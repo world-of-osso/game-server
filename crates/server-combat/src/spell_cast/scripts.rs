@@ -30,27 +30,22 @@ mod batch6;
 mod batch7;
 mod batch8;
 mod batch9;
-mod frost;
-pub(super) use frost::{consume_due_killing_machine, roll_runic_empowerment};
-mod frost_mage;
 mod frost_mage_events;
 pub(super) use frost_mage_events::resolve as resolve_frost_mage_events;
 mod frost_mage_procs;
 mod frost_mage_supply;
 pub(super) use frost_mage_procs::snapshot_launch_auras as snapshot_frost_launch_auras;
+pub(super) use script_registry::{
+    after_queued_triggers as consume_due_killing_machine,
+    after_spell_payment as roll_runic_empowerment,
+};
 mod periodic_attacks;
 pub(crate) use periodic_attacks::{after_periodic_trigger, rolls_reapplication};
 pub(super) use script_registry::after_foreground_special;
 pub(crate) use script_registry::melee_residual as after_melee_residual;
 pub(super) use script_registry::spell_residual as after_spell_residual;
 mod chrono_flame;
-mod clearcasting;
-mod elemental;
-mod guardian_impacts;
-mod stacking_summons;
-pub(crate) use elemental::register as register_elemental_policies;
 pub(super) use script_registry::after_modifier_consumption as apply_echo_policies;
-pub(crate) mod empower_evoker;
 mod enhancement_imbues;
 mod enhancement_modes;
 mod enhancement_nova;
@@ -74,7 +69,6 @@ pub(crate) fn register_enhancement(scripts: &mut crate::auras::scripts::AuraScri
 }
 mod policies;
 mod spellslinger;
-pub(crate) use clearcasting::{OMEN, check_omen_proc};
 pub(super) use policies::check_cast as check_policy_cast;
 pub(crate) use policies::register_channel_policies;
 pub(super) use policies::{
@@ -102,7 +96,7 @@ pub(super) fn apply_periodic_damage_policies(
     target: Entity,
     amount: f32,
 ) {
-    frost_mage::after_periodic_damage(world, ctx, target);
+    script_registry::after_periodic_damage_policies(world, ctx, target);
     policies::after_periodic_damage(world, ctx, target, amount);
     spellslinger::after_periodic_damage(world, ctx, target);
     midnight_items::after_periodic_damage(world, ctx, target);
@@ -110,19 +104,16 @@ pub(super) fn apply_periodic_damage_policies(
 
 pub(crate) fn owns_policy_proc(world: &World, spell: u32) -> bool {
     policies::owns_policy_proc(world, spell)
-        || frost::owns_proc(spell)
         || frost_mage_procs::owns_proc(spell)
         || frost_mage_supply::owns_proc(spell)
 }
-mod fire_procs;
 pub(crate) mod holy_priest;
-mod hot_streak;
-pub(crate) use fire_procs::register as register_fire_procs;
-pub(super) use fire_procs::{before_hot_streak_launch, fire_feedback_hit, fire_meteorite_hit};
-pub(super) use hot_streak::triggers_hot_streak;
-pub(super) use hot_streak::{
-    flamestrike_hot_streak_chance, pyroclasm_damage_modifier, record_fire_hit,
-    roll_flamestrike_hot_streak,
+pub(super) use script_registry::{
+    after_fire_direct_hit as fire_feedback_hit, after_fire_outcome_hit as fire_meteorite_hit,
+    before_proc_launch as before_hot_streak_launch,
+    cast_hit_proc_chance as flamestrike_hot_streak_chance,
+    launch_damage_modifiers as pyroclasm_damage_modifier, record_fire_outcome as record_fire_hit,
+    roll_cast_hit_proc as roll_flamestrike_hot_streak, triggers_hot_streak,
 };
 mod midnight_items;
 pub(crate) mod prayer_of_mending;
@@ -141,10 +132,8 @@ mod rogue_hero;
 pub(crate) use rogue_children::register as register_rogue_children;
 pub(super) use rogue_hero::prepare as prepare_rogue_hero;
 mod scourge_strike;
-mod soul_of_the_forest;
-mod swiftmend;
-pub(super) use soul_of_the_forest::direct_multiplier as soul_of_the_forest_direct_multiplier;
-pub(crate) use soul_of_the_forest::snapshot_amount as snapshot_soul_of_the_forest;
+pub(super) use script_registry::healing_multiplier as soul_of_the_forest_direct_multiplier;
+pub(crate) use script_registry::snapshot_healing_aura as snapshot_soul_of_the_forest;
 mod unbroken_rhythm;
 pub(crate) use unbroken_rhythm::register_unbroken_rhythm;
 mod windwalker;
@@ -164,7 +153,6 @@ pub(crate) fn after_melee_hit(
 ) {
     windwalker_flurry::after_melee_hit(world, caster, hand, critical);
     script_registry::after_white_hit(world, caster, critical);
-    frost::after_white_hit(world, caster, critical);
 }
 mod xuens_battlegear;
 pub(crate) use xuens_battlegear::register_xuens_battlegear;
@@ -193,7 +181,7 @@ pub(super) fn capture_consumed_damage_modifier(
     foreground: bool,
 ) -> Option<u32> {
     policies::pet_sets::capture_cobra_damage(world, caster, spell);
-    elemental::capture_damage_modifier(world, caster, spell, foreground)
+    script_registry::capture_consumed_damage_modifier(world, caster, spell, foreground)
 }
 
 pub(super) fn finish_scripted_launch(
@@ -204,8 +192,10 @@ pub(super) fn finish_scripted_launch(
     depth: u8,
     foreground: bool,
 ) {
-    elemental::after_launch(world, caster, spell, consumed, depth, foreground);
-    frost::after_launch(world, caster, spell, foreground);
+    script_registry::finish_consumed_damage_modifier(
+        world, caster, spell, consumed, depth, foreground,
+    );
+    script_registry::after_elemental_launch(world, caster, spell, foreground);
     frost_mage_supply::after_launch(world, caster, spell);
     policies::pet_sets::finish_cobra(world, caster, spell);
     script_registry::after_counter_launch(world, caster, spell.id);
@@ -219,7 +209,7 @@ pub(super) fn finish_scripted_launch(
 pub(super) fn on_cast(world: &mut World, caster: Entity, spell_id: u32, depth: u8) {
     script_registry::on_cast(world, caster, spell_id, depth);
     windwalker::scripted_combo_cast(world, caster, spell_id, depth);
-    elemental::before_launch(world, caster, spell_id, depth);
+    script_registry::before_judgment_on_cast(world, caster, spell_id, depth);
     match spell_id {
         batch16::RET_JUDGMENT | batch16::HOLY_JUDGMENT | batch10::PROTECTION_JUDGMENT => {
             batch16::energize_judgment(world, caster, depth);
@@ -248,7 +238,7 @@ pub(super) fn after_direct_damage(
     target: Entity,
     critical: bool,
 ) {
-    frost_mage::after_damage(world, ctx, target, critical);
+    script_registry::before_direct_damage_policies(world, ctx, target, critical);
     spellslinger::after_direct_damage(world, ctx);
     windwalker_flurry::after_direct_damage(world, ctx, critical);
     crate::auras::rogue::after_builder_hit(world, ctx, critical);
@@ -358,9 +348,7 @@ use crate::spell_info::SpellInfo;
 /// Frostbolt: its effects are TRIGGER_MISSILE 32 to 228597 (SCHOOL_DAMAGE) only.
 /// Sourced consumers retain native modifier amounts through projectile impact.
 pub(crate) fn snapshots_modifier(world: &World, id: u32) -> bool {
-    maelstrom_weapon::snapshots_modifier(id)
-        || script_registry::snapshots_modifier(world, id)
-        || frost::snapshots_modifier(id)
+    maelstrom_weapon::snapshots_modifier(id) || script_registry::snapshots_modifier(world, id)
 }
 
 const FROSTBOLT: u32 = 116;
@@ -506,9 +494,6 @@ pub fn on_effect_hit(
     spell_id: u32,
     effect_index: u8,
 ) -> Option<EffectHitHook> {
-    if let Some(hook) = guardian_impacts::hit_hook(spell_id, effect_index) {
-        return Some(hook);
-    }
     if let Some(hook) = registry.effect_hit(spell_id, effect_index) {
         return Some(hook);
     }
@@ -645,7 +630,7 @@ pub fn crit_chance(world: &World, caster: Entity, target: Entity, spell_id: u32)
         return Some(chance);
     }
     match spell_id {
-        FIREBALL | hot_streak::PYROBLAST => firestarter_crit(world, caster, target),
+        FIREBALL | 11366 => firestarter_crit(world, caster, target),
         batch17::REGROWTH => batch17::regrowth_crit(world, caster, target),
         batch3::SHRED if batch11::shred_stealth_bonus(world, caster) => {
             let spell = world
@@ -793,12 +778,10 @@ pub(super) fn snapshot_proc_modifiers(
     auras
         .iter()
         .filter(|aura| {
-            (matches!(
-                aura.spell_id,
-                hot_streak::HOT_STREAK | maelstrom_weapon::MODIFIER
-            ) || world
-                .resource::<script_registry::SpellScriptRegistry>()
-                .is_cast_time_proc(aura.spell_id))
+            (aura.spell_id == maelstrom_weapon::MODIFIER
+                || world
+                    .resource::<script_registry::SpellScriptRegistry>()
+                    .is_cast_time_proc(aura.spell_id))
                 && aura.effects.iter().any(|effect| {
                     effect.misc_values[0] == crate::auras::SpellModOp::ChangeCastTime as i32
                         && crate::auras::spell_mods::class_mask_affects(aura, effect, spell)
@@ -808,18 +791,7 @@ pub(super) fn snapshot_proc_modifiers(
         .collect()
 }
 
-/// `SpellCastFn` on `AfterCast`: runs once on the caster after the spell resolved.
-pub(super) type EmpowerCompleteHook =
-    fn(&mut World, Entity, &SpellInfo, Option<Entity>) -> Result<(), super::CastFailure>;
-
-pub(super) fn empower_completion(spell_id: u32) -> Option<EmpowerCompleteHook> {
-    match spell_id {
-        357208 | 382266 | 359073 | 382411 => Some(empower_evoker::release),
-        _ => None,
-    }
-}
-
-pub(super) use empower_evoker::damage_bonus as empower_damage_bonus;
+pub(super) use script_registry::empower_damage_bonus;
 
 pub type AfterCastHook = fn(&mut World, Entity, &SpellInfo);
 
@@ -842,9 +814,6 @@ fn native_after_cast(world: &World, spell_id: u32) -> Option<AfterCastHook> {
     if let Some(hook) = script_registry::native_after_cast(world, spell_id) {
         return Some(hook);
     }
-    if let Some(hook) = stacking_summons::hook(spell_id) {
-        return Some(hook);
-    }
     match spell_id {
         33757 | 318038 => Some(enhancement_imbues::apply),
         470057 => Some(maelstrom_weapon::grant_voltaic_blaze),
@@ -852,9 +821,6 @@ fn native_after_cast(world: &World, spell_id: u32) -> Option<AfterCastHook> {
         windwalker::FISTS_OF_FURY => Some(windwalker_children::fof_executed),
         holy_priest::APOTHEOSIS => Some(holy_priest::restore_holy_words),
         prayer_of_mending::PRAYER => Some(holy_priest::reduce_word_on_mending),
-        hot_streak::PYROBLAST | hot_streak::FLAMESTRIKE | hot_streak::NATIVE_FLAMESTRIKE => {
-            Some(hot_streak::consume_procs_and_roll_pyroclasm)
-        }
         IMPENDING_VICTORY => Some(heal_and_consume_victorious),
         ENRAGED_REGENERATION => Some(cast_invigorating_fury_heal),
         crate::scripted_ai::azure_vault::ABSOLUTE_ZERO_DAMAGE => {
@@ -983,12 +949,6 @@ pub(super) fn target_plan(world: &World, spell_id: u32) -> Option<(Relation, Tar
     }
     if let Some(hook) = policies::target_plan_hook(world, spell_id) {
         return Some(hook);
-    }
-    if let Some(hook) = frost_mage::target_plan_hook(spell_id) {
-        return Some(hook);
-    }
-    if let Some(hook) = guardian_impacts::plan_hook(spell_id) {
-        return Some((Relation::Enemy, hook));
     }
     match spell_id {
         super::toy_flag::TARGETING => Some((Relation::Any, super::toy_flag::targeting_plan)),
@@ -1761,9 +1721,6 @@ pub fn on_hit(world: &World, spell_id: u32) -> Option<HitHook> {
         107428 | 113656 => Some(windwalker::trigger_wdp_enabler_on_hit),
         unbroken_rhythm::ROOT => Some(unbroken_rhythm::capture_and_consume),
 
-        swiftmend::SWIFTMEND => Some(swiftmend::hit),
-        soul_of_the_forest::REGROWTH => Some(clearcasting::regrowth_hit),
-        soul_of_the_forest::REJUVENATION => Some(soul_of_the_forest::consume_after_heal),
         batch13::MORTAL_STRIKE => Some(batch13::apply_mortal_wounds),
         batch3::GARROTE => Some(batch3::garrote),
         batch5::DISINTEGRATE => Some(batch5::disintegrate),
