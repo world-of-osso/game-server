@@ -64,7 +64,7 @@ pub(super) fn on_cast(
         ready_in,
     });
     if spell.id == AUTO_SHOT {
-        super::scripts::roll_snakeskin_cobra(world, caster, target);
+        super::script_registry::auto_repeat(world, caster, target);
     }
 }
 

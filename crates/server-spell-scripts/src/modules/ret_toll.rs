@@ -4,10 +4,25 @@
 use bevy::prelude::*;
 use shared::components::ActiveSpec;
 
-use crate::auras;
-use crate::spell_cast::effects::EffectCtx;
-use crate::spell_cast::targets::{self, Relation};
-use crate::spell_info::{SpellInfo, SpellStore};
+use super::combat;
+use combat::auras;
+use combat::spell_cast::effects::EffectCtx;
+use combat::spell_cast::targets::{self, Relation};
+use combat::spell_cast::script_registry::{SpellScriptHook, ContextHitHook, AreaTargetFilter};
+use combat::spell_info::{SpellInfo, SpellStore};
+
+pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::ContextHit(context_hit),
+    SpellScriptHook::AreaFilter(area_filter),
+];
+
+fn context_hit(spell: u32) -> Option<ContextHitHook> {
+    (spell == ROOT).then_some(cast_child)
+}
+
+fn area_filter(spell: u32, index: u8) -> Option<AreaTargetFilter> {
+    (spell == ROOT && index == 1).then_some(limit_area)
+}
 
 pub(super) const ROOT: u32 = 375576;
 const JUDGMENT: u32 = 406957;
@@ -63,11 +78,11 @@ pub(super) fn cast_child(world: &mut World, ctx: &EffectCtx, target: Entity) {
         warn!(spell_id = id, "Divine Toll native child unavailable");
         return;
     };
-    let percent = super::script_effect_value(world, ctx.caster, ROOT, 5);
+    let percent = combat::spell_cast::scripts::script_effect_value(world, ctx.caster, ROOT, 5);
     child.cast_damage_multiplier = Some(1.0 + percent / 100.0);
     // Same native triggered child seam as the other approved Ret relationships.
     // Funding and Resonance/Exaction/DivineHammer are separate qualifications.
-    if !super::super::launch_triggered_spell(world, ctx.caster, &child, Some(target), ctx.depth + 1)
+    if !combat::spell_cast::launch_triggered_spell(world, ctx.caster, &child, Some(target), ctx.depth + 1)
     {
         debug!(
             spell_id = id,

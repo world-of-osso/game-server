@@ -65,8 +65,17 @@ fn havoc_demonic_enters_meta_before_native_eye_beam_channel() {
         .unwrap();
     let remaining = meta.expires_at.unwrap() - crate::auras::aura_now(world);
     assert!(
-        (remaining - 5.0).abs() < 0.001,
-        "native Demonic effect0 supplies5s, got {remaining}"
+        (remaining
+            - 5.0
+            - f64::from(
+                world
+                    .get::<shared::casting::CastState>(actor)
+                    .unwrap()
+                    .duration
+            ))
+        .abs()
+            < 0.001,
+        "Demonic must retain native5s plus actual channel duration, got {remaining}"
     );
     assert_eq!(
         world
@@ -78,6 +87,10 @@ fn havoc_demonic_enters_meta_before_native_eye_beam_channel() {
 }
 
 fn earn_eye_beam_fury(run: &mut Run) {
+    earn_havoc_fury(run, 30.0);
+}
+
+pub(super) fn start_havoc_swings(run: &mut Run) {
     let actor = run.actor;
     let target = run.targets[0];
     engage(run);
@@ -87,7 +100,12 @@ fn earn_eye_beam_fury(run: &mut Run) {
         literal_rotation::execution::Execution::AutoAttack(target),
     )
     .unwrap();
-    // Native Demon Blades swings fund the native30 Fury cost; no pool edits.
+}
+
+pub(super) fn earn_havoc_fury(run: &mut Run, minimum: f32) {
+    let actor = run.actor;
+    start_havoc_swings(run);
+    // Earn the requested native cast budget from real swings; no pool edits.
     for _ in 0..800 {
         let (fury, _) = crate::spell_cast::powers::power_value(
             run.app.world(),
@@ -95,12 +113,12 @@ fn earn_eye_beam_fury(run: &mut Run) {
             shared::components::PowerType::Fury,
         )
         .unwrap();
-        if fury >= 30.0 {
+        if fury >= minimum {
             return;
         }
         run.app.update();
     }
-    panic!("native swings did not fund Eye Beam");
+    panic!("native swings did not fund {minimum} Fury");
 }
 
 #[test]
@@ -136,7 +154,14 @@ fn havoc_demonic_extends_existing_native_meta_without_refreshing_it() {
         Some(target),
     )
     .expect("ordinary native Eye Beam while Meta is active");
-    assert!((deadline(run.app.world()) - before - 5.0).abs() < 0.001);
+    let channel = f64::from(
+        run.app
+            .world()
+            .get::<shared::casting::CastState>(actor)
+            .unwrap()
+            .duration,
+    );
+    assert!((deadline(run.app.world()) - before - 5.0 - channel).abs() < 0.001);
 }
 
 #[test]
