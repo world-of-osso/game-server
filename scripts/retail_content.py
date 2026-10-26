@@ -319,6 +319,9 @@ FOLLOWER_HUNTER_PET_SIMC_DEFAULT = 174884
 # Native448659 then supplies authentic223453 and SummonProperties5940.
 CLASS_SUMMON_POLICY_CHILDREN = (
     (471876, 1222271), (471876, 472020), (471876, 471993), (448658, 448659),
+    # SimC76f8118 sc_priest_shadow.cpp2206–2214: full Yogg counter summons
+    # native373277, whose effect28 supplies authentic Thing From Beyond189988.
+    (373276, 373277),
 )
 CLASS_SUMMON_POLICY_VALUES = ','.join(f'({parent},{child})' for parent, child in CLASS_SUMMON_POLICY_CHILDREN)
 CLASS_SUMMON_ENTRIES = f"""WITH RECURSIVE policy_links(parent,child) AS (

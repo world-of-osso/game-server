@@ -32,6 +32,17 @@ class ClassSummonImportTests(unittest.TestCase):
             selected = {row[0] for row in conn.execute(retail_content.CLASS_SUMMON_ENTRIES)}
             self.assertIn(entry, selected)
 
+    def test_yogg_threshold_reaches_authentic_thing_from_beyond(self):
+        source = (ROOT / "data/world.db").resolve()
+        with closing(sqlite3.connect(f"file:{source}?mode=ro", uri=True)) as conn:
+            entry = conn.execute("""SELECT EffectMiscValue_0 FROM spell_effect
+                WHERE SpellID=373277 AND DifficultyID=0 AND Effect=28""").fetchone()[0]
+            self.assertEqual(entry, 189988)
+            native = conn.execute("SELECT name FROM tdb_creature_template WHERE entry=?", (entry,)).fetchone()
+            self.assertEqual(native, ("Thing From Beyond",))
+            selected = {row[0] for row in conn.execute(retail_content.CLASS_SUMMON_ENTRIES)}
+            self.assertIn(entry, selected, "native Yogg counter must retain its real scripted summon dependency")
+
     def test_efflo_native_summon_import_is_authentic_idempotent_and_spawn_free(self):
         with tempfile.TemporaryDirectory() as directory:
             prepared = Path(directory) / "class-summons.sqlite"
