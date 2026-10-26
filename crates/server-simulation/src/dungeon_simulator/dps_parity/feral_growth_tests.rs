@@ -50,7 +50,7 @@ fn feral_selected_thriving_growth_native_rip_rake_ticks_execute_vines() {
     );
 }
 
-fn cast_native_spell_after_regeneration(run: &mut Run, spell: u32) {
+pub(super) fn cast_native_spell_after_regeneration(run: &mut Run, spell: u32) {
     for _ in 0..600 {
         match crate::spell_cast::creature_cast(
             run.app.world_mut(),

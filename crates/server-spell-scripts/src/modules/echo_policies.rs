@@ -6,9 +6,14 @@
 //! SimC's200ms is TODO/unverified; no artificial delay is used here.
 use bevy::prelude::*;
 
-use crate::auras::{ActiveAuras, procs};
-use crate::class_progression::{ActiveSpec, TraitLoadout};
-use crate::spell_info::SpellInfo;
+use super::combat;
+use combat::auras::{ActiveAuras, procs};
+use combat::class_progression::{ActiveSpec, TraitLoadout};
+use combat::spell_cast::script_registry::SpellScriptHook;
+use combat::spell_info::SpellInfo;
+
+pub(super) const HOOKS: &[SpellScriptHook] =
+    &[SpellScriptHook::AfterModifierConsumption(after_cast)];
 
 struct EchoPolicy {
     name: &'static str,
@@ -60,7 +65,7 @@ fn read_live_values(world: &World, caster: Entity, policy: &EchoPolicy) -> Optio
     ))
 }
 
-pub(in crate::spell_cast) fn after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
+pub(super) fn after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
     if spell.cast_parent_owns_modifier_charges {
         return;
     }
@@ -109,12 +114,13 @@ fn queue_echo(
 ) {
     // Defer after the foreground action without a fabricated authored timer.
     world.commands().queue(move |world: &mut World| {
-        let Some(mut child) = super::super::load_triggered_spell(world, policy.payload, 1) else {
+        let Some(mut child) = combat::spell_cast::load_triggered_spell(world, policy.payload, 1)
+        else {
             return;
         };
         child.cast_damage_multiplier = Some(multiplier);
-        child.cast_damage_role = crate::spell_info::CastDamageRole::Echo;
-        if !super::super::launch_triggered_spell(world, caster, &child, Some(target), 1) {
+        child.cast_damage_role = combat::spell_info::CastDamageRole::Echo;
+        if !combat::spell_cast::launch_triggered_spell(world, caster, &child, Some(target), 1) {
             warn!(
                 policy = policy.name,
                 ?caster,

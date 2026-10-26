@@ -579,7 +579,7 @@ pub fn try_native_policy_proc(world: &mut World, unit: Entity, id: u32) -> bool 
 }
 
 /// Guaranteed source callbacks use the native ICD without an additional RNG roll.
-pub(crate) fn start_policy_proc(world: &mut World, unit: Entity, id: u32) -> Option<AuraInstance> {
+pub fn start_policy_proc(world: &mut World, unit: Entity, id: u32) -> Option<AuraInstance> {
     let now = aura_now(world);
     let ready = world
         .get::<ActiveAuras>(unit)

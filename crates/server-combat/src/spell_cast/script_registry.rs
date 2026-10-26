@@ -46,6 +46,16 @@
 //! - `LandedDamagePolicy`: actual white/spell damage at the original Havoc policy boundary.
 //! - `AbilityUseAvailable`: earned per-ability use state, not ordinary cast admission.
 //! - `ChannelPeriodic`: first scripted periodic-trigger callback, before native trigger handling.
+//! - `BeforeNativeOnCast`: admitted cast data before ordinary OnCast and payment.
+//! - `PrepareStoredDamage`: after fixed payload overrides, before triggered admission.
+//! - `EnemyContextHit`: damage-only hit callbacks, excluding caster/aura recipients.
+//! - `AfterPolicyDirectDamage` and `AfterPolicyPeriodicDamage`: original Ret damage slots.
+//! - `TargetContextDamageMultiplier`: after Giantkiller, before Shadow Weaving.
+//! - `AfterNativeOnCast`: after native judgment energize and other OnCast work.
+//! - `AfterModifierConsumption`: before foreground-spender tier callbacks.
+//! - `AfterForegroundSpender`: before Crusade stacks and spender-proc generation.
+//! - `AfterSpenderProc`: after spender-proc generation, before deferred background execution.
+//! New stages own distinct callback/lookup aliases, even when signatures coincide.
 //! Within a stage, traverse module slices and entries from first to last. Never sort
 //! or deduplicate them. Adding a policy to an existing module changes only that module.
 
@@ -95,6 +105,17 @@ pub type ResolvedDamageHook = fn(&mut World, &EffectCtx<'_>, Entity, bool, f32);
 pub type LandedDamageHook = fn(&mut World, Entity, Entity, Option<u32>, f32, bool);
 pub type AbilityUseLookup = fn(&World, Entity, u32) -> bool;
 pub type ChannelPeriodicLookup = fn(u32, u8) -> Option<ContextHitHook>;
+pub type BeforeNativeOnCastHook = fn(&mut World, Entity, &SpellInfo, u8);
+pub type PrepareStoredDamageHook = fn(&mut SpellInfo);
+pub type EnemyContextHitHook = fn(&mut World, &EffectCtx<'_>, Entity);
+pub type EnemyContextHitLookup = fn(u32) -> Option<EnemyContextHitHook>;
+pub type AfterPolicyDirectDamageHook = fn(&mut World, &EffectCtx<'_>, Entity, bool);
+pub type AfterPolicyPeriodicDamageHook = fn(&mut World, &EffectCtx<'_>, Entity, bool);
+pub type TargetContextDamageMultiplierHook = fn(&World, &EffectCtx<'_>, Entity, bool) -> f32;
+pub type AfterNativeOnCastHook = fn(&mut World, Entity, u32, u8);
+pub type AfterModifierConsumptionHook = fn(&mut World, Entity, &SpellInfo);
+pub type AfterForegroundSpenderHook = fn(&mut World, Entity, &SpellInfo, Option<Entity>);
+pub type AfterSpenderProcHook = fn(&mut World, Entity, &SpellInfo, Option<Entity>);
 
 #[derive(Clone, Copy)]
 pub enum SpellScriptHook {
@@ -147,6 +168,16 @@ pub enum SpellScriptHook {
     LandedDamagePolicy(LandedDamageHook),
     AbilityUseAvailable(AbilityUseLookup),
     ChannelPeriodic(ChannelPeriodicLookup),
+    BeforeNativeOnCast(BeforeNativeOnCastHook),
+    PrepareStoredDamage(PrepareStoredDamageHook),
+    EnemyContextHit(EnemyContextHitLookup),
+    AfterPolicyDirectDamage(AfterPolicyDirectDamageHook),
+    AfterPolicyPeriodicDamage(AfterPolicyPeriodicDamageHook),
+    TargetContextDamageMultiplier(TargetContextDamageMultiplierHook),
+    AfterNativeOnCast(AfterNativeOnCastHook),
+    AfterModifierConsumption(AfterModifierConsumptionHook),
+    AfterForegroundSpender(AfterForegroundSpenderHook),
+    AfterSpenderProc(AfterSpenderProcHook),
 }
 
 #[derive(Clone, Copy, Resource)]
@@ -671,6 +702,118 @@ pub fn channel_periodic(world: &World, spell: u32, index: u8) -> Option<ContextH
             SpellScriptHook::ChannelPeriodic(lookup) => lookup(spell, index),
             _ => None,
         })
+}
+
+pub fn before_native_on_cast(world: &mut World, caster: Entity, spell: &SpellInfo, depth: u8) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::BeforeNativeOnCast(run) = hook {
+            run(world, caster, spell, depth);
+        }
+    }
+}
+
+pub fn prepare_stored_damage(world: &World, spell: &mut SpellInfo) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::PrepareStoredDamage(run) = hook {
+            run(spell);
+        }
+    }
+}
+
+pub fn enemy_context_hit(world: &World, spell: u32) -> Option<EnemyContextHitHook> {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .find_map(|hook| match hook {
+            SpellScriptHook::EnemyContextHit(lookup) => lookup(spell),
+            _ => None,
+        })
+}
+
+pub fn after_policy_direct_damage(
+    world: &mut World,
+    ctx: &EffectCtx<'_>,
+    target: Entity,
+    critical: bool,
+) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::AfterPolicyDirectDamage(run) = hook {
+            run(world, ctx, target, critical);
+        }
+    }
+}
+
+pub fn after_policy_periodic_damage(
+    world: &mut World,
+    ctx: &EffectCtx<'_>,
+    target: Entity,
+    critical: bool,
+) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::AfterPolicyPeriodicDamage(run) = hook {
+            run(world, ctx, target, critical);
+        }
+    }
+}
+
+pub fn target_context_damage_multiplier(
+    world: &World,
+    ctx: &EffectCtx<'_>,
+    target: Entity,
+    periodic: bool,
+) -> f32 {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .filter_map(|hook| match hook {
+            SpellScriptHook::TargetContextDamageMultiplier(run) => {
+                Some(run(world, ctx, target, periodic))
+            }
+            _ => None,
+        })
+        .product()
+}
+
+pub fn after_native_on_cast(world: &mut World, caster: Entity, spell: u32, depth: u8) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::AfterNativeOnCast(run) = hook {
+            run(world, caster, spell, depth);
+        }
+    }
+}
+
+pub fn after_modifier_consumption(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::AfterModifierConsumption(run) = hook {
+            run(world, caster, spell);
+        }
+    }
+}
+
+pub fn after_foreground_spender(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    target: Option<Entity>,
+) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::AfterForegroundSpender(run) = hook {
+            run(world, caster, spell, target);
+        }
+    }
+}
+
+pub fn after_spender_proc(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    target: Option<Entity>,
+) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::AfterSpenderProc(run) = hook {
+            run(world, caster, spell, target);
+        }
+    }
 }
 
 #[cfg(test)]

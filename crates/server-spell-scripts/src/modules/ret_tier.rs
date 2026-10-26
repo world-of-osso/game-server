@@ -4,8 +4,15 @@
 //! TC a352b1fa has no handler; the set roots' native Dummy effects have Trigger0.
 use bevy::prelude::*;
 
-use crate::auras::{self, RemoveReason};
-use crate::spell_info::SpellInfo;
+use super::combat;
+use combat::auras::{self, RemoveReason};
+use combat::spell_cast::script_registry::SpellScriptHook;
+use combat::spell_info::SpellInfo;
+
+pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::AfterForegroundSpender(after_foreground_spender),
+    SpellScriptHook::OwnsPolicyProc(owns_arbiter_charge),
+];
 
 const TWO_PIECE: u32 = 1296660;
 const FOUR_PIECE: u32 = 1296661;
@@ -48,7 +55,7 @@ fn consumed_purpose(spell: &SpellInfo) -> bool {
         .any(|modifier| modifier.aura_spell_id == DIVINE_PURPOSE && modifier.amount != 0.0)
 }
 
-pub(in crate::spell_cast) fn after_foreground_spender(
+fn after_foreground_spender(
     world: &mut World,
     caster: Entity,
     spell: &SpellInfo,
@@ -59,7 +66,7 @@ pub(in crate::spell_cast) fn after_foreground_spender(
     };
     let consumed = consumed_purpose(spell);
     if consumed && auras::has_aura(world, caster, TWO_PIECE) {
-        crate::spell_cast::cast_triggered(world, caster, DIVINE_POWER, Some(caster), 1);
+        combat::spell_cast::cast_triggered(world, caster, DIVINE_POWER, Some(caster), 1);
     }
     if !auras::has_aura(world, caster, FOUR_PIECE) {
         return;
@@ -69,7 +76,7 @@ pub(in crate::spell_cast) fn after_foreground_spender(
         .into_iter()
         .any(|buff| auras::has_aura(world, caster, buff));
     if consumed && !pending {
-        crate::spell_cast::cast_triggered(world, caster, kind, Some(caster), 1);
+        combat::spell_cast::cast_triggered(world, caster, kind, Some(caster), 1);
     }
     if let Some(buff) = opposite
         .into_iter()
@@ -104,7 +111,7 @@ fn consume_opposite(world: &mut World, caster: Entity, target: Option<Entity>, b
     auras::remove_auras(world, caster, RemoveReason::Consumed, |aura| {
         aura.spell_id == buff
     });
-    if !crate::spell_cast::try_cast_triggered(world, caster, DIVINE_ARBITER, Some(target), 1) {
+    if !combat::spell_cast::try_cast_triggered(world, caster, DIVINE_ARBITER, Some(target), 1) {
         warn!(
             ?caster,
             ?target,
