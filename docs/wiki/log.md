@@ -1,9 +1,14 @@
+## 2026-10-26 — Fire Molten Fury execute
+
+[Fire target-versus policy](systems/simc-apl.md#fire-fixture-adapter) now reads selected native Molten Fury's health threshold and damage percentage. Actual Fire Blast RED2689→2689 instead of3092.35 is qualified; GREEN and measurement remain train-gated. No coefficient changes or generic aura303 rewrite.
+
 ## 2026-10-26 — Mage Inspired Intellect source
 
 [Mage intellect](systems/character-stats.md#mage-inspired-intellect--2026-10-26) identifies the missing native2-point enhancement to Arcane Intellect, not a universal stat deficit. Base/gear/enchant/gem/food/rune totals reconcile; duplicate weapon Intellect rows explain the reference JSON gear-map undercount. Fire native RED is observed; Frost64/Affliction265 real-player gates remain pending.
 ## 2026-10-26 — Native Loa and Rite stat callbacks
 
 [Native stat callbacks](systems/character-stats.md#native-loa-and-rite-stat-callbacks--2026-10-26) use equipped gem metadata, linked rank amounts and combat admission. Native RED `f282665373` → GREEN `412af0a123`; the five-profile gate passed again before landing `44c2b6c5d`. Other-spec numerical remeasurement remains separate.
+[Mage intellect](systems/character-stats.md#mage-inspired-intellect--2026-10-26) identifies the missing native2-point enhancement to Arcane Intellect, not a universal stat deficit. Base/gear/enchant/gem/food/rune totals reconcile; duplicate weapon Intellect rows explain the reference JSON gear-map undercount. Fire/Frost REDs and the Affliction control pass all3 real-player gates; landed44a57ef9a via trainf75e88a9fa. Numerical DPS parity remains separate.
 
 ## 2026-10-25 — Equipment procs before combat
 
@@ -4688,6 +4693,8 @@ Documented the first compile-boundary slice in [spell-script-crate](systems/spel
 
 - 2026-10-26: [Feral fixture](systems/simc-apl.md#feral-literal-fixture--2026-10-25) records landed Rampancy/Unseen, the duplicate-periodic correction and native Convoke16-child/free-Energy/Cat controls. Neutral31146 requires Enemy admission, not hostile reaction. Convoke landed7befa09dd. TF/Stalking producer and real-Shred consumer REDs→six native GREEN6c3a3a964f, landed59b6754f9: three-seed300s Player ST96.45%/3T93.21%. Feral pauses with remaining mechanical gaps separate from numerical acceptance.
 - 2026-10-26: Documented [Garrote stored literal multiplier](systems/auras.md#garrote-stored-literal-multiplier--2026-10-26). Native RED529a58341f reports1.0 instead of frozen1.5;99f7567ec qualifies actual cast-factor metadata and target-aware reads without damage changes. GREEN9e43191111 passes25Assassination+2Vanish;2fa55f7807 passes both existing Feral snapshot controls.
+
+- 2026-10-26: Added [Zatha'tek weapon proc](systems/zathatek-weapon.md). Actual259/261swings reproduce missing delivery; the next native damage-ratio gate distinguishes driver1298023effect1's percentage from1305391effect0's item-scaled value. Corrected4c388d2d6 passes both equipped profiles and260unequipped control in6947cb2902/3338495bc6/60d629afcd.259probe output is94.922%ST/90.963%three-target; integrated landing and all-equipper remeasurement remain pending.
 - 2026-10-26: Documented [Ret Judgment target uses](systems/ret-judgment.md): ordinary native Judgment RED6a9c30b6f8 produced no197277; downstream producer/consumer and flat incoming magnitude implemented. Probee4384f8211 reached the first successful consumption; an extra timer-cancellation assertion contradicted pinned buff.cpp2246–2289 and was removed without changing generic timers. Corrected GREEN and numerical acceptance pending.
 - 2026-10-26: Documented ordinary native spell GCD haste ordering, native eligibility/bounds and40-spec clock test scope; full-profile DPS qualification remains separate.
 - 2026-10-26: Documented [Ret Judgment target uses](systems/ret-judgment.md): ordinary native Judgment RED6a9c30b6f8 produced no197277; downstream producer/consumer and flat incoming magnitude implemented. Probee4384f8211 reached the first successful consumption; an extra timer-cancellation assertion contradicted pinned buff.cpp2246–2289 and was removed without changing generic timers. Corrected GREENbb564822f6 and113 native cases passed; landed261f87e51. Full-fight target amplification is observed; actor-only uptime excludes the target debuff.

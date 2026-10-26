@@ -73,7 +73,9 @@ register_modules! {
     elemental: (1000, "modules/elemental.rs"),
     elemental_ascendance: (220, "modules/elemental_ascendance.rs"),
     empower_evoker: (1000, "modules/empower_evoker.rs"),
+    enhancement_armor: (2630, "modules/enhancement_armor.rs"),
     essence_burst: (140, "modules/essence_burst.rs"),
+    evoker_burnout: (1000, "modules/evoker_burnout.rs"),
     evoker_tier: (160, "modules/evoker_tier.rs"),
     execution_counters: (320, "modules/execution_counters.rs"),
     feral_convoke: (1033, "modules/feral_convoke.rs"),
@@ -143,6 +145,7 @@ register_modules! {
     shadow_rift: (2585, "modules/shadow_rift.rs"),
     shadow_screams: (2583, "modules/shadow_screams.rs"),
     shadow_torment: (2584, "modules/shadow_torment.rs"),
+    shadow_void_blast: (2586, "modules/shadow_void_blast.rs"),
     shadow_volley: (2580, "modules/shadow_volley.rs"),
     snakeskin_quiver: (230, "modules/snakeskin_quiver.rs"),
     soul_of_the_forest: (1000, "modules/soul_of_the_forest.rs"),
@@ -159,6 +162,7 @@ register_modules! {
     warrior: (40, "modules/warrior.rs"),
     windwalker_momentum: (50, "modules/windwalker_momentum.rs"),
     windwalker_zenith: (30, "modules/windwalker_zenith.rs"),
+    zathatek_breath: (1000, "modules/zathatek_breath.rs"),
 }
 
 #[cfg(test)]
