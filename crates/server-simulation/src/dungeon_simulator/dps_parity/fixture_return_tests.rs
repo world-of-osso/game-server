@@ -14,8 +14,7 @@ fn shared_fixture_displacement_returns_to_melee_after_real_retreat() {
         literal_rotation::execution::Execution::Spell(198793, run.actor, Some(run.targets[0]))).unwrap();
     let mut displaced = false;
     for frame in 0..240 {
-        let boundary = run.app.world().resource::<Time>().elapsed() + Duration::from_millis(50);
-        advance_fixture_step(&mut run, boundary).unwrap();
+        run.app.update();
         let position = run.app.world().get::<Position>(run.actor).unwrap();
         displaced |= (position.x - start.x).hypot(position.z - start.z) > 5.0;
         if frame == 140 {
