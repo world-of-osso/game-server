@@ -47,6 +47,7 @@ fn assassination_garrote_snapshot_preserves_empowerment_after_window_and_scopes_
     let equipment =
         literal_rotation::equipment::Equipment::load(run.app.world_mut(), actor, &mut bindings)
             .unwrap();
+    let absent_factors = read_garrote_factors(&run, &bindings, &equipment, absent);
     engage(&mut run);
     literal_rotation::execution::execute(
         run.app.world_mut(),
@@ -81,8 +82,7 @@ fn assassination_garrote_snapshot_preserves_empowerment_after_window_and_scopes_
         "the real empowered bleed keeps its factor after the post-stealth window ends"
     );
     assert_eq!(
-        read_garrote_factors(&run, &bindings, &equipment, absent),
-        [0.0; 2],
+        absent_factors, [0.0; 2],
         "an absent target-owned bleed has no snapshot"
     );
     literal_rotation::execution::execute(
