@@ -1339,6 +1339,53 @@ fn fire_execute_real_ignite_ticks_earn_selected_heat_shimmer() {
     );
 }
 
+#[test]
+#[ignore = "requires exact Fire63 inputs and private70448 DB"]
+fn fire_feedback_intensifying_flame_tick_preserves_earned_fevered_incantation() {
+    let _seed = crate::random::seed_scope(70_448);
+    let (mut profile, traits) = read_reference(63).unwrap();
+    let identity = inputs::read_actor(&profile).unwrap();
+    profile.equipment.clear();
+    profile.consumables.clear();
+    profile.omnium_talents = None;
+    let mut run = prepare_literal_reference(profile, &traits, 1, identity).unwrap();
+    let actor = run.actor;
+    let target = run.targets[0];
+    run.app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(actor)
+        .unwrap()
+        .crit_pct = 0.0;
+    start_native(&mut run, 108853, target);
+    run.app.update();
+    assert_eq!(
+        stacks(&run, 383811),
+        1,
+        "actual guaranteed Fire Blast crit earns Fevered"
+    );
+    for _ in 0..60 {
+        run.app.update();
+    }
+    assert!(
+        run.app
+            .world()
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|event| event.source == Some(actor.to_bits())
+                && event.spell_id == Some(419800)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0
+                && !event.crit),
+        "actual Ignite tick produced noncritical Intensifying Flame"
+    );
+    assert_eq!(
+        stacks(&run, 383811),
+        1,
+        "Intensifying Flame is spell_t, not mage_spell_t, and must not clear earned Fevered Incantation"
+    );
+}
+
 fn reacted(run: &Run, name: &str) -> f64 {
     use crate::simc_apl_native::{Bindings, Encounter, FightStyle, NativeFacts};
     let bindings = Bindings {
