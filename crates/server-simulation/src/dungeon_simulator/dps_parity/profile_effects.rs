@@ -26,11 +26,19 @@ pub(super) fn install(world: &mut World, actor: Entity, profile: &Profile) -> Re
             }
             // SimC76f8118 consumable.cpp40–59/item_data.inc175834: quality2 identity.
             ("flask", "flask_of_the_blood_knights_2") => apply_item(world, actor, 241324, &db)?,
-            ("augmentation", "void_touched") => apply_item(world, actor, 259085, &db)?,
+            // SimC76f8118 item_data.inc175830: quality2 native item/ilvl295.
+            ("flask", "flask_of_thalassian_resistance_2") => apply_item(world, actor, 241320, &db)?,
+            // consumable.cpp613 accepts both short and full Void-Touched tokens.
+            ("augmentation", "void_touched" | "void_touched_augment_rune") => {
+                apply_item(world, actor, 259085, &db)?
+            }
             // Food selectors require the composed native equipment/consumable ratings.
             ("food", _) => {}
-            ("potion", "potion_of_recklessness_2") => {
-                let item = super::literal_rotation::equipment::ItemUse::consumable(world, 241288)?;
+            ("potion", _) => {
+                let Some(id) = potion_item(value) else {
+                    continue;
+                };
+                let item = super::literal_rotation::equipment::ItemUse::consumable(world, id)?;
                 world.entity_mut(actor).insert((
                     Potion(item),
                     crate::simc_apl_native::ConfiguredPotion {
@@ -143,21 +151,32 @@ fn resolve_expansion_entry(token: &str) -> Result<u32, String> {
         .map_err(|error| format!("native expansion entry {token:?}: {error}"))
 }
 
+fn potion_item(token: &str) -> Option<u32> {
+    // SimC76f8118 item_data.inc175810/175828: identities only; native catalogs
+    // supply each potion's spell, item level, coefficient and cooldown.
+    match token {
+        "potion_of_recklessness_2" => Some(241288),
+        "lights_potential_2" => Some(241308),
+        _ => None,
+    }
+}
+
 pub(super) fn supported(kind: &str, value: &str) -> bool {
     matches!(
         (kind, value),
         ("flask", "flask_of_the_magisters_2" | "magisters_2")
             | ("flask", "flask_of_the_blood_knights_2")
-            | ("augmentation", "void_touched")
+            | ("flask", "flask_of_thalassian_resistance_2")
+            | ("augmentation", "void_touched" | "void_touched_augment_rune")
             | ("food", "royal_roast")
             | (
                 "food",
                 "harandar_celebration" | "silvermoon_parade" | "blooming_feast"
             )
-            | ("potion", "potion_of_recklessness_2")
-    ) || (kind == "temporary_enchant"
-        && value.split('/').all(|e| {
-            e.split_once(':')
-                .is_some_and(|(_, v)| v == "thalassian_phoenix_oil_2")
-        }))
+    ) || (kind == "potion" && potion_item(value).is_some())
+        || (kind == "temporary_enchant"
+            && value.split('/').all(|e| {
+                e.split_once(':')
+                    .is_some_and(|(_, v)| v == "thalassian_phoenix_oil_2")
+            }))
 }
