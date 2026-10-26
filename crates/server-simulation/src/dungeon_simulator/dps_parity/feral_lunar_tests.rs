@@ -58,12 +58,20 @@ fn feral_selected_lunar_inspiration_applies_and_removes_native_override() {
     );
     crate::spell_cast::creature_cast(world, actor, 768, Some(actor), false).unwrap();
     preparation::finish_pending_setup(&mut run).unwrap();
-    let moonfire = server::spell_cast::knowledge::resolve_actor_action(
-        run.app.world(), actor, 8921,
-    ).unwrap();
+    let moonfire =
+        server::spell_cast::knowledge::resolve_actor_action(run.app.world(), actor, 8921).unwrap();
     crate::spell_cast::creature_cast(
-        run.app.world_mut(), actor, moonfire, Some(run.targets[0]), false,
-    ).expect("ordinary selected Moonfire is usable in native Cat Form");
+        run.app.world_mut(),
+        actor,
+        moonfire,
+        Some(run.targets[0]),
+        false,
+    )
+    .expect("ordinary selected Moonfire is usable in native Cat Form");
     preparation::finish_pending_setup(&mut run).unwrap();
-    assert!(crate::auras::has_aura(run.app.world(), run.targets[0], 155625));
+    assert!(crate::auras::has_aura(
+        run.app.world(),
+        run.targets[0],
+        155625
+    ));
 }
