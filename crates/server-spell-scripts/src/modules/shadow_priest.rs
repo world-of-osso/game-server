@@ -10,7 +10,7 @@ use combat::auras::ActiveAuras;
 use combat::class_progression::TraitLoadout;
 use combat::random as rand;
 use combat::spell_cast;
-use combat::spell_cast::script_registry::{SpellScriptHook, HitHook};
+use combat::spell_cast::script_registry::{HitHook, SpellScriptHook};
 use combat::spell_info::SpellStore;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
@@ -50,14 +50,14 @@ pub(super) fn slam_impact(world: &mut World, caster: Entity, primary: Entity, de
     let Some(damage) = load_slam_damage(world, primary, depth) else {
         return;
     };
-    let plan =
-        match spell_cast::plan_triggered_spell(world, caster, &damage, Some(primary), depth) {
-            Ok(plan) => plan,
-            Err(reason) => {
-                warn!(?reason, "Tentacle Slam native area selection failed");
-                return;
-            }
-        };
+    let plan = match spell_cast::plan_triggered_spell(world, caster, &damage, Some(primary), depth)
+    {
+        Ok(plan) => plan,
+        Err(reason) => {
+            warn!(?reason, "Tentacle Slam native area selection failed");
+            return;
+        }
+    };
     let units = spell_cast::selected_units(&plan);
     apply_slam_dots(world, caster, units, depth);
     // sc_priest_shadow.cpp1853–1869: VT before damage, then weak Madness.
@@ -148,12 +148,7 @@ fn owned_effect_amount(world: &World, caster: Entity, spell: u32, index: u8) -> 
 }
 
 /// SimC76f8118 sc_priest.cpp4285–4341: live target DoTs, not a flat school bonus.
-fn weaving_multiplier(
-    world: &World,
-    caster: Entity,
-    target: Entity,
-    spell: u32,
-) -> f32 {
+fn weaving_multiplier(world: &World, caster: Entity, target: Entity, spell: u32) -> f32 {
     let shadow = world
         .get::<ActiveSpec>(caster)
         .is_some_and(|spec| spec.0 == 258);

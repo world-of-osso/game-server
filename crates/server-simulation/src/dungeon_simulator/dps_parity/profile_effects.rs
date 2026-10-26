@@ -26,6 +26,8 @@ pub(super) fn install(world: &mut World, actor: Entity, profile: &Profile) -> Re
             }
             // SimC76f8118 consumable.cpp40–59/item_data.inc175834: quality2 identity.
             ("flask", "flask_of_the_blood_knights_2") => apply_item(world, actor, 241324, &db)?,
+            // SimC76f8118 item_data.inc175836: quality2; native ItemSparse owns the ilvl.
+            ("flask", "flask_of_the_shattered_sun_2") => apply_item(world, actor, 241326, &db)?,
             ("augmentation", "void_touched") => apply_item(world, actor, 259085, &db)?,
             // Food selectors require the composed native equipment/consumable ratings.
             ("food", _) => {}
@@ -149,6 +151,7 @@ pub(super) fn supported(kind: &str, value: &str) -> bool {
         (kind, value),
         ("flask", "flask_of_the_magisters_2" | "magisters_2")
             | ("flask", "flask_of_the_blood_knights_2")
+            | ("flask", "flask_of_the_shattered_sun_2")
             | ("augmentation", "void_touched")
             | ("food", "royal_roast")
             | (

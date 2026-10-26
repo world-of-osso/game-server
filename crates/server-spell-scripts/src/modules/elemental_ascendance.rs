@@ -5,9 +5,9 @@ use shared::components::CombatStatus;
 
 use super::combat;
 use combat::auras::{SpellModOp, spell_mods};
-use combat::spell_cast::{self, Sight, targets};
-use combat::spell_cast::script_registry::{SpellScriptHook, HitHook};
+use combat::spell_cast::script_registry::{HitHook, SpellScriptHook};
 use combat::spell_cast::scripts::script_effect_value;
+use combat::spell_cast::{self, Sight, targets};
 use combat::spell_info::SpellStore;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::Hit(hit_hook)];
