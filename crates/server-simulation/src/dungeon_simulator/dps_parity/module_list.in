@@ -32,6 +32,7 @@ mod dummy_reference_tests;
 mod elemental_ancestor_tests;
 mod elemental_ascendance_tests;
 mod elemental_cadence_tests;
+mod elemental_communication_tests;
 mod elemental_mechanics_tests;
 mod elemental_rotation_tests;
 mod engagement_tests;
