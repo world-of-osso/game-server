@@ -4671,3 +4671,5 @@ Documented the first compile-boundary slice in [spell-script-crate](systems/spel
 - 2026-10-25: Documented Affliction265 literal fixture and native Agony shard funding; controller RED9774→GREENfa58; funding RED4b2dc (15landed ticks,0raw shards), GREEN/measure pending.
 
 - 2026-10-25: Added Affliction native Nightfall tick threshold/consumer documentation; REDa00f81dc4b proved actual Wither ticks never earned the selected buff; GREEN/measurement pending.
+
+- 2026-10-26: Documented [Garrote stored literal multiplier](systems/auras.md#garrote-stored-literal-multiplier--2026-10-26). Native RED529a58341f reports1.0 instead of frozen1.5;99f7567ec qualifies actual cast-factor metadata and target-aware reads without damage changes. GREEN9e43191111 passes25Assassination+2Vanish;2fa55f7807 passes both existing Feral snapshot controls.
