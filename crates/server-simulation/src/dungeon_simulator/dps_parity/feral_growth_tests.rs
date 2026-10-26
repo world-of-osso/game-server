@@ -50,6 +50,49 @@ fn feral_selected_thriving_growth_native_rip_rake_ticks_execute_vines() {
     );
 }
 
+#[test]
+#[ignore = "requires exact spec103 profile/traits and native private DB"]
+fn feral_native_vines_applications_expire_independently() {
+    let mut run = prepare_literal(103, 1).unwrap();
+    let actor = run.actor;
+    let target = run.targets[0];
+    let read = |run: &Run| {
+        run.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(target)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 439531 && aura.caster == actor)
+            .cloned()
+    };
+    crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 439531, Some(target), 1);
+    let first = read(&run).expect("native Vines application");
+    assert_eq!(first.stacks, 1);
+    let first_expiry = first.expires_at.unwrap();
+    for _ in 0..20 {
+        run.app.update();
+    }
+    crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 439531, Some(target), 1);
+    let second = read(&run).expect("native Vines refresh");
+    assert_eq!(second.stacks, 2);
+    assert!(second.expires_at.unwrap() > first_expiry);
+    while crate::spell_cast::now(run.app.world()) <= first_expiry + 0.1 {
+        run.app.update();
+    }
+    assert_eq!(
+        read(&run).expect("second application remains live").stacks,
+        1,
+        "a Vines refresh must not extend the first stack beyond its native lifetime"
+    );
+    while crate::spell_cast::now(run.app.world()) <= second.expires_at.unwrap() + 0.1 {
+        run.app.update();
+    }
+    assert!(
+        read(&run).is_none(),
+        "both native application lifetimes have ended"
+    );
+}
+
 pub(super) fn cast_native_spell_after_regeneration(run: &mut Run, spell: u32) {
     for _ in 0..600 {
         match crate::spell_cast::creature_cast(
