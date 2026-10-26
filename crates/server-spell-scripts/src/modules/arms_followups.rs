@@ -5,6 +5,8 @@ use shared::components::ActiveSpec;
 use super::combat;
 use combat::spell_cast::script_registry::SpellScriptHook;
 
+#[path = "arms_heroic_might.rs"]
+mod heroic_might;
 #[path = "arms_warfare_binding.rs"]
 mod warfare;
 #[path = "arms_just_warming_up.rs"]
@@ -13,6 +15,8 @@ mod warming;
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::EarlyAuraRegistration(warfare::register),
     SpellScriptHook::AfterElementalLaunch(warming::after_smash),
+    SpellScriptHook::AfterElementalLaunch(heroic_might::after_heroic),
+    SpellScriptHook::BeforeNativeOnCast(heroic_might::before_smash),
 ];
 
 fn selected(world: &World, caster: Entity, passive: u32) -> bool {
