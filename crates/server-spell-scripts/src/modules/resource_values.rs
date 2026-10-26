@@ -1,8 +1,19 @@
 //! Source-qualified effective resource values, separate from actual payment.
-use super::AfterCastHook;
-use crate::auras::{ActiveAuras, AuraInstance, RemoveReason, spell_mods};
-use crate::random::Rng;
-use crate::spell_info::SpellInfo;
+use super::combat;
+use combat::auras::{ActiveAuras, AuraInstance, RemoveReason, spell_mods};
+use combat::random::Rng;
+use combat::spell_cast;
+use combat::spell_cast::script_registry::SpellScriptHook;
+use combat::spell_cast::scripts::AfterCastHook;
+use combat::spell_info::SpellInfo;
+
+pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::ResourceValueAfterCast(after_cast_hook),
+    SpellScriptHook::TriggeredResourceProducer(apply_producers),
+    SpellScriptHook::EffectiveResourceValue(effective_value),
+    SpellScriptHook::ConsumeResourceValueSources(consume_sources),
+    SpellScriptHook::OwnsPolicyProc(owns_proc),
+];
 use bevy::prelude::*;
 use shared::components::PowerType;
 
@@ -42,7 +53,7 @@ pub(super) fn after_cast_hook(parent: u32) -> Option<AfterCastHook> {
         .then_some(apply_producers as AfterCastHook)
 }
 
-pub(in crate::spell_cast) fn apply_producers(world: &mut World, caster: Entity, spell: &SpellInfo) {
+fn apply_producers(world: &mut World, caster: Entity, spell: &SpellInfo) {
     for rule in RULES
         .iter()
         .filter(|rule| rule.producer_casts.contains(&spell.id))
@@ -50,15 +61,15 @@ pub(in crate::spell_cast) fn apply_producers(world: &mut World, caster: Entity, 
         let Some((chance, payload)) = read_producer(world, caster, rule) else {
             continue;
         };
-        if crate::random::thread_rng().gen_range(0.0..100.0) < chance {
-            let depth = super::super::next_trigger_depth(world);
-            super::super::cast_triggered(world, caster, payload, Some(caster), depth);
+        if combat::random::thread_rng().gen_range(0.0..100.0) < chance {
+            let depth = spell_cast::next_trigger_depth(world);
+            spell_cast::cast_triggered(world, caster, payload, Some(caster), depth);
         }
     }
 }
 
 fn read_producer(world: &World, caster: Entity, rule: &MaximumValueRule) -> Option<(f32, u32)> {
-    let now = super::super::now(world);
+    let now = spell_cast::now(world);
     let source = world.get::<ActiveAuras>(caster)?.iter().find(|aura| {
         aura.caster == caster
             && aura.spell_id == rule.source
@@ -84,7 +95,7 @@ fn matches(world: &World, caster: Entity, spell: &SpellInfo, rule: &MaximumValue
     {
         return false;
     }
-    let now = super::super::now(world);
+    let now = spell_cast::now(world);
     world.get::<ActiveAuras>(caster).is_some_and(|auras| {
         auras.iter().any(|aura| {
             aura.spell_id == rule.aura
@@ -101,7 +112,7 @@ fn affects(aura: &AuraInstance, spell: &SpellInfo, index: u8) -> bool {
         .any(|effect| effect.index == index && spell_mods::class_mask_affects(aura, effect, spell))
 }
 
-pub(in crate::spell_cast) fn effective_value(
+fn effective_value(
     world: &World,
     caster: Entity,
     spell: &SpellInfo,
@@ -112,21 +123,21 @@ pub(in crate::spell_cast) fn effective_value(
         .iter()
         .any(|rule| rule.resource == resource && matches(world, caster, spell, rule));
     if maximum {
-        return super::super::powers::power_value(world, caster, resource)
+        return spell_cast::powers::power_value(world, caster, resource)
             .expect("effective maximum resource requires the native pool")
             .1;
     }
     paid
 }
 
-pub(in crate::spell_cast) fn consume_sources(world: &mut World, caster: Entity, spell: &SpellInfo) {
+fn consume_sources(world: &mut World, caster: Entity, spell: &SpellInfo) {
     let sources: Vec<_> = RULES
         .iter()
         .filter(|rule| matches(world, caster, spell, rule))
         .map(|rule| rule.aura)
         .collect();
     for source in sources {
-        crate::auras::remove_auras(world, caster, RemoveReason::Consumed, |aura| {
+        combat::auras::remove_auras(world, caster, RemoveReason::Consumed, |aura| {
             aura.spell_id == source && aura.caster == caster
         });
     }

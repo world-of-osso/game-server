@@ -905,10 +905,16 @@ fn snapshot_attacker(
     {
         return None;
     }
+    let swing_haste_pct = stats.map_or_else(
+        || stat_mods.map_or(0.0, |modifiers| modifiers.haste_pct),
+        |stats| stats.haste_pct,
+    );
     Some(SwingSnapshot {
         auto_attack: auto_attack.clone(),
         position: *position,
-        mods: mods.cloned(),
+        mods: mods.map(|modifiers| {
+            crate::auras::rogue::fold_swift_slasher(modifiers, auras, entity, swing_haste_pct)
+        }),
         attack_spells: [
             read_melee_override(auras, Hand::Main),
             read_melee_override(auras, Hand::Off),
@@ -2532,7 +2538,7 @@ fn record_swing_events(world: &mut World, attacker: Entity, target: Entity, outc
     };
     reward_swing_rage(world, attacker, target, rage_secs, damage);
     crate::spell_cast::log_event(world, swing_log_event(attacker, target, &outcome));
-    crate::spell_cast::scripts::apply_havoc_damage_policies(
+    crate::spell_cast::script_registry::landed_damage_policies(
         world, attacker, target, None, damage, false,
     );
     if outcome.npc_died || outcome.player_died {
