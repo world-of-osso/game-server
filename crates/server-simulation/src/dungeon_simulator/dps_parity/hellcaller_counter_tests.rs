@@ -40,7 +40,7 @@ fn native_value(run: &Run, spell: u32, index: u8) -> f32 {
     crate::spell_cast::scripts::script_effect_value(run.app.world(), run.actor, spell, index)
 }
 
-fn counters(run: &mut Run, stacks: u8) {
+fn apply_counter_state(run: &mut Run, stacks: u8) {
     // Explicit native SPELLVALUE_AURA_STACK precondition, not an invented producer.
     let mut spell = run
         .app
@@ -84,7 +84,7 @@ fn blackened_hits(run: &Run) -> usize {
 #[test]
 #[ignore = "requires private265 native player inputs"]
 fn hellcaller_actual_ua_application_and_refresh_add_owned_wither_without_refreshing_it() {
-    // SimC76f8118 actions1537–1540,5534–5546: actual UA application is a producer.
+    // SimC76f8118 actions1544–1565,5534–5546: actual UA application is a producer.
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(265, 1).unwrap();
     engage(&mut run);
@@ -108,6 +108,70 @@ fn hellcaller_actual_ua_application_and_refresh_add_owned_wither_without_refresh
 }
 
 #[test]
+#[ignore = "requires private267 native player inputs"]
+fn hellcaller_actual_destruction_hits_add_owned_wither_counters() {
+    // Native triggered impacts exercise the hit boundary, including background
+    // copies. Resource payment is separately covered by Incinerate/pool tests.
+    // SimC76f8118 actions4328–4331/4807–4810: CB/Shadowburn impact producers.
+    for spell_id in [116858, 17877] {
+        let _seed = crate::random::seed_scope(70448);
+        let mut run = prepare_literal(267, 1).unwrap();
+        engage(&mut run);
+        let target = run.targets[0];
+        if spell_id == 17877 {
+            let mut health = run
+                .app
+                .world_mut()
+                .get_mut::<shared::components::Health>(target)
+                .unwrap();
+            health.current = health.max * 0.19;
+        }
+        apply(&mut run, target, WITHER);
+        let before = owned(&run, target, WITHER).unwrap();
+        let spell = run
+            .app
+            .world()
+            .resource::<crate::spell_info::SpellStore>()
+            .get(spell_id)
+            .unwrap()
+            .clone();
+        assert!(crate::spell_cast::launch_triggered_spell(
+            run.app.world_mut(),
+            run.actor,
+            &spell,
+            Some(target),
+            1
+        ));
+        let mut landed = false;
+        for _ in 0..60 {
+            run.app.update();
+            landed = run
+                .app
+                .world()
+                .resource::<ObservedCombatEvents>()
+                .0
+                .iter()
+                .any(|event| {
+                    event.source == Some(run.actor.to_bits())
+                        && event.spell_id == Some(spell_id)
+                        && event.kind == CombatLogKind::Damage
+                        && event.amount > 0
+                });
+            if landed {
+                break;
+            }
+        }
+        assert!(landed, "actual native impact{spell_id} required");
+        let after = owned(&run, target, WITHER).unwrap();
+        assert!(
+            (before.0 + 1..=before.0 + 2).contains(&after.0),
+            "native impact{spell_id} must produce its base counter: {before:?}→{after:?}"
+        );
+        assert!(after.1 <= before.1, "counter grant must not extend Wither");
+    }
+}
+
+#[test]
 #[ignore = "requires private265 native player inputs"]
 fn hellcaller_ua_without_owned_wither_creates_no_counter_or_collapse() {
     let _seed = crate::random::seed_scope(70448);
@@ -122,7 +186,7 @@ fn hellcaller_ua_without_owned_wither_creates_no_counter_or_collapse() {
 #[test]
 #[ignore = "requires private265 native player inputs"]
 fn hellcaller_malevolence_adds_native_six_only_to_owned_wither_and_grants_its_buff() {
-    // SimC76f8118 actions5508–5531,5534–5611: native effect0 grants6;
+    // SimC76f8118 actions1295–1317,5534–5611: native effect0 grants6;
     // Malevolence does not independently roll the ordinary collapse chance.
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(265, 3).unwrap();
@@ -169,7 +233,7 @@ fn hellcaller_seed_stack_gate_starts_a_permanent_counter_and_native_blackened_ti
     let target = run.targets[0];
     let threshold = native_value(&run, SEEDS, 0) as u8;
     assert_eq!(threshold, 8, "native Seeds threshold");
-    counters(&mut run, threshold - 1);
+    apply_counter_state(&mut run, threshold - 1);
     let expiry = owned(&run, target, WITHER).unwrap().1;
     apply(&mut run, target, UA);
     let initial = owned(&run, target, WITHER).unwrap().0;
@@ -202,7 +266,7 @@ fn hellcaller_seed_stack_gate_starts_a_permanent_counter_and_native_blackened_ti
 #[test]
 #[ignore = "requires private265 native player inputs"]
 fn hellcaller_seed_health_gate_collapses_to_one_then_stops() {
-    // SimC76f8118 actions5431–5447,5579–5606: health gate, one stack
+    // SimC76f8118 actions1232–1272,5579–5606: health gate, one stack
     // consumed per real Blackened hit, expire collapse when Wither reaches1.
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(265, 1).unwrap();
