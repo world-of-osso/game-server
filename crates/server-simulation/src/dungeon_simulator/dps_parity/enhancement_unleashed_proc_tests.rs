@@ -68,7 +68,7 @@ fn enhancement_delayed_unleashed_hits_proc_real_flametongue_and_windfury_without
     // SimC76f8118 sc_shaman.cpp3039–3055/3095–3101: eligible main-hand weapon impacts
     // run imbue callbacks, including the actual1252431 delayed ground strikes.
     let _seed = crate::random::seed_scope(70448);
-    let mut run = prepare_literal(263, 3).unwrap();
+    let mut run = prepare_measurement(263, 3).unwrap();
     engage(&mut run);
     for buff in [319773, 319778] {
         assert!(
