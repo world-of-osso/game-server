@@ -148,9 +148,9 @@ def check(log):
         return False
     if cargo(log, "fmt") != 0:
         return False
-    # cargo fmt does not follow include!(), so the modules declared in the union-merged
-    # module_list.in are formatted directly.
-    included = sorted(str(p) for p in (TREE / PARITY_DIR).glob("*.rs"))
+    # cargo fmt does not follow include!() or macro-generated #[path] mods, so the modules declared
+    # in the union-merged module_list.in and server-spell-scripts' modules.rs are formatted directly.
+    included = sorted(str(p) for d in (PARITY_DIR, SCRIPT_MODULES_DIR) for p in (TREE / d).glob("*.rs"))
     if subprocess.run(["rustfmt", "--edition", "2024", *included], cwd=TREE, check=False).returncode != 0:
         return False
     if git("status", "--porcelain", "--untracked-files=no").stdout.strip():
@@ -159,6 +159,7 @@ def check(log):
 
 
 PARITY_DIR = "crates/server-simulation/src/dungeon_simulator/dps_parity"
+SCRIPT_MODULES_DIR = "crates/server-spell-scripts/src/modules"
 
 
 class MasterBroken(Exception):
