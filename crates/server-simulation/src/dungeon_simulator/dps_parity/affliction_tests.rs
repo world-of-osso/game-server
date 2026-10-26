@@ -3,6 +3,67 @@ use super::*;
 
 #[test]
 #[ignore = "requires private265 profile and native70448 world DB"]
+fn affliction_selected_malefic_grasp_projects_to_real_native_channel() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(265, 1).unwrap();
+    engage(&mut run);
+    let caster = run.actor;
+    let target = run.targets[0];
+    assert!(
+        run.app
+            .world()
+            .get::<crate::class_progression::KnownSpells>(caster)
+            .unwrap()
+            .contains(1261149)
+    );
+    // SimC76f8118 init181–183/actions2100: selected1261149 enables channel1261153.
+    let spell = crate::spell_cast::knowledge::resolve_actor_action(
+        run.app.world(),
+        caster,
+        1261149,
+    )
+    .expect(
+        "selected Malefic Grasp must resolve its native channel instead of its passive talent root",
+    );
+    assert_eq!(spell, 1261153);
+    crate::spell_cast::creature_cast(run.app.world_mut(), caster, 205180, Some(caster), true)
+        .unwrap();
+    for _ in 0..10 {
+        run.app.update();
+    }
+    crate::spell_cast::creature_cast(run.app.world_mut(), caster, spell, Some(target), false)
+        .unwrap();
+    assert_eq!(
+        run.app
+            .world()
+            .get::<shared::casting::CastState>(caster)
+            .unwrap()
+            .cast_type,
+        shared::casting::CastType::Channel
+    );
+    for _ in 0..60 {
+        run.app.update();
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(caster.to_bits())
+                && event.target == Some(target.to_bits())
+                && event.spell_id == Some(1261153)
+                && event.periodic
+                && event.kind == shared::protocol::CombatLogKind::Damage
+                && event.amount > 0),
+        "the selected talent must enable actual periodic channel damage"
+    );
+}
+
+#[test]
+#[ignore = "requires private265 profile and native70448 world DB"]
 fn affliction_agony_landed_ticks_energize_native_whole_shards() {
     use shared::components::PowerType;
     use shared::protocol::CombatLogKind;
@@ -59,6 +120,29 @@ fn affliction_agony_landed_ticks_energize_native_whole_shards() {
         shards >= 10.0 && shards <= 50.0 && shards % 10.0 == 0.0,
         "landed Agony must fund whole native shards: ticks={damage_ticks}, raw={shards}"
     );
+}
+
+#[test]
+#[ignore = "requires private265 profile and native70448 world DB"]
+fn affliction_literal_three_target_profile_keeps_foreground_history() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_measurement(265, 3).unwrap();
+    engage(&mut run);
+    for _ in 0..400 {
+        drive_player(&mut run).unwrap();
+        run.app.update();
+    }
+    assert!(
+        run.app
+            .world()
+            .get::<crate::spell_cast::SpellHistory>(run.actor)
+            .unwrap()
+            .last_successful_cast_at(27243)
+            .is_some(),
+        "literal three-target precombat must execute actual Seed"
+    );
+    let combat = report::combat(run.app.world(), &run.targets, 20.0);
+    assert!(combat["total_damage"].as_u64().unwrap() > 0);
 }
 
 #[test]

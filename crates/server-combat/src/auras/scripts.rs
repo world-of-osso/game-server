@@ -115,16 +115,6 @@ pub(super) fn check_proc(
     if crate::spell_cast::scripts::owns_policy_proc(world, aura.spell_id) {
         return false;
     }
-    // SIMC_RET_TIER_MID2_DIVINE_PURPOSE_RELATIONSHIP owns these charges;
-    // only a different-kind actual spender consumes them, not arbitrary casts.
-    if crate::spell_cast::scripts::owns_arbiter_charge(aura.spell_id) {
-        return false;
-    }
-    // SIMC_RET_EMPYREAN_LEGACY_RELATIONSHIP replaces only its own driver/buff
-    // predicates: Wrath grants it, actual Verdict consumes it.
-    if crate::spell_cast::scripts::owns_empyrean_proc(aura.spell_id) {
-        return false;
-    }
     script(world, aura.spell_id)
         .and_then(|script| script.check_proc)
         .is_none_or(|check| check(world, aura, event))
@@ -406,6 +396,7 @@ pub(super) fn register_class_scripts(
     registry: Res<crate::spell_cast::script_registry::SpellScriptRegistry>,
 ) {
     registry.register_early_auras(&mut scripts);
+    crate::consumables::register_liquid_luster(&mut scripts);
     scripts.0.insert(
         1236994,
         AuraScript {
@@ -449,7 +440,7 @@ pub(super) fn register_class_scripts(
     super::spirit_wolf::register(&mut scripts);
     super::natures_guardian::register(&mut scripts);
     super::ret_sentence::register(&mut scripts);
-    crate::spell_cast::scripts::register_fire_procs(&mut scripts);
+    registry.register_fire_auras(&mut scripts);
     scripts.0.insert(
         super::fel_devastation::FEL_DEVASTATION,
         AuraScript {
@@ -518,13 +509,7 @@ pub(super) fn register_class_scripts(
             ..Default::default()
         },
     );
-    scripts.0.insert(
-        crate::spell_cast::scripts::OMEN,
-        AuraScript {
-            check_proc: Some(crate::spell_cast::scripts::check_omen_proc),
-            ..Default::default()
-        },
-    );
+    registry.register_mid_auras(&mut scripts);
     scripts.0.insert(
         crate::spell_cast::scripts::CENARION_WARD,
         AuraScript {
@@ -716,7 +701,7 @@ pub(super) fn register_class_scripts(
     // Extend existing parent lifecycle entries rather than replacing their hooks.
     crate::spell_cast::scripts::register_xuens_battlegear(&mut scripts);
     crate::spell_cast::scripts::register_channel_policies(&mut scripts, &registry);
-    crate::spell_cast::scripts::register_elemental_policies(&mut scripts);
+    registry.register_before_late_auras(&mut scripts);
     registry.register_late_auras(&mut scripts);
 }
 

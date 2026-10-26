@@ -92,6 +92,8 @@ struct Hit {
     mitigated: Option<f32>,
 }
 
+pub(super) struct CapturedHit(Hit);
+
 #[derive(Default)]
 struct State {
     formulas: BTreeMap<(u32, u8), Formula>,
@@ -622,22 +624,29 @@ fn result_event(
     result
 }
 
-pub(super) fn finish(
+/// Detach before mutable recipient operations. Bevy EntityWorldMut::insert
+/// flushes queued commands: a same-ID child can finish during the parent hit.
+/// Its observations must not overwrite or consume the parent's pending stages.
+pub(super) fn take_hit(
     world: &World,
     ctx: &EffectCtx,
     target: Entity,
     damage: &DamageInput,
-    event: &shared::protocol::CombatLogEvent,
-) {
+) -> Option<CapturedHit> {
+    let mut captured = None;
     observe(world, ctx.caster, |capture, state| {
         if target != capture.target {
             return;
         }
-        let time = crate::spell_cast::now(world);
         let mut hit = state
             .hits
             .remove(&(ctx.spell.id, target.to_bits()))
-            .expect("native factor impact stages absent");
+            .unwrap_or_else(|| {
+                panic!(
+                    "native factor impact stages absent: spell={} depth={} target={target:?} completed={} pending={:?}",
+                    ctx.spell.id, ctx.depth, state.completed, state.hits.keys().collect::<Vec<_>>()
+                )
+            });
         hit.emission_origin = describe_emission_origin(state, ctx);
         hit.formula = damage
             .effect
@@ -648,6 +657,25 @@ pub(super) fn finish(
             &hit.formula,
             &state.modifiers.remove(&ctx.spell.id).unwrap_or_default(),
         );
+        captured = Some(CapturedHit(hit));
+    });
+    captured
+}
+
+pub(super) fn finish(
+    world: &World,
+    ctx: &EffectCtx,
+    target: Entity,
+    hit: Option<CapturedHit>,
+    event: &shared::protocol::CombatLogEvent,
+) {
+    observe(world, ctx.caster, |capture, state| {
+        if target != capture.target {
+            return;
+        }
+        let CapturedHit(hit) =
+            hit.expect("native factor hit was not detached before recipient mutation");
+        let time = crate::spell_cast::now(world);
         state
             .events
             .push(amount_event(capture, ctx, &hit, event, time));
