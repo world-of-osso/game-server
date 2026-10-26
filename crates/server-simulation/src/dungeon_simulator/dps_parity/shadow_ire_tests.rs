@@ -74,6 +74,7 @@ fn sample_flay_source(run: &mut Run) -> f64 {
     cast_when_ready(run, actual);
     finish_cast(run);
     let capture = run.app.world().resource::<FactorCapture>().export();
+    println!("actual Flay {actual} factor capture: {capture}");
     let result = capture["events"]
         .as_array()
         .unwrap()
