@@ -159,6 +159,7 @@ mod expel_harm_tests;
 mod fel_devastation_tests;
 mod ferocious_bite;
 pub use ferocious_bite::read_maximum_energy as read_ferocious_bite_maximum_energy;
+pub use resource_facts::read_prepared_spell as read_resource_prepared_spell;
 #[cfg(test)]
 mod full_trigger_dead_target_tests;
 pub mod guardian;
@@ -227,6 +228,7 @@ mod protective_growth_tests;
 mod raid_area_tests;
 pub(crate) mod recovery_rate;
 mod reflect;
+mod resource_facts;
 mod resources;
 pub mod runes;
 pub mod script_registry;
