@@ -5,40 +5,33 @@ use crate::spell_info::{SpellInfo, SpellStore};
 use bevy::prelude::*;
 const VOID_VOLLEY: u32 = 1242173;
 const VOLLEY_BOLT: u32 = 1242189;
+const BOLT_INTERVAL_MS: u32 = 50;
 
 pub(super) fn volley(world: &mut World, caster: Entity, primary: Entity, depth: u8) {
     if depth >= spell_cast::effects::MAX_TRIGGER_DEPTH {
         warn!("Void Volley trigger depth exhausted");
         return;
     }
-    let root = world
-        .resource::<SpellStore>()
-        .get(VOID_VOLLEY)
-        .expect("Volley root")
-        .clone();
-    let center = targets::position(world, primary).expect("Volley hit target position");
     let bolt = world
         .resource::<SpellStore>()
         .get(VOLLEY_BOLT)
         .expect("Volley requires1242189")
         .clone();
-    let units = targets::area_units(
-        world,
-        caster,
-        center,
-        targets::radius(&root.effects[0], 1),
-        targets::Relation::Enemy,
-        0,
-    );
-    for unit in units {
-        let count = script_effect_value(
-            world,
-            caster,
-            VOID_VOLLEY,
-            if unit == primary { 0 } else { 2 },
-        ) as usize;
+    for unit in read_recipients(world, caster, primary) {
+        let index = if unit == primary { 0 } else { 2 };
+        let count = script_effect_value(world, caster, VOID_VOLLEY, index) as usize;
         launch_bolts(world, caster, unit, &bolt, count, depth + 1);
     }
+}
+
+fn read_recipients(world: &mut World, caster: Entity, primary: Entity) -> Vec<Entity> {
+    let root = world
+        .resource::<SpellStore>()
+        .get(VOID_VOLLEY)
+        .expect("Volley root");
+    let radius = targets::radius(&root.effects[0], 1);
+    let center = targets::position(world, primary).expect("Volley hit target position");
+    targets::area_units(world, caster, center, radius, targets::Relation::Enemy, 0)
 }
 
 fn launch_bolts(
@@ -63,7 +56,7 @@ fn launch_bolts(
             &ctx,
             unit,
             bolt.id,
-            index as u32 * 50,
+            index as u32 * BOLT_INTERVAL_MS,
         );
     }
 }
