@@ -16,7 +16,7 @@ fn stacks(run: &Run, spell: u32) -> u8 {
         .map_or(0, |aura| aura.stacks)
 }
 
-fn start_cast(run: &mut Run, spell: u32) {
+pub(super) fn start_cast(run: &mut Run, spell: u32) {
     literal_rotation::execution::execute(
         run.app.world_mut(),
         run.actor,
@@ -30,7 +30,7 @@ fn cast(run: &mut Run, spell: u32) {
     preparation::finish_pending_setup(run).unwrap();
 }
 
-fn grant(run: &mut Run, spell: u32, count: u8) {
+pub(super) fn grant(run: &mut Run, spell: u32, count: u8) {
     for _ in 0..count {
         crate::auras::apply_aura(
             run.app.world_mut(),
@@ -45,7 +45,7 @@ fn grant(run: &mut Run, spell: u32, count: u8) {
     }
 }
 
-fn expected_charge_bonus(run: &Run, spell: u32) -> f32 {
+pub(super) fn expected_charge_bonus(run: &Run, spell: u32) -> f32 {
     let world = run.app.world();
     let store = world.resource::<crate::spell_info::SpellStore>();
     let index = u8::from(spell == 44425);
@@ -145,7 +145,7 @@ fn sample_charge_hit(spell: u32, charges: f32) -> (f32, f32, f32) {
     (damage, per_charge, versatility)
 }
 
-fn normalize_charge_hit_rolls(run: &Run, spell: u32, amount: i32) -> f32 {
+pub(super) fn normalize_charge_hit_rolls(run: &Run, spell: u32, amount: i32) -> f32 {
     let trace = run
         .app
         .world()
