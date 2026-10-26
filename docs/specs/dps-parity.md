@@ -819,7 +819,7 @@ Named `action.<alias>.charges`, `max_charges`, `charges_fractional` and `full_re
 
 ## Elemental Shaman fixture (262)
 
-- The follower measurement uses the exact profile action rows through the shared literal SimC evaluator, native readiness and native spell execution. The production follower kit is unchanged.
+- Both Player and follower measurements use the exact profile action rows through the shared literal SimC evaluator, native readiness and native spell execution. Player measurements must not also run AssistedCombat; the production follower kit is unchanged.
 - Precombat rows complete native casts and GCDs before engagement. Ancestral Swiftness replaces Nature's Swiftness when its talent is active (SimC76f8118 `sc_shaman.cpp`8132–8137).
 - Per-ability native output includes actual critical-hit count and damage, plus separate critical and noncritical mean damage. Zero critical hits produce a zero mean, not inferred criticals.
 - Score 262 ST against `262.reference.single.json` and 3T against `262.reference-fixed.three.json`. The original `262.reference.three.json` has the known Patchwerk add-event error and is not a three-target reference.
@@ -829,6 +829,14 @@ Only successful ordinary Lava Burst51505 grants MOTE through native16166 effect0
 The Elemental MOTE policy uses the resolved native260734 effect0 amount, not an invented spell modifier or charge. It snapshots eligible cast damage, consumes the earned stack after a successful foreground launch (also triggered Flame Shock), and retains the multiplier through missile flight, periodic damage and ground fields. Background overloads do not consume it (SimC76f8118 `sc_shaman.cpp`3249–3252,3297–3300).
 
 Elemental Blast117014 grants one native118522/173183/173184 buff after its cast; overload120588 grants it before execution. Choose uniformly among inactive buffs until all three are active, then refresh one. Native aura values and durations stay unchanged (`sc_shaman.cpp`7545–7577,7615–7620,7700–7704).
+
+Flame Shock's literal action uses learned native470411, whose costed trigger casts188389. The DoT fact retains188389; do not grant knowledge of its unlearned payload or bypass readiness.
+
+Elemental Overload callbacks are instant background actions that can execute during a foreground hardcast without replacing its cast state. Schedule the400ms callback before parent projectile travel, not400ms after impact (`sc_shaman.cpp`3316–3351). Native child damage, resource costs and aura/target checks remain authoritative; effect160 ordinary forced casts remain unchanged (SimC76f8118 `sc_shaman.cpp`4846–4847).
+
+Stormkeeper grants its native effect4 count of next-spell uses, bounded by the native stack cap. Retain the native single proc charge; do not represent the same uses again as extra charges. Each use carries one native modifier amount, not a stack-multiplied bonus. A successful foreground root spends one use; its background overload does not spend another (`sc_shaman.cpp`8759).
+
+Native445624 supplies actual221177 Ancestors and their native lifetime after selected Stormkeeper or Ancestral Swiftness. Successful foreground spells command each living owned Ancestor once with native447419/447425 children at the retained primary. Background overloads do not command them. Native owner spell power and crit are inherited; Ancestor Lava Burst is guaranteed critical and scales with inherited crit (`sc_shaman.cpp`4342–4441,6358,7856,8163–8166,8758). Natural expiry allows selected Final Calling465717; cancellation does not. Actual Ancestor447419/447425/465717 critical hits apply selected live Elemental Fury60188 effect0's critical bonus, preserving its native amount and other spells' modifier masks (`sc_shaman.cpp`11468–11469; SimC effect indexes are one-based). Removing that owner aura removes the bonus. Routine Communication, Ancient Fellowship and remaining pet effect inheritance still require qualification.
 
 ## Out of scope
 

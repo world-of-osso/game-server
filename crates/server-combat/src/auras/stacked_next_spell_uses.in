@@ -5,6 +5,8 @@
     117828,
     // SimC76f8118 sc_rogue.cpp5015/5057: Opportunity stacks are shots, not magnitude.
     195627,
+    // SimC76f8118 sc_shaman.cpp8759: Stormkeeper stacks are independent uses.
+    191634,
     263725,
     // SimC76f8118 sc_warrior.cpp1256–1261/1324–1325: Sweeping stacks are uses.
     260708,
