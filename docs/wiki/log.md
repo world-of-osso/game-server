@@ -1,3 +1,7 @@
+## 2026-10-26 — Explicit non-demon guardian SP
+
+[Guardian spell power](systems/spell-casting.md#explicit-non-demon-guardian-spell-power--2026-10-26) now reads explicit SP policies without changing native identity, demon scaling or owner RAP. Native Yogg RED8bf69a675f reaches an owned type15 Thing but no positive Spike; cross-family GREEN and landing remain pending.
+
 ## 2026-10-26 — Merged Mage feedback grants
 
 [Feedback grants](systems/spell-casting.md#merged-feedback-grants-are-not-casts--2026-10-26) distinguish native aura application from a full triggered spell. Paired native ST trace2ef3293ef0 reproduces the cast-supply loss; RED579171b891 identifies an unrelated+78haste from the old queued grant. The generic queue now applies native auras directly; three-Mage GREEN/measurements remain pending.
