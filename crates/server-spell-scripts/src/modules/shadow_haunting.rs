@@ -20,8 +20,7 @@ fn impact_hook(spell: u32) -> Option<ContextHitHook> {
 }
 
 fn extend_dots(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
-    let payload = ctx.effect.index == 0;
-    if !payload || !auras::has_aura(world, ctx.caster, HAUNTING) {
+    if !auras::has_aura(world, ctx.caster, HAUNTING) {
         return;
     }
     let milliseconds = spell_cast::scripts::script_effect_value(world, ctx.caster, HAUNTING, 1);
