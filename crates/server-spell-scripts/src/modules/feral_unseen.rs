@@ -80,39 +80,48 @@ fn roll_unseen(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
 
 // SimC76f8118 sc_druid.cpp2776–2804: pick an actual enemy in the sourced
 // native talent range, then select Slash versus Swipe from local occupancy.
-fn launch_unseen(world: &mut World, ctx: &EffectCtx<'_>, points: f32, energy: f32) {
-    let range = effect(world, ctx.caster, UNSEEN, 1).expect("native Unseen range");
-    let center = targets::position(world, ctx.caster).expect("native Bite caster position");
-    let enemies = targets::area_units(
-        world,
-        ctx.caster,
-        center,
-        range,
-        targets::Relation::Enemy,
-        0,
-    );
+fn choose_enemy(world: &mut World, caster: Entity) -> Option<Entity> {
+    let range = effect(world, caster, UNSEEN, 1).expect("native Unseen range");
+    let center = targets::position(world, caster).expect("native Bite caster position");
+    let enemies = targets::area_units(world, caster, center, range, targets::Relation::Enemy, 0);
     if enemies.is_empty() {
-        return;
+        return None;
     }
-    let target = enemies[combat::random::thread_rng().gen_range(0..enemies.len())];
-    let depth = ctx.depth + 1;
-    let Some(mut spell) = spell_cast::load_triggered_spell(world, SLASH, depth) else {
-        return;
-    };
+    Some(enemies[combat::random::thread_rng().gen_range(0..enemies.len())])
+}
+
+fn read_attack(
+    world: &mut World,
+    caster: Entity,
+    target: Entity,
+    depth: u8,
+) -> Option<combat::spell_info::SpellInfo> {
     let target_center = targets::position(world, target).expect("native selected Unseen target");
-    let swipe = spell_cast::load_triggered_spell(world, SWIPE, depth).expect("native Unseen Swipe");
+    let swipe = spell_cast::load_triggered_spell(world, SWIPE, depth)?;
     let radius = targets::radius(&swipe.effects[0], 0);
     let local = targets::area_units(
         world,
-        ctx.caster,
+        caster,
         target_center,
         radius,
         targets::Relation::Enemy,
         0,
     );
     if local.len() > SWIPE_THRESHOLD {
-        spell = swipe;
+        Some(swipe)
+    } else {
+        spell_cast::load_triggered_spell(world, SLASH, depth)
     }
+}
+
+fn launch_unseen(world: &mut World, ctx: &EffectCtx<'_>, points: f32, energy: f32) {
+    let Some(target) = choose_enemy(world, ctx.caster) else {
+        return;
+    };
+    let depth = ctx.depth + 1;
+    let Some(mut spell) = read_attack(world, ctx.caster, target, depth) else {
+        return;
+    };
     let (_, maximum) = spell_cast::powers::power_value(world, ctx.caster, PowerType::ComboPoints)
         .expect("native Unseen caster has a combo-point pool");
     // sc_druid.cpp4919–4929: CP fraction times extra-Energy fraction,
