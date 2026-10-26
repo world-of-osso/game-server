@@ -32,6 +32,16 @@ struct GuardianPolicy {
 // SimC76f8118 pets.cpp19/705/867/1510–1548: bindings and inheritance
 // belong to the actual root/creature pair, including the alternative Tyrant.
 const GUARDIAN_POLICIES: &[GuardianPolicy] = &[
+    // SimC76f8118 pets.cpp2050–2119: actual Infernal, native self-buff
+    // clocks/children, and validated SP/AP from live owner spell power.
+    GuardianPolicy {
+        summons: &[111685],
+        entry: 89,
+        spells: &[264364, 19483],
+        repeat_gcd: None,
+        owner_spell_share: Some(2.2275),
+        owner_attack_share: Some(2.2275),
+    },
     // SimC76f8118 sc_hunter.cpp2043–2047: Bear inherits live owner AP0.6.
     // Rend is explicitly launched on summon, not an autonomous guardian cast.
     GuardianPolicy {
@@ -473,6 +483,30 @@ fn load_actor_powers(world: &World, entry: u32, spells: &[u32]) -> super::powers
         pool.current = policy.maximum;
     }
     pools
+}
+
+/// Initialize existing action clocks once; sampling never runs for old actors.
+/// Source leaves supply delays, while native casts and deadlines stay authoritative.
+pub fn initialize_action_delays(
+    world: &mut World,
+    actor: Entity,
+    sample: impl FnOnce() -> Vec<(u32, f64)>,
+) {
+    let now = super::now(world);
+    let mut state = world
+        .get_mut::<GuardianActor>(actor)
+        .expect("source-bound action delays require an initialized native guardian");
+    let initialized = !state.spell_ready_at.is_empty() || !state.once_used.is_empty();
+    if initialized {
+        return;
+    }
+    for (spell, delay) in sample() {
+        assert!(
+            state.spells.contains(&spell),
+            "initial clock requires a bound native action"
+        );
+        state.spell_ready_at.insert(spell, now + delay);
+    }
 }
 
 pub(super) fn update(world: &mut World) {
