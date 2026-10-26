@@ -41,6 +41,7 @@ register_modules! {
     affliction_agony: (2650, "modules/affliction_agony.rs"),
     affliction_grasp: (2654, "modules/affliction_grasp.rs"),
     affliction_instability: (2651, "modules/affliction_instability.rs"),
+    affliction_nathreza: (2655, "modules/affliction_nathreza.rs"),
     affliction_nightfall: (2652, "modules/affliction_nightfall.rs"),
     affliction_ua: (2653, "modules/affliction_ua.rs"),
     after_cast_auras: (100, "modules/after_cast_auras.rs"),
