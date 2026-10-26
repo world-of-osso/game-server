@@ -10,9 +10,9 @@ const BARBED_FOCUS: u32 = 246152;
 const PACK_TACTICS: u32 = 321014;
 const PACK_FOCUS: u32 = 1282660;
 
-pub const HOOKS: &[SpellScriptHook] = &[
-    SpellScriptHook::NativeAfterCast(after_cast as AfterCastLookup),
-];
+pub const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::NativeAfterCast(
+    after_cast as AfterCastLookup,
+)];
 
 fn after_cast(spell: u32) -> Option<combat::spell_cast::scripts::AfterCastHook> {
     (spell == BARBED_SHOT).then_some(grant_barbed_focus)

@@ -12,10 +12,6 @@ mod enhancement_doom;
 mod enhancement_elemental_weapons;
 #[path = "enhancement/enhancement_flurry.rs"]
 mod enhancement_flurry;
-#[path = "enhancement/enhancement_stormblast.rs"]
-mod enhancement_stormblast;
-#[path = "enhancement/enhancement_stormwell.rs"]
-mod enhancement_stormwell;
 #[path = "enhancement/enhancement_imbues.rs"]
 mod enhancement_imbues;
 #[path = "enhancement/enhancement_modes.rs"]
@@ -26,6 +22,10 @@ mod enhancement_nova;
 mod enhancement_rod;
 #[path = "enhancement/enhancement_spending.rs"]
 mod enhancement_spending;
+#[path = "enhancement/enhancement_stormblast.rs"]
+mod enhancement_stormblast;
+#[path = "enhancement/enhancement_stormwell.rs"]
+mod enhancement_stormwell;
 #[path = "enhancement/enhancement_strikes.rs"]
 mod enhancement_strikes;
 #[path = "enhancement/enhancement_tempest_buffs.rs"]

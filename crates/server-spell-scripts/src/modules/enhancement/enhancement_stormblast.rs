@@ -117,12 +117,7 @@ pub(super) fn snapshot(world: &mut World, caster: Entity, spell: u32, depth: u8)
     }
 }
 
-pub(super) fn after_weapon_damage(
-    world: &mut World,
-    ctx: &EffectCtx,
-    target: Entity,
-    damage: f32,
-) {
+pub(super) fn after_weapon_damage(world: &mut World, ctx: &EffectCtx, target: Entity, damage: f32) {
     if !matches!(ctx.spell.id, 32175 | 32176 | 115357 | 115360)
         || !is_enhancement(world, ctx.caster)
     {
