@@ -104,7 +104,7 @@ fn havoc_tactical_retreat_native_damage_execution_earns_periodic_fury() {
         .world()
         .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
         .0;
-    assert!(events.iter().any(|event| event.kind == CombatLogKind::CastSuccess && event.spell_id == Some(198813)), "actual Retreat damage child must execute first");
+    assert!(events.iter().any(|event| event.kind == CombatLogKind::CastSuccess && event.spell_id == Some(198793)), "ordinary native Retreat must execute first");
     assert!(
         events
             .iter()
