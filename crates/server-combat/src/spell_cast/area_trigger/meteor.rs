@@ -74,10 +74,10 @@ pub(super) fn burn_binding(world: &World) -> Result<(f32, Relation, u32), String
 
 pub(super) fn expire_delay(world: &mut World, trigger: &SpellAreaTrigger, position: Vec3) {
     if trigger.spell_id == DELAY_FIELD {
-        // TC OnRemove uses TRIGGERED_NONE. In particular, an admitted hardcast
-        // rejects this new spell; SimC's unconditional delayed impact differs.
+        // SimC76f8118 sc_mage.cpp4721/4741–4744: the scheduled impact is
+        // unconditional travel, not a new foreground cast competing with Pyroblast.
         if let Err(reason) =
-            cast_at_destination(world, trigger.caster, METEOR_MISSILE, position, false)
+            cast_at_destination(world, trigger.caster, METEOR_MISSILE, position, true)
         {
             debug!(?reason, "Meteor expiry missile admission failed");
         }
