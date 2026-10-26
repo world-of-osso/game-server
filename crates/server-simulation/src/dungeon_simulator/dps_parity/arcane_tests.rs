@@ -94,6 +94,40 @@ fn sample_charge_hit(spell: u32, charges: f32) -> (f32, f32) {
         "real power change must also exercise native36032"
     );
     let per_charge = expected_charge_bonus(&run, spell);
+    let before_stats = format!(
+        "{:?}",
+        run.app
+            .world()
+            .get::<crate::stats::CharacterStats>(run.actor)
+    );
+    let before_auras = run
+        .app
+        .world()
+        .get::<ActiveAuras>(run.actor)
+        .unwrap()
+        .iter()
+        .filter(|aura| {
+            [36032, 190740, 384612].contains(&aura.spell_id)
+                || aura.effects.iter().any(|effect| effect.aura_type == 189)
+        })
+        .map(|aura| {
+            (
+                aura.spell_id,
+                aura.stacks,
+                aura.effects
+                    .iter()
+                    .map(|effect| {
+                        (
+                            effect.index,
+                            effect.aura_type,
+                            effect.amount,
+                            effect.misc_values,
+                        )
+                    })
+                    .collect::<Vec<_>>(),
+            )
+        })
+        .collect::<Vec<_>>();
     run.app.insert_resource(
         crate::spell_cast::effects::factor_capture::FactorCapture::new(
             run.actor,
@@ -129,6 +163,16 @@ fn sample_charge_hit(spell: u32, charges: f32) -> (f32, f32) {
         "one actual native{spell} impact at{charges} charges"
     );
     let damage = normalize_charge_hit_rolls(&run, spell, hits[0].amount);
+    eprintln!(
+        "CHARGE_STATE spell={spell} charges={charges} normalized={damage} bonus={per_charge} BEFORE_STATS={before_stats} BEFORE_AURAS={before_auras:?} AFTER_STATS={:?} TRACE={}",
+        run.app
+            .world()
+            .get::<crate::stats::CharacterStats>(run.actor),
+        run.app
+            .world()
+            .resource::<crate::spell_cast::effects::factor_capture::FactorCapture>()
+            .export()
+    );
     (damage, per_charge)
 }
 
