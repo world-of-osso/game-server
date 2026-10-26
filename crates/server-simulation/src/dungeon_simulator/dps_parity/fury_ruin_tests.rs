@@ -58,12 +58,12 @@ fn fury_rampage_requires_selected_rampaging_ruin_even_with_whirlwind() {
                     && event.amount > 0
             })
             .collect();
-        assert!(
-            damage
-                .iter()
-                .any(|event| matches!(event.spell_id, Some(184707 | 184709 | 201364 | 201363))),
-            "the real Rampage weapon sequence must land"
-        );
+        for weapon_hit in [184707, 184709, 201364, 201363] {
+            assert!(
+                damage.iter().any(|event| event.spell_id == Some(weapon_hit)),
+                "the real Rampage sequence must retain native weapon hit{weapon_hit}"
+            );
+        }
         assert!(
             damage.iter().all(|event| event.spell_id != Some(1299944)),
             "an unselected Rampaging Ruin cannot follow real Rampage: whirlwind={whirlwind}, damage={damage:?}"
