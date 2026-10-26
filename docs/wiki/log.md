@@ -2,6 +2,13 @@
 
 [Shared counters](systems/warlock-periodic-counters.md#counter-lifecycle) now have a downstream producer/collapse module, additive actual-UA application binding, native periodic driver and source RNG models. Native UA/CB/collapse REDs are recorded; lifecycle GREEN and numerical parity remain pending. UA expiry callbacks remain independently owned.
 
+## 2026-10-25 — Arcane literal player fixture
+
+[Arcane62](systems/simc-apl.md#arcane-fixture-62) executes supplied profile rows through shared literal control with native class admission and no concurrent AssistedCombat. The300s ST controller regression passes; numerical parity remains open.
+## 2026-10-26 — Fire native Arcane Phoenix
+
+[Fire Phoenix](systems/simc-apl.md#fire-fixture-adapter) uses authentic summon reachability, native action values, Codex ordering and Ashes stack production. Summon/action RED is observed; GREEN and numerical parity remain train-gated.
+
 ## 2026-10-25 — Shared Hellcaller Wither counters
 
 [Wither counters](systems/warlock-periodic-counters.md) retain actual native stacks without multiplying periodic damage or adding a stack on ordinary refresh. Native real-cast/tick2RED→2GREEN covers both265 and267, with Affliction and Destruction controls. Collapse producers and numerical parity remain separate.
@@ -15,7 +22,7 @@
 ## 2026-10-25 — Frost Mage native hit relationships
 
 [Frost Mage parity](investigations/frost-mage-dps-parity.md): owned Freezing and native Shatter, primary/secondary exclusion, Controlled Instincts copied damage, Infused Splinters and root/payload report-ID traps. Native proofs and pending proc/flight boundaries are recorded separately.
-[Feral fixture](systems/simc-apl.md#feral-literal-fixture--2026-10-25): native Lunar/Growth, literal setup and periodic snapshot/CP RED→GREEN are landed. First300s ST187377.13=97.76%;3T refuses missing Clearcasting reaction settings. Reaction fixc2a996a0ca and Vines independent-lifetime RED2a06c0fec9 await the train. Total parity remains open; shared consumables stay separate.
+[Feral fixture](systems/simc-apl.md#feral-literal-fixture--2026-10-25): native Lunar/Growth, literal setup, periodic facts, reaction acquisition, independent Vines lifetimes and Bite/expiry Bursting Growth are RED→GREEN and landed. Corrected latestST147148.95=76.77%,3T184652.97=74.53%; early97.76% ST included inflated Vines. Unseen/context and Rogue spender controls await trainf087d8b30c; Rampancy/Twin Sprouts/Convoke remain open. Shared consumables stay separate.
 
 ## 2026-10-25 — Secondary residual sources
 

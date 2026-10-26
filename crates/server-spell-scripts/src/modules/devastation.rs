@@ -4,7 +4,9 @@ use shared::components::ActiveSpec;
 
 use super::combat;
 use combat::spell_cast::effects::EffectCtx;
-use combat::spell_cast::script_registry::{Policy, Relationship, SpellScriptHook};
+use combat::spell_cast::script_registry::{
+    EnemyContextHitHook, Policy, Relationship, SpellScriptHook,
+};
 use combat::spell_cast::scripts::{AfterCastHook, reduce_cooldown, script_effect_value};
 use combat::spell_info::SpellInfo;
 
@@ -13,7 +15,44 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::PeriodicPrimaryDamage(causality_tick),
     SpellScriptHook::PeriodicPrimaryDamage(scintillation_tick),
     SpellScriptHook::AfterResourceValues(deep_breath_hook),
+    SpellScriptHook::EnemyContextHit(surge_hit_hook),
 ];
+
+fn surge_hit_hook(spell: u32) -> Option<EnemyContextHitHook> {
+    (spell == 359077).then_some(shattering_stars)
+}
+
+fn shattering_stars(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
+    const SHATTERING_STARS: u32 = 1265802;
+    const STAR_SALVO: u32 = 1265826;
+    let devastation = world
+        .get::<ActiveSpec>(ctx.caster)
+        .is_some_and(|spec| spec.0 == 1467);
+    if !devastation || !combat::auras::has_aura(world, ctx.caster, SHATTERING_STARS) {
+        return;
+    }
+    let primary = ctx.spell.cast_primary_target == Some(target);
+    if !primary && !combat::auras::has_aura(world, ctx.caster, STAR_SALVO) {
+        return;
+    }
+    let Some(rank) = ctx.spell.cast_empower_level else {
+        return;
+    };
+    // SIMC_DEVASTATION_SHATTERING_STARS: sc_evoker.cpp5550–5573. Native
+    // effect0 scales completed rank; Scintillation's actual child effectiveness carries on.
+    let rank_percent = script_effect_value(world, ctx.caster, SHATTERING_STARS, 0);
+    let effectiveness = (1.0 + f32::from(rank - 1) * rank_percent / 100.0)
+        * ctx.spell.cast_damage_multiplier.unwrap_or(1.0);
+    let depth = ctx.depth + 1;
+    let Some(mut child) = combat::spell_cast::load_triggered_spell(world, 1265804, depth) else {
+        return;
+    };
+    child.cast_damage_multiplier = Some(effectiveness);
+    child.cast_damage_role = combat::spell_info::CastDamageRole::Secondary;
+    if !combat::spell_cast::launch_triggered_spell(world, ctx.caster, &child, Some(target), depth) {
+        warn!(caster = ?ctx.caster, ?target, "Native Shattering Star child refused");
+    }
+}
 
 fn deep_breath_hook(spell: u32) -> Option<AfterCastHook> {
     matches!(spell, 357210 | 433874).then_some(strafing_run)

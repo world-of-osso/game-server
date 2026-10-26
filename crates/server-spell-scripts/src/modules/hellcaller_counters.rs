@@ -140,15 +140,17 @@ fn after_hit(
 }
 
 fn after_cast(spell: u32) -> Option<AfterCastHook> {
-    (spell == MALEVOLENCE).then_some(cast_malevolence)
+    // Native TraitDefinition122451 projects talent430014 to visible442726.
+    (spell == MALEVOLENCE_BUFF).then_some(cast_malevolence)
 }
 
 fn find_owned_wither_targets(world: &mut World, caster: Entity) -> Vec<Entity> {
     let now = combat::auras::aura_now(world);
-    world
-        .query::<(Entity, &ActiveAuras, &Health)>()
+    let mut query = world.query::<(Entity, &ActiveAuras, &Health)>();
+    let alive = query
         .iter(world)
-        .filter(|(_, _, health)| health.current > 0.0)
+        .filter(|(_, _, health)| health.current > 0.0);
+    alive
         .filter(|(_, auras, _)| {
             auras.iter().any(|aura| {
                 aura.spell_id == WITHER
@@ -164,8 +166,8 @@ fn cast_malevolence(world: &mut World, caster: Entity, _spell: &SpellInfo) {
     if !is_hellcaller(world, caster) {
         return;
     }
-    // SimC76f8118 actions1309–1316: buff before the owned-target producer pass.
-    apply_native_aura(world, caster, caster, MALEVOLENCE_BUFF);
+    // SimC76f8118 actions1309–1316: the actual native442726 cast has
+    // already applied its buff before this post-launch producer pass.
     for target in find_owned_wither_targets(world, caster) {
         grant_stacks(world, caster, target, true);
         cast_native_damage(world, caster, target, MALEVOLENCE_DAMAGE);

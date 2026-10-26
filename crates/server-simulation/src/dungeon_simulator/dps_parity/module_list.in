@@ -2,13 +2,19 @@
 // .gitattributes merges this file with merge=union so concurrent spec branches that
 // each add a module line do not conflict; a duplicate line fails to compile (E0428).
 mod active_enemy_tests;
+#[cfg(test)] mod arcane_tests;
 mod affliction_grasp_tests;
+mod affliction_nathreza_tests;
 mod affliction_tests;
 mod affliction_ua_tests;
+mod arms_chain_boundary_tests;
+mod arms_cooldown_tests;
 mod arms_massacre_sudden_death_tests;
+mod arms_reap_cleave_tests;
 mod arms_reap_tests;
 mod arms_sweeping_tests;
 mod arms_tests;
+mod assassination_doomblade_tests;
 mod assassination_energy_tests;
 mod assassination_focus_tests;
 mod assassination_hero_tests;
@@ -66,6 +72,7 @@ mod feral_lunar_tests;
 mod feral_native_tests;
 mod feral_snapshot_tests;
 mod feral_tests;
+mod feral_unseen_tests;
 mod fire_gap_tests;
 mod fire_literal_tests;
 mod fire_nova_native_tests;
@@ -76,7 +83,9 @@ mod frost_mage_modifiers_tests;
 mod frost_mage_orb_proc_tests;
 mod frost_mage_proc_tests;
 mod fixture_return_tests;
+mod frost_mage_rapid_refreezing_tests;
 mod frost_mage_shatter_followups_tests;
+mod frost_mage_splinterstorm_tests;
 mod frost_mage_supply_tests;
 mod frost_mage_tests;
 mod gear_profile_tests;
@@ -98,6 +107,9 @@ mod hunter_fixture;
 #[cfg(test)]
 mod hunter_focus_tests;
 mod hunter_followup_tests;
+mod hunter_howl_cycle_tests;
+mod hunter_howl_recovery_tests;
+mod hunter_howl_tests;
 mod hunter_mark_mask_tests;
 mod hunter_salvo_tests;
 #[cfg(test)]
@@ -163,6 +175,7 @@ mod rogue_swift_slasher_tests;
 mod shadow_apparition_tests;
 mod shadow_link_tests;
 mod shadow_mastery_tests;
+mod shadow_screams_tests;
 mod shadow_slam_tests;
 mod shadow_tests;
 mod shadow_volley_tests;

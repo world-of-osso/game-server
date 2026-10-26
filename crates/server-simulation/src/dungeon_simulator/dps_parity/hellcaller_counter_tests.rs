@@ -207,10 +207,16 @@ fn hellcaller_malevolence_adds_native_six_only_to_owned_wither_and_grants_its_bu
     }
     let expected = 1 + native_value(&run, 430014, 0) as u8;
     assert_eq!(expected, 7, "native70448 Malevolence fixture");
+    // The real driver resolves native TraitDefinition122451's visible action.
+    // execute() takes an already resolved ID;430014 is only the talent endpoint.
+    let actual = literal_rotation::execution::resolve_action(run.app.world(), run.actor, 430014)
+        .unwrap()
+        .expect("selected native Malevolence action");
+    assert_eq!(actual, 442726);
     literal_rotation::execution::execute(
         run.app.world_mut(),
         run.actor,
-        literal_rotation::execution::Execution::Spell(430014, run.actor, Some(targets[0])),
+        literal_rotation::execution::Execution::Spell(actual, run.actor, Some(targets[0])),
     )
     .unwrap();
     preparation::finish_pending_setup(&mut run).unwrap();
