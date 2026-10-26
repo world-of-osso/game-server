@@ -125,6 +125,9 @@ Selected native155580 applies its owned155627 override aura, so ordinary Moonfir
 
 ### Outlaw literal fixture
 
+- Landed native Sinister Strike193315 rolls selected Opportunity279876 once per hit. Read native chance and the RtB extra-chance contribution; success earns native195627 stacks and dispatches197834 to the same enemy after300ms. Extra strikes cannot recursively roll Opportunity (`sc_rogue.cpp1286–1292,5942–5991,8255–8280`).
+- Blade Flurry13877 activation dispatches one native429951 area attack, including the primary enemy. Selected Deft Maneuvers grants its native combo-point amount once per actual activation hit. This is independent of Blade Flurry22482 secondary copies (`sc_rogue.cpp3907–3922,3993–3999`).
+
 - Spec260 preserves the requested player identity and captures literal control before setup. Execute the profile's complete action rows with shared `Program`/`Driver`/`Prepared`/`Equipment`, not AssistedCombat. The pinned profile requests Instant Poison without a nonlethal coating. Read combo points, Energy, native readiness and earned Roll the Bones states from the actor; never substitute reference damage or synthetic buffs.
 - Shared Rogue operands expose the native combo-point spend capacity and Energy deficit/time-to-max excluding temporary capacity, while retaining permanent talent capacity.
 - Native Rogue-family spells with a ComboPoints cost scale all direct damage effects by frozen effective points. Between the Eyes must not be omitted by an action-ID list; Envenom and Dispatch retain their existing point scaling. Feral Bite keeps its separate maximum-point-normalized rule.
