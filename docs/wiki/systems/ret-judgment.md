@@ -12,7 +12,7 @@ Preserve the pinned timer semantics: `buff.cpp2246–2289` decrements the count 
 
 ## Qualification
 
-Native RED6a9c30b6f8 observed zero target uses after an ordinary Judgment. Probee4384f8211 passed two native Judgment applications, the flat bonus and first consumption, then rejected an extra timer-cancellation expectation that contradicted the pin. The corrected test retains two real Judgments and two naturally funded Verdicts; its GREEN is pending. Full Ret gates and three-seed numerical acceptance remain open.
+Native RED6a9c30b6f8→GREENbb564822f6 proves two real Judgments and two naturally funded Verdicts, with one flat native bonus and one-use consumption. Landed261f87e51 passed113 Ret cases. The full-fight factor trace confirms real target amplification; actor-only buff uptime does not include target197277. Numerical parity also depends on spender/tier supply.
 
 ## Sources
 
@@ -23,5 +23,6 @@ Native RED6a9c30b6f8 observed zero target uses after an ordinary Judgment. Probe
 
 ## See Also
 
+- [[ret-divine-purpose]] — spender and tier supply are separate from target amplification.
 - [[spell-script-crate]] — downstream relationship registration.
 - [[auras]] — native application and stack lifetime.

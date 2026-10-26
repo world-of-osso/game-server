@@ -11,4 +11,6 @@
     1265871,
     // SimC76f8118 warlock actions199/2152/2182/877–878: Nightfall stacks are uses.
     264571,
+    // SimC76f8118 sc_hunter.cpp1407–1408: Tip stacks count uses, not magnitude.
+    260286,
 ]
