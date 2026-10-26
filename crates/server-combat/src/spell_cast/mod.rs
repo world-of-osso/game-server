@@ -3497,6 +3497,16 @@ fn enemy_damage_hit_units(world: &World, ctx: &EffectCtx) -> Vec<Entity> {
 #[derive(Resource, Debug, Default)]
 pub(crate) struct ResolvingHits(Vec<HitFrame>);
 
+/// The innermost resolving spell owned by this caster, for native impact scripts.
+pub fn resolving_spell_id(world: &World, caster: Entity) -> Option<u32> {
+    world
+        .resource::<ResolvingHits>()
+        .0
+        .last()
+        .filter(|frame| frame.caster == caster)
+        .map(|frame| frame.spell_id)
+}
+
 #[derive(Debug)]
 struct HitFrame {
     caster: Entity,

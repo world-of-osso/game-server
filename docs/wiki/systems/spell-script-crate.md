@@ -72,6 +72,10 @@ Master of the Elements damage rules, consumption and Elemental Blast's missing-b
 
 Clearcasting/Omen, Soul of the Forest and Swiftmend live downstream together. Omen's proc filter retains its native registration slot. Swiftmend consumes the original ordered owned HoT before granting the next-heal buff; Regrowth/Rejuvenation consume that buff only after the heal. Direct healing and periodic aura snapshots retain separate stages so the persistent bonus survives later ticks without rereading a consumed aura.
 
+## Guardian impacts and stacking summons
+
+Guardian impact target caps/child edges and successful-cast counter/summon tables live downstream. Guardian callbacks query the original innermost resolving spell ID rather than holding or copying combat's frame state. Native after-cast dispatch still selects one handler; summon counters, refunds, random choices and duplicate redirects retain their original traversal and RNG calls.
+
 ## Tests
 
 The server's public native harness and simulation's harness alias install the plugin before the harness runs Startup. Simulation installs it on every new app, including apps that reuse cached aura catalogs. Combat's own unit-test build compiles the exact downstream module sources against its local test-crate types; it does not add a production dependency or duplicate policy data. Ordinary simulation builds do not compile those test-only inclusions.
