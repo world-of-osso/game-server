@@ -79,7 +79,10 @@ fn check_awakening_storms(_world: &World, _aura: &AuraInstance, event: &AuraEven
 pub(super) fn grant_elemental_assault(world: &mut World, caster: Entity, _spell: &SpellInfo) {
     // SimC76f8118 sc_shaman.cpp5225/5605–5608/12023–12039: normal roots, including misses.
     const ELEMENTAL_ASSAULT: u32 = 210853;
-    if !enhancement(world, caster) || !learned(world, caster, ELEMENTAL_ASSAULT) {
+    if !enhancement(world, caster)
+        || !learned(world, caster, ELEMENTAL_ASSAULT)
+        || super::enhancement_flurry::is_executing(world, caster)
+    {
         return;
     }
     let chance = super::script_effect_value(world, caster, ELEMENTAL_ASSAULT, 2);
@@ -139,7 +142,7 @@ pub(super) fn on_strike(world: &mut World, ctx: &EffectCtx, target: Entity) {
         }
         _ => false,
     };
-    if invoke {
+    if invoke && !super::enhancement_flurry::is_executing(world, ctx.caster) {
         invoke_thorim(world, ctx.caster, target, ctx.depth);
     }
     super::enhancement_spending::consume_for_strike(world, ctx);
@@ -167,6 +170,7 @@ pub(super) fn cast_ride_the_lightning(
         .get(RIDE_DAMAGE)
         .expect("native Ride the Lightning payload")
         .clone();
+    payload.cast_damage_multiplier = Some(super::enhancement_flurry::multiplier(world, caster));
     // SimC6587–6597: this background variant never benefits from or spends MW.
     payload.cast_charge_mods = Some(
         auras::spell_mods::snapshot_charged_modifiers(world, caster, &payload)
@@ -219,7 +223,9 @@ fn cast_crash_payload(world: &mut World, caster: Entity, target: Entity, depth: 
         return;
     }
     // SimC4545/4553–4558: split total damage among native recipients, scaled by stacks.
-    payload.cast_damage_multiplier = Some(f32::from(stacks) / count as f32);
+    payload.cast_damage_multiplier = Some(
+        f32::from(stacks) / count as f32 * super::enhancement_flurry::multiplier(world, caster),
+    );
     spell_cast::launch_triggered_spell(world, caster, &payload, Some(target), depth + 1);
 }
 

@@ -170,6 +170,16 @@ Selected native155580 applies its owned155627 override aura, so ordinary Moonfir
 
 ### Fire literal fixture
 
+- Fiery Rush's native permanent payload ends when its owner's Combustion ends (`sc_mage.cpp1453–1457`); its recovery-rate benefit must not persist between Combustion windows.
+
+- An owned Controlled Destruction target stack multiplies only new Ignite contributions with its native per-stack amount (`sc_mage.cpp1945–1946`). Never rescale the unpaid existing bank or read another caster's target stacks.
+
+- Selected Deep Impact amplifies only the closest live hostile recipient to the Meteor destination, with the native talent amount (`sc_mage.cpp4664–4668`); secondary recipients retain their unmodified native coefficient.
+
+- Each admitted Meteor or earned Meteorite schedules one native impact action selecting its area once, not one complete area impact per missile recipient (`sc_mage.cpp4721,4741–4744,4802–4808`). The simulation installs the production area-field catalog, so native Meteor Burn entry/expiry and periodic damage use actual authored data.
+
+- Native Inflame multiplies actual Hot Streak Ignite contributions by its selected talent amount (`sc_mage.cpp2397–2399`). Native Pyrocosm Fireball hits roll effect2 for one real Meteorite (`3845–3846`); each Meteorite execution reduces active Fire Blast recharge by native effect4 milliseconds once, regardless of target count (`4783–4792`).
+
 - Selected Overflowing Energy gains a native stack after noncritical Fireball/Frostfire Bolt and clears on their critical hits (`sc_mage.cpp1897–1898,3819`). Selected Fevered Incantation gains after direct Mage critical hits and clears on direct noncritical hits (`1900–1901`); apply these outcomes after the current hit batch (`5585–5605,7272–7293`). Fireball and Hot Streak-spell hits produce their caster-owned native Controlled Destruction target stack with native talent effect1×0.1 (`2457,3843,5648–5650`).
 
 - Ordinary noncritical Hot Streak producers preserve Heating Up during its first200ms (`sc_mage.cpp2196–2210`). Qualify this with an ordinary Fireball already in flight when ordinary Fire Blast earns Heating Up; triggered depth1 damage is not a Hot Streak producer.
@@ -399,6 +409,9 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 ### Measurement
 
+- [ ] Native measurements execute an independent300s sample for every comma-separated `DPS_PARITY_SEEDS` value, default `70448,1,2`. `report.seed` lists the actual seeds, `seed_dps` retains each native DPS, and `combat.dps` is their arithmetic mean. Invalid seed lists or a failed sample fail the measurement; no sample is silently omitted.
+- [ ] `combat.actions` averages actual per-spell damage, hits and cast counts over all samples, including zero contribution when an action is absent. Shares must preserve mean per-spell DPS for unchanged `dps_parity_gaps.py` consumers. Full reports remain in `<spec>.native.<count>.seed-<seed>.json`; `detail_seed` identifies first-seed buff, entity and other unaveraged details.
+
 - Origin-centered parity arenas provide explicit open collision/LOS services for native destination selection. They have no dungeon walls or baked-eye requirement, matching pinned `action.cpp1738–1752` target selection. This fixture mode must not change production map LOS or bypass native summon/spell metadata.
 
 - Venomous Wounds returns native Energy after a successful owned Garrote/Rupture tick on an owned poisoned target. Its native refund is divided by the same bleed's active poisoned-target count raised to the native diminishing exponent. Keep fractional gains until a whole Energy is earned. Resolve before the producing aura expires; do not count other Rogues' dots or roll the deferred proc again.
@@ -502,7 +515,11 @@ Selected Enhancement Conductive Energy455123 uses the completed native hit frame
 
 Selected1252373 makes a landed native Crash Lightning root schedule native1252431 Unleashed weapon strikes at one-second intervals. Native1252373 effect1 supplies the pulse count. Each pulse reevaluates the native Crash target list and uses the pinned90% target-occupancy roll, not a damage coefficient adjustment. Each execution snapshots and consumes its own native1299991 Short Circuit stack value; overlapping executions retain independent pulse state. Sources: pinned SimC `sc_shaman.cpp1490,4519–4532,6110–6135`.
 
-Actual466772 Doom Winds emits native469270 area damage on application and its native periodic effect2 ticks. It requires the caster's real living selected target; a missing/dead selected identity suppresses the pulse rather than selecting a substitute. Native destination/area geometry and damage metadata remain authoritative.
+Actual466772 Doom Winds emits native469270 area damage on application and its native periodic effect2 ticks. It requires the caster's real living selected target; a missing/dead selected identity suppresses the pulse rather than selecting a substitute. Native destination/area geometry and damage metadata remain authoritative. Selected114051 also draws an independent three-success600-card deck per actual MW consumed outside its active aura, with greater-than10-card success spacing within and across refills. Spending while Ascendance is active neither draws nor resets the deck. A success triggers background384352, including its native466772/Static producer, without activating Ascendance or starting the ordinary Doom button cooldown. Sources: pinned SimC `sc_shaman.cpp11809–11827,13099–13110`.
+
+Actual Strike weapon children32175/32176/115357/115360 roll native201845 Stormsurge with its native chance/mastery modifiers. A proc grants201846, restores all actual Strike charges, and grants470466 when319930 Stormblast is selected. Native319930's generated every-cast grant is suppressed. An ordinary Strike snapshots previously earned470466 before consuming one Stormsurge/Stormblast stack; both real weapon children emit390287 from their resolved damage times native319930 effect0. The copy cannot crit or reapply broad caster modifiers, but retains the pinned explicit live77223 mastery and384355 Elemental Weapons multipliers plus native target modifiers. Sources: pinned SimC `sc_shaman.cpp4449–4469,4702–4711,5597–5600,12125–12147,13184–13187,13212–13220`.
+
+Selected344357 Stormflurry rolls its native effect0 chance after each actual Strike execution, including its own background repeats. A success schedules the same native Strike root after a Gaussian200±25ms delay, retaining its selected target and prior Stormblast snapshot. The repeat does not press another foreground button or spend ordinary charges/GCD/resources. Native effect1 scales its weapon children, Crash payload and Ride chain once; Stormblast copies the already-scaled weapon result. Repeats retain real weapon procs but do not grant normal-root Elemental Assault or invoke Thorim. Sources: pinned SimC `sc_shaman.cpp4545–4561,4682–4689,5540–5545,5597–5608,5647,5685–5690,6610–6613,12041–12073`.
 
 Selected Ride the Lightning289874 emits native211094 once per actual Strike/Lava Lash execution, using its native chain targets. This background variant neither benefits from nor spends MW. Real Tempest casts spend one454015 stack, preserving the other earned proc; Thorim spends its current Tempest proc before its MW consumption can earn a new one.
 
