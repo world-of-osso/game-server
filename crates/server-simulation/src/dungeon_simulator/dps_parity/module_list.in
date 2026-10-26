@@ -90,6 +90,7 @@ mod frost_mage_shatter_followups_tests;
 mod frost_mage_splinterstorm_tests;
 mod frost_mage_supply_tests;
 mod frost_mage_tests;
+mod frost_shatter_factor_tests;
 mod gear_profile_tests;
 mod haste_tests;
 mod havoc_channels_tests;
