@@ -31,7 +31,9 @@ impl ExceptionalDeck {
             self.0[0] = true;
             self.0.shuffle(&mut random::thread_rng());
         }
-        self.0.pop().expect("refilled native Convoke exceptional deck")
+        self.0
+            .pop()
+            .expect("refilled native Convoke exceptional deck")
     }
 }
 
@@ -42,7 +44,10 @@ pub(super) fn roll_cards(ticks: usize, guidance: bool, exceptional: bool) -> Vec
     if exceptional {
         cards.push(Card::Exceptional);
     }
-    assert!(ticks > cards.len(), "native Convoke clock must fit its Cat deck");
+    assert!(
+        ticks > cards.len(),
+        "native Convoke clock must fit its Cat deck"
+    );
     let bites = roll_bite_count(guidance, ticks - cards.len());
     cards.extend(std::iter::repeat_n(Card::Main, bites));
     cards.resize(ticks, Card::Spec);
@@ -50,7 +55,11 @@ pub(super) fn roll_cards(ticks: usize, guidance: bool, exceptional: bool) -> Vec
 }
 
 fn roll_bite_count(guidance: bool, remaining: usize) -> usize {
-    let (mean, deviation) = if guidance { (3.0, 0.8) } else { (4.2, 0.9360890055) };
+    let (mean, deviation) = if guidance {
+        (3.0, 0.8)
+    } else {
+        (4.2, 0.9360890055)
+    };
     // gauss_ab is a bounded normal, not a clamped count. Native RNG remains seeded
     // only by the ordinary simulation scope; no expected damage enters this draw.
     loop {

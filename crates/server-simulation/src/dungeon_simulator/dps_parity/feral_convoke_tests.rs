@@ -74,9 +74,9 @@ fn feral_native_cat_convoke_deals_child_damage_without_spending_energy_or_form()
         "ordinary native Cat regeneration reaches its actual cap"
     );
     let initial = energy(&run).0;
-    run.app.world_mut().insert_resource(
-        crate::spell_cast::test_harness::ObservedTriggeredCasts::default(),
-    );
+    run.app
+        .world_mut()
+        .insert_resource(crate::spell_cast::test_harness::ObservedTriggeredCasts::default());
     literal_rotation::execution::execute(
         run.app.world_mut(),
         actor,
@@ -105,12 +105,24 @@ fn feral_native_cat_convoke_deals_child_damage_without_spending_energy_or_form()
         child_damage > 0,
         "real Cat Convoke must execute damaging native children, not only an empty channel"
     );
-    let admitted_children = run.app.world()
-        .resource::<crate::spell_cast::test_harness::ObservedTriggeredCasts>().0.iter()
-        .filter(|(caster, spell, _)| *caster == actor && matches!(
-            spell, 22568 | 5221 | 1822 | 155625 | 5176 | 8936 | 774 | 274837 | 1243807
-        )).count();
-    assert_eq!(admitted_children, 16, "native four-second Convoke admits one child per250ms tick");
+    let admitted_children = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedTriggeredCasts>()
+        .0
+        .iter()
+        .filter(|(caster, spell, _)| {
+            *caster == actor
+                && matches!(
+                    spell,
+                    22568 | 5221 | 1822 | 155625 | 5176 | 8936 | 774 | 274837 | 1243807
+                )
+        })
+        .count();
+    assert_eq!(
+        admitted_children, 16,
+        "native four-second Convoke admits one child per250ms tick"
+    );
     assert!(
         (initial - minimum).abs() < 0.01,
         "free Convoke children cannot burn or pay the Cat's Energy: {initial}→{minimum}"

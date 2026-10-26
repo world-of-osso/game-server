@@ -1,14 +1,15 @@
 //! SimC76f8118 sc_druid.cpp9191–9674: native Cat Convoke child actions.
 use super::combat;
 use bevy::prelude::*;
-use combat::auras::{ActiveAuras, AuraInstance, RemoveReason};
 use combat::auras::scripts::{AuraScript, AuraScripts};
+use combat::auras::{ActiveAuras, AuraInstance, RemoveReason};
 use combat::random::Rng;
-use combat::spell_cast::{self, effects::EffectCtx, targets};
 use combat::spell_cast::script_registry::{ContextHitHook, SpellScriptHook};
+use combat::spell_cast::{self, effects::EffectCtx, targets};
 use combat::spell_info::{CastPolicyContext, SpellInfo};
 use shared::components::{ActiveSpec, Health, PowerType};
 
+#[path = "feral_convoke/deck.rs"]
 mod deck;
 use deck::{Action, Card, ExceptionalDeck};
 
@@ -38,11 +39,14 @@ struct Channel {
 }
 
 fn register(scripts: &mut AuraScripts) {
-    scripts.0.insert(CONVOKE, AuraScript {
-        on_periodic: Some(tick),
-        on_remove: Some(clear_channel),
-        ..Default::default()
-    });
+    scripts.0.insert(
+        CONVOKE,
+        AuraScript {
+            on_periodic: Some(tick),
+            on_remove: Some(clear_channel),
+            ..Default::default()
+        },
+    );
 }
 
 fn hit(spell: u32) -> Option<ContextHitHook> {
@@ -50,36 +54,61 @@ fn hit(spell: u32) -> Option<ContextHitHook> {
 }
 
 fn selected(world: &World, caster: Entity, spell: u32) -> bool {
-    world.get::<combat::class_progression::TraitLoadout>(caster)
-        .is_some_and(|traits| traits.active_talent_spells().any(|talent| talent.spell_id == spell))
+    world
+        .get::<combat::class_progression::TraitLoadout>(caster)
+        .is_some_and(|traits| {
+            traits
+                .active_talent_spells()
+                .any(|talent| talent.spell_id == spell)
+        })
 }
 
 fn begin(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
-    if target != ctx.caster
-        || world.get::<ActiveSpec>(ctx.caster).is_none_or(|spec| spec.0 != 103)
-        || !combat::auras::has_aura(world, ctx.caster, CAT)
-    {
+    if target != ctx.caster {
+        return;
+    }
+    let feral = world
+        .get::<ActiveSpec>(ctx.caster)
+        .is_some_and(|spec| spec.0 == 103);
+    if !feral || !combat::auras::has_aura(world, ctx.caster, CAT) {
         return;
     }
     let Some(primary) = ctx.spell.cast_primary_target else {
         warn!(caster=?ctx.caster, "native Cat Convoke lacks its retained primary");
         return;
     };
-    let ticks = read_tick_budget(world, ctx.caster, ctx.spell);
-    let guidance = selected(world, ctx.caster, GUIDANCE);
-    let mut exceptional = world.entity_mut(ctx.caster).take::<ExceptionalDeck>().unwrap_or_default();
+    let channel = roll_channel(world, ctx.caster, ctx.spell, primary);
+    world.entity_mut(ctx.caster).insert(channel);
+}
+
+fn roll_channel(world: &mut World, caster: Entity, spell: &SpellInfo, primary: Entity) -> Channel {
+    let ticks = read_tick_budget(world, caster, spell);
+    let guidance = selected(world, caster, GUIDANCE);
+    let mut exceptional = world
+        .entity_mut(caster)
+        .take::<ExceptionalDeck>()
+        .unwrap_or_default();
     let success = exceptional.draw(guidance);
-    world.entity_mut(ctx.caster).insert(exceptional);
+    world.entity_mut(caster).insert(exceptional);
     let cards = deck::roll_cards(ticks, guidance, success);
-    world.entity_mut(ctx.caster).insert(Channel { primary, cards });
+    Channel { primary, cards }
 }
 
 fn read_tick_budget(world: &World, caster: Entity, spell: &SpellInfo) -> usize {
-    let aura = world.get::<ActiveAuras>(caster)
-        .and_then(|auras| auras.iter().find(|aura| aura.spell_id == CONVOKE && aura.caster == caster))
+    let aura = world
+        .get::<ActiveAuras>(caster)
+        .and_then(|auras| {
+            auras
+                .iter()
+                .find(|aura| aura.spell_id == CONVOKE && aura.caster == caster)
+        })
         .expect("ordinary Convoke applies its actual native channel aura before hit scripts");
-    let period = spell.effects.iter().find(|effect| effect.index == 0)
-        .expect("native Convoke retains its periodic driver").aura_period_ms;
+    let period = spell
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .expect("native Convoke retains its periodic driver")
+        .aura_period_ms;
     assert!(period > 0, "native Convoke requires a positive period");
     (aura.duration_ms / period) as usize
 }
@@ -113,15 +142,24 @@ fn read_enemies(world: &World, caster: Entity, primary: Entity) -> Vec<Entity> {
     // enemy count, or replacement recipient enters the distance-disabled encounter.
     let mut enemies: Vec<_> = std::iter::once(primary)
         .chain(combat::combat_refs::active_opponents(world, caster))
-        .filter(|target| targets::is_hostile(world, caster, *target)
-            && world.get::<Health>(*target).is_some_and(|health| health.current > 0.0))
+        .filter(|target| {
+            targets::is_hostile(world, caster, *target)
+                && world
+                    .get::<Health>(*target)
+                    .is_some_and(|health| health.current > 0.0)
+        })
         .collect();
     enemies.sort_unstable_by_key(|target| target.to_bits());
     enemies.dedup();
     enemies
 }
 
-fn roll_child(world: &World, caster: Entity, primary: Entity, action: Action) -> Option<(u32, Entity)> {
+fn roll_child(
+    world: &World,
+    caster: Entity,
+    primary: Entity,
+    action: Action,
+) -> Option<(u32, Entity)> {
     let enemies = read_enemies(world, caster, primary);
     if enemies.is_empty() {
         return None;
@@ -134,29 +172,40 @@ fn roll_child(world: &World, caster: Entity, primary: Entity, action: Action) ->
         enemies[combat::random::thread_rng().gen_range(0..enemies.len())]
     };
     let spell = roll_spell_id(world, caster, target, &action);
-    let target = if matches!(action, Action::Heal) { caster } else { target };
+    let target = if matches!(action, Action::Heal) {
+        caster
+    } else {
+        target
+    };
     Some((spell, target))
 }
 
 fn owns_dot(world: &World, caster: Entity, target: Entity, spell: u32) -> bool {
     let now = spell_cast::now(world);
-    world.get::<ActiveAuras>(target).is_some_and(|auras| auras.iter().any(|aura| {
-        aura.caster == caster && aura.spell_id == spell
-            && aura.expires_at.is_none_or(|expiry| expiry > now)
-    }))
+    world.get::<ActiveAuras>(target).is_some_and(|auras| {
+        auras.iter().any(|aura| {
+            aura.caster == caster
+                && aura.spell_id == spell
+                && aura.expires_at.is_none_or(|expiry| expiry > now)
+        })
+    })
 }
 
 fn roll_spell_id(world: &World, caster: Entity, target: Entity, action: &Action) -> u32 {
     match action {
         Action::Bite => BITE,
-        Action::Frenzy => if selected(world, caster, FRANTIC_FRENZY) { FRANTIC_FRENZY } else { FERAL_FRENZY },
+        Action::Frenzy if selected(world, caster, FRANTIC_FRENZY) => FRANTIC_FRENZY,
+        Action::Frenzy => FERAL_FRENZY,
         Action::Shred => SHRED,
         // sc_druid.cpp9515–9522: already-ticking dots replace these cards,
         // rather than wasting native casts refreshing the same target's dot.
-        Action::Rake => if owns_dot(world, caster, target, RAKE_BLEED) { SHRED } else { RAKE },
-        Action::Moonfire => if owns_dot(world, caster, target, MOONFIRE) { WRATH } else { MOONFIRE },
+        Action::Rake if owns_dot(world, caster, target, RAKE_BLEED) => SHRED,
+        Action::Rake => RAKE,
+        Action::Moonfire if owns_dot(world, caster, target, MOONFIRE) => WRATH,
+        Action::Moonfire => MOONFIRE,
         Action::Wrath => WRATH,
-        Action::Heal => if combat::random::thread_rng().gen_bool(0.5) { REGROWTH } else { REJUVENATION },
+        Action::Heal if combat::random::thread_rng().gen_bool(0.5) => REGROWTH,
+        Action::Heal => REJUVENATION,
     }
 }
 
