@@ -20,6 +20,16 @@ pub(crate) fn on_natural_fade(world: &mut World, owner: Entity) {
     }
 }
 
+// SimC76f8118 pets.cpp968–979: Implosion uses the native Imp chance
+// as an independent roll, never the natural-fade accumulator.
+pub(super) fn on_implosion(world: &mut World, owner: Entity) {
+    if let Some(chance) = read_native_chance(world, owner, 0) {
+        if crate::random::thread_rng().gen_bool(chance) {
+            crate::spell_cast::cast_triggered(world, owner, CORE_BUFF, Some(owner), 0);
+        }
+    }
+}
+
 struct DemiseCorePolicy {
     roots: &'static [u32],
     entry: u32,

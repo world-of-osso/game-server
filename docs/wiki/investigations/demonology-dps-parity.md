@@ -58,6 +58,12 @@ Actual native Fel Firebolt used2000ms despite the owner's19.45591% haste; the so
 
 Actual Burning Cleave separately observed zero critical chance against the owner's35.065216%. The landed `combat::read_pet_owner_critical_chance` helper now also resolves executing guardians through the same owner reader used for haste. Both native swings and spell critical-chance calculations consume that one helper. Existing Hunter qualification and spell-specific modifiers are retained. The native guardian critical-chance and WW white-crit regressions pass. The separate Hunter100%-owner control is a known pre-existing fixture failure: ordinary stat folding restores the actual owner's crit before its assertions.
 
+## Implosion admission and execution
+
+The real six-Imp regression rejected ordinary196277 with `CasterAuraState`: native metadata requires296553, but the Imp lifecycle never supplied it. Real Imp spawn/removal now maintains that native availability aura. The sourced execution selects from eligible owned demons at native effect0's limit, samples participating Imps without replacement, and launches lower-Energy/older Imps first. Native196278 damage scales its selected primary by remaining Energy; secondaries retain full native damage. Actual Imp retirement follows its impact and uses the independent native Demoniac chance, not the natural-fade accumulator.
+
+To Hell and Back reads native1281511's group/count values and casts actual279910, binding143622 to the same native Fel Firebolt and no-regeneration behavior as55659. Only the actual replacement actors receive1250772/1281512. The private `world.implosion.db` is a backup of the existing `world.current.db` with exact143622 template/model publication via the existing importer; canonical data and in-flight train inputs stay unchanged. GREEN qualification is pending.
+
 ## Owner passive SpellMods
 
 Native and pinned reference Fel Firebolt both use SP coefficient0.192178. The current native Imp instead misses selected owner passive modifiers: its first real bolt leaves80 Energy rather than84, and its observed critical chance lacks native Imp-erator's15 percentage points. These are native RED failures, not coefficient differences.
