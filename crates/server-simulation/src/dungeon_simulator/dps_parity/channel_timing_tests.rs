@@ -11,12 +11,12 @@ pub(super) fn remove_equipped_proc_drivers(run: &mut Run) {
         .get::<crate::auras::ActiveAuras>(run.actor)
         .unwrap()
         .iter()
-        .filter(|aura| aura.cast_item_level.is_some())
         .filter(|aura| {
-            store
-                .get(aura.spell_id)
-                .and_then(|spell| spell.aura_options.as_ref())
-                .is_some_and(|options| options.proc_type_mask.iter().any(|&mask| mask != 0))
+            aura.cast_item_level.is_some()
+                && store
+                    .get(aura.spell_id)
+                    .and_then(|spell| spell.aura_options.as_ref())
+                    .is_some_and(|options| options.proc_type_mask.iter().any(|&mask| mask != 0))
         })
         .map(|aura| aura.spell_id)
         .collect();

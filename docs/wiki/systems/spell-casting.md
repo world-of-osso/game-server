@@ -176,7 +176,7 @@ Source: authenticated70448/read-only world.db25 effect rows; SimC76f8118 `sc_dea
 
 ## Rounded hasted channel clocks — 2026-10-26
 
-`auras::channel_tick_timing_ms` selects the same native effect cadence used by aura construction, including existing scripted cadence definitions. Hasted channel duration and `CastState` use this shared rounded period; duration preserves the original modified tick count. Non-channel period quantization and un-hasted channel lifetime remain unchanged. Modifier ordering and stored application haste remain with their existing owners.
+`auras::channel_tick_timing_ms` selects the same native effect cadence used by aura construction, including existing scripted cadence definitions. Hasted channel duration and `CastState` use this shared rounded period; duration preserves the original modified tick count. Native direct/triggered health effects rank ahead of auxiliary control effects when selecting the cadence. FoF's166ms stun row must not outrank its existing1000ms damage cadence: strict REDd8c6a93202 observed a2988ms deadline while four damage intervals require2992ms. Non-channel period quantization and un-hasted channel lifetime remain unchanged. Modifier ordering and stored application haste remain with their existing owners.
 
 Pinned SimC76f8118 `action.cpp4297–4314/4397–4421` rounds channel tick time, then rebuilds duration to prevent false expiry partials. Native Ray RED2d0ea30702 observed8full ticks plus a0.012690355 expiry fraction at constant26.69281%haste. Seven-family GREEN qualification and landing are pending; [Frost investigation](../investigations/frost-mage-dps-parity.md#per-hit-factor-investigation--2026-10-26) records the consumer evidence. This is not a spell-specific ninth-tick filter.
 

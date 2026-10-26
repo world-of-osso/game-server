@@ -103,7 +103,7 @@ use crate::auth::{Authenticated, InWorld};
 use crate::class_progression::{KnownSpells, SpellTrait, TraitLoadout};
 use crate::grid_activity::GridDormant;
 use crate::networking::PlayerLink;
-use crate::spell_cast::{log_event, targets};
+use crate::spell_cast::{effects, log_event, targets};
 use crate::spell_info::{SpellEffect, SpellInfo, SpellStore};
 use crate::stats::StatModifiers;
 pub use periodic::{paid_periodic_ticks, remaining_periodic_ticks};
@@ -787,16 +787,57 @@ pub(crate) fn channel_tick_timing_ms(
     caster: Entity,
     spell: &SpellInfo,
 ) -> Option<(f32, u32)> {
-    let base = spell
+    // Declared health emissions own action ticks before auxiliary control pulses.
+    // Script-only/utility channels retain their native periodic cadence.
+    let (_, base) = spell
         .effects
         .iter()
-        .map(|effect| periodic_base_interval_ms(spell, effect))
-        .filter(|&period| period > 0)
+        .map(|effect| {
+            (
+                !channel_tick_declares_health(world, effect),
+                periodic_base_interval_ms(spell, effect),
+            )
+        })
+        .filter(|(_, period)| *period > 0)
         .min()?;
     let haste = periodic_haste_multiplier(world, caster, spell);
     Some(periodic_timing_with_haste(
         world, caster, spell, base, haste,
     ))
+}
+
+fn channel_tick_declares_health(world: &World, effect: &SpellEffect) -> bool {
+    if is_health_effect(effect) {
+        return true;
+    }
+    world
+        .resource::<SpellStore>()
+        .get(effect.trigger_spell)
+        .is_some_and(|trigger| trigger.effects.iter().any(is_health_effect))
+}
+
+fn is_health_effect(effect: &SpellEffect) -> bool {
+    matches!(
+        effect.aura,
+        handlers::PERIODIC_DAMAGE
+            | handlers::PERIODIC_DAMAGE_PERCENT
+            | handlers::PERIODIC_LEECH
+            | handlers::PERIODIC_HEAL
+            | handlers::OBS_MOD_HEALTH
+    ) || matches!(
+        effect.effect,
+        effects::EFFECT_SCHOOL_DAMAGE
+            | effects::EFFECT_DAMAGE_FROM_MAX_HEALTH_PCT
+            | effects::EFFECT_WEAPON_DAMAGE
+            | effects::EFFECT_WEAPON_PERCENT_DAMAGE
+            | effects::EFFECT_NORMALIZED_WEAPON_DMG
+            | effects::EFFECT_HEALTH_LEECH
+            | effects::EFFECT_HEAL
+            | effects::EFFECT_HEAL_PCT
+            | effects::EFFECT_HEAL_MAX_HEALTH
+            | effects::EFFECT_POWER_BURN
+            | effects::EFFECT_INSTAKILL
+    )
 }
 
 fn periodic_haste_multiplier(world: &World, caster: Entity, spell: &SpellInfo) -> f32 {

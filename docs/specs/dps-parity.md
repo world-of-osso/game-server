@@ -10,7 +10,7 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 ### Shared channel timing
 
 - Quantize native channel tick intervals to the nearest millisecond. A hasted channel's duration is that rounded interval times its original native modified tick count, not an independently truncated hasted duration (`action.cpp4297–4314/4397–4421`).
-- The actor's channel cadence and its periodic aura use the same native effect cadence. Constant haste must not create an extra expiry damage event or full proc callbacks from rounding residue. Preserve tick-zero behavior and genuine fractional native tick counts.
+- The actor's channel cadence and its periodic aura use the same native effect cadence. Declared damage/healing periods own this cadence ahead of faster auxiliary control pulses; channels without declared health emissions retain their native utility/script period. Constant haste must not create an extra expiry damage event or full proc callbacks from rounding residue. Preserve tick-zero behavior and genuine fractional native tick counts.
 - Preserve non-channel periodic quantization, existing modifier/haste snapshots, and un-hasted channel lifetimes, including four-second Convoke. Do not add spell-ID branches or replace native coefficients/periods/durations.
 
 ### Literal spec drivers
