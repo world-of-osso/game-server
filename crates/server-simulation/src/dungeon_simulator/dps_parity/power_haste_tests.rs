@@ -194,12 +194,16 @@ fn prepare_spent_resource(spec: u32, spell: u32, power: PowerType) -> Run {
         crate::followers::simulator::ParityActor::Follower,
     )
     .unwrap();
-    // The quiet owner lives at X20; cap waits must not carry this controlled caster away.
+    // Use the standard literal-fixture controller: the follower AI otherwise
+    // reattaches FollowOwner during regroup, even after a one-time removal.
     run.app
         .world_mut()
         .entity_mut(run.actor)
         .remove::<crate::creature_ai::FollowOwner>()
-        .insert(crate::creature_ai::CreatureState::Idle);
+        .insert((
+            crate::creature_ai::CreatureState::Idle,
+            literal_rotation::LiteralParityFixture,
+        ));
     let origin = *run
         .app
         .world()
@@ -254,7 +258,9 @@ fn assert_native_tick(run: &mut Run, power: PowerType, expected_rate: f32) {
     );
     assert!((actual_rate - expected_rate).abs() <= rounding);
     assert!((after - before - expected_rate * dt).abs() <= rounding);
-    assert_read_only_potential_facts(run, power, expected_rate);
+    // The tick uses its pre-frame stats; native aura/stat folding can change
+    // the live potential later in this same update without rewriting its cache.
+    assert_read_only_potential_facts(run, power, read_expected_native_regen(run, power));
 }
 
 fn assert_hasted_native_pool(spec: u32, spell: u32, power: PowerType) {
