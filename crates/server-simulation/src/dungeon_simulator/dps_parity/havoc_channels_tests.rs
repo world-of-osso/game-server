@@ -139,8 +139,33 @@ fn havoc_eternal_hunt_real_hunt_empowers_beam_and_completed_beam_resets_dance() 
         crate::auras::has_aura(run.app.world(), run.actor, 1271144),
         "actual Hunt must arm selected native Empowered Eye Beam"
     );
+    eprintln!(
+        "ETERNAL_BEFORE_BEAM actor={:?} facing={:?} primary={:?}",
+        run.app
+            .world()
+            .get::<shared::components::Position>(run.actor),
+        run.app
+            .world()
+            .get::<shared::components::Rotation>(run.actor),
+        run.app
+            .world()
+            .get::<shared::components::Position>(run.targets[0])
+    );
+    run.app
+        .world_mut()
+        .init_resource::<crate::spell_cast::test_harness::ObservedTriggeredCasts>();
     cast(&mut run, 198013, false);
     preparation::finish_pending_setup(&mut run).unwrap();
+    eprintln!(
+        "ETERNAL_AFTER_BEAM triggers={:?} ordinary={:?} empowered={:?} state={}",
+        run.app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedTriggeredCasts>()
+            .0,
+        damage(&run, Some(198030)),
+        damage(&run, Some(1287949)),
+        report::engagement(run.app.world(), run.actor, &run.targets)
+    );
     assert!(
         !damage(&run, Some(1287949)).is_empty(),
         "earned beam must deliver its actual native empowered child"
