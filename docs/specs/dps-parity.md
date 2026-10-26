@@ -28,7 +28,7 @@ An actual landed primary Bite with selected1263657 rolls its native chance per f
 
 ### Feral Cat Convoke
 
-Selected Cat Convoke391528 dispatches one native child per actual periodic-driver tick for its native channel lifetime. Use the pinned Cat card counts/distributions, persistent exceptional deck, primary-target Bite/Frenzy and random encounter-enemy filler/off-spec selection (`sc_druid.cpp9340,9372–9385,9469–9522,9630–9674,12415`). An already-owned Rake or Cat Moonfire replaces that card with Shred or Wrath, respectively. Free child Bites retain native maximum effective combo points and extra-Energy effectiveness without granting or spending either pool; ordinary spenders keep paid snapshots. Child casts must retain Cat Form. Native aura removal clears channel state; other forms and multi-friendly-target healing remain separately unqualified.
+Selected Cat Convoke391528 dispatches one native child per actual periodic-driver tick for its native channel lifetime. Use the pinned Cat card counts/distributions, persistent exceptional deck, primary-target Bite/Frenzy and random encounter-enemy filler/off-spec selection (`sc_druid.cpp9340,9372–9385,9469–9522,9630–9674,12415`). Use native Enemy admission, not hostile reaction alone; neutral attackable encounter units remain eligible. An already-owned Rake or Cat Moonfire replaces that card with Shred or Wrath, respectively. Free child Bites retain native maximum effective combo points and extra-Energy effectiveness without granting or spending either pool; ordinary spenders keep paid snapshots. Child casts must retain Cat Form. Native aura removal clears channel state; other forms and multi-friendly-target healing remain separately unqualified.
 
 ### Feral Lunar Inspiration
 
@@ -344,6 +344,8 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 - [x] Spec71 parity executes the exact reference manifest's action lists through the shared literal evaluator, native readiness/execution and equipment facts. Capture control before warmup, cast the source precombat Battle Stance once, and use native selected targets for Slayer/Colossus lists. When no native follower profile exists, use the real player actor; never fabricate a follower. Stockade/native follower rotations remain unchanged. Potion inventory and external Power Infusion are explicit gaps.
 
 ### Fury player parity
+
+- Rampage184367 may schedule its native effect5 Rampaging Ruin child only with selected Rampaging Ruin1265357 and live Whirlwind85739. An unselected talent or absent Whirlwind cannot add the AoE hit. Retain the original native effect64 payload, delay, admission and damage values (`sc_warrior.cpp5727–5748,5800–5801`).
 
 - Shared Unrelenting Onslaught uses owned Executioner stacks after a genuine Sudden Death Execute to reduce the current native Bladestorm endpoint by444780 effect0 seconds per stack and apply native445836 to the actual primary using effect1 stacks per Executioner stack. Paid Execute alone does not qualify; native producers and counters remain unchanged (`sc_warrior.cpp4361–4365,4561–4565`).
 
@@ -713,6 +715,11 @@ Rotation/decision implementation belongs to the lead/rotation agents. No system 
 ### Ordinary native spell GCD haste
 
 Category133 ordinary spells apply native spell haste before the independent aura417 haste-regeneration path. Preserve melee/ranged defense and ability/ranged-slot exclusions, native750–1500ms haste bounds, and exclude other base GCDs from this haste path. TC a352b1fa `Spell.cpp9209–9224` and SimC76f8118 `action.cpp648–666,1285–1315` define this behavior. The native clock gate covers representative foreground actions for all40 specs at0%,25% and150% haste; aura417 retains its separate native controls.
+### Affliction native target talents
+
+- Selected386976 Withering Bolt multiplies native Shadow Bolt686, Shadowbolt Volley453176, Grasp1261153 and Drain Soul198590 by its native percentage per distinct owned Agony980, Corruption146739, Wither445474, Seed27243 and UA1259790, up to its native effect1 cap. UA stacks count as one DoT; foreign/expired auras do not count (`sc_warlock.cpp248–264`, actions817–818/915–916/2223–2224/2368–2369).
+- Selected1312998 Impetuous Wrath uses native effects0/1 for Shadow Bolt, Grasp and Drain Soul, or2/3 for Dark Harvest1257065, choosing the enhanced effect only for the caster's own active Haunt. It does not affect Volley. Removing the passive removes its factor (`actions918–919/2226–2227/2371–2372/2452–2453`). Native coefficients and other modifier stages remain unchanged.
+
 ### Affliction native Darkglare inheritance
 
 - Native205180/103673 Darkglare inherits full live owner spell power through the existing guardian policy, as base `warlock_pet_t` specifies and Darkglare retains (`sc_warlock_pets.cpp19/2424–2430`). Native205231 supplies damage coefficients and cast time; other guardian policy entries are unchanged.
