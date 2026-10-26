@@ -18,6 +18,7 @@
 
 mod abundance;
 pub(crate) mod agony;
+pub use agony::advance_stack as advance_agony_stack;
 pub(crate) mod area_avoidance;
 mod async_stacks;
 pub(crate) mod augmentation;
