@@ -131,10 +131,6 @@ fn run_burst_fixture(count: usize) -> f64 {
             "actual Rift expiry emits one native Collapse per nearby enemy"
         );
     }
-    println!(
-        "collapse {count} targets capture: {}",
-        run.app.world().resource::<FactorCapture>().export()
-    );
     let amount = read_factor(&run, 448405, "result", "raw_amount").unwrap();
     let power = read_factor(&run, 448405, "direct_amount", "s_power").unwrap();
     let versatility = read_factor(&run, 448405, "result", "versatility").unwrap();
@@ -144,7 +140,7 @@ fn run_burst_fixture(count: usize) -> f64 {
 
 #[test]
 #[ignore = "requires native258 Player/profile/traits"]
-fn diag_collapse_actual_rift_end_bursts_once_and_splits_across_three_targets() {
+fn shadow_collapse_actual_rift_end_bursts_once_and_splits_across_three_targets() {
     // Real native observed amounts, normalized only for crit, live SP and Vers.
     let single = run_burst_fixture(1);
     let three = run_burst_fixture(3);
@@ -155,7 +151,7 @@ fn diag_collapse_actual_rift_end_bursts_once_and_splits_across_three_targets() {
 
 #[test]
 #[ignore = "requires native258 Player/profile/traits"]
-fn diag_collapse_ordinary_funded_madness_grows_actual_rift_damage() {
+fn shadow_collapse_ordinary_funded_madness_grows_actual_rift_damage() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(258, 1).unwrap();
     enter_shadowform(&mut run);
@@ -175,10 +171,6 @@ fn diag_collapse_ordinary_funded_madness_grows_actual_rift_damage() {
     ));
     cast_when_ready(&mut run, 263165);
     finish_cast(&mut run);
-    println!(
-        "rift before Madness: {}",
-        run.app.world().resource::<FactorCapture>().export()
-    );
     let before =
         read_factor(&run, 447448, "result", "source_product").expect("real pre-growth Rift pulse");
     assert!(owns_rift(&run));
@@ -197,10 +189,6 @@ fn diag_collapse_ordinary_funded_madness_grows_actual_rift_damage() {
         }
         run.app.update();
     }
-    println!(
-        "rift after Madness: {}",
-        run.app.world().resource::<FactorCapture>().export()
-    );
     let after = read_factor(&run, 447448, "result", "source_product")
         .expect("real post-Madness Rift pulse");
     let percent =
