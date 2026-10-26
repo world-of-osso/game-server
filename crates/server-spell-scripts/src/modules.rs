@@ -156,6 +156,7 @@ register_modules! {
     stacking_summons: (1000, "modules/stacking_summons.rs"),
     subtlety_shadow: (420, "modules/subtlety_shadow.rs"),
     survival: (2550, "modules/survival.rs"),
+    survival_pet: (2552, "modules/survival_pet.rs"),
     survival_wildfire: (2551, "modules/survival_wildfire.rs"),
     sweeping_strikes: (711, "modules/sweeping_strikes.rs"),
     swiftmend: (1000, "modules/swiftmend.rs"),

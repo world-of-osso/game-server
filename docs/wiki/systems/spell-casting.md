@@ -35,10 +35,10 @@ Sentinel reuses `marksmanship_sentinel.rs` for owned mark grants, consumption, L
 | Capability | Proof as of2026-10-26 |
 |---|---|
 | Tip/Swipe/Wildfire/Shrapnel | Landed455a8ad19; b899ee589e passes35 actual cases with canonical/Pack fixtures partitioned and unit cases in server-combat |
-| Sentinel force/Tip/Storm/recharge | Native0ac1974a11 has3 genuine owned-mark REDs; implementation committed, landing/measurement gatebdb0b13806 pending |
-| Strike as One | Still missing; native7d268c55e0 observes0 owned-pet strikes, including the tipped rank3 Swipe case |
+| Sentinel force/Tip/Storm/recharge | Native0ac1974a11 has3 genuine owned-mark REDs→GREEN; landed4c9083c0c0 via bdb0b13806 with38 actual controls, including all19MM |
+| Strike as One | Native7d268c55e0 observes0 owned-pet strikes, including tipped rank3 Swipe; native-payload/ICD implementation committed, GREEN and actual-crit Sic 'Em qualification pending |
 
-Recorded canonical300s baseline after455a8ad19 is60195.31ST/104726.809three-target DPS, not numerical parity. Pack Leader is a mechanics control, not the canonical scoring fixture. Concurrent shared changes prevent isolated slice attribution.
+After Sentinel landing4c9083c0c0, canonical300s three-seed means are78418.654ST/140699.957three-target DPS (39.50%/44.16% reference), not numerical parity. Earlier455a8ad19 baseline was60195.31ST/104726.809three-target. Pack Leader is a mechanics control, not the canonical scoring fixture. Concurrent shared changes prevent isolated slice attribution.
 
 Sources: [shared Sentinel](../../../crates/server-spell-scripts/src/modules/marksmanship_sentinel.rs), [Tip/Swipe](../../../crates/server-spell-scripts/src/modules/survival.rs), [Wildfire](../../../crates/server-spell-scripts/src/modules/survival_wildfire.rs), [actual mark tests](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/survival_mark_tests.rs); pinned `sc_hunter.cpp1358–1372,3650–3710,6181–6188,6400–6401,7104–7107`.
 
