@@ -34,7 +34,10 @@ mod frost_mage_events;
 pub(super) use frost_mage_events::resolve as resolve_frost_mage_events;
 mod frost_mage_procs;
 mod frost_mage_supply;
-pub(super) use frost_mage_procs::snapshot_launch_auras as snapshot_frost_launch_auras;
+pub(super) use frost_mage_procs::{
+    flurry_damage_multiplier as frost_flurry_damage_multiplier,
+    snapshot_launch_auras as snapshot_frost_launch_auras,
+};
 pub(super) use script_registry::{
     after_queued_triggers as consume_due_killing_machine,
     after_spell_payment as roll_runic_empowerment,

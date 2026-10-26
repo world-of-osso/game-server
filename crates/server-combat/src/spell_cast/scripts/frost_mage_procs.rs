@@ -16,6 +16,23 @@ fn is_frost(world: &World, caster: Entity) -> bool {
         .is_some_and(|spec| spec.0 == 64)
 }
 
+pub(in crate::spell_cast) fn flurry_damage_multiplier(
+    world: &World,
+    caster: Entity,
+    parent: &SpellInfo,
+    child: u32,
+) -> Option<f32> {
+    // SimC76f8118 sc_mage.cpp3957–3966/4002–4015: each delayed bolt
+    // retains the Flurry's earned Brain Freeze snapshot after consumption.
+    match (parent.id, child) {
+        (44614, 228596) if parent.cast_launch_auras.contains(&BRAIN_FREEZE) => {
+            Some(1.0 + super::script_effect_value(world, caster, BRAIN_FREEZE, 1) / 100.0)
+        }
+        (228596, 228354) => parent.cast_damage_multiplier,
+        _ => None,
+    }
+}
+
 pub(super) fn owns_proc(spell: u32) -> bool {
     matches!(spell, FINGERS | THERMAL | BRAIN_FREEZE)
 }
