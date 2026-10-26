@@ -15,6 +15,8 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::TargetPlan(target_plan_hook),
 ];
 
+const FINGERS: u32 = 44544;
+const THERMAL: u32 = 1247730;
 const SHATTER: u32 = 1246769;
 const FREEZING: u32 = 1221389;
 const SHATTER_DAMAGE: u32 = 1246949;
@@ -91,26 +93,34 @@ fn shatter_owned_freezing(world: &mut World, ctx: &EffectCtx, target: Entity) {
             .find(|aura| aura.spell_id == FREEZING && aura.caster == ctx.caster)
             .map(|aura| (aura.instance_id, aura.stacks, aura.duration_ms))
     });
-    let Some((instance, stacks, duration)) = owned else {
-        return;
-    };
-    // sc_mage.cpp4428/7129–7181: one payload scaled by the actual owned
-    // stacks consumed, followed by removal and refresh of remaining Freezing.
-    let limit = script_effect_value(world, ctx.caster, SHATTER, 3) as u8;
-    let consumed = stacks.min(limit);
-    if consumed == 0 {
-        return;
+    // sc_mage.cpp4445–4473/7129–7170: use the launched missile's earned
+    // Fingers/Thermal snapshot, not buffs already spent at execution.
+    let fingers = ctx.spell.cast_launch_auras.contains(&FINGERS);
+    let thermal = ctx.spell.cast_launch_auras.contains(&THERMAL);
+    let base_limit = script_effect_value(world, ctx.caster, SHATTER, 3) as u8;
+    let limit = base_limit * if thermal { 2 } else { 1 };
+    let available = owned.map_or(0, |(_, stacks, _)| stacks);
+    let shatter_stacks = if fingers { limit } else { available.min(limit) };
+    if shatter_stacks > 0 {
+        launch_shatter(world, ctx, target, shatter_stacks);
     }
+    if let Some((instance, _, duration)) = owned {
+        if !fingers {
+            for _ in 0..shatter_stacks {
+                auras::spend_stack(world, target, instance);
+            }
+        }
+        auras::set_owned_duration(world, ctx.caster, target, FREEZING, duration);
+    }
+}
+
+fn launch_shatter(world: &mut World, ctx: &EffectCtx, target: Entity, stacks: u8) {
     let Some(mut payload) = spell_cast::load_triggered_spell(world, SHATTER_DAMAGE, ctx.depth + 1)
     else {
         return;
     };
-    payload.cast_damage_multiplier = Some(f32::from(consumed));
+    payload.cast_damage_multiplier = Some(f32::from(stacks));
     spell_cast::launch_triggered_spell(world, ctx.caster, &payload, Some(target), ctx.depth + 1);
-    for _ in 0..consumed {
-        auras::spend_stack(world, target, instance);
-    }
-    auras::set_owned_duration(world, ctx.caster, target, FREEZING, duration);
 }
 
 pub(super) fn target_plan_hook(spell: u32) -> Option<(targets::Relation, TargetPlanHook)> {

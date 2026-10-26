@@ -241,6 +241,7 @@ fn run_ticks(world: &mut World, unit: Entity, ticks: Vec<Tick>) {
             continue;
         };
         spell.cast_periodic_fraction = Some(tick.fraction);
+        spell.cast_periodic_ordinal = Some(tick.ordinal);
         spell.cast_primary_target = tick.cast_primary_target;
         run_tick(world, unit, &spell, &tick);
         end_aura_at_full_health(world, unit, &tick);

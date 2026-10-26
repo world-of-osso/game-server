@@ -63,6 +63,7 @@ register_modules! {
     foreground_procs: (310, "modules/foreground_procs.rs"),
     frost: (80, "modules/frost.rs"),
     frost_death_knight: (1000, "modules/frost_death_knight.rs"),
+    frost_followups: (411, "modules/frost_followups.rs"),
     frost_mage: (1000, "modules/frost_mage.rs"),
     germination: (200, "modules/germination.rs"),
     giantkiller: (170, "modules/giantkiller.rs"),

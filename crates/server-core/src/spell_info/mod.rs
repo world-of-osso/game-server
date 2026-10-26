@@ -142,6 +142,10 @@ pub struct SpellInfo {
     /// Retained through hardcasts/missiles; triggered casts do not acquire markers.
     #[serde(skip)]
     pub cast_proc_mods: Vec<u32>,
+    /// Source-selected native aura spell IDs present at ordinary admission.
+    /// Retained through flight independently of later aura consumption/expiry.
+    #[serde(skip)]
+    pub cast_launch_auras: Vec<u32>,
     /// Whether this ordinary cast had positive cast time at admission, not its DB2 base.
     #[serde(skip)]
     pub cast_was_hardcast: bool,
@@ -157,6 +161,9 @@ pub struct SpellInfo {
     /// Fraction of a final periodic interval, applied after damage/healing modifiers.
     #[serde(skip)]
     pub cast_periodic_fraction: Option<f32>,
+    /// Actual native scheduler ordinal for this tick, not the already advanced live counter.
+    #[serde(skip)]
+    pub cast_periodic_ordinal: Option<u64>,
     #[serde(skip)]
     pub cast_damage_role: CastDamageRole,
     /// Every `spell_power` row, sorted by `OrderIndex`.
