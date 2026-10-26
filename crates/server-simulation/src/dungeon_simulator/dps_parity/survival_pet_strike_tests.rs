@@ -14,7 +14,16 @@ fn survival_native_tip_impact_commands_owned_pet_strike_as_one() {
     let pet = crate::hunter_pet::summoned_pet(run.app.world(), run.actor).unwrap();
     engage(&mut run);
     cast(&mut run, 259489, false);
+    let strike_state = |run: &Run| {
+        run.app.world().get::<crate::auras::ActiveAuras>(run.actor).and_then(|auras| {
+            auras.iter().find(|aura| aura.spell_id == 1251717).map(|aura| {
+                (aura.instance_id, aura.proc.last_success_at, aura.proc.next_ready_at)
+            })
+        })
+    };
+    eprintln!("SURVIVAL_STRIKE_BEFORE_RAPTOR {:?}", strike_state(&run));
     cast(&mut run, 186270, false);
+    eprintln!("SURVIVAL_STRIKE_AFTER_RAPTOR {:?}", strike_state(&run));
     for _ in 0..40 {
         run.app.update();
     }
@@ -31,7 +40,9 @@ fn survival_native_tip_impact_commands_owned_pet_strike_as_one() {
                 && event.spell_id == Some(1251779)
                 && event.kind == CombatLogKind::Damage
                 && event.amount > 0),
-        "a real earned Tip impact must dispatch native Strike as One from the owned pet"
+        "a real earned Tip impact must dispatch native Strike as One from the owned pet; outcomes={:#?}; casts={:#?}",
+        events.iter().filter(|event| matches!(event.spell_id, Some(1251779 | 186270 | 1253750 | 260286))).collect::<Vec<_>>(),
+        run.app.world().resource::<crate::spell_cast::test_harness::ObservedTriggeredCasts>().0.iter().filter(|(_, spell, _)| *spell == 1251779).collect::<Vec<_>>()
     );
 }
 
