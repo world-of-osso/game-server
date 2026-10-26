@@ -280,7 +280,7 @@ fn havoc_mid2_four_piece_essence_break_advances_cycle_and_reduces_native_beam_re
     );
     let expected =
         crate::spell_cast::scripts::script_effect_value(run.app.world(), run.actor, 258887, 0)
-            as u32;
+            as u64;
     let before = cooldown_remaining(&run, 198013);
     assert!(before > expected);
     cast(&mut run, 258860, false);
