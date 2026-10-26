@@ -14,7 +14,7 @@
 ## 2026-10-25 — Frost Mage native hit relationships
 
 [Frost Mage parity](investigations/frost-mage-dps-parity.md): owned Freezing and native Shatter, primary/secondary exclusion, Controlled Instincts copied damage, Infused Splinters and root/payload report-ID traps. Native proofs and pending proc/flight boundaries are recorded separately.
-[Feral fixture](systems/simc-apl.md#feral-literal-fixture--2026-10-25): native Lunar/Growth, literal setup and periodic snapshot/CP RED→GREEN are landed. First300s ST187377.13=97.76%;3T refuses missing Clearcasting reaction settings. Reaction fixc2a996a0ca and Vines independent-lifetime RED2a06c0fec9 await the train. Total parity remains open; shared consumables stay separate.
+[Feral fixture](systems/simc-apl.md#feral-literal-fixture--2026-10-25): native Lunar/Growth, literal setup, periodic facts, reaction acquisition, independent Vines lifetimes and Bite/expiry Bursting Growth are RED→GREEN and landed. Corrected latestST147148.95=76.77%,3T184652.97=74.53%; early97.76% ST included inflated Vines. Unseen/context and Rogue spender controls await trainf087d8b30c; Rampancy/Twin Sprouts/Convoke remain open. Shared consumables stay separate.
 
 ## 2026-10-25 — Secondary residual sources
 

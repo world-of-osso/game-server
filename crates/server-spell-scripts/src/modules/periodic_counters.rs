@@ -15,23 +15,40 @@ struct PeriodicCounter {
     effect: u8,
     counter: u32,
     enabler: u32,
+    random_initial_phase: bool,
 }
 
 // SimC76f8118 sc_mage.cpp5559–5581/7186–7200: hasted passive Icicles,
 // random initial phase, and the actual counter cap enables Glacial Spike.
-const COUNTERS: &[PeriodicCounter] = &[PeriodicCounter {
-    spec: 64,
-    talent: 1246832,
-    passive: 1246832,
-    effect: 0,
-    counter: 205473,
-    enabler: 1222865,
-}];
+const COUNTERS: &[PeriodicCounter] = &[
+    PeriodicCounter {
+        spec: 64,
+        talent: 1246832,
+        passive: 1246832,
+        effect: 0,
+        counter: 205473,
+        enabler: 1222865,
+        random_initial_phase: true,
+    },
+    // sc_mage.cpp6468–6471: the earned Rapid Refreezing buff grants one
+    // Icicle on each actual native200ms tick; its first tick is not randomized.
+    PeriodicCounter {
+        spec: 64,
+        talent: 1246832,
+        passive: 1310248,
+        effect: 0,
+        counter: 205473,
+        enabler: 1222865,
+        random_initial_phase: false,
+    },
+];
 
 fn register(scripts: &mut combat::auras::scripts::AuraScripts) {
     for row in COUNTERS {
         let script = scripts.0.entry(row.passive).or_default();
-        script.on_apply = Some(randomize_initial_phase);
+        if row.random_initial_phase {
+            script.on_apply = Some(randomize_initial_phase);
+        }
         script.on_periodic = Some(advance_counter);
     }
 }
