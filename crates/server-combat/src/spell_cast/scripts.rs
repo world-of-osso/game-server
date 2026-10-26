@@ -40,11 +40,10 @@ mod batch8;
 mod batch9;
 mod frost;
 mod periodic_attacks;
-mod secondary_copies;
 pub(crate) use periodic_attacks::{after_periodic_trigger, rolls_reapplication};
 pub(super) use script_registry::after_foreground_special;
-pub(crate) use secondary_copies::after_melee as after_melee_residual;
-pub(super) use secondary_copies::after_spell as after_spell_residual;
+pub(crate) use script_registry::melee_residual as after_melee_residual;
+pub(super) use script_registry::spell_residual as after_spell_residual;
 mod chrono_flame;
 mod clearcasting;
 mod echo_policies;
@@ -110,9 +109,7 @@ pub(super) fn apply_periodic_damage_policies(
 }
 
 pub(crate) fn owns_policy_proc(world: &World, spell: u32) -> bool {
-    policies::owns_policy_proc(world, spell)
-        || resource_values::owns_proc(spell)
-        || frost::owns_proc(spell)
+    policies::owns_policy_proc(world, spell) || frost::owns_proc(spell)
 }
 mod havoc;
 pub(crate) use havoc::{apply_havoc_damage_policies, is_eye_beam_channel, register_havoc};
@@ -138,10 +135,7 @@ pub(super) use ret_empyrean::schedule_empyrean_legacy;
 mod ret_tier;
 pub(super) use ret_tier::after_foreground_spender;
 pub(crate) use ret_tier::owns_arbiter_charge;
-mod resource_values;
-pub(super) use resource_values::{
-    consume_sources as consume_resource_value_sources, effective_value as effective_resource_value,
-};
+pub(super) use script_registry::{consume_resource_value_sources, effective_resource_value};
 mod scourge_strike;
 mod soul_of_the_forest;
 mod swiftmend;
@@ -826,7 +820,7 @@ pub fn after_cast(world: &World, spell_id: u32) -> impl Iterator<Item = AfterCas
         .chain(spellslinger::after_cast_hook(spell_id))
         .chain(batch9::after_cast_hook(spell_id))
         .chain(script_registry::aura_roll_after_cast(world, spell_id))
-        .chain(resource_values::after_cast_hook(spell_id))
+        .chain(script_registry::resource_value_after_cast(world, spell_id))
         .chain(script_registry::after_resource_values(world, spell_id))
 }
 

@@ -31,6 +31,12 @@
 //! - `ImpactProcDamage`: after generic damage policies, before Ret damage policies.
 //! - `AfterWhiteHit`: after Flurry; `ReplacementDirectDamage`: before generic damage policies.
 //! - `OwnsPolicyProc`: native proc ownership classification, not a proc attempt.
+//! - `ResourceValueAfterCast`: after aura rolls, before AfterResourceValues.
+//! - `TriggeredResourceProducer`: before triggered relationship producers.
+//! - `EffectiveResourceValue`: effective spend value only; actual payment is unchanged.
+//! - `ConsumeResourceValueSources`: after successful foreground base execution.
+//! - `SpellResidual`: direct, unresolved source damage before direct-damage callbacks.
+//! - `MeleeResidual`: only after a landed white-hit outcome.
 //! Within a stage, traverse module slices and entries from first to last. Never sort
 //! or deduplicate them. Adding a policy to an existing module changes only that module.
 
@@ -71,6 +77,9 @@ pub type ActionHook = fn(&mut World, Entity, u32);
 pub type WhiteHitHook = fn(&mut World, Entity, bool);
 pub type DirectDamageHook = fn(&mut World, &EffectCtx<'_>, Entity, bool);
 pub type OwnsProcLookup = fn(u32) -> bool;
+pub type EffectiveResourceValueHook =
+    fn(&World, Entity, &SpellInfo, shared::components::PowerType, f32) -> f32;
+pub type MeleeResidualHook = fn(&mut World, Entity, Entity, f32);
 
 #[derive(Clone, Copy)]
 pub enum SpellScriptHook {
@@ -106,6 +115,12 @@ pub enum SpellScriptHook {
     AfterWhiteHit(WhiteHitHook),
     ReplacementDirectDamage(DirectDamageHook),
     OwnsPolicyProc(OwnsProcLookup),
+    ResourceValueAfterCast(AfterCastLookup),
+    TriggeredResourceProducer(AfterCastHook),
+    EffectiveResourceValue(EffectiveResourceValueHook),
+    ConsumeResourceValueSources(AfterCastHook),
+    SpellResidual(PeriodicPrimaryDamageHook),
+    MeleeResidual(MeleeResidualHook),
 }
 
 #[derive(Clone, Copy, Resource)]
@@ -451,6 +466,69 @@ pub fn replacement_direct_damage(
     for hook in world.resource::<SpellScriptRegistry>().hooks() {
         if let SpellScriptHook::ReplacementDirectDamage(run) = hook {
             run(world, ctx, target, critical);
+        }
+    }
+}
+
+pub fn resource_value_after_cast(
+    world: &World,
+    spell: u32,
+) -> impl Iterator<Item = AfterCastHook> + use<> {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .filter_map(move |hook| match hook {
+            SpellScriptHook::ResourceValueAfterCast(lookup) => lookup(spell),
+            _ => None,
+        })
+}
+
+pub fn triggered_resource_producer(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::TriggeredResourceProducer(run) = hook {
+            run(world, caster, spell);
+        }
+    }
+}
+
+pub fn effective_resource_value(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    resource: shared::components::PowerType,
+    paid: f32,
+) -> f32 {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .fold(paid, |value, hook| match hook {
+            SpellScriptHook::EffectiveResourceValue(run) => {
+                run(world, caster, spell, resource, value)
+            }
+            _ => value,
+        })
+}
+
+pub fn consume_resource_value_sources(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::ConsumeResourceValueSources(run) = hook {
+            run(world, caster, spell);
+        }
+    }
+}
+
+pub fn spell_residual(world: &mut World, ctx: &EffectCtx<'_>, target: Entity, amount: f32) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::SpellResidual(run) = hook {
+            run(world, ctx, target, amount);
+        }
+    }
+}
+
+pub fn melee_residual(world: &mut World, caster: Entity, target: Entity, amount: f32) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::MeleeResidual(run) = hook {
+            run(world, caster, target, amount);
         }
     }
 }

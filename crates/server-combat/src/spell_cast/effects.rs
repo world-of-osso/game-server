@@ -1505,7 +1505,7 @@ fn health_leech(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target
 }
 
 /// A named copy has already consumed the source's damage modifiers and crit.
-pub(crate) fn deal_copied_damage(world: &mut World, ctx: &EffectCtx, target: Entity, amount: f32) {
+pub fn deal_copied_damage(world: &mut World, ctx: &EffectCtx, target: Entity, amount: f32) {
     let damage = DamageInput {
         amount,
         crit: false,
@@ -1518,7 +1518,7 @@ pub(crate) fn deal_copied_damage(world: &mut World, ctx: &EffectCtx, target: Ent
 }
 
 /// TC Unit.cpp:6922–6929/6962; SharedDefines.h:576/687.
-pub(super) fn creature_type_damage_multiplier(
+pub fn creature_type_damage_multiplier(
     world: &World,
     caster: Entity,
     target: Entity,
