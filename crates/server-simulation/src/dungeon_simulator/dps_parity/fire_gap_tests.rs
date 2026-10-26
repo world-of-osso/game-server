@@ -914,6 +914,85 @@ fn fire_meteor_deep_impact_amplifies_only_nearest_target() {
     );
 }
 
+#[test]
+#[ignore = "requires exact Fire63 inputs and private70448 DB"]
+fn fire_ignite_controlled_destruction_scales_only_owned_ignite_contribution() {
+    let contribution = |keep_debuff: bool| {
+        let _seed = crate::random::seed_scope(70_448);
+        let mut run = prepare_literal(63, 1).unwrap();
+        let actor = run.actor;
+        let target = run.targets[0];
+        for _ in 0..20 {
+            start_native(&mut run, 133, target);
+            preparation::finish_pending_setup(&mut run).unwrap();
+            for _ in 0..20 {
+                run.app.update();
+            }
+        }
+        let multiplier = {
+            let aura = run
+                .app
+                .world()
+                .get::<ActiveAuras>(target)
+                .unwrap()
+                .iter()
+                .find(|aura| aura.spell_id == 453268 && aura.caster == actor)
+                .unwrap();
+            let percent = aura
+                .effects
+                .iter()
+                .find(|effect| effect.index == 0)
+                .unwrap()
+                .amount;
+            assert!(
+                aura.stacks >= 10 && percent > 0.0,
+                "real earned target stacks"
+            );
+            1.0 + percent * f32::from(aura.stacks) / 100.0
+        };
+        crate::auras::remove_auras(
+            run.app.world_mut(),
+            target,
+            crate::auras::RemoveReason::Consumed,
+            |aura| aura.spell_id == 12654 || (!keep_debuff && aura.spell_id == 453268),
+        );
+        start_native(&mut run, 108853, target);
+        run.app.update();
+        let world = run.app.world();
+        let damage = world
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .rev()
+            .find(|event| {
+                event.source == Some(actor.to_bits())
+                    && event.target == Some(target.to_bits())
+                    && event.spell_id == Some(108853)
+                    && event.kind == CombatLogKind::Damage
+            })
+            .unwrap()
+            .amount as f32;
+        let tick = world
+            .get::<ActiveAuras>(target)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 12654 && aura.caster == actor)
+            .unwrap()
+            .effects
+            .iter()
+            .find(|effect| effect.index == 0)
+            .unwrap()
+            .amount;
+        (tick / damage, multiplier)
+    };
+    let (baseline, _) = contribution(false);
+    let (controlled, multiplier) = contribution(true);
+    assert!(
+        (controlled / baseline - multiplier).abs() < 0.002,
+        "owned Controlled Destruction scales the real Ignite bank: {baseline} -> {controlled}, expected factor{multiplier}"
+    );
+}
+
 fn reacted(run: &Run, name: &str) -> f64 {
     use crate::simc_apl_native::{Bindings, Encounter, FightStyle, NativeFacts};
     let bindings = Bindings {
