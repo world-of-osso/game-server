@@ -38,7 +38,14 @@ fn enhancement_actual_stormstrike_earns_stormsurge_and_next_weapon_hits_emit_sto
         .world_mut()
         .entity_mut(run.actor)
         .remove::<crate::combat::AutoAttack>();
-    let before = run.app.world().resource::<ObservedCombatEvents>().0.len();
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0;
+    assert!(
+        events
+            .iter()
+            .all(|event| event.spell_id != Some(390287) || event.kind != CombatLogKind::Damage),
+        "the first earned proc cannot retroactively amplify its producing root's weapon hits"
+    );
+    let before = events.len();
     enhancement_generation_tests::cast(&mut run, 17364, target);
     let blasts: Vec<_> = run.app.world().resource::<ObservedCombatEvents>().0[before..]
         .iter()
