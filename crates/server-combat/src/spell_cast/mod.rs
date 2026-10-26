@@ -2771,10 +2771,13 @@ fn execute_cast_with_primary(
     disenchant::check_cast(world, caster, spell)?;
     let mut prepared = resources::snapshot(world, caster, spell, &costs);
     prepared.cast_primary_target = primary_target;
+    let plan = plan_targets(world, caster, &prepared, explicit, false)?;
+    // SimC76f8118 sc_mage.cpp2722–2731: freeze Barrage recipients before
+    // Orb Barrage, but include the Orb root's charge in damage modifiers.
+    scripts::before_arcane_cast(world, caster, &prepared, 0);
     let mut launch_modifiers = spell_mods::snapshot_charged_modifiers(world, caster, &prepared);
     launch_modifiers.extend(scripts::pyroclasm_damage_modifier(world, caster, &prepared));
     prepared.cast_charge_mods = Some(launch_modifiers);
-    let plan = plan_targets(world, caster, &prepared, explicit, false)?;
     prepared.cast_policy_context =
         scripts::snapshot_hit_policies(world, caster, &prepared, &plan, &costs);
     scripts::prepare_rogue_hero(world, caster, &mut prepared);
@@ -2801,7 +2804,6 @@ fn execute_cast_with_primary(
     }
     // TC Spell.cpp3843–3869: OnCast precedes TakePower and SendSpellGo.
     scripts::before_ret_damage_cast(world, caster, spell, 0);
-    scripts::before_arcane_cast(world, caster, spell, 0);
     scripts::on_cast(world, caster, spell.id, 0);
     take_cast_resources(world, caster, spell, &costs);
     start_cooldowns(world, caster, spell);

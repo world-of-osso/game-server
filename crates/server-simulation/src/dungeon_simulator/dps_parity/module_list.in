@@ -2,6 +2,7 @@
 // .gitattributes merges this file with merge=union so concurrent spec branches that
 // each add a module line do not conflict; a duplicate line fails to compile (E0428).
 mod active_enemy_tests;
+#[cfg(test)] mod arcane_orb_order_tests;
 #[cfg(test)] mod arcane_tests;
 mod affliction_darkglare_tests;
 mod affliction_grasp_tests;
@@ -100,6 +101,7 @@ mod frost_mage_shatter_followups_tests;
 mod frost_mage_splinterstorm_tests;
 mod frost_mage_supply_tests;
 mod frost_mage_tests;
+mod fury_hack_and_slash_tests;
 mod fury_ruin_tests;
 mod gear_profile_tests;
 mod haste_tests;
@@ -210,6 +212,7 @@ mod shaman263_proc_tests;
 mod shaman263_tier_tests;
 mod shared_consumables_tests;
 mod shared_fact_extension_tests;
+mod shared_intellect_tests;
 mod shared_liquid_luster_tests;
 mod shared_oil_tests;
 pub(crate) mod single_spell;
