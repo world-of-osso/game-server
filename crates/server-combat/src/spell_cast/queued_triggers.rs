@@ -13,6 +13,7 @@ enum QueuedCastKind {
     CostedTrigger,
     NormalForce,
     FullTrigger,
+    ScriptCallback(fn(&mut World, Entity, Entity, u8)),
     ApplyOwnedAura,
     RemoveOwnedAura,
     ScaledFullTrigger(f32),
@@ -140,6 +141,34 @@ pub fn schedule_full_trigger(
         target,
         destination: None,
         spell_id,
+        depth: ctx.depth + 1,
+        item_level: ctx.spell.cast_item_level,
+        damage_multiplier: None,
+    };
+    world
+        .resource_mut::<PendingTriggers>()
+        .0
+        .entry(due_ms)
+        .or_default()
+        .push_back(trigger);
+}
+
+/// Run a sourced delayed action against live state, with the native queue's
+/// owner/target lifetime checks and trigger-depth budget.
+pub fn schedule_callback(
+    world: &mut World,
+    ctx: &super::EffectCtx,
+    target: Entity,
+    delay_ms: u32,
+    callback: fn(&mut World, Entity, Entity, u8),
+) {
+    let due_ms = now_ms(world) + u64::from(delay_ms);
+    let trigger = QueuedTrigger {
+        kind: QueuedCastKind::ScriptCallback(callback),
+        caster: ctx.caster,
+        target,
+        destination: None,
+        spell_id: ctx.spell.id,
         depth: ctx.depth + 1,
         item_level: ctx.spell.cast_item_level,
         damage_multiplier: None,
@@ -303,6 +332,17 @@ pub(crate) fn resolve_due(world: &mut World) {
         }
         match trigger.kind {
             QueuedCastKind::CostedTrigger => resolve_costed_trigger(world, trigger),
+            QueuedCastKind::ScriptCallback(callback) => {
+                if trigger.depth > super::effects::MAX_TRIGGER_DEPTH {
+                    warn!(
+                        source = trigger.spell_id,
+                        depth = trigger.depth,
+                        "Delayed scripted callback exceeds native trigger depth"
+                    );
+                    continue;
+                }
+                callback(world, trigger.caster, trigger.target, trigger.depth);
+            }
             QueuedCastKind::FullTrigger => {
                 let Some(mut spell) =
                     super::load_triggered_spell(world, trigger.spell_id, trigger.depth)

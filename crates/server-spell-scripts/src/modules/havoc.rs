@@ -37,6 +37,14 @@ pub(super) fn has_talent(world: &World, caster: Entity, talent: u32) -> bool {
             .is_some_and(|known| known.contains(talent))
 }
 
+pub(super) fn owned_passive_instance(world: &World, caster: Entity, spell: u32) -> Option<u32> {
+    world
+        .get::<ActiveAuras>(caster)?
+        .iter()
+        .find(|aura| aura.caster == caster && aura.spell_id == spell)
+        .map(|aura| aura.instance_id)
+}
+
 fn before_runtime_cast(world: &mut World, caster: Entity, spell: u32, depth: u8) {
     damage::before_cast(world, caster, spell);
     demonsurge::before_cast(world, caster, spell, depth);

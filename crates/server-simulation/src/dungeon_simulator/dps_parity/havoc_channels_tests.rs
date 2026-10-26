@@ -116,13 +116,32 @@ fn havoc_relentless_onslaught_delays_real_free_copies_and_starts_native_icd_at_c
             .unwrap()
             .proc_category_recovery_ms as f64
             / 1000.0;
+        let offhand_delay = run
+            .app
+            .world()
+            .resource::<crate::spell_info::SpellStore>()
+            .get(201427)
+            .unwrap()
+            .effects
+            .iter()
+            .find(|effect| effect.trigger_spell == 201428)
+            .unwrap()
+            .misc_values[0] as f64
+            / 1000.0;
         let mut observed_copies = 0;
         let mut expected_ready_at = None;
         for _ in 0..5 {
             havoc_tests::earn_havoc_fury(&mut run, 40.0);
             cast(&mut run, 201427, false);
+            let hits_before_cast = damage(&run, Some(201428)).len();
+            let mut first_offhand_at = None;
             for _ in 0..75 {
                 run.app.update();
+                let now = crate::auras::aura_now(run.app.world());
+                if first_offhand_at.is_none() && damage(&run, Some(201428)).len() > hits_before_cast
+                {
+                    first_offhand_at = Some(now);
+                }
                 let copies = run
                     .app
                     .world()
@@ -134,6 +153,12 @@ fn havoc_relentless_onslaught_delays_real_free_copies_and_starts_native_icd_at_c
                     })
                     .count();
                 if copies > observed_copies {
+                    let hit_at = first_offhand_at
+                        .expect("Onslaught requires the real landed native off-hand");
+                    assert!(
+                        (now - hit_at - offhand_delay).abs() < 0.025,
+                        "copy must follow the actual OH hit by its native delay"
+                    );
                     let aura = run
                         .app
                         .world()
@@ -148,25 +173,7 @@ fn havoc_relentless_onslaught_delays_real_free_copies_and_starts_native_icd_at_c
                     ));
                     observed_copies = copies;
                 }
-                if let Some((instance, ready_at)) = expected_ready_at {
-                    let now = crate::auras::aura_now(run.app.world());
-                    let ready = crate::auras::procs::policy_proc_ready(
-                        run.app.world(),
-                        run.actor,
-                        instance,
-                    );
-                    if now < ready_at - 0.025 {
-                        assert!(
-                            !ready,
-                            "native Onslaught ICD cannot expire before its actual delayed copy's cooldown"
-                        );
-                    } else if now > ready_at + 0.025 {
-                        assert!(
-                            ready,
-                            "native Onslaught ICD must expire after its delayed copy's native cooldown"
-                        );
-                    }
-                }
+                assert_onslaught_cooldown(&run, expected_ready_at);
             }
         }
         total_copies += observed_copies;
@@ -180,6 +187,25 @@ fn havoc_relentless_onslaught_delays_real_free_copies_and_starts_native_icd_at_c
         offhand_hits > 40,
         "free copies must deliver actual native off-hand damage, not only report a launch"
     );
+}
+
+fn assert_onslaught_cooldown(run: &Run, expected_ready_at: Option<(u32, f64)>) {
+    let Some((instance, ready_at)) = expected_ready_at else {
+        return;
+    };
+    let now = crate::auras::aura_now(run.app.world());
+    let ready = crate::auras::procs::policy_proc_ready(run.app.world(), run.actor, instance);
+    if now < ready_at - 0.025 {
+        assert!(
+            !ready,
+            "native Onslaught ICD cannot expire before its actual delayed copy's cooldown"
+        );
+    } else if now > ready_at + 0.025 {
+        assert!(
+            ready,
+            "native Onslaught ICD must expire after its delayed copy's native cooldown"
+        );
+    }
 }
 
 #[test]
