@@ -49,6 +49,7 @@ register_modules! {
     affliction_wrath: (2656, "modules/affliction_wrath.rs"),
     after_cast_auras: (100, "modules/after_cast_auras.rs"),
     arcane_feedback: (620, "modules/arcane_feedback.rs"),
+    arms_fatality: (717, "modules/arms_fatality.rs"),
     arms_mortal_wounds: (715, "modules/arms_mortal_wounds.rs"),
     arms_paid_cooldowns: (712, "modules/arms_paid_cooldowns.rs"),
     arms_tactical_edge: (716, "modules/arms_tactical_edge.rs"),
