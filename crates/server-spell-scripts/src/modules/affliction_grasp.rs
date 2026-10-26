@@ -37,17 +37,42 @@ fn copy_owned_ticks(world: &mut World, ctx: &EffectCtx<'_>, target: Entity, _: f
             continue;
         };
         let amount = base * fraction;
-        let amount = if child == AGONY_CHILD { amount * AGONY_CHILD_BUG_MULTIPLIER } else { amount };
-        spell_cast::cast_triggered_with_effect0_amount(world, ctx.caster, child,
-            Some(target), ctx.depth + 1, amount);
+        let amount = if child == AGONY_CHILD {
+            amount * AGONY_CHILD_BUG_MULTIPLIER
+        } else {
+            amount
+        };
+        spell_cast::cast_triggered_with_effect0_amount(
+            world,
+            ctx.caster,
+            child,
+            Some(target),
+            ctx.depth + 1,
+            amount,
+        );
     }
 }
 
-fn owned_base_tick(world: &World, caster: Entity, target: Entity, dot: u32, use_stacks: bool) -> Option<f32> {
-    let aura = world.get::<ActiveAuras>(target)?.iter()
+fn owned_base_tick(
+    world: &World,
+    caster: Entity,
+    target: Entity,
+    dot: u32,
+    use_stacks: bool,
+) -> Option<f32> {
+    let aura = world
+        .get::<ActiveAuras>(target)?
+        .iter()
         .find(|aura| aura.caster == caster && aura.spell_id == dot && aura.stacks > 0)?;
-    let effect = aura.effects.iter().find(|effect| effect.aura_type == PERIODIC_DAMAGE)?;
-    let stacks = if use_stacks { aura.stack_multiplier() } else { 1.0 };
+    let effect = aura
+        .effects
+        .iter()
+        .find(|effect| effect.aura_type == PERIODIC_DAMAGE)?;
+    let stacks = if use_stacks {
+        aura.stack_multiplier()
+    } else {
+        1.0
+    };
     Some(effect.amount * stacks)
 }
 
@@ -58,12 +83,13 @@ fn child_hit(spell: u32) -> Option<spell_cast::script_registry::EnemyContextHitH
 // SimC76f8118 sc_warlock_actions.cpp2052–2060: a landed Agony extra
 // tick advances its actual owned DoT counter, but cannot fund shards.
 fn advance_agony(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
-    let Some(mut auras) = world.get_mut::<ActiveAuras>(target) else { return; };
-    let Some(aura) = auras.auras.iter_mut()
-        .find(|aura| aura.caster == ctx.caster && aura.spell_id == AGONY) else { return; };
-    let stacks = aura.stacks.saturating_add(1).min(aura.max_stacks.max(1));
-    if stacks != aura.stacks {
-        aura.stacks = stacks;
-        combat::auras::auras_changed(world, target);
+    let instance = world.get::<ActiveAuras>(target).and_then(|auras| {
+        auras
+            .iter()
+            .find(|aura| aura.caster == ctx.caster && aura.spell_id == AGONY)
+            .map(|aura| aura.instance_id)
+    });
+    if let Some(instance) = instance {
+        combat::auras::advance_agony_stack(world, target, instance);
     }
 }
