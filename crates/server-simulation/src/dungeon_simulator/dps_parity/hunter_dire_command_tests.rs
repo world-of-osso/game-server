@@ -42,12 +42,11 @@ fn native_hunter_dire_command_actual_kills_spawn_authentic_beasts() {
                 let original = *origins.entry(unit.to_bits()).or_insert(distance);
                 moved_toward_target |= distance + 0.1 < original;
                 if distance <= 5.0 && in_range_seen.insert(unit.to_bits()) {
-                    eprintln!("DIRE_IN_RANGE unit={unit:?} distance={distance} attack={:?} state={:?} flags={:?} target_flags={:?} los={}",
+                    eprintln!("DIRE_IN_RANGE unit={unit:?} distance={distance} attack={:?} state={:?} flags={:?} target_flags={:?}",
                         run.app.world().get::<crate::combat::AutoAttack>(unit),
                         run.app.world().get::<crate::creature_ai::CreatureState>(unit),
                         run.app.world().get::<shared::components::UnitFlags>(unit),
-                        run.app.world().get::<shared::components::UnitFlags>(run.targets[0]),
-                        crate::line_of_sight::sees_in_world(run.app.world(), unit, run.targets[0]));
+                        run.app.world().get::<shared::components::UnitFlags>(run.targets[0]));
                 }
                 if beasts.insert(unit.to_bits()) {
                     eprintln!("DIRE_ACTOR unit={unit:?} at={} position={:?} primary_position={:?} attack={:?} motion={:?}",
