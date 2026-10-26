@@ -6,7 +6,7 @@ The selected384355 talent supplies408390's zero-placeholder amounts from its nat
 
 Native RED4db1ecbdad observes identical31098 Bolt damage for zero and one real imbue with matching roll, crit, Mastery, Versatility and target inputs; the one-hand expectation is32652.9. GREEN and numerical measurement remain pending.
 
-Sources: pinned SimC76f8118 `sc_shaman.cpp13212–13220`; [contract](../../specs/dps-parity.md#enhancement-fixture-driver), [imbue callbacks](../../../crates/server-combat/src/spell_cast/scripts/enhancement_imbues.rs), [native damage test](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/enhancement_elemental_weapons_tests.rs).
+Sources: pinned SimC76f8118 `sc_shaman.cpp13212–13220`; [contract](../../specs/dps-parity.md#enhancement-fixture-driver), [dynamic amount](../../../crates/server-combat/src/spell_cast/scripts/enhancement_elemental_weapons.rs), [imbue callbacks](../../../crates/server-combat/src/spell_cast/scripts/enhancement_imbues.rs), [native damage test](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/enhancement_elemental_weapons_tests.rs).
 
 ## Garrote stored literal multiplier — 2026-10-26
 

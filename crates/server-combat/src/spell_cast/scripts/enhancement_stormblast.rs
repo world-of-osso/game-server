@@ -180,6 +180,6 @@ fn copy_multiplier(world: &World, caster: Entity) -> f32 {
                 .map(|effect| effect.amount / 100.0)
         })
         .expect("Enhancement's native mastery aura/effect0 must be active");
-    let weapons = super::enhancement_imbues::elemental_weapons_percent(world, caster) / 100.0;
+    let weapons = super::enhancement_elemental_weapons::percent(world, caster) / 100.0;
     (1.0 + mastery) * (1.0 + weapons)
 }
