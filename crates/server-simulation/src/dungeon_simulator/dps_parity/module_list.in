@@ -2,6 +2,7 @@
 // .gitattributes merges this file with merge=union so concurrent spec branches that
 // each add a module line do not conflict; a duplicate line fails to compile (E0428).
 mod active_enemy_tests;
+mod affliction_tests;
 mod arms_tests;
 mod assassination_energy_tests;
 mod assassination_hero_tests;

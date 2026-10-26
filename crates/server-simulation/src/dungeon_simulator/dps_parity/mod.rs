@@ -71,6 +71,7 @@ spec_drivers! {
     261 => subtlety_rotation,
     262 => elemental_rotation,
     263 => enhancement_rotation,
+    265 => affliction_rotation,
     266 => demonology_rotation,
     269 => windwalker_rotation,
     577 => havoc_rotation,
