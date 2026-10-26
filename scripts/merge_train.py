@@ -43,6 +43,7 @@ GATHER_SECONDS = 300
 ISOLATED_PER_CYCLE = 3
 # Global concurrent spec measurements; each spec can run both target counts in parallel.
 MEASURE_PARALLEL = 8
+MEASURE_SEEDS = "70448,1,2,3,4,5,6,7,8,9"
 ASSISTED_DB2 = "/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/dps-parity-2026-10-21/native-player-inputs/assisted-70448/"
 RUNNER = "CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER"
 
@@ -130,9 +131,159 @@ def parse_measure(text):
     return fields
 
 
+MODULE_LINE = re.compile(r'\bmod\s+(\w+)\s*;')
+INLINE_MODULE = re.compile(r'\bmod\s+(\w+)\s*\{|[{}]')
+PATH_ATTRIBUTE = re.compile(r'#\s*\[\s*path\s*=\s*"([^"]+)"\s*\]')
+RAW_LITERAL = re.compile(r'(?:br|r)(\#*)"')
+CHAR_LITERAL = re.compile(r"'(?:\\\\.|[^'\\\\])'")
+
+
+def mask_rust_noncode(source):
+    """Blank comments and literals while preserving positions and newlines."""
+    output = list(source)
+    index = 0
+    block_depth = 0
+    end_literal = None
+    while index < len(source):
+        start = index
+        if block_depth:
+            if source.startswith("/*", index):
+                block_depth += 1
+                index += 2
+            elif source.startswith("*/", index):
+                block_depth -= 1
+                index += 2
+            else:
+                index += 1
+        elif end_literal is not None:
+            if source.startswith(end_literal, index):
+                index += len(end_literal)
+                end_literal = None
+            elif end_literal == '"' and source[index] == "\\":
+                index += min(2, len(source) - index)
+            else:
+                index += 1
+        elif source.startswith("//", index):
+            newline = source.find("\n", index)
+            index = len(source) if newline < 0 else newline
+        elif source.startswith("/*", index):
+            block_depth = 1
+            index += 2
+        elif (raw := RAW_LITERAL.match(source, index)):
+            end_literal = '"' + raw.group(1)
+            index += len(raw.group())
+        elif source[index] == '"':
+            end_literal = '"'
+            index += 1
+        elif (char := CHAR_LITERAL.match(source, index)):
+            index += len(char.group())
+        else:
+            index += 1
+            continue
+        for position in range(start, index):
+            if output[position] != "\n":
+                output[position] = " "
+    return "".join(output)
+
+
+def added_module_lines(commit):
+    """Return (path, line, column, name) for declarations added since master."""
+    revision = f"origin/master...{commit}"
+    paths = git("diff", "--name-only", "-z", "--diff-filter=ACMRT", revision,
+                "--", "*.rs", "*.in").stdout.split("\0")
+    found = []
+    for path in filter(None, paths):
+        source = git("show", f"{commit}:{path}").stdout
+        code_lines = mask_rust_noncode(source).splitlines()
+        diff = git("diff", "--no-ext-diff", "--no-renames", "--unified=0", revision,
+                   "--", path).stdout
+        line_number = 0
+        for line in diff.splitlines():
+            hunk = re.match(r"@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@", line)
+            if hunk:
+                line_number = int(hunk.group(1))
+            elif line.startswith("+") and not line.startswith("+++"):
+                for declaration in MODULE_LINE.finditer(code_lines[line_number - 1]):
+                    found.append((path, line_number, declaration.start(), declaration.group(1)))
+                line_number += 1
+            elif line.startswith(" "):
+                line_number += 1
+    return found
+
+
+def module_directory(path):
+    source = Path(path)
+    if source.suffix == ".in" or source.name in ("mod.rs", "lib.rs", "main.rs") \
+            or source.parent.name in ("bin", "examples", "tests", "benches"):
+        return source.parent
+    return source.parent / source.stem
+
+
+def module_paths(path, source, number, column, name):
+    """Resolve an external declaration in a file or its inline module."""
+    lines = source.splitlines()
+    depth = 0
+    modules = []
+    code_lines = mask_rust_noncode(source).splitlines()
+    preceding = code_lines[:number - 1] + [code_lines[number - 1][:column]]
+    for line in preceding:
+        for token in INLINE_MODULE.finditer(line):
+            if token.group(1):
+                depth += 1
+                modules.append((depth, token.group(1)))
+            elif token.group() == "{":
+                depth += 1
+            else:
+                if modules and modules[-1][0] == depth:
+                    modules.pop()
+                depth -= 1
+    nested = Path(*(name for _, name in modules))
+    prefix = lines[number - 1][:column]
+    attrs = [re.split(r'[;{}]', prefix)[-1]]
+    for line in reversed(lines[:number - 1]):
+        stripped = line.strip()
+        if stripped.startswith("#[") or stripped.startswith("//") or not stripped:
+            attrs.append(line)
+        else:
+            break
+    explicit = next((match.group(1) for line in attrs if (match := PATH_ATTRIBUTE.search(line))), None)
+    if explicit is not None:
+        parent = module_directory(path) if modules else Path(path).parent
+        return [os.path.normpath(str(parent / nested / explicit))]
+    directory = module_directory(path) / nested
+    return [str(directory / f"{name}.rs"), str(directory / name / "mod.rs")]
+
+
+def missing_added_modules(commit):
+    sources = {}
+    missing = []
+    for path, number, column, name in added_module_lines(commit):
+        if path not in sources:
+            sources[path] = git("show", f"{commit}:{path}").stdout
+        candidates = module_paths(path, sources[path], number, column, name)
+        if not any(git("cat-file", "-e", f"{commit}:{candidate}", check=False).returncode == 0
+                   for candidate in candidates):
+            missing.append(f"{path}:{number}: mod {name}; requires committed " + " or ".join(candidates))
+    return missing
+
+
+def added_module_names(commit):
+    return {name for _, _, _, name in added_module_lines(commit)}
+
+
+def missing_module_names(log, start):
+    with log.open() as source:
+        source.seek(start)
+        text = source.read()
+    return set(re.findall(r'error\[E0583\]: file not found for module [`\']([^`\']+)[`\']', text))
+
+
 def submit(args):
     commit = subprocess.run(["git", "rev-parse", "--verify", f"{args.commit}^{{commit}}"],
                             text=True, capture_output=True, check=True).stdout.strip()
+    missing = missing_added_modules(commit)
+    if missing:
+        raise SystemExit("missing committed Rust module files:\n" + "\n".join(missing))
     entry = {"id": uuid.uuid4().hex[:10], "owner": args.owner, "commit": commit,
              "land": args.land, "red": args.red and subprocess.run(
                  ["git", "rev-parse", "--verify", f"{args.red}^{{commit}}"], text=True,
@@ -256,7 +407,7 @@ def failing_paths(log, start):
         text = f.read()
     # include!()d sources are reported through `..` hops (crates/a/src/../../b/...).
     return {os.path.normpath(p) for p in
-            re.findall(r"(?:-->|Diff in) /?(?:\S*?/game-server-land/)?(crates/\S+?\.rs)", text)}
+            re.findall(r"(?:-->|Diff in) /?(?:\S*?/game-server-land/)?(crates/\S+?\.(?:rs|in))", text)}
 
 
 def touches(entry, paths):
@@ -299,7 +450,10 @@ def build_checked(entries, log):
         raise MasterBroken(f"origin/master itself fails check; see {log}")
     # Entries touching the files the compiler or rustfmt blamed are the likely culprits: admit
     # the rest in one check first, so one broken entry costs ~3 checks instead of a full bisect.
-    suspects = [e for e in merged if touches(e, paths)]
+    modules = missing_module_names(log, checked_from)
+    suspects = [e for e in merged if added_module_names(e["commit"]) & modules]
+    if not suspects:
+        suspects = [e for e in merged if touches(e, paths)]
     if suspects and len(suspects) < len(merged):
         admit([e for e in merged if e not in suspects])
         admit(suspects)
@@ -515,11 +669,14 @@ def push(entries, log):
     return None, []
 
 
+PARITY_BUILD_ARGS = ("test", "--locked", "-p", "server-simulation", "--lib", "--no-run",
+                     "--message-format=json-render-diagnostics")
+
+
 def parity_executable(log):
     with timed(log, "parity-build", tree_id()):
         out = subprocess.run(
-            [str(AGENT_RUN), "merge-train", "cargo", "test", "--locked", "-p", "server-simulation",
-             "--lib", "--no-run", "--message-format=json-render-diagnostics"],
+            [str(AGENT_RUN), "merge-train", "cargo", *PARITY_BUILD_ARGS],
             cwd=TREE, env=base_env(), text=True, capture_output=True, check=False)
     with log.open("a") as f:
         f.write(out.stderr)
@@ -541,7 +698,8 @@ def measure_spec(entry, measurement, executable, target, log, tree, previous=Non
                "--world-db", measurement["world_db"], "--output", measurement["output"]]
     with timed(log, "measure", tree, entry=entry["id"], spec=measurement["spec"]):
         out = subprocess.run(command, cwd=TREE,
-                             env=base_env() | entry.get("env", {}) | {"CARGO_TARGET_DIR": str(target)},
+                             env=base_env() | {"DPS_PARITY_SEEDS": MEASURE_SEEDS} | entry.get("env", {})
+                             | {"CARGO_TARGET_DIR": str(target)},
                              text=True, capture_output=True, check=False)
     return [line for line in out.stdout.splitlines() if "NATIVE_DPS" in line or "FAILED" in line]
 
@@ -696,6 +854,57 @@ def land(entries, log):
     measure_then_write(pushed, log)
 
 
+def cargo_config_files():
+    """External Cargo config also affects the otherwise tree-keyed parity build."""
+    cargo_home = Path(os.environ.get("CARGO_HOME", Path.home() / ".cargo"))
+    directories = [cargo_home, *(parent / ".cargo" for parent in (TREE, *TREE.parents))]
+    return tuple((str(path), path.read_bytes() if path.is_file() else None)
+                 for directory in directories for path in (directory / "config", directory / "config.toml"))
+
+
+def isolated_measure_groups(entries):
+    """Group only conflict-free entries resolving to the same parity build inputs."""
+    groups = {}
+    if entries:
+        reset_tree()
+    base = git("rev-parse", "origin/master").stdout.strip() if entries else None
+    environment = tuple(sorted(base_env().items()))
+    configs = cargo_config_files()
+    for entry in entries:
+        resolved = git("merge-tree", "--write-tree", base, entry["commit"], check=False)
+        if resolved.returncode:
+            key = ("conflict", entry["id"])
+        else:
+            tree = resolved.stdout.splitlines()[0]
+            build_env = tuple(sorted((key, value) for key, value in entry.get("env", {}).items()
+                                     if key.startswith(("CARGO_", "RUST", "LD_"))))
+            key = (tree, PARITY_BUILD_ARGS, environment, configs, build_env)
+        groups.setdefault(key, []).append(entry)
+    return base, list(groups.values())
+
+
+def build_isolated_group(group, log, base):
+    """Check one representative; identical resolved trees have the same verdict."""
+    representative, *siblings = group
+    passed, failed = build_and_test([representative], log)
+    # reset_tree fetches master; a changed base invalidates the grouping proof.
+    if siblings and git("rev-parse", "origin/master").stdout.strip() != base:
+        for entry in siblings:
+            (RUNNING / f"{entry['id']}.json").rename(QUEUE / f"{entry['id']}.json")
+        return passed, failed
+    if passed:
+        return group, []
+    if failed:
+        for entry in siblings:
+            entry["status"] = failed[0]["status"]
+            entry["reason"] = failed[0]["reason"]
+        write_results(siblings)
+        return [], failed + siblings
+    for entry in siblings:
+        (RUNNING / f"{entry['id']}.json").rename(QUEUE / f"{entry['id']}.json")
+    return [], []
+
+
 def run_probes(probes, gated, log):
     """Probes, then the RED twins of gated landings, each in a tree that is never pushed.
     Returns the gated landings whose RED was observed."""
@@ -718,14 +927,16 @@ def run_probes(probes, gated, log):
     # shared: their verdict is pass/fail, and the landing measurement on master is the real number.
     isolated = [e for e in probes if e["measure"] and not e["tests"]]
     shared = [e for e in probes if e not in isolated]
-    # Each isolated tree costs a check, a test build and a parity build; past a few per cycle they
-    # dominated it (cycle-20261026T151410: 8 trees, 40+ min). The rest wait for the next cycle.
-    for entry in isolated[ISOLATED_PER_CYCLE:]:
-        (RUNNING / f"{entry['id']}.json").rename(QUEUE / f"{entry['id']}.json")
-    isolated = isolated[:ISOLATED_PER_CYCLE]
+    # Bound distinct isolated builds, not entries sharing a resolved parity-build tree.
+    isolated_base, isolated_groups = isolated_measure_groups(isolated)
+    for group in isolated_groups[ISOLATED_PER_CYCLE:]:
+        for entry in group:
+            (RUNNING / f"{entry['id']}.json").rename(QUEUE / f"{entry['id']}.json")
+    isolated_groups = isolated_groups[:ISOLATED_PER_CYCLE]
     passed, failed = [], []
-    for group in ([shared] if shared else []) + [[e] for e in isolated]:
-        group_passed, group_failed = build_and_test(group, log)
+    for group in ([shared] if shared else []) + isolated_groups:
+        group_passed, group_failed = (build_and_test(group, log) if group is shared
+                                      else build_isolated_group(group, log, isolated_base))
         for entry in group_passed:
             entry["status"] = "probe passed"
         # Measure now, while the tree is still this group's: the next build replaces it.

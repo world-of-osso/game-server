@@ -173,6 +173,15 @@ fn havoc_literal_fixture_executes_source_actions() {
     let result = measure(577, 1).expect("native Havoc measurement");
     assert_eq!(result["driver"], "LITERAL_SIMC_HAVOC_76f8118");
     let actions = result["combat"]["actions"].as_array().unwrap();
+    let essence = actions
+        .iter()
+        .find(|row| row["spell_id"] == 258860)
+        .expect("native Essence Break cast");
+    assert_eq!(
+        essence["count"].as_f64(),
+        essence["hits"].as_f64(),
+        "literal native Essence Break must not spend its cooldown on an empty cone in the one-target fixture: {essence}"
+    );
     // Native overrides can replace Eye Beam with Abyssal Gaze; neither is
     // a different priority (SimC76f8118 sc_demon_hunter.cpp4078–4106).
     for ids in [&[191427][..], &[198013, 452497], &[258860]] {

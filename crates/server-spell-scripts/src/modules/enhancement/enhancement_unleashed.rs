@@ -28,15 +28,20 @@ struct Pulse {
 struct Pending(Vec<Pulse>);
 
 pub(super) fn schedule_for_landed_root(world: &mut World, ctx: &EffectCtx, target: Entity) {
+    if ctx.spell.id != CRASH {
+        return;
+    }
+    let multiplier = consume_short_circuit(world, ctx.caster);
+    super::enhancement_mid2::retain(world, ctx.caster, multiplier);
     let selected = world
         .get::<KnownSpells>(ctx.caster)
         .is_some_and(|known| known.contains(UNLEASHED));
-    if ctx.spell.id != CRASH || !selected {
+    if !selected {
         return;
     }
     let pulse = Pulse {
         primary: target,
-        multiplier: consume_short_circuit(world, ctx.caster),
+        multiplier,
         next_tick: auras::aura_now(world) + PERIOD_SECONDS,
         remaining: super::script_effect_value(world, ctx.caster, UNLEASHED, 1) as u32,
         depth: ctx.depth + 1,

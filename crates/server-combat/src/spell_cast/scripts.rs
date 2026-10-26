@@ -63,7 +63,7 @@ pub(super) use script_registry::{
     native_weapon_multiplier as enhancement_flurry_weapon_multiplier,
 };
 pub(in crate::spell_cast) mod elemental_ancestors;
-pub use elemental_ancestors::owner as ancestor_owner;
+pub use elemental_ancestors::{owner as ancestor_owner, summon as summon_ancestor};
 mod policies;
 pub(super) use policies::check_cast as check_policy_cast;
 pub(crate) use policies::register_channel_policies;
@@ -581,7 +581,6 @@ pub fn on_effect_hit(
         (batch6::TEMPLARS_VERDICT, 0) => Some(batch6::verdict),
         (batch6::SHADOW_WORD_DEATH, 1) => Some(batch6::shadow_word_death),
         (batch5::DEMONS_BITE, 1) => Some(batch5::demons_bite),
-        (batch5::CHAOS_STRIKE, 0) => Some(batch5::chaos_strike),
         (batch5::RAPTURE, 0) => Some(batch5::rapture),
         (batch5::SHURIKEN_STORM, 0) => Some(batch5::shuriken_storm),
         (batch5::DEATHS_CARESS, 0) => Some(batch5::deaths_caress),
