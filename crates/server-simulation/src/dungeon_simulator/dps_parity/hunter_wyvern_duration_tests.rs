@@ -103,7 +103,9 @@ fn native_hunter_wyvern_extension_caps_and_resets_after_actual_expiry() {
                     .cloned()
             })
     };
-    let deadline = crate::spell_cast::now(run.app.world()) + 300.0;
+    let started_at = run.app.world().resource::<Time>().elapsed();
+    install_fixture_lifetimes(&mut run, started_at);
+    let deadline = crate::spell_cast::now(run.app.world()) + 299.0;
     let mut at_cap = false;
     let mut cap_guard_seen = false;
     let mut capped_cry_expired = false;
@@ -164,7 +166,37 @@ fn native_hunter_wyvern_extension_caps_and_resets_after_actual_expiry() {
             }
             break;
         }
-        run.app.update();
+        // Use the same fixed-time target clock as the actual300s driver.
+        let boundary = run.app.world().resource::<Time>().elapsed() + Duration::from_millis(100);
+        let tick = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            advance_fixture_step(&mut run, boundary).unwrap();
+        }));
+        if let Err(panic) = tick {
+            let pets: Vec<_> = run
+                .app
+                .world_mut()
+                .query::<(Entity, &crate::hunter_pet::HunterPet)>()
+                .iter(run.app.world())
+                .map(|(pet, data)| (pet, data.owner))
+                .collect();
+            for (pet, owner) in pets {
+                eprintln!(
+                    "FURY_REGEN at={boundary:?} pet={pet:?} owner={owner:?} actor={:?} owner_exists={} stats={} dormant={} powers={:?}",
+                    run.actor,
+                    run.app.world().get_entity(owner).is_ok(),
+                    run.app
+                        .world()
+                        .get::<crate::stats::CharacterStats>(owner)
+                        .is_some(),
+                    run.app
+                        .world()
+                        .get::<crate::grid_activity::GridDormant>(owner)
+                        .is_some(),
+                    run.app.world().get::<shared::components::PowerPools>(owner)
+                );
+            }
+            std::panic::resume_unwind(panic);
+        }
     }
     assert!(
         cap_guard_seen && reset_seen,
