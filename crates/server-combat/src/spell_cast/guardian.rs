@@ -138,12 +138,13 @@ const GUARDIAN_POLICIES: &[GuardianPolicy] = &[
         owner_attack_share: Some(0.45),
     },
     // Native205180 description names $205231s1; preserve the existing binding.
+    // SimC76f8118 pets.cpp19/2424–2430: Darkglare retains base owner SP1.0.
     GuardianPolicy {
         summons: &[205180],
         entry: 103673,
         spells: &[205231],
         repeat_gcd: None,
-        owner_spell_share: None,
+        owner_spell_share: Some(1.0),
         owner_attack_share: None,
     },
 ];
