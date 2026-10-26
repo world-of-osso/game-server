@@ -506,6 +506,7 @@ fn fire_meteorite_pyroblast_does_not_spend_a_glorious_stack() {
 }
 
 fn fireball_feedback_hit(run: &mut Run, health_fraction: f32) -> bool {
+    let first_event = run.app.world().resource::<ObservedCombatEvents>().0.len();
     let target = run.targets[0];
     let mut health = run.app.world_mut().get_mut::<Health>(target).unwrap();
     health.current = health.max * health_fraction;
@@ -514,11 +515,7 @@ fn fireball_feedback_hit(run: &mut Run, health_fraction: f32) -> bool {
     for _ in 0..20 {
         run.app.update();
     }
-    let hits: Vec<_> = run
-        .app
-        .world()
-        .resource::<ObservedCombatEvents>()
-        .0
+    let hits: Vec<_> = run.app.world().resource::<ObservedCombatEvents>().0[first_event..]
         .iter()
         .filter(|event| {
             event.source == Some(run.actor.to_bits())
