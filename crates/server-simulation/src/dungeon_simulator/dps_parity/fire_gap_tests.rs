@@ -1204,6 +1204,10 @@ fn fire_execute_scald_amplifies_actual_selected_fireball_and_scorch() {
         run.app.world_mut().get_mut::<crate::stats::CharacterStats>(actor).unwrap().crit_pct = 100.0;
         start_native(&mut run, spell, target);
         preparation::finish_pending_setup(&mut run).unwrap();
+        // Hardcast completion is not Fireball impact; deliver its real missile.
+        for _ in 0..40 {
+            run.app.update();
+        }
         let damage = run.app.world().resource::<ObservedCombatEvents>().0.iter()
             .find(|event| event.source == Some(actor.to_bits())
                 && event.target == Some(target.to_bits()) && event.spell_id == Some(spell)
