@@ -158,6 +158,8 @@ mod expel_harm_tests;
 #[cfg(test)]
 mod fel_devastation_tests;
 mod ferocious_bite;
+#[cfg(test)]
+mod gcd_haste_tests;
 pub use ferocious_bite::read_maximum_energy as read_ferocious_bite_maximum_energy;
 pub use resource_facts::read_prepared_spell as read_resource_prepared_spell;
 #[cfg(test)]
