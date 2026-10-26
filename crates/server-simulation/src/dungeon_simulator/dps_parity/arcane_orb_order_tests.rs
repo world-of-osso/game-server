@@ -11,6 +11,7 @@ const SEEDS: &[u64] = &[70448, 1, 2, 3, 4, 5, 6, 7];
 struct BarrageSample {
     damage: f32,
     per_charge: f32,
+    versatility: f32,
     recipients: usize,
 }
 
@@ -74,10 +75,24 @@ fn read_barrage_sample(run: &Run, per_charge: f32) -> BarrageSample {
         .find(|event| event.target == Some(run.targets[0].to_bits()))
         .expect("ordinary Barrage must hit its actual primary");
     BarrageSample {
-        damage: normalize_charge_hit_rolls(run, primary.amount),
+        damage: normalize_charge_hit_rolls(run, 44425, primary.amount),
         per_charge,
+        versatility: read_barrage_versatility(run),
         recipients: hits.len(),
     }
+}
+
+fn read_barrage_versatility(run: &Run) -> f32 {
+    let trace = run.app.world().resource::<FactorCapture>().export();
+    let result = trace["events"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|event| event["event"] == "result" && event["spell_id"] == 44425)
+        .expect("actual native Barrage result");
+    let value = result["factors"]["versatility"].as_f64().unwrap() as f32;
+    assert!(value > 0.0, "native Barrage versatility: {trace}");
+    value
 }
 
 #[test]
@@ -94,7 +109,9 @@ fn arcane_orb_order_barrage_damage_includes_the_orb_root_charge() {
             continue;
         };
         assert_eq!(zero.per_charge, one.per_charge);
-        let expected = zero.damage * (1.0 + 2.0 * zero.per_charge) / (1.0 + zero.per_charge);
+        let expected = zero.damage * (1.0 + 2.0 * zero.per_charge) / (1.0 + zero.per_charge)
+            * one.versatility
+            / zero.versatility;
         assert!(
             (one.damage - expected).abs() <= expected * 0.005 + 2.0,
             "native Orb proc: before0/1 must snapshot1/2; seed={seed}, zero={}, one={}, per_charge={}, expected={expected}",
