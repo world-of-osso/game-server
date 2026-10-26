@@ -459,6 +459,12 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 - The primary prefers the original target without its caster's Seed; otherwise it selects an unseeded candidate and uses the original only if none remain. The read-only sibling helper `warlock_seed::selected_primary(world,caster)` returns that actual selection for the same successful Seed execution, before projectile/explosion. Other owned leaves reuse it without another target draw. Pinned265 bugs mode ignores seeds in flight (`actions1836–1892`). This helper does not apply UA.
 - Qualify actual threshold, expiry, refresh/original-deadline and recipient ownership, with native265 Seed and267 shared-Wither controls. Native paid-recast redirection needs its own RED→GREEN. Selected-Sow effectiveness, death/dispel and MID2 seed-applied-UA relationships remain separately qualified; do not infer them from a zero-damage periodic tick.
 
+### Absolute Corruption lifetime
+
+- Selected196103 on actual Affliction265 makes owned Corruption146739 and Wither445474 permanent, including background Seed applications and reapplications. Preserve native effects, counters and periodic phase; do not change catalog duration or read fixture fight clocks. Pinned SimC models permanence as twice the expected fight length (`actions759–762/1072–1077`).
+- Generic DoT facts for an active permanent aura are not refreshable and have unbounded remains/duration, before finite fresh-duration/Pandemic validation. Missing/finite DoTs and buff/debuff sentinel semantics stay unchanged. Do not suppress literal casts in the adapter to hide an expiring aura.
+- Qualify the actual literal ST and recurring30s-add-wave ordering. Gate265 ST/3T and267, plus actual finite-DoT refreshability from103 or258. Count explosion hits separately from explosion actions; do not tune damage or target counts to repair excess paid Seed refreshes.
+
 ### Shared Hellcaller Wither counters
 
 - Native Wither445474 keeps its actual counter stacks, but its periodic damage ignores that count. An ordinary recast preserves earned stacks without adding a refresh stack; explicit native stack applications retain normal counter advancement. Preserve native coefficients, tick phase and lifetime. Both265 and267 share this rule (SimC76f8118 `sc_warlock_actions.cpp1066,1174–1186`).
