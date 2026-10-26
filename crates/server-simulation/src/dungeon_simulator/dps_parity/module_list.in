@@ -240,3 +240,4 @@ mod venomcursed_tests;
 mod warrior_proc_tests;
 mod warrior_stat_tests;
 mod wither_stack_tests;
+mod zathatek_tests;

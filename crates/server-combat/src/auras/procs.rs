@@ -152,7 +152,7 @@ pub struct PendingAuraEvents {
 /// TC AuraEffect.cpp6126–6155 uses the nullable action target, never an invented
 /// caster target. A proc child's native enemy selector also excludes its owner;
 /// children selecting their own caster retain native implicit targeting.
-pub(crate) fn select_proc_trigger_target(
+pub fn select_proc_trigger_target(
     world: &World,
     caster: Entity,
     child: u32,
