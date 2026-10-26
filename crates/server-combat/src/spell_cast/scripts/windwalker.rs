@@ -383,7 +383,8 @@ fn read_wdp_duration_ms(world: &World, caster: Entity) -> Option<i32> {
 /// SIMC_WW_RWK_BOK_LANDED_PRODUCER: SimC76f8118 sc_monk.cpp1408–1414.
 /// TC a352b1fa has no binding. DB2 owns the selected talent's chance and override.
 /// Native instant BOK hits before modifier-use consumption; misses never run OnHit.
-pub(super) fn blackout_kick_hit(world: &mut World, caster: Entity, _target: Entity, depth: u8) {
+pub(super) fn blackout_kick_hit(world: &mut World, caster: Entity, target: Entity, depth: u8) {
+    super::teachings_of_the_monastery::blackout_hit(world, caster, target, depth);
     if !auras::has_aura(world, caster, COMBO_BREAKER_BUFF) {
         return;
     }
@@ -461,6 +462,7 @@ pub(super) fn reset_rising_sun_kick(world: &mut World, caster: Entity) {
 
 /// Tiger Palm rolls its learned passive's native effect0 chance on a landed hit.
 pub(super) fn tiger_palm_hit(world: &mut World, caster: Entity, _target: Entity, depth: u8) {
+    super::teachings_of_the_monastery::tiger_palm_hit(world, caster, depth);
     let chance = world
         .get::<ActiveAuras>(caster)
         .and_then(|auras| auras.iter().find(|aura| aura.spell_id == COMBO_BREAKER))
