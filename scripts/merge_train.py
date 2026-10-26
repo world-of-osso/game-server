@@ -38,6 +38,7 @@ CAPACITY = Path("/home/osso/.worktrees/logs/capacity.sh")
 AGENT_RUN = Path("/home/osso/Projects/world-of-osso/game-engine/scripts/agent/agent-run")
 # Collect submissions for a while so one build covers several agents.
 GATHER_SECONDS = 300
+ISOLATED_PER_CYCLE = 3
 MEASURE_PARALLEL = 8
 ASSISTED_DB2 = "/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/dps-parity-2026-10-21/native-player-inputs/assisted-70448/"
 RUNNER = "CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER"
@@ -508,10 +509,23 @@ def write_results(entries):
         (RUNNING / f"{entry['id']}.json").unlink(missing_ok=True)
 
 
+# While this file names an owner prefix, cycles take only that owner's entries: a broad change
+# (the spell-scripts crate split) gets a cycle in which no other landing moves its seams.
+SOLO = HOME / "solo"
+
+
+def eligible_queue():
+    paths = sorted(QUEUE.glob("*.json"))
+    if not SOLO.exists():
+        return paths
+    owner = SOLO.read_text().strip()
+    return [p for p in paths if json.loads(p.read_text()).get("owner", "").startswith(owner)]
+
+
 def take_queue():
     RUNNING.mkdir(parents=True, exist_ok=True)
     entries = []
-    for path in sorted(QUEUE.glob("*.json")):
+    for path in eligible_queue():
         target = RUNNING / path.name
         path.rename(target)
         entries.append(json.loads(target.read_text()))
@@ -636,6 +650,11 @@ def run_probes(probes, gated, log):
     # Isolation only changes measurements, so --isolated without --measure stays shared.
     isolated = [e for e in probes if e["measure"] and (e.get("isolated") or not e["tests"])]
     shared = [e for e in probes if e not in isolated]
+    # Each isolated tree costs a check, a test build and a parity build; past a few per cycle they
+    # dominated it (cycle-20261026T151410: 8 trees, 40+ min). The rest wait for the next cycle.
+    for entry in isolated[ISOLATED_PER_CYCLE:]:
+        (RUNNING / f"{entry['id']}.json").rename(QUEUE / f"{entry['id']}.json")
+    isolated = isolated[:ISOLATED_PER_CYCLE]
     passed, failed = [], []
     for group in ([shared] if shared else []) + [[e] for e in isolated]:
         group_passed, group_failed = build_and_test(group, log)
@@ -714,7 +733,7 @@ def run(_args):
                 continue
             print("merge_train.py changed, reloading", flush=True)
             os.execv(sys.executable, [sys.executable, str(script), "run"])
-        queued = list(QUEUE.glob("*.json"))
+        queued = eligible_queue()
         if queued and time.time() - min(p.stat().st_mtime for p in queued) >= GATHER_SECONDS:
             try:
                 cycle()
