@@ -561,6 +561,10 @@ Lifebloom hooks bloom33778 on expiry/dispel and replace only other targets beari
 
 Guardian/Karma/Eye Beam and retained markers/talents remain excluded. Batch17 did not infer general leech from disease application; batch18 adds aura53 explicitly. Current proof and source limits live in the linked coverage ledger.
 
+## Arcane Familiar on Intellect —2026-10-26
+
+Pinned SimC76f8118 `sc_mage.cpp3080–3092` triggers Familiar from an actual Arcane Intellect execution when the talent is selected. Native205022 talent and210126 aura supply eligibility and the10% max-Mana effect. Native RED4178eeb663 confirms real precombat1459 and selected205022 but no210126; direct native aura application changes max Mana392057→431263. The Arcane foreground hook now grants the authored aura, with no synthetic amount or reference-stat adjustment. GREEN and paired62 measurements remain pending. Hasted225119 attacks and Energized/Attuned Familiar relationships are not implemented by this slice.
+
 ## Native proc-mask-qualified modifier charges —2026-10-26
 
 Charged spell modifiers use the aura's explicit native proc spell mask to qualify charge consumption, separately from which spells receive the modifier. The existing native family matcher is shared with proc events; family0 and entries without a spell mask retain their unconstrained semantics. No native charges, masks, amounts or RNG values change.
