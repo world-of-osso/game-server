@@ -706,6 +706,7 @@ pub(super) fn register_class_scripts(
             ..Default::default()
         },
     );
+    crate::spell_cast::scripts::register_arcane(&mut scripts);
     // Extend existing parent lifecycle entries rather than replacing their hooks.
     crate::spell_cast::scripts::register_xuens_battlegear(&mut scripts);
     crate::spell_cast::scripts::register_channel_policies(&mut scripts, &registry);
