@@ -273,6 +273,7 @@ mod shadow_apparition_tests;
 mod shadow_horizon_tests;
 mod shadow_haunting_tests;
 mod shadow_insight_tests;
+mod shadow_ire_tests;
 mod shadow_link_tests;
 mod shadow_mastery_tests;
 mod shadow_nzoth_tests;
