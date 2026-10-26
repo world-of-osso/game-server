@@ -98,8 +98,8 @@ fn next_pyre(world: &mut World, actor: Entity, aura: &AuraInstance, index: u8) {
     let Some(effect) = aura.effects.iter().find(|effect| effect.index == index) else {
         return;
     };
-    // Source's tick-on-apply plus the first two periodic ticks are three actual casts.
-    if effect.periodic_ticks <= 2 {
+    // SimC buff.cpp182/2525–2527: application is tick0; scheduled ticks1–3 also cast.
+    if effect.periodic_ticks <= 3 {
         cast_pyre(world, actor);
     }
 }

@@ -43,7 +43,7 @@ fn evoker_command_squadron_actual_maneuverability_owns_two_pets_and_three_flight
             .map(|(entity, _, _)| entity)
             .collect();
         // SimC76f8118 sc_evoker.cpp3795–3839/6256–6261: two actual guardians,
-        // each executes three real Pyres while its source flight is in progress.
+        // uninterrupted flight executes tick0 plus scheduled ticks1–3.
         assert_eq!(
             pets.len(),
             if selected { 2 } else { 0 },
@@ -71,8 +71,8 @@ fn evoker_command_squadron_actual_maneuverability_owns_two_pets_and_three_flight
                     })
                     .count();
                 assert_eq!(
-                    hits, 3,
-                    "each actual Commando must damage each native pack recipient three times"
+                    hits, 4,
+                    "each actual Commando must damage each native pack recipient four times on uninterrupted flight"
                 );
             }
             assert!(
