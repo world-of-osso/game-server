@@ -1,3 +1,4 @@
+- 2026-10-26: Absolute landed8f4e67fed6; identified nonstacking Corruption0 passed to positive-counter API and replaced that caller with duration-only permanence. Native GREEN pending.
 ## 2026-10-26 — Independent Destruction Echo
 
 [Echo](systems/spell-casting.md#destruction-echo--2026-10-26) producer/payload native REDs become two GREEN cases in309398a397. Its value assertion used raw per-rank4, but selected rank2 and pinned reference both require8%. Corrected only the expectation; native values, coefficients and allocations unchanged. Selected-rank gate/landing pending; above8-target reduction unqualified.
