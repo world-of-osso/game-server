@@ -14,7 +14,7 @@ fn stacks(run: &Run, spell: u32) -> u8 {
         .map_or(0, |aura| aura.stacks)
 }
 
-fn crash_remains(run: &Run) -> f64 {
+fn crash_value(run: &Run, property: &str) -> f64 {
     let bindings = Bindings {
         actions: [("crash_lightning".into(), 187874)].into(),
         global_cooldown_spell: 187874,
@@ -31,11 +31,11 @@ fn crash_remains(run: &Run) -> f64 {
         },
         1,
     )
-    .value("cooldown.crash_lightning.remains")
+    .value(property)
     .unwrap()
 }
 
-fn earn_storm_with_normal_crash_recharging(run: &mut Run) -> f64 {
+fn earn_storm_with_normal_crash_recharging(run: &mut Run) {
     engage(run);
     let target = run.targets[0];
     literal_rotation::execution::execute(
@@ -50,7 +50,8 @@ fn earn_storm_with_normal_crash_recharging(run: &mut Run) -> f64 {
     for _ in 0..40000 {
         if needs_crash && stacks(run, 344179) >= 5 {
             enhancement_generation_tests::cast(run, 187874, target);
-            normal_ready_at = crate::spell_cast::now(run.app.world()) + crash_remains(run);
+            normal_ready_at = crate::spell_cast::now(run.app.world())
+                + crash_value(run, "cooldown.crash_lightning.remains");
             needs_crash = false;
         }
         if !needs_crash {
@@ -63,7 +64,7 @@ fn earn_storm_with_normal_crash_recharging(run: &mut Run) -> f64 {
                 normal_ready_at > crate::spell_cast::now(run.app.world()),
                 "the earned proc must overlap a real normal Crash recharge"
             );
-            return normal_ready_at;
+            return;
         }
         if spent >= 250 {
             break;
@@ -89,15 +90,32 @@ fn enhancement_real_spending_earns_free_crash_without_extending_normal_recharge(
             .unwrap()
             .contains(1262713)
     );
-    let normal_ready_at = earn_storm_with_normal_crash_recharging(&mut run);
+    earn_storm_with_normal_crash_recharging(&mut run);
+    for _ in 0..100 {
+        let now = crate::spell_cast::now(run.app.world());
+        if !run
+            .app
+            .world()
+            .get::<crate::spell_cast::SpellHistory>(run.actor)
+            .unwrap()
+            .has_active_gcd(now)
+        {
+            break;
+        }
+        run.app.update();
+    }
     assert_eq!(stacks(&run, 1262830), 1);
     assert_eq!(
-        crash_remains(&run),
+        crash_value(&run, "cooldown.crash_lightning.remains"),
         0.0,
         "earned native411 supplies the extra charge"
     );
     let target = run.targets[0];
-    enhancement_generation_tests::cast(&mut run, 187874, target);
+    // Read the running charge after real proc-driven haste changes, then cast without advancing frames.
+    let remaining = crash_value(&run, "cooldown.crash_lightning.full_recharge_time");
+    assert!(remaining > 0.0, "the free cast precedes normal recovery");
+    crate::spell_cast::creature_cast(run.app.world_mut(), run.actor, 187874, Some(target), false)
+        .unwrap();
     run.app
         .world_mut()
         .entity_mut(run.actor)
@@ -107,11 +125,9 @@ fn enhancement_real_spending_earns_free_crash_without_extending_normal_recharge(
         0,
         "one actual Crash consumes the earned proc"
     );
-    let remaining = normal_ready_at - crate::spell_cast::now(run.app.world());
-    assert!(remaining > 0.0, "the free cast precedes normal recovery");
+    let actual = crash_value(&run, "cooldown.crash_lightning.remains");
     assert!(
-        (crash_remains(&run) - remaining).abs() < 0.051,
-        "free Crash must preserve the old recharge, not append another: expected={remaining}, actual={}",
-        crash_remains(&run)
+        (actual - remaining).abs() < 0.051,
+        "free Crash must preserve the old recharge, not append another: expected={remaining}, actual={actual}"
     );
 }
