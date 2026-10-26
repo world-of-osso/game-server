@@ -150,3 +150,67 @@ fn affliction_nightfall_gained_during_real_hardcast_is_retained_without_bonus() 
         "the hardcast cannot borrow its newly gained Nightfall: {products:?}"
     );
 }
+
+fn start_grasp_duration(run: &mut Run) -> f32 {
+    crate::spell_cast::creature_cast(
+        run.app.world_mut(),
+        run.actor,
+        1261153,
+        Some(run.targets[0]),
+        false,
+    )
+    .unwrap();
+    run.app
+        .world()
+        .get::<shared::casting::CastState>(run.actor)
+        .expect("actual Grasp retains its nonzero channel duration")
+        .duration
+}
+
+#[test]
+#[ignore = "requires private265 profile and native70448 world DB"]
+fn affliction_nightfall_channel_uses_do_not_multiply_duration_reduction() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_nightfall();
+    crate::spell_cast::cast_triggered(run.app.world_mut(), run.actor, 205180, Some(run.actor), 0);
+    let unbuffed = start_grasp_duration(&mut run);
+    finish_bolt(&mut run);
+    grant_nightfall(&mut run);
+    let one_use = start_grasp_duration(&mut run);
+    assert_eq!(uses(&run), 0);
+    finish_bolt(&mut run);
+    grant_nightfall(&mut run);
+    grant_nightfall(&mut run);
+    let two_uses = start_grasp_duration(&mut run);
+    // SimC76f8118 actions199/2151–2163/2182: one boolean bonus and one consumed use.
+    assert_eq!(uses(&run), 1, "a channel spends one of the two real uses");
+    assert!(
+        (one_use - two_uses).abs() < 0.00001,
+        "stacked uses cannot double the duration reduction: {one_use} vs {two_uses}"
+    );
+    let percent =
+        crate::spell_cast::scripts::script_effect_value(run.app.world(), run.actor, NIGHTFALL, 3);
+    let expected = unbuffed * (1.0 + percent / 100.0);
+    assert!(
+        (one_use - expected).abs() < 0.001,
+        "one native duration reduction: {one_use}, expected={expected}"
+    );
+    finish_bolt(&mut run);
+    let hits = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    let ticks = hits
+        .iter()
+        .filter(|event| {
+            event.spell_id == Some(1261153)
+                && event.kind == shared::protocol::CombatLogKind::Damage
+                && event.amount > 0
+        })
+        .count();
+    assert_eq!(
+        ticks, 12,
+        "all three real channels retain all four native ticks"
+    );
+}
