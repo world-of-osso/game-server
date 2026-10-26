@@ -1,4 +1,4 @@
-//! Real delayed Unleashed weapon hits must retain imbue callbacks, independently of white swings.
+//! Native Magic Unleashed and selected Stormwell have different imbue admission.
 use super::*;
 use crate::spell_cast::test_harness::ObservedCombatEvents;
 use shared::protocol::CombatLogKind;
@@ -65,50 +65,54 @@ fn cast_crash_with_dormant_white_swings(run: &mut Run) -> usize {
 
 #[test]
 #[ignore = "native263 reference inputs and private world database"]
-fn enhancement_delayed_unleashed_hits_proc_real_flametongue_and_windfury_without_white_swings() {
-    // SimC76f8118 sc_shaman.cpp3039–3055/3095–3101: eligible main-hand weapon impacts
-    // run imbue callbacks, including the actual1252431 delayed ground strikes.
+fn enhancement_magic_unleashed_hits_do_not_proc_weapon_imbues() {
+    // SimC76f8118 sc_shaman.cpp3039–3055 and SpellDataDump1252431: Magic
+    // fails imbue admission even though the action inherits shaman_attack_t.
     let _seed = crate::random::seed_scope(70448);
-    let mut run = prepare_measurement(263, 3).unwrap();
+    let mut run = prepare_measurement(263, 1).unwrap();
     engage(&mut run);
+    defer_white_swings(&mut run);
     for buff in [319773, 319778] {
         assert!(
             crate::auras::has_aura(run.app.world(), run.actor, buff),
             "native imbue{buff} must be equipped"
         );
     }
-    for _ in 0..8 {
-        cast_crash_with_dormant_white_swings(&mut run);
-        let before_unleashed = hits(&run, Some(1252431));
-        let before_flametongue = hits(&run, Some(10444));
-        let before_windfury = hits(&run, Some(25504));
-        let before_white = hits(&run, None);
-        for _ in 0..40 {
-            run.app.update();
-        }
-        let unleashed = hits(&run, Some(1252431)) - before_unleashed;
-        let flametongue = hits(&run, Some(10444)) - before_flametongue;
-        let windfury = hits(&run, Some(25504)) - before_windfury;
-        assert_eq!(
-            hits(&run, None),
-            before_white,
-            "white swings cannot explain the delayed imbue hits"
-        );
-        assert!(
-            unleashed > 0,
-            "real Crash must supply delayed native weapon hits"
-        );
-        assert!(
-            flametongue >= unleashed,
-            "each real Unleashed weapon hit must trigger native Flametongue: unleashed={unleashed}, flametongue={flametongue}"
-        );
-        if windfury > 0 {
-            return;
-        }
-    }
-    panic!(
-        "delayed Unleashed weapon hits must also roll native Windfury within eight actual Crashes"
+    let target = run.targets[0];
+    let melee_before = hits(&run, Some(32175));
+    let flametongue_before = hits(&run, Some(10444));
+    crate::spell_cast::cast_triggered(run.app.world_mut(), run.actor, 32175, Some(target), 1);
+    preparation::finish_pending_setup(&mut run).unwrap();
+    assert!(
+        hits(&run, Some(32175)) > melee_before,
+        "real Melee control must land"
     );
+    assert!(
+        hits(&run, Some(10444)) > flametongue_before,
+        "the equipped native Flametongue callback must work for a real Melee hit"
+    );
+
+    let before_magic = hits(&run, Some(1252431));
+    let before_flametongue = hits(&run, Some(10444));
+    let before_windfury = hits(&run, Some(25504));
+    let before_white = hits(&run, None);
+    crate::spell_cast::cast_triggered(run.app.world_mut(), run.actor, 1252431, Some(target), 1);
+    preparation::finish_pending_setup(&mut run).unwrap();
+    assert!(
+        hits(&run, Some(1252431)) > before_magic,
+        "real native Magic child must land"
+    );
+    assert_eq!(
+        hits(&run, Some(10444)),
+        before_flametongue,
+        "native Magic Unleashed must not trigger Flametongue"
+    );
+    assert_eq!(
+        hits(&run, Some(25504)),
+        before_windfury,
+        "native Magic Unleashed must not trigger Windfury"
+    );
+    assert_eq!(hits(&run, None), before_white, "no unrelated white swings");
 }
 
 #[test]
