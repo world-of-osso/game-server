@@ -257,7 +257,7 @@ pub(super) fn schedule_instant_background(
         spell_id,
         depth: 0,
         item_level: None,
-        damage_multiplier: ctx.spell.cast_damage_multiplier,
+        damage_multiplier: ctx.spell.cast_overload_multiplier,
     };
     world
         .resource_mut::<PendingTriggers>()

@@ -55,6 +55,7 @@ fn overload_damage(multiplier: f32, mote: bool) -> (u64, f32) {
         .unwrap()
         .clone();
     blast.cast_damage_multiplier = Some(multiplier);
+    blast.cast_overload_multiplier = Some(multiplier);
     assert!(crate::spell_cast::launch_triggered_spell(
         run.app.world_mut(),
         run.actor,
@@ -116,7 +117,7 @@ fn cast_events(run: &Run, spell: u32) -> usize {
         .iter()
         .filter(|event| {
             event.source == Some(run.actor.to_bits())
-                && event.kind == CombatLogKind::CastSuccess
+                && event.kind == CombatLogKind::Damage
                 && event.spell_id == Some(spell)
         })
         .count()

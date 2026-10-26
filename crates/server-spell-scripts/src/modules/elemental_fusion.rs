@@ -57,6 +57,7 @@ fn cast_fusion(world: &mut World, caster: Entity, target: Option<Entity>) {
     let percent = spell_cast::scripts::script_effect_value(world, caster, FUSION, 0);
     let mut blast = world.resource::<SpellStore>().get(BLAST).expect("native Fusion Blast").clone();
     blast.cast_damage_multiplier = Some(percent / 100.0);
+    blast.cast_overload_multiplier = Some(percent / 100.0);
     blast.cast_primary_target = Some(target);
     blast.cast_parent_owns_modifier_charges = true;
     // SimC76f8118 sc_shaman.cpp7653–7674: instant, free background Blast.
