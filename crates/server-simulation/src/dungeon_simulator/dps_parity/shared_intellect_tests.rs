@@ -4,7 +4,7 @@ use crate::auras::ActiveAuras;
 use crate::followers::Follower;
 use crate::stats::{CharacterStats, StatModifiers};
 use server::test_support::ReferenceRace;
-use shared::components::UnitLevel;
+use shared::components::{Player, UnitLevel};
 
 fn infer_equipped_intellect(world: &World, actor: Entity, base: f32) -> f32 {
     let stats = world.get::<CharacterStats>(actor).unwrap();
@@ -35,13 +35,26 @@ fn read_primary_aura_sources(world: &World, actor: Entity) -> Vec<(u32, u32, f32
         .collect()
 }
 
+fn read_actor_identity(world: &World, actor: Entity) -> (u8, u8) {
+    if let Some(player) = world.get::<Player>(actor) {
+        return (player.class, player.race);
+    }
+    let follower = world
+        .get::<Follower>(actor)
+        .expect("native reference actor is a player or follower");
+    let race = world
+        .get::<ReferenceRace>(actor)
+        .expect("native reference follower retains its declared race")
+        .0;
+    (follower.profile.class_id, race)
+}
+
 fn assert_profile_intellect(spec: u32, expected: f32) {
     let _seed = crate::random::seed_scope(70_448);
     let run = prepare_measurement(spec, 1).unwrap();
     let world = run.app.world();
     let actor = run.actor;
-    let class = world.get::<Follower>(actor).unwrap().profile.class_id;
-    let race = world.get::<ReferenceRace>(actor).unwrap().0;
+    let (class, race) = read_actor_identity(world, actor);
     let level = world.get::<UnitLevel>(actor).unwrap().0;
     let base = crate::stats::base_primary_stats(class, race, level)
         .unwrap()
