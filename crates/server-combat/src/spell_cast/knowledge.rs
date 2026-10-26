@@ -110,6 +110,8 @@ fn project_known_parent(world: &World, actor: Entity, requested: u32) -> u32 {
         357210 if known.contains(433871) => 433874,
         114050 => 1219480,
         426115 => 264178,
+        // simc_apl: Malefic Grasp — SimC76f8118 sc_warlock_init.cpp181–183/sc_warlock_actions.cpp2100.
+        1261149 => 1261153,
         _ => requested,
     }
 }
