@@ -3,6 +3,8 @@
     114255,
     116768,
     117828,
+    // SimC76f8118 sc_rogue.cpp5015/5057: Opportunity stacks are shots, not magnitude.
+    195627,
     263725,
     // SimC76f8118 sc_warrior.cpp1256–1261/1324–1325: Sweeping stacks are uses.
     260708,
@@ -13,4 +15,6 @@
     264571,
     // SimC76f8118 sc_hunter.cpp1407–1408: Tip stacks count uses, not magnitude.
     260286,
+    // Native470532s1/s2 EX_SUPPRESS_STACKING64; SimC parse_effects.cpp716–719.
+    470532,
 ]

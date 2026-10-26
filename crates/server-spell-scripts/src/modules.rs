@@ -39,6 +39,8 @@ const fn order_modules<const N: usize>(
 
 register_modules! {
     affliction_agony: (2650, "modules/affliction_agony.rs"),
+    affliction_embrace: (2659, "modules/affliction_embrace.rs"),
+    affliction_darkglare: (2659, "modules/affliction_darkglare.rs"),
     affliction_empowerment: (2658, "modules/affliction_empowerment.rs"),
     affliction_grasp: (2654, "modules/affliction_grasp.rs"),
     affliction_instability: (2651, "modules/affliction_instability.rs"),
@@ -134,6 +136,7 @@ register_modules! {
     midnight_stat_items: (1000, "modules/midnight_stat_items.rs"),
     outlaw_flurry: (2601, "modules/outlaw_flurry.rs"),
     outlaw_opportunity: (2600, "modules/outlaw_opportunity.rs"),
+    outlaw_pistol: (2602, "modules/outlaw_pistol.rs"),
     outlaw_spree: (2600, "modules/outlaw_spree.rs"),
     paid_cooldowns: (130, "modules/paid_cooldowns.rs"),
     periodic_counters: (270, "modules/periodic_counters.rs"),
@@ -173,7 +176,9 @@ register_modules! {
     touch_of_death: (240, "modules/touch_of_death.rs"),
     unrelenting_onslaught: (714, "modules/unrelenting_onslaught.rs"),
     voltaic_blaze: (250, "modules/voltaic_blaze.rs"),
+    warlock_seed: (2659, "modules/warlock_seed.rs"),
     warrior: (40, "modules/warrior.rs"),
+    windwalker_fof: (2690, "modules/windwalker_fof.rs"),
     windwalker_momentum: (50, "modules/windwalker_momentum.rs"),
     windwalker_zenith: (30, "modules/windwalker_zenith.rs"),
     zathatek_breath: (1000, "modules/zathatek_breath.rs"),
