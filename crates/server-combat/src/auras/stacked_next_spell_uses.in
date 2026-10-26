@@ -5,10 +5,14 @@
     117828,
     // SimC76f8118 sc_rogue.cpp5015/5057: Opportunity stacks are shots, not magnitude.
     195627,
+    // SimC76f8118 sc_shaman.cpp8759: Stormkeeper stacks are independent uses.
+    191634,
     263725,
     // SimC76f8118 sc_warrior.cpp1256–1261/1324–1325: Sweeping stacks are uses.
     260708,
     325202,
+    // SimC76f8118 sc_evoker.cpp3004–3006/3223–3250: Imminent stacks are flat-cost uses.
+    411055,
     436336,
     1265871,
     // SimC76f8118 warlock actions199/2152/2182/877–878: Nightfall stacks are uses.

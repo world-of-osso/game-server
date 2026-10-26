@@ -18,6 +18,30 @@ fn destruction_imp_native_firebolt_inherits_validated_live_owner_power() {
     assert_eq!(run.app.world().get::<Npc>(imp).unwrap().template_id, 416);
     assert!(run.app.world().get::<UnitIsPet>(imp).unwrap().0);
     let target = run.targets[0];
+    // Read-only native27 planning also covers controlled pets. Do not cast a
+    // different pet's energize or trust the supplied enemy as the master.
+    let master_spell = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(264365)
+        .unwrap()
+        .clone();
+    let recipients = crate::spell_cast::targets::select_targets(
+        run.app.world_mut(),
+        imp,
+        Some(target),
+        &master_spell,
+        &master_spell.effects[0],
+        0,
+        false,
+    )
+    .unwrap();
+    assert_eq!(
+        recipients,
+        vec![owner],
+        "native27 must resolve the actual controlled owner"
+    );
     engage(&mut run);
     // A real pet order isolates power from literal-controller engagement.
     crate::pet_control::order_companion_pet(run.app.world_mut(), owner, Some(target));

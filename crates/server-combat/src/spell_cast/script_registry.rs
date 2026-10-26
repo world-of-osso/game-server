@@ -78,6 +78,7 @@
 //! - `AfterQueuedTriggers`: fixed update after queued hits, before power/rune sync.
 //! - `AfterSpellPayment`: after generic payment callbacks, before gargoyle empowerment.
 //! - `AfterAuraApplication`: after successful aura storage and native apply/refresh callbacks.
+//! - `SummonInitialized`: after guardian initialization, receiving the actual spawned actor.
 //! New stages own distinct callback/lookup aliases, even when signatures coincide.
 //! Within a stage, traverse module slices and entries from first to last. Never sort
 //! or deduplicate them. Adding a policy to an existing module changes only that module.
@@ -96,10 +97,13 @@ pub type PeriodicPrimaryDamageHook = fn(&mut World, &EffectCtx<'_>, Entity, f32,
 pub type SpellResidualHook = fn(&mut World, &EffectCtx<'_>, Entity, f32);
 pub type TargetDamageMultiplierHook = fn(&World, Entity, Entity, &SpellInfo) -> f32;
 pub type AuraApplicationHook = fn(&mut World, Entity, &crate::auras::AuraInstance);
+pub type SummonInitializedHook = fn(&mut World, Entity);
 pub type AuraRedirectHook = fn(&mut World, Entity, Entity, u32, u8) -> bool;
 
 pub type AfterCastLookup = fn(u32) -> Option<AfterCastHook>;
 pub type OnCastHook = fn(&mut World, Entity, u32, u8);
+/// Actor-conditioned channel behavior supplied by a source-qualified script.
+pub type ScriptedChannelHook = fn(&World, Entity, &SpellInfo) -> bool;
 pub type AfterPaymentHook = fn(&mut World, Entity, &[(CostPool, f32)]);
 pub type PowerCostHook = fn(&World, Entity, &SpellInfo, CostPool, f32) -> f32;
 pub type HitHook = fn(&mut World, Entity, Entity, u8);
@@ -179,6 +183,7 @@ pub type SnapshotHealingAuraHook =
 pub enum SpellScriptHook {
     Policies(&'static [Policy]),
     NativeAfterCast(AfterCastLookup),
+    ScriptedChannel(ScriptedChannelHook),
     AuraRollAfterCast(AfterCastLookup),
     OnCast(OnCastHook),
     AfterPayment(AfterPaymentHook),
@@ -194,6 +199,7 @@ pub enum SpellScriptHook {
     AuraRedirect(AuraRedirectHook),
     /// All successful native aura applications, including refresh/replacement.
     AfterAuraApplication(AuraApplicationHook),
+    SummonInitialized(SummonInitializedHook),
     EffectHit(EffectHitLookup),
     EffectHandler(EffectHandlerLookup),
     TargetFilter(TargetFilterHook),
@@ -329,6 +335,14 @@ impl SpellScriptRegistry {
         })
     }
 
+    pub fn summon_initialized(self, world: &mut World, actor: Entity) {
+        for hook in self.hooks() {
+            if let SpellScriptHook::SummonInitialized(run) = hook {
+                run(world, actor);
+            }
+        }
+    }
+
     pub fn register_early_auras(self, scripts: &mut crate::auras::scripts::AuraScripts) {
         for hook in self.hooks() {
             if let SpellScriptHook::EarlyAuraRegistration(register) = hook {
@@ -433,6 +447,17 @@ impl Default for SpellScriptRegistry {
         #[cfg(not(test))]
         Self::new(&[])
     }
+}
+
+pub(crate) fn scripted_channel(world: &World, caster: Entity, spell: &SpellInfo) -> bool {
+    world
+        .get_resource::<SpellScriptRegistry>()
+        .is_some_and(|registry| {
+            registry.hooks().any(|hook| match hook {
+                SpellScriptHook::ScriptedChannel(test) => test(world, caster, spell),
+                _ => false,
+            })
+        })
 }
 
 pub(crate) fn requires_resource_context(world: &World, spell: u32) -> bool {

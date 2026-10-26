@@ -154,6 +154,7 @@ fn matching<'a>(
 // Native accumulated next-spell uses, not multiplied modifier magnitude.
 // SimC76f8118 sc_monk.cpp1422 decrements one Combo Breaker stack per Blackout Kick.
 // Tidal Waves/Backdraft/Surge of Light stacks are also next-spell uses.
+// SimC76f8118 sc_shaman.cpp8759 grants SK's uses; each carries one buff value.
 // SimC76f8118 sc_evoker.cpp6485/6595: Mass Disintegrate stacks are uses,
 // not a multiplier on its native additional-target amount.
 // SimC76f8118 sc_mage.cpp1852–1853/3242: Clearcasting stacks are
@@ -316,7 +317,19 @@ fn modifier_totals(world: &World, caster: Entity, spell: &SpellInfo, op: SpellMo
     })
 }
 
-/// Spell modifiers with charges are spent by the spell they modify: each
+// An explicit native proc mask can restrict charge use more narrowly than the
+// modifier itself:36032 modifies Blast but its charge is spent by Barrage.
+fn proc_mask_allows_consumer(world: &World, aura: &AuraInstance, spell: &SpellInfo) -> bool {
+    world
+        .get_resource::<crate::spell_info::SpellStore>()
+        .and_then(|store| store.get(aura.spell_id))
+        .and_then(|source| source.aura_options.as_ref())
+        .and_then(|options| options.proc_family)
+        .filter(|(_, mask)| *mask != [0; 4])
+        .is_none_or(|(family, mask)| super::procs::matches_explicit_family(spell, family, mask))
+}
+
+/// Spell modifiers with charges are spent by an eligible modifying spell: each
 /// charged mod aura affecting `spell` (any op) loses one charge and is
 /// removed at zero.
 pub fn consume_charges(world: &mut World, caster: Entity, spell: &SpellInfo) {
@@ -327,6 +340,7 @@ pub fn consume_charges(world: &mut World, caster: Entity, spell: &SpellInfo) {
         .iter()
         .filter(|aura| {
             aura.charges > 0
+                && proc_mask_allows_consumer(world, aura, spell)
                 && !world
                     .resource::<crate::spell_cast::script_registry::SpellScriptRegistry>()
                     .preserve_unadmitted_proc(spell, aura)
