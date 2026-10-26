@@ -167,6 +167,12 @@ fn affliction_nightfall_gained_during_real_hardcast_is_retained_without_bonus() 
 }
 
 fn start_grasp_duration(run: &mut Run) -> f32 {
+    let haste_before = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(run.actor)
+        .unwrap()
+        .haste_pct;
     crate::spell_cast::creature_cast(
         run.app.world_mut(),
         run.actor,
@@ -175,11 +181,34 @@ fn start_grasp_duration(run: &mut Run) -> f32 {
         false,
     )
     .unwrap();
-    run.app
+    let duration = run
+        .app
         .world()
         .get::<shared::casting::CastState>(run.actor)
         .expect("actual Grasp retains its nonzero channel duration")
-        .duration
+        .duration;
+    let world = run.app.world();
+    let haste_after = world
+        .get::<crate::stats::CharacterStats>(run.actor)
+        .unwrap()
+        .haste_pct;
+    let periods = world
+        .get::<crate::auras::ActiveAuras>(run.targets[0])
+        .map(|auras| {
+            auras
+                .iter()
+                .filter(|aura| aura.spell_id == 1261153 && aura.caster == run.actor)
+                .flat_map(|aura| {
+                    aura.effects
+                        .iter()
+                        .map(|effect| (effect.index, effect.period_ms))
+                })
+                .collect::<Vec<_>>()
+        });
+    eprintln!(
+        "Grasp clock: span={duration}s haste_before={haste_before}% haste_after={haste_after}% periods={periods:?}"
+    );
+    duration
 }
 
 #[test]
