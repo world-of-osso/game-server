@@ -180,6 +180,7 @@ register_modules! {
     soul_of_the_forest: (1000, "modules/soul_of_the_forest.rs"),
     spellslinger_hits: (401, "modules/spellslinger_hits.rs"),
     stacking_summons: (1000, "modules/stacking_summons.rs"),
+    subtlety_ancient: (2611, "modules/subtlety_ancient.rs"),
     subtlety_shadow: (420, "modules/subtlety_shadow.rs"),
     subtlety_techniques: (2610, "modules/subtlety_techniques.rs"),
     survival: (2550, "modules/survival.rs"),
