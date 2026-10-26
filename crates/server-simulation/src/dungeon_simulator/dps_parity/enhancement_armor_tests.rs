@@ -18,7 +18,7 @@ fn prepare_root(root: u32) -> Run {
     run
 }
 
-fn apply_armor_control(run: &mut Run, armorless: bool) {
+pub(super) fn apply_armor_control(run: &mut Run, armorless: bool) {
     const DEMATERIALIZE_ARMOR: u32 = 40935;
     let target = run.targets[0];
     assert!(
