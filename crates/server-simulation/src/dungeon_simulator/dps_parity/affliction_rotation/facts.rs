@@ -19,7 +19,7 @@ impl<'a> AfflictionFacts<'a> {
         encounter: Encounter,
     ) -> Self {
         let now = crate::spell_cast::now(world);
-        // SimC76f8118 pet.cpp1123–1127: remains is the awake pet's actual expiration.
+        // SimC76f8118 player.cpp12462–12469: remains reads the actual pet expiration.
         let darkglare_remains = world
             .iter_entities()
             .filter_map(|entity| {
@@ -64,7 +64,7 @@ impl ActionFacts for AfflictionFacts<'_> {
         self.native.target_ids(action)
     }
     fn value_for(&self, action: &Action, name: &str) -> Result<f64, String> {
-        // dot.cpp510–550: bare dot operands refer to the candidate action and recipient.
+        // SimC76f8118 dot.cpp448–485: these operands read the candidate's own dot.
         if matches!(name, "remains" | "duration" | "refreshable") {
             return self
                 .native
