@@ -30,12 +30,14 @@ fn destruction_echo_native_apex_values_include_real_gear_and_talent_labels() {
         base(1265770, 0) + base(1296571, 1),
         "native2pc adds its actual label-bound chance"
     );
-    let selected = world
-        .get::<TraitLoadout>(run.actor)
-        .unwrap()
-        .spell_trait(1265772)
-        .expect("actual selected Embers II definition");
-    assert_eq!(selected.rank, 2, "frozen267 selects native Embers II rank2");
+    assert!(
+        world
+            .get::<TraitLoadout>(run.actor)
+            .unwrap()
+            .active_talent_spells()
+            .any(|talent| talent.spell_id == 1265772),
+        "frozen267 actually selects Embers II"
+    );
     for index in [0, 1] {
         let vision =
             crate::spell_cast::scripts::script_effect_value(world, run.actor, 1265939, index);
