@@ -102,6 +102,64 @@ fn rogue_supercharger_outlaw_adrenaline_earns_effective_spree_points() {
     );
 }
 
+fn first_noncritical_spree_hand(adrenaline: bool) -> (f32, f32) {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(260, 1).unwrap();
+    engage(&mut run);
+    if adrenaline {
+        cast(&mut run, 13750, true);
+    }
+    let maximum =
+        crate::spell_cast::powers::power_value(run.app.world(), run.actor, PowerType::ComboPoints)
+            .unwrap()
+            .1;
+    let forced = if crate::auras::has_aura(run.app.world(), run.actor, 470668) {
+        crate::spell_cast::scripts::script_effect_value(run.app.world(), run.actor, 470668, 0)
+    } else {
+        0.0
+    };
+    let extra = if adrenaline {
+        crate::spell_cast::scripts::script_effect_value(run.app.world(), run.actor, 470347, 1)
+            + forced
+    } else {
+        0.0
+    };
+    let per_point =
+        crate::spell_cast::scripts::script_effect_value(run.app.world(), run.actor, 51690, 3)
+            / 100.0;
+    fund(&mut run, maximum);
+    cast(&mut run, 51690, true);
+    let event = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .iter()
+        .find(|event| {
+            event.source == Some(run.actor.to_bits())
+                && event.spell_id == Some(57841)
+                && event.kind == CombatLogKind::Damage
+                && !event.crit
+                && event.amount > 0
+        })
+        .expect("actual native Spree must supply a noncritical hand hit");
+    (event.amount as f32, 1.0 + per_point * extra)
+}
+
+#[test]
+#[ignore = "requires private native260 player profile and traits"]
+fn rogue_supercharger_overcap_spree_scales_native_hand_damage() {
+    let (ordinary, _) = first_noncritical_spree_hand(false);
+    let (charged, expected) = first_noncritical_spree_hand(true);
+    // SimC76f8118 sc_rogue.cpp4702–4714: each excess effective point
+    // adds the native Spree effect4 fraction to both actual hand payloads.
+    let ratio = charged / ordinary;
+    assert!(
+        (expected * 0.97..expected * 1.03).contains(&ratio),
+        "native overcap hand ratio must be{expected}, got{ratio} ({ordinary}/{charged})"
+    );
+}
+
 fn assert_other_rogue_producer(spec: u32, producer: u32, finisher: u32, self_target: bool) {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(spec, 1).unwrap();
