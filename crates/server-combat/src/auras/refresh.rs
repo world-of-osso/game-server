@@ -68,7 +68,24 @@ pub(super) fn prepare_application(
         };
         roll_remaining_periodic(world, target, new, budget);
     }
+    preserve_counter_only_stacks(world, target, new, spell);
     super::ret_crusade::preserve_refresh_duration(world, target, new);
+}
+
+fn preserve_counter_only_stacks(
+    world: &World,
+    target: Entity,
+    new: &mut AuraInstance,
+    spell: &SpellInfo,
+) {
+    let counter_only = world
+        .resource::<crate::spell_cast::script_registry::SpellScriptRegistry>()
+        .counter_only_dot_stacks(spell.id);
+    if counter_only && spell.cast_aura_stacks.is_none() && previous(world, target, new).is_some() {
+        // Ordinary refresh contributes no counter stacks; explicit native stack
+        // applications still advance the counter through the normal merge.
+        new.stacks = 0;
+    }
 }
 
 fn preserve_expiry(world: &World, target: Entity, new: &mut AuraInstance, spell: &SpellInfo) {

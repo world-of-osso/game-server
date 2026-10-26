@@ -914,7 +914,9 @@ fn build_instance(
         expires_at,
         stacks,
         max_stacks,
-        stack_expirations: async_stacks::initial_expirations(spell, max_stacks, stacks, expires_at),
+        stack_expirations: async_stacks::initial_expirations(
+            world, spell, max_stacks, stacks, expires_at,
+        ),
         charges: charges.clamp(0.0, 255.0) as u8,
         passive,
         hidden: passive || attributes(spell, 0) & ATTR0_DO_NOT_DISPLAY != 0,
