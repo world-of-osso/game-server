@@ -31,6 +31,7 @@ mod batch7;
 mod batch8;
 mod batch9;
 mod frost;
+mod frost_mage;
 mod periodic_attacks;
 pub(crate) use periodic_attacks::{after_periodic_trigger, rolls_reapplication};
 pub(super) use script_registry::after_foreground_special;
@@ -96,6 +97,7 @@ pub(super) fn apply_periodic_damage_policies(
     target: Entity,
     amount: f32,
 ) {
+    frost_mage::after_periodic_damage(world, ctx, target);
     policies::after_periodic_damage(world, ctx, target, amount);
     spellslinger::after_periodic_damage(world, ctx, target);
     midnight_items::after_periodic_damage(world, ctx, target);
@@ -239,6 +241,7 @@ pub(super) fn after_direct_damage(
     target: Entity,
     critical: bool,
 ) {
+    frost_mage::after_damage(world, ctx, target, critical);
     spellslinger::after_direct_damage(world, ctx);
     windwalker_flurry::after_direct_damage(world, ctx, critical);
     crate::auras::rogue::after_builder_hit(world, ctx, critical);
@@ -969,6 +972,9 @@ pub(super) fn target_plan(world: &World, spell_id: u32) -> Option<(Relation, Tar
         return Some(hook);
     }
     if let Some(hook) = policies::target_plan_hook(world, spell_id) {
+        return Some(hook);
+    }
+    if let Some(hook) = frost_mage::target_plan_hook(spell_id) {
         return Some(hook);
     }
     if let Some(hook) = guardian_impacts::plan_hook(spell_id) {
