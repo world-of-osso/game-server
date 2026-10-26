@@ -33,6 +33,11 @@ fn actual_hit(spell_id: u32, boost: bool) -> (f64, f64) {
                 source: AuraSource::Cast,
             },
         );
+    }
+    // Aura application marks modifiers changed; the real stat system folds
+    // them on the next frame. Advance both samples equally before admission.
+    run.app.update();
+    if boost {
         let after = run.app.world().get::<CharacterStats>(caster).unwrap();
         assert_eq!(
             after.spell_power, before.spell_power,
@@ -44,7 +49,9 @@ fn actual_hit(spell_id: u32, boost: bool) -> (f64, f64) {
         );
         assert!(
             (after.crit_pct - before.crit_pct - 30.0).abs() < 0.01,
-            "native113858 must supply its actual single-effect30% crit input"
+            "native113858 must supply its actual single-effect30% crit input: before={}, after={}",
+            before.crit_pct,
+            after.crit_pct
         );
     }
     if spell_id == 17877 {
