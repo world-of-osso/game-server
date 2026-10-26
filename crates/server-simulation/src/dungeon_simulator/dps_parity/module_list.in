@@ -296,6 +296,7 @@ mod subtlety_blades_tests;
 mod subtlety_deathstalker_tests;
 mod subtlety_finishers_tests;
 mod subtlety_relentless_tests;
+mod subtlety_mass_tests;
 mod subtlety_secret_snapshot_tests;
 mod subtlety_secret_tests;
 mod subtlety_blades_tests;
