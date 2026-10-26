@@ -3,6 +3,7 @@ use super::*;
 #[test]
 #[ignore = "requires private spec253 reference inputs and native world DB"]
 fn native_bm_wrath_applies_bloodshed_from_each_owned_pet() {
+    let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_measurement(253, 1).expect("native literal BM fixture");
     engage(&mut run);
     literal_rotation::execution::execute(
@@ -26,12 +27,20 @@ fn native_bm_wrath_applies_bloodshed_from_each_owned_pet() {
         .world()
         .get::<crate::auras::ActiveAuras>(run.targets[0])
         .unwrap();
+    let bloodshed_events: Vec<_> = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .iter()
+        .filter(|event| event.spell_id == Some(321538))
+        .collect();
     for pet in &pets {
         assert!(
             auras
                 .iter()
                 .any(|aura| aura.spell_id == 321538 && aura.caster == *pet),
-            "selected Bloodshed must be a real native aura owned by each pet: {pet}"
+            "selected Bloodshed must be a real native aura owned by each pet: {pet}; native Bloodshed events={bloodshed_events:?}; target auras={auras:?}"
         );
     }
     for _ in 0..40 {
