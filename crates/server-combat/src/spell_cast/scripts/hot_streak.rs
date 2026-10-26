@@ -35,6 +35,10 @@ pub(crate) fn record_fire_hit(
     if !eligible || !learned {
         return;
     }
+    apply_hot_streak_outcome(world, caster, crit, guaranteed);
+}
+
+fn apply_hot_streak_outcome(world: &mut World, caster: Entity, crit: bool, guaranteed: bool) {
     // SimC76f8118 sc_mage.cpp2138–2159/2186–2192: guaranteed outcomes
     // predict HU, and known-HU conversions predict HS; wasted crits keep HS.
     if crit && crate::auras::has_aura(world, caster, HOT_STREAK) {
@@ -47,6 +51,7 @@ pub(crate) fn record_fire_hit(
     #[cfg(any(test, feature = "test-support"))]
     let reacted =
         crate::simc_apl_native::reaction::has_observed_reaction(world, caster, HEATING_UP);
+    let now = crate::auras::aura_now(world);
     let heating_up = world
         .get::<ActiveAuras>(caster)
         .and_then(|auras| {
@@ -54,7 +59,19 @@ pub(crate) fn record_fire_hit(
                 .iter()
                 .find(|aura| aura.spell_id == HEATING_UP && aura.caster == caster)
         })
-        .map(|aura| aura.instance_id);
+        .map(|aura| {
+            let protected = aura.expires_at.is_some_and(|expiry| {
+                let applied_at = expiry - f64::from(aura.duration_ms) / 1000.0;
+                now - applied_at <= 0.2
+            });
+            (aura.instance_id, protected)
+        });
+    // SimC76f8118 sc_mage.cpp2196–2210: an ordinary noncritical hit
+    // cannot remove Heating Up during its first200ms.
+    if !crit && heating_up.is_some_and(|(_, protected)| protected) {
+        return;
+    }
+    let heating_up = heating_up.map(|(instance, _)| instance);
     if let Some(instance) = heating_up {
         remove_instance(world, caster, instance, RemoveReason::Consumed);
     }
@@ -74,16 +91,47 @@ pub(crate) fn record_fire_hit(
     }
 }
 
-fn consume_admitted_hot_streak(world: &mut World, caster: Entity, spell: &SpellInfo) -> bool {
-    let instance = world
+/// SimC76f8118 sc_mage.cpp3913–3920: one independent Fuel roll per cast
+/// that hits any recipient, using the cast's crit snapshot before proc consumption.
+pub(crate) fn flamestrike_hot_streak_chance(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    hit: Option<Entity>,
+) -> Option<f32> {
+    if !matches!(spell.id, FLAMESTRIKE | NATIVE_FLAMESTRIKE) {
+        return None;
+    }
+    let hit = hit?;
+    let known = world.get::<KnownSpells>(caster)?;
+    if !known.contains(DRIVER) {
+        return None;
+    }
+    Some(if known.contains(416094) {
+        crate::spell_cast::effects::crit_chance(world, caster, hit, spell)
+    } else {
+        0.0
+    })
+}
+
+pub(crate) fn roll_flamestrike_hot_streak(world: &mut World, caster: Entity, chance: f32) {
+    let crit = rand::random::<f32>() * 100.0 < chance;
+    apply_hot_streak_outcome(world, caster, crit, chance >= 100.0);
+}
+
+pub(super) fn admitted_hot_streak(world: &World, caster: Entity, spell: &SpellInfo) -> Option<u32> {
+    world
         .get::<ActiveAuras>(caster)
         .and_then(|auras| {
             auras.iter().find(|aura| {
                 aura.spell_id == HOT_STREAK && spell.cast_proc_mods.contains(&aura.instance_id)
             })
         })
-        .map(|aura| aura.instance_id);
-    let Some(instance) = instance else {
+        .map(|aura| aura.instance_id)
+}
+
+fn consume_admitted_hot_streak(world: &mut World, caster: Entity, spell: &SpellInfo) -> bool {
+    let Some(instance) = admitted_hot_streak(world, caster, spell) else {
         return false;
     };
     remove_instance(world, caster, instance, RemoveReason::Consumed);
@@ -131,12 +179,16 @@ pub(crate) fn consume_procs_and_roll_pyroclasm(
             crate::auras::spend_stack(world, caster, instance);
         }
     }
-    if consume_admitted_hot_streak(world, caster, spell) {
+    let spent_hot_streak = consume_admitted_hot_streak(world, caster, spell);
+    if spent_hot_streak {
         roll_pyroclasm(world, caster);
     }
+    super::fire_procs::after_hot_streak_cast(world, caster, spent_hot_streak);
 }
 
 fn roll_pyroclasm(world: &mut World, caster: Entity) {
+    // SimC76f8118 sc_mage.cpp6446: chance belongs to talent269650.
+    // Native MID2's label5947 modifies buff269651, not talent label5949.
     let chance = world
         .get::<ActiveAuras>(caster)
         .and_then(|auras| auras.iter().find(|aura| aura.spell_id == PYROCLASM_TALENT))

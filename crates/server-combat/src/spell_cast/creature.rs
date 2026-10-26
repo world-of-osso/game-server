@@ -150,7 +150,7 @@ pub(crate) fn creature_cast_with_effect0_ignoring_in_progress(
             "partial-trigger BP0 effect missing".into(),
         ))?;
     effect.base_points = amount;
-    super::scripts::prepare_stored_damage(&mut spell);
+    super::scripts::prepare_stored_damage(world, &mut spell);
     let target = super::validate_start(world, caster, &spell, explicit, true)?;
     super::begin_validated_cast(world, caster, &spell, target)
 }
@@ -180,7 +180,7 @@ fn load_creature_cast(
         .and_then(|store| store.get(spell_id))
         .cloned()
         .ok_or(CastFailure::UnknownSpell)?;
-    let requirement = targets::explicit_requirement(handled_effects(&spell));
+    let requirement = targets::explicit_requirement(handled_effects(world, &spell));
     let supplied = target.or_else(|| default_scripted_target(world, caster, requirement));
     // Normalize only the redundant self object rejected by EXCLUDE_CASTER.
     // Other supplied objects still own this runtime's cast/packet/log recipient;

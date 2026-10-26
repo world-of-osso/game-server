@@ -45,8 +45,10 @@ pub struct AuraStatMods {
     pub target_reduction_mult: Vec<(u32, f32)>,
     /// MOD_HEALING_PCT 118 and MOD_HEALING_RECEIVED 283.
     pub healing_taken_mult: f32,
-    /// Raw signed MOD_WEAPON_CRIT_PERCENT52 + MOD_CRIT_PCT290, NPC autoattacks only.
+    /// Raw signed MOD_CRIT_PCT290 for NPCs without folded CharacterStats.
     pub npc_crit_pct: f32,
+    /// Raw MOD_WEAPON_CRIT_PERCENT52, separate from folded generic crit.
+    pub npc_weapon_crit_pct: f32,
     /// MOD_AUTOATTACK_CRIT_CHANCE334: signed additive percentage points.
     pub autoattack_crit_pct: f32,
     /// MOD_AUTOATTACK_DAMAGE 344.
@@ -136,6 +138,7 @@ impl Default for AuraStatMods {
             target_reduction_mult: Vec::new(),
             healing_taken_mult: 1.0,
             npc_crit_pct: 0.0,
+            npc_weapon_crit_pct: 0.0,
             autoattack_crit_pct: 0.0,
             autoattack_damage_mult: 1.0,
             autoattack_range_bonus: 0.0,
@@ -575,6 +578,17 @@ fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance) {
                     effect.amount.trunc() * stacks,
                 );
             }
+            // SimC76f8118 sc_mage.cpp6497–6501: effect2 ×0.001 is the
+            // fractional haste per Mana Cascade stack; effect1 is zero-valued.
+            MELEE_SLOW if matches!(aura.spell_id, 449314 | 449322) => {
+                let haste = aura
+                    .effects
+                    .iter()
+                    .find(|effect| effect.index == 1)
+                    .expect("native Mana Cascade requires effect2")
+                    .amount;
+                stats.haste_pct = compound_haste_pct(stats.haste_pct, haste * 0.1 * stacks);
+            }
             // SimC76f8118 player.cpp4987–4995: independent haste buffs multiply.
             MOD_MELEE_HASTE
             | MOD_RANGED_HASTE
@@ -611,7 +625,7 @@ fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance) {
             }),
             MOD_HEALING_DONE_PERCENT => combat.healing_done_mult *= pct(amount),
             MOD_HEALING_PCT | MOD_HEALING_RECEIVED => combat.healing_taken_mult *= pct(amount),
-            MOD_WEAPON_CRIT_PERCENT => combat.npc_crit_pct += amount,
+            MOD_WEAPON_CRIT_PERCENT => combat.npc_weapon_crit_pct += amount,
             MOD_AUTOATTACK_CRIT_CHANCE => combat.autoattack_crit_pct += amount,
             MOD_AUTOATTACK_DAMAGE => combat.autoattack_damage_mult *= pct(amount),
             MOD_AUTOATTACK_RANGE => combat.autoattack_range_bonus += amount,

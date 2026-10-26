@@ -148,9 +148,17 @@ def check(log):
         return False
     if cargo(log, "fmt") != 0:
         return False
+    # cargo fmt does not follow include!(), so the modules declared in the union-merged
+    # module_list.in are formatted directly.
+    included = sorted(str(p) for p in (TREE / PARITY_DIR).glob("*.rs"))
+    if subprocess.run(["rustfmt", "--edition", "2024", *included], cwd=TREE, check=False).returncode != 0:
+        return False
     if git("status", "--porcelain", "--untracked-files=no").stdout.strip():
         git("commit", "-qam", "merge train: cargo fmt")
     return True
+
+
+PARITY_DIR = "crates/server-simulation/src/dungeon_simulator/dps_parity"
 
 
 class MasterBroken(Exception):
@@ -501,15 +509,18 @@ def run_probes(probes, gated, log):
         else:
             twins[entry["id"]] = twin
     passed, failed = build_and_test(probes, log) if probes else ([], [])
+    for entry in passed:
+        entry["status"] = "probe passed"
+    # Measure now, while the tree is still the probe tree: the RED twins below rebuild it
+    # without the probes, so a later parity executable would lack their changes.
+    measure_then_write(passed, log)
     twin_passed, twin_failed = build_and_test(list(twins.values()), log) if twins else ([], [])
-    for entry in passed + twin_passed:
+    for entry in twin_passed:
         entry["status"] = "probe passed"
     for entry in failed + twin_failed:
         entry["status"] = "rejected"
     passed, failed = passed + twin_passed, failed + twin_failed
-    real = [e for e in passed + failed if not e["id"].endswith("-red")]
-    write_results([e for e in real if e["status"] != "probe passed"])
-    measure_then_write([e for e in real if e["status"] == "probe passed"], log)
+    write_results([e for e in failed if not e["id"].endswith("-red")])
     outcome = {e["id"]: e for e in passed + failed}
     proven = []
     for entry in gated:
@@ -541,14 +552,14 @@ def cycle():
     probes = [e for e in entries if not e["land"]]
     gated = [e for e in entries if e["land"] and e.get("red")]
     plain = [e for e in entries if e["land"] and not e.get("red")]
-    # Plain landings go first: a slow probe bisect must not hold them back.
-    mark_phase(log, "1/3 plain landings", plain)
-    land(plain, log)
+    # Proven RED-gated entries land in the same build as plain ones: landing plain entries
+    # first moved master under the gated ones, which then conflicted with this cycle's own landings.
+    proven = []
     if probes or gated:
-        mark_phase(log, "2/3 probes and RED twins", probes + gated)
+        mark_phase(log, "1/2 probes and RED twins", probes + gated)
         proven = run_probes(probes, gated, log)
-        mark_phase(log, "3/3 RED-gated landings", proven)
-        land(proven, log)
+    mark_phase(log, "2/2 landings", plain + proven)
+    land(plain + proven, log)
     (HOME / "current.json").unlink(missing_ok=True)
 
 
@@ -566,7 +577,11 @@ def run(_args):
     loaded = script.stat().st_mtime
     while True:
         # deploy_merge_train.py replaces this file; pick it up between cycles.
-        if script.stat().st_mtime != loaded and not MEASURING:
+        if script.stat().st_mtime != loaded:
+            # Start no new cycle (it would start more measurements); reload once they drain.
+            if MEASURING:
+                time.sleep(30)
+                continue
             print("merge_train.py changed, reloading", flush=True)
             os.execv(sys.executable, [sys.executable, str(script), "run"])
         queued = list(QUEUE.glob("*.json"))

@@ -36,6 +36,10 @@ mod dance_rppm_tests;
 #[path = "proc_event_candidate_tests.rs"]
 mod event_candidate_tests;
 
+#[cfg(test)]
+#[path = "proc_family_tests.rs"]
+mod family_tests;
+
 use crate::random as rand;
 use bevy::prelude::*;
 use std::collections::HashSet;
@@ -433,6 +437,16 @@ fn proc_matches(
     if mask[0] & SPELL_PROC_MASK == 0 {
         return true;
     }
+    // TC a352b1fa SpellMgr.cpp555–560 / SpellInfo.cpp1974–1984:
+    // explicit TDB family predicates replace, not merge with, generated masks.
+    let explicit_family = world
+        .get_resource::<SpellStore>()
+        .and_then(|store| store.get(aura.spell_id))
+        .and_then(|spell| spell.aura_options.as_ref())
+        .and_then(|options| options.proc_family);
+    if let Some((family, family_mask)) = explicit_family {
+        return event_spell.is_none_or(|spell| matches_explicit_family(spell, family, family_mask));
+    }
     let family_mask = aura
         .effects
         .iter()
@@ -450,6 +464,18 @@ fn proc_matches(
             options.spell_class_set == aura.class_set
                 && (0..4).any(|word| options.spell_class_mask[word] & family_mask[word] != 0)
         })
+}
+
+fn matches_explicit_family(spell: &SpellInfo, family: u32, mask: [u32; 4]) -> bool {
+    if family == 0 {
+        return true;
+    }
+    let Some(options) = spell.class_options.as_ref() else {
+        return false;
+    };
+    let mask_matches =
+        mask == [0; 4] || (0..4).any(|word| options.spell_class_mask[word] & mask[word] != 0);
+    options.spell_class_set == family && mask_matches
 }
 
 /// TC SpellInfo.cpp4292–4308/4358–4371: Type1 rows select haste channels;
@@ -516,7 +542,7 @@ fn proc_chance(world: &mut World, unit: Entity, id: u32, now: f64) -> f32 {
     spell_mods::modify(world, unit, &spell, SpellModOp::ProcChance, chance)
 }
 
-pub(crate) fn policy_proc_ready(world: &World, unit: Entity, id: u32) -> bool {
+pub fn policy_proc_ready(world: &World, unit: Entity, id: u32) -> bool {
     let now = aura_now(world);
     world
         .get::<ActiveAuras>(unit)
@@ -526,7 +552,7 @@ pub(crate) fn policy_proc_ready(world: &World, unit: Entity, id: u32) -> bool {
 
 /// Named source policies supply their live effect chance, not fabricated proc metadata.
 /// Reuse the owning native aura's actual proc timer and DB2 internal cooldown.
-pub(crate) fn try_policy_proc(world: &mut World, unit: Entity, id: u32, chance: f32) -> bool {
+pub fn try_policy_proc(world: &mut World, unit: Entity, id: u32, chance: f32) -> bool {
     let now = aura_now(world);
     let ready = world
         .get::<ActiveAuras>(unit)
@@ -539,7 +565,7 @@ pub(crate) fn try_policy_proc(world: &mut World, unit: Entity, id: u32, chance: 
 }
 
 /// Scripted execution sources reuse native RPPM attempts and internal cooldowns.
-pub(crate) fn try_native_policy_proc(world: &mut World, unit: Entity, id: u32) -> bool {
+pub fn try_native_policy_proc(world: &mut World, unit: Entity, id: u32) -> bool {
     let now = aura_now(world);
     let ready = world
         .get::<ActiveAuras>(unit)
@@ -553,7 +579,7 @@ pub(crate) fn try_native_policy_proc(world: &mut World, unit: Entity, id: u32) -
 }
 
 /// Guaranteed source callbacks use the native ICD without an additional RNG roll.
-pub(crate) fn start_policy_proc(world: &mut World, unit: Entity, id: u32) -> Option<AuraInstance> {
+pub fn start_policy_proc(world: &mut World, unit: Entity, id: u32) -> Option<AuraInstance> {
     let now = aura_now(world);
     let ready = world
         .get::<ActiveAuras>(unit)
