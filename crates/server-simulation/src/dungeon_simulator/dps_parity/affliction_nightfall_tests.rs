@@ -166,7 +166,27 @@ fn affliction_nightfall_gained_during_real_hardcast_is_retained_without_bonus() 
     );
 }
 
-fn start_grasp_duration(run: &mut Run) -> f32 {
+fn cast_grasp_and_assert_clock(run: &mut Run, charged_factor: f32) {
+    let world = run.app.world();
+    let haste = world
+        .get::<crate::stats::CharacterStats>(run.actor)
+        .unwrap()
+        .haste_pct;
+    let native = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(1261153)
+        .unwrap();
+    let base = native.misc.as_ref().unwrap().duration.unwrap().duration_ms as u32;
+    let period = native
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap()
+        .aura_period_ms;
+    assert_eq!(base / period, 4, "native Grasp has four original ticks");
+    // SimC76f8118 action.cpp4390–4432: quantize each cast's hasted period,
+    // then rebuild its span. Other casts can have different native haste.
+    let expected_period = (base as f32 * charged_factor / (1.0 + haste / 100.0) / 4.0).round();
     crate::spell_cast::creature_cast(
         run.app.world_mut(),
         run.actor,
@@ -175,11 +195,36 @@ fn start_grasp_duration(run: &mut Run) -> f32 {
         false,
     )
     .unwrap();
-    run.app
-        .world()
+    let world = run.app.world();
+    let cast = world
         .get::<shared::casting::CastState>(run.actor)
-        .expect("actual Grasp retains its nonzero channel duration")
-        .duration
+        .expect("actual Grasp retains its nonzero channel duration");
+    assert!(
+        (cast.duration * 1000.0 - 4.0 * expected_period).abs() < 0.1,
+        "channel span uses its own haste{haste}% and charged factor{charged_factor}: actual{}s expected{}ms",
+        cast.duration,
+        4.0 * expected_period
+    );
+    assert!(
+        (cast.channel_tick_interval * 1000.0 - expected_period).abs() < 0.1,
+        "channel bar period retains the admitted snapshot"
+    );
+    let aura = world
+        .get::<crate::auras::ActiveAuras>(run.targets[0])
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 1261153 && aura.caster == run.actor)
+        .unwrap();
+    let actual_period = aura
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap()
+        .period_ms;
+    assert_eq!(
+        actual_period, expected_period as u32,
+        "damage aura period retains the same native snapshot as the channel bar"
+    );
 }
 
 #[test]
@@ -187,32 +232,21 @@ fn start_grasp_duration(run: &mut Run) -> f32 {
 fn affliction_nightfall_channel_uses_do_not_multiply_duration_reduction() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_nightfall();
-    // Trace6680c9ea33: native haste changes33.288498→33.91441% between casts.
-    // Compare native use snapshots at constant haste, retaining static gear values.
-    super::channel_timing_tests::remove_equipped_proc_drivers(&mut run);
     crate::spell_cast::cast_triggered(run.app.world_mut(), run.actor, 205180, Some(run.actor), 0);
-    let unbuffed = start_grasp_duration(&mut run);
+    cast_grasp_and_assert_clock(&mut run, 1.0);
     finish_bolt(&mut run);
     grant_nightfall(&mut run);
-    let one_use = start_grasp_duration(&mut run);
+    let percent =
+        crate::spell_cast::scripts::script_effect_value(run.app.world(), run.actor, NIGHTFALL, 3);
+    let factor = 1.0 + percent / 100.0;
+    cast_grasp_and_assert_clock(&mut run, factor);
     assert_eq!(uses(&run), 0);
     finish_bolt(&mut run);
     grant_nightfall(&mut run);
     grant_nightfall(&mut run);
-    let two_uses = start_grasp_duration(&mut run);
+    cast_grasp_and_assert_clock(&mut run, factor);
     // SimC76f8118 actions199/2151–2163/2182: one boolean bonus and one consumed use.
     assert_eq!(uses(&run), 1, "a channel spends one of the two real uses");
-    assert!(
-        (one_use - two_uses).abs() < 0.00001,
-        "stacked uses cannot double the duration reduction: {one_use} vs {two_uses}"
-    );
-    let percent =
-        crate::spell_cast::scripts::script_effect_value(run.app.world(), run.actor, NIGHTFALL, 3);
-    let expected = unbuffed * (1.0 + percent / 100.0);
-    assert!(
-        (one_use - expected).abs() < 0.001,
-        "one native duration reduction: {one_use}, expected={expected}"
-    );
     finish_bolt(&mut run);
     let hits = &run
         .app
