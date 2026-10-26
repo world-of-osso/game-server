@@ -193,3 +193,60 @@ fn registry_classifies_only_the_authored_aura_fields() {
     assert!(!registry.consumes_named_aura_field(390994, 0));
     assert!(!SpellScriptRegistry::new(&[]).consumes_named_aura_field(41635, 0));
 }
+
+fn source_conjures(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    target: Entity,
+    count: u32,
+) {
+    assert_ne!(caster, target);
+    assert_eq!(spell.id, 30451);
+    assert_eq!(spell.cast_primary_target, Some(target));
+    assert_eq!(spell.cast_damage_multiplier, Some(1.75));
+    assert_eq!(count, 3);
+    world.resource_mut::<Calls>().0.push("source-conjures");
+}
+
+fn repeated_weapon_multiplier(_: &World, _: Entity, parent: &SpellInfo, child: u32) -> Option<f32> {
+    (parent.id == 17364 && child == 32175).then_some(0.4)
+}
+
+#[test]
+fn registry_preserves_explicit_conjure_source_and_weapon_child_selection() {
+    const HOOKS: &[SpellScriptHook] = &[
+        SpellScriptHook::ConjureFromSpell(source_conjures),
+        SpellScriptHook::NativeWeaponMultiplier(repeated_weapon_multiplier),
+    ];
+    let mut world = World::new();
+    world.insert_resource(SpellScriptRegistry::new(&[HOOKS]));
+    world.init_resource::<Calls>();
+    let caster = world.spawn_empty().id();
+    let target = world.spawn_empty().id();
+    let source = SpellInfo {
+        id: 30451,
+        cast_primary_target: Some(target),
+        cast_damage_multiplier: Some(1.75),
+        ..Default::default()
+    };
+    script_registry::conjure_from_spell(&mut world, caster, &source, target, 3);
+    assert_eq!(world.resource::<Calls>().0, ["source-conjures"]);
+    let strike = SpellInfo {
+        id: 17364,
+        ..Default::default()
+    };
+    assert_eq!(
+        script_registry::native_weapon_multiplier(&world, caster, &strike, 32175),
+        Some(0.4)
+    );
+    assert_eq!(
+        script_registry::native_weapon_multiplier(&world, caster, &strike, 30451),
+        None
+    );
+    world.insert_resource(SpellScriptRegistry::new(&[]));
+    assert_eq!(
+        script_registry::native_weapon_multiplier(&world, caster, &strike, 32175),
+        None
+    );
+}
