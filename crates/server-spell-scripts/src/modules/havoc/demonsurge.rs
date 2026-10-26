@@ -27,7 +27,16 @@ pub(super) fn focused_hatred(
     }
     let count = combat::spell_cast::resolving_targets(world, ctx)
         .expect("native Demonsurge damage retains resolved targets")
-        .len();
+        .iter()
+        .filter(|&&target| {
+            combat::spell_cast::targets::relation_matches(
+                world,
+                ctx.caster,
+                target,
+                combat::spell_cast::targets::Relation::Enemy,
+            )
+        })
+        .count();
     if !(1..=5).contains(&count) {
         return 1.0;
     }
