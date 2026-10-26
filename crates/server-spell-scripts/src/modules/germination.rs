@@ -1,13 +1,18 @@
 //! SimC76f8118 sc_druid.cpp6487–6518: redirect Rejuvenation before application.
 use bevy::prelude::*;
 
-use crate::auras::{ActiveAuras, has_aura};
+use super::combat;
+use combat::auras::{ActiveAuras, has_aura};
+use combat::spell_cast::script_registry::SpellScriptHook;
+
+pub(super) const HOOKS: &[SpellScriptHook] =
+    &[SpellScriptHook::AuraRedirect(redirect_rejuvenation)];
 
 const REJUVENATION: u32 = 774;
 const GERMINATION_TALENT: u32 = 155675;
 const GERMINATION_HOT: u32 = 155777;
 
-pub(in crate::spell_cast) fn redirect_rejuvenation(
+fn redirect_rejuvenation(
     world: &mut World,
     caster: Entity,
     target: Entity,
@@ -27,7 +32,7 @@ pub(in crate::spell_cast) fn redirect_rejuvenation(
     if !use_germination {
         return false;
     }
-    super::super::cast_triggered(world, caster, GERMINATION_HOT, Some(target), depth + 1);
+    combat::spell_cast::cast_triggered(world, caster, GERMINATION_HOT, Some(target), depth + 1);
     true
 }
 

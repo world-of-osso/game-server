@@ -1,6 +1,10 @@
 //! Source-qualified periodic counters; native aura clocks, stacks and values remain authoritative.
-use crate::auras::{ActiveAuras, AuraApplication, AuraInstance, AuraSource};
-use crate::class_progression::TraitLoadout;
+use super::combat;
+use combat::auras::{ActiveAuras, AuraApplication, AuraInstance, AuraSource};
+use combat::class_progression::TraitLoadout;
+use combat::spell_cast::script_registry::SpellScriptHook;
+
+pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::EarlyAuraRegistration(register)];
 use bevy::prelude::*;
 use shared::components::ActiveSpec;
 
@@ -24,7 +28,7 @@ const COUNTERS: &[PeriodicCounter] = &[PeriodicCounter {
     enabler: 1222865,
 }];
 
-pub(crate) fn register(scripts: &mut crate::auras::scripts::AuraScripts) {
+fn register(scripts: &mut combat::auras::scripts::AuraScripts) {
     for row in COUNTERS {
         let script = scripts.0.entry(row.passive).or_default();
         script.on_apply = Some(randomize_initial_phase);
@@ -46,7 +50,7 @@ fn selected(world: &World, unit: Entity, row: &PeriodicCounter) -> bool {
 fn randomize_initial_phase(world: &mut World, unit: Entity, aura: &AuraInstance) {
     for row in COUNTERS.iter().filter(|row| row.passive == aura.spell_id) {
         if selected(world, unit, row) {
-            crate::auras::randomize_initial_periodic_phase(
+            combat::auras::randomize_initial_periodic_phase(
                 world,
                 unit,
                 aura.instance_id,
@@ -57,7 +61,7 @@ fn randomize_initial_phase(world: &mut World, unit: Entity, aura: &AuraInstance)
 }
 
 fn apply_owned(world: &mut World, caster: Entity, spell_id: u32) {
-    crate::auras::apply_aura(
+    combat::auras::apply_aura(
         world,
         &AuraApplication {
             caster,
