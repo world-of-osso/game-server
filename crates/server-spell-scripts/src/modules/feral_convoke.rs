@@ -143,7 +143,9 @@ fn read_enemies(world: &World, caster: Entity, primary: Entity) -> Vec<Entity> {
     let mut enemies: Vec<_> = std::iter::once(primary)
         .chain(combat::combat_refs::active_opponents(world, caster))
         .filter(|target| {
-            targets::is_hostile(world, caster, *target)
+            // sc_druid.cpp9643 uses eligible enemies, including neutral attackable
+            // native31146/faction7. Hostile reaction alone excludes those targets.
+            targets::relation_matches(world, caster, *target, targets::Relation::Enemy)
                 && world
                     .get::<Health>(*target)
                     .is_some_and(|health| health.current > 0.0)
