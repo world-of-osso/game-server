@@ -1,11 +1,11 @@
 //! SimC76f8118 sc_priest_shadow.cpp1491–1514/sc_priest.cpp1606–1683/3543–3562.
 //! Native Torrent starts a hasted Rift driver at its actual hostile primary.
-use super::{combat, shadow_void_blast, shadow_voidheart};
+use super::{combat, shadow_collapse, shadow_void_blast, shadow_voidheart};
 use bevy::prelude::*;
 use combat::auras::scripts::{AuraScript, AuraScripts};
 use combat::auras::{self, ActiveAuras, AuraInstance, RemoveReason};
 use combat::spell_cast::script_registry::{SpellScriptHook, TargetPlanHook};
-use combat::spell_cast::{self, PlannedEffect, TargetPlan, targets};
+use combat::spell_cast::{self, targets, PlannedEffect, TargetPlan};
 use combat::spell_info::{SpellInfo, SpellStore};
 use shared::components::ActiveSpec;
 
@@ -75,6 +75,11 @@ fn pulse(world: &mut World, unit: Entity, _: &AuraInstance, index: u8) {
 }
 
 fn clear_rift(world: &mut World, unit: Entity, _: &AuraInstance, _: RemoveReason) {
+    let primary = world.get::<Rift>(unit).map(|rift| rift.primary);
+    if let Some(primary) = primary {
+        // SimC3568–3571 resolves the payload before removing Voidheart.
+        shadow_collapse::burst(world, unit, primary);
+    }
     shadow_void_blast::expire_override(world, unit);
     shadow_voidheart::replace_with_touch_tail(world, unit);
     world.entity_mut(unit).remove::<Rift>();
