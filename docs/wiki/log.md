@@ -1,6 +1,9 @@
 ## 2026-10-25 — Arcane literal player fixture
 
 [Arcane62](systems/simc-apl.md#arcane-fixture-62) executes supplied profile rows through shared literal control with native class admission and no concurrent AssistedCombat. The300s ST controller regression passes; numerical parity remains open.
+## 2026-10-25 — Subtlety Lingering Shadow
+
+[Lingering Shadow](systems/spell-casting.md#subtlety-lingering-shadow--2026-10-25): pinned expiry/decay and native mitigated residual, downstream hooks, native RED957d26c2d3→GREEN561fb56b0d; numerical parity remains open.
 ## 2026-10-25 — Marksmanship Salvo producer
 
 [Marksmanship](systems/spell-casting.md#marksmanship-native-relationships--2026-10-25): selected Salvo launches native capped background Explosive Shots from actual Volley recipients, with native Volley-duration internal recovery and no foreground producers.
