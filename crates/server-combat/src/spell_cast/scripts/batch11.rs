@@ -5,7 +5,7 @@ use shared::components::{Level, PowerType};
 use super::{batch3, batch9, script_effect_value};
 use crate::auras::{ActiveAuras, AuraApplication, AuraSource};
 use crate::spell_cast::{self, PlannedEffect, targets};
-use crate::spell_info::{SpellInfo, SpellStore};
+use crate::spell_info::SpellStore;
 
 pub(super) const SINISTER_STRIKE: u32 = 193315;
 pub(super) const HAMMER_RIGHTEOUS: u32 = 53595;

@@ -1,6 +1,6 @@
 //! Mainline 12.1.0.69933 named children and explicit tooltip fields.
 use super::script_effect_value;
-use crate::auras::{ActiveAuras, AuraApplication, AuraSource};
+use crate::auras::{AuraApplication, AuraSource};
 use crate::spell_cast::effects::{CastEffectHandler, EffectCtx};
 use crate::spell_cast::{self, PlannedEffect, targets};
 use crate::spell_info::SpellStore;
