@@ -15,6 +15,7 @@ mod affliction_ua_tests;
 mod affliction_wrath_tests;
 mod arms_chain_boundary_tests;
 mod arms_cooldown_tests;
+mod arms_followup_relationship_tests;
 mod arms_massacre_sudden_death_tests;
 mod arms_missing_relationship_tests;
 mod arms_reap_cleave_tests;
