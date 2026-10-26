@@ -104,6 +104,7 @@ register_modules! {
     marksmanship_salvo: (2540, "modules/marksmanship_salvo.rs"),
     marksmanship_sentinel: (390, "modules/marksmanship_sentinel.rs"),
     melee_reset: (340, "modules/melee_reset.rs"),
+    midnight_stat_items: (1000, "modules/midnight_stat_items.rs"),
     outlaw_spree: (2600, "modules/outlaw_spree.rs"),
     paid_cooldowns: (130, "modules/paid_cooldowns.rs"),
     periodic_counters: (270, "modules/periodic_counters.rs"),
