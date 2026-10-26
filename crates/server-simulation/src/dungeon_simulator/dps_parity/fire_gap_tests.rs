@@ -1538,6 +1538,58 @@ fn fire_ignite_fire_blast_spreads_existing_native_tick_to_other_enemies() {
 
 #[test]
 #[ignore = "requires exact Fire63 inputs and private70448 DB"]
+fn fire_ignite_flamestrike_selected_ignition_amplifies_native_contribution() {
+    let contribution = |selected: bool| {
+        let _seed = crate::random::seed_scope(70_448);
+        let (mut profile, traits) = read_reference(63).unwrap();
+        let identity = inputs::read_actor(&profile).unwrap();
+        profile.equipment.clear();
+        profile.consumables.clear();
+        profile.omnium_talents = None;
+        let mut run = prepare_literal_reference(profile, &traits, 1, identity).unwrap();
+        let actor = run.actor;
+        let target = run.targets[0];
+        let percent = crate::spell_cast::scripts::script_effect_value(
+            run.app.world(), actor, 1254756, 1);
+        assert!(percent > 0.0, "native selected Ignition percentage");
+        if !selected {
+            let known = run.app.world().get::<crate::class_progression::KnownSpells>(actor)
+                .unwrap().iter().filter(|id| *id != 1254756).collect();
+            run.app.world_mut().entity_mut(actor)
+                .insert(crate::class_progression::KnownSpells::fixture(known));
+            crate::auras::remove_auras(run.app.world_mut(), actor,
+                crate::auras::RemoveReason::Consumed, |aura| aura.spell_id == 1254756);
+        }
+        preparation::warm_up_reference(&mut run).unwrap();
+        run.app.world_mut().get_mut::<crate::stats::CharacterStats>(actor)
+            .unwrap().crit_pct = 0.0;
+        start_native(&mut run, 2120, target);
+        preparation::finish_pending_setup(&mut run).unwrap();
+        let world = run.app.world();
+        let hit = world.resource::<ObservedCombatEvents>().0.iter()
+            .find(|event| event.source == Some(actor.to_bits())
+                && event.target == Some(target.to_bits())
+                && event.spell_id == Some(2120)
+                && event.kind == CombatLogKind::Damage)
+            .expect("ordinary native Flamestrike actually hit");
+        assert!(!hit.crit);
+        let tick = world.get::<ActiveAuras>(target).unwrap().iter()
+            .find(|aura| aura.spell_id == 12654 && aura.caster == actor)
+            .expect("actual Flamestrike earned native Ignite").effects.iter()
+            .find(|effect| effect.index == 0).unwrap().amount;
+        (tick / hit.amount as f32, percent)
+    };
+    let baseline = contribution(false).0;
+    let (amplified, percent) = contribution(true);
+    // SimC76f8118 sc_mage.cpp3896–3898: Ignition modifies the
+    // Flamestrike Ignite contribution, not the direct hit or every Ignite.
+    let expected = baseline * (1.0 + percent / 100.0);
+    assert!((amplified / expected - 1.0).abs() < 0.001,
+        "selected Ignition increases the native Flamestrike Ignite ratio: {baseline} -> {amplified}, expected{expected}");
+}
+
+#[test]
+#[ignore = "requires exact Fire63 inputs and private70448 DB"]
 fn fire_execute_molten_fury_amplifies_actual_damage_below_native_health_gate() {
     let hit = |selected: bool| {
         let _seed = crate::random::seed_scope(70_448);
