@@ -33,7 +33,14 @@ fn native_hunter_dire_command_actual_kills_spawn_authentic_beasts() {
                     summon.expires_at.is_some(),
                     "native Dire Beast must be finite"
                 );
-                beasts.insert(unit.to_bits());
+                if beasts.insert(unit.to_bits()) {
+                    eprintln!("DIRE_ACTOR unit={unit:?} at={} position={:?} primary_position={:?} attack={:?} motion={:?}",
+                        crate::spell_cast::now(run.app.world()),
+                        run.app.world().get::<shared::components::Position>(unit),
+                        run.app.world().get::<shared::components::Position>(run.targets[0]),
+                        run.app.world().get::<crate::combat::AutoAttack>(unit),
+                        run.app.world().get::<shared::components::MovementSpeed>(unit));
+                }
             }
         }
     })
