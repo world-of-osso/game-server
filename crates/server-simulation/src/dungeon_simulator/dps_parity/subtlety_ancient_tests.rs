@@ -45,7 +45,8 @@ fn subtlety_ancient_arts_finisher_collects_after_payment_and_consumes_window() {
         literal_rotation::execution::Execution::Spell(196819, run.targets[0], Some(run.targets[0])),
     )
     .unwrap();
-    preparation::finish_pending_setup(&mut run).unwrap();
+    // The instant finisher has resolved; waiting for its GCD also permits real
+    // white hits to earn new storage before the consumption assertion.
     let (points, _) =
         crate::spell_cast::powers::power_value(run.app.world(), run.actor, PowerType::ComboPoints)
             .unwrap();
@@ -53,9 +54,37 @@ fn subtlety_ancient_arts_finisher_collects_after_payment_and_consumes_window() {
         points, 5.0,
         "earned Ancient Arts refills stored points after paying the finisher"
     );
+    let remaining: Vec<_> = run
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(run.actor)
+        .unwrap()
+        .iter()
+        .filter(|aura| aura.spell_id == 196911)
+        .map(|aura| {
+            (
+                aura.caster.to_bits(),
+                aura.stacks,
+                aura.instance_id,
+                aura.source.clone(),
+            )
+        })
+        .collect();
+    let events: Vec<_> = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .iter()
+        .filter(|event| {
+            event.source == Some(run.actor.to_bits())
+                && (event.spell_id == Some(196911) || event.spell_id.is_none())
+        })
+        .cloned()
+        .collect();
     assert!(
-        !crate::auras::has_aura(run.app.world(), run.actor, 196911),
-        "all five stored points were collected"
+        remaining.is_empty(),
+        "all five stored points were collected: {remaining:?}, events: {events:?}"
     );
     assert!(
         !crate::auras::has_aura(run.app.world(), run.actor, 1269163),

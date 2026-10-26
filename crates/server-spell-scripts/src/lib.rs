@@ -28,4 +28,6 @@ mod policy_order_tests;
 #[cfg(test)]
 mod registry_target_tests;
 #[cfg(test)]
+mod runtime_stage_tests;
+#[cfg(test)]
 mod tests;

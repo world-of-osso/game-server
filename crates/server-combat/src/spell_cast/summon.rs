@@ -882,6 +882,8 @@ fn spawn_summon(
     let actor = entity.id();
     entity.world_scope(|world| {
         super::guardian::initialize(world, actor);
+        let registry = *world.resource::<super::script_registry::SpellScriptRegistry>();
+        registry.summon_initialized(world, actor);
         //49028's description explicitly grants81256 while its weapon is active.
         //Attach to actual spawn, not AfterCast: missing templates spawn nothing.
         if ctx.spell.id == DANCING_RUNE_WEAPON {

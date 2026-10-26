@@ -94,7 +94,8 @@ fn subtlety_techniques_native_builder_collects_only_points_missing_after_base_ga
         literal_rotation::execution::Execution::Spell(53, run.targets[0], Some(run.targets[0])),
     )
     .unwrap();
-    preparation::finish_pending_setup(&mut run).unwrap();
+    // Inspect the synchronous builder before white swings during its GCD can
+    // earn additional native storage.
     let (points, _) =
         crate::spell_cast::powers::power_value(run.app.world(), run.actor, PowerType::ComboPoints)
             .unwrap();
