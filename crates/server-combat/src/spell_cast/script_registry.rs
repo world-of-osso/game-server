@@ -41,6 +41,7 @@
 //! - `SuccessfulCastRelationships`: after foreground special/resource consumers.
 //! - `GuaranteesCrit`, `IgnoresCooldown`, `SnapshotsModifier`, `ArmorIgnoredSpells`:
 //!   pure native-readiness, launch snapshot and damage classification predicates.
+//! - `PersistentCastMultiplier`: spell IDs whose existing cast factor is stored as periodic metadata.
 //! - `ResolvedDamage`: after actual direct/periodic damage, before Explosive tick callbacks.
 //! - `AfterDirectDamageBeforeItems`: after Ret direct damage, before item scripts.
 //! - `LandedDamagePolicy`: actual white/spell damage at the original Havoc policy boundary.
@@ -100,6 +101,7 @@ pub type AuraRedirectHook = fn(&mut World, Entity, Entity, u32, u8) -> bool;
 pub type AfterCastLookup = fn(u32) -> Option<AfterCastHook>;
 pub type OnCastHook = fn(&mut World, Entity, u32, u8);
 pub type AfterPaymentHook = fn(&mut World, Entity, &[(CostPool, f32)]);
+pub type PowerCostHook = fn(&World, Entity, &SpellInfo, CostPool, f32) -> f32;
 pub type HitHook = fn(&mut World, Entity, Entity, u8);
 pub type EffectHitLookup = fn(u32, u8) -> Option<HitHook>;
 pub type EffectHandlerLookup = fn(u32, u8) -> Option<super::effects::EffectHandler>;
@@ -179,6 +181,7 @@ pub enum SpellScriptHook {
     AuraRollAfterCast(AfterCastLookup),
     OnCast(OnCastHook),
     AfterPayment(AfterPaymentHook),
+    PowerCost(PowerCostHook),
     AfterResourceValues(AfterCastLookup),
     TargetPlan(TargetPlanLookup),
     PeriodicPrimaryDamage(PeriodicPrimaryDamageHook),
@@ -230,6 +233,8 @@ pub enum SpellScriptHook {
     GuaranteesCrit(CastPredicate),
     IgnoresCooldown(CastPredicate),
     SnapshotsModifier(OwnsProcLookup),
+    /// These spells retain their existing cast damage factor as stored periodic metadata.
+    PersistentCastMultiplier(&'static [u32]),
     ArmorIgnoredSpells(&'static [u32]),
     ResolvedDamage(ResolvedDamageHook),
     AfterDirectDamageBeforeItems(PeriodicDamageFinishedHook),
@@ -764,6 +769,24 @@ pub fn triggered_resource_producer(world: &mut World, caster: Entity, spell: &Sp
     }
 }
 
+/// Source-script cost adjustments run after native aura modifiers, before payment.
+/// Without a registered callback, the native cost is unchanged.
+pub fn power_cost(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    pool: CostPool,
+    amount: f32,
+) -> f32 {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .fold(amount, |cost, hook| match hook {
+            SpellScriptHook::PowerCost(run) => run(world, caster, spell, pool, cost),
+            _ => cost,
+        })
+}
+
 pub fn effective_resource_value(
     world: &World,
     caster: Entity,
@@ -841,6 +864,17 @@ pub fn snapshots_modifier(world: &World, spell: u32) -> bool {
         .any(|hook| match hook {
             SpellScriptHook::SnapshotsModifier(test) => test(spell),
             _ => false,
+        })
+}
+
+pub fn uses_persistent_cast_multiplier(world: &World, spell: u32) -> bool {
+    world
+        .get_resource::<SpellScriptRegistry>()
+        .is_some_and(|registry| {
+            registry.hooks().any(|hook| match hook {
+                SpellScriptHook::PersistentCastMultiplier(spells) => spells.contains(&spell),
+                _ => false,
+            })
         })
 }
 

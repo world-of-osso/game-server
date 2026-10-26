@@ -35,6 +35,7 @@ mod earthen_rage;
 pub(crate) mod ebon_might;
 mod echo_of_light;
 pub(crate) mod effect_immunity;
+pub(crate) mod enhancement_power;
 mod fear;
 mod fel_devastation;
 mod fixate;
@@ -102,7 +103,7 @@ use crate::auth::{Authenticated, InWorld};
 use crate::class_progression::{KnownSpells, SpellTrait, TraitLoadout};
 use crate::grid_activity::GridDormant;
 use crate::networking::PlayerLink;
-use crate::spell_cast::{log_event, targets};
+use crate::spell_cast::{effects, log_event, targets};
 use crate::spell_info::{SpellEffect, SpellInfo, SpellStore};
 use crate::stats::StatModifiers;
 pub use ignite::spread_ignite;
@@ -777,7 +778,67 @@ pub(crate) fn periodic_interval_ms(
     base: u32,
 ) -> u32 {
     let haste = periodic_haste_multiplier(world, caster, spell);
-    periodic_interval_with_haste(world, caster, spell, base, haste)
+    periodic_timing_with_haste(world, caster, spell, base, haste).1
+}
+
+/// The canonical native channel period, before and after haste quantization.
+/// Use the same selected effect/cadence as the aura, including existing scripted periods.
+pub(crate) fn channel_tick_timing_ms(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+) -> Option<(f32, u32)> {
+    // Declared health emissions own action ticks before auxiliary control pulses.
+    // Script-only/utility channels retain their native periodic cadence.
+    let (_, base) = spell
+        .effects
+        .iter()
+        .map(|effect| {
+            (
+                !channel_tick_declares_health(world, effect),
+                periodic_base_interval_ms(spell, effect),
+            )
+        })
+        .filter(|(_, period)| *period > 0)
+        .min()?;
+    let haste = periodic_haste_multiplier(world, caster, spell);
+    Some(periodic_timing_with_haste(
+        world, caster, spell, base, haste,
+    ))
+}
+
+fn channel_tick_declares_health(world: &World, effect: &SpellEffect) -> bool {
+    if is_health_effect(effect) {
+        return true;
+    }
+    world
+        .resource::<SpellStore>()
+        .get(effect.trigger_spell)
+        .is_some_and(|trigger| trigger.effects.iter().any(is_health_effect))
+}
+
+fn is_health_effect(effect: &SpellEffect) -> bool {
+    matches!(
+        effect.aura,
+        handlers::PERIODIC_DAMAGE
+            | handlers::PERIODIC_DAMAGE_PERCENT
+            | handlers::PERIODIC_LEECH
+            | handlers::PERIODIC_HEAL
+            | handlers::OBS_MOD_HEALTH
+    ) || matches!(
+        effect.effect,
+        effects::EFFECT_SCHOOL_DAMAGE
+            | effects::EFFECT_DAMAGE_FROM_MAX_HEALTH_PCT
+            | effects::EFFECT_WEAPON_DAMAGE
+            | effects::EFFECT_WEAPON_PERCENT_DAMAGE
+            | effects::EFFECT_NORMALIZED_WEAPON_DMG
+            | effects::EFFECT_HEALTH_LEECH
+            | effects::EFFECT_HEAL
+            | effects::EFFECT_HEAL_PCT
+            | effects::EFFECT_HEAL_MAX_HEALTH
+            | effects::EFFECT_POWER_BURN
+            | effects::EFFECT_INSTAKILL
+    )
 }
 
 fn periodic_haste_multiplier(world: &World, caster: Entity, spell: &SpellInfo) -> f32 {
@@ -790,18 +851,26 @@ fn periodic_haste_multiplier(world: &World, caster: Entity, spell: &SpellInfo) -
         .map_or(1.0, |stats| 1.0 + stats.haste_pct / 100.0)
 }
 
-fn periodic_interval_with_haste(
+fn periodic_timing_with_haste(
     world: &World,
     caster: Entity,
     spell: &SpellInfo,
     base: u32,
     haste: f32,
-) -> u32 {
+) -> (f32, u32) {
     if base == 0 {
-        return 0;
+        return (0.0, 0);
     }
     let period = spell_mods::modify(world, caster, spell, SpellModOp::Period, base as f32);
-    (period / haste.max(0.01)).max(1.0) as u32
+    let hasted = (period / haste.max(0.01)).max(1.0);
+    // SimC76f8118 action.cpp4297–4314: channel tick time rounds to nearest ms.
+    // Non-channel periodic quantization is outside this channel-only change.
+    let quantized = if crate::spell_cast::is_channeled(spell) {
+        hasted.round()
+    } else {
+        hasted
+    };
+    (period, quantized as u32)
 }
 
 fn build_effect(
@@ -831,14 +900,14 @@ fn build_effect(
     let amount = augmentation::snapshot_amount(world, caster, spell.id, effect.index, amount);
     let base_period_ms = periodic_base_interval_ms(spell, effect);
     let haste = periodic_haste_multiplier(world, caster, spell);
-    let period_ms = periodic_interval_with_haste(world, caster, spell, base_period_ms, haste);
+    let (_, period_ms) = periodic_timing_with_haste(world, caster, spell, base_period_ms, haste);
     let extra_initial_period = attributes(spell, 5) & ATTR5_EXTRA_INITIAL_PERIOD != 0;
     AuraEffectState {
         index: effect.index,
         immunity: effect.immunity.clone(),
         aura_type: effect.aura,
         amount,
-        persistent_multiplier: periodic_snapshot::multiplier(world, caster, spell, effect),
+        persistent_multiplier: periodic_snapshot::capture_multiplier(world, caster, spell, effect),
         misc_values: effect.misc_values,
         period_ms,
         periodic_base_ms: base_period_ms,
@@ -1235,13 +1304,8 @@ pub fn apply_aura(world: &mut World, application: &AuraApplication) {
     apply_aura_with_spell(world, application, &spell);
 }
 
-/// Casts supply their per-cast spell clone so item-level amounts are snapshotted
-/// before the casting item is consumed. Other aura sources use the catalog above.
-pub(crate) fn apply_aura_with_spell(
-    world: &mut World,
-    application: &AuraApplication,
-    spell: &SpellInfo,
-) {
+/// Apply a source-owned spell clone, retaining item-level and native amount snapshots.
+pub fn apply_aura_with_spell(world: &mut World, application: &AuraApplication, spell: &SpellInfo) {
     let target = application.target;
     if world.get_entity(target).is_err() || world.get_entity(application.caster).is_err() {
         return;

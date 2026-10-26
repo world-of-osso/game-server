@@ -74,6 +74,7 @@ pub(crate) use enhancement_rod::snapshot_rod_amount;
 mod enhancement_spending;
 mod enhancement_stormblast;
 pub(super) use enhancement_stormblast::after_weapon_damage as enhancement_weapon_damage;
+mod enhancement_stormwell;
 mod enhancement_strikes;
 mod enhancement_tier;
 mod enhancement_unleashed;
@@ -602,7 +603,6 @@ pub fn on_effect_hit(
         (batch14::SURVIVAL_COMMAND, 0) => Some(batch14::command_pet),
         (KILL_COMMAND, 0) => Some(batch14::command_beast),
         (batch14::WILD_THRASH, 0) => Some(batch14::wild_thrash),
-        (batch14::WILDFIRE_BOMB, 2) => Some(batch14::bomb_primary),
         (batch14::CONSUME, 0) => Some(batch14::consume_fury),
         (batch13::REND, 0) => Some(batch13::apply_rend_bleed),
         (batch13::ASPECT_WILD, 0) => Some(batch13::cast_wild_primary),

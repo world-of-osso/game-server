@@ -16,6 +16,7 @@ Assassination259 combat and the shared Rogue attack-speed and Vanish paths follo
 
 ### Stealth and bleed children
 
+- [x] Literal `pmultiplier` and `dot.garrote.pmultiplier` read the action target's owned Garrote application factor, not a fixed1.0. An absent bleed returns0; an applied factor persists after the stealth window and is replaced by its next real refresh. Capture only the native cast factor already applied to damage; do not change damage values. Source: `sc_rogue.cpp4551–4561`, `dot.cpp568–573`.
 - [x] Selected381632 makes Garrote retain392401 effect1's native bonus when applied during real stealth or the native post-stealth window. Leaving the last real stealth aura grants392401. Readiness and recovery storage both use zero Garrote recovery during those windows, including the first stealth cast; preserve real costs and GCDs. Source: `sc_rogue.cpp4550–4561,4604–4609,7351–7378,11121–11133`.
 - [x] Successful Rupture with selected381627 applies native381628 at its captured effective-CP multiplier, minimum1, without another payment. Preserve native coefficients, cadence and duration. Source: `sc_rogue.cpp5257–5264,6200–6203`.
 - [x] Successful Kingsbane with selected1265387 starts1265787; each native effect1 tick casts1265794 and1265795 at its retained impacted target. Target loss does not select a replacement; removing the driver clears its target. Source: `sc_rogue.cpp4891–4905,4954–4958`.
@@ -68,6 +69,7 @@ Paths below are under `crates/server-simulation/src/dungeon_simulator/dps_parity
 - `assassination_white_tests.rs` — actual landed weapon hits and marked/unmarked retargeting.
 - `assassination_target_tests.rs` — real poison recipient state/health damage and Kingsbane count exclusion.
 - `assassination_poison_mechanics_tests.rs` — earned ramp and Amplifying consumption.
+- `assassination_garrote_snapshot_tests.rs` — real empowered bleeds retain their factors after window expiry; ordinary refresh, absent state and target-aware operands remain distinct.
 - `assassination_hero_tests.rs` — real stealth exit/spread, native children and mark cycles.
 - `assassination_seal_fate_tests.rs` — real builder crits and Poisoned Knife exclusion.
 - `rogue_vanish_tests.rs` — actual Vanish, suspended white swings, natural Stealth, next Garrote/window, resumed weapons and harmful early break without later re-stealth.

@@ -426,6 +426,7 @@ fn guardians2_darkglare_retargets_stops_and_expires_without_pet_replacement() {
 #[test]
 fn guardians2_native_dreadstalker_never_substitutes_imp_firebolt() {
     use shared::protocol::CombatLogKind;
+    let _seed = crate::random::seed_scope(70448);
     let bite = world_db().unwrap().store.get(271971).unwrap().clone();
     let mut h = harness(vec![bite], &[193332], 9).unwrap();
     h.app.init_resource::<ObservedCombatEvents>();
@@ -435,16 +436,30 @@ fn guardians2_native_dreadstalker_never_substitutes_imp_firebolt() {
         .get_mut::<shared::components::Position>(h.npc)
         .unwrap()
         .x = 2.0;
-    h.advance(45);
+    // Native Dreadbite may miss; one short first-cast window is not a binding proof.
+    // Bound the wait to ten fixture seconds without changing native hit chances.
+    const MIN_OBSERVE_FRAMES: usize = 45;
+    const MAX_WAIT_FRAMES: usize = 200;
+    let landed = (0..MAX_WAIT_FRAMES).any(|frame| {
+        h.advance(1);
+        let observed = h
+            .app
+            .world()
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|event| {
+                event.source == Some(actor.to_bits())
+                    && event.spell_id == Some(271971)
+                    && event.kind == CombatLogKind::Damage
+                    && event.amount > 0
+            });
+        frame + 1 >= MIN_OBSERVE_FRAMES && observed
+    });
     let events = &h.app.world().resource::<ObservedCombatEvents>().0;
     assert!(
-        events
-            .iter()
-            .any(|event| event.source == Some(actor.to_bits())
-                && event.spell_id == Some(271971)
-                && event.kind == CombatLogKind::Damage
-                && event.amount > 0),
-        "the real bound Dreadstalker must land native Dreadbite"
+        landed,
+        "the real bound Dreadstalker must land native Dreadbite within ten seconds: {events:?}"
     );
     assert!(
         !events
