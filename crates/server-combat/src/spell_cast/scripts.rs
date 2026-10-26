@@ -38,16 +38,15 @@ pub(super) use script_registry::{
 mod periodic_attacks;
 mod shadow_volley_bolts;
 pub(crate) use periodic_attacks::{after_periodic_trigger, rolls_reapplication};
-pub(super) use script_registry::after_foreground_special;
-pub(crate) use script_registry::melee_residual as after_melee_residual;
-pub(super) use script_registry::spell_residual as after_spell_residual;
-mod chrono_flame;
 pub(super) use script_registry::after_cast_update as update_unleashed;
+pub(super) use script_registry::after_foreground_special;
 pub(super) use script_registry::after_modifier_consumption as apply_echo_policies;
 pub(super) use script_registry::after_resolved_hits;
 pub(super) use script_registry::check_native_spell as check_enhancement_cast;
 pub(crate) use script_registry::consume_cast_modifiers as consume_maelstrom_weapon;
+pub(crate) use script_registry::melee_residual as after_melee_residual;
 pub(crate) use script_registry::snapshot_native_aura_amount as snapshot_rod_amount;
+pub(super) use script_registry::spell_residual as after_spell_residual;
 mod policies;
 pub(super) use policies::check_cast as check_policy_cast;
 pub(crate) use policies::register_channel_policies;
@@ -137,7 +136,7 @@ pub(crate) fn after_melee_hit(
 mod xuens_battlegear;
 pub(crate) use xuens_battlegear::register_xuens_battlegear;
 
-pub(crate) use chrono_flame::record_health_change;
+pub(crate) use script_registry::health_change_observed as record_health_change;
 pub(crate) use windwalker::{
     DANCE_OF_CHIJI, after_dance_cast_event, apply_mystic_touch_after_hit, check_dance_proc,
     combo_strikes_multiplier, ordinary_combo_cast, register_wdp_relationship,
@@ -342,12 +341,6 @@ const CHILLED: u32 = 205_708;
 const CHAOS_STRIKE_INITIAL: u32 = 344_862;
 /// Chaos Strike: DUMMY 0, TRIGGER_SPELL 1 (222031) and 2 (199547), the weapon hits.
 const CHAOS_STRIKE: u32 = 162_794;
-/// Living Flame (Red): DUMMY 0 only.
-const LIVING_FLAME: u32 = 361_469;
-/// Living Flame damage: SCHOOL_DAMAGE 0.
-const LIVING_FLAME_DAMAGE: u32 = 361_500;
-/// Living Flame heal.
-const LIVING_FLAME_HEAL: u32 = 361_509;
 /// Switch Flight Style: 436854 toggles, 460002 to Skyriding, 460003 to Steady.
 const SWITCH_FLIGHT_STYLE: u32 = 436_854;
 const SWITCH_TO_SKYRIDING: u32 = 460_002;
@@ -597,9 +590,6 @@ pub fn on_effect_hit(
         (DEATH_COIL, 0) => Some(death_coil),
         (DEMON_SPIKES, 0) => Some(demon_spikes),
         (CHAOS_STRIKE_INITIAL, 0) => Some(chaos_strike_initial),
-        (LIVING_FLAME, 0) => Some(living_flame),
-        (chrono_flame::CHRONO_FLAMES, 0) => Some(living_flame),
-        (LIVING_FLAME_DAMAGE | LIVING_FLAME_HEAL, 0) => Some(chrono_flame::repeat_landed_flame),
         (SWITCH_FLIGHT_STYLE, 0) => Some(switch_flight_style),
         (SWITCH_TO_SKYRIDING, 0) => Some(switch_to_skyriding),
         (SWITCH_TO_STEADY, 0) => Some(switch_to_steady),
@@ -1076,9 +1066,6 @@ pub fn check_target(
     target: Entity,
 ) -> Result<(), super::CastFailure> {
     script_registry::check_target(world, caster, spell_id, target)?;
-    if spell_id == chrono_flame::CHRONO_FLAMES {
-        return chrono_flame::check_children(world);
-    }
     if spell_id == batch8::PROVOKE {
         return batch8::check_provoke(world, caster, target);
     }
@@ -1537,54 +1524,6 @@ fn switch_to_skyriding(world: &mut World, _caster: Entity, target: Entity, _dept
 /// the caster puts it on Steady.
 fn switch_to_steady(world: &mut World, _caster: Entity, target: Entity, _depth: u8) {
     set_flight_style(world, target, FlightStyle::Steady);
-}
-
-/// Energizing Flame (Evoker passive): DUMMY 0, the percent of Living Flame's mana
-/// cost refunded when it hits an enemy.
-const ENERGIZING_FLAME: u32 = 400_006;
-
-/// `spell_evo_living_flame::HandleHitTarget` (spell_evoker.cpp:505-530): heal a
-/// unit the caster can assist, damage any other; `HandleLaunchTarget` refunds
-/// Energizing Flame's percent of the mana cost on an enemy.
-fn living_flame(world: &mut World, caster: Entity, target: Entity, depth: u8) {
-    if relation_matches(world, caster, target, Relation::Ally) {
-        super::cast_triggered(world, caster, LIVING_FLAME_HEAL, Some(target), depth + 1);
-        return;
-    }
-    refund_energizing_flame(world, caster);
-    super::cast_triggered(world, caster, LIVING_FLAME_DAMAGE, Some(target), depth + 1);
-}
-
-fn refund_energizing_flame(world: &mut World, caster: Entity) {
-    if !crate::auras::has_aura(world, caster, ENERGIZING_FLAME) {
-        return;
-    }
-    let store = world.resource::<crate::spell_info::SpellStore>();
-    let (Some(living_flame), Some(energizing)) =
-        (store.get(LIVING_FLAME), store.get(ENERGIZING_FLAME))
-    else {
-        return;
-    };
-    let percent = energizing
-        .effects
-        .iter()
-        .find(|effect| effect.index == 0)
-        .map_or(0.0, |effect| effect.base_points);
-    let living_flame = living_flame.clone();
-    let mana_cost: f32 = super::applicable_costs(world, caster, &living_flame)
-        .unwrap_or_default()
-        .into_iter()
-        .filter(|(pool, ..)| *pool == super::CostPool::Power(shared::components::PowerType::Mana))
-        .map(|(_, amount, _)| amount)
-        .sum();
-    if mana_cost > 0.0 {
-        super::powers::change_power(
-            world,
-            caster,
-            shared::components::PowerType::Mana,
-            mana_cost * percent / 100.0,
-        );
-    }
 }
 
 /// TC spell_dru_yseras_gift_group_heal, Spell.cpp:9516-9580:

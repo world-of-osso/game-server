@@ -1,12 +1,13 @@
 //! Native Chrono Flame431442 fields0/2(percent),1(seconds), override431443.
 //! DescriptionVariables852: cap=SP*2.5*(1+versadmg), Overclock1260647
 //! adds its native40%, corroborated by cap2=SP*3.5*(1+versadmg).
-use crate::spell_cast::{
+use super::combat;
+use bevy::prelude::*;
+use combat::spell_cast::{
     CastFailure,
     effects::{self, EffectCtx},
 };
-use crate::spell_info::SpellStore;
-use bevy::prelude::*;
+use combat::spell_info::SpellStore;
 use shared::components::ActiveSpec;
 use shared::protocol::{CombatLogEvent, CombatLogKind};
 use std::collections::VecDeque;
@@ -56,11 +57,11 @@ fn parse_health_change(event: &CombatLogEvent, at: f64) -> Option<(Entity, Healt
 }
 
 pub(crate) fn record_health_change(world: &mut World, event: &CombatLogEvent) {
-    let at = crate::spell_cast::now(world);
+    let at = combat::spell_cast::now(world);
     let Some((actor, change)) = parse_health_change(event, at) else {
         return;
     };
-    if !crate::auras::has_aura(world, actor, PASSIVE) {
+    if !combat::auras::has_aura(world, actor, PASSIVE) {
         return;
     }
     let cutoff = at - history_seconds(world, actor);
@@ -79,7 +80,7 @@ pub(crate) fn record_health_change(world: &mut World, event: &CombatLogEvent) {
 }
 
 fn recent_amount(world: &World, caster: Entity, target: Entity, healing: bool) -> f32 {
-    let cutoff = crate::spell_cast::now(world) - history_seconds(world, caster);
+    let cutoff = combat::spell_cast::now(world) - history_seconds(world, caster);
     world
         .get::<RecentHealthChanges>(caster)
         .map_or(0.0, |history| {
@@ -106,7 +107,7 @@ fn repeat_amount(world: &World, caster: Entity, target: Entity, healing: bool) -
         2
     };
     let percent = super::script_effect_value(world, caster, PASSIVE, index);
-    let bonus = if crate::auras::has_aura(world, caster, OVERCLOCK) {
+    let bonus = if combat::auras::has_aura(world, caster, OVERCLOCK) {
         super::script_effect_value(world, caster, OVERCLOCK, 0) / 100.0
     } else {
         0.0
@@ -170,13 +171,13 @@ fn resolve_repeat(
 }
 
 pub(super) fn repeat_landed_flame(world: &mut World, caster: Entity, target: Entity, depth: u8) {
-    let healing = crate::spell_cast::targets::relation_matches(
+    let healing = combat::spell_cast::targets::relation_matches(
         world,
         caster,
         target,
-        crate::spell_cast::targets::Relation::Ally,
+        combat::spell_cast::targets::Relation::Ally,
     );
-    if !crate::auras::has_aura(world, caster, PASSIVE) {
+    if !combat::auras::has_aura(world, caster, PASSIVE) {
         return;
     }
     // Native Living Flame children can land after the root due to missiles.

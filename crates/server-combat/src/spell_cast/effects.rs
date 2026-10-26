@@ -325,7 +325,7 @@ pub fn log_unhandled(world: &mut World, spell_id: u32, effect_id: u32) {
 }
 
 /// `(spell power, attack power)` of `unit`; `healing` selects its healing power.
-pub(crate) fn power_stats(world: &World, unit: Entity, healing: bool) -> (f32, f32) {
+pub fn power_stats(world: &World, unit: Entity, healing: bool) -> (f32, f32) {
     if let Some(wolf) = world.get::<super::guardian::SpiritWolf>(unit) {
         let owner = world
             .get::<CharacterStats>(wolf.owner)
@@ -810,7 +810,7 @@ fn with_variance(amount: f32, variance: f32) -> f32 {
 }
 
 /// 1 + the caster's versatility (players only).
-pub(crate) fn versatility_multiplier(world: &World, caster: Entity) -> f32 {
+pub fn versatility_multiplier(world: &World, caster: Entity) -> f32 {
     world
         .get::<CharacterStats>(caster)
         .map_or(1.0, |stats| 1.0 + stats.versatility_pct / 100.0)
@@ -2227,12 +2227,7 @@ pub fn apply_heal(
 
 /// A named transfer already computed from effective healing; no second spell-power,
 /// healing multiplier or crit roll on the copied amount.
-pub(in crate::spell_cast) fn apply_fixed_heal(
-    world: &mut World,
-    ctx: &EffectCtx,
-    target: Entity,
-    amount: f32,
-) {
+pub fn apply_fixed_heal(world: &mut World, ctx: &EffectCtx, target: Entity, amount: f32) {
     apply_resolved_heal(world, ctx, target, amount.max(0.0).round(), false, false);
 }
 

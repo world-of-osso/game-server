@@ -207,6 +207,7 @@ pub type AfterCastUpdateHook = fn(&mut World);
 pub type ConsumeCastModifiersHook = fn(&mut World, Entity, &SpellInfo);
 pub type AfterWeaponLaunchHook = fn(&mut World, Entity, &SpellInfo, u8);
 
+pub type HealthChangeObservedHook = fn(&mut World, &shared::protocol::CombatLogEvent);
 pub type SupportAuraRegistrationHook = fn(&mut crate::auras::scripts::AuraScripts);
 pub type NamedAuraFields = &'static [(u32, u8)];
 pub type SnapshotLaunchAurasHook = fn(&World, Entity, &mut SpellInfo);
@@ -329,6 +330,7 @@ pub enum SpellScriptHook {
     AfterCastUpdate(AfterCastUpdateHook),
     ConsumeCastModifiers(ConsumeCastModifiersHook),
     AfterWeaponLaunch(AfterWeaponLaunchHook),
+    HealthChangeObserved(HealthChangeObservedHook),
     SupportAuraRegistration(SupportAuraRegistrationHook),
     NamedAuraFields(NamedAuraFields),
     SnapshotLaunchAuras(SnapshotLaunchAurasHook),
@@ -1492,6 +1494,15 @@ pub fn conjure_count(world: &mut World, caster: Entity, target: Entity, count: u
     for hook in world.resource::<SpellScriptRegistry>().hooks() {
         if let SpellScriptHook::ConjureCount(run) = hook {
             run(world, caster, target, count);
+        }
+    }
+}
+
+/// Health history observes the emitted event after meters and arena bookkeeping.
+pub fn health_change_observed(world: &mut World, event: &shared::protocol::CombatLogEvent) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::HealthChangeObserved(run) = hook {
+            run(world, event);
         }
     }
 }

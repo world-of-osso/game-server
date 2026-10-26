@@ -255,8 +255,6 @@ pub(super) fn consumes_named_field(spell_id: u32, effect_index: u8) -> bool {
         || (spell_id == PROTECTIVE_GROWTH && effect_index == 0)
         || (spell_id == LINGERING_HEALING && effect_index == 1)
         || (spell_id == FOUNT_OF_STRENGTH && effect_index == 2)
-        || (spell_id == 431442 && matches!(effect_index, 0..=2))
-        || (spell_id == 1260647 && effect_index == 0)
         || (spell_id == BREATH_OF_FIRE_BURN && effect_index == 1)
         || (spell_id == 740 && effect_index == 5)
         || (spell_id == 190456 && matches!(effect_index, 1 | 3))
