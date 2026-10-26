@@ -819,7 +819,7 @@ const MECHANIC_BLEED: u32 = 15;
 
 /// Unit::IsDamageReducedByArmor (Unit.cpp:1680-1687): physical damage of a
 /// spell without a bleed mechanic.
-fn reduced_by_armor(spell: &SpellInfo) -> bool {
+fn reduced_by_armor(world: &World, spell: &SpellInfo) -> bool {
     let bleed = spell
         .categories
         .as_ref()
@@ -828,7 +828,9 @@ fn reduced_by_armor(spell: &SpellInfo) -> bool {
             .effects
             .iter()
             .any(|effect| effect.mechanic == MECHANIC_BLEED);
-    spell.school_mask() & 1 != 0 && !bleed && !super::scripts::sentinel_ignores_armor(spell.id)
+    spell.school_mask() & 1 != 0
+        && !bleed
+        && !super::script_registry::ignores_armor(world, spell.id)
 }
 
 /// The target's armor against the caster: a creature's own armor at the
@@ -918,7 +920,7 @@ fn takes_melee_crit_modifier(spell: &SpellInfo) -> bool {
 const SPELL_ATTR2_CANT_CRIT: u32 = 0x2000_0000;
 
 /// CritChance mods and script values precede the victim's melee crit modifier.
-fn crit_chance(world: &World, caster: Entity, target: Entity, spell: &SpellInfo) -> f32 {
+pub(super) fn crit_chance(world: &World, caster: Entity, target: Entity, spell: &SpellInfo) -> f32 {
     // SimC76f8118 engine/player/pet.cpp217–220: controlled pets inherit the
     // live owner's melee/spell crit. Scripts and target modifiers keep the pet.
     let owner = world
@@ -1278,7 +1280,7 @@ fn expected_damage_after_mitigation(
     );
     let ignores_mitigation =
         super::attributes(ctx.spell, 4) & ATTR4_IGNORE_DAMAGE_TAKEN_MODIFIERS != 0;
-    if !ignores_mitigation && reduced_by_armor(ctx.spell) {
+    if !ignores_mitigation && reduced_by_armor(world, ctx.spell) {
         armor_reduced(world, ctx.caster, target, amount, ctx.spell)
     } else {
         amount
@@ -1505,7 +1507,7 @@ fn health_leech(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target
 }
 
 /// A named copy has already consumed the source's damage modifiers and crit.
-pub(crate) fn deal_copied_damage(world: &mut World, ctx: &EffectCtx, target: Entity, amount: f32) {
+pub fn deal_copied_damage(world: &mut World, ctx: &EffectCtx, target: Entity, amount: f32) {
     let damage = DamageInput {
         amount,
         crit: false,
@@ -1518,7 +1520,7 @@ pub(crate) fn deal_copied_damage(world: &mut World, ctx: &EffectCtx, target: Ent
 }
 
 /// TC Unit.cpp:6922–6929/6962; SharedDefines.h:576/687.
-pub(super) fn creature_type_damage_multiplier(
+pub fn creature_type_damage_multiplier(
     world: &World,
     caster: Entity,
     target: Entity,
@@ -1919,7 +1921,7 @@ fn deal_source_damage_and_report(
         crate::auras::area_avoidance::reduce_damage(world, target, ctx.spell, effect, false, amount)
     };
     let amount = if super::attributes(ctx.spell, 4) & ATTR4_IGNORE_DAMAGE_TAKEN_MODIFIERS == 0
-        && reduced_by_armor(ctx.spell)
+        && reduced_by_armor(world, ctx.spell)
     {
         armor_reduced(world, ctx.caster, target, amount, ctx.spell)
     } else {
@@ -2021,7 +2023,7 @@ fn deal_source_damage_and_report(
     #[cfg(any(test, feature = "test-support"))]
     factor_capture::finish(world, ctx, target, &damage, &event);
     log_event(world, event);
-    super::scripts::apply_havoc_damage_policies(
+    super::script_registry::landed_damage_policies(
         world,
         ctx.caster,
         target,
@@ -2030,8 +2032,7 @@ fn deal_source_damage_and_report(
         periodic,
     );
     if !resolved_source {
-        super::scripts::apply_marksman_residual(world, ctx, target, crit, amount);
-        super::scripts::apply_sentinel_damage(world, ctx, target, crit, amount);
+        super::script_registry::resolved_damage(world, ctx, target, crit, amount);
     }
     if periodic {
         crate::auras::rogue::after_bleed_tick(world, ctx, target);
@@ -2047,6 +2048,7 @@ fn deal_source_damage_and_report(
     }
     if hot_streak_hit {
         super::scripts::record_fire_hit(world, ctx.caster, ctx.spell, crit, guaranteed_crit);
+        super::scripts::fire_meteorite_hit(world, ctx, target);
     }
     if periodic {
         super::script_registry::periodic_damage_finished(world, ctx);

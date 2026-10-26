@@ -3,8 +3,15 @@ use bevy::prelude::*;
 use shared::components::ActiveSpec;
 use std::collections::BTreeMap;
 
-use crate::auras::{ActiveAuras, procs};
-use crate::spell_cast::effects::EffectCtx;
+use super::combat;
+use combat::auras::{ActiveAuras, procs};
+use combat::spell_cast::effects::EffectCtx;
+use combat::spell_cast::script_registry::SpellScriptHook;
+
+pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::ImpactProcDamage(after_damage),
+    SpellScriptHook::OwnsPolicyProc(owns_proc),
+];
 
 struct ImpactProc {
     passive: u32,
@@ -53,7 +60,7 @@ fn roll_impact_proc(world: &mut World, ctx: &EffectCtx, target: Entity, policy: 
         return;
     };
     let attempts = advance_attempts(world, ctx.caster, policy.passive);
-    let constant = crate::random::accumulated_proc_constant(probability);
+    let constant = combat::random::accumulated_proc_constant(probability);
     let chance = (constant * f64::from(attempts) * 100.0).min(100.0) as f32;
     if procs::try_policy_proc(world, ctx.caster, instance, chance) {
         cast_impact_proc(world, ctx, target, policy);
@@ -66,7 +73,7 @@ fn cast_impact_proc(world: &mut World, ctx: &EffectCtx, target: Entity, policy: 
         .unwrap()
         .0
         .insert(policy.passive, 0);
-    if !crate::spell_cast::try_cast_triggered(
+    if !combat::spell_cast::try_cast_triggered(
         world,
         ctx.caster,
         policy.payload,

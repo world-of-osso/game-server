@@ -432,16 +432,31 @@ fn literal_precombat_player_declared_shards_exist_before_first_frame() {
     let (profile, traits) = read_reference(267).unwrap();
     let identity = inputs::read_actor(&profile).unwrap();
     let mut run = spawn_reference(profile, &traits, 1, identity).unwrap();
-    assert!(run.app.world().get::<shared::components::Player>(run.actor).is_some());
+    assert!(
+        run.app
+            .world()
+            .get::<shared::components::Player>(run.actor)
+            .is_some()
+    );
     let read_power = |run: &Run| {
         crate::spell_cast::powers::power_value(run.app.world(), run.actor, PowerType::SoulShards)
             .expect("native player class pool must precede declared-power validation")
     };
     let initial = read_power(&run);
-    assert_eq!(initial.0, 0.0, "honor the pinned warlock.soul_shards=0 before warmup");
-    assert!(initial.1 > 0.0, "native class metadata supplies the maximum");
+    assert_eq!(
+        initial.0, 0.0,
+        "honor the pinned warlock.soul_shards=0 before warmup"
+    );
+    assert!(
+        initial.1 > 0.0,
+        "native class metadata supplies the maximum"
+    );
     run.app.update();
-    assert_eq!(read_power(&run), initial, "the first ordinary native frame cannot replace the configured pool");
+    assert_eq!(
+        read_power(&run),
+        initial,
+        "the first ordinary native frame cannot replace the configured pool"
+    );
 }
 
 #[test]
