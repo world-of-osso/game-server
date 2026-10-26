@@ -79,6 +79,10 @@ Selected native155580 applies its owned155627 override aura, so ordinary Moonfir
 
 ### Beast Mastery literal fixture
 
+- Selected Wildspeaker commands existing native Dire Beast, Dark Hound, Fenryr, Hati and Bear summons with native1232922 at the real Kill Command primary. Command dispatch precedes Howl consumption, so a Bear created by that cast cannot receive it retroactively. Stable bodies retain their separate command path (SimC76f8118 hunter3175–3189/6587–6604).
+
+- A real Howl Bear immediately casts its native Rend Flesh471999 at the consuming Kill Command's hostile primary and nearby enemies. Native effect1 supplies the bleed radius and coefficient; effect2 supplies the target cap. The Bear owns the applications and periodic damage, using its source-defined live owner ranged-AP share0.6 without changing native bleed coefficients (SimC76f8118 hunter2043–2047/2057–2060/3218–3234).
+
 - Native Aura493 triggers its authored companion spell after Call Pet; native Effect260 creates a second stable body without changing the current-pet record. The companion has white swings and owned-pet commands, no autonomous Focus spender, and ends with its main pet. NPC pet orders reach all active owned pets.
 
 - Selected Howl starts its native cooldown at combat entry and earns Wyvern, Boar and Bear readiness in order. Bestial Wrath with selected Stampede independently advances that cycle. Ordinary Kill Command consumes every earned ready beast: Wyvern and Bear require actual owned native summons; Wyvern Cry follows the real Wyvern. Consuming readiness starts the native cooldown only when absent. Incoming Stampede survives Bestial Wrath's own successful-cast event; only consuming Howl spends it. An armed Stampede starts only after a consumed Howl and retains the selected primary, native tick-zero/periodic clock and600/900/1200ms payload delays; native201594 damages the pack without a target cap (SimC76f8118 hunter3776–3841/4864–4900/6780–6781/8240–8270/8698–8699). Bear attacks and Wildspeaker remain separately unqualified.
