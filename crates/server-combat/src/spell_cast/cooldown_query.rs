@@ -127,7 +127,7 @@ pub(crate) fn cooldown_value(
         "remains_expected" | "remains_guess" => expected_remains(&state, history_now(world)),
         "duration" => Ok(state.duration),
         "charges" => Ok(state.charges),
-        // SimC76f8118 action.cpp3496–3500/cooldown.cpp: capacity, not remaining uses.
+        // SimC76f8118 action.cpp3496–3500/cooldown.cpp598–599: capacity, not remaining uses.
         "max_charges" => Ok(state.max_charges),
         "charges_fractional" => Ok(state.fractional),
         "full_recharge_time" => Ok(state.full_recharge),

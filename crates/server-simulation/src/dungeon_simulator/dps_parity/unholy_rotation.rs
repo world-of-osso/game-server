@@ -269,12 +269,6 @@ impl ActionFacts for UnholyFacts<'_> {
         if equipment_operand(name) || name == "dot.dread_plague.active_dots" {
             return self.value(name);
         }
-        // SimC76f8118 action.cpp: bare duration describes the action, not its cooldown.
-        if name == "duration" {
-            return self
-                .native
-                .value(&format!("action.{}.duration", action.name));
-        }
         self.native.value_for(action, name)
     }
 }
