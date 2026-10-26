@@ -4,8 +4,15 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 ## What it must do
 
+- Equipped Call the Swarm1310082 delivers Acidbrood1310088 through native missile1310083, and equipped Void Eruption1310208 delivers1310209. Payload damage uses the originating item's native driver effect1 budget and native role multiplier, not the zero-valued damage-leaf points. Preserve native proc eligibility/RPPM/ICD, travel, crit and full unsplit AoE.
+- The pinned `bugs=true` Void Eruption behavior does not apply its inactive Venomcursed15% bonus. Casting-item context must survive native aura proc children and their missile/trigger descendants; class procs without an item retain their existing context.
+
 - The native encounter fixture faces the actor toward its actual primary before engagement and restores maintained melee-intent facing after forced movement finishes, including a charge that ends inside melee range. Do not turn active channels or override forced movement. Keep native directional selectors, widths and radii unchanged.
 - A fixture actor with native melee AutoAttack intent walks back into nominal melee range at its native run speed after movement abilities. Preserve forced movement ownership, native movement/cast restrictions and position=back; never suppress displacement, snap the actor or grant resources. This shared controller applies without specialization or spell-ID cases (SimC76f8118 sc_demon_hunter.cpp1559–1611).
+
+### Native Pandemic duration carry
+
+- Native `PERIODIC_REFRESH_EXTENDS_DURATION` selects Pandemic carry: a refresh retains up to30% of fresh duration from the previous owned application, never reducing a longer remaining lifetime (`action.cpp684–685/4612`). Use the native attribute, not a Rip/Rake whitelist. Existing explicit Extend policies and rolling refresh retain their source precedence (`action.cpp2729–2734`); preserve native periodic phase, amounts and asynchronous deadlines.
 
 ### Shared channel timing
 
@@ -93,6 +100,8 @@ Native merged buff outcomes apply or clear the caster-owned aura after the hit b
 - Precombat completes real Intellect and its first usable harmful precast before engagement. Native clocks, channel decisions, knowledge, costs, cooldowns and70448 spell values remain authoritative. Buff and recipient Freezing reaction clocks are configured before acquisition, including new add waves.
 
 ### Beast Mastery literal fixture
+
+- Selected Wildspeaker1232739 applies native1235388 to existing DireCritters when owner Bestial Wrath succeeds. New DireCritters joining an active owner BW inherit only its remaining time, before summon-time Rend executes; stable pets keep their separate native Wrath path (SimC76f8118 hunter1866–1867,6729–6736).
 
 - Selected Fury of the Wyvern472550 extends an existing earned Cry471881 after successful BM Kill Command34026, including the consuming command. Native effect2 supplies each extension and effect4 the total budget. Actual Cry removal resets the budget; white-impact stack growth does not (SimC76f8118 hunter6626–6630,8279–8287).
 
@@ -422,6 +431,8 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 ### Fury player parity
 
+- Selected Spite383852 applies its native rank values in tenths of a percent to damage and critical damage, as specified by the native display and SimC76f8118 `sc_warrior.cpp7894–7899`; preserve its native masks and rank curves.
+
 - Hack and Slash383873 increases only the next complete Raging Blow/Crushing Blow weapon sequence. Both native delayed weapon hits retain its native bonus; the final off-hand execution consumes one stack, even though its native proc-charge count is zero (`sc_warrior.cpp5061,5227`).
 
 - Rampage184367 may schedule its native effect5 Rampaging Ruin child only with selected Rampaging Ruin1265357 and live Whirlwind85739. An unselected talent or absent Whirlwind cannot add the AoE hit. Retain the original native effect64 payload, delay, admission and damage values (`sc_warrior.cpp5727–5748,5800–5801`).
@@ -458,6 +469,7 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 ### Shared pet prerequisites
 
 - Headless native Player actors must have runtime-only native pet storage before a real summon. Do not fabricate an authenticated character, follower identity, actor or resource grant. Hunter default-record provisioning reuses that same storage.
+- Generic implicit27 TARGET_UNIT_MASTER selects the actual native controlled-pet or temporary-summon owner in the same map, independently of the supplied explicit target. Never substitute the caster, controller actor or a resource grant (TC a352b1fa Spell.cpp1753–1755).
 - Generic effect148 must forward its actual hit destination/unit, native costs and value to every child effect on the per-cast clone. Do not mutate catalog data (TC a352b1fa SpellEffects.cpp725–788).
 - Generic implicit85 is DEST_DEST_FRONT_LEFT: use native radius/direction, native caster origin when no destination is supplied, and existing collision/allowed-Z handling. Do not use spell-ID branches (TC a352b1fa Spell.cpp1690–1738).
 - Qualify the native267 summon regressions and protected255/254/253/265 probes before landing shared behavior. Pet attack lists, coefficients and class producers remain separate work.
@@ -479,11 +491,17 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 - Generic DoT facts for an active permanent aura are not refreshable and have unbounded remains/duration, before finite fresh-duration/Pandemic validation. Missing/finite DoTs and buff/debuff sentinel semantics stay unchanged. Do not suppress literal casts in the adapter to hide an expiring aura.
 - Qualify the actual literal ST and recurring30s-add-wave ordering. Gate265 ST/3T and267, plus actual finite-DoT refreshability from103 or258. Count explosion hits separately from explosion actions; do not tune damage or target counts to repair excess paid Seed refreshes.
 
+### Native Infernal guardian
+
+- Actual111685 summons89 with live owner-SP shares2.2275 for SP and AP (SimC76f8118 `sc_warlock_pets.cpp2050–2119`). Native264364→264365 energizes the existing owner through target27; native19483→20153 emits its authored periodic area damage. Preserve native costs, coefficients, targets, clocks and actor expiry.
+- Immediately after actual guardian initialization, the generic `SummonInitialized` callback receives that actor. The downstream Infernal leaf initializes existing action clocks once: a nonnegative normal arise delay(mean1s,stddev0.1s) starts Embers; Immolation starts after another uniform0–0.75s, without an Immolation zero tick. No per-unit summon wrapper, actor-query loop, synthetic ticks or new timer state. Unregistered guardians retain existing behavior; qualify BM Bear,265 guardians and DK Rune Weapon.
+
 ### Shared Hellcaller Wither counters
 
 - Native Wither445474 keeps its actual counter stacks, but its periodic damage ignores that count. An ordinary recast preserves earned stacks without adding a refresh stack; explicit native stack applications retain normal counter advancement. Preserve native coefficients, tick phase and lifetime. Both265 and267 share this rule (SimC76f8118 `sc_warlock_actions.cpp1066,1174–1186`).
 - Wither's counter is not an ordinary damage-stack multiplier. Other stacking DoTs keep their existing behavior; Blackened Soul producers/collapse are separate relationships.
 - Shared265/267 Hellcaller producers must use actual Chaos Bolt/Shadowburn impacts and actual UA applications, including refresh, Fatal Echoes and seed-applied UA. Do not replace UA's independently owned expiry callbacks. Grant native Malevolence stacks/buff/damage only to its caster's active Withers; preserve each Wither lifetime and tick phase.
+- Selected Devil Fruit1266805 attempts its native RPPM on actual owned Wither ticks and applies Malevolence442726 with the talent's native effect0 lifetime, without executing the button's damage/stack producers. Both earned procs and the actual button extend existing Malevolence; preserve native buff effects and ordinary button duration (SimC76f8118 actions1154–1159; init968–971,1475).
 - Check Seeds gates on gains and Wither ticks. Blackened uses a permanent runtime counter with the native tick period, decrements Wither before damage/Mark of Xavius, consumes its separate collapse budget, and stops at Wither1 or missing Wither. Preserve source PRD/weighted-threshold behavior and native spec-specific payout buffs; do not tune damage or duplicate shard mechanics (SimC76f8118 actions1119–1149,1208–1317,1544–1565,4328–4331,4807–4810,5534–5611; init1441–1480).
 
 ### Destruction main-pet engagement
@@ -758,6 +776,7 @@ Named `action.<alias>.charges`, `max_charges`, `charges_fractional` and `full_re
 - Ordinary Raptor Strike rolls the selected native Swipe rank's chance. An actual upgraded Raptor Swipe consumes its replacement and cannot produce itself. Source: `sc_hunter.cpp6188,6217–6236`.
 - A real Wildfire Bomb explodes around its actual primary using pinned5yd geometry, native reduced-AoE cap and native primary-only bonus. Apply the corresponding periodic payload to every actual impact recipient with the same cap/primary effectiveness. Selected Shrapnel replaces, never duplicates, the ordinary fire DoT. Keep native damage coefficients and timing. Source: `sc_hunter.cpp7030,7039–7043,7062–7068,7083–7089,7118–7120,7134`.
 
+- Selected Spirit Bond263135 includes459722's native percentage through the existing aura/mastery engine. Its full native modifier application follows the owning mastery aura's apply/remove lifecycle; do not replace CharacterStats or add a parallel mastery/damage calculation. Source: `sc_hunter.cpp1392–1395,2586–2589,7900`.
 - Actual Raptor Strike/Swipe base executions grant native Mongoose Fury259388, including its full selected effect set, native stack cap and refresh. Do not require the named talent to create the buff. Actual primary Tip consumption grants selected Stargazer1253750 before its queued mark/ordinary pet strike; retain independent native stack expiry. Native aura values supply all damage effects; do not add manual damage factors or stat changes. Source: `sc_hunter.cpp1358–1361,6149–6155,7749,7880,8160–8165,8303–8305`.
 - Actual primary Tip consumption dispatches native Strike as One1251779 from the living owned main pet and starts the existing native1251717 ICD only after execution. Actual tipped rank3 Swipe dispatches its separate strike before base execution with the rank's native second-effect effectiveness; that extra does not spend the ordinary ICD. Use the actual aura instance for the shared proc timer; raw melee hints must not spend its owned ICD. Selected Sic 'Em1253137 executes native1253138 from the same main pet only on its actual Strike as One crit. Reuse shared pet stats/crit, periodic clocks and native payloads, not a second pet engine. Source: `sc_hunter.cpp1367–1372,2875–2898,3381–3387,6181–6186,7944`.
 - Real primary impacts that consume native Tip uses queue Sentinel's distinct native Survival chance after the impact batch, so tipped Wildfire can earn a fresh mark after consuming an old one. Native Sentinel already receives Moon's Blessing through its5585 label; do not add it twice. Selected Lunar Calling adds its Survival effect during actual Takedown. MM's distinct native chance remains unchanged. Source: `sc_hunter.cpp1358–1366,3694–3709`.
@@ -866,10 +885,20 @@ Rotation/decision implementation belongs to the lead/rotation agents. No system 
 
 ### Affliction native Death's Embrace
 
+- Selected234876 uses its native maximum amount and health threshold to scale source-qualified damage linearly with each actual recipient's live health below that threshold (`sc_warlock_actions.cpp529–535`). Preserve pinned exclusions: direct Corruption/Wither, Shadowbolt Volley and Malefic Grasp itself are not affected; Grasp's extra DoT payloads are affected. While any actual owned seed-applied UA stack remains in the native async scheduler, ordinary UA does not receive Embrace (pinned bugs=1).
 - Selected234876 uses its native maximum amount and health threshold to scale source-qualified damage linearly with each actual recipient's live health below that threshold (`sc_warlock_actions.cpp529–535`). Preserve pinned exclusions: direct Corruption/Wither, Shadowbolt Volley and Malefic Grasp itself are not affected; Grasp's extra DoT payloads are affected. Seed-applied UA stack suppression belongs with MID2 Seed UA integration.
+### Affliction native Nathreza recipients
+
+- Actual1262710 retains native chain count/range/amplitude but only admits its actual Haunt primary or secondaries with this caster's ticking146739/445474. The undotted primary remains eligible; foreign DoTs and losing the actual owned DoT do not admit secondaries (`sc_warlock_actions.cpp2532–2546`). Haunt's one-owned-recipient replacement is already native-qualified and needs no separate implementation.
+
 ### Affliction native Darkglare Eye Beam
 
 - Ordinary native205231 from an actual103673 Darkglare reads its real owner and actual recipient. Each distinct owned active Agony, Corruption, Wither, Seed or UA contributes the native205180 effect2 amount; multiple UA stacks count once and foreign DoTs do not count (`sc_warlock_pets.cpp2445–2455`, `sc_warlock.cpp248–264`). Keep native guardian rows and coefficients unchanged. Nether Plating's alternate AoE chain is not selected by this MID2 fixture and is separately unqualified.
+
+### Affliction native MID2 Seed UA
+
+- Selected1296569 makes successful Seed execution apply one real1259790 to the same smart primary selected by the actual Seed plan, before the projectile/explosion (`sc_warlock_actions.cpp1799–1813/1903–1910`). It pays no second resource cost and secondary Seed recipients do not earn UA. An instant Seed and its tier UA spend exactly one admitted native Instability use; a use earned during a hardcast remains available (`sc_warlock_actions.cpp1913–1924`).
+- Seed applications retain visible native stacks but contribute the native set effect0 fraction to periodic UA damage; ordinary/Fatal Echoes applications remain full strength. Track provenance against the actual stored asynchronous stack deadlines, never a second expiry scheduler. Real stack loss ends its weighting and Embrace suppression; UA Grasp children deliberately retain the visible stack count (`sc_warlock.cpp140–172`, `sc_warlock_actions.cpp1652–1664/2212`).
 
 ### Affliction native Darkglare Presence
 

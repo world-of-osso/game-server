@@ -141,10 +141,12 @@ fn emit_echo(world: &mut World, caster: Entity, target: Entity, depth: u8) -> bo
     true
 }
 
+// SimC76f8118 actions5619–5641 accepts an awake attack target. Native
+// enemy admission includes neutral attackable targets, not only hostile factions.
 fn is_live_enemy(world: &World, caster: Entity, target: Entity) -> bool {
     targets::is_alive(world, target)
         && targets::same_map(world, caster, target)
-        && targets::is_hostile(world, caster, target)
+        && targets::relation_matches(world, caster, target, targets::Relation::Enemy)
 }
 
 fn collect_owned_dot_targets(world: &mut World, caster: Entity) -> Vec<Entity> {
