@@ -239,6 +239,27 @@ fn frost_paid_runic_power_restores_native_runes() {
     assert!(events.iter().any(|event| event.spell_id == Some(193486) && event.kind == CombatLogKind::Energize && event.amount > event.overflow), "paid RP must earn effective Runic Empowerment rune restoration, not a synthetic rotation grant");
 }
 
+#[test]
+#[ignore = "native251 selected Frozen Dominion starts actual Remorseless Winter from Pillar"]
+fn frost_pillar_starts_frozen_dominion_winter() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::protocol::CombatLogKind;
+    let _seed = crate::random::seed_scope(251);
+    let mut run = super::super::prepare_literal(251, 3).unwrap();
+    super::super::engage(&mut run);
+    assert!(auras::has_aura(run.app.world(), run.actor, 377226));
+    let actor = run.actor;
+    super::super::enhancement_generation_tests::cast(&mut run, 51271, actor);
+    assert!(auras::has_aura(run.app.world(), actor, 1233152), "ordinary Pillar with selected Frozen Dominion starts its native Winter aura");
+    for _ in 0..80 {
+        run.app.update();
+    }
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0;
+    for target in &run.targets {
+        assert!(events.iter().any(|event| event.spell_id == Some(196771) && event.target == Some(target.to_bits()) && event.kind == CombatLogKind::Damage && event.amount > 0), "native Winter must pulse damage onto each in-range enemy{target:?}");
+    }
+}
+
 fn erw_full_recharge(run: &Run) -> f64 {
     let bindings = super::bindings::build();
     NativeFacts::new(
