@@ -193,6 +193,17 @@ pub(crate) fn owner_attack_share(summon: u32, entry: u32) -> Option<f32> {
     policy(summon, entry).and_then(|row| row.owner_attack_share)
 }
 
+// SimC76f8118 pets.cpp372–375: the main Imp remains a controlled pet,
+// inheriting both powers from live owner SP rather than guardian identity.
+const CONTROLLED_PET_POWER_SHARES: &[(u32, f32, f32)] = &[(416, 5.625, 2.8125)];
+
+pub(crate) fn controlled_pet_power_shares(entry: u32) -> Option<(f32, f32)> {
+    CONTROLLED_PET_POWER_SHARES
+        .iter()
+        .find(|(creature, _, _)| *creature == entry)
+        .map(|(_, spell, attack)| (*spell, *attack))
+}
+
 // SimC76f8118 pets.cpp1513/1520–1523 selects the Antoran weapon mode.
 // Native1264093 requires1251000; grant that real mode instead of bypassing
 // its caster-aura gate. pets.cpp56–57/1714–1719 grants Service to Imp Lord.
