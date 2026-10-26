@@ -1,9 +1,10 @@
 //! SimC76f8118 sc_shaman.cpp6141–6145: selected Stormwell owns one primary-impact callback.
+use super::combat;
 use bevy::prelude::*;
 
-use crate::auras::{self, ActiveAuras, procs};
-use crate::class_progression::KnownSpells;
-use crate::spell_cast::effects::EffectCtx;
+use combat::auras::{self, ActiveAuras, procs};
+use combat::class_progression::KnownSpells;
+use combat::spell_cast::effects::EffectCtx;
 
 const CRASH: u32 = 187874;
 const STORMWELL: u32 = 1264762;

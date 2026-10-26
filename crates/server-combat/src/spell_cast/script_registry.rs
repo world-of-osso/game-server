@@ -369,6 +369,12 @@ pub enum SpellScriptHook {
     ResolvePendingScriptEvents(ResolvePendingScriptEventsHook),
     AfterLaunchProcSupply(AfterLaunchProcSupplyHook),
     ConjureCount(ConjureCountHook),
+    ConjureFromSpell(fn(&mut World, Entity, &SpellInfo, Entity, u32)),
+    BeforeScriptOnCast(OnCastHook),
+    AfterWeaponDamage(SpellResidualHook),
+    NativeWeaponMultiplier(TriggeredChildDamageMultiplierHook),
+    AfterNativeLaunch(AfterCastHook),
+    AfterNativeCastUpdate(AfterCastUpdateHook),
     AfterPolicyCast(AfterPolicyCastLookup),
     BeforeMeleeComboDamage(BeforeMeleeComboDamageHook),
     BeforePeriodicItemDamage(BeforePeriodicItemDamageHook),
@@ -1756,3 +1762,69 @@ use crate as combat;
 #[cfg(test)]
 #[path = "../../../server-spell-scripts/src/modules.rs"]
 mod fixtures;
+
+/// Source-preserving explicit conjures from an upstream native caller.
+pub fn conjure_from_spell(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    target: Entity,
+    count: u32,
+) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::ConjureFromSpell(run) = hook {
+            run(world, caster, spell, target, count);
+        }
+    }
+}
+
+/// Native root snapshot before the ordinary on-cast registry.
+pub fn before_script_on_cast(world: &mut World, caster: Entity, spell: u32, depth: u8) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::BeforeScriptOnCast(run) = hook {
+            run(world, caster, spell, depth);
+        }
+    }
+}
+
+/// Actual weapon impact at the original pre-policy position.
+pub fn after_weapon_damage(world: &mut World, ctx: &EffectCtx<'_>, target: Entity, amount: f32) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::AfterWeaponDamage(run) = hook {
+            run(world, ctx, target, amount);
+        }
+    }
+}
+
+pub fn native_weapon_multiplier(
+    world: &World,
+    caster: Entity,
+    parent: &SpellInfo,
+    child: u32,
+) -> Option<f32> {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .find_map(|hook| match hook {
+            SpellScriptHook::NativeWeaponMultiplier(run) => run(world, caster, parent, child),
+            _ => None,
+        })
+}
+
+/// Native repeated launch after the upstream Arcane launch callback.
+pub fn after_native_launch(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::AfterNativeLaunch(run) = hook {
+            run(world, caster, spell);
+        }
+    }
+}
+
+/// Independent scheduler retains its own after-advance_casts system boundary.
+pub fn after_native_cast_update(world: &mut World) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::AfterNativeCastUpdate(run) = hook {
+            run(world);
+        }
+    }
+}

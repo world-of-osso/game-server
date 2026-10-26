@@ -6,6 +6,14 @@ use combat::spell_cast::scripts::{
     AfterCastHook, reduce_cooldown, script_effect_value, snapshot_proc_modifiers,
 };
 
+#[path = "enhancement/enhancement_doom.rs"]
+mod enhancement_doom;
+#[path = "enhancement/enhancement_flurry.rs"]
+mod enhancement_flurry;
+#[path = "enhancement/enhancement_stormblast.rs"]
+mod enhancement_stormblast;
+#[path = "enhancement/enhancement_stormwell.rs"]
+mod enhancement_stormwell;
 #[path = "enhancement/enhancement_imbues.rs"]
 mod enhancement_imbues;
 #[path = "enhancement/enhancement_modes.rs"]
@@ -27,6 +35,11 @@ mod maelstrom_weapon;
 
 pub const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::WeaponAuraRegistration(register_auras),
+    SpellScriptHook::BeforeScriptOnCast(enhancement_stormblast::snapshot),
+    SpellScriptHook::AfterWeaponDamage(enhancement_stormblast::after_weapon_damage),
+    SpellScriptHook::NativeWeaponMultiplier(enhancement_flurry::weapon_multiplier),
+    SpellScriptHook::AfterNativeLaunch(enhancement_flurry::after_launch),
+    SpellScriptHook::AfterNativeCastUpdate(enhancement_flurry::update),
     SpellScriptHook::NativeAfterCast(after_cast),
     SpellScriptHook::ContextHit(context_hit),
     SpellScriptHook::CheckNativeSpell(enhancement_strikes::check_cast),
@@ -44,6 +57,7 @@ fn register_auras(scripts: &mut AuraScripts) {
     maelstrom_weapon::register(scripts);
     enhancement_imbues::register(scripts);
     enhancement_modes::register(scripts);
+    enhancement_stormblast::register(scripts);
     enhancement_strikes::register(scripts);
     enhancement_tier::register(scripts);
 }

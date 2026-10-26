@@ -18,6 +18,7 @@ const CONJURE_SPACING_MS: u32 = 100;
 pub const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AfterPolicyCast(after_cast_hook),
     SpellScriptHook::ConjureCount(conjure_count),
+    SpellScriptHook::ConjureFromSpell(conjure_from_spell),
     SpellScriptHook::BeforeMeleeComboDamage(after_direct_damage),
     SpellScriptHook::BeforePeriodicItemDamage(after_periodic_damage),
 ];
@@ -172,14 +173,14 @@ fn open_storm_window(world: &mut World, caster: Entity) {
     if !selected(world, caster, SPLINTERSTORM) {
         return;
     }
-    crate::auras::apply_aura(
+    combat::auras::apply_aura(
         world,
-        &crate::auras::AuraApplication {
+        &combat::auras::AuraApplication {
             caster,
             target: caster,
             spell_id: STORM_WINDOW,
             effect_mask: u32::MAX,
-            source: crate::auras::AuraSource::Cast,
+            source: combat::auras::AuraSource::Cast,
         },
     );
 }

@@ -1,11 +1,12 @@
 //! SimC76f8118 sc_shaman.cpp4545–4561/4682–4689/5540–5545/12041–12073:
 //! native Stormflurry rolls schedule background Strikes with their retained Stormblast snapshot.
+use super::combat;
 use bevy::prelude::*;
 use shared::components::ActiveSpec;
 
-use crate::class_progression::KnownSpells;
-use crate::spell_cast;
-use crate::spell_info::{SpellInfo, SpellStore};
+use combat::class_progression::KnownSpells;
+use combat::spell_cast;
+use combat::spell_info::{SpellInfo, SpellStore};
 
 const STORMFLURRY: u32 = 344357;
 const DELAY_MEAN_SECONDS: f64 = 0.200;
@@ -36,7 +37,7 @@ pub(super) fn multiplier(world: &World, caster: Entity) -> f32 {
     }
 }
 
-pub(in crate::spell_cast) fn weapon_multiplier(
+pub(super) fn weapon_multiplier(
     world: &World,
     caster: Entity,
     parent: &SpellInfo,
@@ -63,7 +64,7 @@ pub(super) fn after_launch(world: &mut World, caster: Entity, spell: &SpellInfo)
         return;
     }
     let chance = super::script_effect_value(world, caster, STORMFLURRY, 0);
-    if crate::random::random::<f32>() * 100.0 >= chance {
+    if combat::random::random::<f32>() * 100.0 >= chance {
         return;
     }
     let target = spell
@@ -87,12 +88,12 @@ pub(super) fn after_launch(world: &mut World, caster: Entity, spell: &SpellInfo)
 
 fn roll_delay_seconds() -> f64 {
     // Source12056: Gaussian mean200ms, standard deviation25ms, not a uniform jitter.
-    let radial = (1.0 - crate::random::random::<f64>()).ln() * -2.0;
-    let angle = std::f64::consts::TAU * crate::random::random::<f64>();
+    let radial = (1.0 - combat::random::random::<f64>()).ln() * -2.0;
+    let angle = std::f64::consts::TAU * combat::random::random::<f64>();
     (DELAY_MEAN_SECONDS + DELAY_STD_SECONDS * radial.sqrt() * angle.cos()).max(0.0)
 }
 
-pub(in crate::spell_cast) fn update(world: &mut World) {
+pub(super) fn update(world: &mut World) {
     let now = spell_cast::now(world);
     let casters: Vec<Entity> = world
         .query_filtered::<Entity, With<PendingFlurries>>()

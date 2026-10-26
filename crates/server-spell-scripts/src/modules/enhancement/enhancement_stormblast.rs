@@ -1,14 +1,15 @@
 //! SimC76f8118 sc_shaman.cpp4449–4469/4702–4711/5597–5600/12125–12147:
 //! weapon Strike hits earn Stormsurge; the next root snapshots Stormblast before consumption.
+use super::combat;
 use bevy::prelude::*;
 use shared::components::ActiveSpec;
 
-use crate::auras::procs::AuraEvent;
-use crate::auras::scripts::{AuraScript, AuraScripts};
-use crate::auras::{self, ActiveAuras, AuraInstance};
-use crate::class_progression::KnownSpells;
-use crate::spell_cast::{self, effects::EffectCtx};
-use crate::spell_info::SpellStore;
+use combat::auras::procs::AuraEvent;
+use combat::auras::scripts::{AuraScript, AuraScripts};
+use combat::auras::{self, ActiveAuras, AuraInstance};
+use combat::class_progression::KnownSpells;
+use combat::spell_cast::{self, effects::EffectCtx};
+use combat::spell_info::SpellStore;
 
 const STORMSURGE_DRIVER: u32 = 201845;
 const STORMSURGE: u32 = 201846;
@@ -81,7 +82,7 @@ pub(super) fn snapshotted(world: &World, caster: Entity) -> bool {
 pub(super) fn execute_flurry(
     world: &mut World,
     caster: Entity,
-    payload: &crate::spell_info::SpellInfo,
+    payload: &combat::spell_info::SpellInfo,
     stormblast: bool,
 ) {
     let previous = world.get::<StrikeSnapshot>(caster).copied();
@@ -117,7 +118,7 @@ pub(super) fn snapshot(world: &mut World, caster: Entity, spell: u32, depth: u8)
     }
 }
 
-pub(in crate::spell_cast) fn after_weapon_damage(
+pub(super) fn after_weapon_damage(
     world: &mut World,
     ctx: &EffectCtx,
     target: Entity,
@@ -143,7 +144,7 @@ fn roll_stormsurge(world: &mut World, caster: Entity) {
     }) else {
         return;
     };
-    if crate::auras::procs::try_native_policy_proc(world, caster, instance) {
+    if combat::auras::procs::try_native_policy_proc(world, caster, instance) {
         grant_stormsurge(world, caster);
     }
 }

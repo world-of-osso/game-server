@@ -55,14 +55,11 @@ pub(crate) use script_registry::consume_cast_modifiers as consume_maelstrom_weap
 pub(crate) use script_registry::melee_residual as after_melee_residual;
 pub(crate) use script_registry::snapshot_native_aura_amount as snapshot_rod_amount;
 pub(super) use script_registry::spell_residual as after_spell_residual;
-mod enhancement_doom;
-mod enhancement_flurry;
-pub(super) use enhancement_flurry::{
-    update as update_enhancement_flurry, weapon_multiplier as enhancement_flurry_weapon_multiplier,
+pub(super) use script_registry::{
+    after_native_cast_update as update_enhancement_flurry,
+    after_weapon_damage as enhancement_weapon_damage,
+    native_weapon_multiplier as enhancement_flurry_weapon_multiplier,
 };
-mod enhancement_stormblast;
-pub(super) use enhancement_stormblast::after_weapon_damage as enhancement_weapon_damage;
-mod enhancement_stormwell;
 mod policies;
 pub(super) use policies::check_cast as check_policy_cast;
 pub(crate) use policies::register_channel_policies;
@@ -196,12 +193,12 @@ pub(super) fn finish_scripted_launch(
     windwalker_flurry::after_launch(world, caster, spell);
     script_registry::after_weapon_launch(world, caster, spell, depth);
     arcane::after_launch(world, caster, spell, depth);
-    enhancement_flurry::after_launch(world, caster, spell);
+    script_registry::after_native_launch(world, caster, spell);
 }
 
 /// TC OnCast runs once after successful checks, before spending and launch.
 pub(super) fn on_cast(world: &mut World, caster: Entity, spell_id: u32, depth: u8) {
-    enhancement_stormblast::snapshot(world, caster, spell_id, depth);
+    script_registry::before_script_on_cast(world, caster, spell_id, depth);
     script_registry::on_cast(world, caster, spell_id, depth);
     windwalker::scripted_combo_cast(world, caster, spell_id, depth);
     script_registry::before_judgment_on_cast(world, caster, spell_id, depth);
