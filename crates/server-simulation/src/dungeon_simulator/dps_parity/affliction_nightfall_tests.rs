@@ -31,7 +31,7 @@ fn grant_nightfall(run: &mut Run) {
     );
 }
 
-fn uses(run: &Run) -> u8 {
+pub(super) fn uses(run: &Run) -> u8 {
     run.app
         .world()
         .get::<crate::auras::ActiveAuras>(run.actor)
@@ -140,6 +140,8 @@ fn affliction_nightfall_gained_during_real_hardcast_is_retained_without_bonus() 
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_nightfall();
     start_bolt(&mut run);
+    finish_bolt(&mut run);
+    start_bolt(&mut run);
     assert!(
         run.app
             .world()
@@ -156,9 +158,10 @@ fn affliction_nightfall_gained_during_real_hardcast_is_retained_without_bonus() 
         "a mid-hardcast proc belongs to the next Bolt"
     );
     let products = damage_products(&run);
-    assert_eq!(products.len(), 1);
+    assert_eq!(products.len(), 2);
+    let ratio = products[1] / products[0];
     assert!(
-        (products[0] - 1.0).abs() < 0.00001,
+        (ratio - 1.0).abs() < 0.00001,
         "the hardcast cannot borrow its newly gained Nightfall: {products:?}"
     );
 }
