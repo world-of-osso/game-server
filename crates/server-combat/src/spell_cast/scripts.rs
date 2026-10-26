@@ -360,6 +360,7 @@ const PENANCE: u32 = 47_540;
 const PENANCE_DAMAGE_CHANNEL: u32 = 47_758;
 const PENANCE_HEAL_CHANNEL: u32 = 47_757;
 const COBRA_SHOT: u32 = 193_455;
+const BARBED_SHOT: u32 = 217_200;
 const BARBED_SCALES: u32 = 469_880;
 const KILL_COMMAND: u32 = 34_026;
 const BLACKOUT_KICK: u32 = 100_784;
@@ -1193,7 +1194,7 @@ pub(super) fn reduce_barbed_scales(world: &mut World, caster: Entity, spell: &Sp
         return;
     }
     let milliseconds = script_effect_value(world, caster, BARBED_SCALES, 0);
-    reduce_cooldown(world, caster, 217200, f64::from(milliseconds) / 1000.0);
+    reduce_cooldown(world, caster, BARBED_SHOT, f64::from(milliseconds) / 1000.0);
 }
 
 /// Retail 193455: "Reduces the cooldown of Kill Command by $s3 sec."
