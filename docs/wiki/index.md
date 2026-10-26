@@ -1,4 +1,3 @@
-- [Overfiend actual lifecycle](systems/spell-casting.md#native-overfiend-lifecycle--2026-10-26) — own native bolts/coefficient borrowing and actual-actor owner buff; RED retained, GREEN pending.
 - [Absolute nonstacking Corruption](systems/warlock-periodic-counters.md#absolute-corruption-lifetime) — duration-only permanence preserves native maximum0; exact native regression2086230ee4, GREEN pending.
 - [Actual Infernal initialization](systems/spell-casting.md#native-infernal-initialization--2026-10-26) — actual-actor callback replaces unreachable wrapper; native timing RED, protected gates pending.
 - [Devil Fruit Malevolence](systems/warlock-periodic-counters.md#devil-fruit-malevolence) — native Wither-tick RPPM and source-duration extension; genuine265/267 RED, GREEN pending.
