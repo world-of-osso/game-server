@@ -109,7 +109,7 @@ mod fire_procs;
 pub(crate) mod holy_priest;
 mod hot_streak;
 pub(crate) use fire_procs::register as register_fire_procs;
-pub(super) use fire_procs::{before_hot_streak_launch, fire_meteorite_hit};
+pub(super) use fire_procs::{before_hot_streak_launch, fire_feedback_hit, fire_meteorite_hit};
 pub(super) use hot_streak::triggers_hot_streak;
 pub(super) use hot_streak::{
     flamestrike_hot_streak_chance, pyroclasm_damage_modifier, record_fire_hit,
