@@ -26,7 +26,13 @@ fn arms_reap_the_storm_requires_an_actual_sudden_death_execute() {
             .unwrap()
             .current = 400.0;
         if sudden_death {
-            crate::spell_cast::cast_triggered(run.app.world_mut(), run.actor, 52437, Some(run.actor), 1);
+            crate::spell_cast::cast_triggered(
+                run.app.world_mut(),
+                run.actor,
+                52437,
+                Some(run.actor),
+                1,
+            );
         }
         execute(
             run.app.world_mut(),
