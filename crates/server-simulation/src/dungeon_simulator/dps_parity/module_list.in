@@ -95,6 +95,7 @@ mod havoc_tests;
 mod health_aura_state_tests;
 mod howl_tests;
 #[cfg(test)]
+mod hunter_bear_tests;
 mod hunter_bloodshed_tests;
 mod hunter_cadence_tests;
 mod hunter_command_tests;
