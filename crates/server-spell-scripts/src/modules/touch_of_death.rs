@@ -1,9 +1,9 @@
 //! 70391 primary-target admission and maximum-health damage; talents remain separate.
-use bevy::prelude::*;
-use shared::components::{Health, Npc};
 use super::combat;
-use combat::spell_cast::script_registry::{SpellScriptHook, DamageAmountHook};
+use bevy::prelude::*;
+use combat::spell_cast::script_registry::{DamageAmountHook, SpellScriptHook};
 use combat::spell_cast::scripts::script_effect_value;
+use shared::components::{Health, Npc};
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::DamageAmount(damage_hook),
@@ -14,7 +14,12 @@ fn damage_hook(spell: u32) -> Option<DamageAmountHook> {
     (spell == TOUCH_OF_DEATH).then_some(damage)
 }
 
-fn check_target(world: &World, caster: Entity, spell: u32, target: Entity) -> Result<(), combat::spell_cast::CastFailure> {
+fn check_target(
+    world: &World,
+    caster: Entity,
+    spell: u32,
+    target: Entity,
+) -> Result<(), combat::spell_cast::CastFailure> {
     if spell == TOUCH_OF_DEATH && !target_allowed(world, caster, target) {
         return Err(combat::spell_cast::CastFailure::InvalidTarget);
     }

@@ -30,7 +30,7 @@ use shared::components::PowerType;
 use std::collections::VecDeque;
 
 /// Melee attack range in yards.
-const MELEE_RANGE: f32 = 5.0;
+pub const MELEE_RANGE: f32 = 5.0;
 /// TC SharedDefines.h621: these channels do not set UNIT_STATE_CASTING.
 const SPELL_ATTR5_ALLOW_ACTIONS_DURING_CHANNEL: u32 = 0x0000_0001;
 /// Attack's spell ID for the existing owner spell-error channel.
@@ -2538,7 +2538,7 @@ fn record_swing_events(world: &mut World, attacker: Entity, target: Entity, outc
     };
     reward_swing_rage(world, attacker, target, rage_secs, damage);
     crate::spell_cast::log_event(world, swing_log_event(attacker, target, &outcome));
-    crate::spell_cast::scripts::apply_havoc_damage_policies(
+    crate::spell_cast::script_registry::landed_damage_policies(
         world, attacker, target, None, damage, false,
     );
     if outcome.npc_died || outcome.player_died {
