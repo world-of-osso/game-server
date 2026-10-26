@@ -130,9 +130,159 @@ def parse_measure(text):
     return fields
 
 
+MODULE_LINE = re.compile(r'\bmod\s+(\w+)\s*;')
+INLINE_MODULE = re.compile(r'\bmod\s+(\w+)\s*\{|[{}]')
+PATH_ATTRIBUTE = re.compile(r'#\s*\[\s*path\s*=\s*"([^"]+)"\s*\]')
+RAW_LITERAL = re.compile(r'(?:br|r)(\#*)"')
+CHAR_LITERAL = re.compile(r"'(?:\\\\.|[^'\\\\])'")
+
+
+def mask_rust_noncode(source):
+    """Blank comments and literals while preserving positions and newlines."""
+    output = list(source)
+    index = 0
+    block_depth = 0
+    end_literal = None
+    while index < len(source):
+        start = index
+        if block_depth:
+            if source.startswith("/*", index):
+                block_depth += 1
+                index += 2
+            elif source.startswith("*/", index):
+                block_depth -= 1
+                index += 2
+            else:
+                index += 1
+        elif end_literal is not None:
+            if source.startswith(end_literal, index):
+                index += len(end_literal)
+                end_literal = None
+            elif end_literal == '"' and source[index] == "\\":
+                index += min(2, len(source) - index)
+            else:
+                index += 1
+        elif source.startswith("//", index):
+            newline = source.find("\n", index)
+            index = len(source) if newline < 0 else newline
+        elif source.startswith("/*", index):
+            block_depth = 1
+            index += 2
+        elif (raw := RAW_LITERAL.match(source, index)):
+            end_literal = '"' + raw.group(1)
+            index += len(raw.group())
+        elif source[index] == '"':
+            end_literal = '"'
+            index += 1
+        elif (char := CHAR_LITERAL.match(source, index)):
+            index += len(char.group())
+        else:
+            index += 1
+            continue
+        for position in range(start, index):
+            if output[position] != "\n":
+                output[position] = " "
+    return "".join(output)
+
+
+def added_module_lines(commit):
+    """Return (path, line, column, name) for declarations added since master."""
+    revision = f"origin/master...{commit}"
+    paths = git("diff", "--name-only", "-z", "--diff-filter=ACMRT", revision,
+                "--", "*.rs", "*.in").stdout.split("\0")
+    found = []
+    for path in filter(None, paths):
+        source = git("show", f"{commit}:{path}").stdout
+        code_lines = mask_rust_noncode(source).splitlines()
+        diff = git("diff", "--no-ext-diff", "--no-renames", "--unified=0", revision,
+                   "--", path).stdout
+        line_number = 0
+        for line in diff.splitlines():
+            hunk = re.match(r"@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@", line)
+            if hunk:
+                line_number = int(hunk.group(1))
+            elif line.startswith("+") and not line.startswith("+++"):
+                for declaration in MODULE_LINE.finditer(code_lines[line_number - 1]):
+                    found.append((path, line_number, declaration.start(), declaration.group(1)))
+                line_number += 1
+            elif line.startswith(" "):
+                line_number += 1
+    return found
+
+
+def module_directory(path):
+    source = Path(path)
+    if source.suffix == ".in" or source.name in ("mod.rs", "lib.rs", "main.rs") \
+            or source.parent.name in ("bin", "examples", "tests", "benches"):
+        return source.parent
+    return source.parent / source.stem
+
+
+def module_paths(path, source, number, column, name):
+    """Resolve an external declaration in a file or its inline module."""
+    lines = source.splitlines()
+    depth = 0
+    modules = []
+    code_lines = mask_rust_noncode(source).splitlines()
+    preceding = code_lines[:number - 1] + [code_lines[number - 1][:column]]
+    for line in preceding:
+        for token in INLINE_MODULE.finditer(line):
+            if token.group(1):
+                depth += 1
+                modules.append((depth, token.group(1)))
+            elif token.group() == "{":
+                depth += 1
+            else:
+                if modules and modules[-1][0] == depth:
+                    modules.pop()
+                depth -= 1
+    nested = Path(*(name for _, name in modules))
+    prefix = lines[number - 1][:column]
+    attrs = [re.split(r'[;{}]', prefix)[-1]]
+    for line in reversed(lines[:number - 1]):
+        stripped = line.strip()
+        if stripped.startswith("#[") or stripped.startswith("//") or not stripped:
+            attrs.append(line)
+        else:
+            break
+    explicit = next((match.group(1) for line in attrs if (match := PATH_ATTRIBUTE.search(line))), None)
+    if explicit is not None:
+        parent = module_directory(path) if modules else Path(path).parent
+        return [os.path.normpath(str(parent / nested / explicit))]
+    directory = module_directory(path) / nested
+    return [str(directory / f"{name}.rs"), str(directory / name / "mod.rs")]
+
+
+def missing_added_modules(commit):
+    sources = {}
+    missing = []
+    for path, number, column, name in added_module_lines(commit):
+        if path not in sources:
+            sources[path] = git("show", f"{commit}:{path}").stdout
+        candidates = module_paths(path, sources[path], number, column, name)
+        if not any(git("cat-file", "-e", f"{commit}:{candidate}", check=False).returncode == 0
+                   for candidate in candidates):
+            missing.append(f"{path}:{number}: mod {name}; requires committed " + " or ".join(candidates))
+    return missing
+
+
+def added_module_names(commit):
+    return {name for _, _, _, name in added_module_lines(commit)}
+
+
+def missing_module_names(log, start):
+    with log.open() as source:
+        source.seek(start)
+        text = source.read()
+    return set(re.findall(r'error\[E0583\]: file not found for module [`\']([^`\']+)[`\']', text))
+
+
 def submit(args):
     commit = subprocess.run(["git", "rev-parse", "--verify", f"{args.commit}^{{commit}}"],
                             text=True, capture_output=True, check=True).stdout.strip()
+    missing = missing_added_modules(commit)
+    if missing:
+        raise SystemExit("missing committed Rust module files:\n" + "\n".join(missing))
     entry = {"id": uuid.uuid4().hex[:10], "owner": args.owner, "commit": commit,
              "land": args.land, "red": args.red and subprocess.run(
                  ["git", "rev-parse", "--verify", f"{args.red}^{{commit}}"], text=True,
@@ -256,7 +406,7 @@ def failing_paths(log, start):
         text = f.read()
     # include!()d sources are reported through `..` hops (crates/a/src/../../b/...).
     return {os.path.normpath(p) for p in
-            re.findall(r"(?:-->|Diff in) /?(?:\S*?/game-server-land/)?(crates/\S+?\.rs)", text)}
+            re.findall(r"(?:-->|Diff in) /?(?:\S*?/game-server-land/)?(crates/\S+?\.(?:rs|in))", text)}
 
 
 def touches(entry, paths):
@@ -299,7 +449,10 @@ def build_checked(entries, log):
         raise MasterBroken(f"origin/master itself fails check; see {log}")
     # Entries touching the files the compiler or rustfmt blamed are the likely culprits: admit
     # the rest in one check first, so one broken entry costs ~3 checks instead of a full bisect.
-    suspects = [e for e in merged if touches(e, paths)]
+    modules = missing_module_names(log, checked_from)
+    suspects = [e for e in merged if added_module_names(e["commit"]) & modules]
+    if not suspects:
+        suspects = [e for e in merged if touches(e, paths)]
     if suspects and len(suspects) < len(merged):
         admit([e for e in merged if e not in suspects])
         admit(suspects)
