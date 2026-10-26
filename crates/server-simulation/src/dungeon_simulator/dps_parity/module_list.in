@@ -3,6 +3,7 @@
 // each add a module line do not conflict; a duplicate line fails to compile (E0428).
 mod active_enemy_tests;
 mod affliction_tests;
+mod affliction_ua_tests;
 mod arms_massacre_sudden_death_tests;
 mod arms_reap_tests;
 mod arms_sweeping_tests;
