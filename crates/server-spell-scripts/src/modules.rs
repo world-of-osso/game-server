@@ -49,6 +49,7 @@ register_modules! {
     affliction_nightfall: (2652, "modules/affliction_nightfall.rs"),
     affliction_presence: (2659, "modules/affliction_presence.rs"),
     affliction_procs: (2652, "modules/affliction_procs.rs"),
+    affliction_seed_ua: (2659, "modules/affliction_seed_ua.rs"),
     affliction_shared_agony: (2659, "modules/affliction_shared_agony.rs"),
     affliction_targets: (2657, "modules/affliction_targets.rs"),
     affliction_ua: (2653, "modules/affliction_ua.rs"),

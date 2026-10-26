@@ -884,10 +884,15 @@ Rotation/decision implementation belongs to the lead/rotation agents. No system 
 
 ### Affliction native Death's Embrace
 
-- Selected234876 uses its native maximum amount and health threshold to scale source-qualified damage linearly with each actual recipient's live health below that threshold (`sc_warlock_actions.cpp529–535`). Preserve pinned exclusions: direct Corruption/Wither, Shadowbolt Volley and Malefic Grasp itself are not affected; Grasp's extra DoT payloads are affected. Seed-applied UA stack suppression belongs with MID2 Seed UA integration.
+- Selected234876 uses its native maximum amount and health threshold to scale source-qualified damage linearly with each actual recipient's live health below that threshold (`sc_warlock_actions.cpp529–535`). Preserve pinned exclusions: direct Corruption/Wither, Shadowbolt Volley and Malefic Grasp itself are not affected; Grasp's extra DoT payloads are affected. While any actual owned seed-applied UA stack remains in the native async scheduler, ordinary UA does not receive Embrace (pinned bugs=1).
 ### Affliction native Darkglare Eye Beam
 
 - Ordinary native205231 from an actual103673 Darkglare reads its real owner and actual recipient. Each distinct owned active Agony, Corruption, Wither, Seed or UA contributes the native205180 effect2 amount; multiple UA stacks count once and foreign DoTs do not count (`sc_warlock_pets.cpp2445–2455`, `sc_warlock.cpp248–264`). Keep native guardian rows and coefficients unchanged. Nether Plating's alternate AoE chain is not selected by this MID2 fixture and is separately unqualified.
+
+### Affliction native MID2 Seed UA
+
+- Selected1296569 makes successful Seed execution apply one real1259790 to the same smart primary selected by the actual Seed plan, before the projectile/explosion (`sc_warlock_actions.cpp1799–1813/1903–1910`). It pays no second resource cost and secondary Seed recipients do not earn UA. An instant Seed and its tier UA spend exactly one admitted native Instability use; a use earned during a hardcast remains available (`sc_warlock_actions.cpp1913–1924`).
+- Seed applications retain visible native stacks but contribute the native set effect0 fraction to periodic UA damage; ordinary/Fatal Echoes applications remain full strength. Track provenance against the actual stored asynchronous stack deadlines, never a second expiry scheduler. Real stack loss ends its weighting and Embrace suppression; UA Grasp children deliberately retain the visible stack count (`sc_warlock.cpp140–172`, `sc_warlock_actions.cpp1652–1664/2212`).
 
 ### Affliction native Darkglare Presence
 
