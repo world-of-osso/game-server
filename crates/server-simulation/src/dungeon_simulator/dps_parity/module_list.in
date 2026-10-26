@@ -25,6 +25,7 @@ mod conductive_energy_tests;
 mod cooldown_capacity_tests;
 mod devastation_tests;
 mod dot_duration_tests;
+mod dk252_tests;
 mod driver_tests;
 mod dummy_reference_tests;
 mod elemental_ascendance_tests;
