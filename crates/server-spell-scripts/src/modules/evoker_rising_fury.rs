@@ -6,8 +6,8 @@ use super::combat;
 use combat::auras::scripts::AuraScripts;
 use combat::auras::{ActiveAuras, AuraInstance, RemoveReason, has_aura};
 use combat::spell_cast::script_registry::SpellScriptHook;
-use combat::spell_cast::scripts::script_effect_value;
-use combat::spell_info::SpellStore;
+use combat::spell_cast::scripts::{AfterCastHook, script_effect_value};
+use combat::spell_info::{SpellInfo, SpellStore};
 
 const DRAGONRAGE: u32 = 375087;
 const RISING_FURY: u32 = 1271783;
@@ -15,7 +15,10 @@ const FIRST_RANK: u32 = 1271687;
 const THIRD_RANK: u32 = 1271788;
 const UNBOUND_FLAME: u32 = 1292323;
 
-pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::MidAuraRegistration(register)];
+pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::MidAuraRegistration(register),
+    SpellScriptHook::AfterResourceValues(cast_hook),
+];
 
 fn register(scripts: &mut AuraScripts) {
     let dragonrage = scripts.0.entry(DRAGONRAGE).or_default();
@@ -65,6 +68,23 @@ fn finish_fury(world: &mut World, unit: Entity, aura: &AuraInstance, _reason: Re
     let milliseconds = script_effect_value(world, unit, THIRD_RANK, 0) * f32::from(stacks);
     combat::auras::set_owned_duration(world, unit, unit, RISING_FURY, milliseconds as u32);
     grant_unbound_flame(world, unit);
+}
+
+fn cast_hook(spell: u32) -> Option<AfterCastHook> {
+    (spell == 1292321).then_some(spend_unbound_flame)
+}
+
+fn spend_unbound_flame(world: &mut World, unit: Entity, _spell: &SpellInfo) {
+    // SimC76f8118 sc_evoker.cpp7470–7475: the successful native cast spends one use.
+    let instance = world.get::<ActiveAuras>(unit).and_then(|auras| {
+        auras
+            .iter()
+            .find(|aura| aura.spell_id == UNBOUND_FLAME && aura.caster == unit)
+            .map(|aura| aura.instance_id)
+    });
+    if let Some(instance) = instance {
+        combat::auras::spend_stack(world, unit, instance);
+    }
 }
 
 fn grant_unbound_flame(world: &mut World, unit: Entity) {
