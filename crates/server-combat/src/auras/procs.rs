@@ -472,7 +472,7 @@ fn proc_matches(
         })
 }
 
-fn matches_explicit_family(spell: &SpellInfo, family: u32, mask: [u32; 4]) -> bool {
+pub(super) fn matches_explicit_family(spell: &SpellInfo, family: u32, mask: [u32; 4]) -> bool {
     if family == 0 {
         return true;
     }
@@ -632,12 +632,15 @@ fn try_proc(world: &mut World, unit: Entity, other: Option<Entity>, id: u32, eve
                 continue;
             }
         };
-        crate::spell_cast::cast_triggered(
+        // Native item proc children retain the originating aura's item level,
+        // including native missile/trigger descendants used by item-scaled damage.
+        crate::spell_cast::cast_triggered_with_item_level(
             world,
             unit,
             effect.trigger_spell,
             target,
             PROC_TRIGGER_DEPTH,
+            aura.cast_item_level,
         );
     }
     if break_crowd_control(world, unit, &aura, event) {
