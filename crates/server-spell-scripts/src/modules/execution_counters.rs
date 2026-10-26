@@ -2,7 +2,16 @@
 use bevy::prelude::*;
 use std::collections::BTreeMap;
 
-use crate::auras::ActiveAuras;
+use super::combat;
+use combat::auras::ActiveAuras;
+use combat::spell_cast::script_registry::SpellScriptHook;
+use combat::spell_info::SpellInfo;
+
+pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::AfterForegroundSpecial(consume_after_foreground_cast),
+    SpellScriptHook::AfterCounterLaunch(after_launch),
+    SpellScriptHook::OwnsPolicyProc(owns_proc),
+];
 
 struct ExecutionCounter {
     action: u32,
@@ -71,7 +80,8 @@ const CONSUMERS: &[ConsumedCounter] = &[
 #[derive(Component, Default)]
 struct ExecutionCounts(BTreeMap<u32, u32>);
 
-pub(super) fn consume_after_foreground_cast(world: &mut World, caster: Entity, action: u32) {
+fn consume_after_foreground_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    let action = spell.id;
     for consumer in CONSUMERS
         .iter()
         .filter(|consumer| consumer.actions.contains(&action))
@@ -89,7 +99,7 @@ fn consume_counter(world: &mut World, caster: Entity, consumer: &ConsumedCounter
     }) else {
         return;
     };
-    crate::auras::spend_stack(world, caster, instance);
+    combat::auras::spend_stack(world, caster, instance);
     grant_selected_counter(world, caster, consumer);
 }
 
@@ -101,7 +111,7 @@ fn grant_selected_counter(world: &mut World, caster: Entity, consumer: &Consumed
             .all(|spell| auras.has_spell(*spell))
     });
     if selected
-        && !crate::spell_cast::try_cast_triggered(world, caster, consumer.counter, Some(caster), 1)
+        && !combat::spell_cast::try_cast_triggered(world, caster, consumer.counter, Some(caster), 1)
     {
         warn!(
             ?caster,
@@ -152,11 +162,11 @@ fn read_execution_value(world: &World, caster: Entity, execution: &ValuedExecuti
 }
 
 fn cast_valued_execution(world: &mut World, caster: Entity, payload: u32, value: f32) {
-    let overrides = crate::spell_cast::TriggeredSpellOverrides {
+    let overrides = combat::spell_cast::TriggeredSpellOverrides {
         effect0_amount: Some(value),
         ..Default::default()
     };
-    if !crate::spell_cast::cast_triggered_with_overrides(
+    if !combat::spell_cast::cast_triggered_with_overrides(
         world,
         caster,
         payload,

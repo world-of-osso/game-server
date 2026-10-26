@@ -466,7 +466,7 @@ pub(in crate::spell_cast) fn after_triggered_cast(
     spell: &SpellInfo,
     depth: u8,
 ) {
-    super::resource_values::apply_producers(world, caster, spell);
+    script_registry::triggered_resource_producer(world, caster, spell);
     // SimC's common HoW execute also mirrors on Toll/Resonance/Sunrise.
     // Counter consumers remain foreground-only, so same-ID echoes cannot recurse.
     for policy in producers(world, spell.id) {
@@ -588,7 +588,10 @@ fn launch_scaled_payload(
 // CastEcho owns its source event predicate and the native shared ICD. Raw
 // CAST_SUCCESSFUL hints must not consume that ICD on unrelated/self phases.
 pub(crate) fn owns_policy_proc(world: &World, spell: u32) -> bool {
-    if super::execution_counters::owns_proc(spell) || super::impact_procs::owns_proc(spell) {
+    if world
+        .resource::<SpellScriptRegistry>()
+        .owns_policy_proc(spell)
+    {
         return true;
     }
     script_registry::policies(world).any(|policy| match policy.relationship {
@@ -960,18 +963,23 @@ pub(in crate::spell_cast) fn snapshot(
             CostPool::Health => None,
         })
         .collect::<Vec<_>>();
+    let rogue_context = super::rogue_hero::needs_context(world, caster, spell)
+        || super::rogue_children::needs_context(world, caster, spell.id);
     if spell.cast_parent_owns_modifier_charges
-        || !consumers(world, &resources, spell.id).any(|policy| selected(world, caster, policy))
+        || (!rogue_context
+            && !consumers(world, &resources, spell.id)
+                .any(|policy| selected(world, caster, policy)))
     {
         return None;
     }
-    let needs_hit_targets = consumers(world, &resources, spell.id).any(|policy| {
-        selected(world, caster, policy)
-            && !matches!(
-                policy.relationship,
-                Relationship::SpenderCooldownRefund { .. }
-            )
-    });
+    let needs_hit_targets = rogue_context
+        || consumers(world, &resources, spell.id).any(|policy| {
+            selected(world, caster, policy)
+                && !matches!(
+                    policy.relationship,
+                    Relationship::SpenderCooldownRefund { .. }
+                )
+        });
     let targets = if needs_hit_targets {
         capture_primary_targets(caster, spell, plan)?
     } else {
@@ -1017,6 +1025,8 @@ pub(in crate::spell_cast) fn on_hit(world: &mut World, ctx: &EffectCtx<'_>, hit:
     if context.targets.first() != Some(&hit) {
         return;
     }
+    super::rogue_hero::on_hit(world, ctx, hit);
+    super::rogue_children::on_hit(world, ctx, hit);
     for policy in consumers(world, &context.resources, ctx.spell.id) {
         if !selected(world, ctx.caster, policy) {
             continue;

@@ -22,9 +22,6 @@ pub(super) const WILDFIRE_BOMB: u32 = 259495;
 const BOMB_DAMAGE: u32 = 265157;
 const BOMB_BLEED: u32 = 269747;
 pub(crate) const DEATHMARK: u32 = 360194;
-pub(crate) const EYE_BEAM: u32 = 198013;
-pub(crate) const EYE_BEAM_DAMAGE: u32 = 198030;
-const EYE_BEAM_RANK: u32 = 320415;
 const METAMORPHOSIS: u32 = 191427;
 const LANDING_HIT: u32 = 200166;
 const LANDING_DAZE: u32 = 247121;
@@ -171,31 +168,6 @@ pub(crate) fn deathmark_energy(world: &mut World, caster: Entity, spell: &SpellI
         PowerType::Energy,
         total * period as f32 / duration as f32,
     );
-}
-
-///198013's local variable316 names198030;320415 explicitly guarantees crit.
-///No rank means ordinary generic crit, not a forced noncritical hit.
-pub(crate) fn cast_eye_beam_tick(world: &mut World, caster: Entity, parent: u32) {
-    let channel = world
-        .get::<shared::casting::CastState>(caster)
-        .is_some_and(|cast| {
-            cast.cast_type == shared::casting::CastType::Channel && cast.spell_id == parent
-        });
-    if !channel {
-        return;
-    }
-    // SimC76f8118 sc_demon_hunter.cpp3925–4050: both channels use native
-    // cone children, not a hand-built single-target plan or the self cast unit.
-    let child = if crate::auras::has_aura(world, caster, 1271144) {
-        1287949
-    } else {
-        EYE_BEAM_DAMAGE
-    };
-    spell_cast::cast_triggered(world, caster, child, None, 1);
-}
-
-pub(super) fn eye_beam_crit(world: &World, caster: Entity) -> Option<f32> {
-    crate::auras::has_aura(world, caster, EYE_BEAM_RANK).then_some(100.0)
 }
 
 pub(in crate::spell_cast) fn cast_effect(spell: u32, index: u8) -> Option<CastEffectHandler> {

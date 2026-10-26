@@ -4,7 +4,8 @@
 //! - `NativeAfterCast`: first matching module wins, before the native spell match.
 //! - `AuraRollAfterCast`: all matching modules run after native, policies,
 //!   spellslinger and batch9, and before resource-value hooks.
-//! - `OnCast`: all modules run before havoc, combo tracking and elemental launch.
+//! - `OnCast`: all modules run before combo tracking and elemental launch;
+//!   Havoc transformation follows the earlier registered cast-grant modules.
 //! - `AfterPayment`: all modules run after successful payment and before gargoyles.
 //! - `AfterResourceValues`: all matching modules run after resource-value hooks.
 //! - `TargetPlan`: first matching module wins before combat's native target plans.
@@ -25,6 +26,26 @@
 //! - `CastTimeProcs` and `PreserveUnadmittedProcs`: admission markers and charged-mod
 //!   preservation; the native class mask and instance IDs still own consumption.
 //! - `PeriodicDamageFinished`: after actual periodic damage, before Ret periodic hooks.
+//! - `AfterForegroundSpecial`: special-execution producers then execution counters.
+//! - `AfterCounterLaunch`: after consumed elemental/pet launch state, before Unbroken Rhythm.
+//! - `ImpactProcDamage`: after generic damage policies, before Ret damage policies.
+//! - `AfterWhiteHit`: after Flurry; `ReplacementDirectDamage`: before generic damage policies.
+//! - `OwnsPolicyProc`: native proc ownership classification, not a proc attempt.
+//! - `ResourceValueAfterCast`: after aura rolls, before AfterResourceValues.
+//! - `TriggeredResourceProducer`: before triggered relationship producers.
+//! - `EffectiveResourceValue`: effective spend value only; actual payment is unchanged.
+//! - `ConsumeResourceValueSources`: after successful foreground base execution.
+//! - `SpellResidual`: direct, unresolved source damage before direct-damage callbacks.
+//! - `MeleeResidual`: only after a landed white-hit outcome.
+//! - `LateAuraRegistration`: after retained native aura registrations.
+//! - `SuccessfulCastRelationships`: after foreground special/resource consumers.
+//! - `GuaranteesCrit`, `IgnoresCooldown`, `SnapshotsModifier`, `ArmorIgnoredSpells`:
+//!   pure native-readiness, launch snapshot and damage classification predicates.
+//! - `ResolvedDamage`: after actual direct/periodic damage, before Explosive tick callbacks.
+//! - `AfterDirectDamageBeforeItems`: after Ret direct damage, before item scripts.
+//! - `LandedDamagePolicy`: actual white/spell damage at the original Havoc policy boundary.
+//! - `AbilityUseAvailable`: earned per-ability use state, not ordinary cast admission.
+//! - `ChannelPeriodic`: first scripted periodic-trigger callback, before native trigger handling.
 //! Within a stage, traverse module slices and entries from first to last. Never sort
 //! or deduplicate them. Adding a policy to an existing module changes only that module.
 
@@ -61,6 +82,18 @@ pub type AuraRegistrationHook = fn(&mut crate::auras::scripts::AuraScripts);
 pub type LaunchDelayLookup = fn(u32) -> Option<f32>;
 pub type DotMasteryMultiplierHook = fn(&World, Entity, Entity, u32) -> f32;
 pub type PeriodicDamageFinishedHook = fn(&mut World, &EffectCtx<'_>);
+pub type ActionHook = fn(&mut World, Entity, u32);
+pub type WhiteHitHook = fn(&mut World, Entity, bool);
+pub type DirectDamageHook = fn(&mut World, &EffectCtx<'_>, Entity, bool);
+pub type OwnsProcLookup = fn(u32) -> bool;
+pub type EffectiveResourceValueHook =
+    fn(&World, Entity, &SpellInfo, shared::components::PowerType, f32) -> f32;
+pub type MeleeResidualHook = fn(&mut World, Entity, Entity, f32);
+pub type CastPredicate = fn(&World, Entity, &SpellInfo) -> bool;
+pub type ResolvedDamageHook = fn(&mut World, &EffectCtx<'_>, Entity, bool, f32);
+pub type LandedDamageHook = fn(&mut World, Entity, Entity, Option<u32>, f32, bool);
+pub type AbilityUseLookup = fn(&World, Entity, u32) -> bool;
+pub type ChannelPeriodicLookup = fn(u32, u8) -> Option<ContextHitHook>;
 
 #[derive(Clone, Copy)]
 pub enum SpellScriptHook {
@@ -90,6 +123,29 @@ pub enum SpellScriptHook {
     CastTimeProcs(&'static [u32]),
     PreserveUnadmittedProcs(&'static [u32]),
     PeriodicDamageFinished(PeriodicDamageFinishedHook),
+    AfterForegroundSpecial(AfterCastHook),
+    AfterCounterLaunch(ActionHook),
+    ImpactProcDamage(ContextHitHook),
+    AfterWhiteHit(WhiteHitHook),
+    ReplacementDirectDamage(DirectDamageHook),
+    OwnsPolicyProc(OwnsProcLookup),
+    ResourceValueAfterCast(AfterCastLookup),
+    TriggeredResourceProducer(AfterCastHook),
+    EffectiveResourceValue(EffectiveResourceValueHook),
+    ConsumeResourceValueSources(AfterCastHook),
+    SpellResidual(PeriodicPrimaryDamageHook),
+    MeleeResidual(MeleeResidualHook),
+    LateAuraRegistration(AuraRegistrationHook),
+    SuccessfulCastRelationships(AfterCastHook),
+    GuaranteesCrit(CastPredicate),
+    IgnoresCooldown(CastPredicate),
+    SnapshotsModifier(OwnsProcLookup),
+    ArmorIgnoredSpells(&'static [u32]),
+    ResolvedDamage(ResolvedDamageHook),
+    AfterDirectDamageBeforeItems(PeriodicDamageFinishedHook),
+    LandedDamagePolicy(LandedDamageHook),
+    AbilityUseAvailable(AbilityUseLookup),
+    ChannelPeriodic(ChannelPeriodicLookup),
 }
 
 #[derive(Clone, Copy, Resource)]
@@ -145,6 +201,21 @@ impl SpellScriptRegistry {
                 SpellScriptHook::PreserveUnadmittedProcs(spells) => spells.contains(&aura.spell_id),
                 _ => false,
             })
+    }
+
+    pub fn owns_policy_proc(self, spell: u32) -> bool {
+        self.hooks().any(|hook| match hook {
+            SpellScriptHook::OwnsPolicyProc(lookup) => lookup(spell),
+            _ => false,
+        })
+    }
+
+    pub fn register_late_auras(self, scripts: &mut crate::auras::scripts::AuraScripts) {
+        for hook in self.hooks() {
+            if let SpellScriptHook::LateAuraRegistration(register) = hook {
+                register(scripts);
+            }
+        }
     }
 
     pub fn policies(self) -> impl Iterator<Item = &'static Policy> {
@@ -386,6 +457,219 @@ pub fn periodic_damage_finished(world: &mut World, ctx: &EffectCtx<'_>) {
             run(world, ctx);
         }
     }
+}
+
+pub fn after_foreground_special(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::AfterForegroundSpecial(run) = hook {
+            run(world, caster, spell);
+        }
+    }
+}
+
+pub fn after_counter_launch(world: &mut World, caster: Entity, spell: u32) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::AfterCounterLaunch(run) = hook {
+            run(world, caster, spell);
+        }
+    }
+}
+
+pub fn impact_proc_damage(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::ImpactProcDamage(run) = hook {
+            run(world, ctx, target);
+        }
+    }
+}
+
+pub fn after_white_hit(world: &mut World, caster: Entity, critical: bool) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::AfterWhiteHit(run) = hook {
+            run(world, caster, critical);
+        }
+    }
+}
+
+pub fn replacement_direct_damage(
+    world: &mut World,
+    ctx: &EffectCtx<'_>,
+    target: Entity,
+    critical: bool,
+) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::ReplacementDirectDamage(run) = hook {
+            run(world, ctx, target, critical);
+        }
+    }
+}
+
+pub fn resource_value_after_cast(
+    world: &World,
+    spell: u32,
+) -> impl Iterator<Item = AfterCastHook> + use<> {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .filter_map(move |hook| match hook {
+            SpellScriptHook::ResourceValueAfterCast(lookup) => lookup(spell),
+            _ => None,
+        })
+}
+
+pub fn triggered_resource_producer(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::TriggeredResourceProducer(run) = hook {
+            run(world, caster, spell);
+        }
+    }
+}
+
+pub fn effective_resource_value(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    resource: shared::components::PowerType,
+    paid: f32,
+) -> f32 {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .fold(paid, |value, hook| match hook {
+            SpellScriptHook::EffectiveResourceValue(run) => {
+                run(world, caster, spell, resource, value)
+            }
+            _ => value,
+        })
+}
+
+pub fn consume_resource_value_sources(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::ConsumeResourceValueSources(run) = hook {
+            run(world, caster, spell);
+        }
+    }
+}
+
+pub fn spell_residual(world: &mut World, ctx: &EffectCtx<'_>, target: Entity, amount: f32) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::SpellResidual(run) = hook {
+            run(world, ctx, target, amount);
+        }
+    }
+}
+
+pub fn melee_residual(world: &mut World, caster: Entity, target: Entity, amount: f32) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::MeleeResidual(run) = hook {
+            run(world, caster, target, amount);
+        }
+    }
+}
+
+pub fn successful_cast_relationships(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::SuccessfulCastRelationships(run) = hook {
+            run(world, caster, spell);
+        }
+    }
+}
+
+pub fn guarantees_crit(world: &World, caster: Entity, spell: &SpellInfo) -> bool {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .any(|hook| match hook {
+            SpellScriptHook::GuaranteesCrit(test) => test(world, caster, spell),
+            _ => false,
+        })
+}
+
+pub fn ignores_cooldown(world: &World, caster: Entity, spell: &SpellInfo) -> bool {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .any(|hook| match hook {
+            SpellScriptHook::IgnoresCooldown(test) => test(world, caster, spell),
+            _ => false,
+        })
+}
+
+pub fn snapshots_modifier(world: &World, spell: u32) -> bool {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .any(|hook| match hook {
+            SpellScriptHook::SnapshotsModifier(test) => test(spell),
+            _ => false,
+        })
+}
+
+pub fn ignores_armor(world: &World, spell: u32) -> bool {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .any(|hook| match hook {
+            SpellScriptHook::ArmorIgnoredSpells(spells) => spells.contains(&spell),
+            _ => false,
+        })
+}
+
+pub fn resolved_damage(
+    world: &mut World,
+    ctx: &EffectCtx<'_>,
+    target: Entity,
+    critical: bool,
+    amount: f32,
+) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::ResolvedDamage(run) = hook {
+            run(world, ctx, target, critical, amount);
+        }
+    }
+}
+
+pub fn after_direct_damage_before_items(world: &mut World, ctx: &EffectCtx<'_>) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::AfterDirectDamageBeforeItems(run) = hook {
+            run(world, ctx);
+        }
+    }
+}
+
+pub fn landed_damage_policies(
+    world: &mut World,
+    caster: Entity,
+    target: Entity,
+    spell: Option<u32>,
+    amount: f32,
+    periodic: bool,
+) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::LandedDamagePolicy(run) = hook {
+            run(world, caster, target, spell, amount, periodic);
+        }
+    }
+}
+
+pub fn ability_use_available(world: &World, caster: Entity, spell: u32) -> bool {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .any(|hook| match hook {
+            SpellScriptHook::AbilityUseAvailable(test) => test(world, caster, spell),
+            _ => false,
+        })
+}
+
+pub fn channel_periodic(world: &World, spell: u32, index: u8) -> Option<ContextHitHook> {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .find_map(|hook| match hook {
+            SpellScriptHook::ChannelPeriodic(lookup) => lookup(spell, index),
+            _ => None,
+        })
 }
 
 #[cfg(test)]
