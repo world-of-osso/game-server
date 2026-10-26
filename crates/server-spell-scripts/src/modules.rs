@@ -178,6 +178,7 @@ register_modules! {
     voltaic_blaze: (250, "modules/voltaic_blaze.rs"),
     warlock_seed: (2659, "modules/warlock_seed.rs"),
     warrior: (40, "modules/warrior.rs"),
+    windwalker_fof: (2690, "modules/windwalker_fof.rs"),
     windwalker_momentum: (50, "modules/windwalker_momentum.rs"),
     windwalker_zenith: (30, "modules/windwalker_zenith.rs"),
     zathatek_breath: (1000, "modules/zathatek_breath.rs"),
