@@ -134,6 +134,19 @@ fn conjure_cast(world: &mut World, caster: Entity, spell: &SpellInfo, spec: Spec
         return;
     };
     let count = read_count(world, caster, source.count);
+    conjure_from_spell(world, caster, spell, target, count);
+}
+
+pub(super) fn conjure_from_spell(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    target: Entity,
+    count: u32,
+) {
+    let Some(spec) = specialization(world, caster) else {
+        return;
+    };
     let ctx = EffectCtx {
         caster,
         spell,

@@ -70,7 +70,7 @@ where
     Rng::r#gen(&mut thread_rng())
 }
 
-/// SimC76f8118 proc_rng.hpp170–236: default-cap PRD constant for a mean rate.
+/// SimC76f8118 proc_rng.hpp170–236: PRD constant for an uncapped mean rate.
 /// Roll `constant * attempts_since_success` and reset attempts after success.
 pub fn accumulated_proc_constant(probability: f64) -> f64 {
     capped_accumulated_proc_constant(probability, 100_000)
@@ -78,8 +78,8 @@ pub fn accumulated_proc_constant(probability: f64) -> f64 {
 
 /// SimC76f8118 proc_rng.hpp201–236: the cap is part of the mean-rate solver.
 pub fn capped_accumulated_proc_constant(probability: f64, cap: u32) -> f64 {
-    let cap = if cap == 0 { 100_000 } else { cap.min(100_000) };
     assert!(probability.is_finite(), "proc probability must be finite");
+    let cap = if cap == 0 { 100_000 } else { cap.min(100_000) };
     if probability <= 0.0 {
         return 0.0;
     }

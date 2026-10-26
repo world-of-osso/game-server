@@ -306,6 +306,21 @@ fn dummy16_arcane_blast_snapshots_pre_gain_charge_damage_and_cost() {
     for charges in [0.0, 2.0, 4.0] {
         let mut h = fixture(&[30451, 36032], &[30451], 8);
         h.set_power(PowerType::ArcaneCharges, charges);
+        // This bare-spell fixture omits class passives. Supply36032's real
+        // damage effect; cost/cast-time remain separate script controls here.
+        // SimC76f8118 sc_mage.cpp2076–2083 snapshots its charge buff at launch.
+        for _ in 0..charges as u8 {
+            crate::auras::apply_aura(
+                h.app.world_mut(),
+                &crate::auras::AuraApplication {
+                    caster: h.caster,
+                    target: h.caster,
+                    spell_id: 36032,
+                    effect_mask: 1,
+                    source: crate::auras::AuraSource::Cast,
+                },
+            );
+        }
         let spell = world_db().unwrap().store.get(30451).unwrap();
         let base = super::effects::scaled_amount(h.app.world(), h.caster, spell, &spell.effects[0]);
         let before = h.app.world().get::<Mana>(h.caster).unwrap().current;
@@ -315,6 +330,12 @@ fn dummy16_arcane_blast_snapshots_pre_gain_charge_damage_and_cost() {
         assert_eq!(spent, 275.0 * (1.0 + charges));
         assert_eq!(h.power(PowerType::ArcaneCharges), (charges + 1.0).min(4.0));
         h.set_power(PowerType::ArcaneCharges, 0.0);
+        crate::auras::remove_auras(
+            h.app.world_mut(),
+            h.caster,
+            crate::auras::RemoveReason::Cancelled,
+            |aura| aura.spell_id == 36032,
+        );
         h.advance(10);
         let damage: Vec<_> = h
             .inbox
