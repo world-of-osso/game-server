@@ -10,6 +10,7 @@ use combat::spell_info::SpellInfo;
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::ArmorIgnoredSpells(ARMOR_IGNORED),
     SpellScriptHook::ResolvedDamage(after_damage),
+    SpellScriptHook::AfterQueuedTriggers(resolve_tip_marks),
 ];
 use bevy::prelude::*;
 
@@ -30,6 +31,47 @@ const BLOOD_DAMAGE: u32 = 1319015;
 const ARMAMENTS: u32 = 1253831;
 const ARMAMENTS_DOT: u32 = 1253836;
 const PRECISE_SHOTS: u32 = 260242;
+
+#[derive(Resource, Default)]
+struct PendingTipMarks(Vec<(Entity, Entity)>);
+
+pub(super) fn queue_tip_mark(world: &mut World, caster: Entity, target: Entity) {
+    // sc_hunter.cpp1363–1366: defer until the actual impact batch ends, so a
+    // tipped Wildfire explosion consumes its old mark before earning another.
+    world.init_resource::<PendingTipMarks>();
+    world
+        .resource_mut::<PendingTipMarks>()
+        .0
+        .push((caster, target));
+}
+
+fn resolve_tip_marks(world: &mut World) {
+    let Some(pending) = world
+        .get_resource_mut::<PendingTipMarks>()
+        .map(|mut pending| std::mem::take(&mut pending.0))
+    else {
+        return;
+    };
+    for (caster, target) in pending {
+        if !selected(world, caster, SENTINEL) {
+            continue;
+        }
+        let chance = read_survival_mark_chance(world, caster);
+        if combat::random::random::<f32>() * 100.0 < chance {
+            grant_mark(world, caster, target);
+        }
+    }
+}
+
+fn read_survival_mark_chance(world: &World, caster: Entity) -> f32 {
+    // sc_hunter.cpp3694–3700: native Sentinel already receives Moon's
+    // Blessing through its5585 label; unlike MM, never add that effect twice.
+    let mut chance = script_effect_value(world, caster, SENTINEL, 0);
+    if selected(world, caster, LUNAR_CALLING) && auras::has_aura(world, caster, 1250646) {
+        chance += script_effect_value(world, caster, LUNAR_CALLING, 1);
+    }
+    chance
+}
 
 /// sc_hunter.cpp5186–5187: Blood Fletching is a direct school-damage
 /// spell that models a bleed, so its missing native bleed mechanic cannot add armor.
