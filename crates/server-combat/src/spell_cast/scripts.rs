@@ -35,6 +35,7 @@ pub(super) use script_registry::{
     after_spell_payment as roll_runic_empowerment,
 };
 mod periodic_attacks;
+mod shadow_volley_bolts;
 pub(crate) use periodic_attacks::{after_periodic_trigger, rolls_reapplication};
 pub(super) use script_registry::after_foreground_special;
 pub(crate) use script_registry::melee_residual as after_melee_residual;
