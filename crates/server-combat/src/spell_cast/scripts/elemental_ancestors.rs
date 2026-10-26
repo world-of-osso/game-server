@@ -25,7 +25,7 @@ fn selected(world: &World, owner: Entity, talent: u32) -> bool {
         })
 }
 
-pub(in crate::spell_cast) fn owner(world: &World, actor: Entity) -> Option<Entity> {
+pub fn owner(world: &World, actor: Entity) -> Option<Entity> {
     let summon = world.get::<SummonedCreature>(actor)?;
     (summon.spell_id == SUMMON && world.get::<Npc>(actor)?.template_id == ANCESTOR)
         .then_some(summon.owner)
@@ -95,15 +95,6 @@ pub(super) fn after_launch(
     // Ancestral replacement call a new ancestor after the owner's execution.
     if spell.id == 191634 || (spell.id == 443454 && selected(world, caster, 378081)) {
         summon(world, caster, depth);
-    }
-}
-
-pub(super) fn before_launch(world: &mut World, caster: Entity, spell: u32, depth: u8) {
-    if spell == BLAST {
-        if let Some(owner) = owner(world, caster) {
-            // sc_shaman.cpp4382: Final Calling grants the owner's Blast buff first.
-            super::elemental::grant_blast_buff(world, owner, 120588, true, depth);
-        }
     }
 }
 

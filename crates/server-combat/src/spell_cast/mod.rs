@@ -66,6 +66,7 @@ mod census_tail_tests;
 #[cfg(test)]
 mod census_three_tests;
 pub(crate) mod charge;
+mod charge_consumption;
 #[cfg(test)]
 mod charge_rate_tests;
 #[cfg(test)]
@@ -374,6 +375,7 @@ impl Plugin for SpellCastPlugin {
                     start_queued_casts,
                     auto_repeat::update,
                     queued_triggers::resolve_due,
+                    scripts::consume_due_killing_machine,
                     powers::sync_unit_powers,
                     runes::sync_unit_runes,
                     assisted_costs::publish,
@@ -2706,7 +2708,7 @@ fn gcd_duration_ms(world: &World, caster: Entity, spell: &SpellInfo) -> u32 {
 }
 
 /// Recheck, plan targets, spend, start cooldowns, log CastSuccess, resolve.
-pub(crate) fn execute_cast(
+pub fn execute_cast(
     world: &mut World,
     caster: Entity,
     spell: &SpellInfo,
@@ -3499,6 +3501,16 @@ fn enemy_damage_hit_units(world: &World, ctx: &EffectCtx) -> Vec<Entity> {
 #[derive(Resource, Debug, Default)]
 pub(crate) struct ResolvingHits(Vec<HitFrame>);
 
+/// The innermost resolving spell owned by this caster, for native impact scripts.
+pub fn resolving_spell_id(world: &World, caster: Entity) -> Option<u32> {
+    world
+        .resource::<ResolvingHits>()
+        .0
+        .last()
+        .filter(|frame| frame.caster == caster)
+        .map(|frame| frame.spell_id)
+}
+
 #[derive(Debug)]
 struct HitFrame {
     caster: Entity,
@@ -4009,6 +4021,7 @@ fn take_cast_resources(
     }
     spend_costs(world, caster, costs);
     script_registry::after_payment(world, caster, costs);
+    scripts::roll_runic_empowerment(world, caster, spell, costs);
     scripts::empower_gargoyles(world, caster, costs);
     crate::profession::take_reagents(world, caster, spell);
 }
@@ -4115,6 +4128,7 @@ fn start_cooldowns(world: &mut World, caster: Entity, spell: &SpellInfo) {
     let category_ms =
         cooldown_recovery_ms(world, caster, spell, base_category_ms).saturating_sub(ready_credit);
     let mods = charge_mods(world, caster, spell);
+    let ignore_charge_cooldown = charge_consumption::is_ignored(world, caster, spell);
     let mut entity = world.entity_mut(caster);
     let mut history = entity.entry::<SpellHistory>().or_default();
     let mut history = history.get_mut();
@@ -4151,7 +4165,12 @@ fn start_cooldowns(world: &mut World, caster: Entity, spell: &SpellInfo) {
             .insert(category, now + category_ms as f64 / 1000.0);
     }
     let charges = history.charges_mut(spell, now, mods).map(|charges| {
-        charges.consume(now, ready_credit);
+        charge_consumption::consume_unless_ignored(
+            charges,
+            now,
+            ready_credit,
+            ignore_charge_cooldown,
+        );
         charges.spell_id = spell.id;
         charges.snapshot(now)
     });

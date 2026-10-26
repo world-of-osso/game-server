@@ -18,14 +18,14 @@ enum QueuedCastKind {
     ScaledFullTrigger(f32),
 }
 
-pub(super) struct DestinationTrigger {
+pub struct DestinationTrigger {
     pub target: Entity,
     pub spell_id: u32,
     pub delay_ms: u32,
     pub destination: [f32; 3],
 }
 
-pub(super) struct ScaledTrigger {
+pub struct ScaledTrigger {
     pub target: Entity,
     pub spell_id: u32,
     pub delay_ms: u32,
@@ -148,7 +148,7 @@ pub fn schedule_full_trigger(
 
 /// SimC76f8118 sc_mage.cpp5585–5605/7272–7293: apply or clear a
 /// feedback buff after the current hit batch, retaining native aura payloads.
-pub(super) fn schedule_buff_outcome(world: &mut World, caster: Entity, spell_id: u32, grant: bool) {
+pub fn schedule_buff_outcome(world: &mut World, caster: Entity, spell_id: u32, grant: bool) {
     let due_ms = now_ms(world);
     let trigger = QueuedTrigger {
         kind: if grant {
@@ -172,7 +172,7 @@ pub(super) fn schedule_buff_outcome(world: &mut World, caster: Entity, spell_id:
 }
 
 /// Preserve the authored destination of a delayed full trigger.
-pub(super) fn schedule_destination_trigger(
+pub fn schedule_destination_trigger(
     world: &mut World,
     ctx: &super::EffectCtx,
     request: DestinationTrigger,
@@ -196,7 +196,7 @@ pub(super) fn schedule_destination_trigger(
 }
 
 /// A source-qualified delayed multiplier changes no native child coefficients.
-pub(super) fn schedule_scaled_full_trigger(
+pub fn schedule_scaled_full_trigger(
     world: &mut World,
     ctx: &super::EffectCtx,
     request: ScaledTrigger,
