@@ -36,6 +36,17 @@ fn cast_when_ready(run: &mut Run, id: u32) {
     panic!("native spell{id} never became ready");
 }
 
+fn enter_shadowform(run: &mut Run) {
+    let actor = run.actor;
+    execution::execute(
+        run.app.world_mut(),
+        actor,
+        Execution::Spell(232698, actor, None),
+    )
+    .expect("ordinary profile precombat Shadowform");
+    assert!(crate::auras::has_aura(run.app.world(), actor, 232698));
+}
+
 fn finish_cast(run: &mut Run) {
     for _ in 0..240 {
         if run
@@ -100,6 +111,7 @@ fn burst_hits(run: &Run, target: Entity) -> usize {
 fn run_burst_fixture(count: usize) -> f64 {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(258, count).unwrap();
+    enter_shadowform(&mut run);
     engage(&mut run);
     assert!(crate::auras::has_aura(run.app.world(), run.actor, 448403));
     run.app.insert_resource(FactorCapture::new(
@@ -142,6 +154,7 @@ fn shadow_collapse_actual_rift_end_bursts_once_and_splits_across_three_targets()
 fn shadow_collapse_ordinary_funded_madness_grows_actual_rift_damage() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(258, 1).unwrap();
+    enter_shadowform(&mut run);
     engage(&mut run);
     // Three real Slam gains fund the ordinary spender; never assign a pool.
     for _ in 0..3 {
