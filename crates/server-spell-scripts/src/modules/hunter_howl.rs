@@ -34,10 +34,11 @@ struct HowlCombatStarted;
 struct StampedeTarget(Entity);
 
 fn owns_proc(spell: u32) -> bool {
-    // SimC76f8118 sc_hunter.cpp3813–3817: only consuming a Howl spends
-    // incoming Stampede. Native1258338's broad successful-cast proc and one
-    // charge must not spend this newly earned buff on Bestial Wrath itself.
-    spell == INCOMING
+    // SimC76f8118 sc_hunter.cpp3776–3817: only Kill Command consumes
+    // earned beasts and their Incoming Stampede. Boar/Bear readiness and
+    // Incoming have broad one-charge cast-success procs; ordinary Cobra,
+    // Barbed and nested summon casts must not spend these script-owned states.
+    spell == INCOMING || READY.contains(&spell)
 }
 
 fn register(scripts: &mut AuraScripts) {
