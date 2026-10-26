@@ -70,6 +70,14 @@ fn sample_charge_hit(spell: u32, charges: f32) -> (f32, bool, f32) {
         shared::components::PowerType::ArcaneCharges, charges).unwrap();
     assert!(charges == 0.0 || stacks(&run, 36032) > 0, "real power change must also exercise native36032");
     let per_charge = expected_charge_bonus(&run, spell);
+    run.app.insert_resource(crate::spell_cast::effects::factor_capture::FactorCapture::new(
+        run.actor, run.targets[0], spell, "arcane_charge_native", 1,
+    ));
+    println!("charge sample spell{spell} count{charges} stats{:?}", run.app.world().get::<crate::stats::CharacterStats>(run.actor));
+    for aura in run.app.world().get::<ActiveAuras>(run.actor).unwrap().iter()
+        .filter(|aura| [36032, 190740, 384612].contains(&aura.spell_id)) {
+        println!("charge sample aura{} {:?}", aura.spell_id, aura.effects);
+    }
     // Start the same native RNG stream after fixture setup, without replacing
     // native crit, variance, gear, charge auras, or projectile delivery.
     let _seed = crate::random::seed_scope(70448);
@@ -81,6 +89,7 @@ fn sample_charge_hit(spell: u32, charges: f32) -> (f32, bool, f32) {
             && event.spell_id == Some(spell) && event.kind == CombatLogKind::Damage)
         .collect::<Vec<_>>();
     assert_eq!(hits.len(), 1, "one actual native{spell} impact at{charges} charges");
+    println!("charge factors spell{spell} count{charges}: {}", run.app.world().resource::<crate::spell_cast::effects::factor_capture::FactorCapture>().export());
     (hits[0].amount as f32, hits[0].crit, per_charge)
 }
 
