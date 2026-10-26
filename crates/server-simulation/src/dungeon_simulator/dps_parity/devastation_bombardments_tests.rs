@@ -1,6 +1,55 @@
 //! Actual Mass Disintegrate producer and explicitly configured SimC external attempts.
 use super::*;
 
+#[test]
+#[ignore = "requires exact Devastation native profile and DB"]
+fn devastation_bombardments_native_payload_does_not_inherit_giantkiller() {
+    let damage = |mastery: bool| {
+        let mut run = prepare_literal(1467, 1).unwrap();
+        engage(&mut run);
+        if !mastery {
+            crate::auras::remove_auras(
+                run.app.world_mut(),
+                run.actor,
+                crate::auras::RemoveReason::Unlearned,
+                |aura| aura.spell_id == 362980,
+            );
+        }
+        let _seed = crate::random::seed_scope(434481);
+        let primary = run.targets[0];
+        assert!(crate::spell_cast::try_cast_triggered(
+            run.app.world_mut(),
+            run.actor,
+            434481,
+            Some(primary),
+            1
+        ));
+        for _ in 0..30 {
+            run.app.update();
+        }
+        run.app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .find(|event| {
+                event.source == Some(run.actor.to_bits())
+                    && event.spell_id == Some(434481)
+                    && event.kind == shared::protocol::CombatLogKind::Damage
+            })
+            .expect("actual native Bombardment must damage its real recipient")
+            .amount
+    };
+    let without = damage(false);
+    let with = damage(true);
+    assert!(without > 0);
+    // SimC76f8118 sc_evoker.cpp8289–8297: external Bombardments has no Giantkiller.
+    assert_eq!(
+        with, without,
+        "native Bombardments must not inherit owner mastery"
+    );
+}
+
 fn cast_mass_source(run: &mut Run, primary: Entity, earned: bool) {
     if earned {
         crate::spell_cast::creature_cast_empowered_with_targets(
