@@ -101,6 +101,7 @@ register_modules! {
     havoc: (150, "modules/havoc.rs"),
     havoc_children: (5771, "modules/havoc/children.rs"),
     havoc_dance: (5770, "modules/havoc/dance.rs"),
+    havoc_eternal: (5774, "modules/havoc/eternal.rs"),
     havoc_fury: (5773, "modules/havoc/fury.rs"),
     hellcaller_counters: (2666, "modules/hellcaller_counters.rs"),
     havoc_recovery: (5772, "modules/havoc/recovery.rs"),
