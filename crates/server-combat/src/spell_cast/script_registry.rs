@@ -37,6 +37,12 @@
 //! - `ConsumeResourceValueSources`: after successful foreground base execution.
 //! - `SpellResidual`: direct, unresolved source damage before direct-damage callbacks.
 //! - `MeleeResidual`: only after a landed white-hit outcome.
+//! - `LateAuraRegistration`: after retained native aura registrations.
+//! - `SuccessfulCastRelationships`: after foreground special/resource consumers.
+//! - `GuaranteesCrit`, `IgnoresCooldown`, `SnapshotsModifier`, `ArmorIgnoredSpells`:
+//!   pure native-readiness, launch snapshot and damage classification predicates.
+//! - `ResolvedDamage`: after actual direct/periodic damage, before Explosive tick callbacks.
+//! - `AfterDirectDamageBeforeItems`: after Ret direct damage, before item scripts.
 //! Within a stage, traverse module slices and entries from first to last. Never sort
 //! or deduplicate them. Adding a policy to an existing module changes only that module.
 
@@ -80,6 +86,8 @@ pub type OwnsProcLookup = fn(u32) -> bool;
 pub type EffectiveResourceValueHook =
     fn(&World, Entity, &SpellInfo, shared::components::PowerType, f32) -> f32;
 pub type MeleeResidualHook = fn(&mut World, Entity, Entity, f32);
+pub type CastPredicate = fn(&World, Entity, &SpellInfo) -> bool;
+pub type ResolvedDamageHook = fn(&mut World, &EffectCtx<'_>, Entity, bool, f32);
 
 #[derive(Clone, Copy)]
 pub enum SpellScriptHook {
@@ -121,6 +129,14 @@ pub enum SpellScriptHook {
     ConsumeResourceValueSources(AfterCastHook),
     SpellResidual(PeriodicPrimaryDamageHook),
     MeleeResidual(MeleeResidualHook),
+    LateAuraRegistration(AuraRegistrationHook),
+    SuccessfulCastRelationships(AfterCastHook),
+    GuaranteesCrit(CastPredicate),
+    IgnoresCooldown(CastPredicate),
+    SnapshotsModifier(OwnsProcLookup),
+    ArmorIgnoredSpells(&'static [u32]),
+    ResolvedDamage(ResolvedDamageHook),
+    AfterDirectDamageBeforeItems(PeriodicDamageFinishedHook),
 }
 
 #[derive(Clone, Copy, Resource)]
@@ -183,6 +199,14 @@ impl SpellScriptRegistry {
             SpellScriptHook::OwnsPolicyProc(lookup) => lookup(spell),
             _ => false,
         })
+    }
+
+    pub fn register_late_auras(self, scripts: &mut crate::auras::scripts::AuraScripts) {
+        for hook in self.hooks() {
+            if let SpellScriptHook::LateAuraRegistration(register) = hook {
+                register(scripts);
+            }
+        }
     }
 
     pub fn policies(self) -> impl Iterator<Item = &'static Policy> {
@@ -529,6 +553,76 @@ pub fn melee_residual(world: &mut World, caster: Entity, target: Entity, amount:
     for hook in world.resource::<SpellScriptRegistry>().hooks() {
         if let SpellScriptHook::MeleeResidual(run) = hook {
             run(world, caster, target, amount);
+        }
+    }
+}
+
+pub fn successful_cast_relationships(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::SuccessfulCastRelationships(run) = hook {
+            run(world, caster, spell);
+        }
+    }
+}
+
+pub fn guarantees_crit(world: &World, caster: Entity, spell: &SpellInfo) -> bool {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .any(|hook| match hook {
+            SpellScriptHook::GuaranteesCrit(test) => test(world, caster, spell),
+            _ => false,
+        })
+}
+
+pub fn ignores_cooldown(world: &World, caster: Entity, spell: &SpellInfo) -> bool {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .any(|hook| match hook {
+            SpellScriptHook::IgnoresCooldown(test) => test(world, caster, spell),
+            _ => false,
+        })
+}
+
+pub fn snapshots_modifier(world: &World, spell: u32) -> bool {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .any(|hook| match hook {
+            SpellScriptHook::SnapshotsModifier(test) => test(spell),
+            _ => false,
+        })
+}
+
+pub fn ignores_armor(world: &World, spell: u32) -> bool {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .any(|hook| match hook {
+            SpellScriptHook::ArmorIgnoredSpells(spells) => spells.contains(&spell),
+            _ => false,
+        })
+}
+
+pub fn resolved_damage(
+    world: &mut World,
+    ctx: &EffectCtx<'_>,
+    target: Entity,
+    critical: bool,
+    amount: f32,
+) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::ResolvedDamage(run) = hook {
+            run(world, ctx, target, critical, amount);
+        }
+    }
+}
+
+pub fn after_direct_damage_before_items(world: &mut World, ctx: &EffectCtx<'_>) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::AfterDirectDamageBeforeItems(run) = hook {
+            run(world, ctx);
         }
     }
 }

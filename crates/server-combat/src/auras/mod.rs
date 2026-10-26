@@ -813,7 +813,7 @@ fn build_effect(
 }
 
 /// Fresh native stack limit, including the caster's MaxAuraStacks modifiers.
-pub(crate) fn fresh_max_stacks(world: &World, caster: Entity, spell: &SpellInfo) -> u8 {
+pub fn fresh_max_stacks(world: &World, caster: Entity, spell: &SpellInfo) -> u8 {
     if let Some(maximum) = ret_crusade::maximum_stacks(world, caster, spell) {
         return maximum;
     }
@@ -1116,12 +1116,7 @@ pub(super) fn reduce_cast_pushback(world: &mut World, target: Entity) {
 /// `Aura::SetStackAmount` on the unit's own cast, then refresh derived stats/views.
 /// A non-stacking aura has a single stack; zero removes it in TC and is not a
 /// stack assignment. Callers needing removal use remove_instance instead.
-pub(crate) fn set_self_cast_stacks(
-    world: &mut World,
-    unit: Entity,
-    spell_id: u32,
-    stacks: u8,
-) -> bool {
+pub fn set_self_cast_stacks(world: &mut World, unit: Entity, spell_id: u32, stacks: u8) -> bool {
     assert!(stacks > 0, "zero aura stack assignment requires removal");
     let Some(mut auras) = world.get_mut::<ActiveAuras>(unit) else {
         return false;

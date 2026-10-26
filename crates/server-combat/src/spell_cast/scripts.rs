@@ -5,18 +5,10 @@ use super::script_registry;
 use crate::random as rand;
 
 mod bouncing_projectiles;
-mod cast_relationships;
-mod marksmanship;
-mod marksmanship_sentinel;
-pub(crate) use cast_relationships::register as register_cast_relationships;
-pub(super) use cast_relationships::{
-    after_cast as apply_cast_relationships, guarantees_crit as relationship_guarantees_crit,
+pub(super) use script_registry::{
+    guarantees_crit as relationship_guarantees_crit,
     ignores_cooldown as relationship_ignores_cooldown,
-};
-pub(super) use marksmanship::apply_residual as apply_marksman_residual;
-pub(crate) use marksmanship::{begin_rapid_tick, finish_rapid};
-pub(super) use marksmanship_sentinel::{
-    after_damage as apply_sentinel_damage, ignores_armor as sentinel_ignores_armor,
+    successful_cast_relationships as apply_cast_relationships,
 };
 mod batch10;
 mod batch11;
@@ -247,7 +239,7 @@ pub(super) fn after_direct_damage(
     policies::after_damage(world, ctx);
     script_registry::impact_proc_damage(world, ctx, target);
     ret_damage::after_direct_damage(world, ctx, target, critical);
-    marksmanship::roll_auto_lock(world, ctx);
+    script_registry::after_direct_damage_before_items(world, ctx);
     // SimC76f8118 unique_gear_midnight.cpp6351–6355: perfected Guillotine impacts apply Venomfang.
     if ctx.spell.id == 1306624 {
         midnight_items::apply_perfected_venom(world, ctx.caster, target);
@@ -314,7 +306,7 @@ pub(super) fn effect_handler(spell: u32, index: u8) -> Option<super::effects::Ef
 
 pub(super) use batch12::empower_gargoyles;
 pub(super) use batch13::refund_execute;
-pub(crate) use batch13::{HAUNT, RAPID_FIRE, cast_rapid_fire_tick, reset_haunt_on_death};
+pub(crate) use batch13::{HAUNT, reset_haunt_on_death};
 pub(crate) use batch14::{DEATHMARK, EYE_BEAM, cast_eye_beam_tick, deathmark_energy};
 pub(super) use batch15::heal_beacon;
 pub(crate) use batch15::{replace_beacon, snapshot_combustion};
@@ -345,8 +337,8 @@ use crate::spell_info::SpellInfo;
 
 /// Frostbolt: its effects are TRIGGER_MISSILE 32 to 228597 (SCHOOL_DAMAGE) only.
 /// Sourced consumers retain native modifier amounts through projectile impact.
-pub(crate) fn snapshots_modifier(id: u32) -> bool {
-    maelstrom_weapon::snapshots_modifier(id) || cast_relationships::snapshots_modifier(id)
+pub(crate) fn snapshots_modifier(world: &World, id: u32) -> bool {
+    maelstrom_weapon::snapshots_modifier(id) || script_registry::snapshots_modifier(world, id)
 }
 
 const FROSTBOLT: u32 = 116;
@@ -966,9 +958,6 @@ use script_registry::TargetPlanHook;
 /// Script-owned target plans still use normal validation, hit and effect paths.
 pub(super) fn target_plan(world: &World, spell_id: u32) -> Option<(Relation, TargetPlanHook)> {
     if let Some(hook) = script_registry::target_plan(world, spell_id) {
-        return Some(hook);
-    }
-    if let Some(hook) = marksmanship::target_plan(spell_id) {
         return Some(hook);
     }
     if let Some(hook) = policies::target_plan_hook(world, spell_id) {

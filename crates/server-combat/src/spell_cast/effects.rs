@@ -819,7 +819,7 @@ const MECHANIC_BLEED: u32 = 15;
 
 /// Unit::IsDamageReducedByArmor (Unit.cpp:1680-1687): physical damage of a
 /// spell without a bleed mechanic.
-fn reduced_by_armor(spell: &SpellInfo) -> bool {
+fn reduced_by_armor(world: &World, spell: &SpellInfo) -> bool {
     let bleed = spell
         .categories
         .as_ref()
@@ -828,7 +828,9 @@ fn reduced_by_armor(spell: &SpellInfo) -> bool {
             .effects
             .iter()
             .any(|effect| effect.mechanic == MECHANIC_BLEED);
-    spell.school_mask() & 1 != 0 && !bleed && !super::scripts::sentinel_ignores_armor(spell.id)
+    spell.school_mask() & 1 != 0
+        && !bleed
+        && !super::script_registry::ignores_armor(world, spell.id)
 }
 
 /// The target's armor against the caster: a creature's own armor at the
@@ -1278,7 +1280,7 @@ fn expected_damage_after_mitigation(
     );
     let ignores_mitigation =
         super::attributes(ctx.spell, 4) & ATTR4_IGNORE_DAMAGE_TAKEN_MODIFIERS != 0;
-    if !ignores_mitigation && reduced_by_armor(ctx.spell) {
+    if !ignores_mitigation && reduced_by_armor(world, ctx.spell) {
         armor_reduced(world, ctx.caster, target, amount, ctx.spell)
     } else {
         amount
@@ -1919,7 +1921,7 @@ fn deal_source_damage_and_report(
         crate::auras::area_avoidance::reduce_damage(world, target, ctx.spell, effect, false, amount)
     };
     let amount = if super::attributes(ctx.spell, 4) & ATTR4_IGNORE_DAMAGE_TAKEN_MODIFIERS == 0
-        && reduced_by_armor(ctx.spell)
+        && reduced_by_armor(world, ctx.spell)
     {
         armor_reduced(world, ctx.caster, target, amount, ctx.spell)
     } else {
@@ -2030,8 +2032,7 @@ fn deal_source_damage_and_report(
         periodic,
     );
     if !resolved_source {
-        super::scripts::apply_marksman_residual(world, ctx, target, crit, amount);
-        super::scripts::apply_sentinel_damage(world, ctx, target, crit, amount);
+        super::script_registry::resolved_damage(world, ctx, target, crit, amount);
     }
     if periodic {
         crate::auras::rogue::after_bleed_tick(world, ctx, target);

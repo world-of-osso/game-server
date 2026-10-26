@@ -44,6 +44,10 @@ Foreground special procs, execution counters, landed-impact PRD and repeating-me
 
 Effective resource-value rules and secondary residual-copy tables live downstream. Paid resource remains unchanged; a selected value rule can supply the native pool maximum solely to effective-spend consumers. Producers retain both ordinary after-cast and triggered-cast positions. Consumed value sources are removed only at the original successful-execution boundary. Residual copies keep separate direct-spell and landed-white-hit callbacks and retain the source's actual amount and cast depth.
 
+## Successful casts and Marksmanship
+
+Successful-cast relationship rows, Marksmanship target plans/residuals and Sentinel marks live downstream together. Successful-cast hooks retain their foreground-only position, and Sentinel's forced mark still precedes the relationship row traversal. Cast readiness, hardcast crit guarantees and consumed-modifier snapshots query downstream predicates without changing native payment or cooldown storage. Rapid Fire's original periodic and natural-end aura callbacks now register with the module; its native period still supplies seven shots. Resolved damage visits Master Marksman before Sentinel and before the retained Explosive primary-tick stage.
+
 ## Tests
 
 The server's public native harness and simulation's harness alias install the plugin before the harness runs Startup. Simulation installs it on every new app, including apps that reuse cached aura catalogs. Combat's own unit-test build compiles the exact downstream module sources against its local test-crate types; it does not add a production dependency or duplicate policy data. Ordinary simulation builds do not compile those test-only inclusions.
