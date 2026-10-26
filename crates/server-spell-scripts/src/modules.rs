@@ -97,6 +97,7 @@ register_modules! {
     shadow_priest: (290, "modules/shadow_priest.rs"),
     snakeskin_quiver: (230, "modules/snakeskin_quiver.rs"),
     soul_of_the_forest: (1000, "modules/soul_of_the_forest.rs"),
+    spellslinger: (1000, "modules/spellslinger.rs"),
     spellslinger_hits: (401, "modules/spellslinger_hits.rs"),
     stacking_summons: (1000, "modules/stacking_summons.rs"),
     subtlety_shadow: (420, "modules/subtlety_shadow.rs"),

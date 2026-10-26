@@ -1,9 +1,11 @@
 //! Shared Spellslinger conjures; native70448 owns payloads and talent amounts.
-use super::{AfterCastHook, script_effect_value};
-use crate::class_progression::TraitLoadout;
-use crate::spell_cast::{effects::EffectCtx, queued_triggers, targets};
-use crate::spell_info::SpellInfo;
+use super::combat;
 use bevy::prelude::*;
+use combat::class_progression::TraitLoadout;
+use combat::spell_cast::script_registry::SpellScriptHook;
+use combat::spell_cast::scripts::{AfterCastHook, script_effect_value};
+use combat::spell_cast::{effects::EffectCtx, queued_triggers, targets};
+use combat::spell_info::SpellInfo;
 use shared::components::ActiveSpec;
 
 const SORCERY: u32 = 443739;
@@ -12,6 +14,12 @@ const STORM_WINDOW: u32 = 1247908;
 const SIGNATURE: u32 = 470021;
 // SimC76f8118 sc_mage.cpp7340–7359: stagger individual launched Splinters.
 const CONJURE_SPACING_MS: u32 = 100;
+
+pub const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::AfterPolicyCast(after_cast_hook),
+    SpellScriptHook::BeforeMeleeComboDamage(after_direct_damage),
+    SpellScriptHook::BeforePeriodicItemDamage(after_periodic_damage),
+];
 
 #[derive(Clone, Copy)]
 struct Specialization {
@@ -139,10 +147,10 @@ fn after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
 }
 
 fn double_chance(world: &World, caster: Entity, spec: Specialization) -> f64 {
-    let window = crate::auras::has_aura(world, caster, STORM_WINDOW)
+    let window = combat::auras::has_aura(world, caster, STORM_WINDOW)
         || spec
             .surge
-            .is_some_and(|aura| crate::auras::has_aura(world, caster, aura));
+            .is_some_and(|aura| combat::auras::has_aura(world, caster, aura));
     if window && selected(world, caster, SPLINTERSTORM) {
         f64::from(script_effect_value(world, caster, SPLINTERSTORM, 1)) / 100.0
     } else {
@@ -162,7 +170,7 @@ fn conjure(world: &mut World, ctx: &EffectCtx, target: Entity, spec: Specializat
     let mut delay = 0;
     for _ in 0..count {
         // sc_mage.cpp7354–7360: roll independently for each conjure, not each cast.
-        let doubled = chance >= 1.0 || (chance > 0.0 && crate::random::random::<f64>() < chance);
+        let doubled = chance >= 1.0 || (chance > 0.0 && combat::random::random::<f64>() < chance);
         for _ in 0..if doubled { 2 } else { 1 } {
             queued_triggers::schedule_full_trigger(world, ctx, target, spec.payload, delay);
             delay += CONJURE_SPACING_MS;
@@ -186,7 +194,7 @@ pub(super) fn after_direct_damage(world: &mut World, ctx: &EffectCtx) {
         SPELLFROST_TEACHINGS,
         spec.cooldown_effect,
     );
-    super::reduce_cooldown(
+    combat::spell_cast::scripts::reduce_cooldown(
         world,
         ctx.caster,
         spec.orb,
@@ -223,9 +231,9 @@ pub(super) fn after_periodic_damage(world: &mut World, ctx: &EffectCtx, target: 
     conjure(world, ctx, target, spec, count);
     let (talent, aura) = source.window;
     if selected(world, ctx.caster, talent) {
-        crate::auras::apply_aura(
+        combat::auras::apply_aura(
             world,
-            &crate::auras::AuraApplication {
+            &combat::auras::AuraApplication {
                 caster: ctx.caster,
                 target: ctx.caster,
                 spell_id: aura,

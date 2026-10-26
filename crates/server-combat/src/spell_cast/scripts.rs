@@ -43,7 +43,6 @@ pub(super) use script_registry::check_native_spell as check_enhancement_cast;
 pub(crate) use script_registry::consume_cast_modifiers as consume_maelstrom_weapon;
 pub(crate) use script_registry::snapshot_native_aura_amount as snapshot_rod_amount;
 mod policies;
-mod spellslinger;
 pub(super) use policies::check_cast as check_policy_cast;
 pub(crate) use policies::register_channel_policies;
 pub(super) use policies::{
@@ -73,7 +72,7 @@ pub(super) fn apply_periodic_damage_policies(
 ) {
     script_registry::after_periodic_damage_policies(world, ctx, target);
     policies::after_periodic_damage(world, ctx, target, amount);
-    spellslinger::after_periodic_damage(world, ctx, target);
+    script_registry::before_periodic_item_damage(world, ctx, target);
     midnight_items::after_periodic_damage(world, ctx, target);
 }
 
@@ -210,7 +209,7 @@ pub(super) fn after_direct_damage(
     critical: bool,
 ) {
     script_registry::before_direct_damage_policies(world, ctx, target, critical);
-    spellslinger::after_direct_damage(world, ctx);
+    script_registry::before_melee_combo_damage(world, ctx);
     windwalker_flurry::after_direct_damage(world, ctx, critical);
     crate::auras::rogue::after_builder_hit(world, ctx, critical);
     script_registry::replacement_direct_damage(world, ctx, target, critical);
@@ -766,7 +765,7 @@ pub fn after_cast(world: &World, spell_id: u32) -> impl Iterator<Item = AfterCas
     native_after_cast(world, spell_id)
         .into_iter()
         .chain(policies::after_cast_hook(world, spell_id))
-        .chain(spellslinger::after_cast_hook(spell_id))
+        .chain(script_registry::after_policy_cast(world, spell_id))
         .chain(batch9::after_cast_hook(spell_id))
         .chain(script_registry::aura_roll_after_cast(world, spell_id))
         .chain(script_registry::resource_value_after_cast(world, spell_id))

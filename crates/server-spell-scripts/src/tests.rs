@@ -40,12 +40,14 @@ fn record_payment(world: &mut World, caster: Entity, costs: &[(CostPool, f32)]) 
 
 const FIRST: &[SpellScriptHook] = &[
     SpellScriptHook::NativeAfterCast(lookup_first),
+    SpellScriptHook::AfterPolicyCast(lookup_first),
     SpellScriptHook::AuraRollAfterCast(lookup_first),
     SpellScriptHook::OnCast(record_cast),
     SpellScriptHook::AfterPayment(record_payment),
 ];
 const SECOND: &[SpellScriptHook] = &[
     SpellScriptHook::NativeAfterCast(lookup_second),
+    SpellScriptHook::AfterPolicyCast(lookup_second),
     SpellScriptHook::AuraRollAfterCast(lookup_second),
     SpellScriptHook::OnCast(record_cast),
     SpellScriptHook::AfterPayment(record_payment),
@@ -62,6 +64,7 @@ fn registry_keeps_first_match_and_additive_module_order() {
         ..Default::default()
     };
     script_registry::native_after_cast(&world, spell.id).unwrap()(&mut world, caster, &spell);
+    script_registry::after_policy_cast(&world, spell.id).unwrap()(&mut world, caster, &spell);
     for hook in script_registry::aura_roll_after_cast(&world, spell.id) {
         hook(&mut world, caster, &spell);
     }
@@ -72,6 +75,7 @@ fn registry_keeps_first_match_and_additive_module_order() {
         [
             ("first", caster, 133),
             ("first", caster, 133),
+            ("first", caster, 133),
             ("second", caster, 133),
             ("cast", caster, 133),
             ("cast", caster, 133),
@@ -80,6 +84,7 @@ fn registry_keeps_first_match_and_additive_module_order() {
         ]
     );
     assert!(script_registry::native_after_cast(&world, 116).is_none());
+    assert!(script_registry::after_policy_cast(&world, 116).is_none());
     assert_eq!(
         script_registry::aura_roll_after_cast(&world, 116).count(),
         0
@@ -95,6 +100,7 @@ fn empty_registry_has_no_script_side_effects() {
     script_registry::on_cast(&mut world, caster, 133, 3);
     script_registry::after_payment(&mut world, caster, &[(CostPool::Health, 42.0)]);
     assert!(script_registry::native_after_cast(&world, 133).is_none());
+    assert!(script_registry::after_policy_cast(&world, 133).is_none());
     assert_eq!(
         script_registry::aura_roll_after_cast(&world, 133).count(),
         0

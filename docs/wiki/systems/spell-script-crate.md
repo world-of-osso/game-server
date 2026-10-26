@@ -92,6 +92,10 @@ Barbed Shot's focus children, Stormkeeper's authored use count, Feral Berserk's 
 
 Maelstrom Weapon, native weapon imbues, Doom Winds pulses, Thorim selection, spaced spending decks, Conductive Energy, Voltaic/Fire Nova, Burning Core and delayed Storm Unleashed pulses live together under the downstream Enhancement module. Their original aura-registration order, successful foreground consumption, per-cast snapshot markers, post-resolution Rod selection and tier-before-Ride launch order remain unchanged. Combat exposes its resolved-damage view and generic proc-admission snapshot helper rather than copying resolving frames or charge handling downstream.
 
+## Spellslinger conjures
+
+Spellslinger's Arcane/Frost source tables, delayed per-conjure rolls, Ray tick window and actual Orb recharge adjustment live downstream. The conjure cast handler remains after all generic relationship cast handlers and before ground-field handlers. Splinter direct damage still adjusts Orb before melee/combo feedback; Ray ticks still conjure after periodic relationships and before item feedback. This source-execution module is separate from the already-moved Splinter impact module.
+
 ## Tests
 
 The server's public native harness and simulation's harness alias install the plugin before the harness runs Startup. Simulation installs it on every new app, including apps that reuse cached aura catalogs. Combat's own unit-test build compiles the exact downstream module sources against its local test-crate types; it does not add a production dependency or duplicate policy data. Ordinary simulation builds do not compile those test-only inclusions.

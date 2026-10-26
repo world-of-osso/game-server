@@ -91,6 +91,9 @@
 //! - `AfterCastUpdate`: original delayed-weapon scheduler, ordered after advance_casts.
 //! - `ConsumeCastModifiers`: successful foreground consumption at the original MW slot.
 //! - `AfterWeaponLaunch`: tier then linked weapon payloads after Glory of the Dawn.
+//! - `AfterPolicyCast`: first additional cast handler after generic relationship handlers.
+//! - `BeforeMeleeComboDamage`: actual direct damage before melee/combo feedback.
+//! - `BeforePeriodicItemDamage`: periodic relationship completion before item callbacks.
 //! New stages own distinct callback/lookup aliases, even when signatures coincide.
 //! Within a stage, traverse module slices and entries from first to last. Never sort
 //! or deduplicate them. Adding a policy to an existing module changes only that module.
@@ -201,6 +204,11 @@ pub type AfterCastUpdateHook = fn(&mut World);
 pub type ConsumeCastModifiersHook = fn(&mut World, Entity, &SpellInfo);
 pub type AfterWeaponLaunchHook = fn(&mut World, Entity, &SpellInfo, u8);
 
+pub type AfterPolicyCastHook = fn(&mut World, Entity, &SpellInfo);
+pub type AfterPolicyCastLookup = fn(u32) -> Option<AfterPolicyCastHook>;
+pub type BeforeMeleeComboDamageHook = fn(&mut World, &EffectCtx<'_>);
+pub type BeforePeriodicItemDamageHook = fn(&mut World, &EffectCtx<'_>, Entity);
+
 #[derive(Clone, Copy)]
 pub enum SpellScriptHook {
     Policies(&'static [Policy]),
@@ -301,6 +309,9 @@ pub enum SpellScriptHook {
     AfterCastUpdate(AfterCastUpdateHook),
     ConsumeCastModifiers(ConsumeCastModifiersHook),
     AfterWeaponLaunch(AfterWeaponLaunchHook),
+    AfterPolicyCast(AfterPolicyCastLookup),
+    BeforeMeleeComboDamage(BeforeMeleeComboDamageHook),
+    BeforePeriodicItemDamage(BeforePeriodicItemDamageHook),
 }
 
 #[derive(Clone, Copy, Resource)]
@@ -1353,6 +1364,32 @@ pub fn after_weapon_launch(world: &mut World, caster: Entity, spell: &SpellInfo,
     for hook in world.resource::<SpellScriptRegistry>().hooks() {
         if let SpellScriptHook::AfterWeaponLaunch(run) = hook {
             run(world, caster, spell, depth);
+        }
+    }
+}
+
+pub fn after_policy_cast(world: &World, spell: u32) -> Option<AfterPolicyCastHook> {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .find_map(|hook| match hook {
+            SpellScriptHook::AfterPolicyCast(lookup) => lookup(spell),
+            _ => None,
+        })
+}
+
+pub fn before_melee_combo_damage(world: &mut World, ctx: &EffectCtx<'_>) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::BeforeMeleeComboDamage(run) = hook {
+            run(world, ctx);
+        }
+    }
+}
+
+pub fn before_periodic_item_damage(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::BeforePeriodicItemDamage(run) = hook {
+            run(world, ctx, target);
         }
     }
 }
