@@ -173,6 +173,7 @@ mod melee_return;
 mod midnight_stat_items_tests;
 mod multi_seed;
 mod named_action_cooldown_tests;
+mod native_pandemic_tests;
 mod outlaw_cleave_tests;
 mod outlaw_flurry_activation_tests;
 mod outlaw_main_gauche_tests;
