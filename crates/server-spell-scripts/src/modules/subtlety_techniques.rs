@@ -33,7 +33,9 @@ fn owns_proc(spell: u32) -> bool {
 }
 
 fn is_subtlety(world: &World, caster: Entity) -> bool {
-    world.get::<ActiveSpec>(caster).is_some_and(|spec| spec.0 == 261)
+    world
+        .get::<ActiveSpec>(caster)
+        .is_some_and(|spec| spec.0 == 261)
         && auras::has_aura(world, caster, PASSIVE)
 }
 
@@ -41,17 +43,23 @@ fn store_from_white(world: &mut World, caster: Entity, _: bool) {
     if !is_subtlety(world, caster) {
         return;
     }
-    let shadowcraft = has_talent(world, caster, SHADOWCRAFT)
-        && auras::has_aura(world, caster, DANCE);
+    let shadowcraft =
+        has_talent(world, caster, SHADOWCRAFT) && auras::has_aura(world, caster, DANCE);
     let upper = if shadowcraft { 2 } else { 3 };
     let now = spell_cast::now(world);
     if !advance_white_counter(world, caster, upper, now) {
         return;
     }
-    let mut spell = world.resource::<SpellStore>().get(STORAGE)
-        .expect("native Shadow Techniques storage/energy spell").clone();
-    let cooldown = spell.aura_options.as_ref()
-        .expect("native Shadow Techniques ICD").proc_category_recovery_ms;
+    let mut spell = world
+        .resource::<SpellStore>()
+        .get(STORAGE)
+        .expect("native Shadow Techniques storage/energy spell")
+        .clone();
+    let cooldown = spell
+        .aura_options
+        .as_ref()
+        .expect("native Shadow Techniques ICD")
+        .proc_category_recovery_ms;
     world.entity_mut(caster).insert(WhiteProgress {
         hits: 0,
         ready_at: now + f64::from(cooldown) / 1000.0,
@@ -65,17 +73,21 @@ fn advance_white_counter(world: &mut World, caster: Entity, upper: u32, now: f64
     if world.get::<WhiteProgress>(caster).is_none() {
         // sc_rogue.cpp11632–11634: the initial phase is uniform in [0,4).
         let hits = random::thread_rng().gen_range(0..4);
-        world.entity_mut(caster).insert(WhiteProgress { hits, ready_at: 0.0 });
+        world.entity_mut(caster).insert(WhiteProgress {
+            hits,
+            ready_at: 0.0,
+        });
     }
     let mut progress = world.get_mut::<WhiteProgress>(caster).unwrap();
     progress.hits += 1;
-    let threshold = progress.hits >= upper
-        || (progress.hits == 2 && random::random::<f64>() < 0.5);
+    let threshold = progress.hits >= upper || (progress.hits == 2 && random::random::<f64>() < 0.5);
     threshold && now >= progress.ready_at
 }
 
 fn read_storage(world: &World, caster: Entity) -> Option<(u32, u8)> {
-    world.get::<ActiveAuras>(caster)?.iter()
+    world
+        .get::<ActiveAuras>(caster)?
+        .iter()
         .find(|aura| aura.spell_id == STORAGE && aura.caster == caster)
         .map(|aura| (aura.instance_id, aura.stacks))
 }
@@ -89,7 +101,9 @@ fn collect_after_builder(world: &mut World, caster: Entity, spell: &SpellInfo) {
     if !combo_builder || !is_subtlety(world, caster) {
         return;
     }
-    let Some((instance, stored)) = read_storage(world, caster) else { return; };
+    let Some((instance, stored)) = read_storage(world, caster) else {
+        return;
+    };
     // sc_rogue.cpp2705–2716: self Energize resolves before this foreground hook,
     // including for builders whose hostile damage still has missile travel time.
     let (current, maximum) = powers::power_value(world, caster, PowerType::ComboPoints)
@@ -105,9 +119,20 @@ fn collect_points(world: &mut World, caster: Entity, instance: u32, consumed: u8
     }
     let spell = world.resource::<SpellStore>().get(STORAGE).unwrap().clone();
     let ctx = effects::EffectCtx {
-        caster, spell: &spell, depth: 1, dest: None, chain_multiplier: 1.0,
+        caster,
+        spell: &spell,
+        depth: 1,
+        dest: None,
+        chain_multiplier: 1.0,
     };
-    effects::energize_unit(world, &ctx, caster, PowerType::ComboPoints, f32::from(consumed), false);
+    effects::energize_unit(
+        world,
+        &ctx,
+        caster,
+        PowerType::ComboPoints,
+        f32::from(consumed),
+        false,
+    );
     for _ in 0..consumed {
         auras::spend_stack(world, caster, instance);
     }
