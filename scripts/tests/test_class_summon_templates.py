@@ -22,6 +22,16 @@ def spawn_fingerprint(conn):
 
 
 class ClassSummonImportTests(unittest.TestCase):
+    def test_invocation_closure_reaches_authentic_arcane_phoenix(self):
+        source = (ROOT / "data/world.db").resolve()
+        with closing(sqlite3.connect(f"file:{source}?mode=ro", uri=True)) as conn:
+            entry = conn.execute("""SELECT EffectMiscValue_0 FROM spell_effect
+                WHERE SpellID=448659 AND DifficultyID=0 AND Effect=28""").fetchone()[0]
+            native = conn.execute("SELECT name FROM tdb_creature_template WHERE entry=?", (entry,)).fetchone()
+            self.assertEqual(native, ("Arcane Phoenix",))
+            selected = {row[0] for row in conn.execute(retail_content.CLASS_SUMMON_ENTRIES)}
+            self.assertIn(entry, selected)
+
     def test_efflo_native_summon_import_is_authentic_idempotent_and_spawn_free(self):
         with tempfile.TemporaryDirectory() as directory:
             prepared = Path(directory) / "class-summons.sqlite"

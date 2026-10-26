@@ -53,7 +53,18 @@ pub(super) fn read_vampiric_touch_targets(world: &mut World, caster: Entity) -> 
         .collect()
 }
 
-fn copy_link(world: &mut World, source: &EffectCtx<'_>, primary: Entity, _: bool, amount: f32) {
+fn copy_link(
+    world: &mut World,
+    source: &EffectCtx<'_>,
+    source_target: Entity,
+    _: bool,
+    amount: f32,
+) {
+    // SimC76f8118 sc_priest.cpp1430–1446: Link follows the enemy impact,
+    // not caster backlash (which the native log attributes to the same root spell).
+    if source_target == source.caster {
+        return;
+    }
     if amount <= 0.0 || !SOURCES.contains(&source.spell.id) {
         return;
     }
@@ -62,7 +73,7 @@ fn copy_link(world: &mut World, source: &EffectCtx<'_>, primary: Entity, _: bool
     };
     let recipients = read_vampiric_touch_targets(world, source.caster)
         .into_iter()
-        .filter(|target| *target != primary)
+        .filter(|target| *target != source_target)
         .collect::<Vec<_>>();
     if recipients.is_empty() {
         return;

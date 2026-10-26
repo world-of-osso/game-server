@@ -15,11 +15,14 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     // stack behavior; every application retains its own native lifetime.
     SpellScriptHook::AsynchronousAuras(&[BLOODSEEKER_VINES]),
     SpellScriptHook::PeriodicPrimaryDamage(roll_growth),
+    SpellScriptHook::PeriodicPrimaryDamage(bursting::roll_rampancy),
     SpellScriptHook::ConsumedEffectValues(&[
         (THRIVING_GROWTH, 0),
         (THRIVING_GROWTH, 1),
         (THRIVING_GROWTH, 5),
         (GREEN_THUMB, 0),
+        (bursting::RAMPANCY, 0),
+        (bursting::RAMPANCY, 2),
     ]),
 ];
 const THRIVING_GROWTH: u32 = 439528;

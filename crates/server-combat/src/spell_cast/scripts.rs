@@ -4,6 +4,16 @@
 use super::script_registry;
 use crate::random as rand;
 
+mod arcane;
+mod arcane_area;
+mod arcane_charge;
+pub(crate) use arcane_charge::modifier_amount as arcane_charge_modifier_amount;
+mod arcane_touch;
+pub(crate) use arcane::register as register_arcane;
+pub(super) use arcane::{
+    after_foreground as after_arcane_foreground, before_cast as before_arcane_cast,
+};
+pub(super) use arcane_touch::record_damage as record_arcane_touch_damage;
 mod bouncing_projectiles;
 pub(super) use script_registry::{
     guarantees_crit as relationship_guarantees_crit,
@@ -64,6 +74,7 @@ pub(crate) use enhancement_rod::snapshot_rod_amount;
 mod enhancement_spending;
 mod enhancement_stormblast;
 pub(super) use enhancement_stormblast::after_weapon_damage as enhancement_weapon_damage;
+mod enhancement_stormwell;
 mod enhancement_strikes;
 mod enhancement_tier;
 mod enhancement_unleashed;
@@ -223,6 +234,7 @@ pub(super) fn finish_scripted_launch(
     windwalker_flurry::after_launch(world, caster, spell);
     enhancement_tier::after_launch(world, caster, spell, depth);
     enhancement_strikes::cast_ride_the_lightning(world, caster, spell, depth);
+    arcane::after_launch(world, caster, spell, depth);
     enhancement_flurry::after_launch(world, caster, spell);
 }
 
@@ -262,6 +274,8 @@ pub(super) fn after_direct_damage(
 ) {
     script_registry::before_direct_damage_policies(world, ctx, target, critical);
     spellslinger::after_direct_damage(world, ctx);
+    arcane::after_splinter_hit(world, ctx);
+
     windwalker_flurry::after_direct_damage(world, ctx, critical);
     crate::auras::rogue::after_builder_hit(world, ctx, critical);
     script_registry::replacement_direct_damage(world, ctx, target, critical);
@@ -344,6 +358,9 @@ pub(super) fn effect_handler(
     if (spell, index) == (super::toy_flag::TARGETING, 0) {
         return Some(super::toy_flag::plant);
     }
+    if (spell, index) == (321507, 0) {
+        return Some(arcane_touch::apply);
+    }
     prayer_of_mending::effect_handler(spell, index)
         .or_else(|| batch13::effect_handler(spell, index))
 }
@@ -354,7 +371,7 @@ pub(crate) use batch13::{HAUNT, reset_haunt_on_death};
 pub(crate) use batch14::{DEATHMARK, deathmark_energy};
 pub(super) use batch15::heal_beacon;
 pub(crate) use batch15::{replace_beacon, snapshot_combustion};
-pub(super) use batch16::{blast_cast_time, blast_multiplier, mana_cost};
+pub(super) use batch16::{blast_cast_time, mana_cost};
 pub(super) use batch17::bloom_lifebloom_before_refresh;
 pub(crate) use batch17::{
     CENARION_WARD, LIFEBLOOM, bloom_lifebloom, heal_cenarion_ward, replace_lifebloom,
@@ -363,7 +380,8 @@ pub(super) use batch21::berserk_combo_bonus;
 pub(super) use batch22::healing_multiplier;
 
 pub(super) fn effect_enabled(world: &World, caster: Entity, spell: u32, index: u8) -> bool {
-    windwalker_children::effect_enabled(spell, index)
+    arcane::effect_enabled(world, caster, spell, index)
+        && windwalker_children::effect_enabled(spell, index)
         && !(spell == 343527 && index == 4)
         && batch19::effect_enabled(world, caster, spell, index)
         && batch11::effect_enabled(world, caster, spell, index)
@@ -382,7 +400,9 @@ use crate::spell_info::SpellInfo;
 /// Frostbolt: its effects are TRIGGER_MISSILE 32 to 228597 (SCHOOL_DAMAGE) only.
 /// Sourced consumers retain native modifier amounts through projectile impact.
 pub(crate) fn snapshots_modifier(world: &World, id: u32) -> bool {
-    maelstrom_weapon::snapshots_modifier(id) || script_registry::snapshots_modifier(world, id)
+    maelstrom_weapon::snapshots_modifier(id)
+        || script_registry::snapshots_modifier(world, id)
+        || arcane::snapshots_modifier(id)
 }
 
 const FROSTBOLT: u32 = 116;
@@ -585,7 +605,6 @@ pub fn on_effect_hit(
         (batch14::SURVIVAL_COMMAND, 0) => Some(batch14::command_pet),
         (KILL_COMMAND, 0) => Some(batch14::command_beast),
         (batch14::WILD_THRASH, 0) => Some(batch14::wild_thrash),
-        (batch14::WILDFIRE_BOMB, 2) => Some(batch14::bomb_primary),
         (batch14::CONSUME, 0) => Some(batch14::consume_fury),
         (batch13::REND, 0) => Some(batch13::apply_rend_bleed),
         (batch13::ASPECT_WILD, 0) => Some(batch13::cast_wild_primary),
@@ -985,6 +1004,9 @@ pub(super) fn target_plan(world: &World, spell_id: u32) -> Option<(Relation, Tar
         return Some(hook);
     }
     match spell_id {
+        44425 => Some((Relation::Enemy, arcane_area::barrage)),
+        7268 => Some((Relation::Enemy, arcane_area::missiles)),
+        1295939 => Some((Relation::Enemy, arcane_area::prismatic)),
         super::toy_flag::TARGETING => Some((Relation::Any, super::toy_flag::targeting_plan)),
         super::toy_flag::FLAG => Some((Relation::Any, super::toy_flag::flag_plan)),
         97372 => Some((Relation::Any, track_switch_plan)),

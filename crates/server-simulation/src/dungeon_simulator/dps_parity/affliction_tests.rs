@@ -49,8 +49,14 @@ fn affliction_wither_landed_ticks_earn_native_nightfall() {
         earned,
         "actual owned Wither ticks must earn selected native Nightfall"
     );
+    let before = super::affliction_nightfall_tests::uses(&run);
     crate::spell_cast::creature_cast(run.app.world_mut(), caster, 686, Some(target), false)
         .unwrap();
+    assert_eq!(
+        super::affliction_nightfall_tests::uses(&run),
+        before - 1,
+        "one admitted instant Bolt spends one earned use, not every stored use"
+    );
     assert!(
         run.app
             .world()
@@ -61,9 +67,20 @@ fn affliction_wither_landed_ticks_earn_native_nightfall() {
     for _ in 0..20 {
         run.app.update();
     }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
     assert!(
-        !crate::auras::has_aura(run.app.world(), caster, 264571),
-        "the admitted instant Shadow Bolt consumes its earned Nightfall use"
+        events.iter().any(|event| {
+            event.source == Some(caster.to_bits())
+                && event.target == Some(target.to_bits())
+                && event.spell_id == Some(686)
+                && event.amount > 0
+                && event.kind == shared::protocol::CombatLogKind::Damage
+        }),
+        "the admitted instant Shadow Bolt must actually land"
     );
 }
 

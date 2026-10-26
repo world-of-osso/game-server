@@ -93,6 +93,308 @@ fn havoc_font_of_venomous_rage_channels_native_primary_and_secondary_damage() {
 
 #[test]
 #[ignore = "requires prepared native spec577 player profile"]
+fn havoc_blind_fury_native_channel_regenerates_fury_without_weapon_hits() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(577, 1).unwrap();
+    havoc_tests::earn_havoc_fury(&mut run, 30.0);
+    run.app
+        .world_mut()
+        .entity_mut(run.actor)
+        .remove::<crate::combat::AutoAttack>();
+    cast(&mut run, 198013, false);
+    let fury = |run: &Run| {
+        crate::spell_cast::powers::power_value(
+            run.app.world(),
+            run.actor,
+            shared::components::PowerType::Fury,
+        )
+        .unwrap()
+        .0
+    };
+    let before = fury(&run);
+    advance(&mut run, 8);
+    assert!(
+        run.app
+            .world()
+            .get::<shared::casting::CastState>(run.actor)
+            .is_some(),
+        "sample the real active channel before Student's first2s tick"
+    );
+    assert!(
+        fury(&run) > before,
+        "selected Blind Fury must regenerate through native aura85 while no weapon attacks run: before{before} after{}",
+        fury(&run)
+    );
+}
+
+#[test]
+#[ignore = "requires prepared native spec577 player profile"]
+fn havoc_eternal_hunt_real_hunt_empowers_beam_and_completed_beam_resets_dance() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(577, 1).unwrap();
+    havoc_tests::earn_havoc_fury(&mut run, 120.0);
+    cast(&mut run, 370965, false);
+    preparation::finish_pending_setup(&mut run).unwrap();
+    assert!(
+        crate::auras::has_aura(run.app.world(), run.actor, 1271144),
+        "actual Hunt must arm selected native Empowered Eye Beam"
+    );
+    eprintln!(
+        "ETERNAL_BEFORE_BEAM actor={:?} facing={:?} primary={:?}",
+        run.app
+            .world()
+            .get::<shared::components::Position>(run.actor),
+        run.app
+            .world()
+            .get::<shared::components::Rotation>(run.actor),
+        run.app
+            .world()
+            .get::<shared::components::Position>(run.targets[0])
+    );
+    run.app
+        .world_mut()
+        .init_resource::<crate::spell_cast::test_harness::ObservedTriggeredCasts>();
+    cast(&mut run, 198013, false);
+    preparation::finish_pending_setup(&mut run).unwrap();
+    eprintln!(
+        "ETERNAL_AFTER_BEAM triggers={:?} ordinary={:?} empowered={:?} state={}",
+        run.app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedTriggeredCasts>()
+            .0,
+        damage(&run, Some(198030)),
+        damage(&run, Some(1287949)),
+        report::engagement(run.app.world(), run.actor, &run.targets)
+    );
+    assert!(
+        !damage(&run, Some(1287949)).is_empty(),
+        "earned beam must deliver its actual native empowered child"
+    );
+    assert!(
+        !crate::auras::has_aura(run.app.world(), run.actor, 1271144),
+        "the completed channel consumes Empowered Eye Beam"
+    );
+    assert!(
+        crate::auras::has_aura(run.app.world(), run.actor, 1271092),
+        "completed channel must earn actual Eternal Hunt"
+    );
+    cast(&mut run, 210152, true);
+    advance(&mut run, 35);
+    assert!(!crate::auras::has_aura(run.app.world(), run.actor, 1271092));
+    assert_eq!(
+        cooldown_remaining(&run, 210152),
+        0,
+        "actual dance consumes Eternal Hunt and resets recovery after500ms"
+    );
+}
+
+#[test]
+#[ignore = "requires prepared native spec577 player profile"]
+fn havoc_hard_meta_adds_native_duration_to_existing_demonic_meta() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(577, 1).unwrap();
+    havoc_tests::earn_havoc_fury(&mut run, 30.0);
+    cast(&mut run, 198013, false);
+    preparation::finish_pending_setup(&mut run).unwrap();
+    let deadline = |run: &Run| {
+        run.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(run.actor)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 162264 && aura.caster == run.actor)
+            .unwrap()
+            .expires_at
+            .unwrap()
+    };
+    let before = deadline(&run);
+    let payload = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(162264)
+        .unwrap();
+    let duration = f64::from(crate::spell_cast::duration_ms(
+        run.app.world(),
+        run.actor,
+        payload,
+    )) / 1000.0;
+    cast(&mut run, 191427, false);
+    preparation::finish_pending_setup(&mut run).unwrap();
+    let gained = deadline(&run) - before;
+    assert!(
+        (gained - duration).abs() < 0.001,
+        "native hard Meta must add its full{duration}s to live Demonic Meta, got{gained}s"
+    );
+}
+
+#[test]
+#[ignore = "requires prepared native spec577 player profile"]
+fn havoc_tactical_retreat_native_damage_execution_earns_periodic_fury() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(577, 1).unwrap();
+    engage(&mut run);
+    cast(&mut run, 198793, true);
+    advance(&mut run, 80);
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    assert!(events.iter().any(|event| event.kind == CombatLogKind::CastSuccess && event.spell_id == Some(198793)), "ordinary native Retreat must execute first");
+    assert!(
+        events
+            .iter()
+            .any(|event| event.kind == CombatLogKind::Energize
+                && event.spell_id == Some(389890)
+                && event.amount > 0),
+        "selected native Tactical Retreat must grant real periodic Fury"
+    );
+}
+
+#[test]
+#[ignore = "requires prepared native spec577 player profile"]
+fn havoc_student_of_suffering_native_beam_earns_buff_and_fury_ticks() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(577, 1).unwrap();
+    havoc_tests::earn_havoc_fury(&mut run, 30.0);
+    cast(&mut run, 198013, false);
+    advance(&mut run, 80);
+    assert!(
+        crate::auras::has_aura(run.app.world(), run.actor, 453239),
+        "actual beam must produce selected native Student buff"
+    );
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    assert!(
+        events
+            .iter()
+            .any(|event| event.kind == CombatLogKind::Energize
+                && event.spell_id == Some(453236)
+                && event.amount > 0),
+        "native Student periodic child must fund Fury"
+    );
+}
+
+#[test]
+#[ignore = "requires prepared native spec577 player profile"]
+fn havoc_consuming_fire_keeps_immolation_payload_and_its_own_demonsurge_use() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(577, 3).unwrap();
+    havoc_tests::earn_havoc_fury(&mut run, 120.0);
+    cast(&mut run, 191427, false);
+    preparation::finish_pending_setup(&mut run).unwrap();
+    let actor = run.actor;
+    assert!(crate::spell_cast::script_registry::ability_use_available(
+        run.app.world(),
+        actor,
+        258920
+    ));
+    let start = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .len();
+    cast(&mut run, 258920, true);
+    advance(&mut run, 40);
+    assert!(
+        !crate::spell_cast::script_registry::ability_use_available(run.app.world(), actor, 258920),
+        "Consuming Fire must consume Immolation's own use"
+    );
+    assert!(
+        crate::spell_cast::script_registry::ability_use_available(run.app.world(), actor, 201427),
+        "Consuming Fire must not spend Annihilation's use"
+    );
+    assert!(
+        crate::auras::has_aura(run.app.world(), actor, 258920),
+        "dummy Consuming Fire must execute native Immolation payload"
+    );
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0[start..];
+    assert!(
+        events
+            .iter()
+            .any(|event| event.kind == CombatLogKind::Damage
+                && event.spell_id == Some(258922)
+                && event.amount > 0),
+        "Consuming Fire must deliver native Immolation ticks"
+    );
+}
+
+fn cooldown_remaining(run: &Run, id: u32) -> u64 {
+    let world = run.app.world();
+    let spell = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(id)
+        .unwrap();
+    world
+        .get::<crate::spell_cast::SpellHistory>(run.actor)
+        .map_or(0, |history| {
+            history.remaining_cooldown_ms(spell, crate::spell_cast::now(world))
+        })
+}
+
+#[test]
+#[ignore = "requires prepared native spec577 player profile"]
+fn havoc_meta_native_selected_transformation_resets_beam_and_dance() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(577, 1).unwrap();
+    havoc_tests::earn_havoc_fury(&mut run, 100.0);
+    cast(&mut run, 188499, true);
+    preparation::finish_pending_setup(&mut run).unwrap();
+    cast(&mut run, 198013, false);
+    preparation::finish_pending_setup(&mut run).unwrap();
+    assert!(cooldown_remaining(&run, 188499) > 0);
+    assert!(cooldown_remaining(&run, 198013) > 0);
+    cast(&mut run, 191427, false);
+    preparation::finish_pending_setup(&mut run).unwrap();
+    assert_eq!(
+        cooldown_remaining(&run, 188499),
+        0,
+        "selected Chaotic Transformation resets actual Blade Dance"
+    );
+    assert_eq!(
+        cooldown_remaining(&run, 198013),
+        0,
+        "selected Chaotic Transformation resets actual Eye Beam"
+    );
+}
+
+#[test]
+#[ignore = "requires prepared native spec577 player profile"]
+fn havoc_eye_native_completion_grants_furious_gaze_and_cycle_stack() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(577, 1).unwrap();
+    havoc_tests::earn_havoc_fury(&mut run, 30.0);
+    cast(&mut run, 198013, false);
+    preparation::finish_pending_setup(&mut run).unwrap();
+    assert!(!damage(&run, Some(198030)).is_empty());
+    assert!(
+        crate::auras::has_aura(run.app.world(), run.actor, 343312),
+        "completed native channel must grant actual Furious Gaze"
+    );
+    let cycle = run
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(run.actor)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 1214887 && aura.caster == run.actor);
+    assert!(
+        cycle.is_some_and(|aura| aura.stacks == 1),
+        "native Cycle of Hatred must earn one actual stack"
+    );
+}
+
+#[test]
+#[ignore = "requires prepared native spec577 player profile"]
 fn havoc_felblade_real_parent_delivers_native_child_and_fury() {
     let _seed = crate::random::seed_scope(70_448);
     let mut run = prepare_literal(577, 1).unwrap();

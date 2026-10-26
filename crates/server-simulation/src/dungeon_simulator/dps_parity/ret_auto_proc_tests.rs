@@ -165,6 +165,15 @@ fn admitted_without_gcd(run: &mut Run, spell: u32) -> Result<Option<Entity>, Cas
 }
 
 fn attempt_ordinary_cast(run: &mut Run, spell: u32, target: Entity) -> Result<(), CastFailure> {
+    let native = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(spell)
+        .unwrap()
+        .clone();
+    // Player Ok can mean queued, not executed. Wait for real admission before observing resets.
+    crate::spell_cast::read_native_cast_start(run.app.world_mut(), run.actor, &native, target)?;
     crate::spell_cast::cast_for_player_with_target(
         run.app.world_mut(),
         run.actor,

@@ -23,24 +23,24 @@ const VOID_MISSILE: u32 = 1264175;
 const NORMAL_DAMAGE: u32 = 413231;
 const VOID_DAMAGE: u32 = 1264176;
 const VOID_APPARITIONS: u32 = 1264104;
-const VOID_SPIKE: u32 = 373279;
+const VOID_BOLT: u32 = 1264177;
 const SHADEBURST_TALENT: u32 = 73510;
 const SHADEBURST: u32 = 1231479;
 const SPECTRAL_HORRORS: u32 = 407469;
 
 fn impact_hook(spell: u32) -> Option<ContextHitHook> {
     match spell {
-        MADNESS => Some(spawn_madness_apparitions),
+        MADNESS => Some(spawn_apparitions),
         NORMAL_MISSILE | VOID_MISSILE => Some(burst_at_parent),
         _ => None,
     }
 }
 
-fn spawn_madness_apparitions(world: &mut World, ctx: &EffectCtx<'_>, primary: Entity) {
+pub(super) fn spawn_apparitions(world: &mut World, ctx: &EffectCtx<'_>, primary: Entity) {
     if !auras::has_aura(world, ctx.caster, APPARITIONS) {
         return;
     }
-    // SimC1296 is an impact producer, never a Madness periodic-tick producer.
+    // SimC1296/2609–2650: Madness impact and earned Tormented cohorts share launches.
     for target in shadow_link::read_vampiric_touch_targets(world, ctx.caster) {
         let parent = roll_missile(world, ctx.caster);
         launch_apparition(world, ctx, primary, target, parent);
@@ -78,8 +78,9 @@ fn launch_apparition(
         return;
     };
     if parent == VOID_MISSILE {
-        // SimC543–547: every Void Apparition executes its native Void Spike on launch.
-        spell_cast::cast_triggered(world, source.caster, VOID_SPIKE, Some(primary), depth);
+        // SimC543–547/2468: each Void Apparition executes1264177 Void Bolt,
+        // not the unrelated373279 area Void Spike.
+        spell_cast::cast_triggered(world, source.caster, VOID_BOLT, Some(primary), depth);
     }
     // Keep the original source primary distinct from this missile's recipient.
     spell_cast::launch_planned_spell(world, source.caster, &missile, plan, depth);

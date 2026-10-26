@@ -1,6 +1,6 @@
 # Native Rogue parity mechanics
 
-Assassination259 combat and the shared Rogue attack-speed path follow pinned SimC76f8118 behavior with native values under the [DPS parity contract](dps-parity.md). Runtime code lives in `crates/server-combat/src/auras/rogue.rs` and `spell_cast/scripts/rogue_{children,hero}.rs`. Shared coating and Venomous Wounds requirements remain in the parent contract; [auras](../wiki/systems/auras.md) and [casting](../wiki/systems/spell-casting.md) describe the native runtime.
+Assassination259 combat and the shared Rogue attack-speed and Vanish paths follow pinned SimC76f8118 behavior with native values under the [DPS parity contract](dps-parity.md). Runtime code lives in `crates/server-combat/src/auras/rogue.rs` and `spell_cast/scripts/rogue_{children,hero}.rs`. Shared coating and Venomous Wounds requirements remain in the parent contract; [auras](../wiki/systems/auras.md) and [casting](../wiki/systems/spell-casting.md) describe the native runtime.
 
 ## What it must do
 
@@ -12,8 +12,11 @@ Assassination259 combat and the shared Rogue attack-speed path follow pinned Sim
 
 - [x] Kingsbane follows pinned default `bugs=1`: apply its extra native Potent Assassin direct bonus and extra native Implacable effect1 direct/effect2 periodic bonus, in addition to ordinary native family-mask modifiers. Read live passive amounts; preserve coefficients, costs, cadence and earned ramp. Source: `sc_rogue.cpp4921–4945`.
 
+- [x] Each landed native Mutilate hand funds394021 with its resolved damage times selected381673 effect0's native fraction. Native cadence, duration, rolling carry and no-second-crit flags remain authoritative. Its actual over-time snapshot retains native Implacable periodic modifiers, not the unused direct-damage Lethal Dose override. Source: `sc_rogue.cpp5131–5135,7993–7999`, `player.cpp957–964`, `residual_action.hpp147–162`.
+
 ### Stealth and bleed children
 
+- [x] Literal `pmultiplier` and `dot.garrote.pmultiplier` read the action target's owned Garrote application factor, not a fixed1.0. An absent bleed returns0; an applied factor persists after the stealth window and is replaced by its next real refresh. Capture only the native cast factor already applied to damage; do not change damage values. Source: `sc_rogue.cpp4551–4561`, `dot.cpp568–573`.
 - [x] Selected381632 makes Garrote retain392401 effect1's native bonus when applied during real stealth or the native post-stealth window. Leaving the last real stealth aura grants392401. Readiness and recovery storage both use zero Garrote recovery during those windows, including the first stealth cast; preserve real costs and GCDs. Source: `sc_rogue.cpp4550–4561,4604–4609,7351–7378,11121–11133`.
 - [x] Successful Rupture with selected381627 applies native381628 at its captured effective-CP multiplier, minimum1, without another payment. Preserve native coefficients, cadence and duration. Source: `sc_rogue.cpp5257–5264,6200–6203`.
 - [x] Successful Kingsbane with selected1265387 starts1265787; each native effect1 tick casts1265794 and1265795 at its retained impacted target. Target loss does not select a replacement; removing the driver clears its target. Source: `sc_rogue.cpp4891–4905,4954–4958`.
@@ -25,7 +28,14 @@ Assassination259 combat and the shared Rogue attack-speed path follow pinned Sim
 
 - [x] Selected457054 dispatches native457193 once per landed white swing against its actual victim while that victim has the caster's own active457129 mark. Retargeting to an unmarked victim must not dispatch against another target's mark. Native payload data supplies damage. Source: `sc_rogue.cpp3411–3419,10282,10615–10618`.
 
-- [x] Selected457055 copies its native effect0 fraction of actual off-mark direct, periodic and white damage to the caster's live457129 mark through457236. Damage to the marked victim does not self-copy. Preserve the source's resolved crit/modifiers without rolling them again or recursively dispatching residual callbacks. Source: `sc_rogue.cpp6618–6631,11568–11605`.
+- [x] Selected457055 copies its native effect0 fraction of actual off-mark direct, periodic and white damage to the caster's live457129 mark through457236. Damage to the marked victim does not self-copy. Preserve the source's resolved crit, with no second crit/general damage bonus, while applying the payload's own native labelled Mastery/Implacable and marked-target Zoldyck. Source: `sc_rogue.cpp1971–1995,2340–2350,6618–6631,11568–11605`.
+
+### Shared Vanish
+
+- [x] Successful native1856 grants11327 stealth. Preserve native cancellation/AttackStopped publication and suspend both weapon timers. The next admitted harmful melee-start cast resumes elapsed timers against its actual hostile primary and publishes the native AttackStart; an explicit native attack request retains its own new timers.
+- [x] Native no-stealth-break source attributes preserve11327, including1856's own melee-class cast event. Harmful Garrote still consumes active Vanish and must not re-stealth at its former expiry. Source: `sc_rogue.cpp1953–1954`.
+- [x] Natural11327 expiry grants native1784 before the last-stealth check. A harmful break does not grant new Stealth. Leaving that earned Stealth grants the existing Improved Garrote window. Source: `sc_rogue.cpp6103–6125,7419–7444,3381–3385`.
+- [x] The shared queued attack-start entry point retains its original state-update/publication order. Its immediate helper shares only the existing native state/packet contract; no non-Vanish gameplay behavior changes.
 
 ### Shared auto-attack speed
 
@@ -53,17 +63,22 @@ Assassination259 combat and the shared Rogue attack-speed path follow pinned Sim
 
 Paths below are under `crates/server-simulation/src/dungeon_simulator/dps_parity/`:
 
+- `assassination_doomblade_tests.rs` — one real Mutilate's two hands fund the complete native bleed and its native periodic Implacable multiplier.
 - `assassination_kingsbane_tests.rs` — actual direct/periodic damage with and without native Mastery/Implacable passives proves the pinned double-dip ratios.
-- `assassination_focus_tests.rs` — actual off-mark direct/periodic damage copies to the owned mark at the native fraction, with no self-copy or second crit.
+- `assassination_focus_tests.rs` — actual off-mark direct/periodic damage copies to the owned mark at the native fraction with payload-owned Mastery/Implacable/Zoldyck, no self-copy or second crit.
 - `assassination_white_tests.rs` — actual landed weapon hits and marked/unmarked retargeting.
 - `assassination_target_tests.rs` — real poison recipient state/health damage and Kingsbane count exclusion.
 - `assassination_poison_mechanics_tests.rs` — earned ramp and Amplifying consumption.
+- `assassination_garrote_snapshot_tests.rs` — real empowered bleeds retain their factors after window expiry; ordinary refresh, absent state and target-aware operands remain distinct.
 - `assassination_hero_tests.rs` — real stealth exit/spread, native children and mark cycles.
 - `assassination_seal_fate_tests.rs` — real builder crits and Poisoned Knife exclusion.
+- `rogue_vanish_tests.rs` — actual Vanish, suspended white swings, natural Stealth, next Garrote/window, resumed weapons and harmful early break without later re-stealth.
 - `rogue_swift_slasher_tests.rs` — real259/260 swing clocks.
 - `rogue_finisher_tests.rs` — unchanged Outlaw SnD start/extension regression.
 
 ## Known gaps (current cycle)
+
+- [ ] Qualify Doomblade's default aura-delay application and pending-tick duration carry against the pinned staggered-hand refresh (`player.cpp900–972`, `action.cpp4614–4617`). The isolated pool test does not qualify this timing.
 
 - [ ] Qualify these mechanics and spec259 ST/3T output against the parent contract's ±10% band.
 - [ ] Quietus Celeris, mark-target death, Unshakeable Drive's delayed consumer, and Mass Casualty remain unqualified by this slice.

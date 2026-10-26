@@ -1,0 +1,109 @@
+use super::*;
+
+fn owned_howl_deadline(run: &Run) -> Option<f64> {
+    run.app
+        .world()
+        .get::<crate::auras::ActiveAuras>(run.actor)?
+        .iter()
+        .find(|aura| aura.spell_id == 471877 && aura.caster == run.actor)?
+        .expires_at
+}
+
+#[test]
+#[ignore = "requires private spec253 reference inputs and native world DB"]
+fn native_bm_dire_summons_shortens_real_howl_clock_and_earns_next_beast() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_measurement(253, 1).expect("native literal BM fixture");
+    engage(&mut run);
+    crate::combat_refs::set_in_combat_with(run.app.world_mut(), run.actor, run.targets[0]);
+    run.app.update();
+    for (spell, effect) in [(34026, 0), (193455, 2)] {
+        let before = owned_howl_deadline(&run).expect("actual running native Howl clock");
+        let reduction = crate::spell_cast::scripts::script_effect_value(
+            run.app.world(),
+            run.actor,
+            472352,
+            effect,
+        ) as f64
+            / 1000.0;
+        assert!(
+            reduction > 0.0,
+            "selected native Dire Summons owns a time value"
+        );
+        crate::spell_cast::creature_cast(
+            run.app.world_mut(),
+            run.actor,
+            spell,
+            Some(run.targets[0]),
+            false,
+        )
+        .expect("ordinary native recovery producer");
+        let after = owned_howl_deadline(&run).expect("shortened clock still has time remaining");
+        assert!(
+            (before - after - reduction).abs() < 0.001,
+            "ordinary {spell} must shorten Howl by its native Dire Summons effect: before={before}, after={after}, reduction={reduction}"
+        );
+        preparation::finish_pending_setup(&mut run).unwrap();
+    }
+    let before_background = owned_howl_deadline(&run).unwrap();
+    let background_reduction = f64::from(crate::spell_cast::scripts::script_effect_value(
+        run.app.world(),
+        run.actor,
+        472352,
+        2,
+    )) / 1000.0;
+    assert!(
+        crate::spell_cast::try_cast_triggered(
+            run.app.world_mut(),
+            run.actor,
+            193455,
+            Some(run.targets[0]),
+            1,
+        ),
+        "native background Cobra uses the same execution path as earned Snakeskin"
+    );
+    let after_background = owned_howl_deadline(&run).unwrap();
+    assert!(
+        (before_background - after_background - background_reduction).abs() < 0.001,
+        "background Cobra must retain its shared native Dire Summons recovery"
+    );
+    // Ordinary Auto Shots can earn more Snakeskin Cobras during this wait.
+    // Follow the live clock, not the deadline captured before those recoveries.
+    while owned_howl_deadline(&run).expect("running clock before final recovery")
+        - crate::spell_cast::now(run.app.world())
+        > background_reduction
+    {
+        run.app.update();
+    }
+    assert!(owned_howl_deadline(&run).is_some());
+    crate::spell_cast::creature_cast(
+        run.app.world_mut(),
+        run.actor,
+        193455,
+        Some(run.targets[0]),
+        false,
+    )
+    .expect("actual Cobra exhausts the remaining native recovery interval");
+    assert!(
+        owned_howl_deadline(&run).is_none(),
+        "exhausted native Howl clock must end"
+    );
+    assert!(
+        crate::auras::has_aura(run.app.world(), run.actor, 471878),
+        "early clock expiry must run the real next-beast callback"
+    );
+    preparation::finish_pending_setup(&mut run).unwrap();
+    crate::spell_cast::creature_cast(
+        run.app.world_mut(),
+        run.actor,
+        193455,
+        Some(run.targets[0]),
+        false,
+    )
+    .expect("Cobra remains an ordinary native cast without a running Howl clock");
+    assert!(
+        owned_howl_deadline(&run).is_none(),
+        "recovery must not start an inactive clock"
+    );
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, 471878));
+}

@@ -1,5 +1,21 @@
 # Auras
 
+## Garrote stored literal multiplier — 2026-10-26
+
+Garrote already freezes its native Improved Garrote bonus in `SpellInfo.cast_damage_multiplier` and the applied bleed amount. The downstream703 declaration in `PersistentCastMultiplier` makes `periodic_snapshot::capture_multiplier` copy that same factor into each periodic effect's existing `persistent_multiplier` field on application and refresh. It does not change damage or infer a factor from tick amounts. The existing Feral fresh/live producer remains unchanged; this declaration qualifies stored Garrote metadata only.
+
+`RogueFacts` no longer substitutes1.0. Shared `NativeFacts` reads the selected action target's owned aura: absent means0, an actual application supplies its stored factor, and missing qualification is an explicit error. A real empowered bleed therefore remains distinguishable after the stealth window ends, and an ordinary refresh replaces only its actual target's factor. Native RED529a58341f records1.0 instead of1.5 after actual Garrote/window expiry.
+
+Sources: [contract](../../specs/rogue-parity.md#stealth-and-bleed-children), [declaration](../../../crates/server-spell-scripts/src/modules/assassination_garrote.rs), [capture](../../../crates/server-combat/src/auras/periodic_snapshot.rs), [target-aware read](../../../crates/server-combat/src/simc_apl_native/periodic.rs), [Rogue binding](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/assassination_rotation.rs), [native case](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/assassination_garrote_snapshot_tests.rs). Pinned SimC76f8118 `sc_rogue.cpp4551–4561` defines the persistent factor; `dot.cpp568–573` defines the absent state.
+
+## Vanish removal ordering — 2026-10-26
+
+`AuraScript.before_remove_reactions` runs after detachment and before generic removal reactions. It defaults to `None`; only native Vanish11327 registers it. On natural expiry, the script grants native Stealth1784 before the last-stealth check, so expiry does not prematurely grant the post-stealth Improved Garrote window. A harmful early break does not grant new Stealth.
+
+Native1856 is melee-class and emits a zero-damage melee cast event. Without a source-attribute check, that event spends its newly granted11327 charge. The11327 proc predicate honors native no-stealth-break attribute37 (`attributes[1] & 0x20`), while real Garrote still consumes the charge. Native RED4d218d36a2 records1856 as the consuming event; GREENe9a6b7e618 covers natural expiry and harmful early break without later re-stealth. Same-code9469a28941 covers attack packets/timers, Swift, Outlaw opener and Subtlety. The Outlaw DPS report has no Vanish casts, so it is not Outlaw Vanish lifecycle proof.
+
+Sources: [contract](../../specs/rogue-parity.md#shared-vanish), [script](../../../crates/server-spell-scripts/src/modules/rogue_vanish.rs), [removal dispatch](../../../crates/server-combat/src/auras/scripts.rs), [native lifecycle cases](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/rogue_vanish_tests.rs). Pinned SimC76f8118 `sc_rogue.cpp1953–1954,6103–6125,7419–7444` owns behavior; native70448 owns values.
+
 ## Form combat clocks — 2026-10-23
 
 `ShapeshiftForms` imports native CombatRoundTime. `FormAttackTiming` carries seconds and the TC Player/non-Player AP-speed rule, separately from the actual swing period. Class-stat auto-attacks read that period for both hands; ranged autorepeat uses TC's2s form base. White and normalized spell weapon rolls share form min/max rescaling and the sourced0.25s AP-time minimum; normal weapons and the existing RetailAP/DPS6 remain unchanged. No form application resets a running melee timer. All7nonzero rows, including Xuen's actual1ms, are data-driven; no DamageVariance multiplier is invented. [Exact source, native timed RED and qualification](../../handoffs/feral-source-census.md#native-form-combat-timing); [contract](../../specs/player-damage.md). GREEN pending.

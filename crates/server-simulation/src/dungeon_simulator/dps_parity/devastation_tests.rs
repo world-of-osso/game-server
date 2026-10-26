@@ -265,6 +265,516 @@ fn devastation_scintillation_native_channel_ticks_launch_damage_children() {
     }
 }
 
+#[test]
+#[ignore = "requires private native DB and exact Devastation profile"]
+fn devastation_shattering_stars_actual_surge_hits_only_its_selected_primary() {
+    for selected in [false, true] {
+        let mut run = prepare_literal(1467, 3).unwrap();
+        engage(&mut run);
+        let primary = run.targets[1];
+        assert!(crate::auras::has_aura(run.app.world(), run.actor, 1265802));
+        assert!(
+            !crate::auras::has_aura(run.app.world(), run.actor, 1265826),
+            "this exact native profile has no Star Salvo secondary-target policy"
+        );
+        if !selected {
+            crate::auras::remove_auras(
+                run.app.world_mut(),
+                run.actor,
+                crate::auras::RemoveReason::Unlearned,
+                |aura| aura.spell_id == 1265802,
+            );
+        }
+        crate::spell_cast::creature_cast_empowered_with_targets(
+            run.app.world_mut(),
+            run.actor,
+            359073,
+            crate::spell_cast::CastTargets {
+                unit: primary,
+                primary: Some(primary),
+                destination: None,
+            },
+            2,
+        )
+        .unwrap();
+        preparation::finish_pending_setup(&mut run).unwrap();
+        for _ in 0..40 {
+            run.app.update();
+        }
+        let events = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0;
+        assert!(
+            events.iter().any(|event| event.spell_id == Some(359077)
+                && event.kind == shared::protocol::CombatLogKind::Damage
+                && event.amount > 0),
+            "the real native rank-two Surge release must precede its star"
+        );
+        // SimC76f8118 sc_evoker.cpp5550–5573: without Salvo, only chain_target0.
+        for target in &run.targets {
+            let star = events.iter().any(|event| {
+                event.source == Some(run.actor.to_bits())
+                    && event.target == Some(target.to_bits())
+                    && event.spell_id == Some(1265804)
+                    && event.kind == shared::protocol::CombatLogKind::Damage
+                    && event.amount > 0
+            });
+            assert_eq!(
+                star,
+                selected && *target == primary,
+                "native Shattering Stars selected={selected} recipient{target:?} primary{primary:?}"
+            );
+        }
+    }
+}
+
+#[test]
+#[ignore = "requires private native DB and exact Devastation profile"]
+fn devastation_mass_disintegrate_redistributes_only_missing_native_recipients() {
+    for count in [1, 2, 3, 4] {
+        let hit = |empowered: bool| {
+            let _seed = crate::random::seed_scope(70448);
+            let mut run = prepare_literal(1467, count).unwrap();
+            engage(&mut run);
+            let primary = run.targets[0];
+            crate::spell_cast::creature_cast_empowered_with_targets(
+                run.app.world_mut(),
+                run.actor,
+                357208,
+                crate::spell_cast::CastTargets {
+                    unit: run.actor,
+                    primary: Some(primary),
+                    destination: None,
+                },
+                1,
+            )
+            .unwrap();
+            preparation::finish_pending_setup(&mut run).unwrap();
+            assert!(crate::auras::has_aura(run.app.world(), run.actor, 436336));
+            let talent = run
+                .app
+                .world()
+                .get::<crate::auras::ActiveAuras>(run.actor)
+                .unwrap()
+                .iter()
+                .find(|aura| aura.spell_id == 436335)
+                .unwrap();
+            let native_targets = talent
+                .effects
+                .iter()
+                .find(|effect| effect.index == 0)
+                .unwrap()
+                .amount;
+            let native_percent = talent
+                .effects
+                .iter()
+                .find(|effect| effect.index == 1)
+                .unwrap()
+                .amount;
+            assert!(native_targets >= count as f32 && native_percent > 0.0);
+            if !empowered {
+                crate::auras::remove_auras(
+                    run.app.world_mut(),
+                    run.actor,
+                    crate::auras::RemoveReason::Unlearned,
+                    |aura| aura.spell_id == 436336,
+                );
+            }
+            crate::spell_cast::creature_cast_with_targets(
+                run.app.world_mut(),
+                run.actor,
+                356995,
+                crate::spell_cast::CastTargets {
+                    unit: primary,
+                    primary: Some(primary),
+                    destination: None,
+                },
+            )
+            .unwrap();
+            preparation::finish_pending_setup(&mut run).unwrap();
+            let events = &run
+                .app
+                .world()
+                .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+                .0;
+            let amount = events
+                .iter()
+                .find(|event| {
+                    event.source == Some(run.actor.to_bits())
+                        && event.target == Some(primary.to_bits())
+                        && event.spell_id == Some(356995)
+                        && event.kind == shared::protocol::CombatLogKind::Damage
+                        && event.periodic
+                        && !event.crit
+                        && event.amount > 0
+                })
+                .expect("the actual native channel must supply a noncritical primary tick")
+                .amount;
+            (amount, native_targets, native_percent)
+        };
+        let (baseline, _, _) = hit(false);
+        let (empowered, native_targets, native_percent) = hit(true);
+        // SimC76f8118 sc_evoker.cpp6560–6567: use the effective native talent,
+        // including selected Concentrated Power, not the raw unmodified DB2 points.
+        let multiplier =
+            1.0 + f64::from(native_targets - count as f32) * f64::from(native_percent) / 100.0;
+        let expected = f64::from(baseline) * multiplier;
+        assert!(
+            (f64::from(empowered) - expected).abs() <= 3.0,
+            "Mass Disintegrate count{count}: native targets={native_targets}, native percent={native_percent}, baseline={baseline}, actual={empowered}, expected={expected}"
+        );
+    }
+}
+
+#[test]
+#[ignore = "requires private native DB and exact Devastation profile"]
+fn devastation_maneuverable_deep_breath_launches_native_melt_armor_dot_on_its_pack() {
+    for maneuverable in [false, true] {
+        let mut run = prepare_literal(1467, 3).unwrap();
+        engage(&mut run);
+        let primary = run.targets[1];
+        assert!(crate::auras::has_aura(run.app.world(), run.actor, 433871));
+        if !maneuverable {
+            crate::auras::remove_auras(
+                run.app.world_mut(),
+                run.actor,
+                crate::auras::RemoveReason::Unlearned,
+                |aura| aura.spell_id == 433871,
+            );
+        }
+        crate::spell_cast::creature_cast_with_targets(
+            run.app.world_mut(),
+            run.actor,
+            433874,
+            crate::spell_cast::CastTargets {
+                unit: run.actor,
+                primary: Some(primary),
+                destination: None,
+            },
+        )
+        .unwrap();
+        for _ in 0..200 {
+            run.app.update();
+        }
+        let events = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0;
+        for target in &run.targets {
+            assert!(
+                events.iter().any(|event| {
+                    event.source == Some(run.actor.to_bits())
+                        && event.target == Some(target.to_bits())
+                        && event.spell_id == Some(353759)
+                        && event.kind == shared::protocol::CombatLogKind::Damage
+                        && event.amount > 0
+                }),
+                "ordinary Deep Breath must actually reach the native recipient"
+            );
+            // SimC76f8118 sc_evoker.cpp6219–6222/6252–6253: the actual
+            // maneuverable main impact supplies the native441172 periodic child.
+            let melt = events.iter().any(|event| {
+                event.source == Some(run.actor.to_bits())
+                    && event.target == Some(target.to_bits())
+                    && event.spell_id == Some(441172)
+                    && event.kind == shared::protocol::CombatLogKind::Damage
+                    && event.amount > 0
+            });
+            assert_eq!(
+                melt, maneuverable,
+                "native Maneuverability={maneuverable} must own Melt Armor damage on {target:?}"
+            );
+        }
+    }
+}
+
+#[test]
+#[ignore = "requires private native DB and exact Devastation profile"]
+fn devastation_successful_empower_grants_power_swell_and_real_essence_regeneration() {
+    for selected in [false, true] {
+        let mut run = prepare_literal(1467, 1).unwrap();
+        engage(&mut run);
+        let primary = run.targets[0];
+        assert!(crate::auras::has_aura(run.app.world(), run.actor, 370839));
+        if !selected {
+            crate::auras::remove_auras(
+                run.app.world_mut(),
+                run.actor,
+                crate::auras::RemoveReason::Unlearned,
+                |aura| aura.spell_id == 370839,
+            );
+        }
+        crate::spell_cast::creature_cast_with_targets(
+            run.app.world_mut(),
+            run.actor,
+            356995,
+            crate::spell_cast::CastTargets {
+                unit: primary,
+                primary: Some(primary),
+                destination: None,
+            },
+        )
+        .unwrap();
+        preparation::finish_pending_setup(&mut run).unwrap();
+        let pool = |run: &Run| {
+            *run.app
+                .world()
+                .get::<crate::spell_cast::powers::PowerPools>(run.actor)
+                .unwrap()
+                .get(shared::components::PowerType::Essence)
+                .unwrap()
+        };
+        let before = pool(&run);
+        assert!(
+            before.current < before.max && before.regen_per_sec > 0.0,
+            "ordinary Disintegrate must spend actual Essence before regen is measured"
+        );
+        crate::spell_cast::creature_cast_empowered_with_targets(
+            run.app.world_mut(),
+            run.actor,
+            357208,
+            crate::spell_cast::CastTargets {
+                unit: run.actor,
+                primary: Some(primary),
+                destination: None,
+            },
+            1,
+        )
+        .unwrap();
+        preparation::finish_pending_setup(&mut run).unwrap();
+        run.app.update();
+        let after = pool(&run);
+        let native = run
+            .app
+            .world()
+            .get::<crate::auras::ActiveAuras>(run.actor)
+            .and_then(|auras| auras.iter().find(|aura| aura.spell_id == 376850));
+        // SimC76f8118 sc_evoker.cpp4684/11504–11507: actual empower release
+        // grants the native110 Essence regen aura, not an immediate resource refill.
+        assert_eq!(
+            native.is_some(),
+            selected,
+            "only selected Power Swell may be earned"
+        );
+        assert!(
+            after.current < after.max,
+            "observe uncapped native regeneration"
+        );
+        let multiplier = native.map_or(1.0, |aura| {
+            1.0 + aura
+                .effects
+                .iter()
+                .find(|effect| effect.index == 0)
+                .unwrap()
+                .amount
+                / 100.0
+        });
+        assert!(
+            (after.regen_per_sec - before.regen_per_sec * multiplier).abs() < 0.001,
+            "native Power Swell regen: selected={selected}, before={before:?}, after={after:?}, factor={multiplier}"
+        );
+    }
+}
+
+#[test]
+#[ignore = "requires private native DB and exact Devastation profile"]
+fn devastation_burnout_fire_ticks_earn_and_spend_an_actual_instant_living_flame() {
+    for selected in [false, true] {
+        let _seed = crate::random::seed_scope(70448);
+        let mut run = prepare_literal(1467, 3).unwrap();
+        engage(&mut run);
+        let primary = run.targets[0];
+        assert!(crate::auras::has_aura(run.app.world(), run.actor, 375801));
+        if !selected {
+            crate::auras::remove_auras(
+                run.app.world_mut(),
+                run.actor,
+                crate::auras::RemoveReason::Unlearned,
+                |aura| aura.spell_id == 375801,
+            );
+        }
+        crate::spell_cast::creature_cast_empowered_with_targets(
+            run.app.world_mut(),
+            run.actor,
+            357208,
+            crate::spell_cast::CastTargets {
+                unit: run.actor,
+                primary: Some(primary),
+                destination: None,
+            },
+            1,
+        )
+        .unwrap();
+        preparation::finish_pending_setup(&mut run).unwrap();
+        let uses = |run: &Run| {
+            run.app
+                .world()
+                .get::<crate::auras::ActiveAuras>(run.actor)
+                .and_then(|auras| auras.iter().find(|aura| aura.spell_id == 375802))
+                .map_or(0, |aura| aura.stacks)
+        };
+        for _ in 0..400 {
+            run.app.update();
+            if uses(&run) > 0 {
+                break;
+            }
+        }
+        assert_eq!(
+            uses(&run) > 0,
+            selected,
+            "native Fire Breath ticks must roll Burnout only for the actual selected passive"
+        );
+        if !selected {
+            continue;
+        }
+        let before = uses(&run);
+        crate::spell_cast::creature_cast_with_targets(
+            run.app.world_mut(),
+            run.actor,
+            361469,
+            crate::spell_cast::CastTargets {
+                unit: primary,
+                primary: Some(primary),
+                destination: None,
+            },
+        )
+        .unwrap();
+        // SimC76f8118 sc_evoker.cpp5393/7028–7029; TC spell_evoker.cpp161–183.
+        assert!(
+            run.app
+                .world()
+                .get::<shared::casting::CastState>(run.actor)
+                .is_none(),
+            "an actually earned native Burnout must make ordinary Living Flame instant"
+        );
+        assert_eq!(
+            uses(&run),
+            before - 1,
+            "ordinary Living Flame must consume exactly one earned native Burnout use"
+        );
+        for _ in 0..100 {
+            run.app.update();
+        }
+        assert!(
+            run.app
+                .world()
+                .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+                .0
+                .iter()
+                .any(|event| event.source == Some(run.actor.to_bits())
+                    && event.target == Some(primary.to_bits())
+                    && event.spell_id == Some(361500)
+                    && event.kind == shared::protocol::CombatLogKind::Damage
+                    && event.amount > 0),
+            "the instant native cast must really deliver Living Flame damage"
+        );
+    }
+}
+
+#[test]
+#[ignore = "requires private native DB and exact Devastation profile"]
+fn devastation_wingleader_earned_mass_disintegrate_reduces_native_breath_recovery() {
+    for (count, selected, mass) in [
+        (1, false, true),
+        (1, true, false),
+        (1, true, true),
+        (3, true, true),
+    ] {
+        let mut run = prepare_literal(1467, count).unwrap();
+        engage(&mut run);
+        let primary = run.targets[0];
+        let milliseconds = run
+            .app
+            .world()
+            .get::<crate::auras::ActiveAuras>(run.actor)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 441206)
+            .unwrap()
+            .effects
+            .iter()
+            .find(|effect| effect.index == 0)
+            .unwrap()
+            .amount;
+        assert!(milliseconds > 0.0);
+        if !selected {
+            crate::auras::remove_auras(
+                run.app.world_mut(),
+                run.actor,
+                crate::auras::RemoveReason::Unlearned,
+                |aura| aura.spell_id == 441206,
+            );
+        }
+        for _ in 0..2 {
+            crate::spell_cast::creature_cast_with_targets(
+                run.app.world_mut(),
+                run.actor,
+                433874,
+                crate::spell_cast::CastTargets {
+                    unit: run.actor,
+                    primary: Some(primary),
+                    destination: None,
+                },
+            )
+            .unwrap();
+            preparation::finish_pending_setup(&mut run).unwrap();
+        }
+        crate::spell_cast::creature_cast_empowered_with_targets(
+            run.app.world_mut(),
+            run.actor,
+            357208,
+            crate::spell_cast::CastTargets {
+                unit: run.actor,
+                primary: Some(primary),
+                destination: None,
+            },
+            1,
+        )
+        .unwrap();
+        preparation::finish_pending_setup(&mut run).unwrap();
+        assert!(crate::auras::has_aura(run.app.world(), run.actor, 436336));
+        if !mass {
+            crate::auras::remove_auras(
+                run.app.world_mut(),
+                run.actor,
+                crate::auras::RemoveReason::Unlearned,
+                |aura| aura.spell_id == 436336,
+            );
+        }
+        let before = read_native_recharge_ms(&run, 433874);
+        assert!(
+            before > 10_000.0,
+            "the actual Deep Breath charge must still be recovering"
+        );
+        crate::spell_cast::creature_cast_with_targets(
+            run.app.world_mut(),
+            run.actor,
+            356995,
+            crate::spell_cast::CastTargets {
+                unit: primary,
+                primary: Some(primary),
+                destination: None,
+            },
+        )
+        .unwrap();
+        // SimC76f8118 sc_evoker.cpp6560–6572: native effect0 per actual recipient.
+        let reduction = before - read_native_recharge_ms(&run, 433874);
+        let expected = if selected && mass {
+            f64::from(milliseconds) * count as f64
+        } else {
+            0.0
+        };
+        assert!(
+            (reduction - expected).abs() <= 2.0,
+            "Wingleader count{count} selected={selected} mass={mass}: reduction={reduction}, expected={expected}"
+        );
+        preparation::finish_pending_setup(&mut run).unwrap();
+    }
+}
+
 fn cast_reference_empowers(run: &mut Run, primary: Entity) {
     for (spell, unit) in [(357208, run.actor), (359073, primary)] {
         crate::spell_cast::creature_cast_empowered_with_targets(

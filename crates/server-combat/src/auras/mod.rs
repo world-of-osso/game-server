@@ -18,6 +18,7 @@
 
 mod abundance;
 pub(crate) mod agony;
+pub use agony::advance_stack as advance_agony_stack;
 pub(crate) mod area_avoidance;
 mod async_stacks;
 pub(crate) mod augmentation;
@@ -34,6 +35,7 @@ mod earthen_rage;
 pub(crate) mod ebon_might;
 mod echo_of_light;
 pub(crate) mod effect_immunity;
+pub(crate) mod enhancement_power;
 mod fear;
 mod fel_devastation;
 mod fixate;
@@ -101,7 +103,7 @@ use crate::auth::{Authenticated, InWorld};
 use crate::class_progression::{KnownSpells, SpellTrait, TraitLoadout};
 use crate::grid_activity::GridDormant;
 use crate::networking::PlayerLink;
-use crate::spell_cast::{log_event, targets};
+use crate::spell_cast::{effects, log_event, targets};
 use crate::spell_info::{SpellEffect, SpellInfo, SpellStore};
 use crate::stats::StatModifiers;
 pub use periodic::{paid_periodic_ticks, remaining_periodic_ticks};
@@ -253,9 +255,13 @@ pub struct AuraEffectState {
     pub persistent_multiplier: Option<f32>,
     pub misc_values: [i32; 2],
     pub period_ms: u32,
+    /// Authored interval of the actual per-cast spell, before Period modifiers/haste.
+    periodic_base_ms: u32,
+    /// Existing application haste semantics, including channel haste snapshots.
+    periodic_haste_multiplier: f32,
     pub trigger_spell: u32,
     pub class_mask: [u32; 4],
-    /// Application time, or the owning dynamic object's phase origin.
+    /// Schedule origin, rebased after an interval change without resetting ordinals.
     periodic_started_at: f64,
     next_tick_index: u64,
     /// Periodic ticks paid by this application, independent of its phase origin.
@@ -274,6 +280,18 @@ impl AuraEffectState {
         } else {
             self.periodic_ticks += 1;
         }
+    }
+
+    /// SimC76f8118 dot.cpp1109–1145/815–821: modifiers affect the interval
+    /// scheduled AFTER this paid tick, never the tick that was already pending.
+    fn schedule_after_tick(&mut self, scheduled_at: f64, period_ms: u32) {
+        if period_ms == self.period_ms {
+            return;
+        }
+        self.period_ms = period_ms;
+        let paid_offset = self.next_tick_index - 1;
+        self.periodic_started_at =
+            scheduled_at - paid_offset as f64 * f64::from(period_ms) / 1000.0;
     }
 
     fn next_tick_at(&self) -> f64 {
@@ -758,20 +776,100 @@ pub(crate) fn periodic_interval_ms(
     spell: &SpellInfo,
     base: u32,
 ) -> u32 {
+    let haste = periodic_haste_multiplier(world, caster, spell);
+    periodic_timing_with_haste(world, caster, spell, base, haste).1
+}
+
+/// The canonical native channel period, before and after haste quantization.
+/// Use the same selected effect/cadence as the aura, including existing scripted periods.
+pub(crate) fn channel_tick_timing_ms(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+) -> Option<(f32, u32)> {
+    // Declared health emissions own action ticks before auxiliary control pulses.
+    // Script-only/utility channels retain their native periodic cadence.
+    let (_, base) = spell
+        .effects
+        .iter()
+        .map(|effect| {
+            (
+                !channel_tick_declares_health(world, effect),
+                periodic_base_interval_ms(spell, effect),
+            )
+        })
+        .filter(|(_, period)| *period > 0)
+        .min()?;
+    let haste = periodic_haste_multiplier(world, caster, spell);
+    Some(periodic_timing_with_haste(
+        world, caster, spell, base, haste,
+    ))
+}
+
+fn channel_tick_declares_health(world: &World, effect: &SpellEffect) -> bool {
+    if is_health_effect(effect) {
+        return true;
+    }
+    world
+        .resource::<SpellStore>()
+        .get(effect.trigger_spell)
+        .is_some_and(|trigger| trigger.effects.iter().any(is_health_effect))
+}
+
+fn is_health_effect(effect: &SpellEffect) -> bool {
+    matches!(
+        effect.aura,
+        handlers::PERIODIC_DAMAGE
+            | handlers::PERIODIC_DAMAGE_PERCENT
+            | handlers::PERIODIC_LEECH
+            | handlers::PERIODIC_HEAL
+            | handlers::OBS_MOD_HEALTH
+    ) || matches!(
+        effect.effect,
+        effects::EFFECT_SCHOOL_DAMAGE
+            | effects::EFFECT_DAMAGE_FROM_MAX_HEALTH_PCT
+            | effects::EFFECT_WEAPON_DAMAGE
+            | effects::EFFECT_WEAPON_PERCENT_DAMAGE
+            | effects::EFFECT_NORMALIZED_WEAPON_DMG
+            | effects::EFFECT_HEALTH_LEECH
+            | effects::EFFECT_HEAL
+            | effects::EFFECT_HEAL_PCT
+            | effects::EFFECT_HEAL_MAX_HEALTH
+            | effects::EFFECT_POWER_BURN
+            | effects::EFFECT_INSTAKILL
+    )
+}
+
+fn periodic_haste_multiplier(world: &World, caster: Entity, spell: &SpellInfo) -> f32 {
     const SPELL_HASTE_AFFECTS_PERIODIC: u32 = 0x2000;
+    if attributes(spell, 5) & SPELL_HASTE_AFFECTS_PERIODIC == 0 {
+        return 1.0;
+    }
+    world
+        .get::<crate::stats::CharacterStats>(caster)
+        .map_or(1.0, |stats| 1.0 + stats.haste_pct / 100.0)
+}
+
+fn periodic_timing_with_haste(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    base: u32,
+    haste: f32,
+) -> (f32, u32) {
     if base == 0 {
-        return 0;
+        return (0.0, 0);
     }
     let period = spell_mods::modify(world, caster, spell, SpellModOp::Period, base as f32);
-    let period = if attributes(spell, 5) & SPELL_HASTE_AFFECTS_PERIODIC != 0 {
-        let haste = world
-            .get::<crate::stats::CharacterStats>(caster)
-            .map_or(1.0, |stats| 1.0 + stats.haste_pct / 100.0);
-        period / haste.max(0.01)
+    let hasted = (period / haste.max(0.01)).max(1.0);
+    // SimC76f8118 action.cpp4297–4314: channel tick time rounds to nearest ms.
+    // Non-channel periodic quantization is outside this channel-only change.
+    let quantized = if crate::spell_cast::is_channeled(spell) {
+        hasted.round()
     } else {
-        period
+        hasted
     };
-    period.max(1.0) as u32
+    (period, quantized as u32)
 }
 
 fn build_effect(
@@ -800,16 +898,19 @@ fn build_effect(
     let amount = scripts::snapshot_aura_amount(world, caster, spell, effect, amount);
     let amount = augmentation::snapshot_amount(world, caster, spell.id, effect.index, amount);
     let base_period_ms = periodic_base_interval_ms(spell, effect);
-    let period_ms = periodic_interval_ms(world, caster, spell, base_period_ms);
+    let haste = periodic_haste_multiplier(world, caster, spell);
+    let (_, period_ms) = periodic_timing_with_haste(world, caster, spell, base_period_ms, haste);
     let extra_initial_period = attributes(spell, 5) & ATTR5_EXTRA_INITIAL_PERIOD != 0;
     AuraEffectState {
         index: effect.index,
         immunity: effect.immunity.clone(),
         aura_type: effect.aura,
         amount,
-        persistent_multiplier: periodic_snapshot::multiplier(world, caster, spell, effect),
+        persistent_multiplier: periodic_snapshot::capture_multiplier(world, caster, spell, effect),
         misc_values: effect.misc_values,
         period_ms,
+        periodic_base_ms: base_period_ms,
+        periodic_haste_multiplier: haste,
         trigger_spell: effect.trigger_spell,
         class_mask: effect.spell_class_mask,
         // `AuraEffect::ResetPeriodic` (SpellAuraEffects.cpp:957-960): with
@@ -1130,6 +1231,17 @@ pub(super) fn reduce_cast_pushback(world: &mut World, target: Entity) {
 /// A non-stacking aura has a single stack; zero removes it in TC and is not a
 /// stack assignment. Callers needing removal use remove_instance instead.
 pub fn set_self_cast_stacks(world: &mut World, unit: Entity, spell_id: u32, stacks: u8) -> bool {
+    set_owned_stacks(world, unit, unit, spell_id, stacks)
+}
+
+/// Set a caster-owned counter without changing its lifetime or periodic phase.
+pub fn set_owned_stacks(
+    world: &mut World,
+    caster: Entity,
+    unit: Entity,
+    spell_id: u32,
+    stacks: u8,
+) -> bool {
     assert!(stacks > 0, "zero aura stack assignment requires removal");
     let Some(mut auras) = world.get_mut::<ActiveAuras>(unit) else {
         return false;
@@ -1137,7 +1249,7 @@ pub fn set_self_cast_stacks(world: &mut World, unit: Entity, spell_id: u32, stac
     let Some(aura) = auras
         .auras
         .iter_mut()
-        .find(|aura| aura.spell_id == spell_id && aura.caster == unit)
+        .find(|aura| aura.spell_id == spell_id && aura.caster == caster)
     else {
         return false;
     };
@@ -1152,6 +1264,36 @@ pub fn set_self_cast_stacks(world: &mut World, unit: Entity, spell_id: u32, stac
     true
 }
 
+/// Configure a script-owned permanent counter; preserve its periodic deadline.
+/// This changes the runtime instance, never the native catalog definition.
+pub fn make_owned_counter_permanent(
+    world: &mut World,
+    caster: Entity,
+    unit: Entity,
+    spell_id: u32,
+    maximum: u8,
+) -> bool {
+    assert!(maximum > 0, "counter maximum must be positive");
+    let Some(mut auras) = world.get_mut::<ActiveAuras>(unit) else {
+        return false;
+    };
+    let Some(aura) = auras
+        .auras
+        .iter_mut()
+        .find(|aura| aura.spell_id == spell_id && aura.caster == caster)
+    else {
+        return false;
+    };
+    aura.max_stacks = maximum;
+    aura.stacks = aura.stacks.min(maximum);
+    aura.duration_ms = 0;
+    aura.expires_at = None;
+    auras.dirty = true;
+    drop(auras);
+    auras_changed(world, unit);
+    true
+}
+
 /// Apply (or refresh) the aura effects of one resolution on a target.
 pub fn apply_aura(world: &mut World, application: &AuraApplication) {
     let Some(spell) = lookup_spell(world, application.spell_id) else {
@@ -1161,13 +1303,8 @@ pub fn apply_aura(world: &mut World, application: &AuraApplication) {
     apply_aura_with_spell(world, application, &spell);
 }
 
-/// Casts supply their per-cast spell clone so item-level amounts are snapshotted
-/// before the casting item is consumed. Other aura sources use the catalog above.
-pub(crate) fn apply_aura_with_spell(
-    world: &mut World,
-    application: &AuraApplication,
-    spell: &SpellInfo,
-) {
+/// Apply a source-owned spell clone, retaining item-level and native amount snapshots.
+pub fn apply_aura_with_spell(world: &mut World, application: &AuraApplication, spell: &SpellInfo) {
     let target = application.target;
     if world.get_entity(target).is_err() || world.get_entity(application.caster).is_err() {
         return;
@@ -1291,6 +1428,7 @@ pub(crate) fn apply_aura_with_spell(
             &aura,
         );
     }
+    crate::spell_cast::script_registry::after_aura_application(world, target, &aura);
     point_mods::recalculate(world, target, &aura);
     log_event(world, aura_event(&aura, target, kind));
     auras_changed(world, target);
@@ -1996,7 +2134,14 @@ pub fn damage_taken_multiplier(
             .iter()
             .filter(|aura| aura.caster == attacker)
             .flat_map(|aura| {
-                let stacks = aura.stack_multiplier();
+                let stacks = if crate::spell_cast::script_registry::incoming_aura_ignores_stacks(
+                    world,
+                    aura.spell_id,
+                ) {
+                    1.0
+                } else {
+                    aura.stack_multiplier()
+                };
                 aura.effects
                     .iter()
                     .filter(|effect| match effect.aura_type {

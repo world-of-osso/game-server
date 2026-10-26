@@ -14,8 +14,9 @@ import retail_content
 
 DARKGLARE = 103673
 # SimC76f8118 sc_warlock_pets.cpp721/867 binds Wild Imp's Fel Firebolt104318;
-# native104317 effect28 supplies creature55659. Other demons remain unbound.
-SOURCE_BOUND_GUARDIANS = (DARKGLARE, 55659)
+# native104317 effect28 supplies creature55659. SimC pets2516–2563 binds
+# native1262094's Desperate Soul254505 to its one Wrath. Other demons stay unbound.
+SOURCE_BOUND_GUARDIANS = (DARKGLARE, 55659, 254505)
 
 
 def summon_entries(conn, spell_roots):
