@@ -1,13 +1,5 @@
 # Spell Casting
 
-## Warlock periodic shard funding — 2026-10-25
-
-The [Destruction contract](../../specs/dps-parity.md#destruction-periodic-shard-funding) runs in the downstream [destruction_periodic module](../../../crates/server-spell-scripts/src/modules/destruction_periodic.rs). Its specialization-qualified callback passes the original periodic context to `energize_unit`, preserving the shared raw pool, source attribution and overflow. Affliction uses its separate Agony module; sharing Wither does not share Destruction funding.
-
-`PeriodicPrimaryDamageHook` carries the actual critical outcome from damage resolution. Nonperiodic residual dispatch keeps its independent four-argument `SpellResidualHook`; reusing the periodic alias broke the combined migration build. Native funding, critical-roll and Affliction-exclusion tests pass, alongside MM periodic and Demonology owner-stat controls. Full267 DPS remained blocked on named action charge operands at this landing.
-
-Sources: the linked contract/module, `script_registry.rs`, and `destruction_periodic_tests.rs`/`destruction_tests.rs` under `dps_parity`.
-
 ## Marksmanship native relationships — 2026-10-25
 
 The [Marksmanship contract](../../specs/dps-parity.md#marksmanship-native-cast-relationships) separates native70448 values from pinned SimC76f8118 execution relationships. Runtime MM scripts live in `crates/server-spell-scripts/src/modules/`.
@@ -1160,6 +1152,14 @@ Backstab53 unconditional `$<mult>` joins variable339: `(max(0,min(player_level-1
 [Contract](../../specs/spell-guardians.md#feral-spirit-owner-inheritance). Actual51533→228562 creates two29264 wolves. Pinned TC a352b1fa TemporarySummon.h:119 classifies only29264 as Spirit Wolf; StatSystem.cpp:1353/1423 supplies owner melee AP×0.31 (integer AP and bonus SP) and AP/3.5×attack seconds. Pet.cpp:1026 supplies weapon3–5×summon level; local template supplies1500ms. Both spell power and melee swings read live owner power. Other guardian formulas remain unchanged.
 
 Named gap `FERAL_SPIRIT_INTRINSIC_AP_SOURCE`: archive pet_levelstats has2715 rows and zero29264. TC substitutes explicitly fake Strength22; this implementation does not. Intrinsic AP, armor/stamina shares, healing/AI/chase and full legal-loadout parity remain unsupported. Native centered training-dummy RED at89645435 reaches ownerAP100→10000 with damage10→10 and power(0,0); Merged afc0e5e5/protocol62865c23 controls24/24 pass (55.15s tests), check102.286s/fmt/readability clean. Live power asserts31→3100 SP/AP; ordinary dummy stays0/0. Independent/full-stat/legal-loadout acceptance remains open. Sources and proof ledger: data/class-completeness6-2026-10-12/guardian-{owner-power-source,owner-power-proof-ledger,wolf-pet-levelstats-source}.json.
+
+## Warlock periodic shard funding — 2026-10-25
+
+The [Destruction contract](../../specs/dps-parity.md#destruction-periodic-shard-funding) runs in the downstream [destruction_periodic module](../../../crates/server-spell-scripts/src/modules/destruction_periodic.rs). Its specialization-qualified callback passes the original periodic context to `energize_unit`, preserving the shared raw pool, source attribution and overflow. Affliction uses its separate Agony module; sharing Wither does not share Destruction funding.
+
+`PeriodicPrimaryDamageHook` carries the actual critical outcome from damage resolution. Nonperiodic residual dispatch keeps its independent four-argument `SpellResidualHook`; reusing the periodic alias broke the combined migration build. Native funding, critical-roll and Affliction-exclusion tests pass, alongside MM periodic and Demonology owner-stat controls. Full267 DPS remained blocked on named action charge operands at this landing.
+
+Sources: the linked contract/module, `script_registry.rs`, and `destruction_periodic_tests.rs`/`destruction_tests.rs` under `dps_parity`.
 
 ## Census effect77 — 2026-10-20
 
