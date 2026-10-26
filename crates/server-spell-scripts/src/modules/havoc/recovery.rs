@@ -2,7 +2,11 @@
 use super::{combat, havoc::has_talent};
 use bevy::prelude::*;
 use combat::auras::{ActiveAuras, AuraInstance, scripts::AuraScripts};
-use combat::spell_cast::{SpellHistory, script_registry::SpellScriptHook, scripts::AfterCastHook};
+use combat::spell_cast::{
+    SpellHistory,
+    script_registry::{Policy, Relationship, SpellScriptHook},
+    scripts::AfterCastHook,
+};
 use combat::spell_info::{SpellInfo, SpellStore};
 
 const BEAMS: &[u32] = &[198013, 452497];
@@ -10,7 +14,16 @@ const CYCLE: u32 = 1214887;
 const CYCLE_TALENT: u32 = 258887;
 const FURIOUS_GAZE: u32 = 343312;
 const GAZE_TALENT: u32 = 343311;
+// SimC76f8118 sc_demon_hunter.cpp4984–4985: hard Meta adds its
+// native duration to an already-live transformation instead of replacing it.
+const POLICIES: &[Policy] = &[Policy {
+    name: "SIMC_HAVOC_META_REAPPLICATION_EXTENDS",
+    spec: 577,
+    talent: 191427,
+    relationship: Relationship::ReapplicationExtend { payload: 162264 },
+}];
 pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::Policies(POLICIES),
     SpellScriptHook::NativeAfterCast(after_cast),
     SpellScriptHook::LateAuraRegistration(register_channels),
 ];
@@ -35,7 +48,7 @@ fn reset_meta_actions(world: &mut World, caster: Entity, _spell: &SpellInfo) {
     }
 }
 
-fn reset_action(world: &mut World, caster: Entity, id: u32, all_charges: bool) {
+pub(super) fn reset_action(world: &mut World, caster: Entity, id: u32, all_charges: bool) {
     let spell = world
         .resource::<SpellStore>()
         .get(id)
@@ -84,11 +97,16 @@ fn advance_cycle(world: &mut World, caster: Entity, spell: &SpellInfo) {
 
 fn register_channels(scripts: &mut AuraScripts) {
     for beam in BEAMS {
-        scripts.0.entry(*beam).or_default().on_natural_end = Some(finish_beam);
+        let script = scripts.0.entry(*beam).or_default();
+        script.on_natural_end = Some(finish_beam);
+        script.on_remove = Some(super::havoc_eternal::remove_beam);
     }
 }
 
 fn finish_beam(world: &mut World, caster: Entity, aura: &AuraInstance) {
+    if aura.caster == caster {
+        super::havoc_eternal::finish_beam(world, caster);
+    }
     if aura.caster == caster && has_talent(world, caster, GAZE_TALENT) {
         combat::spell_cast::cast_triggered(world, caster, FURIOUS_GAZE, Some(caster), 1);
     }
