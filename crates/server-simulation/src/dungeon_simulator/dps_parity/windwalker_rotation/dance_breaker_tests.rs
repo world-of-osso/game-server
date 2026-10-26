@@ -90,6 +90,9 @@ fn literal_ww_native_revolving_whirl_wdp_grants_dance() {
         if !cast_since(&run, WDP, events) || before >= maximum {
             continue;
         }
+        // Ordinary cast-success aura events run on the next native update.
+        run.app.update();
+        drive_player(&mut run).unwrap();
         let after = stacks(&run, DANCE);
         assert!(
             after > before,
@@ -117,9 +120,15 @@ fn literal_ww_native_sequenced_empowered_sck_grants_combo_breaker() {
         let events = run.app.world().resource::<ObservedCombatEvents>().0.len();
         run.app.update();
         drive_player(&mut run).unwrap();
-        let empowered = dance_before > stacks(&run, DANCE);
-        let admitted_empowered = empowered && cast_since(&run, SCK, events);
+        let admitted_empowered = dance_before > 0 && cast_since(&run, SCK, events);
         if !admitted_empowered || before >= maximum {
+            continue;
+        }
+        // The existing Dance hook consumes its use after processing the queued
+        // ordinary Chi-action proc, not synchronously inside the cast request.
+        run.app.update();
+        drive_player(&mut run).unwrap();
+        if dance_before <= stacks(&run, DANCE) {
             continue;
         }
         let after = stacks(&run, COMBO_BREAKER);
