@@ -3,13 +3,25 @@ use super::*;
 fn wait_for_beast(run: &mut Run, spell: u32) {
     let deadline = crate::spell_cast::now(run.app.world()) + 31.0;
     while !crate::auras::has_aura(run.app.world(), run.actor, spell)
-        && crate::spell_cast::now(run.app.world()) < deadline { run.app.update(); }
-    assert!(crate::auras::has_aura(run.app.world(), run.actor, spell), "naturally earned beast{spell}");
+        && crate::spell_cast::now(run.app.world()) < deadline
+    {
+        run.app.update();
+    }
+    assert!(
+        crate::auras::has_aura(run.app.world(), run.actor, spell),
+        "naturally earned beast{spell}"
+    );
 }
 
 fn consume_beasts(run: &mut Run) {
-    crate::spell_cast::creature_cast(run.app.world_mut(), run.actor, 34026,
-        Some(run.targets[0]), false).expect("ordinary KC consumes naturally earned beasts");
+    crate::spell_cast::creature_cast(
+        run.app.world_mut(),
+        run.actor,
+        34026,
+        Some(run.targets[0]),
+        false,
+    )
+    .expect("ordinary KC consumes naturally earned beasts");
     preparation::finish_pending_setup(run).unwrap();
 }
 
@@ -28,20 +40,35 @@ fn prepare_bear_ready() -> Run {
 }
 
 fn find_bear(run: &mut Run) -> Entity {
-    run.app.world_mut().query::<(Entity, &crate::spell_cast::summon::SummonedCreature)>()
-        .iter(run.app.world()).find(|(_, summon)| summon.owner == run.actor && summon.spell_id == 471990)
-        .map(|(unit, _)| unit).expect("real naturally earned Bear")
+    run.app
+        .world_mut()
+        .query::<(Entity, &crate::spell_cast::summon::SummonedCreature)>()
+        .iter(run.app.world())
+        .find(|(_, summon)| summon.owner == run.actor && summon.spell_id == 471990)
+        .map(|(unit, _)| unit)
+        .expect("real naturally earned Bear")
 }
 
 fn owned_aura(run: &Run, unit: Entity, spell: u32) -> crate::auras::AuraInstance {
-    run.app.world().get::<crate::auras::ActiveAuras>(unit).unwrap().iter()
+    run.app
+        .world()
+        .get::<crate::auras::ActiveAuras>(unit)
+        .unwrap()
+        .iter()
         .find(|aura| aura.spell_id == spell && aura.caster == unit)
-        .unwrap_or_else(|| panic!("native aura{spell} must be owned by{unit:?}")).clone()
+        .unwrap_or_else(|| panic!("native aura{spell} must be owned by{unit:?}"))
+        .clone()
 }
 
 fn cast_wrath(run: &mut Run) {
-    crate::spell_cast::creature_cast(run.app.world_mut(), run.actor, 19574,
-        Some(run.actor), false).expect("actual native owner Bestial Wrath");
+    crate::spell_cast::creature_cast(
+        run.app.world_mut(),
+        run.actor,
+        19574,
+        Some(run.actor),
+        false,
+    )
+    .expect("actual native owner Bestial Wrath");
 }
 
 #[test]
@@ -72,6 +99,9 @@ fn native_wildspeaker_new_bear_inherits_only_remaining_owner_wrath() {
     let wrath = owned_aura(&run, bear, 1235388);
     // SimC76f8118 hunter1866–1867 inherits remaining time, never a fresh
     // full duration when a DireCritter joins an already running owner BW.
-    assert!((wrath.expires_at.unwrap() - owner_deadline).abs() < 0.002,
-        "new Bear must inherit actual owner BW deadline: pet={:?}, owner={owner_deadline}", wrath.expires_at);
+    assert!(
+        (wrath.expires_at.unwrap() - owner_deadline).abs() < 0.002,
+        "new Bear must inherit actual owner BW deadline: pet={:?}, owner={owner_deadline}",
+        wrath.expires_at
+    );
 }
