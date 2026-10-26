@@ -2,13 +2,15 @@
 use bevy::prelude::*;
 
 use super::combat;
-use combat::auras::{self, ActiveAuras};
+use combat::auras;
 use combat::class_progression::{ActiveSpec, TraitLoadout};
 use combat::spell_cast::{self, script_registry::SpellScriptHook};
 use combat::spell_info::{SpellInfo, SpellStore};
 
-pub(super) const HOOKS: &[SpellScriptHook] =
-    &[SpellScriptHook::AfterElementalLaunch(after_launch)];
+pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::AfterElementalLaunch(after_launch),
+    SpellScriptHook::OwnsPolicyProc(owns_power_proc),
+];
 
 const POWER_TALENT: u32 = 191861;
 const POWER: u32 = 191877;
@@ -17,14 +19,21 @@ const BLAST: u32 = 117014;
 const BUILDERS: &[u32] = &[188196, 188443];
 
 fn selected(world: &World, caster: Entity, talent: u32) -> bool {
-    world.get::<ActiveSpec>(caster).is_some_and(|spec| spec.0 == 262)
+    world
+        .get::<ActiveSpec>(caster)
+        .is_some_and(|spec| spec.0 == 262)
         && world.get::<TraitLoadout>(caster).is_some_and(|traits| {
-            traits.active_talent_spells().any(|entry| entry.spell_id == talent)
+            traits
+                .active_talent_spells()
+                .any(|entry| entry.spell_id == talent)
         })
 }
 
 fn after_launch(world: &mut World, caster: Entity, spell: &SpellInfo, foreground: bool) {
-    if !foreground || spell.cast_parent_owns_modifier_charges || !selected(world, caster, POWER_TALENT) {
+    if !foreground
+        || spell.cast_parent_owns_modifier_charges
+        || !selected(world, caster, POWER_TALENT)
+    {
         return;
     }
     consume_power(world, caster, spell);
@@ -33,18 +42,18 @@ fn after_launch(world: &mut World, caster: Entity, spell: &SpellInfo, foreground
     }
 }
 
+fn owns_power_proc(spell: u32) -> bool {
+    matches!(spell, POWER_TALENT | POWER)
+}
+
 fn consume_power(world: &mut World, caster: Entity, spell: &SpellInfo) {
-    // SimC76f8118 sc_shaman.cpp2582/3303–3311: the native mask decides eligibility.
-    let instance = world.get::<ActiveAuras>(caster).and_then(|auras| {
-        auras.iter().find(|aura| {
-            aura.spell_id == POWER && aura.caster == caster && aura.effects.iter().any(|effect| {
-                effect.index == 0 && auras::spell_mods::class_mask_affects(aura, effect, spell)
-            })
-        }).map(|aura| aura.instance_id)
-    });
-    let Some(instance) = instance else { return };
-    auras::spend_stack(world, caster, instance);
-    if selected(world, caster, FUSION) {
+    // SimC76f8118 sc_shaman.cpp2582/3303–3311: the native modifier mask decides eligibility.
+    let spent = spell
+        .cast_charge_mods
+        .iter()
+        .flatten()
+        .any(|modifier| modifier.aura_spell_id == POWER);
+    if spent && selected(world, caster, FUSION) {
         cast_fusion(world, caster, spell.cast_primary_target);
     }
 }
@@ -55,7 +64,11 @@ fn cast_fusion(world: &mut World, caster: Entity, target: Option<Entity>) {
         return;
     };
     let percent = spell_cast::scripts::script_effect_value(world, caster, FUSION, 0);
-    let mut blast = world.resource::<SpellStore>().get(BLAST).expect("native Fusion Blast").clone();
+    let mut blast = world
+        .resource::<SpellStore>()
+        .get(BLAST)
+        .expect("native Fusion Blast")
+        .clone();
     blast.cast_damage_multiplier = Some(percent / 100.0);
     blast.cast_overload_multiplier = Some(percent / 100.0);
     blast.cast_primary_target = Some(target);
@@ -76,8 +89,11 @@ fn roll_power(world: &mut World, caster: Entity) {
         warn!(?caster, "Native Power of the Maelstrom buff refused");
         return;
     }
-    let stacks = world.resource::<SpellStore>().get(POWER)
+    let stacks = world
+        .resource::<SpellStore>()
+        .get(POWER)
         .and_then(|spell| spell.aura_options.as_ref())
-        .expect("native Power stack limit").cumulative_aura as u8;
+        .expect("native Power stack limit")
+        .cumulative_aura as u8;
     auras::set_self_cast_stacks(world, caster, POWER, stacks);
 }
