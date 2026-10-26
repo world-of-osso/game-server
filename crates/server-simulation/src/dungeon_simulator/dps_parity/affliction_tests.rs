@@ -39,6 +39,15 @@ fn affliction_shadow_bolt_landed_hits_earn_native_shard_instability() {
         crate::auras::has_aura(run.app.world(), caster, 1260269),
         "landed native Shadow Bolts must earn the selected Shard Instability buff"
     );
+    crate::spell_cast::creature_cast(run.app.world_mut(), caster, 1259790, Some(target), false)
+        .expect("earned Instability must admit free native Unstable Affliction at zero shards");
+    for _ in 0..10 {
+        run.app.update();
+    }
+    assert!(
+        !crate::auras::has_aura(run.app.world(), caster, 1260269),
+        "actual instant UA must consume its admitted Instability use"
+    );
 }
 
 #[test]
