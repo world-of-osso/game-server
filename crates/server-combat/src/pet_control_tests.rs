@@ -344,15 +344,6 @@ impl PetHarness {
             .collect()
     }
 
-    fn focus(&self) -> i32 {
-        self.h
-            .app
-            .world()
-            .get::<UnitPowers>(self.pet)
-            .and_then(|powers| powers.entries.first().map(|entry| entry.current))
-            .expect("the pet has Focus")
-    }
-
     fn command(&mut self, command: u32) {
         self.order(pet_action_button(command, ACT_COMMAND), None, None);
     }
