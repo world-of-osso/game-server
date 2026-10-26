@@ -1,3 +1,7 @@
+## 2026-10-25 — Shared Hellcaller Wither counters
+
+[Wither counters](systems/warlock-periodic-counters.md) retain actual native stacks without multiplying periodic damage or adding a stack on ordinary refresh. Native real-cast/tick2RED→2GREEN covers both265 and267, with Affliction and Destruction controls. Collapse producers and numerical parity remain separate.
+
 ## 2026-10-25 — Warlock periodic funding and target DoT facts
 
 [Warlock funding](systems/spell-casting.md#warlock-periodic-shard-funding--2026-10-25) uses the downstream critical-aware periodic callback and existing native power pipeline, qualified only on Destruction. [Target DoT duration](systems/simc-apl.md#native-target-dot-duration) reads active owned native state without pandemic carry; both have native GREEN and cross-spec controls. Numerical267 acceptance remains separate.
@@ -4652,3 +4656,4 @@ Documented the first compile-boundary slice in [spell-script-crate](systems/spel
 ## 2026-10-26 — Shared Evoker flame compile boundary
 
 - Updated [spell-script crate](systems/spell-script-crate.md#shared-evoker-flames) for downstream Living/Chrono Flame state and shared effect helpers. Devastation and native Chrono/Living gates remain required.
+- 2026-10-25: Added Affliction native Nightfall tick threshold/consumer documentation; REDa00f81dc4b proved actual Wither ticks never earned the selected buff; GREEN/measurement pending.
