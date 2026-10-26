@@ -181,7 +181,7 @@ fn native_hunter_wyvern_extension_caps_and_resets_after_actual_expiry() {
                 .collect();
             for (pet, owner) in pets {
                 eprintln!(
-                    "FURY_REGEN at={boundary:?} pet={pet:?} owner={owner:?} actor={:?} owner_exists={} stats={} dormant={} powers={:?}",
+                    "FURY_REGEN at={boundary:?} pet={pet:?} owner={owner:?} actor={:?} owner_exists={} stats={} powers={:?}",
                     run.actor,
                     run.app.world().get_entity(owner).is_ok(),
                     run.app
@@ -190,9 +190,7 @@ fn native_hunter_wyvern_extension_caps_and_resets_after_actual_expiry() {
                         .is_some(),
                     run.app
                         .world()
-                        .get::<crate::grid_activity::GridDormant>(owner)
-                        .is_some(),
-                    run.app.world().get::<shared::components::PowerPools>(owner)
+                        .get::<crate::spell_cast::powers::PowerPools>(owner)
                 );
             }
             std::panic::resume_unwind(panic);
