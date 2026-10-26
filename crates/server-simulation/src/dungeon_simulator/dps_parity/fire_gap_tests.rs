@@ -1386,6 +1386,93 @@ fn fire_feedback_intensifying_flame_tick_preserves_earned_fevered_incantation() 
     );
 }
 
+#[test]
+#[ignore = "requires exact Fire63 inputs and private70448 DB"]
+fn fire_execute_fuel_amplifies_actual_flamestrike_by_its_native_target_count() {
+    let hit = |selected: bool| {
+        let _seed = crate::random::seed_scope(70_448);
+        let (mut profile, traits) = read_reference(63).unwrap();
+        let identity = inputs::read_actor(&profile).unwrap();
+        profile.equipment.clear();
+        profile.consumables.clear();
+        profile.omnium_talents = None;
+        let mut run = prepare_literal_reference(profile, &traits, 3, identity).unwrap();
+        let actor = run.actor;
+        let target = run.targets[0];
+        let fuel = run
+            .app
+            .world()
+            .get::<ActiveAuras>(actor)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 416094)
+            .unwrap();
+        let percent = fuel
+            .effects
+            .iter()
+            .find(|effect| effect.index == 1)
+            .unwrap()
+            .amount;
+        let cap = fuel
+            .effects
+            .iter()
+            .find(|effect| effect.index == 2)
+            .unwrap()
+            .amount;
+        if !selected {
+            let known = run
+                .app
+                .world()
+                .get::<crate::class_progression::KnownSpells>(actor)
+                .unwrap()
+                .iter()
+                .filter(|id| *id != 416094)
+                .collect();
+            run.app
+                .world_mut()
+                .entity_mut(actor)
+                .insert(crate::class_progression::KnownSpells::fixture(known));
+            crate::auras::remove_auras(
+                run.app.world_mut(),
+                actor,
+                crate::auras::RemoveReason::Consumed,
+                |aura| aura.spell_id == 416094,
+            );
+        }
+        run.app
+            .world_mut()
+            .get_mut::<crate::stats::CharacterStats>(actor)
+            .unwrap()
+            .crit_pct = 0.0;
+        crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 48108, Some(actor), 1);
+        start_native(&mut run, 2120, target);
+        preparation::finish_pending_setup(&mut run).unwrap();
+        let hits = run
+            .app
+            .world()
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .filter(|event| {
+                event.source == Some(actor.to_bits())
+                    && event.spell_id == Some(2120)
+                    && event.kind == CombatLogKind::Damage
+                    && event.amount > 0
+            })
+            .collect::<Vec<_>>();
+        assert_eq!(hits.len(), 3, "actual native Flamestrike recipients");
+        let damage = hits.iter().map(|event| event.amount as f32).sum::<f32>();
+        (damage, 1.0 + percent * (hits.len() as f32).min(cap) / 100.0)
+    };
+    let baseline = hit(false).0;
+    let (amplified, multiplier) = hit(true);
+    let expected = baseline * multiplier;
+    assert!(
+        (amplified / expected - 1.0).abs() < 0.001,
+        "native Fuel target-count multiplier changes actual Flamestrike damage: {baseline} -> {amplified}, expected{expected}"
+    );
+}
+
 fn reacted(run: &Run, name: &str) -> f64 {
     use crate::simc_apl_native::{Bindings, Encounter, FightStyle, NativeFacts};
     let bindings = Bindings {
