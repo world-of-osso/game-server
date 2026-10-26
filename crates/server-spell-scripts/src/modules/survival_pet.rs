@@ -9,26 +9,46 @@ use combat::spell_info::SpellInfo;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::BeforeProcLaunch(strike_before_swipe),
+    SpellScriptHook::ResolvedDamage(bleed_after_strike_crit),
+    SpellScriptHook::OwnsPolicyProc(owns_strike_proc),
 ];
 
 const STRIKE_AS_ONE: u32 = 1251717;
 const STRIKE_DAMAGE: u32 = 1251779;
+const SIC_EM: u32 = 1253137;
+const SIC_EM_BLEED: u32 = 1253138;
+
 const TIP: u32 = 260286;
 const SWIPE: u32 = 1262293;
 const SWIPE_RANK_THREE: u32 = 1259019;
 
+fn owns_strike_proc(spell: u32) -> bool {
+    // Only actual Tip consumption owns this ICD, not raw native melee hints.
+    spell == STRIKE_AS_ONE
+}
+
 pub(super) fn after_tip_impact(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
     // SimC76f8118 sc_hunter.cpp1367–1372/7944: normal Tip impact uses
     // the selected native aura's ICD, only after a real main pet executes.
-    if !has_talent(world, ctx.caster, STRIKE_AS_ONE)
-        || !procs::policy_proc_ready(world, ctx.caster, STRIKE_AS_ONE)
-    {
+    if !has_talent(world, ctx.caster, STRIKE_AS_ONE) {
+        return;
+    }
+    let instance = world.get::<ActiveAuras>(ctx.caster).and_then(|auras| {
+        auras
+            .iter()
+            .find(|aura| aura.spell_id == STRIKE_AS_ONE && aura.caster == ctx.caster)
+            .map(|aura| aura.instance_id)
+    });
+    let Some(instance) = instance else {
+        return;
+    };
+    if !procs::policy_proc_ready(world, ctx.caster, instance) {
         return;
     }
     if !launch_strike(world, ctx.caster, target, 1.0, ctx.depth + 1) {
         return;
     }
-    if procs::start_policy_proc(world, ctx.caster, STRIKE_AS_ONE).is_none() {
+    if procs::start_policy_proc(world, ctx.caster, instance).is_none() {
         warn!(caster = ?ctx.caster, "Native Strike as One ICD could not start after execution");
     }
 }
@@ -52,6 +72,30 @@ fn strike_before_swipe(world: &mut World, caster: Entity, spell: &SpellInfo) {
     };
     let effectiveness = script_effect_value(world, caster, SWIPE_RANK_THREE, 1) / 100.0;
     launch_strike(world, caster, target, effectiveness, 1);
+}
+
+fn bleed_after_strike_crit(
+    world: &mut World,
+    ctx: &EffectCtx<'_>,
+    target: Entity,
+    critical: bool,
+    _damage: f32,
+) {
+    // SimC76f8118 sc_hunter.cpp2893–2898: an actual main-pet strike
+    // crit executes the selected native bleed from that same pet.
+    if ctx.spell.id != STRIKE_DAMAGE || !critical {
+        return;
+    }
+    let Some(owner) = world
+        .get::<combat::hunter_pet::HunterPet>(ctx.caster)
+        .map(|pet| pet.owner)
+    else {
+        return;
+    };
+    if read_main_pet(world, owner) != Some(ctx.caster) || !has_talent(world, owner, SIC_EM) {
+        return;
+    }
+    spell_cast::cast_triggered(world, ctx.caster, SIC_EM_BLEED, Some(target), ctx.depth + 1);
 }
 
 fn read_main_pet(world: &World, owner: Entity) -> Option<Entity> {
