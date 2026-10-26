@@ -553,6 +553,14 @@ Lifebloom hooks bloom33778 on expiry/dispel and replace only other targets beari
 
 Guardian/Karma/Eye Beam and retained markers/talents remain excluded. Batch17 did not infer general leech from disease application; batch18 adds aura53 explicitly. Current proof and source limits live in the linked coverage ledger.
 
+## Native proc-mask-qualified modifier charges —2026-10-26
+
+Charged spell modifiers use the aura's explicit native proc spell mask to qualify charge consumption, separately from which spells receive the modifier. The existing native family matcher is shared with proc events; family0 and entries without a spell mask retain their unconstrained semantics. No native charges, masks, amounts or RNG values change.
+
+Native36032 modifies Blast's damage/time/cost but its family3 proc mask selects Barrage. Spending its single proc charge on Blast removed the aura while the real resource remained capped; a4→4 power gain crosses no threshold to recreate it. Unchanged70448 factor traceff4f9393e4 reproduces118438.8367DPS with the charge modifier absent on26/52Blast and26/56Barrage impacts. A real paid Blast→Blast/Barrage regression supplies the paired RED/GREEN gate; qualification remains pending. Sources: native70448 AuraOptions/TDB proc data, TC a352b1fa SpellMgr.cpp555–560, pinned `sc_mage.cpp2734–2738/2858–2865`.
+
+The pre-change inventory contains51charged/masked auras,34with spell modifiers, including native TDB charge overrides. Controls cover Fire63/Frost64/Fury72/FrostDK251/Ret70follower/Enhancement263 plus Arcane62, with same-master before/after comparisons required. The inventory is a conservative surface, not a claim that every listed aura changes.
+
 ## Sixteenth batch: low-count rank and charge consumers
 
 [Contract](../../specs/spell-dummy-scripts.md#sixteenth-batch-low-count-rank-and-charge-contracts), [capabilities/proof/all40](../../spell-dummy16-coverage.md). `scripts/batch16.rs` binds Holy Light's231642/88852 gain, Holy/Ret Judgment's315867/220637 gain, Crusader's Might196926's separate Holy Shock/Crusader Strike cooldown reductions and Riptide51564's named53390 grant. Rank fixtures pin KnownSpells separately from loaded child rows. Crusader's Might covers Holy Judgment275773 only; other Judgment variants and owned-mark/secondary/talent mechanics stay open.
