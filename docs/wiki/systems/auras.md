@@ -15,6 +15,8 @@ Sources: pinned SimC76f8118 `sc_shaman.cpp6587–6597,6631–6643,6709–6714,99
 
 [Native Rising Fury](../../../crates/server-spell-scripts/src/modules/evoker_rising_fury.rs) registers Dragonrage apply/remove and Fury periodic callbacks. Native1271783 supplies stack cap, period and per-stack haste. Growth checks actual Dragonrage presence; rank3 removal converts the infinite buff to its earned finite grace without changing its periodic phase, so grace cannot grow stacks. The reverse Unbound Flame window starts at its native cap. Successful1292321 casts consume one owned use after launch; native children retain damage and Essence Burst.
 
+[Imminent Destruction](../../../crates/server-spell-scripts/src/modules/evoker_imminent.rs) uses actual native channel removal for Maneuverability plus Command Squadron. The actor-conditioned registry predicate changes native runtime/action facts, not stored DBC flags; native duration and dummy period own the clock. The native talent supplies initial411055 uses. Its stacked-use declaration prevents multiplying the flat cost reduction, while admission records the actual owned aura instance only when Essence Burst does not pay. Ordinary charged-mod consumption owns spending.
+
 The exact legal pinned3T oracle uses Patchwerk with one permanent target and replacement adds (30s duration/cooldown). Its Dragonrage/Fury/Unbound entries are absent. `raid_event.cpp2404–2422/3121–3135` keeps `adds.in` positive while active; the literal three-target Dragonrage condition therefore never opens. Do not change shared add facts to force that cooldown. The ST oracle does use these windows. [Contract and remaining qualifications](../../specs/devastation-parity.md); source relationships are `sc_evoker.cpp10571–10633/7436–7475`.
 
 ## Elemental Weapons dynamic amount — 2026-10-26
@@ -24,6 +26,16 @@ The selected384355 talent supplies408390's zero-placeholder amounts from its nat
 Native RED4db1ecbdad observes identical31098 Bolt damage for zero and one real imbue with matching roll, crit, Mastery, Versatility and target inputs. GREEN5002a0bca2 observes31098/32653/34208 for zero/one/two hands, with all28 native Enhancement and3 deck tests passing. Landed5a8c96626dc9a77bda80d51ca3fefc4627f80969 contains implementationeeda0fc32. Integrated300s ST158135.70/3T328919.95 are81.896%/82.178% of pinned references; parity remains open. These integrated totals are not isolated uplift evidence.
 
 Sources: pinned SimC76f8118 `sc_shaman.cpp13212–13220`; [contract](../../specs/dps-parity.md#enhancement-fixture-driver), [dynamic amount](../../../crates/server-combat/src/spell_cast/scripts/enhancement_elemental_weapons.rs), [imbue callbacks](../../../crates/server-combat/src/spell_cast/scripts/enhancement_imbues.rs), [native damage test](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/enhancement_elemental_weapons_tests.rs).
+
+## Thunder Capacitor paid-stack refund — 2026-10-26
+
+Selected1262635 rolls its native effect1 percentage only after actual MW payment by normal/Thorim LB, CL or Tempest. The spending seam supplies the actual consumed count to the existing native counter/modifier generator. Arc/Ride backgrounds never reach that payment hook; zero spends and other spells are excluded. No damage values, proc timer or chance are changed.
+
+Native RED6260f1c7f7 samples32 genuinely admitted instant Bolts at GCD-ready boundaries: each5–9 MW balance becomes0 despite selected native20%. Supercharge is unselected. A future observed refund must include a real consumed-counter removal event, not skipped payment. The earning-test helper now counts the native admitted amount, because refunded stacks make a net counter delta invalid. The instant-Bolt control retains its consumption assertion through the actual counter-removal event and permits the native paid/refunded balances. Focused6516987437 passes the actual5→0 then consumed/refunded5→5 boundary and all5 generation cases; full57e5ee7aa1 passes30/31 native cases but the old linked-mode control is capped after its refunded clearing Bolt.
+
+Diagnostic7df90ef94d observes before10/after10/cap10 while the retained producer still has native amount1/period1000ms. That fixture now uses bounded real lightning casts until native capacity exists after any legitimate refund, observing acceptance directly instead of waiting another full GCD. It checks room below the native cap while preserving strict tick growth, no melee and final-parent expiry. Native187881 cast-time masks exclude Healing Surge8004, so healing is not used as an artificial clearing path. No resource values or chances are injected. Full corrected qualification and measurement remain pending.
+
+Sources: pinned SimC76f8118 `sc_shaman.cpp6687–6694,7462–7469,9978–9985`; [contract](../../specs/dps-parity.md#enhancement-fixture-driver), [refund policy](../../../crates/server-combat/src/spell_cast/scripts/enhancement_thunder_capacitor.rs), [native paid-cast case](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/enhancement_thunder_capacitor_tests.rs).
 
 ## Garrote stored literal multiplier — 2026-10-26
 

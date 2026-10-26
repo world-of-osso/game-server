@@ -38,6 +38,7 @@ const fn order_modules<const N: usize>(
 }
 
 register_modules! {
+    affliction_absolute_corruption: (2660, "modules/affliction_absolute_corruption.rs"),
     affliction_agony: (2650, "modules/affliction_agony.rs"),
     affliction_embrace: (2659, "modules/affliction_embrace.rs"),
     affliction_darkglare: (2659, "modules/affliction_darkglare.rs"),
@@ -89,6 +90,7 @@ register_modules! {
     essence_burst: (140, "modules/essence_burst.rs"),
     evoker_bombardments: (1000, "modules/evoker_bombardments.rs"),
     evoker_burnout: (1000, "modules/evoker_burnout.rs"),
+    evoker_imminent: (1000, "modules/evoker_imminent.rs"),
     evoker_rising_fury: (1000, "modules/evoker_rising_fury.rs"),
     evoker_tier: (160, "modules/evoker_tier.rs"),
     execution_counters: (320, "modules/execution_counters.rs"),
@@ -144,6 +146,7 @@ register_modules! {
     outlaw_opportunity: (2600, "modules/outlaw_opportunity.rs"),
     outlaw_pistol: (2602, "modules/outlaw_pistol.rs"),
     outlaw_spree: (2600, "modules/outlaw_spree.rs"),
+    outlaw_spree_power: (2605, "modules/outlaw_spree_power.rs"),
     paid_cooldowns: (130, "modules/paid_cooldowns.rs"),
     periodic_counters: (270, "modules/periodic_counters.rs"),
     reap_the_storm: (710, "modules/reap_the_storm.rs"),
@@ -158,6 +161,7 @@ register_modules! {
     ret_toll: (280, "modules/ret_toll.rs"),
     retribution: (60, "modules/retribution.rs"),
     rogue: (70, "modules/rogue.rs"),
+    rogue_supercharger: (2604, "modules/rogue_supercharger.rs"),
     rogue_vanish: (2595, "modules/rogue_vanish.rs"),
     secondary_copies: (360, "modules/secondary_copies.rs"),
     shadow_apparitions: (2582, "modules/shadow_apparitions.rs"),
