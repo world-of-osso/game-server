@@ -89,10 +89,24 @@ fn rogue_envenom_and_dispatch_retain_paid_point_scaling() {
 fn outlaw_killing_spree_emits_both_hands_for_effective_point_ticks() {
     // SimC76f8118 sc_rogue.cpp4749–4838: tick-zero plus one tick per
     // effective point; each tick independently emits the native MH and OH hits.
-    for points in [1, 5] {
+    for (points, adrenaline) in [(1, false), (5, true)] {
         let _seed = crate::random::seed_scope(70448);
         let mut run = prepare_literal(260, 1).unwrap();
         engage(&mut run);
+        if adrenaline {
+            literal_rotation::execution::execute(
+                run.app.world_mut(),
+                run.actor,
+                literal_rotation::execution::Execution::Spell(
+                    13750,
+                    run.actor,
+                    Some(run.targets[0]),
+                ),
+            )
+            .unwrap();
+            preparation::finish_pending_setup(&mut run).unwrap();
+            assert!(crate::auras::has_aura(run.app.world(), run.actor, 13750));
+        }
         fund_finisher(&mut run, points as f32);
         literal_rotation::execution::execute(
             run.app.world_mut(),
@@ -100,6 +114,14 @@ fn outlaw_killing_spree_emits_both_hands_for_effective_point_ticks() {
             literal_rotation::execution::Execution::Spell(51690, run.actor, Some(run.targets[0])),
         )
         .unwrap();
+        assert!(
+            run.app
+                .world()
+                .get::<shared::casting::CastState>(run.actor)
+                .is_some_and(|cast| cast.spell_id == 51690
+                    && cast.cast_type == shared::casting::CastType::Channel),
+            "paid native Killing Spree must retain its resource-sized channel state"
+        );
         preparation::finish_pending_setup(&mut run).unwrap();
         let events = &run
             .app
