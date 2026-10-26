@@ -7,6 +7,7 @@ mod arms_massacre_sudden_death_tests;
 mod arms_reap_tests;
 mod arms_sweeping_tests;
 mod arms_tests;
+mod assassination_doomblade_tests;
 mod assassination_energy_tests;
 mod assassination_focus_tests;
 mod assassination_hero_tests;
