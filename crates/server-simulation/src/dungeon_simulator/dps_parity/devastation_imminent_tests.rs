@@ -70,6 +70,18 @@ fn devastation_imminent_destruction_actual_breath_earns_flat_uses_preserved_by_e
             },
         )
         .unwrap();
+        assert!(
+            run.app
+                .world()
+                .get::<shared::casting::CastState>(run.actor)
+                .is_some_and(|cast| cast.spell_id == 433874
+                    && cast.cast_type == shared::casting::CastType::Channel),
+            "selected Maneuverability plus Command Squadron must retain its actual native channel before last-tick Imminent grant"
+        );
+        assert!(
+            !crate::auras::has_aura(run.app.world(), run.actor, 411055),
+            "the first flight cannot grant its last-tick resource uses at launch"
+        );
         preparation::finish_pending_setup(&mut run).unwrap();
         let window = |run: &Run| {
             run.app
