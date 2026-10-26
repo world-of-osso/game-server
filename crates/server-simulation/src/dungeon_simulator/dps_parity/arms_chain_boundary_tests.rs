@@ -1,9 +1,5 @@
 use super::literal_rotation::execution::{Execution, execute};
 use super::*;
-use crate::spell_cast::powers::PowerPools;
-use crate::spell_cast::test_harness::ObservedCombatEvents;
-use shared::components::PowerType;
-use shared::protocol::CombatLogKind;
 
 #[test]
 #[ignore = "private current native DB and exact spec71 inputs"]

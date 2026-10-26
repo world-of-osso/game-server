@@ -1,9 +1,9 @@
-//! Native Reap payload must follow an actual Sudden Death Execute, not paid Rage.
+//! Native Cleave rolls Reap once only when its recipient threshold is met.
 use super::literal_rotation::execution::{Execution, execute};
 use super::*;
 use crate::spell_cast::powers::PowerPools;
 use crate::spell_cast::test_harness::ObservedCombatEvents;
-use shared::components::{Health, PowerType};
+use shared::components::PowerType;
 use shared::protocol::CombatLogKind;
 
 #[test]
