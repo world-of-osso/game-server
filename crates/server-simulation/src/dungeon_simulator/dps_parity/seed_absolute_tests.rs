@@ -2,7 +2,11 @@
 use super::*;
 use crate::auras::ActiveAuras;
 use crate::class_progression::TraitLoadout;
+use crate::simc_apl_native::{
+    Bindings, DotRefresh, DotRefreshPolicy, Encounter, FightStyle, NativeFacts, native_dot_spell,
+};
 use crate::spell_cast::test_harness::ObservedCombatEvents;
+use server::simc_apl::Facts;
 use shared::protocol::CombatLogKind;
 
 fn wither_applying_casts(run: &Run) -> usize {
@@ -17,6 +21,45 @@ fn wither_applying_casts(run: &Run) -> usize {
                 && event.kind == CombatLogKind::CastSuccess
         })
         .count()
+}
+
+fn assert_permanent_dot_facts_preserve_buff_semantics(run: &Run, boss: Entity) {
+    let bindings = Bindings {
+        buffs: [
+            ("wither".into(), 445474),
+            ("absolute_corruption".into(), 196103),
+        ]
+        .into(),
+        dot_refresh: [(
+            "wither".into(),
+            DotRefresh {
+                resolve: native_dot_spell,
+                policy: DotRefreshPolicy::Pandemic,
+            },
+        )]
+        .into(),
+        ..Default::default()
+    };
+    let encounter = Encounter::Fixture {
+        started_at: crate::spell_cast::now(run.app.world()),
+        duration: 300.0,
+        style: FightStyle::Patchwerk,
+    };
+    let facts = NativeFacts::new(
+        run.app.world(),
+        run.actor,
+        &bindings,
+        encounter,
+        run.targets.len(),
+    )
+    .with_targets(Some(boss), &run.targets);
+    assert_eq!(facts.value("dot.wither.refreshable").unwrap(), 0.0);
+    assert_eq!(facts.value("dot.wither.remains").unwrap(), f64::INFINITY);
+    assert_eq!(facts.value("dot.wither.duration").unwrap(), f64::INFINITY);
+    assert!(
+        facts.value("buff.absolute_corruption.remains").unwrap() < 0.0,
+        "permanent-buff sentinel remains unchanged; only DoT facts are unbounded"
+    );
 }
 
 fn assert_absolute_boss_wither_survives(count: usize) {
@@ -88,6 +131,7 @@ fn assert_absolute_boss_wither_survives(count: usize) {
         original_expiry.is_none_or(|expiry| expiry > now),
         "the first owned Absolute Wither must survive60s, original expiry={original_expiry:?}, now={now}"
     );
+    assert_permanent_dot_facts_preserve_buff_semantics(&run, boss);
     assert_eq!(
         wither_applying_casts(&run),
         settled_seed_casts.unwrap(),
