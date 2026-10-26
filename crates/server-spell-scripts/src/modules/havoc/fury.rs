@@ -1,7 +1,7 @@
 //! SimC76f8118 sc_demon_hunter.cpp3339–3348,8567–8581: native Fury buff producers.
 use super::{combat, havoc::has_talent};
 use bevy::prelude::*;
-use combat::auras::{ActiveAuras, AuraInstance};
+use combat::auras::AuraInstance;
 use combat::spell_cast::{script_registry::SpellScriptHook, scripts::AfterCastHook};
 use combat::spell_info::SpellInfo;
 
@@ -25,21 +25,18 @@ pub(super) fn apply_blind_fury(world: &mut World, caster: Entity, aura: &AuraIns
     // every100ms: exactly its native raw amount per5s. Eye/Gaze already
     // carries the real aura85 Fury-regeneration effect; populate that amount.
     let amount = combat::spell_cast::scripts::script_effect_value(world, caster, 203550, 2);
-    let mut auras = world
-        .get_mut::<ActiveAuras>(caster)
-        .expect("applied native beam aura");
-    let beam = auras
-        .get_mut(aura.instance_id)
-        .expect("native beam instance");
-    let regen = beam
+    let regen = aura
         .effects
-        .iter_mut()
+        .iter()
         .find(|effect| {
             effect.aura_type == combat::auras::handlers::MOD_POWER_REGEN
                 && effect.misc_values[0] == 17
         })
         .expect("native beam Fury regeneration effect");
-    regen.amount = amount;
+    assert!(
+        combat::auras::set_effect_amount(world, caster, aura.instance_id, regen.index, amount),
+        "applied native beam instance"
+    );
 }
 
 fn grant_student(world: &mut World, caster: Entity, _spell: &SpellInfo) {
