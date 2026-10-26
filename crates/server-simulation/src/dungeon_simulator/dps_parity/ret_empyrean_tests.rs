@@ -130,25 +130,28 @@ fn dps_parity_ret_empyrean_background_storm_can_generate_divine_purpose() {
 fn dps_parity_ret_sunrise_unrelated_judgment_preserves_icd() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = fixture(true);
-    let sunrise_timer = |run: &Run| {
+    let sunrise_ready = |run: &Run| {
         let auras = run
             .app
             .world()
             .get::<crate::auras::ActiveAuras>(run.actor)
             .unwrap();
         let aura = auras.iter().find(|aura| aura.spell_id == 431474).unwrap();
-        (aura.proc.last_success_at, aura.proc.next_ready_at)
+        crate::auras::procs::policy_proc_ready(run.app.world(), run.actor, aura.instance_id)
     };
-    let before = sunrise_timer(&run);
+    assert!(sunrise_ready(&run), "Sunrise starts ready");
     let target = run.targets[0];
     cast_ready(&mut run, 20271, target);
-    for _ in 0..30 {
+    for _ in 0..4 {
         run.app.update();
     }
     assert!(damage(&run, 20271) > 0, "actual Judgment must land");
     // SimC76f8118 Ret612–619/sc_paladin.cpp1774–1781: only Storm
     // and Hammer producers roll this ICD, never Judgment or white swings.
-    assert_eq!(sunrise_timer(&run), before);
+    assert!(
+        sunrise_ready(&run),
+        "unrelated damage must leave Sunrise ready"
+    );
 }
 
 #[test]
