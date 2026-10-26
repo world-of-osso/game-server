@@ -65,7 +65,7 @@ fn dummy2_hunter_cobra_shot_does_not_create_a_kill_command_cooldown() {
 fn dummy2_monk_blackout_kick_reduces_rising_sun_kick_recharge_with_rank_two() {
     let mut h = harness_with_native_enemy_dodge_reduction(
         Vec::new(),
-        &[100784, 261917, 107428, 185099],
+        &[100784, 261917, 107428, 185099, 113656],
         10,
     )
     .expect("real world.db required");
@@ -103,7 +103,7 @@ fn dummy2_monk_blackout_kick_reduces_rising_sun_kick_recharge_with_rank_two() {
 fn dummy2_monk_blackout_kick_reduces_fists_of_fury_cooldown_with_rank_two() {
     let mut h = harness_with_native_enemy_dodge_reduction(
         Vec::new(),
-        &[100784, 261917, 113656, 117418, 120086],
+        &[100784, 261917, 113656, 117418, 120086, 107428],
         10,
     )
     .expect("real world.db required");

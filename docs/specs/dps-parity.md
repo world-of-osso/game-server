@@ -133,6 +133,9 @@ Native merged buff outcomes apply or clear the caster-owned aura after the hit b
 
 ### Outlaw literal fixture
 
+- Landed native Sinister Strike193315 rolls selected Opportunity279876 once per hit. Read native chance and the RtB extra-chance contribution; success earns native195627 stacks and dispatches197834 to the same enemy after300ms. Extra strikes cannot recursively roll Opportunity (`sc_rogue.cpp1286–1292,5942–5991,8255–8280`).
+- Blade Flurry13877 activation dispatches one native429951 area attack, including the primary enemy. Selected Deft Maneuvers grants its native combo-point amount once per actual activation hit. This is independent of Blade Flurry22482 secondary copies (`sc_rogue.cpp3907–3922,3993–3999`).
+
 - Spec260 preserves the requested player identity and captures literal control before setup. Execute the profile's complete action rows with shared `Program`/`Driver`/`Prepared`/`Equipment`, not AssistedCombat. The pinned profile requests Instant Poison without a nonlethal coating. Read combo points, Energy, native readiness and earned Roll the Bones states from the actor; never substitute reference damage or synthetic buffs.
 - Shared Rogue operands expose the native combo-point spend capacity and Energy deficit/time-to-max excluding temporary capacity, while retaining permanent talent capacity.
 - Native Rogue-family spells with a ComboPoints cost scale all direct damage effects by frozen effective points. Between the Eyes must not be omitted by an action-ID list; Envenom and Dispatch retain their existing point scaling. Feral Bite keeps its separate maximum-point-normalized rule.
@@ -255,6 +258,8 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 - Guaranteed critical hits predict their actual Heating Up acquisition; an observed Heating Up conversion predicts Hot Streak. A critical hit with Hot Streak already active preserves and predicts it without creating Heating Up.
 
 ### Havoc literal rotation
+
+- Native Annihilation201428 off-hand execution rolls the same197125 Fury refund passive as Chaos Strike. The real passive supplies its chance, Critical Chaos modifiers and500ms internal cooldown;193840 supplies the Fury payload (SimC76f8118 sc_demon_hunter.cpp7472–7510,7673–7685). Do not omit the transformed spender's refund.
 
 - Selected Shattered Destiny388116 accumulates native base Fury for genuinely paid literal Havoc actions only while owned162264 is live. Each native effect1 threshold extends Meta by native effect0 milliseconds; preserve the remainder across casts and exclude free/background copies and pre-Meta spending. The existing frozen resource context establishes positive payment (SimC76f8118 sc_demon_hunter.cpp2529–2555).
 
@@ -806,6 +811,10 @@ Rotation/decision implementation belongs to the lead/rotation agents. No system 
 - `simc_apl:` selected Malefic Grasp1261149 resolves to native channel1261153 under the same sourced known-parent projection as Demoniac. Native70448 has no visible-action link. Unknown/unselected talents do not grant the channel; costs and actual channel damage stay native.
 
 - Projection qualification retains the Demonology owner's gate: `demonology_ --ignored --skip demonology_implosion_`. The excluded Implosion test is the owner's existing master RED, not a Malefic Grasp regression (same exclusion as trainsdd4e681ed7/d577e0ad22). Native Affliction cast and Frost literal opener remain required.
+
+### Affliction native Darkglare Presence
+
+- Native1280663 direct/periodic masks and amounts apply only while an actual owned living103673 Darkglare remains unexpired. Actual death or expiry ends the increase; foreign summons and unmasked damage do not qualify (`sc_warlock_pets.cpp2487–2500`, `sc_warlock_actions.cpp200`). No independent buff timer or guardian-row change supplies this effect.
 
 ### Affliction native Unstable Empowerment
 
