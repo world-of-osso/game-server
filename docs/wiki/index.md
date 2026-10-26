@@ -1,4 +1,5 @@
 - [Absolute nonstacking Corruption](systems/warlock-periodic-counters.md#absolute-corruption-lifetime) — duration-only permanence preserves native maximum0; exact native regression2086230ee4, GREEN pending.
+- [Actual Infernal initialization](systems/spell-casting.md#native-infernal-initialization--2026-10-26) — actual-actor callback replaces unreachable wrapper; native timing RED, protected gates pending.
 - [Devil Fruit Malevolence](systems/warlock-periodic-counters.md#devil-fruit-malevolence) — native Wither-tick RPPM and source-duration extension; genuine265/267 RED, GREEN pending.
 - [Explicit non-demon guardian SP](systems/spell-casting.md#explicit-non-demon-guardian-spell-power--2026-10-26) — native Thing type15 reads its sourced full-owner-SP policy; actual Spike and protected BM/265/267 cases pass, landing pending.
 - [Haunting Shadows impact extensions](systems/spell-casting.md#haunting-shadows-impact-extensions--2026-10-26) — actual apparition impact preserves owned Pain/VT; native missing-extension RED, GREEN pending.

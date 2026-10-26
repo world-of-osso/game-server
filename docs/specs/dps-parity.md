@@ -460,6 +460,7 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 ### Shared pet prerequisites
 
 - Headless native Player actors must have runtime-only native pet storage before a real summon. Do not fabricate an authenticated character, follower identity, actor or resource grant. Hunter default-record provisioning reuses that same storage.
+- Generic implicit27 TARGET_UNIT_MASTER selects the actual native controlled-pet or temporary-summon owner in the same map, independently of the supplied explicit target. Never substitute the caster, controller actor or a resource grant (TC a352b1fa Spell.cpp1753–1755).
 - Generic effect148 must forward its actual hit destination/unit, native costs and value to every child effect on the per-cast clone. Do not mutate catalog data (TC a352b1fa SpellEffects.cpp725–788).
 - Generic implicit85 is DEST_DEST_FRONT_LEFT: use native radius/direction, native caster origin when no destination is supplied, and existing collision/allowed-Z handling. Do not use spell-ID branches (TC a352b1fa Spell.cpp1690–1738).
 - Qualify the native267 summon regressions and protected255/254/253/265 probes before landing shared behavior. Pet attack lists, coefficients and class producers remain separate work.
@@ -480,6 +481,11 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 - Selected196103 on actual Affliction265 makes owned Corruption146739 and Wither445474 permanent, including background Seed applications and reapplications. Preserve native effects, counters and periodic phase; do not change catalog duration or read fixture fight clocks. Pinned SimC models permanence as twice the expected fight length (`actions759–762/1072–1077`).
 - Generic DoT facts for an active permanent aura are not refreshable and have unbounded remains/duration, before finite fresh-duration/Pandemic validation. Missing/finite DoTs and buff/debuff sentinel semantics stay unchanged. Do not suppress literal casts in the adapter to hide an expiring aura.
 - Qualify the actual literal ST and recurring30s-add-wave ordering. Gate265 ST/3T and267, plus actual finite-DoT refreshability from103 or258. Count explosion hits separately from explosion actions; do not tune damage or target counts to repair excess paid Seed refreshes.
+
+### Native Infernal guardian
+
+- Actual111685 summons89 with live owner-SP shares2.2275 for SP and AP (SimC76f8118 `sc_warlock_pets.cpp2050–2119`). Native264364→264365 energizes the existing owner through target27; native19483→20153 emits its authored periodic area damage. Preserve native costs, coefficients, targets, clocks and actor expiry.
+- Immediately after actual guardian initialization, the generic `SummonInitialized` callback receives that actor. The downstream Infernal leaf initializes existing action clocks once: a nonnegative normal arise delay(mean1s,stddev0.1s) starts Embers; Immolation starts after another uniform0–0.75s, without an Immolation zero tick. No per-unit summon wrapper, actor-query loop, synthetic ticks or new timer state. Unregistered guardians retain existing behavior; qualify BM Bear,265 guardians and DK Rune Weapon.
 
 ### Shared Hellcaller Wither counters
 

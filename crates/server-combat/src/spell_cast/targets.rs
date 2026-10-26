@@ -17,7 +17,8 @@
 //! DEST_TARGET_ALLY, 65 DEST_TARGET_BACK (the explicit target's position moved the
 //! effect radius behind it; collision is not modelled), 76 DEST_CHANNEL_TARGET
 //! (the live channel destination), 77 UNIT_CHANNEL_TARGET
-//! (the caster's channel target), 92 UNIT_SUMMONER (the native summoned creature's
+//! (the caster's channel target), 27 UNIT_MASTER (the native pet/summon owner),
+//! 92 UNIT_SUMMONER (the native summoned creature's
 //! actual summoner), and 28 DEST_DYNOBJ_ENEMY (the units a persistent
 //! area aura affects, `spell_cast::area_aura`). Target56 selects the caster's group;
 //!118 UNIT_TARGET_ALLY_OR_RAID selects the group around a grouped explicit ally,
@@ -125,6 +126,8 @@ enum Selector {
     ChannelDestination,
     /// The caster's channel target.
     ChannelTarget,
+    ///27: the caster's native controlling/owning unit, not an explicit unit.
+    Master,
     /// The native spell-created creature's actual summoner, not an explicit unit.
     Summoner,
     /// The caster's summoned pet.
@@ -201,6 +204,7 @@ fn selector(id: u32) -> Option<Selector> {
         65 => Selector::DestTargetOffset(std::f32::consts::PI),
         76 => Selector::ChannelDestination,
         77 => Selector::ChannelTarget,
+        27 => Selector::Master,
         92 => Selector::Summoner,
         24 => Selector::ConeEnemy,
         // TC SpellInfo.cpp maps both to caster-reference CONE/ENTRY/FRONT.
@@ -267,6 +271,7 @@ pub(crate) fn provides_non_caster_unit_target(effect: &SpellEffect) -> bool {
                     | Selector::AllyOrRaid
                     | Selector::RaidCorpses
                     | Selector::ChannelTarget
+                    | Selector::Master
                     | Selector::Summoner
                     | Selector::Pet
                     | Selector::Critter
@@ -643,6 +648,10 @@ pub(super) fn select_targets_and_destination(
             Selector::ChannelTarget => {
                 selected_any = true;
                 units.extend(channel_target(world, caster));
+            }
+            Selector::Master => {
+                selected_any = true;
+                units.extend(find_master(world, caster));
             }
             Selector::Summoner => {
                 selected_any = true;
@@ -1330,6 +1339,17 @@ fn random_destination(point: Vec3, effect: &SpellEffect, slot: usize) -> Vec3 {
 /// direction, moved by this slot's CalcRadius. Terrain/collision is not modelled.
 fn offset_destination(point: Vec3, angle: f32, distance: f32) -> Vec3 {
     point + Vec3::new(distance * angle.cos(), 0.0, -distance * angle.sin())
+}
+
+/// TC a352b1fa Spell.cpp1753–1755: TARGET_UNIT_MASTER uses actual ownership.
+/// Native controlled pets and temporary summons store that relation separately.
+fn find_master(world: &World, caster: Entity) -> Option<Entity> {
+    let owner = if let Some(pet) = world.get::<crate::hunter_pet::HunterPet>(caster) {
+        pet.owner
+    } else {
+        world.get::<super::summon::SummonedCreature>(caster)?.owner
+    };
+    same_map(world, caster, owner).then_some(owner)
 }
 
 /// TC Spell.cpp:1760–1763: only a TempSummon supplies UNIT_SUMMONER.
