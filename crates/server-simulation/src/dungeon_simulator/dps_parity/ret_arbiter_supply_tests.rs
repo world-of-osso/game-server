@@ -1,6 +1,8 @@
 //! Passive native lifecycle counts separate Arbiter supply from damage/seed variance.
 use super::*;
 use crate::auras::observations;
+use crate::spell_cast::test_harness::{ObservedCombatEvents, ObservedTriggeredCasts};
+use shared::protocol::CombatLogKind;
 
 const TRACKED: &[(u32, u32)] = &[
     (408458, 408459),
@@ -17,6 +19,7 @@ fn ret_arbiter_supply_records_native_initial_uses_applications_consumption_and_p
     for seed in [70448, 1, 2] {
         let _seed = crate::random::seed_scope(seed);
         let mut run = prepare_measurement(70, 1).expect("native Ret follower measurement");
+        run.app.init_resource::<ObservedTriggeredCasts>();
         observations::start_tracking(run.app.world_mut(), run.actor, TRACKED);
         let initial = observations::snapshot(run.app.world());
         for spell in [408458, 1306161, 1306162, 1310461] {
@@ -46,12 +49,41 @@ fn ret_arbiter_supply_records_native_initial_uses_applications_consumption_and_p
             1306923,
         )
         .unwrap() as u64;
-        let outcomes: u64 = ["hits", "misses", "dodges", "parries"]
+        let launches = run
+            .app
+            .world()
+            .resource::<ObservedTriggeredCasts>()
+            .0
             .iter()
-            .map(|key| arbiter[*key].as_u64().unwrap())
-            .sum();
+            .filter(|(caster, spell, _)| *caster == run.actor && *spell == 1306923)
+            .count() as u64;
+        let events: Vec<_> = run
+            .app
+            .world()
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .filter(|event| {
+                event.source == Some(run.actor.to_bits())
+                    && event.target == Some(run.targets[0].to_bits())
+                    && event.spell_id == Some(1306923)
+            })
+            .collect();
+        // The presentation report counts only Miss/Dodge/Parry, not every native miss kind.
+        let outcomes = events
+            .iter()
+            .filter(|event| matches!(event.kind, CombatLogKind::Damage | CombatLogKind::Miss(_)))
+            .count() as u64;
+        let misses: Vec<_> = events
+            .iter()
+            .filter(|event| matches!(event.kind, CombatLogKind::Miss(_)))
+            .collect();
         eprintln!(
-            "NATIVE_ARBITER_WINDOW seed={seed} consumed={payouts} outcomes={outcomes} in_flight={in_flight}"
+            "NATIVE_ARBITER_WINDOW seed={seed} consumed={payouts} launches={launches} outcomes={outcomes} in_flight={in_flight} misses={misses:?}"
+        );
+        assert_eq!(
+            payouts, launches,
+            "every consumed native use must launch its real payload"
         );
         assert_eq!(
             payouts,
@@ -60,7 +92,8 @@ fn ret_arbiter_supply_records_native_initial_uses_applications_consumption_and_p
         );
         let output = json!({"seed":seed,"simulated_seconds":seconds,"initial_uses":initial,
             "usage":usage,"arbiter_payouts":payouts,"arbiter":arbiter,
-            "arbiter_terminal_outcomes":outcomes,"arbiter_in_flight_at_end":in_flight,
+            "arbiter_launches":launches,"arbiter_terminal_outcomes":outcomes,"arbiter_in_flight_at_end":in_flight,
+            "arbiter_native_misses":misses,
             "buff_uptime_pct":uptimes,"combat":combat,"stats_after":report::stats(run.app.world(),run.actor)});
         let path = inputs::directory()
             .unwrap()
