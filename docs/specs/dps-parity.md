@@ -469,6 +469,7 @@ Bare `refreshable`/`remains` retain the action and recipient context. Qualified 
 
 `action.<alias>.damage` reads the proposed target's native direct school-damage snapshot, including current power, modifiers, mitigation and expected crit, without casting or sampling RNG. Weapon-damage predictions remain explicit errors. Action cooldown/duration and bare `ticking` retain action context. Target-owned `dot.<alias>.duration` is0 when inactive; an active DoT reads its native fresh composite duration, excluding remaining time and pandemic carry (SimC76f8118 `dot.cpp448–455`). `pet.<summon alias>.active` reads actual living, unexpired, same-map owned summons; absent summons are inactive.
 
+Named `action.<alias>.charges`, `max_charges`, `charges_fractional` and `full_recharge_time` read the same native cooldown state as bare action-context operands. Named `.usable` reads cooldown readiness only, not resource/GCD admission (SimC76f8118 `action.cpp3269–3270,3496–3499`).
 ## Survival literal controller
 
 - Spec255 uses the exact pinned `hunter_survival.simc` action rows through shared `Program`, `Driver`, `Prepared` and `Equipment` with the requested native actor identity. It does not require an invented follower kit.

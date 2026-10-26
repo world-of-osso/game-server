@@ -1,3 +1,7 @@
+## 2026-10-25 — Warlock periodic funding and target DoT facts
+
+[Warlock funding](systems/spell-casting.md#warlock-periodic-shard-funding--2026-10-25) uses the downstream critical-aware periodic callback and existing native power pipeline, qualified only on Destruction. [Target DoT duration](systems/simc-apl.md#native-target-dot-duration) reads active owned native state without pandemic carry; both have native GREEN and cross-spec controls. Numerical267 acceptance remains separate.
+
 ## 2026-10-25 — Subtlety Lingering Shadow
 
 [Lingering Shadow](systems/spell-casting.md#subtlety-lingering-shadow--2026-10-25): pinned expiry/decay and native mitigated residual, downstream hooks, native RED957d26c2d3→GREEN561fb56b0d; numerical parity remains open.
