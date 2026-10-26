@@ -30,8 +30,6 @@ mod batch6;
 mod batch7;
 mod batch8;
 mod batch9;
-mod frost;
-mod frost_mage;
 mod periodic_attacks;
 pub(crate) use periodic_attacks::{after_periodic_trigger, rolls_reapplication};
 pub(super) use script_registry::after_foreground_special;
@@ -44,7 +42,6 @@ mod guardian_impacts;
 mod stacking_summons;
 pub(crate) use elemental::register as register_elemental_policies;
 pub(super) use script_registry::after_modifier_consumption as apply_echo_policies;
-pub(crate) mod empower_evoker;
 mod enhancement_imbues;
 mod enhancement_modes;
 mod enhancement_nova;
@@ -96,14 +93,14 @@ pub(super) fn apply_periodic_damage_policies(
     target: Entity,
     amount: f32,
 ) {
-    frost_mage::after_periodic_damage(world, ctx, target);
+    script_registry::after_periodic_damage_policies(world, ctx, target);
     policies::after_periodic_damage(world, ctx, target, amount);
     spellslinger::after_periodic_damage(world, ctx, target);
     midnight_items::after_periodic_damage(world, ctx, target);
 }
 
 pub(crate) fn owns_policy_proc(world: &World, spell: u32) -> bool {
-    policies::owns_policy_proc(world, spell) || frost::owns_proc(spell)
+    policies::owns_policy_proc(world, spell)
 }
 mod fire_procs;
 pub(crate) mod holy_priest;
@@ -155,7 +152,6 @@ pub(crate) fn after_melee_hit(
 ) {
     windwalker_flurry::after_melee_hit(world, caster, hand, critical);
     script_registry::after_white_hit(world, caster, critical);
-    frost::after_white_hit(world, caster, critical);
 }
 mod xuens_battlegear;
 pub(crate) use xuens_battlegear::register_xuens_battlegear;
@@ -196,7 +192,7 @@ pub(super) fn finish_scripted_launch(
     foreground: bool,
 ) {
     elemental::after_launch(world, caster, spell, consumed, depth, foreground);
-    frost::after_launch(world, caster, spell, foreground);
+    script_registry::after_elemental_launch(world, caster, spell, foreground);
     policies::pet_sets::finish_cobra(world, caster, spell);
     script_registry::after_counter_launch(world, caster, spell.id);
     unbroken_rhythm::after_launch(world, caster, spell.id);
@@ -238,7 +234,7 @@ pub(super) fn after_direct_damage(
     target: Entity,
     critical: bool,
 ) {
-    frost_mage::after_damage(world, ctx, target, critical);
+    script_registry::before_direct_damage_policies(world, ctx, target, critical);
     spellslinger::after_direct_damage(world, ctx);
     windwalker_flurry::after_direct_damage(world, ctx, critical);
     crate::auras::rogue::after_builder_hit(world, ctx, critical);
@@ -345,9 +341,7 @@ use crate::spell_info::SpellInfo;
 /// Frostbolt: its effects are TRIGGER_MISSILE 32 to 228597 (SCHOOL_DAMAGE) only.
 /// Sourced consumers retain native modifier amounts through projectile impact.
 pub(crate) fn snapshots_modifier(world: &World, id: u32) -> bool {
-    maelstrom_weapon::snapshots_modifier(id)
-        || script_registry::snapshots_modifier(world, id)
-        || frost::snapshots_modifier(id)
+    maelstrom_weapon::snapshots_modifier(id) || script_registry::snapshots_modifier(world, id)
 }
 
 const FROSTBOLT: u32 = 116;
@@ -796,18 +790,7 @@ pub(super) fn snapshot_proc_modifiers(
         .collect()
 }
 
-/// `SpellCastFn` on `AfterCast`: runs once on the caster after the spell resolved.
-pub(super) type EmpowerCompleteHook =
-    fn(&mut World, Entity, &SpellInfo, Option<Entity>) -> Result<(), super::CastFailure>;
-
-pub(super) fn empower_completion(spell_id: u32) -> Option<EmpowerCompleteHook> {
-    match spell_id {
-        357208 | 382266 | 359073 | 382411 => Some(empower_evoker::release),
-        _ => None,
-    }
-}
-
-pub(super) use empower_evoker::damage_bonus as empower_damage_bonus;
+pub(super) use script_registry::empower_damage_bonus;
 
 pub type AfterCastHook = fn(&mut World, Entity, &SpellInfo);
 
@@ -968,9 +951,6 @@ pub(super) fn target_plan(world: &World, spell_id: u32) -> Option<(Relation, Tar
         return Some(hook);
     }
     if let Some(hook) = policies::target_plan_hook(world, spell_id) {
-        return Some(hook);
-    }
-    if let Some(hook) = frost_mage::target_plan_hook(spell_id) {
         return Some(hook);
     }
     if let Some(hook) = guardian_impacts::plan_hook(spell_id) {

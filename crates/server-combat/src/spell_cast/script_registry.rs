@@ -55,6 +55,12 @@
 //! - `AfterModifierConsumption`: before foreground-spender tier callbacks.
 //! - `AfterForegroundSpender`: before Crusade stacks and spender-proc generation.
 //! - `AfterSpenderProc`: after spender-proc generation, before deferred background execution.
+//! - `AfterElementalLaunch`: after Elemental consumption, before pet-set launch state.
+//! - `BeforeDirectDamagePolicies`: before Spellslinger and other direct-damage policies.
+//! - `AfterPeriodicDamagePolicies`: after generic periodic relationships and Spellslinger.
+//! - `EmpowerCompletion`: first completion handler, before channel end and finish GCD.
+//! - `EmpowerDamageBonus`: native converted-tick damage added before normal multipliers.
+//! - `EmpowerReleasePreview`: first matching native release metadata for APL/fixtures.
 //! New stages own distinct callback/lookup aliases, even when signatures coincide.
 //! Within a stage, traverse module slices and entries from first to last. Never sort
 //! or deduplicate them. Adding a policy to an existing module changes only that module.
@@ -116,6 +122,14 @@ pub type AfterNativeOnCastHook = fn(&mut World, Entity, u32, u8);
 pub type AfterModifierConsumptionHook = fn(&mut World, Entity, &SpellInfo);
 pub type AfterForegroundSpenderHook = fn(&mut World, Entity, &SpellInfo, Option<Entity>);
 pub type AfterSpenderProcHook = fn(&mut World, Entity, &SpellInfo, Option<Entity>);
+pub type AfterElementalLaunchHook = fn(&mut World, Entity, &SpellInfo, bool);
+pub type BeforeDirectDamagePoliciesHook = fn(&mut World, &EffectCtx<'_>, Entity, bool);
+pub type AfterPeriodicDamagePoliciesHook = fn(&mut World, &EffectCtx<'_>, Entity);
+pub type EmpowerCompleteHook =
+    fn(&mut World, Entity, &SpellInfo, Option<Entity>) -> Result<(), super::CastFailure>;
+pub type EmpowerCompleteLookup = fn(u32) -> Option<EmpowerCompleteHook>;
+pub type EmpowerDamageBonusHook = fn(&World, Entity, &SpellInfo) -> f32;
+pub type EmpowerReleasePreviewHook = fn(&World, Entity, u32, u8) -> Option<SpellInfo>;
 
 #[derive(Clone, Copy)]
 pub enum SpellScriptHook {
@@ -178,6 +192,12 @@ pub enum SpellScriptHook {
     AfterModifierConsumption(AfterModifierConsumptionHook),
     AfterForegroundSpender(AfterForegroundSpenderHook),
     AfterSpenderProc(AfterSpenderProcHook),
+    AfterElementalLaunch(AfterElementalLaunchHook),
+    BeforeDirectDamagePolicies(BeforeDirectDamagePoliciesHook),
+    AfterPeriodicDamagePolicies(AfterPeriodicDamagePoliciesHook),
+    EmpowerCompletion(EmpowerCompleteLookup),
+    EmpowerDamageBonus(EmpowerDamageBonusHook),
+    EmpowerReleasePreview(EmpowerReleasePreviewHook),
 }
 
 #[derive(Clone, Copy, Resource)]
@@ -814,6 +834,76 @@ pub fn after_spender_proc(
             run(world, caster, spell, target);
         }
     }
+}
+
+pub fn after_elemental_launch(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    foreground: bool,
+) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::AfterElementalLaunch(run) = hook {
+            run(world, caster, spell, foreground);
+        }
+    }
+}
+
+pub fn before_direct_damage_policies(
+    world: &mut World,
+    ctx: &EffectCtx<'_>,
+    target: Entity,
+    critical: bool,
+) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::BeforeDirectDamagePolicies(run) = hook {
+            run(world, ctx, target, critical);
+        }
+    }
+}
+
+pub fn after_periodic_damage_policies(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::AfterPeriodicDamagePolicies(run) = hook {
+            run(world, ctx, target);
+        }
+    }
+}
+
+pub fn empower_completion(world: &World, spell: u32) -> Option<EmpowerCompleteHook> {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .find_map(|hook| match hook {
+            SpellScriptHook::EmpowerCompletion(lookup) => lookup(spell),
+            _ => None,
+        })
+}
+
+pub fn empower_damage_bonus(world: &World, caster: Entity, spell: &SpellInfo) -> f32 {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .filter_map(|hook| match hook {
+            SpellScriptHook::EmpowerDamageBonus(run) => Some(run(world, caster, spell)),
+            _ => None,
+        })
+        .sum()
+}
+
+pub fn empower_release_preview(
+    world: &World,
+    caster: Entity,
+    spell: u32,
+    rank: u8,
+) -> Option<SpellInfo> {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .find_map(|hook| match hook {
+            SpellScriptHook::EmpowerReleasePreview(run) => run(world, caster, spell, rank),
+            _ => None,
+        })
 }
 
 #[cfg(test)]

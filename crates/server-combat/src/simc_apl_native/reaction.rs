@@ -135,7 +135,7 @@ fn active_instances(world: &World, actor: Entity, spell: u32) -> Vec<u32> {
 }
 
 /// SimC76f8118 buff.cpp3001–3004: prediction makes existing acquired stacks react now.
-pub(crate) fn predict(world: &mut World, actor: Entity, spell: u32) {
+pub fn predict(world: &mut World, actor: Entity, spell: u32) {
     let instances = active_instances(world, actor, spell);
     let now = crate::spell_cast::now(world);
     if let Some(mut reactions) = world.get_mut::<BuffReactions>(actor) {

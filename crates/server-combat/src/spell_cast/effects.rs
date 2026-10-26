@@ -686,7 +686,7 @@ fn modify_base_points(
 
 /// Effect amount before crit: `modded_base_points` plus SP/AP coefficients
 /// with BonusCoefficient mods.
-pub(crate) fn scaled_amount(
+pub fn scaled_amount(
     world: &World,
     caster: Entity,
     spell: &SpellInfo,

@@ -2,11 +2,21 @@
 use bevy::prelude::*;
 use shared::components::{ActiveSpec, WeaponType};
 
-use crate::{
+use super::combat;
+use combat::{
     auras, random, spell_cast,
     spell_info::{SpellInfo, SpellStore},
     stats::CharacterStats,
 };
+
+use combat::spell_cast::script_registry::SpellScriptHook;
+
+pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::OwnsPolicyProc(owns_proc),
+    SpellScriptHook::SnapshotsModifier(snapshots_modifier),
+    SpellScriptHook::AfterWhiteHit(after_white_hit),
+    SpellScriptHook::AfterElementalLaunch(after_launch),
+];
 
 const KILLING_MACHINE: u32 = 51128;
 const RIME: u32 = 59057;
@@ -84,7 +94,7 @@ pub(super) fn after_launch(world: &mut World, caster: Entity, spell: &SpellInfo,
     // SimC76f8118 sc_death_knight.cpp10889–10900/11177–11189:
     // after Obliteration, FS/GA roll Rime's native effect2 (not effect1).
     if matches!(spell.id, 49143 | 194913) && auras::has_aura(world, caster, RIME) {
-        let chance = super::script_effect_value(world, caster, RIME, 1);
+        let chance = spell_cast::scripts::script_effect_value(world, caster, RIME, 1);
         if random::random::<f32>() * 100.0 < chance {
             trigger_native_buff(world, caster, RIME);
         }
@@ -106,8 +116,9 @@ fn consume_rime(world: &mut World, caster: Entity, spell: &SpellInfo) {
     // SimC76f8118 sc_death_knight.cpp11637–11665: an earned Rime HB
     // adjusts ERW by native Frostbound Will effect1, then decrements Rime.
     if auras::has_aura(world, caster, FROSTBOUND_WILL) {
-        let milliseconds = super::script_effect_value(world, caster, FROSTBOUND_WILL, 0);
-        super::reduce_cooldown(
+        let milliseconds =
+            spell_cast::scripts::script_effect_value(world, caster, FROSTBOUND_WILL, 0);
+        spell_cast::scripts::reduce_cooldown(
             world,
             caster,
             EMPOWER_RUNE_WEAPON,
@@ -134,9 +145,9 @@ fn trigger_obliteration(world: &mut World, caster: Entity) {
     if auras::has_aura(world, caster, KILLING_MACHINE) {
         trigger_native_buff(world, caster, KILLING_MACHINE);
         // sc_death_knight.cpp13356–13364: guaranteed producers predict KM now.
-        crate::simc_apl_native::reaction::predict(world, caster, 51124);
+        combat::simc_apl_native::reaction::predict(world, caster, 51124);
     }
-    let chance = super::script_effect_value(world, caster, OBLITERATION, 1);
+    let chance = spell_cast::scripts::script_effect_value(world, caster, OBLITERATION, 1);
     if random::random::<f32>() * 100.0 >= chance {
         return;
     }

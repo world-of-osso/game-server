@@ -2704,7 +2704,7 @@ fn gcd_duration_ms(world: &World, caster: Entity, spell: &SpellInfo) -> u32 {
 }
 
 /// Recheck, plan targets, spend, start cooldowns, log CastSuccess, resolve.
-pub(crate) fn execute_cast(
+pub fn execute_cast(
     world: &mut World,
     caster: Entity,
     spell: &SpellInfo,
