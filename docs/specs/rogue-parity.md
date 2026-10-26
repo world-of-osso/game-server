@@ -21,6 +21,8 @@ Assassination259 combat and the shared Rogue attack-speed path follow pinned Sim
 - [x] Native Garrote establishes one owned457129 mark using selected457052 effect0 stacks. Transfer it off the previous target without refreshing the same target's existing mark. Finishers meeting effect1's native CP threshold consume one stack and deal457157 damage. Source: `sc_rogue.cpp4599,8732–8817`.
 - [x] Depletion with selected457058 grants457280 after1ms, including native Energy. A maximum-CP Envenom retains its native damage/critical bonus, reapplies the native mark count and consumes Darkest Night. Lower-CP casts consume neither marks nor Darkest Night while it is active. This lifecycle qualification is spec259-only. Source: `sc_rogue.cpp2435–2440,2569–2574,8732–8817`.
 
+- [x] Selected457054 dispatches native457193 once per landed white swing against its actual victim while that victim has the caster's own active457129 mark. Retargeting to an unmarked victim must not dispatch against another target's mark. Native payload data supplies damage. Source: `sc_rogue.cpp3411–3419,10282,10615–10618`.
+
 ### Shared auto-attack speed
 
 - [x] Owned381988 and315496 add live attack haste, scaled by381988 effect1, to SnD's native auto-attack-speed bonus. Preserve ordinary haste, unrelated attack-time modifiers, aura amounts, duration, extension, GCD/cast clocks and ranged timing. Assassination and Outlaw use the same path. Source: `sc_rogue.cpp9140–9148,11280–11282`.
@@ -47,6 +49,7 @@ Assassination259 combat and the shared Rogue attack-speed path follow pinned Sim
 
 Paths below are under `crates/server-simulation/src/dungeon_simulator/dps_parity/`:
 
+- `assassination_white_tests.rs` — actual landed weapon hits and marked/unmarked retargeting.
 - `assassination_target_tests.rs` — real poison recipient state/health damage and Kingsbane count exclusion.
 - `assassination_poison_mechanics_tests.rs` — earned ramp and Amplifying consumption.
 - `assassination_hero_tests.rs` — real stealth exit/spread, native children and mark cycles.
@@ -57,7 +60,7 @@ Paths below are under `crates/server-simulation/src/dungeon_simulator/dps_parity
 ## Known gaps (current cycle)
 
 - [ ] Qualify these mechanics and spec259 ST/3T output against the parent contract's ±10% band.
-- [ ] Quietus Celeris, mark-target death, Unshakeable Drive's delayed consumer, Mass Casualty and Hunt Them Down remain unqualified by this slice.
+- [ ] Quietus Celeris, mark-target death, Unshakeable Drive's delayed consumer, and Mass Casualty remain unqualified by this slice.
 
 ## Out of scope
 

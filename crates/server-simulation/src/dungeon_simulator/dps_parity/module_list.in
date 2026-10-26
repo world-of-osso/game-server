@@ -3,6 +3,9 @@
 // each add a module line do not conflict; a duplicate line fails to compile (E0428).
 mod active_enemy_tests;
 mod affliction_tests;
+mod arms_massacre_sudden_death_tests;
+mod arms_reap_tests;
+mod arms_sweeping_tests;
 mod arms_tests;
 mod assassination_energy_tests;
 mod assassination_hero_tests;
@@ -13,6 +16,8 @@ mod assassination_poison_tests;
 mod assassination_seal_fate_tests;
 #[cfg(test)]
 mod assassination_target_tests;
+#[cfg(test)]
+mod assassination_white_tests;
 mod aura342_tests;
 mod barbed_budget_tests;
 #[cfg(test)]
@@ -56,8 +61,11 @@ mod fire_literal_tests;
 mod fire_nova_native_tests;
 mod firestarter_tests;
 mod fixture_facing_tests;
+mod frost_mage_lance_cdr_tests;
 mod frost_mage_proc_tests;
 mod fixture_return_tests;
+mod frost_mage_shatter_followups_tests;
+mod frost_mage_supply_tests;
 mod frost_mage_tests;
 mod gear_profile_tests;
 mod haste_tests;
@@ -136,6 +144,7 @@ mod rogue_swift_slasher_tests;
 mod shadow_mastery_tests;
 mod shadow_slam_tests;
 mod shadow_tests;
+mod shadow_volley_tests;
 mod shaman263_proc_tests;
 mod shaman263_tier_tests;
 mod shared_consumables_tests;
