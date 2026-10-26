@@ -1,6 +1,6 @@
 //! Native Bombardments payload and explicitly installed SimC external attempts.
 //! The live SpellScriptsPlugin never installs the simulated cadence.
-use crate::combat;
+use super::combat;
 use bevy::prelude::*;
 use combat::auras::ActiveAuras;
 use std::collections::{BTreeMap, BTreeSet};

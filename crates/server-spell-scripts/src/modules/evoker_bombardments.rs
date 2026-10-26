@@ -71,7 +71,7 @@ fn disarm_driver(world: &mut World, target: Entity, mark: &AuraInstance, _reason
 fn check_damage(world: &World, aura: &AuraInstance, event: &AuraEvent) -> bool {
     // sc_evoker.cpp8770–8794: the configured simulated cadence replaces live callbacks.
     if world
-        .get::<crate::bombardments::SimulatedBombardments>(aura.caster)
+        .get::<super::super::bombardments::SimulatedBombardments>(aura.caster)
         .is_some()
         || event.spell_id == Some(DAMAGE)
         || event.damage <= 0.0
@@ -88,7 +88,7 @@ fn check_damage(world: &World, aura: &AuraInstance, event: &AuraEvent) -> bool {
 }
 
 fn bombard(world: &mut World, target: Entity, driver: &AuraInstance, _event: &AuraEvent) {
-    if !crate::bombardments::launch_damage(world, driver.caster, target) {
+    if !super::super::bombardments::launch_damage(world, driver.caster, target) {
         warn!(caster=?driver.caster, ?target, "Native Bombardments damage refused");
     }
 }
