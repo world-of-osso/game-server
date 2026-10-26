@@ -92,6 +92,13 @@ def parse_measure(text):
     for key in ("spec", "world_db", "output"):
         if key not in fields:
             raise SystemExit(f"--measure needs {key}=")
+    # Native tests and measurement read their inputs from the output directory; a missing input
+    # used to cost a whole cycle before failing.
+    missing = [p for p in (Path(fields["world_db"]), Path(fields["output"]) / f"{fields['spec']}.profile.json",
+                           Path(fields["output"]) / f"{fields['spec']}.selected-traits-active.json")
+               if not p.exists()]
+    if missing:
+        raise SystemExit(f"--measure inputs missing: {', '.join(map(str, missing))}")
     return fields
 
 
@@ -145,6 +152,10 @@ def check(log):
     """Compile check. Formatting is applied, not checked: an unformatted entry would
     otherwise cost a bisect, and formatter output is never a behavior change."""
     if cargo(log, "check", "--locked", "--workspace", "--all-targets") != 0:
+        return False
+    # The workspace check unifies test-support features into every crate; the deployed server
+    # binary builds without them (an ungated simc_apl_native call broke it on 2026-10-26).
+    if cargo(log, "check", "--locked", "-p", "server", "--bins") != 0:
         return False
     if cargo(log, "fmt") != 0:
         return False
@@ -617,6 +628,19 @@ def where(args):
     print("unknown id")
 
 
+def withdraw(args):
+    """Drop a queued entry (an owner's obsolete or superseded submission); running entries finish."""
+    queued = QUEUE / f"{args.id}.json"
+    try:
+        entry = json.loads(queued.read_text())
+        queued.unlink()
+    except FileNotFoundError:
+        raise SystemExit(f"{args.id} is not queued (running entries cannot be withdrawn; see `where`)")
+    entry["status"], entry["reason"] = "rejected", "withdrawn by owner"
+    write_results([entry])
+    print(f"withdrew {args.id}")
+
+
 def status(_args):
     """Print the train's throughput metrics as JSON (read-only)."""
     now = time.time()
@@ -682,6 +706,9 @@ def main():
     wh = sub.add_parser("where", help="where one entry is")
     wh.add_argument("id")
     wh.set_defaults(func=where)
+    wd = sub.add_parser("withdraw", help="drop one queued entry")
+    wd.add_argument("id")
+    wd.set_defaults(func=withdraw)
     sub.add_parser("status", help="throughput metrics for the periodic bottleneck check").set_defaults(func=status)
     args = parser.parse_args()
     args.func(args)

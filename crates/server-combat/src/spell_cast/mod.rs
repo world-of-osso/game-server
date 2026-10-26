@@ -1137,7 +1137,7 @@ fn selects_targets(
 ) -> bool {
     effects::is_handled(effect)
         || cosmetic::is_visual_only(spell)
-        || scripts::effect_handler(spell.id, effect.index).is_some()
+        || scripts::effect_handler(registry, spell.id, effect.index).is_some()
         || scripts::on_effect_hit(registry, spell.id, effect.index).is_some()
         || scripts::cast_effect(spell.id, effect.index).is_some()
         || scripts::on_cast_effect(spell.id, effect.index).is_some()
@@ -3128,10 +3128,15 @@ fn plan_targets(
 
 /// Generic TRIGGER_SPELL64 runs only in LAUNCH/LAUNCH_TARGET mode
 /// (SpellEffects.cpp594–598); authored scripts keep their own hit handling.
-fn launches(spell: &SpellInfo, effect: &crate::spell_info::SpellEffect) -> bool {
+fn launches(world: &World, spell: &SpellInfo, effect: &crate::spell_info::SpellEffect) -> bool {
     effect.effect == effects::EFFECT_TRIGGER_SPELL
         && scripts::cast_effect(spell.id, effect.index).is_none()
-        && scripts::effect_handler(spell.id, effect.index).is_none()
+        && scripts::effect_handler(
+            *world.resource::<script_registry::SpellScriptRegistry>(),
+            spell.id,
+            effect.index,
+        )
+        .is_none()
 }
 
 /// `Spell::HandleLaunchPhase` (Spell.cpp8493–8527): launch-mode effects resolve on
@@ -3146,7 +3151,7 @@ fn resolve_launch_effects(
 ) {
     for planned in plan {
         let effect = &spell.effects[planned.index];
-        if !launches(spell, effect)
+        if !launches(world, spell, effect)
             || !scripts::effect_enabled(world, caster, spell.id, effect.index)
         {
             continue;
@@ -3281,11 +3286,15 @@ fn resolve_effects(
             handler(world, &ctx, effect);
             continue;
         }
-        let handler = if launches(spell, effect) {
+        let handler = if launches(world, spell, effect) {
             None
         } else {
-            scripts::effect_handler(spell.id, effect.index)
-                .or_else(|| effects::handler(effect.effect))
+            scripts::effect_handler(
+                *world.resource::<script_registry::SpellScriptRegistry>(),
+                spell.id,
+                effect.index,
+            )
+            .or_else(|| effects::handler(effect.effect))
         };
         let hook = scripts::on_effect_hit(
             *world.resource::<script_registry::SpellScriptRegistry>(),
