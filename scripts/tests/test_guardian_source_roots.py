@@ -54,6 +54,8 @@ class GuardianSourceRootsTests(unittest.TestCase):
                 models = prepared.execute("SELECT * FROM tdb_creature_template_model WHERE CreatureID=? ORDER BY Idx", (entry,)).fetchall()
                 self.assertTrue(models)
                 self.assertEqual(prepared.execute("SELECT * FROM content_creature_template_model WHERE CreatureID=? ORDER BY Idx", (entry,)).fetchall(), models)
+            # Each real importer invocation owns a new connection and its temp tables.
+            with closing(sqlite3.connect(prepared_path)) as prepared, prepared:
                 self.assertNotIn(entry, guardian_templates.add_guardian_templates(prepared))
                 self.assertEqual(prepared.execute("SELECT COUNT(*) FROM content_creature").fetchone()[0], before_spawns)
 
