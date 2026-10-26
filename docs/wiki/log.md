@@ -14,6 +14,10 @@
 ## 2026-10-26 — Arcane charge cost and cast time
 
 [Arcane charge folds](systems/spell-casting.md#sixteenth-batch-low-count-rank-and-charge-consumers) retain native aura timing/cost modifiers and remove the duplicate batch16 consumers. Native RED8fee037a92 proves real ordinary Mana admission and cast-bar failures; sparse dummy16 controls now supply the same authored effects without changing assertions. Landing proof covers the real cast bar and existing Arcane/dummy16 controls; the tight Mana admission test is retained unchanged on a separate follow-up branch for source-backed rounding/order investigation. GREEN and paired measurement remain train-gated.
+## 2026-10-26 — Native Voidheart lifecycle
+
+[Voidheart](systems/spell-casting.md#native-voidheart-lifecycle--2026-10-26) earns the actual native aura at Rift birth, retains full native channel tail and grants selected8sTouch after Rift removal. Direct aura application avoids a false helpful cast. Native missing-buff RED7e64bee2cb→all26Shadow GREEN930909eb2f, landed7ca893368bc; numerical parity remains open.
+
 ## 2026-10-26 — Explicit non-demon guardian SP
 
 [Guardian spell power](systems/spell-casting.md#explicit-non-demon-guardian-spell-power--2026-10-26) now reads explicit SP policies without changing native identity, demon scaling or owner RAP. Native Yogg RED8bf69a675f reaches an owned type15 Thing but no positive Spike; actual Spike, guardian units and native BM/265/267 cases pass; landed with the [combined Shadow update](systems/spell-casting.md#earned-shadow-rift-extensions--2026-10-26) in513fe59afac.

@@ -1,5 +1,13 @@
 # Spell Casting
 
+## Native Voidheart lifecycle — 2026-10-26
+
+`shadow_voidheart.rs` applies native449887 directly when actual459314 Rift appears with selected449880. It does not execute a helpful spell: SimC `buff.trigger` must not add spell-hit equipment-proc side effects. The two native effects retain shadow5% and Torrent20%.
+
+The existing `shadow_rift` channel-removal callback restores each aura's own fresh duration (Rift8000ms, Voidheart8100ms) without resetting periodic phase. Rift removal clears Voidheart and selected1266856 grants its native8s Touch tail. These remain in the owned Rift callback; installing a second `AuraScript::on_remove` would replace the existing callback, not compose it. Sources: SimC76f8118 `sc_priest.cpp1683–1685/3540–3541/3571–3576` and `sc_priest_shadow.cpp1491–1501`.
+
+Actual Torrent/Rift missing-buff RED7e64bee2cb→native complete-lifecycle GREEN930909eb2f, all26Shadow pass; landed24d5ca1fd in7ca893368bcabcbd48f5924b00e7e997be93b178. Current landed ST153877.26 (83.97%) and3T289484.28 (85.15%) remain below90%; [contract](../../specs/dps-parity.md#shadow-priest-literal-parity-controller).
+
 ## Explicit non-demon guardian spell power — 2026-10-26
 
 `effects::power_stats` reads an explicit guardian SP policy after the existing demon and owner-RAP paths. Native Thing From Beyond189988 retains creature type15; its373277→373279 policy inherits full live owner SP without a demon marker or copied actor stats. Unlisted guardians keep their existing behavior.
@@ -10,7 +18,7 @@ Native Yogg RED8bf69a675f has the authentic owned actor but no positive Spike da
 
 `shadow_horizon.rs` tracks the actual Rift instance and paid extension count. Ordinary450983 completion extends existing owned459314/449887 by native449912 effect2, at most native effect1 uses per Rift, without restarting periodic phase. Native RED5411c58c11 reaches the first real cast with deadline10.6 instead of11.6. The finite-window cap test earns real Insight and PI before Torrent, then completes four ordinary Blasts: the first three add1s and the fourth adds nothing.
 
-Horizon638b079972, Yogg4c915017a8 and Haunting2cac634596 landed together in513fe59afac5703d9ec46e6c95e033d801d00f96. All25Shadow and13guardian cases pass (one unrelated ignored); protected BM/265/267 cases also pass. Combined native ST148428.52 (81.00%) and3T279491.71 (82.21%) remain below the90% target. These are one-tree measurements, not separately attributed uplifts.
+Horizon638b079972, Yogg4c915017a8 and Haunting2cac634596 landed together in513fe59afac5703d9ec46e6c95e033d801d00f96. All25Shadow and13guardian cases pass (one unrelated ignored); protected BM/265/267 cases also pass. That landing's combined native ST148428.52 (81.00%) and3T279491.71 (82.21%) remain below the90% target. These are one-tree measurements, not separately attributed uplifts.
 
 ## Haunting Shadows impact extensions — 2026-10-26
 
