@@ -14,7 +14,7 @@
 - [Warlock periodic shard funding](systems/spell-casting.md#warlock-periodic-shard-funding--2026-10-25) — downstream Destruction-only funding, actual critical context and shared native pool/overflow; Affliction remains separate.
 - [Native target DoT duration](systems/simc-apl.md#native-target-dot-duration) — owned active state and native fresh duration, independent of refreshed lifetime.
 - [Subtlety Lingering Shadow](systems/spell-casting.md#subtlety-lingering-shadow--2026-10-25) — native Dance-expiry counter, periodic decay and per-recipient residual; native RED→GREEN, numerical parity open.
-- [Feral literal fixture](systems/simc-apl.md#feral-literal-fixture--2026-10-25) — native Cat/Prowl, periodic facts, Growth/Burst/Rampancy, single-payload Unseen and Convoke landed; both measured scenarios within±10%; Stalking margin fix remains native-gated.
+- [Feral literal fixture](systems/simc-apl.md#feral-literal-fixture--2026-10-25) — native Cat/Prowl, periodic facts, Growth/Burst/Rampancy, single-payload Unseen and Convoke landed; Stalking's native two-use chain landed; both measured scenarios within±10% with margin, remaining mechanical gaps listed separately; Feral paused.
 - [Downstream spell scripts](systems/spell-script-crate.md) — combat-owned registry, ordered downstream policy slices and first five leaf modules; remaining implementations stay in combat.
 - [Frost Mage DPS parity](investigations/frost-mage-dps-parity.md) — native Freezing/Shatter, Splinter copies, qualified proc clocks, measured gaps and pending Overflowing Energy feedback.
 - [Elemental literal fixture](systems/simc-apl.md#elemental-fixture-262) — exact profile rows, native Maelstrom/spell admission and named-action target counts; numerical parity remains separate.
