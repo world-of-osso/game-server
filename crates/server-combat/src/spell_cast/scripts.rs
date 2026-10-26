@@ -60,7 +60,7 @@ pub(crate) use script_registry::melee_residual as after_melee_residual;
 pub(super) use script_registry::spell_residual as after_spell_residual;
 mod chrono_flame;
 pub(in crate::spell_cast) mod elemental_ancestors;
-pub use elemental_ancestors::owner as ancestor_owner;
+pub use elemental_ancestors::{owner as ancestor_owner, summon as summon_ancestor};
 pub(super) use script_registry::after_modifier_consumption as apply_echo_policies;
 mod enhancement_doom;
 mod enhancement_elemental_weapons;
