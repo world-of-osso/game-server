@@ -2,10 +2,9 @@
 use bevy::prelude::*;
 
 use super::combat;
-use combat::group::GroupRegistry;
-use combat::persistence::ClientId;
 use combat::spell_cast::script_registry::SpellScriptHook;
 use combat::spell_info::SpellInfo;
+use combat::{ClientId, GroupRegistry};
 
 pub const HOOKS: &[SpellScriptHook] =
     &[SpellScriptHook::NamedHealingMultiplier(healing_multiplier)];
