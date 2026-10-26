@@ -107,9 +107,11 @@ class MeasurementTests(unittest.TestCase):
             stack.enter_context(patch.object(train, "parity_executable", return_value=str(executable)))
             stack.enter_context(patch.object(train, "tree_id", return_value="tree-abc"))
             order = []
+            seeds = []
 
             def fake_run(command, **kwargs):
                 target = command[command.index("--targets") + 1]
+                seeds.append(kwargs["env"].get("DPS_PARITY_SEEDS"))
                 order.append(f"start-{target}")
                 time.sleep(0.05)
                 order.append(f"end-{target}")
@@ -128,6 +130,7 @@ class MeasurementTests(unittest.TestCase):
                 time.sleep(0.01)
             self.assertTrue((root / "results/duplicate.json").exists())
             self.assertEqual(order, ["start-1", "end-1", "start-3", "end-3"])
+            self.assertEqual(seeds, ["70448,1,2,3,4,5,6,7,8,9"] * 2)
             self.assertEqual(json.loads((root / "results/duplicate.json").read_text())["measurements"],
                              ["NATIVE_DPS target 1", "NATIVE_DPS target 3"])
 
