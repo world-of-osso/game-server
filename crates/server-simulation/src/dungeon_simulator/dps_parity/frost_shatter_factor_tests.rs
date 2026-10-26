@@ -68,7 +68,7 @@ fn capture_hit(run: &mut Run, root: u32, focus: u32, label: &str) -> serde_json:
         run.targets[0],
         focus,
         label,
-        1,
+        32,
     ));
     let _seed = crate::random::seed_scope(64070448);
     literal_rotation::execution::execute(
