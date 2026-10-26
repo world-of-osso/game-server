@@ -326,6 +326,8 @@ pub struct AuraInstance {
     pub source: AuraSource,
     /// Item-level snapshot of the applied aura effects.
     pub cast_item_level: Option<u16>,
+    /// Selected action primary retained for periodic hit relationships; None stays unknown.
+    cast_primary_target: Option<Entity>,
     /// Learned trait identity/rank at application, for passive relearning.
     trait_info: Option<SpellTrait>,
     pub from_player: bool,
@@ -424,6 +426,7 @@ impl AuraInstance {
         self.refresh_stacks(&new);
         self.charges = new.charges;
         self.guardian_heal_pct = new.guardian_heal_pct;
+        self.cast_primary_target = new.cast_primary_target;
         for fresh in new.effects {
             match self
                 .effects
@@ -901,6 +904,7 @@ fn build_instance(
         caster,
         source: application.source,
         cast_item_level: spell.cast_item_level,
+        cast_primary_target: spell.cast_primary_target,
         trait_info: world
             .get::<TraitLoadout>(caster)
             .and_then(|traits| traits.spell_trait(spell.id)),

@@ -60,6 +60,26 @@ Ret damage, Empyrean Legacy, tier and echo policies own their rows and per-entit
 
 New dispatch stages use independent callback and lookup aliases, even when their current signatures match, so changing one stage cannot silently change another stage's callback contract.
 
+## Frost and empower releases
+
+Frost DK's earned Killing Machine/Rime/Obliteration state and Frost Mage's owned Freezing/Shatter plans live downstream. Frost DK's white-hit callback follows Ret's reset callback; launch consumption stays immediately after Elemental. Freezing's direct/periodic callbacks retain their original positions. Evoker empower release construction, Animosity progress and converted-tick bonus also live downstream; APL/fixture previews query the installed registry for the same native release metadata used by completion, without a second implementation.
+
+## Elemental launch state
+
+Master of the Elements damage rules, consumption and Elemental Blast's missing-buff selection live downstream. Pet-set capture still precedes the consuming modifier snapshot; completion consumes the captured actual aura instance before Frost/pet-set launch callbacks. Elemental Blast's pre-launch grant still follows combo tracking and precedes native judgment handling, while ordinary post-launch grants retain their original position. Native proc veto registration remains before late relationship registration.
+
+## Restoration healing scripts
+
+Clearcasting/Omen, Soul of the Forest and Swiftmend live downstream together. Omen's proc filter retains its native registration slot. Swiftmend consumes the original ordered owned HoT before granting the next-heal buff; Regrowth/Rejuvenation consume that buff only after the heal. Direct healing and periodic aura snapshots retain separate stages so the persistent bonus survives later ticks without rereading a consumed aura.
+
+## Guardian impacts and stacking summons
+
+Guardian impact target caps/child edges and successful-cast counter/summon tables live downstream. Guardian callbacks query the original innermost resolving spell ID rather than holding or copying combat's frame state. Native after-cast dispatch still selects one handler; summon counters, refunds, random choices and duplicate redirects retain their original traversal and RNG calls.
+
+## Fire proc state
+
+Hot Streak's producer table, Heating Up protection, admitted-proc consumption and Pyroclasm snapshots live downstream with Fire's Sphere/Fired Up/Cascade/Hyperthermia feedback. The same registered producer table classifies native in-flight actions and actual damage outcomes. Flamestrike still snapshots chance before consumption and rolls once after the cast. Fire feedback and Meteorites retain their separate actual-hit stages; native aura lifecycle registration remains after Ret Sentence.
+
 ## Tests
 
 The server's public native harness and simulation's harness alias install the plugin before the harness runs Startup. Simulation installs it on every new app, including apps that reuse cached aura catalogs. Combat's own unit-test build compiles the exact downstream module sources against its local test-crate types; it does not add a production dependency or duplicate policy data. Ordinary simulation builds do not compile those test-only inclusions.

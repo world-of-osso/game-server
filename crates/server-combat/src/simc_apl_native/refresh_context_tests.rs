@@ -78,7 +78,8 @@ fn resolve_fire_stage_one(
     {
         return Err("native Fire Breath stage1 metadata unavailable".into());
     }
-    Ok(crate::spell_cast::scripts::empower_evoker::build_fire_breath_release(world, caster, 1))
+    crate::spell_cast::script_registry::empower_release_preview(world, caster, FIRE_BREATH, 1)
+        .ok_or_else(|| "native Fire Breath release script unavailable".into())
 }
 
 fn release_native_fire_breath() -> Harness {
