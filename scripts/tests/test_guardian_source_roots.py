@@ -1,4 +1,5 @@
 """Native summon-effect template publication, with real DB2/TDB rows on a private copy."""
+from contextlib import closing
 import importlib.util
 import os
 from pathlib import Path
@@ -37,10 +38,10 @@ class GuardianSourceRootsTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(prefix="desperate-soul-import-") as directory:
             prepared_path = Path(directory) / "prepared.sqlite"
             source_path = Path(os.environ["DPS_PARITY_WORLD_DB"])
-            with sqlite3.connect(f"file:{source_path}?mode=ro", uri=True) as source:
-                with sqlite3.connect(prepared_path) as prepared:
+            with closing(sqlite3.connect(f"file:{source_path}?mode=ro", uri=True)) as source:
+                with closing(sqlite3.connect(prepared_path)) as prepared:
                     source.backup(prepared)
-            with sqlite3.connect(prepared_path) as prepared:
+            with closing(sqlite3.connect(prepared_path)) as prepared, prepared:
                 prepared.execute("DELETE FROM content_creature_template WHERE entry=?", (entry,))
                 prepared.execute("DELETE FROM content_creature_template_model WHERE CreatureID=?", (entry,))
                 before_spawns = prepared.execute("SELECT COUNT(*) FROM content_creature").fetchone()[0]
