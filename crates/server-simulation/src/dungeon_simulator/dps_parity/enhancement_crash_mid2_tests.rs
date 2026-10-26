@@ -12,6 +12,7 @@ const SHORT_CIRCUIT: u32 = 1299991;
 struct Probe {
     damage: f64,
     inputs: Value,
+    mastery: f64,
     retained_bonus: f64,
 }
 
@@ -157,15 +158,20 @@ fn cast_and_capture_crash(run: &mut Run) -> Value {
 
 fn observed_damage_inputs(hit: &Value) -> Value {
     let factors = &hit["factors"];
-    let mastery: Vec<_> = hit["factor_sources"]["source_product"]
+    json!({"roll": factors["native_input_amount"], "crit": factors["crit_bonus"],
+        "versatility": factors["versatility"], "target": factors["target_product"]})
+}
+
+fn observed_mastery(hit: &Value) -> f64 {
+    let sources: Vec<_> = hit["factor_sources"]["source_product"]
         .as_array()
         .unwrap()
         .iter()
         .filter(|source| source["source_spell_id"] == 77223 && source["native_effect_index"] == 0)
-        .map(|source| source["value"].clone())
         .collect();
-    json!({"roll": factors["native_input_amount"], "crit": factors["crit_bonus"],
-        "versatility": factors["versatility"], "mastery": mastery, "target": factors["target_product"]})
+    assert_eq!(sources.len(), 1, "one native Enhancement Mastery source");
+    sources[0]["value"].as_f64().unwrap()
+
 }
 
 fn cast_probe(voltaic_casts: usize) -> Probe {
@@ -179,6 +185,7 @@ fn cast_probe(voltaic_casts: usize) -> Probe {
     );
     let hit = cast_and_capture_crash(&mut run);
     let inputs = observed_damage_inputs(&hit);
+    let mastery = observed_mastery(&hit);
     let damage = hit["factors"]["actual_amount"].as_f64().unwrap();
     assert!(damage > 0.0);
     println!(
@@ -187,6 +194,7 @@ fn cast_probe(voltaic_casts: usize) -> Probe {
     Probe {
         damage,
         inputs,
+        mastery,
         retained_bonus,
     }
 }
@@ -198,9 +206,11 @@ fn enhancement_crash_mid2_real_proc_uses_average_retained_short_circuit_after_co
     let actual = cast_probe(1);
     assert_eq!(
         actual.inputs, baseline.inputs,
-        "native roll/crit/Mastery/Vers/recipient inputs must match"
+        "native roll/crit/Vers/recipient inputs must match"
     );
-    let expected = baseline.damage * (1.0 + actual.retained_bonus);
+    // Dynamic native mastery can differ after Voltaic; compare the captured factor, not RNG state.
+    let mastery_ratio = (1.0 + actual.mastery / 100.0) / (1.0 + baseline.mastery / 100.0);
+    let expected = baseline.damage * mastery_ratio * (1.0 + actual.retained_bonus);
     assert!(
         (actual.damage - expected).abs() <= 2.0,
         "real retained MID2 average{}: damage{}, expected{expected}; baseline{}",
