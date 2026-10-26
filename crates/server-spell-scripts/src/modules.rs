@@ -48,6 +48,7 @@ register_modules! {
     cast_grants: (120, "modules/cast_grants.rs"),
     cast_relationships: (370, "modules/cast_relationships.rs"),
     cast_resets: (90, "modules/cast_resets.rs"),
+    destruction_incinerate: (2671, "modules/destruction_incinerate.rs"),
     destruction_periodic: (2670, "modules/destruction_periodic.rs"),
     clearcasting: (1000, "modules/clearcasting.rs"),
     devastation: (10, "modules/devastation.rs"),
