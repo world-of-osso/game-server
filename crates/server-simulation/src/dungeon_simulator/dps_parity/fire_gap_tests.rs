@@ -629,7 +629,14 @@ fn fire_feedback_fireball_applies_owned_controlled_destruction() {
 fn fire_feedback_hot_streak_ignite_includes_native_inflame() {
     let contribution = |with_inflame: bool| {
         let _seed = crate::random::seed_scope(70_448);
-        let mut run = prepare_literal(63, 1).unwrap();
+        let (mut profile, traits) = read_reference(63).unwrap();
+        let identity = inputs::read_actor(&profile).unwrap();
+        // This class-effect control excludes independent item/oil/rune damage:
+        // those real native procs add their own unaffected Ignite to the bank.
+        profile.equipment.clear();
+        profile.consumables.clear();
+        profile.omnium_talents = None;
+        let mut run = prepare_literal_reference(profile, &traits, 1, identity).unwrap();
         let actor = run.actor;
         let target = run.targets[0];
         if !with_inflame {
