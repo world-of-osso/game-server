@@ -126,6 +126,32 @@ fn dps_parity_ret_empyrean_background_storm_can_generate_divine_purpose() {
 }
 
 #[test]
+#[ignore = "unrelated native Judgment must not spend Second Sunrise's ICD"]
+fn dps_parity_ret_sunrise_unrelated_judgment_preserves_icd() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = fixture(true);
+    let sunrise_timer = |run: &Run| {
+        let auras = run
+            .app
+            .world()
+            .get::<crate::auras::ActiveAuras>(run.actor)
+            .unwrap();
+        let aura = auras.iter().find(|aura| aura.spell_id == 431474).unwrap();
+        (aura.proc.last_success_at, aura.proc.next_ready_at)
+    };
+    let before = sunrise_timer(&run);
+    let target = run.targets[0];
+    cast_ready(&mut run, 20271, target);
+    for _ in 0..30 {
+        run.app.update();
+    }
+    assert!(damage(&run, 20271) > 0, "actual Judgment must land");
+    // SimC76f8118 Ret612–619/sc_paladin.cpp1774–1781: only Storm
+    // and Hammer producers roll this ICD, never Judgment or white swings.
+    assert_eq!(sunrise_timer(&run), before);
+}
+
+#[test]
 #[ignore = "native Legacy Storms must exercise the selected Second Sunrise chance"]
 fn dps_parity_ret_empyrean_background_storm_can_echo_second_sunrise() {
     let _seed = crate::random::seed_scope(70448);
