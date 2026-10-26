@@ -1,5 +1,9 @@
 - 2026-10-26: Recovered [Overfiend lifecycle](systems/spell-casting.md#native-overfiend-lifecycle--2026-10-26), replacing unreachable summon wrapper with the actual-actor callback; qualification pending.
 - 2026-10-26: Absolute landed8f4e67fed6; identified nonstacking Corruption0 passed to positive-counter API and replaced that caller with duration-only permanence. Native GREEN pending.
+## 2026-10-26 — Proc-mask-qualified charged modifiers
+
+[Modifier charge consumption](systems/spell-casting.md#native-proc-mask-qualified-modifier-charges-2026-10-26) now qualifies consumers against explicit native proc masks. Arcane's real consecutive paid-cast regression is paired with its tests-only RED commit in one train cycle; native qualification and seven-spec same-master comparisons remain pending. The generic rule shares the existing family matcher and changes no native values.
+
 ## 2026-10-26 — Independent Destruction Echo
 
 [Echo](systems/spell-casting.md#destruction-echo--2026-10-26) producer/payload native REDs become two GREEN cases in309398a397. Its value assertion used raw per-rank4, but selected rank2 and pinned reference both require8%. Corrected only the expectation; native values, coefficients and allocations unchanged. Selected-rank gate/landing pending; above8-target reduction unqualified.
@@ -22,6 +26,7 @@
 
 [Voidheart](systems/spell-casting.md#native-voidheart-lifecycle--2026-10-26) earns the actual native aura at Rift birth, retains full native channel tail and grants selected8sTouch after Rift removal. Direct aura application avoids a false helpful cast. Native missing-buff RED7e64bee2cb→all26Shadow GREEN930909eb2f, landed7ca893368bc; numerical parity remains open.
 
+[Arcane charge folds](systems/spell-casting.md#sixteenth-batch-low-count-rank-and-charge-consumers) landed513fe59afac5703d9ec46e6c95e033d801d00f96 via19928d01a5: native cast-bar RED8fee037a92→28Arcane/15dummy16 GREEN, without native value changes. Paired62 ST114388.8289(64.3787%)/3T209463.15(63.3492%) remain below parity; integrated gains over the last baseline are9815.71/47045.34DPS. The original tight Mana test had a separate zero-charge truncation error, proven by1eca672f29. Its corrected raw-operand oracle rejects expected−1Mana and admits exactly expected; corrected-budget RED15650fb8e0-red→GREEN15650fb8e0 landed7ca893368bcabcbd48f5924b00e7e997be93b178; the native2/4-charge bounds pass without spare Mana or runtime changes.
 ## 2026-10-26 — Explicit non-demon guardian SP
 
 [Guardian spell power](systems/spell-casting.md#explicit-non-demon-guardian-spell-power--2026-10-26) now reads explicit SP policies without changing native identity, demon scaling or owner RAP. Native Yogg RED8bf69a675f reaches an owned type15 Thing but no positive Spike; actual Spike, guardian units and native BM/265/267 cases pass; landed with the [combined Shadow update](systems/spell-casting.md#earned-shadow-rift-extensions--2026-10-26) in513fe59afac.
@@ -35,7 +40,7 @@
 
 ## 2026-10-26 — Merged Mage feedback grants
 
-[Feedback grants](systems/spell-casting.md#merged-feedback-grants-are-not-casts--2026-10-26) distinguish native aura application from a full triggered spell. Paired native ST trace2ef3293ef0 reproduces the cast-supply loss; RED579171b891 identifies an unrelated+78haste from the old queued grant. The generic queue now applies native auras directly; three-Mage GREEN/measurements remain pending.
+[Feedback grants](systems/spell-casting.md#merged-feedback-grants-are-not-casts--2026-10-26) distinguish native aura application from a full triggered spell. Paired native ST trace2ef3293ef0 reproduces the cast-supply loss; RED579171b891 identifies an unrelated+78haste from the old queued grant. The generic queue now applies native auras directly, landedb01577f7d via89ba0d3f38 with27Arcane/44Fire/27Frost GREEN and lead-approved pre-existing Fire exclusions. Paired62/63/64 measurements were completed and delivered to the lead; only merged grants changed.
 ## 2026-10-26 — Elemental Weapons dynamic amount
 
 [Elemental Weapons](systems/auras.md#elemental-weapons-dynamic-amount--2026-10-26) derives native408390 amounts from selected384355 and real imbued hands. Matching-input Bolt RED4db1ecbdad→GREEN5002a0bca2 gives31098/32653/34208 for0/1/2 hands;28 native cases and3 decks pass. Landed5a8c96626dc9a77bda80d51ca3fefc4627f80969. Integrated ST158135.70/3T328919.95 (81.896%/82.178%) remain below parity; no isolated uplift claim. Native masks, coefficients and proc chances are unchanged.
