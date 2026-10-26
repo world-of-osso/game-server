@@ -134,7 +134,17 @@ fn diag_nzoth_ordinary_funded_madness_counts_its_execution_target() {
         cast_when_ready(&mut run, 1227280);
         finish_cast(&mut run);
     }
+    for _ in 0..80 {
+        if counter(&run) == 36 {
+            break;
+        }
+        run.app.update();
+    }
     let before = counter(&run);
+    assert_eq!(
+        before, 36,
+        "all three real Slam children must execute before sampling"
+    );
     cast_when_ready(&mut run, 335467);
     finish_cast(&mut run);
     assert_eq!(
