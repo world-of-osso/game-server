@@ -1550,13 +1550,25 @@ fn fire_ignite_fire_blast_overwrites_existing_weaker_tick_and_phase() {
     let primary = run.targets[0];
     let secondary = run.targets[1];
     preparation::warm_up_reference(&mut run).unwrap();
-    run.app.world_mut().get_mut::<crate::stats::CharacterStats>(actor)
-        .unwrap().crit_pct = 0.0;
+    run.app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(actor)
+        .unwrap()
+        .crit_pct = 0.0;
     let tick = |run: &Run, target: Entity| {
-        let aura = run.app.world().get::<ActiveAuras>(target).unwrap().iter()
+        let aura = run
+            .app
+            .world()
+            .get::<ActiveAuras>(target)
+            .unwrap()
+            .iter()
             .find(|aura| aura.spell_id == 12654 && aura.caster == actor)
             .expect("ordinary native damage earned owned Ignite");
-        aura.effects.iter().find(|effect| effect.index == 0).unwrap().amount
+        aura.effects
+            .iter()
+            .find(|effect| effect.index == 0)
+            .unwrap()
+            .amount
     };
     start_native(&mut run, 108853, primary);
     for _ in 0..12 {
@@ -1566,20 +1578,30 @@ fn fire_ignite_fire_blast_overwrites_existing_weaker_tick_and_phase() {
     preparation::finish_pending_setup(&mut run).unwrap();
     let source_tick = tick(&run, primary);
     let old_tick = tick(&run, secondary);
-    assert!(old_tick < source_tick * 0.25,
-        "actual Scorch earned a sufficiently weaker destination bank: {old_tick} vs{source_tick}");
+    assert!(
+        old_tick < source_tick * 0.25,
+        "actual Scorch earned a sufficiently weaker destination bank: {old_tick} vs{source_tick}"
+    );
     let source_ticks = crate::auras::paid_periodic_ticks(run.app.world(), actor, primary, 12654);
     let old_ticks = crate::auras::paid_periodic_ticks(run.app.world(), actor, secondary, 12654);
-    assert!(source_ticks > old_ticks, "actual native casts earned different tick phases");
+    assert!(
+        source_ticks > old_ticks,
+        "actual native casts earned different tick phases"
+    );
     start_native(&mut run, 108853, primary);
     run.app.update();
     let copied = tick(&run, secondary);
     // SimC76f8118 sc_mage.cpp2259–2279/dot.cpp286–332: replace
     // the weaker bank rather than add a deposit, and clone the source phase.
-    assert!((copied / source_tick - 1.0).abs() < 0.001,
-        "existing Ignite copies the old source tick, not its own bank: {old_tick} -> {copied}, expected{source_tick}");
-    assert_eq!(crate::auras::paid_periodic_ticks(run.app.world(), actor, secondary, 12654),
-        source_ticks, "existing destination inherits source tick progress");
+    assert!(
+        (copied / source_tick - 1.0).abs() < 0.001,
+        "existing Ignite copies the old source tick, not its own bank: {old_tick} -> {copied}, expected{source_tick}"
+    );
+    assert_eq!(
+        crate::auras::paid_periodic_ticks(run.app.world(), actor, secondary, 12654),
+        source_ticks,
+        "existing destination inherits source tick progress"
+    );
 }
 
 #[test]
@@ -1595,34 +1617,61 @@ fn fire_ignite_flamestrike_selected_ignition_amplifies_native_contribution() {
         let mut run = prepare_literal_reference(profile, &traits, 1, identity).unwrap();
         let actor = run.actor;
         let target = run.targets[0];
-        let percent = crate::spell_cast::scripts::script_effect_value(
-            run.app.world(), actor, 1254756, 1);
+        let percent =
+            crate::spell_cast::scripts::script_effect_value(run.app.world(), actor, 1254756, 1);
         assert!(percent > 0.0, "native selected Ignition percentage");
         if !selected {
-            let known = run.app.world().get::<crate::class_progression::KnownSpells>(actor)
-                .unwrap().iter().filter(|id| *id != 1254756).collect();
-            run.app.world_mut().entity_mut(actor)
+            let known = run
+                .app
+                .world()
+                .get::<crate::class_progression::KnownSpells>(actor)
+                .unwrap()
+                .iter()
+                .filter(|id| *id != 1254756)
+                .collect();
+            run.app
+                .world_mut()
+                .entity_mut(actor)
                 .insert(crate::class_progression::KnownSpells::fixture(known));
-            crate::auras::remove_auras(run.app.world_mut(), actor,
-                crate::auras::RemoveReason::Consumed, |aura| aura.spell_id == 1254756);
+            crate::auras::remove_auras(
+                run.app.world_mut(),
+                actor,
+                crate::auras::RemoveReason::Consumed,
+                |aura| aura.spell_id == 1254756,
+            );
         }
         preparation::warm_up_reference(&mut run).unwrap();
-        run.app.world_mut().get_mut::<crate::stats::CharacterStats>(actor)
-            .unwrap().crit_pct = 0.0;
+        run.app
+            .world_mut()
+            .get_mut::<crate::stats::CharacterStats>(actor)
+            .unwrap()
+            .crit_pct = 0.0;
         start_native(&mut run, 2120, target);
         preparation::finish_pending_setup(&mut run).unwrap();
         let world = run.app.world();
-        let hit = world.resource::<ObservedCombatEvents>().0.iter()
-            .find(|event| event.source == Some(actor.to_bits())
-                && event.target == Some(target.to_bits())
-                && event.spell_id == Some(2120)
-                && event.kind == CombatLogKind::Damage)
+        let hit = world
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .find(|event| {
+                event.source == Some(actor.to_bits())
+                    && event.target == Some(target.to_bits())
+                    && event.spell_id == Some(2120)
+                    && event.kind == CombatLogKind::Damage
+            })
             .expect("ordinary native Flamestrike actually hit");
         assert!(!hit.crit);
-        let tick = world.get::<ActiveAuras>(target).unwrap().iter()
+        let tick = world
+            .get::<ActiveAuras>(target)
+            .unwrap()
+            .iter()
             .find(|aura| aura.spell_id == 12654 && aura.caster == actor)
-            .expect("actual Flamestrike earned native Ignite").effects.iter()
-            .find(|effect| effect.index == 0).unwrap().amount;
+            .expect("actual Flamestrike earned native Ignite")
+            .effects
+            .iter()
+            .find(|effect| effect.index == 0)
+            .unwrap()
+            .amount;
         (tick / hit.amount as f32, percent)
     };
     let baseline = contribution(false).0;
@@ -1630,8 +1679,10 @@ fn fire_ignite_flamestrike_selected_ignition_amplifies_native_contribution() {
     // SimC76f8118 sc_mage.cpp3896–3898: Ignition modifies the
     // Flamestrike Ignite contribution, not the direct hit or every Ignite.
     let expected = baseline * (1.0 + percent / 100.0);
-    assert!((amplified / expected - 1.0).abs() < 0.001,
-        "selected Ignition increases the native Flamestrike Ignite ratio: {baseline} -> {amplified}, expected{expected}");
+    assert!(
+        (amplified / expected - 1.0).abs() < 0.001,
+        "selected Ignition increases the native Flamestrike Ignite ratio: {baseline} -> {amplified}, expected{expected}"
+    );
 }
 
 #[test]
