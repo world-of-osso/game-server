@@ -265,6 +265,71 @@ fn devastation_scintillation_native_channel_ticks_launch_damage_children() {
     }
 }
 
+#[test]
+#[ignore = "requires private native DB and exact Devastation profile"]
+fn devastation_shattering_stars_actual_surge_hits_only_its_selected_primary() {
+    for selected in [false, true] {
+        let mut run = prepare_literal(1467, 3).unwrap();
+        engage(&mut run);
+        let primary = run.targets[1];
+        assert!(crate::auras::has_aura(run.app.world(), run.actor, 1265802));
+        assert!(
+            !crate::auras::has_aura(run.app.world(), run.actor, 1265826),
+            "this exact native profile has no Star Salvo secondary-target policy"
+        );
+        if !selected {
+            crate::auras::remove_auras(
+                run.app.world_mut(),
+                run.actor,
+                crate::auras::RemoveReason::Unlearned,
+                |aura| aura.spell_id == 1265802,
+            );
+        }
+        crate::spell_cast::creature_cast_empowered_with_targets(
+            run.app.world_mut(),
+            run.actor,
+            359073,
+            crate::spell_cast::CastTargets {
+                unit: primary,
+                primary: Some(primary),
+                destination: None,
+            },
+            2,
+        )
+        .unwrap();
+        preparation::finish_pending_setup(&mut run).unwrap();
+        for _ in 0..40 {
+            run.app.update();
+        }
+        let events = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0;
+        assert!(
+            events.iter().any(|event| event.spell_id == Some(359077)
+                && event.kind == shared::protocol::CombatLogKind::Damage
+                && event.amount > 0),
+            "the real native rank-two Surge release must precede its star"
+        );
+        // SimC76f8118 sc_evoker.cpp5550–5573: without Salvo, only chain_target0.
+        for target in &run.targets {
+            let star = events.iter().any(|event| {
+                event.source == Some(run.actor.to_bits())
+                    && event.target == Some(target.to_bits())
+                    && event.spell_id == Some(1265804)
+                    && event.kind == shared::protocol::CombatLogKind::Damage
+                    && event.amount > 0
+            });
+            assert_eq!(
+                star,
+                selected && *target == primary,
+                "native Shattering Stars selected={selected} recipient{target:?} primary{primary:?}"
+            );
+        }
+    }
+}
+
 fn cast_reference_empowers(run: &mut Run, primary: Entity) {
     for (spell, unit) in [(357208, run.actor), (359073, primary)] {
         crate::spell_cast::creature_cast_empowered_with_targets(

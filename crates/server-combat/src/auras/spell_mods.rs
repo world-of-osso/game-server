@@ -156,6 +156,8 @@ fn matching<'a>(
 // Tidal Waves/Backdraft/Surge of Light stacks are also next-spell uses.
 // SimC76f8118 sc_evoker.cpp6485/6595: Mass Disintegrate stacks are uses,
 // not a multiplier on its native additional-target amount.
+// SimC76f8118 sc_mage.cpp1852–1853/3242: Clearcasting stacks are
+// independent uses too: one Missiles spends one, without multiplying its -100% cost.
 // Native1265871 suppresses points stacking (effect attribute0x40); tier uses
 // do not multiply its ordinary damage modifier (sc_evoker.cpp10850–10856).
 // One spell ID per line in the union-merged list file, so concurrent additions never conflict.
@@ -200,7 +202,10 @@ pub(crate) fn snapshot_charged_modifiers(
                 aura_spell_id: aura.spell_id,
                 op: effect.misc_values[0],
                 percent: is_pct(effect.aura_type),
-                amount: stacked_amount(aura, effect),
+                amount: crate::spell_cast::scripts::arcane_charge_modifier_amount(
+                    world, caster, aura, effect,
+                )
+                .unwrap_or_else(|| stacked_amount(aura, effect)),
             })
         })
         .collect()

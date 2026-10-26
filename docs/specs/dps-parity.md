@@ -9,7 +9,7 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 ### Literal spec drivers
 
-- Register each literal spec once, in spec-ID order. Adding a spec changes only its own rotation module and its registration line, not shared fields, initialization, dispatch, reporting or preparation branches.
+- Register each literal spec once, in spec-ID order. Adding a spec changes only its own rotation module and its registration line, not shared fields, initialization, dispatch, reporting or preparation branches. See [Arcane Mage parity](arcane-mage-parity.md) for spec62's execution contracts.
 - Registered literal drivers apply to both Player and Follower identities unless the spec explicitly opts out. Preserve native actor identity, ordered precombat and existing report labels and keys, including null inactive reports.
 
 ### Feral literal fixture
@@ -78,6 +78,8 @@ Selected native155580 applies its owned155627 override aura, so ordinary Moonfir
 ### Beast Mastery literal fixture
 
 - Native Aura493 triggers its authored companion spell after Call Pet; native Effect260 creates a second stable body without changing the current-pet record. The companion has white swings and owned-pet commands, no autonomous Focus spender, and ends with its main pet. NPC pet orders reach all active owned pets.
+
+- Selected Howl starts its native cooldown at combat entry and earns Wyvern, Boar and Bear readiness in order. Bestial Wrath with selected Stampede independently advances that cycle. Ordinary Kill Command consumes every earned ready beast: Wyvern and Bear require actual owned native summons; Wyvern Cry follows the real Wyvern. Consuming readiness starts the native cooldown only when absent. Incoming Stampede survives Bestial Wrath's own successful-cast event; only consuming Howl spends it. An armed Stampede starts only after a consumed Howl and retains the selected primary, native tick-zero/periodic clock and600/900/1200ms payload delays; native201594 damages the pack without a target cap (SimC76f8118 hunter3776–3841/4864–4900/6780–6781/8240–8270/8698–8699). Bear attacks and Wildspeaker remain separately unqualified.
 
 - Selected War Orders reduces already-running Kill Command cooldown/recharge after a successful Barbed Shot by native393933 effect2's time value. It does not start a cooldown or replace native charge recovery.
 
@@ -206,6 +208,8 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 - Guaranteed critical hits predict their actual Heating Up acquisition; an observed Heating Up conversion predicts Hot Streak. A critical hit with Hot Streak already active preserves and predicts it without creating Heating Up.
 
 ### Havoc literal rotation
+
+- Native Consuming Fire452487/456640 retains Immolation Aura258920's payload and spends only that ability's Demonsurge use. Its dummy override cannot consume Annihilation's use or omit native Immolation ticks/Fury; Fel Desolation452486 is not Death Sweep (SimC76f8118 sc_demon_hunter.cpp181–189,4784–4839).
 
 - Selected Chaotic Transformation388112 resets actual Eye Beam/Gaze and Blade Dance/Death Sweep recovery on ordinary Meta191427; selected Violent Transformation452409 restores Immolation charges and Sigil recovery. Completed native Eye/Gaze grants selected343311's actual343312 haste buff, never on interruption. Selected Cycle of Hatred258887 reduces each executed beam's recovery by its prior owned1214887 stacks × native effect0 milliseconds, then grants one native stack (SimC76f8118 sc_demon_hunter.cpp4002–4005,4033–4047,4987–4998). MID2 cross-cooldown reductions remain separate.
 
@@ -396,7 +400,11 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 - Native channel decision ticks use the same modified, hasted interval as the real periodic aura, not the raw DB2 period beside a hasted duration (SimC76f8118 `action.cpp4390–4420`).
 
+- Channel `interrupt_if`/`early_chain_if`, `cancel_if` and `line_cd` expressions read the same current per-driver APL variable state as ordinary row conditions. They must not route `variable.*` operands to native actor facts or create a spec-local variable copy.
+
 - [x] `early_chain_if` works without `chain=1`: after a paid native channel tick, a true expression and ready GCD may re-execute the same ready source row before its penultimate tick, but never ahead of a ready higher-priority action (SimC76f8118 `dot.cpp841–845`).
+
+- [x] Arcane62 executes its exact supplied profile action rows through shared literal control, including source-order precombat and native readiness predicates. Without an official follower profile, the fixture uses a real player; it must not run AssistedCombat concurrently, invent priorities, or change native coefficients/resources.
 
 ### Empyrean Legacy relationship
 
@@ -662,6 +670,16 @@ Rotation/decision implementation belongs to the lead/rotation agents. No system 
 - Bare `health.pct` and `is_boss` retain the actor context inside target scoring. Bare `duration` reads the proposed action's captured native periodic state (zero when absent), not its cooldown or hypothetical fresh duration.
 - Spec252 runs the exact exported76f8118 Unholy action rows through shared Program/Driver/Prepared/Equipment with native player identity. Bind rune/Runic Power, disease and pet state to native70448 values; ordered precombat executes native Raise Dead. Numerical parity is separately measurement-gated.
 
+
+### Affliction native Malefic Grasp extra ticks
+
+- Every landed native1261153 tick copies each ticking owned Agony, UA, Corruption or Wither base tick into its native child1261166/1261176/1261158/1279686 at the native channel effect1 fraction. Agony/UA retain actual stacks; Wither counters do not scale its copy. Children retain independent native direct modifiers and critical rolls, not the parent's resolved damage (SimC76f8118 `sc_warlock_actions.cpp136–158/2210–2214`).
+- The pinned `bugs=1` Agony child compensation is1.95, as in `sc_warlock_actions.cpp2036–2044`; it is not a replacement coefficient. Its landed impact advances the owned Agony counter without funding shards (`2052–2060`). Foreign DoTs cannot produce children.
+
+### Affliction native Fatal Echoes
+
+- Actual native1259790 asynchronous application expirations roll selected1260229's native chance through one per-caster PRD stream. Each expired stack rolls once, including the final stack; a successful proc queues a free, fully effective native1259790 reapplication after final-aura cleanup (SimC76f8118 `sc_warlock_actions.cpp1587–1606/5757–5780`, `sc_warlock_init.cpp1248–1253`).
+- The echo retains actual target identity, cannot consume Shard Instability, and earns selected native1261125 Cascading Calamity even when no previous UA remains. Native spell coefficients, stack deadlines and costs for ordinary casts are unchanged.
 
 ### Affliction native Nightfall
 
