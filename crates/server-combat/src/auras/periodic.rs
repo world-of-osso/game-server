@@ -257,35 +257,43 @@ fn run_ticks(world: &mut World, unit: Entity, ticks: Vec<Tick>) {
         spell.cast_periodic_ordinal = Some(tick.ordinal);
         spell.cast_primary_target = tick.cast_primary_target;
         run_tick(world, unit, &spell, &tick);
-        schedule_next_tick(world, unit, &spell, &tick);
+        schedule_next_tick(world, unit, &mut spell, &tick);
         end_aura_at_full_health(world, unit, &tick);
     }
 }
 
-fn read_periodic_timing(world: &World, unit: Entity, tick: &Tick) -> Option<(Entity, u32, f32)> {
+fn read_periodic_effect<'a>(
+    world: &'a World,
+    unit: Entity,
+    tick: &Tick,
+) -> Option<(Entity, &'a super::AuraEffectState)> {
     let aura = world.get::<ActiveAuras>(unit)?.get(tick.instance_id)?;
     let effect = aura
         .effects
         .iter()
         .find(|effect| effect.index == tick.effect_index)?;
-    Some((
-        aura.caster,
-        effect.periodic_base_ms,
-        effect.periodic_haste_multiplier,
-    ))
+    Some((aura.caster, effect))
 }
 
-fn schedule_next_tick(world: &mut World, unit: Entity, spell: &SpellInfo, tick: &Tick) {
+fn schedule_next_tick(world: &mut World, unit: Entity, spell: &mut SpellInfo, tick: &Tick) {
     if tick.fraction < 1.0 {
         return; // SimC dot.cpp1154–1170: a final partial tick has no next schedule.
     }
     // A tick can remove its own aura; SimC dot.cpp1128–1131 stops in that case.
-    let Some((caster, base, haste)) = read_periodic_timing(world, unit, tick) else {
+    let Some((caster, effect)) = read_periodic_effect(world, unit, tick) else {
         return;
     };
-    let (_, period) = super::periodic_timing_with_haste(world, caster, spell, base, haste);
-    #[cfg(any(test, feature = "test-support"))]
-    let diagnostic_now = super::aura_now(world);
+    // SimC76f8118 sc_warlock_actions.cpp2145–2163/2294–2311 retains
+    // the admitted channel's Period modifier after its proc use is consumed.
+    // Live uncharged Period modifiers still update the next interval normally.
+    spell.cast_charge_mods = effect.periodic_cast_charge_mods.clone();
+    let (_, period) = super::periodic_timing_with_haste(
+        world,
+        caster,
+        spell,
+        effect.periodic_base_ms,
+        effect.periodic_haste_multiplier,
+    );
     let mut auras = world
         .get_mut::<ActiveAuras>(unit)
         .expect("retained periodic unit");
@@ -293,30 +301,13 @@ fn schedule_next_tick(world: &mut World, unit: Entity, spell: &SpellInfo, tick: 
         .bypass_change_detection()
         .get_mut(tick.instance_id)
         .expect("retained periodic aura");
-    #[cfg(any(test, feature = "test-support"))]
-    let diagnostic_expiry = aura.expires_at;
     let effect = aura
         .effects
         .iter_mut()
         .find(|effect| effect.index == tick.effect_index)
         .expect("retained periodic effect");
-    #[cfg(any(test, feature = "test-support"))]
-    let diagnostic_before = (effect.period_ms, effect.next_tick_at());
     // Keep paid ordinals/async deadlines. Only the next interval and its origin change.
     effect.schedule_after_tick(tick.scheduled_at, period);
-    #[cfg(any(test, feature = "test-support"))]
-    if diagnostic_before.0 != period {
-        eprintln!(
-            "periodic_rebase spell={} effect={} paid={} now={diagnostic_now:.17} scheduled={:.17} old_period={} new_period={period} old_due={:.17} new_due={:.17} expiry={diagnostic_expiry:.17?}",
-            tick.spell_id,
-            tick.effect_index,
-            effect.periodic_ticks,
-            tick.scheduled_at,
-            diagnostic_before.0,
-            diagnostic_before.1,
-            effect.next_tick_at()
-        );
-    }
 }
 
 fn end_aura_at_full_health(world: &mut World, unit: Entity, tick: &Tick) -> bool {
