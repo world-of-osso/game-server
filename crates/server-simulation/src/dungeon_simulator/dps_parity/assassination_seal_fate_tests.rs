@@ -73,6 +73,7 @@ fn assassination_seal_fate_critical_builders_earn_native_combo_points() {
             event.source == Some(run.actor.to_bits())
                 && event.kind == CombatLogKind::Damage
                 && event.crit
+                && !event.periodic
                 && event.spell_id.is_some_and(|spell| {
                     [51723, 5374, 27576, 385627, 1265795, 5938, 8676].contains(&spell)
                 })
