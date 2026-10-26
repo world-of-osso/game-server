@@ -165,6 +165,7 @@ mod named_action_cooldown_tests;
 mod outlaw_cleave_tests;
 mod outlaw_flurry_activation_tests;
 mod outlaw_opportunity_tests;
+mod outlaw_pistol_tests;
 mod outlaw_resource_tests;
 mod outlaw_tests;
 mod owner_cooldown_tests;
