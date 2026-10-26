@@ -12,7 +12,7 @@ const BOLT: u32 = 188196;
 const LAVA: u32 = 51505;
 const BLAST: u32 = 117014;
 
-fn overload_damage(multiplier: f32) -> u64 {
+fn overload_damage(multiplier: f32, mote: bool) -> (u64, f32) {
     let _seed = crate::random::seed_scope(70448);
     let mut run = fixture();
     crate::spell_cast::creature_cast(
@@ -24,6 +24,24 @@ fn overload_damage(multiplier: f32) -> u64 {
     )
     .unwrap();
     settle(&mut run);
+    cast(&mut run, LAVA);
+    let mote_aura = own_aura(&run, 260734).expect("native Lava earns MOTE");
+    let percent = mote_aura
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap()
+        .amount;
+    let aura = mote_aura.instance_id;
+    if !mote {
+        crate::auras::remove_instance(
+            run.app.world_mut(),
+            run.actor,
+            aura,
+            crate::auras::RemoveReason::Consumed,
+        );
+    }
+    let _cast_seed = crate::random::seed_scope(70448);
     run.app
         .world_mut()
         .resource_mut::<ObservedCombatEvents>()
@@ -45,7 +63,8 @@ fn overload_damage(multiplier: f32) -> u64 {
         1
     ));
     settle(&mut run);
-    run.app
+    let damage = run
+        .app
         .world()
         .resource::<ObservedCombatEvents>()
         .0
@@ -56,14 +75,15 @@ fn overload_damage(multiplier: f32) -> u64 {
                 && event.kind == CombatLogKind::Damage
         })
         .map(|event| event.amount as u64)
-        .sum()
+        .sum();
+    (damage, percent)
 }
 
 #[test]
 #[ignore = "requires private262 native DB/profile"]
 fn elemental_fusion_overload_retains_parent_multiplier() {
-    let ordinary = overload_damage(1.0);
-    let scaled = overload_damage(0.4);
+    let (ordinary, _) = overload_damage(1.0, false);
+    let (scaled, _) = overload_damage(0.4, false);
     assert!(
         ordinary > 0 && scaled > 0,
         "native Ascendance produces overload damage"
@@ -72,6 +92,19 @@ fn elemental_fusion_overload_retains_parent_multiplier() {
     assert!(
         (ratio - 0.4).abs() < 0.02,
         "native overload multiplier: {scaled}/{ordinary} = {ratio}"
+    );
+}
+
+#[test]
+#[ignore = "requires private262 native DB/profile"]
+fn elemental_fusion_overload_applies_mote_only_once() {
+    let (ordinary, _) = overload_damage(0.4, false);
+    let (empowered, percent) = overload_damage(0.4, true);
+    let ratio = empowered as f64 / ordinary as f64;
+    let expected = 1.0 + f64::from(percent) / 100.0;
+    assert!(
+        ordinary > 0 && (ratio - expected).abs() < 0.03,
+        "MOTE applies once: {empowered}/{ordinary} = {ratio}; expected {expected}"
     );
 }
 
