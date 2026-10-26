@@ -1,5 +1,16 @@
 # Auras
 
+## Tempest-owned Enhancement buffs — 2026-10-26
+
+Tempest's existing execution seam grants selected native Storm Swell455089 and Arc Discharge470532 for263. The generic455088 every-spell proc is suppressed only for Enhancement. Elemental262 retains its existing policy.
+
+Arc consumes one use after the final actual Chain/Ride chain impact and uses that recipient as the extra chain's primary325–425ms later. Its native400ms proc timer allows the pinned late self-trigger. Caster-owned pending events load native payloads and snapshot current modifiers at dispatch: ordinary Arc benefits from MW without spending, Ride Arc excludes MW. Native470532s1/s2 attributes64 suppress magnitude stacking; native cap/duration/masks remain unchanged.
+
+Native11ab1f1e5e records both REDs: ordinary Bolt grants false Storm Swell, and an actually earned/cast Tempest never grants Arc. Finald939eadb13 passes all30 native Enhancement and3 deck tests, including3→3 Arc hits from the final recipient after0.4s. Landed26ee488ac36ddc7b55d88f110035a1d0d60e318f contains runtime2094ed7dd and fixture7344e8b29. Integrated300s ST158810.65/3T335321.69 are82.246%/83.778% of pinned references; parity remains open, with no isolated-uplift claim.
+
+Diagnostic4b0ca7de9a proves the control's earlier Melee hit left3 Windfury events with only1 Flametongue callback processed; the next Magic window then received3 deferred Flametongue callbacks. [The aura event pump](../../../crates/server-combat/src/auras/procs.rs) takes one batch per tick, not a recursive drain. The Melee-positive and Magic-negative scenarios now use independent fresh native runs, preserving all assertions, chances and proc behavior. The corrected control passes in finald939eadb13.
+
+Sources: pinned SimC76f8118 `sc_shaman.cpp6587–6597,6631–6643,6709–6714,9994–10007,12437–12484`; [contract](../../specs/dps-parity.md#enhancement-fixture-driver), [policy](../../../crates/server-combat/src/spell_cast/scripts/enhancement_tempest_buffs.rs), [native lifecycle cases](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/enhancement_tempest_buffs_tests.rs).
 ## Devastation Dragonrage-earned windows — 2026-10-26
 
 [Native Rising Fury](../../../crates/server-spell-scripts/src/modules/evoker_rising_fury.rs) registers Dragonrage apply/remove and Fury periodic callbacks. Native1271783 supplies stack cap, period and per-stack haste. Growth checks actual Dragonrage presence; rank3 removal converts the infinite buff to its earned finite grace without changing its periodic phase, so grace cannot grow stacks. The reverse Unbound Flame window starts at its native cap. Successful1292321 casts consume one owned use after launch; native children retain damage and Essence Burst.

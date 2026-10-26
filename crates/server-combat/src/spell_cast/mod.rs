@@ -1066,7 +1066,8 @@ fn spell_haste_multiplier(world: &World, caster: Entity) -> f32 {
 }
 
 /// Cast time after ChangeCastTime mods, divided by `1 + CharacterStats.haste_pct`
-/// (haste auras fold in through `StatModifiers`).
+/// (haste auras fold in through `StatModifiers`). Native charge effects use
+/// this fold once (SimC76f8118 sc_mage.cpp2091–2100).
 pub fn cast_time_ms(world: &World, caster: Entity, spell: &SpellInfo) -> i32 {
     let base = spell
         .misc
@@ -1084,7 +1085,6 @@ pub fn cast_time_ms(world: &World, caster: Entity, spell: &SpellInfo) -> i32 {
         SpellModOp::ChangeCastTime,
         base as f32,
     );
-    let modded = scripts::blast_cast_time(world, caster, spell, modded);
     let slow = world
         .get::<crate::auras::AuraStatMods>(caster)
         .map_or(1.0, |mods| mods.attack_cast_time_mult);
@@ -1105,8 +1105,8 @@ pub fn duration_ms(world: &World, caster: Entity, spell: &SpellInfo) -> i32 {
     haste_channel_duration_ms(world, caster, spell, duration.max(0.0).round() as u32) as i32
 }
 
-/// SimC76f8118 action.cpp4390–4420 hastes channel duration with its ticks.
-/// TC Object.cpp1816–1838/Spell.cpp3264–3266/4010–4017 share this for aura/cast state.
+/// SimC76f8118 action.cpp4390–4432 uses duration/period mods plus haste.
+/// Cast-time mods belong only to execute time (parse_effects.cpp1690–1695).
 pub(crate) fn haste_channel_duration_ms(
     world: &World,
     caster: Entity,
@@ -1116,13 +1116,6 @@ pub(crate) fn haste_channel_duration_ms(
     if !is_channeled(spell) || attributes(spell, 5) & 0x2000 == 0 {
         return duration;
     }
-    let modded = modify(
-        world,
-        caster,
-        spell,
-        SpellModOp::ChangeCastTime,
-        duration as f32,
-    );
     let haste = spell_haste_multiplier(world, caster);
     let slow = world
         .get::<crate::auras::AuraStatMods>(caster)
@@ -1130,7 +1123,7 @@ pub(crate) fn haste_channel_duration_ms(
     // SimC76f8118 action.cpp4397–4421: preserve the original modified
     // tick count, rebuilding duration from the same rounded hasted aura period.
     // Independent duration/period truncation creates false expiry partial ticks.
-    let duration = modded * slow;
+    let duration = duration as f32 * slow;
     match crate::auras::channel_tick_timing_ms(world, caster, spell) {
         Some((original_period, hasted_period)) => {
             let ticks = duration / original_period;
@@ -2475,12 +2468,13 @@ pub fn applicable_costs(
         let initial = amount_with(base);
         let school_modified =
             school_costs::modify_school_cost(world, caster, spell, cost.power_type, initial);
+        // SimC76f8118 sc_mage.cpp2850–2855: native charge cost is already
+        // included in this fold, without a second named-spell multiplier.
         let modified = match SpellModOp::power_cost(cost.order_index) {
             Some(op) => modify(world, caster, spell, op, school_modified),
             None => school_modified,
         };
         let modified = if pool == CostPool::Power(PowerType::Mana) {
-            let modified = scripts::mana_cost(world, caster, spell, modified);
             school_costs::modify_mana_cost(world, caster, modified)
         } else {
             modified
@@ -2596,7 +2590,13 @@ fn execute_and_channel(
     // as their aura. SimC76f8118 sc_rogue.cpp4784–4795 freezes Killing Spree CP.
     let channel = if is_channeled_for_actor(world, caster, spell) {
         let costs = spell_costs(world, caster, spell)?;
-        Some(resources::snapshot(world, caster, spell, &costs))
+        let mut channel = resources::snapshot(world, caster, spell, &costs);
+        // SimC76f8118 sc_warlock_actions.cpp2145–2182/2294–2338:
+        // duration/period modifiers survive spending the admitted proc use.
+        channel.cast_charge_mods = Some(spell_mods::snapshot_charged_modifiers(
+            world, caster, &channel,
+        ));
+        Some(channel)
     } else {
         None
     };
@@ -3387,6 +3387,7 @@ fn resolve_effects(
         dest: None,
         chain_multiplier: 1.0,
     };
+    scripts::after_enhancement_chain(world, &ctx);
     scripts::after_resolved_hits(world, &ctx);
     let (damage, healing) = world
         .get_resource_mut::<ResolvingHits>()

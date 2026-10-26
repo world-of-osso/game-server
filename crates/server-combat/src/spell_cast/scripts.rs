@@ -77,6 +77,9 @@ mod enhancement_stormblast;
 pub(super) use enhancement_stormblast::after_weapon_damage as enhancement_weapon_damage;
 mod enhancement_stormwell;
 mod enhancement_strikes;
+mod enhancement_tempest_buffs;
+pub(super) use enhancement_tempest_buffs::after_chain as after_enhancement_chain;
+pub(super) use enhancement_tempest_buffs::resolve_due as resolve_enhancement_discharges;
 mod enhancement_tier;
 mod enhancement_unleashed;
 pub(super) use enhancement_strikes::check_cast as check_enhancement_cast;
@@ -90,6 +93,7 @@ pub(crate) fn register_enhancement(scripts: &mut crate::auras::scripts::AuraScri
     enhancement_modes::register(scripts);
     enhancement_stormblast::register(scripts);
     enhancement_strikes::register(scripts);
+    enhancement_tempest_buffs::register(scripts);
     enhancement_tier::register(scripts);
 }
 mod policies;
@@ -373,7 +377,6 @@ pub(crate) use batch13::{HAUNT, reset_haunt_on_death};
 pub(crate) use batch14::{DEATHMARK, deathmark_energy};
 pub(super) use batch15::heal_beacon;
 pub(crate) use batch15::{replace_beacon, snapshot_combustion};
-pub(super) use batch16::{blast_cast_time, mana_cost};
 pub(super) use batch17::bloom_lifebloom_before_refresh;
 pub(crate) use batch17::{
     CENARION_WARD, LIFEBLOOM, bloom_lifebloom, heal_cenarion_ward, replace_lifebloom,

@@ -1,9 +1,8 @@
 //! Named rank consumers from local Mainline12.1.0.69933 rows/descriptions.
 use super::script_effect_value;
-use crate::spell_cast::{self, powers};
+use crate::spell_cast;
 use crate::spell_info::SpellInfo;
 use bevy::prelude::*;
-use shared::components::PowerType;
 
 pub(super) const HOLY_LIGHT: u32 = 82326;
 pub(super) const HOLY_SHOCK: u32 = 20473;
@@ -19,8 +18,6 @@ const JUDGMENT_POWER: u32 = 220637;
 const CRUSADERS_MIGHT: u32 = 196926;
 const TIDAL_WAVES: u32 = 51564;
 const TIDAL_BUFF: u32 = 53390;
-const ARCANE_BLAST: u32 = 30451;
-const ARCANE_CHARGE: u32 = 36032;
 
 ///82326 explicitly gates the named88852s1 gain on231642, once per cast.
 pub(super) fn energize_holy_light(world: &mut World, caster: Entity, _spell: &SpellInfo) {
@@ -82,40 +79,5 @@ pub(super) fn grant_tidal_waves(world: &mut World, caster: Entity, _spell: &Spel
         for _ in 0..stacks {
             spell_cast::cast_triggered(world, caster, TIDAL_BUFF, Some(caster), 1);
         }
-    }
-}
-
-///30451's description binds live charge count to36032s1 damage, s4 cast
-///time and s5 mana cost. Damage callers snapshot before30451s2 gains a charge.
-pub(in crate::spell_cast) fn blast_multiplier(world: &World, caster: Entity, index: u8) -> f32 {
-    let (charges, _) = powers::power_value(world, caster, PowerType::ArcaneCharges)
-        .expect("Arcane Blast requires ArcaneCharges");
-    1.0 + charges * script_effect_value(world, caster, ARCANE_CHARGE, index) / 100.0
-}
-pub(in crate::spell_cast) fn blast_cast_time(
-    world: &World,
-    caster: Entity,
-    spell: &SpellInfo,
-    base: f32,
-) -> f32 {
-    if spell.id == ARCANE_BLAST {
-        base * blast_multiplier(world, caster, 3)
-    } else {
-        base
-    }
-}
-
-/// Arcane Blast's charge cost follows the generic school-cost aura fold.
-/// Arcane Power's native aura72 is already applied there, without a rank gate.
-pub(in crate::spell_cast) fn mana_cost(
-    world: &World,
-    caster: Entity,
-    spell: &SpellInfo,
-    base: f32,
-) -> f32 {
-    if spell.id == ARCANE_BLAST {
-        base * blast_multiplier(world, caster, 4)
-    } else {
-        base
     }
 }
