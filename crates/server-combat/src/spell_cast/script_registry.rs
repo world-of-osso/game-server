@@ -41,6 +41,7 @@
 //! - `SuccessfulCastRelationships`: after foreground special/resource consumers.
 //! - `GuaranteesCrit`, `IgnoresCooldown`, `SnapshotsModifier`, `ArmorIgnoredSpells`:
 //!   pure native-readiness, launch snapshot and damage classification predicates.
+//! - `PersistentCastMultiplier`: spell IDs whose existing cast factor is stored as periodic metadata.
 //! - `ResolvedDamage`: after actual direct/periodic damage, before Explosive tick callbacks.
 //! - `AfterDirectDamageBeforeItems`: after Ret direct damage, before item scripts.
 //! - `LandedDamagePolicy`: actual white/spell damage at the original Havoc policy boundary.
@@ -232,6 +233,8 @@ pub enum SpellScriptHook {
     GuaranteesCrit(CastPredicate),
     IgnoresCooldown(CastPredicate),
     SnapshotsModifier(OwnsProcLookup),
+    /// These spells retain their existing cast damage factor as stored periodic metadata.
+    PersistentCastMultiplier(&'static [u32]),
     ArmorIgnoredSpells(&'static [u32]),
     ResolvedDamage(ResolvedDamageHook),
     AfterDirectDamageBeforeItems(PeriodicDamageFinishedHook),
@@ -861,6 +864,17 @@ pub fn snapshots_modifier(world: &World, spell: u32) -> bool {
         .any(|hook| match hook {
             SpellScriptHook::SnapshotsModifier(test) => test(spell),
             _ => false,
+        })
+}
+
+pub fn uses_persistent_cast_multiplier(world: &World, spell: u32) -> bool {
+    world
+        .get_resource::<SpellScriptRegistry>()
+        .is_some_and(|registry| {
+            registry.hooks().any(|hook| match hook {
+                SpellScriptHook::PersistentCastMultiplier(spells) => spells.contains(&spell),
+                _ => false,
+            })
         })
 }
 
