@@ -64,7 +64,10 @@ impl ActionFacts for HunterFacts<'_> {
         // SimC76f8118 sc_hunter.cpp4452–4455: the shared Sentinel
         // action requires an earned Chakram enabler, not just native knowledge.
         if action.name == "moonlight_chakram" {
-            return self.native.value("buff.moonlight_chakram.up").map(|value| value != 0.0);
+            return self
+                .native
+                .value("buff.moonlight_chakram.up")
+                .map(|value| value != 0.0);
         }
         Ok(true)
     }
