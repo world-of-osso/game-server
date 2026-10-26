@@ -12,6 +12,7 @@ pub(crate) struct PendingTriggers(BTreeMap<u64, VecDeque<QueuedTrigger>>);
 enum QueuedCastKind {
     CostedTrigger,
     NormalForce,
+    InstantBackground,
     FullTrigger,
     ApplyOwnedAura,
     RemoveOwnedAura,
@@ -238,9 +239,9 @@ pub fn schedule_scaled_full_trigger(
         .push_back(trigger);
 }
 
-/// Source script callback using default TRIGGERED_NONE, not FULL_MASK.
-/// Unlike effect160, this preserves the source caster and chosen target.
-pub(super) fn schedule_normal_cast(
+/// SimC76f8118 sc_shaman.cpp4846–4847: instant background overload.
+/// Retain ordinary validation, costs and source/target; do not replace a hardcast.
+pub(super) fn schedule_instant_background(
     world: &mut World,
     ctx: &super::EffectCtx,
     target: Entity,
@@ -249,7 +250,7 @@ pub(super) fn schedule_normal_cast(
 ) {
     let due_ms = now_ms(world) + u64::from(delay_ms);
     let trigger = QueuedTrigger {
-        kind: QueuedCastKind::NormalForce,
+        kind: QueuedCastKind::InstantBackground,
         caster: ctx.caster,
         target,
         destination: None,
@@ -320,6 +321,16 @@ pub(crate) fn resolve_due(world: &mut World) {
                     trigger.depth,
                 ) {
                     warn!("Delayed scripted spell {} refused", trigger.spell_id);
+                }
+            }
+            QueuedCastKind::InstantBackground => {
+                if let Err(failure) = super::creature::creature_cast_instant_background(
+                    world,
+                    trigger.caster,
+                    trigger.spell_id,
+                    Some(trigger.target),
+                ) {
+                    warn!("Background spell {} skipped: {failure:?}", trigger.spell_id);
                 }
             }
             QueuedCastKind::ScaledFullTrigger(multiplier) => {

@@ -960,7 +960,6 @@ fn build_instance(
     let options = spell.aura_options.as_deref();
     let max_stacks = fresh_max_stacks(world, caster, spell);
     let charges = options.map_or(0.0, |options| options.proc_charges.max(0) as f32);
-    let charges = crate::spell_cast::scripts::proc_charges(world, caster, spell, charges);
     let charges = spell_mods::modify(world, caster, spell, SpellModOp::ProcCharges, charges);
     let mut effects: Vec<AuraEffectState> = spell
         .effects
@@ -1274,6 +1273,29 @@ pub fn set_owned_stacks(
     #[cfg(any(test, feature = "test-support"))]
     crate::simc_apl_native::reaction::applied(world, unit, &source);
     auras_changed(world, unit);
+    true
+}
+
+/// Make an existing owned aura permanent without changing its native stack rules.
+pub fn make_owned_aura_permanent(
+    world: &mut World,
+    caster: Entity,
+    unit: Entity,
+    spell_id: u32,
+) -> bool {
+    let Some(mut auras) = world.get_mut::<ActiveAuras>(unit) else {
+        return false;
+    };
+    let Some(aura) = auras
+        .auras
+        .iter_mut()
+        .find(|aura| aura.spell_id == spell_id && aura.caster == caster)
+    else {
+        return false;
+    };
+    aura.duration_ms = 0;
+    aura.expires_at = None;
+    auras.dirty = true;
     true
 }
 

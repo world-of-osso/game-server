@@ -1,5 +1,6 @@
 //! TC a352b1fa spell_shaman.cpp2124–2230: native mastery, real SK modifier,
-//!400ms callback and default TRIGGERED_NONE child cast; never a base-hit scalar.
+//!400ms callback; SimC76f8118 sc_shaman.cpp4846–4847 makes it instant/background.
+//! Native child records still own damage and costs; never a base-hit scalar.
 use bevy::prelude::*;
 
 use crate::auras::ActiveAuras;
@@ -45,9 +46,9 @@ fn stormkeeper_modified_cast(spell: &SpellInfo) -> bool {
         .any(|modifier| modifier.aura_spell_id == STORMKEEPER)
 }
 
-/// TDB168534 phase2 is HIT: roll once per landed target, then wait400ms.
+/// SimC76f8118 sc_shaman.cpp3316–3351: roll at travel scheduling, not impact.
 /// The retained launch snapshot proves SK matched even after charge consumption.
-pub(super) fn after_hit(
+pub(super) fn after_launch(
     world: &mut World,
     caster: Entity,
     spell: &SpellInfo,
@@ -87,7 +88,7 @@ pub(super) fn after_hit(
         chain_multiplier: 1.0,
     };
     for _ in 0..u32::from(ordinary) + additional {
-        super::queued_triggers::schedule_normal_cast(
+        super::queued_triggers::schedule_instant_background(
             world,
             &ctx,
             target,
