@@ -1192,3 +1192,9 @@ Pinned TC a352b1fa `spell_dk_subduing_grasp` binds Gorefiend's Grasp108199E1 to 
 Priest32379E3 is consumed execute data (TC CalcDamage4483–4487), not an effect dispatch. Existing native E2/E3 arithmetic qualified with real damage/heal threshold crossing, RED only for unsupported-slot diagnostic→GREEN; unmatched Shockwave E1 still reports. Classifier changes diagnostics only, no generic77 binding.
 
 Shaman77478E1 is consumed OnHit knockdown-chance data: native5%,77505 FULL_MASK, one target insertion per owned61882 field. Original field entity travels in existing per-cast OriginalCaster metadata; each existing ground field owns its stun set. Orphan ticks retain damage but cannot stun. Native256-target/fresh-field/expiry/ally/outside/orphan proof: ignored1RED/1control→2GREEN17.83s before enabling. Source and [cause77 deltas](../../diagnostics/census-e77-70448.md) distinguish3handledroots/7memberships from41gaproots/118memberships.
+
+## Ordinary spell GCD haste — 2026-10-26
+
+For a native base GCD of750–1500ms, `gcd_duration_ms` applies StartCooldown modifiers, ordinary spell haste, then the separate affecting aura417 path. Ordinary haste requires category133, neither melee nor ranged defense, and neither the ranged-slot nor ability attribute. The haste result uses the native750–1500ms bounds; other base GCDs stay outside this haste path. The same duration starts the native history deadline and client cooldown update.
+
+Sources: TC a352b1fa `Spell.cpp9209–9224`; SimC76f8118 `action.cpp648–666,1285–1315`; `crates/server-combat/src/spell_cast/{mod.rs,gcd_haste.rs}`; [contract](../../specs/dps-parity.md#ordinary-native-spell-gcd-haste). The clock regression covers one native foreground action for each of40 specs at0%,25% and150% haste. This is not full-profile DPS qualification; numerical remeasurement remains separate.

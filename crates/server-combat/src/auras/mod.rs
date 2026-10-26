@@ -35,6 +35,7 @@ mod earthen_rage;
 pub(crate) mod ebon_might;
 mod echo_of_light;
 pub(crate) mod effect_immunity;
+pub(crate) mod enhancement_power;
 mod fear;
 mod fel_devastation;
 mod fixate;
@@ -837,7 +838,7 @@ fn build_effect(
         immunity: effect.immunity.clone(),
         aura_type: effect.aura,
         amount,
-        persistent_multiplier: periodic_snapshot::multiplier(world, caster, spell, effect),
+        persistent_multiplier: periodic_snapshot::capture_multiplier(world, caster, spell, effect),
         misc_values: effect.misc_values,
         period_ms,
         periodic_base_ms: base_period_ms,
@@ -2070,7 +2071,14 @@ pub fn damage_taken_multiplier(
             .iter()
             .filter(|aura| aura.caster == attacker)
             .flat_map(|aura| {
-                let stacks = aura.stack_multiplier();
+                let stacks = if crate::spell_cast::script_registry::incoming_aura_ignores_stacks(
+                    world,
+                    aura.spell_id,
+                ) {
+                    1.0
+                } else {
+                    aura.stack_multiplier()
+                };
                 aura.effects
                     .iter()
                     .filter(|effect| match effect.aura_type {

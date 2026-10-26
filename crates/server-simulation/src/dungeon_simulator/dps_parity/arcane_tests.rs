@@ -80,7 +80,7 @@ fn expected_charge_bonus(run: &Run, spell: u32) -> f32 {
         / 100.0
 }
 
-fn sample_charge_hit(spell: u32, charges: f32) -> (f32, f32) {
+fn sample_charge_hit(spell: u32, charges: f32) -> (f32, f32, f32) {
     let mut run = prepare_literal(62, 1).unwrap();
     crate::spell_cast::powers::change_power(
         run.app.world_mut(),
@@ -128,51 +128,143 @@ fn sample_charge_hit(spell: u32, charges: f32) -> (f32, f32) {
         1,
         "one actual native{spell} impact at{charges} charges"
     );
-    let damage = normalize_charge_hit_rolls(&run, hits[0].amount);
-    (damage, per_charge)
+    let damage = normalize_charge_hit_rolls(&run, spell, hits[0].amount);
+    let trace = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::effects::factor_capture::FactorCapture>()
+        .export();
+    let result = trace["events"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|event| event["event"] == "result" && event["spell_id"] == spell)
+        .expect("actual charge-hit result");
+    let versatility = result["factors"]["versatility"].as_f64().unwrap() as f32;
+    assert!(versatility > 0.0, "native charge-hit versatility: {trace}");
+    (damage, per_charge, versatility)
 }
 
-fn normalize_charge_hit_rolls(run: &Run, amount: i32) -> f32 {
+fn normalize_charge_hit_rolls(run: &Run, spell: u32, amount: i32) -> f32 {
     let trace = run
         .app
         .world()
         .resource::<crate::spell_cast::effects::factor_capture::FactorCapture>()
         .export();
     let events = trace["events"].as_array().expect("native charge hit trace");
+    // Capture stops after its focus hit, but retains earlier non-focus hits.
+    // Use the actual spell being normalized, not the first actor event.
     let direct = events
         .iter()
-        .find(|event| event["event"] == "direct_amount")
-        .expect("actual native direct amount");
+        .find(|event| event["event"] == "direct_amount" && event["spell_id"] == spell)
+        .unwrap_or_else(|| panic!("native spell{spell} direct amount absent: {trace}"));
     let result = events
         .iter()
-        .find(|event| event["event"] == "result")
-        .expect("actual native damage result");
+        .find(|event| event["event"] == "result" && event["spell_id"] == spell)
+        .unwrap_or_else(|| panic!("native spell{spell} damage result absent: {trace}"));
     let scaled = direct["factors"]["native_scaled_amount"].as_f64().unwrap();
     let input = result["factors"]["native_input_amount"].as_f64().unwrap();
     // Native proc/cast timing changes RNG consumption even from the same seed.
     // Divide out the observed variance and critical multiplier; never change
     // native rolls, coefficients, aura state or projectile delivery.
     let rolled_multiplier = input / scaled;
-    assert!(rolled_multiplier > 0.0);
+    assert!(
+        rolled_multiplier > 0.0,
+        "invalid native charge observation: damage={amount}, input={input}, scaled={scaled}, stats={:?}, trace={trace}",
+        run.app
+            .world()
+            .get::<crate::stats::CharacterStats>(run.actor)
+    );
     (f64::from(amount) / rolled_multiplier) as f32
 }
 
 fn assert_charge_hit_formula(spell: u32) {
-    let (base, per_charge) = sample_charge_hit(spell, 0.0);
+    let (base, per_charge, base_versatility) = sample_charge_hit(spell, 0.0);
     assert!(base > 0.0);
     for charges in [2.0, 4.0] {
-        let (damage, charged_bonus) = sample_charge_hit(spell, charges);
+        let (damage, charged_bonus, charged_versatility) = sample_charge_hit(spell, charges);
 
         assert_eq!(
             charged_bonus, per_charge,
             "same native mastery/talent values"
         );
-        let expected = base * (1.0 + charges * per_charge);
+        // SimC76f8118 action.cpp4345–4347 snapshots versatility separately.
+        // Native gear procs can change it between launch and impact; compare
+        // the charge term with each hit's actual observed versatility product.
+        let expected = base * (1.0 + charges * per_charge) * charged_versatility / base_versatility;
         assert!(
             (damage - expected).abs() <= expected * 0.005 + 2.0,
             "native{spell}, charges={charges}, base={base}, per_charge={per_charge}, expected={expected}, actual={damage}"
         );
     }
+}
+
+#[test]
+#[ignore = "requires private native70448 DB and exact Arcane62 inputs"]
+fn arcane_charge_roll_normalization_uses_barrage_after_an_earlier_blast() {
+    let mut run = prepare_literal(62, 1).unwrap();
+    run.app.insert_resource(
+        crate::spell_cast::effects::factor_capture::FactorCapture::new(
+            run.actor,
+            run.targets[0],
+            44425,
+            "charge_focus_after_foreign_hit",
+            1,
+        ),
+    );
+    let _seed = crate::random::seed_scope(70448);
+    cast(&mut run, 30451);
+    cast(&mut run, 44425);
+    for _ in 0..20 {
+        run.app.update();
+    }
+    let trace = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::effects::factor_capture::FactorCapture>()
+        .export();
+    let events = trace["events"].as_array().unwrap();
+    let first_direct = events
+        .iter()
+        .find(|event| event["event"] == "direct_amount")
+        .unwrap();
+    assert_ne!(
+        first_direct["spell_id"], 44425,
+        "fixture must retain the earlier real hit"
+    );
+    let direct = events
+        .iter()
+        .find(|event| event["event"] == "direct_amount" && event["spell_id"] == 44425)
+        .unwrap();
+    let result = events
+        .iter()
+        .find(|event| event["event"] == "result" && event["spell_id"] == 44425)
+        .unwrap();
+    let hit = run
+        .app
+        .world()
+        .resource::<ObservedCombatEvents>()
+        .0
+        .iter()
+        .find(|event| {
+            event.source == Some(run.actor.to_bits())
+                && event.target == Some(run.targets[0].to_bits())
+                && event.spell_id == Some(44425)
+                && event.kind == CombatLogKind::Damage
+        })
+        .expect("real Barrage damage after the earlier Blast");
+    let input = result["factors"]["native_input_amount"].as_f64().unwrap();
+    let scaled = direct["factors"]["native_scaled_amount"].as_f64().unwrap();
+    assert!(
+        input > 0.0 && scaled > 0.0,
+        "actual Barrage factors: {trace}"
+    );
+    let expected = f64::from(hit.amount) * scaled / input;
+    let actual = normalize_charge_hit_rolls(&run, 44425, hit.amount);
+    assert!(
+        (f64::from(actual) - expected).abs() < 0.01,
+        "normalized Barrage must use its own native factors; actual={actual}, expected={expected}, trace={trace}"
+    );
 }
 
 #[test]

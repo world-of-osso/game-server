@@ -121,6 +121,7 @@ pub(crate) fn consume(world: &mut World, caster: Entity, spell: &SpellInfo) {
     } else {
         retain_stacks(world, caster, remaining);
     }
+    crate::auras::enhancement_power::grant_for_spending(world, caster, spent);
     reduce_tempo_recharge(world, caster, spent);
     super::enhancement_spending::grant_for_spending(world, caster, spent);
 }

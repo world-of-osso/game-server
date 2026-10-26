@@ -388,9 +388,6 @@ impl Facts for RogueFacts<'_> {
             "main_hand.dagger" => self.weapon_is_dagger(shared::protocol::EquipmentSlot::MainHand),
             "off_hand.dagger" => self.weapon_is_dagger(shared::protocol::EquipmentSlot::OffHand),
             "energy.regen_combined" => self.combined_regen(),
-            // There is no persistent Improved Garrote snapshot in native aura state yet.
-            // SimC action.cpp pmultiplier is1 for an unempowered native application.
-            "dot.garrote.pmultiplier" => Ok(1.0),
             _ if name.starts_with("trinket.") || name.starts_with("set_bonus.") => {
                 self.equipment.fact(name, &self.native)
             }
@@ -410,19 +407,14 @@ impl ActionFacts for RogueFacts<'_> {
             // SimC76f8118 action.cpp3795–3808 evaluates the proposed action's
             // GCD. Preserve that context through the shared native binding.
             "gcd" | "gcd.max" | "gcd.min" | "gcd.remains" => self.native.value_for(action, name),
-            "remains" | "refreshable" => self
+            "remains" | "refreshable" | "pmultiplier" => self
                 .native
                 .value_for(action, &format!("dot.{}.{}", action.name, name)),
-            "pmultiplier" => self.value(&format!("dot.{}.pmultiplier", action.name)),
             _ if name.starts_with("dot.")
                 || name.starts_with("debuff.")
                 || name.starts_with("target.") =>
             {
-                if name == "dot.garrote.pmultiplier" {
-                    self.value(name)
-                } else {
-                    self.native.value_for(action, name)
-                }
+                self.native.value_for(action, name)
             }
             _ => self.value(name),
         }

@@ -330,6 +330,167 @@ fn devastation_shattering_stars_actual_surge_hits_only_its_selected_primary() {
     }
 }
 
+#[test]
+#[ignore = "requires private native DB and exact Devastation profile"]
+fn devastation_mass_disintegrate_redistributes_only_missing_native_recipients() {
+    for count in [1, 2, 3, 4] {
+        let hit = |empowered: bool| {
+            let _seed = crate::random::seed_scope(70448);
+            let mut run = prepare_literal(1467, count).unwrap();
+            engage(&mut run);
+            let primary = run.targets[0];
+            crate::spell_cast::creature_cast_empowered_with_targets(
+                run.app.world_mut(),
+                run.actor,
+                357208,
+                crate::spell_cast::CastTargets {
+                    unit: run.actor,
+                    primary: Some(primary),
+                    destination: None,
+                },
+                1,
+            )
+            .unwrap();
+            preparation::finish_pending_setup(&mut run).unwrap();
+            assert!(crate::auras::has_aura(run.app.world(), run.actor, 436336));
+            let talent = run
+                .app
+                .world()
+                .get::<crate::auras::ActiveAuras>(run.actor)
+                .unwrap()
+                .iter()
+                .find(|aura| aura.spell_id == 436335)
+                .unwrap();
+            let native_targets = talent
+                .effects
+                .iter()
+                .find(|effect| effect.index == 0)
+                .unwrap()
+                .amount;
+            let native_percent = talent
+                .effects
+                .iter()
+                .find(|effect| effect.index == 1)
+                .unwrap()
+                .amount;
+            assert!(native_targets >= count as f32 && native_percent > 0.0);
+            if !empowered {
+                crate::auras::remove_auras(
+                    run.app.world_mut(),
+                    run.actor,
+                    crate::auras::RemoveReason::Unlearned,
+                    |aura| aura.spell_id == 436336,
+                );
+            }
+            crate::spell_cast::creature_cast_with_targets(
+                run.app.world_mut(),
+                run.actor,
+                356995,
+                crate::spell_cast::CastTargets {
+                    unit: primary,
+                    primary: Some(primary),
+                    destination: None,
+                },
+            )
+            .unwrap();
+            preparation::finish_pending_setup(&mut run).unwrap();
+            let events = &run
+                .app
+                .world()
+                .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+                .0;
+            let amount = events
+                .iter()
+                .find(|event| {
+                    event.source == Some(run.actor.to_bits())
+                        && event.target == Some(primary.to_bits())
+                        && event.spell_id == Some(356995)
+                        && event.kind == shared::protocol::CombatLogKind::Damage
+                        && event.periodic
+                        && !event.crit
+                        && event.amount > 0
+                })
+                .expect("the actual native channel must supply a noncritical primary tick")
+                .amount;
+            (amount, native_targets, native_percent)
+        };
+        let (baseline, _, _) = hit(false);
+        let (empowered, native_targets, native_percent) = hit(true);
+        // SimC76f8118 sc_evoker.cpp6560–6567: use the effective native talent,
+        // including selected Concentrated Power, not the raw unmodified DB2 points.
+        let multiplier =
+            1.0 + f64::from(native_targets - count as f32) * f64::from(native_percent) / 100.0;
+        let expected = f64::from(baseline) * multiplier;
+        assert!(
+            (f64::from(empowered) - expected).abs() <= 3.0,
+            "Mass Disintegrate count{count}: native targets={native_targets}, native percent={native_percent}, baseline={baseline}, actual={empowered}, expected={expected}"
+        );
+    }
+}
+
+#[test]
+#[ignore = "requires private native DB and exact Devastation profile"]
+fn devastation_maneuverable_deep_breath_launches_native_melt_armor_dot_on_its_pack() {
+    for maneuverable in [false, true] {
+        let mut run = prepare_literal(1467, 3).unwrap();
+        engage(&mut run);
+        let primary = run.targets[1];
+        assert!(crate::auras::has_aura(run.app.world(), run.actor, 433871));
+        if !maneuverable {
+            crate::auras::remove_auras(
+                run.app.world_mut(),
+                run.actor,
+                crate::auras::RemoveReason::Unlearned,
+                |aura| aura.spell_id == 433871,
+            );
+        }
+        crate::spell_cast::creature_cast_with_targets(
+            run.app.world_mut(),
+            run.actor,
+            433874,
+            crate::spell_cast::CastTargets {
+                unit: run.actor,
+                primary: Some(primary),
+                destination: None,
+            },
+        )
+        .unwrap();
+        for _ in 0..200 {
+            run.app.update();
+        }
+        let events = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0;
+        for target in &run.targets {
+            assert!(
+                events.iter().any(|event| {
+                    event.source == Some(run.actor.to_bits())
+                        && event.target == Some(target.to_bits())
+                        && event.spell_id == Some(353759)
+                        && event.kind == shared::protocol::CombatLogKind::Damage
+                        && event.amount > 0
+                }),
+                "ordinary Deep Breath must actually reach the native recipient"
+            );
+            // SimC76f8118 sc_evoker.cpp6219–6222/6252–6253: the actual
+            // maneuverable main impact supplies the native441172 periodic child.
+            let melt = events.iter().any(|event| {
+                event.source == Some(run.actor.to_bits())
+                    && event.target == Some(target.to_bits())
+                    && event.spell_id == Some(441172)
+                    && event.kind == shared::protocol::CombatLogKind::Damage
+                    && event.amount > 0
+            });
+            assert_eq!(
+                melt, maneuverable,
+                "native Maneuverability={maneuverable} must own Melt Armor damage on {target:?}"
+            );
+        }
+    }
+}
+
 fn cast_reference_empowers(run: &mut Run, primary: Entity) {
     for (spell, unit) in [(357208, run.actor), (359073, primary)] {
         crate::spell_cast::creature_cast_empowered_with_targets(
