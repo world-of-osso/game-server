@@ -508,10 +508,23 @@ def write_results(entries):
         (RUNNING / f"{entry['id']}.json").unlink(missing_ok=True)
 
 
+# While this file names an owner prefix, cycles take only that owner's entries: a broad change
+# (the spell-scripts crate split) gets a cycle in which no other landing moves its seams.
+SOLO = HOME / "solo"
+
+
+def eligible_queue():
+    paths = sorted(QUEUE.glob("*.json"))
+    if not SOLO.exists():
+        return paths
+    owner = SOLO.read_text().strip()
+    return [p for p in paths if json.loads(p.read_text()).get("owner", "").startswith(owner)]
+
+
 def take_queue():
     RUNNING.mkdir(parents=True, exist_ok=True)
     entries = []
-    for path in sorted(QUEUE.glob("*.json")):
+    for path in eligible_queue():
         target = RUNNING / path.name
         path.rename(target)
         entries.append(json.loads(target.read_text()))
@@ -714,7 +727,7 @@ def run(_args):
                 continue
             print("merge_train.py changed, reloading", flush=True)
             os.execv(sys.executable, [sys.executable, str(script), "run"])
-        queued = list(QUEUE.glob("*.json"))
+        queued = eligible_queue()
         if queued and time.time() - min(p.stat().st_mtime for p in queued) >= GATHER_SECONDS:
             try:
                 cycle()
