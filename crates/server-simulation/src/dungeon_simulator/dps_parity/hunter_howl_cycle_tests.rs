@@ -5,7 +5,6 @@ use super::*;
 fn native_bm_howl_combat_clock_cycles_real_wyvern_boar_and_bear() {
     let _seed = crate::random::seed_scope(70_448);
     let mut run = prepare_measurement(253, 3).expect("native literal BM fixture");
-    crate::test_data::install_native_collision(&mut run.app).expect("native summon ground and LOS");
     engage(&mut run);
     crate::combat_refs::set_in_combat_with(run.app.world_mut(), run.actor, run.targets[0]);
     run.app.update();

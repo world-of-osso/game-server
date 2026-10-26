@@ -129,15 +129,22 @@ fn consume_beasts(world: &mut World, caster: Entity, primary: Entity) {
         });
         consumed = true;
     }
-    if consumed && auras::has_aura(world, caster, INCOMING) {
-        // SimC76f8118 sc_hunter.cpp3813–3817: no Stampede without a
-        // consumed Howl. Store the actual primary, not a later mutable target.
-        auras::remove_auras(world, caster, RemoveReason::Consumed, |aura| {
-            aura.spell_id == INCOMING
-        });
-        world.entity_mut(caster).insert(StampedeTarget(primary));
-        apply_self(world, caster, STAMPEDE_TRIGGER);
+    if consumed {
+        start_earned_stampede(world, caster, primary);
     }
+}
+
+fn start_earned_stampede(world: &mut World, caster: Entity, primary: Entity) {
+    if !auras::has_aura(world, caster, INCOMING) {
+        return;
+    }
+    // SimC76f8118 sc_hunter.cpp3813–3817: no Stampede without a
+    // consumed Howl. Store the actual primary, not a later mutable target.
+    auras::remove_auras(world, caster, RemoveReason::Consumed, |aura| {
+        aura.spell_id == INCOMING
+    });
+    world.entity_mut(caster).insert(StampedeTarget(primary));
+    apply_self(world, caster, STAMPEDE_TRIGGER);
 }
 
 fn summon_beast(world: &mut World, caster: Entity, spell: u32) -> bool {
@@ -222,7 +229,7 @@ fn stampede_plan(
     let radius = targets::effect_radius(&trigger.effects[0]);
     let units = targets::area_units(world, caster, center, radius, targets::Relation::Enemy, 0);
     vec![PlannedEffect {
-        index: spell.effects[0].index,
+        index: usize::from(spell.effects[0].index),
         units,
         chain_multipliers: Vec::new(),
         dest: None,

@@ -5,7 +5,6 @@ use super::*;
 fn native_bm_howl_earns_real_wyvern_and_stampede_hits_the_pack() {
     let _seed = crate::random::seed_scope(70_448);
     let mut run = prepare_measurement(253, 3).expect("native literal BM fixture");
-    crate::test_data::install_native_collision(&mut run.app).expect("native summon ground and LOS");
     engage(&mut run);
     literal_rotation::execution::execute(
         run.app.world_mut(),
