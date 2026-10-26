@@ -42,6 +42,7 @@ pub(crate) mod forecast;
 pub mod handlers;
 pub(crate) mod health_pct_trigger;
 mod ignite;
+mod incoming_spell_masks;
 pub mod invisibility;
 mod item_requirements;
 mod light_of_titans;
