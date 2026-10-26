@@ -58,12 +58,15 @@ fn literal_ww_native_teachings_one_stack_per_tiger_palm_impact() {
     assert_eq!(stacks(&run), 0);
     super::tests::cast(&mut run, TP);
     let events = &run.app.world().resource::<ObservedCombatEvents>().0;
-    let impacts = events.iter().filter(|event| {
-        event.source == Some(run.actor.to_bits())
-            && event.spell_id == Some(TP)
-            && event.kind == CombatLogKind::Damage
-            && event.amount > 0
-    }).count();
+    let impacts = events
+        .iter()
+        .filter(|event| {
+            event.source == Some(run.actor.to_bits())
+                && event.spell_id == Some(TP)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0
+        })
+        .count();
     assert_eq!(impacts, 1, "one actual native Tiger Palm damage impact");
     // SimC76f8118 monk883–889: impact(), not its separate self-Energize recipient.
     assert_eq!(stacks(&run), 1, "one stack per actual TP impact");

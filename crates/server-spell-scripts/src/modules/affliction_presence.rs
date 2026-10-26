@@ -2,17 +2,19 @@
 use super::combat;
 use bevy::prelude::*;
 use combat::auras::spell_mods;
-use combat::spell_cast::{effects::EffectCtx, script_registry::SpellScriptHook, summon::SummonedCreature};
 use combat::spell_cast::scripts::script_effect_value;
+use combat::spell_cast::{
+    effects::EffectCtx, script_registry::SpellScriptHook, summon::SummonedCreature,
+};
 use combat::spell_info::SpellStore;
 use shared::components::{Health, Npc};
 
 const PRESENCE: u32 = 1280663;
 const DARKGLARE: u32 = 103673;
 
-pub(super) const HOOKS: &[SpellScriptHook] = &[
-    SpellScriptHook::TargetContextDamageMultiplier(damage_multiplier),
-];
+pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::TargetContextDamageMultiplier(
+    damage_multiplier,
+)];
 
 fn has_living_darkglare(world: &World, owner: Entity) -> bool {
     let now = combat::auras::aura_now(world);
@@ -32,12 +34,17 @@ fn has_living_darkglare(world: &World, owner: Entity) -> bool {
 // Read the existing guardian instead of creating a second duration clock.
 fn damage_multiplier(world: &World, ctx: &EffectCtx<'_>, _: Entity, periodic: bool) -> f32 {
     let store = world.resource::<SpellStore>();
-    let Some(presence) = store.get(PRESENCE) else { return 1.0; };
+    let Some(presence) = store.get(PRESENCE) else {
+        return 1.0;
+    };
     let index = u8::from(periodic);
     let Some(effect) = presence.effects.iter().find(|effect| effect.index == index) else {
         return 1.0;
     };
-    let family = presence.class_options.as_ref().map_or(0, |options| options.spell_class_set);
+    let family = presence
+        .class_options
+        .as_ref()
+        .map_or(0, |options| options.spell_class_set);
     if !spell_mods::class_mask_matches(family, &effect.spell_class_mask, ctx.spell)
         || !has_living_darkglare(world, ctx.caster)
     {

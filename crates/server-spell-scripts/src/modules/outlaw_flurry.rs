@@ -2,8 +2,12 @@
 use super::combat;
 use bevy::prelude::*;
 use combat::auras;
-use combat::spell_cast::{self, effects::{self, EffectCtx}, script_registry::SpellScriptHook};
 use combat::spell_cast::scripts::{AfterCastHook, script_effect_value};
+use combat::spell_cast::{
+    self,
+    effects::{self, EffectCtx},
+    script_registry::SpellScriptHook,
+};
 use combat::spell_info::SpellInfo;
 use shared::components::PowerType;
 
@@ -27,11 +31,20 @@ fn launch_activation(world: &mut World, caster: Entity, _: &SpellInfo) {
 }
 
 fn after_hit(world: &mut World, ctx: &EffectCtx, _: Entity, _: bool, damage: f32) {
-    if ctx.spell.id != INSTANT_ATTACK || damage <= 0.0
-        || !auras::has_aura(world, ctx.caster, DEFT_MANEUVERS) {
+    if ctx.spell.id != INSTANT_ATTACK
+        || damage <= 0.0
+        || !auras::has_aura(world, ctx.caster, DEFT_MANEUVERS)
+    {
         return;
     }
     // sc_rogue.cpp3916–3922: selected Deft Maneuvers pays once per hit.
     let points = script_effect_value(world, ctx.caster, DEFT_MANEUVERS, 1);
-    effects::energize_unit(world, ctx, ctx.caster, PowerType::ComboPoints, points, false);
+    effects::energize_unit(
+        world,
+        ctx,
+        ctx.caster,
+        PowerType::ComboPoints,
+        points,
+        false,
+    );
 }
