@@ -181,6 +181,7 @@ mod rogue_vanish_tests;
 mod shadow_apparition_tests;
 mod shadow_link_tests;
 mod shadow_mastery_tests;
+mod shadow_rift_tests;
 mod shadow_screams_tests;
 mod shadow_slam_tests;
 mod shadow_tests;
