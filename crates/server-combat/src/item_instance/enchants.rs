@@ -24,6 +24,8 @@ pub struct Enchantment {
 pub struct EnchantmentTables {
     pub enchants: HashMap<u32, Enchantment>,
     pub gems: HashMap<u32, u32>,
+    /// Native ItemSparse.ItemNameDescriptionID used by gem-family relationships.
+    pub gem_descriptions: HashMap<u32, u32>,
 }
 
 #[derive(Default)]
@@ -202,6 +204,7 @@ mod tests {
         EnchantmentTables {
             enchants: HashMap::from([(7987, primary), (8157, gem), (8039, proc)]),
             gems: HashMap::from([(240910, 8157)]),
+            gem_descriptions: HashMap::from([(240910, 14276)]),
         }
     }
 
