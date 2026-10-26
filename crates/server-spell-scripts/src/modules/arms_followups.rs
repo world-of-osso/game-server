@@ -5,6 +5,8 @@ use shared::components::ActiveSpec;
 use super::combat;
 use combat::spell_cast::script_registry::SpellScriptHook;
 
+#[path = "arms_bloodletting.rs"]
+mod bloodletting;
 #[path = "arms_heroic_might.rs"]
 mod heroic_might;
 #[path = "arms_warfare_binding.rs"]
@@ -21,6 +23,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::BeforeNativeOnCast(heroic_might::before_smash),
     SpellScriptHook::OwnsPolicyProc(winding::owns_proc),
     SpellScriptHook::AfterElementalLaunch(winding::after_cast),
+    SpellScriptHook::AfterPolicyDirectDamage(bloodletting::after_mortal),
 ];
 
 fn selected(world: &World, caster: Entity, passive: u32) -> bool {

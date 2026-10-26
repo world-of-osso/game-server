@@ -353,6 +353,8 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 ### Arms literal controller
 
+- With selected Bloodletting383154 and Rend772, actual Mortal Strike impacts (including background Unhinged) apply native Rend388539 only below Bloodletting's native effect3 health threshold. Ordinary higher-health impacts cannot grant it (`sc_warrior.cpp3122–3123`).
+
 - Equipped MID2 Arms4pc1296644 grants native Winding Up1300670 once per Mortal Strike/Overpower execution, including background MS, preserving its native ICD/magnitude/cap. Slam-family executions (1464/1269383) cannot produce it and expire all current stacks only after their damage resolves (`sc_warrior.cpp3111–3112,5494–5495,3537–3538`).
 
 - Selected Heroic Might1269307 accumulates native-capped Heroic Strike uses separately from its active Colossus Smash window. The next CS transfers pending stacks into native1292058 for the wound's native duration and clears pending uses; Heroics after CS cannot change its current window. Native label2443 modifiers supply both spell/white-swing vulnerability amounts (`sc_warrior.cpp3571–3573,3761–3764,1729–1730`).
