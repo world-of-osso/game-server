@@ -326,6 +326,11 @@ fn build_darkglare_harness() -> Harness {
 #[test]
 fn guardians2_darkglare_native_beam_cast_time_and_live_demon_power() {
     let mut h = build_darkglare_harness();
+    {
+        let mut health = h.app.world_mut().get_mut::<Health>(h.npc).unwrap();
+        health.current = 20_000.0;
+        health.max = 20_000.0;
+    }
     let actor = spawn_darkglare(&mut h);
     h.advance(2);
     assert_eq!(
@@ -336,9 +341,13 @@ fn guardians2_darkglare_native_beam_cast_time_and_live_demon_power() {
             .spell_id,
         205231
     );
-    assert_eq!(h.health(h.npc), 5000.0);
+    assert_eq!(h.health(h.npc), 20_000.0);
     h.advance(43);
-    assert_eq!(h.health(h.npc), 4269.0, "4.87044 * inherited150SP rounded");
+    assert_eq!(
+        h.health(h.npc),
+        15_130.0,
+        "4.87044 * inherited1000SP rounded"
+    );
     h.app
         .world_mut()
         .get_mut::<crate::stats::CharacterStats>(h.caster)
@@ -347,7 +356,7 @@ fn guardians2_darkglare_native_beam_cast_time_and_live_demon_power() {
     h.advance(40);
     assert_eq!(
         h.health(h.npc),
-        2808.0,
+        5389.0,
         "next beam reads changed owner SP, not a spawn snapshot"
     );
 }
@@ -381,7 +390,7 @@ fn guardians2_darkglare_retargets_stops_and_expires_without_pet_replacement() {
         .0 = Some(other);
     h.advance(45);
     assert_eq!(h.health(h.npc), 5000.0);
-    assert_eq!(h.health(other), 4269.0);
+    assert_eq!(h.health(other), 130.0);
     h.app
         .world_mut()
         .get_mut::<crate::networking::CombatTarget>(h.caster)
