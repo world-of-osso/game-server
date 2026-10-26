@@ -18,6 +18,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::LaunchDamageModifier(snapshot_bolt_bonus),
     SpellScriptHook::CastTimeProcs(&[BUFF]),
     SpellScriptHook::PreserveUnadmittedProcs(&[BUFF]),
+    SpellScriptHook::OwnsPolicyProc(owns_nightfall_uses),
 ];
 
 #[derive(Component)]
@@ -98,6 +99,12 @@ fn sataiel_multiplier(world: &World, caster: Entity) -> f64 {
     }
     let percent = combat::spell_cast::scripts::script_effect_value(world, caster, SATAIEL, 0);
     1.0 + f64::from(percent) / 100.0
+}
+
+// SimC76f8118 actions877–878/2182/2338: cast execution owns these uses.
+// The native broad proc mask cannot also spend a charge on queued cast events.
+fn owns_nightfall_uses(spell: u32) -> bool {
+    spell == BUFF
 }
 
 // SimC76f8118 actions902–908: the instant Bolt's one native bonus survives

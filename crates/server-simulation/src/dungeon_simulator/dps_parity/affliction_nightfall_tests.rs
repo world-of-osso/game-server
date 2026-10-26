@@ -116,7 +116,15 @@ fn affliction_nightfall_two_real_uses_require_two_ordinary_bolts() {
         "one ordinary instant Bolt spends exactly one use"
     );
     finish_bolt(&mut run);
+    assert_eq!(uses(&run), 1, "first impact cannot spend the next use");
     start_bolt(&mut run);
+    assert!(
+        run.app
+            .world()
+            .get::<shared::casting::CastState>(run.actor)
+            .is_none(),
+        "the second admitted use must really make its Bolt instant"
+    );
     assert_eq!(
         uses(&run),
         0,
