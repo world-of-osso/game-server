@@ -579,6 +579,101 @@ fn devastation_successful_empower_grants_power_swell_and_real_essence_regenerati
     }
 }
 
+#[test]
+#[ignore = "requires private native DB and exact Devastation profile"]
+fn devastation_burnout_fire_ticks_earn_and_spend_an_actual_instant_living_flame() {
+    for selected in [false, true] {
+        let _seed = crate::random::seed_scope(70448);
+        let mut run = prepare_literal(1467, 3).unwrap();
+        engage(&mut run);
+        let primary = run.targets[0];
+        assert!(crate::auras::has_aura(run.app.world(), run.actor, 375801));
+        if !selected {
+            crate::auras::remove_auras(
+                run.app.world_mut(),
+                run.actor,
+                crate::auras::RemoveReason::Unlearned,
+                |aura| aura.spell_id == 375801,
+            );
+        }
+        crate::spell_cast::creature_cast_empowered_with_targets(
+            run.app.world_mut(),
+            run.actor,
+            357208,
+            crate::spell_cast::CastTargets {
+                unit: run.actor,
+                primary: Some(primary),
+                destination: None,
+            },
+            1,
+        )
+        .unwrap();
+        preparation::finish_pending_setup(&mut run).unwrap();
+        let uses = |run: &Run| {
+            run.app
+                .world()
+                .get::<crate::auras::ActiveAuras>(run.actor)
+                .and_then(|auras| auras.iter().find(|aura| aura.spell_id == 375802))
+                .map_or(0, |aura| aura.stacks)
+        };
+        for _ in 0..400 {
+            run.app.update();
+            if uses(&run) > 0 {
+                break;
+            }
+        }
+        assert_eq!(
+            uses(&run) > 0,
+            selected,
+            "native Fire Breath ticks must roll Burnout only for the actual selected passive"
+        );
+        if !selected {
+            continue;
+        }
+        let before = uses(&run);
+        crate::spell_cast::creature_cast_with_targets(
+            run.app.world_mut(),
+            run.actor,
+            361469,
+            crate::spell_cast::CastTargets {
+                unit: primary,
+                primary: Some(primary),
+                destination: None,
+            },
+        )
+        .unwrap();
+        // SimC76f8118 sc_evoker.cpp5393/7028–7029; TC spell_evoker.cpp161–183.
+        assert!(
+            run.app
+                .world()
+                .get::<shared::casting::CastState>(run.actor)
+                .is_none(),
+            "an actually earned native Burnout must make ordinary Living Flame instant"
+        );
+        assert_eq!(
+            uses(&run),
+            before - 1,
+            "ordinary Living Flame must consume exactly one earned native Burnout use"
+        );
+        for _ in 0..100 {
+            run.app.update();
+        }
+        assert!(
+            run.app
+                .world()
+                .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+                .0
+                .iter()
+                .any(|event| event.source == Some(run.actor.to_bits())
+                    && event.target == Some(primary.to_bits())
+                    && event.spell_id == Some(361500)
+                    && event.kind == shared::protocol::CombatLogKind::Damage
+                    && event.amount > 0),
+            "the instant native cast must really deliver Living Flame damage"
+        );
+    }
+}
+
 fn cast_reference_empowers(run: &mut Run, primary: Entity) {
     for (spell, unit) in [(357208, run.actor), (359073, primary)] {
         crate::spell_cast::creature_cast_empowered_with_targets(
