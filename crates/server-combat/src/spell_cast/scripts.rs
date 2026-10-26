@@ -167,7 +167,6 @@ pub(super) use batch9::{spawn_ravager_field, update_ground_pulses};
 pub(crate) use batch19::{copy_havoc, dispersion_tick, on_dispelled, replace_havoc};
 pub(super) use protection_items::snapshot_guillotine_health;
 pub(crate) use protection_items::{GUILLOTINE, cast_guillotine, check_guillotine_proc};
-pub(crate) use script_registry::proc_charges;
 pub(super) fn capture_consumed_damage_modifier(
     world: &World,
     caster: Entity,
