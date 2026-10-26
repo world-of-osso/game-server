@@ -41,6 +41,8 @@ register_modules! {
     affliction_agony: (2650, "modules/affliction_agony.rs"),
     affliction_instability: (2651, "modules/affliction_instability.rs"),
     after_cast_auras: (100, "modules/after_cast_auras.rs"),
+    arms_paid_cooldowns: (712, "modules/arms_paid_cooldowns.rs"),
+    arms_tactician: (713, "modules/arms_tactician.rs"),
     assassination_target: (2590, "modules/assassination_target.rs"),
     assassination_white: (2591, "modules/assassination_white.rs"),
     aura_rolls: (110, "modules/aura_rolls.rs"),
