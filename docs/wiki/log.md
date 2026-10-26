@@ -1,3 +1,7 @@
+## 2026-10-25 — Marksmanship Salvo producer
+
+[Marksmanship](systems/spell-casting.md#marksmanship-native-relationships--2026-10-25): selected Salvo launches native capped background Explosive Shots from actual Volley recipients, with native Volley-duration internal recovery and no foreground producers.
+
 ## 2026-10-25 — Marksmanship native relationships
 
 [Marksmanship](systems/spell-casting.md#marksmanship-native-relationships--2026-10-25): native stack limits, Volley-earned cleave without its separate talent, caster-owned channel consumption, execution/arrival ordering, residual banks and Explosive primary/secondary relationships.

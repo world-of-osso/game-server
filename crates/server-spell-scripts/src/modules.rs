@@ -64,6 +64,7 @@ register_modules! {
     lava_surge: (300, "modules/lava_surge.rs"),
     marksmanship: (380, "modules/marksmanship.rs"),
     marksmanship_explosive: (180, "modules/marksmanship_explosive.rs"),
+    marksmanship_salvo: (400, "modules/marksmanship_salvo.rs"),
     marksmanship_sentinel: (390, "modules/marksmanship_sentinel.rs"),
     melee_reset: (340, "modules/melee_reset.rs"),
     paid_cooldowns: (130, "modules/paid_cooldowns.rs"),
