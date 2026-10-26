@@ -3,6 +3,11 @@ use crate::auras::{ActiveAuras, AuraApplication, AuraInstance, AuraSource};
 use crate::spell_info::{SpellInfo, SpellStore};
 use bevy::prelude::*;
 
+mod liquid_luster;
+pub(crate) use liquid_luster::{
+    ROOT as LIQUID_LUSTER, register as register_liquid_luster, tick as tick_liquid_luster,
+};
+
 /// Apply a prepared consumable through the ordinary aura and derived-stat paths.
 /// The item level is the original native consumable quality, not the character's gear level.
 pub fn apply(

@@ -388,6 +388,75 @@ fn frost_mage_native_periodic_icicles_enable_and_pay_glacial_spike() {
     );
 }
 
+#[test]
+#[ignore = "requires private native70448 DB and exact Frost64 inputs"]
+fn frost_mage_native_impacts_build_freezing_and_lance_pays_owned_shatter() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(64, 1).unwrap();
+    for spell in [116, 116, 44614] {
+        literal_rotation::execution::execute(
+            run.app.world_mut(),
+            run.actor,
+            literal_rotation::execution::Execution::Spell(
+                spell,
+                run.targets[0],
+                Some(run.targets[0]),
+            ),
+        )
+        .unwrap();
+        preparation::finish_pending_setup(&mut run).unwrap();
+        for _ in 0..20 {
+            run.app.update();
+        }
+    }
+    let freezing = |run: &Run| {
+        run.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(run.targets[0])
+            .unwrap()
+            .iter()
+            .find(|aura| aura.caster == run.actor && aura.spell_id == 1221389)
+            .map_or(0, |aura| aura.stacks)
+    };
+    let before = freezing(&run);
+    assert!(
+        before >= 4,
+        "actual Frostbolt/Flurry impacts must earn native owned Freezing"
+    );
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(30455, run.targets[0], Some(run.targets[0])),
+    )
+    .unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    for _ in 0..20 {
+        run.app.update();
+    }
+    assert!(
+        freezing(&run) < before,
+        "successful Lance must consume its actual target's stacks"
+    );
+    let hits = run
+        .app
+        .world()
+        .resource::<ObservedCombatEvents>()
+        .0
+        .iter()
+        .filter(|event| {
+            event.source == Some(run.actor.to_bits())
+                && event.target == Some(run.targets[0].to_bits())
+                && event.spell_id == Some(1246949)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0
+        })
+        .count();
+    assert_eq!(
+        hits, 1,
+        "native Shatter primary must hit once, not once per primary/secondary effect"
+    );
+}
+
 use super::*;
 use crate::spell_cast::test_harness::ObservedCombatEvents;
 use shared::protocol::CombatLogKind;

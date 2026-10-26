@@ -31,6 +31,7 @@ mod batch7;
 mod batch8;
 mod batch9;
 mod frost;
+mod frost_mage;
 mod periodic_attacks;
 pub(crate) use periodic_attacks::{after_periodic_trigger, rolls_reapplication};
 pub(super) use script_registry::after_foreground_special;
@@ -96,6 +97,7 @@ pub(super) fn apply_periodic_damage_policies(
     target: Entity,
     amount: f32,
 ) {
+    frost_mage::after_periodic_damage(world, ctx, target);
     policies::after_periodic_damage(world, ctx, target, amount);
     spellslinger::after_periodic_damage(world, ctx, target);
     midnight_items::after_periodic_damage(world, ctx, target);
@@ -148,6 +150,7 @@ mod windwalker_dual_threat;
 pub(crate) use windwalker_dual_threat::{
     read_replacement as white_impact_replacement, roll_replacement as replace_white_impact,
 };
+mod glory_of_the_dawn;
 mod windwalker_flurry;
 pub(crate) fn after_melee_hit(
     world: &mut World,
@@ -202,6 +205,7 @@ pub(super) fn finish_scripted_launch(
     policies::pet_sets::finish_cobra(world, caster, spell);
     script_registry::after_counter_launch(world, caster, spell.id);
     unbroken_rhythm::after_launch(world, caster, spell.id);
+    glory_of_the_dawn::after_launch(world, caster, spell, depth);
     enhancement_tier::after_launch(world, caster, spell, depth);
     enhancement_strikes::cast_ride_the_lightning(world, caster, spell, depth);
 }
@@ -227,6 +231,7 @@ pub(crate) fn periodic_trigger(
     index: u8,
 ) -> Option<crate::auras::scripts::PeriodicHook> {
     match (spell, index) {
+        (crate::consumables::LIQUID_LUSTER, 0) => Some(crate::consumables::tick_liquid_luster),
         (unbroken_rhythm::ROOT, 0) => Some(unbroken_rhythm::cast_tick),
         _ => None,
     }
@@ -239,6 +244,7 @@ pub(super) fn after_direct_damage(
     target: Entity,
     critical: bool,
 ) {
+    frost_mage::after_damage(world, ctx, target, critical);
     spellslinger::after_direct_damage(world, ctx);
     windwalker_flurry::after_direct_damage(world, ctx, critical);
     crate::auras::rogue::after_builder_hit(world, ctx, critical);
@@ -252,7 +258,7 @@ pub(super) fn after_direct_damage(
         midnight_items::apply_perfected_venom(world, ctx.caster, target);
     }
     match ctx.spell.id {
-        xuens_battlegear::RSK_DAMAGE | xuens_battlegear::RWK_DAMAGE => {
+        xuens_battlegear::RSK_DAMAGE | xuens_battlegear::RWK_DAMAGE | glory_of_the_dawn::DAMAGE => {
             xuens_battlegear::reduce_fof_on_critical_impact(world, ctx, target, critical);
         }
         _ => {}
@@ -969,6 +975,9 @@ pub(super) fn target_plan(world: &World, spell_id: u32) -> Option<(Relation, Tar
         return Some(hook);
     }
     if let Some(hook) = policies::target_plan_hook(world, spell_id) {
+        return Some(hook);
+    }
+    if let Some(hook) = frost_mage::target_plan_hook(spell_id) {
         return Some(hook);
     }
     if let Some(hook) = guardian_impacts::plan_hook(spell_id) {
