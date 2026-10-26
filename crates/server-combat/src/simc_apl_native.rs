@@ -413,6 +413,18 @@ impl<'a> NativeFacts<'a> {
             "up" | "ticking" => Ok(bool_value(!active.is_empty())),
             "down" => Ok(bool_value(active.is_empty())),
             "remains" => Ok(buff_remaining(&active, now)),
+            // SimC76f8118 dot.cpp448–455: inactive is0; otherwise fresh
+            // composite duration, not remaining time or pandemic carry.
+            "duration" => Ok(if active.is_empty() {
+                0.0
+            } else {
+                f64::from(crate::auras::fresh_duration_ms(
+                    self.world,
+                    self.actor,
+                    target,
+                    self.spell(id)?,
+                )) / 1000.0
+            }),
             "stack" => Ok(active
                 .iter()
                 .map(|aura| f64::from(aura.stacks))
