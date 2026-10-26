@@ -45,7 +45,29 @@ fn native_bm_dire_summons_shortens_real_howl_clock_and_earns_next_beast() {
         );
         preparation::finish_pending_setup(&mut run).unwrap();
     }
-    let deadline = owned_howl_deadline(&run).unwrap();
+    let before_background = owned_howl_deadline(&run).unwrap();
+    let background_reduction = f64::from(crate::spell_cast::scripts::script_effect_value(
+        run.app.world(),
+        run.actor,
+        472352,
+        2,
+    )) / 1000.0;
+    assert!(
+        crate::spell_cast::try_cast_triggered(
+            run.app.world_mut(),
+            run.actor,
+            193455,
+            Some(run.targets[0]),
+            1,
+        ),
+        "native background Cobra uses the same execution path as earned Snakeskin"
+    );
+    let after_background = owned_howl_deadline(&run).unwrap();
+    assert!(
+        (before_background - after_background - background_reduction).abs() < 0.001,
+        "background Cobra must retain its shared native Dire Summons recovery"
+    );
+    let deadline = after_background;
     while crate::spell_cast::now(run.app.world()) < deadline - 0.5 {
         run.app.update();
     }
