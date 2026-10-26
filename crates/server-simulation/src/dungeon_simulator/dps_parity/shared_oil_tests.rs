@@ -1,5 +1,29 @@
 //! Temporary oil conditions select actual native enchant contributions.
 #[test]
+#[ignore = "native70448 exact profile and enchant catalogs"]
+fn shared_oil_disabled_has_no_temporary_stats_or_unmodeled_gap() {
+    let (mut profile, traits) = super::read_reference(70).unwrap();
+    profile
+        .consumables
+        .insert("temporary_enchant".into(), "disabled".into());
+    let identity = super::inputs::read_actor(&profile).unwrap();
+    let run = super::prepare_literal_reference(profile, &traits, 1, identity).unwrap();
+    assert!(
+        run.app
+            .world()
+            .get::<crate::stats::EquippedItemModifiers>(run.actor)
+            .unwrap()
+            .temporary_enchants
+            .is_empty()
+    );
+    assert!(
+        !run.gaps
+            .iter()
+            .any(|gap| gap == "CONSUMABLE_UNMODELED:temporary_enchant=disabled")
+    );
+}
+
+#[test]
 #[ignore = "native70448 exact Elemental profile and talent catalogs"]
 fn shared_oil_elemental_condition_uses_native_selected_talent() {
     let mut run = super::prepare_literal(262, 1).unwrap();
