@@ -40,7 +40,7 @@ fn subtlety_blades_actual_backstab_produces_one_native_shadow_hit_only_during_bu
             literal_rotation::execution::Execution::Spell(53, run.targets[0], Some(run.targets[0])),
         )
         .unwrap();
-        preparation::finish_pending_setup(&mut run).unwrap();
+        // Later white hits during the GCD legitimately produce their own copies.
         let events = &run
             .app
             .world()
@@ -64,5 +64,6 @@ fn subtlety_blades_actual_backstab_produces_one_native_shadow_hit_only_during_bu
             usize::from(active),
             "earned Shadow Blades emits one nonrecursive native hit; events: {events:?}"
         );
+        preparation::finish_pending_setup(&mut run).unwrap();
     }
 }
