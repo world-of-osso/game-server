@@ -153,6 +153,10 @@ def check(log):
     otherwise cost a bisect, and formatter output is never a behavior change."""
     if cargo(log, "check", "--locked", "--workspace", "--all-targets") != 0:
         return False
+    # The workspace check unifies test-support features into every crate; the deployed server
+    # binary builds without them (an ungated simc_apl_native call broke it on 2026-10-26).
+    if cargo(log, "check", "--locked", "-p", "server", "--bins") != 0:
+        return False
     if cargo(log, "fmt") != 0:
         return False
     # cargo fmt does not follow include!() or macro-generated #[path] mods, so the modules declared
