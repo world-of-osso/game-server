@@ -980,6 +980,9 @@ fn log_unhandled_types(world: &mut World, aura: &AuraInstance) {
             .into_iter()
             .all(|supported| supported);
         if handled
+            || world
+                .resource::<crate::spell_cast::script_registry::SpellScriptRegistry>()
+                .consumes_named_aura_field(aura.spell_id, effect.index)
             || scripts::consumes_named_field(aura.spell_id, effect.index)
             || crate::scripted_ai::kings_rest::handles_molten_gold_effect(aura.spell_id, effect)
         {

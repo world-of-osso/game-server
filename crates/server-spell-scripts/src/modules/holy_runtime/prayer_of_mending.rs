@@ -1,16 +1,17 @@
 //! Prayer of Mending; TC a352b1fa spell_priest.cpp3636–3806.
 //! Stack values and OriginalCaster are real per-cast arguments, including flight.
-use crate::random as rand;
+use super::combat;
+use combat::random as rand;
 use bevy::prelude::*;
 use rand::seq::SliceRandom;
 use shared::components::{Health, Player};
 
-use crate::auras::procs::AuraEvent;
-use crate::auras::scripts::{AuraScript, AuraScripts};
-use crate::auras::{ActiveAuras, AuraInstance, RemoveReason};
-use crate::spell_cast::effects::{self, EffectCtx, EffectHandler};
-use crate::spell_cast::{TriggeredSpellOverrides, cast_triggered, cast_triggered_with_overrides};
-use crate::spell_info::{SpellEffect, SpellInfo};
+use combat::auras::procs::AuraEvent;
+use combat::auras::scripts::{AuraScript, AuraScripts};
+use combat::auras::{ActiveAuras, AuraInstance, RemoveReason};
+use combat::spell_cast::effects::{self, EffectCtx, EffectHandler};
+use combat::spell_cast::{TriggeredSpellOverrides, cast_triggered, cast_triggered_with_overrides};
+use combat::spell_info::{SpellEffect, SpellInfo};
 
 pub(crate) const PRAYER: u32 = 33_076;
 pub(crate) const WARD: u32 = 41_635;
@@ -94,7 +95,7 @@ fn heal_and_jump(world: &mut World, holder: Entity, aura: &AuraInstance, _event:
         );
     }
     // TC launches the jump before removing its current holder's aura.
-    crate::auras::remove_instance(world, holder, aura.instance_id, RemoveReason::Consumed);
+    combat::auras::remove_instance(world, holder, aura.instance_id, RemoveReason::Consumed);
 }
 
 fn land_jump(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target: Entity) {

@@ -2,7 +2,7 @@
 use bevy::prelude::*;
 use shared::components::Health;
 
-use super::{reduce_cooldown, script_effect_value};
+use super::script_effect_value;
 use crate::spell_cast::{self, PlannedEffect, TargetPlan, targets};
 use crate::spell_info::SpellInfo;
 
@@ -13,7 +13,6 @@ pub(super) const MANGLE: u32 = 33917;
 pub(super) const VIVIFY: u32 = 116670;
 pub(super) const RENEWING_MIST_CAST: u32 = 115151;
 pub(super) const HOWLING_BLAST: u32 = 49184;
-pub(super) const SANCTIFY: u32 = 34861;
 pub(super) const ERUPTION: u32 = 395160;
 const STEADY_FOCUS: u32 = 77443;
 const MANGLE_RANK: u32 = 231064;
@@ -180,24 +179,6 @@ pub(super) fn howling_blast(world: &mut World, caster: Entity, target: Entity, _
             source: crate::auras::AuraSource::Cast,
         },
     );
-}
-
-/// 34861s3: Prayer of Healing reduces an existing recharge by six seconds.
-pub(super) fn prayer(world: &mut World, caster: Entity, _spell: &SpellInfo) {
-    let (word, index) = if crate::auras::has_aura(world, caster, 1246517) {
-        (super::batch3::SERENITY, 1)
-    } else {
-        (SANCTIFY, 2)
-    };
-    if world
-        .resource::<crate::spell_info::SpellStore>()
-        .get(word)
-        .is_some()
-    {
-        let seconds = script_effect_value(world, caster, word, index);
-        let seconds = super::holy_priest::holy_word_reduction(world, caster, seconds);
-        reduce_cooldown(world, caster, word, seconds);
-    }
 }
 
 /// 395160 gates extension on395153, whose s1 is milliseconds. Extend once

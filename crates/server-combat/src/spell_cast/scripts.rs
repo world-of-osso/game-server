@@ -88,7 +88,6 @@ pub(super) fn apply_periodic_damage_policies(
 pub(crate) fn owns_policy_proc(world: &World, spell: u32) -> bool {
     policies::owns_policy_proc(world, spell)
 }
-pub(crate) mod holy_priest;
 pub(super) use script_registry::{
     after_fire_direct_hit as fire_feedback_hit, after_fire_outcome_hit as fire_meteorite_hit,
     before_proc_launch as before_hot_streak_launch,
@@ -97,7 +96,6 @@ pub(super) use script_registry::{
     roll_cast_hit_proc as roll_flamestrike_hot_streak, triggers_hot_streak,
 };
 mod midnight_items;
-pub(crate) mod prayer_of_mending;
 mod protection_items;
 pub use batch9::spawn_consecration;
 pub(crate) use midnight_items::register as register_midnight_items;
@@ -296,8 +294,7 @@ pub(super) fn effect_handler(
     if (spell, index) == (super::toy_flag::TARGETING, 0) {
         return Some(super::toy_flag::plant);
     }
-    prayer_of_mending::effect_handler(spell, index)
-        .or_else(|| batch13::effect_handler(spell, index))
+    batch13::effect_handler(spell, index)
 }
 
 pub(super) use batch12::empower_gargoyles;
@@ -799,8 +796,6 @@ fn native_after_cast(world: &World, spell_id: u32) -> Option<AfterCastHook> {
     match spell_id {
         windwalker::RUSHING_WIND_KICK => Some(windwalker::consume_rushing_wind_kick),
         windwalker::FISTS_OF_FURY => Some(windwalker_children::fof_executed),
-        holy_priest::APOTHEOSIS => Some(holy_priest::restore_holy_words),
-        prayer_of_mending::PRAYER => Some(holy_priest::reduce_word_on_mending),
         IMPENDING_VICTORY => Some(heal_and_consume_victorious),
         ENRAGED_REGENERATION => Some(cast_invigorating_fury_heal),
         crate::scripted_ai::azure_vault::ABSOLUTE_ZERO_DAMAGE => {
@@ -826,8 +821,6 @@ fn native_after_cast(world: &World, spell_id: u32) -> Option<AfterCastHook> {
         batch9::CONSECRATION => Some(batch9::spawn_consecration),
         batch8::DEMONBOLT => Some(batch8::demonbolt),
         batch8::ARCANE_BARRAGE => Some(batch8::arcane_barrage),
-        batch3::FLASH_HEAL => Some(batch3::flash_heal),
-        batch3::PRAYER_OF_HEALING => Some(batch4::prayer),
         batch4::VIVIFY => Some(batch4::vivify),
         batch4::ERUPTION => Some(batch4::eruption),
         batch6::STARFALL => Some(batch6::starfall),
@@ -874,9 +867,6 @@ pub fn area_target_filter(
 ) -> Option<AreaTargetFilter> {
     if let Some(hook) = script_registry::area_filter(world, spell_id, effect_index) {
         return Some(hook);
-    }
-    if let Some(filter) = prayer_of_mending::area_filter(spell_id, effect_index) {
-        return Some(filter);
     }
     match (spell_id, effect_index) {
         (crate::auras::ebon_might::EBON, 0 | 1) => Some(crate::auras::ebon_might::filter_allies),
@@ -936,7 +926,6 @@ pub(super) fn target_plan(world: &World, spell_id: u32) -> Option<(Relation, Tar
         batch8::SANCTIFY => Some((Relation::Ally, batch8::sanctify_plan)),
         batch8::PROVOKE_SINGLE => Some((Relation::Enemy, batch8::provoke_plan)),
         batch8::PROVOKE_AREA => Some((Relation::Any, batch8::provoke_plan)),
-        batch3::PRAYER_OF_HEALING => Some((Relation::Ally, batch3::prayer_plan)),
         batch4::LIGHT_OF_DAWN => Some((Relation::Ally, batch4::light_of_dawn_plan)),
         CHAIN_HEAL => Some((Relation::Ally, chain_heal_plan)),
         batch6::STARFIRE => Some((Relation::Enemy, batch6::starfire_plan)),

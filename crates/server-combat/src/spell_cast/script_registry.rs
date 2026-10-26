@@ -207,6 +207,8 @@ pub type AfterCastUpdateHook = fn(&mut World);
 pub type ConsumeCastModifiersHook = fn(&mut World, Entity, &SpellInfo);
 pub type AfterWeaponLaunchHook = fn(&mut World, Entity, &SpellInfo, u8);
 
+pub type SupportAuraRegistrationHook = fn(&mut crate::auras::scripts::AuraScripts);
+pub type NamedAuraFields = &'static [(u32, u8)];
 pub type SnapshotLaunchAurasHook = fn(&World, Entity, &mut SpellInfo);
 pub type TriggeredChildDamageMultiplierHook = fn(&World, Entity, &SpellInfo, u32) -> Option<f32>;
 pub type ProcAfterCastLookup = fn(u32) -> Option<AfterCastHook>;
@@ -327,6 +329,8 @@ pub enum SpellScriptHook {
     AfterCastUpdate(AfterCastUpdateHook),
     ConsumeCastModifiers(ConsumeCastModifiersHook),
     AfterWeaponLaunch(AfterWeaponLaunchHook),
+    SupportAuraRegistration(SupportAuraRegistrationHook),
+    NamedAuraFields(NamedAuraFields),
     SnapshotLaunchAuras(SnapshotLaunchAurasHook),
     TriggeredChildDamageMultiplier(TriggeredChildDamageMultiplierHook),
     ProcAfterCast(ProcAfterCastLookup),
@@ -389,6 +393,21 @@ impl SpellScriptRegistry {
                 register(scripts);
             }
         }
+    }
+
+    pub fn register_support_auras(self, scripts: &mut crate::auras::scripts::AuraScripts) {
+        for hook in self.hooks() {
+            if let SpellScriptHook::SupportAuraRegistration(register) = hook {
+                register(scripts);
+            }
+        }
+    }
+
+    pub fn consumes_named_aura_field(self, spell: u32, index: u8) -> bool {
+        self.hooks().any(|hook| match hook {
+            SpellScriptHook::NamedAuraFields(values) => values.contains(&(spell, index)),
+            _ => false,
+        })
     }
 
     pub fn register_weapon_auras(self, scripts: &mut crate::auras::scripts::AuraScripts) {

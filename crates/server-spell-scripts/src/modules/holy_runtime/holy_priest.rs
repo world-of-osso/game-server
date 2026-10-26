@@ -1,10 +1,12 @@
 //! Native70448 Holy scripts. Numeric values remain in the local spell catalog.
+use super::combat;
+use combat::random as rand;
 use bevy::prelude::*;
 
-use crate::auras::procs::AuraEvent;
-use crate::auras::scripts::{AuraScript, AuraScripts};
-use crate::auras::{ActiveAuras, AuraInstance, has_aura};
-use crate::spell_info::{SpellInfo, SpellStore};
+use combat::auras::procs::AuraEvent;
+use combat::auras::scripts::{AuraScript, AuraScripts};
+use combat::auras::{ActiveAuras, AuraInstance, has_aura};
+use combat::spell_info::{SpellInfo, SpellStore};
 
 pub(crate) const APOTHEOSIS: u32 = 200183;
 const SURGE_TALENT: u32 = 109186;
@@ -52,11 +54,11 @@ fn roll_surge_from_native_spell(world: &World, aura: &AuraInstance, event: &Aura
 fn grant_surge(world: &mut World, priest: Entity, _aura: &AuraInstance, _other: Option<Entity>) {
     #[cfg(any(test, feature = "test-support"))]
     let before = read_surge_stacks(world, priest);
-    crate::spell_cast::cast_triggered(world, priest, SURGE_BUFF, Some(priest), 1);
+    combat::spell_cast::cast_triggered(world, priest, SURGE_BUFF, Some(priest), 1);
     #[cfg(any(test, feature = "test-support"))]
     {
         let after = read_surge_stacks(world, priest);
-        crate::spell_cast::holy_metrics::record_surge_gain(world, priest, before, after);
+        combat::spell_cast::holy_metrics::record_surge_gain(world, priest, before, after);
     }
 }
 
@@ -92,7 +94,7 @@ pub(super) fn restore_holy_words(world: &mut World, priest: Entity, _spell: &Spe
         })
         .collect();
     for category in categories {
-        crate::spell_cast::restore_charges(world, priest, category, count);
+        combat::spell_cast::restore_charges(world, priest, category, count);
     }
 }
 
@@ -122,9 +124,9 @@ pub(super) fn spend_surge(world: &mut World, priest: Entity) {
         })
         .map(|aura| aura.instance_id);
     if let Some(instance) = instance {
-        crate::auras::spend_stack(world, priest, instance);
+        combat::auras::spend_stack(world, priest, instance);
         #[cfg(any(test, feature = "test-support"))]
-        crate::spell_cast::holy_metrics::record_surge_use(world, priest);
+        combat::spell_cast::holy_metrics::record_surge_use(world, priest);
     }
 }
 
