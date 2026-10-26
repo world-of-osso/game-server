@@ -63,12 +63,7 @@ fn cast_crash_with_dormant_white_swings(run: &mut Run) -> usize {
     panic!("native Crash imbue fixture did not become ready");
 }
 
-#[test]
-#[ignore = "native263 reference inputs and private world database"]
-fn enhancement_magic_unleashed_hits_do_not_proc_weapon_imbues() {
-    // SimC76f8118 sc_shaman.cpp3039–3055 and SpellDataDump1252431: Magic
-    // fails imbue admission even though the action inherits shaman_attack_t.
-    let _seed = crate::random::seed_scope(70448);
+fn prepare_imbued_control() -> Run {
     let mut run = prepare_measurement(263, 1).unwrap();
     engage(&mut run);
     defer_white_swings(&mut run);
@@ -78,6 +73,11 @@ fn enhancement_magic_unleashed_hits_do_not_proc_weapon_imbues() {
             "native imbue{buff} must be equipped"
         );
     }
+    run
+}
+
+fn assert_native_melee_control() {
+    let mut run = prepare_imbued_control();
     let target = run.targets[0];
     let melee_before = hits(&run, Some(32175));
     let flametongue_before = hits(&run, Some(10444));
@@ -91,7 +91,18 @@ fn enhancement_magic_unleashed_hits_do_not_proc_weapon_imbues() {
         hits(&run, Some(10444)) > flametongue_before,
         "the equipped native Flametongue callback must work for a real Melee hit"
     );
+}
 
+#[test]
+#[ignore = "native263 reference inputs and private world database"]
+fn enhancement_magic_unleashed_hits_do_not_proc_weapon_imbues() {
+    // SimC76f8118 sc_shaman.cpp3039–3055 and SpellDataDump1252431: data-Magic fails admission.
+    let _seed = crate::random::seed_scope(70448);
+    // procs.rs258–260 defers events emitted by the positive control's Windfury hits.
+    // Independent native scenarios prevent those legitimate callbacks entering the Magic sample.
+    assert_native_melee_control();
+    let mut run = prepare_imbued_control();
+    let target = run.targets[0];
     let before_magic = hits(&run, Some(1252431));
     let before_flametongue = hits(&run, Some(10444));
     let before_windfury = hits(&run, Some(25504));
