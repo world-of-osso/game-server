@@ -80,8 +80,12 @@ fn ret_crusade_paid_and_free_spenders_reach_ten_without_scaling_wrath_base_effec
         .get::<crate::stats::CharacterStats>(run.actor)
         .unwrap()
         .haste_pct;
+    // SimC76f8118 player.cpp4982–4995 composes independent haste
+    // multipliers; sc_paladin.cpp4617–4618 adds Crusade's own factor.
     let expected =
-        ((1.0 + (base_haste + base_wrath_haste) / 100.0) * (1.0 + per_stack / 100.0) - 1.0) * 100.0;
+        ((1.0 + base_haste / 100.0) * (1.0 + base_wrath_haste / 100.0) * (1.0 + per_stack / 100.0)
+            - 1.0)
+            * 100.0;
     assert!(
         (hasted - expected).abs() < 0.01,
         "initial Crusade haste must multiply the existing speed: {hasted} vs{expected}"

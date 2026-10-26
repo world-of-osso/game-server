@@ -30,7 +30,7 @@ pub fn hot_streak_spells_in_flight(world: &World, caster: Entity) -> Result<f64,
     let pending = world
         .get_resource::<missiles::PendingSpellHits>()
         .ok_or("native Hot Streak pending missile state unavailable")?;
-    Ok(pending.count_matching(caster, scripts::triggers_hot_streak) as f64)
+    Ok(pending.count_matching(caster, |spell| scripts::triggers_hot_streak(world, spell)) as f64)
 }
 
 /// Native target-only admission; no cooldown, power, knowledge or cast mutation.

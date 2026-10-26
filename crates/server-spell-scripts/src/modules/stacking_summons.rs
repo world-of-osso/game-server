@@ -1,10 +1,14 @@
 //! Explicit cast→counter→summon relationships; native rows own stacks/payloads.
-use super::AfterCastHook;
-use crate::auras::ActiveAuras;
-use crate::class_progression::TraitLoadout;
-use crate::random::Rng;
-use crate::spell_cast::{self, summon::SummonedCreature};
-use crate::spell_info::SpellInfo;
+use super::combat;
+use combat::auras::ActiveAuras;
+use combat::class_progression::TraitLoadout;
+use combat::random::Rng;
+use combat::spell_cast::script_registry::SpellScriptHook;
+use combat::spell_cast::scripts::AfterCastHook;
+use combat::spell_cast::{self, summon::SummonedCreature};
+use combat::spell_info::SpellInfo;
+
+pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::NativeAfterCast(hook)];
 use bevy::prelude::*;
 use shared::components::ActiveSpec;
 
@@ -111,7 +115,7 @@ fn advance_counter(world: &mut World, caster: Entity, spell: &SpellInfo, policy:
     }
     let starts = spell.id == policy.starter;
     let advances = policy.advancing_casts.contains(&spell.id)
-        && crate::auras::has_aura(world, caster, policy.counter);
+        && combat::auras::has_aura(world, caster, policy.counter);
     if !starts && !advances {
         return;
     }
@@ -203,12 +207,12 @@ fn grant_stack(world: &mut World, caster: Entity, policy: &Policy) {
     // init.cpp785 queues this at zero delay: retain one actual native stack.
     // No cast/resource decision intervenes in this synchronous AfterCast callback.
     for _ in 1..maximum {
-        crate::auras::spend_stack(world, caster, instance);
+        combat::auras::spend_stack(world, caster, instance);
     }
 }
 
 fn summon_choice(world: &mut World, caster: Entity, policy: &Policy) {
-    let index = crate::random::thread_rng().gen_range(0..policy.choices.len());
+    let index = combat::random::thread_rng().gen_range(0..policy.choices.len());
     let choice = &policy.choices[index];
     let spell = match choice.duplicate_redirect {
         Some(redirect) if has_living_summon(world, caster, choice.spell) => {
