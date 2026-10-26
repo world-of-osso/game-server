@@ -1,4 +1,5 @@
-//! SimC76f8118 sc_rogue.cpp5131–5135,6278–6287,7993–7999.
+//! SimC76f8118 rogue5131–5135/7993–7999, player.cpp957–964:
+//! a rolling residual snapshots native periodic modifiers, not the unused DA override.
 use super::*;
 use crate::auras::{ActiveAuras, RemoveReason};
 use crate::spell_cast::test_harness::ObservedCombatEvents;
@@ -12,7 +13,7 @@ fn assassination_doomblade_both_real_mutilate_hands_fund_native_bleed() {
     engage(&mut run);
     let actor = run.actor;
     let target = run.targets[0];
-    let native_percent = |spell| {
+    let native_percent = |spell, index| {
         run.app
             .world()
             .get::<ActiveAuras>(actor)
@@ -22,13 +23,13 @@ fn assassination_doomblade_both_real_mutilate_hands_fund_native_bleed() {
             .unwrap()
             .effects
             .iter()
-            .find(|effect| effect.index == 0)
+            .find(|effect| effect.index == index)
             .unwrap()
             .amount
     };
-    let fraction = native_percent(381673) / 100.0;
-    let dose = native_percent(381640) / 100.0;
-    // Keep the target's only counted bleed the earned Doomblade itself.
+    let fraction = native_percent(381673, 0) / 100.0;
+    let implacable = native_percent(1265386, 2) / 100.0;
+    // Isolate the residual from unrelated periodic poison procs.
     crate::auras::remove_auras(
         run.app.world_mut(),
         actor,
@@ -40,21 +41,7 @@ fn assassination_doomblade_both_real_mutilate_hands_fund_native_bleed() {
         .resource_mut::<ObservedCombatEvents>()
         .0
         .clear();
-    use crate::spell_cast::effects::factor_capture::FactorCapture;
-    run.app
-        .world_mut()
-        .insert_resource(FactorCapture::new(actor, target, 394021, "doomblade", 32));
     crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 1329, Some(target), 1);
-    let initial_bleed = run
-        .app
-        .world()
-        .get::<ActiveAuras>(target)
-        .and_then(|auras| {
-            auras
-                .iter()
-                .find(|aura| aura.spell_id == 394021 && aura.caster == actor)
-                .cloned()
-        });
     for _ in 0..180 {
         run.app.update();
     }
@@ -92,16 +79,10 @@ fn assassination_doomblade_both_real_mutilate_hands_fund_native_bleed() {
         "a residual retains the source's crit once"
     );
     let expected =
-        hands.iter().map(|event| event.amount as f32).sum::<f32>() * fraction * (1.0 + dose);
+        hands.iter().map(|event| event.amount as f32).sum::<f32>() * fraction * (1.0 + implacable);
     let actual = ticks.iter().map(|event| event.amount as f32).sum::<f32>();
     assert!(
         (actual - expected).abs() <= 6.0,
-        "both resolved hits fund the native bleed fraction and its dynamic Lethal Dose: {actual}/{expected}; fraction{fraction},dose{dose}; hands{:?}; ticks{:?}; initial{initial_bleed:?}; factors{}",
-        hands
-            .iter()
-            .map(|event| (event.spell_id, event.amount, event.crit))
-            .collect::<Vec<_>>(),
-        ticks.iter().map(|event| event.amount).collect::<Vec<_>>(),
-        run.app.world().resource::<FactorCapture>().export()
+        "both resolved hits fund the native bleed fraction and its periodic Implacable modifier: {actual}/{expected}; fraction{fraction},implacable{implacable}"
     );
 }

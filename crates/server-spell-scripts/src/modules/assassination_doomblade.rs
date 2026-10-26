@@ -21,6 +21,7 @@ fn after_hand(world: &mut World, ctx: &EffectCtx, target: Entity, _crit: bool, d
     });
     let Some(percent) = percent else { return };
     // Native394021 owns duration, cadence, rolling carry and no-second-crit flags.
-    // Its dynamic Lethal Dose multiplier is applied by assassination_target.
+    // player.cpp957–964 snapshots DMG_OVER_TIME: native Implacable periodic
+    // modifiers apply; Doomblade's unused composite_da override does not.
     bank_residual(world, ctx, target, BLEED, percent, damage);
 }

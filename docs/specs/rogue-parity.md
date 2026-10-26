@@ -12,7 +12,7 @@ Assassination259 combat and the shared Rogue attack-speed path follow pinned Sim
 
 - [x] Kingsbane follows pinned default `bugs=1`: apply its extra native Potent Assassin direct bonus and extra native Implacable effect1 direct/effect2 periodic bonus, in addition to ordinary native family-mask modifiers. Read live passive amounts; preserve coefficients, costs, cadence and earned ramp. Source: `sc_rogue.cpp4921–4945`.
 
-- [x] Each landed native Mutilate hand funds394021 with its resolved damage times selected381673 effect0's native fraction. Native cadence, duration, rolling carry and no-second-crit flags remain authoritative; dynamic Lethal Dose applies to its ticks. Source: `sc_rogue.cpp5131–5135,6278–6287,7993–7999`.
+- [x] Each landed native Mutilate hand funds394021 with its resolved damage times selected381673 effect0's native fraction. Native cadence, duration, rolling carry and no-second-crit flags remain authoritative. Its actual over-time snapshot retains native Implacable periodic modifiers, not the unused direct-damage Lethal Dose override. Source: `sc_rogue.cpp5131–5135,7993–7999`, `player.cpp957–964`, `residual_action.hpp147–162`.
 
 ### Stealth and bleed children
 
@@ -55,7 +55,7 @@ Assassination259 combat and the shared Rogue attack-speed path follow pinned Sim
 
 Paths below are under `crates/server-simulation/src/dungeon_simulator/dps_parity/`:
 
-- `assassination_doomblade_tests.rs` — one real Mutilate's two hands fund the complete native bleed and its own Lethal Dose bonus.
+- `assassination_doomblade_tests.rs` — one real Mutilate's two hands fund the complete native bleed and its native periodic Implacable multiplier.
 - `assassination_kingsbane_tests.rs` — actual direct/periodic damage with and without native Mastery/Implacable passives proves the pinned double-dip ratios.
 - `assassination_focus_tests.rs` — actual off-mark direct/periodic damage copies to the owned mark at the native fraction, with no self-copy or second crit.
 - `assassination_white_tests.rs` — actual landed weapon hits and marked/unmarked retargeting.
@@ -67,6 +67,8 @@ Paths below are under `crates/server-simulation/src/dungeon_simulator/dps_parity
 - `rogue_finisher_tests.rs` — unchanged Outlaw SnD start/extension regression.
 
 ## Known gaps (current cycle)
+
+- [ ] Qualify Doomblade's default aura-delay application and pending-tick duration carry against the pinned staggered-hand refresh (`player.cpp900–972`, `action.cpp4614–4617`). The isolated pool test does not qualify this timing.
 
 - [ ] Qualify these mechanics and spec259 ST/3T output against the parent contract's ±10% band.
 - [ ] Quietus Celeris, mark-target death, Unshakeable Drive's delayed consumer, and Mass Casualty remain unqualified by this slice.
