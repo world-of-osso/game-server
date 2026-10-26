@@ -178,7 +178,21 @@ Source: authenticated70448/read-only world.db25 effect rows; SimC76f8118 `sc_dea
 
 `auras::channel_tick_timing_ms` selects the same native effect cadence used by aura construction, including existing scripted cadence definitions. Hasted channel duration and `CastState` use this shared rounded period; duration preserves the original modified tick count. Native direct/triggered health effects rank ahead of auxiliary control effects when selecting the cadence. FoF's166ms stun row must not outrank its existing1000ms damage cadence: strict REDd8c6a93202 observed a2988ms deadline while four damage intervals require2992ms. Non-channel period quantization and un-hasted channel lifetime remain unchanged. Modifier ordering and stored application haste remain with their existing owners.
 
-Pinned SimC76f8118 `action.cpp4297–4314/4397–4421` rounds channel tick time, then rebuilds duration to prevent false expiry partials. Native Ray RED2d0ea30702 observed8full ticks plus a0.012690355 expiry fraction at constant26.69281%haste. Seven-family GREEN qualification and landing are pending; [Frost investigation](../investigations/frost-mage-dps-parity.md#per-hit-factor-investigation--2026-10-26) records the consumer evidence. This is not a spell-specific ninth-tick filter.
+Pinned SimC76f8118 `action.cpp4297–4314/4397–4421` rounds channel tick time, then rebuilds duration to prevent false expiry partials. Native Ray RED2d0ea30702 observed8full ticks plus a0.012690355 expiry fraction at constant26.69281%haste. The [Frost investigation](../investigations/frost-mage-dps-parity.md#per-hit-factor-investigation--2026-10-26) records the consumer evidence. This is not a spell-specific ninth-tick filter.
+
+Code`fad33456f` passes67 native cases across all seven required families. The workspace/all-target check and formatting pass. These are probe proofs, not landing or all-spec DPS acceptance.
+
+| Native family | Actual proof | Probe |
+|---|---|---|
+| Frost64 | Ray8full ticks;27Frost controls | `4d5a25a057` |
+| Arcane62 |23Missiles/Arcane controls | `d159d93aee` |
+| Shadow258 | Mind Flay paid ticks; Void Torrent tick-zero exclusion | `0ca0083ba7` |
+| Affliction265 | Full Drain Soul expiry; native Malefic Grasp | `a95cf82de3` |
+| Devastation1467 | Scintillation children, Mass Disintegrate and native interruption | `78cfc39738` |
+| WW269 | Full FoF deadline and five periodic damage emissions; initial MID2 half-child kept separate; melee/channel controls | `cee5ded2ce` |
+| Feral103 | Convoke retains4s lifetime and free native children | `d093253376` |
+
+Drain Soul uses private gate choice124692 at native node72045. The original265 reference input retains91566 (Improved Shadow Bolt); it is unchanged and must not be replaced by the gate variant for DPS measurement. All-spec remeasurement remains a separate integration requirement.
 
 ## Dead-caster native channel coverage — 2026-10-17
 
