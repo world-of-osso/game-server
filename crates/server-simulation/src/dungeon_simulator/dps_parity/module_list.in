@@ -77,6 +77,7 @@ mod devastation_bombardments_tests;
 mod devastation_imminent_tests;
 mod devastation_tests;
 mod dot_duration_tests;
+mod diag_outlaw_ruthlessness_tests;
 mod dk252_tests;
 mod driver_tests;
 mod dummy_reference_tests;
