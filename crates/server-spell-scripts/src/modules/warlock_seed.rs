@@ -163,7 +163,6 @@ fn is_supported_owner(world: &World, caster: Entity) -> bool {
 
 fn register(scripts: &mut AuraScripts) {
     let script = scripts.0.entry(SEED).or_default();
-    script.on_periodic = Some(original_tick);
     script.on_remove = Some(seed_removed);
 }
 
@@ -215,17 +214,22 @@ fn after_landed_damage(
     target: Entity,
     spell: Option<u32>,
     amount: f32,
-    _periodic: bool,
+    periodic: bool,
 ) {
     if !is_supported_owner(world, caster) {
+        return;
+    }
+    // actions1937–1948: Seed's actual native PERIODIC_DAMAGE3 tick, even with
+    // zero damage, ends the original timer. AuraScript::on_periodic dispatches
+    // dummy/trigger auras only and cannot observe this boundary.
+    if spell == Some(SEED) && periodic {
+        detonate_owned_seed(world, caster, target);
         return;
     }
     if spell == Some(EXPLOSION) {
         // actions1763–1773: a real explosion chains owned seeds, then applies
         // the background DoT. It does not add Wither's direct445468 payload.
-        if let Some((instance, _)) = owned_seed(world, caster, target) {
-            auras::remove_instance(world, target, instance, RemoveReason::Consumed);
-        }
+        detonate_owned_seed(world, caster, target);
         apply_background_dot(world, caster, target);
         return;
     }
@@ -248,13 +252,10 @@ fn consume_owner_damage(world: &mut World, caster: Entity, target: Entity, amoun
     }
 }
 
-fn original_tick(world: &mut World, target: Entity, aura: &AuraInstance, index: u8) {
-    if index != TIMER_EFFECT || !is_supported_owner(world, aura.caster) {
-        return;
+fn detonate_owned_seed(world: &mut World, caster: Entity, target: Entity) {
+    if let Some((instance, _)) = owned_seed(world, caster, target) {
+        auras::remove_instance(world, target, instance, RemoveReason::Consumed);
     }
-    // actions1937–1948: refresh extends duration but not this original tick.
-    // The native scripted periodic boundary replaces the zero-damage tick.
-    auras::remove_instance(world, target, aura.instance_id, RemoveReason::Consumed);
 }
 
 fn seed_removed(world: &mut World, target: Entity, aura: &AuraInstance, reason: RemoveReason) {

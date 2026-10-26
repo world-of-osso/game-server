@@ -225,6 +225,20 @@ fn seed_native_refresh_keeps_original_explosion_timer_without_resource_reset() {
         crate::spell_cast::now(run.app.world()) < refreshed,
         "do not borrow refreshed natural expiry"
     );
+    assert!(
+        run.app
+            .world()
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|event| {
+                event.source == Some(run.actor.to_bits())
+                    && event.spell_id == Some(SEED)
+                    && event.kind == CombatLogKind::Damage
+                    && event.periodic
+            }),
+        "observe Seed's actual periodic-damage boundary, not a dummy-aura callback"
+    );
     assert_actual_explosion_and_wither(&run);
 }
 
