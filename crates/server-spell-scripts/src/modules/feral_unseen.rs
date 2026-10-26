@@ -9,6 +9,7 @@ use combat::spell_cast::{
     script_registry::{ContextHitHook, SpellScriptHook},
     targets,
 };
+use combat::spell_info::CastPolicyContext;
 use shared::components::PowerType;
 
 const BITE: u32 = 22568;
@@ -115,20 +116,35 @@ fn read_attack(
 }
 
 fn launch_unseen(world: &mut World, ctx: &EffectCtx<'_>, points: f32, energy: f32) {
-    let Some(target) = choose_enemy(world, ctx.caster) else {
+    let context = ctx
+        .spell
+        .cast_policy_context
+        .clone()
+        .expect("native Bite retains its launch context");
+    launch_effective_unseen(world, ctx.caster, ctx.depth + 1, points, energy, context);
+}
+
+pub(super) fn launch_effective_unseen(
+    world: &mut World,
+    caster: Entity,
+    depth: u8,
+    points: f32,
+    energy: f32,
+    context: Box<CastPolicyContext>,
+) {
+    let Some(target) = choose_enemy(world, caster) else {
         return;
     };
-    let depth = ctx.depth + 1;
-    let Some(mut spell) = read_attack(world, ctx.caster, target, depth) else {
+    let Some(mut spell) = read_attack(world, caster, target, depth) else {
         return;
     };
-    let (_, maximum) = spell_cast::powers::power_value(world, ctx.caster, PowerType::ComboPoints)
+    let (_, maximum) = spell_cast::powers::power_value(world, caster, PowerType::ComboPoints)
         .expect("native Unseen caster has a combo-point pool");
     // sc_druid.cpp4919–4929: CP fraction times extra-Energy fraction,
     // not Bite's1+extra*Saber effectiveness. Coefficients stay native.
     spell.cast_damage_multiplier = Some(points / maximum * energy);
-    spell.cast_policy_context = ctx.spell.cast_policy_context.clone();
-    spell_cast::launch_triggered_spell(world, ctx.caster, &spell, Some(target), depth);
+    spell.cast_policy_context = Some(context);
+    spell_cast::launch_triggered_spell(world, caster, &spell, Some(target), depth);
 }
 
 fn travel_delay(spell: u32) -> Option<f32> {

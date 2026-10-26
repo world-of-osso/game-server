@@ -130,6 +130,7 @@ pub(super) fn on_strike(world: &mut World, ctx: &EffectCtx, target: Entity) {
     if ctx.primary_target() != Some(target) {
         return;
     }
+    super::enhancement_stormwell::after_primary_crash(world, ctx, target);
     if matches!(ctx.spell.id, 17364 | 115356 | 60103) {
         cast_crash_payload(world, ctx.caster, target, ctx.depth);
     }

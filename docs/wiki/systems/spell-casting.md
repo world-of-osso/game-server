@@ -552,6 +552,14 @@ Shield of Righteous53600 has a spell-owned native6yd/120-degree caster-facing co
 
 Initial census164 roots94/70 from93/71. Final origin/master809b61e integration includes batch15/petbattle-effects3: baseline163 roots98/65, combined163 roots99/64; E3=114/122,aura4=66/74,aura226=18/19 unchanged by guardian follow-up. All40 batch15 baseline IDs/counts exactly reproduced; only Affliction core script presence3→4, root A unchanged. Single requested spell_cast gate352/352 at6ea07e4; later25bc1fc integration proves bounded guardian/batch15 tests22/22 plus fmt/check, not a repeated/fresh broad gate. Evidence: `game-engine/data/diagnostics/spell-guardians2-2026-10-10/`, including `integrated/` census/table receipts. No realm/full-rotation claim.
 
+## Shared pet prerequisites — 2026-10-26
+
+The parity Player spawner installs the same runtime-only `PetStable` previously supplied only by the Hunter fixture. Native688 then creates its real UNIT_PET through existing summon/storage code without fake `PlayerLink`/`InWorld`, character IDs or pool resets. The Hunter fixture retains only its source default-record provisioning. Ordinary native OOC resource readiness remains unchanged.
+
+Generic effect148 dispatches both unit and destination hit modes. Its new `trigger_missile_value` leaf copies the native value into every effect on the child cast clone, preserves destination/costs and leaves `SpellStore` unchanged. Implicit85 adds the native front-left destination offset through the existing ordered selection and collision path; TC `CheckDst` supplies caster origin when absent. There are no spell-ID branches.
+
+Native `f9d838495d` observed missing actual Imp/Infernal actors and rejected Overfiend admission. Focused `pet_prerequisite_tests` cover these boundaries and child-value/catalog isolation. GREEN and protected255/254/253/265 qualification remain pending. This does not qualify pet attack/power rows or numerical parity. [Contract](../../specs/dps-parity.md#shared-pet-prerequisites).
+
 ## Guardian actors and damage transfer
 
 [Contract](../../specs/spell-guardians.md), [capability matrix/all40-spec table](../../spell-guardians-coverage.md). Effect28 creates its existing `SummonedCreature`; supported guardian/minion/runeblade titles (and named49206's temporary pet-title Gargoyle) gain `GuardianActor` when an authentic creature spell list or the explicit [Darkglare native-description binding](#guardian-source-follow-ups) exists. `guardian_spells` imports9586 TDB1210 creature_template_spell rows; startup opens it read-only and logs a missing import. Parent supplied the canonical9586-row table before batch12 (verified2026-10-10). Companion actors never acquire this combat AI. Actors read the owner's current `CombatTarget` and use normal creature casts, native power pools/costs, cast time and cooldowns. Lists are deduplicated in archive index order; untimed spells are used once, with no invented repeat clock. Existing demon-pet power coefficients are reused for demon templates; other guardian power scaling is not newly inferred. Native duration, owner death/removal or map departure removes actors.
@@ -1172,6 +1180,14 @@ Backstab53 unconditional `$<mult>` joins variable339: `(max(0,min(player_level-1
 [Contract](../../specs/spell-guardians.md#feral-spirit-owner-inheritance). Actual51533→228562 creates two29264 wolves. Pinned TC a352b1fa TemporarySummon.h:119 classifies only29264 as Spirit Wolf; StatSystem.cpp:1353/1423 supplies owner melee AP×0.31 (integer AP and bonus SP) and AP/3.5×attack seconds. Pet.cpp:1026 supplies weapon3–5×summon level; local template supplies1500ms. Both spell power and melee swings read live owner power. Other guardian formulas remain unchanged.
 
 Named gap `FERAL_SPIRIT_INTRINSIC_AP_SOURCE`: archive pet_levelstats has2715 rows and zero29264. TC substitutes explicitly fake Strength22; this implementation does not. Intrinsic AP, armor/stamina shares, healing/AI/chase and full legal-loadout parity remain unsupported. Native centered training-dummy RED at89645435 reaches ownerAP100→10000 with damage10→10 and power(0,0); Merged afc0e5e5/protocol62865c23 controls24/24 pass (55.15s tests), check102.286s/fmt/readability clean. Live power asserts31→3100 SP/AP; ordinary dummy stays0/0. Independent/full-stat/legal-loadout acceptance remains open. Sources and proof ledger: data/class-completeness6-2026-10-12/guardian-{owner-power-source,owner-power-proof-ledger,wolf-pet-levelstats-source}.json.
+
+## Destruction guaranteed-crit damage — 2026-10-26
+
+`destruction_crit_scaling` registers the existing `DamageAmount` boundary for Conflagrate17962/Shadowburn17877 only. Selected387108 multiplies by `1 + live caster spell crit`, excluding the ability-specific guaranteed outcome. The same pure callback serves forecasts; resolved copies skip it. Existing Chaos Bolt scaling is unchanged. Source: SimC76f8118 actions4511–4517/4838–4844; [contract](../../specs/dps-parity.md#destruction-guaranteed-crit-damage).
+
+Native RED `3e1761f9b2` observes real Conflagrate critical damage42039 unchanged when native113858 increases caster crit34.95652→64.95652%; the source requires ratio1.2222938. Existing CB control passes. Aura modifiers require a real stat-update frame before admission; the first probe failed that test precondition and is not gameplay RED. CoC GREEN remains pending.
+
+The separate `destruction_mastery` actual-hit sampler and pure mean forecast landed via `632a4d9a0b` with nine native/control cases GREEN. Actual eligible hits sample native mastery bounds; read-only forecasts consume no RNG. [Current numerical status](warlock-periodic-counters.md#counter-lifecycle) remains below parity.
 
 ## Warlock periodic shard funding — 2026-10-25
 
