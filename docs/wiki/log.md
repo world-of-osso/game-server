@@ -1,3 +1,9 @@
+## 2026-10-26 — Merged Mage feedback grants
+
+[Feedback grants](systems/spell-casting.md#merged-feedback-grants-are-not-casts--2026-10-26) distinguish native aura application from a full triggered spell. Paired native ST trace2ef3293ef0 reproduces the cast-supply loss; RED579171b891 identifies an unrelated+78haste from the old queued grant. The generic queue now applies native auras directly; three-Mage GREEN/measurements remain pending.
+## 2026-10-26 — Elemental Weapons dynamic amount
+
+[Elemental Weapons](systems/auras.md#elemental-weapons-dynamic-amount--2026-10-26) derives native408390 amounts from selected384355 and real imbued hands. Matching-input Bolt RED4db1ecbdad→GREEN5002a0bca2 gives31098/32653/34208 for0/1/2 hands;28 native cases and3 decks pass. Landed5a8c96626dc9a77bda80d51ca3fefc4627f80969. Integrated ST158135.70/3T328919.95 (81.896%/82.178%) remain below parity; no isolated uplift claim. Native masks, coefficients and proc chances are unchanged.
 ## 2026-10-26 — Native Ignite spread
 
 [Fire Ignite](systems/simc-apl.md#fire-fixture-adapter) now copies the owned pre-hit bank through native admission, with native cap/threshold, stable bank ordering and separate new/existing target clocks. Actual Fire Blast RED0-of-1 recipients passes with Ignition and Controlled Destruction (3GREEN22.02s), landedb01577f7d via train792052d168. ST184739.98 is93.6857%;3T331209.35 is89.2607%, still2743.33 below the strict90% boundary. The invalid existing-target fixture is removed, not weakened; any later real-clock qualification remains separate. No direct-damage or stat scalar changed.
@@ -13,6 +19,10 @@
 ## 2026-10-26 — Mage Inspired Intellect source
 
 [Mage intellect](systems/character-stats.md#mage-inspired-intellect--2026-10-26) identifies the missing native2-point enhancement to Arcane Intellect, not a universal stat deficit. Base/gear/enchant/gem/food/rune totals reconcile; duplicate weapon Intellect rows explain the reference JSON gear-map undercount. Fire native RED is observed; Frost64/Affliction265 real-player gates remain pending.
+## 2026-10-26 — Aurora integrated; Hammer Sunrise qualification
+
+[Ret Purpose supply](systems/ret-divine-purpose.md#qualification) records landed 116-case integration and the final numerical boundary. [HoW Second Sunrise](systems/spell-casting.md#how-primary-impact-extension--2026-10-26) has corrected native RED evidence and a successful-primary producer using shared native values/ICD. Critical echo payloads retain native Sun Sear. GREEN integration and numerical qualification remain pending.
+
 ## 2026-10-26 — Native Loa and Rite stat callbacks
 
 [Native stat callbacks](systems/character-stats.md#native-loa-and-rite-stat-callbacks--2026-10-26) use equipped gem metadata, linked rank amounts and combat admission. Native RED `f282665373` → GREEN `412af0a123`; the five-profile gate passed again before landing `44c2b6c5d`. Other-spec numerical remeasurement remains separate.
@@ -4713,3 +4723,5 @@ Documented the first compile-boundary slice in [spell-script-crate](systems/spel
 - 2026-10-26: Documented [Ret Judgment target uses](systems/ret-judgment.md): ordinary native Judgment RED6a9c30b6f8 produced no197277; downstream producer/consumer and flat incoming magnitude implemented. Probee4384f8211 reached the first successful consumption; an extra timer-cancellation assertion contradicted pinned buff.cpp2246–2289 and was removed without changing generic timers. Corrected GREENbb564822f6 and113 native cases passed; landed261f87e51. Full-fight target amplification is observed; actor-only uptime excludes the target debuff.
 
 - 2026-10-26: Documented [Ret Purpose and tier supply](systems/ret-divine-purpose.md): selected Aurora's guaranteed Wake grant was missing; native REDb584a946f8→GREENc768cfaee3 restores real free-spender/Arbiter delivery with native ICD ownership. Full integrationd841480cd6 pending.
+- 2026-10-26: Documented [Survival native producers](systems/spell-casting.md#survival-native-producers--2026-10-26): Tip/Swipe/Wildfire landed455a8ad19 with35 real controls and partitioned hero inputs; obsolete primary-only bridge documentation now links to the native pack path. Sentinel0ac1974a11 has3 genuine owned-mark REDs; queued Tip producer/shared mark/Storm/recharge gatebdb0b13806 remains pending. Numerical parity and owned-pet Strike as One remain open.
+- 2026-10-26: [Shared Survival Sentinel](systems/spell-casting.md#survival-native-producers--2026-10-26) landed4c9083c0c0 throughbdb0b13806,3 genuine mark REDs→GREEN and all38 controls PASS. Canonical three-seed means78418.654ST/140699.957three-target are39.50%/44.16% of reference, not parity. Next native strike producer reuses the living owned pet,1251717 ICD and1251779 payload; GREEN and specific real-crit Sic 'Em RED are pending.

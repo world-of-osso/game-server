@@ -1,5 +1,13 @@
 # Auras
 
+## Elemental Weapons dynamic amount — 2026-10-26
+
+The selected384355 talent supplies408390's zero-placeholder amounts from its native effect0 ×0.1 per actual Windfury/Flametongue hand. Existing imbue apply/remove hooks update the native direct/periodic effects without changing their operations or masks. Zero hands or talent removal removes the derived modifier. Stormblast's explicit exception reads the same percent; its native child still excludes broad caster modifiers.
+
+Native RED4db1ecbdad observes identical31098 Bolt damage for zero and one real imbue with matching roll, crit, Mastery, Versatility and target inputs. GREEN5002a0bca2 observes31098/32653/34208 for zero/one/two hands, with all28 native Enhancement and3 deck tests passing. Landed5a8c96626dc9a77bda80d51ca3fefc4627f80969 contains implementationeeda0fc32. Integrated300s ST158135.70/3T328919.95 are81.896%/82.178% of pinned references; parity remains open. These integrated totals are not isolated uplift evidence.
+
+Sources: pinned SimC76f8118 `sc_shaman.cpp13212–13220`; [contract](../../specs/dps-parity.md#enhancement-fixture-driver), [dynamic amount](../../../crates/server-combat/src/spell_cast/scripts/enhancement_elemental_weapons.rs), [imbue callbacks](../../../crates/server-combat/src/spell_cast/scripts/enhancement_imbues.rs), [native damage test](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/enhancement_elemental_weapons_tests.rs).
+
 ## Garrote stored literal multiplier — 2026-10-26
 
 Garrote already freezes its native Improved Garrote bonus in `SpellInfo.cast_damage_multiplier` and the applied bleed amount. The downstream703 declaration in `PersistentCastMultiplier` makes `periodic_snapshot::capture_multiplier` copy that same factor into each periodic effect's existing `persistent_multiplier` field on application and refresh. It does not change damage or infer a factor from tick amounts. The existing Feral fresh/live producer remains unchanged; this declaration qualifies stored Garrote metadata only.

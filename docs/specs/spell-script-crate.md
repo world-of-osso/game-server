@@ -13,6 +13,8 @@
 
 - Ordered downstream effect-handler lookup replaces native per-unit dispatch at the same handled/launch/impact boundaries. Additive target filters retain caster and immutable primary context after existing policy filters; they do not replace native target selection.
 
+- Resource-only consumers retain frozen payment even when native effects select only self; target-qualified ResourceContext consumers still require the selected primary in their hit plan. Neither registration changes native target selection or costs.
+
 ## How it works
 
 - [Registry assembly and test boundaries](../wiki/systems/spell-script-crate.md)

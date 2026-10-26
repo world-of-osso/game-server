@@ -990,7 +990,8 @@ pub(in crate::spell_cast) fn snapshot(
     {
         return None;
     }
-    let needs_hit_targets = source_context
+    let needs_hit_targets = rogue_context
+        || script_registry::requires_target_context(world, spell.id)
         || consumers(world, &resources, spell.id).any(|policy| {
             selected(world, caster, policy)
                 && !matches!(
