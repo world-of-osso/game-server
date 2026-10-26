@@ -3,7 +3,6 @@
 
 use super::script_registry;
 use crate::random as rand;
-pub(super) use script_registry::conjure_count;
 
 mod bouncing_projectiles;
 pub(super) use script_registry::{

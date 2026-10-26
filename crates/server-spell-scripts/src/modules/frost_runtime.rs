@@ -4,8 +4,11 @@ use combat::spell_cast::script_registry::{self, SpellScriptHook};
 use combat::spell_cast::scripts::{AfterCastHook, script_effect_value};
 use script_registry::conjure_count;
 
+#[path = "frost_runtime/frost_mage_events.rs"]
 mod frost_mage_events;
+#[path = "frost_runtime/frost_mage_procs.rs"]
 mod frost_mage_procs;
+#[path = "frost_runtime/frost_mage_supply.rs"]
 mod frost_mage_supply;
 
 pub const HOOKS: &[SpellScriptHook] = &[
