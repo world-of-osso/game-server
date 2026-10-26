@@ -1,6 +1,50 @@
 //! Native selected Bursting Growth relationships at real Vines and Bite boundaries.
 use super::*;
 
+#[test]
+#[ignore = "requires exact spec103 profile/traits and native private DB"]
+fn feral_selected_vines_ticks_roll_native_rampancy_before_any_expiry() {
+    let _seed = crate::random::seed_scope(1031270586);
+    let mut run = prepare_literal(103, 3).unwrap();
+    let actor = run.actor;
+    let target = run.targets[0];
+    assert!(crate::auras::has_aura(run.app.world(), actor, 1270586));
+    engage(&mut run);
+    for _ in 0..32 {
+        crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 439531, Some(target), 1);
+        for _ in 0..45 {
+            run.app.update();
+        }
+        let aura = run
+            .app
+            .world()
+            .get::<crate::auras::ActiveAuras>(target)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 439531 && aura.caster == actor)
+            .unwrap();
+        assert!(
+            aura.expires_at.unwrap() > crate::spell_cast::now(run.app.world()),
+            "the native Vines application is still live when its damage is observed"
+        );
+        if burst_damage(&run) > 0 {
+            break;
+        }
+        // Remove before any native stack deadline, so expiration bursts cannot
+        // masquerade as the missing actual-periodic-tick Rampancy producer.
+        crate::auras::remove_auras(
+            run.app.world_mut(),
+            target,
+            crate::auras::RemoveReason::Cancelled,
+            |aura| aura.spell_id == 439531 && aura.caster == actor,
+        );
+    }
+    assert!(
+        burst_damage(&run) > 0,
+        "selected native Vines damage ticks must roll Rampancy without Bite or expiry"
+    );
+}
+
 fn burst_damage(run: &Run) -> u64 {
     report::combat(run.app.world(), &run.targets, 1.0)["actions"]
         .as_array()
