@@ -1,3 +1,4 @@
+- 2026-10-26: Added [Devil Fruit lifecycle](systems/warlock-periodic-counters.md#devil-fruit-malevolence), native RED and reused proc/extension boundaries; qualification pending.
 ## 2026-10-26 — Absolute Corruption lifetime
 
 [Absolute lifetime](systems/warlock-periodic-counters.md#absolute-corruption-lifetime) explains repeated paid Seeds and Wither on replacement add waves: selected196103 lacked permanent445474 runtime state. Exact literal ST/wave60s NativeRED618ca30eeb recorded. Own lifecycle leaf and generic DoT-only unbounded facts preserve native effects/counters/ticks and leave buff/finite semantics unchanged;265/267 plus103finite-refresh gates pending. No damage/target-count fit or catalog/fixture-clock edits.
