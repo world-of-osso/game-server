@@ -1,7 +1,7 @@
 //! Permanent Unholy ghoul policy; Hunter/Warlock/Mage paths are unchanged.
 use crate::stats::{CharacterStats, StatModifiers, WeaponAttackType};
 use bevy::prelude::*;
-use shared::components::{Npc, Player, WeaponType};
+use shared::components::{Npc, WeaponType};
 
 #[derive(Component)]
 struct DeathKnightGhoul;
@@ -73,13 +73,7 @@ pub(crate) fn power_stats(world: &World, pet: Entity) -> Option<(f32, f32)> {
 }
 
 pub(crate) fn order_on_owner_cast(world: &mut World, owner: Entity) {
-    if world
-        .get::<Player>(owner)
-        .is_none_or(|player| player.class != 6)
-        && !world
-            .get::<crate::followers::Follower>(owner)
-            .is_some_and(|follower| follower.profile.class_id == 6)
-    {
+    if super::owner_class(world, owner) != Some(6) {
         return;
     }
     let target = world
