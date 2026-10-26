@@ -491,6 +491,94 @@ fn devastation_maneuverable_deep_breath_launches_native_melt_armor_dot_on_its_pa
     }
 }
 
+#[test]
+#[ignore = "requires private native DB and exact Devastation profile"]
+fn devastation_successful_empower_grants_power_swell_and_real_essence_regeneration() {
+    for selected in [false, true] {
+        let mut run = prepare_literal(1467, 1).unwrap();
+        engage(&mut run);
+        let primary = run.targets[0];
+        assert!(crate::auras::has_aura(run.app.world(), run.actor, 370839));
+        if !selected {
+            crate::auras::remove_auras(
+                run.app.world_mut(),
+                run.actor,
+                crate::auras::RemoveReason::Unlearned,
+                |aura| aura.spell_id == 370839,
+            );
+        }
+        crate::spell_cast::creature_cast_with_targets(
+            run.app.world_mut(),
+            run.actor,
+            356995,
+            crate::spell_cast::CastTargets {
+                unit: primary,
+                primary: Some(primary),
+                destination: None,
+            },
+        )
+        .unwrap();
+        preparation::finish_pending_setup(&mut run).unwrap();
+        let pool = |run: &Run| {
+            *run.app
+                .world()
+                .get::<crate::spell_cast::powers::PowerPools>(run.actor)
+                .unwrap()
+                .get(shared::components::PowerType::Essence)
+                .unwrap()
+        };
+        let before = pool(&run);
+        assert!(
+            before.current < before.max && before.regen_per_sec > 0.0,
+            "ordinary Disintegrate must spend actual Essence before regen is measured"
+        );
+        crate::spell_cast::creature_cast_empowered_with_targets(
+            run.app.world_mut(),
+            run.actor,
+            357208,
+            crate::spell_cast::CastTargets {
+                unit: run.actor,
+                primary: Some(primary),
+                destination: None,
+            },
+            1,
+        )
+        .unwrap();
+        preparation::finish_pending_setup(&mut run).unwrap();
+        run.app.update();
+        let after = pool(&run);
+        let native = run
+            .app
+            .world()
+            .get::<crate::auras::ActiveAuras>(run.actor)
+            .and_then(|auras| auras.iter().find(|aura| aura.spell_id == 376850));
+        // SimC76f8118 sc_evoker.cpp4684/11504–11507: actual empower release
+        // grants the native110 Essence regen aura, not an immediate resource refill.
+        assert_eq!(
+            native.is_some(),
+            selected,
+            "only selected Power Swell may be earned"
+        );
+        assert!(
+            after.current < after.max,
+            "observe uncapped native regeneration"
+        );
+        let multiplier = native.map_or(1.0, |aura| {
+            1.0 + aura
+                .effects
+                .iter()
+                .find(|effect| effect.index == 0)
+                .unwrap()
+                .amount
+                / 100.0
+        });
+        assert!(
+            (after.regen_per_sec - before.regen_per_sec * multiplier).abs() < 0.001,
+            "native Power Swell regen: selected={selected}, before={before:?}, after={after:?}, factor={multiplier}"
+        );
+    }
+}
+
 fn cast_reference_empowers(run: &mut Run, primary: Entity) {
     for (spell, unit) in [(357208, run.actor), (359073, primary)] {
         crate::spell_cast::creature_cast_empowered_with_targets(
