@@ -117,6 +117,7 @@ fn havoc_relentless_onslaught_delays_real_free_copies_and_starts_native_icd_at_c
             .proc_category_recovery_ms as f64
             / 1000.0;
         let mut observed_copies = 0;
+        let mut expected_ready_at = None;
         for _ in 0..5 {
             havoc_tests::earn_havoc_fury(&mut run, 40.0);
             cast(&mut run, 201427, false);
@@ -141,13 +142,30 @@ fn havoc_relentless_onslaught_delays_real_free_copies_and_starts_native_icd_at_c
                         .iter()
                         .find(|aura| aura.caster == run.actor && aura.spell_id == 389977)
                         .unwrap();
-                    let remaining =
-                        aura.proc.next_ready_at - crate::auras::aura_now(run.app.world());
-                    assert!(
-                        (remaining - cooldown).abs() < 0.025,
-                        "native Onslaught ICD starts at actual delayed copy execution, not the earlier off-hand hit: {remaining} versus {cooldown}"
-                    );
+                    expected_ready_at = Some((
+                        aura.instance_id,
+                        crate::auras::aura_now(run.app.world()) + cooldown,
+                    ));
                     observed_copies = copies;
+                }
+                if let Some((instance, ready_at)) = expected_ready_at {
+                    let now = crate::auras::aura_now(run.app.world());
+                    let ready = crate::auras::procs::policy_proc_ready(
+                        run.app.world(),
+                        run.actor,
+                        instance,
+                    );
+                    if now < ready_at - 0.025 {
+                        assert!(
+                            !ready,
+                            "native Onslaught ICD cannot expire before its actual delayed copy's cooldown"
+                        );
+                    } else if now > ready_at + 0.025 {
+                        assert!(
+                            ready,
+                            "native Onslaught ICD must expire after its delayed copy's native cooldown"
+                        );
+                    }
                 }
             }
         }
