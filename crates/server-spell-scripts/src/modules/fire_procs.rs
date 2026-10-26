@@ -44,6 +44,7 @@ const FEVERED: u32 = 383811;
 const CONTROLLED_TALENT: u32 = 383669;
 const CONTROLLED: u32 = 453268;
 const MAGE_FAMILY: u32 = 3;
+const INTENSIFYING_FLAME_DAMAGE: u32 = 419800;
 const PYROCOSM: u32 = 1260673;
 const METEORITE_IMPACT: u32 = 449569;
 const FROM_THE_ASHES: u32 = 342344;
@@ -201,7 +202,9 @@ pub(crate) fn fire_feedback_hit(world: &mut World, ctx: &EffectCtx, target: Enti
         .class_options
         .as_ref()
         .is_some_and(|options| options.spell_class_set == MAGE_FAMILY);
-    if !mage_spell {
+    // sc_mage.cpp2502: Intensifying Flame inherits spell_t, not mage_spell_t;
+    // its native Mage family does not make it a Fevered feedback producer.
+    if !mage_spell || ctx.spell.id == INTENSIFYING_FLAME_DAMAGE {
         return;
     }
     // sc_mage.cpp3819: Fire's Overflowing Energy eligibility is Fireball

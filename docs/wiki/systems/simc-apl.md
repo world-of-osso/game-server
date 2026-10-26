@@ -50,6 +50,8 @@ Selected From the Ashes uses actual eligible direct-hit callbacks to restore nat
 
 Heat Shimmer production runs at actual Ignite tick completion through the existing periodic callback. It reuses the actual457735 aura instance's RPPM/ICD state to grant458964, and suppresses attempts while native `CastState` identifies Scorch. Proc helpers take instance IDs, not spell IDs; passing457735 made every attempt return false. Scorch freezes the native buff's modifiers plus its guaranteed crit at admission, then spends one stack after launch. Native tick→buff RED is observed; the full earned-buff consumer and numerical acceptance remain under qualification.
 
+Fevered feedback excludes Intensifying Flame419800: its native class-family field is Mage, but the pinned action inherits `spell_t`, not `mage_spell_t`. A real Fire Blast crit→Ignite tick→noncritical Intensifying Flame sequence reproduced the incorrectly cleared earned stack. The fix changes feedback eligibility, not critical-damage values; GREEN remains train-gated.
+
 ## Expected combat length
 
 `expected_combat_length` reads the existing `Encounter::Fixture.duration`, validated positive+finite. It is not elapsed/fight-remains, a300literal or an extra stored field. Dungeon and invalid fixture values return EXPECTED_COMBAT_LENGTH_UNAVAILABLE; proposed-action forwarding uses the same configured value. Four minimal-world cases at88095009c give4genuineRED0.02s;991b7fcde (landed master924638aba base) yields4/4GREEN0.00s/14m24compile/0warnings. Tests enabled attribute-only afterward; no DB/profile/suite rerun. [Exact proof](../../handoffs/expected-combat-length-proof-ledger.md).
