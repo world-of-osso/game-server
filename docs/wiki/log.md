@@ -64,6 +64,10 @@
 
 [Fire Ignite](systems/simc-apl.md#fire-fixture-adapter) now applies selected native Ignition's percentage only to each new Flamestrike contribution. Actual noncritical Flamestrike's unchanged tick/damage ratio passed RED→GREEN atfdef43f47 (train47ab06258e). ST178387.61 is unchanged;3T308050.16 remains below band. Direct damage and existing unpaid bank are unchanged.
 
+## 2026-10-26 — Survival Sanctified Armaments
+
+[Shared Sentinel residual](systems/spell-casting.md#survival-native-producers--2026-10-26) now handles actual Survival Raptor/Swipe recipients using native effect2 and the existing rolling periodic engine. Real-cast3af19c26c0 reproduces the missing owned residual; GREEN and numerical measurement remain pending.
+
 ## 2026-10-26 — Survival Spirit and Swipe
 
 [Spirit Bond](systems/spell-casting.md#survival-native-producers--2026-10-26) landedc017250c5 via99578c23fc with44 controls; canonical three-seed means129144.341ST/198580.287three-target remain65.06%/62.32% of reference. Swipe primary/secondary corrected real-hit probe17ee9b2065 passes; its separate landing remains pending.
