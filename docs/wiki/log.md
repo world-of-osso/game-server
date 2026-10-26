@@ -1,6 +1,6 @@
 ## 2026-10-26 — Elemental Weapons dynamic amount
 
-[Elemental Weapons](systems/auras.md#elemental-weapons-dynamic-amount--2026-10-26) now derives native408390 amounts from selected384355 and real imbued hands. Matching-input Bolt RED4db1ecbdad records31098→31098 instead of +5% with one hand; GREEN and measurement remain pending. Native masks, coefficients and proc chances are unchanged.
+[Elemental Weapons](systems/auras.md#elemental-weapons-dynamic-amount--2026-10-26) derives native408390 amounts from selected384355 and real imbued hands. Matching-input Bolt RED4db1ecbdad→GREEN5002a0bca2 gives31098/32653/34208 for0/1/2 hands;28 native cases and3 decks pass. Landed5a8c96626dc9a77bda80d51ca3fefc4627f80969. Integrated ST158135.70/3T328919.95 (81.896%/82.178%) remain below parity; no isolated uplift claim. Native masks, coefficients and proc chances are unchanged.
 
 ## 2026-10-26 — Fire Ignition contribution
 
