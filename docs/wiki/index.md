@@ -1,4 +1,5 @@
 - [Ordinary spell GCD haste](systems/spell-casting.md#ordinary-spell-gcd-haste--2026-10-26) — native category133 spell eligibility, haste bounds and separate417 path;40-spec clock gate, numerical remeasurement separate.
+- [Warlock periodic counters](systems/warlock-periodic-counters.md) — native Wither counter-only RED→GREEN; shared producer/collapse lifecycle implemented, native qualification pending.
 - [Arcane literal fixture](systems/simc-apl.md#arcane-fixture-62) — supplied profile rows and native class readiness; ST controller regression passes, numerical parity remains separate.
 - [Warlock periodic counters](systems/warlock-periodic-counters.md) — native Wither counters do not scale ticks or grow on refresh;265/267 actual-cast/tick RED→GREEN.
 - [Warlock periodic shard funding](systems/spell-casting.md#warlock-periodic-shard-funding--2026-10-25) — downstream Destruction-only funding, actual critical context and shared native pool/overflow; Affliction remains separate.
