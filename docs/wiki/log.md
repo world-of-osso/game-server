@@ -1,10 +1,16 @@
+## 2026-10-26 — Merged Mage feedback grants
+
+[Feedback grants](systems/spell-casting.md#merged-feedback-grants-are-not-casts--2026-10-26) distinguish native aura application from a full triggered spell. Paired native ST trace2ef3293ef0 reproduces the cast-supply loss; RED579171b891 identifies an unrelated+78haste from the old queued grant. The generic queue now applies native auras directly; three-Mage GREEN/measurements remain pending.
 ## 2026-10-26 — Elemental Weapons dynamic amount
 
-[Elemental Weapons](systems/auras.md#elemental-weapons-dynamic-amount--2026-10-26) now derives native408390 amounts from selected384355 and real imbued hands. Matching-input Bolt RED4db1ecbdad records31098→31098 instead of +5% with one hand; GREEN and measurement remain pending. Native masks, coefficients and proc chances are unchanged.
+[Elemental Weapons](systems/auras.md#elemental-weapons-dynamic-amount--2026-10-26) derives native408390 amounts from selected384355 and real imbued hands. Matching-input Bolt RED4db1ecbdad→GREEN5002a0bca2 gives31098/32653/34208 for0/1/2 hands;28 native cases and3 decks pass. Landed5a8c96626dc9a77bda80d51ca3fefc4627f80969. Integrated ST158135.70/3T328919.95 (81.896%/82.178%) remain below parity; no isolated uplift claim. Native masks, coefficients and proc chances are unchanged.
+## 2026-10-26 — Native Ignite spread
+
+[Fire Ignite](systems/simc-apl.md#fire-fixture-adapter) now copies the owned pre-hit bank through native admission, with native cap/threshold, stable bank ordering and separate new/existing target clocks. Actual Fire Blast RED0-of-1 recipients now passes with Ignition and Controlled Destruction in77265cb9e3. The invalid existing-target fixture is removed, not weakened; separate real-clock qualification is deferred until after remeasurement. The three-case landing and measurement remain pending. No direct-damage or stat scalar changed.
 
 ## 2026-10-26 — Fire Ignition contribution
 
-[Fire Ignite](systems/simc-apl.md#fire-fixture-adapter) now applies selected native Ignition's percentage only to each new Flamestrike contribution. Actual noncritical Flamestrike's unchanged tick/damage ratio has qualified RED proof; GREEN and measurement remain train-gated. Direct damage and existing unpaid bank are unchanged.
+[Fire Ignite](systems/simc-apl.md#fire-fixture-adapter) now applies selected native Ignition's percentage only to each new Flamestrike contribution. Actual noncritical Flamestrike's unchanged tick/damage ratio passed RED→GREEN atfdef43f47 (train47ab06258e). ST178387.61 is unchanged;3T308050.16 remains below band. Direct damage and existing unpaid bank are unchanged.
 
 ## 2026-10-26 — Fire Molten Fury execute
 
@@ -13,6 +19,10 @@
 ## 2026-10-26 — Mage Inspired Intellect source
 
 [Mage intellect](systems/character-stats.md#mage-inspired-intellect--2026-10-26) identifies the missing native2-point enhancement to Arcane Intellect, not a universal stat deficit. Base/gear/enchant/gem/food/rune totals reconcile; duplicate weapon Intellect rows explain the reference JSON gear-map undercount. Fire native RED is observed; Frost64/Affliction265 real-player gates remain pending.
+## 2026-10-26 — Aurora integrated; Hammer Sunrise qualification
+
+[Ret Purpose supply](systems/ret-divine-purpose.md#qualification) records landed 116-case integration and the final numerical boundary. [HoW Second Sunrise](systems/spell-casting.md#how-primary-impact-extension--2026-10-26) has corrected native RED evidence and a successful-primary producer using shared native values/ICD. Critical echo payloads retain native Sun Sear. GREEN integration and numerical qualification remain pending.
+
 ## 2026-10-26 — Native Loa and Rite stat callbacks
 
 [Native stat callbacks](systems/character-stats.md#native-loa-and-rite-stat-callbacks--2026-10-26) use equipped gem metadata, linked rank amounts and combat admission. Native RED `f282665373` → GREEN `412af0a123`; the five-profile gate passed again before landing `44c2b6c5d`. Other-spec numerical remeasurement remains separate.
