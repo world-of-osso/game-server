@@ -56,7 +56,7 @@ register_modules! {
     execution_counters: (320, "modules/execution_counters.rs"),
     feral_frenzy: (260, "modules/feral_frenzy.rs"),
     feral_growth: (410, "modules/feral_growth.rs"),
-    feral_lunar: (400, "modules/feral_lunar.rs"),
+    feral_lunar: (401, "modules/feral_lunar.rs"),
     foreground_procs: (310, "modules/foreground_procs.rs"),
     frost: (80, "modules/frost.rs"),
     germination: (200, "modules/germination.rs"),
