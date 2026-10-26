@@ -4,6 +4,7 @@
 mod active_enemy_tests;
 #[cfg(test)] mod arcane_tests;
 mod affliction_grasp_tests;
+mod affliction_nathreza_tests;
 mod affliction_tests;
 mod affliction_ua_tests;
 mod arms_chain_boundary_tests;
@@ -173,6 +174,7 @@ mod rogue_swift_slasher_tests;
 mod shadow_apparition_tests;
 mod shadow_link_tests;
 mod shadow_mastery_tests;
+mod shadow_screams_tests;
 mod shadow_slam_tests;
 mod shadow_tests;
 mod shadow_volley_tests;
