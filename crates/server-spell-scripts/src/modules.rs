@@ -73,6 +73,7 @@ register_modules! {
     giantkiller: (170, "modules/giantkiller.rs"),
     guardian_impacts: (1000, "modules/guardian_impacts.rs"),
     havoc: (150, "modules/havoc.rs"),
+    havoc_dance: (5770, "modules/havoc/dance.rs"),
     hellcaller_wither: (2665, "modules/hellcaller_wither.rs"),
     hot_streak: (1000, "modules/hot_streak.rs"),
     impact_procs: (330, "modules/impact_procs.rs"),
