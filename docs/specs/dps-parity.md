@@ -433,7 +433,7 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 ### Destruction Echo of Sargeras
 
 - Selected Embers1265770 advances source PRD only on real Incinerate29722 (including FnB) and Infernal Bolt434506 hits, using native label-modified chance. Selected1265774 actual Chaos Bolt/Shadowburn hits and ordinary in-combat Rain of Fire execution share its native internal cooldown. Pinned `bugs=true` uses full native Echo payload for spenders (SimC76f8118 actions450–455,4337,4605,4813,5614–5649,6039–6042; init1428–1434).
-- Native1265884 primary/secondary effects hit each recipient once; actual primary is excluded from its secondary effect. Preserve their native coefficients. Earn native1265939 through Echo and selectedII, and1305711 only from actual Echo impacts with genuine ItemSet-owned1296572. Do not replace authored label values or use the broad tier proc hint. ST/3T qualification does not certify the above-eight-target reduction.
+- Native1265884 primary/secondary effects hit each recipient once; actual primary is excluded from its secondary effect. Preserve their native coefficients. Earn native1265939 through Echo and selectedII, and1305711 only from actual Echo impacts with genuine ItemSet-owned1296572. Do not replace authored label values or use the broad tier proc hint. Frozen267 selects EmbersII rank2: native Vision is8% haste/crit, matching pinned reference `default_value=0.08`, not the raw per-rank4 (init846–849). ST/3T qualification does not certify the above-eight-target reduction.
 
 ### Destruction Chaotic Energies
 

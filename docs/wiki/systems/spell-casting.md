@@ -1233,6 +1233,12 @@ Native RED `3e1761f9b2` observes real Conflagrate critical damage42039 unchanged
 
 The separate `destruction_mastery` actual-hit sampler and pure mean forecast landed via `632a4d9a0b` with nine native/control cases GREEN. Actual eligible hits sample native mastery bounds; read-only forecasts consume no RNG. [Current numerical status](warlock-periodic-counters.md#counter-lifecycle) remains below parity.
 
+## Destruction Echo — 2026-10-26
+
+[Contract](../../specs/dps-parity.md#destruction-echo-of-sargeras). The owned [Echo leaf](../../../crates/server-spell-scripts/src/modules/destruction_echo.rs) uses actual Incinerate/Infernal Bolt hits for Embers I PRD, and actual Chaos Bolt/Shadowburn hits or ordinary Rain of Fire execution for the shared Embers III cooldown. It emits native1265884, excludes the primary from secondary damage, earns native Vision, and applies the tier mark only from actual Echo impacts with the real item-set aura. Seed has no role in this producer.
+
+Native producer RED `c12efd197e` and payload RED `24a0c65f22` become two GREEN cases in `309398a397`. Its remaining value failure was a test error: frozen267 selects Embers II rank2, so native Vision8% matches pinned reference `default_value=0.08`; raw per-rank4 is not the selected value. Correcting this assertion changes no gameplay, stats, allocations or coefficients. The selected-rank gate and landing remain pending. Above-eight-target reduction is not qualified. Sources: pinned SimC76f8118 actions450–455/4337/4605/4813/5614–5649/6039–6042 and init846–849/1428–1434.
+
 ## Warlock periodic shard funding — 2026-10-25
 
 Shared Wither stack/damage rules are documented separately in [Warlock periodic counters](warlock-periodic-counters.md).

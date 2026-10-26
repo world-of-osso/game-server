@@ -30,13 +30,20 @@ fn destruction_echo_native_apex_values_include_real_gear_and_talent_labels() {
         base(1265770, 0) + base(1296571, 1),
         "native2pc adds its actual label-bound chance"
     );
+    let selected = world
+        .get::<TraitLoadout>(run.actor)
+        .unwrap()
+        .spell_trait(1265772)
+        .expect("actual selected Embers II definition");
+    assert_eq!(selected.rank, 2, "frozen267 selects native Embers II rank2");
     for index in [0, 1] {
         let vision =
             crate::spell_cast::scripts::script_effect_value(world, run.actor, 1265939, index);
         assert_eq!(
-            vision,
-            base(1265772, index),
-            "native EmbersII binds Vision effect{index}"
+            vision, 8.0,
+            // init846–849 uses selected talent effects, not raw per-rank4.
+            // Pinned267 reference Vision default_value=0.08 agrees with rank2.
+            "selected rank2 EmbersII binds native Vision effect{index}"
         );
     }
 }
