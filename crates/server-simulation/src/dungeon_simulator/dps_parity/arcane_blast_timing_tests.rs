@@ -3,7 +3,7 @@ use super::*;
 use shared::casting::{CastState, CastType};
 use shared::components::PowerType;
 
-fn charge_amount(run: &Run, index: u8) -> f32 {
+pub(super) fn charge_amount(run: &Run, index: u8) -> f32 {
     let world = run.app.world();
     let spell = world
         .resource::<crate::spell_info::SpellStore>()
@@ -17,7 +17,7 @@ fn charge_amount(run: &Run, index: u8) -> f32 {
     crate::spell_cast::effects::modded_base_points(world, run.actor, spell, effect)
 }
 
-fn set_native_charges(run: &mut Run, charges: f32) {
+pub(super) fn set_native_charges(run: &mut Run, charges: f32) {
     let current = crate::spell_cast::powers::power_value(
         run.app.world(),
         run.actor,
