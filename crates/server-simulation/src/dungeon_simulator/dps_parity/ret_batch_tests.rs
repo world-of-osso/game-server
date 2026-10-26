@@ -16,6 +16,15 @@ fn dps_parity_ret_batch_dawnlight_two_real_spenders_extend() {
     wait_for_damage(&mut run, 383328);
     assert_eq!(budget(&run).unwrap().stacks, 2);
     let fresh = f64::from(owned_dot_at(&run, run.targets[0]).unwrap().duration_ms) / 1000.0;
+    // This duration test needs ordinary Crusading Strikes to fund its next
+    // spender before the first DoT expires. The Wake-only helper does not
+    // start this independent resource producer (sc_paladin.cpp888–916).
+    super::literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        super::literal_rotation::execution::Execution::AutoAttack(run.targets[0]),
+    )
+    .unwrap();
     earn_finisher_power(&mut run, 383328);
     let old = owned_dot_at(&run, run.targets[0])
         .unwrap()

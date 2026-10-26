@@ -12,8 +12,10 @@ use combat::class_progression::{ActiveSpec, TraitLoadout};
 use combat::spell_cast::script_registry::SpellScriptHook;
 use combat::spell_info::SpellInfo;
 
-pub(super) const HOOKS: &[SpellScriptHook] =
-    &[SpellScriptHook::AfterModifierConsumption(after_cast)];
+pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::AfterModifierConsumption(after_cast),
+    SpellScriptHook::OwnsPolicyProc(owns_proc),
+];
 
 struct EchoPolicy {
     name: &'static str,
@@ -34,6 +36,13 @@ const POLICIES: &[EchoPolicy] = &[EchoPolicy {
     chance_effect: 0,
     effectiveness_effect: 1,
 }];
+
+// SimC76f8118 Ret612–619/sc_paladin.cpp1774–1781: source producers
+// alone own this ICD. Native broad DUMMY proc hints must not spend it
+// on Judgment, white swings or unrelated impacts without producing an echo.
+fn owns_proc(spell: u32) -> bool {
+    POLICIES.iter().any(|policy| policy.talent == spell)
+}
 
 fn selected(world: &World, caster: Entity, policy: &EchoPolicy) -> bool {
     let spec = world

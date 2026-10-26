@@ -30,6 +30,10 @@ mod batch6;
 mod batch7;
 mod batch8;
 mod batch9;
+pub(super) use script_registry::{
+    after_queued_triggers as consume_due_killing_machine,
+    after_spell_payment as roll_runic_empowerment,
+};
 mod periodic_attacks;
 pub(crate) use periodic_attacks::{after_periodic_trigger, rolls_reapplication};
 pub(super) use script_registry::after_foreground_special;
@@ -43,8 +47,8 @@ mod enhancement_nova;
 mod enhancement_rod;
 pub(super) use enhancement_rod::after_resolution as after_resolved_hits;
 pub(crate) use enhancement_rod::snapshot_rod_amount;
+mod enhancement_spending;
 mod enhancement_strikes;
-mod enhancement_tempest;
 mod enhancement_tier;
 mod enhancement_unleashed;
 pub(super) use enhancement_strikes::check_cast as check_enhancement_cast;

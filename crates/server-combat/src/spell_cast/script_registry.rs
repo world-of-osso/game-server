@@ -74,6 +74,8 @@
 //! - `AfterFireDirectHit`: positive direct hits after generic direct damage callbacks.
 //! - `RecordFireOutcome`, `AfterFireOutcomeHit`: eligible hit outcomes, then Meteorite callbacks.
 //! - `CastHitProcChance` and `RollCastHitProc`: chance snapshot before consumption, roll after cast.
+//! - `AfterQueuedTriggers`: fixed update after queued hits, before power/rune sync.
+//! - `AfterSpellPayment`: after generic payment callbacks, before gargoyle empowerment.
 //! New stages own distinct callback/lookup aliases, even when signatures coincide.
 //! Within a stage, traverse module slices and entries from first to last. Never sort
 //! or deduplicate them. Adding a policy to an existing module changes only that module.
@@ -149,6 +151,8 @@ pub type FinishConsumedDamageModifierHook =
     fn(&mut World, Entity, &SpellInfo, Option<u32>, u8, bool);
 pub type BeforeJudgmentOnCastHook = fn(&mut World, Entity, u32, u8);
 pub type BeforeLateAuraRegistrationHook = fn(&mut crate::auras::scripts::AuraScripts);
+pub type AfterQueuedTriggersHook = fn(&mut World);
+pub type AfterSpellPaymentHook = fn(&mut World, Entity, &SpellInfo, &[(CostPool, f32)]);
 pub type FireAuraRegistrationHook = fn(&mut crate::auras::scripts::AuraScripts);
 pub type BeforeProcLaunchHook = fn(&mut World, Entity, &SpellInfo);
 pub type AfterFireDirectHitHook = fn(&mut World, &EffectCtx<'_>, Entity, bool);
@@ -234,6 +238,8 @@ pub enum SpellScriptHook {
     FinishConsumedDamageModifier(FinishConsumedDamageModifierHook),
     BeforeJudgmentOnCast(BeforeJudgmentOnCastHook),
     BeforeLateAuraRegistration(BeforeLateAuraRegistrationHook),
+    AfterQueuedTriggers(AfterQueuedTriggersHook),
+    AfterSpellPayment(AfterSpellPaymentHook),
     FireAuraRegistration(FireAuraRegistrationHook),
     BeforeProcLaunch(BeforeProcLaunchHook),
     AfterFireDirectHit(AfterFireDirectHitHook),
@@ -1133,6 +1139,27 @@ pub fn launch_damage_modifiers<'a>(
             SpellScriptHook::LaunchDamageModifier(run) => run(world, caster, spell),
             _ => None,
         })
+}
+
+pub fn after_queued_triggers(world: &mut World) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::AfterQueuedTriggers(run) = hook {
+            run(world);
+        }
+    }
+}
+
+pub fn after_spell_payment(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    costs: &[(CostPool, f32)],
+) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::AfterSpellPayment(run) = hook {
+            run(world, caster, spell, costs);
+        }
+    }
 }
 
 #[cfg(test)]

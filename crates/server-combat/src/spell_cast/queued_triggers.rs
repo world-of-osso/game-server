@@ -24,7 +24,7 @@ pub struct DestinationTrigger {
     pub destination: [f32; 3],
 }
 
-pub(super) struct ScaledTrigger {
+pub struct ScaledTrigger {
     pub target: Entity,
     pub spell_id: u32,
     pub delay_ms: u32,
@@ -195,7 +195,7 @@ pub fn schedule_destination_trigger(
 }
 
 /// A source-qualified delayed multiplier changes no native child coefficients.
-pub(super) fn schedule_scaled_full_trigger(
+pub fn schedule_scaled_full_trigger(
     world: &mut World,
     ctx: &super::EffectCtx,
     request: ScaledTrigger,
