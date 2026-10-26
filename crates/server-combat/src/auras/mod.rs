@@ -57,6 +57,7 @@ mod natures_guardian;
 #[cfg(any(test, feature = "test-support"))]
 pub mod observations;
 mod periodic;
+pub(crate) mod periodic_snapshot;
 #[cfg(test)]
 mod point_mod_tests;
 mod point_mods;
@@ -248,6 +249,8 @@ pub struct AuraEffectState {
     /// caster's Points mods, plus SP/AP coefficients for damage, heal and
     /// absorb types (`handlers::scales_with_power`).
     pub amount: f32,
+    /// Qualified factor captured at application, not reconstructed from damage.
+    pub persistent_multiplier: Option<f32>,
     pub misc_values: [i32; 2],
     pub period_ms: u32,
     pub trigger_spell: u32,
@@ -801,6 +804,7 @@ fn build_effect(
         immunity: effect.immunity.clone(),
         aura_type: effect.aura,
         amount,
+        persistent_multiplier: periodic_snapshot::multiplier(world, caster, spell, effect),
         misc_values: effect.misc_values,
         period_ms,
         trigger_spell: effect.trigger_spell,

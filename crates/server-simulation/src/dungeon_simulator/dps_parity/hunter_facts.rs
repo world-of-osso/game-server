@@ -60,6 +60,18 @@ fn configured_potion(potion: &str, alias: &str) -> f64 {
 }
 
 impl ActionFacts for HunterFacts<'_> {
+    fn target_ready(&self, action: &Action) -> Result<bool, String> {
+        // SimC76f8118 sc_hunter.cpp4452–4455: the shared Sentinel
+        // action requires an earned Chakram enabler, not just native knowledge.
+        if action.name == "moonlight_chakram" {
+            return self
+                .native
+                .value("buff.moonlight_chakram.up")
+                .map(|value| value != 0.0);
+        }
+        Ok(true)
+    }
+
     fn target_ids(&self, action: &Action) -> Result<Vec<u64>, String> {
         self.native.target_ids(action)
     }
