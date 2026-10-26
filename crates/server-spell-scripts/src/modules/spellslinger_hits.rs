@@ -10,7 +10,7 @@ use combat::spell_cast::{
     script_registry::SpellScriptHook,
     targets,
 };
-use combat::spell_info::SpellStore;
+use combat::spell_info::{SpellInfo, SpellStore};
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::ResolvedDamage(after_damage)];
 const CONTROLLED_INSTINCTS: u32 = 444483;
@@ -77,23 +77,7 @@ fn copy_secondaries(
         .get(payload)
         .expect("native Controlled Instincts payload")
         .clone();
-    let center = targets::position(world, primary).expect("landed Splinter recipient position");
-    let radius = targets::radius(&spell.effects[0], 1);
-    // sc_mage.cpp5346–5354: the pinned default bugs=1 uses a hard cap,
-    // not a soft reduced-AoE multiplier. Always exclude the source primary.
-    let cap = script_effect_value(world, source.caster, CONTROLLED_INSTINCTS, 4) as usize;
-    let recipients: Vec<_> = targets::area_units(
-        world,
-        source.caster,
-        center,
-        radius,
-        targets::Relation::Enemy,
-        0,
-    )
-    .into_iter()
-    .filter(|target| *target != primary)
-    .take(cap)
-    .collect();
+    let recipients = select_secondaries(world, source.caster, primary, &spell);
     let ctx = EffectCtx {
         caster: source.caster,
         spell: &spell,
@@ -104,4 +88,22 @@ fn copy_secondaries(
     for target in recipients {
         effects::deal_copied_damage(world, &ctx, target, amount);
     }
+}
+
+fn select_secondaries(
+    world: &mut World,
+    caster: Entity,
+    primary: Entity,
+    spell: &SpellInfo,
+) -> Vec<Entity> {
+    let center = targets::position(world, primary).expect("landed Splinter recipient position");
+    let radius = targets::radius(&spell.effects[0], 1);
+    // sc_mage.cpp5346–5354: the pinned default bugs=1 uses a hard cap,
+    // not a soft reduced-AoE multiplier. Always exclude the source primary.
+    let cap = script_effect_value(world, caster, CONTROLLED_INSTINCTS, 4) as usize;
+    targets::area_units(world, caster, center, radius, targets::Relation::Enemy, 0)
+        .into_iter()
+        .filter(|target| *target != primary)
+        .take(cap)
+        .collect()
 }

@@ -7,6 +7,9 @@ use combat::spell_cast::{effects::EffectCtx, script_registry::SpellScriptHook};
 use shared::components::ActiveSpec;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
+    // SimC76f8118 sc_druid.cpp13755–13764 explicitly overrides the native
+    // stack behavior; every application retains its own native lifetime.
+    SpellScriptHook::AsynchronousAuras(&[BLOODSEEKER_VINES]),
     SpellScriptHook::PeriodicPrimaryDamage(roll_growth),
     SpellScriptHook::ConsumedEffectValues(&[
         (THRIVING_GROWTH, 0),

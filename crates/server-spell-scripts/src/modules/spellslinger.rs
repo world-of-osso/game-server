@@ -17,6 +17,7 @@ const CONJURE_SPACING_MS: u32 = 100;
 
 pub const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AfterPolicyCast(after_cast_hook),
+    SpellScriptHook::ConjureCount(conjure_count),
     SpellScriptHook::BeforeMeleeComboDamage(after_direct_damage),
     SpellScriptHook::BeforePeriodicItemDamage(after_periodic_damage),
 ];
@@ -139,6 +140,25 @@ fn after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
     let ctx = EffectCtx {
         caster,
         spell,
+        depth: 0,
+        dest: None,
+        chain_multiplier: 1.0,
+    };
+    conjure(world, &ctx, target, spec, count);
+}
+
+pub(super) fn conjure_count(world: &mut World, caster: Entity, target: Entity, count: u32) {
+    let Some(spec) = specialization(world, caster) else {
+        return;
+    };
+    let spell = world
+        .resource::<combat::spell_info::SpellStore>()
+        .get(spec.payload)
+        .expect("native specialization Splinter payload")
+        .clone();
+    let ctx = EffectCtx {
+        caster,
+        spell: &spell,
         depth: 0,
         dest: None,
         chain_multiplier: 1.0,
