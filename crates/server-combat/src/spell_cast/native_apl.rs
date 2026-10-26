@@ -61,7 +61,7 @@ pub(crate) fn target_eligible(
 /// other actions occupy at least their native GCD.
 pub(crate) fn execute_time(world: &World, caster: Entity, spell: &SpellInfo) -> f64 {
     let cast = f64::from(cast_time_ms(world, caster, spell).max(0)) / 1000.0;
-    if is_channeled(spell) {
+    if is_channeled_for_actor(world, caster, spell) {
         cast + f64::from(duration_ms(world, caster, spell).max(0)) / 1000.0
     } else {
         cast.max(f64::from(gcd_duration_ms(world, caster, spell)) / 1000.0)
@@ -101,7 +101,8 @@ fn read_action_eligibility(
     read_healer_recovery(world, caster, spell)?;
     let moving_blocks = (cast_time_ms(world, caster, spell) > 0
         && !cast_allows_moving(world, caster, spell))
-        || (is_channeled(spell) && !channel_allows_moving(world, caster, spell));
+        || (is_channeled_for_actor(world, caster, spell)
+            && !channel_allows_moving(world, caster, spell));
     if moving_blocks && world.get::<Moving>(caster).is_some_and(|moving| moving.0) {
         return Err(CastFailure::Moving);
     }

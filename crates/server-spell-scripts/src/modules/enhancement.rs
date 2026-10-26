@@ -30,6 +30,8 @@ mod enhancement_spending;
 mod enhancement_strikes;
 #[path = "enhancement/enhancement_tempest_buffs.rs"]
 mod enhancement_tempest_buffs;
+#[path = "enhancement/enhancement_thunder_capacitor.rs"]
+mod enhancement_thunder_capacitor;
 #[path = "enhancement/enhancement_tier.rs"]
 mod enhancement_tier;
 #[path = "enhancement/enhancement_unleashed.rs"]

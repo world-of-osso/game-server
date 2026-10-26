@@ -4,12 +4,19 @@
 
 `effects::power_stats` reads an explicit guardian SP policy after the existing demon and owner-RAP paths. Native Thing From Beyond189988 retains creature type15; its373277→373279 policy inherits full live owner SP without a demon marker or copied actor stats. Unlisted guardians keep their existing behavior.
 
-Native Yogg RED8bf69a675f has the authentic owned actor but no positive Spike damage: the former SP-policy lookup existed only in the demon branch. Native4ef1614ab5 passes23Shadow cases including all-three-target Spikes and13guardian cases (one unrelated ignored). BM Bear/Wildspeaker7c3eeb0fea passes2,265guardian7efd24bed9 passes3, and267petsf8014078a3 passes5. Landing remains pending. See the [Shadow contract](../../specs/dps-parity.md#shadow-literal-fixture).
+Native Yogg RED8bf69a675f has the authentic owned actor but no positive Spike damage: the former SP-policy lookup existed only in the demon branch. Native4ef1614ab5 passes23Shadow cases including all-three-target Spikes and13guardian cases (one unrelated ignored). BM Bear/Wildspeaker7c3eeb0fea passes2,265guardian7efd24bed9 passes3, and267petsf8014078a3 passes5. Landed via4c915017a8 in the combined Shadow update below. See the [Shadow contract](../../specs/dps-parity.md#shadow-priest-literal-parity-controller).
+
+## Earned Shadow Rift extensions — 2026-10-26
+
+`shadow_horizon.rs` tracks the actual Rift instance and paid extension count. Ordinary450983 completion extends existing owned459314/449887 by native449912 effect2, at most native effect1 uses per Rift, without restarting periodic phase. Native RED5411c58c11 reaches the first real cast with deadline10.6 instead of11.6. The finite-window cap test earns real Insight and PI before Torrent, then completes four ordinary Blasts: the first three add1s and the fourth adds nothing.
+
+Horizon638b079972, Yogg4c915017a8 and Haunting2cac634596 landed together in513fe59afac5703d9ec46e6c95e033d801d00f96. All25Shadow and13guardian cases pass (one unrelated ignored); protected BM/265/267 cases also pass. Combined native ST148428.52 (81.00%) and3T279491.71 (82.21%) remain below the90% target. These are one-tree measurements, not separately attributed uplifts.
+
 ## Haunting Shadows impact extensions — 2026-10-26
 
 `shadow_haunting.rs` handles native413231/1264176 payload impacts. Selected1279355 extends existing same-caster Pain/VT by native effect1 milliseconds through the owned-duration operation, not aura reapplication; periodic phase and damage formulas remain unchanged. Pinned SimC76f8118 `sc_priest_shadow.cpp427–435` defines this behavior.
 
-Native isolated RED901d805102 reaches one actual travelling apparition hit but leaves Pain at16.3 rather than17.3. GREEN/landing remain pending. See the [Shadow contract](../../specs/dps-parity.md#shadow-priest-literal-parity-controller).
+Native isolated RED901d805102 reaches one actual travelling apparition hit but leaves Pain at16.3 rather than17.3. All25Shadow cases pass via2cac634596 in the combined landing above. See the [Shadow contract](../../specs/dps-parity.md#shadow-priest-literal-parity-controller).
 
 ## Merged feedback grants are not casts — 2026-10-26
 
@@ -90,7 +97,7 @@ Native4442 raw15/30 plus1258011 effect modifiers5/20 produce effective20/50. The
 
 `CAST_POLICIES` retains Storm's execution producer. `PRIMARY_HIT_POLICIES` adds ordinary HoW's successful-primary producer from pinned `sc_paladin.cpp1689–1710/1757–1783`. Both use the same owned native431474 aura, live effect values and ICD. The HoW callback follows native Judgment/Sun Sear processing; it rejects background depth, non-primary cast roles and secondary recipients. Echoes retain native flight and cannot produce another echo. Critical HoW echo payloads retain native Sun Sear impact behavior.
 
-Corrected native RED `81fbd788eb` observed 39 ordinary HoW hits and zero matching scaled echo hits in actual300s combat. Legal unselected and actual background-hit controls passed. Capture counts filter the actual Hammer spell ID, not unrelated Storm echoes. GREEN integration and landed numerical qualification remain pending. [Contract](../../specs/dps-parity.md#ret-hammer-second-sunrise), [native cases](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/ret_hammer_sunrise_tests.rs); see also [[ret-divine-purpose]].
+Corrected native RED `81fbd788eb` observed 39 ordinary HoW hits and zero matching scaled echo hits in actual300s combat. Legal unselected and actual background-hit controls passed. Capture counts filter the actual Hammer spell ID, not unrelated Storm echoes. Native producer GREEN records 35 ordinary roots and 7 correctly scaled echoes; unselected/background and critical echo→Sun Sear controls pass. The retained 119-case gate plus repaired strict three-seed Arbiter cutoff case landed `b01577f7d` via `7b2aa57d91`. Final follower means are 160670.95 ST and 293727.01 three-target (90.2335%/91.4051% of pinned references), both within ±10%. The diagnostic witnesses a native launch at300.300, due300.329 and target-alive-state discard at300.350; it neither extends the measured fight nor adds missing damage. [Contract](../../specs/dps-parity.md#ret-hammer-second-sunrise), [native cases](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/ret_hammer_sunrise_tests.rs); see also [[ret-divine-purpose]].
 
 ## Selected primary across self casts — 2026-10-24
 

@@ -952,6 +952,11 @@ pub(crate) fn is_channeled(spell: &SpellInfo) -> bool {
     attributes(spell, 1) & SPELL_ATTR1_CHANNELED != 0
 }
 
+/// Preserve native flags while allowing a selected script to require a real channel.
+pub(crate) fn is_channeled_for_actor(world: &World, caster: Entity, spell: &SpellInfo) -> bool {
+    is_channeled(spell) || script_registry::scripted_channel(world, caster, spell)
+}
+
 /// Moving leaves the cast bar alone (`Spell::CheckMovement`: no
 /// `SpellInterruptFlags::Movement`).
 fn cast_allows_moving(world: &World, caster: Entity, spell: &SpellInfo) -> bool {
@@ -2089,8 +2094,8 @@ fn validate_start_with_policy(
     validate_history(world, caster, spell, check)?;
     let cast_blocked_by_moving =
         cast_time_ms(world, caster, spell) > 0 && !cast_allows_moving(world, caster, spell);
-    let channel_blocked_by_moving =
-        is_channeled(spell) && !channel_allows_moving(world, caster, spell);
+    let channel_blocked_by_moving = is_channeled_for_actor(world, caster, spell)
+        && !channel_allows_moving(world, caster, spell);
     let blocked_by_moving = cast_blocked_by_moving || channel_blocked_by_moving;
     if blocked_by_moving && world.get::<Moving>(caster).is_some_and(|moving| moving.0) {
         return Err(CastFailure::Moving);
@@ -2583,7 +2588,7 @@ fn execute_and_channel(
 ) -> Result<(), CastFailure> {
     // Resource-sized native channels must retain the same prepayment duration
     // as their aura. SimC76f8118 sc_rogue.cpp4784–4795 freezes Killing Spree CP.
-    let channel = if is_channeled(spell) {
+    let channel = if is_channeled_for_actor(world, caster, spell) {
         let costs = spell_costs(world, caster, spell)?;
         let mut channel = resources::snapshot(world, caster, spell, &costs);
         // SimC76f8118 sc_warlock_actions.cpp2145–2182/2294–2338:
@@ -2605,7 +2610,7 @@ fn execute_and_channel(
 /// Shared by ordinary channels and the documented Penance DUMMY bridge.
 fn start_channel(world: &mut World, caster: Entity, spell: &SpellInfo, target: Option<Entity>) {
     let channel_ms = duration_ms(world, caster, spell);
-    if !is_channeled(spell) || channel_ms <= 0 {
+    if !is_channeled_for_actor(world, caster, spell) || channel_ms <= 0 {
         return;
     }
     // SimC76f8118 action.cpp4390–4420: channel decisions share the actual
@@ -3762,7 +3767,6 @@ fn push_hit_events(
             if first_harmful_hit {
                 start_spell_melee_attack(world, caster, spell);
             }
-            elemental_overload::after_hit(world, caster, spell, target, first_harmful_hit);
             first_harmful_hit = false;
         }
     }

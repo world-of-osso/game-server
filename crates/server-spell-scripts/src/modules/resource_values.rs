@@ -35,9 +35,10 @@ const RULES: &[MaximumValueRule] = &[
         resource: PowerType::ComboPoints,
         match_effect: 0,
         // sc_rogue.cpp3597/5991/11265–11267: only Ambush/Sinister
-        // execute the tier roll; native source effect0 owns its20% chance.
+        // execute the tier roll; extra-attack class5944–5964 does not.
+        // Native source effect0 owns the chance.
         source: 1296589,
-        producer_casts: &[8676, 193315, 197834],
+        producer_casts: &[8676, 193315],
         chance_effect: 0,
     },
 ];

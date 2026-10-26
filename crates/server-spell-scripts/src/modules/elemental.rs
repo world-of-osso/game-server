@@ -99,6 +99,10 @@ const DAMAGE_RULES: &[DamageRule] = &[
 // 7700–7704 grants the ordinary/Fusion-of-Elements root's buff afterward.
 const BUFF_RULES: &[(u32, bool)] = &[(117014, false), (120588, true)];
 
+// SimC76f8118 sc_shaman.cpp8759: trigger(effectN(5).base_value()) uses.
+// Native zero-based effect4 owns the count; a refresh adds uses up to its cap.
+const USE_GRANTS: &[(u32, u32, u8)] = &[(191634, 191634, 4)];
+
 fn selected(world: &World, caster: Entity, talent: u32) -> bool {
     world
         .get::<ActiveSpec>(caster)
@@ -144,6 +148,12 @@ fn capture_damage_modifier(
 
 pub(super) fn before_launch(world: &mut World, caster: Entity, spell: u32, depth: u8) {
     grant_blast_buff(world, caster, spell, true, depth);
+    if spell == 465717 {
+        if let Some(owner) = spell_cast::scripts::ancestor_owner(world, caster) {
+            // SimC76f8118 sc_shaman.cpp4382: Final Calling grants the owner's buff first.
+            grant_blast_buff(world, owner, 120588, true, depth);
+        }
+    }
 }
 
 fn after_launch(
@@ -161,12 +171,41 @@ fn after_launch(
         grant_mote(world, caster, spell.id, depth);
     }
     grant_blast_buff(world, caster, spell.id, false, depth);
+    grant_native_uses(world, caster, spell.id);
+}
+
+fn grant_native_uses(world: &mut World, caster: Entity, spell: u32) {
+    let Some(&(_, aura_spell, effect)) = USE_GRANTS.iter().find(|rule| rule.0 == spell) else {
+        return;
+    };
+    if !selected(world, caster, spell) {
+        return;
+    }
+    let uses = spell_cast::scripts::script_effect_value(world, caster, spell, effect) as u8;
+    assert!(uses > 0, "native next-spell grant must supply uses");
+    let Some(aura) = world.get::<ActiveAuras>(caster).and_then(|auras| {
+        auras
+            .iter()
+            .find(|aura| aura.spell_id == aura_spell && aura.caster == caster)
+    }) else {
+        warn!(
+            ?caster,
+            spell, aura_spell, "Native use-grant aura missing after cast"
+        );
+        return;
+    };
+    // Applying the native aura already contributed one stack.
+    let stacks = aura.stacks.saturating_add(uses - 1);
+    combat::auras::set_self_cast_stacks(world, caster, aura_spell, stacks);
 }
 
 // SimC76f8118 sc_shaman.cpp7245–7247: only normal Lava Burst earns MOTE.
 // The native16166 generated HIT mask is broad and would re-grant it on Lightning.
 fn register(scripts: &mut combat::auras::scripts::AuraScripts) {
     scripts.0.entry(MASTER_OF_ELEMENTS).or_default().check_proc = Some(block_generated_mote_proc);
+    // SimC76f8118 sc_shaman.cpp6595/7449: the foreground action owns SK uses.
+    // Its generated HIT proc must not also spend the shared charge between roots.
+    scripts.0.entry(191634).or_default().check_proc = Some(block_generated_mote_proc);
 }
 
 fn block_generated_mote_proc(
@@ -217,7 +256,13 @@ fn missing_buffs(world: &World, caster: Entity) -> Vec<u32> {
 
 // SimC76f8118 sc_shaman.cpp7545–7577: uniformly choose an absent buff;
 // when all three are active, refresh one. Native118522/173183/173184 own values.
-fn grant_blast_buff(world: &mut World, caster: Entity, spell: u32, before: bool, depth: u8) {
+pub(super) fn grant_blast_buff(
+    world: &mut World,
+    caster: Entity,
+    spell: u32,
+    before: bool,
+    depth: u8,
+) {
     if !BUFF_RULES.contains(&(spell, before)) || !selected(world, caster, ELEMENTAL_BLAST) {
         return;
     }
