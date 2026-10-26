@@ -32,6 +32,10 @@ fn prepare(selected: bool) -> Run {
         traits.retain(|entry| retained.contains(&entry.entry_id));
         assert!(traits.len() < count);
     }
+    // This fixture qualifies ordinary earned-charge release, not the independent
+    // Wisdom/Stand Ready batches. Declare those two native talent inputs unselected;
+    // hero_flurry_tests keeps the full frozen selection and qualifies their producers.
+    traits.retain(|entry| !matches!(entry.entry_id, 125073 | 135956));
     let identity = super::super::inputs::read_actor(&profile).unwrap();
     let mut run = super::super::prepare_literal_reference(profile, &traits, 1, identity).unwrap();
     run.spec_driver = Some(super::prepare_driver(&mut run).unwrap());

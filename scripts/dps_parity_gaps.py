@@ -12,6 +12,7 @@ import argparse
 import glob
 import json
 import os
+import sys
 from pathlib import Path
 
 RESULTS = Path("/home/osso/.worktrees/train/results")
@@ -54,7 +55,10 @@ def compare(spec, output, count):
     reference_path = REFERENCES / f"{spec}.reference.{TARGETS[count]}.normalized.json"
     if not native_path.exists() or not reference_path.exists():
         return None
-    native = json.loads(native_path.read_text())["combat"]
+    native = json.loads(native_path.read_text()).get("combat")
+    if native is None:  # the run stopped before combat (e.g. an unsupported APL expression)
+        print(f"{native_path}: no combat section, skipped", file=sys.stderr)
+        return None
     reference = json.loads(reference_path.read_text())
     ours = per_spell(native["actions"], native["dps"])
     theirs = per_spell(reference["actions"], reference["dps"])

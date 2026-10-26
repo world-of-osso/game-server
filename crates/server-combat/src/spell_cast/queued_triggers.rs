@@ -39,6 +39,7 @@ struct QueuedTrigger {
     spell_id: u32,
     depth: u8,
     item_level: Option<u16>,
+    damage_multiplier: Option<f32>,
 }
 
 impl PendingTriggers {
@@ -84,6 +85,9 @@ pub(super) fn schedule(
         spell_id: effect.trigger_spell,
         depth: ctx.depth + 1,
         item_level: ctx.spell.cast_item_level,
+        damage_multiplier: super::scripts::frost_flurry_damage_multiplier(
+            world, ctx.caster, ctx.spell, child.id,
+        ),
     };
     world
         .resource_mut::<PendingTriggers>()
@@ -110,6 +114,7 @@ pub(super) fn schedule_force_cast(
         spell_id: effect.trigger_spell,
         depth: 0,
         item_level: None,
+        damage_multiplier: None,
     };
     world
         .resource_mut::<PendingTriggers>()
@@ -136,6 +141,7 @@ pub fn schedule_full_trigger(
         spell_id,
         depth: ctx.depth + 1,
         item_level: ctx.spell.cast_item_level,
+        damage_multiplier: None,
     };
     world
         .resource_mut::<PendingTriggers>()
@@ -161,6 +167,7 @@ pub fn schedule_buff_outcome(world: &mut World, caster: Entity, spell_id: u32, g
         spell_id,
         depth: 1,
         item_level: None,
+        damage_multiplier: None,
     };
     world
         .resource_mut::<PendingTriggers>()
@@ -185,6 +192,7 @@ pub fn schedule_destination_trigger(
         spell_id: request.spell_id,
         depth: ctx.depth + 1,
         item_level: ctx.spell.cast_item_level,
+        damage_multiplier: None,
     };
     world
         .resource_mut::<PendingTriggers>()
@@ -217,6 +225,7 @@ pub fn schedule_scaled_full_trigger(
         spell_id: request.spell_id,
         depth: ctx.depth + 1,
         item_level: ctx.spell.cast_item_level,
+        damage_multiplier: None,
     };
     world
         .resource_mut::<PendingTriggers>()
@@ -244,6 +253,7 @@ pub(super) fn schedule_normal_cast(
         spell_id,
         depth: 0,
         item_level: None,
+        damage_multiplier: None,
     };
     world
         .resource_mut::<PendingTriggers>()
@@ -253,8 +263,33 @@ pub(super) fn schedule_normal_cast(
         .push_back(trigger);
 }
 
+fn resolve_costed_trigger(world: &mut World, trigger: QueuedTrigger) {
+    let Some(mut spell) = super::load_triggered_spell(world, trigger.spell_id, trigger.depth)
+    else {
+        return;
+    };
+    spell.cast_item_level = trigger.item_level;
+    spell.cast_destination = trigger.destination;
+    spell.cast_damage_multiplier = trigger.damage_multiplier;
+    // Retain Effect64's native payment/check path with its frozen launch value.
+    if let Err(failure) = super::execute_costed_trigger(
+        world,
+        trigger.caster,
+        &spell,
+        Some(trigger.target),
+        trigger.depth,
+    ) {
+        warn!(
+            spell = trigger.spell_id,
+            ?failure,
+            "Queued native costed trigger refused"
+        );
+    }
+}
+
 /// Remove one event before invoking it; nested zero-delay events follow it.
 pub(crate) fn resolve_due(world: &mut World) {
+    super::scripts::resolve_frost_mage_events(world);
     let now_ms = now_ms(world);
     loop {
         let Some(trigger) = world.resource_mut::<PendingTriggers>().pop_due(now_ms) else {
@@ -264,17 +299,7 @@ pub(crate) fn resolve_due(world: &mut World) {
             continue;
         }
         match trigger.kind {
-            QueuedCastKind::CostedTrigger => {
-                super::cast_costed_trigger_with_context(
-                    world,
-                    trigger.caster,
-                    trigger.spell_id,
-                    Some(trigger.target),
-                    trigger.depth,
-                    trigger.item_level,
-                    trigger.destination,
-                );
-            }
+            QueuedCastKind::CostedTrigger => resolve_costed_trigger(world, trigger),
             QueuedCastKind::FullTrigger => {
                 let Some(mut spell) =
                     super::load_triggered_spell(world, trigger.spell_id, trigger.depth)
