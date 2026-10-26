@@ -6,6 +6,8 @@ use combat::spell_cast::{self, effects::EffectCtx, script_registry::SpellScriptH
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::ResolvedDamage(after_pain_tick),
+    SpellScriptHook::AfterForegroundSpecial(consume_insight),
+    SpellScriptHook::CastTimeProcs(&[INSIGHT]),
     SpellScriptHook::ConsumedEffectValues(&[(DARK_THOUGHTS, 1)]),
 ];
 const PAIN: u32 = 589;
@@ -36,6 +38,23 @@ fn after_pain_tick(world: &mut World, ctx: &EffectCtx<'_>, _: Entity, _: bool, a
     if roll_progress(world, ctx.caster, passive, maximum) {
         // Native375981 owns instant cast, extra maximum charge and use consumption.
         spell_cast::cast_triggered(world, ctx.caster, INSIGHT, Some(ctx.caster), ctx.depth + 1);
+    }
+}
+
+fn consume_insight(world: &mut World, caster: Entity, spell: &combat::spell_info::SpellInfo) {
+    if !matches!(spell.id, 8092 | 450983) {
+        return;
+    }
+    let instance = world.get::<ActiveAuras>(caster).and_then(|auras| {
+        auras
+            .iter()
+            .find(|aura| aura.caster == caster && aura.spell_id == INSIGHT)
+            .map(|aura| aura.instance_id)
+    });
+    if let Some(instance) = instance {
+        // SimC sc_priest.cpp298–316: execute owns one live Insight use.
+        // Native aura500 already skips the underlying charge consumption.
+        combat::auras::spend_stack(world, caster, instance);
     }
 }
 

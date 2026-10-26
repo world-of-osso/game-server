@@ -150,6 +150,9 @@ fn shadow_insight_real_pain_ticks_earn_usable_instant_mind_blast_and_consume_one
         earned - 1,
         "one actual Mind Blast consumes one earned stack"
     );
+    // Let the normal fixed update publish the reduced native maximum after
+    // consuming the buff. This must not consume the underlying base charge.
+    run.app.update();
     assert_eq!(
         mind_blast_charges(&run),
         charges - 1.0,
