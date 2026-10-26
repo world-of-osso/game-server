@@ -90,7 +90,7 @@ fn advance_accumulator(world: &mut World, caster: Entity, scale: f64) -> bool {
     true
 }
 
-fn roll_growth(world: &mut World, ctx: &EffectCtx<'_>, target: Entity, _: f32) {
+fn roll_growth(world: &mut World, ctx: &EffectCtx<'_>, target: Entity, _: f32, _: bool) {
     // SimC76f8118 sc_druid.cpp2416–2448/12400–12406: only actual
     // Rip/Rake damage ticks roll; the proc is cast at that tick's recipient.
     let Some(&(_, index)) = SOURCES.iter().find(|(spell, _)| *spell == ctx.spell.id) else {
