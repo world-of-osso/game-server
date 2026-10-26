@@ -212,15 +212,15 @@ Pinned SimC76f8118 `action.cpp4297–4314/4397–4421` rounds channel tick time,
 
 Code`fad33456f` passes67 native cases across all seven required families. The workspace/all-target check and formatting pass. These are probe proofs. Corrected plain landing entryed45d940de passes34cases (Ray/Frost plus six native family controls) and lands4c9083c0c. Its first submission30283eb573 failed only Cargo inline-table CLI syntax; no behavior tests ran there. The [Frost investigation](../investigations/frost-mage-dps-parity.md) owns the first measured64 totals. All-spec acceptance remains separate.
 
-| Native family | Actual proof | Probe |
+| Native family | Actual proof | Rounding / charged-snapshot probes |
 |---|---|---|
-| Frost64 | Ray8full ticks;27Frost controls | `4d5a25a057` |
-| Arcane62 |23Missiles/Arcane controls | `d159d93aee` |
-| Shadow258 | Mind Flay paid ticks; Void Torrent tick-zero exclusion | `0ca0083ba7` |
-| Affliction265 | Full Drain Soul expiry; native Malefic Grasp | `a95cf82de3` |
-| Devastation1467 | Scintillation children, Mass Disintegrate and native interruption | `78cfc39738` |
-| WW269 | Full FoF deadline and five periodic damage emissions; initial MID2 half-child kept separate; melee/channel controls | `cee5ded2ce` |
-| Feral103 | Convoke retains4s lifetime and free native children | `d093253376` |
+| Frost64 | Ray8full ticks;27Frost controls | `4d5a25a057` / `e21164bf1c` |
+| Arcane62 |23Missiles/Arcane controls | `d159d93aee` / `391f78276d` |
+| Shadow258 | Mind Flay paid ticks; Void Torrent tick-zero exclusion | `0ca0083ba7` / `7a88258e8e` |
+| Affliction265 | Full Drain Soul expiry; native Malefic Grasp | `a95cf82de3` / `56d3aba749` |
+| Devastation1467 | Scintillation children, Mass Disintegrate and native interruption | `78cfc39738` / `ecce68aaf3` |
+| WW269 | Full FoF deadline and five periodic damage emissions; initial MID2 half-child kept separate; melee/channel controls | `cee5ded2ce` / `388717b955` |
+| Feral103 | Convoke retains4s lifetime and free native children | `d093253376` / `9cc0c846bb` |
 
 Drain Soul uses private gate choice124692 at native node72045. The original265 reference input retains91566 (Improved Shadow Bolt); it is unchanged and must not be replaced by the gate variant for DPS measurement. All-spec remeasurement remains a separate integration requirement.
 
@@ -230,7 +230,7 @@ SimC76f8118 `parse_effects.cpp1690–1695` maps P_CAST_TIME only to execute-time
 
 Native Nightfall264571 has a−100% cast-time effect and separate−50% Period/Duration effects. Channel duration excludes the cast-time effect. Ordinary channel execution freezes charged modifiers beside its prepayment resource snapshot, before execution consumes an admitted use. The applied aura and subsequent channel bar therefore retain the same duration/period modifiers rather than recomputing the bar from depleted live auras. Each channel aura effect also retains its charged launch-modifier list for later interval recalculation; the tick's raw SpellStore copy otherwise loses that consumed modifier. Non-channel timing and live uncharged Period changes remain unchanged.
 
-Full16648tree3ff583ed53 supplies the native Grasp assertions. RED417d517a80 reaches an ordinary cast with no nonzero channel state. The fixture asserts each cast's span and aura/bar period against its own native haste and single charged factor, one use consumed per channel, and12damage ticks across three channels. The initial duration/span fix passes all seven channel-family probes; the subsequent periodic-rebase correction needs renewed qualification. Trace6680c9ea33 shows the remaining baseline-ratio assertion compared different native haste states:33.288498%/750ms/3.000s against33.91441%/373ms/1.492s. Both spans equal four periods. Equipped-driver isolation also failed to keep haste constant, so no proc suppression is retained. Expected spans now use each cast's actual start haste and native charged factor, rounding the period before rebuilding the four-tick span. Cross-cast baseline×0.5/equality assumptions are removed;12ticks and instant Bolt controls remain. Full GREEN qualification is pending. Trace4145dd6cd2 explains11rather than12ticks: after the consumed-use channel's first tick, raw metadata rebased373→747ms, moving next due4.54599999999999937→4.91999999999999993 while expiry remained5.29199999999999982. This is lost charged Period state, not epsilon or expiry ordering. No time tolerance or terminal-tick exception is changed.
+Full16648tree3ff583ed53 supplies the native Grasp assertions. RED417d517a80 reaches an ordinary cast with no nonzero channel state. The fixture asserts each cast's span and aura/bar period against its own native haste and single charged factor, one use consumed per channel, and12damage ticks across three channels. Fixes8f5f54e03/f1c34de24 on merged122c71bac pass72native cases:67renewed seven-family controls (matrix above), four Nightfall cases and one existing native fractional-deadline control in1a0852c7ed. Nightfall reaches12ticks across three casts; instant Bolt behavior remains intact. Allowed workspace/all-target check and formatting pass. Landing/measurement remain separate. Trace6680c9ea33 shows the remaining baseline-ratio assertion compared different native haste states:33.288498%/750ms/3.000s against33.91441%/373ms/1.492s. Both spans equal four periods. Equipped-driver isolation also failed to keep haste constant, so no proc suppression is retained. Expected spans now use each cast's actual start haste and native charged factor, rounding the period before rebuilding the four-tick span. Cross-cast baseline×0.5/equality assumptions are removed;12ticks and instant Bolt controls remain. Trace4145dd6cd2 explains11rather than12ticks: after the consumed-use channel's first tick, raw metadata rebased373→747ms, moving next due4.54599999999999937→4.91999999999999993 while expiry remained5.29199999999999982. This is lost charged Period state, not epsilon or expiry ordering. No time tolerance or terminal-tick exception is changed.
 
 ## Dead-caster native channel coverage — 2026-10-17
 

@@ -65,7 +65,7 @@
 [Warlock funding](systems/spell-casting.md#warlock-periodic-shard-funding--2026-10-25) uses the downstream critical-aware periodic callback and existing native power pipeline, qualified only on Destruction. [Target DoT duration](systems/simc-apl.md#native-target-dot-duration) reads active owned native state without pandemic carry; both have native GREEN and cross-spec controls. Numerical267 acceptance remains separate.
 ## 2026-10-26 — Channel duration modifier separation
 
-[Channel snapshots](systems/spell-casting.md#channel-duration-and-charged-modifier-snapshots) separate execute-time modifiers from duration and retain the pre-consumption charged-modifier snapshot for span/period consistency. Native Grasp RED417d517a80 loses its channel state; the unchanged fixture also qualifies12ticks across three casts. SimC is authoritative; cached TC explicitly differs. GREEN remains pending.
+[Channel snapshots](systems/spell-casting.md#channel-duration-and-charged-modifier-snapshots) separate execute-time modifiers from duration and retain the pre-consumption charged-modifier snapshot for span/period consistency. Native Grasp RED417d517a80 loses its channel state; trace4145dd6cd2 additionally proves charged Period loss on rebase. Generic fixes pass72native cases, including12ticks across three casts, per-cast native haste snapshots, instant Bolt, seven channel families and the existing fractional-deadline control. SimC is authoritative; cached TC explicitly differs. Landing/measurement remain separate.
 
 ## 2026-10-26 — Shared hasted channel rounding
 
