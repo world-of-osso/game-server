@@ -563,7 +563,7 @@ Guardian/Karma/Eye Beam and retained markers/talents remain excluded. Batch17 di
 
 ## Arcane Familiar on Intellect —2026-10-26
 
-Pinned SimC76f8118 `sc_mage.cpp3080–3092` triggers Familiar from an actual Arcane Intellect execution when the talent is selected. Native205022 talent and210126 aura supply eligibility and the10% max-Mana effect. Native RED4178eeb663 confirms real precombat1459 and selected205022 but no210126; direct native aura application changes max Mana392057→431263. The Arcane foreground hook now grants the authored aura, with no synthetic amount or reference-stat adjustment. GREEN and paired62 measurements remain pending. Hasted225119 attacks and Energized/Attuned Familiar relationships are not implemented by this slice.
+Pinned SimC76f8118 `sc_mage.cpp3080–3092` triggers Familiar from an actual Arcane Intellect execution when the talent is selected. Native205022 talent and210126 aura supply eligibility and the10% max-Mana effect. Native RED4178eeb663 confirms real precombat1459 and selected205022 but no210126; direct native aura application changes max Mana392057→431263. The Arcane foreground hook now grants the authored aura, with no synthetic amount or reference-stat adjustment. GREEN and paired62 measurements remain pending. Native REDc15f014bb5 separately proves the active owned aura produced zero225119 attacks against the selected enemy in7s. A downstream hasted three-second Familiar timer now emits the existing native225119 against the current target and ends when its own aura is absent; GREEN remains pending. Energized/Attuned Familiar relationships are not implemented by this slice.
 
 ## Native proc-mask-qualified modifier charges —2026-10-26
 

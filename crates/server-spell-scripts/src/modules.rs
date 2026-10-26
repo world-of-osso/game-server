@@ -54,6 +54,7 @@ register_modules! {
     affliction_ua: (2653, "modules/affliction_ua.rs"),
     affliction_wrath: (2656, "modules/affliction_wrath.rs"),
     after_cast_auras: (100, "modules/after_cast_auras.rs"),
+    arcane_familiar: (620, "modules/arcane_familiar.rs"),
     arcane_feedback: (620, "modules/arcane_feedback.rs"),
     arms_concussive_slam: (718, "modules/arms_concussive_slam.rs"),
     arms_fatality: (717, "modules/arms_fatality.rs"),
