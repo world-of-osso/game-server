@@ -17,7 +17,7 @@ fn survival_native_tip_impact_commands_owned_pet_strike_as_one() {
     let strike_state = |run: &Run| {
         run.app.world().get::<crate::auras::ActiveAuras>(run.actor).and_then(|auras| {
             auras.iter().find(|aura| aura.spell_id == 1251717).map(|aura| {
-                (aura.instance_id, aura.proc.last_success_at, aura.proc.next_ready_at)
+                (aura.instance_id, crate::auras::procs::policy_proc_ready(run.app.world(), run.actor, aura.instance_id))
             })
         })
     };
