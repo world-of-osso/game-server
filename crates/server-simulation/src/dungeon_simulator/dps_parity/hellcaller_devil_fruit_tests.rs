@@ -85,9 +85,16 @@ fn assert_ticks_earn_native_malevolence(spec: u32) {
                 .expires_at
                 .expect("native earned Malevolence is finite")
                 - crate::spell_cast::now(run.app.world());
+            // A proc can occur while an ordinary Wither refresh is finishing.
+            // Inspect its stored native lifetime, not an assumed observation instant.
+            assert_eq!(
+                buff.duration_ms,
+                (duration * 1000.0) as u32,
+                "Devil Fruit earns its native lifetime, not the ordinary button duration"
+            );
             assert!(
-                remaining > duration - 0.1 && remaining <= duration + 0.001,
-                "Devil Fruit earns its native{duration}s, not the ordinary button duration: {remaining}"
+                remaining > 0.0 && remaining <= duration + 0.001,
+                "the earned native buff must still be active when observed: {remaining}"
             );
             let ticks = run
                 .app
