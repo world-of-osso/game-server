@@ -1765,6 +1765,13 @@ pub(super) fn on_enemy_damage_hit_with_context(
     if crate::auras::rogue::LETHAL_POISON_HITS.contains(&spell_id) {
         return Some(rogue_children::poison_hit);
     }
+    // SimC76f8118 monk883–889: only the enemy impact earns Teachings.
+    // Native TP also hits its caster with Energize; that is not another impact.
+    if spell_id == 100780 {
+        return Some(|world, ctx, target| {
+            windwalker::tiger_palm_hit(world, ctx.caster, target, ctx.depth);
+        });
+    }
     script_registry::enemy_context_hit(world, spell_id)
 }
 
@@ -1774,7 +1781,6 @@ pub fn on_hit(world: &World, spell_id: u32) -> Option<HitHook> {
     }
     match spell_id {
         windwalker_children::ZENITH => Some(windwalker_children::zenith_hit),
-        100780 => Some(windwalker::tiger_palm_hit),
         100784 => Some(windwalker::blackout_kick_hit),
         teachings_of_the_monastery::DAMAGE => Some(teachings_of_the_monastery::blackout_hit),
         107428 | 113656 => Some(windwalker::trigger_wdp_enabler_on_hit),
