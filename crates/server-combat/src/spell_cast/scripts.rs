@@ -51,6 +51,10 @@ pub(super) use script_registry::spell_residual as after_spell_residual;
 mod chrono_flame;
 pub(super) use script_registry::after_modifier_consumption as apply_echo_policies;
 mod enhancement_doom;
+mod enhancement_flurry;
+pub(super) use enhancement_flurry::{
+    update as update_enhancement_flurry, weapon_multiplier as enhancement_flurry_weapon_multiplier,
+};
 mod enhancement_imbues;
 mod enhancement_modes;
 mod enhancement_nova;
@@ -217,6 +221,7 @@ pub(super) fn finish_scripted_launch(
     windwalker_flurry::after_launch(world, caster, spell);
     enhancement_tier::after_launch(world, caster, spell, depth);
     enhancement_strikes::cast_ride_the_lightning(world, caster, spell, depth);
+    enhancement_flurry::after_launch(world, caster, spell);
 }
 
 /// TC OnCast runs once after successful checks, before spending and launch.
