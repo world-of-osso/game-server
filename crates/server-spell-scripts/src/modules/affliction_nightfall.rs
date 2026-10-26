@@ -1,0 +1,117 @@
+//! Affliction Nightfall: actual owned Corruption/Wither threshold ticks and native consumers.
+use super::combat;
+use bevy::prelude::*;
+use combat::auras::ActiveAuras;
+use combat::spell_cast::{effects::EffectCtx, script_registry::SpellScriptHook};
+use combat::spell_info::SpellInfo;
+use shared::components::ActiveSpec;
+
+const TALENT: u32 = 108558;
+const BUFF: u32 = 264571;
+const SATAIEL: u32 = 449637;
+// SimC76f8118 sc_warlock.hpp1065, not a spell-damage coefficient.
+const INCREMENT_MAX: f64 = 0.130;
+
+pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::PeriodicDamageFinished(landed_tick),
+    SpellScriptHook::AfterForegroundSpecial(consume_earned_use),
+    SpellScriptHook::CastTimeProcs(&[BUFF]),
+];
+
+#[derive(Component)]
+struct NightfallProgress {
+    passive: u32,
+    progress: f64,
+}
+
+fn landed_tick(world: &mut World, ctx: &EffectCtx<'_>) {
+    if !matches!(ctx.spell.id, 146739 | 445474) {
+        return;
+    }
+    if world
+        .get::<ActiveSpec>(ctx.caster)
+        .is_none_or(|spec| spec.0 != 265)
+    {
+        return;
+    }
+    let Some(passive) = read_passive(world, ctx.caster) else {
+        return;
+    };
+    let count = active_dots(world, ctx.caster, ctx.spell.id);
+    assert!(count > 0, "real Nightfall source retains its owned dot");
+    // SimC76f8118 init1190–1225: independent threshold progress, uniform initial
+    // phase and rollover; native timing/hero normalization and active-dot count.
+    let maximum = INCREMENT_MAX
+        * super::affliction_agony::creeping_normalization(world, ctx.caster)
+        * sataiel_multiplier(world, ctx.caster)
+        * (count as f64).powf(-2.0 / 3.0);
+    let initial = world
+        .get::<NightfallProgress>(ctx.caster)
+        .filter(|state| state.passive == passive)
+        .map_or_else(combat::random::random::<f64>, |state| state.progress);
+    let (progress, proc) = super::affliction_agony::advance_progress(
+        initial,
+        combat::random::random::<f64>() * maximum,
+    );
+    world
+        .entity_mut(ctx.caster)
+        .insert(NightfallProgress { passive, progress });
+    if proc {
+        combat::auras::apply_aura(
+            world,
+            &combat::auras::AuraApplication {
+                caster: ctx.caster,
+                target: ctx.caster,
+                spell_id: BUFF,
+                effect_mask: u32::MAX,
+                source: combat::auras::AuraSource::Cast,
+            },
+        );
+    }
+}
+
+fn read_passive(world: &World, caster: Entity) -> Option<u32> {
+    world
+        .get::<ActiveAuras>(caster)?
+        .iter()
+        .find(|aura| aura.caster == caster && aura.spell_id == TALENT)
+        .map(|aura| aura.instance_id)
+}
+
+fn active_dots(world: &mut World, caster: Entity, spell: u32) -> usize {
+    world
+        .query::<&ActiveAuras>()
+        .iter(world)
+        .filter(|auras| {
+            auras
+                .iter()
+                .any(|aura| aura.caster == caster && aura.spell_id == spell)
+        })
+        .count()
+}
+
+fn sataiel_multiplier(world: &World, caster: Entity) -> f64 {
+    if !combat::auras::has_aura(world, caster, SATAIEL) {
+        return 1.0;
+    }
+    let percent = combat::spell_cast::scripts::script_effect_value(world, caster, SATAIEL, 0);
+    1.0 + f64::from(percent) / 100.0
+}
+
+fn consume_earned_use(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    if !matches!(spell.id, 686 | 198590 | 1261153) {
+        return;
+    }
+    // SimC76f8118 actions877–878/2182/2338: instant Shadow Bolt consumes an
+    // admitted use; Drain Soul and Grasp consume one on execution regardless.
+    let admitted = world.get::<ActiveAuras>(caster).is_some_and(|auras| {
+        auras.iter().any(|aura| {
+            aura.caster == caster
+                && aura.spell_id == BUFF
+                && spell.cast_proc_mods.contains(&aura.instance_id)
+        })
+    });
+    if spell.id != 686 || admitted {
+        super::cast_relationships::decrement(world, caster, BUFF);
+    }
+}
