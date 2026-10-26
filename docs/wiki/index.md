@@ -19,7 +19,7 @@
 - [Subtlety Lingering Shadow](systems/spell-casting.md#subtlety-lingering-shadow--2026-10-25) — native Dance-expiry counter, periodic decay and per-recipient residual; native RED→GREEN, numerical parity open.
 - [Feral literal fixture](systems/simc-apl.md#feral-literal-fixture--2026-10-25) — native Cat/Prowl, periodic facts, Growth/Burst/Rampancy, single-payload Unseen and Convoke landed; Stalking's native two-use chain landed; both measured scenarios within±10% with margin, remaining mechanical gaps listed separately; Feral paused.
 - [Downstream spell scripts](systems/spell-script-crate.md) — combat-owned registry, ordered downstream policy slices and first five leaf modules; remaining implementations stay in combat.
-- [Frost Mage DPS parity](investigations/frost-mage-dps-parity.md) — native Freezing/Shatter, Splinter copies, qualified proc clocks, measured gaps and pending Overflowing Energy feedback.
+- [Frost Mage DPS parity](investigations/frost-mage-dps-parity.md) — native Freezing/Shatter, Splinter copies, qualified proc clocks and Overflowing Energy, measured gaps and shared-gate dependencies.
 - [Elemental literal fixture](systems/simc-apl.md#elemental-fixture-262) — exact profile rows, native Maelstrom/spell admission and named-action target counts; numerical parity remains separate.
 - [Form combat clocks](systems/auras.md#form-combat-clocks--2026-10-23) — all7authored timing rows, native Cat/Bear timed RED and unshifted control; generic cadence/weapon terms retained; reconciliation qualification pending.
 - [Havoc literal fixture and Demonic](systems/simc-apl.md#havoc-fixture-577) — pinned source decisions, native cursor-targeted Meta, and talent-sourced before-channel transformation/extension; numeric parity remains open.
