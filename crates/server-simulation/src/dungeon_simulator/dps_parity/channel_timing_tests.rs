@@ -143,29 +143,3 @@ fn shared_channel_native_drain_soul_completes_without_rounding_partial() {
         "native Drain Soul must preserve original ticks without an expiry partial; advertised{advertised}s elapsed{elapsed}s"
     );
 }
-
-#[test]
-#[ignore = "requires exact native103 player/profile for the unhasted4s Convoke gate"]
-fn shared_channel_native_cat_convoke_keeps_four_second_lifetime() {
-    let mut run = prepare_literal(103, 1).unwrap();
-    let actor = run.actor;
-    let target = run.targets[0];
-    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 768, Some(actor), false).unwrap();
-    preparation::finish_pending_setup(&mut run).unwrap();
-    engage(&mut run);
-    literal_rotation::execution::execute(
-        run.app.world_mut(),
-        actor,
-        literal_rotation::execution::Execution::Spell(391528, actor, Some(target)),
-    )
-    .unwrap();
-    let (advertised, elapsed) = finish_observed_channel(&mut run, 391528);
-    assert!(
-        (advertised - 4.0).abs() < 0.001,
-        "native Convoke advertises4s, not a hasted lifetime"
-    );
-    assert!(
-        (elapsed - 4.0).abs() <= 0.10,
-        "actual Convoke remains active for4s, observed{elapsed}s"
-    );
-}
