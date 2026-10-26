@@ -116,6 +116,7 @@ register_modules! {
     shadow_apparitions: (2582, "modules/shadow_apparitions.rs"),
     shadow_link: (2581, "modules/shadow_link.rs"),
     shadow_priest: (290, "modules/shadow_priest.rs"),
+    shadow_screams: (2583, "modules/shadow_screams.rs"),
     shadow_volley: (2580, "modules/shadow_volley.rs"),
     snakeskin_quiver: (230, "modules/snakeskin_quiver.rs"),
     soul_of_the_forest: (1000, "modules/soul_of_the_forest.rs"),
