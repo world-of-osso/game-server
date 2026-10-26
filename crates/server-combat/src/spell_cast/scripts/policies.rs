@@ -981,14 +981,16 @@ pub(in crate::spell_cast) fn snapshot(
         .collect::<Vec<_>>();
     let rogue_context = super::rogue_hero::needs_context(world, caster, spell)
         || super::rogue_children::needs_context(world, caster, spell.id);
+    let source_context =
+        rogue_context || script_registry::requires_resource_context(world, spell.id);
     if spell.cast_parent_owns_modifier_charges
-        || (!rogue_context
+        || (!source_context
             && !consumers(world, &resources, spell.id)
                 .any(|policy| selected(world, caster, policy)))
     {
         return None;
     }
-    let needs_hit_targets = rogue_context
+    let needs_hit_targets = source_context
         || consumers(world, &resources, spell.id).any(|policy| {
             selected(world, caster, policy)
                 && !matches!(
