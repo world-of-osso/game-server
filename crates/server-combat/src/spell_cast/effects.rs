@@ -2043,6 +2043,7 @@ fn deal_source_damage_and_report(
         periodic,
     );
     if !resolved_source {
+        super::scripts::enhancement_weapon_damage(world, ctx, target, amount);
         super::script_registry::resolved_damage(world, ctx, target, crit, amount);
     }
     if periodic {
@@ -2699,6 +2700,11 @@ fn trigger_spell(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, targe
     spell.cast_item_level = ctx.spell.cast_item_level;
     spell.cast_damage_multiplier =
         super::scripts::frost_flurry_damage_multiplier(world, ctx.caster, ctx.spell, spell.id);
+    if let Some(multiplier) =
+        super::scripts::enhancement_flurry_weapon_multiplier(world, ctx.caster, ctx.spell, spell.id)
+    {
+        spell.cast_damage_multiplier = Some(multiplier);
+    }
     let target = trigger_recipient(ctx, &spell, target);
     super::launch_triggered_spell(world, ctx.caster, &spell, target, depth);
 }
