@@ -91,6 +91,59 @@ fn havoc_font_of_venomous_rage_channels_native_primary_and_secondary_damage() {
     }
 }
 
+fn native_chaos_and_physical_hits(remove_armor: bool) -> (i32, i32) {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(577, 1).unwrap();
+    let target = run.targets[0];
+    let native_armor = run
+        .app
+        .world()
+        .get::<crate::level_scaling::CreatureArmor>(target)
+        .unwrap()
+        .0;
+    assert!(
+        native_armor > 0.0,
+        "native training dummy must have actual armor"
+    );
+    if remove_armor {
+        run.app
+            .world_mut()
+            .get_mut::<crate::level_scaling::CreatureArmor>(target)
+            .unwrap()
+            .0 = 0.0;
+    }
+    for spell in [393054, 198813] {
+        crate::spell_cast::cast_triggered(run.app.world_mut(), run.actor, spell, Some(target), 1);
+    }
+    let total = |spell| {
+        damage(&run, Some(spell))
+            .iter()
+            .map(|event| event.amount)
+            .sum::<i32>()
+    };
+    let hits = (total(393054), total(198813));
+    assert!(
+        hits.0 > 0 && hits.1 > 0,
+        "both native school payloads must really land: {hits:?}"
+    );
+    hits
+}
+
+#[test]
+#[ignore = "requires prepared native spec577 player profile"]
+fn havoc_chaos_native_child_ignores_armor_but_physical_damage_retains_it() {
+    let armored = native_chaos_and_physical_hits(false);
+    let unarmored = native_chaos_and_physical_hits(true);
+    assert_eq!(
+        armored.0, unarmored.0,
+        "native Chaos393054 must ignore armor, SimC76f8118 action.cpp1686–1690"
+    );
+    assert!(
+        armored.1 < unarmored.1,
+        "native pure Physical198813 must still take armor mitigation"
+    );
+}
+
 #[test]
 #[ignore = "requires prepared native spec577 player profile"]
 fn havoc_consuming_fire_keeps_immolation_payload_and_its_own_demonsurge_use() {
