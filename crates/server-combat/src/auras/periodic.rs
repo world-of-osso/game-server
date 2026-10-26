@@ -320,9 +320,10 @@ fn run_tick(world: &mut World, unit: Entity, spell: &SpellInfo, tick: &Tick) {
         PERIODIC_ENERGIZE => energize(world, &ctx, unit, tick),
         OBS_MOD_POWER => obs_mod_power(world, &ctx, unit, tick),
         PERIODIC_TRIGGER_SPELL
-            if spell.id == crate::spell_cast::scripts::EYE_BEAM && tick.effect_index == 0 =>
+            if crate::spell_cast::scripts::is_eye_beam_channel(spell.id)
+                && tick.effect_index == 0 =>
         {
-            crate::spell_cast::scripts::cast_eye_beam_tick(world, tick.caster);
+            crate::spell_cast::scripts::cast_eye_beam_tick(world, tick.caster, spell.id);
         }
         PERIODIC_TRIGGER_SPELL
             if spell.id == crate::spell_cast::omor_orbital::ORBITAL_WHIP

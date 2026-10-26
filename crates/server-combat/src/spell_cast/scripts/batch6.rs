@@ -104,11 +104,12 @@ fn plan_primary_damage(
     damage_index: u8,
     multipliers: (f32, f32),
 ) -> TargetPlan {
+    let registry = *world.resource::<spell_cast::script_registry::SpellScriptRegistry>();
     spell
         .effects
         .iter()
         .enumerate()
-        .filter(|(_, effect)| spell_cast::selects_targets(spell, effect))
+        .filter(|(_, effect)| spell_cast::selects_targets(registry, spell, effect))
         .map(|(index, effect)| {
             let units = targets::select_targets(world, caster, explicit, spell, effect, 0, false)
                 .expect("class spell catalog selectors");

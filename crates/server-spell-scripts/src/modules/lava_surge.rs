@@ -1,12 +1,36 @@
 //! TC a352b1fa spell_shaman.cpp1793–1867: normalized Flame Shock ticks and RestoreCharge.
 //! SimC76f8118 sc_shaman.cpp7230–7258,12000–12020: defer reset/consumption mid-Lava Burst.
-use crate::random as rand;
+use super::combat;
+use combat::random as rand;
+use combat::spell_cast::script_registry::{SpellScriptHook, HitHook};
+use combat::spell_cast::scripts::AfterCastHook;
+use combat::spell_cast::effects::EffectCtx;
+
+pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::NativeAfterCast(after_cast),
+    SpellScriptHook::Hit(hit_hook),
+    SpellScriptHook::CastTimeProcs(&[PROC]),
+    SpellScriptHook::PreserveUnadmittedProcs(&[PROC]),
+    SpellScriptHook::PeriodicDamageFinished(periodic_damage),
+];
+
+fn after_cast(spell: u32) -> Option<AfterCastHook> {
+    (spell == LAVA_BURST).then_some(restore_deferred_charge)
+}
+
+fn hit_hook(spell: u32) -> Option<HitHook> {
+    (spell == PROC).then_some(restore_on_proc_hit)
+}
+
+fn periodic_damage(world: &mut World, ctx: &EffectCtx<'_>) {
+    if ctx.spell.id == FLAME_SHOCK { roll_flame_shock_tick(world, ctx.caster); }
+}
 use bevy::prelude::*;
 use shared::casting::{CastState, CastType};
 
-use crate::auras::ActiveAuras;
-use crate::maps::InMap;
-use crate::spell_info::{SpellInfo, SpellStore};
+use combat::auras::ActiveAuras;
+use combat::maps::InMap;
+use combat::spell_info::{SpellInfo, SpellStore};
 
 const PASSIVE: u32 = 77756;
 pub(crate) const PROC: u32 = 77762;
@@ -35,7 +59,7 @@ pub(crate) fn roll_flame_shock_tick(world: &mut World, caster: Entity) {
     let chance = 1.0 - miss_chance.powf(ticks);
     if rand::random::<f64>() < chance {
         world.get_mut::<NormalizedTicks>(caster).unwrap().ticks = 0.0;
-        crate::spell_cast::cast_triggered(world, caster, PROC, Some(caster), 1);
+        combat::spell_cast::cast_triggered(world, caster, PROC, Some(caster), 1);
     }
 }
 
@@ -57,14 +81,14 @@ fn passive_chance(world: &World, caster: Entity) -> Option<(u32, f32)> {
 
 fn active_flame_shocks(world: &mut World, caster: Entity) -> usize {
     let from =
-        crate::spell_cast::targets::position(world, caster).expect("ticking Shaman position");
+        combat::spell_cast::targets::position(world, caster).expect("ticking Shaman position");
     let map = world.get::<InMap>(caster).copied();
     let mut query = world.query::<(Entity, &ActiveAuras, &InMap)>();
     query
         .iter(world)
         .filter(|(unit, auras, target_map)| {
             Some(**target_map) == map
-                && crate::spell_cast::targets::position(world, *unit)
+                && combat::spell_cast::targets::position(world, *unit)
                     .is_some_and(|to| from.distance_squared(to) <= PROC_RADIUS * PROC_RADIUS)
                 && auras
                     .iter()
@@ -117,5 +141,5 @@ fn restore_lava_charge(world: &mut World, caster: Entity) {
         .as_ref()
         .expect("native Lava Burst charge category")
         .charge_category;
-    crate::spell_cast::restore_charges(world, caster, category, 1);
+    combat::spell_cast::restore_charges(world, caster, category, 1);
 }

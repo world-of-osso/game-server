@@ -1,10 +1,12 @@
 //! Native rand distributions; only an explicit, test-only scope supplies a seed.
 #[cfg(not(any(test, feature = "test-support")))]
-pub(crate) use ::rand::*;
+pub use ::rand::*;
 
 #[cfg(any(test, feature = "test-support"))]
 pub use ::rand::Rng;
-pub(crate) use ::rand::{SeedableRng, distributions, rngs, seq};
+pub use ::rand::seq;
+#[cfg(any(test, feature = "test-support"))]
+pub(crate) use ::rand::{SeedableRng, distributions, rngs};
 
 #[cfg(any(test, feature = "test-support"))]
 thread_local! {

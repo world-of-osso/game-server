@@ -339,13 +339,13 @@ pub(crate) fn power_stats(world: &World, unit: Entity, healing: bool) -> (f32, f
         {
             let entry = world
                 .get::<shared::components::Npc>(unit)
-                .map(|npc| npc.template_id);
-            let spell_share = match (summon.spell_id, entry) {
-                (104317, Some(55659)) => WILD_IMP_OWNER_SPELL_POWER,
-                (265187, Some(135002)) => TYRANT_OWNER_SPELL_POWER,
-                _ => DEMON_OWNER_SPELL_POWER,
-            };
-            return demon_power_stats(world, summon.owner, spell_share);
+                .unwrap()
+                .template_id;
+            let spell_share = super::guardian::owner_spell_share(summon.spell_id, entry)
+                .unwrap_or(DEMON_OWNER_SPELL_POWER);
+            let attack_share = super::guardian::owner_attack_share(summon.spell_id, entry)
+                .unwrap_or(DEMON_OWNER_ATTACK_POWER);
+            return demon_power_stats(world, summon.owner, spell_share, attack_share);
         }
     }
     if let Some(pet) = world.get::<crate::hunter_pet::HunterPet>(unit) {
@@ -356,7 +356,12 @@ pub(crate) fn power_stats(world: &World, unit: Entity, healing: bool) -> (f32, f
         {
             // TC StatSystem.cpp1358: controlled SUMMON_PET uses the IsPet branch.
             // Water Elemental's separate40% branch is for non-pet guardians, not56.
-            return demon_power_stats(world, pet.owner, DEMON_OWNER_SPELL_POWER);
+            return demon_power_stats(
+                world,
+                pet.owner,
+                DEMON_OWNER_SPELL_POWER,
+                DEMON_OWNER_ATTACK_POWER,
+            );
         }
         return (0.0, hunter_pet_attack_power(world, pet.owner));
     }
@@ -374,20 +379,20 @@ pub(crate) fn power_stats(world: &World, unit: Entity, healing: bool) -> (f32, f
 
 /// Guardian::UpdateAttackPowerAndDamage (TC StatSystem.cpp:1358-1367): demons
 /// inherit 15% spell bonus and 57% AP from the owner's fire/shadow spell power.
-/// Source-qualified Wild Imp and base Tyrant use their explicit SimC SP policies.
+/// Source-qualified guardians use their explicit validated SimC inheritance policies.
 /// CharacterStats currently exposes one spell-power value, not school-specific values.
-fn demon_power_stats(world: &World, owner: Entity, spell_share: f32) -> (f32, f32) {
+fn demon_power_stats(
+    world: &World,
+    owner: Entity,
+    spell_share: f32,
+    attack_share: f32,
+) -> (f32, f32) {
     let power = world
         .get::<CharacterStats>(owner)
         .map_or(0.0, |stats| stats.spell_power.max(0.0));
-    (power * spell_share, power * DEMON_OWNER_ATTACK_POWER)
+    (power * spell_share, power * attack_share)
 }
 
-// WARLOCK_WILD_IMP_OWNER_SP_SIMC: constructor705 overrides base19.
-// Keep native104318 coefficient; do not adopt SimC's unvalidated AP share.
-const WILD_IMP_OWNER_SPELL_POWER: f32 = 1.2;
-// WARLOCK_TYRANT_OWNER_SP_SIMC: constructor1510 retains base19 SP1.0.
-const TYRANT_OWNER_SPELL_POWER: f32 = 1.0;
 const DEMON_OWNER_SPELL_POWER: f32 = 0.15;
 const DEMON_OWNER_ATTACK_POWER: f32 = 0.57;
 
@@ -610,7 +615,7 @@ fn level_scaled_points(
 }
 
 /// Base points (`calc_base_value`) with the caster's Points and PointsIndexN mods.
-pub(crate) fn modded_base_points(
+pub fn modded_base_points(
     world: &World,
     caster: Entity,
     spell: &SpellInfo,
@@ -934,9 +939,12 @@ fn crit_chance_from_owner(
     }
     let chance =
         super::scripts::crit_chance(world, caster, target, spell.id).unwrap_or_else(|| {
-            let base = world
-                .get::<CharacterStats>(spell_owner)
-                .map_or(0.0, |stats| stats.crit_pct);
+            let base =
+                crate::combat::read_pet_owner_critical_chance(world, caster).unwrap_or_else(|| {
+                    world
+                        .get::<CharacterStats>(spell_owner)
+                        .map_or(0.0, |stats| stats.crit_pct)
+                });
             let spell_bonus = if uses_weapon_crit_bonus_order(spell) {
                 0.0
             } else {
@@ -1638,8 +1646,12 @@ fn damage_source_amount(
         let giantkiller =
             super::script_registry::target_damage_multiplier(world, ctx.caster, target, ctx.spell);
         let ret_damage = super::scripts::ret_damage_multiplier(world, ctx, target, periodic);
-        let shadow_weaving =
-            super::scripts::shadow_weaving_multiplier(world, bonus_caster, target, ctx.spell.id);
+        let shadow_weaving = super::script_registry::dot_mastery_multiplier(
+            world,
+            bonus_caster,
+            target,
+            ctx.spell.id,
+        );
         #[cfg(any(test, feature = "test-support"))]
         factor_capture::record_done(
             world,
@@ -2010,6 +2022,14 @@ fn deal_source_damage_and_report(
     #[cfg(any(test, feature = "test-support"))]
     factor_capture::finish(world, ctx, target, &damage, &event);
     log_event(world, event);
+    super::scripts::apply_havoc_damage_policies(
+        world,
+        ctx.caster,
+        target,
+        Some(ctx.spell.id),
+        amount,
+        periodic,
+    );
     if !resolved_source {
         super::scripts::apply_marksman_residual(world, ctx, target, crit, amount);
         super::scripts::apply_sentinel_damage(world, ctx, target, crit, amount);
@@ -2029,8 +2049,8 @@ fn deal_source_damage_and_report(
     if hot_streak_hit {
         super::scripts::record_fire_hit(world, ctx.caster, ctx.spell, crit, guaranteed_crit);
     }
-    if periodic && ctx.spell.id == super::scripts::FLAME_SHOCK {
-        super::scripts::roll_flame_shock_tick(world, ctx.caster);
+    if periodic {
+        super::script_registry::periodic_damage_finished(world, ctx);
     }
     // Proc events carry the damage in the target's health units (level scaling), which
     // breakable crowd control compares with the target's max health.

@@ -257,3 +257,64 @@ fn registry_preserves_target_selection_and_damage_stage_arguments() {
         1.0
     );
 }
+
+fn redirect_first(
+    world: &mut World,
+    caster: Entity,
+    target: Entity,
+    spell: u32,
+    depth: u8,
+) -> bool {
+    assert_ne!(caster, target);
+    assert_eq!(depth, 3);
+    world
+        .resource_mut::<Calls>()
+        .0
+        .push(("redirect", target, spell));
+    spell == 774
+}
+
+fn redirect_later(_: &mut World, _: Entity, _: Entity, _: u32, _: u8) -> bool {
+    panic!("a consumed aura application must not run a later redirect");
+}
+
+#[test]
+fn registry_redirect_stops_at_consumption_and_spender_callbacks_remain_additive() {
+    const A: &[SpellScriptHook] = &[
+        SpellScriptHook::AuraRedirect(redirect_first),
+        SpellScriptHook::AfterSpenderStacks(first),
+    ];
+    const B: &[SpellScriptHook] = &[
+        SpellScriptHook::AuraRedirect(redirect_later),
+        SpellScriptHook::AfterSpenderStacks(second),
+    ];
+    let mut world = World::new();
+    world.insert_resource(SpellScriptRegistry::new(&[A, B]));
+    world.init_resource::<Calls>();
+    let caster = world.spawn_empty().id();
+    let target = world.spawn_empty().id();
+    assert!(script_registry::aura_redirect(
+        &mut world, caster, target, 774, 3
+    ));
+    let spell = SpellInfo {
+        id: 53385,
+        ..Default::default()
+    };
+    script_registry::after_spender_stacks(&mut world, caster, &spell);
+    assert_eq!(
+        world.resource::<Calls>().0,
+        [
+            ("redirect", target, 774),
+            ("first", caster, 53385),
+            ("second", caster, 53385),
+        ]
+    );
+    world.insert_resource(SpellScriptRegistry::new(&[A]));
+    assert!(!script_registry::aura_redirect(
+        &mut world, caster, target, 133, 3
+    ));
+    world.insert_resource(SpellScriptRegistry::new(&[]));
+    assert!(!script_registry::aura_redirect(
+        &mut world, caster, target, 774, 3
+    ));
+}

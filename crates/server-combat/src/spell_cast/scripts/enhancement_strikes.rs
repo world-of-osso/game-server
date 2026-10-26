@@ -142,6 +142,7 @@ pub(super) fn on_strike(world: &mut World, ctx: &EffectCtx, target: Entity) {
     if invoke {
         invoke_thorim(world, ctx.caster, target, ctx.depth);
     }
+    super::enhancement_unleashed::schedule_for_landed_root(world, ctx, target);
 }
 
 pub(super) fn cast_ride_the_lightning(
