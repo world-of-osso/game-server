@@ -588,7 +588,10 @@ fn launch_scaled_payload(
 // CastEcho owns its source event predicate and the native shared ICD. Raw
 // CAST_SUCCESSFUL hints must not consume that ICD on unrelated/self phases.
 pub(crate) fn owns_policy_proc(world: &World, spell: u32) -> bool {
-    if super::execution_counters::owns_proc(spell) || super::impact_procs::owns_proc(spell) {
+    if world
+        .resource::<SpellScriptRegistry>()
+        .owns_policy_proc(spell)
+    {
         return true;
     }
     script_registry::policies(world).any(|policy| match policy.relationship {

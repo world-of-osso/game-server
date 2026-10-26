@@ -2,9 +2,17 @@
 use bevy::prelude::*;
 use shared::components::ActiveSpec;
 
-use crate::auras::{ActiveAuras, procs};
-use crate::spell_cast::{self, effects::EffectCtx};
-use crate::spell_info::SpellStore;
+use super::combat;
+use combat::auras::{ActiveAuras, procs};
+use combat::spell_cast::{self, effects::EffectCtx};
+use combat::spell_info::SpellStore;
+use combat::spell_cast::script_registry::SpellScriptHook;
+
+pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::AfterWhiteHit(roll_white_hit),
+    SpellScriptHook::ReplacementDirectDamage(roll_replacement_hit),
+    SpellScriptHook::OwnsPolicyProc(owns_proc),
+];
 
 struct MeleeReset {
     spec: u32,

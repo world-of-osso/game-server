@@ -1739,7 +1739,7 @@ pub fn spend_charge(world: &mut World, unit: Entity, instance_id: u32) {
 }
 
 /// TC Aura::ModStackAmount(-1), SpellAuras.cpp:1093–1128: no timer refresh on loss.
-pub(crate) fn spend_stack(world: &mut World, unit: Entity, instance_id: u32) {
+pub fn spend_stack(world: &mut World, unit: Entity, instance_id: u32) {
     let Some(mut auras) = world.get_mut::<ActiveAuras>(unit) else {
         return;
     };

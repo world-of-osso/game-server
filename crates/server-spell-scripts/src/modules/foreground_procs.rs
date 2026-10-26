@@ -1,8 +1,12 @@
 //! Foreground special-execution proc relationships; native data owns rates and ICDs.
 use bevy::prelude::*;
 
-use crate::auras::{ActiveAuras, procs};
-use crate::spell_info::{SpellInfo, SpellStore};
+use super::combat;
+use combat::auras::{ActiveAuras, procs};
+use combat::spell_info::{SpellInfo, SpellStore};
+use combat::spell_cast::script_registry::SpellScriptHook;
+
+pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::AfterForegroundSpecial(after_foreground_special)];
 
 struct ForegroundProc {
     class_set: u32,
@@ -22,7 +26,7 @@ const PROCS: &[ForegroundProc] = &[
     },
 ];
 
-pub(in crate::spell_cast) fn after_foreground_special(
+fn after_foreground_special(
     world: &mut World,
     caster: Entity,
     spell: &SpellInfo,
@@ -71,7 +75,7 @@ pub(super) fn grant_buff_and_reset_actions(
     buff: u32,
     resets: &[u32],
 ) {
-    if !crate::spell_cast::try_cast_triggered(world, caster, buff, Some(caster), 1) {
+    if !combat::spell_cast::try_cast_triggered(world, caster, buff, Some(caster), 1) {
         warn!(?caster, buff, "Native proc buff refused");
         return;
     }
@@ -86,14 +90,14 @@ fn reset_action(world: &mut World, caster: Entity, action: u32) {
         .get(action)
         .expect("native proc reset action")
         .clone();
-    let now = crate::spell_cast::now(world);
+    let now = combat::spell_cast::now(world);
     let remaining = world
-        .get::<crate::spell_cast::SpellHistory>(caster)
+        .get::<combat::spell_cast::SpellHistory>(caster)
         .map_or(0, |history| history.remaining_cooldown_ms(&spell, now));
-    super::reduce_cooldown(world, caster, action, remaining as f64 / 1000.0);
+    combat::spell_cast::scripts::reduce_cooldown(world, caster, action, remaining as f64 / 1000.0);
     let category = spell
         .categories
         .as_ref()
         .map_or(0, |category| category.charge_category);
-    crate::spell_cast::restore_charges(world, caster, category, 1);
+    combat::spell_cast::restore_charges(world, caster, category, 1);
 }

@@ -36,6 +36,10 @@ Shadow's complete module owns Tentacle Slam's effect-hit dispatch, consumed effe
 
 Lava Surge owns normalized Flame Shock tick rolls and deferred Lava Burst charge restoration downstream. Its proc IDs register admission snapshot and unadmitted-charge-preservation tables; combat still checks native cast-time class masks and actual aura instance IDs. The normalized tick callback runs only after periodic damage and before retained Ret periodic hooks.
 
+## Execution and landed-melee proc stages
+
+Foreground special procs, execution counters, landed-impact PRD and repeating-melee resets own their tables, counters and RNG downstream. Producers still run before foreground counter consumption; execution counters retain the original post-launch position. Ret's white/replacement-hit reset stages stay separate from arbitrary direct hits. Static proc ownership prevents generic proc hints from consuming a script-owned ICD.
+
 ## Tests
 
 The server's public native harness and simulation's harness alias install the plugin before the harness runs Startup. Simulation installs it on every new app, including apps that reuse cached aura catalogs. Combat's own unit-test build compiles the exact downstream module sources against its local test-crate types; it does not add a production dependency or duplicate policy data. Ordinary simulation builds do not compile those test-only inclusions.

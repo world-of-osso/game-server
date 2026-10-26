@@ -38,19 +38,13 @@ mod batch6;
 mod batch7;
 mod batch8;
 mod batch9;
-mod execution_counters;
-mod foreground_procs;
 mod frost;
-mod impact_procs;
 mod periodic_attacks;
 mod secondary_copies;
 pub(crate) use periodic_attacks::{after_periodic_trigger, rolls_reapplication};
+pub(super) use script_registry::after_foreground_special;
 pub(crate) use secondary_copies::after_melee as after_melee_residual;
 pub(super) use secondary_copies::after_spell as after_spell_residual;
-pub(super) fn after_foreground_special(world: &mut World, caster: Entity, spell: &SpellInfo) {
-    foreground_procs::after_foreground_special(world, caster, spell);
-    execution_counters::consume_after_foreground_cast(world, caster, spell.id);
-}
 mod chrono_flame;
 mod clearcasting;
 mod echo_policies;
@@ -117,7 +111,6 @@ pub(super) fn apply_periodic_damage_policies(
 
 pub(crate) fn owns_policy_proc(world: &World, spell: u32) -> bool {
     policies::owns_policy_proc(world, spell)
-        || melee_reset::owns_proc(spell)
         || resource_values::owns_proc(spell)
         || frost::owns_proc(spell)
 }
@@ -130,7 +123,6 @@ pub(crate) mod holy_priest;
 mod hot_streak;
 pub(super) use hot_streak::triggers_hot_streak;
 pub(super) use hot_streak::{pyroclasm_damage_modifier, record_fire_hit};
-mod melee_reset;
 mod midnight_items;
 pub(crate) mod prayer_of_mending;
 mod protection_items;
@@ -172,7 +164,7 @@ pub(crate) fn after_melee_hit(
     critical: bool,
 ) {
     windwalker_flurry::after_melee_hit(world, caster, hand, critical);
-    melee_reset::roll_white_hit(world, caster, critical);
+    script_registry::after_white_hit(world, caster, critical);
     frost::after_white_hit(world, caster, critical);
 }
 mod xuens_battlegear;
@@ -216,7 +208,7 @@ pub(super) fn finish_scripted_launch(
     elemental::after_launch(world, caster, spell, consumed, depth, foreground);
     frost::after_launch(world, caster, spell.id, foreground);
     policies::pet_sets::finish_cobra(world, caster, spell);
-    execution_counters::after_launch(world, caster, spell.id);
+    script_registry::after_counter_launch(world, caster, spell.id);
     unbroken_rhythm::after_launch(world, caster, spell.id);
     enhancement_tier::after_launch(world, caster, spell, depth);
     enhancement_strikes::cast_ride_the_lightning(world, caster, spell, depth);
@@ -257,9 +249,9 @@ pub(super) fn after_direct_damage(
 ) {
     spellslinger::after_direct_damage(world, ctx);
     windwalker_flurry::after_direct_damage(world, ctx, critical);
-    melee_reset::roll_replacement_hit(world, ctx, target, critical);
+    script_registry::replacement_direct_damage(world, ctx, target, critical);
     policies::after_damage(world, ctx);
-    impact_procs::after_damage(world, ctx, target);
+    script_registry::impact_proc_damage(world, ctx, target);
     ret_damage::after_direct_damage(world, ctx, target, critical);
     marksmanship::roll_auto_lock(world, ctx);
     // SimC76f8118 unique_gear_midnight.cpp6351–6355: perfected Guillotine impacts apply Venomfang.
