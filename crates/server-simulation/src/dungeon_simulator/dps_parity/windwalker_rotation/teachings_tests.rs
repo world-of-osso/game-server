@@ -24,18 +24,26 @@ fn stacks(run: &Run) -> u8 {
 }
 
 fn rsk_remaining(run: &Run) -> f64 {
-    let world = run.app.world();
-    let spell = world
-        .resource::<crate::spell_info::SpellStore>()
-        .get(RSK)
-        .unwrap();
+    use crate::simc_apl_native::{Bindings, Encounter, FightStyle, NativeFacts};
+    use server::simc_apl::Facts;
+    let bindings = Bindings {
+        actions: [("rising_sun_kick".into(), RSK)].into(),
+        global_cooldown_spell: RSK,
+        ..Default::default()
+    };
     // RSK uses native charge category1518, not an own/category spell timer.
-    crate::spell_cast::cooldown_query::cooldown_value(
-        world,
+    NativeFacts::new(
+        run.app.world(),
         run.actor,
-        spell,
-        "full_recharge_time",
+        &bindings,
+        Encounter::Fixture {
+            started_at: 0.0,
+            duration: 300.0,
+            style: FightStyle::Patchwerk,
+        },
+        1,
     )
+    .value("cooldown.rising_sun_kick.full_recharge_time")
     .unwrap()
 }
 
