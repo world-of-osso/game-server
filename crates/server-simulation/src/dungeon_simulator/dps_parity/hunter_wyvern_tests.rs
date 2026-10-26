@@ -34,6 +34,8 @@ fn native_hunter_stable_white_impacts_grow_earned_wyvern_cry_without_refresh() {
         false,
     )
     .expect("actual Kill Command earns real Wyvern Cry");
+    // Match the ordinary literal Hunter driver's explicit pet Attack order.
+    crate::pet_control::order_companion_pet(run.app.world_mut(), run.actor, Some(run.targets[0]));
     let before = owned_cry(&run);
     assert!(
         before.stacks < before.max_stacks,
