@@ -144,6 +144,11 @@ fn finish_unseen(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
         let Some(mut bleed) = spell_cast::load_triggered_spell(world, BLEED, ctx.depth + 1) else {
             return;
         };
+        // SIMC_UNSEEN_SINGLE_PERIODIC_PAYLOAD: sc_druid.cpp4933–4960
+        // models one bleed. action.cpp838–865 assigns one tick coefficient
+        // and period; native effect1 must not create a second damage clock.
+        // Keep effect0's unchanged native0.46AP payload and normal aura rules.
+        bleed.effects.retain(|effect| effect.index == 0);
         bleed.cast_damage_multiplier = ctx.spell.cast_damage_multiplier;
         spell_cast::launch_triggered_spell(world, ctx.caster, &bleed, Some(target), ctx.depth + 1);
     }
