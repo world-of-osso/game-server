@@ -77,6 +77,7 @@ mod elemental_cadence_tests;
 mod elemental_communication_tests;
 mod elemental_mechanics_tests;
 mod elemental_rotation_tests;
+mod elemental_tier_tests;
 mod engagement_tests;
 mod enhancement_armor_tests;
 mod enhancement_doom_deck_tests;
