@@ -106,9 +106,23 @@ fn arms_deep_wounds_still_applies_from_native_mortal_strike() {
     crate::spell_cast::powers::change_power(run.app.world_mut(), actor, PowerType::Rage, 1300.0)
         .unwrap();
     cast_native(&mut run, 12294, target);
+    let events: Vec<_> = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .iter()
+        .filter(|event| event.source == Some(actor.to_bits()) && event.spell_id == Some(12294))
+        .collect();
+    assert!(
+        events
+            .iter()
+            .any(|event| event.kind == shared::protocol::CombatLogKind::Damage && event.amount > 0),
+        "native Mortal Strike must land before testing its bleed producer: {events:?}"
+    );
     assert!(
         crate::auras::has_aura(run.app.world(), target, 262115),
-        "Fury's proc replacement must not disable Arms Mortal Strike's native producer"
+        "Fury's proc replacement must not disable Arms Mortal Strike's native producer: {events:?}"
     );
 }
 
