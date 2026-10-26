@@ -96,15 +96,13 @@ pub(super) fn apply_periodic_damage_policies(
 pub(crate) fn owns_policy_proc(world: &World, spell: u32) -> bool {
     policies::owns_policy_proc(world, spell)
 }
-mod fire_procs;
 pub(crate) mod holy_priest;
-mod hot_streak;
-pub(crate) use fire_procs::register as register_fire_procs;
-pub(super) use fire_procs::{before_hot_streak_launch, fire_feedback_hit, fire_meteorite_hit};
-pub(super) use hot_streak::triggers_hot_streak;
-pub(super) use hot_streak::{
-    flamestrike_hot_streak_chance, pyroclasm_damage_modifier, record_fire_hit,
-    roll_flamestrike_hot_streak,
+pub(super) use script_registry::{
+    after_fire_direct_hit as fire_feedback_hit, after_fire_outcome_hit as fire_meteorite_hit,
+    before_proc_launch as before_hot_streak_launch,
+    cast_hit_proc_chance as flamestrike_hot_streak_chance,
+    launch_damage_modifiers as pyroclasm_damage_modifier, record_fire_outcome as record_fire_hit,
+    roll_cast_hit_proc as roll_flamestrike_hot_streak, triggers_hot_streak,
 };
 mod midnight_items;
 pub(crate) mod prayer_of_mending;
@@ -618,7 +616,7 @@ pub fn crit_chance(world: &World, caster: Entity, target: Entity, spell_id: u32)
         return Some(chance);
     }
     match spell_id {
-        FIREBALL | hot_streak::PYROBLAST => firestarter_crit(world, caster, target),
+        FIREBALL | 11366 => firestarter_crit(world, caster, target),
         batch17::REGROWTH => batch17::regrowth_crit(world, caster, target),
         batch3::SHRED if batch11::shred_stealth_bonus(world, caster) => {
             let spell = world
@@ -766,12 +764,10 @@ pub(super) fn snapshot_proc_modifiers(
     auras
         .iter()
         .filter(|aura| {
-            (matches!(
-                aura.spell_id,
-                hot_streak::HOT_STREAK | maelstrom_weapon::MODIFIER
-            ) || world
-                .resource::<script_registry::SpellScriptRegistry>()
-                .is_cast_time_proc(aura.spell_id))
+            (aura.spell_id == maelstrom_weapon::MODIFIER
+                || world
+                    .resource::<script_registry::SpellScriptRegistry>()
+                    .is_cast_time_proc(aura.spell_id))
                 && aura.effects.iter().any(|effect| {
                     effect.misc_values[0] == crate::auras::SpellModOp::ChangeCastTime as i32
                         && crate::auras::spell_mods::class_mask_affects(aura, effect, spell)
@@ -809,9 +805,6 @@ fn native_after_cast(world: &World, spell_id: u32) -> Option<AfterCastHook> {
         windwalker::FISTS_OF_FURY => Some(windwalker_children::fof_executed),
         holy_priest::APOTHEOSIS => Some(holy_priest::restore_holy_words),
         prayer_of_mending::PRAYER => Some(holy_priest::reduce_word_on_mending),
-        hot_streak::PYROBLAST | hot_streak::FLAMESTRIKE | hot_streak::NATIVE_FLAMESTRIKE => {
-            Some(hot_streak::consume_procs_and_roll_pyroclasm)
-        }
         IMPENDING_VICTORY => Some(heal_and_consume_victorious),
         ENRAGED_REGENERATION => Some(cast_invigorating_fury_heal),
         crate::scripted_ai::azure_vault::ABSOLUTE_ZERO_DAMAGE => {

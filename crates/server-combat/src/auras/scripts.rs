@@ -440,7 +440,7 @@ pub(super) fn register_class_scripts(
     super::spirit_wolf::register(&mut scripts);
     super::natures_guardian::register(&mut scripts);
     super::ret_sentence::register(&mut scripts);
-    crate::spell_cast::scripts::register_fire_procs(&mut scripts);
+    registry.register_fire_auras(&mut scripts);
     scripts.0.insert(
         super::fel_devastation::FEL_DEVASTATION,
         AuraScript {

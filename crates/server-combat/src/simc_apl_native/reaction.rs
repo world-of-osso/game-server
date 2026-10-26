@@ -147,7 +147,7 @@ pub fn predict(world: &mut World, actor: Entity, spell: u32) {
     }
 }
 
-pub(crate) fn has_observed_reaction(world: &World, actor: Entity, spell: u32) -> bool {
+pub fn has_observed_reaction(world: &World, actor: Entity, spell: u32) -> bool {
     let Some(reactions) = world.get::<BuffReactions>(actor) else {
         return false;
     };

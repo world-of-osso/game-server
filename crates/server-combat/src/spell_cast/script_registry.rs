@@ -68,6 +68,12 @@
 //! - `MidAuraRegistration`: native proc rows after Dance of Chi-Ji, before Cenarion Ward.
 //! - `HealingMultiplier`: direct/periodic healing at the original persistent-heal slot.
 //! - `SnapshotHealingAura`: after periodic spell-mod capture, before other aura amount scripts.
+//! - `FireAuraRegistration`: after native Ret Sentence, before Fel Devastation.
+//! - `BeforeProcLaunch` and `LaunchDamageModifier`: admitted launch snapshots before damage.
+//! - `HotStreakProducers`: shared eligible flight/damage classification table.
+//! - `AfterFireDirectHit`: positive direct hits after generic direct damage callbacks.
+//! - `RecordFireOutcome`, `AfterFireOutcomeHit`: eligible hit outcomes, then Meteorite callbacks.
+//! - `CastHitProcChance` and `RollCastHitProc`: chance snapshot before consumption, roll after cast.
 //! New stages own distinct callback/lookup aliases, even when signatures coincide.
 //! Within a stage, traverse module slices and entries from first to last. Never sort
 //! or deduplicate them. Adding a policy to an existing module changes only that module.
@@ -143,6 +149,15 @@ pub type FinishConsumedDamageModifierHook =
     fn(&mut World, Entity, &SpellInfo, Option<u32>, u8, bool);
 pub type BeforeJudgmentOnCastHook = fn(&mut World, Entity, u32, u8);
 pub type BeforeLateAuraRegistrationHook = fn(&mut crate::auras::scripts::AuraScripts);
+pub type FireAuraRegistrationHook = fn(&mut crate::auras::scripts::AuraScripts);
+pub type BeforeProcLaunchHook = fn(&mut World, Entity, &SpellInfo);
+pub type AfterFireDirectHitHook = fn(&mut World, &EffectCtx<'_>, Entity, bool);
+pub type AfterFireOutcomeHitHook = fn(&mut World, &EffectCtx<'_>, Entity);
+pub type RecordFireOutcomeHook = fn(&mut World, Entity, &SpellInfo, bool, bool);
+pub type CastHitProcChanceHook = fn(&World, Entity, &SpellInfo, Option<Entity>) -> Option<f32>;
+pub type RollCastHitProcHook = fn(&mut World, Entity, f32);
+pub type LaunchDamageModifierHook =
+    fn(&World, Entity, &SpellInfo) -> Option<crate::spell_info::ChargedSpellModifier>;
 pub type MidAuraRegistrationHook = fn(&mut crate::auras::scripts::AuraScripts);
 pub type HealingMultiplierHook = fn(&World, Entity, &SpellInfo, bool) -> f32;
 pub type SnapshotHealingAuraHook =
@@ -219,6 +234,15 @@ pub enum SpellScriptHook {
     FinishConsumedDamageModifier(FinishConsumedDamageModifierHook),
     BeforeJudgmentOnCast(BeforeJudgmentOnCastHook),
     BeforeLateAuraRegistration(BeforeLateAuraRegistrationHook),
+    FireAuraRegistration(FireAuraRegistrationHook),
+    BeforeProcLaunch(BeforeProcLaunchHook),
+    AfterFireDirectHit(AfterFireDirectHitHook),
+    AfterFireOutcomeHit(AfterFireOutcomeHitHook),
+    HotStreakProducers(&'static [u32]),
+    RecordFireOutcome(RecordFireOutcomeHook),
+    CastHitProcChance(CastHitProcChanceHook),
+    RollCastHitProc(RollCastHitProcHook),
+    LaunchDamageModifier(LaunchDamageModifierHook),
     MidAuraRegistration(MidAuraRegistrationHook),
     HealingMultiplier(HealingMultiplierHook),
     SnapshotHealingAura(SnapshotHealingAuraHook),
@@ -305,6 +329,14 @@ impl SpellScriptRegistry {
     pub fn register_mid_auras(self, scripts: &mut crate::auras::scripts::AuraScripts) {
         for hook in self.hooks() {
             if let SpellScriptHook::MidAuraRegistration(register) = hook {
+                register(scripts);
+            }
+        }
+    }
+
+    pub fn register_fire_auras(self, scripts: &mut crate::auras::scripts::AuraScripts) {
+        for hook in self.hooks() {
+            if let SpellScriptHook::FireAuraRegistration(register) = hook {
                 register(scripts);
             }
         }
@@ -1010,6 +1042,96 @@ pub fn snapshot_healing_aura(
         .fold(amount, |value, hook| match hook {
             SpellScriptHook::SnapshotHealingAura(run) => run(world, caster, spell, effect, value),
             _ => value,
+        })
+}
+
+pub fn triggers_hot_streak(world: &World, spell: u32) -> bool {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .any(|hook| match hook {
+            SpellScriptHook::HotStreakProducers(spells) => spells.contains(&spell),
+            _ => false,
+        })
+}
+
+pub fn before_proc_launch(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::BeforeProcLaunch(run) = hook {
+            run(world, caster, spell);
+        }
+    }
+}
+
+pub fn after_fire_direct_hit(
+    world: &mut World,
+    ctx: &EffectCtx<'_>,
+    target: Entity,
+    critical: bool,
+) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::AfterFireDirectHit(run) = hook {
+            run(world, ctx, target, critical);
+        }
+    }
+}
+
+pub fn after_fire_outcome_hit(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::AfterFireOutcomeHit(run) = hook {
+            run(world, ctx, target);
+        }
+    }
+}
+
+pub fn record_fire_outcome(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    critical: bool,
+    guaranteed: bool,
+) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::RecordFireOutcome(run) = hook {
+            run(world, caster, spell, critical, guaranteed);
+        }
+    }
+}
+
+pub fn cast_hit_proc_chance(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    hit: Option<Entity>,
+) -> Option<f32> {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .find_map(|hook| match hook {
+            SpellScriptHook::CastHitProcChance(run) => run(world, caster, spell, hit),
+            _ => None,
+        })
+}
+
+pub fn roll_cast_hit_proc(world: &mut World, caster: Entity, chance: f32) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::RollCastHitProc(run) = hook {
+            run(world, caster, chance);
+        }
+    }
+}
+
+pub fn launch_damage_modifiers<'a>(
+    world: &'a World,
+    caster: Entity,
+    spell: &'a SpellInfo,
+) -> impl Iterator<Item = crate::spell_info::ChargedSpellModifier> + 'a {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .filter_map(move |hook| match hook {
+            SpellScriptHook::LaunchDamageModifier(run) => run(world, caster, spell),
+            _ => None,
         })
 }
 
