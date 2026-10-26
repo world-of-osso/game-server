@@ -88,12 +88,12 @@ enum LoaChoice {
     Unqualified(u32),
 }
 
-fn read_loa_choices(world: &World, unit: Entity) -> Vec<LoaChoice> {
+fn read_gem_descriptions(world: &World, unit: Entity) -> BTreeSet<u32> {
     let equipped = world
         .get::<EquippedItemModifiers>(unit)
         .expect("native equipped gem instances");
     let native = world.resource::<NativeItemInstances>();
-    let colors: BTreeSet<_> = equipped
+    equipped
         .items
         .iter()
         .flat_map(|(_, item)| item.gems.iter())
@@ -104,7 +104,11 @@ fn read_loa_choices(world: &World, unit: Entity) -> Vec<LoaChoice> {
                 .get(id)
                 .expect("equipped gem has native ItemNameDescriptionID")
         })
-        .collect();
+        .collect()
+}
+
+fn read_loa_choices(world: &World, unit: Entity) -> Vec<LoaChoice> {
+    let colors = read_gem_descriptions(world, unit);
     std::iter::once(LoaChoice::Primary)
         .chain(
             LOA_COLORS
