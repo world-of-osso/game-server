@@ -50,47 +50,112 @@ fn expected_charge_bonus(run: &Run, spell: u32) -> f32 {
     let store = world.resource::<crate::spell_info::SpellStore>();
     let index = u8::from(spell == 44425);
     let effect = |id, index| {
-        store.get(id).unwrap().effects.iter().find(|effect| effect.index == index).unwrap()
+        store
+            .get(id)
+            .unwrap()
+            .effects
+            .iter()
+            .find(|effect| effect.index == index)
+            .unwrap()
     };
-    let mastery = world.get::<crate::stats::CharacterStats>(run.actor).unwrap().mastery_points;
-    let prodigious = world.get::<ActiveAuras>(run.actor).unwrap().iter()
+    let mastery = world
+        .get::<crate::stats::CharacterStats>(run.actor)
+        .unwrap()
+        .mastery_points;
+    let prodigious = world
+        .get::<ActiveAuras>(run.actor)
+        .unwrap()
+        .iter()
         .find(|aura| aura.spell_id == 384612)
         .and_then(|aura| aura.effects.iter().find(|effect| effect.index == index))
         .map_or(0.0, |effect| effect.amount);
-    assert!(mastery > 0.0 && prodigious > 0.0, "native fixture must exercise Savant and Prodigious Savant");
+    assert!(
+        mastery > 0.0 && prodigious > 0.0,
+        "native fixture must exercise Savant and Prodigious Savant"
+    );
     // SimC76f8118 sc_mage.cpp2076–2083: mastery augments the per-charge
     // term; Prodigious Savant multiplies mastery, not the base charge bonus.
     (effect(36032, index).base_points
-        + mastery * effect(190740, index + 1).bonus_coefficient * (1.0 + prodigious / 100.0)) / 100.0
+        + mastery * effect(190740, index + 1).bonus_coefficient * (1.0 + prodigious / 100.0))
+        / 100.0
 }
 
 fn sample_charge_hit(spell: u32, charges: f32) -> (f32, bool, f32) {
     let mut run = prepare_literal(62, 1).unwrap();
-    crate::spell_cast::powers::change_power(run.app.world_mut(), run.actor,
-        shared::components::PowerType::ArcaneCharges, charges).unwrap();
-    assert!(charges == 0.0 || stacks(&run, 36032) > 0, "real power change must also exercise native36032");
+    crate::spell_cast::powers::change_power(
+        run.app.world_mut(),
+        run.actor,
+        shared::components::PowerType::ArcaneCharges,
+        charges,
+    )
+    .unwrap();
+    assert!(
+        charges == 0.0 || stacks(&run, 36032) > 0,
+        "real power change must also exercise native36032"
+    );
     let per_charge = expected_charge_bonus(&run, spell);
-    run.app.insert_resource(crate::spell_cast::effects::factor_capture::FactorCapture::new(
-        run.actor, run.targets[0], spell, "arcane_charge_native", 1,
-    ));
-    println!("charge sample spell{spell} count{charges} stats{:?}", run.app.world().get::<crate::stats::CharacterStats>(run.actor));
-    for aura in run.app.world().get::<ActiveAuras>(run.actor).unwrap().iter()
-        .filter(|aura| [36032, 190740, 384612].contains(&aura.spell_id)) {
-        println!("charge sample aura{} {:?}", aura.spell_id, aura.effects);
-    }
+    run.app.insert_resource(
+        crate::spell_cast::effects::factor_capture::FactorCapture::new(
+            run.actor,
+            run.targets[0],
+            spell,
+            "arcane_charge_native",
+            1,
+        ),
+    );
     // Start the same native RNG stream after fixture setup, without replacing
     // native crit, variance, gear, charge auras, or projectile delivery.
     let _seed = crate::random::seed_scope(70448);
     cast(&mut run, spell);
-    for _ in 0..20 { run.app.update(); }
-    let hits = run.app.world().resource::<ObservedCombatEvents>().0.iter()
-        .filter(|event| event.source == Some(run.actor.to_bits())
-            && event.target == Some(run.targets[0].to_bits())
-            && event.spell_id == Some(spell) && event.kind == CombatLogKind::Damage)
+    for _ in 0..20 {
+        run.app.update();
+    }
+    let hits = run
+        .app
+        .world()
+        .resource::<ObservedCombatEvents>()
+        .0
+        .iter()
+        .filter(|event| {
+            event.source == Some(run.actor.to_bits())
+                && event.target == Some(run.targets[0].to_bits())
+                && event.spell_id == Some(spell)
+                && event.kind == CombatLogKind::Damage
+        })
         .collect::<Vec<_>>();
-    assert_eq!(hits.len(), 1, "one actual native{spell} impact at{charges} charges");
-    println!("charge factors spell{spell} count{charges}: {}", run.app.world().resource::<crate::spell_cast::effects::factor_capture::FactorCapture>().export());
-    (hits[0].amount as f32, hits[0].crit, per_charge)
+    assert_eq!(
+        hits.len(),
+        1,
+        "one actual native{spell} impact at{charges} charges"
+    );
+    let damage = normalize_charge_hit_variance(&run, hits[0].amount);
+    (damage, hits[0].crit, per_charge)
+}
+
+fn normalize_charge_hit_variance(run: &Run, amount: i32) -> f32 {
+    let trace = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::effects::factor_capture::FactorCapture>()
+        .export();
+    let events = trace["events"].as_array().expect("native charge hit trace");
+    let direct = events
+        .iter()
+        .find(|event| event["event"] == "direct_amount")
+        .expect("actual native direct amount");
+    let result = events
+        .iter()
+        .find(|event| event["event"] == "result")
+        .expect("actual native damage result");
+    let scaled = direct["factors"]["native_scaled_amount"].as_f64().unwrap();
+    let input = result["factors"]["native_input_amount"].as_f64().unwrap();
+    let critical = 1.0 + result["factors"]["crit_bonus"].as_f64().unwrap();
+    // Native proc/cast timing changes RNG consumption even from the same seed.
+    // Observe and divide out the actual variance; never change the roll, damage
+    // coefficient, critical result, aura state or native projectile delivery.
+    let variance = input / (scaled * critical);
+    assert!(variance > 0.0);
+    (f64::from(amount) / variance) as f32
 }
 
 fn assert_charge_hit_formula(spell: u32) {
@@ -99,10 +164,15 @@ fn assert_charge_hit_formula(spell: u32) {
     for charges in [2.0, 4.0] {
         let (damage, charged_critical, charged_bonus) = sample_charge_hit(spell, charges);
         assert_eq!(charged_critical, critical, "identical native crit stream");
-        assert_eq!(charged_bonus, per_charge, "same native mastery/talent values");
+        assert_eq!(
+            charged_bonus, per_charge,
+            "same native mastery/talent values"
+        );
         let expected = base * (1.0 + charges * per_charge);
-        assert!((damage - expected).abs() <= expected * 0.005 + 2.0,
-            "native{spell}, charges={charges}, base={base}, per_charge={per_charge}, expected={expected}, actual={damage}");
+        assert!(
+            (damage - expected).abs() <= expected * 0.005 + 2.0,
+            "native{spell}, charges={charges}, base={base}, per_charge={per_charge}, expected={expected}, actual={damage}"
+        );
     }
 }
 
@@ -602,7 +672,10 @@ fn arcane_batch_clearcasting_prd_uses_the_pinned_coefficient_cap() {
         survival *= 1.0 - (constant * f64::from(attempt)).min(1.0);
     }
     assert!((expected_attempts - 1.0 / 0.12).abs() < 1e-10);
-    assert_eq!(crate::random::capped_accumulated_proc_constant(0.05, 13), 1e-300);
+    assert_eq!(
+        crate::random::capped_accumulated_proc_constant(0.05, 13),
+        1e-300
+    );
     assert!(
         (crate::random::accumulated_proc_constant(0.15) - 0.03222091437308769).abs() < 1e-12,
         "uncapped Arms caller unchanged"

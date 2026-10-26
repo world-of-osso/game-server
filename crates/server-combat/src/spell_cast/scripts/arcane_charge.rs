@@ -36,6 +36,7 @@ pub(crate) fn modifier_amount(
         .get::<ActiveAuras>(caster)
         .and_then(|auras| auras.iter().find(|row| row.spell_id == 384612))
         .and_then(|aura| aura.effects.iter().find(|row| row.index == effect.index))
-        .map_or(0.0, |row| row.amount * aura.stack_multiplier());
+        // Talent rank is already folded into the native effect amount.
+        .map_or(0.0, |row| row.amount);
     Some((base + mastery * (1.0 + prodigious / 100.0)) * aura.stack_multiplier())
 }
