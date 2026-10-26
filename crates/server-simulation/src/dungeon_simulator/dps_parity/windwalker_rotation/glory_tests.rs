@@ -16,7 +16,7 @@ fn literal_ww_native_glory_kick_executes_emit_damage_and_chi() {
     let _seed = crate::random::seed_scope(70_448);
     let mut run = prepare_measurement(269, 3).unwrap();
     let actor = run.actor;
-    let primary = run.targets[0];
+    let mut primary = None;
     let started = run.app.world().resource::<Time>().elapsed();
     install_fixture_lifetimes(&mut run, started);
     assert!(
@@ -57,6 +57,11 @@ fn literal_ww_native_glory_kick_executes_emit_damage_and_chi() {
             if event.source != Some(actor.to_bits()) {
                 continue;
             }
+            if event.kind == CombatLogKind::CastSuccess
+                && matches!(event.spell_id, Some(107428 | 467307))
+            {
+                primary = event.target;
+            }
             if matches!(event.spell_id, Some(RSK_DAMAGE | RWK_DAMAGE))
                 && event.kind == CombatLogKind::Damage
                 && event.amount > 0
@@ -68,9 +73,8 @@ fn literal_ww_native_glory_kick_executes_emit_damage_and_chi() {
             }
             if event.kind == CombatLogKind::Damage && event.amount > 0 {
                 assert_eq!(
-                    event.target,
-                    Some(primary.to_bits()),
-                    "Glory retains the actual primary"
+                    event.target, primary,
+                    "Glory retains the actual kick request's primary, not a fixed fixture target"
                 );
                 parents.insert(last_kick.expect("actual RSK/RWK damage precedes its Glory child"));
             }

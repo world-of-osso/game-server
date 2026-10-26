@@ -196,9 +196,7 @@ fn sample_cast(run: &mut Run, root: u32, damage: u32) -> Sample {
                     damage: damage_since(run, cursor, damage),
                     glory_criticals: damage_since(run, cursor, 392959)
                         .iter()
-                        .filter(|event| {
-                            event.crit && event.target == Some(run.targets[0].to_bits())
-                        })
+                        .filter(|event| event.crit)
                         .count(),
                 };
             }
