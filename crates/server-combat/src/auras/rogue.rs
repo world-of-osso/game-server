@@ -157,7 +157,7 @@ pub(crate) fn prepare_cast(
 
 /// SimC76f8118 sc_rogue.cpp4550–4561/4604–4609: the actual stealth
 /// and post-stealth window govern both the bleed bonus and zero recovery.
-pub(crate) fn improved_garrote_active(world: &World, caster: Entity, spell: u32) -> bool {
+pub fn improved_garrote_active(world: &World, caster: Entity, spell: u32) -> bool {
     if spell != 703 || !super::has_aura(world, caster, IMPROVED_GARROTE) {
         return false;
     }

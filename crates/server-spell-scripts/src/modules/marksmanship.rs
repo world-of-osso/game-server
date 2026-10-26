@@ -2,14 +2,38 @@
 use bevy::prelude::*;
 use shared::components::ActiveSpec;
 
-use super::super::{PlannedEffect, TargetPlan, effects::EffectCtx, targets};
 use super::cast_relationships::{decrement, has_talent};
-use crate::auras::{self, AuraInstance};
-use crate::spell_info::{SpellInfo, SpellStore};
+use super::combat;
+use combat::auras::scripts::{AuraScript, AuraScripts};
+use combat::auras::{self, AuraInstance};
+use combat::spell_cast::script_registry::{SpellScriptHook, TargetPlanHook};
+use combat::spell_cast::scripts::{reduce_cooldown, script_effect_value};
+use combat::spell_cast::{self, PlannedEffect, TargetPlan, effects::EffectCtx, targets};
+use combat::spell_info::{SpellInfo, SpellStore};
+
+pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::TargetPlan(target_plan),
+    SpellScriptHook::LateAuraRegistration(register),
+    SpellScriptHook::ResolvedDamage(apply_residual),
+    SpellScriptHook::AfterDirectDamageBeforeItems(roll_auto_lock),
+];
+
+fn register(scripts: &mut AuraScripts) {
+    scripts.0.insert(
+        RAPID_FIRE,
+        AuraScript {
+            on_periodic: Some(cast_rapid_fire_tick),
+            on_natural_end: Some(finish_rapid),
+            ..Default::default()
+        },
+    );
+}
 
 const SPEC: u32 = 254;
 const AIMED_SHOT: u32 = 19434;
+const RAPID_FIRE: u32 = 257044;
 const RAPID_FIRE_SHOT: u32 = 257045;
+const RAPID_FIRE_FOCUS: u32 = 263585;
 const TRICK_SHOTS: u32 = 257621;
 const TRICK_BUFF: u32 = 257622;
 const VOLLEY: u32 = 260243;
@@ -46,9 +70,8 @@ pub(super) fn trick_plan(
         } else {
             (2, 4)
         };
-        let count = super::script_effect_value(world, caster, TRICK_SHOTS, count_index) as usize;
-        let multiplier =
-            super::script_effect_value(world, caster, TRICK_SHOTS, percent_index) / 100.0;
+        let count = script_effect_value(world, caster, TRICK_SHOTS, count_index) as usize;
+        let multiplier = script_effect_value(world, caster, TRICK_SHOTS, percent_index) / 100.0;
         let extras = select_trick_targets(world, caster, primary, count);
         chain_multipliers.extend(extras.iter().map(|&target| (target, multiplier)));
         units.extend(extras);
@@ -83,8 +106,8 @@ fn select_trick_targets(
     extras.retain(|&target| target != primary);
     // sc_hunter.cpp5393–5396/5665–5668 randomizes only when exceeding the cap.
     if extras.len() > count {
-        use crate::random::seq::SliceRandom;
-        extras.shuffle(&mut crate::random::thread_rng());
+        use combat::random::seq::SliceRandom;
+        extras.shuffle(&mut combat::random::thread_rng());
         extras.truncate(count);
     }
     extras
@@ -101,13 +124,7 @@ pub(crate) fn finish_rapid(world: &mut World, _target: Entity, aura: &AuraInstan
 
 /// sc_hunter.cpp8583–8626/5175–5178: actual critical damage supplies the
 /// residual pool, with Blood Fletching's native share for Aimed Shot only.
-pub(in crate::spell_cast) fn apply_residual(
-    world: &mut World,
-    ctx: &EffectCtx,
-    target: Entity,
-    critical: bool,
-    damage: f32,
-) {
+fn apply_residual(world: &mut World, ctx: &EffectCtx, target: Entity, critical: bool, damage: f32) {
     if !critical
         || damage <= 0.0
         || ctx.spell.id == MASTER_BLEED
@@ -128,7 +145,7 @@ pub(in crate::spell_cast) fn apply_residual(
     } else {
         MASTER_MARKSMAN
     };
-    let percent = super::script_effect_value(world, ctx.caster, talent, 0);
+    let percent = script_effect_value(world, ctx.caster, talent, 0);
     bank_residual(world, ctx, target, MASTER_BLEED, percent, damage);
 }
 
@@ -141,7 +158,7 @@ pub(super) fn bank_residual(
     damage: f32,
 ) {
     let tick_amount = damage * percent / 100.0 / native_residual_ticks(world, child) as f32;
-    super::super::cast_triggered_with_effect0_amount(
+    spell_cast::cast_triggered_with_effect0_amount(
         world,
         ctx.caster,
         child,
@@ -180,8 +197,8 @@ fn native_residual_ticks(world: &World, child: u32) -> u32 {
 pub(crate) fn begin_rapid_tick(world: &mut World, caster: Entity) {
     const TAKE_AIM: u32 = 1273132;
     if selected(world, caster, TAKE_AIM) {
-        let seconds = f64::from(super::script_effect_value(world, caster, TAKE_AIM, 1)) / 1000.0;
-        super::reduce_cooldown(world, caster, AIMED_SHOT, seconds);
+        let seconds = f64::from(script_effect_value(world, caster, TAKE_AIM, 1)) / 1000.0;
+        reduce_cooldown(world, caster, AIMED_SHOT, seconds);
     }
 }
 
@@ -191,12 +208,23 @@ pub(super) fn roll_auto_lock(world: &mut World, ctx: &EffectCtx) {
     if ctx.spell.id != 75 || !selected(world, ctx.caster, LOCK_AND_LOAD) {
         return;
     }
-    let chance = super::script_effect_value(world, ctx.caster, LOCK_AND_LOAD, 0);
-    if crate::random::random::<f32>() * 100.0 < chance {
-        super::super::cast_triggered(world, ctx.caster, 194594, Some(ctx.caster), 1);
+    let chance = script_effect_value(world, ctx.caster, LOCK_AND_LOAD, 0);
+    if combat::random::random::<f32>() * 100.0 < chance {
+        spell_cast::cast_triggered(world, ctx.caster, 194594, Some(ctx.caster), 1);
     }
 }
 
-pub(super) fn target_plan(spell: u32) -> Option<(targets::Relation, super::TargetPlanHook)> {
+pub(super) fn target_plan(spell: u32) -> Option<(targets::Relation, TargetPlanHook)> {
     matches!(spell, AIMED_SHOT | RAPID_FIRE_SHOT).then_some((targets::Relation::Enemy, trick_plan))
+}
+
+///257044 explicitly names257045 and263585. Its333ms period,2000ms duration
+///and EXTRA_INITIAL_PERIOD attribute author seven shots; no synthetic timer.
+fn cast_rapid_fire_tick(world: &mut World, unit: Entity, aura: &AuraInstance, index: u8) {
+    if index != 1 {
+        return;
+    }
+    begin_rapid_tick(world, aura.caster);
+    spell_cast::cast_triggered(world, aura.caster, RAPID_FIRE_SHOT, Some(unit), 1);
+    spell_cast::cast_triggered(world, aura.caster, RAPID_FIRE_FOCUS, Some(aura.caster), 1);
 }

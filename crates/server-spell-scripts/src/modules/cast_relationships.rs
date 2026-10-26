@@ -1,8 +1,19 @@
 //! Source-qualified successful-cast relationships; native records own aura payloads.
-use crate::auras::procs::{AuraEvent, PROC2_CAST_SUCCESSFUL};
-use crate::auras::{ActiveAuras, AuraInstance, RemoveReason};
-use crate::class_progression::TraitLoadout;
-use crate::spell_info::SpellInfo;
+use super::combat;
+use combat::auras::procs::{AuraEvent, PROC2_CAST_SUCCESSFUL};
+use combat::auras::{ActiveAuras, AuraInstance, RemoveReason};
+use combat::class_progression::TraitLoadout;
+use combat::spell_cast;
+use combat::spell_cast::script_registry::SpellScriptHook;
+use combat::spell_info::SpellInfo;
+
+pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::LateAuraRegistration(register),
+    SpellScriptHook::SuccessfulCastRelationships(after_cast),
+    SpellScriptHook::GuaranteesCrit(guarantees_crit),
+    SpellScriptHook::IgnoresCooldown(ignores_cooldown),
+    SpellScriptHook::SnapshotsModifier(snapshots_modifier),
+];
 use bevy::prelude::*;
 use shared::components::ActiveSpec;
 
@@ -189,11 +200,7 @@ const CRIT_RULES: &[CritRule] = &[
     },
 ];
 
-pub(in crate::spell_cast) fn guarantees_crit(
-    world: &World,
-    caster: Entity,
-    spell: &SpellInfo,
-) -> bool {
+fn guarantees_crit(world: &World, caster: Entity, spell: &SpellInfo) -> bool {
     spell.cast_was_hardcast
         && CRIT_RULES.iter().any(|rule| {
             rule.actions.contains(&spell.id)
@@ -218,7 +225,7 @@ pub(super) fn has_talent(world: &World, caster: Entity, talent: u32) -> bool {
 }
 
 fn owns_aura(world: &World, caster: Entity, spell: u32) -> bool {
-    let now = super::super::now(world);
+    let now = spell_cast::now(world);
     world.get::<ActiveAuras>(caster).is_some_and(|auras| {
         auras.iter().any(|aura| {
             aura.caster == caster
@@ -228,7 +235,7 @@ fn owns_aura(world: &World, caster: Entity, spell: u32) -> bool {
     })
 }
 
-pub(crate) fn register(scripts: &mut crate::auras::scripts::AuraScripts) {
+fn register(scripts: &mut combat::auras::scripts::AuraScripts) {
     for rule in RULES
         .iter()
         .filter(|rule| matches!(rule.operation, Operation::NativeProc))
@@ -283,14 +290,10 @@ fn used_modifier(spell: &SpellInfo, aura: u32) -> bool {
 }
 
 /// Ordinary native readiness and cooldown storage share this same sourced window.
-pub(in crate::spell_cast) fn ignores_cooldown(
-    world: &World,
-    caster: Entity,
-    spell: &SpellInfo,
-) -> bool {
+fn ignores_cooldown(world: &World, caster: Entity, spell: &SpellInfo) -> bool {
     // SimC76f8118 sc_rogue.cpp4604–4609: Improved Garrote has zero
     // recovery even on the first actual-stealth cast, before its exit buff.
-    if crate::auras::rogue::improved_garrote_active(world, caster, spell.id) {
+    if combat::auras::rogue::improved_garrote_active(world, caster, spell.id) {
         return true;
     }
     RULES
@@ -304,7 +307,7 @@ pub(in crate::spell_cast) fn ignores_cooldown(
         })
 }
 
-pub(in crate::spell_cast) fn after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
+fn after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
     super::marksmanship_sentinel::after_cast(world, caster, spell);
     for rule in RULES.iter().filter(|rule| rule.cast == spell.id) {
         if !selected(world, caster, rule) {
@@ -366,7 +369,7 @@ pub(super) fn decrement(world: &mut World, caster: Entity, spell: u32) {
             consume(world, caster, spell);
         }
         Some(count) => {
-            crate::auras::set_self_cast_stacks(world, caster, spell, count - 1);
+            combat::auras::set_self_cast_stacks(world, caster, spell, count - 1);
         }
         None => {}
     }
@@ -374,16 +377,16 @@ pub(super) fn decrement(world: &mut World, caster: Entity, spell: u32) {
 
 fn grant_maximum(world: &mut World, caster: Entity, aura: u32, policy: &'static str) {
     let buff = world
-        .resource::<crate::spell_info::SpellStore>()
+        .resource::<combat::spell_info::SpellStore>()
         .get(aura)
         .expect("relationship requires native buff");
-    let maximum = crate::auras::fresh_max_stacks(world, caster, buff).max(1);
+    let maximum = combat::auras::fresh_max_stacks(world, caster, buff).max(1);
     grant_with_overrides(
         world,
         caster,
         aura,
         policy,
-        super::super::TriggeredSpellOverrides {
+        spell_cast::TriggeredSpellOverrides {
             aura_stacks: Some(maximum),
             ..Default::default()
         },
@@ -397,13 +400,13 @@ fn grant_for_cast_duration(
     aura: u32,
     policy: &'static str,
 ) {
-    let duration = super::super::duration_ms(world, caster, spell) as i32;
+    let duration = spell_cast::duration_ms(world, caster, spell) as i32;
     grant_with_overrides(
         world,
         caster,
         aura,
         policy,
-        super::super::TriggeredSpellOverrides {
+        spell_cast::TriggeredSpellOverrides {
             duration_ms: Some(duration),
             ..Default::default()
         },
@@ -415,22 +418,22 @@ fn grant_with_overrides(
     caster: Entity,
     spell: u32,
     policy: &'static str,
-    values: super::super::TriggeredSpellOverrides,
+    values: spell_cast::TriggeredSpellOverrides,
 ) {
-    if !super::super::cast_triggered_with_overrides(world, caster, spell, Some(caster), 1, values) {
+    if !spell_cast::cast_triggered_with_overrides(world, caster, spell, Some(caster), 1, values) {
         warn!(?caster, spell, policy, "Native relationship aura refused");
     }
 }
 
 fn consume(world: &mut World, caster: Entity, spell: u32) -> bool {
-    !crate::auras::remove_auras(world, caster, RemoveReason::Consumed, |aura| {
+    !combat::auras::remove_auras(world, caster, RemoveReason::Consumed, |aura| {
         aura.caster == caster && aura.spell_id == spell
     })
     .is_empty()
 }
 
 fn grant(world: &mut World, caster: Entity, spell: u32, policy: &'static str) {
-    if !super::super::try_cast_triggered(world, caster, spell, Some(caster), 1) {
+    if !spell_cast::try_cast_triggered(world, caster, spell, Some(caster), 1) {
         warn!(?caster, spell, policy, "Native relationship aura refused");
     }
 }

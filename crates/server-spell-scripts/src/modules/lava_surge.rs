@@ -2,9 +2,9 @@
 //! SimC76f8118 sc_shaman.cpp7230–7258,12000–12020: defer reset/consumption mid-Lava Burst.
 use super::combat;
 use combat::random as rand;
-use combat::spell_cast::script_registry::{SpellScriptHook, HitHook};
-use combat::spell_cast::scripts::AfterCastHook;
 use combat::spell_cast::effects::EffectCtx;
+use combat::spell_cast::script_registry::{HitHook, SpellScriptHook};
+use combat::spell_cast::scripts::AfterCastHook;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::NativeAfterCast(after_cast),
@@ -23,7 +23,9 @@ fn hit_hook(spell: u32) -> Option<HitHook> {
 }
 
 fn periodic_damage(world: &mut World, ctx: &EffectCtx<'_>) {
-    if ctx.spell.id == FLAME_SHOCK { roll_flame_shock_tick(world, ctx.caster); }
+    if ctx.spell.id == FLAME_SHOCK {
+        roll_flame_shock_tick(world, ctx.caster);
+    }
 }
 use bevy::prelude::*;
 use shared::casting::{CastState, CastType};

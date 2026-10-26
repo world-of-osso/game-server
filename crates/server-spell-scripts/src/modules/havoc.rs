@@ -6,8 +6,40 @@ use super::combat;
 use combat::auras::ActiveAuras;
 use combat::spell_cast::script_registry::SpellScriptHook;
 
-pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::OnCast(before_cast)];
+pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::OnCast(before_cast),
+    SpellScriptHook::EarlyAuraRegistration(demonsurge::register_havoc),
+    SpellScriptHook::LandedDamagePolicy(damage::apply_havoc_damage_policies),
+    SpellScriptHook::AbilityUseAvailable(demonsurge::havoc_demonsurge_available),
+    SpellScriptHook::ChannelPeriodic(beam::periodic_trigger),
+    SpellScriptHook::CriticalChance(beam::crit_chance),
+];
 use combat::class_progression::KnownSpells;
+
+#[path = "havoc/beam.rs"]
+mod beam;
+#[path = "havoc/damage.rs"]
+mod damage;
+#[path = "havoc/demonsurge.rs"]
+mod demonsurge;
+
+fn is_havoc(world: &World, caster: Entity) -> bool {
+    world
+        .get::<ActiveSpec>(caster)
+        .is_some_and(|spec| spec.0 == 577)
+}
+
+fn has_talent(world: &World, caster: Entity, talent: u32) -> bool {
+    is_havoc(world, caster)
+        && world
+            .get::<KnownSpells>(caster)
+            .is_some_and(|known| known.contains(talent))
+}
+
+fn before_runtime_cast(world: &mut World, caster: Entity, spell: u32, depth: u8) {
+    damage::before_cast(world, caster, spell);
+    demonsurge::before_cast(world, caster, spell, depth);
+}
 
 struct TransformPolicy {
     name: &'static str,
@@ -31,7 +63,7 @@ const DEMONIC: TransformPolicy = TransformPolicy {
 };
 
 pub(super) fn before_cast(world: &mut World, caster: Entity, spell: u32, depth: u8) {
-    combat::spell_cast::scripts::before_havoc_cast(world, caster, spell, depth);
+    before_runtime_cast(world, caster, spell, depth);
     if !DEMONIC.parents.contains(&spell) || !selected(world, caster) {
         return;
     }
@@ -49,7 +81,7 @@ pub(super) fn before_cast(world: &mut World, caster: Entity, spell: u32, depth: 
         return;
     }
     transform_or_extend(world, caster, duration as u32, depth);
-    combat::spell_cast::scripts::arm_havoc_demonic(world, caster);
+    demonsurge::arm_demonic(world, caster);
     // SimC76f8118 sc_demon_hunter.cpp4051–4057: add the hasted channel
     // duration after Meta has supplied its native haste, not another flat grant.
     let parent = world
