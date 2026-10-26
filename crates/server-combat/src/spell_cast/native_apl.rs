@@ -25,6 +25,14 @@ pub(crate) fn flight_value(
     }
 }
 
+/// Actual caster-owned hit events still in native travel at an observation cutoff.
+pub fn spell_hits_in_flight(world: &World, caster: Entity, spell_id: u32) -> Result<usize, String> {
+    let pending = world
+        .get_resource::<missiles::PendingSpellHits>()
+        .ok_or("native pending missile state unavailable")?;
+    Ok(pending.count_matching(caster, |id| id == spell_id))
+}
+
 /// SimC76f8118 sc_mage.cpp6988–7010 sums caster-owned eligible travel events.
 pub fn hot_streak_spells_in_flight(world: &World, caster: Entity) -> Result<f64, String> {
     let pending = world
