@@ -4644,3 +4644,7 @@ Documented the first compile-boundary slice in [spell-script-crate](systems/spel
 ## 2026-10-26 — Frost runtime compile boundary
 
 - Updated [spell-script crate](systems/spell-script-crate.md#frost-launch-procs-and-delayed-supply) with downstream launch/proc/supply ownership, preserved callback order, compile-touch observations and train-only native gates.
+
+## 2026-10-26 — Holy script compile boundary
+
+- Updated [spell-script crate](systems/spell-script-crate.md#holy-words-and-prayer-runtime) with Holy/Prayer ownership and preserved support-aura registration, target planning and native charge/jump semantics.

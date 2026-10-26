@@ -102,6 +102,10 @@ Spellslinger's Arcane/Frost source tables, delayed per-conjure rolls, Ray tick w
 
 A warm `server-simulation --no-run` touch of the moved supply source rebuilt combat, scripts and simulation in87.72s before extraction (including a package-cache wait), then only scripts and simulation in5.45s after extraction. These are compile observations, not gameplay acceptance; native Frost and registry gates run in the merge train.
 
+## Holy Words and Prayer runtime
+
+`modules/holy_runtime/` owns Surge of Light, Apotheosis charge restoration, Flash/Prayer cooldown reductions, Prayer of Healing's injured-ally plan, and Prayer of Mending's native stacks, OriginalCaster and random injured/player-priority jumps. Support aura registration stays after Abundance and before Earthen Rage. Named aura fields classify only the same authored effect indices; they do not add effects. Native registry lookups replace the original first-match cases without changing payment, flight or healing.
+
 ## Tests
 
 The server's public native harness and simulation's harness alias install the plugin before the harness runs Startup. Simulation installs it on every new app, including apps that reuse cached aura catalogs. Combat's own unit-test build compiles the exact downstream module sources against its local test-crate types; it does not add a production dependency or duplicate policy data. Ordinary simulation builds do not compile those test-only inclusions.

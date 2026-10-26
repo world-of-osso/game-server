@@ -28,7 +28,8 @@
 ## Tests asserting this spec
 
 - `crates/server-spell-scripts/src/tests.rs` — first-match, additive order, event arguments, empty registration and host installation.
-- `crates/server-spell-scripts/src/runtime_stage_tests.rs` — native/proc/supply/policy order and launch snapshots carried to child and delayed stages.
+- `crates/server-spell-scripts/src/runtime_stage_tests.rs` — native/proc/supply/policy order, launch snapshots carried to child and delayed stages, and exact named-aura-field classification.
+- `crates/server-combat/src/spell_cast/{holy_words,prayer_of_mending,dummy3}_tests.rs` — native moved Holy charges, Surge usage, Prayer healing and jump behavior.
 - `crates/server-simulation/src/dungeon_simulator/dps_parity/frost_mage_{proc,supply,modifiers,lance_cdr,shatter_followups}_tests.rs` — native migrated Frost execution boundaries.
 - `crates/server-simulation/src/dungeon_simulator/dps_parity/{ret_auto_proc_tests.rs,outlaw_tests.rs,fury_rotation/mechanics_tests.rs}` — native migrated-hook behavior.
 - Existing native Ret/BM/Devastation/Windwalker/Warrior/Rogue policy fixtures continue to exercise relationship execution.

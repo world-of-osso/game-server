@@ -105,3 +105,14 @@ fn registry_carries_launch_snapshot_into_child_and_delayed_stages() {
     script_registry::resolve_pending_script_events(&mut world);
     assert_eq!(world.resource::<Calls>().0, ["launch", "pending"]);
 }
+
+#[test]
+fn registry_classifies_only_the_authored_aura_fields() {
+    const FIRST: &[SpellScriptHook] = &[SpellScriptHook::NamedAuraFields(&[(41635, 0)])];
+    const SECOND: &[SpellScriptHook] = &[SpellScriptHook::NamedAuraFields(&[(390994, 1)])];
+    let registry = SpellScriptRegistry::new(&[FIRST, SECOND]);
+    assert!(registry.consumes_named_aura_field(41635, 0));
+    assert!(registry.consumes_named_aura_field(390994, 1));
+    assert!(!registry.consumes_named_aura_field(390994, 0));
+    assert!(!SpellScriptRegistry::new(&[]).consumes_named_aura_field(41635, 0));
+}
