@@ -33,7 +33,7 @@ Selected native155580 applies its owned155627 override aura, so ordinary Moonfir
 ### Shared Spellslinger producers
 
 - Selected Splintering Sorcery443739 emits the native specialization payload (Arcane443763/Frost443722) after native Arcane Blast, Prismatic Bolt, Frostbolt, Flurry and Glacial Spike executions. Signature Spell supplies its authored extra conjures. All queued recipients retain the actual hostile primary; individual launches are staggered100ms as pinned `sc_mage.cpp7324–7361` specifies.
-- Each native Ray of Frost damage tick conjures the native Splinterstorm effect2 amount, then opens/refreshes native1247908. Conjures during an earned Splinterstorm/Arcane Surge window use the selected native doubling chance. Native spell records retain damage coefficients.
+- Successful native Ray of Frost execution opens selected native1247908 Splinterstorm once, before its periodic updates. Each damage tick conjures the native Splinterstorm effect3 amount without refreshing the window. Conjures during the actual earned Splinterstorm/Arcane Surge lifetime use the selected native doubling chance. Native spell records retain duration and damage coefficients (`sc_mage.cpp4992–4996/5021`).
 
 - Each actual native Splinter impact with selected Spellfrost Teachings444986 reduces the specialization's running Orb cooldown/recharge by its native effect (Arcane index0/Frost index1, milliseconds). The shared reducer updates active native spell, category and charge timers without starting inactive timers; cooldown packets retain the native category and full duration. Unrelated payloads do not reduce recharge.
 
@@ -58,6 +58,8 @@ Selected native155580 applies its owned155627 override aura, so ordinary Moonfir
 - Actual paid Ice Lance primary stacks conjure selected native Force of Will Splinters using its effect3 stacks-per-conjure value. Selected native Glaciate effect2 milliseconds reduce running Ray recharge per shattered stack, never starting absent timers (`sc_mage.cpp4471–4481`).
 
 - Each real Frozen Orb bolt resolution that actually hits at least one unit rolls selected Everlasting Frost effect2 for one Fingers stack. Use the native resolution ledger to run this once per area pulse, not once per recipient or only when a preselected primary hits (`sc_mage.cpp4141–4147`).
+
+- Selected Overflowing Energy merges actual Frostbolt228597 and Glacial Spike228600 hit outcomes through the shared native buff-outcome queue: noncritical hits earn native394195 stacks and eligible critical hits expire them after the hit batch. Ice Lance neither produces nor consumes this state; native spell masks and stack amounts supply the Frost critical-chance benefit (`sc_mage.cpp4050/4244/1729–1730/1897–1898`).
 
 ### Frost Mage native Icicles and Glacial Spike
 
@@ -143,6 +145,7 @@ Selected native155580 applies its owned155627 override aura, so ordinary Moonfir
 - [x] The native-table producer preserves signed values, replaces only the requested table, supports repeated imports and rolls back a duplicate-ID failure without losing the prior table.
 - [x] Shipped profile manifests preserve exact item IDs, bonus lists, item-level overrides, enchants, gems, crafted stats, talents, consumables and action text. Missing item IDs fail explicitly. Temporary enchant declarations apply only to equipped slots; an empty off hand is inactive.
 - Native class actors use live `CharacterStats` melee crit even with NPC identity. Native Hunter pets inherit their current owner's crit; preserve their own applicable bonuses and target modifiers. Generic no-stats creatures retain native template/base crit. Do not replace class/owner crit with generic creature5% or suppress it through a generic NPC `NO_CRIT` flag (SimC76f8118 `player.cpp5125–5134`, `pet.cpp217–220`).
+- Equipment-source aura procs require actual, non-suppressed native combat references before chance, RPPM or recovery state changes. Equipment initialization and idle aura reconciliation cannot earn temporary item buffs. Ordinary class-aura eligibility remains unchanged (SimC76f8118 `action/action_callback.cpp79–82`).
 - Venomcursed armor drivers1307906/1307923/1307928 proc their native crit/mastery/haste buffs. Both signed stat amounts come from the equipped driver's native effects1/2; retain each buff's native rating masks, lifetime and refresh behavior, and the driver's ordinary proc eligibility/RPPM. No invented stats or rate changes (SimC76f8118 `unique_gear_midnight.cpp5600–5614/6600`).
 - Ordinary native haste auras multiply with converted rating haste and each other: `(1 + rating%) × Π(1 + aura%) − 1`. Retain native aura amounts/stacks, non-stacking selection, independent Crusade and autoattack-only342 factors. Native WW1205 rating plus5% ordinary haste yields33.7557%; no coefficient or rating adjustment (SimC76f8118 `player.cpp4982–4995`).
 - `liquid_luster_2` uses native item271887/ilvl295. Apply one real Lustrous Gleam stack immediately and another at each native six-second period, capped by native stack metadata; derive each stack's rating from the scaled driver effect. All stacks expire with the driver. Literal `pre_pot_time` ages the real aura, pays elapsed native periods, ages its actual cooldown and preserves the later combat use (SimC76f8118 `unique_gear_midnight.cpp288–366`, `consumable.cpp500–565`).
@@ -386,7 +389,7 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 - A Madness impact (including Slam's weak Madness, not its periodic ticks) launches a native148859 or1264175 projectile to each own live VT. Native1264104 effect1 owns Void selection/effectiveness; Void launches373279. Preserve source-parent identity through travel so only its apparition triggers1231479 Shadeburst, with native73510 soft cap. Native407469 boosts apparition damage on own Madness; these payloads use live Shadow Weaving (SimC76f8118 `sc_priest_shadow.cpp291–549/1296/2609–2650`).
 - Tormented Spirits' additional Pain producers, Auspicious Spirits' Insanity threshold and Haunting Shadows' DoT extensions remain separate unqualified relationships; native projectile E1/E2 must not unconditionally substitute for them.
 
-- Selected Psychic Link199484 copies its native effect0 fraction of eligible landed spell/tick damage to every other recipient with the caster's live Vampiric Touch. Native199486 supplies the damage payload; the echo cannot independently crit, hit its original recipient or use foreign VT (SimC76f8118 `sc_priest_shadow.cpp1521–1619/2655–2669`).
+- Selected Psychic Link199484 copies its native effect0 fraction of eligible landed spell/tick damage to every other recipient with the caster's live Vampiric Touch. Native199486 supplies the damage payload; the echo cannot independently crit, hit its original recipient or use foreign VT. Actual caster-self damage, including native Death backlash sharing the offensive spell ID, is not a producer (SimC76f8118 `sc_priest_shadow.cpp1521–1619/2655–2669`, `sc_priest.cpp1430–1446`).
 
 - Voidform228260 grants1242171 uses from native effect2 after its free Volley. Ordinary1242173 consumes earned uses and cannot cast without one. Primary/secondary bolts retain native counts and the pinned50ms interval. Native1296580 grants a capped tier use after Slam in1242171 during Voidform or1279437 outside it. Voidform expiry grants selected Crushing Void and transfers earned tier uses. Literal Voidform readiness is checked before native action aliases can turn it into Volley (SimC76f8118 `sc_priest_shadow.cpp960–1079/1380–1401/1829–1846/1960–2000`).
 
@@ -687,6 +690,11 @@ Rotation/decision implementation belongs to the lead/rotation agents. No system 
 - Spec252 runs the exact exported76f8118 Unholy action rows through shared Program/Driver/Prepared/Equipment with native player identity. Bind rune/Runic Power, disease and pet state to native70448 values; ordered precombat executes native Raise Dead. Numerical parity is separately measurement-gated.
 
 
+### Affliction native Darkglare inheritance
+
+- Native205180/103673 Darkglare inherits full live owner spell power through the existing guardian policy, as base `warlock_pet_t` specifies and Darkglare retains (`sc_warlock_pets.cpp19/2424–2430`). Native205231 supplies damage coefficients and cast time; other guardian policy entries are unchanged.
+- Existing native guardian tests retain real cast timing, dynamic owner-SP changes, retargeting, expiry and persistent-pet preservation. A native265 cast must spawn103673 and land205231 with the full owner-SP term in its actual damage calculation.
+
 ### Affliction native Shadow of Nathreza
 
 - With selected native1261984, actual Haunt48181 effect4 pulses launch native1262710 at that Haunt's recipient. Use its native one-second clock without an initial pulse; removing the selected talent stops further apex payloads without removing Haunt (`sc_warlock.cpp41–49`). Native coefficients, direct damage modifiers and critical rolls remain unchanged.
@@ -696,6 +704,11 @@ Rotation/decision implementation belongs to the lead/rotation agents. No system 
 
 - Every landed native1261153 tick copies each ticking owned Agony, UA, Corruption or Wither base tick into its native child1261166/1261176/1261158/1279686 at the native channel effect1 fraction. Agony/UA retain actual stacks; Wither counters do not scale its copy. Children retain independent native direct modifiers and critical rolls, not the parent's resolved damage (SimC76f8118 `sc_warlock_actions.cpp136–158/2210–2214`).
 - The pinned `bugs=1` Agony child compensation is1.95, as in `sc_warlock_actions.cpp2036–2044`; it is not a replacement coefficient. Its landed impact advances the owned Agony counter without funding shards (`2052–2060`). Foreign DoTs cannot produce children.
+
+### Affliction native Cascading Calamity
+
+- A successful overlapping native1259790 application earns selected1261124's native1261125 buff. The first owned UA on a recipient does not earn it. Observe the actual stored aura through the shared application stage, including refreshes, without replacing native aura callbacks (`sc_warlock_actions.cpp1547–1550`).
+- Final-stack Fatal Echoes also earns the buff when the previous UA has ended (`1604–1606`); overlapping echoes use their normal application callback once. Native buff values and duration remain authoritative.
 
 ### Affliction native Fatal Echoes
 
