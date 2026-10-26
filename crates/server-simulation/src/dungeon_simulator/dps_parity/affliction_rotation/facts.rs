@@ -7,6 +7,7 @@ pub(super) struct AfflictionFacts<'a> {
     native: NativeFacts<'a>,
     equipment: &'a Equipment,
     darkglare_remains: f64,
+    previous_action: Option<&'a str>,
 }
 
 impl<'a> AfflictionFacts<'a> {
@@ -17,6 +18,7 @@ impl<'a> AfflictionFacts<'a> {
         bindings: &'a Bindings,
         equipment: &'a Equipment,
         encounter: Encounter,
+        previous_action: Option<&'a str>,
     ) -> Self {
         let now = crate::spell_cast::now(world);
         // SimC76f8118 player.cpp12462–12469: remains reads the actual pet expiration.
@@ -36,12 +38,18 @@ impl<'a> AfflictionFacts<'a> {
                 .with_targets(targets.first().copied(), targets),
             equipment,
             darkglare_remains,
+            previous_action,
         }
     }
 }
 
 impl Facts for AfflictionFacts<'_> {
     fn value(&self, name: &str) -> Result<f64, String> {
+        // SimC76f8118 action.cpp3714–3733: prev compares the last foreground
+        // action, including off-GCD actions, rather than only the previous GCD.
+        if let Some(alias) = name.strip_prefix("prev.") {
+            return Ok(f64::from(self.previous_action == Some(alias)));
+        }
         match name {
             "pet.darkglare.remains" => Ok(self.darkglare_remains),
             "pet.darkglare.active" => Ok(f64::from(self.darkglare_remains > 0.0)),
@@ -70,7 +78,10 @@ impl ActionFacts for AfflictionFacts<'_> {
                 .native
                 .value_for(action, &format!("dot.{}.{name}", action.name));
         }
-        if name.starts_with("pet.darkglare.") || name.starts_with("trinket.") {
+        if name.starts_with("pet.darkglare.")
+            || name.starts_with("trinket.")
+            || name.starts_with("prev.")
+        {
             self.value(name)
         } else {
             self.native.value_for(action, name)
