@@ -1,5 +1,23 @@
 # Spell Casting
 
+## Explicit non-demon guardian spell power — 2026-10-26
+
+`effects::power_stats` reads an explicit guardian SP policy after the existing demon and owner-RAP paths. Native Thing From Beyond189988 retains creature type15; its373277→373279 policy inherits full live owner SP without a demon marker or copied actor stats. Unlisted guardians keep their existing behavior.
+
+Native Yogg RED8bf69a675f has the authentic owned actor but no positive Spike damage: the former SP-policy lookup existed only in the demon branch. Native4ef1614ab5 passes23Shadow cases including all-three-target Spikes and13guardian cases (one unrelated ignored). BM Bear/Wildspeaker7c3eeb0fea passes2,265guardian7efd24bed9 passes3, and267petsf8014078a3 passes5. Landed via4c915017a8 in the combined Shadow update below. See the [Shadow contract](../../specs/dps-parity.md#shadow-priest-literal-parity-controller).
+
+## Earned Shadow Rift extensions — 2026-10-26
+
+`shadow_horizon.rs` tracks the actual Rift instance and paid extension count. Ordinary450983 completion extends existing owned459314/449887 by native449912 effect2, at most native effect1 uses per Rift, without restarting periodic phase. Native RED5411c58c11 reaches the first real cast with deadline10.6 instead of11.6. The finite-window cap test earns real Insight and PI before Torrent, then completes four ordinary Blasts: the first three add1s and the fourth adds nothing.
+
+Horizon638b079972, Yogg4c915017a8 and Haunting2cac634596 landed together in513fe59afac5703d9ec46e6c95e033d801d00f96. All25Shadow and13guardian cases pass (one unrelated ignored); protected BM/265/267 cases also pass. Combined native ST148428.52 (81.00%) and3T279491.71 (82.21%) remain below the90% target. These are one-tree measurements, not separately attributed uplifts.
+
+## Haunting Shadows impact extensions — 2026-10-26
+
+`shadow_haunting.rs` handles native413231/1264176 payload impacts. Selected1279355 extends existing same-caster Pain/VT by native effect1 milliseconds through the owned-duration operation, not aura reapplication; periodic phase and damage formulas remain unchanged. Pinned SimC76f8118 `sc_priest_shadow.cpp427–435` defines this behavior.
+
+Native isolated RED901d805102 reaches one actual travelling apparition hit but leaves Pain at16.3 rather than17.3. All25Shadow cases pass via2cac634596 in the combined landing above. See the [Shadow contract](../../specs/dps-parity.md#shadow-priest-literal-parity-controller).
+
 ## Merged feedback grants are not casts — 2026-10-26
 
 The [shared feedback contract](../../specs/dps-parity.md#shared-merged-critical-feedback) uses `queued_triggers::schedule_buff_outcome` for Arcane/Frost Overflowing Energy and Fire feedback. Gains apply the native caster-owned aura after the hit batch; clears remove only that caster's aura. Other queued spells retain their existing cast paths.
@@ -44,11 +62,16 @@ Sentinel reuses `marksmanship_sentinel.rs` for owned mark grants, consumption, L
 |---|---|
 | Tip/Swipe/Wildfire/Shrapnel | Landed455a8ad19; b899ee589e passes35 actual cases with canonical/Pack fixtures partitioned and unit cases in server-combat |
 | Sentinel force/Tip/Storm/recharge | Native0ac1974a11 has3 genuine owned-mark REDs→GREEN; landed4c9083c0c0 via bdb0b13806 with38 actual controls, including all19MM |
-| Strike as One | Native7d268c55e0 observes0 owned-pet strikes, including tipped rank3 Swipe; native-payload/ICD implementation committed, GREEN and actual-crit Sic 'Em qualification pending |
+| Strike as One/Sic 'Em | Native7d268c55e0 and actual-crit3eaa27a77d RED→GREEN; landed5a8c96626d throughb0f0f0b804 with41 actual controls. Shared policy timers require aura.instance_id, not spell ID |
+| Mongoose Fury/Stargazer | Native12233749ba has2 genuine real-cast REDs: actual Raptor and earned Tip consumption produce0 stacks. Full-effect native producers/asynchronous Stargazer committed; GREEN and measurement pending |
 
-After Sentinel landing4c9083c0c0, canonical300s three-seed means are78418.654ST/140699.957three-target DPS (39.50%/44.16% reference), not numerical parity. Earlier455a8ad19 baseline was60195.31ST/104726.809three-target. Pack Leader is a mechanics control, not the canonical scoring fixture. Concurrent shared changes prevent isolated slice attribution.
+After Strike/Sic-Em landing5a8c96626d, canonical300s three-seed means are88726.483ST/145807.187three-target DPS (44.70%/45.76% reference), not numerical parity. Previous Sentinel landing4c9083c0c0 measured78418.654ST/140699.957three-target. Earlier455a8ad19 baseline was60195.31ST/104726.809three-target. Pack Leader is a mechanics control, not the canonical scoring fixture. Concurrent shared changes prevent isolated slice attribution.
 
-Sources: [shared Sentinel](../../../crates/server-spell-scripts/src/modules/marksmanship_sentinel.rs), [Tip/Swipe](../../../crates/server-spell-scripts/src/modules/survival.rs), [Wildfire](../../../crates/server-spell-scripts/src/modules/survival_wildfire.rs), [actual mark tests](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/survival_mark_tests.rs); pinned `sc_hunter.cpp1358–1372,3650–3710,6181–6188,6400–6401,7104–7107`.
+`survival_buffs.rs` grants full native Mongoose Fury after real Raptor/Swipe execution and selected Stargazer immediately after real Tip consumption. Native70448 supplies Mongoose's20-stack cap/10% base effect and Stargazer's100-stack cap; its independent expirations use the existing asynchronous-aura engine. Full applications retain all selected Mongoose effects and label modifiers; effect0-only priming would omit them. No stat changes or manual damage multiplier.
+
+`survival_pet.rs` dispatches native1251779 from the living owned main pet. The normal path owns1251717's actual aura-instance700ms timer; raw melee proc hints cannot spend it. Tipped rank3 Swipe executes its separate native effectiveness before base impact. Actual main-pet strike crits trigger selected native Sic 'Em1253138; shared pet stats, owner crit and periodic timing remain authoritative. No synthetic pet or stat overrides.
+
+Sources: [owned-pet strikes](../../../crates/server-spell-scripts/src/modules/survival_pet.rs), [shared Sentinel](../../../crates/server-spell-scripts/src/modules/marksmanship_sentinel.rs), [Tip/Swipe](../../../crates/server-spell-scripts/src/modules/survival.rs), [Wildfire](../../../crates/server-spell-scripts/src/modules/survival_wildfire.rs), [actual mark tests](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/survival_mark_tests.rs); pinned `sc_hunter.cpp1358–1372,3650–3710,6181–6188,6400–6401,7104–7107`.
 
 ## Native Warrior execution relationships — 2026-10-25
 
@@ -74,7 +97,7 @@ Native4442 raw15/30 plus1258011 effect modifiers5/20 produce effective20/50. The
 
 `CAST_POLICIES` retains Storm's execution producer. `PRIMARY_HIT_POLICIES` adds ordinary HoW's successful-primary producer from pinned `sc_paladin.cpp1689–1710/1757–1783`. Both use the same owned native431474 aura, live effect values and ICD. The HoW callback follows native Judgment/Sun Sear processing; it rejects background depth, non-primary cast roles and secondary recipients. Echoes retain native flight and cannot produce another echo. Critical HoW echo payloads retain native Sun Sear impact behavior.
 
-Corrected native RED `81fbd788eb` observed 39 ordinary HoW hits and zero matching scaled echo hits in actual300s combat. Legal unselected and actual background-hit controls passed. Capture counts filter the actual Hammer spell ID, not unrelated Storm echoes. GREEN integration and landed numerical qualification remain pending. [Contract](../../specs/dps-parity.md#ret-hammer-second-sunrise), [native cases](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/ret_hammer_sunrise_tests.rs); see also [[ret-divine-purpose]].
+Corrected native RED `81fbd788eb` observed 39 ordinary HoW hits and zero matching scaled echo hits in actual300s combat. Legal unselected and actual background-hit controls passed. Capture counts filter the actual Hammer spell ID, not unrelated Storm echoes. Native producer GREEN records 35 ordinary roots and 7 correctly scaled echoes; unselected/background and critical echo→Sun Sear controls pass. The retained 119-case gate plus repaired strict three-seed Arbiter cutoff case landed `b01577f7d` via `7b2aa57d91`. Final follower means are 160670.95 ST and 293727.01 three-target (90.2335%/91.4051% of pinned references), both within ±10%. The diagnostic witnesses a native launch at300.300, due300.329 and target-alive-state discard at300.350; it neither extends the measured fight nor adds missing damage. [Contract](../../specs/dps-parity.md#ret-hammer-second-sunrise), [native cases](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/ret_hammer_sunrise_tests.rs); see also [[ret-divine-purpose]].
 
 ## Selected primary across self casts — 2026-10-24
 
@@ -210,19 +233,27 @@ Source: authenticated70448/read-only world.db25 effect rows; SimC76f8118 `sc_dea
 
 Pinned SimC76f8118 `action.cpp4297–4314/4397–4421` rounds channel tick time, then rebuilds duration to prevent false expiry partials. Native Ray RED2d0ea30702 observed8full ticks plus a0.012690355 expiry fraction at constant26.69281%haste. The [Frost investigation](../investigations/frost-mage-dps-parity.md#per-hit-factor-investigation--2026-10-26) records the consumer evidence. This is not a spell-specific ninth-tick filter.
 
-Code`fad33456f` passes67 native cases across all seven required families. The workspace/all-target check and formatting pass. These are probe proofs, not landing or all-spec DPS acceptance.
+Code`fad33456f` passes67 native cases across all seven required families. The workspace/all-target check and formatting pass. These are probe proofs. Corrected plain landing entryed45d940de passes34cases (Ray/Frost plus six native family controls) and lands4c9083c0c. Its first submission30283eb573 failed only Cargo inline-table CLI syntax; no behavior tests ran there. The [Frost investigation](../investigations/frost-mage-dps-parity.md) owns the first measured64 totals. All-spec acceptance remains separate.
 
-| Native family | Actual proof | Probe |
+| Native family | Actual proof | Rounding / charged-snapshot probes |
 |---|---|---|
-| Frost64 | Ray8full ticks;27Frost controls | `4d5a25a057` |
-| Arcane62 |23Missiles/Arcane controls | `d159d93aee` |
-| Shadow258 | Mind Flay paid ticks; Void Torrent tick-zero exclusion | `0ca0083ba7` |
-| Affliction265 | Full Drain Soul expiry; native Malefic Grasp | `a95cf82de3` |
-| Devastation1467 | Scintillation children, Mass Disintegrate and native interruption | `78cfc39738` |
-| WW269 | Full FoF deadline and five periodic damage emissions; initial MID2 half-child kept separate; melee/channel controls | `cee5ded2ce` |
-| Feral103 | Convoke retains4s lifetime and free native children | `d093253376` |
+| Frost64 | Ray8full ticks;27Frost controls | `4d5a25a057` / `e21164bf1c` |
+| Arcane62 |23Missiles/Arcane controls | `d159d93aee` / `391f78276d` |
+| Shadow258 | Mind Flay paid ticks; Void Torrent tick-zero exclusion | `0ca0083ba7` / `7a88258e8e` |
+| Affliction265 | Full Drain Soul expiry; native Malefic Grasp | `a95cf82de3` / `56d3aba749` |
+| Devastation1467 | Scintillation children, Mass Disintegrate and native interruption | `78cfc39738` / `ecce68aaf3` |
+| WW269 | Full FoF deadline and five periodic damage emissions; initial MID2 half-child kept separate; melee/channel controls | `cee5ded2ce` / `388717b955` |
+| Feral103 | Convoke retains4s lifetime and free native children | `d093253376` / `9cc0c846bb` |
 
 Drain Soul uses private gate choice124692 at native node72045. The original265 reference input retains91566 (Improved Shadow Bolt); it is unchanged and must not be replaced by the gate variant for DPS measurement. All-spec remeasurement remains a separate integration requirement.
+
+### Channel duration and charged-modifier snapshots
+
+SimC76f8118 `parse_effects.cpp1690–1695` maps P_CAST_TIME only to execute-time effects; `parse_effects.hpp1072–1107` keeps them separate from duration effects. `action.cpp4390–4432` uses duration/period modifiers plus haste. Cached TC a352b1fa differs: `Object.cpp1816–1838::ModSpellDurationTime` also applies ChangeCastTime. This engine follows the pinned SimC behavior, not that TC operation.
+
+Native Nightfall264571 has a−100% cast-time effect and separate−50% Period/Duration effects. Channel duration excludes the cast-time effect. Ordinary channel execution freezes charged modifiers beside its prepayment resource snapshot, before execution consumes an admitted use. The applied aura and subsequent channel bar therefore retain the same duration/period modifiers rather than recomputing the bar from depleted live auras. Each channel aura effect also retains its charged launch-modifier list for later interval recalculation; the tick's raw SpellStore copy otherwise loses that consumed modifier. Non-channel timing and live uncharged Period changes remain unchanged.
+
+Full16648tree3ff583ed53 supplies the native Grasp assertions. RED417d517a80 reaches an ordinary cast with no nonzero channel state. The fixture asserts each cast's span and aura/bar period against its own native haste and single charged factor, one use consumed per channel, and12damage ticks across three channels. Fixes8f5f54e03/f1c34de24 on merged122c71bac pass72native cases:67renewed seven-family controls (matrix above), four Nightfall cases and one existing native fractional-deadline control in1a0852c7ed. Nightfall reaches12ticks across three casts; instant Bolt behavior remains intact. Allowed workspace/all-target check and formatting pass. Landing/measurement remain separate. Trace6680c9ea33 shows the remaining baseline-ratio assertion compared different native haste states:33.288498%/750ms/3.000s against33.91441%/373ms/1.492s. Both spans equal four periods. Equipped-driver isolation also failed to keep haste constant, so no proc suppression is retained. Expected spans now use each cast's actual start haste and native charged factor, rounding the period before rebuilding the four-tick span. Cross-cast baseline×0.5/equality assumptions are removed;12ticks and instant Bolt controls remain. Trace4145dd6cd2 explains11rather than12ticks: after the consumed-use channel's first tick, raw metadata rebased373→747ms, moving next due4.54599999999999937→4.91999999999999993 while expiry remained5.29199999999999982. This is lost charged Period state, not epsilon or expiry ordering. No time tolerance or terminal-tick exception is changed.
 
 ## Dead-caster native channel coverage — 2026-10-17
 
@@ -528,7 +559,7 @@ Guardian/Karma/Eye Beam and retained markers/talents remain excluded. Batch17 di
 
 Judgment correction2026-10-23: TC a352b1fa `spell_paladin.cpp1062–1091` grants220637 on **OnCast** when315867 is **known**, not on damage or rank-aura presence. The former damage-hit scripts lost power on misses and wrongly authorized aura-only casters. One shared cast hook now covers20271/275773/275779 across ordinary, triggered and costed-trigger delivery, before spending/launch (TC Spell.cpp3843–3869). Three genuine native REDs establish the timing/immune/knowledge boundaries; native16GREEN followed by warning-free retained5GREEN at02090739e. [Current proof](../../handoffs/ret-paladin-parity-proof-ledger.md#judgment-cast-time-resource-correction).
 
-Arcane Blast's successful-launch resource clone freezes36032s1 damage from pre-gain charges. Cast time and mana admission/payment separately read36032s4/s5. Arcane Power's native12042s2 is consumed once by the generic aura72 school/power-mask fold (TC a352b1fa SpellInfo.cpp:4185–4194), with no343208 gate. The obsolete named rank consumer duplicated that discount after arena preparation added generic school costs; the native cost control now requires100/70/70 for absent/unranked/ranked aura states. Tidal Waves stacks represent future uses, so53390 modifiers retain their per-use magnitude and completed matching casts consume one accumulated stack before removing the final native charge. No guardian module changes.
+Arcane Blast freezes native36032s1 damage in its launch spell-modifier snapshot before gaining charges; it does not rescale the resource clone's coefficient. Native36032s4/s5 apply cast time and Mana admission/payment once through the ordinary aura folds. The old `batch16` callbacks repeated those folds: native RED8fee037a92 records a1242ms two-charge cast bar instead of1478.4ms, and rejects the once-folded18612Mana budget. Sparse dummy16 controls now supply the authored damage/time/cost aura effects while retaining their assertions. Source: SimC76f8118 `sc_mage.cpp2076–2100/2850–2855`; native `arcane_blast_timing_tests.rs` exercises actual CastState with unchanged native modifiers. The tight Mana admission boundary is a separate follow-up. Diagnostic1eca672f29 proves an oracle error: native raw6875 with461260/1270845's authored−5%/−5% gives6204.6875, truncated to6204 only by the zero-charge query. Two charges cost18614 after one final truncation; the old test incorrectly supplied6204×3+1=18613. Pinned `action.cpp1192–1238` retains fractional cost, while native `school_costs.rs` truncates after the folds when aura423 is present. The corrected oracle reads raw native operands and now rejects expected−1Mana, then admits exactly the expected final cost, without spare Mana or coefficient changes; GREEN remains train-gated. Arcane Power's native12042s2 is consumed once by the generic aura72 school/power-mask fold (TC a352b1fa SpellInfo.cpp:4185–4194), with no343208 gate. The obsolete named rank consumer duplicated that discount after arena preparation added generic school costs; the native cost control now requires100/70/70 for absent/unranked/ranked aura states. Tidal Waves stacks represent future uses, so53390 modifiers retain their per-use magnitude and completed matching casts consume one accumulated stack before removing the final native charge. No guardian module changes.
 
 Healing Wave77472's native45/zero-chain-target heal now has a named single-primary plan, needed to test real Tidal use consumption through native cast admission. Generic45 stays unsupported; existing friendly self selection is unchanged. Frozen8ff636a→9721cec census stays163 roots/98 reviewed/65 underived: no existing census markers are silently removed.229 native rows match local CSVs; all prior40-spec ID sets match. Targeted12/12 warning-free; single post-origin/master spell_cast372/372 at e0fa018, fmt/check pass. Later master c644eaa adds three unrelated toy visual IDs; fresh156cd37 targeted12/12 and fmt/check pass without rerunning the broad gate. Corrected fixture/RED boundaries and source/proof scope are recorded in the linked ledger.
 
@@ -1232,6 +1263,12 @@ Named gap `FERAL_SPIRIT_INTRINSIC_AP_SOURCE`: archive pet_levelstats has2715 row
 Native RED `3e1761f9b2` observes real Conflagrate critical damage42039 unchanged when native113858 increases caster crit34.95652→64.95652%; the source requires ratio1.2222938. Existing CB control passes. Aura modifiers require a real stat-update frame before admission; the first probe failed that test precondition and is not gameplay RED. CoC GREEN remains pending.
 
 The separate `destruction_mastery` actual-hit sampler and pure mean forecast landed via `632a4d9a0b` with nine native/control cases GREEN. Actual eligible hits sample native mastery bounds; read-only forecasts consume no RNG. [Current numerical status](warlock-periodic-counters.md#counter-lifecycle) remains below parity.
+
+## Destruction Echo — 2026-10-26
+
+[Contract](../../specs/dps-parity.md#destruction-echo-of-sargeras). The owned [Echo leaf](../../../crates/server-spell-scripts/src/modules/destruction_echo.rs) uses actual Incinerate/Infernal Bolt hits for Embers I PRD, and actual Chaos Bolt/Shadowburn hits or ordinary Rain of Fire execution for the shared Embers III cooldown. It emits native1265884, excludes the primary from secondary damage, earns native Vision, and applies the tier mark only from actual Echo impacts with the real item-set aura. Seed has no role in this producer.
+
+Native producer RED `c12efd197e` and payload RED `24a0c65f22` become two GREEN cases in `309398a397`. Its remaining value failure was a test error: frozen267 selects Embers II rank2, so native Vision8% matches pinned reference `default_value=0.08`; raw per-rank4 is not the selected value. Correcting this assertion changes no gameplay, stats, allocations or coefficients. The selected-rank gate and landing remain pending. Above-eight-target reduction is not qualified. Sources: pinned SimC76f8118 actions450–455/4337/4605/4813/5614–5649/6039–6042 and init846–849/1428–1434.
 
 ## Warlock periodic shard funding — 2026-10-25
 

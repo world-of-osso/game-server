@@ -260,6 +260,8 @@ pub struct AuraEffectState {
     periodic_base_ms: u32,
     /// Existing application haste semantics, including channel haste snapshots.
     periodic_haste_multiplier: f32,
+    /// Charged launch modifiers retained for channel interval recalculation.
+    periodic_cast_charge_mods: Option<Vec<crate::spell_info::ChargedSpellModifier>>,
     pub trigger_spell: u32,
     pub class_mask: [u32; 4],
     /// Schedule origin, rebased after an interval change without resetting ordinals.
@@ -912,6 +914,11 @@ fn build_effect(
         period_ms,
         periodic_base_ms: base_period_ms,
         periodic_haste_multiplier: haste,
+        periodic_cast_charge_mods: if crate::spell_cast::is_channeled(spell) {
+            spell.cast_charge_mods.clone()
+        } else {
+            None
+        },
         trigger_spell: effect.trigger_spell,
         class_mask: effect.spell_class_mask,
         // `AuraEffect::ResetPeriodic` (SpellAuraEffects.cpp:957-960): with

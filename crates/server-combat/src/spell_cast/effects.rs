@@ -366,6 +366,15 @@ pub(crate) fn power_stats(world: &World, unit: Entity, healing: bool) -> (f32, f
                 owner.total_attack_power(crate::stats::WeaponAttackType::Ranged, modifiers);
             return (0.0, attack_power * share);
         }
+        if let Some(share) =
+            entry.and_then(|entry| super::guardian::owner_spell_share(summon.spell_id, entry))
+        {
+            // Explicit guardian SP inheritance does not require demon identity.
+            let owner = world
+                .get::<CharacterStats>(summon.owner)
+                .expect("owner-scaled guardian requires native CharacterStats");
+            return (owner.spell_power * share, 0.0);
+        }
     }
     if let Some(pet) = world.get::<crate::hunter_pet::HunterPet>(unit) {
         if world

@@ -149,7 +149,7 @@ fn owned_effect_amount(world: &World, caster: Entity, spell: u32, index: u8) -> 
 }
 
 /// SimC76f8118 sc_priest.cpp4285–4341: live target DoTs, not a flat school bonus.
-fn weaving_multiplier(world: &World, caster: Entity, target: Entity, spell: u32) -> f32 {
+pub(super) fn weaving_multiplier(world: &World, caster: Entity, target: Entity, spell: u32) -> f32 {
     let shadow = world
         .get::<ActiveSpec>(caster)
         .is_some_and(|spec| spec.0 == 258);
