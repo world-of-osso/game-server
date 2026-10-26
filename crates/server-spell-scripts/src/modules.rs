@@ -38,6 +38,7 @@ const fn order_modules<const N: usize>(
 }
 
 register_modules! {
+    affliction_absolute_corruption: (2660, "modules/affliction_absolute_corruption.rs"),
     affliction_agony: (2650, "modules/affliction_agony.rs"),
     affliction_embrace: (2659, "modules/affliction_embrace.rs"),
     affliction_darkglare: (2659, "modules/affliction_darkglare.rs"),
