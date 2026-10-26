@@ -15,6 +15,14 @@ const POLICIES: &[Policy] = &[
             payload: 1282474,
         },
     },
+    // SimC76f8118 sc_hunter.cpp6710–6728: native pet buffs precede
+    // Bloodshed; Apex retains its sourced buff and strike delays.
+    Policy {
+        name: "SIMC_BM_WRATH_PET_EFFECTS",
+        spec: 253,
+        talent: 19574,
+        relationship: Relationship::OwnedPetWrathAfterCast { parent: 19574 },
+    },
     // SimC76f8118 sc_hunter.cpp6746–6750: every active stable pet applies
     // Bloodshed after the summon above. Native321538 owns the periodic payload.
     Policy {
@@ -44,6 +52,18 @@ const POLICIES: &[Policy] = &[
         relationship: Relationship::ApplySelfAuraAfterCast {
             parent: 193455,
             payload: 1276720,
+        },
+    },
+    // SimC76f8118 sc_hunter.cpp5135–5136: successful Barbed Shot reduces
+    // running Kill Command recharge by selected War Orders' third native effect.
+    Policy {
+        name: "SIMC_BM_BARBED_WAR_ORDERS",
+        spec: 253,
+        talent: 393933,
+        relationship: Relationship::ReduceCooldownAfterCast {
+            parent: 217200,
+            cooldown: 34026,
+            milliseconds_effect: 2,
         },
     },
     // SimC76f8118 sc_hunter.cpp6633: consume only after Kill Command executes.
