@@ -3,7 +3,7 @@ use super::combat;
 use bevy::prelude::*;
 use combat::auras::ActiveAuras;
 use combat::spell_cast::{effects::EffectCtx, script_registry::SpellScriptHook};
-use combat::spell_info::SpellInfo;
+use combat::spell_info::{ChargedSpellModifier, SpellInfo};
 use shared::components::ActiveSpec;
 
 const TALENT: u32 = 108558;
@@ -15,7 +15,10 @@ const INCREMENT_MAX: f64 = 0.130;
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::PeriodicDamageFinished(landed_tick),
     SpellScriptHook::AfterForegroundSpecial(consume_earned_use),
+    SpellScriptHook::LaunchDamageModifier(snapshot_bolt_bonus),
     SpellScriptHook::CastTimeProcs(&[BUFF]),
+    SpellScriptHook::PreserveUnadmittedProcs(&[BUFF]),
+    SpellScriptHook::OwnsPolicyProc(owns_nightfall_uses),
 ];
 
 #[derive(Component)]
@@ -98,20 +101,53 @@ fn sataiel_multiplier(world: &World, caster: Entity) -> f64 {
     1.0 + f64::from(percent) / 100.0
 }
 
+// SimC76f8118 actions877–878/2182/2338: cast execution owns these uses.
+// The native broad proc mask cannot also spend a charge on queued cast events.
+fn owns_nightfall_uses(spell: u32) -> bool {
+    spell == BUFF
+}
+
+// SimC76f8118 actions902–908: the instant Bolt's one native bonus survives
+// spending its admitted use before impact. Mid-hardcast gains do not qualify.
+fn snapshot_bolt_bonus(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+) -> Option<ChargedSpellModifier> {
+    if spell.id != 686 || spell.cast_was_hardcast {
+        return None;
+    }
+    let aura = find_admitted_use(world, caster, spell)?;
+    let amount = aura.effects.iter().find(|effect| effect.index == 1)?.amount;
+    Some(ChargedSpellModifier {
+        aura_spell_id: BUFF,
+        op: combat::auras::SpellModOp::HealingAndDamage as i32,
+        percent: true,
+        amount,
+    })
+}
+
+fn find_admitted_use<'a>(
+    world: &'a World,
+    caster: Entity,
+    spell: &SpellInfo,
+) -> Option<&'a combat::auras::AuraInstance> {
+    let auras = world.get::<ActiveAuras>(caster)?;
+    spell
+        .cast_proc_mods
+        .iter()
+        .filter_map(|id| auras.get(*id))
+        .find(|aura| aura.caster == caster && aura.spell_id == BUFF)
+}
+
 fn consume_earned_use(world: &mut World, caster: Entity, spell: &SpellInfo) {
-    if !matches!(spell.id, 686 | 198590 | 1261153) {
+    if !matches!(spell.id, 198590 | 1261153) {
         return;
     }
-    // SimC76f8118 actions877–878/2182/2338: instant Shadow Bolt consumes an
-    // admitted use; Drain Soul and Grasp consume one on execution regardless.
-    let admitted = world.get::<ActiveAuras>(caster).is_some_and(|auras| {
-        auras.iter().any(|aura| {
-            aura.caster == caster
-                && aura.spell_id == BUFF
-                && spell.cast_proc_mods.contains(&aura.instance_id)
-        })
-    });
-    if spell.id != 686 || admitted {
+    // SimC76f8118 actions877–878/2182/2338: exactly one execution-owned use.
+    // Native Grasp shares Bolt's cast-time mask; generic charge consumption
+    // already spends its admitted use. Drain Soul's unadmitted use is manual.
+    if find_admitted_use(world, caster, spell).is_none() {
         super::cast_relationships::decrement(world, caster, BUFF);
     }
 }
