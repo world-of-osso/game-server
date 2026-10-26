@@ -120,6 +120,7 @@ register_modules! {
     frost_runtime: (641, "modules/frost_runtime.rs"),
     fury_hack_and_slash: (721, "modules/fury_hack_and_slash.rs"),
     fury_rampaging_ruin: (720, "modules/fury_rampaging_ruin.rs"),
+    fury_spite: (722, "modules/fury_spite.rs"),
     germination: (200, "modules/germination.rs"),
     giantkiller: (170, "modules/giantkiller.rs"),
     guardian_impacts: (1000, "modules/guardian_impacts.rs"),

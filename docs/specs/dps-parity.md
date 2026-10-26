@@ -424,6 +424,8 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 ### Fury player parity
 
+- Selected Spite383852 applies its native rank values in tenths of a percent to damage and critical damage, as specified by the native display and SimC76f8118 `sc_warrior.cpp7894–7899`; preserve its native masks and rank curves.
+
 - Hack and Slash383873 increases only the next complete Raging Blow/Crushing Blow weapon sequence. Both native delayed weapon hits retain its native bonus; the final off-hand execution consumes one stack, even though its native proc-charge count is zero (`sc_warrior.cpp5061,5227`).
 
 - Rampage184367 may schedule its native effect5 Rampaging Ruin child only with selected Rampaging Ruin1265357 and live Whirlwind85739. An unselected talent or absent Whirlwind cannot add the AoE hit. Retain the original native effect64 payload, delay, admission and damage values (`sc_warrior.cpp5727–5748,5800–5801`).
