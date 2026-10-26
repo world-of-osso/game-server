@@ -332,6 +332,7 @@ mod toy_foam_sword;
 pub(crate) mod toy_scripts;
 mod toy_weather;
 mod toy_wormhole;
+mod trigger_missile_value;
 
 mod elemental_overload;
 pub mod queued_triggers;
@@ -2469,6 +2470,7 @@ pub fn applicable_costs(
         };
         // TC CalcPowerCost retains native negative generation, but modifiers
         // cannot turn an originally positive cost into a grant or vice versa.
+        let modified = script_registry::power_cost(world, caster, spell, pool, modified);
         let amount = preserve_cost_sign(initial, modified);
         // OptionalCost is additional raw spend, never an admission requirement.
         let additional = resources::additional_optional_cost(world, caster, spell, cost.power_type);
@@ -2769,10 +2771,13 @@ fn execute_cast_with_primary(
     disenchant::check_cast(world, caster, spell)?;
     let mut prepared = resources::snapshot(world, caster, spell, &costs);
     prepared.cast_primary_target = primary_target;
+    let plan = plan_targets(world, caster, &prepared, explicit, false)?;
+    // SimC76f8118 sc_mage.cpp2722–2731: freeze Barrage recipients before
+    // Orb Barrage, but include the Orb root's charge in damage modifiers.
+    scripts::before_arcane_cast(world, caster, &prepared, 0);
     let mut launch_modifiers = spell_mods::snapshot_charged_modifiers(world, caster, &prepared);
     launch_modifiers.extend(scripts::pyroclasm_damage_modifier(world, caster, &prepared));
     prepared.cast_charge_mods = Some(launch_modifiers);
-    let plan = plan_targets(world, caster, &prepared, explicit, false)?;
     prepared.cast_policy_context =
         scripts::snapshot_hit_policies(world, caster, &prepared, &plan, &costs);
     scripts::prepare_rogue_hero(world, caster, &mut prepared);
@@ -2799,7 +2804,6 @@ fn execute_cast_with_primary(
     }
     // TC Spell.cpp3843–3869: OnCast precedes TakePower and SendSpellGo.
     scripts::before_ret_damage_cast(world, caster, spell, 0);
-    scripts::before_arcane_cast(world, caster, spell, 0);
     scripts::on_cast(world, caster, spell.id, 0);
     take_cast_resources(world, caster, spell, &costs);
     start_cooldowns(world, caster, spell);
@@ -3279,9 +3283,18 @@ fn resolve_effects(
         }
         // TC EffectTriggerMissileSpell's HIT mode: destination effects have no
         // hit units, but still cast their child once with the parent's destination.
-        if effect.effect == effects::EFFECT_TRIGGER_MISSILE && units.is_empty() {
-            effects::trigger_missile_at_destination(world, &ctx, effect);
-            continue;
+        if units.is_empty() {
+            match effect.effect {
+                effects::EFFECT_TRIGGER_MISSILE => {
+                    effects::trigger_missile_at_destination(world, &ctx, effect);
+                    continue;
+                }
+                effects::EFFECT_TRIGGER_MISSILE_WITH_VALUE => {
+                    trigger_missile_value::at_destination(world, &ctx, effect);
+                    continue;
+                }
+                _ => {}
+            }
         }
         // TC EffectSendEvent HANDLE_HIT runs targetless events once, not once per frame.
         // Unit-targeted events use the normal hit/immunity boundary below.
