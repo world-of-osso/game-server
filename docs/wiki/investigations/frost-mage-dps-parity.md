@@ -10,7 +10,7 @@ Verified: 2026-10-26. Spec64 uses the literal pinned76f8118 APL and native70448 
 - Controlled Instincts copies the final resolved Splinter hit using native444483's specialization fraction. It excludes the hit's primary, uses the native radius and pinned `bugs=1` hard cap, and does not roll another critical hit or reapply caster modifiers. `ResolvedDamage` supplies the real source amount; no damage-dispatch signature change is needed.
 - Infused Splinters uses its native Frost chance/count on actual443722 impacts to earn owned Freezing.
 - Rapid Refreezing accrues five native200ms Icicle ticks during its1s window. Only Glacial Spike attempts the pinned accumulated proc curve; the broad native proc hint must not grant it on paid Lance/Shatter.
-- Overflowing Energy eligibility belongs to actual Frostbolt228597 and Spike228600 positive direct hits. Schedule native394195 outcomes through the existing merged buff queue; do not grant or remove stacks on Lance. Native RED1b8be9a776 proves both missing gain and expiration; GREENd6ef48c03d qualifies the Frost-only callback and Lance exclusion. Landing and measurement remain blocked by the unrelated Arcane charge-damage fixture control.
+- Overflowing Energy eligibility belongs to actual Frostbolt228597 and Spike228600 positive direct hits. Schedule native394195 outcomes through the existing merged buff queue; do not grant or remove stacks on Lance. Native RED1b8be9a776 proves both missing gain and expiration; GREENd6ef48c03d qualifies the Frost-only callback and Lance exclusion. The initial landing was blocked by an unrelated Arcane fixture control; after its fixture-only fix,208adb8ca9 landed the same behavior with all controls retained.
 
 ## Proven landings
 
@@ -22,8 +22,9 @@ Verified: 2026-10-26. Spec64 uses the literal pinned76f8118 APL and native70448 
 | Deep Shatter critical modifier and post-consumption Brain Freeze damage | GREENe5816f0565;20native Frost/CI cases and15costed controls | cfec0a955 |
 | Paid-Lance Glaciate/Force of Will and once-per-Orb-pulse Fingers | GREEN896a8e1556;22native Frost/CI cases and15costed controls | 4aba2bff2 |
 | Rapid Refreezing native tick clock and qualified Spike-only source | RED8455eb05e5/351688fab3 → GREENf19726f012; costed controls retained | ca856c659 |
+| Ray execution-time10s Splinterstorm window; Frost Overflowing Energy feedback | RED1f25b0f870/1b8be9a776 → GREEN208adb8ca9;27Frost/2CI/15costed controls | ca48fe12e |
 
-Latest confirmed measurement, from trainf19726f012:152,167.13 ST and232,622.16 three-target DPS (77.57%/77.90% of reference). This follows the earlier145,736.36/225,002.13 checkpoint. The ±10% goal remains open; queued changes are not measured landings. Both Ray's execution-time10s Splinterstorm window and Overflowing Energy passed all27Frost/2CI cases in d6ef48c03d. The entry was rejected on one Arcane fixture control (14other costed controls passed), so it produced no new DPS measurement; await the fixture owner's fix and resubmit.
+Latest confirmed measurement, from train208adb8ca9:153,092.12 ST and232,077.22 three-target DPS (78.0463%/77.7192% of reference). Against Rapid checkpoint152,167.13/232,622.16, the combined-source change is+924.99ST/−544.94three-target DPS; this does not isolate either fix. The ±10% goal remains open. Remeasure after the separately owned shared precombat equipment-proc gate and ordinary category133 spell-GCD haste fixes land.
 
 ## Investigation traps and remaining work
 
@@ -31,7 +32,7 @@ Latest confirmed measurement, from trainf19726f012:152,167.13 ST and232,622.16 t
 - After the third landing, actual remaining gaps rank ST Shatter23.6k, Splinter16.3k, Spike10.3k; three-target Shatter42.0k, Controlled Instincts20.0k, Orb18.7k and Splinter16.7k. The raw spell-ID report must be reconciled as above.
 - Deep Shatter and post-consumption Brain Freeze are now qualified above. Their original2RED193e699b7e compared plain/selected critical17,865 and plain/earned Flurry59,618.
 - The Glaciate test uses `full_recharge_time`, not admission `remains`, which is zero while another charge is usable. Native modified Shatter cap is6, not raw4: selected Heart of Ice/Polished Focus modifiers make the qualified reduction0.6s and Force of Will count3Splinters.
-- Orb-tick Fingers is now qualified above. Overflowing Energy feedback and source/data modifier completeness remain open. Do not replace missing relationships with coefficient tuning.
+- Orb-tick Fingers and Overflowing Energy are now qualified above. Shared precombat equipment-proc admission and ordinary spell-GCD haste are being fixed by Survival and Arcane owners; do not duplicate them or replace missing relationships with coefficient tuning.
 - Requested periodic-deadline probe5ecd5357cb on6f842e121 ran25GREEN controls but failed the two unimplemented Overflowing Energy assertions. The train skipped its measurement; there is no ST/three-target delta and no isolated proof of a periodic-rule regression.
 - Shared flask and augment-rune bindings belong to the shared-consumables owner, not this investigation.
 

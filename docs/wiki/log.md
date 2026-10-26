@@ -21,7 +21,7 @@
 [Warlock funding](systems/spell-casting.md#warlock-periodic-shard-funding--2026-10-25) uses the downstream critical-aware periodic callback and existing native power pipeline, qualified only on Destruction. [Target DoT duration](systems/simc-apl.md#native-target-dot-duration) reads active owned native state without pandemic carry; both have native GREEN and cross-spec controls. Numerical267 acceptance remains separate.
 ## 2026-10-26 — Frost Mage native proc qualification
 
-[Frost Mage parity](investigations/frost-mage-dps-parity.md) records landed Deep Shatter, Brain Freeze, paid-Lance, Orb Fingers and Rapid Refreezing proofs. Latest confirmed ST/three-target measurements are77.57%/77.90% of reference; Overflowing Energy feedback passed native GREENd6ef48c03d; landing and measurement wait on an unrelated Arcane fixture control. Periodic-rule probe5ecd5357cb failed the two new feedback controls and produced no measurement.
+[Frost Mage parity](investigations/frost-mage-dps-parity.md) records landed Deep Shatter, Brain Freeze, paid-Lance, Orb Fingers and Rapid Refreezing proofs. Ray's execution-time Splinterstorm window and Frost Overflowing Energy landed viac48fe12e/train208adb8ca9 with27Frost/2CI/15costed controls GREEN; current measurements and shared-gate dependencies are recorded there. Periodic-rule probe5ecd5357cb failed the then-unimplemented feedback controls and produced no measurement.
 
 ## 2026-10-25 — Frost Mage native hit relationships
 
