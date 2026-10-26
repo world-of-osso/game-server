@@ -458,6 +458,33 @@ fn demonology_imp_lord_executes_real_greater_felbolts() {
         .find(|(_, summon, npc)| summon.owner == run.actor && npc.template_id == 258584)
         .map(|(unit, _, _)| unit)
         .expect("ordinary Grimoire must create actual258584");
+    let spell = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(1277116)
+        .unwrap()
+        .clone();
+    let admission = crate::spell_cast::read_native_cast_start(
+        run.app.world_mut(),
+        lord,
+        &spell,
+        run.targets[0],
+    );
+    let note = format!(
+        "admission={admission:?} health={:?} powers={:?} position={:?} target={:?} summon={:?}",
+        run.app.world().get::<shared::components::Health>(lord),
+        run.app
+            .world()
+            .get::<crate::spell_cast::powers::PowerPools>(lord),
+        run.app.world().get::<shared::components::Position>(lord),
+        run.app
+            .world()
+            .get::<crate::networking::CombatTarget>(run.actor),
+        run.app
+            .world()
+            .get::<crate::spell_cast::summon::SummonedCreature>(lord)
+    );
     for _ in 0..200 {
         run.app.update();
     }
@@ -478,7 +505,7 @@ fn demonology_imp_lord_executes_real_greater_felbolts() {
     // from200 initial Energy, paying native40 while retaining the125 gate.
     assert!(
         hits >= 2,
-        "actual Imp Lord must launch real Greater Felbolts: hits{hits}"
+        "actual Imp Lord must launch real Greater Felbolts: hits{hits}; {note}"
     );
 }
 
