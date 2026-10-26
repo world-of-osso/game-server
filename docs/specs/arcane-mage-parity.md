@@ -33,7 +33,7 @@ Spec62 follows the pinned SimC behavior and native-value rules in [DPS parity](d
 
 ## Known gaps (current cycle)
 
-- [ ] Qualify and fix charge damage per hit; mastery augments only the per-charge term.
+- [x] Blast and Barrage apply one native charge damage modifier frozen before charge gain/spend. Savant augments only its per-charge term; Prodigious multiplies only that mastery contribution (`sc_mage.cpp2076–2083`).
 - [ ] Reach ±10% of pinned ST and3T DPS.
 - [ ] Resolve the separately diagnosed native GCD haste gap before qualifying channel chaining.
 

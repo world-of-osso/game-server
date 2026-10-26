@@ -30,7 +30,7 @@ struct BankedOverpowered;
 
 pub(super) fn snapshots_modifier(spell: u32) -> bool {
     // sc_mage.cpp2738/2758/2866/2944: spent modifiers survive projectile flight.
-    matches!(spell, SALVO | CUMULATIVE | 1223797 | 1277009)
+    matches!(spell, 36032 | SALVO | CUMULATIVE | 1223797 | 1277009)
 }
 
 fn is_arcane(world: &World, caster: Entity) -> bool {

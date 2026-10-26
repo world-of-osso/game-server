@@ -203,7 +203,10 @@ pub(crate) fn snapshot_charged_modifiers(
                 aura_spell_id: aura.spell_id,
                 op: effect.misc_values[0],
                 percent: is_pct(effect.aura_type),
-                amount: stacked_amount(aura, effect),
+                amount: crate::spell_cast::scripts::arcane_charge_modifier_amount(
+                    world, caster, aura, effect,
+                )
+                .unwrap_or_else(|| stacked_amount(aura, effect)),
             })
         })
         .collect()

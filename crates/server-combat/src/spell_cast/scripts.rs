@@ -6,6 +6,8 @@ use crate::random as rand;
 
 mod arcane;
 mod arcane_area;
+mod arcane_charge;
+pub(crate) use arcane_charge::modifier_amount as arcane_charge_modifier_amount;
 mod arcane_touch;
 pub(crate) use arcane::register as register_arcane;
 pub(super) use arcane::{
