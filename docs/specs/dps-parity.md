@@ -215,6 +215,8 @@ Selected native155580 applies its owned155627 override aura, so ordinary Moonfir
 
 - Selected Overflowing Energy gains a native stack after noncritical Fireball/Frostfire Bolt and clears on their critical hits (`sc_mage.cpp1897–1898,3819`). Selected Fevered Incantation gains after direct Mage critical hits and clears on direct noncritical hits (`1900–1901`); Intensifying Flame419800 inherits plain `spell_t`, so its native Mage family does not make its copied damage a feedback producer (`2502`). Apply these outcomes after the current hit batch (`5585–5605,7272–7293`). Fireball and Hot Streak-spell hits produce their caster-owned native Controlled Destruction target stack with native talent effect1×0.1 (`2457,3843,5648–5650`).
 
+- Fire Blast spreads the caster's pre-existing Ignite before its new contribution (`sc_mage.cpp2216–2279,4586–4590`). Use native mastery effect2 as the weaker-bank threshold and effect5 as the secondary cap after selected spell modifiers. Sort eligible hostile banks ascending, exclude the source, copy its tick amount rather than add a deposit, start a fresh clock on empty targets and clone source progress on existing targets (`dot.cpp241–332`).
+
 - Selected Ignition multiplies each new Flamestrike Ignite contribution by its native effect2 percentage (`sc_mage.cpp3896–3898`). Do not apply this to other Ignite producers or rescale the unpaid existing bank.
 
 - Selected Molten Fury amplifies actual recipient damage at or below its native effect1 health threshold by native effect2 (`sc_mage.cpp6821–6827`). This is the Mage's target-versus policy, not an unconditional damage bonus or a new globally supported aura303 implementation.
