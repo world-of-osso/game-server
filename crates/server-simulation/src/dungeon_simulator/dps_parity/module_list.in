@@ -128,7 +128,9 @@ mod hunter_melee_tests;
 #[cfg(test)]
 mod hunter_stomp_tests;
 mod hunter_survival_howl_tests;
+mod hunter_wild_hunt_tests;
 mod hunter_wildspeaker_tests;
+mod hunter_wyvern_tests;
 mod incinerate_resource_tests;
 mod hunter_wrath_tests;
 mod inputs;

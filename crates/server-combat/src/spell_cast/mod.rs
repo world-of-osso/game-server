@@ -2470,6 +2470,7 @@ pub fn applicable_costs(
         };
         // TC CalcPowerCost retains native negative generation, but modifiers
         // cannot turn an originally positive cost into a grant or vice versa.
+        let modified = script_registry::power_cost(world, caster, spell, pool, modified);
         let amount = preserve_cost_sign(initial, modified);
         // OptionalCost is additional raw spend, never an admission requirement.
         let additional = resources::additional_optional_cost(world, caster, spell, cost.power_type);
