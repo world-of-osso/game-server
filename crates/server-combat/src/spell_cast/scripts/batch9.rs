@@ -323,11 +323,7 @@ pub(in crate::spell_cast) fn spawn_ravager_field(
 
 ///26573's local description variable names81297; period=t1, limit=s2=1.
 ///The field remains at the original caster position, not the moving caster.
-pub(super) fn spawn_consecration(
-    world: &mut World,
-    caster: Entity,
-    spell: &crate::spell_info::SpellInfo,
-) {
+pub fn spawn_consecration(world: &mut World, caster: Entity, spell: &crate::spell_info::SpellInfo) {
     let position = targets::position(world, caster).expect("Consecration caster position");
     let ctx = EffectCtx {
         caster,

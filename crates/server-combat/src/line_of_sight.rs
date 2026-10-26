@@ -30,7 +30,8 @@ const LOS_DIR: &str = "los";
 #[derive(Resource)]
 pub struct LineOfSight {
     dir: PathBuf,
-    eyes: EyeTable,
+    // None is the explicit open-arena fixture, never a failed bake fallback.
+    eyes: Option<EyeTable>,
     /// Baked tiles per map id, loaded on first use.
     maps: Mutex<HashMap<u32, LosMap>>,
     /// Displays without an eye row, logged once each.
@@ -53,11 +54,28 @@ pub(crate) type BodyParts<'a> = (
 );
 
 impl LineOfSight {
+    /// SimC76f8118 action.cpp1738–1752 selects encounter enemies without map
+    /// occlusion. This declared arena has no baked geometry or eye-data dependency.
+    pub fn open_arena() -> Self {
+        Self {
+            dir: PathBuf::new(),
+            eyes: None,
+            maps: Mutex::new(HashMap::new()),
+            missing: Mutex::new(HashSet::new()),
+            rays: AtomicU64::new(0),
+            live_hulls: HashMap::new(),
+        }
+    }
+
+    fn is_open_arena(&self) -> bool {
+        self.eyes.is_none()
+    }
+
     /// The bake output in `dir`: `eye_heights.tsv`, `player_displays.tsv`, `<map>/`.
     pub fn load(dir: &Path) -> Result<Self, String> {
         Ok(Self {
             dir: dir.to_path_buf(),
-            eyes: EyeTable::load(dir)?,
+            eyes: Some(EyeTable::load(dir)?),
             maps: Mutex::new(HashMap::new()),
             missing: Mutex::new(HashSet::new()),
             rays: AtomicU64::new(0),
@@ -72,10 +90,10 @@ impl LineOfSight {
         &self,
         (entity, npc, position, rotation, display, pose, player, player_stand): BodyParts,
     ) -> Option<Body> {
+        let eyes = self.eyes.as_ref()?;
         let (display, stand_state) = match (player, display) {
             (Some(player), _) => (
-                self.eyes
-                    .player_display(player.race, player.appearance.sex)
+                eyes.player_display(player.race, player.appearance.sex)
                     .unwrap_or_else(|| {
                         panic!(
                             "{}: no character display for race {} sex {}",
@@ -93,7 +111,7 @@ impl LineOfSight {
             // `Unit::RestoreDisplayId` of a unit spawned without a display.
             (None, None) => (0, StandState::Stand),
         };
-        let Some(eye) = self.eyes.eye(display, stand_state as u8) else {
+        let Some(eye) = eyes.eye(display, stand_state as u8) else {
             if self.missing.lock().unwrap().insert(display) {
                 // The first unit to show it: a spawn, or a creature a script summoned.
                 let (display_id, dir) = (display, self.dir.display());
@@ -153,12 +171,17 @@ impl LineOfSight {
     /// Whether the segment `a..b` crosses no baked or enabled live GO triangle.
     pub fn clear(&self, map: InMap, a: Vec3, b: Vec3) -> bool {
         self.rays.fetch_add(1, Ordering::Relaxed);
-        self.live_clear(map, a, b) && self.with_map(map, |tiles| tiles.clear(a, b))
+        self.live_clear(map, a, b)
+            && (self.is_open_arena() || self.with_map(map, |tiles| tiles.clear(a, b)))
     }
 
     /// First static or enabled dynamic collision along a movement segment.
     pub(crate) fn first_hit(&self, map: InMap, a: Vec3, b: Vec3) -> Option<f32> {
-        let baked = self.with_map(map, |tiles| tiles.first_hit(a, b));
+        let baked = if self.is_open_arena() {
+            None
+        } else {
+            self.with_map(map, |tiles| tiles.first_hit(a, b))
+        };
         self.live_hulls
             .get(&map)
             .into_iter()
@@ -188,6 +211,9 @@ pub(crate) fn unit_sees(
     let Some(los) = los else {
         return true;
     };
+    if los.is_open_arena() {
+        return true;
+    }
     match (los.body(watcher), los.body(target)) {
         (Some(watcher), Some(target)) => los.sees(map, &watcher, &target),
         _ => false,
@@ -243,11 +269,14 @@ pub(crate) fn mutually_visible_at(
         .ok_or("Projected LOS lacks native data")?;
     let mut parts = parts_in_world(world, unit).ok_or("Projected LOS unit lacks body parts")?;
     parts.2 = &position;
+    let other_parts =
+        parts_in_world(world, other).ok_or("Projected LOS target lacks body parts")?;
+    if los.is_open_arena() {
+        return Ok(true);
+    }
     let body = los
         .body(parts)
         .ok_or("Projected LOS unit lacks native eye geometry")?;
-    let other_parts =
-        parts_in_world(world, other).ok_or("Projected LOS target lacks body parts")?;
     let target = los
         .body(other_parts)
         .ok_or("Projected LOS target lacks native eye geometry")?;
@@ -264,6 +293,9 @@ pub(crate) fn sees_area_center(world: &World, target: Entity, center: Vec3) -> b
     let Some(map) = world.get::<InMap>(target).copied() else {
         return false;
     };
+    if los.is_open_arena() {
+        return true;
+    }
     let Some(body) = parts_in_world(world, target).and_then(|parts| los.body(parts)) else {
         return false;
     };
@@ -292,7 +324,10 @@ fn open_line_of_sight(mut commands: Commands) {
     info!(
         "Line of sight loads from {} ({} eye rows)",
         dir.display(),
-        los.eyes.len()
+        los.eyes
+            .as_ref()
+            .expect("baked LOS constructor loads eyes")
+            .len()
     );
     commands.insert_resource(los);
 }

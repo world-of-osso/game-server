@@ -31,6 +31,8 @@ Named `action.<alias>.executing` and `execute_remains` read the matching native 
 
 Flamestrike's selected talent ID supplies both the fact and dispatch binding. Shared cast-relationship tables express the selected Meteor→Pyroclasm grant and the native MID2 hardcast crit condition. The latter reads the admitted modifier snapshot, not a proc aura already consumed before impact. Native hit handling retains its pre-damage guaranteed-crit fact and updates only configured reaction observations; ordinary gameplay does not acquire a synthetic reaction policy. Existing Hot Streak is preserved on wasted critical hits.
 
+Native `spell_cast/scripts/fire_procs.rs` supplies Hot Streak-spend Fired Up, capped-PRD Spellfire Spheres and Mana Cascade. Memory of Al'ar starts Hyperthermia at Combustion expiry. The fixture applies the pinned five initial Sphere applications through the native three-stack cap; Codex consumes them on invocation. Meteor travel no longer competes with a later hardcast, and Flamestrike rolls Fuel the Fire once per successful cast. Native MID2 four-piece label5947 modifies Pyroclasm's buff payload, not the label5949 talent's15% proc chance. See [the Fire contract](../../specs/dps-parity.md#fire-literal-fixture); current numerical acceptance remains separate.
+
 ## Expected combat length
 
 `expected_combat_length` reads the existing `Encounter::Fixture.duration`, validated positive+finite. It is not elapsed/fight-remains, a300literal or an extra stored field. Dungeon and invalid fixture values return EXPECTED_COMBAT_LENGTH_UNAVAILABLE; proposed-action forwarding uses the same configured value. Four minimal-world cases at88095009c give4genuineRED0.02s;991b7fcde (landed master924638aba base) yields4/4GREEN0.00s/14m24compile/0warnings. Tests enabled attribute-only afterward; no DB/profile/suite rerun. [Exact proof](../../handoffs/expected-combat-length-proof-ledger.md).
@@ -166,3 +168,9 @@ The shared spender-hit policy starts or extends native Slice and Dice after an e
 ## See Also
 
 - [[dungeon-simulator]] — native fixture lifecycle and measurements.
+
+## Affliction fixture265
+
+The adapter reads every exported profile row unchanged, uses the profile-selected native pet and shared channel decisions, and reads Darkglare lifetime from real owned summons. Native spells, knowledge, resources and damage stay authoritative. See [qualification contract](../../specs/dps-parity.md#affliction265-literal-fixture).
+
+Agony funding is a separate downstream module: landed native ticks advance per-owner threshold progress; native17941 supplies whole-shard amount, and losing the last Agony resets progress. It does not share Destruction fragment-per-tick funding. Numeric parity remains measurement-gated. [Source](../../../crates/server-spell-scripts/src/modules/affliction_agony.rs).

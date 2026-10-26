@@ -23,7 +23,7 @@ pub mod area_aura;
 pub mod area_trigger;
 #[cfg(test)]
 mod attack_power_tests;
-mod aura_spell_restrictions;
+pub mod aura_spell_restrictions;
 pub(crate) mod auto_repeat;
 #[cfg(test)]
 mod auto_shot_repeat_tests;
@@ -159,6 +159,7 @@ mod expel_harm_tests;
 mod fel_devastation_tests;
 mod ferocious_bite;
 pub use ferocious_bite::read_maximum_energy as read_ferocious_bite_maximum_energy;
+pub use resource_facts::read_prepared_spell as read_resource_prepared_spell;
 #[cfg(test)]
 mod full_trigger_dead_target_tests;
 pub mod guardian;
@@ -219,15 +220,20 @@ mod open_lock_tests;
 #[cfg(test)]
 mod portal_tests;
 pub mod powers;
+mod precombat_item;
+pub use precombat_item::age_precombat_item_use;
 #[cfg(test)]
 mod protective_growth_tests;
 #[cfg(test)]
 mod raid_area_tests;
 pub(crate) mod recovery_rate;
 mod reflect;
+mod resource_facts;
 mod resources;
 pub mod runes;
+pub mod script_registry;
 pub mod scripts;
+pub use resources::spent;
 mod shapeshift;
 pub mod summon;
 #[cfg(test)]
@@ -319,12 +325,13 @@ mod toy_weather;
 mod toy_wormhole;
 
 mod elemental_overload;
-pub(crate) mod queued_triggers;
+pub mod queued_triggers;
 
 pub struct SpellCastPlugin;
 
 impl Plugin for SpellCastPlugin {
     fn build(&self, app: &mut App) {
+        app.init_resource::<script_registry::SpellScriptRegistry>();
         #[cfg(any(test, feature = "test-support"))]
         app.insert_resource(toy_requirements::fixture());
         app.add_plugins(crate::knockback::KnockbackPlugin);
@@ -386,6 +393,7 @@ impl Plugin for SpellCastPlugin {
                     crate::game_objects::summoned::expire_objects.after(advance_casts),
                     area_trigger::update_area_triggers.after(advance_casts),
                     scripts::update_ground_pulses.after(advance_casts),
+                    scripts::update_unleashed.after(advance_casts),
                     toy_coin::catch_landed_coins.after(advance_casts),
                 ),
             );
@@ -542,6 +550,8 @@ struct ChargeState {
     recovery_ms: f32,
     recovery_mult: f32,
     pending: VecDeque<ChargeRecovery>,
+    /// Start of this recharge cycle; later uses do not restart its first timer.
+    started_at: f64,
     /// Exact time the final missing charge returned, not the observed frame.
     fully_ready_at: f64,
 }
@@ -573,6 +583,9 @@ impl ChargeState {
         let duration = Self::calculate_recovery_seconds(self.recovery_ms, self.recovery_mult);
         if self.max == 0 || duration <= 0.0 {
             return;
+        }
+        if self.pending.is_empty() {
+            self.started_at = now;
         }
         let ready_at = self.pending.back().map_or_else(
             || now + (duration - f64::from(ready_credit) / 1000.0).max(0.0),
@@ -643,6 +656,8 @@ pub struct SpellHistory {
     gcd_casts: Vec<u32>,
     cast_sequence: u64,
     spell_ready_at: HashMap<u32, f64>,
+    /// Actual timer starts survive deadline reductions and rate changes.
+    cooldown_started_at: HashMap<u32, f64>,
     category_ready_at: HashMap<u32, f64>,
     /// Native spell that last started each category timer, for masked rate changes.
     category_spell_ids: HashMap<u32, u32>,
@@ -783,6 +798,7 @@ impl SpellHistory {
                 recovery_ms: 0.0,
                 recovery_mult: mods.recovery_mult,
                 pending: VecDeque::new(),
+                started_at: 0.0,
                 fully_ready_at: 0.0,
             });
         state.max = max;
@@ -1022,6 +1038,15 @@ fn modify(world: &World, caster: Entity, spell: &SpellInfo, op: SpellModOp, base
     spell_mods::modify(world, caster, spell, op, base)
 }
 
+// SimC76f8118 pet.cpp222–226: native guardians inherit owner spell haste
+// and cast speed, while spell-specific modifiers remain on the actual caster.
+fn spell_haste_multiplier(world: &World, caster: Entity) -> f32 {
+    let owner = guardian::stat_owner(world, caster).unwrap_or(caster);
+    world
+        .get::<CharacterStats>(owner)
+        .map_or(1.0, |stats| 1.0 + stats.haste_pct / 100.0)
+}
+
 /// Cast time after ChangeCastTime mods, divided by `1 + CharacterStats.haste_pct`
 /// (haste auras fold in through `StatModifiers`).
 pub fn cast_time_ms(world: &World, caster: Entity, spell: &SpellInfo) -> i32 {
@@ -1033,9 +1058,7 @@ pub fn cast_time_ms(world: &World, caster: Entity, spell: &SpellInfo) -> i32 {
     if base == 0 {
         return 0;
     }
-    let haste = world
-        .get::<CharacterStats>(caster)
-        .map_or(1.0, |stats| 1.0 + stats.haste_pct / 100.0);
+    let haste = spell_haste_multiplier(world, caster);
     let modded = modify(
         world,
         caster,
@@ -1051,7 +1074,7 @@ pub fn cast_time_ms(world: &World, caster: Entity, spell: &SpellInfo) -> i32 {
 }
 
 /// Channel duration after Duration mods.
-pub(crate) fn duration_ms(world: &World, caster: Entity, spell: &SpellInfo) -> i32 {
+pub fn duration_ms(world: &World, caster: Entity, spell: &SpellInfo) -> i32 {
     let base = spell
         .misc
         .as_ref()
@@ -1082,9 +1105,7 @@ pub(crate) fn haste_channel_duration_ms(
         SpellModOp::ChangeCastTime,
         duration as f32,
     );
-    let haste = world
-        .get::<CharacterStats>(caster)
-        .map_or(1.0, |stats| 1.0 + stats.haste_pct / 100.0);
+    let haste = spell_haste_multiplier(world, caster);
     let slow = world
         .get::<crate::auras::AuraStatMods>(caster)
         .map_or(1.0, |mods| mods.attack_cast_time_mult);
@@ -1093,21 +1114,29 @@ pub(crate) fn haste_channel_duration_ms(
 
 /// Effects that have a handler, apply an aura or run a script hook; only
 /// these select targets.
-fn handled_effects(spell: &SpellInfo) -> impl Iterator<Item = &crate::spell_info::SpellEffect> {
+fn handled_effects<'a>(
+    world: &World,
+    spell: &'a SpellInfo,
+) -> impl Iterator<Item = &'a crate::spell_info::SpellEffect> + use<'a> {
+    let registry = *world.resource::<script_registry::SpellScriptRegistry>();
     spell
         .effects
         .iter()
-        .filter(|effect| selects_targets(spell, effect))
+        .filter(move |effect| selects_targets(registry, spell, effect))
 }
 
 /// A `SPELL_EFFECT_DUMMY` effect does nothing itself but selects its targets, which the
 /// spell then hits (`CreatureAI::SpellHit`); one at an unmodelled implicit target selects
 /// nothing instead of failing the cast.
-fn selects_targets(spell: &SpellInfo, effect: &crate::spell_info::SpellEffect) -> bool {
+fn selects_targets(
+    registry: script_registry::SpellScriptRegistry,
+    spell: &SpellInfo,
+    effect: &crate::spell_info::SpellEffect,
+) -> bool {
     effects::is_handled(effect)
         || cosmetic::is_visual_only(spell)
         || scripts::effect_handler(spell.id, effect.index).is_some()
-        || scripts::on_effect_hit(spell.id, effect.index).is_some()
+        || scripts::on_effect_hit(registry, spell.id, effect.index).is_some()
         || scripts::cast_effect(spell.id, effect.index).is_some()
         || scripts::on_cast_effect(spell.id, effect.index).is_some()
         || (effect.effect == effects::EFFECT_DUMMY && targets::unsupported_target(effect).is_none())
@@ -1945,7 +1974,7 @@ pub(crate) fn read_targets_include(
         if !visited.insert((spell.id, explicit)) {
             continue;
         }
-        for effect in handled_effects(&spell) {
+        for effect in handled_effects(world, &spell) {
             let units = targets::select_targets(
                 world,
                 caster,
@@ -2046,8 +2075,8 @@ fn validate_start_with_policy(
     if blocked_by_moving && world.get::<Moving>(caster).is_some_and(|moving| moving.0) {
         return Err(CastFailure::Moving);
     }
-    if scripts::target_plan(spell.id).is_none()
-        && let Some(id) = handled_effects(spell).find_map(targets::unsupported_target)
+    if scripts::target_plan(world, spell.id).is_none()
+        && let Some(id) = handled_effects(world, spell).find_map(targets::unsupported_target)
     {
         return Err(CastFailure::Unsupported(format!(
             "implicit target {id} not supported"
@@ -2165,7 +2194,7 @@ fn permits_transient_gcd(
 
 /// Line of sight evidence when a cast checks its unit target (docs/specs/line-of-sight.md).
 #[derive(Clone, Copy, Debug)]
-pub(crate) enum Sight {
+pub enum Sight {
     /// Cast start: search using the caster and target's authoritative positions.
     Start,
     /// Cast finish: a creature searches again; player sight was checked at start.
@@ -2190,7 +2219,7 @@ fn in_line_of_sight(world: &World, caster: Entity, target: Entity, sight: Sight)
 
 /// Explicit target rules: required relation, alive, range, line of sight. Friendly
 /// spells with no valid ally target fall back to the caster (retail auto self-cast).
-fn validate_target(
+pub fn validate_target(
     world: &World,
     caster: Entity,
     spell: &SpellInfo,
@@ -2241,9 +2270,9 @@ fn validate_target(
         .any(crate::death::resurrection::is_resurrection);
     // Retail resurrection rows have both implicit targets zero; their effect still
     // requires an explicit dead ally and the normal range/LOS checks.
-    let requirement = scripts::target_plan(spell.id)
+    let requirement = scripts::target_plan(world, spell.id)
         .map(|(relation, _)| relation)
-        .or_else(|| targets::explicit_requirement(handled_effects(spell)))
+        .or_else(|| targets::explicit_requirement(handled_effects(world, spell)))
         .or_else(|| {
             spell
                 .effects
@@ -2595,9 +2624,7 @@ fn haste_regen_gcd_ms(world: &World, caster: Entity, spell: &SpellInfo, gcd_ms: 
     {
         return gcd_ms;
     }
-    let haste = world
-        .get::<CharacterStats>(caster)
-        .map_or(1.0, |stats| 1.0 + stats.haste_pct / 100.0);
+    let haste = spell_haste_multiplier(world, caster);
     ((gcd_ms as f32 / haste.max(0.01)) as u32).clamp(MIN_GCD_MS, MAX_GCD_MS)
 }
 
@@ -2722,8 +2749,11 @@ fn execute_cast_with_primary(
     let plan = plan_targets(world, caster, &prepared, explicit, false)?;
     prepared.cast_policy_context =
         scripts::snapshot_hit_policies(world, caster, &prepared, &plan, &costs);
+    scripts::prepare_rogue_hero(world, caster, &mut prepared);
+    crate::auras::rogue::prepare_cast(world, caster, explicit, &mut prepared);
     let consumed_damage =
         scripts::capture_consumed_damage_modifier(world, caster, &mut prepared, true);
+    scripts::before_hot_streak_launch(world, caster, &prepared);
     let spell = &prepared;
     if spell.id == shared::battleground::AZERITE_GATHERING_SPELL {
         debug!(caster = ?caster, spell_id = spell.id, explicit = ?explicit, plan = ?plan, "Cast execution target plan");
@@ -2782,6 +2812,12 @@ fn execute_cast_with_primary(
             reflected: false,
         },
     );
+    let flamestrike_chance = scripts::flamestrike_hot_streak_chance(
+        world,
+        caster,
+        spell,
+        plan.iter().flat_map(|effect| &effect.units).copied().next(),
+    );
     let previous_efflo_summons = efflorescence::read_previous_summons(world, caster, spell.id);
     scripts::spawn_ravager_field(world, caster, spell, explicit, 0);
     missiles::launch(world, caster, spell, plan, 0);
@@ -2789,8 +2825,11 @@ fn execute_cast_with_primary(
     efflorescence::initialize_new_summons(world, caster, previous_efflo_summons);
     scripts::refund_execute(world, caster, spell, explicit, &costs);
     scripts::consume_phalanx(world, caster, spell, explicit);
-    for hook in scripts::after_cast(spell.id) {
+    for hook in scripts::after_cast(world, spell.id) {
         hook(world, caster, spell);
+    }
+    if let Some(chance) = flamestrike_chance {
+        scripts::roll_flamestrike_hot_streak(world, caster, chance);
     }
     if !spell.cast_parent_owns_modifier_charges {
         spell_mods::consume_charges(world, caster, spell);
@@ -2801,7 +2840,7 @@ fn execute_cast_with_primary(
         scripts::apply_echo_policies(world, caster, spell);
         scripts::after_foreground_spender(world, caster, spell, spell.cast_primary_target);
         crate::auras::add_ret_crusade_spender_stacks(world, caster, spell, &costs);
-        scripts::roll_selected_ret_divine_purpose(world, caster, spell);
+        script_registry::after_spender_stacks(world, caster, spell);
         scripts::schedule_empyrean_legacy(world, caster, spell, spell.cast_primary_target);
     }
     scripts::after_foreground_special(world, caster, spell);
@@ -2829,20 +2868,20 @@ fn discount_missed_rune_costs(costs: Vec<(CostPool, f32)>, missed: bool) -> Vec<
 
 /// One handled effect's unit targets and destination.
 #[derive(Debug, Clone)]
-struct PlannedEffect {
-    index: usize,
-    units: Vec<Entity>,
+pub struct PlannedEffect {
+    pub index: usize,
+    pub units: Vec<Entity>,
     /// Original selection survives MISS/IMMUNE for launch/arrival combat, not effects.
-    selected_units: Vec<Entity>,
-    dest: Option<Dest>,
+    pub selected_units: Vec<Entity>,
+    pub dest: Option<Dest>,
     /// A chained effect's damage and healing multiplier per unit: `EffectChainAmplitude`
     /// to the power of the unit's place in the chain (`m_damageMultipliers`,
     /// Spell.cpp:1840-1844, 8631-8636). Empty for an unchained effect.
-    chain_multipliers: Vec<(Entity, f32)>,
+    pub chain_multipliers: Vec<(Entity, f32)>,
     /// Native block hit result, retained across flight for these unit targets.
-    blocked_units: Vec<Entity>,
+    pub blocked_units: Vec<Entity>,
     /// Source per-cast continuation state; retain hit receipts when the hook is suppressed.
-    prevent_hit_script: bool,
+    pub prevent_hit_script: bool,
 }
 
 impl PlannedEffect {
@@ -2854,7 +2893,7 @@ impl PlannedEffect {
     }
 }
 
-type TargetPlan = Vec<PlannedEffect>;
+pub type TargetPlan = Vec<PlannedEffect>;
 
 /// The first effect whose targets `Spell::SelectSpellTargets` selects together with
 /// effect `index` (Spell.cpp:741-781): an effect with the same implicit targets and, for
@@ -2932,7 +2971,7 @@ fn plan_targets(
             })
             .collect());
     }
-    if let Some((_, select)) = scripts::target_plan(spell.id) {
+    if let Some((_, select)) = scripts::target_plan(world, spell.id) {
         let mut plan = select(world, caster, spell, explicit);
         hit::remove_defended_targets(world, caster, spell, &mut plan);
         return Ok(plan);
@@ -2948,7 +2987,11 @@ fn plan_targets(
     // Units per leading effect (`processedEffectsMaskForSpell`).
     let mut selected: Vec<(usize, Vec<Entity>, Option<targets::Dest>)> = Vec::new();
     for (index, effect) in spell.effects.iter().enumerate() {
-        if !selects_targets(spell, effect) {
+        if !selects_targets(
+            *world.resource::<script_registry::SpellScriptRegistry>(),
+            spell,
+            effect,
+        ) {
             continue;
         }
         if effect.effect == crate::game_objects::summoned::EFFECT_TRANSMITTED {
@@ -2997,7 +3040,7 @@ fn plan_targets(
             };
         effects::retain_threat_level_targets(world, spell, effect, &mut units);
         scripts::filter_secondary_targets(world, caster, spell, effect.index, explicit, &mut units);
-        if let Some(filter) = scripts::area_target_filter(spell.id, effect.index) {
+        if let Some(filter) = scripts::area_target_filter(world, spell.id, effect.index) {
             filter(world, spell, explicit, &mut units);
         }
         if spell.id == efflorescence::HEAL && effect.index == 0 {
@@ -3131,9 +3174,18 @@ fn resolve_effects(
         crate::achievement::record_targeted_spell_hit(world, caster, unit, spell.id);
     }
     for effect in &spell.effects {
-        let consumed_data =
-            effect.effect == 77 && scripts::consumes_effect_value(spell.id, effect.index);
-        if !selects_targets(spell, effect) && !consumed_data {
+        let consumed_data = effect.effect == 77
+            && scripts::consumes_effect_value(
+                *world.resource::<script_registry::SpellScriptRegistry>(),
+                spell.id,
+                effect.index,
+            );
+        if !selects_targets(
+            *world.resource::<script_registry::SpellScriptRegistry>(),
+            spell,
+            effect,
+        ) && !consumed_data
+        {
             effects::log_unhandled(world, spell.id, effect.effect);
         }
     }
@@ -3219,7 +3271,11 @@ fn resolve_effects(
             scripts::effect_handler(spell.id, effect.index)
                 .or_else(|| effects::handler(effect.effect))
         };
-        let hook = scripts::on_effect_hit(spell.id, effect.index);
+        let hook = scripts::on_effect_hit(
+            *world.resource::<script_registry::SpellScriptRegistry>(),
+            spell.id,
+            effect.index,
+        );
         for &unit in units {
             if crate::auras::effect_immunity::blocks_effect(world, unit, spell, effect) {
                 effects::log_mechanic_immune(world, &ctx, unit);
@@ -3244,7 +3300,7 @@ fn resolve_effects(
         }
     }
     for (target, effect_mask) in aura_masks {
-        if scripts::redirect_rejuvenation(world, caster, target, spell.id, depth) {
+        if script_registry::aura_redirect(world, caster, target, spell.id, depth) {
             continue;
         }
         scripts::bloom_lifebloom_before_refresh(world, caster, target, spell.id, depth);
@@ -3264,6 +3320,14 @@ fn resolve_effects(
     for unit in hit_units(plan) {
         crate::scripted_ai::spell_hit(world, unit, caster, spell.id);
     }
+    let ctx = EffectCtx {
+        caster,
+        spell,
+        depth,
+        dest: None,
+        chain_multiplier: 1.0,
+    };
+    scripts::after_resolved_hits(world, &ctx);
     let (damage, healing) = world
         .get_resource_mut::<ResolvingHits>()
         .and_then(|mut resolving| resolving.0.pop())
@@ -3321,7 +3385,7 @@ fn hit_units(plan: &TargetPlan) -> Vec<Entity> {
 }
 
 /// TargetInfo includes misses; named plans that skip defense selection retain their units.
-fn selected_units(plan: &[PlannedEffect]) -> Vec<Entity> {
+pub fn selected_units(plan: &[PlannedEffect]) -> Vec<Entity> {
     let selected = plan
         .iter()
         .flat_map(|effect| effect.selected_units.iter().chain(&effect.units));
@@ -3340,11 +3404,11 @@ fn run_hit_scripts(
     plan: &TargetPlan,
     depth: u8,
 ) {
-    let hook = scripts::on_hit(spell.id);
-    let context_hook = scripts::on_hit_with_context(spell.id);
-    let damage_hook = scripts::on_enemy_damage_hit_with_context(spell.id);
+    let hook = scripts::on_hit(world, spell.id);
+    let context_hook = scripts::on_hit_with_context(world, spell.id);
+    let damage_hook = scripts::on_enemy_damage_hit_with_context(world, spell.id);
     let native_hooks = hook.is_some() || context_hook.is_some() || damage_hook.is_some();
-    let policies = spell.cast_policy_context.is_some() || scripts::has_impact_policy(spell);
+    let policies = spell.cast_policy_context.is_some() || scripts::has_impact_policy(world, spell);
     if !native_hooks && !policies {
         return;
     }
@@ -3449,11 +3513,23 @@ struct HitFrame {
 
 /// Actual resolving TargetInfos, not mutable combat focus or only successful hits.
 /// The first entry owns native primary impact even when it misses.
-pub(super) fn resolving_targets<'w>(world: &'w World, ctx: &EffectCtx<'_>) -> Option<&'w [Entity]> {
+pub fn resolving_targets<'w>(world: &'w World, ctx: &EffectCtx<'_>) -> Option<&'w [Entity]> {
+    Some(resolving_frame(world, ctx)?.selected.as_slice())
+}
+
+/// Actual direct damage of this native resolution, isolated from nested child casts.
+pub(super) fn resolving_damage<'w>(
+    world: &'w World,
+    ctx: &EffectCtx<'_>,
+) -> Option<&'w [(Entity, f32)]> {
+    Some(resolving_frame(world, ctx)?.damage.as_slice())
+}
+
+fn resolving_frame<'w>(world: &'w World, ctx: &EffectCtx<'_>) -> Option<&'w HitFrame> {
     let frame = world.get_resource::<ResolvingHits>()?.0.last()?;
     let matches =
         frame.caster == ctx.caster && frame.spell_id == ctx.spell.id && frame.depth == ctx.depth;
-    matches.then_some(frame.selected.as_slice())
+    matches.then_some(frame)
 }
 
 /// Read the innermost matching hit's block result; nested casts own their frame.
@@ -3466,7 +3542,7 @@ fn hit_was_blocked(world: &World, caster: Entity, spell_id: u32, target: Entity)
 }
 
 /// A linked child inherits the active hit's trigger depth, without persisting cast state in an aura.
-pub(crate) fn next_trigger_depth(world: &World) -> u8 {
+pub fn next_trigger_depth(world: &World) -> u8 {
     world
         .get_resource::<ResolvingHits>()
         .and_then(|hits| hits.0.last())
@@ -3669,7 +3745,7 @@ pub fn cast_triggered(
 }
 
 /// `cast_triggered`, reporting whether the cast went off (TC `SPELL_CAST_OK`).
-pub(crate) fn try_cast_triggered(
+pub fn try_cast_triggered(
     world: &mut World,
     caster: Entity,
     spell_id: u32,
@@ -3696,7 +3772,7 @@ pub(super) fn cast_triggered_with_item_level(
 
 /// Sourced per-cast overrides retained in real triggered spell snapshots.
 #[derive(Default)]
-pub(crate) struct TriggeredSpellOverrides {
+pub struct TriggeredSpellOverrides {
     pub effect0_amount: Option<f32>,
     pub item_level: Option<u16>,
     pub effect_mask: Option<u32>,
@@ -3706,7 +3782,7 @@ pub(crate) struct TriggeredSpellOverrides {
     pub duration_ms: Option<i32>,
 }
 
-pub(crate) fn cast_triggered_with_overrides(
+pub fn cast_triggered_with_overrides(
     world: &mut World,
     caster: Entity,
     spell_id: u32,
@@ -3744,7 +3820,7 @@ pub(crate) fn cast_triggered_with_overrides(
 }
 
 /// Source AddSpellBP0 for Ysera's Gift's percent-of-owner-health children.
-pub(crate) fn cast_triggered_with_effect0_amount(
+pub fn cast_triggered_with_effect0_amount(
     world: &mut World,
     caster: Entity,
     spell_id: u32,
@@ -3780,7 +3856,7 @@ pub(crate) fn cast_triggered_at_destination(
     launch_triggered_spell(world, caster, &spell, None, depth);
 }
 
-fn load_triggered_spell(world: &World, spell_id: u32, depth: u8) -> Option<SpellInfo> {
+pub fn load_triggered_spell(world: &World, spell_id: u32, depth: u8) -> Option<SpellInfo> {
     if depth > effects::MAX_TRIGGER_DEPTH {
         warn!(
             "Triggered spell {spell_id} skipped: depth {depth} exceeds {}",
@@ -3802,7 +3878,7 @@ fn load_triggered_spell(world: &World, spell_id: u32, depth: u8) -> Option<Spell
     spell
 }
 
-fn plan_triggered_spell(
+pub fn plan_triggered_spell(
     world: &mut World,
     caster: Entity,
     spell: &SpellInfo,
@@ -3829,7 +3905,7 @@ fn plan_triggered_spell(
     plan_targets(world, caster, spell, explicit, true)
 }
 
-fn launch_triggered_spell(
+pub fn launch_triggered_spell(
     world: &mut World,
     caster: Entity,
     spell: &SpellInfo,
@@ -3908,6 +3984,7 @@ fn execute_costed_trigger(
     let mut prepared = resources::snapshot(world, caster, spell, &costs);
     prepared.cast_primary_target = primary_target;
     let plan = plan_targets(world, caster, &prepared, explicit, true)?;
+    crate::auras::rogue::prepare_cast(world, caster, explicit, &mut prepared);
     let consumed_damage =
         scripts::capture_consumed_damage_modifier(world, caster, &mut prepared, false);
     scripts::before_ret_damage_cast(world, caster, &prepared, depth);
@@ -3932,7 +4009,7 @@ fn take_cast_resources(
         return;
     }
     spend_costs(world, caster, costs);
-    scripts::after_paid_resources(world, caster, costs);
+    script_registry::after_payment(world, caster, costs);
     scripts::empower_gargoyles(world, caster, costs);
     crate::profession::take_reagents(world, caster, spell);
 }
@@ -3963,9 +4040,7 @@ fn haste_regen_cooldown_ms(world: &World, caster: Entity, spell: &SpellInfo, dur
     ) {
         return duration;
     }
-    let haste = world
-        .get::<CharacterStats>(caster)
-        .map_or(1.0, |stats| 1.0 + stats.haste_pct / 100.0);
+    let haste = spell_haste_multiplier(world, caster);
     // Native Duration(int64(...)) truncates fractional milliseconds.
     (duration / haste.max(0.01)).trunc()
 }
@@ -4058,6 +4133,7 @@ fn start_cooldowns(world: &mut World, caster: Entity, spell: &SpellInfo) {
     }
     // A fully discounted authored cooldown becomes ready now, not at its old deadline.
     if base_recovery_ms > 0 || base_category_ms > 0 {
+        history.cooldown_started_at.insert(spell.id, now);
         // TC SpellHistory.cpp:505: when spell recovery is zero, its entry
         // lasts until category recovery, so ResetCooldown can erase both.
         let spell_ms = if recovery_ms > 0 {
@@ -4101,7 +4177,7 @@ fn start_cooldowns(world: &mut World, caster: Entity, spell: &SpellInfo) {
 
 /// `SpellHistory::RestoreCharge` (a352b1fa SpellHistory.cpp:831-840) `count` times: give back the
 /// most recently used charges of `charge_category`; the oldest keeps recovering.
-pub(crate) fn restore_charges(world: &mut World, unit: Entity, charge_category: u32, count: u8) {
+pub fn restore_charges(world: &mut World, unit: Entity, charge_category: u32, count: u8) {
     let now = history_now(world);
     let Some(mut history) = world.get_mut::<SpellHistory>(unit) else {
         return;

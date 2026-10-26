@@ -241,6 +241,222 @@ fn frost_mage_native_frozen_orb_pays_thirty_delayed_area_pulses() {
     );
 }
 
+#[test]
+#[ignore = "requires private native70448 DB and exact Arcane62/Frost64 inputs"]
+fn spellslinger_native_impacts_reduce_actual_specialization_orb_recharge() {
+    use crate::simc_apl_native::{Bindings, Encounter, FightStyle, NativeFacts};
+    use server::simc_apl::Facts;
+    for (spec, orb, source, payload, effect) in
+        [(62, 153626, 30451, 443763, 0), (64, 84714, 116, 443722, 1)]
+    {
+        let _seed = crate::random::seed_scope(70448);
+        let mut run = prepare_literal(spec, 1).unwrap();
+        let bindings = Bindings {
+            actions: [("orb".into(), orb)].into(),
+            ..default()
+        };
+        let encounter = Encounter::Fixture {
+            started_at: 0.0,
+            duration: 300.0,
+            style: FightStyle::Patchwerk,
+        };
+        let recharge = |run: &Run| {
+            NativeFacts::new(run.app.world(), run.actor, &bindings, encounter, 1)
+                .value("cooldown.orb.full_recharge_time")
+                .unwrap()
+        };
+        let unit = if spec == 64 {
+            run.actor
+        } else {
+            run.targets[0]
+        };
+        literal_rotation::execution::execute(
+            run.app.world_mut(),
+            run.actor,
+            literal_rotation::execution::Execution::Spell(orb, unit, Some(run.targets[0])),
+        )
+        .unwrap();
+        preparation::finish_pending_setup(&mut run).unwrap();
+        let before = recharge(&run);
+        assert!(
+            before > 0.0,
+            "native spec{spec} Orb recharge must really run"
+        );
+        let started = crate::spell_cast::now(run.app.world());
+        crate::spell_cast::creature_cast(
+            run.app.world_mut(),
+            run.actor,
+            source,
+            Some(run.targets[0]),
+            false,
+        )
+        .unwrap();
+        preparation::finish_pending_setup(&mut run).unwrap();
+        for _ in 0..40 {
+            run.app.update();
+        }
+        let hits = run
+            .app
+            .world()
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .filter(|event| {
+                event.source == Some(run.actor.to_bits())
+                    && event.spell_id == Some(payload)
+                    && event.kind == CombatLogKind::Damage
+                    && event.amount > 0
+            })
+            .count();
+        assert!(
+            hits > 0,
+            "native Splinters must land before checking their cooldown consumer"
+        );
+        let native_ms = run
+            .app
+            .world()
+            .resource::<crate::spell_info::SpellStore>()
+            .get(444986)
+            .unwrap()
+            .effects
+            .iter()
+            .find(|row| row.index == effect)
+            .unwrap()
+            .base_points;
+        let elapsed = crate::spell_cast::now(run.app.world()) - started;
+        let reduction = before - recharge(&run) - elapsed;
+        assert!(
+            (reduction - hits as f64 * f64::from(native_ms) / 1000.0).abs() < 0.005,
+            "spec{spec}: {hits} actual Splinter impacts must reduce native recharge; got{reduction}"
+        );
+    }
+}
+
+#[test]
+#[ignore = "requires private native70448 DB and exact Frost64 inputs"]
+fn frost_mage_native_periodic_icicles_enable_and_pay_glacial_spike() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(64, 1).unwrap();
+    assert!(
+        crate::auras::has_aura(run.app.world(), run.actor, 1246832),
+        "the actual selected Icicles passive must exist before testing its periodic producer"
+    );
+    for _ in 0..800 {
+        run.app.update();
+    }
+    let stacks = run
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(run.actor)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.caster == run.actor && aura.spell_id == 205473)
+        .map_or(0, |aura| aura.stacks);
+    assert_eq!(
+        stacks, 5,
+        "native hasted Icicles must accumulate without casting Frostbolt"
+    );
+    assert!(
+        crate::auras::has_aura(run.app.world(), run.actor, 1222865),
+        "the native counter cap must enable Glacial Spike"
+    );
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(199786, run.targets[0], Some(run.targets[0])),
+    )
+    .unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    for _ in 0..20 {
+        run.app.update();
+    }
+    assert!(
+        !crate::auras::has_aura(run.app.world(), run.actor, 1222865),
+        "a successful Spike must consume its actual enabler"
+    );
+    assert!(
+        run.app
+            .world()
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|event| event.source == Some(run.actor.to_bits())
+                && event.spell_id == Some(228600)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0),
+        "the real Spike must deliver native228600 rather than a zero-damage Dummy cast"
+    );
+}
+
+#[test]
+#[ignore = "requires private native70448 DB and exact Frost64 inputs"]
+fn frost_mage_native_impacts_build_freezing_and_lance_pays_owned_shatter() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(64, 1).unwrap();
+    for spell in [116, 116, 44614] {
+        literal_rotation::execution::execute(
+            run.app.world_mut(),
+            run.actor,
+            literal_rotation::execution::Execution::Spell(
+                spell,
+                run.targets[0],
+                Some(run.targets[0]),
+            ),
+        )
+        .unwrap();
+        preparation::finish_pending_setup(&mut run).unwrap();
+        for _ in 0..20 {
+            run.app.update();
+        }
+    }
+    let freezing = |run: &Run| {
+        run.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(run.targets[0])
+            .unwrap()
+            .iter()
+            .find(|aura| aura.caster == run.actor && aura.spell_id == 1221389)
+            .map_or(0, |aura| aura.stacks)
+    };
+    let before = freezing(&run);
+    assert!(
+        before >= 4,
+        "actual Frostbolt/Flurry impacts must earn native owned Freezing"
+    );
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(30455, run.targets[0], Some(run.targets[0])),
+    )
+    .unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    for _ in 0..20 {
+        run.app.update();
+    }
+    assert!(
+        freezing(&run) < before,
+        "successful Lance must consume its actual target's stacks"
+    );
+    let hits = run
+        .app
+        .world()
+        .resource::<ObservedCombatEvents>()
+        .0
+        .iter()
+        .filter(|event| {
+            event.source == Some(run.actor.to_bits())
+                && event.target == Some(run.targets[0].to_bits())
+                && event.spell_id == Some(1246949)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0
+        })
+        .count();
+    assert_eq!(
+        hits, 1,
+        "native Shatter primary must hit once, not once per primary/secondary effect"
+    );
+}
+
 use super::*;
 use crate::spell_cast::test_harness::ObservedCombatEvents;
 use shared::protocol::CombatLogKind;
