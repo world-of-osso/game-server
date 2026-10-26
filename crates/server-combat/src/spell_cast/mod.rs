@@ -215,6 +215,8 @@ mod melee_crit_taken_tests;
 #[cfg(test)]
 mod melee_hit_modifier_tests;
 mod missiles;
+/// Launch an already validated native plan without replacing its source primary.
+pub use missiles::launch as launch_planned_spell;
 pub mod open_lock;
 #[cfg(test)]
 mod open_lock_tests;
