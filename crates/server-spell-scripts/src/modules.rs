@@ -167,6 +167,7 @@ register_modules! {
     outlaw_pistol: (2602, "modules/outlaw_pistol.rs"),
     outlaw_spree: (2600, "modules/outlaw_spree.rs"),
     outlaw_spree_power: (2605, "modules/outlaw_spree_power.rs"),
+    outlaw_trickster: (2607, "modules/outlaw_trickster.rs"),
     paid_cooldowns: (130, "modules/paid_cooldowns.rs"),
     periodic_counters: (270, "modules/periodic_counters.rs"),
     pet_sets: (1000, "modules/pet_sets.rs"),
