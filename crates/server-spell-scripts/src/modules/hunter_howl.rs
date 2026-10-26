@@ -8,6 +8,7 @@ use combat::spell_info::{SpellInfo, SpellStore};
 use shared::components::CombatStatus;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::OwnsPolicyProc(owns_proc),
     SpellScriptHook::AfterQueuedTriggers(begin_combat),
     SpellScriptHook::AfterElementalLaunch(after_launch),
     SpellScriptHook::EarlyAuraRegistration(register),
@@ -32,6 +33,13 @@ struct HowlCombatStarted;
 #[derive(Component)]
 struct StampedeTarget(Entity);
 
+fn owns_proc(spell: u32) -> bool {
+    // SimC76f8118 sc_hunter.cpp3813–3817: only consuming a Howl spends
+    // incoming Stampede. Native1258338's broad successful-cast proc and one
+    // charge must not spend this newly earned buff on Bestial Wrath itself.
+    spell == INCOMING
+}
+
 fn register(scripts: &mut AuraScripts) {
     scripts.0.entry(COOLDOWN).or_default().on_natural_end = Some(earn_beast);
     for ready in READY {
@@ -41,23 +49,9 @@ fn register(scripts: &mut AuraScripts) {
 }
 
 fn apply_self(world: &mut World, caster: Entity, spell: u32) {
-    let native = world
-        .resource::<SpellStore>()
-        .get(spell)
-        .expect("selected Pack Leader requires its native buff record");
-    let effect_mask = auras::aura_effect_mask(native);
-    // SimC76f8118 sc_hunter.cpp3816/8299–8300: trigger the native buff,
-    // not the spell's unrelated destination-dummy execution.
-    auras::apply_aura(
-        world,
-        &auras::AuraApplication {
-            caster,
-            target: caster,
-            spell_id: spell,
-            effect_mask,
-            source: auras::AuraSource::Cast,
-        },
-    );
+    if !spell_cast::try_cast_triggered(world, caster, spell, Some(caster), 1) {
+        warn!(?caster, spell, "Pack Leader native aura refused");
+    }
 }
 
 fn begin_combat(world: &mut World) {

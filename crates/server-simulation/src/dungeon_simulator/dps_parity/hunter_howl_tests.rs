@@ -17,6 +17,10 @@ fn native_bm_howl_earns_real_wyvern_and_stampede_hits_the_pack() {
         "selected Stampede must earn the next real Howl readiness after Bestial Wrath"
     );
     preparation::finish_pending_setup(&mut run).unwrap();
+    assert!(
+        crate::auras::has_aura(run.app.world(), run.actor, 1258338),
+        "Bestial Wrath's own successful-cast event must not spend newly earned incoming Stampede before Kill Command"
+    );
     crate::spell_cast::creature_cast(
         run.app.world_mut(),
         run.actor,
