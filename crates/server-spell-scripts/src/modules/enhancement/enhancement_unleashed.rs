@@ -1,11 +1,12 @@
 //! SimC76f8118 sc_shaman.cpp4519–4532/6110–6135: real Crash executions own delayed Unleashed strikes.
 use bevy::prelude::*;
 
-use crate::auras::{self, ActiveAuras, RemoveReason};
-use crate::class_progression::KnownSpells;
-use crate::random::Rng;
-use crate::spell_cast::{self, effects::EffectCtx, targets};
-use crate::spell_info::SpellStore;
+use super::combat;
+use combat::auras::{self, ActiveAuras, RemoveReason};
+use combat::class_progression::KnownSpells;
+use combat::random::Rng;
+use combat::spell_cast::{self, effects::EffectCtx, targets};
+use combat::spell_info::SpellStore;
 
 const CRASH: u32 = 187874;
 const UNLEASHED: u32 = 1252373;
@@ -69,7 +70,7 @@ fn consume_short_circuit(world: &mut World, caster: Entity) -> f32 {
     multiplier
 }
 
-pub(in crate::spell_cast) fn update(world: &mut World) {
+pub(super) fn update(world: &mut World) {
     let now = auras::aura_now(world);
     let mut due = Vec::new();
     for (caster, mut pending) in world.query::<(Entity, &mut Pending)>().iter_mut(world) {
@@ -115,7 +116,7 @@ fn cast_pack_pulse(world: &mut World, caster: Entity, primary: Entity, multiplie
         .clone();
     payload.cast_damage_multiplier = Some(multiplier);
     for target in pack {
-        let occupies = crate::random::thread_rng().gen_range(0.0..1.0) < OCCUPANCY;
+        let occupies = combat::random::thread_rng().gen_range(0.0..1.0) < OCCUPANCY;
         if !occupies {
             continue;
         }

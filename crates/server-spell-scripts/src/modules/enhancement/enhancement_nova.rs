@@ -2,10 +2,11 @@
 use bevy::prelude::*;
 use shared::components::Health;
 
-use crate::auras::ActiveAuras;
-use crate::class_progression::KnownSpells;
-use crate::random::Rng;
-use crate::spell_cast::{self, targets};
+use super::combat;
+use combat::auras::ActiveAuras;
+use combat::class_progression::KnownSpells;
+use combat::random::Rng;
+use combat::spell_cast::{self, targets};
 
 const TALENT: u32 = 1260666;
 const FLAME_SHOCK: u32 = 188389;
@@ -20,7 +21,7 @@ pub(super) fn roll_and_cast(world: &mut World, caster: Entity) {
     }
     // SimC10126 rolls native talent effect2 before checking its dot-dependent target list.
     let chance = super::script_effect_value(world, caster, TALENT, 1);
-    if crate::random::thread_rng().gen_range(0.0..100.0) >= chance {
+    if combat::random::thread_rng().gen_range(0.0..100.0) >= chance {
         return;
     }
     for target in select_own_flame_shocks(world, caster) {

@@ -3,12 +3,13 @@
 use bevy::prelude::*;
 use shared::components::ActiveSpec;
 
-use crate::auras::procs::AuraEvent;
-use crate::auras::scripts::{AuraScript, AuraScripts};
-use crate::auras::{self, ActiveAuras, AuraInstance};
-use crate::class_progression::KnownSpells;
-use crate::spell_cast::{self, effects::EffectCtx, targets};
-use crate::spell_info::{SpellInfo, SpellStore};
+use super::combat;
+use combat::auras::procs::AuraEvent;
+use combat::auras::scripts::{AuraScript, AuraScripts};
+use combat::auras::{self, ActiveAuras, AuraInstance};
+use combat::class_progression::KnownSpells;
+use combat::spell_cast::{self, effects::EffectCtx, targets};
+use combat::spell_info::{SpellInfo, SpellStore};
 
 const CRASH: u32 = 187874;
 const CRASH_BUFF: u32 = 187878;
@@ -83,7 +84,7 @@ pub(super) fn grant_elemental_assault(world: &mut World, caster: Entity, _spell:
         return;
     }
     let chance = super::script_effect_value(world, caster, ELEMENTAL_ASSAULT, 2);
-    if crate::random::random::<f32>() * 100.0 >= chance {
+    if combat::random::random::<f32>() * 100.0 >= chance {
         return;
     }
     let count = super::script_effect_value(world, caster, ELEMENTAL_ASSAULT, 1) as u8;
@@ -94,7 +95,7 @@ fn strike_hook_owns_payload(_world: &World, _aura: &AuraInstance, _event: &AuraE
     false
 }
 
-pub(in crate::spell_cast) fn check_cast(
+pub(super) fn check_cast(
     world: &World,
     caster: Entity,
     spell: &SpellInfo,

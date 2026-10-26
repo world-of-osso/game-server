@@ -3,10 +3,11 @@
 use bevy::prelude::*;
 use shared::components::Health;
 
-use crate::auras::AuraInstance;
-use crate::auras::scripts::{AuraScript, AuraScripts};
-use crate::networking::CombatTarget;
-use crate::spell_cast;
+use super::combat;
+use combat::auras::AuraInstance;
+use combat::auras::scripts::{AuraScript, AuraScripts};
+use combat::networking::CombatTarget;
+use combat::spell_cast;
 
 const DOOM_WINDS: u32 = 466772;
 const DOOM_DAMAGE: u32 = 469270;

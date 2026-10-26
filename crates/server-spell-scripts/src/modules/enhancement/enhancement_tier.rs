@@ -2,10 +2,11 @@
 //! equipped MID2 pieces own Burning Core ticks and Fire Nova's recharge reward.
 use bevy::prelude::*;
 
-use crate::auras::scripts::{AuraScript, AuraScripts};
-use crate::auras::{self, AuraInstance};
-use crate::spell_cast;
-use crate::spell_info::SpellInfo;
+use super::combat;
+use combat::auras::scripts::{AuraScript, AuraScripts};
+use combat::auras::{self, AuraInstance};
+use combat::spell_cast;
+use combat::spell_info::SpellInfo;
 
 const TWO_PIECE: u32 = 1296627;
 const FOUR_PIECE: u32 = 1296628;

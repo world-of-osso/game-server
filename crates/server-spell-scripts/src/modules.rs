@@ -54,6 +54,7 @@ register_modules! {
     elemental: (1000, "modules/elemental.rs"),
     elemental_ascendance: (220, "modules/elemental_ascendance.rs"),
     empower_evoker: (1000, "modules/empower_evoker.rs"),
+    enhancement: (1000, "modules/enhancement.rs"),
     essence_burst: (140, "modules/essence_burst.rs"),
     evoker_rewind: (1000, "modules/evoker_rewind.rs"),
     evoker_tier: (160, "modules/evoker_tier.rs"),

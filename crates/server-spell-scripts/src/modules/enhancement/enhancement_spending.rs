@@ -4,10 +4,11 @@ use std::collections::BTreeMap;
 
 use bevy::prelude::*;
 
-use crate::auras::{self, ActiveAuras};
-use crate::class_progression::KnownSpells;
-use crate::random::Rng;
-use crate::spell_cast::{self, effects::EffectCtx};
+use super::combat;
+use combat::auras::{self, ActiveAuras};
+use combat::class_progression::KnownSpells;
+use combat::random::Rng;
+use combat::spell_cast::{self, effects::EffectCtx};
 
 const MAX_DRAW: usize = 10;
 
@@ -76,7 +77,7 @@ fn shuffle_successes(proc: &SpendingProc, previous_distance: usize) -> Vec<usize
 fn shuffle_success_position(cards: usize, previous_distance: usize, placed: &[usize]) -> usize {
     // SimC's rejection shuffle preserves spacing within AND across decks, with100 usable attempts.
     for _ in 0..100 {
-        let position = crate::random::thread_rng().gen_range(0..cards);
+        let position = combat::random::thread_rng().gen_range(0..cards);
         let separated = placed.iter().all(|old| old.abs_diff(position) > MAX_DRAW);
         if previous_distance + position > MAX_DRAW && separated {
             return position;
@@ -145,7 +146,7 @@ pub(super) fn consume_for_strike(world: &mut World, ctx: &EffectCtx) {
 
 #[cfg(test)]
 fn assert_deck_spacing(proc: &SpendingProc) {
-    let _seed = crate::random::seed_scope(70448);
+    let _seed = combat::random::seed_scope(70448);
     let mut deck = SpacedDeck::default();
     let draws: Vec<bool> = (0..proc.cards * 20).map(|_| deck.draw(proc)).collect();
     for cycle in draws.chunks_exact(proc.cards) {

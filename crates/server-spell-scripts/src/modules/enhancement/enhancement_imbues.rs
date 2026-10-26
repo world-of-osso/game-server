@@ -5,12 +5,13 @@ use bevy::prelude::*;
 use shared::components::{ActiveSpec, Level};
 use shared::protocol::EquipmentSlot;
 
-use crate::auras::procs::{self, AuraEvent};
-use crate::auras::scripts::{AuraScript, AuraScripts};
-use crate::auras::{self, AuraInstance};
-use crate::spell_cast;
-use crate::spell_info::{SpellInfo, SpellStore};
-use crate::stats::{EquippedItems, NativeItemInstances};
+use super::combat;
+use combat::auras::procs::{self, AuraEvent};
+use combat::auras::scripts::{AuraScript, AuraScripts};
+use combat::auras::{self, AuraInstance};
+use combat::spell_cast;
+use combat::spell_info::{SpellInfo, SpellStore};
+use combat::stats::{EquippedItems, NativeItemInstances};
 
 const WINDFURY: u32 = 319773;
 const FLAMETONGUE: u32 = 319778;
@@ -60,7 +61,7 @@ fn has_equipped_weapon(world: &World, caster: Entity, slot: EquipmentSlot) -> bo
     let Some(equipped) = world.get::<EquippedItems>(caster) else {
         return false;
     };
-    let templates = world.resource::<crate::item_templates::ItemTemplates>();
+    let templates = world.resource::<combat::item_templates::ItemTemplates>();
     equipped.items.iter().any(|&(key, source, item)| {
         key == slot
             && templates
@@ -81,7 +82,7 @@ fn apply_enchant_aura(world: &mut World, caster: Entity, enchant_spell: u32) {
         .misc_values[0] as u32;
     let level = world.get::<Level>(caster).expect("weapon owner level").0;
     let tables = &world.resource::<NativeItemInstances>().enchants;
-    let payload = server::item_instance::enchants::enchantment_stats(enchant, level, tables)
+    let payload = combat::item_instance::enchants::enchantment_stats(enchant, level, tables)
         .unwrap_or_else(|error| panic!("native weapon enchant {enchant}: {error}"));
     for child in payload.equip_spells {
         spell_cast::cast_triggered(world, caster, child, Some(caster), 1);
@@ -128,7 +129,7 @@ fn cast_windfury(world: &mut World, caster: Entity, _aura: &AuraInstance, target
     };
     // SimC11946–11958: two real payload attacks plus the selected native extra-attack roll.
     let extra = auras::has_aura(world, caster, UNRULY_WINDS)
-        && crate::random::random::<f32>() * 100.0
+        && combat::random::random::<f32>() * 100.0
             < super::script_effect_value(world, caster, UNRULY_WINDS, 0);
     for _ in 0..2 + u8::from(extra) {
         spell_cast::cast_triggered(world, caster, WINDFURY_ATTACK, Some(target), 1);

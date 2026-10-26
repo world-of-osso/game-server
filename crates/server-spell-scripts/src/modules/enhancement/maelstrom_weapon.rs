@@ -3,11 +3,12 @@
 //! TC a352b1fa spell_shaman.cpp1973–1993/2056–2071 supplies the modifier/counter pair.
 use bevy::prelude::*;
 
-use crate::auras::procs::AuraEvent;
-use crate::auras::scripts::{AuraScript, AuraScripts};
-use crate::auras::{self, ActiveAuras, AuraInstance, RemoveReason};
-use crate::spell_cast;
-use crate::spell_info::SpellInfo;
+use super::combat;
+use combat::auras::procs::AuraEvent;
+use combat::auras::scripts::{AuraScript, AuraScripts};
+use combat::auras::{self, ActiveAuras, AuraInstance, RemoveReason};
+use combat::spell_cast;
+use combat::spell_info::SpellInfo;
 
 const PASSIVE: u32 = 187880;
 const COUNTER: u32 = 344179;

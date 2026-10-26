@@ -36,28 +36,12 @@ pub(super) use script_registry::after_foreground_special;
 pub(crate) use script_registry::melee_residual as after_melee_residual;
 pub(super) use script_registry::spell_residual as after_spell_residual;
 mod chrono_flame;
+pub(super) use script_registry::after_cast_update as update_unleashed;
 pub(super) use script_registry::after_modifier_consumption as apply_echo_policies;
-mod enhancement_imbues;
-mod enhancement_modes;
-mod enhancement_nova;
-mod enhancement_rod;
-pub(super) use enhancement_rod::after_resolution as after_resolved_hits;
-pub(crate) use enhancement_rod::snapshot_rod_amount;
-mod enhancement_spending;
-mod enhancement_strikes;
-mod enhancement_tier;
-mod enhancement_unleashed;
-pub(super) use enhancement_strikes::check_cast as check_enhancement_cast;
-pub(super) use enhancement_unleashed::update as update_unleashed;
-mod maelstrom_weapon;
-pub(crate) use maelstrom_weapon::consume as consume_maelstrom_weapon;
-pub(crate) fn register_enhancement(scripts: &mut crate::auras::scripts::AuraScripts) {
-    maelstrom_weapon::register(scripts);
-    enhancement_imbues::register(scripts);
-    enhancement_modes::register(scripts);
-    enhancement_strikes::register(scripts);
-    enhancement_tier::register(scripts);
-}
+pub(super) use script_registry::after_resolved_hits;
+pub(super) use script_registry::check_native_spell as check_enhancement_cast;
+pub(crate) use script_registry::consume_cast_modifiers as consume_maelstrom_weapon;
+pub(crate) use script_registry::snapshot_native_aura_amount as snapshot_rod_amount;
 mod policies;
 mod spellslinger;
 pub(super) use policies::check_cast as check_policy_cast;
@@ -189,8 +173,7 @@ pub(super) fn finish_scripted_launch(
     script_registry::after_counter_launch(world, caster, spell.id);
     unbroken_rhythm::after_launch(world, caster, spell.id);
     glory_of_the_dawn::after_launch(world, caster, spell, depth);
-    enhancement_tier::after_launch(world, caster, spell, depth);
-    enhancement_strikes::cast_ride_the_lightning(world, caster, spell, depth);
+    script_registry::after_weapon_launch(world, caster, spell, depth);
 }
 
 /// TC OnCast runs once after successful checks, before spending and launch.
@@ -333,7 +316,7 @@ use crate::spell_info::SpellInfo;
 /// Frostbolt: its effects are TRIGGER_MISSILE 32 to 228597 (SCHOOL_DAMAGE) only.
 /// Sourced consumers retain native modifier amounts through projectile impact.
 pub(crate) fn snapshots_modifier(world: &World, id: u32) -> bool {
-    maelstrom_weapon::snapshots_modifier(id) || script_registry::snapshots_modifier(world, id)
+    script_registry::snapshots_modifier(world, id)
 }
 
 const FROSTBOLT: u32 = 116;
@@ -753,21 +736,16 @@ fn backstab_damage(world: &World, caster: Entity, target: Entity, amount: f32) -
 }
 
 /// TC's m_appliedMods marker: only a native cast-time modifier present at admission.
-pub(super) fn snapshot_proc_modifiers(
-    world: &World,
-    caster: Entity,
-    spell: &SpellInfo,
-) -> Vec<u32> {
+pub fn snapshot_proc_modifiers(world: &World, caster: Entity, spell: &SpellInfo) -> Vec<u32> {
     let Some(auras) = world.get::<crate::auras::ActiveAuras>(caster) else {
         return Vec::new();
     };
     auras
         .iter()
         .filter(|aura| {
-            (aura.spell_id == maelstrom_weapon::MODIFIER
-                || world
-                    .resource::<script_registry::SpellScriptRegistry>()
-                    .is_cast_time_proc(aura.spell_id))
+            world
+                .resource::<script_registry::SpellScriptRegistry>()
+                .is_cast_time_proc(aura.spell_id)
                 && aura.effects.iter().any(|effect| {
                     effect.misc_values[0] == crate::auras::SpellModOp::ChangeCastTime as i32
                         && crate::auras::spell_mods::class_mask_affects(aura, effect, spell)
@@ -799,8 +777,6 @@ fn native_after_cast(world: &World, spell_id: u32) -> Option<AfterCastHook> {
         return Some(hook);
     }
     match spell_id {
-        33757 | 318038 => Some(enhancement_imbues::apply),
-        470057 => Some(maelstrom_weapon::grant_voltaic_blaze),
         windwalker::RUSHING_WIND_KICK => Some(windwalker::consume_rushing_wind_kick),
         windwalker::FISTS_OF_FURY => Some(windwalker_children::fof_executed),
         holy_priest::APOTHEOSIS => Some(holy_priest::restore_holy_words),
@@ -829,9 +805,6 @@ fn native_after_cast(world: &World, spell_id: u32) -> Option<AfterCastHook> {
         batch10::ARCANE_SURGE => Some(batch10::apply_surge),
         batch9::CONSECRATION => Some(batch9::spawn_consecration),
         batch8::DEMONBOLT => Some(batch8::demonbolt),
-        batch8::CRASH_LIGHTNING => Some(enhancement_strikes::after_crash),
-        188196 | 188443 | 452201 => Some(enhancement_strikes::after_lightning),
-        17364 | 115356 | 60103 => Some(enhancement_strikes::grant_elemental_assault),
         batch8::ARCANE_BARRAGE => Some(batch8::arcane_barrage),
         batch3::FLASH_HEAL => Some(batch3::flash_heal),
         batch3::PRAYER_OF_HEALING => Some(batch4::prayer),
@@ -1669,7 +1642,6 @@ pub(super) fn on_hit_with_context(world: &World, spell_id: u32) -> Option<Contex
         return Some(hook);
     }
     match spell_id {
-        17364 | 115356 | 60103 | 187874 => Some(enhancement_strikes::on_strike),
         xuens_battlegear::SCK => Some(xuens_battlegear::capture_sck_parent),
         windwalker::WHIRLING_DRAGON_PUNCH => Some(windwalker::cast_wdp_single_hit),
         77_478 => Some(batch9::cast_earthquake_knockdown),
