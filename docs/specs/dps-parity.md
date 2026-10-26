@@ -353,6 +353,8 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 ### Arms literal controller
 
+- Selected Just Warming Up1261048 grants its native effect1 raw Rage once after completed Colossus Smash167105. AoE victims do not multiply that resource grant, and automatic swing Rage is independent (`sc_warrior.cpp3781–3782`).
+
 - Selected Master of Warfare1269306 binds the native damage/critical-damage modifier effects of its earned1269394 buff from the talent's rank values divided by10. Each actual stack applies those modifiers; the buff's separate native armor penetration is unchanged (`sc_warrior.cpp7888–7891,7902–7907`).
 
 - Equipped MID2 Arms2pc1296643 makes each Slam-family execution (1464 and inherited Heroic Strike1269383, including background Slam) launch native Concussive Slam1300660 once. Its damage excludes the original primary; native payload selection retains radius/enemy eligibility (`sc_warrior.cpp3443–3453,3534–3535,3551–3562`).
