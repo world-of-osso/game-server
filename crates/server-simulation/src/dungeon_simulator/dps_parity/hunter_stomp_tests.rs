@@ -23,32 +23,8 @@ fn native_bm_barbed_stomps_the_pack_and_earns_mid2_cobra_fang() {
         false,
     )
     .expect("ordinary Barbed Shot");
-    eprintln!(
-        "FANG_IMMEDIATE {:?}",
-        run.app
-            .world()
-            .get::<crate::auras::ActiveAuras>(run.actor)
-            .map(|auras| auras
-                .iter()
-                .filter(|aura| [1299389, 1296631, 1296632].contains(&aura.spell_id))
-                .map(|aura| (aura.spell_id, aura.stacks, aura.source.clone()))
-                .collect::<Vec<_>>())
-    );
-    preparation::finish_pending_setup(&mut run).unwrap();
-    eprintln!(
-        "FANG_POST_GCD triggered={:?} events={:?}",
-        run.app
-            .world()
-            .get_resource::<crate::spell_cast::test_harness::ObservedTriggeredCasts>()
-            .map(|casts| &casts.0),
-        run.app
-            .world()
-            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
-            .0
-            .iter()
-            .filter(|event| [Some(193455), Some(75)].contains(&event.spell_id))
-            .collect::<Vec<_>>()
-    );
+    // Inspect the producer synchronously: a real Snakeskin background Cobra
+    // can consume these earned stacks while the Barbed GCD is settling.
     let events = &run
         .app
         .world()
@@ -105,14 +81,21 @@ fn native_bm_barbed_stomps_the_pack_and_earns_mid2_cobra_fang() {
         .unwrap()
         .effects[1]
         .base_points;
-    crate::spell_cast::creature_cast(
-        run.app.world_mut(),
-        run.actor,
-        193455,
-        Some(run.targets[0]),
-        false,
-    )
-    .expect("ordinary Cobra Shot consumes earned Fang");
+    preparation::finish_pending_setup(&mut run).unwrap();
+    let background_consumed = !crate::auras::has_aura(run.app.world(), run.actor, 1299389);
+    if !background_consumed {
+        crate::spell_cast::creature_cast(
+            run.app.world_mut(),
+            run.actor,
+            193455,
+            Some(run.targets[0]),
+            false,
+        )
+        .expect("ordinary Cobra Shot consumes earned Fang");
+    }
+    // SimC76f8118 hunter4970 applies to both Cobra variants. Preserve the
+    // actual first consumer rather than assuming the earned aura survives GCD.
+    eprintln!("NATIVE_FANG_CONSUMER background={background_consumed} stacks={stacks}");
     assert!(
         !crate::auras::has_aura(run.app.world(), run.actor, 1299389),
         "Cobra Shot must consume earned Fang on successful launch, before flight"
