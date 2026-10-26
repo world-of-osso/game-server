@@ -29,6 +29,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::OwnsPolicyProc(owns_proc),
     SpellScriptHook::BeforeNativeOnCast(prepare_spree),
     SpellScriptHook::AfterNativeOnCast(after_unseen_execute),
+    SpellScriptHook::SpellResidual(after_builder_residual),
     SpellScriptHook::ResolvedDamage(after_hit),
 ];
 
@@ -41,12 +42,23 @@ fn after_hit(world: &mut World, ctx: &EffectCtx, target: Entity, _: bool, damage
         return;
     }
     match ctx.spell.id {
+        UNSEEN => finish_unseen_hit(world, ctx, target),
+        57841 if auras::has_aura(world, ctx.caster, DEVIOUS) => apply_fazed(world, ctx, target),
+        _ => {}
+    }
+}
+
+fn after_builder_residual(world: &mut World, ctx: &EffectCtx, target: Entity, amount: f32) {
+    if amount <= 0.0 {
+        return;
+    }
+    // sc_rogue.cpp2832–2837/5986–5991: the builder's Blade Flurry
+    // resolves before its Unseen Blade can earn Flawless Form.
+    match ctx.spell.id {
         193315 | 8676 => trigger_unseen(world, ctx, target),
         185763 if auras::has_aura(world, ctx.caster, CLEVER_COMBATANT) => {
             trigger_unseen(world, ctx, target)
         }
-        UNSEEN => finish_unseen_hit(world, ctx, target),
-        57841 if auras::has_aura(world, ctx.caster, DEVIOUS) => apply_fazed(world, ctx, target),
         _ => {}
     }
 }
