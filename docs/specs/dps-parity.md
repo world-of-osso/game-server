@@ -314,6 +314,9 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 ### Shadow Priest literal parity controller
 
+- A Madness impact (including Slam's weak Madness, not its periodic ticks) launches a native148859 or1264175 projectile to each own live VT. Native1264104 effect1 owns Void selection/effectiveness; Void launches373279. Preserve source-parent identity through travel so only its apparition triggers1231479 Shadeburst, with native73510 soft cap. Native407469 boosts apparition damage on own Madness; these payloads use live Shadow Weaving (SimC76f8118 `sc_priest_shadow.cpp291–549/1296/2609–2650`).
+- Tormented Spirits' additional Pain producers, Auspicious Spirits' Insanity threshold and Haunting Shadows' DoT extensions remain separate unqualified relationships; native projectile E1/E2 must not unconditionally substitute for them.
+
 - Selected Psychic Link199484 copies its native effect0 fraction of eligible landed spell/tick damage to every other recipient with the caster's live Vampiric Touch. Native199486 supplies the damage payload; the echo cannot independently crit, hit its original recipient or use foreign VT (SimC76f8118 `sc_priest_shadow.cpp1521–1619/2655–2669`).
 
 - Voidform228260 grants1242171 uses from native effect2 after its free Volley. Ordinary1242173 consumes earned uses and cannot cast without one. Primary/secondary bolts retain native counts and the pinned50ms interval. Native1296580 grants a capped tier use after Slam in1242171 during Voidform or1279437 outside it. Voidform expiry grants selected Crushing Void and transfers earned tier uses. Literal Voidform readiness is checked before native action aliases can turn it into Volley (SimC76f8118 `sc_priest_shadow.cpp960–1079/1380–1401/1829–1846/1960–2000`).
