@@ -58,7 +58,7 @@ fn now_ms(world: &World) -> u64 {
     (super::now(world) * MILLIS_PER_SECOND) as u64
 }
 
-pub(super) fn schedule(
+pub fn schedule(
     world: &mut World,
     ctx: &super::EffectCtx,
     effect: &crate::spell_info::SpellEffect,

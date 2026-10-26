@@ -89,6 +89,9 @@ pub(crate) fn filter_secondary_targets(
 ) {
     policies::filter_secondary_targets(world, caster, spell, effect, primary, units);
     midnight_items::filter_font_targets(spell, primary, units);
+    world
+        .resource::<script_registry::SpellScriptRegistry>()
+        .filter_targets(world, caster, spell, effect, primary, units);
 }
 
 pub(super) fn apply_periodic_damage_policies(
@@ -303,7 +306,14 @@ pub(super) fn cast_effect(spell: u32, index: u8) -> Option<super::effects::CastE
         .or_else(|| batch9::cast_effect(spell, index))
 }
 /// Native per-unit scripts replace the default effect handler before dispatch.
-pub(super) fn effect_handler(spell: u32, index: u8) -> Option<super::effects::EffectHandler> {
+pub(super) fn effect_handler(
+    registry: script_registry::SpellScriptRegistry,
+    spell: u32,
+    index: u8,
+) -> Option<super::effects::EffectHandler> {
+    if let Some(hook) = registry.effect_handler(spell, index) {
+        return Some(hook);
+    }
     if let Some(hook) = bouncing_projectiles::hook(spell, index) {
         return Some(hook);
     }
