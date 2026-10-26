@@ -1120,7 +1120,18 @@ pub(crate) fn haste_channel_duration_ms(
     let slow = world
         .get::<crate::auras::AuraStatMods>(caster)
         .map_or(1.0, |mods| mods.attack_cast_time_mult);
-    (modded / haste.max(0.01) * slow).max(0.0) as u32
+    // SimC76f8118 action.cpp4397–4421: preserve the original modified
+    // tick count, rebuilding duration from the same rounded hasted aura period.
+    // Independent duration/period truncation creates false expiry partial ticks.
+    let duration = modded * slow;
+    match crate::auras::channel_tick_timing_ms(world, caster, spell) {
+        Some((original_period, hasted_period)) => {
+            let ticks = duration / original_period;
+            (hasted_period as f32 * ticks).max(0.0).round() as u32
+        }
+        // Duration-only channels have no periodic clock to align (action.cpp4423–4430).
+        None => (duration / haste.max(0.01)).max(0.0).round() as u32,
+    }
 }
 
 /// Effects that have a handler, apply an aura or run a script hook; only
@@ -2596,15 +2607,8 @@ fn start_channel(world: &mut World, caster: Entity, spell: &SpellInfo, target: O
     }
     // SimC76f8118 action.cpp4390–4420: channel decisions share the actual
     // periodic cadence, not raw DB2 periods beside a hasted channel duration.
-    let tick_ms = spell
-        .effects
-        .iter()
-        .map(|effect| {
-            crate::auras::periodic_interval_ms(world, caster, spell, effect.aura_period_ms)
-        })
-        .filter(|&period| period > 0)
-        .min()
-        .unwrap_or(0);
+    let tick_ms =
+        crate::auras::channel_tick_timing_ms(world, caster, spell).map_or(0, |(_, period)| period);
     let mut cast = CastState::channel(
         spell.id,
         target.map_or(0, Entity::to_bits),

@@ -26,6 +26,10 @@
 ## 2026-10-25 — Warlock periodic funding and target DoT facts
 
 [Warlock funding](systems/spell-casting.md#warlock-periodic-shard-funding--2026-10-25) uses the downstream critical-aware periodic callback and existing native power pipeline, qualified only on Destruction. [Target DoT duration](systems/simc-apl.md#native-target-dot-duration) reads active owned native state without pandemic carry; both have native GREEN and cross-spec controls. Numerical267 acceptance remains separate.
+## 2026-10-26 — Shared hasted channel rounding
+
+[Channel clocks](systems/spell-casting.md#rounded-hasted-channel-clocks--2026-10-26) share a rounded native aura/cast period and rebuild hasted duration from the original tick count. Ray's constant-haste ninth-expiry RED is confirmed; seven-family probes and landing remain pending. No spell-ID branch or non-channel period change is added.
+
 ## 2026-10-26 — Frost Mage native proc qualification
 
 [Frost Mage parity](investigations/frost-mage-dps-parity.md) records landed Deep Shatter, Brain Freeze, paid-Lance, Orb Fingers and Rapid Refreezing proofs. Ray's execution-time Splinterstorm window and Frost Overflowing Energy landed viac48fe12e/train208adb8ca9 with27Frost/2CI/15costed controls GREEN; current measurements and shared-gate dependencies are recorded there. [Per-hit captures](investigations/frost-mage-dps-parity.md#per-hit-factor-investigation--2026-10-26) qualify the consumption paths and enumerate actual modifier products; a separate source-qualified Ray rounding RED2d0ea30702 observes nine positive ticks instead of eight at constant haste, with a0.012690355 expiry fraction. Shared clock implementation remains unchanged. Periodic-rule probe5ecd5357cb failed the then-unimplemented feedback controls and produced no measurement.

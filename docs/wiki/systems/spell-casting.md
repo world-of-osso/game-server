@@ -174,6 +174,12 @@ Source: authenticated70448/read-only world.db25 effect rows; SimC76f8118 `sc_dea
 
 [Health aura-state qualification](../investigations/health-aura-state-admission.md) preserves the exact source update/check boundary and open passive/ownership seams. The implemented aura-spell checks below are not health-state admission or full-trigger target validation.
 
+## Rounded hasted channel clocks — 2026-10-26
+
+`auras::channel_tick_timing_ms` selects the same native effect cadence used by aura construction, including existing scripted cadence definitions. Hasted channel duration and `CastState` use this shared rounded period; duration preserves the original modified tick count. Non-channel period quantization and un-hasted channel lifetime remain unchanged. Modifier ordering and stored application haste remain with their existing owners.
+
+Pinned SimC76f8118 `action.cpp4297–4314/4397–4421` rounds channel tick time, then rebuilds duration to prevent false expiry partials. Native Ray RED2d0ea30702 observed8full ticks plus a0.012690355 expiry fraction at constant26.69281%haste. Seven-family GREEN qualification and landing are pending; [Frost investigation](../investigations/frost-mage-dps-parity.md#per-hit-factor-investigation--2026-10-26) records the consumer evidence. This is not a spell-specific ninth-tick filter.
+
 ## Dead-caster native channel coverage — 2026-10-17
 
 Native55224 Archivist's Scan supplies cast-time row195=1100ms, duration row31=8000ms, Attr1 channel bit0x4, Attr0 AllowCastWhileDead, and a real zero-amount aura12 target stun. It has no power or target-condition rows in the owned source snapshot. This is a distinct prepare→channel lifetime boundary, not another direct cast. New concrete fixtures use actual5 and DeathPlugin-produced Dead, retain the native cast/channel clocks and require actual channel state plus an ordinary target Frostbolt refused as Stunned. The full-mask5 call used to kill a caster during its channel is the real generic-CC-exempt bool API, not an edited flag.

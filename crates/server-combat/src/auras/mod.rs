@@ -777,7 +777,26 @@ pub(crate) fn periodic_interval_ms(
     base: u32,
 ) -> u32 {
     let haste = periodic_haste_multiplier(world, caster, spell);
-    periodic_interval_with_haste(world, caster, spell, base, haste)
+    periodic_timing_with_haste(world, caster, spell, base, haste).1
+}
+
+/// The canonical native channel period, before and after haste quantization.
+/// Use the same selected effect/cadence as the aura, including existing scripted periods.
+pub(crate) fn channel_tick_timing_ms(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+) -> Option<(f32, u32)> {
+    let base = spell
+        .effects
+        .iter()
+        .map(|effect| periodic_base_interval_ms(spell, effect))
+        .filter(|&period| period > 0)
+        .min()?;
+    let haste = periodic_haste_multiplier(world, caster, spell);
+    Some(periodic_timing_with_haste(
+        world, caster, spell, base, haste,
+    ))
 }
 
 fn periodic_haste_multiplier(world: &World, caster: Entity, spell: &SpellInfo) -> f32 {
@@ -790,18 +809,26 @@ fn periodic_haste_multiplier(world: &World, caster: Entity, spell: &SpellInfo) -
         .map_or(1.0, |stats| 1.0 + stats.haste_pct / 100.0)
 }
 
-fn periodic_interval_with_haste(
+fn periodic_timing_with_haste(
     world: &World,
     caster: Entity,
     spell: &SpellInfo,
     base: u32,
     haste: f32,
-) -> u32 {
+) -> (f32, u32) {
     if base == 0 {
-        return 0;
+        return (0.0, 0);
     }
     let period = spell_mods::modify(world, caster, spell, SpellModOp::Period, base as f32);
-    (period / haste.max(0.01)).max(1.0) as u32
+    let hasted = (period / haste.max(0.01)).max(1.0);
+    // SimC76f8118 action.cpp4297–4314: channel tick time rounds to nearest ms.
+    // Non-channel periodic quantization is outside this channel-only change.
+    let quantized = if crate::spell_cast::is_channeled(spell) {
+        hasted.round()
+    } else {
+        hasted
+    };
+    (period, quantized as u32)
 }
 
 fn build_effect(
@@ -831,7 +858,7 @@ fn build_effect(
     let amount = augmentation::snapshot_amount(world, caster, spell.id, effect.index, amount);
     let base_period_ms = periodic_base_interval_ms(spell, effect);
     let haste = periodic_haste_multiplier(world, caster, spell);
-    let period_ms = periodic_interval_with_haste(world, caster, spell, base_period_ms, haste);
+    let (_, period_ms) = periodic_timing_with_haste(world, caster, spell, base_period_ms, haste);
     let extra_initial_period = attributes(spell, 5) & ATTR5_EXTRA_INITIAL_PERIOD != 0;
     AuraEffectState {
         index: effect.index,
