@@ -84,6 +84,10 @@ Hot Streak's producer table, Heating Up protection, admitted-proc consumption an
 
 The last class-specific table nested under generic relationship execution, pet-set Stomp/Cobra Fang rules, lives downstream. Generic policies retain only ordered relationship execution and call the registered tail handler at the original cast/first-hit boundary. Cobra Fang still snapshots before consuming damage modifiers and removes the earned aura after successful launch, after Frost callbacks and before execution counters.
 
+## Native resource and effect overrides
+
+Barbed Shot's focus children, Stormkeeper's authored use count, Feral Berserk's extra combo point, Rewind's non-raid healing factor and Enduring Torment's specialization filter live downstream. Their stages retain the original aura-creation, positive root self-energize, named-healing and effect-filter boundaries. Charge transforms preserve the native input, point bonuses add, healing factors multiply, and effect filters can only veto an effect. Unregistered stages have neutral results.
+
 ## Tests
 
 The server's public native harness and simulation's harness alias install the plugin before the harness runs Startup. Simulation installs it on every new app, including apps that reuse cached aura catalogs. Combat's own unit-test build compiles the exact downstream module sources against its local test-crate types; it does not add a production dependency or duplicate policy data. Ordinary simulation builds do not compile those test-only inclusions.

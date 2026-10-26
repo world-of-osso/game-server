@@ -19,10 +19,6 @@ mod batch15;
 mod batch16;
 mod batch17;
 mod batch19;
-mod batch20;
-mod batch21;
-mod batch22;
-mod batch23;
 mod batch3;
 mod batch4;
 mod batch5;
@@ -164,9 +160,9 @@ pub(crate) use batch3::{
 pub(crate) use batch9::{ground_pulse_radius, hostile_ground_fields, owned_ground_fields};
 pub(super) use batch9::{spawn_ravager_field, update_ground_pulses};
 pub(crate) use batch19::{copy_havoc, dispersion_tick, on_dispelled, replace_havoc};
-pub(crate) use batch20::proc_charges;
 pub(super) use protection_items::snapshot_guillotine_health;
 pub(crate) use protection_items::{GUILLOTINE, cast_guillotine, check_guillotine_proc};
+pub(crate) use script_registry::proc_charges;
 pub(super) fn capture_consumed_damage_modifier(
     world: &World,
     caster: Entity,
@@ -314,8 +310,8 @@ pub(super) use batch17::bloom_lifebloom_before_refresh;
 pub(crate) use batch17::{
     CENARION_WARD, LIFEBLOOM, bloom_lifebloom, heal_cenarion_ward, replace_lifebloom,
 };
-pub(super) use batch21::berserk_combo_bonus;
-pub(super) use batch22::healing_multiplier;
+pub(super) use script_registry::extra_combo_points as berserk_combo_bonus;
+pub(super) use script_registry::named_healing_multiplier as healing_multiplier;
 
 pub(super) fn effect_enabled(world: &World, caster: Entity, spell: u32, index: u8) -> bool {
     windwalker_children::effect_enabled(spell, index)
@@ -324,7 +320,7 @@ pub(super) fn effect_enabled(world: &World, caster: Entity, spell: u32, index: u
         && batch11::effect_enabled(world, caster, spell, index)
         && batch13::effect_enabled(spell, index)
         && batch15::effect_enabled(world, caster, spell, index)
-        && batch23::effect_enabled(world, caster, spell, index)
+        && script_registry::effect_enabled(world, caster, spell, index)
         && super::guardian::effect_enabled(world, caster, spell, index)
 }
 
@@ -821,7 +817,6 @@ fn native_after_cast(world: &World, spell_id: u32) -> Option<AfterCastHook> {
         crate::scripted_ai::murder_row::SPELL_BLINK => {
             Some(crate::scripted_ai::murder_row::cast_fel_nova_after_blink)
         }
-        batch20::BARBED_SHOT => Some(batch20::grant_barbed_focus),
         batch17::SHADOW_BOLT => Some(batch17::energize_shadow_bolt),
         batch17::SOUL_FIRE => Some(batch17::energize_soul_fire),
         batch16::HOLY_LIGHT => Some(batch16::energize_holy_light),
@@ -1225,12 +1220,7 @@ pub(super) fn reduce_barbed_scales(world: &mut World, caster: Entity, spell: &Sp
         return;
     }
     let milliseconds = script_effect_value(world, caster, BARBED_SCALES, 0);
-    reduce_cooldown(
-        world,
-        caster,
-        batch20::BARBED_SHOT,
-        f64::from(milliseconds) / 1000.0,
-    );
+    reduce_cooldown(world, caster, 217200, f64::from(milliseconds) / 1000.0);
 }
 
 /// Retail 193455: "Reduces the cooldown of Kill Command by $s3 sec."

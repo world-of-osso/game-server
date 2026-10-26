@@ -80,6 +80,10 @@
 //! - `BeforeExecutionCounterLaunch`: after Frost launch completion, before execution counters.
 //! - `PolicyTailCast`, `PolicyTailHit`: first additional relationship handler after generic
 //!   policy traversal, preserving the original first-hit/target guard and cast ordering.
+//! - `ProcCharges`: transform the authored charge count at native aura creation.
+//! - `ExtraComboPoints`: additional authored points at the positive root self-energize slot.
+//! - `NamedHealingMultiplier`: factors before the persistent-healing multiplier.
+//! - `EffectEnabled`: additive vetoes after other native effect filters, before guardians.
 //! New stages own distinct callback/lookup aliases, even when signatures coincide.
 //! Within a stage, traverse module slices and entries from first to last. Never sort
 //! or deduplicate them. Adding a policy to an existing module changes only that module.
@@ -177,6 +181,11 @@ pub type HealingMultiplierHook = fn(&World, Entity, &SpellInfo, bool) -> f32;
 pub type SnapshotHealingAuraHook =
     fn(&World, Entity, &SpellInfo, &crate::spell_info::SpellEffect, f32) -> f32;
 
+pub type ProcChargesHook = fn(&World, Entity, &SpellInfo, f32) -> f32;
+pub type ExtraComboPointsHook = fn(&World, Entity, &SpellInfo) -> f32;
+pub type NamedHealingMultiplierHook = fn(&World, Entity, &SpellInfo) -> f32;
+pub type EffectEnabledHook = fn(&World, Entity, u32, u8) -> bool;
+
 #[derive(Clone, Copy)]
 pub enum SpellScriptHook {
     Policies(&'static [Policy]),
@@ -266,6 +275,10 @@ pub enum SpellScriptHook {
     MidAuraRegistration(MidAuraRegistrationHook),
     HealingMultiplier(HealingMultiplierHook),
     SnapshotHealingAura(SnapshotHealingAuraHook),
+    ProcCharges(ProcChargesHook),
+    ExtraComboPoints(ExtraComboPointsHook),
+    NamedHealingMultiplier(NamedHealingMultiplierHook),
+    EffectEnabled(EffectEnabledHook),
 }
 
 #[derive(Clone, Copy, Resource)]
@@ -1209,6 +1222,48 @@ pub fn policy_tail_hit(world: &World, spell: u32) -> Option<PolicyTailHitHook> {
         .find_map(|hook| match hook {
             SpellScriptHook::PolicyTailHit(lookup) => lookup(spell),
             _ => None,
+        })
+}
+
+pub fn proc_charges(world: &World, caster: Entity, spell: &SpellInfo, native: f32) -> f32 {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .fold(native, |amount, hook| match hook {
+            SpellScriptHook::ProcCharges(run) => run(world, caster, spell, amount),
+            _ => amount,
+        })
+}
+
+pub fn extra_combo_points(world: &World, caster: Entity, spell: &SpellInfo) -> f32 {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .filter_map(|hook| match hook {
+            SpellScriptHook::ExtraComboPoints(run) => Some(run(world, caster, spell)),
+            _ => None,
+        })
+        .sum()
+}
+
+pub fn named_healing_multiplier(world: &World, caster: Entity, spell: &SpellInfo) -> f32 {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .filter_map(|hook| match hook {
+            SpellScriptHook::NamedHealingMultiplier(run) => Some(run(world, caster, spell)),
+            _ => None,
+        })
+        .product()
+}
+
+pub fn effect_enabled(world: &World, caster: Entity, spell: u32, index: u8) -> bool {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .all(|hook| match hook {
+            SpellScriptHook::EffectEnabled(run) => run(world, caster, spell, index),
+            _ => true,
         })
 }
 

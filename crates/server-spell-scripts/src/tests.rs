@@ -322,3 +322,56 @@ fn registry_redirect_stops_at_consumption_and_spender_callbacks_remain_additive(
         &mut world, caster, target, 774, 3
     ));
 }
+
+#[test]
+fn native_overrides_keep_charge_transforms_bonus_sums_factors_and_effect_vetoes() {
+    const FIRST: &[SpellScriptHook] = &[
+        SpellScriptHook::ProcCharges(|_, _, _, amount| amount + 2.0),
+        SpellScriptHook::ExtraComboPoints(|_, _, _| 1.0),
+        SpellScriptHook::NamedHealingMultiplier(|_, _, _| 3.0),
+        SpellScriptHook::EffectEnabled(|_, _, spell, index| spell != 453314 || index < 2),
+    ];
+    const SECOND: &[SpellScriptHook] = &[
+        SpellScriptHook::ProcCharges(|_, _, _, amount| amount * 3.0),
+        SpellScriptHook::ExtraComboPoints(|_, _, _| 2.0),
+        SpellScriptHook::NamedHealingMultiplier(|_, _, _| 2.0),
+        SpellScriptHook::EffectEnabled(|_, _, _, _| true),
+    ];
+    let mut world = World::new();
+    let caster = world.spawn_empty().id();
+    let spell = SpellInfo {
+        id: 191634,
+        ..Default::default()
+    };
+    world.insert_resource(SpellScriptRegistry::new(&[FIRST, SECOND]));
+    assert_eq!(
+        script_registry::proc_charges(&world, caster, &spell, 4.0),
+        18.0
+    );
+    assert_eq!(
+        script_registry::extra_combo_points(&world, caster, &spell),
+        3.0
+    );
+    assert_eq!(
+        script_registry::named_healing_multiplier(&world, caster, &spell),
+        6.0
+    );
+    assert!(script_registry::effect_enabled(&world, caster, 453314, 0));
+    assert!(!script_registry::effect_enabled(&world, caster, 453314, 2));
+    assert!(script_registry::effect_enabled(&world, caster, 116, 2));
+
+    world.insert_resource(SpellScriptRegistry::new(&[]));
+    assert_eq!(
+        script_registry::proc_charges(&world, caster, &spell, 4.0),
+        4.0
+    );
+    assert_eq!(
+        script_registry::extra_combo_points(&world, caster, &spell),
+        0.0
+    );
+    assert_eq!(
+        script_registry::named_healing_multiplier(&world, caster, &spell),
+        1.0
+    );
+    assert!(script_registry::effect_enabled(&world, caster, 453314, 2));
+}
