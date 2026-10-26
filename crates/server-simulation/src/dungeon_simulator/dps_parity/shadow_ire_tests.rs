@@ -93,7 +93,10 @@ fn shadow_ire_real_three_dot_window_boosts_actual_flay_then_naturally_expires() 
     assert!(crate::auras::has_aura(run.app.world(), run.actor, 373212));
     let percent =
         crate::spell_cast::scripts::script_effect_value(run.app.world(), run.actor, 373212, 0);
-    assert_eq!(percent, 20.0, "native talent value, not stale373213's25%");
+    assert_eq!(
+        percent, 25.0,
+        "native definition108688 curve59064 rank2 sets25 over raw20"
+    );
     let baseline = sample_flay_source(&mut run);
     cast_when_ready(&mut run, 1227280);
     finish_cast(&mut run);
