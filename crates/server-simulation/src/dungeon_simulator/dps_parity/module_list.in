@@ -235,6 +235,7 @@ mod subtlety_tests;
 mod survival_bomb_tests;
 mod survival_mark_tests;
 mod survival_mechanics_tests;
+mod survival_pet_strike_tests;
 mod survival_sentinel_tests;
 mod survival_stat_tests;
 mod survival_tests;
