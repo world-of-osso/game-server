@@ -100,6 +100,8 @@ pub type OnCastHook = fn(&mut World, Entity, u32, u8);
 pub type AfterPaymentHook = fn(&mut World, Entity, &[(CostPool, f32)]);
 pub type HitHook = fn(&mut World, Entity, Entity, u8);
 pub type EffectHitLookup = fn(u32, u8) -> Option<HitHook>;
+pub type EffectHandlerLookup = fn(u32, u8) -> Option<super::effects::EffectHandler>;
+pub type TargetFilterHook = fn(&World, Entity, &SpellInfo, u8, Option<Entity>, &mut Vec<Entity>);
 pub type HitLookup = fn(u32) -> Option<HitHook>;
 pub type ContextHitHook = fn(&mut World, &EffectCtx<'_>, Entity);
 pub type ContextHitLookup = fn(u32) -> Option<ContextHitHook>;
@@ -182,6 +184,8 @@ pub enum SpellScriptHook {
     AfterSpenderStacks(AfterCastHook),
     AuraRedirect(AuraRedirectHook),
     EffectHit(EffectHitLookup),
+    EffectHandler(EffectHandlerLookup),
+    TargetFilter(TargetFilterHook),
     Hit(HitLookup),
     ContextHit(ContextHitLookup),
     AreaFilter(AreaFilterLookup),
@@ -273,6 +277,29 @@ impl SpellScriptRegistry {
 
     fn hooks(self) -> impl Iterator<Item = &'static SpellScriptHook> {
         self.modules.iter().flat_map(|module| module.iter())
+    }
+
+    pub fn effect_handler(self, spell: u32, index: u8) -> Option<super::effects::EffectHandler> {
+        self.hooks().find_map(|hook| match hook {
+            SpellScriptHook::EffectHandler(lookup) => lookup(spell, index),
+            _ => None,
+        })
+    }
+
+    pub fn filter_targets(
+        self,
+        world: &World,
+        caster: Entity,
+        spell: &SpellInfo,
+        effect: u8,
+        primary: Option<Entity>,
+        units: &mut Vec<Entity>,
+    ) {
+        for hook in self.hooks() {
+            if let SpellScriptHook::TargetFilter(run) = hook {
+                run(world, caster, spell, effect, primary, units);
+            }
+        }
     }
 
     pub fn effect_hit(self, spell: u32, index: u8) -> Option<HitHook> {

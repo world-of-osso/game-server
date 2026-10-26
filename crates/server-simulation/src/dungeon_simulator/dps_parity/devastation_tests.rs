@@ -123,6 +123,73 @@ fn devastation_deep_breath_cast_damages_the_native_three_target_pack() {
     }
 }
 
+#[test]
+#[ignore = "requires private native DB and exact Devastation profile"]
+fn devastation_strafing_run_earns_one_additional_deep_breath_without_restarting_recovery() {
+    let mut run = prepare_literal(1467, 3).unwrap();
+    engage(&mut run);
+    let primary = run.targets[0];
+    assert!(
+        crate::auras::has_aura(run.app.world(), run.actor, 1266151),
+        "the exact native profile selects Strafing Run"
+    );
+    let window = |run: &Run| crate::auras::has_aura(run.app.world(), run.actor, 1266165);
+    let cast = |run: &mut Run| {
+        crate::spell_cast::creature_cast_with_targets(
+            run.app.world_mut(),
+            run.actor,
+            433874,
+            crate::spell_cast::CastTargets {
+                unit: run.actor,
+                primary: Some(primary),
+                destination: None,
+            },
+        )
+        .unwrap();
+        preparation::finish_pending_setup(run).unwrap();
+    };
+    cast(&mut run);
+    // SimC76f8118 sc_evoker.cpp6384–6398 grants only when no old window was present.
+    assert!(
+        window(&run),
+        "first real Deep Breath must earn native Strafing Run"
+    );
+    let before = read_native_recharge_ms(&run, 433874);
+    assert!(
+        before > 10_000.0,
+        "ordinary Deep Breath must start native recovery"
+    );
+    let started_at = crate::spell_cast::now(run.app.world());
+    cast(&mut run);
+    assert!(
+        !window(&run),
+        "the second Deep Breath must consume, not renew, the earned window"
+    );
+    let elapsed_ms = (crate::spell_cast::now(run.app.world()) - started_at) * 1000.0;
+    let after = read_native_recharge_ms(&run, 433874);
+    assert!(
+        (before - after - elapsed_ms).abs() <= 3.0,
+        "the earned extra cast must preserve original recovery: before={before}, after={after}, elapsed={elapsed_ms}"
+    );
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    assert_eq!(
+        events
+            .iter()
+            .filter(|event| {
+                event.source == Some(run.actor.to_bits())
+                    && event.spell_id == Some(433874)
+                    && event.kind == shared::protocol::CombatLogKind::CastSuccess
+            })
+            .count(),
+        2,
+        "two ordinary native casts, not synthesized child successes"
+    );
+}
+
 fn cast_reference_empowers(run: &mut Run, primary: Entity) {
     for (spell, unit) in [(357208, run.actor), (359073, primary)] {
         crate::spell_cast::creature_cast_empowered_with_targets(

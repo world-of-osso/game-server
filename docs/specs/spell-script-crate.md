@@ -11,6 +11,8 @@
 - [ ] Keep new dispatch-stage callback/lookup signatures independent, even when their current signatures match.
 - [ ] Measure a moved-file touch using warm `cargo test --locked -p server-simulation --lib --no-run -j2` before and after the move; keep the same worktree-local target directory.
 
+- Ordered downstream effect-handler lookup replaces native per-unit dispatch at the same handled/launch/impact boundaries. Additive target filters retain caster and immutable primary context after existing policy filters; they do not replace native target selection.
+
 ## How it works
 
 - [Registry assembly and test boundaries](../wiki/systems/spell-script-crate.md)
