@@ -61,7 +61,8 @@ fn shared_liquid_luster_native_use_stacks_rating_and_expires_with_driver() {
         .find(|aura| aura.spell_id == 1295132)
         .unwrap();
     assert_eq!(expires, driver.expires_at.unwrap());
-    let tick = driver.effects[0].periodic_started_at + 6.0;
+    let tick = expires - f64::from(driver.duration_ms) / 1000.0
+        + f64::from(driver.effects[0].period_ms) / 1000.0;
     while crate::spell_cast::now(run.app.world()) < tick + 0.1 {
         run.app.update();
     }
