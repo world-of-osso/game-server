@@ -985,16 +985,18 @@ pub(in crate::spell_cast) fn snapshot(
             CostPool::Health => None,
         })
         .collect::<Vec<_>>();
-    let scripted_context = script_registry::policy_context_required(world, caster, spell)
-        || script_registry::requires_resource_context(world, spell.id);
+    let scripted_context = script_registry::policy_context_required(world, caster, spell);
+    let source_context =
+        scripted_context || script_registry::requires_resource_context(world, spell.id);
     if spell.cast_parent_owns_modifier_charges
-        || (!scripted_context
+        || (!source_context
             && !consumers(world, &resources, spell.id)
                 .any(|policy| selected(world, caster, policy)))
     {
         return None;
     }
     let needs_hit_targets = scripted_context
+        || script_registry::requires_target_context(world, spell.id)
         || consumers(world, &resources, spell.id).any(|policy| {
             selected(world, caster, policy)
                 && !matches!(
