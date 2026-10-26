@@ -67,6 +67,7 @@ mod enhancement_spending_tests;
 mod enhancement_stormblast_tests;
 mod enhancement_strike_tests;
 mod enhancement_tests;
+mod enhancement_unleashed_proc_tests;
 mod enhancement_unleashed_tests;
 mod equipment_input_tests;
 mod equipped_set_tests;
