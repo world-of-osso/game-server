@@ -278,6 +278,7 @@ fn spellslinger_native_impacts_reduce_actual_specialization_orb_recharge() {
         .unwrap();
         preparation::finish_pending_setup(&mut run).unwrap();
         let before = recharge(&run);
+        let event_cursor = run.app.world().resource::<ObservedCombatEvents>().0.len();
         assert!(
             before > 0.0,
             "native spec{spec} Orb recharge must really run"
@@ -301,6 +302,7 @@ fn spellslinger_native_impacts_reduce_actual_specialization_orb_recharge() {
             .resource::<ObservedCombatEvents>()
             .0
             .iter()
+            .skip(event_cursor)
             .filter(|event| {
                 event.source == Some(run.actor.to_bits())
                     && event.spell_id == Some(payload)
