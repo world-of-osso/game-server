@@ -92,6 +92,13 @@ def parse_measure(text):
     for key in ("spec", "world_db", "output"):
         if key not in fields:
             raise SystemExit(f"--measure needs {key}=")
+    # Native tests and measurement read their inputs from the output directory; a missing input
+    # used to cost a whole cycle before failing.
+    missing = [p for p in (Path(fields["world_db"]), Path(fields["output"]) / f"{fields['spec']}.profile.json",
+                           Path(fields["output"]) / f"{fields['spec']}.selected-traits-active.json")
+               if not p.exists()]
+    if missing:
+        raise SystemExit(f"--measure inputs missing: {', '.join(map(str, missing))}")
     return fields
 
 
