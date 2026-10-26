@@ -9,6 +9,8 @@
 - [Shared pet prerequisites](systems/spell-casting.md#shared-pet-prerequisites--2026-10-26) — native runtime storage, effect148 values and destination85; protected probes pending.
 - [Warlock periodic counters](systems/warlock-periodic-counters.md) — native Wither counter-only and six shared lifecycle cases GREEN; numerical parity remains open.
 - [Arcane literal fixture](systems/simc-apl.md#arcane-fixture-62) — supplied profile rows and native class readiness; ST controller regression passes, numerical parity remains separate.
+- [Native Loa/Rite stat callbacks](systems/character-stats.md#native-loa-and-rite-stat-callbacks--2026-10-26) — native gem metadata, linked rank amount, combat admission and five-profile RED→GREEN; landed44c2b6c5d.
+- [Ret Purpose and tier supply](systems/ret-divine-purpose.md) — native Aurora Wake grant, chance producer and distinct Arbiter consumption; end-to-end RED→GREEN, full integration pending.
 - [Ret Judgment target uses](systems/ret-judgment.md) — source-qualified native producer/consumer, flat damage magnitude and independently expiring uses; native RED observed, GREEN/measurement pending.
 - [Warlock periodic counters](systems/warlock-periodic-counters.md) — native Wither counters do not scale ticks or grow on refresh;265/267 actual-cast/tick RED→GREEN.
 - [Warlock periodic shard funding](systems/spell-casting.md#warlock-periodic-shard-funding--2026-10-25) — downstream Destruction-only funding, actual critical context and shared native pool/overflow; Affliction remains separate.

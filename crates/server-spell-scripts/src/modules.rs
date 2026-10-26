@@ -123,6 +123,7 @@ register_modules! {
     periodic_counters: (270, "modules/periodic_counters.rs"),
     reap_the_storm: (710, "modules/reap_the_storm.rs"),
     resource_values: (350, "modules/resource_values.rs"),
+    ret_aurora: (1000, "modules/ret_aurora.rs"),
     ret_damage: (1000, "modules/ret_damage.rs"),
     ret_empyrean: (1000, "modules/ret_empyrean.rs"),
     ret_judgment: (1000, "modules/ret_judgment.rs"),
