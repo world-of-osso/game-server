@@ -120,6 +120,7 @@ register_modules! {
     havoc_eternal: (5774, "modules/havoc/eternal.rs"),
     havoc_fury: (5773, "modules/havoc/fury.rs"),
     hellcaller_counters: (2666, "modules/hellcaller_counters.rs"),
+    hellcaller_devil_fruit: (2675, "modules/hellcaller_devil_fruit.rs"),
     havoc_recovery: (5772, "modules/havoc/recovery.rs"),
     hellcaller_wither: (2665, "modules/hellcaller_wither.rs"),
     hot_streak: (1000, "modules/hot_streak.rs"),

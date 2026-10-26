@@ -73,9 +73,9 @@ fn assert_ticks_earn_native_malevolence(spec: u32) {
         if now - started >= 300.0 {
             break;
         }
-        let remaining = owned(&run, run.targets[0], WITHER)
-            .and_then(|aura| aura.expires_at)
-            .map_or(0.0, |expiry| expiry - now);
+        let remaining = owned(&run, run.targets[0], WITHER).map_or(0.0, |aura| {
+            aura.expires_at.map_or(f64::INFINITY, |expiry| expiry - now)
+        });
         if remaining <= 3.0 {
             cast_actual_wither(&mut run);
         }
@@ -114,6 +114,7 @@ fn assert_ticks_earn_native_malevolence(spec: u32) {
                 ticks > 0,
                 "actual owned Wither ticks must precede earned Malevolence"
             );
+            assert_button_extends_earned_malevolence(&mut run);
             return;
         }
     }
@@ -137,6 +138,48 @@ fn assert_ticks_earn_native_malevolence(spec: u32) {
     );
     panic!(
         "selected Devil Fruit must earn native Malevolence from{ticks} actual Wither ticks on spec{spec}"
+    );
+}
+
+fn assert_button_extends_earned_malevolence(run: &mut Run) {
+    let previous_expiry = owned(run, run.actor, MALEVOLENCE)
+        .unwrap()
+        .expires_at
+        .unwrap();
+    let native_duration = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(MALEVOLENCE)
+        .unwrap()
+        .misc
+        .as_ref()
+        .unwrap()
+        .duration
+        .as_ref()
+        .unwrap()
+        .duration_ms;
+    let actual =
+        literal_rotation::execution::resolve_action(run.app.world(), run.actor, MALEVOLENCE)
+            .unwrap()
+            .expect("actual selected Malevolence button");
+    let actor = run.actor;
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        actor,
+        literal_rotation::execution::Execution::Spell(actual, actor, Some(actor)),
+    )
+    .unwrap();
+    preparation::finish_pending_setup(run).unwrap();
+    let expiry = owned(run, run.actor, MALEVOLENCE)
+        .unwrap()
+        .expires_at
+        .unwrap();
+    // SimC76f8118 init968–971: the button extends the earned buff, rather
+    // than replacing its remaining lifetime with the ordinary button duration.
+    assert!(
+        (expiry - previous_expiry - f64::from(native_duration) / 1000.0).abs() < 0.001,
+        "actual button must add native duration to earned expiry: {previous_expiry} -> {expiry}"
     );
 }
 
