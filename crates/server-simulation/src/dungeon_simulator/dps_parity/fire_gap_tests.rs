@@ -1144,6 +1144,36 @@ fn fire_phoenix_native_casts_deal_damage_and_feed_selected_mana_cascade() {
     );
 }
 
+#[test]
+#[ignore = "requires exact Fire63 inputs and private70448 DB"]
+fn fire_feedback_from_the_ashes_reduces_the_fire_blast_that_triggered_it() {
+    use crate::simc_apl_native::{Bindings, Encounter, FightStyle, NativeFacts};
+    let mut run = prepare_literal(63, 1).unwrap();
+    let target = run.targets[0];
+    start_native(&mut run, 108853, target);
+    let bindings = Bindings {
+        actions: [("fire_blast".into(), 108853)].into(),
+        ..default()
+    };
+    let fractional = NativeFacts::new(
+        run.app.world(),
+        run.actor,
+        &bindings,
+        Encounter::Fixture {
+            started_at: 0.0,
+            duration: 300.0,
+            style: FightStyle::Patchwerk,
+        },
+        1,
+    )
+    .value("cooldown.fire_blast.charges_fractional")
+    .unwrap();
+    assert!(
+        fractional > 2.01,
+        "an actual selected From the Ashes hit restores native500ms progress immediately after spending a Fire Blast charge: {fractional}"
+    );
+}
+
 fn reacted(run: &Run, name: &str) -> f64 {
     use crate::simc_apl_native::{Bindings, Encounter, FightStyle, NativeFacts};
     let bindings = Bindings {
