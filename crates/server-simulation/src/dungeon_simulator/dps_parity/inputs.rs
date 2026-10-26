@@ -384,8 +384,8 @@ pub(super) fn install_reference_catalogs(app: &mut App) -> Result<(), String> {
     app.insert_resource(data);
     // Native Meteor Burn fields use the same authored catalog as production;
     // a missing fixture resource must not turn real area effects into no-ops.
-    app.insert_resource(crate::spell_cast::area_trigger::load_aura_field_catalog(&db)
-        .map_err(|error| format!("load native area-trigger catalog: {error}"))?);
+    crate::spell_cast::area_trigger::install_native_catalog(app.world_mut(), &db)
+        .map_err(|error| format!("load native area-trigger catalog: {error}"))?;
     app.insert_resource(
         crate::hunter_pet::read_pet_catalog(&db).map_err(|error| error.to_string())?,
     );

@@ -21,6 +21,16 @@ use bevy::prelude::*;
 use shared::components::Position;
 use std::collections::HashSet;
 
+/// Install the production area-field data in a transport-free native simulation.
+#[cfg(any(test, feature = "test-support"))]
+pub fn install_native_catalog(
+    world: &mut World,
+    connection: &rusqlite::Connection,
+) -> rusqlite::Result<()> {
+    world.insert_resource(load_aura_field_catalog(connection)?);
+    Ok(())
+}
+
 pub const EFFECT_CREATE_AREATRIGGER: u32 = 179;
 
 /// Source-bound spheres add native reach; only authored native curves advance in time.
