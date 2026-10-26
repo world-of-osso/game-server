@@ -2,10 +2,44 @@
 use bevy::prelude::*;
 use shared::components::ActiveSpec;
 
-use crate::auras::{self, ActiveAuras, RemoveReason, spell_mods};
-use crate::class_progression::{KnownSpells, TraitLoadout};
-use crate::spell_cast::{self, PlannedEffect, TargetPlan, effects::EffectCtx, targets};
-use crate::spell_info::{CastDamageRole, SpellInfo, SpellStore};
+use super::combat;
+use combat::auras::{self, ActiveAuras, RemoveReason, spell_mods};
+use combat::class_progression::{KnownSpells, TraitLoadout};
+use combat::spell_cast::script_registry::{
+    AreaTargetFilter, ContextHitHook, EnemyContextHitHook, SpellScriptHook, TargetPlanHook,
+};
+use combat::spell_cast::scripts::script_effect_value;
+use combat::spell_cast::{self, PlannedEffect, TargetPlan, effects::EffectCtx, targets};
+use combat::spell_info::{CastDamageRole, SpellInfo, SpellStore};
+
+pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::BeforeNativeOnCast(before_cast),
+    SpellScriptHook::PrepareStoredDamage(prepare_stored_damage),
+    SpellScriptHook::ContextHit(context_hit),
+    SpellScriptHook::EnemyContextHit(enemy_context_hit),
+    SpellScriptHook::AfterPolicyDirectDamage(after_direct_damage),
+    SpellScriptHook::AfterPolicyPeriodicDamage(after_periodic_damage),
+    SpellScriptHook::TargetContextDamageMultiplier(damage_multiplier),
+    SpellScriptHook::TargetPlan(target_plan),
+    SpellScriptHook::AreaFilter(area_filter),
+];
+
+fn context_hit(spell: u32) -> Option<ContextHitHook> {
+    (spell == SENTENCE).then_some(sentence_init)
+}
+
+fn enemy_context_hit(spell: u32) -> Option<EnemyContextHitHook> {
+    matches!(spell, 20271 | 406957 | 24275 | 1279408).then_some(judgment_mastery)
+}
+
+fn target_plan(spell: u32) -> Option<(targets::Relation, TargetPlanHook)> {
+    matches!(spell, LIGHT_WITHIN | TEMPEST | 431911)
+        .then_some((targets::Relation::Enemy, area_plan))
+}
+
+fn area_filter(spell: u32, index: u8) -> Option<AreaTargetFilter> {
+    (spell == 1306923 && index == 1).then_some(exclude_primary_cleave)
+}
 
 const BLADE: u32 = 184575;
 const SENTENCE: u32 = 343527;
@@ -40,12 +74,7 @@ fn selected(world: &World, caster: Entity, talent: u32) -> bool {
 
 /// Called after admission, before native charged modifiers are consumed.
 /// Ret393–430 snapshots Art of War/Righteous Cause before Blade executes.
-pub(in crate::spell_cast) fn before_cast(
-    world: &mut World,
-    caster: Entity,
-    spell: &SpellInfo,
-    depth: u8,
-) {
+fn before_cast(world: &mut World, caster: Entity, spell: &SpellInfo, depth: u8) {
     if !is_ret(world, caster) || spell.cast_damage_role == CastDamageRole::Secondary {
         return;
     }
@@ -81,7 +110,7 @@ fn schedule_light_within(
         chain_multiplier: 1.0,
     };
     // Ret412–414: a350ms delayed background1261160, not another paid Blade.
-    super::super::queued_triggers::schedule_full_trigger(world, &ctx, target, LIGHT_WITHIN, 350);
+    spell_cast::queued_triggers::schedule_full_trigger(world, &ctx, target, LIGHT_WITHIN, 350);
     // Ret416–430: the selected PTR stacking talent consumes one Righteous
     // Cause stack; without it the buff expires. This child does not reset cooldowns.
     let righteous = world.get::<ActiveAuras>(caster).and_then(|auras| {
@@ -158,12 +187,12 @@ fn cast_consecrated_blade(world: &mut World, caster: Entity) {
     world
         .entity_mut(caster)
         .insert(ConsecratedBladeReadyAt(now + 10.0));
-    let Some(spell) = super::super::load_triggered_spell(world, 26573, 1) else {
+    let Some(spell) = spell_cast::load_triggered_spell(world, 26573, 1) else {
         warn!("Consecrated Blade requires native26573");
         return;
     };
-    if super::super::launch_triggered_spell(world, caster, &spell, Some(caster), 1) {
-        super::batch9::spawn_consecration(world, caster, &spell);
+    if spell_cast::launch_triggered_spell(world, caster, &spell, Some(caster), 1) {
+        spell_cast::scripts::spawn_consecration(world, caster, &spell);
     }
 }
 
@@ -175,14 +204,14 @@ fn queue_tempest(world: &mut World, caster: Entity, parent: &SpellInfo, target: 
     } else {
         TEMPEST
     };
-    let Some(mut child) = super::super::load_triggered_spell(world, id, depth + 1) else {
+    let Some(mut child) = spell_cast::load_triggered_spell(world, id, depth + 1) else {
         return;
     };
     child.cast_damage_multiplier =
-        Some(super::script_effect_value(world, caster, TEMPEST_TALENT, 0) / 100.0);
+        Some(script_effect_value(world, caster, TEMPEST_TALENT, 0) / 100.0);
     child.cast_damage_role = CastDamageRole::Secondary;
     world.commands().queue(move |world: &mut World| {
-        if !super::super::launch_triggered_spell(world, caster, &child, Some(target), depth + 1) {
+        if !spell_cast::launch_triggered_spell(world, caster, &child, Some(target), depth + 1) {
             warn!("Ret Tempest native child refused");
         }
     });
@@ -190,7 +219,7 @@ fn queue_tempest(world: &mut World, caster: Entity, parent: &SpellInfo, target: 
 
 /// Ret35–75 adds accumulated damage BEFORE normal source/target multipliers.
 /// Native387113 suppresses those multipliers; preserve its native no-crit flag.
-pub(in crate::spell_cast) fn prepare_stored_damage(spell: &mut SpellInfo) {
+fn prepare_stored_damage(spell: &mut SpellInfo) {
     if spell.id != 387113 {
         return;
     }
@@ -211,13 +240,12 @@ pub(super) fn sentence_init(world: &mut World, ctx: &EffectCtx, target: Entity) 
     let Some(position) = targets::position(world, target) else {
         return;
     };
-    let Some(mut child) = super::super::load_triggered_spell(world, SENTENCE_INIT, ctx.depth + 1)
+    let Some(mut child) = spell_cast::load_triggered_spell(world, SENTENCE_INIT, ctx.depth + 1)
     else {
         return;
     };
     child.cast_destination = Some(position.to_array());
-    if !super::super::launch_triggered_spell(world, ctx.caster, &child, Some(target), ctx.depth + 1)
-    {
+    if !spell_cast::launch_triggered_spell(world, ctx.caster, &child, Some(target), ctx.depth + 1) {
         warn!("Execution Sentence initial child refused");
     }
 }
@@ -227,14 +255,14 @@ pub(super) fn judgment_mastery(world: &mut World, ctx: &EffectCtx, target: Entit
     if !is_ret(world, ctx.caster) || (ctx.spell.id == 24275 && ctx.depth > 0) {
         return;
     }
-    let mut chance = super::script_effect_value(world, ctx.caster, MASTERY, 3);
+    let mut chance = script_effect_value(world, ctx.caster, MASTERY, 3);
     if selected(world, ctx.caster, 383876) {
-        chance *= 1.0 + super::script_effect_value(world, ctx.caster, 383876, 0) / 100.0;
+        chance *= 1.0 + script_effect_value(world, ctx.caster, 383876, 0) / 100.0;
     }
     if selected(world, ctx.caster, HIGHLORDS_WRATH) {
         chance *= wrath_mastery_factor(world, ctx.caster);
     }
-    if crate::random::random::<f32>() * 100.0 < chance {
+    if combat::random::random::<f32>() * 100.0 < chance {
         spell_cast::cast_triggered(world, ctx.caster, 383921, Some(target), ctx.depth + 1);
     }
 }
@@ -252,12 +280,7 @@ pub(super) fn after_direct_damage(world: &mut World, ctx: &EffectCtx, target: En
     }
 }
 
-pub(in crate::spell_cast) fn after_periodic_damage(
-    world: &mut World,
-    ctx: &EffectCtx,
-    target: Entity,
-    crit: bool,
-) {
+fn after_periodic_damage(world: &mut World, ctx: &EffectCtx, target: Entity, crit: bool) {
     if ctx.spell.id == 431380 && selected(world, ctx.caster, AVATAR_TALENT) {
         // sc_paladin.cpp3048–3055: one native Avatar action per Dawnlight tick.
         spell_cast::cast_triggered(world, ctx.caster, 431911, Some(target), ctx.depth + 1);
@@ -268,7 +291,7 @@ pub(in crate::spell_cast) fn after_periodic_damage(
 }
 
 fn extend_truths_wake(world: &mut World, caster: Entity, target: Entity) {
-    let seconds = super::script_effect_value(world, caster, BURN_TO_ASH, 0);
+    let seconds = script_effect_value(world, caster, BURN_TO_ASH, 0);
     let now = spell_cast::now(world);
     // Ret752–759: extend only a still-ticking owned aura; preserve tick phase.
     let ticking = world.get::<ActiveAuras>(target).is_some_and(|auras| {
@@ -290,9 +313,9 @@ fn extend_truths_wake(world: &mut World, caster: Entity, target: Entity) {
 }
 
 fn wrath_mastery_factor(world: &World, caster: Entity) -> f32 {
-    1.0 + super::script_effect_value(world, caster, HIGHLORDS_WRATH, 2)
+    1.0 + script_effect_value(world, caster, HIGHLORDS_WRATH, 2)
         / 100.0
-        / super::script_effect_value(world, caster, HIGHLORDS_WRATH, 1)
+        / script_effect_value(world, caster, HIGHLORDS_WRATH, 1)
 }
 
 fn effect_affects(source: &SpellInfo, index: u8, spell: &SpellInfo) -> bool {
@@ -314,16 +337,10 @@ fn effect_affects(source: &SpellInfo, index: u8, spell: &SpellInfo) -> bool {
 
 /// sc_paladin.hpp1258–1271: replace the native mastery factor, never stack a
 /// second base mastery multiplier on already-whitelisted Final Verdict/Blade.
-pub(in crate::spell_cast) fn damage_multiplier(
-    world: &World,
-    ctx: &EffectCtx,
-    target: Entity,
-    periodic: bool,
-) -> f32 {
+fn damage_multiplier(world: &World, ctx: &EffectCtx, target: Entity, periodic: bool) -> f32 {
     let mut multiplier = mastery_multiplier(world, ctx, periodic);
     if ctx.spell.id == LIGHT_WITHIN && ctx.spell.cast_primary_target == Some(target) {
-        multiplier *=
-            1.0 + super::script_effect_value(world, ctx.caster, LIGHT_WITHIN_TALENT, 0) / 100.0;
+        multiplier *= 1.0 + script_effect_value(world, ctx.caster, LIGHT_WITHIN_TALENT, 0) / 100.0;
     }
     multiplier
 }
@@ -339,7 +356,7 @@ fn mastery_multiplier(world: &World, ctx: &EffectCtx, periodic: bool) -> f32 {
     if !effect_affects(mastery, 0, ctx.spell) && !matches!(ctx.spell.id, BLADE | SENTENCE) {
         return 1.0;
     }
-    let mut amount = super::script_effect_value(world, ctx.caster, MASTERY, 0) / 100.0;
+    let mut amount = script_effect_value(world, ctx.caster, MASTERY, 0) / 100.0;
     let hidden = store.get(HIDDEN_MASTERY).is_some_and(|hidden| {
         effect_affects(hidden, 0, ctx.spell) || effect_affects(hidden, 2, ctx.spell)
     });
@@ -379,7 +396,7 @@ pub(super) fn area_plan(
         LIGHT_WITHIN => (damage_area_radius(spell), 8.0),
         431911 => (
             damage_area_radius(spell),
-            super::script_effect_value(world, caster, AVATAR_TALENT, 5),
+            script_effect_value(world, caster, AVATAR_TALENT, 5),
         ),
         TEMPEST => {
             let storm = world
