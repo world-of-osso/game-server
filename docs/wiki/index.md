@@ -1,3 +1,4 @@
+- [Subtlety Lingering Shadow](systems/spell-casting.md#subtlety-lingering-shadow--2026-10-25) — native Dance-expiry counter, periodic decay and per-recipient residual; native RED→GREEN, numerical parity open.
 - [Downstream spell scripts](systems/spell-script-crate.md) — combat-owned registry, ordered downstream policy slices and first five leaf modules; remaining implementations stay in combat.
 - [Frost Mage DPS parity](investigations/frost-mage-dps-parity.md) — owned Freezing/Shatter, native Splinter copy boundaries, root/payload report-ID traps and remaining proc supply.
 - [Elemental literal fixture](systems/simc-apl.md#elemental-fixture-262) — exact profile rows, native Maelstrom/spell admission and named-action target counts; numerical parity remains separate.
