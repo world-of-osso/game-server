@@ -370,7 +370,20 @@ fn fire_hero_combustion_consumes_codex_spheres() {
 #[ignore = "requires exact Fire63 inputs and private70448 DB"]
 fn fire_hero_recent_heating_up_survives_a_noncritical_fireball() {
     let _seed = crate::random::seed_scope(70_448);
-    let mut run = prepare_literal(63, 1).unwrap();
+    let (mut profile, traits) = read_reference(63).unwrap();
+    let identity = inputs::read_actor(&profile).unwrap();
+    profile.equipment.clear();
+    profile.consumables.clear();
+    profile.omnium_talents = None;
+    let mut run = prepare_literal_reference(profile, &traits, 1, identity).unwrap();
+    preparation::warm_up_reference(&mut run).unwrap();
+    // The grace boundary requires a noncritical missile, not a particular
+    // position in the changing equipment/native-proc random stream.
+    run.app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(run.actor)
+        .unwrap()
+        .crit_pct = 0.0;
     let target = run.targets[0];
     let mut health = run.app.world_mut().get_mut::<Health>(target).unwrap();
     health.current = health.max * 0.5;
@@ -1119,8 +1132,11 @@ fn fire_phoenix_native_casts_deal_damage_and_feed_selected_mana_cascade() {
     let _seed = crate::random::seed_scope(70_448);
     let mut run = prepare_literal(63, 1).unwrap();
     let actor = run.actor;
-    // Invocation triggers this authentic summon child; players do not learn it.
-    crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 448659, Some(actor), 1);
+    // Ordinary Combustion captures the selected enemy before Invocation's
+    // triggered self-summon. A standalone child has neither that context nor
+    // active combat opponents in this otherwise idle fixture.
+    start_native(&mut run, 190319, actor);
+    run.app.update();
     let phoenix = fire_phoenix_actor(&mut run).expect("native summon/template precondition");
     for _ in 0..100 {
         run.app.update();
@@ -1320,6 +1336,11 @@ fn fire_execute_real_ignite_ticks_earn_selected_heat_shimmer() {
             .is_none(),
         "earned native Heat Shimmer makes ordinary Scorch instant"
     );
+    assert_eq!(
+        stacks(&run, 458964),
+        0,
+        "the actual ordinary Scorch spends its earned Heat Shimmer before later Ignite ticks can earn it again"
+    );
     preparation::finish_pending_setup(&mut run).unwrap();
     let scorch = run
         .app
@@ -1336,11 +1357,6 @@ fn fire_execute_real_ignite_ticks_earn_selected_heat_shimmer() {
     assert!(
         scorch.crit,
         "earned Heat Shimmer guarantees Scorch crit above execute health"
-    );
-    assert_eq!(
-        stacks(&run, 458964),
-        0,
-        "the actual ordinary Scorch spends its earned Heat Shimmer"
     );
 }
 

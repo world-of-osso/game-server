@@ -4,6 +4,7 @@ use server_combat as combat;
 use bevy::prelude::*;
 use combat::spell_cast::script_registry::SpellScriptRegistry;
 
+pub mod bombardments;
 mod modules;
 
 /// Install before the first cast, in both the server and transport-free simulation.

@@ -248,6 +248,13 @@ const POLICIES: &[Policy] = &[
         talent: 433871,
         relationship: Relationship::ReapplicationExtend { payload: 441172 },
     },
+    // SimC76f8118 sc_evoker.cpp8774: overlapping earned Bombardment marks extend.
+    Policy {
+        name: "SIMC_DEVASTATION_BOMBARDMENTS_REAPPLICATION_EXTEND",
+        spec: 1467,
+        talent: 434300,
+        relationship: Relationship::ReapplicationExtend { payload: 434473 },
+    },
     // SimC76f8118 sc_evoker.cpp6584–6595: one successful Disintegrate
     // spends one earned Mass Disintegrate use, not one per secondary recipient.
     Policy {

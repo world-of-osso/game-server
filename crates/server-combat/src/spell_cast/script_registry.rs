@@ -1789,12 +1789,6 @@ pub fn after_launch_proc_supply(world: &mut World, caster: Entity, spell: &Spell
     }
 }
 
-#[cfg(test)]
-use crate as combat;
-#[cfg(test)]
-#[path = "../../../server-spell-scripts/src/modules.rs"]
-mod fixtures;
-
 /// Source-preserving explicit conjures from an upstream native caller.
 pub fn conjure_from_spell(
     world: &mut World,
@@ -1878,3 +1872,14 @@ pub fn before_pending_script_events(world: &mut World) {
         }
     }
 }
+
+#[cfg(test)]
+use crate as combat;
+#[cfg(test)]
+#[path = "../../../server-spell-scripts/src/modules.rs"]
+mod fixtures;
+
+// Native unit fixtures compile the same helper against their own combat types.
+#[cfg(test)]
+#[path = "../../../server-spell-scripts/src/bombardments.rs"]
+pub mod bombardments;

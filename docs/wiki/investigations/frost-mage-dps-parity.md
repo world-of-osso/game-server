@@ -23,8 +23,9 @@ Verified: 2026-10-26. Spec64 uses the literal pinned76f8118 APL and native70448 
 | Paid-Lance Glaciate/Force of Will and once-per-Orb-pulse Fingers | GREEN896a8e1556;22native Frost/CI cases and15costed controls | 4aba2bff2 |
 | Rapid Refreezing native tick clock and qualified Spike-only source | RED8455eb05e5/351688fab3 → GREENf19726f012; costed controls retained | ca856c659 |
 | Ray execution-time10s Splinterstorm window; Frost Overflowing Energy feedback | RED1f25b0f870/1b8be9a776 → GREEN208adb8ca9;27Frost/2CI/15costed controls | ca48fe12e |
+| Shared rounded channel clock and native health-period selection | Ray RED2d0ea30702/FoF REDd8c6a93202;67probe cases and34landing cases GREEN | 4c9083c0c |
 
-Latest confirmed measurement, from train208adb8ca9:153,092.12 ST and232,077.22 three-target DPS (78.0463%/77.7192% of reference). Against Rapid checkpoint152,167.13/232,622.16, the combined-source change is+924.99ST/−544.94three-target DPS; this does not isolate either fix. The ±10% goal remains open. The separately owned shared precombat equipment-proc gate and ordinary category133 spell-GCD haste fixes are now on master. The parent's combined remeasurement3f737611d8 includes64; its result is pending.
+Latest confirmed measurement, trained45d940de on4c9083c0c:172,980.544444 ST and263,644.423333 three-target DPS (88.1855%/88.2905% of reference). Both remain below90%:3,559.324166 ST and5,104.640590 three-target DPS are still needed. This tree includes several shared/class landings; the gain is not an isolated channel-clock effect. The earlier208adb8ca9 measurement was153,092.12/232,077.22. The ±10% goal remains open; lead owns the next combined all-spec remeasurement. Artifacts: private `parity-64/post-channel-clock/`.
 
 ## Investigation traps and remaining work
 
@@ -32,7 +33,7 @@ Latest confirmed measurement, from train208adb8ca9:153,092.12 ST and232,077.22 t
 - After the third landing, actual remaining gaps rank ST Shatter23.6k, Splinter16.3k, Spike10.3k; three-target Shatter42.0k, Controlled Instincts20.0k, Orb18.7k and Splinter16.7k. The raw spell-ID report must be reconciled as above.
 - Deep Shatter and post-consumption Brain Freeze are now qualified above. Their original2RED193e699b7e compared plain/selected critical17,865 and plain/earned Flurry59,618.
 - The Glaciate test uses `full_recharge_time`, not admission `remains`, which is zero while another charge is usable. Native modified Shatter cap is6, not raw4: selected Heart of Ice/Polished Focus modifiers make the qualified reduction0.6s and Force of Will count3Splinters.
-- Orb-tick Fingers and Overflowing Energy are now qualified above. Shared precombat equipment-proc admission and ordinary spell-GCD haste are now on master; their joint remeasurement remains pending. Do not duplicate those fixes or replace missing relationships with coefficient tuning.
+- Orb-tick Fingers and Overflowing Energy are now qualified above. Shared precombat equipment-proc admission and ordinary spell-GCD haste are now included in the latest measured tree; do not attribute that combined change to one fix. Do not duplicate those fixes or replace missing relationships with coefficient tuning.
 - Requested periodic-deadline probe5ecd5357cb on6f842e121 ran25GREEN controls but failed the two unimplemented Overflowing Energy assertions. The train skipped its measurement; there is no ST/three-target delta and no isolated proof of a periodic-rule regression.
 - Shared flask and augment-rune bindings belong to the shared-consumables owner, not this investigation.
 

@@ -5,7 +5,7 @@
 ## What it must do
 
 - [ ] Preserve policy traversal, first-match lookup, additive hook order, cast depth, resource payment, RNG, targets and native payloads.
-- [ ] Install the same registry in the server and transport-free simulation, including native fixture harnesses and cached simulation apps.
+- [ ] Install the same registry in the server and transport-free simulation, including native fixture harnesses and cached simulation apps. Combat unit fixtures include the same downstream native Bombardments helper beside the registry modules and bind its parent combat alias to the unit-test crate; simulation cadence remains opt-in.
 - [ ] Permit an existing module's policies and hooks to change without editing combat or a central policy table. A new downstream module needs only its file and one alphabetical registration line; registration must not reorder existing policy traversal.
 - [ ] Keep combat independent of the downstream crate in the production dependency graph.
 - [ ] Keep new dispatch-stage callback/lookup signatures independent, even when their current signatures match.
