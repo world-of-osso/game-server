@@ -315,10 +315,14 @@ FOLLOWER_HUNTER_PET_SIMC_DEFAULT = 174884
 # SIMC_BM_HOWL_OF_THE_PACK_LEADER_CYCLE: approved source-only edges, not
 # fabricated native TriggerSpell data. SimC76f8118 hunter3776–3840/7830–7834;
 # native471993 then supplies its actual471990 trigger and234018 summon.
-HOWL_POLICY_CHILDREN = ((471876, 1222271), (471876, 472020), (471876, 471993))
-HOWL_POLICY_VALUES = ','.join(f'({parent},{child})' for parent, child in HOWL_POLICY_CHILDREN)
+# Invocation's scripted child: SimC76f8118 sc_mage.cpp3531–3543.
+# Native448659 then supplies authentic223453 and SummonProperties5940.
+CLASS_SUMMON_POLICY_CHILDREN = (
+    (471876, 1222271), (471876, 472020), (471876, 471993), (448658, 448659),
+)
+CLASS_SUMMON_POLICY_VALUES = ','.join(f'({parent},{child})' for parent, child in CLASS_SUMMON_POLICY_CHILDREN)
 CLASS_SUMMON_ENTRIES = f"""WITH RECURSIVE policy_links(parent,child) AS (
-    VALUES {HOWL_POLICY_VALUES}
+    VALUES {CLASS_SUMMON_POLICY_VALUES}
 ), class_line AS (
     SELECT l.ID, c.ID AS class_id FROM skill_line l JOIN chr_classes c
       ON c.Name_lang=l.DisplayName_lang WHERE l.CategoryID=7 AND c.ID BETWEEN 1 AND 13
