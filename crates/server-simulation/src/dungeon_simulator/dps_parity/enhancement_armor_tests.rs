@@ -47,6 +47,7 @@ fn actual_damage(root: u32, armorless: bool) -> Vec<(u32, i32)> {
                 && match root {
                     384352 => event.spell_id == Some(469270),
                     115356 => matches!(event.spell_id, Some(115357 | 115360)),
+                    17364 => matches!(event.spell_id, Some(32175 | 32176)),
                     _ => unreachable!(),
                 }
         })
@@ -57,7 +58,32 @@ fn actual_damage(root: u32, armorless: bool) -> Vec<(u32, i32)> {
         "actual native root{root} must deal its weapon/area damage: {:?}",
         &events[before..]
     );
+    println!(
+        "ENHANCEMENT_ARMOR root={root} armorless={armorless} armor_after={} damage={damage:?}",
+        run.app
+            .world()
+            .get::<crate::level_scaling::CreatureArmor>(target)
+            .unwrap()
+            .0
+    );
     damage
+}
+
+#[test]
+#[ignore = "native263 reference inputs and private world database"]
+fn enhancement_actual_physical_stormstrike_is_reduced_by_target_armor() {
+    let armored: i32 = actual_damage(17364, false)
+        .iter()
+        .map(|(_, amount)| *amount)
+        .sum();
+    let unarmored: i32 = actual_damage(17364, true)
+        .iter()
+        .map(|(_, amount)| *amount)
+        .sum();
+    assert!(
+        armored < unarmored,
+        "the real physical control must distinguish armor: armored={armored}, unarmored={unarmored}"
+    );
 }
 
 #[test]
