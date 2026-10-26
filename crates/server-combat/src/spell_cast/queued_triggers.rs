@@ -112,7 +112,7 @@ pub(super) fn schedule_force_cast(
 }
 
 /// Scripted FULL_MASK callback, sharing the ordinary owner/target lifetime checks.
-pub(super) fn schedule_full_trigger(
+pub fn schedule_full_trigger(
     world: &mut World,
     ctx: &super::EffectCtx,
     target: Entity,

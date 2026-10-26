@@ -615,7 +615,7 @@ fn level_scaled_points(
 }
 
 /// Base points (`calc_base_value`) with the caster's Points and PointsIndexN mods.
-pub(crate) fn modded_base_points(
+pub fn modded_base_points(
     world: &World,
     caster: Entity,
     spell: &SpellInfo,
@@ -1646,8 +1646,12 @@ fn damage_source_amount(
         let giantkiller =
             super::script_registry::target_damage_multiplier(world, ctx.caster, target, ctx.spell);
         let ret_damage = super::scripts::ret_damage_multiplier(world, ctx, target, periodic);
-        let shadow_weaving =
-            super::scripts::shadow_weaving_multiplier(world, bonus_caster, target, ctx.spell.id);
+        let shadow_weaving = super::script_registry::dot_mastery_multiplier(
+            world,
+            bonus_caster,
+            target,
+            ctx.spell.id,
+        );
         #[cfg(any(test, feature = "test-support"))]
         factor_capture::record_done(
             world,
@@ -2044,8 +2048,8 @@ fn deal_source_damage_and_report(
     if hot_streak_hit {
         super::scripts::record_fire_hit(world, ctx.caster, ctx.spell, crit, guaranteed_crit);
     }
-    if periodic && ctx.spell.id == super::scripts::FLAME_SHOCK {
-        super::scripts::roll_flame_shock_tick(world, ctx.caster);
+    if periodic {
+        super::script_registry::periodic_damage_finished(world, ctx);
     }
     // Proc events carry the damage in the target's health units (level scaling), which
     // breakable crowd control compares with the target's max health.

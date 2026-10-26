@@ -280,12 +280,7 @@ impl AuraEffectState {
 
 /// Source-qualified initial phase on a newly applied native periodic effect.
 /// Later ticks retain the same native interval and ordinal clock.
-pub(crate) fn randomize_initial_periodic_phase(
-    world: &mut World,
-    unit: Entity,
-    instance: u32,
-    index: u8,
-) {
+pub fn randomize_initial_periodic_phase(world: &mut World, unit: Entity, instance: u32, index: u8) {
     let now = aura_now(world);
     let mut auras = world
         .get_mut::<ActiveAuras>(unit)
