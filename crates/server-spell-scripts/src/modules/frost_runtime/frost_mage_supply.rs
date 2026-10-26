@@ -1,8 +1,8 @@
 //! Frost and Spellslinger execution producers, using authored native amounts.
 use super::{AfterCastHook, combat, script_effect_value};
+use bevy::prelude::*;
 use combat::auras::{self, ActiveAuras, AuraApplication, AuraSource, procs};
 use combat::spell_info::SpellInfo;
-use bevy::prelude::*;
 use shared::components::ActiveSpec;
 
 const AUGURY: u32 = 1280165;

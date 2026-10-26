@@ -1,8 +1,8 @@
 //! Prayer of Mending; TC a352b1fa spell_priest.cpp3636–3806.
 //! Stack values and OriginalCaster are real per-cast arguments, including flight.
 use super::combat;
-use combat::random as rand;
 use bevy::prelude::*;
+use combat::random as rand;
 use rand::seq::SliceRandom;
 use shared::components::{Health, Player};
 

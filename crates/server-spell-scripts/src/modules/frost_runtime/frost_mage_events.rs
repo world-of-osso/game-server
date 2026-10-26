@@ -1,7 +1,7 @@
 //! Native delayed mage callbacks; read their authored recipient at execution.
 use super::combat;
-use combat::spell_cast;
 use bevy::prelude::*;
+use combat::spell_cast;
 use std::collections::{BTreeMap, VecDeque};
 
 #[derive(Resource, Default)]

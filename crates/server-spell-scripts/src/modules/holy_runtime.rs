@@ -2,16 +2,21 @@
 use super::combat;
 use bevy::prelude::*;
 use combat::auras::scripts::AuraScripts;
-use combat::spell_cast::{script_registry::{SpellScriptHook, TargetPlanHook}, targets::Relation};
-use combat::spell_cast::scripts::{AfterCastHook, AreaTargetFilter, reduce_cooldown, script_effect_value};
+use combat::spell_cast::scripts::{
+    AfterCastHook, AreaTargetFilter, reduce_cooldown, script_effect_value,
+};
+use combat::spell_cast::{
+    script_registry::{SpellScriptHook, TargetPlanHook},
+    targets::Relation,
+};
 use combat::spell_info::{SpellInfo, SpellStore};
 
 #[path = "holy_runtime/holy_priest.rs"]
 mod holy_priest;
-#[path = "holy_runtime/prayer_of_mending.rs"]
-mod prayer_of_mending;
 #[path = "holy_runtime/prayer_healing.rs"]
 mod prayer_healing;
+#[path = "holy_runtime/prayer_of_mending.rs"]
+mod prayer_of_mending;
 
 const FLASH_HEAL: u32 = 2061;
 const PRAYER_OF_HEALING: u32 = 596;
@@ -20,7 +25,12 @@ const SANCTIFY: u32 = 34861;
 
 pub const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::SupportAuraRegistration(register_auras),
-    SpellScriptHook::NamedAuraFields(&[(109186, 0), (200183, 0), (390994, 1), (prayer_of_mending::WARD, 0)]),
+    SpellScriptHook::NamedAuraFields(&[
+        (109186, 0),
+        (200183, 0),
+        (390994, 1),
+        (prayer_of_mending::WARD, 0),
+    ]),
     SpellScriptHook::NativeAfterCast(after_cast),
     SpellScriptHook::EffectHandler(prayer_of_mending::effect_handler),
     SpellScriptHook::AreaFilter(prayer_of_mending::area_filter),

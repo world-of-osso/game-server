@@ -1,7 +1,7 @@
 //! Native70448 Holy scripts. Numeric values remain in the local spell catalog.
 use super::combat;
-use combat::random as rand;
 use bevy::prelude::*;
+use combat::random as rand;
 
 use combat::auras::procs::AuraEvent;
 use combat::auras::scripts::{AuraScript, AuraScripts};

@@ -55,7 +55,7 @@ pub(super) fn record_reduction(
     word.applied_seconds += applied;
 }
 
-pub(super) fn record_surge_gain(world: &mut World, caster: Entity, before: u8, after: u8) {
+pub fn record_surge_gain(world: &mut World, caster: Entity, before: u8, after: u8) {
     let Some(mut metrics) = world.get_resource_mut::<HolyMetrics>() else {
         return;
     };
@@ -64,7 +64,7 @@ pub(super) fn record_surge_gain(world: &mut World, caster: Entity, before: u8, a
     actor.surge_effective_gains += u64::from(after.saturating_sub(before));
 }
 
-pub(super) fn record_surge_use(world: &mut World, caster: Entity) {
+pub fn record_surge_use(world: &mut World, caster: Entity) {
     if let Some(mut metrics) = world.get_resource_mut::<HolyMetrics>() {
         metrics
             .actors

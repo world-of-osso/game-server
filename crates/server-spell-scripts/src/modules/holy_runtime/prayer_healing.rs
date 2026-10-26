@@ -1,7 +1,10 @@
 //! Native Prayer of Healing injured-ally plan.
-use super::{combat, script_effect_value, PRAYER_OF_HEALING};
+use super::{PRAYER_OF_HEALING, combat, script_effect_value};
 use bevy::prelude::*;
-use combat::spell_cast::{PlannedEffect, TargetPlan, targets::{self, Relation}};
+use combat::spell_cast::{
+    PlannedEffect, TargetPlan,
+    targets::{self, Relation},
+};
 use combat::spell_info::SpellInfo;
 
 fn select_prayer_allies(

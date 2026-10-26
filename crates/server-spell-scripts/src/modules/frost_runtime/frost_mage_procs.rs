@@ -4,7 +4,10 @@ use bevy::prelude::*;
 use shared::components::ActiveSpec;
 
 use combat::auras::{self, ActiveAuras, AuraApplication, AuraSource};
-use combat::spell_cast::{self, effects::{EffectCtx, EffectHandler}};
+use combat::spell_cast::{
+    self,
+    effects::{EffectCtx, EffectHandler},
+};
 use combat::spell_info::{SpellEffect, SpellInfo, SpellStore};
 
 pub(super) const FINGERS: u32 = 44544;
@@ -15,12 +18,7 @@ pub(super) fn effect_handler(spell: u32, index: u8) -> Option<EffectHandler> {
     ((spell, index) == (30455, 0)).then_some(launch_lance_payload)
 }
 
-fn launch_lance_payload(
-    world: &mut World,
-    ctx: &EffectCtx,
-    _effect: &SpellEffect,
-    target: Entity,
-) {
+fn launch_lance_payload(world: &mut World, ctx: &EffectCtx, _effect: &SpellEffect, target: Entity) {
     let Some(mut payload) = spell_cast::load_triggered_spell(world, 228598, ctx.depth + 1) else {
         return;
     };
@@ -55,11 +53,7 @@ pub(super) fn owns_proc(spell: u32) -> bool {
     matches!(spell, FINGERS | THERMAL | BRAIN_FREEZE)
 }
 
-pub(super) fn snapshot_launch_auras(
-    world: &World,
-    caster: Entity,
-    spell: &mut SpellInfo,
-) {
+pub(super) fn snapshot_launch_auras(world: &World, caster: Entity, spell: &mut SpellInfo) {
     if !is_frost(world, caster) {
         return;
     }
