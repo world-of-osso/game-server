@@ -1477,6 +1477,141 @@ fn fire_execute_fuel_amplifies_actual_flamestrike_by_its_native_target_count() {
     );
 }
 
+#[test]
+#[ignore = "requires exact Fire63 inputs and private70448 DB"]
+fn fire_ignite_fire_blast_spreads_existing_native_tick_to_other_enemies() {
+    let _seed = crate::random::seed_scope(70_448);
+    let (mut profile, traits) = read_reference(63).unwrap();
+    let identity = inputs::read_actor(&profile).unwrap();
+    profile.equipment.clear();
+    profile.consumables.clear();
+    profile.omnium_talents = None;
+    let mut run = prepare_literal_reference(profile, &traits, 3, identity).unwrap();
+    let tick = |run: &Run, target: Entity| {
+        run.app
+            .world()
+            .get::<ActiveAuras>(target)
+            .and_then(|auras| {
+                auras
+                    .iter()
+                    .find(|aura| aura.spell_id == 12654 && aura.caster == run.actor)
+            })
+            .and_then(|aura| aura.effects.iter().find(|effect| effect.index == 0))
+            .map(|effect| effect.amount)
+    };
+    let primary = run.targets[0];
+    start_native(&mut run, 108853, primary);
+    for _ in 0..12 {
+        run.app.update();
+    }
+    let source = tick(&run, primary).expect("first actual Fire Blast earned native Ignite");
+    assert!(source > 0.0);
+    assert!(
+        run.targets[1..]
+            .iter()
+            .all(|target| tick(&run, *target).is_none()),
+        "the first Fire Blast has no pre-existing Ignite to spread"
+    );
+    // sc_mage.cpp2240–2242: the native mastery effect5 cap includes
+    // selected Ignition's modifier; this profile admits one secondary.
+    let cap = crate::spell_cast::scripts::script_effect_value(run.app.world(), run.actor, 12846, 4)
+        as usize;
+    assert!(cap > 0, "selected native Ignition enables spread");
+    start_native(&mut run, 108853, primary);
+    run.app.update();
+    let copied: Vec<_> = run.targets[1..]
+        .iter()
+        .filter_map(|target| tick(&run, *target))
+        .collect();
+    assert_eq!(
+        copied.len(),
+        cap.min(run.targets.len() - 1),
+        "next actual Fire Blast spreads its pre-existing owned Ignite to the native cap"
+    );
+    for copied in copied {
+        assert!(
+            (copied / source - 1.0).abs() < 0.001,
+            "spread copies the prior native tick, before the new Fire Blast contribution: {source} -> {copied}"
+        );
+    }
+}
+
+#[test]
+#[ignore = "requires exact Fire63 inputs and private70448 DB"]
+fn fire_execute_molten_fury_amplifies_actual_damage_below_native_health_gate() {
+    let hit = |selected: bool| {
+        let _seed = crate::random::seed_scope(70_448);
+        let (mut profile, traits) = read_reference(63).unwrap();
+        let identity = inputs::read_actor(&profile).unwrap();
+        profile.equipment.clear();
+        profile.consumables.clear();
+        profile.omnium_talents = None;
+        let mut run = prepare_literal_reference(profile, &traits, 1, identity).unwrap();
+        let actor = run.actor;
+        let target = run.targets[0];
+        let percent = run
+            .app
+            .world()
+            .get::<ActiveAuras>(actor)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 457803)
+            .unwrap()
+            .effects
+            .iter()
+            .find(|effect| effect.index == 1)
+            .unwrap()
+            .amount;
+        if !selected {
+            let known = run
+                .app
+                .world()
+                .get::<crate::class_progression::KnownSpells>(actor)
+                .unwrap()
+                .iter()
+                .filter(|id| *id != 457803)
+                .collect();
+            run.app
+                .world_mut()
+                .entity_mut(actor)
+                .insert(crate::class_progression::KnownSpells::fixture(known));
+            crate::auras::remove_auras(
+                run.app.world_mut(),
+                actor,
+                crate::auras::RemoveReason::Consumed,
+                |aura| aura.spell_id == 457803,
+            );
+        }
+        preparation::warm_up_reference(&mut run).unwrap();
+        let mut health = run.app.world_mut().get_mut::<Health>(target).unwrap();
+        health.current = health.max * 0.2;
+        start_native(&mut run, 108853, target);
+        run.app.update();
+        let event = run
+            .app
+            .world()
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .find(|event| {
+                event.source == Some(actor.to_bits())
+                    && event.target == Some(target.to_bits())
+                    && event.spell_id == Some(108853)
+                    && event.kind == CombatLogKind::Damage
+            })
+            .expect("actual ordinary Fire Blast impact");
+        assert!(event.crit);
+        (event.amount as f32, percent)
+    };
+    let baseline = hit(false).0;
+    let (amplified, percent) = hit(true);
+    let expected = baseline * (1.0 + percent / 100.0);
+    assert!(
+        (amplified / expected - 1.0).abs() < 0.001,
+        "selected Molten Fury changes actual low-health Fire Blast by native{percent}%: {baseline} -> {amplified}, expected{expected}"
+    );
+}
+
 fn reacted(run: &Run, name: &str) -> f64 {
     use crate::simc_apl_native::{Bindings, Encounter, FightStyle, NativeFacts};
     let bindings = Bindings {
