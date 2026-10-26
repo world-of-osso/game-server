@@ -42,6 +42,9 @@ fn living_flame_hit(run: &mut Run, primary: Entity) -> (i32, bool) {
 }
 
 fn fury_sample(selected: bool) -> ((i32, bool), (i32, bool), f64) {
+    // The actual setup/empower sequence rolls equipment procs before the hit.
+    // Reset the complete sequence, not only the final cast, for paired inputs.
+    let _setup_seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(1467, 1).unwrap();
     engage(&mut run);
     let primary = run.targets[0];
