@@ -627,80 +627,463 @@ fn fire_feedback_fireball_applies_owned_controlled_destruction() {
 #[test]
 #[ignore = "requires exact Fire63 inputs and private70448 DB"]
 fn fire_feedback_hot_streak_ignite_includes_native_inflame() {
-    let _seed = crate::random::seed_scope(70_448);
-    let mut run = prepare_literal(63, 1).unwrap();
-    let target = run.targets[0];
-    // Snapshot the native input before this hit's other native proc callbacks
-    // can change mastery. Later aura state is not this contribution's input.
-    let (mastery, inflame) = {
-        let auras = run.app.world().get::<ActiveAuras>(run.actor).unwrap();
-        let amount = |spell| {
-            auras
-                .iter()
-                .find(|aura| aura.spell_id == spell)
-                .unwrap()
-                .effects
-                .iter()
-                .find(|effect| effect.index == 0)
-                .unwrap()
-                .amount
-        };
-        (amount(12846), amount(417467))
+    let contribution = |with_inflame: bool| {
+        let _seed = crate::random::seed_scope(70_448);
+        let (mut profile, traits) = read_reference(63).unwrap();
+        let identity = inputs::read_actor(&profile).unwrap();
+        // This class-effect control excludes independent item/oil/rune damage:
+        // those real native procs add their own unaffected Ignite to the bank.
+        profile.equipment.clear();
+        profile.consumables.clear();
+        profile.omnium_talents = None;
+        let mut run = prepare_literal_reference(profile, &traits, 1, identity).unwrap();
+        let actor = run.actor;
+        let target = run.targets[0];
+        if !with_inflame {
+            crate::auras::remove_auras(
+                run.app.world_mut(),
+                actor,
+                crate::auras::RemoveReason::Consumed,
+                |aura| aura.spell_id == 417467,
+            );
+        }
+        crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 48108, Some(actor), 1);
+        start_native(&mut run, 11366, target);
+        preparation::finish_pending_setup(&mut run).unwrap();
+        let world = run.app.world();
+        let damage = world
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .find(|event| {
+                event.source == Some(actor.to_bits())
+                    && event.target == Some(target.to_bits())
+                    && event.spell_id == Some(11366)
+                    && event.kind == CombatLogKind::Damage
+            })
+            .expect("real Pyroblast impact")
+            .amount as f32;
+        let tick = world
+            .get::<ActiveAuras>(target)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 12654 && aura.caster == actor)
+            .unwrap()
+            .effects
+            .iter()
+            .find(|effect| effect.index == 0)
+            .unwrap()
+            .amount;
+        assert!(damage > 0.0 && tick > 0.0);
+        tick / damage
     };
-    crate::spell_cast::cast_triggered(run.app.world_mut(), run.actor, 48108, Some(run.actor), 1);
-    start_native(&mut run, 11366, target);
-    preparation::finish_pending_setup(&mut run).unwrap();
-    let world = run.app.world();
-    let damage = world
-        .resource::<ObservedCombatEvents>()
-        .0
-        .iter()
-        .find(|event| {
-            event.source == Some(run.actor.to_bits())
-                && event.target == Some(target.to_bits())
-                && event.spell_id == Some(11366)
-                && event.kind == CombatLogKind::Damage
-        })
-        .expect("real Pyroblast impact")
-        .amount as f32;
-    let dot = world
-        .resource::<crate::spell_info::SpellStore>()
-        .get(12654)
-        .unwrap();
-    let duration = dot.misc.as_ref().unwrap().duration.unwrap().duration_ms;
-    let period = dot
-        .effects
-        .iter()
-        .find(|effect| effect.index == 0)
-        .unwrap()
-        .aura_period_ms;
-    let ticks = duration as u32 / period;
-    assert!(
-        mastery > 0.0 && inflame > 0.0,
-        "real native Ignite mastery and selected Inflame"
-    );
-    // The combat log uses dealt-damage units; native proc amounts and the
-    // stored Ignite bank use victim-HP units (level_scaling::health_loss).
-    let attacker = crate::level_scaling::UnitScaling::of(world, run.actor);
-    let victim = crate::level_scaling::UnitScaling::of(world, target);
-    let hp_multiplier = victim.health_multiplier(&attacker);
-    let hp_damage = (damage / hp_multiplier).trunc();
-    let minimum_tick = hp_damage * mastery / 100.0 * 2.0 * (1.0 + inflame / 100.0) / ticks as f32;
-    let tick = world
-        .get::<ActiveAuras>(target)
+    let baseline = contribution(false);
+    let inflamed = contribution(true);
+    let run = prepare_literal(63, 1).unwrap();
+    let percent = run
+        .app
+        .world()
+        .get::<ActiveAuras>(run.actor)
         .unwrap()
         .iter()
-        .find(|aura| aura.spell_id == 12654 && aura.caster == run.actor)
+        .find(|aura| aura.spell_id == 417467)
         .unwrap()
         .effects
         .iter()
         .find(|effect| effect.index == 0)
         .unwrap()
         .amount;
+    let expected = baseline * (1.0 + percent / 100.0);
     assert!(
-        tick + 1.0 >= minimum_tick,
-        "Ignite must retain HS and native Inflame contributions in HP units: {tick} < {minimum_tick}; HP multiplier={hp_multiplier}"
+        (inflamed / expected - 1.0).abs() < 0.001,
+        "Inflame changes actual Ignite contribution by its native multiplier: {baseline} -> {inflamed}, expected{expected}"
     );
+}
+
+#[test]
+#[ignore = "requires exact Fire63 inputs and private70448 DB"]
+fn fire_feedback_fevered_stack_uses_native_talent_critical_damage() {
+    let hit = |with_fevered: bool| {
+        let _seed = crate::random::seed_scope(70_448);
+        let mut run = prepare_literal(63, 1).unwrap();
+        let target = run.targets[0];
+        if with_fevered {
+            crate::spell_cast::cast_triggered(
+                run.app.world_mut(),
+                run.actor,
+                383811,
+                Some(run.actor),
+                1,
+            );
+        }
+        start_native(&mut run, 108853, target);
+        let event = run
+            .app
+            .world()
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .find(|event| {
+                event.source == Some(run.actor.to_bits())
+                    && event.target == Some(target.to_bits())
+                    && event.spell_id == Some(108853)
+                    && event.kind == CombatLogKind::Damage
+            })
+            .unwrap();
+        assert!(event.crit);
+        event.amount as f32
+    };
+    let baseline = hit(false);
+    let fevered = hit(true);
+    let run = prepare_literal(63, 1).unwrap();
+    let percent = run
+        .app
+        .world()
+        .get::<ActiveAuras>(run.actor)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 383810)
+        .unwrap()
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap()
+        .amount;
+    let expected = baseline * (1.0 + percent / 100.0);
+    assert!(
+        (fevered / expected - 1.0).abs() < 0.001,
+        "one Fevered stack uses selected native talent damage: {baseline} -> {fevered}, expected{expected}"
+    );
+}
+
+#[test]
+#[ignore = "requires exact Fire63 inputs and private70448 DB"]
+fn fire_meteorite_pyrocosm_impacts_reduce_active_fire_blast_recharge() {
+    use crate::simc_apl_native::{Bindings, Encounter, FightStyle, NativeFacts};
+    let mut run = prepare_literal(63, 1).unwrap();
+    let target = run.targets[0];
+    start_native(&mut run, 108853, target);
+    let bindings = Bindings {
+        actions: [("fire_blast".into(), 108853)].into(),
+        ..default()
+    };
+    let remaining = |run: &Run| {
+        NativeFacts::new(
+            run.app.world(),
+            run.actor,
+            &bindings,
+            Encounter::Fixture {
+                started_at: 0.0,
+                duration: 300.0,
+                style: FightStyle::Patchwerk,
+            },
+            1,
+        )
+        .value("cooldown.fire_blast.charges_fractional")
+        .unwrap()
+    };
+    let before = remaining(&run);
+    start_native(&mut run, 449569, target);
+    assert!(
+        run.app
+            .world()
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|event| {
+                event.spell_id == Some(449569)
+                    && event.kind == CombatLogKind::Damage
+                    && event.amount > 0
+            }),
+        "native Meteorite actually impacts before reading recharge"
+    );
+    let after = remaining(&run);
+    assert!(
+        after > before,
+        "a native Pyrocosm meteorite impact reduces active Fire Blast recharge: {before} -> {after}"
+    );
+}
+
+#[test]
+#[ignore = "requires exact Fire63 inputs and private70448 DB"]
+fn fire_meteorite_pyrocosm_fireballs_launch_native_meteorites() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(63, 1).unwrap();
+    let target = run.targets[0];
+    let mut health = run.app.world_mut().get_mut::<Health>(target).unwrap();
+    health.current = health.max * 0.5;
+    for _ in 0..24 {
+        start_native(&mut run, 133, target);
+        preparation::finish_pending_setup(&mut run).unwrap();
+        for _ in 0..20 {
+            run.app.update();
+        }
+    }
+    assert!(
+        run.app
+            .world()
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|event| {
+                event.source == Some(run.actor.to_bits())
+                    && event.spell_id == Some(449569)
+                    && event.kind == CombatLogKind::Damage
+                    && event.amount > 0
+            }),
+        "selected Pyrocosm produces actual native meteorite damage from Fireball hits"
+    );
+}
+
+#[test]
+#[ignore = "requires exact Fire63 inputs and private70448 DB"]
+fn fire_meteor_native_burn_ticks_after_scheduled_impact() {
+    let mut run = prepare_literal(63, 1).unwrap();
+    let target = run.targets[0];
+    start_native(&mut run, 153561, target);
+    for _ in 0..180 {
+        run.app.update();
+    }
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0;
+    assert!(
+        events
+            .iter()
+            .any(|event| event.spell_id == Some(351140) && event.kind == CombatLogKind::Damage),
+        "Meteor really impacted first"
+    );
+    assert!(
+        events.iter().any(|event| {
+            event.source == Some(run.actor.to_bits())
+                && event.target == Some(target.to_bits())
+                && event.spell_id == Some(155158)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0
+        }),
+        "native Meteor Burn must tick on the target inside its real field"
+    );
+}
+
+#[test]
+#[ignore = "requires exact Fire63 inputs and private70448 DB"]
+fn fire_meteor_deep_impact_amplifies_only_nearest_target() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(63, 3).unwrap();
+    let target = run.targets[0];
+    crate::spell_cast::cast_triggered(run.app.world_mut(), run.actor, 190319, Some(run.actor), 1);
+    start_native(&mut run, 153561, target);
+    for _ in 0..140 {
+        run.app.update();
+    }
+    let hits: Vec<_> = run
+        .app
+        .world()
+        .resource::<ObservedCombatEvents>()
+        .0
+        .iter()
+        .filter(|event| {
+            event.source == Some(run.actor.to_bits())
+                && event.spell_id == Some(351140)
+                && event.kind == CombatLogKind::Damage
+        })
+        .collect();
+    assert_eq!(hits.len(), 3);
+    assert!(
+        hits.iter().all(|hit| hit.crit),
+        "native Combustion keeps all three outcomes critical"
+    );
+    let primary = hits
+        .iter()
+        .find(|hit| hit.target == Some(target.to_bits()))
+        .unwrap()
+        .amount as f32;
+    let secondary = hits
+        .iter()
+        .find(|hit| hit.target == Some(run.targets[1].to_bits()))
+        .unwrap()
+        .amount as f32;
+    let percent = run
+        .app
+        .world()
+        .get::<ActiveAuras>(run.actor)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 1254857)
+        .unwrap()
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap()
+        .amount;
+    let expected = 1.0 + percent / 100.0;
+    let variance = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(351140)
+        .unwrap()
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap()
+        .variance
+        .abs()
+        * 0.5;
+    // Each target has an independent native ±variance/2 roll. Compare the
+    // resulting ratio's exact authored bounds, not an impossible point value.
+    let minimum = expected * (1.0 - variance) / (1.0 + variance);
+    let maximum = expected * (1.0 + variance) / (1.0 - variance);
+    let ratio = primary / secondary;
+    assert!(
+        (minimum - 0.0001..=maximum + 0.0001).contains(&ratio),
+        "only the closest Meteor target gets native Deep Impact within native variance: {ratio}, expected{minimum}..{maximum}"
+    );
+}
+
+#[test]
+#[ignore = "requires exact Fire63 inputs and private70448 DB"]
+fn fire_ignite_controlled_destruction_scales_only_owned_ignite_contribution() {
+    let contribution = |keep_debuff: bool| {
+        let _seed = crate::random::seed_scope(70_448);
+        let mut run = prepare_literal(63, 1).unwrap();
+        let actor = run.actor;
+        let target = run.targets[0];
+        for _ in 0..20 {
+            start_native(&mut run, 133, target);
+            preparation::finish_pending_setup(&mut run).unwrap();
+            for _ in 0..20 {
+                run.app.update();
+            }
+        }
+        let multiplier = {
+            let aura = run
+                .app
+                .world()
+                .get::<ActiveAuras>(target)
+                .unwrap()
+                .iter()
+                .find(|aura| aura.spell_id == 453268 && aura.caster == actor)
+                .unwrap();
+            let percent = aura
+                .effects
+                .iter()
+                .find(|effect| effect.index == 0)
+                .unwrap()
+                .amount;
+            assert!(
+                aura.stacks >= 10 && percent > 0.0,
+                "real earned target stacks"
+            );
+            1.0 + percent * f32::from(aura.stacks) / 100.0
+        };
+        crate::auras::remove_auras(
+            run.app.world_mut(),
+            target,
+            crate::auras::RemoveReason::Consumed,
+            |aura| aura.spell_id == 12654 || (!keep_debuff && aura.spell_id == 453268),
+        );
+        start_native(&mut run, 108853, target);
+        run.app.update();
+        let world = run.app.world();
+        let damage = world
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .rev()
+            .find(|event| {
+                event.source == Some(actor.to_bits())
+                    && event.target == Some(target.to_bits())
+                    && event.spell_id == Some(108853)
+                    && event.kind == CombatLogKind::Damage
+            })
+            .unwrap()
+            .amount as f32;
+        let tick = world
+            .get::<ActiveAuras>(target)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 12654 && aura.caster == actor)
+            .unwrap()
+            .effects
+            .iter()
+            .find(|effect| effect.index == 0)
+            .unwrap()
+            .amount;
+        (tick / damage, multiplier)
+    };
+    let (baseline, _) = contribution(false);
+    let (controlled, multiplier) = contribution(true);
+    assert!(
+        (controlled / baseline - multiplier).abs() < 0.002,
+        "owned Controlled Destruction scales the real Ignite bank: {baseline} -> {controlled}, expected factor{multiplier}"
+    );
+}
+
+#[test]
+#[ignore = "requires exact Fire63 inputs and private70448 DB"]
+fn fire_meteorite_glorious_count_selects_the_pack_once_per_missile() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(63, 3).unwrap();
+    let target = run.targets[0];
+    let count = run
+        .app
+        .world()
+        .get::<ActiveAuras>(run.actor)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 449394)
+        .unwrap()
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap()
+        .amount as usize;
+    crate::spell_cast::cast_triggered(run.app.world_mut(), run.actor, 451073, Some(run.actor), 1);
+    start_native(&mut run, 108853, target);
+    for _ in 0..80 {
+        run.app.update();
+    }
+    let hits: Vec<_> = run
+        .app
+        .world()
+        .resource::<ObservedCombatEvents>()
+        .0
+        .iter()
+        .filter(|event| {
+            event.source == Some(run.actor.to_bits())
+                && event.spell_id == Some(449569)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0
+        })
+        .collect();
+    assert_eq!(
+        hits.len(),
+        count * run.targets.len(),
+        "each authored Glorious Meteorite selects its area once, never one full area per recipient"
+    );
+}
+
+#[test]
+#[ignore = "requires exact Fire63 inputs and private70448 DB"]
+fn fire_feedback_fiery_rush_ends_with_combustion() {
+    let mut run = prepare_literal(63, 1).unwrap();
+    let actor = run.actor;
+    start_native(&mut run, 190319, actor);
+    run.app.update();
+    assert!(
+        crate::auras::has_aura(run.app.world(), actor, 383637),
+        "ordinary Combustion earns selected native Fiery Rush"
+    );
+    for _ in 0..600 {
+        run.app.update();
+        if !crate::auras::has_aura(run.app.world(), actor, 190319) {
+            assert!(
+                !crate::auras::has_aura(run.app.world(), actor, 383637),
+                "Fiery Rush must not persist as permanent Fire Blast recovery after Combustion ends"
+            );
+            return;
+        }
+    }
+    panic!("unextended native Combustion must expire within30s");
 }
 
 fn reacted(run: &Run, name: &str) -> f64 {
