@@ -39,6 +39,8 @@ const fn order_modules<const N: usize>(
 
 register_modules! {
     affliction_agony: (2650, "modules/affliction_agony.rs"),
+    affliction_embrace: (2659, "modules/affliction_embrace.rs"),
+    affliction_darkglare: (2659, "modules/affliction_darkglare.rs"),
     affliction_empowerment: (2658, "modules/affliction_empowerment.rs"),
     affliction_grasp: (2654, "modules/affliction_grasp.rs"),
     affliction_instability: (2651, "modules/affliction_instability.rs"),
@@ -176,7 +178,9 @@ register_modules! {
     touch_of_death: (240, "modules/touch_of_death.rs"),
     unrelenting_onslaught: (714, "modules/unrelenting_onslaught.rs"),
     voltaic_blaze: (250, "modules/voltaic_blaze.rs"),
+    warlock_seed: (2659, "modules/warlock_seed.rs"),
     warrior: (40, "modules/warrior.rs"),
+    windwalker_fof: (2690, "modules/windwalker_fof.rs"),
     windwalker_momentum: (50, "modules/windwalker_momentum.rs"),
     windwalker_zenith: (30, "modules/windwalker_zenith.rs"),
     zathatek_breath: (1000, "modules/zathatek_breath.rs"),
