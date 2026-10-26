@@ -154,6 +154,7 @@ fn matching<'a>(
 // Native accumulated next-spell uses, not multiplied modifier magnitude.
 // SimC76f8118 sc_monk.cpp1422 decrements one Combo Breaker stack per Blackout Kick.
 // Tidal Waves/Backdraft/Surge of Light stacks are also next-spell uses.
+// SimC76f8118 sc_shaman.cpp8759 grants SK's uses; each carries one buff value.
 // SimC76f8118 sc_evoker.cpp6485/6595: Mass Disintegrate stacks are uses,
 // not a multiplier on its native additional-target amount.
 // SimC76f8118 sc_mage.cpp1852–1853/3242: Clearcasting stacks are
