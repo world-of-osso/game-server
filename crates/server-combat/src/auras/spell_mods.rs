@@ -107,7 +107,7 @@ pub fn class_mask_affects(
 }
 
 /// Same native mask relation for an unapplied source record (e.g. form overrides).
-pub(crate) fn class_mask_matches(class_set: u32, mask: &[u32; 4], spell: &SpellInfo) -> bool {
+pub fn class_mask_matches(class_set: u32, mask: &[u32; 4], spell: &SpellInfo) -> bool {
     let Some(options) = spell.class_options.as_ref() else {
         return false;
     };

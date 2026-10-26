@@ -3402,7 +3402,7 @@ fn run_hit_scripts(
 ) {
     let hook = scripts::on_hit(world, spell.id);
     let context_hook = scripts::on_hit_with_context(world, spell.id);
-    let damage_hook = scripts::on_enemy_damage_hit_with_context(spell.id);
+    let damage_hook = scripts::on_enemy_damage_hit_with_context(world, spell.id);
     let native_hooks = hook.is_some() || context_hook.is_some() || damage_hook.is_some();
     let policies = spell.cast_policy_context.is_some() || scripts::has_impact_policy(world, spell);
     if !native_hooks && !policies {
