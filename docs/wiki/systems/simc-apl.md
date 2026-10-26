@@ -54,6 +54,8 @@ Fevered feedback excludes Intensifying Flame419800: its native class-family fiel
 
 Fuel the Fire's damage multiplier reads the ordinary Flamestrike `CastPolicyContext.targets`, filters hostile recipients, and applies native effect2 per target up to native effect3. The existing context registration retains the actual target plan for both selected Flamestrike IDs. A native three-recipient cast reproduced9943 damage with or without the selected talent instead of11434.45; GREEN remains train-gated.
 
+Scald reads native Fireball/Scorch health thresholds and native effect1/effect2 damage amounts. Scorch also reads its frozen Heat Shimmer modifier admission, so the execute multiplier survives consumption. The native counterfactual first settles `Changed<KnownSpells>` before forcing equal critical chance: otherwise follower-stat recomputation changed only the negative control. After settlement, Fireball execute reproduced7467 with or without Scald instead of9333.75. GREEN remains train-gated.
+
 ## Expected combat length
 
 `expected_combat_length` reads the existing `Encounter::Fixture.duration`, validated positive+finite. It is not elapsed/fight-remains, a300literal or an extra stored field. Dungeon and invalid fixture values return EXPECTED_COMBAT_LENGTH_UNAVAILABLE; proposed-action forwarding uses the same configured value. Four minimal-world cases at88095009c give4genuineRED0.02s;991b7fcde (landed master924638aba base) yields4/4GREEN0.00s/14m24compile/0warnings. Tests enabled attribute-only afterward; no DB/profile/suite rerun. [Exact proof](../../handoffs/expected-combat-length-proof-ledger.md).
