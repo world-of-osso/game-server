@@ -8,6 +8,10 @@ pub(super) struct StabledPetGuardian {
     expires_at: Option<f64>,
 }
 
+pub(crate) fn is_stabled_guardian(world: &World, pet: Entity) -> bool {
+    world.get::<StabledPetGuardian>(pet).is_some()
+}
+
 pub(crate) fn effect_summon_stabled_pet(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect) {
     // SimC76f8118 sc_hunter.cpp6702–6703: Nature's Ally uses the stable-pet
     // body, with its native summon duration. No alternate creature identity.
@@ -53,7 +57,9 @@ fn spawn_stabled_guardian(
         health.current = health.max;
     }
     if let Some(target) = ctx.spell.cast_primary_target {
-        crate::pet_control::attack_start(world, pet, target);
+        // SimC76f8118 sc_hunter.cpp1706–1711/2248–2253 starts native
+        // melee on summon. Give the pet an order, preserving its saved stance.
+        crate::pet_control::order_attack(world, pet, target);
     }
     crate::spell_cast::log_summon(world, ctx.caster, pet, ctx.spell);
 }
