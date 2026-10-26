@@ -11,7 +11,10 @@ use shared::components::{ActiveSpec, PowerType};
 pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::PeriodicPrimaryDamage(after_tick)];
 
 fn after_tick(world: &mut World, ctx: &EffectCtx<'_>, _target: Entity, _amount: f32, crit: bool) {
-    if world.get::<ActiveSpec>(ctx.caster).is_none_or(|spec| spec.0 != 267) {
+    if world
+        .get::<ActiveSpec>(ctx.caster)
+        .is_none_or(|spec| spec.0 != 267)
+    {
         return;
     }
     let direct = match ctx.spell.id {
@@ -22,11 +25,18 @@ fn after_tick(world: &mut World, ctx: &EffectCtx<'_>, _target: Entity, _amount: 
     // SimC76f8118 sc_warlock_actions.cpp1108–1117/4047–4059 grants
     //0.1 displayed shard per landed Destruction tick; only a critical tick
     // rolls the native direct spell's effect1 chance for another fragment.
-    let divisor = world.resource::<PowerTypeTable>().get(PowerType::SoulShards)
-        .expect("native Destruction requires Soul Shards metadata").display_modifier;
-    assert!(divisor > 0, "native Soul Shards display divisor must be positive");
+    let divisor = world
+        .resource::<PowerTypeTable>()
+        .get(PowerType::SoulShards)
+        .expect("native Destruction requires Soul Shards metadata")
+        .display_modifier;
+    assert!(
+        divisor > 0,
+        "native Soul Shards display divisor must be positive"
+    );
     let fragment = 0.1 * divisor as f32;
-    let extra = crit && rand::random::<f32>() * 100.0 < script_effect_value(world, ctx.caster, direct, 1);
+    let extra =
+        crit && rand::random::<f32>() * 100.0 < script_effect_value(world, ctx.caster, direct, 1);
     let amount = if extra { fragment * 2.0 } else { fragment };
     energize_unit(world, ctx, ctx.caster, PowerType::SoulShards, amount, true);
 }
