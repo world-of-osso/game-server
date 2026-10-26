@@ -95,6 +95,41 @@ fn attack_swing_starts_auto_attack_announces_it_and_the_first_swing_enters_comba
 }
 
 #[test]
+fn immediate_attack_start_restores_native_timers_and_publishes_one_packet() {
+    let mut h = attack_harness().expect("native combat fixture for immediate attack start");
+    let npc = h.npc;
+    h.attack(npc);
+    h.advance(3);
+    let saved = h.app.world().get::<AutoAttack>(h.caster).unwrap().clone();
+    assert!(
+        saved.timer > Duration::ZERO,
+        "the native first swing must have reset its timer"
+    );
+    h.stop_attack();
+    h.advance(3);
+    assert_eq!(victim(&h), None);
+    let swings_before = swings(&h).len();
+    let caster = h.caster;
+    crate::combat::start_attack_now(h.app.world_mut(), caster, saved.clone());
+    let restored = h.app.world().get::<AutoAttack>(caster).unwrap();
+    assert_eq!(restored.victim, saved.victim);
+    assert_eq!(restored.timer, saved.timer);
+    assert_eq!(restored.off_hand_timer, saved.off_hand_timer);
+    h.advance(3);
+    let packet = AttackStart {
+        attacker: caster.to_bits(),
+        victim: npc.to_bits(),
+    };
+    assert_eq!(h.inbox.attack_starts, vec![packet.clone(), packet]);
+    assert_eq!(h.inbox.attack_stops, vec![stopped(&h, Some(npc))]);
+    assert_eq!(
+        swings(&h).len(),
+        swings_before,
+        "restoring a live timer must not grant an immediate swing"
+    );
+}
+
+#[test]
 fn attack_stop_ends_swinging_and_announces_it() {
     let Some(mut h) = attack_harness() else {
         return;

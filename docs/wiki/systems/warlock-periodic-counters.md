@@ -1,0 +1,61 @@
+# Warlock periodic counters
+
+Hellcaller Wither uses stacks as a counter, not as an ordinary periodic-damage multiplier. Both Affliction265 and Destruction267 share the [counter contract](../../specs/dps-parity.md#shared-hellcaller-wither-counters).
+
+## Representation
+
+The downstream `hellcaller_wither` module registers native445474 through `CounterOnlyDotStacks`. Native aura stacks, maximum, duration and tick phase remain intact. The generic periodic scheduler uses one payload regardless of that counter. Ordinary refresh contributes no new counter stack; an explicit native `SPELLVALUE_AURA_STACK` application still uses normal stack merging.
+
+This is separate from [Destruction shard funding](spell-casting.md#warlock-periodic-shard-funding--2026-10-25), which is specialization-qualified, and from Affliction's Agony threshold RNG. Neither resource policy is a Wither damage multiplier.
+
+## Cause and proof
+
+Pinned SimC76f8118 `sc_warlock_actions.cpp1066` sets `dot_ignore_stack=true`;1174–1186 cancels the automatic refreshed-dot stack increment while preserving earned stacks. Native generic stacking previously did both: a real recast increased1→2, and ordinary noncritical tick damage increased6398→63979 when the native counter input changed1→10.
+
+`wither_stack_tests.rs` reproduces both failures and passes after the source policy on both265 and267. It observes actual ordinary casts and periodic damage, including preservation of an existing eight-stack counter. Destruction funding, Affliction native mechanics/rotation and owned DoT-duration controls also pass. This proves the counter boundary, not Blackened Soul producers, collapse behavior or numerical DPS parity.
+
+## Counter lifecycle
+
+`hellcaller_counters` owns Chaos Bolt/Shadowburn landed-hit producers and actual UA1259790 applications. The additive `AfterAuraApplication` stage runs after successful storage, including refresh/replacement. It does not replace UA's `AuraScripts` expiry registration. Counter changes preserve Wither's expiry and periodic deadline.
+
+Native TraitDefinition122451 resolves Malevolence talent430014 to actual442726. The post-cast hook uses442726; the native cast already applies its buff before granting its native stack amount and damage to targets with caster-owned Wither. Ordinary gains include its active-buff bonus and the source's global Bleakheart PRD. Seeds gates run on both gains and real Wither ticks. A positive collapse-budget trigger refreshes its own clock; a decrement does not.
+
+Blackened445731 uses the native1000ms periodic driver with runtime permanent/max-counter state, not the catalog's2000ms lifetime. Each tick decrements Wither before native445736 damage, applies Mark of Xavius to that remaining counter, then consumes its independent collapse budget. It stops at Wither1 or when Wither disappears. The weighted Seeds threshold stream grants native Shard Instability/Flashpoint; it does not create a second shard pool. Native effect base values supply stack counts and gates. Damage-modified dummy amounts are not stack-count inputs.
+
+Pinned behavior is in `sc_warlock_actions.cpp1119–1149,1208–1317,1544–1565,4328–4331,4807–4810,5534–5611`, `sc_warlock_init.cpp1441–1480`, and `proc_rng.cpp221–276`. The23% collapse,15% Bleakheart PRD and0.240 threshold increment are pinned RNG-model settings, not damage adjustments.
+
+Native lifecycle RED is recorded in train `a203eec969` and `97012b5fc8`: UA and CB leave Wither1 unchanged, and collapse gates fail. The no-owned-Wither control passes. The Malevolence test initially used a damage-modified dummy amount; it now reads the raw native base value, as the source does. Probe `c77810573a` passes five lifecycle cases. Its Malevolence case incorrectly cast raw talent430014; it now uses the same native action resolution as the real driver and casts442726. Train `687ff619cf` lands `b6937d3bf310` with all six native lifecycle cases GREEN. The separate265-led `1636dfe495` also passes all six; three independently owned Affliction Calamity/Wrath cases remain RED. Three-seed267 means are94930.81ST and123087.79three-target (48.65%/47.94% of reference), not numerical parity.
+
+## Devil Fruit Malevolence
+
+The downstream [Devil Fruit leaf](../../../crates/server-spell-scripts/src/modules/hellcaller_devil_fruit.rs) owns selected1266805's proc attempts on actual445474 primary periodic damage. It reuses native aura proc timers/RPPM, not a second RNG state. Successful attempts apply native442726 through a source-owned spell clone whose only changed field is its duration from1266805 effect0. This applies the buff without executing Malevolence button damage or Wither-stack producers. Existing declarative `ReapplicationExtend` policies cover both265/267, including the ordinary button. The catalog's effects and button duration stay unchanged. Source: `sc_warlock_actions.cpp1154–1159`, `sc_warlock_init.cpp968–971,1475`.
+
+Native train `fffed3d36a` records genuine missing-buff RED after249/125 actual265/267 Wither ticks. Recovered tests treat an active permanent Wither as permanent rather than repeatedly recasting it, and also check that the actual button adds native duration to earned Malevolence. Workspace/all-target and production-bin checks pass; native GREEN and measurements remain pending behind Absolute qualification. This is not an uptime fit or numerical-parity claim.
+
+## Absolute Corruption lifetime
+
+[Contract](../../specs/dps-parity.md#absolute-corruption-lifetime). The owned [Absolute leaf](../../../crates/server-spell-scripts/src/modules/affliction_absolute_corruption.rs) makes actual265 selected196103 applications of445474/146739 permanent after storage. It uses a duration-only owned-aura API; native stacks, maximum and tick phase are not changed. Native Corruption's maximum0 means nonstacking. Passing that0 to the separate permanent-counter API incorrectly panicked; `2086230ee4` reproduces this through actual172→146739 before Grasp, and the duration-only API fixes that caller without a clamp or fixture change. This covers Seed's background Wither as well as ordinary applications. No catalog duration or fixture-clock value is written. The generic native DoT facts recognize an active indefinite aura before finite Pandemic/fresh-duration validation: refreshable0, unbounded remains/duration. Buff/debuff sentinels and finite DoTs are unchanged.
+
+Post-Seed master26ee488ac's exact16783 measurement has23 paid Seeds and67 explosion hits (about22.33 three-target explosions), versus reference3.225 paid casts/8.826 hits. Frozen265 selects Absolute, but native boss Wither still expires. That repeated refresh spreads Wither to every replacement add wave. Reference Wither totals354.915 target-seconds (boss plus initial wave) while Agony totals859.49 (all waves). Source actions759–762/1072–1077 requires permanent Corruption/Wither; this is not a damage-threshold or target-count fit.
+
+Native RED618ca30eeb reproduces literal ST and actual30s-add replacement through60s with unmodified copied16783 inputs: first boss Wither expires at38.9/39.2 while the clock reaches79.7/80.1. Train `d86e331ddb` landed8f4e67fed6 with both permanent-DoT/buff-sentinel cases, five Seed/primary cases, two Wither controls and103 earned-five-CP Rip finite-refresh control GREEN. Integrated265 means163676.41ST/234022.07three-target (81.5561%/85.0611%);267132422.09/196274.80 (67.8593%/76.4375%). The later Corruption nonstacking regression above still requires its exact native GREEN; no numerical parity claim. Corruption uses the same source lifecycle; the frozen Wither profile does not fabricate unavailable Corruption access.
+
+## Seed of Corruption lifecycle
+
+This is native27243/27285, not the separate Hellcaller Seeds of Their Demise counter. [Contract](../../specs/dps-parity.md#seed-of-corruption-lifecycle). The downstream `warlock_seed` leaf stores the snapshotted threshold in the actual owned Seed dummy effect2. The existing landed-damage callback consumes that budget and observes Seed's actual zero-damage PERIODIC_DAMAGE3 tick; removal enqueues its unmodified explosion. `AuraScript::on_periodic` dispatches only dummy/trigger auras, so it cannot observe Seed's timer and is not registered. The generic declarative `PreservePeriodicPhase` policy in the registry/refresh boundary keeps Seed's already scheduled tick; only27243 registers it. This is necessary because normal nonstacking/non-Pandemic refresh resets the timer. Without selected Sow196226, the leaf selects one primary rather than creating three Seeds. Its owned target plan now prefers an unseeded original, otherwise chooses an unseeded candidate, and uses the original only if no unseeded candidate exists. It records the selection on the caster; the same plan reads `warlock_seed::selected_primary(world,caster)` to build recipients.16783's owned UA leaf can read that helper during the same successful-execution callback before projectile arrival, without a second draw. The old TargetFilter is removed. Pinned265 explicitly uses bugs mode, so in-flight Seeds do not block candidates. Selected-Sow effectiveness remains unqualified. Real explosion impacts chain owned Seeds and apply only the native background DoT, leaving shared Wither counter policy and UA lifecycle registrations unchanged.
+
+Native `f932eaa2c1` proves both failures with paid casts and normal frames: actual owner damage exceeded native threshold before expiry, and a separate Seed ended naturally, but neither produced27285. Probe `ffe97fd353` passes native threshold and expiry plus two literal265 and two UA controls, but proves two additional REDs: paid recast misses the original explosion deadline, and one no-Sow cast creates three actual Seeds rather than one. The phase policy and no-Sow restriction address those failures. Core `2c35357a07` passes threshold/expiry/no-Sow3cases but still fails the original-deadline case: the attempted `on_periodic` wrapper cannot observe PERIODIC_DAMAGE3. The leaf now handles that actual periodic landed event before its zero-amount guard; no new seam is needed. Combined train `39190f98b0` passes all five native Seed cases plus two265 literal and one267 hit control, and lands `bb5f457ab` in26ee488ac; the18 prior unaffected controls, including Fire/UA, remain valid.267 probe `c0e7affe53` passes six Hellcaller, three funding and two Wither controls. Parent assigns MID2 seed-applied UA to16783 on top; this leaf adds no UA caller. Native paid-recast redirection probe `b1856e294b` fails before the target-plan/helper implementation because the second paid Seed refreshes the already-seeded original; its actual smart-primary case is GREEN in39190f98b0.267 remains118293.72ST/165796.51three-target;265's apparent parity after dispatch is contaminated by the separate Absolute lifetime excess described above. No numerical parity claim follows from the dispatch change.
+
+## Sources
+
+- [Counter lifecycle module](../../../crates/server-spell-scripts/src/modules/hellcaller_counters.rs) and [native lifecycle tests](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/hellcaller_counter_tests.rs)
+- [Downstream source policy](../../../crates/server-spell-scripts/src/modules/hellcaller_wither.rs)
+- [Native cast and tick tests](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/wither_stack_tests.rs)
+- [Generic periodic scheduler](../../../crates/server-combat/src/auras/periodic.rs)
+- [Native refresh handling](../../../crates/server-combat/src/auras/refresh.rs)
+
+## See Also
+
+- [[spell-script-crate]] — downstream registry and assembly.
+- [[spell-casting]] — separate native Warlock funding boundary.
+- [[auras]] — ordinary stack, refresh and periodic scheduling rules.

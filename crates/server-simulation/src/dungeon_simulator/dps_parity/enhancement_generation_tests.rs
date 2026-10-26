@@ -135,8 +135,15 @@ fn enhancement_elemental_tempo_reduces_running_strike_recharge_per_spent_stack()
     let target = run.targets[0];
     cast(&mut run, 17364, target);
     cast(&mut run, 470057, target);
+    // Real Stormsurge may reset a Strike; earn an actual pending charge and instant-Bolt funding.
+    for _ in 0..20 {
+        if full_recharge(&run) > 0.0 && stacks(&run) >= 5 {
+            break;
+        }
+        cast(&mut run, 17364, target);
+    }
     let spent = stacks(&run);
-    assert!(spent > 0);
+    assert!(spent >= 5, "actual generators must fund an instant Bolt");
     let before = full_recharge(&run);
     assert!(
         before > 0.0,
@@ -156,7 +163,8 @@ fn enhancement_elemental_tempo_reduces_running_strike_recharge_per_spent_stack()
         .unwrap()
         .amount;
     let started = crate::spell_cast::now(run.app.world());
-    cast(&mut run, 188196, target);
+    crate::spell_cast::creature_cast(run.app.world_mut(), run.actor, 188196, Some(target), false)
+        .unwrap();
     let elapsed = crate::spell_cast::now(run.app.world()) - started;
     let expected =
         (before - elapsed - f64::from(milliseconds) * f64::from(spent) / 1000.0).max(0.0);
@@ -218,6 +226,10 @@ pub(super) fn try_spend_native_maelstrom(run: &mut Run, target: Entity) -> u32 {
     if available < 5 {
         return 0;
     }
+    let limit =
+        crate::spell_cast::scripts::script_effect_value(run.app.world(), run.actor, 187880, 1)
+            as u8;
+    let spent = available.min(limit);
     match crate::spell_cast::creature_cast(
         run.app.world_mut(),
         run.actor,
@@ -227,11 +239,12 @@ pub(super) fn try_spend_native_maelstrom(run: &mut Run, target: Entity) -> u32 {
     ) {
         Ok(()) => {
             let remaining = stacks(run);
+            // SimC7462–7469 refunds after payment; a net counter delta is not the paid amount.
             assert!(
-                remaining < available,
-                "real instant Bolt must spend its admitted MW"
+                remaining == available - spent || remaining == available,
+                "actual paid Bolt must consume its native admission or restore it via refund: before={available}, spent={spent}, after={remaining}"
             );
-            u32::from(available - remaining)
+            u32::from(spent)
         }
         Err(
             crate::spell_cast::CastFailure::OnGlobalCooldown

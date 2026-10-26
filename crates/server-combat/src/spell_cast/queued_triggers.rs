@@ -12,7 +12,10 @@ pub(crate) struct PendingTriggers(BTreeMap<u64, VecDeque<QueuedTrigger>>);
 enum QueuedCastKind {
     CostedTrigger,
     NormalForce,
+    InstantBackground,
     FullTrigger,
+    ScriptCallback(fn(&mut World, Entity, Entity, u8)),
+    ApplyOwnedAura,
     RemoveOwnedAura,
     ScaledFullTrigger(f32),
 }
@@ -39,6 +42,7 @@ struct QueuedTrigger {
     spell_id: u32,
     depth: u8,
     item_level: Option<u16>,
+    damage_multiplier: Option<f32>,
 }
 
 impl PendingTriggers {
@@ -59,7 +63,7 @@ fn now_ms(world: &World) -> u64 {
     (super::now(world) * MILLIS_PER_SECOND) as u64
 }
 
-pub(super) fn schedule(
+pub fn schedule(
     world: &mut World,
     ctx: &super::EffectCtx,
     effect: &crate::spell_info::SpellEffect,
@@ -84,6 +88,9 @@ pub(super) fn schedule(
         spell_id: effect.trigger_spell,
         depth: ctx.depth + 1,
         item_level: ctx.spell.cast_item_level,
+        damage_multiplier: super::scripts::frost_flurry_damage_multiplier(
+            world, ctx.caster, ctx.spell, child.id,
+        ),
     };
     world
         .resource_mut::<PendingTriggers>()
@@ -110,6 +117,7 @@ pub(super) fn schedule_force_cast(
         spell_id: effect.trigger_spell,
         depth: 0,
         item_level: None,
+        damage_multiplier: None,
     };
     world
         .resource_mut::<PendingTriggers>()
@@ -136,6 +144,35 @@ pub fn schedule_full_trigger(
         spell_id,
         depth: ctx.depth + 1,
         item_level: ctx.spell.cast_item_level,
+        damage_multiplier: None,
+    };
+    world
+        .resource_mut::<PendingTriggers>()
+        .0
+        .entry(due_ms)
+        .or_default()
+        .push_back(trigger);
+}
+
+/// Run a sourced delayed action against live state, with the native queue's
+/// owner/target lifetime checks and trigger-depth budget.
+pub fn schedule_callback(
+    world: &mut World,
+    ctx: &super::EffectCtx,
+    target: Entity,
+    delay_ms: u32,
+    callback: fn(&mut World, Entity, Entity, u8),
+) {
+    let due_ms = now_ms(world) + u64::from(delay_ms);
+    let trigger = QueuedTrigger {
+        kind: QueuedCastKind::ScriptCallback(callback),
+        caster: ctx.caster,
+        target,
+        destination: None,
+        spell_id: ctx.spell.id,
+        depth: ctx.depth + 1,
+        item_level: ctx.spell.cast_item_level,
+        damage_multiplier: None,
     };
     world
         .resource_mut::<PendingTriggers>()
@@ -147,11 +184,13 @@ pub fn schedule_full_trigger(
 
 /// SimC76f8118 sc_mage.cpp5585–5605/7272–7293: apply or clear a
 /// feedback buff after the current hit batch, retaining native aura payloads.
+/// The source calls buff.trigger, not action.execute: grants must not emit
+/// spell-hit events that can activate unrelated equipment or cast policies.
 pub fn schedule_buff_outcome(world: &mut World, caster: Entity, spell_id: u32, grant: bool) {
     let due_ms = now_ms(world);
     let trigger = QueuedTrigger {
         kind: if grant {
-            QueuedCastKind::FullTrigger
+            QueuedCastKind::ApplyOwnedAura
         } else {
             QueuedCastKind::RemoveOwnedAura
         },
@@ -161,6 +200,7 @@ pub fn schedule_buff_outcome(world: &mut World, caster: Entity, spell_id: u32, g
         spell_id,
         depth: 1,
         item_level: None,
+        damage_multiplier: None,
     };
     world
         .resource_mut::<PendingTriggers>()
@@ -185,6 +225,7 @@ pub fn schedule_destination_trigger(
         spell_id: request.spell_id,
         depth: ctx.depth + 1,
         item_level: ctx.spell.cast_item_level,
+        damage_multiplier: None,
     };
     world
         .resource_mut::<PendingTriggers>()
@@ -217,6 +258,7 @@ pub fn schedule_scaled_full_trigger(
         spell_id: request.spell_id,
         depth: ctx.depth + 1,
         item_level: ctx.spell.cast_item_level,
+        damage_multiplier: None,
     };
     world
         .resource_mut::<PendingTriggers>()
@@ -226,9 +268,9 @@ pub fn schedule_scaled_full_trigger(
         .push_back(trigger);
 }
 
-/// Source script callback using default TRIGGERED_NONE, not FULL_MASK.
-/// Unlike effect160, this preserves the source caster and chosen target.
-pub(super) fn schedule_normal_cast(
+/// SimC76f8118 sc_shaman.cpp4846–4847: instant background overload.
+/// Retain ordinary validation, costs and source/target; do not replace a hardcast.
+pub(super) fn schedule_instant_background(
     world: &mut World,
     ctx: &super::EffectCtx,
     target: Entity,
@@ -237,13 +279,14 @@ pub(super) fn schedule_normal_cast(
 ) {
     let due_ms = now_ms(world) + u64::from(delay_ms);
     let trigger = QueuedTrigger {
-        kind: QueuedCastKind::NormalForce,
+        kind: QueuedCastKind::InstantBackground,
         caster: ctx.caster,
         target,
         destination: None,
         spell_id,
         depth: 0,
         item_level: None,
+        damage_multiplier: None,
     };
     world
         .resource_mut::<PendingTriggers>()
@@ -253,8 +296,34 @@ pub(super) fn schedule_normal_cast(
         .push_back(trigger);
 }
 
+fn resolve_costed_trigger(world: &mut World, trigger: QueuedTrigger) {
+    let Some(mut spell) = super::load_triggered_spell(world, trigger.spell_id, trigger.depth)
+    else {
+        return;
+    };
+    spell.cast_item_level = trigger.item_level;
+    spell.cast_destination = trigger.destination;
+    spell.cast_damage_multiplier = trigger.damage_multiplier;
+    // Retain Effect64's native payment/check path with its frozen launch value.
+    if let Err(failure) = super::execute_costed_trigger(
+        world,
+        trigger.caster,
+        &spell,
+        Some(trigger.target),
+        trigger.depth,
+    ) {
+        warn!(
+            spell = trigger.spell_id,
+            ?failure,
+            "Queued native costed trigger refused"
+        );
+    }
+}
+
 /// Remove one event before invoking it; nested zero-delay events follow it.
 pub(crate) fn resolve_due(world: &mut World) {
+    super::scripts::resolve_enhancement_discharges(world);
+    super::scripts::resolve_frost_mage_events(world);
     let now_ms = now_ms(world);
     loop {
         let Some(trigger) = world.resource_mut::<PendingTriggers>().pop_due(now_ms) else {
@@ -264,16 +333,17 @@ pub(crate) fn resolve_due(world: &mut World) {
             continue;
         }
         match trigger.kind {
-            QueuedCastKind::CostedTrigger => {
-                super::cast_costed_trigger_with_context(
-                    world,
-                    trigger.caster,
-                    trigger.spell_id,
-                    Some(trigger.target),
-                    trigger.depth,
-                    trigger.item_level,
-                    trigger.destination,
-                );
+            QueuedCastKind::CostedTrigger => resolve_costed_trigger(world, trigger),
+            QueuedCastKind::ScriptCallback(callback) => {
+                if trigger.depth > super::effects::MAX_TRIGGER_DEPTH {
+                    warn!(
+                        source = trigger.spell_id,
+                        depth = trigger.depth,
+                        "Delayed scripted callback exceeds native trigger depth"
+                    );
+                    continue;
+                }
+                callback(world, trigger.caster, trigger.target, trigger.depth);
             }
             QueuedCastKind::FullTrigger => {
                 let Some(mut spell) =
@@ -291,6 +361,16 @@ pub(crate) fn resolve_due(world: &mut World) {
                     trigger.depth,
                 ) {
                     warn!("Delayed scripted spell {} refused", trigger.spell_id);
+                }
+            }
+            QueuedCastKind::InstantBackground => {
+                if let Err(failure) = super::creature::creature_cast_instant_background(
+                    world,
+                    trigger.caster,
+                    trigger.spell_id,
+                    Some(trigger.target),
+                ) {
+                    warn!("Background spell {} skipped: {failure:?}", trigger.spell_id);
                 }
             }
             QueuedCastKind::ScaledFullTrigger(multiplier) => {
@@ -316,6 +396,18 @@ pub(crate) fn resolve_due(world: &mut World) {
                 ) {
                     warn!(spell = trigger.spell_id, "Delayed scaled spell refused");
                 }
+            }
+            QueuedCastKind::ApplyOwnedAura => {
+                crate::auras::apply_aura(
+                    world,
+                    &crate::auras::AuraApplication {
+                        caster: trigger.caster,
+                        target: trigger.target,
+                        spell_id: trigger.spell_id,
+                        effect_mask: u32::MAX,
+                        source: crate::auras::AuraSource::Cast,
+                    },
+                );
             }
             QueuedCastKind::RemoveOwnedAura => {
                 crate::auras::remove_auras(

@@ -144,7 +144,18 @@ Players no longer use the HP/mana/rating functions below: [[character-stats]] co
 - **Armor mitigation**: `armor / (armor + K(attacker_level))`, capped at85% before damage truncation; native `K` comes from installed ExpectedStat, not a SimC table. [Aura280 follower policy and source-qualified inputs](../investigations/follower-armor-penetration.md).
 - **Secondary stat DR**: piecewise-linear curve (SimC DBC curve 21024); affects Crit, Haste, Mastery, Versatility
 
+## Native spell armor — 2026-10-26
+
+`effects.rs::reduced_by_armor` admits only the pure Physical mask1, matching pinned SimC76f8118 `action.cpp1686–1690`. Hybrid Physical/Nature9 and Chaos127 do not take armor. Native bleed exceptions remain; Physical Windstrike115357/115360 has the explicit bypass from `sc_shaman.cpp4726`. Armor amounts, the ExpectedStat coefficient and native spell schools remain unchanged. See the [parity contract](../../specs/dps-parity.md#shared-armor-classification).
+
+The native controls apply40935 Dematerialize Armor after target-level scaling. Changing raw `CreatureArmor` cannot remove armor from a tuned target. Casting the control can also change the attacker's live stat procs: paired hits can have different Mastery or Versatility. The tests therefore compare each actual damage result with its own observed pre-mitigation amount. Hybrid/Windstrike hits retain that amount; ordinary Physical hits lose damage with armor and retain it after removal. No caster stats, rolls or spell coefficients are overridden.
+
+The same qualification exposed a Ret fixture timing error: Crusading Strikes can earn HP during a GCD wait. Payment must be sampled immediately around the accepted cast, not before retrying admission. Otherwise a real4→1 payment appears as3→1 and fails the native3HP prerequisite. The damage and no-Sunrise-echo assertions remain unchanged.
+
 ## Sources
+
+- [Spell damage](../../../crates/server-combat/src/spell_cast/effects.rs) and [Windstrike policy](../../../crates/server-spell-scripts/src/modules/enhancement_armor.rs) — school admission and the explicit bypass.
+- [Native root armor controls](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/enhancement_armor_tests.rs), [Chaos control](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/hybrid_armor_tests.rs), and [Ret payment boundary](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/ret_storm_gap_tests.rs) — real casts and observed input/output amounts.
 
 - [crates/server/src/combat.rs](../../../crates/server/src/combat.rs) — CombatPlugin, auto-attack, lethal-transition emission, NPC death transition, and respawn
 - [crates/server/src/combat_tests.rs](../../../crates/server/src/combat_tests.rs) — auto-attack participation, NPC death, and respawn coverage

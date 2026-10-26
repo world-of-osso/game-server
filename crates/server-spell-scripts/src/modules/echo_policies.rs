@@ -1,5 +1,5 @@
 //! Explicit source relationships, executed without core spell-ID branches.
-//! SIMC_RET_SECOND_SUNRISE_STORM_ECHO: SimC76f8118 Ret495–638.
+//! Second Sunrise: SimC76f8118 Ret495–638 and sc_paladin.cpp1689–1710/1757–1783.
 //! No TC handler/native child edge. Native4442 live talent effects own values/ICD.
 //! Parent reports Maxroll12.1.5 and Skycoach15%/30%; native raw15/30 plus
 //! specialization1258011 yields20/50. Do not tune native values to web guides.
@@ -9,11 +9,12 @@ use bevy::prelude::*;
 use super::combat;
 use combat::auras::{ActiveAuras, procs};
 use combat::class_progression::{ActiveSpec, TraitLoadout};
-use combat::spell_cast::script_registry::SpellScriptHook;
-use combat::spell_info::SpellInfo;
+use combat::spell_cast::{effects::EffectCtx, script_registry::SpellScriptHook};
+use combat::spell_info::{CastDamageRole, SpellInfo};
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AfterModifierConsumption(after_cast),
+    SpellScriptHook::AfterPolicyDirectDamage(after_primary_hit),
     SpellScriptHook::OwnsPolicyProc(owns_proc),
 ];
 
@@ -27,7 +28,7 @@ struct EchoPolicy {
     effectiveness_effect: u8,
 }
 
-const POLICIES: &[EchoPolicy] = &[EchoPolicy {
+const CAST_POLICIES: &[EchoPolicy] = &[EchoPolicy {
     name: "SIMC_RET_SECOND_SUNRISE_STORM_ECHO",
     spec: 70,
     talent: 431474,
@@ -37,11 +38,24 @@ const POLICIES: &[EchoPolicy] = &[EchoPolicy {
     effectiveness_effect: 1,
 }];
 
+const PRIMARY_HIT_POLICIES: &[EchoPolicy] = &[EchoPolicy {
+    name: "SIMC_RET_SECOND_SUNRISE_HAMMER_ECHO",
+    spec: 70,
+    talent: 431474,
+    root: 24275,
+    payload: 24275,
+    chance_effect: 0,
+    effectiveness_effect: 1,
+}];
+
 // SimC76f8118 Ret612–619/sc_paladin.cpp1774–1781: source producers
 // alone own this ICD. Native broad DUMMY proc hints must not spend it
 // on Judgment, white swings or unrelated impacts without producing an echo.
 fn owns_proc(spell: u32) -> bool {
-    POLICIES.iter().any(|policy| policy.talent == spell)
+    CAST_POLICIES
+        .iter()
+        .chain(PRIMARY_HIT_POLICIES)
+        .any(|policy| policy.talent == spell)
 }
 
 fn selected(world: &World, caster: Entity, policy: &EchoPolicy) -> bool {
@@ -78,9 +92,30 @@ pub(super) fn after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
     if spell.cast_parent_owns_modifier_charges {
         return;
     }
-    for policy in POLICIES.iter().filter(|policy| policy.root == spell.id) {
+    for policy in CAST_POLICIES
+        .iter()
+        .filter(|policy| policy.root == spell.id)
+    {
         if selected(world, caster, policy) {
             try_echo(world, caster, spell, policy);
+        }
+    }
+}
+
+fn after_primary_hit(world: &mut World, ctx: &EffectCtx, target: Entity, _: bool) {
+    // sc_paladin.cpp1757–1783: only a successful foreground chain_target0 impact.
+    let ordinary_primary = ctx.depth == 0
+        && ctx.spell.cast_damage_role == CastDamageRole::Primary
+        && ctx.spell.cast_primary_target == Some(target);
+    if !ordinary_primary {
+        return;
+    }
+    for policy in PRIMARY_HIT_POLICIES
+        .iter()
+        .filter(|policy| policy.root == ctx.spell.id)
+    {
+        if selected(world, ctx.caster, policy) {
+            try_echo(world, ctx.caster, ctx.spell, policy);
         }
     }
 }

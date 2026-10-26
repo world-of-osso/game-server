@@ -56,6 +56,7 @@ pub(crate) type BodyParts<'a> = (
 impl LineOfSight {
     /// SimC76f8118 action.cpp1738–1752 selects encounter enemies without map
     /// occlusion. This declared arena has no baked geometry or eye-data dependency.
+    #[cfg(any(test, feature = "test-support"))]
     pub fn open_arena() -> Self {
         Self {
             dir: PathBuf::new(),

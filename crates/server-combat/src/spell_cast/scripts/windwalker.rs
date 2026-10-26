@@ -60,6 +60,8 @@ const COMBO_BREAKER: u32 = 137384;
 const COMBO_BREAKER_BUFF: u32 = 116768;
 pub(crate) use crate::spell_info::DANCE_OF_CHIJI;
 const DANCE_BUFF: u32 = 325202;
+const SEQUENCED_STRIKES: u32 = 451515;
+const REVOLVING_WHIRL: u32 = 451524;
 const SPINNING_CRANE_KICK: u32 = 101546;
 const MYSTIC_TOUCH_PASSIVE: u32 = 8647;
 const MYSTIC_TOUCH_DEBUFF: u32 = 113746;
@@ -178,10 +180,21 @@ pub(crate) fn check_dance_proc(
 
 /// SimC1664–1666: the generic Chi-action roll occurs before this SCK use is spent.
 pub(crate) fn after_dance_cast_event(world: &mut World, event: &auras::procs::AuraEvent) {
-    if !ordinary_cast_event(event) || event.spell_id != Some(SPINNING_CRANE_KICK) {
+    if !ordinary_cast_event(event) {
         return;
     }
     let caster = event.actor;
+    match event.spell_id {
+        // SimC1913–1918: WDP grants Dance after its ordinary Chi-action proc.
+        Some(WHIRLING_DRAGON_PUNCH) => {
+            trigger_selected_earned_buff(world, caster, REVOLVING_WHIRL, DANCE_BUFF);
+        }
+        Some(SPINNING_CRANE_KICK) => spend_dance_and_trigger_sequenced(world, caster),
+        _ => {}
+    }
+}
+
+fn spend_dance_and_trigger_sequenced(world: &mut World, caster: Entity) {
     let instance = world
         .get::<ActiveAuras>(caster)
         .and_then(|auras| {
@@ -192,7 +205,32 @@ pub(crate) fn after_dance_cast_event(world: &mut World, event: &auras::procs::Au
         .map(|aura| aura.instance_id);
     if let Some(instance) = instance {
         auras::spend_stack(world, caster, instance);
+        // SimC1664–1670: only an actually spent earned Dance use grants CB.
+        trigger_selected_earned_buff(world, caster, SEQUENCED_STRIKES, COMBO_BREAKER_BUFF);
     }
+}
+
+fn trigger_selected_earned_buff(world: &mut World, caster: Entity, talent: u32, buff: u32) {
+    let selected = world
+        .get::<crate::class_progression::TraitLoadout>(caster)
+        .is_some_and(|traits| {
+            traits
+                .active_talent_spells()
+                .any(|spell| spell.spell_id == talent)
+        });
+    if !selected {
+        return;
+    }
+    let chance = super::script_effect_value(world, caster, talent, 0);
+    if chance <= 0.0 {
+        return;
+    }
+    if chance < 100.0 && rand::random::<f32>() * 100.0 >= chance {
+        return;
+    }
+    // Direct native application is SimC's increment: it bypasses a second
+    // RPPM roll, while the real buff still owns its cap, lifetime and uses.
+    crate::spell_cast::cast_triggered(world, caster, buff, Some(caster), 1);
 }
 
 /// Source may_combo_strike actions; unrelated triggered children do not advance it.
@@ -345,7 +383,8 @@ fn read_wdp_duration_ms(world: &World, caster: Entity) -> Option<i32> {
 /// SIMC_WW_RWK_BOK_LANDED_PRODUCER: SimC76f8118 sc_monk.cpp1408–1414.
 /// TC a352b1fa has no binding. DB2 owns the selected talent's chance and override.
 /// Native instant BOK hits before modifier-use consumption; misses never run OnHit.
-pub(super) fn blackout_kick_hit(world: &mut World, caster: Entity, _target: Entity, depth: u8) {
+pub(super) fn blackout_kick_hit(world: &mut World, caster: Entity, target: Entity, depth: u8) {
+    super::teachings_of_the_monastery::blackout_hit(world, caster, target, depth);
     if !auras::has_aura(world, caster, COMBO_BREAKER_BUFF) {
         return;
     }
@@ -423,6 +462,7 @@ pub(super) fn reset_rising_sun_kick(world: &mut World, caster: Entity) {
 
 /// Tiger Palm rolls its learned passive's native effect0 chance on a landed hit.
 pub(super) fn tiger_palm_hit(world: &mut World, caster: Entity, _target: Entity, depth: u8) {
+    super::teachings_of_the_monastery::tiger_palm_hit(world, caster, depth);
     let chance = world
         .get::<ActiveAuras>(caster)
         .and_then(|auras| auras.iter().find(|aura| aura.spell_id == COMBO_BREAKER))

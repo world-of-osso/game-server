@@ -25,6 +25,14 @@ pub(crate) fn flight_value(
     }
 }
 
+/// Actual caster-owned hit events still in native travel at an observation cutoff.
+pub fn spell_hits_in_flight(world: &World, caster: Entity, spell_id: u32) -> Result<usize, String> {
+    let pending = world
+        .get_resource::<missiles::PendingSpellHits>()
+        .ok_or("native pending missile state unavailable")?;
+    Ok(pending.count_matching(caster, |id| id == spell_id))
+}
+
 /// SimC76f8118 sc_mage.cpp6988–7010 sums caster-owned eligible travel events.
 pub fn hot_streak_spells_in_flight(world: &World, caster: Entity) -> Result<f64, String> {
     let pending = world
@@ -53,7 +61,7 @@ pub(crate) fn target_eligible(
 /// other actions occupy at least their native GCD.
 pub(crate) fn execute_time(world: &World, caster: Entity, spell: &SpellInfo) -> f64 {
     let cast = f64::from(cast_time_ms(world, caster, spell).max(0)) / 1000.0;
-    if is_channeled(spell) {
+    if is_channeled_for_actor(world, caster, spell) {
         cast + f64::from(duration_ms(world, caster, spell).max(0)) / 1000.0
     } else {
         cast.max(f64::from(gcd_duration_ms(world, caster, spell)) / 1000.0)
@@ -82,6 +90,9 @@ fn read_action_eligibility(
     caster: Entity,
     spell: &SpellInfo,
 ) -> Result<(), CastFailure> {
+    if !super::script_registry::action_available(world, caster, spell.id) {
+        return Err(CastFailure::CasterAuraState);
+    }
     check_ordinary_caster_life(world, caster, spell)?;
     casting_restriction::check_cast(world, caster, spell)?;
     shapeshift::check_cast(world, caster, spell)?;
@@ -93,7 +104,8 @@ fn read_action_eligibility(
     read_healer_recovery(world, caster, spell)?;
     let moving_blocks = (cast_time_ms(world, caster, spell) > 0
         && !cast_allows_moving(world, caster, spell))
-        || (is_channeled(spell) && !channel_allows_moving(world, caster, spell));
+        || (is_channeled_for_actor(world, caster, spell)
+            && !channel_allows_moving(world, caster, spell));
     if moving_blocks && world.get::<Moving>(caster).is_some_and(|moving| moving.0) {
         return Err(CastFailure::Moving);
     }

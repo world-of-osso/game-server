@@ -1,5 +1,5 @@
 //! Active70448 Agony980/SuddenOnset1260209; SimC76f8118 actions1405–1491.
-//! Cap8, start1/3, damage before increment; no shard RNG/legacy Writhe policy.
+//! Cap8, start1/3, damage before increment; native energize remains available.
 use shared::components::{CombatRatings, DerivedStats, Level, UnitStats};
 use shared::protocol::{CombatLogEvent, CombatLogKind, MissKind};
 
@@ -12,6 +12,7 @@ use crate::spell_info::SpellStore;
 use crate::stats::CharacterStats;
 
 const AGONY: u32 = 980;
+const AGONY_ENERGIZE: u32 = 17941;
 const SUDDEN_ONSET: u32 = 1_260_209;
 const CORRUPTION: u32 = 172;
 const CORRUPTION_DOT: u32 = 146_739;
@@ -19,6 +20,7 @@ const SHADOW_IMMUNITY: u32 = 7743;
 const SHIELD: u32 = 17;
 const BASE_IDS: &[u32] = &[AGONY, CORRUPTION, CORRUPTION_DOT];
 const STORE_IDS: &[u32] = &[
+    AGONY_ENERGIZE,
     AGONY,
     CORRUPTION,
     CORRUPTION_DOT,

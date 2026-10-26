@@ -12,8 +12,6 @@ const IGNORE_PAIN: u32 = 190456;
 const PROTECTION_WARRIOR: u32 = 73;
 const SHIELD_BLOCK: u32 = 132404;
 const SHIELD_OF_THE_RIGHTEOUS: u32 = 132403;
-const RIP: u32 = 1079;
-const RAKE: u32 = 155722;
 
 #[derive(Clone, Copy)]
 enum RollingBudget {
@@ -26,6 +24,13 @@ enum DurationCarry {
     Pandemic,
     Extend,
     CappedExtend(u32),
+}
+
+fn has_native_pandemic(spell: &SpellInfo) -> bool {
+    spell
+        .misc
+        .as_ref()
+        .is_some_and(|misc| misc.attributes[13] & PERIODIC_REFRESH_EXTENDS_DURATION != 0)
 }
 
 pub(super) fn prepare_application(
@@ -48,10 +53,14 @@ pub(super) fn prepare_application(
     prepare_periodic_phase(world, target, new, spell, sourced_rolling);
     if crate::spell_cast::scripts::extends_reapplication(world, new.caster, new.spell_id) {
         carry_duration(world, target, new, DurationCarry::Extend);
+    } else if has_native_pandemic(spell) && !rolling {
+        // SimC76f8118 action.cpp684–685/4612: the native refresh flag
+        // selects Pandemic, not a spell-ID whitelist. Explicit Extend and
+        // Rolling retain their source precedence (action.cpp2729–2734).
+        carry_duration(world, target, new, DurationCarry::Pandemic);
     }
     match new.spell_id {
         IGNORE_PAIN => accumulate_ignore_pain(world, target, new),
-        RIP | RAKE => carry_duration(world, target, new, DurationCarry::Pandemic),
         SHIELD_BLOCK => carry_duration(world, target, new, DurationCarry::Extend),
         SHIELD_OF_THE_RIGHTEOUS => {
             carry_duration(world, target, new, DurationCarry::CappedExtend(3));
@@ -68,7 +77,25 @@ pub(super) fn prepare_application(
         };
         roll_remaining_periodic(world, target, new, budget);
     }
+    preserve_counter_only_stacks(world, target, new, spell);
+    super::enhancement_power::preserve_refresh_duration(world, target, new);
     super::ret_crusade::preserve_refresh_duration(world, target, new);
+}
+
+fn preserve_counter_only_stacks(
+    world: &World,
+    target: Entity,
+    new: &mut AuraInstance,
+    spell: &SpellInfo,
+) {
+    let counter_only = world
+        .resource::<crate::spell_cast::script_registry::SpellScriptRegistry>()
+        .counter_only_dot_stacks(spell.id);
+    if counter_only && spell.cast_aura_stacks.is_none() && previous(world, target, new).is_some() {
+        // Ordinary refresh contributes no counter stacks; explicit native stack
+        // applications still advance the counter through the normal merge.
+        new.stacks = 0;
+    }
 }
 
 fn preserve_expiry(world: &World, target: Entity, new: &mut AuraInstance, spell: &SpellInfo) {
@@ -149,12 +176,12 @@ fn prepare_periodic_phase(
         .aura_options
         .as_ref()
         .is_some_and(|options| options.cumulative_aura >= 2);
-    let pandemic = spell
-        .misc
-        .as_ref()
-        .is_some_and(|misc| misc.attributes[13] & PERIODIC_REFRESH_EXTENDS_DURATION != 0);
+    let pandemic = has_native_pandemic(spell);
     let native_preserves_phase = spell.cast_dont_reset_periodic_timer || stacking || pandemic;
-    let preserve_phase = native_preserves_phase || sourced_rolling;
+    let scripted_phase = world
+        .resource::<crate::spell_cast::script_registry::SpellScriptRegistry>()
+        .preserves_periodic_phase(spell.id);
+    let preserve_phase = native_preserves_phase || sourced_rolling || scripted_phase;
     if !preserve_phase {
         return;
     }

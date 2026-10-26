@@ -52,6 +52,31 @@ fn outlaw_blade_flurry_transfers_native_hits_only_to_secondary_targets() {
                 && event.amount > 0),
         "native primary hit must land"
     );
+    let primary_amount = events
+        .iter()
+        .find(|event| {
+            event.source == Some(run.actor.to_bits())
+                && event.target == Some(run.targets[0].to_bits())
+                && event.kind == CombatLogKind::Damage
+                && event.spell_id == Some(193315)
+        })
+        .unwrap()
+        .amount as f32;
+    let fraction = run
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(run.actor)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 13877 && aura.caster == run.actor)
+        .unwrap()
+        .effects
+        .iter()
+        .find(|effect| effect.index == 1)
+        .unwrap()
+        .amount
+        / 100.0;
+    let expected_copy = primary_amount * fraction;
     let copies: Vec<_> = events
         .iter()
         .filter(|event| {
@@ -67,6 +92,15 @@ fn outlaw_blade_flurry_transfers_native_hits_only_to_secondary_targets() {
                 .iter()
                 .any(|event| event.target == Some(secondary.to_bits())),
             "native Blade Flurry must transfer landed hits to secondary{secondary:?}"
+        );
+    }
+    for &secondary in &run.targets[1..] {
+        assert!(
+            copies.iter().any(|event| {
+                event.target == Some(secondary.to_bits())
+                    && (event.amount as f32 - expected_copy).abs() <= 2.0
+            }),
+            "secondary{secondary:?} must receive the native fraction of this same-armor source hit ({expected_copy}), without doubling caster bonuses, critical damage or armor"
         );
     }
     assert!(

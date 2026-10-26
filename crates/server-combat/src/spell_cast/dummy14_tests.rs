@@ -122,7 +122,7 @@ fn dummy14_kill_commands_never_borrow_foreign_pets() {
 }
 
 #[test]
-fn dummy14_wildfire_primary_named_hit_bonus_and_owned_bleed() {
+fn dummy14_wildfire_native_pack_damage_primary_bonus_and_owned_periodics() {
     let mut h = harness(Vec::new(), &[259495, 265163, 265157, 269747], 3).unwrap();
     let target = h.npc;
     let other = spawn_npc(&mut h.app, 4.0);
@@ -135,17 +135,19 @@ fn dummy14_wildfire_primary_named_hit_bonus_and_owned_bleed() {
     // The master failure occurred near a variance endpoint. Exercise
     // bounded real casts, cancelling previous bleeds so primary damage is isolated.
     for attempt in 0..256 {
-        crate::auras::remove_auras(
-            h.app.world_mut(),
-            target,
-            crate::auras::RemoveReason::Cancelled,
-            |aura| aura.spell_id == 269747,
-        );
-        h.app
-            .world_mut()
-            .get_mut::<shared::components::Health>(target)
-            .unwrap()
-            .current = 5000.0;
+        for unit in [target, other] {
+            crate::auras::remove_auras(
+                h.app.world_mut(),
+                unit,
+                crate::auras::RemoveReason::Cancelled,
+                |aura| aura.spell_id == 269747,
+            );
+            h.app
+                .world_mut()
+                .get_mut::<shared::components::Health>(unit)
+                .unwrap()
+                .current = 5000.0;
+        }
         h.set_power(PowerType::Focus, 100.0);
         h.inbox = Inbox::default();
         execute(&mut h, 259495, Some(target));
@@ -160,23 +162,27 @@ fn dummy14_wildfire_primary_named_hit_bonus_and_owned_bleed() {
         );
     }
     assert!(crate::auras::has_aura(h.app.world(), target, 269747));
-    assert_eq!(
-        h.health(other),
-        5000.0,
-        "cone unimplemented, no guessed splash"
+    assert!(
+        varied(1.9 * 100.0).contains(&(5000.0 - h.health(other))),
+        "the nearby actual enemy receives native explosion damage without the primary bonus"
     );
     h.advance(125);
     let ticks: Vec<_> = h
         .inbox
         .log
         .iter()
-        .filter(|e| e.spell_id == Some(269747) && e.kind == CombatLogKind::Damage)
+        .filter(|e| {
+            e.spell_id == Some(269747)
+                && e.kind == CombatLogKind::Damage
+                && e.target == Some(target.to_bits())
+        })
         .collect();
     assert_eq!(ticks.len(), 6);
     assert!(
         // Active Effect718207 snapshots fixture RAP100, not melee AP37:
-        // 0.252 × 100, rounded to25 each native tick.
-        ticks.iter().all(|e| e.amount == 25),
+        // SimC76f8118 sc_hunter.cpp7042–7043: native primary bonus applies
+        // to the periodic payload too:0.252 ×100 ×1.5, rounded to38.
+        ticks.iter().all(|e| e.amount == 38),
         "{ticks:?}"
     );
     assert!(!crate::auras::has_aura(h.app.world(), target, 269747));

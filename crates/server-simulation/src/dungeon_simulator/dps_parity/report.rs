@@ -203,6 +203,90 @@ pub(super) fn combat(world: &World, targets: &[Entity], seconds: f64) -> Value {
         "energize_units": "raw_logged_integer"})
 }
 
+/// Mean action contributions include absent actions as zero-valued samples.
+/// Non-action receipts retain their first-seed identity under `detail_seed`.
+pub(super) fn mean_combat(reports: &[Value]) -> Value {
+    let mut combat = reports[0]["combat"].clone();
+    let samples = reports.len() as f64;
+    let total: u64 = reports
+        .iter()
+        .map(|report| report["combat"]["total_damage"].as_u64().unwrap())
+        .sum();
+    let dps: f64 = reports
+        .iter()
+        .map(|report| report["combat"]["dps"].as_f64().unwrap())
+        .sum();
+    let actions = pool_action_totals(reports);
+    combat["dps"] = json!(dps / samples);
+    combat["total_damage"] = json!(total as f64 / samples);
+    combat["actions"] = json!(
+        actions
+            .into_iter()
+            .map(|((actor, spell), totals)| {
+                mean_action_report(actor, spell, totals, total, samples)
+            })
+            .collect::<Vec<_>>()
+    );
+    combat
+}
+
+fn pool_action_totals(reports: &[Value]) -> BTreeMap<(Option<u64>, Option<u32>), ActionTotals> {
+    let mut actions = BTreeMap::new();
+    for report in reports {
+        for action in report["combat"]["actions"].as_array().unwrap() {
+            let key = (
+                action["actor"].as_u64(),
+                action["spell_id"]
+                    .as_u64()
+                    .map(|spell| u32::try_from(spell).unwrap()),
+            );
+            add_action_totals(actions.entry(key).or_default(), action);
+        }
+    }
+    actions
+}
+
+fn action_count(action: &Value, field: &str) -> u32 {
+    u32::try_from(action[field].as_u64().expect("native integer action count"))
+        .expect("native action count fits u32")
+}
+
+fn add_action_totals(totals: &mut ActionTotals, action: &Value) {
+    totals.damage += action["damage"].as_u64().unwrap();
+    totals.hits += action_count(action, "hits");
+    totals.casts += action_count(action, "count");
+    totals.crits += action_count(action, "crit_hits");
+    totals.crit_damage += action["crit_damage"].as_u64().unwrap();
+    totals.misses += action_count(action, "misses");
+    totals.dodges += action_count(action, "dodges");
+    totals.parries += action_count(action, "parries");
+}
+
+fn mean_action_report(
+    actor: Option<u64>,
+    spell: Option<u32>,
+    totals: ActionTotals,
+    total_damage: u64,
+    samples: f64,
+) -> Value {
+    let mut action = action_report(actor, spell, totals, total_damage);
+    for field in [
+        "damage",
+        "hits",
+        "count",
+        "crit_hits",
+        "crit_damage",
+        "misses",
+        "dodges",
+        "parries",
+        "noncrit_hits",
+        "noncrit_damage",
+    ] {
+        action[field] = json!(action[field].as_f64().unwrap() / samples);
+    }
+    action
+}
+
 /// Authoritative raw pools, including fractional current values. Rates describe
 /// the last native tick, not integrated realized regeneration or cap losses.
 fn power_snapshot(world: &World, unit: Entity) -> Value {
