@@ -10,7 +10,8 @@ pub fn fire_breath_release(
     caster: bevy::prelude::Entity,
     rank: u8,
 ) -> crate::spell_info::SpellInfo {
-    crate::spell_cast::scripts::empower_evoker::build_fire_breath_release(world, caster, rank)
+    crate::spell_cast::script_registry::empower_release_preview(world, caster, 357208, rank)
+        .expect("native Fire Breath release script must be registered")
 }
 
 /// Explicit fixture controller capture; preserves native Follower/NPC identity.
