@@ -487,11 +487,6 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 - Actual111685 summons89 with live owner-SP shares2.2275 for SP and AP (SimC76f8118 `sc_warlock_pets.cpp2050–2119`). Native264364→264365 energizes the existing owner through target27; native19483→20153 emits its authored periodic area damage. Preserve native costs, coefficients, targets, clocks and actor expiry.
 - Immediately after actual guardian initialization, the generic `SummonInitialized` callback receives that actor. The downstream Infernal leaf initializes existing action clocks once: a nonnegative normal arise delay(mean1s,stddev0.1s) starts Embers; Immolation starts after another uniform0–0.75s, without an Immolation zero tick. No per-unit summon wrapper, actor-query loop, synthetic ticks or new timer state. Unregistered guardians retain existing behavior; qualify BM Bear,265 guardians and DK Rune Weapon.
 
-### Native Overfiend guardian
-
-- Actual434587 summons217429 with live owner SP1.0 and native repeated434589. Its spell coefficient borrows native116858 effect0 times native Avatar1245089 effect0; guarantee its critical outcome separately from live owner spell-crit scaling and the sourced owner-mastery range (SimC76f8118 pets2358–2407).
-- Actual creation grants native457578 to the existing owner through `SummonInitialized`, not an unreachable per-unit summon wrapper. Preserve native aura duration/period/raw energize, actor expiry and catalog values (actions4190–4205/init851–855). No synthetic bolts, resource grants or new timer state.
-
 ### Shared Hellcaller Wither counters
 
 - Native Wither445474 keeps its actual counter stacks, but its periodic damage ignores that count. An ordinary recast preserves earned stacks without adding a refresh stack; explicit native stack applications retain normal counter advancement. Preserve native coefficients, tick phase and lifetime. Both265 and267 share this rule (SimC76f8118 `sc_warlock_actions.cpp1066,1174–1186`).
