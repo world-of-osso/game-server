@@ -71,6 +71,12 @@ fn cast_two_crash_roots(run: &mut Run) -> f64 {
         0.0,
         "first real Crash consumes Short Circuit"
     );
+    // Isolate overlapping real Crash applications: the ordinary cooldown can exceed
+    // the first stack's 12-second lifetime before the helper admits a second cast.
+    run.app
+        .world_mut()
+        .entity_mut(run.actor)
+        .insert(crate::spell_cast::SpellHistory::default());
     enhancement_generation_tests::cast(run, CRASH, target);
     assert_eq!(
         short_circuit_bonus(run),
