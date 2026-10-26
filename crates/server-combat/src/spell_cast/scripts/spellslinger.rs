@@ -151,7 +151,7 @@ pub(super) fn conjure_from_spell(
     conjure(world, &ctx, target, spec, count);
 }
 
-pub(super) fn conjure_count(world: &mut World, caster: Entity, target: Entity, count: u32) {
+pub fn conjure_count(world: &mut World, caster: Entity, target: Entity, count: u32) {
     let Some(spec) = specialization(world, caster) else {
         return;
     };
