@@ -78,9 +78,23 @@ fn shadow_yogg_real_native_cohort_threshold_summons_owned_thing_and_actual_spike
         .unwrap()
         .cumulative_aura;
     assert_eq!(cap, 20, "native Yogg counter threshold");
-    for _ in 1..cap {
+    let recovery_ms = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(1227280)
+        .unwrap()
+        .categories
+        .as_ref()
+        .unwrap()
+        .charge_recovery_ms;
+    assert!(recovery_ms > 0);
+    let recovery_frames = (recovery_ms as usize).div_ceil(50);
+    // Real native charge cadence keeps combat/VT live, unlike45s idle gaps.
+    for cohort in 1..cap {
         slam(&mut run);
-        advance(&mut run, 900);
+        advance(&mut run, recovery_frames);
+        eprintln!("YOGG cohort{cohort} counter{}", counter(&run));
     }
     slam(&mut run);
     advance(&mut run, 120);
@@ -95,11 +109,17 @@ fn shadow_yogg_real_native_cohort_threshold_summons_owned_thing_and_actual_spike
         })
         .map(|(entity, _, _)| entity.to_bits())
         .collect::<Vec<_>>();
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0;
+    let summon_events = events
+        .iter()
+        .filter(|event| event.spell_id == Some(373277))
+        .map(|event| (event.kind, event.amount))
+        .collect::<Vec<_>>();
     assert!(
         !things.is_empty(),
-        "actual threshold earns a native owned Thing From Beyond, not caster damage"
+        "actual threshold earns a native owned Thing From Beyond, not caster damage; counter={}, summon_events={summon_events:?}",
+        counter(&run)
     );
-    let events = &run.app.world().resource::<ObservedCombatEvents>().0;
     for &target in &run.targets {
         assert!(
             events.iter().any(|event| {
