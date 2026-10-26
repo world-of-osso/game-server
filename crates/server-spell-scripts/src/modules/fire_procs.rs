@@ -14,6 +14,8 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::BeforeProcLaunch(before_hot_streak_launch),
     SpellScriptHook::AfterFireDirectHit(fire_feedback_hit),
     SpellScriptHook::AfterFireOutcomeHit(fire_meteorite_hit),
+    SpellScriptHook::OnCast(on_fire_cast),
+    SpellScriptHook::TargetDamageMultiplier(meteor_primary_multiplier),
 ];
 
 const COMBUSTION: u32 = 190319;
@@ -37,6 +39,8 @@ const FEVERED: u32 = 383811;
 const CONTROLLED_TALENT: u32 = 383669;
 const CONTROLLED: u32 = 453268;
 const MAGE_FAMILY: u32 = 3;
+const PYROCOSM: u32 = 1260673;
+const METEORITE_IMPACT: u32 = 449569;
 
 #[derive(Component, Default)]
 struct FireProcState {
@@ -155,10 +159,19 @@ pub(crate) fn fire_meteorite_hit(world: &mut World, ctx: &EffectCtx, target: Ent
     {
         return;
     }
+    let count = script_effect_value(world, ctx.caster, GLORIOUS_TALENT, 0).max(0.0) as u32;
+    schedule_meteorites(world, ctx, target, count);
+}
+
+fn schedule_meteorites(
+    world: &mut World,
+    ctx: &EffectCtx,
+    target: Entity,
+    count: u32,
+) {
     let Some(position) = world.get::<shared::components::Position>(target).copied() else {
         return;
     };
-    let count = script_effect_value(world, ctx.caster, GLORIOUS_TALENT, 0).max(0.0) as u32;
     for ordinal in 0..count {
         queued_triggers::schedule_destination_trigger(
             world,
@@ -193,6 +206,64 @@ pub(crate) fn fire_feedback_hit(world: &mut World, ctx: &EffectCtx, target: Enti
         queued_triggers::schedule_buff_outcome(world, ctx.caster, FEVERED, crit);
     }
     apply_controlled_destruction(world, ctx, target);
+    // SimC76f8118 sc_mage.cpp3845–3846/2003–2012: Pyrocosm Fireball
+    // hits independently roll native effect2, then schedule one real Meteorite.
+    if matches!(ctx.spell.id, 133 | 431044)
+        && selected(world, ctx.caster, PYROCOSM)
+        && selected(world, ctx.caster, GLORIOUS_TALENT)
+    {
+        let chance = script_effect_value(world, ctx.caster, PYROCOSM, 1);
+        if combat::random::random::<f32>() * 100.0 < chance {
+            schedule_meteorites(world, ctx, target, 1);
+        }
+    }
+}
+
+fn on_fire_cast(world: &mut World, caster: Entity, spell_id: u32, _depth: u8) {
+    if spell_id == METEORITE_IMPACT && selected(world, caster, PYROCOSM) {
+        // SimC76f8118 sc_mage.cpp4783–4792: once per Meteorite execution,
+        // not per recipient; the native effect4 value is milliseconds.
+        let reduction = script_effect_value(world, caster, PYROCOSM, 3);
+        reduce_cooldown(world, caster, 108853, f64::from(reduction) / 1000.0);
+    }
+}
+
+fn meteor_primary_multiplier(world: &World, caster: Entity, target: Entity, spell: &SpellInfo) -> f32 {
+    const METEOR_IMPACT: u32 = 351140;
+    const DEEP_IMPACT: u32 = 1254857;
+    if spell.id != METEOR_IMPACT || !selected(world, caster, DEEP_IMPACT) {
+        return 1.0;
+    }
+    let Some(destination) = spell.cast_destination else {
+        return 1.0;
+    };
+    // SimC76f8118 sc_mage.cpp4664–4668: native Deep Impact amplifies
+    // only the closest enemy to the authored destination, not the entire AoE.
+    if closest_meteor_target(world, caster, Vec3::from_array(destination)) != Some(target) {
+        return 1.0;
+    }
+    1.0 + script_effect_value(world, caster, DEEP_IMPACT, 0) / 100.0
+}
+
+fn closest_meteor_target(world: &World, caster: Entity, destination: Vec3) -> Option<Entity> {
+    use combat::maps::InMap;
+    use combat::spell_cast::targets::{Relation, relation_matches};
+    use shared::components::{Health, Position};
+    let map = world.get::<InMap>(caster)?;
+    let mut query = world.try_query::<(Entity, &Position, &Health, &InMap)>()?;
+    query.iter(world)
+        .filter(|(entity, _, health, candidate_map)| {
+            health.current > 0.0 && *candidate_map == map
+                && relation_matches(world, caster, *entity, Relation::Enemy)
+        })
+        .map(|(entity, position, _, _)| {
+            let distance = Vec3::new(position.x, position.y, position.z).distance_squared(destination);
+            (entity, distance)
+        })
+        .min_by(|(left, left_distance), (right, right_distance)| {
+            left_distance.total_cmp(right_distance).then_with(|| left.to_bits().cmp(&right.to_bits()))
+        })
+        .map(|(entity, _)| entity)
 }
 
 fn apply_controlled_destruction(world: &mut World, ctx: &EffectCtx, target: Entity) {
@@ -219,6 +290,7 @@ pub(crate) fn register(scripts: &mut auras::scripts::AuraScripts) {
         COMBUSTION,
         auras::scripts::AuraScript {
             on_apply: Some(reset_combustion_procs),
+            on_remove: Some(end_fiery_rush),
             on_natural_end: Some(start_hyperthermia),
             ..Default::default()
         },
@@ -247,6 +319,14 @@ fn check_glorious_fire_blast(
     // SimC76f8118 sc_mage.cpp4577–4580: only Fire Blast spends this
     // charge; the broad native harmful-spell mask also matches Pyroblast.
     event.spell_id == Some(108853)
+}
+
+fn end_fiery_rush(world: &mut World, caster: Entity, _aura: &AuraInstance, reason: auras::RemoveReason) {
+    // SimC76f8118 sc_mage.cpp1453–1457: the native permanent Fiery Rush
+    // payload lasts only while Combustion is active; do not leave it after expiry.
+    auras::remove_auras(world, caster, reason, |aura| {
+        aura.spell_id == 383637 && aura.caster == caster
+    });
 }
 
 fn reset_combustion_procs(world: &mut World, caster: Entity, _aura: &AuraInstance) {
