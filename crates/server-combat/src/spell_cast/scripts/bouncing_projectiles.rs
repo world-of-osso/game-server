@@ -5,12 +5,10 @@ use crate::spell_cast::{
     queued_triggers::{self, ScaledTrigger},
 };
 use bevy::prelude::*;
-use shared::components::ActiveSpec;
 
 struct BouncePolicy {
     parent: u32,
     payload: u32,
-    spec: u32,
     talent: u32,
     dispatch_effect: u8,
     count_effect: u8,
@@ -25,7 +23,6 @@ struct BouncePolicy {
 const POLICIES: &[BouncePolicy] = &[BouncePolicy {
     parent: 1264949,
     payload: 1266081,
-    spec: 254,
     talent: 1264902,
     dispatch_effect: 0,
     count_effect: 1,
@@ -36,10 +33,9 @@ const POLICIES: &[BouncePolicy] = &[BouncePolicy {
 }];
 
 fn selected(world: &World, caster: Entity, policy: &BouncePolicy) -> bool {
-    world
-        .get::<ActiveSpec>(caster)
-        .is_some_and(|spec| spec.0 == policy.spec)
-        && has_talent(world, caster, policy.talent)
+    // SimC76f8118 sc_hunter.cpp7864–7877: the active Sentinel hero
+    // talent supplies this same action for both native Hunter specializations.
+    has_talent(world, caster, policy.talent)
 }
 
 fn has_talent(world: &World, caster: Entity, talent: u32) -> bool {

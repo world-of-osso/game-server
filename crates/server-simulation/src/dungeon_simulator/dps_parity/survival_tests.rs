@@ -1,0 +1,138 @@
+//! Native Survival fixture contracts; no follower kit or substitute priorities.
+use super::*;
+use shared::protocol::CombatLogKind;
+
+#[test]
+#[ignore = "requires private spec255 player inputs and native world DB"]
+fn survival_literal_precombat_summons_native_pet() {
+    let run = prepare_measurement(255, 1).expect("native Survival player fixture");
+    let driver = run.spec_driver.as_ref().expect("literal Survival driver");
+    assert_eq!(driver.label(), "LITERAL_SIMC_SURVIVAL_76f8118");
+    let pet = crate::hunter_pet::summoned_pet(run.app.world(), run.actor)
+        .expect("precombat Call Pet must summon the native stable pet");
+    assert_eq!(
+        run.app
+            .world()
+            .get::<crate::hunter_pet::HunterPet>(pet)
+            .unwrap()
+            .owner,
+        run.actor
+    );
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(run.actor.to_bits())
+                && event.spell_id == Some(883)
+                && event.kind == CombatLogKind::CastSuccess)
+    );
+}
+
+#[test]
+#[ignore = "requires private spec255 player inputs and native world DB"]
+fn survival_literal_actions_and_pet_damage_actual_primary() {
+    let mut run = prepare_measurement(255, 1).expect("native Survival player fixture");
+    assert!(
+        run.spec_driver.is_some(),
+        "Survival cannot use AssistedCombat"
+    );
+    engage(&mut run);
+    // Match advance_combat: target.time_to_die reads actual fixture lifetimes.
+    let started_at = run.app.world().resource::<Time>().elapsed();
+    install_fixture_lifetimes(&mut run, started_at);
+    let event_start = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .len();
+    for _ in 0..200 {
+        run.app.update();
+        drive_player(&mut run).expect("literal Survival decision");
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    let casts: Vec<_> = events[event_start..]
+        .iter()
+        .filter(|event| {
+            event.source == Some(run.actor.to_bits()) && event.kind == CombatLogKind::CastSuccess
+        })
+        .filter_map(|event| event.spell_id)
+        .collect();
+    eprintln!("SURVIVAL_NATIVE_CASTS {casts:?}");
+    assert!(
+        casts.iter().any(|spell| matches!(
+            *spell,
+            259489 | 186270 | 1262293 | 259495 | 1250646 | 1261193 | 1264949
+        )),
+        "the literal APL must execute real native Survival source actions: {casts:?}"
+    );
+    let pet = report::pet(run.app.world(), run.actor, &run.damage_targets);
+    assert!(
+        pet["damage"].as_u64().unwrap() > 0,
+        "the native summoned pet must attack the actual primary: {pet}"
+    );
+}
+
+#[test]
+#[ignore = "requires private spec255 player inputs and native world DB"]
+fn survival_literal_takedown_uses_native_hostile_primary() {
+    let mut run = prepare_measurement(255, 1).unwrap();
+    let spell = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(1250646)
+        .unwrap()
+        .clone();
+    let self_ready = crate::spell_cast::read_native_cast_start(
+        run.app.world_mut(),
+        run.actor,
+        &spell,
+        run.actor,
+    );
+    let enemy_ready = crate::spell_cast::read_native_cast_start(
+        run.app.world_mut(),
+        run.actor,
+        &spell,
+        run.targets[0],
+    );
+    eprintln!("SURVIVAL_TAKEDOWN_READINESS self={self_ready:?} enemy={enemy_ready:?}");
+    assert!(
+        enemy_ready.is_ok(),
+        "native Takedown must admit its actual enemy: {enemy_ready:?}"
+    );
+    engage(&mut run);
+    let started_at = run.app.world().resource::<Time>().elapsed();
+    install_fixture_lifetimes(&mut run, started_at);
+    let mut observed_buff = false;
+    for _ in 0..200 {
+        run.app.update();
+        drive_player(&mut run).unwrap();
+        observed_buff |= crate::auras::has_aura(run.app.world(), run.actor, 1250646);
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(run.actor.to_bits())
+                && event.spell_id == Some(1250646)
+                && event.kind == CombatLogKind::CastSuccess),
+        "literal Takedown must preserve the enemy cast unit despite its self aura effects"
+    );
+    assert!(
+        observed_buff,
+        "the same enemy-targeted cast must buff its actual owner"
+    );
+}

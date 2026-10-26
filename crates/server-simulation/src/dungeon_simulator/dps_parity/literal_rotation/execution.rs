@@ -467,6 +467,11 @@ fn read_spell(
     let Some(id) = resolve_action(world, actor, id)? else {
         return Ok(());
     };
+    let resolved = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(id)
+        .expect("resolved native action remains in its catalog");
+    let self_target = self_target || crate::spell_cast::targets::targets_caster_only(resolved);
     // SimC76f8118 sc_hunter.cpp7269–7274: start once; native repeats
     // own later shots. This applies to any native autorepeat, not a spell-ID branch.
     if crate::spell_cast::test_harness::read_native_auto_repeat(world, actor, id) {
@@ -512,6 +517,19 @@ fn read_item(
     let (slot, item) = item;
     let name = format!("item:{slot}");
     prepared.declared.insert(name.clone());
+    // SimC76f8118 player.cpp10056–10068 forwards the selected primary to
+    // the on-use action. Native ally/self payloads still cast on their owner.
+    let spell = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(item.on_use.spell_id)
+        .ok_or_else(|| format!("native literal item spell{} absent", item.on_use.spell_id))?;
+    let requirement = crate::spell_cast::targets::explicit_requirement(spell.effects.iter());
+    let default_target = match requirement {
+        Some(
+            crate::spell_cast::targets::Relation::Enemy | crate::spell_cast::targets::Relation::Any,
+        ) => targets.first().copied(),
+        _ => Some(actor),
+    };
     for target in std::iter::once(actor).chain(targets.iter().copied()) {
         let state = native_readiness(
             world,
@@ -524,7 +542,7 @@ fn read_item(
         record_probe(
             prepared,
             (name.clone(), Some(target)),
-            target == actor,
+            Some(target) == default_target,
             state,
             Execution::Item(item, target),
         );
@@ -636,6 +654,12 @@ pub(crate) fn execute_row(
     row: &Action,
     execution: Execution,
 ) -> Result<(), String> {
+    if let Some(age) = row.options.get("pre_pot_time") {
+        if row.name != "potion" {
+            return Err("pre_pot_time requires a native potion row".into());
+        }
+        return super::precombat_potion::execute(world, actor, execution, age);
+    }
     let Some(stage) = row.options.get("empower_to") else {
         return execute(world, actor, execution);
     };

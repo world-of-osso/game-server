@@ -1,0 +1,16 @@
+[package]
+name = "server-spell-scripts"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+server-combat = { path = "../server-combat" }
+bevy = { version = "0.19", default-features = false, features = ["bevy_log", "bevy_state"] }
+shared = { git = "https://github.com/world-of-osso/shared-protocol.git", rev = "186134ff880f1a6a7b754e4ce43456d775a44caf" }
+
+[features]
+test-support = ["server-combat/test-support"]
+
+[dev-dependencies]
+server-combat = { path = "../server-combat", features = ["test-support"] }

@@ -31,6 +31,8 @@ Named `action.<alias>.executing` and `execute_remains` read the matching native 
 
 Flamestrike's selected talent ID supplies both the fact and dispatch binding. Shared cast-relationship tables express the selected Meteor→Pyroclasm grant and the native MID2 hardcast crit condition. The latter reads the admitted modifier snapshot, not a proc aura already consumed before impact. Native hit handling retains its pre-damage guaranteed-crit fact and updates only configured reaction observations; ordinary gameplay does not acquire a synthetic reaction policy. Existing Hot Streak is preserved on wasted critical hits.
 
+Native `spell_cast/scripts/fire_procs.rs` supplies Hot Streak-spend Fired Up, capped-PRD Spellfire Spheres and Mana Cascade. Memory of Al'ar starts Hyperthermia at Combustion expiry. The fixture applies the pinned five initial Sphere applications through the native three-stack cap; Codex consumes them on invocation. Meteor travel no longer competes with a later hardcast, and Flamestrike rolls Fuel the Fire once per successful cast. Native MID2 four-piece label5947 modifies Pyroclasm's buff payload, not the label5949 talent's15% proc chance. See [the Fire contract](../../specs/dps-parity.md#fire-literal-fixture); current numerical acceptance remains separate.
+
 ## Expected combat length
 
 `expected_combat_length` reads the existing `Encounter::Fixture.duration`, validated positive+finite. It is not elapsed/fight-remains, a300literal or an extra stored field. Dungeon and invalid fixture values return EXPECTED_COMBAT_LENGTH_UNAVAILABLE; proposed-action forwarding uses the same configured value. Four minimal-world cases at88095009c give4genuineRED0.02s;991b7fcde (landed master924638aba base) yields4/4GREEN0.00s/14m24compile/0warnings. Tests enabled attribute-only afterward; no DB/profile/suite rerun. [Exact proof](../../handoffs/expected-combat-length-proof-ledger.md).
@@ -50,6 +52,8 @@ Pinned SimC76f8118 `player.cpp12146–12148` reads `current.distance_to_move`, n
 `pool_resource,for_next=1` is interpreter control, not native dispatch. Program checks the following source action at current state, then a readonly local selected-resource maximum view plus `ActionFacts::ready_at_resource_max(action, resource)`. `primary_resource()` supplies the adapter's sourced default; missing hooks error. Active pooling propagates through call lists without lower-priority leakage. `max_energy=1` reads action-bound maximum_energy, not actor energy.max; native cost/extra-cap/modifiers stay adapter-owned. Only for_next1/resource options are qualified; ordered precombat pooling and other options error. Exact reporter/counterexamples and44sharedGREEN scope: [ledger](../../handoffs/feral-shared-program-proof-ledger.md); corrected d101 reporter plus explicit fixture hooks yields4GREEN/full53GREEN atc4; native Feral wiring remains unqualified.
 
 ## Shared literal fixture machinery
+
+The [parity harness](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/mod.rs) stores one `Option<Box<dyn SpecDriver>>`. Its sorted `spec_drivers!` table declares each rotation module and registers its factory, actor predicate and optional report key. Each module owns preparation, combat dispatch and report label. `supports_actor` defaults to both Player and Follower; overrides must be explicit. Elemental and Devastation no longer have Follower-only selection. Ret and Windwalker explicitly opt out for Player because their existing loaders require native follower fixtures. Shared preparation retains only native setup machinery. Existing report keys, including inactive nulls, remain unchanged. See the [contract](../../specs/dps-parity.md#literal-spec-drivers).
 
 After the explicit target-candidate interpreter landed, WW's count-only adapter rejected actual ST/3T runs atd45fe30e8 with `target_if requires explicit native target candidates`. WW now carries the actual supplied entity slice into target_ids; shared pd1035 Prepared/Execution preserves selected identities. This integration is not a first-target fallback, and per-fixture TTD still follows one global fixed-time clock. Same-binary ff8ba4206 actual300s ST/3T now pass the target seam at47064.44/81373.16, still−77.20%/−78.39% versus the requested reference, NOT parity; [exact failures/current receipts](../../handoffs/ww-source-census.md).
 
@@ -137,8 +141,19 @@ For an active channel, sample `Prepared::read_after_channel`, build live action-
 
 `call_action_list` retains its literal option values but is interpreter control, not an executable spell. Off-GCD traversal never changes a child's own Prepared admission. See the [behavior contract](../../specs/simc-apl.md) and [channel requirements](../../specs/dps-parity.md#literal-action-readiness-and-channels).
 
+## Rogue literal fixture and effective resource values
+
+The Outlaw adapter passes the profile's complete rows through the shared evaluator. Roll the Bones binds specialization action1214909, not the obsolete315508 trait endpoint. Shared Rogue facts retain action context for GCD queries and read permanent Energy capacity separately from temporary increases. These bindings do not establish numerical DPS parity.
+
+`CastPolicyContext.resources` stores `(PowerType, effective_value)` pairs at launch. Actual payment remains separate. `resource_values.rs` matches an earned Fang Strike aura through its native family mask, snapshots the native combo-point maximum even for a free finisher, and consumes the one-use window after ordinary execution. Multiplying damage by paid cost had produced zero-damage Dispatch casts.
+
+The shared spender-hit policy starts or extends native Slice and Dice after an eligible primary hit. Cut to the Chase reads native51667 seconds per effective point and315496 base duration; its cap follows the pinned maximum-point pandemic formula. Native producer-event qualification remains separate from value snapshots and consumption.
+
 ## Sources
 
+- [Outlaw adapter](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/outlaw_rotation.rs) — literal rows and native action bindings.
+- [Effective resource policies](../../../crates/server-combat/src/spell_cast/scripts/resource_values.rs) — pinned `sc_rogue.cpp1926,2021–2027` and native family-mask/pool data.
+- [Spender hit policies](../../../crates/server-combat/src/spell_cast/scripts/policies.rs) — pinned `sc_rogue.cpp3787,4386,4439,6891,8704–8716` and native aura amounts/duration.
 - [Havoc adapter](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/havoc_rotation.rs) — literal source rows and virtual action predicates.
 - [Demonic policy](../../../crates/server/src/spell_cast/scripts/havoc.rs) — pinned relationship with native payload and duration.
 
@@ -153,3 +168,9 @@ For an active channel, sample `Prepared::read_after_channel`, build live action-
 ## See Also
 
 - [[dungeon-simulator]] — native fixture lifecycle and measurements.
+
+## Affliction fixture265
+
+The adapter reads every exported profile row unchanged, uses the profile-selected native pet and shared channel decisions, and reads Darkglare lifetime from real owned summons. Native spells, knowledge, resources and damage stay authoritative. See [qualification contract](../../specs/dps-parity.md#affliction265-literal-fixture).
+
+Agony funding is a separate downstream module: landed native ticks advance per-owner threshold progress; native17941 supplies whole-shard amount, and losing the last Agony resets progress. It does not share Destruction fragment-per-tick funding. Numeric parity remains measurement-gated. [Source](../../../crates/server-spell-scripts/src/modules/affliction_agony.rs).

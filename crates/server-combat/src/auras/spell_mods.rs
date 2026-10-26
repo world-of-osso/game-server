@@ -98,7 +98,7 @@ pub(super) fn affects(aura: &AuraInstance, effect: &AuraEffectState, spell: &Spe
 
 /// `AuraEffect::IsAffectingSpell` (SpellAuraEffects.cpp:1286-1296): `spell` is of the
 /// aura's `SpellClassSet` and shares a bit of the effect's `SpellClassMask`.
-pub(crate) fn class_mask_affects(
+pub fn class_mask_affects(
     aura: &AuraInstance,
     effect: &AuraEffectState,
     spell: &SpellInfo,
@@ -107,7 +107,7 @@ pub(crate) fn class_mask_affects(
 }
 
 /// Same native mask relation for an unapplied source record (e.g. form overrides).
-pub(crate) fn class_mask_matches(class_set: u32, mask: &[u32; 4], spell: &SpellInfo) -> bool {
+pub fn class_mask_matches(class_set: u32, mask: &[u32; 4], spell: &SpellInfo) -> bool {
     let Some(options) = spell.class_options.as_ref() else {
         return false;
     };
@@ -156,7 +156,9 @@ fn matching<'a>(
 // Tidal Waves/Backdraft/Surge of Light stacks are also next-spell uses.
 // SimC76f8118 sc_evoker.cpp6485/6595: Mass Disintegrate stacks are uses,
 // not a multiplier on its native additional-target amount.
-const STACKED_NEXT_SPELL_USES: &[u32] = &[53390, 117828, 116768, 325202, 114255, 436336];
+// Native1265871 suppresses points stacking (effect attribute0x40); tier uses
+// do not multiply its ordinary damage modifier (sc_evoker.cpp10850–10856).
+const STACKED_NEXT_SPELL_USES: &[u32] = &[53390, 117828, 116768, 325202, 114255, 436336, 1265871];
 
 fn stacked_amount(aura: &AuraInstance, effect: &AuraEffectState) -> f32 {
     let stacks = if STACKED_NEXT_SPELL_USES.contains(&aura.spell_id) {
@@ -186,7 +188,7 @@ pub(crate) fn snapshot_charged_modifiers(
         return Vec::new();
     };
     let charged = auras.iter().filter(|aura| {
-        aura.charges > 0 || crate::spell_cast::scripts::snapshots_modifier(aura.spell_id)
+        aura.charges > 0 || crate::spell_cast::scripts::snapshots_modifier(world, aura.spell_id)
     });
     charged
         .flat_map(|aura| {
@@ -209,21 +211,33 @@ fn snapshots_periodic_modifier(aura: &AuraInstance, op: SpellModOp) -> bool {
     aura.spell_id == 5217 && op == SpellModOp::PeriodicHealingAndDamage
 }
 
+fn periodic_snapshot_modifiers(world: &World, caster: Entity, spell: &SpellInfo) -> (f32, f32) {
+    let Some(auras) = world.get::<ActiveAuras>(caster) else {
+        return (0.0, 1.0);
+    };
+    let op = SpellModOp::PeriodicHealingAndDamage;
+    matching(auras, spell, op)
+        .filter(|(aura, _)| snapshots_periodic_modifier(aura, op))
+        .fold((0.0, 1.0), |sum, (aura, effect)| {
+            add_modifier(sum, stacked_amount(aura, effect), is_pct(effect.aura_type))
+        })
+}
+
+pub(crate) fn snapshot_periodic_multiplier(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+) -> f32 {
+    periodic_snapshot_modifiers(world, caster, spell).1
+}
+
 pub(crate) fn snapshot_periodic_amount(
     world: &World,
     caster: Entity,
     spell: &SpellInfo,
     amount: f32,
 ) -> f32 {
-    let Some(auras) = world.get::<ActiveAuras>(caster) else {
-        return amount;
-    };
-    let op = SpellModOp::PeriodicHealingAndDamage;
-    let (flat, multiplier) = matching(auras, spell, op)
-        .filter(|(aura, _)| snapshots_periodic_modifier(aura, op))
-        .fold((0.0, 1.0), |sum, (aura, effect)| {
-            add_modifier(sum, stacked_amount(aura, effect), is_pct(effect.aura_type))
-        });
+    let (flat, multiplier) = periodic_snapshot_modifiers(world, caster, spell);
     (amount + flat) * multiplier
 }
 
@@ -273,7 +287,7 @@ fn modifier_totals(world: &World, caster: Entity, spell: &SpellInfo, op: SpellMo
             .filter(|(aura, _)| {
                 spell.cast_charge_mods.is_none()
                     || (aura.charges == 0
-                        && !crate::spell_cast::scripts::snapshots_modifier(aura.spell_id))
+                        && !crate::spell_cast::scripts::snapshots_modifier(world, aura.spell_id))
             })
             .fold(frozen, |sum, (aura, effect)| {
                 let amount = stacked_amount(aura, effect);
@@ -307,7 +321,9 @@ pub fn consume_charges(world: &mut World, caster: Entity, spell: &SpellInfo) {
         .iter()
         .filter(|aura| {
             aura.charges > 0
-                && !crate::spell_cast::scripts::preserve_unadmitted_proc(spell, aura)
+                && !world
+                    .resource::<crate::spell_cast::script_registry::SpellScriptRegistry>()
+                    .preserve_unadmitted_proc(spell, aura)
                 && aura.effects.iter().any(|effect| {
                     // TC Player.cpp22820: zero-valued mods never enter m_appliedMods.
                     effect.amount != 0.0

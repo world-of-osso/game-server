@@ -116,7 +116,9 @@ fn literal_precombat_ww_snapshot_exists_before_engagement_and_fight_time() {
             target
         ));
     }
-    let rotation = run.windwalker_rotation.as_ref().unwrap();
+    let rotation = (run.spec_driver.as_ref().unwrap().as_ref() as &dyn std::any::Any)
+        .downcast_ref::<windwalker_rotation::Rotation>()
+        .unwrap();
     assert!(rotation.report()["native_precombat_snapshot"].is_object());
     let action = server::simc_apl::Action {
         source_row: None,
@@ -421,6 +423,39 @@ fn literal_precombat_initializes_declared_demo_shards_before_warmup() {
     assert_eq!(
         current, 0.0,
         "profile-declared starting state precedes precombat; do not reset/grant after casts"
+    );
+}
+
+#[test]
+#[ignore = "requires prepared267 profile/current native source view; player initial pool ordering"]
+fn literal_precombat_player_declared_shards_exist_before_first_frame() {
+    let (profile, traits) = read_reference(267).unwrap();
+    let identity = inputs::read_actor(&profile).unwrap();
+    let mut run = spawn_reference(profile, &traits, 1, identity).unwrap();
+    assert!(
+        run.app
+            .world()
+            .get::<shared::components::Player>(run.actor)
+            .is_some()
+    );
+    let read_power = |run: &Run| {
+        crate::spell_cast::powers::power_value(run.app.world(), run.actor, PowerType::SoulShards)
+            .expect("native player class pool must precede declared-power validation")
+    };
+    let initial = read_power(&run);
+    assert_eq!(
+        initial.0, 0.0,
+        "honor the pinned warlock.soul_shards=0 before warmup"
+    );
+    assert!(
+        initial.1 > 0.0,
+        "native class metadata supplies the maximum"
+    );
+    run.app.update();
+    assert_eq!(
+        read_power(&run),
+        initial,
+        "the first ordinary native frame cannot replace the configured pool"
     );
 }
 

@@ -7,7 +7,7 @@ use shared::components::{PowerType, UnitStats};
 
 use super::handlers::*;
 use super::{ActiveAuras, AuraInstance};
-use crate::stats::StatModifiers;
+use crate::stats::{StatModifiers, compound_haste_pct};
 
 /// School bit indexes 0 Physical .. 6 Arcane.
 pub const SCHOOL_COUNT: usize = 7;
@@ -45,8 +45,10 @@ pub struct AuraStatMods {
     pub target_reduction_mult: Vec<(u32, f32)>,
     /// MOD_HEALING_PCT 118 and MOD_HEALING_RECEIVED 283.
     pub healing_taken_mult: f32,
-    /// Raw signed MOD_WEAPON_CRIT_PERCENT52 + MOD_CRIT_PCT290, NPC autoattacks only.
+    /// Raw signed MOD_CRIT_PCT290 for NPCs without folded CharacterStats.
     pub npc_crit_pct: f32,
+    /// Raw MOD_WEAPON_CRIT_PERCENT52, separate from folded generic crit.
+    pub npc_weapon_crit_pct: f32,
     /// MOD_AUTOATTACK_CRIT_CHANCE334: signed additive percentage points.
     pub autoattack_crit_pct: f32,
     /// MOD_AUTOATTACK_DAMAGE 344.
@@ -136,6 +138,7 @@ impl Default for AuraStatMods {
             target_reduction_mult: Vec::new(),
             healing_taken_mult: 1.0,
             npc_crit_pct: 0.0,
+            npc_weapon_crit_pct: 0.0,
             autoattack_crit_pct: 0.0,
             autoattack_damage_mult: 1.0,
             autoattack_range_bonus: 0.0,
@@ -382,7 +385,7 @@ pub fn compute(auras: &ActiveAuras, player_controlled_npc: bool) -> (StatModifie
     acc.combat.movement_speed = slowed(capped(run, BASE_SPEED));
     acc.combat.flight_speed = slowed(capped(flight, BASE_SPEED));
     acc.combat.swim_speed = slowed(capped(swim, BASE_SWIM_SPEED));
-    acc.stats.haste_pct += acc.haste_not_stack;
+    acc.stats.haste_pct = compound_haste_pct(acc.stats.haste_pct, acc.haste_not_stack);
     acc.stats.haste_total_pct = super::ret_crusade::haste_total_pct(auras);
     (acc.stats, acc.combat)
 }
@@ -575,13 +578,25 @@ fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance) {
                     effect.amount.trunc() * stacks,
                 );
             }
-            // Retail 12.x haste is one stat: melee, ranged and spell haste
-            // auras all add to it.
+            // SimC76f8118 sc_mage.cpp6497–6501: effect2 ×0.001 is the
+            // fractional haste per Mana Cascade stack; effect1 is zero-valued.
+            MELEE_SLOW if matches!(aura.spell_id, 449314 | 449322) => {
+                let haste = aura
+                    .effects
+                    .iter()
+                    .find(|effect| effect.index == 1)
+                    .expect("native Mana Cascade requires effect2")
+                    .amount;
+                stats.haste_pct = compound_haste_pct(stats.haste_pct, haste * 0.1 * stacks);
+            }
+            // SimC76f8118 player.cpp4987–4995: independent haste buffs multiply.
             MOD_MELEE_HASTE
             | MOD_RANGED_HASTE
             | MOD_MELEE_RANGED_HASTE
             | MELEE_SLOW
-            | HASTE_SPELLS => stats.haste_pct += amount,
+            | HASTE_SPELLS => {
+                stats.haste_pct = compound_haste_pct(stats.haste_pct, amount);
+            }
             MOD_CASTING_SPEED_NOT_STACK => acc.haste_not_stack = acc.haste_not_stack.max(amount),
             MASTERY => stats.mastery_points += amount,
             // Player::ApplyModOverrideSpellPowerByAPPercent adds each aura's amount
@@ -610,7 +625,7 @@ fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance) {
             }),
             MOD_HEALING_DONE_PERCENT => combat.healing_done_mult *= pct(amount),
             MOD_HEALING_PCT | MOD_HEALING_RECEIVED => combat.healing_taken_mult *= pct(amount),
-            MOD_WEAPON_CRIT_PERCENT => combat.npc_crit_pct += amount,
+            MOD_WEAPON_CRIT_PERCENT => combat.npc_weapon_crit_pct += amount,
             MOD_AUTOATTACK_CRIT_CHANCE => combat.autoattack_crit_pct += amount,
             MOD_AUTOATTACK_DAMAGE => combat.autoattack_damage_mult *= pct(amount),
             MOD_AUTOATTACK_RANGE => combat.autoattack_range_bonus += amount,

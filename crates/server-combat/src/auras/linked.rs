@@ -14,7 +14,7 @@ fn linked_effects(aura: &AuraInstance) -> impl Iterator<Item = &AuraEffectState>
         .filter(|effect| is_linked(effect.aura_type))
 }
 
-fn find_child_caster(
+pub(super) fn find_child_caster(
     world: &World,
     target: Entity,
     aura: &AuraInstance,
@@ -102,6 +102,9 @@ pub(super) fn on_removed(world: &mut World, target: Entity, aura: &AuraInstance)
         let Some(caster) = find_child_caster(world, target, aura, effect.trigger_spell) else {
             continue;
         };
+        if super::linked_owners::has_other_parent(world, target, caster, effect.trigger_spell) {
+            continue;
+        }
         super::remove_auras(world, target, super::RemoveReason::Cancelled, |child| {
             child.spell_id == effect.trigger_spell && child.caster == caster
         });

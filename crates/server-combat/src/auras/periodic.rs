@@ -62,6 +62,7 @@ struct Tick {
     amount: f32,
     fraction: f32,
     scheduled_at: f64,
+    ordinal: u64,
     misc: i32,
     trigger_spell: u32,
 }
@@ -126,6 +127,7 @@ fn due_ticks(world: &mut World, unit: Entity, now: f64, only: Option<u32>) -> Ve
                     amount: effect.amount * stacks,
                     fraction,
                     scheduled_at,
+                    ordinal: effect.periodic_ticks,
                     misc: effect.misc_values[0],
                     trigger_spell: effect.trigger_spell,
                 });
@@ -273,6 +275,13 @@ fn run_tick(world: &mut World, unit: Entity, spell: &SpellInfo, tick: &Tick) {
         .iter()
         .find(|effect| effect.index == tick.effect_index)
         .expect("periodic effect belongs to its spell");
+    if tick.aura_type == PERIODIC_TRIGGER_SPELL
+        && let Some(run) =
+            crate::spell_cast::script_registry::channel_periodic(world, spell.id, tick.effect_index)
+    {
+        run(world, &ctx, unit);
+        return;
+    }
     match tick.aura_type {
         PERIODIC_DAMAGE => {
             let agony_tick = spell.id == super::agony::AGONY && tick.effect_index == 0;
@@ -318,11 +327,6 @@ fn run_tick(world: &mut World, unit: Entity, spell: &SpellInfo, tick: &Tick) {
         PERIODIC_ENERGIZE => energize(world, &ctx, unit, tick),
         OBS_MOD_POWER => obs_mod_power(world, &ctx, unit, tick),
         PERIODIC_TRIGGER_SPELL
-            if spell.id == crate::spell_cast::scripts::EYE_BEAM && tick.effect_index == 0 =>
-        {
-            crate::spell_cast::scripts::cast_eye_beam_tick(world, tick.caster);
-        }
-        PERIODIC_TRIGGER_SPELL
             if spell.id == crate::spell_cast::omor_orbital::ORBITAL_WHIP
                 && tick.effect_index == 0 =>
         {
@@ -341,6 +345,13 @@ fn run_trigger_tick(world: &mut World, unit: Entity, spell: &SpellInfo, tick: &T
     // Additive OnEffectPeriodic still precedes default or registered emission.
     // This also preserves script-only triggers such as Mirror Image1264098.
     run_scripted_tick(world, unit, spell, tick);
+    crate::spell_cast::scripts::after_periodic_trigger(
+        world,
+        tick.caster,
+        spell.id,
+        tick.effect_index,
+        tick.ordinal,
+    );
     if let Some(run) = crate::spell_cast::scripts::periodic_trigger(spell.id, tick.effect_index) {
         let aura = world
             .get::<ActiveAuras>(unit)

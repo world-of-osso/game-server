@@ -1,10 +1,18 @@
 //! Gameplay-world bindings for the engine-free pinned SimC APL evaluator.
+mod periodic;
 pub mod reaction;
 use bevy::prelude::*;
 use server::simc_apl::{Action, ActionFacts, Facts};
 use shared::components::PowerType;
 use std::collections::BTreeMap;
 use std::time::Duration;
+
+/// SimC76f8118 action.cpp1738–1752: open encounter geometry, not a native
+/// map-data fallback. Production worlds do not call this fixture setup.
+pub fn install_open_arena(world: &mut World) {
+    world.insert_resource(crate::line_of_sight::LineOfSight::open_arena());
+    world.insert_resource(crate::ground::GroundMap::flat_arena(0.0));
+}
 
 /// Explicit fixture lifetime/role; never changes the native creature template.
 #[derive(Component, Clone, Copy)]
@@ -60,14 +68,11 @@ pub struct DotRefresh {
 
 pub fn native_dot_spell(
     world: &World,
-    _caster: Entity,
+    caster: Entity,
     spell: u32,
 ) -> Result<crate::spell_info::SpellInfo, String> {
-    world
-        .resource::<crate::spell_info::SpellStore>()
-        .get(spell)
-        .cloned()
-        .ok_or_else(|| format!("native dot spell{spell} absent"))
+    crate::spell_cast::read_resource_prepared_spell(world, caster, spell)
+        .map_err(|error| format!("native resource-prepared dot{spell}: {error:?}"))
 }
 
 #[derive(Default)]
@@ -250,6 +255,16 @@ impl<'a> NativeFacts<'a> {
         }
         let target = self.selected_target(action)?;
         match property {
+            // SimC76f8118 action.cpp4030–4032 exposes target.distance.
+            // Native evaluation uses the selected entities' actual geometry,
+            // not the reference profile's synthetic base-distance option.
+            "distance" => {
+                let from = crate::spell_cast::targets::position(self.world, self.actor)
+                    .ok_or("NATIVE_APL_POSITION_UNAVAILABLE: actor position missing")?;
+                let to = crate::spell_cast::targets::position(self.world, target)
+                    .ok_or("NATIVE_APL_POSITION_UNAVAILABLE: selected target position missing")?;
+                Ok(f64::from(from.distance(to)))
+            }
             // SimC76f8118 hunter_marksmanship.simc18 scores target.health;
             // the native candidate supplies its actual current pool.
             "health" => self
@@ -406,6 +421,19 @@ impl<'a> NativeFacts<'a> {
             "up" | "ticking" => Ok(bool_value(!active.is_empty())),
             "down" => Ok(bool_value(active.is_empty())),
             "remains" => Ok(buff_remaining(&active, now)),
+            "pmultiplier" => self.stored_persistent_multiplier(alias, action),
+            // SimC76f8118 dot.cpp448–455: inactive is0; otherwise fresh
+            // composite duration, not remaining time or pandemic carry.
+            "duration" => Ok(if active.is_empty() {
+                0.0
+            } else {
+                f64::from(crate::auras::fresh_duration_ms(
+                    self.world,
+                    self.actor,
+                    target,
+                    self.spell(id)?,
+                )) / 1000.0
+            }),
             "stack" => Ok(active
                 .iter()
                 .map(|aura| f64::from(aura.stacks))
@@ -759,6 +787,8 @@ impl<'a> NativeFacts<'a> {
                 crate::spell_cast::cast_time_ms(self.world, self.actor, spell).max(0),
             ) / 1000.0),
             "cost" => self.action_cost(spell),
+            "persistent_multiplier" => self.live_persistent_multiplier(alias),
+            "pmultiplier" => self.stored_persistent_multiplier(alias, action),
             _ => Err(format!("unknown native APL action property {property}")),
         }
     }
@@ -830,7 +860,7 @@ impl<'a> NativeFacts<'a> {
     fn contextual_property(&self, action: &Action, name: &str) -> Result<f64, String> {
         let spell = self.action_spell(&action.name)?;
         match name {
-            "charges" | "charges_fractional" | "full_recharge_time" => {
+            "charges" | "max_charges" | "charges_fractional" | "full_recharge_time" => {
                 crate::spell_cast::cooldown_query::cooldown_value(
                     self.world, self.actor, spell, name,
                 )
@@ -1037,10 +1067,9 @@ impl Facts for NativeFacts<'_> {
             "movement.distance" => self.movement_distance(),
             "movement.remains" => self.movement_value("remains"),
             "movement.speed" => self.movement_value("speed"),
-            "gcd" | "gcd.max" | "gcd.min" | "gcd.remains" | "charges" | "charges_fractional"
-            | "full_recharge_time" | "execute_time" | "ticks_remain" | "ticks" | "ticking" => {
-                Err(format!("native APL {name} requires action context"))
-            }
+            "gcd" | "gcd.max" | "gcd.min" | "gcd.remains" | "charges" | "max_charges"
+            | "charges_fractional" | "full_recharge_time" | "execute_time" | "ticks_remain"
+            | "ticks" | "ticking" => Err(format!("native APL {name} requires action context")),
             _ => {
                 if let Some(value) = name.strip_prefix("buff.") {
                     return self.buff(value);
@@ -1102,10 +1131,16 @@ impl ActionFacts for NativeFacts<'_> {
         }
         match name {
             "gcd" | "gcd.max" | "gcd.min" | "gcd.remains" => self.gcd(action, name),
-            "charges" | "charges_fractional" | "full_recharge_time" | "execute_time"
-            | "cast_time" | "cost" | "ticks_remain" | "ticks" | "ticking" | "cooldown_react" => {
-                self.contextual_property(action, name)
+            // SimC76f8118 action.cpp3940–3997 binds bare dot operands to
+            // this actual source action and selected recipient.
+            "refreshable" | "remains" => {
+                self.dot_value(&format!("{}.{}", action.name, name), Some(action))
             }
+            "persistent_multiplier" => self.live_persistent_multiplier(&action.name),
+            "pmultiplier" => self.stored_persistent_multiplier(&action.name, Some(action)),
+            "charges" | "max_charges" | "charges_fractional" | "full_recharge_time"
+            | "execute_time" | "cast_time" | "cost" | "ticks_remain" | "ticks" | "ticking"
+            | "cooldown_react" => self.contextual_property(action, name),
             _ => self.value(name),
         }
     }
@@ -1177,6 +1212,8 @@ mod movement_distance_tests;
 mod refresh_context_tests;
 #[cfg(test)]
 mod target_context_tests;
+#[cfg(test)]
+mod target_distance_tests;
 #[cfg(test)]
 mod target_tests;
 #[cfg(test)]

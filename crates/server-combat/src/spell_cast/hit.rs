@@ -147,7 +147,9 @@ fn roll_defense(
     }
     // Object::SpellHitResult: ALWAYS_HIT bypasses avoidance, not immunity.
     // Reflection remains a separate launch decision in missiles::launch.
-    if attributes(spell, 3) & (ATTR3_NO_AVOIDANCE | ATTR3_ALWAYS_HIT) != 0 {
+    if attributes(spell, 3) & (ATTR3_NO_AVOIDANCE | ATTR3_ALWAYS_HIT) != 0
+        || super::scripts::ignores_hit_avoidance(spell.id)
+    {
         return None;
     }
     let defense = spell

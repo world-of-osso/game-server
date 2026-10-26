@@ -68,7 +68,7 @@ pub struct ChargedSpellModifier {
     pub amount: f32,
 }
 
-/// Ordinary launch inputs retained for explicit resource-spender hit policies.
+/// Ordinary launch inputs retained for explicit resource-dependent cast/hit policies.
 #[derive(Debug, Clone)]
 pub struct CastPolicyContext {
     /// Effective launch values, retained independently of later resource changes.
@@ -305,6 +305,8 @@ pub enum ProcDefinitionSource {
 pub struct SpellAuraOptions {
     /// None disables proc generation, not stacking or charge metadata.
     pub proc_definition_source: Option<ProcDefinitionSource>,
+    /// Explicit TDB (SpellFamilyName, four SpellFamilyMask words); None uses generation.
+    pub proc_family: Option<(u32, [u32; 4])>,
     /// Max stacks (`CumulativeAura`).
     pub cumulative_aura: u32,
     pub proc_category_recovery_ms: i32,

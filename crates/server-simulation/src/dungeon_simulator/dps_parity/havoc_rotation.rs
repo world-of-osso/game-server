@@ -6,7 +6,7 @@ use super::literal_rotation::{
 };
 use crate::simc_apl_native::{Bindings, Encounter, NativeFacts};
 use bevy::prelude::*;
-use facts::{DemonsurgeUses, HavocFacts};
+use facts::HavocFacts;
 use serde_json::{Value, json};
 use server::simc_apl::Program;
 
@@ -15,7 +15,6 @@ pub(super) struct Rotation {
     bindings: Bindings,
     equipment: Equipment,
     encounter: Encounter,
-    uses: DemonsurgeUses,
 }
 
 fn load_program() -> Result<Program, String> {
@@ -57,7 +56,6 @@ impl Rotation {
             bindings,
             equipment,
             encounter,
-            uses: DemonsurgeUses::default(),
         })
     }
 
@@ -81,13 +79,13 @@ impl Rotation {
         actor: Entity,
         targets: &[Entity],
     ) -> Result<bool, String> {
-        self.uses.observe(world, actor);
         let prepared = self.prepare(world, actor, targets)?;
         let facts = HavocFacts {
             native: NativeFacts::new(world, actor, &self.bindings, self.encounter, targets.len())
                 .with_targets(targets.first().copied(), targets),
             equipment: &self.equipment,
-            uses: &self.uses,
+            world,
+            actor,
         };
         match self
             .driver
@@ -126,13 +124,13 @@ impl Rotation {
         actor: Entity,
         targets: &[Entity],
     ) -> Result<(), String> {
-        self.uses.observe(world, actor);
         let prepared = self.prepare(world, actor, targets)?;
         let facts = HavocFacts {
             native: NativeFacts::new(world, actor, &self.bindings, self.encounter, targets.len())
                 .with_targets(targets.first().copied(), targets),
             equipment: &self.equipment,
-            uses: &self.uses,
+            world,
+            actor,
         };
         if let Some((action, execution)) =
             self.driver
@@ -148,5 +146,44 @@ impl Rotation {
             "native_precombat_snapshot": self.driver.snapshot,
             "gaps": ["NATIVE_SOUL_FRAGMENT_PICKUP_UNAVAILABLE",
                 "NATIVE_HAVOC_PER_ABILITY_QUALIFICATION_OPEN", "NATIVE_DEMONSURGE_DAMAGE_UNQUALIFIED"]})
+    }
+}
+
+pub(super) fn prepare_driver(run: &mut super::Run) -> Result<Box<dyn super::SpecDriver>, String> {
+    let encounter = crate::simc_apl_native::Encounter::Fixture {
+        started_at: crate::spell_cast::now(run.app.world()),
+        duration: 300.0,
+        style: crate::simc_apl_native::FightStyle::Patchwerk,
+    };
+    let mut rotation = Rotation::load(run.app.world_mut(), run.actor, encounter)?;
+    while rotation.precombat_step(run.app.world_mut(), run.actor, &run.targets)? {
+        super::preparation::finish_pending_setup(run)?;
+    }
+    rotation.start_combat_at(crate::spell_cast::now(run.app.world()));
+    run.gaps.retain(|gap| {
+        !gap.starts_with("NATIVE_ASSISTED_COMBAT_70448_VS_SIMC_APL")
+            && !gap.starts_with("NATIVE_FOLLOWER_KIT_VS_SIMC_APL")
+    });
+    Ok(Box::new(rotation))
+}
+
+pub(super) const REPORT_KEY: Option<&str> = Some("havoc_rotation");
+
+impl super::SpecDriver for Rotation {
+    fn label(&self) -> &'static str {
+        "LITERAL_SIMC_HAVOC_76f8118"
+    }
+
+    fn drive(
+        &mut self,
+        world: &mut World,
+        actor: Entity,
+        targets: &[Entity],
+    ) -> Result<(), String> {
+        self.drive(world, actor, targets)
+    }
+
+    fn report(&self) -> serde_json::Value {
+        self.report()
     }
 }

@@ -66,7 +66,20 @@ fn fury_sudden_death_foreground_special_grants_buff_and_resets_execute() {
     let mut run = super::super::prepare_measurement(72, 1).unwrap();
     let actor = run.actor;
     let target = run.targets[0];
+    // Isolate the native29725 producer from Slayer's independent SD reward.
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        actor,
+        crate::auras::RemoveReason::Consumed,
+        |aura| matches!(aura.spell_id, 444767 | 444769),
+    );
     super::super::engage(&mut run);
+    super::super::literal_rotation::execution::execute(
+        run.app.world_mut(),
+        actor,
+        super::super::literal_rotation::execution::Execution::AutoAttack(target),
+    )
+    .unwrap();
     for _ in 0..40 {
         crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 190411, Some(actor), 1);
         for _ in 0..40 {
@@ -77,6 +90,19 @@ fn fury_sudden_death_foreground_special_grants_buff_and_resets_execute() {
             "autos and background specials do not roll Sudden Death"
         );
     }
+    assert!(
+        run.app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(
+                |event| event.kind == shared::protocol::CombatLogKind::Damage
+                    && event.source == Some(actor.to_bits())
+                    && event.spell_id.is_none()
+            ),
+        "the auto-attack negative control must include real white impacts"
+    );
     let maximum = run
         .app
         .world()

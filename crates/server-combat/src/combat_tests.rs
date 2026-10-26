@@ -110,6 +110,7 @@ fn run_attack_tick(app: &mut App) {
                 armor_constants: armor_constants.as_deref(),
                 spells: None,
                 melee_override: None,
+                impact_replacement: None,
                 creature_types: crate::unit_creature_type::CreatureTypes {
                     races: None,
                     forms: None,
@@ -136,7 +137,9 @@ fn run_attack_tick(app: &mut App) {
                     temp_summoner: None,
                     spirit_wolf: None,
                     hunter_owner_ap: None,
+                    hunter_owner_crit_pct: None,
                 };
+                let mut impact_gate = WhiteImpactGate::default();
                 for hand in [Hand::Main, Hand::Off] {
                     if try_swing(
                         &attacker,
@@ -145,6 +148,7 @@ fn run_attack_tick(app: &mut App) {
                         &context,
                         te,
                         &mut aa,
+                        &mut impact_gate,
                         &mut commands,
                         &mut redirect_health,
                     )
