@@ -4,7 +4,7 @@
 
 `effects::power_stats` reads an explicit guardian SP policy after the existing demon and owner-RAP paths. Native Thing From Beyond189988 retains creature type15; its373277→373279 policy inherits full live owner SP without a demon marker or copied actor stats. Unlisted guardians keep their existing behavior.
 
-Native Yogg RED8bf69a675f has the authentic owned actor but no positive Spike damage: the former SP-policy lookup existed only in the demon branch. Shadow, BM Bear,265 guardians,267 pets and guardian-unit gates are required before landing. See the [Shadow contract](../../specs/dps-parity.md#shadow-literal-fixture).
+Native Yogg RED8bf69a675f has the authentic owned actor but no positive Spike damage: the former SP-policy lookup existed only in the demon branch. Native4ef1614ab5 passes23Shadow cases including all-three-target Spikes and13guardian cases (one unrelated ignored). BM Bear/Wildspeaker7c3eeb0fea passes2,265guardian7efd24bed9 passes3, and267petsf8014078a3 passes5. Landing remains pending. See the [Shadow contract](../../specs/dps-parity.md#shadow-literal-fixture).
 
 ## Merged feedback grants are not casts — 2026-10-26
 
