@@ -35,7 +35,7 @@ mod earthen_rage;
 pub(crate) mod ebon_might;
 mod echo_of_light;
 pub(crate) mod effect_immunity;
-pub(crate) mod enhancement_power;
+pub mod enhancement_power;
 mod fear;
 mod fel_devastation;
 mod fixate;
@@ -1088,6 +1088,9 @@ fn log_unhandled_types(world: &mut World, aura: &AuraInstance) {
             .into_iter()
             .all(|supported| supported);
         if handled
+            || world
+                .resource::<crate::spell_cast::script_registry::SpellScriptRegistry>()
+                .consumes_named_aura_field(aura.spell_id, effect.index)
             || scripts::consumes_named_field(aura.spell_id, effect.index)
             || crate::scripted_ai::kings_rest::handles_molten_gold_effect(aura.spell_id, effect)
         {
@@ -1268,6 +1271,29 @@ pub fn set_owned_stacks(
     #[cfg(any(test, feature = "test-support"))]
     crate::simc_apl_native::reaction::applied(world, unit, &source);
     auras_changed(world, unit);
+    true
+}
+
+/// Make an existing owned aura permanent without changing its native stack rules.
+pub fn make_owned_aura_permanent(
+    world: &mut World,
+    caster: Entity,
+    unit: Entity,
+    spell_id: u32,
+) -> bool {
+    let Some(mut auras) = world.get_mut::<ActiveAuras>(unit) else {
+        return false;
+    };
+    let Some(aura) = auras
+        .auras
+        .iter_mut()
+        .find(|aura| aura.spell_id == spell_id && aura.caster == caster)
+    else {
+        return false;
+    };
+    aura.duration_ms = 0;
+    aura.expires_at = None;
+    auras.dirty = true;
     true
 }
 
