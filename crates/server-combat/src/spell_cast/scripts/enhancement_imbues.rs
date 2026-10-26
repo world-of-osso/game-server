@@ -7,7 +7,7 @@ use shared::protocol::EquipmentSlot;
 
 use crate::auras::procs::{self, AuraEvent};
 use crate::auras::scripts::{AuraScript, AuraScripts};
-use crate::auras::{self, AuraInstance};
+use crate::auras::{self, ActiveAuras, AuraApplication, AuraInstance, AuraSource, RemoveReason};
 use crate::spell_cast;
 use crate::spell_info::{SpellInfo, SpellStore};
 use crate::stats::{EquippedItems, NativeItemInstances};
@@ -16,6 +16,9 @@ const WINDFURY: u32 = 319773;
 const FLAMETONGUE: u32 = 319778;
 const WINDFURY_ATTACK: u32 = 25504;
 const FLAMETONGUE_ATTACK: u32 = 10444;
+const ELEMENTAL_WEAPONS: u32 = 384355;
+const ELEMENTAL_WEAPONS_MODIFIER: u32 = 408390;
+const IMBUE_TALENT_FRACTION: f32 = 0.1;
 // Native70448 Unruly Winds;384355 is Elemental Weapons, not the extra-attack talent.
 const UNRULY_WINDS: u32 = 390288;
 const REQUIRES_MAIN_HAND: u32 = 0x0000_0400;
@@ -25,6 +28,8 @@ pub(super) fn register(scripts: &mut AuraScripts) {
     scripts.0.insert(
         WINDFURY,
         AuraScript {
+            on_apply: Some(refresh_elemental_weapons),
+            on_remove: Some(refresh_after_imbue_removed),
             check_proc: Some(check_windfury),
             on_proc: Some(cast_windfury),
             ..Default::default()
@@ -33,11 +38,86 @@ pub(super) fn register(scripts: &mut AuraScripts) {
     scripts.0.insert(
         FLAMETONGUE,
         AuraScript {
+            on_apply: Some(refresh_elemental_weapons),
+            on_remove: Some(refresh_after_imbue_removed),
             check_proc: Some(check_flametongue),
             on_proc: Some(cast_flametongue),
             ..Default::default()
         },
     );
+    scripts.0.insert(
+        ELEMENTAL_WEAPONS,
+        AuraScript {
+            on_apply: Some(refresh_elemental_weapons),
+            on_remove: Some(refresh_after_imbue_removed),
+            ..Default::default()
+        },
+    );
+}
+
+/// SimC76f8118 sc_shaman.cpp13212–13220: native talent amount ×0.1 per imbued hand.
+/// The same value supplies the native masked modifier and Stormblast's explicit exception.
+pub(super) fn elemental_weapons_percent(world: &World, caster: Entity) -> f32 {
+    if !auras::has_aura(world, caster, ELEMENTAL_WEAPONS) {
+        return 0.0;
+    }
+    let hands = [WINDFURY, FLAMETONGUE]
+        .iter()
+        .filter(|buff| auras::has_aura(world, caster, **buff))
+        .count();
+    super::script_effect_value(world, caster, ELEMENTAL_WEAPONS, 0)
+        * IMBUE_TALENT_FRACTION
+        * hands as f32
+}
+
+fn refresh_after_imbue_removed(
+    world: &mut World,
+    unit: Entity,
+    aura: &AuraInstance,
+    _reason: RemoveReason,
+) {
+    refresh_elemental_weapons(world, unit, aura);
+}
+
+fn refresh_elemental_weapons(world: &mut World, unit: Entity, _aura: &AuraInstance) {
+    let amount = elemental_weapons_percent(world, unit);
+    if amount == 0.0 {
+        auras::remove_auras(world, unit, RemoveReason::Unlearned, |aura| {
+            aura.spell_id == ELEMENTAL_WEAPONS_MODIFIER && aura.caster == unit
+        });
+        return;
+    }
+    if !auras::has_aura(world, unit, ELEMENTAL_WEAPONS_MODIFIER) {
+        auras::apply_aura(
+            world,
+            &AuraApplication {
+                caster: unit,
+                target: unit,
+                spell_id: ELEMENTAL_WEAPONS_MODIFIER,
+                effect_mask: u32::MAX,
+                source: AuraSource::Cast,
+            },
+        );
+    }
+    update_elemental_weapons_amount(world, unit, amount);
+}
+
+fn update_elemental_weapons_amount(world: &mut World, unit: Entity, amount: f32) {
+    let instance = world
+        .get::<ActiveAuras>(unit)
+        .and_then(|auras| {
+            auras
+                .iter()
+                .find(|aura| aura.spell_id == ELEMENTAL_WEAPONS_MODIFIER && aura.caster == unit)
+        })
+        .expect("native Elemental Weapons modifier")
+        .instance_id;
+    // Keep408390's native direct/periodic operations and class masks, replacing only zero amounts.
+    for index in [0, 1] {
+        assert!(auras::set_effect_amount(
+            world, unit, instance, index, amount
+        ));
+    }
 }
 
 pub(super) fn apply(world: &mut World, caster: Entity, spell: &SpellInfo) {
