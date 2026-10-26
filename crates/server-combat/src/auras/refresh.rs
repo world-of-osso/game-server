@@ -69,6 +69,7 @@ pub(super) fn prepare_application(
         roll_remaining_periodic(world, target, new, budget);
     }
     preserve_counter_only_stacks(world, target, new, spell);
+    super::enhancement_power::preserve_refresh_duration(world, target, new);
     super::ret_crusade::preserve_refresh_duration(world, target, new);
 }
 

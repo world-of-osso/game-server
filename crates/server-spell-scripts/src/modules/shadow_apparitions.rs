@@ -30,17 +30,17 @@ const SPECTRAL_HORRORS: u32 = 407469;
 
 fn impact_hook(spell: u32) -> Option<ContextHitHook> {
     match spell {
-        MADNESS => Some(spawn_madness_apparitions),
+        MADNESS => Some(spawn_apparitions),
         NORMAL_MISSILE | VOID_MISSILE => Some(burst_at_parent),
         _ => None,
     }
 }
 
-fn spawn_madness_apparitions(world: &mut World, ctx: &EffectCtx<'_>, primary: Entity) {
+pub(super) fn spawn_apparitions(world: &mut World, ctx: &EffectCtx<'_>, primary: Entity) {
     if !auras::has_aura(world, ctx.caster, APPARITIONS) {
         return;
     }
-    // SimC1296 is an impact producer, never a Madness periodic-tick producer.
+    // SimC1296/2609–2650: Madness impact and earned Tormented cohorts share launches.
     for target in shadow_link::read_vampiric_touch_targets(world, ctx.caster) {
         let parent = roll_missile(world, ctx.caster);
         launch_apparition(world, ctx, primary, target, parent);

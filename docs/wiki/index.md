@@ -1,3 +1,4 @@
+- [Ordinary spell GCD haste](systems/spell-casting.md#ordinary-spell-gcd-haste--2026-10-26) — native category133 spell eligibility, haste bounds and separate417 path;40-spec clock gate, numerical remeasurement separate.
 - [Equipment proc eligibility](systems/character-stats.md#equipment-proc-eligibility--2026-10-25) — native idle Venomcursed999→correct permanent606 RED/GREEN; shared combat-reference gate passes four native groups; Ret/WW test-control RED→GREEN and four independently reproduced WW baseline failures are recorded.
 - [Warlock periodic counters](systems/warlock-periodic-counters.md) — native Wither counter-only RED→GREEN; shared producer/collapse lifecycle implemented, native qualification pending.
 - [Arcane literal fixture](systems/simc-apl.md#arcane-fixture-62) — supplied profile rows and native class readiness; ST controller regression passes, numerical parity remains separate.

@@ -35,7 +35,7 @@ Spec62 follows the pinned SimC behavior and native-value rules in [DPS parity](d
 
 - [x] Blast and Barrage apply one native charge damage modifier frozen before charge gain/spend. Savant augments only its per-charge term; Prodigious multiplies only that mastery contribution (`sc_mage.cpp2076–2083`).
 - [ ] Reach ±10% of pinned ST and3T DPS.
-- [ ] Resolve the separately diagnosed native GCD haste gap before qualifying channel chaining.
+- [ ] Qualify shared ordinary spell GCD haste across all40 native spec representatives before qualifying channel chaining. Category133 spells without melee/ranged defense or ability/ranged-slot attributes use ordinary spell haste before aura417, within the native750–1500ms bounds (TC a352b1fa `Spell.cpp9209–9224`; SimC76f8118 `action.cpp648–666,1285–1315`).
 
 ## Out of scope
 
