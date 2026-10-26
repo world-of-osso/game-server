@@ -162,6 +162,8 @@ register_modules! {
     melee_reset: (340, "modules/melee_reset.rs"),
     midnight_item_damage: (1000, "modules/midnight_item_damage.rs"),
     midnight_stat_items: (1000, "modules/midnight_stat_items.rs"),
+    outlaw_bte: (2606, "modules/outlaw_bte.rs"),
+    outlaw_coup: (2608, "modules/outlaw_coup.rs"),
     outlaw_flurry: (2601, "modules/outlaw_flurry.rs"),
     outlaw_gravedigger: (2608, "modules/outlaw_gravedigger.rs"),
     outlaw_main_gauche: (2603, "modules/outlaw_main_gauche.rs"),
