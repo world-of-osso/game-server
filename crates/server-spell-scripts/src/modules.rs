@@ -94,6 +94,7 @@ register_modules! {
     soul_of_the_forest: (1000, "modules/soul_of_the_forest.rs"),
     stacking_summons: (1000, "modules/stacking_summons.rs"),
     subtlety_shadow: (420, "modules/subtlety_shadow.rs"),
+    sweeping_strikes: (711, "modules/sweeping_strikes.rs"),
     swiftmend: (1000, "modules/swiftmend.rs"),
     touch_of_death: (240, "modules/touch_of_death.rs"),
     voltaic_blaze: (250, "modules/voltaic_blaze.rs"),
