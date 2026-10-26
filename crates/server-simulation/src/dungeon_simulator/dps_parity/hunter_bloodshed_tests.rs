@@ -3,6 +3,7 @@ use super::*;
 #[test]
 #[ignore = "requires private spec253 reference inputs and native world DB"]
 fn native_bm_wrath_applies_bloodshed_from_each_owned_pet() {
+    let _seed = crate::random::seed_scope(70_448);
     let mut run = prepare_measurement(253, 1).expect("native literal BM fixture");
     engage(&mut run);
     literal_rotation::execution::execute(
@@ -26,19 +27,48 @@ fn native_bm_wrath_applies_bloodshed_from_each_owned_pet() {
         .world()
         .get::<crate::auras::ActiveAuras>(run.targets[0])
         .unwrap();
-    for pet in &pets {
-        assert!(
+    let landed: Vec<_> = pets
+        .iter()
+        .copied()
+        .filter(|pet| {
             auras
                 .iter()
-                .any(|aura| aura.spell_id == 321538 && aura.caster == *pet),
-            "selected Bloodshed must be a real native aura owned by each pet: {pet}"
+                .any(|aura| aura.spell_id == 321538 && aura.caster == *pet)
+        })
+        .collect();
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    for pet in &pets {
+        // Native physical application can be dodged. Every actual owned pet
+        // must attempt Bloodshed; only landed applications can own its DoT.
+        let missed = events.iter().any(|event| {
+            event.source == Some(pet.to_bits())
+                && event.target == Some(run.targets[0].to_bits())
+                && event.spell_id == Some(321538)
+                && matches!(event.kind, shared::protocol::CombatLogKind::Miss(_))
+        });
+        assert!(
+            landed.contains(pet) || missed,
+            "each owned pet must actually apply or miss native Bloodshed: pet={pet}, events={events:?}"
         );
     }
+    assert!(
+        !landed.is_empty(),
+        "fixture must exercise actual native Bloodshed ticks"
+    );
+    eprintln!(
+        "NATIVE_BLOODSHED_OUTCOMES attempts={} landed={}",
+        pets.len(),
+        landed.len()
+    );
     for _ in 0..40 {
         run.app.update();
     }
     let combat = report::combat(run.app.world(), &run.damage_targets, 3.0);
-    for pet in pets {
+    for pet in landed {
         assert!(
             combat["actions"]
                 .as_array()
@@ -47,7 +77,7 @@ fn native_bm_wrath_applies_bloodshed_from_each_owned_pet() {
                 .any(|action| action["actor"] == pet.to_bits()
                     && action["spell_id"] == 321538
                     && action["damage"].as_u64().unwrap() > 0),
-            "each pet's native Bloodshed must tick actual damage: {pet}; {combat}"
+            "each landed pet Bloodshed must tick actual damage: pet={pet}; {combat}"
         );
     }
 }
