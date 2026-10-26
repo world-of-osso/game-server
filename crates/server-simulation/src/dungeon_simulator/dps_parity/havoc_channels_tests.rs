@@ -294,6 +294,21 @@ fn havoc_mid2_four_piece_essence_break_advances_cycle_and_reduces_native_beam_re
         2,
         "four-piece Essence Break also earns the next real Cycle stack"
     );
+    preparation::finish_pending_setup(&mut run).unwrap();
+    cast(&mut run, 191427, false);
+    preparation::finish_pending_setup(&mut run).unwrap();
+    havoc_tests::earn_havoc_fury(&mut run, 30.0);
+    let essence_before = cooldown_remaining(&run, 258860);
+    cast(&mut run, 452497, false);
+    let essence_after = cooldown_remaining(&run, 258860);
+    assert!(
+        essence_before
+            .saturating_sub(essence_after)
+            .abs_diff(expected)
+            <= 1,
+        "actual native Gaze must reciprocally reduce Essence Break recovery before advancing Cycle: before={essence_before} after={essence_after}"
+    );
+    assert_eq!(cycle_stacks(&run), 3);
 }
 
 #[test]
