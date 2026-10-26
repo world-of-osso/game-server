@@ -100,9 +100,15 @@ fn cast_native(run: &mut Run, spell: u32, target: Entity) {
 #[ignore = "requires exact Arms71 player profile and native selected Deep Wounds"]
 fn arms_deep_wounds_still_applies_from_native_mortal_strike() {
     let _seed_scope = crate::random::seed_scope(70_448);
-    let mut run = super::super::prepare_literal(71, 1).unwrap();
+    // prepare_literal captures control before native setup; a real producer
+    // cast must run after the selected passive applications have completed.
+    let mut run = super::super::prepare_measurement(71, 1).unwrap();
     let actor = run.actor;
     let target = run.targets[0];
+    assert!(
+        crate::auras::has_aura(run.app.world(), actor, 1261060),
+        "the native selected Deep Wounds passive must be initialized before Mortal Strike"
+    );
     crate::spell_cast::powers::change_power(run.app.world_mut(), actor, PowerType::Rage, 1300.0)
         .unwrap();
     cast_native(&mut run, 12294, target);
