@@ -112,6 +112,7 @@ register_modules! {
     resource_values: (350, "modules/resource_values.rs"),
     ret_damage: (1000, "modules/ret_damage.rs"),
     ret_empyrean: (1000, "modules/ret_empyrean.rs"),
+    ret_judgment: (1000, "modules/ret_judgment.rs"),
     ret_purpose: (210, "modules/ret_purpose.rs"),
     ret_resonance: (190, "modules/ret_resonance.rs"),
     ret_tier: (1000, "modules/ret_tier.rs"),
