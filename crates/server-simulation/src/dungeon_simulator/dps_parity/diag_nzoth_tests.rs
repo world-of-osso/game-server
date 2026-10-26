@@ -92,7 +92,7 @@ fn assert_periodic_buff(run: &Run, id: u32) {
 
 #[test]
 #[ignore = "requires native258 Player/profile/traits"]
-fn shadow_nzoth_real_slam_background_madness_funds_native_target_counter() {
+fn diag_nzoth_real_slam_background_madness_funds_native_target_counter() {
     let mut run = prepare_literal(258, 1).unwrap();
     engage(&mut run);
     assert!(crate::auras::has_aura(run.app.world(), run.actor, 373280));
@@ -120,7 +120,7 @@ fn shadow_nzoth_real_slam_background_madness_funds_native_target_counter() {
 
 #[test]
 #[ignore = "requires native258 Player/profile/traits"]
-fn shadow_nzoth_ordinary_funded_madness_counts_its_execution_target() {
+fn diag_nzoth_ordinary_funded_madness_counts_its_execution_target() {
     let mut run = prepare_literal(258, 1).unwrap();
     let actor = run.actor;
     execution::execute(
@@ -146,7 +146,7 @@ fn shadow_nzoth_ordinary_funded_madness_counts_its_execution_target() {
 
 #[test]
 #[ignore = "requires native258 Player/profile/traits"]
-fn shadow_nzoth_actual_flay_ticks_cross_native_thresholds_and_roll_over() {
+fn diag_nzoth_actual_flay_ticks_cross_native_thresholds_and_roll_over() {
     let mut run = prepare_literal(258, 1).unwrap();
     engage(&mut run);
     let native = |index| {
