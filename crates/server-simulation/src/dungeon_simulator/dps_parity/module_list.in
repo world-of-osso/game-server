@@ -88,6 +88,7 @@ mod elemental_ancestor_tests;
 mod elemental_ascendance_tests;
 mod elemental_cadence_tests;
 mod elemental_communication_tests;
+mod elemental_fellowship_tests;
 mod elemental_fusion_tests;
 mod elemental_mechanics_tests;
 mod elemental_offering_tests;
