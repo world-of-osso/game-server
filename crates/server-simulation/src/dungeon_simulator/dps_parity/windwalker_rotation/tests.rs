@@ -43,6 +43,8 @@ pub(super) fn cast(run: &mut super::super::Run, spell: u32) {
             }
             Err(
                 CastFailure::OnGlobalCooldown
+                | CastFailure::OnCooldown
+                | CastFailure::NoCharges
                 | CastFailure::InProgress
                 | CastFailure::NotEnoughPower(_),
             ) => run.app.update(),

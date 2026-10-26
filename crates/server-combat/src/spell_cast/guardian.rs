@@ -32,6 +32,16 @@ struct GuardianPolicy {
 // SimC76f8118 pets.cpp19/705/867/1510–1548: bindings and inheritance
 // belong to the actual root/creature pair, including the alternative Tyrant.
 const GUARDIAN_POLICIES: &[GuardianPolicy] = &[
+    // SimC76f8118 sc_hunter.cpp2043–2047: Bear inherits live owner AP0.6.
+    // Rend is explicitly launched on summon, not an autonomous guardian cast.
+    GuardianPolicy {
+        summons: &[471990],
+        entry: 234018,
+        spells: &[],
+        repeat_gcd: None,
+        owner_spell_share: None,
+        owner_attack_share: Some(0.6),
+    },
     GuardianPolicy {
         summons: &[104317],
         entry: 55659,
@@ -138,12 +148,23 @@ const GUARDIAN_POLICIES: &[GuardianPolicy] = &[
         owner_attack_share: Some(0.45),
     },
     // Native205180 description names $205231s1; preserve the existing binding.
+    // SimC76f8118 pets.cpp19/2424–2430: Darkglare retains base owner SP1.0.
     GuardianPolicy {
         summons: &[205180],
         entry: 103673,
         spells: &[205231],
         repeat_gcd: None,
-        owner_spell_share: None,
+        owner_spell_share: Some(1.0),
+        owner_attack_share: None,
+    },
+    // SimC76f8118 pets19/2516–2563: native Desperate Soul, full SP,
+    // one actual Wrath; its own post-cast callback marks native dismissal.
+    GuardianPolicy {
+        summons: &[1262094],
+        entry: 254505,
+        spells: &[1278047],
+        repeat_gcd: None,
+        owner_spell_share: Some(1.0),
         owner_attack_share: None,
     },
 ];

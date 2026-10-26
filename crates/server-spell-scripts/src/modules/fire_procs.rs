@@ -5,17 +5,24 @@ use super::combat;
 use combat::auras::{self, AuraInstance};
 use combat::class_progression::KnownSpells;
 use combat::spell_cast::script_registry::SpellScriptHook;
-use combat::spell_cast::scripts::{reduce_cooldown, script_effect_value};
+use combat::spell_cast::scripts::{AfterCastHook, reduce_cooldown, script_effect_value};
 use combat::spell_cast::{self, effects::EffectCtx, queued_triggers};
-use combat::spell_info::SpellInfo;
+use combat::spell_info::{ChargedSpellModifier, SpellInfo, SpellStore};
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::FireAuraRegistration(register),
     SpellScriptHook::BeforeProcLaunch(before_hot_streak_launch),
     SpellScriptHook::AfterFireDirectHit(fire_feedback_hit),
+    SpellScriptHook::AfterFireDirectHit(refund_from_the_ashes),
+    SpellScriptHook::PeriodicDamageFinished(roll_heat_shimmer),
+    SpellScriptHook::SnapshotsModifier(is_heat_shimmer),
+    SpellScriptHook::LaunchDamageModifier(heat_shimmer_crit_modifier),
+    SpellScriptHook::NativeAfterCast(scorch_after_cast),
     SpellScriptHook::AfterFireOutcomeHit(fire_meteorite_hit),
     SpellScriptHook::OnCast(on_fire_cast),
     SpellScriptHook::TargetDamageMultiplier(meteor_primary_multiplier),
+    SpellScriptHook::ResourceContext(&[2120, 1254851]),
+    SpellScriptHook::TargetDamageMultiplier(fuel_damage_multiplier),
 ];
 
 const COMBUSTION: u32 = 190319;
@@ -39,13 +46,21 @@ const FEVERED: u32 = 383811;
 const CONTROLLED_TALENT: u32 = 383669;
 const CONTROLLED: u32 = 453268;
 const MAGE_FAMILY: u32 = 3;
+const INTENSIFYING_FLAME_DAMAGE: u32 = 419800;
 const PYROCOSM: u32 = 1260673;
 const METEORITE_IMPACT: u32 = 449569;
+const FROM_THE_ASHES: u32 = 342344;
+const HEAT_SHIMMER_TALENT: u32 = 457735;
+const HEAT_SHIMMER: u32 = 458964;
+const IGNITE: u32 = 12654;
+const SCORCH: u32 = 2948;
+const FUEL_THE_FIRE: u32 = 416094;
 
 #[derive(Component, Default)]
 struct FireProcState {
     sphere_attempts: u32,
     combustion_procs: usize,
+    ashes_ready_at: Option<f64>,
 }
 
 fn selected(world: &World, caster: Entity, talent: u32) -> bool {
@@ -121,6 +136,7 @@ fn apply_fired_up(world: &mut World, caster: Entity) {
     reduce_cooldown(world, caster, 108853, f64::from(reduction_ms) / 1000.0);
     let extension_ms = script_effect_value(world, caster, FIRED_UP_TALENT, 2).max(0.0) as u32;
     auras::extend_owned_duration(world, caster, caster, &[COMBUSTION], extension_ms);
+    super::fire_phoenix::extend(world, caster, extension_ms);
 }
 
 fn roll_spellfire_sphere(world: &mut World, caster: Entity) {
@@ -189,7 +205,9 @@ pub(crate) fn fire_feedback_hit(world: &mut World, ctx: &EffectCtx, target: Enti
         .class_options
         .as_ref()
         .is_some_and(|options| options.spell_class_set == MAGE_FAMILY);
-    if !mage_spell {
+    // sc_mage.cpp2502: Intensifying Flame inherits spell_t, not mage_spell_t;
+    // its native Mage family does not make it a Fevered feedback producer.
+    if !mage_spell || ctx.spell.id == INTENSIFYING_FLAME_DAMAGE {
         return;
     }
     // sc_mage.cpp3819: Fire's Overflowing Energy eligibility is Fireball
@@ -214,6 +232,116 @@ pub(crate) fn fire_feedback_hit(world: &mut World, ctx: &EffectCtx, target: Enti
     }
 }
 
+fn roll_heat_shimmer(world: &mut World, ctx: &EffectCtx) {
+    if ctx.spell.id != IGNITE || !selected(world, ctx.caster, HEAT_SHIMMER_TALENT) {
+        return;
+    }
+    // SimC76f8118 sc_mage.cpp2557–2559/6439–6441: actual Ignite ticks
+    // attempt the talent's native RPPM, except while Scorch is being cast.
+    let scorching = world
+        .get::<shared::casting::CastState>(ctx.caster)
+        .is_some_and(|cast| cast.spell_id == SCORCH);
+    if scorching {
+        return;
+    }
+    let Some(instance) = world
+        .get::<auras::ActiveAuras>(ctx.caster)
+        .and_then(|auras| {
+            auras
+                .iter()
+                .find(|aura| aura.spell_id == HEAT_SHIMMER_TALENT)
+        })
+        .map(|aura| aura.instance_id)
+    else {
+        return;
+    };
+    // Native proc helpers take an aura instance ID, not a spell ID.
+    if auras::procs::try_native_policy_proc(world, ctx.caster, instance) {
+        spell_cast::cast_triggered(world, ctx.caster, HEAT_SHIMMER, Some(ctx.caster), 1);
+    }
+}
+
+fn is_heat_shimmer(spell: u32) -> bool {
+    spell == HEAT_SHIMMER
+}
+
+fn heat_shimmer_crit_modifier(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+) -> Option<ChargedSpellModifier> {
+    if spell.id != SCORCH || !auras::has_aura(world, caster, HEAT_SHIMMER) {
+        return None;
+    }
+    // sc_mage.cpp2293–2294/5074–5080: the earned buff enables execute
+    // crit above the health threshold. Retain it across the consumer's impact.
+    Some(ChargedSpellModifier {
+        aura_spell_id: HEAT_SHIMMER,
+        op: auras::SpellModOp::CritChance as i32,
+        percent: false,
+        amount: 100.0,
+    })
+}
+
+fn scorch_after_cast(spell: u32) -> Option<AfterCastHook> {
+    (spell == SCORCH).then_some(consume_heat_shimmer)
+}
+
+fn consume_heat_shimmer(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    let admitted = spell.cast_charge_mods.as_ref().is_some_and(|mods| {
+        mods.iter()
+            .any(|modifier| modifier.aura_spell_id == HEAT_SHIMMER)
+    });
+    if !admitted {
+        return;
+    }
+    let instance = world
+        .get::<auras::ActiveAuras>(caster)
+        .and_then(|auras| auras.iter().find(|aura| aura.spell_id == HEAT_SHIMMER))
+        .map(|aura| aura.instance_id);
+    // sc_mage.cpp5048–5051: spend one earned stack, not the native
+    // damage/cast-time/crit values already frozen for this Scorch.
+    if let Some(instance) = instance {
+        auras::spend_stack(world, caster, instance);
+    }
+}
+
+fn refund_from_the_ashes(world: &mut World, ctx: &EffectCtx, _target: Entity, _crit: bool) {
+    // SimC76f8118 sc_mage.cpp2116–2120: eligible actual hits restore
+    // native Fire Blast recharge progress, respecting the talent's native ICD.
+    // Producers:3689,3821,4557,4905,5040; Pyromaniac copies are excluded.
+    let eligible = matches!(ctx.spell.id, 133 | 431044 | 108853 | 11366 | 2948 | 31661);
+    if !eligible || !selected(world, ctx.caster, FROM_THE_ASHES) {
+        return;
+    }
+    ensure_state(world, ctx.caster);
+    let now = auras::aura_now(world);
+    let ready_at = world
+        .get::<FireProcState>(ctx.caster)
+        .unwrap()
+        .ashes_ready_at;
+    if ready_at.is_some_and(|deadline| now < deadline) {
+        return;
+    }
+    let icd_ms = world
+        .resource::<SpellStore>()
+        .get(FROM_THE_ASHES)
+        .and_then(|spell| spell.aura_options.as_ref())
+        .expect("native From the Ashes proc options")
+        .proc_category_recovery_ms;
+    world
+        .get_mut::<FireProcState>(ctx.caster)
+        .unwrap()
+        .ashes_ready_at = Some(now + f64::from(icd_ms) / 1000.0);
+    let adjustment_ms = script_effect_value(world, ctx.caster, FROM_THE_ASHES, 0);
+    reduce_cooldown(
+        world,
+        ctx.caster,
+        108853,
+        -f64::from(adjustment_ms) / 1000.0,
+    );
+}
+
 fn on_fire_cast(world: &mut World, caster: Entity, spell_id: u32, _depth: u8) {
     if spell_id == METEORITE_IMPACT && selected(world, caster, PYROCOSM) {
         // SimC76f8118 sc_mage.cpp4783–4792: once per Meteorite execution,
@@ -221,6 +349,32 @@ fn on_fire_cast(world: &mut World, caster: Entity, spell_id: u32, _depth: u8) {
         let reduction = script_effect_value(world, caster, PYROCOSM, 3);
         reduce_cooldown(world, caster, 108853, f64::from(reduction) / 1000.0);
     }
+}
+
+fn fuel_damage_multiplier(
+    world: &World,
+    caster: Entity,
+    _target: Entity,
+    spell: &SpellInfo,
+) -> f32 {
+    use combat::spell_cast::targets::{Relation, relation_matches};
+    if !matches!(spell.id, 2120 | 1254851) || !selected(world, caster, FUEL_THE_FIRE) {
+        return 1.0;
+    }
+    // SimC76f8118 sc_mage.cpp3904–3909: native effect2 per target,
+    // capped by effect3. Count this cast's actual admitted hostile recipients.
+    let context = spell
+        .cast_policy_context
+        .as_ref()
+        .expect("ordinary Flamestrike retains its admitted target plan");
+    let targets = context
+        .targets
+        .iter()
+        .filter(|target| relation_matches(world, caster, **target, Relation::Enemy))
+        .count() as f32;
+    let percent = script_effect_value(world, caster, FUEL_THE_FIRE, 1);
+    let cap = script_effect_value(world, caster, FUEL_THE_FIRE, 2);
+    1.0 + percent * targets.min(cap) / 100.0
 }
 
 fn meteor_primary_multiplier(
@@ -339,20 +493,14 @@ fn end_fiery_rush(
     });
 }
 
-fn reset_combustion_procs(world: &mut World, caster: Entity, _aura: &AuraInstance) {
+fn reset_combustion_procs(world: &mut World, caster: Entity, aura: &AuraInstance) {
     // SimC76f8118 sc_mage.cpp1450: each new Combustion resets its proc curve.
     ensure_state(world, caster);
     world
         .get_mut::<FireProcState>(caster)
         .unwrap()
         .combustion_procs = 0;
-    // SimC76f8118 sc_mage.cpp1249–1253: Codex spends stored spheres
-    // when Combustion invokes the selected Phoenix.
-    if selected(world, caster, 449382) && selected(world, caster, 448658) {
-        auras::remove_auras(world, caster, auras::RemoveReason::Consumed, |aura| {
-            aura.spell_id == SPHERE && aura.caster == caster
-        });
-    }
+    super::fire_phoenix::invoke(world, caster, aura);
 }
 
 fn start_hyperthermia(world: &mut World, caster: Entity, _aura: &AuraInstance) {

@@ -351,7 +351,23 @@ fn ret_damage_sentence_gathers_marked_secondary_target_into_primary_explosion() 
 #[test]
 #[ignore = "opt-in native parity inputs"]
 fn ret_damage_native_verdict_applies_mastery_exactly_once() {
-    let mut run = native_ret(1);
+    let (mut profile, traits) = read_reference(70).unwrap();
+    // Compare class mastery without equipment procs changing the two hits' inputs.
+    // Keep the actual native weapon, but not its proc enchant or proc-bearing armor.
+    profile.equipment.retain(|item| item.slot == "main_hand");
+    profile
+        .equipment
+        .first_mut()
+        .expect("native Ret mastery control requires its real main-hand weapon")
+        .enchant = 0;
+    let mut run = prepare_literal_reference(
+        profile,
+        &traits,
+        1,
+        crate::followers::simulator::ParityActor::Follower,
+    )
+    .unwrap();
+    engage(&mut run);
     let mastery = run
         .app
         .world()

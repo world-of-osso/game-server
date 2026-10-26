@@ -12,7 +12,8 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::AfterPolicyDirec
 
 const MORTAL_WOUNDS: u32 = 1261062;
 const DEEP_WOUNDS: u32 = 262115;
-const CRITICAL_PRODUCERS: &[u32] = &[12294, 1464];
+// Heroic Strike inherits slam_base_t::impact (sc_warrior.cpp3551–3562).
+const CRITICAL_PRODUCERS: &[u32] = &[12294, 1464, 1269383];
 
 fn apply_critical_mortal_wounds(
     world: &mut World,
@@ -21,7 +22,7 @@ fn apply_critical_mortal_wounds(
     critical: bool,
 ) {
     // SimC76f8118 sc_warrior.cpp3153–3154/3518–3519: selected Mortal
-    // Wounds applies native Deep Wounds only on Mortal Strike/Slam crits,
+    // Wounds applies native Deep Wounds only on Mortal Strike/Slam-family crits,
     // including background Unhinged Mortal Strikes. Execute retains its
     // separate native1261060 producer (cpp4248–4249); Fury is unchanged.
     let eligible_hit = critical && CRITICAL_PRODUCERS.contains(&ctx.spell.id);
