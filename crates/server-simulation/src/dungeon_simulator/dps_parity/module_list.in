@@ -52,6 +52,7 @@ mod bare_ttd_tests;
 mod beast_mastery_mechanics_tests;
 #[cfg(test)]
 mod beast_mastery_pet_tests;
+mod channel_pandemic_tests;
 mod channel_timing_tests;
 mod composite_precombat_tests;
 mod demonology_tests;
