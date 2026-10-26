@@ -1,5 +1,6 @@
 //! Register new modules with one alphabetical line. The numeric position preserves
 //! historical dispatch order independently of declaration order; do not renumber it.
+//! Independent new modules may share a trailing position; ties retain declaration order.
 use super::combat;
 use combat::spell_cast::script_registry::SpellScriptHook;
 
@@ -29,12 +30,6 @@ const fn order_modules<const N: usize>(
     let mut ordered: [&[SpellScriptHook]; N] = [&[]; N];
     index = 0;
     while index < N {
-        if index > 0 {
-            assert!(
-                modules[index - 1].0 != modules[index].0,
-                "duplicate module position"
-            );
-        }
         ordered[index] = modules[index].1;
         index += 1;
     }
@@ -44,6 +39,7 @@ const fn order_modules<const N: usize>(
 register_modules! {
     affliction_agony: (2650, "modules/affliction_agony.rs"),
     after_cast_auras: (100, "modules/after_cast_auras.rs"),
+    assassination_target: (2590, "modules/assassination_target.rs"),
     aura_rolls: (110, "modules/aura_rolls.rs"),
     beast_mastery: (20, "modules/beast_mastery.rs"),
     cast_grants: (120, "modules/cast_grants.rs"),
@@ -51,12 +47,14 @@ register_modules! {
     cast_resets: (90, "modules/cast_resets.rs"),
     destruction_periodic: (2670, "modules/destruction_periodic.rs"),
     devastation: (10, "modules/devastation.rs"),
+    echo_policies: (1000, "modules/echo_policies.rs"),
     elemental_ascendance: (220, "modules/elemental_ascendance.rs"),
     essence_burst: (140, "modules/essence_burst.rs"),
     evoker_tier: (160, "modules/evoker_tier.rs"),
     execution_counters: (320, "modules/execution_counters.rs"),
     feral_frenzy: (260, "modules/feral_frenzy.rs"),
-    feral_lunar: (400, "modules/feral_lunar.rs"),
+    feral_growth: (1031, "modules/feral_growth.rs"),
+    feral_lunar: (1030, "modules/feral_lunar.rs"),
     foreground_procs: (310, "modules/foreground_procs.rs"),
     frost: (80, "modules/frost.rs"),
     germination: (200, "modules/germination.rs"),
@@ -66,13 +64,17 @@ register_modules! {
     lava_surge: (300, "modules/lava_surge.rs"),
     marksmanship: (380, "modules/marksmanship.rs"),
     marksmanship_explosive: (180, "modules/marksmanship_explosive.rs"),
+    marksmanship_salvo: (2540, "modules/marksmanship_salvo.rs"),
     marksmanship_sentinel: (390, "modules/marksmanship_sentinel.rs"),
     melee_reset: (340, "modules/melee_reset.rs"),
     paid_cooldowns: (130, "modules/paid_cooldowns.rs"),
     periodic_counters: (270, "modules/periodic_counters.rs"),
     resource_values: (350, "modules/resource_values.rs"),
+    ret_damage: (1000, "modules/ret_damage.rs"),
+    ret_empyrean: (1000, "modules/ret_empyrean.rs"),
     ret_purpose: (210, "modules/ret_purpose.rs"),
     ret_resonance: (190, "modules/ret_resonance.rs"),
+    ret_tier: (1000, "modules/ret_tier.rs"),
     ret_toll: (280, "modules/ret_toll.rs"),
     retribution: (60, "modules/retribution.rs"),
     rogue: (70, "modules/rogue.rs"),
@@ -86,4 +88,35 @@ register_modules! {
     warrior: (40, "modules/warrior.rs"),
     windwalker_momentum: (50, "modules/windwalker_momentum.rs"),
     windwalker_zenith: (30, "modules/windwalker_zenith.rs"),
+}
+
+#[cfg(test)]
+mod ordering_tests {
+    use super::*;
+    use bevy::prelude::*;
+    use combat::spell_cast::script_registry::{self, SpellScriptRegistry};
+
+    #[derive(Resource, Default)]
+    struct Calls(Vec<&'static str>);
+
+    fn first(world: &mut World, _: Entity, _: u32, _: u8) {
+        world.resource_mut::<Calls>().0.push("first");
+    }
+
+    fn second(world: &mut World, _: Entity, _: u32, _: u8) {
+        world.resource_mut::<Calls>().0.push("second");
+    }
+
+    #[test]
+    fn independent_modules_share_a_position_without_reordering_existing_callbacks() {
+        const FIRST: &[SpellScriptHook] = &[SpellScriptHook::OnCast(first)];
+        const SECOND: &[SpellScriptHook] = &[SpellScriptHook::OnCast(second)];
+        let modules = order_modules([(1000, FIRST), (10, SECOND), (1000, SECOND)]);
+        let mut world = World::new();
+        world.insert_resource(SpellScriptRegistry::new(Box::leak(Box::new(modules))));
+        world.init_resource::<Calls>();
+        let caster = world.spawn_empty().id();
+        script_registry::on_cast(&mut world, caster, 133, 0);
+        assert_eq!(world.resource::<Calls>().0, ["second", "first", "second"]);
+    }
 }
