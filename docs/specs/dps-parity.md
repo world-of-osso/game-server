@@ -125,6 +125,8 @@ Selected native155580 applies its owned155627 override aura, so ordinary Moonfir
 
 ### Outlaw literal fixture
 
+- Pistol Shot spends one earned Opportunity use per execution, not all stacks or a stack-multiplied damage/cost bonus. An ordinary shot schedules up to native Fan the Hammer's count of remaining earned uses100ms apart, using its native damage reduction; children cannot fan. Each earned shot grants native Quick Draw points when selected. Background shots freeze charged modifiers at launch and consume their own use before impact (`sc_rogue.cpp4981–5070`).
+
 - Landed native Sinister Strike193315 rolls selected Opportunity279876 once per hit. Read native chance and the RtB extra-chance contribution; success earns native195627 stacks and dispatches197834 to the same enemy after300ms. Extra strikes cannot recursively roll Opportunity (`sc_rogue.cpp1286–1292,5942–5991,8255–8280`).
 - Blade Flurry13877 activation dispatches one native429951 area attack, including the primary enemy. Selected Deft Maneuvers grants its native combo-point amount once per actual activation hit. This is independent of Blade Flurry22482 secondary copies (`sc_rogue.cpp3907–3922,3993–3999`).
 

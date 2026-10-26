@@ -131,6 +131,7 @@ register_modules! {
     midnight_stat_items: (1000, "modules/midnight_stat_items.rs"),
     outlaw_flurry: (2601, "modules/outlaw_flurry.rs"),
     outlaw_opportunity: (2600, "modules/outlaw_opportunity.rs"),
+    outlaw_pistol: (2602, "modules/outlaw_pistol.rs"),
     outlaw_spree: (2600, "modules/outlaw_spree.rs"),
     paid_cooldowns: (130, "modules/paid_cooldowns.rs"),
     periodic_counters: (270, "modules/periodic_counters.rs"),

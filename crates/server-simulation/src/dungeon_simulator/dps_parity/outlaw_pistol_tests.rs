@@ -44,4 +44,8 @@ fn outlaw_earned_opportunity_pays_native_fan_shots_and_consumes_each_use() {
     assert_eq!(hits, expected, "native Pistol Shot must pay its earned Fan shots (stacks={stacks},fan={fan})");
     assert!(!crate::auras::has_aura(run.app.world(), run.actor, 195627),
         "root and Fan shots must consume all the earned uses");
+    let quick_draw = run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0.iter()
+        .filter(|event| event.source == Some(run.actor.to_bits()) && event.kind == CombatLogKind::Energize
+            && event.spell_id == Some(1254567) && event.amount > 0).count();
+    assert_eq!(quick_draw, expected, "each earned shot must pay native Quick Draw combo points");
 }
