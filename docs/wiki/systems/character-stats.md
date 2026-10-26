@@ -8,6 +8,14 @@
 
 Ordinary NPCs without `CharacterStats` still have no class-derived spell power, attack power or crit. Approved followers carry `CharacterStats` and the stat fields required by this same production query, while remaining NPCs rather than persisted players. Their absent `SheetOwner` keeps owner-only sheet fields hidden; health/mana replication remains ordinary.
 
+## Mage Inspired Intellect — 2026-10-26
+
+The local aura-stat fold replaces an earned Arcane Intellect factor with its native amount plus the selected native Inspired Intellect458437 effect1. Pinned `sc_mage.cpp6832–6841` applies this only to the Mage who owns the talent, not the raid aura's payload. Wizardry and other factors retain their existing composition. Removing either aura removes this enhancement; other intellect classes are unchanged. See the [shared profile contract](../../specs/dps-parity.md).
+
+Fire's frozen baseline is619 base +2458 base gear +91 permanent enchants +23 primary gem +50 food +25 augment rune, with no primary flask amount:3266 before percentages. Native used Wizardry1.05×Arcane Intellect1.03=3532.179; selected Inspired Intellect adds native2 percentage points to Arcane Intellect, giving1.05×1.05=3600.765. The pinned report floors this to3600. No base stat, item amount or global rounding was changed. Fire's complete native setup has RED proof; real-player Frost64/Affliction265 gates remain pending.
+
+The reference JSON gear map is not additive when an item has duplicate stat types: `report_json.cpp397–405` assigns each value to the same key. Weapon271092 has native Intellect allocations5259 and25370, yielding103+499 at ilvl344; the JSON only retains499. Summing those JSON fields alone undercounts actual gear by103. The native source diagnostic reads actual derived stats and distinguishes player identity from the approved follower's declared reference race; it does not add a Follower to players.
+
 ## Native weapon attack power — 2026-10-23
 
 `CharacterStats.weapon_attack_power` retains raw integer main/off/ranged weapon AP from unrounded item-table DPS×6, including effective instance level/quality (TC a352b1fa Player.cpp8180–8191). Sheet melee/RAP fields remain unchanged. Native coefficient selection adds max(main,ranged) weapon AP for main/ranged attacks, or adds offhand AP and halves the full offhand sum, before the appropriate AP percentage (Unit.cpp9973–10000). Damage/heal/absorb coefficients share the ranged/exclusive-offhand/main selection; equipped player and approved follower stats do not replace guardian inheritance. Aura366 derived SP/healing power now reads total main-hand AP; weapon/white-hit inputs retain bare AP to avoid double-counting.
