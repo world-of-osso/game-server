@@ -1,7 +1,8 @@
+- 2026-10-26: Recovered [Overfiend lifecycle](systems/spell-casting.md#native-overfiend-lifecycle--2026-10-26), replacing unreachable summon wrapper with the actual-actor callback; qualification pending.
 - 2026-10-26: Absolute landed8f4e67fed6; identified nonstacking Corruption0 passed to positive-counter API and replaced that caller with duration-only permanence. Native GREEN pending.
 ## 2026-10-26 — Arcane Familiar Intellect grant
 
-[Selected Familiar](systems/spell-casting.md#arcane-familiar-on-intellect-2026-10-26) now receives native210126 on actual Arcane Intellect. Native RED4178eeb663 reached real precombat and selected205022 but found no aura; GREEN remains pending. Periodic225119 attacks are not part of this slice.
+[Selected Familiar](systems/spell-casting.md#arcane-familiar-on-intellect-2026-10-26) now receives native210126 on actual Arcane Intellect. Native RED4178eeb663 reached real precombat and selected205022 but found no aura; GREEN remains pending. Separate REDc15f014bb5 observes an active owned Familiar with zero225119 impacts in7s; a downstream source-hasted3s timer now targets the actual selected enemy. GREEN remains pending; Energized/Attuned relationships remain open.
 
 ## 2026-10-26 — Proc-mask-qualified charged modifiers
 
@@ -62,6 +63,10 @@
 ## 2026-10-26 — Fire Ignition contribution
 
 [Fire Ignite](systems/simc-apl.md#fire-fixture-adapter) now applies selected native Ignition's percentage only to each new Flamestrike contribution. Actual noncritical Flamestrike's unchanged tick/damage ratio passed RED→GREEN atfdef43f47 (train47ab06258e). ST178387.61 is unchanged;3T308050.16 remains below band. Direct damage and existing unpaid bank are unchanged.
+
+## 2026-10-26 — Survival Spirit and Swipe
+
+[Spirit Bond](systems/spell-casting.md#survival-native-producers--2026-10-26) landedc017250c5 via99578c23fc with44 controls; canonical three-seed means129144.341ST/198580.287three-target remain65.06%/62.32% of reference. Swipe primary/secondary corrected real-hit probe17ee9b2065 passes; its separate landing remains pending.
 
 ## 2026-10-26 — Survival Spirit Bond
 
