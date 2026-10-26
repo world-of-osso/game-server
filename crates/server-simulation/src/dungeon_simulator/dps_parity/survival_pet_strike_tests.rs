@@ -1,11 +1,35 @@
 //! Actual Tip spending must dispatch Strike as One from the already owned pet.
 use super::marksmanship_mechanics_tests::cast;
 use super::*;
-use shared::protocol::CombatLogKind;
+use shared::protocol::{CombatLogEvent, CombatLogKind};
+
+fn owned_strike_outcomes(run: &Run, pet: Entity, start: usize) -> Vec<&CombatLogEvent> {
+    run.app.world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0[start..]
+        .iter()
+        .filter(|event| {
+            event.source == Some(pet.to_bits())
+                && event.target == Some(run.targets[0].to_bits())
+                && event.spell_id == Some(1251779)
+                && matches!(event.kind, CombatLogKind::Damage | CombatLogKind::Miss(_))
+        })
+        .collect()
+}
 
 #[test]
 #[ignore = "requires private spec255 player inputs and native world DB"]
 fn survival_native_tip_impact_commands_owned_pet_strike_as_one() {
+    // Exercise every seed in this fixed matrix, never retry until one passes.
+    let mut positive = 0;
+    for seed in 0..32 {
+        positive += usize::from(assert_owned_tip_strike(seed));
+    }
+    assert!(positive > 0, "native owned strikes never dealt positive damage");
+}
+
+fn assert_owned_tip_strike(seed: u64) -> bool {
+    let _seed = crate::random::seed_scope(seed);
     // SimC76f8118 sc_hunter.cpp1367–1372: earned Tip consumption orders
     // the real main pet, preserving that pet as the native damage source.
     let mut run = prepare_literal(255, 1).unwrap();
@@ -23,16 +47,11 @@ fn survival_native_tip_impact_commands_owned_pet_strike_as_one() {
         .world()
         .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
         .0;
-    assert!(
-        events
-            .iter()
-            .any(|event| event.source == Some(pet.to_bits())
-                && event.target == Some(run.targets[0].to_bits())
-                && event.spell_id == Some(1251779)
-                && event.kind == CombatLogKind::Damage
-                && event.amount > 0),
-        "a real earned Tip impact must dispatch native Strike as One from the owned pet"
-    );
+    // Native97ad4bea8b seed9 proves a genuine owned strike can be dodged.
+    // Count the actual attack outcome, not a fabricated guaranteed hit.
+    let strikes = owned_strike_outcomes(&run, pet, 0);
+    assert_eq!(strikes.len(), 1, "seed{seed}: expected one real owned strike outcome: {events:#?}");
+    strikes[0].kind == CombatLogKind::Damage && strikes[0].amount > 0
 }
 
 #[test]
@@ -57,21 +76,7 @@ fn survival_native_tipped_rank_three_swipe_adds_separate_pet_strike() {
     for _ in 0..40 {
         run.app.update();
     }
-    let events = &run
-        .app
-        .world()
-        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
-        .0[start..];
-    let strikes = events
-        .iter()
-        .filter(|event| {
-            event.source == Some(pet.to_bits())
-                && event.target == Some(run.targets[0].to_bits())
-                && event.spell_id == Some(1251779)
-                && event.kind == CombatLogKind::Damage
-                && event.amount > 0
-        })
-        .count();
+    let strikes = owned_strike_outcomes(&run, pet, start).len();
     assert_eq!(
         strikes, 2,
         "actual tipped rank3 Swipe must dispatch both its extra pet attack and the normal Tip attack"
