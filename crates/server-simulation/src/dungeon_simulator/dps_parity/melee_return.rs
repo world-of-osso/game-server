@@ -5,6 +5,9 @@ use crate::simc_apl_native::FixtureMovement;
 use bevy::prelude::*;
 use shared::components::{MovementControl, Position};
 
+#[derive(Component)]
+struct ReturningToMelee;
+
 struct WalkStep {
     target: Entity,
     position: Position,
@@ -25,9 +28,11 @@ pub(super) fn advance(world: &mut World) {
 
 fn advance_actor(world: &mut World, actor: Entity, delta: f32) {
     let step = read_walk_step(world, actor, delta);
-    if let Some(mut moving) = world.get_mut::<crate::networking::Moving>(actor) {
-        moving.0 = step.as_ref().is_some_and(|step| !step.arrived);
+    if step.is_none() && world.get::<ReturningToMelee>(actor).is_none() {
+        return;
     }
+    let walking = step.as_ref().is_some_and(|step| !step.arrived);
+    set_return_walking(world, actor, walking);
     let Some(step) = step else {
         return;
     };
@@ -40,6 +45,17 @@ fn advance_actor(world: &mut World, actor: Entity, delta: f32) {
         .collect();
     for target in opponents {
         super::face_dummy_away_from_actor(world, actor, target);
+    }
+}
+
+fn set_return_walking(world: &mut World, actor: Entity, walking: bool) {
+    if walking {
+        world.entity_mut(actor).insert(ReturningToMelee);
+    } else {
+        world.entity_mut(actor).remove::<ReturningToMelee>();
+    }
+    if let Some(mut moving) = world.get_mut::<crate::networking::Moving>(actor) {
+        moving.0 = walking;
     }
 }
 

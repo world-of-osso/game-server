@@ -5,6 +5,32 @@ use shared::protocol::CombatLogKind;
 
 #[test]
 #[ignore = "requires prepared native spec577 player profile"]
+fn shared_fixture_displacement_preserves_unowned_movement_without_melee_intent() {
+    let mut run = prepare_literal(577, 1).unwrap();
+    assert!(
+        run.app
+            .world()
+            .get::<crate::combat::AutoAttack>(run.actor)
+            .is_none()
+    );
+    run.app
+        .world_mut()
+        .get_mut::<crate::networking::Moving>(run.actor)
+        .unwrap()
+        .0 = true;
+    run.app.update();
+    assert!(
+        run.app
+            .world()
+            .get::<crate::networking::Moving>(run.actor)
+            .unwrap()
+            .0,
+        "the melee return controller must not rewrite unrelated native movement"
+    );
+}
+
+#[test]
+#[ignore = "requires prepared native spec577 player profile"]
 fn shared_fixture_displacement_returns_to_melee_after_real_retreat() {
     let _seed = crate::random::seed_scope(70_448);
     let mut run = prepare_literal(577, 1).unwrap();
