@@ -1,6 +1,7 @@
 //! Register new modules with one alphabetical line. The numeric position preserves
 //! historical dispatch order independently of declaration order; do not renumber it.
 //! Independent new modules may share a trailing position; ties retain declaration order.
+//! This file merges with `merge=union`: keep code above the registry stable and edit only registry lines.
 use super::combat;
 use combat::spell_cast::script_registry::SpellScriptHook;
 
