@@ -11,7 +11,9 @@ fn shadow_void_bolt_real_slam_void_apparitions_emit_one_native_bolt_at_primary()
     engage_fixture_opponents(&mut run);
     let actor = run.actor;
     let primary = run.targets[0];
-    for _ in 0..5 {
+    // Native Void selection is15%; five cohorts have an8.7% empty sample.
+    // Stop at a real success, bounded at150actual rolls (empty probability<3e-11).
+    for _ in 0..50 {
         literal_rotation::execution::execute(
             run.app.world_mut(),
             actor,
@@ -20,6 +22,21 @@ fn shadow_void_bolt_real_slam_void_apparitions_emit_one_native_bolt_at_primary()
         .expect("ordinary native Slam");
         for _ in 0..900 {
             run.app.update();
+        }
+        let has_void = run
+            .app
+            .world()
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|event| {
+                event.source == Some(actor.to_bits())
+                    && event.spell_id == Some(1264176)
+                    && event.kind == CombatLogKind::Damage
+                    && event.amount > 0
+            });
+        if has_void {
+            break;
         }
     }
     let events = &run.app.world().resource::<ObservedCombatEvents>().0;
