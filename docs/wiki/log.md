@@ -1,9 +1,14 @@
+## 2026-10-26 — Fire Molten Fury execute
+
+[Fire target-versus policy](systems/simc-apl.md#fire-fixture-adapter) now reads selected native Molten Fury's health threshold and damage percentage. Actual Fire Blast RED2689→2689 instead of3092.35 is qualified; GREEN and measurement remain train-gated. No coefficient changes or generic aura303 rewrite.
+
 ## 2026-10-26 — Mage Inspired Intellect source
 
 [Mage intellect](systems/character-stats.md#mage-inspired-intellect--2026-10-26) identifies the missing native2-point enhancement to Arcane Intellect, not a universal stat deficit. Base/gear/enchant/gem/food/rune totals reconcile; duplicate weapon Intellect rows explain the reference JSON gear-map undercount. Fire native RED is observed; Frost64/Affliction265 real-player gates remain pending.
 ## 2026-10-26 — Native Loa and Rite stat callbacks
 
 [Native stat callbacks](systems/character-stats.md#native-loa-and-rite-stat-callbacks--2026-10-26) use equipped gem metadata, linked rank amounts and combat admission. Native RED `f282665373` → GREEN `412af0a123`; the five-profile gate passed again before landing `44c2b6c5d`. Other-spec numerical remeasurement remains separate.
+[Mage intellect](systems/character-stats.md#mage-inspired-intellect--2026-10-26) identifies the missing native2-point enhancement to Arcane Intellect, not a universal stat deficit. Base/gear/enchant/gem/food/rune totals reconcile; duplicate weapon Intellect rows explain the reference JSON gear-map undercount. Fire/Frost REDs and the Affliction control pass all3 real-player gates; landed44a57ef9a via trainf75e88a9fa. Numerical DPS parity remains separate.
 
 ## 2026-10-25 — Equipment procs before combat
 
