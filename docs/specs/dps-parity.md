@@ -37,7 +37,7 @@ Selected native155580 applies its owned155627 override aura, so ordinary Moonfir
 ### Shared Spellslinger producers
 
 - Selected Splintering Sorcery443739 emits the native specialization payload (Arcane443763/Frost443722) after native Arcane Blast, Prismatic Bolt, Frostbolt, Flurry and Glacial Spike executions. Signature Spell supplies its authored extra conjures. All queued recipients retain the actual hostile primary; individual launches are staggered100ms as pinned `sc_mage.cpp7324–7361` specifies.
-- Each native Ray of Frost damage tick conjures the native Splinterstorm effect2 amount, then opens/refreshes native1247908. Conjures during an earned Splinterstorm/Arcane Surge window use the selected native doubling chance. Native spell records retain damage coefficients.
+- Successful native Ray of Frost execution opens selected native1247908 Splinterstorm once, before its periodic updates. Each damage tick conjures the native Splinterstorm effect3 amount without refreshing the window. Conjures during the actual earned Splinterstorm/Arcane Surge lifetime use the selected native doubling chance. Native spell records retain duration and damage coefficients (`sc_mage.cpp4992–4996/5021`).
 
 - Each actual native Splinter impact with selected Spellfrost Teachings444986 reduces the specialization's running Orb cooldown/recharge by its native effect (Arcane index0/Frost index1, milliseconds). The shared reducer updates active native spell, category and charge timers without starting inactive timers; cooldown packets retain the native category and full duration. Unrelated payloads do not reduce recharge.
 
@@ -63,6 +63,8 @@ Selected native155580 applies its owned155627 override aura, so ordinary Moonfir
 
 - Each real Frozen Orb bolt resolution that actually hits at least one unit rolls selected Everlasting Frost effect2 for one Fingers stack. Use the native resolution ledger to run this once per area pulse, not once per recipient or only when a preselected primary hits (`sc_mage.cpp4141–4147`).
 
+- Selected Overflowing Energy merges actual Frostbolt228597 and Glacial Spike228600 hit outcomes through the shared native buff-outcome queue: noncritical hits earn native394195 stacks and eligible critical hits expire them after the hit batch. Ice Lance neither produces nor consumes this state; native spell masks and stack amounts supply the Frost critical-chance benefit (`sc_mage.cpp4050/4244/1729–1730/1897–1898`).
+
 ### Frost Mage native Icicles and Glacial Spike
 
 - Selected Icicles1246832 uses its actual hasted PERIODIC_DUMMY clock to apply native205473 without a spell cast. The first native interval has the pinned random phase (`sc_mage.cpp5559–5581`); later intervals keep native timing. Reaching the actual counter cap enables1222865.
@@ -84,6 +86,8 @@ Selected native155580 applies its owned155627 override aura, so ordinary Moonfir
 - Native Aura493 triggers its authored companion spell after Call Pet; native Effect260 creates a second stable body without changing the current-pet record. The companion has white swings and owned-pet commands, no autonomous Focus spender, and ends with its main pet. NPC pet orders reach all active owned pets.
 
 - Selected Howl starts its native cooldown at combat entry and earns Wyvern, Boar and Bear readiness in order. Bestial Wrath with selected Stampede independently advances that cycle. Ordinary Kill Command consumes every earned ready beast: Wyvern and Bear require actual owned native summons; Wyvern Cry follows the real Wyvern. Consuming readiness starts the native cooldown only when absent. Incoming Stampede survives Bestial Wrath's own successful-cast event; only consuming Howl spends it. An armed Stampede starts only after a consumed Howl and retains the selected primary, native tick-zero/periodic clock and600/900/1200ms payload delays; native201594 damages the pack without a target cap (SimC76f8118 hunter3776–3841/4864–4900/6780–6781/8240–8270/8698–8699). Bear attacks and Wildspeaker remain separately unqualified.
+
+- Selected Dire Summons472352 reduces only the owner's running Howl471877 clock after actual BM/SV Kill Command, Cobra Shot and source-qualified Survival melee Focus spenders, using native effects0/1/2/3 respectively. An exhausted clock expires through its real next-beast callback; an inactive clock stays inactive. Howl consumption precedes recovery (SimC76f8118 hunter4966/6127/6604–6624).
 
 - Selected War Orders reduces already-running Kill Command cooldown/recharge after a successful Barbed Shot by native393933 effect2's time value. It does not start a cooldown or replace native charge recovery.
 
@@ -349,6 +353,8 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 - Native Wither445474 keeps its actual counter stacks, but its periodic damage ignores that count. An ordinary recast preserves earned stacks without adding a refresh stack; explicit native stack applications retain normal counter advancement. Preserve native coefficients, tick phase and lifetime. Both265 and267 share this rule (SimC76f8118 `sc_warlock_actions.cpp1066,1174–1186`).
 - Wither's counter is not an ordinary damage-stack multiplier. Other stacking DoTs keep their existing behavior; Blackened Soul producers/collapse are separate relationships.
+- Shared265/267 Hellcaller producers must use actual Chaos Bolt/Shadowburn impacts and actual UA applications, including refresh, Fatal Echoes and seed-applied UA. Do not replace UA's independently owned expiry callbacks. Grant native Malevolence stacks/buff/damage only to its caster's active Withers; preserve each Wither lifetime and tick phase.
+- Check Seeds gates on gains and Wither ticks. Blackened uses a permanent runtime counter with the native tick period, decrements Wither before damage/Mark of Xavius, consumes its separate collapse budget, and stops at Wither1 or missing Wither. Preserve source PRD/weighted-threshold behavior and native spec-specific payout buffs; do not tune damage or duplicate shard mechanics (SimC76f8118 actions1119–1149,1208–1317,1544–1565,4328–4331,4807–4810,5534–5611; init1441–1480).
 
 ### Destruction Incinerate funding
 
@@ -684,6 +690,11 @@ Rotation/decision implementation belongs to the lead/rotation agents. No system 
 - Bare `health.pct` and `is_boss` retain the actor context inside target scoring. Bare `duration` reads the proposed action's captured native periodic state (zero when absent), not its cooldown or hypothetical fresh duration.
 - Spec252 runs the exact exported76f8118 Unholy action rows through shared Program/Driver/Prepared/Equipment with native player identity. Bind rune/Runic Power, disease and pet state to native70448 values; ordered precombat executes native Raise Dead. Numerical parity is separately measurement-gated.
 
+
+### Affliction native Darkglare inheritance
+
+- Native205180/103673 Darkglare inherits full live owner spell power through the existing guardian policy, as base `warlock_pet_t` specifies and Darkglare retains (`sc_warlock_pets.cpp19/2424–2430`). Native205231 supplies damage coefficients and cast time; other guardian policy entries are unchanged.
+- Existing native guardian tests retain real cast timing, dynamic owner-SP changes, retargeting, expiry and persistent-pet preservation. A native265 cast must spawn103673 and land205231 with the full owner-SP term in its actual damage calculation.
 
 ### Affliction native Shadow of Nathreza
 

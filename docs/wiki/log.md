@@ -1,3 +1,7 @@
+## 2026-10-26 — Hellcaller counter lifecycle
+
+[Shared counters](systems/warlock-periodic-counters.md#counter-lifecycle) now have a downstream producer/collapse module, additive actual-UA application binding, native periodic driver and source RNG models. Native UA/CB/collapse REDs are recorded; lifecycle GREEN and numerical parity remain pending. UA expiry callbacks remain independently owned.
+
 ## 2026-10-25 — Arcane literal player fixture
 
 [Arcane62](systems/simc-apl.md#arcane-fixture-62) executes supplied profile rows through shared literal control with native class admission and no concurrent AssistedCombat. The300s ST controller regression passes; numerical parity remains open.
@@ -15,6 +19,10 @@
 ## 2026-10-25 — Warlock periodic funding and target DoT facts
 
 [Warlock funding](systems/spell-casting.md#warlock-periodic-shard-funding--2026-10-25) uses the downstream critical-aware periodic callback and existing native power pipeline, qualified only on Destruction. [Target DoT duration](systems/simc-apl.md#native-target-dot-duration) reads active owned native state without pandemic carry; both have native GREEN and cross-spec controls. Numerical267 acceptance remains separate.
+## 2026-10-26 — Frost Mage native proc qualification
+
+[Frost Mage parity](investigations/frost-mage-dps-parity.md) records landed Deep Shatter, Brain Freeze, paid-Lance, Orb Fingers and Rapid Refreezing proofs. Latest confirmed ST/three-target measurements are77.57%/77.90% of reference; Overflowing Energy feedback passed native GREENd6ef48c03d; landing and measurement wait on an unrelated Arcane fixture control. Periodic-rule probe5ecd5357cb failed the two new feedback controls and produced no measurement.
+
 ## 2026-10-25 — Frost Mage native hit relationships
 
 [Frost Mage parity](investigations/frost-mage-dps-parity.md): owned Freezing and native Shatter, primary/secondary exclusion, Controlled Instincts copied damage, Infused Splinters and root/payload report-ID traps. Native proofs and pending proc/flight boundaries are recorded separately.

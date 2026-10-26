@@ -76,6 +76,7 @@
 //! - `CastHitProcChance` and `RollCastHitProc`: chance snapshot before consumption, roll after cast.
 //! - `AfterQueuedTriggers`: fixed update after queued hits, before power/rune sync.
 //! - `AfterSpellPayment`: after generic payment callbacks, before gargoyle empowerment.
+//! - `AfterAuraApplication`: after successful aura storage and native apply/refresh callbacks.
 //! New stages own distinct callback/lookup aliases, even when signatures coincide.
 //! Within a stage, traverse module slices and entries from first to last. Never sort
 //! or deduplicate them. Adding a policy to an existing module changes only that module.
@@ -93,6 +94,7 @@ pub type TargetPlanLookup = fn(u32) -> Option<(Relation, TargetPlanHook)>;
 pub type PeriodicPrimaryDamageHook = fn(&mut World, &EffectCtx<'_>, Entity, f32, bool);
 pub type SpellResidualHook = fn(&mut World, &EffectCtx<'_>, Entity, f32);
 pub type TargetDamageMultiplierHook = fn(&World, Entity, Entity, &SpellInfo) -> f32;
+pub type AuraApplicationHook = fn(&mut World, Entity, &crate::auras::AuraInstance);
 pub type AuraRedirectHook = fn(&mut World, Entity, Entity, u32, u8) -> bool;
 
 pub type AfterCastLookup = fn(u32) -> Option<AfterCastHook>;
@@ -184,6 +186,8 @@ pub enum SpellScriptHook {
     TargetDamageMultiplier(TargetDamageMultiplierHook),
     AfterSpenderStacks(AfterCastHook),
     AuraRedirect(AuraRedirectHook),
+    /// All successful native aura applications, including refresh/replacement.
+    AfterAuraApplication(AuraApplicationHook),
     EffectHit(EffectHitLookup),
     EffectHandler(EffectHandlerLookup),
     TargetFilter(TargetFilterHook),
@@ -855,6 +859,18 @@ pub fn after_direct_damage_before_items(world: &mut World, ctx: &EffectCtx<'_>) 
     for hook in world.resource::<SpellScriptRegistry>().hooks() {
         if let SpellScriptHook::AfterDirectDamageBeforeItems(run) = hook {
             run(world, ctx);
+        }
+    }
+}
+
+pub fn after_aura_application(
+    world: &mut World,
+    target: Entity,
+    aura: &crate::auras::AuraInstance,
+) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::AfterAuraApplication(run) = hook {
+            run(world, target, aura);
         }
     }
 }
