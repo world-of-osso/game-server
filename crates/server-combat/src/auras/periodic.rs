@@ -99,6 +99,7 @@ fn next_due_tick(effect: &super::AuraEffectState, expiry: f64, now: f64) -> Opti
 
 /// Ticks due by `now` of every aura on `unit`, or of aura instance `only`.
 fn due_ticks(world: &mut World, unit: Entity, now: f64, only: Option<u32>) -> Vec<Tick> {
+    let scripts = *world.resource::<crate::spell_cast::script_registry::SpellScriptRegistry>();
     let Some(mut auras) = world.get_mut::<ActiveAuras>(unit) else {
         return Vec::new();
     };
@@ -110,7 +111,11 @@ fn due_ticks(world: &mut World, unit: Entity, now: f64, only: Option<u32>) -> Ve
         .filter(|aura| only.is_none_or(|instance| aura.instance_id == instance))
     {
         let expiry = aura.expires_at.unwrap_or(f64::INFINITY);
-        let stacks = aura.stack_multiplier();
+        let stacks = if scripts.counter_only_dot_stacks(aura.spell_id) {
+            1.0
+        } else {
+            aura.stack_multiplier()
+        };
         for effect in aura
             .effects
             .iter_mut()

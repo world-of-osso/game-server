@@ -106,6 +106,7 @@ pub enum SpellScriptHook {
     AfterResourceValues(AfterCastLookup),
     TargetPlan(TargetPlanLookup),
     PeriodicPrimaryDamage(PeriodicPrimaryDamageHook),
+    CounterOnlyDotStacks(&'static [u32]),
     TargetDamageMultiplier(TargetDamageMultiplierHook),
     AfterSpenderStacks(AfterCastHook),
     AuraRedirect(AuraRedirectHook),
@@ -176,6 +177,13 @@ impl SpellScriptRegistry {
                 register(scripts);
             }
         }
+    }
+
+    pub fn counter_only_dot_stacks(self, spell: u32) -> bool {
+        self.hooks().any(|hook| match hook {
+            SpellScriptHook::CounterOnlyDotStacks(spells) => spells.contains(&spell),
+            _ => false,
+        })
     }
 
     pub fn consumes_effect_value(self, spell: u32, index: u8) -> bool {
