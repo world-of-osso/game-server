@@ -1000,6 +1000,50 @@ fn fire_ignite_controlled_destruction_scales_only_owned_ignite_contribution() {
     );
 }
 
+#[test]
+#[ignore = "requires exact Fire63 inputs and private70448 DB"]
+fn fire_meteorite_glorious_count_selects_the_pack_once_per_missile() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(63, 3).unwrap();
+    let target = run.targets[0];
+    let count = run
+        .app
+        .world()
+        .get::<ActiveAuras>(run.actor)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 449394)
+        .unwrap()
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap()
+        .amount as usize;
+    crate::spell_cast::cast_triggered(run.app.world_mut(), run.actor, 451073, Some(run.actor), 1);
+    start_native(&mut run, 108853, target);
+    for _ in 0..80 {
+        run.app.update();
+    }
+    let hits: Vec<_> = run
+        .app
+        .world()
+        .resource::<ObservedCombatEvents>()
+        .0
+        .iter()
+        .filter(|event| {
+            event.source == Some(run.actor.to_bits())
+                && event.spell_id == Some(449569)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0
+        })
+        .collect();
+    assert_eq!(
+        hits.len(),
+        count * run.targets.len(),
+        "each authored Glorious Meteorite selects its area once, never one full area per recipient"
+    );
+}
+
 fn reacted(run: &Run, name: &str) -> f64 {
     use crate::simc_apl_native::{Bindings, Encounter, FightStyle, NativeFacts};
     let bindings = Bindings {
