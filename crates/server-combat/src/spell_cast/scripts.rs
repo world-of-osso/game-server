@@ -211,6 +211,7 @@ pub(super) fn finish_scripted_launch(
 /// TC OnCast runs once after successful checks, before spending and launch.
 pub(super) fn on_cast(world: &mut World, caster: Entity, spell_id: u32, depth: u8) {
     script_registry::on_cast(world, caster, spell_id, depth);
+    fire_procs::on_fire_cast(world, caster, spell_id);
     windwalker::scripted_combo_cast(world, caster, spell_id, depth);
     elemental::before_launch(world, caster, spell_id, depth);
     match spell_id {

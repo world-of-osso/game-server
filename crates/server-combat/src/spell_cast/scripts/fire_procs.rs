@@ -26,6 +26,8 @@ const FEVERED: u32 = 383811;
 const CONTROLLED_TALENT: u32 = 383669;
 const CONTROLLED: u32 = 453268;
 const MAGE_FAMILY: u32 = 3;
+const PYROCOSM: u32 = 1260673;
+const METEORITE_IMPACT: u32 = 449569;
 
 #[derive(Component, Default)]
 struct FireProcState {
@@ -150,10 +152,19 @@ pub(crate) fn fire_meteorite_hit(
     {
         return;
     }
+    let count = super::script_effect_value(world, ctx.caster, GLORIOUS_TALENT, 0).max(0.0) as u32;
+    schedule_meteorites(world, ctx, target, count);
+}
+
+fn schedule_meteorites(
+    world: &mut World,
+    ctx: &super::super::effects::EffectCtx,
+    target: Entity,
+    count: u32,
+) {
     let Some(position) = world.get::<shared::components::Position>(target).copied() else {
         return;
     };
-    let count = super::script_effect_value(world, ctx.caster, GLORIOUS_TALENT, 0).max(0.0) as u32;
     for ordinal in 0..count {
         super::super::queued_triggers::schedule_destination_trigger(
             world,
@@ -193,6 +204,26 @@ pub(crate) fn fire_feedback_hit(
         super::super::queued_triggers::schedule_buff_outcome(world, ctx.caster, FEVERED, crit);
     }
     apply_controlled_destruction(world, ctx, target);
+    // SimC76f8118 sc_mage.cpp3845–3846/2003–2012: Pyrocosm Fireball
+    // hits independently roll native effect2, then schedule one real Meteorite.
+    if matches!(ctx.spell.id, 133 | 431044)
+        && selected(world, ctx.caster, PYROCOSM)
+        && selected(world, ctx.caster, GLORIOUS_TALENT)
+    {
+        let chance = super::script_effect_value(world, ctx.caster, PYROCOSM, 1);
+        if crate::random::random::<f32>() * 100.0 < chance {
+            schedule_meteorites(world, ctx, target, 1);
+        }
+    }
+}
+
+pub(crate) fn on_fire_cast(world: &mut World, caster: Entity, spell_id: u32) {
+    if spell_id == METEORITE_IMPACT && selected(world, caster, PYROCOSM) {
+        // SimC76f8118 sc_mage.cpp4783–4792: once per Meteorite execution,
+        // not per recipient; the native effect4 value is milliseconds.
+        let reduction = super::script_effect_value(world, caster, PYROCOSM, 3);
+        super::reduce_cooldown(world, caster, 108853, f64::from(reduction) / 1000.0);
+    }
 }
 
 fn apply_controlled_destruction(
