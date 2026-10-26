@@ -288,6 +288,11 @@ pub(super) fn cast_effect(spell: u32, index: u8) -> Option<super::effects::CastE
     if (spell, index) == (super::area_trigger::meteor::METEOR, 0) {
         return Some(super::area_trigger::meteor::cast_meteor);
     }
+    if (spell, index) == (153564, 2) {
+        // SimC76f8118 sc_mage.cpp4721/4741–4744: one scheduled Meteor
+        // impact action selects the area once; not one whole area per hit unit.
+        return Some(super::effects::trigger_missile_at_destination);
+    }
     if spell == super::mobile_banking::MOBILE_BANKING && index == 0 {
         return Some(super::mobile_banking::summon_chest);
     }
