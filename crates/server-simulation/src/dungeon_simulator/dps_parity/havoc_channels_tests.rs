@@ -93,6 +93,42 @@ fn havoc_font_of_venomous_rage_channels_native_primary_and_secondary_damage() {
 
 #[test]
 #[ignore = "requires prepared native spec577 player profile"]
+fn havoc_eternal_hunt_real_hunt_empowers_beam_and_completed_beam_resets_dance() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(577, 1).unwrap();
+    havoc_tests::earn_havoc_fury(&mut run, 120.0);
+    cast(&mut run, 370965, false);
+    preparation::finish_pending_setup(&mut run).unwrap();
+    assert!(
+        crate::auras::has_aura(run.app.world(), run.actor, 1271144),
+        "actual Hunt must arm selected native Empowered Eye Beam"
+    );
+    cast(&mut run, 198013, false);
+    preparation::finish_pending_setup(&mut run).unwrap();
+    assert!(
+        !damage(&run, Some(1287949)).is_empty(),
+        "earned beam must deliver its actual native empowered child"
+    );
+    assert!(
+        !crate::auras::has_aura(run.app.world(), run.actor, 1271144),
+        "the completed channel consumes Empowered Eye Beam"
+    );
+    assert!(
+        crate::auras::has_aura(run.app.world(), run.actor, 1271092),
+        "completed channel must earn actual Eternal Hunt"
+    );
+    cast(&mut run, 210152, true);
+    advance(&mut run, 35);
+    assert!(!crate::auras::has_aura(run.app.world(), run.actor, 1271092));
+    assert_eq!(
+        cooldown_remaining(&run, 210152),
+        0,
+        "actual dance consumes Eternal Hunt and resets recovery after500ms"
+    );
+}
+
+#[test]
+#[ignore = "requires prepared native spec577 player profile"]
 fn havoc_hard_meta_adds_native_duration_to_existing_demonic_meta() {
     let _seed = crate::random::seed_scope(70_448);
     let mut run = prepare_literal(577, 1).unwrap();
