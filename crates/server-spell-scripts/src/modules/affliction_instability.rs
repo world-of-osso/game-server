@@ -14,7 +14,7 @@ const UNSTABLE_AFFLICTION: u32 = 1259790;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AfterDirectDamageBeforeItems(direct_hit),
-    SpellScriptHook::PeriodicDamageFinished(periodic_hit),
+    SpellScriptHook::PeriodicPrimaryDamage(periodic_hit),
     SpellScriptHook::NativeAfterCast(after_cast),
     SpellScriptHook::CastTimeProcs(&[BUFF]),
 ];
@@ -33,9 +33,10 @@ fn direct_hit(world: &mut World, ctx: &EffectCtx<'_>) {
     }
 }
 
-fn periodic_hit(world: &mut World, ctx: &EffectCtx<'_>) {
+fn periodic_hit(world: &mut World, ctx: &EffectCtx<'_>, _: Entity, _: f32, _: bool) {
     // SimC76f8118 actions2192–2195/2347–2350/init1242–1243: actual Grasp
     // and Drain Soul ticks share their10% PRD stream, independent of Shadow Bolt.
+    // This primary-tick boundary precedes Cunning and Grasp extra-DoT emission.
     if matches!(ctx.spell.id, 1261153 | 198590) {
         roll_instability(world, ctx.caster, 0, true);
     }

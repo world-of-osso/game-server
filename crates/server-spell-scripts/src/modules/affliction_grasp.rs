@@ -5,6 +5,7 @@ use combat::auras::ActiveAuras;
 use combat::spell_cast::{self, effects::EffectCtx, script_registry::SpellScriptHook};
 
 const GRASP: u32 = 1261153;
+const WITHER_TALENT: u32 = 445465;
 const AGONY: u32 = 980;
 const AGONY_CHILD: u32 = 1261166;
 const PERIODIC_DAMAGE: u32 = 3;
@@ -14,7 +15,7 @@ const AGONY_CHILD_BUG_MULTIPLIER: f32 = 1.95;
 const DOT_CHILDREN: &[(u32, u32, bool)] = &[
     (AGONY, AGONY_CHILD, true),
     (1259790, 1261176, true),
-    (172, 1261158, true),
+    (146739, 1261158, true),
     (445474, 1279686, false),
 ];
 
@@ -32,7 +33,11 @@ fn copy_owned_ticks(world: &mut World, ctx: &EffectCtx<'_>, target: Entity, _: f
         return;
     }
     let fraction = spell_cast::scripts::script_effect_value(world, ctx.caster, GRASP, 1) / 100.0;
+    let wither = combat::auras::has_aura(world, ctx.caster, WITHER_TALENT);
     for &(dot, child, use_stacks) in DOT_CHILDREN {
+        if !selected_corruption(dot, wither) {
+            continue;
+        }
         let Some(base) = owned_base_tick(world, ctx.caster, target, dot, use_stacks) else {
             continue;
         };
@@ -50,6 +55,16 @@ fn copy_owned_ticks(world: &mut World, ctx: &EffectCtx<'_>, target: Entity, _: f
             ctx.depth + 1,
             amount,
         );
+    }
+}
+
+// Source actions2117–2131: the selected hero owns exactly one of these
+// replacement children. The actual Corruption DoT is146739, not direct172.
+fn selected_corruption(dot: u32, wither: bool) -> bool {
+    match dot {
+        146739 => !wither,
+        445474 => wither,
+        _ => true,
     }
 }
 

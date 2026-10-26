@@ -716,6 +716,12 @@ Rotation/decision implementation belongs to the lead/rotation agents. No system 
 - Spec252 runs the exact exported76f8118 Unholy action rows through shared Program/Driver/Prepared/Equipment with native player identity. Bind rune/Runic Power, disease and pet state to native70448 values; ordered precombat executes native Raise Dead. Numerical parity is separately measurement-gated.
 
 
+### Affliction native Cunning Cruelty and Ravenous Afflictions
+
+- Selected453172 shares one Cunning PRD stream across landed Shadow Bolt686 impacts and Grasp1261153/Drain Soul198590 ticks. Pinned SB-selected chance is0.50, DS-selected0.25 (`sc_warlock.hpp1066–1067`, init1232–1235). Success casts native453176 at the actual recipient; its native coefficient, missile and five-target limit remain authoritative. The talent's native value5 names that enemy count, not the proc chance.
+- Selected459440 attempts its native RPPM only on actual critical Agony980, Corruption146739, Wither445474, UA1259790 ticks or critical Grasp extra children1261166/1261176/1261158/1279686. Success applies real264571 Nightfall. Generic/noncritical events cannot also advance this owned stream; talent removal stops acquisition (`actions459–467/2004–2025`, init1227).
+- Preserve the pinned Grasp tick order: Instability, Cunning, extra DoT children. The existing primary-tick dispatch owns that order; no shared damage dispatcher changes are required. Grasp chooses only the selected Corruption/Wither child and reads actual Corruption146739, not direct172 (`actions2192–2214/2117–2131`).
+
 ### Ordinary native spell GCD haste
 
 Category133 ordinary spells apply native spell haste before the independent aura417 haste-regeneration path. Preserve melee/ranged defense and ability/ranged-slot exclusions, native750–1500ms haste bounds, and exclude other base GCDs from this haste path. TC a352b1fa `Spell.cpp9209–9224` and SimC76f8118 `action.cpp648–666,1285–1315` define this behavior. The native clock gate covers representative foreground actions for all40 specs at0%,25% and150% haste; aura417 retains its separate native controls.

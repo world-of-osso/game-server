@@ -43,6 +43,7 @@ register_modules! {
     affliction_instability: (2651, "modules/affliction_instability.rs"),
     affliction_nathreza: (2655, "modules/affliction_nathreza.rs"),
     affliction_nightfall: (2652, "modules/affliction_nightfall.rs"),
+    affliction_procs: (2652, "modules/affliction_procs.rs"),
     affliction_targets: (2657, "modules/affliction_targets.rs"),
     affliction_ua: (2653, "modules/affliction_ua.rs"),
     affliction_wrath: (2656, "modules/affliction_wrath.rs"),
