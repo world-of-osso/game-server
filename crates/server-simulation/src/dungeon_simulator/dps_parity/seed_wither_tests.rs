@@ -101,6 +101,44 @@ fn assert_actual_explosion_and_wither(run: &Run) {
 
 #[test]
 #[ignore = "requires private265 native player inputs"]
+fn seed_native_without_sow_applies_only_one_real_seed_in_the_pack() {
+    let _seed = crate::random::seed_scope(70448);
+    let (run, _, _) = prepare_actual_seed(3);
+    let traits = run
+        .app
+        .world()
+        .get::<crate::class_progression::TraitLoadout>(run.actor)
+        .unwrap();
+    assert!(
+        !traits
+            .active_talent_spells()
+            .any(|talent| talent.spell_id == 196226),
+        "frozen265 has no Sow the Seeds; do not change its allocations"
+    );
+    let seeded = run
+        .targets
+        .iter()
+        .filter(|target| {
+            run.app
+                .world()
+                .get::<ActiveAuras>(**target)
+                .is_some_and(|auras| {
+                    auras
+                        .iter()
+                        .any(|aura| aura.caster == run.actor && aura.spell_id == SEED)
+                })
+        })
+        .count();
+    // actions1800–1802: source AoE count is1 without the selected native talent,
+    // despite its raw aura selectors naming a destination area.
+    assert_eq!(
+        seeded, 1,
+        "one ordinary paid cast must create one real Seed without Sow"
+    );
+}
+
+#[test]
+#[ignore = "requires private265 native player inputs"]
 fn seed_native_natural_expiry_explodes_and_applies_owned_wither_to_pack() {
     let _seed = crate::random::seed_scope(70448);
     let (mut run, expiry, _) = prepare_actual_seed(3);
