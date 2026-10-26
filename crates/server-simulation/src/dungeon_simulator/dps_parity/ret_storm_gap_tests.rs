@@ -40,19 +40,11 @@ fn damage(run: &Run, spell: Option<u32>) -> i64 {
         .sum()
 }
 
-fn cast_ordinary(run: &mut Run, spell: u32, unit: Entity) {
+fn cast_ordinary(run: &mut Run, spell: u32, unit: Entity) -> f32 {
     for _ in 0..200 {
+        // Native Crusading Strikes can earn HP while a rejected attempt waits
+        // for GCD. Observe payment only around the accepted synchronous cast.
         let before = current_holy_power(run);
-        let world = run.app.world();
-        let info = world
-            .resource::<crate::spell_info::SpellStore>()
-            .get(spell)
-            .unwrap();
-        let costs = crate::spell_cast::applicable_costs(world, run.actor, info);
-        let target_before = format!(
-            "{:?}",
-            world.get::<shared::components::Health>(run.targets[0])
-        );
         let result = crate::spell_cast::creature_cast_with_targets(
             run.app.world_mut(),
             run.actor,
@@ -64,16 +56,7 @@ fn cast_ordinary(run: &mut Run, spell: u32, unit: Entity) {
             },
         );
         match result {
-            Ok(()) => {
-                println!(
-                    "RET_STORM_ACCEPT spell={spell} before_hp={before} after_hp={} costs={costs:?} target_before={target_before} target_after={:?}",
-                    current_holy_power(run),
-                    run.app
-                        .world()
-                        .get::<shared::components::Health>(run.targets[0])
-                );
-                return;
-            }
+            Ok(()) => return before - current_holy_power(run),
             Err(CastFailure::OnGlobalCooldown | CastFailure::InProgress) => run.app.update(),
             Err(reason) => panic!(
                 "ordinary native {spell} failed: {reason:?}; Wake damage={}, Storm damage={}, HolyPower={}",
@@ -104,11 +87,8 @@ fn cast_funded_storms(run: &mut Run, count: usize) -> usize {
     wait_for_funding(run);
     for _ in 0..count {
         earn_finisher_power(run, STORM);
-        let before = current_holy_power(run);
-        cast_ordinary(run, STORM, actor);
-        let after = current_holy_power(run);
-        println!("RET_STORM_OUTER before_hp={before} after_hp={after}");
-        paid += usize::from(before - after >= 3.0);
+        let paid_hp = cast_ordinary(run, STORM, actor);
+        paid += usize::from(paid_hp >= 3.0);
         for _ in 0..40 {
             run.app.update();
         }
