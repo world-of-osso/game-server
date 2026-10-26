@@ -10,6 +10,8 @@ Assassination259 combat and the shared Rogue attack-speed path follow pinned Sim
 - [x] Envenom snapshots Amplifying Poison's native bonus at its native owned383414 stack threshold, then consumes exactly that threshold before generating new poison. Preserve other casters' stacks and sub-threshold state. Source: `sc_rogue.cpp4281–4310`.
 - [x] Selected14190 rolls its live effect0 chance on critical CP-builder hits, including Fan of Knives and both Mutilate hands, and casts native effect1 child14189. White swings, noncrits, periodic ticks, Pistol Shot, Shuriken Toss and Poisoned Knife do not qualify. Do not repeat the proc through deferred dispatch. Source: `sc_rogue.cpp2178–2180,4471–4473,5085–5086,5137–5138,5933–5934,6351–6352,7921–7937`.
 
+- [x] Kingsbane follows pinned default `bugs=1`: apply its extra native Potent Assassin direct bonus and extra native Implacable effect1 direct/effect2 periodic bonus, in addition to ordinary native family-mask modifiers. Read live passive amounts; preserve coefficients, costs, cadence and earned ramp. Source: `sc_rogue.cpp4921–4945`.
+
 ### Stealth and bleed children
 
 - [x] Selected381632 makes Garrote retain392401 effect1's native bonus when applied during real stealth or the native post-stealth window. Leaving the last real stealth aura grants392401. Readiness and recovery storage both use zero Garrote recovery during those windows, including the first stealth cast; preserve real costs and GCDs. Source: `sc_rogue.cpp4550–4561,4604–4609,7351–7378,11121–11133`.
@@ -51,6 +53,7 @@ Assassination259 combat and the shared Rogue attack-speed path follow pinned Sim
 
 Paths below are under `crates/server-simulation/src/dungeon_simulator/dps_parity/`:
 
+- `assassination_kingsbane_tests.rs` — actual direct/periodic damage with and without native Mastery/Implacable passives proves the pinned double-dip ratios.
 - `assassination_focus_tests.rs` — actual off-mark direct/periodic damage copies to the owned mark at the native fraction, with no self-copy or second crit.
 - `assassination_white_tests.rs` — actual landed weapon hits and marked/unmarked retargeting.
 - `assassination_target_tests.rs` — real poison recipient state/health damage and Kingsbane count exclusion.
