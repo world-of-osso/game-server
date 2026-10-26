@@ -253,6 +253,51 @@ fn havoc_annihilation_offhand_execution_can_refund_native_fury() {
 
 #[test]
 #[ignore = "requires prepared native spec577 player profile"]
+fn havoc_mid2_four_piece_essence_break_advances_cycle_and_reduces_native_beam_recovery() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(577, 1).unwrap();
+    assert!(
+        crate::auras::has_aura(run.app.world(), run.actor, 1296612),
+        "real equipped native Havoc12.1 four-piece required"
+    );
+    havoc_tests::earn_havoc_fury(&mut run, 60.0);
+    cast(&mut run, 198013, false);
+    preparation::finish_pending_setup(&mut run).unwrap();
+    let cycle_stacks = |run: &Run| {
+        run.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(run.actor)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.caster == run.actor && aura.spell_id == 1214887)
+            .unwrap()
+            .stacks
+    };
+    assert_eq!(
+        cycle_stacks(&run),
+        1,
+        "first real native beam earns one Cycle stack"
+    );
+    let expected =
+        crate::spell_cast::scripts::script_effect_value(run.app.world(), run.actor, 258887, 0)
+            as u32;
+    let before = cooldown_remaining(&run, 198013);
+    assert!(before > expected);
+    cast(&mut run, 258860, false);
+    let after = cooldown_remaining(&run, 198013);
+    assert!(
+        before.saturating_sub(after).abs_diff(expected) <= 1,
+        "real four-piece Essence Break must reduce the already-running native Eye Beam cooldown by its native Cycle value (SimC76f8118 sc_demon_hunter.cpp7814–7833): before={before} after={after} expected={expected}"
+    );
+    assert_eq!(
+        cycle_stacks(&run),
+        2,
+        "four-piece Essence Break also earns the next real Cycle stack"
+    );
+}
+
+#[test]
+#[ignore = "requires prepared native spec577 player profile"]
 fn havoc_shattered_destiny_counts_paid_native_base_fury_only_in_meta() {
     let _seed = crate::random::seed_scope(70_448);
     let mut run = prepare_literal(577, 1).unwrap();
