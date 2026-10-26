@@ -114,6 +114,10 @@ A warm `server-simulation --no-run` touch of the moved supply source rebuilt com
 
 `hunter_bounces.rs` owns shared Hunter bounce policy data, native target round-robin order, delays and ramp scalars. `shadow_bolts.rs` owns Voidform's initial Volley, Volley's primary/caster plan and native50ms bolt queue. `unholy_eruption.rs` owns Scourge Strike's owned periodic snapshot reads, native pre-mitigation calculation and missing-only Virulent Plague application. They use the existing effect-handler, effect-hit and target-plan slots; already-moved spec modules are unchanged. The generic `DamageInput` and pre-mitigation helper remain in combat.
 
+## Assassination context and native children
+
+`modules/assassination_runtime/` owns Deathstalker's mark/Darkest Night cycle, Internal Bleeding's effective-CP child and Implacable's actual-target driver. Generic policy execution retains capture of paid resources and selected primary. The module requests that context, prepares earned snapshots after capture, and runs its mark then child callbacks only after the existing primary guard. Lethal poison impacts still precede ordinary enemy-hit lookups; positive damage reads the generic matching resolution view. Child aura registration remains immediately before the native Rogue aura rows. Existing downstream Assassination modules and `auras::rogue::improved_garrote_active` are unchanged.
+
 ## Tests
 
 The server's public native harness and simulation's harness alias install the plugin before the harness runs Startup. Simulation installs it on every new app, including apps that reuse cached aura catalogs. Combat's own unit-test build compiles the exact downstream module sources against its local test-crate types; it does not add a production dependency or duplicate policy data. Ordinary simulation builds do not compile those test-only inclusions.

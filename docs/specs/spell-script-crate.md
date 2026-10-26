@@ -34,6 +34,7 @@
 - `crates/server-simulation/src/dungeon_simulator/dps_parity/{ret_auto_proc_tests.rs,outlaw_tests.rs,fury_rotation/mechanics_tests.rs}` — native migrated-hook behavior.
 - `crates/server-combat/src/spell_cast/chrono_flame_tests.rs` and `crates/server-spell-tests/src/spell_cast/new_class_tests.rs` — history, native replacement, Living Flame healing/damage branches and refund behavior. All `devastation_` native cases gate shared Evoker flame moves.
 - Native Hunter bounce, Shadow Volley and Scourge eruption fixtures gate their corresponding downstream modules. BM/Hunter, Affliction and Unholy probes use separate spec inputs; one entry's first measurement supplies its test environment.
+- Registry context/snapshot/primary-hit/pre-enemy-hit tests and separate `assassination_`259 / `outlaw_`260 native probes gate the moved Rogue runtime. Existing native mark, Internal Bleeding, Implacable and poison cases retain their real execution boundaries.
 - Existing native Ret/BM/Devastation/Windwalker/Warrior/Rogue policy fixtures continue to exercise relationship execution.
 
 ## Known gaps (current cycle)

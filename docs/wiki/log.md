@@ -4661,3 +4661,7 @@ Documented the first compile-boundary slice in [spell-script-crate](systems/spel
 ## 2026-10-26 — Bounded projectile script compile boundaries
 
 - Updated [spell-script crate](systems/spell-script-crate.md#bounded-native-projectile-scripts) for downstream Hunter bounce, Shadow Volley and Scourge eruption ownership without changing native queues, recipients or pre-mitigation calculation.
+
+## 2026-10-26 — Assassination runtime compile boundary
+
+- Updated [spell-script crate](systems/spell-script-crate.md#assassination-context-and-native-children) with downstream context/hero/child ownership and unchanged primary/poison/registration positions.
