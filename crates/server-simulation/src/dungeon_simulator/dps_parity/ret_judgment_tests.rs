@@ -36,8 +36,7 @@ fn capture_verdict(run: &mut Run) -> f64 {
         .unwrap()
         .iter()
         .find(|event| event["event"] == "result" && event["spell_id"] == VERDICT)
-        .expect("native Verdict result")
-        ["factors"]["target_product"]
+        .expect("native Verdict result")["factors"]["target_product"]
         .as_f64()
         .unwrap()
 }
@@ -77,13 +76,9 @@ fn ret_judgment_native_impacts_grant_uses_with_one_flat_damage_bonus() {
             "the target debuff never belongs on its caster"
         );
     }
-    let native_bonus = crate::spell_cast::scripts::script_effect_value(
-        run.app.world(),
-        run.actor,
-        MARK,
-        0,
-    ) as f64
-        / 100.0;
+    let native_bonus =
+        crate::spell_cast::scripts::script_effect_value(run.app.world(), run.actor, MARK, 0) as f64
+            / 100.0;
     for remaining in [1, 0] {
         let marked = capture_verdict(&mut run);
         assert!(

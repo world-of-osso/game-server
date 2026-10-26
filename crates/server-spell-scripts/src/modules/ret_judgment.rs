@@ -61,7 +61,8 @@ fn after_hit(world: &mut World, ctx: &EffectCtx, target: Entity, _: bool) {
 
 fn consume_mark(world: &mut World, ctx: &EffectCtx, target: Entity) {
     // Ret450/505: Tempest and Sunrise Storm benefit but do not decrement uses.
-    let secondary_storm = ctx.spell.id == 53385 && ctx.spell.cast_damage_role != CastDamageRole::Primary;
+    let secondary_storm =
+        ctx.spell.id == 53385 && ctx.spell.cast_damage_role != CastDamageRole::Primary;
     if ctx.spell.id == 224239 || secondary_storm {
         return;
     }
