@@ -837,7 +837,7 @@ impl<'a> NativeFacts<'a> {
     fn contextual_property(&self, action: &Action, name: &str) -> Result<f64, String> {
         let spell = self.action_spell(&action.name)?;
         match name {
-            "charges" | "charges_fractional" | "full_recharge_time" => {
+            "charges" | "max_charges" | "charges_fractional" | "full_recharge_time" => {
                 crate::spell_cast::cooldown_query::cooldown_value(
                     self.world, self.actor, spell, name,
                 )
@@ -1044,10 +1044,9 @@ impl Facts for NativeFacts<'_> {
             "movement.distance" => self.movement_distance(),
             "movement.remains" => self.movement_value("remains"),
             "movement.speed" => self.movement_value("speed"),
-            "gcd" | "gcd.max" | "gcd.min" | "gcd.remains" | "charges" | "charges_fractional"
-            | "full_recharge_time" | "execute_time" | "ticks_remain" | "ticks" | "ticking" => {
-                Err(format!("native APL {name} requires action context"))
-            }
+            "gcd" | "gcd.max" | "gcd.min" | "gcd.remains" | "charges" | "max_charges"
+            | "charges_fractional" | "full_recharge_time" | "execute_time" | "ticks_remain"
+            | "ticks" | "ticking" => Err(format!("native APL {name} requires action context")),
             _ => {
                 if let Some(value) = name.strip_prefix("buff.") {
                     return self.buff(value);
@@ -1109,10 +1108,9 @@ impl ActionFacts for NativeFacts<'_> {
         }
         match name {
             "gcd" | "gcd.max" | "gcd.min" | "gcd.remains" => self.gcd(action, name),
-            "charges" | "charges_fractional" | "full_recharge_time" | "execute_time"
-            | "cast_time" | "cost" | "ticks_remain" | "ticks" | "ticking" | "cooldown_react" => {
-                self.contextual_property(action, name)
-            }
+            "charges" | "max_charges" | "charges_fractional" | "full_recharge_time"
+            | "execute_time" | "cast_time" | "cost" | "ticks_remain" | "ticks" | "ticking"
+            | "cooldown_react" => self.contextual_property(action, name),
             _ => self.value(name),
         }
     }
