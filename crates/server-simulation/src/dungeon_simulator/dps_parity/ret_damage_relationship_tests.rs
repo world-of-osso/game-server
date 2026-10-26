@@ -442,9 +442,25 @@ fn ret_damage_sentence_explosion_applies_normal_outgoing_modifiers_to_stored_dam
                 result["factors"]["result"], "hit",
                 "Sentence's native no-crit flag must survive"
             );
+            // SimC76f8118 Ret61–75 multiplies stored damage normally.
+            // The actual profile's versatility, not an arbitrary1% floor,
+            // supplies the minimum outgoing multiplier.
+            let versatility = 1.0
+                + f64::from(
+                    run.app
+                        .world()
+                        .get::<crate::stats::CharacterStats>(run.actor)
+                        .unwrap()
+                        .versatility_pct,
+                ) / 100.0;
             assert!(
-                result["factors"]["native_done_product"].as_f64().unwrap() > 1.01,
-                "SimC Ret61–75 multiplies stored damage normally, including native versatility: {result}"
+                versatility > 1.0,
+                "native profile must exercise versatility"
+            );
+            let done = result["factors"]["native_done_product"].as_f64().unwrap();
+            assert!(
+                done + 1e-6 >= versatility,
+                "stored damage must retain native versatility{versatility}: {result}"
             );
             return;
         }

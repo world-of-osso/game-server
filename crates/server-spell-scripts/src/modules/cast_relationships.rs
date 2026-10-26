@@ -40,7 +40,8 @@ enum Operation {
 
 struct CastRule {
     name: &'static str,
-    spec: u32,
+    /// None means an active hero talent qualifies independently of specialization.
+    spec: Option<u32>,
     /// Zero means no talent prerequisite: only an already earned buff is consumed.
     talent: u32,
     cast: u32,
@@ -57,7 +58,7 @@ const RULES: &[CastRule] = &[
     // executes one native buff application, without the HS-spend chance roll.
     CastRule {
         name: "SIMC_FIRE_SUNFURY_METEOR_PYROCLASM",
-        spec: 63,
+        spec: Some(63),
         talent: 449349,
         cast: 153561,
         operation: Operation::GrantIfTalent {
@@ -65,19 +66,27 @@ const RULES: &[CastRule] = &[
             aura: 269651,
         },
     },
-    // SimC76f8118 sc_hunter.cpp6913–6914: only Trueshot grants Chakram.
+    // SimC76f8118 sc_hunter.cpp6913–6914/6413–6414: selected Sentinel
+    // grants Chakram only from actual Trueshot or Takedown executions.
     // Native1264902 aura42 supplies1264946 and its actual duration/chance.
     CastRule {
         name: "SIMC_MM_TRUESHOT_CHAKRAM",
-        spec: 254,
+        spec: None,
         talent: 1264902,
         cast: 288613,
+        operation: Operation::NativeProc,
+    },
+    CastRule {
+        name: "SIMC_SENTINEL_TAKEDOWN_CHAKRAM",
+        spec: None,
+        talent: 1264902,
+        cast: 1250646,
         operation: Operation::NativeProc,
     },
     // sc_hunter.cpp4480–4481 consumes the actual enabler on a Chakram cast.
     CastRule {
         name: "SIMC_MM_CHAKRAM_CONSUMER",
-        spec: 254,
+        spec: None,
         talent: 1264902,
         cast: 1264949,
         operation: Operation::Consume {
@@ -89,7 +98,7 @@ const RULES: &[CastRule] = &[
     // grants Lock and Load on the actual Chakram cast, not on each bounce.
     CastRule {
         name: "SIMC_MM_STALK_LOCK_AND_LOAD",
-        spec: 254,
+        spec: Some(254),
         talent: 1266069,
         cast: 1264949,
         operation: Operation::Grant(194594),
@@ -98,14 +107,14 @@ const RULES: &[CastRule] = &[
     // then spend exactly one use per Aimed Shot. Native70448 has one use.
     CastRule {
         name: "SIMC_MM_BULLETSTORM_PRODUCER",
-        spec: 254,
+        spec: Some(254),
         talent: 389019,
         cast: 257044,
         operation: Operation::FillStacks(389020),
     },
     CastRule {
         name: "SIMC_MM_BULLETSTORM_CONSUMER",
-        spec: 254,
+        spec: Some(254),
         talent: 389019,
         cast: 19434,
         operation: Operation::Decrement {
@@ -117,14 +126,14 @@ const RULES: &[CastRule] = &[
     // its native field duration; ordinary Aimed/Rapid consume only outside Volley.
     CastRule {
         name: "SIMC_MM_VOLLEY_TRICK_SHOTS",
-        spec: 254,
+        spec: Some(254),
         talent: 260243,
         cast: 260243,
         operation: Operation::GrantForCastDuration(257622),
     },
     CastRule {
         name: "SIMC_MM_AIMED_TRICK_CONSUMER",
-        spec: 254,
+        spec: Some(254),
         talent: 0,
         cast: 19434,
         operation: Operation::Decrement {
@@ -137,7 +146,7 @@ const RULES: &[CastRule] = &[
     // sc_hunter.cpp5565–5567: one native Precise Shots application per Aimed Shot.
     CastRule {
         name: "SIMC_MM_AIMED_PRECISE_SHOTS",
-        spec: 254,
+        spec: Some(254),
         talent: 260240,
         cast: 19434,
         operation: Operation::Grant(260242),
@@ -145,7 +154,7 @@ const RULES: &[CastRule] = &[
     // sc_hunter.cpp5796–5799: selected No Scope grants the same native buff.
     CastRule {
         name: "SIMC_MM_NO_SCOPE_PRECISE_SHOTS",
-        spec: 254,
+        spec: Some(254),
         talent: 473385,
         cast: 257044,
         operation: Operation::Grant(260242),
@@ -154,21 +163,21 @@ const RULES: &[CastRule] = &[
     // a real spender expires Precise Shots and triggers selected Stargazer.
     CastRule {
         name: "SIMC_MM_ARCANE_PRECISE_CONSUMER",
-        spec: 254,
+        spec: Some(254),
         talent: 260240,
         cast: 185358,
         operation: PRECISE_CONSUMER,
     },
     CastRule {
         name: "SIMC_MM_MULTI_PRECISE_CONSUMER",
-        spec: 254,
+        spec: Some(254),
         talent: 260240,
         cast: 257620,
         operation: PRECISE_CONSUMER,
     },
     CastRule {
         name: "SIMC_MM_KILL_PRECISE_CONSUMER",
-        spec: 254,
+        spec: Some(254),
         talent: 260240,
         cast: 53351,
         operation: PRECISE_CONSUMER,
@@ -177,7 +186,7 @@ const RULES: &[CastRule] = &[
     // Native1301778 owns its three-second duration and -100% cost modifier.
     CastRule {
         name: "SIMC_MM_UNSTABLE_TRIGGER_RECAST",
-        spec: 254,
+        spec: Some(254),
         talent: 473520,
         cast: 212431,
         operation: Operation::FreeRecast(1301778),
@@ -210,10 +219,11 @@ fn guarantees_crit(world: &World, caster: Entity, spell: &SpellInfo) -> bool {
 }
 
 fn selected(world: &World, caster: Entity, rule: &CastRule) -> bool {
-    world
-        .get::<ActiveSpec>(caster)
-        .is_some_and(|spec| spec.0 == rule.spec)
-        && (rule.talent == 0 || has_talent(world, caster, rule.talent))
+    rule.spec.is_none_or(|required| {
+        world
+            .get::<ActiveSpec>(caster)
+            .is_some_and(|spec| spec.0 == required)
+    }) && (rule.talent == 0 || has_talent(world, caster, rule.talent))
 }
 
 pub(super) fn has_talent(world: &World, caster: Entity, talent: u32) -> bool {
@@ -245,14 +255,12 @@ fn register(scripts: &mut combat::auras::scripts::AuraScripts) {
 }
 
 fn check_native_proc(world: &World, aura: &AuraInstance, event: &AuraEvent) -> bool {
-    // Only explicitly assigned actor/spec policies add a veto. Other users of
-    // the same native hero talent are unchanged, not qualified by the MM proof.
+    // Active shared hero talents qualify without a specialization list.
+    // Specialization-owned rules keep their ordinary source qualification.
     let assigned = RULES.iter().any(|rule| {
         matches!(rule.operation, Operation::NativeProc)
             && rule.talent == aura.spell_id
-            && world
-                .get::<ActiveSpec>(aura.caster)
-                .is_some_and(|spec| spec.0 == rule.spec)
+            && selected(world, aura.caster, rule)
     });
     if !assigned {
         return true;

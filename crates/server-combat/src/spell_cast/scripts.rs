@@ -52,8 +52,8 @@ mod enhancement_nova;
 mod enhancement_rod;
 pub(super) use enhancement_rod::after_resolution as after_resolved_hits;
 pub(crate) use enhancement_rod::snapshot_rod_amount;
+mod enhancement_spending;
 mod enhancement_strikes;
-mod enhancement_tempest;
 mod enhancement_tier;
 mod enhancement_unleashed;
 pub(super) use enhancement_strikes::check_cast as check_enhancement_cast;
@@ -110,7 +110,7 @@ mod fire_procs;
 pub(crate) mod holy_priest;
 mod hot_streak;
 pub(crate) use fire_procs::register as register_fire_procs;
-pub(super) use fire_procs::{before_hot_streak_launch, fire_meteorite_hit};
+pub(super) use fire_procs::{before_hot_streak_launch, fire_feedback_hit, fire_meteorite_hit};
 pub(super) use hot_streak::triggers_hot_streak;
 pub(super) use hot_streak::{
     flamestrike_hot_streak_chance, pyroclasm_damage_modifier, record_fire_hit,
