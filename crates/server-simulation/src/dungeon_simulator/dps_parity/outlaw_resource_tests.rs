@@ -25,11 +25,6 @@ fn first_finisher_damage(spec: u32, spell: u32, points: f32) -> f64 {
     let mut run = prepare_literal(spec, 1).unwrap();
     engage(&mut run);
     fund_finisher(&mut run, points);
-    run.app
-        .world_mut()
-        .get_mut::<crate::stats::CharacterStats>(run.actor)
-        .unwrap()
-        .crit_pct = 0.0;
     literal_rotation::execution::execute(
         run.app.world_mut(),
         run.actor,
@@ -50,12 +45,37 @@ fn first_finisher_damage(spec: u32, spell: u32, points: f32) -> f64 {
                 && event.spell_id == Some(spell)
         })
         .unwrap();
-    assert!(
-        !hit.crit,
-        "the point-value control excludes critical amplification"
-    );
     assert!(hit.amount > 0);
-    f64::from(hit.amount + hit.blocked + hit.absorbed + hit.resisted)
+    let amplification = if hit.crit {
+        read_native_weapon_crit_multiplier(&run, spell)
+    } else {
+        1.0
+    };
+    f64::from(hit.amount + hit.blocked + hit.absorbed + hit.resisted) / f64::from(amplification)
+}
+
+fn read_native_weapon_crit_multiplier(run: &Run, spell: u32) -> f32 {
+    let world = run.app.world();
+    let spell = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(spell)
+        .unwrap();
+    // These native Rogue finishers use weapon crit ordering (Unit.cpp1222–1237):
+    // spell-modified bonus first, then the caster's whole-hit crit modifier.
+    // Unlike writing derived crit_pct once, this remains valid through real
+    // Main Gauche/item procs that refresh the actor's computed stats.
+    let bonus = crate::auras::spell_mods::modify(
+        world,
+        run.actor,
+        spell,
+        crate::auras::SpellModOp::CritDamageAndHealing,
+        1.0,
+    );
+    let whole_hit = world
+        .get::<crate::auras::AuraStatMods>(run.actor)
+        .unwrap()
+        .critical_damage(spell.school_mask());
+    (1.0 + bonus) * whole_hit
 }
 
 #[test]

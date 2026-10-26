@@ -134,6 +134,8 @@ Native merged buff outcomes apply or clear the caster-owned aura after the hit b
 
 ### Outlaw literal fixture
 
+- Native Main Gauche76806 rolls its authored proc chance from successful main-hand white swings and the pinned eligible special impacts, including Sinister extra attacks and Killing Spree's main hand. Emit native86392 at the actual hit recipient. Pistol Shot, Between the Eyes, off-hand whites, Spree's off hand and Main Gauche itself cannot produce it. Native mastery coefficients remain unchanged (`sc_rogue.cpp3468–3469,4726–4728,5942–6001,7948–7973`).
+
 - Pistol Shot spends one earned Opportunity use per execution, not all stacks or a stack-multiplied damage/cost bonus. An ordinary shot schedules up to native Fan the Hammer's count of remaining earned uses100ms apart, using its native damage reduction; children cannot fan. Each earned shot grants native Quick Draw points when selected. Background shots freeze charged modifiers at launch and consume their own use before impact (`sc_rogue.cpp4981–5070`).
 
 - Landed native Sinister Strike193315 rolls selected Opportunity279876 once per hit. Read native chance and the RtB extra-chance contribution; success earns native195627 stacks and dispatches197834 to the same enemy after300ms. Extra strikes cannot recursively roll Opportunity (`sc_rogue.cpp1286–1292,5942–5991,8255–8280`).
