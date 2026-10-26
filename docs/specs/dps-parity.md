@@ -10,6 +10,10 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 - The native encounter fixture faces the actor toward its actual primary before engagement and restores maintained melee-intent facing after forced movement finishes, including a charge that ends inside melee range. Do not turn active channels or override forced movement. Keep native directional selectors, widths and radii unchanged.
 - A fixture actor with native melee AutoAttack intent walks back into nominal melee range at its native run speed after movement abilities. Preserve forced movement ownership, native movement/cast restrictions and position=back; never suppress displacement, snap the actor or grant resources. This shared controller applies without specialization or spell-ID cases (SimC76f8118 sc_demon_hunter.cpp1559–1611).
 
+### Native Pandemic duration carry
+
+- Native `PERIODIC_REFRESH_EXTENDS_DURATION` selects Pandemic carry: a refresh retains up to30% of fresh duration from the previous owned application, never reducing a longer remaining lifetime (`action.cpp684–685/4612`). Use the native attribute, not a Rip/Rake whitelist. Existing explicit Extend policies and rolling refresh retain their source precedence (`action.cpp2729–2734`); preserve native periodic phase, amounts and asynchronous deadlines.
+
 ### Shared channel timing
 
 - Quantize native channel tick intervals to the nearest millisecond. A hasted channel's duration is that rounded interval times its original native modified tick count, not an independently truncated hasted duration (`action.cpp4297–4314/4397–4421`).

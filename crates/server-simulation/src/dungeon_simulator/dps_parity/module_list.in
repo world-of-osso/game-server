@@ -54,6 +54,7 @@ mod bare_ttd_tests;
 mod beast_mastery_mechanics_tests;
 #[cfg(test)]
 mod beast_mastery_pet_tests;
+mod channel_pandemic_tests;
 mod channel_timing_tests;
 mod composite_precombat_tests;
 mod demonology_tests;
@@ -190,6 +191,7 @@ mod midnight_item_damage_tests;
 mod midnight_stat_items_tests;
 mod multi_seed;
 mod named_action_cooldown_tests;
+mod native_pandemic_tests;
 mod outlaw_cleave_tests;
 mod outlaw_flurry_activation_tests;
 mod outlaw_main_gauche_tests;
