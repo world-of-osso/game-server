@@ -158,6 +158,7 @@ mod windwalker_dual_threat;
 pub(crate) use windwalker_dual_threat::{
     read_replacement as white_impact_replacement, roll_replacement as replace_white_impact,
 };
+mod glory_of_the_dawn;
 mod windwalker_flurry;
 pub(crate) fn after_melee_hit(
     world: &mut World,
@@ -213,6 +214,7 @@ pub(super) fn finish_scripted_launch(
     policies::pet_sets::finish_cobra(world, caster, spell);
     script_registry::after_counter_launch(world, caster, spell.id);
     unbroken_rhythm::after_launch(world, caster, spell.id);
+    glory_of_the_dawn::after_launch(world, caster, spell, depth);
     enhancement_tier::after_launch(world, caster, spell, depth);
     enhancement_strikes::cast_ride_the_lightning(world, caster, spell, depth);
 }
@@ -265,7 +267,7 @@ pub(super) fn after_direct_damage(
         midnight_items::apply_perfected_venom(world, ctx.caster, target);
     }
     match ctx.spell.id {
-        xuens_battlegear::RSK_DAMAGE | xuens_battlegear::RWK_DAMAGE => {
+        xuens_battlegear::RSK_DAMAGE | xuens_battlegear::RWK_DAMAGE | glory_of_the_dawn::DAMAGE => {
             xuens_battlegear::reduce_fof_on_critical_impact(world, ctx, target, critical);
         }
         _ => {}
