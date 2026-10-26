@@ -23,7 +23,32 @@ fn native_bm_barbed_stomps_the_pack_and_earns_mid2_cobra_fang() {
         false,
     )
     .expect("ordinary Barbed Shot");
+    eprintln!(
+        "FANG_IMMEDIATE {:?}",
+        run.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(run.actor)
+            .map(|auras| auras
+                .iter()
+                .filter(|aura| [1299389, 1296631, 1296632].contains(&aura.spell_id))
+                .map(|aura| (aura.spell_id, aura.stacks, aura.source.clone()))
+                .collect::<Vec<_>>())
+    );
     preparation::finish_pending_setup(&mut run).unwrap();
+    eprintln!(
+        "FANG_POST_GCD triggered={:?} events={:?}",
+        run.app
+            .world()
+            .get_resource::<crate::spell_cast::test_harness::ObservedTriggeredCasts>()
+            .map(|casts| &casts.0),
+        run.app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .filter(|event| [Some(193455), Some(75)].contains(&event.spell_id))
+            .collect::<Vec<_>>()
+    );
     let events = &run
         .app
         .world()

@@ -26,7 +26,39 @@ fn native_bm_wrath_applies_bloodshed_from_each_owned_pet() {
         .world()
         .get::<crate::auras::ActiveAuras>(run.targets[0])
         .unwrap();
+    eprintln!(
+        "BLOODSHED_STATE known={} target_auras={:?} triggered={:?}",
+        run.app
+            .world()
+            .get::<crate::class_progression::KnownSpells>(run.actor)
+            .is_some_and(|known| known.contains(1272099)),
+        auras
+            .iter()
+            .map(|aura| (aura.spell_id, aura.caster))
+            .collect::<Vec<_>>(),
+        run.app
+            .world()
+            .get_resource::<crate::spell_cast::test_harness::ObservedTriggeredCasts>()
+            .map(|casts| &casts.0)
+    );
+    eprintln!(
+        "BLOODSHED_EVENTS {:?}",
+        run.app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .filter(|event| event.spell_id == Some(321538))
+            .collect::<Vec<_>>()
+    );
     for pet in &pets {
+        eprintln!(
+            "BLOODSHED_PET pet={pet:?} pos={:?} target={:?}",
+            run.app.world().get::<shared::components::Position>(*pet),
+            run.app
+                .world()
+                .get::<shared::components::Position>(run.targets[0])
+        );
         assert!(
             auras
                 .iter()
