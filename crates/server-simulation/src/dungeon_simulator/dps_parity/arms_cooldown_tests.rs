@@ -123,6 +123,8 @@ fn arms_sudden_death_onslaught_reduces_bladestorm_and_applies_overwhelmed() {
     for _ in 0..3 {
         crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 445579, Some(target), 1);
     }
+    // Slayer's native effect64 queues its Executioner child for the real update.
+    advance_frames(&mut run, 2);
     assert!(
         crate::auras::has_aura(run.app.world(), actor, 52437),
         "three actual Slayer executions earn SD"
