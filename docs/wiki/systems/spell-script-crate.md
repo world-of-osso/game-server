@@ -132,3 +132,7 @@ The server's public native harness and simulation's harness alias install the pl
 ## See Also
 
 - [[spell-casting]] — retained execution engine and native relationships
+
+## Master integration: linked Enhancement helpers
+
+The split also owns the newly landed Doom, Stormblast, Stormflurry and Stormwell helpers under `modules/enhancement/`. Their component state moves with the existing spending and Strike callbacks. Independent registry slots preserve the pre-OnCast snapshot, actual weapon impact, weapon-child multiplier, post-Arcane launch and separately scheduled after-cast update boundaries. Unlimited Power retains its native aura-refresh implementation in combat; the downstream Maelstrom spender calls its public grant function. Arcane explicit Splinter conjures pass the original source spell through `ConjureFromSpell`, while source-free Frost requests retain `ConjureCount`.

@@ -35,7 +35,7 @@ mod earthen_rage;
 pub(crate) mod ebon_might;
 mod echo_of_light;
 pub(crate) mod effect_immunity;
-pub(crate) mod enhancement_power;
+pub mod enhancement_power;
 mod fear;
 mod fel_devastation;
 mod fixate;

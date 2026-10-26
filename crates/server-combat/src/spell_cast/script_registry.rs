@@ -229,6 +229,12 @@ pub type SupplyAfterCastLookup = fn(u32) -> Option<AfterCastHook>;
 pub type ResolvePendingScriptEventsHook = fn(&mut World);
 pub type AfterLaunchProcSupplyHook = fn(&mut World, Entity, &SpellInfo);
 
+pub type ConjureFromSpellHook = fn(&mut World, Entity, &SpellInfo, Entity, u32);
+pub type BeforeScriptOnCastHook = fn(&mut World, Entity, u32, u8);
+pub type AfterWeaponDamageHook = fn(&mut World, &EffectCtx<'_>, Entity, f32);
+pub type NativeWeaponMultiplierHook = fn(&World, Entity, &SpellInfo, u32) -> Option<f32>;
+pub type AfterNativeLaunchHook = fn(&mut World, Entity, &SpellInfo);
+pub type AfterNativeCastUpdateHook = fn(&mut World);
 pub type ConjureCountHook = fn(&mut World, Entity, Entity, u32);
 pub type AfterPolicyCastHook = fn(&mut World, Entity, &SpellInfo);
 pub type AfterPolicyCastLookup = fn(u32) -> Option<AfterPolicyCastHook>;
@@ -369,12 +375,12 @@ pub enum SpellScriptHook {
     ResolvePendingScriptEvents(ResolvePendingScriptEventsHook),
     AfterLaunchProcSupply(AfterLaunchProcSupplyHook),
     ConjureCount(ConjureCountHook),
-    ConjureFromSpell(fn(&mut World, Entity, &SpellInfo, Entity, u32)),
-    BeforeScriptOnCast(OnCastHook),
-    AfterWeaponDamage(SpellResidualHook),
-    NativeWeaponMultiplier(TriggeredChildDamageMultiplierHook),
-    AfterNativeLaunch(AfterCastHook),
-    AfterNativeCastUpdate(AfterCastUpdateHook),
+    ConjureFromSpell(ConjureFromSpellHook),
+    BeforeScriptOnCast(BeforeScriptOnCastHook),
+    AfterWeaponDamage(AfterWeaponDamageHook),
+    NativeWeaponMultiplier(NativeWeaponMultiplierHook),
+    AfterNativeLaunch(AfterNativeLaunchHook),
+    AfterNativeCastUpdate(AfterNativeCastUpdateHook),
     AfterPolicyCast(AfterPolicyCastLookup),
     BeforeMeleeComboDamage(BeforeMeleeComboDamageHook),
     BeforePeriodicItemDamage(BeforePeriodicItemDamageHook),
