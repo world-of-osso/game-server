@@ -88,6 +88,7 @@ register_modules! {
     retribution: (60, "modules/retribution.rs"),
     rogue: (70, "modules/rogue.rs"),
     secondary_copies: (360, "modules/secondary_copies.rs"),
+    shadow_link: (2581, "modules/shadow_link.rs"),
     shadow_priest: (290, "modules/shadow_priest.rs"),
     shadow_volley: (2580, "modules/shadow_volley.rs"),
     snakeskin_quiver: (230, "modules/snakeskin_quiver.rs"),
