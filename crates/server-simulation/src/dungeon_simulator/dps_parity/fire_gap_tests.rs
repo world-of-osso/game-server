@@ -828,6 +828,92 @@ fn fire_meteorite_pyrocosm_fireballs_launch_native_meteorites() {
     );
 }
 
+#[test]
+#[ignore = "requires exact Fire63 inputs and private70448 DB"]
+fn fire_meteor_native_burn_ticks_after_scheduled_impact() {
+    let mut run = prepare_literal(63, 1).unwrap();
+    let target = run.targets[0];
+    start_native(&mut run, 153561, target);
+    for _ in 0..180 {
+        run.app.update();
+    }
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0;
+    assert!(
+        events
+            .iter()
+            .any(|event| event.spell_id == Some(351140) && event.kind == CombatLogKind::Damage),
+        "Meteor really impacted first"
+    );
+    assert!(
+        events.iter().any(|event| {
+            event.source == Some(run.actor.to_bits())
+                && event.target == Some(target.to_bits())
+                && event.spell_id == Some(155158)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0
+        }),
+        "native Meteor Burn must tick on the target inside its real field"
+    );
+}
+
+#[test]
+#[ignore = "requires exact Fire63 inputs and private70448 DB"]
+fn fire_meteor_deep_impact_amplifies_only_nearest_target() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(63, 3).unwrap();
+    let target = run.targets[0];
+    crate::spell_cast::cast_triggered(run.app.world_mut(), run.actor, 190319, Some(run.actor), 1);
+    start_native(&mut run, 153561, target);
+    for _ in 0..140 {
+        run.app.update();
+    }
+    let hits: Vec<_> = run
+        .app
+        .world()
+        .resource::<ObservedCombatEvents>()
+        .0
+        .iter()
+        .filter(|event| {
+            event.source == Some(run.actor.to_bits())
+                && event.spell_id == Some(351140)
+                && event.kind == CombatLogKind::Damage
+        })
+        .collect();
+    assert_eq!(hits.len(), 3);
+    assert!(
+        hits.iter().all(|hit| hit.crit),
+        "native Combustion keeps all three outcomes critical"
+    );
+    let primary = hits
+        .iter()
+        .find(|hit| hit.target == Some(target.to_bits()))
+        .unwrap()
+        .amount as f32;
+    let secondary = hits
+        .iter()
+        .find(|hit| hit.target == Some(run.targets[1].to_bits()))
+        .unwrap()
+        .amount as f32;
+    let percent = run
+        .app
+        .world()
+        .get::<ActiveAuras>(run.actor)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 1254857)
+        .unwrap()
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap()
+        .amount;
+    let expected = 1.0 + percent / 100.0;
+    assert!(
+        (primary / secondary - expected).abs() < 0.01,
+        "only the closest Meteor target gets native Deep Impact: {primary}/{secondary}, expected{expected}"
+    );
+}
+
 fn reacted(run: &Run, name: &str) -> f64 {
     use crate::simc_apl_native::{Bindings, Encounter, FightStyle, NativeFacts};
     let bindings = Bindings {
