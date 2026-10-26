@@ -4,12 +4,19 @@
 
 `effects::power_stats` reads an explicit guardian SP policy after the existing demon and owner-RAP paths. Native Thing From Beyond189988 retains creature type15; its373277→373279 policy inherits full live owner SP without a demon marker or copied actor stats. Unlisted guardians keep their existing behavior.
 
-Native Yogg RED8bf69a675f has the authentic owned actor but no positive Spike damage: the former SP-policy lookup existed only in the demon branch. Native4ef1614ab5 passes23Shadow cases including all-three-target Spikes and13guardian cases (one unrelated ignored). BM Bear/Wildspeaker7c3eeb0fea passes2,265guardian7efd24bed9 passes3, and267petsf8014078a3 passes5. Landing remains pending. See the [Shadow contract](../../specs/dps-parity.md#shadow-literal-fixture).
+Native Yogg RED8bf69a675f has the authentic owned actor but no positive Spike damage: the former SP-policy lookup existed only in the demon branch. Native4ef1614ab5 passes23Shadow cases including all-three-target Spikes and13guardian cases (one unrelated ignored). BM Bear/Wildspeaker7c3eeb0fea passes2,265guardian7efd24bed9 passes3, and267petsf8014078a3 passes5. Landed via4c915017a8 in the combined Shadow update below. See the [Shadow contract](../../specs/dps-parity.md#shadow-priest-literal-parity-controller).
+
+## Earned Shadow Rift extensions — 2026-10-26
+
+`shadow_horizon.rs` tracks the actual Rift instance and paid extension count. Ordinary450983 completion extends existing owned459314/449887 by native449912 effect2, at most native effect1 uses per Rift, without restarting periodic phase. Native RED5411c58c11 reaches the first real cast with deadline10.6 instead of11.6. The finite-window cap test earns real Insight and PI before Torrent, then completes four ordinary Blasts: the first three add1s and the fourth adds nothing.
+
+Horizon638b079972, Yogg4c915017a8 and Haunting2cac634596 landed together in513fe59afac5703d9ec46e6c95e033d801d00f96. All25Shadow and13guardian cases pass (one unrelated ignored); protected BM/265/267 cases also pass. Combined native ST148428.52 (81.00%) and3T279491.71 (82.21%) remain below the90% target. These are one-tree measurements, not separately attributed uplifts.
+
 ## Haunting Shadows impact extensions — 2026-10-26
 
 `shadow_haunting.rs` handles native413231/1264176 payload impacts. Selected1279355 extends existing same-caster Pain/VT by native effect1 milliseconds through the owned-duration operation, not aura reapplication; periodic phase and damage formulas remain unchanged. Pinned SimC76f8118 `sc_priest_shadow.cpp427–435` defines this behavior.
 
-Native isolated RED901d805102 reaches one actual travelling apparition hit but leaves Pain at16.3 rather than17.3. GREEN/landing remain pending. See the [Shadow contract](../../specs/dps-parity.md#shadow-priest-literal-parity-controller).
+Native isolated RED901d805102 reaches one actual travelling apparition hit but leaves Pain at16.3 rather than17.3. All25Shadow cases pass via2cac634596 in the combined landing above. See the [Shadow contract](../../specs/dps-parity.md#shadow-priest-literal-parity-controller).
 
 ## Merged feedback grants are not casts — 2026-10-26
 
