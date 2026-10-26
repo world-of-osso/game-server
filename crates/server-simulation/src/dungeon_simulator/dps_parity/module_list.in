@@ -80,6 +80,7 @@ mod havoc_channels_tests;
 mod havoc_fact_tests;
 mod havoc_tests;
 mod health_aura_state_tests;
+mod hellcaller_counter_tests;
 mod howl_tests;
 #[cfg(test)]
 mod hunter_bloodshed_tests;
