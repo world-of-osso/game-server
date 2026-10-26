@@ -89,6 +89,8 @@ Selected native155580 applies its owned155627 override aura, so ordinary Moonfir
 
 ### Beast Mastery literal fixture
 
+- Each actual main-pet, companion or stable Nature's Ally white impact adds one stack to that owner's already active Wyvern Cry471881, including avoided outcomes. Preserve the native cap and the existing expiration; white impacts cannot create inactive Cry. Keep landed-hit producers and ordinary proc masks unchanged (SimC76f8118 hunter2974–3010).
+
 - Ordinary main-pet Bite, Claw and Smack use native62762 Wild Hunt damage and cost bonuses only above its authored Focus threshold. Capture damage effectiveness before payment; at the threshold or below, ordinary cost applies. Free background basics and non-main stable bodies do not receive this main-action behavior (SimC76f8118 hunter3046–3079).
 
 - Selected Wildspeaker commands existing native Dire Beast, Dark Hound, Fenryr, Hati and Bear summons with native1232922 at the real Kill Command primary. Command dispatch precedes Howl consumption, so a Bear created by that cast cannot receive it retroactively. Stable bodies retain their separate command path (SimC76f8118 hunter3175–3189/6587–6604).
@@ -97,7 +99,7 @@ Selected native155580 applies its owned155627 override aura, so ordinary Moonfir
 
 - Native Aura493 triggers its authored companion spell after Call Pet; native Effect260 creates a second stable body without changing the current-pet record. The companion has white swings and owned-pet commands, no autonomous Focus spender, and ends with its main pet. NPC pet orders reach all active owned pets.
 
-- Selected Howl starts its native cooldown at combat entry and earns Wyvern, Boar and Bear readiness in order. Bestial Wrath with selected Stampede independently advances that cycle. Ordinary BM34026 and Survival259489 Kill Command consume every earned ready beast: Wyvern and Bear require actual owned native summons; Wyvern Cry follows the real Wyvern. Consuming readiness starts the native cooldown only when absent. Incoming Stampede survives Bestial Wrath's own successful-cast event; only consuming Howl spends it. An armed Stampede starts only after a consumed Howl and retains the selected primary, native tick-zero/periodic clock and600/900/1200ms payload delays; native201594 damages the pack without a target cap (SimC76f8118 hunter3776–3841/4864–4900/6780–6781/8240–8270/8698–8699). Bear attacks and Wildspeaker remain separately unqualified.
+- Selected Howl starts its native cooldown at combat entry and earns Wyvern, Boar and Bear readiness in order. Bestial Wrath with selected Stampede independently advances that cycle. Ordinary BM34026 and Survival259489 Kill Command consume every earned ready beast: Wyvern and Bear require actual owned native summons; Wyvern Cry follows the real Wyvern. Consuming readiness starts the native cooldown only when absent. All earned readiness and Incoming Stampede are script-owned: unrelated successful casts and triggered children cannot spend them. Only actual Kill Command consumes earned beasts; consuming Howl spends Incoming Stampede. An armed Stampede starts only after a consumed Howl and retains the selected primary, native tick-zero/periodic clock and600/900/1200ms payload delays; native201594 damages the pack without a target cap (SimC76f8118 hunter3776–3841/4864–4900/6780–6781/8240–8270/8698–8699). Bear attacks and Wildspeaker remain separately unqualified.
 
 - Selected Dire Summons472352 reduces only the owner's running Howl471877 clock after actual BM/SV Kill Command, Cobra Shot and source-qualified Survival melee Focus spenders, using native effects0/1/2/3 respectively. An exhausted clock expires through its real next-beast callback; an inactive clock stays inactive. Howl consumption precedes recovery (SimC76f8118 hunter4966/6127/6604–6624).
 
@@ -777,6 +779,11 @@ Rotation/decision implementation belongs to the lead/rotation agents. No system 
 
 - Selected MID2 four-piece1296569 earns native1305774 from actual owned UA1259790 applications. Count UA stacks globally across active living targets, not DoT instances; ignore foreign casts and cap at the native buff maximum (`sc_warlock_actions.cpp1567–1568/5673–5699`).
 - Each independent UA expiration and full removal updates the earned stack count; no remaining owned UA means no buff. Fatal Echoes updates it through its actual new application. Keep native player, pet and guardian damage effects and amounts; do not add haste or change damage coefficients (`actions5779–5780`, native1305774).
+### Affliction Nightfall uses
+
+- Native264571 stacks are independent next-spell uses, not a multiplier of its native effect amounts. One ordinary instant Shadow Bolt consumes one admitted use. A proc earned during a hardcast remains for the next action; queued cast/proc callbacks cannot consume it or spend the next stored use (`sc_warlock_actions.cpp877–878`).
+- The admitted instant Shadow Bolt retains native264571 effect1's damage bonus through missile impact after consumption. Hardcasts cannot borrow a later proc's bonus. Preserve native coefficients and the pinned Hellcaller Grasp exception; this bonus applies only to Shadow Bolt (`actions902–908/2147–2152`).
+- Drain Soul/Grasp consume one use on execution. Two uses retain the same native duration and tick-period reduction as one use; they cannot collapse the channel (`actions199/2151–2163/2182/2299–2311/2338`).
 
 ### Affliction earned Shard Instability
 
