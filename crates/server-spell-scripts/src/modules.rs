@@ -86,6 +86,7 @@ register_modules! {
     frost_modifiers: (413, "modules/frost_modifiers.rs"),
     frost_orb: (415, "modules/frost_orb.rs"),
     frost_rapid_refreezing: (417, "modules/frost_rapid_refreezing.rs"),
+    fury_rampaging_ruin: (720, "modules/fury_rampaging_ruin.rs"),
     germination: (200, "modules/germination.rs"),
     giantkiller: (170, "modules/giantkiller.rs"),
     guardian_impacts: (1000, "modules/guardian_impacts.rs"),

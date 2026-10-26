@@ -341,6 +341,8 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 ### Fury player parity
 
+- Rampage184367 may schedule its native effect5 Rampaging Ruin child only with selected Rampaging Ruin1265357 and live Whirlwind85739. An unselected talent or absent Whirlwind cannot add the AoE hit. Retain the original native effect64 payload, delay, admission and damage values (`sc_warrior.cpp5727–5748,5800–5801`).
+
 - Shared Unrelenting Onslaught uses owned Executioner stacks after a genuine Sudden Death Execute to reduce the current native Bladestorm endpoint by444780 effect0 seconds per stack and apply native445836 to the actual primary using effect1 stacks per Executioner stack. Paid Execute alone does not qualify; native producers and counters remain unchanged (`sc_warrior.cpp4361–4365,4561–4565`).
 
 - Slayer's Strike445579 uses one actor-wide PRD attempt counter, native Slayer's Dominance444767 chance (effect0 Fury, effect1 Arms), and its native ICD. Only pinned eligible landed impacts roll; autos never roll, and only Cleave rolls per target (`sc_warrior.cpp1651–1661,1693–1703`). Native spell payloads supply all damage.
