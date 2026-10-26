@@ -46,33 +46,8 @@ pub(super) fn owned_passive_instance(world: &World, caster: Entity, spell: u32) 
 }
 
 fn before_runtime_cast(world: &mut World, caster: Entity, spell: u32, depth: u8) {
-    #[cfg(feature = "test-support")]
-    if spell == 258860 {
-        trace_essence_geometry(world, caster);
-    }
     damage::before_cast(world, caster, spell);
     demonsurge::before_cast(world, caster, spell, depth);
-}
-
-#[cfg(feature = "test-support")]
-fn trace_essence_geometry(world: &World, caster: Entity) {
-    let primary = world
-        .get::<combat::combat::AutoAttack>(caster)
-        .map(|attack| attack.victim);
-    eprintln!(
-        "ESSENCE_GEOMETRY t={:.3} caster={:?} facing={:?} primary={:?} target={:?} forced={:?} charge={}",
-        combat::spell_cast::now(world),
-        world.get::<shared::components::Position>(caster),
-        world.get::<shared::components::Rotation>(caster),
-        primary,
-        primary.and_then(|target| world.get::<shared::components::Position>(target)),
-        world
-            .get::<shared::components::MovementControl>(caster)
-            .map(|control| control.controlled),
-        world
-            .get::<combat::spell_cast::ChargeMovement>(caster)
-            .is_some()
-    );
 }
 
 struct TransformPolicy {
