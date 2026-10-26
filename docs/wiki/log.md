@@ -1,6 +1,6 @@
 ## 2026-10-25 — Feral native literal takeover
 
-[Feral fixture](systems/simc-apl.md#feral-literal-fixture--2026-10-25): source-order/player-precombat controls, native Lunar override lifecycle and selected Rip/Rake Growth are qualified. Full300s runs still refuse missing bare periodic facts; native snapshot/CP REDs are retained, with GREEN and numerical parity pending. Shared consumable work remains separate.
+[Feral fixture](systems/simc-apl.md#feral-literal-fixture--2026-10-25): native Lunar/Growth, literal setup and periodic snapshot/CP RED→GREEN are landed. First300s ST187377.13=97.76%;3T refuses missing Clearcasting reaction settings. Reaction fixc2a996a0ca and Vines independent-lifetime RED2a06c0fec9 await the train. Total parity remains open; shared consumables stay separate.
 
 ## 2026-10-25 — Marksmanship Salvo producer
 
