@@ -44,6 +44,7 @@ const fn order_modules<const N: usize>(
 register_modules! {
     affliction_agony: (2650, "modules/affliction_agony.rs"),
     after_cast_auras: (100, "modules/after_cast_auras.rs"),
+    assassination_target: (2590, "modules/assassination_target.rs"),
     aura_rolls: (110, "modules/aura_rolls.rs"),
     beast_mastery: (20, "modules/beast_mastery.rs"),
     cast_grants: (120, "modules/cast_grants.rs"),
@@ -67,6 +68,7 @@ register_modules! {
     lava_surge: (300, "modules/lava_surge.rs"),
     marksmanship: (380, "modules/marksmanship.rs"),
     marksmanship_explosive: (180, "modules/marksmanship_explosive.rs"),
+    marksmanship_salvo: (2540, "modules/marksmanship_salvo.rs"),
     marksmanship_sentinel: (390, "modules/marksmanship_sentinel.rs"),
     melee_reset: (340, "modules/melee_reset.rs"),
     paid_cooldowns: (130, "modules/paid_cooldowns.rs"),

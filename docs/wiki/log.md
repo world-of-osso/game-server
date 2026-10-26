@@ -2,6 +2,9 @@
 
 [Feral fixture](systems/simc-apl.md#feral-literal-fixture--2026-10-25): source-order/player-precombat controls, native Lunar override lifecycle and selected Rip/Rake Growth are qualified. Full300s runs still refuse missing bare periodic facts; native snapshot/CP REDs are retained, with GREEN and numerical parity pending. Shared consumable work remains separate.
 
+## 2026-10-25 — Marksmanship Salvo producer
+
+[Marksmanship](systems/spell-casting.md#marksmanship-native-relationships--2026-10-25): selected Salvo launches native capped background Explosive Shots from actual Volley recipients, with native Volley-duration internal recovery and no foreground producers.
 ## 2026-10-25 — Shared native consumable bindings
 
 [Shared profile effects](systems/character-stats.md#shared-profile-effects--2026-10-25): rune/flask/potion identities, native Liquid Luster per-stack scaling and common expiry, literal prepot aura/cooldown aging, and talent-conditioned temporary oil. Numerical parity remains measurement-gated.

@@ -161,6 +161,7 @@ struct Sample {
     after: f64,
     selected: Vec<Entity>,
     damage: Vec<CombatLogEvent>,
+    glory_criticals: usize,
 }
 
 fn sample_cast(run: &mut Run, root: u32, damage: u32) -> Sample {
@@ -193,6 +194,10 @@ fn sample_cast(run: &mut Run, root: u32, damage: u32) -> Sample {
                     after: deadline(run),
                     selected,
                     damage: damage_since(run, cursor, damage),
+                    glory_criticals: damage_since(run, cursor, 392959)
+                        .iter()
+                        .filter(|event| event.crit)
+                        .count(),
                 };
             }
             Err(
@@ -228,6 +233,12 @@ fn assert_sample(label: &str, sample: &Sample, expected: f64) {
     );
 }
 
+fn expected_kick_reduction(run: &Run, sample: &Sample, primary_critical: bool) -> f64 {
+    let criticals = usize::from(primary_critical) + sample.glory_criticals;
+    let available = (sample.before - crate::spell_cast::history_now(run.app.world())).max(0.0);
+    (criticals as f64 * budget(run, 1)).min(available)
+}
+
 fn observe_rsk(selected: bool, wanted_crit: bool, label: &str) {
     let mut run = prepare(1, selected);
     for _ in 0..8 {
@@ -241,8 +252,8 @@ fn observe_rsk(selected: bool, wanted_crit: bool, label: &str) {
             assert_sample(
                 label,
                 &sample,
-                if selected && wanted_crit {
-                    budget(&run, 1)
+                if selected {
+                    expected_kick_reduction(&run, &sample, wanted_crit)
                 } else {
                     0.0
                 },
@@ -312,11 +323,19 @@ fn observe_rwk(primary_critical: bool) {
             }),
         );
         if primary_critical && primary_crit {
-            assert_sample("xuen-rwk-primary-crit", &sample, budget(&run, 1));
+            assert_sample(
+                "xuen-rwk-primary-crit",
+                &sample,
+                expected_kick_reduction(&run, &sample, true),
+            );
             return;
         }
         if !primary_critical && !primary_crit && secondary_crit {
-            assert_sample("xuen-rwk-secondary-only-crit", &sample, 0.0);
+            assert_sample(
+                "xuen-rwk-secondary-only-crit",
+                &sample,
+                expected_kick_reduction(&run, &sample, false),
+            );
             return;
         }
     }
