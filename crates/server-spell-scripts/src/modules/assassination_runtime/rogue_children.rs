@@ -1,11 +1,12 @@
 //! Native Assassination children whose dispatch is scripted in SimC76f8118.
-use crate::auras::{
+use super::combat;
+use bevy::prelude::*;
+use combat::auras::{
     self, AuraInstance, RemoveReason,
     scripts::{AuraScript, AuraScripts},
 };
-use crate::spell_cast::{self, effects::EffectCtx};
-use crate::spell_info::SpellStore;
-use bevy::prelude::*;
+use combat::spell_cast::{self, effects::EffectCtx};
+use combat::spell_info::SpellStore;
 use shared::components::{ActiveSpec, PowerType};
 
 const RUPTURE: u32 = 1943;
@@ -84,13 +85,8 @@ pub(super) fn on_hit(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
 // Use the actual positive TargetInfo before expiry, not a deferred proc event.
 // Each sourced lethal poison has one direct damage effect; absorbs grant no ramp.
 pub(super) fn poison_hit(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
-    let positive = world
-        .get_resource::<spell_cast::ResolvingHits>()
-        .and_then(|hits| hits.0.last())
-        .filter(|frame| {
-            frame.caster == ctx.caster && frame.spell_id == ctx.spell.id && frame.depth == ctx.depth
-        })
-        .and_then(|frame| frame.damage.iter().find(|(unit, _)| *unit == target))
+    let positive = spell_cast::resolving_damage(world, ctx)
+        .and_then(|damage| damage.iter().find(|(unit, _)| *unit == target))
         .is_some_and(|(_, damage)| *damage > 0.0);
     if positive {
         auras::rogue::after_poison_hit(world, ctx, target);

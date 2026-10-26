@@ -429,6 +429,7 @@ pub(super) fn register_class_scripts(
     super::abundance::register(&mut scripts);
     registry.register_support_auras(&mut scripts);
     super::earthen_rage::register(&mut scripts);
+    registry.register_rogue_auras(&mut scripts);
     super::rogue::register(&mut scripts);
     registry.register_weapon_auras(&mut scripts);
     super::spirit_wolf::register(&mut scripts);

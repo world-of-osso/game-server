@@ -985,16 +985,15 @@ pub(in crate::spell_cast) fn snapshot(
             CostPool::Health => None,
         })
         .collect::<Vec<_>>();
-    let rogue_context = super::rogue_hero::needs_context(world, caster, spell)
-        || super::rogue_children::needs_context(world, caster, spell.id);
+    let scripted_context = script_registry::policy_context_required(world, caster, spell);
     if spell.cast_parent_owns_modifier_charges
-        || (!rogue_context
+        || (!scripted_context
             && !consumers(world, &resources, spell.id)
                 .any(|policy| selected(world, caster, policy)))
     {
         return None;
     }
-    let needs_hit_targets = rogue_context
+    let needs_hit_targets = scripted_context
         || consumers(world, &resources, spell.id).any(|policy| {
             selected(world, caster, policy)
                 && !matches!(
@@ -1047,8 +1046,7 @@ pub(in crate::spell_cast) fn on_hit(world: &mut World, ctx: &EffectCtx<'_>, hit:
     if context.targets.first() != Some(&hit) {
         return;
     }
-    super::rogue_hero::on_hit(world, ctx, hit);
-    super::rogue_children::on_hit(world, ctx, hit);
+    script_registry::before_policy_primary_hit(world, ctx, hit);
     for policy in consumers(world, &context.resources, ctx.spell.id) {
         if !selected(world, ctx.caster, policy) {
             continue;

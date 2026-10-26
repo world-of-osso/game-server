@@ -97,6 +97,9 @@ mod midnight_items;
 mod protection_items;
 pub use batch9::spawn_consecration;
 pub(crate) use midnight_items::register as register_midnight_items;
+pub(super) use script_registry::healing_multiplier as soul_of_the_forest_direct_multiplier;
+pub(super) use script_registry::prepare_policy_spell as prepare_rogue_hero;
+pub(crate) use script_registry::snapshot_healing_aura as snapshot_soul_of_the_forest;
 pub(super) use script_registry::{
     after_foreground_spender, after_policy_periodic_damage as after_ret_periodic_damage,
     after_spender_proc as schedule_empyrean_legacy,
@@ -104,12 +107,6 @@ pub(super) use script_registry::{
     target_context_damage_multiplier as ret_damage_multiplier,
 };
 pub(super) use script_registry::{consume_resource_value_sources, effective_resource_value};
-mod rogue_children;
-mod rogue_hero;
-pub(crate) use rogue_children::register as register_rogue_children;
-pub(super) use rogue_hero::prepare as prepare_rogue_hero;
-pub(super) use script_registry::healing_multiplier as soul_of_the_forest_direct_multiplier;
-pub(crate) use script_registry::snapshot_healing_aura as snapshot_soul_of_the_forest;
 mod unbroken_rhythm;
 pub(crate) use unbroken_rhythm::register_unbroken_rhythm;
 mod windwalker;
@@ -1593,8 +1590,8 @@ pub(super) fn on_enemy_damage_hit_with_context(
     world: &World,
     spell_id: u32,
 ) -> Option<script_registry::EnemyContextHitHook> {
-    if crate::auras::rogue::LETHAL_POISON_HITS.contains(&spell_id) {
-        return Some(rogue_children::poison_hit);
+    if let Some(hook) = script_registry::before_enemy_context_hit(world, spell_id) {
+        return Some(hook);
     }
     script_registry::enemy_context_hit(world, spell_id)
 }

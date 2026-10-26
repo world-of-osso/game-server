@@ -207,6 +207,12 @@ pub type AfterCastUpdateHook = fn(&mut World);
 pub type ConsumeCastModifiersHook = fn(&mut World, Entity, &SpellInfo);
 pub type AfterWeaponLaunchHook = fn(&mut World, Entity, &SpellInfo, u8);
 
+pub type PolicyContextRequiredHook = fn(&World, Entity, &SpellInfo) -> bool;
+pub type PreparePolicySpellHook = fn(&World, Entity, &mut SpellInfo);
+pub type BeforePolicyPrimaryHitHook = fn(&mut World, &EffectCtx<'_>, Entity);
+pub type RogueAuraRegistrationHook = fn(&mut crate::auras::scripts::AuraScripts);
+pub type BeforeEnemyContextHitHook = fn(&mut World, &EffectCtx<'_>, Entity);
+pub type BeforeEnemyContextHitLookup = fn(u32) -> Option<BeforeEnemyContextHitHook>;
 pub type HealthChangeObservedHook = fn(&mut World, &shared::protocol::CombatLogEvent);
 pub type SupportAuraRegistrationHook = fn(&mut crate::auras::scripts::AuraScripts);
 pub type NamedAuraFields = &'static [(u32, u8)];
@@ -330,6 +336,11 @@ pub enum SpellScriptHook {
     AfterCastUpdate(AfterCastUpdateHook),
     ConsumeCastModifiers(ConsumeCastModifiersHook),
     AfterWeaponLaunch(AfterWeaponLaunchHook),
+    PolicyContextRequired(PolicyContextRequiredHook),
+    PreparePolicySpell(PreparePolicySpellHook),
+    BeforePolicyPrimaryHit(BeforePolicyPrimaryHitHook),
+    RogueAuraRegistration(RogueAuraRegistrationHook),
+    BeforeEnemyContextHit(BeforeEnemyContextHitLookup),
     HealthChangeObserved(HealthChangeObservedHook),
     SupportAuraRegistration(SupportAuraRegistrationHook),
     NamedAuraFields(NamedAuraFields),
@@ -392,6 +403,14 @@ impl SpellScriptRegistry {
     pub fn register_early_auras(self, scripts: &mut crate::auras::scripts::AuraScripts) {
         for hook in self.hooks() {
             if let SpellScriptHook::EarlyAuraRegistration(register) = hook {
+                register(scripts);
+            }
+        }
+    }
+
+    pub fn register_rogue_auras(self, scripts: &mut crate::auras::scripts::AuraScripts) {
+        for hook in self.hooks() {
+            if let SpellScriptHook::RogueAuraRegistration(register) = hook {
                 register(scripts);
             }
         }
@@ -1496,6 +1515,46 @@ pub fn conjure_count(world: &mut World, caster: Entity, target: Entity, count: u
             run(world, caster, target, count);
         }
     }
+}
+
+/// Source scripts can require the existing paid-resource and primary snapshot.
+pub fn policy_context_required(world: &World, caster: Entity, spell: &SpellInfo) -> bool {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .any(|hook| match hook {
+            SpellScriptHook::PolicyContextRequired(run) => run(world, caster, spell),
+            _ => false,
+        })
+}
+
+/// Script snapshots follow captured policy context and precede ordinary aura preparation.
+pub fn prepare_policy_spell(world: &World, caster: Entity, spell: &mut SpellInfo) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::PreparePolicySpell(run) = hook {
+            run(world, caster, spell);
+        }
+    }
+}
+
+/// The policy dispatcher has already checked the original primary before this slot.
+pub fn before_policy_primary_hit(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::BeforePolicyPrimaryHit(run) = hook {
+            run(world, ctx, target);
+        }
+    }
+}
+
+/// First native enemy-hit callback, before ordinary registered enemy impact lookups.
+pub fn before_enemy_context_hit(world: &World, spell: u32) -> Option<BeforeEnemyContextHitHook> {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .find_map(|hook| match hook {
+            SpellScriptHook::BeforeEnemyContextHit(lookup) => lookup(spell),
+            _ => None,
+        })
 }
 
 /// Health history observes the emitted event after meters and arena bookkeeping.

@@ -1,10 +1,11 @@
 //! Assassination Deathstalker relationships from pinned SimC76f8118.
+use super::combat;
 use bevy::prelude::*;
 use shared::components::{ActiveSpec, PowerType};
 
-use crate::auras::{self, ActiveAuras, RemoveReason, SpellModOp};
-use crate::spell_cast::{self, effects::EffectCtx};
-use crate::spell_info::{ChargedSpellModifier, SpellInfo, SpellStore};
+use combat::auras::{self, ActiveAuras, RemoveReason, SpellModOp};
+use combat::spell_cast::{self, effects::EffectCtx};
+use combat::spell_info::{ChargedSpellModifier, SpellInfo, SpellStore};
 
 const MARK_TALENT: u32 = 457052;
 const MARK: u32 = 457129;
@@ -63,7 +64,7 @@ fn empowered(world: &World, caster: Entity, spell: &SpellInfo) -> bool {
 
 /// sc_rogue.cpp2435–2440/2569–2574: only the maximum-CP Envenom
 /// snapshots Darkest Night's native damage bonus and guaranteed critical chance.
-pub(in crate::spell_cast) fn prepare(world: &World, caster: Entity, spell: &mut SpellInfo) {
+pub(super) fn prepare(world: &World, caster: Entity, spell: &mut SpellInfo) {
     if !needs_context(world, caster, spell) || !empowered(world, caster, spell) {
         return;
     }
