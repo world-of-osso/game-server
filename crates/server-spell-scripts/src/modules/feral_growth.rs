@@ -1,4 +1,5 @@
 //! Native Rip/Rake ticks feed the pinned Thriving Growth accumulator.
+#[path = "feral_growth/bursting.rs"]
 mod bursting;
 use super::combat;
 use bevy::prelude::*;
