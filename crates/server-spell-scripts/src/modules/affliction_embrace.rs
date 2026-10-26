@@ -40,7 +40,11 @@ fn selected(world: &World, caster: Entity) -> bool {
 // SimC76f8118 actions529–535: evaluate the current recipient, not a cast
 // snapshot or the caster's selected target. Native effects supply40% and35%.
 fn damage_multiplier(world: &World, ctx: &EffectCtx<'_>, target: Entity, periodic: bool) -> f32 {
-    if !affected(ctx.spell.id, periodic) || !selected(world, ctx.caster) {
+    // SimC76f8118 actions531–534: pinned bugs=1 suppresses all ordinary
+    // UA Embrace scaling while any actual owned seed-applied stack is present.
+    let seed_ua = ctx.spell.id == 1259790
+        && super::affliction_seed_ua::has_seed_stack(world, ctx.caster, target);
+    if !affected(ctx.spell.id, periodic) || !selected(world, ctx.caster) || seed_ua {
         return 1.0;
     }
     let Some(health) = world.get::<Health>(target) else {
