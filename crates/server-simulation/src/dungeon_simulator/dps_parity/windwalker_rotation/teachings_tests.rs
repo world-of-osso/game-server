@@ -29,12 +29,14 @@ fn rsk_remaining(run: &Run) -> f64 {
         .resource::<crate::spell_info::SpellStore>()
         .get(RSK)
         .unwrap();
-    world
-        .get::<crate::spell_cast::SpellHistory>(run.actor)
-        .map_or(0.0, |history| {
-            history.remaining_cooldown_ms(spell, crate::spell_cast::history_now(world)) as f64
-                / 1000.0
-        })
+    // RSK uses native charge category1518, not an own/category spell timer.
+    crate::spell_cast::cooldown_query::cooldown_value(
+        world,
+        run.actor,
+        spell,
+        "full_recharge_time",
+    )
+    .unwrap()
 }
 
 #[test]
