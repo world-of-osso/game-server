@@ -147,6 +147,8 @@ register_modules! {
     spellslinger_hits: (401, "modules/spellslinger_hits.rs"),
     stacking_summons: (1000, "modules/stacking_summons.rs"),
     subtlety_shadow: (420, "modules/subtlety_shadow.rs"),
+    survival: (2550, "modules/survival.rs"),
+    survival_wildfire: (2551, "modules/survival_wildfire.rs"),
     sweeping_strikes: (711, "modules/sweeping_strikes.rs"),
     swiftmend: (1000, "modules/swiftmend.rs"),
     touch_of_death: (240, "modules/touch_of_death.rs"),
