@@ -391,7 +391,9 @@ impl Facts for RogueFacts<'_> {
             // There is no persistent Improved Garrote snapshot in native aura state yet.
             // SimC action.cpp pmultiplier is1 for an unempowered native application.
             "dot.garrote.pmultiplier" => Ok(1.0),
-            _ if name.starts_with("trinket.") => self.equipment.fact(name, &self.native),
+            _ if name.starts_with("trinket.") || name.starts_with("set_bonus.") => {
+                self.equipment.fact(name, &self.native)
+            }
             _ => self.native.value(name),
         }
     }
