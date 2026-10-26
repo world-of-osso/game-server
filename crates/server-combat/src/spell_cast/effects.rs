@@ -328,6 +328,13 @@ pub fn log_unhandled(world: &mut World, spell_id: u32, effect_id: u32) {
 
 /// `(spell power, attack power)` of `unit`; `healing` selects its healing power.
 pub(crate) fn power_stats(world: &World, unit: Entity, healing: bool) -> (f32, f32) {
+    // SimC76f8118 sc_shaman.cpp4391: actual Ancestors inherit100% live owner SP.
+    if let Some(owner) = super::scripts::elemental_ancestors::owner(world, unit) {
+        let stats = world
+            .get::<CharacterStats>(owner)
+            .expect("Ancestor owner stats");
+        return (stats.spell_power, 0.0);
+    }
     if let Some(wolf) = world.get::<super::guardian::SpiritWolf>(unit) {
         let owner = world
             .get::<CharacterStats>(wolf.owner)
@@ -949,9 +956,11 @@ const SPELL_ATTR2_CANT_CRIT: u32 = 0x2000_0000;
 pub fn crit_chance(world: &World, caster: Entity, target: Entity, spell: &SpellInfo) -> f32 {
     // SimC76f8118 engine/player/pet.cpp217–220: controlled pets inherit the
     // live owner's melee/spell crit. Scripts and target modifiers keep the pet.
-    let owner = world
-        .get::<crate::hunter_pet::HunterPet>(caster)
-        .map_or(caster, |pet| pet.owner);
+    let owner = super::scripts::elemental_ancestors::owner(world, caster).unwrap_or_else(|| {
+        world
+            .get::<crate::hunter_pet::HunterPet>(caster)
+            .map_or(caster, |pet| pet.owner)
+    });
     crit_chance_from_owner(world, caster, target, spell, owner)
 }
 
@@ -1132,6 +1141,8 @@ fn critical_damage_amount(
         SpellModOp::CritDamageAndHealing,
         base_bonus,
     );
+    let bonus =
+        super::scripts::elemental_ancestors::modify_critical_bonus(world, caster, spell.id, bonus);
     let total = amount + bonus;
     if weapon_order {
         total * multiplier

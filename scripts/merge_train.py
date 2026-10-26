@@ -38,6 +38,7 @@ CAPACITY = Path("/home/osso/.worktrees/logs/capacity.sh")
 AGENT_RUN = Path("/home/osso/Projects/world-of-osso/game-engine/scripts/agent/agent-run")
 # Collect submissions for a while so one build covers several agents.
 GATHER_SECONDS = 300
+ISOLATED_PER_CYCLE = 3
 MEASURE_PARALLEL = 8
 ASSISTED_DB2 = "/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/dps-parity-2026-10-21/native-player-inputs/assisted-70448/"
 RUNNER = "CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER"
@@ -211,6 +212,21 @@ class MasterBroken(Exception):
     pass
 
 
+def failing_paths(log, start):
+    """Source files named by errors in the log written since byte offset `start`."""
+    with log.open() as f:
+        f.seek(start)
+        text = f.read()
+    # include!()d sources are reported through `..` hops (crates/a/src/../../b/...).
+    return {os.path.normpath(p) for p in
+            re.findall(r"(?:-->|Diff in) /?(?:\S*?/game-server-land/)?(crates/\S+?\.rs)", text)}
+
+
+def touches(entry, paths):
+    changed = git("diff", "--name-only", f"origin/master...{entry['commit']}", check=False).stdout.split()
+    return bool(paths.intersection(changed))
+
+
 def build_checked(entries, log):
     """Return (tree entries that check together, rejected), with the tree checked out.
     A failing set is split in halves, so a few broken entries cost O(k log n) checks."""
@@ -236,13 +252,22 @@ def build_checked(entries, log):
             admit(candidates[:half])
             admit(candidates[half:])
 
+    checked_from = log.stat().st_size if log.exists() else 0
     if check(log):
         return merged, rejected
+    paths = failing_paths(log, checked_from)
     # A broken master rejects everything; report that instead of blaming entries.
     reset_tree()
     if not check(log):
         raise MasterBroken(f"origin/master itself fails check; see {log}")
-    admit(merged)
+    # Entries touching the files the compiler or rustfmt blamed are the likely culprits: admit
+    # the rest in one check first, so one broken entry costs ~3 checks instead of a full bisect.
+    suspects = [e for e in merged if touches(e, paths)]
+    if suspects and len(suspects) < len(merged):
+        admit([e for e in merged if e not in suspects])
+        admit(suspects)
+    else:
+        admit(merged)
     reset_tree()
     merge(good, log)
     return good, rejected
@@ -484,10 +509,25 @@ def write_results(entries):
         (RUNNING / f"{entry['id']}.json").unlink(missing_ok=True)
 
 
+# While this file names an owner prefix, cycles take only that owner's entries: a broad change
+# (the spell-scripts crate split) gets a cycle in which no other landing moves its seams.
+SOLO = HOME / "solo"
+
+
+def eligible_queue():
+    paths = sorted(QUEUE.glob("*.json"))
+    if not SOLO.exists():
+        return paths
+    # One owner prefix or entry id per line (an urgent revert can join the window).
+    allowed = tuple(SOLO.read_text().split())
+    return [p for p in paths if p.stem in allowed
+            or json.loads(p.read_text()).get("owner", "").startswith(allowed)]
+
+
 def take_queue():
     RUNNING.mkdir(parents=True, exist_ok=True)
     entries = []
-    for path in sorted(QUEUE.glob("*.json")):
+    for path in eligible_queue():
         target = RUNNING / path.name
         path.rename(target)
         entries.append(json.loads(target.read_text()))
@@ -612,6 +652,11 @@ def run_probes(probes, gated, log):
     # Isolation only changes measurements, so --isolated without --measure stays shared.
     isolated = [e for e in probes if e["measure"] and (e.get("isolated") or not e["tests"])]
     shared = [e for e in probes if e not in isolated]
+    # Each isolated tree costs a check, a test build and a parity build; past a few per cycle they
+    # dominated it (cycle-20261026T151410: 8 trees, 40+ min). The rest wait for the next cycle.
+    for entry in isolated[ISOLATED_PER_CYCLE:]:
+        (RUNNING / f"{entry['id']}.json").rename(QUEUE / f"{entry['id']}.json")
+    isolated = isolated[:ISOLATED_PER_CYCLE]
     passed, failed = [], []
     for group in ([shared] if shared else []) + [[e] for e in isolated]:
         group_passed, group_failed = build_and_test(group, log)
@@ -690,7 +735,7 @@ def run(_args):
                 continue
             print("merge_train.py changed, reloading", flush=True)
             os.execv(sys.executable, [sys.executable, str(script), "run"])
-        queued = list(QUEUE.glob("*.json"))
+        queued = eligible_queue()
         if queued and time.time() - min(p.stat().st_mtime for p in queued) >= GATHER_SECONDS:
             try:
                 cycle()

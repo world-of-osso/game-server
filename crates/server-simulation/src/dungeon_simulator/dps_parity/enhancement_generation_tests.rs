@@ -226,6 +226,10 @@ pub(super) fn try_spend_native_maelstrom(run: &mut Run, target: Entity) -> u32 {
     if available < 5 {
         return 0;
     }
+    let limit =
+        crate::spell_cast::scripts::script_effect_value(run.app.world(), run.actor, 187880, 1)
+            as u8;
+    let spent = available.min(limit);
     match crate::spell_cast::creature_cast(
         run.app.world_mut(),
         run.actor,
@@ -235,11 +239,12 @@ pub(super) fn try_spend_native_maelstrom(run: &mut Run, target: Entity) -> u32 {
     ) {
         Ok(()) => {
             let remaining = stacks(run);
+            // SimC7462–7469 refunds after payment; a net counter delta is not the paid amount.
             assert!(
-                remaining < available,
-                "real instant Bolt must spend its admitted MW"
+                remaining == available - spent || remaining == available,
+                "actual paid Bolt must consume its native admission or restore it via refund: before={available}, spent={spent}, after={remaining}"
             );
-            u32::from(available - remaining)
+            u32::from(spent)
         }
         Err(
             crate::spell_cast::CastFailure::OnGlobalCooldown
