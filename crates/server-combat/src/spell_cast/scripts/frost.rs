@@ -93,6 +93,11 @@ pub(super) fn after_launch(world: &mut World, caster: Entity, spell: &SpellInfo,
         consume_rime(world, caster, spell);
     }
     schedule_killing_machine(world, caster, spell);
+    // SimC76f8118 sc_death_knight.cpp12050–12060/15341–15342:
+    // selected Frozen Dominion starts its native Winter aura from real Pillar.
+    if spell.id == PILLAR && auras::has_aura(world, caster, 377226) {
+        cast_buff_stacks(world, caster, 1233152, 1);
+    }
 }
 
 fn consume_rime(world: &mut World, caster: Entity, spell: &SpellInfo) {
