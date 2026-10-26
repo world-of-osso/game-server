@@ -48,6 +48,48 @@ pub(super) fn owned_passive_instance(world: &World, caster: Entity, spell: u32) 
 fn before_runtime_cast(world: &mut World, caster: Entity, spell: u32, depth: u8) {
     damage::before_cast(world, caster, spell);
     demonsurge::before_cast(world, caster, spell, depth);
+    trigger_exergy(world, caster, spell, depth);
+}
+
+// SimC76f8118 sc_demon_hunter.cpp2822–2841,5501–5504,8539–8541,
+// 10010–10013: Hunt and Retreat grant Exergy before executing; refresh adds
+// the native buff duration to its remaining duration, capped at 30 seconds.
+fn trigger_exergy(world: &mut World, caster: Entity, spell: u32, depth: u8) {
+    const TALENT: u32 = 206476;
+    const BUFF: u32 = 208628;
+    if !matches!(spell, 370965 | 198793) || !has_talent(world, caster, TALENT) {
+        return;
+    }
+    let now = combat::auras::aura_now(world);
+    let remaining = world
+        .get::<ActiveAuras>(caster)
+        .and_then(|auras| {
+            auras.iter().find_map(|aura| {
+                (aura.spell_id == BUFF && aura.caster == caster)
+                    .then_some(aura.expires_at)
+                    .flatten()
+                    .map(|expiry| (expiry - now).max(0.0))
+            })
+        })
+        .unwrap_or(0.0);
+    let duration = world
+        .resource::<combat::spell_info::SpellStore>()
+        .get(BUFF)
+        .and_then(|spell| spell.misc.as_ref()?.duration)
+        .map(|duration| duration.duration_ms)
+        .filter(|duration| *duration > 0);
+    let Some(duration) = duration else {
+        error!("Native Exergy buff has no positive duration");
+        return;
+    };
+    if !combat::spell_cast::try_cast_triggered(world, caster, BUFF, Some(caster), depth + 1) {
+        error!("Native Exergy buff cast refused");
+        return;
+    }
+    let refreshed = (remaining * 1000.0 + f64::from(duration)).min(30_000.0) as u32;
+    if !combat::auras::set_owned_duration(world, caster, caster, BUFF, refreshed) {
+        error!("Native Exergy buff aura absent");
+    }
 }
 
 struct TransformPolicy {
