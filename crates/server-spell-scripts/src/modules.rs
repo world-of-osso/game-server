@@ -80,6 +80,7 @@ register_modules! {
     havoc: (150, "modules/havoc.rs"),
     havoc_children: (5771, "modules/havoc/children.rs"),
     havoc_dance: (5770, "modules/havoc/dance.rs"),
+    havoc_recovery: (5772, "modules/havoc/recovery.rs"),
     hellcaller_wither: (2665, "modules/hellcaller_wither.rs"),
     hot_streak: (1000, "modules/hot_streak.rs"),
     impact_procs: (330, "modules/impact_procs.rs"),
