@@ -46,7 +46,7 @@ fn actors(world: &mut World, owner: Entity) -> Vec<Entity> {
         .collect()
 }
 
-fn summon(world: &mut World, owner: Entity, depth: u8) {
+pub fn summon(world: &mut World, owner: Entity, depth: u8) {
     let before = actors(world, owner).len();
     if !super::super::try_cast_triggered(world, owner, SUMMON, Some(owner), depth + 1) {
         warn!(?owner, "Native Ancestor summon refused");
