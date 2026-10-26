@@ -94,9 +94,25 @@ fn actual_damage(root: u32, armorless: bool) -> Vec<(u32, i32)> {
     } else {
         run.targets[0]
     };
+    run.app.world_mut().insert_resource(
+        crate::spell_cast::effects::factor_capture::FactorCapture::new(
+            run.actor,
+            run.targets[0],
+            damage_spells(root)[0],
+            "armor_control",
+            4,
+        ),
+    );
     let _damage_seed = crate::random::seed_scope(818181);
     enhancement_generation_tests::cast(&mut run, root, selected);
     let damage = collect_damage(&run, root, before);
+    println!(
+        "ENHANCEMENT_ARMOR_FACTORS armorless={armorless} {}",
+        run.app
+            .world()
+            .resource::<crate::spell_cast::effects::factor_capture::FactorCapture>()
+            .export()
+    );
     assert!(
         !damage.is_empty(),
         "actual native root{root} must deal damage"

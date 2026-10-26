@@ -121,6 +121,15 @@ fn native_chaos_and_physical_hits(remove_armor: bool) -> (i32, i32) {
             -100.0,
         );
     }
+    run.app.world_mut().insert_resource(
+        crate::spell_cast::effects::factor_capture::FactorCapture::new(
+            run.actor,
+            target,
+            393054,
+            "armor_control",
+            4,
+        ),
+    );
     let _damage_seed = crate::random::seed_scope(818181);
     for spell in [393054, 198813] {
         crate::spell_cast::cast_triggered(run.app.world_mut(), run.actor, spell, Some(target), 1);
@@ -132,6 +141,13 @@ fn native_chaos_and_physical_hits(remove_armor: bool) -> (i32, i32) {
             .sum::<i32>()
     };
     let hits = (total(393054), total(198813));
+    println!(
+        "HAVOC_ARMOR_FACTORS armorless={remove_armor} {}",
+        run.app
+            .world()
+            .resource::<crate::spell_cast::effects::factor_capture::FactorCapture>()
+            .export()
+    );
     println!("HAVOC_ARMOR armorless={remove_armor} chaos_physical={hits:?}");
     assert!(
         hits.0 > 0 && hits.1 > 0,
