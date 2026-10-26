@@ -17,7 +17,7 @@ const EXPLOSIVE: u32 = 212431;
 const CLEAVE: u32 = 212680;
 const MID2_FOUR_PIECE: u32 = 1296634;
 
-fn after_tick(world: &mut World, ctx: &EffectCtx, primary: Entity, damage: f32) {
+fn after_tick(world: &mut World, ctx: &EffectCtx, primary: Entity, damage: f32, _crit: bool) {
     if ctx.spell.id != EXPLOSIVE
         || damage <= 0.0
         || world

@@ -63,6 +63,29 @@ fn affliction_agony_landed_ticks_energize_native_whole_shards() {
 
 #[test]
 #[ignore = "requires private265 profile and native70448 world DB"]
+fn affliction_literal_three_target_profile_keeps_foreground_history() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_measurement(265, 3).unwrap();
+    engage(&mut run);
+    for _ in 0..400 {
+        drive_player(&mut run).unwrap();
+        run.app.update();
+    }
+    assert!(
+        run.app
+            .world()
+            .get::<crate::spell_cast::SpellHistory>(run.actor)
+            .unwrap()
+            .last_successful_cast_at(27243)
+            .is_some(),
+        "literal three-target precombat must execute actual Seed"
+    );
+    let combat = report::combat(run.app.world(), &run.targets, 20.0);
+    assert!(combat["total_damage"].as_u64().unwrap() > 0);
+}
+
+#[test]
+#[ignore = "requires private265 profile and native70448 world DB"]
 fn affliction_literal_fixture_executes_profile_instead_of_assisted_kit() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_measurement(265, 1).unwrap();

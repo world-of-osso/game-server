@@ -12,12 +12,10 @@ fn feral_selected_thriving_growth_native_rip_rake_ticks_execute_vines() {
         crate::auras::has_aura(run.app.world(), actor, 439528),
         "the exact profile owns Thriving Growth"
     );
-    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 768, Some(actor), false)
-        .unwrap();
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 768, Some(actor), false).unwrap();
     preparation::finish_pending_setup(&mut run).unwrap();
     let frenzy =
-        crate::spell_cast::knowledge::resolve_actor_action(run.app.world(), actor, 274837)
-            .unwrap();
+        crate::spell_cast::knowledge::resolve_actor_action(run.app.world(), actor, 274837).unwrap();
     cast_native_spell_after_regeneration(&mut run, frenzy);
     for _ in 0..100 {
         run.app.update();
@@ -75,4 +73,3 @@ pub(super) fn cast_native_spell_after_regeneration(run: &mut Run, spell: u32) {
     }
     panic!("native spell{spell} never became ready within the fixture setup bound");
 }
-

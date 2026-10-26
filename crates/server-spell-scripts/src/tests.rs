@@ -163,7 +163,9 @@ fn tick_first(
     ctx: &combat::spell_cast::effects::EffectCtx<'_>,
     target: Entity,
     amount: f32,
+    crit: bool,
 ) {
+    assert!(crit, "the native critical result must reach the callback");
     assert_eq!(ctx.depth, 3);
     assert_eq!(amount, 42.0);
     first(world, target, ctx.spell);
@@ -174,7 +176,9 @@ fn tick_second(
     ctx: &combat::spell_cast::effects::EffectCtx<'_>,
     target: Entity,
     amount: f32,
+    crit: bool,
 ) {
+    assert!(crit, "the native critical result must reach every callback");
     assert_eq!(ctx.depth, 3);
     assert_eq!(amount, 42.0);
     second(world, target, ctx.spell);
@@ -230,7 +234,7 @@ fn registry_preserves_target_selection_and_damage_stage_arguments() {
         dest: None,
         chain_multiplier: 1.0,
     };
-    script_registry::periodic_primary_damage(&mut world, &ctx, target, 42.0);
+    script_registry::periodic_primary_damage(&mut world, &ctx, target, 42.0, true);
     assert_eq!(
         world.resource::<Calls>().0,
         [
@@ -250,7 +254,7 @@ fn registry_preserves_target_selection_and_damage_stage_arguments() {
         script_registry::after_resource_values(&world, 133).count(),
         0
     );
-    script_registry::periodic_primary_damage(&mut world, &ctx, target, 42.0);
+    script_registry::periodic_primary_damage(&mut world, &ctx, target, 42.0, true);
     assert_eq!(world.resource::<Calls>().0.len(), 4);
     assert_eq!(
         script_registry::target_damage_multiplier(&world, caster, target, &spell),
