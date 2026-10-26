@@ -3,8 +3,18 @@
 use bevy::prelude::*;
 use shared::components::CombatStatus;
 
-use crate::spell_cast::{self, Sight, SpellModOp, targets};
-use crate::spell_info::SpellStore;
+use super::combat;
+use combat::auras::{SpellModOp, spell_mods};
+use combat::spell_cast::{self, Sight, targets};
+use combat::spell_cast::script_registry::{SpellScriptHook, HitHook};
+use combat::spell_cast::scripts::script_effect_value;
+use combat::spell_info::SpellStore;
+
+pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::Hit(hit_hook)];
+
+fn hit_hook(spell: u32) -> Option<HitHook> {
+    (spell == ASCENDANCE).then_some(cast_entry)
+}
 
 pub(super) const ASCENDANCE: u32 = 1219480;
 const FLAME_SHOCK: u32 = 188389;
@@ -24,7 +34,7 @@ fn select_flame_shock_eligible_enemies(
         .clone();
     let origin = targets::position(world, caster).expect("Ascendance caster retains position");
     let (_, maximum) = targets::spell_range(&shock, true);
-    let maximum = spell_cast::modify(world, caster, &shock, SpellModOp::Range, maximum);
+    let maximum = spell_mods::modify(world, caster, &shock, SpellModOp::Range, maximum);
     let mut candidates =
         targets::area_units(world, caster, origin, maximum, targets::Relation::Enemy, 0);
     candidates.retain(|&unit| {
@@ -55,8 +65,8 @@ fn cast_entry_lava_burst(
 }
 
 pub(super) fn cast_entry(world: &mut World, caster: Entity, _self_target: Entity, depth: u8) {
-    let cap = super::script_effect_value(world, caster, ASCENDANCE, 6) as usize;
-    let multiplier = super::script_effect_value(world, caster, ASCENDANCE, 9) / 100.0;
+    let cap = script_effect_value(world, caster, ASCENDANCE, 6) as usize;
+    let multiplier = script_effect_value(world, caster, ASCENDANCE, 9) / 100.0;
     let units = select_flame_shock_eligible_enemies(world, caster, cap);
     for &unit in &units {
         spell_cast::cast_triggered(world, caster, FLAME_SHOCK, Some(unit), depth + 1);
