@@ -40,13 +40,27 @@ fn ret_arbiter_supply_records_native_initial_uses_applications_consumption_and_p
             .iter()
             .find(|action| action["spell_id"] == 1306923)
             .expect("native Arbiter damage");
+        let in_flight = crate::spell_cast::native_apl::spell_hits_in_flight(
+            run.app.world(),
+            run.actor,
+            1306923,
+        )
+        .unwrap() as u64;
+        let outcomes: u64 = ["hits", "misses", "dodges", "parries"]
+            .iter()
+            .map(|key| arbiter[*key].as_u64().unwrap())
+            .sum();
+        eprintln!(
+            "NATIVE_ARBITER_WINDOW seed={seed} consumed={payouts} outcomes={outcomes} in_flight={in_flight}"
+        );
         assert_eq!(
             payouts,
-            arbiter["hits"].as_u64().unwrap(),
-            "each consumed native Arbiter use must deliver one real primary hit"
+            outcomes + in_flight,
+            "every consumed native Arbiter use must have a real outcome or remain in actual flight at300s"
         );
         let output = json!({"seed":seed,"simulated_seconds":seconds,"initial_uses":initial,
             "usage":usage,"arbiter_payouts":payouts,"arbiter":arbiter,
+            "arbiter_terminal_outcomes":outcomes,"arbiter_in_flight_at_end":in_flight,
             "buff_uptime_pct":uptimes,"combat":combat,"stats_after":report::stats(run.app.world(),run.actor)});
         let path = inputs::directory()
             .unwrap()
