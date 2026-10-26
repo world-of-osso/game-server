@@ -111,6 +111,11 @@ def submit(args):
                  ["git", "rev-parse", "--verify", f"{args.red}^{{commit}}"], text=True,
                  capture_output=True, check=True).stdout.strip(), "env": dict(pair.split("=", 1) for pair in args.env), "tests": [shlex.split(test) for test in args.test],
              "measure": [parse_measure(m) for m in args.measure], "submitted": time.time()}
+    # Native parity tests read DPS_PARITY_* inputs that only --measure (or --env) supplies; without
+    # them they fail at fixture setup a cycle later (Shadow Collapse/Ire probes, 2026-10-26).
+    if any("server-simulation" in test and "--ignored" in test for test in entry["tests"]) \
+            and not entry["measure"] and not any(k.startswith("DPS_PARITY_") for k in entry["env"]):
+        sys.exit("native server-simulation --ignored tests need --measure (or --env DPS_PARITY_*) inputs")
     QUEUE.mkdir(parents=True, exist_ok=True)
     (QUEUE / f"{entry['id']}.json").write_text(json.dumps(entry, indent=2))
     print(entry["id"])
