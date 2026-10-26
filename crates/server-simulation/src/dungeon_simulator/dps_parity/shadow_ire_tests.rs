@@ -74,7 +74,6 @@ fn sample_flay_source(run: &mut Run) -> f64 {
     cast_when_ready(run, actual);
     finish_cast(run);
     let capture = run.app.world().resource::<FactorCapture>().export();
-    println!("actual Flay {actual} factor capture: {capture}");
     let result = capture["events"]
         .as_array()
         .unwrap()
@@ -101,7 +100,7 @@ fn sample_flay_source(run: &mut Run) -> f64 {
 
 #[test]
 #[ignore = "requires native258 Player/profile/traits"]
-fn diag_ire_real_three_dot_window_boosts_actual_flay_then_naturally_expires() {
+fn shadow_ire_real_three_dot_window_boosts_actual_flay_then_naturally_expires() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(258, 1).unwrap();
     engage(&mut run);
