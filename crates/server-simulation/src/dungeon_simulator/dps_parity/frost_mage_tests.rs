@@ -278,6 +278,7 @@ fn spellslinger_native_impacts_reduce_actual_specialization_orb_recharge() {
         .unwrap();
         preparation::finish_pending_setup(&mut run).unwrap();
         let before = recharge(&run);
+        let event_cursor = run.app.world().resource::<ObservedCombatEvents>().0.len();
         assert!(
             before > 0.0,
             "native spec{spec} Orb recharge must really run"
@@ -301,6 +302,7 @@ fn spellslinger_native_impacts_reduce_actual_specialization_orb_recharge() {
             .resource::<ObservedCombatEvents>()
             .0
             .iter()
+            .skip(event_cursor)
             .filter(|event| {
                 event.source == Some(run.actor.to_bits())
                     && event.spell_id == Some(payload)
@@ -422,6 +424,14 @@ fn frost_mage_native_impacts_build_freezing_and_lance_pays_owned_shatter() {
     assert!(
         before >= 4,
         "actual Frostbolt/Flurry impacts must earn native owned Freezing"
+    );
+    // This case isolates owned-debuff payment. Earned Fingers has a separate
+    // real Orb/flight test and intentionally does not consume target stacks.
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        run.actor,
+        crate::auras::RemoveReason::Consumed,
+        |aura| aura.spell_id == 44544,
     );
     literal_rotation::execution::execute(
         run.app.world_mut(),

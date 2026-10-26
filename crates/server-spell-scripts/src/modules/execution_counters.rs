@@ -70,7 +70,7 @@ const CONSUMERS: &[ConsumedCounter] = &[
     // SimC76f8118 sc_warrior.cpp4347–4352/4547–4554: Execute consumes
     // one SD stack after base execution, then grants selected Imminent Demise.
     ConsumedCounter {
-        actions: &[163201, 280735],
+        actions: &[163201, 281000, 280735],
         buff: 52437,
         required: &[29725, 444769],
         counter: 445606,
