@@ -36,7 +36,7 @@ fn start_new_beasts(world: &mut World, owner: Entity, spell: &SpellInfo, _: bool
         // SimC76f8118 hunter1869–1873: newly summoned DireCritters start
         // their own white attack against the real consuming KC primary.
         world.entity_mut(pet).insert(AttackStarted);
-        combat::combat::start_attack_now(world, pet, combat::combat::AutoAttack::new(primary));
+        spell_cast::summon::start_melee_attack(world, pet, primary);
     }
 }
 

@@ -21,6 +21,8 @@ fn native_hunter_dire_command_actual_kills_spawn_authentic_beasts() {
         &shared::components::Npc,
     )>();
     let mut beasts = std::collections::BTreeSet::new();
+    let mut origins = std::collections::HashMap::new();
+    let mut moved_toward_target = false;
     engage(&mut run);
     advance_combat_observed(&mut run, |run| {
         for (unit, summon, npc) in query.iter(run.app.world()) {
@@ -33,6 +35,11 @@ fn native_hunter_dire_command_actual_kills_spawn_authentic_beasts() {
                     summon.expires_at.is_some(),
                     "native Dire Beast must be finite"
                 );
+                let position = *run.app.world().get::<shared::components::Position>(unit).unwrap();
+                let target = *run.app.world().get::<shared::components::Position>(run.targets[0]).unwrap();
+                let distance = ((position.x - target.x).powi(2) + (position.z - target.z).powi(2)).sqrt();
+                let original = *origins.entry(unit.to_bits()).or_insert(distance);
+                moved_toward_target |= distance + 0.1 < original;
                 if beasts.insert(unit.to_bits()) {
                     eprintln!("DIRE_ACTOR unit={unit:?} at={} position={:?} primary_position={:?} attack={:?} motion={:?}",
                         crate::spell_cast::now(run.app.world()),
@@ -67,6 +74,10 @@ fn native_hunter_dire_command_actual_kills_spawn_authentic_beasts() {
         !beasts.is_empty(),
         "actual KC Dire Command must spawn native219199 actors: commands={commands}, beasts={}",
         beasts.len()
+    );
+    assert!(
+        moved_toward_target,
+        "a real summoned Beast outside melee range must move toward its target"
     );
     let events = &run
         .app
