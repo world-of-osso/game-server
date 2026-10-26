@@ -8,7 +8,7 @@
 //! - `AfterPayment`: all modules run after successful payment and before gargoyles.
 //! - `AfterResourceValues`: all matching modules run after resource-value hooks.
 //! - `TargetPlan`: first matching module wins before combat's native target plans.
-//! - `PeriodicPrimaryDamage`: all modules run at the Explosive primary-tick boundary.
+//! - `PeriodicPrimaryDamage`: all modules receive the landed periodic amount and actual crit result.
 //! - `TargetDamageMultiplier`: factors run at the Giantkiller damage boundary.
 //! - `AfterSpenderStacks`: after foreground Crusade stacks and the corresponding
 //!   background Storm callback; before Empyrean Legacy or echo policy dispatch.
@@ -38,7 +38,7 @@ use crate::spell_info::SpellInfo;
 
 pub type TargetPlanHook = fn(&mut World, Entity, &SpellInfo, Option<Entity>) -> TargetPlan;
 pub type TargetPlanLookup = fn(u32) -> Option<(Relation, TargetPlanHook)>;
-pub type PeriodicPrimaryDamageHook = fn(&mut World, &EffectCtx<'_>, Entity, f32);
+pub type PeriodicPrimaryDamageHook = fn(&mut World, &EffectCtx<'_>, Entity, f32, bool);
 pub type TargetDamageMultiplierHook = fn(&World, Entity, Entity, &SpellInfo) -> f32;
 pub type AuraRedirectHook = fn(&mut World, Entity, Entity, u32, u8) -> bool;
 
@@ -237,10 +237,11 @@ pub fn periodic_primary_damage(
     ctx: &EffectCtx<'_>,
     target: Entity,
     amount: f32,
+    crit: bool,
 ) {
     for hook in world.resource::<SpellScriptRegistry>().hooks() {
         if let SpellScriptHook::PeriodicPrimaryDamage(run) = hook {
-            run(world, ctx, target, amount);
+            run(world, ctx, target, amount, crit);
         }
     }
 }

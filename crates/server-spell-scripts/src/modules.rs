@@ -47,6 +47,7 @@ register_modules! {
     beast_mastery: (20, "modules/beast_mastery.rs"),
     cast_grants: (120, "modules/cast_grants.rs"),
     cast_resets: (90, "modules/cast_resets.rs"),
+    destruction_periodic: (2670, "modules/destruction_periodic.rs"),
     devastation: (10, "modules/devastation.rs"),
     elemental_ascendance: (220, "modules/elemental_ascendance.rs"),
     essence_burst: (140, "modules/essence_burst.rs"),
