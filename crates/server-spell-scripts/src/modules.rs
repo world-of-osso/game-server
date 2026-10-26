@@ -1,5 +1,6 @@
 //! Register new modules with one alphabetical line. The numeric position preserves
 //! historical dispatch order independently of declaration order; do not renumber it.
+//! Independent new modules may share a trailing position; ties retain declaration order.
 use super::combat;
 use combat::spell_cast::script_registry::SpellScriptHook;
 
@@ -29,12 +30,6 @@ const fn order_modules<const N: usize>(
     let mut ordered: [&[SpellScriptHook]; N] = [&[]; N];
     index = 0;
     while index < N {
-        if index > 0 {
-            assert!(
-                modules[index - 1].0 != modules[index].0,
-                "duplicate module position"
-            );
-        }
         ordered[index] = modules[index].1;
         index += 1;
     }
@@ -81,4 +76,35 @@ register_modules! {
     warrior: (40, "modules/warrior.rs"),
     windwalker_momentum: (50, "modules/windwalker_momentum.rs"),
     windwalker_zenith: (30, "modules/windwalker_zenith.rs"),
+}
+
+#[cfg(test)]
+mod ordering_tests {
+    use super::*;
+    use bevy::prelude::*;
+    use combat::spell_cast::script_registry::{self, SpellScriptRegistry};
+
+    #[derive(Resource, Default)]
+    struct Calls(Vec<&'static str>);
+
+    fn first(world: &mut World, _: Entity, _: u32, _: u8) {
+        world.resource_mut::<Calls>().0.push("first");
+    }
+
+    fn second(world: &mut World, _: Entity, _: u32, _: u8) {
+        world.resource_mut::<Calls>().0.push("second");
+    }
+
+    #[test]
+    fn independent_modules_share_a_position_without_reordering_existing_callbacks() {
+        const FIRST: &[SpellScriptHook] = &[SpellScriptHook::OnCast(first)];
+        const SECOND: &[SpellScriptHook] = &[SpellScriptHook::OnCast(second)];
+        let modules = order_modules([(1000, FIRST), (10, SECOND), (1000, SECOND)]);
+        let mut world = World::new();
+        world.insert_resource(SpellScriptRegistry::new(Box::leak(Box::new(modules))));
+        world.init_resource::<Calls>();
+        let caster = world.spawn_empty().id();
+        script_registry::on_cast(&mut world, caster, 133, 0);
+        assert_eq!(world.resource::<Calls>().0, ["second", "first", "second"]);
+    }
 }
