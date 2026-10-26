@@ -176,8 +176,7 @@ pub(super) fn prepare_driver(run: &mut super::Run) -> Result<Box<dyn super::Spec
         duration: 300.0,
         style: crate::simc_apl_native::FightStyle::Patchwerk,
     };
-    let mut rotation =
-        Rotation::load(run.app.world(), run.actor, encounter)?;
+    let mut rotation = Rotation::load(run.app.world(), run.actor, encounter)?;
     // Pinned player.cpp6138–6183: source-order setup, through the first harmful precast.
     loop {
         match rotation.precombat_step(run.app.world_mut(), run.actor, &run.targets)? {
@@ -199,7 +198,12 @@ impl super::SpecDriver for Rotation {
         "LITERAL_SIMC_DEVASTATION_76f8118"
     }
 
-    fn drive(&mut self, world: &mut World, actor: Entity, targets: &[Entity]) -> Result<(), String> {
+    fn drive(
+        &mut self,
+        world: &mut World,
+        actor: Entity,
+        targets: &[Entity],
+    ) -> Result<(), String> {
         self.drive(world, actor, targets)
     }
 

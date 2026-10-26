@@ -1,14 +1,25 @@
 # Spell Casting
 
+## Marksmanship native relationships — 2026-10-25
+
+The [Marksmanship contract](../../specs/dps-parity.md#marksmanship-native-cast-relationships) separates native70448 values from pinned SimC76f8118 execution relationships. Runtime scripts live in `crates/server-combat/src/spell_cast/scripts/`.
+
+- `cast_relationships.rs` grants Stalk and Strike's Lock and Load, fills Bulletstorm to its actual native maximum, and spends one earned use. Native70448 has one Bulletstorm use; do not import the reference build's stack limit.
+- `marksmanship.rs` plans Aimed/Rapid secondary recipients and banks critical damage into native Master Marksman. Volley can earn Trick Shots without the separate talent. Rapid Fire's target-carried channel must spend its caster's buff, not the recipient's. Recharge reductions occur on tick execution; the final projectile can arrive after channel completion.
+- `marksmanship_sentinel.rs` owns actual target marks, delayed Blood Fletching acquisition, Lunar Storm dispatch and Sanctified Armaments residuals. Native rolling-periodic handling retains unpaid damage. The applying Aimed critical hit precedes Blood Fletching's1ms mark callback.
+- `marksmanship_explosive.rs` converts each actual primary tick into native secondary-only cleave and applies equipped MID2 cooldown reductions once, independently of recipient count.
+
+Sources: the named runtime modules and `hunter_{cadence,followup,explosive}_tests.rs` under `crates/server-simulation/src/dungeon_simulator/dps_parity/`. Numerical parity requires a separate complete300s measurement; passing relationship tests alone does not establish it.
+
 ## Native Warrior execution relationships — 2026-10-25
 
-The [Fury/Warrior contract](../../specs/dps-parity.md#fury-player-parity) is implemented as source-qualified rows, not spell-ID branches in the shared cast engine. Native70448 supplies effects, probabilities, ICDs, resource units and payloads; SimC76f8118 supplies execution boundaries.
+The [Fury/Warrior contract](../../specs/dps-parity.md#fury-player-parity) is implemented as source-qualified scripts, not spell-ID branches in the shared cast engine. Native70448 supplies effects, probabilities, ICDs, resource units and payloads; SimC76f8118 supplies execution boundaries.
 
 - `scripts/foreground_procs.rs` rolls the selected passive through native RPPM timers after an ordinary special execution. The execution-consumer wrapper follows that roll, so Execute can consume its newly earned stack.
 - `scripts/impact_procs.rs` keeps actor-wide PRD attempts and uses `random::accumulated_proc_constant`; `auras::procs::policy_proc_ready` preserves timer ownership. `owns_policy_proc` blocks broad native hints for relationships that own their event predicate.
 - `scripts/execution_counters.rs` runs after native launch for foreground and background casts. It owns execution-count rewards, single-stack consumers and valued child auras; Frenzy reads its native passive value instead of the child's zero catalog points.
-- `scripts/periodic_attacks.rs` reads the paid ordinal captured in each due `Tick`, not the scheduler's final count after catch-up. Children resolve live native action overrides and retain their actual selected primary.
-- `scripts/paid_cooldowns.rs` observes the successful payment vector after `spend_costs`, converts raw units through native `PowerTypeTable`, and reduces only running cooldowns. Later resource gains are not subtracted from the paid amount.
+- `scripts/periodic_attacks.rs` reads the paid ordinal captured in each due `Tick`, not the scheduler's final count after catch-up. Children resolve live native action overrides and retain their actual selected primary. Its `cast_bladestorm_offhand` hook owns50622 effect1 once after a landed main-hand area, only for dual-wielding Fury. That native slot selects SRC_CASTER and has no unit recipient for generic effect64 launch; the hook dispatches the native95738 area once rather than per hit.
+- `server-spell-scripts/src/modules/paid_cooldowns.rs` observes the successful payment vector after `spend_costs`, converts raw units through native `PowerTypeTable`, and reduces only running cooldowns. Later resource gains are not subtracted from the paid amount.
 
 `periodic_attacks::ROLLING_REAPPLICATIONS` stores payload, selected passive and eligible specs. `scripts::rolls_reapplication` selects the [Deep Wounds exception](auras.md#native-rolling-periodic-refresh--2026-10-22) from those rows, independently of the shared cast-policy registry. Neither its budget nor duration rule is inferred for other spells from the native rolling flag alone.
 
@@ -28,7 +39,7 @@ The actual Ret self-cast boundary failed with child target=caster and passes wit
 
 ## Dawnlight named hit policies — 2026-10-24
 
-`spell_cast/scripts/policies.rs` stores `Policy { name, spec, talent, relationship }` rows. `Relationship::CounterAfterCast` reads a selected talent’s live native effect and casts a native counter; `Relationship::SpenderHit` binds a resource pool, counter and native payload. Specific Dawnlight IDs occur in policy data, not core spell-ID conditionals. The [contract](../../specs/dps-parity.md#ret-dawnlight-policies) explicitly names the two SimC relationships because TC/DB2/TDB do not encode them.
+[Downstream module slices](spell-script-crate.md) store `Policy { name, spec, talent, relationship }` rows; `spell_cast/scripts/policies.rs` executes those relationships. `Relationship::CounterAfterCast` reads a selected talent’s live native effect and casts a native counter; `Relationship::SpenderHit` binds a resource pool, counter and native payload. Specific Dawnlight IDs occur in policy data, not core spell-ID conditionals. The [contract](../../specs/dps-parity.md#ret-dawnlight-policies) explicitly names the two SimC relationships because TC/DB2/TDB do not encode them.
 
 Ordinary native launch stores applicable resource pools (including zero final cost) and the actual selected primary/list in `SpellInfo.cast_policy_context`. Triggered catalog clones have no context. Logical first-hit dispatch checks the live owned counter, native payload target admission and live owned periodic state: refresh on one target, choose the first unticking actual target in an area list, or spend nothing if all tick. Native stack loss does not refresh duration. Native3, maximum6 and431380 payload/timing remain unchanged.
 

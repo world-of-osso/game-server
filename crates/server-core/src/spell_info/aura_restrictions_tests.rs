@@ -9,8 +9,14 @@ fn open_spell_database() -> Connection {
     conn.execute_batch(SCHEMA).unwrap();
     // The production loader also requires TC proc provenance, separate from DB2.
     // These restriction-only fixtures contain no explicit proc definitions.
-    conn.execute_batch("CREATE TABLE tdb_spell_proc (SpellId INTEGER PRIMARY KEY);")
-        .unwrap();
+    conn.execute_batch(
+        "CREATE TABLE tdb_spell_proc (
+            SpellId INTEGER PRIMARY KEY, SpellFamilyName INTEGER NOT NULL DEFAULT 0,
+            SpellFamilyMask0 INTEGER NOT NULL DEFAULT 0, SpellFamilyMask1 INTEGER NOT NULL DEFAULT 0,
+            SpellFamilyMask2 INTEGER NOT NULL DEFAULT 0, SpellFamilyMask3 INTEGER NOT NULL DEFAULT 0
+        );",
+    )
+    .unwrap();
     conn
 }
 

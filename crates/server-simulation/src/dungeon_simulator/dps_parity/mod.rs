@@ -1,107 +1,5 @@
 //! Native 300s dummy qualification with explicit per-spec fixture controllers.
-mod active_enemy_tests;
-mod arms_tests;
-mod assassination_energy_tests;
-mod assassination_knowledge_tests;
-mod assassination_mechanics_tests;
-mod assassination_poison_tests;
-mod aura342_tests;
-mod barbed_budget_tests;
-#[cfg(test)]
-mod beast_mastery_mechanics_tests;
-#[cfg(test)]
-mod beast_mastery_pet_tests;
-mod composite_precombat_tests;
-mod devastation_tests;
-mod driver_tests;
-mod dummy_reference_tests;
-mod elemental_ascendance_tests;
-mod elemental_mechanics_tests;
-mod elemental_rotation_tests;
-mod engagement_tests;
-mod enhancement_generation_tests;
-mod enhancement_mechanics_tests;
-mod enhancement_operand_tests;
-mod enhancement_strike_tests;
-mod enhancement_tests;
-mod equipment_input_tests;
-mod equipped_set_tests;
-mod feral_native_tests;
-mod feral_tests;
-mod fire_gap_tests;
-mod fire_literal_tests;
-mod firestarter_tests;
-mod frost_mage_tests;
-mod gear_profile_tests;
-mod haste_tests;
-mod havoc_fact_tests;
-mod havoc_tests;
-mod health_aura_state_tests;
-mod howl_tests;
-#[cfg(test)]
-mod hunter_bloodshed_tests;
-#[cfg(test)]
-mod hunter_focus_tests;
-#[cfg(test)]
-mod hunter_stomp_tests;
-mod inputs;
-mod literal_ranged_attack_tests;
-pub(crate) mod literal_rotation;
-mod marksmanship_fact_tests;
-mod marksmanship_mechanics_tests;
-mod outlaw_cleave_tests;
-mod outlaw_resource_tests;
-mod outlaw_tests;
-mod owner_cooldown_tests;
-mod pack_tactics_tests;
-mod periodic_crit_tests;
-mod periodic_final_tick_tests;
-mod pet_child_tests;
-mod pet_melee_tests;
-mod pet_stats_tests;
-mod player_rotation;
-mod poison_precombat_tests;
-mod power_haste_tests;
-mod power_tests;
-mod precombat_tests;
-mod preparation;
-mod profile_effects;
-mod profile_initialization;
-mod rake_stealth_tests;
-mod report;
-mod ret_auto_proc_tests;
-mod ret_batch_tests;
-mod ret_crusade_tests;
-mod ret_damage_relationship_tests;
-mod ret_damage_tests;
-mod ret_dawnlight_consumer_tests;
-mod ret_dawnlight_remainder_tests;
-mod ret_dawnlight_target_tests;
-mod ret_dawnlight_tests;
-mod ret_empyrean_tests;
-mod ret_proc_rate_tests;
-mod ret_purpose_tests;
-mod ret_resonance_phase_tests;
-mod ret_resource_tests;
-mod ret_sentence_tests;
-mod ret_storm_gap_tests;
-mod ret_tier_tests;
-mod ret_toll_control_tests;
-mod ret_toll_tests;
-mod ret_trigger_resource_tests;
-mod ret_wake_tests;
-mod rogue_finisher_tests;
-mod shadow_mastery_tests;
-mod shadow_slam_tests;
-mod shadow_tests;
-mod shaman263_proc_tests;
-mod shaman263_tier_tests;
-mod shared_fact_extension_tests;
-pub(crate) mod single_spell;
-mod snakeskin_tests;
-mod trigger_primary_tests;
-mod warrior_proc_tests;
-mod warrior_stat_tests;
+include!("module_list.in");
 use crate::simc_apl_native::{FixtureAdds, FixtureTarget};
 use bevy::prelude::*;
 use serde_json::{Value, json};
@@ -144,6 +42,8 @@ struct SpecRegistration {
 }
 
 // Register a spec only here and in its own module. The table is sorted by spec ID.
+// Until rustfmt traverses macro-declared modules, format changed rotation files
+// directly with `rustfmt --edition 2024` as well as running `cargo fmt`.
 macro_rules! spec_drivers {
     ($($spec_id:literal => $module:ident,)*) => {
         $(mod $module;)*
@@ -162,6 +62,7 @@ spec_drivers! {
     70 => ret_rotation,
     71 => arms_rotation,
     72 => fury_rotation,
+    251 => frost_rotation,
     253 => beast_mastery_rotation,
     254 => marksmanship_rotation,
     258 => shadow_rotation,
@@ -169,6 +70,7 @@ spec_drivers! {
     260 => outlaw_rotation,
     262 => elemental_rotation,
     263 => enhancement_rotation,
+    266 => demonology_rotation,
     269 => windwalker_rotation,
     577 => havoc_rotation,
     1467 => devastation_rotation,
@@ -388,7 +290,7 @@ fn literal_spec_selection_applies_to_player_and_follower() {
 #[test]
 fn literal_follower_only_specs_explicitly_preserve_their_actor_restriction() {
     use crate::followers::simulator::ParityActor;
-    for spec_id in [70, 269] {
+    for spec_id in [70, 266, 269] {
         assert!(measurement_driver(spec_id, &ParityActor::Follower).is_some());
         assert!(measurement_driver(spec_id, &ParityActor::Player { race: 1 }).is_none());
     }
@@ -431,6 +333,7 @@ fn spawn_reference(
     let copy = super::runtime::create_copy(&mut app);
     // Origin-centered parity fixtures have no frozen dungeon geometry.
     app.world_mut().remove_resource::<super::Space>();
+    crate::simc_apl_native::install_open_arena(app.world_mut());
     let level = profile
         .level
         .parse()
@@ -497,7 +400,26 @@ fn engage_fixture_opponents(run: &mut Run) {
     }
 }
 
+// SimC76f8118 sc_demon_hunter.cpp3927–3938 models Eye Beam as target AoE.
+// The native fixture pack is at +X; player Rotation.y=0 instead faces +Z.
+// Establish encounter facing, not a replacement cone or target list.
+fn face_actor_toward_primary(world: &mut World, actor: Entity, primary: Entity) {
+    use shared::components::{Position, Rotation};
+    let from = *world
+        .get::<Position>(actor)
+        .expect("fixture actor position");
+    let to = *world
+        .get::<Position>(primary)
+        .expect("fixture primary position");
+    let orientation = (from.z - to.z).atan2(to.x - from.x);
+    world
+        .get_mut::<Rotation>(actor)
+        .expect("fixture actor rotation")
+        .y = orientation + std::f32::consts::FRAC_PI_2;
+}
+
 fn engage(run: &mut Run) {
+    face_actor_toward_primary(run.app.world_mut(), run.actor, run.targets[0]);
     for &target in &run.targets {
         face_dummy_away_from_actor(run.app.world_mut(), run.actor, target);
     }

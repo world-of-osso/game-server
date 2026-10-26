@@ -193,8 +193,7 @@ pub(super) fn prepare_driver(run: &mut super::Run) -> Result<Box<dyn super::Spec
         duration: 300.0,
         style: crate::simc_apl_native::FightStyle::Patchwerk,
     };
-    let mut rotation =
-        Rotation::load(run.app.world_mut(), run.actor, encounter)?;
+    let mut rotation = Rotation::load(run.app.world_mut(), run.actor, encounter)?;
     for _ in 0..super::preparation::MAX_SETUP_TICKS {
         match rotation.poll_precombat(run.app.world_mut(), run.actor, &run.targets)? {
             PrecombatPoll::Waiting => super::preparation::finish_pending_setup(run)?,
@@ -222,7 +221,12 @@ impl super::SpecDriver for Rotation {
         "LITERAL_SIMC_RETRIBUTION_76f8118"
     }
 
-    fn drive(&mut self, world: &mut World, actor: Entity, targets: &[Entity]) -> Result<(), String> {
+    fn drive(
+        &mut self,
+        world: &mut World,
+        actor: Entity,
+        targets: &[Entity],
+    ) -> Result<(), String> {
         self.drive(world, actor, targets)
     }
 

@@ -8,6 +8,12 @@ use crate::auras::{
 use crate::spell_cast::{self, TriggeredSpellOverrides};
 use bevy::prelude::*;
 
+mod font;
+pub(crate) use font::SPLATTER as FONT_SPLATTER;
+pub(crate) use font::{
+    after_periodic_damage, filter_targets as filter_font_targets, splatter_damage,
+};
+
 const VENOM_DRIVER: u32 = 1291718;
 const VENOM: u32 = 1306635;
 const BURST: u32 = 1306639;
@@ -21,6 +27,7 @@ const LINGERING: u32 = 1287555;
 const LINGERING_DAMAGE: u32 = 1287663;
 
 pub(crate) fn register(scripts: &mut AuraScripts) {
+    font::register(scripts);
     for driver in [VENOM_DRIVER, HEART, FIRE] {
         scripts.0.insert(
             driver,

@@ -281,7 +281,12 @@ impl super::SpecDriver for Rotation {
         "LITERAL_SIMC_FURY_76f8118"
     }
 
-    fn drive(&mut self, world: &mut World, actor: Entity, targets: &[Entity]) -> Result<(), String> {
+    fn drive(
+        &mut self,
+        world: &mut World,
+        actor: Entity,
+        targets: &[Entity],
+    ) -> Result<(), String> {
         self.drive(world, actor, targets)
     }
 
@@ -289,4 +294,3 @@ impl super::SpecDriver for Rotation {
         self.report()
     }
 }
-

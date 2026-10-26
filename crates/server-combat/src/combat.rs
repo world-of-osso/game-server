@@ -666,6 +666,23 @@ pub(crate) struct AutoAttackParams<'w, 's> {
     commands: Commands<'w, 's>,
 }
 
+/// Live owner crit for native Hunter pets and executing guardians.
+/// SimC76f8118 pet.cpp217–220: the shared source serves swings and spells.
+pub fn read_pet_owner_critical_chance(world: &World, unit: Entity) -> Option<f32> {
+    let owner = if let Some(owner) = crate::spell_cast::guardian::stat_owner(world, unit) {
+        owner
+    } else {
+        world.get::<crate::hunter_pet_stats::HunterInheritedStats>(unit)?;
+        world.get::<crate::hunter_pet::HunterPet>(unit)?.owner
+    };
+    Some(
+        world
+            .get::<CharacterStats>(owner)
+            .expect("native pet owner requires CharacterStats for inherited crit")
+            .crit_pct,
+    )
+}
+
 /// Process auto-attacks: tick timers, deal damage when in range and timer ready.
 pub(crate) fn auto_attack_system(world: &mut World) {
     let attackers: Vec<Entity> = world
@@ -675,14 +692,15 @@ pub(crate) fn auto_attack_system(world: &mut World) {
     for attacker in attackers {
         // Apply this attacker's commands before the next attacker reads mitigation.
         // In particular, consuming Ardent also removes its30% damage reduction now.
+        let owner_crit = read_pet_owner_critical_chance(world, attacker);
         world
-            .run_system_cached_with(auto_attack_unit, attacker)
+            .run_system_cached_with(auto_attack_unit, (attacker, owner_crit))
             .expect("auto-attack unit system must have its registered resources");
     }
 }
 
 fn auto_attack_unit(
-    In(attacker_entity): In<Entity>,
+    In((attacker_entity, owner_crit)): In<(Entity, Option<f32>)>,
     time: Res<Time>,
     mut params: AutoAttackParams,
 ) {
@@ -723,6 +741,12 @@ fn auto_attack_unit(
     {
         return;
     }
+    let hunter_owner = params.hunter_pets.get(attacker_entity).ok().map(|pet| {
+        params
+            .owner_stats
+            .get(pet.owner)
+            .expect("native Hunter pet owner requires CharacterStats for inherited melee")
+    });
     let attacker = Attacker {
         entity: attacker_entity,
         position: &snapshot.position,
@@ -736,13 +760,11 @@ fn auto_attack_unit(
         form_attack_time: snapshot.form_attack_time,
         creature_flags: snapshot.creature_flags.as_ref(),
         temp_summoner: snapshot.temp_summoner,
-        hunter_owner_ap: params.hunter_pets.get(attacker_entity).ok().map(|pet| {
-            let (owner, modifiers) = params
-                .owner_stats
-                .get(pet.owner)
-                .expect("native Hunter pet owner requires CharacterStats for melee power");
+        hunter_owner_ap: hunter_owner.map(|(owner, modifiers)| {
             crate::hunter_pet_stats::owner_bonus_attack_power(owner, modifiers)
         }),
+        // SimC76f8118 pet.cpp217–220: read live owner crit, not template base5%.
+        hunter_owner_crit_pct: owner_crit,
         spirit_wolf: params.spirit_wolves.get(attacker_entity).ok().map(|wolf| {
             let (owner, _) = params
                 .owner_stats
@@ -928,6 +950,12 @@ fn record_swing(
     mark_replication_changed(world.get_resource::<ReplicationDirtyQueue>(), target_entity);
     let landed = !outcome.immune && !outcome.kind.avoided();
     if landed {
+        crate::spell_cast::scripts::after_melee_residual(
+            world,
+            attacker_entity,
+            target_entity,
+            outcome.residual_source,
+        );
         crate::spell_cast::scripts::after_melee_hit(
             world,
             attacker_entity,
@@ -1005,7 +1033,7 @@ pub(crate) struct Attacker<'a> {
     pub enemy_dodge_pct: f32,
     /// Native aura240/4 reduction plus the player/class-parity baseline expertise.
     pub expertise_pct: f32,
-    /// A creature (`Npc`): it rolls the creature side of the hit table.
+    /// Native `Npc` identity; class stats still supply its melee critical chance.
     pub creature: bool,
     pub authored_attack_time: Option<CreatureAttackTime>,
     pub form_attack_time: Option<crate::auras::shapeshift::FormAttackTiming>,
@@ -1015,6 +1043,7 @@ pub(crate) struct Attacker<'a> {
     pub temp_summoner: Option<Entity>,
     pub spirit_wolf: Option<(&'a crate::spell_cast::guardian::SpiritWolf, f32)>,
     pub hunter_owner_ap: Option<f32>,
+    pub hunter_owner_crit_pct: Option<f32>,
 }
 
 impl Attacker<'_> {
@@ -1078,7 +1107,6 @@ pub(crate) struct SwingContext<'a, 'w, 's> {
 /// multipliers × target physical damage taken (`AuraStatMods`, Unit::MeleeDamageBonusDone/Taken).
 struct SwingDamage {
     amount: f32,
-    #[cfg(any(test, feature = "test-support"))]
     raw: f32,
 }
 
@@ -1116,7 +1144,7 @@ fn swing_damage(
     scaling: &UnitScaling,
     taken: f32,
     additional_mult: f32,
-    #[cfg(any(test, feature = "test-support"))] source_mult: f32,
+    source_mult: f32,
 ) -> SwingDamage {
     let base = roll_swing_base(attacker, weapon, hand, scaling);
     // TC Guardian::UpdateDamagePhysical1423: owner-derived AP is additive
@@ -1128,7 +1156,6 @@ fn swing_damage(
     let base = base + owner_bonus;
     SwingDamage {
         amount: apply_swing_multipliers(base, attacker.mods, taken, additional_mult),
-        #[cfg(any(test, feature = "test-support"))]
         raw: base
             * attacker.mods.map_or(1.0, |mods| {
                 mods.damage_done(1) * mods.autoattack_damage_mult
@@ -1296,13 +1323,14 @@ fn read_outcome_chances(
     target_auras: Option<&crate::auras::ActiveAuras>,
     target_health: &Health,
 ) -> melee::MeleeChances {
+    // SimC76f8118 player.cpp5125–5134: real class crit includes rating and auras.
     let swinger = match (attacker.creature, attacker.stats) {
-        (true, _) => Swinger::Creature {
-            miss_pct: creature_miss_chance(attacker.mods),
-        },
-        (false, Some(stats)) => Swinger::Player {
+        (_, Some(stats)) => Swinger::Player {
             crit_pct: stats.crit_pct,
             dual_wield: stats.off_hand.is_some(),
+        },
+        (true, None) => Swinger::Creature {
+            miss_pct: creature_miss_chance(attacker.mods),
         },
         (false, None) => Swinger::Player {
             crit_pct: 0.0,
@@ -1386,21 +1414,30 @@ fn read_outcome_chances(
                 )
             })
     });
-    let npc_crit_modifier = if attacker.creature {
-        attacker.mods.map_or(0.0, |mods| mods.npc_crit_pct)
-    } else {
-        0.0
-    };
-    // Unit.cpp2885–2893: NO_CRIT excludes only NPC base5 + source52/290.
+    let generic_creature = attacker.creature && attacker.stats.is_none();
+    // CharacterStats includes290, not weapon-only52. Preserve each once.
+    let npc_crit_modifier = attacker.mods.map_or(0.0, |mods| {
+        let generic = if generic_creature {
+            mods.npc_crit_pct
+        } else {
+            0.0
+        };
+        let weapon = if attacker.creature {
+            mods.npc_weapon_crit_pct
+        } else {
+            0.0
+        };
+        generic + weapon
+    });
+    // Unit.cpp2885–2893: NO_CRIT excludes NPC base5 + source52/290, not class/owner crit.
     const NO_CRIT: u32 = 0x20000;
-    let source_crit = if attacker.creature
-        && attacker
-            .creature_flags
-            .is_some_and(|flags| flags.0 & NO_CRIT != 0)
-    {
-        0.0
-    } else {
-        chances.crit + npc_crit_modifier
+    let no_crit_flag = attacker
+        .creature_flags
+        .is_some_and(|flags| flags.0 & NO_CRIT != 0);
+    let source_crit = match attacker.hunter_owner_crit_pct {
+        Some(owner_crit) => owner_crit + npc_crit_modifier,
+        None if generic_creature && no_crit_flag => 0.0,
+        None => chances.crit + npc_crit_modifier,
     };
     // Unit.cpp2906–2926 clamps source + received183/187/197/306/339 BEFORE334 at2387.
     let crit_taken = (source_crit + crit_modifier).max(0.0);
@@ -1561,6 +1598,8 @@ struct SwingOutcome {
     kind: MeleeOutcome,
     immune: bool,
     absorbed: f32,
+    /// Landed source before victim multipliers, armor, block, absorption or scaling.
+    residual_source: f32,
     damage: f32,
     /// `damage` in the target's health units (level scaling).
     scaled_loss: f32,
@@ -1709,7 +1748,6 @@ fn try_swing(
         attacker.entity,
         raw_armor,
     );
-    #[cfg(any(test, feature = "test-support"))]
     let source_multiplier = context.summon_modifiers.multiplier(attacker.entity) * versus;
     let swing = swing_damage(
         attacker,
@@ -1722,7 +1760,6 @@ fn try_swing(
                 .summon_modifiers
                 .taken_multiplier(attacker.entity, avoidance.1.as_deref())
             * versus,
-        #[cfg(any(test, feature = "test-support"))]
         source_multiplier,
     );
     let armored = armor_mitigated(
@@ -1858,11 +1895,19 @@ fn try_swing(
     let scaled_loss = crate::level_scaling::health_loss(&attacker_scaling, &target, damage);
     // Commit health-sensitive limits and real rescue children in swing order.
     let incoming_loss = health_loss(training_dummy, scaled_loss);
+    let raw = if versus > 0.0 {
+        swing.raw / versus
+    } else {
+        0.0
+    };
+    let residual_source =
+        melee::outcome_damage(raw, kind, level_difference, 0.0).0 * critical_multiplier;
     let outcome = SwingOutcome {
         hand,
         kind,
         immune,
         absorbed,
+        residual_source,
         damage,
         scaled_loss,
         incoming_loss,
@@ -2361,11 +2406,23 @@ pub fn replay_healer_hit(
     );
     let damage = crate::level_scaling::damage_dealt(&attacker_scaling, &target, amount);
     let scaled_loss = crate::level_scaling::health_loss(&attacker_scaling, &target, damage);
+    let versus = world
+        .get::<AuraStatMods>(attacker)
+        .filter(|mods| mods.has_damage_done_versus())
+        .map_or(1.0, |mods| {
+            mods.damage_done_versus(crate::unit_creature_type::mask(
+                crate::unit_creature_type::get(world, victim),
+            ))
+        });
+    let raw = if versus > 0.0 { hit.raw / versus } else { 0.0 };
+    let residual_source =
+        melee::outcome_damage(raw, kind, level_difference, 0.0).0 * critical_multiplier;
     let mut outcome = SwingOutcome {
         hand,
         kind,
         immune,
         absorbed,
+        residual_source,
         damage,
         scaled_loss,
         incoming_loss: health_loss(world.get::<TrainingDummy>(victim).is_some(), scaled_loss),
@@ -2475,6 +2532,9 @@ fn record_swing_events(world: &mut World, attacker: Entity, target: Entity, outc
     };
     reward_swing_rage(world, attacker, target, rage_secs, damage);
     crate::spell_cast::log_event(world, swing_log_event(attacker, target, &outcome));
+    crate::spell_cast::scripts::apply_havoc_damage_policies(
+        world, attacker, target, None, damage, false,
+    );
     if outcome.npc_died || outcome.player_died {
         world.entity_mut(target).insert(KillingBlow(Some(attacker)));
         crate::auras::remove_on_death(world, target);

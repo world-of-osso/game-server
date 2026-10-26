@@ -111,7 +111,7 @@ pub(super) fn check_proc(
     {
         return false;
     }
-    if crate::spell_cast::scripts::owns_policy_proc(aura.spell_id) {
+    if crate::spell_cast::scripts::owns_policy_proc(world, aura.spell_id) {
         return false;
     }
     // SIMC_RET_TIER_MID2_DIVINE_PURPOSE_RELATIONSHIP owns these charges;
@@ -319,15 +319,17 @@ pub(super) fn absorb_amount(
     Some(health.max * percent / 100.0)
 }
 
-///1822's stealth bonus also applies to its named155722 bleed, frozen on apply.
-///Do not re-read stealth at each tick or modify arbitrary periodic auras.
-pub(super) fn snapshot_periodic_amount(
+/// Source-qualified native aura amounts, frozen on application and refresh.
+/// Periodic policies never re-read their launch bonuses at each tick.
+pub(super) fn snapshot_aura_amount(
     world: &World,
     caster: Entity,
     spell: &crate::spell_info::SpellInfo,
     effect: &crate::spell_info::SpellEffect,
     amount: f32,
 ) -> f32 {
+    let amount =
+        crate::spell_cast::scripts::snapshot_rod_amount(world, spell, effect.index, amount);
     let amount = if effect.aura == super::PERIODIC_DAMAGE_AURA {
         super::spell_mods::snapshot_periodic_amount(world, caster, spell, amount)
     } else {
@@ -408,9 +410,12 @@ fn check_inundate_proc(
     utility_cast && in_combat
 }
 
-pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
-    crate::spell_cast::scripts::register_feral_frenzy(&mut scripts);
-    crate::spell_cast::scripts::register_periodic_counters(&mut scripts);
+pub(super) fn register_class_scripts(
+    mut scripts: ResMut<AuraScripts>,
+    registry: Res<crate::spell_cast::script_registry::SpellScriptRegistry>,
+) {
+    crate::spell_cast::scripts::register_havoc(&mut scripts);
+    registry.register_early_auras(&mut scripts);
     scripts.0.insert(
         1236994,
         AuraScript {
@@ -419,7 +424,8 @@ pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
         },
     );
     crate::spell_cast::scripts::register_midnight_items(&mut scripts);
-    crate::spell_cast::scripts::register_lifecycle_policies(&mut scripts);
+    super::venomcursed::register(&mut scripts);
+    crate::spell_cast::scripts::register_lifecycle_policies(&mut scripts, &registry);
     crate::spell_cast::scripts::register_wdp_relationship(&mut scripts);
     crate::spell_cast::scripts::register_unbroken_rhythm(&mut scripts);
     scripts.0.insert(
@@ -453,6 +459,7 @@ pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
     super::spirit_wolf::register(&mut scripts);
     super::natures_guardian::register(&mut scripts);
     super::ret_sentence::register(&mut scripts);
+    crate::spell_cast::scripts::register_fire_procs(&mut scripts);
     scripts.0.insert(
         super::fel_devastation::FEL_DEVASTATION,
         AuraScript {
@@ -683,6 +690,7 @@ pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
         crate::spell_cast::scripts::RAPID_FIRE,
         AuraScript {
             on_periodic: Some(crate::spell_cast::scripts::cast_rapid_fire_tick),
+            on_natural_end: Some(crate::spell_cast::scripts::finish_rapid),
             ..Default::default()
         },
     );
@@ -725,7 +733,7 @@ pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
     );
     // Extend existing parent lifecycle entries rather than replacing their hooks.
     crate::spell_cast::scripts::register_xuens_battlegear(&mut scripts);
-    crate::spell_cast::scripts::register_channel_policies(&mut scripts);
+    crate::spell_cast::scripts::register_channel_policies(&mut scripts, &registry);
     crate::spell_cast::scripts::register_elemental_policies(&mut scripts);
     crate::spell_cast::scripts::register_cast_relationships(&mut scripts);
 }

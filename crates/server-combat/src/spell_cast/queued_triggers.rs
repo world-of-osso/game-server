@@ -16,6 +16,13 @@ enum QueuedCastKind {
     ScaledFullTrigger(f32),
 }
 
+pub(super) struct DestinationTrigger {
+    pub target: Entity,
+    pub spell_id: u32,
+    pub delay_ms: u32,
+    pub destination: [f32; 3],
+}
+
 pub(super) struct ScaledTrigger {
     pub target: Entity,
     pub spell_id: u32,
@@ -112,7 +119,7 @@ pub(super) fn schedule_force_cast(
 }
 
 /// Scripted FULL_MASK callback, sharing the ordinary owner/target lifetime checks.
-pub(super) fn schedule_full_trigger(
+pub fn schedule_full_trigger(
     world: &mut World,
     ctx: &super::EffectCtx,
     target: Entity,
@@ -126,6 +133,30 @@ pub(super) fn schedule_full_trigger(
         target,
         destination: None,
         spell_id,
+        depth: ctx.depth + 1,
+        item_level: ctx.spell.cast_item_level,
+    };
+    world
+        .resource_mut::<PendingTriggers>()
+        .0
+        .entry(due_ms)
+        .or_default()
+        .push_back(trigger);
+}
+
+/// Preserve the authored destination of a delayed full trigger.
+pub(super) fn schedule_destination_trigger(
+    world: &mut World,
+    ctx: &super::EffectCtx,
+    request: DestinationTrigger,
+) {
+    let due_ms = now_ms(world) + u64::from(request.delay_ms);
+    let trigger = QueuedTrigger {
+        kind: QueuedCastKind::FullTrigger,
+        caster: ctx.caster,
+        target: request.target,
+        destination: Some(request.destination),
+        spell_id: request.spell_id,
         depth: ctx.depth + 1,
         item_level: ctx.spell.cast_item_level,
     };
@@ -219,13 +250,19 @@ pub(crate) fn resolve_due(world: &mut World) {
                 );
             }
             QueuedCastKind::FullTrigger => {
-                if !super::cast_triggered_with_item_level(
+                let Some(mut spell) =
+                    super::load_triggered_spell(world, trigger.spell_id, trigger.depth)
+                else {
+                    continue;
+                };
+                spell.cast_item_level = trigger.item_level;
+                spell.cast_destination = trigger.destination;
+                if !super::launch_triggered_spell(
                     world,
                     trigger.caster,
-                    trigger.spell_id,
+                    &spell,
                     Some(trigger.target),
                     trigger.depth,
-                    trigger.item_level,
                 ) {
                     warn!("Delayed scripted spell {} refused", trigger.spell_id);
                 }

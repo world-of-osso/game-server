@@ -14,7 +14,9 @@ fn prepare_first_cast(targets: usize) -> Run {
     let start = run.app.world().resource::<Time>().elapsed();
     super::super::install_fixture_lifetimes(&mut run, start);
     super::super::engage(&mut run);
-    let mut rotation = (run.spec_driver.take().unwrap() as Box<dyn std::any::Any>).downcast::<Rotation>().unwrap();
+    let mut rotation = (run.spec_driver.take().unwrap() as Box<dyn std::any::Any>)
+        .downcast::<Rotation>()
+        .unwrap();
     for _ in 0..6000 {
         rotation
             .drive(run.app.world_mut(), run.actor, &run.targets)

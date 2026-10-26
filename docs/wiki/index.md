@@ -1,3 +1,4 @@
+- [Downstream spell scripts](systems/spell-script-crate.md) — combat-owned registry, ordered downstream policy slices and first five leaf modules; remaining implementations stay in combat.
 - [Elemental literal fixture](systems/simc-apl.md#elemental-fixture-262) — exact profile rows, native Maelstrom/spell admission and named-action target counts; numerical parity remains separate.
 - [Form combat clocks](systems/auras.md#form-combat-clocks--2026-10-23) — all7authored timing rows, native Cat/Bear timed RED and unshifted control; generic cadence/weapon terms retained; reconciliation qualification pending.
 - [Havoc literal fixture and Demonic](systems/simc-apl.md#havoc-fixture-577) — pinned source decisions, native cursor-targeted Meta, and talent-sourced before-channel transformation/extension; numeric parity remains open.
@@ -9,6 +10,7 @@
 
 - [Rogue literal fixture and effective resource values](systems/simc-apl.md#rogue-literal-fixture-and-effective-resource-values) — native Outlaw action binding, free-finisher value/payment separation and shared Cut to the Chase; numerical parity remains open.
 - [Literal spec drivers](systems/simc-apl.md#shared-literal-fixture-machinery) — one sorted registration per spec; spec-owned preparation, dispatch and reports; both actor identities by default.
+- [Marksmanship native relationships](systems/spell-casting.md#marksmanship-native-relationships--2026-10-25) — earned-buff eligibility, execution versus projectile timing, native residuals and primary/secondary ownership; numerical parity remains measurement-gated.
 - [Fire literal fixture](systems/simc-apl.md#fire-fixture-adapter) — exact rows, selected bindings, native proc relationships and reaction observations; numerical parity remains separate.
 - [Shared profile gear effects](systems/character-stats.md#shared-profile-effects--2026-10-25) — native consumables, oil, race and Omnium setup; Heart/Venomfang/fire relationships and neutral recipients.
 - [Ret Storm source qualification](../handoffs/ret-storm-gap-proof-ledger.md) — ranked root supply is separate from same-ID echoes; native Aura361 and approved bounded Sunrise strict RED→GREEN, actual root1.0/echo0.5 damage/hostile primary and background/no-Hero controls; core hand-order test and retained62melee cases pass; test-target/plain-bin checks pass once; parent full gate and excluded sources remain separate.
