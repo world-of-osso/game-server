@@ -699,7 +699,63 @@ fn fire_feedback_hot_streak_ignite_includes_native_inflame() {
         .amount;
     assert!(
         tick + 1.0 >= minimum_tick,
-        "Ignite must retain HS and native Inflame contributions in HP units: {tick} < {minimum_tick}; HP multiplier={hp_multiplier}"
+        "Ignite must retain HS and native Inflame contributions in HP units: {tick} < {minimum_tick}; HP multiplier={hp_multiplier}; damage={damage}; mastery={mastery}; inflame={inflame}; ticks={ticks}"
+    );
+}
+
+#[test]
+#[ignore = "requires exact Fire63 inputs and private70448 DB"]
+fn fire_feedback_fevered_stack_uses_native_talent_critical_damage() {
+    let hit = |with_fevered: bool| {
+        let _seed = crate::random::seed_scope(70_448);
+        let mut run = prepare_literal(63, 1).unwrap();
+        let target = run.targets[0];
+        if with_fevered {
+            crate::spell_cast::cast_triggered(
+                run.app.world_mut(),
+                run.actor,
+                383811,
+                Some(run.actor),
+                1,
+            );
+        }
+        start_native(&mut run, 108853, target);
+        let event = run
+            .app
+            .world()
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .find(|event| {
+                event.source == Some(run.actor.to_bits())
+                    && event.target == Some(target.to_bits())
+                    && event.spell_id == Some(108853)
+                    && event.kind == CombatLogKind::Damage
+            })
+            .unwrap();
+        assert!(event.crit);
+        event.amount as f32
+    };
+    let baseline = hit(false);
+    let fevered = hit(true);
+    let run = prepare_literal(63, 1).unwrap();
+    let percent = run
+        .app
+        .world()
+        .get::<ActiveAuras>(run.actor)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 383810)
+        .unwrap()
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap()
+        .amount;
+    let expected = baseline * (1.0 + percent / 100.0);
+    assert!(
+        (fevered - expected).abs() <= 2.0,
+        "one Fevered stack uses selected native talent damage: {baseline} -> {fevered}, expected{expected}"
     );
 }
 
