@@ -15,6 +15,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AfterFireDirectHit(fire_feedback_hit),
     SpellScriptHook::AfterFireOutcomeHit(fire_meteorite_hit),
     SpellScriptHook::OnCast(on_fire_cast),
+    SpellScriptHook::TargetDamageMultiplier(meteor_primary_multiplier),
 ];
 
 const COMBUSTION: u32 = 190319;
@@ -225,6 +226,44 @@ fn on_fire_cast(world: &mut World, caster: Entity, spell_id: u32, _depth: u8) {
         let reduction = script_effect_value(world, caster, PYROCOSM, 3);
         reduce_cooldown(world, caster, 108853, f64::from(reduction) / 1000.0);
     }
+}
+
+fn meteor_primary_multiplier(world: &World, caster: Entity, target: Entity, spell: &SpellInfo) -> f32 {
+    const METEOR_IMPACT: u32 = 351140;
+    const DEEP_IMPACT: u32 = 1254857;
+    if spell.id != METEOR_IMPACT || !selected(world, caster, DEEP_IMPACT) {
+        return 1.0;
+    }
+    let Some(destination) = spell.cast_destination else {
+        return 1.0;
+    };
+    // SimC76f8118 sc_mage.cpp4664–4668: native Deep Impact amplifies
+    // only the closest enemy to the authored destination, not the entire AoE.
+    if closest_meteor_target(world, caster, Vec3::from_array(destination)) != Some(target) {
+        return 1.0;
+    }
+    1.0 + script_effect_value(world, caster, DEEP_IMPACT, 0) / 100.0
+}
+
+fn closest_meteor_target(world: &World, caster: Entity, destination: Vec3) -> Option<Entity> {
+    use combat::maps::InMap;
+    use combat::spell_cast::targets::{Relation, relation_matches};
+    use shared::components::{Health, Position};
+    let map = world.get::<InMap>(caster)?;
+    let mut query = world.try_query::<(Entity, &Position, &Health, &InMap)>()?;
+    query.iter(world)
+        .filter(|(entity, _, health, candidate_map)| {
+            health.current > 0.0 && *candidate_map == map
+                && relation_matches(world, caster, *entity, Relation::Enemy)
+        })
+        .map(|(entity, position, _, _)| {
+            let distance = Vec3::new(position.x, position.y, position.z).distance_squared(destination);
+            (entity, distance)
+        })
+        .min_by(|(left, left_distance), (right, right_distance)| {
+            left_distance.total_cmp(right_distance).then_with(|| left.to_bits().cmp(&right.to_bits()))
+        })
+        .map(|(entity, _)| entity)
 }
 
 fn apply_controlled_destruction(world: &mut World, ctx: &EffectCtx, target: Entity) {
