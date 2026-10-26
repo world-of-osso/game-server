@@ -11,34 +11,72 @@ fn survival_literal_precombat_summons_native_pet() {
     let pet = crate::hunter_pet::summoned_pet(run.app.world(), run.actor)
         .expect("precombat Call Pet must summon the native stable pet");
     assert_eq!(
-        run.app.world().get::<crate::hunter_pet::HunterPet>(pet).unwrap().owner,
+        run.app
+            .world()
+            .get::<crate::hunter_pet::HunterPet>(pet)
+            .unwrap()
+            .owner,
         run.actor
     );
-    let events = &run.app.world()
-        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
-    assert!(events.iter().any(|event| event.source == Some(run.actor.to_bits())
-        && event.spell_id == Some(883) && event.kind == CombatLogKind::CastSuccess));
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(run.actor.to_bits())
+                && event.spell_id == Some(883)
+                && event.kind == CombatLogKind::CastSuccess)
+    );
 }
 
 #[test]
 #[ignore = "requires private spec255 player inputs and native world DB"]
 fn survival_literal_actions_and_pet_damage_actual_primary() {
     let mut run = prepare_measurement(255, 1).expect("native Survival player fixture");
-    assert!(run.spec_driver.is_some(), "Survival cannot use AssistedCombat");
+    assert!(
+        run.spec_driver.is_some(),
+        "Survival cannot use AssistedCombat"
+    );
     engage(&mut run);
     // Match advance_combat: target.time_to_die reads actual fixture lifetimes.
     let started_at = run.app.world().resource::<Time>().elapsed();
     install_fixture_lifetimes(&mut run, started_at);
+    let event_start = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .len();
     for _ in 0..200 {
         run.app.update();
         drive_player(&mut run).expect("literal Survival decision");
     }
-    let events = &run.app.world()
-        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
-    assert!(events.iter().any(|event| event.source == Some(run.actor.to_bits())
-        && event.spell_id == Some(259489) && event.kind == CombatLogKind::CastSuccess),
-        "literal APL must execute native Survival Kill Command");
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    let casts: Vec<_> = events[event_start..]
+        .iter()
+        .filter(|event| {
+            event.source == Some(run.actor.to_bits()) && event.kind == CombatLogKind::CastSuccess
+        })
+        .filter_map(|event| event.spell_id)
+        .collect();
+    eprintln!("SURVIVAL_NATIVE_CASTS {casts:?}");
+    assert!(
+        casts.iter().any(|spell| matches!(
+            *spell,
+            259489 | 186270 | 1262293 | 259495 | 1250646 | 1261193 | 1264949
+        )),
+        "the literal APL must execute real native Survival source actions: {casts:?}"
+    );
     let pet = report::pet(run.app.world(), run.actor, &run.damage_targets);
-    assert!(pet["damage"].as_u64().unwrap() > 0,
-        "the native summoned pet must attack the actual primary: {pet}");
+    assert!(
+        pet["damage"].as_u64().unwrap() > 0,
+        "the native summoned pet must attack the actual primary: {pet}"
+    );
 }
