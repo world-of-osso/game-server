@@ -218,6 +218,8 @@ mod melee_crit_taken_tests;
 #[cfg(test)]
 mod melee_hit_modifier_tests;
 mod missiles;
+/// Launch an already validated native plan without replacing its source primary.
+pub use missiles::launch as launch_planned_spell;
 pub mod open_lock;
 #[cfg(test)]
 mod open_lock_tests;
@@ -398,6 +400,7 @@ impl Plugin for SpellCastPlugin {
                     crate::game_objects::summoned::expire_objects.after(advance_casts),
                     area_trigger::update_area_triggers.after(advance_casts),
                     scripts::update_ground_pulses.after(advance_casts),
+                    scripts::update_enhancement_flurry.after(advance_casts),
                     scripts::update_unleashed.after(advance_casts),
                     toy_coin::catch_landed_coins.after(advance_casts),
                 ),
@@ -3559,10 +3562,7 @@ pub fn resolving_targets<'w>(world: &'w World, ctx: &EffectCtx<'_>) -> Option<&'
 }
 
 /// Actual direct damage of this native resolution, isolated from nested child casts.
-pub(super) fn resolving_damage<'w>(
-    world: &'w World,
-    ctx: &EffectCtx<'_>,
-) -> Option<&'w [(Entity, f32)]> {
+pub fn resolving_damage<'w>(world: &'w World, ctx: &EffectCtx<'_>) -> Option<&'w [(Entity, f32)]> {
     Some(resolving_frame(world, ctx)?.damage.as_slice())
 }
 

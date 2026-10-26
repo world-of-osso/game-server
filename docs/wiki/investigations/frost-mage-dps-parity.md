@@ -16,14 +16,17 @@ Verified: 2026-10-25. Spec64 uses the literal pinned76f8118 APL and native70448 
 |---|---|---|
 | Owned Freezing and stack-paid Shatter, primary exclusion | RED72e1a35007/15da49910f → GREEN5d884bd519; nine Frost controls | de6efa82f |
 | Controlled Instincts secondary copy and Infused Freezing | two RED9f79335000 → two GREEN2a2148ffbe; nine Frost controls retained | cd9e0e188 |
+| Orb-earned procs, Lance flight retention, cast supply, Splintering Orbs/Augury, Hand/tier/Ray | RED7d25e5c2dc/ba38b7e5e0/7e193c9c90 → all18native cases GREENbdb2e07889 | 6ecb05c789 |
 
-The second landing measured77,364.44 ST and105,096.15 three-target DPS (39.44%/35.20% of reference). Later shared changes require a fresh measurement before treating those numbers as current.
+The third landing measured117,989.23 ST and167,793.59 three-target DPS (60.15%/56.19% of reference). Later shared changes require a fresh measurement before treating those numbers as current.
 
 ## Investigation traps and remaining work
 
 - `dps_parity_gaps.py` matches spell IDs. SimC reports Frostbolt116, Ice Lance30455 and Glacial Spike199786 damage; native damage uses228597,228598 and228600. Read both reports before classifying those root IDs as missing damage.
-- Shatter remains the largest actual missing channel after the two landings. Orb-earned Fingers/Brain Freeze and native Lance flight retention failed the real-cast test7d25e5c2dc. That fix is measurement-gated separately.
-- Further source work includes Frostbolt/Spike/Ray/Orb-tick proc supply, Brain Freeze follow-ups, Splintering Orbs, Augury, Hand of Frost, Shatter tier Icicles and hit-side cooldown reductions. Do not replace these missing relationships with coefficient tuning.
+- After the third landing, actual remaining gaps rank ST Shatter23.6k, Splinter16.3k, Spike10.3k; three-target Shatter42.0k, Controlled Instincts20.0k, Orb18.7k and Splinter16.7k. The raw spell-ID report must be reconciled as above.
+- Native2RED193e699b7e proves both missing Deep Shatter critical amplification (plain/selected17,865) and missing post-consumption Brain Freeze Flurry amplification (plain/earned59,618). Their implementations remain separately GREEN/measurement-gated.
+- Native RED0a917790e7 proves missing paid-Lance Glaciate reduction: native4stacks expected0.4s, observed0s. Its running-charge test uses `full_recharge_time`, not admission `remains`, which is zero while another charge is usable.
+- Remaining unqualified relationships include Orb-tick Fingers and source/data modifier completeness. Do not replace missing relationships with coefficient tuning.
 - Shared flask and augment-rune bindings belong to the shared-consumables owner, not this investigation.
 
 ## Sources

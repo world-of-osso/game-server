@@ -51,6 +51,10 @@ Selected native155580 applies its owned155627 override aura, so ordinary Moonfir
 - Earned Brain Freeze Flurry snapshots native190446 effect2 on the real44614 execution and carries that effectiveness across the native costed228596 callback and its missile to228354. Spending or expiring the live buff cannot remove that launched benefit. Preserve native Effect64 costs, carrier speed, delay and payload coefficients (`sc_mage.cpp3957–3966/4002–4015`).
 - Deep Shatter's native periodic Dummy recalculates its zero-valued critical-damage spell modifier from native effect1's factor and current caster spell critical chance, including initial application. Keep its native spell mask and operation; do not replace Shatter coefficients (`sc_mage.cpp4365–4373`).
 
+- Actual paid Ice Lance primary stacks conjure selected native Force of Will Splinters using its effect3 stacks-per-conjure value. Selected native Glaciate effect2 milliseconds reduce running Ray recharge per shattered stack, never starting absent timers (`sc_mage.cpp4471–4481`).
+
+- Each real Frozen Orb bolt resolution that actually hits at least one unit rolls selected Everlasting Frost effect2 for one Fingers stack. Use the native resolution ledger to run this once per area pulse, not once per recipient or only when a preselected primary hits (`sc_mage.cpp4141–4147`).
+
 ### Frost Mage native Icicles and Glacial Spike
 
 - Selected Icicles1246832 uses its actual hasted PERIODIC_DUMMY clock to apply native205473 without a spell cast. The first native interval has the pinned random phase (`sc_mage.cpp5559–5581`); later intervals keep native timing. Reaching the actual counter cap enables1222865.
@@ -166,6 +170,16 @@ Selected native155580 applies its owned155627 override aura, so ordinary Moonfir
 
 ### Fire literal fixture
 
+- Fiery Rush's native permanent payload ends when its owner's Combustion ends (`sc_mage.cpp1453–1457`); its recovery-rate benefit must not persist between Combustion windows.
+
+- An owned Controlled Destruction target stack multiplies only new Ignite contributions with its native per-stack amount (`sc_mage.cpp1945–1946`). Never rescale the unpaid existing bank or read another caster's target stacks.
+
+- Selected Deep Impact amplifies only the closest live hostile recipient to the Meteor destination, with the native talent amount (`sc_mage.cpp4664–4668`); secondary recipients retain their unmodified native coefficient.
+
+- Each admitted Meteor or earned Meteorite schedules one native impact action selecting its area once, not one complete area impact per missile recipient (`sc_mage.cpp4721,4741–4744,4802–4808`). The simulation installs the production area-field catalog, so native Meteor Burn entry/expiry and periodic damage use actual authored data.
+
+- Native Inflame multiplies actual Hot Streak Ignite contributions by its selected talent amount (`sc_mage.cpp2397–2399`). Native Pyrocosm Fireball hits roll effect2 for one real Meteorite (`3845–3846`); each Meteorite execution reduces active Fire Blast recharge by native effect4 milliseconds once, regardless of target count (`4783–4792`).
+
 - Selected Overflowing Energy gains a native stack after noncritical Fireball/Frostfire Bolt and clears on their critical hits (`sc_mage.cpp1897–1898,3819`). Selected Fevered Incantation gains after direct Mage critical hits and clears on direct noncritical hits (`1900–1901`); apply these outcomes after the current hit batch (`5585–5605,7272–7293`). Fireball and Hot Streak-spell hits produce their caster-owned native Controlled Destruction target stack with native talent effect1×0.1 (`2457,3843,5648–5650`).
 
 - Ordinary noncritical Hot Streak producers preserve Heating Up during its first200ms (`sc_mage.cpp2196–2210`). Qualify this with an ordinary Fireball already in flight when ordinary Fire Blast earns Heating Up; triggered depth1 damage is not a Hot Streak producer.
@@ -186,6 +200,8 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 - Guaranteed critical hits predict their actual Heating Up acquisition; an observed Heating Up conversion predicts Hot Streak. A critical hit with Hot Streak already active preserves and predicts it without creating Heating Up.
 
 ### Havoc literal rotation
+
+- Native Felblade232893 dispatches213243 at its actual selected primary; native child damage and effect2 Fury supply the result, not an adapter resource grant. A landed Essence Break258860 applies owned320338 after250ms. Eligible native Chaos Strike/Annihilation and Blade Dance/Death Sweep hits against that caster-owned mark dispatch1245759 at the native per-target internal cooldown (SimC76f8118 sc_demon_hunter.cpp7073–7080,7542–7550,7837–7843,7870–7893,11186).
 
 - Selected First Blood206416 replaces Blade Dance/Death Sweep's primary with native391374/391378/393055/393054 at each authored effect64 delay. Base area strikes exclude only the immutable selected primary. The native selected talent effect0 supplies its primary damage bonus (SimC76f8118 sc_demon_hunter.cpp7040–7110,7252–7275,7324–7385).
 
@@ -302,6 +318,10 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 - Native Wither445474 keeps its actual counter stacks, but its periodic damage ignores that count. An ordinary recast preserves earned stacks without adding a refresh stack; explicit native stack applications retain normal counter advancement. Preserve native coefficients, tick phase and lifetime. Both265 and267 share this rule (SimC76f8118 `sc_warlock_actions.cpp1066,1174–1186`).
 - Wither's counter is not an ordinary damage-stack multiplier. Other stacking DoTs keep their existing behavior; Blackened Soul producers/collapse are separate relationships.
 
+### Destruction Incinerate funding
+
+- An ordinary native Incinerate29722 primary impact keeps its existing244670 base grant. Selected Diabolic Embers387173 adds its native effect0 percentage of that base; an actual critical impact adds0.1 displayed shard scaled by the same talent. Use native PowerType raw units and the shared energize/overflow pipeline, without another base grant or resource pool (SimC76f8118 `sc_warlock_actions.cpp3927–3931,4015–4025`). Unselected noncritical hits retain the native base amount. Secondary/triggered copy relationships are separate.
+
 ### Destruction periodic shard funding
 
 - Spec267 landed Wither445474 and Immolate157736 ticks grant0.1 displayed Soul Shard through the shared native power/overflow pipeline. A critical tick rolls its native direct spell445468/348 effect1 chance for one additional fragment. Immune ticks do not fund shards; fully absorbed landed ticks remain eligible. Native PowerType metadata supplies raw units (SimC76f8118 `sc_warlock_actions.cpp1108–1117,4047–4059`, `sc_warlock_init.cpp1319,1443`).
@@ -322,6 +342,9 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 - [ ] Dreadstalker, Imp Lord and Dominion guardians execute source-bound native actions from their actual actors. Only validated source inheritance is adopted; native coefficients and power costs are unchanged. Fresh Imp Lord initialization and its125-Energy readiness gate follow pinned `pets.cpp1680–1705`; this never resets an existing owner or pet pool. Prepared private data must publish the exact native summon-root templates through the existing importer.
 
 ### Shadow Priest literal parity controller
+
+- A Madness impact (including Slam's weak Madness, not its periodic ticks) launches a native148859 or1264175 projectile to each own live VT. Native1264104 effect1 owns Void selection/effectiveness; Void launches373279. Preserve source-parent identity through travel so only its apparition triggers1231479 Shadeburst, with native73510 soft cap. Native407469 boosts apparition damage on own Madness; these payloads use live Shadow Weaving (SimC76f8118 `sc_priest_shadow.cpp291–549/1296/2609–2650`).
+- Tormented Spirits' additional Pain producers, Auspicious Spirits' Insanity threshold and Haunting Shadows' DoT extensions remain separate unqualified relationships; native projectile E1/E2 must not unconditionally substitute for them.
 
 - Selected Psychic Link199484 copies its native effect0 fraction of eligible landed spell/tick damage to every other recipient with the caster's live Vampiric Touch. Native199486 supplies the damage payload; the echo cannot independently crit, hit its original recipient or use foreign VT (SimC76f8118 `sc_priest_shadow.cpp1521–1619/2655–2669`).
 
@@ -383,6 +406,9 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 - `empower_to` selects the real native release stage while retaining the selected hostile primary independently of self casts. Fire Breath dot facts observe native357209 owned by that actor. Disintegrate uses the shared channel decision seam, including action-bound `ticks_remain`.
 
 ### Measurement
+
+- [ ] Native measurements execute an independent300s sample for every comma-separated `DPS_PARITY_SEEDS` value, default `70448,1,2`. `report.seed` lists the actual seeds, `seed_dps` retains each native DPS, and `combat.dps` is their arithmetic mean. Invalid seed lists or a failed sample fail the measurement; no sample is silently omitted.
+- [ ] `combat.actions` averages actual per-spell damage, hits and cast counts over all samples, including zero contribution when an action is absent. Shares must preserve mean per-spell DPS for unchanged `dps_parity_gaps.py` consumers. Full reports remain in `<spec>.native.<count>.seed-<seed>.json`; `detail_seed` identifies first-seed buff, entity and other unaveraged details.
 
 - Origin-centered parity arenas provide explicit open collision/LOS services for native destination selection. They have no dungeon walls or baked-eye requirement, matching pinned `action.cpp1738–1752` target selection. This fixture mode must not change production map LOS or bypass native summon/spell metadata.
 
@@ -487,7 +513,11 @@ Selected Enhancement Conductive Energy455123 uses the completed native hit frame
 
 Selected1252373 makes a landed native Crash Lightning root schedule native1252431 Unleashed weapon strikes at one-second intervals. Native1252373 effect1 supplies the pulse count. Each pulse reevaluates the native Crash target list and uses the pinned90% target-occupancy roll, not a damage coefficient adjustment. Each execution snapshots and consumes its own native1299991 Short Circuit stack value; overlapping executions retain independent pulse state. Sources: pinned SimC `sc_shaman.cpp1490,4519–4532,6110–6135`.
 
-Actual466772 Doom Winds emits native469270 area damage on application and its native periodic effect2 ticks. It requires the caster's real living selected target; a missing/dead selected identity suppresses the pulse rather than selecting a substitute. Native destination/area geometry and damage metadata remain authoritative.
+Actual466772 Doom Winds emits native469270 area damage on application and its native periodic effect2 ticks. It requires the caster's real living selected target; a missing/dead selected identity suppresses the pulse rather than selecting a substitute. Native destination/area geometry and damage metadata remain authoritative. Selected114051 also draws an independent three-success600-card deck per actual MW consumed outside its active aura, with greater-than10-card success spacing within and across refills. Spending while Ascendance is active neither draws nor resets the deck. A success triggers background384352, including its native466772/Static producer, without activating Ascendance or starting the ordinary Doom button cooldown. Sources: pinned SimC `sc_shaman.cpp11809–11827,13099–13110`.
+
+Actual Strike weapon children32175/32176/115357/115360 roll native201845 Stormsurge with its native chance/mastery modifiers. A proc grants201846, restores all actual Strike charges, and grants470466 when319930 Stormblast is selected. Native319930's generated every-cast grant is suppressed. An ordinary Strike snapshots previously earned470466 before consuming one Stormsurge/Stormblast stack; both real weapon children emit390287 from their resolved damage times native319930 effect0. The copy cannot crit or reapply broad caster modifiers, but retains the pinned explicit live77223 mastery and384355 Elemental Weapons multipliers plus native target modifiers. Sources: pinned SimC `sc_shaman.cpp4449–4469,4702–4711,5597–5600,12125–12147,13184–13187,13212–13220`.
+
+Selected344357 Stormflurry rolls its native effect0 chance after each actual Strike execution, including its own background repeats. A success schedules the same native Strike root after a Gaussian200±25ms delay, retaining its selected target and prior Stormblast snapshot. The repeat does not press another foreground button or spend ordinary charges/GCD/resources. Native effect1 scales its weapon children, Crash payload and Ride chain once; Stormblast copies the already-scaled weapon result. Repeats retain real weapon procs but do not grant normal-root Elemental Assault or invoke Thorim. Sources: pinned SimC `sc_shaman.cpp4545–4561,4682–4689,5540–5545,5597–5608,5647,5685–5690,6610–6613,12041–12073`.
 
 Selected Ride the Lightning289874 emits native211094 once per actual Strike/Lava Lash execution, using its native chain targets. This background variant neither benefits from nor spends MW. Real Tempest casts spend one454015 stack, preserving the other earned proc; Thorim spends its current Tempest proc before its MW consumption can earn a new one.
 
@@ -620,3 +650,7 @@ Rotation/decision implementation belongs to the lead/rotation agents. No system 
 ### Ordinary native spell GCD haste
 
 Category133 ordinary spells apply native spell haste before the independent aura417 haste-regeneration path. Preserve melee/ranged defense and ability/ranged-slot exclusions, native750–1500ms bounds, and unmodified out-of-range base GCDs. TC a352b1fa `Spell.cpp9209–9224` and SimC76f8118 `action.cpp648–666,1285–1315` define this behavior. The native clock gate covers representative foreground actions for all40 specs at0%,25% and150% haste; aura417 retains its separate native controls.
+### Affliction native Nightfall
+
+- Landed owned Corruption146739 or Wither445474 ticks with selected108558 advance an independent uniform-initial/rollover threshold stream. Pinned base0.130 is normalized by active owned dots, native Creeping Death and selected Sataiel's Volition. This does not modify Wither stacks or damage.
+- Native264571 supplies stack cap, lifetime and cast-time modifiers. An admitted instant Shadow Bolt consumes one use; actual Drain Soul and Malefic Grasp executions consume one use. The additive foreground hook preserves native Shadow Bolt shard funding.

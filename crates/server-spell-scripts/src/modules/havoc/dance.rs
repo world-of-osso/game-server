@@ -1,10 +1,10 @@
 //! SimC76f8118 sc_demon_hunter.cpp7040–7110,7252–7275,7324–7385.
 use super::combat;
+use super::havoc::has_talent;
 use bevy::prelude::*;
-use combat::spell_info::{SpellEffect, SpellInfo};
 use combat::spell_cast::effects::{EffectCtx, EffectHandler};
 use combat::spell_cast::script_registry::{DamageAmountHook, SpellScriptHook};
-use super::havoc::has_talent;
+use combat::spell_info::{SpellEffect, SpellInfo};
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::EffectHandler(effect_handler),
@@ -24,7 +24,10 @@ fn trigger_dance(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, targe
         return;
     }
     let Some(primary) = ctx.primary_target() else {
-        error!(spell = ctx.spell.id, "First Blood lacks its selected primary");
+        error!(
+            spell = ctx.spell.id,
+            "First Blood lacks its selected primary"
+        );
         return;
     };
     let mut strike = effect.clone();
@@ -40,7 +43,14 @@ fn trigger_dance(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, targe
     combat::spell_cast::queued_triggers::schedule(world, ctx, effect, primary);
 }
 
-pub(super) fn filter_targets(world: &World, caster: Entity, spell: &SpellInfo, _effect: u8, primary: Option<Entity>, units: &mut Vec<Entity>) {
+pub(super) fn filter_targets(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    _effect: u8,
+    primary: Option<Entity>,
+    units: &mut Vec<Entity>,
+) {
     if matches!(spell.id, 199552 | 200685 | 210153 | 210155)
         && has_talent(world, caster, FIRST_BLOOD)
     {
