@@ -54,7 +54,7 @@ fn affliction_procs_real_bolts_and_grasp_ticks_earn_pinned_cunning_volley() {
     assert_eq!(owned_damage_hits(&run, 686), 40);
     let bolts = owned_damage_hits(&run, 453176);
     // SimC76f8118 init1232–1235/hpp1066–1067: SB-selected50% PRD,
-    // not talent effect5 (which is the native Volley enemy cap).
+    // not the talent's value5 (the native Volley enemy cap).
     assert!(
         (12..=28).contains(&bolts),
         "40 actual Bolts must earn the pinned50% stream: {bolts}"
