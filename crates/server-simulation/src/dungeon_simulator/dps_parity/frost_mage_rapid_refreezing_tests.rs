@@ -56,12 +56,14 @@ fn frost_mage_native_rapid_refreezing_comes_from_spike_not_unrelated_successes()
             crate::auras::RemoveReason::Consumed,
             |aura| matches!(aura.spell_id, 1310248 | 205473 | 1222865),
         );
-        crate::spell_cast::creature_cast(
+        literal_rotation::execution::execute(
             run.app.world_mut(),
             run.actor,
-            116,
-            Some(run.targets[0]),
-            false,
+            literal_rotation::execution::Execution::Spell(
+                116,
+                run.targets[0],
+                Some(run.targets[0]),
+            ),
         )
         .unwrap();
         preparation::finish_pending_setup(&mut run).unwrap();
@@ -81,12 +83,14 @@ fn frost_mage_native_rapid_refreezing_comes_from_spike_not_unrelated_successes()
                 },
             );
         }
-        crate::spell_cast::creature_cast(
+        literal_rotation::execution::execute(
             run.app.world_mut(),
             run.actor,
-            199786,
-            Some(run.targets[0]),
-            false,
+            literal_rotation::execution::Execution::Spell(
+                199786,
+                run.targets[0],
+                Some(run.targets[0]),
+            ),
         )
         .unwrap();
         preparation::finish_pending_setup(&mut run).unwrap();
