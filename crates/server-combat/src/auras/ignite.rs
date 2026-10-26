@@ -13,6 +13,7 @@ const INTENSIFYING_FLAME_DAMAGE: u32 = 419800;
 const PYROBLAST: u32 = 11366;
 const FLAMESTRIKE: u32 = 2120;
 const NATIVE_FLAMESTRIKE: u32 = 1254851;
+const IGNITION: u32 = 1254756;
 
 pub(super) fn check_damage(_world: &World, _aura: &AuraInstance, event: &AuraEvent) -> bool {
     // TC IsTriggeredByAura excludes the producer's own child. This scripted
@@ -62,7 +63,9 @@ pub(super) fn apply_damage(
     let target_multiplier = event.target.map_or(1.0, |target| {
         controlled_destruction_multiplier(world, unit, target)
     });
-    let amount = calculate_tick_amount(effect.amount, event, ticks, inflame) * target_multiplier;
+    let ignition = flamestrike_ignite_multiplier(world, unit, event.spell_id);
+    let amount =
+        calculate_tick_amount(effect.amount, event, ticks, inflame) * target_multiplier * ignition;
     crate::spell_cast::cast_triggered_with_effect0_amount(
         world,
         unit,
@@ -71,6 +74,20 @@ pub(super) fn apply_damage(
         1,
         amount,
     );
+}
+
+fn flamestrike_ignite_multiplier(world: &World, caster: Entity, spell: Option<u32>) -> f32 {
+    let flamestrike = matches!(spell, Some(FLAMESTRIKE | NATIVE_FLAMESTRIKE));
+    let selected = world
+        .get::<crate::class_progression::KnownSpells>(caster)
+        .is_some_and(|known| known.contains(IGNITION));
+    if !flamestrike || !selected {
+        return 1.0;
+    }
+    // SimC76f8118 sc_mage.cpp3896–3898: only Flamestrike's new
+    // Ignite contribution receives selected Ignition's native effect2.
+    let percent = crate::spell_cast::scripts::script_effect_value(world, caster, IGNITION, 1);
+    1.0 + percent / 100.0
 }
 
 fn controlled_destruction_multiplier(world: &World, caster: Entity, target: Entity) -> f32 {

@@ -1,6 +1,10 @@
+## 2026-10-26 — Fire Ignition contribution
+
+[Fire Ignite](systems/simc-apl.md#fire-fixture-adapter) now applies selected native Ignition's percentage only to each new Flamestrike contribution. Actual noncritical Flamestrike's unchanged tick/damage ratio has qualified RED proof; GREEN and measurement remain train-gated. Direct damage and existing unpaid bank are unchanged.
+
 ## 2026-10-26 — Fire Molten Fury execute
 
-[Fire target-versus policy](systems/simc-apl.md#fire-fixture-adapter) now reads selected native Molten Fury's health threshold and damage percentage. Actual Fire Blast RED2689→2689 instead of3092.35 is qualified; GREEN and measurement remain train-gated. No coefficient changes or generic aura303 rewrite.
+[Fire target-versus policy](systems/simc-apl.md#fire-fixture-adapter) now reads selected native Molten Fury's health threshold and damage percentage. Actual Fire Blast RED2689→2689 instead of3092.35 now passes; landeda0c868a8b via traina3b134bbe8. ST178387.61 is90.46% of reference;3T300096.76 is80.88%, so AoE parity remains open. No coefficient changes or generic aura303 rewrite.
 
 ## 2026-10-26 — Mage Inspired Intellect source
 
