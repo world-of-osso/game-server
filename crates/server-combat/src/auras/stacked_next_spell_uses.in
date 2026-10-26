@@ -9,4 +9,6 @@
     325202,
     436336,
     1265871,
+    // SimC76f8118 sc_hunter.cpp1407–1408: Tip stacks count uses, not magnitude.
+    260286,
 ]
