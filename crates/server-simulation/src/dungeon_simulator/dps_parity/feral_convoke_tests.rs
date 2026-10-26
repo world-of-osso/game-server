@@ -11,6 +11,7 @@ fn feral_native_convoke_keeps_its_unhasted_channel_lifetime() {
     let target = run.targets[0];
     crate::spell_cast::creature_cast(run.app.world_mut(), actor, 768, Some(actor), false).unwrap();
     preparation::finish_pending_setup(&mut run).unwrap();
+    engage(&mut run);
     literal_rotation::execution::execute(
         run.app.world_mut(),
         actor,
@@ -57,6 +58,7 @@ fn feral_native_cat_convoke_deals_child_damage_without_spending_energy_or_form()
     );
     crate::spell_cast::creature_cast(run.app.world_mut(), actor, 768, Some(actor), false).unwrap();
     preparation::finish_pending_setup(&mut run).unwrap();
+    engage(&mut run);
     let energy = |run: &Run| {
         crate::spell_cast::powers::power_value(run.app.world(), actor, PowerType::Energy).unwrap()
     };
