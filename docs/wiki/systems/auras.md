@@ -25,6 +25,16 @@ Native RED4db1ecbdad observes identical31098 Bolt damage for zero and one real i
 
 Sources: pinned SimC76f8118 `sc_shaman.cpp13212–13220`; [contract](../../specs/dps-parity.md#enhancement-fixture-driver), [dynamic amount](../../../crates/server-combat/src/spell_cast/scripts/enhancement_elemental_weapons.rs), [imbue callbacks](../../../crates/server-combat/src/spell_cast/scripts/enhancement_imbues.rs), [native damage test](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/enhancement_elemental_weapons_tests.rs).
 
+## Thunder Capacitor paid-stack refund — 2026-10-26
+
+Selected1262635 rolls its native effect1 percentage only after actual MW payment by normal/Thorim LB, CL or Tempest. The spending seam supplies the actual consumed count to the existing native counter/modifier generator. Arc/Ride backgrounds never reach that payment hook; zero spends and other spells are excluded. No damage values, proc timer or chance are changed.
+
+Native RED6260f1c7f7 samples32 genuinely admitted instant Bolts at GCD-ready boundaries: each5–9 MW balance becomes0 despite selected native20%. Supercharge is unselected. A future observed refund must include a real consumed-counter removal event, not skipped payment. The earning-test helper now counts the native admitted amount, because refunded stacks make a net counter delta invalid. The instant-Bolt control retains its consumption assertion through the actual counter-removal event and permits the native paid/refunded balances. Focused6516987437 passes the actual5→0 then consumed/refunded5→5 boundary and all5 generation cases; full57e5ee7aa1 passes30/31 native cases but the old linked-mode control is capped after its refunded clearing Bolt.
+
+Diagnostic7df90ef94d observes before10/after10/cap10 while the retained producer still has native amount1/period1000ms. That fixture now uses bounded real lightning casts until native capacity exists after any legitimate refund, observing acceptance directly instead of waiting another full GCD. It checks room below the native cap while preserving strict tick growth, no melee and final-parent expiry. Native187881 cast-time masks exclude Healing Surge8004, so healing is not used as an artificial clearing path. No resource values or chances are injected. Full corrected qualification and measurement remain pending.
+
+Sources: pinned SimC76f8118 `sc_shaman.cpp6687–6694,7462–7469,9978–9985`; [contract](../../specs/dps-parity.md#enhancement-fixture-driver), [refund policy](../../../crates/server-combat/src/spell_cast/scripts/enhancement_thunder_capacitor.rs), [native paid-cast case](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/enhancement_thunder_capacitor_tests.rs).
+
 ## Garrote stored literal multiplier — 2026-10-26
 
 Garrote already freezes its native Improved Garrote bonus in `SpellInfo.cast_damage_multiplier` and the applied bleed amount. The downstream703 declaration in `PersistentCastMultiplier` makes `periodic_snapshot::capture_multiplier` copy that same factor into each periodic effect's existing `persistent_multiplier` field on application and refresh. It does not change damage or infer a factor from tick amounts. The existing Feral fresh/live producer remains unchanged; this declaration qualifies stored Garrote metadata only.

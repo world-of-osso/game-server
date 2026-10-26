@@ -368,6 +368,21 @@ impl<'a> NativeFacts<'a> {
 
     fn dot_value(&self, operand: &str, action: Option<&Action>) -> Result<f64, String> {
         let (alias, property) = split_property(operand, "dot")?;
+        if matches!(property, "refreshable" | "remains" | "duration") {
+            let id = bound_spell(&self.bindings.buffs, alias, "dot")?;
+            self.spell(id)?;
+            let target = self.selected_target(action)?;
+            let active = self.read_owned_auras(target, id);
+            if active.iter().any(|aura| aura.expires_at.is_none()) {
+                // An indefinite DoT never enters a finite Pandemic window.
+                // Keep permanent-buff sentinels in target_aura/buff_remaining.
+                return Ok(if property == "refreshable" {
+                    0.0
+                } else {
+                    f64::INFINITY
+                });
+            }
+        }
         if property != "refreshable" {
             return self.target_aura(operand, action);
         }

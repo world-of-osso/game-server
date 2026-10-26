@@ -129,6 +129,12 @@ fn enhancement_real_maelstrom_weapon_makes_bolt_instant_and_is_consumed() {
         10,
         "ordinary melee must earn the native counter and its modifiers"
     );
+    let first_event = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .len();
     cast(&mut run, LIGHTNING_BOLT);
     assert!(
         run.app
@@ -138,10 +144,22 @@ fn enhancement_real_maelstrom_weapon_makes_bolt_instant_and_is_consumed() {
         "at least five MW stacks must make the real Bolt instant"
     );
     preparation::finish_pending_setup(&mut run).unwrap();
-    assert_eq!(
-        stacks(&run),
-        0,
-        "the native foreground Bolt must spend its counter"
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0[first_event..];
+    assert!(
+        events.iter().any(|event| {
+            event.kind == shared::protocol::CombatLogKind::AuraRemoved
+                && event.spell_id == Some(MAELSTROM_WEAPON)
+                && event.target == Some(run.actor.to_bits())
+        }),
+        "the native foreground Bolt must actually consume its counter before any refund"
+    );
+    assert!(
+        matches!(stacks(&run), 0 | 10),
+        "native payment either remains spent or Thunder restores its paid stacks"
     );
 }
 
