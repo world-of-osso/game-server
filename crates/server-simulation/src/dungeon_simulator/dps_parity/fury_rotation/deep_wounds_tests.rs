@@ -97,39 +97,76 @@ fn cast_native(run: &mut Run, spell: u32, target: Entity) {
 }
 
 #[test]
-#[ignore = "requires exact Arms71 player profile and native selected Deep Wounds"]
-fn arms_deep_wounds_still_applies_from_native_mortal_strike() {
-    let _seed_scope = crate::random::seed_scope(70_448);
-    // prepare_literal captures control before native setup; a real producer
-    // cast must run after the selected passive applications have completed.
-    let mut run = super::super::prepare_measurement(71, 1).unwrap();
-    let actor = run.actor;
-    let target = run.targets[0];
-    assert!(
-        crate::auras::has_aura(run.app.world(), actor, 1261060),
-        "the native selected Deep Wounds passive must be initialized before Mortal Strike"
-    );
-    crate::spell_cast::powers::change_power(run.app.world_mut(), actor, PowerType::Rage, 1300.0)
-        .unwrap();
-    cast_native(&mut run, 12294, target);
-    let events: Vec<_> = run
-        .app
-        .world()
-        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
-        .0
-        .iter()
-        .filter(|event| event.source == Some(actor.to_bits()) && event.spell_id == Some(12294))
-        .collect();
-    assert!(
-        events
-            .iter()
-            .any(|event| event.kind == shared::protocol::CombatLogKind::Damage && event.amount > 0),
-        "native Mortal Strike must land before testing its bleed producer: {events:?}"
-    );
-    assert!(
-        crate::auras::has_aura(run.app.world(), target, 262115),
-        "Fury's proc replacement must not disable Arms Mortal Strike's native producer: {events:?}"
-    );
+#[ignore = "requires exact Arms71 player profile and native selected Mortal Wounds"]
+fn arms_mortal_wounds_applies_only_on_mortal_strike_and_slam_crits() {
+    for action in [12294, 1464] {
+        let _seed_scope = crate::random::seed_scope(70_448);
+        let mut run = super::super::prepare_measurement(71, 1).unwrap();
+        super::super::engage(&mut run);
+        let actor = run.actor;
+        let target = run.targets[0];
+        assert!(crate::auras::has_aura(run.app.world(), actor, 1261062));
+        let mut critical_seen = false;
+        let mut normal_seen = false;
+        for _ in 0..16 {
+            crate::auras::remove_auras(
+                run.app.world_mut(),
+                target,
+                crate::auras::RemoveReason::Consumed,
+                |aura| aura.spell_id == 262115,
+            );
+            // Keep Slam as the real native Slam, not its earned Heroic replacement.
+            crate::auras::remove_auras(
+                run.app.world_mut(),
+                actor,
+                crate::auras::RemoveReason::Consumed,
+                |aura| aura.spell_id == 1269391,
+            );
+            crate::spell_cast::powers::change_power(
+                run.app.world_mut(),
+                actor,
+                PowerType::Rage,
+                1300.0,
+            )
+            .unwrap();
+            let cursor = run
+                .app
+                .world()
+                .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+                .0
+                .len();
+            cast_native(&mut run, action, target);
+            let events: Vec<_> = run
+                .app
+                .world()
+                .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+                .0[cursor..]
+                .iter()
+                .filter(|event| {
+                    event.source == Some(actor.to_bits())
+                        && event.spell_id == Some(action)
+                        && event.kind == shared::protocol::CombatLogKind::Damage
+                        && event.amount > 0
+                })
+                .cloned()
+                .collect();
+            let critical = events.iter().any(|event| event.crit);
+            critical_seen |= critical;
+            normal_seen |= events.iter().any(|event| !event.crit);
+            assert_eq!(
+                crate::auras::has_aura(run.app.world(), target, 262115),
+                critical,
+                "native Mortal Wounds follows the actual critical result, not every hit: action={action}, events={events:?}"
+            );
+            for _ in 0..120 {
+                run.app.update();
+            }
+        }
+        assert!(
+            critical_seen && normal_seen,
+            "both native outcomes must be exercised for{action}"
+        );
+    }
 }
 
 #[test]

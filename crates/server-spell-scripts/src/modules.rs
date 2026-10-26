@@ -42,6 +42,7 @@ register_modules! {
     affliction_instability: (2651, "modules/affliction_instability.rs"),
     affliction_nightfall: (2652, "modules/affliction_nightfall.rs"),
     after_cast_auras: (100, "modules/after_cast_auras.rs"),
+    arms_mortal_wounds: (715, "modules/arms_mortal_wounds.rs"),
     arms_paid_cooldowns: (712, "modules/arms_paid_cooldowns.rs"),
     arms_tactician: (713, "modules/arms_tactician.rs"),
     assassination_focus: (2592, "modules/assassination_focus.rs"),
