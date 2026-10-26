@@ -289,6 +289,7 @@ fn resolve_costed_trigger(world: &mut World, trigger: QueuedTrigger) {
 
 /// Remove one event before invoking it; nested zero-delay events follow it.
 pub(crate) fn resolve_due(world: &mut World) {
+    super::scripts::resolve_enhancement_discharges(world);
     super::scripts::resolve_frost_mage_events(world);
     let now_ms = now_ms(world);
     loop {

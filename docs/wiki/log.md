@@ -1,3 +1,7 @@
+## 2026-10-26 — Tempest-owned Enhancement buffs
+
+[Tempest buffs](systems/auras.md#tempest-owned-enhancement-buffs--2026-10-26) replace263's every-spell Storm Swell grant and supply Arc's native-use/ICD-gated delayed chain from the final actual recipient. Native11ab1f1e5e records ordinary-Bolt false-Swell and real-Tempest missing-Arc REDs. GREEN and integrated measurement remain pending;262 and native values remain unchanged.
+
 ## 2026-10-26 — Elemental Weapons dynamic amount
 
 [Elemental Weapons](systems/auras.md#elemental-weapons-dynamic-amount--2026-10-26) now derives native408390 amounts from selected384355 and real imbued hands. Matching-input Bolt RED4db1ecbdad records31098→31098 instead of +5% with one hand; GREEN and measurement remain pending. Native masks, coefficients and proc chances are unchanged.

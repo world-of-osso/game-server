@@ -3382,6 +3382,7 @@ fn resolve_effects(
         dest: None,
         chain_multiplier: 1.0,
     };
+    scripts::after_enhancement_chain(world, &ctx);
     scripts::after_resolved_hits(world, &ctx);
     let (damage, healing) = world
         .get_resource_mut::<ResolvingHits>()

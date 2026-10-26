@@ -276,6 +276,7 @@ fn consume_tempest(world: &mut World, caster: Entity, spell: u32) {
     if let Some(instance) = instance {
         auras::spend_stack(world, caster, instance);
     }
+    super::enhancement_tempest_buffs::grant(world, caster);
 }
 
 pub(super) fn after_lightning(world: &mut World, caster: Entity, spell: &SpellInfo) {

@@ -629,6 +629,8 @@ Only a pure Physical school mask uses target armor. Hybrid schools, including Do
 
 ### Enhancement fixture driver
 
+Actual Tempest grants selected Storm Swell455089 and one native Arc Discharge470532 stack. Ordinary spell events must not grant Storm Swell for263. Each eligible Chain/Ride chain's final actual recipient consumes one Arc use when its native400ms ICD permits and becomes the delayed325–425ms extra chain's primary. Extra chains may self-trigger outside that ICD; normal Arc benefits from live MW without spending it, while Ride Arc neither benefits nor spends. Arc uses do not multiply its native modifier amounts (effect attributes64). Preserve native masks, values, caps and duration, and Elemental262's separate policy. Sources: pinned SimC76f8118 `sc_shaman.cpp6587–6597,6631–6643,6709–6714,9994–10007,12437–12484`.
+
 Selected384355 Elemental Weapons supplies408390's native masked direct/periodic modifiers at talent effect0 ×0.1 per actually imbued hand. Real imbue gains/removals update the bonus; zero imbues or an unlearned talent remove it. Stormblast retains its explicit sourced exception without a second generic application. Sources: pinned SimC76f8118 `sc_shaman.cpp13212–13220`; native70448 supplies values and masks.
 
 Actual Windstrike weapon children115357/115360 ignore target armor. Native Doom469270 retains its Physical/Nature school but does not use Physical armor; ordinary Physical Stormstrike children remain armor-sensitive (SimC76f8118 `sc_shaman.cpp4726`, `action.cpp1686–1689`).

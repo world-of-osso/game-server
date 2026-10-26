@@ -13,4 +13,6 @@
     264571,
     // SimC76f8118 sc_hunter.cpp1407–1408: Tip stacks count uses, not magnitude.
     260286,
+    // Native470532s1/s2 EX_SUPPRESS_STACKING64; SimC parse_effects.cpp716–719.
+    470532,
 ]
