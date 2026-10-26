@@ -6,6 +6,14 @@ fn beast_mastery_natures_ally_guardian_attacks_and_expires_without_replacing_pet
     let mut run = prepare_measurement(253, 1).expect("native literal BM fixture");
     engage(&mut run);
     let main = crate::hunter_pet::summoned_pet(run.app.world(), run.actor).unwrap();
+    let permanent: Vec<_> = run
+        .app
+        .world_mut()
+        .query::<(Entity, &crate::hunter_pet::HunterPet)>()
+        .iter(run.app.world())
+        .filter(|(_, pet)| pet.owner == run.actor)
+        .map(|(unit, _)| unit)
+        .collect();
     literal_rotation::execution::execute(
         run.app.world_mut(),
         run.actor,
@@ -23,10 +31,10 @@ fn beast_mastery_natures_ally_guardian_attacks_and_expires_without_replacing_pet
         .collect();
     assert_eq!(
         pets.len(),
-        2,
+        permanent.len() + 1,
         "selected Nature's Ally must summon an additional real stable pet"
     );
-    let guardian = *pets.iter().find(|&&unit| unit != main).unwrap();
+    let guardian = *pets.iter().find(|unit| !permanent.contains(unit)).unwrap();
     crate::spell_cast::creature_cast(
         run.app.world_mut(),
         run.actor,

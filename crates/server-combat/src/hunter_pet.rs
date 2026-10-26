@@ -11,6 +11,8 @@
 //! Pet bar/AI: pet_control.rs. Not modelled: full pet base stats, stable slots beyond
 //! the five active ones, hunter pet death, and pets across map transfers.
 
+mod companions;
+pub(crate) use companions::{EFFECT_SUMMON_STABLED_PET, effect_summon_companion};
 mod guardians;
 pub(crate) use guardians::{
     EFFECT_SUMMON_STABLED_PET_AS_GUARDIAN, effect_summon_stabled_pet, is_stabled_guardian,
@@ -547,6 +549,7 @@ pub(crate) fn effect_summon_pet(world: &mut World, ctx: &EffectCtx, effect: &Spe
     };
     if let Some(pet) = pet {
         crate::spell_cast::log_summon(world, owner, pet, ctx.spell);
+        companions::trigger_summon_auras(world, owner);
     }
 }
 
@@ -749,6 +752,7 @@ pub(crate) fn remove_pet(world: &mut World, pet: Entity) {
         return;
     };
     persist_current_pet_health(world, owner);
+    companions::remove_companion(world, pet);
     crate::combat::combat_stop(world, pet);
     world.entity_mut(pet).despawn();
     if let Some(mut stable) = world.get_mut::<PetStable>(owner) {
@@ -1096,14 +1100,27 @@ fn restore_pet_stable(
 /// A pet whose owner left the world (logout: `Player::RemovePet(PET_SAVE_AS_CURRENT)`)
 /// or no longer has it out leaves the world; its slot stays as saved.
 fn remove_ownerless_pets(
-    pets: Query<(Entity, &HunterPet, Option<&guardians::StabledPetGuardian>)>,
+    pets: Query<(
+        Entity,
+        &HunterPet,
+        Option<&guardians::StabledPetGuardian>,
+        Option<&companions::StableCompanion>,
+    )>,
+    health: Query<&Health>,
     owners: Query<&PetStable, Without<crate::networking::PendingDespawn>>,
     mut commands: Commands,
 ) {
-    for (pet, hunter_pet, guardian) in &pets {
-        let still_out = owners
-            .get(hunter_pet.owner)
-            .is_ok_and(|stable| stable.summoned == Some(pet) || guardian.is_some());
+    for (pet, hunter_pet, guardian, companion) in &pets {
+        let bound_main_alive = companion.is_some_and(|companion| {
+            health
+                .get(companion.main)
+                .is_ok_and(|health| health.current > 0.0)
+        });
+        let still_out = owners.get(hunter_pet.owner).is_ok_and(|stable| {
+            stable.summoned == Some(pet)
+                || guardian.is_some()
+                || (bound_main_alive && stable.summoned == companion.map(|pet| pet.main))
+        });
         if !still_out {
             commands.entity(pet).despawn();
         }

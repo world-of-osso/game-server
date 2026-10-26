@@ -643,9 +643,12 @@ fn can_attack(world: &World, pet: Entity, target: Entity) -> bool {
 /// without an order.
 /// Server-side orders from an authenticated NPC companion, using the same pet AI.
 pub fn order_companion_pet(world: &mut World, owner: Entity, target: Option<Entity>) {
-    let Some(pet) = summoned_pet(world, owner) else {
-        return;
-    };
+    for pet in crate::hunter_pet::active_owned_pets(world, owner) {
+        order_pet_target(world, pet, target);
+    }
+}
+
+fn order_pet_target(world: &mut World, pet: Entity, target: Option<Entity>) {
     let at = world.get::<Position>(pet).copied();
     update_charm(world, pet, |charm| {
         charm.command = if target.is_some() {

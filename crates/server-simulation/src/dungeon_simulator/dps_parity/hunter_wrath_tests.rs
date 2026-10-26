@@ -6,7 +6,14 @@ fn native_bm_wrath_applies_pet_buffs_and_delayed_apex_strike() {
     let _seed = crate::random::seed_scope(70_448);
     let mut run = prepare_measurement(253, 1).expect("native literal BM fixture");
     engage(&mut run);
-    let main = crate::hunter_pet::summoned_pet(run.app.world(), run.actor).unwrap();
+    let permanent: Vec<_> = run
+        .app
+        .world_mut()
+        .query::<(Entity, &crate::hunter_pet::HunterPet)>()
+        .iter(run.app.world())
+        .filter(|(_, pet)| pet.owner == run.actor)
+        .map(|(unit, _)| unit)
+        .collect();
     let started = crate::spell_cast::now(run.app.world());
     literal_rotation::execution::execute(
         run.app.world_mut(),
@@ -19,13 +26,15 @@ fn native_bm_wrath_applies_pet_buffs_and_delayed_apex_strike() {
         .world_mut()
         .query::<(Entity, &crate::hunter_pet::HunterPet)>()
         .iter(run.app.world())
-        .find(|(unit, pet)| pet.owner == run.actor && *unit != main)
+        .find(|(unit, pet)| pet.owner == run.actor && !permanent.contains(unit))
         .map(|(unit, _)| unit)
         .expect("native Nature's Ally summon");
-    assert!(
-        crate::auras::has_aura(run.app.world(), main, 186254),
-        "Bestial Wrath must apply the main pet's native damage aura after its strike"
-    );
+    for pet in permanent {
+        assert!(
+            crate::auras::has_aura(run.app.world(), pet, 186254),
+            "Bestial Wrath must apply each permanent pet's native damage aura after its strike"
+        );
+    }
     while crate::spell_cast::now(run.app.world()) < started + 0.4 {
         run.app.update();
     }
