@@ -85,11 +85,16 @@ fn assert_swift_clock(spec: u32) {
     let mut run = prepare_swift_run(spec);
     for _ in 0..200 {
         let before = read_swing_clock(&run);
+        let tick = run.app.world().resource::<Time>().delta();
         run.app.update();
         let after = read_swing_clock(&run);
         let stable =
             before.haste == after.haste && before.generic_time_factor == after.generic_time_factor;
-        if !stable || after.remaining <= before.remaining {
+        // An off-hand swing pushes the other timer to ATTACK_DISPLAY_DELAY.
+        // Observed139ms ->200ms with off-hand42ms ->391ms is not a main swing.
+        // Qualify the hand by its pre-tick deadline, not any white damage event.
+        let main_was_due = before.remaining <= tick;
+        if !stable || !main_was_due || after.remaining <= before.remaining {
             continue;
         }
         let events = &run
