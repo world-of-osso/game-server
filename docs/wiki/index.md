@@ -1,6 +1,7 @@
+- [Destruction guaranteed-crit damage](systems/spell-casting.md#destruction-guaranteed-crit-damage--2026-10-26) — live crit chance supplies the selected Conflagrate/Shadowburn multiplier; native RED recorded, GREEN pending.
 - [Warlock periodic counters](systems/warlock-periodic-counters.md) — native Wither counter-only RED→GREEN; shared producer/collapse lifecycle native6GREEN on265/267; numerical parity remains open.
+- [Equipment proc eligibility](systems/character-stats.md#equipment-proc-eligibility--2026-10-25) — native idle Venomcursed999→correct permanent606 RED/GREEN; shared combat-reference gate passes four native groups; Ret/WW test-control RED→GREEN and four independently reproduced WW baseline failures are recorded.
 - [Arcane literal fixture](systems/simc-apl.md#arcane-fixture-62) — supplied profile rows and native class readiness; ST controller regression passes, numerical parity remains separate.
-- [Warlock periodic counters](systems/warlock-periodic-counters.md) — native Wither counters do not scale ticks or grow on refresh;265/267 actual-cast/tick RED→GREEN.
 - [Warlock periodic shard funding](systems/spell-casting.md#warlock-periodic-shard-funding--2026-10-25) — downstream Destruction-only funding, actual critical context and shared native pool/overflow; Affliction remains separate.
 - [Native target DoT duration](systems/simc-apl.md#native-target-dot-duration) — owned active state and native fresh duration, independent of refreshed lifetime.
 - [Subtlety Lingering Shadow](systems/spell-casting.md#subtlety-lingering-shadow--2026-10-25) — native Dance-expiry counter, periodic decay and per-recipient residual; native RED→GREEN, numerical parity open.

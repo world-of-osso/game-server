@@ -337,6 +337,11 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 - Native77220 mastery affects only the pinned `affected_by.chaotic_energies` action set. Actual unresolved direct hits and periodic updates sample1+mastery×U(0.5,1). The source-marked Chaos Bolt, Shadowburn and Rain of Fire payload instead use selected native387275 effect0 as the lower fraction. Read native mastery values; do not adjust damage coefficients (SimC76f8118 `sc_warlock_actions.cpp480–489` and each action's explicit flags).
 - Read-only direct-damage projections use the analytic mean without advancing native RNG or casting. Already-resolved copies do not receive a second multiplier; pets, items, racials and unmarked actions receive none from this relationship.
 
+### Destruction guaranteed-crit damage
+
+- Selected Conflagration of Chaos387108 scales Conflagrate17962 and Shadowburn17877 damage by one plus the live caster spell-crit fraction. The ability-specific guaranteed crit is not the multiplier input. Actual damage and pure forecasts must share this rule without rerolling damage or rescaling resolved copies (SimC76f8118 actions4511–4517,4838–4844).
+- Preserve the existing Chaos Bolt crit-chance scaling; do not apply it twice. Native crit changes, not a reference-derived damage coefficient, must drive this relationship.
+
 ### Shared Hellcaller Wither counters
 
 - Native Wither445474 keeps its actual counter stacks, but its periodic damage ignores that count. An ordinary recast preserves earned stacks without adding a refresh stack; explicit native stack applications retain normal counter advancement. Preserve native coefficients, tick phase and lifetime. Both265 and267 share this rule (SimC76f8118 `sc_warlock_actions.cpp1066,1174–1186`).

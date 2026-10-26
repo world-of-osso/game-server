@@ -1,3 +1,14 @@
+## 2026-10-25 — Equipment procs before combat
+
+[Equipment proc eligibility](systems/character-stats.md#equipment-proc-eligibility--2026-10-25) records the native idle Venomcursed RED, exact permanent Survival crit606 reconciliation and shared CombatRefs gate. Workspace check and native idle606, Survival6/Venomcursed1/MM19/Assassination22 pass. Train283a28a30a did not land because Ret/WW inherited its255/player fixture. Corrected per-spec probes pass Ret107/108 and WW52/57. Plain-master controls reproduce four WW baseline failures. Minimal test-only readiness/equipment isolation fixesd8c535677 pass the two remaining exact controls ina6c3a5d1b9/e2dabf1ecb after native RED63296cfcd5/97447efaec. Final four-group landing gate and all-spec remeasurement remain pending.
+## 2026-10-26 — Native Vanish lifecycle
+
+[Vanish removal ordering](systems/auras.md#vanish-removal-ordering--2026-10-26) records the observed1856 self-consumption cause, native source-attribute admission and expiry-before-last-stealth seam. Two lifecycle cases and same-code Rogue/attack controls pass;259 DPS remains below the target band. Outlaw measurement does not exercise Vanish.
+
+## 2026-10-26 — Destruction crit-chance damage
+
+[Selected Conflagrate/Shadowburn scaling](systems/spell-casting.md#destruction-guaranteed-crit-damage--2026-10-26) now uses the shared actual/predicted amount boundary and live caster spell crit. Native Conflagrate42039→42039 is genuine RED; existing CB control passes. No coefficient/reference tuning. GREEN remains pending.
+
 ## 2026-10-26 — Hellcaller counter lifecycle
 
 [Shared counters](systems/warlock-periodic-counters.md#counter-lifecycle) landed in `b6937d3bf310` with six native lifecycle cases GREEN and additive actual-UA application binding. The265-led probe also passes all six; independently owned Calamity/Wrath failures remain separate. Three-seed267ST94930.81/3T123087.79 are48.65%/47.94% of reference, not numerical parity. UA expiry callbacks remain independently owned.

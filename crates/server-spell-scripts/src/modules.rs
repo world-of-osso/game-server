@@ -58,6 +58,7 @@ register_modules! {
     cast_relationships: (370, "modules/cast_relationships.rs"),
     cast_resets: (90, "modules/cast_resets.rs"),
     clearcasting: (1000, "modules/clearcasting.rs"),
+    destruction_crit_scaling: (2673, "modules/destruction_crit_scaling.rs"),
     destruction_incinerate: (2671, "modules/destruction_incinerate.rs"),
     destruction_mastery: (2672, "modules/destruction_mastery.rs"),
     destruction_periodic: (2670, "modules/destruction_periodic.rs"),
