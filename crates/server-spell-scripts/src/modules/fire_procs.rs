@@ -7,12 +7,13 @@ use combat::class_progression::KnownSpells;
 use combat::spell_cast::script_registry::SpellScriptHook;
 use combat::spell_cast::scripts::{reduce_cooldown, script_effect_value};
 use combat::spell_cast::{self, effects::EffectCtx, queued_triggers};
-use combat::spell_info::SpellInfo;
+use combat::spell_info::{SpellInfo, SpellStore};
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::FireAuraRegistration(register),
     SpellScriptHook::BeforeProcLaunch(before_hot_streak_launch),
     SpellScriptHook::AfterFireDirectHit(fire_feedback_hit),
+    SpellScriptHook::AfterFireDirectHit(refund_from_the_ashes),
     SpellScriptHook::AfterFireOutcomeHit(fire_meteorite_hit),
     SpellScriptHook::OnCast(on_fire_cast),
     SpellScriptHook::TargetDamageMultiplier(meteor_primary_multiplier),
@@ -41,11 +42,13 @@ const CONTROLLED: u32 = 453268;
 const MAGE_FAMILY: u32 = 3;
 const PYROCOSM: u32 = 1260673;
 const METEORITE_IMPACT: u32 = 449569;
+const FROM_THE_ASHES: u32 = 342344;
 
 #[derive(Component, Default)]
 struct FireProcState {
     sphere_attempts: u32,
     combustion_procs: usize,
+    ashes_ready_at: Option<f64>,
 }
 
 fn selected(world: &World, caster: Entity, talent: u32) -> bool {
@@ -213,6 +216,42 @@ pub(crate) fn fire_feedback_hit(world: &mut World, ctx: &EffectCtx, target: Enti
             schedule_meteorites(world, ctx, target, 1);
         }
     }
+}
+
+fn refund_from_the_ashes(world: &mut World, ctx: &EffectCtx, _target: Entity, _crit: bool) {
+    // SimC76f8118 sc_mage.cpp2116–2120: eligible actual hits restore
+    // native Fire Blast recharge progress, respecting the talent's native ICD.
+    // Producers:3689,3821,4557,4905,5040; Pyromaniac copies are excluded.
+    let eligible = matches!(ctx.spell.id, 133 | 431044 | 108853 | 11366 | 2948 | 31661);
+    if !eligible || !selected(world, ctx.caster, FROM_THE_ASHES) {
+        return;
+    }
+    ensure_state(world, ctx.caster);
+    let now = auras::aura_now(world);
+    let ready_at = world
+        .get::<FireProcState>(ctx.caster)
+        .unwrap()
+        .ashes_ready_at;
+    if ready_at.is_some_and(|deadline| now < deadline) {
+        return;
+    }
+    let icd_ms = world
+        .resource::<SpellStore>()
+        .get(FROM_THE_ASHES)
+        .and_then(|spell| spell.aura_options.as_ref())
+        .expect("native From the Ashes proc options")
+        .proc_category_recovery_ms;
+    world
+        .get_mut::<FireProcState>(ctx.caster)
+        .unwrap()
+        .ashes_ready_at = Some(now + f64::from(icd_ms) / 1000.0);
+    let adjustment_ms = script_effect_value(world, ctx.caster, FROM_THE_ASHES, 0);
+    reduce_cooldown(
+        world,
+        ctx.caster,
+        108853,
+        -f64::from(adjustment_ms) / 1000.0,
+    );
 }
 
 fn on_fire_cast(world: &mut World, caster: Entity, spell_id: u32, _depth: u8) {
