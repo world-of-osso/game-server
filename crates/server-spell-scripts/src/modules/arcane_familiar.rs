@@ -159,5 +159,5 @@ fn energize_from_assault(world: &mut World, caster: Entity, spell: &SpellInfo, _
         dest: None,
         chain_multiplier: 1.0,
     };
-    spell_cast::effects::energize_unit(world, &ctx, caster, amount, false);
+    spell_cast::effects::energize_unit(world, &ctx, caster, PowerType::Mana, amount, false);
 }
