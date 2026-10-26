@@ -1246,6 +1246,8 @@ fn expected_school_damage(
 ) -> f32 {
     let amount = scaled_amount(world, ctx.caster, ctx.spell, effect)
         + super::scripts::empower_damage_bonus(world, ctx.caster, ctx.spell);
+    let amount = amount
+        * super::script_registry::expected_damage_multiplier(world, ctx.caster, target, ctx.spell);
     let critical = critical_damage_amount(
         world,
         ctx.caster,
@@ -1816,8 +1818,11 @@ fn deal_damage_and_report(
     world: &mut World,
     ctx: &EffectCtx,
     target: Entity,
-    damage: DamageInput,
+    mut damage: DamageInput,
 ) -> f32 {
+    if !damage.resolved_source {
+        damage.amount *= super::script_registry::actual_damage_multiplier(world, ctx, target);
+    }
     deal_source_damage_and_report(world, ctx, target, damage, None)
 }
 
@@ -2038,6 +2043,7 @@ fn deal_source_damage_and_report(
         periodic,
     );
     if !resolved_source {
+        super::scripts::enhancement_weapon_damage(world, ctx, target, amount);
         super::script_registry::resolved_damage(world, ctx, target, crit, amount);
     }
     if periodic {
@@ -2694,6 +2700,11 @@ fn trigger_spell(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, targe
     spell.cast_item_level = ctx.spell.cast_item_level;
     spell.cast_damage_multiplier =
         super::scripts::frost_flurry_damage_multiplier(world, ctx.caster, ctx.spell, spell.id);
+    if let Some(multiplier) =
+        super::scripts::enhancement_flurry_weapon_multiplier(world, ctx.caster, ctx.spell, spell.id)
+    {
+        spell.cast_damage_multiplier = Some(multiplier);
+    }
     let target = trigger_recipient(ctx, &spell, target);
     super::launch_triggered_spell(world, ctx.caster, &spell, target, depth);
 }

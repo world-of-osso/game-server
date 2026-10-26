@@ -339,7 +339,46 @@ def run_executable(entry, test, executable, cwd, entry_log):
         f.write(f"\n$ {shlex.join(command)}\n{out.stdout}")
     ran = sum(int(m) for m in re.findall(r"test result: \w+\. (\d+) passed; (?:\d+) failed", out.stdout))
     ran += sum(int(m) for m in re.findall(r"test result: \w+\. \d+ passed; (\d+) failed", out.stdout))
-    return out.returncode, ran
+    # libtest interleaves panic output with "test X ... FAILED"; the closing summary lists names.
+    failed = {name for block in re.findall(r"^failures:\n((?:    \S+\n)+)\ntest result:", out.stdout, re.M)
+              for name in block.split()}
+    return out.returncode, ran, failed
+
+
+def test_file(name, rev):
+    """Path of the file defining test function `name` (last path segment) at `rev`, or None."""
+    fn = name.rsplit("::", 1)[-1]
+    out = git("grep", "-l", "-w", f"fn {fn}", rev, "--", "crates", check=False).stdout.split()
+    return out[0].split(":", 1)[1] if out else None
+
+
+def foreign_failures_only(entry, failed):
+    """A combined tree also contains other entries' tests; a broad filter can select one that
+    another entry added or changed and that fails for that owner (2026-10-26: Assassination's
+    in-flight Doomblade/Focus tests rejected Feral twice). A failure is this entry's unless the
+    test file is identical in the combined tree and in master merged with this entry alone."""
+    alone = git("merge-tree", "--write-tree", "origin/master", entry["commit"], check=False)
+    if alone.returncode:
+        return False
+    alone_tree = alone.stdout.split()[0]
+
+    def body(rev, path, fn):
+        text = git("show", f"{rev}:{path}", check=False).stdout.splitlines()
+        for i, line in enumerate(text):
+            if re.search(rf"\bfn {re.escape(fn)}\b", line):
+                indent = line[:len(line) - len(line.lstrip())]
+                end = next((j for j in range(i + 1, len(text)) if text[j] == f"{indent}}}"), len(text))
+                # The train formats the combined tree, so compare without whitespace/trailing commas.
+                return re.sub(r",(?=[)\]}])", "", re.sub(r"\s+", "", "".join(text[i:end + 1])))
+        return None
+
+    def foreign(name):
+        # Compared per test function, so this entry's own edits in a shared test file stay its own.
+        fn = name.rsplit("::", 1)[-1]
+        path = test_file(name, "HEAD")
+        return path is not None and body(alone_tree, path, fn) != body("HEAD", path, fn)
+
+    return bool(failed) and all(foreign(name) for name in failed)
 
 
 def run_tests(entries, log):
@@ -357,10 +396,24 @@ def run_tests(entries, log):
                 jobs += [(entry, test, exe, cwd, entry_log) for exe, cwd in found]
     with ThreadPoolExecutor(TEST_PARALLEL) as pool:
         codes = list(pool.map(lambda job: ((job[0]["id"], tuple(job[1])), run_executable(*job)), jobs))
-    failing = broken | {key[0] for key, (code, _) in codes if code}
+    by_id = {e["id"]: e for e in entries}
+    failed_names, nonzero = {}, set()
+    for key, (code, _, names) in codes:
+        if code:
+            nonzero.add(key[0])
+            failed_names.setdefault(key[0], set()).update(names)
+    # Only landings: a probe or RED twin must never turn a real failure into a pass.
+    foreign = {i for i in nonzero - broken if i in failed_names and by_id[i]["land"]
+               and len(failed_names[i]) and foreign_failures_only(by_id[i], failed_names[i])
+               # Every nonzero run must be explained by named failures (a panic outside a test is not).
+               and all(names for key, (code, _, names) in codes if key[0] == i and code)}
+    for i in foreign:
+        with Path(by_id[i]["test_log"]).open("a") as f:
+            f.write(f"\nIgnored failures of tests added by other entries in this tree: {sorted(failed_names[i])}\n")
+    failing = broken | (nonzero - foreign)
     # A --test that runs no test at all (a stale filter or package) is a failure, not a pass.
     ran = {}
-    for key, (_, count) in codes:
+    for key, (_, count, _) in codes:
         ran[key] = ran.get(key, 0) + count
     empty = {e["id"] for e in entries for t in e["tests"]
              if e["id"] not in broken and ran.get((e["id"], tuple(t)), 0) == 0}

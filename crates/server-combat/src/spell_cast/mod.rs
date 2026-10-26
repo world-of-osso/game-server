@@ -159,7 +159,10 @@ mod expel_harm_tests;
 #[cfg(test)]
 mod fel_devastation_tests;
 mod ferocious_bite;
-pub use ferocious_bite::read_maximum_energy as read_ferocious_bite_maximum_energy;
+pub use ferocious_bite::{
+    read_extra_energy_modifier as read_ferocious_bite_extra_energy_modifier,
+    read_maximum_energy as read_ferocious_bite_maximum_energy,
+};
 pub use resource_facts::read_prepared_spell as read_resource_prepared_spell;
 #[cfg(test)]
 mod full_trigger_dead_target_tests;
@@ -215,6 +218,8 @@ mod melee_crit_taken_tests;
 #[cfg(test)]
 mod melee_hit_modifier_tests;
 mod missiles;
+/// Launch an already validated native plan without replacing its source primary.
+pub use missiles::launch as launch_planned_spell;
 pub mod open_lock;
 #[cfg(test)]
 mod open_lock_tests;
@@ -395,6 +400,7 @@ impl Plugin for SpellCastPlugin {
                     crate::game_objects::summoned::expire_objects.after(advance_casts),
                     area_trigger::update_area_triggers.after(advance_casts),
                     scripts::update_ground_pulses.after(advance_casts),
+                    scripts::update_enhancement_flurry.after(advance_casts),
                     scripts::update_unleashed.after(advance_casts),
                     toy_coin::catch_landed_coins.after(advance_casts),
                 ),
