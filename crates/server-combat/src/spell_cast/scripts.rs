@@ -80,6 +80,7 @@ mod enhancement_strikes;
 mod enhancement_tempest_buffs;
 pub(super) use enhancement_tempest_buffs::after_chain as after_enhancement_chain;
 pub(super) use enhancement_tempest_buffs::resolve_due as resolve_enhancement_discharges;
+mod enhancement_thunder_capacitor;
 mod enhancement_tier;
 mod enhancement_unleashed;
 pub(super) use enhancement_strikes::check_cast as check_enhancement_cast;

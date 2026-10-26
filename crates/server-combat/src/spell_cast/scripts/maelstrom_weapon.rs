@@ -124,6 +124,7 @@ pub(crate) fn consume(world: &mut World, caster: Entity, spell: &SpellInfo) {
     crate::auras::enhancement_power::grant_for_spending(world, caster, spent);
     reduce_tempo_recharge(world, caster, spent);
     super::enhancement_spending::grant_for_spending(world, caster, spent);
+    super::enhancement_thunder_capacitor::refund(world, caster, spell, spent);
 }
 
 fn reduce_tempo_recharge(world: &mut World, caster: Entity, spent: u8) {
