@@ -97,7 +97,10 @@ fn havoc_blind_fury_native_channel_regenerates_fury_without_weapon_hits() {
     let _seed = crate::random::seed_scope(70_448);
     let mut run = prepare_literal(577, 1).unwrap();
     havoc_tests::earn_havoc_fury(&mut run, 30.0);
-    crate::combat::attack_stop(run.app.world_mut(), run.actor);
+    run.app
+        .world_mut()
+        .entity_mut(run.actor)
+        .remove::<crate::combat::AutoAttack>();
     cast(&mut run, 198013, false);
     let fury = |run: &Run| {
         crate::spell_cast::powers::power_value(
