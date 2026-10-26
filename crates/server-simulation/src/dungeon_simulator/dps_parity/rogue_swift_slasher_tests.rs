@@ -4,6 +4,7 @@ use shared::protocol::CombatLogKind;
 
 struct SwingClock {
     remaining: Duration,
+    off_hand_remaining: Duration,
     haste: f32,
     generic_time_factor: f32,
     expected_seconds: f32,
@@ -65,6 +66,10 @@ fn read_swing_clock(run: &Run) -> SwingClock {
             .get::<crate::combat::AutoAttack>(run.actor)
             .unwrap()
             .timer,
+        off_hand_remaining: world
+            .get::<crate::combat::AutoAttack>(run.actor)
+            .unwrap()
+            .off_hand_timer,
         haste: stats.haste_pct,
         generic_time_factor,
         expected_seconds: generic * (1.0 + slice) / (1.0 + slice + haste * swift),
@@ -80,11 +85,16 @@ fn assert_swift_clock(spec: u32) {
     let mut run = prepare_swift_run(spec);
     for _ in 0..200 {
         let before = read_swing_clock(&run);
+        let tick = run.app.world().resource::<Time>().delta();
         run.app.update();
         let after = read_swing_clock(&run);
         let stable =
             before.haste == after.haste && before.generic_time_factor == after.generic_time_factor;
-        if !stable || after.remaining <= before.remaining {
+        // An off-hand swing pushes the other timer to ATTACK_DISPLAY_DELAY.
+        // Observed139ms ->200ms with off-hand42ms ->391ms is not a main swing.
+        // Qualify the hand by its pre-tick deadline, not any white damage event.
+        let main_was_due = before.remaining <= tick;
+        if !stable || !main_was_due || after.remaining <= before.remaining {
             continue;
         }
         let events = &run
@@ -103,8 +113,11 @@ fn assert_swift_clock(spec: u32) {
         let actual = after.remaining.as_secs_f32();
         assert!(
             (actual - before.expected_seconds).abs() <= 0.0501,
-            "spec{spec} native swing must include Swift Slasher, within one50ms tick: actual={actual}, expected={}",
-            before.expected_seconds
+            "spec{spec} native swing must include Swift Slasher, within one50ms tick: actual={actual}, expected={}, before_main={:?}, before_off={:?}, after_off={:?}",
+            before.expected_seconds,
+            before.remaining,
+            before.off_hand_remaining,
+            after.off_hand_remaining
         );
         return;
     }
