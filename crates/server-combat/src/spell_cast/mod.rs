@@ -2781,6 +2781,7 @@ fn execute_cast_with_primary(
     disenchant::check_cast(world, caster, spell)?;
     let mut prepared = resources::snapshot(world, caster, spell, &costs);
     prepared.cast_primary_target = primary_target;
+    prepared.cast_executed_target = explicit;
     let plan = plan_targets(world, caster, &prepared, explicit, false)?;
     // SimC76f8118 sc_mage.cpp2722–2731: freeze Barrage recipients before
     // Orb Barrage, but include the Orb root's charge in damage modifiers.
@@ -3988,6 +3989,7 @@ pub fn launch_triggered_spell(
 ) -> bool {
     let mut prepared = spell.clone();
     prepared.cast_primary_target = explicit;
+    prepared.cast_executed_target = explicit;
     let consumed_damage =
         scripts::capture_consumed_damage_modifier(world, caster, &mut prepared, false);
     let spell = &prepared;
@@ -4058,6 +4060,7 @@ fn execute_costed_trigger(
     crate::profession::check_cast_items(world, caster, spell)?;
     let mut prepared = resources::snapshot(world, caster, spell, &costs);
     prepared.cast_primary_target = primary_target;
+    prepared.cast_executed_target = explicit;
     let plan = plan_targets(world, caster, &prepared, explicit, true)?;
     crate::auras::rogue::prepare_cast(world, caster, explicit, &mut prepared);
     let consumed_damage =

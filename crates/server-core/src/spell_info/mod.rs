@@ -117,6 +117,9 @@ pub struct SpellInfo {
     /// Read-only to hit scripts; never inferred from an effect's self/area recipients.
     #[serde(skip)]
     pub cast_primary_target: Option<Entity>,
+    /// Validated explicit unit for this execution, distinct from controller metadata.
+    #[serde(skip)]
+    pub cast_executed_target: Option<Entity>,
     /// Sourced ordinary-hit policy inputs; triggered catalog clones keep None.
     #[serde(skip)]
     pub cast_policy_context: Option<Box<CastPolicyContext>>,
