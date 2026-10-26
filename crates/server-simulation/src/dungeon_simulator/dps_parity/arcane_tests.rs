@@ -45,6 +45,70 @@ fn grant(run: &mut Run, spell: u32, count: u8) {
     }
 }
 
+fn expected_charge_bonus(run: &Run, spell: u32) -> f32 {
+    let world = run.app.world();
+    let store = world.resource::<crate::spell_info::SpellStore>();
+    let index = u8::from(spell == 44425);
+    let effect = |id, index| {
+        store.get(id).unwrap().effects.iter().find(|effect| effect.index == index).unwrap()
+    };
+    let mastery = world.get::<crate::stats::CharacterStats>(run.actor).unwrap().mastery_points;
+    let prodigious = world.get::<ActiveAuras>(run.actor).unwrap().iter()
+        .find(|aura| aura.spell_id == 384612)
+        .and_then(|aura| aura.effects.iter().find(|effect| effect.index == index))
+        .map_or(0.0, |effect| effect.amount);
+    assert!(mastery > 0.0 && prodigious > 0.0, "native fixture must exercise Savant and Prodigious Savant");
+    // SimC76f8118 sc_mage.cpp2076–2083: mastery augments the per-charge
+    // term; Prodigious Savant multiplies mastery, not the base charge bonus.
+    (effect(36032, index).base_points
+        + mastery * effect(190740, index + 1).bonus_coefficient * (1.0 + prodigious / 100.0)) / 100.0
+}
+
+fn sample_charge_hit(spell: u32, charges: f32) -> (f32, bool, f32) {
+    let mut run = prepare_literal(62, 1).unwrap();
+    crate::spell_cast::powers::change_power(run.app.world_mut(), run.actor,
+        shared::components::PowerType::ArcaneCharges, charges).unwrap();
+    assert!(charges == 0.0 || stacks(&run, 36032) > 0, "real power change must also exercise native36032");
+    let per_charge = expected_charge_bonus(&run, spell);
+    // Start the same native RNG stream after fixture setup, without replacing
+    // native crit, variance, gear, charge auras, or projectile delivery.
+    let _seed = crate::random::seed_scope(70448);
+    cast(&mut run, spell);
+    for _ in 0..20 { run.app.update(); }
+    let hits = run.app.world().resource::<ObservedCombatEvents>().0.iter()
+        .filter(|event| event.source == Some(run.actor.to_bits())
+            && event.target == Some(run.targets[0].to_bits())
+            && event.spell_id == Some(spell) && event.kind == CombatLogKind::Damage)
+        .collect::<Vec<_>>();
+    assert_eq!(hits.len(), 1, "one actual native{spell} impact at{charges} charges");
+    (hits[0].amount as f32, hits[0].crit, per_charge)
+}
+
+fn assert_charge_hit_formula(spell: u32) {
+    let (base, critical, per_charge) = sample_charge_hit(spell, 0.0);
+    assert!(base > 0.0);
+    for charges in [2.0, 4.0] {
+        let (damage, charged_critical, charged_bonus) = sample_charge_hit(spell, charges);
+        assert_eq!(charged_critical, critical, "identical native crit stream");
+        assert_eq!(charged_bonus, per_charge, "same native mastery/talent values");
+        let expected = base * (1.0 + charges * per_charge);
+        assert!((damage - expected).abs() <= expected * 0.005 + 2.0,
+            "native{spell}, charges={charges}, base={base}, per_charge={per_charge}, expected={expected}, actual={damage}");
+    }
+}
+
+#[test]
+#[ignore = "requires private native70448 DB and exact Arcane62 inputs"]
+fn arcane_charge_damage_barrage_applies_source_multiplier_once_per_hit() {
+    assert_charge_hit_formula(44425);
+}
+
+#[test]
+#[ignore = "requires private native70448 DB and exact Arcane62 inputs"]
+fn arcane_charge_damage_blast_applies_source_multiplier_once_per_hit() {
+    assert_charge_hit_formula(30451);
+}
+
 #[test]
 #[ignore = "requires private native70448 DB and exact Arcane62 inputs"]
 fn arcane_batch_surge_guarantees_clearcasting() {
