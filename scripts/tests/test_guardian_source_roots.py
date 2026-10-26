@@ -32,6 +32,30 @@ class GuardianSourceRootFixtureTests(unittest.TestCase):
 
 @unittest.skipUnless(os.environ.get("DPS_PARITY_WORLD_DB"), "DPS_PARITY_WORLD_DB native DB fixture is unset")
 class GuardianSourceRootsTests(unittest.TestCase):
+    def test_default_preparation_imports_authentic_desperate_soul_once(self):
+        entry = 254505
+        with tempfile.TemporaryDirectory(prefix="desperate-soul-import-") as directory:
+            prepared_path = Path(directory) / "prepared.sqlite"
+            source_path = Path(os.environ["DPS_PARITY_WORLD_DB"])
+            with sqlite3.connect(f"file:{source_path}?mode=ro", uri=True) as source:
+                with sqlite3.connect(prepared_path) as prepared:
+                    source.backup(prepared)
+            with sqlite3.connect(prepared_path) as prepared:
+                prepared.execute("DELETE FROM content_creature_template WHERE entry=?", (entry,))
+                prepared.execute("DELETE FROM content_creature_template_model WHERE CreatureID=?", (entry,))
+                before_spawns = prepared.execute("SELECT COUNT(*) FROM content_creature").fetchone()[0]
+                added = guardian_templates.add_guardian_templates(prepared)
+                self.assertIn(entry, added)
+                source = prepared.execute("SELECT entry,name,type,BaseAttackTime,AIName,ScriptName FROM tdb_creature_template WHERE entry=?", (entry,)).fetchone()
+                actual = prepared.execute("SELECT entry,name,type,BaseAttackTime,AIName,ScriptName FROM content_creature_template WHERE entry=?", (entry,)).fetchone()
+                self.assertEqual(actual, source)
+                self.assertEqual(actual[:3], (254505, "Desperate Soul", 3))
+                models = prepared.execute("SELECT * FROM tdb_creature_template_model WHERE CreatureID=? ORDER BY Idx", (entry,)).fetchall()
+                self.assertTrue(models)
+                self.assertEqual(prepared.execute("SELECT * FROM content_creature_template_model WHERE CreatureID=? ORDER BY Idx", (entry,)).fetchall(), models)
+                self.assertNotIn(entry, guardian_templates.add_guardian_templates(prepared))
+                self.assertEqual(prepared.execute("SELECT COUNT(*) FROM content_creature").fetchone()[0], before_spawns)
+
     def test_explicit_native_summon_roots_publish_exact_tdb_models_without_world_spawns(self):
         root = ROOT
         source_path = Path(os.environ["DPS_PARITY_WORLD_DB"])

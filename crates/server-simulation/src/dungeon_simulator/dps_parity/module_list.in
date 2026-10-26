@@ -8,6 +8,7 @@ mod affliction_grasp_tests;
 mod affliction_nathreza_tests;
 mod affliction_tests;
 mod affliction_ua_tests;
+mod affliction_wrath_tests;
 mod arms_massacre_sudden_death_tests;
 mod arms_reap_tests;
 mod arms_sweeping_tests;
