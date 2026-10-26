@@ -174,6 +174,26 @@ Source: authenticated70448/read-only world.db25 effect rows; SimC76f8118 `sc_dea
 
 [Health aura-state qualification](../investigations/health-aura-state-admission.md) preserves the exact source update/check boundary and open passive/ownership seams. The implemented aura-spell checks below are not health-state admission or full-trigger target validation.
 
+## Rounded hasted channel clocks — 2026-10-26
+
+`auras::channel_tick_timing_ms` selects the same native effect cadence used by aura construction, including existing scripted cadence definitions. Hasted channel duration and `CastState` use this shared rounded period; duration preserves the original modified tick count. Native direct/triggered health effects rank ahead of auxiliary control effects when selecting the cadence. FoF's166ms stun row must not outrank its existing1000ms damage cadence: strict REDd8c6a93202 observed a2988ms deadline while four damage intervals require2992ms. Non-channel period quantization and un-hasted channel lifetime remain unchanged. Modifier ordering and stored application haste remain with their existing owners.
+
+Pinned SimC76f8118 `action.cpp4297–4314/4397–4421` rounds channel tick time, then rebuilds duration to prevent false expiry partials. Native Ray RED2d0ea30702 observed8full ticks plus a0.012690355 expiry fraction at constant26.69281%haste. The [Frost investigation](../investigations/frost-mage-dps-parity.md#per-hit-factor-investigation--2026-10-26) records the consumer evidence. This is not a spell-specific ninth-tick filter.
+
+Code`fad33456f` passes67 native cases across all seven required families. The workspace/all-target check and formatting pass. These are probe proofs, not landing or all-spec DPS acceptance.
+
+| Native family | Actual proof | Probe |
+|---|---|---|
+| Frost64 | Ray8full ticks;27Frost controls | `4d5a25a057` |
+| Arcane62 |23Missiles/Arcane controls | `d159d93aee` |
+| Shadow258 | Mind Flay paid ticks; Void Torrent tick-zero exclusion | `0ca0083ba7` |
+| Affliction265 | Full Drain Soul expiry; native Malefic Grasp | `a95cf82de3` |
+| Devastation1467 | Scintillation children, Mass Disintegrate and native interruption | `78cfc39738` |
+| WW269 | Full FoF deadline and five periodic damage emissions; initial MID2 half-child kept separate; melee/channel controls | `cee5ded2ce` |
+| Feral103 | Convoke retains4s lifetime and free native children | `d093253376` |
+
+Drain Soul uses private gate choice124692 at native node72045. The original265 reference input retains91566 (Improved Shadow Bolt); it is unchanged and must not be replaced by the gate variant for DPS measurement. All-spec remeasurement remains a separate integration requirement.
+
 ## Dead-caster native channel coverage — 2026-10-17
 
 Native55224 Archivist's Scan supplies cast-time row195=1100ms, duration row31=8000ms, Attr1 channel bit0x4, Attr0 AllowCastWhileDead, and a real zero-amount aura12 target stun. It has no power or target-condition rows in the owned source snapshot. This is a distinct prepare→channel lifetime boundary, not another direct cast. New concrete fixtures use actual5 and DeathPlugin-produced Dead, retain the native cast/channel clocks and require actual channel state plus an ordinary target Frostbolt refused as Stunned. The full-mask5 call used to kill a caster during its channel is the real generic-CC-exempt bool API, not an edited flag.
@@ -545,6 +565,14 @@ Shield of Righteous53600 has a spell-owned native6yd/120-degree caster-facing co
 183 pinned12.1.0.69933 rows exactly match CSV. Archive creature spell/addon/smart-script/linked-aura/proc sources and CreatureDisplayInfo were rechecked. Xuen123904 explicitly names123999→123996, but its actor AP share and target policy remain unproved. Rune Weapon51906 and tamed-pet passive amounts are zero; pet_levelstats supplies base attributes, not inheritance percentages or weapon damage, with stale/placeholder level limits. Local gametables do not establish owner stamina share. Wolf1500ms and ghoul2000ms template times alone cannot derive melee damage. Non-demon inheritance, stamina scaling, guardian melee and other named rotations remain underivable; no guessed percentage/ID/flat swing added. Modern Army42650 Lesser Ghoul Orders cannot be inferred from legacy42651/24207.
 
 Initial census164 roots94/70 from93/71. Final origin/master809b61e integration includes batch15/petbattle-effects3: baseline163 roots98/65, combined163 roots99/64; E3=114/122,aura4=66/74,aura226=18/19 unchanged by guardian follow-up. All40 batch15 baseline IDs/counts exactly reproduced; only Affliction core script presence3→4, root A unchanged. Single requested spell_cast gate352/352 at6ea07e4; later25bc1fc integration proves bounded guardian/batch15 tests22/22 plus fmt/check, not a repeated/fresh broad gate. Evidence: `game-engine/data/diagnostics/spell-guardians2-2026-10-10/`, including `integrated/` census/table receipts. No realm/full-rotation claim.
+
+## Shared pet prerequisites — 2026-10-26
+
+The parity Player spawner installs the same runtime-only `PetStable` previously supplied only by the Hunter fixture. Native688 then creates its real UNIT_PET through existing summon/storage code without fake `PlayerLink`/`InWorld`, character IDs or pool resets. The Hunter fixture retains only its source default-record provisioning. Ordinary native OOC resource readiness remains unchanged.
+
+Generic effect148 dispatches both unit and destination hit modes. Its new `trigger_missile_value` leaf copies the native value into every effect on the child cast clone, preserves destination/costs and leaves `SpellStore` unchanged. Implicit85 adds the native front-left destination offset through the existing ordered selection and collision path; TC `CheckDst` supplies caster origin when absent. There are no spell-ID branches.
+
+Native `f9d838495d` observed missing actual Imp/Infernal actors and rejected Overfiend admission. Focused `pet_prerequisite_tests` cover these boundaries and child-value/catalog isolation. GREEN and protected255/254/253/265 qualification remain pending. This does not qualify pet attack/power rows or numerical parity. [Contract](../../specs/dps-parity.md#shared-pet-prerequisites).
 
 ## Guardian actors and damage transfer
 
@@ -1167,6 +1195,14 @@ Backstab53 unconditional `$<mult>` joins variable339: `(max(0,min(player_level-1
 
 Named gap `FERAL_SPIRIT_INTRINSIC_AP_SOURCE`: archive pet_levelstats has2715 rows and zero29264. TC substitutes explicitly fake Strength22; this implementation does not. Intrinsic AP, armor/stamina shares, healing/AI/chase and full legal-loadout parity remain unsupported. Native centered training-dummy RED at89645435 reaches ownerAP100→10000 with damage10→10 and power(0,0); Merged afc0e5e5/protocol62865c23 controls24/24 pass (55.15s tests), check102.286s/fmt/readability clean. Live power asserts31→3100 SP/AP; ordinary dummy stays0/0. Independent/full-stat/legal-loadout acceptance remains open. Sources and proof ledger: data/class-completeness6-2026-10-12/guardian-{owner-power-source,owner-power-proof-ledger,wolf-pet-levelstats-source}.json.
 
+## Destruction guaranteed-crit damage — 2026-10-26
+
+`destruction_crit_scaling` registers the existing `DamageAmount` boundary for Conflagrate17962/Shadowburn17877 only. Selected387108 multiplies by `1 + live caster spell crit`, excluding the ability-specific guaranteed outcome. The same pure callback serves forecasts; resolved copies skip it. Existing Chaos Bolt scaling is unchanged. Source: SimC76f8118 actions4511–4517/4838–4844; [contract](../../specs/dps-parity.md#destruction-guaranteed-crit-damage).
+
+Native RED `3e1761f9b2` observes real Conflagrate critical damage42039 unchanged when native113858 increases caster crit34.95652→64.95652%; the source requires ratio1.2222938. Existing CB control passes. Aura modifiers require a real stat-update frame before admission; the first probe failed that test precondition and is not gameplay RED. CoC GREEN remains pending.
+
+The separate `destruction_mastery` actual-hit sampler and pure mean forecast landed via `632a4d9a0b` with nine native/control cases GREEN. Actual eligible hits sample native mastery bounds; read-only forecasts consume no RNG. [Current numerical status](warlock-periodic-counters.md#counter-lifecycle) remains below parity.
+
 ## Warlock periodic shard funding — 2026-10-25
 
 Shared Wither stack/damage rules are documented separately in [Warlock periodic counters](warlock-periodic-counters.md).
@@ -1184,3 +1220,9 @@ Pinned TC a352b1fa `spell_dk_subduing_grasp` binds Gorefiend's Grasp108199E1 to 
 Priest32379E3 is consumed execute data (TC CalcDamage4483–4487), not an effect dispatch. Existing native E2/E3 arithmetic qualified with real damage/heal threshold crossing, RED only for unsupported-slot diagnostic→GREEN; unmatched Shockwave E1 still reports. Classifier changes diagnostics only, no generic77 binding.
 
 Shaman77478E1 is consumed OnHit knockdown-chance data: native5%,77505 FULL_MASK, one target insertion per owned61882 field. Original field entity travels in existing per-cast OriginalCaster metadata; each existing ground field owns its stun set. Orphan ticks retain damage but cannot stun. Native256-target/fresh-field/expiry/ally/outside/orphan proof: ignored1RED/1control→2GREEN17.83s before enabling. Source and [cause77 deltas](../../diagnostics/census-e77-70448.md) distinguish3handledroots/7memberships from41gaproots/118memberships.
+
+## Ordinary spell GCD haste — 2026-10-26
+
+For a native base GCD of750–1500ms, `gcd_duration_ms` applies StartCooldown modifiers, ordinary spell haste, then the separate affecting aura417 path. Ordinary haste requires category133, neither melee nor ranged defense, and neither the ranged-slot nor ability attribute. The haste result uses the native750–1500ms bounds; other base GCDs stay outside this haste path. The same duration starts the native history deadline and client cooldown update.
+
+Sources: TC a352b1fa `Spell.cpp9209–9224`; SimC76f8118 `action.cpp648–666,1285–1315`; `crates/server-combat/src/spell_cast/{mod.rs,gcd_haste.rs}`; [contract](../../specs/dps-parity.md#ordinary-native-spell-gcd-haste). The clock regression covers one native foreground action for each of40 specs at0%,25% and150% haste. This is not full-profile DPS qualification; numerical remeasurement remains separate.

@@ -91,6 +91,11 @@ pub fn load_enchantment_tables(conn: &Connection) -> rusqlite::Result<Enchantmen
             "SELECT item.ID,gem.Enchant_ID FROM item_sparse item JOIN gem_properties gem ON item.Gem_properties=gem.ID WHERE item.Gem_properties<>0",
             |row| Ok((row.get(0)?, row.get(1)?)),
         )?,
+        gem_descriptions: load_map(
+            conn,
+            "SELECT ID,ItemNameDescriptionID FROM item_sparse WHERE Gem_properties<>0",
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )?,
     })
 }
 
@@ -193,9 +198,10 @@ mod tests {
           INSERT INTO spell_item_enchantment VALUES(7987,-7,0,80,5,0,0,0,0,0,71,0,0,1.48670006,0,0),(8157,-7,0,80,5,5,0,0,0,0,32,40,0,0.475744992,0.208138004,0);
           CREATE TABLE gem_properties(ID INTEGER PRIMARY KEY,Enchant_ID INTEGER,Type INTEGER);
           INSERT INTO gem_properties VALUES(4400,8157,14);
-          CREATE TABLE item_sparse(ID INTEGER PRIMARY KEY,Gem_properties INTEGER);
-          INSERT INTO item_sparse VALUES(240910,4400);").unwrap();
+          CREATE TABLE item_sparse(ID INTEGER PRIMARY KEY,Gem_properties INTEGER,ItemNameDescriptionID INTEGER);
+          INSERT INTO item_sparse VALUES(240910,4400,14276);").unwrap();
         let tables = load_enchantment_tables(&conn).unwrap();
+        assert_eq!(tables.gem_descriptions.get(&240910), Some(&14276));
         let gem = super::super::enchants::gem_stats(240910, 90, &tables);
         assert!(
             gem.is_ok(),

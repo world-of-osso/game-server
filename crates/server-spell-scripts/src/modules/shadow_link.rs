@@ -36,32 +36,45 @@ fn native_fraction(world: &World, caster: Entity) -> Option<f32> {
     Some(amount / 100.0)
 }
 
-fn read_recipients(world: &mut World, caster: Entity, primary: Entity) -> Vec<Entity> {
+pub(super) fn read_vampiric_touch_targets(world: &mut World, caster: Entity) -> Vec<Entity> {
     let now = spell_cast::now(world);
     world
         .query::<(Entity, &ActiveAuras)>()
         .iter(world)
-        .filter(|(target, auras)| {
-            *target != primary
-                && auras.iter().any(|aura| {
-                    let owned_vt = aura.caster == caster && aura.spell_id == VAMPIRIC_TOUCH;
-                    let live = aura.expires_at.is_none_or(|expiry| expiry > now);
-                    let ticking = aura.effects.iter().any(|effect| effect.period_ms > 0);
-                    owned_vt && live && ticking
-                })
+        .filter(|(_, auras)| {
+            auras.iter().any(|aura| {
+                let owned_vt = aura.caster == caster && aura.spell_id == VAMPIRIC_TOUCH;
+                let live = aura.expires_at.is_none_or(|expiry| expiry > now);
+                let ticking = aura.effects.iter().any(|effect| effect.period_ms > 0);
+                owned_vt && live && ticking
+            })
         })
         .map(|(target, _)| target)
         .collect()
 }
 
-fn copy_link(world: &mut World, source: &EffectCtx<'_>, primary: Entity, _: bool, amount: f32) {
+fn copy_link(
+    world: &mut World,
+    source: &EffectCtx<'_>,
+    source_target: Entity,
+    _: bool,
+    amount: f32,
+) {
+    // SimC76f8118 sc_priest.cpp1430–1446: Link follows the enemy impact,
+    // not caster backlash (which the native log attributes to the same root spell).
+    if source_target == source.caster {
+        return;
+    }
     if amount <= 0.0 || !SOURCES.contains(&source.spell.id) {
         return;
     }
     let Some(fraction) = native_fraction(world, source.caster) else {
         return;
     };
-    let recipients = read_recipients(world, source.caster, primary);
+    let recipients = read_vampiric_touch_targets(world, source.caster)
+        .into_iter()
+        .filter(|target| *target != source_target)
+        .collect::<Vec<_>>();
     if recipients.is_empty() {
         return;
     }

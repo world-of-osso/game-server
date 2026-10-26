@@ -133,6 +133,8 @@ impl super::SpecDriver for Rotation {
         actor: Entity,
         targets: &[Entity],
     ) -> Result<(), String> {
+        // SimC76f8118 pet.cpp67–68/149: the actual pet follows its owner's target.
+        crate::pet_control::order_companion_pet(world, actor, targets.first().copied());
         self.step(world, actor, targets, false)?;
         Ok(())
     }

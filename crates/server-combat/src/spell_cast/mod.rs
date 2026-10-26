@@ -66,6 +66,7 @@ mod census_tail_tests;
 #[cfg(test)]
 mod census_three_tests;
 pub(crate) mod charge;
+pub use charge::ChargeMovement;
 mod charge_consumption;
 #[cfg(test)]
 mod charge_rate_tests;
@@ -159,7 +160,13 @@ mod expel_harm_tests;
 #[cfg(test)]
 mod fel_devastation_tests;
 mod ferocious_bite;
-pub use ferocious_bite::read_maximum_energy as read_ferocious_bite_maximum_energy;
+mod gcd_haste;
+#[cfg(test)]
+mod gcd_haste_tests;
+pub use ferocious_bite::{
+    read_extra_energy_modifier as read_ferocious_bite_extra_energy_modifier,
+    read_maximum_energy as read_ferocious_bite_maximum_energy,
+};
 pub use resource_facts::read_prepared_spell as read_resource_prepared_spell;
 #[cfg(test)]
 mod full_trigger_dead_target_tests;
@@ -215,6 +222,8 @@ mod melee_crit_taken_tests;
 #[cfg(test)]
 mod melee_hit_modifier_tests;
 mod missiles;
+/// Launch an already validated native plan without replacing its source primary.
+pub use missiles::launch as launch_planned_spell;
 pub mod open_lock;
 #[cfg(test)]
 mod open_lock_tests;
@@ -324,6 +333,7 @@ mod toy_foam_sword;
 pub(crate) mod toy_scripts;
 mod toy_weather;
 mod toy_wormhole;
+mod trigger_missile_value;
 
 mod elemental_overload;
 pub mod queued_triggers;
@@ -395,6 +405,7 @@ impl Plugin for SpellCastPlugin {
                     crate::game_objects::summoned::expire_objects.after(advance_casts),
                     area_trigger::update_area_triggers.after(advance_casts),
                     scripts::update_ground_pulses.after(advance_casts),
+                    scripts::update_enhancement_flurry.after(advance_casts),
                     scripts::update_unleashed.after(advance_casts),
                     toy_coin::catch_landed_coins.after(advance_casts),
                 ),
@@ -1111,7 +1122,18 @@ pub(crate) fn haste_channel_duration_ms(
     let slow = world
         .get::<crate::auras::AuraStatMods>(caster)
         .map_or(1.0, |mods| mods.attack_cast_time_mult);
-    (modded / haste.max(0.01) * slow).max(0.0) as u32
+    // SimC76f8118 action.cpp4397–4421: preserve the original modified
+    // tick count, rebuilding duration from the same rounded hasted aura period.
+    // Independent duration/period truncation creates false expiry partial ticks.
+    let duration = modded * slow;
+    match crate::auras::channel_tick_timing_ms(world, caster, spell) {
+        Some((original_period, hasted_period)) => {
+            let ticks = duration / original_period;
+            (hasted_period as f32 * ticks).max(0.0).round() as u32
+        }
+        // Duration-only channels have no periodic clock to align (action.cpp4423–4430).
+        None => (duration / haste.max(0.01)).max(0.0).round() as u32,
+    }
 }
 
 /// Effects that have a handler, apply an aura or run a script hook; only
@@ -2460,6 +2482,7 @@ pub fn applicable_costs(
         };
         // TC CalcPowerCost retains native negative generation, but modifiers
         // cannot turn an originally positive cost into a grant or vice versa.
+        let modified = script_registry::power_cost(world, caster, spell, pool, modified);
         let amount = preserve_cost_sign(initial, modified);
         // OptionalCost is additional raw spend, never an admission requirement.
         let additional = resources::additional_optional_cost(world, caster, spell, cost.power_type);
@@ -2587,15 +2610,8 @@ fn start_channel(world: &mut World, caster: Entity, spell: &SpellInfo, target: O
     }
     // SimC76f8118 action.cpp4390–4420: channel decisions share the actual
     // periodic cadence, not raw DB2 periods beside a hasted channel duration.
-    let tick_ms = spell
-        .effects
-        .iter()
-        .map(|effect| {
-            crate::auras::periodic_interval_ms(world, caster, spell, effect.aura_period_ms)
-        })
-        .filter(|&period| period > 0)
-        .min()
-        .unwrap_or(0);
+    let tick_ms =
+        crate::auras::channel_tick_timing_ms(world, caster, spell).map_or(0, |(_, period)| period);
     let mut cast = CastState::channel(
         spell.id,
         target.map_or(0, Entity::to_bits),
@@ -2715,6 +2731,7 @@ fn gcd_duration_ms(world: &World, caster: Entity, spell: &SpellInfo) -> u32 {
     .round() as u32;
     // Only a 750-1500 ms GCD is modified (Spell.cpp:9195-9198).
     if (MIN_GCD_MS..=MAX_GCD_MS).contains(&base_gcd_ms) {
+        let gcd_ms = gcd_haste::ordinary_spell_ms(world, caster, spell, gcd_ms);
         haste_regen_gcd_ms(world, caster, spell, gcd_ms)
     } else {
         gcd_ms
@@ -2759,10 +2776,13 @@ fn execute_cast_with_primary(
     disenchant::check_cast(world, caster, spell)?;
     let mut prepared = resources::snapshot(world, caster, spell, &costs);
     prepared.cast_primary_target = primary_target;
+    let plan = plan_targets(world, caster, &prepared, explicit, false)?;
+    // SimC76f8118 sc_mage.cpp2722–2731: freeze Barrage recipients before
+    // Orb Barrage, but include the Orb root's charge in damage modifiers.
+    scripts::before_arcane_cast(world, caster, &prepared, 0);
     let mut launch_modifiers = spell_mods::snapshot_charged_modifiers(world, caster, &prepared);
     launch_modifiers.extend(scripts::pyroclasm_damage_modifier(world, caster, &prepared));
     prepared.cast_charge_mods = Some(launch_modifiers);
-    let plan = plan_targets(world, caster, &prepared, explicit, false)?;
     prepared.cast_policy_context =
         scripts::snapshot_hit_policies(world, caster, &prepared, &plan, &costs);
     scripts::prepare_rogue_hero(world, caster, &mut prepared);
@@ -2860,6 +2880,7 @@ fn execute_cast_with_primary(
         scripts::schedule_empyrean_legacy(world, caster, spell, spell.cast_primary_target);
     }
     scripts::after_foreground_special(world, caster, spell);
+    scripts::after_arcane_foreground(world, caster, spell);
     blooming_infusion::after_cast(world, caster, spell);
     druid_transform::after_cast(world, caster, spell);
     // Spell::finish (Spell.cpp:4448-4450): some spells stop the caster's auto-attack.
@@ -3267,9 +3288,18 @@ fn resolve_effects(
         }
         // TC EffectTriggerMissileSpell's HIT mode: destination effects have no
         // hit units, but still cast their child once with the parent's destination.
-        if effect.effect == effects::EFFECT_TRIGGER_MISSILE && units.is_empty() {
-            effects::trigger_missile_at_destination(world, &ctx, effect);
-            continue;
+        if units.is_empty() {
+            match effect.effect {
+                effects::EFFECT_TRIGGER_MISSILE => {
+                    effects::trigger_missile_at_destination(world, &ctx, effect);
+                    continue;
+                }
+                effects::EFFECT_TRIGGER_MISSILE_WITH_VALUE => {
+                    trigger_missile_value::at_destination(world, &ctx, effect);
+                    continue;
+                }
+                _ => {}
+            }
         }
         // TC EffectSendEvent HANDLE_HIT runs targetless events once, not once per frame.
         // Unit-targeted events use the normal hit/immunity boundary below.
@@ -3960,6 +3990,7 @@ pub fn launch_triggered_spell(
             }
             crate::achievement::record_spell_cast(world, caster, spell.id);
             scripts::before_ret_damage_cast(world, caster, spell, depth);
+            scripts::before_arcane_cast(world, caster, spell, depth);
             scripts::on_cast(world, caster, spell.id, depth);
             scripts::spawn_ravager_field(world, caster, spell, explicit, depth);
             missiles::launch(world, caster, spell, plan, depth);
@@ -4020,6 +4051,7 @@ fn execute_costed_trigger(
     let consumed_damage =
         scripts::capture_consumed_damage_modifier(world, caster, &mut prepared, false);
     scripts::before_ret_damage_cast(world, caster, &prepared, depth);
+    scripts::before_arcane_cast(world, caster, &prepared, depth);
     scripts::on_cast(world, caster, prepared.id, depth);
     take_cast_resources(world, caster, &prepared, &costs);
     crate::achievement::record_spell_cast(world, caster, prepared.id);

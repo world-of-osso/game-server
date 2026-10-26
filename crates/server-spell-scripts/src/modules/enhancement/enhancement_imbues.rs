@@ -123,7 +123,12 @@ fn check_flametongue(world: &World, aura: &AuraInstance, event: &AuraEvent) -> b
     eligible(world, aura, event, false)
 }
 
-fn cast_windfury(world: &mut World, caster: Entity, _aura: &AuraInstance, target: Option<Entity>) {
+pub(super) fn cast_windfury(
+    world: &mut World,
+    caster: Entity,
+    _aura: &AuraInstance,
+    target: Option<Entity>,
+) {
     let Some(target) = target else {
         return;
     };

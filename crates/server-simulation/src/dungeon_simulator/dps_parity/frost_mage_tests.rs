@@ -369,13 +369,13 @@ fn frost_mage_native_periodic_icicles_enable_and_pay_glacial_spike() {
     )
     .unwrap();
     preparation::finish_pending_setup(&mut run).unwrap();
+    assert!(
+        !crate::auras::has_aura(run.app.world(), run.actor, 1222865),
+        "a successful Spike must consume its actual enabler before earned Rapid Refreezing can refill it"
+    );
     for _ in 0..20 {
         run.app.update();
     }
-    assert!(
-        !crate::auras::has_aura(run.app.world(), run.actor, 1222865),
-        "a successful Spike must consume its actual enabler"
-    );
     assert!(
         run.app
             .world()

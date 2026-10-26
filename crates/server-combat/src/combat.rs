@@ -421,13 +421,23 @@ pub fn start_attack(
         ..*current
     });
     commands.entity(attacker).insert(auto_attack);
-    commands.queue(move |world: &mut World| {
-        let message = AttackStart {
-            attacker: attacker.to_bits(),
-            victim: victim.to_bits(),
-        };
-        crate::spell_cast::send_to_set(world, attacker, message);
-    });
+    commands.queue(move |world: &mut World| announce_attack_start(world, attacker, victim));
+}
+
+/// Restore an authorized attack and its native timers immediately, then publish
+/// the same AttackStart as the queued entry point. Validation remains with callers.
+pub fn start_attack_now(world: &mut World, attacker: Entity, auto_attack: AutoAttack) {
+    let victim = auto_attack.victim;
+    world.entity_mut(attacker).insert(auto_attack);
+    announce_attack_start(world, attacker, victim);
+}
+
+fn announce_attack_start(world: &mut World, attacker: Entity, victim: Entity) {
+    let message = AttackStart {
+        attacker: attacker.to_bits(),
+        victim: victim.to_bits(),
+    };
+    crate::spell_cast::send_to_set(world, attacker, message);
 }
 
 /// `Unit::AttackStop` (Unit.cpp:5982-6009): stop swinging and announce it with
@@ -969,6 +979,9 @@ fn record_swing(
             outcome.kind == MeleeOutcome::Crit,
         );
     }
+    // SimC76f8118 hunter2974–3010 runs stable-pet impact producers on
+    // every result, independently of the landed-hit and generic proc stages.
+    crate::spell_cast::script_registry::after_white_impact(world, attacker_entity);
     // Procs default to normal and critical hits (SpellMgr::LoadSpellProcs
     // HitMask 0); dodge- and parry-triggered procs are not modelled.
     if landed {

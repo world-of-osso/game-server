@@ -92,13 +92,7 @@ enum Landing {
 
 /// Resolve launch-mode effects, then `plan` now if the spell has no travel time,
 /// else schedule each hit.
-pub(super) fn launch(
-    world: &mut World,
-    caster: Entity,
-    spell: &SpellInfo,
-    plan: TargetPlan,
-    depth: u8,
-) {
+pub fn launch(world: &mut World, caster: Entity, spell: &SpellInfo, plan: TargetPlan, depth: u8) {
     // All successful ordinary/triggered casts reach this once, before flight/hit.
     crate::scripted_ai::on_spell_cast(world, caster, spell.id);
     super::scripts::reduce_barbed_scales(world, caster, spell);

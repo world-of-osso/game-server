@@ -11,6 +11,13 @@ fn fixture(world: &World) -> Encounter {
     }
 }
 
+fn install_target_lifetimes(run: &mut super::super::Run) {
+    // These bounded loops bypass advance_combat, which normally installs the
+    // explicit fixture lifetime/role consumed by native target facts.
+    let started_at = run.app.world().resource::<Time>().elapsed();
+    super::super::install_fixture_lifetimes(run, started_at);
+}
+
 fn action(name: &str) -> Action {
     Action {
         source_row: None,
@@ -36,6 +43,8 @@ pub(super) fn cast(run: &mut super::super::Run, spell: u32) {
             }
             Err(
                 CastFailure::OnGlobalCooldown
+                | CastFailure::OnCooldown
+                | CastFailure::NoCharges
                 | CastFailure::InProgress
                 | CastFailure::NotEnoughPower(_),
             ) => run.app.update(),
@@ -358,6 +367,7 @@ fn literal_ww_native_zenith_target_if_preserves_enemy_context_and_self_aura() {
 fn run_literal(count: usize) {
     let _scope = crate::random::seed_scope(70448);
     let mut run = super::super::prepare_measurement(269, count).unwrap();
+    install_target_lifetimes(&mut run);
     super::super::engage(&mut run);
     let mut rotation = (run.spec_driver.take().unwrap() as Box<dyn std::any::Any>)
         .downcast::<Rotation>()
@@ -447,6 +457,7 @@ fn literal_ww_native_three_target_executes_sck_and_damages_all_native_targets() 
 fn literal_ww_native_fof_channel_releases_damage_on_the_measured_target() {
     let _scope = crate::random::seed_scope(70448);
     let mut run = super::super::prepare_measurement(269, 1).unwrap();
+    install_target_lifetimes(&mut run);
     super::super::engage(&mut run);
     let mut rotation = (run.spec_driver.take().unwrap() as Box<dyn std::any::Any>)
         .downcast::<Rotation>()
@@ -510,7 +521,7 @@ fn literal_ww_native_combo_breaker_blackout_earns_rwk_and_delivers_its_child() {
     let actions = report["combat"]["actions"].as_array().unwrap();
     assert!(
         actions.iter().any(|action| action["spell_id"] == 100784
-            && action["hits"].as_u64().is_some_and(|hits| hits > 0)),
+            && action["hits"].as_f64().is_some_and(|hits| hits > 0.0)),
         "actual Blackout Kick damage is required before testing its producer"
     );
     assert!(
@@ -527,12 +538,12 @@ fn literal_ww_native_combo_breaker_blackout_earns_rwk_and_delivers_its_child() {
     );
     assert!(
         actions.iter().any(|action| action["spell_id"] == 467307
-            && action["count"].as_u64().is_some_and(|count| count > 0)),
+            && action["count"].as_f64().is_some_and(|count| count > 0.0)),
         "literal APL must admit the actual earned RWK override"
     );
     assert!(
         actions.iter().any(|action| action["spell_id"] == 468179
-            && action["damage"].as_u64().is_some_and(|damage| damage > 0)),
+            && action["damage"].as_f64().is_some_and(|damage| damage > 0.0)),
         "actual RWK must deliver native468179 damage, not just a root cast"
     );
 }

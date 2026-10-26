@@ -985,7 +985,8 @@ pub(in crate::spell_cast) fn snapshot(
             CostPool::Health => None,
         })
         .collect::<Vec<_>>();
-    let scripted_context = script_registry::policy_context_required(world, caster, spell);
+    let scripted_context = script_registry::policy_context_required(world, caster, spell)
+        || script_registry::requires_resource_context(world, spell.id);
     if spell.cast_parent_owns_modifier_charges
         || (!scripted_context
             && !consumers(world, &resources, spell.id)
@@ -1006,7 +1007,11 @@ pub(in crate::spell_cast) fn snapshot(
     } else {
         Vec::new()
     };
-    Some(Box::new(CastPolicyContext { resources, targets }))
+    Some(Box::new(CastPolicyContext {
+        resources,
+        free_spender: false,
+        targets,
+    }))
 }
 
 fn capture_primary_targets(

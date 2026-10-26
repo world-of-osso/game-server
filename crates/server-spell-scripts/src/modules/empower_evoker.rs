@@ -33,8 +33,8 @@ const SCOURING_FLAME: u32 = 378438;
 const ETERNITYS_SPAN: u32 = 375757;
 const ANIMOSITY: u32 = 375797;
 const DRAGONRAGE: u32 = 375087;
-const MASS_DISINTEGRATE: u32 = 436335;
-const MASS_DISINTEGRATE_BUFF: u32 = 436336;
+// sc_evoker.cpp4684/4703–4704: successful empower producers; native buffs own values.
+const EMPOWER_BUFFS: &[(u32, u32)] = &[(436335, 436336), (370839, 376850)];
 const BASE_FIRE_TICKS: u32 = 10;
 const CONVERTED_TICKS_PER_RANK: u32 = 3;
 
@@ -134,7 +134,7 @@ pub(crate) fn build_fire_breath_release(world: &World, caster: Entity, rank: u8)
     child
 }
 
-fn build_eternity_surge_release(world: &World, caster: Entity, rank: u8) -> SpellInfo {
+pub(super) fn build_eternity_surge_release(world: &World, caster: Entity, rank: u8) -> SpellInfo {
     let mut child = world
         .resource::<SpellStore>()
         .get(SURGE_DAMAGE)
@@ -168,18 +168,20 @@ pub(super) fn release(
     // TC uses IGNORE_CAST_IN_PROGRESS, not FULL_MASK: preserve normal damage procs.
     spell_cast::execute_cast(world, caster, &child, target)?;
     extend_dragonrage(world, caster);
-    grant_mass_disintegrate(world, caster);
+    grant_empower_buffs(world, caster);
     Ok(())
 }
 
-fn grant_mass_disintegrate(world: &mut World, caster: Entity) {
-    // SIMC_DEVASTATION_EMPOWER_MASS_DISINTEGRATE: sc_evoker.cpp4703–4704
-    // grants one native buff application after a successful empower release.
-    if !combat::auras::has_aura(world, caster, MASS_DISINTEGRATE) {
-        return;
-    }
-    if !spell_cast::try_cast_triggered(world, caster, MASS_DISINTEGRATE_BUFF, Some(caster), 1) {
-        warn!(?caster, "Native empower Mass Disintegrate grant refused");
+fn grant_empower_buffs(world: &mut World, caster: Entity) {
+    // SIMC_DEVASTATION_EMPOWER_MASS_DISINTEGRATE and SIMC_DEVASTATION_POWER_SWELL.
+    // Each real release grants one native application only for its live talent.
+    for &(talent, buff) in EMPOWER_BUFFS {
+        if !combat::auras::has_aura(world, caster, talent) {
+            continue;
+        }
+        if !spell_cast::try_cast_triggered(world, caster, buff, Some(caster), 1) {
+            warn!(?caster, talent, buff, "Native empower buff grant refused");
+        }
     }
 }
 
