@@ -117,6 +117,7 @@ fn grant_orb_procs(world: &mut World, caster: Entity, primary: Option<Entity>) {
             apply_buff(world, caster, FINGERS);
         }
         // sc_mage.cpp7457–7460: guaranteed Fingers is immediately reacted.
+        #[cfg(any(test, feature = "test-support"))]
         combat::simc_apl_native::reaction::predict(world, caster, FINGERS);
     }
     if auras::has_aura(world, caster, 378406) {
