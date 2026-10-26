@@ -157,7 +157,11 @@ fn havoc_relentless_onslaught_delays_real_free_copies_and_starts_native_icd_at_c
                         .expect("Onslaught requires the real landed native off-hand");
                     assert!(
                         (now - hit_at - offhand_delay).abs() < 0.025,
-                        "copy must follow the actual OH hit by its native delay"
+                        "copy must follow the actual OH hit by its native delay: now={now} hit_at={hit_at} delay={offhand_delay} frame={}",
+                        run.app
+                            .world()
+                            .resource::<bevy::prelude::Time>()
+                            .delta_secs()
                     );
                     let aura = run
                         .app
