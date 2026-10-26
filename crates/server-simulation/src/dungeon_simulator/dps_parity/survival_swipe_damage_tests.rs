@@ -19,7 +19,11 @@ fn survival_native_rank_two_swipe_amplifies_only_actual_primary_damage() {
         let target = run.targets[target_index];
         run.app.world_mut().insert_resource(
             crate::spell_cast::effects::factor_capture::FactorCapture::new(
-                actor, target, 1262293, "native_swipe_primary", 32,
+                actor,
+                target,
+                1262293,
+                "native_swipe_primary",
+                32,
             ),
         );
         cast(&mut run, 186270, false);
@@ -28,17 +32,29 @@ fn survival_native_rank_two_swipe_amplifies_only_actual_primary_damage() {
 }
 
 fn assert_actual_swipe_amount(run: &Run, primary: bool) {
-    let bonus = crate::spell_cast::scripts::script_effect_value(
-        run.app.world(), run.actor, 1259017, 1,
-    );
-    let effectiveness = if primary { 1.0 + f64::from(bonus) / 100.0 } else { 1.0 };
-    let capture = run.app.world()
+    let bonus =
+        crate::spell_cast::scripts::script_effect_value(run.app.world(), run.actor, 1259017, 1);
+    let effectiveness = if primary {
+        1.0 + f64::from(bonus) / 100.0
+    } else {
+        1.0
+    };
+    let capture = run
+        .app
+        .world()
         .resource::<crate::spell_cast::effects::factor_capture::FactorCapture>()
         .export();
-    let hits: Vec<_> = capture["events"].as_array().unwrap().iter()
+    let hits: Vec<_> = capture["events"]
+        .as_array()
+        .unwrap()
+        .iter()
         .filter(|event| event["event"] == "result" && event["spell_id"] == 1262293)
         .collect();
-    assert_eq!(hits.len(), 1, "actual native Swipe must resolve once on this real recipient");
+    assert_eq!(
+        hits.len(),
+        1,
+        "actual native Swipe must resolve once on this real recipient"
+    );
     let factors = &hits[0]["factors"];
     // The actual source amount already includes target-specific script factors.
     // Remove only that captured boundary's contribution, then compare the final
@@ -51,14 +67,31 @@ fn assert_actual_swipe_amount(run: &Run, primary: bool) {
         .find(|event| event["event"] == "direct_amount" && event["spell_id"] == 1262293)
         .expect("actual Swipe must expose its observed source factors");
     let applied = amount["applied_multipliers"].as_array().unwrap();
-    let other_done: f64 = ["school_damage_done", "versatility", "summon_damage", "creature_type_damage", "mechanic_damage", "combo_strikes", "ret_damage", "shadow_weaving"]
-        .iter()
-        .map(|name| applied.iter().find(|row| row["factor"] == *name).unwrap()["value"].as_f64().unwrap())
-        .product();
+    let other_done: f64 = [
+        "school_damage_done",
+        "versatility",
+        "summon_damage",
+        "creature_type_damage",
+        "mechanic_damage",
+        "combo_strikes",
+        "ret_damage",
+        "shadow_weaving",
+    ]
+    .iter()
+    .map(|name| {
+        applied.iter().find(|row| row["factor"] == *name).unwrap()["value"]
+            .as_f64()
+            .unwrap()
+    })
+    .product();
     let actual = factors["native_rounded_amount"].as_f64().unwrap();
     let expected = (input * other_done * effectiveness).round();
     assert!(input > 0.0 && factors["actual_amount"].as_f64().unwrap() > 0.0);
-    println!("NATIVE_SWIPE primary={primary} source={input} native_bonus={bonus} actual={actual} expected={expected}");
-    assert!((actual - expected).abs() <= 1.0,
-        "actual Swipe primary={primary} amount={actual} must include native source bonus: expected={expected}, factors={factors}");
+    println!(
+        "NATIVE_SWIPE primary={primary} source={input} native_bonus={bonus} actual={actual} expected={expected}"
+    );
+    assert!(
+        (actual - expected).abs() <= 1.0,
+        "actual Swipe primary={primary} amount={actual} must include native source bonus: expected={expected}, factors={factors}"
+    );
 }

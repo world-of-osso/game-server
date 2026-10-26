@@ -5,9 +5,8 @@ use bevy::prelude::*;
 use combat::spell_cast::{script_registry::SpellScriptHook, scripts::script_effect_value};
 use combat::spell_info::SpellInfo;
 
-pub(super) const HOOKS: &[SpellScriptHook] = &[
-    SpellScriptHook::TargetDamageMultiplier(primary_multiplier),
-];
+pub(super) const HOOKS: &[SpellScriptHook] =
+    &[SpellScriptHook::TargetDamageMultiplier(primary_multiplier)];
 
 const SWIPE: u32 = 1262293;
 const SWIPE_RANK_TWO: u32 = 1259017;

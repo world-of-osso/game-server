@@ -2,8 +2,8 @@
 //! each live Crash stack retains its Short Circuit snapshot.
 use std::collections::VecDeque;
 
-use bevy::prelude::*;
 use super::combat;
+use bevy::prelude::*;
 use combat::auras::{self, ActiveAuras, AuraInstance, RemoveReason};
 use combat::class_progression::KnownSpells;
 
@@ -18,10 +18,16 @@ pub(super) fn retain(world: &mut World, caster: Entity, multiplier: f32) {
     if !auras::has_aura(world, caster, FOUR_PIECE) {
         return;
     }
-    let asynchronous = world.get::<KnownSpells>(caster).is_some_and(|known| known.contains(APEX));
+    let asynchronous = world
+        .get::<KnownSpells>(caster)
+        .is_some_and(|known| known.contains(APEX));
     let at_cap = world.get::<ActiveAuras>(caster).is_some_and(|active| {
-        active.iter().any(|aura| aura.spell_id == CRASH_STACKS && aura.caster == caster
-            && aura.max_stacks > 0 && aura.stacks >= aura.max_stacks)
+        active.iter().any(|aura| {
+            aura.spell_id == CRASH_STACKS
+                && aura.caster == caster
+                && aura.max_stacks > 0
+                && aura.stacks >= aura.max_stacks
+        })
     });
     if world.get::<Snapshots>(caster).is_none() {
         world.entity_mut(caster).insert(Snapshots::default());
@@ -36,7 +42,9 @@ pub(super) fn retain(world: &mut World, caster: Entity, multiplier: f32) {
 }
 
 pub(super) fn multiplier(world: &World, caster: Entity) -> f32 {
-    let Some(snapshots) = world.get::<Snapshots>(caster) else { return 1.0; };
+    let Some(snapshots) = world.get::<Snapshots>(caster) else {
+        return 1.0;
+    };
     if snapshots.0.is_empty() {
         return 1.0;
     }
@@ -51,7 +59,12 @@ pub(super) fn expire_stacks(world: &mut World, caster: Entity, _aura: &AuraInsta
     }
 }
 
-pub(super) fn clear(world: &mut World, caster: Entity, _aura: &AuraInstance, _reason: RemoveReason) {
+pub(super) fn clear(
+    world: &mut World,
+    caster: Entity,
+    _aura: &AuraInstance,
+    _reason: RemoveReason,
+) {
     if let Some(mut snapshots) = world.get_mut::<Snapshots>(caster) {
         snapshots.0.clear();
     }
