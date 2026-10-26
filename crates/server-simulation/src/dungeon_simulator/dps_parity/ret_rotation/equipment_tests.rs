@@ -48,15 +48,10 @@ fn dps_parity_ret_literal_native_source_variables_read_real_equipment() {
         selected.is_none(),
         "unowned Puzzle Box must not create an item execution"
     );
-    for operand in [
-        "trinket.1.has_buff.unknown_stat",
-        "equipped.unknown_native_item",
-    ] {
-        assert!(
-            facts.value(operand).is_err(),
-            "unknown equipment operand {operand}"
-        );
-    }
+    // SimC76f8118 player.cpp11974–11993: an absent equipped name
+    // is false, while an unknown stat operand remains invalid.
+    assert_eq!(facts.value("equipped.unknown_native_item").unwrap(), 0.0);
+    assert!(facts.value("trinket.1.has_buff.unknown_stat").is_err());
     assert_eq!(
         driver.snapshot, snapshot,
         "equipment facts cannot replace the snapshot"

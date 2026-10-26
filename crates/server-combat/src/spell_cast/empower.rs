@@ -5,7 +5,7 @@ use lightyear::prelude::MessageReceiver;
 use shared::casting::CastState;
 use shared::protocol::ReleaseEmpowerSpell;
 
-use super::{CastFailure, PendingCastSpell, scripts};
+use super::{CastFailure, PendingCastSpell};
 use crate::spell_info::{SpellInfo, SpellStore};
 
 const HOLD_AT_MAX_MS: u32 = 1_000;
@@ -174,7 +174,7 @@ fn advance_channel_clock(world: &mut World, caster: Entity, dt: f32) -> (u32, u3
 
 fn finish(world: &mut World, caster: Entity, spell: &SpellInfo, target: Option<Entity>) {
     // TC Spell.cpp9057–9067: an empty completion-hook list still finishes normally.
-    let result = scripts::empower_completion(spell.id)
+    let result = super::script_registry::empower_completion(world, spell.id)
         .map_or(Ok(()), |handler| handler(world, caster, spell, target));
     world.entity_mut(caster).remove::<EmpowerProgress>();
     super::finish_channel(world, caster, spell.id);

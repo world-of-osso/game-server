@@ -1,7 +1,13 @@
 //! Source-qualified guardian impact relationships absent from native Dummy rows.
-use super::{EffectHitHook, TargetPlanHook};
-use crate::spell_cast::{self, PlannedEffect, TargetPlan, targets};
-use crate::spell_info::SpellInfo;
+use super::combat;
+use combat::spell_cast::script_registry::{HitHook, SpellScriptHook, TargetPlanHook};
+use combat::spell_cast::{self, PlannedEffect, TargetPlan, targets};
+use combat::spell_info::SpellInfo;
+
+pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::EffectHit(hit_hook),
+    SpellScriptHook::TargetPlan(plan_hook),
+];
 use bevy::prelude::*;
 
 struct Impact {
@@ -17,17 +23,17 @@ const IMPACTS: &[Impact] = &[Impact {
     child: 1292391,
 }];
 
-pub(super) fn hit_hook(spell: u32, effect: u8) -> Option<EffectHitHook> {
+pub(super) fn hit_hook(spell: u32, effect: u8) -> Option<HitHook> {
     IMPACTS
         .iter()
         .any(|row| row.parent == spell && row.effect == effect)
         .then_some(launch_child)
 }
-pub(super) fn plan_hook(spell: u32) -> Option<TargetPlanHook> {
+fn plan_hook(spell: u32) -> Option<(targets::Relation, TargetPlanHook)> {
     IMPACTS
         .iter()
         .any(|row| row.parent == spell)
-        .then_some(select_targets)
+        .then_some((targets::Relation::Enemy, select_targets))
 }
 
 fn select_targets(
@@ -85,13 +91,8 @@ fn select_capped_units(
 }
 
 fn launch_child(world: &mut World, caster: Entity, target: Entity, depth: u8) {
-    let parent = world
-        .resource::<spell_cast::ResolvingHits>()
-        .0
-        .last()
-        .filter(|frame| frame.caster == caster)
-        .expect("guardian impact requires its native resolving frame")
-        .spell_id;
+    let parent = spell_cast::resolving_spell_id(world, caster)
+        .expect("guardian impact requires its native resolving frame");
     let child = IMPACTS
         .iter()
         .find(|row| row.parent == parent)

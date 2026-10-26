@@ -256,6 +256,7 @@ impl Equipment {
                 .fold(0.0, f64::max)),
             "cooldown.remains" | "cooldown.ready" => read_cooldown(item, field, native),
             "proc.any_dps.duration" => Ok(item.metadata.duration),
+            "proc.any_dps.up" | "proc.any_dps.remains" => read_proc_state(item, field, native),
             // SimC76f8118 unique_gear.cpp4307–4311: has_ selects the same
             // stat-buff existence expression, including both APL spellings.
             _ if field.starts_with("has_buff.") || field.starts_with("has_stat.") => {
@@ -438,4 +439,13 @@ fn read_modifiers(
         .find(|(found, _)| *found == slot)
         .map(|(_, properties)| properties)
         .ok_or_else(|| format!("native instance modifiers for {slot:?} absent"))
+}
+
+fn read_proc_state(item: &Slot, field: &str, native: &NativeFacts<'_>) -> Result<f64, String> {
+    // SimC76f8118 unique_gear.cpp3776–3788: a multi-buff trinket proxy
+    // takes the maximum of its matching buffs; no matching native buff is zero.
+    let property = field.strip_prefix("proc.any_dps.").expect("registered item proc fact");
+    item.metadata.buff_spells.iter().try_fold(0.0_f64, |maximum, &spell| {
+        native.owned_buff_property(spell, property).map(|value| maximum.max(value))
+    })
 }
