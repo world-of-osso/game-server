@@ -168,6 +168,7 @@ mod outlaw_opportunity_tests;
 mod outlaw_resource_tests;
 mod outlaw_tests;
 mod owner_cooldown_tests;
+mod pack_leader_bear_lifetime_tests;
 mod pack_leader_fixture_tests;
 mod pack_tactics_tests;
 mod periodic_crit_tests;
