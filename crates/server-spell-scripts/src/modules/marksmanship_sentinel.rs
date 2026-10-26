@@ -1,6 +1,6 @@
 //! SimC76f8118 Sentinel target marks, Lunar Storm and native residual bridges.
-use super::combat;
 use super::cast_relationships::has_talent as selected;
+use super::combat;
 use combat::auras::{self, ActiveAuras, RemoveReason};
 use combat::spell_cast::script_registry::SpellScriptHook;
 use combat::spell_cast::scripts::{reduce_cooldown, script_effect_value};
@@ -85,8 +85,7 @@ pub(super) fn after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
         1250646 => selected(world, caster, LUNAR_CALLING),
         _ => false,
     };
-    if forces_mark && let Some(target) = spell.cast_primary_target
-    {
+    if forces_mark && let Some(target) = spell.cast_primary_target {
         grant_mark(world, caster, target);
     }
 }
