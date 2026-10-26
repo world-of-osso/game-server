@@ -6,6 +6,7 @@ mod active_enemy_tests;
 mod affliction_darkglare_tests;
 mod affliction_grasp_tests;
 mod affliction_nathreza_tests;
+mod affliction_nightfall_tests;
 mod affliction_procs_tests;
 mod affliction_targets_tests;
 mod affliction_tests;
