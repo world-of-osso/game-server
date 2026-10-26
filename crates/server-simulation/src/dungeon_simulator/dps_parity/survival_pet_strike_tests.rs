@@ -6,6 +6,14 @@ use shared::protocol::CombatLogKind;
 #[test]
 #[ignore = "requires private spec255 player inputs and native world DB"]
 fn survival_native_tip_impact_commands_owned_pet_strike_as_one() {
+    // Exercise every seed in this fixed matrix, never retry until one passes.
+    for seed in 0..32 {
+        assert_owned_tip_strike(seed);
+    }
+}
+
+fn assert_owned_tip_strike(seed: u64) {
+    let _seed = crate::random::seed_scope(seed);
     // SimC76f8118 sc_hunter.cpp1367–1372: earned Tip consumption orders
     // the real main pet, preserving that pet as the native damage source.
     let mut run = prepare_literal(255, 1).unwrap();
@@ -21,9 +29,9 @@ fn survival_native_tip_impact_commands_owned_pet_strike_as_one() {
             })
         })
     };
-    eprintln!("SURVIVAL_STRIKE_BEFORE_RAPTOR {:?}", strike_state(&run));
+    eprintln!("SURVIVAL_STRIKE_BEFORE_RAPTOR seed={seed} {:?}", strike_state(&run));
     cast(&mut run, 186270, false);
-    eprintln!("SURVIVAL_STRIKE_AFTER_RAPTOR {:?}", strike_state(&run));
+    eprintln!("SURVIVAL_STRIKE_AFTER_RAPTOR seed={seed} {:?}", strike_state(&run));
     for _ in 0..40 {
         run.app.update();
     }
