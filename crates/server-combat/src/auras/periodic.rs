@@ -284,6 +284,8 @@ fn schedule_next_tick(world: &mut World, unit: Entity, spell: &SpellInfo, tick: 
         return;
     };
     let (_, period) = super::periodic_timing_with_haste(world, caster, spell, base, haste);
+    #[cfg(any(test, feature = "test-support"))]
+    let diagnostic_now = super::aura_now(world);
     let mut auras = world
         .get_mut::<ActiveAuras>(unit)
         .expect("retained periodic unit");
@@ -291,13 +293,30 @@ fn schedule_next_tick(world: &mut World, unit: Entity, spell: &SpellInfo, tick: 
         .bypass_change_detection()
         .get_mut(tick.instance_id)
         .expect("retained periodic aura");
+    #[cfg(any(test, feature = "test-support"))]
+    let diagnostic_expiry = aura.expires_at;
     let effect = aura
         .effects
         .iter_mut()
         .find(|effect| effect.index == tick.effect_index)
         .expect("retained periodic effect");
+    #[cfg(any(test, feature = "test-support"))]
+    let diagnostic_before = (effect.period_ms, effect.next_tick_at());
     // Keep paid ordinals/async deadlines. Only the next interval and its origin change.
     effect.schedule_after_tick(tick.scheduled_at, period);
+    #[cfg(any(test, feature = "test-support"))]
+    if diagnostic_before.0 != period {
+        eprintln!(
+            "periodic_rebase spell={} effect={} paid={} now={diagnostic_now:.17} scheduled={:.17} old_period={} new_period={period} old_due={:.17} new_due={:.17} expiry={diagnostic_expiry:.17?}",
+            tick.spell_id,
+            tick.effect_index,
+            effect.periodic_ticks,
+            tick.scheduled_at,
+            diagnostic_before.0,
+            diagnostic_before.1,
+            effect.next_tick_at()
+        );
+    }
 }
 
 fn end_aura_at_full_health(world: &mut World, unit: Entity, tick: &Tick) -> bool {
