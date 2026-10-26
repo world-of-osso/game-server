@@ -480,6 +480,102 @@ fn fire_meteorite_pyroblast_does_not_spend_a_glorious_stack() {
     );
 }
 
+fn fireball_feedback_hit(run: &mut Run, health_fraction: f32) -> bool {
+    let target = run.targets[0];
+    let mut health = run.app.world_mut().get_mut::<Health>(target).unwrap();
+    health.current = health.max * health_fraction;
+    start_native(run, 133, target);
+    preparation::finish_pending_setup(run).unwrap();
+    for _ in 0..20 { run.app.update(); }
+    let hits: Vec<_> = run.app.world().resource::<ObservedCombatEvents>().0.iter()
+        .filter(|event| event.source == Some(run.actor.to_bits()) && event.target == Some(target.to_bits())
+            && event.spell_id == Some(133) && event.kind == CombatLogKind::Damage).collect();
+    assert_eq!(hits.len(), 1, "one ordinary native Fireball hit");
+    hits[0].crit
+}
+
+#[test]
+#[ignore = "requires exact Fire63 inputs and private70448 DB"]
+fn fire_feedback_noncritical_fireball_earns_overflowing_energy() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(63, 1).unwrap();
+    assert!(!fireball_feedback_hit(&mut run, 0.5), "native noncritical precondition");
+    assert_eq!(stacks(&run, 394195), 1, "selected Overflowing Energy gains one stack after a noncrit");
+}
+
+#[test]
+#[ignore = "requires exact Fire63 inputs and private70448 DB"]
+fn fire_feedback_critical_fireball_clears_overflowing_energy() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(63, 1).unwrap();
+    crate::spell_cast::cast_triggered(run.app.world_mut(), run.actor, 394195, Some(run.actor), 1);
+    assert_eq!(stacks(&run, 394195), 1);
+    assert!(fireball_feedback_hit(&mut run, 1.0), "native Firestarter guaranteed-crit precondition");
+    assert_eq!(stacks(&run, 394195), 0, "an eligible critical hit clears Overflowing Energy");
+}
+
+#[test]
+#[ignore = "requires exact Fire63 inputs and private70448 DB"]
+fn fire_feedback_critical_fire_blast_earns_fevered_incantation() {
+    let mut run = prepare_literal(63, 1).unwrap();
+    let target = run.targets[0];
+    start_native(&mut run, 108853, target);
+    run.app.update();
+    assert_eq!(stacks(&run, 383811), 1, "selected Fevered Incantation gains one stack after a direct crit");
+}
+
+#[test]
+#[ignore = "requires exact Fire63 inputs and private70448 DB"]
+fn fire_feedback_noncritical_fireball_clears_fevered_incantation() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(63, 1).unwrap();
+    for _ in 0..2 {
+        crate::spell_cast::cast_triggered(run.app.world_mut(), run.actor, 383811, Some(run.actor), 1);
+    }
+    assert_eq!(stacks(&run, 383811), 2);
+    assert!(!fireball_feedback_hit(&mut run, 0.5), "native noncritical precondition");
+    assert_eq!(stacks(&run, 383811), 0, "a direct noncrit clears Fevered Incantation");
+}
+
+#[test]
+#[ignore = "requires exact Fire63 inputs and private70448 DB"]
+fn fire_feedback_fireball_applies_owned_controlled_destruction() {
+    let mut run = prepare_literal(63, 1).unwrap();
+    fireball_feedback_hit(&mut run, 0.5);
+    let debuff = run.app.world().get::<ActiveAuras>(run.targets[0]).unwrap().iter()
+        .find(|aura| aura.spell_id == 453268 && aura.caster == run.actor);
+    assert_eq!(debuff.map(|aura| aura.stacks), Some(1), "the hit target receives its caster's Controlled Destruction");
+}
+
+#[test]
+#[ignore = "requires exact Fire63 inputs and private70448 DB"]
+fn fire_feedback_hot_streak_ignite_includes_native_inflame() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(63, 1).unwrap();
+    let target = run.targets[0];
+    crate::spell_cast::cast_triggered(run.app.world_mut(), run.actor, 48108, Some(run.actor), 1);
+    start_native(&mut run, 11366, target);
+    preparation::finish_pending_setup(&mut run).unwrap();
+    let world = run.app.world();
+    let damage = world.resource::<ObservedCombatEvents>().0.iter().find(|event| {
+        event.source == Some(run.actor.to_bits()) && event.target == Some(target.to_bits())
+            && event.spell_id == Some(11366) && event.kind == CombatLogKind::Damage
+    }).expect("real Pyroblast impact").amount as f32;
+    let amount = |spell| world.get::<ActiveAuras>(run.actor).unwrap().iter()
+        .find(|aura| aura.spell_id == spell).unwrap().effects.iter()
+        .find(|effect| effect.index == 0).unwrap().amount;
+    let dot = world.resource::<crate::spell_info::SpellStore>().get(12654).unwrap();
+    let duration = dot.misc.as_ref().unwrap().duration.unwrap().duration_ms;
+    let period = dot.effects.iter().find(|effect| effect.index == 0).unwrap().aura_period_ms;
+    let ticks = duration as u32 / period;
+    assert!(amount(12846) > 0.0 && amount(417467) > 0.0, "real native Ignite mastery and selected Inflame");
+    let minimum_tick = damage * amount(12846) / 100.0 * 2.0 * (1.0 + amount(417467) / 100.0) / ticks as f32;
+    let tick = world.get::<ActiveAuras>(target).unwrap().iter()
+        .find(|aura| aura.spell_id == 12654 && aura.caster == run.actor).unwrap()
+        .effects.iter().find(|effect| effect.index == 0).unwrap().amount;
+    assert!(tick + 1.0 >= minimum_tick, "Ignite must retain HS and native Inflame contributions: {tick} < {minimum_tick}");
+}
+
 fn reacted(run: &Run, name: &str) -> f64 {
     use crate::simc_apl_native::{Bindings, Encounter, FightStyle, NativeFacts};
     let bindings = Bindings {
