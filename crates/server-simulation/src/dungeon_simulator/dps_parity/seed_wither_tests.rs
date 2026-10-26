@@ -31,8 +31,8 @@ fn seed_expiry(run: &Run) -> Option<f64> {
         .expires_at
 }
 
-fn prepare_actual_seed() -> (Run, f64, f32) {
-    let mut run = prepare_literal(265, 3).unwrap();
+fn prepare_actual_seed(count: usize) -> (Run, f64, f32) {
+    let mut run = prepare_literal(265, count).unwrap();
     // Profile starts at0 shards. Existing ordinary pet setup waits for native
     // OOC readiness and pays its real cost; no pool reset/grant is introduced.
     preparation::start_configured_native_pet(&mut run).unwrap();
@@ -103,7 +103,7 @@ fn assert_actual_explosion_and_wither(run: &Run) {
 #[ignore = "requires private265 native player inputs"]
 fn seed_native_natural_expiry_explodes_and_applies_owned_wither_to_pack() {
     let _seed = crate::random::seed_scope(70448);
-    let (mut run, expiry, _) = prepare_actual_seed();
+    let (mut run, expiry, _) = prepare_actual_seed(3);
     // No player rotation or pet attack order after the paid Seed: let the
     // actual native aura expire rather than granting/removing it in the fixture.
     for _ in 0..600 {
@@ -118,9 +118,47 @@ fn seed_native_natural_expiry_explodes_and_applies_owned_wither_to_pack() {
 
 #[test]
 #[ignore = "requires private265 native player inputs"]
+fn seed_native_refresh_keeps_original_explosion_timer_without_resource_reset() {
+    let _seed = crate::random::seed_scope(70448);
+    // One real enemy forces the source's original-target reapplication case.
+    let (mut run, original_expiry, _) = prepare_actual_seed(1);
+    for _ in 0..20 {
+        run.app.update();
+    }
+    let target = run.targets[0];
+    cast_native_action(&mut run, SEED, target);
+    let mut refreshed = original_expiry;
+    for _ in 0..20 {
+        run.app.update();
+        refreshed = seed_expiry(&run).expect("actual paid reapplication keeps native Seed");
+        if refreshed > original_expiry {
+            break;
+        }
+    }
+    assert!(
+        refreshed > original_expiry,
+        "actual reapplication must reach its extended native aura"
+    );
+    // actions1937–1965: refresh extends the aura but cannot move explosion's
+    // original tick. This reproduces the literal APL's repeated Seed ordering.
+    for _ in 0..600 {
+        if crate::spell_cast::now(run.app.world()) > original_expiry + 0.25 {
+            break;
+        }
+        run.app.update();
+    }
+    assert!(
+        crate::spell_cast::now(run.app.world()) < refreshed,
+        "do not borrow refreshed natural expiry"
+    );
+    assert_actual_explosion_and_wither(&run);
+}
+
+#[test]
+#[ignore = "requires private265 native player inputs"]
 fn seed_native_actual_owner_damage_threshold_explodes_before_expiry_and_applies_wither() {
     let _seed = crate::random::seed_scope(70448);
-    let (mut run, expiry, threshold) = prepare_actual_seed();
+    let (mut run, expiry, threshold) = prepare_actual_seed(3);
     let target = run.targets[0];
     let actual = cast_native_action(&mut run, 686, target);
     let mut reached = false;
