@@ -5,12 +5,47 @@ use shared::components::ActiveSpec;
 use super::combat;
 use combat::spell_cast::effects::EffectCtx;
 use combat::spell_cast::script_registry::{Policy, Relationship, SpellScriptHook};
-use combat::spell_cast::scripts::{reduce_cooldown, script_effect_value};
+use combat::spell_cast::scripts::{AfterCastHook, reduce_cooldown, script_effect_value};
+use combat::spell_info::SpellInfo;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::Policies(POLICIES),
     SpellScriptHook::PeriodicPrimaryDamage(causality_tick),
+    SpellScriptHook::AfterResourceValues(deep_breath_hook),
 ];
+
+fn deep_breath_hook(spell: u32) -> Option<AfterCastHook> {
+    matches!(spell, 357210 | 433874).then_some(strafing_run)
+}
+
+fn strafing_run(world: &mut World, caster: Entity, _spell: &SpellInfo) {
+    const STRAFING_RUN: u32 = 1266151;
+    const EXTRA_BREATH: u32 = 1266165;
+    let devastation = world
+        .get::<ActiveSpec>(caster)
+        .is_some_and(|spec| spec.0 == 1467);
+    if !devastation || !combat::auras::has_aura(world, caster, STRAFING_RUN) {
+        return;
+    }
+    let instance = world
+        .get::<combat::auras::ActiveAuras>(caster)
+        .and_then(|auras| {
+            auras
+                .iter()
+                .find(|aura| aura.spell_id == EXTRA_BREATH && aura.caster == caster)
+                .map(|aura| aura.instance_id)
+        });
+    // SIMC_DEVASTATION_STRAFING_RUN: sc_evoker.cpp6344–6353/6384–6398.
+    // Native aura411 adds the real charge; aura500 preserves its existing recharge.
+    if let Some(instance) = instance {
+        combat::auras::spend_stack(world, caster, instance);
+        return;
+    }
+    let depth = combat::spell_cast::next_trigger_depth(world);
+    if !combat::spell_cast::try_cast_triggered(world, caster, EXTRA_BREATH, Some(caster), depth) {
+        warn!(?caster, "Native Strafing Run grant refused");
+    }
+}
 
 fn causality_tick(
     world: &mut World,
