@@ -123,12 +123,7 @@ fn devastation_deep_breath_cast_damages_the_native_three_target_pack() {
     }
 }
 
-#[test]
-#[ignore = "requires private native DB and exact Devastation profile"]
-fn devastation_mass_disintegrate_native_chain_and_consumption() {
-    let mut run = prepare_literal(1467, 3).unwrap();
-    engage(&mut run);
-    let primary = run.targets[0];
+fn cast_reference_empowers(run: &mut Run, primary: Entity) {
     for (spell, unit) in [(357208, run.actor), (359073, primary)] {
         crate::spell_cast::creature_cast_empowered_with_targets(
             run.app.world_mut(),
@@ -142,8 +137,119 @@ fn devastation_mass_disintegrate_native_chain_and_consumption() {
             1,
         )
         .unwrap();
-        preparation::finish_pending_setup(&mut run).unwrap();
+        preparation::finish_pending_setup(run).unwrap();
     }
+}
+
+#[test]
+#[ignore = "requires private native DB and exact Devastation profile"]
+fn devastation_causality_reduces_empowers_once_per_primary_tick() {
+    for (active, with_primary) in [(false, true), (true, false), (true, true)] {
+        let mut run = prepare_literal(1467, 3).unwrap();
+        engage(&mut run);
+        // Choose an add, not the actor's default boss victim.
+        let primary = run.targets[1];
+        cast_reference_empowers(&mut run, primary);
+        let reduction_ms = -run
+            .app
+            .world()
+            .get::<crate::auras::ActiveAuras>(run.actor)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 375777)
+            .unwrap()
+            .effects
+            .iter()
+            .find(|effect| effect.index == 0)
+            .unwrap()
+            .amount;
+        assert!(
+            reduction_ms > 0.0,
+            "native Causality supplies a negative cooldown delta"
+        );
+        if !active {
+            crate::auras::remove_auras(
+                run.app.world_mut(),
+                run.actor,
+                crate::auras::RemoveReason::Unlearned,
+                |aura| aura.spell_id == 375777,
+            );
+        }
+        let remaining = |run: &Run, id: u32| {
+            let world = run.app.world();
+            let spell = world
+                .resource::<crate::spell_info::SpellStore>()
+                .get(id)
+                .unwrap();
+            world
+                .get::<crate::spell_cast::SpellHistory>(run.actor)
+                .unwrap()
+                .remaining_cooldown_ms(spell, crate::spell_cast::now(world)) as f64
+        };
+        let before = [remaining(&run, 357208), remaining(&run, 359073)];
+        let started_at = crate::spell_cast::now(run.app.world());
+        crate::spell_cast::creature_cast_with_targets(
+            run.app.world_mut(),
+            run.actor,
+            356995,
+            crate::spell_cast::CastTargets {
+                unit: primary,
+                primary: with_primary.then_some(primary),
+                destination: None,
+            },
+        )
+        .unwrap();
+        preparation::finish_pending_setup(&mut run).unwrap();
+        let elapsed_ms = (crate::spell_cast::now(run.app.world()) - started_at) * 1000.0;
+        let events = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0;
+        let ticks: Vec<_> = run
+            .targets
+            .iter()
+            .map(|target| {
+                events
+                    .iter()
+                    .filter(|event| {
+                        event.source == Some(run.actor.to_bits())
+                            && event.target == Some(target.to_bits())
+                            && event.spell_id == Some(356995)
+                            && event.kind == shared::protocol::CombatLogKind::Damage
+                            && event.periodic
+                            && event.amount > 0
+                    })
+                    .count()
+            })
+            .collect();
+        assert!(
+            ticks.iter().all(|count| *count > 1),
+            "the real native channel must tick on all three recipients: {ticks:?}"
+        );
+        // SimC76f8118 sc_evoker.cpp6694–6699: only main ticks reduce both timers.
+        let expected = if active && with_primary {
+            f64::from(reduction_ms) * ticks[1] as f64
+        } else {
+            0.0
+        };
+        for (id, before) in [357208, 359073].into_iter().zip(before) {
+            let actual = before - remaining(&run, id) - elapsed_ms;
+            assert!(
+                (actual - expected).abs() <= 3.0,
+                "native Causality spell{id}: active={active}, primary={with_primary}, ticks={ticks:?}, reduction={actual}, expected={expected}"
+            );
+        }
+    }
+}
+
+#[test]
+#[ignore = "requires private native DB and exact Devastation profile"]
+fn devastation_mass_disintegrate_native_chain_and_consumption() {
+    let mut run = prepare_literal(1467, 3).unwrap();
+    engage(&mut run);
+    let primary = run.targets[0];
+    cast_reference_empowers(&mut run, primary);
     let stacks = |run: &Run| {
         run.app
             .world()
