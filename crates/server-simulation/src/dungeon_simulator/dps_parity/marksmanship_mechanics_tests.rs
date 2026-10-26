@@ -137,6 +137,11 @@ fn arcane_damage_after_precise_launch_expiry(precise: bool) -> (f64, f64) {
         .world()
         .resource::<crate::spell_cast::effects::factor_capture::FactorCapture>()
         .export();
+    for event in receipt["events"].as_array().unwrap() {
+        if event["event"] == "direct_amount" || event["event"] == "result" {
+            eprintln!("Precise={precise}: {event}");
+        }
+    }
     let observed = receipt["events"]
         .as_array()
         .unwrap()
