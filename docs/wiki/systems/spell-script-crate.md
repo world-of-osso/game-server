@@ -136,3 +136,9 @@ The server's public native harness and simulation's harness alias install the pl
 ## Master integration: linked Enhancement helpers
 
 The split also owns the newly landed Doom, Stormblast, Stormflurry and Stormwell helpers under `modules/enhancement/`. Their component state moves with the existing spending and Strike callbacks. Independent registry slots preserve the pre-OnCast snapshot, actual weapon impact, weapon-child multiplier, post-Arcane launch and separately scheduled after-cast update boundaries. Unlimited Power retains its native aura-refresh implementation in combat; the downstream Maelstrom spender calls its public grant function. Arcane explicit Splinter conjures pass the original source spell through `ConjureFromSpell`, while source-free Frost requests retain `ConjureCount`.
+
+## Compile-speed qualification
+
+A warm Rogue hero leaf touch at master `f4f20505a` versus split `c9bd6c7c9`, using the same `target-check` and `agent-run`, measured `cargo build --locked -p server --bins` at 17.03 → 11.91 seconds and `cargo test --locked -p server-simulation --lib --no-run` at 23.86 → 4.93 seconds. After the split, both commands compile only scripts and their host, not combat. These are incremental compile/link times, not cold builds or gameplay timings.
+
+The all-target check is a different loop: it measured 13.82 → 12.76 seconds because combat's existing `cfg(test)` registry still includes downstream module sources. Production combat fingerprints remain unchanged, but its unit-test crate recompiles. Removing that test-only reverse coupling requires relocating script-dependent combat tests into a downstream test host; it is the next slice, not part of the runtime extraction.

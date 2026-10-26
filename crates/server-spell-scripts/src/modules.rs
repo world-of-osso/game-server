@@ -76,7 +76,6 @@ register_modules! {
     destruction_mastery: (2672, "modules/destruction_mastery.rs"),
     destruction_periodic: (2670, "modules/destruction_periodic.rs"),
     devastation: (10, "modules/devastation.rs"),
-    // sc_paladin.cpp1757–1783: HoW echo follows Judgment and Sun Sear (priority1000).
     echo_policies: (1001, "modules/echo_policies.rs"),
     elemental: (1000, "modules/elemental.rs"),
     elemental_ascendance: (220, "modules/elemental_ascendance.rs"),
@@ -188,6 +187,7 @@ register_modules! {
     windwalker_momentum: (50, "modules/windwalker_momentum.rs"),
     windwalker_zenith: (30, "modules/windwalker_zenith.rs"),
     zathatek_breath: (1000, "modules/zathatek_breath.rs"),
+    // sc_paladin.cpp1757–1783: HoW echo follows Judgment and Sun Sear (priority1000).
 }
 
 #[cfg(test)]
