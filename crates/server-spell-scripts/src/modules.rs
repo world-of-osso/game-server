@@ -39,6 +39,7 @@ const fn order_modules<const N: usize>(
 
 register_modules! {
     affliction_agony: (2650, "modules/affliction_agony.rs"),
+    affliction_empowerment: (2658, "modules/affliction_empowerment.rs"),
     affliction_grasp: (2654, "modules/affliction_grasp.rs"),
     affliction_instability: (2651, "modules/affliction_instability.rs"),
     affliction_nathreza: (2655, "modules/affliction_nathreza.rs"),
@@ -80,6 +81,7 @@ register_modules! {
     enhancement_armor: (2630, "modules/enhancement_armor.rs"),
     essence_burst: (140, "modules/essence_burst.rs"),
     evoker_burnout: (1000, "modules/evoker_burnout.rs"),
+    evoker_rising_fury: (1000, "modules/evoker_rising_fury.rs"),
     evoker_tier: (160, "modules/evoker_tier.rs"),
     execution_counters: (320, "modules/execution_counters.rs"),
     feral_convoke: (1033, "modules/feral_convoke.rs"),
@@ -107,6 +109,7 @@ register_modules! {
     havoc: (150, "modules/havoc.rs"),
     havoc_children: (5771, "modules/havoc/children.rs"),
     havoc_dance: (5770, "modules/havoc/dance.rs"),
+    havoc_destiny: (5775, "modules/havoc/destiny.rs"),
     havoc_eternal: (5774, "modules/havoc/eternal.rs"),
     havoc_fury: (5773, "modules/havoc/fury.rs"),
     hellcaller_counters: (2666, "modules/hellcaller_counters.rs"),
@@ -158,6 +161,7 @@ register_modules! {
     stacking_summons: (1000, "modules/stacking_summons.rs"),
     subtlety_shadow: (420, "modules/subtlety_shadow.rs"),
     survival: (2550, "modules/survival.rs"),
+    survival_pet: (2552, "modules/survival_pet.rs"),
     survival_wildfire: (2551, "modules/survival_wildfire.rs"),
     sweeping_strikes: (711, "modules/sweeping_strikes.rs"),
     swiftmend: (1000, "modules/swiftmend.rs"),
