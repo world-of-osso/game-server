@@ -61,6 +61,7 @@ pub(super) use script_registry::spell_residual as after_spell_residual;
 mod chrono_flame;
 pub(super) use script_registry::after_modifier_consumption as apply_echo_policies;
 mod enhancement_doom;
+mod enhancement_elemental_weapons;
 mod enhancement_flurry;
 pub(super) use enhancement_flurry::{
     update as update_enhancement_flurry, weapon_multiplier as enhancement_flurry_weapon_multiplier,
@@ -84,6 +85,7 @@ mod maelstrom_weapon;
 pub(crate) use maelstrom_weapon::consume as consume_maelstrom_weapon;
 pub(crate) fn register_enhancement(scripts: &mut crate::auras::scripts::AuraScripts) {
     maelstrom_weapon::register(scripts);
+    enhancement_elemental_weapons::register(scripts);
     enhancement_imbues::register(scripts);
     enhancement_modes::register(scripts);
     enhancement_stormblast::register(scripts);
