@@ -467,6 +467,9 @@ fn read_spell(
     let Some(id) = resolve_action(world, actor, id)? else {
         return Ok(());
     };
+    let resolved = world.resource::<crate::spell_info::SpellStore>()
+        .get(id).expect("resolved native action remains in its catalog");
+    let self_target = self_target || crate::spell_cast::targets::targets_caster_only(resolved);
     // SimC76f8118 sc_hunter.cpp7269–7274: start once; native repeats
     // own later shots. This applies to any native autorepeat, not a spell-ID branch.
     if crate::spell_cast::test_harness::read_native_auto_repeat(world, actor, id) {
