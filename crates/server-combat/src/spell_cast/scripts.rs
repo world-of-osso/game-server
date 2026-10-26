@@ -152,6 +152,7 @@ pub(crate) use windwalker_dual_threat::{
 };
 mod glory_of_the_dawn;
 mod windwalker_flurry;
+pub(crate) use windwalker_flurry::register_hero_flurry;
 pub(crate) fn after_melee_hit(
     world: &mut World,
     caster: Entity,
@@ -206,6 +207,7 @@ pub(super) fn finish_scripted_launch(
     script_registry::after_counter_launch(world, caster, spell.id);
     unbroken_rhythm::after_launch(world, caster, spell.id);
     glory_of_the_dawn::after_launch(world, caster, spell, depth);
+    windwalker_flurry::after_launch(world, caster, spell);
     enhancement_tier::after_launch(world, caster, spell, depth);
     enhancement_strikes::cast_ride_the_lightning(world, caster, spell, depth);
 }

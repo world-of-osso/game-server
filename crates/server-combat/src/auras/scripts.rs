@@ -419,6 +419,7 @@ pub(super) fn register_class_scripts(
     crate::spell_cast::scripts::register_lifecycle_policies(&mut scripts, &registry);
     crate::spell_cast::scripts::register_wdp_relationship(&mut scripts);
     crate::spell_cast::scripts::register_unbroken_rhythm(&mut scripts);
+    crate::spell_cast::scripts::register_hero_flurry(&mut scripts);
     scripts.0.insert(
         INUNDATE,
         AuraScript {
