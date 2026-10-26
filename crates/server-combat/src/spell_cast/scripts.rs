@@ -160,6 +160,7 @@ pub(crate) use windwalker_dual_threat::{
     read_replacement as white_impact_replacement, roll_replacement as replace_white_impact,
 };
 mod glory_of_the_dawn;
+mod teachings_of_the_monastery;
 mod windwalker_flurry;
 pub(crate) use windwalker_flurry::register_hero_flurry;
 pub(crate) fn after_melee_hit(
@@ -218,6 +219,7 @@ pub(super) fn finish_scripted_launch(
     script_registry::after_counter_launch(world, caster, spell.id);
     unbroken_rhythm::after_launch(world, caster, spell.id);
     glory_of_the_dawn::after_launch(world, caster, spell, depth);
+    teachings_of_the_monastery::after_launch(world, caster, spell, depth);
     windwalker_flurry::after_launch(world, caster, spell);
     enhancement_tier::after_launch(world, caster, spell, depth);
     enhancement_strikes::cast_ride_the_lightning(world, caster, spell, depth);
@@ -1750,6 +1752,7 @@ pub fn on_hit(world: &World, spell_id: u32) -> Option<HitHook> {
         windwalker_children::ZENITH => Some(windwalker_children::zenith_hit),
         100780 => Some(windwalker::tiger_palm_hit),
         100784 => Some(windwalker::blackout_kick_hit),
+        teachings_of_the_monastery::DAMAGE => Some(teachings_of_the_monastery::blackout_hit),
         107428 | 113656 => Some(windwalker::trigger_wdp_enabler_on_hit),
         unbroken_rhythm::ROOT => Some(unbroken_rhythm::capture_and_consume),
 
