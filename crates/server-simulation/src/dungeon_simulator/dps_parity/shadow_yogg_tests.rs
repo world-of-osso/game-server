@@ -35,7 +35,7 @@ fn counter(run: &Run) -> u8 {
 #[ignore = "requires native258 Player/profile/traits"]
 fn shadow_yogg_real_three_vt_cohort_earns_one_counter_stack() {
     let mut run = prepare_literal(258, 3).unwrap();
-    engage_fixture_opponents(&mut run);
+    engage(&mut run);
     assert!(crate::auras::has_aura(run.app.world(), run.actor, 373273));
     assert_eq!(counter(&run), 0);
     slam(&mut run);
@@ -66,7 +66,9 @@ fn shadow_yogg_real_three_vt_cohort_earns_one_counter_stack() {
 #[ignore = "requires native258 Player/profile/traits"]
 fn shadow_yogg_real_native_cohort_threshold_summons_owned_thing_and_actual_spikes() {
     let mut run = prepare_literal(258, 3).unwrap();
-    engage_fixture_opponents(&mut run);
+    // The normal measurement engagement selects the player's real enemy.
+    // Combat references alone do not give a native guardian an owner target.
+    engage(&mut run);
     let cap = run
         .app
         .world()
