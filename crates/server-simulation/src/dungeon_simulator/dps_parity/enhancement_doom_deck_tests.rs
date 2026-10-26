@@ -5,6 +5,27 @@ use crate::spell_cast::test_harness::ObservedCombatEvents;
 use server::simc_apl::Facts;
 use shared::protocol::CombatLogKind;
 
+fn try_cast_native_generator(run: &mut Run, target: Entity) {
+    for spell in [470057, 17364] {
+        match crate::spell_cast::creature_cast(
+            run.app.world_mut(),
+            run.actor,
+            spell,
+            Some(target),
+            false,
+        ) {
+            Ok(()) => return,
+            Err(
+                crate::spell_cast::CastFailure::OnGlobalCooldown
+                | crate::spell_cast::CastFailure::OnCooldown
+                | crate::spell_cast::CastFailure::NoCharges
+                | crate::spell_cast::CastFailure::InProgress,
+            ) => {}
+            Err(reason) => panic!("native generator{spell}: {reason:?}"),
+        }
+    }
+}
+
 #[test]
 #[ignore = "native263 reference inputs and private world database"]
 fn enhancement_real_maelstrom_spending_earns_doom_without_starting_button_cooldown() {
@@ -30,13 +51,21 @@ fn enhancement_real_maelstrom_spending_earns_doom_without_starting_button_cooldo
     let mut spent = 0;
     let mut earned = false;
     for _ in 0..40000 {
-        spent += enhancement_generation_tests::try_spend_native_maelstrom(&mut run, target);
+        let paid = enhancement_generation_tests::try_spend_native_maelstrom(&mut run, target);
+        spent += paid;
+        if paid == 0 {
+            try_cast_native_generator(&mut run, target);
+        }
         run.app.update();
         earned = crate::auras::has_aura(run.app.world(), run.actor, 466772);
         if earned || spent >= 600 {
             break;
         }
     }
+    assert!(
+        earned || spent >= 600,
+        "actual generators must fund a complete600-card deck: spent={spent}"
+    );
     assert!(
         earned,
         "real MW spending must earn background Doom within600 cards: spent={spent}"
