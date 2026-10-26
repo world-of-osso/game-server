@@ -108,7 +108,7 @@ fn rogue_envenom_and_dispatch_retain_paid_point_scaling() {
 #[ignore = "requires private native260 player profile and traits"]
 fn outlaw_killing_spree_emits_both_hands_for_effective_point_ticks() {
     // SimC76f8118 sc_rogue.cpp4749–4838: tick-zero plus one tick per
-    // effective point; each tick independently emits the native MH and OH hits.
+    // effective point up to the spend cap; each tick emits both native hand hits.
     for (points, adrenaline) in [(1, false), (5, true)] {
         let _seed = crate::random::seed_scope(70448);
         let mut run = prepare_literal(260, 1).unwrap();
@@ -143,7 +143,14 @@ fn outlaw_killing_spree_emits_both_hands_for_effective_point_ticks() {
         } else {
             0.0
         };
-        let effective_points = points + extra as usize;
+        let maximum = crate::spell_cast::powers::power_value(
+            run.app.world(),
+            run.actor,
+            PowerType::ComboPoints,
+        )
+        .unwrap()
+        .1 as usize;
+        let effective_points = (points + extra as usize).min(maximum);
         fund_finisher(&mut run, points as f32);
         literal_rotation::execution::execute(
             run.app.world_mut(),

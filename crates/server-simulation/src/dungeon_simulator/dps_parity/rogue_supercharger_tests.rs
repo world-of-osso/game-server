@@ -89,11 +89,16 @@ fn rogue_supercharger_outlaw_adrenaline_earns_effective_spree_points() {
                 && event.kind == CombatLogKind::Energize
         })
         .count();
-    // sc_rogue.cpp2021–2038/4851: native effective points size the real
-    // Spree channel and hand ticks without increasing the actual CP payment.
+    let maximum =
+        crate::spell_cast::powers::power_value(run.app.world(), run.actor, PowerType::ComboPoints)
+            .unwrap()
+            .1 as usize;
+    // sc_rogue.cpp4794–4805: excess effective points increase hand damage,
+    // NOT duration. Native Duration1319's3500ms maximum caps this7-CP actor.
     assert_eq!(
-        returned, effective,
-        "earned Supercharger must size actual Spree ticks"
+        returned,
+        effective.min(maximum),
+        "earned Supercharger must cap actual Spree ticks at the spend limit"
     );
     assert_eq!(
         read_charges(&run),
