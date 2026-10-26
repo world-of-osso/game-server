@@ -76,6 +76,7 @@ register_modules! {
     secondary_copies: (360, "modules/secondary_copies.rs"),
     shadow_priest: (290, "modules/shadow_priest.rs"),
     snakeskin_quiver: (230, "modules/snakeskin_quiver.rs"),
+    spellslinger_hits: (401, "modules/spellslinger_hits.rs"),
     touch_of_death: (240, "modules/touch_of_death.rs"),
     voltaic_blaze: (250, "modules/voltaic_blaze.rs"),
     warrior: (40, "modules/warrior.rs"),
