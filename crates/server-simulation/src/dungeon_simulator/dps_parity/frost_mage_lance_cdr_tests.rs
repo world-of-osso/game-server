@@ -67,6 +67,12 @@ fn frost_mage_native_paid_lance_reduces_ray_and_earns_force_of_will_splinters() 
     for _ in 0..40 {
         run.app.update();
     }
+    let native_cap =
+        crate::spell_cast::scripts::script_effect_value(run.app.world(), run.actor, 1246769, 3);
+    assert_eq!(
+        native_cap, 6.0,
+        "Heart of Ice and Polished Focus each add one to native four-stack Lance"
+    );
     let expected = f64::from(
         run.app
             .world()
@@ -78,13 +84,13 @@ fn frost_mage_native_paid_lance_reduces_ray_and_earns_force_of_will_splinters() 
             .find(|effect| effect.index == 1)
             .unwrap()
             .base_points,
-    ) * 4.0
+    ) * f64::from(native_cap)
         / 1000.0;
     let elapsed = crate::spell_cast::now(run.app.world()) - start;
     let reduction = before - cooldown(&run) - elapsed;
     assert!(
         (reduction - expected).abs() < 0.005,
-        "four actually shattered stacks must pay native Glaciate; expected{expected}, got{reduction}"
+        "the selected native Shatter cap must pay native Glaciate; expected{expected}, got{reduction}"
     );
     let splinters = run
         .app
@@ -101,7 +107,7 @@ fn frost_mage_native_paid_lance_reduces_ray_and_earns_force_of_will_splinters() 
         })
         .count();
     assert!(
-        splinters >= 2,
-        "four primary shattered stacks must earn native Force of Will2Splinters, got{splinters}"
+        splinters >= 3,
+        "six primary shattered stacks must earn native Force of Will3Splinters, got{splinters}"
     );
 }
