@@ -900,6 +900,111 @@ fn devastation_rising_fury_grows_native_haste_then_freezes_for_earned_dragonrage
     }
 }
 
+#[test]
+#[ignore = "requires private native DB and exact Devastation profile"]
+fn devastation_unbound_flame_earned_native_uses_damage_the_pack_and_consume_one() {
+    for count in [1, 3] {
+        let mut run = prepare_literal(1467, count).unwrap();
+        engage(&mut run);
+        let primary = run.targets[0];
+        crate::spell_cast::creature_cast_with_targets(
+            run.app.world_mut(),
+            run.actor,
+            375087,
+            crate::spell_cast::CastTargets {
+                unit: run.actor,
+                primary: Some(primary),
+                destination: None,
+            },
+        )
+        .unwrap();
+        for _ in 0..1200 {
+            run.app.update();
+            if !crate::auras::has_aura(run.app.world(), run.actor, 375087) {
+                break;
+            }
+        }
+        let stacks = |run: &Run| {
+            run.app
+                .world()
+                .get::<crate::auras::ActiveAuras>(run.actor)
+                .and_then(|auras| auras.iter().find(|aura| aura.spell_id == 1292323))
+                .map_or(0, |aura| aura.stacks)
+        };
+        let initial = stacks(&run);
+        assert!(
+            initial > 0,
+            "actual Dragonrage expiration must earn native Unbound Flame uses"
+        );
+        let maximum = {
+            let spell = run
+                .app
+                .world()
+                .resource::<crate::spell_info::SpellStore>()
+                .get(1292323)
+                .unwrap();
+            crate::auras::fresh_max_stacks(run.app.world(), run.actor, spell)
+        };
+        assert_eq!(
+            initial, maximum,
+            "actual reverse-buff producer must grant its native cap"
+        );
+        for used in 1..=initial {
+            let before = run
+                .app
+                .world()
+                .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+                .0
+                .len();
+            crate::spell_cast::creature_cast_with_targets(
+                run.app.world_mut(),
+                run.actor,
+                1292321,
+                crate::spell_cast::CastTargets {
+                    unit: primary,
+                    primary: Some(primary),
+                    destination: None,
+                },
+            )
+            .unwrap();
+            for _ in 0..50 {
+                run.app.update();
+            }
+            // SimC76f8118 sc_evoker.cpp7470–7475: native payload and one earned use.
+            let events = &run
+                .app
+                .world()
+                .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+                .0[before..];
+            for target in &run.targets {
+                assert!(
+                    events
+                        .iter()
+                        .any(|event| event.source == Some(run.actor.to_bits())
+                            && event.target == Some(target.to_bits())
+                            && event.spell_id == Some(1292322)
+                            && event.kind == shared::protocol::CombatLogKind::Damage
+                            && event.amount > 0),
+                    "actual Unbound Flame use{used} must damage native pack recipient {target:?}"
+                );
+            }
+            assert_eq!(
+                stacks(&run),
+                initial - used,
+                "each actual Unbound Flame spends one earned use"
+            );
+        }
+        let resolved =
+            literal_rotation::execution::resolve_action(run.app.world(), run.actor, 375087)
+                .unwrap();
+        assert_eq!(
+            resolved,
+            Some(375087),
+            "last earned use restores the actual Dragonrage action"
+        );
+    }
+}
+
 fn cast_reference_empowers(run: &mut Run, primary: Entity) {
     for (spell, unit) in [(357208, run.actor), (359073, primary)] {
         crate::spell_cast::creature_cast_empowered_with_targets(
