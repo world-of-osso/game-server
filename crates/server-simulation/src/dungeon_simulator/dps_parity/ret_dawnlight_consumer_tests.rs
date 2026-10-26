@@ -78,7 +78,7 @@ fn dps_parity_dawnlight_consumer_paid_native_verdict_applies_dot_and_spends_one(
     let _seed = crate::random::seed_scope(70448);
     let mut run = native_ret(4);
     // The paid control leaves Aurora unspent; selected Wake legitimately makes this free.
-    ret_aurora_tests::unselect_aurora(&mut run);
+    ret_aurora_tests::unselect_ret_talent(&mut run, 439760);
     arm_wake_budget(&mut run);
     cast_finisher(&mut run, FINAL_VERDICT);
     wait_for_damage(&mut run, FINAL_VERDICT);

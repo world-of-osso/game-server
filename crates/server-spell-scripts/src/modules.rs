@@ -74,7 +74,8 @@ register_modules! {
     destruction_mastery: (2672, "modules/destruction_mastery.rs"),
     destruction_periodic: (2670, "modules/destruction_periodic.rs"),
     devastation: (10, "modules/devastation.rs"),
-    echo_policies: (1000, "modules/echo_policies.rs"),
+    // sc_paladin.cpp1757–1783: HoW echo follows Judgment and Sun Sear (priority1000).
+    echo_policies: (1001, "modules/echo_policies.rs"),
     elemental: (1000, "modules/elemental.rs"),
     elemental_ascendance: (220, "modules/elemental_ascendance.rs"),
     empower_evoker: (1000, "modules/empower_evoker.rs"),

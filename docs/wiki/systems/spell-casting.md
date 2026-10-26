@@ -70,6 +70,12 @@ Sources: `crates/server-combat/src/spell_cast/{mod.rs,scripts.rs,scripts/}`, `cr
 
 Native4442 raw15/30 plus1258011 effect modifiers5/20 produce effective20/50. The parent reports guide15/30 from Maxroll12.1.5/Skycoach; that source conflict is recorded, not resolved by tuning native data. [Contract](../../specs/dps-parity.md#ret-storm-root-supply-and-secondary-relationships), [strict RED and capability ledger](../../handoffs/ret-storm-gap-proof-ledger.md). Native positive/no-Hero RED→GREEN and actual root1.0/echo0.5 damage are recorded there. HoW, Tempest, Empyrean/other background-source eligibility and full parity remain separate.
 
+### HoW primary-impact extension — 2026-10-26
+
+`CAST_POLICIES` retains Storm's execution producer. `PRIMARY_HIT_POLICIES` adds ordinary HoW's successful-primary producer from pinned `sc_paladin.cpp1689–1710/1757–1783`. Both use the same owned native431474 aura, live effect values and ICD. The HoW callback follows native Judgment/Sun Sear processing; it rejects background depth, non-primary cast roles and secondary recipients. Echoes retain native flight and cannot produce another echo. Critical HoW echo payloads retain native Sun Sear impact behavior.
+
+Corrected native RED `81fbd788eb` observed 39 ordinary HoW hits and zero matching scaled echo hits in actual300s combat. Legal unselected and actual background-hit controls passed. Capture counts filter the actual Hammer spell ID, not unrelated Storm echoes. GREEN integration and landed numerical qualification remain pending. [Contract](../../specs/dps-parity.md#ret-hammer-second-sunrise), [native cases](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/ret_hammer_sunrise_tests.rs); see also [[ret-divine-purpose]].
+
 ## Selected primary across self casts — 2026-10-24
 
 The shared literal execution carries the native cast unit and selected action primary separately. `CastTargets` supplies both to ordinary Player/NPC admission; existing spell snapshots retain the primary through queued requests and cast bars. Foreground child relationships use that snapshot, not the explicit self-cast unit or a later mutable combat target. Missing context does not choose another target. Native target selectors, values, payment and flight remain unchanged.

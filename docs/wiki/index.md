@@ -12,8 +12,9 @@
 - [Warlock periodic counters](systems/warlock-periodic-counters.md) — native Wither counter-only and six shared lifecycle cases GREEN; numerical parity remains open.
 - [Arcane literal fixture](systems/simc-apl.md#arcane-fixture-62) — supplied profile rows and native class readiness; ST controller regression passes, numerical parity remains separate.
 - [Native Loa/Rite stat callbacks](systems/character-stats.md#native-loa-and-rite-stat-callbacks--2026-10-26) — native gem metadata, linked rank amount, combat admission and five-profile RED→GREEN; landed44c2b6c5d.
-- [Ret Purpose and tier supply](systems/ret-divine-purpose.md) — native Aurora Wake grant, chance producer and distinct Arbiter consumption; end-to-end RED→GREEN, full integration pending.
-- [Ret Judgment target uses](systems/ret-judgment.md) — source-qualified native producer/consumer, flat damage magnitude and independently expiring uses; native RED observed, GREEN/measurement pending.
+- [HoW Second Sunrise](systems/spell-casting.md#how-primary-impact-extension--2026-10-26) — native successful-primary RED; shared native ICD/effectiveness and echo payload implemented, GREEN pending.
+- [Ret Purpose and tier supply](systems/ret-divine-purpose.md) — native Aurora Wake grant, chance producer and distinct Arbiter consumption; end-to-end RED→GREEN, 116-case landed integration; ST remains below the parity band.
+- [Ret Judgment target uses](systems/ret-judgment.md) — source-qualified native producer/consumer, flat damage magnitude and independently expiring uses; native RED→GREEN and target-benefit qualification; actor-only uptime does not sample the target aura.
 - [Warlock periodic counters](systems/warlock-periodic-counters.md) — native Wither counters do not scale ticks or grow on refresh;265/267 actual-cast/tick RED→GREEN.
 - [Warlock periodic shard funding](systems/spell-casting.md#warlock-periodic-shard-funding--2026-10-25) — downstream Destruction-only funding, actual critical context and shared native pool/overflow; Affliction remains separate.
 - [Native target DoT duration](systems/simc-apl.md#native-target-dot-duration) — owned active state and native fresh duration, independent of refreshed lifetime.
