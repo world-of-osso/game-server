@@ -11,13 +11,24 @@ const DEADLY_POISON: u32 = 2823;
 const INSTANT_POISON: u32 = 315584;
 const DEADLY_INSTANT: u32 = 113780;
 const VENOMOUS_WOUNDS: u32 = 79134;
+const SEAL_FATE: u32 = 14190;
+const SWIFT_SLASHER: u32 = 381988;
+const SLICE_AND_DICE: u32 = 315496;
 const VENOMOUS_BLEEDS: &[u32] = &[703, 1943];
 const DISPEL_POISON: u8 = 4;
+const IMPROVED_GARROTE: u32 = 381632;
+const GARROTE_WINDOW: u32 = 392401;
+const KINGSBANE: u32 = 385627;
+const KINGSBANE_RAMP: u32 = 394095;
+// SimC76f8118 sc_rogue.cpp2974–3083: lethal direct poison payloads;
+// Deadly's periodic ticks are not impact callbacks.
+pub(crate) const LETHAL_POISON_HITS: &[u32] = &[113780, 315585, 8680, 383414];
 
 #[derive(Component)]
 struct VenomousRemainder(f64);
 
 pub(super) fn register(scripts: &mut AuraScripts) {
+    spell_cast::scripts::register_rogue_children(scripts);
     scripts.0.insert(
         DEADLY_POISON,
         AuraScript {
@@ -33,9 +44,16 @@ pub(super) fn register(scripts: &mut AuraScripts) {
         },
     );
     scripts.0.insert(
+        SEAL_FATE,
+        AuraScript {
+            check_proc: Some(block_deferred_proc),
+            ..Default::default()
+        },
+    );
+    scripts.0.insert(
         VENOMOUS_WOUNDS,
         AuraScript {
-            check_proc: Some(block_deferred_wounds),
+            check_proc: Some(block_deferred_proc),
             on_remove: Some(clear_venomous_remainder),
             ..Default::default()
         },
@@ -98,10 +116,252 @@ fn apply_deadly_poison(
     spell_cast::cast_triggered(world, caster, dot, Some(target), 1);
 }
 
+/// SimC76f8118 sc_rogue.cpp2948–2954/4975/11155–11156: every
+/// positive lethal poison impact against the owned Kingsbane grants a native
+/// ramp stack. Its lifetime ends with that dot, never with a later poison hit.
+pub(crate) fn after_poison_hit(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
+    let deadline = world.get::<ActiveAuras>(target).and_then(|auras| {
+        auras
+            .iter()
+            .find(|aura| aura.spell_id == KINGSBANE && aura.caster == ctx.caster)
+            .map(|aura| aura.expires_at)
+    });
+    let Some(deadline) = deadline else { return };
+    spell_cast::cast_triggered(
+        world,
+        ctx.caster,
+        KINGSBANE_RAMP,
+        Some(ctx.caster),
+        ctx.depth + 1,
+    );
+    if let Some(mut auras) = world.get_mut::<ActiveAuras>(ctx.caster) {
+        for aura in auras
+            .auras
+            .iter_mut()
+            .filter(|aura| aura.spell_id == KINGSBANE_RAMP && aura.caster == ctx.caster)
+        {
+            aura.expires_at = deadline;
+        }
+    }
+}
+
+pub(crate) fn prepare_cast(
+    world: &mut World,
+    caster: Entity,
+    target: Option<Entity>,
+    spell: &mut SpellInfo,
+) {
+    prepare_garrote(world, caster, spell);
+    prepare_envenom(world, caster, target, spell);
+}
+
+/// SimC76f8118 sc_rogue.cpp4550–4561/4604–4609: the actual stealth
+/// and post-stealth window govern both the bleed bonus and zero recovery.
+pub(crate) fn improved_garrote_active(world: &World, caster: Entity, spell: u32) -> bool {
+    if spell != 703 || !super::has_aura(world, caster, IMPROVED_GARROTE) {
+        return false;
+    }
+    let stealthed = world
+        .get::<ActiveAuras>(caster)
+        .is_some_and(|auras| auras.has_type(super::handlers::MOD_STEALTH));
+    stealthed || super::has_aura(world, caster, GARROTE_WINDOW)
+}
+
+// Keep the bonus in the applied bleed instead of reading stealth on each tick.
+fn prepare_garrote(world: &World, caster: Entity, spell: &mut SpellInfo) {
+    if !improved_garrote_active(world, caster, spell.id) {
+        return;
+    }
+    let window = world
+        .resource::<SpellStore>()
+        .get(GARROTE_WINDOW)
+        .expect("selected Improved Garrote requires its native window");
+    let effect = window
+        .effects
+        .iter()
+        .find(|effect| effect.index == 1)
+        .expect("native Improved Garrote damage bonus");
+    let bonus = spell_cast::effects::modded_base_points(world, caster, window, effect);
+    spell.cast_damage_multiplier =
+        Some(spell.cast_damage_multiplier.unwrap_or(1.0) * (1.0 + bonus / 100.0));
+}
+
+/// sc_rogue.cpp7351–7378/11121–11133: ending the last real stealth
+/// aura starts the native window; re-entering stealth does not start a timer.
+pub(super) fn after_stealth_removed(world: &mut World, unit: Entity, aura: &AuraInstance) {
+    if !aura
+        .effects
+        .iter()
+        .any(|effect| effect.aura_type == super::handlers::MOD_STEALTH)
+        || !super::has_aura(world, unit, IMPROVED_GARROTE)
+    {
+        return;
+    }
+    let stealthed = world
+        .get::<ActiveAuras>(unit)
+        .is_some_and(|auras| auras.has_type(super::handlers::MOD_STEALTH));
+    if !stealthed {
+        spell_cast::cast_triggered(world, unit, GARROTE_WINDOW, Some(unit), 1);
+    }
+}
+
+/// SimC76f8118 sc_rogue.cpp4281–4310: snapshot the native Amplifying
+/// bonus and consume the owned threshold before this cast can generate poison.
+fn prepare_envenom(
+    world: &mut World,
+    caster: Entity,
+    target: Option<Entity>,
+    spell: &mut SpellInfo,
+) {
+    if spell.id != 32645 {
+        return;
+    }
+    let Some(target) = target else { return };
+    let Some((bonus, threshold)) = read_amplifying_values(world, caster) else {
+        return;
+    };
+    assert!(
+        threshold > 0,
+        "Amplifying Poison requires a positive native threshold"
+    );
+    let instance = world.get::<ActiveAuras>(target).and_then(|auras| {
+        auras
+            .iter()
+            .find(|aura| {
+                aura.spell_id == 383414 && aura.caster == caster && aura.stacks >= threshold
+            })
+            .map(|aura| aura.instance_id)
+    });
+    let Some(instance) = instance else { return };
+    spell.cast_damage_multiplier =
+        Some(spell.cast_damage_multiplier.unwrap_or(1.0) * (1.0 + bonus / 100.0));
+    for _ in 0..threshold {
+        super::spend_stack(world, target, instance);
+    }
+}
+
+fn read_amplifying_values(world: &World, caster: Entity) -> Option<(f32, u8)> {
+    let coating = world
+        .get::<ActiveAuras>(caster)?
+        .iter()
+        .find(|aura| aura.spell_id == 381664 && aura.caster == caster)?;
+    let amount = |index| {
+        coating
+            .effects
+            .iter()
+            .find(|effect| effect.index == index)
+            .expect("Amplifying Poison retains its native bonus and threshold")
+            .amount
+    };
+    Some((amount(0), amount(1) as u8))
+}
+
 // The native periodic-hit producer below owns this proc before aura expiry.
 // Queued generic proc dispatch runs after expiry and cannot recover that count.
-fn block_deferred_wounds(_world: &World, _aura: &AuraInstance, _event: &procs::AuraEvent) -> bool {
+fn block_deferred_proc(_world: &World, _aura: &AuraInstance, _event: &procs::AuraEvent) -> bool {
     false
+}
+
+/// SimC76f8118 sc_rogue.cpp2178–2180/4471–4473/5137–5138/7921–7937:
+/// actual critical CP-builder impacts roll the selected native chance and child.
+/// Mutilate's hands and Fan's dummy builder are explicitly scripted exceptions.
+pub(crate) fn after_builder_hit(world: &mut World, ctx: &EffectCtx<'_>, critical: bool) {
+    if !critical || !is_combo_builder(ctx.spell) {
+        return;
+    }
+    let values = world.get::<ActiveAuras>(ctx.caster).and_then(|auras| {
+        let talent = auras
+            .iter()
+            .find(|aura| aura.spell_id == SEAL_FATE && aura.caster == ctx.caster)?;
+        let chance = talent
+            .effects
+            .iter()
+            .find(|effect| effect.index == 0)
+            .expect("native Seal Fate retains its chance")
+            .amount;
+        let payload = talent
+            .effects
+            .iter()
+            .find(|effect| effect.index == 1)
+            .expect("native Seal Fate retains its child")
+            .trigger_spell;
+        Some((talent.instance_id, chance, payload))
+    });
+    let Some((instance, chance, payload)) = values else {
+        return;
+    };
+    assert_ne!(
+        payload, 0,
+        "native Seal Fate requires a combo-point payload"
+    );
+    if procs::try_policy_proc(world, ctx.caster, instance, chance) {
+        spell_cast::cast_triggered(world, ctx.caster, payload, Some(ctx.caster), ctx.depth + 1);
+    }
+}
+
+fn is_combo_builder(spell: &SpellInfo) -> bool {
+    // sc_rogue.cpp5085–5086/5933–5934/6351–6352 explicitly exclude
+    // Pistol Shot, Shuriken Toss and Poisoned Knife despite native CP gains.
+    if matches!(spell.id, 185763 | 114014 | 185565) {
+        return false;
+    }
+    if matches!(spell.id, 51723 | 5374 | 27576) {
+        return true;
+    }
+    spell
+        .class_options
+        .as_ref()
+        .is_some_and(|class| class.spell_class_set == 8)
+        && spell.effects.iter().any(|effect| {
+            let energizes_combo =
+                effect.effect == 30 && effect.misc_values[0] == PowerType::ComboPoints as i32;
+            let adds_combo = effect.effect == 80;
+            (energizes_combo || adds_combo) && effect.base_points > 0.0
+        })
+}
+
+/// SimC76f8118 sc_rogue.cpp9140–9148/11280–11282: Swift Slasher
+/// adds live attack haste to SnD's auto-attack bonus. The generic native342
+/// factor is already present; adjust only the melee swing snapshot, not auras.
+pub(crate) fn fold_swift_slasher(
+    modifiers: &super::AuraStatMods,
+    auras: Option<&ActiveAuras>,
+    unit: Entity,
+    haste_pct: f32,
+) -> super::AuraStatMods {
+    let mut modifiers = modifiers.clone();
+    let Some(auras) = auras else { return modifiers };
+    if let Some(factor) = swift_slasher_time_factor(auras, unit, haste_pct) {
+        modifiers.attack_time_mult *= factor;
+    }
+    modifiers
+}
+
+fn swift_slasher_time_factor(auras: &ActiveAuras, unit: Entity, haste_pct: f32) -> Option<f32> {
+    let owned = |spell| {
+        auras
+            .iter()
+            .find(|aura| aura.spell_id == spell && aura.caster == unit)
+    };
+    let talent = owned(SWIFT_SLASHER)?;
+    let slice = owned(SLICE_AND_DICE)?;
+    let haste_share = talent
+        .effects
+        .iter()
+        .find(|effect| effect.index == 1)
+        .expect("native Swift Slasher retains its haste percentage")
+        .amount
+        / 100.0;
+    let slice_bonus = slice
+        .effects
+        .iter()
+        .find(|effect| effect.aura_type == super::handlers::MOD_MELEE_RANGED_HASTE_2)
+        .expect("native Slice and Dice retains its attack-time bonus")
+        .amount
+        * slice.stack_multiplier()
+        / 100.0;
+    let generic = 1.0 + slice_bonus;
+    Some(generic / (generic + haste_pct / 100.0 * haste_share))
 }
 
 fn clear_venomous_remainder(

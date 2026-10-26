@@ -1,0 +1,50 @@
+//! Traversal order is observable: policy dispatch must not alphabetize class groups.
+#[test]
+fn policy_traversal_keeps_the_original_relationship_order() {
+    let names: Vec<_> = super::registry()
+        .policies()
+        .map(|policy| policy.name)
+        .collect();
+    assert_eq!(
+        names,
+        [
+            "SIMC_DEVASTATION_MASS_DISINTEGRATE_CONSUMER",
+            "SIMC_DEVASTATION_DEEP_BREATH_PAYLOAD",
+            "SIMC_DEVASTATION_MANEUVERABLE_DEEP_BREATH_PAYLOAD",
+            "SIMC_BM_WRATH_NATURES_ALLY_SUMMON",
+            "SIMC_BM_WRATH_BLOODSHED",
+            "SIMC_BM_BARBED_NATURES_ALLY",
+            "SIMC_BM_COBRA_NATURES_ALLY",
+            "SIMC_BM_KILL_COMMAND_NATURES_ALLY",
+            "SIMC_WW_ZENITH_STOMP_CHILD",
+            "SIMC_ARMS_MASTER_OF_WARFARE_REPLACEMENT",
+            "SIMC_ARMS_CLEAVE_REND",
+            "SIMC_FURY_EXECUTE_DEEP_WOUNDS",
+            "SIMC_WW_MOMENTUM_BOOST",
+            "SIMC_RET_ENDLESS_GLEAM",
+            "SIMC_RET_DAWNLIGHT_PERIODIC_SPLASH",
+            "SIMC_RET_DAWNLIGHT_REAPPLICATION_EXTEND",
+            "SIMC_RET_WRATH_HAMMER_MODE",
+            "SIMC_RET_BACKGROUND_WRATH_HAMMER_MODE",
+            "SIMC_RET_RESONANCE_JUDGMENT",
+            "SIMC_RET_RESONANCE_HAMMER",
+            "SIMC_RET_WALK_INTO_LIGHT",
+            "SIMC_RET_TOLL_WALK_INTO_LIGHT",
+            "SIMC_RET_JUDGMENT_SECONDARIES",
+            "SIMC_RET_HAMMER_SECONDARIES",
+            "SIMC_RET_TOLL_JUDGMENT_HOLY_POWER",
+            "SIMC_RET_CRUSADING_STRIKE_HOLY_POWER",
+            "SIMC_RET_BLADE_EXPURGATION",
+            "SIMC_RET_BLADE_SECONDARY_EXPURGATION",
+            "SIMC_RET_DAWNLIGHT_WAKE_PRODUCER",
+            "SIMC_RET_DAWNLIGHT_SPENDER_CONSUMER",
+            "SIMC_ROGUE_CUT_TO_THE_CHASE",
+            "SIMC_ROGUE_CUT_TO_THE_CHASE",
+            "SIMC_ROGUE_CUT_TO_THE_CHASE",
+            "SIMC_OUTLAW_RESTLESS_BLADES",
+            "SIMC_FROST_GLACIAL_SPIKE_DAMAGE",
+            "SIMC_FROST_GLACIAL_SPIKE_ICICLE_CONSUMER",
+            "SIMC_FROST_GLACIAL_SPIKE_ENABLER_CONSUMER",
+        ]
+    );
+}

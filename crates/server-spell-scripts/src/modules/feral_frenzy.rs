@@ -1,9 +1,24 @@
 //! SimC76f8118 sc_druid.cpp4058–4165: Frenzy parents execute native tick children.
 use bevy::prelude::*;
 
-use crate::auras::scripts::{AuraScript, AuraScripts};
-use crate::auras::{AuraInstance, RemoveReason};
-use crate::spell_cast::{self, effects::EffectCtx, queued_triggers};
+use super::combat;
+use combat::auras::scripts::{AuraScript, AuraScripts};
+use combat::auras::{AuraInstance, RemoveReason};
+use combat::spell_cast::{self, effects::EffectCtx, queued_triggers};
+use combat::spell_cast::script_registry::{SpellScriptHook, ContextHitHook};
+
+pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::EarlyAuraRegistration(register),
+    SpellScriptHook::ContextHit(context_hit),
+];
+
+fn context_hit(spell: u32) -> Option<ContextHitHook> {
+    match spell {
+        FERAL | FRANTIC => Some(begin),
+        FRANTIC_CHILD => Some(energize_frantic),
+        _ => None,
+    }
+}
 
 pub(super) const FERAL: u32 = 274837;
 pub(super) const FRANTIC: u32 = 1243807;
