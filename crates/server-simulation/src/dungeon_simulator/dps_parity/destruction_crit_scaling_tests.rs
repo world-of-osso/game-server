@@ -78,6 +78,12 @@ fn actual_hit(spell_id: u32, boost: bool) -> (f64, f64) {
     ));
     // Instant hits already exist after launch; observe them before advancing
     // the world. Projectiles require their actual impact frame instead.
+    let mut previous_crit = run
+        .app
+        .world()
+        .get::<CharacterStats>(caster)
+        .unwrap()
+        .crit_pct;
     for _ in 0..60 {
         let hit = run
             .app
@@ -104,8 +110,32 @@ fn actual_hit(spell_id: u32, boost: bool) -> (f64, f64) {
                 .get::<CharacterStats>(caster)
                 .unwrap()
                 .crit_pct;
+            let buffs: Vec<_> = run
+                .app
+                .world()
+                .get::<crate::auras::ActiveAuras>(caster)
+                .unwrap()
+                .iter()
+                .filter(|aura| {
+                    matches!(
+                        aura.spell_id,
+                        113858 | 1265939 | 1297663 | 1297664 | 1307927
+                    )
+                })
+                .map(|aura| (aura.spell_id, aura.expires_at))
+                .collect();
+            eprintln!(
+                "impact diagnostic spell={spell_id} boost={boost} previous_crit={previous_crit} after_crit={impact_crit} damage={} buffs={buffs:?}",
+                hit.amount
+            );
             return (f64::from(hit.amount), f64::from(impact_crit));
         }
+        previous_crit = run
+            .app
+            .world()
+            .get::<CharacterStats>(caster)
+            .unwrap()
+            .crit_pct;
         run.app.update();
     }
     panic!("native spell{spell_id} must land");
