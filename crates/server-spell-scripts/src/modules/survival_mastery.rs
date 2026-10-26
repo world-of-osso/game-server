@@ -1,13 +1,11 @@
 //! Spirit Bond's authored native percentage stays in the shared aura/mastery engine.
 use super::combat;
 use bevy::prelude::*;
-use combat::auras::{self, AuraInstance, RemoveReason};
 use combat::auras::scripts::AuraScripts;
+use combat::auras::{self, AuraInstance, RemoveReason};
 use combat::spell_cast::{self, script_registry::SpellScriptHook};
 
-pub(super) const HOOKS: &[SpellScriptHook] = &[
-    SpellScriptHook::LateAuraRegistration(register),
-];
+pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::LateAuraRegistration(register)];
 
 const SPIRIT_BOND: u32 = 263135;
 const SPIRIT_BOND_MODIFIER: u32 = 459722;

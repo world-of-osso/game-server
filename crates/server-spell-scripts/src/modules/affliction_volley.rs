@@ -15,9 +15,9 @@ pub(super) const HOOKS: &[SpellScriptHook] =
 fn volley_multiplier(world: &World, caster: Entity, _target: Entity, spell: &SpellInfo) -> f32 {
     if spell.id != SHADOWBOLT_VOLLEY
         || !world.get::<ActiveAuras>(caster).is_some_and(|auras| {
-            auras.iter().any(|aura| {
-                aura.caster == caster && aura.spell_id == IMPROVED_SHADOW_BOLT
-            })
+            auras
+                .iter()
+                .any(|aura| aura.caster == caster && aura.spell_id == IMPROVED_SHADOW_BOLT)
         })
     {
         return 1.0;

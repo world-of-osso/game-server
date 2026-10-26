@@ -15,19 +15,43 @@ fn native_spirit_bond_selected_payload_includes_native_mastery_dependency() {
         run.app.update();
     }
     let world = run.app.world();
-    let points = world.get::<crate::stats::CharacterStats>(run.actor).unwrap().mastery_points;
+    let points = world
+        .get::<crate::stats::CharacterStats>(run.actor)
+        .unwrap()
+        .mastery_points;
     let store = world.resource::<crate::spell_info::SpellStore>();
     let mastery = store.get(263135).unwrap();
-    let coefficient = mastery.effects.iter().find(|effect| effect.index == 0).unwrap().bonus_coefficient;
+    let coefficient = mastery
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap()
+        .bonus_coefficient;
     let dependency = store.get(459722).unwrap();
-    let percent = dependency.effects.iter().find(|effect| effect.index == 0).unwrap().base_points;
+    let percent = dependency
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap()
+        .base_points;
     let active = world.get::<crate::auras::ActiveAuras>(run.actor).unwrap();
-    let aura = active.iter().find(|aura| aura.spell_id == 263135 && aura.caster == run.actor)
+    let aura = active
+        .iter()
+        .find(|aura| aura.spell_id == 263135 && aura.caster == run.actor)
         .expect("actual selected native Spirit Bond must exist");
-    let amount = aura.effects.iter().find(|effect| effect.index == 0).unwrap().amount;
+    let amount = aura
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap()
+        .amount;
     let expected = points * coefficient * (1.0 + percent / 100.0);
-    println!("NATIVE_SPIRIT_BOND points={points} coefficient={coefficient} dependency_pct={percent} actual={amount} expected={expected}");
+    println!(
+        "NATIVE_SPIRIT_BOND points={points} coefficient={coefficient} dependency_pct={percent} actual={amount} expected={expected}"
+    );
     assert!(points > 0.0 && coefficient > 0.0 && percent > 0.0);
-    assert!((amount - expected).abs() < 0.01,
-        "actual native Spirit Bond magnitude lacks its sourced native percentage: actual={amount}, expected={expected}");
+    assert!(
+        (amount - expected).abs() < 0.01,
+        "actual native Spirit Bond magnitude lacks its sourced native percentage: actual={amount}, expected={expected}"
+    );
 }
