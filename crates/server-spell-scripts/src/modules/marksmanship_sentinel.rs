@@ -10,11 +10,12 @@ use combat::spell_info::SpellInfo;
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::ArmorIgnoredSpells(ARMOR_IGNORED),
     SpellScriptHook::ResolvedDamage(after_damage),
-    SpellScriptHook::AfterQueuedTriggers(resolve_tip_marks),
+    SpellScriptHook::AfterQueuedTriggers(roll_queued_tip_marks),
 ];
 use bevy::prelude::*;
 
 const AIMED: u32 = 19434;
+const TAKEDOWN: u32 = 1250646;
 const WILDFIRE_BOMB: u32 = 259495;
 const WILDFIRE_DAMAGE: u32 = 265157;
 const RAPID_TICK: u32 = 257045;
@@ -45,7 +46,7 @@ pub(super) fn queue_tip_mark(world: &mut World, caster: Entity, target: Entity) 
         .push((caster, target));
 }
 
-fn resolve_tip_marks(world: &mut World) {
+fn roll_queued_tip_marks(world: &mut World) {
     let Some(pending) = world
         .get_resource_mut::<PendingTipMarks>()
         .map(|mut pending| std::mem::take(&mut pending.0))
@@ -67,7 +68,7 @@ fn read_survival_mark_chance(world: &World, caster: Entity) -> f32 {
     // sc_hunter.cpp3694–3700: native Sentinel already receives Moon's
     // Blessing through its5585 label; unlike MM, never add that effect twice.
     let mut chance = script_effect_value(world, caster, SENTINEL, 0);
-    if selected(world, caster, LUNAR_CALLING) && auras::has_aura(world, caster, 1250646) {
+    if selected(world, caster, LUNAR_CALLING) && auras::has_aura(world, caster, TAKEDOWN) {
         chance += script_effect_value(world, caster, LUNAR_CALLING, 1);
     }
     chance
@@ -82,7 +83,7 @@ pub(super) fn after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
     // producer force-marks its actual hostile primary before cast relationships.
     let forces_mark = match spell.id {
         288613 => selected(world, caster, FEATHERED_FRENZY),
-        1250646 => selected(world, caster, LUNAR_CALLING),
+        TAKEDOWN => selected(world, caster, LUNAR_CALLING),
         _ => false,
     };
     if forces_mark && let Some(target) = spell.cast_primary_target {

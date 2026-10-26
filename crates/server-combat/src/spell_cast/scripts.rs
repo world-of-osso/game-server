@@ -61,6 +61,7 @@ pub(super) use script_registry::spell_residual as after_spell_residual;
 mod chrono_flame;
 pub(super) use script_registry::after_modifier_consumption as apply_echo_policies;
 mod enhancement_doom;
+mod enhancement_elemental_weapons;
 mod enhancement_flurry;
 pub(super) use enhancement_flurry::{
     update as update_enhancement_flurry, weapon_multiplier as enhancement_flurry_weapon_multiplier,
@@ -84,6 +85,7 @@ mod maelstrom_weapon;
 pub(crate) use maelstrom_weapon::consume as consume_maelstrom_weapon;
 pub(crate) fn register_enhancement(scripts: &mut crate::auras::scripts::AuraScripts) {
     maelstrom_weapon::register(scripts);
+    enhancement_elemental_weapons::register(scripts);
     enhancement_imbues::register(scripts);
     enhancement_modes::register(scripts);
     enhancement_stormblast::register(scripts);
@@ -171,6 +173,7 @@ pub(crate) use windwalker_dual_threat::{
     read_replacement as white_impact_replacement, roll_replacement as replace_white_impact,
 };
 mod glory_of_the_dawn;
+mod teachings_of_the_monastery;
 mod windwalker_flurry;
 pub(crate) use windwalker_flurry::register_hero_flurry;
 pub(crate) fn after_melee_hit(
@@ -229,6 +232,7 @@ pub(super) fn finish_scripted_launch(
     script_registry::after_counter_launch(world, caster, spell.id);
     unbroken_rhythm::after_launch(world, caster, spell.id);
     glory_of_the_dawn::after_launch(world, caster, spell, depth);
+    teachings_of_the_monastery::after_launch(world, caster, spell, depth);
     windwalker_flurry::after_launch(world, caster, spell);
     enhancement_tier::after_launch(world, caster, spell, depth);
     enhancement_strikes::cast_ride_the_lightning(world, caster, spell, depth);
@@ -1761,6 +1765,13 @@ pub(super) fn on_enemy_damage_hit_with_context(
     if crate::auras::rogue::LETHAL_POISON_HITS.contains(&spell_id) {
         return Some(rogue_children::poison_hit);
     }
+    // SimC76f8118 monk883–889: only the enemy impact earns Teachings.
+    // Native TP also hits its caster with Energize; that is not another impact.
+    if spell_id == 100780 {
+        return Some(|world, ctx, target| {
+            windwalker::tiger_palm_hit(world, ctx.caster, target, ctx.depth);
+        });
+    }
     script_registry::enemy_context_hit(world, spell_id)
 }
 
@@ -1770,8 +1781,8 @@ pub fn on_hit(world: &World, spell_id: u32) -> Option<HitHook> {
     }
     match spell_id {
         windwalker_children::ZENITH => Some(windwalker_children::zenith_hit),
-        100780 => Some(windwalker::tiger_palm_hit),
         100784 => Some(windwalker::blackout_kick_hit),
+        teachings_of_the_monastery::DAMAGE => Some(teachings_of_the_monastery::blackout_hit),
         107428 | 113656 => Some(windwalker::trigger_wdp_enabler_on_hit),
         unbroken_rhythm::ROOT => Some(unbroken_rhythm::capture_and_consume),
 

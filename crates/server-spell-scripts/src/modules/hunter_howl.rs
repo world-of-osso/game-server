@@ -7,6 +7,11 @@ use combat::spell_cast::{self, PlannedEffect, TargetPlan, effects::EffectCtx, ta
 use combat::spell_info::{SpellInfo, SpellStore};
 use shared::components::CombatStatus;
 
+#[path = "hunter_howl/pack_mentality.rs"]
+mod pack_mentality;
+#[path = "hunter_howl/summons.rs"]
+mod summons;
+
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::OwnsPolicyProc(owns_proc),
     SpellScriptHook::AfterQueuedTriggers(begin_combat),
@@ -18,7 +23,6 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
 const HOWL: u32 = 471876;
 const COOLDOWN: u32 = 471877;
 const READY: [u32; 3] = [471878, 472324, 472325];
-const SUMMON: [u32; 3] = [1222271, 0, 471990];
 const STAMPEDE: u32 = 472741;
 const INCOMING: u32 = 1258338;
 const STAMPEDE_TRIGGER: u32 = 1258344;
@@ -122,7 +126,7 @@ fn after_launch(world: &mut World, caster: Entity, spell: &SpellInfo, foreground
 }
 
 fn consume_beasts(world: &mut World, caster: Entity, primary: Entity) {
-    let mut consumed = false;
+    let mut consumed = 0_u32;
     for (index, ready) in READY.into_iter().enumerate() {
         if !auras::has_aura(world, caster, ready) {
             continue;
@@ -132,15 +136,16 @@ fn consume_beasts(world: &mut World, caster: Entity, primary: Entity) {
         if index == 1 {
             spell_cast::cast_triggered(world, caster, 471936, Some(primary), 1);
             spell_cast::cast_triggered(world, caster, 471938, Some(primary), 1);
-        } else if !summon_beast(world, caster, SUMMON[index], primary) {
+        } else if !summons::summon(world, caster, ready, primary) {
             continue;
         }
         auras::remove_auras(world, caster, RemoveReason::Consumed, |aura| {
             aura.spell_id == ready
         });
-        consumed = true;
+        consumed += 1;
     }
-    if consumed {
+    if consumed > 0 {
+        pack_mentality::recover_cooldowns(world, caster, consumed);
         start_earned_stampede(world, caster, primary);
     }
 }
@@ -156,30 +161,6 @@ fn start_earned_stampede(world: &mut World, caster: Entity, primary: Entity) {
     });
     world.entity_mut(caster).insert(StampedeTarget(primary));
     apply_self(world, caster, STAMPEDE_TRIGGER);
-}
-
-fn summon_beast(world: &mut World, caster: Entity, spell: u32, primary: Entity) -> bool {
-    use combat::spell_cast::summon::SummonedCreature;
-    let owned = |world: &mut World| -> Vec<Entity> {
-        world
-            .query::<(Entity, &SummonedCreature)>()
-            .iter(world)
-            .filter(|(_, summon)| summon.owner == caster && summon.spell_id == spell)
-            .map(|(unit, _)| unit)
-            .collect()
-    };
-    let before = owned(world);
-    // The native summon still chooses its caster-relative destination. Retain
-    // the consuming Kill Command's hostile primary for the beast's first action.
-    spell_cast::cast_triggered(world, caster, spell, Some(primary), 1);
-    let created = owned(world).iter().any(|unit| !before.contains(unit));
-    if !created {
-        warn!(
-            ?caster,
-            spell, "Howl retains readiness because native summon did not create an actor"
-        );
-    }
-    created
 }
 
 fn stampede_tick(world: &mut World, _: Entity, aura: &AuraInstance, effect: u8) {

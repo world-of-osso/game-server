@@ -775,6 +775,240 @@ fn devastation_wingleader_earned_mass_disintegrate_reduces_native_breath_recover
     }
 }
 
+#[test]
+#[ignore = "requires private native DB and exact Devastation profile"]
+fn devastation_rising_fury_grows_native_haste_then_freezes_for_earned_dragonrage_grace() {
+    for selected in [false, true] {
+        let mut run = prepare_literal(1467, 1).unwrap();
+        engage(&mut run);
+        let primary = run.targets[0];
+        let before = run
+            .app
+            .world()
+            .get::<crate::stats::CharacterStats>(run.actor)
+            .unwrap()
+            .haste_pct;
+        assert!(crate::auras::has_aura(run.app.world(), run.actor, 1271687));
+        if !selected {
+            crate::auras::remove_auras(
+                run.app.world_mut(),
+                run.actor,
+                crate::auras::RemoveReason::Unlearned,
+                |aura| aura.spell_id == 1271687,
+            );
+        }
+        crate::spell_cast::creature_cast_with_targets(
+            run.app.world_mut(),
+            run.actor,
+            375087,
+            crate::spell_cast::CastTargets {
+                unit: run.actor,
+                primary: Some(primary),
+                destination: None,
+            },
+        )
+        .unwrap();
+        run.app.update();
+        let fury = |run: &Run| {
+            run.app
+                .world()
+                .get::<crate::auras::ActiveAuras>(run.actor)
+                .and_then(|auras| auras.iter().find(|aura| aura.spell_id == 1271783))
+                .cloned()
+        };
+        assert_eq!(
+            fury(&run).is_some(),
+            selected,
+            "only selected Rising Fury may be earned by actual Dragonrage"
+        );
+        if !selected {
+            continue;
+        }
+        let initial = fury(&run).unwrap();
+        assert_eq!(
+            initial.stacks, 1,
+            "actual Dragonrage starts one native Fury stack"
+        );
+        let amount = initial
+            .effects
+            .iter()
+            .find(|effect| effect.index == 0)
+            .unwrap()
+            .amount;
+        let period_ms = initial
+            .effects
+            .iter()
+            .find(|effect| effect.index == 3)
+            .unwrap()
+            .period_ms;
+        assert!(amount > 0.0 && period_ms > 0);
+        let haste = run
+            .app
+            .world()
+            .get::<crate::stats::CharacterStats>(run.actor)
+            .unwrap()
+            .haste_pct;
+        let expected = ((1.0 + before / 100.0) * (1.0 + amount / 100.0) - 1.0) * 100.0;
+        assert!(
+            (haste - expected).abs() < 0.01,
+            "one real native Fury stack must raise haste: before={before}, actual={haste}, expected={expected}"
+        );
+        for _ in 0..(period_ms / 50 + 2) {
+            run.app.update();
+        }
+        assert_eq!(
+            fury(&run).unwrap().stacks,
+            2,
+            "one actual native periodic interval must earn one more Fury stack"
+        );
+        for _ in 0..1200 {
+            if !crate::auras::has_aura(run.app.world(), run.actor, 375087) {
+                break;
+            }
+            run.app.update();
+        }
+        assert!(
+            !crate::auras::has_aura(run.app.world(), run.actor, 375087),
+            "actual Dragonrage must expire before the native grace is tested"
+        );
+        let grace = fury(&run).expect("selected third-rank Fury must linger after Dragonrage");
+        assert!(
+            grace
+                .expires_at
+                .is_some_and(|at| at > crate::spell_cast::now(run.app.world()))
+        );
+        assert!(
+            crate::auras::has_aura(run.app.world(), run.actor, 1292323),
+            "natural Dragonrage end must earn the native Unbound Flame window"
+        );
+        // SimC76f8118 sc_evoker.cpp10615–10631: grace keeps earned stacks, frozen.
+        for _ in 0..(period_ms / 50 + 2) {
+            run.app.update();
+        }
+        assert_eq!(
+            fury(&run).unwrap().stacks,
+            grace.stacks,
+            "native grace must not continue earning periodic Fury stacks"
+        );
+        for _ in 0..1200 {
+            if fury(&run).is_none() {
+                break;
+            }
+            run.app.update();
+        }
+        assert!(fury(&run).is_none(), "earned native Fury grace must expire");
+    }
+}
+
+#[test]
+#[ignore = "requires private native DB and exact Devastation profile"]
+fn devastation_unbound_flame_earned_native_uses_damage_the_pack_and_consume_one() {
+    for count in [1, 3] {
+        let mut run = prepare_literal(1467, count).unwrap();
+        engage(&mut run);
+        let primary = run.targets[0];
+        crate::spell_cast::creature_cast_with_targets(
+            run.app.world_mut(),
+            run.actor,
+            375087,
+            crate::spell_cast::CastTargets {
+                unit: run.actor,
+                primary: Some(primary),
+                destination: None,
+            },
+        )
+        .unwrap();
+        for _ in 0..1200 {
+            run.app.update();
+            if !crate::auras::has_aura(run.app.world(), run.actor, 375087) {
+                break;
+            }
+        }
+        let stacks = |run: &Run| {
+            run.app
+                .world()
+                .get::<crate::auras::ActiveAuras>(run.actor)
+                .and_then(|auras| auras.iter().find(|aura| aura.spell_id == 1292323))
+                .map_or(0, |aura| aura.stacks)
+        };
+        let initial = stacks(&run);
+        assert!(
+            initial > 0,
+            "actual Dragonrage expiration must earn native Unbound Flame uses"
+        );
+        let maximum = {
+            let spell = run
+                .app
+                .world()
+                .resource::<crate::spell_info::SpellStore>()
+                .get(1292323)
+                .unwrap();
+            crate::auras::fresh_max_stacks(run.app.world(), run.actor, spell)
+        };
+        assert_eq!(
+            initial, maximum,
+            "actual reverse-buff producer must grant its native cap"
+        );
+        for used in 1..=initial {
+            let before = run
+                .app
+                .world()
+                .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+                .0
+                .len();
+            crate::spell_cast::creature_cast_with_targets(
+                run.app.world_mut(),
+                run.actor,
+                1292321,
+                crate::spell_cast::CastTargets {
+                    unit: primary,
+                    primary: Some(primary),
+                    destination: None,
+                },
+            )
+            .unwrap();
+            for _ in 0..50 {
+                run.app.update();
+            }
+            // SimC76f8118 sc_evoker.cpp7470–7475: native payload and one earned use.
+            let events = &run
+                .app
+                .world()
+                .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+                .0[before..];
+            for target in &run.targets {
+                assert!(
+                    events
+                        .iter()
+                        .any(|event| event.source == Some(run.actor.to_bits())
+                            && event.target == Some(target.to_bits())
+                            && event.spell_id == Some(1292322)
+                            && event.kind == shared::protocol::CombatLogKind::Damage
+                            && event.amount > 0),
+                    "actual Unbound Flame use{used} must damage native pack recipient {target:?}"
+                );
+            }
+            assert!(
+                crate::auras::has_aura(run.app.world(), run.actor, 359618),
+                "actual Unbound Flame must grant its native Essence Burst child"
+            );
+            assert_eq!(
+                stacks(&run),
+                initial - used,
+                "each actual Unbound Flame spends one earned use"
+            );
+        }
+        let resolved =
+            literal_rotation::execution::resolve_action(run.app.world(), run.actor, 375087)
+                .unwrap();
+        assert_eq!(
+            resolved,
+            Some(375087),
+            "last earned use restores the actual Dragonrage action"
+        );
+    }
+}
+
 fn cast_reference_empowers(run: &mut Run, primary: Entity) {
     for (spell, unit) in [(357208, run.actor), (359073, primary)] {
         crate::spell_cast::creature_cast_empowered_with_targets(
