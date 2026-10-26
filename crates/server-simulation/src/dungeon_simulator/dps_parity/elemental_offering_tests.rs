@@ -5,7 +5,7 @@ use super::*;
 const STORMKEEPER: u32 = 191634;
 const OFFERING: u32 = 443451;
 
-fn remaining(run: &Run) -> u32 {
+fn remaining(run: &Run) -> u64 {
     let world = run.app.world();
     let spell = world
         .resource::<crate::spell_info::SpellStore>()
@@ -27,7 +27,7 @@ fn elemental_offering_each_native_ancestor_advances_running_stormkeeper() {
         .iter()
         .find(|effect| effect.index == 0)
         .unwrap()
-        .amount) as u32;
+        .amount) as u64;
     assert!(reduction_ms > 0);
     crate::spell_cast::creature_cast(
         run.app.world_mut(),
