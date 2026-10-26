@@ -637,7 +637,12 @@ pub(super) fn finish(
         let mut hit = state
             .hits
             .remove(&(ctx.spell.id, target.to_bits()))
-            .expect("native factor impact stages absent");
+            .unwrap_or_else(|| {
+                panic!(
+                    "native factor impact stages absent: spell={} depth={} target={target:?} completed={} pending={:?}",
+                    ctx.spell.id, ctx.depth, state.completed, state.hits.keys().collect::<Vec<_>>()
+                )
+            });
         hit.emission_origin = describe_emission_origin(state, ctx);
         hit.formula = damage
             .effect

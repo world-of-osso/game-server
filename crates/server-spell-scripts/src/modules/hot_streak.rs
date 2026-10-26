@@ -1,11 +1,31 @@
 //! TC a352b1fa spell_mage.cpp1037–1129, with native70448 driver195283 (Effect3).
 //! SimC76f8118 sc_mage.cpp2427: only the cast admitted with Hot Streak spends it.
-use crate::random as rand;
+use super::combat;
+use combat::random as rand;
+use combat::spell_cast::script_registry::SpellScriptHook;
+use combat::spell_cast::scripts::AfterCastHook;
+
+pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::NativeAfterCast(after_cast),
+    SpellScriptHook::CastTimeProcs(&[HOT_STREAK]),
+    SpellScriptHook::HotStreakProducers(PRODUCERS),
+    SpellScriptHook::RecordFireOutcome(record_fire_hit),
+    SpellScriptHook::CastHitProcChance(flamestrike_hot_streak_chance),
+    SpellScriptHook::RollCastHitProc(roll_flamestrike_hot_streak),
+    SpellScriptHook::LaunchDamageModifier(pyroclasm_damage_modifier),
+];
+
+const PRODUCERS: &[u32] = &[133, 108853, 319836, PYROBLAST, 2948];
+
+fn after_cast(spell: u32) -> Option<AfterCastHook> {
+    matches!(spell, PYROBLAST | FLAMESTRIKE | NATIVE_FLAMESTRIKE)
+        .then_some(consume_procs_and_roll_pyroclasm)
+}
 use bevy::prelude::*;
 
-use crate::auras::{ActiveAuras, RemoveReason, remove_instance};
-use crate::class_progression::KnownSpells;
-use crate::spell_info::{ChargedSpellModifier, SpellInfo};
+use combat::auras::{ActiveAuras, RemoveReason, remove_instance};
+use combat::class_progression::KnownSpells;
+use combat::spell_info::{ChargedSpellModifier, SpellInfo};
 
 const DRIVER: u32 = 195283;
 const HEATING_UP: u32 = 48107;
@@ -18,7 +38,7 @@ pub(super) const NATIVE_FLAMESTRIKE: u32 = 1254851;
 
 /// SimC76f8118 sc_mage.cpp6988–7010: only Hot Streak producers enter its flight count.
 pub(crate) fn triggers_hot_streak(spell_id: u32) -> bool {
-    matches!(spell_id, 133 | 108853 | 319836 | PYROBLAST | 2948)
+    PRODUCERS.contains(&spell_id)
 }
 
 pub(crate) fn record_fire_hit(
@@ -41,17 +61,17 @@ pub(crate) fn record_fire_hit(
 fn apply_hot_streak_outcome(world: &mut World, caster: Entity, crit: bool, guaranteed: bool) {
     // SimC76f8118 sc_mage.cpp2138–2159/2186–2192: guaranteed outcomes
     // predict HU, and known-HU conversions predict HS; wasted crits keep HS.
-    if crit && crate::auras::has_aura(world, caster, HOT_STREAK) {
+    if crit && combat::auras::has_aura(world, caster, HOT_STREAK) {
         if guaranteed {
             #[cfg(any(test, feature = "test-support"))]
-            crate::simc_apl_native::reaction::predict(world, caster, HOT_STREAK);
+            combat::simc_apl_native::reaction::predict(world, caster, HOT_STREAK);
         }
         return;
     }
     #[cfg(any(test, feature = "test-support"))]
     let reacted =
-        crate::simc_apl_native::reaction::has_observed_reaction(world, caster, HEATING_UP);
-    let now = crate::auras::aura_now(world);
+        combat::simc_apl_native::reaction::has_observed_reaction(world, caster, HEATING_UP);
+    let now = combat::auras::aura_now(world);
     let heating_up = world
         .get::<ActiveAuras>(caster)
         .and_then(|auras| {
@@ -81,11 +101,11 @@ fn apply_hot_streak_outcome(world: &mut World, caster: Entity, crit: bool, guara
         } else {
             HEATING_UP
         };
-        crate::spell_cast::cast_triggered(world, caster, proc, Some(caster), 1);
+        combat::spell_cast::cast_triggered(world, caster, proc, Some(caster), 1);
         if guaranteed {
             #[cfg(any(test, feature = "test-support"))]
             if heating_up.is_none() || reacted {
-                crate::simc_apl_native::reaction::predict(world, caster, proc);
+                combat::simc_apl_native::reaction::predict(world, caster, proc);
             }
         }
     }
@@ -108,7 +128,7 @@ pub(crate) fn flamestrike_hot_streak_chance(
         return None;
     }
     Some(if known.contains(416094) {
-        crate::spell_cast::effects::crit_chance(world, caster, hit, spell)
+        combat::spell_cast::effects::crit_chance(world, caster, hit, spell)
     } else {
         0.0
     })
@@ -157,7 +177,7 @@ pub(crate) fn pyroclasm_damage_modifier(
     let amount = aura.effects.iter().find(|effect| effect.index == 0)?.amount;
     Some(ChargedSpellModifier {
         aura_spell_id: aura.spell_id,
-        op: crate::auras::SpellModOp::HealingAndDamage as i32,
+        op: combat::auras::SpellModOp::HealingAndDamage as i32,
         percent: true,
         amount,
     })
@@ -176,7 +196,7 @@ pub(crate) fn consume_procs_and_roll_pyroclasm(
             .and_then(|auras| auras.iter().find(|aura| aura.spell_id == PYROCLASM))
             .map(|aura| aura.instance_id);
         if let Some(instance) = instance {
-            crate::auras::spend_stack(world, caster, instance);
+            combat::auras::spend_stack(world, caster, instance);
         }
     }
     let spent_hot_streak = consume_admitted_hot_streak(world, caster, spell);
@@ -195,6 +215,6 @@ fn roll_pyroclasm(world: &mut World, caster: Entity) {
         .and_then(|aura| aura.effects.iter().find(|effect| effect.index == 0))
         .map_or(0.0, |effect| effect.amount);
     if chance > 0.0 && rand::random::<f32>() * 100.0 < chance {
-        crate::spell_cast::cast_triggered(world, caster, PYROCLASM, Some(caster), 1);
+        combat::spell_cast::cast_triggered(world, caster, PYROCLASM, Some(caster), 1);
     }
 }
