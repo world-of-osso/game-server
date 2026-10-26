@@ -679,7 +679,13 @@ fn fire_feedback_hot_streak_ignite_includes_native_inflame() {
         mastery > 0.0 && inflame > 0.0,
         "real native Ignite mastery and selected Inflame"
     );
-    let minimum_tick = damage * mastery / 100.0 * 2.0 * (1.0 + inflame / 100.0) / ticks as f32;
+    // The combat log uses dealt-damage units; native proc amounts and the
+    // stored Ignite bank use victim-HP units (level_scaling::health_loss).
+    let attacker = crate::level_scaling::UnitScaling::of(world, run.actor);
+    let victim = crate::level_scaling::UnitScaling::of(world, target);
+    let hp_multiplier = victim.health_multiplier(&attacker);
+    let hp_damage = (damage / hp_multiplier).trunc();
+    let minimum_tick = hp_damage * mastery / 100.0 * 2.0 * (1.0 + inflame / 100.0) / ticks as f32;
     let tick = world
         .get::<ActiveAuras>(target)
         .unwrap()
@@ -693,7 +699,7 @@ fn fire_feedback_hot_streak_ignite_includes_native_inflame() {
         .amount;
     assert!(
         tick + 1.0 >= minimum_tick,
-        "Ignite must retain HS and native Inflame contributions: {tick} < {minimum_tick}"
+        "Ignite must retain HS and native Inflame contributions in HP units: {tick} < {minimum_tick}; HP multiplier={hp_multiplier}"
     );
 }
 
