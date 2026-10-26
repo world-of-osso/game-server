@@ -47,6 +47,7 @@ fn policy_traversal_keeps_the_original_relationship_order() {
             "SIMC_FROST_GLACIAL_SPIKE_DAMAGE",
             "SIMC_FROST_GLACIAL_SPIKE_ICICLE_CONSUMER",
             "SIMC_FROST_GLACIAL_SPIKE_ENABLER_CONSUMER",
+            "SIMC_SHADOW_SCREAMS_REAPPLICATION_EXTEND",
         ]
     );
 }
