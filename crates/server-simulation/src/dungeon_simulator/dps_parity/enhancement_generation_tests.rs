@@ -213,7 +213,7 @@ pub(super) fn earn_tempest_by_spending(run: &mut Run) {
     );
 }
 
-fn try_spend_native_maelstrom(run: &mut Run, target: Entity) -> u32 {
+pub(super) fn try_spend_native_maelstrom(run: &mut Run, target: Entity) -> u32 {
     let available = stacks(run);
     if available < 5 {
         return 0;

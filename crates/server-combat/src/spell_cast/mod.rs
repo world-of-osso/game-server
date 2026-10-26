@@ -66,6 +66,7 @@ mod census_tail_tests;
 #[cfg(test)]
 mod census_three_tests;
 pub(crate) mod charge;
+mod charge_consumption;
 #[cfg(test)]
 mod charge_rate_tests;
 #[cfg(test)]
@@ -159,6 +160,7 @@ mod expel_harm_tests;
 mod fel_devastation_tests;
 mod ferocious_bite;
 pub use ferocious_bite::read_maximum_energy as read_ferocious_bite_maximum_energy;
+pub use resource_facts::read_prepared_spell as read_resource_prepared_spell;
 #[cfg(test)]
 mod full_trigger_dead_target_tests;
 pub mod guardian;
@@ -227,6 +229,7 @@ mod protective_growth_tests;
 mod raid_area_tests;
 pub(crate) mod recovery_rate;
 mod reflect;
+mod resource_facts;
 mod resources;
 pub mod runes;
 pub mod script_registry;
@@ -372,6 +375,7 @@ impl Plugin for SpellCastPlugin {
                     start_queued_casts,
                     auto_repeat::update,
                     queued_triggers::resolve_due,
+                    scripts::consume_due_killing_machine,
                     powers::sync_unit_powers,
                     runes::sync_unit_runes,
                     assisted_costs::publish,
@@ -4008,6 +4012,7 @@ fn take_cast_resources(
     }
     spend_costs(world, caster, costs);
     script_registry::after_payment(world, caster, costs);
+    scripts::roll_runic_empowerment(world, caster, spell, costs);
     scripts::empower_gargoyles(world, caster, costs);
     crate::profession::take_reagents(world, caster, spell);
 }
@@ -4114,6 +4119,7 @@ fn start_cooldowns(world: &mut World, caster: Entity, spell: &SpellInfo) {
     let category_ms =
         cooldown_recovery_ms(world, caster, spell, base_category_ms).saturating_sub(ready_credit);
     let mods = charge_mods(world, caster, spell);
+    let ignore_charge_cooldown = charge_consumption::is_ignored(world, caster, spell);
     let mut entity = world.entity_mut(caster);
     let mut history = entity.entry::<SpellHistory>().or_default();
     let mut history = history.get_mut();
@@ -4150,7 +4156,12 @@ fn start_cooldowns(world: &mut World, caster: Entity, spell: &SpellInfo) {
             .insert(category, now + category_ms as f64 / 1000.0);
     }
     let charges = history.charges_mut(spell, now, mods).map(|charges| {
-        charges.consume(now, ready_credit);
+        charge_consumption::consume_unless_ignored(
+            charges,
+            now,
+            ready_credit,
+            ignore_charge_cooldown,
+        );
         charges.spell_id = spell.id;
         charges.snapshot(now)
     });

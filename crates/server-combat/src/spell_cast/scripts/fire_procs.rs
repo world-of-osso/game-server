@@ -19,6 +19,13 @@ const CASCADE: u32 = 449314;
 const MEMORY: u32 = 449619;
 const HYPERTHERMIA: u32 = 383874;
 const HYPERTHERMIA_DAMAGE: u32 = 1242220;
+const OVERFLOWING_TALENT: u32 = 390218;
+const OVERFLOWING: u32 = 394195;
+const FEVERED_TALENT: u32 = 383810;
+const FEVERED: u32 = 383811;
+const CONTROLLED_TALENT: u32 = 383669;
+const CONTROLLED: u32 = 453268;
+const MAGE_FAMILY: u32 = 3;
 
 #[derive(Component, Default)]
 struct FireProcState {
@@ -159,6 +166,56 @@ pub(crate) fn fire_meteorite_hit(
             },
         );
     }
+}
+
+/// SimC76f8118 sc_mage.cpp1890–1901: real direct Mage hits update
+/// crit feedback after their hit batch, not before later targets roll damage.
+pub(crate) fn fire_feedback_hit(
+    world: &mut World,
+    ctx: &super::super::effects::EffectCtx,
+    target: Entity,
+    crit: bool,
+) {
+    let mage_spell = ctx
+        .spell
+        .class_options
+        .as_ref()
+        .is_some_and(|options| options.spell_class_set == MAGE_FAMILY);
+    if !mage_spell {
+        return;
+    }
+    // sc_mage.cpp3819: Fire's Overflowing Energy eligibility is Fireball
+    // (including the selected Frostfire replacement), not every Hot Streak producer.
+    if matches!(ctx.spell.id, 133 | 431044) && selected(world, ctx.caster, OVERFLOWING_TALENT) {
+        super::super::queued_triggers::schedule_buff_outcome(world, ctx.caster, OVERFLOWING, !crit);
+    }
+    if selected(world, ctx.caster, FEVERED_TALENT) {
+        super::super::queued_triggers::schedule_buff_outcome(world, ctx.caster, FEVERED, crit);
+    }
+    apply_controlled_destruction(world, ctx, target);
+}
+
+fn apply_controlled_destruction(
+    world: &mut World,
+    ctx: &super::super::effects::EffectCtx,
+    target: Entity,
+) {
+    if !matches!(ctx.spell.id, 133 | 431044 | 11366 | 2120 | 1254851)
+        || !selected(world, ctx.caster, CONTROLLED_TALENT)
+    {
+        return;
+    }
+    // sc_mage.cpp2457/3843/5648–5650: one owned target stack per hit;
+    // the native talent supplies the percent, scaled by the sourced one-tenth rule.
+    let percent = super::script_effect_value(world, ctx.caster, CONTROLLED_TALENT, 0) * 0.1;
+    super::super::cast_triggered_with_effect0_amount(
+        world,
+        ctx.caster,
+        CONTROLLED,
+        Some(target),
+        1,
+        percent,
+    );
 }
 
 pub(crate) fn register(scripts: &mut auras::scripts::AuraScripts) {
