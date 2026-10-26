@@ -1,16 +1,44 @@
 //! Dire Command summons the actual native Dire Beast from successful Kill Commands.
 use super::{cast_relationships::has_talent, combat};
 use bevy::prelude::*;
-use combat::spell_cast::{self, TriggeredSpellOverrides, script_registry::SpellScriptHook};
+use combat::spell_cast::{
+    self, TriggeredSpellOverrides, script_registry::SpellScriptHook, summon::SummonedCreature,
+};
 use combat::spell_info::{SpellInfo, SpellStore};
 
-pub(super) const HOOKS: &[SpellScriptHook] =
-    &[SpellScriptHook::AfterElementalLaunch(after_command)];
+pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::AfterElementalLaunch(after_command),
+    SpellScriptHook::AfterElementalLaunch(start_new_beasts),
+];
 const DIRE_COMMAND: u32 = 378743;
 const DIRE_BEAST: u32 = 219199;
 
 #[derive(Component, Default)]
 struct Attempts(u32);
+
+#[derive(Component)]
+struct AttackStarted;
+
+fn start_new_beasts(world: &mut World, owner: Entity, spell: &SpellInfo, _: bool) {
+    if spell.id != DIRE_BEAST {
+        return;
+    }
+    let Some(primary) = spell.cast_primary_target else {
+        return;
+    };
+    let pets: Vec<_> = world
+        .query_filtered::<(Entity, &SummonedCreature), Without<AttackStarted>>()
+        .iter(world)
+        .filter(|(_, summon)| summon.owner == owner && summon.spell_id == DIRE_BEAST)
+        .map(|(pet, _)| pet)
+        .collect();
+    for pet in pets {
+        // SimC76f8118 hunter1869–1873: newly summoned DireCritters start
+        // their own white attack against the real consuming KC primary.
+        world.entity_mut(pet).insert(AttackStarted);
+        combat::combat::start_attack_now(world, pet, combat::combat::AutoAttack::new(primary));
+    }
+}
 
 fn roll_command(world: &mut World, owner: Entity) -> bool {
     let probability = f64::from(spell_cast::scripts::script_effect_value(
