@@ -10,7 +10,10 @@ use combat::spell_cast::{
 };
 use combat::spell_info::SpellStore;
 
-pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::ResolvedDamage(copy_link)];
+pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::ResolvedDamage(copy_link),
+    SpellScriptHook::ConsumedEffectValues(&[(TALENT, 0)]),
+];
 const TALENT: u32 = 199484;
 const PAYLOAD: u32 = 199486;
 const VAMPIRIC_TOUCH: u32 = 34914;
