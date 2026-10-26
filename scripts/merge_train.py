@@ -619,7 +619,12 @@ def where(args):
             return
     if (RUNNING / f"{args.id}.json").exists():
         current = HOME / "current.json"
-        info = json.loads(current.read_text()) if current.exists() else {}
+        try:
+            info = json.loads(current.read_text())
+        except (FileNotFoundError, json.JSONDecodeError):
+            # Between cycles: a landed entry's measurement may still be running in the background.
+            print("running, between cycles (measuring, or waiting for the next cycle to start); keep waiting")
+            return
         here = args.id in info.get("entries", [])
         minutes = round((time.time() - info.get("since", time.time())) / 60, 1)
         print(f"in cycle {info.get('cycle')}: phase {info.get('phase')} ({minutes} min)"
