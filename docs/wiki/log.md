@@ -1,6 +1,6 @@
 ## 2026-10-26 — Native Ignite spread
 
-[Fire Ignite](systems/simc-apl.md#fire-fixture-adapter) now copies the owned pre-hit bank through native admission, with native cap/threshold, stable bank ordering and separate new/existing target clocks. Actual Fire Blast RED0-of-1 recipients is qualified; clone lifetime and measurement gates remain pending. No direct-damage or stat scalar changed.
+[Fire Ignite](systems/simc-apl.md#fire-fixture-adapter) now copies the owned pre-hit bank through native admission, with native cap/threshold, stable bank ordering and separate new/existing target clocks. Actual Fire Blast RED0-of-1 recipients now passes with Ignition and Controlled Destruction in77265cb9e3. The invalid existing-target fixture is removed, not weakened; separate real-clock qualification is deferred until after remeasurement. The three-case landing and measurement remain pending. No direct-damage or stat scalar changed.
 
 ## 2026-10-26 — Fire Ignition contribution
 
