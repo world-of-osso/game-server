@@ -348,6 +348,22 @@ pub(crate) fn power_stats(world: &World, unit: Entity, healing: bool) -> (f32, f
                 .unwrap_or(DEMON_OWNER_ATTACK_POWER);
             return demon_power_stats(world, summon.owner, spell_share, attack_share);
         }
+        let entry = world
+            .get::<shared::components::Npc>(unit)
+            .map(|npc| npc.template_id);
+        if let Some(share) =
+            entry.and_then(|entry| super::guardian::owner_attack_share(summon.spell_id, entry))
+        {
+            // Non-demon guardian policies inherit actual owner RAP. Demon
+            // policies above retain their separate spell-power-derived AP.
+            let owner = world
+                .get::<CharacterStats>(summon.owner)
+                .expect("owner-scaled guardian requires native CharacterStats");
+            let modifiers = world.get::<crate::stats::StatModifiers>(summon.owner);
+            let attack_power =
+                owner.total_attack_power(crate::stats::WeaponAttackType::Ranged, modifiers);
+            return (0.0, attack_power * share);
+        }
     }
     if let Some(pet) = world.get::<crate::hunter_pet::HunterPet>(unit) {
         if world
