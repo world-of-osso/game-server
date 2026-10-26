@@ -16,7 +16,37 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::PeriodicPrimaryDamage(scintillation_tick),
     SpellScriptHook::AfterResourceValues(deep_breath_hook),
     SpellScriptHook::EnemyContextHit(surge_hit_hook),
+    SpellScriptHook::ResourceContext(&[356995]),
+    SpellScriptHook::CaptureConsumedDamageModifier(snapshot_mass_disintegrate),
 ];
+
+fn snapshot_mass_disintegrate(
+    world: &World,
+    caster: Entity,
+    spell: &mut SpellInfo,
+    foreground: bool,
+) -> Option<u32> {
+    const MASS_DISINTEGRATE: u32 = 436335;
+    if !foreground || spell.id != 356995 || !combat::auras::has_aura(world, caster, 436336) {
+        return None;
+    }
+    let context = spell.cast_policy_context.as_ref()?;
+    // Disintegrate also selects the caster for its native helper aura, not a damage recipient.
+    let actual_targets = context
+        .targets
+        .iter()
+        .filter(|&&target| target != caster)
+        .count();
+    let maximum = script_effect_value(world, caster, MASS_DISINTEGRATE, 0) as usize;
+    let missing = maximum.saturating_sub(actual_targets);
+    let per_missing = script_effect_value(world, caster, MASS_DISINTEGRATE, 1) / 100.0;
+    // SIMC_DEVASTATION_MASS_DISINTEGRATE_REDISTRIBUTION: sc_evoker.cpp6560–6567.
+    // Snapshot before the earned use is consumed; the native periodic payload retains it.
+    let multiplier = 1.0 + missing as f32 * per_missing;
+    spell.cast_damage_multiplier = Some(spell.cast_damage_multiplier.unwrap_or(1.0) * multiplier);
+    // The existing successful-cast policy owns stack spending, not a completion token.
+    None
+}
 
 fn surge_hit_hook(spell: u32) -> Option<EnemyContextHitHook> {
     (spell == 359077).then_some(shattering_stars)
