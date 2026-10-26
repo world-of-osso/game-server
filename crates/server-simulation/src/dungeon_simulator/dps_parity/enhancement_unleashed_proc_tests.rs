@@ -92,6 +92,7 @@ fn enhancement_magic_unleashed_hits_do_not_proc_weapon_imbues() {
         "the equipped native Flametongue callback must work for a real Melee hit"
     );
 
+    let first_magic_event = run.app.world().resource::<ObservedCombatEvents>().0.len();
     let before_magic = hits(&run, Some(1252431));
     let before_flametongue = hits(&run, Some(10444));
     let before_windfury = hits(&run, Some(25504));
@@ -101,6 +102,17 @@ fn enhancement_magic_unleashed_hits_do_not_proc_weapon_imbues() {
     assert!(
         hits(&run, Some(1252431)) > before_magic,
         "real native Magic child must land"
+    );
+    let magic_window: Vec<_> = run.app.world().resource::<ObservedCombatEvents>().0
+        [first_magic_event..]
+        .iter()
+        .filter(|event| {
+            event.source == Some(run.actor.to_bits()) && event.kind == CombatLogKind::Damage
+        })
+        .map(|event| (event.spell_id, event.amount, event.target))
+        .collect();
+    println!(
+        "UNLEASHED_MAGIC_WINDOW prior_windfury={before_windfury} prior_flametongue={before_flametongue} events={magic_window:?}"
     );
     assert_eq!(
         hits(&run, Some(10444)),
