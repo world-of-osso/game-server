@@ -2,7 +2,7 @@
 - 2026-10-26: Absolute landed8f4e67fed6; identified nonstacking Corruption0 passed to positive-counter API and replaced that caller with duration-only permanence. Native GREEN pending.
 ## 2026-10-26 — Proc-mask-qualified charged modifiers
 
-[Modifier charge consumption](systems/spell-casting.md#native-proc-mask-qualified-modifier-charges-2026-10-26) now qualifies consumers against explicit native proc masks. Arcane's real consecutive paid-cast regression is paired with its tests-only RED commit in one train cycle; native qualification and seven-spec same-master comparisons remain pending. The generic rule shares the existing family matcher and changes no native values.
+[Modifier charge consumption](systems/spell-casting.md#native-proc-mask-qualified-modifier-charges-2026-10-26) landed1b6a6115 via d331ebfe39. Arcane's real paid-cast RED→GREEN and30Arcane/3proc-family/7charge-snapshot/15dummy16 controls pass. Integrated62 ST149932.62(84.38%)/3T258935.87(78.31%) remain below parity. The original control baseline had a push race and the wrong Ret DB; corrected same-master seven-spec comparisons remain pending. The generic rule shares the native family matcher and changes no native values.
 
 ## 2026-10-26 — Independent Destruction Echo
 
