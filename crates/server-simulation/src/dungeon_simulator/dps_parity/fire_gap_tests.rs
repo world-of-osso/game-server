@@ -1477,6 +1477,47 @@ fn fire_execute_fuel_amplifies_actual_flamestrike_by_its_native_target_count() {
     );
 }
 
+#[test]
+#[ignore = "requires exact Fire63 inputs and private70448 DB"]
+fn fire_ignite_fire_blast_spreads_existing_native_tick_to_other_enemies() {
+    let _seed = crate::random::seed_scope(70_448);
+    let (mut profile, traits) = read_reference(63).unwrap();
+    let identity = inputs::read_actor(&profile).unwrap();
+    profile.equipment.clear();
+    profile.consumables.clear();
+    profile.omnium_talents = None;
+    let mut run = prepare_literal_reference(profile, &traits, 3, identity).unwrap();
+    let tick = |run: &Run, target: Entity| {
+        run.app
+            .world()
+            .get::<ActiveAuras>(target)
+            .and_then(|auras| {
+                auras
+                    .iter()
+                    .find(|aura| aura.spell_id == 12654 && aura.caster == run.actor)
+            })
+            .and_then(|aura| aura.effects.iter().find(|effect| effect.index == 0))
+            .map(|effect| effect.amount)
+    };
+    let primary = run.targets[0];
+    start_native(&mut run, 108853, primary);
+    for _ in 0..12 {
+        run.app.update();
+    }
+    let source = tick(&run, primary).expect("first actual Fire Blast earned native Ignite");
+    assert!(source > 0.0);
+    start_native(&mut run, 108853, primary);
+    run.app.update();
+    for target in &run.targets[1..] {
+        let copied = tick(&run, *target)
+            .expect("next actual Fire Blast spreads its pre-existing owned Ignite");
+        assert!(
+            (copied / source - 1.0).abs() < 0.001,
+            "spread copies the prior native tick, before the new Fire Blast contribution: {source} -> {copied}"
+        );
+    }
+}
+
 fn reacted(run: &Run, name: &str) -> f64 {
     use crate::simc_apl_native::{Bindings, Encounter, FightStyle, NativeFacts};
     let bindings = Bindings {
