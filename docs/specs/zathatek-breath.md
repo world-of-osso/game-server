@@ -4,10 +4,10 @@ Equipped weapon271093 follows pinned SimC76f8118 `unique_gear_midnight.cpp5233â€
 
 ## What it must do
 
-- [ ] Actual equipped1298023 procs deliver1305395 using its native item-level-scaled budget and native role expression. Retain generic native proc eligibility/rates and payload damage rules; do not proc before combat or recursively from its own action.
-- [ ] Each impact applies or refreshes owned1305391 after the damage. Driver1298023 effect1 supplies the stack percentage; native1305391 supplies its cap and lifetime. Its item-scaled effect0 is not the percentage.
-- [ ] Existing recipient stacks amplify only that caster's1305395 payload. A different recipient's stacks do not substitute; preserve ordinary damage/critical resolution.
-- [ ] Gate both actual equipped profiles259/261 and the unequipped260 negative profile without changing their equipment. Notify the lead before landing for both equipped specs' remeasurement.
+- [x] Actual equipped1298023 procs deliver1305395 using its native item-level-scaled budget and native role expression. Retain generic native proc eligibility/rates and payload damage rules; do not proc before combat or recursively from its own action.
+- [x] Each impact applies or refreshes owned1305391 after the damage. Driver1298023 effect1 supplies the stack percentage; native1305391 supplies its cap and lifetime. Its item-scaled effect0 is not the percentage.
+- [x] Existing recipient stacks amplify only that caster's1305395 payload. A different recipient's stacks do not substitute; preserve ordinary damage/critical resolution.
+- [x] Gate both actual equipped profiles259/261 and the unequipped260 negative profile without changing their equipment. Notify the lead before landing for both equipped specs' remeasurement.
 
 ## How it works
 
@@ -26,7 +26,7 @@ Equipped weapon271093 follows pinned SimC76f8118 `unique_gear_midnight.cpp5233â€
 
 ## Known gaps (current cycle)
 
-- [ ] Native RED259a2b9e604e6 and261b9b13e112f record265/240real swings without any payload.260negative ac13dc9bac passes. GREEN and final all-equipper measurements remain pending.
+- [ ] Finish the integrated landing and post-land remeasurement for every equipped profile259/261. Corrected4c388d2d6 passes2596947cb2902,2613338495bc6 and26060d629afcd; the lead was notified before landing.
 
 ## Out of scope
 
