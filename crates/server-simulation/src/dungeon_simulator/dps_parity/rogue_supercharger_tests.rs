@@ -102,13 +102,13 @@ fn rogue_supercharger_outlaw_adrenaline_earns_effective_spree_points() {
     );
 }
 
-fn first_noncritical_spree_hand(adrenaline: bool) -> (f32, f32) {
+fn first_noncritical_spree_hand(overcap: bool) -> (f32, f32) {
+    // Both controls earn the same actual AR/counters. Only paid CP differs,
+    // so ordinary AR and item modifiers cannot masquerade as an overcap bonus.
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(260, 1).unwrap();
     engage(&mut run);
-    if adrenaline {
-        cast(&mut run, 13750, true);
-    }
+    cast(&mut run, 13750, true);
     let maximum =
         crate::spell_cast::powers::power_value(run.app.world(), run.actor, PowerType::ComboPoints)
             .unwrap()
@@ -118,16 +118,15 @@ fn first_noncritical_spree_hand(adrenaline: bool) -> (f32, f32) {
     } else {
         0.0
     };
-    let extra = if adrenaline {
+    let extra =
         crate::spell_cast::scripts::script_effect_value(run.app.world(), run.actor, 470347, 1)
-            + forced
-    } else {
-        0.0
-    };
+            + forced;
+    assert!(extra > 0.0 && extra < maximum);
+    let paid = if overcap { maximum } else { maximum - extra };
     let per_point =
         crate::spell_cast::scripts::script_effect_value(run.app.world(), run.actor, 51690, 3)
             / 100.0;
-    fund(&mut run, maximum);
+    fund(&mut run, paid);
     cast(&mut run, 51690, true);
     let event = run
         .app
@@ -143,7 +142,8 @@ fn first_noncritical_spree_hand(adrenaline: bool) -> (f32, f32) {
                 && event.amount > 0
         })
         .expect("actual native Spree must supply a noncritical hand hit");
-    (event.amount as f32, 1.0 + per_point * extra)
+    let excess = if overcap { extra } else { 0.0 };
+    (event.amount as f32, 1.0 + per_point * excess)
 }
 
 #[test]
