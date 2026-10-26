@@ -35,6 +35,7 @@ fn begin(world: &mut World, unit: Entity, _: &AuraInstance) {
 
 fn end(world: &mut World, unit: Entity, _: &AuraInstance, _: RemoveReason) {
     world.entity_mut(unit).remove::<SpreeTicks>();
+    super::outlaw_spree_power::clear(world, unit);
 }
 
 fn tick(world: &mut World, unit: Entity, aura: &AuraInstance, effect: u8) {
@@ -53,7 +54,7 @@ fn tick(world: &mut World, unit: Entity, aura: &AuraInstance, effect: u8) {
     // an enemy; tick0 deals damage but only subsequent ticks return native CP.
     for hand in HANDS {
         if let Some(target) = choose_target(world, aura.caster) {
-            spell_cast::cast_triggered(world, aura.caster, *hand, Some(target), 1);
+            super::outlaw_spree_power::launch_hand(world, aura.caster, *hand, target);
         }
     }
     if !initial {

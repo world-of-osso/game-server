@@ -59,6 +59,8 @@ pub(super) use script_registry::after_foreground_special;
 pub(crate) use script_registry::melee_residual as after_melee_residual;
 pub(super) use script_registry::spell_residual as after_spell_residual;
 mod chrono_flame;
+pub(in crate::spell_cast) mod elemental_ancestors;
+pub use elemental_ancestors::owner as ancestor_owner;
 pub(super) use script_registry::after_modifier_consumption as apply_echo_policies;
 mod enhancement_doom;
 mod enhancement_elemental_weapons;
@@ -80,6 +82,7 @@ mod enhancement_strikes;
 mod enhancement_tempest_buffs;
 pub(super) use enhancement_tempest_buffs::after_chain as after_enhancement_chain;
 pub(super) use enhancement_tempest_buffs::resolve_due as resolve_enhancement_discharges;
+mod enhancement_thunder_capacitor;
 mod enhancement_tier;
 mod enhancement_unleashed;
 pub(super) use enhancement_strikes::check_cast as check_enhancement_cast;
@@ -206,7 +209,6 @@ pub(crate) use batch3::{
 pub(crate) use batch9::{ground_pulse_radius, hostile_ground_fields, owned_ground_fields};
 pub(super) use batch9::{spawn_ravager_field, update_ground_pulses};
 pub(crate) use batch19::{copy_havoc, dispersion_tick, on_dispelled, replace_havoc};
-pub(crate) use batch20::proc_charges;
 pub(super) use protection_items::snapshot_guillotine_health;
 pub(crate) use protection_items::{GUILLOTINE, cast_guillotine, check_guillotine_proc};
 pub(super) fn capture_consumed_damage_modifier(
@@ -230,6 +232,7 @@ pub(super) fn finish_scripted_launch(
     script_registry::finish_consumed_damage_modifier(
         world, caster, spell, consumed, depth, foreground,
     );
+    elemental_ancestors::after_launch(world, caster, spell, depth, foreground);
     script_registry::after_elemental_launch(world, caster, spell, foreground);
     frost_mage_supply::after_launch(world, caster, spell);
     policies::pet_sets::finish_cobra(world, caster, spell);
@@ -688,6 +691,7 @@ pub fn crit_chance(world: &World, caster: Entity, target: Entity, spell_id: u32)
         return Some(chance);
     }
     match spell_id {
+        447419 if elemental_ancestors::owner(world, caster).is_some() => Some(100.0),
         FIREBALL | 11366 => firestarter_crit(world, caster, target),
         batch17::REGROWTH => batch17::regrowth_crit(world, caster, target),
         batch3::SHRED if batch11::shred_stealth_bonus(world, caster) => {
@@ -749,6 +753,7 @@ pub fn damage_amount(world: &World, spell_id: u32) -> Option<DamageAmountHook> {
         return Some(hook);
     }
     match spell_id {
+        447419 => Some(elemental_ancestors::lava_multiplier),
         midnight_items::FONT_SPLATTER => Some(midnight_items::splatter_damage),
         windwalker_dual_threat::DAMAGE => Some(windwalker_dual_threat::damage),
         windwalker_children::JADEFIRE => Some(windwalker_children::jadefire_damage),
