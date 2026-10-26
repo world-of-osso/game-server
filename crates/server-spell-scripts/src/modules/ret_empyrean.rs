@@ -3,9 +3,23 @@
 //! TC has no handler/TDB proc row; native387170 effect1 owns the percentage.
 use bevy::prelude::*;
 
-use crate::auras::{self, RemoveReason};
-use crate::class_progression::TraitLoadout;
-use crate::spell_info::{SpellInfo, SpellStore};
+use super::combat;
+use combat::auras::{self, RemoveReason};
+use combat::class_progression::TraitLoadout;
+use combat::spell_cast::script_registry::SpellScriptHook;
+use combat::spell_info::{SpellInfo, SpellStore};
+
+pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::AfterNativeOnCast(on_cast),
+    SpellScriptHook::AfterSpenderProc(schedule_empyrean_legacy),
+    SpellScriptHook::OwnsPolicyProc(owns_empyrean_proc),
+];
+
+fn on_cast(world: &mut World, caster: Entity, spell: u32, depth: u8) {
+    if matches!(spell, 31884 | 454351) {
+        grant_on_wrath(world, caster, depth);
+    }
+}
 
 const LEGACY_TALENT: u32 = 387170;
 const LEGACY_BUFF: u32 = 387178;
@@ -27,11 +41,11 @@ pub(crate) fn owns_empyrean_proc(spell: u32) -> bool {
 
 pub(super) fn grant_on_wrath(world: &mut World, caster: Entity, depth: u8) {
     if selected(world, caster) {
-        crate::spell_cast::cast_triggered(world, caster, LEGACY_BUFF, Some(caster), depth + 1);
+        combat::spell_cast::cast_triggered(world, caster, LEGACY_BUFF, Some(caster), depth + 1);
     }
 }
 
-pub(in crate::spell_cast) fn schedule_empyrean_legacy(
+fn schedule_empyrean_legacy(
     world: &mut World,
     caster: Entity,
     spell: &SpellInfo,
@@ -50,7 +64,7 @@ pub(in crate::spell_cast) fn schedule_empyrean_legacy(
         );
         return;
     };
-    let percent = super::script_effect_value(world, caster, LEGACY_TALENT, 1);
+    let percent = combat::spell_cast::scripts::script_effect_value(world, caster, LEGACY_TALENT, 1);
     let multiplier = 1.0 + percent / 100.0;
     auras::remove_auras(world, caster, RemoveReason::Consumed, |aura| {
         aura.spell_id == LEGACY_BUFF
@@ -74,14 +88,14 @@ fn cast_background_storm(world: &mut World, caster: Entity, target: Entity, mult
     };
     storm.cast_damage_multiplier = Some(multiplier);
     storm.cast_primary_target = Some(target);
-    if crate::spell_cast::launch_triggered_spell(world, caster, &storm, Some(target), 1) {
+    if combat::spell_cast::launch_triggered_spell(world, caster, &storm, Some(target), 1) {
         super::ret_tier::after_background_storm(world, caster, target);
         // Ret576–602/hpp1721–1726: Legacy can produce fresh Purpose,
         // although it cannot consume or classify the existing charge.
-        crate::spell_cast::script_registry::after_spender_stacks(world, caster, &storm);
+        combat::spell_cast::script_registry::after_spender_stacks(world, caster, &storm);
         // SimC76f8118 Ret573–590/609–625: Legacy constructs the same
         // Second Sunrise producer as foreground Storm; echoes do not recurse.
-        super::apply_echo_policies(world, caster, &storm);
+        super::echo_policies::after_cast(world, caster, &storm);
     } else {
         warn!(
             ?caster,
