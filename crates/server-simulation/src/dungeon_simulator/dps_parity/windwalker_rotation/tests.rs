@@ -519,7 +519,7 @@ fn literal_ww_native_combo_breaker_blackout_earns_rwk_and_delivers_its_child() {
     let actions = report["combat"]["actions"].as_array().unwrap();
     assert!(
         actions.iter().any(|action| action["spell_id"] == 100784
-            && action["hits"].as_u64().is_some_and(|hits| hits > 0)),
+            && action["hits"].as_f64().is_some_and(|hits| hits > 0.0)),
         "actual Blackout Kick damage is required before testing its producer"
     );
     assert!(
@@ -536,12 +536,12 @@ fn literal_ww_native_combo_breaker_blackout_earns_rwk_and_delivers_its_child() {
     );
     assert!(
         actions.iter().any(|action| action["spell_id"] == 467307
-            && action["count"].as_u64().is_some_and(|count| count > 0)),
+            && action["count"].as_f64().is_some_and(|count| count > 0.0)),
         "literal APL must admit the actual earned RWK override"
     );
     assert!(
         actions.iter().any(|action| action["spell_id"] == 468179
-            && action["damage"].as_u64().is_some_and(|damage| damage > 0)),
+            && action["damage"].as_f64().is_some_and(|damage| damage > 0.0)),
         "actual RWK must deliver native468179 damage, not just a root cast"
     );
 }
