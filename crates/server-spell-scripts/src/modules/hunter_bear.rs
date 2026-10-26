@@ -50,8 +50,12 @@ fn select_rend_targets(
     spell: &SpellInfo,
     primary: Option<Entity>,
 ) -> TargetPlan {
-    let Some(primary) = primary else { return Vec::new() };
-    let Some(center) = targets::position(world, primary) else { return Vec::new() };
+    let Some(primary) = primary else {
+        return Vec::new();
+    };
+    let Some(center) = targets::position(world, primary) else {
+        return Vec::new();
+    };
     // SimC76f8118 sc_hunter.cpp3224: native effect2 supplies the cap;
     // the native periodic effect supplies its radius and damage coefficient.
     let radius = targets::effect_radius(&spell.effects[0]);
