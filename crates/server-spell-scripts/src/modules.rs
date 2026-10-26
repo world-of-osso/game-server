@@ -83,6 +83,7 @@ register_modules! {
     outlaw_spree: (2600, "modules/outlaw_spree.rs"),
     paid_cooldowns: (130, "modules/paid_cooldowns.rs"),
     periodic_counters: (270, "modules/periodic_counters.rs"),
+    reap_the_storm: (710, "modules/reap_the_storm.rs"),
     resource_values: (350, "modules/resource_values.rs"),
     ret_damage: (1000, "modules/ret_damage.rs"),
     ret_empyrean: (1000, "modules/ret_empyrean.rs"),
