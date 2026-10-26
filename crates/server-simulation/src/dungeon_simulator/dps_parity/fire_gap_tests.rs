@@ -915,9 +915,27 @@ fn fire_meteor_deep_impact_amplifies_only_nearest_target() {
         .unwrap()
         .amount;
     let expected = 1.0 + percent / 100.0;
+    let variance = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(351140)
+        .unwrap()
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap()
+        .variance
+        .abs()
+        * 0.5;
+    // Each target has an independent native ±variance/2 roll. Compare the
+    // resulting ratio's exact authored bounds, not an impossible point value.
+    let minimum = expected * (1.0 - variance) / (1.0 + variance);
+    let maximum = expected * (1.0 + variance) / (1.0 - variance);
+    let ratio = primary / secondary;
     assert!(
-        (primary / secondary - expected).abs() < 0.01,
-        "only the closest Meteor target gets native Deep Impact: {primary}/{secondary}, expected{expected}"
+        (minimum - 0.0001..=maximum + 0.0001).contains(&ratio),
+        "only the closest Meteor target gets native Deep Impact within native variance: {ratio}, expected{minimum}..{maximum}"
     );
 }
 
@@ -1042,6 +1060,30 @@ fn fire_meteorite_glorious_count_selects_the_pack_once_per_missile() {
         count * run.targets.len(),
         "each authored Glorious Meteorite selects its area once, never one full area per recipient"
     );
+}
+
+#[test]
+#[ignore = "requires exact Fire63 inputs and private70448 DB"]
+fn fire_feedback_fiery_rush_ends_with_combustion() {
+    let mut run = prepare_literal(63, 1).unwrap();
+    let actor = run.actor;
+    start_native(&mut run, 190319, actor);
+    run.app.update();
+    assert!(
+        crate::auras::has_aura(run.app.world(), actor, 383637),
+        "ordinary Combustion earns selected native Fiery Rush"
+    );
+    for _ in 0..600 {
+        run.app.update();
+        if !crate::auras::has_aura(run.app.world(), actor, 190319) {
+            assert!(
+                !crate::auras::has_aura(run.app.world(), actor, 383637),
+                "Fiery Rush must not persist as permanent Fire Blast recovery after Combustion ends"
+            );
+            return;
+        }
+    }
+    panic!("unextended native Combustion must expire within30s");
 }
 
 fn reacted(run: &Run, name: &str) -> f64 {
