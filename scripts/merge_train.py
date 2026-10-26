@@ -577,7 +577,11 @@ def run(_args):
     loaded = script.stat().st_mtime
     while True:
         # deploy_merge_train.py replaces this file; pick it up between cycles.
-        if script.stat().st_mtime != loaded and not MEASURING:
+        if script.stat().st_mtime != loaded:
+            # Start no new cycle (it would start more measurements); reload once they drain.
+            if MEASURING:
+                time.sleep(30)
+                continue
             print("merge_train.py changed, reloading", flush=True)
             os.execv(sys.executable, [sys.executable, str(script), "run"])
         queued = list(QUEUE.glob("*.json"))

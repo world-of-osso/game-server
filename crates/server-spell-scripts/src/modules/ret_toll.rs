@@ -7,8 +7,8 @@ use shared::components::ActiveSpec;
 use super::combat;
 use combat::auras;
 use combat::spell_cast::effects::EffectCtx;
+use combat::spell_cast::script_registry::{AreaTargetFilter, ContextHitHook, SpellScriptHook};
 use combat::spell_cast::targets::{self, Relation};
-use combat::spell_cast::script_registry::{SpellScriptHook, ContextHitHook, AreaTargetFilter};
 use combat::spell_info::{SpellInfo, SpellStore};
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
@@ -82,8 +82,13 @@ pub(super) fn cast_child(world: &mut World, ctx: &EffectCtx, target: Entity) {
     child.cast_damage_multiplier = Some(1.0 + percent / 100.0);
     // Same native triggered child seam as the other approved Ret relationships.
     // Funding and Resonance/Exaction/DivineHammer are separate qualifications.
-    if !combat::spell_cast::launch_triggered_spell(world, ctx.caster, &child, Some(target), ctx.depth + 1)
-    {
+    if !combat::spell_cast::launch_triggered_spell(
+        world,
+        ctx.caster,
+        &child,
+        Some(target),
+        ctx.depth + 1,
+    ) {
         debug!(
             spell_id = id,
             ?target,
