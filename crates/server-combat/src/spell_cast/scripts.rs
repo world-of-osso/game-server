@@ -36,7 +36,6 @@ pub(super) use script_registry::after_foreground_special;
 pub(crate) use script_registry::melee_residual as after_melee_residual;
 pub(super) use script_registry::spell_residual as after_spell_residual;
 mod chrono_flame;
-mod clearcasting;
 mod guardian_impacts;
 mod stacking_summons;
 pub(super) use script_registry::after_modifier_consumption as apply_echo_policies;
@@ -63,7 +62,6 @@ pub(crate) fn register_enhancement(scripts: &mut crate::auras::scripts::AuraScri
 }
 mod policies;
 mod spellslinger;
-pub(crate) use clearcasting::{OMEN, check_omen_proc};
 pub(super) use policies::check_cast as check_policy_cast;
 pub(crate) use policies::register_channel_policies;
 pub(super) use policies::{
@@ -127,10 +125,8 @@ mod rogue_hero;
 pub(crate) use rogue_children::register as register_rogue_children;
 pub(super) use rogue_hero::prepare as prepare_rogue_hero;
 mod scourge_strike;
-mod soul_of_the_forest;
-mod swiftmend;
-pub(super) use soul_of_the_forest::direct_multiplier as soul_of_the_forest_direct_multiplier;
-pub(crate) use soul_of_the_forest::snapshot_amount as snapshot_soul_of_the_forest;
+pub(super) use script_registry::healing_multiplier as soul_of_the_forest_direct_multiplier;
+pub(crate) use script_registry::snapshot_healing_aura as snapshot_soul_of_the_forest;
 mod unbroken_rhythm;
 pub(crate) use unbroken_rhythm::register_unbroken_rhythm;
 mod windwalker;
@@ -1727,9 +1723,6 @@ pub fn on_hit(world: &World, spell_id: u32) -> Option<HitHook> {
         107428 | 113656 => Some(windwalker::trigger_wdp_enabler_on_hit),
         unbroken_rhythm::ROOT => Some(unbroken_rhythm::capture_and_consume),
 
-        swiftmend::SWIFTMEND => Some(swiftmend::hit),
-        soul_of_the_forest::REGROWTH => Some(clearcasting::regrowth_hit),
-        soul_of_the_forest::REJUVENATION => Some(soul_of_the_forest::consume_after_heal),
         batch13::MORTAL_STRIKE => Some(batch13::apply_mortal_wounds),
         batch3::GARROTE => Some(batch3::garrote),
         batch5::DISINTEGRATE => Some(batch5::disintegrate),

@@ -1,9 +1,31 @@
 //! Native113043: Lifebloom HoT rolls effect0's chance, not DB ProcChance100.
 //! TC a352b1fa spell_druid.cpp1871–1882; SimC76f8118 sc_druid.cpp6247,11532–11535.
-use crate::random as rand;
+use super::combat;
+use combat::auras::scripts::{AuraScript, AuraScripts};
+use combat::random as rand;
+use combat::spell_cast::script_registry::{HitHook, SpellScriptHook};
+
+pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::MidAuraRegistration(register),
+    SpellScriptHook::Hit(hit_hook),
+];
+
+fn register(scripts: &mut AuraScripts) {
+    scripts.0.insert(
+        OMEN,
+        AuraScript {
+            check_proc: Some(check_omen_proc),
+            ..Default::default()
+        },
+    );
+}
+
+fn hit_hook(spell: u32) -> Option<HitHook> {
+    (spell == super::soul_of_the_forest::REGROWTH).then_some(regrowth_hit)
+}
 use bevy::prelude::*;
 
-use crate::auras::{ActiveAuras, AuraInstance, procs::AuraEvent, spend_stack};
+use combat::auras::{ActiveAuras, AuraInstance, procs::AuraEvent, spend_stack};
 
 pub(crate) const OMEN: u32 = 113043;
 const CLEARCASTING: u32 = 16870;

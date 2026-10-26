@@ -68,6 +68,10 @@ Frost DK's earned Killing Machine/Rime/Obliteration state and Frost Mage's owned
 
 Master of the Elements damage rules, consumption and Elemental Blast's missing-buff selection live downstream. Pet-set capture still precedes the consuming modifier snapshot; completion consumes the captured actual aura instance before Frost/pet-set launch callbacks. Elemental Blast's pre-launch grant still follows combo tracking and precedes native judgment handling, while ordinary post-launch grants retain their original position. Native proc veto registration remains before late relationship registration.
 
+## Restoration healing scripts
+
+Clearcasting/Omen, Soul of the Forest and Swiftmend live downstream together. Omen's proc filter retains its native registration slot. Swiftmend consumes the original ordered owned HoT before granting the next-heal buff; Regrowth/Rejuvenation consume that buff only after the heal. Direct healing and periodic aura snapshots retain separate stages so the persistent bonus survives later ticks without rereading a consumed aura.
+
 ## Tests
 
 The server's public native harness and simulation's harness alias install the plugin before the harness runs Startup. Simulation installs it on every new app, including apps that reuse cached aura catalogs. Combat's own unit-test build compiles the exact downstream module sources against its local test-crate types; it does not add a production dependency or duplicate policy data. Ordinary simulation builds do not compile those test-only inclusions.

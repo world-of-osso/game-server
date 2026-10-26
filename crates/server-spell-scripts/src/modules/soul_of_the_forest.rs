@@ -1,8 +1,20 @@
 //! SimC76f8118 sc_druid.cpp6393–6398,6469–6475,6553: persistent next-heal bonus.
 use bevy::prelude::*;
 
-use crate::auras::{ActiveAuras, RemoveReason, handlers, has_aura, remove_auras};
-use crate::spell_info::{SpellEffect, SpellInfo};
+use super::combat;
+use combat::auras::{ActiveAuras, RemoveReason, handlers, has_aura, remove_auras};
+use combat::spell_cast::script_registry::{HitHook, SpellScriptHook};
+use combat::spell_info::{SpellEffect, SpellInfo};
+
+pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::HealingMultiplier(direct_multiplier),
+    SpellScriptHook::SnapshotHealingAura(snapshot_amount),
+    SpellScriptHook::Hit(hit_hook),
+];
+
+fn hit_hook(spell: u32) -> Option<HitHook> {
+    (spell == REJUVENATION).then_some(consume_after_heal)
+}
 
 const TALENT: u32 = 158478;
 const BUFF: u32 = 114108;
@@ -12,7 +24,7 @@ const GERMINATION_HOT: u32 = 155777;
 
 pub(super) fn grant_after_swiftmend(world: &mut World, caster: Entity, depth: u8) {
     if has_aura(world, caster, TALENT) {
-        super::super::cast_triggered(world, caster, BUFF, Some(caster), depth + 1);
+        combat::spell_cast::cast_triggered(world, caster, BUFF, Some(caster), depth + 1);
     }
 }
 
@@ -28,12 +40,7 @@ fn persistent_multiplier(world: &World, caster: Entity) -> f32 {
         .map_or(1.0, |effect| 1.0 + effect.amount / 100.0)
 }
 
-pub(in crate::spell_cast) fn direct_multiplier(
-    world: &World,
-    caster: Entity,
-    spell: &SpellInfo,
-    periodic: bool,
-) -> f32 {
+fn direct_multiplier(world: &World, caster: Entity, spell: &SpellInfo, periodic: bool) -> f32 {
     if spell.id == REGROWTH && !periodic {
         persistent_multiplier(world, caster)
     } else {

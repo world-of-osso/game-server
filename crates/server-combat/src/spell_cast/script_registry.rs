@@ -65,6 +65,9 @@
 //! - `FinishConsumedDamageModifier`: before Frost/pet-set launch completion.
 //! - `BeforeJudgmentOnCast`: after combo tracking, before native judgment energize.
 //! - `BeforeLateAuraRegistration`: immediately before late relationship registration.
+//! - `MidAuraRegistration`: native proc rows after Dance of Chi-Ji, before Cenarion Ward.
+//! - `HealingMultiplier`: direct/periodic healing at the original persistent-heal slot.
+//! - `SnapshotHealingAura`: after periodic spell-mod capture, before other aura amount scripts.
 //! New stages own distinct callback/lookup aliases, even when signatures coincide.
 //! Within a stage, traverse module slices and entries from first to last. Never sort
 //! or deduplicate them. Adding a policy to an existing module changes only that module.
@@ -140,6 +143,10 @@ pub type FinishConsumedDamageModifierHook =
     fn(&mut World, Entity, &SpellInfo, Option<u32>, u8, bool);
 pub type BeforeJudgmentOnCastHook = fn(&mut World, Entity, u32, u8);
 pub type BeforeLateAuraRegistrationHook = fn(&mut crate::auras::scripts::AuraScripts);
+pub type MidAuraRegistrationHook = fn(&mut crate::auras::scripts::AuraScripts);
+pub type HealingMultiplierHook = fn(&World, Entity, &SpellInfo, bool) -> f32;
+pub type SnapshotHealingAuraHook =
+    fn(&World, Entity, &SpellInfo, &crate::spell_info::SpellEffect, f32) -> f32;
 
 #[derive(Clone, Copy)]
 pub enum SpellScriptHook {
@@ -212,6 +219,9 @@ pub enum SpellScriptHook {
     FinishConsumedDamageModifier(FinishConsumedDamageModifierHook),
     BeforeJudgmentOnCast(BeforeJudgmentOnCastHook),
     BeforeLateAuraRegistration(BeforeLateAuraRegistrationHook),
+    MidAuraRegistration(MidAuraRegistrationHook),
+    HealingMultiplier(HealingMultiplierHook),
+    SnapshotHealingAura(SnapshotHealingAuraHook),
 }
 
 #[derive(Clone, Copy, Resource)]
@@ -287,6 +297,14 @@ impl SpellScriptRegistry {
     pub fn register_before_late_auras(self, scripts: &mut crate::auras::scripts::AuraScripts) {
         for hook in self.hooks() {
             if let SpellScriptHook::BeforeLateAuraRegistration(register) = hook {
+                register(scripts);
+            }
+        }
+    }
+
+    pub fn register_mid_auras(self, scripts: &mut crate::auras::scripts::AuraScripts) {
+        for hook in self.hooks() {
+            if let SpellScriptHook::MidAuraRegistration(register) = hook {
                 register(scripts);
             }
         }
@@ -966,6 +984,33 @@ pub fn before_judgment_on_cast(world: &mut World, caster: Entity, spell: u32, de
             run(world, caster, spell, depth);
         }
     }
+}
+
+pub fn healing_multiplier(world: &World, caster: Entity, spell: &SpellInfo, periodic: bool) -> f32 {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .filter_map(|hook| match hook {
+            SpellScriptHook::HealingMultiplier(run) => Some(run(world, caster, spell, periodic)),
+            _ => None,
+        })
+        .product()
+}
+
+pub fn snapshot_healing_aura(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    effect: &crate::spell_info::SpellEffect,
+    amount: f32,
+) -> f32 {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .fold(amount, |value, hook| match hook {
+            SpellScriptHook::SnapshotHealingAura(run) => run(world, caster, spell, effect, value),
+            _ => value,
+        })
 }
 
 #[cfg(test)]

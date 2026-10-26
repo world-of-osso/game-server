@@ -509,13 +509,7 @@ pub(super) fn register_class_scripts(
             ..Default::default()
         },
     );
-    scripts.0.insert(
-        crate::spell_cast::scripts::OMEN,
-        AuraScript {
-            check_proc: Some(crate::spell_cast::scripts::check_omen_proc),
-            ..Default::default()
-        },
-    );
+    registry.register_mid_auras(&mut scripts);
     scripts.0.insert(
         crate::spell_cast::scripts::CENARION_WARD,
         AuraScript {
