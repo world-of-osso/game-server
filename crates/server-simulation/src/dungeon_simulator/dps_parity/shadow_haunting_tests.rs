@@ -2,7 +2,7 @@
 use super::literal_rotation::execution::{self, Execution};
 use super::*;
 use crate::auras::ActiveAuras;
-use crate::spell_cast::{read_native_cast_start, test_harness::ObservedCombatEvents, CastFailure};
+use crate::spell_cast::{CastFailure, read_native_cast_start, test_harness::ObservedCombatEvents};
 use crate::spell_info::SpellStore;
 use shared::protocol::CombatLogKind;
 
@@ -100,7 +100,9 @@ fn shadow_haunting_actual_apparition_impact_extends_existing_pain_and_vt() {
     for (spell, before) in [(589, pain_before), (34914, vt_before)] {
         let expected = before + seconds * impacts as f64;
         let observed = deadline(&run, spell).unwrap();
-        assert!((observed - expected).abs() < 0.001,
-            "native Haunting extends spell{spell} once per actual impact: observed={observed}, expected={expected}, impacts={impacts}");
+        assert!(
+            (observed - expected).abs() < 0.001,
+            "native Haunting extends spell{spell} once per actual impact: observed={observed}, expected={expected}, impacts={impacts}"
+        );
     }
 }
