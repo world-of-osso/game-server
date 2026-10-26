@@ -3560,6 +3560,13 @@ fn enemy_damage_hit_units(world: &World, ctx: &EffectCtx) -> Vec<Entity> {
 #[derive(Resource, Debug, Default)]
 pub(crate) struct ResolvingHits(Vec<HitFrame>);
 
+/// Whether this caster still has a native impact in flight for the spell.
+pub fn has_pending_spell_hit(world: &World, caster: Entity, spell: u32) -> bool {
+    world
+        .get_resource::<missiles::PendingSpellHits>()
+        .is_some_and(|pending| pending.has_spell(caster, spell))
+}
+
 /// The innermost resolving spell owned by this caster, for native impact scripts.
 pub fn resolving_spell_id(world: &World, caster: Entity) -> Option<u32> {
     world
