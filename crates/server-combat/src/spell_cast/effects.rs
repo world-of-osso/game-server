@@ -818,8 +818,8 @@ pub(crate) fn versatility_multiplier(world: &World, caster: Entity) -> f32 {
 
 const MECHANIC_BLEED: u32 = 15;
 
-/// Unit::IsDamageReducedByArmor (Unit.cpp:1680-1687): physical damage of a
-/// spell without a bleed mechanic.
+/// SimC76f8118 action.cpp1686–1690: armor applies only to pure Physical
+/// damage, not hybrid schools. Native bleed and explicit bypass rules remain.
 fn reduced_by_armor(world: &World, spell: &SpellInfo) -> bool {
     let bleed = spell
         .categories
@@ -829,9 +829,7 @@ fn reduced_by_armor(world: &World, spell: &SpellInfo) -> bool {
             .effects
             .iter()
             .any(|effect| effect.mechanic == MECHANIC_BLEED);
-    spell.school_mask() & 1 != 0
-        && !bleed
-        && !super::script_registry::ignores_armor(world, spell.id)
+    spell.school_mask() == 1 && !bleed && !super::script_registry::ignores_armor(world, spell.id)
 }
 
 /// The target's armor against the caster: a creature's own armor at the

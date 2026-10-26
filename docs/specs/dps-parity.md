@@ -540,6 +540,12 @@ The test-only attacker seam also accepts `DPS_PARITY_ACTOR=player`: native speci
 
 Native aura271 effects match both their source spell family and their effect's SpellClassMask. Burning Core1299975 affects Fire Nova only; Sentinel's Mark1253601 applies its Aimed and Wildfire bonuses independently. Unrelated spells and other families receive neither bonus. Lashing Flames retains its native Flame Shock mask. The documented Colossus Smash208086 exception continues to grant owner damage through the common Warrior target multiplier. Sources: pinned SimC `sc_shaman.cpp7010–7028`, `sc_hunter.cpp1278,1493–1494`, and `sc_warrior.cpp1723–1734`.
 
+Ret Truth's Wake403695 effect3 uses its native Consecration/Divine Hammer mask, not a universal owner-damage bonus. Its separate537 effects keep labels2511/2587; Judgment197277 keeps its native spender mask. Expurgation383346's270 Holy mask matches overlapping schools, including Radiant6. Native paired casts verify unchanged FV under Truth's Wake, the real Judgment bonus and Holy Flames on mixed-school damage; removing the former blanket271 amplifier must not be reversed to recover a DPS band.
+
+### Shared armor classification
+
+Only a pure Physical school mask uses target armor. Hybrid schools, including Doom's Physical/Nature and Havoc's Chaos children, retain their native school masks without Physical armor reduction. Native bleed mechanics and explicit spell bypasses remain unchanged (SimC76f8118 `action.cpp1686–1690`).
+
 ### Enhancement fixture driver
 
 Actual Windstrike weapon children115357/115360 ignore target armor. Native Doom469270 retains its Physical/Nature school but does not use Physical armor; ordinary Physical Stormstrike children remain armor-sensitive (SimC76f8118 `sc_shaman.cpp4726`, `action.cpp1686–1689`).
