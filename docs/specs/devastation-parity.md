@@ -38,6 +38,8 @@ Devastation1467 must execute its DPS rotation natively and measure within10% of 
 
 ## Tests asserting this spec
 
+Command Squadron qualification uses the class-summon importer on a current canonical-source database backup; the authentic native219827 template and summon properties must be present before the real-pet fixture runs.
+
 Four ignored `giantkiller_native_*` cases were pushed at3caafcc03 before implementation. Frozen0d07469b8 execution produced genuine4RED (22.30s): actual Flame2995 versus3354.4, Disintegrate2090 versus2340.8 and Deep Breath DoT2598 versus2909.76 with actual12% native mastery. These failures establish absent mastery consequences. Frozen f50689cfa execution passed all four cases in25.40s: health100/50/10% and30%floor, ordinary Tyranny/Dragonrage controls, other-family exclusion, and all three secondary exceptions. Tests remain opt-in because they require frozen native inputs. Evidence: `game-engine/data/diagnostics/dev-evoker-parity-2026-10-22/giantkiller-green-f50689cfa.log`.
 
 ## Known gaps (current cycle)
