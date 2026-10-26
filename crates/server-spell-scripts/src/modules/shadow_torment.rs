@@ -43,7 +43,7 @@ fn read_passive_instance(world: &World, caster: Entity) -> Option<u32> {
         .map(|aura| aura.instance_id)
 }
 
-fn count_owned_pain(world: &mut World, caster: Entity) -> usize {
+pub(super) fn count_owned_pain(world: &mut World, caster: Entity) -> usize {
     // Include the aura paying its final tick before the scheduler removes it.
     world
         .query::<&ActiveAuras>()

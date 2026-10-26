@@ -109,7 +109,8 @@ def submit(args):
              "land": args.land, "red": args.red and subprocess.run(
                  ["git", "rev-parse", "--verify", f"{args.red}^{{commit}}"], text=True,
                  capture_output=True, check=True).stdout.strip(), "env": dict(pair.split("=", 1) for pair in args.env), "tests": [shlex.split(test) for test in args.test],
-             "measure": [parse_measure(m) for m in args.measure], "submitted": time.time()}
+             "measure": [parse_measure(m) for m in args.measure], "isolated": args.isolated,
+             "submitted": time.time()}
     QUEUE.mkdir(parents=True, exist_ok=True)
     (QUEUE / f"{entry['id']}.json").write_text(json.dumps(entry, indent=2))
     print(entry["id"])
@@ -606,12 +607,18 @@ def run_probes(probes, gated, log):
             (RUNNING / f"{entry['id']}.json").rename(QUEUE / f"{entry['id']}.json")
         else:
             twins[entry["id"]] = twin
-    passed, failed = build_and_test(probes, log) if probes else ([], [])
-    for entry in passed:
-        entry["status"] = "probe passed"
-    # Measure now, while the tree is still the probe tree: the RED twins below rebuild it
-    # without the probes, so a later parity executable would lack their changes.
-    measure_then_write(passed, log)
+    # Probes share one tree, so a shared probe's numbers include the other probes' changes.
+    # Measure-only entries (baselines, remeasures) and --isolated ones get a tree of their own.
+    isolated = [e for e in probes if e.get("isolated") or not e["tests"]]
+    shared = [e for e in probes if e not in isolated]
+    passed, failed = [], []
+    for group in ([shared] if shared else []) + [[e] for e in isolated]:
+        group_passed, group_failed = build_and_test(group, log)
+        for entry in group_passed:
+            entry["status"] = "probe passed"
+        # Measure now, while the tree is still this group's: the next build replaces it.
+        measure_then_write(group_passed, log)
+        passed, failed = passed + group_passed, failed + group_failed
     twin_passed, twin_failed = build_and_test(list(twins.values()), log) if twins else ([], [])
     for entry in twin_passed:
         entry["status"] = "probe passed"
@@ -789,6 +796,9 @@ def main():
     s.add_argument("--land", action="store_true", help="push to master when green")
     s.add_argument("--red", help="commit with the tests but without the fix; its tests must fail "
                                  "in the same cycle before the entry lands (replaces a separate RED probe)")
+    s.add_argument("--isolated", action="store_true",
+                   help="probe in a tree of its own, so its measurement excludes other probes' changes "
+                        "(costs one extra build; measure-only entries are always isolated)")
     s.set_defaults(func=submit)
     w = sub.add_parser("wait")
     w.add_argument("id")

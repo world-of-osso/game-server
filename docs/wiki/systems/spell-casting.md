@@ -1,5 +1,13 @@
 # Spell Casting
 
+## Merged feedback grants are not casts — 2026-10-26
+
+The [shared feedback contract](../../specs/dps-parity.md#shared-merged-critical-feedback) uses `queued_triggers::schedule_buff_outcome` for Arcane/Frost Overflowing Energy and Fire feedback. Gains apply the native caster-owned aura after the hit batch; clears remove only that caster's aura. Other queued spells retain their existing cast paths.
+
+The old gain path executed a full triggered spell. Its helpful spell-hit event could enter native equipment proc rolls, even before a later attack used the earned critical chance. Native RED579171b891 demonstrates an unrelated +78 haste after queued394195 versus direct aura application:1194 versus1116 rating at seed70448, with identical actual Splinter6242 critical damage and Salvo2. The paired ST trace2ef3293ef0 reproduces the resulting rotation change before the first critical benefit: Salvo3 versus5 at6.60s, then Barrage versus Blast at8.00/8.15s. This is not an APL Overflowing Energy operand; the profile has none.
+
+Sources: pinned SimC76f8118 `sc_mage.cpp7272–7293/5585–5605` calls `buff.trigger`, not another action; native `arcane_buff_outcome_tests.rs` compares the queued and direct grant through actual later damage/proc/stat outcomes. Arcane, Fire and Frost GREEN gates and numerical measurements remain pending.
+
 ## Subtlety Lingering Shadow — 2026-10-25
 
 The [Subtlety contract](../../specs/dps-parity.md#subtlety-literal-fixture) follows pinned SimC76f8118. Downstream `server-spell-scripts/src/modules/subtlety_shadow.rs` registers existing late-aura and resolved-damage callbacks; no shared Rogue operand or resource rule changes.
@@ -61,6 +69,12 @@ Sources: `crates/server-combat/src/spell_cast/{mod.rs,scripts.rs,scripts/}`, `cr
 `echo_policies.rs` stores `EchoPolicy` rows: name, spec, selected talent, root/payload IDs and native effect indices. `SIMC_RET_SECOND_SUNRISE_STORM_ECHO` is explicitly approved because pinned SimC76f8118 Ret495–638 supplies a relationship absent from TC/native child fields. Only ordinary53385 enters generic foreground dispatch. The actual selected primary is mandatory; no target substitution. Runtime reads owned live431474 chance/effectiveness, then shared proc code reuses that aura's native internal cooldown. A queued full-trigger native child carries the observed effectiveness, has no extra resource payment and cannot recursively enter the foreground hook. No200ms timer is introduced.
 
 Native4442 raw15/30 plus1258011 effect modifiers5/20 produce effective20/50. The parent reports guide15/30 from Maxroll12.1.5/Skycoach; that source conflict is recorded, not resolved by tuning native data. [Contract](../../specs/dps-parity.md#ret-storm-root-supply-and-secondary-relationships), [strict RED and capability ledger](../../handoffs/ret-storm-gap-proof-ledger.md). Native positive/no-Hero RED→GREEN and actual root1.0/echo0.5 damage are recorded there. HoW, Tempest, Empyrean/other background-source eligibility and full parity remain separate.
+
+### HoW primary-impact extension — 2026-10-26
+
+`CAST_POLICIES` retains Storm's execution producer. `PRIMARY_HIT_POLICIES` adds ordinary HoW's successful-primary producer from pinned `sc_paladin.cpp1689–1710/1757–1783`. Both use the same owned native431474 aura, live effect values and ICD. The HoW callback follows native Judgment/Sun Sear processing; it rejects background depth, non-primary cast roles and secondary recipients. Echoes retain native flight and cannot produce another echo. Critical HoW echo payloads retain native Sun Sear impact behavior.
+
+Corrected native RED `81fbd788eb` observed 39 ordinary HoW hits and zero matching scaled echo hits in actual300s combat. Legal unselected and actual background-hit controls passed. Capture counts filter the actual Hammer spell ID, not unrelated Storm echoes. GREEN integration and landed numerical qualification remain pending. [Contract](../../specs/dps-parity.md#ret-hammer-second-sunrise), [native cases](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/ret_hammer_sunrise_tests.rs); see also [[ret-divine-purpose]].
 
 ## Selected primary across self casts — 2026-10-24
 

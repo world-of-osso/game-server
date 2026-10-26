@@ -106,6 +106,7 @@ use crate::networking::PlayerLink;
 use crate::spell_cast::{effects, log_event, targets};
 use crate::spell_info::{SpellEffect, SpellInfo, SpellStore};
 use crate::stats::StatModifiers;
+pub use ignite::spread_ignite;
 pub use periodic::{paid_periodic_ticks, remaining_periodic_ticks};
 pub use spell_mods::SpellModOp;
 pub use stat_mods::AuraStatMods;
