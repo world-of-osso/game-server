@@ -135,8 +135,15 @@ fn enhancement_elemental_tempo_reduces_running_strike_recharge_per_spent_stack()
     let target = run.targets[0];
     cast(&mut run, 17364, target);
     cast(&mut run, 470057, target);
+    // Real Stormsurge may reset a Strike; earn an actual pending charge and instant-Bolt funding.
+    for _ in 0..20 {
+        if full_recharge(&run) > 0.0 && stacks(&run) >= 5 {
+            break;
+        }
+        cast(&mut run, 17364, target);
+    }
     let spent = stacks(&run);
-    assert!(spent > 0);
+    assert!(spent >= 5, "actual generators must fund an instant Bolt");
     let before = full_recharge(&run);
     assert!(
         before > 0.0,
@@ -156,7 +163,8 @@ fn enhancement_elemental_tempo_reduces_running_strike_recharge_per_spent_stack()
         .unwrap()
         .amount;
     let started = crate::spell_cast::now(run.app.world());
-    cast(&mut run, 188196, target);
+    crate::spell_cast::creature_cast(run.app.world_mut(), run.actor, 188196, Some(target), false)
+        .unwrap();
     let elapsed = crate::spell_cast::now(run.app.world()) - started;
     let expected =
         (before - elapsed - f64::from(milliseconds) * f64::from(spent) / 1000.0).max(0.0);

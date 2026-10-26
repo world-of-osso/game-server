@@ -103,6 +103,7 @@ register_modules! {
     rogue: (70, "modules/rogue.rs"),
     rogue_vanish: (2595, "modules/rogue_vanish.rs"),
     secondary_copies: (360, "modules/secondary_copies.rs"),
+    shadow_apparitions: (2582, "modules/shadow_apparitions.rs"),
     shadow_link: (2581, "modules/shadow_link.rs"),
     shadow_priest: (290, "modules/shadow_priest.rs"),
     shadow_volley: (2580, "modules/shadow_volley.rs"),
