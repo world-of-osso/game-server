@@ -4,6 +4,8 @@ Spec269 rotation spells and selected talents follow pinned SimC76f8118 behavior 
 
 ## Required behavior
 
+- Selected Glory of the Dawn392958 rolls native effect1 percentage × actual melee haste once after each RSK185099/RWK468179 damage execute, not once per AoE hit. A successful roll executes native392959 at that kick's original primary. Native child effects own damage and Chi; inherited RSK-family mastery/Sunfire, critical FoF recovery and Unbroken consumption apply without advancing combo identity. Autoattack-only342 does not increase this chance. No fabricated resources/chance or coefficient tuning (SimC76f8118 `sc_monk.cpp919–958/963–996`).
+
 - Native spell-haste flags shorten both channel cast state and its aura lifetime with periodic intervals, preserving the channel tick count rather than adding haste-driven ticks.
 - FoF emits the equipped MID2 extra child and selected Jadefire completion damage instead of standalone root AP damage. Zenith emits its selected Stomp child and resets actual RSK recovery. Real RWK/WDP/Jadefire/Stomp children receive source-declared mastery; RWK scales then splits over its actual selected targets.
 - Interpret the pinned MID2 Windwalker literal APL using action-bound facts, actual native spellbook/castability and explicit unknown-operand failures ([shared contract](simc-apl.md)).
