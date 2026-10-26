@@ -14,6 +14,8 @@ mod enhancement_elemental_weapons;
 mod enhancement_flurry;
 #[path = "enhancement/enhancement_imbues.rs"]
 mod enhancement_imbues;
+#[path = "enhancement/enhancement_mid2.rs"]
+mod enhancement_mid2;
 #[path = "enhancement/enhancement_modes.rs"]
 mod enhancement_modes;
 #[path = "enhancement/enhancement_nova.rs"]

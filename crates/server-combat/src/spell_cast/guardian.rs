@@ -176,6 +176,16 @@ const GUARDIAN_POLICIES: &[GuardianPolicy] = &[
         owner_spell_share: Some(1.0),
         owner_attack_share: None,
     },
+    // SimC76f8118 pets.cpp19/2358–2407: actual Overfiend repeatedly
+    // casts its native Chaos Bolt with base owner SP1.0; no guessed AP share.
+    GuardianPolicy {
+        summons: &[434587],
+        entry: 217429,
+        spells: &[434589],
+        repeat_gcd: None,
+        owner_spell_share: Some(1.0),
+        owner_attack_share: None,
+    },
     // SimC76f8118 pets19/2516–2563: native Desperate Soul, full SP,
     // one actual Wrath; its own post-cast callback marks native dismissal.
     GuardianPolicy {
