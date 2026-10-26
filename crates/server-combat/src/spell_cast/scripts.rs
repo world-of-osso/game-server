@@ -103,11 +103,6 @@ pub(super) fn apply_periodic_damage_policies(
 pub(crate) fn owns_policy_proc(world: &World, spell: u32) -> bool {
     policies::owns_policy_proc(world, spell) || frost::owns_proc(spell)
 }
-mod havoc;
-pub(crate) use havoc::{apply_havoc_damage_policies, is_eye_beam_channel, register_havoc};
-pub use havoc::{
-    arm_demonic as arm_havoc_demonic, before_cast as before_havoc_cast, havoc_demonsurge_available,
-};
 pub(crate) mod holy_priest;
 mod hot_streak;
 pub(super) use hot_streak::triggers_hot_streak;
@@ -307,7 +302,7 @@ pub(super) fn effect_handler(spell: u32, index: u8) -> Option<super::effects::Ef
 pub(super) use batch12::empower_gargoyles;
 pub(super) use batch13::refund_execute;
 pub(crate) use batch13::{HAUNT, reset_haunt_on_death};
-pub(crate) use batch14::{DEATHMARK, EYE_BEAM, cast_eye_beam_tick, deathmark_energy};
+pub(crate) use batch14::{DEATHMARK, deathmark_energy};
 pub(super) use batch15::heal_beacon;
 pub(crate) use batch15::{replace_beacon, snapshot_combustion};
 pub(super) use batch16::{blast_cast_time, blast_multiplier, mana_cost};
@@ -626,7 +621,6 @@ pub fn crit_chance(world: &World, caster: Entity, target: Entity, spell_id: u32)
     match spell_id {
         FIREBALL | hot_streak::PYROBLAST => firestarter_crit(world, caster, target),
         batch17::REGROWTH => batch17::regrowth_crit(world, caster, target),
-        batch14::EYE_BEAM_DAMAGE => batch14::eye_beam_crit(world, caster),
         batch3::SHRED if batch11::shred_stealth_bonus(world, caster) => {
             let spell = world
                 .resource::<crate::spell_info::SpellStore>()

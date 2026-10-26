@@ -2023,7 +2023,7 @@ fn deal_source_damage_and_report(
     #[cfg(any(test, feature = "test-support"))]
     factor_capture::finish(world, ctx, target, &damage, &event);
     log_event(world, event);
-    super::scripts::apply_havoc_damage_policies(
+    super::script_registry::landed_damage_policies(
         world,
         ctx.caster,
         target,

@@ -2532,7 +2532,7 @@ fn record_swing_events(world: &mut World, attacker: Entity, target: Entity, outc
     };
     reward_swing_rage(world, attacker, target, rage_secs, damage);
     crate::spell_cast::log_event(world, swing_log_event(attacker, target, &outcome));
-    crate::spell_cast::scripts::apply_havoc_damage_policies(
+    crate::spell_cast::script_registry::landed_damage_policies(
         world, attacker, target, None, damage, false,
     );
     if outcome.npc_died || outcome.player_died {

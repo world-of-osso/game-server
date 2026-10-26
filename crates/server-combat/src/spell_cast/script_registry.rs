@@ -43,6 +43,9 @@
 //!   pure native-readiness, launch snapshot and damage classification predicates.
 //! - `ResolvedDamage`: after actual direct/periodic damage, before Explosive tick callbacks.
 //! - `AfterDirectDamageBeforeItems`: after Ret direct damage, before item scripts.
+//! - `LandedDamagePolicy`: actual white/spell damage at the original Havoc policy boundary.
+//! - `AbilityUseAvailable`: earned per-ability use state, not ordinary cast admission.
+//! - `ChannelPeriodic`: first scripted periodic-trigger callback, before native trigger handling.
 //! Within a stage, traverse module slices and entries from first to last. Never sort
 //! or deduplicate them. Adding a policy to an existing module changes only that module.
 
@@ -88,6 +91,9 @@ pub type EffectiveResourceValueHook =
 pub type MeleeResidualHook = fn(&mut World, Entity, Entity, f32);
 pub type CastPredicate = fn(&World, Entity, &SpellInfo) -> bool;
 pub type ResolvedDamageHook = fn(&mut World, &EffectCtx<'_>, Entity, bool, f32);
+pub type LandedDamageHook = fn(&mut World, Entity, Entity, Option<u32>, f32, bool);
+pub type AbilityUseLookup = fn(&World, Entity, u32) -> bool;
+pub type ChannelPeriodicLookup = fn(u32, u8) -> Option<ContextHitHook>;
 
 #[derive(Clone, Copy)]
 pub enum SpellScriptHook {
@@ -137,6 +143,9 @@ pub enum SpellScriptHook {
     ArmorIgnoredSpells(&'static [u32]),
     ResolvedDamage(ResolvedDamageHook),
     AfterDirectDamageBeforeItems(PeriodicDamageFinishedHook),
+    LandedDamagePolicy(LandedDamageHook),
+    AbilityUseAvailable(AbilityUseLookup),
+    ChannelPeriodic(ChannelPeriodicLookup),
 }
 
 #[derive(Clone, Copy, Resource)]
@@ -625,6 +634,41 @@ pub fn after_direct_damage_before_items(world: &mut World, ctx: &EffectCtx<'_>) 
             run(world, ctx);
         }
     }
+}
+
+pub fn landed_damage_policies(
+    world: &mut World,
+    caster: Entity,
+    target: Entity,
+    spell: Option<u32>,
+    amount: f32,
+    periodic: bool,
+) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::LandedDamagePolicy(run) = hook {
+            run(world, caster, target, spell, amount, periodic);
+        }
+    }
+}
+
+pub fn ability_use_available(world: &World, caster: Entity, spell: u32) -> bool {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .any(|hook| match hook {
+            SpellScriptHook::AbilityUseAvailable(test) => test(world, caster, spell),
+            _ => false,
+        })
+}
+
+pub fn channel_periodic(world: &World, spell: u32, index: u8) -> Option<ContextHitHook> {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .find_map(|hook| match hook {
+            SpellScriptHook::ChannelPeriodic(lookup) => lookup(spell, index),
+            _ => None,
+        })
 }
 
 #[cfg(test)]

@@ -3,8 +3,9 @@ use std::collections::BTreeSet;
 
 use bevy::prelude::*;
 
-use crate::auras::scripts::AuraScripts;
-use crate::auras::{AuraInstance, RemoveReason};
+use super::combat;
+use combat::auras::scripts::AuraScripts;
+use combat::auras::{self, AuraInstance, RemoveReason};
 
 const TALENT: u32 = 452402;
 const META: u32 = 162264;
@@ -28,7 +29,7 @@ fn ability(spell: u32) -> u32 {
 
 pub fn havoc_demonsurge_available(world: &World, caster: Entity, spell: u32) -> bool {
     super::has_talent(world, caster, TALENT)
-        && crate::auras::has_aura(world, caster, META)
+        && auras::has_aura(world, caster, META)
         && world
             .get::<DemonsurgeUses>(caster)
             .is_some_and(|uses| uses.0.contains(&ability(spell)))
@@ -58,11 +59,11 @@ pub(super) fn before_cast(world: &mut World, caster: Entity, spell: u32, depth: 
             .into_mut()
             .0
             .extend(ABILITIES.iter().copied());
-        crate::auras::remove_auras(world, caster, RemoveReason::Cancelled, |aura| {
+        auras::remove_auras(world, caster, RemoveReason::Cancelled, |aura| {
             aura.spell_id == STACKS && aura.caster == caster
         });
         if super::has_talent(world, caster, 452415) {
-            crate::spell_cast::cast_triggered(world, caster, INTENSITY, Some(caster), depth + 1);
+            combat::spell_cast::cast_triggered(world, caster, INTENSITY, Some(caster), depth + 1);
         }
         return;
     }
@@ -82,7 +83,7 @@ pub(super) fn before_cast(world: &mut World, caster: Entity, spell: u32, depth: 
     } else {
         453323
     };
-    if !crate::spell_cast::try_cast_triggered(world, caster, trigger, Some(caster), depth + 1) {
+    if !combat::spell_cast::try_cast_triggered(world, caster, trigger, Some(caster), depth + 1) {
         error!(trigger, "Native Demonsurge trigger refused");
     }
 }
@@ -98,7 +99,7 @@ fn expire_meta(world: &mut World, unit: Entity, aura: &AuraInstance, reason: Rem
     if let Some(mut uses) = world.get_mut::<DemonsurgeUses>(unit) {
         uses.0.clear();
     }
-    crate::auras::remove_auras(world, unit, reason, |active| {
+    auras::remove_auras(world, unit, reason, |active| {
         active.caster == unit && matches!(active.spell_id, INTENSITY | STACKS)
     });
 }

@@ -48,6 +48,10 @@ Effective resource-value rules and secondary residual-copy tables live downstrea
 
 Successful-cast relationship rows, Marksmanship target plans/residuals and Sentinel marks live downstream together. Successful-cast hooks retain their foreground-only position, and Sentinel's forced mark still precedes the relationship row traversal. Cast readiness, hardcast crit guarantees and consumed-modifier snapshots query downstream predicates without changing native payment or cooldown storage. Rapid Fire's original periodic and natural-end aura callbacks now register with the module; its native period still supplies seven shots. Resolved damage visits Master Marksman before Sentinel and before the retained Explosive primary-tick stage.
 
+## Complete Havoc runtime
+
+Havoc's Initiative targets, Burning Blades residuals, Demonsurge uses and Meta expiry hooks live under the downstream Havoc module. Its runtime pre-cast callbacks still precede the Demonic transformation, and channel-duration extension still follows transformation haste. The same downstream component state supplies native APL availability queries. Eye Beam/Gaze periodic child dispatch and learned-rank critical chance also live downstream; their callbacks retain the real channel-state guard and native child geometry.
+
 ## Tests
 
 The server's public native harness and simulation's harness alias install the plugin before the harness runs Startup. Simulation installs it on every new app, including apps that reuse cached aura catalogs. Combat's own unit-test build compiles the exact downstream module sources against its local test-crate types; it does not add a production dependency or duplicate policy data. Ordinary simulation builds do not compile those test-only inclusions.
