@@ -5,19 +5,33 @@ use bevy::prelude::*;
 use combat::auras::ActiveAuras;
 use combat::spell_cast::{
     self,
-    effects::{self, EffectCtx},
-    script_registry::SpellScriptHook,
+    effects::EffectCtx,
+    script_registry::{self, DamageAmountHook, SpellScriptHook},
     targets,
 };
-use combat::spell_info::SpellStore;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::DamageAmount(payload_amount),
     SpellScriptHook::ResolvedDamage(after_spell),
     SpellScriptHook::LandedDamagePolicy(after_white),
 ];
 const TALENT: u32 = 457055;
 const MARK: u32 = 457129;
 const DAMAGE: u32 = 457236;
+
+fn payload_amount(spell: u32) -> Option<DamageAmountHook> {
+    (spell == DAMAGE).then_some(apply_target_modifier)
+}
+
+fn apply_target_modifier(world: &World, caster: Entity, target: Entity, amount: f32) -> f32 {
+    // sc_rogue.cpp2346–2350: scripted Zoldyck applies even when the payload
+    // ignores ordinary percent-done modifiers. Native labels/health own eligibility.
+    let spell = world
+        .resource::<combat::spell_info::SpellStore>()
+        .get(DAMAGE)
+        .expect("native Singular Focus payload");
+    amount * script_registry::target_damage_multiplier(world, caster, target, spell)
+}
 
 fn after_spell(world: &mut World, ctx: &EffectCtx, target: Entity, _crit: bool, amount: f32) {
     copy_to_mark(world, ctx.caster, target, amount, ctx.depth + 1);
@@ -77,19 +91,16 @@ fn copy_to_mark(world: &mut World, caster: Entity, source: Entity, amount: f32, 
     let Some(target) = find_owned_mark(world, caster, source) else {
         return;
     };
-    let spell = world
-        .resource::<SpellStore>()
-        .get(DAMAGE)
-        .expect("native Singular Focus payload")
-        .clone();
-    let ctx = EffectCtx {
+    // sc_rogue.cpp1971–1995/2340–2350: the residual's own label3936
+    // still receives native Mastery and target-health Zoldyck. Native payload
+    // CANNOT_CRIT/NO_DONE_PCT flags prevent a second crit/general damage bonus;
+    // background depth and the marked-recipient exclusion prevent proc recursion.
+    spell_cast::cast_triggered_with_effect0_amount(
+        world,
         caster,
-        spell: &spell,
+        DAMAGE,
+        Some(target),
         depth,
-        dest: None,
-        chain_multiplier: 1.0,
-    };
-    // The pinned payload has callbacks=false: retain the source's crit and
-    // damage modifiers, but never roll them again or recursively emit copies.
-    effects::deal_copied_damage(world, &ctx, target, amount * fraction);
+        amount * fraction,
+    );
 }
