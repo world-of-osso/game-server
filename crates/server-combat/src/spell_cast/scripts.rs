@@ -50,7 +50,7 @@ pub(super) use enhancement_rod::after_resolution as after_resolved_hits;
 pub(crate) use enhancement_rod::snapshot_rod_amount;
 mod enhancement_spending;
 mod enhancement_stormblast;
-pub(super) use enhancement_stormblast::copy_weapon_damage as stormblast_weapon_damage;
+pub(super) use enhancement_stormblast::after_weapon_damage as enhancement_weapon_damage;
 mod enhancement_strikes;
 mod enhancement_tier;
 mod enhancement_unleashed;

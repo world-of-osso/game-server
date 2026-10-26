@@ -27,8 +27,7 @@ pub(super) fn register(scripts: &mut AuraScripts) {
     scripts.0.insert(
         STORMSURGE_DRIVER,
         AuraScript {
-            check_proc: Some(check_strike_weapon),
-            on_proc: Some(grant_stormsurge),
+            check_proc: Some(suppress_every_cast_grant),
             ..Default::default()
         },
     );
@@ -54,23 +53,11 @@ fn selected(world: &World, caster: Entity, talent: u32) -> bool {
         .is_some_and(|known| known.contains(talent))
 }
 
-fn check_strike_weapon(world: &World, aura: &AuraInstance, event: &AuraEvent) -> bool {
-    is_enhancement(world, aura.caster)
-        && matches!(event.spell_id, Some(32175 | 32176 | 115357 | 115360))
-        && !event.periodic
-}
-
 fn suppress_every_cast_grant(_world: &World, _aura: &AuraInstance, _event: &AuraEvent) -> bool {
     false
 }
 
-fn grant_stormsurge(
-    world: &mut World,
-    caster: Entity,
-    _aura: &AuraInstance,
-    _target: Option<Entity>,
-) {
-    // Generic proc admission keeps native201845 chance, mastery/Storm's Wrath modifiers and timer.
+fn grant_stormsurge(world: &mut World, caster: Entity) {
     spell_cast::cast_triggered(world, caster, STORMSURGE, Some(caster), 1);
     if selected(world, caster, STORMBLAST_TALENT) {
         spell_cast::cast_triggered(world, caster, STORMBLAST, Some(caster), 1);
@@ -106,14 +93,39 @@ pub(super) fn snapshot(world: &mut World, caster: Entity, spell: u32, depth: u8)
     }
 }
 
-pub(in crate::spell_cast) fn copy_weapon_damage(
+pub(in crate::spell_cast) fn after_weapon_damage(
     world: &mut World,
     ctx: &EffectCtx,
     target: Entity,
     damage: f32,
 ) {
     if !matches!(ctx.spell.id, 32175 | 32176 | 115357 | 115360)
-        || !selected(world, ctx.caster, STORMBLAST_TALENT)
+        || !is_enhancement(world, ctx.caster)
+    {
+        return;
+    }
+    copy_weapon_damage(world, ctx, target, damage);
+    roll_stormsurge(world, ctx.caster);
+}
+
+fn roll_stormsurge(world: &mut World, caster: Entity) {
+    // Native TDB family filters select roots, but SimC4702 rolls on each actual weapon child.
+    // Execution policy keeps the native201845 chance, mastery modifiers and timer, not that family gate.
+    let Some(instance) = world.get::<ActiveAuras>(caster).and_then(|auras| {
+        auras
+            .iter()
+            .find(|aura| aura.spell_id == STORMSURGE_DRIVER && aura.caster == caster)
+            .map(|aura| aura.instance_id)
+    }) else {
+        return;
+    };
+    if crate::auras::procs::try_native_policy_proc(world, caster, instance) {
+        grant_stormsurge(world, caster);
+    }
+}
+
+fn copy_weapon_damage(world: &mut World, ctx: &EffectCtx, target: Entity, damage: f32) {
+    if !selected(world, ctx.caster, STORMBLAST_TALENT)
         || !world
             .get::<StrikeSnapshot>(ctx.caster)
             .is_some_and(|state| state.stormblast)
