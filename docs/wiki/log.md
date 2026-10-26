@@ -1,3 +1,7 @@
+## 2026-10-26 — Native Vanish lifecycle
+
+[Vanish removal ordering](systems/auras.md#vanish-removal-ordering--2026-10-26) records the observed1856 self-consumption cause, native source-attribute admission and expiry-before-last-stealth seam. Two lifecycle cases and same-code Rogue/attack controls pass;259 DPS remains below the target band. Outlaw measurement does not exercise Vanish.
+
 ## 2026-10-26 — Hellcaller counter lifecycle
 
 [Shared counters](systems/warlock-periodic-counters.md#counter-lifecycle) now have a downstream producer/collapse module, additive actual-UA application binding, native periodic driver and source RNG models. Native UA/CB/collapse REDs are recorded; lifecycle GREEN and numerical parity remain pending. UA expiry callbacks remain independently owned.
