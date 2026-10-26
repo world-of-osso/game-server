@@ -88,6 +88,15 @@ fn shared_channel_native_fists_preserves_final_damage_tick_and_deadline() {
     preparation::finish_pending_setup(&mut run).unwrap();
     cast_with_native_readiness(&mut run, 100780);
     preparation::finish_pending_setup(&mut run).unwrap();
+    run.app.insert_resource(
+        crate::spell_cast::effects::factor_capture::FactorCapture::new(
+            run.actor,
+            run.targets[0],
+            117418,
+            "full_fof_damage_clock",
+            32,
+        ),
+    );
     cast_with_native_readiness(&mut run, 113656);
     let damage_period = run
         .app
@@ -115,18 +124,21 @@ fn shared_channel_native_fists_preserves_final_damage_tick_and_deadline() {
         "FoF deadline must equal four rounded damage periods, not auxiliary control periods: duration{advertised}s, damage_period{damage_period}ms"
     );
     finish_observed_channel(&mut run, 113656);
-    let hits = run
+    let trace = run
         .app
         .world()
-        .resource::<ObservedCombatEvents>()
-        .0
+        .resource::<crate::spell_cast::effects::factor_capture::FactorCapture>()
+        .export();
+    // The equipped MID2 execution child is separate from the periodic tick clock.
+    let hits = trace["events"]
+        .as_array()
+        .unwrap()
         .iter()
         .filter(|event| {
-            event.source == Some(run.actor.to_bits())
-                && event.target == Some(run.targets[0].to_bits())
-                && event.spell_id == Some(117418)
-                && event.kind == CombatLogKind::Damage
-                && event.amount > 0
+            event["spell_id"] == 117418
+                && event["event"] == "direct_amount"
+                && event["native_emission_origin"]["aura_spell_id"] == 113656
+                && event["native_emission_origin"]["effect_index"] == 2
         })
         .count();
     assert_eq!(
@@ -136,13 +148,18 @@ fn shared_channel_native_fists_preserves_final_damage_tick_and_deadline() {
 }
 
 #[test]
-#[ignore = "requires exact native265 player/profile for full Drain Soul channel"]
+#[ignore = "requires native265 player and Drain Soul choice72045:124692 instead of Improved Shadow Bolt"]
 fn shared_channel_native_drain_soul_completes_without_rounding_partial() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(265, 1).unwrap();
     remove_equipped_proc_drivers(&mut run);
     let actor = run.actor;
     let target = run.targets[0];
+    assert_eq!(
+        crate::spell_cast::knowledge::resolve_actor_action(run.app.world(), actor, 686).unwrap(),
+        198590,
+        "this gate explicitly selects the native Drain Soul choice, not Improved Shadow Bolt"
+    );
     let spell = run
         .app
         .world()
