@@ -3,8 +3,8 @@ use super::cast_relationships::has_talent;
 use super::combat;
 use bevy::prelude::*;
 use combat::auras::{ActiveAuras, procs};
-use combat::spell_cast::{self, effects::EffectCtx, script_registry::SpellScriptHook};
 use combat::spell_cast::scripts::script_effect_value;
+use combat::spell_cast::{self, effects::EffectCtx, script_registry::SpellScriptHook};
 use combat::spell_info::SpellInfo;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[

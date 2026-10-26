@@ -115,10 +115,19 @@ fn survival_native_actual_pet_strike_crits_produce_selected_sic_em_bleed() {
             saw_crit = true;
         }
         if event.spell_id == Some(1253138) {
-            assert!(saw_crit, "native Sic 'Em damage preceded any actual pet strike crit");
+            assert!(
+                saw_crit,
+                "native Sic 'Em damage preceded any actual pet strike crit"
+            );
             saw_bleed = true;
         }
     }
-    assert!(saw_crit, "prerequisite: no actual owned Strike as One crit was observed");
-    assert!(saw_bleed, "actual owned strike crits produced no selected native Sic 'Em bleed");
+    assert!(
+        saw_crit,
+        "prerequisite: no actual owned Strike as One crit was observed"
+    );
+    assert!(
+        saw_bleed,
+        "actual owned strike crits produced no selected native Sic 'Em bleed"
+    );
 }

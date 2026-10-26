@@ -1,3 +1,7 @@
+## 2026-10-26 — Elemental Weapons dynamic amount
+
+[Elemental Weapons](systems/auras.md#elemental-weapons-dynamic-amount--2026-10-26) now derives native408390 amounts from selected384355 and real imbued hands. Matching-input Bolt RED4db1ecbdad records31098→31098 instead of +5% with one hand; GREEN and measurement remain pending. Native masks, coefficients and proc chances are unchanged.
+
 ## 2026-10-26 — Fire Ignition contribution
 
 [Fire Ignite](systems/simc-apl.md#fire-fixture-adapter) now applies selected native Ignition's percentage only to each new Flamestrike contribution. Actual noncritical Flamestrike's unchanged tick/damage ratio has qualified RED proof; GREEN and measurement remain train-gated. Direct damage and existing unpaid bank are unchanged.
