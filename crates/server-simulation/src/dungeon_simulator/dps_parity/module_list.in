@@ -6,6 +6,7 @@ mod active_enemy_tests;
 #[cfg(test)] mod arcane_orb_order_tests;
 #[cfg(test)] mod arcane_tests;
 mod affliction_darkglare_tests;
+mod affliction_empowerment_tests;
 mod affliction_grasp_tests;
 mod affliction_nathreza_tests;
 mod affliction_procs_tests;
