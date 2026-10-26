@@ -51,6 +51,7 @@ mod howl_tests;
 mod hunter_bloodshed_tests;
 mod hunter_cadence_tests;
 mod hunter_explosive_tests;
+mod hunter_facts;
 #[cfg(test)]
 mod hunter_focus_tests;
 mod hunter_followup_tests;
@@ -114,5 +115,6 @@ mod shared_fact_extension_tests;
 pub(crate) mod single_spell;
 mod snakeskin_tests;
 mod trigger_primary_tests;
+mod venomcursed_tests;
 mod warrior_proc_tests;
 mod warrior_stat_tests;

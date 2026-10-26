@@ -47,6 +47,7 @@ pub(crate) use elemental::register as register_elemental_policies;
 pub(crate) mod empower_evoker;
 mod enhancement_imbues;
 mod enhancement_modes;
+mod enhancement_nova;
 mod enhancement_rod;
 pub(super) use enhancement_rod::after_resolution as after_resolved_hits;
 pub(crate) use enhancement_rod::snapshot_rod_amount;
@@ -103,10 +104,16 @@ pub(super) fn apply_periodic_damage_policies(
 pub(crate) fn owns_policy_proc(world: &World, spell: u32) -> bool {
     policies::owns_policy_proc(world, spell) || frost::owns_proc(spell)
 }
+mod fire_procs;
 pub(crate) mod holy_priest;
 mod hot_streak;
+pub(crate) use fire_procs::register as register_fire_procs;
+pub(super) use fire_procs::{before_hot_streak_launch, fire_meteorite_hit};
 pub(super) use hot_streak::triggers_hot_streak;
-pub(super) use hot_streak::{pyroclasm_damage_modifier, record_fire_hit};
+pub(super) use hot_streak::{
+    flamestrike_hot_streak_chance, pyroclasm_damage_modifier, record_fire_hit,
+    roll_flamestrike_hot_streak,
+};
 mod midnight_items;
 pub(crate) mod prayer_of_mending;
 mod protection_items;
@@ -187,7 +194,7 @@ pub(super) fn finish_scripted_launch(
     foreground: bool,
 ) {
     elemental::after_launch(world, caster, spell, consumed, depth, foreground);
-    frost::after_launch(world, caster, spell.id, foreground);
+    frost::after_launch(world, caster, spell, foreground);
     policies::pet_sets::finish_cobra(world, caster, spell);
     script_registry::after_counter_launch(world, caster, spell.id);
     unbroken_rhythm::after_launch(world, caster, spell.id);
@@ -333,7 +340,9 @@ use crate::spell_info::SpellInfo;
 /// Frostbolt: its effects are TRIGGER_MISSILE 32 to 228597 (SCHOOL_DAMAGE) only.
 /// Sourced consumers retain native modifier amounts through projectile impact.
 pub(crate) fn snapshots_modifier(world: &World, id: u32) -> bool {
-    maelstrom_weapon::snapshots_modifier(id) || script_registry::snapshots_modifier(world, id)
+    maelstrom_weapon::snapshots_modifier(id)
+        || script_registry::snapshots_modifier(world, id)
+        || frost::snapshots_modifier(id)
 }
 
 const FROSTBOLT: u32 = 116;
