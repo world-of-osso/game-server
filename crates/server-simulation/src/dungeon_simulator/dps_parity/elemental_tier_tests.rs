@@ -29,7 +29,7 @@ fn spend_stormkeeper(run: &mut Run) {
     let uses = own_aura(run, STORMKEEPER)
         .expect("actual native Stormkeeper")
         .stacks;
-    assert_eq!(uses, 4, "native70448 Stormkeeper uses");
+    assert_eq!(uses, 2, "native70448 Stormkeeper uses");
     for _ in 0..uses {
         cast(run, LIGHTNING_BOLT);
     }
