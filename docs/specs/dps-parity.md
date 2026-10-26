@@ -397,6 +397,8 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 ### Shadow Priest literal parity controller
 
+- Ordinary Shadow Void Torrent263165 starts native459314 Rift at the actual hostile primary. Its hasted native driver clock skips its first travelling tick; subsequent ticks emit native447448 to enemies inside half the native447445 radius. Channel end restores full native remaining driver duration without resetting tick phase. The APL tracking fact reads459314 (SimC76f8118 `sc_priest_shadow.cpp1491–1514`, `sc_priest.cpp1606–1683/3543–3562`). Collapse, Darkening Horizon and Void Blast admission remain separately qualified.
+
 - Selected Screams of the Void375767 makes every successful Madness execute, including Slam's background Madness, apply393919. Reapplication extends by the native fresh duration; native flat-label talent modifiers supply its period amount (SimC76f8118 `sc_priest_shadow.cpp1324–1327/2203–2204`).
 
 - A Madness impact (including Slam's weak Madness, not its periodic ticks) launches a native148859 or1264175 projectile to each own live VT. Native1264104 effect1 owns Void selection/effectiveness; Void launches373279. Preserve source-parent identity through travel so only its apparition triggers1231479 Shadeburst, with native73510 soft cap. Native407469 boosts apparition damage on own Madness; these payloads use live Shadow Weaving (SimC76f8118 `sc_priest_shadow.cpp291–549/1296/2609–2650`).
