@@ -209,6 +209,8 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 ### Havoc literal rotation
 
+- Native Consuming Fire452487/456640 retains Immolation Aura258920's payload and spends only that ability's Demonsurge use. Its dummy override cannot consume Annihilation's use or omit native Immolation ticks/Fury; Fel Desolation452486 is not Death Sweep (SimC76f8118 sc_demon_hunter.cpp181–189,4784–4839).
+
 - Selected Chaotic Transformation388112 resets actual Eye Beam/Gaze and Blade Dance/Death Sweep recovery on ordinary Meta191427; selected Violent Transformation452409 restores Immolation charges and Sigil recovery. Completed native Eye/Gaze grants selected343311's actual343312 haste buff, never on interruption. Selected Cycle of Hatred258887 reduces each executed beam's recovery by its prior owned1214887 stacks × native effect0 milliseconds, then grants one native stack (SimC76f8118 sc_demon_hunter.cpp4002–4005,4033–4047,4987–4998). MID2 cross-cooldown reductions remain separate.
 
 - Native Felblade232893 dispatches213243 at its actual selected primary; native child damage and effect2 Fury supply the result, not an adapter resource grant. A landed Essence Break258860 applies owned320338 after250ms. Eligible native Chaos Strike/Annihilation and Blade Dance/Death Sweep hits against that caster-owned mark dispatch1245759 at the native per-target internal cooldown (SimC76f8118 sc_demon_hunter.cpp7073–7080,7542–7550,7837–7843,7870–7893,11186).
@@ -296,7 +298,12 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 ### Arms literal controller
 
-- A real Sudden Death Execute (including native Massacre281000) can dispatch selected Reap the Storm446005 through Imminent Demise's native effect1 chance. Paid Execute alone cannot dispatch it. Reuse the native444775 internal cooldown and unchanged payload values (`sc_warrior.cpp4347–4359,4547–4559,7980–7981`).
+- Selected Mortal Wounds1261062 applies native Deep Wounds262115 only after an actual Mortal Strike12294 or Slam1464 critical impact, including Unhinged Mortal Strikes. Normal hits cannot grant it. Shared1261060 remains the separate Execute producer and Fury's native relationship is unchanged (`sc_warrior.cpp3153–3154,3518–3519,4248–4249`).
+
+- Selected Arms Anger Management reduces only running Avatar and Colossus Smash native endpoints from actual paid Rage and native effect0's displayed-Rage divisor. Ignore Pain and zero-payment casts do not contribute (`sc_warrior.cpp1450–1455,1519–1527`). Fury's separate effect2 policy is unchanged.
+- Selected Tactician rolls its native effect0 chance once per positive foreground Rage payment. Selected Brute Force adds its native chance only for Slam/Heroic Strike. A success restores one Overpower charge and grants selected native Opportunist456120 (`sc_warrior.cpp1458–1471`).
+
+- Cleave rolls selected Reap the Storm446005 once per execution only when its native selected-recipient count meets444775 effect1's threshold, using effect2's native chance. A real Sudden Death Execute (including native Massacre281000) can dispatch selected Reap through Imminent Demise's native effect1 chance. Paid Execute alone cannot dispatch it. Reuse the native444775 internal cooldown and unchanged payload values (`sc_warrior.cpp4347–4359,4547–4559,7980–7981`).
 
 - [ ] Sweeping Strikes grants the current native effect4 use count (12 in70448). Each affected single-target attack uses the native extra-target count and secondary damage percentage; one use is consumed only when it hits at least two targets. Preserve the native primary strike, costs and cooldowns (`sc_warrior.cpp1230,1256–1273,1324–1325,5287–5294`).
 
@@ -309,6 +316,8 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 - [x] Spec71 parity executes the exact reference manifest's action lists through the shared literal evaluator, native readiness/execution and equipment facts. Capture control before warmup, cast the source precombat Battle Stance once, and use native selected targets for Slayer/Colossus lists. When no native follower profile exists, use the real player actor; never fabricate a follower. Stockade/native follower rotations remain unchanged. Potion inventory and external Power Infusion are explicit gaps.
 
 ### Fury player parity
+
+- Shared Unrelenting Onslaught uses owned Executioner stacks after a genuine Sudden Death Execute to reduce the current native Bladestorm endpoint by444780 effect0 seconds per stack and apply native445836 to the actual primary using effect1 stacks per Executioner stack. Paid Execute alone does not qualify; native producers and counters remain unchanged (`sc_warrior.cpp4361–4365,4561–4565`).
 
 - Slayer's Strike445579 uses one actor-wide PRD attempt counter, native Slayer's Dominance444767 chance (effect0 Fury, effect1 Arms), and its native ICD. Only pinned eligible landed impacts roll; autos never roll, and only Cleave rolls per target (`sc_warrior.cpp1651–1661,1693–1703`). Native spell payloads supply all damage.
 

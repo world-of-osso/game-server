@@ -91,6 +91,55 @@ fn havoc_font_of_venomous_rage_channels_native_primary_and_secondary_damage() {
     }
 }
 
+#[test]
+#[ignore = "requires prepared native spec577 player profile"]
+fn havoc_consuming_fire_keeps_immolation_payload_and_its_own_demonsurge_use() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(577, 3).unwrap();
+    havoc_tests::earn_havoc_fury(&mut run, 120.0);
+    cast(&mut run, 191427, false);
+    preparation::finish_pending_setup(&mut run).unwrap();
+    let actor = run.actor;
+    assert!(crate::spell_cast::script_registry::ability_use_available(
+        run.app.world(),
+        actor,
+        258920
+    ));
+    let start = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .len();
+    cast(&mut run, 258920, true);
+    advance(&mut run, 40);
+    assert!(
+        !crate::spell_cast::script_registry::ability_use_available(run.app.world(), actor, 258920),
+        "Consuming Fire must consume Immolation's own use"
+    );
+    assert!(
+        crate::spell_cast::script_registry::ability_use_available(run.app.world(), actor, 201427),
+        "Consuming Fire must not spend Annihilation's use"
+    );
+    assert!(
+        crate::auras::has_aura(run.app.world(), actor, 258920),
+        "dummy Consuming Fire must execute native Immolation payload"
+    );
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0[start..];
+    assert!(
+        events
+            .iter()
+            .any(|event| event.kind == CombatLogKind::Damage
+                && event.spell_id == Some(258922)
+                && event.amount > 0),
+        "Consuming Fire must deliver native Immolation ticks"
+    );
+}
+
 fn cooldown_remaining(run: &Run, id: u32) -> u64 {
     let world = run.app.world();
     let spell = world
