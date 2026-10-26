@@ -183,6 +183,80 @@ fn literal_ww_native_source_children_wdp_uses_native_mastery() {
     assert!(empowered, "actual WDP damage must include native mastery");
 }
 
+fn fof_done_products(targets: usize, recipient: usize) -> Vec<f64> {
+    let mut run = prepare_targets(targets);
+    run.app.insert_resource(FactorCapture::new(
+        run.actor,
+        run.targets[recipient],
+        FOF_DAMAGE,
+        "fof_secondary",
+        6,
+    ));
+    super::tests::cast(&mut run, FOF);
+    for _ in 0..200 {
+        run.app.update();
+        if !crate::auras::has_aura(run.app.world(), run.actor, FOF) {
+            break;
+        }
+    }
+    let capture = run.app.world().resource::<FactorCapture>().export();
+    capture["events"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|row| row["event"] == "direct_amount" && row["spell_id"] == FOF_DAMAGE)
+        .map(|row| {
+            // Observe the actual source-stage multiplier separately from stat procs.
+            row["applied_multipliers"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|factor| factor["factor"] == "ret_damage")
+                .unwrap()["value"]
+                .as_f64()
+                .unwrap()
+        })
+        .collect()
+}
+
+#[test]
+#[ignore = "native FoF regular and MID2 ticks retain primary damage and authored secondary fraction"]
+fn literal_ww_native_source_children_fof_secondary_damage_uses_native_fraction() {
+    let _seed = crate::random::seed_scope(70448);
+    let run = prepare_targets(1);
+    let secondary_fraction = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(FOF)
+        .unwrap()
+        .effects
+        .iter()
+        .find(|effect| effect.index == 5)
+        .unwrap()
+        .base_points
+        / 100.0;
+    drop(run);
+    let single = fof_done_products(1, 0);
+    let primary = fof_done_products(3, 0);
+    let secondary = fof_done_products(3, 1);
+    assert_eq!(single.len(), 6, "actual MID2 plus five regular FoF impacts");
+    assert_eq!(primary.len(), single.len());
+    assert_eq!(secondary.len(), single.len());
+    // SimC76f8118 monk1690–1717: chain_target0 stays full; others use effect6.
+    for ((single, primary), secondary) in single.iter().zip(primary).zip(secondary) {
+        assert!(
+            (primary / single - 1.0).abs() < 0.00001,
+            "FoF primary must retain ST damage, primary={primary} ST={single}"
+        );
+        assert!(
+            (secondary / primary - f64::from(secondary_fraction)).abs() < 0.00001,
+            "FoF secondary must use native fraction={secondary_fraction}, actual={}",
+            secondary / primary
+        );
+    }
+}
+
 #[test]
 #[ignore = "native RWK uses authored target scaling and divides its actual selected target count"]
 fn literal_ww_native_source_children_rwk_uses_authored_split_multiplier() {

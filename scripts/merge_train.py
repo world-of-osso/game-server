@@ -609,7 +609,8 @@ def run_probes(probes, gated, log):
             twins[entry["id"]] = twin
     # Probes share one tree, so a shared probe's numbers include the other probes' changes.
     # Measure-only entries (baselines, remeasures) and --isolated ones get a tree of their own.
-    isolated = [e for e in probes if e.get("isolated") or not e["tests"]]
+    # Isolation only changes measurements, so --isolated without --measure stays shared.
+    isolated = [e for e in probes if e["measure"] and (e.get("isolated") or not e["tests"])]
     shared = [e for e in probes if e not in isolated]
     passed, failed = [], []
     for group in ([shared] if shared else []) + [[e] for e in isolated]:
