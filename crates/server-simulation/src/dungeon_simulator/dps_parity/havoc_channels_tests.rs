@@ -91,6 +91,46 @@ fn havoc_font_of_venomous_rage_channels_native_primary_and_secondary_damage() {
     }
 }
 
+#[test]
+#[ignore = "requires prepared native spec577 player profile"]
+fn havoc_hard_meta_adds_native_duration_to_existing_demonic_meta() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(577, 1).unwrap();
+    havoc_tests::earn_havoc_fury(&mut run, 30.0);
+    cast(&mut run, 198013, false);
+    preparation::finish_pending_setup(&mut run).unwrap();
+    let deadline = |run: &Run| {
+        run.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(run.actor)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 162264 && aura.caster == run.actor)
+            .unwrap()
+            .expires_at
+            .unwrap()
+    };
+    let before = deadline(&run);
+    let payload = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(162264)
+        .unwrap();
+    let duration = f64::from(crate::spell_cast::duration_ms(
+        run.app.world(),
+        run.actor,
+        payload,
+    )) / 1000.0;
+    cast(&mut run, 191427, false);
+    preparation::finish_pending_setup(&mut run).unwrap();
+    let gained = deadline(&run) - before;
+    assert!(
+        (gained - duration).abs() < 0.001,
+        "native hard Meta must add its full{duration}s to live Demonic Meta, got{gained}s"
+    );
+}
+
 fn native_chaos_and_physical_hits(remove_armor: bool) -> (i32, i32) {
     let _seed = crate::random::seed_scope(70_448);
     let mut run = prepare_literal(577, 1).unwrap();
