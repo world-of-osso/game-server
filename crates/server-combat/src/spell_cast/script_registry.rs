@@ -190,6 +190,8 @@ pub enum SpellScriptHook {
     CriticalChance(CriticalChanceHook),
     EarlyAuraRegistration(AuraRegistrationHook),
     ConsumedEffectValues(&'static [(u32, u8)]),
+    /// Explicit source-script override of synchronous native stacking.
+    AsynchronousAuras(&'static [u32]),
     LaunchDelay(LaunchDelayLookup),
     DotMasteryMultiplier(DotMasteryMultiplierHook),
     CastTimeProcs(&'static [u32]),
@@ -365,6 +367,16 @@ impl Default for SpellScriptRegistry {
         #[cfg(not(test))]
         Self::new(&[])
     }
+}
+
+pub(crate) fn asynchronous_aura(world: &World, spell: u32) -> bool {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .any(|hook| match hook {
+            SpellScriptHook::AsynchronousAuras(spells) => spells.contains(&spell),
+            _ => false,
+        })
 }
 
 pub fn policies(world: &World) -> impl Iterator<Item = &'static Policy> + use<> {
