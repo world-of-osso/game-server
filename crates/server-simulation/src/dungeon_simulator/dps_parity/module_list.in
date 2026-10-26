@@ -7,6 +7,7 @@ mod active_enemy_tests;
 #[cfg(test)] mod arcane_buff_outcome_tests;
 #[cfg(test)] mod arcane_charge_lifetime_tests;
 #[cfg(test)] mod arcane_feedback_tests;
+#[cfg(test)] mod arcane_familiar_tests;
 #[cfg(test)] mod arcane_orb_order_tests;
 #[cfg(test)] mod arcane_tests;
 mod affliction_darkglare_dots_tests;
