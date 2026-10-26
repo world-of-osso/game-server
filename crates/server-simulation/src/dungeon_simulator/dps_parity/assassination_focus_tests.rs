@@ -27,8 +27,10 @@ fn assert_native_payload_modifiers(health_fraction: f32) {
     let secondary = run.targets[1];
     let fraction = native_percent(&run, 457055, 0);
     // sc_rogue.cpp1797/1971–1995/2340–2350: the residual's own
-    // label3936 receives native direct Mastery and target-health Zoldyck.
+    // label3936 receives native Mastery/Implacable and target-health Zoldyck.
+    // Native1265386 effect3 independently modifies that same payload label.
     let mastery = 1.0 + native_percent(&run, 76803, 3);
+    let implacable = 1.0 + native_percent(&run, 1265386, 3);
     let execute = if health_fraction < native_percent(&run, 381798, 1) {
         1.0 + native_percent(&run, 381798, 0)
     } else {
@@ -111,12 +113,15 @@ fn assert_native_payload_modifiers(health_fraction: f32) {
             .iter()
             .all(|event| event.target == Some(marked.to_bits()) && !event.crit)
     );
-    let expected =
-        sources.iter().map(|event| event.amount as f32).sum::<f32>() * fraction * mastery * execute;
+    let expected = sources.iter().map(|event| event.amount as f32).sum::<f32>()
+        * fraction
+        * mastery
+        * implacable
+        * execute;
     let actual = copies.iter().map(|event| event.amount as f32).sum::<f32>();
     assert!(
         (actual - expected).abs() <= sources.len() as f32 * 2.0,
-        "native fraction retains payload-owned Mastery/Zoldyck without another crit: {actual}/{expected}"
+        "native fraction retains payload-owned Mastery/Implacable/Zoldyck without another crit: {actual}/{expected}"
     );
 }
 

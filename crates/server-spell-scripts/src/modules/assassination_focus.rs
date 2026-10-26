@@ -26,7 +26,9 @@ fn payload_amount(spell: u32) -> Option<DamageAmountHook> {
 fn apply_target_modifier(world: &World, caster: Entity, target: Entity, amount: f32) -> f32 {
     // sc_rogue.cpp2346–2350: scripted Zoldyck applies even when the payload
     // ignores ordinary percent-done modifiers. Native labels/health own eligibility.
-    let spell = world.resource::<combat::spell_info::SpellStore>().get(DAMAGE)
+    let spell = world
+        .resource::<combat::spell_info::SpellStore>()
+        .get(DAMAGE)
         .expect("native Singular Focus payload");
     amount * script_registry::target_damage_multiplier(world, caster, target, spell)
 }
@@ -94,6 +96,11 @@ fn copy_to_mark(world: &mut World, caster: Entity, source: Entity, amount: f32, 
     // CANNOT_CRIT/NO_DONE_PCT flags prevent a second crit/general damage bonus;
     // background depth and the marked-recipient exclusion prevent proc recursion.
     spell_cast::cast_triggered_with_effect0_amount(
-        world, caster, DAMAGE, Some(target), depth, amount * fraction,
+        world,
+        caster,
+        DAMAGE,
+        Some(target),
+        depth,
+        amount * fraction,
     );
 }
