@@ -82,7 +82,7 @@ fn launch_apparition(
         spell_cast::cast_triggered(world, source.caster, VOID_SPIKE, Some(primary), depth);
     }
     // Keep the original source primary distinct from this missile's recipient.
-    spell_cast::missiles::launch(world, source.caster, &missile, plan, depth);
+    spell_cast::launch_planned_spell(world, source.caster, &missile, plan, depth);
 }
 
 fn plan_apparition(
