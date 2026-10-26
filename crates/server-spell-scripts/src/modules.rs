@@ -39,6 +39,7 @@ const fn order_modules<const N: usize>(
 
 register_modules! {
     affliction_agony: (2650, "modules/affliction_agony.rs"),
+    affliction_empowerment: (2658, "modules/affliction_empowerment.rs"),
     affliction_grasp: (2654, "modules/affliction_grasp.rs"),
     affliction_instability: (2651, "modules/affliction_instability.rs"),
     affliction_nathreza: (2655, "modules/affliction_nathreza.rs"),
