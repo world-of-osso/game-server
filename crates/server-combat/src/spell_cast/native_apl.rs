@@ -90,6 +90,9 @@ fn read_action_eligibility(
     caster: Entity,
     spell: &SpellInfo,
 ) -> Result<(), CastFailure> {
+    if !super::script_registry::action_available(world, caster, spell.id) {
+        return Err(CastFailure::CasterAuraState);
+    }
     check_ordinary_caster_life(world, caster, spell)?;
     casting_restriction::check_cast(world, caster, spell)?;
     shapeshift::check_cast(world, caster, spell)?;

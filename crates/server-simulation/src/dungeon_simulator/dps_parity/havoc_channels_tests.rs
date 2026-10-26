@@ -93,6 +93,132 @@ fn havoc_font_of_venomous_rage_channels_native_primary_and_secondary_damage() {
 
 #[test]
 #[ignore = "requires prepared native spec577 player profile"]
+fn havoc_relentless_onslaught_delays_real_free_copies_and_starts_native_icd_at_copy() {
+    let mut total_copies = 0;
+    let mut offhand_hits = 0;
+    for seed in [70_448, 1, 2, 3, 4, 5, 6, 7] {
+        let _seed = crate::random::seed_scope(seed);
+        let mut run = prepare_literal(577, 1).unwrap();
+        havoc_tests::earn_havoc_fury(&mut run, 160.0);
+        cast(&mut run, 191427, false);
+        preparation::finish_pending_setup(&mut run).unwrap();
+        run.app
+            .world_mut()
+            .init_resource::<crate::spell_cast::test_harness::ObservedTriggeredCasts>();
+        let cooldown = run
+            .app
+            .world()
+            .resource::<crate::spell_info::SpellStore>()
+            .get(389977)
+            .unwrap()
+            .aura_options
+            .as_ref()
+            .unwrap()
+            .proc_category_recovery_ms as f64
+            / 1000.0;
+        let offhand_delay = run
+            .app
+            .world()
+            .resource::<crate::spell_info::SpellStore>()
+            .get(201427)
+            .unwrap()
+            .effects
+            .iter()
+            .find(|effect| effect.trigger_spell == 201428)
+            .unwrap()
+            .misc_values[0] as f64
+            / 1000.0;
+        let mut observed_copies = 0;
+        let mut expected_ready_at = None;
+        for _ in 0..5 {
+            havoc_tests::earn_havoc_fury(&mut run, 40.0);
+            cast(&mut run, 201427, false);
+            let hits_before_cast = damage(&run, Some(201428)).len();
+            let mut first_offhand_at = None;
+            for _ in 0..75 {
+                run.app.update();
+                let now = crate::auras::aura_now(run.app.world());
+                if first_offhand_at.is_none() && damage(&run, Some(201428)).len() > hits_before_cast
+                {
+                    first_offhand_at = Some(now);
+                }
+                let copies = run
+                    .app
+                    .world()
+                    .resource::<crate::spell_cast::test_harness::ObservedTriggeredCasts>()
+                    .0
+                    .iter()
+                    .filter(|&&(caster, spell, target)| {
+                        caster == run.actor && spell == 201427 && target == Some(run.targets[0])
+                    })
+                    .count();
+                if copies > observed_copies {
+                    let hit_at = first_offhand_at
+                        .expect("Onslaught requires the real landed native off-hand");
+                    let frame = f64::from(
+                        run.app
+                            .world()
+                            .resource::<bevy::prelude::Time>()
+                            .delta_secs(),
+                    );
+                    let actual_delay = now - hit_at;
+                    // Native integer-ms deadlines resolve on the next actual simulation frame.
+                    assert!(
+                        actual_delay + 0.001 >= offhand_delay
+                            && actual_delay <= offhand_delay + frame + 0.001,
+                        "copy delay outside native deadline/frame bound: actual={actual_delay} native={offhand_delay} frame={frame}"
+                    );
+                    let aura = run
+                        .app
+                        .world()
+                        .get::<crate::auras::ActiveAuras>(run.actor)
+                        .unwrap()
+                        .iter()
+                        .find(|aura| aura.caster == run.actor && aura.spell_id == 389977)
+                        .unwrap();
+                    expected_ready_at = Some((
+                        aura.instance_id,
+                        crate::auras::aura_now(run.app.world()) + cooldown,
+                    ));
+                    observed_copies = copies;
+                }
+                assert_onslaught_cooldown(&run, expected_ready_at);
+            }
+        }
+        total_copies += observed_copies;
+        offhand_hits += damage(&run, Some(201428)).len();
+    }
+    assert!(
+        total_copies > 0,
+        "forty real native Annihilations must be eligible for selected Relentless Onslaught copies"
+    );
+    assert!(
+        offhand_hits > 40,
+        "free copies must deliver actual native off-hand damage, not only report a launch"
+    );
+}
+
+fn assert_onslaught_cooldown(run: &Run, expected_ready_at: Option<(u32, f64)>) {
+    let Some((instance, ready_at)) = expected_ready_at else {
+        return;
+    };
+    let now = crate::auras::aura_now(run.app.world());
+    let ready = crate::auras::procs::policy_proc_ready(run.app.world(), run.actor, instance);
+    if now < ready_at - 0.025 {
+        assert!(
+            !ready,
+            "native Onslaught ICD cannot expire before its actual delayed copy's cooldown"
+        );
+    } else if now > ready_at + 0.025 {
+        assert!(
+            ready,
+            "native Onslaught ICD must expire after its delayed copy's native cooldown"
+        );
+    }
+}
+
+#[test]
+#[ignore = "requires prepared native spec577 player profile"]
 fn havoc_annihilation_offhand_execution_can_refund_native_fury() {
     let mut refunds = 0;
     for seed in [70_448, 1, 2] {
@@ -132,6 +258,156 @@ fn havoc_annihilation_offhand_execution_can_refund_native_fury() {
         refunds > 0,
         "fifteen real native Annihilations across fixed parity seeds must be eligible for the native Fury refund"
     );
+}
+
+#[test]
+#[ignore = "requires prepared native spec577 player profile"]
+fn havoc_exergy_real_hunt_and_retreat_grant_native_buff_before_damage_and_cap_refresh() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(577, 1).unwrap();
+    assert!(
+        crate::auras::has_aura(run.app.world(), run.actor, 206476),
+        "real selected native Exergy talent required"
+    );
+    havoc_tests::earn_havoc_fury(&mut run, 60.0);
+    run.app
+        .world_mut()
+        .resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .clear();
+    cast(&mut run, 370965, false);
+    preparation::finish_pending_setup(&mut run).unwrap();
+    let remaining = |run: &Run| {
+        run.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(run.actor)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.caster == run.actor && aura.spell_id == 208628)
+            .expect("ordinary native Hunt/Retreat must produce the real Exergy buff")
+            .expires_at
+            .unwrap()
+            - crate::auras::aura_now(run.app.world())
+    };
+    let duration = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(208628)
+        .unwrap()
+        .misc
+        .as_ref()
+        .unwrap()
+        .duration
+        .unwrap()
+        .duration_ms as f64
+        / 1000.0;
+    assert!(
+        remaining(&run) > duration - 2.0 && remaining(&run) <= 30.0,
+        "actual native Exergy duration must survive the real Hunt launch and movement"
+    );
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    let buff = events
+        .iter()
+        .position(|event| {
+            event.spell_id == Some(208628) && event.kind == CombatLogKind::AuraApplied
+        })
+        .expect("real Exergy application");
+    let hit = events
+        .iter()
+        .position(|event| event.spell_id == Some(370966) && event.kind == CombatLogKind::Damage)
+        .expect("real Hunt impact");
+    assert!(
+        buff < hit,
+        "SimC2822–2841 grants Exergy before the movement ability deals damage"
+    );
+    cast(&mut run, 198793, true);
+    assert!(
+        (remaining(&run) - 30.0).abs() < 0.001,
+        "SimC10010–10013 adds native duration to remaining Exergy, capped at30s"
+    );
+}
+
+#[test]
+#[ignore = "requires prepared native spec577 player profile"]
+fn havoc_mid2_four_piece_essence_break_advances_cycle_and_reduces_native_beam_recovery() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(577, 1).unwrap();
+    assert!(
+        crate::auras::has_aura(run.app.world(), run.actor, 1296612),
+        "real equipped native Havoc12.1 four-piece required"
+    );
+    havoc_tests::earn_havoc_fury(&mut run, 60.0);
+    cast(&mut run, 198013, false);
+    preparation::finish_pending_setup(&mut run).unwrap();
+    let cycle_stacks = |run: &Run| {
+        run.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(run.actor)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.caster == run.actor && aura.spell_id == 1214887)
+            .unwrap()
+            .stacks
+    };
+    assert_eq!(
+        cycle_stacks(&run),
+        1,
+        "first real native beam earns one Cycle stack"
+    );
+    let expected =
+        crate::spell_cast::scripts::script_effect_value(run.app.world(), run.actor, 258887, 0)
+            as u64;
+    let before = cooldown_remaining(&run, 198013);
+    assert!(before > expected);
+    cast(&mut run, 258860, false);
+    let after = cooldown_remaining(&run, 198013);
+    assert!(
+        before.saturating_sub(after).abs_diff(expected) <= 1,
+        "real four-piece Essence Break must reduce the already-running native Eye Beam cooldown by its native Cycle value (SimC76f8118 sc_demon_hunter.cpp7814–7833): before={before} after={after} expected={expected}"
+    );
+    assert_eq!(
+        cycle_stacks(&run),
+        2,
+        "four-piece Essence Break also earns the next real Cycle stack"
+    );
+    preparation::finish_pending_setup(&mut run).unwrap();
+    cast(&mut run, 191427, false);
+    preparation::finish_pending_setup(&mut run).unwrap();
+    havoc_tests::earn_havoc_fury(&mut run, 30.0);
+    let gaze = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(452497)
+        .unwrap()
+        .clone();
+    let actor = run.actor;
+    let primary = run.targets[0];
+    // Hard Meta's native GCD/forced movement must finish; never clear either state.
+    for _ in 0..100 {
+        if crate::spell_cast::read_native_cast_start(run.app.world_mut(), actor, &gaze, primary)
+            .is_ok()
+        {
+            break;
+        }
+        run.app.update();
+    }
+    let essence_before = cooldown_remaining(&run, 258860);
+    cast(&mut run, 452497, false);
+    let essence_after = cooldown_remaining(&run, 258860);
+    assert!(
+        essence_before
+            .saturating_sub(essence_after)
+            .abs_diff(expected)
+            <= 1,
+        "actual native Gaze must reciprocally reduce Essence Break recovery before advancing Cycle: before={essence_before} after={essence_after}"
+    );
+    assert_eq!(cycle_stacks(&run), 3);
 }
 
 #[test]

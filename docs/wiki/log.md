@@ -1,10 +1,15 @@
 - 2026-10-26: Absolute landed8f4e67fed6; identified nonstacking Corruption0 passed to positive-counter API and replaced that caller with duration-only permanence. Native GREEN pending.
+## 2026-10-26 — Arcane Familiar Intellect grant
+
+[Selected Familiar](systems/spell-casting.md#arcane-familiar-on-intellect-2026-10-26) now receives native210126 on actual Arcane Intellect. Native RED4178eeb663 reached real precombat and selected205022 but found no aura; GREEN remains pending. Separate REDc15f014bb5 observes an active owned Familiar with zero225119 impacts in7s; a downstream source-hasted3s timer now targets the actual selected enemy. GREEN remains pending; Energized/Attuned relationships remain open.
+
 ## 2026-10-26 — Proc-mask-qualified charged modifiers
 
 [Modifier charge consumption](systems/spell-casting.md#native-proc-mask-qualified-modifier-charges-2026-10-26) now qualifies consumers against explicit native proc masks. Arcane's real consecutive paid-cast regression is paired with its tests-only RED commit in one train cycle; native qualification and seven-spec same-master comparisons remain pending. The generic rule shares the existing family matcher and changes no native values.
 ## 2026-10-26 — Midnight equipped item damage
 
 [Item payloads](systems/midnight-item-damage.md) use the native driver's class−9 budget and role, preserve the Acidbrood missile, and wire Void's missing action. Actual64/62/263 equipper REDs validate positive6884/5163budgets but zero Acidbrood damage and no Void hits. Native proc children retain casting-item context; Ret stat-item code stays separate. GREEN/measurement remain pending.
+[Modifier charge consumption](systems/spell-casting.md#native-proc-mask-qualified-modifier-charges-2026-10-26) landed1b6a6115 via d331ebfe39. Arcane's real paid-cast RED→GREEN and30Arcane/3proc-family/7charge-snapshot/15dummy16 controls pass. Integrated62 ST149932.62(84.38%)/3T258935.87(78.31%) remain below parity. The original control baseline had a push race and the wrong Ret DB; corrected same-master seven-spec comparisons remain pending. The generic rule shares the native family matcher and changes no native values.
 
 ## 2026-10-26 — Independent Destruction Echo
 
