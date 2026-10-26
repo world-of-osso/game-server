@@ -48,6 +48,8 @@ Registered `fire_phoenix.rs` invokes authentic Phoenix223453 with native448659. 
 
 Selected From the Ashes uses actual eligible direct-hit callbacks to restore native Fire Blast recharge progress, including the triggering Fire Blast charge. Its owner-local deadline reads the native talent ICD; it does not reset with Combustion. The native charge-progress test passed RED→GREEN at landingf73f366ad. Ordinary Fire Blast admission rejects a second same-frame cast, so that sequence cannot qualify the talent's separate ICD.
 
+Heat Shimmer production runs at actual Ignite tick completion through the existing periodic callback. It reuses the native457735 RPPM/ICD state to grant458964, and suppresses attempts while native `CastState` identifies Scorch. Native tick→buff RED is observed; earned-buff consumption and numerical acceptance remain under qualification.
+
 ## Expected combat length
 
 `expected_combat_length` reads the existing `Encounter::Fixture.duration`, validated positive+finite. It is not elapsed/fight-remains, a300literal or an extra stored field. Dungeon and invalid fixture values return EXPECTED_COMBAT_LENGTH_UNAVAILABLE; proposed-action forwarding uses the same configured value. Four minimal-world cases at88095009c give4genuineRED0.02s;991b7fcde (landed master924638aba base) yields4/4GREEN0.00s/14m24compile/0warnings. Tests enabled attribute-only afterward; no DB/profile/suite rerun. [Exact proof](../../handoffs/expected-combat-length-proof-ledger.md).

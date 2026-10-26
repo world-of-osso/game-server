@@ -14,6 +14,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::BeforeProcLaunch(before_hot_streak_launch),
     SpellScriptHook::AfterFireDirectHit(fire_feedback_hit),
     SpellScriptHook::AfterFireDirectHit(refund_from_the_ashes),
+    SpellScriptHook::PeriodicDamageFinished(roll_heat_shimmer),
     SpellScriptHook::AfterFireOutcomeHit(fire_meteorite_hit),
     SpellScriptHook::OnCast(on_fire_cast),
     SpellScriptHook::TargetDamageMultiplier(meteor_primary_multiplier),
@@ -43,6 +44,10 @@ const MAGE_FAMILY: u32 = 3;
 const PYROCOSM: u32 = 1260673;
 const METEORITE_IMPACT: u32 = 449569;
 const FROM_THE_ASHES: u32 = 342344;
+const HEAT_SHIMMER_TALENT: u32 = 457735;
+const HEAT_SHIMMER: u32 = 458964;
+const IGNITE: u32 = 12654;
+const SCORCH: u32 = 2948;
 
 #[derive(Component, Default)]
 struct FireProcState {
@@ -215,6 +220,20 @@ pub(crate) fn fire_feedback_hit(world: &mut World, ctx: &EffectCtx, target: Enti
         if combat::random::random::<f32>() * 100.0 < chance {
             schedule_meteorites(world, ctx, target, 1);
         }
+    }
+}
+
+fn roll_heat_shimmer(world: &mut World, ctx: &EffectCtx) {
+    if ctx.spell.id != IGNITE || !selected(world, ctx.caster, HEAT_SHIMMER_TALENT) {
+        return;
+    }
+    // SimC76f8118 sc_mage.cpp2557–2559/6439–6441: actual Ignite ticks
+    // attempt the talent's native RPPM, except while Scorch is being cast.
+    let scorching = world
+        .get::<shared::casting::CastState>(ctx.caster)
+        .is_some_and(|cast| cast.spell_id == SCORCH);
+    if !scorching && auras::procs::try_native_policy_proc(world, ctx.caster, HEAT_SHIMMER_TALENT) {
+        spell_cast::cast_triggered(world, ctx.caster, HEAT_SHIMMER, Some(ctx.caster), 1);
     }
 }
 
