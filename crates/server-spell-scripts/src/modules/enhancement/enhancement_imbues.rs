@@ -26,6 +26,8 @@ pub(super) fn register(scripts: &mut AuraScripts) {
     scripts.0.insert(
         WINDFURY,
         AuraScript {
+            on_apply: Some(super::enhancement_elemental_weapons::refresh),
+            on_remove: Some(super::enhancement_elemental_weapons::refresh_after_remove),
             check_proc: Some(check_windfury),
             on_proc: Some(cast_windfury),
             ..Default::default()
@@ -34,6 +36,8 @@ pub(super) fn register(scripts: &mut AuraScripts) {
     scripts.0.insert(
         FLAMETONGUE,
         AuraScript {
+            on_apply: Some(super::enhancement_elemental_weapons::refresh),
+            on_remove: Some(super::enhancement_elemental_weapons::refresh_after_remove),
             check_proc: Some(check_flametongue),
             on_proc: Some(cast_flametongue),
             ..Default::default()

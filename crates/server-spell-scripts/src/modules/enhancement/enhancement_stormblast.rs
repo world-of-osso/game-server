@@ -17,7 +17,6 @@ const STORMBLAST_TALENT: u32 = 319930;
 const STORMBLAST: u32 = 470466;
 const STORMBLAST_DAMAGE: u32 = 390287;
 const MASTERY: u32 = 77223;
-const ELEMENTAL_WEAPONS: u32 = 384355;
 
 #[derive(Component, Clone, Copy)]
 struct StrikeSnapshot {
@@ -182,16 +181,6 @@ fn copy_multiplier(world: &World, caster: Entity) -> f32 {
                 .map(|effect| effect.amount / 100.0)
         })
         .expect("Enhancement's native mastery aura/effect0 must be active");
-    let weapons = if selected(world, caster, ELEMENTAL_WEAPONS) {
-        let imbues = [319773, 319778]
-            .iter()
-            .filter(|buff| auras::has_aura(world, caster, **buff))
-            .count();
-        super::script_effect_value(world, caster, ELEMENTAL_WEAPONS, 0) / 100.0
-            * 0.1
-            * imbues as f32
-    } else {
-        0.0
-    };
+    let weapons = super::enhancement_elemental_weapons::percent(world, caster) / 100.0;
     (1.0 + mastery) * (1.0 + weapons)
 }

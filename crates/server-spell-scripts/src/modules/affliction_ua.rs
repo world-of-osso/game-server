@@ -86,6 +86,9 @@ fn expire_stacks(world: &mut World, target: Entity, aura: &AuraInstance, lost: u
             schedule_echo(world, target, aura);
         }
     }
+    // SimC76f8118 actions5779–5780: actual independent losses update MID2.
+    // A queued Fatal Echoes application updates it again through the apply stage.
+    super::affliction_empowerment::sync(world, aura.caster);
 }
 
 fn schedule_echo(world: &mut World, target: Entity, aura: &AuraInstance) {

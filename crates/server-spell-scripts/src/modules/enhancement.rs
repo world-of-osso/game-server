@@ -8,6 +8,8 @@ use combat::spell_cast::scripts::{
 
 #[path = "enhancement/enhancement_doom.rs"]
 mod enhancement_doom;
+#[path = "enhancement/enhancement_elemental_weapons.rs"]
+mod enhancement_elemental_weapons;
 #[path = "enhancement/enhancement_flurry.rs"]
 mod enhancement_flurry;
 #[path = "enhancement/enhancement_stormblast.rs"]
@@ -55,6 +57,7 @@ pub const HOOKS: &[SpellScriptHook] = &[
 
 fn register_auras(scripts: &mut AuraScripts) {
     maelstrom_weapon::register(scripts);
+    enhancement_elemental_weapons::register(scripts);
     enhancement_imbues::register(scripts);
     enhancement_modes::register(scripts);
     enhancement_stormblast::register(scripts);
