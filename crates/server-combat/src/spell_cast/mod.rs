@@ -2747,6 +2747,7 @@ fn execute_cast_with_primary(
         scripts::snapshot_hit_policies(world, caster, &prepared, &plan, &costs);
     let consumed_damage =
         scripts::capture_consumed_damage_modifier(world, caster, &mut prepared, true);
+    scripts::before_hot_streak_launch(world, caster, &prepared);
     let spell = &prepared;
     if spell.id == shared::battleground::AZERITE_GATHERING_SPELL {
         debug!(caster = ?caster, spell_id = spell.id, explicit = ?explicit, plan = ?plan, "Cast execution target plan");
@@ -2806,6 +2807,12 @@ fn execute_cast_with_primary(
             reflected: false,
         },
     );
+    let flamestrike_chance = scripts::flamestrike_hot_streak_chance(
+        world,
+        caster,
+        spell,
+        plan.iter().flat_map(|effect| &effect.units).copied().next(),
+    );
     let previous_efflo_summons = efflorescence::read_previous_summons(world, caster, spell.id);
     scripts::spawn_ravager_field(world, caster, spell, explicit, 0);
     missiles::launch(world, caster, spell, plan, 0);
@@ -2815,6 +2822,9 @@ fn execute_cast_with_primary(
     scripts::consume_phalanx(world, caster, spell, explicit);
     for hook in scripts::after_cast(world, spell.id) {
         hook(world, caster, spell);
+    }
+    if let Some(chance) = flamestrike_chance {
+        scripts::roll_flamestrike_hot_streak(world, caster, chance);
     }
     if !spell.cast_parent_owns_modifier_charges {
         spell_mods::consume_charges(world, caster, spell);

@@ -130,6 +130,7 @@ pub(crate) fn owns_policy_proc(world: &World, spell: u32) -> bool {
         || resource_values::owns_proc(spell)
         || frost::owns_proc(spell)
 }
+mod fire_procs;
 mod havoc;
 pub(crate) use havoc::{apply_havoc_damage_policies, is_eye_beam_channel, register_havoc};
 pub use havoc::{
@@ -137,8 +138,13 @@ pub use havoc::{
 };
 pub(crate) mod holy_priest;
 mod hot_streak;
+pub(crate) use fire_procs::register as register_fire_procs;
+pub(super) use fire_procs::{before_hot_streak_launch, fire_meteorite_hit};
 pub(super) use hot_streak::triggers_hot_streak;
-pub(super) use hot_streak::{pyroclasm_damage_modifier, record_fire_hit};
+pub(super) use hot_streak::{
+    flamestrike_hot_streak_chance, pyroclasm_damage_modifier, record_fire_hit,
+    roll_flamestrike_hot_streak,
+};
 mod melee_reset;
 mod midnight_items;
 pub(crate) mod prayer_of_mending;
@@ -223,7 +229,7 @@ pub(super) fn finish_scripted_launch(
     foreground: bool,
 ) {
     elemental::after_launch(world, caster, spell, consumed, depth, foreground);
-    frost::after_launch(world, caster, spell.id, foreground);
+    frost::after_launch(world, caster, spell, foreground);
     policies::pet_sets::finish_cobra(world, caster, spell);
     execution_counters::after_launch(world, caster, spell.id);
     unbroken_rhythm::after_launch(world, caster, spell.id);
@@ -378,6 +384,7 @@ pub(crate) fn snapshots_modifier(id: u32) -> bool {
     maelstrom_weapon::snapshots_modifier(id)
         || cast_relationships::snapshots_modifier(id)
         || arcane::snapshots_modifier(id)
+        || frost::snapshots_modifier(id)
 }
 
 const FROSTBOLT: u32 = 116;

@@ -70,10 +70,14 @@ where
     Rng::r#gen(&mut thread_rng())
 }
 
-/// SimC76f8118 proc_rng.hpp170–236: PRD constant for a mean rate and cap.
-/// Zero means uncapped (the source's numerical limit100000).
+/// SimC76f8118 proc_rng.hpp170–236: PRD constant for an uncapped mean rate.
 /// Roll `constant * attempts_since_success` and reset attempts after success.
-pub fn accumulated_proc_constant(probability: f64, cap: u32) -> f64 {
+pub fn accumulated_proc_constant(probability: f64) -> f64 {
+    capped_accumulated_proc_constant(probability, 100_000)
+}
+
+/// SimC76f8118 proc_rng.hpp201–236: the cap is part of the mean-rate solver.
+pub fn capped_accumulated_proc_constant(probability: f64, cap: u32) -> f64 {
     assert!(probability.is_finite(), "proc probability must be finite");
     let cap = if cap == 0 { 100_000 } else { cap.min(100_000) };
     if probability <= 0.0 {
@@ -128,7 +132,7 @@ fn accumulated_proc_constants_match_expected_proc_rates() {
         (0.5, 0.3021030253487419),
         (1.0, 1.0),
     ] {
-        let actual = accumulated_proc_constant(probability, 0);
+        let actual = accumulated_proc_constant(probability);
         if expected == 0.0 || expected == 1e-300 || expected == 1.0 {
             assert_eq!(actual, expected);
         } else {

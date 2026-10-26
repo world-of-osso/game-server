@@ -42,6 +42,7 @@ pub(crate) mod forecast;
 pub mod handlers;
 pub(crate) mod health_pct_trigger;
 mod ignite;
+mod incoming_spell_masks;
 pub mod invisibility;
 mod item_requirements;
 mod light_of_titans;
@@ -80,6 +81,7 @@ pub mod stat_mods;
 pub(crate) mod stealth;
 pub mod summon_damage;
 mod unit_state;
+mod venomcursed;
 mod warrior_stats;
 pub(crate) mod world_state;
 #[cfg(test)]

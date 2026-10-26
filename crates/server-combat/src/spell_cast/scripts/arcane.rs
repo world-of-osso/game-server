@@ -308,7 +308,7 @@ fn roll_clearcasting(world: &mut World, caster: Entity) {
         1,
     )) / 100.0;
     // sc_mage.cpp6626–6631: bugs=true uses13 only for finding C; no roll cap.
-    let constant = crate::random::accumulated_proc_constant(chance, 13);
+    let constant = crate::random::capped_accumulated_proc_constant(chance, 13);
     if world.get::<ClearcastingAttempts>(caster).is_none() {
         world
             .entity_mut(caster)

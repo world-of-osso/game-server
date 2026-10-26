@@ -521,7 +521,7 @@ fn arcane_reaction_surge_predicts_its_guaranteed_clearcasting() {
 #[test]
 #[ignore = "merge-train shared PRD regression"]
 fn arcane_batch_clearcasting_prd_uses_the_pinned_coefficient_cap() {
-    let constant = crate::random::accumulated_proc_constant(0.12, 13);
+    let constant = crate::random::capped_accumulated_proc_constant(0.12, 13);
     let mut survival = 1.0;
     let mut expected_attempts = 0.0;
     for attempt in 1..=13 {
@@ -529,9 +529,9 @@ fn arcane_batch_clearcasting_prd_uses_the_pinned_coefficient_cap() {
         survival *= 1.0 - (constant * f64::from(attempt)).min(1.0);
     }
     assert!((expected_attempts - 1.0 / 0.12).abs() < 1e-10);
-    assert_eq!(crate::random::accumulated_proc_constant(0.05, 13), 1e-300);
+    assert_eq!(crate::random::capped_accumulated_proc_constant(0.05, 13), 1e-300);
     assert!(
-        (crate::random::accumulated_proc_constant(0.15, 0) - 0.03222091437308769).abs() < 1e-12,
+        (crate::random::accumulated_proc_constant(0.15) - 0.03222091437308769).abs() < 1e-12,
         "uncapped Arms caller unchanged"
     );
 }

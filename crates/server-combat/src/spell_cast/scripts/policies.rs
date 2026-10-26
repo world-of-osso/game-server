@@ -679,7 +679,7 @@ fn roll_replacement_proc(
     let mut state = world.get_mut::<ReplacementProcAttempts>(caster).unwrap();
     let attempts = state.0.entry(name).or_default();
     *attempts += 1;
-    let chance = crate::random::accumulated_proc_constant(mean_chance, 0) * f64::from(*attempts);
+    let chance = crate::random::accumulated_proc_constant(mean_chance) * f64::from(*attempts);
     let success = crate::random::random::<f64>() < chance;
     if success {
         *attempts = 0;
