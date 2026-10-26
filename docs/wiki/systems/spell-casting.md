@@ -1,5 +1,13 @@
 # Spell Casting
 
+## Subtlety Lingering Shadow — 2026-10-25
+
+The [Subtlety contract](../../specs/dps-parity.md#subtlety-literal-fixture) follows pinned SimC76f8118. Downstream `server-spell-scripts/src/modules/subtlety_shadow.rs` registers existing late-aura and resolved-damage callbacks; no shared Rogue operand or resource rule changes.
+
+Shadow Dance removal replaces owned385960. Its native cap supplies the initial counter, minus the pinned tick-zero decrement. Native periodic timing and382524 effect2 determine the alternating decay. Eligible builders use the counter's native percentage; finishers additionally require equipped MID2 four-piece1296593. Native386081 copies each recipient's mitigated source damage, including source crit, with the pinned extra Shadow-school and Lingering Darkness factors. Resolved-copy dispatch prevents a second critical roll and recursion.
+
+Sources: `subtlety_shadow.rs` cites exact pinned lines; `subtlety_shadow_tests.rs` exercises actual Dance expiry, counter decay, unearned exclusion and three-target Storm impacts. RED probe957d26c2d3 reproduces the missing earned counter; GREEN and numerical acceptance require train qualification. The first valid literal baseline at21ea477c4 was31,988.78ST/43,305.03three-target; it is not a parity claim.
+
 ## Marksmanship native relationships — 2026-10-25
 
 The [Marksmanship contract](../../specs/dps-parity.md#marksmanship-native-cast-relationships) separates native70448 values from pinned SimC76f8118 execution relationships. Runtime scripts live in `crates/server-combat/src/spell_cast/scripts/`.

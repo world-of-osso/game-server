@@ -1,3 +1,7 @@
+## 2026-10-25 — Subtlety Lingering Shadow
+
+[Lingering Shadow](systems/spell-casting.md#subtlety-lingering-shadow--2026-10-25): pinned expiry/decay and native mitigated residual, downstream hooks, native RED957d26c2d3; numerical parity remains open.
+
 ## 2026-10-25 — Marksmanship native relationships
 
 [Marksmanship](systems/spell-casting.md#marksmanship-native-relationships--2026-10-25): native stack limits, Volley-earned cleave without its separate talent, caster-owned channel consumption, execution/arrival ordering, residual banks and Explosive primary/secondary relationships.
