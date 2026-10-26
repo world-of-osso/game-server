@@ -16,7 +16,10 @@ fn after_finisher_hit(world: &mut World, ctx: &EffectCtx, target: Entity, _: boo
     if ctx.depth != 0 || damage <= 0.0 || ctx.spell.cast_primary_target != Some(target) {
         return;
     }
-    if !world.get::<KnownSpells>(ctx.caster).is_some_and(|known| known.contains(TALENT)) {
+    if !world
+        .get::<KnownSpells>(ctx.caster)
+        .is_some_and(|known| known.contains(TALENT))
+    {
         return;
     }
     let Some(points) = ctx.spell.cast_policy_context.as_ref().and_then(|context| {
@@ -26,10 +29,15 @@ fn after_finisher_hit(world: &mut World, ctx: &EffectCtx, target: Entity, _: boo
     }) else {
         return;
     };
-    let chance_per_point = world.resource::<SpellStore>().get(TALENT)
+    let chance_per_point = world
+        .resource::<SpellStore>()
+        .get(TALENT)
         .expect("known Ruthlessness has native spell data")
-        .effects.iter().find(|effect| effect.index == 0)
-        .expect("native Ruthlessness chance").points_per_resource;
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .expect("native Ruthlessness chance")
+        .points_per_resource;
     // SimC76f8118 sc_rogue.cpp2683–2688/8091–8127: each landed
     // foreground finisher rolls the native chance per effective combo point.
     let chance = chance_per_point * points / 100.0;
