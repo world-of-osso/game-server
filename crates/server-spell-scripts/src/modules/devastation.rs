@@ -45,6 +45,7 @@ fn snapshot_mass_disintegrate(
     // Snapshot before the earned use is consumed; the native periodic payload retains it.
     let multiplier = 1.0 + missing as f32 * per_missing;
     spell.cast_damage_multiplier = Some(spell.cast_damage_multiplier.unwrap_or(1.0) * multiplier);
+    spell.cast_launch_auras.push(436336);
     // The existing successful-cast policy owns stack spending, not a completion token.
     None
 }
@@ -112,7 +113,43 @@ fn shattering_stars(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
 }
 
 fn deep_breath_hook(spell: u32) -> Option<AfterCastHook> {
-    matches!(spell, 357210 | 433874).then_some(strafing_run)
+    match spell {
+        357210 | 433874 => Some(strafing_run),
+        356995 => Some(wingleader),
+        _ => None,
+    }
+}
+
+fn wingleader(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    const WINGLEADER: u32 = 441206;
+    if !spell.cast_launch_auras.contains(&436336)
+        || !combat::auras::has_aura(world, caster, WINGLEADER)
+    {
+        return;
+    }
+    let Some(context) = &spell.cast_policy_context else {
+        return;
+    };
+    let targets = context
+        .targets
+        .iter()
+        .filter(|&&target| target != caster)
+        .count();
+    // SIMC_DEVASTATION_WINGLEADER: pinned12.1.5 sc_evoker.cpp6569–6572.
+    // Native effect0 milliseconds per real admitted Mass Disintegrate recipient.
+    let milliseconds = script_effect_value(world, caster, WINGLEADER, 0) * targets as f32;
+    let action = match combat::spell_cast::knowledge::resolve_actor_action(world, caster, 357210) {
+        Ok(action) => action,
+        Err(reason) => {
+            warn!(
+                ?caster,
+                ?reason,
+                "Native Wingleader Deep Breath action unavailable"
+            );
+            return;
+        }
+    };
+    reduce_cooldown(world, caster, action, f64::from(milliseconds) / 1000.0);
 }
 
 fn strafing_run(world: &mut World, caster: Entity, _spell: &SpellInfo) {
