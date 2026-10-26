@@ -51,6 +51,10 @@ Selected native155580 applies its owned155627 override aura, so ordinary Moonfir
 - Earned Brain Freeze Flurry snapshots native190446 effect2 on the real44614 execution and carries that effectiveness across the native costed228596 callback and its missile to228354. Spending or expiring the live buff cannot remove that launched benefit. Preserve native Effect64 costs, carrier speed, delay and payload coefficients (`sc_mage.cpp3957–3966/4002–4015`).
 - Deep Shatter's native periodic Dummy recalculates its zero-valued critical-damage spell modifier from native effect1's factor and current caster spell critical chance, including initial application. Keep its native spell mask and operation; do not replace Shatter coefficients (`sc_mage.cpp4365–4373`).
 
+- Actual paid Ice Lance primary stacks conjure selected native Force of Will Splinters using its effect3 stacks-per-conjure value. Selected native Glaciate effect2 milliseconds reduce running Ray recharge per shattered stack, never starting absent timers (`sc_mage.cpp4471–4481`).
+
+- Each real Frozen Orb bolt resolution that actually hits at least one unit rolls selected Everlasting Frost effect2 for one Fingers stack. Use the native resolution ledger to run this once per area pulse, not once per recipient or only when a preselected primary hits (`sc_mage.cpp4141–4147`).
+
 ### Frost Mage native Icicles and Glacial Spike
 
 - Selected Icicles1246832 uses its actual hasted PERIODIC_DUMMY clock to apply native205473 without a spell cast. The first native interval has the pinned random phase (`sc_mage.cpp5559–5581`); later intervals keep native timing. Reaching the actual counter cap enables1222865.
