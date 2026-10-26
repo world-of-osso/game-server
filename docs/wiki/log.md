@@ -1,3 +1,10 @@
+## 2026-10-25 — Equipment procs before combat
+
+[Equipment proc eligibility](systems/character-stats.md#equipment-proc-eligibility--2026-10-25) records the native idle Venomcursed RED, exact permanent Survival crit606 reconciliation and shared CombatRefs gate. Workspace check and native idle606, Survival6/Venomcursed1/MM19/Assassination22 pass. Train283a28a30a did not land because Ret/WW inherited its255/player fixture. Corrected per-spec probes pass Ret107/108 and WW52/57. Plain-master controls reproduce four WW baseline failures. Minimal test-only readiness/equipment isolation fixesd8c535677 pass the two remaining exact controls ina6c3a5d1b9/e2dabf1ecb after native RED63296cfcd5/97447efaec. Final four-group landing gate and all-spec remeasurement remain pending.
+## 2026-10-26 — Native Vanish lifecycle
+
+[Vanish removal ordering](systems/auras.md#vanish-removal-ordering--2026-10-26) records the observed1856 self-consumption cause, native source-attribute admission and expiry-before-last-stealth seam. Two lifecycle cases and same-code Rogue/attack controls pass;259 DPS remains below the target band. Outlaw measurement does not exercise Vanish.
+
 ## 2026-10-26 — Hellcaller counter lifecycle
 
 [Shared counters](systems/warlock-periodic-counters.md#counter-lifecycle) now have a downstream producer/collapse module, additive actual-UA application binding, native periodic driver and source RNG models. Native UA/CB/collapse REDs are recorded; lifecycle GREEN and numerical parity remain pending. UA expiry callbacks remain independently owned.
@@ -7,7 +14,7 @@
 [Arcane62](systems/simc-apl.md#arcane-fixture-62) executes supplied profile rows through shared literal control with native class admission and no concurrent AssistedCombat. The300s ST controller regression passes; numerical parity remains open.
 ## 2026-10-26 — Fire native Arcane Phoenix
 
-[Fire Phoenix](systems/simc-apl.md#fire-fixture-adapter) uses authentic summon reachability, native action values, Codex ordering and Ashes stack production. Summon/action RED is observed; GREEN and numerical parity remain train-gated.
+[Fire Phoenix](systems/simc-apl.md#fire-fixture-adapter) uses authentic summon reachability, native action values, Codex ordering and Ashes stack production. Summon/action and recharge tests passed3RED→3GREEN atf73f366ad; numerical parity remains open.
 
 ## 2026-10-25 — Shared Hellcaller Wither counters
 
@@ -4666,3 +4673,4 @@ Documented the first compile-boundary slice in [spell-script-crate](systems/spel
 - 2026-10-25: Added Affliction native Nightfall tick threshold/consumer documentation; REDa00f81dc4b proved actual Wither ticks never earned the selected buff; GREEN/measurement pending.
 
 - 2026-10-26: [Feral fixture](systems/simc-apl.md#feral-literal-fixture--2026-10-25) reconciles landed Rampancy/Unseen and the duplicate-periodic correction. Native first-tick2→1 event RED→GREEN; corrected three-seed ST81.59%/3T82.03%, parity open. Convoke native damage RED/unchanged clock GREEN; initial implementation stayed RED because it required hostile reaction instead of native enemy admission for neutral31146. Canonical admission correction awaits GREEN; paid Bite/Saber and Unseen/Rogue controls pass.
+- 2026-10-26: Documented [Ret Judgment target uses](systems/ret-judgment.md): ordinary native Judgment RED6a9c30b6f8 produced no197277; downstream producer/consumer and flat incoming magnitude implemented. Probee4384f8211 reached the first successful consumption; an extra timer-cancellation assertion contradicted pinned buff.cpp2246–2289 and was removed without changing generic timers. Corrected GREEN and numerical acceptance pending.

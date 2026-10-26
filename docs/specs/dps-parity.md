@@ -149,6 +149,7 @@ Selected native155580 applies its owned155627 override aura, so ordinary Moonfir
 - [x] The native-table producer preserves signed values, replaces only the requested table, supports repeated imports and rolls back a duplicate-ID failure without losing the prior table.
 - [x] Shipped profile manifests preserve exact item IDs, bonus lists, item-level overrides, enchants, gems, crafted stats, talents, consumables and action text. Missing item IDs fail explicitly. Temporary enchant declarations apply only to equipped slots; an empty off hand is inactive.
 - Native class actors use live `CharacterStats` melee crit even with NPC identity. Native Hunter pets inherit their current owner's crit; preserve their own applicable bonuses and target modifiers. Generic no-stats creatures retain native template/base crit. Do not replace class/owner crit with generic creature5% or suppress it through a generic NPC `NO_CRIT` flag (SimC76f8118 `player.cpp5125–5134`, `pet.cpp217–220`).
+- Equipment-source aura procs require actual, non-suppressed native combat references before chance, RPPM or recovery state changes. Equipment initialization and idle aura reconciliation cannot earn temporary item buffs. Ordinary class-aura eligibility remains unchanged (SimC76f8118 `action/action_callback.cpp79–82`).
 - Venomcursed armor drivers1307906/1307923/1307928 proc their native crit/mastery/haste buffs. Both signed stat amounts come from the equipped driver's native effects1/2; retain each buff's native rating masks, lifetime and refresh behavior, and the driver's ordinary proc eligibility/RPPM. No invented stats or rate changes (SimC76f8118 `unique_gear_midnight.cpp5600–5614/6600`).
 - Ordinary native haste auras multiply with converted rating haste and each other: `(1 + rating%) × Π(1 + aura%) − 1`. Retain native aura amounts/stacks, non-stacking selection, independent Crusade and autoattack-only342 factors. Native WW1205 rating plus5% ordinary haste yields33.7557%; no coefficient or rating adjustment (SimC76f8118 `player.cpp4982–4995`).
 - `liquid_luster_2` uses native item271887/ilvl295. Apply one real Lustrous Gleam stack immediately and another at each native six-second period, capped by native stack metadata; derive each stack's rating from the scaled driver effect. All stacks expire with the driver. Literal `pre_pot_time` ages the real aura, pays elapsed native periods, ages its actual cooldown and preserves the later combat use (SimC76f8118 `unique_gear_midnight.cpp288–366`, `consumable.cpp500–565`).
@@ -198,6 +199,8 @@ Selected native155580 applies its owned155627 override aura, so ordinary Moonfir
 
 - Selected Overflowing Energy gains a native stack after noncritical Fireball/Frostfire Bolt and clears on their critical hits (`sc_mage.cpp1897–1898,3819`). Selected Fevered Incantation gains after direct Mage critical hits and clears on direct noncritical hits (`1900–1901`); apply these outcomes after the current hit batch (`5585–5605,7272–7293`). Fireball and Hot Streak-spell hits produce their caster-owned native Controlled Destruction target stack with native talent effect1×0.1 (`2457,3843,5648–5650`).
 
+- Selected Heat Shimmer attempts the native talent RPPM at actual Ignite tick boundaries, except while Scorch is being cast (`sc_mage.cpp2557–2559,6439–6441`). Do not substitute a fixed chance or grant the buff from direct hits. Its earned buff makes ordinary Scorch instant, enables execute crit at any recipient health and is spent once after launch (`5048–5080`). Preserve the admitted native damage/cast-time values and guaranteed crit across impact.
+
 - Selected From the Ashes restores active Fire Blast recharge progress after actual eligible Fireball/Frostfire Bolt, Fire Blast, Pyroblast, Scorch and Dragon's Breath hits. Use the native talent effect1 time adjustment and native internal cooldown, including the Fire Blast charge just spent; same-frame hits cannot bypass that cooldown (`sc_mage.cpp2116–2120,3689,3821,4557,4905,5040`).
 
 - Ordinary noncritical Hot Streak producers preserve Heating Up during its first200ms (`sc_mage.cpp2196–2210`). Qualify this with an ordinary Fireball already in flight when ordinary Fire Blast earns Heating Up; triggered depth1 damage is not a Hot Streak producer.
@@ -220,6 +223,8 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 - Guaranteed critical hits predict their actual Heating Up acquisition; an observed Heating Up conversion predicts Hot Streak. A critical hit with Hot Streak already active preserves and predicts it without creating Heating Up.
 
 ### Havoc literal rotation
+
+- Actual Eye Beam/Gaze execution with selected452412 grants native453239 Student of Suffering. Actual Retreat damage-child198813 execution with selected389688 grants native389890 Tactical Retreat. Native periodic effects, durations and453236 energize child supply all Fury; the adapter never credits resources directly (SimC76f8118 sc_demon_hunter.cpp3339–3348,8567–8581).
 
 - Native Consuming Fire452487/456640 retains Immolation Aura258920's payload and spends only that ability's Demonsurge use. Its dummy override cannot consume Annihilation's use or omit native Immolation ticks/Fury; Fel Desolation452486 is not Death Sweep (SimC76f8118 sc_demon_hunter.cpp181–189,4784–4839).
 
@@ -277,6 +282,13 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 - Storm produces224239 Tempest, or a53385 Tempest for a Sunrise echo, at native383396 effectiveness. Retained primary/echo/secondary cast roles prevent recursive children and extra resource consumption.
 - Critical ordinary/Legacy Storm and HoW impacts apply native431414 Sun Sear. Each actual Dawnlight tick produces431911 Sun's Avatar with native area/cap values. Critical still-ticking403695 extends its owned duration by native446663 effect0 without resetting tick phase.
 - Divine Arbiter1306923 uses its native first damage effect on the primary and its native second effect on other recipients, never both on the primary. Spell coefficients remain native70448 values.
+
+### Ret Judgment target uses
+
+- Selected Greater Judgment grants native197277 initial uses on successful Judgment/HoW-family enemy impacts, including sourced background variants. Selected Lingering Radiance grants one use when owned Dawnlight ends naturally.
+- The native target effect supplies its amount, class mask, caster ownership, cap and duration. Stored uses expire independently; matching successful impacts consume one use. The damage bonus remains one native percentage regardless of use count; Tempest and Sunrise Storm do not consume uses. Unrelated incoming damage effects retain ordinary stack scaling.
+
+- Pending for the unselected Radiance choice: cancellation invokes `last_tick` (`dot.cpp75–81`), but its cancellation→Judgment relationship is not implemented.
 
 ### Ret Crusade
 
@@ -390,7 +402,7 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 - A Madness impact (including Slam's weak Madness, not its periodic ticks) launches a native148859 or1264175 projectile to each own live VT. Native1264104 effect1 owns Void selection/effectiveness; Void launches373279. Preserve source-parent identity through travel so only its apparition triggers1231479 Shadeburst, with native73510 soft cap. Native407469 boosts apparition damage on own Madness; these payloads use live Shadow Weaving (SimC76f8118 `sc_priest_shadow.cpp291–549/1296/2609–2650`).
 - Tormented Spirits' additional Pain producers, Auspicious Spirits' Insanity threshold and Haunting Shadows' DoT extensions remain separate unqualified relationships; native projectile E1/E2 must not unconditionally substitute for them.
 
-- Selected Psychic Link199484 copies its native effect0 fraction of eligible landed spell/tick damage to every other recipient with the caster's live Vampiric Touch. Native199486 supplies the damage payload; the echo cannot independently crit, hit its original recipient or use foreign VT (SimC76f8118 `sc_priest_shadow.cpp1521–1619/2655–2669`).
+- Selected Psychic Link199484 copies its native effect0 fraction of eligible landed spell/tick damage to every other recipient with the caster's live Vampiric Touch. Native199486 supplies the damage payload; the echo cannot independently crit, hit its original recipient or use foreign VT. Actual caster-self damage, including native Death backlash sharing the offensive spell ID, is not a producer (SimC76f8118 `sc_priest_shadow.cpp1521–1619/2655–2669`, `sc_priest.cpp1430–1446`).
 
 - Voidform228260 grants1242171 uses from native effect2 after its free Volley. Ordinary1242173 consumes earned uses and cannot cast without one. Primary/secondary bolts retain native counts and the pinned50ms interval. Native1296580 grants a capped tier use after Slam in1242171 during Voidform or1279437 outside it. Voidform expiry grants selected Crushing Void and transfers earned tier uses. Literal Voidform readiness is checked before native action aliases can turn it into Volley (SimC76f8118 `sc_priest_shadow.cpp960–1079/1380–1401/1829–1846/1960–2000`).
 
@@ -699,12 +711,24 @@ Rotation/decision implementation belongs to the lead/rotation agents. No system 
 ### Affliction native Shadow of Nathreza
 
 - With selected native1261984, actual Haunt48181 effect4 pulses launch native1262710 at that Haunt's recipient. Use its native one-second clock without an initial pulse; removing the selected talent stops further apex payloads without removing Haunt (`sc_warlock.cpp41–49`). Native coefficients, direct damage modifiers and critical rolls remain unchanged.
-- Wrath of Nathreza RPPM and Desperate Soul guardians are separate, still-unqualified producers; this clock hook supplies only Shadow of Nathreza.
+- Wrath's separate RPPM and guardian lifecycle are specified below; Shadow of Nathreza remains its own native damage payload.
+
+### Affliction native Wrath of Nathreza
+
+- Selected1261992 rolls its native hasted RPPM and actual aura timers through `try_native_policy_proc` on landed Haunt impacts and real Haunt pulses. Generic spell damage cannot also roll this owned stream (`sc_warlock.cpp41–49`, `sc_warlock_actions.cpp2408–2415/5651–5662`). A newly landed Haunt replaces that caster's earlier Haunt.
+- Native1262094 imports and summons authentic Desperate Soul254505. Only its new guardian policy binds1278047 with full owner SP1.0; one actual Wrath executes around the owner's current Haunt recipient, then native expiry dismisses the soul. Other guardian policies and native damage coefficients are unchanged (`sc_warlock_pets.cpp19/2516–2563`).
+- Guardian publication preserves authentic TDB models, is idempotent across importer runs and does not create world spawns.
+- Qualification covers ST/3T, native target selectors, one-cast lifetime, actual RPPM producers and talent removal. More-than-eight-target reduction is outside this parity fixture's scope.
 
 ### Affliction native Malefic Grasp extra ticks
 
 - Every landed native1261153 tick copies each ticking owned Agony, UA, Corruption or Wither base tick into its native child1261166/1261176/1261158/1279686 at the native channel effect1 fraction. Agony/UA retain actual stacks; Wither counters do not scale its copy. Children retain independent native direct modifiers and critical rolls, not the parent's resolved damage (SimC76f8118 `sc_warlock_actions.cpp136–158/2210–2214`).
 - The pinned `bugs=1` Agony child compensation is1.95, as in `sc_warlock_actions.cpp2036–2044`; it is not a replacement coefficient. Its landed impact advances the owned Agony counter without funding shards (`2052–2060`). Foreign DoTs cannot produce children.
+
+### Affliction native Cascading Calamity
+
+- A successful overlapping native1259790 application earns selected1261124's native1261125 buff. The first owned UA on a recipient does not earn it. Observe the actual stored aura through the shared application stage, including refreshes, without replacing native aura callbacks (`sc_warlock_actions.cpp1547–1550`).
+- Final-stack Fatal Echoes also earns the buff when the previous UA has ended (`1604–1606`); overlapping echoes use their normal application callback once. Native buff values and duration remain authoritative.
 
 ### Affliction native Fatal Echoes
 
