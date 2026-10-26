@@ -140,6 +140,7 @@ register_modules! {
     rogue_vanish: (2595, "modules/rogue_vanish.rs"),
     secondary_copies: (360, "modules/secondary_copies.rs"),
     shadow_apparitions: (2582, "modules/shadow_apparitions.rs"),
+    shadow_horizon: (2588, "modules/shadow_horizon.rs"),
     shadow_link: (2581, "modules/shadow_link.rs"),
     shadow_priest: (290, "modules/shadow_priest.rs"),
     shadow_rift: (2585, "modules/shadow_rift.rs"),
