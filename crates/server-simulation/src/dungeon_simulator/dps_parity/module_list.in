@@ -136,6 +136,7 @@ pub(crate) mod literal_rotation;
 mod marksmanship_fact_tests;
 mod marksmanship_mechanics_tests;
 mod melee_return;
+mod midnight_stat_items_tests;
 mod multi_seed;
 mod named_action_cooldown_tests;
 mod outlaw_cleave_tests;
