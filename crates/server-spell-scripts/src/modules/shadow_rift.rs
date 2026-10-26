@@ -4,13 +4,13 @@ use super::combat;
 use bevy::prelude::*;
 use combat::auras::scripts::{AuraScript, AuraScripts};
 use combat::auras::{self, ActiveAuras, AuraInstance, RemoveReason};
-use combat::spell_cast::script_registry::{SpellScriptHook, TargetPlanHook};
+use combat::spell_cast::script_registry::{HitHook, SpellScriptHook, TargetPlanHook};
 use combat::spell_cast::{self, PlannedEffect, TargetPlan, targets};
 use combat::spell_info::{SpellInfo, SpellStore};
 use shared::components::ActiveSpec;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
-    SpellScriptHook::BeforeNativeOnCast(before_cast),
+    SpellScriptHook::EffectHit(effect_hit),
     SpellScriptHook::EarlyAuraRegistration(register),
     SpellScriptHook::TargetPlan(target_plan),
 ];
@@ -25,16 +25,19 @@ struct Rift {
     ticks: u32,
 }
 
-fn before_cast(world: &mut World, caster: Entity, spell: &SpellInfo, depth: u8) {
+fn effect_hit(spell: u32, index: u8) -> Option<HitHook> {
+    (spell == TORRENT && index == 0).then_some(start_rift)
+}
+
+fn start_rift(world: &mut World, caster: Entity, primary: Entity, depth: u8) {
     let shadow = world
         .get::<ActiveSpec>(caster)
         .is_some_and(|spec| spec.0 == 258);
-    if spell.id != TORRENT || !shadow {
+    if !shadow {
         return;
     }
-    let primary = spell
-        .cast_primary_target
-        .expect("native Torrent hostile primary");
+    // The actual enemy effect supplies its recipient even when no controller selected
+    // a separate cast_primary_target. Caster-side Torrent auras are not producers.
     // SimC1677–1681 expires the old window before starting the new driver clock.
     auras::remove_auras(world, caster, RemoveReason::Cancelled, |aura| {
         aura.spell_id == DRIVER && aura.caster == caster
