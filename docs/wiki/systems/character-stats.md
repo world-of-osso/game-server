@@ -120,7 +120,7 @@ Sources: [callback module](../../../crates/server-spell-scripts/src/modules/midn
 
 Native DUMMY has no child trigger edges. Pinned SimC supplies the explicit four-child relationship; `unique_gear_midnight.cpp1385–1428` supplies uniform choice and one shared callback. This does not fabricate DBC edges or modify native proc timing. Combat admission is shared with Loa/Rite.
 
-Current profiles (verified:2026-10-26) equip native bonus13771 on62/63/64/72/261/263/265/266/267/577, one off-hand copy each. Native Fire63 RED `d41cfc4d1c` passed root/link/scaling/no-precombat/actual-damage prerequisites and observed no rating child in300s. All ten genuine profile controls plus retained Loa/Rite gates qualify GREEN separately; numerical remeasurement remains separate.
+Current profiles (verified:2026-10-26) equip native bonus13771 on62/63/64/72/261/263/265/266/267/577, one off-hand copy each. Native Fire63 RED `d41cfc4d1c` passed root/link/scaling/no-precombat/actual-damage prerequisites and observed no rating child in300s. Fire GREEN sees all four native children at amount67/item-level331; retained Loa/Rite gates pass. The idle assertion runs before native pre-pull driver execution: Arcane's actual pre-pull Blast/Surge may legitimately establish combat and earn stats before the later fixture `engage()` call. Prep-earned buffs require real native combat references and are not cleared or suppressed. All ten profile controls and numerical remeasurement remain pending.
 
 [Contract](../../specs/dps-parity.md#equipment), [callback](../../../crates/server-spell-scripts/src/modules/midnight_stat_items.rs), [native probes](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/midnight_stat_items_tests.rs). See also [[spell-casting]].
 

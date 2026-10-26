@@ -4,6 +4,8 @@ use crate::auras::ActiveAuras;
 use crate::spell_info::SpellStore;
 use std::collections::BTreeSet;
 
+const RITUAL_CHILDREN: &[u32] = &[1295898, 1295899, 1295900, 1295901];
+
 fn prepare_item_probe(spec: u32) -> Run {
     use crate::followers::simulator::ParityActor;
     let (profile, traits) = read_reference(spec).unwrap();
@@ -16,8 +18,27 @@ fn prepare_item_probe(spec: u32) -> Run {
     };
     let driver = measurement_driver(spec, &identity).expect("native literal item-control driver");
     let mut run = prepare_literal_reference(profile, &traits, 1, identity).unwrap();
+    assert_idle_item_setup(&run);
     run.spec_driver = Some((driver.prepare)(&mut run).unwrap());
     run
+}
+
+fn assert_idle_item_setup(run: &Run) {
+    assert!(
+        crate::combat_refs::active_opponents(run.app.world(), run.actor)
+            .next()
+            .is_none(),
+        "native idle item fixture must precede hostile pre-pull execution"
+    );
+    assert!(
+        run.app
+            .world()
+            .get::<ActiveAuras>(run.actor)
+            .unwrap()
+            .iter()
+            .all(|aura| !RITUAL_CHILDREN.contains(&aura.spell_id)),
+        "Stone cannot grant stats while genuinely idle before native pre-pull casts"
+    );
 }
 
 #[test]
@@ -211,7 +232,7 @@ fn native_ritual_root(run: &Run) -> crate::spell_info::SpellInfo {
 #[test]
 #[ignore = "native Hunter's Ritual Stone must dispatch scaled rating buffs on every equipping profile"]
 fn shared_stat_items_ritual_stone_native_rating_children_follow_equipped_root_across_specs() {
-    let payloads = BTreeSet::from([1295898, 1295899, 1295900, 1295901]);
+    let payloads: BTreeSet<_> = RITUAL_CHILDREN.iter().copied().collect();
     let mut all_seen = BTreeSet::new();
     for spec in [63, 62, 64, 72, 261, 263, 265, 266, 267, 577] {
         let _seed = crate::random::seed_scope(70448);
@@ -244,10 +265,15 @@ fn shared_stat_items_ritual_stone_native_rating_children_follow_equipped_root_ac
         );
         let auras = run.app.world().get::<ActiveAuras>(run.actor).unwrap();
         assert!(auras.iter().any(|aura| aura.spell_id == proc_spell));
-        assert!(
-            auras.iter().all(|aura| !payloads.contains(&aura.spell_id)),
-            "Stone cannot grant stats before genuine combat"
-        );
+        if auras.iter().any(|aura| payloads.contains(&aura.spell_id)) {
+            // Arcane prepare completes its actual hostile pre-pull Blast/Surge before engage().
+            assert!(
+                crate::combat_refs::active_opponents(run.app.world(), run.actor)
+                    .next()
+                    .is_some(),
+                "prep-earned Stone stats require actual native combat, not a setup label"
+            );
+        }
         let mut seen = BTreeSet::new();
         engage(&mut run);
         let (seconds, uptimes, _) = advance_combat_observed(&mut run, |run| {
