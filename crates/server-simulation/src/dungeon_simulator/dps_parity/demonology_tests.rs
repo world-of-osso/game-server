@@ -467,8 +467,9 @@ fn demonology_literal_fixture_executes_profile_instead_of_native_kit() {
         "the literal controller must let actual guardians attack its selected enemy"
     );
     assert!(
-        actions.iter().any(|row| row["actor"] == pet.to_bits()
-            && row["damage"].as_u64().unwrap() > 0),
+        actions
+            .iter()
+            .any(|row| row["actor"] == pet.to_bits() && row["damage"].as_u64().unwrap() > 0),
         "the literal controller must command its real Felguard, not only summon it"
     );
     assert!(
