@@ -3,7 +3,7 @@ use super::*;
 
 #[test]
 #[ignore = "private current native DB and exact spec71 inputs"]
-fn arms_sweeping_strikes_adds_one_to_native_zero_base_chain_targets() {
+fn arms_sweeping_strikes_preserves_native_single_primary_cardinality() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_measurement(71, 3).unwrap();
     engage(&mut run);
@@ -16,7 +16,7 @@ fn arms_sweeping_strikes_adds_one_to_native_zero_base_chain_targets() {
         .get(12294)
         .unwrap()
         .clone();
-    assert_eq!(spell.effects[0].chain_targets, 0);
+    assert_eq!(spell.effects[0].chain_targets, 1);
     let secondaries = |run: &mut Run| {
         crate::spell_cast::targets::chain_targets(
             run.app.world_mut(),
