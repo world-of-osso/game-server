@@ -258,7 +258,7 @@ mod rogue_vanish_tests;
 mod seed_absolute_tests;
 mod seed_wither_tests;
 mod shadow_apparition_tests;
-mod shadow_collapse_tests;
+mod diag_collapse_tests;
 mod shadow_horizon_tests;
 mod shadow_haunting_tests;
 mod shadow_insight_tests;

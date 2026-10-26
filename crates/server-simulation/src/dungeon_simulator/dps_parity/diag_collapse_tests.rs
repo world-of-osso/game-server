@@ -62,13 +62,13 @@ fn finish_cast(run: &mut Run) {
     panic!("ordinary cast must finish at native timing");
 }
 
-fn read_factor(run: &Run, event: &str, name: &str) -> Option<f64> {
+fn read_factor(run: &Run, spell: u32, event: &str, name: &str) -> Option<f64> {
     let capture = run.app.world().resource::<FactorCapture>().export();
     let row = capture["events"]
         .as_array()
         .unwrap()
         .iter()
-        .find(|row| row["event"] == event)?;
+        .find(|row| row["event"] == event && row["spell_id"] == spell)?;
     Some(
         row["factors"][name]
             .as_f64()
@@ -131,17 +131,20 @@ fn run_burst_fixture(count: usize) -> f64 {
             "actual Rift expiry emits one native Collapse per nearby enemy"
         );
     }
-    println!("collapse {count} targets capture: {}", run.app.world().resource::<FactorCapture>().export());
-    let amount = read_factor(&run, "result", "raw_amount").unwrap();
-    let power = read_factor(&run, "direct_amount", "s_power").unwrap();
-    let versatility = read_factor(&run, "result", "versatility").unwrap();
+    println!(
+        "collapse {count} targets capture: {}",
+        run.app.world().resource::<FactorCapture>().export()
+    );
+    let amount = read_factor(&run, 448405, "result", "raw_amount").unwrap();
+    let power = read_factor(&run, 448405, "direct_amount", "s_power").unwrap();
+    let versatility = read_factor(&run, 448405, "result", "versatility").unwrap();
     assert!(power > 0.0 && versatility >= 1.0);
     amount / (power * versatility)
 }
 
 #[test]
 #[ignore = "requires native258 Player/profile/traits"]
-fn shadow_collapse_actual_rift_end_bursts_once_and_splits_across_three_targets() {
+fn diag_collapse_actual_rift_end_bursts_once_and_splits_across_three_targets() {
     // Real native observed amounts, normalized only for crit, live SP and Vers.
     let single = run_burst_fixture(1);
     let three = run_burst_fixture(3);
@@ -152,7 +155,7 @@ fn shadow_collapse_actual_rift_end_bursts_once_and_splits_across_three_targets()
 
 #[test]
 #[ignore = "requires native258 Player/profile/traits"]
-fn shadow_collapse_ordinary_funded_madness_grows_actual_rift_damage() {
+fn diag_collapse_ordinary_funded_madness_grows_actual_rift_damage() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(258, 1).unwrap();
     enter_shadowform(&mut run);
@@ -172,8 +175,12 @@ fn shadow_collapse_ordinary_funded_madness_grows_actual_rift_damage() {
     ));
     cast_when_ready(&mut run, 263165);
     finish_cast(&mut run);
-    println!("rift before Madness: {}", run.app.world().resource::<FactorCapture>().export());
-    let before = read_factor(&run, "result", "source_product").expect("real pre-growth Rift pulse");
+    println!(
+        "rift before Madness: {}",
+        run.app.world().resource::<FactorCapture>().export()
+    );
+    let before =
+        read_factor(&run, 447448, "result", "source_product").expect("real pre-growth Rift pulse");
     assert!(owns_rift(&run));
     cast_when_ready(&mut run, 335467);
     finish_cast(&mut run);
@@ -185,14 +192,17 @@ fn shadow_collapse_ordinary_funded_madness_grows_actual_rift_damage() {
         1,
     ));
     for _ in 0..80 {
-        if read_factor(&run, "result", "source_product").is_some() {
+        if read_factor(&run, 447448, "result", "source_product").is_some() {
             break;
         }
         run.app.update();
     }
-    println!("rift after Madness: {}", run.app.world().resource::<FactorCapture>().export());
-    let after =
-        read_factor(&run, "result", "source_product").expect("real post-Madness Rift pulse");
+    println!(
+        "rift after Madness: {}",
+        run.app.world().resource::<FactorCapture>().export()
+    );
+    let after = read_factor(&run, 447448, "result", "source_product")
+        .expect("real post-Madness Rift pulse");
     let percent =
         crate::spell_cast::scripts::script_effect_value(run.app.world(), run.actor, 448403, 2);
     let expected = 1.0 + f64::from(percent) / 100.0;
