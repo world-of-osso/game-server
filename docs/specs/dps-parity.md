@@ -143,6 +143,8 @@ Native merged buff outcomes apply or clear the caster-owned aura after the hit b
 
 ### Outlaw literal fixture
 
+- Selected native Unseen Blade441146 dispatches441144 after successful Sinister Strike/Ambush and selected Clever Combatant Pistol impacts. Preserve its native ICD and separate459485 quiet cooldown; selected Flashing Steel may emit its native extra strike. Actual Unseen executes earn Escalating Blade when Coup is selected; actual impacts apply owned Fazed and selected Flawless Form. Real Spree earns native Disorienting uses and Flawless before tick-zero. Selected permanent441274 is not an earned runtime use; uses bypass only the quiet cooldown, never the ICD (`sc_rogue.cpp4812–4821,5989,6689–6712,8821–8850,11102–11110`).
+
 - Selected native Rogue Supercharger470347 fills its authored count of first inactive counters in pinned470398/470406/470409/470412/470414/470415/470416 order after ordinary Adrenaline Rush, Shadow Dance or a successful Kingsbane direct impact. Eligible finishers add its native effective-point bonus and selected Forced Induction after other effective-point sources, without changing payment. Consume one highest active counter after success and open selected Echoing Reprimand470671. Slice and Dice and unselected talents do not consume or grant counters (`sc_rogue.cpp2021–2038,2215–2216,3578,4959,5576,8913–8961`).
 
 - Native Main Gauche76806 rolls its authored proc chance from successful main-hand white swings and the pinned eligible special impacts, including Sinister extra attacks and Killing Spree's main hand. Emit native86392 at the actual hit recipient. Pistol Shot, Between the Eyes, off-hand whites, Spree's off hand and Main Gauche itself cannot produce it. Native mastery coefficients remain unchanged (`sc_rogue.cpp3468–3469,4726–4728,5942–6001,7948–7973`).
@@ -436,6 +438,8 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 ### Fury player parity
 
+- Landed Bloodbath335096 applies its native bleed113344 to its actual target; subsequent landed Bloodbaths extend the existing owned bleed by its native duration (`sc_warrior.cpp2777–2785,2915–2923`).
+
 - Selected Cruelty392931 and Wrath and Fury392936 damage modifiers apply only while native Enrage184362 is active (`sc_warrior.cpp1106,4939–4947,5099–5113,7834–7835`). Their native rank values and other effects remain unchanged.
 
 - Selected Spite383852 applies its native rank values in tenths of a percent to damage and critical damage, as specified by the native display and SimC76f8118 `sc_warrior.cpp7894–7899`; preserve its native masks and rank curves.
@@ -502,6 +506,11 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 - Actual111685 summons89 with live owner-SP shares2.2275 for SP and AP (SimC76f8118 `sc_warlock_pets.cpp2050–2119`). Native264364→264365 energizes the existing owner through target27; native19483→20153 emits its authored periodic area damage. Preserve native costs, coefficients, targets, clocks and actor expiry.
 - Immediately after actual guardian initialization, the generic `SummonInitialized` callback receives that actor. The downstream Infernal leaf initializes existing action clocks once: a nonnegative normal arise delay(mean1s,stddev0.1s) starts Embers; Immolation starts after another uniform0–0.75s, without an Immolation zero tick. No per-unit summon wrapper, actor-query loop, synthetic ticks or new timer state. Unregistered guardians retain existing behavior; qualify BM Bear,265 guardians and DK Rune Weapon.
+
+### Native Overfiend guardian
+
+- Actual434587 summons217429 with live owner SP1.0 and native repeated434589. Its spell coefficient borrows native116858 effect0 times native Avatar1245089 effect0; guarantee its critical outcome separately from live owner spell-crit scaling and the sourced owner-mastery range (SimC76f8118 pets2358–2407).
+- Actual ordinary Soul Fire execution summons one Overfiend; the native Avatar proc hint is too broad and must not summon on unrelated casts. The separate Dimensional Rift deck producer is not yet qualified. Actual creation grants native457578 to the existing owner through `SummonInitialized`, not an unreachable per-unit summon wrapper. Preserve native aura duration/period/raw energize, actor expiry and catalog values (actions4190–4205/init851–855). No synthetic bolts, resource grants or new timer state.
 
 ### Shared Hellcaller Wither counters
 
@@ -782,6 +791,7 @@ Named `action.<alias>.charges`, `max_charges`, `charges_fractional` and `full_re
 - Ordinary Raptor Strike rolls the selected native Swipe rank's chance. An actual upgraded Raptor Swipe consumes its replacement and cannot produce itself. Source: `sc_hunter.cpp6188,6217–6236`.
 - A real Wildfire Bomb explodes around its actual primary using pinned5yd geometry, native reduced-AoE cap and native primary-only bonus. Apply the corresponding periodic payload to every actual impact recipient with the same cap/primary effectiveness. Selected Shrapnel replaces, never duplicates, the ordinary fire DoT. Keep native damage coefficients and timing. Source: `sc_hunter.cpp7030,7039–7043,7062–7068,7083–7089,7118–7120,7134`.
 
+- Selected Raptor Swipe2 applies its native second effect only to the actual hostile primary. Read the current native modified effect value, not raw35%; secondaries and base damage/soft-cap remain unchanged. Source: `sc_hunter.cpp6195–6196`.
 - Selected Spirit Bond263135 includes459722's native percentage through the existing aura/mastery engine. Its full native modifier application follows the owning mastery aura's apply/remove lifecycle; do not replace CharacterStats or add a parallel mastery/damage calculation. Source: `sc_hunter.cpp1392–1395,2586–2589,7900`.
 - Actual Raptor Strike/Swipe base executions grant native Mongoose Fury259388, including its full selected effect set, native stack cap and refresh. Do not require the named talent to create the buff. Actual primary Tip consumption grants selected Stargazer1253750 before its queued mark/ordinary pet strike; retain independent native stack expiry. Native aura values supply all damage effects; do not add manual damage factors or stat changes. Source: `sc_hunter.cpp1358–1361,6149–6155,7749,7880,8160–8165,8303–8305`.
 - Actual primary Tip consumption dispatches native Strike as One1251779 from the living owned main pet and starts the existing native1251717 ICD only after execution. Actual tipped rank3 Swipe dispatches its separate strike before base execution with the rank's native second-effect effectiveness; that extra does not spend the ordinary ICD. Use the actual aura instance for the shared proc timer; raw melee hints must not spend its owned ICD. Selected Sic 'Em1253137 executes native1253138 from the same main pet only on its actual Strike as One crit. Reuse shared pet stats/crit, periodic clocks and native payloads, not a second pet engine. Source: `sc_hunter.cpp1367–1372,2875–2898,3381–3387,6181–6186,7944`.
