@@ -41,6 +41,16 @@ const GUARDIAN_POLICIES: &[GuardianPolicy] = &[
         owner_spell_share: None,
         owner_attack_share: Some(1.0),
     },
+    // SimC76f8118 pets.cpp2050–2119: actual Infernal, native self-buff
+    // clocks/children, and validated SP/AP from live owner spell power.
+    GuardianPolicy {
+        summons: &[111685],
+        entry: 89,
+        spells: &[264364, 19483],
+        repeat_gcd: None,
+        owner_spell_share: Some(2.2275),
+        owner_attack_share: Some(2.2275),
+    },
     // SimC76f8118 sc_hunter.cpp2043–2047: Bear inherits live owner AP0.6.
     // Rend is explicitly launched on summon, not an autonomous guardian cast.
     GuardianPolicy {
@@ -162,6 +172,16 @@ const GUARDIAN_POLICIES: &[GuardianPolicy] = &[
         summons: &[205180],
         entry: 103673,
         spells: &[205231],
+        repeat_gcd: None,
+        owner_spell_share: Some(1.0),
+        owner_attack_share: None,
+    },
+    // SimC76f8118 pets.cpp19/2358–2407: actual Overfiend repeatedly
+    // casts its native Chaos Bolt with base owner SP1.0; no guessed AP share.
+    GuardianPolicy {
+        summons: &[434587],
+        entry: 217429,
+        spells: &[434589],
         repeat_gcd: None,
         owner_spell_share: Some(1.0),
         owner_attack_share: None,
@@ -482,6 +502,30 @@ fn load_actor_powers(world: &World, entry: u32, spells: &[u32]) -> super::powers
         pool.current = policy.maximum;
     }
     pools
+}
+
+/// Initialize existing action clocks once; sampling never runs for old actors.
+/// Source leaves supply delays, while native casts and deadlines stay authoritative.
+pub fn initialize_action_delays(
+    world: &mut World,
+    actor: Entity,
+    sample: impl FnOnce() -> Vec<(u32, f64)>,
+) {
+    let now = super::now(world);
+    let mut state = world
+        .get_mut::<GuardianActor>(actor)
+        .expect("source-bound action delays require an initialized native guardian");
+    let initialized = !state.spell_ready_at.is_empty() || !state.once_used.is_empty();
+    if initialized {
+        return;
+    }
+    for (spell, delay) in sample() {
+        assert!(
+            state.spells.contains(&spell),
+            "initial clock requires a bound native action"
+        );
+        state.spell_ready_at.insert(spell, now + delay);
+    }
 }
 
 pub(super) fn update(world: &mut World) {
