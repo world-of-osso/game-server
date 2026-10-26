@@ -3,22 +3,61 @@
 #[ignore = "native251 profile and quality2 Shattered Sun consumable catalog"]
 fn shared_shattered_sun_flask_grants_native_crit() {
     let mut run = super::prepare_literal(251, 1).unwrap();
-    assert_eq!(run.profile.consumables.get("flask").map(String::as_str),
-        Some("flask_of_the_shattered_sun_2"));
+    assert_eq!(
+        run.profile.consumables.get("flask").map(String::as_str),
+        Some("flask_of_the_shattered_sun_2")
+    );
     let actor = run.actor;
-    let aura = run.app.world().get::<crate::auras::ActiveAuras>(actor).unwrap().iter()
-        .find(|aura| aura.spell_id == 1235111).expect("native Shattered Sun2 aura");
-    assert_eq!(aura.cast_item_level, Some(295), "quality2 uses native item241326 ilvl295");
-    let amount = aura.effects.iter().find(|effect| effect.aura_type == 189).unwrap().amount;
-    assert!(!run.gaps.iter().any(|gap| gap == "CONSUMABLE_UNMODELED:flask=flask_of_the_shattered_sun_2"));
-    let before = run.app.world().get::<crate::stats::CharacterStats>(actor).unwrap().ratings.crit;
-    crate::auras::remove_auras(run.app.world_mut(), actor, crate::auras::RemoveReason::Cancelled,
-        |aura| aura.spell_id == 1235111 && aura.caster == actor);
+    let aura = run
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(actor)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 1235111)
+        .expect("native Shattered Sun2 aura");
+    assert_eq!(
+        aura.cast_item_level,
+        Some(295),
+        "quality2 uses native item241326 ilvl295"
+    );
+    let amount = aura
+        .effects
+        .iter()
+        .find(|effect| effect.aura_type == 189)
+        .unwrap()
+        .amount;
+    assert!(
+        !run.gaps
+            .iter()
+            .any(|gap| gap == "CONSUMABLE_UNMODELED:flask=flask_of_the_shattered_sun_2")
+    );
+    let before = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(actor)
+        .unwrap()
+        .ratings
+        .crit;
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        actor,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 1235111 && aura.caster == actor,
+    );
     run.app.update();
-    let after = run.app.world().get::<crate::stats::CharacterStats>(actor).unwrap().ratings.crit;
+    let after = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(actor)
+        .unwrap()
+        .ratings
+        .crit;
     assert!(amount > 0.0);
-    assert!((before - after - amount).abs() < 0.01,
-        "flask's native crit {amount}: {before} -> {after}");
+    assert!(
+        (before - after - amount).abs() < 0.01,
+        "flask's native crit {amount}: {before} -> {after}"
+    );
 }
 
 #[test]
