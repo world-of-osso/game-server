@@ -4664,3 +4664,5 @@ Documented the first compile-boundary slice in [spell-script-crate](systems/spel
 - 2026-10-25: Documented Affliction265 literal fixture and native Agony shard funding; controller RED9774→GREENfa58; funding RED4b2dc (15landed ticks,0raw shards), GREEN/measure pending.
 
 - 2026-10-25: Added Affliction native Nightfall tick threshold/consumer documentation; REDa00f81dc4b proved actual Wither ticks never earned the selected buff; GREEN/measurement pending.
+
+- 2026-10-26: [Feral fixture](systems/simc-apl.md#feral-literal-fixture--2026-10-25) reconciles landed Rampancy/Unseen and the duplicate-periodic correction. Native first-tick2→1 event RED→GREEN; corrected three-seed ST81.59%/3T82.03%, parity open. Convoke native damage RED/unchanged clock GREEN; source child implementation awaits train5f0e14266d.
