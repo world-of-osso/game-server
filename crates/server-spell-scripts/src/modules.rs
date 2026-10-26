@@ -65,6 +65,7 @@ register_modules! {
     feral_frenzy: (260, "modules/feral_frenzy.rs"),
     feral_growth: (1031, "modules/feral_growth.rs"),
     feral_lunar: (1030, "modules/feral_lunar.rs"),
+    fire_phoenix: (1000, "modules/fire_phoenix.rs"),
     fire_procs: (1000, "modules/fire_procs.rs"),
     foreground_procs: (310, "modules/foreground_procs.rs"),
     frost: (80, "modules/frost.rs"),

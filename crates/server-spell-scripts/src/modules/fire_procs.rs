@@ -121,6 +121,7 @@ fn apply_fired_up(world: &mut World, caster: Entity) {
     reduce_cooldown(world, caster, 108853, f64::from(reduction_ms) / 1000.0);
     let extension_ms = script_effect_value(world, caster, FIRED_UP_TALENT, 2).max(0.0) as u32;
     auras::extend_owned_duration(world, caster, caster, &[COMBUSTION], extension_ms);
+    super::fire_phoenix::extend(world, caster, extension_ms);
 }
 
 fn roll_spellfire_sphere(world: &mut World, caster: Entity) {
@@ -339,20 +340,14 @@ fn end_fiery_rush(
     });
 }
 
-fn reset_combustion_procs(world: &mut World, caster: Entity, _aura: &AuraInstance) {
+fn reset_combustion_procs(world: &mut World, caster: Entity, aura: &AuraInstance) {
     // SimC76f8118 sc_mage.cpp1450: each new Combustion resets its proc curve.
     ensure_state(world, caster);
     world
         .get_mut::<FireProcState>(caster)
         .unwrap()
         .combustion_procs = 0;
-    // SimC76f8118 sc_mage.cpp1249–1253: Codex spends stored spheres
-    // when Combustion invokes the selected Phoenix.
-    if selected(world, caster, 449382) && selected(world, caster, 448658) {
-        auras::remove_auras(world, caster, auras::RemoveReason::Consumed, |aura| {
-            aura.spell_id == SPHERE && aura.caster == caster
-        });
-    }
+    super::fire_phoenix::invoke(world, caster, aura);
 }
 
 fn start_hyperthermia(world: &mut World, caster: Entity, _aura: &AuraInstance) {

@@ -1,3 +1,7 @@
+## 2026-10-26 — Fire native Arcane Phoenix
+
+[Fire Phoenix](systems/simc-apl.md#fire-fixture-adapter) uses authentic summon reachability, native action values, Codex ordering and Ashes stack production. Summon/action RED is observed; GREEN and numerical parity remain train-gated.
+
 ## 2026-10-25 — Shared Hellcaller Wither counters
 
 [Wither counters](systems/warlock-periodic-counters.md) retain actual native stacks without multiplying periodic damage or adding a stack on ordinary refresh. Native real-cast/tick2RED→2GREEN covers both265 and267, with Affliction and Destruction controls. Collapse producers and numerical parity remain separate.
