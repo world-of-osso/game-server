@@ -141,6 +141,25 @@ fn cast_reference_empowers(run: &mut Run, primary: Entity) {
     }
 }
 
+fn read_native_recharge_ms(run: &Run, id: u32) -> f64 {
+    let bindings = crate::simc_apl_native::Bindings {
+        actions: [("measured".into(), id)].into(),
+        ..Default::default()
+    };
+    let facts = crate::simc_apl_native::NativeFacts::new(
+        run.app.world(),
+        run.actor,
+        &bindings,
+        crate::simc_apl_native::Encounter::Fixture {
+            started_at: 0.0,
+            duration: 300.0,
+            style: crate::simc_apl_native::FightStyle::Patchwerk,
+        },
+        run.targets.len(),
+    );
+    server::simc_apl::Facts::value(&facts, "cooldown.measured.full_recharge_time").unwrap() * 1000.0
+}
+
 #[test]
 #[ignore = "requires private native DB and exact Devastation profile"]
 fn devastation_causality_reduces_empowers_once_per_primary_tick() {
@@ -175,18 +194,14 @@ fn devastation_causality_reduces_empowers_once_per_primary_tick() {
                 |aura| aura.spell_id == 375777,
             );
         }
-        let remaining = |run: &Run, id: u32| {
-            let world = run.app.world();
-            let spell = world
-                .resource::<crate::spell_info::SpellStore>()
-                .get(id)
-                .unwrap();
-            world
-                .get::<crate::spell_cast::SpellHistory>(run.actor)
-                .unwrap()
-                .remaining_cooldown_ms(spell, crate::spell_cast::now(world)) as f64
-        };
-        let before = [remaining(&run, 357208), remaining(&run, 359073)];
+        let before = [
+            read_native_recharge_ms(&run, 357208),
+            read_native_recharge_ms(&run, 359073),
+        ];
+        assert!(
+            before.iter().all(|remaining| *remaining > 5000.0),
+            "measure real active empower charge recovery, not the expired one-second spell throttle: {before:?}"
+        );
         let started_at = crate::spell_cast::now(run.app.world());
         crate::spell_cast::creature_cast_with_targets(
             run.app.world_mut(),
@@ -234,7 +249,7 @@ fn devastation_causality_reduces_empowers_once_per_primary_tick() {
             0.0
         };
         for (id, before) in [357208, 359073].into_iter().zip(before) {
-            let actual = before - remaining(&run, id) - elapsed_ms;
+            let actual = before - read_native_recharge_ms(&run, id) - elapsed_ms;
             assert!(
                 (actual - expected).abs() <= 3.0,
                 "native Causality spell{id}: active={active}, primary={with_primary}, ticks={ticks:?}, reduction={actual}, expected={expected}"
@@ -429,19 +444,12 @@ fn devastation_eternity_surge_earns_native_azure_sweep_action() {
         Some(1265872),
         "native aura332 must expose Azure Sweep through known Azure Strike"
     );
-    let surge_cooldown = |run: &Run| {
-        let world = run.app.world();
-        let spell = world
-            .resource::<crate::spell_info::SpellStore>()
-            .get(359073)
-            .unwrap();
-        world
-            .get::<crate::spell_cast::SpellHistory>(run.actor)
-            .unwrap()
-            .remaining_cooldown_ms(spell, crate::spell_cast::now(world))
-    };
     for remaining_uses in [1, 0] {
-        let before = surge_cooldown(&run);
+        let before = read_native_recharge_ms(&run, 359073);
+        assert!(
+            before > 2000.0,
+            "native Surge recovery must actually be active"
+        );
         crate::spell_cast::creature_cast_with_targets(
             run.app.world_mut(),
             run.actor,
@@ -454,10 +462,9 @@ fn devastation_eternity_surge_earns_native_azure_sweep_action() {
         )
         .unwrap();
         // sc_evoker.cpp5704–5710: actual tier effect1 reduces the running Surge cooldown.
-        assert_eq!(
-            surge_cooldown(&run),
-            before.saturating_sub(2000),
-            "each native Sweep must earn the native two-second Surge reduction"
+        assert!(
+            (read_native_recharge_ms(&run, 359073) - (before - 2000.0)).abs() <= 2.0,
+            "each native Sweep must earn the native two-second Surge charge-recovery reduction"
         );
         preparation::finish_pending_setup(&mut run).unwrap();
         assert_eq!(
