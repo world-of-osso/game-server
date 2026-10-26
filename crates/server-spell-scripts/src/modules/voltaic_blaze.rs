@@ -5,8 +5,10 @@ use bevy::prelude::*;
 
 use super::combat;
 use combat::spell_cast::effects::EffectCtx;
+use combat::spell_cast::script_registry::{
+    AreaTargetFilter, ContextHitHook, HitHook, SpellScriptHook,
+};
 use combat::spell_info::SpellInfo;
-use combat::spell_cast::script_registry::{SpellScriptHook, HitHook, ContextHitHook, AreaTargetFilter};
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::EffectHit(effect_hit),
