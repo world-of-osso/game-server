@@ -5,15 +5,19 @@ use super::combat;
 use combat::auras::{self, AuraInstance};
 use combat::class_progression::KnownSpells;
 use combat::spell_cast::script_registry::SpellScriptHook;
-use combat::spell_cast::scripts::{reduce_cooldown, script_effect_value};
+use combat::spell_cast::scripts::{AfterCastHook, reduce_cooldown, script_effect_value};
 use combat::spell_cast::{self, effects::EffectCtx, queued_triggers};
-use combat::spell_info::{SpellInfo, SpellStore};
+use combat::spell_info::{ChargedSpellModifier, SpellInfo, SpellStore};
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::FireAuraRegistration(register),
     SpellScriptHook::BeforeProcLaunch(before_hot_streak_launch),
     SpellScriptHook::AfterFireDirectHit(fire_feedback_hit),
     SpellScriptHook::AfterFireDirectHit(refund_from_the_ashes),
+    SpellScriptHook::PeriodicDamageFinished(roll_heat_shimmer),
+    SpellScriptHook::SnapshotsModifier(is_heat_shimmer),
+    SpellScriptHook::LaunchDamageModifier(heat_shimmer_crit_modifier),
+    SpellScriptHook::NativeAfterCast(scorch_after_cast),
     SpellScriptHook::AfterFireOutcomeHit(fire_meteorite_hit),
     SpellScriptHook::OnCast(on_fire_cast),
     SpellScriptHook::TargetDamageMultiplier(meteor_primary_multiplier),
@@ -43,6 +47,10 @@ const MAGE_FAMILY: u32 = 3;
 const PYROCOSM: u32 = 1260673;
 const METEORITE_IMPACT: u32 = 449569;
 const FROM_THE_ASHES: u32 = 342344;
+const HEAT_SHIMMER_TALENT: u32 = 457735;
+const HEAT_SHIMMER: u32 = 458964;
+const IGNITE: u32 = 12654;
+const SCORCH: u32 = 2948;
 
 #[derive(Component, Default)]
 struct FireProcState {
@@ -215,6 +223,80 @@ pub(crate) fn fire_feedback_hit(world: &mut World, ctx: &EffectCtx, target: Enti
         if combat::random::random::<f32>() * 100.0 < chance {
             schedule_meteorites(world, ctx, target, 1);
         }
+    }
+}
+
+fn roll_heat_shimmer(world: &mut World, ctx: &EffectCtx) {
+    if ctx.spell.id != IGNITE || !selected(world, ctx.caster, HEAT_SHIMMER_TALENT) {
+        return;
+    }
+    // SimC76f8118 sc_mage.cpp2557–2559/6439–6441: actual Ignite ticks
+    // attempt the talent's native RPPM, except while Scorch is being cast.
+    let scorching = world
+        .get::<shared::casting::CastState>(ctx.caster)
+        .is_some_and(|cast| cast.spell_id == SCORCH);
+    if scorching {
+        return;
+    }
+    let Some(instance) = world
+        .get::<auras::ActiveAuras>(ctx.caster)
+        .and_then(|auras| {
+            auras
+                .iter()
+                .find(|aura| aura.spell_id == HEAT_SHIMMER_TALENT)
+        })
+        .map(|aura| aura.instance_id)
+    else {
+        return;
+    };
+    // Native proc helpers take an aura instance ID, not a spell ID.
+    if auras::procs::try_native_policy_proc(world, ctx.caster, instance) {
+        spell_cast::cast_triggered(world, ctx.caster, HEAT_SHIMMER, Some(ctx.caster), 1);
+    }
+}
+
+fn is_heat_shimmer(spell: u32) -> bool {
+    spell == HEAT_SHIMMER
+}
+
+fn heat_shimmer_crit_modifier(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+) -> Option<ChargedSpellModifier> {
+    if spell.id != SCORCH || !auras::has_aura(world, caster, HEAT_SHIMMER) {
+        return None;
+    }
+    // sc_mage.cpp2293–2294/5074–5080: the earned buff enables execute
+    // crit above the health threshold. Retain it across the consumer's impact.
+    Some(ChargedSpellModifier {
+        aura_spell_id: HEAT_SHIMMER,
+        op: auras::SpellModOp::CritChance as i32,
+        percent: false,
+        amount: 100.0,
+    })
+}
+
+fn scorch_after_cast(spell: u32) -> Option<AfterCastHook> {
+    (spell == SCORCH).then_some(consume_heat_shimmer)
+}
+
+fn consume_heat_shimmer(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    let admitted = spell.cast_charge_mods.as_ref().is_some_and(|mods| {
+        mods.iter()
+            .any(|modifier| modifier.aura_spell_id == HEAT_SHIMMER)
+    });
+    if !admitted {
+        return;
+    }
+    let instance = world
+        .get::<auras::ActiveAuras>(caster)
+        .and_then(|auras| auras.iter().find(|aura| aura.spell_id == HEAT_SHIMMER))
+        .map(|aura| aura.instance_id);
+    // sc_mage.cpp5048–5051: spend one earned stack, not the native
+    // damage/cast-time/crit values already frozen for this Scorch.
+    if let Some(instance) = instance {
+        auras::spend_stack(world, caster, instance);
     }
 }
 
