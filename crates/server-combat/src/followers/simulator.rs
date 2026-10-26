@@ -314,6 +314,13 @@ fn spawn_parity_player(
         ))
         .id();
     install_parity_player_stat_components(world, player);
+    // SimC76f8118 sc_warlock_init.cpp1533–1538 initializes the class pool
+    // before profile values; a newly spawned Player has not run its first frame.
+    world
+        .run_system_once(crate::spell_cast::powers::init_player_powers)
+        .map_err(|error| {
+            format!("initialize parity player through native class powers: {error}")
+        })?;
     Ok(player)
 }
 
