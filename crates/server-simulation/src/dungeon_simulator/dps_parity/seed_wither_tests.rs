@@ -139,6 +139,42 @@ fn seed_native_without_sow_applies_only_one_real_seed_in_the_pack() {
 
 #[test]
 #[ignore = "requires private265 native player inputs"]
+fn seed_primary_native_paid_recast_redirects_to_an_unseeded_enemy() {
+    let _seed = crate::random::seed_scope(70448);
+    let (mut run, original_expiry, _) = prepare_actual_seed(3);
+    let original = run.targets[0];
+    cast_native_action(&mut run, SEED, original);
+    for _ in 0..100 {
+        let seeded = run
+            .targets
+            .iter()
+            .filter(|target| {
+                run.app
+                    .world()
+                    .get::<ActiveAuras>(**target)
+                    .is_some_and(|auras| {
+                        auras
+                            .iter()
+                            .any(|aura| aura.caster == run.actor && aura.spell_id == SEED)
+                    })
+            })
+            .count();
+        if seeded == 2 {
+            return;
+        }
+        assert!(
+            crate::spell_cast::now(run.app.world()) < original_expiry,
+            "observe real redirection before the original Seed can expire"
+        );
+        run.app.update();
+    }
+    // SimC76f8118 actions1851–1879: an already-seeded original redirects to
+    // one unseeded candidate. Later seed-applied UA must reuse this selection.
+    panic!("second ordinary paid Seed must reach an unseeded real enemy, not refresh original");
+}
+
+#[test]
+#[ignore = "requires private265 native player inputs"]
 fn seed_native_natural_expiry_explodes_and_applies_owned_wither_to_pack() {
     let _seed = crate::random::seed_scope(70448);
     let (mut run, expiry, _) = prepare_actual_seed(3);
