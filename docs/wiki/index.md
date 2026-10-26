@@ -1,4 +1,4 @@
-- [Native Pandemic duration carry](systems/auras.md#native-pandemic-duration-carry--2026-10-26) — native Agony refresh loses4.5s in RED; attribute-driven carry replaces the Rip/Rake ID route, five-spec and charged Grasp qualification pending.
+- [Native Pandemic duration carry](systems/auras.md#native-pandemic-duration-carry--2026-10-26) — native Agony, Rip/Rake and charged Grasp carry pass; attribute dispatch replaces the ID route, merged five-spec landing/DPS qualification pending.
 - [Explicit non-demon guardian SP](systems/spell-casting.md#explicit-non-demon-guardian-spell-power--2026-10-26) — native Thing type15 reads its sourced full-owner-SP policy; actual Spike and protected BM/265/267 cases pass, landing pending.
 - [Haunting Shadows impact extensions](systems/spell-casting.md#haunting-shadows-impact-extensions--2026-10-26) — actual apparition impact preserves owned Pain/VT; native missing-extension RED, GREEN pending.
 - [Devastation Dragonrage-earned windows](systems/auras.md#devastation-dragonrage-earned-windows--2026-10-26) — native Fury growth/frozen grace, finite Unbound uses, and why the pinned replacement-add3T oracle has no Dragonrage.
