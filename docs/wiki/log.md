@@ -1,3 +1,7 @@
+## 2026-10-26 — Merged Mage feedback grants
+
+[Feedback grants](systems/spell-casting.md#merged-feedback-grants-are-not-casts--2026-10-26) distinguish native aura application from a full triggered spell. Paired native ST trace2ef3293ef0 reproduces the cast-supply loss; RED579171b891 identifies an unrelated+78haste from the old queued grant. The generic queue now applies native auras directly; three-Mage GREEN/measurements remain pending.
+
 ## 2026-10-26 — Fire Molten Fury execute
 
 [Fire target-versus policy](systems/simc-apl.md#fire-fixture-adapter) now reads selected native Molten Fury's health threshold and damage percentage. Actual Fire Blast RED2689→2689 instead of3092.35 is qualified; GREEN and measurement remain train-gated. No coefficient changes or generic aura303 rewrite.
