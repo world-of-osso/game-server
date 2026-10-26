@@ -54,6 +54,7 @@ pub(super) fn run_remove(
     aura: &AuraInstance,
     reason: super::RemoveReason,
 ) {
+    super::rogue::after_stealth_removed(world, unit, aura);
     let Some(script) = script(world, aura.spell_id) else {
         return;
     };
@@ -148,7 +149,6 @@ const DRAIN_SOUL_ENERGIZE: u32 = 205_292;
 const SURVIVAL_INSTINCTS: u32 = 61336;
 const SURVIVAL_INSTINCTS_BUFF: u32 = 50322;
 const BREATH_OF_FIRE_BURN: u32 = 123725;
-const LASHING_FLAMES: u32 = 334168;
 const RAKE_BLEED: u32 = 155722;
 const UNSTABLE_AFFLICTION: u32 = 30108;
 const UNSTABLE_AFFLICTION_BLEED: u32 = 233490;
@@ -237,16 +237,7 @@ pub(super) fn protective_growth_multiplier(unit: Entity, auras: &super::ActiveAu
     1.0 - amount / 100.0
 }
 
-///60103/334046/334168 explicitly limit this vulnerability to Flame Shock.
-///Other271 masks do not establish a universal filter:208086's description
-///instead grants all owner damage. Keep that existing base contract intact.
-pub(super) fn affects_incoming_spell(
-    aura: &AuraInstance,
-    effect: &super::AuraEffectState,
-    spell: &crate::spell_info::SpellInfo,
-) -> bool {
-    aura.spell_id != LASHING_FLAMES || super::spell_mods::class_mask_affects(aura, effect, spell)
-}
+pub(super) use super::incoming_spell_masks::affects_incoming_spell;
 
 ///115181 names123725s2 as reduced damage dealt to the casting Monk.
 ///Consume that named field for this spell only; do not redefine generic269.
@@ -414,7 +405,6 @@ pub(super) fn register_class_scripts(
     mut scripts: ResMut<AuraScripts>,
     registry: Res<crate::spell_cast::script_registry::SpellScriptRegistry>,
 ) {
-    crate::spell_cast::scripts::register_havoc(&mut scripts);
     registry.register_early_auras(&mut scripts);
     scripts.0.insert(
         1236994,
@@ -424,6 +414,7 @@ pub(super) fn register_class_scripts(
         },
     );
     crate::spell_cast::scripts::register_midnight_items(&mut scripts);
+    super::venomcursed::register(&mut scripts);
     crate::spell_cast::scripts::register_lifecycle_policies(&mut scripts, &registry);
     crate::spell_cast::scripts::register_wdp_relationship(&mut scripts);
     crate::spell_cast::scripts::register_unbroken_rhythm(&mut scripts);
@@ -686,14 +677,6 @@ pub(super) fn register_class_scripts(
         },
     );
     scripts.0.insert(
-        crate::spell_cast::scripts::RAPID_FIRE,
-        AuraScript {
-            on_periodic: Some(crate::spell_cast::scripts::cast_rapid_fire_tick),
-            on_natural_end: Some(crate::spell_cast::scripts::finish_rapid),
-            ..Default::default()
-        },
-    );
-    scripts.0.insert(
         crate::spell_cast::scripts::HAUNT,
         AuraScript {
             on_remove: Some(crate::spell_cast::scripts::reset_haunt_on_death),
@@ -734,7 +717,7 @@ pub(super) fn register_class_scripts(
     crate::spell_cast::scripts::register_xuens_battlegear(&mut scripts);
     crate::spell_cast::scripts::register_channel_policies(&mut scripts, &registry);
     crate::spell_cast::scripts::register_elemental_policies(&mut scripts);
-    crate::spell_cast::scripts::register_cast_relationships(&mut scripts);
+    registry.register_late_auras(&mut scripts);
 }
 
 /// TC spell_rogue.cpp spell_rog_stealth: 1784's own rows carry no MOD_STEALTH;

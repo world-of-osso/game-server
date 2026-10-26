@@ -42,6 +42,7 @@ pub(crate) mod forecast;
 pub mod handlers;
 pub(crate) mod health_pct_trigger;
 mod ignite;
+mod incoming_spell_masks;
 pub mod invisibility;
 mod item_requirements;
 mod light_of_titans;
@@ -69,7 +70,7 @@ pub(crate) use ret_crusade::after_spender as add_ret_crusade_spender_stacks;
 mod ret_sentence;
 pub(crate) use ret_sentence::track_cast as track_ret_sentence_cast;
 pub(crate) mod reward_mods;
-pub(crate) mod rogue;
+pub mod rogue;
 #[cfg(test)]
 mod rolling_periodic_tests;
 pub mod scripts;
@@ -80,6 +81,7 @@ pub mod stat_mods;
 pub(crate) mod stealth;
 pub mod summon_damage;
 mod unit_state;
+mod venomcursed;
 mod warrior_stats;
 pub(crate) mod world_state;
 #[cfg(test)]
@@ -813,7 +815,7 @@ fn build_effect(
 }
 
 /// Fresh native stack limit, including the caster's MaxAuraStacks modifiers.
-pub(crate) fn fresh_max_stacks(world: &World, caster: Entity, spell: &SpellInfo) -> u8 {
+pub fn fresh_max_stacks(world: &World, caster: Entity, spell: &SpellInfo) -> u8 {
     if let Some(maximum) = ret_crusade::maximum_stacks(world, caster, spell) {
         return maximum;
     }
@@ -1116,12 +1118,7 @@ pub(super) fn reduce_cast_pushback(world: &mut World, target: Entity) {
 /// `Aura::SetStackAmount` on the unit's own cast, then refresh derived stats/views.
 /// A non-stacking aura has a single stack; zero removes it in TC and is not a
 /// stack assignment. Callers needing removal use remove_instance instead.
-pub(crate) fn set_self_cast_stacks(
-    world: &mut World,
-    unit: Entity,
-    spell_id: u32,
-    stacks: u8,
-) -> bool {
+pub fn set_self_cast_stacks(world: &mut World, unit: Entity, spell_id: u32, stacks: u8) -> bool {
     assert!(stacks > 0, "zero aura stack assignment requires removal");
     let Some(mut auras) = world.get_mut::<ActiveAuras>(unit) else {
         return false;
@@ -1739,7 +1736,7 @@ pub fn spend_charge(world: &mut World, unit: Entity, instance_id: u32) {
 }
 
 /// TC Aura::ModStackAmount(-1), SpellAuras.cpp:1093–1128: no timer refresh on loss.
-pub(crate) fn spend_stack(world: &mut World, unit: Entity, instance_id: u32) {
+pub fn spend_stack(world: &mut World, unit: Entity, instance_id: u32) {
     let Some(mut auras) = world.get_mut::<ActiveAuras>(unit) else {
         return;
     };

@@ -4,8 +4,8 @@ use bevy::prelude::*;
 use super::combat;
 use combat::auras::scripts::{AuraScript, AuraScripts};
 use combat::auras::{AuraInstance, RemoveReason};
+use combat::spell_cast::script_registry::{ContextHitHook, SpellScriptHook};
 use combat::spell_cast::{self, effects::EffectCtx, queued_triggers};
-use combat::spell_cast::script_registry::{SpellScriptHook, ContextHitHook};
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::EarlyAuraRegistration(register),

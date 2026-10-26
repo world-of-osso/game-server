@@ -3,7 +3,8 @@ use std::collections::BTreeSet;
 
 use bevy::prelude::*;
 
-use crate::spell_info::SpellStore;
+use super::combat;
+use combat::spell_info::SpellStore;
 
 const BURNING_BLADES: u32 = 452408;
 const RESIDUAL: u32 = 453177;
@@ -40,11 +41,11 @@ pub(crate) fn apply_havoc_damage_policies(
     if amount <= 0.0 || periodic || !super::is_havoc(world, caster) {
         return;
     }
-    if !crate::spell_cast::targets::relation_matches(
+    if !combat::spell_cast::targets::relation_matches(
         world,
         caster,
         target,
-        crate::spell_cast::targets::Relation::Enemy,
+        combat::spell_cast::targets::Relation::Enemy,
     ) {
         return;
     }
@@ -68,7 +69,7 @@ fn apply_initiative(world: &mut World, caster: Entity, target: Entity) {
         .0
         .insert(target);
     if first_hit {
-        crate::spell_cast::cast_triggered(world, caster, INITIATIVE_BUFF, Some(caster), 1);
+        combat::spell_cast::cast_triggered(world, caster, INITIATIVE_BUFF, Some(caster), 1);
     }
 }
 
@@ -77,11 +78,12 @@ fn apply_burning_blades(world: &mut World, caster: Entity, target: Entity, damag
         error!("Native Burning Blades453177 has no positive tick count");
         return;
     };
-    let percent = super::super::script_effect_value(world, caster, BURNING_BLADES, 0);
+    let percent =
+        combat::spell_cast::scripts::script_effect_value(world, caster, BURNING_BLADES, 0);
     // Use the landed amount in attacker units, not AuraEvent.damage's scaled
     // target-health units. Native453177's rolling-periodic flag carries unpaid
     // damage and preserves its existing tick phase through generic refresh.
-    crate::spell_cast::cast_triggered_with_effect0_amount(
+    combat::spell_cast::cast_triggered_with_effect0_amount(
         world,
         caster,
         RESIDUAL,

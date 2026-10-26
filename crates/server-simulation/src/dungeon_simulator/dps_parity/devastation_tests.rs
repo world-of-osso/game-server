@@ -448,10 +448,24 @@ fn devastation_empower_release_grants_selected_mass_disintegrate() {
 #[ignore = "requires private native DB and exact Devastation profile"]
 fn devastation_literal_measurement_executes_reference_deep_breath() {
     let mut run = prepare_measurement(1467, 1).unwrap();
+    assert!(
+        run.app
+            .world()
+            .get::<crate::class_progression::TraitLoadout>(run.actor)
+            .unwrap()
+            .active_talent_spells()
+            .any(|talent| talent.spell_id == 433871),
+        "the exact reference selects native Maneuverability"
+    );
     let deep_breath =
         literal_rotation::execution::resolve_action(run.app.world(), run.actor, 357210)
             .unwrap()
             .expect("selected Devastation actor knows Deep Breath");
+    // SimC76f8118 sc_evoker.cpp6323–6327 selects the actual Maneuverability endpoint.
+    assert_eq!(
+        deep_breath, 433874,
+        "selected Maneuverability must replace the base Deep Breath action"
+    );
     let started_at = run.app.world().resource::<Time>().elapsed();
     install_fixture_lifetimes(&mut run, started_at);
     engage(&mut run);
