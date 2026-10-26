@@ -143,6 +143,7 @@ register_modules! {
     shadow_rift: (2585, "modules/shadow_rift.rs"),
     shadow_screams: (2583, "modules/shadow_screams.rs"),
     shadow_torment: (2584, "modules/shadow_torment.rs"),
+    shadow_void_blast: (2586, "modules/shadow_void_blast.rs"),
     shadow_volley: (2580, "modules/shadow_volley.rs"),
     snakeskin_quiver: (230, "modules/snakeskin_quiver.rs"),
     soul_of_the_forest: (1000, "modules/soul_of_the_forest.rs"),

@@ -1,6 +1,6 @@
 //! SimC76f8118 sc_priest_shadow.cpp1491–1514/sc_priest.cpp1606–1683/3543–3562.
 //! Native Torrent starts a hasted Rift driver at its actual hostile primary.
-use super::combat;
+use super::{combat, shadow_void_blast};
 use bevy::prelude::*;
 use combat::auras::scripts::{AuraScript, AuraScripts};
 use combat::auras::{self, ActiveAuras, AuraInstance, RemoveReason};
@@ -75,6 +75,7 @@ fn pulse(world: &mut World, unit: Entity, _: &AuraInstance, index: u8) {
 }
 
 fn clear_rift(world: &mut World, unit: Entity, _: &AuraInstance, _: RemoveReason) {
+    shadow_void_blast::expire_override(world, unit);
     world.entity_mut(unit).remove::<Rift>();
 }
 
