@@ -106,12 +106,22 @@ fn native_chaos_and_physical_hits(remove_armor: bool) -> (i32, i32) {
         "native training dummy must have actual armor"
     );
     if remove_armor {
-        run.app
-            .world_mut()
-            .get_mut::<crate::level_scaling::CreatureArmor>(target)
-            .unwrap()
-            .0 = 0.0;
+        // Tuned target armor ignores raw CreatureArmor edits. Native40935's
+        // -100% Physical armor multiplier applies after target-level scaling.
+        crate::spell_cast::cast_triggered(run.app.world_mut(), run.actor, 40935, Some(target), 1);
     }
+    preparation::finish_pending_setup(&mut run).unwrap();
+    if remove_armor {
+        assert_eq!(
+            run.app
+                .world()
+                .get::<crate::stats::StatModifiers>(target)
+                .unwrap()
+                .total_armor_pct,
+            -100.0,
+        );
+    }
+    let _damage_seed = crate::random::seed_scope(818181);
     for spell in [393054, 198813] {
         crate::spell_cast::cast_triggered(run.app.world_mut(), run.actor, spell, Some(target), 1);
     }
@@ -122,6 +132,7 @@ fn native_chaos_and_physical_hits(remove_armor: bool) -> (i32, i32) {
             .sum::<i32>()
     };
     let hits = (total(393054), total(198813));
+    println!("HAVOC_ARMOR armorless={remove_armor} chaos_physical={hits:?}");
     assert!(
         hits.0 > 0 && hits.1 > 0,
         "both native school payloads must really land: {hits:?}"
