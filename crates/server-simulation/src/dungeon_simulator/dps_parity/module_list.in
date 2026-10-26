@@ -165,6 +165,7 @@ mod hunter_stomp_tests;
 mod hunter_survival_howl_tests;
 mod hunter_wild_hunt_tests;
 mod hunter_wildspeaker_tests;
+mod hunter_wildspeaker_wrath_tests;
 mod hybrid_armor_tests;
 mod hunter_wyvern_duration_tests;
 mod hunter_wyvern_tests;
