@@ -17,7 +17,7 @@ fn count_summons(run: &Run) -> usize {
         .filter(|event| {
             event.source == Some(run.actor.to_bits())
                 && event.spell_id == Some(SUMMON)
-                && event.kind == CombatLogKind::CastSuccess
+                && event.kind == CombatLogKind::Summon
         })
         .count()
 }

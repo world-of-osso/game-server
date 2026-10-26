@@ -63,7 +63,7 @@ pub(super) use script_registry::{
     native_weapon_multiplier as enhancement_flurry_weapon_multiplier,
 };
 pub(in crate::spell_cast) mod elemental_ancestors;
-pub use elemental_ancestors::owner as ancestor_owner;
+pub use elemental_ancestors::{owner as ancestor_owner, summon as summon_ancestor};
 mod policies;
 pub(super) use policies::check_cast as check_policy_cast;
 pub(crate) use policies::register_channel_policies;
