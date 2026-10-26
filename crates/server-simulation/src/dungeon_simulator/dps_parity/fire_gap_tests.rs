@@ -1086,6 +1086,177 @@ fn fire_feedback_fiery_rush_ends_with_combustion() {
     panic!("unextended native Combustion must expire within30s");
 }
 
+fn fire_phoenix_actor(run: &mut Run) -> Option<Entity> {
+    run.app
+        .world_mut()
+        .query::<(
+            Entity,
+            &crate::spell_cast::summon::SummonedCreature,
+            &shared::components::Npc,
+        )>()
+        .iter(run.app.world())
+        .find(|(_, summon, npc)| summon.owner == run.actor && npc.template_id == 223453)
+        .map(|(entity, _, _)| entity)
+}
+
+#[test]
+#[ignore = "requires exact Fire63 inputs and authentic private Arcane Phoenix template"]
+fn fire_phoenix_combustion_invokes_authentic_owned_summon() {
+    let mut run = prepare_literal(63, 1).unwrap();
+    let actor = run.actor;
+    start_native(&mut run, 190319, actor);
+    run.app.update();
+    assert!(
+        fire_phoenix_actor(&mut run).is_some(),
+        "selected Invocation must summon the actual native223453 through448659"
+    );
+}
+
+#[test]
+#[ignore = "requires exact Fire63 inputs and authentic private Arcane Phoenix template"]
+fn fire_phoenix_native_casts_deal_damage_and_feed_selected_mana_cascade() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(63, 1).unwrap();
+    let actor = run.actor;
+    start_native(&mut run, 448659, actor);
+    let phoenix = fire_phoenix_actor(&mut run).expect("native summon/template precondition");
+    for _ in 0..100 {
+        run.app.update();
+    }
+    assert!(
+        run.app
+            .world()
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|event| {
+                event.source == Some(phoenix.to_bits())
+                    && event.target == Some(run.targets[0].to_bits())
+                    && matches!(event.spell_id, Some(450461 | 450499))
+                    && event.kind == CombatLogKind::Damage
+                    && event.amount > 0
+            }),
+        "an actual Phoenix must cast its native single-target actions on the selected enemy"
+    );
+    assert!(
+        stacks(&run, 449314) >= 3,
+        "selected Ashes of Inspiration must grant native Cascade stacks from actual Phoenix executions"
+    );
+}
+
+#[test]
+#[ignore = "requires exact Fire63 inputs and private70448 DB"]
+fn fire_feedback_from_the_ashes_reduces_the_fire_blast_that_triggered_it() {
+    use crate::simc_apl_native::{Bindings, Encounter, FightStyle, NativeFacts};
+    let mut run = prepare_literal(63, 1).unwrap();
+    let target = run.targets[0];
+    start_native(&mut run, 108853, target);
+    let bindings = Bindings {
+        actions: [("fire_blast".into(), 108853)].into(),
+        ..default()
+    };
+    let first = NativeFacts::new(
+        run.app.world(),
+        run.actor,
+        &bindings,
+        Encounter::Fixture {
+            started_at: 0.0,
+            duration: 300.0,
+            style: FightStyle::Patchwerk,
+        },
+        1,
+    )
+    .value("cooldown.fire_blast.charges_fractional")
+    .unwrap();
+    assert!(
+        first > 2.01,
+        "an actual selected From the Ashes hit restores native500ms progress immediately after spending a Fire Blast charge: {first}"
+    );
+}
+
+#[test]
+#[ignore = "requires exact Fire63 inputs and private70448 DB"]
+fn fire_execute_scald_amplifies_actual_selected_fireball_and_scorch() {
+    let hit = |spell: u32, selected: bool| {
+        let _seed = crate::random::seed_scope(70_448);
+        let (mut profile, traits) = read_reference(63).unwrap();
+        let identity = inputs::read_actor(&profile).unwrap();
+        profile.equipment.clear();
+        profile.consumables.clear();
+        profile.omnium_talents = None;
+        let mut run = prepare_literal_reference(profile, &traits, 1, identity).unwrap();
+        let actor = run.actor;
+        let target = run.targets[0];
+        let effect_index = if spell == 133 { 0 } else { 1 };
+        let percent = run
+            .app
+            .world()
+            .get::<ActiveAuras>(actor)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 450746)
+            .unwrap()
+            .effects
+            .iter()
+            .find(|effect| effect.index == effect_index)
+            .unwrap()
+            .amount;
+        if !selected {
+            let known = run
+                .app
+                .world()
+                .get::<crate::class_progression::KnownSpells>(actor)
+                .unwrap()
+                .iter()
+                .filter(|id| *id != 450746)
+                .collect();
+            run.app
+                .world_mut()
+                .entity_mut(actor)
+                .insert(crate::class_progression::KnownSpells::fixture(known));
+            crate::auras::remove_auras(
+                run.app.world_mut(),
+                actor,
+                crate::auras::RemoveReason::Consumed,
+                |aura| aura.spell_id == 450746,
+            );
+        }
+        let mut health = run.app.world_mut().get_mut::<Health>(target).unwrap();
+        health.current = health.max * 0.2;
+        run.app
+            .world_mut()
+            .get_mut::<crate::stats::CharacterStats>(actor)
+            .unwrap()
+            .crit_pct = 100.0;
+        start_native(&mut run, spell, target);
+        preparation::finish_pending_setup(&mut run).unwrap();
+        let damage = run
+            .app
+            .world()
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .find(|event| {
+                event.source == Some(actor.to_bits())
+                    && event.target == Some(target.to_bits())
+                    && event.spell_id == Some(spell)
+                    && event.kind == CombatLogKind::Damage
+            })
+            .expect("actual ordinary Fire spell impact")
+            .amount as f32;
+        (damage, percent)
+    };
+    for spell in [133, 2948] {
+        let baseline = hit(spell, false).0;
+        let (amplified, percent) = hit(spell, true);
+        let expected = baseline * (1.0 + percent / 100.0);
+        assert!(
+            (amplified / expected - 1.0).abs() < 0.001,
+            "selected native Scald amplifies actual execute{spell} by{percent}%: {baseline} -> {amplified}, expected{expected}"
+        );
+    }
+}
+
 fn reacted(run: &Run, name: &str) -> f64 {
     use crate::simc_apl_native::{Bindings, Encounter, FightStyle, NativeFacts};
     let bindings = Bindings {
