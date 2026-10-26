@@ -98,8 +98,8 @@ fn cast_native(run: &mut Run, spell: u32, target: Entity) {
 
 #[test]
 #[ignore = "requires exact Arms71 player profile and native selected Mortal Wounds"]
-fn arms_mortal_wounds_applies_only_on_mortal_strike_and_slam_crits() {
-    for action in [12294, 1464] {
+fn arms_mortal_wounds_applies_only_on_native_strike_and_slam_family_crits() {
+    for (action, required_proc) in [(12294, None), (1464, None), (1269383, Some(1269391))] {
         let _seed_scope = crate::random::seed_scope(70_448);
         let mut run = super::super::prepare_measurement(71, 1).unwrap();
         super::super::engage(&mut run);
@@ -122,6 +122,15 @@ fn arms_mortal_wounds_applies_only_on_mortal_strike_and_slam_crits() {
                 crate::auras::RemoveReason::Consumed,
                 |aura| aura.spell_id == 1269391,
             );
+            if let Some(proc_spell) = required_proc {
+                crate::spell_cast::cast_triggered(
+                    run.app.world_mut(),
+                    actor,
+                    proc_spell,
+                    Some(actor),
+                    1,
+                );
+            }
             crate::spell_cast::powers::change_power(
                 run.app.world_mut(),
                 actor,
@@ -136,6 +145,10 @@ fn arms_mortal_wounds_applies_only_on_mortal_strike_and_slam_crits() {
                 .0
                 .len();
             cast_native(&mut run, action, target);
+            assert!(
+                crate::spell_cast::targets::is_alive(run.app.world(), target),
+                "the native training dummy must survive the producer impact"
+            );
             let events: Vec<_> = run
                 .app
                 .world()
