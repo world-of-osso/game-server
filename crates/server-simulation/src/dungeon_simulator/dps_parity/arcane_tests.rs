@@ -183,6 +183,74 @@ fn assert_charge_hit_formula(spell: u32) {
 
 #[test]
 #[ignore = "requires private native70448 DB and exact Arcane62 inputs"]
+fn arcane_charge_roll_normalization_uses_barrage_after_an_earlier_blast() {
+    let mut run = prepare_literal(62, 1).unwrap();
+    run.app.insert_resource(
+        crate::spell_cast::effects::factor_capture::FactorCapture::new(
+            run.actor,
+            run.targets[0],
+            44425,
+            "charge_focus_after_foreign_hit",
+            1,
+        ),
+    );
+    let _seed = crate::random::seed_scope(70448);
+    cast(&mut run, 30451);
+    cast(&mut run, 44425);
+    for _ in 0..20 {
+        run.app.update();
+    }
+    let trace = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::effects::factor_capture::FactorCapture>()
+        .export();
+    let events = trace["events"].as_array().unwrap();
+    let first_direct = events
+        .iter()
+        .find(|event| event["event"] == "direct_amount")
+        .unwrap();
+    assert_ne!(
+        first_direct["spell_id"], 44425,
+        "fixture must retain the earlier real hit"
+    );
+    let direct = events
+        .iter()
+        .find(|event| event["event"] == "direct_amount" && event["spell_id"] == 44425)
+        .unwrap();
+    let result = events
+        .iter()
+        .find(|event| event["event"] == "result" && event["spell_id"] == 44425)
+        .unwrap();
+    let hit = run
+        .app
+        .world()
+        .resource::<ObservedCombatEvents>()
+        .0
+        .iter()
+        .find(|event| {
+            event.source == Some(run.actor.to_bits())
+                && event.target == Some(run.targets[0].to_bits())
+                && event.spell_id == Some(44425)
+                && event.kind == CombatLogKind::Damage
+        })
+        .expect("real Barrage damage after the earlier Blast");
+    let input = result["factors"]["native_input_amount"].as_f64().unwrap();
+    let scaled = direct["factors"]["native_scaled_amount"].as_f64().unwrap();
+    assert!(
+        input > 0.0 && scaled > 0.0,
+        "actual Barrage factors: {trace}"
+    );
+    let expected = f64::from(hit.amount) * scaled / input;
+    let actual = normalize_charge_hit_rolls(&run, hit.amount);
+    assert!(
+        (f64::from(actual) - expected).abs() < 0.01,
+        "normalized Barrage must use its own native factors; actual={actual}, expected={expected}, trace={trace}"
+    );
+}
+
+#[test]
+#[ignore = "requires private native70448 DB and exact Arcane62 inputs"]
 fn arcane_charge_damage_barrage_applies_source_multiplier_once_per_hit() {
     assert_charge_hit_formula(44425);
 }
