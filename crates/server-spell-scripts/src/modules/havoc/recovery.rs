@@ -1,4 +1,4 @@
-//! SimC76f8118 sc_demon_hunter.cpp4002–4005,4033–4047,4987–4998.
+//! SimC76f8118 sc_demon_hunter.cpp4002–4005,4033–4047,4987–4998,7814–7833.
 use super::{combat, havoc::has_talent};
 use bevy::prelude::*;
 use combat::auras::{ActiveAuras, AuraInstance, scripts::AuraScripts};
@@ -31,7 +31,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
 fn after_cast(spell: u32) -> Option<AfterCastHook> {
     match spell {
         191427 => Some(reset_meta_actions),
-        198013 | 452497 => Some(advance_cycle),
+        198013 | 452497 | 258860 => Some(advance_cycle),
         _ => None,
     }
 }
@@ -73,26 +73,56 @@ pub(super) fn reset_action(world: &mut World, caster: Entity, id: u32, all_charg
 }
 
 fn advance_cycle(world: &mut World, caster: Entity, spell: &SpellInfo) {
-    if !has_talent(world, caster, CYCLE_TALENT) {
+    let four_piece = super::havoc::owned_passive_instance(world, caster, 1296612).is_some();
+    if !has_talent(world, caster, CYCLE_TALENT) || (spell.id == 258860 && !four_piece) {
         return;
     }
-    let stacks = world
+    let stacks = read_cycle_stacks(world, caster);
+    let seconds = f64::from(combat::spell_cast::scripts::script_effect_value(
+        world,
+        caster,
+        CYCLE_TALENT,
+        0,
+    )) / 1000.0;
+    // SimC4033–4047/7814–7833 reads existing stacks before earning the next.
+    combat::spell_cast::scripts::reduce_cooldown(
+        world,
+        caster,
+        spell.id,
+        seconds * f64::from(stacks),
+    );
+    if four_piece {
+        reduce_paired_recovery(world, caster, spell.id, stacks, seconds);
+    }
+    combat::spell_cast::cast_triggered(world, caster, CYCLE, Some(caster), 1);
+}
+
+fn read_cycle_stacks(world: &World, caster: Entity) -> u8 {
+    world
         .get::<ActiveAuras>(caster)
         .and_then(|auras| {
             auras
                 .iter()
                 .find(|aura| aura.spell_id == CYCLE && aura.caster == caster)
         })
-        .map_or(0, |aura| aura.stacks);
-    let milliseconds =
-        combat::spell_cast::scripts::script_effect_value(world, caster, CYCLE_TALENT, 0);
-    combat::spell_cast::scripts::reduce_cooldown(
-        world,
-        caster,
-        spell.id,
-        f64::from(milliseconds) * f64::from(stacks) / 1000.0,
-    );
-    combat::spell_cast::cast_triggered(world, caster, CYCLE, Some(caster), 1);
+        .map_or(0, |aura| aura.stacks)
+}
+
+fn reduce_paired_recovery(world: &mut World, caster: Entity, spell: u32, stacks: u8, seconds: f64) {
+    let maximum = world
+        .resource::<SpellStore>()
+        .get(CYCLE)
+        .expect("native Cycle buff")
+        .aura_options
+        .as_ref()
+        .expect("native Cycle stack cap")
+        .cumulative_aura;
+    if stacks == 0 || u32::from(stacks) >= maximum {
+        return;
+    }
+    // Eye/Gaze share native category1582; reduce that one cooldown only once.
+    let paired = if spell == 258860 { 198013 } else { 258860 };
+    combat::spell_cast::scripts::reduce_cooldown(world, caster, paired, seconds);
 }
 
 fn register_channels(scripts: &mut AuraScripts) {
