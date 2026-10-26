@@ -11,6 +11,7 @@ fn destruction_periodic_damage_funds_real_soul_shard_pool() {
     for spell_id in [445474, 157736] {
         let _seed = crate::random::seed_scope(70448);
         let mut run = prepare_literal(267, 1).unwrap();
+        engage(&mut run);
         let (caster, target) = (run.actor, run.targets[0]);
         let before = crate::spell_cast::powers::power_value(run.app.world(), caster, PowerType::SoulShards).unwrap().0;
         crate::auras::apply_aura(run.app.world_mut(), &crate::auras::AuraApplication {
