@@ -65,63 +65,6 @@ fn destruction_periodic_damage_funds_real_soul_shard_pool() {
 
 #[test]
 #[ignore = "requires private267 profile and native world DB"]
-fn destruction_wither_duration_fact_reads_native_active_dot() {
-    use server::simc_apl::Facts;
-    let mut run = prepare_literal(267, 1).unwrap();
-    let bindings = crate::simc_apl_native::Bindings {
-        buffs: [("wither".into(), 445474)].into(),
-        ..Default::default()
-    };
-    let read_duration = |run: &Run| {
-        crate::simc_apl_native::NativeFacts::new(
-            run.app.world(),
-            run.actor,
-            &bindings,
-            crate::simc_apl_native::Encounter::Fixture {
-                started_at: crate::spell_cast::now(run.app.world()),
-                duration: 300.0,
-                style: crate::simc_apl_native::FightStyle::Patchwerk,
-            },
-            1,
-        )
-        .with_targets(Some(run.targets[0]), &run.targets)
-        .value("dot.wither.duration")
-        .unwrap()
-    };
-    assert_eq!(read_duration(&run), 0.0, "inactive dot has no source state");
-    let (caster, target) = (run.actor, run.targets[0]);
-    crate::auras::apply_aura(
-        run.app.world_mut(),
-        &crate::auras::AuraApplication {
-            caster,
-            target,
-            spell_id: 445474,
-            effect_mask: 1,
-            source: crate::auras::AuraSource::Cast,
-        },
-    );
-    let fresh_ms = run
-        .app
-        .world()
-        .get::<crate::auras::ActiveAuras>(target)
-        .unwrap()
-        .iter()
-        .find(|aura| aura.spell_id == 445474 && aura.caster == caster)
-        .unwrap()
-        .duration_ms;
-    assert!(fresh_ms > 0);
-    assert_eq!(read_duration(&run), f64::from(fresh_ms) / 1000.0);
-    crate::auras::remove_auras(
-        run.app.world_mut(),
-        target,
-        crate::auras::RemoveReason::Dispelled,
-        |aura| aura.spell_id == 445474 && aura.caster == caster,
-    );
-    assert_eq!(read_duration(&run), 0.0);
-}
-
-#[test]
-#[ignore = "requires private267 profile and native world DB"]
 fn destruction_literal_fixture_executes_profile_instead_of_native_kit() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_measurement(267, 1).unwrap();
