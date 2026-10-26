@@ -168,3 +168,9 @@ The shared spender-hit policy starts or extends native Slice and Dice after an e
 ## See Also
 
 - [[dungeon-simulator]] — native fixture lifecycle and measurements.
+
+## Affliction fixture265
+
+The adapter reads every exported profile row unchanged, uses the profile-selected native pet and shared channel decisions, and reads Darkglare lifetime from real owned summons. Native spells, knowledge, resources and damage stay authoritative. See [qualification contract](../../specs/dps-parity.md#affliction265-literal-fixture).
+
+Agony funding is a separate downstream module: landed native ticks advance per-owner threshold progress; native17941 supplies whole-shard amount, and losing the last Agony resets progress. It does not share Destruction fragment-per-tick funding. Numeric parity remains measurement-gated. [Source](../../../crates/server-spell-scripts/src/modules/affliction_agony.rs).

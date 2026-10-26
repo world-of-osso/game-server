@@ -378,7 +378,10 @@ fn fire_hero_recent_heating_up_survives_a_noncritical_fireball() {
     crate::spell_cast::cast_triggered(run.app.world_mut(), run.actor, 133, Some(target), 1);
     let snapshot = |run: &Run| {
         let world = run.app.world();
-        let heating = world.get::<ActiveAuras>(run.actor).unwrap().iter()
+        let heating = world
+            .get::<ActiveAuras>(run.actor)
+            .unwrap()
+            .iter()
             .find(|aura| aura.spell_id == 48107)
             .map(|aura| (aura.duration_ms, aura.expires_at, aura.stacks));
         (crate::auras::aura_now(world), heating)
