@@ -80,6 +80,6 @@ fn launch_strike(
         return false;
     };
     // Native1251779 supplies payload, modifiers and shared owner crit inheritance.
-    spell.cast_damage_multiplier *= effectiveness;
+    spell.cast_damage_multiplier = Some(effectiveness);
     spell_cast::launch_triggered_spell(world, pet, &spell, Some(target), depth)
 }
