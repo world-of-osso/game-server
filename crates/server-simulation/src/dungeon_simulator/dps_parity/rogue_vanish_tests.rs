@@ -173,20 +173,36 @@ fn rogue_vanish_native_harmful_cast_breaks_active_vanish_without_later_restealth
     let actor = run.actor;
     let target = run.targets[0];
     literal_rotation::execution::execute(
-        run.app.world_mut(), actor,
+        run.app.world_mut(),
+        actor,
         literal_rotation::execution::Execution::Spell(1856, actor, Some(target)),
-    ).unwrap();
+    )
+    .unwrap();
     run.app.update();
-    assert!(crate::auras::has_aura(run.app.world(), actor, 11327), "Vanish must survive its own cast event");
+    assert!(
+        crate::auras::has_aura(run.app.world(), actor, 11327),
+        "Vanish must survive its own cast event"
+    );
     literal_rotation::execution::execute(
-        run.app.world_mut(), actor,
+        run.app.world_mut(),
+        actor,
         literal_rotation::execution::Execution::Spell(703, target, Some(target)),
-    ).unwrap();
+    )
+    .unwrap();
     for _ in 0..80 {
         run.app.update();
     }
-    assert_eq!(run.app.world().resource::<VanishRemovals>().0, [crate::auras::RemoveReason::Consumed]);
+    assert_eq!(
+        run.app.world().resource::<VanishRemovals>().0,
+        [crate::auras::RemoveReason::Consumed]
+    );
     assert!(!crate::auras::has_aura(run.app.world(), actor, 11327));
-    assert!(!crate::auras::has_aura(run.app.world(), actor, 1784), "harmful re-entry must not re-stealth at the old Vanish expiry");
-    assert!(crate::auras::has_aura(run.app.world(), actor, 392401), "harmful re-entry earns the real post-stealth Garrote window");
+    assert!(
+        !crate::auras::has_aura(run.app.world(), actor, 1784),
+        "harmful re-entry must not re-stealth at the old Vanish expiry"
+    );
+    assert!(
+        crate::auras::has_aura(run.app.world(), actor, 392401),
+        "harmful re-entry earns the real post-stealth Garrote window"
+    );
 }

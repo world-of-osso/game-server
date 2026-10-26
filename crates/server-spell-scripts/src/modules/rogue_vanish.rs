@@ -84,12 +84,19 @@ fn register(scripts: &mut AuraScripts) {
 }
 
 fn breaks_vanish(world: &World, _aura: &AuraInstance, event: &AuraEvent) -> bool {
-    let Some(id) = event.spell_id else { return true };
-    let spell = world.resource::<SpellStore>().get(id)
+    let Some(id) = event.spell_id else {
+        return true;
+    };
+    let spell = world
+        .resource::<SpellStore>()
+        .get(id)
         .expect("native Vanish proc source spell");
     // rogue1953–1954 honors SX_NO_STEALTH_BREAK (attribute37). Native1856
     // is a melee-class spell, but must not consume its own new11327 charge.
-    !spell.misc.as_ref().is_some_and(|misc| misc.attributes[1] & DOES_NOT_BREAK_STEALTH != 0)
+    !spell
+        .misc
+        .as_ref()
+        .is_some_and(|misc| misc.attributes[1] & DOES_NOT_BREAK_STEALTH != 0)
 }
 
 fn expire_to_stealth(world: &mut World, unit: Entity, aura: &AuraInstance, reason: RemoveReason) {
