@@ -717,6 +717,11 @@ Rotation/decision implementation belongs to the lead/rotation agents. No system 
 
 - Projection qualification retains the Demonology owner's gate: `demonology_ --ignored --skip demonology_implosion_`. The excluded Implosion test is the owner's existing master RED, not a Malefic Grasp regression (same exclusion as trainsdd4e681ed7/d577e0ad22). Native Affliction cast and Frost literal opener remain required.
 
+### Affliction Nightfall uses
+
+- Native264571 stacks are independent next-spell uses, not a multiplier of its native effect amounts. One ordinary instant Shadow Bolt consumes one admitted use. A proc earned during a hardcast remains for the next action (`sc_warlock_actions.cpp877–878`).
+- Drain Soul/Grasp consume one use on execution. Two uses retain the same native duration and tick-period reduction as one use; they cannot collapse the channel (`actions199/2151–2163/2182/2299–2311/2338`).
+
 ### Affliction earned Shard Instability
 
 - Selected native1260264 rolls its native effect1 chance on landed Shadow Bolt and effect0 chance on actual Drain Soul/Malefic Grasp ticks, using independent accumulated-probability streams for Bolt and the shared channels. Native1260269 owns stacks, lifetime and spell modifiers.

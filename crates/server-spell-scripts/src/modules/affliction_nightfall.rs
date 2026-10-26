@@ -16,6 +16,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::PeriodicDamageFinished(landed_tick),
     SpellScriptHook::AfterForegroundSpecial(consume_earned_use),
     SpellScriptHook::CastTimeProcs(&[BUFF]),
+    SpellScriptHook::PreserveUnadmittedProcs(&[BUFF]),
 ];
 
 #[derive(Component)]
@@ -99,19 +100,10 @@ fn sataiel_multiplier(world: &World, caster: Entity) -> f64 {
 }
 
 fn consume_earned_use(world: &mut World, caster: Entity, spell: &SpellInfo) {
-    if !matches!(spell.id, 686 | 198590 | 1261153) {
-        return;
-    }
-    // SimC76f8118 actions877–878/2182/2338: instant Shadow Bolt consumes an
-    // admitted use; Drain Soul and Grasp consume one on execution regardless.
-    let admitted = world.get::<ActiveAuras>(caster).is_some_and(|auras| {
-        auras.iter().any(|aura| {
-            aura.caster == caster
-                && aura.spell_id == BUFF
-                && spell.cast_proc_mods.contains(&aura.instance_id)
-        })
-    });
-    if spell.id != 686 || admitted {
+    // SimC76f8118 actions877–878/2182/2338: ordinary instant Bolt spends one
+    // admitted native modifier charge. Channels do not admit a cast-time use,
+    // so PreserveUnadmittedProcs leaves their one manual decrement here.
+    if matches!(spell.id, 198590 | 1261153) {
         super::cast_relationships::decrement(world, caster, BUFF);
     }
 }
