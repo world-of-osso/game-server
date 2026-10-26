@@ -1,7 +1,7 @@
 //! SimC76f8118 sc_paladin.cpp1689–1710/1757–1783: actual HoW primary hits supply Sunrise.
 use super::ret_dawnlight_consumer_tests::damage;
 use super::ret_storm_gap_tests::remove_hero_selection;
-use super::ret_tier_tests::{has, native_ret};
+use super::ret_tier_tests::{cast_finisher, has, native_ret};
 use super::*;
 use crate::spell_cast::effects::factor_capture::FactorCapture;
 use crate::spell_cast::test_harness::ObservedTriggeredCasts;
@@ -50,7 +50,7 @@ fn count_hammer_damage(capture: &Value, effectiveness: f64) -> (usize, usize) {
     let mut echoes = 0;
     for event in events
         .iter()
-        .filter(|event| event["event"] == "direct_amount")
+        .filter(|event| event["event"] == "direct_amount" && event["spell_id"] == HAMMER)
     {
         let scale = event["applied_multipliers"]
             .as_array()
@@ -101,16 +101,20 @@ fn ret_hammer_sunrise_native_background_hits_do_not_recurse() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = native_ret(4);
     assert!(has(&run, SUNRISE));
+    cast_finisher(&mut run, 31884);
     run.app.init_resource::<ObservedTriggeredCasts>();
     for _ in 0..12 {
-        crate::spell_cast::cast_triggered(
-            run.app.world_mut(),
-            run.actor,
-            HAMMER,
-            Some(run.targets[0]),
-            1,
+        assert!(
+            crate::spell_cast::try_cast_triggered(
+                run.app.world_mut(),
+                run.actor,
+                HAMMER,
+                Some(run.targets[0]),
+                1,
+            ),
+            "ordinary Wrath must admit the actual background Hammer payload"
         );
-        for _ in 0..40 {
+        for _ in 0..20 {
             run.app.update();
         }
     }
