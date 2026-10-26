@@ -18,6 +18,36 @@ fn strike_hits(run: &Run) -> usize {
         .count()
 }
 
+fn cast_strike_observing_delay(run: &mut Run, target: Entity) {
+    for _ in 0..1200 {
+        let before = strike_hits(run);
+        match crate::spell_cast::creature_cast(
+            run.app.world_mut(),
+            run.actor,
+            17364,
+            Some(target),
+            false,
+        ) {
+            Ok(()) => {
+                assert!(
+                    strike_hits(run) <= before + 2,
+                    "Stormflurry cannot emit extra weapon hits synchronously with its producing root"
+                );
+                preparation::finish_pending_setup(run).unwrap();
+                return;
+            }
+            Err(
+                crate::spell_cast::CastFailure::OnGlobalCooldown
+                | crate::spell_cast::CastFailure::OnCooldown
+                | crate::spell_cast::CastFailure::NoCharges
+                | crate::spell_cast::CastFailure::InProgress,
+            ) => run.app.update(),
+            Err(reason) => panic!("Stormflurry native root: {reason:?}"),
+        }
+    }
+    panic!("Stormflurry fixture Strike did not become ready");
+}
+
 #[test]
 #[ignore = "native263 reference inputs and private world database"]
 fn enhancement_stormflurry_earns_delayed_weapon_repeats_without_extra_button_casts() {
@@ -36,7 +66,7 @@ fn enhancement_stormflurry_earns_delayed_weapon_repeats_without_extra_button_cas
     let target = run.targets[0];
     let mut buttons = 0;
     for _ in 0..40 {
-        enhancement_generation_tests::cast(&mut run, 17364, target);
+        cast_strike_observing_delay(&mut run, target);
         buttons += 1;
         if strike_hits(&run) > 2 * buttons {
             break;

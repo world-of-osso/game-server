@@ -18,7 +18,7 @@ const STORMBLAST_DAMAGE: u32 = 390287;
 const MASTERY: u32 = 77223;
 const ELEMENTAL_WEAPONS: u32 = 384355;
 
-#[derive(Component)]
+#[derive(Component, Clone, Copy)]
 struct StrikeSnapshot {
     stormblast: bool,
 }
@@ -70,6 +70,30 @@ fn grant_stormsurge(world: &mut World, caster: Entity) {
         .expect("native Stormstrike charge category")
         .charge_category;
     spell_cast::restore_charges(world, caster, category, u8::MAX);
+}
+
+pub(super) fn snapshotted(world: &World, caster: Entity) -> bool {
+    world
+        .get::<StrikeSnapshot>(caster)
+        .is_some_and(|state| state.stormblast)
+}
+
+pub(super) fn execute_flurry(
+    world: &mut World,
+    caster: Entity,
+    payload: &crate::spell_info::SpellInfo,
+    stormblast: bool,
+) {
+    let previous = world.get::<StrikeSnapshot>(caster).copied();
+    world
+        .entity_mut(caster)
+        .insert(StrikeSnapshot { stormblast });
+    spell_cast::launch_triggered_spell(world, caster, payload, payload.cast_primary_target, 1);
+    if let Some(previous) = previous {
+        world.entity_mut(caster).insert(previous);
+    } else {
+        world.entity_mut(caster).remove::<StrikeSnapshot>();
+    }
 }
 
 pub(super) fn snapshot(world: &mut World, caster: Entity, spell: u32, depth: u8) {
