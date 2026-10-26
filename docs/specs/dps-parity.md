@@ -470,3 +470,9 @@ Elemental Blast117014 grants one native118522/173183/173184 buff after its cast;
 ## Out of scope
 
 Rotation/decision implementation belongs to the lead/rotation agents. No system install, native-table re-export, canonical data mutation or protocol change without demonstrated need. Reference SimC is the official local CLI-only source build at76f8118cf3f7f41dad20708e8328e1f4ab2deebc (embedded70391); server inputs remain70448. Durable evidence lives in `game-engine/data/diagnostics/dps-parity-2026-10-21/`.
+
+### Affliction265 literal fixture
+
+- Spec265 uses the exact exported76f8118 Affliction action rows through shared Program/Driver/Prepared/Equipment. Native player identity, spell knowledge, costs, clocks, target selection and70448 values remain authoritative.
+- Precombat summons the profile-selected pet and executes its first eligible harmful precast. Darkglare activity and remaining lifetime come from real owned summons; Malefic Grasp requires that actual pet. Channel chaining and interruptions use shared native channel decisions.
+- The fixture does not grant shards, buffs or reference damage. Numeric ST/3T parity remains separately measurement-gated.
