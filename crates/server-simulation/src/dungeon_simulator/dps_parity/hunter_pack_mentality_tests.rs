@@ -57,6 +57,12 @@ fn native_bm_pack_mentality_recovers_real_barbed_recharge_after_consuming_howl()
         false,
     )
     .expect("ordinary Barbed starts native recharge");
+    preparation::finish_pending_setup(&mut run).unwrap();
+    assert!(
+        crate::auras::has_aura(run.app.world(), run.actor, 471878)
+            && crate::auras::has_aura(run.app.world(), run.actor, 472324),
+        "both earned beasts must remain ready after Barbed and its real GCD"
+    );
     let before = barbed_recharge(&run);
     let reduction = f64::from(crate::spell_cast::scripts::script_effect_value(
         run.app.world(),
