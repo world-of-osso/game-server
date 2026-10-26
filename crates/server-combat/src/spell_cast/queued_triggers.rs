@@ -13,6 +13,7 @@ enum QueuedCastKind {
     CostedTrigger,
     NormalForce,
     FullTrigger,
+    ApplyOwnedAura,
     RemoveOwnedAura,
     ScaledFullTrigger(f32),
 }
@@ -153,11 +154,13 @@ pub fn schedule_full_trigger(
 
 /// SimC76f8118 sc_mage.cpp5585–5605/7272–7293: apply or clear a
 /// feedback buff after the current hit batch, retaining native aura payloads.
+/// The source calls buff.trigger, not action.execute: grants must not emit
+/// spell-hit events that can activate unrelated equipment or cast policies.
 pub fn schedule_buff_outcome(world: &mut World, caster: Entity, spell_id: u32, grant: bool) {
     let due_ms = now_ms(world);
     let trigger = QueuedTrigger {
         kind: if grant {
-            QueuedCastKind::FullTrigger
+            QueuedCastKind::ApplyOwnedAura
         } else {
             QueuedCastKind::RemoveOwnedAura
         },
@@ -342,6 +345,18 @@ pub(crate) fn resolve_due(world: &mut World) {
                 ) {
                     warn!(spell = trigger.spell_id, "Delayed scaled spell refused");
                 }
+            }
+            QueuedCastKind::ApplyOwnedAura => {
+                crate::auras::apply_aura(
+                    world,
+                    &crate::auras::AuraApplication {
+                        caster: trigger.caster,
+                        target: trigger.target,
+                        spell_id: trigger.spell_id,
+                        effect_mask: u32::MAX,
+                        source: crate::auras::AuraSource::Cast,
+                    },
+                );
             }
             QueuedCastKind::RemoveOwnedAura => {
                 crate::auras::remove_auras(

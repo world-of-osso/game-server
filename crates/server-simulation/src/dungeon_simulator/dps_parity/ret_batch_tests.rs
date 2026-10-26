@@ -72,6 +72,8 @@ fn dps_parity_ret_batch_primary_is_not_its_own_splash() {
     for spell in [20271, 24275] {
         let _seed = crate::random::seed_scope(70448);
         let mut run = native_ret(4);
+        // Isolate the ordinary splash; selected Sunrise now legitimately adds a same-ID hit.
+        super::ret_aurora_tests::unselect_ret_talent(&mut run, 431474);
         if spell == 24275 {
             cast_finisher(&mut run, 31884);
         }
