@@ -43,6 +43,7 @@ GATHER_SECONDS = 300
 ISOLATED_PER_CYCLE = 3
 # Global concurrent spec measurements; each spec can run both target counts in parallel.
 MEASURE_PARALLEL = 8
+MEASURE_SEEDS = "70448,1,2,3,4,5,6,7,8,9"
 ASSISTED_DB2 = "/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/dps-parity-2026-10-21/native-player-inputs/assisted-70448/"
 RUNNER = "CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER"
 
@@ -668,11 +669,14 @@ def push(entries, log):
     return None, []
 
 
+PARITY_BUILD_ARGS = ("test", "--locked", "-p", "server-simulation", "--lib", "--no-run",
+                     "--message-format=json-render-diagnostics")
+
+
 def parity_executable(log):
     with timed(log, "parity-build", tree_id()):
         out = subprocess.run(
-            [str(AGENT_RUN), "merge-train", "cargo", "test", "--locked", "-p", "server-simulation",
-             "--lib", "--no-run", "--message-format=json-render-diagnostics"],
+            [str(AGENT_RUN), "merge-train", "cargo", *PARITY_BUILD_ARGS],
             cwd=TREE, env=base_env(), text=True, capture_output=True, check=False)
     with log.open("a") as f:
         f.write(out.stderr)
@@ -694,7 +698,8 @@ def measure_spec(entry, measurement, executable, target, log, tree, previous=Non
                "--world-db", measurement["world_db"], "--output", measurement["output"]]
     with timed(log, "measure", tree, entry=entry["id"], spec=measurement["spec"]):
         out = subprocess.run(command, cwd=TREE,
-                             env=base_env() | entry.get("env", {}) | {"CARGO_TARGET_DIR": str(target)},
+                             env=base_env() | {"DPS_PARITY_SEEDS": MEASURE_SEEDS} | entry.get("env", {})
+                             | {"CARGO_TARGET_DIR": str(target)},
                              text=True, capture_output=True, check=False)
     return [line for line in out.stdout.splitlines() if "NATIVE_DPS" in line or "FAILED" in line]
 
@@ -849,6 +854,57 @@ def land(entries, log):
     measure_then_write(pushed, log)
 
 
+def cargo_config_files():
+    """External Cargo config also affects the otherwise tree-keyed parity build."""
+    cargo_home = Path(os.environ.get("CARGO_HOME", Path.home() / ".cargo"))
+    directories = [cargo_home, *(parent / ".cargo" for parent in (TREE, *TREE.parents))]
+    return tuple((str(path), path.read_bytes() if path.is_file() else None)
+                 for directory in directories for path in (directory / "config", directory / "config.toml"))
+
+
+def isolated_measure_groups(entries):
+    """Group only conflict-free entries resolving to the same parity build inputs."""
+    groups = {}
+    if entries:
+        reset_tree()
+    base = git("rev-parse", "origin/master").stdout.strip() if entries else None
+    environment = tuple(sorted(base_env().items()))
+    configs = cargo_config_files()
+    for entry in entries:
+        resolved = git("merge-tree", "--write-tree", base, entry["commit"], check=False)
+        if resolved.returncode:
+            key = ("conflict", entry["id"])
+        else:
+            tree = resolved.stdout.splitlines()[0]
+            build_env = tuple(sorted((key, value) for key, value in entry.get("env", {}).items()
+                                     if key.startswith(("CARGO_", "RUST", "LD_"))))
+            key = (tree, PARITY_BUILD_ARGS, environment, configs, build_env)
+        groups.setdefault(key, []).append(entry)
+    return base, list(groups.values())
+
+
+def build_isolated_group(group, log, base):
+    """Check one representative; identical resolved trees have the same verdict."""
+    representative, *siblings = group
+    passed, failed = build_and_test([representative], log)
+    # reset_tree fetches master; a changed base invalidates the grouping proof.
+    if siblings and git("rev-parse", "origin/master").stdout.strip() != base:
+        for entry in siblings:
+            (RUNNING / f"{entry['id']}.json").rename(QUEUE / f"{entry['id']}.json")
+        return passed, failed
+    if passed:
+        return group, []
+    if failed:
+        for entry in siblings:
+            entry["status"] = failed[0]["status"]
+            entry["reason"] = failed[0]["reason"]
+        write_results(siblings)
+        return [], failed + siblings
+    for entry in siblings:
+        (RUNNING / f"{entry['id']}.json").rename(QUEUE / f"{entry['id']}.json")
+    return [], []
+
+
 def run_probes(probes, gated, log):
     """Probes, then the RED twins of gated landings, each in a tree that is never pushed.
     Returns the gated landings whose RED was observed."""
@@ -871,14 +927,16 @@ def run_probes(probes, gated, log):
     # shared: their verdict is pass/fail, and the landing measurement on master is the real number.
     isolated = [e for e in probes if e["measure"] and not e["tests"]]
     shared = [e for e in probes if e not in isolated]
-    # Each isolated tree costs a check, a test build and a parity build; past a few per cycle they
-    # dominated it (cycle-20261026T151410: 8 trees, 40+ min). The rest wait for the next cycle.
-    for entry in isolated[ISOLATED_PER_CYCLE:]:
-        (RUNNING / f"{entry['id']}.json").rename(QUEUE / f"{entry['id']}.json")
-    isolated = isolated[:ISOLATED_PER_CYCLE]
+    # Bound distinct isolated builds, not entries sharing a resolved parity-build tree.
+    isolated_base, isolated_groups = isolated_measure_groups(isolated)
+    for group in isolated_groups[ISOLATED_PER_CYCLE:]:
+        for entry in group:
+            (RUNNING / f"{entry['id']}.json").rename(QUEUE / f"{entry['id']}.json")
+    isolated_groups = isolated_groups[:ISOLATED_PER_CYCLE]
     passed, failed = [], []
-    for group in ([shared] if shared else []) + [[e] for e in isolated]:
-        group_passed, group_failed = build_and_test(group, log)
+    for group in ([shared] if shared else []) + isolated_groups:
+        group_passed, group_failed = (build_and_test(group, log) if group is shared
+                                      else build_isolated_group(group, log, isolated_base))
         for entry in group_passed:
             entry["status"] = "probe passed"
         # Measure now, while the tree is still this group's: the next build replaces it.
