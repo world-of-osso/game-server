@@ -5,7 +5,7 @@ use crate::spell_cast::test_harness::ObservedCombatEvents;
 use server::simc_apl::Facts;
 use shared::protocol::CombatLogKind;
 
-fn try_cast_native_generator(run: &mut Run, target: Entity) {
+pub(super) fn try_cast_native_generator(run: &mut Run, target: Entity) {
     for spell in [470057, 17364] {
         match crate::spell_cast::creature_cast(
             run.app.world_mut(),
