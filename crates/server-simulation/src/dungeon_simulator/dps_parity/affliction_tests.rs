@@ -256,6 +256,25 @@ fn affliction_agony_landed_ticks_energize_native_whole_shards() {
 
 #[test]
 #[ignore = "requires private265 profile and native70448 world DB"]
+fn affliction_sayaad_reacts_to_owner_damage_only_when_not_passive() {
+    for react in [shared::protocol::REACT_ASSIST, shared::protocol::REACT_PASSIVE] {
+        let _seed = crate::random::seed_scope(70448);
+        let mut run = prepare_measurement(265, 1).unwrap();
+        let pet = crate::hunter_pet::summoned_pet(run.app.world(), run.actor).unwrap();
+        run.app.world_mut().get_mut::<crate::pet_control::PetCharm>(pet).unwrap().react = react;
+        engage(&mut run);
+        let (caster, target) = (run.actor, run.targets[0]);
+        crate::spell_cast::cast_triggered(run.app.world_mut(), caster, 686, Some(target), 0);
+        for _ in 0..40 {
+            run.app.update();
+        }
+        let victim = run.app.world().get::<crate::combat::AutoAttack>(pet).map(|attack| attack.victim);
+        assert_eq!(victim, (react == shared::protocol::REACT_ASSIST).then_some(target));
+    }
+}
+
+#[test]
+#[ignore = "requires private265 profile and native70448 world DB"]
 fn affliction_literal_sayaad_attacks_primary_with_melee_and_lash() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_measurement(265, 1).unwrap();
