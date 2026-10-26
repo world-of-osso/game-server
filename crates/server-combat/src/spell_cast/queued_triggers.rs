@@ -229,6 +229,7 @@ pub(super) fn schedule_normal_cast(
 
 /// Remove one event before invoking it; nested zero-delay events follow it.
 pub(crate) fn resolve_due(world: &mut World) {
+    super::scripts::resolve_frost_mage_events(world);
     let now_ms = now_ms(world);
     loop {
         let Some(trigger) = world.resource_mut::<PendingTriggers>().pop_due(now_ms) else {

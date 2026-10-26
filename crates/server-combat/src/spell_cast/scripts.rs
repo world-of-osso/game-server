@@ -32,7 +32,10 @@ mod batch8;
 mod batch9;
 mod frost;
 mod frost_mage;
+mod frost_mage_events;
+pub(super) use frost_mage_events::resolve as resolve_frost_mage_events;
 mod frost_mage_procs;
+mod frost_mage_supply;
 pub(super) use frost_mage_procs::snapshot_launch_auras as snapshot_frost_launch_auras;
 mod periodic_attacks;
 pub(crate) use periodic_attacks::{after_periodic_trigger, rolls_reapplication};
@@ -109,6 +112,7 @@ pub(crate) fn owns_policy_proc(world: &World, spell: u32) -> bool {
     policies::owns_policy_proc(world, spell)
         || frost::owns_proc(spell)
         || frost_mage_procs::owns_proc(spell)
+        || frost_mage_supply::owns_proc(spell)
 }
 mod fire_procs;
 pub(crate) mod holy_priest;
@@ -205,6 +209,7 @@ pub(super) fn finish_scripted_launch(
 ) {
     elemental::after_launch(world, caster, spell, consumed, depth, foreground);
     frost::after_launch(world, caster, spell, foreground);
+    frost_mage_supply::after_launch(world, caster, spell);
     policies::pet_sets::finish_cobra(world, caster, spell);
     script_registry::after_counter_launch(world, caster, spell.id);
     unbroken_rhythm::after_launch(world, caster, spell.id);
@@ -824,6 +829,7 @@ pub fn after_cast(world: &World, spell_id: u32) -> impl Iterator<Item = AfterCas
     native_after_cast(world, spell_id)
         .into_iter()
         .chain(frost_mage_procs::after_cast_hook(spell_id))
+        .chain(frost_mage_supply::after_cast_hook(spell_id))
         .chain(policies::after_cast_hook(world, spell_id))
         .chain(spellslinger::after_cast_hook(spell_id))
         .chain(batch9::after_cast_hook(spell_id))

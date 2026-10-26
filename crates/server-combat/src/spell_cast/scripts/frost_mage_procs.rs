@@ -63,7 +63,7 @@ fn after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
         return;
     }
     match spell.id {
-        84714 => grant_orb_procs(world, caster),
+        84714 => grant_orb_procs(world, caster, spell.cast_primary_target),
         // sc_mage.cpp4455–4462: spend at execution, not at impact.
         30455 => {
             for &aura in &spell.cast_launch_auras {
@@ -95,7 +95,7 @@ fn apply_buff(world: &mut World, caster: Entity, spell: u32) {
     );
 }
 
-fn grant_orb_procs(world: &mut World, caster: Entity) {
+fn grant_orb_procs(world: &mut World, caster: Entity, primary: Option<Entity>) {
     // sc_mage.cpp4186–4190: native selected Orb producers, independently
     // of the ground damage pulses and their recipients.
     if auras::has_aura(world, caster, 460590) {
@@ -112,22 +112,40 @@ fn grant_orb_procs(world: &mut World, caster: Entity) {
     if auras::has_aura(world, caster, 378406) {
         let chance = super::script_effect_value(world, caster, 378406, 0);
         if crate::random::random::<f32>() * 100.0 < chance {
-            grant_brain_freeze(world, caster);
+            grant_brain_freeze(world, caster, primary);
         }
     }
 }
 
-fn grant_brain_freeze(world: &mut World, caster: Entity) {
+fn grant_brain_freeze(world: &mut World, caster: Entity, primary: Option<Entity>) {
+    complete_brain_freeze(world, caster, false);
+    super::frost_mage_supply::after_brain_freeze(world, caster, primary);
+}
+
+pub(super) fn grant_random_brain_freeze(world: &mut World, caster: Entity) {
+    if auras::has_aura(world, caster, BRAIN_FREEZE) {
+        super::frost_mage_events::schedule_brain_freeze(world, caster);
+    } else {
+        complete_brain_freeze(world, caster, true);
+    }
+}
+
+pub(super) fn refresh_random_brain_freeze(world: &mut World, caster: Entity) {
+    complete_brain_freeze(world, caster, true);
+}
+
+fn complete_brain_freeze(world: &mut World, caster: Entity, restore_one: bool) {
     apply_buff(world, caster, BRAIN_FREEZE);
-    // sc_mage.cpp7430–7433: a guaranteed Brain Freeze resets all Flurry
-    // charges, rather than starting a new cooldown or restoring only one.
+    // sc_mage.cpp7412–7433: guaranteed producers reset all charges;
+    // random producers restore one, with a150ms delay if BF was already up.
     let category = world
         .resource::<SpellStore>()
         .get(44614)
         .and_then(|spell| spell.categories.as_ref())
         .expect("native Flurry charge category")
         .charge_category;
-    spell_cast::restore_charges(world, caster, category, u8::MAX);
+    let count = if restore_one { 1 } else { u8::MAX };
+    spell_cast::restore_charges(world, caster, category, count);
 }
 
 fn spend_owned_stack(world: &mut World, caster: Entity, spell: u32) {
