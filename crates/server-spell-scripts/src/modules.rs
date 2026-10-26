@@ -80,6 +80,7 @@ register_modules! {
     enhancement_armor: (2630, "modules/enhancement_armor.rs"),
     essence_burst: (140, "modules/essence_burst.rs"),
     evoker_burnout: (1000, "modules/evoker_burnout.rs"),
+    evoker_rising_fury: (1000, "modules/evoker_rising_fury.rs"),
     evoker_tier: (160, "modules/evoker_tier.rs"),
     execution_counters: (320, "modules/execution_counters.rs"),
     feral_convoke: (1033, "modules/feral_convoke.rs"),
