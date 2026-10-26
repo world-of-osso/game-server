@@ -30,7 +30,7 @@ fn grant_after_cast(world: &mut World, caster: Entity, _: &SpellInfo) {
     grant_counters(world, caster);
 }
 
-fn after_kingsbane_hit(world: &mut World, ctx: &EffectCtx, _: Entity, _: bool) {
+fn after_kingsbane_hit(world: &mut World, ctx: &EffectCtx) {
     // sc_rogue.cpp4947–4961: successful Kingsbane impact, never its DoT.
     if ctx.spell.id == 385627 && ctx.depth == 0 {
         grant_counters(world, ctx.caster);
