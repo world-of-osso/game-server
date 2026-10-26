@@ -357,6 +357,16 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 ### Arms literal controller
 
+- With selected Bloodletting383154 and Rend772, actual Mortal Strike impacts (including background Unhinged) apply native Rend388539 only below Bloodletting's native effect3 health threshold. Ordinary higher-health impacts cannot grant it (`sc_warrior.cpp3122–3123`).
+
+- Equipped MID2 Arms4pc1296644 grants native Winding Up1300670 once per Mortal Strike/Overpower execution, including background MS, preserving its native ICD/magnitude/cap. Slam-family executions (1464/1269383) cannot produce it and expire all current stacks only after their damage resolves (`sc_warrior.cpp3111–3112,5494–5495,3537–3538`).
+
+- Selected Heroic Might1269307 accumulates native-capped Heroic Strike uses separately from its active Colossus Smash window. The next CS transfers pending stacks into native1292058 for the wound's native duration and clears pending uses; Heroics after CS cannot change its current window. Native label2443 modifiers supply both spell/white-swing vulnerability amounts (`sc_warrior.cpp3571–3573,3761–3764,1729–1730`).
+
+- Selected Just Warming Up1261048 grants its native effect1 raw Rage once after completed Colossus Smash167105. AoE victims do not multiply that resource grant, and automatic swing Rage is independent (`sc_warrior.cpp3781–3782`).
+
+- Selected Master of Warfare1269306 binds the native damage/critical-damage modifier effects of its earned1269394 buff from the talent's rank values divided by10. Each actual stack applies those modifiers; the buff's separate native armor penetration is unchanged (`sc_warrior.cpp7888–7891,7902–7907`).
+
 - Equipped MID2 Arms2pc1296643 makes each Slam-family execution (1464 and inherited Heroic Strike1269383, including background Slam) launch native Concussive Slam1300660 once. Its damage excludes the original primary; native payload selection retains radius/enemy eligibility (`sc_warrior.cpp3443–3453,3534–3535,3551–3562`).
 
 - With selected Fatality383703, actual Execute damage260798 resolves native383706 against the caster-owned383704 marks. Damage scales with the actual mark stacks, cannot crit, and consumes those marks on its impact without consuming another caster's marks (`sc_warrior.cpp4251–4252,4404–4423`).

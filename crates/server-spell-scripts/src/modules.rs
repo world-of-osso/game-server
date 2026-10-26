@@ -52,6 +52,7 @@ register_modules! {
     arcane_feedback: (620, "modules/arcane_feedback.rs"),
     arms_concussive_slam: (718, "modules/arms_concussive_slam.rs"),
     arms_fatality: (717, "modules/arms_fatality.rs"),
+    arms_followups: (719, "modules/arms_followups.rs"),
     arms_mortal_wounds: (715, "modules/arms_mortal_wounds.rs"),
     arms_paid_cooldowns: (712, "modules/arms_paid_cooldowns.rs"),
     arms_tactical_edge: (716, "modules/arms_tactical_edge.rs"),
