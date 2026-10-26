@@ -62,8 +62,12 @@ fn damage_products(run: &Run) -> Vec<f64> {
         .as_array()
         .unwrap()
         .iter()
-        .filter(|event| event["event"] == "direct_amount" && event["spell_id"] == BOLT)
-        .map(|event| event["native_spell_mod_product"].as_f64().unwrap())
+        .filter(|event| event["event"] == "result" && event["spell_id"] == BOLT)
+        .map(|event| {
+            event["factors"]["native_spell_mod_product"]
+                .as_f64()
+                .unwrap()
+        })
         .collect()
 }
 
