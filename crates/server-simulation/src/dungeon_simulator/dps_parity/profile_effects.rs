@@ -126,6 +126,7 @@ const NAMED_EXPANSION_ENTRIES: &[(&str, u32)] = &[
     ("rune_of_selfmending", 136819),
     ("rune_of_lingering", 136817),
     ("rune_of_critical_power", 136815),
+    ("rune_of_masterful_cunning", 136818),
     ("rune_of_overload", 136814),
     ("rune_of_lynxlike_reflexes", 136823),
     ("rune_of_burning_haste", 136821),
