@@ -36,7 +36,8 @@ const DOTS: &[u32] = &[589, VT, MADNESS];
 // Current native Shadow APL damage; not item/racial procs or reflected self damage.
 // sc_priest.cpp194/1220; sc_priest_shadow.cpp40/561/756/835/1186/1435/1709.
 const WEAVING_PAYLOADS: &[u32] = &[
-    589, 8092, 15407, 32379, VT, 263165, MADNESS, 391403, 450983, DAMAGE, 1242189,
+    589, 8092, 15407, 32379, VT, 263165, MADNESS, 373279, 391403, 413231, 450983, DAMAGE, 1231479,
+    1242189, 1264176,
 ];
 
 /// SimC sc_priest_shadow.cpp1819–1826 explicitly authors500ms, absent in data.
@@ -101,7 +102,7 @@ fn apply_slam_dots(world: &mut World, caster: Entity, mut units: Vec<Entity>, de
     }
 }
 
-fn owns_dot(world: &World, caster: Entity, target: Entity, spell: u32) -> bool {
+pub(super) fn owns_dot(world: &World, caster: Entity, target: Entity, spell: u32) -> bool {
     let now = spell_cast::now(world);
     world.get::<ActiveAuras>(target).is_some_and(|auras| {
         auras.iter().any(|aura| {

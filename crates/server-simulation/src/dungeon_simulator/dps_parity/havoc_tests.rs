@@ -176,7 +176,7 @@ fn havoc_literal_fixture_executes_source_actions() {
         assert!(
             actions.iter().any(|row| {
                 ids.iter().any(|id| row["spell_id"] == *id)
-                    && row["count"].as_u64().unwrap_or(0) > 0
+                    && row["count"].as_f64().expect("numeric mean cast count") > 0.0
             }),
             "literal source ability {ids:?} must execute: {actions:?}"
         );

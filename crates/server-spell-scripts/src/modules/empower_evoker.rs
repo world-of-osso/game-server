@@ -134,7 +134,7 @@ pub(crate) fn build_fire_breath_release(world: &World, caster: Entity, rank: u8)
     child
 }
 
-fn build_eternity_surge_release(world: &World, caster: Entity, rank: u8) -> SpellInfo {
+pub(super) fn build_eternity_surge_release(world: &World, caster: Entity, rank: u8) -> SpellInfo {
     let mut child = world
         .resource::<SpellStore>()
         .get(SURGE_DAMAGE)
