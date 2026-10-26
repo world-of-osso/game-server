@@ -164,6 +164,7 @@ impl Rotation {
         let facts = UnholyFacts {
             world,
             actor,
+            primary: targets.first().copied(),
             native: NativeFacts::new(world, actor, &self.bindings, self.encounter, targets.len())
                 .with_targets(targets.first().copied(), targets),
             equipment: &self.equipment,
@@ -243,6 +244,7 @@ impl super::SpecDriver for Rotation {
 struct UnholyFacts<'a> {
     world: &'a World,
     actor: Entity,
+    primary: Option<Entity>,
     native: NativeFacts<'a>,
     equipment: &'a Equipment,
 }
@@ -296,6 +298,42 @@ impl ActionFacts for UnholyFacts<'_> {
         {
             return self.value(name);
         }
+        if name == "duration" {
+            return self.read_action_dot_duration(action);
+        }
         self.native.value_for(action, name)
+    }
+}
+
+impl UnholyFacts<'_> {
+    fn read_action_dot_duration(&self, action: &Action) -> Result<f64, String> {
+        // SimC76f8118 action.cpp3372/dot.cpp448–456: bare duration is this
+        // action's current dot duration; without a captured dot state it is zero.
+        let &(_, spell, self_target) = ACTIONS
+            .iter()
+            .find(|row| row.0 == action.name)
+            .ok_or_else(|| format!("unbound native Unholy action {}", action.name))?;
+        let target = if self_target {
+            Some(self.actor)
+        } else {
+            action
+                .target
+                .and_then(Entity::try_from_bits)
+                .or(self.primary)
+        }
+        .ok_or("native Unholy action duration lacks a target")?;
+        let now = crate::spell_cast::now(self.world);
+        Ok(self
+            .world
+            .get::<crate::auras::ActiveAuras>(target)
+            .into_iter()
+            .flat_map(|auras| auras.iter())
+            .find(|aura| {
+                aura.spell_id == spell
+                    && aura.caster == self.actor
+                    && aura.expires_at.is_none_or(|end| end > now)
+                    && aura.effects.iter().any(|effect| effect.period_ms > 0)
+            })
+            .map_or(0.0, |aura| f64::from(aura.duration_ms) / 1000.0))
     }
 }
