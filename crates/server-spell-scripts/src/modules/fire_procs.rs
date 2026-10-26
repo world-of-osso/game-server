@@ -24,6 +24,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::ResourceContext(&[2120, 1254851]),
     SpellScriptHook::TargetDamageMultiplier(fuel_damage_multiplier),
     SpellScriptHook::TargetDamageMultiplier(scald_damage_multiplier),
+    SpellScriptHook::TargetDamageMultiplier(molten_fury_damage_multiplier),
 ];
 
 const COMBUSTION: u32 = 190319;
@@ -57,6 +58,7 @@ const IGNITE: u32 = 12654;
 const SCORCH: u32 = 2948;
 const FUEL_THE_FIRE: u32 = 416094;
 const SCALD: u32 = 450746;
+const MOLTEN_FURY: u32 = 457803;
 
 #[derive(Component, Default)]
 struct FireProcState {
@@ -351,6 +353,27 @@ fn on_fire_cast(world: &mut World, caster: Entity, spell_id: u32, _depth: u8) {
         let reduction = script_effect_value(world, caster, PYROCOSM, 3);
         reduce_cooldown(world, caster, 108853, f64::from(reduction) / 1000.0);
     }
+}
+
+/// SimC76f8118 sc_mage.cpp6821–6827: selected Molten Fury uses
+/// its native effect1 recipient-health gate and effect2 damage percentage.
+fn molten_fury_damage_multiplier(
+    world: &World,
+    caster: Entity,
+    target: Entity,
+    _spell: &SpellInfo,
+) -> f32 {
+    if !selected(world, caster, MOLTEN_FURY) {
+        return 1.0;
+    }
+    let threshold = script_effect_value(world, caster, MOLTEN_FURY, 0);
+    let execute_active = world
+        .get::<shared::components::Health>(target)
+        .is_some_and(|health| health.current <= health.max * threshold / 100.0);
+    if !execute_active {
+        return 1.0;
+    }
+    1.0 + script_effect_value(world, caster, MOLTEN_FURY, 1) / 100.0
 }
 
 fn scald_damage_multiplier(

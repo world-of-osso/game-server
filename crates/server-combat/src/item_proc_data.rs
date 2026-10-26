@@ -125,7 +125,7 @@ pub(crate) fn default_role_multiplier(world: &World, unit: Entity) -> Result<f32
     })
 }
 
-pub(crate) fn role_multiplier(world: &World, unit: Entity, driver: u32) -> Result<f32, String> {
+pub fn role_multiplier(world: &World, unit: Entity, driver: u32) -> Result<f32, String> {
     world
         .get_resource::<ItemProcInputs>()
         .ok_or("native item proc inputs not initialized")?
