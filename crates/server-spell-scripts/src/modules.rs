@@ -200,6 +200,7 @@ register_modules! {
     subtlety_shadow: (420, "modules/subtlety_shadow.rs"),
     survival: (2550, "modules/survival.rs"),
     survival_buffs: (2553, "modules/survival_buffs.rs"),
+    survival_mastery: (2555, "modules/survival_mastery.rs"),
     survival_pet: (2552, "modules/survival_pet.rs"),
     survival_wildfire: (2551, "modules/survival_wildfire.rs"),
     sweeping_strikes: (711, "modules/sweeping_strikes.rs"),

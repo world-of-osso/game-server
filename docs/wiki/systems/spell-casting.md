@@ -62,7 +62,7 @@ Sources: the named runtime modules and `hunter_{cadence,followup,explosive,salvo
 
 ## Survival native producers — 2026-10-26
 
-[Survival's contract](../../specs/dps-parity.md#survival-literal-controller) uses native70448 values and pinned SimC76f8118 relationships. `survival.rs` grants real Tip uses and dispatches the actual Swipe replacement; `survival_wildfire.rs` owns primary-centred pack geometry and selected Shrapnel periodics. The old `batch14::bomb_primary` bridge is removed.
+[Survival's contract](../../specs/dps-parity.md#survival-literal-controller) uses native70448 values and pinned SimC76f8118 relationships. [Spirit Bond](../../../crates/server-spell-scripts/src/modules/survival_mastery.rs) attaches native459722's authored modifiers to the selected263135 aura lifecycle; native test8fe6c1c91f observed42.1175 versus84.235 and integrated gate0e62bbecfb observed84.235. Independent landing and measurement remain pending. `survival.rs` grants real Tip uses and dispatches the actual Swipe replacement; `survival_wildfire.rs` owns primary-centred pack geometry and selected Shrapnel periodics. The old `batch14::bomb_primary` bridge is removed.
 
 Sentinel reuses `marksmanship_sentinel.rs` for owned mark grants, consumption, Lunar Storm and running cooldown reductions. Actual Takedown with Lunar Calling force-marks its hostile primary. Tip consumption queues real caster/target pairs until after the impact batch, so Wildfire can consume an old mark before earning another. Survival reads native Sentinel chance, including Moon's Blessing through label5585, then Lunar Calling's distinct Survival effect during Takedown. MM's manual Moon addition and its separate native chance remain unchanged. Do not add Moon twice or create another mark engine.
 

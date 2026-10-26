@@ -58,6 +58,10 @@
 
 [Fire Ignite](systems/simc-apl.md#fire-fixture-adapter) now applies selected native Ignition's percentage only to each new Flamestrike contribution. Actual noncritical Flamestrike's unchanged tick/damage ratio passed RED→GREEN atfdef43f47 (train47ab06258e). ST178387.61 is unchanged;3T308050.16 remains below band. Direct damage and existing unpaid bank are unchanged.
 
+## 2026-10-26 — Survival Spirit Bond
+
+[Spirit Bond](systems/spell-casting.md#survival-native-producers--2026-10-26) native mastery payload was42.1175 instead of84.235; the authored459722 dependency produces84.235 in the integrated test. The combined gate failed a separate Swipe test, so Spirit is submitted independently; landing and numerical measurement remain pending.
+
 ## 2026-10-26 — Fire Molten Fury execute
 
 [Fire target-versus policy](systems/simc-apl.md#fire-fixture-adapter) now reads selected native Molten Fury's health threshold and damage percentage. Actual Fire Blast RED2689→2689 instead of3092.35 now passes; landeda0c868a8b via traina3b134bbe8. ST178387.61 is90.46% of reference;3T300096.76 is80.88%, so AoE parity remains open. No coefficient changes or generic aura303 rewrite.
