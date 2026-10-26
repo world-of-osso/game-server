@@ -9,7 +9,6 @@ use combat::auras::scripts::AuraScripts;
 use combat::auras::{ActiveAuras, AuraInstance, RemoveReason, has_aura};
 use combat::spell_cast::effects::EffectCtx;
 use combat::spell_cast::script_registry::{ContextHitHook, SpellScriptHook};
-use combat::spell_info::SpellInfo;
 
 const TALENT: u32 = 434300;
 const MARK: u32 = 434473;
@@ -19,7 +18,6 @@ const DAMAGE: u32 = 434481;
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::ContextHit(hit_hook),
     SpellScriptHook::MidAuraRegistration(register),
-    SpellScriptHook::CaptureConsumedDamageModifier(split_damage),
 ];
 
 fn hit_hook(spell: u32) -> Option<ContextHitHook> {
@@ -73,7 +71,7 @@ fn disarm_driver(world: &mut World, target: Entity, mark: &AuraInstance, _reason
 fn check_damage(world: &World, aura: &AuraInstance, event: &AuraEvent) -> bool {
     // sc_evoker.cpp8770–8794: the configured simulated cadence replaces live callbacks.
     if world
-        .get::<crate::simulation::SimulatedBombardments>(aura.caster)
+        .get::<crate::bombardments::SimulatedBombardments>(aura.caster)
         .is_some()
         || event.spell_id == Some(DAMAGE)
         || event.damage <= 0.0
@@ -90,25 +88,7 @@ fn check_damage(world: &World, aura: &AuraInstance, event: &AuraEvent) -> bool {
 }
 
 fn bombard(world: &mut World, target: Entity, driver: &AuraInstance, _event: &AuraEvent) {
-    if !combat::spell_cast::try_cast_triggered(world, driver.caster, DAMAGE, Some(target), 1) {
+    if !crate::bombardments::launch_damage(world, driver.caster, target) {
         warn!(caster=?driver.caster, ?target, "Native Bombardments damage refused");
     }
-}
-
-fn split_damage(
-    _world: &World,
-    _caster: Entity,
-    spell: &mut SpellInfo,
-    _foreground: bool,
-) -> Option<u32> {
-    if spell.id != DAMAGE {
-        return None;
-    }
-    let count = spell.cast_policy_context.as_ref()?.targets.len();
-    if count == 0 {
-        return None;
-    }
-    // sc_evoker.cpp8230–8233: divide the native payload among actual admitted recipients.
-    spell.cast_damage_multiplier = Some(spell.cast_damage_multiplier.unwrap_or(1.0) / count as f32);
-    None
 }

@@ -1,4 +1,5 @@
-//! Explicit simulation-only sources. The live SpellScriptsPlugin never installs these.
+//! Native Bombardments payload and explicitly installed SimC external attempts.
+//! The live SpellScriptsPlugin never installs the simulated cadence.
 use crate::combat;
 use bevy::prelude::*;
 use combat::auras::ActiveAuras;
@@ -13,7 +14,7 @@ pub(crate) struct SimulatedBombardments {
 
 /// SimC76f8118 sc_evoker.cpp1333–1335/8762–8811: external attempts, not damage ticks.
 /// Only the parity simulator calls this installer with its SimC option values.
-pub fn install_bombardments(
+pub fn install_simulation(
     app: &mut App,
     caster: Entity,
     mean: f64,
@@ -34,6 +35,35 @@ pub fn install_bombardments(
         });
     app.add_systems(Last, advance);
     Ok(())
+}
+
+pub(crate) fn launch_damage(world: &mut World, caster: Entity, target: Entity) -> bool {
+    let Some(mut payload) = combat::spell_cast::load_triggered_spell(world, 434481, 1) else {
+        return false;
+    };
+    let effect = payload
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .expect("native Bombardments damage effect0");
+    // Native434481 uses deterministic destination-area selectors. Like Crash Lightning,
+    // count the native recipients immediately before launching the same native payload.
+    let recipients = combat::spell_cast::targets::select_targets(
+        world,
+        caster,
+        Some(target),
+        &payload,
+        effect,
+        0,
+        true,
+    )
+    .unwrap_or_else(|selector| panic!("native Bombardments target selector {selector}"));
+    if recipients.is_empty() {
+        return false;
+    }
+    // sc_evoker.cpp8230–8233: split the unmodified native payload, not its coefficients.
+    payload.cast_damage_multiplier = Some(1.0 / recipients.len() as f32);
+    combat::spell_cast::launch_triggered_spell(world, caster, &payload, Some(target), 1)
 }
 
 fn sample_delay(mean: f64, deviation: f64) -> f64 {
@@ -97,7 +127,7 @@ fn advance(world: &mut World) {
             if !combat::auras::procs::try_native_policy_proc(world, target, instance) {
                 continue;
             }
-            if !combat::spell_cast::try_cast_triggered(world, caster, 434481, Some(target), 1) {
+            if !launch_damage(world, caster, target) {
                 warn!(
                     ?caster,
                     ?target,

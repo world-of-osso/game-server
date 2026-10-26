@@ -225,7 +225,7 @@ fn install_bombardments_simulation(run: &mut super::Run) -> Result<(), String> {
     )?
     .parse::<f64>()
     .map_err(|error| format!("SimC Bombardments deviation: {error}"))?;
-    server_spell_scripts::simulation::install_bombardments(&mut run.app, run.actor, mean, deviation)
+    server_spell_scripts::bombardments::install_simulation(&mut run.app, run.actor, mean, deviation)
 }
 
 pub(super) const REPORT_KEY: Option<&str> = Some("devastation_rotation");
