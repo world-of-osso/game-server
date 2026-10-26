@@ -64,6 +64,13 @@ fn selected(world: &World, caster: Entity, spell: u32) -> bool {
 }
 
 fn begin(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
+    eprintln!(
+        "CONVOKE begin caster={:?} target={target:?} primary={:?} spec={:?} cat={}",
+        ctx.caster,
+        ctx.spell.cast_primary_target,
+        world.get::<ActiveSpec>(ctx.caster).map(|spec| spec.0),
+        combat::auras::has_aura(world, ctx.caster, CAT)
+    );
     if target != ctx.caster {
         return;
     }
@@ -91,6 +98,7 @@ fn roll_channel(world: &mut World, caster: Entity, spell: &SpellInfo, primary: E
     let success = exceptional.draw(guidance);
     world.entity_mut(caster).insert(exceptional);
     let cards = deck::roll_cards(ticks, guidance, success);
+    eprintln!("CONVOKE initialized {caster:?} ticks={ticks} guidance={guidance}");
     Channel { primary, cards }
 }
 
@@ -114,6 +122,11 @@ fn read_tick_budget(world: &World, caster: Entity, spell: &SpellInfo) -> usize {
 }
 
 fn tick(world: &mut World, unit: Entity, _: &AuraInstance, index: u8) {
+    eprintln!(
+        "CONVOKE tick unit={unit:?} index={index} state={} cat={}",
+        world.get::<Channel>(unit).is_some(),
+        combat::auras::has_aura(world, unit, CAT)
+    );
     if index != 0 {
         return;
     }
@@ -133,7 +146,8 @@ fn tick(world: &mut World, unit: Entity, _: &AuraInstance, index: u8) {
     }
 }
 
-fn clear_channel(world: &mut World, unit: Entity, _: &AuraInstance, _: RemoveReason) {
+fn clear_channel(world: &mut World, unit: Entity, _: &AuraInstance, reason: RemoveReason) {
+    eprintln!("CONVOKE remove unit={unit:?} reason={reason:?}");
     world.entity_mut(unit).remove::<Channel>();
 }
 
@@ -224,5 +238,6 @@ fn launch_child(world: &mut World, caster: Entity, id: u32, target: Entity) {
             targets: vec![target],
         }));
     }
-    spell_cast::launch_triggered_spell(world, caster, &spell, Some(target), 1);
+    let admitted = spell_cast::launch_triggered_spell(world, caster, &spell, Some(target), 1);
+    eprintln!("CONVOKE child={id} target={target:?} admitted={admitted}");
 }

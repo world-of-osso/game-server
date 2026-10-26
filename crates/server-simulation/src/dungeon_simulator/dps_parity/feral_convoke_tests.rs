@@ -83,6 +83,31 @@ fn feral_native_cat_convoke_deals_child_damage_without_spending_energy_or_form()
         literal_rotation::execution::Execution::Spell(391528, actor, Some(target)),
     )
     .expect("ordinary selected Convoke channel with preserved hostile primary");
+    eprintln!(
+        "CONVOKE actual spec={:?} cat={} hit_hook={} periodic_hook={} aura={:?}",
+        run.app
+            .world()
+            .get::<shared::components::ActiveSpec>(actor)
+            .map(|spec| spec.0),
+        crate::auras::has_aura(run.app.world(), actor, 768),
+        crate::spell_cast::script_registry::context_hit(run.app.world(), 391528).is_some(),
+        run.app
+            .world()
+            .get_resource::<crate::auras::scripts::AuraScripts>()
+            .and_then(|scripts| scripts.0.get(&391528))
+            .is_some_and(|script| script.on_periodic.is_some()),
+        run.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(actor)
+            .and_then(|auras| auras.iter().find(|aura| aura.spell_id == 391528))
+            .map(|aura| (
+                aura.duration_ms,
+                aura.effects
+                    .iter()
+                    .map(|effect| (effect.index, effect.aura_type, effect.period_ms))
+                    .collect::<Vec<_>>()
+            ))
+    );
     let mut minimum = initial;
     for _ in 0..180 {
         run.app.update();
