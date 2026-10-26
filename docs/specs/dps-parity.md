@@ -18,6 +18,11 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 - Each actual native Splinter impact with selected Spellfrost Teachings444986 reduces the specialization's running Orb cooldown/recharge by its native effect (Arcane index0/Frost index1, milliseconds). The shared reducer updates active native spell, category and charge timers without starting inactive timers; cooldown packets retain the native category and full duration. Unrelated payloads do not reduce recharge.
 
+### Frost Mage native Freezing and Shatter
+
+- Actual Frostbolt228597, Flurry228354 and Glacial Spike228600 damage adds the native1246769 Freezing counts to the caster-owned1221389 debuff. Selected Frostbite adds its native count on critical Frostbolt/Spike impacts. Each actual Ray tick adds one stack (`sc_mage.cpp3947/4055/4094–4095/4248/4304–4305/4995/7105–7127`).
+- Ice Lance228598 consumes up to native1246769 effect4 stacks from that mage's own recipient debuff and launches one native1246949 payload scaled by the consumed count. Remaining owned Freezing refreshes. Effect0 hits the primary once; selected Frostbite enables effect1 on secondary enemies only, with its native reduced-AoE cap (`sc_mage.cpp4324–4342/4428/7129–7181`). Fingers of Frost/ Thermal Void launch snapshots and the associated secondary producers remain separate work.
+
 ### Frost Mage native Icicles and Glacial Spike
 
 - Selected Icicles1246832 uses its actual hasted PERIODIC_DUMMY clock to apply native205473 without a spell cast. The first native interval has the pinned random phase (`sc_mage.cpp5559–5581`); later intervals keep native timing. Reaching the actual counter cap enables1222865.

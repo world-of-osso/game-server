@@ -41,6 +41,7 @@ mod batch9;
 mod execution_counters;
 mod foreground_procs;
 mod frost;
+mod frost_mage;
 mod impact_procs;
 mod periodic_attacks;
 mod secondary_copies;
@@ -111,6 +112,7 @@ pub(super) fn apply_periodic_damage_policies(
     target: Entity,
     amount: f32,
 ) {
+    frost_mage::after_periodic_damage(world, ctx, target);
     policies::after_periodic_damage(world, ctx, target, amount);
     spellslinger::after_periodic_damage(world, ctx, target);
     midnight_items::after_periodic_damage(world, ctx, target);
@@ -262,6 +264,7 @@ pub(super) fn after_direct_damage(
     target: Entity,
     critical: bool,
 ) {
+    frost_mage::after_damage(world, ctx, target, critical);
     spellslinger::after_direct_damage(world, ctx);
     windwalker_flurry::after_direct_damage(world, ctx, critical);
     melee_reset::roll_replacement_hit(world, ctx, target, critical);
@@ -995,6 +998,9 @@ pub(super) fn target_plan(world: &World, spell_id: u32) -> Option<(Relation, Tar
         return Some(hook);
     }
     if let Some(hook) = policies::target_plan_hook(world, spell_id) {
+        return Some(hook);
+    }
+    if let Some(hook) = frost_mage::target_plan_hook(spell_id) {
         return Some(hook);
     }
     if let Some(hook) = guardian_impacts::plan_hook(spell_id) {
