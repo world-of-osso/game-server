@@ -38,6 +38,28 @@ fn rsk_remaining(run: &Run) -> f64 {
 }
 
 #[test]
+#[ignore = "one actual TP enemy impact earns one Teachings stack, not another from self Energize"]
+fn literal_ww_native_teachings_one_stack_per_tiger_palm_impact() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_measurement(269, 1).unwrap();
+    let started = run.app.world().resource::<Time>().elapsed();
+    install_fixture_lifetimes(&mut run, started);
+    engage(&mut run);
+    assert_eq!(stacks(&run), 0);
+    super::tests::cast(&mut run, TP);
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0;
+    let impacts = events.iter().filter(|event| {
+        event.source == Some(run.actor.to_bits())
+            && event.spell_id == Some(TP)
+            && event.kind == CombatLogKind::Damage
+            && event.amount > 0
+    }).count();
+    assert_eq!(impacts, 1, "one actual native Tiger Palm damage impact");
+    // SimC76f8118 monk883–889: impact(), not its separate self-Energize recipient.
+    assert_eq!(stacks(&run), 1, "one stack per actual TP impact");
+}
+
+#[test]
 #[ignore = "actual selected TP must earn Teachings; BOK consumes it for real child impacts and recovery"]
 fn literal_ww_native_teachings_tp_bok_chain_and_child_recovery() {
     let _seed = crate::random::seed_scope(70448);
