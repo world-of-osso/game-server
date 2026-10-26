@@ -32,6 +32,7 @@ Assassination259 combat and the shared Rogue attack-speed and Vanish paths follo
 ### Shared Vanish
 
 - [x] Successful native1856 grants11327 stealth. Preserve native cancellation/AttackStopped publication and suspend both weapon timers. The next admitted harmful melee-start cast resumes elapsed timers against its actual hostile primary and publishes the native AttackStart; an explicit native attack request retains its own new timers.
+- [x] Native no-stealth-break source attributes preserve11327, including1856's own melee-class cast event. Harmful Garrote still consumes active Vanish and must not re-stealth at its former expiry. Source: `sc_rogue.cpp1953–1954`.
 - [x] Natural11327 expiry grants native1784 before the last-stealth check. A harmful break does not grant new Stealth. Leaving that earned Stealth grants the existing Improved Garrote window. Source: `sc_rogue.cpp6103–6125,7419–7444,3381–3385`.
 - [x] The shared queued attack-start entry point retains its original state-update/publication order. Its immediate helper shares only the existing native state/packet contract; no non-Vanish gameplay behavior changes.
 
@@ -69,7 +70,7 @@ Paths below are under `crates/server-simulation/src/dungeon_simulator/dps_parity
 - `assassination_poison_mechanics_tests.rs` — earned ramp and Amplifying consumption.
 - `assassination_hero_tests.rs` — real stealth exit/spread, native children and mark cycles.
 - `assassination_seal_fate_tests.rs` — real builder crits and Poisoned Knife exclusion.
-- `rogue_vanish_tests.rs` — actual Vanish, suspended white swings, natural Stealth, next Garrote/window and resumed weapons.
+- `rogue_vanish_tests.rs` — actual Vanish, suspended white swings, natural Stealth, next Garrote/window, resumed weapons and harmful early break without later re-stealth.
 - `rogue_swift_slasher_tests.rs` — real259/260 swing clocks.
 - `rogue_finisher_tests.rs` — unchanged Outlaw SnD start/extension regression.
 

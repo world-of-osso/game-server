@@ -1,10 +1,10 @@
 //! SimC76f8118 rogue6103–6125/7419–7444: Vanish stealth and weapon suspension.
 use super::combat;
 use bevy::prelude::*;
-use combat::auras::{AuraInstance, RemoveReason, scripts::AuraScripts};
+use combat::auras::{AuraInstance, RemoveReason, procs::AuraEvent, scripts::AuraScripts};
 use combat::combat::{self as attacks, AutoAttack};
 use combat::spell_cast::{self, script_registry::SpellScriptHook};
-use combat::spell_info::SpellInfo;
+use combat::spell_info::{SpellInfo, SpellStore};
 use std::time::Duration;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
@@ -16,6 +16,7 @@ const VANISH: u32 = 1856;
 const VANISH_BUFF: u32 = 11327;
 const STEALTH: u32 = 1784;
 const MELEE_COMBAT_START: u32 = 0x200;
+const DOES_NOT_BREAK_STEALTH: u32 = 0x20;
 
 #[derive(Component)]
 struct SuspendedWeapons {
@@ -77,11 +78,18 @@ fn after_cast(world: &mut World, caster: Entity, spell: u32, depth: u8) {
 }
 
 fn register(scripts: &mut AuraScripts) {
-    scripts
-        .0
-        .entry(VANISH_BUFF)
-        .or_default()
-        .before_remove_reactions = Some(expire_to_stealth);
+    let script = scripts.0.entry(VANISH_BUFF).or_default();
+    script.before_remove_reactions = Some(expire_to_stealth);
+    script.check_proc = Some(breaks_vanish);
+}
+
+fn breaks_vanish(world: &World, _aura: &AuraInstance, event: &AuraEvent) -> bool {
+    let Some(id) = event.spell_id else { return true };
+    let spell = world.resource::<SpellStore>().get(id)
+        .expect("native Vanish proc source spell");
+    // rogue1953–1954 honors SX_NO_STEALTH_BREAK (attribute37). Native1856
+    // is a melee-class spell, but must not consume its own new11327 charge.
+    !spell.misc.as_ref().is_some_and(|misc| misc.attributes[1] & DOES_NOT_BREAK_STEALTH != 0)
 }
 
 fn expire_to_stealth(world: &mut World, unit: Entity, aura: &AuraInstance, reason: RemoveReason) {

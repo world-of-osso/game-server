@@ -31,10 +31,7 @@ fn observe_vanish_removal(
     world.resource_mut::<VanishRemovals>().0.push(reason);
 }
 
-#[test]
-#[ignore = "requires prepared259 private native DB and player actor"]
-fn rogue_vanish_native_cast_suspends_weapons_expires_to_stealth_and_earns_garrote_window() {
-    let _seed = crate::random::seed_scope(70448);
+fn prepare_vanish_after_opener() -> Run {
     let mut run = prepare_measurement(259, 1).unwrap();
     run.app.init_resource::<VanishRemovals>();
     run.app.init_resource::<VanishProcs>();
@@ -60,6 +57,16 @@ fn rogue_vanish_native_cast_suspends_weapons_expires_to_stealth_and_earns_garrot
     for _ in 0..140 {
         run.app.update();
     }
+    run
+}
+
+#[test]
+#[ignore = "requires prepared259 private native DB and player actor"]
+fn rogue_vanish_native_cast_suspends_weapons_expires_to_stealth_and_earns_garrote_window() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_vanish_after_opener();
+    let actor = run.actor;
+    let target = run.targets[0];
     assert!(!crate::auras::rogue::improved_garrote_active(
         run.app.world(),
         actor,
@@ -118,7 +125,7 @@ fn rogue_vanish_native_cast_suspends_weapons_expires_to_stealth_and_earns_garrot
     assert_eq!(
         run.app.world().resource::<VanishRemovals>().0,
         [crate::auras::RemoveReason::Expired],
-        "the actual Vanish must end naturally, not from unrelated periodic damage; actual native procs{:?}",
+        "Vanish must reject its own native no-stealth-break event and expire naturally; actual native procs{:?}",
         run.app.world().resource::<VanishProcs>().0
     );
     assert!(
@@ -156,4 +163,30 @@ fn rogue_vanish_native_cast_suspends_weapons_expires_to_stealth_and_earns_garrot
             }),
         "actual harmful re-entry resumes native weapons"
     );
+}
+
+#[test]
+#[ignore = "requires prepared259 private native DB and player actor"]
+fn rogue_vanish_native_harmful_cast_breaks_active_vanish_without_later_restealth() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_vanish_after_opener();
+    let actor = run.actor;
+    let target = run.targets[0];
+    literal_rotation::execution::execute(
+        run.app.world_mut(), actor,
+        literal_rotation::execution::Execution::Spell(1856, actor, Some(target)),
+    ).unwrap();
+    run.app.update();
+    assert!(crate::auras::has_aura(run.app.world(), actor, 11327), "Vanish must survive its own cast event");
+    literal_rotation::execution::execute(
+        run.app.world_mut(), actor,
+        literal_rotation::execution::Execution::Spell(703, target, Some(target)),
+    ).unwrap();
+    for _ in 0..80 {
+        run.app.update();
+    }
+    assert_eq!(run.app.world().resource::<VanishRemovals>().0, [crate::auras::RemoveReason::Consumed]);
+    assert!(!crate::auras::has_aura(run.app.world(), actor, 11327));
+    assert!(!crate::auras::has_aura(run.app.world(), actor, 1784), "harmful re-entry must not re-stealth at the old Vanish expiry");
+    assert!(crate::auras::has_aura(run.app.world(), actor, 392401), "harmful re-entry earns the real post-stealth Garrote window");
 }
