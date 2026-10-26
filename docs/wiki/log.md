@@ -1,3 +1,7 @@
+## 2026-10-26 — Hellcaller counter lifecycle
+
+[Shared counters](systems/warlock-periodic-counters.md#counter-lifecycle) now have a downstream producer/collapse module, additive actual-UA application binding, native periodic driver and source RNG models. Native UA/CB/collapse REDs are recorded; lifecycle GREEN and numerical parity remain pending. UA expiry callbacks remain independently owned.
+
 ## 2026-10-25 — Shared Hellcaller Wither counters
 
 [Wither counters](systems/warlock-periodic-counters.md) retain actual native stacks without multiplying periodic damage or adding a stack on ordinary refresh. Native real-cast/tick2RED→2GREEN covers both265 and267, with Affliction and Destruction controls. Collapse producers and numerical parity remain separate.

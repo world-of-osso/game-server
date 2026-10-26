@@ -37,7 +37,17 @@ fn apply(run: &mut Run, target: Entity, spell: u32) {
 }
 
 fn native_value(run: &Run, spell: u32, index: u8) -> f32 {
-    crate::spell_cast::scripts::script_effect_value(run.app.world(), run.actor, spell, index)
+    // SimC reads effectN(n).base_value(), not a damage-modified spell amount.
+    run.app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(spell)
+        .unwrap()
+        .effects
+        .iter()
+        .find(|effect| effect.index == index)
+        .unwrap()
+        .base_points
 }
 
 fn apply_counter_state(run: &mut Run, stacks: u8) {
@@ -261,6 +271,21 @@ fn hellcaller_seed_stack_gate_starts_a_permanent_counter_and_native_blackened_ti
         owned(&run, target, COLLAPSE).unwrap().0,
         initial - hits as u8
     );
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        target,
+        crate::auras::RemoveReason::Consumed,
+        |aura| aura.spell_id == WITHER,
+    );
+    for _ in 0..25 {
+        run.app.update();
+    }
+    assert_eq!(
+        blackened_hits(&run),
+        hits,
+        "no ghost Blackened damage after Wither removal"
+    );
+    assert!(owned(&run, target, COLLAPSE).is_none());
 }
 
 #[test]
