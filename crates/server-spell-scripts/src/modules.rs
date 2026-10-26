@@ -40,6 +40,7 @@ const fn order_modules<const N: usize>(
 register_modules! {
     affliction_agony: (2650, "modules/affliction_agony.rs"),
     affliction_instability: (2651, "modules/affliction_instability.rs"),
+    affliction_nightfall: (2652, "modules/affliction_nightfall.rs"),
     after_cast_auras: (100, "modules/after_cast_auras.rs"),
     assassination_target: (2590, "modules/assassination_target.rs"),
     assassination_white: (2591, "modules/assassination_white.rs"),

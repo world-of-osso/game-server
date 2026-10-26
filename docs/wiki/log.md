@@ -4640,3 +4640,5 @@ Same-source550c4b453 route control: bothPASS,5437case/ignore census equal; opt0â
 Documented the first compile-boundary slice in [spell-script-crate](systems/spell-script-crate.md): all relationship-policy rows and five complete hook modules move downstream; the remaining implementations stay in combat. Dispatch order has one code-level contract.
 
 - 2026-10-25: Documented Affliction265 literal fixture and native Agony shard funding; controller RED9774â†’GREENfa58; funding RED4b2dc (15landed ticks,0raw shards), GREEN/measure pending.
+
+- 2026-10-25: Added Affliction native Nightfall tick threshold/consumer documentation; REDa00f81dc4b proved actual Wither ticks never earned the selected buff; GREEN/measurement pending.
