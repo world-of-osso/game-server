@@ -428,6 +428,69 @@ fn devastation_mass_disintegrate_redistributes_only_missing_native_recipients() 
     }
 }
 
+#[test]
+#[ignore = "requires private native DB and exact Devastation profile"]
+fn devastation_maneuverable_deep_breath_launches_native_melt_armor_dot_on_its_pack() {
+    for maneuverable in [false, true] {
+        let mut run = prepare_literal(1467, 3).unwrap();
+        engage(&mut run);
+        let primary = run.targets[1];
+        assert!(crate::auras::has_aura(run.app.world(), run.actor, 433871));
+        if !maneuverable {
+            crate::auras::remove_auras(
+                run.app.world_mut(),
+                run.actor,
+                crate::auras::RemoveReason::Unlearned,
+                |aura| aura.spell_id == 433871,
+            );
+        }
+        crate::spell_cast::creature_cast_with_targets(
+            run.app.world_mut(),
+            run.actor,
+            433874,
+            crate::spell_cast::CastTargets {
+                unit: run.actor,
+                primary: Some(primary),
+                destination: None,
+            },
+        )
+        .unwrap();
+        for _ in 0..200 {
+            run.app.update();
+        }
+        let events = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0;
+        for target in &run.targets {
+            assert!(
+                events.iter().any(|event| {
+                    event.source == Some(run.actor.to_bits())
+                        && event.target == Some(target.to_bits())
+                        && event.spell_id == Some(353759)
+                        && event.kind == shared::protocol::CombatLogKind::Damage
+                        && event.amount > 0
+                }),
+                "ordinary Deep Breath must actually reach the native recipient"
+            );
+            // SimC76f8118 sc_evoker.cpp6219–6222/6252–6253: the actual
+            // maneuverable main impact supplies the native441172 periodic child.
+            let melt = events.iter().any(|event| {
+                event.source == Some(run.actor.to_bits())
+                    && event.target == Some(target.to_bits())
+                    && event.spell_id == Some(441172)
+                    && event.kind == shared::protocol::CombatLogKind::Damage
+                    && event.amount > 0
+            });
+            assert_eq!(
+                melt, maneuverable,
+                "native Maneuverability={maneuverable} must own Melt Armor damage on {target:?}"
+            );
+        }
+    }
+}
+
 fn cast_reference_empowers(run: &mut Run, primary: Entity) {
     for (spell, unit) in [(357208, run.actor), (359073, primary)] {
         crate::spell_cast::creature_cast_empowered_with_targets(

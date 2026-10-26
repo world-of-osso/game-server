@@ -1221,6 +1221,9 @@ fn fire_execute_scald_amplifies_actual_selected_fireball_and_scorch() {
                 |aura| aura.spell_id == 450746,
             );
         }
+        // Changed<KnownSpells> rebuilds native follower stats; settle it before
+        // imposing the same critical chance on both actual-cast controls.
+        preparation::warm_up_reference(&mut run).unwrap();
         let mut health = run.app.world_mut().get_mut::<Health>(target).unwrap();
         health.current = health.max * 0.2;
         run.app
@@ -1439,6 +1442,7 @@ fn fire_execute_fuel_amplifies_actual_flamestrike_by_its_native_target_count() {
                 |aura| aura.spell_id == 416094,
             );
         }
+        preparation::warm_up_reference(&mut run).unwrap();
         run.app
             .world_mut()
             .get_mut::<crate::stats::CharacterStats>(actor)
