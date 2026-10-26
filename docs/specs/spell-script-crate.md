@@ -32,7 +32,7 @@
 - `crates/server-combat/src/spell_cast/{holy_words,prayer_of_mending,dummy3}_tests.rs` — native moved Holy charges, Surge usage, Prayer healing and jump behavior.
 - `crates/server-simulation/src/dungeon_simulator/dps_parity/frost_mage_{proc,supply,modifiers,lance_cdr,shatter_followups}_tests.rs` — native migrated Frost execution boundaries.
 - `crates/server-simulation/src/dungeon_simulator/dps_parity/{ret_auto_proc_tests.rs,outlaw_tests.rs,fury_rotation/mechanics_tests.rs}` — native migrated-hook behavior.
-- `crates/server-combat/src/spell_cast/chrono_flame_tests.rs` and native Living Flame cases — history, native replacement, healing/damage branches and refund behavior. All `devastation_` native cases gate shared Evoker flame moves.
+- `crates/server-combat/src/spell_cast/chrono_flame_tests.rs` and `crates/server-spell-tests/src/spell_cast/new_class_tests.rs` — history, native replacement, Living Flame healing/damage branches and refund behavior. All `devastation_` native cases gate shared Evoker flame moves.
 - Existing native Ret/BM/Devastation/Windwalker/Warrior/Rogue policy fixtures continue to exercise relationship execution.
 
 ## Known gaps (current cycle)
