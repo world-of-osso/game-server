@@ -98,7 +98,7 @@ pub(super) fn affects(aura: &AuraInstance, effect: &AuraEffectState, spell: &Spe
 
 /// `AuraEffect::IsAffectingSpell` (SpellAuraEffects.cpp:1286-1296): `spell` is of the
 /// aura's `SpellClassSet` and shares a bit of the effect's `SpellClassMask`.
-pub(crate) fn class_mask_affects(
+pub fn class_mask_affects(
     aura: &AuraInstance,
     effect: &AuraEffectState,
     spell: &SpellInfo,
@@ -192,7 +192,7 @@ pub(crate) fn snapshot_charged_modifiers(
         return Vec::new();
     };
     let charged = auras.iter().filter(|aura| {
-        aura.charges > 0 || crate::spell_cast::scripts::snapshots_modifier(aura.spell_id)
+        aura.charges > 0 || crate::spell_cast::scripts::snapshots_modifier(world, aura.spell_id)
     });
     charged
         .flat_map(|aura| {
@@ -279,7 +279,7 @@ fn modifier_totals(world: &World, caster: Entity, spell: &SpellInfo, op: SpellMo
             .filter(|(aura, _)| {
                 spell.cast_charge_mods.is_none()
                     || (aura.charges == 0
-                        && !crate::spell_cast::scripts::snapshots_modifier(aura.spell_id))
+                        && !crate::spell_cast::scripts::snapshots_modifier(world, aura.spell_id))
             })
             .fold(frozen, |sum, (aura, effect)| {
                 let amount = stacked_amount(aura, effect);

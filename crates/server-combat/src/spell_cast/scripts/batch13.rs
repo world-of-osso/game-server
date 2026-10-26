@@ -14,9 +14,6 @@ const REND_BLEED: u32 = 388539;
 const EXECUTE_RANK: u32 = 316405;
 pub(super) const SHADOW_WORD_DEATH: u32 = 32379;
 const DEATHSPEAKER: u32 = 364675;
-pub(crate) const RAPID_FIRE: u32 = 257044;
-const RAPID_FIRE_SHOT: u32 = 257045;
-const RAPID_FIRE_FOCUS: u32 = 263585;
 pub(super) const BESTIAL_WRATH: u32 = 19574;
 const BESTIAL_STRIKE: u32 = 344572;
 const SCENT_OF_BLOOD: u32 = 193532;
@@ -136,22 +133,6 @@ pub(super) fn death_execute(world: &World, caster: Entity, target: Entity, amoun
     } else {
         amount
     }
-}
-
-///257044 explicitly names257045 and263585. Its333ms period,2000ms duration
-///and EXTRA_INITIAL_PERIOD attribute author seven shots; no synthetic timer.
-pub(crate) fn cast_rapid_fire_tick(
-    world: &mut World,
-    unit: Entity,
-    aura: &AuraInstance,
-    index: u8,
-) {
-    if index != 1 {
-        return;
-    }
-    super::begin_rapid_tick(world, aura.caster);
-    spell_cast::cast_triggered(world, aura.caster, RAPID_FIRE_SHOT, Some(unit), 1);
-    spell_cast::cast_triggered(world, aura.caster, RAPID_FIRE_FOCUS, Some(aura.caster), 1);
 }
 
 /// Native193532 names its Barbed charge count; SimC76f8118 hunter6741-6742
