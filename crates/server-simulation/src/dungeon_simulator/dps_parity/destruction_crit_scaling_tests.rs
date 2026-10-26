@@ -62,13 +62,6 @@ fn actual_hit(spell_id: u32, boost: bool) -> (f64, f64) {
             .unwrap();
         health.current = health.max * 0.19;
     }
-    let crit = f64::from(
-        run.app
-            .world()
-            .get::<CharacterStats>(caster)
-            .unwrap()
-            .crit_pct,
-    );
     let spell = run
         .app
         .world()
@@ -83,8 +76,9 @@ fn actual_hit(spell_id: u32, boost: bool) -> (f64, f64) {
         Some(target),
         1
     ));
+    // Instant hits already exist after launch; observe them before advancing
+    // the world. Projectiles require their actual impact frame instead.
     for _ in 0..60 {
-        run.app.update();
         let hit = run
             .app
             .world()
@@ -102,8 +96,12 @@ fn actual_hit(spell_id: u32, boost: bool) -> (f64, f64) {
                 hit.crit && hit.amount > 0,
                 "both native samples must actually crit"
             );
-            return (f64::from(hit.amount), crit);
+            // Native damage reads live crit at impact, not at admission.
+            // Projectile travel can outlive an earlier stat modifier.
+            let impact_crit = run.app.world().get::<CharacterStats>(caster).unwrap().crit_pct;
+            return (f64::from(hit.amount), f64::from(impact_crit));
         }
+        run.app.update();
     }
     panic!("native spell{spell_id} must land");
 }
