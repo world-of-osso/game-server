@@ -1,0 +1,137 @@
+use super::*;
+use shared::components::PowerType;
+use shared::protocol::CombatLogKind;
+
+const CHARGES: &[u32] = &[470398, 470406, 470409, 470412, 470414, 470415, 470416];
+
+fn fund(run: &mut Run, points: f32) {
+    let mut powers = run
+        .app
+        .world_mut()
+        .get_mut::<crate::spell_cast::powers::PowerPools>(run.actor)
+        .unwrap();
+    let energy = powers.get_mut(PowerType::Energy).unwrap();
+    energy.current = energy.max;
+    powers.get_mut(PowerType::ComboPoints).unwrap().current = points;
+}
+
+fn cast(run: &mut Run, spell: u32, self_target: bool) {
+    let target = if self_target {
+        run.actor
+    } else {
+        run.targets[0]
+    };
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(spell, target, Some(run.targets[0])),
+    )
+    .unwrap();
+    preparation::finish_pending_setup(run).unwrap();
+}
+
+fn read_charges(run: &Run) -> Vec<u32> {
+    CHARGES
+        .iter()
+        .copied()
+        .filter(|spell| crate::auras::has_aura(run.app.world(), run.actor, *spell))
+        .collect()
+}
+
+fn earn_charges(run: &mut Run, producer: u32, self_target: bool) -> usize {
+    assert!(read_charges(run).is_empty());
+    let count =
+        crate::spell_cast::scripts::script_effect_value(run.app.world(), run.actor, 470347, 0)
+            as usize;
+    cast(run, producer, self_target);
+    // SimC76f8118 sc_rogue.cpp8913–8933/10961–10966:
+    // actual producers fill the first inactive native counters in order.
+    assert_eq!(
+        read_charges(run),
+        CHARGES[..count],
+        "native producer{producer} must earn ordered Supercharger uses"
+    );
+    count
+}
+
+#[test]
+#[ignore = "requires private native260 player profile and traits"]
+fn rogue_supercharger_outlaw_adrenaline_earns_effective_spree_points() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(260, 1).unwrap();
+    engage(&mut run);
+    let count = earn_charges(&mut run, 13750, true);
+    let extra =
+        crate::spell_cast::scripts::script_effect_value(run.app.world(), run.actor, 470347, 1);
+    let forced = if crate::auras::has_aura(run.app.world(), run.actor, 470668) {
+        crate::spell_cast::scripts::script_effect_value(run.app.world(), run.actor, 470668, 0)
+    } else {
+        0.0
+    };
+    let effective = (5.0 + extra + forced) as usize;
+    fund(&mut run, 5.0);
+    run.app
+        .world_mut()
+        .resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .clear();
+    cast(&mut run, 51690, true);
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    let returned = events
+        .iter()
+        .filter(|event| {
+            event.source == Some(run.actor.to_bits())
+                && event.spell_id == Some(1235074)
+                && event.kind == CombatLogKind::Energize
+        })
+        .count();
+    // sc_rogue.cpp2021–2038/4851: native effective points size the real
+    // Spree channel and hand ticks without increasing the actual CP payment.
+    assert_eq!(
+        returned, effective,
+        "earned Supercharger must size actual Spree ticks"
+    );
+    assert_eq!(
+        read_charges(&run),
+        CHARGES[..count - 1],
+        "the effective finisher consumes the last earned counter, not the first"
+    );
+}
+
+fn assert_other_rogue_producer(spec: u32, producer: u32, finisher: u32, self_target: bool) {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(spec, 1).unwrap();
+    engage(&mut run);
+    let count = earn_charges(&mut run, producer, self_target);
+    fund(&mut run, 5.0);
+    cast(&mut run, finisher, false);
+    assert_eq!(
+        read_charges(&run),
+        CHARGES[..count - 1],
+        "native spec{spec} finisher must consume one highest earned use"
+    );
+}
+
+#[test]
+#[ignore = "requires private native259 player profile and traits"]
+fn rogue_supercharger_unselected_assassination_does_not_earn_counters() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(259, 1).unwrap();
+    engage(&mut run);
+    assert!(!crate::auras::has_aura(run.app.world(), run.actor, 470347));
+    cast(&mut run, 385627, false);
+    assert!(
+        read_charges(&run).is_empty(),
+        "unselected Supercharger must not grant counters"
+    );
+}
+
+#[test]
+#[ignore = "requires private native261 player profile and traits"]
+fn rogue_supercharger_subtlety_dance_earns_then_eviscerate_consumes() {
+    assert_other_rogue_producer(261, 185313, 196819, true);
+}
