@@ -151,6 +151,25 @@ pub(super) fn conjure_from_spell(
     conjure(world, &ctx, target, spec, count);
 }
 
+pub(super) fn conjure_count(world: &mut World, caster: Entity, target: Entity, count: u32) {
+    let Some(spec) = specialization(world, caster) else {
+        return;
+    };
+    let spell = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(spec.payload)
+        .expect("native specialization Splinter payload")
+        .clone();
+    let ctx = EffectCtx {
+        caster,
+        spell: &spell,
+        depth: 0,
+        dest: None,
+        chain_multiplier: 1.0,
+    };
+    conjure(world, &ctx, target, spec, count);
+}
+
 fn double_chance(world: &World, caster: Entity, spec: Specialization) -> f64 {
     let window = crate::auras::has_aura(world, caster, STORM_WINDOW)
         || spec
