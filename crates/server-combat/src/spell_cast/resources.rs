@@ -11,9 +11,6 @@ use crate::spell_info::{SpellDuration, SpellEffect, SpellInfo};
 pub(in crate::spell_cast) const EXECUTE_PARENTS: &[u32] = &[163201, 281000];
 const ROGUE_SPELL_FAMILY: u32 = 8;
 const FEROCIOUS_BITE: u32 = 22568;
-const ARCANE_BARRAGE: u32 = 44425;
-const ARCANE_BLAST: u32 = 30451;
-const ARCANE_CHARGE: u32 = 36032;
 
 /// CalcPowerCost's optional branch: signed, power/family-masked caster total.
 pub(super) fn additional_optional_cost(
@@ -119,13 +116,6 @@ fn execute_damage_multiplier(
     2.0 * paid.min(maximum) / maximum
 }
 
-fn barrage_multiplier(world: &World, caster: Entity) -> f32 {
-    let (charges, _) = powers::power_value(world, caster, PowerType::ArcaneCharges)
-        .expect("Arcane Barrage requires charges");
-    let bonus = super::scripts::script_effect_value(world, caster, ARCANE_CHARGE, 1);
-    1.0 + charges * bonus / 100.0
-}
-
 pub(super) fn snapshot(
     world: &World,
     caster: Entity,
@@ -174,8 +164,6 @@ pub(super) fn snapshot(
                 .expect("native Bite requires a combo-point pool");
             combo / maximum
         }
-        ARCANE_BARRAGE => barrage_multiplier(world, caster),
-        ARCANE_BLAST => super::scripts::blast_multiplier(world, caster, 0),
         _ => return spell,
     };
     scale_effect(&mut spell, 0, multiplier);

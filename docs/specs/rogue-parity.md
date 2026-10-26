@@ -27,7 +27,7 @@ Assassination259 combat and the shared Rogue attack-speed path follow pinned Sim
 
 - [x] Selected457054 dispatches native457193 once per landed white swing against its actual victim while that victim has the caster's own active457129 mark. Retargeting to an unmarked victim must not dispatch against another target's mark. Native payload data supplies damage. Source: `sc_rogue.cpp3411–3419,10282,10615–10618`.
 
-- [x] Selected457055 copies its native effect0 fraction of actual off-mark direct, periodic and white damage to the caster's live457129 mark through457236. Damage to the marked victim does not self-copy. Preserve the source's resolved crit/modifiers without rolling them again or recursively dispatching residual callbacks. Source: `sc_rogue.cpp6618–6631,11568–11605`.
+- [x] Selected457055 copies its native effect0 fraction of actual off-mark direct, periodic and white damage to the caster's live457129 mark through457236. Damage to the marked victim does not self-copy. Preserve the source's resolved crit, with no second crit/general damage bonus, while applying the payload's own native labelled Mastery/Implacable and marked-target Zoldyck. Source: `sc_rogue.cpp1971–1995,2340–2350,6618–6631,11568–11605`.
 
 ### Shared auto-attack speed
 
@@ -57,7 +57,7 @@ Paths below are under `crates/server-simulation/src/dungeon_simulator/dps_parity
 
 - `assassination_doomblade_tests.rs` — one real Mutilate's two hands fund the complete native bleed and its native periodic Implacable multiplier.
 - `assassination_kingsbane_tests.rs` — actual direct/periodic damage with and without native Mastery/Implacable passives proves the pinned double-dip ratios.
-- `assassination_focus_tests.rs` — actual off-mark direct/periodic damage copies to the owned mark at the native fraction, with no self-copy or second crit.
+- `assassination_focus_tests.rs` — actual off-mark direct/periodic damage copies to the owned mark at the native fraction with payload-owned Mastery/Implacable/Zoldyck, no self-copy or second crit.
 - `assassination_white_tests.rs` — actual landed weapon hits and marked/unmarked retargeting.
 - `assassination_target_tests.rs` — real poison recipient state/health damage and Kingsbane count exclusion.
 - `assassination_poison_mechanics_tests.rs` — earned ramp and Amplifying consumption.
