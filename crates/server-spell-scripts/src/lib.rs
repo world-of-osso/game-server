@@ -25,4 +25,6 @@ pub mod test_support;
 #[cfg(test)]
 mod policy_order_tests;
 #[cfg(test)]
+mod registry_target_tests;
+#[cfg(test)]
 mod tests;
