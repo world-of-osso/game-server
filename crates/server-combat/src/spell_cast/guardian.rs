@@ -147,6 +147,16 @@ const GUARDIAN_POLICIES: &[GuardianPolicy] = &[
         owner_spell_share: Some(1.0),
         owner_attack_share: None,
     },
+    // SimC76f8118 pets19/2516–2563: native Desperate Soul, full SP,
+    // one actual Wrath; its own post-cast callback marks native dismissal.
+    GuardianPolicy {
+        summons: &[1262094],
+        entry: 254505,
+        spells: &[1278047],
+        repeat_gcd: None,
+        owner_spell_share: Some(1.0),
+        owner_attack_share: None,
+    },
 ];
 
 fn policy(summon: u32, entry: u32) -> Option<&'static GuardianPolicy> {
