@@ -460,6 +460,12 @@ Bare `refreshable`/`remains` retain the action and recipient context. Qualified 
 
 `action.<alias>.damage` reads the proposed target's native direct school-damage snapshot, including current power, modifiers, mitigation and expected crit, without casting or sampling RNG. Weapon-damage predictions remain explicit errors. Action cooldown/duration and bare `ticking` retain action context. Target-owned `dot.<alias>.duration` is0 when inactive; an active DoT reads its native fresh composite duration, excluding remaining time and pandemic carry (SimC76f8118 `dot.cpp448–455`). `pet.<summon alias>.active` reads actual living, unexpired, same-map owned summons; absent summons are inactive.
 
+## Survival literal controller
+
+- Spec255 uses the exact pinned `hunter_survival.simc` action rows through shared `Program`, `Driver`, `Prepared` and `Equipment` with the requested native actor identity. It does not require an invented follower kit.
+- Precombat provisions the existing native default-duck stable policy and executes ordinary Call Pet, snapshot and the selected harmful precast before engagement. Native pet control supplies independent pet attacks. Shared Hunter facts supply equipment, potion and Howl observations; shared pet mechanics and live owner critical chance remain authoritative.
+- Native70448 supplies stats, damage, costs, cooldowns and selected traits. Controller coverage alone does not qualify ST/3T DPS parity; missing native relationships remain measurement-gated.
+
 ## Marksmanship literal controller
 
 - [x] Spec254 uses a real Player with exact reference gear/traits and unchanged pinned `hunter_marksmanship.simc` source through shared `literal_rotation`. It does not require a nonexistent follower profile or use AssistedCombat priorities.
@@ -469,7 +475,7 @@ Bare `refreshable`/`remains` retain the action and recipient context. Qualified 
 
 ### Marksmanship native cast relationships
 
-- [x] Only actual Trueshot enables Moonlight Chakram; a Chakram cast consumes that enabler and delivers the native bounce count, delay and selected ramp to actual targets.
+- [x] Active Sentinel Moonlight Chakram is shared by Hunter specializations: only actual Trueshot or Takedown enables it. A Chakram cast consumes that enabler and delivers the existing native bounce count, delay and selected ramp to actual targets. Unrelated harmful casts cannot produce the enabler. Gate shared relationships by active hero talent, not specialization lists.
 - [x] Actual Aimed Shot and selected No Scope Rapid Fire produce native Precise Shots. Real spenders consume it, preserve its damage through projectile arrival and trigger selected Stargazer.
 - [x] Selected Unstable Trigger permits exactly one native-duration, Focus-free Explosive Shot recast inside its existing cooldown; that recast does not create another window.
 - [x] Volley delivers its native-duration periodic payload at the selected ground point to every actual in-radius target; all magnitudes remain native-data driven.
