@@ -54,6 +54,7 @@ register_modules! {
     affliction_shared_agony: (2659, "modules/affliction_shared_agony.rs"),
     affliction_targets: (2657, "modules/affliction_targets.rs"),
     affliction_ua: (2653, "modules/affliction_ua.rs"),
+    affliction_volley: (2659, "modules/affliction_volley.rs"),
     affliction_wrath: (2656, "modules/affliction_wrath.rs"),
     after_cast_auras: (100, "modules/after_cast_auras.rs"),
     arcane_feedback: (620, "modules/arcane_feedback.rs"),
