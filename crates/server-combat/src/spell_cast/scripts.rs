@@ -333,7 +333,7 @@ pub(crate) use batch13::{HAUNT, reset_haunt_on_death};
 pub(crate) use batch14::{DEATHMARK, deathmark_energy};
 pub(super) use batch15::heal_beacon;
 pub(crate) use batch15::{replace_beacon, snapshot_combustion};
-pub(super) use batch16::{blast_cast_time, blast_multiplier, mana_cost};
+pub(super) use batch16::{blast_cast_time, mana_cost};
 pub(super) use batch17::bloom_lifebloom_before_refresh;
 pub(crate) use batch17::{
     CENARION_WARD, LIFEBLOOM, bloom_lifebloom, heal_cenarion_ward, replace_lifebloom,
