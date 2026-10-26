@@ -75,23 +75,6 @@ fn chaos_strike(chance: u32) -> f32 {
     .expect("real catalog");
     let caster = h.caster;
     apply(&mut h, caster, caster, 197125, u32::MAX);
-    eprintln!(
-        "REFUND_PASSIVE effects={:?} live={} caster={caster:?} owned={:?}",
-        h.app
-            .world()
-            .resource::<crate::spell_info::SpellStore>()
-            .get(197125)
-            .map(|spell| spell.effects.len()),
-        crate::auras::has_aura(h.app.world(), caster, 197125),
-        h.app
-            .world()
-            .get::<crate::auras::ActiveAuras>(caster)
-            .map(|auras| auras
-                .iter()
-                .filter(|aura| aura.spell_id == 197125)
-                .map(|aura| (aura.instance_id, aura.caster))
-                .collect::<Vec<_>>())
-    );
     h.set_power(PowerType::Fury, 50.0);
     h.cast_and_deliver(162794, Some(h.npc));
     h.advance(4);

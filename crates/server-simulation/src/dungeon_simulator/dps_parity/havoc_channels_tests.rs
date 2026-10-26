@@ -155,13 +155,18 @@ fn havoc_relentless_onslaught_delays_real_free_copies_and_starts_native_icd_at_c
                 if copies > observed_copies {
                     let hit_at = first_offhand_at
                         .expect("Onslaught requires the real landed native off-hand");
-                    assert!(
-                        (now - hit_at - offhand_delay).abs() < 0.025,
-                        "copy must follow the actual OH hit by its native delay: now={now} hit_at={hit_at} delay={offhand_delay} frame={}",
+                    let frame = f64::from(
                         run.app
                             .world()
                             .resource::<bevy::prelude::Time>()
-                            .delta_secs()
+                            .delta_secs(),
+                    );
+                    let actual_delay = now - hit_at;
+                    // Native integer-ms deadlines resolve on the next actual simulation frame.
+                    assert!(
+                        actual_delay + 0.001 >= offhand_delay
+                            && actual_delay <= offhand_delay + frame + 0.001,
+                        "copy delay outside native deadline/frame bound: actual={actual_delay} native={offhand_delay} frame={frame}"
                     );
                     let aura = run
                         .app

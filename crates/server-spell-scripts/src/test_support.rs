@@ -6,6 +6,21 @@ pub fn harness(extra: Vec<SpellInfo>, ids: &[u32], class: u8) -> Option<Harness>
     harness_with(extra, ids, class, false)
 }
 
+pub fn harness_with_native_enemy_dodge_reduction(
+    extra: Vec<SpellInfo>,
+    ids: &[u32],
+    class: u8,
+) -> Option<Harness> {
+    crate::combat::spell_cast::test_harness::harness_with_native_enemy_dodge_reduction_and_plugins(
+        extra,
+        ids,
+        class,
+        |app| {
+            app.add_plugins(crate::SpellScriptsPlugin);
+        },
+    )
+}
+
 pub fn harness_with(
     extra: Vec<SpellInfo>,
     ids: &[u32],
