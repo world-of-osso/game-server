@@ -28,6 +28,8 @@ mod enhancement_rod;
 mod enhancement_spending;
 #[path = "enhancement/enhancement_strikes.rs"]
 mod enhancement_strikes;
+#[path = "enhancement/enhancement_tempest_buffs.rs"]
+mod enhancement_tempest_buffs;
 #[path = "enhancement/enhancement_tier.rs"]
 mod enhancement_tier;
 #[path = "enhancement/enhancement_unleashed.rs"]
@@ -42,6 +44,8 @@ pub const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::NativeWeaponMultiplier(enhancement_flurry::weapon_multiplier),
     SpellScriptHook::AfterNativeLaunch(enhancement_flurry::after_launch),
     SpellScriptHook::AfterNativeCastUpdate(enhancement_flurry::update),
+    SpellScriptHook::AfterChainResolved(enhancement_tempest_buffs::after_chain),
+    SpellScriptHook::BeforePendingScriptEvents(enhancement_tempest_buffs::resolve_due),
     SpellScriptHook::NativeAfterCast(after_cast),
     SpellScriptHook::ContextHit(context_hit),
     SpellScriptHook::CheckNativeSpell(enhancement_strikes::check_cast),
@@ -62,6 +66,7 @@ fn register_auras(scripts: &mut AuraScripts) {
     enhancement_modes::register(scripts);
     enhancement_stormblast::register(scripts);
     enhancement_strikes::register(scripts);
+    enhancement_tempest_buffs::register(scripts);
     enhancement_tier::register(scripts);
 }
 

@@ -235,6 +235,8 @@ pub type AfterWeaponDamageHook = fn(&mut World, &EffectCtx<'_>, Entity, f32);
 pub type NativeWeaponMultiplierHook = fn(&World, Entity, &SpellInfo, u32) -> Option<f32>;
 pub type AfterNativeLaunchHook = fn(&mut World, Entity, &SpellInfo);
 pub type AfterNativeCastUpdateHook = fn(&mut World);
+pub type AfterChainResolvedHook = fn(&mut World, &EffectCtx<'_>);
+pub type BeforePendingScriptEventsHook = fn(&mut World);
 pub type ConjureCountHook = fn(&mut World, Entity, Entity, u32);
 pub type AfterPolicyCastHook = fn(&mut World, Entity, &SpellInfo);
 pub type AfterPolicyCastLookup = fn(u32) -> Option<AfterPolicyCastHook>;
@@ -253,6 +255,8 @@ pub enum SpellScriptHook {
     TargetPlan(TargetPlanLookup),
     PeriodicPrimaryDamage(PeriodicPrimaryDamageHook),
     CounterOnlyDotStacks(&'static [u32]),
+    /// Source-owned refreshes retain the already scheduled periodic deadline.
+    PreservePeriodicPhase(&'static [u32]),
     TargetDamageMultiplier(TargetDamageMultiplierHook),
     AfterSpenderStacks(AfterCastHook),
     AuraRedirect(AuraRedirectHook),
@@ -383,6 +387,8 @@ pub enum SpellScriptHook {
     NativeWeaponMultiplier(NativeWeaponMultiplierHook),
     AfterNativeLaunch(AfterNativeLaunchHook),
     AfterNativeCastUpdate(AfterNativeCastUpdateHook),
+    AfterChainResolved(AfterChainResolvedHook),
+    BeforePendingScriptEvents(BeforePendingScriptEventsHook),
     AfterPolicyCast(AfterPolicyCastLookup),
     BeforeMeleeComboDamage(BeforeMeleeComboDamageHook),
     BeforePeriodicItemDamage(BeforePeriodicItemDamageHook),
@@ -459,6 +465,13 @@ impl SpellScriptRegistry {
     pub fn consumes_named_aura_field(self, spell: u32, index: u8) -> bool {
         self.hooks().any(|hook| match hook {
             SpellScriptHook::NamedAuraFields(values) => values.contains(&(spell, index)),
+            _ => false,
+        })
+    }
+
+    pub fn preserves_periodic_phase(self, spell: u32) -> bool {
+        self.hooks().any(|hook| match hook {
+            SpellScriptHook::PreservePeriodicPhase(spells) => spells.contains(&spell),
             _ => false,
         })
     }
@@ -1843,6 +1856,24 @@ pub fn after_native_launch(world: &mut World, caster: Entity, spell: &SpellInfo)
 pub fn after_native_cast_update(world: &mut World) {
     for hook in world.resource::<SpellScriptRegistry>().hooks() {
         if let SpellScriptHook::AfterNativeCastUpdate(run) = hook {
+            run(world);
+        }
+    }
+}
+
+/// Actual chain recipients are still captured before the resolving frame is removed.
+pub fn after_chain_resolved(world: &mut World, ctx: &EffectCtx<'_>) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::AfterChainResolved(run) = hook {
+            run(world, ctx);
+        }
+    }
+}
+
+/// Retain native discharge resolution before Frost and generic queued events.
+pub fn before_pending_script_events(world: &mut World) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::BeforePendingScriptEvents(run) = hook {
             run(world);
         }
     }

@@ -56,8 +56,10 @@ pub(crate) use script_registry::melee_residual as after_melee_residual;
 pub(crate) use script_registry::snapshot_native_aura_amount as snapshot_rod_amount;
 pub(super) use script_registry::spell_residual as after_spell_residual;
 pub(super) use script_registry::{
+    after_chain_resolved as after_enhancement_chain,
     after_native_cast_update as update_enhancement_flurry,
     after_weapon_damage as enhancement_weapon_damage,
+    before_pending_script_events as resolve_enhancement_discharges,
     native_weapon_multiplier as enhancement_flurry_weapon_multiplier,
 };
 mod policies;
@@ -132,6 +134,7 @@ pub(crate) use windwalker_dual_threat::{
     read_replacement as white_impact_replacement, roll_replacement as replace_white_impact,
 };
 mod glory_of_the_dawn;
+mod teachings_of_the_monastery;
 mod windwalker_flurry;
 pub(crate) use windwalker_flurry::register_hero_flurry;
 pub(crate) fn after_melee_hit(
@@ -190,6 +193,7 @@ pub(super) fn finish_scripted_launch(
     script_registry::after_counter_launch(world, caster, spell.id);
     unbroken_rhythm::after_launch(world, caster, spell.id);
     glory_of_the_dawn::after_launch(world, caster, spell, depth);
+    teachings_of_the_monastery::after_launch(world, caster, spell, depth);
     windwalker_flurry::after_launch(world, caster, spell);
     script_registry::after_weapon_launch(world, caster, spell, depth);
     arcane::after_launch(world, caster, spell, depth);
@@ -1623,6 +1627,13 @@ pub(super) fn on_enemy_damage_hit_with_context(
     if let Some(hook) = script_registry::before_enemy_context_hit(world, spell_id) {
         return Some(hook);
     }
+    // SimC76f8118 monk883–889: only the enemy impact earns Teachings.
+    // Native TP also hits its caster with Energize; that is not another impact.
+    if spell_id == 100780 {
+        return Some(|world, ctx, target| {
+            windwalker::tiger_palm_hit(world, ctx.caster, target, ctx.depth);
+        });
+    }
     script_registry::enemy_context_hit(world, spell_id)
 }
 
@@ -1632,8 +1643,8 @@ pub fn on_hit(world: &World, spell_id: u32) -> Option<HitHook> {
     }
     match spell_id {
         windwalker_children::ZENITH => Some(windwalker_children::zenith_hit),
-        100780 => Some(windwalker::tiger_palm_hit),
         100784 => Some(windwalker::blackout_kick_hit),
+        teachings_of_the_monastery::DAMAGE => Some(teachings_of_the_monastery::blackout_hit),
         107428 | 113656 => Some(windwalker::trigger_wdp_enabler_on_hit),
         unbroken_rhythm::ROOT => Some(unbroken_rhythm::capture_and_consume),
 
