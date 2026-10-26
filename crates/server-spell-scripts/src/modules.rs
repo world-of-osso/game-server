@@ -163,6 +163,7 @@ register_modules! {
     midnight_item_damage: (1000, "modules/midnight_item_damage.rs"),
     midnight_stat_items: (1000, "modules/midnight_stat_items.rs"),
     outlaw_flurry: (2601, "modules/outlaw_flurry.rs"),
+    outlaw_gravedigger: (2608, "modules/outlaw_gravedigger.rs"),
     outlaw_main_gauche: (2603, "modules/outlaw_main_gauche.rs"),
     outlaw_opportunity: (2600, "modules/outlaw_opportunity.rs"),
     outlaw_pistol: (2602, "modules/outlaw_pistol.rs"),
