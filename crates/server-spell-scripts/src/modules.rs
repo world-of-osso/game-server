@@ -85,6 +85,7 @@ register_modules! {
     destruction_incinerate: (2671, "modules/destruction_incinerate.rs"),
     destruction_infernal: (2674, "modules/destruction_infernal.rs"),
     destruction_mastery: (2672, "modules/destruction_mastery.rs"),
+    destruction_overfiend: (2674, "modules/destruction_overfiend.rs"),
     destruction_periodic: (2670, "modules/destruction_periodic.rs"),
     devastation: (10, "modules/devastation.rs"),
     echo_policies: (1001, "modules/echo_policies.rs"),
