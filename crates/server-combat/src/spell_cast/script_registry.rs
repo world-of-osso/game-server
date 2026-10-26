@@ -76,6 +76,10 @@
 //! - `CastHitProcChance` and `RollCastHitProc`: chance snapshot before consumption, roll after cast.
 //! - `AfterQueuedTriggers`: fixed update after queued hits, before power/rune sync.
 //! - `AfterSpellPayment`: after generic payment callbacks, before gargoyle empowerment.
+//! - `BeforeDamageSnapshot`: before consumed-modifier capture, preserving pet-set multiplier order.
+//! - `BeforeExecutionCounterLaunch`: after Frost launch completion, before execution counters.
+//! - `PolicyTailCast`, `PolicyTailHit`: first additional relationship handler after generic
+//!   policy traversal, preserving the original first-hit/target guard and cast ordering.
 //! New stages own distinct callback/lookup aliases, even when signatures coincide.
 //! Within a stage, traverse module slices and entries from first to last. Never sort
 //! or deduplicate them. Adding a policy to an existing module changes only that module.
@@ -151,6 +155,12 @@ pub type FinishConsumedDamageModifierHook =
     fn(&mut World, Entity, &SpellInfo, Option<u32>, u8, bool);
 pub type BeforeJudgmentOnCastHook = fn(&mut World, Entity, u32, u8);
 pub type BeforeLateAuraRegistrationHook = fn(&mut crate::auras::scripts::AuraScripts);
+pub type BeforeDamageSnapshotHook = fn(&World, Entity, &mut SpellInfo);
+pub type BeforeExecutionCounterLaunchHook = fn(&mut World, Entity, &SpellInfo);
+pub type PolicyTailCastHook = fn(&mut World, Entity, &SpellInfo);
+pub type PolicyTailCastLookup = fn(u32) -> Option<PolicyTailCastHook>;
+pub type PolicyTailHitHook = fn(&mut World, &EffectCtx<'_>);
+pub type PolicyTailHitLookup = fn(u32) -> Option<PolicyTailHitHook>;
 pub type AfterQueuedTriggersHook = fn(&mut World);
 pub type AfterSpellPaymentHook = fn(&mut World, Entity, &SpellInfo, &[(CostPool, f32)]);
 pub type FireAuraRegistrationHook = fn(&mut crate::auras::scripts::AuraScripts);
@@ -238,6 +248,10 @@ pub enum SpellScriptHook {
     FinishConsumedDamageModifier(FinishConsumedDamageModifierHook),
     BeforeJudgmentOnCast(BeforeJudgmentOnCastHook),
     BeforeLateAuraRegistration(BeforeLateAuraRegistrationHook),
+    BeforeDamageSnapshot(BeforeDamageSnapshotHook),
+    BeforeExecutionCounterLaunch(BeforeExecutionCounterLaunchHook),
+    PolicyTailCast(PolicyTailCastLookup),
+    PolicyTailHit(PolicyTailHitLookup),
     AfterQueuedTriggers(AfterQueuedTriggersHook),
     AfterSpellPayment(AfterSpellPaymentHook),
     FireAuraRegistration(FireAuraRegistrationHook),
@@ -1160,6 +1174,42 @@ pub fn after_spell_payment(
             run(world, caster, spell, costs);
         }
     }
+}
+
+pub fn before_damage_snapshot(world: &World, caster: Entity, spell: &mut SpellInfo) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::BeforeDamageSnapshot(run) = hook {
+            run(world, caster, spell);
+        }
+    }
+}
+
+pub fn before_execution_counter_launch(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::BeforeExecutionCounterLaunch(run) = hook {
+            run(world, caster, spell);
+        }
+    }
+}
+
+pub fn policy_tail_cast(world: &World, spell: u32) -> Option<PolicyTailCastHook> {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .find_map(|hook| match hook {
+            SpellScriptHook::PolicyTailCast(lookup) => lookup(spell),
+            _ => None,
+        })
+}
+
+pub fn policy_tail_hit(world: &World, spell: u32) -> Option<PolicyTailHitHook> {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .find_map(|hook| match hook {
+            SpellScriptHook::PolicyTailHit(lookup) => lookup(spell),
+            _ => None,
+        })
 }
 
 #[cfg(test)]

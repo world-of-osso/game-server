@@ -216,7 +216,7 @@ impl PetCastFailure {
 }
 
 /// Living owned stable pets, including native temporary guardians.
-pub(crate) fn active_owned_pets(world: &mut World, owner: Entity) -> Vec<Entity> {
+pub fn active_owned_pets(world: &mut World, owner: Entity) -> Vec<Entity> {
     world
         .query::<(Entity, &HunterPet)>()
         .iter(world)

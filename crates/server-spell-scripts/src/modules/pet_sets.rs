@@ -1,8 +1,25 @@
 //! Native owned-pet cast/hit relationships backed by equipped ItemSet auras.
-use crate::auras::{ActiveAuras, AuraSource};
-use crate::class_progression::{ActiveSpec, KnownSpells};
-use crate::spell_cast::{self, effects::EffectCtx};
-use crate::spell_info::{SpellInfo, SpellStore};
+use super::combat;
+use combat::auras::{ActiveAuras, AuraSource};
+use combat::class_progression::{ActiveSpec, KnownSpells};
+use combat::spell_cast::script_registry::{PolicyTailCastHook, PolicyTailHitHook, SpellScriptHook};
+use combat::spell_cast::{self, effects::EffectCtx};
+use combat::spell_info::{SpellInfo, SpellStore};
+
+pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::BeforeDamageSnapshot(capture_cobra_damage),
+    SpellScriptHook::BeforeExecutionCounterLaunch(finish_cobra),
+    SpellScriptHook::PolicyTailCast(cast_hook),
+    SpellScriptHook::PolicyTailHit(hit_hook),
+];
+
+fn cast_hook(spell: u32) -> Option<PolicyTailCastHook> {
+    has_cast(spell).then_some(after_cast)
+}
+
+fn hit_hook(spell: u32) -> Option<PolicyTailHitHook> {
+    has_hit(spell).then_some(on_hit)
+}
 use bevy::prelude::*;
 
 const COBRA_SHOT: u32 = 193455;
@@ -59,7 +76,7 @@ fn owns_set(world: &World, owner: Entity, spell: u32) -> bool {
 pub(crate) fn capture_cobra_damage(world: &World, caster: Entity, spell: &mut SpellInfo) {
     if spell.id != COBRA_SHOT
         || !owns_set(world, caster, COBRA_FANG_SET)
-        || crate::auras::has_aura(world, caster, BEAST_CLEAVE)
+        || combat::auras::has_aura(world, caster, BEAST_CLEAVE)
     {
         return;
     }
@@ -90,10 +107,10 @@ pub(crate) fn finish_cobra(world: &mut World, caster: Entity, spell: &SpellInfo)
     if spell.id != COBRA_SHOT || !owns_set(world, caster, COBRA_FANG_SET) {
         return;
     }
-    crate::auras::remove_auras(
+    combat::auras::remove_auras(
         world,
         caster,
-        crate::auras::RemoveReason::Consumed,
+        combat::auras::RemoveReason::Consumed,
         |aura| aura.spell_id == COBRA_FANG && aura.caster == caster,
     );
 }
@@ -112,7 +129,8 @@ fn read_echo(world: &World, caster: Entity, rule: &StompCast) -> Option<SpellInf
     if !owns_set(world, caster, rule.echo_set) {
         return None;
     }
-    let percent = super::super::script_effect_value(world, caster, rule.echo_set, rule.echo_effect);
+    let percent =
+        spell_cast::scripts::script_effect_value(world, caster, rule.echo_set, rule.echo_effect);
     let mut spell = world
         .resource::<SpellStore>()
         .get(rule.payload)
@@ -142,7 +160,7 @@ fn cast_stomps(world: &mut World, caster: Entity, spell: &SpellInfo, rule: &Stom
         return;
     };
     let depth = spell_cast::next_trigger_depth(world);
-    for pet in crate::hunter_pet::active_owned_pets(world, caster) {
+    for pet in combat::hunter_pet::active_owned_pets(world, caster) {
         if selected {
             spell_cast::cast_triggered(world, pet, rule.payload, Some(target), depth);
         }
@@ -158,7 +176,7 @@ pub(super) fn has_hit(parent: u32) -> bool {
 
 pub(super) fn on_hit(world: &mut World, ctx: &EffectCtx<'_>) {
     let Some(owner) = world
-        .get::<crate::hunter_pet::HunterPet>(ctx.caster)
+        .get::<combat::hunter_pet::HunterPet>(ctx.caster)
         .map(|pet| pet.owner)
     else {
         return;

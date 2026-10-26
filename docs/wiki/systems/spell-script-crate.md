@@ -80,6 +80,10 @@ Guardian impact target caps/child edges and successful-cast counter/summon table
 
 Hot Streak's producer table, Heating Up protection, admitted-proc consumption and Pyroclasm snapshots live downstream with Fire's Sphere/Fired Up/Cascade/Hyperthermia feedback. The same registered producer table classifies native in-flight actions and actual damage outcomes. Flamestrike still snapshots chance before consumption and rolls once after the cast. Fire feedback and Meteorites retain their separate actual-hit stages; native aura lifecycle registration remains after Ret Sentence.
 
+## Pet-set relationship tables
+
+The last class-specific table nested under generic relationship execution, pet-set Stomp/Cobra Fang rules, lives downstream. Generic policies retain only ordered relationship execution and call the registered tail handler at the original cast/first-hit boundary. Cobra Fang still snapshots before consuming damage modifiers and removes the earned aura after successful launch, after Frost callbacks and before execution counters.
+
 ## Tests
 
 The server's public native harness and simulation's harness alias install the plugin before the harness runs Startup. Simulation installs it on every new app, including apps that reuse cached aura catalogs. Combat's own unit-test build compiles the exact downstream module sources against its local test-crate types; it does not add a production dependency or duplicate policy data. Ordinary simulation builds do not compile those test-only inclusions.

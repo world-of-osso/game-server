@@ -173,7 +173,7 @@ pub(super) fn capture_consumed_damage_modifier(
     spell: &mut SpellInfo,
     foreground: bool,
 ) -> Option<u32> {
-    policies::pet_sets::capture_cobra_damage(world, caster, spell);
+    script_registry::before_damage_snapshot(world, caster, spell);
     script_registry::capture_consumed_damage_modifier(world, caster, spell, foreground)
 }
 
@@ -189,7 +189,7 @@ pub(super) fn finish_scripted_launch(
         world, caster, spell, consumed, depth, foreground,
     );
     script_registry::after_elemental_launch(world, caster, spell, foreground);
-    policies::pet_sets::finish_cobra(world, caster, spell);
+    script_registry::before_execution_counter_launch(world, caster, spell);
     script_registry::after_counter_launch(world, caster, spell.id);
     unbroken_rhythm::after_launch(world, caster, spell.id);
     glory_of_the_dawn::after_launch(world, caster, spell, depth);
