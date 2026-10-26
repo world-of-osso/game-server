@@ -144,6 +144,7 @@ mod rogue_swift_slasher_tests;
 mod shadow_mastery_tests;
 mod shadow_slam_tests;
 mod shadow_tests;
+mod shadow_volley_tests;
 mod shaman263_proc_tests;
 mod shaman263_tier_tests;
 mod shared_consumables_tests;

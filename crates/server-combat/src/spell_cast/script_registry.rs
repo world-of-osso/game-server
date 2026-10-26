@@ -220,6 +220,8 @@ pub enum SpellScriptHook {
     AfterDirectDamageBeforeItems(PeriodicDamageFinishedHook),
     LandedDamagePolicy(LandedDamageHook),
     AbilityUseAvailable(AbilityUseLookup),
+    /// Sourced foreground readiness, checked before knowledge aliases and cast admission.
+    ActionAvailable(AbilityUseLookup),
     ChannelPeriodic(ChannelPeriodicLookup),
     BeforeNativeOnCast(BeforeNativeOnCastHook),
     PrepareStoredDamage(PrepareStoredDamageHook),
@@ -800,6 +802,16 @@ pub fn landed_damage_policies(
             run(world, caster, target, spell, amount, periodic);
         }
     }
+}
+
+pub fn action_available(world: &World, caster: Entity, spell: u32) -> bool {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .all(|hook| match hook {
+            SpellScriptHook::ActionAvailable(test) => test(world, caster, spell),
+            _ => true,
+        })
 }
 
 pub fn ability_use_available(world: &World, caster: Entity, spell: u32) -> bool {

@@ -95,6 +95,7 @@ register_modules! {
     rogue: (70, "modules/rogue.rs"),
     secondary_copies: (360, "modules/secondary_copies.rs"),
     shadow_priest: (290, "modules/shadow_priest.rs"),
+    shadow_volley: (2580, "modules/shadow_volley.rs"),
     snakeskin_quiver: (230, "modules/snakeskin_quiver.rs"),
     spellslinger_hits: (401, "modules/spellslinger_hits.rs"),
     soul_of_the_forest: (1000, "modules/soul_of_the_forest.rs"),
