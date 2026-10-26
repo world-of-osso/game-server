@@ -87,7 +87,7 @@ fn destination(world: &World, unit: Entity, from: Vec3) -> Option<(Vec3, f32)> {
     }
 }
 
-fn read_speed(world: &World, unit: Entity) -> f32 {
+pub(super) fn read_speed(world: &World, unit: Entity) -> f32 {
     world
         .get::<crate::creature_ai::SpawnPoint>(unit)
         .map_or(1.0, |spawn| spawn.speed_run)
@@ -97,7 +97,7 @@ fn read_speed(world: &World, unit: Entity) -> f32 {
             .map_or(1.0, |mods| mods.movement_speed)
 }
 
-fn can_move(world: &World, unit: Entity) -> bool {
+pub(super) fn can_move(world: &World, unit: Entity) -> bool {
     world
         .get::<Health>(unit)
         .is_some_and(|health| health.current > 0.0)
