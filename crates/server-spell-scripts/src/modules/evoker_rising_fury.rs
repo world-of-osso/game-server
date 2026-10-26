@@ -5,6 +5,7 @@ use bevy::prelude::*;
 use super::combat;
 use combat::auras::scripts::AuraScripts;
 use combat::auras::{ActiveAuras, AuraInstance, RemoveReason, has_aura};
+use combat::spell_cast::effects::EffectCtx;
 use combat::spell_cast::script_registry::SpellScriptHook;
 use combat::spell_cast::scripts::{AfterCastHook, script_effect_value};
 use combat::spell_info::{SpellInfo, SpellStore};
@@ -18,7 +19,35 @@ const UNBOUND_FLAME: u32 = 1292323;
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::MidAuraRegistration(register),
     SpellScriptHook::AfterResourceValues(cast_hook),
+    SpellScriptHook::TargetContextDamageMultiplier(maximum_fury_damage),
 ];
+
+fn maximum_fury_damage(world: &World, ctx: &EffectCtx<'_>, _target: Entity, periodic: bool) -> f32 {
+    let Some(auras) = world.get::<ActiveAuras>(ctx.caster) else {
+        return 1.0;
+    };
+    if !has_aura(world, ctx.caster, 1271796) {
+        return 1.0;
+    }
+    let Some(fury) = auras.iter().find(|aura| {
+        aura.spell_id == RISING_FURY
+            && aura.caster == ctx.caster
+            && aura.stacks == aura.max_stacks
+            && aura.stacks > 0
+    }) else {
+        return 1.0;
+    };
+    // SimC76f8118 sc_evoker.cpp3046–3050 and parse_effects.cpp1689–1691:
+    // native direct effect1 and periodic effect2 retain their own class masks.
+    let index = if periodic { 2 } else { 1 };
+    let Some(effect) = fury.effects.iter().find(|effect| effect.index == index) else {
+        return 1.0;
+    };
+    if !combat::auras::spell_mods::class_mask_affects(fury, effect, ctx.spell) {
+        return 1.0;
+    }
+    1.0 + script_effect_value(world, ctx.caster, 1271796, 0) * f32::from(fury.stacks) / 100.0
+}
 
 fn register(scripts: &mut AuraScripts) {
     let dragonrage = scripts.0.entry(DRAGONRAGE).or_default();
