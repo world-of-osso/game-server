@@ -32,6 +32,18 @@ fn native_bm_howl_earns_real_wyvern_and_stampede_hits_the_pack() {
     assert!(!crate::auras::has_aura(run.app.world(), run.actor, 471878));
     assert!(crate::auras::has_aura(run.app.world(), run.actor, 471877));
     assert!(!crate::auras::has_aura(run.app.world(), run.actor, 1258338));
+    let stampede = run
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(run.actor)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 1258344);
+    assert!(
+        stampede.is_some(),
+        "consumed Howl must apply the native Stampede clock"
+    );
+    eprintln!("Stampede clock after KC: {stampede:?}");
     let launched = crate::spell_cast::now(run.app.world());
     while crate::spell_cast::now(run.app.world()) < launched + 1.35 {
         run.app.update();
@@ -49,7 +61,7 @@ fn native_bm_howl_earns_real_wyvern_and_stampede_hits_the_pack() {
                     && matches!(event.kind, shared::protocol::CombatLogKind::Damage)
                     && event.amount > 0
             }),
-            "earned native Stampede must damage every pack recipient: {target:?}"
+            "earned native Stampede must damage every pack recipient: {target:?}; events={events:?}"
         );
     }
 }
