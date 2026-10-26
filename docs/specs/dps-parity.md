@@ -250,6 +250,8 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 ### Havoc literal rotation
 
+- Selected Shattered Destiny388116 accumulates native base Fury for genuinely paid literal Havoc actions only while owned162264 is live. Each native effect1 threshold extends Meta by native effect0 milliseconds; preserve the remainder across casts and exclude free/background copies and pre-Meta spending. The existing frozen resource context establishes positive payment (SimC76f8118 sc_demon_hunter.cpp2529–2555).
+
 - Selected Blind Fury203550 supplies its native effect2 amount to Eye/Gaze's existing aura85 Fury regeneration effect. The ordinary native per-five-second regeneration path supplies Fury only during that actual channel, with no weapon-hit dependency or adapter credit (SimC76f8118 sc_demon_hunter.cpp9986–9993).
 
 - Hard Meta191427 adds native162264's duration to live Havoc transformation instead of discarding Demonic time. The ordinary native reapplication path retains aura effects and phase (SimC76f8118 sc_demon_hunter.cpp4984–4985).
@@ -631,6 +633,8 @@ Only a pure Physical school mask uses target armor. Hybrid schools, including Do
 
 ### Enhancement fixture driver
 
+Selected384355 Elemental Weapons supplies408390's native masked direct/periodic modifiers at talent effect0 ×0.1 per actually imbued hand. Real imbue gains/removals update the bonus; zero imbues or an unlearned talent remove it. Stormblast retains its explicit sourced exception without a second generic application. Sources: pinned SimC76f8118 `sc_shaman.cpp13212–13220`; native70448 supplies values and masks.
+
 Actual Windstrike weapon children115357/115360 ignore target armor. Native Doom469270 retains its Physical/Nature school but does not use Physical armor; ordinary Physical Stormstrike children remain armor-sensitive (SimC76f8118 `sc_shaman.cpp4726`, `action.cpp1686–1689`).
 Selected Stormwell1264762 runs a guaranteed equipped-native Windfury callback once on each landed primary Crash187874 impact, not once per AoE recipient. Preserve its native internal cooldown, payload and Unruly Winds behavior; ordinary imbue proc chances remain unchanged (SimC76f8118 `sc_shaman.cpp6141–6145`).
 
@@ -687,8 +691,9 @@ Named `action.<alias>.charges`, `max_charges`, `charges_fractional` and `full_re
 - Ordinary Raptor Strike rolls the selected native Swipe rank's chance. An actual upgraded Raptor Swipe consumes its replacement and cannot produce itself. Source: `sc_hunter.cpp6188,6217–6236`.
 - A real Wildfire Bomb explodes around its actual primary using pinned5yd geometry, native reduced-AoE cap and native primary-only bonus. Apply the corresponding periodic payload to every actual impact recipient with the same cap/primary effectiveness. Selected Shrapnel replaces, never duplicates, the ordinary fire DoT. Keep native damage coefficients and timing. Source: `sc_hunter.cpp7030,7039–7043,7062–7068,7083–7089,7118–7120,7134`.
 
+- Actual primary Tip consumption dispatches native Strike as One1251779 from the living owned main pet and starts the existing native1251717 ICD only after execution. Actual tipped rank3 Swipe dispatches its separate strike before base execution with the rank's native second-effect effectiveness; that extra does not spend the ordinary ICD. Use the actual aura instance for the shared proc timer; raw melee hints must not spend its owned ICD. Selected Sic 'Em1253137 executes native1253138 from the same main pet only on its actual Strike as One crit. Reuse shared pet stats/crit, periodic clocks and native payloads, not a second pet engine. Source: `sc_hunter.cpp1367–1372,2875–2898,3381–3387,6181–6186,7944`.
 - Real primary impacts that consume native Tip uses queue Sentinel's distinct native Survival chance after the impact batch, so tipped Wildfire can earn a fresh mark after consuming an old one. Native Sentinel already receives Moon's Blessing through its5585 label; do not add it twice. Selected Lunar Calling adds its Survival effect during actual Takedown. MM's distinct native chance remains unchanged. Source: `sc_hunter.cpp1358–1366,3694–3709`.
-- Active Sentinel's selected Lunar Calling makes actual Takedown force an owned mark on its hostile primary. A real Wildfire explosion consumes only the caster's own marks and schedules native Lunar Storm payloads on those recipients. Shared mark grants reduce running Aimed/Wildfire recovery through the distinct native Moon's Blessing effects, without starting recovery or restoring charges. Preserve existing MM producers and native values. Source: `sc_hunter.cpp3665–3667,3709–3710,3760–3773,6400–6401,7104–7107`.
+- Active Sentinel's selected Lunar Calling makes actual Takedown force an owned mark on its hostile primary. A real Wildfire explosion consumes only the caster's own marks and schedules native Lunar Storm payloads on those recipients. Shared mark grants reduce running Aimed/Wildfire recovery through the distinct native Moon's Blessing effects, without starting inactive recovery or resetting charges. Preserve existing MM producers and native values. Source: `sc_hunter.cpp3665–3667,3709–3710,3760–3773,6400–6401,7104–7107`.
 
 ## Marksmanship literal controller
 
@@ -779,6 +784,10 @@ Rotation/decision implementation belongs to the lead/rotation agents. No system 
 
 - Projection qualification retains the Demonology owner's gate: `demonology_ --ignored --skip demonology_implosion_`. The excluded Implosion test is the owner's existing master RED, not a Malefic Grasp regression (same exclusion as trainsdd4e681ed7/d577e0ad22). Native Affliction cast and Frost literal opener remain required.
 
+### Affliction native Unstable Empowerment
+
+- Selected MID2 four-piece1296569 earns native1305774 from actual owned UA1259790 applications. Count UA stacks globally across active living targets, not DoT instances; ignore foreign casts and cap at the native buff maximum (`sc_warlock_actions.cpp1567–1568/5673–5699`).
+- Each independent UA expiration and full removal updates the earned stack count; no remaining owned UA means no buff. Fatal Echoes updates it through its actual new application. Keep native player, pet and guardian damage effects and amounts; do not add haste or change damage coefficients (`actions5779–5780`, native1305774).
 ### Affliction Nightfall uses
 
 - Native264571 stacks are independent next-spell uses, not a multiplier of its native effect amounts. One ordinary instant Shadow Bolt consumes one admitted use. A proc earned during a hardcast remains for the next action; queued cast/proc callbacks cannot consume it or spend the next stored use (`sc_warlock_actions.cpp877–878`).
