@@ -95,6 +95,7 @@ register_modules! {
     hellcaller_wither: (2665, "modules/hellcaller_wither.rs"),
     hot_streak: (1000, "modules/hot_streak.rs"),
     hunter_howl: (2530, "modules/hunter_howl.rs"),
+    hunter_howl_recovery: (2531, "modules/hunter_howl_recovery.rs"),
     impact_procs: (330, "modules/impact_procs.rs"),
     lava_surge: (300, "modules/lava_surge.rs"),
     marksmanship: (380, "modules/marksmanship.rs"),
