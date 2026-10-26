@@ -1,37 +1,11 @@
 //! Constant-haste native Ray must not conjure a fractional extra channel tick.
+use super::channel_timing_tests::remove_equipped_proc_drivers;
 use super::*;
 use crate::spell_cast::effects::factor_capture::FactorCapture;
 use crate::spell_cast::test_harness::ObservedCombatEvents;
 use shared::protocol::CombatLogKind;
 
 const RAY: u32 = 205021;
-
-fn remove_equipped_proc_drivers(run: &mut Run) {
-    let world = run.app.world();
-    let store = world.resource::<crate::spell_info::SpellStore>();
-    let drivers: Vec<_> = world
-        .get::<crate::auras::ActiveAuras>(run.actor)
-        .unwrap()
-        .iter()
-        .filter(|aura| aura.cast_item_level.is_some())
-        .filter(|aura| {
-            store
-                .get(aura.spell_id)
-                .and_then(|spell| spell.aura_options.as_ref())
-                .is_some_and(|options| options.proc_type_mask.iter().any(|&mask| mask != 0))
-        })
-        .map(|aura| aura.spell_id)
-        .collect();
-    crate::auras::remove_auras(
-        run.app.world_mut(),
-        run.actor,
-        crate::auras::RemoveReason::Consumed,
-        |aura| drivers.contains(&aura.spell_id),
-    );
-    // Settle only the removed proc drivers; keep static equipment/food/flask/rune stats.
-    run.app.update();
-    run.app.update();
-}
 
 #[test]
 #[ignore = "native70448 exact Frost64 Ray channel rounding RED"]
