@@ -47,7 +47,7 @@ pub(super) fn on_spawn(world: &mut World, unit: Entity) {
     cast::cast_triggered(world, owner, AVAILABILITY, Some(owner), 0);
 }
 
-pub(super) fn on_remove(world: &mut World, unit: Entity) {
+pub(in crate::spell_cast) fn on_remove(world: &mut World, unit: Entity) {
     if !is_imp(world, unit) {
         return;
     }
@@ -76,7 +76,11 @@ fn owned_imps(world: &mut World, owner: Entity) -> Vec<Entity> {
         .collect()
 }
 
-pub(super) fn after_cast(world: &mut World, owner: Entity, spell: &crate::spell_info::SpellInfo) {
+pub(in crate::spell_cast) fn after_cast(
+    world: &mut World,
+    owner: Entity,
+    spell: &crate::spell_info::SpellInfo,
+) {
     if spell.id != IMPLOSION {
         return;
     }
