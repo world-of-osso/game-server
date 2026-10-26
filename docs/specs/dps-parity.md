@@ -649,7 +649,7 @@ Rotation/decision implementation belongs to the lead/rotation agents. No system 
 
 ### Ordinary native spell GCD haste
 
-Category133 ordinary spells apply native spell haste before the independent aura417 haste-regeneration path. Preserve melee/ranged defense and ability/ranged-slot exclusions, native750–1500ms bounds, and unmodified out-of-range base GCDs. TC a352b1fa `Spell.cpp9209–9224` and SimC76f8118 `action.cpp648–666,1285–1315` define this behavior. The native clock gate covers representative foreground actions for all40 specs at0%,25% and150% haste; aura417 retains its separate native controls.
+Category133 ordinary spells apply native spell haste before the independent aura417 haste-regeneration path. Preserve melee/ranged defense and ability/ranged-slot exclusions, native750–1500ms haste bounds, and exclude other base GCDs from this haste path. TC a352b1fa `Spell.cpp9209–9224` and SimC76f8118 `action.cpp648–666,1285–1315` define this behavior. The native clock gate covers representative foreground actions for all40 specs at0%,25% and150% haste; aura417 retains its separate native controls.
 ### Affliction native Nightfall
 
 - Landed owned Corruption146739 or Wither445474 ticks with selected108558 advance an independent uniform-initial/rollover threshold stream. Pinned base0.130 is normalized by active owned dots, native Creeping Death and selected Sataiel's Volition. This does not modify Wither stacks or damage.
