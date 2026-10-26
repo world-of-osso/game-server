@@ -6,6 +6,22 @@ use shared::protocol::CombatLogKind;
 #[derive(Resource, Default)]
 struct VanishRemovals(Vec<crate::auras::RemoveReason>);
 
+#[derive(Resource, Default)]
+struct VanishProcs(Vec<(f64, crate::auras::procs::AuraEvent)>);
+
+fn observe_vanish_proc(
+    world: &mut World,
+    _unit: Entity,
+    _aura: &crate::auras::AuraInstance,
+    event: &crate::auras::procs::AuraEvent,
+) {
+    let now = crate::spell_cast::now(world);
+    world
+        .resource_mut::<VanishProcs>()
+        .0
+        .push((now, event.clone()));
+}
+
 fn observe_vanish_removal(
     world: &mut World,
     _unit: Entity,
@@ -21,13 +37,16 @@ fn rogue_vanish_native_cast_suspends_weapons_expires_to_stealth_and_earns_garrot
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_measurement(259, 1).unwrap();
     run.app.init_resource::<VanishRemovals>();
-    run.app
-        .world_mut()
-        .resource_mut::<crate::auras::scripts::AuraScripts>()
-        .0
-        .entry(11327)
-        .or_default()
-        .on_remove = Some(observe_vanish_removal);
+    run.app.init_resource::<VanishProcs>();
+    {
+        let mut scripts = run
+            .app
+            .world_mut()
+            .resource_mut::<crate::auras::scripts::AuraScripts>();
+        let script = scripts.0.entry(11327).or_default();
+        script.on_remove = Some(observe_vanish_removal);
+        script.on_damage_proc = Some(observe_vanish_proc);
+    }
     engage(&mut run);
     let actor = run.actor;
     let target = run.targets[0];
@@ -99,7 +118,8 @@ fn rogue_vanish_native_cast_suspends_weapons_expires_to_stealth_and_earns_garrot
     assert_eq!(
         run.app.world().resource::<VanishRemovals>().0,
         [crate::auras::RemoveReason::Expired],
-        "the actual Vanish must end naturally, not from unrelated periodic damage"
+        "the actual Vanish must end naturally, not from unrelated periodic damage; actual native procs{:?}",
+        run.app.world().resource::<VanishProcs>().0
     );
     assert!(
         crate::auras::has_aura(run.app.world(), actor, 1784),
