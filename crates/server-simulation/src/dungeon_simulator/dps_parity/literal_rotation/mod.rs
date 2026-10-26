@@ -10,6 +10,8 @@ pub(crate) mod equipment;
 pub(crate) mod execution;
 #[cfg(test)]
 mod gating_tests;
+#[cfg(test)]
+mod hostile_item_tests;
 mod item_context;
 #[cfg(test)]
 mod precombat_poll_tests;

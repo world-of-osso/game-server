@@ -9,21 +9,16 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 ### Literal spec drivers
 
-- Register each literal spec once, in spec-ID order. Adding a spec changes only its own rotation module and its registration line, not shared fields, initialization, dispatch, reporting or preparation branches.
+- Register each literal spec once, in spec-ID order. Adding a spec changes only its own rotation module and its registration line, not shared fields, initialization, dispatch, reporting or preparation branches. See [Arcane Mage parity](arcane-mage-parity.md) for spec62's execution contracts.
 - Registered literal drivers apply to both Player and Follower identities unless the spec explicitly opts out. Preserve native actor identity, ordered precombat and existing report labels and keys, including null inactive reports.
 
-### Arcane native execution relationships
+### Feral literal fixture
 
-- Eligible Arcane Blast, Barrage, Missiles, Orb and Explosion executions roll native Clearcasting's effect1 mean through shared accumulated PRD. Pinned `sc_mage.cpp6626–6631` uses13 for the coefficient calculation, not an actual13-attempt guarantee. Arcane Surge grants Clearcasting without a roll.
-- Improved Clearcasting's native stacks are independent next-spell uses sharing its one proc charge. Missiles spends one stack, not the complete bank; its native cost modifier is not multiplied by stack count.
-- Actual hostile Missiles periodic ticks execute native7268 once, generating Cumulative Power and selected Salvo/Focusing Crystal/High Voltage from native values. The secondary damage effect requires its selected AoE talent or earned Overpowered Missiles.
-- Barrage rolls selected Orb Barrage before charge spending, then rolls Prismatic Bolt from earned Salvo and consumes Salvo outside Arcane Soul. Polished Focus refunds its native amount using the pre-Orb stack snapshot. Filler consumes Cumulative Power; Prismatic Bolt also consumes its enabling aura.
-- Touch applies its native caster-owned210824 mark. Owned Mage spell hits accumulate actual damage, excluding positive aura87 vulnerability; expiry or replacement discharges the stored native321507 percentage through210833. Selected Aegwynn's Technique grants Clearcasting. Successful Clearcasting triggers selected Brainstorm and rolls Overpowered Missiles, banking an in-channel proc until the old channel ends.
-- Consumed native Salvo, Cumulative Power and Intuition modifiers are captured through the existing charged-modifier snapshot seam, so projectile arrival cannot lose their earned values.
-- Barrage snapshots charge-based recipient count before Orb Barrage, using native Arcing Cleave's secondary fraction. Missiles uses one full primary effect and its native secondary effect only on additional recipients; Prismatic's separate splash excludes its primary. Orb delivers its native bolt to each source-selected enemy in native range. These recipient contracts do not qualify continuous retail Orb movement geometry.
-- Arcane-only Touch/Signature Spell, Surge/Splinterstorm, Barrage/Force of Will and Orb/Splintering Orbs producers call the existing shared Spellslinger conjure path. Preserve native counts, its selected-specialization payload, doubling window and stagger. Infused Splinters independently rolls native Salvo from landed Arcane Splinter impacts. Shared Controlled Instincts, Spellfrost Teachings and Augury remain shared Spellslinger behavior.
-- The literal Arcane controller configures Clearcasting, Salvo and Overpowered Missiles reaction clocks before native acquisition. Guaranteed Salvo and eligible guaranteed Clearcasting sources predict their earned stacks immediately; random acquisitions retain observed reaction delay (`sc_mage.cpp1860,7254–7255,7388–7389`).
-- Arcane potion operands use the shared configured native potion facts, never a local name matcher.
+Spec103 captures the native actor before setup and executes all74 pinned76f8118 Feral rows through shared `Program`, `Driver`, `Prepared` and `Equipment`, for either Player or Follower identity. Preserve ordered native Cat Form/Prowl precombat, the shared potion/item path, native action admission and source-recipient geometry. Do not replace missing periodic snapshot facts or damage mechanics with assisted priorities or synthetic values. Controller qualification is separate from full-duration numerical parity.
+
+### Feral Thriving Growth
+
+Actual owned Rip1079 and Rake155722 periodic damage feeds the selected439528 accumulator using native per-source amounts, native active-dot exponent and selected Feral Green Thumb1270565. Keep the pinned random initial phase, uniform increments and1000-point threshold. Success casts native439531 on the actual tick recipient; other periodic sources cannot roll it (`sc_druid.cpp2416–2448,12311–12406`). Twin Sprouts, Rampancy and Bursting Growth remain separately unqualified.
 
 ### Feral Lunar Inspiration
 
@@ -93,6 +88,8 @@ Selected native155580 applies its owned155627 override aura, so ordinary Moonfir
 - Spec261 preserves the requested native actor and executes every pinned MID2 Subtlety action row through shared `Program`/`Driver`/`Prepared`/`Equipment`. Precombat uses shared Rogue native coatings and Stealth before engagement. Shared Rogue facts retain native Energy and combo-point values; Subtlety bindings read earned native buffs. Missing damage relationships remain measurement gaps, not substituted reference damage.
 
 ### Equipment
+
+- Shared named/slot on-use item selection binds native enemy/any-unit spells to the selected primary by default; ally/self payloads retain the actor. Preserve explicit target contexts, native admission, item level and cooldowns. An absent hostile primary is unavailable, never a self-target substitute (SimC76f8118 player.cpp10056–10068).
 
 - Font of Venomous Rage1297908's actual item-use channel snapshots native1297911 effect0 divided by its native base tick count (including the authored initial tick). Each channel damage tick launches native1307222 at the retained primary, with native1297911 effect1 per tick; its area excludes that primary and follows pinned reduced-AoE8 semantics. Native item level, role expression, channel timing and damage pipeline remain authoritative (SimC76f8118 unique_gear_midnight.cpp3803–3859).
 
@@ -457,6 +454,8 @@ Equipped native MID2 Enhancement two-piece1296627 makes real Voltaic Blaze apply
 
 ### Shared literal snapshot operands
 
+`target.distance` reads the actual native actor-to-selected-target spatial distance, including action-scored target overrides and later position changes. Missing native positions fail explicitly; movement-event distance remains a separate configured-event fact.
+
 `action.<alias>.damage` reads the proposed target's native direct school-damage snapshot, including current power, modifiers, mitigation and expected crit, without casting or sampling RNG. Weapon-damage predictions remain explicit errors. Action cooldown/duration and bare `ticking` retain action context. Target-owned `dot.<alias>.duration` is0 when inactive; an active DoT reads its native fresh composite duration, excluding remaining time and pandemic carry (SimC76f8118 `dot.cpp448–455`). `pet.<summon alias>.active` reads actual living, unexpired, same-map owned summons; absent summons are inactive.
 
 ## Marksmanship literal controller
@@ -482,6 +481,7 @@ Equipped native MID2 Enhancement two-piece1296627 makes real Voltaic Blaze apply
 - `hunter_followup_tests` covers real recharge, repeating Auto Shots, forced mark consumption and both native damage producers.
 - Each actual Explosive Shot primary tick feeds native212680 secondary-only cleave at the root's native excluded-share percentage and reduced-AoE cap. The equipped MID2 four-piece reduces running Aimed and Rapid recovery by its native effect2 milliseconds once per primary tick, never per cleave recipient.
 - A target-carried Rapid Fire channel consumes its caster's earned Trick Shots on natural completion outside actual Volley; the channel's recipient is not its owner. `hunter_explosive_tests` covers actual cleave recipients, both real recharge clocks and this ownership boundary.
+- Selected Salvo makes a real Volley pulse launch background Explosive Shot at its native-capped actual recipients, once per native Volley-duration internal cooldown. These applications retain native periodic damage and rolling carry without paying foreground Focus, starting its ordinary cooldown or granting Unstable Trigger. `hunter_salvo_tests` checks recipient cap, unchanged expiry across later pulses and actual periodic damage.
 
 ## Tests asserting this spec
 

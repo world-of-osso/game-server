@@ -1,6 +1,9 @@
 ## 2026-10-25 — Arcane literal player fixture
 
 [Arcane62](systems/simc-apl.md#arcane-fixture-62) executes supplied profile rows through shared literal control with native class admission and no concurrent AssistedCombat. The300s ST controller regression passes; numerical parity remains open.
+## 2026-10-25 — Marksmanship Salvo producer
+
+[Marksmanship](systems/spell-casting.md#marksmanship-native-relationships--2026-10-25): selected Salvo launches native capped background Explosive Shots from actual Volley recipients, with native Volley-duration internal recovery and no foreground producers.
 ## 2026-10-25 — Shared native consumable bindings
 
 [Shared profile effects](systems/character-stats.md#shared-profile-effects--2026-10-25): rune/flask/potion identities, native Liquid Luster per-stack scaling and common expiry, literal prepot aura/cooldown aging, and talent-conditioned temporary oil. Numerical parity remains measurement-gated.
