@@ -127,6 +127,7 @@ mod frost_ray_rounding_tests;
 mod frost_shatter_factor_tests;
 mod fury_hack_and_slash_tests;
 mod fury_ruin_tests;
+mod fury_spite_tests;
 mod gear_profile_tests;
 mod haste_tests;
 mod havoc_channels_tests;
