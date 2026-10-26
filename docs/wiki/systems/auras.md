@@ -6,7 +6,9 @@ Tempest's existing execution seam grants selected native Storm Swell455089 and A
 
 Arc consumes one use after the final actual Chain/Ride chain impact and uses that recipient as the extra chain's primary325–425ms later. Its native400ms proc timer allows the pinned late self-trigger. Caster-owned pending events load native payloads and snapshot current modifiers at dispatch: ordinary Arc benefits from MW without spending, Ride Arc excludes MW. Native470532s1/s2 attributes64 suppress magnitude stacking; native cap/duration/masks remain unchanged.
 
-Native11ab1f1e5e records both REDs: ordinary Bolt grants false Storm Swell, and an actually earned/cast Tempest never grants Arc. GREEN and integrated measurement remain pending.
+Native11ab1f1e5e records both REDs: ordinary Bolt grants false Storm Swell, and an actually earned/cast Tempest never grants Arc. Gatebea9845e9b passes both corrected cases, including3→3 Arc hits from the final recipient after0.4s, but rejects29/30 overall on the old Magic-Unleashed control. No landing or measurement yet.
+
+Diagnostic4b0ca7de9a proves the control's earlier Melee hit left3 Windfury events with only1 Flametongue callback processed; the next Magic window then received3 deferred Flametongue callbacks. [The aura event pump](../../../crates/server-combat/src/auras/procs.rs) takes one batch per tick, not a recursive drain. The Melee-positive and Magic-negative scenarios now use independent fresh native runs, preserving all assertions, chances and proc behavior. Full corrected qualification remains pending.
 
 Sources: pinned SimC76f8118 `sc_shaman.cpp6587–6597,6631–6643,6709–6714,9994–10007,12437–12484`; [contract](../../specs/dps-parity.md#enhancement-fixture-driver), [policy](../../../crates/server-combat/src/spell_cast/scripts/enhancement_tempest_buffs.rs), [native lifecycle cases](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/enhancement_tempest_buffs_tests.rs).
 

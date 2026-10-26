@@ -1,6 +1,6 @@
 ## 2026-10-26 — Tempest-owned Enhancement buffs
 
-[Tempest buffs](systems/auras.md#tempest-owned-enhancement-buffs--2026-10-26) replace263's every-spell Storm Swell grant and supply Arc's native-use/ICD-gated delayed chain from the final actual recipient. Native11ab1f1e5e records ordinary-Bolt false-Swell and real-Tempest missing-Arc REDs. GREEN and integrated measurement remain pending;262 and native values remain unchanged.
+[Tempest buffs](systems/auras.md#tempest-owned-enhancement-buffs--2026-10-26) replace263's every-spell Storm Swell grant and supply Arc's native-use/ICD-gated delayed chain from the final actual recipient. Native11ab1f1e5e records ordinary-Bolt false-Swell and real-Tempest missing-Arc REDs; both corrected cases pass inbea9845e9b. Full qualification remains blocked by a proven deferred-callback contamination in the old Unleashed control; that fixture now separates its native scenarios. No landing or measurement yet;262 and native values remain unchanged.
 
 ## 2026-10-26 — Merged Mage feedback grants
 
