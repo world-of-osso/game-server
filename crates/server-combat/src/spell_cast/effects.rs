@@ -1441,15 +1441,15 @@ pub(crate) fn deal_effect_damage(
     deal_damage_and_report(world, ctx, target, damage);
 }
 
-pub(super) struct DamageInput<'a> {
-    pub(super) amount: f32,
-    pub(super) crit: bool,
-    pub(super) periodic: bool,
-    pub(super) resolved_source: bool,
+pub struct DamageInput<'a> {
+    pub amount: f32,
+    pub crit: bool,
+    pub periodic: bool,
+    pub resolved_source: bool,
     /// Authored effect for native damage; script/copy amounts carry no effect selector.
-    pub(super) effect: Option<&'a SpellEffect>,
+    pub effect: Option<&'a SpellEffect>,
     /// DAMAGE_SHIELD attributes damage to its owner but bonuses to its aura caster.
-    pub(super) bonus_caster: Entity,
+    pub bonus_caster: Entity,
 }
 
 /// TC Unit::DealMeleeDamage: shield owner damages the attacker; the original
@@ -1727,7 +1727,7 @@ fn cast_damage_multiplier(spell: &SpellInfo) -> f32 {
 }
 
 /// Source amount followed by the native recipient reduction and authored cast multiplier.
-pub(super) fn damage_before_mitigation(
+pub fn damage_before_mitigation(
     world: &World,
     ctx: &EffectCtx,
     target: Entity,

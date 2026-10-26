@@ -1,10 +1,15 @@
 //! Missing bounce dispatch; native child records retain damage, crit and armor rules.
-use crate::class_progression::TraitLoadout;
-use crate::spell_cast::{
+use super::combat;
+use bevy::prelude::*;
+use combat::class_progression::TraitLoadout;
+use combat::spell_cast::script_registry::SpellScriptHook;
+use combat::spell_cast::scripts::script_effect_value;
+use combat::spell_cast::{
     effects::EffectCtx,
     queued_triggers::{self, ScaledTrigger},
 };
-use bevy::prelude::*;
+
+pub const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::EffectHandler(hook)];
 
 struct BouncePolicy {
     parent: u32,
@@ -46,7 +51,7 @@ fn has_talent(world: &World, caster: Entity, talent: u32) -> bool {
     })
 }
 
-pub(super) fn hook(spell: u32, index: u8) -> Option<crate::spell_cast::effects::EffectHandler> {
+pub(super) fn hook(spell: u32, index: u8) -> Option<combat::spell_cast::effects::EffectHandler> {
     POLICIES
         .iter()
         .any(|policy| policy.parent == spell && policy.dispatch_effect == index)
@@ -56,7 +61,7 @@ pub(super) fn hook(spell: u32, index: u8) -> Option<crate::spell_cast::effects::
 fn schedule_bounces(
     world: &mut World,
     ctx: &EffectCtx<'_>,
-    _effect: &crate::spell_info::SpellEffect,
+    _effect: &combat::spell_info::SpellEffect,
     target: Entity,
 ) {
     let Some(policy) = POLICIES
@@ -65,7 +70,8 @@ fn schedule_bounces(
     else {
         return;
     };
-    let Some(targets) = super::super::resolving_targets(world, ctx).map(<[Entity]>::to_vec) else {
+    let Some(targets) = combat::spell_cast::resolving_targets(world, ctx).map(<[Entity]>::to_vec)
+    else {
         error!(caster=?ctx.caster,spell=ctx.spell.id,"Bounce dispatch lacks native TargetInfos");
         return;
     };
@@ -83,13 +89,13 @@ fn read_impacts(
     policy: &BouncePolicy,
     targets: &[Entity],
 ) -> Vec<ScaledTrigger> {
-    let count = super::script_effect_value(world, caster, policy.parent, policy.count_effect);
+    let count = script_effect_value(world, caster, policy.parent, policy.count_effect);
     if !count.is_finite() || !(0.0..=u32::MAX as f32).contains(&count) {
         error!(count, spell = policy.parent, "Native bounce count invalid");
         return Vec::new();
     }
     let ramp = if has_talent(world, caster, policy.ramp_talent) {
-        super::script_effect_value(world, caster, policy.ramp_talent, policy.ramp_effect) / 100.0
+        script_effect_value(world, caster, policy.ramp_talent, policy.ramp_effect) / 100.0
     } else {
         0.0
     };

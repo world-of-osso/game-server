@@ -8,8 +8,6 @@ use crate::spell_cast::{self, PlannedEffect, targets};
 use crate::spell_info::{SpellInfo, SpellStore};
 
 pub(super) const SINISTER_STRIKE: u32 = 193315;
-pub(super) const VOID_VOLLEY: u32 = 1242173;
-pub(super) const VOIDFORM: u32 = 228260;
 pub(super) const HAMMER_RIGHTEOUS: u32 = 53595;
 pub(super) const BLADE_JUSTICE: u32 = 184575;
 pub(super) const THRASH: u32 = 106830;
@@ -38,52 +36,6 @@ pub(in crate::spell_cast) fn effect_enabled(
 ) -> bool {
     spell != BLADE_JUSTICE || index != 2 || crate::auras::has_aura(world, caster, BLADE_TALENT)
 }
-
-///228260 explicitly names1242173. The initial volley is separate from the
-///earned foreground uses granted by the downstream Shadow script.
-pub(super) fn initial_volley(world: &mut World, caster: Entity, target: Entity, depth: u8) {
-    spell_cast::cast_triggered(world, caster, VOID_VOLLEY, Some(target), depth + 1);
-}
-
-///1242173s1/s3 define ten bolts at the primary and one at each nearby enemy.
-///Each uses1242189's native missile/hit path, with sourced50ms child scheduling.
-pub(super) fn volley_plan(
-    world: &mut World,
-    caster: Entity,
-    spell: &SpellInfo,
-    explicit: Option<Entity>,
-) -> spell_cast::TargetPlan {
-    let primary = explicit.expect("Volley validated primary target");
-    let dest = targets::effect_dest(
-        world,
-        caster,
-        explicit,
-        &spell.effects[0],
-        spell.cast_destination,
-    );
-    vec![
-        PlannedEffect {
-            index: 0,
-            units: vec![primary],
-            dest,
-            chain_multipliers: Vec::new(),
-            selected_units: Vec::new(),
-            blocked_units: Vec::new(),
-            prevent_hit_script: false,
-        },
-        PlannedEffect {
-            index: 1,
-            units: vec![caster],
-            dest: None,
-            chain_multipliers: Vec::new(),
-            selected_units: Vec::new(),
-            blocked_units: Vec::new(),
-            prevent_hit_script: false,
-        },
-    ]
-}
-
-pub(super) use super::shadow_volley_bolts::volley;
 
 ///53595 names88263 for all OTHER targets, only while standing in own26573.
 pub(super) fn hammer_wave(world: &mut World, caster: Entity, target: Entity, depth: u8) {

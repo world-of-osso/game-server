@@ -4,7 +4,6 @@
 use super::script_registry;
 use crate::random as rand;
 
-mod bouncing_projectiles;
 pub(super) use script_registry::{
     guarantees_crit as relationship_guarantees_crit,
     ignores_cooldown as relationship_ignores_cooldown,
@@ -36,7 +35,6 @@ pub(super) use script_registry::{
     triggered_child_damage_multiplier as frost_flurry_damage_multiplier,
 };
 mod periodic_attacks;
-mod shadow_volley_bolts;
 pub(crate) use periodic_attacks::{after_periodic_trigger, rolls_reapplication};
 pub(super) use script_registry::after_cast_update as update_unleashed;
 pub(super) use script_registry::after_foreground_special;
@@ -109,7 +107,6 @@ mod rogue_children;
 mod rogue_hero;
 pub(crate) use rogue_children::register as register_rogue_children;
 pub(super) use rogue_hero::prepare as prepare_rogue_hero;
-mod scourge_strike;
 pub(super) use script_registry::healing_multiplier as soul_of_the_forest_direct_multiplier;
 pub(crate) use script_registry::snapshot_healing_aura as snapshot_soul_of_the_forest;
 mod unbroken_rhythm;
@@ -282,9 +279,6 @@ pub(super) fn effect_handler(
     index: u8,
 ) -> Option<super::effects::EffectHandler> {
     if let Some(hook) = registry.effect_handler(spell, index) {
-        return Some(hook);
-    }
-    if let Some(hook) = bouncing_projectiles::hook(spell, index) {
         return Some(hook);
     }
     if (spell, index) == (super::toy_coyote::DESPAWN, 0) {
@@ -534,8 +528,6 @@ pub fn on_effect_hit(
         (batch13::ASPECT_WILD, 0) => Some(batch13::cast_wild_primary),
         (batch12::FERAL_SPIRIT, 0) => Some(batch12::summon_wolves),
         (batch12::BUTCHERY, 0) => Some(batch12::butchery_bleed),
-        (batch11::VOID_VOLLEY, 0) => Some(batch11::volley),
-        (batch11::VOIDFORM, 0) => Some(batch11::initial_volley),
         (batch11::HAMMER_RIGHTEOUS, 0) => Some(batch11::hammer_wave),
         (batch3::SHRED, 2) => Some(batch11::shred_points),
         (batch11::THRASH, 0) => Some(batch11::thrash_bleed),
@@ -543,7 +535,6 @@ pub fn on_effect_hit(
         (batch10::FERAL_LUNGE, 0) => Some(batch10::bite_lunge),
         (batch10::HAND_OF_GULDAN, 0) => Some(batch10::launch_guldan_meteor),
         (batch9::WINTER_DAMAGE, 0) => Some(batch9::slow_winter_hit),
-        (batch9::SCOURGE_STRIKE, 0) => Some(scourge_strike::erupt_and_apply_missing),
         (batch9::RADIANCE, 1) => Some(batch9::apply_radiance_atonement),
         (batch8::REAP, 0) => Some(batch8::reap),
         (batch8::PROVOKE, 0) => Some(batch8::provoke),
@@ -912,7 +903,6 @@ pub(super) fn target_plan(world: &World, spell_id: u32) -> Option<(Relation, Tar
         97372 => Some((Relation::Any, track_switch_plan)),
         batch16::HEALING_WAVE => Some((Relation::Ally, batch16::healing_wave_plan)),
         batch12::SHIELD_RIGHTEOUS => Some((Relation::Ally, batch12::shield_plan)),
-        batch11::VOID_VOLLEY => Some((Relation::Enemy, batch11::volley_plan)),
         batch8::SANCTIFY => Some((Relation::Ally, batch8::sanctify_plan)),
         batch8::PROVOKE_SINGLE => Some((Relation::Enemy, batch8::provoke_plan)),
         batch8::PROVOKE_AREA => Some((Relation::Any, batch8::provoke_plan)),

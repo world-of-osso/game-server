@@ -24,7 +24,6 @@ pub(super) const EARTHQUAKE: u32 = 61882;
 const EARTHQUAKE_TARGET: u32 = 462620;
 pub(super) const EMERALD_BLOSSOM: u32 = 355913;
 pub(super) const WINTER_DAMAGE: u32 = 196771;
-pub(super) const SCOURGE_STRIKE: u32 = 55090;
 pub(super) const VOID_STEP: u32 = 1234796;
 pub(super) const RADIANCE: u32 = 194509;
 const RAIN_HEAL: u32 = 73921;
@@ -32,7 +31,6 @@ const QUAKE_DAMAGE: u32 = 77478;
 const QUAKE_KNOCKDOWN: u32 = 77505;
 const BLOSSOM_HEAL: u32 = 355916;
 const WINTER_SLOW: u32 = 211793;
-const VIRULENT_PLAGUE: u32 = 191587;
 const ATONEMENT: u32 = 194384;
 
 pub(in crate::spell_cast) fn cast_effect(spell_id: u32, index: u8) -> Option<CastEffectHandler> {
@@ -619,28 +617,6 @@ pub(super) fn slow_winter_hit(world: &mut World, caster: Entity, target: Entity,
             source: AuraSource::Cast,
         },
     );
-}
-
-///55090 applies Virulent Plague if absent. Existing marks belong to the separate
-///spread/eruption contract; they are not refreshed as a substitute for spreading.
-pub(super) fn apply_missing_plague(world: &mut World, caster: Entity, target: Entity, _depth: u8) {
-    let owned = world.get::<ActiveAuras>(target).is_some_and(|auras| {
-        auras
-            .iter()
-            .any(|a| a.spell_id == VIRULENT_PLAGUE && a.caster == caster)
-    });
-    if !owned {
-        crate::auras::apply_aura(
-            world,
-            &AuraApplication {
-                caster,
-                target,
-                spell_id: VIRULENT_PLAGUE,
-                effect_mask: 1,
-                source: AuraSource::Cast,
-            },
-        );
-    }
 }
 
 ///194509s4 is60% of194384's normal duration, not a full-duration mark.
