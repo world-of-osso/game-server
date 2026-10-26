@@ -64,6 +64,8 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 ### Equipment
 
+- Font of Venomous Rage1297908's actual item-use channel snapshots native1297911 effect0 divided by its native base tick count (including the authored initial tick). Each channel damage tick launches native1307222 at the retained primary, with native1297911 effect1 per tick; its area excludes that primary and follows pinned reduced-AoE8 semantics. Native item level, role expression, channel timing and damage pipeline remain authoritative (SimC76f8118 unique_gear_midnight.cpp3803–3859).
+
 - `trinket.N.has_stat.<stat>` and `has_buff.<stat>` use the same native item stat-buff existence query, including `any_dps`; direct-damage-only items are false.
 - `trinket.N.has_use_damage` requires an actual native on-use ItemEffect whose spell/reachable native trigger effects deal direct, weapon or periodic damage/leech. Passive-only or stat-only trinkets are false; no item-ID lists or guessed script damage.
 - `trinket.N.cooldown.charges_fractional` reads native charge-category state or ordinary spell/category timers; fractional progress uses authored/resolved recharge duration, never a synthetic cooldown. Aggregate multiple item cooldown sources with pinned max semantics; no cooldown sources returns0.
@@ -93,6 +95,16 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 - [x] Native execution preserves the selected action primary separately from the spell's cast unit. A self-target spell must keep its native self cast while forwarding the actual selected hostile primary to child relationships. Preserve that context across queued requests, cast bars and missile snapshots; an absent or unknown context must not select a substitute. Apply the same contract to Player and NPC actors without spell-ID branches, damage multipliers or mutable-target fallbacks. [Proof](../handoffs/hostile-primary-proof-ledger.md).
 
+### Frost literal rotation
+
+- Successful native Frost Strike/Glacial Advance executions roll Rime using native59057 effect2. Actual Frost Strike/Glacial Advance/Howling Blast during Pillar with selected Obliteration grants Killing Machine and rolls native281238 effect2 for native281327 rune restoration. White critical swings use pinned accumulated KM PRD (0.3 dual wield;1.0 two-handed with Might of the Frozen Wastes); ordinary/noncritical hits do not roll. Native passive trigger effects supply the buff identities and payloads (`sc_death_knight.cpp`7716–7719,10889–10900,11177–11189,11614–11622,14824–14825,16163–16165).
+
+- Frost `.react` observes actual native buff/debuff acquisition using the pinned251 player's reaction settings, including new add waves. Predictable Obliteration KM is immediately reacted; white-crit KM retains reaction delay (`sc_death_knight.cpp`13356–13364). No proc is fabricated by reading a fact.
+
+- [ ] Named Frost Omnium tokens, including Lynxlike Reflexes and Burning Haste, and their numeric TraitNodeEntry forms apply the same native auras; do not import reference stat amounts.
+- [ ] Spec251 player measurements execute the pinned76f8118 Frost source-order precombat and combat action rows through the shared literal driver, not the follower or assisted priority. Native70448 supplies readiness, resources, spell values and damage; missing mechanics remain separate parity work.
+- [ ] `death_knight.first_ams_cast` honors the profile delay and pinned20s default without inventing incoming damage or Runic Power.
+
 ### Fire literal fixture
 
 Spec63 measurements use the exact profile action rows with shared `Program`, `Driver`, `Prepared` and `Equipment`, for either native actor kind. Capture fixture control before setup frames; complete native Arcane Intellect, Mirror Image and prepull Pyroblast in source order before starting the combat clock. Fire-only facts read selected-recipient health thresholds and Heat Shimmer from native70448 data; `hot_streak_spells_in_flight` counts this caster's actual eligible missiles, using the same producer identities as native hit handling. Ordinary dungeon follower control is unchanged.
@@ -104,10 +116,15 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 ### Havoc literal rotation
 
-- [x] `SIMC_HAVOC_DEMONIC_TRANSFORMATION`: native Eye Beam198013/Abyssal Gaze452497 with selected213410/spec577 enters native162264 before channel execution, using the live native talent effect0 duration. If the actor already owns live Meta, extend it without resetting effects or tick phase. No resource grant or damage adjustment; unrelated spells do not trigger the relationship.
+- Selected First Blood206416 replaces Blade Dance/Death Sweep's primary with native391374/391378/393055/393054 at each authored effect64 delay. Base area strikes exclude only the immutable selected primary. The native selected talent effect0 supplies its primary damage bonus (SimC76f8118 sc_demon_hunter.cpp7040–7110,7252–7275,7324–7385).
+
+- [ ] Native Burning Blades453177 receives the selected452408 percentage of landed swing, Chaos Strike/Annihilation, First Blood primary-strike and Throw Glaive damage. Native duration, period and rolling-refresh rules determine ticks; residual damage cannot feed itself (pinned sc_demon_hunter.cpp3088–3110).
+- [ ] Selected Initiative388108 grants native391215 on the first positive direct enemy hit, without refreshing on repeated hits against that enemy. Vengeful Retreat's damage child resets those target trackers before its hits (pinned sc_demon_hunter.cpp2608–2620,8567–8576).
+
+- [ ] `SIMC_HAVOC_DEMONIC_TRANSFORMATION`: native Eye Beam198013/Abyssal Gaze452497 with selected213410/spec577 enters native162264 before channel execution, using the live native talent effect0 duration plus the actual hasted channel duration (pinned sc_demon_hunter.cpp4051–4057). If the actor already owns live Meta, extend it without resetting effects or tick phase. No resource grant or damage adjustment; unrelated spells do not trigger the relationship.
 
 - [x] Spec577 player measurements interpret the pinned76f8118 Havoc action lists through the shared literal driver, including source-order precombat, native selected hero tree, and native equipment facts. No replacement priority or resource grants.
-- [ ] Per-action Demonsurge availability tracks successful source-defined Meta/Demonic casts and individual uses; these virtual APL predicates do not fabricate native Demonsurge damage. Missing soul-fragment pickups and inventory potions remain named gaps.
+- [ ] Per-action Demonsurge availability reads the native producer's per-ability uses. Meta arms all source-defined abilities, Demonic re-arms Annihilation/Death Sweep, and each cast consumes only its own use. Native453323/1238696 supply explosion delays and452416 supplies damage/geometry; Meta expiry clears uses and native intensity/stack buffs (pinned sc_demon_hunter.cpp4976–4982,9153–9172,9265–9277,12645–12671). Missing soul-fragment pickups and inventory potions remain named gaps.
 
 ### Ret Dawnlight policies
 
@@ -212,6 +229,7 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 - [ ] Selected Dominion I starts its native1276166 counter on actual Tyrant completion; ordinary HoG/Ruination advance only an active counter. At its native cumulative limit, choose among the four native summon spells uniformly, redirect living duplicate unique demons as pinned, and retain one stack. Selected Dominion III refunds through actual native1276318, never by editing the pool. Native Aura Does Not Refresh keeps the original expiry while stacks advance (SimC76f8118 `buff.cpp740–743`).
 - Expected cooldown remaining time follows pinned `cooldown.cpp603–615`: use actual elapsed time since the native timer started versus its observed progress, including reductions. Ready timers return zero; a timer at its complete duration returns that duration. Queries cannot mutate history.
+- Executing native guardians read live owner critical chance through the same shared `combat::read_pet_owner_critical_chance` helper as native Hunter pet melee. Spell critical-chance calculations reuse that helper; native caster/target modifiers remain separate (SimC76f8118 `pet.cpp217–220`).
 - Executing native guardians inherit the live owner's spell haste for cast, GCD and hasted channel/duration clocks, retaining spell-specific caster modifiers (SimC76f8118 `pet.cpp222–226`). Creature/class identity and base spell times remain native.
 - Actual Wild Imp104317/55659 guardians cannot regenerate spent Energy (pinned `pets.cpp701/875–882`). Native pool sizes, spell costs and actual exhaustion/removal remain authoritative; other guardian regeneration is unchanged.
 - Player-controlled follower minions inherit the same player-affected attack permission as their owner, without changing either NPC identity or native summon-property ownership rules. Ordinary NPC summons remain subject to NPC-versus-neutral restrictions (SimC76f8118 `pet.cpp66–68`).
@@ -252,6 +270,8 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 - Legacy Storm also rolls selected native Divine Purpose after consuming an opposite Arbiter kind and before Second Sunrise. It can grant fresh Purpose without consuming or classifying existing Purpose; echoes and Tempest cannot inherit this producer (`sc_paladin_retribution.cpp576–602`; `sc_paladin.hpp1665–1726`).
 
 ### Proc recipients
+
+- Explicit `tdb_spell_proc` family names and all four family-mask words constrain native spell-event dispatch, replacing generated aura-effect family predicates. Family0 is unrestricted; a nonzero family must match, and a nonzero mask requires any intersecting word. Native197147 Festering Wound must proc from eligible Festering Strike, never unrelated Frost Strike or another melee family. Generated proc definitions retain their existing masks (TC `SpellMgr.cpp`555–560 / `SpellInfo.cpp`1974–1984).
 
 - Triggered native casts resolve their explicit unit identity before planning or launch. A queued proc whose enemy has despawned must reject that cast, not recreate combat references or select a substitute. Native300s Enhancement3T add retirement is the regression boundary (TC `Spell.cpp4243–4255`).
 
@@ -361,7 +381,11 @@ Enhancement native melee procs generate the real344179 counter and187881 modifie
 
 Native Enhancement strike roots dispatch one195592 Crash payload per actual landed root while their Crash buff is active, not one per weapon child. Selected1262713 uses native async1252415 rather than187878; payload stacks multiply its total damage before native-recipient splitting. Thorim invokes the actual last foreground LB/CL choice (initially LB), overridden by an earned Tempest proc, and spends its real MW modifiers on that background cast. Windstrike always invokes; Stormstrike requires Doom Winds; Crash requires Doom Winds or Ascendance. Foreground Tempest requires actual454015 and consumes that proc. Sources: pinned SimC `sc_shaman.cpp4536–4598,5597–5689,6102–6105,10041–10049,12554–12600,12758–12763`.
 
-Native Enhancement Static Accumulation384437 ticks generate real MW stacks at their native amount/period. Selected Elemental Assault210853 grants its modified native effect1 stack count on ordinary strike/Lava Lash roots, including misses. Each actual consumed MW stack reduces running Strike/Lava Lash recharge by Elemental Tempo1250364 effect2 milliseconds. Descending Skies1264688 admits only actual Ascendance casts; Awakening Storms455129 admits only Strike roots, preserving native proc chance/RPPM and payload. Sources: pinned SimC `sc_shaman.cpp5225,5605–5610,10280–10283,11780–11787,12023–12039,12249–12261,12838–12847`.
+Native Enhancement Static Accumulation384437 ticks generate real MW stacks at their native amount/period. Overlapping Ascendance and Doom Winds links retain that same producer until the last matching caster-owned parent ends; the first parent's expiry must not stop its real ticks. Shared linked-aura removal reads native parent metadata and child-caster identity rather than spell-ID exceptions (SimC `sc_shaman.cpp12840–12860`). Selected Elemental Assault210853 grants its modified native effect1 stack count on ordinary strike/Lava Lash roots, including misses. Each actual consumed MW stack reduces running Strike/Lava Lash recharge by Elemental Tempo1250364 effect2 milliseconds. Descending Skies1264688 admits only actual Ascendance casts; Awakening Storms455129 admits only Strike roots, preserving native proc chance/RPPM and payload. Sources: pinned SimC `sc_shaman.cpp5225,5605–5610,10280–10283,11780–11787,12023–12039,12249–12261,12838–12847`.
+
+Selected Enhancement Conductive Energy455123 uses the completed native hit frame for LB, CL, Ride the Lightning and Tempest. Existing caster-owned living Rods receive one accumulated197568 event per resolution, scaled by native210689 effect1; the native child cannot crit or reapply caster modifiers. Application of197209 is deferred by SimC's10–100ms: LB/Tempest retain their actual primary, CL chooses its first un-Rodded native chain target (otherwise primary). The creating cast cannot mirror into its own newly applied Rod. Native chain recipients include neutral attackable enemies, not only hostile faction reactions. Aura amounts on application/refresh use that same native coefficient.
+
+Selected1252373 makes a landed native Crash Lightning root schedule native1252431 Unleashed weapon strikes at one-second intervals. Native1252373 effect1 supplies the pulse count. Each pulse reevaluates the native Crash target list and uses the pinned90% target-occupancy roll, not a damage coefficient adjustment. Each execution snapshots and consumes its own native1299991 Short Circuit stack value; overlapping executions retain independent pulse state. Sources: pinned SimC `sc_shaman.cpp1490,4519–4532,6110–6135`.
 
 Actual466772 Doom Winds emits native469270 area damage on application and its native periodic effect2 ticks. It requires the caster's real living selected target; a missing/dead selected identity suppresses the pulse rather than selecting a substitute. Native destination/area geometry and damage metadata remain authoritative.
 
