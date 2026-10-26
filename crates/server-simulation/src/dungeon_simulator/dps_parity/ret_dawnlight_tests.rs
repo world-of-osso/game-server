@@ -19,12 +19,8 @@ pub(super) fn budget(run: &Run) -> Option<&crate::auras::AuraInstance> {
 }
 
 pub(super) fn cast_and_damage(run: &mut Run, spell: u32) {
-    literal_rotation::execution::execute(
-        run.app.world_mut(),
-        run.actor,
-        literal_rotation::execution::Execution::AutoAttack(run.targets[0]),
-    )
-    .unwrap();
+    // SimC76f8118 Ret846–876: Wake owns its resource/budget grant.
+    // Do not start an independent Crusading Strike that also earns Holy Power.
     crate::spell_cast::creature_cast(
         run.app.world_mut(),
         run.actor,

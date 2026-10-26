@@ -686,7 +686,7 @@ fn modify_base_points(
 
 /// Effect amount before crit: `modded_base_points` plus SP/AP coefficients
 /// with BonusCoefficient mods.
-pub(crate) fn scaled_amount(
+pub fn scaled_amount(
     world: &World,
     caster: Entity,
     spell: &SpellInfo,
@@ -920,7 +920,7 @@ fn takes_melee_crit_modifier(spell: &SpellInfo) -> bool {
 const SPELL_ATTR2_CANT_CRIT: u32 = 0x2000_0000;
 
 /// CritChance mods and script values precede the victim's melee crit modifier.
-pub(super) fn crit_chance(world: &World, caster: Entity, target: Entity, spell: &SpellInfo) -> f32 {
+pub fn crit_chance(world: &World, caster: Entity, target: Entity, spell: &SpellInfo) -> f32 {
     // SimC76f8118 engine/player/pet.cpp217–220: controlled pets inherit the
     // live owner's melee/spell crit. Scripts and target modifiers keep the pet.
     let owner = world
@@ -1849,7 +1849,7 @@ fn deal_source_damage_and_report(
     let hot_streak_hit = !periodic
         && !resolved_source
         && ctx.depth == 0
-        && super::scripts::triggers_hot_streak(ctx.spell.id);
+        && super::scripts::triggers_hot_streak(world, ctx.spell.id);
     // Retain the actual pre-damage chance before recipient HP or hit procs change it.
     let guaranteed_crit =
         crit && hot_streak_hit && crit_chance(world, ctx.caster, target, ctx.spell) >= 100.0;

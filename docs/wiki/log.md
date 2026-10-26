@@ -2,6 +2,9 @@
 
 [Feral fixture](systems/simc-apl.md#feral-literal-fixture--2026-10-25): native Lunar/Growth, literal setup and periodic snapshot/CP RED→GREEN are landed. First300s ST187377.13=97.76%;3T refuses missing Clearcasting reaction settings. Reaction fixc2a996a0ca and Vines independent-lifetime RED2a06c0fec9 await the train. Total parity remains open; shared consumables stay separate.
 
+## 2026-10-25 — Subtlety Lingering Shadow
+
+[Lingering Shadow](systems/spell-casting.md#subtlety-lingering-shadow--2026-10-25): pinned expiry/decay and native mitigated residual, downstream hooks, native RED957d26c2d3→GREEN561fb56b0d; numerical parity remains open.
 ## 2026-10-25 — Marksmanship Salvo producer
 
 [Marksmanship](systems/spell-casting.md#marksmanship-native-relationships--2026-10-25): selected Salvo launches native capped background Explosive Shots from actual Volley recipients, with native Volley-duration internal recovery and no foreground producers.
