@@ -23,6 +23,7 @@ fn native_hunter_dire_command_actual_kills_spawn_authentic_beasts() {
     let mut beasts = std::collections::BTreeSet::new();
     let mut origins = std::collections::HashMap::new();
     let mut moved_toward_target = false;
+    let mut in_range_seen = std::collections::BTreeSet::new();
     engage(&mut run);
     advance_combat_observed(&mut run, |run| {
         for (unit, summon, npc) in query.iter(run.app.world()) {
@@ -40,6 +41,14 @@ fn native_hunter_dire_command_actual_kills_spawn_authentic_beasts() {
                 let distance = ((position.x - target.x).powi(2) + (position.z - target.z).powi(2)).sqrt();
                 let original = *origins.entry(unit.to_bits()).or_insert(distance);
                 moved_toward_target |= distance + 0.1 < original;
+                if distance <= 5.0 && in_range_seen.insert(unit.to_bits()) {
+                    eprintln!("DIRE_IN_RANGE unit={unit:?} distance={distance} attack={:?} state={:?} flags={:?} target_flags={:?} los={}",
+                        run.app.world().get::<crate::combat::AutoAttack>(unit),
+                        run.app.world().get::<crate::creature_ai::CreatureState>(unit),
+                        run.app.world().get::<shared::components::UnitFlags>(unit),
+                        run.app.world().get::<shared::components::UnitFlags>(run.targets[0]),
+                        crate::line_of_sight::sees_in_world(run.app.world(), unit, run.targets[0]));
+                }
                 if beasts.insert(unit.to_bits()) {
                     eprintln!("DIRE_ACTOR unit={unit:?} at={} position={:?} primary_position={:?} attack={:?} motion={:?}",
                         crate::spell_cast::now(run.app.world()),
