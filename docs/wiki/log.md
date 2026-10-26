@@ -1,6 +1,6 @@
 ## 2026-10-25 — Subtlety Lingering Shadow
 
-[Lingering Shadow](systems/spell-casting.md#subtlety-lingering-shadow--2026-10-25): pinned expiry/decay and native mitigated residual, downstream hooks, native RED957d26c2d3; numerical parity remains open.
+[Lingering Shadow](systems/spell-casting.md#subtlety-lingering-shadow--2026-10-25): pinned expiry/decay and native mitigated residual, downstream hooks, native RED957d26c2d3→GREEN561fb56b0d; numerical parity remains open.
 ## 2026-10-25 — Shared native consumable bindings
 
 [Shared profile effects](systems/character-stats.md#shared-profile-effects--2026-10-25): rune/flask/potion identities, native Liquid Luster per-stack scaling and common expiry, literal prepot aura/cooldown aging, and talent-conditioned temporary oil. Numerical parity remains measurement-gated.
