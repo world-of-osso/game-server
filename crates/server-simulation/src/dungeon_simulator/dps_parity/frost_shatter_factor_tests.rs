@@ -128,6 +128,37 @@ fn frost_shatter_factor_native_lance_consumption_and_multiplier_matrix() {
 }
 
 #[test]
+#[ignore = "native70448 exact300s production factor investigation"]
+fn frost_shatter_factor_native_literal_rotation_stack_and_modifier_distribution() {
+    for (targets, captured_target) in [(1, 0), (3, 0), (3, 1)] {
+        let _seed = crate::random::seed_scope(70448);
+        let mut run = prepare_measurement(64, targets).unwrap();
+        engage(&mut run);
+        run.app.insert_resource(FactorCapture::new(
+            run.actor,
+            run.targets[captured_target],
+            1246949,
+            "shatter_ice_lance",
+            512,
+        ));
+        // Reuse the actual benchmark's precombat, event boundaries and300s driver.
+        // Do not approximate its ordering with a second replay loop.
+        advance_combat(&mut run).unwrap();
+        let trace = run.app.world().resource::<FactorCapture>().export();
+        assert!(trace["captured_hits"].as_u64().unwrap() > 0);
+        let path = std::path::PathBuf::from(std::env::var("DPS_PARITY_OUTPUT").unwrap()).join(
+            format!("64.shatter-production-factors.{targets}.{captured_target}.json"),
+        );
+        std::fs::write(&path, serde_json::to_vec_pretty(&trace).unwrap()).unwrap();
+        println!(
+            "FROST_ROTATION_FACTORS targets={targets} target={captured_target} hits={} path={}",
+            trace["captured_hits"],
+            path.display()
+        );
+    }
+}
+
+#[test]
 #[ignore = "native70448 Frost per-hit factor investigation"]
 fn frost_shatter_factor_native_spike_preserves_unselected_glacial_shatter() {
     let _fixture_seed = crate::random::seed_scope(70448);
