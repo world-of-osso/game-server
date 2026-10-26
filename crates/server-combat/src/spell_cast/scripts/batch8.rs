@@ -10,7 +10,6 @@ use crate::spell_info::{SpellInfo, SpellStore};
 pub(super) const REAP: u32 = 1226019;
 pub(super) const PROVOKE: u32 = 115546;
 pub(super) const DEMONBOLT: u32 = 264178;
-pub(super) const CRASH_LIGHTNING: u32 = 187874;
 pub(super) const BREATH_OF_FIRE: u32 = 115181;
 pub(super) const FAN_OF_KNIVES: u32 = 51723;
 pub(super) const SANCTIFY: u32 = 34861;

@@ -926,7 +926,7 @@ pub fn now(world: &World) -> f64 {
     world.resource::<Time>().elapsed_secs_f64()
 }
 
-fn attributes(spell: &SpellInfo, index: usize) -> u32 {
+pub fn attributes(spell: &SpellInfo, index: usize) -> u32 {
     spell.misc.as_ref().map_or(0, |misc| misc.attributes[index])
 }
 
