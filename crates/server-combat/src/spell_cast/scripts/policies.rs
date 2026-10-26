@@ -1,4 +1,5 @@
 //! Explicit missing-script policies; native spell records still own payloads.
+mod pet_wrath;
 use bevy::prelude::*;
 use shared::components::{ActiveSpec, PowerType};
 use std::collections::HashSet;
@@ -699,7 +700,9 @@ fn producers(world: &World, parent: u32) -> impl Iterator<Item = &'static Policy
             return parents.contains(&parent);
         }
         matches!(policy.relationship,
-        Relationship::OwnedPetSpellAfterCast { parent: trigger, .. }
+        Relationship::OwnedPetWrathAfterCast { parent: trigger }
+        | Relationship::ReduceCooldownAfterCast { parent: trigger, .. }
+        | Relationship::OwnedPetSpellAfterCast { parent: trigger, .. }
         | Relationship::TriggerPrimaryAfterCast { parent: trigger, .. }
         | Relationship::ApplySelfAuraAfterCast { parent: trigger, .. }
         | Relationship::ConsumeSelfAuraAfterCast { parent: trigger, .. }
@@ -754,6 +757,19 @@ fn apply_after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
             continue;
         }
         match policy.relationship {
+            Relationship::OwnedPetWrathAfterCast { .. } => {
+                pet_wrath::after_cast(world, caster, spell)
+            }
+            Relationship::ReduceCooldownAfterCast {
+                cooldown,
+                milliseconds_effect,
+                ..
+            } => {
+                let milliseconds =
+                    super::script_effect_value(world, caster, policy.talent, milliseconds_effect);
+                let seconds = f64::from(milliseconds) / 1000.0;
+                super::reduce_cooldown(world, caster, cooldown, seconds);
+            }
             Relationship::OwnedPetSpellAfterCast { payload, .. } => {
                 cast_owned_pet_payload(world, caster, spell, payload);
             }
