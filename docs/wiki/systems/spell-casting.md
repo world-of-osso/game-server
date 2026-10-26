@@ -26,6 +26,22 @@ The [Marksmanship contract](../../specs/dps-parity.md#marksmanship-native-cast-r
 
 Sources: the named runtime modules and `hunter_{cadence,followup,explosive,salvo}_tests.rs` under `crates/server-simulation/src/dungeon_simulator/dps_parity/`. Numerical parity requires a separate complete300s measurement; passing relationship tests alone does not establish it.
 
+## Survival native producers — 2026-10-26
+
+[Survival's contract](../../specs/dps-parity.md#survival-literal-controller) uses native70448 values and pinned SimC76f8118 relationships. `survival.rs` grants real Tip uses and dispatches the actual Swipe replacement; `survival_wildfire.rs` owns primary-centred pack geometry and selected Shrapnel periodics. The old `batch14::bomb_primary` bridge is removed.
+
+Sentinel reuses `marksmanship_sentinel.rs` for owned mark grants, consumption, Lunar Storm and running cooldown reductions. Actual Takedown with Lunar Calling force-marks its hostile primary. Tip consumption queues real caster/target pairs until after the impact batch, so Wildfire can consume an old mark before earning another. Survival reads native Sentinel chance, including Moon's Blessing through label5585, then Lunar Calling's distinct Survival effect during Takedown. MM's manual Moon addition and its separate native chance remain unchanged. Do not add Moon twice or create another mark engine.
+
+| Capability | Proof as of2026-10-26 |
+|---|---|
+| Tip/Swipe/Wildfire/Shrapnel | Landed455a8ad19; b899ee589e passes35 actual cases with canonical/Pack fixtures partitioned and unit cases in server-combat |
+| Sentinel force/Tip/Storm/recharge | Native0ac1974a11 has3 genuine owned-mark REDs→GREEN; landed4c9083c0c0 via bdb0b13806 with38 actual controls, including all19MM |
+| Strike as One | Native7d268c55e0 observes0 owned-pet strikes, including tipped rank3 Swipe; native-payload/ICD implementation committed, GREEN and actual-crit Sic 'Em qualification pending |
+
+After Sentinel landing4c9083c0c0, canonical300s three-seed means are78418.654ST/140699.957three-target DPS (39.50%/44.16% reference), not numerical parity. Earlier455a8ad19 baseline was60195.31ST/104726.809three-target. Pack Leader is a mechanics control, not the canonical scoring fixture. Concurrent shared changes prevent isolated slice attribution.
+
+Sources: [shared Sentinel](../../../crates/server-spell-scripts/src/modules/marksmanship_sentinel.rs), [Tip/Swipe](../../../crates/server-spell-scripts/src/modules/survival.rs), [Wildfire](../../../crates/server-spell-scripts/src/modules/survival_wildfire.rs), [actual mark tests](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/survival_mark_tests.rs); pinned `sc_hunter.cpp1358–1372,3650–3710,6181–6188,6400–6401,7104–7107`.
+
 ## Native Warrior execution relationships — 2026-10-25
 
 The [Fury/Warrior contract](../../specs/dps-parity.md#fury-player-parity) is implemented as source-qualified scripts, not spell-ID branches in the shared cast engine. Native70448 supplies effects, probabilities, ICDs, resource units and payloads; SimC76f8118 supplies execution boundaries.
@@ -522,7 +538,7 @@ Frozen615fb90 baseline164/93/71 becomes163/98/65 at1e719bf: only Vampiric Blood'
 
 ## Wildfire primary variance fixture
 
-Current native source values replace stale golden constants, not runtime coefficients or variance tolerance. A legitimate upper primary draw reproduced the master red; bounded real casts now cover the full source interval while distinct AP/RAP preserve owned bleed and splash limits. [Source, exact failure and merged proof](../../class-completeness6.md#wildfire-primary-variance-master-red--batch61).
+Historical primary-only bridge proof: native source values replaced stale golden constants without changing runtime coefficients or variance tolerance. A legitimate upper primary draw reproduced the master red. The retained fixture now covers the [native Survival pack producer](#survival-native-producers--2026-10-26), which replaces that bridge. [Source, exact failure and merged proof](../../class-completeness6.md#wildfire-primary-variance-master-red--batch61).
 
 ## Touch of Death primary damage — 2026-10-16
 
@@ -544,7 +560,7 @@ Ordinary HostClient34026 after native Call Pet883/creature299 reproduces owner C
 
 ## Fourteenth batch: owned hits and native clocks
 
-[Contract](../../specs/spell-dummy-scripts.md#fourteenth-batch-local-hit-actor-and-periodic-consumers), [capabilities/proof/all40](../../spell-dummy14-coverage.md). `scripts/batch14.rs` binds Frozen Orb/Blizzard's distinct named hit slows, Survival Kill Command's actual persistent-pet caster, Wildfire's named primary hit/bleed, Deathmark's80 total Energy on its existing bleed clock, Eye Beam's named primary/ranked crit, Metamorphosis's8yd destination hit and player daze, and Consume's named Fury. These are eight bounded entries, not full class/talent parity. Frost child-hit tests are not root-cast A proofs; cone179/129 actors remain separate gaps.
+[Contract](../../specs/spell-dummy-scripts.md#fourteenth-batch-local-hit-actor-and-periodic-consumers), [capabilities/proof/all40](../../spell-dummy14-coverage.md). `scripts/batch14.rs` binds Frozen Orb/Blizzard's distinct named hit slows, Survival Kill Command's actual persistent-pet caster, Deathmark's80 total Energy on its existing bleed clock, Eye Beam's named primary/ranked crit, Metamorphosis's8yd destination hit and player daze, and Consume's named Fury. The original batch had eight bounded entries, not full class/talent parity; its Wildfire bridge has since moved to the [native Survival producer](#survival-native-producers--2026-10-26). Frost child-hit tests are not root-cast A proofs; cone179/129 actors remain separate gaps.
 
 Eye Beam's native2000ms/200ms/EXTRA_INITIAL_PERIOD yields11 attacks. Local variable316's total expression references10: retain the discrepancy, do not replace the native clock with a guessed timer. Rank fixtures explicitly restrict KnownSpells to prevent automatic passive sync from making the no-rank case vacuous. Pet fixtures assert66 damage from the real22AP inherited state; no production scaling workaround. Landing player-CC fixtures require actual duel hostility, not an NPC faction substituted onto a player.
 

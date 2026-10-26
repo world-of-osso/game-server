@@ -116,5 +116,6 @@ fn consume_tip(
     if affected {
         decrement(world, ctx.caster, TIP);
         super::marksmanship_sentinel::queue_tip_mark(world, ctx.caster, target);
+        super::survival_pet::after_tip_impact(world, ctx, target);
     }
 }
