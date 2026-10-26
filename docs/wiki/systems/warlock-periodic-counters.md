@@ -26,6 +26,12 @@ Pinned behavior is in `sc_warlock_actions.cpp1119–1149,1208–1317,1544–1565
 
 Native lifecycle RED is recorded in train `a203eec969` and `97012b5fc8`: UA and CB leave Wither1 unchanged, and collapse gates fail. The no-owned-Wither control passes. The Malevolence test initially used a damage-modified dummy amount; it now reads the raw native base value, as the source does. Probe `c77810573a` passes five lifecycle cases. Its Malevolence case incorrectly cast raw talent430014; it now uses the same native action resolution as the real driver and casts442726. Train `687ff619cf` lands `b6937d3bf310` with all six native lifecycle cases GREEN. The separate265-led `1636dfe495` also passes all six; three independently owned Affliction Calamity/Wrath cases remain RED. Three-seed267 means are94930.81ST and123087.79three-target (48.65%/47.94% of reference), not numerical parity.
 
+## Seed of Corruption lifecycle
+
+This is native27243/27285, not the separate Hellcaller Seeds of Their Demise counter. [Contract](../../specs/dps-parity.md#seed-of-corruption-lifecycle). The downstream `warlock_seed` leaf stores the snapshotted threshold in the actual owned Seed dummy effect2. Existing landed-damage callbacks consume that budget; native periodic/removal callbacks detach Seed and enqueue its unmodified explosion. Refresh keeps the original periodic boundary rather than waiting for the extended aura expiry. Real explosion impacts chain owned Seeds and apply only the native background DoT, leaving shared Wither counter policy and UA lifecycle registrations unchanged.
+
+Native `f932eaa2c1` proves both failures with paid casts and normal frames: actual owner damage exceeded native threshold before expiry, and a separate Seed ended naturally, but neither produced27285. The267 shared-Wither baseline passes. The implementation and the additional paid-recast/original-deadline case remain native qualification-gated. No numerical parity claim follows from the dispatch change.
+
 ## Sources
 
 - [Counter lifecycle module](../../../crates/server-spell-scripts/src/modules/hellcaller_counters.rs) and [native lifecycle tests](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/hellcaller_counter_tests.rs)

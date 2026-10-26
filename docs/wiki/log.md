@@ -1,3 +1,7 @@
+## 2026-10-26 — Native Seed explosion lifecycle
+
+[Seed of Corruption](systems/warlock-periodic-counters.md#seed-of-corruption-lifecycle) has genuine paid-cast threshold and expiry REDf932eaa2c1: both native boundaries occur, neither emits27285. Downstream aura-budget, original periodic tick and queued explosion dispatch preserve native damage, background Wither ownership and independently owned UA lifecycle. Native GREEN, both-spec guards and measurement remain pending.
+
 ## 2026-10-26 — Elemental Weapons dynamic amount
 
 [Elemental Weapons](systems/auras.md#elemental-weapons-dynamic-amount--2026-10-26) now derives native408390 amounts from selected384355 and real imbued hands. Matching-input Bolt RED4db1ecbdad records31098→31098 instead of +5% with one hand; GREEN and measurement remain pending. Native masks, coefficients and proc chances are unchanged.

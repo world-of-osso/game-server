@@ -419,6 +419,12 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 - Selected Conflagration of Chaos387108 scales Conflagrate17962 and Shadowburn17877 damage by one plus the live caster spell-crit fraction. The ability-specific guaranteed crit is not the multiplier input. Actual damage and pure forecasts must share this rule without rerolling damage or rescaling resolved copies (SimC76f8118 actions4511–4517,4838–4844).
 - Preserve the existing Chaos Bolt crit-chance scaling; do not apply it twice. Native crit changes, not a reference-derived damage coefficient, must drive this relationship.
 
+### Seed of Corruption lifecycle
+
+- Actual paid27243 snapshots its caster's native spell power times effect0 percent as the damage threshold. Its caster's actual landed damage consumes that owned threshold. Reaching zero or natural expiry queues real27285 after Seed removal, without nested explosions or catalog/coefficient changes (SimC76f8118 `sc_warlock.cpp380–405`, `sc_warlock_actions.cpp1927–1965`).
+- Reapplication extends the aura but must not move its original periodic explosion deadline. A real27285 impact chains an owned Seed and applies background native Wither445474 for selected445465, otherwise Corruption146739, without the initial direct Wither payload or a new cost (`sc_warlock_actions.cpp1710–1773`). Preserve shared Wither counters and tick phase; do not register or replace UA1259790 lifecycle callbacks.
+- Qualify actual threshold, expiry, refresh/original-deadline and recipient ownership, with native265 Seed and267 shared-Wither controls. Root target selection/Sow effectiveness, death/dispel and MID2 seed-applied-UA relationships require their own proof; do not infer them from a zero-damage periodic tick.
+
 ### Shared Hellcaller Wither counters
 
 - Native Wither445474 keeps its actual counter stacks, but its periodic damage ignores that count. An ordinary recast preserves earned stacks without adding a refresh stack; explicit native stack applications retain normal counter advancement. Preserve native coefficients, tick phase and lifetime. Both265 and267 share this rule (SimC76f8118 `sc_warlock_actions.cpp1066,1174–1186`).
