@@ -37,10 +37,8 @@ pub(crate) use script_registry::melee_residual as after_melee_residual;
 pub(super) use script_registry::spell_residual as after_spell_residual;
 mod chrono_flame;
 mod clearcasting;
-mod elemental;
 mod guardian_impacts;
 mod stacking_summons;
-pub(crate) use elemental::register as register_elemental_policies;
 pub(super) use script_registry::after_modifier_consumption as apply_echo_policies;
 mod enhancement_imbues;
 mod enhancement_modes;
@@ -180,7 +178,7 @@ pub(super) fn capture_consumed_damage_modifier(
     foreground: bool,
 ) -> Option<u32> {
     policies::pet_sets::capture_cobra_damage(world, caster, spell);
-    elemental::capture_damage_modifier(world, caster, spell, foreground)
+    script_registry::capture_consumed_damage_modifier(world, caster, spell, foreground)
 }
 
 pub(super) fn finish_scripted_launch(
@@ -191,7 +189,9 @@ pub(super) fn finish_scripted_launch(
     depth: u8,
     foreground: bool,
 ) {
-    elemental::after_launch(world, caster, spell, consumed, depth, foreground);
+    script_registry::finish_consumed_damage_modifier(
+        world, caster, spell, consumed, depth, foreground,
+    );
     script_registry::after_elemental_launch(world, caster, spell, foreground);
     policies::pet_sets::finish_cobra(world, caster, spell);
     script_registry::after_counter_launch(world, caster, spell.id);
@@ -205,7 +205,7 @@ pub(super) fn finish_scripted_launch(
 pub(super) fn on_cast(world: &mut World, caster: Entity, spell_id: u32, depth: u8) {
     script_registry::on_cast(world, caster, spell_id, depth);
     windwalker::scripted_combo_cast(world, caster, spell_id, depth);
-    elemental::before_launch(world, caster, spell_id, depth);
+    script_registry::before_judgment_on_cast(world, caster, spell_id, depth);
     match spell_id {
         batch16::RET_JUDGMENT | batch16::HOLY_JUDGMENT | batch10::PROTECTION_JUDGMENT => {
             batch16::energize_judgment(world, caster, depth);

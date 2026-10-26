@@ -1,8 +1,18 @@
 //! Missing Elemental script relationships; native aura records own every amount.
-use crate::auras::ActiveAuras;
-use crate::class_progression::{ActiveSpec, TraitLoadout};
-use crate::random::seq::SliceRandom;
-use crate::spell_info::SpellInfo;
+use super::combat;
+use combat::auras::ActiveAuras;
+use combat::class_progression::{ActiveSpec, TraitLoadout};
+use combat::random::seq::SliceRandom;
+use combat::spell_cast;
+use combat::spell_cast::script_registry::SpellScriptHook;
+use combat::spell_info::SpellInfo;
+
+pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::CaptureConsumedDamageModifier(capture_damage_modifier),
+    SpellScriptHook::FinishConsumedDamageModifier(after_launch),
+    SpellScriptHook::BeforeJudgmentOnCast(before_launch),
+    SpellScriptHook::BeforeLateAuraRegistration(register),
+];
 use bevy::prelude::*;
 
 const MASTER_OF_ELEMENTS: u32 = 16166;
@@ -102,7 +112,7 @@ fn selected(world: &World, caster: Entity, talent: u32) -> bool {
 
 /// Preserve the earned multiplier through ordinary flight, DoTs and fields.
 /// SimC76f8118 sc_shaman.cpp3249–3252 reads MOTE's native buff value once.
-pub(in crate::spell_cast) fn capture_damage_modifier(
+fn capture_damage_modifier(
     world: &World,
     caster: Entity,
     spell: &mut SpellInfo,
@@ -112,7 +122,7 @@ pub(in crate::spell_cast) fn capture_damage_modifier(
     if !selected(world, caster, MASTER_OF_ELEMENTS) {
         return None;
     }
-    let now = super::super::now(world);
+    let now = spell_cast::now(world);
     let aura = world.get::<ActiveAuras>(caster)?.iter().find(|aura| {
         aura.spell_id == MOTE && aura.caster == caster && aura.expires_at.is_none_or(|at| at > now)
     })?;
@@ -136,7 +146,7 @@ pub(super) fn before_launch(world: &mut World, caster: Entity, spell: u32, depth
     grant_blast_buff(world, caster, spell, true, depth);
 }
 
-pub(in crate::spell_cast) fn after_launch(
+fn after_launch(
     world: &mut World,
     caster: Entity,
     spell: &SpellInfo,
@@ -145,7 +155,7 @@ pub(in crate::spell_cast) fn after_launch(
     foreground: bool,
 ) {
     if let Some(instance) = consumed {
-        crate::auras::spend_stack(world, caster, instance);
+        combat::auras::spend_stack(world, caster, instance);
     }
     if foreground && !spell.cast_parent_owns_modifier_charges {
         grant_mote(world, caster, spell.id, depth);
@@ -155,14 +165,14 @@ pub(in crate::spell_cast) fn after_launch(
 
 // SimC76f8118 sc_shaman.cpp7245–7247: only normal Lava Burst earns MOTE.
 // The native16166 generated HIT mask is broad and would re-grant it on Lightning.
-pub(crate) fn register(scripts: &mut crate::auras::scripts::AuraScripts) {
+fn register(scripts: &mut combat::auras::scripts::AuraScripts) {
     scripts.0.entry(MASTER_OF_ELEMENTS).or_default().check_proc = Some(block_generated_mote_proc);
 }
 
 fn block_generated_mote_proc(
     _world: &World,
-    _aura: &crate::auras::AuraInstance,
-    _event: &crate::auras::procs::AuraEvent,
+    _aura: &combat::auras::AuraInstance,
+    _event: &combat::auras::procs::AuraEvent,
 ) -> bool {
     false
 }
@@ -172,7 +182,7 @@ fn grant_mote(world: &mut World, caster: Entity, spell: u32, depth: u8) {
         return;
     }
     let parent = world
-        .resource::<crate::spell_info::SpellStore>()
+        .resource::<combat::spell_info::SpellStore>()
         .get(MASTER_OF_ELEMENTS)
         .expect("selected native Master of the Elements metadata");
     let child = parent
@@ -181,7 +191,7 @@ fn grant_mote(world: &mut World, caster: Entity, spell: u32, depth: u8) {
         .find(|effect| effect.index == 0)
         .expect("native Master of the Elements trigger effect0")
         .trigger_spell;
-    if !super::super::try_cast_triggered(world, caster, child, Some(caster), depth + 1) {
+    if !spell_cast::try_cast_triggered(world, caster, child, Some(caster), depth + 1) {
         warn!(
             ?caster,
             spell, child, "Native Master of the Elements buff cast refused"
@@ -190,7 +200,7 @@ fn grant_mote(world: &mut World, caster: Entity, spell: u32, depth: u8) {
 }
 
 fn missing_buffs(world: &World, caster: Entity) -> Vec<u32> {
-    let now = super::super::now(world);
+    let now = spell_cast::now(world);
     let auras = world
         .get::<ActiveAuras>(caster)
         .expect("native class actor retains auras");
@@ -218,9 +228,9 @@ fn grant_blast_buff(world: &mut World, caster: Entity, spell: u32, before: bool,
         &missing
     };
     let buff = *candidates
-        .choose(&mut crate::random::thread_rng())
+        .choose(&mut combat::random::thread_rng())
         .expect("Elemental Blast has three native buffs");
-    if !super::super::try_cast_triggered(world, caster, buff, Some(caster), depth + 1) {
+    if !spell_cast::try_cast_triggered(world, caster, buff, Some(caster), depth + 1) {
         warn!(
             ?caster,
             spell, buff, "Native Elemental Blast buff cast refused"

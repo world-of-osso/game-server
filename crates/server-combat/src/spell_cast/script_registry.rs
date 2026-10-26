@@ -61,6 +61,10 @@
 //! - `EmpowerCompletion`: first completion handler, before channel end and finish GCD.
 //! - `EmpowerDamageBonus`: native converted-tick damage added before normal multipliers.
 //! - `EmpowerReleasePreview`: first matching native release metadata for APL/fixtures.
+//! - `CaptureConsumedDamageModifier`: after pet-set capture; first consuming source.
+//! - `FinishConsumedDamageModifier`: before Frost/pet-set launch completion.
+//! - `BeforeJudgmentOnCast`: after combo tracking, before native judgment energize.
+//! - `BeforeLateAuraRegistration`: immediately before late relationship registration.
 //! New stages own distinct callback/lookup aliases, even when signatures coincide.
 //! Within a stage, traverse module slices and entries from first to last. Never sort
 //! or deduplicate them. Adding a policy to an existing module changes only that module.
@@ -130,6 +134,12 @@ pub type EmpowerCompleteHook =
 pub type EmpowerCompleteLookup = fn(u32) -> Option<EmpowerCompleteHook>;
 pub type EmpowerDamageBonusHook = fn(&World, Entity, &SpellInfo) -> f32;
 pub type EmpowerReleasePreviewHook = fn(&World, Entity, u32, u8) -> Option<SpellInfo>;
+pub type CaptureConsumedDamageModifierHook =
+    fn(&World, Entity, &mut SpellInfo, bool) -> Option<u32>;
+pub type FinishConsumedDamageModifierHook =
+    fn(&mut World, Entity, &SpellInfo, Option<u32>, u8, bool);
+pub type BeforeJudgmentOnCastHook = fn(&mut World, Entity, u32, u8);
+pub type BeforeLateAuraRegistrationHook = fn(&mut crate::auras::scripts::AuraScripts);
 
 #[derive(Clone, Copy)]
 pub enum SpellScriptHook {
@@ -198,6 +208,10 @@ pub enum SpellScriptHook {
     EmpowerCompletion(EmpowerCompleteLookup),
     EmpowerDamageBonus(EmpowerDamageBonusHook),
     EmpowerReleasePreview(EmpowerReleasePreviewHook),
+    CaptureConsumedDamageModifier(CaptureConsumedDamageModifierHook),
+    FinishConsumedDamageModifier(FinishConsumedDamageModifierHook),
+    BeforeJudgmentOnCast(BeforeJudgmentOnCastHook),
+    BeforeLateAuraRegistration(BeforeLateAuraRegistrationHook),
 }
 
 #[derive(Clone, Copy, Resource)]
@@ -265,6 +279,14 @@ impl SpellScriptRegistry {
     pub fn register_late_auras(self, scripts: &mut crate::auras::scripts::AuraScripts) {
         for hook in self.hooks() {
             if let SpellScriptHook::LateAuraRegistration(register) = hook {
+                register(scripts);
+            }
+        }
+    }
+
+    pub fn register_before_late_auras(self, scripts: &mut crate::auras::scripts::AuraScripts) {
+        for hook in self.hooks() {
+            if let SpellScriptHook::BeforeLateAuraRegistration(register) = hook {
                 register(scripts);
             }
         }
@@ -904,6 +926,46 @@ pub fn empower_release_preview(
             SpellScriptHook::EmpowerReleasePreview(run) => run(world, caster, spell, rank),
             _ => None,
         })
+}
+
+pub fn capture_consumed_damage_modifier(
+    world: &World,
+    caster: Entity,
+    spell: &mut SpellInfo,
+    foreground: bool,
+) -> Option<u32> {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .find_map(|hook| match hook {
+            SpellScriptHook::CaptureConsumedDamageModifier(capture) => {
+                capture(world, caster, spell, foreground)
+            }
+            _ => None,
+        })
+}
+
+pub fn finish_consumed_damage_modifier(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    consumed: Option<u32>,
+    depth: u8,
+    foreground: bool,
+) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::FinishConsumedDamageModifier(run) = hook {
+            run(world, caster, spell, consumed, depth, foreground);
+        }
+    }
+}
+
+pub fn before_judgment_on_cast(world: &mut World, caster: Entity, spell: u32, depth: u8) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::BeforeJudgmentOnCast(run) = hook {
+            run(world, caster, spell, depth);
+        }
+    }
 }
 
 #[cfg(test)]
