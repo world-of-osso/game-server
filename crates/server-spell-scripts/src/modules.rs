@@ -117,6 +117,7 @@ register_modules! {
     hunter_howl: (2530, "modules/hunter_howl.rs"),
     hunter_howl_recovery: (2531, "modules/hunter_howl_recovery.rs"),
     hunter_wild_hunt: (2534, "modules/hunter_wild_hunt.rs"),
+    hunter_wyvern: (2535, "modules/hunter_wyvern.rs"),
     impact_procs: (330, "modules/impact_procs.rs"),
     lava_surge: (300, "modules/lava_surge.rs"),
     marksmanship: (380, "modules/marksmanship.rs"),
