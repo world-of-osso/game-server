@@ -161,6 +161,9 @@ pub struct SpellInfo {
     /// Fraction of a final periodic interval, applied after damage/healing modifiers.
     #[serde(skip)]
     pub cast_periodic_fraction: Option<f32>,
+    /// Actual native scheduler ordinal for this tick, not the already advanced live counter.
+    #[serde(skip)]
+    pub cast_periodic_ordinal: Option<u64>,
     #[serde(skip)]
     pub cast_damage_role: CastDamageRole,
     /// Every `spell_power` row, sorted by `OrderIndex`.

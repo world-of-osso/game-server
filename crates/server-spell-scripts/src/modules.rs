@@ -57,6 +57,7 @@ register_modules! {
     feral_lunar: (1030, "modules/feral_lunar.rs"),
     foreground_procs: (310, "modules/foreground_procs.rs"),
     frost: (80, "modules/frost.rs"),
+    frost_followups: (411, "modules/frost_followups.rs"),
     germination: (200, "modules/germination.rs"),
     giantkiller: (170, "modules/giantkiller.rs"),
     havoc: (150, "modules/havoc.rs"),
