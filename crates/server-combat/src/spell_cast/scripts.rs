@@ -32,6 +32,8 @@ mod batch8;
 mod batch9;
 mod frost;
 mod frost_mage;
+mod frost_mage_procs;
+pub(super) use frost_mage_procs::snapshot_launch_auras as snapshot_frost_launch_auras;
 mod periodic_attacks;
 pub(crate) use periodic_attacks::{after_periodic_trigger, rolls_reapplication};
 pub(super) use script_registry::after_foreground_special;
@@ -104,7 +106,9 @@ pub(super) fn apply_periodic_damage_policies(
 }
 
 pub(crate) fn owns_policy_proc(world: &World, spell: u32) -> bool {
-    policies::owns_policy_proc(world, spell) || frost::owns_proc(spell)
+    policies::owns_policy_proc(world, spell)
+        || frost::owns_proc(spell)
+        || frost_mage_procs::owns_proc(spell)
 }
 mod fire_procs;
 pub(crate) mod holy_priest;
@@ -586,7 +590,6 @@ pub fn on_effect_hit(
         (batch7::RAKE, 0) => Some(batch7::stun_rake),
         (batch6::SUNFIRE, 0) => Some(batch6::sunfire),
         (batch6::TEMPLARS_VERDICT, 0) => Some(batch6::verdict),
-        (batch6::ICE_LANCE, 0) => Some(batch6::ice_lance),
         (batch6::SHADOW_WORD_DEATH, 1) => Some(batch6::shadow_word_death),
         (batch5::DEMONS_BITE, 1) => Some(batch5::demons_bite),
         (batch5::CHAOS_STRIKE, 0) => Some(batch5::chaos_strike),
@@ -819,6 +822,7 @@ pub fn after_cast(world: &World, spell_id: u32) -> impl Iterator<Item = AfterCas
     // not alternate implementations (SimC76f8118 sc_hunter.cpp5083–5092).
     native_after_cast(world, spell_id)
         .into_iter()
+        .chain(frost_mage_procs::after_cast_hook(spell_id))
         .chain(policies::after_cast_hook(world, spell_id))
         .chain(spellslinger::after_cast_hook(spell_id))
         .chain(batch9::after_cast_hook(spell_id))
@@ -1715,6 +1719,9 @@ pub type HitHook = fn(&mut World, Entity, Entity, u8);
 pub(super) type ContextHitHook = fn(&mut World, &super::effects::EffectCtx, Entity);
 
 pub(super) fn on_hit_with_context(world: &World, spell_id: u32) -> Option<ContextHitHook> {
+    if spell_id == 30455 {
+        return Some(frost_mage_procs::launch_lance_payload);
+    }
     if let Some(hook) = policies::hit_hook(world, spell_id) {
         return Some(hook);
     }

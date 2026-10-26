@@ -25,7 +25,9 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 ### Frost Mage native Freezing and Shatter
 
 - Actual Frostbolt228597, Flurry228354 and Glacial Spike228600 damage adds the native1246769 Freezing counts to the caster-owned1221389 debuff. Selected Frostbite adds its native count on critical Frostbolt/Spike impacts. Each actual Ray tick adds one stack (`sc_mage.cpp3947/4055/4094–4095/4248/4304–4305/4995/7105–7127`).
-- Ice Lance228598 consumes up to native1246769 effect4 stacks from that mage's own recipient debuff and launches one native1246949 payload scaled by the consumed count. Remaining owned Freezing refreshes. Effect0 hits the primary once; selected Frostbite enables effect1 on secondary enemies only, with its native reduced-AoE cap (`sc_mage.cpp4324–4342/4428/7129–7181`). Fingers of Frost/ Thermal Void launch snapshots and the associated secondary producers remain separate work.
+- Ice Lance228598 consumes up to native1246769 effect4 stacks from that mage's own recipient debuff and launches one native1246949 payload scaled by the consumed count. Remaining owned Freezing refreshes. Effect0 hits the primary once; selected Frostbite enables effect1 on secondary enemies only, with its native reduced-AoE cap (`sc_mage.cpp4324–4342/4428/7129–7181`). Ordinary Ice Lance snapshots native Fingers of Frost and Thermal Void at admission and retains them through its missile and228598 payload. Spend those buffs at execution. Earned Fingers pays the full native Shatter count without consuming recipient Freezing; earned Thermal doubles the count (`sc_mage.cpp4445–4473/7129–7170`).
+
+- Native Frozen Orb grants selected Everlasting Frost's authored Fingers count and rolls native Wintertide for Brain Freeze; guaranteed Brain Freeze restores all native Flurry charges. Selected Permafrost Lances opens its native buff. An actual Brain Freeze Flurry consumes that proc and opens selected Thermal Void (`sc_mage.cpp4186–4190/4012–4015/7430–7433`). Other Frost proc producers remain separate work.
 
 ### Frost Mage native Icicles and Glacial Spike
 
