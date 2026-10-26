@@ -51,7 +51,8 @@ fn start_squadron(world: &mut World, owner: Entity, spell: &SpellInfo) {
     let duration = world
         .resource::<SpellStore>()
         .get(FLIGHT)
-        .and_then(|flight| flight.duration.as_ref())
+        .and_then(|flight| flight.misc.as_ref())
+        .and_then(|misc| misc.duration.as_ref())
         .expect("native Commando flight duration")
         .duration_ms;
     for &summon in SUMMONS {
