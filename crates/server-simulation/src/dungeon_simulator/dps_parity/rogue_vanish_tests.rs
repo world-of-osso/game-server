@@ -80,6 +80,10 @@ fn rogue_vanish_native_cast_suspends_weapons_expires_to_stealth_and_earns_garrot
         crate::auras::has_aura(run.app.world(), actor, 1784),
         "natural Vanish expiry grants actual Stealth, rather than breaking concealment"
     );
+    assert!(
+        !crate::auras::has_aura(run.app.world(), actor, 392401),
+        "natural expiry must preserve concealment without prematurely earning the post-stealth Garrote window"
+    );
     literal_rotation::execution::execute(
         run.app.world_mut(),
         actor,
