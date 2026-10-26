@@ -162,6 +162,8 @@ impl Rotation {
             self.driver.snapshot.is_none(),
         )?;
         let facts = UnholyFacts {
+            world,
+            actor,
             native: NativeFacts::new(world, actor, &self.bindings, self.encounter, targets.len())
                 .with_targets(targets.first().copied(), targets),
             equipment: &self.equipment,
@@ -239,6 +241,8 @@ impl super::SpecDriver for Rotation {
 }
 
 struct UnholyFacts<'a> {
+    world: &'a World,
+    actor: Entity,
     native: NativeFacts<'a>,
     equipment: &'a Equipment,
 }
@@ -255,6 +259,24 @@ impl Facts for UnholyFacts<'_> {
         if name == "dot.dread_plague.active_dots" {
             return self.native.value("active_dot.dread_plague");
         }
+        // SimC76f8118 action.cpp4276/player.cpp11768–11770,11807–11808,
+        // 12574–12600: bare operands bind the actor, even inside target_if.
+        if name == "health.pct" {
+            let health = self
+                .world
+                .get::<shared::components::Health>(self.actor)
+                .ok_or("native Unholy actor lacks Health")?;
+            if health.max <= 0.0 {
+                return Err("native Unholy actor has invalid maximum Health".into());
+            }
+            return Ok(f64::from(health.current) * 100.0 / f64::from(health.max));
+        }
+        if name == "is_boss" {
+            return Ok(self
+                .world
+                .get::<crate::simc_apl_native::FixtureTarget>(self.actor)
+                .map_or(0.0, |role| if role.is_boss { 1.0 } else { 0.0 }));
+        }
         self.native.value(name)
     }
 }
@@ -266,7 +288,12 @@ impl ActionFacts for UnholyFacts<'_> {
         self.native.target_ready(action)
     }
     fn value_for(&self, action: &Action, name: &str) -> Result<f64, String> {
-        if equipment_operand(name) || name == "dot.dread_plague.active_dots" {
+        if equipment_operand(name)
+            || matches!(
+                name,
+                "dot.dread_plague.active_dots" | "health.pct" | "is_boss"
+            )
+        {
             return self.value(name);
         }
         self.native.value_for(action, name)
