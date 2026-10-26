@@ -15,9 +15,17 @@ fn after_hand(world: &mut World, ctx: &EffectCtx, target: Entity, _crit: bool, d
         return;
     }
     let percent = world.get::<ActiveAuras>(ctx.caster).and_then(|auras| {
-        let talent = auras.iter().find(|aura| aura.spell_id == TALENT && aura.caster == ctx.caster)?;
-        Some(talent.effects.iter().find(|effect| effect.index == 0)
-            .expect("native Doomblade retains its residual fraction").amount)
+        let talent = auras
+            .iter()
+            .find(|aura| aura.spell_id == TALENT && aura.caster == ctx.caster)?;
+        Some(
+            talent
+                .effects
+                .iter()
+                .find(|effect| effect.index == 0)
+                .expect("native Doomblade retains its residual fraction")
+                .amount,
+        )
     });
     let Some(percent) = percent else { return };
     // Native394021 owns duration, cadence, rolling carry and no-second-crit flags.
