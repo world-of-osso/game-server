@@ -101,6 +101,7 @@ register_modules! {
     essence_burst: (140, "modules/essence_burst.rs"),
     evoker_bombardments: (1000, "modules/evoker_bombardments.rs"),
     evoker_burnout: (1000, "modules/evoker_burnout.rs"),
+    evoker_command_squadron: (1000, "modules/evoker_command_squadron.rs"),
     evoker_flames: (430, "modules/evoker_flames.rs"),
     evoker_imminent: (1000, "modules/evoker_imminent.rs"),
     evoker_rewind: (1000, "modules/evoker_rewind.rs"),
