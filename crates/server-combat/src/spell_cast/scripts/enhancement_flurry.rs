@@ -8,6 +8,8 @@ use crate::spell_cast;
 use crate::spell_info::{SpellInfo, SpellStore};
 
 const STORMFLURRY: u32 = 344357;
+const DELAY_MEAN_SECONDS: f64 = 0.200;
+const DELAY_STD_SECONDS: f64 = 0.025;
 
 struct PendingFlurry {
     at: f64,
@@ -47,15 +49,17 @@ pub(in crate::spell_cast) fn weapon_multiplier(
     .then(|| multiplier(world, caster))
 }
 
-pub(super) fn after_launch(world: &mut World, caster: Entity, spell: &SpellInfo) {
-    if !matches!(spell.id, 17364 | 115356)
-        || !world
-            .get::<ActiveSpec>(caster)
-            .is_some_and(|spec| spec.0 == 263)
-        || !world
+fn is_selected(world: &World, caster: Entity) -> bool {
+    world
+        .get::<ActiveSpec>(caster)
+        .is_some_and(|spec| spec.0 == 263)
+        && world
             .get::<KnownSpells>(caster)
             .is_some_and(|known| known.contains(STORMFLURRY))
-    {
+}
+
+pub(super) fn after_launch(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    if !matches!(spell.id, 17364 | 115356) || !is_selected(world, caster) {
         return;
     }
     let chance = super::script_effect_value(world, caster, STORMFLURRY, 0);
@@ -85,7 +89,7 @@ fn roll_delay_seconds() -> f64 {
     // Source12056: Gaussian mean200ms, standard deviation25ms, not a uniform jitter.
     let radial = (1.0 - crate::random::random::<f64>()).ln() * -2.0;
     let angle = std::f64::consts::TAU * crate::random::random::<f64>();
-    (0.200 + 0.025 * radial.sqrt() * angle.cos()).max(0.0)
+    (DELAY_MEAN_SECONDS + DELAY_STD_SECONDS * radial.sqrt() * angle.cos()).max(0.0)
 }
 
 pub(in crate::spell_cast) fn update(world: &mut World) {
