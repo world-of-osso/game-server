@@ -5,19 +5,27 @@ use bevy::prelude::*;
 use combat::auras::ActiveAuras;
 use combat::spell_cast::{effects::EffectCtx, script_registry::SpellScriptHook};
 
-pub(super) const HOOKS: &[SpellScriptHook] = &[
-    SpellScriptHook::TargetContextDamageMultiplier(extra_multiplier),
-];
+pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::TargetContextDamageMultiplier(
+    extra_multiplier,
+)];
 const KINGSBANE: u32 = 385627;
 const MASTERY: u32 = 76803;
 const IMPLACABLE: u32 = 1265386;
 
 fn read_native_percent(world: &World, caster: Entity, spell: u32, index: u8) -> f32 {
-    world.get::<ActiveAuras>(caster)
-        .and_then(|auras| auras.iter().find(|aura| aura.spell_id == spell && aura.caster == caster))
+    world
+        .get::<ActiveAuras>(caster)
+        .and_then(|auras| {
+            auras
+                .iter()
+                .find(|aura| aura.spell_id == spell && aura.caster == caster)
+        })
         .map_or(0.0, |aura| {
-            aura.effects.iter().find(|effect| effect.index == index)
-                .expect("native Kingsbane modifier retains its sourced effect").amount
+            aura.effects
+                .iter()
+                .find(|effect| effect.index == index)
+                .expect("native Kingsbane modifier retains its sourced effect")
+                .amount
         })
 }
 
