@@ -258,7 +258,9 @@ fn assert_native_tick(run: &mut Run, power: PowerType, expected_rate: f32) {
     );
     assert!((actual_rate - expected_rate).abs() <= rounding);
     assert!((after - before - expected_rate * dt).abs() <= rounding);
-    assert_read_only_potential_facts(run, power, expected_rate);
+    // The tick uses its pre-frame stats; native aura/stat folding can change
+    // the live potential later in this same update without rewriting its cache.
+    assert_read_only_potential_facts(run, power, read_expected_native_regen(run, power));
 }
 
 fn assert_hasted_native_pool(spec: u32, spell: u32, power: PowerType) {
