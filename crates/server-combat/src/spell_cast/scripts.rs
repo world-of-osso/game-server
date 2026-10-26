@@ -32,6 +32,7 @@ mod batch8;
 mod batch9;
 mod frost;
 pub(super) use frost::consume_due_killing_machine;
+mod frost_mage;
 mod periodic_attacks;
 pub(crate) use periodic_attacks::{after_periodic_trigger, rolls_reapplication};
 pub(super) use script_registry::after_foreground_special;
@@ -39,12 +40,11 @@ pub(crate) use script_registry::melee_residual as after_melee_residual;
 pub(super) use script_registry::spell_residual as after_spell_residual;
 mod chrono_flame;
 mod clearcasting;
-mod echo_policies;
 mod elemental;
 mod guardian_impacts;
 mod stacking_summons;
-pub(super) use echo_policies::after_cast as apply_echo_policies;
 pub(crate) use elemental::register as register_elemental_policies;
+pub(super) use script_registry::after_modifier_consumption as apply_echo_policies;
 pub(crate) mod empower_evoker;
 mod enhancement_imbues;
 mod enhancement_modes;
@@ -97,6 +97,7 @@ pub(super) fn apply_periodic_damage_policies(
     target: Entity,
     amount: f32,
 ) {
+    frost_mage::after_periodic_damage(world, ctx, target);
     policies::after_periodic_damage(world, ctx, target, amount);
     spellslinger::after_periodic_damage(world, ctx, target);
     midnight_items::after_periodic_damage(world, ctx, target);
@@ -118,18 +119,14 @@ pub(super) use hot_streak::{
 mod midnight_items;
 pub(crate) mod prayer_of_mending;
 mod protection_items;
+pub use batch9::spawn_consecration;
 pub(crate) use midnight_items::register as register_midnight_items;
-mod ret_damage;
-pub(super) use ret_damage::{
-    after_periodic_damage as after_ret_periodic_damage, before_cast as before_ret_damage_cast,
-    damage_multiplier as ret_damage_multiplier, prepare_stored_damage,
+pub(super) use script_registry::{
+    after_foreground_spender, after_policy_periodic_damage as after_ret_periodic_damage,
+    after_spender_proc as schedule_empyrean_legacy,
+    before_native_on_cast as before_ret_damage_cast, prepare_stored_damage,
+    target_context_damage_multiplier as ret_damage_multiplier,
 };
-mod ret_empyrean;
-pub(crate) use ret_empyrean::owns_empyrean_proc;
-pub(super) use ret_empyrean::schedule_empyrean_legacy;
-mod ret_tier;
-pub(super) use ret_tier::after_foreground_spender;
-pub(crate) use ret_tier::owns_arbiter_charge;
 pub(super) use script_registry::{consume_resource_value_sources, effective_resource_value};
 mod rogue_children;
 mod rogue_hero;
@@ -149,6 +146,7 @@ mod windwalker_dual_threat;
 pub(crate) use windwalker_dual_threat::{
     read_replacement as white_impact_replacement, roll_replacement as replace_white_impact,
 };
+mod glory_of_the_dawn;
 mod windwalker_flurry;
 pub(crate) fn after_melee_hit(
     world: &mut World,
@@ -203,6 +201,7 @@ pub(super) fn finish_scripted_launch(
     policies::pet_sets::finish_cobra(world, caster, spell);
     script_registry::after_counter_launch(world, caster, spell.id);
     unbroken_rhythm::after_launch(world, caster, spell.id);
+    glory_of_the_dawn::after_launch(world, caster, spell, depth);
     enhancement_tier::after_launch(world, caster, spell, depth);
     enhancement_strikes::cast_ride_the_lightning(world, caster, spell, depth);
 }
@@ -216,10 +215,9 @@ pub(super) fn on_cast(world: &mut World, caster: Entity, spell_id: u32, depth: u
         batch16::RET_JUDGMENT | batch16::HOLY_JUDGMENT | batch10::PROTECTION_JUDGMENT => {
             batch16::energize_judgment(world, caster, depth);
         }
-        // SimC's ordinary/background Avenging Wrath constructors use these IDs.
-        31884 | 454351 => ret_empyrean::grant_on_wrath(world, caster, depth),
         _ => {}
     }
+    script_registry::after_native_on_cast(world, caster, spell_id, depth);
 }
 
 /// A registered emission replaces only that parent's native periodic trigger.
@@ -228,6 +226,7 @@ pub(crate) fn periodic_trigger(
     index: u8,
 ) -> Option<crate::auras::scripts::PeriodicHook> {
     match (spell, index) {
+        (crate::consumables::LIQUID_LUSTER, 0) => Some(crate::consumables::tick_liquid_luster),
         (unbroken_rhythm::ROOT, 0) => Some(unbroken_rhythm::cast_tick),
         _ => None,
     }
@@ -240,20 +239,21 @@ pub(super) fn after_direct_damage(
     target: Entity,
     critical: bool,
 ) {
+    frost_mage::after_damage(world, ctx, target, critical);
     spellslinger::after_direct_damage(world, ctx);
     windwalker_flurry::after_direct_damage(world, ctx, critical);
     crate::auras::rogue::after_builder_hit(world, ctx, critical);
     script_registry::replacement_direct_damage(world, ctx, target, critical);
     policies::after_damage(world, ctx);
     script_registry::impact_proc_damage(world, ctx, target);
-    ret_damage::after_direct_damage(world, ctx, target, critical);
+    script_registry::after_policy_direct_damage(world, ctx, target, critical);
     script_registry::after_direct_damage_before_items(world, ctx);
     // SimC76f8118 unique_gear_midnight.cpp6351–6355: perfected Guillotine impacts apply Venomfang.
     if ctx.spell.id == 1306624 {
         midnight_items::apply_perfected_venom(world, ctx.caster, target);
     }
     match ctx.spell.id {
-        xuens_battlegear::RSK_DAMAGE | xuens_battlegear::RWK_DAMAGE => {
+        xuens_battlegear::RSK_DAMAGE | xuens_battlegear::RWK_DAMAGE | glory_of_the_dawn::DAMAGE => {
             xuens_battlegear::reduce_fof_on_critical_impact(world, ctx, target, critical);
         }
         _ => {}
@@ -925,7 +925,6 @@ pub fn area_target_filter(
     }
     match (spell_id, effect_index) {
         (crate::auras::ebon_might::EBON, 0 | 1) => Some(crate::auras::ebon_might::filter_allies),
-        (1306923, 1) => Some(ret_damage::exclude_primary_cleave),
         (145_110, 0) => Some(pick_yseras_gift_group_target),
         (AZURE_STRIKE, 1) => Some(azure_strike_targets),
         (30735, 0) => Some(crate::scripted_ai::nethekurse::filter_shadow_sear),
@@ -972,11 +971,13 @@ pub(super) fn target_plan(world: &World, spell_id: u32) -> Option<(Relation, Tar
     if let Some(hook) = policies::target_plan_hook(world, spell_id) {
         return Some(hook);
     }
+    if let Some(hook) = frost_mage::target_plan_hook(spell_id) {
+        return Some(hook);
+    }
     if let Some(hook) = guardian_impacts::plan_hook(spell_id) {
         return Some((Relation::Enemy, hook));
     }
     match spell_id {
-        1261160 | 224239 | 431911 => Some((Relation::Enemy, ret_damage::area_plan)),
         super::toy_flag::TARGETING => Some((Relation::Any, super::toy_flag::targeting_plan)),
         super::toy_flag::FLAG => Some((Relation::Any, super::toy_flag::flag_plan)),
         97372 => Some((Relation::Any, track_switch_plan)),
@@ -1720,21 +1721,20 @@ pub(super) fn on_hit_with_context(world: &World, spell_id: u32) -> Option<Contex
         17364 | 115356 | 60103 | 187874 => Some(enhancement_strikes::on_strike),
         xuens_battlegear::SCK => Some(xuens_battlegear::capture_sck_parent),
         windwalker::WHIRLING_DRAGON_PUNCH => Some(windwalker::cast_wdp_single_hit),
-        343527 => Some(ret_damage::sentence_init),
         77_478 => Some(batch9::cast_earthquake_knockdown),
         _ => None,
     }
 }
 
 /// Damage-only impact scripts do not receive caster buffs or other aura recipients.
-pub(super) fn on_enemy_damage_hit_with_context(spell_id: u32) -> Option<ContextHitHook> {
+pub(super) fn on_enemy_damage_hit_with_context(
+    world: &World,
+    spell_id: u32,
+) -> Option<script_registry::EnemyContextHitHook> {
     if crate::auras::rogue::LETHAL_POISON_HITS.contains(&spell_id) {
         return Some(rogue_children::poison_hit);
     }
-    match spell_id {
-        20271 | 406957 | 24275 | 1279408 => Some(ret_damage::judgment_mastery),
-        _ => None,
-    }
+    script_registry::enemy_context_hit(world, spell_id)
 }
 
 pub fn on_hit(world: &World, spell_id: u32) -> Option<HitHook> {

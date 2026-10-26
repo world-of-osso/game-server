@@ -188,6 +188,8 @@ mod channel_melee_tests;
 #[cfg(test)]
 mod flurry_tests;
 #[cfg(test)]
+mod glory_tests;
+#[cfg(test)]
 mod momentum_tests;
 #[cfg(test)]
 mod source_children_tests;

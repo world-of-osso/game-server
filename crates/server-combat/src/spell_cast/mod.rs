@@ -219,6 +219,8 @@ mod open_lock_tests;
 #[cfg(test)]
 mod portal_tests;
 pub mod powers;
+mod precombat_item;
+pub use precombat_item::age_precombat_item_use;
 #[cfg(test)]
 mod protective_growth_tests;
 #[cfg(test)]
@@ -3403,7 +3405,7 @@ fn run_hit_scripts(
 ) {
     let hook = scripts::on_hit(world, spell.id);
     let context_hook = scripts::on_hit_with_context(world, spell.id);
-    let damage_hook = scripts::on_enemy_damage_hit_with_context(spell.id);
+    let damage_hook = scripts::on_enemy_damage_hit_with_context(world, spell.id);
     let native_hooks = hook.is_some() || context_hook.is_some() || damage_hook.is_some();
     let policies = spell.cast_policy_context.is_some() || scripts::has_impact_policy(world, spell);
     if !native_hooks && !policies {
@@ -3510,7 +3512,7 @@ struct HitFrame {
 
 /// Actual resolving TargetInfos, not mutable combat focus or only successful hits.
 /// The first entry owns native primary impact even when it misses.
-pub(super) fn resolving_targets<'w>(world: &'w World, ctx: &EffectCtx<'_>) -> Option<&'w [Entity]> {
+pub fn resolving_targets<'w>(world: &'w World, ctx: &EffectCtx<'_>) -> Option<&'w [Entity]> {
     Some(resolving_frame(world, ctx)?.selected.as_slice())
 }
 
