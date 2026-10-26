@@ -4665,4 +4665,4 @@ Documented the first compile-boundary slice in [spell-script-crate](systems/spel
 
 - 2026-10-25: Added Affliction native Nightfall tick threshold/consumer documentation; REDa00f81dc4b proved actual Wither ticks never earned the selected buff; GREEN/measurement pending.
 
-- 2026-10-26: [Feral fixture](systems/simc-apl.md#feral-literal-fixture--2026-10-25) reconciles landed Rampancy/Unseen and the duplicate-periodic correction. Native first-tick2→1 event RED→GREEN; corrected three-seed ST81.59%/3T82.03%, parity open. Convoke native damage RED/unchanged clock GREEN; source child implementation awaits train5f0e14266d.
+- 2026-10-26: [Feral fixture](systems/simc-apl.md#feral-literal-fixture--2026-10-25) reconciles landed Rampancy/Unseen and the duplicate-periodic correction. Native first-tick2→1 event RED→GREEN; corrected three-seed ST81.59%/3T82.03%, parity open. Convoke native damage RED/unchanged clock GREEN; initial implementation stayed RED because it required hostile reaction instead of native enemy admission for neutral31146. Canonical admission correction awaits GREEN; paid Bite/Saber and Unseen/Rogue controls pass.
