@@ -187,6 +187,8 @@ pub enum SpellScriptHook {
     TargetPlan(TargetPlanLookup),
     PeriodicPrimaryDamage(PeriodicPrimaryDamageHook),
     CounterOnlyDotStacks(&'static [u32]),
+    /// Source-owned refreshes retain the already scheduled periodic deadline.
+    PreservePeriodicPhase(&'static [u32]),
     TargetDamageMultiplier(TargetDamageMultiplierHook),
     AfterSpenderStacks(AfterCastHook),
     AuraRedirect(AuraRedirectHook),
@@ -333,6 +335,13 @@ impl SpellScriptRegistry {
                 register(scripts);
             }
         }
+    }
+
+    pub fn preserves_periodic_phase(self, spell: u32) -> bool {
+        self.hooks().any(|hook| match hook {
+            SpellScriptHook::PreservePeriodicPhase(spells) => spells.contains(&spell),
+            _ => false,
+        })
     }
 
     pub fn counter_only_dot_stacks(self, spell: u32) -> bool {

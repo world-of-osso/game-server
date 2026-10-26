@@ -172,7 +172,10 @@ fn prepare_periodic_phase(
         .as_ref()
         .is_some_and(|misc| misc.attributes[13] & PERIODIC_REFRESH_EXTENDS_DURATION != 0);
     let native_preserves_phase = spell.cast_dont_reset_periodic_timer || stacking || pandemic;
-    let preserve_phase = native_preserves_phase || sourced_rolling;
+    let scripted_phase = world
+        .resource::<crate::spell_cast::script_registry::SpellScriptRegistry>()
+        .preserves_periodic_phase(spell.id);
+    let preserve_phase = native_preserves_phase || sourced_rolling || scripted_phase;
     if !preserve_phase {
         return;
     }

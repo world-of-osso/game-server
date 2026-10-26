@@ -4,13 +4,14 @@ use bevy::prelude::*;
 use combat::auras::{self, ActiveAuras, AuraInstance, RemoveReason, scripts::AuraScripts};
 use combat::class_progression::TraitLoadout;
 use combat::spell_cast::{effects::EffectCtx, queued_triggers, script_registry::SpellScriptHook};
-use combat::spell_info::SpellStore;
+use combat::spell_info::{SpellInfo, SpellStore};
 use combat::stats::CharacterStats;
 use shared::components::ActiveSpec;
 
 const SEED: u32 = 27243;
 const EXPLOSION: u32 = 27285;
 const WITHER_TALENT: u32 = 445465;
+const SOW_THE_SEEDS: u32 = 196226;
 const WITHER_DOT: u32 = 445474;
 const CORRUPTION_DOT: u32 = 146739;
 const BUDGET_EFFECT: u8 = 2;
@@ -20,7 +21,34 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AfterAuraApplication(snapshot_seed_budget),
     SpellScriptHook::LandedDamagePolicy(after_landed_damage),
     SpellScriptHook::LateAuraRegistration(register),
+    // SimC76f8118 actions1937–1948: refresh cannot postpone the original tick.
+    SpellScriptHook::PreservePeriodicPhase(&[SEED]),
+    SpellScriptHook::TargetFilter(restrict_unselected_sow),
 ];
+
+fn has_talent(world: &World, caster: Entity, spell: u32) -> bool {
+    world.get::<TraitLoadout>(caster).is_some_and(|traits| {
+        traits
+            .active_talent_spells()
+            .any(|talent| talent.spell_id == spell)
+    })
+}
+
+fn restrict_unselected_sow(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    _index: u8,
+    primary: Option<Entity>,
+    units: &mut Vec<Entity>,
+) {
+    if spell.id != SEED || has_talent(world, caster, SOW_THE_SEEDS) {
+        return;
+    }
+    // actions1800–1802: without Sow, raw area selectors still apply one Seed.
+    // Retain only the actual primary; never add an unvalidated recipient.
+    units.retain(|&unit| Some(unit) == primary);
+}
 
 fn is_supported_owner(world: &World, caster: Entity) -> bool {
     world
@@ -148,11 +176,7 @@ fn seed_removed(world: &mut World, target: Entity, aura: &AuraInstance, reason: 
 }
 
 fn apply_background_dot(world: &mut World, caster: Entity, target: Entity) {
-    let wither = world.get::<TraitLoadout>(caster).is_some_and(|traits| {
-        traits
-            .active_talent_spells()
-            .any(|talent| talent.spell_id == WITHER_TALENT)
-    });
+    let wither = has_talent(world, caster, WITHER_TALENT);
     let dot = if wither { WITHER_DOT } else { CORRUPTION_DOT };
     // actions1710–1724: real native background Wither/Corruption, no cost or
     // initial direct damage; existing native application preserves owned state.
