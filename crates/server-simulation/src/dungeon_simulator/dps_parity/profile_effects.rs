@@ -47,7 +47,7 @@ pub(super) fn install(world: &mut World, actor: Entity, profile: &Profile) -> Re
                     },
                 ));
             }
-            ("temporary_enchant", _) => install_oils(world, actor, value)?,
+            ("temporary_enchant", _) => super::profile_oils::install(world, actor, value)?,
             _ => {} // Report retains every unsupported token explicitly.
         }
     }
@@ -79,33 +79,6 @@ fn item_spell(db: &Connection, item: u32) -> Result<(u32, u16), String> {
 fn apply_item(world: &mut World, actor: Entity, item: u32, db: &Connection) -> Result<(), String> {
     let (spell, level) = item_spell(db, item)?;
     server::consumables::apply(world, actor, spell, Some(level))
-}
-
-fn install_oils(world: &mut World, actor: Entity, value: &str) -> Result<(), String> {
-    let mut oils = Vec::new();
-    for entry in value.split('/') {
-        let (slot, oil) = entry
-            .split_once(':')
-            .ok_or("temporary enchant lacks slot")?;
-        if oil != "thalassian_phoenix_oil_2" {
-            continue;
-        }
-        let slot = super::inputs::slot(slot)?;
-        let equipped = world
-            .get::<crate::stats::EquippedItems>(actor)
-            .ok_or("temporary enchant owner lacks native equipment")?;
-        // SimC76f8118 item.cpp2237–2245: inactive slots do not initialize enchants.
-        if !equipped.items.iter().any(|(s, _, _)| *s == slot) {
-            continue;
-        }
-        // SimC76f8118 temporary_enchant.inc116 binds quality2 to native enchant8052.
-        oils.push((slot, 8052));
-    }
-    world
-        .get_mut::<crate::stats::EquippedItemModifiers>(actor)
-        .ok_or("temporary enchant owner lacks native equipment")?
-        .temporary_enchants = oils;
-    Ok(())
 }
 
 fn install_expansion(
@@ -157,11 +130,16 @@ fn potion_item(token: &str) -> Option<u32> {
     match token {
         "potion_of_recklessness_2" => Some(241288),
         "lights_potential_2" => Some(241308),
+        // SimC76f8118 item_data.inc182728: Liquid Luster quality2, native ilvl295.
+        "liquid_luster_2" => Some(271887),
         _ => None,
     }
 }
 
 pub(super) fn supported(kind: &str, value: &str) -> bool {
+    if value == "disabled" || value.is_empty() {
+        return true;
+    }
     matches!(
         (kind, value),
         ("flask", "flask_of_the_magisters_2" | "magisters_2")
@@ -174,9 +152,5 @@ pub(super) fn supported(kind: &str, value: &str) -> bool {
                 "harandar_celebration" | "silvermoon_parade" | "blooming_feast"
             )
     ) || (kind == "potion" && potion_item(value).is_some())
-        || (kind == "temporary_enchant"
-            && value.split('/').all(|e| {
-                e.split_once(':')
-                    .is_some_and(|(_, v)| v == "thalassian_phoenix_oil_2")
-            }))
+        || (kind == "temporary_enchant" && super::profile_oils::supported(value))
 }

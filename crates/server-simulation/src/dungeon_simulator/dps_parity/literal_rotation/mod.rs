@@ -13,6 +13,7 @@ mod gating_tests;
 mod item_context;
 #[cfg(test)]
 mod precombat_poll_tests;
+mod precombat_potion;
 #[cfg(test)]
 mod tests;
 #[cfg(test)]

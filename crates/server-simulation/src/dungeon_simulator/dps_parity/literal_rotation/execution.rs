@@ -636,6 +636,12 @@ pub(crate) fn execute_row(
     row: &Action,
     execution: Execution,
 ) -> Result<(), String> {
+    if let Some(age) = row.options.get("pre_pot_time") {
+        if row.name != "potion" {
+            return Err("pre_pot_time requires a native potion row".into());
+        }
+        return super::precombat_potion::execute(world, actor, execution, age);
+    }
     let Some(stage) = row.options.get("empower_to") else {
         return execute(world, actor, execution);
     };

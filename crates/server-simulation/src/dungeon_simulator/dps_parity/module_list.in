@@ -86,6 +86,7 @@ mod precombat_tests;
 mod preparation;
 mod profile_effects;
 mod profile_initialization;
+mod profile_oils;
 mod rake_stealth_tests;
 mod report;
 mod ret_auto_proc_tests;
