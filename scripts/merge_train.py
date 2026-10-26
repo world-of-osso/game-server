@@ -617,6 +617,19 @@ def where(args):
     print("unknown id")
 
 
+def withdraw(args):
+    """Drop a queued entry (an owner's obsolete or superseded submission); running entries finish."""
+    queued = QUEUE / f"{args.id}.json"
+    try:
+        entry = json.loads(queued.read_text())
+        queued.unlink()
+    except FileNotFoundError:
+        raise SystemExit(f"{args.id} is not queued (running entries cannot be withdrawn; see `where`)")
+    entry["status"], entry["reason"] = "rejected", "withdrawn by owner"
+    write_results([entry])
+    print(f"withdrew {args.id}")
+
+
 def status(_args):
     """Print the train's throughput metrics as JSON (read-only)."""
     now = time.time()
@@ -682,6 +695,9 @@ def main():
     wh = sub.add_parser("where", help="where one entry is")
     wh.add_argument("id")
     wh.set_defaults(func=where)
+    wd = sub.add_parser("withdraw", help="drop one queued entry")
+    wd.add_argument("id")
+    wd.set_defaults(func=withdraw)
     sub.add_parser("status", help="throughput metrics for the periodic bottleneck check").set_defaults(func=status)
     args = parser.parse_args()
     args.func(args)
