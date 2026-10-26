@@ -1,4 +1,5 @@
 //! Native Rip/Rake ticks feed the pinned Thriving Growth accumulator.
+mod bursting;
 use super::combat;
 use bevy::prelude::*;
 use combat::auras::ActiveAuras;
@@ -7,6 +8,8 @@ use combat::spell_cast::{effects::EffectCtx, script_registry::SpellScriptHook};
 use shared::components::ActiveSpec;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::EarlyAuraRegistration(bursting::register),
+    SpellScriptHook::EnemyContextHit(bursting::enemy_hit),
     // SimC76f8118 sc_druid.cpp13755–13764 explicitly overrides the native
     // stack behavior; every application retains its own native lifetime.
     SpellScriptHook::AsynchronousAuras(&[BLOODSEEKER_VINES]),
