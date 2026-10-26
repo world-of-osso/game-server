@@ -112,5 +112,19 @@ fn shadow_yogg_real_native_cohort_threshold_summons_owned_thing_and_actual_spike
             }),
             "real Thing casts native Void Spike at each nearby enemy"
         );
+        let bursts = events
+            .iter()
+            .filter(|event| {
+                event.source == Some(actor.to_bits())
+                    && event.target == Some(target.to_bits())
+                    && event.spell_id == Some(1231479)
+                    && event.kind == CombatLogKind::Damage
+                    && event.amount > 0
+            })
+            .count();
+        assert_eq!(
+            bursts, cap as usize,
+            "only ordinary parent cohorts Shadeburst, never the parentless Yogg bonus"
+        );
     }
 }

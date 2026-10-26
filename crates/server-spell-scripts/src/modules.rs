@@ -146,6 +146,7 @@ register_modules! {
     shadow_torment: (2584, "modules/shadow_torment.rs"),
     shadow_void_blast: (2586, "modules/shadow_void_blast.rs"),
     shadow_volley: (2580, "modules/shadow_volley.rs"),
+    shadow_yogg: (2587, "modules/shadow_yogg.rs"),
     snakeskin_quiver: (230, "modules/snakeskin_quiver.rs"),
     soul_of_the_forest: (1000, "modules/soul_of_the_forest.rs"),
     spellslinger_hits: (401, "modules/spellslinger_hits.rs"),

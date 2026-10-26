@@ -167,6 +167,16 @@ const GUARDIAN_POLICIES: &[GuardianPolicy] = &[
         owner_spell_share: Some(1.0),
         owner_attack_share: None,
     },
+    // SimC76f8118 sc_priest_pets.cpp75–86/1061–1134: native Thing From
+    // Beyond repeats Void Spike with full owner SP; native cast time owns cadence.
+    GuardianPolicy {
+        summons: &[373277],
+        entry: 189988,
+        spells: &[373279],
+        repeat_gcd: None,
+        owner_spell_share: Some(1.0),
+        owner_attack_share: None,
+    },
 ];
 
 fn policy(summon: u32, entry: u32) -> Option<&'static GuardianPolicy> {
