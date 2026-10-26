@@ -1119,8 +1119,11 @@ fn fire_phoenix_native_casts_deal_damage_and_feed_selected_mana_cascade() {
     let _seed = crate::random::seed_scope(70_448);
     let mut run = prepare_literal(63, 1).unwrap();
     let actor = run.actor;
-    // Invocation triggers this authentic summon child; players do not learn it.
-    crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 448659, Some(actor), 1);
+    // Ordinary Combustion captures the selected enemy before Invocation's
+    // triggered self-summon. A standalone child has neither that context nor
+    // active combat opponents in this otherwise idle fixture.
+    start_native(&mut run, 190319, actor);
+    run.app.update();
     let phoenix = fire_phoenix_actor(&mut run).expect("native summon/template precondition");
     for _ in 0..100 {
         run.app.update();

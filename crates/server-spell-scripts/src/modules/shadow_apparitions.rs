@@ -1,6 +1,6 @@
 //! SimC76f8118 sc_priest_shadow.cpp291–308/439–445/450–549/1296/2609–2650.
 //! Native projectile parents transport their damage payload; only the source parent bursts.
-use super::{combat, shadow_link, shadow_priest};
+use super::{combat, shadow_link, shadow_priest, shadow_yogg};
 use bevy::prelude::*;
 use combat::auras;
 use combat::spell_cast::script_registry::{ContextHitHook, DamageAmountHook, SpellScriptHook};
@@ -37,11 +37,24 @@ fn impact_hook(spell: u32) -> Option<ContextHitHook> {
 }
 
 pub(super) fn spawn_apparitions(world: &mut World, ctx: &EffectCtx<'_>, primary: Entity) {
+    spawn_cohort(world, ctx, Some(primary));
+}
+
+pub(super) fn spawn_parentless_apparitions(world: &mut World, ctx: &EffectCtx<'_>) {
+    spawn_cohort(world, ctx, None);
+}
+
+fn spawn_cohort(world: &mut World, ctx: &EffectCtx<'_>, primary: Option<Entity>) {
     if !auras::has_aura(world, ctx.caster, APPARITIONS) {
         return;
     }
-    // SimC1296/2609–2650: Madness impact and earned Tormented cohorts share launches.
-    for target in shadow_link::read_vampiric_touch_targets(world, ctx.caster) {
+    let recipients = shadow_link::read_vampiric_touch_targets(world, ctx.caster);
+    if recipients.is_empty() {
+        return;
+    }
+    // SimC2628–2632: exactly one Yogg stack for this source cohort, not per VT.
+    shadow_yogg::earn_cohort(world, ctx);
+    for target in recipients {
         let parent = roll_missile(world, ctx.caster);
         launch_apparition(world, ctx, primary, target, parent);
     }
@@ -62,7 +75,7 @@ fn roll_missile(world: &World, caster: Entity) -> u32 {
 fn launch_apparition(
     world: &mut World,
     source: &EffectCtx<'_>,
-    primary: Entity,
+    primary: Option<Entity>,
     target: Entity,
     parent: u32,
 ) {
@@ -73,17 +86,28 @@ fn launch_apparition(
     // SimC450–549: native E0 owns the damage missile. E1 resource generation
     // is conditional Auspicious Spirits; E2 Shadeburst belongs only to the parent.
     missile.effects.retain(|effect| effect.index == 0);
-    missile.cast_primary_target = Some(primary);
+    missile.cast_primary_target = primary;
     let Some(plan) = plan_apparition(world, source.caster, &missile, target, depth) else {
         return;
     };
     if parent == VOID_MISSILE {
-        // SimC543–547/2468: each Void Apparition executes1264177 Void Bolt,
-        // not the unrelated373279 area Void Spike.
-        spell_cast::cast_triggered(world, source.caster, VOID_BOLT, Some(primary), depth);
+        launch_void_bolt(world, source, primary, depth);
     }
     // Keep the original source primary distinct from this missile's recipient.
     spell_cast::launch_planned_spell(world, source.caster, &missile, plan, depth);
+}
+
+fn launch_void_bolt(world: &mut World, source: &EffectCtx<'_>, primary: Option<Entity>, depth: u8) {
+    // SimC543–547/2468: every Void Apparition executes native1264177.
+    let target = match primary {
+        Some(target) => Some(target),
+        // Parentless Yogg keeps null Shadeburst identity; its default Bolt action
+        // still uses the priest's actual selected enemy (2850–2858).
+        None => world
+            .get::<combat::networking::CombatTarget>(source.caster)
+            .and_then(|target| target.0),
+    };
+    spell_cast::cast_triggered(world, source.caster, VOID_BOLT, target, depth);
 }
 
 fn plan_apparition(
