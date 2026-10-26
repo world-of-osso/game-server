@@ -8,10 +8,9 @@ use super::script_effect_value;
 use crate::auras::handlers::{PERIODIC_DAMAGE, PERIODIC_DAMAGE_PERCENT};
 use crate::auras::{ActiveAuras, AuraApplication, AuraSource};
 use crate::spell_cast::{self, targets};
-use crate::spell_info::{SpellInfo, SpellStore};
+use crate::spell_info::SpellInfo;
 
 pub(super) const DEMONS_BITE: u32 = 162243;
-pub(super) const CHAOS_STRIKE: u32 = 162794;
 pub(super) const DISINTEGRATE: u32 = 356995;
 pub(super) const CHAOS_BOLT: u32 = 116858;
 pub(super) const RAPTURE: u32 = 324536;
@@ -22,8 +21,6 @@ pub(super) const EPIDEMIC: u32 = 207317;
 pub(super) const EPIDEMIC_DAMAGE: u32 = 212739;
 pub(super) const LAVA_BURST_DAMAGE: u32 = 285452;
 const INSATIABLE_HUNGER: u32 = 258876;
-const CHAOS_REFUND_CHANCE: u32 = 197125;
-const CHAOS_REFUND: u32 = 193840;
 const DISINTEGRATE_SLOW: u32 = 370898;
 const BONE_SHIELD: u32 = 195181;
 const VIRULENT_PLAGUE: u32 = 191587;
@@ -42,30 +39,6 @@ pub(super) fn demons_bite(world: &mut World, caster: Entity, _target: Entity, _d
     let high = script_effect_value(world, caster, INSATIABLE_HUNGER, 3) as i32;
     let extra = rand::Rng::gen_range(&mut rand::thread_rng(), low..=high);
     spell_cast::powers::change_power(world, caster, PowerType::Fury, extra as f32);
-}
-
-/// 162794 explicitly uses197125h (not its root's30 mirror) and193840s1.
-/// One roll for the root's landed target, never one per weapon child.
-pub(super) fn chaos_strike(world: &mut World, caster: Entity, _target: Entity, depth: u8) {
-    let refund = world
-        .resource::<SpellStore>()
-        .get(CHAOS_REFUND_CHANCE)
-        .expect("Chaos Strike requires197125");
-    let base_chance = refund
-        .aura_options
-        .as_ref()
-        .expect("197125 requires proc chance")
-        .proc_chance as f32;
-    let chance = crate::auras::spell_mods::modify(
-        world,
-        caster,
-        refund,
-        crate::auras::SpellModOp::ProcChance,
-        base_chance,
-    );
-    if rand::random::<f32>() * 100.0 < chance {
-        spell_cast::cast_triggered(world, caster, CHAOS_REFUND, Some(caster), depth + 1);
-    }
 }
 
 /// 356995's own description names370898s1/d. Channel application, not every tick.

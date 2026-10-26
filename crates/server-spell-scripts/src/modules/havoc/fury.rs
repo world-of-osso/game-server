@@ -52,24 +52,17 @@ fn after_launch(world: &mut World, caster: Entity, spell: u32) {
     if spell == 198813 && has_talent(world, caster, 389688) {
         combat::spell_cast::cast_triggered(world, caster, 389890, Some(caster), 1);
     }
-    if spell == 201428 {
-        roll_annihilation_refund(world, caster);
+    if matches!(spell, 199547 | 201428) {
+        roll_chaos_strike_refund(world, caster);
     }
 }
 
-fn roll_annihilation_refund(world: &mut World, caster: Entity) {
+fn roll_chaos_strike_refund(world: &mut World, caster: Entity) {
     // SimC76f8118 sc_demon_hunter.cpp7472–7510,7673–7685: the real
-    // Annihilation off-hand execution rolls Chaos Strike's native refund.
+    // Chaos Strike/Annihilation off-hand execution rolls the native refund.
     // Own197125's event so broad metadata cannot spend its ICD without a payload.
     // The native helper takes the live aura instance, not its spell ID.
-    let instance = world
-        .get::<combat::auras::ActiveAuras>(caster)
-        .and_then(|auras| {
-            auras
-                .iter()
-                .find(|aura| aura.caster == caster && aura.spell_id == 197125)
-                .map(|aura| aura.instance_id)
-        });
+    let instance = super::havoc::owned_passive_instance(world, caster, 197125);
     if let Some(instance) = instance
         && combat::auras::procs::try_native_policy_proc(world, caster, instance)
     {

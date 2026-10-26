@@ -369,22 +369,80 @@ fn record_ready(
 }
 
 fn record_target_contexts(
+    world: &World,
+    actor: Entity,
     prepared: &mut Prepared,
     name: &str,
     contexts: &[Entity],
     state: NativeReadiness,
-    spell: u32,
-    cast_unit: Entity,
+    spell: &crate::spell_info::SpellInfo,
 ) {
     for &candidate in contexts {
+        let state = filter_primary_range(world, actor, spell, Some(candidate), state);
         record_probe(
             prepared,
             (name.into(), Some(candidate)),
             false,
             state,
-            Execution::Spell(spell, cast_unit, Some(candidate)),
+            Execution::Spell(spell.id, actor, Some(candidate)),
         );
     }
+}
+
+fn filter_primary_range(
+    world: &World,
+    actor: Entity,
+    spell: &crate::spell_info::SpellInfo,
+    primary: Option<Entity>,
+    state: NativeReadiness,
+) -> NativeReadiness {
+    if !state.ready && state.limited.is_none() {
+        return state;
+    }
+    // Native enemy selection includes attackable neutral units, not only hostile factions.
+    let Some(primary) = primary.filter(|&primary| {
+        crate::spell_cast::targets::relation_matches(
+            world,
+            actor,
+            primary,
+            crate::spell_cast::targets::Relation::Enemy,
+        )
+    }) else {
+        return state;
+    };
+    let harmful = crate::spell_info::positivity::negative_effects(
+        world.resource::<crate::spell_info::SpellStore>(),
+        spell,
+    ) != 0;
+    if !harmful || primary_in_native_range(world, actor, spell, primary) {
+        return state;
+    }
+    NativeReadiness {
+        ready: false,
+        limited: None,
+    }
+}
+
+fn primary_in_native_range(
+    world: &World,
+    actor: Entity,
+    spell: &crate::spell_info::SpellInfo,
+    primary: Entity,
+) -> bool {
+    let (Some(from), Some(to)) = (
+        crate::spell_cast::targets::position(world, actor),
+        crate::spell_cast::targets::position(world, primary),
+    ) else {
+        return false;
+    };
+    // SimC76f8118 action.cpp2418–2430 checks the selected hostile target,
+    // even when a caster-centred native spell keeps the actor as its cast unit.
+    // Reuse native range and live Range modifiers; do not move either unit.
+    let (min, max) = crate::spell_cast::targets::spell_range(spell, true);
+    let max =
+        crate::auras::spell_mods::modify(world, actor, spell, crate::auras::SpellModOp::Range, max);
+    let distance = from.distance(to);
+    distance >= min && distance <= max
 }
 
 fn read_attacks(world: &World, actor: Entity, targets: &[Entity], ready: &mut ReadyActions) {
@@ -483,7 +541,17 @@ fn read_spell(
         enemies
     };
     for (index, &target) in targets.iter().enumerate() {
-        let state = native_readiness(world, actor, id, target, None, prepared.after_channel)?;
+        let native = native_readiness(world, actor, id, target, None, prepared.after_channel)?;
+        let resolved = world
+            .resource::<crate::spell_info::SpellStore>()
+            .get(id)
+            .expect("resolved native action remains in its catalog");
+        let primary = if self_target {
+            enemies.first().copied()
+        } else {
+            Some(target)
+        };
+        let state = filter_primary_range(world, actor, resolved, primary, native);
         record_probe(
             prepared,
             (name.into(), Some(target)),
@@ -501,7 +569,7 @@ fn read_spell(
                 state,
                 Execution::Spell(id, target, enemies.first().copied()),
             );
-            record_target_contexts(prepared, name, enemies, state, id, target);
+            record_target_contexts(world, actor, prepared, name, enemies, native, resolved);
         }
     }
     Ok(())
