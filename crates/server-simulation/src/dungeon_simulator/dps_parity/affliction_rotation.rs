@@ -16,6 +16,7 @@ pub(super) struct Rotation {
     equipment: Equipment,
     pet: Option<ConfiguredPet>,
     encounter: Encounter,
+    previous_action: Option<String>,
 }
 
 impl Rotation {
@@ -54,6 +55,7 @@ impl Rotation {
             equipment,
             pet,
             encounter,
+            previous_action: None,
         })
     }
 
@@ -88,6 +90,7 @@ impl Rotation {
             &self.bindings,
             &self.equipment,
             self.encounter,
+            self.previous_action.as_deref(),
         );
         let list = if precombat { "precombat" } else { "default" };
         let Some((action, execution)) =
@@ -96,7 +99,9 @@ impl Rotation {
         else {
             return Ok(false);
         };
+        let name = action.name.clone();
         self.driver.execute(world, actor, action, execution)?;
+        self.previous_action = Some(name);
         Ok(true)
     }
 
@@ -120,6 +125,7 @@ impl Rotation {
             &self.bindings,
             &self.equipment,
             self.encounter,
+            self.previous_action.as_deref(),
         );
         let decision =
             self.driver
