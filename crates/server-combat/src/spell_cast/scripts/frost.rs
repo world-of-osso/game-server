@@ -2,18 +2,29 @@
 use bevy::prelude::*;
 use shared::components::{ActiveSpec, WeaponType};
 
-use crate::{auras, random, spell_cast, spell_info::SpellStore, stats::CharacterStats};
+use crate::{
+    auras, random, spell_cast,
+    spell_info::{SpellInfo, SpellStore},
+    stats::CharacterStats,
+};
 
 const KILLING_MACHINE: u32 = 51128;
 const RIME: u32 = 59057;
 const OBLITERATION: u32 = 281238;
 const PILLAR: u32 = 51271;
+const RIME_BUFF: u32 = 59052;
+const FROSTBOUND_WILL: u32 = 1238680;
+const EMPOWER_RUNE_WEAPON: u32 = 47568;
 
 #[derive(Component, Default)]
 struct KillingMachineAttempts(u32);
 
 pub(super) fn owns_proc(spell: u32) -> bool {
     matches!(spell, KILLING_MACHINE | RIME | OBLITERATION)
+}
+
+pub(super) fn snapshots_modifier(spell: u32) -> bool {
+    spell == RIME_BUFF
 }
 
 fn is_frost(world: &World, caster: Entity) -> bool {
@@ -63,20 +74,54 @@ pub(super) fn after_white_hit(world: &mut World, caster: Entity, critical: bool)
     trigger_native_buff(world, caster, KILLING_MACHINE);
 }
 
-pub(super) fn after_launch(world: &mut World, caster: Entity, spell: u32, foreground: bool) {
+pub(super) fn after_launch(world: &mut World, caster: Entity, spell: &SpellInfo, foreground: bool) {
     if !foreground || !is_frost(world, caster) {
         return;
     }
-    if matches!(spell, 49143 | 194913 | 49184) {
+    if matches!(spell.id, 49143 | 194913 | 49184) {
         trigger_obliteration(world, caster);
     }
     // SimC76f8118 sc_death_knight.cpp10889–10900/11177–11189:
     // after Obliteration, FS/GA roll Rime's native effect2 (not effect1).
-    if matches!(spell, 49143 | 194913) && auras::has_aura(world, caster, RIME) {
+    if matches!(spell.id, 49143 | 194913) && auras::has_aura(world, caster, RIME) {
         let chance = super::script_effect_value(world, caster, RIME, 1);
         if random::random::<f32>() * 100.0 < chance {
             trigger_native_buff(world, caster, RIME);
         }
+    }
+    if spell.id == 49184 {
+        consume_rime(world, caster, spell);
+    }
+}
+
+fn consume_rime(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    let used_rime = spell
+        .cast_charge_mods
+        .iter()
+        .flatten()
+        .any(|modifier| modifier.aura_spell_id == RIME_BUFF);
+    if !used_rime {
+        return;
+    }
+    // SimC76f8118 sc_death_knight.cpp11637–11665: an earned Rime HB
+    // adjusts ERW by native Frostbound Will effect1, then decrements Rime.
+    if auras::has_aura(world, caster, FROSTBOUND_WILL) {
+        let milliseconds = super::script_effect_value(world, caster, FROSTBOUND_WILL, 0);
+        super::reduce_cooldown(
+            world,
+            caster,
+            EMPOWER_RUNE_WEAPON,
+            f64::from(-milliseconds) / 1000.0,
+        );
+    }
+    let instance = world.get::<auras::ActiveAuras>(caster).and_then(|auras| {
+        auras
+            .iter()
+            .find(|aura| aura.spell_id == RIME_BUFF && aura.caster == caster)
+            .map(|aura| aura.instance_id)
+    });
+    if let Some(instance) = instance {
+        auras::spend_stack(world, caster, instance);
     }
 }
 

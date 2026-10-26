@@ -214,7 +214,7 @@ pub(super) fn finish_scripted_launch(
     foreground: bool,
 ) {
     elemental::after_launch(world, caster, spell, consumed, depth, foreground);
-    frost::after_launch(world, caster, spell.id, foreground);
+    frost::after_launch(world, caster, spell, foreground);
     policies::pet_sets::finish_cobra(world, caster, spell);
     execution_counters::after_launch(world, caster, spell.id);
     unbroken_rhythm::after_launch(world, caster, spell.id);
@@ -360,7 +360,9 @@ use crate::spell_info::SpellInfo;
 /// Frostbolt: its effects are TRIGGER_MISSILE 32 to 228597 (SCHOOL_DAMAGE) only.
 /// Sourced consumers retain native modifier amounts through projectile impact.
 pub(crate) fn snapshots_modifier(id: u32) -> bool {
-    maelstrom_weapon::snapshots_modifier(id) || cast_relationships::snapshots_modifier(id)
+    maelstrom_weapon::snapshots_modifier(id)
+        || cast_relationships::snapshots_modifier(id)
+        || frost::snapshots_modifier(id)
 }
 
 const FROSTBOLT: u32 = 116;
