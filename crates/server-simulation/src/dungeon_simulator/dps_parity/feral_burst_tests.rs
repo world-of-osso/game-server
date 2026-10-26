@@ -45,6 +45,18 @@ fn feral_selected_vines_ticks_roll_native_rampancy_before_any_expiry() {
     );
 }
 
+fn remove_rampancy_for_burst_control(run: &mut Run) {
+    // Isolate Bite/expiry from the separate chance producer using native removal.
+    let actor = run.actor;
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        actor,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 1270586 && aura.caster == actor,
+    );
+    assert!(!crate::auras::has_aura(run.app.world(), actor, 1270586));
+}
+
 fn burst_damage(run: &Run) -> u64 {
     report::combat(run.app.world(), &run.targets, 1.0)["actions"]
         .as_array()
@@ -59,6 +71,7 @@ fn burst_damage(run: &Run) -> u64 {
 #[ignore = "requires exact spec103 profile/traits and native private DB"]
 fn feral_selected_vines_expiry_executes_native_bursting_growth() {
     let mut run = prepare_literal(103, 3).unwrap();
+    remove_rampancy_for_burst_control(&mut run);
     let actor = run.actor;
     let target = run.targets[0];
     assert!(crate::auras::has_aura(run.app.world(), actor, 440120));
@@ -87,6 +100,7 @@ fn feral_selected_vines_expiry_executes_native_bursting_growth() {
 #[ignore = "requires exact spec103 profile/traits and native private DB"]
 fn feral_selected_bite_on_owned_vines_executes_native_bursting_growth() {
     let mut run = prepare_literal(103, 3).unwrap();
+    remove_rampancy_for_burst_control(&mut run);
     let actor = run.actor;
     let target = run.targets[0];
     crate::spell_cast::creature_cast(run.app.world_mut(), actor, 768, Some(actor), false).unwrap();
