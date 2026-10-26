@@ -93,6 +93,64 @@ fn havoc_font_of_venomous_rage_channels_native_primary_and_secondary_damage() {
 
 #[test]
 #[ignore = "requires prepared native spec577 player profile"]
+fn havoc_felblade_real_parent_delivers_native_child_and_fury() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(577, 1).unwrap();
+    engage(&mut run);
+    let events = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .len();
+    cast(&mut run, 232893, false);
+    preparation::finish_pending_setup(&mut run).unwrap();
+    assert!(
+        !damage(&run, Some(213243)).is_empty(),
+        "ordinary Felblade must launch its native damage child"
+    );
+    assert!(
+        run.app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0[events..]
+            .iter()
+            .any(|event| event.kind == CombatLogKind::Energize
+                && event.spell_id == Some(213243)
+                && event.amount > 0),
+        "native Felblade child must fund Fury, not an adapter grant"
+    );
+}
+
+#[test]
+#[ignore = "requires prepared native spec577 player profile"]
+fn havoc_essence_break_native_hit_marks_enemy_and_strikes_proc_once_per_icd() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(577, 1).unwrap();
+    havoc_tests::earn_havoc_fury(&mut run, 100.0);
+    cast(&mut run, 258860, false);
+    preparation::finish_pending_setup(&mut run).unwrap();
+    assert!(
+        !damage(&run, Some(258860)).is_empty(),
+        "actual Essence Break hit required"
+    );
+    assert!(
+        crate::auras::has_aura(run.app.world(), run.targets[0], 320338),
+        "landed native Essence Break must apply its delayed owned mark"
+    );
+    cast(&mut run, 162794, false);
+    advance(&mut run, 18);
+    let hits = damage(&run, Some(1245759));
+    assert_eq!(
+        hits.len(),
+        1,
+        "two native Chaos Strike hits share the mark's native1s target ICD: {hits:?}"
+    );
+    assert_eq!(hits[0].target, Some(run.targets[0].to_bits()));
+}
+
+#[test]
+#[ignore = "requires prepared native spec577 player profile"]
 fn havoc_first_blood_splits_native_primary_and_secondary_strikes() {
     let _seed = crate::random::seed_scope(70_448);
     for (parent, primary_strikes, secondary_strikes) in [
