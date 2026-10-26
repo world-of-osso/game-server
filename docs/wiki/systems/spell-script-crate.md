@@ -4,7 +4,7 @@
 
 ## Registry
 
-Each downstream module exports a const `HOOKS` slice. Add a new file and one alphabetical `register_modules!` line in `src/modules.rs`; existing policy additions change only their module. Each registration carries its historical dispatch position, so declaration order does not reorder policy groups. New modules use an unused position after existing modules unless their stage requires another explicit boundary. Const assembly rejects duplicate positions and preserves the ordered slice of slices. The authoritative lookup and dispatch-order contract is documented once in [`script_registry.rs`](../../../crates/server-combat/src/spell_cast/script_registry.rs). Policy rows retain their original traversal order, including the separated Windwalker groups.
+Each downstream module exports a const `HOOKS` slice. Add a new file and one alphabetical `register_modules!` line in `src/modules.rs`; existing policy additions change only their module. Each registration carries its historical dispatch position, so declaration order does not reorder policy groups. Independent new modules can share a trailing position without coordinating a counter; equal positions retain alphabetical declaration order. Use distinct positions only when callback order requires it. Const assembly preserves the historical ordered slice of slices. The authoritative lookup and dispatch-order contract is documented once in [`script_registry.rs`](../../../crates/server-combat/src/spell_cast/script_registry.rs). Policy rows retain their original traversal order, including the separated Windwalker groups.
 
 Run `python3 scripts/format-spell-scripts.py` to format, or add `--check` to verify formatting. Cargo's formatter does not discover declarations inside `register_modules!`; this command runs Cargo formatting plus an explicit rustfmt pass over leaf and nested module sources. `run-tests.sh` enforces the check before running tests.
 
@@ -53,6 +53,12 @@ Successful-cast relationship rows, Marksmanship target plans/residuals and Senti
 ## Complete Havoc runtime
 
 Havoc's Initiative targets, Burning Blades residuals, Demonsurge uses and Meta expiry hooks live under the downstream Havoc module. Its runtime pre-cast callbacks still precede the Demonic transformation, and channel-duration extension still follows transformation haste. The same downstream component state supplies native APL availability queries. Eye Beam/Gaze periodic child dispatch and learned-rank critical chance also live downstream; their callbacks retain the real channel-state guard and native child geometry.
+
+## Ret damage, tier and echoes
+
+Ret damage, Empyrean Legacy, tier and echo policies own their rows and per-entity state downstream. Admission snapshots still precede generic OnCast/payment. The mastery correction remains between Giantkiller and Shadow Weaving. Echoes, tier consumption, Purpose generation and deferred Legacy execution retain distinct foreground/background boundaries. Script-owned driver/charge IDs use the native proc-ownership gate. Consecrated Blade still calls combat's existing ground-field helper until the ground-pulse module moves; there is no copied field implementation.
+
+New dispatch stages use independent callback and lookup aliases, even when their current signatures match, so changing one stage cannot silently change another stage's callback contract.
 
 ## Tests
 

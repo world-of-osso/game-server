@@ -8,6 +8,7 @@
 - [ ] Install the same registry in the server and transport-free simulation, including native fixture harnesses and cached simulation apps.
 - [ ] Permit an existing module's policies and hooks to change without editing combat or a central policy table. A new downstream module needs only its file and one alphabetical registration line; registration must not reorder existing policy traversal.
 - [ ] Keep combat independent of the downstream crate in the production dependency graph.
+- [ ] Keep new dispatch-stage callback/lookup signatures independent, even when their current signatures match.
 - [ ] Measure a moved-file touch using warm `cargo test --locked -p server-simulation --lib --no-run -j2` before and after the move; keep the same worktree-local target directory.
 
 - Ordered downstream effect-handler lookup replaces native per-unit dispatch at the same handled/launch/impact boundaries. Additive target filters retain caster and immutable primary context after existing policy filters; they do not replace native target selection.

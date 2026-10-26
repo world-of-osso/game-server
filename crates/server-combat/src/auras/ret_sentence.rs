@@ -17,7 +17,7 @@ const INITIAL_DAMAGE: u32 = 1260251;
 struct SentenceTarget(Entity);
 
 /// SimC owns one caster-side accumulation pool; the primary owns its expiry.
-pub(crate) fn track_cast(world: &mut World, caster: Entity, target: Entity) {
+pub fn track_cast(world: &mut World, caster: Entity, target: Entity) {
     world.entity_mut(caster).insert(SentenceTarget(target));
 }
 
