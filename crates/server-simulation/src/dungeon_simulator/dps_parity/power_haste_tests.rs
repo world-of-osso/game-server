@@ -194,12 +194,16 @@ fn prepare_spent_resource(spec: u32, spell: u32, power: PowerType) -> Run {
         crate::followers::simulator::ParityActor::Follower,
     )
     .unwrap();
-    // The quiet owner lives at X20; cap waits must not carry this controlled caster away.
+    // Use the standard literal-fixture controller: the follower AI otherwise
+    // reattaches FollowOwner during regroup, even after a one-time removal.
     run.app
         .world_mut()
         .entity_mut(run.actor)
         .remove::<crate::creature_ai::FollowOwner>()
-        .insert(crate::creature_ai::CreatureState::Idle);
+        .insert((
+            crate::creature_ai::CreatureState::Idle,
+            literal_rotation::LiteralParityFixture,
+        ));
     let origin = *run
         .app
         .world()
