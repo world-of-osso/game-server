@@ -1,5 +1,5 @@
 //! SimC76f8118 sc_paladin.cpp1689–1710/1757–1783: actual HoW primary hits supply Sunrise.
-use super::ret_dawnlight_consumer_tests::damage;
+use super::ret_dawnlight_consumer_tests::{damage, wait_for_damage};
 use super::ret_storm_gap_tests::remove_hero_selection;
 use super::ret_tier_tests::{cast_finisher, has, native_ret};
 use super::*;
@@ -134,4 +134,35 @@ fn ret_hammer_sunrise_native_background_hits_do_not_recurse() {
         launches, 12,
         "only requested background casts, not recursive echoes"
     );
+}
+
+#[test]
+#[ignore = "real native critical HoW echo payload retains Sun Sear application and damage"]
+fn ret_hammer_sunrise_native_echo_payload_critical_hit_applies_sun_sear() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = native_ret(4);
+    let effectiveness = native_effectiveness(&run) as f32;
+    cast_finisher(&mut run, 31884);
+    for _ in 0..16 {
+        let mut child =
+            crate::spell_cast::load_triggered_spell(run.app.world(), HAMMER, 1).unwrap();
+        child.cast_damage_multiplier = Some(effectiveness);
+        child.cast_damage_role = crate::spell_info::CastDamageRole::Echo;
+        assert!(crate::spell_cast::launch_triggered_spell(
+            run.app.world_mut(),
+            run.actor,
+            &child,
+            Some(run.targets[0]),
+            1,
+        ));
+        for _ in 0..20 {
+            run.app.update();
+        }
+        if crate::auras::has_aura(run.app.world(), run.targets[0], 431414) {
+            assert!(damage(&run, HAMMER) > 0);
+            wait_for_damage(&mut run, 431414);
+            return;
+        }
+    }
+    panic!("native critical HoW echo payload never applied Sun Sear in bounded attempts");
 }

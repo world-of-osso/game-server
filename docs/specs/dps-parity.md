@@ -288,7 +288,7 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 ### Ret Hammer Second Sunrise
 
 - Ordinary HoW successful primary impacts may produce a native same-ID background echo (`sc_paladin.cpp1689–1710/1757–1783`). Missed/immune primaries, secondary recipients, background HoW and echoes do not produce it.
-- Read selected native431474 chance/effectiveness and share its native ICD with Storm. Preserve native payload damage, recipients and existing background execution relationships. Do not tune values, grant synthetic resources or implement the source's unverified200ms delay.
+- Read selected native431474 chance/effectiveness and share its native ICD with Storm. Preserve native payload damage, recipients and existing background execution relationships, including native Sun Sear from critical HoW echoes. Do not tune values, grant synthetic resources or implement the source's unverified200ms delay.
 - Native actual-combat RED→GREEN must show ordinary root damage and correctly scaled echo damage, with unselected/background controls; retain all Ret/Dawnlight gates and remeasure three-seed ST/3T.
 
 ### Ret Divine Resonance producer

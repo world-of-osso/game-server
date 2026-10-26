@@ -268,10 +268,10 @@ pub(super) fn judgment_mastery(world: &mut World, ctx: &EffectCtx, target: Entit
 }
 
 pub(super) fn after_direct_damage(world: &mut World, ctx: &EffectCtx, target: Entity, crit: bool) {
-    if !crit
-        || !selected(world, ctx.caster, SUN_SEAR_TALENT)
-        || ctx.spell.cast_damage_role != CastDamageRole::Primary
-    {
+    // sc_paladin.cpp1703–1710/1767–1771: the background HoW echo retains Sun Sear impact.
+    let eligible_role = ctx.spell.cast_damage_role == CastDamageRole::Primary
+        || (ctx.spell.id == 24275 && ctx.spell.cast_damage_role == CastDamageRole::Echo);
+    if !crit || !selected(world, ctx.caster, SUN_SEAR_TALENT) || !eligible_role {
         return;
     }
     // Ret633–637 and sc_paladin.cpp1767–1771: critical Storm/HoW only.
