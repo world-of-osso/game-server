@@ -1,5 +1,6 @@
 use super::*;
 use shared::components::PowerType;
+use shared::protocol::CombatLogKind;
 
 #[test]
 #[ignore = "requires private native260 profile/traits and player actor"]
