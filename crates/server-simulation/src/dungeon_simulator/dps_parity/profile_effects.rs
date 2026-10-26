@@ -26,11 +26,21 @@ pub(super) fn install(world: &mut World, actor: Entity, profile: &Profile) -> Re
             }
             // SimC76f8118 consumable.cpp40–59/item_data.inc175834: quality2 identity.
             ("flask", "flask_of_the_blood_knights_2") => apply_item(world, actor, 241324, &db)?,
-            ("augmentation", "void_touched") => apply_item(world, actor, 259085, &db)?,
+            // SimC76f8118 item_data.inc175836: quality2; native ItemSparse owns the ilvl.
+            ("flask", "flask_of_the_shattered_sun_2") => apply_item(world, actor, 241326, &db)?,
+            // SimC76f8118 item_data.inc175830: quality2 native item/ilvl295.
+            ("flask", "flask_of_thalassian_resistance_2") => apply_item(world, actor, 241320, &db)?,
+            // consumable.cpp613 accepts both short and full Void-Touched tokens.
+            ("augmentation", "void_touched" | "void_touched_augment_rune") => {
+                apply_item(world, actor, 259085, &db)?
+            }
             // Food selectors require the composed native equipment/consumable ratings.
             ("food", _) => {}
-            ("potion", "potion_of_recklessness_2") => {
-                let item = super::literal_rotation::equipment::ItemUse::consumable(world, 241288)?;
+            ("potion", _) => {
+                let Some(id) = potion_item(value) else {
+                    continue;
+                };
+                let item = super::literal_rotation::equipment::ItemUse::consumable(world, id)?;
                 world.entity_mut(actor).insert((
                     Potion(item),
                     crate::simc_apl_native::ConfiguredPotion {
@@ -39,7 +49,7 @@ pub(super) fn install(world: &mut World, actor: Entity, profile: &Profile) -> Re
                     },
                 ));
             }
-            ("temporary_enchant", _) => install_oils(world, actor, value)?,
+            ("temporary_enchant", _) => super::profile_oils::install(world, actor, value)?,
             _ => {} // Report retains every unsupported token explicitly.
         }
     }
@@ -71,33 +81,6 @@ fn item_spell(db: &Connection, item: u32) -> Result<(u32, u16), String> {
 fn apply_item(world: &mut World, actor: Entity, item: u32, db: &Connection) -> Result<(), String> {
     let (spell, level) = item_spell(db, item)?;
     server::consumables::apply(world, actor, spell, Some(level))
-}
-
-fn install_oils(world: &mut World, actor: Entity, value: &str) -> Result<(), String> {
-    let mut oils = Vec::new();
-    for entry in value.split('/') {
-        let (slot, oil) = entry
-            .split_once(':')
-            .ok_or("temporary enchant lacks slot")?;
-        if oil != "thalassian_phoenix_oil_2" {
-            continue;
-        }
-        let slot = super::inputs::slot(slot)?;
-        let equipped = world
-            .get::<crate::stats::EquippedItems>(actor)
-            .ok_or("temporary enchant owner lacks native equipment")?;
-        // SimC76f8118 item.cpp2237–2245: inactive slots do not initialize enchants.
-        if !equipped.items.iter().any(|(s, _, _)| *s == slot) {
-            continue;
-        }
-        // SimC76f8118 temporary_enchant.inc116 binds quality2 to native enchant8052.
-        oils.push((slot, 8052));
-    }
-    world
-        .get_mut::<crate::stats::EquippedItemModifiers>(actor)
-        .ok_or("temporary enchant owner lacks native equipment")?
-        .temporary_enchants = oils;
-    Ok(())
 }
 
 fn install_expansion(
@@ -143,21 +126,34 @@ fn resolve_expansion_entry(token: &str) -> Result<u32, String> {
         .map_err(|error| format!("native expansion entry {token:?}: {error}"))
 }
 
+fn potion_item(token: &str) -> Option<u32> {
+    // SimC76f8118 item_data.inc175810/175828: identities only; native catalogs
+    // supply each potion's spell, item level, coefficient and cooldown.
+    match token {
+        "potion_of_recklessness_2" => Some(241288),
+        "lights_potential_2" => Some(241308),
+        // SimC76f8118 item_data.inc182728: Liquid Luster quality2, native ilvl295.
+        "liquid_luster_2" => Some(271887),
+        _ => None,
+    }
+}
+
 pub(super) fn supported(kind: &str, value: &str) -> bool {
+    if value == "disabled" || value.is_empty() {
+        return true;
+    }
     matches!(
         (kind, value),
         ("flask", "flask_of_the_magisters_2" | "magisters_2")
             | ("flask", "flask_of_the_blood_knights_2")
-            | ("augmentation", "void_touched")
+            | ("flask", "flask_of_the_shattered_sun_2")
+            | ("flask", "flask_of_thalassian_resistance_2")
+            | ("augmentation", "void_touched" | "void_touched_augment_rune")
             | ("food", "royal_roast")
             | (
                 "food",
                 "harandar_celebration" | "silvermoon_parade" | "blooming_feast"
             )
-            | ("potion", "potion_of_recklessness_2")
-    ) || (kind == "temporary_enchant"
-        && value.split('/').all(|e| {
-            e.split_once(':')
-                .is_some_and(|(_, v)| v == "thalassian_phoenix_oil_2")
-        }))
+    ) || (kind == "potion" && potion_item(value).is_some())
+        || (kind == "temporary_enchant" && super::profile_oils::supported(value))
 }

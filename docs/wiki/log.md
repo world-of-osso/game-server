@@ -1,6 +1,10 @@
 ## 2026-10-25 — Arcane literal player fixture
 
 [Arcane62](systems/simc-apl.md#arcane-fixture-62) executes supplied profile rows through shared literal control with native class admission and no concurrent AssistedCombat. The300s ST controller regression passes; numerical parity remains open.
+## 2026-10-25 — Shared native consumable bindings
+
+[Shared profile effects](systems/character-stats.md#shared-profile-effects--2026-10-25): rune/flask/potion identities, native Liquid Luster per-stack scaling and common expiry, literal prepot aura/cooldown aging, and talent-conditioned temporary oil. Numerical parity remains measurement-gated.
+
 ## 2026-10-25 — Marksmanship native relationships
 
 [Marksmanship](systems/spell-casting.md#marksmanship-native-relationships--2026-10-25): native stack limits, Volley-earned cleave without its separate talent, caster-owned channel consumption, execution/arrival ordering, residual banks and Explosive primary/secondary relationships.
@@ -4613,3 +4617,5 @@ Same-source550c4b453 route control: bothPASS,5437case/ignore census equal; opt0�
 ## 2026-10-25 — Downstream spell-script registry
 
 Documented the first compile-boundary slice in [spell-script-crate](systems/spell-script-crate.md): all relationship-policy rows and five complete hook modules move downstream; the remaining implementations stay in combat. Dispatch order has one code-level contract.
+
+- 2026-10-25: Documented Affliction265 literal fixture and native Agony shard funding; controller RED9774→GREENfa58; funding RED4b2dc (15landed ticks,0raw shards), GREEN/measure pending.

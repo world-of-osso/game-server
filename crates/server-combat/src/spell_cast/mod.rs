@@ -219,6 +219,8 @@ mod open_lock_tests;
 #[cfg(test)]
 mod portal_tests;
 pub mod powers;
+mod precombat_item;
+pub use precombat_item::age_precombat_item_use;
 #[cfg(test)]
 mod protective_growth_tests;
 #[cfg(test)]
