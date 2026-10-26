@@ -1,7 +1,7 @@
 //! Frost's authored crit-scaled native modifier update.
 use super::combat;
 use bevy::prelude::*;
-use combat::auras::{ActiveAuras, AuraInstance};
+use combat::auras::AuraInstance;
 use combat::spell_cast::script_registry::SpellScriptHook;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::EarlyAuraRegistration(register)];
@@ -33,13 +33,5 @@ fn update_deep_shatter(world: &mut World, unit: Entity, aura: &AuraInstance) {
         .get::<combat::stats::CharacterStats>(unit)
         .map_or(0.0, |stats| stats.crit_pct);
     let amount = factor * crit / 100.0;
-    let Some(effect) = world
-        .get_mut::<ActiveAuras>(unit)
-        .and_then(|auras| auras.into_inner().get_mut(aura.instance_id))
-        .and_then(|aura| aura.effects.iter_mut().find(|effect| effect.index == 1))
-    else {
-        return;
-    };
-    effect.amount = amount;
-    combat::auras::auras_changed(world, unit);
+    combat::auras::set_effect_amount(world, unit, aura.instance_id, 1, amount);
 }
