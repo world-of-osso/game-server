@@ -1155,31 +1155,22 @@ fn fire_feedback_from_the_ashes_reduces_the_fire_blast_that_triggered_it() {
         actions: [("fire_blast".into(), 108853)].into(),
         ..default()
     };
-    let fractional = |run: &Run| {
-        NativeFacts::new(
-            run.app.world(),
-            run.actor,
-            &bindings,
-            Encounter::Fixture {
-                started_at: 0.0,
-                duration: 300.0,
-                style: FightStyle::Patchwerk,
-            },
-            1,
-        )
-        .value("cooldown.fire_blast.charges_fractional")
-        .unwrap()
-    };
-    let first = fractional(&run);
+    let first = NativeFacts::new(
+        run.app.world(),
+        run.actor,
+        &bindings,
+        Encounter::Fixture {
+            started_at: 0.0,
+            duration: 300.0,
+            style: FightStyle::Patchwerk,
+        },
+        1,
+    )
+    .value("cooldown.fire_blast.charges_fractional")
+    .unwrap();
     assert!(
         first > 2.01,
         "an actual selected From the Ashes hit restores native500ms progress immediately after spending a Fire Blast charge: {first}"
-    );
-    start_native(&mut run, 108853, target);
-    let second = fractional(&run);
-    assert!(
-        (second - (first - 1.0)).abs() < 0.0001,
-        "a second actual same-frame Fire Blast spends a charge without bypassing the native From the Ashes ICD: {first} -> {second}"
     );
 }
 

@@ -41,7 +41,7 @@ Pyrocosm's native Fireball chance produces a real destination Meteorite and its 
 
 Registered `fire_phoenix.rs` invokes authentic Phoenix223453 with native448659. The class-summon importer follows Invocation448658→448659 to import existing TDB templates/models, not synthetic pets or world spawns. Before its immediate first action, Codex snapshots and consumes owner spheres. The native effect2 periodic aura drives subsequent random ST/area actions without haste scaling. Alternating exceptional actions consume that budget; Meteorite repeats retain the pinned normal/bugged impact IDs and native travel values. Actual actions produce native Ashes Cascade stacks. Fired Up extends both the summon and its periodic aura. Native summon/action tests have RED proof; GREEN and numerical acceptance remain train-gated.
 
-Selected From the Ashes uses actual eligible direct-hit callbacks to restore native Fire Blast recharge progress, including the triggering Fire Blast charge. Its owner-local deadline reads the native talent ICD; it does not reset with Combustion. The native charge-progress test has RED proof and also checks a second same-frame ordinary Fire Blast cannot refund again; GREEN remains train-gated.
+Selected From the Ashes uses actual eligible direct-hit callbacks to restore native Fire Blast recharge progress, including the triggering Fire Blast charge. Its owner-local deadline reads the native talent ICD; it does not reset with Combustion. The native charge-progress test has RED proof; GREEN remains train-gated. Ordinary Fire Blast admission rejects a second same-frame cast, so that sequence cannot qualify the talent's separate ICD.
 
 ## Expected combat length
 
