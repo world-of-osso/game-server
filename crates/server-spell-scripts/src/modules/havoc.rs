@@ -8,9 +8,6 @@ use combat::spell_cast::script_registry::SpellScriptHook;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::OnCast(before_cast),
-    SpellScriptHook::EffectHandler(dance::effect_handler),
-    SpellScriptHook::TargetFilter(dance::filter_targets),
-    SpellScriptHook::DamageAmount(dance::damage_amount),
     SpellScriptHook::EarlyAuraRegistration(demonsurge::register_havoc),
     SpellScriptHook::LandedDamagePolicy(damage::apply_havoc_damage_policies),
     SpellScriptHook::AbilityUseAvailable(demonsurge::havoc_demonsurge_available),
@@ -23,8 +20,6 @@ use combat::class_progression::KnownSpells;
 mod beam;
 #[path = "havoc/damage.rs"]
 mod damage;
-#[path = "havoc/dance.rs"]
-mod dance;
 #[path = "havoc/demonsurge.rs"]
 mod demonsurge;
 
@@ -34,7 +29,7 @@ fn is_havoc(world: &World, caster: Entity) -> bool {
         .is_some_and(|spec| spec.0 == 577)
 }
 
-fn has_talent(world: &World, caster: Entity, talent: u32) -> bool {
+pub(super) fn has_talent(world: &World, caster: Entity, talent: u32) -> bool {
     is_havoc(world, caster)
         && world
             .get::<KnownSpells>(caster)

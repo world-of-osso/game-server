@@ -60,6 +60,7 @@ register_modules! {
     germination: (200, "modules/germination.rs"),
     giantkiller: (170, "modules/giantkiller.rs"),
     havoc: (150, "modules/havoc.rs"),
+    havoc_dance: (5770, "modules/havoc/dance.rs"),
     impact_procs: (330, "modules/impact_procs.rs"),
     lava_surge: (300, "modules/lava_surge.rs"),
     marksmanship: (380, "modules/marksmanship.rs"),

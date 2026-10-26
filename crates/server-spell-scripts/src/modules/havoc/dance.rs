@@ -3,7 +3,14 @@ use super::combat;
 use bevy::prelude::*;
 use combat::spell_info::{SpellEffect, SpellInfo};
 use combat::spell_cast::effects::{EffectCtx, EffectHandler};
-use combat::spell_cast::script_registry::DamageAmountHook;
+use combat::spell_cast::script_registry::{DamageAmountHook, SpellScriptHook};
+use super::havoc::has_talent;
+
+pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::EffectHandler(effect_handler),
+    SpellScriptHook::TargetFilter(filter_targets),
+    SpellScriptHook::DamageAmount(damage_amount),
+];
 
 const FIRST_BLOOD: u32 = 206416;
 
@@ -12,7 +19,7 @@ pub(super) fn effect_handler(spell: u32, index: u8) -> Option<EffectHandler> {
 }
 
 fn trigger_dance(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target: Entity) {
-    if !super::has_talent(world, ctx.caster, FIRST_BLOOD) {
+    if !has_talent(world, ctx.caster, FIRST_BLOOD) {
         combat::spell_cast::queued_triggers::schedule(world, ctx, effect, target);
         return;
     }
@@ -35,7 +42,7 @@ fn trigger_dance(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, targe
 
 pub(super) fn filter_targets(world: &World, caster: Entity, spell: &SpellInfo, _effect: u8, primary: Option<Entity>, units: &mut Vec<Entity>) {
     if matches!(spell.id, 199552 | 200685 | 210153 | 210155)
-        && super::has_talent(world, caster, FIRST_BLOOD)
+        && has_talent(world, caster, FIRST_BLOOD)
     {
         units.retain(|unit| Some(*unit) != primary);
     }
@@ -46,7 +53,7 @@ pub(super) fn damage_amount(spell: u32) -> Option<DamageAmountHook> {
 }
 
 fn first_blood_damage(world: &World, caster: Entity, _target: Entity, amount: f32) -> f32 {
-    if !super::has_talent(world, caster, FIRST_BLOOD) {
+    if !has_talent(world, caster, FIRST_BLOOD) {
         return amount;
     }
     let percent = combat::spell_cast::scripts::script_effect_value(world, caster, FIRST_BLOOD, 0);
