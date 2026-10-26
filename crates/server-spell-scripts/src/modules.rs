@@ -86,6 +86,7 @@ register_modules! {
     elemental_ascendance: (220, "modules/elemental_ascendance.rs"),
     empower_evoker: (1000, "modules/empower_evoker.rs"),
     enhancement_armor: (2630, "modules/enhancement_armor.rs"),
+    enhancement_availability: (2631, "modules/enhancement_availability.rs"),
     essence_burst: (140, "modules/essence_burst.rs"),
     evoker_bombardments: (1000, "modules/evoker_bombardments.rs"),
     evoker_burnout: (1000, "modules/evoker_burnout.rs"),
