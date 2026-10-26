@@ -7,7 +7,9 @@ const ACTIONS: &[(&str, u32, bool)] = &[
     ("kill_command", 259489, false),
     ("raptor_strike", 186270, false),
     ("wildfire_bomb", 259495, false),
-    ("takedown", 1250646, true),
+    // SimC76f8118 sc_hunter.cpp6375/6403: actual hostile primary;
+    // native70448 effect5 requires enemy6 despite the caster-only aura effects.
+    ("takedown", 1250646, false),
     ("boomstick", 1261193, false),
     ("moonlight_chakram", 1264949, false),
     ("muzzle", 187707, false),
