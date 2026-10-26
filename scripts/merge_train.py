@@ -128,6 +128,38 @@ def reset_tree():
     git("clean", "-qfd", "-e", "target-lead")
 
 
+# Registries merged with `merge=union`: a line one side moved and the other side kept survives
+# twice (E0428 "defined multiple times" cost 19 checks on 2026-10-26). A repeated entry line is
+# always an error there, so the first occurrence is kept.
+UNION_REGISTRIES = {
+    "crates/server-spell-scripts/src/modules.rs": re.compile(r'^\s+\w+: \(\d+, "[^"]+"\),$'),
+    "crates/server-simulation/src/dungeon_simulator/dps_parity/module_list.in": re.compile(r"^mod \w+;$"),
+    "crates/server-combat/src/auras/stacked_next_spell_uses.in": re.compile(r"^\s+\d+,$"),
+}
+
+
+def drop_union_duplicates():
+    changed = False
+    for name, entry_line in UNION_REGISTRIES.items():
+        path = TREE / name
+        if not path.exists():
+            continue
+        seen, kept = set(), []
+        for line in path.read_text().splitlines(keepends=True):
+            key = line.rstrip("\n")
+            if entry_line.match(key):
+                if key in seen:
+                    continue
+                seen.add(key)
+            kept.append(line)
+        text = "".join(kept)
+        if text != path.read_text():
+            path.write_text(text)
+            changed = True
+    if changed:
+        git("commit", "-qa", "--amend", "--no-edit")
+
+
 def merge(entries, log):
     """Merge entries in order; return those that merged and those that conflicted."""
     merged, conflicted = [], []
@@ -142,6 +174,7 @@ def merge(entries, log):
             entry["reason"] = f"merge conflict:\n{result.stdout}{result.stderr}"
             conflicted.append(entry)
         else:
+            drop_union_duplicates()
             merged.append(entry)
     with log.open("a") as out:
         out.write(f"merged {[e['id'] for e in merged]} conflicted {[e['id'] for e in conflicted]}\n")
@@ -619,7 +652,12 @@ def where(args):
             return
     if (RUNNING / f"{args.id}.json").exists():
         current = HOME / "current.json"
-        info = json.loads(current.read_text()) if current.exists() else {}
+        try:
+            info = json.loads(current.read_text())
+        except (FileNotFoundError, json.JSONDecodeError):
+            # Between cycles: a landed entry's measurement may still be running in the background.
+            print("running, between cycles (measuring, or waiting for the next cycle to start); keep waiting")
+            return
         here = args.id in info.get("entries", [])
         minutes = round((time.time() - info.get("since", time.time())) / 60, 1)
         print(f"in cycle {info.get('cycle')}: phase {info.get('phase')} ({minutes} min)"
