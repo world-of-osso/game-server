@@ -4,7 +4,14 @@ use bevy::prelude::*;
 use combat::auras::{self, ActiveAuras};
 use combat::spell_cast::script_registry::SpellScriptHook;
 
-pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::AfterWhiteImpact(grow_cry)];
+#[path = "hunter_wyvern/fury.rs"]
+mod fury;
+
+pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::AfterWhiteImpact(grow_cry),
+    SpellScriptHook::EarlyAuraRegistration(fury::register),
+    SpellScriptHook::AfterElementalLaunch(fury::extend_after_command),
+];
 const WYVERN_CRY: u32 = 471881;
 
 fn grow_cry(world: &mut World, pet: Entity) {
