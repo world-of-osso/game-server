@@ -45,6 +45,7 @@ mod stacking_summons;
 pub(crate) use elemental::register as register_elemental_policies;
 pub(super) use script_registry::after_modifier_consumption as apply_echo_policies;
 pub(crate) mod empower_evoker;
+mod enhancement_doom;
 mod enhancement_imbues;
 mod enhancement_modes;
 mod enhancement_nova;
