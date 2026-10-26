@@ -196,6 +196,7 @@ register_modules! {
     spellslinger: (1000, "modules/spellslinger.rs"),
     spellslinger_hits: (401, "modules/spellslinger_hits.rs"),
     stacking_summons: (1000, "modules/stacking_summons.rs"),
+    subtlety_finishers: (2612, "modules/subtlety_finishers.rs"),
     subtlety_shadow: (420, "modules/subtlety_shadow.rs"),
     survival: (2550, "modules/survival.rs"),
     survival_buffs: (2553, "modules/survival_buffs.rs"),
