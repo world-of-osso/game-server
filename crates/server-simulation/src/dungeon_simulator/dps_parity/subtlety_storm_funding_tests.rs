@@ -2,7 +2,7 @@
 use super::*;
 use shared::{components::PowerType, protocol::CombatLogKind};
 
-fn cast_storm() -> Run {
+fn cast_storm(initial_points: f32) -> Run {
     let mut run = prepare_literal(261, 3).unwrap();
     engage(&mut run);
     crate::auras::apply_aura(
@@ -28,7 +28,7 @@ fn cast_storm() -> Run {
             .get_mut::<crate::spell_cast::powers::PowerPools>(run.actor)
             .unwrap();
         pools.get_mut(PowerType::Energy).unwrap().current = 100.0;
-        pools.get_mut(PowerType::ComboPoints).unwrap().current = 0.0;
+        pools.get_mut(PowerType::ComboPoints).unwrap().current = initial_points;
     }
     literal_rotation::execution::execute(
         run.app.world_mut(),
@@ -42,7 +42,7 @@ fn cast_storm() -> Run {
 #[test]
 #[ignore = "requires private native261 profile/traits and player actor"]
 fn subtlety_storm_funding_collects_after_actual_three_target_combo_gains() {
-    let run = cast_storm();
+    let run = cast_storm(0.0);
     let events = &run
         .app
         .world()
@@ -82,7 +82,7 @@ fn subtlety_storm_funding_collects_after_actual_three_target_combo_gains() {
 #[test]
 #[ignore = "requires private native261 profile/traits and player actor"]
 fn subtlety_storm_funding_logs_each_actual_combo_gain_once() {
-    let run = cast_storm();
+    let run = cast_storm(0.0);
     let events = &run
         .app
         .world()
@@ -108,5 +108,25 @@ fn subtlety_storm_funding_logs_each_actual_combo_gain_once() {
             .map(|event| event.amount - event.overflow)
             .sum::<i32>(),
         3
+    );
+}
+
+#[test]
+#[ignore = "requires private native261 profile/traits and player actor"]
+fn subtlety_storm_funding_at_cap_keeps_storage_and_arms_ancient_arts() {
+    let run = cast_storm(7.0);
+    let stacks = run
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(run.actor)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 196911 && aura.caster == run.actor)
+        .unwrap()
+        .stacks;
+    assert_eq!(stacks, 5, "capped gains cannot consume stored points");
+    assert!(
+        crate::auras::has_aura(run.app.world(), run.actor, 1269163),
+        "an actual builder at cap still evaluates the native Ancient Arts threshold"
     );
 }
