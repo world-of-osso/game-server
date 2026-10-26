@@ -242,14 +242,6 @@ impl ActionFacts for DestructionFacts<'_> {
                 .map(|target| target as f64)
                 .ok_or("267 action has no target identity".into());
         }
-        if let Some(alias) = name
-            .strip_prefix("action.")
-            .and_then(|value| value.strip_suffix(".usable"))
-        {
-            return self
-                .native
-                .value_for(action, &format!("action.{alias}.ready"));
-        }
         if name == "demonic_art"
             || name.starts_with("dot_refreshable_count.")
             || name.starts_with("trinket.")

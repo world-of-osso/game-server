@@ -342,6 +342,17 @@ impl<'a> NativeFacts<'a> {
             .collect()
     }
 
+    /// Item proxies observe this actor's own proc, not a foreign caster's same-ID aura.
+    pub fn owned_buff_property(&self, spell: u32, property: &str) -> Result<f64, String> {
+        self.spell(spell)?;
+        let active = self.read_owned_auras(self.actor, spell);
+        match property {
+            "up" => Ok(bool_value(!active.is_empty())),
+            "remains" => Ok(buff_remaining(&active, crate::spell_cast::now(self.world))),
+            _ => Err(format!("unknown native owned-buff property {property}")),
+        }
+    }
+
     fn active_dot(&self, alias: &str) -> Result<f64, String> {
         let spell = bound_spell(&self.bindings.buffs, alias, "dot")?;
         self.spell(spell)?;
@@ -778,6 +789,12 @@ impl<'a> NativeFacts<'a> {
             "usable_in" => crate::spell_cast::cooldown_query::cooldown_value(
                 self.world, self.actor, spell, "remains",
             ),
+            // SimC76f8118 action.cpp3269–3270/3496–3499 delegates these
+            // named action operands to the same native cooldown state.
+            "usable" => self.cooldown_for_spell(spell, "up"),
+            "charges" | "max_charges" | "charges_fractional" | "full_recharge_time" => {
+                self.cooldown_for_spell(spell, property)
+            }
             "ready" => crate::spell_cast::native_apl::action_ready(self.world, self.actor, spell),
             "execute_time" => Ok(crate::spell_cast::native_apl::execute_time(
                 self.world, self.actor, spell,

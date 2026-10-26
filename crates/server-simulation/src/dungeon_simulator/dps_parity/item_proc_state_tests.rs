@@ -63,4 +63,21 @@ fn literal_item_proc_state_tracks_own_native_use_aura_and_expiry() {
     }
     assert_eq!(read(&run, 1, "up"), 0.0);
     assert_eq!(read(&run, 1, "remains"), 0.0);
+    crate::auras::apply_aura(
+        run.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: run.targets[0],
+            target: run.actor,
+            spell_id: 1297761,
+            effect_mask: u32::MAX,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, 1297761));
+    assert_eq!(
+        read(&run, 1, "up"),
+        0.0,
+        "a foreign caster cannot supply this item's proc"
+    );
+    assert_eq!(read(&run, 1, "remains"), 0.0);
 }
