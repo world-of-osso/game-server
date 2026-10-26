@@ -180,6 +180,8 @@ pub(super) fn resolve_due_hits(world: &mut World) {
         due
     };
     for hit in due {
+        #[cfg(any(test, feature = "test-support"))]
+        observe_discarded_targets(world, &hit);
         if world.get_entity(hit.caster).is_err() {
             continue;
         }
@@ -192,6 +194,53 @@ pub(super) fn resolve_due_hits(world: &mut World) {
             hit.launched,
         );
     }
+}
+
+#[cfg(any(test, feature = "test-support"))]
+fn observe_discarded_targets(world: &mut World, hit: &PendingHit) {
+    use super::test_harness::ObservedDiscardedSpellHits;
+    if !world.contains_resource::<ObservedDiscardedSpellHits>() {
+        return;
+    }
+    let Landing::Units {
+        alive_at_launch, ..
+    } = &hit.landing
+    else {
+        return;
+    };
+    let discarded: Vec<_> = alive_at_launch
+        .iter()
+        .filter_map(|&(target, alive)| read_discarded_target(world, hit, target, alive))
+        .collect();
+    world
+        .resource_mut::<ObservedDiscardedSpellHits>()
+        .0
+        .extend(discarded);
+}
+
+#[cfg(any(test, feature = "test-support"))]
+fn read_discarded_target(
+    world: &World,
+    hit: &PendingHit,
+    target: Entity,
+    alive_at_launch: bool,
+) -> Option<super::test_harness::DiscardedSpellHit> {
+    let exists_now = world.get_entity(target).is_ok();
+    let alive_now = super::targets::is_alive(world, target);
+    if exists_now && alive_now == alive_at_launch {
+        return None;
+    }
+    Some(super::test_harness::DiscardedSpellHit {
+        caster: hit.caster,
+        spell_id: hit.spell.id,
+        target,
+        launched_at: hit.launched,
+        due_at: hit.due,
+        discarded_at: now(world),
+        alive_at_launch,
+        exists_now,
+        alive_now,
+    })
 }
 
 fn land_now(
