@@ -43,6 +43,7 @@ const fn order_modules<const N: usize>(
 
 register_modules! {
     after_cast_auras: (100, "modules/after_cast_auras.rs"),
+    assassination_target: (2590, "modules/assassination_target.rs"),
     aura_rolls: (110, "modules/aura_rolls.rs"),
     beast_mastery: (20, "modules/beast_mastery.rs"),
     cast_grants: (120, "modules/cast_grants.rs"),

@@ -98,7 +98,7 @@ pub(super) fn affects(aura: &AuraInstance, effect: &AuraEffectState, spell: &Spe
 
 /// `AuraEffect::IsAffectingSpell` (SpellAuraEffects.cpp:1286-1296): `spell` is of the
 /// aura's `SpellClassSet` and shares a bit of the effect's `SpellClassMask`.
-pub(crate) fn class_mask_affects(
+pub fn class_mask_affects(
     aura: &AuraInstance,
     effect: &AuraEffectState,
     spell: &SpellInfo,
