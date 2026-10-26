@@ -285,6 +285,12 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 - [x] Strict native tests must prove real swing damage or actual Wake funding/paid Storm damage before the missing boundary; retain unselected controls. Commit tests before RED and generic execution before GREEN.
 - [x] Report root supply, Second Sunrise, Tempest and background-source coverage separately. [Scoped native/compiler proof](../handoffs/ret-storm-gap-proof-ledger.md). Missing echo damage does not explain the full ranked Storm deficit.
 
+### Ret Hammer Second Sunrise
+
+- Ordinary HoW successful primary impacts may produce a native same-ID background echo (`sc_paladin.cpp1689–1710/1757–1783`). Missed/immune primaries, secondary recipients, background HoW and echoes do not produce it.
+- Read selected native431474 chance/effectiveness and share its native ICD with Storm. Preserve native payload damage, recipients and existing background execution relationships. Do not tune values, grant synthetic resources or implement the source's unverified200ms delay.
+- Native actual-combat RED→GREEN must show ordinary root damage and correctly scaled echo damage, with unselected/background controls; retain all Ret/Dawnlight gates and remeasure three-seed ST/3T.
+
 ### Ret Divine Resonance producer
 
 - [ ] `SIMC_RET_DIVINE_RESONANCE_PRODUCER`: validated selected384027/spec70 and an actual ordinary Divine Toll375576 cast grant native1266308 at its native maximum3 stacks, through existing AfterCast after cast-success is raised. SimC76f8118 `sc_paladin.cpp1880–1905,3686–3688` supplies the missing relationship; `action.cpp1971–1985` dispatches cast-success callbacks before that grant. Keep native30s duration; no legacy5s pulse, new hook, per-spell proc suppression or copied timer. Echo, stack spending and500ms ICD remain excluded. [Source/proof](../handoffs/aura-proc-event-candidates-proof-ledger.md#ret-producer-phase).

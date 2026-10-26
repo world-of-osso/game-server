@@ -185,6 +185,7 @@ mod ret_dawnlight_target_tests;
 mod ret_dawnlight_tests;
 mod ret_empyrean_tests;
 mod ret_factor_tests;
+mod ret_hammer_sunrise_tests;
 mod ret_judgment_tests;
 mod ret_multiseed_tests;
 mod ret_proc_rate_tests;

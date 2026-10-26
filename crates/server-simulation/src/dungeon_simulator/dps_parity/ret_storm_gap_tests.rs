@@ -129,7 +129,7 @@ fn assert_live_sunrise(run: &Run) {
     assert_eq!(amount(1), 50.0, "native30 plus actual1258011 modifier20");
 }
 
-fn remove_hero_selection(run: &mut Run) {
+pub(super) fn remove_hero_selection(run: &mut Run) {
     let (_, mut traits) = read_reference(70).unwrap();
     let classes = run.app.world().resource::<crate::spell_info::ClassSpells>();
     let tree = &classes
