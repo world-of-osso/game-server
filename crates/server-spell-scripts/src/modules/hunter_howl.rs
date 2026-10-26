@@ -7,6 +7,8 @@ use combat::spell_cast::{self, PlannedEffect, TargetPlan, effects::EffectCtx, ta
 use combat::spell_info::{SpellInfo, SpellStore};
 use shared::components::CombatStatus;
 
+#[path = "hunter_howl/pack_mentality.rs"]
+mod pack_mentality;
 #[path = "hunter_howl/summons.rs"]
 mod summons;
 
@@ -124,7 +126,7 @@ fn after_launch(world: &mut World, caster: Entity, spell: &SpellInfo, foreground
 }
 
 fn consume_beasts(world: &mut World, caster: Entity, primary: Entity) {
-    let mut consumed = false;
+    let mut consumed = 0_u32;
     for (index, ready) in READY.into_iter().enumerate() {
         if !auras::has_aura(world, caster, ready) {
             continue;
@@ -140,9 +142,10 @@ fn consume_beasts(world: &mut World, caster: Entity, primary: Entity) {
         auras::remove_auras(world, caster, RemoveReason::Consumed, |aura| {
             aura.spell_id == ready
         });
-        consumed = true;
+        consumed += 1;
     }
-    if consumed {
+    if consumed > 0 {
+        pack_mentality::recover_cooldowns(world, caster, consumed);
         start_earned_stampede(world, caster, primary);
     }
 }
