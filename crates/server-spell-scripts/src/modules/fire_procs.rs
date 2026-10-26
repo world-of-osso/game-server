@@ -290,6 +290,7 @@ pub(crate) fn register(scripts: &mut auras::scripts::AuraScripts) {
         COMBUSTION,
         auras::scripts::AuraScript {
             on_apply: Some(reset_combustion_procs),
+            on_remove: Some(end_fiery_rush),
             on_natural_end: Some(start_hyperthermia),
             ..Default::default()
         },
@@ -318,6 +319,14 @@ fn check_glorious_fire_blast(
     // SimC76f8118 sc_mage.cpp4577–4580: only Fire Blast spends this
     // charge; the broad native harmful-spell mask also matches Pyroblast.
     event.spell_id == Some(108853)
+}
+
+fn end_fiery_rush(world: &mut World, caster: Entity, _aura: &AuraInstance, reason: auras::RemoveReason) {
+    // SimC76f8118 sc_mage.cpp1453–1457: the native permanent Fiery Rush
+    // payload lasts only while Combustion is active; do not leave it after expiry.
+    auras::remove_auras(world, caster, reason, |aura| {
+        aura.spell_id == 383637 && aura.caster == caster
+    });
 }
 
 fn reset_combustion_procs(world: &mut World, caster: Entity, _aura: &AuraInstance) {
