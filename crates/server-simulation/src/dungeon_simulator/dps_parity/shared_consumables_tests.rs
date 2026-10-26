@@ -130,6 +130,10 @@ fn shared_consumables_lights_potential_quality2_cast_grants_native_primary() {
         .get::<crate::stats::CharacterStats>(actor)
         .unwrap()
         .primary;
+    let potion = world
+        .get::<super::profile_effects::Potion>(actor)
+        .expect("Light's Potential must configure its native use item");
+    assert_eq!((potion.0.item_id, potion.0.item_level), (241308, 295));
     let mut bindings = crate::simc_apl_native::Bindings::default();
     let equipment = Equipment::load(world, actor, &mut bindings).unwrap();
     let row = server::simc_apl::Action {
@@ -171,8 +175,6 @@ fn shared_consumables_lights_potential_quality2_cast_grants_native_primary() {
         .primary;
     assert!(after.strength > before.strength);
     assert_eq!(after.stamina, before.stamina);
-    let potion = world.get::<super::profile_effects::Potion>(actor).unwrap();
-    assert_eq!((potion.0.item_id, potion.0.item_level), (241308, 295));
     let prepared = Prepared::read(
         run.app.world_mut(),
         actor,
