@@ -98,6 +98,7 @@ fn advance_cycle(world: &mut World, caster: Entity, spell: &SpellInfo) {
 fn register_channels(scripts: &mut AuraScripts) {
     for beam in BEAMS {
         let script = scripts.0.entry(*beam).or_default();
+        script.on_apply = Some(super::havoc_fury::apply_blind_fury);
         script.on_natural_end = Some(finish_beam);
         script.on_remove = Some(super::havoc_eternal::remove_beam);
     }
