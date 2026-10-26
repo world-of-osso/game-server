@@ -98,7 +98,12 @@ fn actual_hit(spell_id: u32, boost: bool) -> (f64, f64) {
             );
             // Native damage reads live crit at impact, not at admission.
             // Projectile travel can outlive an earlier stat modifier.
-            let impact_crit = run.app.world().get::<CharacterStats>(caster).unwrap().crit_pct;
+            let impact_crit = run
+                .app
+                .world()
+                .get::<CharacterStats>(caster)
+                .unwrap()
+                .crit_pct;
             return (f64::from(hit.amount), f64::from(impact_crit));
         }
         run.app.update();
