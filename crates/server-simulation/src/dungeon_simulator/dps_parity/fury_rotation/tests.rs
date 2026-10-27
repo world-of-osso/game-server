@@ -10,18 +10,24 @@ fn fury_player_literal_fixture_casts_stance_recklessness_and_paid_rampage() {
         actions
             .iter()
             .filter(|action| action["spell_id"] == spell)
-            .map(|action| action["count"].as_u64().unwrap())
-            .sum::<u64>()
+            .map(|action| action["count"].as_f64().unwrap())
+            .sum::<f64>()
     };
     assert_eq!(
         casts(386196),
-        1,
+        1.0,
         "literal precombat casts Berserker Stance once"
     );
-    assert!(casts(1719) > 0, "literal Fury actually casts Recklessness");
-    assert!(casts(184367) > 0, "actual native rage funds a paid Rampage");
     assert!(
-        casts(190411) < 50,
+        casts(1719) > 0.0,
+        "literal Fury actually casts Recklessness"
+    );
+    assert!(
+        casts(184367) > 0.0,
+        "actual native rage funds a paid Rampage"
+    );
+    assert!(
+        casts(190411) < 50.0,
         "literal Fury must not repeat251 Whirlwinds like native SBA"
     );
 }

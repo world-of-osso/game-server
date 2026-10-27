@@ -40,12 +40,14 @@ fn record_payment(world: &mut World, caster: Entity, costs: &[(CostPool, f32)]) 
 
 const FIRST: &[SpellScriptHook] = &[
     SpellScriptHook::NativeAfterCast(lookup_first),
+    SpellScriptHook::AfterPolicyCast(lookup_first),
     SpellScriptHook::AuraRollAfterCast(lookup_first),
     SpellScriptHook::OnCast(record_cast),
     SpellScriptHook::AfterPayment(record_payment),
 ];
 const SECOND: &[SpellScriptHook] = &[
     SpellScriptHook::NativeAfterCast(lookup_second),
+    SpellScriptHook::AfterPolicyCast(lookup_second),
     SpellScriptHook::AuraRollAfterCast(lookup_second),
     SpellScriptHook::OnCast(record_cast),
     SpellScriptHook::AfterPayment(record_payment),
@@ -62,6 +64,7 @@ fn registry_keeps_first_match_and_additive_module_order() {
         ..Default::default()
     };
     script_registry::native_after_cast(&world, spell.id).unwrap()(&mut world, caster, &spell);
+    script_registry::after_policy_cast(&world, spell.id).unwrap()(&mut world, caster, &spell);
     for hook in script_registry::aura_roll_after_cast(&world, spell.id) {
         hook(&mut world, caster, &spell);
     }
@@ -72,6 +75,7 @@ fn registry_keeps_first_match_and_additive_module_order() {
         [
             ("first", caster, 133),
             ("first", caster, 133),
+            ("first", caster, 133),
             ("second", caster, 133),
             ("cast", caster, 133),
             ("cast", caster, 133),
@@ -80,6 +84,7 @@ fn registry_keeps_first_match_and_additive_module_order() {
         ]
     );
     assert!(script_registry::native_after_cast(&world, 116).is_none());
+    assert!(script_registry::after_policy_cast(&world, 116).is_none());
     assert_eq!(
         script_registry::aura_roll_after_cast(&world, 116).count(),
         0
@@ -95,6 +100,7 @@ fn empty_registry_has_no_script_side_effects() {
     script_registry::on_cast(&mut world, caster, 133, 3);
     script_registry::after_payment(&mut world, caster, &[(CostPool::Health, 42.0)]);
     assert!(script_registry::native_after_cast(&world, 133).is_none());
+    assert!(script_registry::after_policy_cast(&world, 133).is_none());
     assert_eq!(
         script_registry::aura_roll_after_cast(&world, 133).count(),
         0
@@ -321,4 +327,57 @@ fn registry_redirect_stops_at_consumption_and_spender_callbacks_remain_additive(
     assert!(!script_registry::aura_redirect(
         &mut world, caster, target, 774, 3
     ));
+}
+
+#[test]
+fn native_overrides_keep_charge_transforms_bonus_sums_factors_and_effect_vetoes() {
+    const FIRST: &[SpellScriptHook] = &[
+        SpellScriptHook::ProcCharges(|_, _, _, amount| amount + 2.0),
+        SpellScriptHook::ExtraComboPoints(|_, _, _| 1.0),
+        SpellScriptHook::NamedHealingMultiplier(|_, _, _| 3.0),
+        SpellScriptHook::EffectEnabled(|_, _, spell, index| spell != 453314 || index < 2),
+    ];
+    const SECOND: &[SpellScriptHook] = &[
+        SpellScriptHook::ProcCharges(|_, _, _, amount| amount * 3.0),
+        SpellScriptHook::ExtraComboPoints(|_, _, _| 2.0),
+        SpellScriptHook::NamedHealingMultiplier(|_, _, _| 2.0),
+        SpellScriptHook::EffectEnabled(|_, _, _, _| true),
+    ];
+    let mut world = World::new();
+    let caster = world.spawn_empty().id();
+    let spell = SpellInfo {
+        id: 191634,
+        ..Default::default()
+    };
+    world.insert_resource(SpellScriptRegistry::new(&[FIRST, SECOND]));
+    assert_eq!(
+        script_registry::proc_charges(&world, caster, &spell, 4.0),
+        18.0
+    );
+    assert_eq!(
+        script_registry::extra_combo_points(&world, caster, &spell),
+        3.0
+    );
+    assert_eq!(
+        script_registry::named_healing_multiplier(&world, caster, &spell),
+        6.0
+    );
+    assert!(script_registry::effect_enabled(&world, caster, 453314, 0));
+    assert!(!script_registry::effect_enabled(&world, caster, 453314, 2));
+    assert!(script_registry::effect_enabled(&world, caster, 116, 2));
+
+    world.insert_resource(SpellScriptRegistry::new(&[]));
+    assert_eq!(
+        script_registry::proc_charges(&world, caster, &spell, 4.0),
+        4.0
+    );
+    assert_eq!(
+        script_registry::extra_combo_points(&world, caster, &spell),
+        0.0
+    );
+    assert_eq!(
+        script_registry::named_healing_multiplier(&world, caster, &spell),
+        1.0
+    );
+    assert!(script_registry::effect_enabled(&world, caster, 453314, 2));
 }

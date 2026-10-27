@@ -1,5 +1,5 @@
 //! Explicit missing-script policies; native spell records still own payloads.
-pub(super) mod pet_sets;
+mod pet_wrath;
 use bevy::prelude::*;
 use shared::components::{ActiveSpec, PowerType};
 use std::collections::HashSet;
@@ -614,8 +614,10 @@ pub(super) fn hit_hook(world: &World, parent: u32) -> Option<super::ContextHitHo
         matches!(policy.relationship, Relationship::ProcReplacement { triggers, .. }
             if triggers.iter().any(|(spell, _)| *spell == parent))
     });
-    (replacement || hit_payloads(world, parent).next().is_some() || pet_sets::has_hit(parent))
-        .then_some(cast_hit_payload as super::ContextHitHook)
+    (replacement
+        || hit_payloads(world, parent).next().is_some()
+        || script_registry::policy_tail_hit(world, parent).is_some())
+    .then_some(cast_hit_payload as super::ContextHitHook)
 }
 
 fn cast_hit_payload(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
@@ -639,7 +641,9 @@ fn cast_hit_payload(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
         super::super::cast_triggered(world, ctx.caster, payload, Some(recipient), ctx.depth + 1);
     }
     produce_replacement_proc(world, ctx);
-    pet_sets::on_hit(world, ctx);
+    if let Some(run) = script_registry::policy_tail_hit(world, ctx.spell.id) {
+        run(world, ctx);
+    }
 }
 
 #[derive(Component, Default)]
@@ -696,7 +700,9 @@ fn producers(world: &World, parent: u32) -> impl Iterator<Item = &'static Policy
             return parents.contains(&parent);
         }
         matches!(policy.relationship,
-        Relationship::OwnedPetSpellAfterCast { parent: trigger, .. }
+        Relationship::OwnedPetWrathAfterCast { parent: trigger }
+        | Relationship::ReduceCooldownAfterCast { parent: trigger, .. }
+        | Relationship::OwnedPetSpellAfterCast { parent: trigger, .. }
         | Relationship::TriggerPrimaryAfterCast { parent: trigger, .. }
         | Relationship::ApplySelfAuraAfterCast { parent: trigger, .. }
         | Relationship::ConsumeSelfAuraAfterCast { parent: trigger, .. }
@@ -729,8 +735,9 @@ fn consumers<'a>(
 }
 
 pub(super) fn after_cast_hook(world: &World, parent: u32) -> Option<AfterCastHook> {
-    (producers(world, parent).next().is_some() || pet_sets::has_cast(parent))
-        .then_some(apply_after_cast as AfterCastHook)
+    (producers(world, parent).next().is_some()
+        || script_registry::policy_tail_cast(world, parent).is_some())
+    .then_some(apply_after_cast as AfterCastHook)
 }
 
 fn selected(world: &World, caster: Entity, policy: &Policy) -> bool {
@@ -750,6 +757,19 @@ fn apply_after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
             continue;
         }
         match policy.relationship {
+            Relationship::OwnedPetWrathAfterCast { .. } => {
+                pet_wrath::after_cast(world, caster, spell)
+            }
+            Relationship::ReduceCooldownAfterCast {
+                cooldown,
+                milliseconds_effect,
+                ..
+            } => {
+                let milliseconds =
+                    super::script_effect_value(world, caster, policy.talent, milliseconds_effect);
+                let seconds = f64::from(milliseconds) / 1000.0;
+                super::reduce_cooldown(world, caster, cooldown, seconds);
+            }
             Relationship::OwnedPetSpellAfterCast { payload, .. } => {
                 cast_owned_pet_payload(world, caster, spell, payload);
             }
@@ -796,7 +816,9 @@ fn apply_after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
             _ => unreachable!("after-cast policy iterator"),
         }
     }
-    pet_sets::after_cast(world, caster, spell);
+    if let Some(run) = script_registry::policy_tail_cast(world, spell.id) {
+        run(world, caster, spell);
+    }
 }
 
 fn refund_spender_cooldowns(world: &mut World, caster: Entity, spell: &SpellInfo, policy: &Policy) {
@@ -963,16 +985,18 @@ pub(in crate::spell_cast) fn snapshot(
             CostPool::Health => None,
         })
         .collect::<Vec<_>>();
-    let rogue_context = super::rogue_hero::needs_context(world, caster, spell)
-        || super::rogue_children::needs_context(world, caster, spell.id);
+    let scripted_context = script_registry::policy_context_required(world, caster, spell);
+    let source_context =
+        scripted_context || script_registry::requires_resource_context(world, spell.id);
     if spell.cast_parent_owns_modifier_charges
-        || (!rogue_context
+        || (!source_context
             && !consumers(world, &resources, spell.id)
                 .any(|policy| selected(world, caster, policy)))
     {
         return None;
     }
-    let needs_hit_targets = rogue_context
+    let needs_hit_targets = scripted_context
+        || script_registry::requires_target_context(world, spell.id)
         || consumers(world, &resources, spell.id).any(|policy| {
             selected(world, caster, policy)
                 && !matches!(
@@ -985,7 +1009,11 @@ pub(in crate::spell_cast) fn snapshot(
     } else {
         Vec::new()
     };
-    Some(Box::new(CastPolicyContext { resources, targets }))
+    Some(Box::new(CastPolicyContext {
+        resources,
+        free_spender: false,
+        targets,
+    }))
 }
 
 fn capture_primary_targets(
@@ -1025,8 +1053,7 @@ pub(in crate::spell_cast) fn on_hit(world: &mut World, ctx: &EffectCtx<'_>, hit:
     if context.targets.first() != Some(&hit) {
         return;
     }
-    super::rogue_hero::on_hit(world, ctx, hit);
-    super::rogue_children::on_hit(world, ctx, hit);
+    script_registry::before_policy_primary_hit(world, ctx, hit);
     for policy in consumers(world, &context.resources, ctx.spell.id) {
         if !selected(world, ctx.caster, policy) {
             continue;

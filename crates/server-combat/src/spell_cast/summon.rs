@@ -882,6 +882,8 @@ fn spawn_summon(
     let actor = entity.id();
     entity.world_scope(|world| {
         super::guardian::initialize(world, actor);
+        let registry = *world.resource::<super::script_registry::SpellScriptRegistry>();
+        registry.summon_initialized(world, actor);
         //49028's description explicitly grants81256 while its weapon is active.
         //Attach to actual spawn, not AfterCast: missing templates spawn nothing.
         if ctx.spell.id == DANCING_RUNE_WEAPON {
@@ -979,6 +981,14 @@ pub(super) fn expire_summons(world: &mut World) {
         .map(|(entity, _, _)| entity)
         .collect();
     for entity in expired {
+        if world
+            .get::<SummonedCreature>(entity)
+            .unwrap()
+            .expires_at
+            .is_some_and(|expiry| now >= expiry)
+        {
+            super::scripts::elemental_ancestors::on_expire(world, entity);
+        }
         let summon = world.get::<SummonedCreature>(entity).unwrap();
         if summon.spell_id == 104317
             && summon.expires_at.is_some_and(|expiry| now >= expiry)
@@ -993,7 +1003,8 @@ pub(super) fn expire_summons(world: &mut World) {
     }
 }
 
-pub(crate) fn despawn_summon(world: &mut World, entity: Entity) {
+pub fn despawn_summon(world: &mut World, entity: Entity) {
+    super::scripts::elemental_ancestors::on_despawn(world, entity);
     if let Some(summon) = world.get::<SummonedCreature>(entity) {
         if summon.spell_id == DANCING_RUNE_WEAPON {
             let owner = summon.owner;
@@ -1010,6 +1021,7 @@ pub(crate) fn despawn_summon(world: &mut World, entity: Entity) {
             "Despawn summon {entity}: spell {}, properties {}",
             summon.spell_id, summon.properties_id
         );
+        super::guardian::implosion::on_remove(world, entity);
         super::guardian::core::on_demise(world, entity);
         super::guardian::tyrant::on_despawn(world, entity);
     }

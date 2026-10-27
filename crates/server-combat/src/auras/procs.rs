@@ -152,7 +152,7 @@ pub struct PendingAuraEvents {
 /// TC AuraEffect.cpp6126–6155 uses the nullable action target, never an invented
 /// caster target. A proc child's native enemy selector also excludes its owner;
 /// children selecting their own caster retain native implicit targeting.
-pub(crate) fn select_proc_trigger_target(
+pub fn select_proc_trigger_target(
     world: &World,
     caster: Entity,
     child: u32,
@@ -312,12 +312,18 @@ fn handle_side(
         .as_ref()
         .is_some_and(|spell| attributes3(spell) & SPELL_ATTR3_NOT_A_PROC != 0);
     let standing = crate::stand_state::stand_state(world, unit).is_stand();
+    // SimC76f8118 action_callback.cpp79–82: item callbacks require actual combat.
+    // Reject idle equipment reconciliation before touching proc chance or recovery.
+    let in_combat = crate::combat_refs::active_opponents(world, unit)
+        .next()
+        .is_some();
     let candidates: Vec<u32> = world
         .get::<ActiveAuras>(unit)
         .map(|auras| {
             auras
                 .iter()
                 .filter(|aura| pinned_candidates.contains(&aura.instance_id))
+                .filter(|aura| in_combat || !matches!(aura.source, super::AuraSource::Equipment(_)))
                 .filter(|aura| standing || procs_while_sitting(world, aura))
                 .filter(|aura| {
                     event.can_proc || triggered_can_proc(world, aura, event, event_not_a_proc)
@@ -466,7 +472,7 @@ fn proc_matches(
         })
 }
 
-fn matches_explicit_family(spell: &SpellInfo, family: u32, mask: [u32; 4]) -> bool {
+pub(super) fn matches_explicit_family(spell: &SpellInfo, family: u32, mask: [u32; 4]) -> bool {
     if family == 0 {
         return true;
     }
@@ -626,12 +632,15 @@ fn try_proc(world: &mut World, unit: Entity, other: Option<Entity>, id: u32, eve
                 continue;
             }
         };
-        crate::spell_cast::cast_triggered(
+        // Native item proc children retain the originating aura's item level,
+        // including native missile/trigger descendants used by item-scaled damage.
+        crate::spell_cast::cast_triggered_with_item_level(
             world,
             unit,
             effect.trigger_spell,
             target,
             PROC_TRIGGER_DEPTH,
+            aura.cast_item_level,
         );
     }
     if break_crowd_control(world, unit, &aura, event) {

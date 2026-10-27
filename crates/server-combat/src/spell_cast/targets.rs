@@ -17,7 +17,8 @@
 //! DEST_TARGET_ALLY, 65 DEST_TARGET_BACK (the explicit target's position moved the
 //! effect radius behind it; collision is not modelled), 76 DEST_CHANNEL_TARGET
 //! (the live channel destination), 77 UNIT_CHANNEL_TARGET
-//! (the caster's channel target), 92 UNIT_SUMMONER (the native summoned creature's
+//! (the caster's channel target), 27 UNIT_MASTER (the native pet/summon owner),
+//! 92 UNIT_SUMMONER (the native summoned creature's
 //! actual summoner), and 28 DEST_DYNOBJ_ENEMY (the units a persistent
 //! area aura affects, `spell_cast::area_aura`). Target56 selects the caster's group;
 //!118 UNIT_TARGET_ALLY_OR_RAID selects the group around a grouped explicit ally,
@@ -105,7 +106,7 @@ enum Selector {
     DestRandom,
     ///74: explicit-object-centered CalcRadius(nullptr), not the current critter.
     DestTargetRandom,
-    /// Destination moved forward (78) or backward (79) by this slot's DB2 radius.
+    /// Destination moved forward78/back79/front-left85 by this slot's DB2 radius.
     DestOffset(f32),
     /// 55 DEST_CASTER_FRONT_LEAP: radius of this target slot, collision checked on execution.
     ForwardLeap,
@@ -125,6 +126,8 @@ enum Selector {
     ChannelDestination,
     /// The caster's channel target.
     ChannelTarget,
+    ///27: the caster's native controlling/owning unit, not an explicit unit.
+    Master,
     /// The native spell-created creature's actual summoner, not an explicit unit.
     Summoner,
     /// The caster's summoned pet.
@@ -178,6 +181,7 @@ fn selector(id: u32) -> Option<Selector> {
         148 => Selector::DestTowardsCaster,
         78 => Selector::DestOffset(0.0),
         79 => Selector::DestOffset(std::f32::consts::PI),
+        85 => Selector::DestOffset(std::f32::consts::FRAC_PI_4),
         72 => Selector::CasterRandom,
         73 => Selector::CasterRadius,
         74 => Selector::DestTargetRandom,
@@ -200,6 +204,7 @@ fn selector(id: u32) -> Option<Selector> {
         65 => Selector::DestTargetOffset(std::f32::consts::PI),
         76 => Selector::ChannelDestination,
         77 => Selector::ChannelTarget,
+        27 => Selector::Master,
         92 => Selector::Summoner,
         24 => Selector::ConeEnemy,
         // TC SpellInfo.cpp maps both to caster-reference CONE/ENTRY/FRONT.
@@ -266,6 +271,7 @@ pub(crate) fn provides_non_caster_unit_target(effect: &SpellEffect) -> bool {
                     | Selector::AllyOrRaid
                     | Selector::RaidCorpses
                     | Selector::ChannelTarget
+                    | Selector::Master
                     | Selector::Summoner
                     | Selector::Pet
                     | Selector::Critter
@@ -629,13 +635,12 @@ pub(super) fn select_targets_and_destination(
                 center = Some(random_destination(origin, effect, slot));
             }
             Selector::DestOffset(angle) => {
-                center = center.map(|point| {
-                    offset_destination(
-                        point,
-                        orientation(world, caster) + angle,
-                        radius(effect, slot),
-                    )
-                });
+                // TC Spell.cpp1692–1696 CheckDst supplies caster origin.
+                center = Some(offset_destination(
+                    center.unwrap_or(caster_pos),
+                    orientation(world, caster) + angle,
+                    radius(effect, slot),
+                ));
             }
             Selector::ChannelDestination => {
                 center = channel_destination(world, caster).map(|dest| dest.position);
@@ -643,6 +648,10 @@ pub(super) fn select_targets_and_destination(
             Selector::ChannelTarget => {
                 selected_any = true;
                 units.extend(channel_target(world, caster));
+            }
+            Selector::Master => {
+                selected_any = true;
+                units.extend(find_master(world, caster));
             }
             Selector::Summoner => {
                 selected_any = true;
@@ -1332,6 +1341,17 @@ fn offset_destination(point: Vec3, angle: f32, distance: f32) -> Vec3 {
     point + Vec3::new(distance * angle.cos(), 0.0, -distance * angle.sin())
 }
 
+/// TC a352b1fa Spell.cpp1753–1755: TARGET_UNIT_MASTER uses actual ownership.
+/// Native controlled pets and temporary summons store that relation separately.
+fn find_master(world: &World, caster: Entity) -> Option<Entity> {
+    let owner = if let Some(pet) = world.get::<crate::hunter_pet::HunterPet>(caster) {
+        pet.owner
+    } else {
+        world.get::<super::summon::SummonedCreature>(caster)?.owner
+    };
+    same_map(world, caster, owner).then_some(owner)
+}
+
 /// TC Spell.cpp:1760–1763: only a TempSummon supplies UNIT_SUMMONER.
 fn find_summoner(world: &World, caster: Entity) -> Option<Entity> {
     let summoner = world.get::<super::summon::SummonedCreature>(caster)?.owner;
@@ -1443,17 +1463,26 @@ fn effect_dest_slot(
             let angle = (-delta.z).atan2(delta.x);
             Some(offset_destination(origin, angle, radius(effect, slot)))
         }
-        Selector::DestOffset(angle) => dest.map(|dest: Dest| {
-            offset_destination(
-                dest.position,
-                if effect.implicit_targets.contains(&148) {
-                    orientation(world, caster) + angle
-                } else {
-                    dest.orientation + angle
-                },
+        Selector::DestOffset(angle) => {
+            // TC Spell.cpp1690–1738: CheckDst, then native radius/direction.
+            let origin = dest
+                .map(|dest| dest.position)
+                .or_else(|| position(world, caster))?;
+            let direction = if effect
+                .implicit_targets
+                .iter()
+                .any(|&id| matches!(id, 85 | 148))
+            {
+                orientation(world, caster)
+            } else {
+                dest.map_or_else(|| orientation(world, caster), |dest| dest.orientation)
+            };
+            Some(offset_destination(
+                origin,
+                direction + angle,
                 radius(effect, slot),
-            )
-        }),
+            ))
+        }
         Selector::CenterExplicit(_) => explicit.and_then(|target| position(world, target)),
         Selector::DestTargetOffset(angle) => {
             explicit.and_then(|target| target_offset(world, target, radius(effect, slot), angle))

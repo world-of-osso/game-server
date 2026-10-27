@@ -1,5 +1,58 @@
 # Auras
 
+## Tempest-owned Enhancement buffs — 2026-10-26
+
+Tempest's existing execution seam grants selected native Storm Swell455089 and Arc Discharge470532 for263. The generic455088 every-spell proc is suppressed only for Enhancement. Elemental262 retains its existing policy.
+
+Arc consumes one use after the final actual Chain/Ride chain impact and uses that recipient as the extra chain's primary325–425ms later. Its native400ms proc timer allows the pinned late self-trigger. Caster-owned pending events load native payloads and snapshot current modifiers at dispatch: ordinary Arc benefits from MW without spending, Ride Arc excludes MW. Native470532s1/s2 attributes64 suppress magnitude stacking; native cap/duration/masks remain unchanged.
+
+Native11ab1f1e5e records both REDs: ordinary Bolt grants false Storm Swell, and an actually earned/cast Tempest never grants Arc. Finald939eadb13 passes all30 native Enhancement and3 deck tests, including3→3 Arc hits from the final recipient after0.4s. Landed26ee488ac36ddc7b55d88f110035a1d0d60e318f contains runtime2094ed7dd and fixture7344e8b29. Integrated300s ST158810.65/3T335321.69 are82.246%/83.778% of pinned references; parity remains open, with no isolated-uplift claim.
+
+Diagnostic4b0ca7de9a proves the control's earlier Melee hit left3 Windfury events with only1 Flametongue callback processed; the next Magic window then received3 deferred Flametongue callbacks. [The aura event pump](../../../crates/server-combat/src/auras/procs.rs) takes one batch per tick, not a recursive drain. The Melee-positive and Magic-negative scenarios now use independent fresh native runs, preserving all assertions, chances and proc behavior. The corrected control passes in finald939eadb13.
+
+Sources: pinned SimC76f8118 `sc_shaman.cpp6587–6597,6631–6643,6709–6714,9994–10007,12437–12484`; [contract](../../specs/dps-parity.md#enhancement-fixture-driver), [policy](../../../crates/server-combat/src/spell_cast/scripts/enhancement_tempest_buffs.rs), [native lifecycle cases](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/enhancement_tempest_buffs_tests.rs).
+## Devastation Dragonrage-earned windows — 2026-10-26
+
+[Native Rising Fury](../../../crates/server-spell-scripts/src/modules/evoker_rising_fury.rs) registers Dragonrage apply/remove and Fury periodic callbacks. Native1271783 supplies stack cap, period and per-stack haste. Growth checks actual Dragonrage presence; rank3 removal converts the infinite buff to its earned finite grace without changing its periodic phase, so grace cannot grow stacks. The reverse Unbound Flame window starts at its native cap. Successful1292321 casts consume one owned use after launch; native children retain damage and Essence Burst.
+
+[Imminent Destruction](../../../crates/server-spell-scripts/src/modules/evoker_imminent.rs) uses actual native channel removal for Maneuverability plus Command Squadron. The actor-conditioned registry predicate changes native runtime/action facts, not stored DBC flags; native duration and dummy period own the clock. The native talent supplies initial411055 uses. Its stacked-use declaration prevents multiplying the flat cost reduction, while admission records the actual owned aura instance only when Essence Burst does not pay. Ordinary charged-mod consumption owns spending.
+
+The exact legal pinned3T oracle uses Patchwerk with one permanent target and replacement adds (30s duration/cooldown). Its Dragonrage/Fury/Unbound entries are absent. `raid_event.cpp2404–2422/3121–3135` keeps `adds.in` positive while active; the literal three-target Dragonrage condition therefore never opens. Do not change shared add facts to force that cooldown. The ST oracle does use these windows. [Contract and remaining qualifications](../../specs/devastation-parity.md); source relationships are `sc_evoker.cpp10571–10633/7436–7475`.
+
+## Elemental Weapons dynamic amount — 2026-10-26
+
+The selected384355 talent supplies408390's zero-placeholder amounts from its native effect0 ×0.1 per actual Windfury/Flametongue hand. Existing imbue apply/remove hooks update the native direct/periodic effects without changing their operations or masks. Zero hands or talent removal removes the derived modifier. Stormblast's explicit exception reads the same percent; its native child still excludes broad caster modifiers.
+
+Native RED4db1ecbdad observes identical31098 Bolt damage for zero and one real imbue with matching roll, crit, Mastery, Versatility and target inputs. GREEN5002a0bca2 observes31098/32653/34208 for zero/one/two hands, with all28 native Enhancement and3 deck tests passing. Landed5a8c96626dc9a77bda80d51ca3fefc4627f80969 contains implementationeeda0fc32. Integrated300s ST158135.70/3T328919.95 are81.896%/82.178% of pinned references; parity remains open. These integrated totals are not isolated uplift evidence.
+
+Sources: pinned SimC76f8118 `sc_shaman.cpp13212–13220`; [contract](../../specs/dps-parity.md#enhancement-fixture-driver), [dynamic amount](../../../crates/server-combat/src/spell_cast/scripts/enhancement_elemental_weapons.rs), [imbue callbacks](../../../crates/server-combat/src/spell_cast/scripts/enhancement_imbues.rs), [native damage test](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/enhancement_elemental_weapons_tests.rs).
+
+## Thunder Capacitor paid-stack refund — 2026-10-26
+
+Selected1262635 rolls its native effect1 percentage only after actual MW payment by normal/Thorim LB, CL or Tempest. The spending seam supplies the actual consumed count to the existing native counter/modifier generator. Arc/Ride backgrounds never reach that payment hook; zero spends and other spells are excluded. No damage values, proc timer or chance are changed.
+
+Native RED6260f1c7f7 samples32 genuinely admitted instant Bolts at GCD-ready boundaries: each5–9 MW balance becomes0 despite selected native20%. Supercharge is unselected. Native GREEN proves the refund follows a real consumed-counter removal event, not skipped payment. The earning-test helper now counts the native admitted amount, because refunded stacks make a net counter delta invalid. The instant-Bolt control retains its consumption assertion through the actual counter-removal event and permits the native paid/refunded balances. Focused6516987437 passes the actual5→0 then consumed/refunded5→5 boundary and all5 generation cases; full57e5ee7aa1 passes30/31 native cases but the old linked-mode control is capped after its refunded clearing Bolt.
+
+Diagnostic7df90ef94d observes before10/after10/cap10 while the retained producer still has native amount1/period1000ms. That fixture now uses bounded real lightning casts until native capacity exists after any legitimate refund, observing acceptance directly instead of waiting another full GCD. It checks room below the native cap while preserving strict tick growth, no melee and final-parent expiry. Native187881 cast-time masks exclude Healing Surge8004, so healing is not used as an artificial clearing path. No resource values or chances are injected. Final82ad5016b2 passes all31 native Enhancement and3 deck tests. Landed8f4e67fed6ec59a2994e3803d745b602ad1716d9 contains runtimecad61e40a and fixture78e15c2d5. Integrated300s ST164270.12/3T335864.22 are85.073%/83.913% of pinned references; parity remains open. Earlier isolateda71212a7aa measured166937.48/351636.84 on a different master+commit tree and is not isolated-uplift evidence for this landing.
+
+Sources: pinned SimC76f8118 `sc_shaman.cpp6687–6694,7462–7469,9978–9985`; [contract](../../specs/dps-parity.md#enhancement-fixture-driver), [refund policy](../../../crates/server-combat/src/spell_cast/scripts/enhancement_thunder_capacitor.rs), [native paid-cast case](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/enhancement_thunder_capacitor_tests.rs).
+
+## Garrote stored literal multiplier — 2026-10-26
+
+Garrote already freezes its native Improved Garrote bonus in `SpellInfo.cast_damage_multiplier` and the applied bleed amount. The downstream703 declaration in `PersistentCastMultiplier` makes `periodic_snapshot::capture_multiplier` copy that same factor into each periodic effect's existing `persistent_multiplier` field on application and refresh. It does not change damage or infer a factor from tick amounts. The existing Feral fresh/live producer remains unchanged; this declaration qualifies stored Garrote metadata only.
+
+`RogueFacts` no longer substitutes1.0. Shared `NativeFacts` reads the selected action target's owned aura: absent means0, an actual application supplies its stored factor, and missing qualification is an explicit error. A real empowered bleed therefore remains distinguishable after the stealth window ends, and an ordinary refresh replaces only its actual target's factor. Native RED529a58341f records1.0 instead of1.5 after actual Garrote/window expiry.
+
+Sources: [contract](../../specs/rogue-parity.md#stealth-and-bleed-children), [declaration](../../../crates/server-spell-scripts/src/modules/assassination_garrote.rs), [capture](../../../crates/server-combat/src/auras/periodic_snapshot.rs), [target-aware read](../../../crates/server-combat/src/simc_apl_native/periodic.rs), [Rogue binding](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/assassination_rotation.rs), [native case](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/assassination_garrote_snapshot_tests.rs). Pinned SimC76f8118 `sc_rogue.cpp4551–4561` defines the persistent factor; `dot.cpp568–573` defines the absent state.
+
+## Vanish removal ordering — 2026-10-26
+
+`AuraScript.before_remove_reactions` runs after detachment and before generic removal reactions. It defaults to `None`; only native Vanish11327 registers it. On natural expiry, the script grants native Stealth1784 before the last-stealth check, so expiry does not prematurely grant the post-stealth Improved Garrote window. A harmful early break does not grant new Stealth.
+
+Native1856 is melee-class and emits a zero-damage melee cast event. Without a source-attribute check, that event spends its newly granted11327 charge. The11327 proc predicate honors native no-stealth-break attribute37 (`attributes[1] & 0x20`), while real Garrote still consumes the charge. Native RED4d218d36a2 records1856 as the consuming event; GREENe9a6b7e618 covers natural expiry and harmful early break without later re-stealth. Same-code9469a28941 covers attack packets/timers, Swift, Outlaw opener and Subtlety. The Outlaw DPS report has no Vanish casts, so it is not Outlaw Vanish lifecycle proof.
+
+Sources: [contract](../../specs/rogue-parity.md#shared-vanish), [script](../../../crates/server-spell-scripts/src/modules/rogue_vanish.rs), [removal dispatch](../../../crates/server-combat/src/auras/scripts.rs), [native lifecycle cases](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/rogue_vanish_tests.rs). Pinned SimC76f8118 `sc_rogue.cpp1953–1954,6103–6125,7419–7444` owns behavior; native70448 owns values.
+
 ## Form combat clocks — 2026-10-23
 
 `ShapeshiftForms` imports native CombatRoundTime. `FormAttackTiming` carries seconds and the TC Player/non-Player AP-speed rule, separately from the actual swing period. Class-stat auto-attacks read that period for both hands; ranged autorepeat uses TC's2s form base. White and normalized spell weapon rolls share form min/max rescaling and the sourced0.25s AP-time minimum; normal weapons and the existing RetailAP/DPS6 remain unchanged. No form application resets a running melee timer. All7nonzero rows, including Xuen's actual1ms, are data-driven; no DamageVariance multiplier is invented. [Exact source, native timed RED and qualification](../../handoffs/feral-source-census.md#native-form-combat-timing); [contract](../../specs/player-damage.md). GREEN pending.
@@ -92,6 +145,12 @@ observed procs. The lead requires a full workspace gate before landing.
 [Contract](../../specs/light-of-the-titans.md),
 [exact proof ledger](../../handoffs/light-of-the-titans-proof-ledger.md).
 Actual repeated-Word pool integration, PvP scaling and effectiveness stay separate.
+
+## Native Pandemic duration carry — 2026-10-26
+
+`refresh::prepare_application` now selects `DurationCarry::Pandemic` from the same authored attribute used by periodic-phase preservation. Rip/Rake no longer have a separate ID route; explicit Extend policies and rolling budgets keep their existing precedence. Source: [refresh.rs](../../../crates/server-combat/src/auras/refresh.rs), SimC76f8118 `action.cpp684–685/4612/2729–2734`; [contract](../../specs/dps-parity.md#native-pandemic-duration-carry).
+
+The old phase-only handling reset actual Agony duration on refresh, explaining23 native ST applications versus17 reference applications. Native REDfe4067cd18 records expiry31.8 instead of36.3 after a real refresh within the native window. Probe165ebb927a passes102 native cases, including actual Agony carry, identical Rip/Rake carry and the charged Grasp snapshot. Its sole legacy Feral kit failure also occurs on master in c0ae0fb343; the lead approved excluding only that exact case. Merged landing gates and five-spec DPS measurements remain pending; this is not a numeric parity claim.
 
 ## Native rolling periodic refresh — 2026-10-22
 
@@ -303,7 +362,7 @@ Source: pinned TC a352b1fa `spell_shaman.cpp861–920`; native70448 CSV rows mat
 
 ## Prayer of Mending baseline — 2026-10-18
 
-`spell_cast/scripts/prayer_of_mending.rs` handles33076 and155793's native effect0 DUMMY and41635's on-damage proc. Root native jump count4 creates5 initial stacks; existing owned wards add the authored4 through normal refresh, capped by native max10. A proc casts real33110 from the original Priest, launches real155793 from the current holder with remaining stacks/original caster, then removes that holder's ward. The actual40yd/s missile keeps its per-cast SpellInfo clone, so delayed arrival can apply41635 with the original Priest and remaining count. Healing coefficient0.732/variance0.05 and RNG are unchanged. Ward tooltip-point/custom-visual projection and talent custom arguments are outside this baseline.
+`server-spell-scripts/src/modules/holy_runtime/prayer_of_mending.rs` handles33076 and155793's native effect0 DUMMY and41635's on-damage proc. Root native jump count4 creates5 initial stacks; existing owned wards add the authored4 through normal refresh, capped by native max10. A proc casts real33110 from the original Priest, launches real155793 from the current holder with remaining stacks/original caster, then removes that holder's ward. The actual40yd/s missile keeps its per-cast SpellInfo clone, so delayed arrival can apply41635 with the original Priest and remaining count. Healing coefficient0.732/variance0.05 and RNG are unchanged. Ward tooltip-point/custom-visual projection and talent custom arguments are outside this baseline.
 
 `SpellInfo` stores two private, non-serialized per-cast arguments: `cast_aura_stacks` and `cast_original_caster`. Aura construction consumes the stack argument before stacking/log/view publication; no post-hoc mutation of a published one-stack ward. Normal applications still request one, and Agony retains its special initial1/3 floor and refresh behavior. The triggered helper carries these arguments through existing planning and missile snapshots; old effect0-amount callers use the same helper with the two new arguments absent.
 

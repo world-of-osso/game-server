@@ -16,6 +16,7 @@ executable. `--probe` entries (e.g. a RED proof) are built and tested but never 
 """
 import argparse
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import contextmanager
 import json
 import os
 from pathlib import Path
@@ -24,6 +25,7 @@ import shlex
 import shutil
 import subprocess
 import sys
+import threading
 import time
 import tomllib
 import uuid
@@ -38,13 +40,40 @@ CAPACITY = Path("/home/osso/.worktrees/logs/capacity.sh")
 AGENT_RUN = Path("/home/osso/Projects/world-of-osso/game-engine/scripts/agent/agent-run")
 # Collect submissions for a while so one build covers several agents.
 GATHER_SECONDS = 300
+ISOLATED_PER_CYCLE = 3
+# Global concurrent spec measurements; each spec can run both target counts in parallel.
 MEASURE_PARALLEL = 8
+MEASURE_SEEDS = "70448,1,2,3,4,5,6,7,8,9"
 ASSISTED_DB2 = "/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/dps-parity-2026-10-21/native-player-inputs/assisted-70448/"
 RUNNER = "CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER"
 
 
 def git(*args, check=True):
     return subprocess.run(["git", *args], cwd=TREE, text=True, capture_output=True, check=check)
+
+
+TIMING_LOCK = threading.Lock()
+
+
+def tree_id():
+    return git("rev-parse", "HEAD^{tree}").stdout.strip()
+
+
+def timing_event(log, phase, event, tree, **details):
+    record = {"phase": phase, "event": event, "monotonic": time.monotonic(),
+              "tree": tree, **details}
+    with TIMING_LOCK, log.open("a") as out:
+        out.write(f"TIMING {json.dumps(record, sort_keys=True)}\n")
+
+
+@contextmanager
+def timed(log, phase, tree, **details):
+    details = {"span": uuid.uuid4().hex, **details}
+    timing_event(log, phase, "start", tree, **details)
+    try:
+        yield
+    finally:
+        timing_event(log, phase, "end", tree, **details)
 
 
 def base_env():
@@ -92,17 +121,179 @@ def parse_measure(text):
     for key in ("spec", "world_db", "output"):
         if key not in fields:
             raise SystemExit(f"--measure needs {key}=")
+    # Native tests and measurement read their inputs from the output directory; a missing input
+    # used to cost a whole cycle before failing.
+    missing = [p for p in (Path(fields["world_db"]), Path(fields["output"]) / f"{fields['spec']}.profile.json",
+                           Path(fields["output"]) / f"{fields['spec']}.selected-traits-active.json")
+               if not p.exists()]
+    if missing:
+        raise SystemExit(f"--measure inputs missing: {', '.join(map(str, missing))}")
     return fields
+
+
+MODULE_LINE = re.compile(r'\bmod\s+(\w+)\s*;')
+INLINE_MODULE = re.compile(r'\bmod\s+(\w+)\s*\{|[{}]')
+PATH_ATTRIBUTE = re.compile(r'#\s*\[\s*path\s*=\s*"([^"]+)"\s*\]')
+RAW_LITERAL = re.compile(r'(?:br|r)(\#*)"')
+CHAR_LITERAL = re.compile(r"'(?:\\\\.|[^'\\\\])'")
+
+
+def mask_rust_noncode(source):
+    """Blank comments and literals while preserving positions and newlines."""
+    output = list(source)
+    index = 0
+    block_depth = 0
+    end_literal = None
+    while index < len(source):
+        start = index
+        if block_depth:
+            if source.startswith("/*", index):
+                block_depth += 1
+                index += 2
+            elif source.startswith("*/", index):
+                block_depth -= 1
+                index += 2
+            else:
+                index += 1
+        elif end_literal is not None:
+            if source.startswith(end_literal, index):
+                index += len(end_literal)
+                end_literal = None
+            elif end_literal == '"' and source[index] == "\\":
+                index += min(2, len(source) - index)
+            else:
+                index += 1
+        elif source.startswith("//", index):
+            newline = source.find("\n", index)
+            index = len(source) if newline < 0 else newline
+        elif source.startswith("/*", index):
+            block_depth = 1
+            index += 2
+        elif (raw := RAW_LITERAL.match(source, index)):
+            end_literal = '"' + raw.group(1)
+            index += len(raw.group())
+        elif source[index] == '"':
+            end_literal = '"'
+            index += 1
+        elif (char := CHAR_LITERAL.match(source, index)):
+            index += len(char.group())
+        else:
+            index += 1
+            continue
+        for position in range(start, index):
+            if output[position] != "\n":
+                output[position] = " "
+    return "".join(output)
+
+
+def added_module_lines(commit):
+    """Return (path, line, column, name) for declarations added since master."""
+    revision = f"origin/master...{commit}"
+    paths = git("diff", "--name-only", "-z", "--diff-filter=ACMRT", revision,
+                "--", "*.rs", "*.in").stdout.split("\0")
+    found = []
+    for path in filter(None, paths):
+        source = git("show", f"{commit}:{path}").stdout
+        code_lines = mask_rust_noncode(source).splitlines()
+        diff = git("diff", "--no-ext-diff", "--no-renames", "--unified=0", revision,
+                   "--", path).stdout
+        line_number = 0
+        for line in diff.splitlines():
+            hunk = re.match(r"@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@", line)
+            if hunk:
+                line_number = int(hunk.group(1))
+            elif line.startswith("+") and not line.startswith("+++"):
+                for declaration in MODULE_LINE.finditer(code_lines[line_number - 1]):
+                    found.append((path, line_number, declaration.start(), declaration.group(1)))
+                line_number += 1
+            elif line.startswith(" "):
+                line_number += 1
+    return found
+
+
+def module_directory(path):
+    source = Path(path)
+    if source.suffix == ".in" or source.name in ("mod.rs", "lib.rs", "main.rs") \
+            or source.parent.name in ("bin", "examples", "tests", "benches"):
+        return source.parent
+    return source.parent / source.stem
+
+
+def module_paths(path, source, number, column, name):
+    """Resolve an external declaration in a file or its inline module."""
+    lines = source.splitlines()
+    depth = 0
+    modules = []
+    code_lines = mask_rust_noncode(source).splitlines()
+    preceding = code_lines[:number - 1] + [code_lines[number - 1][:column]]
+    for line in preceding:
+        for token in INLINE_MODULE.finditer(line):
+            if token.group(1):
+                depth += 1
+                modules.append((depth, token.group(1)))
+            elif token.group() == "{":
+                depth += 1
+            else:
+                if modules and modules[-1][0] == depth:
+                    modules.pop()
+                depth -= 1
+    nested = Path(*(name for _, name in modules))
+    prefix = lines[number - 1][:column]
+    attrs = [re.split(r'[;{}]', prefix)[-1]]
+    for line in reversed(lines[:number - 1]):
+        stripped = line.strip()
+        if stripped.startswith("#[") or stripped.startswith("//") or not stripped:
+            attrs.append(line)
+        else:
+            break
+    explicit = next((match.group(1) for line in attrs if (match := PATH_ATTRIBUTE.search(line))), None)
+    if explicit is not None:
+        parent = module_directory(path) if modules else Path(path).parent
+        return [os.path.normpath(str(parent / nested / explicit))]
+    directory = module_directory(path) / nested
+    return [str(directory / f"{name}.rs"), str(directory / name / "mod.rs")]
+
+
+def missing_added_modules(commit):
+    sources = {}
+    missing = []
+    for path, number, column, name in added_module_lines(commit):
+        if path not in sources:
+            sources[path] = git("show", f"{commit}:{path}").stdout
+        candidates = module_paths(path, sources[path], number, column, name)
+        if not any(git("cat-file", "-e", f"{commit}:{candidate}", check=False).returncode == 0
+                   for candidate in candidates):
+            missing.append(f"{path}:{number}: mod {name}; requires committed " + " or ".join(candidates))
+    return missing
+
+
+def added_module_names(commit):
+    return {name for _, _, _, name in added_module_lines(commit)}
+
+
+def missing_module_names(log, start):
+    with log.open() as source:
+        source.seek(start)
+        text = source.read()
+    return set(re.findall(r'error\[E0583\]: file not found for module [`\']([^`\']+)[`\']', text))
 
 
 def submit(args):
     commit = subprocess.run(["git", "rev-parse", "--verify", f"{args.commit}^{{commit}}"],
                             text=True, capture_output=True, check=True).stdout.strip()
+    missing = missing_added_modules(commit)
+    if missing:
+        raise SystemExit("missing committed Rust module files:\n" + "\n".join(missing))
     entry = {"id": uuid.uuid4().hex[:10], "owner": args.owner, "commit": commit,
              "land": args.land, "red": args.red and subprocess.run(
                  ["git", "rev-parse", "--verify", f"{args.red}^{{commit}}"], text=True,
                  capture_output=True, check=True).stdout.strip(), "env": dict(pair.split("=", 1) for pair in args.env), "tests": [shlex.split(test) for test in args.test],
              "measure": [parse_measure(m) for m in args.measure], "submitted": time.time()}
+    # Native parity tests read DPS_PARITY_* inputs that only --measure (or --env) supplies; without
+    # them they fail at fixture setup a cycle later (Shadow Collapse/Ire probes, 2026-10-26).
+    if any("server-simulation" in test and "--ignored" in test for test in entry["tests"]) \
+            and not entry["measure"] and not any(k.startswith("DPS_PARITY_") for k in entry["env"]):
+        sys.exit("native server-simulation --ignored tests need --measure (or --env DPS_PARITY_*) inputs")
     QUEUE.mkdir(parents=True, exist_ok=True)
     (QUEUE / f"{entry['id']}.json").write_text(json.dumps(entry, indent=2))
     print(entry["id"])
@@ -121,11 +312,44 @@ def reset_tree():
     git("clean", "-qfd", "-e", "target-lead")
 
 
+# Registries merged with `merge=union`: a line one side moved and the other side kept survives
+# twice (E0428 "defined multiple times" cost 19 checks on 2026-10-26). A repeated entry line is
+# always an error there, so the first occurrence is kept.
+UNION_REGISTRIES = {
+    "crates/server-spell-scripts/src/modules.rs": re.compile(r'^\s+\w+: \(\d+, "[^"]+"\),$'),
+    "crates/server-simulation/src/dungeon_simulator/dps_parity/module_list.in": re.compile(r"^mod \w+;$"),
+    "crates/server-combat/src/auras/stacked_next_spell_uses.in": re.compile(r"^\s+\d+,$"),
+}
+
+
+def drop_union_duplicates():
+    changed = False
+    for name, entry_line in UNION_REGISTRIES.items():
+        path = TREE / name
+        if not path.exists():
+            continue
+        seen, kept = set(), []
+        for line in path.read_text().splitlines(keepends=True):
+            key = line.rstrip("\n")
+            if entry_line.match(key):
+                if key in seen:
+                    continue
+                seen.add(key)
+            kept.append(line)
+        text = "".join(kept)
+        if text != path.read_text():
+            path.write_text(text)
+            changed = True
+    if changed:
+        git("commit", "-qa", "--amend", "--no-edit")
+
+
 def merge(entries, log):
     """Merge entries in order; return those that merged and those that conflicted."""
     merged, conflicted = [], []
     for entry in entries:
-        result = git("merge", "--no-ff", "--no-edit", "-q", entry["commit"], check=False)
+        with timed(log, "merge", tree_id(), entry=entry["id"], commit=entry["commit"]):
+            result = git("merge", "--no-ff", "--no-edit", "-q", entry["commit"], check=False)
         if result.returncode:
             git("merge", "--abort", check=False)
             # Clean against master means it only collides with another queued entry:
@@ -135,6 +359,7 @@ def merge(entries, log):
             entry["reason"] = f"merge conflict:\n{result.stdout}{result.stderr}"
             conflicted.append(entry)
         else:
+            drop_union_duplicates()
             merged.append(entry)
     with log.open("a") as out:
         out.write(f"merged {[e['id'] for e in merged]} conflicted {[e['id'] for e in conflicted]}\n")
@@ -144,25 +369,50 @@ def merge(entries, log):
 def check(log):
     """Compile check. Formatting is applied, not checked: an unformatted entry would
     otherwise cost a bisect, and formatter output is never a behavior change."""
-    if cargo(log, "check", "--locked", "--workspace", "--all-targets") != 0:
+    tree = tree_id()
+    with timed(log, "check", tree, scope="workspace-all-targets"):
+        result = cargo(log, "check", "--locked", "--workspace", "--all-targets")
+    if result != 0:
         return False
-    if cargo(log, "fmt") != 0:
+    # The workspace check unifies test-support features into every crate; the deployed server
+    # binary builds without them (an ungated simc_apl_native call broke it on 2026-10-26).
+    with timed(log, "check", tree, scope="server-bins"):
+        result = cargo(log, "check", "--locked", "-p", "server", "--bins")
+    if result != 0:
         return False
-    # cargo fmt does not follow include!(), so the modules declared in the union-merged
-    # module_list.in are formatted directly.
-    included = sorted(str(p) for p in (TREE / PARITY_DIR).glob("*.rs"))
-    if subprocess.run(["rustfmt", "--edition", "2024", *included], cwd=TREE, check=False).returncode != 0:
-        return False
+    with timed(log, "fmt", tree):
+        if cargo(log, "fmt") != 0:
+            return False
+        # Cargo does not discover include!() or macro-generated module declarations.
+        included = sorted(str(p) for d in (PARITY_DIR, SCRIPT_MODULES_DIR) for p in (TREE / d).glob("*.rs"))
+        if subprocess.run(["rustfmt", "--edition", "2024", *included], cwd=TREE, check=False).returncode != 0:
+            return False
     if git("status", "--porcelain", "--untracked-files=no").stdout.strip():
         git("commit", "-qam", "merge train: cargo fmt")
     return True
 
 
 PARITY_DIR = "crates/server-simulation/src/dungeon_simulator/dps_parity"
+SCRIPT_MODULES_DIR = "crates/server-spell-scripts/src/modules"
 
 
 class MasterBroken(Exception):
     pass
+
+
+def failing_paths(log, start):
+    """Source files named by errors in the log written since byte offset `start`."""
+    with log.open() as f:
+        f.seek(start)
+        text = f.read()
+    # include!()d sources are reported through `..` hops (crates/a/src/../../b/...).
+    return {os.path.normpath(p) for p in
+            re.findall(r"(?:-->|Diff in) /?(?:\S*?/game-server-land/)?(crates/\S+?\.(?:rs|in))", text)}
+
+
+def touches(entry, paths):
+    changed = git("diff", "--name-only", f"origin/master...{entry['commit']}", check=False).stdout.split()
+    return bool(paths.intersection(changed))
 
 
 def build_checked(entries, log):
@@ -190,13 +440,25 @@ def build_checked(entries, log):
             admit(candidates[:half])
             admit(candidates[half:])
 
+    checked_from = log.stat().st_size if log.exists() else 0
     if check(log):
         return merged, rejected
+    paths = failing_paths(log, checked_from)
     # A broken master rejects everything; report that instead of blaming entries.
     reset_tree()
     if not check(log):
         raise MasterBroken(f"origin/master itself fails check; see {log}")
-    admit(merged)
+    # Entries touching the files the compiler or rustfmt blamed are the likely culprits: admit
+    # the rest in one check first, so one broken entry costs ~3 checks instead of a full bisect.
+    modules = missing_module_names(log, checked_from)
+    suspects = [e for e in merged if added_module_names(e["commit"]) & modules]
+    if not suspects:
+        suspects = [e for e in merged if touches(e, paths)]
+    if suspects and len(suspects) < len(merged):
+        admit([e for e in merged if e not in suspects])
+        admit(suspects)
+    else:
+        admit(merged)
     reset_tree()
     merge(good, log)
     return good, rejected
@@ -205,14 +467,15 @@ def build_checked(entries, log):
 TEST_PARALLEL = 8
 
 
-def test_executables(entry, test, entry_log):
+def test_executables(entry, test, entry_log, cycle_log, tree):
     """Build (under Cargo's lock) and list the test executables for one --test.
     Returns [(executable, cwd)] or None when the build fails."""
     cargo_args, _, _ = split_test(test)
-    out = subprocess.run(
-        [str(AGENT_RUN), "merge-train", "cargo", "test", "--locked", "--no-run",
-         "--message-format=json-render-diagnostics", *cargo_args],
-        cwd=TREE, env=base_env() | test_env(entry, test), text=True, capture_output=True, check=False)
+    with timed(cycle_log, "no-run-build", tree, entry=entry["id"], args=cargo_args):
+        out = subprocess.run(
+            [str(AGENT_RUN), "merge-train", "cargo", "test", "--locked", "--no-run",
+             "--message-format=json-render-diagnostics", *cargo_args],
+            cwd=TREE, env=base_env() | test_env(entry, test), text=True, capture_output=True, check=False)
     with entry_log.open("a") as f:
         f.write(f"\n$ cargo test --no-run {shlex.join(cargo_args)}\n{out.stderr}")
     if out.returncode:
@@ -279,7 +542,7 @@ def config_overrides(cargo_args):
     return env, runner
 
 
-def run_executable(entry, test, executable, cwd, entry_log):
+def run_executable(entry, test, executable, cwd, entry_log, cycle_log, tree):
     """Run one test binary outside Cargo, so entries run in parallel without its build lock."""
     env = base_env() | test_env(entry, test)
     runner = shlex.split(env.pop(RUNNER, ""))
@@ -288,34 +551,90 @@ def run_executable(entry, test, executable, cwd, entry_log):
     runner = config_runner or runner
     _, _, test_args = split_test(test)
     command = [*runner, executable, *test_args]
-    out = subprocess.run(command, cwd=cwd, env=env, text=True, stdout=subprocess.PIPE,
-                         stderr=subprocess.STDOUT, check=False)
+    with timed(cycle_log, "test-execution", tree, entry=entry["id"], args=test_args,
+               executable=executable):
+        out = subprocess.run(command, cwd=cwd, env=env, text=True, stdout=subprocess.PIPE,
+                             stderr=subprocess.STDOUT, check=False)
     with entry_log.open("a") as f:
         f.write(f"\n$ {shlex.join(command)}\n{out.stdout}")
     ran = sum(int(m) for m in re.findall(r"test result: \w+\. (\d+) passed; (?:\d+) failed", out.stdout))
     ran += sum(int(m) for m in re.findall(r"test result: \w+\. \d+ passed; (\d+) failed", out.stdout))
-    return out.returncode, ran
+    # libtest interleaves panic output with "test X ... FAILED"; the closing summary lists names.
+    failed = {name for block in re.findall(r"^failures:\n((?:    \S+\n)+)\ntest result:", out.stdout, re.M)
+              for name in block.split()}
+    return out.returncode, ran, failed
+
+
+def test_file(name, rev):
+    """Path of the file defining test function `name` (last path segment) at `rev`, or None."""
+    fn = name.rsplit("::", 1)[-1]
+    out = git("grep", "-l", "-w", f"fn {fn}", rev, "--", "crates", check=False).stdout.split()
+    return out[0].split(":", 1)[1] if out else None
+
+
+def foreign_failures_only(entry, failed):
+    """A combined tree also contains other entries' tests; a broad filter can select one that
+    another entry added or changed and that fails for that owner (2026-10-26: Assassination's
+    in-flight Doomblade/Focus tests rejected Feral twice). A failure is this entry's unless the
+    test file is identical in the combined tree and in master merged with this entry alone."""
+    alone = git("merge-tree", "--write-tree", "origin/master", entry["commit"], check=False)
+    if alone.returncode:
+        return False
+    alone_tree = alone.stdout.split()[0]
+
+    def body(rev, path, fn):
+        text = git("show", f"{rev}:{path}", check=False).stdout.splitlines()
+        for i, line in enumerate(text):
+            if re.search(rf"\bfn {re.escape(fn)}\b", line):
+                indent = line[:len(line) - len(line.lstrip())]
+                end = next((j for j in range(i + 1, len(text)) if text[j] == f"{indent}}}"), len(text))
+                # The train formats the combined tree, so compare without whitespace/trailing commas.
+                return re.sub(r",(?=[)\]}])", "", re.sub(r"\s+", "", "".join(text[i:end + 1])))
+        return None
+
+    def foreign(name):
+        # Compared per test function, so this entry's own edits in a shared test file stay its own.
+        fn = name.rsplit("::", 1)[-1]
+        path = test_file(name, "HEAD")
+        return path is not None and body(alone_tree, path, fn) != body("HEAD", path, fn)
+
+    return bool(failed) and all(foreign(name) for name in failed)
 
 
 def run_tests(entries, log):
     # Build every entry's test binaries first (serialized by Cargo), then run them all in parallel.
     jobs, broken = [], set()
+    tree = tree_id()
     for entry in entries:
         entry_log = LOGS / f"{entry['id']}.tests.log"
         entry_log.unlink(missing_ok=True)
         entry["test_log"] = str(entry_log)
         for test in entry["tests"]:
-            found = test_executables(entry, test, entry_log)
+            found = test_executables(entry, test, entry_log, log, tree)
             if found is None:
                 broken.add(entry["id"])
             else:
-                jobs += [(entry, test, exe, cwd, entry_log) for exe, cwd in found]
+                jobs += [(entry, test, exe, cwd, entry_log, log, tree) for exe, cwd in found]
     with ThreadPoolExecutor(TEST_PARALLEL) as pool:
         codes = list(pool.map(lambda job: ((job[0]["id"], tuple(job[1])), run_executable(*job)), jobs))
-    failing = broken | {key[0] for key, (code, _) in codes if code}
+    by_id = {e["id"]: e for e in entries}
+    failed_names, nonzero = {}, set()
+    for key, (code, _, names) in codes:
+        if code:
+            nonzero.add(key[0])
+            failed_names.setdefault(key[0], set()).update(names)
+    # Only landings: a probe or RED twin must never turn a real failure into a pass.
+    foreign = {i for i in nonzero - broken if i in failed_names and by_id[i]["land"]
+               and len(failed_names[i]) and foreign_failures_only(by_id[i], failed_names[i])
+               # Every nonzero run must be explained by named failures (a panic outside a test is not).
+               and all(names for key, (code, _, names) in codes if key[0] == i and code)}
+    for i in foreign:
+        with Path(by_id[i]["test_log"]).open("a") as f:
+            f.write(f"\nIgnored failures of tests added by other entries in this tree: {sorted(failed_names[i])}\n")
+    failing = broken | (nonzero - foreign)
     # A --test that runs no test at all (a stale filter or package) is a failure, not a pass.
     ran = {}
-    for key, (_, count) in codes:
+    for key, (_, count, _) in codes:
         ran[key] = ran.get(key, 0) + count
     empty = {e["id"] for e in entries for t in e["tests"]
              if e["id"] not in broken and ran.get((e["id"], tuple(t)), 0) == 0}
@@ -350,11 +669,15 @@ def push(entries, log):
     return None, []
 
 
+PARITY_BUILD_ARGS = ("test", "--locked", "-p", "server-simulation", "--lib", "--no-run",
+                     "--message-format=json-render-diagnostics")
+
+
 def parity_executable(log):
-    out = subprocess.run(
-        [str(AGENT_RUN), "merge-train", "cargo", "test", "--locked", "-p", "server-simulation",
-         "--lib", "--no-run", "--message-format=json-render-diagnostics"],
-        cwd=TREE, env=base_env(), text=True, capture_output=True, check=False)
+    with timed(log, "parity-build", tree_id()):
+        out = subprocess.run(
+            [str(AGENT_RUN), "merge-train", "cargo", *PARITY_BUILD_ARGS],
+            cwd=TREE, env=base_env(), text=True, capture_output=True, check=False)
     with log.open("a") as f:
         f.write(out.stderr)
     for line in out.stdout.splitlines():
@@ -366,16 +689,19 @@ def parity_executable(log):
     return None
 
 
-def measure(entry, executable, target):
-    lines = []
-    for m in entry["measure"]:
-        command = [sys.executable, str(TREE / "scripts/dps_parity_measure.py"), "--executable", executable,
-                   "--spec", m["spec"], "--targets", m["targets"], "--actor", m.get("actor", "follower"),
-                   "--world-db", m["world_db"], "--output", m["output"]]
-        out = subprocess.run(command, cwd=TREE, env=base_env() | {"CARGO_TARGET_DIR": str(target)},
+def measure_spec(entry, measurement, executable, target, log, tree, previous=None):
+    if previous is not None:
+        previous.result()
+    command = [sys.executable, str(TREE / "scripts/dps_parity_measure.py"), "--executable", executable,
+               "--spec", measurement["spec"], "--targets", measurement["targets"],
+               "--actor", measurement.get("actor", "follower"),
+               "--world-db", measurement["world_db"], "--output", measurement["output"]]
+    with timed(log, "measure", tree, entry=entry["id"], spec=measurement["spec"]):
+        out = subprocess.run(command, cwd=TREE,
+                             env=base_env() | {"DPS_PARITY_SEEDS": MEASURE_SEEDS} | entry.get("env", {})
+                             | {"CARGO_TARGET_DIR": str(target)},
                              text=True, capture_output=True, check=False)
-        lines += [line for line in out.stdout.splitlines() if "NATIVE_DPS" in line or "FAILED" in line]
-    entry["measurements"] = lines
+    return [line for line in out.stdout.splitlines() if "NATIVE_DPS" in line or "FAILED" in line]
 
 
 def write_results(entries):
@@ -385,10 +711,25 @@ def write_results(entries):
         (RUNNING / f"{entry['id']}.json").unlink(missing_ok=True)
 
 
+# While this file names an owner prefix, cycles take only that owner's entries: a broad change
+# (the spell-scripts crate split) gets a cycle in which no other landing moves its seams.
+SOLO = HOME / "solo"
+
+
+def eligible_queue():
+    paths = sorted(QUEUE.glob("*.json"))
+    if not SOLO.exists():
+        return paths
+    # One owner prefix or entry id per line (an urgent revert can join the window).
+    allowed = tuple(SOLO.read_text().split())
+    return [p for p in paths if p.stem in allowed
+            or json.loads(p.read_text()).get("owner", "").startswith(allowed)]
+
+
 def take_queue():
     RUNNING.mkdir(parents=True, exist_ok=True)
     entries = []
-    for path in sorted(QUEUE.glob("*.json")):
+    for path in eligible_queue():
         target = RUNNING / path.name
         path.rename(target)
         entries.append(json.loads(target.read_text()))
@@ -459,22 +800,44 @@ def measure_then_write(entries, log):
     target.mkdir(parents=True)
     copy = target / Path(executable).name
     shutil.copy2(executable, copy)
-    pending = [len(measured)]
+    tree = tree_id()
+    lock = threading.Lock()
+    pending_entries = [len(measured)]
 
-    def finish(entry):
-        try:
-            measure(entry, str(copy), target)
-        except Exception as error:  # a failed measurement must still produce a result
-            entry["measurements"] = [f"FAILED: {error}"]
-        write_results([entry])
-        pending[0] -= 1
-        if pending[0] == 0:
-            shutil.rmtree(target, ignore_errors=True)
+    def schedule(entry):
+        results = [None] * len(entry["measure"])
+        remaining = [len(results)]
+
+        def finish(index, future):
+            try:
+                lines = future.result()
+            except Exception as error:  # a failed measurement must still produce a result
+                lines = error
+            with lock:
+                results[index] = lines
+                remaining[0] -= 1
+                if remaining[0] == 0:
+                    failure = next((result for result in results if isinstance(result, Exception)), None)
+                    entry["measurements"] = ([f"FAILED: {failure}"] if failure is not None
+                                             else [line for result in results for line in result])
+                    write_results([entry])
+                    pending_entries[0] -= 1
+                    if pending_entries[0] == 0:
+                        shutil.rmtree(target, ignore_errors=True)
+            MEASURING.discard(future)
+
+        previous_by_output = {}
+        for index, measurement in enumerate(entry["measure"]):
+            # The parity script writes a spec-level timing file as well as target reports.
+            key = (str(Path(measurement["output"]).resolve()), measurement["spec"])
+            previous = previous_by_output.get(key)
+            future = MEASURER.submit(measure_spec, entry, measurement, str(copy), target, log, tree, previous)
+            previous_by_output[key] = future
+            MEASURING.add(future)
+            future.add_done_callback(lambda done, index=index: finish(index, done))
 
     for entry in measured:
-        future = MEASURER.submit(finish, entry)
-        MEASURING.add(future)
-        future.add_done_callback(MEASURING.discard)
+        schedule(entry)
 
 
 def red_twin(entry):
@@ -489,6 +852,57 @@ def land(entries, log):
     for entry in pushed:
         entry["status"] = f"landed in {master}"
     measure_then_write(pushed, log)
+
+
+def cargo_config_files():
+    """External Cargo config also affects the otherwise tree-keyed parity build."""
+    cargo_home = Path(os.environ.get("CARGO_HOME", Path.home() / ".cargo"))
+    directories = [cargo_home, *(parent / ".cargo" for parent in (TREE, *TREE.parents))]
+    return tuple((str(path), path.read_bytes() if path.is_file() else None)
+                 for directory in directories for path in (directory / "config", directory / "config.toml"))
+
+
+def isolated_measure_groups(entries):
+    """Group only conflict-free entries resolving to the same parity build inputs."""
+    groups = {}
+    if entries:
+        reset_tree()
+    base = git("rev-parse", "origin/master").stdout.strip() if entries else None
+    environment = tuple(sorted(base_env().items()))
+    configs = cargo_config_files()
+    for entry in entries:
+        resolved = git("merge-tree", "--write-tree", base, entry["commit"], check=False)
+        if resolved.returncode:
+            key = ("conflict", entry["id"])
+        else:
+            tree = resolved.stdout.splitlines()[0]
+            build_env = tuple(sorted((key, value) for key, value in entry.get("env", {}).items()
+                                     if key.startswith(("CARGO_", "RUST", "LD_"))))
+            key = (tree, PARITY_BUILD_ARGS, environment, configs, build_env)
+        groups.setdefault(key, []).append(entry)
+    return base, list(groups.values())
+
+
+def build_isolated_group(group, log, base):
+    """Check one representative; identical resolved trees have the same verdict."""
+    representative, *siblings = group
+    passed, failed = build_and_test([representative], log)
+    # reset_tree fetches master; a changed base invalidates the grouping proof.
+    if siblings and git("rev-parse", "origin/master").stdout.strip() != base:
+        for entry in siblings:
+            (RUNNING / f"{entry['id']}.json").rename(QUEUE / f"{entry['id']}.json")
+        return passed, failed
+    if passed:
+        return group, []
+    if failed:
+        for entry in siblings:
+            entry["status"] = failed[0]["status"]
+            entry["reason"] = failed[0]["reason"]
+        write_results(siblings)
+        return [], failed + siblings
+    for entry in siblings:
+        (RUNNING / f"{entry['id']}.json").rename(QUEUE / f"{entry['id']}.json")
+    return [], []
 
 
 def run_probes(probes, gated, log):
@@ -508,12 +922,26 @@ def run_probes(probes, gated, log):
             (RUNNING / f"{entry['id']}.json").rename(QUEUE / f"{entry['id']}.json")
         else:
             twins[entry["id"]] = twin
-    passed, failed = build_and_test(probes, log) if probes else ([], [])
-    for entry in passed:
-        entry["status"] = "probe passed"
-    # Measure now, while the tree is still the probe tree: the RED twins below rebuild it
-    # without the probes, so a later parity executable would lack their changes.
-    measure_then_write(passed, log)
+    # Probes share one tree, so a shared probe's numbers include the other probes' changes.
+    # Measure-only entries (baselines, remeasures) get a tree of their own. Probes with tests stay
+    # shared: their verdict is pass/fail, and the landing measurement on master is the real number.
+    isolated = [e for e in probes if e["measure"] and not e["tests"]]
+    shared = [e for e in probes if e not in isolated]
+    # Bound distinct isolated builds, not entries sharing a resolved parity-build tree.
+    isolated_base, isolated_groups = isolated_measure_groups(isolated)
+    for group in isolated_groups[ISOLATED_PER_CYCLE:]:
+        for entry in group:
+            (RUNNING / f"{entry['id']}.json").rename(QUEUE / f"{entry['id']}.json")
+    isolated_groups = isolated_groups[:ISOLATED_PER_CYCLE]
+    passed, failed = [], []
+    for group in ([shared] if shared else []) + isolated_groups:
+        group_passed, group_failed = (build_and_test(group, log) if group is shared
+                                      else build_isolated_group(group, log, isolated_base))
+        for entry in group_passed:
+            entry["status"] = "probe passed"
+        # Measure now, while the tree is still this group's: the next build replaces it.
+        measure_then_write(group_passed, log)
+        passed, failed = passed + group_passed, failed + group_failed
     twin_passed, twin_failed = build_and_test(list(twins.values()), log) if twins else ([], [])
     for entry in twin_passed:
         entry["status"] = "probe passed"
@@ -584,7 +1012,7 @@ def run(_args):
                 continue
             print("merge_train.py changed, reloading", flush=True)
             os.execv(sys.executable, [sys.executable, str(script), "run"])
-        queued = list(QUEUE.glob("*.json"))
+        queued = eligible_queue()
         if queued and time.time() - min(p.stat().st_mtime for p in queued) >= GATHER_SECONDS:
             try:
                 cycle()
@@ -607,13 +1035,31 @@ def where(args):
             return
     if (RUNNING / f"{args.id}.json").exists():
         current = HOME / "current.json"
-        info = json.loads(current.read_text()) if current.exists() else {}
+        try:
+            info = json.loads(current.read_text())
+        except (FileNotFoundError, json.JSONDecodeError):
+            # Between cycles: a landed entry's measurement may still be running in the background.
+            print("running, between cycles (measuring, or waiting for the next cycle to start); keep waiting")
+            return
         here = args.id in info.get("entries", [])
         minutes = round((time.time() - info.get("since", time.time())) / 60, 1)
         print(f"in cycle {info.get('cycle')}: phase {info.get('phase')} ({minutes} min)"
               + ("; this entry is in the current phase" if here else "; this entry waits for a later phase of this cycle"))
         return
     print("unknown id")
+
+
+def withdraw(args):
+    """Drop a queued entry (an owner's obsolete or superseded submission); running entries finish."""
+    queued = QUEUE / f"{args.id}.json"
+    try:
+        entry = json.loads(queued.read_text())
+        queued.unlink()
+    except FileNotFoundError:
+        raise SystemExit(f"{args.id} is not queued (running entries cannot be withdrawn; see `where`)")
+    entry["status"], entry["reason"] = "rejected", "withdrawn by owner"
+    write_results([entry])
+    print(f"withdrew {args.id}")
 
 
 def status(_args):
@@ -681,6 +1127,9 @@ def main():
     wh = sub.add_parser("where", help="where one entry is")
     wh.add_argument("id")
     wh.set_defaults(func=where)
+    wd = sub.add_parser("withdraw", help="drop one queued entry")
+    wd.add_argument("id")
+    wd.set_defaults(func=withdraw)
     sub.add_parser("status", help="throughput metrics for the periodic bottleneck check").set_defaults(func=status)
     args = parser.parse_args()
     args.func(args)

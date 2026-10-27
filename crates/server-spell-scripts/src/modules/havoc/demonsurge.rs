@@ -13,17 +13,65 @@ const INTENSITY: u32 = 452489;
 const STACKS: u32 = 452416;
 const ABILITIES: &[u32] = &[201427, 210152, 258920, 452497, 452490];
 
+// SimC76f8118 sc_demon_hunter.cpp5608–5634: Focused Hatred uses
+// native effect0 minus effect1 per additional resolved enemy, through five.
+pub(super) fn focused_hatred(
+    world: &World,
+    ctx: &combat::spell_cast::effects::EffectCtx<'_>,
+    _target: Entity,
+    periodic: bool,
+) -> f32 {
+    const FOCUSED_HATRED: u32 = 452405;
+    if periodic || ctx.spell.id != STACKS || !super::has_talent(world, ctx.caster, FOCUSED_HATRED) {
+        return 1.0;
+    }
+    let count = combat::spell_cast::resolving_targets(world, ctx)
+        .expect("native Demonsurge damage retains resolved targets")
+        .iter()
+        .filter(|&&target| {
+            combat::spell_cast::targets::relation_matches(
+                world,
+                ctx.caster,
+                target,
+                combat::spell_cast::targets::Relation::Enemy,
+            )
+        })
+        .count();
+    if !(1..=5).contains(&count) {
+        return 1.0;
+    }
+    let effect = |index| {
+        combat::spell_cast::scripts::script_effect_value(world, ctx.caster, FOCUSED_HATRED, index)
+    };
+    1.0 + (effect(0) - effect(1) * (count - 1) as f32) / 100.0
+}
+
 #[derive(Component, Default)]
 struct DemonsurgeUses(BTreeSet<u32>);
 
 fn ability(spell: u32) -> u32 {
     match spell {
-        452486 => 210152,
-        452487 => 201427,
-        456640 => 258920,
+        452487 | 456640 => 258920,
         198013 => 452497,
         204596 => 452490,
         spell => spell,
+    }
+}
+
+pub(super) fn after_cast(spell: u32) -> Option<combat::spell_cast::scripts::AfterCastHook> {
+    matches!(spell, 452487 | 456640).then_some(cast_consuming_fire_payload)
+}
+
+fn cast_consuming_fire_payload(
+    world: &mut World,
+    caster: Entity,
+    _spell: &combat::spell_info::SpellInfo,
+) {
+    // SimC76f8118 sc_demon_hunter.cpp4784–4839 uses Immolation's native
+    // payload and spends CONSUMING_FIRE, never Annihilation. The native
+    // override endpoints are dummy records with no authored trigger edge.
+    if super::has_talent(world, caster, TALENT) {
+        combat::spell_cast::cast_triggered(world, caster, 258920, Some(caster), 1);
     }
 }
 

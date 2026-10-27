@@ -23,6 +23,8 @@ pub type DamageProcHook = fn(&mut World, Entity, &AuraInstance, &super::procs::A
 pub struct AuraScript {
     pub on_apply: Option<AuraHook>,
     pub on_remove: Option<RemoveHook>,
+    /// After detachment, before generic reactions to the removed aura.
+    pub before_remove_reactions: Option<RemoveHook>,
     /// One callback for asynchronous native stack expirations, including the last stack.
     pub on_stack_loss: Option<fn(&mut World, Entity, &AuraInstance, u8)>,
     /// Duration expiry or explicit full channel completion, never interruption.
@@ -54,6 +56,11 @@ pub(super) fn run_remove(
     aura: &AuraInstance,
     reason: super::RemoveReason,
 ) {
+    if let Some(run) =
+        script(world, aura.spell_id).and_then(|script| script.before_remove_reactions)
+    {
+        run(world, unit, aura, reason);
+    }
     super::rogue::after_stealth_removed(world, unit, aura);
     let Some(script) = script(world, aura.spell_id) else {
         return;
@@ -252,20 +259,14 @@ pub(super) fn consumes_named_field(spell_id: u32, effect_index: u8) -> bool {
         || (spell_id == crate::spell_cast::blooming_infusion::BLOOMING_INFUSION
             && effect_index == 0)
         || (spell_id == crate::spell_cast::control_dream::CONTROL_OF_THE_DREAM && effect_index == 0)
-        || (spell_id == 109186 && effect_index == 0)
-        || (spell_id == 200183 && effect_index == 0)
-        || (spell_id == 390994 && effect_index == 1)
         || (spell_id == PROTECTIVE_GROWTH && effect_index == 0)
         || (spell_id == LINGERING_HEALING && effect_index == 1)
         || (spell_id == FOUNT_OF_STRENGTH && effect_index == 2)
-        || (spell_id == 431442 && matches!(effect_index, 0..=2))
-        || (spell_id == 1260647 && effect_index == 0)
         || (spell_id == BREATH_OF_FIRE_BURN && effect_index == 1)
         || (spell_id == 740 && effect_index == 5)
         || (spell_id == 190456 && matches!(effect_index, 1 | 3))
         || (spell_id == 31850 && effect_index == 1)
         || (spell_id == 47788 && effect_index == 2)
-        || (spell_id == crate::spell_cast::scripts::prayer_of_mending::WARD && effect_index == 0)
         || (spell_id == 288733 && effect_index == 1)
         || (spell_id == crate::spell_cast::toy_coyote::HAT && effect_index == 0)
 }
@@ -409,6 +410,7 @@ pub(super) fn register_class_scripts(
     crate::spell_cast::scripts::register_lifecycle_policies(&mut scripts, &registry);
     crate::spell_cast::scripts::register_wdp_relationship(&mut scripts);
     crate::spell_cast::scripts::register_unbroken_rhythm(&mut scripts);
+    crate::spell_cast::scripts::register_hero_flurry(&mut scripts);
     scripts.0.insert(
         INUNDATE,
         AuraScript {
@@ -432,11 +434,11 @@ pub(super) fn register_class_scripts(
     );
     crate::spell_cast::toy_coyote::register(&mut scripts);
     super::abundance::register(&mut scripts);
-    crate::spell_cast::scripts::holy_priest::register(&mut scripts);
-    crate::spell_cast::scripts::prayer_of_mending::register(&mut scripts);
+    registry.register_support_auras(&mut scripts);
     super::earthen_rage::register(&mut scripts);
+    registry.register_rogue_auras(&mut scripts);
     super::rogue::register(&mut scripts);
-    crate::spell_cast::scripts::register_enhancement(&mut scripts);
+    registry.register_weapon_auras(&mut scripts);
     super::spirit_wolf::register(&mut scripts);
     super::natures_guardian::register(&mut scripts);
     super::ret_sentence::register(&mut scripts);
@@ -698,6 +700,7 @@ pub(super) fn register_class_scripts(
             ..Default::default()
         },
     );
+    crate::spell_cast::scripts::register_arcane(&mut scripts);
     // Extend existing parent lifecycle entries rather than replacing their hooks.
     crate::spell_cast::scripts::register_xuens_battlegear(&mut scripts);
     crate::spell_cast::scripts::register_channel_policies(&mut scripts, &registry);

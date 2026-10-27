@@ -67,6 +67,8 @@ fn havoc_demonic_enters_meta_before_native_eye_beam_channel() {
     assert!(
         (remaining
             - 5.0
+            // Native30 paid Fury also earns two100ms Shattered Destiny extensions.
+            - 0.2
             - f64::from(
                 world
                     .get::<shared::casting::CastState>(actor)
@@ -75,7 +77,7 @@ fn havoc_demonic_enters_meta_before_native_eye_beam_channel() {
             ))
         .abs()
             < 0.001,
-        "Demonic must retain native5s plus actual channel duration, got {remaining}"
+        "Demonic must retain native5s plus actual channel and earned Shattered Destiny, got {remaining}"
     );
     assert_eq!(
         world
@@ -161,7 +163,8 @@ fn havoc_demonic_extends_existing_native_meta_without_refreshing_it() {
             .unwrap()
             .duration,
     );
-    assert!((deadline(run.app.world()) - before - 5.0 - channel).abs() < 0.001);
+    // Native Eye Beam30 Fury crosses two12-Fury Shattered Destiny thresholds.
+    assert!((deadline(run.app.world()) - before - 5.0 - channel - 0.2).abs() < 0.001);
 }
 
 #[test]
@@ -170,13 +173,22 @@ fn havoc_literal_fixture_executes_source_actions() {
     let result = measure(577, 1).expect("native Havoc measurement");
     assert_eq!(result["driver"], "LITERAL_SIMC_HAVOC_76f8118");
     let actions = result["combat"]["actions"].as_array().unwrap();
+    let essence = actions
+        .iter()
+        .find(|row| row["spell_id"] == 258860)
+        .expect("native Essence Break cast");
+    assert_eq!(
+        essence["count"].as_f64(),
+        essence["hits"].as_f64(),
+        "literal native Essence Break must not spend its cooldown on an empty cone in the one-target fixture: {essence}"
+    );
     // Native overrides can replace Eye Beam with Abyssal Gaze; neither is
     // a different priority (SimC76f8118 sc_demon_hunter.cpp4078–4106).
     for ids in [&[191427][..], &[198013, 452497], &[258860]] {
         assert!(
             actions.iter().any(|row| {
                 ids.iter().any(|id| row["spell_id"] == *id)
-                    && row["count"].as_u64().unwrap_or(0) > 0
+                    && row["count"].as_f64().expect("numeric mean cast count") > 0.0
             }),
             "literal source ability {ids:?} must execute: {actions:?}"
         );

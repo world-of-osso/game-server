@@ -273,6 +273,66 @@ pub fn change_power(
     power: PowerType,
     delta: f32,
 ) -> Option<f32> {
+    let source = read_combo_source(world, entity);
+    change_power_with_source(world, entity, power, delta, source)
+}
+
+pub(super) fn change_power_from_effect(
+    world: &mut World,
+    entity: Entity,
+    power: PowerType,
+    delta: f32,
+    ctx: &super::effects::EffectCtx<'_>,
+    periodic: bool,
+) -> Option<f32> {
+    let source = ComboGainSource {
+        caster: ctx.caster,
+        spell: Some(ctx.spell.id),
+        school: ctx.spell.school_mask(),
+        depth: ctx.depth,
+        periodic,
+    };
+    change_power_with_source(world, entity, power, delta, source)
+}
+
+#[derive(Clone, Copy)]
+struct ComboGainSource {
+    caster: Entity,
+    spell: Option<u32>,
+    school: u32,
+    depth: u8,
+    periodic: bool,
+}
+
+fn read_combo_source(world: &World, entity: Entity) -> ComboGainSource {
+    let frame = world
+        .get_resource::<super::ResolvingHits>()
+        .and_then(|hits| hits.0.last());
+    let frame = frame.filter(|frame| frame.caster == entity);
+    let spell = frame.map(|frame| frame.spell_id);
+    let school = spell
+        .and_then(|id| {
+            world
+                .get_resource::<crate::spell_info::SpellStore>()?
+                .get(id)
+        })
+        .map_or(0, |info| info.school_mask());
+    ComboGainSource {
+        caster: entity,
+        spell,
+        school,
+        depth: frame.map_or(0, |frame| frame.depth),
+        periodic: false,
+    }
+}
+
+fn change_power_with_source(
+    world: &mut World,
+    entity: Entity,
+    power: PowerType,
+    delta: f32,
+    source: ComboGainSource,
+) -> Option<f32> {
     let (current, max) = power_value(world, entity, power)?;
     if power == PowerType::Runes && world.get::<super::runes::Runes>(entity).is_some() {
         let changed = change_runes(world, entity, delta);
@@ -292,7 +352,46 @@ pub fn change_power(
         world.get_mut::<PowerPools>(entity)?.get_mut(power)?.current = next;
     }
     crate::auras::power_amount_trigger::on_changed(world, entity, power, current, next);
-    Some(next - current)
+    let gained = next - current;
+    if power == PowerType::ComboPoints && delta > 0.0 {
+        record_combo_gain(world, entity, delta, gained, source);
+    }
+    Some(gained)
+}
+
+fn record_combo_gain(
+    world: &mut World,
+    target: Entity,
+    amount: f32,
+    gained: f32,
+    source: ComboGainSource,
+) {
+    use shared::protocol::{CombatLogEvent, CombatLogKind};
+    super::log_event(
+        world,
+        CombatLogEvent {
+            source: Some(source.caster.to_bits()),
+            target: Some(target.to_bits()),
+            spell_id: source.spell,
+            school_mask: source.school,
+            amount: amount as i32,
+            overflow: (amount - gained) as i32,
+            absorbed: 0,
+            resisted: 0,
+            blocked: 0,
+            crit: false,
+            glancing: false,
+            periodic: source.periodic,
+            extra_spell_id: None,
+            timestamp_unix_ms: 0,
+            kind: CombatLogKind::Energize,
+        },
+    );
+    if source.caster == target
+        && let Some(spell) = source.spell
+    {
+        super::script_registry::combo_point_gain(world, target, spell, source.depth);
+    }
 }
 
 /// Spend (negative) or refill (positive) whole runes; returns the applied change.
@@ -455,17 +554,31 @@ pub(crate) fn apply_max_power_percent_changes(
 /// (TOTAL_VALUE flat), rounded; `SetMaxPower` clamps the current value.
 pub(super) fn update_max_powers(
     table: Option<Res<PowerTypeTable>>,
-    mut units: Query<(&mut PowerPools, &crate::auras::AuraStatMods), Without<GridDormant>>,
+    mut units: Query<
+        (
+            &mut PowerPools,
+            &crate::auras::AuraStatMods,
+            Option<&super::guardian::GuardianActor>,
+            Option<&Npc>,
+        ),
+        Without<GridDormant>,
+    >,
 ) {
     let Some(table) = table else {
         return;
     };
-    for (mut pools, mods) in &mut units {
+    for (mut pools, mods, guardian, npc) in &mut units {
         for pool in pools.bypass_change_detection().pools.iter_mut() {
             let Some(info) = table.get(pool.power) else {
                 continue;
             };
-            let max = ((info.max_base_power as f32 + mods.max_power_flat(pool.power as i32))
+            // SimC76f8118 pets.cpp1680–1705: Imp Lord's200 base remains
+            // authoritative after spawn; a generic100 fold strands its125 gate.
+            let native_base = guardian
+                .and(npc)
+                .and_then(|npc| super::guardian::power_base(npc.template_id, pool.power))
+                .unwrap_or(info.max_base_power as f32);
+            let max = ((native_base + mods.max_power_flat(pool.power as i32))
                 * mods.max_power_multiplier(pool.power as i32))
             .round();
             if pool.max != max {

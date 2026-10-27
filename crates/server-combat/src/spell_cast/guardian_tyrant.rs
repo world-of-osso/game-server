@@ -9,7 +9,10 @@ const DEMONIC_POWER: u32 = 1276788;
 const FELGUARD: u32 = 17252;
 
 fn is_roster_summon(spell: u32, entry: u32) -> bool {
-    matches!((spell, entry), (104317, 55659) | (193331 | 193332, 98035))
+    matches!(
+        (spell, entry),
+        (104317, 55659) | (279910, 143622) | (193331 | 193332, 98035)
+    )
 }
 
 fn is_tyrant(spell: u32, entry: u32) -> bool {

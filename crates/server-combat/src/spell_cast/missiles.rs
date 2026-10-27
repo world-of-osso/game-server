@@ -39,6 +39,12 @@ const SPELL_ATTR4_BOUNCY_CHAIN_MISSILES: u32 = 0x0004_0000;
 pub(crate) struct PendingSpellHits(Vec<PendingHit>);
 
 impl PendingSpellHits {
+    pub(super) fn has_spell(&self, caster: Entity, spell: u32) -> bool {
+        self.0
+            .iter()
+            .any(|hit| hit.caster == caster && hit.spell.id == spell)
+    }
+
     pub(super) fn has_caster(&self, caster: Entity) -> bool {
         self.0.iter().any(|hit| hit.caster == caster)
     }
@@ -92,13 +98,16 @@ enum Landing {
 
 /// Resolve launch-mode effects, then `plan` now if the spell has no travel time,
 /// else schedule each hit.
-pub(super) fn launch(
-    world: &mut World,
-    caster: Entity,
-    spell: &SpellInfo,
-    plan: TargetPlan,
-    depth: u8,
-) {
+pub fn launch(world: &mut World, caster: Entity, spell: &SpellInfo, plan: TargetPlan, depth: u8) {
+    // SimC76f8118 sc_shaman.cpp3316–3351 schedules overloads before parent travel.
+    let mut first = true;
+    for target in super::hit_units(&plan) {
+        if super::targets::relation_matches(world, caster, target, super::targets::Relation::Enemy)
+        {
+            super::elemental_overload::after_launch(world, caster, spell, target, first);
+            first = false;
+        }
+    }
     // All successful ordinary/triggered casts reach this once, before flight/hit.
     crate::scripted_ai::on_spell_cast(world, caster, spell.id);
     super::scripts::reduce_barbed_scales(world, caster, spell);
@@ -172,20 +181,18 @@ pub(super) fn launch(
 /// `Spell::handle_delayed`: land every hit whose delay ran out.
 pub(super) fn resolve_due_hits(world: &mut World) {
     let now = now(world);
-    let due: Vec<PendingHit> = {
-        let Some(mut pending) = world.get_resource_mut::<PendingSpellHits>() else {
-            return;
+    loop {
+        let hit = {
+            let Some(mut pending) = world.get_resource_mut::<PendingSpellHits>() else {
+                return;
+            };
+            let Some(index) = pending.0.iter().position(|hit| hit.due <= now) else {
+                return;
+            };
+            pending.0.remove(index)
         };
-        if pending.0.iter().all(|hit| hit.due > now) {
-            return;
-        }
-        let (due, waiting) = std::mem::take(&mut pending.0)
-            .into_iter()
-            .partition(|hit| hit.due <= now);
-        pending.0 = waiting;
-        due
-    };
-    for hit in due {
+        #[cfg(any(test, feature = "test-support"))]
+        observe_discarded_targets(world, &hit);
         if world.get_entity(hit.caster).is_err() {
             continue;
         }
@@ -198,6 +205,53 @@ pub(super) fn resolve_due_hits(world: &mut World) {
             hit.launched,
         );
     }
+}
+
+#[cfg(any(test, feature = "test-support"))]
+fn observe_discarded_targets(world: &mut World, hit: &PendingHit) {
+    use super::test_harness::ObservedDiscardedSpellHits;
+    if !world.contains_resource::<ObservedDiscardedSpellHits>() {
+        return;
+    }
+    let Landing::Units {
+        alive_at_launch, ..
+    } = &hit.landing
+    else {
+        return;
+    };
+    let discarded: Vec<_> = alive_at_launch
+        .iter()
+        .filter_map(|&(target, alive)| read_discarded_target(world, hit, target, alive))
+        .collect();
+    world
+        .resource_mut::<ObservedDiscardedSpellHits>()
+        .0
+        .extend(discarded);
+}
+
+#[cfg(any(test, feature = "test-support"))]
+fn read_discarded_target(
+    world: &World,
+    hit: &PendingHit,
+    target: Entity,
+    alive_at_launch: bool,
+) -> Option<super::test_harness::DiscardedSpellHit> {
+    let exists_now = world.get_entity(target).is_ok();
+    let alive_now = super::targets::is_alive(world, target);
+    if exists_now && alive_now == alive_at_launch {
+        return None;
+    }
+    Some(super::test_harness::DiscardedSpellHit {
+        caster: hit.caster,
+        spell_id: hit.spell.id,
+        target,
+        launched_at: hit.launched,
+        due_at: hit.due,
+        discarded_at: now(world),
+        alive_at_launch,
+        exists_now,
+        alive_now,
+    })
 }
 
 fn land_now(

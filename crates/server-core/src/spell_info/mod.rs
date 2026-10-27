@@ -59,7 +59,7 @@ pub const WORLD_DB_PATH: &str = "data/world.db";
 pub const WORLD_DB_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../data/world.db");
 
 /// One already matched charged spell modifier, retained by its launched cast.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ChargedSpellModifier {
     /// Actual native source of the already matched modifier, not a live-aura guess.
     pub aura_spell_id: u32,
@@ -73,6 +73,8 @@ pub struct ChargedSpellModifier {
 pub struct CastPolicyContext {
     /// Effective launch values, retained independently of later resource changes.
     pub resources: Vec<(PowerType, f32)>,
+    /// Explicit source-free spender: effective values do not imply payment.
+    pub free_spender: bool,
     pub targets: Vec<Entity>,
 }
 
@@ -115,6 +117,9 @@ pub struct SpellInfo {
     /// Read-only to hit scripts; never inferred from an effect's self/area recipients.
     #[serde(skip)]
     pub cast_primary_target: Option<Entity>,
+    /// Validated explicit unit for this execution, distinct from controller metadata.
+    #[serde(skip)]
+    pub cast_executed_target: Option<Entity>,
     /// Sourced ordinary-hit policy inputs; triggered catalog clones keep None.
     #[serde(skip)]
     pub cast_policy_context: Option<Box<CastPolicyContext>>,
@@ -142,6 +147,10 @@ pub struct SpellInfo {
     /// Retained through hardcasts/missiles; triggered casts do not acquire markers.
     #[serde(skip)]
     pub cast_proc_mods: Vec<u32>,
+    /// Source-selected native aura spell IDs present at ordinary admission.
+    /// Retained through flight independently of later aura consumption/expiry.
+    #[serde(skip)]
+    pub cast_launch_auras: Vec<u32>,
     /// Whether this ordinary cast had positive cast time at admission, not its DB2 base.
     #[serde(skip)]
     pub cast_was_hardcast: bool,
@@ -154,9 +163,15 @@ pub struct SpellInfo {
     /// Scripted effectiveness on this cast's damage only, retained through flight.
     #[serde(skip)]
     pub cast_damage_multiplier: Option<f32>,
+    /// Source-selected effectiveness retained by an independent overload action.
+    #[serde(skip)]
+    pub cast_overload_multiplier: Option<f32>,
     /// Fraction of a final periodic interval, applied after damage/healing modifiers.
     #[serde(skip)]
     pub cast_periodic_fraction: Option<f32>,
+    /// Actual native scheduler ordinal for this tick, not the already advanced live counter.
+    #[serde(skip)]
+    pub cast_periodic_ordinal: Option<u64>,
     #[serde(skip)]
     pub cast_damage_role: CastDamageRole,
     /// Every `spell_power` row, sorted by `OrderIndex`.

@@ -10,6 +10,8 @@ use super::summon::SummonedCreature;
 
 #[path = "guardian_core.rs"]
 pub(super) mod core;
+#[path = "guardian_implosion.rs"]
+pub(super) mod implosion;
 #[path = "guardian_tyrant.rs"]
 pub(super) mod tyrant;
 
@@ -18,7 +20,7 @@ const ANTORAN_ARMAMENTS: u32 = 1250921;
 
 // SimC76f8118 pets.cpp701/875–882: the actual Wild Imp consumes its
 // initial native Energy without regeneration, then fades when exhausted.
-const NO_POWER_REGEN: &[(u32, u32)] = &[(104317, 55659)];
+const NO_POWER_REGEN: &[(u32, u32)] = &[(104317, 55659), (279910, 143622)];
 
 struct GuardianPolicy {
     summons: &'static [u32],
@@ -32,9 +34,46 @@ struct GuardianPolicy {
 // SimC76f8118 pets.cpp19/705/867/1510–1548: bindings and inheritance
 // belong to the actual root/creature pair, including the alternative Tyrant.
 const GUARDIAN_POLICIES: &[GuardianPolicy] = &[
+    // SimC76f8118 sc_evoker.cpp3795–3797: native Commandos inherit live owner SP.
+    GuardianPolicy {
+        summons: &[1235843, 1237036],
+        entry: 219827,
+        spells: &[],
+        repeat_gcd: None,
+        owner_spell_share: Some(1.0),
+        owner_attack_share: None,
+    },
+    // SimC76f8118 pets.cpp2050–2119: actual Infernal, native self-buff
+    // clocks/children, and validated SP/AP from live owner spell power.
+    GuardianPolicy {
+        summons: &[111685],
+        entry: 89,
+        spells: &[264364, 19483],
+        repeat_gcd: None,
+        owner_spell_share: Some(2.2275),
+        owner_attack_share: Some(2.2275),
+    },
+    // SimC76f8118 sc_hunter.cpp2043–2047: Bear inherits live owner AP0.6.
+    // Rend is explicitly launched on summon, not an autonomous guardian cast.
+    GuardianPolicy {
+        summons: &[471990],
+        entry: 234018,
+        spells: &[],
+        repeat_gcd: None,
+        owner_spell_share: None,
+        owner_attack_share: Some(0.6),
+    },
     GuardianPolicy {
         summons: &[104317],
         entry: 55659,
+        spells: &[104318],
+        repeat_gcd: None,
+        owner_spell_share: Some(1.2),
+        owner_attack_share: None,
+    },
+    GuardianPolicy {
+        summons: &[279910],
+        entry: 143622,
         spells: &[104318],
         repeat_gcd: None,
         owner_spell_share: Some(1.2),
@@ -138,12 +177,43 @@ const GUARDIAN_POLICIES: &[GuardianPolicy] = &[
         owner_attack_share: Some(0.45),
     },
     // Native205180 description names $205231s1; preserve the existing binding.
+    // SimC76f8118 pets.cpp19/2424–2430: Darkglare retains base owner SP1.0.
     GuardianPolicy {
         summons: &[205180],
         entry: 103673,
         spells: &[205231],
         repeat_gcd: None,
-        owner_spell_share: None,
+        owner_spell_share: Some(1.0),
+        owner_attack_share: None,
+    },
+    // SimC76f8118 pets.cpp19/2358–2407: actual Overfiend repeatedly
+    // casts its native Chaos Bolt with base owner SP1.0; no guessed AP share.
+    GuardianPolicy {
+        summons: &[434587],
+        entry: 217429,
+        spells: &[434589],
+        repeat_gcd: None,
+        owner_spell_share: Some(1.0),
+        owner_attack_share: None,
+    },
+    // SimC76f8118 pets19/2516–2563: native Desperate Soul, full SP,
+    // one actual Wrath; its own post-cast callback marks native dismissal.
+    GuardianPolicy {
+        summons: &[1262094],
+        entry: 254505,
+        spells: &[1278047],
+        repeat_gcd: None,
+        owner_spell_share: Some(1.0),
+        owner_attack_share: None,
+    },
+    // SimC76f8118 sc_priest_pets.cpp75–86/1061–1134: native Thing From
+    // Beyond repeats Void Spike with full owner SP; native cast time owns cadence.
+    GuardianPolicy {
+        summons: &[373277],
+        entry: 189988,
+        spells: &[373279],
+        repeat_gcd: None,
+        owner_spell_share: Some(1.0),
         owner_attack_share: None,
     },
 ];
@@ -160,6 +230,17 @@ pub(crate) fn owner_spell_share(summon: u32, entry: u32) -> Option<f32> {
 
 pub(crate) fn owner_attack_share(summon: u32, entry: u32) -> Option<f32> {
     policy(summon, entry).and_then(|row| row.owner_attack_share)
+}
+
+// SimC76f8118 pets.cpp372–375: the main Imp remains a controlled pet,
+// inheriting both powers from live owner SP rather than guardian identity.
+const CONTROLLED_PET_POWER_SHARES: &[(u32, f32, f32)] = &[(416, 5.625, 2.8125)];
+
+pub(crate) fn controlled_pet_power_shares(entry: u32) -> Option<(f32, f32)> {
+    CONTROLLED_PET_POWER_SHARES
+        .iter()
+        .find(|(creature, _, _)| *creature == entry)
+        .map(|(_, spell, attack)| (*spell, *attack))
 }
 
 // SimC76f8118 pets.cpp1513/1520–1523 selects the Antoran weapon mode.
@@ -227,6 +308,14 @@ const GUARDIAN_POWERS: &[GuardianPowerPolicy] = &[GuardianPowerPolicy {
     maximum: 200.0,
     cast_threshold: 125.0,
 }];
+
+/// Source-defined guardian bases also govern later native maximum-power folds.
+pub(super) fn power_base(entry: u32, power: PowerType) -> Option<f32> {
+    GUARDIAN_POWERS
+        .iter()
+        .find(|policy| policy.entry == entry && policy.power == power)
+        .map(|policy| policy.maximum)
+}
 
 /// SimC76f8118 pets1513: Antoran Armaments selects the alternative native root effect.
 pub(super) fn effect_enabled(world: &World, caster: Entity, spell: u32, index: u8) -> bool {
@@ -378,6 +467,7 @@ pub(super) fn initialize(world: &mut World, actor: Entity) {
             .insert(crate::hunter_pet::SummonedDemon);
     }
     apply_spawn_auras(world, actor, root, entry);
+    implosion::on_spawn(world, actor);
 }
 
 fn initialize_spirit_wolf(world: &mut World, actor: Entity, owner: Entity) {
@@ -433,12 +523,39 @@ fn load_actor_powers(world: &World, entry: u32, spells: &[u32]) -> super::powers
     pools
 }
 
+/// Initialize existing action clocks once; sampling never runs for old actors.
+/// Source leaves supply delays, while native casts and deadlines stay authoritative.
+pub fn initialize_action_delays(
+    world: &mut World,
+    actor: Entity,
+    sample: impl FnOnce() -> Vec<(u32, f64)>,
+) {
+    let now = super::now(world);
+    let mut state = world
+        .get_mut::<GuardianActor>(actor)
+        .expect("source-bound action delays require an initialized native guardian");
+    let initialized = !state.spell_ready_at.is_empty() || !state.once_used.is_empty();
+    if initialized {
+        return;
+    }
+    for (spell, delay) in sample() {
+        assert!(
+            state.spells.contains(&spell),
+            "initial clock requires a bound native action"
+        );
+        state.spell_ready_at.insert(spell, now + delay);
+    }
+}
+
 pub(super) fn update(world: &mut World) {
     let actors: Vec<_> = world
         .query_filtered::<Entity, With<GuardianActor>>()
         .iter(world)
         .collect();
     for actor in actors {
+        if implosion::advance(world, actor) {
+            continue;
+        }
         if wild_imp_exhausted(world, actor) {
             let owner = world.get::<SummonedCreature>(actor).unwrap().owner;
             core::on_natural_fade(world, owner);
@@ -452,7 +569,7 @@ pub(super) fn update(world: &mut World) {
 fn wild_imp_exhausted(world: &World, actor: Entity) -> bool {
     let summon = world.get::<SummonedCreature>(actor).unwrap();
     let entry = world.get::<Npc>(actor).unwrap().template_id;
-    if (summon.spell_id, entry) != (104317, 55659)
+    if !matches!((summon.spell_id, entry), (104317, 55659) | (279910, 143622))
         || world.get::<CastState>(actor).is_some()
         || world
             .resource::<super::missiles::PendingSpellHits>()

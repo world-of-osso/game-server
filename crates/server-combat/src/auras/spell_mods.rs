@@ -154,11 +154,15 @@ fn matching<'a>(
 // Native accumulated next-spell uses, not multiplied modifier magnitude.
 // SimC76f8118 sc_monk.cpp1422 decrements one Combo Breaker stack per Blackout Kick.
 // Tidal Waves/Backdraft/Surge of Light stacks are also next-spell uses.
+// SimC76f8118 sc_shaman.cpp8759 grants SK's uses; each carries one buff value.
 // SimC76f8118 sc_evoker.cpp6485/6595: Mass Disintegrate stacks are uses,
 // not a multiplier on its native additional-target amount.
+// SimC76f8118 sc_mage.cpp1852–1853/3242: Clearcasting stacks are
+// independent uses too: one Missiles spends one, without multiplying its -100% cost.
 // Native1265871 suppresses points stacking (effect attribute0x40); tier uses
 // do not multiply its ordinary damage modifier (sc_evoker.cpp10850–10856).
-const STACKED_NEXT_SPELL_USES: &[u32] = &[53390, 117828, 116768, 325202, 114255, 436336, 1265871];
+// One spell ID per line in the union-merged list file, so concurrent additions never conflict.
+const STACKED_NEXT_SPELL_USES: &[u32] = &include!("stacked_next_spell_uses.in");
 
 fn stacked_amount(aura: &AuraInstance, effect: &AuraEffectState) -> f32 {
     let stacks = if STACKED_NEXT_SPELL_USES.contains(&aura.spell_id) {
@@ -179,7 +183,7 @@ fn add_modifier((flat, mult): (f32, f32), amount: f32, percent: bool) -> (f32, f
 
 /// TC Spell.cpp8569 retains launch-target damage/healing before impact.
 /// Retain consumed modifier values without retaining or reusing their aura charge.
-pub(crate) fn snapshot_charged_modifiers(
+pub fn snapshot_charged_modifiers(
     world: &World,
     caster: Entity,
     spell: &SpellInfo,
@@ -199,7 +203,10 @@ pub(crate) fn snapshot_charged_modifiers(
                 aura_spell_id: aura.spell_id,
                 op: effect.misc_values[0],
                 percent: is_pct(effect.aura_type),
-                amount: stacked_amount(aura, effect),
+                amount: crate::spell_cast::scripts::arcane_charge_modifier_amount(
+                    world, caster, aura, effect,
+                )
+                .unwrap_or_else(|| stacked_amount(aura, effect)),
             })
         })
         .collect()
@@ -281,36 +288,71 @@ fn modifier_totals(world: &World, caster: Entity, spell: &SpellInfo, op: SpellMo
             );
             add_modifier(sum, modifier.amount, modifier.percent)
         });
-    world.get::<ActiveAuras>(caster).map_or(frozen, |auras| {
-        matching(auras, spell, op)
-            .filter(|(aura, _)| !snapshots_periodic_modifier(aura, op))
-            .filter(|(aura, _)| {
-                spell.cast_charge_mods.is_none()
-                    || (aura.charges == 0
-                        && !crate::spell_cast::scripts::snapshots_modifier(world, aura.spell_id))
-            })
-            .fold(frozen, |sum, (aura, effect)| {
-                let amount = stacked_amount(aura, effect);
-                let percent = is_pct(effect.aura_type);
-                #[cfg(any(test, feature = "test-support"))]
-                crate::spell_cast::effects::factor_capture::record_modifier(
-                    world,
-                    caster,
-                    spell,
-                    crate::spell_cast::effects::factor_capture::ModifierSource {
-                        op: op as u8,
-                        aura_spell_id: aura.spell_id,
-                        effect_index: Some(effect.index),
-                        amount,
-                        percent,
-                    },
-                );
-                add_modifier(sum, amount, percent)
-            })
+    live_modifiers(world, caster, spell, op).fold(frozen, |sum, (aura, effect)| {
+        let amount = stacked_amount(aura, effect);
+        let percent = is_pct(effect.aura_type);
+        #[cfg(any(test, feature = "test-support"))]
+        crate::spell_cast::effects::factor_capture::record_modifier(
+            world,
+            caster,
+            spell,
+            crate::spell_cast::effects::factor_capture::ModifierSource {
+                op: op as u8,
+                aura_spell_id: aura.spell_id,
+                effect_index: Some(effect.index),
+                amount,
+                percent,
+            },
+        );
+        add_modifier(sum, amount, percent)
     })
 }
 
-/// Spell modifiers with charges are spent by the spell they modify: each
+fn live_modifiers<'a>(
+    world: &'a World,
+    caster: Entity,
+    spell: &'a SpellInfo,
+    op: SpellModOp,
+) -> impl Iterator<Item = (&'a AuraInstance, &'a AuraEffectState)> {
+    let local = world
+        .get::<ActiveAuras>(caster)
+        .into_iter()
+        .flat_map(move |auras| matching(auras, spell, op))
+        .filter(move |(aura, _)| !snapshots_periodic_modifier(aura, op))
+        .filter(move |(aura, _)| {
+            spell.cast_charge_mods.is_none()
+                || (aura.charges == 0
+                    && !crate::spell_cast::scripts::snapshots_modifier(world, aura.spell_id))
+        });
+    // SimC76f8118 player.cpp15268–15324 redirects pets' passive spell,
+    // power and effect reads to their owner. sc_warlock_init.cpp120–122
+    // registers class/selected-talent/set passives, not every owner buff.
+    // Native family/label masks still decide which pet action is affected.
+    let owner = world
+        .get::<crate::hunter_pet::HunterPet>(caster)
+        .map(|pet| pet.owner)
+        .or_else(|| crate::spell_cast::guardian::stat_owner(world, caster));
+    let inherited = owner
+        .and_then(|owner| world.get::<ActiveAuras>(owner))
+        .into_iter()
+        .flat_map(move |auras| matching(auras, spell, op))
+        .filter(move |(aura, _)| aura.passive && aura.charges == 0 && Some(aura.caster) == owner);
+    local.chain(inherited)
+}
+
+// An explicit native proc mask can restrict charge use more narrowly than the
+// modifier itself:36032 modifies Blast but its charge is spent by Barrage.
+fn proc_mask_allows_consumer(world: &World, aura: &AuraInstance, spell: &SpellInfo) -> bool {
+    world
+        .get_resource::<crate::spell_info::SpellStore>()
+        .and_then(|store| store.get(aura.spell_id))
+        .and_then(|source| source.aura_options.as_ref())
+        .and_then(|options| options.proc_family)
+        .filter(|(_, mask)| *mask != [0; 4])
+        .is_none_or(|(family, mask)| super::procs::matches_explicit_family(spell, family, mask))
+}
+
+/// Spell modifiers with charges are spent by an eligible modifying spell: each
 /// charged mod aura affecting `spell` (any op) loses one charge and is
 /// removed at zero.
 pub fn consume_charges(world: &mut World, caster: Entity, spell: &SpellInfo) {
@@ -321,6 +363,7 @@ pub fn consume_charges(world: &mut World, caster: Entity, spell: &SpellInfo) {
         .iter()
         .filter(|aura| {
             aura.charges > 0
+                && proc_mask_allows_consumer(world, aura, spell)
                 && !world
                     .resource::<crate::spell_cast::script_registry::SpellScriptRegistry>()
                     .preserve_unadmitted_proc(spell, aura)

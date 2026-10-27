@@ -311,6 +311,13 @@ fn spawn_parity_player(
             crate::networking::CombatTarget::default(),
             crate::networking::Moving(false),
             shared::components::PlayerStandState::default(),
+            // Headless Players use native runtime storage, not a fabricated
+            // authenticated character or a persisted server account.
+            crate::hunter_pet::PetStable {
+                character_id: None,
+                stored: Default::default(),
+                summoned: None,
+            },
         ))
         .id();
     install_parity_player_stat_components(world, player);

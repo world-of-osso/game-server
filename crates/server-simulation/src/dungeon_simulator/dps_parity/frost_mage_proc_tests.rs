@@ -22,10 +22,16 @@ fn frost_mage_native_orb_earns_procs_and_lance_retains_spent_fingers_in_flight()
         crate::auras::has_aura(run.app.world(), run.actor, 190446),
         "selected Wintertide must earn native Brain Freeze from the real Orb cast"
     );
-    assert!(
-        !crate::auras::has_aura(run.app.world(), run.targets[0], 1221389),
-        "Orb does not fabricate recipient Freezing for this Fingers test"
-    );
+    let freezing = |run: &Run| {
+        run.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(run.targets[0])
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 1221389 && aura.caster == run.actor)
+            .map_or(0, |aura| aura.stacks)
+    };
+    let before = freezing(&run);
     literal_rotation::execution::execute(
         run.app.world_mut(),
         run.actor,
@@ -58,7 +64,7 @@ fn frost_mage_native_orb_earns_procs_and_lance_retains_spent_fingers_in_flight()
         "the missile must retain Fingers after the live buff was spent"
     );
     assert!(
-        !crate::auras::has_aura(run.app.world(), run.targets[0], 1221389),
-        "Fingers pays Shatter without inventing or consuming recipient stacks"
+        freezing(&run) >= before,
+        "Fingers must preserve recipient stacks; independent Infused impacts may add more"
     );
 }

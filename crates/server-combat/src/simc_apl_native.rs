@@ -368,6 +368,21 @@ impl<'a> NativeFacts<'a> {
 
     fn dot_value(&self, operand: &str, action: Option<&Action>) -> Result<f64, String> {
         let (alias, property) = split_property(operand, "dot")?;
+        if matches!(property, "refreshable" | "remains" | "duration") {
+            let id = bound_spell(&self.bindings.buffs, alias, "dot")?;
+            self.spell(id)?;
+            let target = self.selected_target(action)?;
+            let active = self.read_owned_auras(target, id);
+            if active.iter().any(|aura| aura.expires_at.is_none()) {
+                // An indefinite DoT never enters a finite Pandemic window.
+                // Keep permanent-buff sentinels in target_aura/buff_remaining.
+                return Ok(if property == "refreshable" {
+                    0.0
+                } else {
+                    f64::INFINITY
+                });
+            }
+        }
         if property != "refreshable" {
             return self.target_aura(operand, action);
         }
@@ -1075,7 +1090,10 @@ impl Facts for NativeFacts<'_> {
                 .map(|cast| f64::from(cast.channel_tick_interval))
                 .ok_or_else(|| "tick_time requires an active native channel".into()),
             "expected_combat_length" => self.expected_combat_length(),
-            "fight_remains" => self.remaining(name),
+            // SimC76f8118 action.cpp4276/player.cpp11866–11895 delegates
+            // bare TTD to the actor; fixed-time player.cpp7731–7754 uses
+            // expected fight length minus elapsed, not a selected add's lifetime.
+            "fight_remains" | "time_to_die" => self.remaining(name),
             // SimC76f8118 action.cpp3886–3896: without distance targeting,
             // bare spell_targets uses active_enemies, including recurring adds.
             "active_enemies" | "spell_targets" => Ok(self.active_enemies as f64),

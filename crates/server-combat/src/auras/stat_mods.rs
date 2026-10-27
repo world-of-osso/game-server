@@ -356,6 +356,7 @@ pub fn compute(auras: &ActiveAuras, player_controlled_npc: bool) -> (StatModifie
     for aura in auras.iter() {
         apply_aura(&mut acc, aura);
     }
+    apply_inspired_intellect(&mut acc.stats, auras);
     let run = if acc.mounted {
         pct(acc.fastest_mounted) * acc.always_mounted.max(pct(acc.mounted_not_stack))
     } else {
@@ -388,6 +389,32 @@ pub fn compute(auras: &ActiveAuras, player_controlled_npc: bool) -> (StatModifie
     acc.stats.haste_pct = compound_haste_pct(acc.stats.haste_pct, acc.haste_not_stack);
     acc.stats.haste_total_pct = super::ret_crusade::haste_total_pct(auras);
     (acc.stats, acc.combat)
+}
+
+fn apply_inspired_intellect(stats: &mut StatModifiers, auras: &ActiveAuras) {
+    const ARCANE_INTELLECT: u32 = 1459;
+    const INSPIRED_INTELLECT: u32 = 458437;
+    let read_amount = |spell| {
+        let aura = auras.iter().find(|aura| aura.spell_id == spell)?;
+        let effect = aura
+            .effects
+            .iter()
+            .find(|effect| effect.index == 0)
+            .expect("native intellect buff/talent requires effect1");
+        Some(effect.amount * aura.stack_multiplier())
+    };
+    let (Some(arcane), Some(inspired)) = (
+        read_amount(ARCANE_INTELLECT),
+        read_amount(INSPIRED_INTELLECT),
+    ) else {
+        return;
+    };
+    // SimC76f8118 sc_mage.cpp6832–6841: locally replace the earned
+    // Arcane Intellect factor with AI + native Inspired Intellect points.
+    // Preserve Wizardry/other factors and the raid aura's original payload.
+    let total = pct(stats.primary_pct.intellect);
+    let enhanced = total / pct(arcane) * pct(arcane + inspired);
+    stats.primary_pct.intellect = (enhanced - 1.0) * 100.0;
 }
 
 /// TC Unit.cpp8833–8854 selects the unit's flight branch before applying211.

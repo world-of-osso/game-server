@@ -18,9 +18,6 @@ pub(super) const SURVIVAL_COMMAND: u32 = 259489;
 const COMMAND_DAMAGE: u32 = 259277;
 pub(super) const WILD_THRASH: u32 = 1264359;
 const WILD_THRASH_PET: u32 = 1264355;
-pub(super) const WILDFIRE_BOMB: u32 = 259495;
-const BOMB_DAMAGE: u32 = 265157;
-const BOMB_BLEED: u32 = 269747;
 pub(crate) const DEATHMARK: u32 = 360194;
 const METAMORPHOSIS: u32 = 191427;
 const LANDING_HIT: u32 = 200166;
@@ -131,24 +128,6 @@ fn cast_owned_pet_command(
     {
         spell_cast::cast_triggered(world, pet, spell, Some(target), depth + 1);
     }
-}
-
-///259495s3 adds its authored percentage to the named primary hit. The179 cone actor/cap remains open;
-///this bridge does not create synthetic cone geometry or unbound actors.
-pub(super) fn bomb_primary(world: &mut World, caster: Entity, target: Entity, depth: u8) {
-    let child = world
-        .resource::<SpellStore>()
-        .get(BOMB_DAMAGE)
-        .expect("Wildfire requires265157")
-        .clone();
-    let multiplier = 1.0 + script_effect_value(world, caster, WILDFIRE_BOMB, 2) / 100.0;
-    let mut plan = spell_cast::plan_targets(world, caster, &child, Some(target), false)
-        .expect("native primary bomb target");
-    for effect in &mut plan {
-        effect.chain_multipliers = vec![(target, multiplier)];
-    }
-    spell_cast::missiles::launch(world, caster, &child, plan, depth + 1);
-    spell_cast::cast_triggered(world, caster, BOMB_BLEED, Some(target), depth + 1);
 }
 
 ///360194s3 Energy over d, distributed on its native bleed clock. No separate

@@ -158,7 +158,7 @@ impl Driver {
         let execution = prepared
             .execution_in(&action, equipment, &self.program)?
             .ok_or("selected literal action lost native readiness")?;
-        self.pending_line = line_deadline(&action, facts)?;
+        self.pending_line = line_deadline(&action, facts, &self.variables)?;
         self.selected_list = list.into();
         Ok(Some((action, execution)))
     }
@@ -223,7 +223,11 @@ impl Driver {
             self.cancellation = None;
             return Ok(false);
         }
-        let cancel = expression.evaluate(&BoundAction { facts, action })? != 0.0;
+        let cancel = expression.evaluate(&BoundAction {
+            facts,
+            action,
+            variables: &self.variables,
+        })? != 0.0;
         if cancel {
             self.cancellation = None;
         }
@@ -276,14 +280,22 @@ fn line_ready(
     Ok(facts.value_for(action, "time")? >= *deadline)
 }
 
-fn line_deadline(action: &Action, facts: &dyn ActionFacts) -> Result<Option<(usize, f64)>, String> {
+fn line_deadline(
+    action: &Action,
+    facts: &dyn ActionFacts,
+    variables: &Variables,
+) -> Result<Option<(usize, f64)>, String> {
     let Some(value) = action.options.get("line_cd") else {
         return Ok(None);
     };
     let row = action.source_row.ok_or("line_cd requires a source row")?;
     // SimC76f8118 action.cpp85/567/2610: line_cooldown belongs to this action object,
     // not its spell cooldown, another identical row, or its target.
-    let seconds = Expression::parse(value)?.evaluate(&BoundAction { facts, action })?;
+    let seconds = Expression::parse(value)?.evaluate(&BoundAction {
+        facts,
+        action,
+        variables,
+    })?;
     if !seconds.is_finite() || seconds < 0.0 {
         return Err("line_cd must be finite and nonnegative".into());
     }
@@ -293,9 +305,18 @@ fn line_deadline(action: &Action, facts: &dyn ActionFacts) -> Result<Option<(usi
 struct BoundAction<'a> {
     facts: &'a dyn ActionFacts,
     action: &'a Action,
+    variables: &'a Variables,
 }
 impl Facts for BoundAction<'_> {
     fn value(&self, name: &str) -> Result<f64, String> {
+        // SimC76f8118 variable.cpp262–298 and apl/mage.cpp87/128: option
+        // expressions share the actor's current APL variables with ordinary if.
+        if let Some(variable) = name.strip_prefix("variable.") {
+            return self
+                .variables
+                .value(variable)
+                .ok_or_else(|| format!("unknown literal APL variable {variable}"));
+        }
         self.facts.value_for(self.action, name)
     }
 }

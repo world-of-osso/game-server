@@ -179,10 +179,15 @@ fn dummy11_sinister_strike_uses_authored_level_curve() {
 }
 #[test]
 fn dummy11_void_volley_counts_primary_secondary_bolts_and_insanity() {
-    let mut h = harness(Vec::new(), &[1242173, 1242189], 5).unwrap();
+    let mut h = harness(Vec::new(), &[228260, 194249, 1242171, 1242173, 1242189], 5).unwrap();
     let near = spawn_npc(&mut h.app, 4.0);
     let far = spawn_npc(&mut h.app, 20.0);
     let ally = spawn_player(&mut h.app, 5, 4.0);
+    // SimC1384–1393: earn ordinary uses with real Voidform first; discard its free volley.
+    h.cast_and_deliver(228260, Some(h.npc));
+    h.advance(80);
+    landed(&h);
+    h.inbox = Inbox::default();
     h.set_power(PowerType::Insanity, 0.0);
     h.cast_and_deliver(1242173, Some(h.npc));
     h.advance(12);

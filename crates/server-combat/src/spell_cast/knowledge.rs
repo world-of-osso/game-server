@@ -26,6 +26,9 @@ pub fn resolve_actor_action(
     actor: Entity,
     requested: u32,
 ) -> Result<u32, CastFailure> {
+    if !super::script_registry::action_available(world, actor, requested) {
+        return Err(CastFailure::NotKnown);
+    }
     let known = world
         .get::<KnownSpells>(actor)
         .ok_or_else(|| CastFailure::Unsupported("native action actor lacks KnownSpells".into()))?;
@@ -110,6 +113,8 @@ fn project_known_parent(world: &World, actor: Entity, requested: u32) -> u32 {
         357210 if known.contains(433871) => 433874,
         114050 => 1219480,
         426115 => 264178,
+        // SimC76f8118 sc_rogue.cpp10247/10300: selected Coup enables its native action.
+        441423 => 441776,
         // simc_apl: Malefic Grasp — SimC76f8118 sc_warlock_init.cpp181–183/sc_warlock_actions.cpp2100.
         1261149 => 1261153,
         _ => requested,

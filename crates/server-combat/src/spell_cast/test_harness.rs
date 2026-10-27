@@ -46,6 +46,23 @@ pub struct ObservedCombatEvents(pub Vec<CombatLogEvent>);
 #[derive(Resource, Default)]
 pub struct ObservedTriggeredCasts(pub Vec<(Entity, u32, Option<Entity>)>);
 
+/// Native travel discarded because the target changed alive/world state before landing.
+#[derive(Debug)]
+pub struct DiscardedSpellHit {
+    pub caster: Entity,
+    pub spell_id: u32,
+    pub target: Entity,
+    pub launched_at: f64,
+    pub due_at: f64,
+    pub discarded_at: f64,
+    pub alive_at_launch: bool,
+    pub exists_now: bool,
+    pub alive_now: bool,
+}
+
+#[derive(Resource, Default)]
+pub struct ObservedDiscardedSpellHits(pub Vec<DiscardedSpellHit>);
+
 /// Actual impact-resolution TargetInfo order, including misses; read-only opt-in.
 #[derive(Resource, Default)]
 pub struct ObservedSelectedTargets(pub Vec<(Entity, u32, Vec<Entity>)>);
@@ -576,9 +593,20 @@ pub fn harness_with_native_enemy_dodge_reduction(
     ids: &[u32],
     class: u8,
 ) -> Option<Harness> {
+    harness_with_native_enemy_dodge_reduction_and_plugins(extra, ids, class, |_| {})
+}
+
+/// The same native fixture, installing host plugins before Startup and native auras.
+#[cfg(any(test, feature = "test-support"))]
+pub fn harness_with_native_enemy_dodge_reduction_and_plugins(
+    extra: Vec<SpellInfo>,
+    ids: &[u32],
+    class: u8,
+    add_plugins: impl FnOnce(&mut App),
+) -> Option<Harness> {
     let mut spells = ids.to_vec();
     spells.push(SUNWELL_RADIANCE);
-    let mut h = harness(extra, &spells, class)?;
+    let mut h = harness_with_plugins(extra, &spells, class, false, add_plugins)?;
     apply_native_enemy_dodge_reduction(&mut h);
     Some(h)
 }
