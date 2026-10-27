@@ -87,6 +87,8 @@ mod devastation_tests;
 mod devourer_immolation_tests;
 mod devourer_burning_tests;
 #[cfg(test)]
+mod devourer_drain_tests;
+#[cfg(test)]
 mod devourer_tests;
 mod dot_duration_tests;
 mod diag_outlaw_ruthlessness_tests;
