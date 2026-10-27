@@ -362,6 +362,25 @@ fn demonology_guardian_owner_passive_increases_fel_firebolt_crit() {
 }
 
 #[test]
+#[ignore = "requires private266 inputs; capture real Fel Firebolt factors"]
+fn diag_demonology_fel_firebolt_factors() {
+    use crate::spell_cast::effects::factor_capture::FactorCapture;
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(266, 1).unwrap();
+    let imp = summon_native_guardian(&mut run, 104317);
+    let owner = run.app.world().get::<crate::stats::CharacterStats>(run.actor).unwrap();
+    eprintln!("DIAG_IMP_OWNER {owner:?}");
+    eprintln!("DIAG_IMP_OWNER_AURAS {:?}", run.app.world().get::<crate::auras::ActiveAuras>(run.actor));
+    eprintln!("DIAG_IMP_AURAS {:?}", run.app.world().get::<crate::auras::ActiveAuras>(imp));
+    run.app.insert_resource(FactorCapture::new(imp, run.targets[0], 104318, "fel_firebolt", 1));
+    crate::spell_cast::creature_cast(run.app.world_mut(), imp, 104318, Some(run.targets[0]), false).unwrap();
+    for _ in 0..100 { run.app.update(); }
+    let capture = run.app.world().resource::<FactorCapture>().export();
+    eprintln!("DIAG_IMP_FACTORS {capture}");
+    assert!(capture["events"].as_array().unwrap().iter().any(|event| event["event"] == "direct_amount"));
+}
+
+#[test]
 #[ignore = "requires private266 inputs; actual Implosion retirement and native explosion"]
 fn demonology_implosion_consumes_actual_imps_and_deals_native_damage() {
     let _seed = crate::random::seed_scope(70448);
