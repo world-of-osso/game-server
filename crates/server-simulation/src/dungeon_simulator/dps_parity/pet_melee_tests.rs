@@ -318,7 +318,9 @@ fn dps_parity_pet_melee_owner_only_melee_ap_buff_does_not_change_swings() {
     // Native70831 Maelstrom Power: caster-only aura166 +20%, no aura167,
     // party/pet recipient, extra attack, trigger or damage effect.
     const MELEE_ONLY_AP: u32 = 70831;
+    let _seed = crate::random::seed_scope(70_448);
     let (mut run, pet) = super::power_tests::prepare_hunter_and_pet();
+    super::channel_timing_tests::remove_equipped_proc_drivers(&mut run);
     let before = normalized_pet_swings(&mut run, pet, 1);
     let owner = run.actor;
     let initial = *run
