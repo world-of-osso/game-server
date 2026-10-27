@@ -656,6 +656,15 @@ pub(crate) struct AutoAttackParams<'w, 's> {
         &'static crate::hunter_pet::HunterPet,
         With<crate::hunter_pet_stats::HunterInheritedStats>,
     >,
+    demon_pets: Query<
+        'w,
+        's,
+        (
+            &'static crate::hunter_pet::HunterPet,
+            &'static shared::components::Npc,
+        ),
+        With<crate::hunter_pet::SummonedDemon>,
+    >,
     owner_stats: Query<
         'w,
         's,
@@ -676,14 +685,23 @@ pub(crate) struct AutoAttackParams<'w, 's> {
     commands: Commands<'w, 's>,
 }
 
-/// Live owner crit for native Hunter pets and executing guardians.
+/// Live owner crit for native controlled pets and executing guardians.
 /// SimC76f8118 pet.cpp217–220: the shared source serves swings and spells.
 pub fn read_pet_owner_critical_chance(world: &World, unit: Entity) -> Option<f32> {
     let owner = if let Some(owner) = crate::spell_cast::guardian::stat_owner(world, unit) {
         owner
     } else {
-        world.get::<crate::hunter_pet_stats::HunterInheritedStats>(unit)?;
-        world.get::<crate::hunter_pet::HunterPet>(unit)?.owner
+        let pet = world.get::<crate::hunter_pet::HunterPet>(unit)?;
+        if world
+            .get::<crate::hunter_pet_stats::HunterInheritedStats>(unit)
+            .is_none()
+            && world
+                .get::<crate::hunter_pet::SummonedDemon>(unit)
+                .is_none()
+        {
+            return None;
+        }
+        pet.owner
     };
     Some(
         world
@@ -757,6 +775,21 @@ fn auto_attack_unit(
             .get(pet.owner)
             .expect("native Hunter pet owner requires CharacterStats for inherited melee")
     });
+    // SimC76f8118 sc_warlock_pets.cpp421–430: the same live owner-SP
+    // policy used by pet spells also supplies the controlled demon's melee AP.
+    let demon_owner_ap = params
+        .demon_pets
+        .get(attacker_entity)
+        .ok()
+        .and_then(|(pet, npc)| {
+            let (_, share) =
+                crate::spell_cast::guardian::controlled_pet_power_shares(npc.template_id)?;
+            let (owner, _) = params
+                .owner_stats
+                .get(pet.owner)
+                .expect("owner-scaled demon requires native CharacterStats");
+            Some(owner.spell_power.max(0.0) * share)
+        });
     let attacker = Attacker {
         entity: attacker_entity,
         position: &snapshot.position,
@@ -770,9 +803,11 @@ fn auto_attack_unit(
         form_attack_time: snapshot.form_attack_time,
         creature_flags: snapshot.creature_flags.as_ref(),
         temp_summoner: snapshot.temp_summoner,
-        hunter_owner_ap: hunter_owner.map(|(owner, modifiers)| {
-            crate::hunter_pet_stats::owner_bonus_attack_power(owner, modifiers)
-        }),
+        hunter_owner_ap: hunter_owner
+            .map(|(owner, modifiers)| {
+                crate::hunter_pet_stats::owner_bonus_attack_power(owner, modifiers)
+            })
+            .or(demon_owner_ap),
         // SimC76f8118 pet.cpp217–220: read live owner crit, not template base5%.
         hunter_owner_crit_pct: owner_crit,
         spirit_wolf: params.spirit_wolves.get(attacker_entity).ok().map(|wolf| {
