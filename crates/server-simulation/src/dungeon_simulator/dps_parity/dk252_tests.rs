@@ -264,7 +264,6 @@ fn dk252_lord_magus_uses_selected_native_lifetime() {
         ),
     )
     .unwrap();
-    preparation::finish_pending_setup(&mut run).unwrap();
     let magus = (0..100)
         .find_map(|_| {
             run.app.update();
