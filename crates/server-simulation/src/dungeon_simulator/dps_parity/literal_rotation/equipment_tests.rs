@@ -227,6 +227,19 @@ fn literal_equipment_devourer_freightrunners_flask_unset_default() {
 }
 
 #[test]
+#[ignore = "requires the native spec1480 selected profile and item catalog"]
+fn literal_equipment_devourer_gebbo_unset_default() {
+    let mut world = load_world();
+    let actor = equip_reference_profile(&mut world, 1480);
+    // SimC76f8118 unique_gear_midnight.cpp3666–3734 creates the six stat
+    // buffs without a default_value; unique_gear.cpp3776–3788 takes max with zero.
+    assert_eq!(
+        read_facts(&world, actor, &["trinket.2.proc.any_dps.default_value"]),
+        vec![Ok(0.0)]
+    );
+}
+
+#[test]
 #[ignore = "unqualified native script default must stay named rather than inventing a value"]
 fn literal_equipment_native_unqualified_proc_default_value_is_explicit() {
     let mut world = load_world();
