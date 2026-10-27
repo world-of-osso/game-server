@@ -59,6 +59,19 @@ fn havoc_hunt_applies_native_dot_to_each_nearby_enemy() {
             "Hunt uses its native five-target cap"
         );
     }
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(577, 3).unwrap();
+    let far = run.targets[2];
+    run.app.world_mut().get_mut::<Position>(far).unwrap().x += 200.0;
+    cast(&mut run, 370965, false);
+    preparation::finish_pending_setup(&mut run).unwrap();
+    advance(&mut run, 80);
+    assert!(
+        damage(&run, Some(370969))
+            .iter()
+            .all(|event| event.target != Some(far.to_bits())),
+        "Hunt must not apply the native DoT outside its hostile range"
+    );
 }
 
 #[test]
