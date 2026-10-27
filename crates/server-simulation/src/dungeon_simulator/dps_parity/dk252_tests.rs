@@ -130,6 +130,47 @@ fn dk252_scourge_strike_commands_active_army_ghouls() {
 
 #[test]
 #[ignore = "requires private native252 profile/traits and player actor"]
+fn dk252_army_death_order_inherits_owner_melee_power() {
+    use crate::spell_cast::effects::factor_capture::FactorCapture;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 1).unwrap();
+    engage(&mut run);
+    literal_rotation::execution::execute(
+        run.app.world_mut(), run.actor,
+        literal_rotation::execution::Execution::Spell(42650, run.actor, None),
+    ).unwrap();
+    for _ in 0..100 { run.app.update(); }
+    let ghoul = {
+        let world = run.app.world_mut();
+        world.query::<(Entity, &crate::spell_cast::summon::SummonedCreature)>()
+            .iter(world).find_map(|(entity, summon)|
+                (summon.owner == run.actor && summon.spell_id == 1294026).then_some(entity)
+            ).expect("actual Army ghoul must exist")
+    };
+    run.app.world_mut().get_mut::<crate::stats::CharacterStats>(run.actor).unwrap().attack_power += 10_000.0;
+    let world = run.app.world();
+    let expected = world.get::<crate::stats::CharacterStats>(run.actor).unwrap().total_attack_power(
+        crate::stats::WeaponAttackType::MainHand, world.get::<crate::stats::StatModifiers>(run.actor),
+    ) * 0.180431625 * 1.4
+        * (1.0 + crate::spell_cast::scripts::script_effect_value(world, run.actor, 1265971, 4) / 100.0);
+    run.app.insert_resource(FactorCapture::new(ghoul, run.targets[0], 1294264, "death_order", 1));
+    assert!(crate::spell_cast::try_cast_triggered(run.app.world_mut(), ghoul, 1294264, Some(run.targets[0]), 1));
+    for _ in 0..100 {
+        run.app.update();
+        let capture = run.app.world().resource::<FactorCapture>().export();
+        if let Some(power) = capture["events"].as_array().unwrap().iter()
+            .find(|event| event["event"] == "direct_amount" && event["spell_id"] == 1294264)
+            .and_then(|event| event["factors"]["a_power"].as_f64()) {
+            assert!((power - f64::from(expected)).abs() < 1.0,
+                "actual Army order must inherit selected owner melee AP: actual={power}, expected={expected}");
+            return;
+        }
+    }
+    panic!("the actual Army ghoul must land Death Order");
+}
+
+#[test]
+#[ignore = "requires private native252 profile/traits and player actor"]
 fn dk252_scourge_strike_commands_army_epidemic_on_three_targets() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(252, 3).unwrap();
