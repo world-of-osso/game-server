@@ -31,6 +31,56 @@ fn shared_fixture_displacement_preserves_unowned_movement_without_melee_intent()
 
 #[test]
 #[ignore = "requires prepared native spec577 player profile"]
+fn havoc_retreat_returns_during_movable_eye_beam() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(577, 1).unwrap();
+    havoc_tests::start_havoc_swings(&mut run);
+    let actor = run.actor;
+    let target = run.targets[0];
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        actor,
+        literal_rotation::execution::Execution::Spell(198793, actor, Some(target)),
+    )
+    .unwrap();
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        actor,
+        literal_rotation::execution::Execution::Spell(198013, actor, Some(target)),
+    )
+    .unwrap();
+    let mut landed_at = None;
+    let mut returned_during_channel = false;
+    for _ in 0..80 {
+        run.app.update();
+        let world = run.app.world();
+        let channel = world
+            .get::<shared::casting::CastState>(actor)
+            .is_some_and(|cast| cast.spell_id == 198013 && cast.cast_while_moving);
+        let controlled = world
+            .get::<shared::components::MovementControl>(actor)
+            .is_some_and(|control| control.controlled);
+        let pos = world.get::<Position>(actor).unwrap();
+        if channel && !controlled {
+            let first = landed_at.get_or_insert(pos.x);
+            if pos.x > *first + 0.1 {
+                returned_during_channel = true;
+                break;
+            }
+        }
+    }
+    assert!(
+        landed_at.is_some(),
+        "Retreat must land while the movable Eye Beam channel is active"
+    );
+    assert!(
+        returned_during_channel,
+        "after Retreat lands the actor must walk back during movable Eye Beam"
+    );
+}
+
+#[test]
+#[ignore = "requires prepared native spec577 player profile"]
 fn shared_fixture_displacement_returns_to_melee_after_real_retreat() {
     let _seed = crate::random::seed_scope(70_448);
     let mut run = prepare_literal(577, 1).unwrap();
