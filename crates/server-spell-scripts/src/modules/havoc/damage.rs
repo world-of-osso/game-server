@@ -28,8 +28,15 @@ fn chaotic_disposition_parameters(
     spell: &combat::spell_info::SpellInfo,
 ) -> Option<(u32, f32, f32)> {
     const TALENT: u32 = 428492;
+    const DEMON_HUNTER_CLASS_SET: u32 = 107;
     const CHROMATIC: u32 = 0x7c;
-    if !super::has_talent(world, caster, TALENT) || matches!(spell.id, 370965 | 370966 | 370969) {
+    if !super::has_talent(world, caster, TALENT)
+        || !spell
+            .class_options
+            .as_ref()
+            .is_some_and(|options| options.spell_class_set == DEMON_HUNTER_CLASS_SET)
+        || matches!(spell.id, 370965 | 370966 | 370969)
+    {
         return None;
     }
     if spell.id != 213243 && spell.school_mask() & CHROMATIC != CHROMATIC {

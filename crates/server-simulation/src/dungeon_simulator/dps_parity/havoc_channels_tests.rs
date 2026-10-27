@@ -200,25 +200,32 @@ fn havoc_chaotic_disposition_rolls_real_chaos_hits_but_not_hunt() {
         assert!(hits.iter().all(|hit| !hit.crit));
         hits.into_iter().map(|hit| hit.amount).collect()
     }
-    let baseline = hits(222031, false);
-    let selected = hits(222031, true);
-    let bonuses: Vec<_> = selected
-        .iter()
-        .zip(&baseline)
-        .map(|(with, without)| *with as f64 / *without as f64)
-        .collect();
-    assert!(
-        bonuses.iter().any(|ratio| (*ratio - 1.0).abs() < 0.001),
-        "some real hits must not proc: {bonuses:?}"
-    );
-    assert!(
-        bonuses.iter().any(|ratio| (*ratio - 1.17).abs() < 0.001),
-        "native17% bonus must occur on real chaos hits: {bonuses:?}"
-    );
+    for spell in [222031, 213243] {
+        let baseline = hits(spell, false);
+        let selected = hits(spell, true);
+        let bonuses: Vec<_> = selected
+            .iter()
+            .zip(&baseline)
+            .map(|(with, without)| *with as f64 / *without as f64)
+            .collect();
+        assert!(
+            bonuses.iter().any(|ratio| (*ratio - 1.0).abs() < 0.001),
+            "some real {spell} hits must not proc: {bonuses:?}"
+        );
+        assert!(
+            bonuses.iter().any(|ratio| (*ratio - 1.17).abs() < 0.001),
+            "native17% bonus must occur on real {spell} hits: {bonuses:?}"
+        );
+    }
     assert_eq!(
         hits(370966, false),
         hits(370966, true),
         "The Hunt is excluded by source"
+    );
+    assert_eq!(
+        hits(66528, false),
+        hits(66528, true),
+        "a chromatic non-Demon-Hunter spell is not a Demon Hunter action"
     );
 }
 
