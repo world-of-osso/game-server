@@ -34,6 +34,7 @@ fn register(scripts: &mut AuraScripts) {
         META,
         AuraScript {
             on_apply: Some(grant_entry_fury),
+            on_remove: Some(super::devourer_voidblade::clear_reapers_replacement),
             ..Default::default()
         },
     );
@@ -56,6 +57,8 @@ fn grant_entry_fury(world: &mut World, unit: Entity, aura: &AuraInstance) {
     if unit != aura.caster || world.get::<ActiveSpec>(unit).map(|spec| spec.0) != Some(1480) {
         return;
     }
+    // SimC76f8118 cpp6777 makes an already-ready Hungering Slash usable in Meta.
+    super::devourer_voidblade::grant_reapers_replacement(world, unit);
     // SimC76f8118 sc_demon_hunter.cpp9192–9195 consumes the soul stack on entry.
     // The native admission aura represents that same readiness.
     auras::remove_auras(world, unit, RemoveReason::Consumed, |aura| {
