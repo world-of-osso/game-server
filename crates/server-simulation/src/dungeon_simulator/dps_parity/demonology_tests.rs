@@ -1126,6 +1126,30 @@ fn summon_native_guardian(run: &mut Run, root: u32) -> Entity {
     panic!("native guardian root{root} must spawn within five seconds");
 }
 
+#[test]
+#[ignore = "requires private266 inputs; Carnivorous Stalkers actual melee proc"]
+fn demonology_dreadstalker_melee_earns_extra_dreadbites() {
+    use shared::protocol::CombatLogKind;
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(266, 1).unwrap();
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, 386194));
+    engage(&mut run);
+    run.app.world_mut().entity_mut(run.actor).insert(crate::networking::CombatTarget(Some(run.targets[0])));
+    for _ in 0..20 {
+        crate::spell_cast::creature_cast(run.app.world_mut(), run.actor, 193331, Some(run.actor), true).unwrap();
+    }
+    let dogs: Vec<_> = run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0.iter()
+        .filter(|event| event.source == Some(run.actor.to_bits()) && event.spell_id == Some(193331) && event.kind == CombatLogKind::Summon)
+        .map(|event| event.target.unwrap()).collect();
+    assert_eq!(dogs.len(), 20);
+    for _ in 0..300 { run.app.update(); }
+    let events = &run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
+    let swings = events.iter().filter(|event| event.source.is_some_and(|source| dogs.contains(&source)) && event.spell_id.is_none() && event.kind == CombatLogKind::Damage).count();
+    let bites = events.iter().filter(|event| event.source.is_some_and(|source| dogs.contains(&source)) && event.spell_id == Some(271971) && event.kind == CombatLogKind::CastSuccess).count();
+    assert!(swings > 0, "actual Dreadstalkers must melee");
+    assert!(bites > dogs.len(), "selected Carnivorous Stalkers must earn extra real Dreadbites: dogs={} swings={swings} bites={bites}", dogs.len());
+}
+
 fn summon_native_dreadstalker(run: &mut Run) -> Entity {
     summon_native_guardian(run, 193331)
 }
