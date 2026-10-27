@@ -49,7 +49,6 @@ fn native_bm_natures_ally_empowers_real_pet_command() {
         assert!(!crate::auras::has_aura(run.app.world(), run.actor, 471878));
     }
     let receipt = run.app.world().resource::<FactorCapture>().export();
-    eprintln!("KC_OWNER_DIAGNOSTIC {}", receipt);
     let events = receipt["events"].as_array().unwrap();
     let results: Vec<_> = events
         .iter()
