@@ -6,7 +6,7 @@ use combat::auras::{self, ActiveAuras, AuraApplication, AuraSource, RemoveReason
 use combat::random::Rng;
 use combat::spell_cast::effects::EffectCtx;
 use combat::spell_cast::script_registry::SpellScriptHook;
-use combat::spell_cast::scripts::script_effect_value;
+use combat::spell_cast::scripts::{reduce_cooldown, script_effect_value};
 use combat::spell_info::SpellInfo;
 use shared::components::ActiveSpec;
 
@@ -19,6 +19,8 @@ const KILL_COMMAND: u32 = 259489;
 const TIP_TALENT: u32 = 260285;
 const TIP: u32 = 260286;
 const PRIMAL_SURGE: u32 = 1272154;
+const WILDFIRE_BOMB: u32 = 259495;
+const WILDFIRE_INFUSION: u32 = 460198;
 const RAPTOR_STRIKE: u32 = 186270;
 const RAPTOR_SWIPE: u32 = 1262293;
 const SWIPE_BUFF: u32 = 1273155;
@@ -49,7 +51,12 @@ fn after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
         return;
     }
     match spell.id {
-        KILL_COMMAND if has_talent(world, caster, TIP_TALENT) => grant_tip(world, caster),
+        KILL_COMMAND => {
+            if has_talent(world, caster, TIP_TALENT) {
+                grant_tip(world, caster);
+            }
+            reduce_bomb_recovery(world, caster);
+        }
         RAPTOR_STRIKE => roll_swipe(world, caster),
         RAPTOR_SWIPE => {
             // SimC76f8118 sc_hunter.cpp6188: the actual upgraded execution
@@ -72,6 +79,15 @@ fn grant_tip(world: &mut World, caster: Entity) {
     };
     for _ in 0..=extra {
         apply_self(world, caster, TIP);
+    }
+}
+
+fn reduce_bomb_recovery(world: &mut World, caster: Entity) {
+    // SimC76f8118 sc_hunter.cpp6622/7776: each actual Kill Command shortens
+    // Wildfire Bomb's running recovery by selected Wildfire Infusion effect1.
+    if has_talent(world, caster, WILDFIRE_INFUSION) {
+        let seconds = f64::from(script_effect_value(world, caster, WILDFIRE_INFUSION, 0)) / 1000.0;
+        reduce_cooldown(world, caster, WILDFIRE_BOMB, seconds);
     }
 }
 
