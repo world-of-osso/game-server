@@ -64,9 +64,36 @@ fn devourer_selected_demonsurge_admits_pierce_in_meta() {
                     && event.kind == CombatLogKind::CastSuccess
             })
         {
-            return;
+            break;
         }
         run.app.update();
     }
-    panic!("admitted native Pierce must execute");
+    assert!(
+        run.app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|event| event.source == Some(actor.to_bits())
+                && event.spell_id == Some(1245483)
+                && event.kind == CombatLogKind::CastSuccess),
+        "admitted native Pierce must execute"
+    );
+    for _ in 0..40 {
+        run.app.update();
+    }
+    // SimC76f8118 cpp5830–5856,5874–5889: Pierce inherits Voidblade's damage child.
+    assert!(
+        run.app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|event| event.source == Some(actor.to_bits())
+                && event.spell_id == Some(1245414)
+                && event.kind == CombatLogKind::Damage
+                && event.target == Some(target.to_bits())
+                && event.amount > 0),
+        "real Pierce must deliver native Voidblade child damage"
+    );
 }
