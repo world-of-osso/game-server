@@ -73,10 +73,10 @@ pub(super) fn expected_charge_bonus(run: &Run, spell: u32) -> f32 {
         mastery > 0.0 && prodigious > 0.0,
         "native fixture must exercise Savant and Prodigious Savant"
     );
-    // SimC76f8118 sc_mage.cpp2076–2083: mastery augments the per-charge
-    // term; Prodigious Savant multiplies mastery, not the base charge bonus.
-    (effect(36032, index).base_points
-        + mastery * effect(190740, index + 1).bonus_coefficient * (1.0 + prodigious / 100.0))
+    // SimC76f8118 sc_mage.cpp2076–2083 multiplies the mastery term; its
+    // affecting-aura pass also raises 36032 base points (debug: 90→108, 60→72).
+    (effect(36032, index).base_points + mastery * effect(190740, index + 1).bonus_coefficient)
+        * (1.0 + prodigious / 100.0)
         / 100.0
 }
 

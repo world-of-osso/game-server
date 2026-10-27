@@ -1,6 +1,8 @@
 //! SimC76f8118 sc_rogue.cpp7489–7501/8554–8575/11182–11195:
 //! Shadow Dance expiry earns a decaying, per-landed-hit Shadow residual.
 use super::{cast_relationships::has_talent, combat};
+#[path = "subtlety_focus.rs"]
+mod subtlety_focus;
 use bevy::prelude::*;
 use combat::auras::scripts::AuraScripts;
 use combat::auras::{self, ActiveAuras, AuraInstance, AuraSource, RemoveReason};
@@ -16,9 +18,11 @@ use shared::components::ActiveSpec;
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::LateAuraRegistration(register),
     SpellScriptHook::ResolvedDamage(after_damage),
+    SpellScriptHook::AfterAuraApplication(subtlety_focus::grant),
+    SpellScriptHook::LateAuraRegistration(subtlety_focus::register),
 ];
 
-const DANCE: u32 = 185313;
+use subtlety_focus::DANCE;
 const TALENT: u32 = 382524;
 const LINGERING: u32 = 385960;
 const RESIDUAL: u32 = 386081;
@@ -26,7 +30,7 @@ const TIER: u32 = 1296593;
 const SHADOW_SCHOOL: u32 = 32;
 
 fn register(scripts: &mut AuraScripts) {
-    scripts.0.entry(DANCE).or_default().on_remove = Some(earn_lingering);
+    scripts.0.entry(DANCE).or_default().on_remove = Some(end_dance);
     let script = scripts.0.entry(LINGERING).or_default();
     script.on_apply = Some(start_decay);
     script.on_periodic = Some(decay_tick);
@@ -37,6 +41,11 @@ fn selected(world: &World, caster: Entity) -> bool {
         .get::<ActiveSpec>(caster)
         .is_some_and(|spec| spec.0 == 261)
         && has_talent(world, caster, TALENT)
+}
+
+fn end_dance(world: &mut World, unit: Entity, aura: &AuraInstance, reason: RemoveReason) {
+    subtlety_focus::expire(world, unit);
+    earn_lingering(world, unit, aura, reason);
 }
 
 fn earn_lingering(world: &mut World, unit: Entity, aura: &AuraInstance, _reason: RemoveReason) {
@@ -133,7 +142,7 @@ pub(super) fn shadow_multiplier(world: &World, ctx: &EffectCtx) -> f32 {
 }
 
 pub(super) fn darkness_multiplier(world: &World, caster: Entity) -> f32 {
-    // sc_rogue.cpp8569–8572: Lingering Darkness is scripted, absent from the whitelist.
+    // sc_rogue.cpp8569–8572/10994: Subtlety's direct mod is effect2, scripted here.
     if !has_talent(world, caster, 457056) {
         return 1.0;
     }
@@ -141,7 +150,7 @@ pub(super) fn darkness_multiplier(world: &World, caster: Entity) -> f32 {
         let amount = aura
             .effects
             .iter()
-            .find(|effect| effect.index == 0)
+            .find(|effect| effect.index == 1)
             .expect("native Lingering Darkness direct bonus")
             .amount;
         1.0 + amount * f32::from(aura.stacks.max(1)) / 100.0

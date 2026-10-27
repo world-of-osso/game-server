@@ -61,6 +61,8 @@ pub struct AuraStatMods {
     pub pet_melee_time_mult: f32,
     /// MOD_GUARDIAN_DAMAGE_DONE531: only the owner's guardians.
     pub guardian_damage_mult: f32,
+    /// Selected Dire Frenzy385810 effect2 for the owner's DireCritters.
+    pub dire_frenzy_damage_mult: f32,
     /// MOD_RAGE_FROM_DAMAGE_DEALT 213, summed percent (TrinityCore
     /// `GetTotalAuraModifier` in `RewardRage`).
     pub rage_from_damage_dealt_pct: f32,
@@ -145,6 +147,7 @@ impl Default for AuraStatMods {
             pet_damage_mult: 1.0,
             pet_melee_time_mult: 1.0,
             guardian_damage_mult: 1.0,
+            dire_frenzy_damage_mult: 1.0,
             rage_from_damage_dealt_pct: 0.0,
             power_regen_mult: Vec::new(),
             power_regen_flat: Vec::new(),
@@ -635,6 +638,11 @@ fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance) {
             }
             // Mainline55233s4 explicitly supplies Vampiric Blood's max-health percent.
             DUMMY if aura.spell_id == 55233 && effect.index == 3 => stats.max_health_pct += amount,
+            // SimC76f8118 sc_hunter.cpp1877–1882 applies the selected
+            // native effect to DireCritter damage, not every guardian.
+            DUMMY if aura.spell_id == 385810 && effect.index == 1 => {
+                combat.dire_frenzy_damage_mult *= pct(amount);
+            }
             // Unit::GetTotalAuraModifier(SPELL_AURA_MOD_BLOCK_PERCENT) (StatSystem.cpp:499).
             MOD_BLOCK_PERCENT => stats.block_pct += amount,
             // Player::UpdateDodgePercentage adds aura 49 outside rating DR.

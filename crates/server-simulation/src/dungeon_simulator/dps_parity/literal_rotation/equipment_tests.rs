@@ -240,6 +240,23 @@ fn literal_equipment_devourer_gebbo_unset_default() {
 }
 
 #[test]
+#[ignore = "requires the native spec1480 selected profile and item catalog"]
+fn literal_equipment_devourer_buff_and_proc_duration_match() {
+    let mut world = load_world();
+    let actor = equip_reference_profile(&mut world, 1480);
+    let actual = read_facts(&world, actor, &[
+        "trinket.1.proc.any_dps.duration", "trinket.1.buff.any_dps.duration",
+        "trinket.2.proc.any_dps.duration", "trinket.2.buff.any_dps.duration",
+    ]);
+    // SimC76f8118 unique_gear.cpp3750–3764,4288–4345 uses the same
+    // item-stat-buff expression for both spellings. Native Flask lasts 15s.
+    assert_eq!(actual[0], Ok(15.0));
+    assert_eq!(actual[1], actual[0]);
+    assert!(actual[2].is_ok());
+    assert_eq!(actual[3], actual[2]);
+}
+
+#[test]
 #[ignore = "unqualified native script default must stay named rather than inventing a value"]
 fn literal_equipment_native_unqualified_proc_default_value_is_explicit() {
     let mut world = load_world();

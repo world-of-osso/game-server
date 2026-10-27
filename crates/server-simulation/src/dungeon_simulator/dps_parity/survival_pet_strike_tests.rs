@@ -51,7 +51,6 @@ fn assert_owned_tip_strike(seed: u64) -> bool {
         .world()
         .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
         .0;
-    // Native97ad4bea8b seed9 proves a genuine owned strike can be dodged.
     // Count the actual attack outcome, not a fabricated guaranteed hit.
     let strikes = owned_strike_outcomes(&run, pet, 0);
     assert_eq!(

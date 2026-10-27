@@ -296,6 +296,167 @@ fn affliction_sayaad_reacts_to_owner_damage_only_when_not_passive() {
     }
 }
 
+fn sayaad_whiplash_melee(owned: bool) -> (f64, f64) {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_measurement(265, 1).unwrap();
+    let owner = run.actor;
+    let pet = crate::hunter_pet::summoned_pet(run.app.world(), owner).unwrap();
+    let target = run.targets[0];
+    engage(&mut run);
+    run.app
+        .world_mut()
+        .get_mut::<crate::pet_control::PetCharm>(pet)
+        .unwrap()
+        .action_bar[3..7]
+        .fill(0);
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        target,
+        crate::auras::RemoveReason::Consumed,
+        |aura| aura.spell_id == 6360,
+    );
+    let aura_caster = if owned { pet } else { owner };
+    for _ in 0..10 {
+        crate::auras::apply_aura(
+            run.app.world_mut(),
+            &crate::auras::AuraApplication {
+                caster: aura_caster,
+                target,
+                spell_id: 6360,
+                effect_mask: u32::MAX,
+                source: crate::auras::AuraSource::Cast,
+            },
+        );
+    }
+    let aura = run
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(target)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.caster == aura_caster && aura.spell_id == 6360)
+        .unwrap();
+    assert_eq!(aura.stacks, 10);
+    let bonus = f64::from(
+        aura.effects
+            .iter()
+            .find(|effect| effect.index == 1)
+            .unwrap()
+            .amount,
+    ) * f64::from(aura.stacks)
+        / 100.0;
+    crate::pet_control::order_companion_pet(run.app.world_mut(), owner, Some(target));
+    run.app
+        .world_mut()
+        .resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .clear();
+    for _ in 0..280 {
+        run.app.update();
+        let hits: Vec<_> = run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .filter(|event| {
+                event.source == Some(pet.to_bits())
+                    && event.target == Some(target.to_bits())
+                    && event.spell_id.is_none()
+                    && event.kind == shared::protocol::CombatLogKind::Damage
+                    && !event.crit
+                    && !event.glancing
+                    && event.blocked == 0
+                    && event.absorbed == 0
+            })
+            .map(|event| event.amount)
+            .collect();
+        if hits.len() >= 2 {
+            return (
+                hits.iter().map(|&amount| f64::from(amount)).sum::<f64>() / hits.len() as f64,
+                bonus,
+            );
+        }
+    }
+    panic!("actual Sayaad must land two noncritical white hits");
+}
+
+#[test]
+#[ignore = "requires private265 profile and native70448 world DB"]
+fn affliction_sayaad_melee_respects_owned_whiplash() {
+    let (foreign, _) = sayaad_whiplash_melee(false);
+    let (owned, bonus) = sayaad_whiplash_melee(true);
+    // SimC76f8118 sc_warlock_pets.cpp447–452: the owned actual target's
+    // Whiplash stacks affect all Sayaad damage, including real white swings.
+    let ratio = owned / foreign;
+    assert!(
+        (ratio - (1.0 + bonus)).abs() < 0.02,
+        "owned Whiplash melee ratio {ratio}, native expected {}",
+        1.0 + bonus
+    );
+}
+
+#[test]
+#[ignore = "requires private265 profile and native70448 world DB"]
+fn affliction_sayaad_melee_uses_owner_hit_and_expertise() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_measurement(265, 1).unwrap();
+    let pet = crate::hunter_pet::summoned_pet(run.app.world(), run.actor).unwrap();
+    let target = run.targets[0];
+    engage(&mut run);
+    crate::pet_control::order_companion_pet(run.app.world_mut(), run.actor, Some(target));
+    run.app
+        .world_mut()
+        .resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .clear();
+    for _ in 0..12000 {
+        run.app.update();
+        let events = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0;
+        let swings: Vec<_> = events
+            .iter()
+            .filter(|event| {
+                event.source == Some(pet.to_bits())
+                    && event.target == Some(target.to_bits())
+                    && event.spell_id.is_none()
+                    && matches!(
+                        event.kind,
+                        shared::protocol::CombatLogKind::Damage
+                            | shared::protocol::CombatLogKind::Miss(_)
+                    )
+            })
+            .collect();
+        if swings.len() < 150 {
+            continue;
+        }
+        let avoided = swings
+            .iter()
+            .filter(|event| {
+                matches!(
+                    event.kind,
+                    shared::protocol::CombatLogKind::Miss(
+                        shared::protocol::MissKind::Miss | shared::protocol::MissKind::Dodge
+                    )
+                )
+            })
+            .count();
+        // SimC76f8118 pet.cpp414–420 inherits owner hit and expertise;
+        // the qualified level90 owner has 7.5% of each against level93.
+        assert_eq!(
+            avoided,
+            0,
+            "actual Sayaad white swings must retain owner hit and expertise: {avoided} avoided of {}",
+            swings.len()
+        );
+        return;
+    }
+    panic!("actual Sayaad must attempt 150 white swings");
+}
+
 #[test]
 #[ignore = "requires private265 profile and native70448 world DB"]
 fn affliction_sayaad_melee_uses_owner_critical_chance() {

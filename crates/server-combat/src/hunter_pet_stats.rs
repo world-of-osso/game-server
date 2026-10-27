@@ -32,6 +32,31 @@ pub(crate) fn owner_bonus_attack_power(
         .trunc()
 }
 
+/// SimC76f8118 sc_hunter.cpp2791–2799/3192–3199: selected Go for the
+/// Throat scales the critical bonus of real Kill Command pet actions.
+pub(crate) fn command_critical_bonus_multiplier(world: &World, actor: Entity, spell: u32) -> f32 {
+    let owner = match spell {
+        83381 if world.get::<HunterInheritedStats>(actor).is_some() => {
+            world.get::<HunterPet>(actor).map(|pet| pet.owner)
+        }
+        1232922 => world
+            .get::<crate::spell_cast::summon::SummonedCreature>(actor)
+            .filter(|summon| crate::auras::summon_damage::is_dire_critter(summon))
+            .map(|summon| summon.owner),
+        _ => None,
+    };
+    let Some(owner) = owner.filter(|owner| crate::auras::has_aura(world, *owner, 459550)) else {
+        return 1.0;
+    };
+    let critical = world
+        .get::<CharacterStats>(owner)
+        .expect("hunter pet owner requires native CharacterStats")
+        .crit_pct
+        / 100.0;
+    let bonus = crate::spell_cast::scripts::script_effect_value(world, owner, 459550, 1) / 100.0;
+    1.0 + bonus * critical
+}
+
 fn owner_bonus_health(owner: &CharacterStats) -> f32 {
     // Guardian::UpdateStats stores the resulting stat as int32 before HP math.
     (owner.primary.stamina * OWNER_STAMINA_FRACTION).trunc() * HEALTH_PER_BONUS_STAMINA

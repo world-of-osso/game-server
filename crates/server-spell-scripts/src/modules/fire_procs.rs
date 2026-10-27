@@ -389,14 +389,15 @@ fn scald_damage_multiplier(
     target: Entity,
     spell: &SpellInfo,
 ) -> f32 {
-    let (bonus_effect, threshold) = match spell.id {
-        133 => (0, script_effect_value(world, caster, SCALD, 2)),
-        SCORCH => (1, script_effect_value(world, caster, SCORCH, 1)),
-        _ => return 1.0,
-    };
-    if !selected(world, caster, SCALD) {
+    // Unselected casters, including NPC Fireballs, never read Scald values.
+    if !matches!(spell.id, 133 | SCORCH) || !selected(world, caster, SCALD) {
         return 1.0;
     }
+    let (bonus_effect, threshold) = if spell.id == 133 {
+        (0, script_effect_value(world, caster, SCALD, 2))
+    } else {
+        (1, script_effect_value(world, caster, SCORCH, 1))
+    };
     // SimC76f8118 sc_mage.cpp2293–2304/3866–3868/5066–5069:
     // native Scald amounts and health gates; admitted Heat Shimmer also
     // enables Scorch execute after that earned buff was consumed at launch.

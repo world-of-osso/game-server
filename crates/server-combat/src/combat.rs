@@ -699,6 +699,13 @@ pub(crate) struct AutoAttackParams<'w, 's> {
 pub fn read_pet_owner_critical_chance(world: &World, unit: Entity) -> Option<f32> {
     let owner = if let Some(owner) = crate::spell_cast::guardian::stat_owner(world, unit) {
         owner
+    } else if let Some(summon) = world
+        .get::<crate::spell_cast::summon::SummonedCreature>(unit)
+        .filter(|summon| crate::auras::summon_damage::is_dire_critter(summon))
+    {
+        // SimC76f8118 pet.cpp217–220: DireCritters inherit live owner crit
+        // even when they have no autonomous guardian spell list.
+        summon.owner
     } else {
         let pet = world.get::<crate::hunter_pet::HunterPet>(unit)?;
         if world
@@ -720,6 +727,36 @@ pub fn read_pet_owner_critical_chance(world: &World, unit: Entity) -> Option<f32
     )
 }
 
+// SimC76f8118 pet.cpp414–420: pets inherit the mean of their owner's
+// attack hit and expertise, including the class actor's 7.5% baselines.
+pub(crate) fn read_pet_owner_hit_expertise(world: &World, unit: Entity) -> Option<f32> {
+    let owner = crate::spell_cast::guardian::stat_owner(world, unit)
+        .or_else(|| {
+            world
+                .get::<crate::hunter_pet::HunterPet>(unit)
+                .map(|pet| pet.owner)
+        })
+        .or_else(|| {
+            world
+                .get::<crate::spell_cast::summon::SummonedCreature>(unit)
+                .filter(|summon| summon.properties.is_guardian())
+                .map(|summon| summon.owner)
+        })?;
+    let player = world.get::<shared::components::Player>(owner).is_some();
+    let follower = world.get::<crate::followers::Follower>(owner).is_some();
+    let baseline = if player || follower { 7.5 } else { 0.0 };
+    let hit = baseline
+        + world
+            .get::<AuraStatMods>(owner)
+            .map_or(0.0, |mods| mods.melee_hit_chance_pct);
+    let expertise = crate::auras::combat_stats::class_actor_expertise_reduction(
+        world.get::<crate::auras::ActiveAuras>(owner),
+        player,
+        follower,
+    );
+    Some((hit + expertise) * 0.5)
+}
+
 /// Process auto-attacks: tick timers, deal damage when in range and timer ready.
 pub(crate) fn auto_attack_system(world: &mut World) {
     let attackers: Vec<Entity> = world
@@ -730,14 +767,18 @@ pub(crate) fn auto_attack_system(world: &mut World) {
         // Apply this attacker's commands before the next attacker reads mitigation.
         // In particular, consuming Ardent also removes its30% damage reduction now.
         let owner_crit = read_pet_owner_critical_chance(world, attacker);
+        let owner_hit_expertise = read_pet_owner_hit_expertise(world, attacker);
         world
-            .run_system_cached_with(auto_attack_unit, (attacker, owner_crit))
+            .run_system_cached_with(
+                auto_attack_unit,
+                (attacker, owner_crit, owner_hit_expertise),
+            )
             .expect("auto-attack unit system must have its registered resources");
     }
 }
 
 fn auto_attack_unit(
-    In((attacker_entity, owner_crit)): In<(Entity, Option<f32>)>,
+    In((attacker_entity, owner_crit, owner_hit_expertise)): In<(Entity, Option<f32>, Option<f32>)>,
     time: Res<Time>,
     mut params: AutoAttackParams,
 ) {
@@ -832,7 +873,8 @@ fn auto_attack_unit(
         stats: snapshot.stats.as_ref(),
         haste_pct: snapshot.haste_pct,
         enemy_dodge_pct: snapshot.enemy_dodge_pct,
-        expertise_pct: snapshot.expertise_pct,
+        expertise_pct: snapshot.expertise_pct + owner_hit_expertise.unwrap_or(0.0),
+        pet_owner_hit_expertise: owner_hit_expertise,
         creature: snapshot.creature,
         authored_attack_time: snapshot.authored_attack_time,
         form_attack_time: snapshot.form_attack_time,
@@ -1134,6 +1176,7 @@ pub(crate) struct Attacker<'a> {
     pub spirit_wolf: Option<(&'a crate::spell_cast::guardian::SpiritWolf, f32)>,
     pub hunter_owner_ap: Option<f32>,
     pub hunter_owner_crit_pct: Option<f32>,
+    pub pet_owner_hit_expertise: Option<f32>,
 }
 
 impl Attacker<'_> {
@@ -1486,7 +1529,11 @@ fn read_outcome_chances(
     } else {
         attacker.mods.map_or(0.0, |mods| mods.melee_hit_chance_pct)
     };
-    chances.miss = (base_miss - player_hit_modifier - hit_modifier).clamp(0.0, 100.0);
+    chances.miss = (base_miss
+        - player_hit_modifier
+        - hit_modifier
+        - attacker.pet_owner_hit_expertise.unwrap_or(0.0))
+    .clamp(0.0, 100.0);
     let crit_modifier = target_auras.map_or(0.0, |auras| {
         auras.modifier(crate::auras::handlers::MOD_ATTACKER_MELEE_CRIT_CHANCE)
             + auras.modifier(crate::auras::handlers::MOD_ATTACKER_SPELL_AND_WEAPON_CRIT_CHANCE)
