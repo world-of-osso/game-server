@@ -502,8 +502,12 @@ fn cast_consume(world: &mut World, owner: Entity, specialization: u32, kind: Fra
         (1480, _) => 1266301,
         _ => unreachable!(),
     };
-    combat::spell_cast::cast_triggered(world, owner, spell, Some(owner), 1);
-    if specialization == 1480 {
-        combat::spell_cast::cast_triggered(world, owner, 1223628, Some(owner), 1);
+    if !combat::spell_cast::try_cast_triggered(world, owner, spell, Some(owner), 1) {
+        error!(spell, "Native soul fragment consume refused");
+    }
+    if specialization == 1480
+        && !combat::spell_cast::try_cast_triggered(world, owner, 1223628, Some(owner), 1)
+    {
+        error!("Native Devourer soul energize refused");
     }
 }
