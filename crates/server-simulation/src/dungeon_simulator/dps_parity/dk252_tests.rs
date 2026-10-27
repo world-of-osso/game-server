@@ -109,6 +109,62 @@ fn dk252_real_lesser_ghoul_summon_reaches_and_melees() {
 
 #[test]
 #[ignore = "requires private native252 profile/traits and player actor"]
+fn dk252_lesser_ghoul_melee_inherits_live_owner_attack_power() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 1).unwrap();
+    engage(&mut run);
+    assert!(crate::spell_cast::try_cast_triggered(
+        run.app.world_mut(),
+        run.actor,
+        275430,
+        Some(run.actor),
+        1,
+    ));
+    let ghoul = (0..100)
+        .find_map(|_| {
+            run.app.update();
+            let world = run.app.world_mut();
+            world
+                .query::<(Entity, &shared::components::Npc)>()
+                .iter(world)
+                .find_map(|(entity, npc)| (npc.template_id == 237409).then_some(entity))
+        })
+        .expect("native lesser ghoul must exist");
+    run.app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(run.actor)
+        .unwrap()
+        .attack_power += 10_000.0;
+    for _ in 0..200 {
+        run.app.update();
+    }
+    let hits: Vec<_> = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .iter()
+        .filter(|event| {
+            event.source == Some(ghoul.to_bits())
+                && event.target == Some(run.targets[0].to_bits())
+                && event.kind == CombatLogKind::Damage
+                && event.spell_id.is_none()
+                && event.amount > 0
+        })
+        .map(|event| event.amount)
+        .collect();
+    assert!(
+        !hits.is_empty(),
+        "the real lesser ghoul must land melee hits"
+    );
+    assert!(
+        hits.iter().any(|hit| *hit > 100),
+        "native ghoul swings must include the live owner's melee AP: {hits:?}"
+    );
+}
+
+#[test]
+#[ignore = "requires private native252 profile/traits and player actor"]
 fn dk252_army_cast_summons_real_melee_ghouls() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(252, 1).unwrap();
