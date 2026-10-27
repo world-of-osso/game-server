@@ -57,6 +57,22 @@ fn havoc_volatile_instinct_explodes_on_hard_meta_and_new_demonic_entry() {
             1,
             "selected Volatile Instinct must produce one native Demonsurge on Meta entry from {spell}"
         );
+        if spell == 191427 {
+            advance(&mut run, 40);
+            run.app
+                .world_mut()
+                .resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+                .0
+                .clear();
+            cast(&mut run, 198013, false);
+            preparation::finish_pending_setup(&mut run).unwrap();
+            advance(&mut run, 20);
+            assert_eq!(
+                damage(&run, Some(452416)).len(),
+                1,
+                "Demonic extending Meta must trigger the armed beam, not another Meta-entry explosion"
+            );
+        }
     }
 }
 
