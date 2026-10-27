@@ -745,6 +745,12 @@ def measure_spec(entry, measurement, executable, target, log, tree, previous=Non
                              | {"CARGO_TARGET_DIR": str(target)},
                              text=True, capture_output=True, check=False)
     lines = [line for line in out.stdout.splitlines() if "NATIVE_DPS" in line or "FAILED" in line]
+    # The next measurement of the same spec overwrites the shared --output; keep this entry's
+    # per-spell aggregates so landings stay comparable (2026-10-27: 1480 drop lost its reports).
+    reports = LOGS / f"{entry['id']}.reports"
+    for path in Path(measurement["output"]).glob(f"{measurement['spec']}.native.[0-9].json"):
+        reports.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(path, reports / path.name)
     if any("FAILED" in line for line in lines):
         # Native logs live in the shared --output directory, where the next measurement of the
         # same spec overwrites them (2026-10-27: two 577 failures lost their cause). Keep a copy.

@@ -37,6 +37,16 @@ fn snapshot_tick(world: &mut World, actor: Entity, spell: u32, _: u8) {
     // SimC76f8118 sc_demon_hunter.cpp6354–6367,6420–6427 selects
     // the native child at channel start, not again at each tick.
     let child = if combat::auras::has_aura(world, actor, META) {
+        // SimC76f8118 cpp6368–6372,6419–6427: Meta's effect8 plus selected
+        // Voidpurge effect1 supplies the hasted cooldown absent from the base spell.
+        let mut cooldown = spell_cast::scripts::script_effect_value(world, actor, META, 7);
+        if world
+            .get::<KnownSpells>(actor)
+            .is_some_and(|known| known.contains(1244220))
+        {
+            cooldown += spell_cast::scripts::script_effect_value(world, actor, 1244220, 0);
+        }
+        spell_cast::scripts::start_hasted_cooldown(world, actor, VOID_RAY, cooldown);
         1214595
     } else {
         1213649
