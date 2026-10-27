@@ -192,6 +192,7 @@ Frost player reaction clocks are configured before food setup advances native fr
 ### Subtlety literal fixture
 
 - Deepening Shadows extends earned Shadow Dance duration using the caster's raw haste-rating fraction and native effect value (`sc_rogue.cpp7457–7475`).
+- Selected Lingering Darkness457056 grants native457273 when Shadow Blades expires. Subtlety keeps its effect2/effect4 Shadow mods, label and Dark Brew effects; Assassination's poison effect1/effect3 never apply (`sc_rogue.cpp10924–10932,10982–11010`).
 - Selected Shadow Focus108209 grants native112942 when Stealth, Vanish or Shadow Dance applies and removes it once none remain (`sc_rogue.cpp7345–7362,7381–7390`).
 - Secret Technique's intrinsic delayed clones snapshot the caster's native guardian damage multiplier; the player attack does not (`sc_rogue.cpp5377–5385`).
 - Eligible shadow clones and landed intrinsic Secret Technique clones can earn Shadow Techniques storage and Energy using Ancient Arts' native proc chance; Shadowcraft still controls stacks during Dance (`sc_rogue.cpp3650–3659,5405–5413,8159–8172`).
