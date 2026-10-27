@@ -874,3 +874,21 @@ fn dk252_raise_dead_produces_a_permanent_controlled_melee_pet() {
         "the real pet must reach and attack the selected hostile primary"
     );
 }
+
+#[test]
+#[ignore = "requires native252 profile/traits and player actor"]
+fn dk252_dread_plague_ticks_produce_sudden_doom() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 1).unwrap();
+    engage(&mut run);
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, 49530));
+    assert!(crate::spell_cast::try_cast_triggered(
+        run.app.world_mut(), run.actor, 1240996, Some(run.targets[0]), 1,
+    ));
+    let mut earned = false;
+    for _ in 0..600 {
+        run.app.update();
+        earned |= crate::auras::has_aura(run.app.world(), run.actor, 81340);
+    }
+    assert!(earned, "Dread Plague ticks must earn selected Sudden Doom");
+}
