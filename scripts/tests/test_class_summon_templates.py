@@ -22,6 +22,17 @@ def spawn_fingerprint(conn):
 
 
 class ClassSummonImportTests(unittest.TestCase):
+    def test_huntmaster_call_reaches_both_authentic_companions(self):
+        source = (ROOT / "data/world.db").resolve()
+        with closing(sqlite3.connect(f"file:{source}?mode=ro", uri=True)) as conn:
+            selected = {row[0] for row in conn.execute(retail_content.CLASS_SUMMON_ENTRIES)}
+            for spell, entry, name in ((459733, 228224, "Fenryr"), (459739, 228226, "Hati")):
+                native_entry = conn.execute("""SELECT EffectMiscValue_0 FROM spell_effect
+                    WHERE SpellID=? AND DifficultyID=0 AND Effect=28""", (spell,)).fetchone()[0]
+                self.assertEqual(native_entry, entry)
+                self.assertEqual(conn.execute("SELECT name FROM tdb_creature_template WHERE entry=?", (entry,)).fetchone(), (name,))
+                self.assertIn(entry, selected, f"Huntmaster Call must reach native {name}")
+
     def test_dire_command_reaches_authentic_native_beast(self):
         source = (ROOT / "data/world.db").resolve()
         with closing(sqlite3.connect(f"file:{source}?mode=ro", uri=True)) as conn:
