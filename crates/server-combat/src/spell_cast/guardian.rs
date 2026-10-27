@@ -606,9 +606,11 @@ pub(super) fn update(world: &mut World) {
             continue;
         }
         if wild_imp_exhausted(world, actor) {
-            let owner = world.get::<SummonedCreature>(actor).unwrap().owner;
-            core::on_natural_fade(world, owner);
-            super::summon::despawn_summon(world, actor);
+            if !implosion::start_isolated(world, actor) {
+                let owner = world.get::<SummonedCreature>(actor).unwrap().owner;
+                core::on_natural_fade(world, owner);
+                super::summon::despawn_summon(world, actor);
+            }
         } else {
             cast_on_owner_target(world, actor);
         }
