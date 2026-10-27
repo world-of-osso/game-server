@@ -124,7 +124,12 @@ fn havoc_final_breath_adds_scaled_tick_on_completed_beam() {
             "Final Breath must add exactly one real Eye Beam tick: {hits:?}"
         );
         if selected {
-            let expected = hits[11].amount as f32 * 3.0;
+            let baseline = hits[..12]
+                .iter()
+                .rev()
+                .find(|hit| hit.crit == hits[12].crit)
+                .expect("matching critical result for baseline");
+            let expected = baseline.amount as f32 * 3.0;
             assert!(
                 (hits[12].amount as f32 / expected - 1.0).abs() < 0.03,
                 "Final Breath must use native 300%: {hits:?}"
