@@ -20,6 +20,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AfterQueuedTriggers(consume_due_killing_machine),
     SpellScriptHook::AfterSpellPayment(roll_runic_empowerment),
     SpellScriptHook::AfterPeriodicDamagePolicies(frost_fever_runic_power),
+    SpellScriptHook::LateAuraRegistration(register_breath),
 ];
 
 const KILLING_MACHINE: u32 = 51128;
@@ -233,6 +234,19 @@ fn trigger_obliteration(world: &mut World, caster: Entity) {
     if !spell_cast::try_cast_triggered(world, caster, 281327, Some(caster), 1) {
         warn!(?caster, "Native Obliteration rune grant refused");
     }
+}
+
+fn register_breath(scripts: &mut auras::scripts::AuraScripts) {
+    scripts.0.entry(1249658).or_default().on_remove = Some(breath_ended);
+}
+
+fn breath_ended(world: &mut World, unit: Entity, aura: &auras::AuraInstance, reason: auras::RemoveReason) {
+    if aura.caster != unit || !is_frost(world, unit) || matches!(reason, auras::RemoveReason::Death | auras::RemoveReason::CasterGone | auras::RemoveReason::Evade | auras::RemoveReason::Unlearned) {
+        return;
+    }
+    // SimC76f8118 sc_death_knight.cpp7135–7140: ending Breath grants
+    // the native 1234304 rune amount, except during encounter teardown.
+    spell_cast::cast_triggered(world, unit, 1234304, Some(unit), 1);
 }
 
 fn frost_fever_runic_power(
