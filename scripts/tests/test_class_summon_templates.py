@@ -1,6 +1,7 @@
 """Native class-summon import behavior against an online backup of authentic data."""
 from contextlib import closing
 import hashlib
+import os
 from pathlib import Path
 import sqlite3
 import subprocess
@@ -22,6 +23,32 @@ def spawn_fingerprint(conn):
 
 
 class ClassSummonImportTests(unittest.TestCase):
+    def test_primal_elementals_are_promoted_from_real_native_summons(self):
+        source = Path(os.environ.get("PARITY_262_TEST_DB", ROOT / "data/world.db")).resolve()
+        with tempfile.TemporaryDirectory() as directory:
+            prepared = Path(directory) / "primal.sqlite"
+            with closing(sqlite3.connect(f"file:{source}?mode=ro", uri=True)) as src:
+                with closing(sqlite3.connect(prepared)) as dst:
+                    src.backup(dst)
+            expected = ((118291, 61029, "Primal Fire Elemental"),
+                        (157319, 77942, "Primal Storm Elemental"))
+            with closing(sqlite3.connect(prepared)) as conn, conn:
+                for spell, entry, name in expected:
+                    self.assertEqual(conn.execute("""SELECT EffectMiscValue_0 FROM spell_effect
+                        WHERE SpellID=? AND DifficultyID=0 AND Effect=28""", (spell,)).fetchone(), (entry,))
+                    self.assertEqual(conn.execute("SELECT name FROM tdb_creature_template WHERE entry=?",
+                                                  (entry,)).fetchone(), (name,))
+                    for table, key in (("content_creature_template", "entry"),
+                                       ("content_creature_template_model", "CreatureID"),
+                                       ("content_creature_template_addon", "entry")):
+                        conn.execute(f"DELETE FROM {table} WHERE {key}=?", (entry,))
+            subprocess.run([sys.executable, str(ROOT / "scripts/add_class_summon_templates.py"),
+                            "--db", str(prepared)], check=True, capture_output=True, text=True)
+            with closing(sqlite3.connect(f"file:{prepared}?mode=ro", uri=True)) as conn:
+                for _, entry, name in expected:
+                    self.assertEqual(conn.execute("SELECT name FROM content_creature_template WHERE entry=?",
+                                                  (entry,)).fetchone(), (name,))
+
     def test_huntmaster_call_reaches_both_authentic_companions(self):
         source = (ROOT / "data/world.db").resolve()
         with closing(sqlite3.connect(f"file:{source}?mode=ro", uri=True)) as conn:

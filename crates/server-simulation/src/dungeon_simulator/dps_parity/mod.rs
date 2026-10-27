@@ -81,6 +81,7 @@ spec_drivers! {
     269 => windwalker_rotation,
     577 => havoc_rotation,
     1467 => devastation_rotation,
+    1480 => devourer_rotation,
 }
 
 struct Run {
