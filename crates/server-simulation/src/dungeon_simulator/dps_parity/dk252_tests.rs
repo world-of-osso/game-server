@@ -827,6 +827,22 @@ fn dk252_single_target_uses_dark_transformation_and_putrefy() {
 }
 
 #[test]
+#[ignore = "requires native252 profile/traits and player actor"]
+fn dk252_necrotic_coil_hits_with_physical_and_shadow_children() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 3).unwrap();
+    engage(&mut run);
+    assert!(crate::spell_cast::try_cast_triggered(run.app.world_mut(), run.actor, 1242174, Some(run.targets[0]), 1));
+    for _ in 0..40 { run.app.update(); }
+    let events = &run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
+    for spell in [1242172, 1242178] {
+        let hits = events.iter().filter(|e| e.source == Some(run.actor.to_bits()) && e.spell_id == Some(spell)
+            && e.kind == CombatLogKind::Damage && e.amount > 0).count();
+        assert_eq!(hits, 3, "Necrotic Coil must hit each target once with child {spell}");
+    }
+}
+
+#[test]
 #[ignore = "requires private native252 profile/traits and player actor"]
 fn dk252_raise_dead_produces_a_permanent_controlled_melee_pet() {
     let _seed = crate::random::seed_scope(70448);
@@ -875,18 +891,3 @@ fn dk252_raise_dead_produces_a_permanent_controlled_melee_pet() {
     );
 }
 
-#[test]
-#[ignore = "requires native252 profile/traits and player actor"]
-fn dk252_necrotic_coil_hits_with_physical_and_shadow_children() {
-    let _seed = crate::random::seed_scope(70448);
-    let mut run = prepare_literal(252, 3).unwrap();
-    engage(&mut run);
-    assert!(crate::spell_cast::try_cast_triggered(run.app.world_mut(), run.actor, 1242174, Some(run.targets[0]), 1));
-    for _ in 0..40 { run.app.update(); }
-    let events = &run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
-    for spell in [1242172, 1242178] {
-        let hits = events.iter().filter(|e| e.source == Some(run.actor.to_bits()) && e.spell_id == Some(spell)
-            && e.kind == CombatLogKind::Damage && e.amount > 0).count();
-        assert_eq!(hits, 3, "Necrotic Coil must hit each target once with child {spell}");
-    }
-}
