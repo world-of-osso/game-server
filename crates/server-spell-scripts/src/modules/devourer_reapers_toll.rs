@@ -11,6 +11,10 @@ fn after_launch(world: &mut World, caster: Entity, spell: &SpellInfo) {
     if spell.id != 1245470 || world.get::<ActiveSpec>(caster).map(|spec| spec.0) != Some(1480) {
         return;
     }
+    // SimC76f8118 cpp6742–6744 executes the native Fury child on the parent.
+    if !spell_cast::try_cast_triggered(world, caster, 1239507, Some(caster), 1) {
+        warn!(?caster, "native Reaper's Toll Fury 1239507 was refused");
+    }
     let target = spell
         .cast_primary_target
         .expect("native Reaper's Toll target");
