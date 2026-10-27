@@ -306,6 +306,72 @@ fn dk252_three_real_magi_raise_the_lord_of_the_dead() {
 
 #[test]
 #[ignore = "requires private native252 profile/traits and player actor"]
+fn dk252_real_lord_casts_necrotic_bolt_using_owner_power() {
+    use crate::spell_cast::effects::factor_capture::FactorCapture;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 1).unwrap();
+    engage(&mut run);
+    for _ in 0..2 {
+        literal_rotation::execution::execute(
+            run.app.world_mut(),
+            run.actor,
+            literal_rotation::execution::Execution::Spell(
+                1247378,
+                run.targets[0],
+                Some(run.targets[0]),
+            ),
+        )
+        .unwrap();
+        for _ in 0..50 {
+            run.app.update();
+        }
+    }
+    let lord = {
+        let world = run.app.world_mut();
+        world
+            .query::<(Entity, &shared::components::Npc)>()
+            .iter(world)
+            .find_map(|(actor, npc)| (npc.template_id == 264321).then_some(actor))
+            .expect("three actual Magi must create the native Lord")
+    };
+    let owner = run.actor;
+    let target = run.targets[0];
+    run.app.insert_resource(FactorCapture::new(
+        lord,
+        target,
+        1297086,
+        "lord_necrotic_bolt",
+        1,
+    ));
+    for _ in 0..200 {
+        run.app.update();
+        let capture = run.app.world().resource::<FactorCapture>().export();
+        let Some(calculation) = capture["events"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|event| event["event"] == "direct_amount" && event["spell_id"] == 1297086)
+        else {
+            continue;
+        };
+        let world = run.app.world();
+        let stats = world.get::<crate::stats::CharacterStats>(owner).unwrap();
+        let expected = stats.total_attack_power(
+            crate::stats::WeaponAttackType::MainHand,
+            world.get::<crate::stats::StatModifiers>(owner),
+        ) * 0.4664;
+        let inherited = calculation["factors"]["a_power"].as_f64().unwrap();
+        assert!(
+            (inherited - f64::from(expected)).abs() < 1.0,
+            "actual Lord bolt must inherit owner melee AP: actual={inherited}, expected={expected}"
+        );
+        return;
+    }
+    panic!("the actual Lord must complete a native Necrotic Bolt");
+}
+
+#[test]
+#[ignore = "requires private native252 profile/traits and player actor"]
 fn dk252_lord_magus_uses_selected_native_lifetime() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(252, 1).unwrap();
