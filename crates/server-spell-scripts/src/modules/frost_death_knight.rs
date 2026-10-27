@@ -21,6 +21,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AfterSpellPayment(roll_runic_empowerment),
     SpellScriptHook::AfterPeriodicDamagePolicies(frost_fever_runic_power),
     SpellScriptHook::LateAuraRegistration(register_breath),
+    SpellScriptHook::ResolvedDamage(frostreaper_impact),
 ];
 
 const KILLING_MACHINE: u32 = 51128;
@@ -35,7 +36,7 @@ const EMPOWER_RUNE_WEAPON: u32 = 47568;
 struct KillingMachineAttempts(u32);
 
 pub(super) fn owns_proc(spell: u32) -> bool {
-    matches!(spell, KILLING_MACHINE | RIME | OBLITERATION | 195621)
+    matches!(spell, KILLING_MACHINE | RIME | OBLITERATION | 195621 | 1230301)
 }
 
 pub(super) fn snapshots_modifier(spell: u32) -> bool {
@@ -98,6 +99,9 @@ pub(super) fn after_launch(world: &mut World, caster: Entity, spell: &SpellInfo,
         trigger_native_buff(world, caster, KILLING_MACHINE);
         #[cfg(any(test, feature = "test-support"))]
         combat::simc_apl_native::reaction::predict(world, caster, 51124);
+    }
+    if spell.id == 49143 {
+        consume_frostreaper(world, caster, spell.cast_primary_target);
     }
     if matches!(spell.id, 49143 | 194913 | 49184) {
         trigger_obliteration(world, caster);
@@ -240,6 +244,52 @@ fn trigger_obliteration(world: &mut World, caster: Entity) {
     if !spell_cast::try_cast_triggered(world, caster, 281327, Some(caster), 1) {
         warn!(?caster, "Native Obliteration rune grant refused");
     }
+}
+
+fn frostreaper_impact(
+    world: &mut World,
+    ctx: &spell_cast::effects::EffectCtx,
+    target: Entity,
+    _: bool,
+    damage: f32,
+) {
+    if damage <= 0.0
+        || !matches!(ctx.spell.id, 222024 | 66198 | 325461 | 1264082 | 1264083 | 1264084)
+        || !is_frost(world, ctx.caster)
+    {
+        return;
+    }
+    let instance = world.get::<auras::ActiveAuras>(ctx.caster).and_then(|active| {
+        active.iter().find(|aura| aura.spell_id == 1230301 && aura.caster == ctx.caster)
+            .map(|aura| aura.instance_id)
+    });
+    let Some(instance) = instance else { return };
+    // SimC76f8118 sc_death_knight.cpp11854–11857: each real Obliterate
+    // strike attempts the native Frostreaper RPPM on its actual target.
+    if !auras::procs::try_native_policy_proc(world, ctx.caster, instance) {
+        return;
+    }
+    if owned_frostreaper(world, ctx.caster, target) {
+        spell_cast::cast_triggered(world, ctx.caster, 1233619, Some(target), ctx.depth + 1);
+    }
+    auras::apply_aura(world, &auras::AuraApplication {
+        caster: ctx.caster, target, spell_id: 1233351, effect_mask: 1, source: auras::AuraSource::Cast,
+    });
+}
+
+fn owned_frostreaper(world: &World, caster: Entity, target: Entity) -> bool {
+    world.get::<auras::ActiveAuras>(target).is_some_and(|active| {
+        active.iter().any(|aura| aura.spell_id == 1233351 && aura.caster == caster)
+    })
+}
+
+fn consume_frostreaper(world: &mut World, caster: Entity, target: Option<Entity>) {
+    let Some(target) = target.filter(|&target| owned_frostreaper(world, caster, target)) else { return };
+    // sc_death_knight.cpp10875–10883: Frost Strike detonates an earned mark.
+    spell_cast::cast_triggered(world, caster, 1233619, Some(target), 1);
+    auras::remove_auras(world, target, auras::RemoveReason::Consumed, |aura| {
+        aura.spell_id == 1233351 && aura.caster == caster
+    });
 }
 
 fn register_breath(scripts: &mut auras::scripts::AuraScripts) {
