@@ -9,6 +9,8 @@ use combat::spell_cast::script_registry::SpellScriptHook;
 use combat::spell_cast::{self, TriggeredSpellOverrides};
 use combat::spell_info::{SpellEffect, SpellStore};
 
+const LIGHTWOOD_DRIVER: u32 = 1296732;
+const LIGHTWOOD_DAMAGE: u32 = 1296735;
 const SWARM_DRIVER: u32 = 1310082;
 const ACIDBROOD: u32 = 1310088;
 const VOID_DRIVER: u32 = 1310208;
@@ -23,6 +25,31 @@ fn register(scripts: &mut AuraScripts) {
     let script = scripts.0.entry(VOID_DRIVER).or_default();
     script.check_proc = Some(admits_void_proc);
     script.on_proc = Some(proc_void);
+    let script = scripts.0.entry(LIGHTWOOD_DRIVER).or_default();
+    script.check_proc = Some(admits_lightwood_proc);
+    script.on_proc = Some(proc_lightwood);
+}
+
+fn admits_lightwood_proc(world: &World, aura: &AuraInstance, event: &AuraEvent) -> bool {
+    event.spell_id != Some(LIGHTWOOD_DAMAGE)
+        && procs::select_proc_trigger_target(world, aura.caster, LIGHTWOOD_DAMAGE, event.target)
+            .is_ok()
+}
+
+fn proc_lightwood(world: &mut World, unit: Entity, driver: &AuraInstance, target: Option<Entity>) {
+    // SimC76f8118 unique_gear_midnight.cpp5219–5230 binds the native dummy
+    // driver to its damage action; native proc timing and item level remain intact.
+    spell_cast::cast_triggered_with_overrides(
+        world,
+        unit,
+        LIGHTWOOD_DAMAGE,
+        target,
+        1,
+        TriggeredSpellOverrides {
+            item_level: driver.cast_item_level,
+            ..Default::default()
+        },
+    );
 }
 
 fn admits_void_proc(world: &World, aura: &AuraInstance, event: &AuraEvent) -> bool {
@@ -50,10 +77,11 @@ fn proc_void(world: &mut World, unit: Entity, driver: &AuraInstance, target: Opt
     );
 }
 
-fn driver_for_payload(spell: u32) -> Option<u32> {
+fn driver_for_payload(spell: u32) -> Option<(u32, bool)> {
     match spell {
-        ACIDBROOD => Some(SWARM_DRIVER),
-        VOID_ERUPTION => Some(VOID_DRIVER),
+        LIGHTWOOD_DAMAGE => Some((LIGHTWOOD_DRIVER, false)),
+        ACIDBROOD => Some((SWARM_DRIVER, true)),
+        VOID_ERUPTION => Some((VOID_DRIVER, true)),
         _ => None,
     }
 }
@@ -62,7 +90,7 @@ fn effect_handler(spell: u32, index: u8) -> Option<EffectHandler> {
     (index == 0 && driver_for_payload(spell).is_some()).then_some(deal_native_item_damage)
 }
 
-fn native_driver_budget(world: &World, caster: Entity, driver: u32, level: u16) -> f32 {
+fn native_driver_budget(world: &World, caster: Entity, driver: u32, level: u16, role_scaled: bool) -> f32 {
     let mut native = world
         .resource::<SpellStore>()
         .get(driver)
@@ -75,9 +103,13 @@ fn native_driver_budget(world: &World, caster: Entity, driver: u32, level: u16) 
         .find(|effect| effect.index == 0)
         .expect("native driver damage budget");
     let amount = effects::modded_base_points(world, caster, &native, effect);
-    let role = combat::item_proc_data::role_multiplier(world, caster, driver)
-        .expect("native item damage role expression");
-    amount * role
+    if role_scaled {
+        let role = combat::item_proc_data::role_multiplier(world, caster, driver)
+            .expect("native item damage role expression");
+        amount * role
+    } else {
+        amount
+    }
 }
 
 fn deal_native_item_damage(
@@ -93,11 +125,11 @@ fn deal_native_item_damage(
         );
         return;
     };
-    let driver = driver_for_payload(ctx.spell.id).expect("registered native item payload");
+    let (driver, role_scaled) = driver_for_payload(ctx.spell.id).expect("registered native item payload");
     let mut payload = effect.clone();
-    // Both native damage leaves have zero BP/coefficients. SimC assigns driver
+    // These native damage leaves have zero BP/coefficients. SimC assigns driver
     // effect1 average; native class−9 item scaling and role data supply the value.
-    payload.base_points = native_driver_budget(world, ctx.caster, driver, level);
+    payload.base_points = native_driver_budget(world, ctx.caster, driver, level, role_scaled);
     // Retain native selectors/AoE, crit and ordinary downstream damage stages.
     // Acidbrood still arrives through native missile1310083→1310088.
     // Pinned bugs=true intentionally omits Void's unimplemented Venomcursed bonus.
