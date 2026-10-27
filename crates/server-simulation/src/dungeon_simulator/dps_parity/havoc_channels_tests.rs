@@ -38,6 +38,56 @@ fn cast(run: &mut Run, spell: u32, self_target: bool) {
 
 #[test]
 #[ignore = "requires prepared native spec577 player profile"]
+fn havoc_undying_embers_retriggers_expired_immolation() {
+    for selected in [false, true] {
+        let _seed = crate::random::seed_scope(70_448);
+        let mut run = prepare_literal(577, 1).unwrap();
+        let actor = run.actor;
+        let known = run
+            .app
+            .world()
+            .get::<crate::class_progression::KnownSpells>(actor)
+            .unwrap();
+        assert!(known.contains(1272405));
+        let spells = known
+            .iter()
+            .filter(|spell| selected || *spell != 1272405)
+            .collect();
+        run.app
+            .world_mut()
+            .entity_mut(actor)
+            .insert(crate::class_progression::KnownSpells::fixture(spells));
+        let before = run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .len();
+        for _ in 0..8 {
+            crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 258920, Some(actor), 1);
+            advance(&mut run, 220);
+        }
+        let events = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0[before..];
+        let applications = events
+            .iter()
+            .filter(|event| {
+                event.kind == CombatLogKind::AuraApplied && event.spell_id == Some(258920)
+            })
+            .count();
+        assert_eq!(
+            applications > 8,
+            selected,
+            "only selected Undying Embers must retrigger naturally expired auras; applications={applications}"
+        );
+    }
+}
+
+#[test]
+#[ignore = "requires prepared native spec577 player profile"]
 fn havoc_final_breath_adds_scaled_tick_on_completed_beam() {
     for selected in [false, true] {
         let _seed = crate::random::seed_scope(70_448);
