@@ -18,7 +18,11 @@ fn renew_immolation(world: &mut World, unit: Entity, aura: &AuraInstance) {
         return;
     }
     let chance = spell_cast::scripts::script_effect_value(world, unit, UNDYING, 0) / 100.0;
-    if combat::random::thread_rng().r#gen::<f32>() >= chance {
+    let roll = combat::random::thread_rng().r#gen::<f32>();
+    if std::env::var_os("IMMOLATION_TRACE").is_some() {
+        eprintln!("EMBER roll={roll} chance={chance}");
+    }
+    if roll >= chance {
         return;
     }
     let spell = world
