@@ -190,12 +190,18 @@ fn shared_fixture_return_keeps_eligible_actions_and_waits_for_priority_range() {
                 talent: None,
                 self_target: true,
             },
+            NativeAction {
+                name: "metamorphosis",
+                spell: 191427,
+                talent: None,
+                self_target: true,
+            },
         ],
         false,
     )
     .unwrap();
     let facts = BTreeMap::<String, f64>::new();
-    for name in ["throw_glaive", "immolation_aura"] {
+    for name in ["throw_glaive", "immolation_aura", "metamorphosis"] {
         let program = server::simc_apl::Program::parse(&[("default", name)]).unwrap();
         let selected = literal_rotation::Driver::new(program)
             .select("default", &facts, &prepared, &equipment)
@@ -214,6 +220,61 @@ fn shared_fixture_return_keeps_eligible_actions_and_waits_for_priority_range() {
     assert!(
         selected.is_none(),
         "out-of-range priority Beam must wait, not fall through to Throw Glaive"
+    );
+    crate::spell_cast::powers::change_power(
+        run.app.world_mut(),
+        actor,
+        shared::components::PowerType::Fury,
+        -1000.0,
+    )
+    .unwrap();
+    let prepared = Prepared::read(
+        run.app.world_mut(),
+        actor,
+        &run.targets,
+        &equipment,
+        [
+            NativeAction {
+                name: "chaos_strike",
+                spell: 162794,
+                talent: None,
+                self_target: false,
+            },
+            NativeAction {
+                name: "throw_glaive",
+                spell: 185123,
+                talent: None,
+                self_target: false,
+            },
+        ],
+        false,
+    )
+    .unwrap();
+    let program = server::simc_apl::Program::parse(&[
+        ("default", "chaos_strike"),
+        ("default", "throw_glaive"),
+    ])
+    .unwrap();
+    let mut driver = literal_rotation::Driver::new(program);
+    let (action, execution) = driver
+        .select("default", &facts, &prepared, &equipment)
+        .unwrap()
+        .expect("unaffordable melee action must not block an available ranged action");
+    assert_eq!(action.name, "throw_glaive");
+    driver
+        .execute(run.app.world_mut(), actor, action, execution)
+        .unwrap();
+    run.app.update();
+    assert!(
+        run.app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|event| event.source == Some(actor.to_bits())
+                && event.spell_id == Some(185123)
+                && event.kind == CombatLogKind::CastSuccess),
+        "the real in-range Throw Glaive must execute during return"
     );
 }
 
