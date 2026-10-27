@@ -551,7 +551,6 @@ pub fn on_effect_hit(
         }
         (97372, 0) => Some(crate::pvp::change_track),
         (batch17::CONFLAGRATE, 0) => Some(batch17::conflagrate),
-        (batch17::SOUL_FIRE, 0) => Some(batch17::apply_soul_fire_dot),
         (batch17::BLOOD_BOIL, 0) => Some(batch17::apply_blood_plague),
         (batch17::MARROWREND, 1) => Some(batch17::grant_bone_shield),
         (batch15::RISING_SUN_DAMAGE, 0) => Some(batch15::wound_rising_sun),

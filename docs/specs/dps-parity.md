@@ -594,6 +594,9 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 ### Destruction Chaotic Inferno
 
 - Each actual Chaos Bolt116858 execution with Chaotic Inferno1244788 selected advances an accumulated PRD from the native talent effect1 chance. A success grants native1244860. Its own cast-time modifier and single charge make the next Incinerate/Infernal Bolt instant and are consumed by that cast (SimC76f8118 `sc_warlock_actions.cpp:4000–4006,4391–4398,5244–5246`, `sc_warlock_init.cpp:830–831,1331–1334`). The pinned bugs-mode rule that keeps Backdraft during that instant Incinerate is not yet qualified.
+### Destruction Soul Fire DoT
+
+- Actual Soul Fire6353 execution casts the caster's selected Wither445474 (Wither445465) or Immolate157736 on its target as a free background DoT without direct damage. The DoT starts at execution, before the missile lands, and does not need the missile to hit (SimC76f8118 `sc_warlock_actions.cpp:5102–5138`).
 
 ### Destruction Roaring Blaze
 
