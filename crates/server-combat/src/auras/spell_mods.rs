@@ -164,8 +164,19 @@ fn matching<'a>(
 // One spell ID per line in the union-merged list file, so concurrent additions never conflict.
 const STACKED_NEXT_SPELL_USES: &[u32] = &include!("stacked_next_spell_uses.in");
 
-fn stacked_amount(aura: &AuraInstance, effect: &AuraEffectState) -> f32 {
-    let stacks = if STACKED_NEXT_SPELL_USES.contains(&aura.spell_id) {
+fn stacked_amount(world: &World, aura: &AuraInstance, effect: &AuraEffectState) -> f32 {
+    // DB2 SpellEffect attribute 0x40 suppresses stacking for this effect only.
+    let suppress_stacking = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(aura.spell_id)
+        .and_then(|spell| {
+            spell
+                .effects
+                .iter()
+                .find(|native| native.index == effect.index)
+        })
+        .is_some_and(|native| native.attributes & 0x40 != 0);
+    let stacks = if suppress_stacking || STACKED_NEXT_SPELL_USES.contains(&aura.spell_id) {
         1.0
     } else {
         aura.stack_multiplier()
@@ -206,7 +217,7 @@ pub fn snapshot_charged_modifiers(
                 amount: crate::spell_cast::scripts::arcane_charge_modifier_amount(
                     world, caster, aura, effect,
                 )
-                .unwrap_or_else(|| stacked_amount(aura, effect)),
+                .unwrap_or_else(|| stacked_amount(world, aura, effect)),
             })
         })
         .collect()
@@ -226,7 +237,11 @@ fn periodic_snapshot_modifiers(world: &World, caster: Entity, spell: &SpellInfo)
     matching(auras, spell, op)
         .filter(|(aura, _)| snapshots_periodic_modifier(aura, op))
         .fold((0.0, 1.0), |sum, (aura, effect)| {
-            add_modifier(sum, stacked_amount(aura, effect), is_pct(effect.aura_type))
+            add_modifier(
+                sum,
+                stacked_amount(world, aura, effect),
+                is_pct(effect.aura_type),
+            )
         })
 }
 
@@ -289,7 +304,7 @@ fn modifier_totals(world: &World, caster: Entity, spell: &SpellInfo, op: SpellMo
             add_modifier(sum, modifier.amount, modifier.percent)
         });
     live_modifiers(world, caster, spell, op).fold(frozen, |sum, (aura, effect)| {
-        let amount = stacked_amount(aura, effect);
+        let amount = stacked_amount(world, aura, effect);
         let percent = is_pct(effect.aura_type);
         #[cfg(any(test, feature = "test-support"))]
         crate::spell_cast::effects::factor_capture::record_modifier(

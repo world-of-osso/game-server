@@ -906,6 +906,57 @@ fn frost_gathering_storm_extends_winter_for_paid_and_free_spenders() {
 }
 
 #[test]
+#[ignore = "two earned Killing Machine stacks keep Frostscythe fixed crit bonus unstacked"]
+fn frostscythe_two_km_stacks_use_fixed_crit_bonus() {
+    use crate::spell_cast::effects::factor_capture::FactorCapture;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::super::prepare_literal(251, 3).unwrap();
+    super::super::engage(&mut run);
+    earn_killing_machine(&mut run);
+    cast(&mut run, 439843);
+    let stacks = run
+        .app
+        .world()
+        .get::<ActiveAuras>(run.actor)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 51124)
+        .unwrap()
+        .stacks;
+    assert_eq!(stacks, 2, "two real Killing Machine stacks");
+    run.app.insert_resource(FactorCapture::new(
+        run.actor,
+        run.targets[0],
+        207230,
+        "frostscythe",
+        1,
+    ));
+    cast(&mut run, 207230);
+    for _ in 0..10 {
+        run.app.update();
+    }
+    let capture = run.app.world().resource::<FactorCapture>().export();
+    let hit = capture["events"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|event| event["spell_id"] == 207230 && event["event"] == "direct_amount")
+        .expect("actual Frostscythe impact");
+    let crit = hit["applied_multipliers"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|item| item["factor"] == "critical_damage")
+        .unwrap()["value"]
+        .as_f64()
+        .unwrap();
+    assert!(
+        (5.4..5.8).contains(&crit),
+        "SimC bonus is 200% fixed and 25% per stack, got {crit}: {hit}"
+    );
+}
+
+#[test]
 #[ignore = "real Breath applies SimC secondary target reduction"]
 fn frost_breath_secondary_targets_are_reduced() {
     use crate::spell_cast::test_harness::ObservedCombatEvents;
