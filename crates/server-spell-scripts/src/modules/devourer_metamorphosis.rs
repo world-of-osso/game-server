@@ -206,6 +206,10 @@ fn grant_entry_fury(world: &mut World, unit: Entity, aura: &AuraInstance) {
     if unit != aura.caster || world.get::<ActiveSpec>(unit).map(|spec| spec.0) != Some(1480) {
         return;
     }
+    // SimC76f8118 cpp9204–9215 removes Monster Rising and Enduring Torment in Meta.
+    auras::remove_auras(world, unit, RemoveReason::Consumed, |aura| {
+        aura.caster == unit && matches!(aura.spell_id, 452550 | 453314)
+    });
     // SimC76f8118 cpp4949–4955,9217–9220 primes the selected Void-Scarred effects.
     if world
         .get::<KnownSpells>(unit)
@@ -277,6 +281,16 @@ fn exit_meta(world: &mut World, unit: Entity, aura: &AuraInstance, reason: Remov
     super::devourer_voidblade::clear_reapers_replacement(world, unit, aura, reason);
     if unit != aura.caster || world.get::<ActiveSpec>(unit).map(|spec| spec.0) != Some(1480) {
         return;
+    }
+    // SimC76f8118 cpp9231–9238 restores selected non-Meta stat buffs.
+    for (talent, buff) in [(452414, 452550), (452410, 453314)] {
+        if world
+            .get::<KnownSpells>(unit)
+            .is_some_and(|known| known.contains(talent))
+            && !spell_cast::try_cast_triggered(world, unit, buff, Some(unit), 1)
+        {
+            error!(?unit, buff, "native non-Meta stat buff was refused");
+        }
     }
     // SimC76f8118 cpp9239–9266 clears Fury before converting remaining souls.
     powers::change_power(world, unit, PowerType::Fury, -f32::MAX).expect("Devourer Fury pool");

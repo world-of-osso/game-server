@@ -91,6 +91,43 @@ fn batch6_real_rotation_produces_voidsurge() {
 
 #[test]
 #[ignore = "requires DPS_PARITY_WORLD_DB and DPS_PARITY_OUTPUT with spec1480 exact profile/traits"]
+fn batch8_monster_rising_follows_metamorphosis() {
+    let mut run = prepare(1480, 1).expect("native Devourer profile");
+    let actor = run.actor;
+    engage(&mut run);
+    for _ in 0..30 {
+        run.app.update();
+    }
+    assert!(
+        crate::auras::has_aura(run.app.world(), actor, 452550),
+        "Monster Rising active outside Meta"
+    );
+    crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 1217605, Some(actor), 1);
+    for _ in 0..30 {
+        run.app.update();
+    }
+    assert!(
+        crate::auras::has_aura(run.app.world(), actor, 1217607),
+        "native Meta active"
+    );
+    assert!(
+        !crate::auras::has_aura(run.app.world(), actor, 452550),
+        "Monster Rising absent during Meta"
+    );
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        actor,
+        crate::auras::RemoveReason::Consumed,
+        |aura| aura.spell_id == 1217607,
+    );
+    assert!(
+        crate::auras::has_aura(run.app.world(), actor, 452550),
+        "Monster Rising returns after Meta"
+    );
+}
+
+#[test]
+#[ignore = "requires DPS_PARITY_WORLD_DB and DPS_PARITY_OUTPUT with spec1480 exact profile/traits"]
 fn devourer_native_measurement_selects_literal_driver() {
     let run = prepare_measurement(1480, 1).expect("native Devourer profile and precombat");
     assert_eq!(
