@@ -1,32 +1,140 @@
-//! Start the Demonology Diabolic Ritual from actual Soul Shard payments.
+//! Demonology Diabolist: paid Hand → Diabolic Ritual → Demonic Art → demon summon,
+//! with the summon-granted Ruination and Infernal Bolt replacements.
 use super::combat;
 use bevy::prelude::*;
-use combat::auras::{self, ActiveAuras};
+use combat::auras::scripts::{AuraScript, AuraScripts};
+use combat::auras::{self, ActiveAuras, AuraInstance, RemoveReason};
+use combat::random::Rng;
+use combat::spell_cast::effects::EffectCtx;
 use combat::spell_cast::powers::PowerTypeTable;
-use combat::spell_cast::script_registry::SpellScriptHook;
+use combat::spell_cast::script_registry::{EnemyContextHitHook, SpellScriptHook};
 use combat::spell_cast::{self, CostPool};
-use combat::spell_info::SpellInfo;
+use combat::spell_info::{SpellInfo, SpellStore};
 use shared::components::{ActiveSpec, CombatStatus, PowerType};
 
 const RITUAL: u32 = 428514;
-const OVERLORD_RITUAL: u32 = 431944;
+const HAND: u32 = 105174;
+const RUINATION_TALENT: u32 = 428522;
+const RUINATION_BUFF: u32 = 433885;
+const RUINATION_CAST: u32 = 434635;
+const RUINATION_IMPACT: u32 = 434636;
+const COVEN: u32 = 428518;
+const INFERNAL_BOLT_BUFF: u32 = 433891;
+const INFERNAL_BOLT: u32 = 434506;
 
-pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::AfterSpellPayment(advance_ritual)];
+/// SimC76f8118 init.cpp927–931: each ritual earns its Art and names the next ritual.
+struct Demon {
+    ritual: u32,
+    art: u32,
+    summon: u32,
+}
 
-fn advance_ritual(world: &mut World, caster: Entity, spell: &SpellInfo, costs: &[(CostPool, f32)]) {
-    // SimC76f8118 actions.cpp278–355: paid Demonology Hand reduces the
-    // native first ritual by effect1 seconds per Soul Shard spent.
-    if spell.id != 105174
-        || world
-            .get::<ActiveSpec>(caster)
-            .is_none_or(|spec| spec.0 != 266)
-        || !auras::has_aura(world, caster, RITUAL)
-        || world
-            .get::<CombatStatus>(caster)
-            .is_none_or(|status| !status.0)
-    {
+const DEMONS: [Demon; 3] = [
+    Demon { ritual: 431944, art: 428524, summon: 428571 }, // Overlord → Mother
+    Demon { ritual: 432815, art: 432794, summon: 428565 }, // Mother → Pit Lord
+    Demon { ritual: 432816, art: 432795, summon: 434400 }, // Pit Lord → Overlord
+];
+
+/// The cast's primary: the triggered impact child does not carry it.
+#[derive(Component)]
+struct RuinationTarget(Entity);
+
+/// Index into `DEMONS` of the ritual the next unritualed paid Hand starts.
+#[derive(Component)]
+struct RitualCycle(usize);
+
+pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::AfterSpellPayment(after_payment),
+    SpellScriptHook::LateAuraRegistration(register),
+    SpellScriptHook::EnemyContextHit(ruination_hit),
+];
+
+fn register(scripts: &mut AuraScripts) {
+    for demon in &DEMONS {
+        scripts
+            .0
+            .entry(demon.ritual)
+            .or_insert(AuraScript::default())
+            .on_natural_end = Some(ritual_ended);
+        scripts
+            .0
+            .entry(demon.art)
+            .or_insert(AuraScript::default())
+            .on_remove = Some(art_removed);
+    }
+}
+
+fn diabolist(world: &World, caster: Entity) -> bool {
+    world
+        .get::<ActiveSpec>(caster)
+        .is_some_and(|spec| spec.0 == 266)
+        && auras::has_aura(world, caster, RITUAL)
+}
+
+fn in_combat(world: &World, unit: Entity) -> bool {
+    world
+        .get::<CombatStatus>(unit)
+        .is_some_and(|status| status.0)
+}
+
+fn after_payment(world: &mut World, caster: Entity, spell: &SpellInfo, costs: &[(CostPool, f32)]) {
+    if !diabolist(world, caster) {
         return;
     }
+    match spell.id {
+        HAND => {
+            // SimC actions.cpp2810–2818/2849–2851: Art consumption needs the Art at cast start.
+            let cast_start = spell_cast::now(world)
+                - f64::from(spell_cast::cast_time_ms(world, caster, spell).max(0)) / 1000.0;
+            consume_art(world, caster, Some(cast_start));
+            if in_combat(world, caster) {
+                advance_ritual(world, caster, costs);
+            }
+        }
+        // actions.cpp5320–5333: Ruination consumes any present Art and one buff stack.
+        RUINATION_CAST => {
+            if let Some(primary) = spell.cast_primary_target {
+                world.entity_mut(caster).insert(RuinationTarget(primary));
+            }
+            consume_art(world, caster, None);
+            spend_own_stack(world, caster, RUINATION_BUFF);
+        }
+        // actions.cpp5233–5240.
+        INFERNAL_BOLT => spend_own_stack(world, caster, INFERNAL_BOLT_BUFF),
+        _ => {}
+    }
+}
+
+fn own_aura(world: &World, caster: Entity, spell: u32) -> Option<&AuraInstance> {
+    world
+        .get::<ActiveAuras>(caster)?
+        .iter()
+        .find(|aura| aura.spell_id == spell && aura.caster == caster)
+}
+
+fn spend_own_stack(world: &mut World, caster: Entity, spell: u32) {
+    if let Some(instance) = own_aura(world, caster, spell).map(|aura| aura.instance_id) {
+        auras::spend_stack(world, caster, instance);
+    }
+}
+
+/// Spend the held Art; `granted_by` excludes an Art earned after that time.
+fn consume_art(world: &mut World, caster: Entity, granted_by: Option<f64>) {
+    let held = DEMONS.iter().find_map(|demon| {
+        let aura = own_aura(world, caster, demon.art)?;
+        let granted = aura.expires_at? - f64::from(aura.duration_ms) / 1000.0;
+        granted_by
+            .is_none_or(|limit| granted <= limit + 1e-6)
+            .then_some(aura.instance_id)
+    });
+    if let Some(instance) = held {
+        auras::spend_stack(world, caster, instance);
+    }
+}
+
+fn advance_ritual(world: &mut World, caster: Entity, costs: &[(CostPool, f32)]) {
+    // SimC actions.cpp302–355: shorten the held ritual by effect1 seconds per shard,
+    // or start the cycle's next ritual and shorten it.
     let paid = spell_cast::spent(costs, PowerType::SoulShards);
     if paid <= 0.0 {
         return;
@@ -41,20 +149,23 @@ fn advance_ritual(world: &mut World, caster: Entity, spell: &SpellInfo, costs: &
         world, caster, RITUAL, 0,
     )) * f64::from(paid)
         / f64::from(units);
-    if !auras::has_aura(world, caster, OVERLORD_RITUAL)
-        && !spell_cast::try_cast_triggered(world, caster, OVERLORD_RITUAL, Some(caster), 1)
-    {
-        warn!(?caster, "Native Overlord ritual refused");
-        return;
-    }
+    let held = DEMONS
+        .iter()
+        .find(|demon| own_aura(world, caster, demon.ritual).is_some());
+    let ritual = match held {
+        Some(demon) => demon.ritual,
+        None => {
+            let next = next_index(world, caster);
+            let ritual = DEMONS[next].ritual;
+            if !spell_cast::try_cast_triggered(world, caster, ritual, Some(caster), 1) {
+                warn!(?caster, ritual, "Native Diabolic Ritual refused");
+                return;
+            }
+            ritual
+        }
+    };
     let now = spell_cast::now(world);
-    let expiry = world
-        .get::<ActiveAuras>(caster)
-        .and_then(|auras| {
-            auras
-                .iter()
-                .find(|aura| aura.spell_id == OVERLORD_RITUAL && aura.caster == caster)
-        })
+    let expiry = own_aura(world, caster, ritual)
         .and_then(|aura| aura.expires_at)
         .expect("native ritual needs a finite expiry");
     let remaining_ms = ((expiry - now - seconds).max(0.0) * 1000.0).round() as u32;
@@ -62,7 +173,117 @@ fn advance_ritual(world: &mut World, caster: Entity, spell: &SpellInfo, costs: &
         world,
         caster,
         caster,
-        OVERLORD_RITUAL,
+        ritual,
         remaining_ms
     ));
+}
+
+/// init.cpp1750: the first ritual of an encounter is uniformly chosen.
+fn next_index(world: &mut World, caster: Entity) -> usize {
+    if let Some(cycle) = world.get::<RitualCycle>(caster) {
+        return cycle.0;
+    }
+    let first = combat::random::thread_rng().gen_range(0..DEMONS.len());
+    world.entity_mut(caster).insert(RitualCycle(first));
+    first
+}
+
+fn ritual_ended(world: &mut World, caster: Entity, aura: &AuraInstance) {
+    let Some(index) = DEMONS.iter().position(|demon| demon.ritual == aura.spell_id) else {
+        return;
+    };
+    world
+        .entity_mut(caster)
+        .insert(RitualCycle((index + 1) % DEMONS.len()));
+    let spell = world
+        .resource::<SpellStore>()
+        .get(aura.spell_id)
+        .expect("native ritual spell")
+        .clone();
+    let ctx = EffectCtx {
+        caster,
+        spell: &spell,
+        depth: 0,
+        dest: None,
+        chain_multiplier: 1.0,
+    };
+    // init.cpp873–886: the Art arrives after a gauss(200ms, 15ms) delay.
+    let delay = gauss_ms(200.0, 15.0);
+    let grant: fn(&mut World, Entity, Entity, u8) = match index {
+        0 => grant_art::<0>,
+        1 => grant_art::<1>,
+        _ => grant_art::<2>,
+    };
+    spell_cast::queued_triggers::schedule_callback(world, &ctx, caster, delay, grant);
+}
+
+fn grant_art<const INDEX: usize>(world: &mut World, caster: Entity, _: Entity, depth: u8) {
+    // init.cpp876–885: a new Art replaces any held Art without summoning its demon.
+    auras::remove_auras(world, caster, RemoveReason::Replaced, |aura| {
+        aura.caster == caster && DEMONS.iter().any(|demon| demon.art == aura.spell_id)
+    });
+    let art = DEMONS[INDEX].art;
+    if !spell_cast::try_cast_triggered(world, caster, art, Some(caster), depth) {
+        warn!(?caster, art, "Native Demonic Art refused");
+    }
+}
+
+fn art_removed(world: &mut World, caster: Entity, aura: &AuraInstance, reason: RemoveReason) {
+    // init.cpp897–925: consumption or expiry in combat summons; replacement does not.
+    if !matches!(reason, RemoveReason::Consumed | RemoveReason::Expired)
+        || aura.caster != caster
+        || !in_combat(world, caster)
+    {
+        return;
+    }
+    let Some(demon) = DEMONS.iter().find(|demon| demon.art == aura.spell_id) else {
+        return;
+    };
+    if !spell_cast::try_cast_triggered(world, caster, demon.summon, Some(caster), 1) {
+        warn!(?caster, summon = demon.summon, "Native Diabolist summon refused");
+        return;
+    }
+    // actions.cpp5455–5458/5476–5481: Mother grants Infernal Bolt, Pit Lord Ruination.
+    let granted = match demon.summon {
+        428565 => (COVEN, INFERNAL_BOLT_BUFF),
+        434400 => (RUINATION_TALENT, RUINATION_BUFF),
+        _ => return,
+    };
+    if auras::has_aura(world, caster, granted.0)
+        && !spell_cast::try_cast_triggered(world, caster, granted.1, Some(caster), 1)
+    {
+        warn!(?caster, buff = granted.1, "Native Diabolist summon buff refused");
+    }
+}
+
+fn ruination_hit(spell: u32) -> Option<EnemyContextHitHook> {
+    (spell == RUINATION_IMPACT).then_some(launch_ruination_meteor)
+}
+
+fn launch_ruination_meteor(world: &mut World, ctx: &EffectCtx, target: Entity) {
+    // actions.cpp5276–5305: the primary impact drops a three-shard Hand meteor
+    // after a gauss(395ms, 35ms) delay; that meteor summons the Wild Imps.
+    if world
+        .get::<RuinationTarget>(ctx.caster)
+        .is_none_or(|primary| primary.0 != target)
+    {
+        return;
+    }
+    world.entity_mut(ctx.caster).remove::<RuinationTarget>();
+    let delay = gauss_ms(395.0, 35.0);
+    spell_cast::queued_triggers::schedule_callback(
+        world,
+        ctx,
+        target,
+        delay,
+        spell_cast::scripts::launch_guldan_meteor,
+    );
+}
+
+fn gauss_ms(mean: f64, deviation: f64) -> u32 {
+    let mut rng = combat::random::thread_rng();
+    let uniform: f64 = rng.gen_range(f64::MIN_POSITIVE..1.0);
+    let angle = rng.gen_range(0.0..std::f64::consts::TAU);
+    let normal = (-2.0 * uniform.ln()).sqrt() * angle.cos();
+    (mean + deviation * normal).max(0.0).round() as u32
 }
