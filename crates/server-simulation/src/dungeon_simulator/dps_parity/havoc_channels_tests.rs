@@ -1161,6 +1161,51 @@ fn havoc_first_blood_splits_native_primary_and_secondary_strikes() {
 
 #[test]
 #[ignore = "requires prepared native spec577 player profile"]
+fn havoc_eye_beam_cadence_diagnostic() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(577, 1).unwrap();
+    havoc_tests::earn_havoc_fury(&mut run, 60.0);
+    run.app
+        .world_mut()
+        .init_resource::<crate::spell_cast::test_harness::ObservedTriggeredCasts>();
+    cast(&mut run, 198013, false);
+    let initial = run
+        .app
+        .world()
+        .get::<shared::casting::CastState>(run.actor)
+        .unwrap()
+        .clone();
+    for _ in 0..60 {
+        run.app.update();
+    }
+    let casts = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedTriggeredCasts>()
+        .0;
+    let children = casts
+        .iter()
+        .filter(|(_, spell, _)| matches!(*spell, 198030 | 1287949))
+        .count();
+    let ticks = damage(&run, Some(198030)).len() + damage(&run, Some(1287949)).len();
+    eprintln!(
+        "real Eye Beam duration={} child_casts={} landed_ticks={} events={:?}",
+        initial.duration,
+        children,
+        ticks,
+        damage(&run, Some(198030))
+            .iter()
+            .map(|e| e.timestamp_unix_ms)
+            .collect::<Vec<_>>()
+    );
+    assert!(
+        children > 0 && ticks > 0,
+        "real channel must execute its native damage children"
+    );
+}
+
+#[test]
+#[ignore = "requires prepared native spec577 player profile"]
 fn havoc_eye_beam_ticks_damage_every_native_frontal_enemy() {
     let _seed = crate::random::seed_scope(70_448);
     for count in [1, 3] {
