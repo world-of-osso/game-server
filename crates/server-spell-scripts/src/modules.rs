@@ -82,6 +82,7 @@ register_modules! {
     demon_hunter_burning: (1482, "modules/demon_hunter_burning.rs"),
     demon_hunter_effects: (1000, "modules/demon_hunter_effects.rs"),
     demonology_firebolt: (2660, "modules/demonology_firebolt.rs"),
+    destruction_chaotic_inferno: (2680, "modules/destruction_chaotic_inferno.rs"),
     destruction_crashing_chaos: (2679, "modules/destruction_crashing_chaos.rs"),
     destruction_crit_scaling: (2673, "modules/destruction_crit_scaling.rs"),
     demon_hunter_fragments: (5777, "modules/demon_hunter_fragments.rs"),

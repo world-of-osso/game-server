@@ -589,6 +589,10 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 - Selected Crashing Chaos417234 earns its native417282 reverse uses on actual Summon Infernal1122 execution. The native talent effect2 sets the starting use count; each Chaos Bolt consumes one use while its native direct-damage modifier applies once, not once per use (SimC76f8118 `sc_warlock_init.cpp:839–841`, `sc_warlock_actions.cpp:4401–4403,5080–5082`).
 
+### Destruction Chaotic Inferno
+
+- Each actual Chaos Bolt116858 execution with Chaotic Inferno1244788 selected advances an accumulated PRD from the native talent effect1 chance. A success grants native1244860. Its own cast-time modifier and single charge make the next Incinerate/Infernal Bolt instant and are consumed by that cast (SimC76f8118 `sc_warlock_actions.cpp:4000–4006,4391–4398,5244–5246`, `sc_warlock_init.cpp:830–831,1331–1334`). The pinned bugs-mode rule that keeps Backdraft during that instant Incinerate is not yet qualified.
+
 ### Destruction Roaring Blaze
 
 - A selected Roaring Blaze1244310 primary Conflagrate17962 hit spreads the caster's existing Wither445474 or Immolate157736 to nearby enemies as a free background DoT, without direct damage. Prioritize targets without the caster's Immolate, as the pinned smart-target selector does even with Wither; the native effect1 count sets the limit, with one extra already-infected target in pinned `bugs=true` mode. Do not spread from Havoc copies or a primary without the caster's DoT (SimC76f8118 `sc_warlock_actions.cpp:4440–4500`, `sc_warlock.cpp:1272–1319`).
