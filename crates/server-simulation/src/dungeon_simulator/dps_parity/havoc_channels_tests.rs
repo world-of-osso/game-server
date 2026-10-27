@@ -120,6 +120,49 @@ fn havoc_fragment_pickup_requires_melee_and_records_last_used() {
 
 #[test]
 #[ignore = "requires prepared native spec577 player profile"]
+fn havoc_chaos_theory_dance_grants_buff_and_offhand_consumes_it_for_refund() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(577, 1).unwrap();
+    let actor = run.actor;
+    assert!(
+        crate::auras::has_aura(run.app.world(), actor, 389687),
+        "selected native Chaos Theory required"
+    );
+    havoc_tests::earn_havoc_fury(&mut run, 80.0);
+    cast(&mut run, 188499, true);
+    preparation::finish_pending_setup(&mut run).unwrap();
+    assert!(
+        crate::auras::has_aura(run.app.world(), actor, 390195),
+        "real Blade Dance must grant native Chaos Theory"
+    );
+    havoc_tests::earn_havoc_fury(&mut run, 80.0);
+    advance(&mut run, 40);
+    run.app
+        .world_mut()
+        .resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .clear();
+    cast(&mut run, 162794, false);
+    advance(&mut run, 20);
+    assert!(
+        !crate::auras::has_aura(run.app.world(), actor, 390195),
+        "actual off-hand execution consumes Chaos Theory"
+    );
+    assert!(
+        run.app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|event| event.spell_id == Some(193840)
+                && event.kind == CombatLogKind::Energize
+                && event.amount > 0),
+        "native 20% base plus Chaos Theory's 80% must refund on the real off-hand"
+    );
+}
+
+#[test]
+#[ignore = "requires prepared native spec577 player profile"]
 fn havoc_native_fragment_pickup_consumes_the_selected_fragment() {
     use server::soul_fragments::{self, FragmentFilter, FragmentKind, PickupMode};
     let _seed = crate::random::seed_scope(70_448);
