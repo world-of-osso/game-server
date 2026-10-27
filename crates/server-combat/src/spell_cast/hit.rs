@@ -298,11 +298,13 @@ fn weapon_spell_dodge_chance(
 fn apply_caster_dodge_modifiers(world: &World, caster: Entity, dodge: f32) -> f32 {
     let caster_auras = world.get::<ActiveAuras>(caster);
     let enemy_dodge = caster_auras.map_or(0.0, |auras| auras.modifier(MOD_ENEMY_DODGE));
+    // SimC76f8118 pet.hpp103–104/attack.cpp179–181: pet weapon spells use
+    // the same inherited owner hit/expertise mean as their auto attacks.
     let expertise = crate::auras::combat_stats::class_actor_expertise_reduction(
         caster_auras,
         world.get::<shared::components::Player>(caster).is_some(),
         world.get::<crate::followers::Follower>(caster).is_some(),
-    );
+    ) + crate::combat::read_pet_owner_hit_expertise(world, caster).unwrap_or(0.0);
     (dodge + enemy_dodge - expertise).max(0.0)
 }
 

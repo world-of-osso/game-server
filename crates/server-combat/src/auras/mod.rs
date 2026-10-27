@@ -73,6 +73,8 @@ mod ret_crusade;
 pub(crate) use ret_crusade::after_spender as add_ret_crusade_spender_stacks;
 mod ret_sentence;
 pub use ret_sentence::track_cast as track_ret_sentence_cast;
+mod janthrazet;
+mod midnight_stat_procs;
 pub(crate) mod reward_mods;
 pub mod rogue;
 #[cfg(test)]
@@ -2219,7 +2221,9 @@ pub fn damage_taken_multiplier(
 }
 
 /// White-swing damage taken from `attacker`: every MOD_MELEE_DAMAGE_FROM_CASTER
-/// 343 effect it owns on the victim (TC Unit::MeleeDamageBonusTaken, Unit.cpp8213–8219).
+/// 343 effect it owns on the victim (TC Unit::MeleeDamageBonusTaken, Unit.cpp8213–8219),
+/// plus owned physical MOD_SCHOOL_MASK_DAMAGE_FROM_CASTER 270: SimC76f8118
+/// sc_warlock_pets.cpp447–452 applies the owner's Whiplash stacks to white swings too.
 pub(crate) fn melee_damage_from_caster(auras: Option<&ActiveAuras>, attacker: Entity) -> f32 {
     auras.map_or(1.0, |auras| {
         auras
@@ -2229,7 +2233,13 @@ pub(crate) fn melee_damage_from_caster(auras: Option<&ActiveAuras>, attacker: En
                 let stacks = aura.stack_multiplier();
                 aura.effects
                     .iter()
-                    .filter(|effect| effect.aura_type == handlers::MOD_MELEE_DAMAGE_FROM_CASTER)
+                    .filter(|effect| match effect.aura_type {
+                        handlers::MOD_MELEE_DAMAGE_FROM_CASTER => true,
+                        handlers::MOD_SCHOOL_MASK_DAMAGE_FROM_CASTER => {
+                            effect.misc_values[0] as u32 & 1 != 0
+                        }
+                        _ => false,
+                    })
                     .map(move |effect| 1.0 + effect.amount * stacks / 100.0)
             })
             .product()

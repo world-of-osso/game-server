@@ -699,6 +699,13 @@ pub(crate) struct AutoAttackParams<'w, 's> {
 pub fn read_pet_owner_critical_chance(world: &World, unit: Entity) -> Option<f32> {
     let owner = if let Some(owner) = crate::spell_cast::guardian::stat_owner(world, unit) {
         owner
+    } else if let Some(summon) = world
+        .get::<crate::spell_cast::summon::SummonedCreature>(unit)
+        .filter(|summon| crate::auras::summon_damage::is_dire_critter(summon))
+    {
+        // SimC76f8118 pet.cpp217–220: DireCritters inherit live owner crit
+        // even when they have no autonomous guardian spell list.
+        summon.owner
     } else {
         let pet = world.get::<crate::hunter_pet::HunterPet>(unit)?;
         if world
@@ -722,7 +729,7 @@ pub fn read_pet_owner_critical_chance(world: &World, unit: Entity) -> Option<f32
 
 // SimC76f8118 pet.cpp414–420: pets inherit the mean of their owner's
 // attack hit and expertise, including the class actor's 7.5% baselines.
-fn read_pet_owner_hit_expertise(world: &World, unit: Entity) -> Option<f32> {
+pub(crate) fn read_pet_owner_hit_expertise(world: &World, unit: Entity) -> Option<f32> {
     let owner = crate::spell_cast::guardian::stat_owner(world, unit)
         .or_else(|| {
             world

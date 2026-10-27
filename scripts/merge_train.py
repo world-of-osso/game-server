@@ -744,7 +744,17 @@ def measure_spec(entry, measurement, executable, target, log, tree, previous=Non
                              env=base_env() | {"DPS_PARITY_SEEDS": MEASURE_SEEDS} | entry.get("env", {})
                              | {"CARGO_TARGET_DIR": str(target)},
                              text=True, capture_output=True, check=False)
-    return [line for line in out.stdout.splitlines() if "NATIVE_DPS" in line or "FAILED" in line]
+    lines = [line for line in out.stdout.splitlines() if "NATIVE_DPS" in line or "FAILED" in line]
+    if any("FAILED" in line for line in lines):
+        # Native logs live in the shared --output directory, where the next measurement of the
+        # same spec overwrites them (2026-10-27: two 577 failures lost their cause). Keep a copy.
+        kept = LOGS / f"{entry['id']}.measure-{measurement['spec']}.log"
+        output = Path(measurement["output"])
+        native = sorted(output.glob(f"{measurement['spec']}.native.*.log"))
+        kept.write_text(out.stdout + out.stderr + "".join(
+            f"\n===== {path}\n{path.read_text(errors='replace')[-20000:]}" for path in native))
+        lines.append(f"FAILED details kept in {kept}")
+    return lines
 
 
 def write_results(entries):
@@ -815,18 +825,18 @@ def build_and_test(entries, log):
     for entry in rejected:
         entry["status"] = "rejected"
     write_results([e for e in rejected if not e["id"].endswith("-red")])
-    requeue(deferred)
+    requeue_entries(deferred)
     passed, failed = run_tests(tree, log)
     deferred = [e for e in failed if e.pop("defer", False)]
     failed = [e for e in failed if e not in deferred]
-    requeue(deferred)
+    requeue_entries(deferred)
     for entry in failed:
         entry["status"] = "rejected"
     write_results([e for e in failed if not e["id"].endswith("-red")])
     return passed, rejected + failed
 
 
-def requeue(entries):
+def requeue_entries(entries):
     """Back to the queue for the next cycle; a RED twin's entry is requeued by run_probes."""
     for entry in entries:
         entry.pop("reason", None)
