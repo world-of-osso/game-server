@@ -361,6 +361,47 @@ pub fn finish_pickup(world: &mut World, owner: Entity, permitted: bool) -> Resul
     Ok(())
 }
 
+/// Consume active fragments in spawn order, as native class abilities require.
+pub fn consume_active(
+    world: &mut World,
+    owner: Entity,
+    filter: FragmentFilter,
+    max: usize,
+    instant: bool,
+) -> Result<usize, String> {
+    if max == 0 {
+        return Ok(0);
+    }
+    let now = combat::auras::aura_now(world);
+    let specialization = spec(world, owner)?;
+    let speed = travel_speed(world, specialization)?;
+    let owner_position = position(world, owner).ok_or("fragment owner position missing")?;
+    let Some(mut state) = world.entity_mut(owner).take::<Fragments>() else {
+        return Ok(0);
+    };
+    let mut count = 0;
+    let mut immediate = Vec::new();
+    let mut index = 0;
+    while index < state.items.len() && count < max {
+        let fragment = state.items[index];
+        if filter.matches(fragment.kind) && fragment.active_at <= now && now < fragment.expires_at {
+            if instant {
+                immediate.push(state.items.remove(index).kind);
+            } else {
+                consume(&mut state, index, now, speed, owner_position);
+            }
+            count += 1;
+        } else {
+            index += 1;
+        }
+    }
+    world.entity_mut(owner).insert(state);
+    for kind in immediate {
+        cast_consume(world, owner, specialization, kind);
+    }
+    Ok(count)
+}
+
 fn consume(state: &mut Fragments, index: usize, now: f64, speed: f32, owner_position: Vec3) {
     let fragment = state.items.remove(index);
     let distance = fragment.position.distance(owner_position);
