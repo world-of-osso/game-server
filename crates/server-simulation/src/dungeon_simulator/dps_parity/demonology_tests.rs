@@ -699,6 +699,52 @@ fn assert_exhausted_imps_trigger_isolated_implosion(target_count: usize) {
 }
 
 #[test]
+#[ignore = "requires private266 inputs; actual Infernal Rapidity twin bolts"]
+fn demonology_imps_emit_infernal_rapidity_twins() {
+    use shared::protocol::CombatLogKind;
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(266, 1).unwrap();
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, 1263941));
+    engage(&mut run);
+    run.app
+        .world_mut()
+        .entity_mut(run.actor)
+        .insert(crate::networking::CombatTarget(Some(run.targets[0])));
+    for _ in 0..20 {
+        crate::spell_cast::creature_cast(
+            run.app.world_mut(),
+            run.actor,
+            104317,
+            Some(run.actor),
+            true,
+        )
+        .unwrap();
+    }
+    for _ in 0..600 {
+        run.app.update();
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    let casts = events
+        .iter()
+        .filter(|event| event.spell_id == Some(104318) && event.kind == CombatLogKind::CastSuccess)
+        .count();
+    let hits = events
+        .iter()
+        .filter(|event| event.spell_id == Some(104318) && event.kind == CombatLogKind::Damage)
+        .count();
+    assert!(casts > 0, "actual Imp bolts must complete native casts");
+    // SimC76f8118 pets.cpp721–736/818–839: per-Imp PRD launches free twin bolts.
+    assert!(
+        hits > casts,
+        "selected Infernal Rapidity must produce additional real bolt damage: casts={casts} hits={hits}"
+    );
+}
+
+#[test]
 #[ignore = "requires private266 inputs; actual exhausted Imp four-piece explosion"]
 fn demonology_exhausted_imps_trigger_isolated_implosion() {
     assert_exhausted_imps_trigger_isolated_implosion(1);
