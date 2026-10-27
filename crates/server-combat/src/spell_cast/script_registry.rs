@@ -11,6 +11,7 @@
 //! - `TargetPlan`: first matching module wins before combat's native target plans.
 //! - `PeriodicPrimaryDamage`: all modules receive the landed periodic amount and actual crit result.
 //! - `TargetDamageMultiplier`: factors run at the Giantkiller damage boundary.
+//! - `PeriodicTickRate`: factors divide each periodic interval when it is scheduled.
 //! - `AfterSpenderStacks`: after foreground Crusade stacks and the corresponding
 //!   background Storm callback; before Empyrean Legacy or echo policy dispatch.
 //! - `AuraRedirect`: first redirect consumes application before native aura dispatch.
@@ -117,6 +118,8 @@ pub type TargetPlanLookup = fn(u32) -> Option<(Relation, TargetPlanHook)>;
 pub type PeriodicPrimaryDamageHook = fn(&mut World, &EffectCtx<'_>, Entity, f32, bool);
 pub type SpellResidualHook = fn(&mut World, &EffectCtx<'_>, Entity, f32);
 pub type TargetDamageMultiplierHook = fn(&World, Entity, Entity, &SpellInfo) -> f32;
+/// Caster, aura target and periodic spell; the result divides the next interval.
+pub type PeriodicTickRateHook = fn(&World, Entity, Entity, &SpellInfo) -> f32;
 pub type AuraApplicationHook = fn(&mut World, Entity, &crate::auras::AuraInstance);
 pub type SummonInitializedHook = fn(&mut World, Entity);
 /// Actual CombatStatus transitions, after native reference state is updated.
@@ -273,6 +276,7 @@ pub enum SpellScriptHook {
     /// Source-owned refreshes retain the already scheduled periodic deadline.
     PreservePeriodicPhase(&'static [u32]),
     TargetDamageMultiplier(TargetDamageMultiplierHook),
+    PeriodicTickRate(PeriodicTickRateHook),
     AfterSpenderStacks(AfterCastHook),
     AuraRedirect(AuraRedirectHook),
     /// All successful native aura applications, including refresh/replacement.
@@ -780,6 +784,17 @@ pub fn periodic_primary_damage(
             run(world, ctx, target, amount, crit);
         }
     }
+}
+
+pub fn periodic_tick_rate(world: &World, caster: Entity, target: Entity, spell: &SpellInfo) -> f32 {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .filter_map(|hook| match hook {
+            SpellScriptHook::PeriodicTickRate(run) => Some(run(world, caster, target, spell)),
+            _ => None,
+        })
+        .product()
 }
 
 pub fn target_damage_multiplier(
