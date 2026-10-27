@@ -532,13 +532,13 @@ fn filter_primary_range(
         world.resource::<crate::spell_info::SpellStore>(),
         spell,
     ) != 0;
-    if !harmful {
+    let returning = super::super::melee_return::returning_after_displacement(world, actor);
+    let channel = crate::spell_cast::is_channeled_for_actor(world, actor, spell);
+    if !harmful && !(returning && channel) {
         return state;
     }
-    let returning = super::super::melee_return::returning_after_displacement(world, actor);
-    let unstable_channel = returning
-        && super::super::melee_return::forced_movement(world, actor)
-        && crate::spell_cast::is_channeled_for_actor(world, actor, spell);
+    let unstable_channel =
+        returning && super::super::melee_return::forced_movement(world, actor) && channel;
     if !unstable_channel && primary_in_native_range(world, actor, spell, primary) {
         return state;
     }
