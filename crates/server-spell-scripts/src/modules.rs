@@ -37,6 +37,8 @@ const fn order_modules<const N: usize>(
     ordered
 }
 
+pub use devourer_metamorphosis::devourer_base_drain_ps;
+
 register_modules! {
     affliction_absolute_corruption: (2660, "modules/affliction_absolute_corruption.rs"),
     affliction_agony: (2650, "modules/affliction_agony.rs"),
@@ -300,6 +302,13 @@ mod ordering_tests {
 
     #[derive(Resource, Default)]
     struct Calls(Vec<&'static str>);
+
+    #[test]
+    fn devourer_base_drain_before_meta_uses_source_initial_rate() {
+        let mut world = World::new();
+        let actor = world.spawn_empty().id();
+        assert!((devourer_base_drain_ps(&world, actor) - 16.4).abs() < 0.0001);
+    }
 
     fn first(world: &mut World, _: Entity, _: u32, _: u8) {
         world.resource_mut::<Calls>().0.push("first");
