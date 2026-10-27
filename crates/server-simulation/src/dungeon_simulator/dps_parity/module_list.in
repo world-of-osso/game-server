@@ -79,6 +79,7 @@ mod destruction_mastery_tests;
 mod destruction_overfiend_rate_tests;
 mod destruction_overfiend_tests;
 mod destruction_periodic_tests;
+mod destruction_imp_melee_tests;
 mod destruction_roaring_blaze_tests;
 mod destruction_chaotic_inferno_tests;
 mod destruction_soul_fire_wither_tests;
