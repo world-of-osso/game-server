@@ -38,6 +38,30 @@ fn cast(run: &mut Run, spell: u32, self_target: bool) {
 
 #[test]
 #[ignore = "requires prepared native spec577 player profile"]
+fn diag_havoc_annihilation_factors() {
+    use crate::spell_cast::effects::factor_capture::FactorCapture;
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_measurement(577, 1).unwrap();
+    let actor = run.actor;
+    let target = run.targets[0];
+    run.app.insert_resource(FactorCapture::new(
+        actor,
+        target,
+        227518,
+        "annihilation_damage_1",
+        40,
+    ));
+    engage(&mut run);
+    advance_combat(&mut run).unwrap();
+    let capture = run.app.world().resource::<FactorCapture>().export();
+    let path = inputs::directory()
+        .unwrap()
+        .join("annihilation-native-factors.json");
+    std::fs::write(&path, serde_json::to_string_pretty(&capture).unwrap()).unwrap();
+}
+
+#[test]
+#[ignore = "requires prepared native spec577 player profile"]
 fn havoc_rotation_immolation_aura_deals_initial_damage() {
     let report = super::measure_seed(577, 1, 70_448).expect("real Havoc 300s rotation");
     let actions = report["combat"]["actions"].as_array().unwrap();
