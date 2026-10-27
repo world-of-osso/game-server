@@ -153,8 +153,12 @@ fn native_wildspeaker_dire_beasts_inherit_owner_crit() {
                 chances.push((chance, owner_crit));
                 if event["factors"]["result"] == "crit" {
                     critical_hits += 1;
-                    let bonus = event["factors"]["crit_bonus"].as_f64().expect("observed crit bonus");
-                    let effect = crate::spell_cast::scripts::script_effect_value(world, run.actor, 459550, 1);
+                    let bonus = event["factors"]["crit_bonus"]
+                        .as_f64()
+                        .expect("observed crit bonus");
+                    let effect = crate::spell_cast::scripts::script_effect_value(
+                        world, run.actor, 459550, 1,
+                    );
                     critical_bonuses.push((bonus, owner_crit, effect));
                 }
             }
@@ -207,7 +211,11 @@ fn native_wildspeaker_dire_beasts_inherit_owner_crit() {
     );
     // SimC76f8118 sc_hunter.cpp3192–3199 scales the actual Wildspeaker
     // critical bonus by native Go for the Throat and live owner crit.
-    assert!(critical_bonuses.iter().all(|(bonus, crit, effect)|
-        *bonus + 0.001 >= 1.0 + f64::from(*crit * *effect) / 10_000.0),
-        "actual Wildspeaker crits omit Go for the Throat: {critical_bonuses:?}");
+    assert!(
+        critical_bonuses
+            .iter()
+            .all(|(bonus, crit, effect)| *bonus + 0.001
+                >= 1.0 + f64::from(*crit * *effect) / 10_000.0),
+        "actual Wildspeaker crits omit Go for the Throat: {critical_bonuses:?}"
+    );
 }

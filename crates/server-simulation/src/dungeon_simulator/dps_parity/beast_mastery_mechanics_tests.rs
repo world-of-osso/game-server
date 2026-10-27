@@ -227,7 +227,6 @@ fn beast_mastery_barbed_and_cobra_arm_consumable_natures_ally() {
     );
 }
 
-
 #[test]
 #[ignore = "requires private spec253 reference inputs and native world DB"]
 fn native_bm_kill_command_crit_uses_selected_go_for_the_throat() {
@@ -236,15 +235,23 @@ fn native_bm_kill_command_crit_uses_selected_go_for_the_throat() {
     assert!(crate::auras::has_aura(run.app.world(), run.actor, 459550));
     let pet = crate::hunter_pet::summoned_pet(run.app.world(), run.actor).expect("native pet");
     let target = run.targets[0];
-    run.app.insert_resource(crate::spell_cast::effects::factor_capture::FactorCapture::new(
-        pet, target, 83381, "kill_command", 100,
-    ));
+    run.app.insert_resource(
+        crate::spell_cast::effects::factor_capture::FactorCapture::new(
+            pet,
+            target,
+            83381,
+            "kill_command",
+            100,
+        ),
+    );
     let mut seen = 0;
     let mut criticals = Vec::new();
     engage(&mut run);
     advance_combat_observed(&mut run, |run| {
         let world = run.app.world();
-        let capture = world.resource::<crate::spell_cast::effects::factor_capture::FactorCapture>().export();
+        let capture = world
+            .resource::<crate::spell_cast::effects::factor_capture::FactorCapture>()
+            .export();
         let events = capture["events"].as_array().expect("native factor events");
         for event in &events[seen..] {
             if event["event"] != "result"
@@ -253,17 +260,31 @@ fn native_bm_kill_command_crit_uses_selected_go_for_the_throat() {
             {
                 continue;
             }
-            let observed = event["factors"]["crit_bonus"].as_f64().expect("observed crit bonus");
-            let owner_crit = world.get::<crate::stats::CharacterStats>(run.actor).unwrap().crit_pct;
-            let effect = crate::spell_cast::scripts::script_effect_value(world, run.actor, 459550, 1);
+            let observed = event["factors"]["crit_bonus"]
+                .as_f64()
+                .expect("observed crit bonus");
+            let owner_crit = world
+                .get::<crate::stats::CharacterStats>(run.actor)
+                .unwrap()
+                .crit_pct;
+            let effect =
+                crate::spell_cast::scripts::script_effect_value(world, run.actor, 459550, 1);
             criticals.push((observed, owner_crit, effect));
         }
         seen = events.len();
-    }).expect("ordinary native300s combat");
-    assert!(!criticals.is_empty(), "natural Kill Command combat must produce a critical hit");
+    })
+    .expect("ordinary native300s combat");
+    assert!(
+        !criticals.is_empty(),
+        "natural Kill Command combat must produce a critical hit"
+    );
     // SimC76f8118 sc_hunter.cpp2791–2799: the selected native effect
     // multiplies the actual crit bonus by owner attack critical chance.
-    assert!(criticals.iter().all(|(bonus, crit, effect)|
-        *bonus + 0.001 >= 1.0 + f64::from(*crit * *effect) / 10_000.0),
-        "actual pet Kill Command crits omit Go for the Throat: {criticals:?}");
+    assert!(
+        criticals
+            .iter()
+            .all(|(bonus, crit, effect)| *bonus + 0.001
+                >= 1.0 + f64::from(*crit * *effect) / 10_000.0),
+        "actual pet Kill Command crits omit Go for the Throat: {criticals:?}"
+    );
 }
