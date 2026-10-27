@@ -7,6 +7,9 @@ use shared::protocol::CombatLogKind;
 
 fn selected_run(fnb: bool, havoc: bool) -> Run {
     let (profile, mut traits) = read_reference(267).unwrap();
+    // Exchange real allocated spec points rather than exceeding the native
+    // level90 budget; these unrelated talents do not define recipient logic.
+    traits.retain(|entry| !(fnb && entry.entry_id == 91481 || havoc && entry.entry_id == 91502));
     if fnb {
         traits.push(inputs::AllocatedTrait {
             node_id: 71982,
