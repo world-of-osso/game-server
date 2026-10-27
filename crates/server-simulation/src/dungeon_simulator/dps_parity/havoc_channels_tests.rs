@@ -163,6 +163,67 @@ fn havoc_chaos_theory_dance_grants_buff_and_offhand_consumes_it_for_refund() {
 
 #[test]
 #[ignore = "requires prepared native spec577 player profile"]
+fn havoc_chaotic_disposition_rolls_real_chaos_hits_but_not_hunt() {
+    fn hits(spell: u32, selected: bool) -> Vec<i32> {
+        let _seed = crate::random::seed_scope(70_448);
+        let mut run = prepare_literal(577, 1).unwrap();
+        preparation::finish_pending_setup(&mut run).unwrap();
+        let actor = run.actor;
+        let target = run.targets[0];
+        let known = run
+            .app
+            .world()
+            .get::<crate::class_progression::KnownSpells>(actor)
+            .unwrap();
+        assert!(
+            known.contains(428492),
+            "native profile must select Chaotic Disposition"
+        );
+        if !selected {
+            let spells = known.iter().filter(|spell| *spell != 428492).collect();
+            run.app
+                .world_mut()
+                .entity_mut(actor)
+                .insert(crate::class_progression::KnownSpells::fixture(spells));
+        }
+        run.app
+            .world_mut()
+            .get_mut::<crate::stats::CharacterStats>(actor)
+            .unwrap()
+            .crit_pct = -1000.0;
+        for seed in 1..=80 {
+            let _seed = crate::random::seed_scope(seed);
+            crate::spell_cast::cast_triggered(run.app.world_mut(), actor, spell, Some(target), 1);
+        }
+        let hits = damage(&run, Some(spell));
+        assert_eq!(hits.len(), 80, "real {spell} hits must land");
+        assert!(hits.iter().all(|hit| !hit.crit));
+        hits.into_iter().map(|hit| hit.amount).collect()
+    }
+    let baseline = hits(222031, false);
+    let selected = hits(222031, true);
+    let bonuses: Vec<_> = selected
+        .iter()
+        .zip(&baseline)
+        .map(|(with, without)| *with as f64 / *without as f64)
+        .collect();
+    assert!(
+        bonuses.iter().any(|ratio| (*ratio - 1.0).abs() < 0.001),
+        "some real hits must not proc: {bonuses:?}"
+    );
+    assert!(
+        bonuses.iter().any(|ratio| (*ratio - 1.17).abs() < 0.001),
+        "native17% bonus must occur on real chaos hits: {bonuses:?}"
+    );
+    assert_eq!(
+        hits(370966, false),
+        hits(370966, true),
+        "The Hunt is excluded by source"
+    );
+}
+
+#[test]
+#[ignore = "requires prepared native spec577 player profile"]
 fn havoc_chaos_theory_real_dance_grants_random_strike_critical_chance() {
     let _seed = crate::random::seed_scope(70_448);
     let mut run = prepare_literal(577, 1).unwrap();
