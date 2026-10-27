@@ -38,6 +38,41 @@ fn cast(run: &mut Run, spell: u32, self_target: bool) {
 
 #[test]
 #[ignore = "requires prepared native spec577 player profile"]
+fn havoc_final_breath_adds_scaled_tick_on_completed_beam() {
+    for selected in [false, true] {
+        let _seed = crate::random::seed_scope(70_448);
+        let mut run = prepare_literal(577, 1).unwrap();
+        let actor = run.actor;
+        let primary = run.targets[0];
+        super::face_actor_toward_primary(run.app.world_mut(), actor, primary);
+        let known = run
+            .app
+            .world()
+            .get::<crate::class_progression::KnownSpells>(actor)
+            .unwrap();
+        assert!(known.contains(1266500));
+        let spells = known
+            .iter()
+            .filter(|spell| selected || *spell != 1266500)
+            .collect();
+        run.app
+            .world_mut()
+            .entity_mut(actor)
+            .insert(crate::class_progression::KnownSpells::fixture(spells));
+        havoc_tests::earn_havoc_fury(&mut run, 30.0);
+        cast(&mut run, 198013, false);
+        preparation::finish_pending_setup(&mut run).unwrap();
+        let hits = damage(&run, Some(198030));
+        assert_eq!(
+            hits.len(),
+            if selected { 13 } else { 12 },
+            "Final Breath must add exactly one real Eye Beam tick: {hits:?}"
+        );
+    }
+}
+
+#[test]
+#[ignore = "requires prepared native spec577 player profile"]
 fn havoc_rotation_immolation_aura_deals_initial_damage() {
     let report = super::measure_seed(577, 1, 70_448).expect("real Havoc 300s rotation");
     let actions = report["combat"]["actions"].as_array().unwrap();
