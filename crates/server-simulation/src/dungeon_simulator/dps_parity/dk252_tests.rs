@@ -71,12 +71,16 @@ fn dk252_putrefy_summons_native_lesser_ghoul() {
     )
     .unwrap();
     preparation::finish_pending_setup(&mut run).unwrap();
-    let world = run.app.world_mut();
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
     assert!(
-        world
-            .query::<&shared::components::Npc>()
-            .iter(world)
-            .any(|npc| npc.template_id == 258578),
+        events.iter().any(|event| event.source == Some(run.actor.to_bits())
+            && event.spell_id == Some(1277098)
+            && event.kind == CombatLogKind::Summon
+            && event.target.is_some()),
         "Putrefy must summon its native lesser ghoul"
     );
 }
