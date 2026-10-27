@@ -27,11 +27,15 @@ impl Rotation {
                 "DUNGEON_TTD_UNAVAILABLE: literal WW requires an explicit Fixture encounter".into(),
             );
         }
-        if !world
+        let follower = world
             .get::<crate::followers::Follower>(actor)
-            .is_some_and(|f| f.profile.spec_id == 269)
-        {
-            return Err("literal WW fixture requires its native spec269 follower".into());
+            .is_some_and(|f| f.profile.spec_id == 269);
+        let player = world.get::<shared::components::Player>(actor).is_some()
+            && world
+                .get::<shared::components::ActiveSpec>(actor)
+                .is_some_and(|spec| spec.0 == 269);
+        if !follower && !player {
+            return Err("literal WW fixture requires a native spec269 actor".into());
         }
         let mut bindings = bindings::build();
         let equipment = Equipment::load(world, actor, &mut bindings)?;
@@ -229,11 +233,6 @@ pub(super) fn prepare_driver(run: &mut super::Run) -> Result<Box<dyn super::Spec
 pub(super) const REPORT_KEY: Option<&str> = Some("windwalker_rotation");
 
 impl super::SpecDriver for Rotation {
-    fn supports_actor(identity: &crate::followers::simulator::ParityActor) -> bool {
-        // Rotation::load requires the existing native spec269 follower fixture.
-        matches!(identity, crate::followers::simulator::ParityActor::Follower)
-    }
-
     fn label(&self) -> &'static str {
         "LITERAL_SIMC_WINDWALKER_76f8118"
     }
