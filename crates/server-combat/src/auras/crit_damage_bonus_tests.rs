@@ -201,14 +201,14 @@ fn class_completeness_native_know_your_enemy_magic_crit_orders_spellmod_after_bo
     set_crit(&mut h, 100.0);
     apply_native(&mut h, KNOW_YOUR_ENEMY);
     apply_native(&mut h, MAGE_CRIT_BONUS);
-    //59 base; (2×59×1.40−59)×1.05+59 =170.51. Wrong weapon order gives169.
-    assert_eq!(cast_damage(&mut h, CJ_BALL).amount, 171);
+    //59 base; (2×59×1.20−59)×1.05+59 =145.73.
+    assert_eq!(cast_damage(&mut h, CJ_BALL).amount, 146);
     // An explicit >100%-crit endpoint guarantees damage crits while the
     // owner's raw crit-derived amount changes; not a player-build claim.
     set_crit(&mut h, 200.0);
     h.advance(40);
-    // KnowYourEnemy80%: (2×59×1.80−59)×1.05+59 =220.07.
-    assert_eq!(cast_damage(&mut h, CJ_BALL).amount, 220);
+    // Know Your Enemy at 200% crit: (2×59×1.40−59)×1.05+59 =170.51.
+    assert_eq!(cast_damage(&mut h, CJ_BALL).amount, 171);
 }
 
 #[test]
@@ -231,8 +231,8 @@ fn class_completeness_native_know_your_enemy_weapon_crit_orders_spellmod_before_
     set_crit(&mut h, 100.0);
     apply_native(&mut h, KNOW_YOUR_ENEMY);
     apply_native(&mut h, HAVOC_CRIT_BONUS);
-    // (73.6+73.6×1.06)×1.40 =212.2624. Wrong magic order gives214.
-    assert_eq!(cast_damage(&mut h, CHAOS_WEAPON_HIT).amount, 212);
+    // (73.6+73.6×1.06)×1.20 =181.9392.
+    assert_eq!(cast_damage(&mut h, CHAOS_WEAPON_HIT).amount, 182);
 }
 
 #[test]
