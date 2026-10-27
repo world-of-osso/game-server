@@ -95,10 +95,15 @@ fn summon_elemental(world: &mut World, owner: Entity, elemental: (u32, u32)) {
 }
 
 fn stormfury_multiplier(world: &World, actor: Entity, _target: Entity, spell: &SpellInfo) -> f32 {
-    if spell.id != 269005 || world.get::<Npc>(actor).is_none_or(|npc| npc.template_id != PRIMAL_STORM.1) {
+    if spell.id != 269005
+        || world
+            .get::<Npc>(actor)
+            .is_none_or(|npc| npc.template_id != PRIMAL_STORM.1)
+    {
         return 1.0;
     }
-    let target = world.get::<combat::networking::CombatTarget>(actor)
+    let target = world
+        .get::<combat::networking::CombatTarget>(actor)
         .and_then(|target| target.0)
         .expect("active Stormfury retains its primary target");
     let ticks = combat::auras::paid_periodic_ticks(world, actor, target, STORMFURY);
