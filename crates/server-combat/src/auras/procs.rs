@@ -634,13 +634,18 @@ fn try_proc(world: &mut World, unit: Entity, other: Option<Entity>, id: u32, eve
         };
         // Native item proc children retain the originating aura's item level,
         // including native missile/trigger descendants used by item-scaled damage.
-        crate::spell_cast::cast_triggered_with_item_level(
+        crate::spell_cast::cast_triggered_with_overrides(
             world,
             unit,
             effect.trigger_spell,
             target,
             PROC_TRIGGER_DEPTH,
-            aura.cast_item_level,
+            crate::spell_cast::TriggeredSpellOverrides {
+                effect0_amount: (effect.aura_type == PROC_TRIGGER_SPELL_WITH_VALUE)
+                    .then_some(effect.amount),
+                item_level: aura.cast_item_level,
+                ..Default::default()
+            },
         );
     }
     if break_crowd_control(world, unit, &aura, event) {

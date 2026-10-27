@@ -187,6 +187,27 @@ pub(super) fn prepare_driver(run: &mut super::Run) -> Result<Box<dyn super::Spec
         style: crate::simc_apl_native::FightStyle::Patchwerk,
     };
     let mut rotation = Rotation::load(run.app.world_mut(), run.actor, encounter)?;
+    if run
+        .app
+        .world()
+        .get::<crate::class_progression::KnownSpells>(run.actor)
+        .is_some_and(|known| known.contains(1261684))
+    {
+        // SimC76f8118 sc_demon_hunter.cpp9827–9835 defaults Entropy's precombat souls to effect2.
+        let count =
+            crate::spell_cast::scripts::script_effect_value(run.app.world(), run.actor, 1261684, 1);
+        for _ in 0..count as usize {
+            if !crate::spell_cast::try_cast_triggered(
+                run.app.world_mut(),
+                run.actor,
+                1225789,
+                Some(run.actor),
+                0,
+            ) {
+                return Err("Entropy precombat Meta stack cast refused".into());
+            }
+        }
+    }
     while rotation.precombat_step(run.app.world_mut(), run.actor, &run.targets)? {
         super::preparation::finish_pending_setup(run)?;
     }
