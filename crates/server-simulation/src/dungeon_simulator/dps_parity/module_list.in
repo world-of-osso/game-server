@@ -91,6 +91,7 @@ mod devastation_imminent_tests;
 mod devastation_tests;
 mod devourer_fury_cap_tests;
 mod devourer_immolation_tests;
+mod devourer_entropy_tests;
 mod devourer_burning_tests;
 mod devourer_pierce_admission_tests;
 mod devourer_ray_tick_cost_tests;
