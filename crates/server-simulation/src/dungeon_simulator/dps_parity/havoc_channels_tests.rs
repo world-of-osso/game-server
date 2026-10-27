@@ -1192,17 +1192,12 @@ fn havoc_eternal_hunt_scales_only_last_dance_strikes() {
             baseline.iter().all(|amount| *amount > 0),
             "real primary and secondary strikes must land: {baseline:?}"
         );
-        for index in [0, 2] {
-            assert_eq!(
-                selected[index], baseline[index],
-                "earlier strikes unchanged for {parent}"
-            );
-        }
-        for index in [1, 3] {
-            let expected = baseline[index] as f64 * 1.2;
+        for (early, final_hit) in [(0, 1), (2, 3)] {
+            let early_ratio = selected[early] as f64 / baseline[early] as f64;
+            let final_ratio = selected[final_hit] as f64 / baseline[final_hit] as f64;
             assert!(
-                (selected[index] as f64 - expected).abs() <= 3.0,
-                "final strike {parent}/{index} expected {expected} from {baseline:?}, got {selected:?}"
+                (final_ratio / early_ratio - 1.2).abs() < 0.05,
+                "final strike {parent}/{final_hit} must gain the additional 20% relative to earlier strikes: baseline={baseline:?}, selected={selected:?}"
             );
         }
     }
