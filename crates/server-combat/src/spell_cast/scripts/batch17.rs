@@ -44,8 +44,11 @@ pub(super) fn energize_shadow_bolt(world: &mut World, caster: Entity, _spell: &S
 }
 
 ///6353 explicitly names281490s1; one grant per completed root cast.
-pub(super) fn energize_soul_fire(world: &mut World, caster: Entity, _spell: &SpellInfo) {
+pub(super) fn energize_soul_fire(world: &mut World, caster: Entity, spell: &SpellInfo) {
     spell_cast::cast_triggered(world, caster, SOUL_FIRE_POWER, Some(caster), 1);
+    if let Some(target) = spell.cast_executed_target {
+        apply_soul_fire_dot(world, caster, target);
+    }
 }
 
 ///17962 names245330s1 fragments and196406 gates117828. Apply one use;
@@ -75,17 +78,22 @@ pub(super) fn conflagrate(world: &mut World, caster: Entity, target: Entity, dep
 }
 
 ///6353's445465 condition selects the named Immolate/Wither periodic child.
-///Only base periodic effect0 is established here, not optional vulnerabilities.
-pub(super) fn apply_soul_fire_dot(world: &mut World, caster: Entity, target: Entity, _depth: u8) {
-    if !landed_damage(world, caster, target, SOUL_FIRE) {
-        return;
-    }
+/// SimC76f8118 actions5102–5138: execute casts a free background dot on the
+/// Soul Fire target before the missile lands.
+fn apply_soul_fire_dot(world: &mut World, caster: Entity, target: Entity) {
     let spell_id = if crate::auras::has_aura(world, caster, WITHER_TALENT) {
         WITHER_DOT
     } else {
         IMMOLATE_DOT
     };
-    apply_named_aura(world, caster, target, spell_id, 1);
+    if !spell_cast::try_cast_triggered(world, caster, spell_id, Some(target), 1) {
+        debug!(
+            ?caster,
+            ?target,
+            spell_id,
+            "Soul Fire background dot refused"
+        );
+    }
 }
 
 ///50842 names55078 unless learned212744 selects the replacement branch.

@@ -30,13 +30,14 @@ pub(crate) fn modifier_amount(
                 .find(|row| row.index == effect.index + 1)
         })
         .map_or(0.0, |row| row.amount);
-    // SimC76f8118 sc_mage.cpp2076–2083: Savant modifies the per-charge
-    // term; Prodigious Savant multiplies only mastery, not the base charge bonus.
+    // SimC76f8118 sc_mage.cpp2076–2083: Savant adds to the per-charge term;
+    // Prodigious Savant multiplies mastery there and, as an affecting aura,
+    // the 36032 base points (debug: 90→108, 60→72).
     let prodigious = world
         .get::<ActiveAuras>(caster)
         .and_then(|auras| auras.iter().find(|row| row.spell_id == 384612))
         .and_then(|aura| aura.effects.iter().find(|row| row.index == effect.index))
         // Talent rank is already folded into the native effect amount.
         .map_or(0.0, |row| row.amount);
-    Some((base + mastery * (1.0 + prodigious / 100.0)) * aura.stack_multiplier())
+    Some((base + mastery) * (1.0 + prodigious / 100.0) * aura.stack_multiplier())
 }

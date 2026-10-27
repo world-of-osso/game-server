@@ -22,6 +22,18 @@ fn owner_and_guardian((summon, pet): Ownership<'_>) -> Option<(Entity, bool)> {
         .then_some((summon.owner, true))
 }
 
+// SimC76f8118 sc_hunter.cpp1877–1882: selected Dire Frenzy affects
+// genuine DireCritters, including their melee and spell damage.
+fn dire_frenzy_multiplier(summon: Option<&SummonedCreature>, mods: &AuraStatMods) -> f32 {
+    if summon
+        .is_some_and(|summon| [219199, 442419, 459733, 459739, 471990].contains(&summon.spell_id))
+    {
+        mods.dire_frenzy_damage_mult
+    } else {
+        1.0
+    }
+}
+
 fn owner_multiplier(mods: &AuraStatMods, guardian: bool) -> f32 {
     if guardian {
         mods.guardian_damage_mult
@@ -62,9 +74,10 @@ pub(crate) fn ownership(world: &World, unit: Entity) -> Option<(Entity, bool)> {
 pub fn multiplier(world: &World, unit: Entity) -> f32 {
     ownership(world, unit)
         .and_then(|(owner, guardian)| {
-            world
-                .get::<AuraStatMods>(owner)
-                .map(|mods| owner_multiplier(mods, guardian))
+            world.get::<AuraStatMods>(owner).map(|mods| {
+                owner_multiplier(mods, guardian)
+                    * dire_frenzy_multiplier(world.get::<SummonedCreature>(unit), mods)
+            })
         })
         .unwrap_or(1.0)
 }
@@ -86,12 +99,11 @@ impl SummonDamageModifiers<'_, '_> {
         self.owners
             .get(unit)
             .ok()
-            .and_then(owner_and_guardian)
-            .and_then(|(owner, guardian)| {
-                self.modifiers
-                    .get(owner)
-                    .ok()
-                    .map(|mods| owner_multiplier(mods, guardian))
+            .and_then(|ownership| {
+                let (owner, guardian) = owner_and_guardian(ownership)?;
+                self.modifiers.get(owner).ok().map(|mods| {
+                    owner_multiplier(mods, guardian) * dire_frenzy_multiplier(ownership.0, mods)
+                })
             })
             .unwrap_or(1.0)
     }
