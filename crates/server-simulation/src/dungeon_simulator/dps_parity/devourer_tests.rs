@@ -77,6 +77,20 @@ fn batch2_real_rotation_produces_soulburst() {
 
 #[test]
 #[ignore = "requires DPS_PARITY_WORLD_DB and DPS_PARITY_OUTPUT with spec1480 exact profile/traits"]
+fn batch6_real_rotation_produces_voidsurge() {
+    let report = measure_seed(1480, 1, 70448).expect("native Devourer rotation");
+    let actions = report["combat"]["actions"].as_array().unwrap();
+    assert!(
+        actions
+            .iter()
+            .any(|action| action["spell_id"] == 1246160
+                && action["damage"].as_u64().unwrap_or(0) > 0),
+        "selected Demonsurge must produce real Voidsurge damage"
+    );
+}
+
+#[test]
+#[ignore = "requires DPS_PARITY_WORLD_DB and DPS_PARITY_OUTPUT with spec1480 exact profile/traits"]
 fn devourer_native_measurement_selects_literal_driver() {
     let run = prepare_measurement(1480, 1).expect("native Devourer profile and precombat");
     assert_eq!(
