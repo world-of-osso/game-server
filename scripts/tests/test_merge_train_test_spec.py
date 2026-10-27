@@ -32,5 +32,18 @@ class TestSpecSelection(unittest.TestCase):
         self.assertEqual(env["DPS_PARITY_SPEC"], "252")
 
 
+class MeasurementFailureStatus(unittest.TestCase):
+    def test_failed_measurement_is_named_in_status(self):
+        import tempfile
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            entry = {"id": "e1", "status": "probe passed",
+                     "measurements": ["NATIVE_DPS spec64 targets1: FAILED, see log", "NATIVE_DPS spec64 targets3: 1.0"]}
+            with patch.object(train, "RESULTS", root / "results"), patch.object(train, "RUNNING", root / "running"):
+                train.write_results([entry])
+            self.assertEqual(entry["status"], "probe passed; measurement FAILED (1)")
+
+
 if __name__ == "__main__":
     unittest.main()
