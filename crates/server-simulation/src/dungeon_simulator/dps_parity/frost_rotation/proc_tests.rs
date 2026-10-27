@@ -342,6 +342,35 @@ fn frost_exterminate_spender_deals_both_native_hits() {
 }
 
 #[test]
+#[ignore = "native Frost Fever ticks use the pinned Runic Power proc rate"]
+fn frost_fever_actual_ticks_roll_runic_power() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::protocol::CombatLogKind;
+    for (targets, minimum, maximum) in [(1, 0.15, 0.45), (3, 0.07, 0.32)] {
+        let _seed = crate::random::seed_scope(70448);
+        let mut run = super::super::prepare_measurement(251, targets).unwrap();
+        super::super::engage(&mut run);
+        super::super::advance_combat(&mut run).unwrap();
+        let events = &run.app.world().resource::<ObservedCombatEvents>().0;
+        let ticks = events.iter().filter(|event| {
+            event.source == Some(run.actor.to_bits())
+                && event.spell_id == Some(55095)
+                && event.kind == CombatLogKind::Damage
+                && event.periodic
+        }).count();
+        let procs = events.iter().filter(|event| {
+            event.source == Some(run.actor.to_bits())
+                && event.spell_id == Some(195617)
+                && event.kind == CombatLogKind::Energize
+        }).count();
+        assert!(ticks >= 100, "actual Frost Fever needs enough ticks: {ticks}");
+        let rate = procs as f64 / ticks as f64;
+        assert!((minimum..maximum).contains(&rate),
+            "actual {targets}T Frost Fever proc rate {rate:.3} ({procs}/{ticks}) violates pinned chance");
+    }
+}
+
+#[test]
 #[ignore = "native Frost earned rune refill preserves in-progress regeneration"]
 fn frost_earned_rune_refill_preserves_regeneration() {
     use crate::spell_cast::test_harness::ObservedRuneRefills;
