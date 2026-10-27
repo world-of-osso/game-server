@@ -118,6 +118,8 @@ pub type SpellResidualHook = fn(&mut World, &EffectCtx<'_>, Entity, f32);
 pub type TargetDamageMultiplierHook = fn(&World, Entity, Entity, &SpellInfo) -> f32;
 pub type AuraApplicationHook = fn(&mut World, Entity, &crate::auras::AuraInstance);
 pub type SummonInitializedHook = fn(&mut World, Entity);
+/// Actual CombatStatus transitions, after native reference state is updated.
+pub type CombatStatusChangedHook = fn(&mut World, Entity, bool);
 pub type SummonExpiredHook = fn(&mut World, Entity);
 pub type AuraRedirectHook = fn(&mut World, Entity, Entity, u32, u8) -> bool;
 
@@ -271,6 +273,7 @@ pub enum SpellScriptHook {
     /// All successful native aura applications, including refresh/replacement.
     AfterAuraApplication(AuraApplicationHook),
     SummonInitialized(SummonInitializedHook),
+    CombatStatusChanged(CombatStatusChangedHook),
     SummonExpired(SummonExpiredHook),
     EffectHit(EffectHitLookup),
     EffectHandler(EffectHandlerLookup),
@@ -447,6 +450,14 @@ impl SpellScriptRegistry {
             SpellScriptHook::EffectHit(lookup) => lookup(spell, index),
             _ => None,
         })
+    }
+
+    pub fn combat_status_changed(self, world: &mut World, unit: Entity, active: bool) {
+        for hook in self.hooks() {
+            if let SpellScriptHook::CombatStatusChanged(run) = hook {
+                run(world, unit, active);
+            }
+        }
     }
 
     pub fn summon_initialized(self, world: &mut World, actor: Entity) {
