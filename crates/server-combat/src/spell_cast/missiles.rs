@@ -202,6 +202,15 @@ pub(super) fn resolve_due_hits(world: &mut World) {
         if world.get_entity(hit.caster).is_err() {
             continue;
         }
+        let retired_health = world
+            .get::<super::summon::RetiringSummon>(hit.caster)
+            .map(|retiring| retiring.health);
+        if let Some(health) = retired_health {
+            world
+                .get_mut::<shared::components::Health>(hit.caster)
+                .expect("retired summon health")
+                .current = health;
+        }
         land_now(
             world,
             hit.caster,
@@ -210,6 +219,11 @@ pub(super) fn resolve_due_hits(world: &mut World) {
             hit.landing,
             hit.launched,
         );
+        if retired_health.is_some() {
+            if let Some(mut health) = world.get_mut::<shared::components::Health>(hit.caster) {
+                health.current = 0.0;
+            }
+        }
     }
 }
 
