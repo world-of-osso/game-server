@@ -10,28 +10,61 @@ fn subtlety_clone_ancient_finisher_launches_native_delayed_clone() {
         let mut run = prepare_literal(261, targets).unwrap();
         engage(&mut run);
         for id in [196911, 1269163] {
-            crate::auras::apply_aura(run.app.world_mut(), &crate::auras::AuraApplication {
-                caster: run.actor, target: run.actor, spell_id: id,
-                effect_mask: u32::MAX, source: crate::auras::AuraSource::Cast,
-            });
+            crate::auras::apply_aura(
+                run.app.world_mut(),
+                &crate::auras::AuraApplication {
+                    caster: run.actor,
+                    target: run.actor,
+                    spell_id: id,
+                    effect_mask: u32::MAX,
+                    source: crate::auras::AuraSource::Cast,
+                },
+            );
         }
-        assert!(crate::auras::set_self_cast_stacks(run.app.world_mut(), run.actor, 196911, 7));
+        assert!(crate::auras::set_self_cast_stacks(
+            run.app.world_mut(),
+            run.actor,
+            196911,
+            7
+        ));
         {
-            let mut pools = run.app.world_mut().get_mut::<crate::spell_cast::powers::PowerPools>(run.actor).unwrap();
+            let mut pools = run
+                .app
+                .world_mut()
+                .get_mut::<crate::spell_cast::powers::PowerPools>(run.actor)
+                .unwrap();
             for kind in [PowerType::Energy, PowerType::ComboPoints] {
                 let pool = pools.get_mut(kind).unwrap();
                 pool.current = pool.max;
             }
         }
-        literal_rotation::execution::execute(run.app.world_mut(), run.actor,
-            literal_rotation::execution::Execution::Spell(spell, run.targets[0], Some(run.targets[0]))).unwrap();
+        literal_rotation::execution::execute(
+            run.app.world_mut(),
+            run.actor,
+            literal_rotation::execution::Execution::Spell(
+                spell,
+                run.targets[0],
+                Some(run.targets[0]),
+            ),
+        )
+        .unwrap();
         preparation::finish_pending_setup(&mut run).unwrap();
-        let events = &run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
+        let events = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0;
         for target in &run.targets {
-            assert!(events.iter().any(|event| event.source == Some(run.actor.to_bits())
-                && event.target == Some(target.to_bits()) && event.spell_id == Some(clone)
-                && event.kind == CombatLogKind::Damage && event.amount > 0),
-                "the earned finisher must launch its native clone on each recipient");
+            assert!(
+                events
+                    .iter()
+                    .any(|event| event.source == Some(run.actor.to_bits())
+                        && event.target == Some(target.to_bits())
+                        && event.spell_id == Some(clone)
+                        && event.kind == CombatLogKind::Damage
+                        && event.amount > 0),
+                "the earned finisher must launch its native clone on each recipient"
+            );
         }
     }
 }
