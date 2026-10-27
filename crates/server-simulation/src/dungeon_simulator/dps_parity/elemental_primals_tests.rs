@@ -266,6 +266,54 @@ fn elemental_primal_fire_immolate_requires_no_current_dot() {
 
 #[test]
 #[ignore = "requires private262 native DB/profile"]
+fn elemental_primal_stormfury_increases_damage_each_channel_tick() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = fixture();
+    // SimC76f8118 sc_shaman.cpp4160–4184: native157375 effect1 (5%)
+    // compounds by current scheduled tick, not by hit or target count.
+    assert!(crate::spell_cast::try_cast_triggered(
+        run.app.world_mut(),
+        run.actor,
+        191634,
+        Some(run.targets[0]),
+        1
+    ));
+    for _ in 0..180 {
+        run.app.update();
+    }
+    let storm = owned_actors(&mut run, 77942);
+    assert_eq!(storm.len(), 1);
+    let actor = storm[0].0;
+    let hits: Vec<_> = run
+        .app
+        .world()
+        .resource::<ObservedCombatEvents>()
+        .0
+        .iter()
+        .filter(|event| {
+            event.source == Some(actor.to_bits())
+                && event.target == Some(run.targets[0].to_bits())
+                && event.spell_id == Some(269005)
+                && event.kind == CombatLogKind::Damage
+        })
+        .take(4)
+        .map(|event| event.amount as f64 / if event.crit { 2.0 } else { 1.0 })
+        .collect();
+    assert_eq!(
+        hits.len(),
+        4,
+        "four real Stormfury channel damage ticks: {hits:?}"
+    );
+    let expected = 1.05_f64.powi(3);
+    // Native269005 has 5% random variance. Compare endpoints with its bound.
+    assert!(
+        hits[3] / hits[0] >= expected * 0.95 / 1.05 - 0.001,
+        "native compounding 5% per tick: {hits:?}"
+    );
+}
+
+#[test]
+#[ignore = "requires private262 native DB/profile"]
 fn elemental_primal_fire_ascendance_summons_and_attacks() {
     assert_native_elemental(1219480, 378255, 61029, &[117588, 57984, 118297]);
 }
