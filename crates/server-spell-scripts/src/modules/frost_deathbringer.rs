@@ -46,6 +46,9 @@ fn stack_mark(world: &mut World, ctx: &EffectCtx, target: Entity, critical: bool
         }
         return;
     }
+    if ctx.spell.id == 441426 && auras::has_aura(world, ctx.caster, 441894) {
+        spell_cast::cast_triggered(world, ctx.caster, 55095, Some(target), ctx.depth + 1);
+    }
     if matches!(ctx.spell.id, 436304 | 66198 | 458169 | 439539) {
         return;
     }
@@ -105,7 +108,17 @@ fn explode_mark(
     // SimC76f8118 sc_death_knight.cpp8355–8402: Frost uses effect2,
     // multiplied by actual earned mark stacks, and selected Exterminate grants effect3 uses.
     explosion.effects.retain(|effect| effect.index == 1);
-    explosion.cast_damage_multiplier = Some(f32::from(aura.stacks));
+    let grim = if auras::has_aura(world, aura.caster, 434905) {
+        let health = world
+            .get::<shared::components::Health>(target)
+            .expect("Mark target health");
+        let missing = (1.0 - health.current / health.max).clamp(0.0, 1.0);
+        let maximum = script_effect_value(world, aura.caster, 434905, 0) / 100.0;
+        1.0 + missing * maximum
+    } else {
+        1.0
+    };
+    explosion.cast_damage_multiplier = Some(f32::from(aura.stacks) * grim);
     if !spell_cast::launch_triggered_spell(world, aura.caster, &explosion, Some(target), 1) {
         return;
     }

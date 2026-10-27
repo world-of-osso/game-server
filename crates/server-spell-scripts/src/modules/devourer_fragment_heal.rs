@@ -69,7 +69,9 @@ fn on_fragment_heal(world: &mut World, caster: Entity, target: Entity, depth: u8
         return;
     }
     // SimC76f8118 cpp3686: each consumed soul heal triggers selected Feast.
-    if world.get::<KnownSpells>(caster).is_some_and(|known| known.contains(1237270))
+    if world
+        .get::<KnownSpells>(caster)
+        .is_some_and(|known| known.contains(1237270))
         && !spell_cast::try_cast_triggered(world, caster, 1232310, Some(caster), depth + 1)
     {
         error!(?caster, "native Feast of Souls was refused");

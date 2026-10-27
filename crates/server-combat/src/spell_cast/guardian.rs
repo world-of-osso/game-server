@@ -841,7 +841,10 @@ fn native_cast_targets(
     // native18/16 selectors center it on the caster. Such spells have no
     // explicit unit: do not range-check the enemy as the cast unit. Preserve
     // that enemy separately as the actual selected primary.
-    let unit = if super::targets::explicit_requirement(spell.effects.iter()).is_some() {
+    // Dreadbite's source-qualified target plan requires its selected enemy.
+    let unit = if spell.id == 271971
+        || super::targets::explicit_requirement(spell.effects.iter()).is_some()
+    {
         enemy
     } else {
         actor
