@@ -126,12 +126,27 @@ fn reduce_paired_recovery(world: &mut World, caster: Entity, spell: u32, stacks:
 }
 
 fn register_channels(scripts: &mut AuraScripts) {
+    scripts.0.entry(390155).or_default().on_apply = Some(apply_serrated_glaive);
     for beam in BEAMS {
         let script = scripts.0.entry(*beam).or_default();
         script.on_apply = Some(super::havoc_fury::apply_blind_fury);
         script.on_natural_end = Some(finish_beam);
         script.on_remove = Some(super::havoc_eternal::remove_beam);
     }
+}
+
+// SimC76f8118 sc_demon_hunter.cpp2195–2196,7534–7539: the earned native
+// buff's zero-valued modifier takes its amount from the selected talent.
+fn apply_serrated_glaive(world: &mut World, caster: Entity, aura: &AuraInstance) {
+    const TALENT: u32 = 390154;
+    if aura.caster != caster || !has_talent(world, caster, TALENT) {
+        return;
+    }
+    let amount = combat::spell_cast::scripts::script_effect_value(world, caster, TALENT, 0);
+    assert!(
+        combat::auras::set_effect_amount(world, caster, aura.instance_id, 0, amount),
+        "native Serrated Glaive modifier must exist"
+    );
 }
 
 fn finish_beam(world: &mut World, caster: Entity, aura: &AuraInstance) {
