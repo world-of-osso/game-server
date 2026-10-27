@@ -252,6 +252,25 @@ const GUARDIAN_POLICIES: &[GuardianPolicy] = &[
         owner_spell_share: Some(1.0),
         owner_attack_share: None,
     },
+    // SimC76f8118 sc_shaman.cpp4026–4042/4070–4139/4248–4315: Primal Fire and
+    // Storm APL order with owner SP1.0 x (1 + native Primal Elementalist117013
+    // effect0 80%); these native roots exist only with that talent.
+    GuardianPolicy {
+        summons: &[118291],
+        entry: 61029,
+        spells: &[117588, 118297, 57984],
+        repeat_gcd: None,
+        owner_spell_share: Some(1.8),
+        owner_attack_share: None,
+    },
+    GuardianPolicy {
+        summons: &[157319],
+        entry: 77942,
+        spells: &[157375, 157348, 157331],
+        repeat_gcd: None,
+        owner_spell_share: Some(1.8),
+        owner_attack_share: None,
+    },
 ];
 
 fn policy(summon: u32, entry: u32) -> Option<&'static GuardianPolicy> {
