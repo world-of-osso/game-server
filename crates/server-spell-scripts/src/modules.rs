@@ -107,6 +107,7 @@ register_modules! {
     evoker_imminent: (1000, "modules/evoker_imminent.rs"),
     evoker_rewind: (1000, "modules/evoker_rewind.rs"),
     evoker_rising_fury: (1000, "modules/evoker_rising_fury.rs"),
+    evoker_siege: (1000, "modules/evoker_siege.rs"),
     evoker_tier: (160, "modules/evoker_tier.rs"),
     execution_counters: (320, "modules/execution_counters.rs"),
     feral_berserk: (1000, "modules/feral_berserk.rs"),
