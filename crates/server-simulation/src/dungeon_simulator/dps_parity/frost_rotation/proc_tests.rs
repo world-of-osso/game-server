@@ -906,6 +906,41 @@ fn frost_gathering_storm_extends_winter_for_paid_and_free_spenders() {
 }
 
 #[test]
+#[ignore = "actual three-target Winter earns one Biting Cold Rime and Frozen Dominion stacks"]
+fn frost_winter_earns_target_bonuses_once() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::super::prepare_literal(251, 3).unwrap();
+    super::super::engage(&mut run);
+    let actor = run.actor;
+    super::super::enhancement_generation_tests::cast(&mut run, 51271, actor);
+    for _ in 0..40 {
+        run.app.update();
+    }
+    assert!(
+        auras::has_aura(run.app.world(), actor, 59052),
+        "three-target Winter earns Rime"
+    );
+    let stacks = run
+        .app
+        .world()
+        .get::<ActiveAuras>(actor)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 377253)
+        .expect("Winter earns Frozen Dominion")
+        .stacks;
+    assert_eq!(stacks, 3, "each distinct target earns one Dominion stack");
+    clear_proc(&mut run, 59052);
+    for _ in 0..60 {
+        run.app.update();
+    }
+    assert!(
+        !auras::has_aura(run.app.world(), actor, 59052),
+        "Biting Cold cannot trigger again in the same Winter"
+    );
+}
+
+#[test]
 #[ignore = "real Frostwyrm's Fury earns and uses Chosen recall"]
 fn frost_fury_earns_and_uses_recall() {
     use crate::spell_cast::test_harness::ObservedCombatEvents;

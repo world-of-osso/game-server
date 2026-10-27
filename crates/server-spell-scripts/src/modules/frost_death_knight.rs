@@ -24,6 +24,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AfterPeriodicDamagePolicies(frost_fever_runic_power),
     SpellScriptHook::AfterPeriodicDamagePolicies(frost_fever_brittle),
     SpellScriptHook::AfterResolvedHits(earn_freezing_tempest),
+    SpellScriptHook::AfterResolvedHits(winter_target_bonuses),
     SpellScriptHook::OnCast(reset_freezing_tempest),
     SpellScriptHook::ResolvedDamage(glacial_advance_razorice),
     SpellScriptHook::LateAuraRegistration(register_frost_auras),
@@ -649,8 +650,54 @@ fn earn_freezing_tempest(world: &mut World, ctx: &spell_cast::effects::EffectCtx
     }
 }
 
+#[derive(Component, Default)]
+struct WinterTargets {
+    biting_cold: bool,
+    dominion_started: bool,
+    dominion_targets: std::collections::HashSet<Entity>,
+}
+
+fn winter_target_bonuses(world: &mut World, ctx: &spell_cast::effects::EffectCtx) {
+    if ctx.spell.id != 196771 || !is_frost(world, ctx.caster) {
+        return;
+    }
+    let hits: Vec<Entity> = spell_cast::resolving_damage(world, ctx)
+        .expect("Winter pulse hits")
+        .iter()
+        .filter(|(_, damage)| *damage > 0.0)
+        .map(|(target, _)| *target)
+        .collect();
+    if hits.is_empty() {
+        return;
+    }
+    let biting = auras::has_aura(world, ctx.caster, 377056);
+    let threshold = spell_cast::scripts::script_effect_value(world, ctx.caster, 377056, 0) as usize;
+    let dominion = auras::has_aura(world, ctx.caster, 377226);
+    let mut dominion_active = auras::has_aura(world, ctx.caster, 377253);
+    let mut state = world
+        .entity_mut(ctx.caster)
+        .take::<WinterTargets>()
+        .unwrap_or_default();
+    if biting && hits.len() >= threshold && !state.biting_cold {
+        state.biting_cold = true;
+        trigger_native_buff(world, ctx.caster, RIME);
+    }
+    if dominion {
+        for target in hits {
+            if (!state.dominion_started || dominion_active) && state.dominion_targets.insert(target)
+            {
+                state.dominion_started = true;
+                spell_cast::cast_triggered(world, ctx.caster, 377253, Some(ctx.caster), 1);
+                dominion_active = auras::has_aura(world, ctx.caster, 377253);
+            }
+        }
+    }
+    world.entity_mut(ctx.caster).insert(state);
+}
+
 fn reset_freezing_tempest(world: &mut World, caster: Entity, spell: u32, _: u8) {
     if matches!(spell, 196770 | 1233152) && is_frost(world, caster) {
+        world.entity_mut(caster).insert(WinterTargets::default());
         // SimC76f8118 sc_death_knight.cpp12443–12450: a new Winter clears the previous stack.
         auras::remove_auras(world, caster, auras::RemoveReason::Consumed, |aura| {
             aura.spell_id == 1297365 && aura.caster == caster
