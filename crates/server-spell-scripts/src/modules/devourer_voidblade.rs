@@ -13,6 +13,10 @@ fn after_launch(world: &mut World, caster: Entity, spell: &SpellInfo) {
     }
     let target = spell.cast_primary_target.expect("native Voidblade target");
     if !spell_cast::try_cast_triggered(world, caster, 1245414, Some(target), 1) {
-        warn!(?caster, ?target, "native Voidblade child 1245414 was refused");
+        warn!(
+            ?caster,
+            ?target,
+            "native Voidblade child 1245414 was refused"
+        );
     }
 }

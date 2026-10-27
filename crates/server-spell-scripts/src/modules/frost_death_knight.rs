@@ -240,8 +240,22 @@ fn register_breath(scripts: &mut auras::scripts::AuraScripts) {
     scripts.0.entry(1249658).or_default().on_remove = Some(breath_ended);
 }
 
-fn breath_ended(world: &mut World, unit: Entity, aura: &auras::AuraInstance, reason: auras::RemoveReason) {
-    if aura.caster != unit || !is_frost(world, unit) || matches!(reason, auras::RemoveReason::Death | auras::RemoveReason::CasterGone | auras::RemoveReason::Evade | auras::RemoveReason::Unlearned) {
+fn breath_ended(
+    world: &mut World,
+    unit: Entity,
+    aura: &auras::AuraInstance,
+    reason: auras::RemoveReason,
+) {
+    if aura.caster != unit
+        || !is_frost(world, unit)
+        || matches!(
+            reason,
+            auras::RemoveReason::Death
+                | auras::RemoveReason::CasterGone
+                | auras::RemoveReason::Evade
+                | auras::RemoveReason::Unlearned
+        )
+    {
         return;
     }
     // SimC76f8118 sc_death_knight.cpp7135–7140: ending Breath grants
