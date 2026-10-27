@@ -362,6 +362,22 @@ fn dk252_putrefy_impact_raises_native_magus() {
 }
 
 #[test]
+#[ignore = "requires native252 profile/traits and player actor"]
+fn dk252_putrefy_triggers_selected_apocalypse_rune() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 1).unwrap();
+    engage(&mut run);
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, 327087));
+    for _ in 0..20 {
+        assert!(crate::spell_cast::try_cast_triggered(run.app.world_mut(), run.actor, 390220, Some(run.targets[0]), 1));
+    }
+    for _ in 0..120 { run.app.update(); }
+    let events = &run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
+    assert!(events.iter().any(|e| e.spell_id == Some(327093) && e.kind == CombatLogKind::Damage && e.amount > 0),
+        "selected Rune of the Apocalypse must produce native Pestilence on Putrefy impacts");
+}
+
+#[test]
 #[ignore = "requires private native252 profile/traits and player actor"]
 fn dk252_putrefy_magus_casts_native_necrotic_bolt() {
     let _seed = crate::random::seed_scope(70448);

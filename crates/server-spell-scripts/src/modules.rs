@@ -287,6 +287,7 @@ register_modules! {
     survival_wildfire: (2551, "modules/survival_wildfire.rs"),
     sweeping_strikes: (711, "modules/sweeping_strikes.rs"),
     swiftmend: (1000, "modules/swiftmend.rs"),
+    unholy_apocalypse_rune: (2530, "modules/unholy_apocalypse_rune.rs"),
     touch_of_death: (240, "modules/touch_of_death.rs"),
     unholy_army: (2522, "modules/unholy_army.rs"),
     unholy_eruption: (2520, "modules/unholy_eruption.rs"),
