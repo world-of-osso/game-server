@@ -59,12 +59,8 @@ fn store_from_white(world: &mut World, caster: Entity, _: bool) {
     if !advance_white_counter(world, caster, upper, now) {
         return;
     }
-    let mut spell = world
-        .resource::<SpellStore>()
-        .get(STORAGE)
+    let cooldown = world.resource::<SpellStore>().get(STORAGE)
         .expect("native Shadow Techniques storage/energy spell")
-        .clone();
-    let cooldown = spell
         .aura_options
         .as_ref()
         .expect("native Shadow Techniques ICD")
@@ -73,6 +69,14 @@ fn store_from_white(world: &mut World, caster: Entity, _: bool) {
         hits: 0,
         ready_at: now + f64::from(cooldown) / 1000.0,
     });
+    earn_storage(world, caster);
+}
+
+// sc_rogue.cpp8159–8172: clones share this producer, without the white-hit ICD.
+pub(super) fn earn_storage(world: &mut World, caster: Entity) {
+    let shadowcraft = has_talent(world, caster, SHADOWCRAFT) && auras::has_aura(world, caster, DANCE);
+    let mut spell = world.resource::<SpellStore>().get(STORAGE)
+        .expect("native Shadow Techniques storage/energy spell").clone();
     // One cast grants native Energy once, even when Shadowcraft earns two stacks.
     spell.cast_aura_stacks = Some(if shadowcraft { 2 } else { 1 });
     spell_cast::launch_triggered_spell(world, caster, &spell, Some(caster), 1);
