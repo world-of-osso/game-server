@@ -1559,3 +1559,58 @@ fn demonology_tyrant_summon_grants_oblation_and_abyssal_dominion() {
         "native 15s Abyssal Dominion plus Reign of Tyranny 5s, got {dominion}"
     );
 }
+
+
+#[test]
+#[ignore = "requires canonical266 inputs; Dreadbite without Dreadlash is single-target"]
+fn demonology_dreadbite_without_dreadlash_hits_only_primary() {
+    use shared::protocol::CombatLogKind;
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(266, 3).unwrap();
+    assert!(!crate::auras::has_aura(run.app.world(), run.actor, 264078));
+    engage(&mut run);
+    let target = run.targets[0];
+    run.app.world_mut().entity_mut(run.actor).insert(crate::networking::CombatTarget(Some(target)));
+    let dog = summon_native_dreadstalker(&mut run);
+    for _ in 0..120 { run.app.update(); }
+    let impacts: Vec<_> = run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0
+        .iter().filter(|e| e.source == Some(dog.to_bits()) && e.spell_id == Some(271971) && e.kind == CombatLogKind::Damage).collect();
+    assert!(!impacts.is_empty(), "real Dreadstalker must deal Dreadbite damage");
+    assert!(impacts.iter().all(|e| e.target == Some(target.to_bits())), "without Dreadlash every actual Dreadbite hits only primary: {impacts:?}");
+}
+
+#[test]
+#[ignore = "requires canonical266 inputs; real Felguard Felstorm"]
+fn demonology_felguard_uses_felstorm_against_native_targets() {
+    use shared::protocol::CombatLogKind;
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_measurement(266, 3).unwrap();
+    engage(&mut run);
+    let pet = run.app.world_mut().query::<(Entity, &crate::hunter_pet::HunterPet, &shared::components::Npc)>()
+        .iter(run.app.world()).find(|(_,pet,npc)| pet.owner == run.actor && npc.template_id == 17252)
+        .map(|(pet,_,_)| pet).expect("precombat real Felguard");
+    crate::pet_control::order_companion_pet(run.app.world_mut(), run.actor, Some(run.targets[0]));
+    for _ in 0..240 { run.app.update(); }
+    let hits: Vec<_> = run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0
+        .iter().filter(|e| e.source == Some(pet.to_bits()) && e.spell_id == Some(89753) && e.kind == CombatLogKind::Damage).collect();
+    assert!(hits.len() >= 5, "actual Felguard must perform the native Felstorm ticks, got {}", hits.len());
+    for target in &run.targets {
+        assert!(hits.iter().any(|e| e.target == Some(target.to_bits())), "Felstorm must damage each native pack target");
+    }
+}
+
+#[test]
+#[ignore = "requires canonical266 inputs; Blighted Maw follows actual Dreadbite damage"]
+fn demonology_blighted_maw_follows_real_dreadbite() {
+    use shared::protocol::CombatLogKind;
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(266, 1).unwrap();
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, 1276956));
+    engage(&mut run);
+    run.app.world_mut().entity_mut(run.actor).insert(crate::networking::CombatTarget(Some(run.targets[0])));
+    let dog = summon_native_dreadstalker(&mut run);
+    for _ in 0..120 { run.app.update(); }
+    let events = &run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
+    assert!(events.iter().any(|e| e.source == Some(dog.to_bits()) && e.spell_id == Some(271971) && e.kind == CombatLogKind::Damage && e.amount > 0), "real dog must land Dreadbite");
+    assert!(events.iter().any(|e| e.source == Some(run.actor.to_bits()) && e.spell_id == Some(1276960) && e.kind == CombatLogKind::Damage && e.amount > 0), "selected Blighted Maw must deal real native Plague damage");
+}
