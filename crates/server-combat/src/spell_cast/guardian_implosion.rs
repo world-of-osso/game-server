@@ -34,7 +34,7 @@ struct RapidityAttempts(u32);
 #[derive(Component)]
 struct PendingIsolated(Entity);
 
-pub(super) fn is_imploded(world: &World, unit: Entity) -> bool {
+pub(in crate::spell_cast) fn is_imploded(world: &World, unit: Entity) -> bool {
     world
         .get::<Imploding>(unit)
         .is_some_and(|state| !state.isolated)
