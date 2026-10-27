@@ -797,6 +797,22 @@ fn dk252_dark_transformation_tracks_the_transformed_pet_on_owner() {
 }
 
 #[test]
+#[ignore = "requires native252 profile/traits and player actor"]
+fn dk252_literal_rotation_observes_sudden_doom_reaction() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_measurement(252, 1).unwrap();
+    engage(&mut run);
+    crate::auras::apply_aura(run.app.world_mut(), &crate::auras::AuraApplication {
+        caster: run.actor, target: run.actor, spell_id: 81340, effect_mask: 15,
+        source: crate::auras::AuraSource::Cast,
+    });
+    for _ in 0..50 {
+        drive_player(&mut run).expect("literal Unholy must handle earned Sudden Doom reaction");
+        run.app.update();
+    }
+}
+
+#[test]
 #[ignore = "requires private native252 profile/traits and player actor"]
 fn dk252_single_target_uses_dark_transformation_and_putrefy() {
     let _seed = crate::random::seed_scope(70448);
