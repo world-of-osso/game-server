@@ -86,6 +86,7 @@ mod devastation_imminent_tests;
 mod devastation_tests;
 mod devourer_immolation_tests;
 mod devourer_burning_tests;
+mod devourer_focused_ray_tests;
 #[cfg(test)]
 mod devourer_tests;
 mod dot_duration_tests;
