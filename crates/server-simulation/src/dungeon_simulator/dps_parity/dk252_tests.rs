@@ -297,6 +297,26 @@ fn dk252_putrefy_summons_native_lesser_ghoul() {
 }
 
 #[test]
+#[ignore = "requires native252 profile/traits and player actor"]
+fn dk252_lesser_ghoul_uses_claw_then_transformed_sweeping_claws() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 1).unwrap();
+    engage(&mut run);
+    assert!(crate::spell_cast::try_cast_triggered(run.app.world_mut(), run.actor, 1294026, Some(run.actor), 1));
+    for _ in 0..160 { run.app.update(); }
+    crate::auras::apply_aura(run.app.world_mut(), &crate::auras::AuraApplication {
+        caster: run.actor, target: run.actor, spell_id: 1235391, effect_mask: 1,
+        source: crate::auras::AuraSource::Cast,
+    });
+    for _ in 0..160 { run.app.update(); }
+    let events = &run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
+    for spell in [199373, 1278150] {
+        assert!(events.iter().any(|e| e.spell_id == Some(spell) && e.kind == CombatLogKind::Damage && e.amount > 0),
+            "actual lesser ghoul must damage with native {spell}");
+    }
+}
+
+#[test]
 #[ignore = "requires private native252 profile/traits and player actor"]
 fn dk252_putrefy_ghoul_impacts_the_enemy() {
     let _seed = crate::random::seed_scope(70448);
