@@ -362,6 +362,24 @@ fn demonology_guardian_owner_passive_increases_fel_firebolt_crit() {
 }
 
 #[test]
+#[ignore = "requires private253 inputs; capture real pet Stomp factors"]
+fn diag_bm_pet_stomp_factors() {
+    use crate::spell_cast::effects::factor_capture::FactorCapture;
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_measurement(253, 1).unwrap();
+    engage(&mut run);
+    let pet = run.app.world_mut().query::<(Entity, &crate::hunter_pet::HunterPet)>()
+        .iter(run.app.world()).find(|(_, pet)| pet.owner == run.actor).map(|(pet, _)| pet).unwrap();
+    let owner = run.app.world().get::<crate::stats::CharacterStats>(run.actor).unwrap();
+    eprintln!("DIAG_BM_OWNER_VERS {}", owner.versatility_pct);
+    run.app.insert_resource(FactorCapture::new(pet, run.targets[0], 201754, "stomp", 1));
+    crate::spell_cast::creature_cast(run.app.world_mut(), run.actor, 217200, Some(run.targets[0]), false).unwrap();
+    let capture = run.app.world().resource::<FactorCapture>().export();
+    eprintln!("DIAG_BM_FACTORS {capture}");
+    assert!(capture["events"].as_array().unwrap().iter().any(|event| event["event"] == "direct_amount"));
+}
+
+#[test]
 #[ignore = "requires private266 inputs; capture real Fel Firebolt factors"]
 fn diag_demonology_fel_firebolt_factors() {
     use crate::spell_cast::effects::factor_capture::FactorCapture;
