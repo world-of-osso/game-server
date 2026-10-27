@@ -66,6 +66,7 @@ fn isolated_prey_hits(spell: u32, count: usize, selected: bool) -> Vec<CombatLog
     {
         let _seed = crate::random::seed_scope(88);
         crate::spell_cast::cast_triggered(run.app.world_mut(), actor, spell, None, 1);
+        run.app.update();
     }
     let hits = damage(&run, Some(spell));
     assert!(
