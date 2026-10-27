@@ -611,6 +611,21 @@ pub fn initialize_action_delays(
     }
 }
 
+/// Reset every bound action's cooldown, e.g. when a source re-summons an active
+/// guardian (SimC76f8118 sc_shaman.cpp11561–11564); cast state is unchanged.
+pub fn reset_action_cooldowns(world: &mut World, actor: Entity) {
+    let mut state = world
+        .get_mut::<GuardianActor>(actor)
+        .expect("cooldown reset requires an initialized native guardian");
+    state.spell_ready_at.clear();
+    let spells = state.spells.clone();
+    if let Some(mut history) = world.get_mut::<super::SpellHistory>(actor) {
+        for id in spells {
+            history.spell_ready_at.remove(&id);
+        }
+    }
+}
+
 pub(super) fn update(world: &mut World) {
     let actors: Vec<_> = world
         .query_filtered::<Entity, With<GuardianActor>>()
