@@ -4,6 +4,8 @@ use shared::components::Position;
 use shared::protocol::CombatLogKind;
 
 struct RetreatThenBeam {
+    driver: literal_rotation::Driver,
+    equipment: literal_rotation::equipment::Equipment,
     cast: bool,
 }
 
@@ -17,18 +19,28 @@ impl SpecDriver for RetreatThenBeam {
         if self.cast || world.get::<shared::casting::CastState>(actor).is_some() {
             return Ok(());
         }
-        if world
-            .get::<crate::spell_cast::SpellHistory>(actor)
-            .is_some_and(|history| history.has_active_gcd(crate::spell_cast::history_now(world)))
-        {
-            return Ok(());
-        }
-        literal_rotation::execution::execute(
+        let prepared = literal_rotation::execution::Prepared::read(
             world,
             actor,
-            literal_rotation::execution::Execution::Spell(198013, actor, Some(targets[0])),
+            targets,
+            &self.equipment,
+            [literal_rotation::execution::NativeAction {
+                name: "eye_beam",
+                spell: 198013,
+                talent: None,
+                self_target: true,
+            }],
+            false,
         )?;
-        self.cast = true;
+        if let Some((action, execution)) = self.driver.select(
+            "default",
+            &BTreeMap::<String, f64>::new(),
+            &prepared,
+            &self.equipment,
+        )? {
+            self.driver.execute(world, actor, action, execution)?;
+            self.cast = true;
+        }
         Ok(())
     }
 
@@ -57,7 +69,18 @@ fn shared_fixture_retreat_then_beam_returns_before_channel() {
         literal_rotation::execution::Execution::Spell(198793, actor, Some(boss)),
     )
     .unwrap();
-    run.spec_driver = Some(Box::new(RetreatThenBeam { cast: false }));
+    let equipment = literal_rotation::equipment::Equipment::load(
+        run.app.world(),
+        actor,
+        &mut crate::simc_apl_native::Bindings::default(),
+    )
+    .unwrap();
+    let program = server::simc_apl::Program::parse(&[("default", "eye_beam")]).unwrap();
+    run.spec_driver = Some(Box::new(RetreatThenBeam {
+        driver: literal_rotation::Driver::new(program),
+        equipment,
+        cast: false,
+    }));
     let mut max_distance = 0.0_f32;
     for _ in 0..240 {
         run.app.update();
