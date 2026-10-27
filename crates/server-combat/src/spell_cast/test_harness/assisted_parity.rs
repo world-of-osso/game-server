@@ -4,8 +4,8 @@ use crate::class_progression::KnownSpells;
 use crate::spell_info::{SpellInfo, SpellStore};
 use bevy::prelude::*;
 use game_engine_core::assisted_combat::AssistedFacts;
-use shared::components::{Health, Player, Position, ThreatTable};
-use std::collections::BTreeSet;
+use shared::components::{Health, Player, ThreatTable};
+use std::collections::{BTreeMap, BTreeSet};
 
 pub fn read_facts(
     world: &mut World,
@@ -13,8 +13,31 @@ pub fn read_facts(
     target: Entity,
     needed: &BTreeSet<u32>,
 ) -> Result<AssistedFacts, String> {
+    read_facts_with_dots(world, actor, target, needed, &BTreeSet::new())
+}
+
+pub fn read_facts_with_dots(
+    world: &mut World,
+    actor: Entity,
+    target: Entity,
+    needed: &BTreeSet<u32>,
+    dot_spells: &BTreeSet<u32>,
+) -> Result<AssistedFacts, String> {
     let mut facts = read_actor_facts(world, actor, target)?;
-    facts.player_combat_enemies_within_8yd = Some(count_nearby_enemies(world, actor)?);
+    let enemies = combat_enemies(world, actor)?;
+    let origin =
+        super::super::targets::position(world, actor).ok_or("native actor position absent")?;
+    facts.active_enemies = Some(enemies.len() as u32);
+    facts.player_combat_enemies_within_8yd = Some(
+        enemies
+            .iter()
+            .filter(|&&unit| {
+                super::super::targets::position(world, unit)
+                    .is_some_and(|point| origin.distance(point) <= 8.0)
+            })
+            .count() as u32,
+    );
+    facts.active_dot_counts = Some(read_active_dot_counts(world, actor, &enemies, dot_spells));
     for &requested in needed {
         let effective = crate::auras::overrides::resolve_spell(world, actor, requested);
         if facts.known.contains(&effective) {
@@ -65,6 +88,16 @@ fn read_actor_facts(world: &World, actor: Entity, target: Entity) -> Result<Assi
         powers,
         player_auras: aura_ids(world, actor),
         player_aura_stacks: Some(aura_stacks(world, actor)),
+        target_aura_stacks: Some(aura_stacks(world, target)),
+        player_aura_remaining_ms: Some(aura_remaining_ms(world, actor)),
+        target_aura_remaining_ms: Some(aura_remaining_ms(world, target)),
+        mana_pct: super::super::powers::power_value(
+            world,
+            actor,
+            shared::components::PowerType::Mana,
+        )
+        .filter(|(_, max)| *max > 0.0)
+        .map(|(current, max)| f64::from(current) * 100.0 / f64::from(max)),
         target_auras: aura_ids(world, target),
         player_health_pct: health_pct(world, actor),
         target_health_pct: health_pct(world, target),
@@ -107,6 +140,60 @@ fn aura_stacks(world: &World, unit: Entity) -> std::collections::BTreeMap<u32, u
     stacks
 }
 
+fn aura_remaining_ms(world: &World, unit: Entity) -> BTreeMap<u32, f64> {
+    let now = crate::auras::aura_now(world);
+    let mut values = BTreeMap::new();
+    for aura in world
+        .get::<crate::auras::ActiveAuras>(unit)
+        .into_iter()
+        .flat_map(|auras| auras.iter())
+    {
+        let remaining = aura
+            .expires_at
+            .map_or(f64::MAX, |expiry| ((expiry - now) * 1000.0).max(0.0));
+        values
+            .entry(aura.spell_id)
+            .and_modify(|old: &mut f64| *old = old.max(remaining))
+            .or_insert(remaining);
+    }
+    values
+}
+
+fn read_active_dot_counts(
+    world: &World,
+    actor: Entity,
+    enemies: &[Entity],
+    dot_spells: &BTreeSet<u32>,
+) -> BTreeMap<u32, u32> {
+    let store = world.resource::<SpellStore>();
+    dot_spells
+        .iter()
+        .filter_map(|&spell| {
+            let info = store.get(spell)?;
+            if !info
+                .effects
+                .iter()
+                .any(|effect| effect.aura == 3 && effect.aura_period_ms > 0)
+            {
+                return None;
+            }
+            let count = enemies
+                .iter()
+                .filter(|&&enemy| {
+                    world
+                        .get::<crate::auras::ActiveAuras>(enemy)
+                        .is_some_and(|auras| {
+                            auras
+                                .iter()
+                                .any(|aura| aura.spell_id == spell && aura.caster == actor)
+                        })
+                })
+                .count();
+            Some((spell, count as u32))
+        })
+        .collect()
+}
+
 fn health_pct(world: &World, unit: Entity) -> Option<f64> {
     world
         .get::<Health>(unit)
@@ -132,26 +219,16 @@ fn read_pet_presence(world: &World, actor: Entity) -> Option<bool> {
     }
 }
 
-fn count_nearby_enemies(world: &mut World, actor: Entity) -> Result<u32, String> {
-    let origin =
-        super::super::targets::position(world, actor).ok_or("native actor position absent")?;
+fn combat_enemies(world: &mut World, actor: Entity) -> Result<Vec<Entity>, String> {
     let copy = *world
         .get::<crate::maps::InMap>(actor)
         .ok_or("native actor map absent")?;
-    let mut query = world.query::<(
-        Entity,
-        &Position,
-        &Health,
-        &crate::maps::InMap,
-        &ThreatTable,
-    )>();
+    let mut query = world.query::<(Entity, &Health, &crate::maps::InMap, &ThreatTable)>();
     let candidates: Vec<_> = query
         .iter(world)
-        .filter(|(_, position, health, map, threat)| {
-            let point = Vec3::new(position.x, position.y, position.z);
+        .filter(|(_, health, map, threat)| {
             **map == copy
                 && health.current > 0.0
-                && origin.distance(point) <= 8.0
                 && threat
                     .entries()
                     .iter()
@@ -169,7 +246,7 @@ fn count_nearby_enemies(world: &mut World, actor: Entity) -> Result<u32, String>
                 super::super::targets::Relation::Enemy,
             )
         })
-        .count() as u32)
+        .collect())
 }
 
 fn read_spell_facts(

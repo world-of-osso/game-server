@@ -40,8 +40,11 @@ impl PlayerRotation {
         target: Entity,
     ) -> Result<(), String> {
         let needed = self.needed_spells(world, actor);
-        let facts = crate::spell_cast::test_harness::read_assisted_parity_facts(
-            world, actor, target, &needed,
+        let dot_spells = self.catalog.rotation_rules(self.spec).into_iter()
+            .filter(|rule| matches!(rule.condition_type, 13 | 51))
+            .map(|rule| rule.values[2]).collect();
+        let facts = crate::spell_cast::test_harness::read_assisted_parity_facts_with_dots(
+            world, actor, target, &needed, &dot_spells,
         )?;
         self.decisions += 1;
         let selection = self.catalog.recommend(
