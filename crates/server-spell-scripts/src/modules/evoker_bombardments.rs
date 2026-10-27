@@ -9,6 +9,8 @@ use combat::auras::scripts::AuraScripts;
 use combat::auras::{ActiveAuras, AuraInstance, RemoveReason, has_aura};
 use combat::spell_cast::effects::EffectCtx;
 use combat::spell_cast::script_registry::{ContextHitHook, SpellScriptHook};
+use combat::spell_cast::scripts::{AfterCastHook, script_effect_value};
+use combat::spell_info::SpellInfo;
 
 const TALENT: u32 = 434300;
 const MARK: u32 = 434473;
@@ -18,7 +20,39 @@ const DAMAGE: u32 = 434481;
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::ContextHit(hit_hook),
     SpellScriptHook::MidAuraRegistration(register),
+    SpellScriptHook::AfterResourceValues(essence_spender),
 ];
+
+fn essence_spender(spell: u32) -> Option<AfterCastHook> {
+    matches!(spell, 356995 | 357211).then_some(extend_marks)
+}
+
+fn extend_marks(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    if !has_aura(world, caster, 441212)
+        || !spell
+            .power_costs
+            .iter()
+            .any(|cost| cost.power_type == 19 && cost.mana_cost > 0)
+    {
+        return;
+    }
+    let milliseconds = (script_effect_value(world, caster, 441212, 0) * 1000.0) as u32;
+    let targets: Vec<Entity> = world
+        .query::<(Entity, &ActiveAuras)>()
+        .iter(world)
+        .filter(|(_, auras)| {
+            auras
+                .iter()
+                .any(|aura| aura.spell_id == MARK && aura.caster == caster)
+        })
+        .map(|(target, _)| target)
+        .collect();
+    // SimC76f8118 sc_evoker.cpp3199–3212/3261–3275: base Essence cost qualifies,
+    // including real Essence Burst; only existing owned marks receive native seconds.
+    for target in targets {
+        combat::auras::extend_owned_duration(world, caster, target, &[MARK], milliseconds);
+    }
+}
 
 fn hit_hook(spell: u32) -> Option<ContextHitHook> {
     (spell == 356995).then_some(mark_primary)
