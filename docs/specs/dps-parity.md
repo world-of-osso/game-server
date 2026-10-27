@@ -169,6 +169,7 @@ Native merged buff outcomes apply or clear the caster-owned aura after the hit b
 
 ### Subtlety literal fixture
 
+- Consuming stored Shadow Techniques can launch a delayed builder shadow clone; Ancient Arts can also launch an Eviscerate or Black Powder shadow clone with the source finisher's combo points and critical chance snapshotted (`sc_rogue.cpp3627–3665,8175–8194,8229–8249,8668–8701`).
 - Consuming stored Shadow Techniques through Ancient Arts can launch a delayed Eviscerate or Black Powder shadow clone, with the source finisher's combo points and critical chance snapshotted (`sc_rogue.cpp3627–3665,8229–8249,8668–8701`).
 - A landed combo-point damage hit distributes Goremaw's native residual fraction across targets with the caster's active Goremaw DoT (`sc_rogue.cpp6444–6463,9011–9028`).
 - Combo-point gains emit one native Energize receipt with actual overflow, including scripted per-hit gains. Shadow Techniques recognizes actual foreground combo-point generation, including capped gains, and collects after all native hit batches for that cast, not before delayed impacts (`sc_rogue.cpp2705–2716,8176–8204`).

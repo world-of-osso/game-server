@@ -5,6 +5,36 @@ use shared::{components::PowerType, protocol::CombatLogKind};
 
 #[test]
 #[ignore = "requires private native261 profile/traits and player actor"]
+fn subtlety_clone_builder_collection_can_launch_native_clone() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut produced = false;
+    for _ in 0..5 {
+        let mut run = prepare_literal(261, 1).unwrap();
+        engage(&mut run);
+        crate::auras::apply_aura(run.app.world_mut(), &crate::auras::AuraApplication {
+            caster: run.actor, target: run.actor, spell_id: 196911,
+            effect_mask: u32::MAX, source: crate::auras::AuraSource::Cast,
+        });
+        assert!(crate::auras::set_self_cast_stacks(run.app.world_mut(), run.actor, 196911, 7));
+        {
+            let mut pools = run.app.world_mut().get_mut::<crate::spell_cast::powers::PowerPools>(run.actor).unwrap();
+            pools.get_mut(PowerType::ComboPoints).unwrap().current = 0.0;
+            let energy = pools.get_mut(PowerType::Energy).unwrap();
+            energy.current = energy.max;
+        }
+        literal_rotation::execution::execute(run.app.world_mut(), run.actor,
+            literal_rotation::execution::Execution::Spell(53, run.targets[0], Some(run.targets[0]))).unwrap();
+        preparation::finish_pending_setup(&mut run).unwrap();
+        produced |= run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0.iter()
+            .any(|event| event.source == Some(run.actor.to_bits()) && event.target == Some(run.targets[0].to_bits())
+                && event.spell_id == Some(1269209) && event.kind == CombatLogKind::Damage && event.amount > 0);
+        if produced { break; }
+    }
+    assert!(produced, "seeded actual Backstab storage collection must produce its native shadow clone");
+}
+
+#[test]
+#[ignore = "requires private native261 profile/traits and player actor"]
 fn subtlety_clone_ancient_finisher_launches_native_delayed_clone() {
     for (spell, clone, targets) in [(196819, 1269205, 1), (319175, 1269565, 3)] {
         let mut run = prepare_literal(261, targets).unwrap();
