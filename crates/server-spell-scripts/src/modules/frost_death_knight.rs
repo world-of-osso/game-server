@@ -112,6 +112,12 @@ pub(super) fn after_launch(world: &mut World, caster: Entity, spell: &SpellInfo,
     if spell.id == PILLAR && auras::has_aura(world, caster, 377226) {
         cast_buff_stacks(world, caster, 1233152, 1);
     }
+    if spell.id == 279302 && auras::has_aura(world, caster, 1265633) {
+        // SimC76f8118 sc_death_knight.cpp10659–10660/10694–10695:
+        // the actual Fury extends an already active Pillar by native effect1.
+        let milliseconds = spell_cast::scripts::script_effect_value(world, caster, 1265633, 0);
+        auras::extend_owned_duration(world, caster, caster, &[PILLAR], milliseconds as u32);
+    }
 }
 
 fn update_empowered_spender(
