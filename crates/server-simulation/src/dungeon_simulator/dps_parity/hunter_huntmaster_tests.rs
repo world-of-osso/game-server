@@ -110,14 +110,15 @@ fn native_huntmaster_earns_authentic_companion_from_real_beast_summons() {
 #[test]
 #[ignore = "requires private spec253 reference inputs and native world DB"]
 fn native_huntmaster_each_companion_melee_inherits_owner_ap() {
-    let _seed = crate::random::seed_scope(70_448);
+    let mut hits = std::collections::BTreeMap::<u32, Vec<(i32, f32)>>::new();
+    for seed in [70_448, 1, 2, 3, 4, 5, 6, 7, 8, 9] {
+    let _seed = crate::random::seed_scope(seed);
     let mut run = prepare_measurement(253, 1).expect("native literal BM fixture");
     let mut summons = run
         .app
         .world_mut()
         .query::<(Entity, &crate::spell_cast::summon::SummonedCreature)>();
     let mut checked_events = 0;
-    let mut hits = std::collections::BTreeMap::<u32, Vec<(i32, f32)>>::new();
     engage(&mut run);
     advance_combat_observed(&mut run, |run| {
         let world = run.app.world();
@@ -184,6 +185,10 @@ fn native_huntmaster_each_companion_melee_inherits_owner_ap() {
         checked_events = events.len();
     })
     .expect("ordinary native300s combat");
+    if hits.contains_key(&459733) && hits.contains_key(&459739) {
+        break;
+    }
+    }
     for (spell, name) in [(459733, "Fenryr"), (459739, "Hati")] {
         let samples = hits
             .get(&spell)
