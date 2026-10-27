@@ -22,7 +22,11 @@ struct Imploding {
     owner: Entity,
     primary: Entity,
     due: f64,
+    isolated: bool,
 }
+
+#[derive(Component, Default)]
+struct IsolatedAttempts(u32);
 
 pub(super) fn is_imp(world: &World, unit: Entity) -> bool {
     let Some(summon) = world.get::<SummonedCreature>(unit) else {
@@ -116,6 +120,7 @@ pub(in crate::spell_cast) fn after_cast(
             owner,
             primary,
             due,
+            isolated: false,
         });
     }
     summon_replacements(world, owner, selected);
@@ -202,16 +207,137 @@ pub(super) fn advance(world: &mut World, imp: Entity) -> bool {
     let Some(state) = world.get::<Imploding>(imp) else {
         return false;
     };
-    let (owner, primary, due) = (state.owner, state.primary, state.due);
+    let (owner, primary, due, isolated) = (state.owner, state.primary, state.due, state.isolated);
     if cast::now(world) < due {
         return true;
     }
     if cast::targets::is_alive(world, primary) {
-        explode(world, imp, owner, primary);
+        if isolated {
+            explode_isolated(world, owner, primary);
+        } else {
+            explode(world, imp, owner, primary);
+        }
     }
-    guardian::core::on_implosion(world, owner);
+    if !isolated {
+        guardian::core::on_implosion(world, owner);
+    }
     cast::summon::despawn_summon(world, imp);
     true
+}
+
+/// SimC76f8118 pets.cpp833–849 and actions.cpp3210–3290: the selected
+/// four-piece rolls once at real exhaustion, then the Imp travels before impact.
+pub(super) fn start_isolated(world: &mut World, imp: Entity) -> bool {
+    const SET: u32 = 1296574;
+    let owner = world.get::<SummonedCreature>(imp).unwrap().owner;
+    let selected = world
+        .get::<crate::auras::ActiveAuras>(owner)
+        .is_some_and(|auras| {
+            auras.iter().any(|aura| {
+                aura.spell_id == SET && matches!(aura.source, crate::auras::AuraSource::ItemSet(_))
+            })
+        });
+    let Some(primary) = world
+        .get::<crate::networking::CombatTarget>(imp)
+        .and_then(|target| target.0)
+    else {
+        return false;
+    };
+    if !selected || !roll_isolated(world, owner) {
+        return false;
+    }
+    let from = cast::targets::position(world, owner).expect("isolated explosion owner position");
+    let to = cast::targets::position(world, primary).expect("isolated explosion target position");
+    let due = cast::now(world) + f64::from(from.distance(to)) / 65.0;
+    world.entity_mut(imp).insert(Imploding {
+        owner,
+        primary,
+        due,
+        isolated: true,
+    });
+    true
+}
+
+fn roll_isolated(world: &mut World, owner: Entity) -> bool {
+    let chance = f64::from(cast::scripts::script_effect_value(world, owner, 1296574, 2)) / 100.0;
+    let coefficient = prd_coefficient(chance);
+    if world.get::<IsolatedAttempts>(owner).is_none() {
+        world.entity_mut(owner).insert(IsolatedAttempts::default());
+    }
+    let mut attempts = world.get_mut::<IsolatedAttempts>(owner).unwrap();
+    attempts.0 += 1;
+    if !crate::random::thread_rng().gen_bool((coefficient * f64::from(attempts.0)).min(1.0)) {
+        return false;
+    }
+    attempts.0 = 0;
+    true
+}
+
+// SimC76f8118 proc_rng.hpp170–235: derive the uncapped PRD coefficient
+// from the native set chance, not from an invented proc rate.
+fn prd_coefficient(chance: f64) -> f64 {
+    assert!(
+        chance > 0.0 && chance <= 1.0,
+        "native Isolated Implosion chance"
+    );
+    let (mut low, mut high) = (0.0, 1.0);
+    for _ in 0..48 {
+        let middle = (low + high) / 2.0;
+        let mut expected = 0.0;
+        let mut survival = 1.0;
+        for attempt in 1..=100_000 {
+            expected += survival;
+            let probability = (middle * f64::from(attempt)).min(1.0);
+            if probability >= 1.0 {
+                break;
+            }
+            survival *= 1.0 - probability;
+        }
+        if expected > 1.0 / chance {
+            low = middle;
+        } else {
+            high = middle;
+        }
+    }
+    (low + high) / 2.0
+}
+
+fn explode_isolated(world: &mut World, owner: Entity, primary: Entity) {
+    let store = world.resource::<crate::spell_info::SpellStore>();
+    let coefficient = store
+        .get(EXPLOSION)
+        .expect("native Implosion damage")
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .expect("native Implosion effect1")
+        .bonus_coefficient;
+    let mut spell = store
+        .get(1306077)
+        .expect("native Isolated Implosion damage")
+        .clone();
+    for effect in &mut spell.effects {
+        if effect.index <= 1 {
+            effect.bonus_coefficient = coefficient;
+        }
+    }
+    spell.cast_destination =
+        cast::targets::position(world, primary).map(|position| position.to_array());
+    let mut plan = cast::plan_targets(world, owner, &spell, Some(primary), false)
+        .expect("native Isolated Implosion targets");
+    for effect in &mut plan {
+        let index = spell.effects[effect.index].index;
+        if index == 1 {
+            effect.units.retain(|target| *target != primary);
+        }
+        let multiplier = cast::scripts::script_effect_value(world, owner, 1296574, index) / 100.0;
+        effect.chain_multipliers = effect
+            .units
+            .iter()
+            .map(|target| (*target, multiplier))
+            .collect();
+    }
+    cast::missiles::launch(world, owner, &spell, plan, 1);
 }
 
 fn explode(world: &mut World, imp: Entity, owner: Entity, primary: Entity) {
