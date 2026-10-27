@@ -576,7 +576,7 @@ def run_executable(entry, test, executable, cwd, entry_log, cycle_log, tree):
     # libtest interleaves panic output with "test X ... FAILED"; the closing summary lists names.
     failed = {name for block in re.findall(r"^failures:\n((?:    \S+\n)+)\ntest result:", out.stdout, re.M)
               for name in block.split()}
-    return out.returncode, ran, failed
+    return out.returncode, ran, failed, out.stdout
 
 
 def test_file(name, rev):
@@ -620,6 +620,22 @@ def foreign_failures_only(entry, failed):
     return bool(failed) and all(foreign(name) for name in failed)
 
 
+def foreign_panics_only(entry, outputs):
+    """A shared tree also holds other entries' production code. A failed run whose every panic is
+    in a file this entry leaves as on master, but the tree changes, says nothing about this entry
+    (2026-10-27: one probe's midnight_stat_procs.rs panic rejected three other owners' probes)."""
+    panics = [path for out in outputs for path in re.findall(r"panicked at (\S+?):\d+:\d+", out)]
+    alone = git("merge-tree", "--write-tree", "origin/master", entry["commit"], check=False)
+    if not panics or alone.returncode:
+        return False
+    own = set(git("diff", "--name-only", "origin/master", alone.stdout.split()[0]).stdout.split())
+    tree = set(git("diff", "--name-only", "origin/master", "HEAD").stdout.split())
+
+    def matches(path, files):
+        return any(f == path or f.endswith("/" + path) for f in files)
+    return all(matches(path, tree) and not matches(path, own) for path in panics)
+
+
 def run_tests(entries, log):
     # Build every entry's test binaries first (serialized by Cargo), then run them all in parallel.
     jobs, broken = [], set()
@@ -637,29 +653,37 @@ def run_tests(entries, log):
     with ThreadPoolExecutor(TEST_PARALLEL) as pool:
         codes = list(pool.map(lambda job: ((job[0]["id"], tuple(job[1])), run_executable(*job)), jobs))
     by_id = {e["id"]: e for e in entries}
-    failed_names, nonzero = {}, set()
-    for key, (code, _, names) in codes:
+    failed_names, nonzero, outputs = {}, set(), {}
+    for key, (code, _, names, out) in codes:
         if code:
             nonzero.add(key[0])
             failed_names.setdefault(key[0], set()).update(names)
+            outputs.setdefault(key[0], []).append(out)
+    # Probes and RED twins never pass on this; they retry next cycle in a different tree.
+    deferred = {i for i in nonzero - broken if not by_id[i]["land"] and foreign_panics_only(by_id[i], outputs[i])}
     # Only landings: a probe or RED twin must never turn a real failure into a pass.
     foreign = {i for i in nonzero - broken if i in failed_names and by_id[i]["land"]
                and len(failed_names[i]) and foreign_failures_only(by_id[i], failed_names[i])
                # Every nonzero run must be explained by named failures (a panic outside a test is not).
-               and all(names for key, (code, _, names) in codes if key[0] == i and code)}
+               and all(names for key, (code, _, names, _) in codes if key[0] == i and code)}
     for i in foreign:
         with Path(by_id[i]["test_log"]).open("a") as f:
             f.write(f"\nIgnored failures of tests added by other entries in this tree: {sorted(failed_names[i])}\n")
     failing = broken | (nonzero - foreign)
     # A --test that runs no test at all (a stale filter or package) is a failure, not a pass.
     ran = {}
-    for key, (_, count, _) in codes:
+    for key, (_, count, _, _) in codes:
         ran[key] = ran.get(key, 0) + count
     empty = {e["id"] for e in entries for t in e["tests"]
              if e["id"] not in broken and ran.get((e["id"], tuple(t)), 0) == 0}
     passed, failed = [], []
     for entry in entries:
-        if entry["id"] in failing or entry["id"] in empty:
+        if entry["id"] in deferred:
+            with Path(entry["test_log"]).open("a") as f:
+                f.write("\nDeferred: every panic is in code only other entries in this tree change.\n")
+            entry["defer"] = True
+            failed.append(entry)
+        elif entry["id"] in failing or entry["id"] in empty:
             entry["reason"] = (f"tests failed; see {entry['test_log']}" if entry["id"] in failing
                                else f"tests failed: a --test ran 0 tests (stale filter or package?); see {entry['test_log']}")
             failed.append(entry)
@@ -791,16 +815,24 @@ def build_and_test(entries, log):
     for entry in rejected:
         entry["status"] = "rejected"
     write_results([e for e in rejected if not e["id"].endswith("-red")])
-    for entry in deferred:
-        del entry["reason"]
-        queued = RUNNING / f"{entry['id']}.json"
-        if queued.exists():  # RED twins have no queue file; their entry is requeued by cycle()
-            queued.rename(QUEUE / queued.name)
+    requeue(deferred)
     passed, failed = run_tests(tree, log)
+    deferred = [e for e in failed if e.pop("defer", False)]
+    failed = [e for e in failed if e not in deferred]
+    requeue(deferred)
     for entry in failed:
         entry["status"] = "rejected"
     write_results([e for e in failed if not e["id"].endswith("-red")])
     return passed, rejected + failed
+
+
+def requeue(entries):
+    """Back to the queue for the next cycle; a RED twin's entry is requeued by run_probes."""
+    for entry in entries:
+        entry.pop("reason", None)
+        queued = RUNNING / f"{entry['id']}.json"
+        if queued.exists():  # RED twins have no queue file
+            queued.rename(QUEUE / queued.name)
 
 
 # Measurements run in the background so the next cycle can build meanwhile.
