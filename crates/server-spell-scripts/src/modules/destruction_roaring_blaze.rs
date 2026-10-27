@@ -50,11 +50,15 @@ fn spread_dot(
     let count = script_effect_value(world, ctx.caster, ROARING_BLAZE, 1) as usize;
     let mut recipients = nearby_enemies(world, ctx.caster, target);
     recipients.shuffle(&mut combat::random::thread_rng());
-    recipients.sort_by_key(|&recipient| has_owned_dot(world, ctx.caster, recipient, dot));
+    recipients.sort_by_key(|&recipient| has_owned_dot(world, ctx.caster, recipient, IMMOLATE));
     // SimC76f8118 actions4440-4500 and warlock.cpp1272-1319: bugs mode
     // permits one additional target only when it already has the DoT.
     for (index, recipient) in recipients.into_iter().take(count + 1).enumerate() {
-        if index == count && !has_owned_dot(world, ctx.caster, recipient, dot) {
+        if index == count
+            && ![WITHER, IMMOLATE]
+                .into_iter()
+                .any(|aura| has_owned_dot(world, ctx.caster, recipient, aura))
+        {
             break;
         }
         if !combat::spell_cast::try_cast_triggered(world, ctx.caster, dot, Some(recipient), 1) {

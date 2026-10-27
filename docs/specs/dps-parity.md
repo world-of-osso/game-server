@@ -548,7 +548,7 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 ### Destruction Roaring Blaze
 
-- A selected Roaring Blaze1244310 primary Conflagrate17962 hit spreads the caster's existing Wither445474 or Immolate157736 to nearby enemies as a free background DoT, without direct damage. Prioritize uninfected targets; the native effect1 count sets the limit, with one extra already-infected target in pinned `bugs=true` mode. Do not spread from Havoc copies or a primary without the caster's DoT (SimC76f8118 `sc_warlock_actions.cpp:4440–4500`, `sc_warlock.cpp:1272–1319`).
+- A selected Roaring Blaze1244310 primary Conflagrate17962 hit spreads the caster's existing Wither445474 or Immolate157736 to nearby enemies as a free background DoT, without direct damage. Prioritize targets without the caster's Immolate, as the pinned smart-target selector does even with Wither; the native effect1 count sets the limit, with one extra already-infected target in pinned `bugs=true` mode. Do not spread from Havoc copies or a primary without the caster's DoT (SimC76f8118 `sc_warlock_actions.cpp:4440–4500`, `sc_warlock.cpp:1272–1319`).
 
 ### Destruction Incinerate recipients
 
