@@ -116,6 +116,7 @@ register_modules! {
     elemental_overload_ascendance: (2627, "modules/elemental_overload_ascendance.rs"),
     elemental_primals: (2628, "modules/elemental_primals.rs"),
     elemental_quake_overload: (2625, "modules/elemental_quake_overload.rs"),
+    elemental_storm_overload: (2629, "modules/elemental_storm_overload.rs"),
     elemental_tier: (2622, "modules/elemental_tier.rs"),
     empower_evoker: (1000, "modules/empower_evoker.rs"),
     enhancement: (1000, "modules/enhancement.rs"),
