@@ -8,7 +8,7 @@ use combat::auras::procs::AuraEvent;
 use combat::auras::scripts::AuraScripts;
 use combat::auras::{ActiveAuras, AuraInstance, RemoveReason, has_aura};
 use combat::spell_cast::effects::EffectCtx;
-use combat::spell_cast::script_registry::{ContextHitHook, SpellScriptHook};
+use combat::spell_cast::script_registry::{ContextHitHook, DamageAmountHook, SpellScriptHook};
 use combat::spell_cast::scripts::{AfterCastHook, script_effect_value};
 use combat::spell_info::SpellInfo;
 
@@ -16,9 +16,11 @@ const TALENT: u32 = 434300;
 const MARK: u32 = 434473;
 const DRIVER: u32 = 443788;
 const DAMAGE: u32 = 434481;
+const MELT_ARMOR: u32 = 441172;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::ContextHit(hit_hook),
+    SpellScriptHook::DamageAmount(damage_lookup),
     SpellScriptHook::MidAuraRegistration(register),
     SpellScriptHook::AfterResourceValues(essence_spender),
 ];
@@ -52,6 +54,31 @@ fn extend_marks(world: &mut World, caster: Entity, spell: &SpellInfo) {
     for target in targets {
         combat::auras::extend_owned_duration(world, caster, target, &[MARK], milliseconds);
     }
+}
+
+fn damage_lookup(spell: u32) -> Option<DamageAmountHook> {
+    (spell == DAMAGE).then_some(melt_armor_amount)
+}
+
+/// SimC76f8118 sc_evoker.cpp8281–8284/8888–8891: the caster's Melt Armor debuff value
+/// is a Bombardments target multiplier. Native434481 ignores caster modifiers and the
+/// native aura271 mask does not select it, so apply the actual debuff value here.
+fn melt_armor_amount(world: &World, caster: Entity, target: Entity, amount: f32) -> f32 {
+    world
+        .get::<ActiveAuras>(target)
+        .and_then(|auras| {
+            auras
+                .iter()
+                .find(|aura| aura.spell_id == MELT_ARMOR && aura.caster == caster)
+        })
+        .map_or(amount, |aura| {
+            let effect = aura
+                .effects
+                .iter()
+                .find(|effect| effect.index == 1)
+                .expect("native Melt Armor retains damage-taken effect1");
+            amount * (1.0 + effect.amount / 100.0)
+        })
 }
 
 fn hit_hook(spell: u32) -> Option<ContextHitHook> {

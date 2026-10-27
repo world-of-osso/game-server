@@ -176,3 +176,74 @@ fn devastation_bombardments_parity_external_attempts_keep_the_native_target_icd(
         );
     }
 }
+
+#[test]
+#[ignore = "requires exact Devastation native profile and DB"]
+fn devastation_bombardments_payload_reads_its_evoker_melt_armor() {
+    let damage = |melted: bool| {
+        let mut run = prepare_literal(1467, 1).unwrap();
+        engage(&mut run);
+        let primary = run.targets[0];
+        if melted {
+            assert!(crate::spell_cast::try_cast_triggered(
+                run.app.world_mut(),
+                run.actor,
+                441172,
+                Some(primary),
+                1
+            ));
+        }
+        let melt = run
+            .app
+            .world()
+            .get::<crate::auras::ActiveAuras>(primary)
+            .and_then(|auras| {
+                auras
+                    .iter()
+                    .find(|aura| aura.spell_id == 441172 && aura.caster == run.actor)
+            })
+            .map(|aura| {
+                aura.effects
+                    .iter()
+                    .find(|effect| effect.index == 1)
+                    .expect("native Melt Armor damage-taken effect1")
+                    .amount
+            });
+        assert_eq!(melt.is_some(), melted);
+        let _seed = crate::random::seed_scope(434481);
+        assert!(crate::spell_cast::try_cast_triggered(
+            run.app.world_mut(),
+            run.actor,
+            434481,
+            Some(primary),
+            1
+        ));
+        for _ in 0..30 {
+            run.app.update();
+        }
+        let amount = run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .find(|event| {
+                event.source == Some(run.actor.to_bits())
+                    && event.spell_id == Some(434481)
+                    && event.kind == shared::protocol::CombatLogKind::Damage
+            })
+            .expect("actual native Bombardment must damage its real recipient")
+            .amount;
+        (amount, melt.unwrap_or(0.0))
+    };
+    let (without, _) = damage(false);
+    let (with, melt) = damage(true);
+    assert!(without > 0 && melt > 0.0);
+    // SimC76f8118 sc_evoker.cpp8281–8284/8888–8891: the evoker's Melt Armor
+    // debuff value (native441172 effect1) multiplies every Bombardment on it.
+    let expected = f64::from(without) * (1.0 + f64::from(melt) / 100.0);
+    assert!(
+        (f64::from(with) - expected).abs() <= 1.0,
+        "Melt Armor must raise the Bombardment: without={without}, with={with}, expected={expected}"
+    );
+}

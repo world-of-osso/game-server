@@ -387,8 +387,10 @@ fn frost_earned_rune_refill_preserves_regeneration() {
         }) {
             for rune in before.order.iter().take(3) {
                 let index = usize::from(*rune);
-                assert_eq!(before.cooldowns[index], after.cooldowns[index],
-                    "earned rune refill must preserve active regeneration while a depleted rune waits");
+                assert_eq!(
+                    before.cooldowns[index], after.cooldowns[index],
+                    "earned rune refill must preserve active regeneration while a depleted rune waits"
+                );
             }
             return;
         }
@@ -428,9 +430,13 @@ fn diag_frost_factors_and_resource_spending() {
         assert!((seconds - 300.0).abs() < 0.001);
         let changes = &run.app.world().resource::<ObservedPowerChanges>().0;
         let spent = |power| {
-            -changes.iter().filter(|(actor, kind, amount)| {
-                *actor == run.actor && *kind == power && *amount < 0.0
-            }).map(|(_, _, amount)| *amount).sum::<f32>()
+            -changes
+                .iter()
+                .filter(|(actor, kind, amount)| {
+                    *actor == run.actor && *kind == power && *amount < 0.0
+                })
+                .map(|(_, _, amount)| *amount)
+                .sum::<f32>()
         };
         let runes = spent(PowerType::Runes);
         let runic_power_raw = spent(PowerType::RunicPower);
@@ -446,13 +452,15 @@ fn diag_frost_factors_and_resource_spending() {
             std::fs::write(
                 output.join(format!("251.factors.{seed}.json")),
                 serde_json::to_vec_pretty(&capture).unwrap(),
-            ).unwrap();
+            )
+            .unwrap();
         }
     }
     std::fs::write(
         output.join("251.power-changes.json"),
         serde_json::to_vec_pretty(&totals).unwrap(),
-    ).unwrap();
+    )
+    .unwrap();
 }
 
 fn earn_rime(run: &mut Run) {
