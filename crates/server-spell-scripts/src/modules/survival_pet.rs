@@ -28,28 +28,35 @@ fn owns_strike_proc(spell: u32) -> bool {
 }
 
 pub(super) fn after_tip_impact(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
+    strike_after_tip(world, ctx.caster, target, ctx.depth + 1);
+}
+
+pub(super) fn strike_after_tip(world: &mut World, caster: Entity, target: Entity, depth: u8) {
     // SimC76f8118 sc_hunter.cpp1367–1372/7944: normal Tip impact uses
     // the selected native aura's ICD, only after a real main pet executes.
-    if !has_talent(world, ctx.caster, STRIKE_AS_ONE) {
+    if !has_talent(world, caster, STRIKE_AS_ONE) {
         return;
     }
-    let instance = world.get::<ActiveAuras>(ctx.caster).and_then(|auras| {
+    let instance = world.get::<ActiveAuras>(caster).and_then(|auras| {
         auras
             .iter()
-            .find(|aura| aura.spell_id == STRIKE_AS_ONE && aura.caster == ctx.caster)
+            .find(|aura| aura.spell_id == STRIKE_AS_ONE && aura.caster == caster)
             .map(|aura| aura.instance_id)
     });
     let Some(instance) = instance else {
         return;
     };
-    if !procs::policy_proc_ready(world, ctx.caster, instance) {
+    if !procs::policy_proc_ready(world, caster, instance) {
         return;
     }
-    if !launch_strike(world, ctx.caster, target, 1.0, ctx.depth + 1) {
+    if !launch_strike(world, caster, target, 1.0, depth) {
         return;
     }
-    if procs::start_policy_proc(world, ctx.caster, instance).is_none() {
-        warn!(caster = ?ctx.caster, "Native Strike as One ICD could not start after execution");
+    if procs::start_policy_proc(world, caster, instance).is_none() {
+        warn!(
+            ?caster,
+            "Native Strike as One ICD could not start after execution"
+        );
     }
 }
 

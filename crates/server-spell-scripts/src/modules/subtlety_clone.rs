@@ -119,10 +119,15 @@ fn queue_clone(
         });
 }
 
-// sc_rogue.cpp2435–2440/2569–2578/10583–10584: maximum-point
-// Eviscerate clones snapshot both native Darkest Night bonuses.
-fn darkest_night_bonus(world: &World, caster: Entity, child: u32, points: f32) -> (f32, f32) {
-    if child != 1269205
+// sc_rogue.cpp2435–2440/2569–2578/4394–4414/10583–10584:
+// maximum-point Eviscerate children snapshot both native bonuses.
+pub(super) fn darkest_night_bonus(
+    world: &World,
+    caster: Entity,
+    child: u32,
+    points: f32,
+) -> (f32, f32) {
+    if !matches!(child, 1269205 | 328082)
         || !powers::power_value(world, caster, PowerType::ComboPoints)
             .is_some_and(|(_, maximum)| points >= maximum)
     {
@@ -171,6 +176,13 @@ fn launch_due(world: &mut World) {
         });
         spell_cast::launch_triggered_spell(world, caster, &clone.spell, Some(clone.target), 1);
         world.entity_mut(caster).remove::<ActiveClone>();
+        // sc_rogue.cpp3650–3659: eligible clones independently earn the
+        // native Shadow Techniques producer using Ancient Arts' chance.
+        if has_talent(world, caster, 1268936)
+            && random::random::<f32>() < script_effect_value(world, caster, 1268936, 0) / 100.0
+        {
+            super::subtlety_techniques::earn_storage(world, caster);
+        }
     }
 }
 

@@ -169,6 +169,20 @@ fn havoc_demonic_extends_existing_native_meta_without_refreshing_it() {
 
 #[test]
 #[ignore = "requires DPS_PARITY_WORLD_DB and DPS_PARITY_OUTPUT with spec577 exact profile/traits"]
+fn havoc_literal_fixture_collects_real_demonic_appetite_fragments() {
+    let result = measure(577, 1).expect("native Havoc measurement");
+    let gains = result["combat"]["energize"].as_array().unwrap();
+    assert!(
+        gains.iter().any(|gain| gain["spell_id"] == 210041
+            && gain["effective_gain"]
+                .as_f64()
+                .is_some_and(|amount| amount > 0.0)),
+        "real Demonic Appetite fragments must reach the native Consume Soul Fury payload: {gains:?}"
+    );
+}
+
+#[test]
+#[ignore = "requires DPS_PARITY_WORLD_DB and DPS_PARITY_OUTPUT with spec577 exact profile/traits"]
 fn havoc_literal_fixture_executes_source_actions() {
     let result = measure(577, 1).expect("native Havoc measurement");
     assert_eq!(result["driver"], "LITERAL_SIMC_HAVOC_76f8118");

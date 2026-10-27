@@ -155,6 +155,42 @@ fn frost_icy_death_torrent_follows_critical_white_swings() {
     }
 }
 
+fn icebreaker_rime_damage(selected: bool) -> i32 {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::protocol::CombatLogKind;
+
+    let _seed = crate::random::seed_scope(251);
+    let mut run = super::super::prepare_literal(251, 1).unwrap();
+    super::super::engage(&mut run);
+    assert!(auras::has_aura(run.app.world(), run.actor, 392950));
+    if !selected {
+        clear_proc(&mut run, 392950);
+    }
+    earn_rime(&mut run);
+    let start = run.app.world().resource::<ObservedCombatEvents>().0.len();
+    cast(&mut run, 49184);
+    run.app.world().resource::<ObservedCombatEvents>().0[start..]
+        .iter()
+        .find(|event| {
+            event.spell_id == Some(49184)
+                && event.kind == CombatLogKind::Damage
+                && event.target == Some(run.targets[0].to_bits())
+        })
+        .expect("earned Rime Howling Blast must hit its actual primary")
+        .amount
+}
+
+#[test]
+#[ignore = "native251 Icebreaker applies its native bonus to earned Rime's primary"]
+fn frost_rime_icebreaker_amplifies_primary_howling_blast() {
+    let without = icebreaker_rime_damage(false);
+    let with = icebreaker_rime_damage(true);
+    assert!(
+        with as f32 > without as f32 * 1.29 && (with as f32) < without as f32 * 1.31,
+        "selected native Icebreaker must add 30% to the earned Rime primary: {without} -> {with}"
+    );
+}
+
 fn earn_rime(run: &mut Run) {
     for _ in 0..24 {
         cast(run, 49020);

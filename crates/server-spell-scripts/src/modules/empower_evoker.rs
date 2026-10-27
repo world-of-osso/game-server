@@ -169,6 +169,28 @@ pub(super) fn release(
     spell_cast::execute_cast(world, caster, &child, target)?;
     extend_dragonrage(world, caster);
     grant_empower_buffs(world, caster);
+    if matches!(spell.id, 357208 | 382266) && combat::auras::has_aura(world, caster, 369939) {
+        combat::auras::remove_auras(
+            world,
+            caster,
+            combat::auras::RemoveReason::Cancelled,
+            |aura| aura.spell_id == 370901 && aura.caster == caster,
+        );
+        let values = spell_cast::TriggeredSpellOverrides {
+            aura_stacks: Some(rank),
+            ..Default::default()
+        };
+        if !spell_cast::cast_triggered_with_overrides(
+            world,
+            caster,
+            370901,
+            Some(caster),
+            1,
+            values,
+        ) {
+            warn!(?caster, "Native Leaping Flames grant refused");
+        }
+    }
     Ok(())
 }
 

@@ -518,6 +518,140 @@ fn diag_demonology_fel_firebolt_factors() {
     );
 }
 
+fn actual_imp_firebolt_targets(unstable: bool) -> (Vec<u64>, Vec<u64>) {
+    use shared::protocol::CombatLogKind;
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(266, 3).unwrap();
+    let imp = summon_native_guardian(&mut run, 104317);
+    if unstable {
+        crate::spell_cast::cast_triggered(run.app.world_mut(), imp, 1281512, Some(imp), 0);
+        assert!(crate::auras::has_aura(run.app.world(), imp, 1281512));
+    }
+    engage(&mut run);
+    run.app
+        .world_mut()
+        .resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .clear();
+    crate::spell_cast::creature_cast(
+        run.app.world_mut(),
+        imp,
+        104318,
+        Some(run.targets[0]),
+        false,
+    )
+    .unwrap();
+    for _ in 0..100 {
+        run.app.update();
+        if run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|event| {
+                event.source == Some(imp.to_bits())
+                    && event.spell_id == Some(104318)
+                    && matches!(event.kind, CombatLogKind::Damage | CombatLogKind::Miss(_))
+            })
+        {
+            break;
+        }
+    }
+    let recipients = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .iter()
+        .filter(|event| {
+            event.source == Some(imp.to_bits())
+                && event.spell_id == Some(104318)
+                && matches!(event.kind, CombatLogKind::Damage | CombatLogKind::Miss(_))
+        })
+        .map(|event| event.target.unwrap())
+        .collect();
+    (
+        recipients,
+        run.targets.iter().map(|target| target.to_bits()).collect(),
+    )
+}
+
+#[test]
+#[ignore = "requires private266 inputs; plain Imp single-target Fel Firebolt"]
+fn demonology_plain_imp_firebolt_only_hits_its_primary() {
+    let (recipients, targets) = actual_imp_firebolt_targets(false);
+    // SimC76f8118 pets.cpp721 and 753–761: aoe=0 without Unstable Soul.
+    assert_eq!(recipients, vec![targets[0]]);
+}
+
+#[test]
+#[ignore = "requires private266 inputs; Unstable Soul repeated-target Fel Firebolt"]
+fn demonology_unstable_imp_firebolt_uses_all_native_hits() {
+    let (recipients, targets) = actual_imp_firebolt_targets(true);
+    // Native1281512 effect2 adds four hits; SimC pets.cpp765–793 repeats targets.
+    assert_eq!(recipients.len(), 5);
+    assert!(targets.iter().all(|target| recipients.contains(target)));
+}
+
+#[test]
+#[ignore = "requires private266 inputs; Demonic Brutality on actual Imp critical damage"]
+fn demonology_imp_critical_damage_inherits_demonic_brutality() {
+    use crate::spell_cast::effects::factor_capture::FactorCapture;
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(266, 1).unwrap();
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, 453908));
+    let effect = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(453908)
+        .unwrap()
+        .effects
+        .iter()
+        .find(|effect| effect.index == 1)
+        .unwrap()
+        .base_points;
+    let imp = summon_native_guardian(&mut run, 104317);
+    run.app.insert_resource(FactorCapture::new(
+        imp,
+        run.targets[0],
+        104318,
+        "fel_firebolt",
+        1,
+    ));
+    crate::spell_cast::creature_cast(
+        run.app.world_mut(),
+        imp,
+        104318,
+        Some(run.targets[0]),
+        false,
+    )
+    .unwrap();
+    for _ in 0..100 {
+        run.app.update();
+    }
+    let capture = run.app.world().resource::<FactorCapture>().export();
+    let events = capture["events"].as_array().unwrap();
+    let direct = events
+        .iter()
+        .find(|event| event["event"] == "direct_amount")
+        .unwrap();
+    let result = events
+        .iter()
+        .find(|event| event["event"] == "result")
+        .unwrap();
+    assert_eq!(result["factors"]["result"], "crit");
+    let uncritical = direct["factors"]["amount"].as_f64().unwrap();
+    let actual = result["factors"]["actual_amount"].as_f64().unwrap();
+    let expected = uncritical * 2.0 * (1.0 + f64::from(effect) / 100.0);
+    // SimC76f8118 pets.cpp185–201: bugs=1 applies native effect2 twice to the critical bonus.
+    assert!(
+        (actual - expected).abs() < 1.5,
+        "actual={actual} expected={expected}"
+    );
+}
+
 #[test]
 #[ignore = "requires private266 inputs; Hand of Guldan first Imp Gang Boss"]
 fn demonology_hand_of_guldan_empowers_first_actual_imp() {

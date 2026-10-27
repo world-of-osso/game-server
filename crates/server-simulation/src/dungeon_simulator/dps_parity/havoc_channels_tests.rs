@@ -38,6 +38,51 @@ fn cast(run: &mut Run, spell: u32, self_target: bool) {
 
 #[test]
 #[ignore = "requires prepared native spec577 player profile"]
+fn havoc_native_fragment_pickup_consumes_the_selected_fragment() {
+    use server::soul_fragments::{self, FragmentFilter, FragmentKind, PickupMode};
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(577, 1).unwrap();
+    let actor = run.actor;
+    soul_fragments::spawn(run.app.world_mut(), actor, FragmentKind::Lesser, false).unwrap();
+    advance(&mut run, 2);
+    let before = soul_fragments::active_count(run.app.world(), actor, FragmentFilter::Lesser);
+    assert!(before > 0, "native lesser fragment must activate");
+    let plan = soul_fragments::plan_pickup(
+        run.app.world(),
+        actor,
+        FragmentFilter::Lesser,
+        PickupMode::Oldest,
+    )
+    .expect("active fragment pickup");
+    soul_fragments::begin_pickup(run.app.world_mut(), actor, plan).unwrap();
+    for _ in 0..100 {
+        if soul_fragments::pickup_due(run.app.world(), actor) {
+            break;
+        }
+        advance(&mut run, 1);
+    }
+    assert!(soul_fragments::pickup_due(run.app.world(), actor));
+    soul_fragments::finish_pickup(run.app.world_mut(), actor, true).unwrap();
+    assert_eq!(
+        soul_fragments::active_count(run.app.world(), actor, FragmentFilter::Lesser),
+        before - 1
+    );
+    advance(&mut run, 20);
+    assert!(
+        run.app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|event| event.spell_id == Some(210041)
+                && event.kind == CombatLogKind::Energize
+                && event.amount > 0),
+        "pickup must execute the native Consume Soul Fury payload"
+    );
+}
+
+#[test]
+#[ignore = "requires prepared native spec577 player profile"]
 fn havoc_hunt_applies_native_dot_to_each_nearby_enemy() {
     for count in [1, 3, 6] {
         let _seed = crate::random::seed_scope(70_448);
