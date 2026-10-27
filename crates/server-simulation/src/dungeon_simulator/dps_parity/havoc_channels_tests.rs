@@ -38,6 +38,30 @@ fn cast(run: &mut Run, spell: u32, self_target: bool) {
 
 #[test]
 #[ignore = "requires prepared native spec577 player profile"]
+fn havoc_volatile_instinct_explodes_on_hard_meta_and_new_demonic_entry() {
+    for spell in [191427, 198013] {
+        let _seed = crate::random::seed_scope(70_448);
+        let mut run = prepare_literal(577, 1).unwrap();
+        assert!(crate::auras::has_aura(run.app.world(), run.actor, 1272453));
+        havoc_tests::earn_havoc_fury(&mut run, 60.0);
+        run.app
+            .world_mut()
+            .resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .clear();
+        cast(&mut run, spell, false);
+        preparation::finish_pending_setup(&mut run).unwrap();
+        advance(&mut run, 20);
+        assert_eq!(
+            damage(&run, Some(452416)).len(),
+            1,
+            "selected Volatile Instinct must produce one native Demonsurge on Meta entry from {spell}"
+        );
+    }
+}
+
+#[test]
+#[ignore = "requires prepared native spec577 player profile"]
 fn havoc_focused_hatred_scales_real_demonsurge_by_resolved_enemy_count() {
     fn hit(count: usize, selected: bool) -> i32 {
         let _seed = crate::random::seed_scope(70_448);
