@@ -972,8 +972,8 @@ fn demonology_paid_hand_starts_and_shortens_diabolic_ritual() {
         .get::<crate::auras::ActiveAuras>(run.actor)
         .unwrap()
         .iter()
-        .find(|aura| aura.spell_id == 431944)
-        .expect("paid Hand must start native Overlord ritual");
+        .find(|aura| matches!(aura.spell_id, 431944 | 432815 | 432816))
+        .expect("paid Hand must start one native Diabolic Ritual");
     let remaining = aura.expires_at.unwrap() - crate::spell_cast::now(world);
     assert!(
         (16.8..=17.1).contains(&remaining),
