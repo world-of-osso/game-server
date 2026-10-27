@@ -350,7 +350,7 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 - Selected Eternal Hunt1270901 applies its native effect0 percentage a second time to the final Blade Dance and Death Sweep primary and secondary strikes, not to earlier strikes (SimC76f8118 `sc_demon_hunter.cpp`7055–7065,7113–7121).
 
-- A melee fixture returns to its selected target at native run speed after self-displacement, including instant teleports. Continue polling its APL: an otherwise-ready action outside its native target range waits without falling through, while eligible self-casts, off-GCD and in-range actions remain available. A hostile channel waits for active displacement to end so its target-range check uses the settled position. Targets stay fixed and actual casts retain native range, movement control and channel self-slow. Real Retreat followed by Eye Beam must land all twelve native ticks.
+- A melee fixture returns to its selected target at native run speed after self-displacement, including instant teleports. Continue polling its APL: an otherwise-ready action outside its native target range waits without falling through, while eligible self-casts, off-GCD and in-range actions remain available. A hostile channel waits for active displacement to end so its target-range check uses the settled position. Targets stay fixed and actual casts retain native range, movement control and channel self-slow. Real Retreat followed by Eye Beam must land all twelve native ticks and the selected Final Breath child.
 
 - Selected Chaos Theory389687 grants native390195 on Blade Dance/Death Sweep. Each affected damage action samples an additive crit-chance bonus between native talent effect0 and effect1; the buff's native proc modifier applies to Chaos Strike/Annihilation's off-hand refund roll. That off-hand execution consumes the buff whether or not a refund occurs (SimC76f8118 sc_demon_hunter.cpp2098–2103,2413–2420,7234–7237,7481–7515).
 
@@ -660,6 +660,8 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 ### Demonology literal execution and alternative Tyrant
 
 - Dreadbite271971 hits only its selected primary unless Dreadlash264078 is selected; a landed Dreadbite triggers the owner's Blighted Maw1276960 using the native1276956 percentage of the actual damage. The Felguard prioritizes its native Felstorm89751 and its89753 ticks when ready (`sc_warlock_pets.cpp536–601,1068–1110`).
+- Selected Flametouched453699 applies native Ferocity453704 to each actual Dreadstalker; its owner-sourced native modifiers supply the melee-haste and critical-chance amounts (`sc_warlock_pets.cpp146–162,1223–1226,1269–1286`).
+
 - Actual owned Wild Imps supply native296553 availability while any remain. Ordinary196277 selects the native maximum from the pinned eligible demon pool, launches selected Imps by remaining Energy then spawn order, emits native196278 with Energy scaling only on the primary and retires the actual actors. Selected To Hell and Back derives replacement count from native1281511 and uses native279910/143622 with1250772/1281512, not fabricated actors. Source: pinned `sc_warlock_actions.cpp2980–3170` and `sc_warlock_pets.cpp919–985`.
 - During actual combat, the spec266 literal controller maintains its default primary enemy for native guardians and commands its existing configured pet through ordinary pet control. Per-action `target_if` recipients do not replace that default enemy. Precombat does not command attacks, and no owner auto-attack is injected (SimC76f8118 `pet.cpp66–68/143–148`).
 - [ ] Spec266 follower parity consumes every exported pinned profile action through shared literal execution, with native target/resource/trait/equipment facts, actual owned Imp/Tyrant counts and source-qualified readiness. Capture precedes warmup; normal default-pet and harmful-precast completion precede pull. Production dungeon kits are unchanged.
@@ -1185,3 +1187,5 @@ Selected Insidious Ire earns its temporary channel bonus when one target has all
 ### Unholy controlled ghoul
 
 - Specialization Raise Dead46584 creates native26125 through the controlled-pet path, retaining the actual current-pet relationship and permanent lifetime. Native Dark Transformation must see the pet through UNIT_PET. DK inherits source-qualified owner melee AP/crit/haste, and ordinary owner casts order the real pet against the selected hostile primary. Hunter, Warlock and Mage pet policies remain unchanged.
+
+- Spec269 executes the pinned Windwalker action rows on native player and follower fixtures. Player measurements retain player identity and use the literal driver rather than AssistedCombat diagnostics.
