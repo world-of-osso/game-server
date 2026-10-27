@@ -13,7 +13,10 @@ const REAPERS_MARK: u32 = 439843;
 const ECHOING_FURY: u32 = 1265855;
 const EXTERMINATE: u32 = 441416;
 
-pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::AfterElementalLaunch(after_launch)];
+pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::OwnsPolicyProc(|spell| spell == EXTERMINATE),
+    SpellScriptHook::AfterElementalLaunch(after_launch),
+];
 
 fn after_launch(world: &mut World, caster: Entity, spell: &SpellInfo, foreground: bool) {
     if !foreground
