@@ -41,6 +41,8 @@ fn isolated_prey_hits(spell: u32, count: usize, selected: bool) -> Vec<CombatLog
     let mut run = prepare_literal(577, count).unwrap();
     preparation::finish_pending_setup(&mut run).unwrap();
     let actor = run.actor;
+    let primary = run.targets[0];
+    super::face_actor_toward_primary(run.app.world_mut(), actor, primary);
     let known = run
         .app
         .world()
