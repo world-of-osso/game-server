@@ -1148,6 +1148,38 @@ fn frost_winter_tick_pillar_only_changes_attack_power() {
 }
 
 #[test]
+#[ignore = "Freezing Tempest gains one stack per Winter pulse, not other spells"]
+fn frost_freezing_tempest_only_counts_real_winter_pulses() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::protocol::CombatLogKind;
+    for targets in [1, 3] {
+        let _seed = crate::random::seed_scope(70448);
+        let mut run = super::super::prepare_literal(251, targets).unwrap();
+        super::super::engage(&mut run);
+        let actor = run.actor;
+        assert!(auras::has_aura(run.app.world(), actor, 1296652));
+        super::super::enhancement_generation_tests::cast(&mut run, 51271, actor);
+        let hits = |run: &Run| run.app.world().resource::<ObservedCombatEvents>().0.iter()
+            .filter(|event| event.source == Some(actor.to_bits()) && event.spell_id == Some(196771)
+                && event.kind == CombatLogKind::Damage).count();
+        let stacks = |run: &Run| run.app.world().get::<ActiveAuras>(actor).and_then(|active| active.iter()
+            .find(|aura| aura.spell_id == 1297365 && aura.caster == actor).map(|aura| aura.stacks)).unwrap_or(0);
+        for _ in 0..60 { run.app.update(); if hits(&run) >= targets { break; } }
+        assert_eq!(hits(&run), targets, "first real pulse hits each target");
+        assert_eq!(stacks(&run), 1, "one actual pulse grants one stack, not one per target");
+        for _ in 0..30 { run.app.update(); }
+        let previous_hits = hits(&run);
+        for _ in 0..30 { run.app.update(); if hits(&run) > previous_hits { break; } }
+        assert!(hits(&run) > previous_hits);
+        let before = stacks(&run);
+        let target = run.targets[0];
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 49184, Some(target), false).unwrap();
+        run.app.update();
+        assert_eq!(stacks(&run), before, "a real Howling Blast must not grant Freezing Tempest");
+    }
+}
+
+#[test]
 #[ignore = "diagnostic actual Freezing Tempest stack events"]
 fn diag_frost_freezing_tempest_events() {
     use crate::spell_cast::test_harness::ObservedCombatEvents;
