@@ -48,10 +48,16 @@ fn schedule_army(world: &mut World, caster: Entity, spell: &SpellInfo) {
     // starts Forbidden Knowledge, whose native linked auras replace RP spenders.
     summon_magus(world, caster, spell);
     if combat::auras::has_aura(world, caster, 1242158) {
-        combat::auras::apply_aura(world, &combat::auras::AuraApplication {
-            caster, target: caster, spell_id: 1242223, effect_mask: 3,
-            source: combat::auras::AuraSource::Cast,
-        });
+        combat::auras::apply_aura(
+            world,
+            &combat::auras::AuraApplication {
+                caster,
+                target: caster,
+                spell_id: 1242223,
+                effect_mask: 3,
+                source: combat::auras::AuraSource::Cast,
+            },
+        );
     }
     let count = spell_cast::scripts::script_effect_value(world, caster, ARMY, 0) as u32;
     assert!(count > 0, "native Army ghoul count must be positive");

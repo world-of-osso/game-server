@@ -16,7 +16,9 @@ fn on_summon(world: &mut World, actor: Entity) {
         return;
     };
     if !matches!(summon.spell_id, 193331 | 193332)
-        || world.get::<Npc>(actor).is_none_or(|npc| npc.template_id != 98035)
+        || world
+            .get::<Npc>(actor)
+            .is_none_or(|npc| npc.template_id != 98035)
     {
         return;
     }

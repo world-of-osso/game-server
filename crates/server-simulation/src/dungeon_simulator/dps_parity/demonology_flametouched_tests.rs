@@ -17,13 +17,36 @@ fn demonology_flametouched_empowers_actual_dreadstalker() {
         .find(|(_, summon)| summon.owner == owner && summon.spell_id == 193331)
         .map(|(actor, _)| actor)
         .expect("actual Dreadstalker");
-    let aura = run.app.world().get::<crate::auras::ActiveAuras>(dog).unwrap().iter()
+    let aura = run
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(dog)
+        .unwrap()
+        .iter()
         .find(|aura| aura.spell_id == 453704 && aura.caster == owner)
         .expect("selected Flametouched grants native Ferocity to the actual dog");
-    let haste = aura.effects.iter().find(|effect| effect.index == 0).unwrap().amount;
-    let crit = aura.effects.iter().find(|effect| effect.index == 1).unwrap().amount;
-    let expected_haste = crate::spell_cast::scripts::script_effect_value(run.app.world(), owner, 453699, 0);
-    let expected_crit = crate::spell_cast::scripts::script_effect_value(run.app.world(), owner, 453699, 1);
-    assert!((haste - expected_haste).abs() < 0.01, "native haste {haste} expected {expected_haste}");
-    assert!((crit - expected_crit).abs() < 0.01, "native crit {crit} expected {expected_crit}");
+    let haste = aura
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap()
+        .amount;
+    let crit = aura
+        .effects
+        .iter()
+        .find(|effect| effect.index == 1)
+        .unwrap()
+        .amount;
+    let expected_haste =
+        crate::spell_cast::scripts::script_effect_value(run.app.world(), owner, 453699, 0);
+    let expected_crit =
+        crate::spell_cast::scripts::script_effect_value(run.app.world(), owner, 453699, 1);
+    assert!(
+        (haste - expected_haste).abs() < 0.01,
+        "native haste {haste} expected {expected_haste}"
+    );
+    assert!(
+        (crit - expected_crit).abs() < 0.01,
+        "native crit {crit} expected {expected_crit}"
+    );
 }

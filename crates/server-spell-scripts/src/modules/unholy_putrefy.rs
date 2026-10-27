@@ -120,7 +120,8 @@ fn set_lord_magus_lifetime(world: &mut World, actor: Entity) {
         }
         _ => return,
     };
-    let duration_ms = combat::spell_cast::scripts::script_effect_value(world, owner, talent, effect);
+    let duration_ms =
+        combat::spell_cast::scripts::script_effect_value(world, owner, talent, effect);
     assert!(
         duration_ms > 0.0,
         "Lord of the Dead Magus duration must be positive"

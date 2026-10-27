@@ -8,15 +8,25 @@ fn dk252_army_grants_forbidden_knowledge_and_summons_magus() {
     let mut run = prepare_literal(252, 1).unwrap();
     engage(&mut run);
     literal_rotation::execution::execute(
-        run.app.world_mut(), run.actor,
+        run.app.world_mut(),
+        run.actor,
         literal_rotation::execution::Execution::Spell(42650, run.actor, None),
-    ).unwrap();
+    )
+    .unwrap();
     preparation::finish_pending_setup(&mut run).unwrap();
     assert!(crate::auras::has_aura(run.app.world(), run.actor, 1242223));
     let world = run.app.world_mut();
-    assert!(world.query::<(&shared::components::Npc, &crate::spell_cast::summon::SummonedCreature)>()
-        .iter(world).any(|(npc, summon)| npc.template_id == 163366
-            && summon.owner == run.actor && summon.spell_id == 317776));
+    assert!(
+        world
+            .query::<(
+                &shared::components::Npc,
+                &crate::spell_cast::summon::SummonedCreature
+            )>()
+            .iter(world)
+            .any(|(npc, summon)| npc.template_id == 163366
+                && summon.owner == run.actor
+                && summon.spell_id == 317776)
+    );
 }
 
 #[test]
@@ -26,14 +36,24 @@ fn dk252_dark_transformation_summons_selected_magus() {
     let mut run = prepare_literal(252, 1).unwrap();
     engage(&mut run);
     literal_rotation::execution::execute(
-        run.app.world_mut(), run.actor,
+        run.app.world_mut(),
+        run.actor,
         literal_rotation::execution::Execution::Spell(1233448, run.actor, None),
-    ).unwrap();
+    )
+    .unwrap();
     preparation::finish_pending_setup(&mut run).unwrap();
     let world = run.app.world_mut();
-    assert!(world.query::<(&shared::components::Npc, &crate::spell_cast::summon::SummonedCreature)>()
-        .iter(world).any(|(npc, summon)| npc.template_id == 163366
-            && summon.owner == run.actor && summon.spell_id == 317776));
+    assert!(
+        world
+            .query::<(
+                &shared::components::Npc,
+                &crate::spell_cast::summon::SummonedCreature
+            )>()
+            .iter(world)
+            .any(|(npc, summon)| npc.template_id == 163366
+                && summon.owner == run.actor
+                && summon.spell_id == 317776)
+    );
 }
 
 #[test]
@@ -95,11 +115,28 @@ fn dk252_lesser_ghoul_expiry_triggers_ruptured_viscera() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(252, 1).unwrap();
     engage(&mut run);
-    assert!(crate::spell_cast::try_cast_triggered(run.app.world_mut(), run.actor, 275430, Some(run.actor), 1));
-    for _ in 0..300 { run.app.update(); }
-    let events = &run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
-    assert!(events.iter().any(|e| e.spell_id == Some(1247379) && e.target == Some(run.targets[0].to_bits())
-        && e.kind == CombatLogKind::Damage && e.amount > 0), "expired real ghoul must deal native Ruptured Viscera damage");
+    assert!(crate::spell_cast::try_cast_triggered(
+        run.app.world_mut(),
+        run.actor,
+        275430,
+        Some(run.actor),
+        1
+    ));
+    for _ in 0..300 {
+        run.app.update();
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    assert!(
+        events.iter().any(|e| e.spell_id == Some(1247379)
+            && e.target == Some(run.targets[0].to_bits())
+            && e.kind == CombatLogKind::Damage
+            && e.amount > 0),
+        "expired real ghoul must deal native Ruptured Viscera damage"
+    );
 }
 
 #[test]
@@ -350,17 +387,41 @@ fn dk252_lesser_ghoul_uses_claw_then_transformed_sweeping_claws() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(252, 1).unwrap();
     engage(&mut run);
-    assert!(crate::spell_cast::try_cast_triggered(run.app.world_mut(), run.actor, 1294026, Some(run.actor), 1));
-    for _ in 0..160 { run.app.update(); }
-    crate::auras::apply_aura(run.app.world_mut(), &crate::auras::AuraApplication {
-        caster: run.actor, target: run.actor, spell_id: 1235391, effect_mask: 1,
-        source: crate::auras::AuraSource::Cast,
-    });
-    for _ in 0..160 { run.app.update(); }
-    let events = &run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
+    assert!(crate::spell_cast::try_cast_triggered(
+        run.app.world_mut(),
+        run.actor,
+        1294026,
+        Some(run.actor),
+        1
+    ));
+    for _ in 0..160 {
+        run.app.update();
+    }
+    crate::auras::apply_aura(
+        run.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: run.actor,
+            target: run.actor,
+            spell_id: 1235391,
+            effect_mask: 1,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    for _ in 0..160 {
+        run.app.update();
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
     for spell in [199373, 1278150] {
-        assert!(events.iter().any(|e| e.spell_id == Some(spell) && e.kind == CombatLogKind::Damage && e.amount > 0),
-            "actual lesser ghoul must damage with native {spell}");
+        assert!(
+            events.iter().any(|e| e.spell_id == Some(spell)
+                && e.kind == CombatLogKind::Damage
+                && e.amount > 0),
+            "actual lesser ghoul must damage with native {spell}"
+        );
     }
 }
 
@@ -613,12 +674,29 @@ fn dk252_ghoul_attacks_earn_infected_claws() {
     let mut run = prepare_literal(252, 1).unwrap();
     engage(&mut run);
     for _ in 0..5 {
-        assert!(crate::spell_cast::try_cast_triggered(run.app.world_mut(), run.actor, 1294026, Some(run.actor), 1));
+        assert!(crate::spell_cast::try_cast_triggered(
+            run.app.world_mut(),
+            run.actor,
+            1294026,
+            Some(run.actor),
+            1
+        ));
     }
-    for _ in 0..400 { run.app.update(); }
-    let events = &run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
-    assert!(events.iter().any(|e| e.spell_id == Some(1241786) && e.target == Some(run.targets[0].to_bits())
-        && e.kind == CombatLogKind::Damage && e.amount > 0), "actual ghoul hits must earn Infected Claws");
+    for _ in 0..400 {
+        run.app.update();
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    assert!(
+        events.iter().any(|e| e.spell_id == Some(1241786)
+            && e.target == Some(run.targets[0].to_bits())
+            && e.kind == CombatLogKind::Damage
+            && e.amount > 0),
+        "actual ghoul hits must earn Infected Claws"
+    );
 }
 
 #[test]
@@ -932,14 +1010,38 @@ fn dk252_death_coil_deposits_rolling_devastation() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(252, 1).unwrap();
     engage(&mut run);
-    assert!(crate::spell_cast::try_cast_triggered(run.app.world_mut(), run.actor, 47632, Some(run.targets[0]), 1));
-    for _ in 0..30 { run.app.update(); }
-    assert!(run.app.world().get::<crate::auras::ActiveAuras>(run.targets[0]).unwrap().iter()
-        .any(|a| a.spell_id == 390271 && a.caster == run.actor));
-    for _ in 0..120 { run.app.update(); }
-    let events = &run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
-    assert!(events.iter().any(|e| e.spell_id == Some(390271) && e.kind == CombatLogKind::Damage && e.amount > 0),
-        "Coil of Devastation must tick after actual Death Coil damage");
+    assert!(crate::spell_cast::try_cast_triggered(
+        run.app.world_mut(),
+        run.actor,
+        47632,
+        Some(run.targets[0]),
+        1
+    ));
+    for _ in 0..30 {
+        run.app.update();
+    }
+    assert!(
+        run.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(run.targets[0])
+            .unwrap()
+            .iter()
+            .any(|a| a.spell_id == 390271 && a.caster == run.actor)
+    );
+    for _ in 0..120 {
+        run.app.update();
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    assert!(
+        events
+            .iter()
+            .any(|e| e.spell_id == Some(390271) && e.kind == CombatLogKind::Damage && e.amount > 0),
+        "Coil of Devastation must tick after actual Death Coil damage"
+    );
 }
 
 #[test]
