@@ -9,6 +9,7 @@ use std::collections::{BTreeMap, BTreeSet};
 #[derive(Clone)]
 pub(crate) enum Execution {
     Snapshot,
+    Wait(f64),
     CancelCast,
     PickupFragment(server::soul_fragments::PickupPlan),
     AutoAttack(Entity),
@@ -861,7 +862,9 @@ pub(crate) fn execute_row(
 
 pub(crate) fn execute(world: &mut World, actor: Entity, action: Execution) -> Result<(), String> {
     match action {
-        Execution::Snapshot => Err("snapshot execution belongs to the native stat recorder".into()),
+        Execution::Snapshot | Execution::Wait(_) => {
+            Err("snapshot and wait execution belong to the literal driver".into())
+        }
         Execution::PickupFragment(plan) => server::soul_fragments::begin_pickup(world, actor, plan),
         Execution::CancelCast => {
             crate::spell_cast::cancel_cast(world, actor);

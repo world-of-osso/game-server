@@ -28,6 +28,10 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 - Selected Burning Blades452408 applies native residual1245654 to landed Devourer weapon swings and Voidblade/Hungering Slash damage children. Preserve the native periodic timing and the existing Havoc residual453177 behavior (SimC76f8118 `sc_demon_hunter.cpp`3088–3111,5830–5847,6697–6710,6875–6878).
 
+### Literal wait
+
+- A selected `wait` evaluates `sec` once, holds subsequent actions for that duration without interrupting attacks, and reevaluates the APL afterwards. The default is one second; nonpositive `sec` uses the source `player.available()` delay (SimC76f8118 `player.cpp`7130–7133,9706–9803).
+
 ### Literal spec drivers
 
 - Register each literal spec once, in spec-ID order. Adding a spec changes only its own rotation module and its registration line, not shared fields, initialization, dispatch, reporting or preparation branches. See [Arcane Mage parity](arcane-mage-parity.md) for spec62's execution contracts.
