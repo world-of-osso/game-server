@@ -9,7 +9,10 @@ use combat::spell_cast::{
     targets,
 };
 use combat::spell_info::SpellStore;
-use shared::{casting::{CastState, CastType}, components::PowerType};
+use shared::{
+    casting::{CastState, CastType},
+    components::PowerType,
+};
 
 const VOID_RAY: u32 = 473728;
 const META: u32 = 1217607;
@@ -90,14 +93,21 @@ fn cast_tick(world: &mut World, ctx: &EffectCtx<'_>, _: Entity) {
 
 fn pay_tick_cost(world: &mut World, actor: Entity, child: u32) -> bool {
     // SimC76f8118 sc_demon_hunter.cpp6431–6455 pays the child cost per tick.
-    let cost: f32 = world.resource::<SpellStore>().get(child)
+    let cost: f32 = world
+        .resource::<SpellStore>()
+        .get(child)
         .expect("native Void Ray child")
-        .power_costs.iter()
-        .filter(|cost| cost.power_type == PowerType::Fury as i32 && cost.required_aura_spell_id == 0)
-        .map(|cost| cost.mana_cost as f32).sum();
+        .power_costs
+        .iter()
+        .filter(|cost| {
+            cost.power_type == PowerType::Fury as i32 && cost.required_aura_spell_id == 0
+        })
+        .map(|cost| cost.mana_cost as f32)
+        .sum();
     assert!(cost > 0.0, "native Void Ray child requires a Fury cost");
     let current = spell_cast::powers::power_value(world, actor, PowerType::Fury)
-        .expect("Void Ray caster requires Fury").0;
+        .expect("Void Ray caster requires Fury")
+        .0;
     if current < cost {
         return false;
     }

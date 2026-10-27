@@ -23,14 +23,23 @@ fn on_collapsing_star_stack(world: &mut World, caster: Entity, target: Entity, d
         return;
     }
     let threshold = spell_cast::scripts::script_effect_value(world, caster, 1221167, 0) as u8;
-    let stacks = world.get::<combat::auras::ActiveAuras>(caster)
-        .and_then(|auras| auras.iter().find(|aura| aura.spell_id == 1227702 && aura.caster == caster))
+    let stacks = world
+        .get::<combat::auras::ActiveAuras>(caster)
+        .and_then(|auras| {
+            auras
+                .iter()
+                .find(|aura| aura.spell_id == 1227702 && aura.caster == caster)
+        })
         .map_or(0, |aura| aura.stacks);
     // SimC76f8118 sc_demon_hunter.cpp9318–9334 grants readiness on crossing the threshold.
-    if threshold > 0 && stacks == threshold
+    if threshold > 0
+        && stacks == threshold
         && !spell_cast::try_cast_triggered(world, caster, 1221171, Some(caster), depth + 1)
     {
-        warn!(?caster, "native Collapsing Star ready aura 1221171 was refused");
+        warn!(
+            ?caster,
+            "native Collapsing Star ready aura 1221171 was refused"
+        );
     }
 }
 
