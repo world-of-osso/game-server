@@ -610,6 +610,22 @@ fn frost_erw_earns_killing_machine() {
     );
 }
 
+#[test]
+#[ignore = "real Mark explosion releases Soul Rupture only on secondary targets"]
+fn frost_soul_rupture_from_real_mark_explosion() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::protocol::CombatLogKind;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::super::prepare_measurement(251, 3).unwrap();
+    super::super::engage(&mut run);
+    assert!(auras::has_aura(run.app.world(), run.actor, 437161));
+    cast(&mut run, 439843);
+    for _ in 0..500 { run.app.update(); }
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0;
+    assert!(events.iter().any(|event| event.spell_id == Some(439594) && event.kind == CombatLogKind::Damage && event.target != Some(run.targets[0].to_bits()) && event.amount > 0));
+    assert!(!events.iter().any(|event| event.spell_id == Some(439594) && event.kind == CombatLogKind::Damage && event.target == Some(run.targets[0].to_bits())));
+}
+
 fn grim_mark_explosion(health_fraction: f32) -> i32 {
     use crate::spell_cast::test_harness::ObservedCombatEvents;
     use shared::protocol::CombatLogKind;

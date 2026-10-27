@@ -36,6 +36,10 @@ fn stack_mark(world: &mut World, ctx: &EffectCtx, target: Entity, critical: bool
     {
         return;
     }
+    if ctx.spell.id == 436304 {
+        trigger_soul_rupture(world, ctx, target, damage);
+        return;
+    }
     if ctx.spell.id == 439843 {
         if auras::has_aura(world, ctx.caster, 434905) {
             // SimC76f8118 sc_death_knight.cpp8550–8554: Grim Reaper's
@@ -83,6 +87,21 @@ fn stack_mark(world: &mut World, ctx: &EffectCtx, target: Entity, critical: bool
             aura.spell_id == 434765 && aura.caster == ctx.caster
         });
     }
+}
+
+fn trigger_soul_rupture(world: &mut World, ctx: &EffectCtx, target: Entity, damage: f32) {
+    if !auras::has_aura(world, ctx.caster, 437161) { return; }
+    let Some(mut rupture) = spell_cast::load_triggered_spell(world, 439594, ctx.depth + 1) else { return };
+    let percent = script_effect_value(world, ctx.caster, 437161, 1);
+    let effect = rupture.effects.iter_mut().find(|effect| effect.index == 0).expect("Soul Rupture damage");
+    effect.base_points = damage * percent / 100.0;
+    let radius = effect.radius[1].as_ref().expect("Soul Rupture area radius").radius;
+    let center = combat::spell_cast::targets::position(world, target).expect("Mark target position");
+    let targets = combat::spell_cast::targets::area_units(world, ctx.caster, center, radius, combat::spell_cast::targets::Relation::Enemy, 0);
+    if targets.iter().all(|candidate| *candidate == target) && auras::has_aura(world, ctx.caster, 443560) {
+        spell_cast::cast_triggered(world, ctx.caster, 469169, Some(ctx.caster), ctx.depth + 1);
+    }
+    spell_cast::launch_triggered_spell(world, ctx.caster, &rupture, Some(target), ctx.depth + 1);
 }
 
 fn explode_mark(
@@ -204,6 +223,9 @@ fn filter_damage_effect(
     _primary: Option<Entity>,
     targets: &mut Vec<Entity>,
 ) {
+    if spell.id == 439594 && effect == 0 {
+        targets.retain(|target| Some(*target) != _primary);
+    }
     // SimC76f8118 sc_death_knight.cpp8239–8242/8300–8302/8516–8517:
     // Frost uses effect2 for Exterminate and effect4 for Mark, not Blood's effect1.
     if matches!(spell.id, 439843 | 441424 | 441426)
