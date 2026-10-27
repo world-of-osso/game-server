@@ -754,6 +754,18 @@ impl<'a> NativeFacts<'a> {
         property: &str,
         action: Option<&Action>,
     ) -> Result<f64, String> {
+        if alias == "pick_up_fragment" && property == "last_used" {
+            let start = match self.encounter {
+                Encounter::Fixture { started_at, .. } | Encounter::Dungeon { started_at } => {
+                    started_at
+                }
+            };
+            return Ok(self
+                .world
+                .get::<crate::spell_cast::SpellHistory>(self.actor)
+                .and_then(|history| history.last_fragment_pickup_at())
+                .map_or(i64::MIN as f64 / 1000.0, |at| at - start));
+        }
         let spell = self.action_spell(alias)?;
         match property {
             // SimC76f8118 action.cpp3609–3626: the matching live cast/channel only.
