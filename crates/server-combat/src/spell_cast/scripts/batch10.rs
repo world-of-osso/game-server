@@ -1,63 +1,20 @@
 //! Bounded Mainline12.1.0.69933 tooltip bridges. No guessed proc/soft-cap formula.
 use bevy::prelude::*;
-use shared::components::PowerType;
 
 use super::script_effect_value;
 use crate::auras::{AuraApplication, AuraSource};
 use crate::spell_cast;
 use crate::spell_info::{SpellInfo, SpellStore};
 
-pub(super) const BLADE_FLURRY: u32 = 13877;
-pub(super) const FLURRY_DAMAGE: u32 = 331850;
 pub(super) const FERAL_LUNGE: u32 = 196884;
 pub(super) const VOIDFORM: u32 = 228260;
 pub(super) const ARCANE_SURGE: u32 = 365350;
 pub(super) const PROTECTION_JUDGMENT: u32 = 275779;
 pub(super) const HAND_OF_GULDAN: u32 = 105174;
-const IMPROVED_FLURRY: u32 = 272026;
-const DEFT_MANEUVERS: u32 = 381878;
 const LUNGE_BITE: u32 = 215802;
 const VOIDFORM_BUFF: u32 = 194249;
 const SURGE_BUFF: u32 = 365362;
 const GULDAN_METEOR: u32 = 86040;
-
-///13877 explicitly names331850s1/i: five base targets, eight with272026.
-///Only the initial strike is bridged; subsequent single-target transfer is open.
-pub(super) fn cast_flurry(world: &mut World, caster: Entity, _spell: &SpellInfo) {
-    let mut child = world
-        .resource::<SpellStore>()
-        .get(FLURRY_DAMAGE)
-        .expect("Blade Flurry requires331850")
-        .clone();
-    let rank = crate::auras::has_aura(world, caster, IMPROVED_FLURRY);
-    let restrictions = child
-        .target_restrictions
-        .as_mut()
-        .expect("Flurry target cap");
-    if !rank {
-        restrictions.max_targets -= script_effect_value(world, caster, IMPROVED_FLURRY, 2) as u32;
-    }
-    let plan = spell_cast::plan_targets(world, caster, &child, None, false)
-        .expect("Flurry native area selectors");
-    spell_cast::missiles::launch(world, caster, &child, plan, 1);
-}
-
-///381878m2 awards one combo point per actual initial hit, not per cast.
-pub(super) fn energize_flurry(world: &mut World, caster: Entity, target: Entity, _depth: u8) {
-    let hit = world
-        .resource::<spell_cast::ResolvingHits>()
-        .0
-        .last()
-        .is_some_and(|frame| {
-            frame.caster == caster
-                && frame.spell_id == FLURRY_DAMAGE
-                && frame.damage.iter().any(|(unit, _)| *unit == target)
-        });
-    if hit && crate::auras::has_aura(world, caster, DEFT_MANEUVERS) {
-        let amount = script_effect_value(world, caster, DEFT_MANEUVERS, 1);
-        spell_cast::powers::change_power(world, caster, PowerType::ComboPoints, amount);
-    }
-}
 
 ///196884 names215802. Keep this bite independently of effect254 displacement;
 ///its source parabolic-curve/arrival options are explicitly unsupported.

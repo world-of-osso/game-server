@@ -15,6 +15,8 @@
     325202,
     // SimC76f8118 sc_evoker.cpp3004–3006/3223–3250: Imminent stacks are flat-cost uses.
     411055,
+    // SimC76f8118 warlock actions4401–4403: Crashing Chaos stacks are uses.
+    417282,
     436336,
     1265871,
     // SimC76f8118 warlock actions199/2152/2182/877–878: Nightfall stacks are uses.
