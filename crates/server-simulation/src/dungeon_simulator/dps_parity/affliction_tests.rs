@@ -298,6 +298,188 @@ fn affliction_sayaad_reacts_to_owner_damage_only_when_not_passive() {
 
 #[test]
 #[ignore = "requires private265 profile and native70448 world DB"]
+fn affliction_sayaad_melee_uses_owner_critical_chance() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_measurement(265, 1).unwrap();
+    let owner = run.actor;
+    let pet = crate::hunter_pet::summoned_pet(run.app.world(), owner).unwrap();
+    let target = run.targets[0];
+    engage(&mut run);
+    crate::pet_control::order_companion_pet(run.app.world_mut(), owner, Some(target));
+    run.app
+        .world_mut()
+        .resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .clear();
+    for _ in 0..12000 {
+        run.app.update();
+        let world = run.app.world();
+        let swings: Vec<_> = world
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .filter(|event| {
+                event.source == Some(pet.to_bits())
+                    && event.target == Some(target.to_bits())
+                    && event.spell_id.is_none()
+                    && event.kind == shared::protocol::CombatLogKind::Damage
+            })
+            .collect();
+        if swings.len() < 150 {
+            continue;
+        }
+        // SimC76f8118 pet.cpp217–220 inherits the owner's live critical chance.
+        let actual = swings.iter().filter(|event| event.crit).count() as f32 / swings.len() as f32;
+        let owner_crit = world
+            .get::<crate::stats::CharacterStats>(owner)
+            .unwrap()
+            .crit_pct
+            / 100.0;
+        assert!(
+            (actual - owner_crit).abs() < 0.1,
+            "actual Sayaad crit {actual}, owner crit {owner_crit}"
+        );
+        return;
+    }
+    panic!("actual Sayaad must land 150 melee swings");
+}
+
+#[test]
+#[ignore = "requires private265 profile and native70448 world DB"]
+fn affliction_sayaad_melee_inherits_live_owner_power() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_measurement(265, 1).unwrap();
+    let owner = run.actor;
+    let pet = crate::hunter_pet::summoned_pet(run.app.world(), owner).unwrap();
+    let target = run.targets[0];
+    engage(&mut run);
+    crate::pet_control::order_companion_pet(run.app.world_mut(), owner, Some(target));
+    run.app
+        .world_mut()
+        .resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .clear();
+    for _ in 0..600 {
+        run.app.update();
+        let world = run.app.world();
+        let event = world
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .find(|event| {
+                event.source == Some(pet.to_bits())
+                    && event.target == Some(target.to_bits())
+                    && event.spell_id.is_none()
+                    && event.kind == shared::protocol::CombatLogKind::Damage
+                    && !event.crit
+                    && !event.glancing
+                    && event.blocked == 0
+                    && event.absorbed == 0
+            });
+        let Some(event) = event else { continue };
+        let owner_sp = world
+            .get::<crate::stats::CharacterStats>(owner)
+            .unwrap()
+            .spell_power;
+        // SimC76f8118 pets.cpp421–430: Sayaad AP is 2.565 times live owner SP.
+        let contribution = owner_sp * 2.565 / 3.5 * 2.0;
+        let mods = world.get::<crate::auras::AuraStatMods>(pet);
+        let done = mods.map_or(1.0, |mods| {
+            mods.damage_done(1) * mods.autoattack_damage_mult
+        });
+        let taken = world
+            .get::<crate::auras::AuraStatMods>(target)
+            .map_or(1.0, |mods| mods.damage_taken(1));
+        let raw =
+            (contribution * done * taken * crate::auras::summon_damage::multiplier(world, pet))
+                .round();
+        let pet_scaling = crate::level_scaling::UnitScaling::of(world, pet);
+        let target_scaling = crate::level_scaling::UnitScaling::of(world, target);
+        let armor = target_scaling.armor_against(
+            world
+                .get::<crate::level_scaling::CreatureArmor>(target)
+                .unwrap()
+                .0,
+            &pet_scaling,
+        );
+        let floor = crate::combat::armor_mitigated(
+            raw,
+            armor,
+            &pet_scaling,
+            &target_scaling,
+            Some(world.resource::<crate::level_scaling::ArmorConstants>()),
+            mods,
+        )
+        .damage
+        .floor();
+        assert!(
+            (event.amount as f32) >= floor,
+            "actual Sayaad melee {} omits owner AP floor {floor}",
+            event.amount
+        );
+        return;
+    }
+    panic!("actual Sayaad must land a noncritical melee hit");
+}
+
+#[test]
+#[ignore = "requires private265 profile and native70448 world DB"]
+fn affliction_sayaad_lash_inherits_live_owner_power() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_measurement(265, 1).unwrap();
+    let owner = run.actor;
+    let pet = crate::hunter_pet::summoned_pet(run.app.world(), owner).unwrap();
+    let target = run.targets[0];
+    engage(&mut run);
+    crate::pet_control::order_companion_pet(run.app.world_mut(), owner, Some(target));
+    run.app.insert_resource(
+        crate::spell_cast::effects::factor_capture::FactorCapture::new(
+            pet,
+            target,
+            7814,
+            "sayaad_lash",
+            16,
+        ),
+    );
+    for _ in 0..200 {
+        run.app.update();
+        let capture = run
+            .app
+            .world()
+            .resource::<crate::spell_cast::effects::factor_capture::FactorCapture>()
+            .export();
+        let Some(event) = capture["events"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|event| event["event"] == "direct_amount" && event["spell_id"] == 7814)
+        else {
+            continue;
+        };
+        let owner_sp = run
+            .app
+            .world()
+            .get::<crate::stats::CharacterStats>(owner)
+            .unwrap()
+            .spell_power as f64;
+        let spell_power = event["factors"]["s_power"].as_f64().unwrap();
+        let attack_power = event["factors"]["a_power"].as_f64().unwrap();
+        // SimC76f8118 sc_warlock_pets.cpp421–430: actual main Sayaad inherits live SP.
+        assert!(
+            (spell_power - owner_sp * 5.175).abs() < 1.0,
+            "Sayaad SP {spell_power}, owner SP {owner_sp}"
+        );
+        assert!(
+            (attack_power - owner_sp * 2.565).abs() < 1.0,
+            "Sayaad AP {attack_power}, owner SP {owner_sp}"
+        );
+        return;
+    }
+    panic!("actual Sayaad must land native Lash");
+}
+
+#[test]
+#[ignore = "requires private265 profile and native70448 world DB"]
 fn affliction_literal_sayaad_attacks_primary_with_melee_and_lash() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_measurement(265, 1).unwrap();
