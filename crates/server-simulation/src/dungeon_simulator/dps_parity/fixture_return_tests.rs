@@ -50,6 +50,7 @@ fn havoc_retreat_returns_during_movable_eye_beam() {
         literal_rotation::execution::Execution::Spell(198013, actor, Some(target)),
     )
     .unwrap();
+    let mut saw_flight = false;
     let mut landed_at = None;
     let mut returned_during_channel = false;
     for _ in 0..80 {
@@ -62,7 +63,8 @@ fn havoc_retreat_returns_during_movable_eye_beam() {
             .get::<shared::components::MovementControl>(actor)
             .is_some_and(|control| control.controlled);
         let pos = world.get::<Position>(actor).unwrap();
-        if channel && !controlled {
+        saw_flight |= controlled;
+        if channel && saw_flight && !controlled && pos.x < -15.0 {
             let first = landed_at.get_or_insert(pos.x);
             if pos.x > *first + 0.1 {
                 returned_during_channel = true;
