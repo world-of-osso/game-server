@@ -151,6 +151,7 @@ pub(crate) fn after_melee_hit(
 ) {
     windwalker_flurry::after_melee_hit(world, caster, hand, critical);
     script_registry::after_white_hit(world, caster, critical);
+    script_registry::after_white_hand_hit(world, caster, hand, critical);
 }
 mod xuens_battlegear;
 pub(crate) use xuens_battlegear::register_xuens_battlegear;
