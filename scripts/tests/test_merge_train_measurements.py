@@ -96,6 +96,25 @@ class MeasurementTests(unittest.TestCase):
                 self.assertLessEqual(pair[0]["monotonic"], pair[1]["monotonic"])
 
 
+    def test_failed_measurement_keeps_its_native_log_beyond_the_shared_output(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            output = root / "out"
+            output.mkdir()
+            (output / "577.native.1.log").write_text("panicked at native item driver effect\n")
+            (root / "logs").mkdir()
+            failed = type("Run", (), {"stdout": "spec577 targets1: FAILED, see out/577.native.1.log\n",
+                                      "stderr": "traceback tail\n"})()
+            with patch.object(train, "LOGS", root / "logs"), patch.object(train, "TREE", root), \
+                    patch.object(train.subprocess, "run", return_value=failed):
+                lines = train.measure_spec({"id": "entry"}, {"spec": "577", "targets": "1", "world_db": "db",
+                                                            "output": str(output)}, "exe", root, root / "c.log", "t")
+            kept = root / "logs/entry.measure-577.log"
+            self.assertEqual(lines[-1], f"FAILED details kept in {kept}")
+            (output / "577.native.1.log").write_text("overwritten by the next measurement\n")
+            self.assertIn("panicked at native item driver effect", kept.read_text())
+            self.assertIn("traceback tail", kept.read_text())
+
     def test_repeated_spec_output_is_serialized_in_submission_order(self):
         with tempfile.TemporaryDirectory() as directory, ExitStack() as stack:
             root = Path(directory)
