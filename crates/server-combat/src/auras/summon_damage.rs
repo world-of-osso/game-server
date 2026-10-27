@@ -22,12 +22,15 @@ fn owner_and_guardian((summon, pet): Ownership<'_>) -> Option<(Entity, bool)> {
         .then_some((summon.owner, true))
 }
 
+/// SimC76f8118 sc_hunter.cpp1900/1928/1961/2003/2027: actual DireCritters.
+pub(crate) fn is_dire_critter(summon: &SummonedCreature) -> bool {
+    [219199, 442419, 459733, 459739, 471990].contains(&summon.spell_id)
+}
+
 // SimC76f8118 sc_hunter.cpp1877–1882: selected Dire Frenzy affects
 // genuine DireCritters, including their melee and spell damage.
 fn dire_frenzy_multiplier(summon: Option<&SummonedCreature>, mods: &AuraStatMods) -> f32 {
-    if summon
-        .is_some_and(|summon| [219199, 442419, 459733, 459739, 471990].contains(&summon.spell_id))
-    {
+    if summon.is_some_and(is_dire_critter) {
         mods.dire_frenzy_damage_mult
     } else {
         1.0
