@@ -56,6 +56,10 @@ fn deliver_apocalypse(world: &mut World) {
             before - pending.0.len()
         };
         for _ in 0..due {
+            // SimC76f8118 cpp9404–9419 cancels Apocalypse if Meta has ended.
+            if !auras::has_aura(world, caster, 1217607) {
+                continue;
+            }
             if !spell_cast::try_cast_triggered(world, caster, 1227338, Some(caster), 1) {
                 error!(?caster, "native Impending Apocalypse was refused");
             }

@@ -245,6 +245,50 @@ fn batch9_blind_focus_scales_voidblade_in_meta() {
 
 #[test]
 #[ignore = "requires DPS_PARITY_WORLD_DB and DPS_PARITY_OUTPUT with spec1480 exact profile/traits"]
+fn batch_a_delayed_apocalypse_requires_meta_at_delivery() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare(1480, 1).expect("native Devourer profile");
+    let actor = run.actor;
+    let target = run.targets[0];
+    engage(&mut run);
+    crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 1217605, Some(actor), 1);
+    for _ in 0..30 {
+        run.app.update();
+    }
+    assert!(
+        crate::auras::has_aura(run.app.world(), actor, 1217607),
+        "real Meta active"
+    );
+    crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 1221162, Some(target), 1);
+    assert!(
+        run.app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|event| event.spell_id == Some(1221162)
+                && event.target == Some(target.to_bits())
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0),
+        "primary Star hit landed"
+    );
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        actor,
+        crate::auras::RemoveReason::Consumed,
+        |aura| aura.spell_id == 1217607,
+    );
+    for _ in 0..35 {
+        run.app.update();
+    }
+    assert!(
+        !crate::auras::has_aura(run.app.world(), actor, 1227338),
+        "delayed Apocalypse cannot start after Meta exits"
+    );
+}
+
+#[test]
+#[ignore = "requires DPS_PARITY_WORLD_DB and DPS_PARITY_OUTPUT with spec1480 exact profile/traits"]
 fn devourer_fragment_heal_increments_meta_stacks() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare(1480, 1).expect("native Devourer profile");
