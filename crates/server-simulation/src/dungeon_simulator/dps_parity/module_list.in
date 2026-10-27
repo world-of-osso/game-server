@@ -315,6 +315,7 @@ pub(crate) mod single_spell;
 mod snakeskin_tests;
 mod subtlety_ancient_tests;
 mod subtlety_blades_tests;
+mod subtlety_clone_funding_tests;
 mod subtlety_clone_tests;
 mod subtlety_deathstalker_tests;
 mod subtlety_finishers_tests;
