@@ -90,6 +90,46 @@ fn dk252_scourge_strike_spends_ready_ghoul_and_summons_it() {
 
 #[test]
 #[ignore = "requires private native252 profile/traits and player actor"]
+fn dk252_scourge_strike_commands_active_army_ghouls() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 1).unwrap();
+    engage(&mut run);
+    literal_rotation::execution::execute(
+        run.app.world_mut(), run.actor,
+        literal_rotation::execution::Execution::Spell(42650, run.actor, None),
+    ).unwrap();
+    for _ in 0..100 { run.app.update(); }
+    let army: std::collections::HashSet<_> = {
+        let world = run.app.world_mut();
+        world.query::<(Entity, &crate::spell_cast::summon::SummonedCreature)>()
+            .iter(world).filter_map(|(entity, summon)|
+                (summon.owner == run.actor && summon.spell_id == 1294026).then_some(entity.to_bits())
+            ).collect()
+    };
+    assert_eq!(army.len(), 8, "actual Army must be present before the command");
+    literal_rotation::execution::execute(
+        run.app.world_mut(), run.actor,
+        literal_rotation::execution::Execution::Spell(85948, run.targets[0], Some(run.targets[0])),
+    ).unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, 1254252));
+    literal_rotation::execution::execute(
+        run.app.world_mut(), run.actor,
+        literal_rotation::execution::Execution::Spell(55090, run.targets[0], Some(run.targets[0])),
+    ).unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    for _ in 0..30 { run.app.update(); }
+    let events = &run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
+    let commanded: std::collections::HashSet<_> = events.iter().filter_map(|event| {
+        (event.spell_id == Some(1294264) && event.kind == CombatLogKind::Damage
+            && event.target == Some(run.targets[0].to_bits()) && event.amount > 0)
+            .then_some(event.source).flatten().filter(|source| army.contains(source))
+    }).collect();
+    assert_eq!(commanded, army, "each actual Army ghoul must execute native Death Order");
+}
+
+#[test]
+#[ignore = "requires private native252 profile/traits and player actor"]
 fn dk252_real_lesser_ghoul_summon_reaches_and_melees() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(252, 1).unwrap();
