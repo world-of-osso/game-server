@@ -874,3 +874,32 @@ fn dk252_raise_dead_produces_a_permanent_controlled_melee_pet() {
         "the real pet must reach and attack the selected hostile primary"
     );
 }
+
+#[test]
+#[ignore = "requires native252 profile/traits and player actor"]
+fn dk252_reaping_grants_buff_and_increases_execute_coil_damage() {
+    fn coil_damage(health_fraction: f32) -> i64 {
+        let _seed = crate::random::seed_scope(70448);
+        let mut run = prepare_literal(252, 1).unwrap();
+        engage(&mut run);
+        {
+            let mut hp = run.app.world_mut().get_mut::<shared::components::Health>(run.targets[0]).unwrap();
+            hp.current = hp.max * health_fraction;
+        }
+        assert!(crate::spell_cast::try_cast_triggered(run.app.world_mut(), run.actor, 47632, Some(run.targets[0]), 1));
+        for _ in 0..30 { run.app.update(); }
+        run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0.iter()
+            .find(|event| event.source == Some(run.actor.to_bits()) && event.target == Some(run.targets[0].to_bits())
+                && event.spell_id == Some(47632) && event.kind == CombatLogKind::Damage)
+            .expect("native Death Coil child must hit").amount.into()
+    }
+    let above = coil_damage(0.9);
+    let below = coil_damage(0.2);
+    assert!(below > above, "selected Reaping must increase execute damage: {above} vs {below}");
+    let mut run = prepare_literal(252, 1).unwrap();
+    engage(&mut run);
+    literal_rotation::execution::execute(run.app.world_mut(), run.actor,
+        literal_rotation::execution::Execution::Spell(1233448, run.actor, None)).unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, 1242654));
+}
