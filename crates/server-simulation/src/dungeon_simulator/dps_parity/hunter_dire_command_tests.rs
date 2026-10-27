@@ -3,6 +3,7 @@ use super::*;
 #[test]
 #[ignore = "requires private spec253 reference inputs and native world DB"]
 fn native_hunter_dire_command_actual_kills_spawn_authentic_beasts() {
+    const SUMMON_CONTROL_PET: u32 = 2;
     let _seed = crate::random::seed_scope(70_448);
     let mut run = prepare_measurement(253, 1).expect("native literal BM fixture");
     assert!(crate::auras::has_aura(run.app.world(), run.actor, 378743));
@@ -95,7 +96,7 @@ fn native_hunter_dire_command_actual_kills_spawn_authentic_beasts() {
                 * mods.map_or(1.0, |m| m.autoattack_damage_mult * m.damage_done(1))
                 * target_mods.map_or(1.0, |m| m.damage_taken(1))
                 * if world.get::<crate::hunter_pet::HunterPet>(pet).is_some()
-                    || summon.properties.is_pet()
+                    || summon.properties.control == SUMMON_CONTROL_PET
                 {
                     world.get::<crate::auras::AuraStatMods>(run.actor).unwrap().pet_damage_mult
                 } else {
