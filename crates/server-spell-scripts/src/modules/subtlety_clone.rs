@@ -121,7 +121,12 @@ fn queue_clone(
 
 // sc_rogue.cpp2435–2440/2569–2578/4394–4414/10583–10584:
 // maximum-point Eviscerate children snapshot both native bonuses.
-pub(super) fn darkest_night_bonus(world: &World, caster: Entity, child: u32, points: f32) -> (f32, f32) {
+pub(super) fn darkest_night_bonus(
+    world: &World,
+    caster: Entity,
+    child: u32,
+    points: f32,
+) -> (f32, f32) {
     if !matches!(child, 1269205 | 328082)
         || !powers::power_value(world, caster, PowerType::ComboPoints)
             .is_some_and(|(_, maximum)| points >= maximum)

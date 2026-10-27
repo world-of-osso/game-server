@@ -116,12 +116,19 @@ fn dispatch_shadow_finisher(world: &mut World, ctx: &EffectCtx, target: Entity) 
         .get(payload)
         .expect("native Shadowed Finishers payload")
         .clone();
-    let (damage_bonus, crit_bonus) = super::subtlety_clone::darkest_night_bonus(world, ctx.caster, payload, points);
+    let (damage_bonus, crit_bonus) =
+        super::subtlety_clone::darkest_night_bonus(world, ctx.caster, payload, points);
     child.cast_damage_multiplier = Some(points * fraction * damage_bonus);
     if crit_bonus > 0.0 {
-        child.cast_charge_mods.get_or_insert_default().push(ChargedSpellModifier {
-            aura_spell_id: 457280, op: SpellModOp::CritChance as i32, percent: false, amount: crit_bonus,
-        });
+        child
+            .cast_charge_mods
+            .get_or_insert_default()
+            .push(ChargedSpellModifier {
+                aura_spell_id: 457280,
+                op: SpellModOp::CritChance as i32,
+                percent: false,
+                amount: crit_bonus,
+            });
     }
     spell_cast::launch_triggered_spell(world, ctx.caster, &child, Some(target), ctx.depth + 1);
 }
