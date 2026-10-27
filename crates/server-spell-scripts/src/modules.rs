@@ -37,6 +37,8 @@ const fn order_modules<const N: usize>(
     ordered
 }
 
+pub use devourer_metamorphosis::devourer_base_drain_ps;
+
 register_modules! {
     affliction_absolute_corruption: (2660, "modules/affliction_absolute_corruption.rs"),
     affliction_agony: (2650, "modules/affliction_agony.rs"),

@@ -14,6 +14,11 @@ pub(super) struct DevourerFacts<'a> {
 
 impl Facts for DevourerFacts<'_> {
     fn value(&self, name: &str) -> Result<f64, String> {
+        if name == "void_metamorphosis_base_drain_ps" {
+            return Ok(server_spell_scripts::devourer_base_drain_ps(
+                self.world, self.actor,
+            ));
+        }
         if name == "buff.vengeful_retreat_movement.up" {
             return Ok(f64::from(
                 retreat_movement_active(self.world, self.actor) as u8
@@ -84,6 +89,7 @@ impl ActionFacts for DevourerFacts<'_> {
     }
     fn value_for(&self, action: &Action, name: &str) -> Result<f64, String> {
         if name.starts_with("trinket.")
+            || name == "void_metamorphosis_base_drain_ps"
             || name == "buff.vengeful_retreat_movement.up"
             || name == "active_dot.soul_immolation"
             || name == "soul_fragments"
