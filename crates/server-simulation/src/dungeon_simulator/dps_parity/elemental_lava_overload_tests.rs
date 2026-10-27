@@ -1,6 +1,5 @@
 //! SimC76f8118 sc_shaman.cpp6835–6855: Lava Burst Overload scales with caster crit chance.
 use super::elemental_mechanics_tests::{cast, fixture, settle};
-use super::*;
 use crate::spell_cast::test_harness::ObservedCombatEvents;
 use shared::protocol::CombatLogKind;
 
