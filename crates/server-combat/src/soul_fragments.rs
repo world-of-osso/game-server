@@ -22,7 +22,10 @@ pub enum FragmentFilter {
     Any,
     Lesser,
     Greater,
-    Demon,
+    GreaterDemon,
+    EmpoweredDemon,
+    AnyGreater,
+    AnyDemon,
 }
 
 impl FragmentFilter {
@@ -30,8 +33,11 @@ impl FragmentFilter {
         match self {
             Self::Any => true,
             Self::Lesser => kind == FragmentKind::Lesser,
-            Self::Greater => kind != FragmentKind::Lesser,
-            Self::Demon => matches!(
+            Self::Greater => kind == FragmentKind::Greater,
+            Self::GreaterDemon => kind == FragmentKind::GreaterDemon,
+            Self::EmpoweredDemon => kind == FragmentKind::EmpoweredDemon,
+            Self::AnyGreater => kind != FragmentKind::Lesser,
+            Self::AnyDemon => matches!(
                 kind,
                 FragmentKind::GreaterDemon | FragmentKind::EmpoweredDemon
             ),

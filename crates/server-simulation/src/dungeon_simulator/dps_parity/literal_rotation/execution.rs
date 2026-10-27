@@ -302,7 +302,7 @@ fn fragment_pickup_plans(
 > {
     use server::soul_fragments::{FragmentFilter as F, PickupMode as M};
     let mut plans = BTreeMap::new();
-    for filter in [F::Any, F::Lesser, F::Greater, F::Demon] {
+    for filter in [F::Any, F::Lesser, F::AnyGreater, F::AnyDemon] {
         for mode in [M::Oldest, M::Newest, M::Nearest] {
             if let Some(plan) = server::soul_fragments::plan_pickup(world, actor, filter, mode) {
                 plans.insert((filter, mode), plan);
@@ -330,8 +330,8 @@ fn fragment_pickup_options(
     {
         "all" | "any" => F::Any,
         "lesser" => F::Lesser,
-        "greater" => F::Greater,
-        "demon" => F::Demon,
+        "greater" => F::AnyGreater,
+        "demon" => F::AnyDemon,
         value => return Err(format!("unsupported fragment type {value}")),
     };
     let mode = match action
