@@ -47,21 +47,22 @@ fn earn_companion(world: &mut World, owner: Entity, primary: Entity) {
     }
     // SimC76f8118 hunter3723–3734: the selected buff owns lifetime; replace
     // an existing companion of the same kind before summoning the real actor.
-    let duration = world
-        .resource::<SpellStore>()
-        .get(buff)
-        .expect("native Huntmaster buff")
-        .misc
-        .as_ref()
-        .and_then(|misc| misc.duration.as_ref())
-        .expect("native Huntmaster duration")
-        .duration_ms;
-    assert!(duration > 0, "Huntmaster duration must be finite");
+    let deadline = world
+        .get::<ActiveAuras>(owner)
+        .and_then(|auras| {
+            auras
+                .iter()
+                .find(|aura| aura.caster == owner && aura.spell_id == buff)
+        })
+        .and_then(|aura| aura.expires_at)
+        .expect("actual Huntmaster buff must have a finite deadline");
+    let remaining_ms = ((deadline - spell_cast::now(world)) * 1000.0).round() as i32;
+    assert!(remaining_ms > 0, "Huntmaster buff must still be active");
     for actor in owned_summons(world, owner, summon) {
         spell_cast::summon::despawn_summon(world, actor);
     }
     let values = TriggeredSpellOverrides {
-        duration_ms: Some(duration),
+        duration_ms: Some(remaining_ms),
         ..Default::default()
     };
     if !spell_cast::cast_triggered_with_overrides(world, owner, summon, Some(primary), 1, values) {
