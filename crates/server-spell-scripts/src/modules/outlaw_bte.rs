@@ -39,14 +39,25 @@ fn prepare_duration(_: &World, _: Entity, spell: &mut SpellInfo) {
     if spell.id != BTE {
         return;
     }
-    let points = spell.cast_policy_context.as_ref().and_then(|context| {
-        context.resources.iter().find_map(|(power, amount)| (*power == PowerType::ComboPoints).then_some(*amount))
-    }).expect("Between the Eyes retains its effective combo points");
-    let duration = spell.misc.as_mut().and_then(|misc| misc.duration.as_mut())
+    let points = spell
+        .cast_policy_context
+        .as_ref()
+        .and_then(|context| {
+            context
+                .resources
+                .iter()
+                .find_map(|(power, amount)| (*power == PowerType::ComboPoints).then_some(*amount))
+        })
+        .expect("Between the Eyes retains its effective combo points");
+    let duration = spell
+        .misc
+        .as_mut()
+        .and_then(|misc| misc.duration.as_mut())
         .expect("native Between the Eyes duration");
     // SimC76f8118 sc_rogue.cpp3844–3845: base duration plus one native
     // duration increment per effective combo point, capped by native data.
-    duration.duration_ms = (duration.duration_ms + (duration.per_resource_ms as f32 * points) as i32)
+    duration.duration_ms = (duration.duration_ms
+        + (duration.per_resource_ms as f32 * points) as i32)
         .min(duration.max_duration_ms);
 }
 
@@ -72,28 +83,54 @@ fn earn_extra_stack(world: &mut World, ctx: &EffectCtx) {
         return;
     }
     // sc_rogue.cpp3847–3850: a separate asynchronous stack uses the same duration.
-    auras::apply_aura_with_spell(world, &AuraApplication {
-        caster: ctx.caster, target: ctx.caster, spell_id: BTE,
-        effect_mask: auras::aura_effect_mask(ctx.spell), source: AuraSource::Cast,
-    }, ctx.spell);
+    auras::apply_aura_with_spell(
+        world,
+        &AuraApplication {
+            caster: ctx.caster,
+            target: ctx.caster,
+            spell_id: BTE,
+            effect_mask: auras::aura_effect_mask(ctx.spell),
+            source: AuraSource::Cast,
+        },
+        ctx.spell,
+    );
 }
 
 fn consume_gravedigger(world: &mut World, caster: Entity) {
-    if world.entity_mut(caster).take::<PendingGravedigger>().is_none() {
+    if world
+        .entity_mut(caster)
+        .take::<PendingGravedigger>()
+        .is_none()
+    {
         return;
     }
     // sc_rogue.cpp3862–3872: the earned use returns native points, resets
     // Between the Eyes and consumes the native Palmed threshold.
     spell_cast::cast_triggered(world, caster, ENERGIZE, Some(caster), 1);
-    let spell = world.resource::<SpellStore>().get(BTE).expect("native Between the Eyes").clone();
+    let spell = world
+        .resource::<SpellStore>()
+        .get(BTE)
+        .expect("native Between the Eyes")
+        .clone();
     let now = spell_cast::now(world);
-    let remaining = world.get::<spell_cast::SpellHistory>(caster)
+    let remaining = world
+        .get::<spell_cast::SpellHistory>(caster)
         .map_or(0, |history| history.remaining_cooldown_ms(&spell, now));
     spell_cast::scripts::reduce_cooldown(world, caster, BTE, remaining as f64 / 1000.0);
-    let threshold = world.resource::<SpellStore>().get(PALMED).expect("native Palmed Bullets")
-        .effects.iter().find(|effect| effect.index == 0).expect("native Palmed threshold").misc_values[1];
+    let threshold = world
+        .resource::<SpellStore>()
+        .get(PALMED)
+        .expect("native Palmed Bullets")
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .expect("native Palmed threshold")
+        .misc_values[1];
     if let Some(instance) = world.get::<ActiveAuras>(caster).and_then(|auras| {
-        auras.iter().find(|aura| aura.spell_id == PALMED && aura.caster == caster).map(|aura| aura.instance_id)
+        auras
+            .iter()
+            .find(|aura| aura.spell_id == PALMED && aura.caster == caster)
+            .map(|aura| aura.instance_id)
     }) {
         for _ in 0..threshold {
             auras::spend_stack(world, caster, instance);
