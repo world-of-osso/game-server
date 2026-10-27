@@ -1,6 +1,6 @@
 //! Native Reap's fragment consumption and delayed damage boundary.
 use super::*;
-use crate::soul_fragments::{self, FragmentFilter, FragmentKind};
+use server::soul_fragments::{self, FragmentFilter, FragmentKind};
 use shared::protocol::CombatLogKind;
 
 #[test]
