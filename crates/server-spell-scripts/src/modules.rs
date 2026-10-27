@@ -241,6 +241,7 @@ register_modules! {
     ret_toll: (280, "modules/ret_toll.rs"),
     retribution: (60, "modules/retribution.rs"),
     rogue: (70, "modules/rogue.rs"),
+    unholy_eternal_agony: (2536, "modules/unholy_eternal_agony.rs"),
     rogue_cloud_cover: (2609, "modules/rogue_cloud_cover.rs"),
     rogue_relentless: (2615, "modules/rogue_relentless.rs"),
     rogue_ruthlessness: (2609, "modules/rogue_ruthlessness.rs"),

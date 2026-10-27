@@ -908,6 +908,28 @@ fn dk252_magus_bolt_inherits_owner_melee_power() {
 }
 
 #[test]
+#[ignore = "requires native252 profile/traits and player actor"]
+fn dk252_death_coil_extends_real_dark_transformation() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 1).unwrap();
+    engage(&mut run);
+    literal_rotation::execution::execute(run.app.world_mut(), run.actor,
+        literal_rotation::execution::Execution::Spell(1233448, run.actor, None)).unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    let pet = crate::hunter_pet::summoned_pet(run.app.world(), run.actor).unwrap();
+    let expiry = |run: &Run, entity, spell| run.app.world().get::<crate::auras::ActiveAuras>(entity).unwrap()
+        .iter().find(|a| a.caster == run.actor && a.spell_id == spell).unwrap().expires_at.unwrap();
+    let owner_before = expiry(&run, run.actor, 1235391);
+    let pet_before = expiry(&run, pet, 1233448);
+    crate::spell_cast::powers::change_power(run.app.world_mut(), run.actor, shared::components::PowerType::RunicPower, 100.0);
+    literal_rotation::execution::execute(run.app.world_mut(), run.actor,
+        literal_rotation::execution::Execution::Spell(47541, run.targets[0], Some(run.targets[0]))).unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    assert!(expiry(&run, run.actor, 1235391) >= owner_before + 0.99);
+    assert!(expiry(&run, pet, 1233448) >= pet_before + 0.99);
+}
+
+#[test]
 #[ignore = "requires private native252 profile/traits and player actor"]
 fn dk252_dark_transformation_tracks_the_transformed_pet_on_owner() {
     let _seed = crate::random::seed_scope(70448);
