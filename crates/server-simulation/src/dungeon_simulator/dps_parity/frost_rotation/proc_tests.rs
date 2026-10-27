@@ -540,6 +540,8 @@ fn diag_frost_factors_and_resource_spending() {
             ));
         }
         super::super::engage(&mut run);
+        let actor = run.actor;
+        crate::auras::observations::start_tracking(run.app.world_mut(), actor, &[(51124, 51128)]);
         let start_runes = run.app.world().get::<crate::spell_cast::runes::Runes>(run.actor).unwrap().ready();
         let (seconds, _, _) = super::super::advance_combat(&mut run).unwrap();
         assert!((seconds - 300.0).abs() < 0.001);
@@ -579,6 +581,7 @@ fn diag_frost_factors_and_resource_spending() {
             "runic_power_raw": runic_power_raw,
             "energize": combat["energize"],
             "killing_machine_events": killing_machine_events,
+            "aura_usage": crate::auras::observations::snapshot(run.app.world()),
         }));
         if seed == 70448 || seed == 1 {
             let capture = run.app.world().resource::<FactorCapture>().export();
