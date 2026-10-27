@@ -1,3 +1,4 @@
+- [Fiendish Cruelty](systems/spell-casting.md#destruction-fiendish-cruelty--2026-10-26) — native critical-producer RED, earned Shadowburn proc/consumption qualification pending.
 - [Incinerate recipient policy](systems/spell-casting.md#destruction-incinerate-recipients--2026-10-26) — native area is not talent-gated; actual untalented/FnB/Havoc REDs, GREEN pending.
 - [Native Pandemic duration carry](systems/auras.md#native-pandemic-duration-carry--2026-10-26) — native Agony, Rip/Rake and charged Grasp carry pass; attribute dispatch replaces the ID route, merged five-spec landing/DPS qualification pending.
 - [Overfiend actual lifecycle](systems/spell-casting.md#native-overfiend-lifecycle--2026-10-26) — own native bolts/coefficient borrowing and actual-actor owner buff; RED retained, GREEN pending.
