@@ -204,4 +204,13 @@ fn reapers_toll_replacement_delivers_native_damage_in_meta() {
                 && event.amount > 0),
         "real Reaper's Toll executes its native Fury child"
     );
+    // SimC76f8118 cpp6699–6717,6739–6742: the damage child spawns the parent effect1 count.
+    assert!(
+        server::soul_fragments::active_count(
+            run.app.world(),
+            actor,
+            server::soul_fragments::FragmentFilter::Lesser
+        ) >= 2,
+        "real Reaper's Toll spawns its two native lesser fragments"
+    );
 }
