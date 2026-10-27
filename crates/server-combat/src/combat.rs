@@ -1767,18 +1767,31 @@ fn try_swing(
         attacker.entity,
         raw_armor,
     );
-    let source_multiplier = context.summon_modifiers.multiplier(attacker.entity) * versus;
+    let inherited_versatility = context
+        .summon_modifiers
+        .owner_versatility_multiplier(attacker.entity)
+        .map_or(1.0, |owner| {
+            let baked = if attacker.spirit_wolf.is_some() {
+                1.0
+            } else {
+                attacker
+                    .stats
+                    .map_or(1.0, |stats| 1.0 + stats.versatility_pct / 100.0)
+            };
+            owner / baked
+        });
+    let source_multiplier =
+        context.summon_modifiers.multiplier(attacker.entity) * inherited_versatility * versus;
     let swing = swing_damage(
         attacker,
         &weapon,
         hand,
         &attacker_scaling,
         taken,
-        context.summon_modifiers.multiplier(attacker.entity)
+        source_multiplier
             * context
                 .summon_modifiers
-                .taken_multiplier(attacker.entity, avoidance.1.as_deref())
-            * versus,
+                .taken_multiplier(attacker.entity, avoidance.1.as_deref()),
         source_multiplier,
     );
     let armored = armor_mitigated(

@@ -78,6 +78,7 @@ pub(crate) fn taken_multiplier(world: &World, unit: Entity, auras: Option<&Activ
 pub(crate) struct SummonDamageModifiers<'w, 's> {
     owners: Query<'w, 's, Ownership<'static>>,
     modifiers: Query<'w, 's, &'static AuraStatMods>,
+    stats: Query<'w, 's, &'static crate::stats::CharacterStats>,
 }
 
 impl SummonDamageModifiers<'_, '_> {
@@ -93,6 +94,15 @@ impl SummonDamageModifiers<'_, '_> {
                     .map(|mods| owner_multiplier(mods, guardian))
             })
             .unwrap_or(1.0)
+    }
+
+    /// SimC76f8118 pet.hpp138–139: pet damage uses live owner versatility.
+    pub(crate) fn owner_versatility_multiplier(&self, unit: Entity) -> Option<f32> {
+        let (owner, _) = self.owners.get(unit).ok().and_then(owner_and_guardian)?;
+        self.stats
+            .get(owner)
+            .ok()
+            .map(|stats| 1.0 + stats.versatility_pct / 100.0)
     }
 
     pub(crate) fn pet_melee_time_multiplier(&self, unit: Entity) -> f32 {
