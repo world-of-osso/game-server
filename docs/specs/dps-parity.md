@@ -1178,3 +1178,7 @@ Selected Insidious Ire earns its temporary channel bonus when one target has all
 ### Unholy controlled ghoul
 
 - Specialization Raise Dead46584 creates native26125 through the controlled-pet path, retaining the actual current-pet relationship and permanent lifetime. Native Dark Transformation must see the pet through UNIT_PET. DK inherits source-qualified owner melee AP/crit/haste, and ordinary owner casts order the real pet against the selected hostile primary. Hunter, Warlock and Mage pet policies remain unchanged.
+
+### Hellbent Commander
+
+- Hellbent Commander reconciles native1281559 stacks to the eligible live demon roster on the pinned randomized 5.25s heartbeat. Actual summon and demise events retain the pinned bug-model ordering, including ordinary Hand Imp and alternate Imp Implosion differences; Diabolist demons are excluded (`sc_warlock.cpp303–338`; `sc_warlock_pets.cpp203–226,992–1006,1310–1341`).
