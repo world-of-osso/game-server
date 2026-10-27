@@ -308,6 +308,21 @@ fn frost_reapers_mark_earns_echoing_fury_rune_discount() {
 }
 
 #[test]
+#[ignore = "real Exterminate second hit applies selected Wither Away Frost Fever"]
+fn frost_wither_away_real_exterminate_applies_fever() {
+    let _seed = crate::random::seed_scope(251);
+    let mut run = super::super::prepare_literal(251, 1).unwrap();
+    super::super::engage(&mut run);
+    assert!(auras::has_aura(run.app.world(), run.actor, 441894));
+    cast(&mut run, 439843);
+    let target = run.targets[0];
+    auras::remove_auras(run.app.world_mut(), target, RemoveReason::Consumed, |aura| aura.spell_id == 55095);
+    cast(&mut run, 49020);
+    for _ in 0..120 { run.app.update(); }
+    assert!(auras::has_aura(run.app.world(), target, 55095), "earned Exterminate must apply Frost Fever");
+}
+
+#[test]
 #[ignore = "native251 earned Exterminate releases its two damage hits"]
 fn frost_exterminate_spender_deals_both_native_hits() {
     use shared::protocol::CombatLogKind;
