@@ -29,6 +29,7 @@ const WOLF_DISPLAY: u32 = 1_413;
 const CHARACTER_ID: u64 = 1;
 const DASH: u32 = 61_684;
 const BITE: u32 = 17_253;
+const WILD_HUNT: u32 = 62_762;
 const GROWL: u32 = 2_649;
 const FURIOUS_BITE: u32 = 263_840;
 const BM_KILL_COMMAND: u32 = 34_026;
@@ -101,6 +102,7 @@ fn hunter_logged_in(path: &Path) -> Option<PetHarness> {
     let ids = [
         CALL_PET_1,
         BITE,
+        WILD_HUNT,
         GROWL,
         DASH,
         BM_KILL_COMMAND,
