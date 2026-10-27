@@ -102,27 +102,61 @@ fn devourer_collapsing_star_threshold_grants_ready_buff() {
     let mut run = prepare(1480, 1).expect("native Devourer profile");
     let actor = run.actor;
     engage(&mut run);
-    assert!(run.app.world().get::<crate::class_progression::KnownSpells>(actor).is_some_and(|known| known.contains(1221167)), "selected Collapsing Star talent");
+    assert!(
+        run.app
+            .world()
+            .get::<crate::class_progression::KnownSpells>(actor)
+            .is_some_and(|known| known.contains(1221167)),
+        "selected Collapsing Star talent"
+    );
     crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 1217605, Some(actor), 1);
     for _ in 0..20 {
-        if crate::auras::has_aura(run.app.world(), actor, 1217607) { break; }
+        if crate::auras::has_aura(run.app.world(), actor, 1217607) {
+            break;
+        }
         run.app.update();
     }
-    assert!(crate::auras::has_aura(run.app.world(), actor, 1217607), "native Meta active");
-    let threshold = crate::spell_cast::scripts::script_effect_value(run.app.world(), actor, 1221167, 0) as u8;
+    assert!(
+        crate::auras::has_aura(run.app.world(), actor, 1217607),
+        "native Meta active"
+    );
+    let threshold =
+        crate::spell_cast::scripts::script_effect_value(run.app.world(), actor, 1221167, 0) as u8;
     assert_eq!(threshold, 30, "native selected talent threshold");
     for _ in 0..threshold - 1 {
         crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 1227702, Some(actor), 1);
     }
     for _ in 0..20 {
-        if stacks(run.app.world(), actor, 1227702) == threshold - 1 { break; }
+        if stacks(run.app.world(), actor, 1227702) == threshold - 1 {
+            break;
+        }
         run.app.update();
     }
-    assert_eq!(stacks(run.app.world(), actor, 1227702), threshold - 1, "native stacks prepared below threshold");
-    assert!(!crate::auras::has_aura(run.app.world(), actor, 1221171), "ready buff absent below threshold");
+    assert_eq!(
+        stacks(run.app.world(), actor, 1227702),
+        threshold - 1,
+        "native stacks prepared below threshold"
+    );
+    assert!(
+        !crate::auras::has_aura(run.app.world(), actor, 1221171),
+        "ready buff absent below threshold"
+    );
     consume_fragment_and_observe_heal(&mut run);
-    assert_eq!(stacks(run.app.world(), actor, 1227702), threshold, "real fragment heal crosses threshold");
-    assert!(crate::auras::has_aura(run.app.world(), actor, 1221171), "crossing threshold grants ready buff");
+    assert_eq!(
+        stacks(run.app.world(), actor, 1227702),
+        threshold,
+        "real fragment heal crosses threshold"
+    );
+    for _ in 0..20 {
+        if crate::auras::has_aura(run.app.world(), actor, 1221171) {
+            break;
+        }
+        run.app.update();
+    }
+    assert!(
+        crate::auras::has_aura(run.app.world(), actor, 1221171),
+        "crossing threshold grants ready buff"
+    );
 }
 
 #[test]
