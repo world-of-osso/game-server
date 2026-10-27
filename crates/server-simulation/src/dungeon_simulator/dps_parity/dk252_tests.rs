@@ -231,6 +231,26 @@ fn dk252_magus_bolt_inherits_owner_melee_power() {
 
 #[test]
 #[ignore = "requires private native252 profile/traits and player actor"]
+fn dk252_single_target_uses_dark_transformation_and_putrefy() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_measurement(252, 1).unwrap();
+    engage(&mut run);
+    advance_combat_observed(&mut run, |_| {}).unwrap();
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    assert!(events.iter().any(|event| event.source == Some(run.actor.to_bits())
+        && event.spell_id == Some(1233448)
+        && event.kind == CombatLogKind::CastSuccess), "the literal ST rotation must use Dark Transformation");
+    assert!(events.iter().any(|event| event.source == Some(run.actor.to_bits())
+        && event.spell_id == Some(1247378)
+        && event.kind == CombatLogKind::CastSuccess), "the literal ST rotation must use Putrefy");
+}
+
+#[test]
+#[ignore = "requires private native252 profile/traits and player actor"]
 fn dk252_raise_dead_produces_a_permanent_controlled_melee_pet() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_measurement(252, 1).unwrap();
