@@ -7,9 +7,17 @@ use combat::class_progression::ActiveSpec;
 use combat::spell_cast::{self, script_registry::SpellScriptHook};
 use combat::spell_info::SpellInfo;
 
-pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::TargetDamageMultiplier(multiplier)];
+pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::CaptureConsumedDamageModifier(snapshot)];
 
-fn multiplier(world: &World, caster: Entity, _target: Entity, spell: &SpellInfo) -> f32 {
+fn snapshot(world: &World, caster: Entity, spell: &mut SpellInfo, _foreground: bool) -> Option<u32> {
+    let factor = multiplier(world, caster, spell);
+    if factor != 1.0 {
+        spell.cast_damage_multiplier = Some(spell.cast_damage_multiplier.unwrap_or(1.0) * factor);
+    }
+    None // This modifier does not consume the native aura.
+}
+
+fn multiplier(world: &World, caster: Entity, spell: &SpellInfo) -> f32 {
     // SimC76f8118 sc_shaman.cpp3265–3267/6795/7323–7324: these two
     // background overloads explicitly qualify despite the native class mask.
     if !matches!(spell.id, 45284 | 285466)
