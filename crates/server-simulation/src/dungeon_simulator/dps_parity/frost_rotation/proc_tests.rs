@@ -1014,6 +1014,50 @@ fn diag_frost_oracle_aligned_factors() {
     }
 }
 
+fn real_frost_debuff_damage_ratio(debuff: u32, source: u32) -> (f32, u8) {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::protocol::CombatLogKind;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::super::prepare_measurement(251, 1).unwrap();
+    super::super::engage(&mut run);
+    let actor = run.actor;
+    let target = run.targets[0];
+    for _ in 0..6000 {
+        super::super::drive_player(&mut run).unwrap();
+        run.app.update();
+        if run.app.world().get::<ActiveAuras>(target).is_some_and(|active| active.iter()
+            .any(|aura| aura.spell_id == debuff && aura.caster == actor)) { break; }
+    }
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0;
+    assert!(events.iter().any(|event| event.source == Some(actor.to_bits()) && event.target == Some(target.to_bits())
+        && event.spell_id == Some(source) && event.kind == CombatLogKind::Damage), "real source {source} must hit target");
+    let stacks = run.app.world().get::<ActiveAuras>(target).and_then(|active| active.iter()
+        .find(|aura| aura.spell_id == debuff && aura.caster == actor).map(|aura| aura.stacks))
+        .unwrap_or_else(|| panic!("real source {source} must earn target debuff {debuff}"));
+    let winter = run.app.world().resource::<crate::spell_info::SpellStore>().get(196771).unwrap().clone();
+    let with = auras::damage_taken_multiplier(run.app.world(), target, actor, &winter);
+    auras::remove_auras(run.app.world_mut(), target, RemoveReason::Consumed,
+        |aura| aura.spell_id == debuff && aura.caster == actor);
+    let without = auras::damage_taken_multiplier(run.app.world(), target, actor, &winter);
+    (with / without, stacks)
+}
+
+#[test]
+#[ignore = "real Frost Fever ticks earn Brittle and amplify Winter"]
+fn frost_fever_earns_brittle_target_damage() {
+    let (ratio, stacks) = real_frost_debuff_damage_ratio(374557, 55095);
+    assert_eq!(stacks, 1);
+    assert!((ratio - 1.06).abs() < 0.001, "real Brittle must apply its native 6%: {ratio}");
+}
+
+#[test]
+#[ignore = "real Arctic Assault earns Razorice and amplifies Winter"]
+fn frost_arctic_assault_earns_razorice_target_damage() {
+    let (ratio, stacks) = real_frost_debuff_damage_ratio(51714, 195975);
+    assert!((ratio - (1.0 + 0.03 * f32::from(stacks))).abs() < 0.001,
+        "real Razorice must apply its native per-stack value: {ratio}, stacks={stacks}");
+}
+
 #[test]
 #[ignore = "diagnostic Frost target debuff production and damage-taken factors"]
 fn diag_frost_target_debuffs() {
