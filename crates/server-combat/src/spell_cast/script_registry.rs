@@ -125,6 +125,7 @@ pub type SummonInitializedHook = fn(&mut World, Entity);
 /// Actual CombatStatus transitions, after native reference state is updated.
 pub type CombatStatusChangedHook = fn(&mut World, Entity, bool);
 pub type SummonExpiredHook = fn(&mut World, Entity);
+pub type SummonRemovedHook = fn(&mut World, Entity);
 /// Actual guardian actor, its bound action and selected enemy.
 pub type GuardianActionEligibleHook = fn(&World, Entity, u32, Entity) -> bool;
 pub type AuraRedirectHook = fn(&mut World, Entity, Entity, u32, u8) -> bool;
@@ -284,6 +285,7 @@ pub enum SpellScriptHook {
     SummonInitialized(SummonInitializedHook),
     CombatStatusChanged(CombatStatusChangedHook),
     SummonExpired(SummonExpiredHook),
+    SummonRemoved(SummonRemovedHook),
     GuardianActionEligible(GuardianActionEligibleHook),
     EffectHit(EffectHitLookup),
     EffectHandler(EffectHandlerLookup),
@@ -483,6 +485,14 @@ impl SpellScriptRegistry {
     pub fn summon_expired(self, world: &mut World, actor: Entity) {
         for hook in self.hooks() {
             if let SpellScriptHook::SummonExpired(run) = hook {
+                run(world, actor);
+            }
+        }
+    }
+
+    pub fn summon_removed(self, world: &mut World, actor: Entity) {
+        for hook in self.hooks() {
+            if let SpellScriptHook::SummonRemoved(run) = hook {
                 run(world, actor);
             }
         }

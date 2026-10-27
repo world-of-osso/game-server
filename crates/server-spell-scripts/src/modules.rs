@@ -89,6 +89,7 @@ register_modules! {
     demonology_diabolist_demons: (2660, "modules/demonology_diabolist_demons.rs"),
     demonology_firebolt: (2660, "modules/demonology_firebolt.rs"),
     demonology_inner_demons: (2660, "modules/demonology_inner_demons.rs"),
+    demonology_hellbent: (2660, "modules/demonology_hellbent.rs"),
     demonology_pet_actions: (2660, "modules/demonology_pet_actions.rs"),
     demonology_tyrant_buffs: (2660, "modules/demonology_tyrant_buffs.rs"),
     destruction_chaotic_inferno: (2680, "modules/destruction_chaotic_inferno.rs"),
