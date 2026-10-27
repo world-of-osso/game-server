@@ -142,20 +142,79 @@ fn native_bm_hogstrider_real_boar_arms_cobra() {
         }
         assert!(crate::auras::has_aura(run.app.world(), run.actor, ready));
         crate::spell_cast::creature_cast(
-            run.app.world_mut(), run.actor, 34026, Some(run.targets[0]), false,
+            run.app.world_mut(),
+            run.actor,
+            34026,
+            Some(run.targets[0]),
+            false,
         )
         .expect("ordinary Kill Command consumes the earned beast");
         preparation::finish_pending_setup(&mut run).unwrap();
     }
-    let events = &run.app.world()
-        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
-    assert!(events.iter().any(|event| {
-        matches!(event.spell_id, Some(471936 | 471938))
-            && event.kind == shared::protocol::CombatLogKind::Damage
-    }), "the earned Boar must deal actual damage");
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    assert!(
+        events.iter().any(|event| {
+            matches!(event.spell_id, Some(471936 | 471938))
+                && event.kind == shared::protocol::CombatLogKind::Damage
+        }),
+        "the earned Boar must deal actual damage"
+    );
     // SimC76f8118 hunter.cpp4800–4846: actual Boar impacts arm Hogstrider.
-    assert!(crate::auras::has_aura(run.app.world(), run.actor, 472640),
-        "selected Hogstrider must arm after actual Boar damage");
+    assert!(
+        crate::auras::has_aura(run.app.world(), run.actor, 472640),
+        "selected Hogstrider must arm after actual Boar damage"
+    );
+    let bonus =
+        crate::spell_cast::scripts::script_effect_value(run.app.world(), run.actor, 472640, 0);
+    let before = events.len();
+    crate::spell_cast::creature_cast(
+        run.app.world_mut(),
+        run.actor,
+        193455,
+        Some(run.targets[0]),
+        false,
+    )
+    .expect("ordinary Cobra Shot consumes the earned Hogstrider");
+    assert!(
+        !crate::auras::has_aura(run.app.world(), run.actor, 472640),
+        "the earned Hogstrider must be consumed at Cobra launch"
+    );
+    preparation::finish_pending_setup(&mut run).unwrap();
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0[before..];
+    let hits: Vec<_> = events
+        .iter()
+        .filter(|event| {
+            event.source == Some(run.actor.to_bits())
+                && event.spell_id == Some(193455)
+                && event.kind == shared::protocol::CombatLogKind::Damage
+        })
+        .collect();
+    for target in &run.targets {
+        assert!(
+            hits.iter().any(|hit| hit.target == Some(target.to_bits())),
+            "earned Hogstrider Cobra must hit each of the three real targets"
+        );
+    }
+    let primary = hits
+        .iter()
+        .find(|hit| hit.target == Some(run.targets[0].to_bits()))
+        .unwrap();
+    let normalized = f64::from(primary.amount) / if primary.crit { 2.0 } else { 1.0 };
+    let expected = ordinary_cobra_damage(&run) * (1.0 + f64::from(bonus) / 100.0);
+    // SimC76f8118 hunter.cpp4944–4980: Hogstrider adds targets and increases
+    // the next Cobra using its native effect, independent of stack count.
+    assert!(
+        (normalized - expected).abs() < expected * 0.15,
+        "earned Hogstrider must increase actual Cobra damage: actual={normalized}, expected={expected}"
+    );
 }
 
 fn ordinary_cobra_damage(run: &Run) -> f64 {
