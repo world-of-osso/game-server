@@ -298,6 +298,62 @@ fn affliction_sayaad_reacts_to_owner_damage_only_when_not_passive() {
 
 #[test]
 #[ignore = "requires private265 profile and native70448 world DB"]
+fn affliction_sayaad_lash_inherits_live_owner_power() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_measurement(265, 1).unwrap();
+    let owner = run.actor;
+    let pet = crate::hunter_pet::summoned_pet(run.app.world(), owner).unwrap();
+    let target = run.targets[0];
+    engage(&mut run);
+    crate::pet_control::order_companion_pet(run.app.world_mut(), owner, Some(target));
+    run.app.insert_resource(
+        crate::spell_cast::effects::factor_capture::FactorCapture::new(
+            pet,
+            target,
+            7814,
+            "sayaad_lash",
+            16,
+        ),
+    );
+    for _ in 0..200 {
+        run.app.update();
+        let capture = run
+            .app
+            .world()
+            .resource::<crate::spell_cast::effects::factor_capture::FactorCapture>()
+            .export();
+        let Some(event) = capture["events"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|event| event["event"] == "direct_amount" && event["spell_id"] == 7814)
+        else {
+            continue;
+        };
+        let owner_sp = run
+            .app
+            .world()
+            .get::<crate::stats::CharacterStats>(owner)
+            .unwrap()
+            .spell_power as f64;
+        let spell_power = event["factors"]["s_power"].as_f64().unwrap();
+        let attack_power = event["factors"]["a_power"].as_f64().unwrap();
+        // SimC76f8118 sc_warlock_pets.cpp421–430: actual main Sayaad inherits live SP.
+        assert!(
+            (spell_power - owner_sp * 5.175).abs() < 1.0,
+            "Sayaad SP {spell_power}, owner SP {owner_sp}"
+        );
+        assert!(
+            (attack_power - owner_sp * 2.565).abs() < 1.0,
+            "Sayaad AP {attack_power}, owner SP {owner_sp}"
+        );
+        return;
+    }
+    panic!("actual Sayaad must land native Lash");
+}
+
+#[test]
+#[ignore = "requires private265 profile and native70448 world DB"]
 fn affliction_literal_sayaad_attacks_primary_with_melee_and_lash() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_measurement(265, 1).unwrap();
