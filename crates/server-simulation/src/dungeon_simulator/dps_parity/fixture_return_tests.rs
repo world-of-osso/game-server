@@ -47,6 +47,7 @@ fn shared_fixture_retreat_then_beam_returns_before_channel() {
     let actor = run.actor;
     let boss = run.targets[0];
     let original = *run.app.world().get::<Position>(boss).unwrap();
+    run.app.world_mut().get_mut::<Position>(actor).unwrap().x = original.x - 3.0;
     run.app
         .world_mut()
         .init_resource::<crate::spell_cast::test_harness::ObservedTriggeredCasts>();
