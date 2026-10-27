@@ -280,6 +280,72 @@ fn shared_fixture_return_keeps_eligible_actions_and_waits_for_priority_range() {
 
 #[test]
 #[ignore = "requires prepared native spec577 player profile"]
+fn shared_fixture_native_blink_waits_for_melee_return() {
+    use literal_rotation::execution::{NativeAction, Prepared};
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(577, 1).unwrap();
+    havoc_tests::start_havoc_swings(&mut run);
+    havoc_tests::earn_havoc_fury(&mut run, 80.0);
+    let actor = run.actor;
+    let boss = run.targets[0];
+    // Native Blink exercises instant self-displacement; it is not a DH loadout claim.
+    crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 1953, Some(actor), 1);
+    run.app.update();
+    let from = run.app.world().get::<Position>(actor).unwrap();
+    let to = run.app.world().get::<Position>(boss).unwrap();
+    assert!(
+        (from.x - to.x).hypot(from.z - to.z) > crate::combat::MELEE_RANGE,
+        "real Blink must leave melee range"
+    );
+    let equipment = literal_rotation::equipment::Equipment::load(
+        run.app.world(),
+        actor,
+        &mut crate::simc_apl_native::Bindings::default(),
+    )
+    .unwrap();
+    let prepared = Prepared::read(
+        run.app.world_mut(),
+        actor,
+        &run.targets,
+        &equipment,
+        [
+            NativeAction {
+                name: "chaos_strike",
+                spell: 162794,
+                talent: None,
+                self_target: false,
+            },
+            NativeAction {
+                name: "throw_glaive",
+                spell: 185123,
+                talent: None,
+                self_target: false,
+            },
+        ],
+        false,
+    )
+    .unwrap();
+    let program = server::simc_apl::Program::parse(&[
+        ("default", "chaos_strike"),
+        ("default", "throw_glaive"),
+    ])
+    .unwrap();
+    let selected = literal_rotation::Driver::new(program)
+        .select(
+            "default",
+            &BTreeMap::<String, f64>::new(),
+            &prepared,
+            &equipment,
+        )
+        .unwrap();
+    assert!(
+        selected.is_none(),
+        "the higher-priority melee action must wait for real return after instant displacement"
+    );
+}
+
+#[test]
+#[ignore = "requires prepared native spec577 player profile"]
 fn shared_fixture_displacement_preserves_unowned_movement_without_melee_intent() {
     let mut run = prepare_literal(577, 1).unwrap();
     assert!(
