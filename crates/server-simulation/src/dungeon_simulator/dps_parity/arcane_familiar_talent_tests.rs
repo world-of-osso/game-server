@@ -110,12 +110,38 @@ fn arcane_familiar_native_assault_earns_selected_energized_mana() {
     );
 }
 
+fn sample_attuned_splinters(include_attuned: bool) -> usize {
+    let _seed = crate::random::seed_scope(70448);
+    let (profile, mut traits) = read_reference(62).unwrap();
+    if !include_attuned {
+        // Native active trait entry135920 maps to Attuned Familiar1261106.
+        traits.retain(|trait_entry| trait_entry.entry_id != 135920);
+    }
+    let actor_kind = inputs::read_actor(&profile).unwrap();
+    let mut run = prepare_literal_reference(profile, &traits, 1, actor_kind).unwrap();
+    assert_eq!(selected(&run, 1261106), include_attuned);
+    engage(&mut run);
+    let actor = run.actor;
+    let target = run.targets[0];
+    let before = observed_hits(&run, 443763);
+    for _ in 0..80 {
+        crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 225119, Some(target), 1);
+    }
+    for _ in 0..100 {
+        run.app.update();
+    }
+    observed_hits(&run, 443763) - before
+}
+
 #[test]
 #[ignore = "requires private native70448 Arcane player profile"]
-fn arcane_familiar_native_assault_earns_selected_attuned_splinters() {
-    let (_, splinters) = sample_native_assault_cohort();
+fn arcane_familiar_native_attuned_selection_adds_owned_splinters() {
+    // A positive-only Splinter assertion passed without an Attuned producer;
+    // compare real profile allocations with the same seeded native cohort.
+    let without = sample_attuned_splinters(false);
+    let with = sample_attuned_splinters(true);
     assert!(
-        splinters > 0,
-        "native selected Attuned Familiar must conjure actual owned Splinter impacts; got{splinters}"
+        with > without,
+        "native Attuned selection must add owned Splinters on actual Assaults: selected{with}, unselected{without}"
     );
 }

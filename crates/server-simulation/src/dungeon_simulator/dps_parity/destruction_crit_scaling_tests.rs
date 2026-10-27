@@ -69,6 +69,14 @@ fn actual_hit(spell_id: u32, boost: bool) -> (f64, f64) {
         .get(spell_id)
         .unwrap()
         .clone();
+    // For instant hits this is the impact-frame stat; for a missile it is
+    // updated immediately before each frame until the actual hit arrives.
+    let mut impact_crit = run
+        .app
+        .world()
+        .get::<CharacterStats>(caster)
+        .unwrap()
+        .crit_pct;
     assert!(crate::spell_cast::launch_triggered_spell(
         run.app.world_mut(),
         caster,
@@ -96,16 +104,23 @@ fn actual_hit(spell_id: u32, boost: bool) -> (f64, f64) {
                 hit.crit && hit.amount > 0,
                 "both native samples must actually crit"
             );
-            // Native damage reads live crit at impact, not at admission.
-            // Projectile travel can outlive an earlier stat modifier.
-            let impact_crit = run
-                .app
-                .world()
-                .get::<CharacterStats>(caster)
-                .unwrap()
-                .crit_pct;
+            // SimC76f8118 actions4337/5614–5649: the hit earns Echo and
+            // Vision only AFTER its damage resolves. Probe8648f75684 proves
+            // reading after update includes Vision's newly earned +8 crit.
+            if spell_id == 116858 {
+                assert!(
+                    crate::auras::has_aura(run.app.world(), caster, 1265939),
+                    "actual Chaos Bolt must earn Vision only after its impact"
+                );
+            }
             return (f64::from(hit.amount), f64::from(impact_crit));
         }
+        impact_crit = run
+            .app
+            .world()
+            .get::<CharacterStats>(caster)
+            .unwrap()
+            .crit_pct;
         run.app.update();
     }
     panic!("native spell{spell_id} must land");
