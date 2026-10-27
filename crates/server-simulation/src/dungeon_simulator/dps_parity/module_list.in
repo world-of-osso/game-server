@@ -322,6 +322,7 @@ mod subtlety_goremaw_tests;
 mod subtlety_mass_tests;
 mod subtlety_master_shadows_tests;
 mod subtlety_relentless_tests;
+mod subtlety_secret_ancient_tests;
 mod subtlety_secret_snapshot_tests;
 mod subtlety_secret_tests;
 mod subtlety_shadow_tests;
