@@ -152,6 +152,7 @@ mod evoker_command_squadron_tests;
 mod evoker_commando_crit_tests;
 mod evoker_leaping_tests;
 mod evoker_rising_damage_tests;
+mod evoker_ruby_burst_tests;
 mod evoker_siege_tests;
 mod evoker_sweep_burst_tests;
 mod evoker_titanic_tests;

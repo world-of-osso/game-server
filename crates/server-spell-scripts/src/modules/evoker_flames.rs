@@ -19,6 +19,8 @@ const LIVING_FLAME_DAMAGE: u32 = 361_500;
 const LIVING_FLAME_HEAL: u32 = 361_509;
 /// Energizing Flame's percentage of the Living Flame mana cost.
 const ENERGIZING_FLAME: u32 = 400_006;
+/// SimC76f8118 sc_evoker.cpp1321 `evoker.heal_eb_chance` default.
+const HEAL_ESSENCE_BURST_CHANCE: f32 = 0.9;
 
 pub const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::EffectHit(effect_hit),
@@ -63,12 +65,34 @@ fn living_flame(world: &mut World, caster: Entity, target: Entity, depth: u8) {
     );
     if relation_matches(world, caster, target, Relation::Ally) {
         spell_cast::cast_triggered(world, caster, LIVING_FLAME_HEAL, Some(target), depth + 1);
+        super::essence_burst::roll_ruby_essence_burst(world, caster);
         return;
     }
     refund_energizing_flame(world, caster);
     spell_cast::cast_triggered(world, caster, LIVING_FLAME_DAMAGE, Some(target), depth + 1);
+    let extras = leaping_extras(world, caster, target, stacks);
+    for &extra in &extras {
+        spell_cast::cast_triggered(world, caster, LIVING_FLAME_DAMAGE, Some(extra), depth + 1);
+    }
+    // SimC76f8118 sc_evoker.cpp6936–6951: unused Leaping Flames heal the caster;
+    // each heal hit counts for Ruby Essence Burst at heal_eb_chance.
+    let unused = usize::from(stacks) - extras.len();
+    let mut heal_hits = 0;
+    for _ in 0..unused {
+        spell_cast::cast_triggered(world, caster, LIVING_FLAME_HEAL, Some(caster), depth + 1);
+        if combat::random::random::<f32>() < HEAL_ESSENCE_BURST_CHANCE {
+            heal_hits += 1;
+        }
+    }
+    // sc_evoker.cpp7004–7023: one Ruby roll per damage hit and counted heal hit.
+    for _ in 0..1 + extras.len() + heal_hits {
+        super::essence_burst::roll_ruby_essence_burst(world, caster);
+    }
+}
+
+fn leaping_extras(world: &mut World, caster: Entity, target: Entity, stacks: u8) -> Vec<Entity> {
     if stacks == 0 {
-        return;
+        return Vec::new();
     }
     let center = targets::position(world, caster).expect("Living Flame caster position");
     let spell = world
@@ -78,9 +102,8 @@ fn living_flame(world: &mut World, caster: Entity, target: Entity, depth: u8) {
     let (_, range) = targets::spell_range(spell, true);
     let mut extras = targets::area_units(world, caster, center, range, Relation::Enemy, 0);
     extras.retain(|&unit| unit != target);
-    for extra in extras.into_iter().take(usize::from(stacks)) {
-        spell_cast::cast_triggered(world, caster, LIVING_FLAME_DAMAGE, Some(extra), depth + 1);
-    }
+    extras.truncate(usize::from(stacks));
+    extras
 }
 
 fn ordinary_flame(world: &mut World, caster: Entity, target: Entity, depth: u8) {
