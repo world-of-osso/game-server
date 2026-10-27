@@ -114,7 +114,7 @@ fn source_fraction(world: &World, caster: Entity, spell: u32) -> f32 {
         })
 }
 
-fn shadow_multiplier(world: &World, ctx: &EffectCtx) -> f32 {
+pub(super) fn shadow_multiplier(world: &World, ctx: &EffectCtx) -> f32 {
     // sc_rogue.cpp2083–2089: add only Shadow-school bonuses not already in the source.
     let school = ctx
         .spell
@@ -132,7 +132,7 @@ fn shadow_multiplier(world: &World, ctx: &EffectCtx) -> f32 {
         .product()
 }
 
-fn darkness_multiplier(world: &World, caster: Entity) -> f32 {
+pub(super) fn darkness_multiplier(world: &World, caster: Entity) -> f32 {
     // sc_rogue.cpp8569–8572: Lingering Darkness is scripted, absent from the whitelist.
     if !has_talent(world, caster, 457056) {
         return 1.0;
