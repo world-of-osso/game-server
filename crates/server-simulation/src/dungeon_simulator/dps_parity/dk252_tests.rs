@@ -147,6 +147,36 @@ fn dk252_horsemen_melee_inherits_live_owner_attack_power() {
 }
 
 #[test]
+#[ignore = "requires private native252 Rider templates/profile and player actor"]
+fn dk252_horsemen_use_their_native_damage_actions() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 1).unwrap();
+    engage(&mut run);
+    literal_rotation::execution::execute(
+        run.app.world_mut(), run.actor,
+        literal_rotation::execution::Execution::Spell(42650, run.actor, None),
+    ).unwrap();
+    for _ in 0..300 { run.app.update(); }
+    let riders: std::collections::HashMap<_, _> = {
+        let world = run.app.world_mut();
+        world.query::<(Entity, &shared::components::Npc, &crate::spell_cast::summon::SummonedCreature)>()
+            .iter(world).filter_map(|(entity, npc, summon)|
+                (summon.owner == run.actor && [444248, 444251, 444252, 444254].contains(&summon.spell_id))
+                    .then_some((npc.template_id, entity.to_bits()))
+            ).collect()
+    };
+    assert_eq!(riders.len(), 4, "four real Horsemen must be present");
+    let events = &run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
+    for (entry, spell) in [(221632,445504),(221633,445513),(221634,445508),(221635,445507)] {
+        let actor = riders[&entry];
+        assert!(events.iter().any(|event| event.source == Some(actor)
+            && event.target == Some(run.targets[0].to_bits()) && event.spell_id == Some(spell)
+            && event.kind == CombatLogKind::Damage && event.amount > 0),
+            "real Horseman {entry} must deal damage with native spell {spell}");
+    }
+}
+
+#[test]
 #[ignore = "requires private native252 profile/traits and player actor"]
 fn dk252_real_lesser_ghoul_summon_reaches_and_melees() {
     let _seed = crate::random::seed_scope(70448);
