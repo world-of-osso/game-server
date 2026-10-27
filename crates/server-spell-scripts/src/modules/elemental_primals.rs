@@ -64,7 +64,8 @@ fn active_elemental(world: &mut World, owner: Entity, (root, entry): (u32, u32))
 }
 
 /// SimC76f8118 sc_shaman.cpp11555–11570: extend an active elemental and the
-/// owner's buff by the native duration, otherwise summon the actual actor.
+/// owner's buff by the native duration and reset its action cooldowns,
+/// otherwise summon the actual actor.
 fn summon_elemental(world: &mut World, owner: Entity, elemental: (u32, u32)) {
     let root = elemental.0;
     let Some(actor) = active_elemental(world, owner, elemental) else {
@@ -84,6 +85,7 @@ fn summon_elemental(world: &mut World, owner: Entity, elemental: (u32, u32)) {
         *expiry += f64::from(milliseconds) / 1000.0;
     }
     combat::auras::extend_owned_duration(world, owner, owner, &[root], milliseconds);
+    spell_cast::guardian::reset_action_cooldowns(world, actor);
 }
 
 fn action_eligible(world: &World, actor: Entity, spell: u32, target: Entity) -> bool {
