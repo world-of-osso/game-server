@@ -68,15 +68,27 @@ fn outlaw_zero_in_earned_by_auto_attack_is_consumed_by_bte() {
                 && event.kind == CombatLogKind::Damage
                 && event.amount > 0)
     );
-    let relevant: Vec<_> = events
-        .iter()
-        .filter(|event| matches!(event.spell_id, Some(1259486 | 315341)))
-        .collect();
-    eprintln!("Zero In cast events: {relevant:?}");
     // SimC76f8118 sc_rogue.cpp3422–3430/3871: earned Zero In
-    // affects the next real Between the Eyes and then expires.
+    // affects the next real Between the Eyes and then expires. A later
+    // automatic swing may earn the buff again after the cast.
+    let removed = events
+        .iter()
+        .position(|event| {
+            event.source == Some(run.actor.to_bits())
+                && event.spell_id == Some(1259486)
+                && event.kind == CombatLogKind::AuraRemoved
+        })
+        .expect("actual Between the Eyes consumes the earned Zero In stacks");
+    let cast = events
+        .iter()
+        .position(|event| {
+            event.source == Some(run.actor.to_bits())
+                && event.spell_id == Some(315341)
+                && event.kind == CombatLogKind::CastSuccess
+        })
+        .expect("actual Between the Eyes must succeed");
     assert!(
-        !crate::auras::has_aura(run.app.world(), run.actor, 1259486),
-        "actual Between the Eyes must consume its earned Zero In stacks"
+        removed < cast,
+        "the earned stacks must be consumed at launch"
     );
 }
