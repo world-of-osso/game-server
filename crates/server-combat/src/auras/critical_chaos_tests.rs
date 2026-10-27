@@ -111,6 +111,10 @@ fn class_completeness_native_critical_chaos_changes_actual_chaos_strike_fury_ref
         h.advance(3);
         assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
         final_fury.push(h.power(PowerType::Fury));
+        eprintln!(
+            "critical chaos diagnostic talented={talented} log={:?}",
+            h.inbox.log
+        );
         let refunds: Vec<_> = h
             .inbox
             .log

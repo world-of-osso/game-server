@@ -37,6 +37,11 @@ pub(super) fn accumulate_heal(
     // not the sum of fractional contributions at the later periodic tick.
     let damage = event.damage as u32;
     let amount = (damage as f64 * f64::from(effect.amount) / 100.0) as u32;
+    #[cfg(test)]
+    eprintln!(
+        "charred diagnostic spell={:?} raw={} damage={} pct={} contribution={}",
+        event.spell_id, event.damage, damage, effect.amount, amount
+    );
     let mut entity = world.entity_mut(unit);
     let mut pending = entity.entry::<PendingHeals>().or_default();
     *pending.get_mut().0.entry(aura.instance_id).or_default() += amount;
@@ -53,6 +58,8 @@ pub(super) fn heal_on_tick(world: &mut World, unit: Entity, aura: &AuraInstance,
     if amount == 0 {
         return;
     }
+    #[cfg(test)]
+    eprintln!("charred diagnostic heal payload={amount}");
     crate::spell_cast::cast_triggered_with_effect0_amount(
         world,
         unit,
