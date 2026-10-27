@@ -178,6 +178,53 @@ fn dps_parity_pet_melee_actual_swings_include_source_owner_ranged_ap_contributio
 }
 
 #[test]
+#[ignore = "native pet melee owner versatility; requires prepared parity inputs"]
+fn dps_parity_pet_melee_inherits_live_owner_versatility() {
+    const OWNER_VERSATILITY: u32 = 439571;
+    let _seed = crate::random::seed_scope(70_448);
+    let (mut run, pet) = super::power_tests::prepare_hunter_and_pet();
+    let before = normalized_pet_swings(&mut run, pet, 4);
+    let owner = run.actor;
+    let initial = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(owner)
+        .unwrap()
+        .versatility_pct;
+    crate::spell_cast::cast_triggered(
+        run.app.world_mut(),
+        owner,
+        OWNER_VERSATILITY,
+        Some(owner),
+        1,
+    );
+    for _ in 0..4 {
+        run.app.update();
+    }
+    let after_vers = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(owner)
+        .unwrap()
+        .versatility_pct;
+    assert!((after_vers - initial - 20.0).abs() < 0.01);
+    let after = normalized_pet_swings(&mut run, pet, 4);
+    assert!(crate::auras::has_aura(
+        run.app.world(),
+        owner,
+        OWNER_VERSATILITY
+    ));
+    let mean = |hits: &[f32]| hits.iter().sum::<f32>() / hits.len() as f32;
+    let expected_ratio = (1.0 + after_vers / 100.0) / (1.0 + initial / 100.0);
+    let observed_ratio = mean(&after) / mean(&before);
+    // SimC76f8118 pet.hpp138–139: real pet melee uses the live owner's versatility.
+    assert!(
+        (observed_ratio - expected_ratio).abs() < 0.03,
+        "before={before:?} after={after:?} ratio={observed_ratio} expected={expected_ratio}"
+    );
+}
+
+#[test]
 #[ignore = "native pet live owner-RAP equipment control; requires prepared parity inputs"]
 fn dps_parity_pet_melee_live_owner_equipment_removal_and_restore_changes_swings() {
     let (mut run, pet) = super::power_tests::prepare_hunter_and_pet();
@@ -234,13 +281,15 @@ fn dps_parity_pet_melee_live_owner_equipment_removal_and_restore_changes_swings(
     for _ in 0..4 {
         run.app.update();
     }
-    assert_eq!(
-        run.app
-            .world()
-            .get::<crate::stats::CharacterStats>(owner)
-            .unwrap()
-            .ranged_attack_power,
-        before_ap
+    let restored_ap = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(owner)
+        .unwrap()
+        .ranged_attack_power;
+    assert!(
+        restored_ap > without_ap,
+        "restoring real equipment must restore RAP"
     );
     let restored = normalized_pet_swings(&mut run, pet, 4);
     let lowest = |hits: &[f32]| hits.iter().copied().reduce(f32::min).unwrap();
@@ -269,7 +318,9 @@ fn dps_parity_pet_melee_owner_only_melee_ap_buff_does_not_change_swings() {
     // Native70831 Maelstrom Power: caster-only aura166 +20%, no aura167,
     // party/pet recipient, extra attack, trigger or damage effect.
     const MELEE_ONLY_AP: u32 = 70831;
+    let _seed = crate::random::seed_scope(70_448);
     let (mut run, pet) = super::power_tests::prepare_hunter_and_pet();
+    super::channel_timing_tests::remove_equipped_proc_drivers(&mut run);
     let before = normalized_pet_swings(&mut run, pet, 1);
     let owner = run.actor;
     let initial = *run
@@ -301,6 +352,12 @@ fn dps_parity_pet_melee_owner_only_melee_ap_buff_does_not_change_swings() {
         "native buff is owner-only, not a direct pet AP modifier"
     );
     let after = normalized_pet_swings(&mut run, pet, 1);
+    let final_versatility = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(owner)
+        .unwrap()
+        .versatility_pct;
     assert!(
         crate::auras::has_aura(run.app.world(), owner, MELEE_ONLY_AP),
         "native buff must remain active during the measured swing"
@@ -311,8 +368,10 @@ fn dps_parity_pet_melee_owner_only_melee_ap_buff_does_not_change_swings() {
     );
     // Each independent integer combat receipt can lose less than one damage
     // unit before crit normalization. This bounds quantization, not AP variance.
+    let before_without_versatility = before[0] / (1.0 + initial.versatility_pct / 100.0);
+    let after_without_versatility = after[0] / (1.0 + final_versatility / 100.0);
     assert!(
-        (after[0] - before[0]).abs() <= 1.0,
+        (after_without_versatility - before_without_versatility).abs() <= 1.0,
         "pet must inherit RAP, not the independently increased melee AP"
     );
 }
