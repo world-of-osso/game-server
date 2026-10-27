@@ -426,8 +426,11 @@ fn diag_frost_factors_and_resource_spending() {
             ));
         }
         super::super::engage(&mut run);
+        let start_runes = run.app.world().get::<crate::spell_cast::runes::Runes>(run.actor).unwrap().ready();
         let (seconds, _, _) = super::super::advance_combat(&mut run).unwrap();
         assert!((seconds - 300.0).abs() < 0.001);
+        let end_runes = run.app.world().get::<crate::spell_cast::runes::Runes>(run.actor).unwrap().ready();
+        let combat = super::super::report::combat(run.app.world(), &run.damage_targets, seconds);
         let changes = &run.app.world().resource::<ObservedPowerChanges>().0;
         let spent = |power| {
             -changes
@@ -440,11 +443,19 @@ fn diag_frost_factors_and_resource_spending() {
         };
         let runes = spent(PowerType::Runes);
         let runic_power_raw = spent(PowerType::RunicPower);
+        let rune_refills = changes.iter().filter(|(actor, kind, amount)| {
+            *actor == run.actor && *kind == PowerType::Runes && *amount > 0.0
+        }).map(|(_, _, amount)| *amount).sum::<f32>();
         assert!(runes > 0.0 && runic_power_raw > 0.0);
         totals.push(serde_json::json!({
             "seed": seed,
             "runes": runes,
+            "rune_refills": rune_refills,
+            "start_runes": start_runes,
+            "end_runes": end_runes,
+            "regenerated_runes": runes + end_runes as f32 - start_runes as f32 - rune_refills,
             "runic_power_raw": runic_power_raw,
+            "energize": combat["energize"],
         }));
         if seed == 70448 || seed == 1 {
             let capture = run.app.world().resource::<FactorCapture>().export();
