@@ -883,7 +883,11 @@ fn dk252_dread_plague_ticks_produce_sudden_doom() {
     engage(&mut run);
     assert!(crate::auras::has_aura(run.app.world(), run.actor, 49530));
     assert!(crate::spell_cast::try_cast_triggered(
-        run.app.world_mut(), run.actor, 1240996, Some(run.targets[0]), 1,
+        run.app.world_mut(),
+        run.actor,
+        1240996,
+        Some(run.targets[0]),
+        1,
     ));
     let mut earned = false;
     for _ in 0..600 {

@@ -13,10 +13,20 @@ fn assisted_269_counts_active_combat_targets() {
         let actor = run.actor;
         let target = run.targets[0];
         let facts = crate::spell_cast::test_harness::read_assisted_parity_facts(
-            run.app.world_mut(), actor, target, &BTreeSet::new(),
-        ).unwrap();
+            run.app.world_mut(),
+            actor,
+            target,
+            &BTreeSet::new(),
+        )
+        .unwrap();
         assert_eq!(facts.active_enemies, Some(count as u32));
-        let rule = AssistedRule { id: 19874, step_spell: 100784, condition_type: 50, values: [2, 9, 0], field_11_1_7_60520_002: 0 };
+        let rule = AssistedRule {
+            id: 19874,
+            step_spell: 100784,
+            condition_type: 50,
+            values: [2, 9, 0],
+            field_11_1_7_60520_002: 0,
+        };
         // SimC76f8118 player.cpp4035–4038: active_enemies <= value1.
         assert_eq!(evaluate_rule(&rule, &facts), Ok(count <= 2));
     }

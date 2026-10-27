@@ -115,8 +115,19 @@ fn exit_meta(world: &mut World, unit: Entity, aura: &AuraInstance, reason: Remov
     }
     // SimC76f8118 cpp9239–9266 clears Fury before converting remaining souls.
     powers::change_power(world, unit, PowerType::Fury, -f32::MAX).expect("Devourer Fury pool");
-    let stacks = world.get::<ActiveAuras>(unit).and_then(|auras| auras.iter().find(|aura| aura.caster == unit && aura.spell_id == 1227702)).map_or(0, |aura| aura.stacks);
-    if stacks > 0 && world.get::<KnownSpells>(unit).is_some_and(|known| known.contains(1244237)) {
+    let stacks = world
+        .get::<ActiveAuras>(unit)
+        .and_then(|auras| {
+            auras
+                .iter()
+                .find(|aura| aura.caster == unit && aura.spell_id == 1227702)
+        })
+        .map_or(0, |aura| aura.stacks);
+    if stacks > 0
+        && world
+            .get::<KnownSpells>(unit)
+            .is_some_and(|known| known.contains(1244237))
+    {
         for _ in 0..stacks {
             if !spell_cast::try_cast_triggered(world, unit, 1244235, Some(unit), 1) {
                 error!(?unit, "native Rolling Torment was refused");
@@ -126,9 +137,14 @@ fn exit_meta(world: &mut World, unit: Entity, aura: &AuraInstance, reason: Remov
         let amount = script_effect_value(world, unit, 1277769, 0) * f32::from(stacks);
         spell_cast::cast_triggered_with_effect0_amount(world, unit, 1277769, Some(unit), 1, amount);
     }
-    auras::remove_auras(world, unit, RemoveReason::Consumed, |aura| aura.caster == unit && matches!(aura.spell_id, 1221171 | 1227702 | 1242504 | 1227338));
+    auras::remove_auras(world, unit, RemoveReason::Consumed, |aura| {
+        aura.caster == unit && matches!(aura.spell_id, 1221171 | 1227702 | 1242504 | 1227338)
+    });
     spell_cast::scripts::reduce_cooldown(world, unit, VOID_RAY, f64::MAX);
-    if world.get::<CastState>(unit).is_some_and(|cast| matches!(cast.spell_id, 1217610 | 1259431)) {
+    if world
+        .get::<CastState>(unit)
+        .is_some_and(|cast| matches!(cast.spell_id, 1217610 | 1259431))
+    {
         spell_cast::cancel_cast(world, unit);
     }
 }

@@ -1,14 +1,13 @@
 //! Sudden Doom from actual Dread Plague ticks.
-use bevy::prelude::*;
 use super::combat;
+use bevy::prelude::*;
 use combat::spell_cast::{effects::EffectCtx, script_registry::SpellScriptHook};
 
 #[derive(Component, Default)]
 struct SuddenDoomAttempts(u32);
 
-pub(super) const HOOKS: &[SpellScriptHook] = &[
-    SpellScriptHook::PeriodicDamageFinished(roll_sudden_doom),
-];
+pub(super) const HOOKS: &[SpellScriptHook] =
+    &[SpellScriptHook::PeriodicDamageFinished(roll_sudden_doom)];
 
 fn roll_sudden_doom(world: &mut World, ctx: &EffectCtx<'_>) {
     let caster = ctx.caster;
@@ -28,7 +27,9 @@ fn roll_sudden_doom(world: &mut World, ctx: &EffectCtx<'_>) {
     }
     let constant = combat::random::accumulated_proc_constant(chance);
     if world.get::<SuddenDoomAttempts>(caster).is_none() {
-        world.entity_mut(caster).insert(SuddenDoomAttempts::default());
+        world
+            .entity_mut(caster)
+            .insert(SuddenDoomAttempts::default());
     }
     let mut attempts = world.get_mut::<SuddenDoomAttempts>(caster).unwrap();
     attempts.0 += 1;
@@ -36,8 +37,14 @@ fn roll_sudden_doom(world: &mut World, ctx: &EffectCtx<'_>) {
         return;
     }
     attempts.0 = 0;
-    combat::auras::apply_aura(world, &combat::auras::AuraApplication {
-        caster, target: caster, spell_id: 81340, effect_mask: 15,
-        source: combat::auras::AuraSource::Cast,
-    });
+    combat::auras::apply_aura(
+        world,
+        &combat::auras::AuraApplication {
+            caster,
+            target: caster,
+            spell_id: 81340,
+            effect_mask: 15,
+            source: combat::auras::AuraSource::Cast,
+        },
+    );
 }

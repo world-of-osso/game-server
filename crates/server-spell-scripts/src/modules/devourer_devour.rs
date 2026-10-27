@@ -33,21 +33,30 @@ fn consume_soulburst(world: &mut World, caster: Entity, spell: &combat::spell_in
     if !matches!(spell.id, 473662 | 1217610) || !combat::auras::has_aura(world, caster, 1297433) {
         return;
     }
-    let target = spell.cast_primary_target.expect("Soulburst cast retains target");
+    let target = spell
+        .cast_primary_target
+        .expect("Soulburst cast retains target");
     // SimC76f8118 cpp5666–5686,5753–5765: Soulburst deals damage then expires.
     if !spell_cast::try_cast_triggered(world, caster, 1297432, Some(target), 1) {
         error!(?caster, "native Soulburst damage was refused");
         return;
     }
-    combat::auras::remove_auras(world, caster, combat::auras::RemoveReason::Consumed, |aura| aura.caster == caster && aura.spell_id == 1297433);
+    combat::auras::remove_auras(
+        world,
+        caster,
+        combat::auras::RemoveReason::Consumed,
+        |aura| aura.caster == caster && aura.spell_id == 1297433,
+    );
     if combat::auras::has_aura(world, caster, 1296616) {
         if !spell_cast::try_cast_triggered(world, caster, 1238495, Some(caster), 1) {
             error!(?caster, "Soulburst Moment of Craving was refused");
         }
         spell_cast::scripts::reduce_cooldown(world, caster, 1226019, f64::MAX);
-        let count = spell_cast::scripts::script_effect_value(world, caster, 1296616, 0).max(0.0) as usize;
+        let count =
+            spell_cast::scripts::script_effect_value(world, caster, 1296616, 0).max(0.0) as usize;
         for _ in 0..count {
-            soul_fragments::spawn(world, caster, FragmentKind::Lesser, false).expect("native Soulburst fragment");
+            soul_fragments::spawn(world, caster, FragmentKind::Lesser, false)
+                .expect("native Soulburst fragment");
         }
     }
 }

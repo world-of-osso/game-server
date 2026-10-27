@@ -36,16 +36,22 @@ fn register_channel_end(scripts: &mut combat::auras::scripts::AuraScripts) {
 }
 
 fn finish_ray(world: &mut World, actor: Entity, aura: &combat::auras::AuraInstance) {
-    if actor != aura.caster { return; }
+    if actor != aura.caster {
+        return;
+    }
     let known = world.get::<KnownSpells>(actor);
     let final_breath = known.is_some_and(|known| known.contains(1266500));
     let moment = known.is_some_and(|known| known.contains(1238488));
     if final_breath {
         // SimC76f8118 cpp3282–3325: a completed channel executes an additional
         // native tick at Final Breath effect1's percentage.
-        let child = world.get::<VoidRayTick>(actor).expect("completed Ray retains tick").0;
+        let child = world
+            .get::<VoidRayTick>(actor)
+            .expect("completed Ray retains tick")
+            .0;
         let mut spell = spell_cast::load_triggered_spell(world, child, 1).expect("native Ray tick");
-        spell.cast_damage_multiplier = Some(spell_cast::scripts::script_effect_value(world, actor, 1266500, 0) / 100.0);
+        spell.cast_damage_multiplier =
+            Some(spell_cast::scripts::script_effect_value(world, actor, 1266500, 0) / 100.0);
         if !spell_cast::launch_triggered_spell(world, actor, &spell, None, 1) {
             error!(?actor, "native Final Breath tick was refused");
         }
@@ -112,10 +118,12 @@ fn focused_ray(world: &World, ctx: &EffectCtx<'_>, _: Entity, periodic: bool) ->
 
 fn shatter_on_tick(world: &mut World, ctx: &EffectCtx<'_>, _: Entity, _: bool) {
     let ray = matches!(ctx.spell.id, 1213649 | 1214595);
-    if !matches!(ctx.spell.id, 1213649 | 1214595 | 1221162 | 473662 | 1217610 | 1245455 | 1225823 | 1239127 | 1297432)
-        || !world
-            .get::<KnownSpells>(ctx.caster)
-            .is_some_and(|known| known.contains(1227619))
+    if !matches!(
+        ctx.spell.id,
+        1213649 | 1214595 | 1221162 | 473662 | 1217610 | 1245455 | 1225823 | 1239127 | 1297432
+    ) || !world
+        .get::<KnownSpells>(ctx.caster)
+        .is_some_and(|known| known.contains(1227619))
     {
         return;
     }
@@ -130,9 +138,10 @@ fn shatter_on_tick(world: &mut World, ctx: &EffectCtx<'_>, _: Entity, _: bool) {
     // SimC76f8118 cpp3390–3437,6338–6344: each selected direct hit rolls
     // base chance +1%; Ray alone applies Waste Not and divides by target count.
     let mut chance = spell_cast::scripts::script_effect_value(world, ctx.caster, 1227619, 0) + 1.0;
-    if ray && world
-        .get::<KnownSpells>(ctx.caster)
-        .is_some_and(|known| known.contains(1223918))
+    if ray
+        && world
+            .get::<KnownSpells>(ctx.caster)
+            .is_some_and(|known| known.contains(1223918))
     {
         chance *=
             1.0 + spell_cast::scripts::script_effect_value(world, ctx.caster, 1223918, 0) / 100.0;

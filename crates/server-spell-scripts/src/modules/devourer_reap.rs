@@ -83,10 +83,14 @@ fn trigger_soulburst(world: &mut World, caster: Entity, consumed: usize) {
         return;
     }
     // SimC76f8118 cpp1256–1260,3452–3465,10719–10727: capped bad-luck protection.
-    let failures = world.get::<SoulburstFailures>(caster).map_or(0, |state| state.0);
+    let failures = world
+        .get::<SoulburstFailures>(caster)
+        .map_or(0, |state| state.0);
     let chance = (0.0663 + 0.0519 * f64::from(failures)).min(0.3949);
     let proc = combat::random::thread_rng().gen_range(0.0..1.0) < chance;
-    world.entity_mut(caster).insert(SoulburstFailures(if proc { 0 } else { failures + 1 }));
+    world
+        .entity_mut(caster)
+        .insert(SoulburstFailures(if proc { 0 } else { failures + 1 }));
     if proc && !spell_cast::try_cast_triggered(world, caster, 1297433, Some(caster), 1) {
         error!(?caster, "native Soulburst aura was refused");
     }
