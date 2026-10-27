@@ -55,6 +55,29 @@ fn dk252_festering_strike_earns_ghouls_and_next_native_scythe() {
 }
 
 #[test]
+#[ignore = "requires private native252 Rider templates/profile and player actor"]
+fn dk252_army_summons_all_four_real_riders() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 1).unwrap();
+    engage(&mut run);
+    literal_rotation::execution::execute(
+        run.app.world_mut(), run.actor,
+        literal_rotation::execution::Execution::Spell(42650, run.actor, None),
+    ).unwrap();
+    for _ in 0..100 { run.app.update(); }
+    let riders: std::collections::HashSet<_> = {
+        let world = run.app.world_mut();
+        world.query::<(&shared::components::Npc, &crate::spell_cast::summon::SummonedCreature)>()
+            .iter(world).filter_map(|(npc, summon)|
+                (summon.owner == run.actor && [444248, 444251, 444252, 444254].contains(&summon.spell_id))
+                    .then_some(npc.template_id)
+            ).collect()
+    };
+    assert_eq!(riders, [221632, 221633, 221634, 221635].into_iter().collect(),
+        "selected Apocalypse Now must summon all four actual native Horsemen");
+}
+
+#[test]
 #[ignore = "requires private native252 profile/traits and player actor"]
 fn dk252_real_lesser_ghoul_summon_reaches_and_melees() {
     let _seed = crate::random::seed_scope(70448);
