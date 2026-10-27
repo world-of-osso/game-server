@@ -336,6 +336,8 @@ fn change_power_with_source(
     let (current, max) = power_value(world, entity, power)?;
     if power == PowerType::Runes && world.get::<super::runes::Runes>(entity).is_some() {
         let changed = change_runes(world, entity, delta);
+        #[cfg(any(test, feature = "test-support"))]
+        observe_power_change(world, entity, power, changed);
         crate::auras::power_amount_trigger::on_changed(
             world,
             entity,
@@ -353,10 +355,21 @@ fn change_power_with_source(
     }
     crate::auras::power_amount_trigger::on_changed(world, entity, power, current, next);
     let gained = next - current;
+    #[cfg(any(test, feature = "test-support"))]
+    observe_power_change(world, entity, power, gained);
     if power == PowerType::ComboPoints && delta > 0.0 {
         record_combo_gain(world, entity, delta, gained, source);
     }
     Some(gained)
+}
+
+#[cfg(any(test, feature = "test-support"))]
+fn observe_power_change(world: &mut World, entity: Entity, power: PowerType, changed: f32) {
+    if let Some(mut observed) =
+        world.get_resource_mut::<super::test_harness::ObservedPowerChanges>()
+    {
+        observed.0.push((entity, power, changed));
+    }
 }
 
 fn record_combo_gain(
