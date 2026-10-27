@@ -103,19 +103,32 @@ fn survival_sentinel_actual_bomb_consumes_mark_into_native_lunar_storm_pack_dama
     let mut run = player();
     cast(&mut run, 1250646, false);
     assert!(owns_mark(&run));
+    let start = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .len();
     cast(&mut run, 259495, false);
     for _ in 0..80 {
         run.app.update();
     }
-    assert!(
-        !owns_mark(&run),
-        "the actual Bomb primary must consume its earlier native mark"
-    );
     let events = &run
         .app
         .world()
         .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
-        .0;
+        .0[start..];
+    // sc_hunter.cpp1363–1366: tipped Bomb may earn a new mark after
+    // consuming the prior one. Observe removal, not final absence.
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(run.actor.to_bits())
+                && event.target == Some(run.targets[0].to_bits())
+                && event.spell_id == Some(1253601)
+                && event.kind == CombatLogKind::AuraRemoved),
+        "the actual Bomb primary must consume its earlier owned native mark"
+    );
     for &target in &run.targets {
         assert!(
             events
