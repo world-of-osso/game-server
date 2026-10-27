@@ -58,11 +58,16 @@ fn subtlety_clone_funding_earned_finisher_clone_can_store_and_energize() {
             !crate::auras::has_aura(run.app.world(), run.actor, 196911),
             "finisher collected all preloaded storage"
         );
-        // The real finisher can start autoattacks. Stop those before the delayed clone.
+        // Keep the real target but move both white swings beyond the clone window;
+        // queued AttackStart on the same target preserves these timers.
         run.app
             .world_mut()
             .entity_mut(run.actor)
-            .remove::<crate::combat::AutoAttack>();
+            .insert(crate::combat::AutoAttack {
+                victim: run.targets[0],
+                timer: std::time::Duration::from_secs(60),
+                off_hand_timer: std::time::Duration::from_secs(60),
+            });
         run.app
             .world_mut()
             .resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>()
