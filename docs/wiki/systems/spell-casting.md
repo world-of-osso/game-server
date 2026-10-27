@@ -81,7 +81,7 @@ After Spirit landingc017250c5, canonical300s three-seed means are129144.341ST/19
 
 [Swipe2](../../../crates/server-spell-scripts/src/modules/survival_swipe.rs) applies its native modified rank effect only to the actual primary. The initial integrated assertion mistakenly used `native_source_amount` after the bonus was applied; probe17ee9b2065 compares actual damage with the real pre-done amount and other observed live factors instead. No stat or coefficient changes.
 
-[Takedown](../../../crates/server-spell-scripts/src/modules/survival_takedown.rs) dispatches native player1253859 and living main-pet1253862 after its buff/force mark; the pet payload's energize effect is excluded per pinned source. Native1941ea152a reproduces missing player damage; GREEN/measurement pending.
+[Takedown](../../../crates/server-spell-scripts/src/modules/survival_takedown.rs) dispatches native player1253859 and living main-pet1253862 after its buff/force mark; the pet payload's energize effect is excluded per pinned source. Native1941ea152a RED→GREEN landed7cf5ade399. Actual Takedown resource tests1355f74968 reproduce owner Focus0 versus native50 and selected Twin Fangs0 versus two remaining Tip uses. Native1258571 owner gain and selected pre-impact Tip grant are implemented; GREEN/measurement pending.
 
 `survival_pet.rs` dispatches native1251779 from the living owned main pet. The normal path owns1251717's actual aura-instance700ms timer; raw melee proc hints cannot spend it. Tipped rank3 Swipe executes its separate native effectiveness before base impact. Actual main-pet strike crits trigger selected native Sic 'Em1253138; shared pet stats, owner crit and periodic timing remain authoritative. No synthetic pet or stat overrides.
 

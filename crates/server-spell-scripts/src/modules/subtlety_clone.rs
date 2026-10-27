@@ -7,6 +7,7 @@ use combat::random;
 use combat::spell_cast::{
     self,
     effects::{self, EffectCtx},
+    powers,
     script_registry::{self, SpellScriptHook},
     scripts::script_effect_value,
 };
@@ -38,6 +39,7 @@ pub(super) fn schedule(world: &mut World, ctx: &EffectCtx, target: Entity, consu
     let child = match ctx.spell.id {
         196819 => 1269205,
         319175 => 1269565,
+        280719 => 1269560,
         _ => return,
     };
     let points = ctx
@@ -95,11 +97,12 @@ fn queue_clone(
         .get(child)
         .expect("native shadow clone")
         .clone();
-    spell.cast_damage_multiplier = Some(points * 0.5);
+    let (damage_bonus, crit_bonus) = darkest_night_bonus(world, caster, child, points);
+    spell.cast_damage_multiplier = Some(points * 0.5 * damage_bonus);
     spell.cast_charge_mods = Some(spell_mods::snapshot_charged_modifiers(
         world, caster, &spell,
     ));
-    let crit = effects::crit_chance(world, caster, target, &spell);
+    let crit = effects::crit_chance(world, caster, target, &spell) + crit_bonus;
     let due = spell_cast::now(world) + delay;
     if world.get::<PendingClones>(caster).is_none() {
         world.entity_mut(caster).insert(PendingClones::default());
@@ -114,6 +117,32 @@ fn queue_clone(
             crit,
             due,
         });
+}
+
+// sc_rogue.cpp2435–2440/2569–2578/10583–10584: maximum-point
+// Eviscerate clones snapshot both native Darkest Night bonuses.
+fn darkest_night_bonus(world: &World, caster: Entity, child: u32, points: f32) -> (f32, f32) {
+    if child != 1269205
+        || !powers::power_value(world, caster, PowerType::ComboPoints)
+            .is_some_and(|(_, maximum)| points >= maximum)
+    {
+        return (1.0, 0.0);
+    }
+    let Some(aura) = world.get::<ActiveAuras>(caster).and_then(|auras| {
+        auras
+            .iter()
+            .find(|aura| aura.spell_id == 457280 && aura.caster == caster)
+    }) else {
+        return (1.0, 0.0);
+    };
+    let amount = |index| {
+        aura.effects
+            .iter()
+            .find(|effect| effect.index == index)
+            .expect("native Darkest Night effect")
+            .amount
+    };
+    (1.0 + amount(1) / 100.0, 100.0 + amount(3))
 }
 
 fn launch_due(world: &mut World) {
