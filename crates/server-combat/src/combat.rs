@@ -729,7 +729,7 @@ pub fn read_pet_owner_critical_chance(world: &World, unit: Entity) -> Option<f32
 
 // SimC76f8118 pet.cpp414–420: pets inherit the mean of their owner's
 // attack hit and expertise, including the class actor's 7.5% baselines.
-fn read_pet_owner_hit_expertise(world: &World, unit: Entity) -> Option<f32> {
+pub(crate) fn read_pet_owner_hit_expertise(world: &World, unit: Entity) -> Option<f32> {
     let owner = crate::spell_cast::guardian::stat_owner(world, unit)
         .or_else(|| {
             world
