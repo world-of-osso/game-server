@@ -94,7 +94,9 @@ fn snapshot_child(world: &World, caster: Entity, id: u32, points: f32) -> SpellI
     // sc_rogue.cpp5377–5385: only the intrinsic clone snapshots the
     // native owner guardian multiplier; the player attack does not.
     let guardian = if id == CLONE {
-        world.get::<AuraStatMods>(caster).map_or(1.0, |mods| mods.guardian_damage_mult)
+        world
+            .get::<AuraStatMods>(caster)
+            .map_or(1.0, |mods| mods.guardian_damage_mult)
     } else {
         1.0
     };

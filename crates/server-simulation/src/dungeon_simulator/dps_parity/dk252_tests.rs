@@ -196,26 +196,44 @@ fn dk252_magus_bolt_inherits_owner_melee_power() {
     literal_rotation::execution::execute(
         run.app.world_mut(),
         run.actor,
-        literal_rotation::execution::Execution::Spell(1247378, run.targets[0], Some(run.targets[0])),
+        literal_rotation::execution::Execution::Spell(
+            1247378,
+            run.targets[0],
+            Some(run.targets[0]),
+        ),
     )
     .unwrap();
     preparation::finish_pending_setup(&mut run).unwrap();
-    let magus = (0..100).find_map(|_| {
-        run.app.update();
-        let world = run.app.world_mut();
-        world.query::<(Entity, &shared::components::Npc)>().iter(world)
-            .find_map(|(actor, npc)| (npc.template_id == 163366).then_some(actor))
-    }).expect("native Putrefy must create a Magus");
+    let magus = (0..100)
+        .find_map(|_| {
+            run.app.update();
+            let world = run.app.world_mut();
+            world
+                .query::<(Entity, &shared::components::Npc)>()
+                .iter(world)
+                .find_map(|(actor, npc)| (npc.template_id == 163366).then_some(actor))
+        })
+        .expect("native Putrefy must create a Magus");
     let owner = run.actor;
     let target = run.targets[0];
-    run.app.insert_resource(FactorCapture::new(magus, target, 1297055, "necrotic_bolt", 1));
+    run.app.insert_resource(FactorCapture::new(
+        magus,
+        target,
+        1297055,
+        "necrotic_bolt",
+        1,
+    ));
     for _ in 0..200 {
         run.app.update();
         let capture = run.app.world().resource::<FactorCapture>().export();
-        let Some(calculation) = capture["events"].as_array().unwrap().iter()
-            .find(|event| event["event"] == "direct_amount" && event["spell_id"] == 1297055) else {
-                continue;
-            };
+        let Some(calculation) = capture["events"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|event| event["event"] == "direct_amount" && event["spell_id"] == 1297055)
+        else {
+            continue;
+        };
         let world = run.app.world();
         let stats = world.get::<crate::stats::CharacterStats>(owner).unwrap();
         let expected = stats.total_attack_power(
@@ -223,7 +241,10 @@ fn dk252_magus_bolt_inherits_owner_melee_power() {
             world.get::<crate::stats::StatModifiers>(owner),
         ) * 0.4664;
         let inherited = calculation["factors"]["a_power"].as_f64().unwrap();
-        assert!((inherited - f64::from(expected)).abs() < 1.0, "actual Magus bolt must inherit owner melee AP: actual={inherited}, expected={expected}");
+        assert!(
+            (inherited - f64::from(expected)).abs() < 1.0,
+            "actual Magus bolt must inherit owner melee AP: actual={inherited}, expected={expected}"
+        );
         return;
     }
     panic!("the actual Magus must complete a native Necrotic Bolt");
