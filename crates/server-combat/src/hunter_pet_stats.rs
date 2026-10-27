@@ -41,7 +41,7 @@ pub(crate) fn command_critical_bonus_multiplier(world: &World, actor: Entity, sp
         }
         1232922 => world
             .get::<crate::spell_cast::summon::SummonedCreature>(actor)
-            .filter(|summon| [219199, 442419, 459733, 459739, 471990].contains(&summon.spell_id))
+            .filter(|summon| crate::auras::summon_damage::is_dire_critter(summon))
             .map(|summon| summon.owner),
         _ => None,
     };
