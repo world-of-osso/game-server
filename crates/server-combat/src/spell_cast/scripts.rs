@@ -128,6 +128,7 @@ pub(super) use script_registry::{
 };
 pub(super) use script_registry::{consume_resource_value_sources, effective_resource_value};
 mod unbroken_rhythm;
+mod unholy_festering;
 pub(crate) use unbroken_rhythm::register_unbroken_rhythm;
 mod windwalker;
 mod windwalker_children;
@@ -803,6 +804,7 @@ pub fn after_cast(world: &World, spell_id: u32) -> impl Iterator<Item = AfterCas
         .chain(script_registry::aura_roll_after_cast(world, spell_id))
         .chain(script_registry::resource_value_after_cast(world, spell_id))
         .chain(script_registry::after_resource_values(world, spell_id))
+        .chain(unholy_festering::after_cast_hook(spell_id))
 }
 
 fn native_after_cast(world: &World, spell_id: u32) -> Option<AfterCastHook> {
