@@ -853,8 +853,11 @@ fn periodic_haste_multiplier(world: &World, caster: Entity, spell: &SpellInfo) -
     if attributes(spell, 5) & SPELL_HASTE_AFFECTS_PERIODIC == 0 {
         return 1.0;
     }
+    // SimC76f8118 pet.cpp217–228 and buff.cpp752/1945: an actual guardian's
+    // hasted periodic aura uses the same owner spell haste as its casts.
+    let owner = crate::spell_cast::guardian::stat_owner(world, caster).unwrap_or(caster);
     world
-        .get::<crate::stats::CharacterStats>(caster)
+        .get::<crate::stats::CharacterStats>(owner)
         .map_or(1.0, |stats| 1.0 + stats.haste_pct / 100.0)
 }
 
