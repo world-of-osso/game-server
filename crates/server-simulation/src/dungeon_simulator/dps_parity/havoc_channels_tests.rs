@@ -18,47 +18,6 @@ fn damage(run: &Run, spell: Option<u32>) -> Vec<CombatLogEvent> {
         .collect()
 }
 
-#[test]
-#[ignore = "requires prepared native spec577 player profile"]
-fn diag_havoc_critical_sources() {
-    let _seed = crate::random::seed_scope(70_448);
-    let mut run = prepare_literal(577, 1).unwrap();
-    havoc_tests::earn_havoc_fury(&mut run, 80.0);
-    cast(&mut run, 191427, false);
-    preparation::finish_pending_setup(&mut run).unwrap();
-    advance(&mut run, 25);
-    let world = run.app.world();
-    let actor = run.actor;
-    let stats = world.get::<crate::stats::CharacterStats>(actor).unwrap();
-    let mods = world.get::<crate::auras::AuraStatMods>(actor).unwrap();
-    let sources: Vec<_> = world
-        .get::<crate::auras::ActiveAuras>(actor)
-        .unwrap()
-        .iter()
-        .flat_map(|aura| {
-            aura.effects
-                .iter()
-                .filter(|effect| effect.aura_type == 163)
-                .map(move |effect| {
-                    (
-                        aura.spell_id,
-                        effect.index,
-                        effect.amount,
-                        effect.misc_values,
-                    )
-                })
-        })
-        .collect();
-    eprintln!(
-        "crit state: crit_pct={} native_critical_mods={:?} sources={:?}",
-        stats.crit_pct, mods.critical_damage_mods, sources
-    );
-    assert!(
-        !sources.is_empty(),
-        "real Havoc profile must carry its crit damage auras"
-    );
-}
-
 fn advance(run: &mut Run, frames: usize) {
     for _ in 0..frames {
         run.app.update();
