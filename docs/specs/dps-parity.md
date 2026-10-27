@@ -228,6 +228,8 @@ Native merged buff outcomes apply or clear the caster-owned aura after the hit b
 
 - Successful native Frost Strike/Glacial Advance executions roll Rime using native59057 effect2. Actual Frost Strike/Glacial Advance/Howling Blast during Pillar with selected Obliteration grants Killing Machine and rolls native281238 effect2 for native281327 rune restoration. White critical swings use pinned accumulated KM PRD (0.3 dual wield;1.0 two-handed with Might of the Frozen Wastes); ordinary/noncritical hits do not roll. Native passive trigger effects supply the buff identities and payloads (`sc_death_knight.cpp`7716–7719,10889–10900,11177–11189,11614–11622,14824–14825,16163–16165).
 
+- Successful native Pillar with selected Frozen Dominion377226 starts native1233152, whose real periodic clock triggers196771 area damage (`sc_death_knight.cpp`12050–12060,15341–15342). Do not synthesize periodic damage in the literal driver.
+
 - Native Frost Runic Power payment rolls Runic Empowerment from the larger native base/actual cost. Native81229 effect1 supplies the per-cost chance and193486 restores the rune; raw RP is converted from tenths only for the source chance calculation (`sc_death_knight.cpp`13128–13146,13424–13439). The literal adapter grants no runes.
 
 - Ordinary Obliterate and Frostscythe retain earned Killing Machine through native weapon impacts, then consume all current stacks with selected Killing Streak, otherwise one. Each consumption grants native Killing Streak, extends active Breath by native effect3 per stack, advances selected Bonegrinder, rolls native Murderous Efficiency rune restoration, and schedules selected native Arctic Assault after500ms (`sc_death_knight.cpp`10585–10588,11908–11915,13372–13412,13460–13485). No child damage coefficient is replaced.
@@ -1030,7 +1032,7 @@ Category133 ordinary spells apply native spell haste before the independent aura
 
 ### Shadow Idol of N'Zoth
 
-Selected Idol of N'Zoth tracks actual Madness executions and Mind Flay ticks per owned target. Its native thresholds trigger Horrific Vision and Vision of N'Zoth, their damage, and their native periodic Insanity buffs. The target counter rolls over at the native upper threshold.
+Selected Idol of N'Zoth tracks actual Madness and Mind Blast executions, foreground Pain and Vampiric Touch executions, and Mind Flay and Void Torrent ticks per owned target. Its native thresholds trigger Horrific Vision and Vision of N'Zoth, their damage, and their native periodic Insanity buffs. The target counter rolls over at the native upper threshold.
 ### Shadow Insidious Ire
 
 Selected Insidious Ire earns its temporary channel bonus when one target has all three caster-owned Pain, Vampiric Touch and Madness effects. The window lasts until the earliest expiry and may be refreshed to a later earned deadline. Its amount comes from the selected native trait effect.
