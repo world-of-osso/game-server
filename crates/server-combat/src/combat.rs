@@ -349,13 +349,21 @@ type RetargetedCreatures<'w, 's> = Query<
 /// A creature's AI attacks by setting its `CombatTarget` (`Unit::Attack`, which
 /// for creatures engages the victim, Unit.cpp:5950-5952); a target it cannot
 /// attack, or none, stops the attack. Players attack only through `AttackSwing`.
-fn creature_attack_system(query: RetargetedCreatures, rules: AttackRules, mut commands: Commands) {
+fn creature_attack_system(
+    query: RetargetedCreatures,
+    rules: AttackRules,
+    controlled_pets: Query<&Npc, With<crate::hunter_pet::HunterPet>>,
+    world_data: Option<Res<crate::world_data::WorldData>>,
+    mut commands: Commands,
+) {
     for (creature, target, current) in &query {
         match target.0 {
             Some(victim)
                 if !rules.dead(creature) && rules.valid_attack_target(creature, victim) =>
             {
-                start_attack(&mut commands, creature, victim, current);
+                if !casts_without_melee(&controlled_pets, world_data.as_deref(), creature) {
+                    start_attack(&mut commands, creature, victim, current);
+                }
                 commands.queue(move |world: &mut World| {
                     crate::combat_refs::set_in_combat_with(world, creature, victim);
                 });
@@ -365,6 +373,26 @@ fn creature_attack_system(query: RetargetedCreatures, rules: AttackRules, mut co
             }
         }
     }
+}
+
+/// Creature family of the warlock Imp (`CreatureFamily` 23).
+const IMP_FAMILY: u32 = 23;
+
+/// SimC76f8118 sc_warlock_pets.cpp360–385: the controlled Imp only casts
+/// Firebolt; it creates no melee attack, unlike the other main demons
+/// (lines 342/431/503). No 70448 DB2 field marks caster pets, so the native
+/// creature family selects it. The pet still engages its target for casts.
+fn casts_without_melee(
+    controlled_pets: &Query<&Npc, With<crate::hunter_pet::HunterPet>>,
+    world_data: Option<&crate::world_data::WorldData>,
+    creature: Entity,
+) -> bool {
+    let Ok(npc) = controlled_pets.get(creature) else {
+        return false;
+    };
+    world_data
+        .and_then(|data| data.template_for(npc.template_id, 0))
+        .is_some_and(|template| template.family == IMP_FAMILY)
 }
 
 /// `WorldSession::HandleAttackSwingOpcode` (CombatHandler.cpp:28-61): an unknown or
