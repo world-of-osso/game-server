@@ -268,6 +268,7 @@ register_modules! {
     shadow_yogg: (2587, "modules/shadow_yogg.rs"),
     snakeskin_quiver: (230, "modules/snakeskin_quiver.rs"),
     soul_of_the_forest: (1000, "modules/soul_of_the_forest.rs"),
+    unholy_lesser_claws: (2531, "modules/unholy_lesser_claws.rs"),
     spellslinger: (1000, "modules/spellslinger.rs"),
     spellslinger_hits: (401, "modules/spellslinger_hits.rs"),
     stacking_summons: (1000, "modules/stacking_summons.rs"),
