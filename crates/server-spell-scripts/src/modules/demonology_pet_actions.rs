@@ -28,7 +28,7 @@ fn target_plan(spell: u32) -> Option<(Relation, TargetPlanHook)> {
 }
 
 fn plan_dreadbite(world: &mut World, caster: Entity, spell: &SpellInfo, explicit: Option<Entity>) -> TargetPlan {
-    let primary = explicit.expect("Dreadbite needs its primary target");
+    let primary = spell.cast_primary_target.expect("Dreadbite needs its primary target");
     let dreadlash = world.get::<SummonedCreature>(caster)
         .is_some_and(|summon| auras::has_aura(world, summon.owner, DREADLASH));
     spell.effects.iter().enumerate().filter(|(_, effect)| effect.effect != 0).map(|(index, effect)| {
