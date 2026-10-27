@@ -1,6 +1,85 @@
 use super::*;
 use server::simc_apl::Facts;
 
+#[test]
+#[ignore = "requires private spec253 reference inputs and native world DB"]
+fn native_bm_natures_ally_empowers_real_pet_command() {
+    use crate::spell_cast::effects::factor_capture::FactorCapture;
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_measurement(253, 1).expect("native literal BM fixture");
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, 1273126));
+    let pet = crate::hunter_pet::summoned_pet(run.app.world(), run.actor).unwrap();
+    let target = run.targets[0];
+    engage(&mut run);
+    crate::combat_refs::set_in_combat_with(run.app.world_mut(), run.actor, target);
+    crate::pet_control::order_companion_pet(run.app.world_mut(), run.actor, Some(target));
+    for _ in 0..40 {
+        run.app.update();
+    }
+    crate::spell_cast::creature_cast(run.app.world_mut(), run.actor, 193455, Some(target), false)
+        .expect("ordinary Cobra earns Nature's Ally");
+    preparation::finish_pending_setup(&mut run).unwrap();
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, 1276720));
+    assert!(!crate::auras::has_aura(run.app.world(), run.actor, 471878));
+    let bonus =
+        crate::spell_cast::scripts::script_effect_value(run.app.world(), run.actor, 1276720, 0);
+    run.app
+        .insert_resource(FactorCapture::new(pet, target, 83381, "kill_command", 2));
+    for expected in 1..=2 {
+        crate::spell_cast::creature_cast(
+            run.app.world_mut(),
+            run.actor,
+            34026,
+            Some(target),
+            false,
+        )
+        .expect("ordinary Kill Command");
+        preparation::finish_pending_setup(&mut run).unwrap();
+        for _ in 0..200 {
+            run.app.update();
+            if run.app.world().resource::<FactorCapture>().export()["captured_hits"]
+                .as_u64()
+                .unwrap()
+                >= expected
+            {
+                break;
+            }
+        }
+        assert!(!crate::auras::has_aura(run.app.world(), run.actor, 1276720));
+        assert!(!crate::auras::has_aura(run.app.world(), run.actor, 471878));
+    }
+    let receipt = run.app.world().resource::<FactorCapture>().export();
+    let events = receipt["events"].as_array().unwrap();
+    let results: Vec<_> = events
+        .iter()
+        .filter(|event| event["event"] == "result" && event["spell_id"] == 83381)
+        .collect();
+    let amounts: Vec<_> = events
+        .iter()
+        .filter(|event| event["event"] == "direct_amount" && event["spell_id"] == 83381)
+        .collect();
+    assert_eq!(
+        (results.len(), amounts.len()),
+        (2, 2),
+        "two actual pet commands"
+    );
+    let normalized = |index: usize| {
+        results[index]["factors"]["raw_amount"].as_f64().unwrap()
+            / amounts[index]["factors"]["ap_term"].as_f64().unwrap()
+            / results[index]["factors"]["target_product"]
+                .as_f64()
+                .unwrap()
+    };
+    let ratio = normalized(0) / normalized(1);
+    let expected = 1.0 + f64::from(bonus) / 100.0;
+    // SimC76f8118 hunter.cpp2779–2785 and 6585–6604: the armed
+    // Nature's Ally value applies to the command before its consumption.
+    assert!(
+        (ratio - expected).abs() < 0.001,
+        "actual armed pet command must receive Nature's Ally: actual={ratio}, expected={expected}"
+    );
+}
+
 fn barbed_recharge(run: &Run) -> f64 {
     let bindings = crate::simc_apl_native::Bindings {
         actions: [("barbed_shot".into(), 217200)].into(),
