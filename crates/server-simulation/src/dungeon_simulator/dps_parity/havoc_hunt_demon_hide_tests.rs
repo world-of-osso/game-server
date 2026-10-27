@@ -2,7 +2,7 @@
 use super::*;
 use shared::protocol::CombatLogKind;
 
-fn hunt_tick(selected: bool) -> u32 {
+fn hunt_tick(selected: bool) -> i32 {
     let _seed = crate::random::seed_scope(70_448);
     let mut run = prepare_literal(577, 1).unwrap();
     let actor = run.actor;
