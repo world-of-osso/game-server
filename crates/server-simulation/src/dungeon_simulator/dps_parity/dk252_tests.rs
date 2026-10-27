@@ -405,7 +405,9 @@ fn dk252_sudden_doom_death_coil_summons_doomed_bidding_ghoul() {
         caster: run.actor, target: run.actor, spell_id: 81340, effect_mask: 15,
         source: crate::auras::AuraSource::Cast,
     });
-    assert!(crate::spell_cast::try_cast_triggered(run.app.world_mut(), run.actor, 47541, Some(run.targets[0]), 1));
+    literal_rotation::execution::execute(run.app.world_mut(), run.actor,
+        literal_rotation::execution::Execution::Spell(47541, run.targets[0], Some(run.targets[0]))).unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
     for _ in 0..30 { run.app.update(); }
     let world = run.app.world_mut();
     assert!(world.query::<&crate::spell_cast::summon::SummonedCreature>().iter(world)
