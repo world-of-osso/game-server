@@ -65,6 +65,7 @@ pub(crate) struct Driver {
     precombat_harmful_executed: bool,
     pub snapshot: Option<Value>,
     cancellation: Option<(Action, Expression, u32)>,
+    pending_fragment_row: Option<usize>,
     line_ready_at: std::collections::BTreeMap<usize, f64>,
     pending_line: Option<(usize, f64)>,
     selected_list: String,
@@ -83,6 +84,7 @@ impl Driver {
             precombat_harmful_executed: false,
             snapshot: None,
             cancellation: None,
+            pending_fragment_row: None,
             line_ready_at: Default::default(),
             pending_line: None,
             selected_list: String::new(),
@@ -171,6 +173,15 @@ impl Driver {
         execution: Execution,
     ) -> Result<(), String> {
         let ends_precombat = self.selected_precombat && harmful_execution(world, &execution)?;
+        let fragment_row = if matches!(execution, Execution::PickupFragment(_)) {
+            Some(
+                action
+                    .source_row
+                    .ok_or("fragment pickup has no source row")?,
+            )
+        } else {
+            None
+        };
         let cancellation = if let Execution::Spell(id, _, _) = &execution {
             action
                 .options
@@ -192,6 +203,9 @@ impl Driver {
         } else {
             execution::execute_row(world, actor, &action, execution)?;
         }
+        if fragment_row.is_some() {
+            self.pending_fragment_row = fragment_row;
+        }
         if let Some((row, deadline)) = self.pending_line.take() {
             self.line_ready_at.insert(row, deadline);
         }
@@ -204,6 +218,27 @@ impl Driver {
         self.precombat_harmful_executed |= ends_precombat;
         self.decisions += 1;
         Ok(())
+    }
+
+    /// SimC re-evaluates the selected row's condition when pickup movement finishes.
+    pub fn fragment_pickup_permitted(
+        &mut self,
+        world: &World,
+        actor: Entity,
+        facts: &dyn ActionFacts,
+    ) -> Result<Option<bool>, String> {
+        let Some(row) = self.pending_fragment_row else {
+            return Ok(None);
+        };
+        if !server::soul_fragments::pickup_due(world, actor) {
+            return Ok(None);
+        }
+        self.pending_fragment_row = None;
+        Ok(Some(
+            self.program
+                .select_row(row, facts, &mut self.variables, |_| Ok(true))?
+                .is_some(),
+        ))
     }
 
     /// Caller releases its immutable facts borrow before cancelling the actual cast.
@@ -240,7 +275,9 @@ fn harmful_execution(world: &World, execution: &Execution) -> Result<bool, Strin
         Execution::Composite(_) => {
             return Err("composite precombat requires a clock-aware executor".into());
         }
-        Execution::Snapshot | Execution::CancelCast => return Ok(false),
+        Execution::Snapshot | Execution::CancelCast | Execution::PickupFragment(_) => {
+            return Ok(false);
+        }
         Execution::AutoAttack(_) | Execution::RetargetAutoAttack(_) => return Ok(true),
         Execution::Spell(id, _, _) => *id,
         Execution::Item(item, _) => item.on_use.spell_id,

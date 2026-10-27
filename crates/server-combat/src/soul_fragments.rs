@@ -17,7 +17,7 @@ pub enum FragmentKind {
     EmpoweredDemon,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum FragmentFilter {
     Any,
     Lesser,
@@ -39,7 +39,7 @@ impl FragmentFilter {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum PickupMode {
     Oldest,
     Newest,
