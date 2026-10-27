@@ -29,7 +29,10 @@ fn devourer_devour_executes_native_fury_payload() {
         }
         run.app.update();
     }
-    assert!(!crate::auras::has_aura(run.app.world(), actor, 201453), "Meta pacify must expire naturally");
+    assert!(
+        !crate::auras::has_aura(run.app.world(), actor, 201453),
+        "Meta pacify must expire naturally"
+    );
     let spell = literal_rotation::execution::resolve_action(run.app.world(), actor, 473662)
         .expect("native Consume resolution")
         .expect("native Consume known");
