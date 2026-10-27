@@ -104,6 +104,7 @@ register_modules! {
     devourer_void_ray: (1480, "modules/devourer_void_ray.rs"),
     devourer_voidblade: (1480, "modules/devourer_voidblade.rs"),
     devourer_devour: (1480, "modules/devourer_devour.rs"),
+    devourer_entropy: (1480, "modules/devourer_entropy.rs"),
     devourer_fragment_heal: (1480, "modules/devourer_fragment_heal.rs"),
     devourer_immolation: (1481, "modules/devourer_immolation.rs"),
     devourer_metamorphosis: (1483, "modules/devourer_metamorphosis.rs"),
