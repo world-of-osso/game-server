@@ -66,16 +66,13 @@ fn havoc_retreat_returns_during_movable_eye_beam() {
         saw_flight |= controlled;
         if channel && saw_flight && !controlled && pos.x < -15.0 {
             eprintln!(
-                "landed x={} target={:?} target_health={:?} attack={} fixture={} flight={} speed={} can_move={} dt={}",
+                "landed x={} target={:?} target_health={:?} attack={} fixture={} speed={} can_move={} dt={}",
                 pos.x,
                 world.get::<Position>(target),
                 world.get::<shared::components::Health>(target),
                 world.get::<crate::combat::AutoAttack>(actor).is_some(),
                 world
                     .get::<crate::simc_apl_native::FixtureMovement>(actor)
-                    .is_some(),
-                world
-                    .get::<crate::knockback::KnockbackFlight>(actor)
                     .is_some(),
                 super::super::movement::read_speed(world, actor),
                 super::super::movement::can_move(world, actor),
