@@ -349,7 +349,8 @@ fn frost_erw_earns_killing_machine() {
     super::super::engage(&mut run);
     assert!(!auras::has_aura(run.app.world(), run.actor, 51124));
     let actor = run.actor;
-    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 47568, Some(actor), false)
+    let target = run.targets[0];
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 47568, Some(target), false)
         .expect("real Empower Rune Weapon is available");
     assert!(auras::has_aura(run.app.world(), actor, 51124),
         "actual Empower Rune Weapon must grant Killing Machine");
