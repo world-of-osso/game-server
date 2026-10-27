@@ -64,6 +64,7 @@ fn read_actor_facts(world: &World, actor: Entity, target: Entity) -> Result<Assi
         known: known.iter().collect(),
         powers,
         player_auras: aura_ids(world, actor),
+        player_aura_stacks: Some(aura_stacks(world, actor)),
         target_auras: aura_ids(world, target),
         player_health_pct: health_pct(world, actor),
         target_health_pct: health_pct(world, target),
@@ -89,6 +90,21 @@ fn aura_ids(world: &World, unit: Entity) -> BTreeSet<u32> {
         .into_iter()
         .flat_map(|auras| auras.iter().map(|aura| aura.spell_id))
         .collect()
+}
+
+fn aura_stacks(world: &World, unit: Entity) -> std::collections::BTreeMap<u32, u8> {
+    let mut stacks = std::collections::BTreeMap::new();
+    for aura in world
+        .get::<crate::auras::ActiveAuras>(unit)
+        .into_iter()
+        .flat_map(|auras| auras.iter())
+    {
+        stacks
+            .entry(aura.spell_id)
+            .and_modify(|count: &mut u8| *count = (*count).max(aura.stacks))
+            .or_insert(aura.stacks);
+    }
+    stacks
 }
 
 fn health_pct(world: &World, unit: Entity) -> Option<f64> {
