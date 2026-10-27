@@ -72,8 +72,13 @@ fn subtlety_darkness_blades_expiry_amplifies_shadow_finisher_not_poison() {
             source: crate::auras::AuraSource::Cast,
         },
     );
-    run.app
-        .insert_resource(FactorCapture::new(actor, target, 328082, "eviscerate_bonus", 1));
+    run.app.insert_resource(FactorCapture::new(
+        actor,
+        target,
+        328082,
+        "eviscerate_bonus",
+        1,
+    ));
     {
         let mut pools = run
             .app

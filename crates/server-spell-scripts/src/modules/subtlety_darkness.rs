@@ -15,7 +15,10 @@ const SUBTLETY_EFFECTS: u32 = 0b111_1010;
 
 pub(super) fn register(scripts: &mut AuraScripts) {
     let script = scripts.0.entry(BLADES).or_default();
-    assert!(script.on_remove.is_none(), "Shadow Blades removal hook taken");
+    assert!(
+        script.on_remove.is_none(),
+        "Shadow Blades removal hook taken"
+    );
     script.on_remove = Some(grant_darkness);
 }
 

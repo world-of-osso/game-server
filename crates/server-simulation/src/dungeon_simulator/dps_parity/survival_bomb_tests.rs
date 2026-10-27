@@ -35,7 +35,10 @@ fn survival_native_shrapnel_explosion_grants_one_native_focus_buff() {
                 && event.kind == CombatLogKind::AuraApplied
         })
         .count();
-    assert_eq!(applied, 1, "one three-recipient explosion grants one Shrapnel buff");
+    assert_eq!(
+        applied, 1,
+        "one three-recipient explosion grants one Shrapnel buff"
+    );
     assert!(
         events.iter().any(|event| event.source == actor
             && event.target == actor
