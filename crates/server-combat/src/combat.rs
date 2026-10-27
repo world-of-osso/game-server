@@ -675,6 +675,7 @@ pub(crate) struct WhiteImpactReplacement {
 pub(crate) struct AutoAttackParams<'w, 's> {
     units: ParamSet<'w, 's, (AutoAttackers<'w, 's>, AutoAttackTargets<'w, 's>)>,
     traits: Query<'w, 's, &'static crate::class_progression::TraitLoadout>,
+    known_spells: Query<'w, 's, &'static crate::class_progression::KnownSpells>,
     impact_gates: Query<'w, 's, &'static WhiteImpactGate>,
     scaling: Query<'w, 's, ScalingItem<'static>>,
     spirit_wolves: Query<'w, 's, &'static crate::spell_cast::guardian::SpiritWolf>,
@@ -887,12 +888,41 @@ fn auto_attack_unit(
                     .owner_stats
                     .get(summon.owner)
                     .expect("owner-scaled guardian requires native CharacterStats");
+                let lesser_ghoul =
+                    npc.template_id == 237409 && matches!(summon.spell_id, 275430 | 1294026);
                 let power = if demon {
                     owner.spell_power.max(0.0)
                 } else {
-                    owner.total_attack_power(crate::stats::WeaponAttackType::Ranged, modifiers)
+                    let attack_type = if lesser_ghoul {
+                        crate::stats::WeaponAttackType::MainHand
+                    } else {
+                        crate::stats::WeaponAttackType::Ranged
+                    };
+                    owner.total_attack_power(attack_type, modifiers)
                 };
-                Some(power * share)
+                // SimC76f8118 sc_death_knight.cpp3630–3636: the selected
+                // native Unholy Armaments effect5 increases lesser-ghoul AP.
+                let armaments = lesser_ghoul
+                    && params
+                        .known_spells
+                        .get(summon.owner)
+                        .is_ok_and(|known| known.contains(1265971));
+                let multiplier = if armaments {
+                    let spell = params
+                        .spells
+                        .as_ref()
+                        .and_then(|store| store.get(1265971))
+                        .expect("selected Unholy Armaments requires native spell data");
+                    let effect = spell
+                        .effects
+                        .iter()
+                        .find(|effect| effect.index == 4)
+                        .expect("Unholy Armaments requires native effect5");
+                    1.0 + effect.base_points / 100.0
+                } else {
+                    1.0
+                };
+                Some(power * share * multiplier)
             });
     let attacker = Attacker {
         entity: attacker_entity,

@@ -203,3 +203,80 @@ fn devourer_meta_fragment_heal_increments_collapsing_star() {
         "Meta fragments must not add out-of-Meta stacks"
     );
 }
+
+#[test]
+#[ignore = "requires DPS_PARITY_WORLD_DB and DPS_PARITY_OUTPUT with spec1480 exact profile/traits"]
+fn devourer_full_soul_stacks_admit_real_metamorphosis() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare(1480, 1).expect("native Devourer profile");
+    let actor = run.actor;
+    engage(&mut run);
+    assert!(
+        !crate::auras::has_aura(run.app.world(), actor, 1217607),
+        "outside Meta"
+    );
+    crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 1225789, Some(actor), 1);
+    let cap = run
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(actor)
+        .and_then(|auras| {
+            auras
+                .iter()
+                .find(|aura| aura.spell_id == 1225789 && aura.caster == actor)
+        })
+        .expect("native soul stack aura")
+        .max_stacks;
+    assert_eq!(cap, 35, "selected Soul Glutton modifies the native cap");
+    for _ in 1..cap - 1 {
+        crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 1225789, Some(actor), 1);
+    }
+    for _ in 0..20 {
+        if stacks(run.app.world(), actor, 1225789) == cap - 1 {
+            break;
+        }
+        run.app.update();
+    }
+    assert_eq!(
+        stacks(run.app.world(), actor, 1225789),
+        cap - 1,
+        "native stacks prepared below effective cap"
+    );
+    assert!(
+        !crate::auras::has_aura(run.app.world(), actor, 1213809),
+        "Meta not ready before cap"
+    );
+    consume_fragment_and_observe_heal(&mut run);
+    assert_eq!(
+        stacks(run.app.world(), actor, 1225789),
+        cap,
+        "real fragment heal reaches native cap"
+    );
+    for _ in 0..20 {
+        if crate::auras::has_aura(run.app.world(), actor, 1213809) {
+            break;
+        }
+        run.app.update();
+    }
+    assert!(
+        crate::auras::has_aura(run.app.world(), actor, 1213809),
+        "full native soul stacks grant Meta admission aura"
+    );
+    crate::spell_cast::cast_for_player_with_target(
+        run.app.world_mut(),
+        actor,
+        1217605,
+        Some(actor),
+    )
+    .expect("full stacks admit ordinary Meta cast");
+    for _ in 0..20 {
+        if crate::auras::has_aura(run.app.world(), actor, 1217607) {
+            break;
+        }
+        run.app.update();
+    }
+    assert!(
+        crate::auras::has_aura(run.app.world(), actor, 1217607),
+        "ordinary Meta starts native aura"
+    );
+}

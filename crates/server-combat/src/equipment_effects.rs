@@ -366,6 +366,64 @@ mod tests {
     }
 
     #[test]
+    fn item_instance_two_ring_enchants_keep_each_passive_aura() {
+        // TC a352b1fa Unit.cpp3411–3412 skips merging passive (multi-slot) auras;
+        // SpellAuras.cpp1650–1652 rejects a same-caster passive only without a cast
+        // item. SimC76f8118 applies each ring's Eyes of the Eagle1236701 separately.
+        let mut h = native_harness();
+        let rings = [
+            (EquipmentSlot::Finger1, 158366),
+            (EquipmentSlot::Finger2, 251136),
+        ];
+        h.app.world_mut().entity_mut(h.caster).insert((
+            EquippedItems {
+                items: rings.iter().map(|&(slot, id)| (slot, Retail, id)).collect(),
+            },
+            EquippedItemModifiers {
+                items: rings
+                    .iter()
+                    .map(|&(slot, _)| {
+                        let enchanted = ItemInstanceModifiers {
+                            enchant: 7967,
+                            ..Default::default()
+                        };
+                        (slot, enchanted)
+                    })
+                    .collect(),
+                ..Default::default()
+            },
+        ));
+        h.advance(3);
+        let mut sources: Vec<_> = h
+            .app
+            .world()
+            .get::<ActiveAuras>(h.caster)
+            .unwrap()
+            .iter()
+            .filter(|aura| aura.spell_id == 1236701)
+            .map(|aura| aura.source)
+            .collect();
+        sources.sort_by_key(|source| format!("{source:?}"));
+        assert_eq!(
+            sources,
+            vec![
+                AuraSource::Equipment(EquipmentSlot::Finger1),
+                AuraSource::Equipment(EquipmentSlot::Finger2)
+            ]
+        );
+        let multiplier = h
+            .app
+            .world()
+            .get::<crate::auras::AuraStatMods>(h.caster)
+            .unwrap()
+            .critical_damage(4);
+        assert!(
+            (multiplier - 1.02 * 1.02).abs() < 1e-4,
+            "both native2% enchants multiply crit damage: {multiplier}"
+        );
+    }
+
+    #[test]
     fn item_instance_equipment_base_spell_is_removed_on_unequip() {
         let mut h = native_harness();
         // Native268209 -> ItemEffect232799 -> equip spell1291718.

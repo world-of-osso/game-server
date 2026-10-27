@@ -14,7 +14,28 @@ fn hit_hook(spell: u32) -> Option<HitHook> {
     match spell {
         1266301 => Some(on_fragment_heal),
         1227702 => Some(on_collapsing_star_stack),
+        1225789 => Some(on_meta_stack),
         _ => None,
+    }
+}
+
+fn on_meta_stack(world: &mut World, caster: Entity, target: Entity, depth: u8) {
+    if caster != target || world.get::<ActiveSpec>(caster).map(|spec| spec.0) != Some(1480) {
+        return;
+    }
+    let at_max = world
+        .get::<combat::auras::ActiveAuras>(caster)
+        .is_some_and(|auras| {
+            auras.iter().any(|aura| {
+                aura.spell_id == 1225789
+                    && aura.caster == caster
+                    && aura.max_stacks > 0
+                    && aura.stacks == aura.max_stacks
+            })
+        });
+    // SimC76f8118 sc_demon_hunter.cpp5036 admits Meta at the modified stack cap.
+    if at_max && !spell_cast::try_cast_triggered(world, caster, 1213809, Some(caster), depth + 1) {
+        warn!(?caster, "native Meta ready aura 1213809 was refused");
     }
 }
 
