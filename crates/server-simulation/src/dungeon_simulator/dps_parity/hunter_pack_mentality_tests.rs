@@ -146,7 +146,6 @@ fn native_bm_pack_mentality_increases_real_kill_command_damage() {
         let amount = &amounts[index]["factors"];
         result["raw_amount"].as_f64().unwrap()
             / amount["ap_term"].as_f64().unwrap()
-            / result["native_done_product"].as_f64().unwrap()
             / result["target_product"].as_f64().unwrap()
     };
     let actual = normalized(1) / normalized(0);
