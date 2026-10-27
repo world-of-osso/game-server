@@ -273,6 +273,242 @@ fn demonology_guardian_fel_firebolt_inherits_owner_cast_haste() {
     );
 }
 
+#[test]
+#[ignore = "requires private266 inputs; native owner passive modifies Imp Energy cost"]
+fn demonology_guardian_owner_passive_reduces_fel_firebolt_cost() {
+    let mut run = prepare_literal(266, 1).unwrap();
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, 334591));
+    let imp = summon_native_guardian(&mut run, 104317);
+    crate::spell_cast::creature_cast(
+        run.app.world_mut(),
+        imp,
+        104318,
+        Some(run.targets[0]),
+        false,
+    )
+    .expect("native Fel Firebolt must cast with its real Energy pool");
+    for _ in 0..100 {
+        run.app.update();
+        if run
+            .app
+            .world()
+            .get::<shared::casting::CastState>(imp)
+            .is_none()
+        {
+            break;
+        }
+    }
+    let pool = run
+        .app
+        .world()
+        .get::<crate::spell_cast::powers::PowerPools>(imp)
+        .unwrap()
+        .get(shared::components::PowerType::Energy)
+        .unwrap();
+    // SimC76f8118 sc_warlock_init.cpp34 + native334591 effect0:
+    // native20 Energy discounted20% consumes16 from the actual100 pool.
+    assert_eq!(
+        pool.current, 84.0,
+        "selected native owner passive must modify the Imp's cost"
+    );
+}
+
+#[test]
+#[ignore = "requires private266 inputs; native Imp-erator owner passive critical chance"]
+fn demonology_guardian_owner_passive_increases_fel_firebolt_crit() {
+    use crate::spell_cast::effects::factor_capture::FactorCapture;
+    let mut run = prepare_literal(266, 1).unwrap();
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, 416230));
+    let expected = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(run.actor)
+        .unwrap()
+        .crit_pct
+        + 15.0;
+    let imp = summon_native_guardian(&mut run, 104317);
+    run.app.world_mut().insert_resource(FactorCapture::new(
+        imp,
+        run.targets[0],
+        104318,
+        "fel_firebolt",
+        1,
+    ));
+    crate::spell_cast::creature_cast(
+        run.app.world_mut(),
+        imp,
+        104318,
+        Some(run.targets[0]),
+        false,
+    )
+    .expect("native Fel Firebolt must cast before sampling its critical chance");
+    for _ in 0..100 {
+        run.app.update();
+    }
+    let capture = run.app.world().resource::<FactorCapture>().export();
+    let event = capture["events"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|event| event["event"] == "result" && event["spell_id"] == 104318)
+        .expect("actual Fel Firebolt must damage the native dummy");
+    let chance = event["factors"]["crit"].as_f64().unwrap() * 100.0;
+    // Pinned Fel Firebolt action-effects parse native416230 effect0's15pp;
+    // this is additive to the separately qualified inherited owner crit.
+    assert!(
+        (chance - f64::from(expected)).abs() < 0.01,
+        "native Imp-erator must add15pp: observed{chance}, expected{expected}"
+    );
+}
+
+#[test]
+#[ignore = "requires private266 inputs; actual Implosion retirement and native explosion"]
+fn demonology_implosion_consumes_actual_imps_and_deals_native_damage() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(266, 1).unwrap();
+    for _ in 0..6 {
+        summon_native_guardian(&mut run, 104317);
+    }
+    let imps: Vec<_> = run
+        .app
+        .world_mut()
+        .query::<(Entity, &crate::spell_cast::summon::SummonedCreature)>()
+        .iter(run.app.world())
+        .filter(|(_, summon)| summon.owner == run.actor && summon.spell_id == 104317)
+        .map(|(entity, _)| entity)
+        .collect();
+    assert_eq!(
+        imps.len(),
+        6,
+        "native summon roots must create actual Imp actors"
+    );
+    engage(&mut run);
+    // SimC76f8118 sc_warlock_actions.cpp2980–3170 launches actual Imps,
+    // emits native196278 and dismisses the participating actor after impact.
+    crate::spell_cast::creature_cast(
+        run.app.world_mut(),
+        run.actor,
+        196277,
+        Some(run.targets[0]),
+        false,
+    )
+    .expect("selected native Implosion must be admitted with real owned Imps");
+    for _ in 0..100 {
+        run.app.update();
+    }
+    assert!(
+        imps.iter()
+            .any(|imp| run.app.world().get_entity(*imp).is_err()),
+        "actual selected Wild Imps must retire after their Implosion impacts"
+    );
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    assert!(
+        events.iter().any(|event| {
+            event.source == Some(run.actor.to_bits())
+                && event.spell_id == Some(196278)
+                && event.kind == shared::protocol::CombatLogKind::Damage
+                && event.amount > 0
+        }),
+        "actual Implosion must deal native explosion damage to its selected enemy"
+    );
+}
+
+#[test]
+#[ignore = "requires private266 inputs; actual Imp Lord native attack dispatch"]
+fn demonology_imp_lord_executes_real_greater_felbolts() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(266, 1).unwrap();
+    // Exact profile starts at zero shards; earn the native summon cost.
+    crate::spell_cast::creature_cast(
+        run.app.world_mut(),
+        run.actor,
+        686,
+        Some(run.targets[0]),
+        false,
+    )
+    .expect("ordinary Shadow Bolt must fund the summon");
+    preparation::finish_pending_setup(&mut run).unwrap();
+    engage(&mut run);
+    run.app
+        .world_mut()
+        .entity_mut(run.actor)
+        .insert(crate::networking::CombatTarget(Some(run.targets[0])));
+    crate::spell_cast::creature_cast(
+        run.app.world_mut(),
+        run.actor,
+        1276452,
+        Some(run.targets[0]),
+        false,
+    )
+    .expect("selected ordinary Grimoire must summon native Imp Lord");
+    preparation::finish_pending_setup(&mut run).unwrap();
+    let lord = run
+        .app
+        .world_mut()
+        .query::<(
+            Entity,
+            &crate::spell_cast::summon::SummonedCreature,
+            &shared::components::Npc,
+        )>()
+        .iter(run.app.world())
+        .find(|(_, summon, npc)| summon.owner == run.actor && npc.template_id == 258584)
+        .map(|(unit, _, _)| unit)
+        .expect("ordinary Grimoire must create actual258584");
+    let spell = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(1277116)
+        .unwrap()
+        .clone();
+    let admission = crate::spell_cast::read_native_cast_start(
+        run.app.world_mut(),
+        lord,
+        &spell,
+        run.targets[0],
+    );
+    let note = format!(
+        "admission={admission:?} health={:?} powers={:?} position={:?} target={:?} summon={:?}",
+        run.app.world().get::<shared::components::Health>(lord),
+        run.app
+            .world()
+            .get::<crate::spell_cast::powers::PowerPools>(lord),
+        run.app.world().get::<shared::components::Position>(lord),
+        run.app
+            .world()
+            .get::<crate::networking::CombatTarget>(run.actor),
+        run.app
+            .world()
+            .get::<crate::spell_cast::summon::SummonedCreature>(lord)
+    );
+    for _ in 0..200 {
+        run.app.update();
+    }
+    let hits = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .iter()
+        .filter(|event| {
+            event.source == Some(lord.to_bits())
+                && event.spell_id == Some(1277116)
+                && event.kind == shared::protocol::CombatLogKind::Damage
+                && event.amount > 0
+        })
+        .count();
+    // SimC76f8118 pets.cpp1672–1705: real Imp Lord repeats Greater Felbolt
+    // from200 initial Energy, paying native40 while retaining the125 gate.
+    assert!(
+        hits >= 2,
+        "actual Imp Lord must launch real Greater Felbolts: hits{hits}; {note}"
+    );
+}
+
 fn summon_native_guardian(run: &mut Run, root: u32) -> Entity {
     crate::spell_cast::creature_cast(run.app.world_mut(), run.actor, root, Some(run.actor), true)
         .expect("native triggered guardian summon must be admitted");
