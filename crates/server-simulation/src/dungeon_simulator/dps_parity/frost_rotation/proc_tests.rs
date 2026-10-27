@@ -488,7 +488,7 @@ fn diag_frost_factors_and_resource_spending() {
 
     let output = std::path::PathBuf::from(std::env::var("DPS_PARITY_OUTPUT").unwrap());
     let mut totals = Vec::new();
-    for seed in [70448, 1, 2, 3, 4, 5, 6, 7, 8, 9] {
+    for seed in [70448, 1, 2] {
         let _seed = crate::random::seed_scope(seed);
         let mut run = super::super::prepare_measurement(251, 1).unwrap();
         run.app.insert_resource(ObservedPowerChanges::default());
@@ -512,6 +512,14 @@ fn diag_frost_factors_and_resource_spending() {
         assert!((seconds - 300.0).abs() < 0.001);
         let end_runes = run.app.world().get::<crate::spell_cast::runes::Runes>(run.actor).unwrap().ready();
         let combat = super::super::report::combat(run.app.world(), &run.damage_targets, seconds);
+        let observed = &run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
+        let killing_machine_events: Vec<_> = observed.iter().filter(|event| {
+            event.source == Some(run.actor.to_bits()) && event.spell_id == Some(51124)
+        }).map(|event| serde_json::json!({
+            "kind": format!("{:?}", event.kind),
+            "amount": event.amount,
+            "timestamp_ms": event.timestamp_unix_ms,
+        })).collect();
         let changes = &run.app.world().resource::<ObservedPowerChanges>().0;
         let spent = |power| {
             -changes
@@ -537,6 +545,7 @@ fn diag_frost_factors_and_resource_spending() {
             "regenerated_runes": runes + end_runes as f32 - start_runes as f32 - rune_refills,
             "runic_power_raw": runic_power_raw,
             "energize": combat["energize"],
+            "killing_machine_events": killing_machine_events,
         }));
         if seed == 70448 || seed == 1 {
             let capture = run.app.world().resource::<FactorCapture>().export();
