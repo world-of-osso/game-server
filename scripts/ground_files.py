@@ -123,7 +123,7 @@ BUILD_PRODUCTS = {"1.60.1.70205": "wow_classic_beta"}
 
 def read_hosted_continents():
     """Read the same literal registry used by runtime admission and startup spawning."""
-    registry = Path(__file__).resolve().parents[1] / "crates/server/src/maps/instances.rs"
+    registry = Path(__file__).resolve().parents[1] / "crates/server-map-rules/src/maps/instances.rs"
     source = registry.read_text()
     declaration = re.search(
         r"pub const HOSTED_CONTINENTS:\s*\[u32;\s*\d+\]\s*=\s*\[([\d,\s]+)\];",
