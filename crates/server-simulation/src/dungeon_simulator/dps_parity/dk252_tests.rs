@@ -78,6 +78,44 @@ fn dk252_army_summons_all_four_real_riders() {
 }
 
 #[test]
+#[ignore = "requires private native252 Rider templates/profile and player actor"]
+fn dk252_army_riders_melee_and_expire_at_selected_duration() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 1).unwrap();
+    engage(&mut run);
+    let started = crate::auras::aura_now(run.app.world());
+    let duration = crate::spell_cast::scripts::script_effect_value(run.app.world(), run.actor, 444040, 1) as f64 / 1000.0;
+    literal_rotation::execution::execute(
+        run.app.world_mut(), run.actor,
+        literal_rotation::execution::Execution::Spell(42650, run.actor, None),
+    ).unwrap();
+    for _ in 0..100 { run.app.update(); }
+    let riders: Vec<_> = {
+        let world = run.app.world_mut();
+        world.query::<(Entity, &crate::spell_cast::summon::SummonedCreature)>()
+            .iter(world).filter_map(|(entity, summon)|
+                (summon.owner == run.actor && [444248, 444251, 444252, 444254].contains(&summon.spell_id))
+                    .then_some((entity, summon.expires_at))
+            ).collect()
+    };
+    assert_eq!(riders.len(), 4, "the actual four Horsemen must be present");
+    for (_, expiry) in &riders {
+        assert!((expiry.unwrap() - started - duration).abs() < 0.2,
+            "Horseman lifetime must use selected Apocalypse Now native duration");
+    }
+    let events = &run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
+    for (rider, _) in &riders {
+        assert!(events.iter().any(|event| event.source == Some(rider.to_bits())
+            && event.target == Some(run.targets[0].to_bits()) && event.spell_id.is_none()
+            && event.kind == CombatLogKind::Damage && event.amount > 0),
+            "each actual Horseman must melee the selected target");
+    }
+    while crate::auras::aura_now(run.app.world()) < started + duration + 1.0 { run.app.update(); }
+    assert!(riders.iter().all(|(rider, _)| run.app.world().get_entity(*rider).is_err()),
+        "Horsemen must expire after their selected native duration");
+}
+
+#[test]
 #[ignore = "requires private native252 profile/traits and player actor"]
 fn dk252_real_lesser_ghoul_summon_reaches_and_melees() {
     let _seed = crate::random::seed_scope(70448);
