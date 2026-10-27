@@ -99,6 +99,7 @@ mod devourer_reap_boundary_tests;
 mod devourer_focused_ray_tests;
 #[cfg(test)]
 mod devourer_drain_tests;
+mod devourer_ray_cost_tests;
 #[cfg(test)]
 mod devourer_tests;
 mod dot_duration_tests;
