@@ -85,5 +85,28 @@ class ForeignFailureTests(unittest.TestCase):
         self.assertFalse(train.foreign_panics_only({"commit": entry}, [foreign, own]))
         self.assertFalse(train.foreign_panics_only({"commit": entry}, ["error: test failed, no panic"]))
 
+
+class RequeueTests(unittest.TestCase):
+    def test_deferred_check_and_test_entries_return_to_the_queue(self):
+        # 2026-10-27: a helper named like the queue-reload requeue() was shadowed by it and
+        # crash-looped the service on the first deferred entry.
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "running").mkdir()
+            (root / "queue").mkdir()
+            for name in ("check", "probe", "landed"):
+                (root / "running" / f"{name}.json").write_text("{}")
+            check = {"id": "check", "defer": True, "reason": "conflicts with queued entry"}
+            probe = {"id": "probe", "defer": True, "reason": "foreign panic"}
+            landed = {"id": "landed"}
+            with patch.object(train, "RUNNING", root / "running"), \
+                    patch.object(train, "QUEUE", root / "queue"), \
+                    patch.object(train, "write_results"), \
+                    patch.object(train, "build_checked", return_value=([probe, landed], [check])), \
+                    patch.object(train, "run_tests", return_value=([landed], [probe])):
+                passed, rejected = train.build_and_test([check, probe, landed], root / "cycle.log")
+            self.assertEqual((passed, rejected), ([landed], []))
+            self.assertEqual(sorted(p.name for p in (root / "queue").iterdir()), ["check.json", "probe.json"])
+
 if __name__ == "__main__":
     unittest.main()

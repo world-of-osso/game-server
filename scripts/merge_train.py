@@ -815,18 +815,18 @@ def build_and_test(entries, log):
     for entry in rejected:
         entry["status"] = "rejected"
     write_results([e for e in rejected if not e["id"].endswith("-red")])
-    requeue(deferred)
+    requeue_entries(deferred)
     passed, failed = run_tests(tree, log)
     deferred = [e for e in failed if e.pop("defer", False)]
     failed = [e for e in failed if e not in deferred]
-    requeue(deferred)
+    requeue_entries(deferred)
     for entry in failed:
         entry["status"] = "rejected"
     write_results([e for e in failed if not e["id"].endswith("-red")])
     return passed, rejected + failed
 
 
-def requeue(entries):
+def requeue_entries(entries):
     """Back to the queue for the next cycle; a RED twin's entry is requeued by run_probes."""
     for entry in entries:
         entry.pop("reason", None)
