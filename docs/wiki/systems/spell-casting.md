@@ -1331,3 +1331,9 @@ Native RED `a76e7960c2` observes next-frame0.05s Embers activation despite the u
 The first landing was reverted at6445001a7 after native267 measured764 Overfiend hits and149466 DPS. Actual literal test `293907b5ae` and isolated `a9767cced9` both reproduce51 real actors from2 Soul Fire and0 Rift in60s. Native Avatar1245089's broad proc hint fires on unrelated cast events. The leaf now owns that proc and creates one native Overfiend after actual Soul Fire execution; the separate SimC Rift-deck producer is not yet qualified. Native actor-bound GREEN and fresh measurement are required before relanding.
 
 Native `02e475cbb6` reaches actual217429 with no landed434589. Recovered `adcc78dbcb` passes live-crit and mastery controls but fails missing owner457578; summon dispatch bypasses its per-unit wrapper. Native repeated-bolt/coefficient/funding/expiry and retained267 controls qualify the actual callback. GREEN and numerical measurements remain pending.
+
+## Guardian periodic haste — 2026-10-26
+
+[Contract](../../specs/dps-parity.md#guardian-periodic-haste). Native19483 has attr5bit13 (spell haste affects periodic). Actual Infernal `a4a1e96579` RED observes real20153 intervals1.85s vs owner-haste expectation1.68373s: aura scheduling read the guardian's own CharacterStats instead of the same actual owner already used for guardian cast speed. SimC76f8118 `pet.cpp217–228` inherits owner spell speed; `buff.cpp752,1945–1954` applies it for a hasted native periodic aura.
+
+The generic periodic haste lookup now reuses `guardian::stat_owner` before reading stats, leaving the existing flag check and guardian-owned period modifiers intact; ordinary units and unhasted auras remain unchanged. Native actual-tick GREEN and 265 Darkglare/266 guardians/253 pets/generic guardian gates and measurements are pending.
