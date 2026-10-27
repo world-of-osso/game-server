@@ -144,6 +144,7 @@ pub type DamageAmountHook = fn(&World, Entity, Entity, f32) -> f32;
 pub type DamageAmountLookup = fn(u32) -> Option<DamageAmountHook>;
 pub type AutoRepeatHook = fn(&mut World, Entity, Entity);
 pub type CriticalChanceHook = fn(&World, Entity, Entity, u32) -> Option<f32>;
+pub type ActualCriticalChanceBonusHook = fn(&World, Entity, Entity, &SpellInfo) -> f32;
 pub type AuraRegistrationHook = fn(&mut crate::auras::scripts::AuraScripts);
 pub type LaunchDelayLookup = fn(u32) -> Option<f32>;
 pub type DotMasteryMultiplierHook = fn(&World, Entity, Entity, u32) -> f32;
@@ -288,6 +289,7 @@ pub enum SpellScriptHook {
     ExpectedDamageMultiplier(TargetDamageMultiplierHook),
     AutoRepeat(AutoRepeatHook),
     CriticalChance(CriticalChanceHook),
+    ActualCriticalChanceBonus(ActualCriticalChanceBonusHook),
     EarlyAuraRegistration(AuraRegistrationHook),
     ConsumedEffectValues(&'static [(u32, u8)]),
     /// Explicit source-script override of synchronous native stacking.
@@ -876,6 +878,25 @@ pub fn auto_repeat(world: &mut World, caster: Entity, target: Entity) {
             run(world, caster, target);
         }
     }
+}
+
+/// Sample additive critical-chance bonuses for an actual damage impact, not forecasts.
+pub fn actual_critical_chance_bonus(
+    world: &World,
+    caster: Entity,
+    target: Entity,
+    spell: &SpellInfo,
+) -> f32 {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .filter_map(|hook| match hook {
+            SpellScriptHook::ActualCriticalChanceBonus(run) => {
+                Some(run(world, caster, target, spell))
+            }
+            _ => None,
+        })
+        .sum()
 }
 
 pub fn critical_chance(world: &World, caster: Entity, target: Entity, spell: u32) -> Option<f32> {
