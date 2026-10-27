@@ -273,9 +273,9 @@ fn frost_km_consumption_extends_active_breath() {
         .find(|effect| effect.index == 2)
         .unwrap()
         .base_points;
-    let target = run.targets[0];
-    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 49020, Some(target), false)
-        .unwrap();
+    // Setup spent all six starting runes. Wait for ordinary rune regeneration;
+    // Frozen Dominion's real Winter must not require a lucky Empowerment roll.
+    cast(&mut run, 49020);
     for _ in 0..3 {
         run.app.update();
     }
@@ -320,6 +320,69 @@ fn frost_paid_runic_power_restores_native_runes() {
             && event.amount > event.overflow),
         "paid RP must earn effective Runic Empowerment rune restoration, not a synthetic rotation grant"
     );
+}
+
+#[test]
+#[ignore = "native251 selected Frozen Dominion starts actual Remorseless Winter from Pillar"]
+fn frost_pillar_starts_frozen_dominion_winter() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::protocol::CombatLogKind;
+    let _seed = crate::random::seed_scope(251);
+    let mut run = super::super::prepare_literal(251, 3).unwrap();
+    super::super::engage(&mut run);
+    assert!(auras::has_aura(run.app.world(), run.actor, 377226));
+    let actor = run.actor;
+    super::super::enhancement_generation_tests::cast(&mut run, 51271, actor);
+    assert!(auras::has_aura(run.app.world(), actor, 1233152), "ordinary Pillar with selected Frozen Dominion starts its native Winter aura");
+    for _ in 0..80 {
+        run.app.update();
+    }
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0;
+    for target in &run.targets {
+        assert!(events.iter().any(|event| event.spell_id == Some(196771) && event.target == Some(target.to_bits()) && event.kind == CombatLogKind::Damage && event.amount > 0), "native Winter must pulse damage onto each in-range enemy{target:?}");
+    }
+}
+
+#[test]
+#[ignore = "native251 earned Rime damage must accumulate Cryogenic Chamber and real Winter releases it"]
+fn frost_cryogenic_chamber_accumulates_earned_rime_hits_and_winter_releases() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::protocol::CombatLogKind;
+    let _seed = crate::random::seed_scope(251);
+    let mut run = super::super::prepare_literal(251, 3).unwrap();
+    super::super::engage(&mut run);
+    assert!(auras::has_aura(run.app.world(), run.actor, 456237));
+    earn_rime(&mut run);
+    cast(&mut run, 49184);
+    let chamber = run
+        .app
+        .world()
+        .get::<ActiveAuras>(run.actor)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 456370)
+        .expect("each actual earned-Rime Howling Blast hit must build native Cryogenic Chamber");
+    assert_eq!(chamber.stacks, 3, "one stack per real in-range HB recipient");
+    let actor = run.actor;
+    super::super::enhancement_generation_tests::cast(&mut run, 51271, actor);
+    for _ in 0..3 {
+        run.app.update();
+    }
+    assert!(!auras::has_aura(run.app.world(), actor, 456370));
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0;
+    for target in &run.targets {
+        let explosions = events
+            .iter()
+            .filter(|event| {
+                event.source == Some(actor.to_bits())
+                    && event.target == Some(target.to_bits())
+                    && event.spell_id == Some(456371)
+                    && event.kind == CombatLogKind::Damage
+                    && event.amount > 0
+            })
+            .count();
+        assert_eq!(explosions, 1, "one stored-damage explosion per actual enemy");
+    }
 }
 
 fn erw_full_recharge(run: &Run) -> f64 {
