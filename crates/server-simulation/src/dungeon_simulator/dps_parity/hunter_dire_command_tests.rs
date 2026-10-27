@@ -12,6 +12,10 @@ fn native_hunter_dire_command_actual_kills_spawn_authentic_beasts() {
         crate::spell_cast::scripts::script_effect_value(run.app.world(), run.actor, 385810, 1)
             as f32
             / 100.0;
+    let pet_damage =
+        crate::spell_cast::scripts::script_effect_value(run.app.world(), run.actor, 137015, 5)
+            as f32
+            / 100.0;
     let probability = f64::from(crate::spell_cast::scripts::script_effect_value(
         run.app.world(),
         run.actor,
@@ -142,13 +146,19 @@ fn native_hunter_dire_command_actual_kills_spawn_authentic_beasts() {
             inherited_ap_hits.push((event.amount, floor, ap));
         }
         checked_events = events.len();
-        let stats = world.get::<crate::stats::CharacterStats>(run.actor).unwrap();
+        let stats = world
+            .get::<crate::stats::CharacterStats>(run.actor)
+            .unwrap();
         previous_ap = stats.total_attack_power(
             crate::stats::WeaponAttackType::Ranged,
             world.get::<crate::stats::StatModifiers>(run.actor),
         );
         previous_mods.clear();
-        for unit in query.iter(world).map(|(pet, _, _)| pet).chain([run.actor, run.targets[0]]) {
+        for unit in query
+            .iter(world)
+            .map(|(pet, _, _)| pet)
+            .chain([run.actor, run.targets[0]])
+        {
             if let Some(mods) = world.get::<crate::auras::AuraStatMods>(unit) {
                 previous_mods.insert(unit, mods.clone());
             }
@@ -175,6 +185,15 @@ fn native_hunter_dire_command_actual_kills_spawn_authentic_beasts() {
             .iter()
             .all(|(hit, floor, _)| *hit as f32 >= (*floor * (1.0 + dire_frenzy)).floor()),
         "Dire Beast swings omit selected Dire Frenzy: {inherited_ap_hits:?}, bonus={dire_frenzy}"
+    );
+    // SimC76f8118 hunter.cpp1854–1856,1869,1880–1882: every real
+    // DireCritter also receives Pet Damage1284992, modified by selected BM.
+    assert!(pet_damage > 0.0);
+    assert!(
+        inherited_ap_hits.iter().all(|(hit, floor, _)| {
+            *hit as f32 >= (*floor * (1.0 + dire_frenzy) * (1.0 + pet_damage)).floor()
+        }),
+        "actual Dire Beast swings must include BM Pet Damage: bonus={pet_damage}, hits={inherited_ap_hits:?}"
     );
     let commands = run
         .app
