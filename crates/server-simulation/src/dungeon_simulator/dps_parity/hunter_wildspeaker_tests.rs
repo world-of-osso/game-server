@@ -97,6 +97,7 @@ fn native_wildspeaker_dire_beasts_inherit_owner_crit() {
     let mut seen_combat_events = 0;
     let mut beasts = std::collections::BTreeSet::new();
     let mut chances = Vec::new();
+    let mut printed = false;
     engage(&mut run);
     let started_at = run.app.world().resource::<Time>().elapsed();
     install_fixture_lifetimes(&mut run, started_at);
@@ -142,6 +143,10 @@ fn native_wildspeaker_dire_beasts_inherit_owner_crit() {
             for event in &events[seen..] {
                 if event["event"] != "result" || event["spell_id"] != 1232922 {
                     continue;
+                }
+                if !printed {
+                    eprintln!("WILDSPEAKER_RESULT {event}");
+                    printed = true;
                 }
                 let owner_crit = world
                     .get::<crate::stats::CharacterStats>(run.actor)
