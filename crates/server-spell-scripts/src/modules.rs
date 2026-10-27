@@ -96,6 +96,7 @@ register_modules! {
     destruction_roaring_blaze: (2678, "modules/destruction_roaring_blaze.rs"),
     devastation: (10, "modules/devastation.rs"),
     devourer_void_ray: (1480, "modules/devourer_void_ray.rs"),
+    devourer_devour: (1480, "modules/devourer_devour.rs"),
     devourer_immolation: (1481, "modules/devourer_immolation.rs"),
     devourer_metamorphosis: (1483, "modules/devourer_metamorphosis.rs"),
     echo_policies: (1001, "modules/echo_policies.rs"),
