@@ -185,18 +185,43 @@ fn dps_parity_pet_melee_inherits_live_owner_versatility() {
     let (mut run, pet) = super::power_tests::prepare_hunter_and_pet();
     let before = normalized_pet_swings(&mut run, pet, 4);
     let owner = run.actor;
-    let initial = run.app.world().get::<crate::stats::CharacterStats>(owner).unwrap().versatility_pct;
-    crate::spell_cast::cast_triggered(run.app.world_mut(), owner, OWNER_VERSATILITY, Some(owner), 1);
-    for _ in 0..4 { run.app.update(); }
-    let after_vers = run.app.world().get::<crate::stats::CharacterStats>(owner).unwrap().versatility_pct;
+    let initial = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(owner)
+        .unwrap()
+        .versatility_pct;
+    crate::spell_cast::cast_triggered(
+        run.app.world_mut(),
+        owner,
+        OWNER_VERSATILITY,
+        Some(owner),
+        1,
+    );
+    for _ in 0..4 {
+        run.app.update();
+    }
+    let after_vers = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(owner)
+        .unwrap()
+        .versatility_pct;
     assert!((after_vers - initial - 20.0).abs() < 0.01);
     let after = normalized_pet_swings(&mut run, pet, 4);
-    assert!(crate::auras::has_aura(run.app.world(), owner, OWNER_VERSATILITY));
+    assert!(crate::auras::has_aura(
+        run.app.world(),
+        owner,
+        OWNER_VERSATILITY
+    ));
     let mean = |hits: &[f32]| hits.iter().sum::<f32>() / hits.len() as f32;
     let expected_ratio = (1.0 + after_vers / 100.0) / (1.0 + initial / 100.0);
     let observed_ratio = mean(&after) / mean(&before);
     // SimC76f8118 pet.hpp138–139: real pet melee uses the live owner's versatility.
-    assert!((observed_ratio - expected_ratio).abs() < 0.03, "before={before:?} after={after:?} ratio={observed_ratio} expected={expected_ratio}");
+    assert!(
+        (observed_ratio - expected_ratio).abs() < 0.03,
+        "before={before:?} after={after:?} ratio={observed_ratio} expected={expected_ratio}"
+    );
 }
 
 #[test]
