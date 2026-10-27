@@ -232,6 +232,7 @@ register_modules! {
     reap_the_storm: (710, "modules/reap_the_storm.rs"),
     resource_bridges: (1000, "modules/resource_bridges.rs"),
     resource_values: (350, "modules/resource_values.rs"),
+    unholy_infected_claws: (2532, "modules/unholy_infected_claws.rs"),
     ret_aurora: (1000, "modules/ret_aurora.rs"),
     ret_damage: (1000, "modules/ret_damage.rs"),
     ret_empyrean: (1000, "modules/ret_empyrean.rs"),
