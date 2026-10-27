@@ -103,12 +103,17 @@ fn havoc_final_breath_adds_scaled_tick_on_completed_beam() {
         assert!(known.contains(1266500));
         let spells = known
             .iter()
-            .filter(|spell| selected || *spell != 1266500)
+            .filter(|spell| *spell != 428492 && (selected || *spell != 1266500))
             .collect();
         run.app
             .world_mut()
             .entity_mut(actor)
             .insert(crate::class_progression::KnownSpells::fixture(spells));
+        run.app
+            .world_mut()
+            .get_mut::<crate::stats::CharacterStats>(actor)
+            .unwrap()
+            .crit_pct = -1000.0;
         havoc_tests::earn_havoc_fury(&mut run, 30.0);
         cast(&mut run, 198013, false);
         preparation::finish_pending_setup(&mut run).unwrap();
@@ -118,6 +123,13 @@ fn havoc_final_breath_adds_scaled_tick_on_completed_beam() {
             if selected { 13 } else { 12 },
             "Final Breath must add exactly one real Eye Beam tick: {hits:?}"
         );
+        if selected {
+            let expected = hits[11].amount as f32 * 3.0;
+            assert!(
+                (hits[12].amount as f32 / expected - 1.0).abs() < 0.03,
+                "Final Breath must use native 300%: {hits:?}"
+            );
+        }
     }
 }
 
