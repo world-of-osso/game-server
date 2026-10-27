@@ -534,6 +534,10 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 - The literal267 controller commands its actual configured main pet against the current encounter primary through native pet orders (SimC76f8118 `pet.cpp67–68,149`). Preserve UNIT_PET identity, saved reaction stance, native attacks, costs and lifetime; do not substitute a guardian or manufacture pet damage.
 
+### Destruction Fiendish Cruelty
+
+- Actual critical Incinerate29722 (including selected secondary impacts), Chaos Bolt116858, Conflagrate17962 and Infernal Bolt434506 attempt selected Fiendish Cruelty1245633 using the native effect0 chance and one shared accumulated PRD stream. Successful attempts earn native1245664, whose existing aura-state exemption and native single charge permit and pay for actual Shadowburn17877 above its ordinary health threshold. Consume the earned charge on actual Shadowburn execution; do not roll on unrelated hits, grant shards or tune the native chance (SimC76f8118 actions433–439,3860,3936,4293,4446,4795–4800,4832–4834,5209; init1323–1326).
+
 ### Destruction Incinerate recipients
 
 - Actual Incinerate29722 damages its selected primary once. Without Fire and Brimstone196408 and an owned Havoc80240, it deals no secondary damage. Selected Fire and Brimstone admits every native area secondary at effect0's native25%; it excludes primary and the Havoc-marked recipient. One actual live owned Havoc recipient, even outside the FnB area, receives one impact with Havoc effect0's native50% plus selected FnB25%. Preserve native hit/crit/damage pipeline and snapshot the actual recipient multipliers at cast (SimC76f8118 actions3852–3900,3952–4002).

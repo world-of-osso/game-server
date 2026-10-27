@@ -1339,3 +1339,9 @@ Native `02e475cbb6` reaches actual217429 with no landed434589. Recovered `adcc78
 The downstream [recipient leaf](../../../crates/server-spell-scripts/src/modules/destruction_incinerate_targets.rs) snapshots the actual primary, native area FnB recipients and separate owned live Havoc recipient into the existing target plan. Existing per-recipient chain multipliers carry source1.0/25%/50%+25% into ordinary hit/crit resolution. The Havoc target is included even outside FnB radius and only once. No general selector, catalog coefficient or fixture change. Pinned actions3852–3900/3952–4002 require uncapped FnB, primary/Havoc exclusions and additive native fractions.
 
 RED `b4ead8b3b5`: untalented paid cast hits an unmarked secondary. Legal-budget selected RED `9eaf9c6380`: native full secondary ratios1.026 rather than source25%,50%,75%. Qualification and integrated267ST/3T pending; the former numeric3T parity was masked by +40.5k Incinerate.
+
+## Destruction Fiendish Cruelty — 2026-10-26
+
+[Contract](../../specs/dps-parity.md#destruction-fiendish-cruelty). Frozen267 selects1245633 but native reports no1245664; reference shows7.75%ST/4.30%3T uptime. Actual paid native RED `20e3bd8d67` observes30 critical Incinerate impacts without earning the buff. Source `sc_warlock_actions.cpp433–439,3860,3936,4293,4446,5209` qualifies actual critical impacts; `sc_warlock_init.cpp1323–1326` uses an accumulated PRD with native effect0 chance.
+
+The downstream [Fiendish leaf](../../../crates/server-spell-scripts/src/modules/destruction_fiendish.rs) owns that passive's native broad proc hint, shares one source PRD per actual aura instance, and applies native1245664 on success. Its native aura262 exempts the Shadowburn target state and its native one-charge/cost-modifier machinery remains authoritative. Source actions4795–4800/4832–4834 require actual consumption by above-threshold Shadowburn. Native GREEN and measurement pending.
