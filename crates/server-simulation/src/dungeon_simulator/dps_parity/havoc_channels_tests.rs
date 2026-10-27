@@ -36,6 +36,87 @@ fn cast(run: &mut Run, spell: u32, self_target: bool) {
     .expect("ordinary native Havoc cast");
 }
 
+fn isolated_prey_hits(spell: u32, count: usize, selected: bool) -> Vec<CombatLogEvent> {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(577, count).unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    let actor = run.actor;
+    let known = run
+        .app
+        .world()
+        .get::<crate::class_progression::KnownSpells>(actor)
+        .unwrap();
+    assert!(
+        known.contains(388113),
+        "real Havoc profile selects Isolated Prey"
+    );
+    let spells = known
+        .iter()
+        .filter(|spell| *spell != 428492 && (selected || *spell != 388113))
+        .collect();
+    run.app
+        .world_mut()
+        .entity_mut(actor)
+        .insert(crate::class_progression::KnownSpells::fixture(spells));
+    run.app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(actor)
+        .unwrap()
+        .crit_pct = -1000.0;
+    {
+        let _seed = crate::random::seed_scope(88);
+        crate::spell_cast::cast_triggered(run.app.world_mut(), actor, spell, None, 1);
+    }
+    damage(&run, Some(spell))
+}
+
+#[test]
+#[ignore = "requires prepared native spec577 player profile"]
+fn havoc_isolated_prey_increases_both_real_beam_children_only_for_one_enemy() {
+    for spell in [198030, 1287949] {
+        for count in [1, 3] {
+            let baseline = isolated_prey_hits(spell, count, false);
+            let selected = isolated_prey_hits(spell, count, true);
+            assert_eq!(
+                baseline.len(),
+                count,
+                "native {spell} must hit every fixture enemy"
+            );
+            assert_eq!(selected.len(), count);
+            for (plain, isolated) in baseline.iter().zip(&selected) {
+                let multiplier = if count == 1 { 1.30 } else { 1.0 };
+                assert!(
+                    (f64::from(isolated.amount) - f64::from(plain.amount) * multiplier).abs()
+                        <= 2.0,
+                    "native {spell} must use single-target Isolated Prey: {plain:?} -> {isolated:?}"
+                );
+            }
+        }
+    }
+}
+
+#[test]
+#[ignore = "requires prepared native spec577 player profile"]
+fn havoc_isolated_prey_guarantees_real_immolation_initial_and_tick_crits_only_for_one_enemy() {
+    for spell in [258921, 258922] {
+        for count in [1, 3] {
+            let baseline = isolated_prey_hits(spell, count, false);
+            let selected = isolated_prey_hits(spell, count, true);
+            assert_eq!(
+                baseline.len(),
+                count,
+                "native {spell} must hit every fixture enemy"
+            );
+            assert_eq!(selected.len(), count);
+            assert!(baseline.iter().all(|hit| !hit.crit));
+            assert!(
+                selected.iter().all(|hit| hit.crit == (count == 1)),
+                "native {spell} crits depend on the actual enemy count: {selected:?}"
+            );
+        }
+    }
+}
+
 #[test]
 #[ignore = "requires prepared native spec577 player profile"]
 fn havoc_fragment_pickup_requires_melee_and_records_last_used() {
