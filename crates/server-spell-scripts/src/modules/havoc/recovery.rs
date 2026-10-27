@@ -26,6 +26,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::Policies(POLICIES),
     SpellScriptHook::NativeAfterCast(after_cast),
     SpellScriptHook::LateAuraRegistration(register_channels),
+    SpellScriptHook::AfterAuraApplication(apply_serrated_glaive),
 ];
 
 fn after_cast(spell: u32) -> Option<AfterCastHook> {
@@ -126,12 +127,51 @@ fn reduce_paired_recovery(world: &mut World, caster: Entity, spell: u32, stacks:
 }
 
 fn register_channels(scripts: &mut AuraScripts) {
+    scripts.0.entry(427794).or_default().on_periodic = Some(update_never_say_die);
     for beam in BEAMS {
         let script = scripts.0.entry(*beam).or_default();
         script.on_apply = Some(super::havoc_fury::apply_blind_fury);
         script.on_natural_end = Some(finish_beam);
         script.on_remove = Some(super::havoc_eternal::remove_beam);
     }
+}
+
+// SimC76f8118 sc_demon_hunter.cpp2197–2199,10044–10066: the native
+// periodic driver enables the damage modifier at the talent's health threshold.
+// The source does not expire an already-active damage buff below that threshold.
+fn update_never_say_die(world: &mut World, caster: Entity, aura: &AuraInstance, index: u8) {
+    const TALENT: u32 = 427794;
+    if index != 0 || aura.caster != caster || !has_talent(world, caster, TALENT) {
+        return;
+    }
+    let threshold = combat::spell_cast::scripts::script_effect_value(world, caster, TALENT, 2);
+    let health = world
+        .get::<shared::components::Health>(caster)
+        .expect("Never Say Die caster health");
+    if health.current * 100.0 < health.max * threshold {
+        return;
+    }
+    let amount = combat::spell_cast::scripts::script_effect_value(world, caster, TALENT, 0);
+    for effect in [3, 4] {
+        assert!(
+            combat::auras::set_effect_amount(world, caster, aura.instance_id, effect, amount),
+            "native Never Say Die damage modifier must exist"
+        );
+    }
+}
+
+// SimC76f8118 sc_demon_hunter.cpp2195–2196,7534–7539: the earned native
+// buff's zero-valued modifier takes its amount from the selected talent.
+fn apply_serrated_glaive(world: &mut World, caster: Entity, aura: &AuraInstance) {
+    const TALENT: u32 = 390154;
+    if aura.spell_id != 390155 || aura.caster != caster || !has_talent(world, caster, TALENT) {
+        return;
+    }
+    let amount = combat::spell_cast::scripts::script_effect_value(world, caster, TALENT, 0);
+    assert!(
+        combat::auras::set_effect_amount(world, caster, aura.instance_id, 0, amount),
+        "native Serrated Glaive modifier must exist"
+    );
 }
 
 fn finish_beam(world: &mut World, caster: Entity, aura: &AuraInstance) {

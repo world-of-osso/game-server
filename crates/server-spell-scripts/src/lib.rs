@@ -7,6 +7,7 @@ use combat::spell_cast::script_registry::SpellScriptRegistry;
 pub mod bombardments;
 mod modules;
 pub use combat::soul_fragments;
+pub use modules::devourer_base_drain_ps;
 
 /// Install before the first cast, in both the server and transport-free simulation.
 pub struct SpellScriptsPlugin;

@@ -74,6 +74,7 @@ mod ret_crusade;
 pub(crate) use ret_crusade::after_spender as add_ret_crusade_spender_stacks;
 mod ret_sentence;
 pub use ret_sentence::track_cast as track_ret_sentence_cast;
+mod gebbos_bag;
 mod janthrazet;
 mod midnight_stat_procs;
 pub(crate) mod reward_mods;
@@ -983,6 +984,20 @@ fn build_instance(
         })
         .map(|effect| build_effect(world, caster, spell, effect, now))
         .collect();
+    // SimC76f8118 dot.cpp schedules every tick with the live target-aware tick time.
+    let rate = crate::spell_cast::script_registry::periodic_tick_rate(
+        world,
+        caster,
+        application.target,
+        spell,
+    );
+    if rate != 1.0 {
+        for effect in &mut effects {
+            let haste = effect.periodic_haste_multiplier * rate;
+            effect.period_ms =
+                periodic_timing_with_haste(world, caster, spell, effect.periodic_base_ms, haste).1;
+        }
+    }
     // TC a352b1fa Unit.cpp7725-7737: snapshot recipient422 once per shield.
     const ATTR11_IGNORE_TARGET_ABSORB_MODIFIERS: u32 = 0x0008_0000;
     if attributes(spell, 11) & ATTR11_IGNORE_TARGET_ABSORB_MODIFIERS == 0 {

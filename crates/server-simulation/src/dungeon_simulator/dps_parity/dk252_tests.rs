@@ -188,7 +188,9 @@ fn dk252_army_cast_summons_real_melee_ghouls() {
                 )>()
                 .iter(world)
                 .filter_map(|(entity, npc, summon)| {
-                    (npc.template_id == 237409 && summon.owner == run.actor)
+                    (npc.template_id == 237409
+                        && summon.owner == run.actor
+                        && summon.spell_id == 1294026)
                         .then_some(entity.to_bits())
                 }),
         );
@@ -196,7 +198,7 @@ fn dk252_army_cast_summons_real_melee_ghouls() {
     assert_eq!(
         ghouls.len(),
         8,
-        "Army must summon eight real native lesser ghouls"
+        "Army must summon eight real native Army ghouls"
     );
     let events = &run
         .app
@@ -212,6 +214,52 @@ fn dk252_army_cast_summons_real_melee_ghouls() {
                 && event.amount > 0
         ),
         "an actual Army ghoul must reach and melee the enemy"
+    );
+}
+
+#[test]
+#[ignore = "requires private native252 profile/traits and player actor"]
+fn dk252_dread_plague_ticks_raise_forbidden_knowledge_magi() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 1).unwrap();
+    engage(&mut run);
+    assert!(crate::spell_cast::try_cast_triggered(
+        run.app.world_mut(),
+        run.actor,
+        1240996,
+        Some(run.targets[0]),
+        1,
+    ));
+    for _ in 0..600 {
+        run.app.update();
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    assert!(
+        events.iter().any(|event| event.spell_id == Some(1240996)
+            && event.target == Some(run.targets[0].to_bits())
+            && event.kind == CombatLogKind::Damage
+            && event.amount > 0),
+        "the actual Dread Plague must deal periodic damage"
+    );
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(run.actor.to_bits())
+                && event.spell_id == Some(1277098)
+                && event.kind == CombatLogKind::Summon),
+        "selected Forbidden Knowledge must raise actual Putrefy ghouls from Dread Plague ticks"
+    );
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(run.actor.to_bits())
+                && event.spell_id == Some(1242294)
+                && event.kind == CombatLogKind::Summon),
+        "actual Forbidden Knowledge ghouls must raise native Lord Magi"
     );
 }
 
