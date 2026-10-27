@@ -31,6 +31,16 @@ fn arcane_missiles_native_amplification_rounds_full_channel_ticks() {
             .has_spell(236628),
         "native Amplification aura is active"
     );
+    for aura in [1296581, 414379] {
+        assert!(
+            run.app
+                .world()
+                .get::<ActiveAuras>(run.actor)
+                .unwrap()
+                .has_spell(aura),
+            "native timing aura {aura} is active"
+        );
+    }
     super::arcane_tests::grant(&mut run, 263725, 1);
     let spell = run
         .app
@@ -67,8 +77,8 @@ fn arcane_missiles_native_amplification_rounds_full_channel_ticks() {
     );
     let scheduled = (modified_duration / modified_period).round() as usize;
     assert_eq!(
-        scheduled, 6,
-        "selected native Amplification must produce the source's six scheduled ticks"
+        scheduled, 7,
+        "native Amplification and tier bonus must produce seven scheduled ticks"
     );
     let before = run.app.world().resource::<ObservedCombatEvents>().0.len();
     super::arcane_tests::start_cast(&mut run, 5143);
@@ -81,7 +91,8 @@ fn arcane_missiles_native_amplification_rounds_full_channel_ticks() {
     let duration_ms = cast.duration * 1000.0;
     let interval_ms = cast.channel_tick_interval * 1000.0;
     preparation::finish_pending_setup(&mut run).unwrap();
-    for _ in 0..20 {
+    let end = crate::spell_cast::now(run.app.world()) + 3.0;
+    while crate::spell_cast::now(run.app.world()) < end {
         run.app.update();
     }
     let hits = run
@@ -102,7 +113,7 @@ fn arcane_missiles_native_amplification_rounds_full_channel_ticks() {
     assert_eq!(
         hits,
         scheduled + 1,
-        "full uninterrupted native channel must deliver six rounded scheduled ticks plus tick_zero; duration={duration_ms}ms period={interval_ms}ms"
+        "full uninterrupted native channel must deliver seven rounded scheduled ticks plus tick_zero; duration={duration_ms}ms period={interval_ms}ms"
     );
     assert!(
         (duration_ms - scheduled as f32 * interval_ms).abs() <= 1.0,
