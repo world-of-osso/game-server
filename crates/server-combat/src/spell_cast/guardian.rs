@@ -54,6 +54,24 @@ const GUARDIAN_POLICIES: &[GuardianPolicy] = &[
         owner_spell_share: None,
         owner_attack_share: Some(0.7),
     },
+    // SimC76f8118 sc_death_knight.cpp3621–3649: ordinary and Army
+    // lesser ghouls inherit owner melee AP; Army gets the 1.4 multiplier.
+    GuardianPolicy {
+        summons: &[275430],
+        entry: 237409,
+        spells: &[],
+        repeat_gcd: None,
+        owner_spell_share: None,
+        owner_attack_share: Some(0.180431625),
+    },
+    GuardianPolicy {
+        summons: &[1294026],
+        entry: 237409,
+        spells: &[],
+        repeat_gcd: None,
+        owner_spell_share: None,
+        owner_attack_share: Some(0.180431625 * 1.4),
+    },
     // SimC76f8118 sc_hunter.cpp1935: Dire Beast inherits live owner AP1.0.
     GuardianPolicy {
         summons: &[219199],
