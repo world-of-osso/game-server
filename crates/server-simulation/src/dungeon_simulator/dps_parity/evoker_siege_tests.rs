@@ -59,9 +59,17 @@ fn evoker_siege_actual_combat_grows_native_stacks_and_removes_them_on_exit() {
             2,
             "one native period earns one real stack"
         );
-        for _ in 0..(u32::from(initial.max_stacks) * (period / 50 + 1)) {
-            // The passive dummy's combat reference expires without refreshed engagement.
-            crate::combat_refs::set_in_combat_with(run.app.world_mut(), actor, target);
+        for frame in 0..(u32::from(initial.max_stacks) * (period / 50 + 1)) {
+            // Real direct hits refresh the training dummy's separate combat timer.
+            if frame % 40 == 0 {
+                assert!(crate::spell_cast::try_cast_triggered(
+                    run.app.world_mut(),
+                    actor,
+                    361500,
+                    Some(target),
+                    1
+                ));
+            }
             run.app.update();
         }
         let capped = aura(&run).unwrap();
