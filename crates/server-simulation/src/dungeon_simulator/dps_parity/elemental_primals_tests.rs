@@ -113,6 +113,38 @@ fn elemental_primal_storm_action_requires_call_lightning() {
     );
 }
 
+fn actor_casts(run: &Run, actor: Entity, spells: &[u32]) -> Vec<u32> {
+    run.app
+        .world()
+        .resource::<ObservedCombatEvents>()
+        .0
+        .iter()
+        .filter(|event| {
+            event.source == Some(actor.to_bits())
+                && event.kind == CombatLogKind::CastSuccess
+                && event.spell_id.is_some_and(|id| spells.contains(&id))
+        })
+        .map(|event| event.spell_id.unwrap())
+        .collect()
+}
+
+#[test]
+#[ignore = "requires private262 native DB/profile"]
+fn elemental_primal_fire_pays_native_mana_for_its_actions() {
+    let mut run = fixture();
+    // Native61029 is unit_class2/ManaModifier41; Immolate costs10 and
+    // Fire Blast4 native mana. TC Guardian::InitStatsForLevel supplies its pool.
+    let actor = bound_native_guardian(&mut run, 61029, 118291, &[118297, 57984]);
+    for _ in 0..200 {
+        run.app.update();
+    }
+    let casts = actor_casts(&run, actor, &[118297, 57984]);
+    assert!(
+        casts.contains(&118297) && casts.contains(&57984),
+        "real Primal Fire Elemental casts native mana actions: {casts:?}"
+    );
+}
+
 #[test]
 #[ignore = "requires private262 native DB/profile"]
 fn elemental_primal_fire_immolate_requires_no_current_dot() {
