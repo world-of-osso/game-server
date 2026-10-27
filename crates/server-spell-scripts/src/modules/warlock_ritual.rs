@@ -30,9 +30,21 @@ struct Demon {
 }
 
 const DEMONS: [Demon; 3] = [
-    Demon { ritual: 431944, art: 428524, summon: 428571 }, // Overlord → Mother
-    Demon { ritual: 432815, art: 432794, summon: 428565 }, // Mother → Pit Lord
-    Demon { ritual: 432816, art: 432795, summon: 434400 }, // Pit Lord → Overlord
+    Demon {
+        ritual: 431944,
+        art: 428524,
+        summon: 428571,
+    }, // Overlord → Mother
+    Demon {
+        ritual: 432815,
+        art: 432794,
+        summon: 428565,
+    }, // Mother → Pit Lord
+    Demon {
+        ritual: 432816,
+        art: 432795,
+        summon: 434400,
+    }, // Pit Lord → Overlord
 ];
 
 /// The cast's primary: the triggered impact child does not carry it.
@@ -189,7 +201,10 @@ fn next_index(world: &mut World, caster: Entity) -> usize {
 }
 
 fn ritual_ended(world: &mut World, caster: Entity, aura: &AuraInstance) {
-    let Some(index) = DEMONS.iter().position(|demon| demon.ritual == aura.spell_id) else {
+    let Some(index) = DEMONS
+        .iter()
+        .position(|demon| demon.ritual == aura.spell_id)
+    else {
         return;
     };
     world
@@ -240,7 +255,11 @@ fn art_removed(world: &mut World, caster: Entity, aura: &AuraInstance, reason: R
         return;
     };
     if !spell_cast::try_cast_triggered(world, caster, demon.summon, Some(caster), 1) {
-        warn!(?caster, summon = demon.summon, "Native Diabolist summon refused");
+        warn!(
+            ?caster,
+            summon = demon.summon,
+            "Native Diabolist summon refused"
+        );
         return;
     }
     // actions.cpp5455–5458/5476–5481: Mother grants Infernal Bolt, Pit Lord Ruination.
@@ -252,7 +271,11 @@ fn art_removed(world: &mut World, caster: Entity, aura: &AuraInstance, reason: R
     if auras::has_aura(world, caster, granted.0)
         && !spell_cast::try_cast_triggered(world, caster, granted.1, Some(caster), 1)
     {
-        warn!(?caster, buff = granted.1, "Native Diabolist summon buff refused");
+        warn!(
+            ?caster,
+            buff = granted.1,
+            "Native Diabolist summon buff refused"
+        );
     }
 }
 

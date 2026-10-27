@@ -29,8 +29,14 @@ fn prepare_funded() -> Run {
 }
 
 fn cast(run: &mut Run, spell: u32) {
-    crate::spell_cast::creature_cast(run.app.world_mut(), run.actor, spell, Some(run.targets[0]), false)
-        .unwrap_or_else(|failure| panic!("native {spell} must cast: {failure:?}"));
+    crate::spell_cast::creature_cast(
+        run.app.world_mut(),
+        run.actor,
+        spell,
+        Some(run.targets[0]),
+        false,
+    )
+    .unwrap_or_else(|failure| panic!("native {spell} must cast: {failure:?}"));
     preparation::finish_pending_setup(run).unwrap();
 }
 
@@ -47,7 +53,9 @@ fn events(run: &Run, kind: CombatLogKind, spell: u32) -> Vec<shared::protocol::C
         .0
         .iter()
         .filter(|event| {
-            event.source == Some(run.actor.to_bits()) && event.spell_id == Some(spell) && event.kind == kind
+            event.source == Some(run.actor.to_bits())
+                && event.spell_id == Some(spell)
+                && event.kind == kind
         })
         .cloned()
         .collect()
@@ -100,7 +108,11 @@ fn demonology_art_hand_summons_pit_lord_and_grants_ruination() {
     cast(&mut run, 105174);
     update(&mut run, 5);
     let summons = events(&run, CombatLogKind::Summon, 434400);
-    assert_eq!(summons.len(), 1, "consumed Pit Lord Art must summon one real Pit Lord");
+    assert_eq!(
+        summons.len(),
+        1,
+        "consumed Pit Lord Art must summon one real Pit Lord"
+    );
     let pit_lord = Entity::from_bits(summons[0].target.unwrap());
     assert!(
         run.app
@@ -109,7 +121,10 @@ fn demonology_art_hand_summons_pit_lord_and_grants_ruination() {
             .is_some_and(|summon| summon.owner == run.actor && summon.spell_id == 434400),
         "the Pit Lord must be a live native summon of the follower"
     );
-    assert!(!crate::auras::has_aura(run.app.world(), run.actor, 432795), "Hand must consume the Art");
+    assert!(
+        !crate::auras::has_aura(run.app.world(), run.actor, 432795),
+        "Hand must consume the Art"
+    );
     assert!(
         crate::auras::has_aura(run.app.world(), run.actor, RUINATION_BUFF),
         "Pit Lord summon must grant native Ruination"
@@ -123,20 +138,46 @@ fn demonology_art_hand_summons_mother_and_grants_infernal_bolt() {
     let mut run = prepare_funded();
     grant_art(&mut run, 432794);
     cast(&mut run, 105174);
-    assert_eq!(events(&run, CombatLogKind::Summon, 428565).len(), 1, "Mother Art must summon one Mother");
+    assert_eq!(
+        events(&run, CombatLogKind::Summon, 428565).len(),
+        1,
+        "Mother Art must summon one Mother"
+    );
     assert!(
         crate::auras::has_aura(run.app.world(), run.actor, INFERNAL_BOLT_BUFF),
         "Mother summon must grant native Infernal Bolt"
     );
-    let before = crate::spell_cast::powers::power_value(run.app.world(), run.actor, shared::components::PowerType::SoulShards).unwrap().0;
+    let before = crate::spell_cast::powers::power_value(
+        run.app.world(),
+        run.actor,
+        shared::components::PowerType::SoulShards,
+    )
+    .unwrap()
+    .0;
     let bolt = crate::auras::overrides::resolve_spell(run.app.world(), run.actor, 686);
     assert_eq!(bolt, 434506, "Infernal Bolt overrides Shadow Bolt");
     cast(&mut run, bolt);
     update(&mut run, 120);
-    assert_eq!(events(&run, CombatLogKind::Damage, 434506).len(), 1, "Infernal Bolt must deal native damage");
-    assert!(!crate::auras::has_aura(run.app.world(), run.actor, INFERNAL_BOLT_BUFF), "the cast consumes the buff");
-    let after = crate::spell_cast::powers::power_value(run.app.world(), run.actor, shared::components::PowerType::SoulShards).unwrap().0;
-    assert!(after > before, "Infernal Bolt must generate native Soul Shards: {before} -> {after}");
+    assert_eq!(
+        events(&run, CombatLogKind::Damage, 434506).len(),
+        1,
+        "Infernal Bolt must deal native damage"
+    );
+    assert!(
+        !crate::auras::has_aura(run.app.world(), run.actor, INFERNAL_BOLT_BUFF),
+        "the cast consumes the buff"
+    );
+    let after = crate::spell_cast::powers::power_value(
+        run.app.world(),
+        run.actor,
+        shared::components::PowerType::SoulShards,
+    )
+    .unwrap()
+    .0;
+    assert!(
+        after > before,
+        "Infernal Bolt must generate native Soul Shards: {before} -> {after}"
+    );
 }
 
 #[test]
@@ -144,14 +185,28 @@ fn demonology_art_hand_summons_mother_and_grants_infernal_bolt() {
 fn demonology_ruination_impacts_then_summons_three_hand_imps() {
     let _seed = crate::random::seed_scope(70_448);
     let mut run = prepare_funded();
-    crate::spell_cast::creature_cast(run.app.world_mut(), run.actor, RUINATION_BUFF, Some(run.actor), true)
-        .expect("native Ruination buff must apply");
+    crate::spell_cast::creature_cast(
+        run.app.world_mut(),
+        run.actor,
+        RUINATION_BUFF,
+        Some(run.actor),
+        true,
+    )
+    .expect("native Ruination buff must apply");
     let ruination = crate::auras::overrides::resolve_spell(run.app.world(), run.actor, 105174);
     assert_eq!(ruination, 434635, "Ruination overrides Hand of Gul'dan");
     cast(&mut run, ruination);
     update(&mut run, 120);
-    assert_eq!(events(&run, CombatLogKind::Damage, 434636).len(), 1, "Ruination impact must deal native damage");
-    assert_eq!(events(&run, CombatLogKind::Damage, 86040).len(), 1, "Ruination must drop one Hand meteor");
+    assert_eq!(
+        events(&run, CombatLogKind::Damage, 434636).len(),
+        1,
+        "Ruination impact must deal native damage"
+    );
+    assert_eq!(
+        events(&run, CombatLogKind::Damage, 86040).len(),
+        1,
+        "Ruination must drop one Hand meteor"
+    );
     assert_eq!(
         events(&run, CombatLogKind::Summon, 104317).len(),
         3,
