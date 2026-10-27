@@ -87,6 +87,22 @@ pub fn roll_owned(world: &mut World, owner: Entity, spell: u32) -> bool {
     id.is_some_and(|id| combat::auras::procs::try_native_policy_proc(world, owner, id))
 }
 
+fn roll_splitter(world: &mut World, owner: Entity) -> bool {
+    let instance = world
+        .get::<combat::auras::ActiveAuras>(owner)
+        .and_then(|auras| {
+            auras
+                .iter()
+                .find(|aura| aura.caster == owner && aura.spell_id == SPLITTER)
+        })
+        .map(|aura| aura.instance_id);
+    let Some(instance) = instance else {
+        return false;
+    };
+    let chance = combat::spell_cast::scripts::script_effect_value(world, owner, SPLITTER, 0);
+    combat::auras::procs::try_policy_proc(world, owner, instance, chance)
+}
+
 fn spec(world: &World, owner: Entity) -> Result<u32, String> {
     match world.get::<ActiveSpec>(owner).map(|s| s.0) {
         Some(value @ (577 | 581 | 1480)) => Ok(value),
@@ -144,7 +160,7 @@ pub fn spawn(
     consume_on_activation: bool,
 ) -> Result<(), String> {
     spawn_one(world, owner, kind, consume_on_activation)?;
-    if roll_owned(world, owner, SPLITTER) {
+    if roll_splitter(world, owner) {
         spawn_one(world, owner, FragmentKind::Lesser, consume_on_activation)?;
     }
     Ok(())
@@ -317,9 +333,15 @@ pub fn pickup_due(world: &World, owner: Entity) -> bool {
 /// Complete a pickup only if the literal row still permits it at arrival.
 pub fn finish_pickup(world: &mut World, owner: Entity, permitted: bool) -> Result<(), String> {
     let now = combat::auras::aura_now(world);
+    let speed = travel_speed(world, spec(world, owner)?)?;
+    let owner_position = position(world, owner).ok_or("fragment owner position missing")?;
     let Some(mut state) = world.entity_mut(owner).take::<Fragments>() else {
         return Ok(());
     };
+    if state.pickup.is_some_and(|pickup| pickup.due > now) {
+        world.entity_mut(owner).insert(state);
+        return Err("fragment pickup has not arrived".into());
+    }
     if let Some(pickup) = state.pickup.take()
         && permitted
         && let Some(index) = state
@@ -327,24 +349,15 @@ pub fn finish_pickup(world: &mut World, owner: Entity, permitted: bool) -> Resul
             .iter()
             .position(|f| f.id == pickup.id && f.active_at <= now && now < f.expires_at)
     {
-        consume(world, owner, &mut state, index, now)?;
+        consume(&mut state, index, now, speed, owner_position);
     }
     world.entity_mut(owner).insert(state);
     Ok(())
 }
 
-fn consume(
-    world: &World,
-    owner: Entity,
-    state: &mut Fragments,
-    index: usize,
-    now: f64,
-) -> Result<(), String> {
+fn consume(state: &mut Fragments, index: usize, now: f64, speed: f32, owner_position: Vec3) {
     let fragment = state.items.remove(index);
-    let speed = travel_speed(world, spec(world, owner)?)?;
-    let distance = fragment
-        .position
-        .distance(position(world, owner).ok_or("fragment owner position missing")?);
+    let distance = fragment.position.distance(owner_position);
     let delay = if speed == 0.0 {
         0.0
     } else {
@@ -354,7 +367,6 @@ fn consume(
         kind: fragment.kind,
         due: now + delay,
     });
-    Ok(())
 }
 
 pub fn update(world: &mut World) {
@@ -372,6 +384,8 @@ pub fn update(world: &mut World) {
 
 fn update_owner(world: &mut World, owner: Entity, now: f64) -> Result<(), String> {
     let specialization = spec(world, owner)?;
+    let speed = travel_speed(world, specialization)?;
+    let owner_position = position(world, owner).ok_or("fragment owner position missing")?;
     let mut state = world
         .entity_mut(owner)
         .take::<Fragments>()
@@ -382,12 +396,9 @@ fn update_owner(world: &mut World, owner: Entity, now: f64) -> Result<(), String
         let f = state.items[index];
         if !f.activated && f.active_at <= now {
             state.items[index].activated = true;
-            let auto = specialization == 1480
-                && f.position
-                    .distance(position(world, owner).ok_or("fragment owner position missing")?)
-                    <= 4.0;
+            let auto = specialization == 1480 && f.position.distance(owner_position) <= 4.0;
             if f.consume_on_activation || auto {
-                consume(world, owner, &mut state, index, now)?;
+                consume(&mut state, index, now, speed, owner_position);
                 continue;
             }
             let cap = match specialization {
@@ -409,7 +420,7 @@ fn update_owner(world: &mut World, owner: Entity, now: f64) -> Result<(), String
                     .iter()
                     .position(|item| item.kind == FragmentKind::Lesser && item.activated)
                     .expect("active overflow fragment");
-                consume(world, owner, &mut state, oldest, now)?;
+                consume(&mut state, oldest, now, speed, owner_position);
                 state.pickup = None;
                 if oldest <= index {
                     index -= 1;
