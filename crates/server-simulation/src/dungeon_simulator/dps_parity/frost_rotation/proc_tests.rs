@@ -611,6 +611,26 @@ fn frost_erw_earns_killing_machine() {
 }
 
 #[test]
+#[ignore = "real Mark produces two Waves of Souls and a critical return"]
+fn frost_mark_earns_two_waves_of_souls() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::protocol::CombatLogKind;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::super::prepare_measurement(251, 3).unwrap();
+    super::super::engage(&mut run);
+    assert!(auras::has_aura(run.app.world(), run.actor, 439851));
+    cast(&mut run, 439843);
+    for _ in 0..100 { run.app.update(); }
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0;
+    for target in &run.targets {
+        let hits: Vec<_> = events.iter().filter(|event| event.spell_id == Some(435802) && event.kind == CombatLogKind::Damage && event.target == Some(target.to_bits()) && event.amount > 0).collect();
+        assert_eq!(hits.len(), 2, "Wave impacts per target");
+        assert!(hits[1].crit, "return wave must critically strike");
+        assert!(auras::has_aura(run.app.world(), *target, 443404));
+    }
+}
+
+#[test]
 #[ignore = "real Mark explosion releases Soul Rupture only on secondary targets"]
 fn frost_soul_rupture_from_real_mark_explosion() {
     use crate::spell_cast::test_harness::ObservedCombatEvents;
