@@ -592,7 +592,11 @@ fn frost_gathering_storm_extends_winter_for_paid_and_free_spenders() {
     cast(&mut run, 47568);
     let before_free = expiration(&run);
     assert!(auras::has_aura(run.app.world(), actor, 1230959));
-    cast(&mut run, 49020);
+    for _ in 0..30 { run.app.update(); }
+    let runes_before = run.app.world().get::<crate::spell_cast::runes::Runes>(actor).unwrap().ready();
+    let target = run.targets[0];
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 49020, Some(target), false).unwrap();
+    assert_eq!(run.app.world().get::<crate::spell_cast::runes::Runes>(actor).unwrap().ready(), runes_before);
     let free = expiration(&run);
     assert!(!auras::has_aura(run.app.world(), actor, 1230959));
     assert!((free - before_free - f64::from(base_extension) * 0.2).abs() < 0.001,
@@ -600,6 +604,12 @@ fn frost_gathering_storm_extends_winter_for_paid_and_free_spenders() {
     let stacks = run.app.world().get::<ActiveAuras>(actor).unwrap().iter()
         .find(|aura| aura.spell_id == 211805 && aura.caster == actor).unwrap().stacks;
     assert_eq!(stacks, 4, "both real Obliterates earn stacks per base rune cost");
+    for _ in 0..600 {
+        run.app.update();
+        if !auras::has_aura(run.app.world(), actor, 1233152) { break; }
+    }
+    assert!(!auras::has_aura(run.app.world(), actor, 1233152));
+    assert!(!auras::has_aura(run.app.world(), actor, 211805), "Winter ending clears Gathering Storm");
 }
 
 #[test]
