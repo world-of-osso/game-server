@@ -147,6 +147,20 @@ fn reapers_toll_replacement_delivers_native_damage_in_meta() {
         .expect("Pierce resolution")
         .expect("selected Pierce");
     assert_eq!(spell, 1245470, "native Reaper's Toll replacement");
+    crate::spell_cast::powers::change_power(
+        run.app.world_mut(),
+        actor,
+        shared::components::PowerType::Fury,
+        -1000.0,
+    )
+    .expect("native Fury pool");
+    crate::spell_cast::powers::change_power(
+        run.app.world_mut(),
+        actor,
+        shared::components::PowerType::Fury,
+        60.0,
+    )
+    .expect("native Fury pool");
     literal_rotation::execution::execute(
         run.app.world_mut(),
         actor,
@@ -179,5 +193,15 @@ fn reapers_toll_replacement_delivers_native_damage_in_meta() {
                 && event.target == Some(target.to_bits())
                 && event.amount > 0),
         "Reaper's Toll delivers native target damage"
+    );
+    // SimC76f8118 cpp6742–6744: the source action executes its native Fury child.
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(actor.to_bits())
+                && event.spell_id == Some(1239507)
+                && event.kind == CombatLogKind::Energize
+                && event.amount > 0),
+        "real Reaper's Toll executes its native Fury child"
     );
 }
