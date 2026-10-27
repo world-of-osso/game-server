@@ -581,6 +581,81 @@ fn dk252_real_lord_casts_necrotic_bolt_using_owner_power() {
 
 #[test]
 #[ignore = "requires private native252 profile/traits and player actor"]
+fn dk252_lord_bolt_scales_with_consumed_magus_remaining_time() {
+    use crate::spell_cast::effects::factor_capture::FactorCapture;
+
+    fn first_bolt_multiplier(remaining: f64) -> f64 {
+        let _seed = crate::random::seed_scope(70448);
+        let mut run = prepare_literal(252, 1).unwrap();
+        engage(&mut run);
+        for index in 0..3 {
+            assert!(crate::spell_cast::try_cast_triggered(
+                run.app.world_mut(),
+                run.actor,
+                1242294,
+                Some(run.actor),
+                1,
+            ));
+            run.app.update();
+            if index < 2 {
+                let world = run.app.world_mut();
+                let now = crate::auras::aura_now(world);
+                let magi: Vec<_> = world
+                    .query::<(Entity, &crate::spell_cast::summon::SummonedCreature)>()
+                    .iter(world)
+                    .filter(|(_, summon)| summon.owner == run.actor && summon.spell_id == 1242294)
+                    .map(|(entity, _)| entity)
+                    .collect();
+                assert_eq!(magi.len(), index + 1, "the native Magi must exist");
+                for magus in magi {
+                    world
+                        .get_mut::<crate::spell_cast::summon::SummonedCreature>(magus)
+                        .unwrap()
+                        .expires_at = Some(now + remaining);
+                }
+            }
+        }
+        let lord = {
+            let world = run.app.world_mut();
+            world
+                .query::<(Entity, &shared::components::Npc)>()
+                .iter(world)
+                .find_map(|(entity, npc)| (npc.template_id == 264321).then_some(entity))
+                .expect("three actual Magi must create the native Lord")
+        };
+        run.app.insert_resource(FactorCapture::new(
+            lord,
+            run.targets[0],
+            1297086,
+            "lord_bolt",
+            1,
+        ));
+        for _ in 0..200 {
+            run.app.update();
+            let capture = run.app.world().resource::<FactorCapture>().export();
+            if let Some(multiplier) = capture["events"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|event| event["event"] == "direct_amount" && event["spell_id"] == 1297086)
+                .and_then(|event| event["factors"]["mult"].as_f64())
+            {
+                return multiplier;
+            }
+        }
+        panic!("the real Lord must cast its native Necrotic Bolt");
+    }
+
+    let short = first_bolt_multiplier(2.0);
+    let long = first_bolt_multiplier(14.0);
+    assert!(
+        long > short * 1.1,
+        "longer consumed Magus lifetime must increase actual Lord damage: short={short}, long={long}"
+    );
+}
+
+#[test]
+#[ignore = "requires private native252 profile/traits and player actor"]
 fn dk252_lord_magus_uses_selected_native_lifetime() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(252, 1).unwrap();

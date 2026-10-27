@@ -660,6 +660,10 @@ fn break_crowd_control(
     aura: &AuraInstance,
     event: &AuraEvent,
 ) -> bool {
+    // Damage dealt to another unit does not consume this unit's CC break threshold.
+    if event.target != Some(unit) {
+        return false;
+    }
     let Some(mut auras) = world.get_mut::<ActiveAuras>(unit) else {
         return false;
     };

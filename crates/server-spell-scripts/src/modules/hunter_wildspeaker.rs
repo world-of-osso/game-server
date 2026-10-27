@@ -11,6 +11,7 @@ mod wrath;
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AfterElementalLaunch(command_existing),
     SpellScriptHook::AfterElementalLaunch(wrath::after_launch),
+    SpellScriptHook::SummonInitialized(apply_pet_damage),
 ];
 
 const WILDSPEAKER: u32 = 1232739;
@@ -20,6 +21,20 @@ const COMMAND_DAMAGE: u32 = 1232922;
 // Dark Hound, Dire Beast, Fenryr, Hati and Bear are DireCritters. Wyvern
 // and the ordinary stable bodies are not members of this source class.
 const DIRE_CRITTER_SUMMONS: &[u32] = &[219199, 442419, 459733, 459739, 471990];
+
+fn apply_pet_damage(world: &mut World, pet: Entity) {
+    let Some(summon) = world.get::<SummonedCreature>(pet) else {
+        return;
+    };
+    if !DIRE_CRITTER_SUMMONS.contains(&summon.spell_id) {
+        return;
+    }
+    // SimC76f8118 hunter.cpp1854–1869: every real DireCritter starts
+    // native Pet Damage; the owner's selected modifiers supply its value.
+    if !spell_cast::try_cast_triggered(world, pet, 1284992, Some(pet), 1) {
+        warn!(?pet, "native DireCritter Pet Damage refused");
+    }
+}
 
 fn read_owned_critters(world: &mut World, owner: Entity) -> Vec<(Entity, u32)> {
     world
