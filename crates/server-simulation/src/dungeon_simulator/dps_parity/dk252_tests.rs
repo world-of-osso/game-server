@@ -55,6 +55,19 @@ fn dk252_festering_strike_earns_ghouls_and_next_native_scythe() {
 }
 
 #[test]
+#[ignore = "requires native252 profile/traits and player actor"]
+fn dk252_lesser_ghoul_expiry_triggers_ruptured_viscera() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 1).unwrap();
+    engage(&mut run);
+    assert!(crate::spell_cast::try_cast_triggered(run.app.world_mut(), run.actor, 275430, Some(run.actor), 1));
+    for _ in 0..300 { run.app.update(); }
+    let events = &run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
+    assert!(events.iter().any(|e| e.spell_id == Some(1247379) && e.target == Some(run.targets[0].to_bits())
+        && e.kind == CombatLogKind::Damage && e.amount > 0), "expired real ghoul must deal native Ruptured Viscera damage");
+}
+
+#[test]
 #[ignore = "requires private native252 profile/traits and player actor"]
 fn dk252_real_lesser_ghoul_summon_reaches_and_melees() {
     let _seed = crate::random::seed_scope(70448);
