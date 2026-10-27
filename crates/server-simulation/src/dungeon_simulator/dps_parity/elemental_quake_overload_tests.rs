@@ -61,4 +61,38 @@ fn elemental_quake_overload_ascendance_creates_native_damage_field() {
         hits(298765) >= 3,
         "Ascendance guarantees an actual native Earthquake overload field on the pack"
     );
+    let noncrit_average = |spell| {
+        let samples: Vec<_> = events
+            .iter()
+            .filter(|event| {
+                event.source == Some(run.actor.to_bits())
+                    && event.spell_id == Some(spell)
+                    && event.kind == CombatLogKind::Damage
+                    && !event.crit
+                    && event.amount > 0
+            })
+            .map(|event| event.amount as f64)
+            .collect();
+        assert!(
+            !samples.is_empty(),
+            "native noncritical samples for {spell}"
+        );
+        samples.iter().sum::<f64>() / samples.len() as f64
+    };
+    let effect = |spell, index| {
+        own_aura(&run, spell)
+            .unwrap()
+            .effects
+            .iter()
+            .find(|effect| effect.index == index)
+            .unwrap()
+            .amount as f64
+    };
+    let expected =
+        effect(381726, 0) / 100.0 * effect(168534, 1) / 100.0 * (1.0 + effect(1219480, 7) / 100.0);
+    let ratio = noncrit_average(298765) / noncrit_average(77478);
+    assert!(
+        (ratio / expected - 1.0).abs() < 0.35,
+        "native overload effectiveness {ratio}; expected {expected}"
+    );
 }
