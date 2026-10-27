@@ -192,6 +192,8 @@ Frost player reaction clocks are configured before food setup advances native fr
 ### Subtlety literal fixture
 
 - Eligible shadow clones and landed intrinsic Secret Technique clones can earn Shadow Techniques storage and Energy using Ancient Arts' native proc chance; Shadowcraft still controls stacks during Dance (`sc_rogue.cpp3650–3659,5405–5413,8159–8172`).
+- Shuriken Storm and its shadow clone snapshot the native rank-two stealth-stance damage bonus (`sc_rogue.cpp5817–5838,5872–5881`).
+- Eligible shadow clones can earn Shadow Techniques storage and Energy using Ancient Arts' native proc chance; Shadowcraft still controls stacks during Dance (`sc_rogue.cpp3650–3659,8159–8172`).
 - Secret Technique's landed player attack triggers earned Ancient Arts collection and can launch its native delayed shadow clone, using the parent finisher's paid points (`sc_rogue.cpp5435–5503,8668–8701`).
 - Eligible shadow clones can earn Shadow Techniques storage and Energy using Ancient Arts' native proc chance; Shadowcraft still controls stacks during Dance (`sc_rogue.cpp3650–3659,8159–8172`).
 - Secret Technique's landed player attack triggers earned Ancient Arts collection and can launch its native delayed shadow clone, using the parent finisher's paid points. With pinned SimC `bugs=true`, that shadow clone deals full damage to secondary targets (`sc_rogue.cpp5333–5352,5435–5503,8668–8701`).
