@@ -9,16 +9,6 @@ fn assert_fury_cap(spec: u32, expected: f32) {
     }
     let (_, max) = crate::spell_cast::powers::power_value(run.app.world(), run.actor, PowerType::Fury)
         .expect("native Fury pool");
-    let world = run.app.world();
-    let auras = world.get::<crate::auras::ActiveAuras>(run.actor).unwrap();
-    for aura in auras.iter() {
-        for effect in &aura.effects {
-            if effect.aura_type == 418 || effect.aura_type == 35 {
-                println!("spec={spec} aura={} caster={:?} effect={:?}", aura.spell_id, aura.caster, effect);
-            }
-        }
-    }
-    println!("spec={spec} player={} filter0={} filter1={}", world.get::<shared::components::Player>(run.actor).is_some(), crate::spell_cast::script_registry::effect_enabled(world, run.actor, 452411, 0), crate::spell_cast::script_registry::effect_enabled(world, run.actor, 452411, 1));
     assert_eq!(max, expected, "selected profile Fury cap for spec {spec}");
 }
 
