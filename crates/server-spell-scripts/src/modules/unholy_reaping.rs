@@ -6,7 +6,7 @@ use combat::spell_info::SpellInfo;
 use shared::components::Health;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
-    SpellScriptHook::NativeAfterCast(after_cast),
+    SpellScriptHook::AuraRollAfterCast(after_cast),
     SpellScriptHook::TargetContextDamageMultiplier(execute_bonus),
 ];
 
