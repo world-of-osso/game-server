@@ -340,7 +340,7 @@ fn affliction_grasp_keeps_channel_tick_cadence_when_bloodlust_starts() {
     for pair in frames.windows(2) {
         let elapsed = (pair[1] - pair[0]) as f64 * 0.05;
         assert!(
-            (elapsed - interval).abs() <= 0.051,
+            (elapsed - f64::from(interval)).abs() <= 0.051,
             "SimC action.cpp:2806–2809 snapshots channel haste: {frames:?}, interval {interval}"
         );
     }
