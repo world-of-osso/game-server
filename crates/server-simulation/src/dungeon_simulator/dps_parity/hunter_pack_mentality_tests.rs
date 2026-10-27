@@ -101,7 +101,7 @@ fn native_bm_pack_mentality_recovers_real_barbed_recharge_after_consuming_howl()
 
 #[test]
 #[ignore = "requires private spec253 reference inputs and native world DB"]
-fn diagnose_native_pack_mentality_real_command_factors() {
+fn native_bm_pack_mentality_increases_real_kill_command_damage() {
     use crate::spell_cast::effects::factor_capture::FactorCapture;
     let _seed = crate::random::seed_scope(70_448);
     let mut run = prepare_measurement(253, 1).expect("native literal BM fixture");
@@ -136,6 +136,23 @@ fn diagnose_native_pack_mentality_real_command_factors() {
         if run.app.world().resource::<FactorCapture>().export()["captured_hits"].as_u64().unwrap() >= 2 { break; }
     }
     let receipt = run.app.world().resource::<FactorCapture>().export();
-    println!("NATIVE_PACK_COMMAND_FACTORS alpha={alpha} pack={pack} receipt={receipt}");
     assert_eq!(receipt["captured_hits"].as_u64(), Some(2), "two actual owned-pet 83381 hits");
+    let events = receipt["events"].as_array().unwrap();
+    let results: Vec<_> = events.iter().filter(|event| event["event"] == "result" && event["spell_id"] == 83381).collect();
+    let amounts: Vec<_> = events.iter().filter(|event| event["event"] == "direct_amount" && event["spell_id"] == 83381).collect();
+    assert_eq!((results.len(), amounts.len()), (2, 2));
+    let normalized = |index: usize| {
+        let result = &results[index]["factors"];
+        let amount = &amounts[index]["factors"];
+        result["raw_amount"].as_f64().unwrap()
+            / amount["ap_term"].as_f64().unwrap()
+            / result["native_done_product"].as_f64().unwrap()
+            / result["target_product"].as_f64().unwrap()
+    };
+    let actual = normalized(1) / normalized(0);
+    // SimC76f8118 sc_hunter.cpp2764–2785: Alpha Predator and selected
+    // Pack Mentality add before multiplying the real pet command.
+    let expected = (100.0 + f64::from(alpha) + f64::from(pack)) / (100.0 + f64::from(alpha));
+    assert!((actual - expected).abs() < 0.001,
+        "earned readiness must amplify actual pet KC: before={}, after={}, actual={actual}, expected={expected}, alpha={alpha}, pack={pack}", normalized(0), normalized(1));
 }
