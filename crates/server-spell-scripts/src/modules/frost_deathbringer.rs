@@ -137,11 +137,15 @@ fn explode_mark(
     // multiplied by actual earned mark stacks, and selected Exterminate grants effect3 uses.
     explosion.effects.retain(|effect| effect.index == 1);
     let grim = if auras::has_aura(world, aura.caster, 434905) {
-        let health = world.get::<shared::components::Health>(target).expect("Mark target health");
+        let health = world
+            .get::<shared::components::Health>(target)
+            .expect("Mark target health");
         let missing = (1.0 - health.current / health.max).clamp(0.0, 1.0);
         let maximum = script_effect_value(world, aura.caster, 434905, 0) / 100.0;
         1.0 + missing * maximum
-    } else { 1.0 };
+    } else {
+        1.0
+    };
     explosion.cast_damage_multiplier = Some(f32::from(aura.stacks) * grim);
     if !spell_cast::launch_triggered_spell(world, aura.caster, &explosion, Some(target), 1) {
         return;

@@ -16,4 +16,4 @@ blake3 = "1.8"
 tempfile = "3"
 rusqlite = { version = "0.35", features = ["bundled"] }
 # Exact frozen AssistedCombat types/rules shared with the core fixture bindings.
-game-engine-core = { git = "ssh://git@github.com/world-of-osso/game-engine.git", rev = "f64be2694109f3c8b2ded336bb27df57b64b03ae", default-features = false }
+game-engine-core = { git = "ssh://git@github.com/world-of-osso/game-engine.git", rev = "21a30a47493d3609d7ad7ce64ddb248294f1cab5", default-features = false }
