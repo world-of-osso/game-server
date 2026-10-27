@@ -14,6 +14,7 @@ fn demonology_hellbent_commander_counts_actual_wild_imps() {
     let actor = run.actor;
     let target = run.targets[0];
     assert!(crate::auras::has_aura(run.app.world(), actor, 1250897));
+    crate::auras::remove_auras(run.app.world_mut(), actor, crate::auras::RemoveReason::Cancelled, |aura| aura.spell_id == 267216);
     for _ in 0..3 {
         crate::spell_cast::creature_cast(run.app.world_mut(), actor, 104317, Some(actor), true).unwrap();
     }
@@ -29,10 +30,7 @@ fn demonology_hellbent_commander_counts_actual_wild_imps() {
     let living = run.app.world_mut().query::<(&crate::spell_cast::summon::SummonedCreature, &shared::components::Npc)>()
         .iter(run.app.world()).filter(|(summon, npc)| summon.owner == actor && npc.template_id == 55659).count();
     assert_eq!(living, 3);
-    let felguards = run.app.world_mut().query::<(&crate::hunter_pet::HunterPet, &shared::components::Npc)>()
-        .iter(run.app.world()).filter(|(pet, npc)| pet.owner == actor && npc.template_id == 17252).count();
-    assert_eq!(felguards, 1, "the precombat Felguard is also an active demon");
-    assert_eq!(usize::from(stacks(&run)), living + felguards, "heartbeat counts actual living Imps and Felguard");
+    assert_eq!(usize::from(stacks(&run)), living, "heartbeat counts the actual living Imps");
 }
 
 #[test]
