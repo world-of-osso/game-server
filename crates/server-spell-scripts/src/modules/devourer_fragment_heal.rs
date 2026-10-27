@@ -68,6 +68,12 @@ fn on_fragment_heal(world: &mut World, caster: Entity, target: Entity, depth: u8
     if caster != target || world.get::<ActiveSpec>(caster).map(|spec| spec.0) != Some(1480) {
         return;
     }
+    // SimC76f8118 cpp3686: each consumed soul heal triggers selected Feast.
+    if world.get::<KnownSpells>(caster).is_some_and(|known| known.contains(1237270))
+        && !spell_cast::try_cast_triggered(world, caster, 1232310, Some(caster), depth + 1)
+    {
+        error!(?caster, "native Feast of Souls was refused");
+    }
     // SimC76f8118 sc_demon_hunter.cpp3678–3698 selects the Meta stack
     // outside Meta and the selected Collapsing Star stack inside Meta.
     let stack = if !combat::auras::has_aura(world, caster, 1217607) {

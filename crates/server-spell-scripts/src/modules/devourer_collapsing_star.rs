@@ -2,16 +2,51 @@
 use super::combat;
 use bevy::prelude::*;
 use combat::auras::{self, ActiveAuras, RemoveReason};
+use combat::class_progression::KnownSpells;
 use combat::spell_cast::{
     self, effects::EffectCtx, script_registry::SpellScriptHook, scripts::script_effect_value,
 };
 use combat::spell_info::SpellInfo;
 use shared::components::ActiveSpec;
 
+#[derive(Component, Default)]
+struct PendingApocalypse(Vec<f64>);
+
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AfterNativeLaunch(after_launch),
+    SpellScriptHook::AfterFireDirectHit(schedule_apocalypse),
+    SpellScriptHook::AfterNativeCastUpdate(deliver_apocalypse),
     SpellScriptHook::TargetContextDamageMultiplier(secondary_multiplier),
 ];
+
+fn schedule_apocalypse(world: &mut World, ctx: &EffectCtx<'_>, target: Entity, _: bool) {
+    if ctx.spell.id != 1221162 || ctx.spell.cast_primary_target != Some(target)
+        || !world.get::<KnownSpells>(ctx.caster).is_some_and(|known| known.contains(1227707))
+    {
+        return;
+    }
+    // SimC76f8118 cpp6516–6523 grants the buff 1.2s after the primary impact.
+    let deadline = spell_cast::now(world) + 1.2;
+    world.entity_mut(ctx.caster).entry::<PendingApocalypse>().or_default().into_mut().0.push(deadline);
+}
+
+fn deliver_apocalypse(world: &mut World) {
+    let now = spell_cast::now(world);
+    let casters: Vec<_> = world.query_filtered::<Entity, With<PendingApocalypse>>().iter(world).collect();
+    for caster in casters {
+        let due = {
+            let mut pending = world.get_mut::<PendingApocalypse>(caster).expect("pending Apocalypse");
+            let before = pending.0.len();
+            pending.0.retain(|deadline| *deadline > now);
+            before - pending.0.len()
+        };
+        for _ in 0..due {
+            if !spell_cast::try_cast_triggered(world, caster, 1227338, Some(caster), 1) {
+                error!(?caster, "native Impending Apocalypse was refused");
+            }
+        }
+    }
+}
 
 fn secondary_multiplier(world: &World, ctx: &EffectCtx<'_>, target: Entity, periodic: bool) -> f32 {
     if periodic || ctx.spell.id != 1221162 {
