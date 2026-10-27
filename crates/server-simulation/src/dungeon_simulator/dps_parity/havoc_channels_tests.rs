@@ -163,6 +163,146 @@ fn havoc_chaos_theory_dance_grants_buff_and_offhand_consumes_it_for_refund() {
 
 #[test]
 #[ignore = "requires prepared native spec577 player profile"]
+fn havoc_chaotic_disposition_rolls_real_chaos_hits_but_not_hunt() {
+    fn hits(spell: u32, selected: bool) -> Vec<i32> {
+        let _seed = crate::random::seed_scope(70_448);
+        let mut run = prepare_literal(577, 1).unwrap();
+        preparation::finish_pending_setup(&mut run).unwrap();
+        let actor = run.actor;
+        let target = run.targets[0];
+        let known = run
+            .app
+            .world()
+            .get::<crate::class_progression::KnownSpells>(actor)
+            .unwrap();
+        assert!(
+            known.contains(428492),
+            "native profile must select Chaotic Disposition"
+        );
+        if !selected {
+            let spells = known.iter().filter(|spell| *spell != 428492).collect();
+            run.app
+                .world_mut()
+                .entity_mut(actor)
+                .insert(crate::class_progression::KnownSpells::fixture(spells));
+        }
+        run.app
+            .world_mut()
+            .get_mut::<crate::stats::CharacterStats>(actor)
+            .unwrap()
+            .crit_pct = -1000.0;
+        for seed in 1..=80 {
+            let _seed = crate::random::seed_scope(seed);
+            crate::spell_cast::cast_triggered(run.app.world_mut(), actor, spell, Some(target), 1);
+        }
+        let hits = damage(&run, Some(spell));
+        assert_eq!(hits.len(), 80, "real {spell} hits must land");
+        assert!(hits.iter().all(|hit| !hit.crit));
+        hits.into_iter().map(|hit| hit.amount).collect()
+    }
+    for spell in [222031, 213243] {
+        let baseline = hits(spell, false);
+        let selected = hits(spell, true);
+        let bonuses: Vec<_> = selected
+            .iter()
+            .zip(&baseline)
+            .map(|(with, without)| *with as f64 / *without as f64)
+            .collect();
+        assert!(
+            bonuses.iter().any(|ratio| (*ratio - 1.0).abs() < 0.001),
+            "some real {spell} hits must not proc: {bonuses:?}"
+        );
+        assert!(
+            bonuses.iter().any(|ratio| (*ratio - 1.17).abs() < 0.001),
+            "native17% bonus must occur on real {spell} hits: {bonuses:?}"
+        );
+    }
+    assert_eq!(
+        hits(370966, false),
+        hits(370966, true),
+        "The Hunt is excluded by source"
+    );
+    assert_eq!(
+        hits(66528, false),
+        hits(66528, true),
+        "a chromatic non-Demon-Hunter spell is not a Demon Hunter action"
+    );
+}
+
+#[test]
+#[ignore = "requires prepared native spec577 player profile"]
+fn havoc_chaotic_disposition_rolls_real_burning_wound_ticks() {
+    fn ticks(selected: bool) -> Vec<i32> {
+        let _seed = crate::random::seed_scope(70_448);
+        let mut run = prepare_literal(577, 1).unwrap();
+        preparation::finish_pending_setup(&mut run).unwrap();
+        let actor = run.actor;
+        let target = run.targets[0];
+        crate::auras::remove_auras(
+            run.app.world_mut(),
+            actor,
+            crate::auras::RemoveReason::Cancelled,
+            |aura| aura.spell_id != 428492,
+        );
+        run.app.update();
+        if !selected {
+            let known = run
+                .app
+                .world()
+                .get::<crate::class_progression::KnownSpells>(actor)
+                .unwrap();
+            let spells = known.iter().filter(|spell| *spell != 428492).collect();
+            run.app
+                .world_mut()
+                .entity_mut(actor)
+                .insert(crate::class_progression::KnownSpells::fixture(spells));
+        }
+        for frame in 0..1200 {
+            let _seed = crate::random::seed_scope(frame + 1);
+            run.app
+                .world_mut()
+                .get_mut::<crate::stats::CharacterStats>(actor)
+                .unwrap()
+                .crit_pct = -1000.0;
+            if frame % 280 == 0 {
+                crate::spell_cast::cast_triggered(
+                    run.app.world_mut(),
+                    actor,
+                    391191,
+                    Some(target),
+                    1,
+                );
+            }
+            run.app.update();
+        }
+        let hits = damage(&run, Some(391191));
+        assert!(
+            hits.len() >= 15,
+            "real Burning Wound must tick repeatedly: {hits:?}"
+        );
+        assert!(hits.iter().all(|hit| hit.periodic && !hit.crit));
+        hits.into_iter().map(|hit| hit.amount).collect()
+    }
+    let baseline = ticks(false);
+    let selected = ticks(true);
+    let baseline_tail = &baseline[5..];
+    let minimum = *baseline_tail.iter().min().unwrap();
+    let maximum = *baseline_tail.iter().max().unwrap();
+    assert!(
+        maximum - minimum <= 2,
+        "unselected ticks must have a stable native base: {baseline:?}"
+    );
+    let selected_tail = &selected[5..];
+    assert!(
+        selected_tail.iter().any(|low| selected_tail
+            .iter()
+            .any(|high| (*high as f64 - *low as f64 * 1.17).abs() <= 1.0)),
+        "selected real periodic ticks must include the native17% bonus: {selected:?}"
+    );
+}
+
+#[test]
+#[ignore = "requires prepared native spec577 player profile"]
 fn havoc_chaos_theory_real_dance_grants_random_strike_critical_chance() {
     let _seed = crate::random::seed_scope(70_448);
     let mut run = prepare_literal(577, 1).unwrap();

@@ -8,6 +8,8 @@ use combat::spell_info::SpellInfo;
 
 const ARMY: u32 = 42650;
 const LESSER_GHOUL: u32 = 275430;
+// SimC76f8118 sc_death_knight.cpp15401–15402: Army uses its own 30s root.
+const ARMY_GHOUL: u32 = 1294026;
 const SUMMON_INTERVAL: f64 = 0.5;
 
 #[derive(Component)]
@@ -43,7 +45,7 @@ fn engage_lesser_ghoul(world: &mut World, actor: Entity) {
     let Some(summon) = world.get::<spell_cast::summon::SummonedCreature>(actor) else {
         return;
     };
-    if summon.spell_id != LESSER_GHOUL {
+    if !matches!(summon.spell_id, LESSER_GHOUL | ARMY_GHOUL) {
         return;
     }
     let owner = summon.owner;
@@ -70,7 +72,7 @@ fn update(world: &mut World) {
         }
     }
     for caster in due {
-        if !spell_cast::try_cast_triggered(world, caster, LESSER_GHOUL, Some(caster), 1) {
+        if !spell_cast::try_cast_triggered(world, caster, ARMY_GHOUL, Some(caster), 1) {
             warn!(?caster, "Native Army lesser-ghoul summon refused");
         }
     }
