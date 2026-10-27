@@ -136,6 +136,16 @@ fn elemental_primal_fire_immolate_requires_no_current_dot() {
         })
         .map(|event| event.spell_id.unwrap())
         .collect();
+    if casts.is_empty() {
+        let result = crate::spell_cast::creature_cast(
+            run.app.world_mut(),
+            actor,
+            118297,
+            Some(run.targets[0]),
+            false,
+        );
+        panic!("fire elemental did not cast; direct native Immolate admission={result:?}");
+    }
     assert!(
         casts.starts_with(&[118297, 57984]),
         "fire elemental casts Immolate then Fire Blast: {casts:?}"
