@@ -91,6 +91,7 @@ register_modules! {
     destruction_periodic: (2670, "modules/destruction_periodic.rs"),
     destruction_roaring_blaze: (2678, "modules/destruction_roaring_blaze.rs"),
     devastation: (10, "modules/devastation.rs"),
+    devourer_void_ray: (1480, "modules/devourer_void_ray.rs"),
     echo_policies: (1001, "modules/echo_policies.rs"),
     elemental: (1000, "modules/elemental.rs"),
     elemental_ascendance: (220, "modules/elemental_ascendance.rs"),
