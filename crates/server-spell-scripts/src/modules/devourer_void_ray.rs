@@ -72,7 +72,8 @@ fn focused_ray(world: &World, ctx: &EffectCtx<'_>, _: Entity, periodic: bool) ->
 }
 
 fn shatter_on_tick(world: &mut World, ctx: &EffectCtx<'_>, _: Entity, _: bool) {
-    if !matches!(ctx.spell.id, 1213649 | 1214595)
+    let ray = matches!(ctx.spell.id, 1213649 | 1214595);
+    if !matches!(ctx.spell.id, 1213649 | 1214595 | 1221162 | 473662 | 1217610 | 1245455 | 1225823 | 1239127 | 1297432)
         || !world
             .get::<KnownSpells>(ctx.caster)
             .is_some_and(|known| known.contains(1227619))
@@ -87,16 +88,20 @@ fn shatter_on_tick(world: &mut World, ctx: &EffectCtx<'_>, _: Entity, _: bool) {
         })
         .count();
     assert!(targets > 0, "Void Ray hit requires a target");
-    // SimC76f8118 cpp3390–3437,6338–6344: base chance +1%, Waste Not, divided by target count.
+    // SimC76f8118 cpp3390–3437,6338–6344: each selected direct hit rolls
+    // base chance +1%; Ray alone applies Waste Not and divides by target count.
     let mut chance = spell_cast::scripts::script_effect_value(world, ctx.caster, 1227619, 0) + 1.0;
-    if world
+    if ray && world
         .get::<KnownSpells>(ctx.caster)
         .is_some_and(|known| known.contains(1223918))
     {
         chance *=
             1.0 + spell_cast::scripts::script_effect_value(world, ctx.caster, 1223918, 0) / 100.0;
     }
-    if combat::random::thread_rng().gen_range(0.0..100.0) < chance / targets as f32 {
+    if ray {
+        chance /= targets as f32;
+    }
+    if combat::random::thread_rng().gen_range(0.0..100.0) < chance {
         soul_fragments::spawn(world, ctx.caster, FragmentKind::Lesser, false)
             .expect("native Shattered Souls fragment");
     }
