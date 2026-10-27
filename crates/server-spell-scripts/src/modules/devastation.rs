@@ -28,7 +28,18 @@ fn snapshot_mass_disintegrate(
     foreground: bool,
 ) -> Option<u32> {
     const MASS_DISINTEGRATE: u32 = 436335;
-    if !foreground || spell.id != 356995 || !combat::auras::has_aura(world, caster, 436336) {
+    if !foreground || spell.id != 356995 {
+        return None;
+    }
+    // sc_evoker.cpp6554–6555/6600–6603: retain Titanic Wrath for the paid channel.
+    if combat::auras::has_aura(world, caster, 359618)
+        && combat::auras::has_aura(world, caster, 386272)
+    {
+        let percent = script_effect_value(world, caster, 386272, 0);
+        spell.cast_damage_multiplier =
+            Some(spell.cast_damage_multiplier.unwrap_or(1.0) * (1.0 + percent / 100.0));
+    }
+    if !combat::auras::has_aura(world, caster, 436336) {
         return None;
     }
     let context = spell.cast_policy_context.as_ref()?;
