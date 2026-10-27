@@ -351,6 +351,7 @@ mod survival_mark_tests;
 mod survival_mechanics_tests;
 mod survival_pet_strike_tests;
 mod survival_sentinel_tests;
+mod survival_shellshock_tests;
 mod survival_stat_tests;
 mod survival_swipe_damage_tests;
 mod survival_takedown_damage_tests;
