@@ -22,7 +22,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
 use combat::class_progression::KnownSpells;
 
 #[path = "havoc/beam.rs"]
-mod beam;
+pub(super) mod beam;
 #[path = "havoc/damage.rs"]
 mod damage;
 #[path = "havoc/demonsurge.rs"]
