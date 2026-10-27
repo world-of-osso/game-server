@@ -34,6 +34,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::OnCast(trigger_voidrush),
     SpellScriptHook::AfterNativeLaunch(trigger_voidsurge),
     SpellScriptHook::TargetContextDamageMultiplier(meta_mastery_multiplier),
+    SpellScriptHook::TargetContextDamageMultiplier(blind_focus_multiplier),
     SpellScriptHook::TargetContextDamageMultiplier(focused_hatred),
     SpellScriptHook::AfterNativeCastUpdate(update_voidsurge),
     SpellScriptHook::AfterNativeCastUpdate(update_drain),
@@ -82,6 +83,48 @@ fn meta_mastery_multiplier(
     // effect3/4's native mastery coefficient.
     let mastery_effect = if periodic { 3 } else { 2 };
     1.0 + script_effect_value(world, ctx.caster, 1238855, mastery_effect) / 100.0
+}
+
+fn blind_focus_multiplier(
+    world: &World,
+    ctx: &spell_cast::effects::EffectCtx<'_>,
+    _: Entity,
+    periodic: bool,
+) -> f32 {
+    if world.get::<ActiveSpec>(ctx.caster).map(|spec| spec.0) != Some(1480)
+        || !auras::has_aura(world, ctx.caster, META)
+        || !auras::has_aura(world, ctx.caster, 1272364)
+        || !world
+            .get::<KnownSpells>(ctx.caster)
+            .is_some_and(|known| known.contains(1272364))
+    {
+        return 1.0;
+    }
+    let store = world.resource::<combat::spell_info::SpellStore>();
+    let talent = store.get(1272364).expect("native Blind Focus");
+    let class_set = talent
+        .class_options
+        .as_ref()
+        .map_or(0, |options| options.spell_class_set);
+    let selected: &[u8] = if periodic { &[1, 3] } else { &[0, 2] };
+    let meta_factor = 1.0 + script_effect_value(world, ctx.caster, META, 15) / 100.0;
+    // SimC76f8118 cpp2248–2260 scales each applicable Blind Focus effect in Meta;
+    // native spell mods already apply its unscaled amount.
+    talent
+        .effects
+        .iter()
+        .filter(|effect| {
+            selected.contains(&effect.index)
+                && auras::spell_mods::class_mask_matches(
+                    class_set,
+                    &effect.spell_class_mask,
+                    ctx.spell,
+                )
+        })
+        .fold(1.0, |factor, effect| {
+            let value = script_effect_value(world, ctx.caster, 1272364, effect.index) / 100.0;
+            factor * (1.0 + value * meta_factor) / (1.0 + value)
+        })
 }
 
 fn focused_hatred(
