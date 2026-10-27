@@ -77,7 +77,7 @@ const GUARDIAN_POLICIES: &[GuardianPolicy] = &[
     GuardianPolicy {
         summons: &[444248],
         entry: 221632,
-        spells: &[],
+        spells: &[445504],
         repeat_gcd: None,
         owner_spell_share: None,
         owner_attack_share: Some(0.70125),
@@ -85,7 +85,7 @@ const GUARDIAN_POLICIES: &[GuardianPolicy] = &[
     GuardianPolicy {
         summons: &[444251],
         entry: 221633,
-        spells: &[],
+        spells: &[445513],
         repeat_gcd: None,
         owner_spell_share: None,
         owner_attack_share: Some(0.70125),
@@ -93,7 +93,7 @@ const GUARDIAN_POLICIES: &[GuardianPolicy] = &[
     GuardianPolicy {
         summons: &[444252],
         entry: 221634,
-        spells: &[],
+        spells: &[445508],
         repeat_gcd: None,
         owner_spell_share: None,
         owner_attack_share: Some(0.70125),
@@ -101,7 +101,7 @@ const GUARDIAN_POLICIES: &[GuardianPolicy] = &[
     GuardianPolicy {
         summons: &[444254],
         entry: 221635,
-        spells: &[],
+        spells: &[445507],
         repeat_gcd: None,
         owner_spell_share: None,
         owner_attack_share: Some(0.70125),
