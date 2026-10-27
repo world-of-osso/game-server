@@ -210,6 +210,61 @@ fn havoc_chaos_theory_dance_grants_buff_and_offhand_consumes_it_for_refund() {
 
 #[test]
 #[ignore = "requires prepared native spec577 player profile"]
+fn havoc_serrated_glaive_earned_by_chaos_strike_increases_next_strike() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(577, 1).unwrap();
+    havoc_tests::earn_havoc_fury(&mut run, 80.0);
+    let actor = run.actor;
+    let target = run.targets[0];
+    cast(&mut run, 162794, false);
+    advance(&mut run, 20);
+    assert!(
+        crate::auras::has_aura(run.app.world(), actor, 390155),
+        "real Chaos Strike must earn Serrated Glaive"
+    );
+    run.app
+        .world_mut()
+        .entity_mut(actor)
+        .remove::<crate::combat::AutoAttack>();
+    run.app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(actor)
+        .unwrap()
+        .crit_pct = -1000.0;
+    run.app
+        .world_mut()
+        .resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .clear();
+    {
+        let _seed = crate::random::seed_scope(88);
+        crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 227518, Some(target), 1);
+    }
+    let with = damage(&run, Some(227518))[0].amount;
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        actor,
+        crate::auras::RemoveReason::Consumed,
+        |aura| aura.spell_id == 390155 && aura.caster == actor,
+    );
+    run.app
+        .world_mut()
+        .resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .clear();
+    {
+        let _seed = crate::random::seed_scope(88);
+        crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 227518, Some(target), 1);
+    }
+    let without = damage(&run, Some(227518))[0].amount;
+    assert!(
+        (with as f64 - without as f64 * 1.15).abs() <= 2.0,
+        "earned native Serrated Glaive must increase actual Annihilation damage by 15%: {without} -> {with}"
+    );
+}
+
+#[test]
+#[ignore = "requires prepared native spec577 player profile"]
 fn havoc_chaotic_disposition_rolls_real_chaos_hits_but_not_hunt() {
     fn hits(spell: u32, selected: bool) -> Vec<i32> {
         let _seed = crate::random::seed_scope(70_448);
