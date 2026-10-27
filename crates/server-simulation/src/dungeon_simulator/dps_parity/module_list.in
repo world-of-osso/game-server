@@ -223,6 +223,7 @@ mod midnight_stat_items_tests;
 mod multi_seed;
 mod named_action_cooldown_tests;
 mod native_pandemic_tests;
+mod outlaw_ace_tests;
 mod outlaw_cleave_tests;
 mod outlaw_cloud_cover_tests;
 mod outlaw_coup_tests;
