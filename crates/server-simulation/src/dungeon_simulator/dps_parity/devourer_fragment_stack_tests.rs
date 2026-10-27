@@ -1,6 +1,6 @@
 //! Native fragment heal impact and out-of-Meta stack production.
 use super::*;
-use crate::soul_fragments::{self, FragmentFilter, FragmentKind};
+use server::soul_fragments::{self, FragmentFilter, FragmentKind};
 use shared::{components::Health, protocol::CombatLogKind};
 
 fn meta_stacks(world: &World, actor: Entity) -> u8 {
