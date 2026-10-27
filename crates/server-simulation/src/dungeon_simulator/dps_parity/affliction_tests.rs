@@ -257,19 +257,42 @@ fn affliction_agony_landed_ticks_energize_native_whole_shards() {
 #[test]
 #[ignore = "requires private265 profile and native70448 world DB"]
 fn affliction_sayaad_reacts_to_owner_damage_only_when_not_passive() {
-    for react in [shared::protocol::REACT_ASSIST, shared::protocol::REACT_PASSIVE] {
+    for react in [
+        shared::protocol::REACT_ASSIST,
+        shared::protocol::REACT_PASSIVE,
+    ] {
         let _seed = crate::random::seed_scope(70448);
         let mut run = prepare_measurement(265, 1).unwrap();
         let pet = crate::hunter_pet::summoned_pet(run.app.world(), run.actor).unwrap();
-        run.app.world_mut().get_mut::<crate::pet_control::PetCharm>(pet).unwrap().react = react;
+        run.app
+            .world_mut()
+            .get_mut::<crate::pet_control::PetCharm>(pet)
+            .unwrap()
+            .react = react;
+        // Precombat Haunt may already have engaged an Assist pet.
+        run.app
+            .world_mut()
+            .entity_mut(pet)
+            .remove::<crate::combat::AutoAttack>();
+        run.app
+            .world_mut()
+            .entity_mut(pet)
+            .insert(crate::networking::CombatTarget(None));
         engage(&mut run);
         let (caster, target) = (run.actor, run.targets[0]);
         crate::spell_cast::cast_triggered(run.app.world_mut(), caster, 686, Some(target), 0);
         for _ in 0..40 {
             run.app.update();
         }
-        let victim = run.app.world().get::<crate::combat::AutoAttack>(pet).map(|attack| attack.victim);
-        assert_eq!(victim, (react == shared::protocol::REACT_ASSIST).then_some(target));
+        let victim = run
+            .app
+            .world()
+            .get::<crate::combat::AutoAttack>(pet)
+            .map(|attack| attack.victim);
+        assert_eq!(
+            victim,
+            (react == shared::protocol::REACT_ASSIST).then_some(target)
+        );
     }
 }
 
@@ -280,23 +303,42 @@ fn affliction_literal_sayaad_attacks_primary_with_melee_and_lash() {
     let mut run = prepare_measurement(265, 1).unwrap();
     let pet = crate::hunter_pet::summoned_pet(run.app.world(), run.actor)
         .expect("the configured Sayaad must be summoned before combat");
-    assert_eq!(run.app.world().get::<shared::components::Npc>(pet).unwrap().template_id, 1863);
+    assert_eq!(
+        run.app
+            .world()
+            .get::<shared::components::Npc>(pet)
+            .unwrap()
+            .template_id,
+        1863
+    );
     engage(&mut run);
     for _ in 0..400 {
         run.app.update();
         drive_player(&mut run).unwrap();
     }
-    let events = &run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
-    let damage = |spell| events.iter().any(|event| {
-        event.source == Some(pet.to_bits())
-            && event.target == Some(run.targets[0].to_bits())
-            && event.spell_id == spell
-            && event.kind == shared::protocol::CombatLogKind::Damage
-            && event.amount > 0
-    });
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    let damage = |spell| {
+        events.iter().any(|event| {
+            event.source == Some(pet.to_bits())
+                && event.target == Some(run.targets[0].to_bits())
+                && event.spell_id == spell
+                && event.kind == shared::protocol::CombatLogKind::Damage
+                && event.amount > 0
+        })
+    };
     // SimC76f8118 sc_warlock_pets.cpp405–459: Sayaad uses melee and Lash.
-    assert!(damage(None), "actual Sayaad melee must hit the primary target");
-    assert!(damage(Some(7814)), "actual Sayaad Lash must hit the primary target");
+    assert!(
+        damage(None),
+        "actual Sayaad melee must hit the primary target"
+    );
+    assert!(
+        damage(Some(7814)),
+        "actual Sayaad Lash must hit the primary target"
+    );
 }
 
 #[test]
