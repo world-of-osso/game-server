@@ -39,18 +39,24 @@ fn cast(run: &mut Run, spell: u32, self_target: bool) {
 #[test]
 #[ignore = "requires prepared native spec577 player profile"]
 fn havoc_hunt_applies_native_dot_to_each_nearby_enemy() {
-    let _seed = crate::random::seed_scope(70_448);
-    let mut run = prepare_literal(577, 3).unwrap();
-    cast(&mut run, 370965, false);
-    preparation::finish_pending_setup(&mut run).unwrap();
-    advance(&mut run, 80);
-    let ticks = damage(&run, Some(370969));
-    for target in &run.targets {
+    for count in [1, 3, 6] {
+        let _seed = crate::random::seed_scope(70_448);
+        let mut run = prepare_literal(577, count).unwrap();
+        cast(&mut run, 370965, false);
+        preparation::finish_pending_setup(&mut run).unwrap();
+        advance(&mut run, 80);
+        let targets: std::collections::BTreeSet<_> = damage(&run, Some(370969))
+            .iter()
+            .filter_map(|event| event.target)
+            .collect();
         assert!(
-            ticks
-                .iter()
-                .any(|event| event.target == Some(target.to_bits())),
-            "real Hunt must apply its native periodic payload to nearby enemy {target:?}"
+            targets.contains(&run.targets[0].to_bits()),
+            "Hunt must retain its primary DoT"
+        );
+        assert_eq!(
+            targets.len(),
+            count.min(5),
+            "Hunt uses its native five-target cap"
         );
     }
 }
