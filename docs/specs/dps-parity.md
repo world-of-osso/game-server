@@ -191,6 +191,7 @@ Frost player reaction clocks are configured before food setup advances native fr
 
 ### Subtlety literal fixture
 
+- Deepening Shadows extends earned Shadow Dance duration using the caster's raw haste-rating fraction and native effect value (`sc_rogue.cpp7457–7475`).
 - Eligible shadow clones and landed intrinsic Secret Technique clones can earn Shadow Techniques storage and Energy using Ancient Arts' native proc chance; Shadowcraft still controls stacks during Dance (`sc_rogue.cpp3650–3659,5405–5413,8159–8172`).
 - Shuriken Storm and its shadow clone snapshot the native rank-two stealth-stance damage bonus (`sc_rogue.cpp5817–5838,5872–5881`).
 - Eligible shadow clones can earn Shadow Techniques storage and Energy using Ancient Arts' native proc chance; Shadowcraft still controls stacks during Dance (`sc_rogue.cpp3650–3659,8159–8172`).

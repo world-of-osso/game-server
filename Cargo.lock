@@ -6750,6 +6750,7 @@ name = "server-spell-scripts"
 version = "0.1.0"
 dependencies = [
  "bevy",
+ "server-catalog",
  "server-combat",
  "shared",
 ]
