@@ -65,8 +65,7 @@ pub(super) fn build() -> Bindings {
 }
 
 pub(super) fn execution_actions() -> impl Iterator<Item = NativeAction<'static>> {
-    // Prepared injects the actual profile potion independently of class spells;
-    // physical soul-fragment pickups remain unavailable.
+    // Prepared injects the actual profile potion independently of class spells.
     ACTIONS
         .iter()
         .filter(|(name, _, _)| *name != "potion")

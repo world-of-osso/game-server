@@ -383,6 +383,9 @@ pub fn power_stats(world: &World, unit: Entity, healing: bool) -> (f32, f32) {
             return (owner.spell_power * share, 0.0);
         }
     }
+    if let Some(power) = crate::hunter_pet::death_knight::power_stats(world, unit) {
+        return power;
+    }
     if let Some(pet) = world.get::<crate::hunter_pet::HunterPet>(unit) {
         if world
             .get::<crate::hunter_pet::SummonedDemon>(unit)
@@ -1145,7 +1148,8 @@ fn critical_damage_amount(
     );
     let bonus =
         super::scripts::elemental_ancestors::modify_critical_bonus(world, caster, spell.id, bonus);
-    let total = amount + bonus;
+    let total =
+        amount + bonus + amount * super::guardian::demonic_brutality_critical_bonus(world, caster);
     if weapon_order {
         total * multiplier
     } else {

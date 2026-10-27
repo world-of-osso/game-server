@@ -10,6 +10,7 @@ use std::collections::{BTreeMap, BTreeSet};
 pub(crate) enum Execution {
     Snapshot,
     CancelCast,
+    PickupFragment(server::soul_fragments::PickupPlan),
     AutoAttack(Entity),
     RetargetAutoAttack(Entity),
     Retarget(Entity),
@@ -46,6 +47,13 @@ struct NativeReadiness {
 pub(crate) struct Prepared {
     ready: ReadyActions,
     limits: BTreeMap<ActionKey, PowerType>,
+    pickups: BTreeMap<
+        (
+            server::soul_fragments::FragmentFilter,
+            server::soul_fragments::PickupMode,
+        ),
+        server::soul_fragments::PickupPlan,
+    >,
     declared: BTreeSet<String>,
     moving: bool,
     cast_active: bool,
@@ -107,10 +115,12 @@ impl Prepared {
             after_channel,
             ready: BTreeMap::new(),
             limits: BTreeMap::new(),
+            pickups: fragment_pickup_plans(world, actor),
             declared: [
                 "snapshot_stats",
                 "auto_attack",
                 "retarget_auto_attack",
+                "pick_up_fragment",
                 "retarget",
             ]
             .into_iter()
@@ -267,11 +277,77 @@ impl Prepared {
         action: &Action,
         equipment: &Equipment,
     ) -> Result<Option<Execution>, String> {
+        if action.name == "pick_up_fragment" {
+            let (filter, mode) = fragment_pickup_options(action)?;
+            return Ok(self
+                .pickups
+                .get(&(filter, mode))
+                .copied()
+                .map(Execution::PickupFragment));
+        }
         let Some(key) = action_key(action, equipment)? else {
             return Ok(None);
         };
         Ok(self.ready.get(&key).cloned())
     }
+}
+
+fn fragment_pickup_plans(
+    world: &World,
+    actor: Entity,
+) -> BTreeMap<
+    (
+        server::soul_fragments::FragmentFilter,
+        server::soul_fragments::PickupMode,
+    ),
+    server::soul_fragments::PickupPlan,
+> {
+    use server::soul_fragments::{FragmentFilter as F, PickupMode as M};
+    let mut plans = BTreeMap::new();
+    for filter in [F::Any, F::Lesser, F::AnyGreater, F::AnyDemon] {
+        for mode in [M::Oldest, M::Newest, M::Nearest] {
+            if let Some(plan) = server::soul_fragments::plan_pickup(world, actor, filter, mode) {
+                plans.insert((filter, mode), plan);
+            }
+        }
+    }
+    plans
+}
+
+fn fragment_pickup_options(
+    action: &Action,
+) -> Result<
+    (
+        server::soul_fragments::FragmentFilter,
+        server::soul_fragments::PickupMode,
+    ),
+    String,
+> {
+    use server::soul_fragments::{FragmentFilter as F, PickupMode as M};
+    let filter = match action
+        .options
+        .get("type")
+        .map(String::as_str)
+        .unwrap_or("any")
+    {
+        "all" | "any" => F::Any,
+        "lesser" => F::Lesser,
+        "greater" => F::AnyGreater,
+        "demon" => F::AnyDemon,
+        value => return Err(format!("unsupported fragment type {value}")),
+    };
+    let mode = match action
+        .options
+        .get("mode")
+        .map(String::as_str)
+        .unwrap_or("oldest")
+    {
+        "old" | "oldest" => M::Oldest,
+        "new" | "newest" => M::Newest,
+        "close" | "near" | "closest" | "nearest" => M::Nearest,
+        value => return Err(format!("unsupported fragment pickup mode {value}")),
+    };
+    Ok((filter, mode))
 }
 
 fn read_composite_plan(
@@ -786,6 +862,7 @@ pub(crate) fn execute_row(
 pub(crate) fn execute(world: &mut World, actor: Entity, action: Execution) -> Result<(), String> {
     match action {
         Execution::Snapshot => Err("snapshot execution belongs to the native stat recorder".into()),
+        Execution::PickupFragment(plan) => server::soul_fragments::begin_pickup(world, actor, plan),
         Execution::CancelCast => {
             crate::spell_cast::cancel_cast(world, actor);
             Ok(())

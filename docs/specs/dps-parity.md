@@ -21,6 +21,13 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 - The actor's channel cadence and its periodic aura use the same native effect cadence. Declared damage/healing periods own this cadence ahead of faster auxiliary control pulses; channels without declared health emissions retain their native utility/script period. Constant haste must not create an extra expiry damage event or full proc callbacks from rounding residue. Preserve tick-zero behavior and genuine fractional native tick counts.
 - Preserve non-channel periodic quantization, existing modifier/haste snapshots, and un-hasted channel lifetimes, including four-second Convoke. Do not add spell-ID branches or replace native coefficients/periods/durations.
 
+### Devourer Soul Immolation
+
+- Each native Soul Immolation1241937 self-HoT tick executes the native Fury payload1242475. The native aura owns its tick timing and payload values (SimC76f8118 `sc_demon_hunter.cpp`5930–5958). Fragment spawning is separate.
+### Devourer Burning Blades
+
+- Selected Burning Blades452408 applies native residual1245654 to landed Devourer weapon swings and Voidblade/Hungering Slash damage children. Preserve the native periodic timing and the existing Havoc residual453177 behavior (SimC76f8118 `sc_demon_hunter.cpp`3088–3111,5830–5847,6697–6710,6875–6878).
+
 ### Literal spec drivers
 
 - Register each literal spec once, in spec-ID order. Adding a spec changes only its own rotation module and its registration line, not shared fields, initialization, dispatch, reporting or preparation branches. See [Arcane Mage parity](arcane-mage-parity.md) for spec62's execution contracts.
@@ -295,6 +302,8 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 - Guaranteed critical hits predict their actual Heating Up acquisition; an observed Heating Up conversion predicts Hot Streak. A critical hit with Hot Streak already active preserves and predicts it without creating Heating Up.
 
 ### Havoc literal rotation
+
+- Demon Hunter soul fragments retain their type, position, activation and expiry. The literal `pick_up_fragment` action selects a live fragment by its source mode and type, rechecks its condition at arrival, then consumes it through the spec's native payload. Demonic Appetite rolls native206478 on real Havoc Chaos Strike/Annihilation execution (SimC76f8118 sc_demon_hunter.cpp1656–1908,5069–5325,7579–7608).
 
 - A landed Havoc Hunt impact applies native370969's periodic payload to enemies within its native hostile range, with the primary included in the native370967 effect0 target cap (SimC76f8118 sc_demon_hunter.cpp5488–5495,5505–5511).
 
@@ -582,7 +591,7 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 - [ ] Selected Dominion I starts its native1276166 counter on actual Tyrant completion; ordinary HoG/Ruination advance only an active counter. At its native cumulative limit, choose among the four native summon spells uniformly, redirect living duplicate unique demons as pinned, and retain one stack. Selected Dominion III refunds through actual native1276318, never by editing the pool. Native Aura Does Not Refresh keeps the original expiry while stacks advance (SimC76f8118 `buff.cpp740–743`).
 - Expected cooldown remaining time follows pinned `cooldown.cpp603–615`: use actual elapsed time since the native timer started versus its observed progress, including reductions. Ready timers return zero; a timer at its complete duration returns that duration. Queries cannot mutate history.
 - Native controlled pets and executing guardians read their owner's self-owned, uncharged passive SpellMods through native family/label matching. Preserve caster-local and frozen modifiers; active or charged owner buffs are not inherited by this path. This follows pinned `player.cpp15268–15324` owner delegation and `sc_warlock_init.cpp120–122` passive registration, not an unqualified owner-buff copy. Native334591/416230/1296573 supply Wild Imp cost, crit and damage values.
-- Executing native guardians and controlled demons read live owner critical chance through the same shared `combat::read_pet_owner_critical_chance` helper as native Hunter pet melee. Spell critical-chance calculations reuse that helper; native caster/target modifiers remain separate (SimC76f8118 `pet.cpp217–220`).
+- Executing native guardians and controlled demons read live owner critical chance through the same shared `combat::read_pet_owner_critical_chance` helper as native Hunter pet melee. Spell critical-chance calculations reuse that helper; native caster/target modifiers remain separate (SimC76f8118 `pet.cpp217–220`). Selected Demonic Brutality adds its native effect2 twice to actual demon spell critical damage under the pinned bugs=1 model (`sc_warlock_pets.cpp185–201`).
 - Executing native guardians inherit the live owner's spell haste for cast, GCD and hasted channel/duration clocks, retaining spell-specific caster modifiers (SimC76f8118 `pet.cpp222–226`). Creature/class identity and base spell times remain native.
 - Pet and guardian spell damage, healing and ordinary melee use live owner versatility (SimC76f8118 `pet.hpp138–142`).
 - Actual Wild Imp104317/55659 guardians cannot regenerate spent Energy (pinned `pets.cpp701/875–882`). Native pool sizes, spell costs and actual exhaustion/removal remain authoritative; other guardian regeneration is unchanged. Selected Imp Gang Boss applies native1250772 to the first actual Imp of each Hand of Gul'dan group (`actions.cpp5716–5723`).
@@ -833,6 +842,7 @@ Named `action.<alias>.charges`, `max_charges`, `charges_fractional` and `full_re
 - Ordinary Raptor Strike rolls the selected native Swipe rank's chance. An actual upgraded Raptor Swipe consumes its replacement and cannot produce itself. Source: `sc_hunter.cpp6188,6217–6236`.
 - A real Wildfire Bomb explodes around its actual primary using pinned5yd geometry, native reduced-AoE cap and native primary-only bonus. Apply the corresponding periodic payload to every actual impact recipient with the same cap/primary effectiveness. Selected Shrapnel replaces, never duplicates, the ordinary fire DoT. Keep native damage coefficients and timing. Source: `sc_hunter.cpp7030,7039–7043,7062–7068,7083–7089,7118–7120,7134`.
 
+- Actual Boomstick channel execution spends one earned Tip, grants native471536 through the channel, and reuses the native Stargazer/selected Sentinel mark/main-pet Strike consumers. Remove the channel buff on root-aura removal. Source: `sc_hunter.cpp6304–6324,6344–6350`.
 - Actual Takedown grants selected Twin Fangs1272139's native Tip count before its buff and damage; owner Focus comes once from native1258571, not the pet child. Source: `sc_hunter.cpp3096–3105,6368–6405`.
 - Actual Takedown executes native player1253859 and living owned main-pet1253862 against its hostile primary after the Takedown buff and shared force mark. The pet payload's native energize effect does not execute; use its damage effect and actual pet stats/crit. Source: `sc_hunter.cpp3096–3105,6359–6405`.
 - Selected Sanctified Armaments1253831 banks its native second effect from each actual Raptor Strike/Swipe impact into the owned native1253836 rolling periodic on that recipient. Reuse the shared MM residual engine while preserving MM Rapid's distinct first effect. Source: `sc_hunter.cpp5708–5711,6140–6167`.
@@ -1067,3 +1077,6 @@ Selected Insidious Ire earns its temporary channel bonus when one target has all
 ### Unholy Festering ready states
 
 - Successful native Festering Strike and its real Scythe replacement each earn one uniform native min/max count of1254252 ready-ghoul stacks. Selected Festering Scythe arms458123 after Strike; successful replacement consumes that owned state and opens1241077. Do not substitute damage, alter rune costs or grant resources beyond native effects.
+### Unholy controlled ghoul
+
+- Specialization Raise Dead46584 creates native26125 through the controlled-pet path, retaining the actual current-pet relationship and permanent lifetime. Native Dark Transformation must see the pet through UNIT_PET. DK inherits source-qualified owner melee AP/crit/haste, and ordinary owner casts order the real pet against the selected hostile primary. Hunter, Warlock and Mage pet policies remain unchanged.

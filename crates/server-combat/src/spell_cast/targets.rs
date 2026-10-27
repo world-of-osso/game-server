@@ -411,6 +411,9 @@ fn dueling(world: &World, caster: Entity, target: Entity) -> bool {
 }
 
 pub fn is_alive(world: &World, entity: Entity) -> bool {
+    if world.get::<super::summon::RetiringSummon>(entity).is_some() {
+        return false;
+    }
     world
         .get::<Health>(entity)
         .is_some_and(|health| health.current > 0.0)
