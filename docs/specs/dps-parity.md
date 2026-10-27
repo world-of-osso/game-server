@@ -24,6 +24,10 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 ### Devourer Soul Immolation
 
 - Each native Soul Immolation1241937 self-HoT tick executes the native Fury payload1242475. The native aura owns its tick timing and payload values (SimC76f8118 `sc_demon_hunter.cpp`5930–5958). Fragment spawning is separate.
+### Devourer Focused Ray
+
+- Selected Focused Ray1240203 amplifies Void Ray damage children1213649/1214595 by native effect1 when the real resolved enemy count is at most native effect2 (SimC76f8118 `sc_demon_hunter.cpp`6304–6321).
+
 ### Devourer Burning Blades
 
 - Selected Burning Blades452408 applies native residual1245654 to landed Devourer weapon swings and Voidblade/Hungering Slash damage children. Preserve the native periodic timing and the existing Havoc residual453177 behavior (SimC76f8118 `sc_demon_hunter.cpp`3088–3111,5830–5847,6697–6710,6875–6878).
