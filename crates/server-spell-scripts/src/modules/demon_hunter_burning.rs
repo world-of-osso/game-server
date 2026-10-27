@@ -10,8 +10,44 @@ const TALENT: u32 = 452408;
 const DEVOURER_RESIDUAL: u32 = 1245654;
 const DEVOURER_CHILDREN: &[u32] = &[1245414, 1239127];
 
-pub(super) const HOOKS: &[SpellScriptHook] =
-    &[SpellScriptHook::LandedDamagePolicy(devourer_damage)];
+pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::LandedDamagePolicy(apply_chaos_brand),
+    SpellScriptHook::LandedDamagePolicy(devourer_damage),
+];
+
+// SimC76f8118 sc_demon_hunter.cpp2452–2457,2594–2605: direct DH impacts
+// apply the native target debuff after damage, including ordinary weapon swings.
+fn apply_chaos_brand(
+    world: &mut World,
+    caster: Entity,
+    target: Entity,
+    spell: Option<u32>,
+    amount: f32,
+    periodic: bool,
+) {
+    if amount <= 0.0
+        || periodic
+        || !matches!(
+            world.get::<ActiveSpec>(caster).map(|s| s.0),
+            Some(577 | 581 | 1480)
+        )
+    {
+        return;
+    }
+    let dh_action = spell.is_none_or(|id| {
+        world
+            .resource::<SpellStore>()
+            .get(id)
+            .and_then(|info| info.class_options.as_ref())
+            .is_some_and(|options| options.spell_class_set == 107)
+    });
+    if dh_action
+        && targets::relation_matches(world, caster, target, targets::Relation::Enemy)
+        && !spell_cast::try_cast_triggered(world, caster, 1490, Some(target), 1)
+    {
+        error!(?caster, ?target, "Native Chaos Brand cast refused");
+    }
+}
 
 fn devourer_damage(
     world: &mut World,

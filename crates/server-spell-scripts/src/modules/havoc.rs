@@ -16,6 +16,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AbilityUseAvailable(demonsurge::havoc_demonsurge_available),
     SpellScriptHook::ChannelPeriodic(beam::periodic_trigger),
     SpellScriptHook::CriticalChance(beam::crit_chance),
+    SpellScriptHook::TargetContextDamageMultiplier(beam::isolated_damage),
     SpellScriptHook::TargetContextDamageMultiplier(demonsurge::focused_hatred),
 ];
 use combat::class_progression::KnownSpells;
