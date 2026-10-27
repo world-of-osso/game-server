@@ -19,7 +19,8 @@ fn outlaw_earned_coup_executes_three_native_children_and_consumes_escalation() {
     let mut run = prepare_literal(260, 1).unwrap();
     engage(&mut run);
     assert!(
-        crate::spell_cast::knowledge::resolve_actor_action(run.app.world(), run.actor, 441776).is_err(),
+        crate::spell_cast::knowledge::resolve_actor_action(run.app.world(), run.actor, 441776)
+            .is_err(),
         "selected Coup must not be admitted before escalation is earned"
     );
     for _ in 0..96 {
@@ -52,7 +53,8 @@ fn outlaw_earned_coup_executes_three_native_children_and_consumes_escalation() {
         "real Sinister/Unseen executions must earn maximum Escalating Blade"
     );
     assert!(
-        crate::spell_cast::knowledge::resolve_actor_action(run.app.world(), run.actor, 2098).is_err(),
+        crate::spell_cast::knowledge::resolve_actor_action(run.app.world(), run.actor, 2098)
+            .is_err(),
         "earned Coup must replace Dispatch until it is consumed"
     );
     {
@@ -114,6 +116,12 @@ fn outlaw_earned_coup_executes_three_native_children_and_consumes_escalation() {
         !crate::auras::has_aura(run.app.world(), run.actor, 441786),
         "successful native Coup must consume its earned escalation"
     );
-    assert!(crate::spell_cast::knowledge::resolve_actor_action(run.app.world(), run.actor, 2098).is_ok());
-    assert!(crate::spell_cast::knowledge::resolve_actor_action(run.app.world(), run.actor, 441776).is_err());
+    assert!(
+        crate::spell_cast::knowledge::resolve_actor_action(run.app.world(), run.actor, 2098)
+            .is_ok()
+    );
+    assert!(
+        crate::spell_cast::knowledge::resolve_actor_action(run.app.world(), run.actor, 441776)
+            .is_err()
+    );
 }

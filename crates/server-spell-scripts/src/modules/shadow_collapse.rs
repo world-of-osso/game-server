@@ -3,7 +3,7 @@ use super::combat;
 use bevy::prelude::*;
 use combat::auras;
 use combat::spell_cast::script_registry::{SpellScriptHook, TargetPlanHook};
-use combat::spell_cast::{self, targets, PlannedEffect, TargetPlan};
+use combat::spell_cast::{self, PlannedEffect, TargetPlan, targets};
 use combat::spell_info::SpellInfo;
 
 const TALENT: u32 = 448403;

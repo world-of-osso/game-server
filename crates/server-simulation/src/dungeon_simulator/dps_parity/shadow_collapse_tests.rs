@@ -4,7 +4,7 @@ use super::literal_rotation::execution::{self, Execution};
 use super::*;
 use crate::auras::ActiveAuras;
 use crate::spell_cast::effects::factor_capture::FactorCapture;
-use crate::spell_cast::{read_native_cast_start, test_harness::ObservedCombatEvents, CastFailure};
+use crate::spell_cast::{CastFailure, read_native_cast_start, test_harness::ObservedCombatEvents};
 use crate::spell_info::SpellStore;
 use shared::protocol::CombatLogKind;
 
@@ -145,8 +145,10 @@ fn shadow_collapse_actual_rift_end_bursts_once_and_splits_across_three_targets()
     let single = run_burst_fixture(1);
     let three = run_burst_fixture(3);
     let fraction = three / single;
-    assert!((fraction - 1.0 / 3.0).abs() < 0.1,
-        "actual primary damage splits across the real pack: single={single}, three={three}, fraction={fraction}");
+    assert!(
+        (fraction - 1.0 / 3.0).abs() < 0.1,
+        "actual primary damage splits across the real pack: single={single}, three={three}, fraction={fraction}"
+    );
 }
 
 #[test]
@@ -194,6 +196,8 @@ fn shadow_collapse_ordinary_funded_madness_grows_actual_rift_damage() {
     let percent =
         crate::spell_cast::scripts::script_effect_value(run.app.world(), run.actor, 448403, 2);
     let expected = 1.0 + f64::from(percent) / 100.0;
-    assert!((after / before - expected).abs() < 0.005,
-        "ordinary Madness adds the native Rift damage bonus: before={before}, after={after}, expected={expected}");
+    assert!(
+        (after / before - expected).abs() < 0.005,
+        "ordinary Madness adds the native Rift damage bonus: before={before}, after={after}, expected={expected}"
+    );
 }

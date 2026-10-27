@@ -5,7 +5,7 @@ use bevy::prelude::*;
 use combat::auras::scripts::{AuraScript, AuraScripts};
 use combat::auras::{self, ActiveAuras, AuraInstance, RemoveReason};
 use combat::spell_cast::script_registry::{SpellScriptHook, TargetPlanHook};
-use combat::spell_cast::{self, targets, PlannedEffect, TargetPlan};
+use combat::spell_cast::{self, PlannedEffect, TargetPlan, targets};
 use combat::spell_info::{SpellInfo, SpellStore};
 use shared::components::ActiveSpec;
 
