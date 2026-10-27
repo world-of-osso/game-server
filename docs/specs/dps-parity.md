@@ -333,6 +333,10 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 ### Havoc literal rotation
 
+- Never Say Die427794's native periodic driver enables its effect0 damage percentage on effects3/4 when health reaches effect2's threshold. Preserve the pinned source's below-threshold behavior: an already-active damage bonus is not expired by that branch (SimC76f8118 `sc_demon_hunter.cpp`2197–2199,10044–10066).
+
+- Earned Serrated Glaive390155 supplies selected talent390154's effect0 percentage to its native spell modifier; the buff's class mask and lifetime still determine which real actions benefit (SimC76f8118 `sc_demon_hunter.cpp`2195–2196,7534–7539).
+
 - Selected Chaotic Disposition428492 rolls its native number of independent chances on each affected Demon Hunter chromatic-school direct or periodic damage action; each success adds its native damage percentage. The Hunt and its DoT are excluded, and Felblade damage is included (SimC76f8118 `sc_demon_hunter.cpp`2105–2108,2317–2346,2370–2396,5493–5497,7854–7858).
 
 - Selected Eternal Hunt1270901 applies its native effect0 percentage a second time to the final Blade Dance and Death Sweep primary and secondary strikes, not to earlier strikes (SimC76f8118 `sc_demon_hunter.cpp`7055–7065,7113–7121).
@@ -992,6 +996,8 @@ Flame Shock's literal action uses learned native470411, whose costed trigger cas
 
 Elemental Overload callbacks are instant background actions that can execute during a foreground hardcast without replacing its cast state. Schedule the400ms callback before parent projectile travel, not400ms after impact (`sc_shaman.cpp`3316–3351). Native child damage, resource costs and aura/target checks remain authoritative; effect160 ordinary forced casts remain unchanged (SimC76f8118 `sc_shaman.cpp`4846–4847).
 
+When Lightning Bolt Overload45284 executes while Stormkeeper is active, it snapshots Stormkeeper's native effect1 damage bonus despite the unmatched native class mask. The bonus survives projectile flight. Chain Lightning Overload retains native mask behavior (`sc_shaman.cpp`3254–3257,6315–6322,7320–7327).
+
 Stormkeeper grants its native effect4 count of next-spell uses, bounded by the native stack cap. Retain the native single proc charge; do not represent the same uses again as extra charges. Each use carries one native modifier amount, not a stack-multiplied bonus. A successful foreground root spends one use; its background overload does not spend another (`sc_shaman.cpp`8759).
 
 Native445624 supplies actual221177 Ancestors and their native lifetime after selected Stormkeeper or Ancestral Swiftness. Successful foreground spells command each living owned Ancestor once with native447419/447425 children at the retained primary. Background overloads do not command them. Native owner spell power and crit are inherited; Ancestor Lava Burst is guaranteed critical and scales with inherited crit (`sc_shaman.cpp`4342–4441,6358,7856,8163–8166,8758). Natural expiry allows selected Final Calling465717; cancellation does not. Actual Ancestor447419/447425/465717 critical hits apply selected live Elemental Fury60188 effect0's critical bonus, preserving its native amount and other spells' modifier masks (`sc_shaman.cpp`11468–11469; SimC effect indexes are one-based). Removing that owner aura removes the bonus. Ancient Fellowship and remaining pet effect inheritance still require qualification.
@@ -1012,7 +1018,7 @@ Selected Power of the Maelstrom191861 rolls its native chance on ordinary Lightn
 
 With Primal Elementalist117013, every Ascendance execution with Call of Fire378255 summons the real native118291/61029 Primal Fire Elemental, and Stormkeeper with Fury of the Storms191717 summons native157319/77942 Primal Storm. When that elemental is already active, its lifetime and the owner buff are extended by the native summon duration and its action cooldowns reset; no second actor is created. Owned guardians receive template class mana. The actors follow the pinned APL order: Meteor, Immolate only when not ticking on the target, then Fire Blast; and Stormfury only with at least10s of Call Lightning, then Call Lightning and Wind Gust. Owner spell power is inherited at1.0 times one plus the native117013 effect0. Stormfury269005 compounds its native157375 effect1 damage bonus once per scheduled channel tick, with the same factor for all recipients (`sc_shaman.cpp`4026–4042,4070–4139,4160–4184,4248–4315,8638–8640,8752–8755,11555–11570).
 
-Equipped MID2 four-piece1296626 grants native Flowing Elements1300219 uses when Stormkeeper or Ascendance ends, buffering the overlapping grant until Ascendance ends. Eligible foreground builders spend one use and earn native Overcharge1300222, which makes the next eligible spender free (`sc_shaman.cpp`12600–12608,12636–12651,12914–12924).
+Equipped MID2 four-piece1296626 grants native Flowing Elements1300219 uses when Stormkeeper or Ascendance ends, buffering the overlapping grant until Ascendance ends. Eligible foreground builders spend one use and earn native Overcharge1300222, which makes the next eligible spender free. Lightning Bolt Overload45284 and Lava Burst Overload285466 snapshot Flowing's native effect0 damage bonus when they execute while Flowing is active, despite their native class masks (`sc_shaman.cpp`3265–3267,6795,7323–7324,12600–12608,12636–12651,12914–12924).
 
 ## Out of scope
 

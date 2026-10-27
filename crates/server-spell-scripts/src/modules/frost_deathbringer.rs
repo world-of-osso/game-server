@@ -31,13 +31,16 @@ fn register_mark(scripts: &mut auras::scripts::AuraScripts) {
 fn stack_mark(world: &mut World, ctx: &EffectCtx, target: Entity, critical: bool, damage: f32) {
     if damage <= 0.0
         || matches!(ctx.spell.id, 439843 | 436304 | 66198 | 458169 | 439539)
-        || !world.get::<ActiveSpec>(ctx.caster).is_some_and(|spec| spec.0 == 251)
+        || !world
+            .get::<ActiveSpec>(ctx.caster)
+            .is_some_and(|spec| spec.0 == 251)
     {
         return;
     }
     let school = ctx.spell.school_mask();
     let shadowfrost = school == 48
-        || (auras::has_aura(world, ctx.caster, 443586) && (school & 48 != 0 || ctx.spell.id == 49998));
+        || (auras::has_aura(world, ctx.caster, 443586)
+            && (school & 48 != 0 || ctx.spell.id == 49998));
     let amount = if shadowfrost {
         if auras::has_aura(world, ctx.caster, 440031) {
             if critical { 4 } else { 2 }
@@ -50,10 +53,14 @@ fn stack_mark(world: &mut World, ctx: &EffectCtx, target: Entity, critical: bool
         return;
     };
     let mark = world.get::<ActiveAuras>(target).and_then(|active| {
-        active.iter().find(|aura| aura.spell_id == 434765 && aura.caster == ctx.caster)
+        active
+            .iter()
+            .find(|aura| aura.spell_id == 434765 && aura.caster == ctx.caster)
             .map(|aura| (aura.stacks, aura.max_stacks))
     });
-    let Some((stacks, maximum)) = mark else { return };
+    let Some((stacks, maximum)) = mark else {
+        return;
+    };
     let next = stacks.saturating_add(amount).min(maximum);
     auras::set_owned_stacks(world, ctx.caster, target, 434765, next);
     if next == maximum {
@@ -63,13 +70,26 @@ fn stack_mark(world: &mut World, ctx: &EffectCtx, target: Entity, critical: bool
     }
 }
 
-fn explode_mark(world: &mut World, target: Entity, aura: &auras::AuraInstance, reason: auras::RemoveReason) {
-    if !matches!(reason, auras::RemoveReason::Expired | auras::RemoveReason::Consumed | auras::RemoveReason::Cancelled)
-        || !world.get::<ActiveSpec>(aura.caster).is_some_and(|spec| spec.0 == 251)
+fn explode_mark(
+    world: &mut World,
+    target: Entity,
+    aura: &auras::AuraInstance,
+    reason: auras::RemoveReason,
+) {
+    if !matches!(
+        reason,
+        auras::RemoveReason::Expired
+            | auras::RemoveReason::Consumed
+            | auras::RemoveReason::Cancelled
+    ) || !world
+        .get::<ActiveSpec>(aura.caster)
+        .is_some_and(|spec| spec.0 == 251)
     {
         return;
     }
-    let Some(mut explosion) = spell_cast::load_triggered_spell(world, 436304, 1) else { return };
+    let Some(mut explosion) = spell_cast::load_triggered_spell(world, 436304, 1) else {
+        return;
+    };
     // SimC76f8118 sc_death_knight.cpp8355–8402: Frost uses effect2,
     // multiplied by actual earned mark stacks, and selected Exterminate grants effect3 uses.
     explosion.effects.retain(|effect| effect.index == 1);
@@ -79,8 +99,17 @@ fn explode_mark(world: &mut World, target: Entity, aura: &auras::AuraInstance, r
     }
     if auras::has_aura(world, aura.caster, 441378) {
         let stacks = script_effect_value(world, aura.caster, 441378, 2) as u8;
-        spell_cast::cast_triggered_with_overrides(world, aura.caster, EXTERMINATE, Some(aura.caster), 1,
-            TriggeredSpellOverrides { aura_stacks: Some(stacks), ..Default::default() });
+        spell_cast::cast_triggered_with_overrides(
+            world,
+            aura.caster,
+            EXTERMINATE,
+            Some(aura.caster),
+            1,
+            TriggeredSpellOverrides {
+                aura_stacks: Some(stacks),
+                ..Default::default()
+            },
+        );
     }
 }
 

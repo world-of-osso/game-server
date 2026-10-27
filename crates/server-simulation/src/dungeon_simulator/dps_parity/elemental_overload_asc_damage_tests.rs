@@ -30,6 +30,17 @@ fn sample(ascendance: bool) -> (f64, f64) {
             instance,
             crate::auras::RemoveReason::Cancelled,
         );
+        // Ending Ascendance earns Flowing Elements; remove that independent
+        // modifier so this comparison isolates Ascendance's damage bonus.
+        if let Some(flowing) = own_aura(&run, 1300219) {
+            let instance = flowing.instance_id;
+            crate::auras::remove_instance(
+                run.app.world_mut(),
+                run.actor,
+                instance,
+                crate::auras::RemoveReason::Consumed,
+            );
+        }
     }
     run.app
         .world_mut()

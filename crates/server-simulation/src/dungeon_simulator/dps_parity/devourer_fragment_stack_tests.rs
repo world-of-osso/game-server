@@ -279,4 +279,14 @@ fn devourer_full_soul_stacks_admit_real_metamorphosis() {
         crate::auras::has_aura(run.app.world(), actor, 1217607),
         "ordinary Meta starts native aura"
     );
+    // SimC76f8118 sc_demon_hunter.cpp9192–9195 expires soul stacks on Meta entry.
+    assert_eq!(
+        stacks(run.app.world(), actor, 1225789),
+        0,
+        "Meta entry consumes its soul stacks"
+    );
+    assert!(
+        !crate::auras::has_aura(run.app.world(), actor, 1213809),
+        "Meta entry removes its ready aura"
+    );
 }
