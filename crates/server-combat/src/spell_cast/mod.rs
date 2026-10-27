@@ -399,8 +399,12 @@ impl Plugin for SpellCastPlugin {
                     powers::regenerate_creature_health,
                     powers::regenerate_player_health,
                     area_aura::update_dynamic_objects.after(advance_casts),
+                    summon::dispatch_arrivals
+                        .after(crate::creature_ai::chase_system)
+                        .before(crate::combat::auto_attack_system),
                     (summon::expire_summons, guardian::update)
                         .chain()
+                        .after(summon::dispatch_arrivals)
                         .after(advance_casts),
                     crate::game_objects::summoned::expire_objects.after(advance_casts),
                     area_trigger::update_area_triggers.after(advance_casts),

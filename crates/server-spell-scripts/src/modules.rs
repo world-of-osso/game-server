@@ -258,6 +258,7 @@ register_modules! {
     swiftmend: (1000, "modules/swiftmend.rs"),
     touch_of_death: (240, "modules/touch_of_death.rs"),
     unholy_eruption: (2520, "modules/unholy_eruption.rs"),
+    unholy_putrefy: (2521, "modules/unholy_putrefy.rs"),
     unrelenting_onslaught: (714, "modules/unrelenting_onslaught.rs"),
     voltaic_blaze: (250, "modules/voltaic_blaze.rs"),
     warlock_seed: (2659, "modules/warlock_seed.rs"),
