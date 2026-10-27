@@ -199,6 +199,7 @@ register_modules! {
     outlaw_spree_power: (2605, "modules/outlaw_spree_power.rs"),
     outlaw_trickster: (2607, "modules/outlaw_trickster.rs"),
     outlaw_zero_producer: (2609, "modules/outlaw_zero_producer.rs"),
+    outlaw_zero_in: (2609, "modules/outlaw_zero_in.rs"),
     paid_cooldowns: (130, "modules/paid_cooldowns.rs"),
     periodic_counters: (270, "modules/periodic_counters.rs"),
     pet_sets: (1000, "modules/pet_sets.rs"),
