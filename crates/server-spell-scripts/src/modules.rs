@@ -305,6 +305,7 @@ register_modules! {
     unrelenting_onslaught: (714, "modules/unrelenting_onslaught.rs"),
     unholy_coil_devastation: (2527, "modules/unholy_coil_devastation.rs"),
     voltaic_blaze: (250, "modules/voltaic_blaze.rs"),
+    demonology_mind_sear: (2660, "modules/demonology_mind_sear.rs"),
     warlock_ritual: (2669, "modules/warlock_ritual.rs"),
     warlock_seed: (2659, "modules/warlock_seed.rs"),
     warrior: (40, "modules/warrior.rs"),
