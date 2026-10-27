@@ -303,6 +303,12 @@ fn update_combat_status(world: &mut World, unit: Entity) {
     let current = world.get::<CombatStatus>(unit).map(|status| status.0);
     if current != Some(in_combat) {
         world.entity_mut(unit).insert(CombatStatus(in_combat));
+        if let Some(registry) = world
+            .get_resource::<crate::spell_cast::script_registry::SpellScriptRegistry>()
+            .copied()
+        {
+            registry.combat_status_changed(world, unit, in_combat);
+        }
     }
 }
 

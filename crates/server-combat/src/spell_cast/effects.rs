@@ -846,10 +846,12 @@ fn with_variance(amount: f32, variance: f32) -> f32 {
     amount * (1.0 + rand::Rng::gen_range(&mut rand::thread_rng(), -delta..=delta))
 }
 
-/// 1 + the caster's versatility (players only).
+/// SimC76f8118 pet.hpp138–142: pets inherit their live owner's versatility.
 pub fn versatility_multiplier(world: &World, caster: Entity) -> f32 {
+    let owner =
+        crate::auras::summon_damage::ownership(world, caster).map_or(caster, |(owner, _)| owner);
     world
-        .get::<CharacterStats>(caster)
+        .get::<CharacterStats>(owner)
         .map_or(1.0, |stats| 1.0 + stats.versatility_pct / 100.0)
 }
 
