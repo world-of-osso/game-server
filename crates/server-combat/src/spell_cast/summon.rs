@@ -254,11 +254,12 @@ pub fn start_melee_attack(world: &mut World, summon: Entity, target: Entity) {
             .is_some(),
         "summon must retain native movement speeds"
     );
-    world
-        .entity_mut(summon)
-        .insert(crate::creature_ai::CreatureState::Pursuing {
+    world.entity_mut(summon).insert((
+        crate::creature_ai::CreatureState::Pursuing {
             target: target.to_bits(),
-        });
+        },
+        crate::networking::CombatTarget(Some(target)),
+    ));
     crate::combat::start_attack_now(world, summon, crate::combat::AutoAttack::new(target));
 }
 
