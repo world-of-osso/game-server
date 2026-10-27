@@ -157,10 +157,27 @@ fn advance_ritual(world: &mut World, caster: Entity, costs: &[(CostPool, f32)]) 
         .expect("native Soul Shards display units")
         .display_modifier;
     assert!(units > 0, "Soul Shards display divisor must be positive");
-    let seconds = f64::from(spell_cast::scripts::script_effect_value(
+    let mut seconds = f64::from(spell_cast::scripts::script_effect_value(
         world, caster, RITUAL, 0,
     )) * f64::from(paid)
         / f64::from(units);
+    // SimC76f8118 actions.cpp311–312: the native time bonus applies once
+    // per spender while an actual owned Demonic Tyrant is active.
+    if auras::has_aura(world, caster, 429917) {
+        let tyrant_active = world
+            .query::<(Entity, &spell_cast::summon::SummonedCreature)>()
+            .iter(world)
+            .any(|(actor, summon)| {
+                summon.owner == caster
+                    && summon.spell_id == 265187
+                    && spell_cast::targets::is_alive(world, actor)
+            });
+        if tyrant_active {
+            seconds += f64::from(spell_cast::scripts::script_effect_value(
+                world, caster, 429917, 0,
+            )) / 1000.0;
+        }
+    }
     let held = DEMONS
         .iter()
         .find(|demon| own_aura(world, caster, demon.ritual).is_some());
