@@ -1074,6 +1074,10 @@ Selected Idol of N'Zoth tracks actual Madness and Mind Blast executions, foregro
 Selected Insidious Ire earns its temporary channel bonus when one target has all three caster-owned Pain, Vampiric Touch and Madness effects. The window lasts until the earliest expiry and may be refreshed to a later earned deadline. Its amount comes from the selected native trait effect.
 - Specialization Raise Dead46584 creates native26125 through the controlled-pet path, retaining the actual current-pet relationship and permanent lifetime. Native Dark Transformation must see the pet through UNIT_PET. DK inherits source-qualified owner melee AP/crit/haste, and ordinary owner casts order the real pet against the selected hostile primary. Hunter, Warlock and Mage pet policies remain unchanged.
 
+### Unholy Putrefy summons
+
+- Native Putrefy summons its lesser ghoul. The actual ghoul travels to the selected enemy before delivering native single-target and area damage; it is then dismissed. Selected Lord of the Dead uses its native chance to raise a Magus after that dismissal. Do not substitute caster-only damage or invent creature data.
+
 ### Unholy Festering ready states
 
 - Successful native Festering Strike and its real Scythe replacement each earn one uniform native min/max count of1254252 ready-ghoul stacks. Selected Festering Scythe arms458123 after Strike; successful replacement consumes that owned state and opens1241077. Do not substitute damage, alter rune costs or grant resources beyond native effects.
