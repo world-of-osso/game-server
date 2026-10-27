@@ -246,6 +246,15 @@ pub fn active_count(world: &World, owner: Entity, filter: FragmentFilter) -> usi
     })
 }
 
+/// SimC76f8118 sc_demon_hunter.cpp5129–5131 and action.cpp2428–2430.
+pub fn pickup_in_melee_range(world: &World, owner: Entity, target: Entity) -> Result<bool, String> {
+    let from = position(world, owner).ok_or("fragment owner position missing")?;
+    let to = position(world, target).ok_or("fragment target position missing")?;
+    let reach = combat::scripted_ai::model_reach::combat_reach(world, target)
+        .ok_or("fragment target combat reach unavailable")?;
+    Ok(from.distance(to) <= 5.0 + reach)
+}
+
 fn position(world: &World, owner: Entity) -> Option<Vec3> {
     world
         .get::<Position>(owner)
@@ -325,6 +334,13 @@ pub fn begin_pickup(world: &mut World, owner: Entity, plan: PickupPlan) -> Resul
         id: plan.id,
         due: plan.due,
     });
+    let at = combat::spell_cast::now(world);
+    world
+        .entity_mut(owner)
+        .entry::<combat::spell_cast::SpellHistory>()
+        .or_default()
+        .into_mut()
+        .record_fragment_pickup(at);
     Ok(())
 }
 
