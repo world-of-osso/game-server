@@ -10,7 +10,7 @@ struct PendingAbomination(f64);
 struct DiseaseCloud { next: f64, period: f64 }
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
-    SpellScriptHook::NativeAfterCast(after_cast),
+    SpellScriptHook::AuraRollAfterCast(after_cast),
     SpellScriptHook::SummonInitialized(initialize),
     SpellScriptHook::AfterCastUpdate(update),
 ];
