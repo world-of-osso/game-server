@@ -166,8 +166,14 @@ fn convert_magi_to_lord(world: &mut World, actor: Entity) {
             return;
         }
         magi.sort_by(|a, b| a.1.total_cmp(&b.1));
-        let duration = magi.iter().take(required).map(|(_, expiry)| expiry - now).sum();
-        world.entity_mut(owner).insert(PendingLordDuration(duration));
+        let duration = magi
+            .iter()
+            .take(required)
+            .map(|(_, expiry)| expiry - now)
+            .sum();
+        world
+            .entity_mut(owner)
+            .insert(PendingLordDuration(duration));
         for (magus, _) in magi.into_iter().take(required) {
             world
                 .get_mut::<summon::SummonedCreature>(magus)
@@ -189,9 +195,13 @@ fn retain_lord_duration(world: &mut World, actor: Entity) {
         return;
     }
     let owner = summon.owner;
-    let duration = world.entity_mut(owner).take::<PendingLordDuration>()
+    let duration = world
+        .entity_mut(owner)
+        .take::<PendingLordDuration>()
         .expect("Lord summon requires consumed Magus durations");
-    world.entity_mut(actor).insert(LordMagusDuration(duration.0));
+    world
+        .entity_mut(actor)
+        .insert(LordMagusDuration(duration.0));
 }
 
 fn lord_duration_multiplier(world: &World, ctx: &EffectCtx<'_>, _: Entity, _: bool) -> f32 {

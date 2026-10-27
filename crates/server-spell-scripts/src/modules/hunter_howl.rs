@@ -147,7 +147,9 @@ fn consume_beasts(world: &mut World, caster: Entity, primary: Entity) {
             continue;
         }
         if ready == 472325
-            && world.get::<combat::class_progression::ActiveSpec>(caster).is_some_and(|spec| spec.0 == 253)
+            && world
+                .get::<combat::class_progression::ActiveSpec>(caster)
+                .is_some_and(|spec| spec.0 == 253)
             && has_talent(world, caster, 472476)
         {
             // SimC76f8118 hunter.cpp3797–3803: the real Bear brings the

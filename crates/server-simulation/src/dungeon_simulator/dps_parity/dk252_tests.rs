@@ -624,12 +624,19 @@ fn dk252_lord_bolt_scales_with_consumed_magus_remaining_time() {
                 .expect("three actual Magi must create the native Lord")
         };
         run.app.insert_resource(FactorCapture::new(
-            lord, run.targets[0], 1297086, "lord_bolt", 1,
+            lord,
+            run.targets[0],
+            1297086,
+            "lord_bolt",
+            1,
         ));
         for _ in 0..200 {
             run.app.update();
             let capture = run.app.world().resource::<FactorCapture>().export();
-            if let Some(multiplier) = capture["events"].as_array().unwrap().iter()
+            if let Some(multiplier) = capture["events"]
+                .as_array()
+                .unwrap()
+                .iter()
                 .find(|event| event["event"] == "direct_amount" && event["spell_id"] == 1297086)
                 .and_then(|event| event["factors"]["mult"].as_f64())
             {
@@ -641,7 +648,10 @@ fn dk252_lord_bolt_scales_with_consumed_magus_remaining_time() {
 
     let short = first_bolt_multiplier(2.0);
     let long = first_bolt_multiplier(14.0);
-    assert!(long > short * 1.1, "longer consumed Magus lifetime must increase actual Lord damage: short={short}, long={long}");
+    assert!(
+        long > short * 1.1,
+        "longer consumed Magus lifetime must increase actual Lord damage: short={short}, long={long}"
+    );
 }
 
 #[test]

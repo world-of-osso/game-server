@@ -97,7 +97,12 @@ pub(super) fn summon_dire_beast(world: &mut World, owner: Entity, primary: Entit
         ..Default::default()
     };
     if !spell_cast::cast_triggered_with_overrides(
-        world, owner, DIRE_BEAST, Some(primary), 1, values,
+        world,
+        owner,
+        DIRE_BEAST,
+        Some(primary),
+        1,
+        values,
     ) {
         warn!(?owner, ?primary, "Native Dire Beast summon refused");
     }

@@ -21,7 +21,9 @@ pub(super) fn after_boar_impact(
     _: f32,
 ) {
     if matches!(ctx.spell.id, 471936 | 471938)
-        && world.get::<ActiveSpec>(ctx.caster).is_some_and(|spec| spec.0 == 253)
+        && world
+            .get::<ActiveSpec>(ctx.caster)
+            .is_some_and(|spec| spec.0 == 253)
         && has_talent(world, ctx.caster, TALENT)
     {
         // SimC76f8118 hunter.cpp4817–4846: each actual Boar impact increments.
@@ -34,14 +36,21 @@ pub(super) fn capture_cobra(world: &World, caster: Entity, spell: &mut SpellInfo
         return;
     }
     let Some(aura) = world.get::<ActiveAuras>(caster).and_then(|auras| {
-        auras.iter().find(|aura| aura.spell_id == BUFF && aura.caster == caster)
+        auras
+            .iter()
+            .find(|aura| aura.spell_id == BUFF && aura.caster == caster)
     }) else {
         return;
     };
     // SimC76f8118 hunter.cpp4979–4980: effect1 applies once, not per stack.
-    let bonus = aura.effects.iter().find(|effect| effect.index == 0)
-        .expect("native Hogstrider damage effect").amount;
-    spell.cast_damage_multiplier = Some(spell.cast_damage_multiplier.unwrap_or(1.0) * (1.0 + bonus / 100.0));
+    let bonus = aura
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .expect("native Hogstrider damage effect")
+        .amount;
+    spell.cast_damage_multiplier =
+        Some(spell.cast_damage_multiplier.unwrap_or(1.0) * (1.0 + bonus / 100.0));
 }
 
 pub(super) fn consume_cobra(world: &mut World, caster: Entity, spell: &SpellInfo) {
