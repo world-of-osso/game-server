@@ -1124,6 +1124,77 @@ fn havoc_essence_break_native_hit_marks_enemy_and_strikes_proc_once_per_icd() {
 
 #[test]
 #[ignore = "requires prepared native spec577 player profile"]
+fn havoc_eternal_hunt_scales_only_last_dance_strikes() {
+    fn strikes(parent: u32, enabled: bool) -> [u64; 4] {
+        let _seed = crate::random::seed_scope(70_448);
+        let mut run = prepare_literal(577, 3).unwrap();
+        preparation::finish_pending_setup(&mut run).unwrap();
+        let actor = run.actor;
+        assert!(
+            run.app
+                .world()
+                .get::<crate::class_progression::KnownSpells>(actor)
+                .unwrap()
+                .contains(1270901)
+        );
+        if !enabled {
+            let known = run
+                .app
+                .world()
+                .get::<crate::class_progression::KnownSpells>(actor)
+                .unwrap();
+            let spells = known.iter().filter(|spell| *spell != 1270901).collect();
+            run.app
+                .world_mut()
+                .entity_mut(actor)
+                .insert(crate::class_progression::KnownSpells::fixture(spells));
+        }
+        run.app
+            .world_mut()
+            .get_mut::<crate::stats::CharacterStats>(actor)
+            .unwrap()
+            .crit_pct = 1000.0;
+        let ids = if parent == 188499 {
+            [391374, 391378, 199552, 200685]
+        } else {
+            [393055, 393054, 210153, 210155]
+        };
+        ids.map(|id| {
+            let target = run.targets[0];
+            crate::spell_cast::cast_triggered(run.app.world_mut(), actor, id, Some(target), 1);
+            let hits = damage(&run, Some(id));
+            assert!(
+                hits.iter().all(|hit| hit.crit),
+                "controlled strikes must be critical: {hits:?}"
+            );
+            hits.iter().map(|hit| hit.amount as u64).sum()
+        })
+    }
+    for parent in [188499, 210152] {
+        let baseline = strikes(parent, false);
+        let selected = strikes(parent, true);
+        assert!(
+            baseline.iter().all(|amount| *amount > 0),
+            "real primary and secondary strikes must land: {baseline:?}"
+        );
+        for index in [0, 2] {
+            assert_eq!(
+                selected[index], baseline[index],
+                "earlier strike {parent}/{index}: baseline={baseline:?}, selected={selected:?}"
+            );
+        }
+        for index in [1, 3] {
+            let ratio = selected[index] as f64 / baseline[index] as f64;
+            assert!(
+                (ratio - 1.2).abs() < 0.001,
+                "final strike {parent}/{index}: baseline={baseline:?}, selected={selected:?}"
+            );
+        }
+    }
+}
+
+#[test]
+#[ignore = "requires prepared native spec577 player profile"]
 fn havoc_first_blood_splits_native_primary_and_secondary_strikes() {
     let _seed = crate::random::seed_scope(70_448);
     for (parent, primary_strikes, secondary_strikes) in [
