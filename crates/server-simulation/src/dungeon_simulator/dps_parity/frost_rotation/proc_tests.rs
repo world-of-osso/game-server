@@ -307,6 +307,37 @@ fn frost_reapers_mark_earns_echoing_fury_rune_discount() {
     }
 }
 
+#[test]
+#[ignore = "native251 earned Exterminate releases its two damage hits"]
+fn frost_exterminate_spender_deals_both_native_hits() {
+    use shared::protocol::CombatLogKind;
+    for spender in [207230, 49020] {
+        let _seed = crate::random::seed_scope(251);
+        let mut run = super::super::prepare_literal(251, 3).unwrap();
+        super::super::engage(&mut run);
+        cast(&mut run, 439843);
+        assert!(auras::has_aura(run.app.world(), run.actor, 441416));
+        cast(&mut run, spender);
+        for _ in 0..120 {
+            run.app.update();
+        }
+        let events = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0;
+        for spell in [441424, 441426] {
+            assert!(events.iter().any(|event| {
+                event.source == Some(run.actor.to_bits())
+                    && event.target == Some(run.targets[0].to_bits())
+                    && event.spell_id == Some(spell)
+                    && event.kind == CombatLogKind::Damage
+                    && event.amount > 0
+            }), "earned spender {spender} must deal native Exterminate hit {spell}");
+        }
+    }
+}
+
 fn earn_rime(run: &mut Run) {
     for _ in 0..24 {
         cast(run, 49020);
