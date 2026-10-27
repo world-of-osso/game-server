@@ -98,15 +98,33 @@ fn subtlety_darkness_blades_expiry_amplifies_shadow_finisher_not_poison() {
         "Shadowed Finishers damage takes Lingering Darkness effect2 once"
     );
 
-    run.app
-        .insert_resource(FactorCapture::new(actor, target, 315585, "instant_poison", 1));
-    let poisoned = (0..2000).any(|_| {
-        run.app.update();
-        run.app.world().resource::<FactorCapture>().export()["captured_hits"] == 1
-    });
-    assert!(poisoned, "white hits must land a real Instant Poison");
-    assert!(
-        darkness_modifiers(&run, 315585).is_empty(),
+    // The poison mask lives in effects 0/2; native Instant Poison must not see them.
+    let poison = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(315585)
+        .unwrap()
+        .clone();
+    let poison_damage = |world: &World| {
+        crate::auras::spell_mods::modify(
+            world,
+            actor,
+            &poison,
+            crate::auras::SpellModOp::HealingAndDamage,
+            100.0,
+        )
+    };
+    let with_darkness = poison_damage(run.app.world());
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        actor,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == DARKNESS,
+    );
+    assert_eq!(
+        with_darkness,
+        poison_damage(run.app.world()),
         "Subtlety Lingering Darkness never takes Assassination's poison effect1"
     );
 }
