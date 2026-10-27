@@ -570,6 +570,38 @@ fn frost_breath_end_restores_runes() {
 }
 
 #[test]
+#[ignore = "real rune spenders extend Frozen Dominion through Gathering Storm"]
+fn frost_gathering_storm_extends_winter_for_paid_and_free_spenders() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::super::prepare_literal(251, 1).unwrap();
+    super::super::engage(&mut run);
+    let actor = run.actor;
+    assert!(auras::has_aura(run.app.world(), actor, 194912));
+    super::super::enhancement_generation_tests::cast(&mut run, 51271, actor);
+    let expiration = |run: &Run| {
+        run.app.world().get::<ActiveAuras>(actor).unwrap().iter()
+            .find(|aura| aura.spell_id == 1233152 && aura.caster == actor)
+            .unwrap().expires_at.unwrap()
+    };
+    let base_extension = crate::spell_cast::scripts::script_effect_value(run.app.world(), actor, 194912, 0);
+    let before = expiration(&run);
+    cast(&mut run, 49020);
+    let paid = expiration(&run);
+    assert!((paid - before - f64::from(base_extension) * 0.2).abs() < 0.001,
+        "paid two-rune Obliterate extends Winter: {before} -> {paid}");
+    super::super::enhancement_generation_tests::cast(&mut run, 47568, actor);
+    let before_free = expiration(&run);
+    assert!(auras::has_aura(run.app.world(), actor, 1230959));
+    cast(&mut run, 49020);
+    let free = expiration(&run);
+    assert!((free - before_free - f64::from(base_extension) * 0.2).abs() < 0.001,
+        "free Obliterate still extends Winter by its base rune cost: {before_free} -> {free}");
+    let stacks = run.app.world().get::<ActiveAuras>(actor).unwrap().iter()
+        .find(|aura| aura.spell_id == 211805 && aura.caster == actor).unwrap().stacks;
+    assert_eq!(stacks, 4, "both real Obliterates earn stacks per base rune cost");
+}
+
+#[test]
 #[ignore = "native Frostwyrm's Fury extends an active Pillar with Chosen of Frostbrood"]
 fn frost_fury_extends_real_pillar() {
     let _seed = crate::random::seed_scope(70448);
