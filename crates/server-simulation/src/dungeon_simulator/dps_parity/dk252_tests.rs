@@ -73,7 +73,10 @@ fn dk252_putrefy_summons_native_lesser_ghoul() {
     preparation::finish_pending_setup(&mut run).unwrap();
     let world = run.app.world_mut();
     assert!(
-        world.query::<&shared::components::Npc>().iter(world).any(|npc| npc.template_id == 258578),
+        world
+            .query::<&shared::components::Npc>()
+            .iter(world)
+            .any(|npc| npc.template_id == 258578),
         "Putrefy must summon its native lesser ghoul"
     );
 }
