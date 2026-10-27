@@ -921,7 +921,7 @@ fn frost_fury_earns_and_uses_recall() {
         auras::overrides::resolve_spell(run.app.world(), run.actor, 279302),
         1265384
     );
-    cast(&mut run, 279302);
+    cast(&mut run, 1265384);
     for _ in 0..10 {
         run.app.update();
     }
