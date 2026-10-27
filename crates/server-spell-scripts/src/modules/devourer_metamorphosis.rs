@@ -85,7 +85,11 @@ fn update_drain(world: &mut World) {
             if deadline > now {
                 break;
             }
-            spell_cast::cast_triggered(world, unit, VOID_BUILDUP, Some(unit), 1);
+            // SimC sc_demon_hunter.cpp12521–12525 consumes the native
+            // Void Buildup resource amount rather than casting its energize effect.
+            let amount = script_effect_value(world, unit, VOID_BUILDUP, 0);
+            powers::change_power(world, unit, PowerType::Fury, amount)
+                .expect("Devourer Meta requires Fury pool");
             let fury = powers::power_value(world, unit, PowerType::Fury)
                 .expect("Devourer Meta requires Fury pool").0;
             if fury <= 0.0 && !is_protected_cast(world, unit) {
