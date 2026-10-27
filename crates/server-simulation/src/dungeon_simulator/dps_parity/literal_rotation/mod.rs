@@ -63,6 +63,7 @@ pub(crate) struct Driver {
     precombat_cursor: usize,
     selected_precombat: bool,
     precombat_harmful_executed: bool,
+    wait_until: Option<f64>,
     pub snapshot: Option<Value>,
     cancellation: Option<(Action, Expression, u32)>,
     pending_fragment_row: Option<usize>,
@@ -82,6 +83,7 @@ impl Driver {
             precombat_cursor: 0,
             selected_precombat: false,
             precombat_harmful_executed: false,
+            wait_until: None,
             snapshot: None,
             cancellation: None,
             pending_fragment_row: None,
@@ -100,7 +102,7 @@ impl Driver {
         prepared: &Prepared,
         equipment: &Equipment,
     ) -> Result<PrecombatPoll, String> {
-        if prepared.setup_pending() {
+        if prepared.setup_pending() || self.waiting(facts)? {
             return Ok(PrecombatPoll::Waiting);
         }
         Ok(
@@ -119,6 +121,10 @@ impl Driver {
         prepared: &Prepared,
         equipment: &Equipment,
     ) -> Result<Option<(Action, Execution)>, String> {
+        if self.waiting(facts)? {
+            return Ok(None);
+        }
+        self.wait_until = None;
         self.selected_precombat = list == "precombat";
         if self.selected_precombat && prepared.setup_pending() {
             return Err("PRECOMBAT_WAIT_REQUIRED: advance native frames via poll_precombat".into());
@@ -157,12 +163,23 @@ impl Driver {
         let Some(action) = action else {
             return Ok(None);
         };
-        let execution = prepared
-            .execution_in(&action, equipment, &self.program)?
-            .ok_or("selected literal action lost native readiness")?;
+        let execution = if action.name == "wait" {
+            Execution::Wait(wait_deadline(&action, facts, &self.variables)?)
+        } else {
+            prepared
+                .execution_in(&action, equipment, &self.program)?
+                .ok_or("selected literal action lost native readiness")?
+        };
         self.pending_line = line_deadline(&action, facts, &self.variables)?;
         self.selected_list = list.into();
         Ok(Some((action, execution)))
+    }
+
+    fn waiting(&self, facts: &dyn ActionFacts) -> Result<bool, String> {
+        match self.wait_until {
+            Some(deadline) => Ok(facts.value("time")? < deadline),
+            None => Ok(false),
+        }
     }
 
     pub fn execute(
@@ -198,10 +215,10 @@ impl Driver {
         } else {
             None
         };
-        if matches!(execution, Execution::Snapshot) {
-            self.snapshot = Some(super::report::stats(world, actor));
-        } else {
-            execution::execute_row(world, actor, &action, execution)?;
+        match execution {
+            Execution::Snapshot => self.snapshot = Some(super::report::stats(world, actor)),
+            Execution::Wait(deadline) => self.wait_until = Some(deadline),
+            execution => execution::execute_row(world, actor, &action, execution)?,
         }
         if fragment_row.is_some() {
             self.pending_fragment_row = fragment_row;
@@ -276,6 +293,7 @@ fn harmful_execution(world: &World, execution: &Execution) -> Result<bool, Strin
             return Err("composite precombat requires a clock-aware executor".into());
         }
         Execution::Snapshot
+        | Execution::Wait(_)
         | Execution::CancelCast
         | Execution::PickupFragment(_)
         | Execution::Retarget(_) => return Ok(false),
@@ -301,7 +319,32 @@ fn candidate_ready(
     Ok(line_ready(action, facts, deadlines)?
         && prepared.permits_row(action)?
         && facts.target_ready(action)?
-        && prepared.execution_in(action, equipment, program)?.is_some())
+        && (action.name == "wait" || prepared.execution_in(action, equipment, program)?.is_some()))
+}
+
+fn wait_deadline(
+    action: &Action,
+    facts: &dyn ActionFacts,
+    variables: &Variables,
+) -> Result<f64, String> {
+    // SimC76f8118 player.cpp9766–9803 evaluates sec once on selection;
+    // nonpositive sec uses available(), a Gaussian 100ms ± 10ms (player.cpp7130–7133).
+    let seconds = Expression::parse(action.options.get("sec").map_or("1.0", String::as_str))?
+        .evaluate(&BoundAction {
+            facts,
+            action,
+            variables,
+        })?;
+    if !seconds.is_finite() {
+        return Err("wait sec must be finite".into());
+    }
+    let duration = if seconds > 0.0 {
+        seconds
+    } else {
+        let radial = (-2.0 * (1.0 - crate::random::random::<f64>()).ln()).sqrt();
+        0.1 + 0.01 * radial * (std::f64::consts::TAU * crate::random::random::<f64>()).cos()
+    };
+    Ok(facts.value_for(action, "time")? + duration)
 }
 
 fn line_ready(

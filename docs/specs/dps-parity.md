@@ -35,6 +35,10 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 - Selected Burning Blades452408 applies native residual1245654 to landed Devourer weapon swings and Voidblade/Hungering Slash damage children. Preserve the native periodic timing and the existing Havoc residual453177 behavior (SimC76f8118 `sc_demon_hunter.cpp`3088–3111,5830–5847,6697–6710,6875–6878).
 
+### Literal wait
+
+- A selected `wait` evaluates `sec` once, holds subsequent actions for that duration without interrupting attacks, and reevaluates the APL afterwards. The default is one second; nonpositive `sec` uses the source `player.available()` delay (SimC76f8118 `player.cpp`7130–7133,9706–9803).
+
 ### Literal spec drivers
 
 - Register each literal spec once, in spec-ID order. Adding a spec changes only its own rotation module and its registration line, not shared fields, initialization, dispatch, reporting or preparation branches. See [Arcane Mage parity](arcane-mage-parity.md) for spec62's execution contracts.
@@ -855,6 +859,7 @@ Named `action.<alias>.charges`, `max_charges`, `charges_fractional` and `full_re
 - Ordinary Raptor Strike rolls the selected native Swipe rank's chance. An actual upgraded Raptor Swipe consumes its replacement and cannot produce itself. Source: `sc_hunter.cpp6188,6217–6236`.
 - A real Wildfire Bomb explodes around its actual primary using pinned5yd geometry, native reduced-AoE cap and native primary-only bonus. Apply the corresponding periodic payload to every actual impact recipient with the same cap/primary effectiveness. Selected Shrapnel replaces, never duplicates, the ordinary fire DoT. Keep native damage coefficients and timing. Source: `sc_hunter.cpp7030,7039–7043,7062–7068,7083–7089,7118–7120,7134`.
 
+- Selected Shellshock1252931 modifies actual Boomstick1261215 hit damage by its native effect1, reduced by the execution recipient count times native effect2 when that count exceeds one, clamped at zero. Use native child targeting, not encounter-wide enemy count. Source: `sc_hunter.cpp6268–6281`.
 - Actual Boomstick channel execution spends one earned Tip, grants native471536 through the channel, and reuses the native Stargazer/selected Sentinel mark/main-pet Strike consumers. Remove the channel buff on root-aura removal. Source: `sc_hunter.cpp6304–6324,6344–6350`.
 - Actual Takedown grants selected Twin Fangs1272139's native Tip count before its buff and damage; owner Focus comes once from native1258571, not the pet child. Source: `sc_hunter.cpp3096–3105,6368–6405`.
 - Actual Takedown executes native player1253859 and living owned main-pet1253862 against its hostile primary after the Takedown buff and shared force mark. The pet payload's native energize effect does not execute; use its damage effect and actual pet stats/crit. Source: `sc_hunter.cpp3096–3105,6359–6405`.
@@ -943,6 +948,8 @@ Stormkeeper grants its native effect4 count of next-spell uses, bounded by the n
 Native445624 supplies actual221177 Ancestors and their native lifetime after selected Stormkeeper or Ancestral Swiftness. Successful foreground spells command each living owned Ancestor once with native447419/447425 children at the retained primary. Background overloads do not command them. Native owner spell power and crit are inherited; Ancestor Lava Burst is guaranteed critical and scales with inherited crit (`sc_shaman.cpp`4342–4441,6358,7856,8163–8166,8758). Natural expiry allows selected Final Calling465717; cancellation does not. Actual Ancestor447419/447425/465717 critical hits apply selected live Elemental Fury60188 effect0's critical bonus, preserving its native amount and other spells' modifier masks (`sc_shaman.cpp`11468–11469; SimC effect indexes are one-based). Removing that owner aura removes the bonus. Ancient Fellowship and remaining pet effect inheritance still require qualification.
 
 Selected Routine Communication443445 draws once after an ordinary successful Lightning Bolt, Chain Lightning or Lava Burst execution. The native effect4/effect5 counts supply successes/total for a shuffled deck; reshuffle only after all cards are drawn. A successful draw summons the real native445624 Ancestor and447244 owner buff. Background builders, overloads and extra Chain recipients do not draw (`sc_shaman.cpp`6654–6658,7260–7263,7436–7438,13025–13033; `proc_rng.cpp`149–161).
+
+While Ascendance1219480 is active, native Elemental Overload damage uses its effect7 bonus (`sc_shaman.cpp`4884–4891).
 
 Elemental Lava Burst Overload285466 scales its damage by one plus the caster's current critical-strike chance (`sc_shaman.cpp`6835–6855).
 
