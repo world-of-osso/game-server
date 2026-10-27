@@ -6,13 +6,66 @@ use super::combat;
 use combat::auras::ActiveAuras;
 use combat::spell_cast::effects::{DamageInput, EffectCtx, damage_before_mitigation};
 use combat::spell_cast::script_registry::{HitHook, SpellScriptHook};
+use combat::spell_cast::scripts::AfterCastHook;
 use combat::spell_cast::scripts::script_effect_value;
 use combat::spell_cast::{self, targets};
-use combat::spell_info::SpellStore;
+use combat::spell_info::{SpellInfo, SpellStore};
 
 const SCOURGE_STRIKE: u32 = 55090;
 const VIRULENT_PLAGUE: u32 = 191587;
-pub const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::EffectHit(effect_hit)];
+pub const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::EffectHit(effect_hit),
+    SpellScriptHook::NativeAfterCast(after_cast),
+];
+
+fn after_cast(spell: u32) -> Option<AfterCastHook> {
+    (spell == SCOURGE_STRIKE).then_some(spend_ready_ghoul)
+}
+
+fn spend_ready_ghoul(world: &mut World, caster: Entity, _: &SpellInfo) {
+    let Some(instance) = world.get::<ActiveAuras>(caster).and_then(|auras| {
+        auras.iter().find(|aura| aura.spell_id == 1254252 && aura.caster == caster)
+            .map(|aura| aura.instance_id)
+    }) else {
+        return;
+    };
+    // SimC76f8118 sc_death_knight.cpp12597–12610: an actual Scourge
+    // execution spends one earned ghoul, then performs its summon or order.
+    combat::auras::spend_stack(world, caster, instance);
+    if combat::auras::has_aura(world, caster, 42650) {
+        command_army(world, caster);
+    } else if !spell_cast::try_cast_triggered(world, caster, 275430, Some(caster), 1) {
+        warn!(?caster, "Scourge Strike lesser-ghoul summon refused");
+    }
+}
+
+fn command_army(world: &mut World, caster: Entity) {
+    let Some(target) = world.get::<combat::networking::CombatTarget>(caster).and_then(|target| target.0) else {
+        warn!(?caster, "Scourge Strike Army command has no selected target");
+        return;
+    };
+    let mut enemies: Vec<_> = std::iter::once(target)
+        .chain(combat::combat_refs::active_opponents(world, caster))
+        .filter(|enemy| targets::is_alive(world, *enemy)
+            && targets::relation_matches(world, caster, *enemy, targets::Relation::Enemy))
+        .collect();
+    enemies.sort_unstable_by_key(|enemy| enemy.to_bits());
+    enemies.dedup();
+    let order = if enemies.len() >= 3 { 1300330 } else { 1294264 };
+    let now = combat::auras::aura_now(world);
+    let ghouls: Vec<_> = world.query::<(Entity, &spell_cast::summon::SummonedCreature)>()
+        .iter(world).filter_map(|(actor, summon)| {
+            (summon.owner == caster && summon.spell_id == 1294026
+                && summon.expires_at.is_some_and(|expiry| expiry > now)).then_some(actor)
+        }).collect();
+    // SimC76f8118 sc_death_knight.cpp6766–6771: actual Army ghouls
+    // execute Death Order or Epidemic Order, not a synthetic owner hit.
+    for ghoul in ghouls {
+        if !spell_cast::try_cast_triggered(world, ghoul, order, Some(target), 1) {
+            warn!(?ghoul, order, "Native Army order refused");
+        }
+    }
+}
 
 fn effect_hit(spell: u32, index: u8) -> Option<HitHook> {
     ((spell, index) == (SCOURGE_STRIKE, 0)).then_some(erupt_and_apply_missing)
