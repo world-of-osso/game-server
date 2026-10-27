@@ -11,7 +11,12 @@ const OFFERING: u32 = 443451;
 const STORMKEEPER: u32 = 191634;
 
 fn after_summon(world: &mut World, caster: Entity, spell: &SpellInfo, _: bool) {
-    if spell.id != SUMMON || !auras::has_aura(world, caster, OFFERING) {
+    if spell.id != SUMMON
+        || !world
+            .get::<combat::class_progression::ActiveSpec>(caster)
+            .is_some_and(|spec| spec.0 == 262)
+        || !auras::has_aura(world, caster, OFFERING)
+    {
         return;
     }
     // SimC76f8118 sc_shaman.cpp11579–11596: native effect0 adjusts the active timer per summon.
