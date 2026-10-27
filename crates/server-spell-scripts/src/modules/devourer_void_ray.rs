@@ -24,11 +24,40 @@ const FOCUSED_RAY: u32 = 1240203;
 struct VoidRayTick(u32);
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::EarlyAuraRegistration(register_channel_end),
     SpellScriptHook::OnCast(snapshot_tick),
     SpellScriptHook::ChannelPeriodic(periodic_trigger),
     SpellScriptHook::TargetContextDamageMultiplier(focused_ray),
     SpellScriptHook::AfterFireDirectHit(shatter_on_tick),
 ];
+
+fn register_channel_end(scripts: &mut combat::auras::scripts::AuraScripts) {
+    scripts.0.entry(VOID_RAY).or_default().on_natural_end = Some(finish_ray);
+}
+
+fn finish_ray(world: &mut World, actor: Entity, aura: &combat::auras::AuraInstance) {
+    if actor != aura.caster { return; }
+    let known = world.get::<KnownSpells>(actor);
+    let final_breath = known.is_some_and(|known| known.contains(1266500));
+    let moment = known.is_some_and(|known| known.contains(1238488));
+    if final_breath {
+        // SimC76f8118 cpp3282–3325: a completed channel executes an additional
+        // native tick at Final Breath effect1's percentage.
+        let child = world.get::<VoidRayTick>(actor).expect("completed Ray retains tick").0;
+        let mut spell = spell_cast::load_triggered_spell(world, child, 1).expect("native Ray tick");
+        spell.cast_damage_multiplier = Some(spell_cast::scripts::script_effect_value(world, actor, 1266500, 0) / 100.0);
+        if !spell_cast::launch_triggered_spell(world, actor, &spell, None, 1) {
+            error!(?actor, "native Final Breath tick was refused");
+        }
+    }
+    if moment {
+        // SimC76f8118 cpp6392–6409: a completed Ray grants Moment and resets Reap.
+        if !spell_cast::try_cast_triggered(world, actor, 1238495, Some(actor), 1) {
+            error!(?actor, "native Moment of Craving was refused");
+        }
+        spell_cast::scripts::reduce_cooldown(world, actor, 1226019, f64::MAX);
+    }
+}
 
 fn snapshot_tick(world: &mut World, actor: Entity, spell: u32, _: u8) {
     if spell != VOID_RAY {
