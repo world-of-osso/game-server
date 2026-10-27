@@ -151,6 +151,40 @@ fn dk252_putrefy_impact_raises_native_magus() {
 
 #[test]
 #[ignore = "requires private native252 profile/traits and player actor"]
+fn dk252_putrefy_magus_casts_native_necrotic_bolt() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 1).unwrap();
+    engage(&mut run);
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(
+            1247378,
+            run.targets[0],
+            Some(run.targets[0]),
+        ),
+    )
+    .unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    for _ in 0..300 {
+        run.app.update();
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    assert!(
+        events.iter().any(|event| event.spell_id == Some(1297055)
+            && event.target == Some(run.targets[0].to_bits())
+            && event.kind == CombatLogKind::Damage
+            && event.amount > 0),
+        "the actual native Magus must damage the enemy with Necrotic Bolt"
+    );
+}
+
+#[test]
+#[ignore = "requires private native252 profile/traits and player actor"]
 fn dk252_raise_dead_produces_a_permanent_controlled_melee_pet() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_measurement(252, 1).unwrap();
