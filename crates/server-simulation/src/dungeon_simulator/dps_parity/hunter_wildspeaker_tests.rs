@@ -103,7 +103,7 @@ fn native_wildspeaker_dire_beasts_inherit_owner_crit_and_savagery() {
                 spell,
                 effect,
             );
-            assert!(amount > 0);
+            assert!(amount > 0.0);
             1.0 + f64::from(amount) / 100.0
         })
         .product();
