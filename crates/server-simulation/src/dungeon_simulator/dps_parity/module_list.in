@@ -321,6 +321,7 @@ mod survival_pet_strike_tests;
 mod survival_sentinel_tests;
 mod survival_stat_tests;
 mod survival_swipe_damage_tests;
+mod survival_takedown_damage_tests;
 mod survival_tests;
 mod trigger_primary_tests;
 mod unholy_tests;
