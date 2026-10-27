@@ -332,6 +332,8 @@ CLASS_SUMMON_POLICY_CHILDREN = (
     (378255, 118291), (191717, 157319),
     # SimC76f8118 sc_evoker.cpp6256–6261: Command Squadron summons two native Commandos.
     (1260745, 1235843), (1260745, 1237036),
+    # SimC76f8118 sc_warlock_init.cpp539–547: Diabolic Ritual's three demons.
+    (428514, 428571), (428514, 428565), (428514, 434400),
     # SimC76f8118 sc_death_knight.cpp15401–15406: selected Unholy summon actions.
     (55090, 275430), (1247378, 1277098), (1256813, 1242294), (1256813, 1292072),
 )
