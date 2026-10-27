@@ -885,7 +885,8 @@ fn dk252_necrotic_coil_hits_with_physical_and_shadow_children() {
     for _ in 0..40 { run.app.update(); }
     let events = &run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
     for spell in [1242172, 1242178] {
-        assert!(events.iter().any(|e| e.source == Some(run.actor.to_bits()) && e.spell_id == Some(spell)
-            && e.kind == CombatLogKind::Damage && e.amount > 0), "Necrotic Coil must deal damage with native child {spell}");
+        let hits = events.iter().filter(|e| e.source == Some(run.actor.to_bits()) && e.spell_id == Some(spell)
+            && e.kind == CombatLogKind::Damage && e.amount > 0).count();
+        assert_eq!(hits, 3, "Necrotic Coil must hit each target once with child {spell}");
     }
 }
