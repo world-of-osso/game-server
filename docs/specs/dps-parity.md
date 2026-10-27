@@ -530,6 +530,7 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 ### Controlled Imp inheritance
 
 - The actual controlled Imp416 inherits live owner spell power at5.625 for SP and2.8125 for AP (SimC76f8118 `sc_warlock_pets.cpp372–375`). Controlled Sayaad1863 inherits live owner spell power at5.175 for SP and2.565 for AP, including melee AP (`sc_warlock_pets.cpp421–430`). Preserve native spell coefficients, UNIT_PET identity, pet orders, stance, costs and storage. Do not replace either pet with a guardian or fixed damage payload. Unlisted controlled pets retain their existing power policy.
+- A target's owned Whiplash6360 stacks (native aura270, mask127) increase all of that Sayaad's damage, including real white swings; another caster's stacks do not (`sc_warlock_pets.cpp447–452`).
 
 ### Shared pet prerequisites
 
