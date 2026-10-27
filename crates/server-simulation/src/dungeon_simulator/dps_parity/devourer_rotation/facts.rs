@@ -62,3 +62,73 @@ impl ActionFacts for DevourerFacts<'_> {
         self.native.value_for(action, name)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::super::super::{engage, prepare};
+    use super::*;
+    use crate::simc_apl_native::{Encounter, FightStyle};
+
+    fn movement_fact(
+        run: &super::super::super::Run,
+        bindings: &crate::simc_apl_native::Bindings,
+        equipment: &Equipment,
+    ) -> Result<f64, String> {
+        let world = run.app.world();
+        let actor = run.actor;
+        let native = NativeFacts::new(
+            world,
+            actor,
+            bindings,
+            Encounter::Fixture {
+                started_at: 0.0,
+                duration: 300.0,
+                style: FightStyle::Patchwerk,
+            },
+            1,
+        );
+        DevourerFacts {
+            native,
+            equipment,
+            world,
+            actor,
+        }
+        .value("buff.vengeful_retreat_movement.up")
+    }
+
+    #[test]
+    #[ignore = "requires DPS_PARITY_WORLD_DB and DPS_PARITY_OUTPUT with spec1480 exact profile/traits"]
+    fn real_retreat_exposes_movement_until_native_duration_expires() {
+        let mut run = prepare(1480, 1).expect("native Devourer profile");
+        let actor = run.actor;
+        engage(&mut run);
+        let mut bindings = super::super::bindings::build();
+        let equipment =
+            Equipment::load(run.app.world_mut(), actor, &mut bindings).expect("native equipment");
+        assert_eq!(
+            movement_fact(&run, &bindings, &equipment).unwrap(),
+            0.0,
+            "no movement before cast"
+        );
+        crate::spell_cast::cast_for_player_with_target(
+            run.app.world_mut(),
+            actor,
+            198793,
+            Some(actor),
+        )
+        .expect("real Vengeful Retreat");
+        assert_eq!(
+            movement_fact(&run, &bindings, &equipment).unwrap(),
+            1.0,
+            "movement starts with real cast"
+        );
+        for _ in 0..30 {
+            run.app.update();
+        }
+        assert_eq!(
+            movement_fact(&run, &bindings, &equipment).unwrap(),
+            0.0,
+            "native movement duration expires"
+        );
+    }
+}
