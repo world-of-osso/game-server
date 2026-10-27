@@ -51,7 +51,9 @@ fn read_actor_identity(world: &World, actor: Entity) -> (u8, u8) {
 
 fn assert_profile_intellect(spec: u32, expected: f32) {
     let _seed = crate::random::seed_scope(70_448);
-    let run = prepare_measurement(spec, 1).unwrap();
+    // SimC buffed_stats samples at combat start: consumables applied, but before
+    // the driver's real pre-pull casts can earn item procs such as Insight1229746.
+    let run = prepare_literal(spec, 1).unwrap();
     let world = run.app.world();
     let actor = run.actor;
     let (class, race) = read_actor_identity(world, actor);

@@ -7,16 +7,26 @@ use shared::protocol::CombatLogKind;
 pub(super) fn remove_equipped_proc_drivers(run: &mut Run) {
     let world = run.app.world();
     let store = world.resource::<crate::spell_info::SpellStore>();
-    let drivers: Vec<_> = world
-        .get::<crate::auras::ActiveAuras>(run.actor)
-        .unwrap()
+    let auras = world.get::<crate::auras::ActiveAuras>(run.actor).unwrap();
+    let has_proc_mask = |spell_id: u32| {
+        store
+            .get(spell_id)
+            .and_then(|spell| spell.aura_options.as_ref())
+            .is_some_and(|options| options.proc_type_mask.iter().any(|&mask| mask != 0))
+    };
+    // Equipped drivers may link a separate Cast-source RPPM aura (e.g. Arcanoweave
+    // Lining1283697 -> 1229511); remove those linked callbacks too.
+    let linked: Vec<u32> = auras
+        .iter()
+        .filter(|aura| aura.cast_item_level.is_some())
+        .flat_map(|aura| aura.effects.iter().map(|effect| effect.trigger_spell))
+        .filter(|&spell_id| spell_id != 0)
+        .collect();
+    let drivers: Vec<_> = auras
         .iter()
         .filter(|aura| {
-            aura.cast_item_level.is_some()
-                && store
-                    .get(aura.spell_id)
-                    .and_then(|spell| spell.aura_options.as_ref())
-                    .is_some_and(|options| options.proc_type_mask.iter().any(|&mask| mask != 0))
+            (aura.cast_item_level.is_some() || linked.contains(&aura.spell_id))
+                && has_proc_mask(aura.spell_id)
         })
         .map(|aura| aura.spell_id)
         .collect();
