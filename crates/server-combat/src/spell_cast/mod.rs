@@ -3664,6 +3664,12 @@ struct HitFrame {
     blocked: HashSet<Entity>,
 }
 
+/// Actual TargetInfos for the innermost resolution of this spell.
+pub fn resolving_spell_targets(world: &World, caster: Entity, spell: u32) -> Option<&[Entity]> {
+    let frame = world.get_resource::<ResolvingHits>()?.0.last()?;
+    (frame.caster == caster && frame.spell_id == spell).then_some(frame.selected.as_slice())
+}
+
 /// Actual resolving TargetInfos, not mutable combat focus or only successful hits.
 /// The first entry owns native primary impact even when it misses.
 pub fn resolving_targets<'w>(world: &'w World, ctx: &EffectCtx<'_>) -> Option<&'w [Entity]> {
