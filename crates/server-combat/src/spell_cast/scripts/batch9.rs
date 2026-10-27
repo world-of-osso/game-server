@@ -154,6 +154,60 @@ fn read_sourced_pulses(
     }
 }
 
+/// Spawn a native source-backed field with effect0 radius and effect1 interval.
+/// The first pulse starts after `delay_ms`; the source supplies the field duration.
+pub fn spawn_delayed_ground_pulses(
+    world: &mut World,
+    caster: Entity,
+    spell: &crate::spell_info::SpellInfo,
+    child: u32,
+    center: Vec3,
+    delay_ms: u32,
+) {
+    let period_ms = spell
+        .effects
+        .iter()
+        .find(|effect| effect.index == 1)
+        .expect("native field interval effect")
+        .aura_period_ms;
+    let period_ms = crate::auras::periodic_interval_ms(world, caster, spell, period_ms);
+    let period = f64::from(period_ms) / 1000.0;
+    assert!(period > 0.0, "native field interval must be positive");
+    let duration = f64::from(spell_cast::duration_ms(world, caster, spell)) / 1000.0;
+    let first = crate::auras::aura_now(world) + f64::from(delay_ms) / 1000.0;
+    let radius = targets::effect_radius(
+        spell
+            .effects
+            .iter()
+            .find(|effect| effect.index == 0)
+            .expect("native field radius effect"),
+    );
+    let map = *world
+        .get::<crate::maps::InMap>(caster)
+        .expect("ground spell caster map");
+    world.spawn((
+        GroundPulses {
+            caster,
+            root: spell.id,
+            child,
+            cast_damage_multiplier: spell.cast_damage_multiplier,
+            radius,
+            cap: 0,
+            relation: targets::Relation::Enemy,
+            expires_at: first + duration - period,
+            next_tick: first,
+            period,
+            depth: 1,
+        },
+        shared::components::Position {
+            x: center.x,
+            y: center.y,
+            z: center.z,
+        },
+        map,
+    ));
+}
+
 /// TC areatrigger_sha_earthquake::AddStunnedTarget: one set per actual field.
 #[derive(Component, Default)]
 struct EarthquakeStunnedTargets(HashSet<Entity>);

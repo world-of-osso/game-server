@@ -34,6 +34,15 @@ struct GuardianPolicy {
 // SimC76f8118 pets.cpp19/705/867/1510–1548: bindings and inheritance
 // belong to the actual root/creature pair, including the alternative Tyrant.
 const GUARDIAN_POLICIES: &[GuardianPolicy] = &[
+    // SimC76f8118 sc_hunter.cpp1935: Dire Beast inherits live owner AP1.0.
+    GuardianPolicy {
+        summons: &[219199],
+        entry: 110063,
+        spells: &[],
+        repeat_gcd: None,
+        owner_spell_share: None,
+        owner_attack_share: Some(1.0),
+    },
     // SimC76f8118 sc_evoker.cpp3795–3797: native Commandos inherit live owner SP.
     GuardianPolicy {
         summons: &[1235843, 1237036],
@@ -232,9 +241,10 @@ pub(crate) fn owner_attack_share(summon: u32, entry: u32) -> Option<f32> {
     policy(summon, entry).and_then(|row| row.owner_attack_share)
 }
 
-// SimC76f8118 pets.cpp372–375: the main Imp remains a controlled pet,
-// inheriting both powers from live owner SP rather than guardian identity.
-const CONTROLLED_PET_POWER_SHARES: &[(u32, f32, f32)] = &[(416, 5.625, 2.8125)];
+// SimC76f8118 pets.cpp372–375/421–430: controlled Imp and Sayaad
+// inherit their validated spell and attack power from live owner SP.
+const CONTROLLED_PET_POWER_SHARES: &[(u32, f32, f32)] =
+    &[(416, 5.625, 2.8125), (1863, 5.175, 2.565)];
 
 pub(crate) fn controlled_pet_power_shares(entry: u32) -> Option<(f32, f32)> {
     CONTROLLED_PET_POWER_SHARES

@@ -38,6 +38,88 @@ fn cast(run: &mut Run, spell: u32, self_target: bool) {
 
 #[test]
 #[ignore = "requires prepared native spec577 player profile"]
+fn havoc_hunt_applies_native_dot_to_each_nearby_enemy() {
+    for count in [1, 3, 6] {
+        let _seed = crate::random::seed_scope(70_448);
+        let mut run = prepare_literal(577, count).unwrap();
+        cast(&mut run, 370965, false);
+        preparation::finish_pending_setup(&mut run).unwrap();
+        advance(&mut run, 80);
+        let targets: std::collections::BTreeSet<_> = damage(&run, Some(370969))
+            .iter()
+            .filter_map(|event| event.target)
+            .collect();
+        assert!(
+            targets.contains(&run.targets[0].to_bits()),
+            "Hunt must retain its primary DoT"
+        );
+        assert_eq!(
+            targets.len(),
+            count.min(5),
+            "Hunt uses its native five-target cap"
+        );
+    }
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(577, 3).unwrap();
+    let far = run.targets[2];
+    run.app
+        .world_mut()
+        .get_mut::<shared::components::Position>(far)
+        .unwrap()
+        .x += 200.0;
+    cast(&mut run, 370965, false);
+    preparation::finish_pending_setup(&mut run).unwrap();
+    advance(&mut run, 80);
+    assert!(
+        damage(&run, Some(370969))
+            .iter()
+            .all(|event| event.target != Some(far.to_bits())),
+        "Hunt must not apply the native DoT outside its hostile range"
+    );
+}
+
+#[test]
+#[ignore = "requires prepared native spec577 player profile"]
+fn havoc_volatile_instinct_explodes_on_hard_meta_and_new_demonic_entry() {
+    for spell in [191427, 198013] {
+        let _seed = crate::random::seed_scope(70_448);
+        let mut run = prepare_literal(577, 1).unwrap();
+        assert!(crate::auras::has_aura(run.app.world(), run.actor, 1272453));
+        havoc_tests::earn_havoc_fury(&mut run, 60.0);
+        run.app
+            .world_mut()
+            .resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .clear();
+        cast(&mut run, spell, false);
+        preparation::finish_pending_setup(&mut run).unwrap();
+        advance(&mut run, 20);
+        assert_eq!(
+            damage(&run, Some(452416)).len(),
+            1,
+            "selected Volatile Instinct must produce one native Demonsurge on Meta entry from {spell}"
+        );
+        if spell == 191427 {
+            advance(&mut run, 40);
+            run.app
+                .world_mut()
+                .resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+                .0
+                .clear();
+            cast(&mut run, 198013, false);
+            preparation::finish_pending_setup(&mut run).unwrap();
+            advance(&mut run, 20);
+            assert_eq!(
+                damage(&run, Some(452416)).len(),
+                1,
+                "Demonic extending Meta must trigger the armed beam, not another Meta-entry explosion"
+            );
+        }
+    }
+}
+
+#[test]
+#[ignore = "requires prepared native spec577 player profile"]
 fn havoc_focused_hatred_scales_real_demonsurge_by_resolved_enemy_count() {
     fn hit(count: usize, selected: bool) -> i32 {
         let _seed = crate::random::seed_scope(70_448);

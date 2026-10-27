@@ -242,6 +242,27 @@ pub struct SummonedCreature {
     pub expires_at: Option<f64>,
 }
 
+/// Start an owned summon's native melee chase against its selected target.
+pub fn start_melee_attack(world: &mut World, summon: Entity, target: Entity) {
+    assert!(
+        world.get::<SummonedCreature>(summon).is_some(),
+        "melee actor must be an actual summon"
+    );
+    assert!(
+        world
+            .get::<crate::creature_ai::SpawnPoint>(summon)
+            .is_some(),
+        "summon must retain native movement speeds"
+    );
+    world.entity_mut(summon).insert((
+        crate::creature_ai::CreatureState::Pursuing {
+            target: target.to_bits(),
+        },
+        crate::networking::CombatTarget(Some(target)),
+    ));
+    crate::combat::start_attack_now(world, summon, crate::combat::AutoAttack::new(target));
+}
+
 /// Same category/data gate for runtime and Toy Box preflight. Missing IDs remain
 /// explicit; no creature or summon classification is inferred from spell names.
 pub(crate) fn unsupported_reason(world: &World, effect: &SpellEffect) -> Option<String> {
@@ -670,6 +691,8 @@ struct SummonTemplate {
     classification: CreatureClassification,
     display_id: u32,
     display_scale: f32,
+    speed_walk: f32,
+    speed_run: f32,
 }
 
 fn read_summon_template(
@@ -696,6 +719,8 @@ fn read_summon_template(
             .expect("validated creature rank"),
         display_id,
         display_scale,
+        speed_walk: template.speed_walk,
+        speed_run: template.speed_run,
     })
 }
 
@@ -875,6 +900,14 @@ fn spawn_summon(
             NpcFlags(0),
             CreatureMotion::Still,
             MovementSpeed(0.0),
+            crate::creature_ai::SpawnPoint {
+                x: dest.position.x,
+                y: dest.position.y,
+                z: dest.position.z,
+                wander_distance: 0.0,
+                speed_walk: template.speed_walk,
+                speed_run: template.speed_run,
+            },
             crate::networking::CombatTarget::default(),
             metadata,
         ),
@@ -988,6 +1021,8 @@ pub(super) fn expire_summons(world: &mut World) {
             .is_some_and(|expiry| now >= expiry)
         {
             super::scripts::elemental_ancestors::on_expire(world, entity);
+            let registry = *world.resource::<super::script_registry::SpellScriptRegistry>();
+            registry.summon_expired(world, entity);
         }
         let summon = world.get::<SummonedCreature>(entity).unwrap();
         if summon.spell_id == 104317

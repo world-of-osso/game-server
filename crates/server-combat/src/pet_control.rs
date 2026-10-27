@@ -500,6 +500,24 @@ fn update_charm(world: &mut World, pet: Entity, change: impl FnOnce(&mut PetChar
     }
 }
 
+/// TC PetAI.cpp:264–281: a non-passive pet assists an owner's harmful cast
+/// without replacing an existing living victim or overriding a follow order.
+pub(crate) fn owner_attacked(world: &mut World, owner: Entity, target: Entity) {
+    let Some(pet) = summoned_pet(world, owner) else {
+        return;
+    };
+    if is_dead(world, pet)
+        || world
+            .get::<PetCharm>(pet)
+            .is_none_or(|charm| charm.react == REACT_PASSIVE)
+        || victim(world, pet).is_some_and(|current| !is_dead(world, current))
+        || !can_attack(world, pet, target)
+    {
+        return;
+    }
+    attack_start(world, pet, target);
+}
+
 /// `PetAI::UpdateAI` for every pet.
 fn pet_ai_system(world: &mut World) {
     let pets: Vec<(Entity, Entity)> = world

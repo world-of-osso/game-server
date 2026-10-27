@@ -132,6 +132,9 @@ pub(super) fn before_cast(world: &mut World, caster: Entity, spell: u32, depth: 
         );
         return;
     }
+    if !meta_is_active(world, caster) {
+        demonsurge::trigger_meta_entry(world, caster, 453323, depth);
+    }
     transform_or_extend(world, caster, duration as u32, depth);
     demonsurge::arm_demonic(world, caster);
     // SimC76f8118 sc_demon_hunter.cpp4051–4057: add the hasted channel
@@ -163,16 +166,19 @@ fn selected(world: &World, caster: Entity) -> bool {
     correct_spec && learned
 }
 
-fn transform_or_extend(world: &mut World, caster: Entity, milliseconds: u32, depth: u8) {
+fn meta_is_active(world: &World, caster: Entity) -> bool {
     let now = combat::auras::aura_now(world);
-    let active = world.get::<ActiveAuras>(caster).is_some_and(|auras| {
+    world.get::<ActiveAuras>(caster).is_some_and(|auras| {
         auras.iter().any(|aura| {
             aura.spell_id == DEMONIC.payload
                 && aura.caster == caster
                 && aura.expires_at.is_some_and(|end| end > now)
         })
-    });
-    if active {
+    })
+}
+
+fn transform_or_extend(world: &mut World, caster: Entity, milliseconds: u32, depth: u8) {
+    if meta_is_active(world, caster) {
         combat::auras::extend_owned_duration(
             world,
             caster,

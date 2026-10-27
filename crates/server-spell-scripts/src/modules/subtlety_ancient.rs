@@ -16,7 +16,34 @@ const TALENT: u32 = 1268939;
 const WINDOW: u32 = 1269163;
 const STORAGE: u32 = 196911;
 
-fn collect_after_finisher(world: &mut World, ctx: &EffectCtx, _: Entity, _: bool, _: f32) {
+fn collect_after_finisher(
+    world: &mut World,
+    ctx: &EffectCtx,
+    target: Entity,
+    critical: bool,
+    damage: f32,
+) {
+    // Secret Technique's parent is a dummy; its real player hit supplies the
+    // successful impact while the parent retains the paid-point snapshot.
+    if ctx.depth == 1 && ctx.spell.id == 280720 {
+        if let Some(parent) = super::subtlety_secret::parent_snapshot(world, ctx.caster) {
+            let source = EffectCtx {
+                caster: ctx.caster,
+                spell: &parent,
+                depth: 0,
+                dest: ctx.dest,
+                chain_multiplier: ctx.chain_multiplier,
+            };
+            collect_after_finisher(
+                world,
+                &source,
+                parent.cast_primary_target.unwrap_or(target),
+                critical,
+                damage,
+            );
+        }
+        return;
+    }
     let combo_spender = ctx
         .spell
         .power_costs
@@ -47,6 +74,7 @@ fn collect_after_finisher(world: &mut World, ctx: &EffectCtx, _: Entity, _: bool
     for _ in 0..consumed {
         auras::spend_stack(world, ctx.caster, instance);
     }
+    super::subtlety_clone::schedule(world, ctx, target, consumed);
     auras::remove_auras(world, ctx.caster, RemoveReason::Consumed, |aura| {
         aura.spell_id == WINDOW && aura.caster == ctx.caster
     });

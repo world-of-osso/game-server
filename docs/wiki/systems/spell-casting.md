@@ -81,6 +81,8 @@ After Spirit landingc017250c5, canonical300s three-seed means are129144.341ST/19
 
 [Swipe2](../../../crates/server-spell-scripts/src/modules/survival_swipe.rs) applies its native modified rank effect only to the actual primary. The initial integrated assertion mistakenly used `native_source_amount` after the bonus was applied; probe17ee9b2065 compares actual damage with the real pre-done amount and other observed live factors instead. No stat or coefficient changes.
 
+[Takedown](../../../crates/server-spell-scripts/src/modules/survival_takedown.rs) dispatches native player1253859 and living main-pet1253862 after its buff/force mark; the pet payload's energize effect is excluded per pinned source. Native1941ea152a RED→GREEN landed7cf5ade399. Actual Takedown resource tests1355f74968 reproduce owner Focus0 versus native50 and selected Twin Fangs0 versus two remaining Tip uses. Native1258571 owner gain and selected pre-impact Tip grant are implemented; GREEN/measurement pending.
+
 `survival_pet.rs` dispatches native1251779 from the living owned main pet. The normal path owns1251717's actual aura-instance700ms timer; raw melee proc hints cannot spend it. Tipped rank3 Swipe executes its separate native effectiveness before base impact. Actual main-pet strike crits trigger selected native Sic 'Em1253138; shared pet stats, owner crit and periodic timing remain authoritative. No synthetic pet or stat overrides.
 
 Sources: [owned-pet strikes](../../../crates/server-spell-scripts/src/modules/survival_pet.rs), [shared Sentinel](../../../crates/server-spell-scripts/src/modules/marksmanship_sentinel.rs), [Tip/Swipe](../../../crates/server-spell-scripts/src/modules/survival.rs), [Wildfire](../../../crates/server-spell-scripts/src/modules/survival_wildfire.rs), [actual mark tests](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/survival_mark_tests.rs); pinned `sc_hunter.cpp1358–1372,3650–3710,6181–6188,6400–6401,7104–7107`.
@@ -1331,3 +1333,22 @@ Native RED `a76e7960c2` observes next-frame0.05s Embers activation despite the u
 The first landing was reverted at6445001a7 after native267 measured764 Overfiend hits and149466 DPS. Actual literal test `293907b5ae` and isolated `a9767cced9` both reproduce51 real actors from2 Soul Fire and0 Rift in60s. Native Avatar1245089's broad proc hint fires on unrelated cast events. The leaf now owns that proc and creates one native Overfiend after actual Soul Fire execution; the separate SimC Rift-deck producer is not yet qualified. Native actor-bound GREEN and fresh measurement are required before relanding.
 
 Native `02e475cbb6` reaches actual217429 with no landed434589. Recovered `adcc78dbcb` passes live-crit and mastery controls but fails missing owner457578; summon dispatch bypasses its per-unit wrapper. Native repeated-bolt/coefficient/funding/expiry and retained267 controls qualify the actual callback. GREEN and numerical measurements remain pending.
+
+## Guardian periodic haste — 2026-10-26
+
+[Contract](../../specs/dps-parity.md#guardian-periodic-haste). Native19483 has attr5bit13 (spell haste affects periodic). Actual Infernal `a4a1e96579` RED observes real20153 intervals1.85s vs owner-haste expectation1.68373s: aura scheduling read the guardian's own CharacterStats instead of the same actual owner already used for guardian cast speed. SimC76f8118 `pet.cpp217–228` inherits owner spell speed; `buff.cpp752,1945–1954` applies it for a hasted native periodic aura.
+
+The generic periodic haste lookup now reuses `guardian::stat_owner` before reading stats, leaving the existing flag check and guardian-owned period modifiers intact; ordinary units and unhasted auras remain unchanged. Native actual-tick GREEN and 265 Darkglare/266 guardians/253 pets/generic guardian gates and measurements are pending.
+## Destruction Incinerate recipients — 2026-10-26
+
+[Contract](../../specs/dps-parity.md#destruction-incinerate-recipients). Native29722 effect1 always exposes area selectors[53,16], without an effect-level talent condition, AuraRestrictions, TargetRestrictions or TDB condition. Its0x20800 attributes are radius flags; FnB196408 label SpellMods966/1886 do not match29722 labels19/16/292. Native area selection alone is not SimC's talent-dependent secondary behavior.
+
+The downstream [recipient leaf](../../../crates/server-spell-scripts/src/modules/destruction_incinerate_targets.rs) snapshots the actual primary, native area FnB recipients and separate owned live Havoc recipient into the existing target plan. Existing per-recipient chain multipliers carry source1.0/25%/50%+25% into ordinary hit/crit resolution. The Havoc target is included even outside FnB radius and only once. No general selector, catalog coefficient or fixture change. Pinned actions3852–3900/3952–4002 require uncapped FnB, primary/Havoc exclusions and additive native fractions.
+
+RED `b4ead8b3b5`: untalented paid cast hits an unmarked secondary. Legal-budget selected RED `9eaf9c6380`: native full secondary ratios1.026 rather than source25%,50%,75%. Qualification and integrated267ST/3T pending; the former numeric3T parity was masked by +40.5k Incinerate.
+
+## Destruction Fiendish Cruelty — 2026-10-26
+
+[Contract](../../specs/dps-parity.md#destruction-fiendish-cruelty). Frozen267 selects1245633 but native reports no1245664; reference shows7.75%ST/4.30%3T uptime. Actual paid native RED `20e3bd8d67` observes30 critical Incinerate impacts without earning the buff. Source `sc_warlock_actions.cpp433–439,3860,3936,4293,4446,5209` qualifies actual critical impacts; `sc_warlock_init.cpp1323–1326` uses an accumulated PRD with native effect0 chance.
+
+The downstream [Fiendish leaf](../../../crates/server-spell-scripts/src/modules/destruction_fiendish.rs) owns that passive's native broad proc hint, shares one source PRD per actual aura instance, and applies native1245664 on success. Its native aura262 exempts the Shadowburn target state and its native one-charge/cost-modifier machinery remains authoritative. Source actions4795–4800/4832–4834 require actual consumption by above-threshold Shadowburn. Native GREEN and measurement pending.

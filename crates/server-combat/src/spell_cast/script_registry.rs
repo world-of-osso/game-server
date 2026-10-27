@@ -98,6 +98,7 @@
 //! - `ConjureCount`: explicit source-qualified extra-projectile requests, without a second cast.
 //! - `AfterAuraApplication`: after successful aura storage and native apply/refresh callbacks.
 //! - `SummonInitialized`: after guardian initialization, receiving the actual spawned actor.
+//! - `SummonExpired`: at natural expiry, before the actual actor is despawned.
 //! New stages own distinct callback/lookup aliases, even when signatures coincide.
 //! Within a stage, traverse module slices and entries from first to last. Never sort
 //! or deduplicate them. Adding a policy to an existing module changes only that module.
@@ -117,6 +118,9 @@ pub type SpellResidualHook = fn(&mut World, &EffectCtx<'_>, Entity, f32);
 pub type TargetDamageMultiplierHook = fn(&World, Entity, Entity, &SpellInfo) -> f32;
 pub type AuraApplicationHook = fn(&mut World, Entity, &crate::auras::AuraInstance);
 pub type SummonInitializedHook = fn(&mut World, Entity);
+/// Actual CombatStatus transitions, after native reference state is updated.
+pub type CombatStatusChangedHook = fn(&mut World, Entity, bool);
+pub type SummonExpiredHook = fn(&mut World, Entity);
 pub type AuraRedirectHook = fn(&mut World, Entity, Entity, u32, u8) -> bool;
 
 pub type AfterCastLookup = fn(u32) -> Option<AfterCastHook>;
@@ -269,6 +273,8 @@ pub enum SpellScriptHook {
     /// All successful native aura applications, including refresh/replacement.
     AfterAuraApplication(AuraApplicationHook),
     SummonInitialized(SummonInitializedHook),
+    CombatStatusChanged(CombatStatusChangedHook),
+    SummonExpired(SummonExpiredHook),
     EffectHit(EffectHitLookup),
     EffectHandler(EffectHandlerLookup),
     TargetFilter(TargetFilterHook),
@@ -446,9 +452,25 @@ impl SpellScriptRegistry {
         })
     }
 
+    pub fn combat_status_changed(self, world: &mut World, unit: Entity, active: bool) {
+        for hook in self.hooks() {
+            if let SpellScriptHook::CombatStatusChanged(run) = hook {
+                run(world, unit, active);
+            }
+        }
+    }
+
     pub fn summon_initialized(self, world: &mut World, actor: Entity) {
         for hook in self.hooks() {
             if let SpellScriptHook::SummonInitialized(run) = hook {
+                run(world, actor);
+            }
+        }
+    }
+
+    pub fn summon_expired(self, world: &mut World, actor: Entity) {
+        for hook in self.hooks() {
+            if let SpellScriptHook::SummonExpired(run) = hook {
                 run(world, actor);
             }
         }

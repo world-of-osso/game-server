@@ -59,6 +59,9 @@ struct TargetFacts<'a> {
 }
 impl Facts for TargetFacts<'_> {
     fn value(&self, name: &str) -> Result<f64, String> {
+        if name == "time" {
+            return Ok(crate::spell_cast::now(self.world));
+        }
         Err(format!("unknown test fact {name}"))
     }
 }
@@ -304,6 +307,71 @@ fn literal_player_expired_selected_target_never_redirects_to_primary() {
     assert!(
         casts(run.app.world(), run.actor).is_empty(),
         "expired target cannot become primary cast"
+    );
+}
+
+#[test]
+#[ignore = "actual native Player fixture; requires frozen parity inputs"]
+fn literal_player_retarget_selects_enemy_and_observes_line_cooldown() {
+    let _scope = crate::random::seed_scope(70448);
+    let (mut run, equipment) = human(3);
+    let target = make_secondary_low(&mut run);
+    let mut driver = Driver::new(
+        Program::parse(&[(
+            "default",
+            "retarget,target_if=min:target.health.pct,line_cd=0.25",
+        )])
+        .unwrap(),
+    );
+    let select = |run: &mut Run, driver: &mut Driver| {
+        let prepared = Prepared::read(
+            run.app.world_mut(),
+            run.actor,
+            &run.targets,
+            &equipment,
+            std::iter::empty::<NativeAction<'_>>(),
+            false,
+        )
+        .unwrap();
+        let facts = TargetFacts {
+            world: run.app.world(),
+            targets: &run.targets,
+        };
+        driver
+            .select("default", &facts, &prepared, &equipment)
+            .unwrap()
+    };
+    let (action, execution) =
+        select(&mut run, &mut driver).expect("retarget selects the lowest health enemy");
+    driver
+        .execute(run.app.world_mut(), run.actor, action, execution)
+        .unwrap();
+    assert_eq!(
+        run.app
+            .world()
+            .get::<crate::networking::CombatTarget>(run.actor)
+            .unwrap()
+            .0,
+        Some(target)
+    );
+    assert!(
+        select(&mut run, &mut driver).is_none(),
+        "line cooldown prevents immediate reselection"
+    );
+    for _ in 0..10 {
+        run.app.update();
+    }
+    assert!(
+        select(&mut run, &mut driver).is_some(),
+        "line cooldown expires"
+    );
+    let mut palm = palm_driver(false);
+    let (action, execution) = select_palm(&mut run, &mut palm, &equipment);
+    palm.execute(run.app.world_mut(), run.actor, action, execution)
+        .unwrap();
+    assert_eq!(
+        casts(run.app.world(), run.actor),
+        vec![Some(target.to_bits())]
     );
 }
 
