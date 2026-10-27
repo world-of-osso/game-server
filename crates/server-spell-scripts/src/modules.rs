@@ -226,6 +226,7 @@ register_modules! {
     survival_mastery: (2555, "modules/survival_mastery.rs"),
     survival_pet: (2552, "modules/survival_pet.rs"),
     survival_swipe: (2554, "modules/survival_swipe.rs"),
+    survival_takedown: (2556, "modules/survival_takedown.rs"),
     survival_wildfire: (2551, "modules/survival_wildfire.rs"),
     sweeping_strikes: (711, "modules/sweeping_strikes.rs"),
     swiftmend: (1000, "modules/swiftmend.rs"),
