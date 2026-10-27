@@ -2,7 +2,7 @@
 //! effective points and crit before its player and two delayed clone attacks.
 use super::combat;
 use bevy::prelude::*;
-use combat::auras::{self, ActiveAuras, handlers, spell_mods};
+use combat::auras::{self, ActiveAuras, AuraStatMods, handlers, spell_mods};
 use combat::spell_cast::{
     self,
     effects::{self, EffectCtx},
@@ -91,7 +91,14 @@ fn snapshot_child(world: &World, caster: Entity, id: u32, points: f32) -> SpellI
         .get(id)
         .expect("native Secret Technique payload")
         .clone();
-    child.cast_damage_multiplier = Some(points);
+    // sc_rogue.cpp5377–5385: only the intrinsic clone snapshots the
+    // native owner guardian multiplier; the player attack does not.
+    let guardian = if id == CLONE {
+        world.get::<AuraStatMods>(caster).map_or(1.0, |mods| mods.guardian_damage_mult)
+    } else {
+        1.0
+    };
+    child.cast_damage_multiplier = Some(points * guardian);
     child.cast_charge_mods = Some(spell_mods::snapshot_charged_modifiers(
         world, caster, &child,
     ));

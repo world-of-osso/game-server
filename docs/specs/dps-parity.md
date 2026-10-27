@@ -191,6 +191,7 @@ Frost player reaction clocks are configured before food setup advances native fr
 
 ### Subtlety literal fixture
 
+- Secret Technique's intrinsic delayed clones snapshot the caster's native guardian damage multiplier; the player attack does not (`sc_rogue.cpp5377–5385`).
 - Eligible shadow clones and landed intrinsic Secret Technique clones can earn Shadow Techniques storage and Energy using Ancient Arts' native proc chance; Shadowcraft still controls stacks during Dance (`sc_rogue.cpp3650–3659,5405–5413,8159–8172`).
 - Shuriken Storm and its shadow clone snapshot the native rank-two stealth-stance damage bonus (`sc_rogue.cpp5817–5838,5872–5881`).
 - Eligible shadow clones can earn Shadow Techniques storage and Energy using Ancient Arts' native proc chance; Shadowcraft still controls stacks during Dance (`sc_rogue.cpp3650–3659,8159–8172`).
