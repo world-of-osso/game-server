@@ -89,6 +89,11 @@ fn is_pct(aura_type: u32) -> bool {
 
 /// Whether a spell-mod effect of `aura` applies to `spell`.
 pub(super) fn affects(aura: &AuraInstance, effect: &AuraEffectState, spell: &SpellInfo) -> bool {
+    // SimC76f8118 sc_death_knight.cpp16122–16123/16959: Pillar changes
+    // strength, but does not directly amplify Remorseless Winter's damage.
+    if aura.spell_id == 51271 && effect.index == 4 && spell.id == 196771 {
+        return false;
+    }
     match effect.aura_type {
         ADD_FLAT_MODIFIER | ADD_PCT_MODIFIER => class_mask_affects(aura, effect, spell),
         _ => u32::try_from(effect.misc_values[1])
