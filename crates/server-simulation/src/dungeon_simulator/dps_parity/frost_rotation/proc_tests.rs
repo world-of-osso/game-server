@@ -117,6 +117,44 @@ fn frost_critical_white_swings_earn_killing_machine() {
     );
 }
 
+#[test]
+#[ignore = "native251 selected Icy Death Torrent follows real critical white swings"]
+fn frost_icy_death_torrent_follows_critical_white_swings() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::protocol::CombatLogKind;
+
+    let _seed = crate::random::seed_scope(251);
+    let mut run = super::super::prepare_literal(251, 3).unwrap();
+    super::super::engage(&mut run);
+    assert!(auras::has_aura(run.app.world(), run.actor, 435010));
+    cast(&mut run, 49020);
+    for _ in 0..2000 {
+        run.app.update();
+    }
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0;
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(run.actor.to_bits())
+                && event.kind == CombatLogKind::Damage
+                && event.spell_id.is_none()
+                && event.crit),
+        "fixture must produce a real critical white swing"
+    );
+    for target in &run.targets {
+        assert!(
+            events
+                .iter()
+                .any(|event| event.source == Some(run.actor.to_bits())
+                    && event.target == Some(target.to_bits())
+                    && event.spell_id == Some(439539)
+                    && event.kind == CombatLogKind::Damage
+                    && event.amount > 0),
+            "actual critical white swings must earn native Icy Death Torrent on {target:?}"
+        );
+    }
+}
+
 fn earn_rime(run: &mut Run) {
     for _ in 0..24 {
         cast(run, 49020);

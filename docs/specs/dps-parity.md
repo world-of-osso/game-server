@@ -522,6 +522,10 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 - Generic DoT facts for an active permanent aura are not refreshable and have unbounded remains/duration, before finite fresh-duration/Pandemic validation. Missing/finite DoTs and buff/debuff sentinel semantics stay unchanged. Do not suppress literal casts in the adapter to hide an expiring aura.
 - Qualify the actual literal ST and recurring30s-add-wave ordering. Gate265 ST/3T and267, plus actual finite-DoT refreshability from103 or258. Count explosion hits separately from explosion actions; do not tune damage or target counts to repair excess paid Seed refreshes.
 
+### Guardian periodic haste
+
+- An actual guardian's periodic aura with native spell-haste-periodic attribute reads the same actual owner's resolved spell haste as its guardian cast time. Apply the aura's own period modifiers on the guardian, preserve native tick phase and unflagged periods, and do not substitute owners for ordinary units (SimC76f8118 `pet.cpp217–228`, `buff.cpp752,1945–1954`). Qualify actual Infernal19483→20153 tick spacing plus 265,266,253 and generic guardian controls.
+
 ### Native Infernal guardian
 
 - Actual111685 summons89 with live owner-SP shares2.2275 for SP and AP (SimC76f8118 `sc_warlock_pets.cpp2050–2119`). Native264364→264365 energizes the existing owner through target27; native19483→20153 emits its authored periodic area damage. Preserve native costs, coefficients, targets, clocks and actor expiry.
@@ -908,6 +912,8 @@ Stormkeeper grants its native effect4 count of next-spell uses, bounded by the n
 Native445624 supplies actual221177 Ancestors and their native lifetime after selected Stormkeeper or Ancestral Swiftness. Successful foreground spells command each living owned Ancestor once with native447419/447425 children at the retained primary. Background overloads do not command them. Native owner spell power and crit are inherited; Ancestor Lava Burst is guaranteed critical and scales with inherited crit (`sc_shaman.cpp`4342–4441,6358,7856,8163–8166,8758). Natural expiry allows selected Final Calling465717; cancellation does not. Actual Ancestor447419/447425/465717 critical hits apply selected live Elemental Fury60188 effect0's critical bonus, preserving its native amount and other spells' modifier masks (`sc_shaman.cpp`11468–11469; SimC effect indexes are one-based). Removing that owner aura removes the bonus. Ancient Fellowship and remaining pet effect inheritance still require qualification.
 
 Selected Routine Communication443445 draws once after an ordinary successful Lightning Bolt, Chain Lightning or Lava Burst execution. The native effect4/effect5 counts supply successes/total for a shuffled deck; reshuffle only after all cards are drawn. A successful draw summons the real native445624 Ancestor and447244 owner buff. Background builders, overloads and extra Chain recipients do not draw (`sc_shaman.cpp`6654–6658,7260–7263,7436–7438,13025–13033; `proc_rng.cpp`149–161).
+
+Selected Mountains Will Fall creates the native298762 Earthquake overload field on a mastery success and adds one during Ascendance. The field uses native298765 damage, native mastery and talent effectiveness, and its source's persistent damage multiplier; Ascendance modifies its damage while active (`sc_shaman.cpp`3175–3180,3316–3351,3379–3414,7897–7915,7953–7968).
 
 Selected Ancient Fellowship443423 draws its native shuffled deck once per natural Ancestor expiry. A successful draw summons a real replacement (`sc_shaman.cpp`4437–4439,13016–13023).
 

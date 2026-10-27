@@ -125,7 +125,10 @@ fn finish_unseen_hit(world: &mut World, ctx: &EffectCtx, target: Entity) {
 }
 
 fn apply_fazed(world: &mut World, ctx: &EffectCtx, target: Entity) {
-    spell_cast::cast_triggered(world, ctx.caster, FAZED, Some(target), ctx.depth + 1);
+    // Cloud Cover already applied this hit through its per-target cooldown.
+    if !auras::has_aura(world, ctx.caster, 441640) {
+        spell_cast::cast_triggered(world, ctx.caster, FAZED, Some(target), ctx.depth + 1);
+    }
 }
 
 fn prepare_spree(

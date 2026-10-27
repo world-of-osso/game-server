@@ -140,6 +140,13 @@ impl<'a> NativeFacts<'a> {
 
     /// Explicit fixture/controller target context; native entities, never a count oracle.
     pub fn with_targets(mut self, current: Option<Entity>, ordered: &'a [Entity]) -> Self {
+        // SimC76f8118 player.cpp10879–10884: retarget changes the actor's current target.
+        let current = self
+            .world
+            .get::<crate::networking::CombatTarget>(self.actor)
+            .and_then(|target| target.0)
+            .filter(|target| ordered.contains(target))
+            .or(current);
         self.targets = Some(TargetContext { current, ordered });
         self.active_enemies = ordered.len();
         self
