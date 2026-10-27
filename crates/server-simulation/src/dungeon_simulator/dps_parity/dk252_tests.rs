@@ -56,6 +56,40 @@ fn dk252_festering_strike_earns_ghouls_and_next_native_scythe() {
 
 #[test]
 #[ignore = "requires private native252 profile/traits and player actor"]
+fn dk252_scourge_strike_spends_ready_ghoul_and_summons_it() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 1).unwrap();
+    engage(&mut run);
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(85948, run.targets[0], Some(run.targets[0])),
+    )
+    .unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    let ready = |run: &Run| {
+        run.app.world().get::<crate::auras::ActiveAuras>(run.actor).unwrap().iter()
+            .find(|aura| aura.spell_id == 1254252 && aura.caster == run.actor)
+            .map_or(0, |aura| aura.stacks)
+    };
+    let initial = ready(&run);
+    assert!(initial > 0, "actual Festering Strike must earn ready ghouls");
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(55090, run.targets[0], Some(run.targets[0])),
+    )
+    .unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    assert_eq!(ready(&run), initial - 1, "Scourge Strike must spend one earned ready ghoul");
+    assert!(run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0.iter()
+        .any(|event| event.source == Some(run.actor.to_bits())
+            && event.spell_id == Some(275430) && event.kind == CombatLogKind::Summon),
+        "the spent ready ghoul must become an actual native lesser ghoul");
+}
+
+#[test]
+#[ignore = "requires private native252 profile/traits and player actor"]
 fn dk252_real_lesser_ghoul_summon_reaches_and_melees() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(252, 1).unwrap();
