@@ -352,10 +352,20 @@ fn extend_winter_for_runes(world: &mut World, caster: Entity, spell: &SpellInfo)
 }
 
 fn register_frost_auras(scripts: &mut auras::scripts::AuraScripts) {
+    scripts.0.entry(PILLAR).or_default().on_apply = Some(pillar_applied);
     scripts.0.entry(1249658).or_default().on_remove = Some(breath_ended);
     for winter in [196770, 1233152] {
         scripts.0.entry(winter).or_default().on_remove = Some(winter_ended);
     }
+}
+
+fn pillar_applied(world: &mut World, unit: Entity, aura: &auras::AuraInstance) {
+    if aura.caster != unit || !is_frost(world, unit) {
+        return;
+    }
+    // SimC76f8118 sc_death_knight.cpp7151–7158/16942–16970 uses Pillar
+    // for strength but does not parse its direct damage modifier for Frost.
+    assert!(auras::set_effect_amount(world, unit, aura.instance_id, 4, 0.0));
 }
 
 fn winter_ended(
