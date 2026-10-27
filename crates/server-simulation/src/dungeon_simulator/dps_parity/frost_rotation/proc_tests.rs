@@ -308,6 +308,21 @@ fn frost_reapers_mark_earns_echoing_fury_rune_discount() {
 }
 
 #[test]
+#[ignore = "real Exterminate second hit applies selected Wither Away Frost Fever"]
+fn frost_wither_away_real_exterminate_applies_fever() {
+    let _seed = crate::random::seed_scope(251);
+    let mut run = super::super::prepare_literal(251, 1).unwrap();
+    super::super::engage(&mut run);
+    assert!(auras::has_aura(run.app.world(), run.actor, 441894));
+    cast(&mut run, 439843);
+    let target = run.targets[0];
+    auras::remove_auras(run.app.world_mut(), target, RemoveReason::Consumed, |aura| aura.spell_id == 55095);
+    cast(&mut run, 49020);
+    for _ in 0..120 { run.app.update(); }
+    assert!(auras::has_aura(run.app.world(), target, 55095), "earned Exterminate must apply Frost Fever");
+}
+
+#[test]
 #[ignore = "native251 earned Exterminate releases its two damage hits"]
 fn frost_exterminate_spender_deals_both_native_hits() {
     use shared::protocol::CombatLogKind;
@@ -574,6 +589,31 @@ fn frost_erw_earns_killing_machine() {
         auras::has_aura(run.app.world(), actor, 51124),
         "actual Empower Rune Weapon must grant Killing Machine"
     );
+}
+
+fn grim_mark_explosion(health_fraction: f32) -> i32 {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::protocol::CombatLogKind;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::super::prepare_measurement(251, 1).unwrap();
+    super::super::engage(&mut run);
+    assert!(auras::has_aura(run.app.world(), run.actor, 434905));
+    cast(&mut run, 439843);
+    let mut health = run.app.world_mut().get_mut::<shared::components::Health>(run.targets[0]).unwrap();
+    health.current = health.max * health_fraction;
+    for _ in 0..500 { run.app.update(); }
+    run.app.world().resource::<ObservedCombatEvents>().0.iter().find(|event|
+        event.source == Some(run.actor.to_bits()) && event.target == Some(run.targets[0].to_bits())
+        && event.spell_id == Some(436304) && event.kind == CombatLogKind::Damage && event.amount > 0
+    ).expect("real Mark expiration must explode").amount
+}
+
+#[test]
+#[ignore = "actual Mark explosion scales with Grim Reaper target missing health"]
+fn frost_grim_reaper_scales_real_mark_explosion() {
+    let full = grim_mark_explosion(1.0);
+    let half = grim_mark_explosion(0.5);
+    assert!((half as f32 / full as f32 - 1.15).abs() < 0.02, "full={full} half={half}");
 }
 
 #[test]
@@ -1482,6 +1522,25 @@ fn diag_frost_winter_tick_factors() {
 }
 
 #[test]
+#[ignore = "diagnostic actual Obliterate physical hit factors"]
+fn diag_frost_obliterate_physical_factors() {
+    use crate::spell_cast::effects::factor_capture::FactorCapture;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::super::prepare_measurement(251, 1).unwrap();
+    run.app.insert_resource(FactorCapture::new(run.actor, run.targets[0], 222024, "obliterate_damage", 30));
+    super::super::engage(&mut run);
+    for _ in 0..1200 {
+        super::super::drive_player(&mut run).unwrap();
+        run.app.update();
+        if run.app.world().resource::<FactorCapture>().export()["captured_hits"].as_u64().unwrap() >= 30 { break; }
+    }
+    let capture = run.app.world().resource::<FactorCapture>().export();
+    assert!(capture["captured_hits"].as_u64().unwrap() > 0);
+    let output = std::path::PathBuf::from(std::env::var("DPS_PARITY_OUTPUT").unwrap());
+    std::fs::write(output.join("251.obliterate-physical-factors.json"), serde_json::to_vec_pretty(&capture).unwrap()).unwrap();
+}
+
+#[test]
 #[ignore = "diagnostic Frost native 300s factors and resource changes"]
 fn diag_frost_factors_and_resource_spending() {
     use crate::spell_cast::effects::factor_capture::FactorCapture;
@@ -1605,6 +1664,27 @@ fn earn_rime(run: &mut Run) {
     panic!("ordinary native Frost Strikes never earned Rime");
 }
 
+#[test]
+#[ignore = "actual Rime consumption earns Dark Talons and increases Icy Talons stacks"]
+fn frost_dark_talons_from_earned_rime_increases_icy_talons() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::super::prepare_literal(251, 1).unwrap();
+    super::super::engage(&mut run);
+    assert!(auras::has_aura(run.app.world(), run.actor, 436687));
+    for _ in 0..20 {
+        earn_rime(&mut run);
+        cast(&mut run, 49184);
+        if auras::has_aura(run.app.world(), run.actor, 443595) {
+            let aura = run.app.world().get::<ActiveAuras>(run.actor).unwrap().iter()
+                .find(|aura| aura.spell_id == 194879 && aura.caster == run.actor).unwrap();
+            assert!(aura.stacks > 3 && aura.max_stacks >= 6,
+                "Dark Talons must grant three Icy Talons stacks and increase its cap: {aura:?}");
+            return;
+        }
+    }
+    panic!("earned Rime casts never produced Dark Talons");
+}
+
 fn earn_killing_machine(run: &mut Run) {
     cast(run, 49020);
     cast(run, 49020);
@@ -1613,6 +1693,64 @@ fn earn_killing_machine(run: &mut Run) {
     clear_proc(run, 51124);
     cast(run, 49143);
     assert!(auras::has_aura(run.app.world(), actor, 51124));
+}
+
+#[test]
+#[ignore = "earned Killing Machine changes actual Obliterate weapon hits to Frost"]
+fn frost_km_converts_obliterate_weapon_children_to_frost() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::protocol::CombatLogKind;
+    let _seed = crate::random::seed_scope(251);
+    let mut run = super::super::prepare_literal(251, 1).unwrap();
+    super::super::engage(&mut run);
+    earn_killing_machine(&mut run);
+    let actor = run.actor;
+    let start = run.app.world().resource::<ObservedCombatEvents>().0.len();
+    let target = run.targets[0];
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 49020, Some(target), false).unwrap();
+    for _ in 0..3 { run.app.update(); }
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0[start..];
+    for id in [222024, 66198] {
+        let event = events.iter().find(|event| event.source == Some(actor.to_bits())
+            && event.target == Some(target.to_bits()) && event.spell_id == Some(id)
+            && event.kind == CombatLogKind::Damage).expect("real Obliterate weapon impact");
+        assert_eq!(event.school_mask, 16, "earned Killing Machine converts weapon child {id} to Frost");
+    }
+}
+
+#[test]
+#[ignore = "converted real Obliterate weapon hit applies mastery and earned Razorice"]
+fn frost_km_obliterate_weapon_uses_mastery_and_razorice() {
+    use crate::spell_cast::effects::factor_capture::FactorCapture;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::super::prepare_measurement(251, 1).unwrap();
+    super::super::engage(&mut run);
+    let actor = run.actor;
+    let target = run.targets[0];
+    for _ in 0..6000 {
+        let razorice = run.app.world().get::<ActiveAuras>(target).and_then(|active| active.iter()
+            .find(|aura| aura.spell_id == 51714 && aura.caster == actor)).cloned();
+        if auras::has_aura(run.app.world(), actor, 51124) && let Some(aura) = razorice {
+            let mastery = run.app.world().get::<crate::stats::CharacterStats>(actor).unwrap().mastery_pct / 100.0;
+            let amount = aura.effects.iter().find(|effect| effect.index == 0).unwrap().amount;
+            let expected = (1.0 + mastery) * (1.0 + amount * f32::from(aura.stacks) / 100.0);
+            run.app.insert_resource(FactorCapture::new(actor, target, 222024, "obliterate_damage", 1));
+            if crate::spell_cast::creature_cast(run.app.world_mut(), actor, 49020, Some(target), false).is_ok() {
+                for _ in 0..3 { run.app.update(); }
+                let capture = run.app.world().resource::<FactorCapture>().export();
+                let hit = capture["events"].as_array().unwrap().iter()
+                    .find(|event| event["spell_id"] == 222024 && event["event"] == "direct_amount").unwrap();
+                let product = hit["applied_multipliers"].as_array().unwrap().iter()
+                    .find(|factor| factor["factor"] == "ret_damage").unwrap()["value"].as_f64().unwrap();
+                assert!((product - f64::from(expected)).abs() < 0.001,
+                    "real converted hit uses mastery and owned Razorice: {product} vs {expected}");
+                return;
+            }
+        }
+        super::super::drive_player(&mut run).unwrap();
+        run.app.update();
+    }
+    panic!("real rotation never admitted KM Obliterate against earned Razorice");
 }
 
 #[test]
