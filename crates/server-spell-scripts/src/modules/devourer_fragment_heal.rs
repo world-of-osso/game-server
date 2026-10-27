@@ -11,7 +11,36 @@ use shared::components::ActiveSpec;
 pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::Hit(hit_hook)];
 
 fn hit_hook(spell: u32) -> Option<HitHook> {
-    (spell == 1266301).then_some(on_fragment_heal)
+    match spell {
+        1266301 => Some(on_fragment_heal),
+        1227702 => Some(on_collapsing_star_stack),
+        _ => None,
+    }
+}
+
+fn on_collapsing_star_stack(world: &mut World, caster: Entity, target: Entity, depth: u8) {
+    if caster != target {
+        return;
+    }
+    let threshold = spell_cast::scripts::script_effect_value(world, caster, 1221167, 0) as u8;
+    let stacks = world
+        .get::<combat::auras::ActiveAuras>(caster)
+        .and_then(|auras| {
+            auras
+                .iter()
+                .find(|aura| aura.spell_id == 1227702 && aura.caster == caster)
+        })
+        .map_or(0, |aura| aura.stacks);
+    // SimC76f8118 sc_demon_hunter.cpp9318–9334 grants readiness on crossing the threshold.
+    if threshold > 0
+        && stacks == threshold
+        && !spell_cast::try_cast_triggered(world, caster, 1221171, Some(caster), depth + 1)
+    {
+        warn!(
+            ?caster,
+            "native Collapsing Star ready aura 1221171 was refused"
+        );
+    }
 }
 
 fn on_fragment_heal(world: &mut World, caster: Entity, target: Entity, depth: u8) {

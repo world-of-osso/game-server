@@ -1152,6 +1152,8 @@ fn critical_damage_amount(
     );
     let bonus =
         super::scripts::elemental_ancestors::modify_critical_bonus(world, caster, spell.id, bonus);
+    let bonus =
+        bonus * crate::hunter_pet_stats::command_critical_bonus_multiplier(world, caster, spell.id);
     let total =
         amount + bonus + amount * super::guardian::demonic_brutality_critical_bonus(world, caster);
     if weapon_order {
