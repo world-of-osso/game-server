@@ -1,6 +1,7 @@
 //! Hogstrider's earned Boar impacts empower the next Cobra Shot.
 use super::{ActiveAuras, RemoveReason, auras, combat, has_talent, spell_cast};
 use bevy::prelude::*;
+use combat::class_progression::ActiveSpec;
 use combat::spell_cast::effects::EffectCtx;
 use combat::spell_info::SpellInfo;
 
@@ -19,7 +20,10 @@ pub(super) fn after_boar_impact(
     _: bool,
     _: f32,
 ) {
-    if matches!(ctx.spell.id, 471936 | 471938) && has_talent(world, ctx.caster, TALENT) {
+    if matches!(ctx.spell.id, 471936 | 471938)
+        && world.get::<ActiveSpec>(ctx.caster).is_some_and(|spec| spec.0 == 253)
+        && has_talent(world, ctx.caster, TALENT)
+    {
         // SimC76f8118 hunter.cpp4817–4846: each actual Boar impact increments.
         spell_cast::cast_triggered(world, ctx.caster, BUFF, Some(ctx.caster), ctx.depth + 1);
     }
