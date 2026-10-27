@@ -23,17 +23,36 @@ fn survival_native_raptor_and_swipe_earn_owned_armaments_for_real_recipients() {
     for _ in 0..80 {
         run.app.update();
     }
-    let events = &run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
     for &target in &run.targets {
-        assert!(events.iter().any(|event| event.source == Some(run.actor.to_bits())
-            && event.target == Some(target.to_bits()) && event.spell_id == Some(1253836)
-            && event.kind == CombatLogKind::Damage && event.periodic && event.amount > 0),
-            "actual Swipe target {target:?} must receive positive native Armaments ticks");
+        assert!(
+            events
+                .iter()
+                .any(|event| event.source == Some(run.actor.to_bits())
+                    && event.target == Some(target.to_bits())
+                    && event.spell_id == Some(1253836)
+                    && event.kind == CombatLogKind::Damage
+                    && event.periodic
+                    && event.amount > 0),
+            "actual Swipe target {target:?} must receive positive native Armaments ticks"
+        );
     }
 }
 
 fn assert_owned_residual(run: &Run, target: Entity) {
-    let auras = run.app.world().get::<crate::auras::ActiveAuras>(target).unwrap();
-    assert!(auras.iter().any(|aura| aura.caster == run.actor && aura.spell_id == 1253836),
-        "actual target {target:?} must receive the owned native Armaments residual");
+    let auras = run
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(target)
+        .unwrap();
+    assert!(
+        auras
+            .iter()
+            .any(|aura| aura.caster == run.actor && aura.spell_id == 1253836),
+        "actual target {target:?} must receive the owned native Armaments residual"
+    );
 }

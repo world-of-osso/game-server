@@ -117,8 +117,12 @@ pub(super) fn on_hit(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
 
 // sc_rogue.cpp6570–6594: Mass Casualty excludes the marked primary.
 pub(super) fn filter_mass_casualty(
-    _world: &World, _caster: Entity, spell: &SpellInfo, index: u8,
-    primary: Option<Entity>, recipients: &mut Vec<Entity>,
+    _world: &World,
+    _caster: Entity,
+    spell: &SpellInfo,
+    index: u8,
+    primary: Option<Entity>,
+    recipients: &mut Vec<Entity>,
 ) {
     if spell.id == MASS_DAMAGE && index == 0 {
         recipients.retain(|target| Some(*target) != primary);
@@ -166,10 +170,20 @@ fn spend_mark(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
     auras::spend_stack(world, target, instance);
     spell_cast::cast_triggered(world, ctx.caster, MARK_DAMAGE, Some(target), ctx.depth + 1);
     if ctx.spell.id == BLACK_POWDER && auras::has_aura(world, ctx.caster, MASS_CASUALTY) {
-        let mut payload = world.resource::<SpellStore>().get(MASS_DAMAGE)
-            .expect("selected Mass Casualty requires native payload").clone();
-        payload.cast_damage_multiplier = Some(native_amount(world, ctx.caster, MASS_CASUALTY, 1) / 100.0);
-        spell_cast::launch_triggered_spell(world, ctx.caster, &payload, Some(target), ctx.depth + 1);
+        let mut payload = world
+            .resource::<SpellStore>()
+            .get(MASS_DAMAGE)
+            .expect("selected Mass Casualty requires native payload")
+            .clone();
+        payload.cast_damage_multiplier =
+            Some(native_amount(world, ctx.caster, MASS_CASUALTY, 1) / 100.0);
+        spell_cast::launch_triggered_spell(
+            world,
+            ctx.caster,
+            &payload,
+            Some(target),
+            ctx.depth + 1,
+        );
     }
     if owned_mark(world, ctx.caster, target).is_none()
         && auras::has_aura(world, ctx.caster, DARKEST_TALENT)
