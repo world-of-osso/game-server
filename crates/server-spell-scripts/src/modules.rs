@@ -79,6 +79,7 @@ register_modules! {
     cast_relationships: (370, "modules/cast_relationships.rs"),
     cast_resets: (90, "modules/cast_resets.rs"),
     clearcasting: (1000, "modules/clearcasting.rs"),
+    demon_hunter_burning: (1482, "modules/demon_hunter_burning.rs"),
     demon_hunter_effects: (1000, "modules/demon_hunter_effects.rs"),
     destruction_crit_scaling: (2673, "modules/destruction_crit_scaling.rs"),
     destruction_echo: (2676, "modules/destruction_echo.rs"),
