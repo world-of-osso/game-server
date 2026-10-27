@@ -333,3 +333,50 @@ fn demonology_wicked_cleave_applies_cloven_soul() {
         "Cloven Soul must be the owner's debuff on the cleaved target"
     );
 }
+
+
+#[test]
+#[ignore = "requires canonical 266 inputs; real Tyrant shortens the ritual"]
+fn demonology_infernal_machine_advances_ritual_with_active_tyrant() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_funded();
+    let actor = run.actor;
+    assert!(crate::auras::has_aura(run.app.world(), actor, 429917));
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 265187, Some(run.targets[0]), true)
+        .expect("real native Tyrant must spawn");
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 431944, Some(actor), true)
+        .expect("native ritual must apply");
+    let expiry = |run: &Run| run.app.world().get::<crate::auras::ActiveAuras>(actor).unwrap()
+        .iter().find(|a| a.spell_id == 431944 && a.caster == actor).unwrap().expires_at.unwrap();
+    let before = expiry(&run);
+    let base = crate::spell_cast::scripts::script_effect_value(run.app.world(), actor, 428514, 0) as f64;
+    let bonus = crate::spell_cast::scripts::script_effect_value(run.app.world(), actor, 429917, 0) as f64 / 1000.0;
+    cast(&mut run, 105174);
+    let advanced = before - expiry(&run);
+    assert!((advanced - (3.0 * base + bonus)).abs() < 0.06, "three paid shards and one native Tyrant bonus: got {advanced}, base {base}, bonus {bonus}");
+}
+
+#[test]
+#[ignore = "requires canonical 266 inputs; Gloom scales actual Hand impact"]
+fn demonology_gloom_of_nathreza_scales_hand_meteor() {
+    fn meteor(with_gloom: bool) -> (i32, bool, f32) {
+        let _seed = crate::random::seed_scope(70_448);
+        let mut run = prepare_funded();
+        super::channel_timing_tests::remove_equipped_proc_drivers(&mut run);
+        let actor = run.actor;
+        let gloom = crate::spell_cast::scripts::script_effect_value(run.app.world(), actor, 429899, 0);
+        assert!(crate::auras::has_aura(run.app.world(), actor, 429899));
+        if !with_gloom {
+            crate::auras::remove_auras(run.app.world_mut(), actor, crate::auras::RemoveReason::Cancelled, |a| a.spell_id == 429899);
+        }
+        cast(&mut run, 105174);
+        update(&mut run, 30);
+        let damage = events(&run, CombatLogKind::Damage, 86040).into_iter().next().expect("actual Hand meteor damage");
+        (damage.amount, damage.crit, gloom)
+    }
+    let (base, base_crit, gloom) = meteor(false);
+    let (boosted, boosted_crit, _) = meteor(true);
+    assert_eq!(base_crit, boosted_crit, "same seed must compare the same hit state");
+    let expected = 1.0 + 3.0 * gloom / 100.0;
+    assert!(((boosted as f32 / base as f32) - expected).abs() < 0.01, "native Gloom multiplier {expected}, actual {boosted}/{base}");
+}
