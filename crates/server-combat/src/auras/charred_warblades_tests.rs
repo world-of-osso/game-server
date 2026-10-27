@@ -92,6 +92,10 @@ fn class_completeness_native_charred_warblades_accumulates_fire_damage_then_heal
         "heal waits for native 1000ms period"
     );
     h.advance(22);
+    eprintln!(
+        "charred test diagnostic first={first} second={second} expected={expected} log={:?}",
+        h.inbox.log
+    );
     assert_eq!(
         h.health(h.caster),
         500.0 + expected as f32,
