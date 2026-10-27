@@ -23,10 +23,15 @@ fn after_white_hit(world: &mut World, caster: Entity, hand: Hand, critical: bool
     if !critical || !auras::has_aura(world, caster, TALENT) {
         return;
     }
-    let stats = world.get::<combat::stats::CharacterStats>(caster).expect("native white swing has weapon stats");
+    let stats = world
+        .get::<combat::stats::CharacterStats>(caster)
+        .expect("native white swing has weapon stats");
     let weapon = match hand {
         Hand::Main => &stats.main_hand,
-        Hand::Off => stats.off_hand.as_ref().expect("native off-hand swing has a weapon"),
+        Hand::Off => stats
+            .off_hand
+            .as_ref()
+            .expect("native off-hand swing has a weapon"),
     };
     // SimC76f8118 sc_rogue.cpp3422–3430: critical dagger swings are
     // suppressed by the talent's native effect2 percentage.
