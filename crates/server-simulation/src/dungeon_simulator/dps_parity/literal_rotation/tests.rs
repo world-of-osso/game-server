@@ -365,6 +365,14 @@ fn literal_player_retarget_selects_enemy_and_observes_line_cooldown() {
         select(&mut run, &mut driver).is_some(),
         "line cooldown expires"
     );
+    let mut palm = palm_driver(false);
+    let (action, execution) = select_palm(&mut run, &mut palm, &equipment);
+    palm.execute(run.app.world_mut(), run.actor, action, execution)
+        .unwrap();
+    assert_eq!(
+        casts(run.app.world(), run.actor),
+        vec![Some(target.to_bits())]
+    );
 }
 
 #[test]
