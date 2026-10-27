@@ -1334,6 +1334,11 @@ The first landing was reverted at6445001a7 after native267 measured764 Overfiend
 
 Native `02e475cbb6` reaches actual217429 with no landed434589. Recovered `adcc78dbcb` passes live-crit and mastery controls but fails missing owner457578; summon dispatch bypasses its per-unit wrapper. Native repeated-bolt/coefficient/funding/expiry and retained267 controls qualify the actual callback. GREEN and numerical measurements remain pending.
 
+## Guardian periodic haste — 2026-10-26
+
+[Contract](../../specs/dps-parity.md#guardian-periodic-haste). Native19483 has attr5bit13 (spell haste affects periodic). Actual Infernal `a4a1e96579` RED observes real20153 intervals1.85s vs owner-haste expectation1.68373s: aura scheduling read the guardian's own CharacterStats instead of the same actual owner already used for guardian cast speed. SimC76f8118 `pet.cpp217–228` inherits owner spell speed; `buff.cpp752,1945–1954` applies it for a hasted native periodic aura.
+
+The generic periodic haste lookup now reuses `guardian::stat_owner` before reading stats, leaving the existing flag check and guardian-owned period modifiers intact; ordinary units and unhasted auras remain unchanged. Native actual-tick GREEN and 265 Darkglare/266 guardians/253 pets/generic guardian gates and measurements are pending.
 ## Destruction Incinerate recipients — 2026-10-26
 
 [Contract](../../specs/dps-parity.md#destruction-incinerate-recipients). Native29722 effect1 always exposes area selectors[53,16], without an effect-level talent condition, AuraRestrictions, TargetRestrictions or TDB condition. Its0x20800 attributes are radius flags; FnB196408 label SpellMods966/1886 do not match29722 labels19/16/292. Native area selection alone is not SimC's talent-dependent secondary behavior.
