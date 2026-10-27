@@ -7,6 +7,8 @@ use combat::spell_cast::{self, PlannedEffect, TargetPlan, effects::EffectCtx, ta
 use combat::spell_info::{SpellInfo, SpellStore};
 use shared::components::CombatStatus;
 
+#[path = "hunter_howl/hogstrider.rs"]
+mod hogstrider;
 #[path = "hunter_howl/pack_mentality.rs"]
 mod pack_mentality;
 #[path = "hunter_howl/summons.rs"]
@@ -14,6 +16,10 @@ mod summons;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::OwnsPolicyProc(owns_proc),
+    SpellScriptHook::OwnsPolicyProc(hogstrider::owns_proc),
+    SpellScriptHook::ResolvedDamage(hogstrider::after_boar_impact),
+    SpellScriptHook::BeforeDamageSnapshot(hogstrider::capture_cobra),
+    SpellScriptHook::BeforeExecutionCounterLaunch(hogstrider::consume_cobra),
     SpellScriptHook::AfterQueuedTriggers(begin_combat),
     SpellScriptHook::AfterElementalLaunch(after_launch),
     SpellScriptHook::TargetDamageMultiplier(pack_mentality::command_damage_multiplier),
