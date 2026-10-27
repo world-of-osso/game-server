@@ -34,6 +34,16 @@ struct GuardianPolicy {
 // SimC76f8118 pets.cpp19/705/867/1510–1548: bindings and inheritance
 // belong to the actual root/creature pair, including the alternative Tyrant.
 const GUARDIAN_POLICIES: &[GuardianPolicy] = &[
+    // SimC76f8118 sc_death_knight.cpp4478–4487/4599–4605: actual Magus AP share
+    // and MID2 actions; each action retains its native cast and recovery data.
+    GuardianPolicy {
+        summons: &[1242294],
+        entry: 163366,
+        spells: &[1297055, 1297091],
+        repeat_gcd: None,
+        owner_spell_share: None,
+        owner_attack_share: Some(0.4664),
+    },
     // SimC76f8118 sc_hunter.cpp1935: Dire Beast inherits live owner AP1.0.
     GuardianPolicy {
         summons: &[219199],
@@ -479,7 +489,9 @@ pub(super) fn initialize(world: &mut World, actor: Entity) {
     tyrant::on_spawn(world, actor);
     let summon = world.get::<SummonedCreature>(actor).unwrap();
     let root = summon.spell_id;
-    let policy = policy(root, entry);
+    let policy = policy(root, entry).filter(|_| {
+        root != 1242294 || entry != 163366 || crate::auras::has_aura(world, owner, 1296654)
+    });
     let spells = policy.map_or_else(
         || {
             world

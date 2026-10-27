@@ -154,6 +154,158 @@ fn dk252_putrefy_impact_raises_native_magus() {
 
 #[test]
 #[ignore = "requires private native252 profile/traits and player actor"]
+fn dk252_putrefy_magus_casts_native_necrotic_bolt() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 1).unwrap();
+    engage(&mut run);
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(
+            1247378,
+            run.targets[0],
+            Some(run.targets[0]),
+        ),
+    )
+    .unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    for _ in 0..300 {
+        run.app.update();
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    assert!(
+        events.iter().any(|event| event.spell_id == Some(1297055)
+            && event.target == Some(run.targets[0].to_bits())
+            && event.kind == CombatLogKind::Damage
+            && event.amount > 0),
+        "the actual native Magus must damage the enemy with Necrotic Bolt"
+    );
+}
+
+#[test]
+#[ignore = "requires private native252 profile/traits and player actor"]
+fn dk252_magus_bolt_inherits_owner_melee_power() {
+    use crate::spell_cast::effects::factor_capture::FactorCapture;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 1).unwrap();
+    engage(&mut run);
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(
+            1247378,
+            run.targets[0],
+            Some(run.targets[0]),
+        ),
+    )
+    .unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    let magus = (0..100)
+        .find_map(|_| {
+            run.app.update();
+            let world = run.app.world_mut();
+            world
+                .query::<(Entity, &shared::components::Npc)>()
+                .iter(world)
+                .find_map(|(actor, npc)| (npc.template_id == 163366).then_some(actor))
+        })
+        .expect("native Putrefy must create a Magus");
+    let owner = run.actor;
+    let target = run.targets[0];
+    run.app.insert_resource(FactorCapture::new(
+        magus,
+        target,
+        1297055,
+        "necrotic_bolt",
+        1,
+    ));
+    for _ in 0..200 {
+        run.app.update();
+        let capture = run.app.world().resource::<FactorCapture>().export();
+        let Some(calculation) = capture["events"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|event| event["event"] == "direct_amount" && event["spell_id"] == 1297055)
+        else {
+            continue;
+        };
+        let world = run.app.world();
+        let stats = world.get::<crate::stats::CharacterStats>(owner).unwrap();
+        let expected = stats.total_attack_power(
+            crate::stats::WeaponAttackType::MainHand,
+            world.get::<crate::stats::StatModifiers>(owner),
+        ) * 0.4664;
+        let inherited = calculation["factors"]["a_power"].as_f64().unwrap();
+        assert!(
+            (inherited - f64::from(expected)).abs() < 1.0,
+            "actual Magus bolt must inherit owner melee AP: actual={inherited}, expected={expected}"
+        );
+        return;
+    }
+    panic!("the actual Magus must complete a native Necrotic Bolt");
+}
+
+#[test]
+#[ignore = "requires private native252 profile/traits and player actor"]
+fn dk252_dark_transformation_tracks_the_transformed_pet_on_owner() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_measurement(252, 1).unwrap();
+    let pet = crate::hunter_pet::summoned_pet(run.app.world(), run.actor).unwrap();
+    engage(&mut run);
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(1233448, run.actor, None),
+    )
+    .unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    assert!(
+        crate::auras::has_aura(run.app.world(), pet, 1233448),
+        "native Dark Transformation must transform the actual controlled ghoul"
+    );
+    assert!(
+        crate::auras::has_aura(run.app.world(), run.actor, 1235391),
+        "the owner must track the actual transformed pet for the literal APL"
+    );
+}
+
+#[test]
+#[ignore = "requires private native252 profile/traits and player actor"]
+fn dk252_single_target_uses_dark_transformation_and_putrefy() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_measurement(252, 1).unwrap();
+    engage(&mut run);
+    advance_combat_observed(&mut run, |_| {}).unwrap();
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(run.actor.to_bits())
+                && event.spell_id == Some(1233448)
+                && event.kind == CombatLogKind::CastSuccess),
+        "the literal ST rotation must use Dark Transformation"
+    );
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(run.actor.to_bits())
+                && event.spell_id == Some(1247378)
+                && event.kind == CombatLogKind::CastSuccess),
+        "the literal ST rotation must use Putrefy"
+    );
+}
+
+#[test]
+#[ignore = "requires private native252 profile/traits and player actor"]
 fn dk252_raise_dead_produces_a_permanent_controlled_melee_pet() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_measurement(252, 1).unwrap();

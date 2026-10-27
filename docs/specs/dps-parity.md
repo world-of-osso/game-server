@@ -191,6 +191,8 @@ Frost player reaction clocks are configured before food setup advances native fr
 
 ### Subtlety literal fixture
 
+- Deepening Shadows extends earned Shadow Dance duration using the caster's raw haste-rating fraction and native effect value (`sc_rogue.cpp7457–7475`).
+- Secret Technique's intrinsic delayed clones snapshot the caster's native guardian damage multiplier; the player attack does not (`sc_rogue.cpp5377–5385`).
 - Eligible shadow clones and landed intrinsic Secret Technique clones can earn Shadow Techniques storage and Energy using Ancient Arts' native proc chance; Shadowcraft still controls stacks during Dance (`sc_rogue.cpp3650–3659,5405–5413,8159–8172`).
 - Shuriken Storm and its shadow clone snapshot the native rank-two stealth-stance damage bonus (`sc_rogue.cpp5817–5838,5872–5881`).
 - Eligible shadow clones can earn Shadow Techniques storage and Energy using Ancient Arts' native proc chance; Shadowcraft still controls stacks during Dance (`sc_rogue.cpp3650–3659,8159–8172`).
@@ -583,6 +585,10 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 - Actual critical Incinerate29722 (including selected secondary impacts), Chaos Bolt116858, Conflagrate17962 and Infernal Bolt434506 attempt selected Fiendish Cruelty1245633 using the native effect0 chance and one shared accumulated PRD stream. Successful attempts earn native1245664, whose existing aura-state exemption and native single charge permit and pay for actual Shadowburn17877 above its ordinary health threshold. Consume the earned charge on actual Shadowburn execution; do not roll on unrelated hits, grant shards or tune the native chance (SimC76f8118 actions433–439,3860,3936,4293,4446,4795–4800,4832–4834,5209; init1323–1326).
 
+### Destruction Crashing Chaos
+
+- Selected Crashing Chaos417234 earns its native417282 reverse uses on actual Summon Infernal1122 execution. The native talent effect2 sets the starting use count; each Chaos Bolt consumes one use while its native direct-damage modifier applies once, not once per use (SimC76f8118 `sc_warlock_init.cpp:839–841`, `sc_warlock_actions.cpp:4401–4403,5080–5082`).
+
 ### Destruction Roaring Blaze
 
 - A selected Roaring Blaze1244310 primary Conflagrate17962 hit spreads the caster's existing Wither445474 or Immolate157736 to nearby enemies as a free background DoT, without direct damage. Prioritize targets without the caster's Immolate, as the pinned smart-target selector does even with Wither; the native effect1 count sets the limit, with one extra already-infected target in pinned `bugs=true` mode. Do not spread from Havoc copies or a primary without the caster's DoT (SimC76f8118 `sc_warlock_actions.cpp:4440–4500`, `sc_warlock.cpp:1272–1319`).
@@ -864,6 +870,7 @@ Named `action.<alias>.charges`, `max_charges`, `charges_fractional` and `full_re
 - Ordinary Raptor Strike rolls the selected native Swipe rank's chance. An actual upgraded Raptor Swipe consumes its replacement and cannot produce itself. Source: `sc_hunter.cpp6188,6217–6236`.
 - A real Wildfire Bomb explodes around its actual primary using pinned5yd geometry, native reduced-AoE cap and native primary-only bonus. Apply the corresponding periodic payload to every actual impact recipient with the same cap/primary effectiveness. Selected Shrapnel replaces, never duplicates, the ordinary fire DoT. Keep native damage coefficients and timing. Source: `sc_hunter.cpp7030,7039–7043,7062–7068,7083–7089,7118–7120,7134`.
 
+- Each actual Boomstick periodic tick executes its native child first, then selected Mongoose Rounds1253945 grants the native number of Mongoose Fury259388 stacks once per tick, not once per recipient. Retain the native periodic clock. Source: `sc_hunter.cpp6333–6341`.
 - Selected Shellshock1252931 modifies actual Boomstick1261215 hit damage by its native effect1, reduced by the execution recipient count times native effect2 when that count exceeds one, clamped at zero. Use native child targeting, not encounter-wide enemy count. Source: `sc_hunter.cpp6268–6281`.
 - Actual Boomstick channel execution spends one earned Tip, grants native471536 through the channel, and reuses the native Stargazer/selected Sentinel mark/main-pet Strike consumers. Remove the channel buff on root-aura removal. Source: `sc_hunter.cpp6304–6324,6344–6350`.
 - Actual Takedown grants selected Twin Fangs1272139's native Tip count before its buff and damage; owner Focus comes once from native1258571, not the pet child. Source: `sc_hunter.cpp3096–3105,6368–6405`.
@@ -1101,11 +1108,15 @@ Selected Insidious Ire earns its temporary channel bonus when one target has all
 
 ### Unholy Putrefy summons
 
-- Native Putrefy summons its lesser ghoul. The actual ghoul travels to the selected enemy before delivering native single-target and area damage; it is then dismissed. Selected Lord of the Dead uses its native chance to raise a Magus after that dismissal. Do not substitute caster-only damage or invent creature data.
+- Native Putrefy summons its lesser ghoul. The actual ghoul travels to the selected enemy before delivering native single-target and area damage; it is then dismissed. Selected Lord of the Dead uses its native chance to raise a Magus after that dismissal. A MID2 two-piece Magus casts its native Necrotic Bolt and Withering Grasp using the source-qualified share of owner melee attack power. Do not substitute caster-only damage or invent creature data.
 
 ### Unholy Festering ready states
 
 - Successful native Festering Strike and its real Scythe replacement each earn one uniform native min/max count of1254252 ready-ghoul stacks. Selected Festering Scythe arms458123 after Strike; successful replacement consumes that owned state and opens1241077. Do not substitute damage, alter rune costs or grant resources beyond native effects.
+### Unholy Dark Transformation state
+
+- After Dark Transformation transforms the controlled ghoul, apply the native owner state 1235391 for the literal APL. Do not grant that state without the transformed owned pet.
+
 ### Unholy controlled ghoul
 
 - Specialization Raise Dead46584 creates native26125 through the controlled-pet path, retaining the actual current-pet relationship and permanent lifetime. Native Dark Transformation must see the pet through UNIT_PET. DK inherits source-qualified owner melee AP/crit/haste, and ordinary owner casts order the real pet against the selected hostile primary. Hunter, Warlock and Mage pet policies remain unchanged.

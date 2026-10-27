@@ -24,9 +24,11 @@ const UTILITY_RATINGS: u32 = (1 << 13) | (1 << 16) | (1 << 20);
 // Seastone3533, Vial3567, Heart3748, Font3806. These exact native drivers
 // build stat buffs without setting buff.default_value, or are disabled/damage
 // drivers with no matching stat buff. buff.hpp327's unset default is -DBL_MIN;
-// unique_gear.cpp3776 takes max with0. This is NOT their stat magnitude.
+// unique_gear.cpp3776 takes max with0. Freightrunner1250533 likewise shows
+// the unset -DBL_MIN value in the pinned 1480 SimC debug output. This is NOT
+// the stat magnitude.
 const SIMC_UNSET_PROC_DEFAULT_DRIVERS: &[u32] = &[
-    1256896, 1259293, 1260459, 1295058, 1293316, 1295179, 1297760, 1297761, 1297911, 1297908,
+    1250533, 1256896, 1259293, 1260459, 1295058, 1293316, 1295179, 1297760, 1297761, 1297911, 1297908,
 ];
 
 #[derive(Clone, Default)]

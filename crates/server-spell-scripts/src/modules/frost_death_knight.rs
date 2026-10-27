@@ -16,6 +16,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::SnapshotsModifier(snapshots_modifier),
     SpellScriptHook::AfterWhiteHit(after_white_hit),
     SpellScriptHook::AfterElementalLaunch(after_launch),
+    SpellScriptHook::AfterElementalLaunch(update_empowered_spender),
     SpellScriptHook::AfterQueuedTriggers(consume_due_killing_machine),
     SpellScriptHook::AfterSpellPayment(roll_runic_empowerment),
 ];
@@ -109,6 +110,68 @@ pub(super) fn after_launch(world: &mut World, caster: Entity, spell: &SpellInfo,
     // selected Frozen Dominion starts its native Winter aura from real Pillar.
     if spell.id == PILLAR && auras::has_aura(world, caster, 377226) {
         cast_buff_stacks(world, caster, 1233152, 1);
+    }
+}
+
+fn update_empowered_spender(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    foreground: bool,
+) {
+    const ERW_BUFF: u32 = 1230959;
+    const OBLITERATION_EFFECT: u32 = 207256;
+    if !is_frost(world, caster) {
+        return;
+    }
+    if spell.id == ERW_BUFF
+        && auras::has_aura(world, caster, PILLAR)
+        && auras::has_aura(world, caster, OBLITERATION)
+    {
+        let instance = world
+            .get::<auras::ActiveAuras>(caster)
+            .and_then(|active| {
+                active
+                    .iter()
+                    .find(|aura| aura.spell_id == ERW_BUFF && aura.caster == caster)
+                    .map(|aura| aura.instance_id)
+            })
+            .expect("actual Empower Rune Weapon applies its native aura");
+        // SimC76f8118 sc_death_knight.cpp10236–10243/16965: real ERW in
+        // Pillar uses native Obliteration trigger effects on its spender aura.
+        for (destination, source) in [(1, 0), (2, 1), (3, 2)] {
+            let amount = spell_cast::scripts::script_effect_value(
+                world,
+                caster,
+                OBLITERATION_EFFECT,
+                source,
+            );
+            assert!(auras::set_effect_amount(
+                world,
+                caster,
+                instance,
+                destination,
+                amount
+            ));
+        }
+    } else if foreground && matches!(spell.id, 207230 | 49020) {
+        let instance = world.get::<auras::ActiveAuras>(caster).and_then(|active| {
+            active
+                .iter()
+                .find(|aura| {
+                    aura.spell_id == ERW_BUFF
+                        && aura.caster == caster
+                        && aura
+                            .effects
+                            .iter()
+                            .any(|effect| effect.index == 1 && effect.amount < 0.0)
+                })
+                .map(|aura| aura.instance_id)
+        });
+        if let Some(instance) = instance {
+            // sc_death_knight.cpp10581–10594/11906–11913: one actual spender consumes it.
+            auras::remove_instance(world, caster, instance, auras::RemoveReason::Consumed);
+        }
     }
 }
 
