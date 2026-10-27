@@ -1333,3 +1333,11 @@ Native RED `a76e7960c2` observes next-frame0.05s Embers activation despite the u
 The first landing was reverted at6445001a7 after native267 measured764 Overfiend hits and149466 DPS. Actual literal test `293907b5ae` and isolated `a9767cced9` both reproduce51 real actors from2 Soul Fire and0 Rift in60s. Native Avatar1245089's broad proc hint fires on unrelated cast events. The leaf now owns that proc and creates one native Overfiend after actual Soul Fire execution; the separate SimC Rift-deck producer is not yet qualified. Native actor-bound GREEN and fresh measurement are required before relanding.
 
 Native `02e475cbb6` reaches actual217429 with no landed434589. Recovered `adcc78dbcb` passes live-crit and mastery controls but fails missing owner457578; summon dispatch bypasses its per-unit wrapper. Native repeated-bolt/coefficient/funding/expiry and retained267 controls qualify the actual callback. GREEN and numerical measurements remain pending.
+
+## Destruction Incinerate recipients — 2026-10-26
+
+[Contract](../../specs/dps-parity.md#destruction-incinerate-recipients). Native29722 effect1 always exposes area selectors[53,16], without an effect-level talent condition, AuraRestrictions, TargetRestrictions or TDB condition. Its0x20800 attributes are radius flags; FnB196408 label SpellMods966/1886 do not match29722 labels19/16/292. Native area selection alone is not SimC's talent-dependent secondary behavior.
+
+The downstream [recipient leaf](../../../crates/server-spell-scripts/src/modules/destruction_incinerate_targets.rs) snapshots the actual primary, native area FnB recipients and separate owned live Havoc recipient into the existing target plan. Existing per-recipient chain multipliers carry source1.0/25%/50%+25% into ordinary hit/crit resolution. The Havoc target is included even outside FnB radius and only once. No general selector, catalog coefficient or fixture change. Pinned actions3852–3900/3952–4002 require uncapped FnB, primary/Havoc exclusions and additive native fractions.
+
+RED `b4ead8b3b5`: untalented paid cast hits an unmarked secondary. Legal-budget selected RED `9eaf9c6380`: native full secondary ratios1.026 rather than source25%,50%,75%. Qualification and integrated267ST/3T pending; the former numeric3T parity was masked by +40.5k Incinerate.
