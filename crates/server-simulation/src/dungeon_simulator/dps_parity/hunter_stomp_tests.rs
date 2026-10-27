@@ -174,6 +174,32 @@ fn assert_hogstrider_cobra(targets: usize) {
         crate::auras::has_aura(run.app.world(), run.actor, 472640),
         "selected Hogstrider must arm after actual Boar damage"
     );
+    let impacts = events
+        .iter()
+        .filter(|event| {
+            event.source == Some(run.actor.to_bits())
+                && matches!(event.spell_id, Some(471936 | 471938))
+                && matches!(
+                    event.kind,
+                    shared::protocol::CombatLogKind::Damage
+                        | shared::protocol::CombatLogKind::Miss(_)
+                )
+        })
+        .count();
+    let stacks = run
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(run.actor)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 472640)
+        .unwrap()
+        .stacks;
+    assert_eq!(
+        usize::from(stacks),
+        impacts.min(4),
+        "each real Boar impact must add one native-capped stack"
+    );
     let bonus =
         crate::spell_cast::scripts::script_effect_value(run.app.world(), run.actor, 472640, 0);
     let before = events.len();
