@@ -8,9 +8,19 @@ use shared::protocol::CombatLogKind;
 fn survival_native_takedown_dispatches_owner_and_owned_pet_damage() {
     // SimC76f8118 sc_hunter.cpp6396–6405: native Takedown buff/mark precede
     // both distinct real-actor impact payloads on the actual hostile primary.
-    let _seed = crate::random::seed_scope(70448);
+    let mut player_hits = 0;
+    let mut pet_hits = 0;
+    for seed in [70448, 0, 1, 2, 3, 4, 5, 6] {
+        let (player, pet) = assert_takedown_outcomes(seed);
+        player_hits += usize::from(player);
+        pet_hits += usize::from(pet);
+    }
+    assert!(player_hits > 0 && pet_hits > 0, "both actual actors must deal positive native damage across the fixed matrix");
+}
+
+fn assert_takedown_outcomes(seed: u64) -> (bool, bool) {
+    let _seed = crate::random::seed_scope(seed);
     let mut run = prepare_literal(255, 1).unwrap();
-    run.app.world_mut().init_resource::<crate::spell_cast::test_harness::ObservedTriggeredCasts>();
     hunter_fixture::provision_pet(run.app.world_mut(), run.actor).unwrap();
     cast(&mut run, 883, true);
     let pet = crate::hunter_pet::summoned_pet(run.app.world(), run.actor).unwrap();
@@ -20,12 +30,15 @@ fn survival_native_takedown_dispatches_owner_and_owned_pet_damage() {
         run.app.update();
     }
     let events = &run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
-    for (actor, spell) in [(run.actor, 1253859), (pet, 1253862)] {
-        assert!(events.iter().any(|event| event.source == Some(actor.to_bits())
+    let mut positive = [false; 2];
+    for (index, (actor, spell)) in [(run.actor, 1253859), (pet, 1253862)].into_iter().enumerate() {
+        // Native fc87ee307c shows the real pet child can be dodged. Require
+        // exactly one actual owned outcome for every seed, not a guaranteed hit.
+        let outcomes: Vec<_> = events.iter().filter(|event| event.source == Some(actor.to_bits())
             && event.target == Some(run.targets[0].to_bits()) && event.spell_id == Some(spell)
-            && event.kind == CombatLogKind::Damage && event.amount > 0),
-            "actual Takedown must produce positive native spell{spell} from actor{actor:?}; outcomes={:#?}; casts={:#?}",
-            events.iter().filter(|event| matches!(event.spell_id, Some(1250646 | 1253859 | 1253862))).collect::<Vec<_>>(),
-            run.app.world().resource::<crate::spell_cast::test_harness::ObservedTriggeredCasts>().0.iter().filter(|(_, id, _)| matches!(*id, 1253859 | 1253862)).collect::<Vec<_>>());
+            && matches!(event.kind, CombatLogKind::Damage | CombatLogKind::Miss(_))).collect();
+        assert_eq!(outcomes.len(), 1, "seed{seed}: actual actor{actor:?} must emit one native spell{spell} outcome");
+        positive[index] = outcomes[0].kind == CombatLogKind::Damage && outcomes[0].amount > 0;
     }
+    (positive[0], positive[1])
 }
