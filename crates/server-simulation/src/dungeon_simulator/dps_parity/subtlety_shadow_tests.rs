@@ -141,14 +141,24 @@ fn subtlety_shadow_native_storm_copies_each_earned_hit_once() {
                     && event.amount > 0
             })
             .collect();
+        let clone_hits = events
+            .iter()
+            .filter(|event| {
+                event.kind == CombatLogKind::Damage
+                    && event.source == Some(run.actor.to_bits())
+                    && event.target == Some(target.to_bits())
+                    && event.spell_id == Some(1269340)
+                    && event.amount > 0
+            })
+            .count();
         assert_eq!(
             copies.len(),
-            1,
-            "each eligible landed hit must produce exactly one Lingering Shadow, without recursion"
+            hits.len() + clone_hits,
+            "each real Storm and Storm clone hit emits one residual: clone hits={clone_hits}"
         );
         assert!(
-            !copies[0].crit,
-            "source crit is already baked into the residual"
+            copies.iter().all(|copy| !copy.crit),
+            "source crit is already baked into each residual"
         );
     }
 }

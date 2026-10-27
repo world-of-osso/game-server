@@ -1,6 +1,8 @@
 //! SimC76f8118 sc_rogue.cpp5572–5575/6114–6117/6146–6149/
 //! 8532–8537/11196–11204: in-combat stance actions earn native Energy ticks.
 use super::{cast_relationships::has_talent, combat};
+#[path = "subtlety_dance.rs"]
+mod subtlety_dance;
 use bevy::prelude::*;
 use combat::auras::{self, AuraApplication, AuraSource};
 use combat::spell_cast::{
@@ -14,7 +16,10 @@ use shared::components::{CombatStatus, PowerType};
 const TALENT: u32 = 196976;
 const BUFF: u32 = 196980;
 const STANCE_ACTIONS: &[u32] = &[1784, 1856, 185313];
-pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::AfterForegroundSpecial(earn_buff)];
+pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::AfterForegroundSpecial(earn_buff),
+    SpellScriptHook::AfterForegroundSpecial(subtlety_dance::extend_duration),
+];
 
 fn earn_buff(world: &mut World, caster: Entity, source: &SpellInfo) {
     if !STANCE_ACTIONS.contains(&source.id)
