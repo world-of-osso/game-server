@@ -24,7 +24,10 @@ fn effect_enabled(world: &World, caster: Entity, spell: u32, index: u8) -> bool 
         }
         // SimC76f8118 sc_demon_hunter.cpp11438–11445 deregisters the
         // other specialization's native max-Fury effect.
-        UNTETHERED_FURY => !matches!((spec, index), (Some(SPEC_DEVOURER), 0) | (Some(577 | 581), 1)),
+        UNTETHERED_FURY => !matches!(
+            (spec, index),
+            (Some(SPEC_DEVOURER), 0) | (Some(577 | 581), 1)
+        ),
         _ => true,
     }
 }

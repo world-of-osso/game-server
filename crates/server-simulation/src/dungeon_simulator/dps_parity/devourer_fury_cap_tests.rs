@@ -7,8 +7,9 @@ fn assert_fury_cap(spec: u32, expected: f32) {
     for _ in 0..5 {
         run.app.update();
     }
-    let (_, max) = crate::spell_cast::powers::power_value(run.app.world(), run.actor, PowerType::Fury)
-        .expect("native Fury pool");
+    let (_, max) =
+        crate::spell_cast::powers::power_value(run.app.world(), run.actor, PowerType::Fury)
+            .expect("native Fury pool");
     assert_eq!(max, expected, "selected profile Fury cap for spec {spec}");
 }
 
