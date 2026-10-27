@@ -29,12 +29,20 @@ fn register_mark(scripts: &mut auras::scripts::AuraScripts) {
 }
 
 fn stack_mark(world: &mut World, ctx: &EffectCtx, target: Entity, critical: bool, damage: f32) {
-    if damage <= 0.0
-        || matches!(ctx.spell.id, 439843 | 436304 | 66198 | 458169 | 439539)
-        || !world
-            .get::<ActiveSpec>(ctx.caster)
-            .is_some_and(|spec| spec.0 == 251)
-    {
+    if damage <= 0.0 || !world.get::<ActiveSpec>(ctx.caster).is_some_and(|spec| spec.0 == 251) {
+        return;
+    }
+    if ctx.spell.id == 439843 {
+        if auras::has_aura(world, ctx.caster, 434905) {
+            // SimC76f8118 sc_death_knight.cpp8550–8554: Grim Reaper's
+            // actual Mark impact grants a predictable Killing Machine stack.
+            spell_cast::cast_triggered(world, ctx.caster, 51124, Some(ctx.caster), ctx.depth + 1);
+            #[cfg(any(test, feature = "test-support"))]
+            combat::simc_apl_native::reaction::predict(world, ctx.caster, 51124);
+        }
+        return;
+    }
+    if matches!(ctx.spell.id, 436304 | 66198 | 458169 | 439539) {
         return;
     }
     let school = ctx.spell.school_mask();
