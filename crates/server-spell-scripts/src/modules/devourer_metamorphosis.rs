@@ -39,6 +39,11 @@ fn grant_entry_fury(world: &mut World, unit: Entity, aura: &AuraInstance) {
     if unit != aura.caster || world.get::<ActiveSpec>(unit).map(|spec| spec.0) != Some(1480) {
         return;
     }
+    // SimC76f8118 sc_demon_hunter.cpp9192–9195 consumes the soul stack on entry.
+    // The native admission aura represents that same readiness.
+    auras::remove_auras(world, unit, RemoveReason::Consumed, |aura| {
+        aura.caster == unit && matches!(aura.spell_id, 1225789 | 1213809)
+    });
     // SimC76f8118 sc_demon_hunter.cpp12445–12452 grants 200 Fury on Meta entry.
     // Native PowerPools owns the cap and the actual applied amount.
     if powers::change_power(world, unit, PowerType::Fury, 200.0).is_none() {
