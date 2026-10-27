@@ -652,12 +652,10 @@ fn demonology_imp_critical_damage_inherits_demonic_brutality() {
     );
 }
 
-#[test]
-#[ignore = "requires private266 inputs; actual exhausted Imp four-piece explosion"]
-fn demonology_exhausted_imps_trigger_isolated_implosion() {
+fn assert_exhausted_imps_trigger_isolated_implosion(target_count: usize) {
     use shared::protocol::CombatLogKind;
     let _seed = crate::random::seed_scope(70_448);
-    let mut run = prepare_literal(266, 1).unwrap();
+    let mut run = prepare_literal(266, target_count).unwrap();
     assert!(crate::auras::has_aura(run.app.world(), run.actor, 1296574));
     engage(&mut run);
     run.app
@@ -689,13 +687,27 @@ fn demonology_exhausted_imps_trigger_isolated_implosion() {
         "actual Imps must spend their Energy on native bolts"
     );
     // SimC76f8118 pets.cpp833–849: selected MID2 rolls when an actual Imp cannot afford its next bolt.
-    assert!(
-        events.iter().any(|event| event.spell_id == Some(1306077)
-            && event.target == Some(run.targets[0].to_bits())
-            && event.kind == CombatLogKind::Damage
-            && event.amount > 0),
-        "exhausted Imps must launch real selected Isolated Implosion damage"
-    );
+    for target in &run.targets {
+        assert!(
+            events.iter().any(|event| event.spell_id == Some(1306077)
+                && event.target == Some(target.to_bits())
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0),
+            "exhausted Imps must launch real selected Isolated Implosion damage on {target}"
+        );
+    }
+}
+
+#[test]
+#[ignore = "requires private266 inputs; actual exhausted Imp four-piece explosion"]
+fn demonology_exhausted_imps_trigger_isolated_implosion() {
+    assert_exhausted_imps_trigger_isolated_implosion(1);
+}
+
+#[test]
+#[ignore = "requires private266 inputs; Isolated Implosion primary and secondary impacts"]
+fn demonology_exhausted_imps_trigger_isolated_implosion_on_three_targets() {
+    assert_exhausted_imps_trigger_isolated_implosion(3);
 }
 
 #[test]
