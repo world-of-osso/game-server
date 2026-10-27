@@ -947,17 +947,38 @@ fn demonology_paid_hand_starts_and_shortens_diabolic_ritual() {
     let mut run = prepare_literal(266, 1).unwrap();
     assert!(crate::auras::has_aura(run.app.world(), run.actor, 428514));
     for _ in 0..3 {
-        crate::spell_cast::creature_cast(run.app.world_mut(), run.actor, 686, Some(run.targets[0]), false).unwrap();
+        crate::spell_cast::creature_cast(
+            run.app.world_mut(),
+            run.actor,
+            686,
+            Some(run.targets[0]),
+            false,
+        )
+        .unwrap();
         preparation::finish_pending_setup(&mut run).unwrap();
     }
     engage(&mut run);
-    crate::spell_cast::creature_cast(run.app.world_mut(), run.actor, 105174, Some(run.targets[0]), false).unwrap();
+    crate::spell_cast::creature_cast(
+        run.app.world_mut(),
+        run.actor,
+        105174,
+        Some(run.targets[0]),
+        false,
+    )
+    .unwrap();
     preparation::finish_pending_setup(&mut run).unwrap();
     let world = run.app.world();
-    let aura = world.get::<crate::auras::ActiveAuras>(run.actor).unwrap().iter()
-        .find(|aura| aura.spell_id == 431944).expect("paid Hand must start native Overlord ritual");
+    let aura = world
+        .get::<crate::auras::ActiveAuras>(run.actor)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 431944)
+        .expect("paid Hand must start native Overlord ritual");
     let remaining = aura.expires_at.unwrap() - crate::spell_cast::now(world);
-    assert!((16.8..=17.1).contains(&remaining), "three paid shards reduce native 20s ritual to 17s, got {remaining}");
+    assert!(
+        (16.8..=17.1).contains(&remaining),
+        "three paid shards reduce native 20s ritual to 17s, got {remaining}"
+    );
 }
 
 #[test]
