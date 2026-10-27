@@ -23,7 +23,10 @@ pub fn age_precombat_item_use(
     if let Some(deadline) = history.category_ready_at.get_mut(&category) {
         *deadline -= elapsed;
     }
-    if let Some(cast) = history.successful_casts.get_mut(&spell) {
+    if let Some(cast) = history
+        .successful_casts
+        .get_mut(&super::SuccessKey::Spell(spell))
+    {
         cast.at -= elapsed;
     }
     Ok(())

@@ -252,6 +252,7 @@ register_modules! {
     subtlety_goremaw: (2618, "modules/subtlety_goremaw.rs"),
     subtlety_master_shadows: (2616, "modules/subtlety_master_shadows.rs"),
     subtlety_shadow: (420, "modules/subtlety_shadow.rs"),
+    subtlety_storm: (2619, "modules/subtlety_storm.rs"),
     subtlety_techniques: (2610, "modules/subtlety_techniques.rs"),
     survival: (2550, "modules/survival.rs"),
     survival_boomstick: (2557, "modules/survival_boomstick.rs"),
