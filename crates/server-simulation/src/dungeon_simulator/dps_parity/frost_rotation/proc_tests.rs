@@ -342,6 +342,25 @@ fn frost_exterminate_spender_deals_both_native_hits() {
 }
 
 #[test]
+#[ignore = "native Breath ending restores its authored runes"]
+fn frost_breath_end_restores_runes() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::protocol::CombatLogKind;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::super::prepare_measurement(251, 1).unwrap();
+    super::super::engage(&mut run);
+    super::super::advance_combat(&mut run).unwrap();
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0;
+    assert!(events.iter().any(|event| event.source == Some(run.actor.to_bits())
+        && event.spell_id == Some(1249658) && event.kind == CombatLogKind::AuraRemoved),
+        "real Breath must end during the fight");
+    assert!(events.iter().any(|event| event.source == Some(run.actor.to_bits())
+        && event.spell_id == Some(1234304) && event.kind == CombatLogKind::Energize
+        && event.amount > event.overflow),
+        "real Breath expiration must replenish spent runes from native 1234304");
+}
+
+#[test]
 #[ignore = "native Frostwyrm's Fury extends an active Pillar with Chosen of Frostbrood"]
 fn frost_fury_extends_real_pillar() {
     let _seed = crate::random::seed_scope(70448);
