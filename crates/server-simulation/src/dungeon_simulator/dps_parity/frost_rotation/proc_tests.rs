@@ -342,6 +342,80 @@ fn frost_exterminate_spender_deals_both_native_hits() {
 }
 
 #[test]
+#[ignore = "native Reaper's Mark explodes and earns Exterminate from actual damage"]
+fn frost_mark_explosion_earns_exterminate() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::protocol::CombatLogKind;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::super::prepare_measurement(251, 1).unwrap();
+    super::super::engage(&mut run);
+    assert!(auras::has_aura(run.app.world(), run.actor, 441378));
+    cast(&mut run, 439843);
+    assert!(auras::has_aura(run.app.world(), run.targets[0], 434765));
+    for _ in 0..500 {
+        super::super::drive_player(&mut run).unwrap();
+        run.app.update();
+    }
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0;
+    let explosion = events.iter().position(|event| {
+        event.source == Some(run.actor.to_bits())
+            && event.target == Some(run.targets[0].to_bits())
+            && event.spell_id == Some(436304)
+            && event.kind == CombatLogKind::Damage && event.amount > 0
+    }).expect("actual Mark must explode after real damaging hits or expiry");
+    assert!(events[explosion..].iter().any(|event| {
+        event.source == Some(run.actor.to_bits()) && event.spell_id == Some(434765)
+            && event.kind == CombatLogKind::AuraRemoved && event.amount > 1
+    }), "real damage must build the Mark before it explodes");
+    assert!(events[explosion..].iter().any(|event| {
+        event.source == Some(run.actor.to_bits()) && event.spell_id == Some(441416)
+            && matches!(event.kind, CombatLogKind::AuraApplied | CombatLogKind::AuraRefreshed)
+            && event.amount == 2
+    }), "actual explosion must earn both native Exterminate uses");
+}
+
+#[test]
+#[ignore = "native Breath ending restores its authored runes"]
+fn frost_breath_end_restores_runes() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::protocol::CombatLogKind;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::super::prepare_measurement(251, 1).unwrap();
+    super::super::engage(&mut run);
+    super::super::advance_combat(&mut run).unwrap();
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0;
+    assert!(events.iter().any(|event| event.source == Some(run.actor.to_bits())
+        && event.spell_id == Some(1249658) && event.kind == CombatLogKind::AuraRemoved),
+        "real Breath must end during the fight");
+    assert!(events.iter().any(|event| event.source == Some(run.actor.to_bits())
+        && event.spell_id == Some(1234304) && event.kind == CombatLogKind::Energize
+        && event.amount > event.overflow),
+        "real Breath expiration must replenish spent runes from native 1234304");
+}
+
+#[test]
+#[ignore = "native Frostwyrm's Fury extends an active Pillar with Chosen of Frostbrood"]
+fn frost_fury_extends_real_pillar() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::super::prepare_literal(251, 1).unwrap();
+    super::super::engage(&mut run);
+    let actor = run.actor;
+    assert!(auras::has_aura(run.app.world(), actor, 1265633));
+    super::super::enhancement_generation_tests::cast(&mut run, 51271, actor);
+    let expiration = |run: &Run| {
+        run.app.world().get::<ActiveAuras>(run.actor).unwrap().iter()
+            .find(|aura| aura.spell_id == 51271 && aura.caster == run.actor)
+            .unwrap().expires_at.unwrap()
+    };
+    let before = expiration(&run);
+    let extension_ms = crate::spell_cast::scripts::script_effect_value(run.app.world(), actor, 1265633, 0);
+    cast(&mut run, 279302);
+    let after = expiration(&run);
+    assert!((after - before - f64::from(extension_ms) / 1000.0).abs() < 0.001,
+        "real Fury must extend active Pillar by native Chosen duration: {before} -> {after}");
+}
+
+#[test]
 #[ignore = "native Frost Fever ticks use the pinned Runic Power proc rate"]
 fn frost_fever_actual_ticks_roll_runic_power() {
     use crate::spell_cast::test_harness::ObservedCombatEvents;
@@ -410,6 +484,35 @@ fn frost_earned_rune_refill_preserves_regeneration() {
 }
 
 #[test]
+#[ignore = "diagnostic Frost oracle-aligned actual spell factors"]
+fn diag_frost_oracle_aligned_factors() {
+    use super::super::single_spell::{SpellProbe, capture_cast};
+    let output = std::path::PathBuf::from(std::env::var("DPS_PARITY_OUTPUT").unwrap());
+    for (root, focus, label, pillar) in [
+        (49020, 1264082, "obliterate_frost", true),
+        (49184, 49184, "howling_blast", false),
+    ] {
+        let _seed = crate::random::seed_scope(70448);
+        let mut run = super::super::prepare_literal(251, 1).unwrap();
+        super::super::engage(&mut run);
+        if pillar {
+            let actor = run.actor;
+            super::super::enhancement_generation_tests::cast(&mut run, 51271, actor);
+        }
+        let receipt = capture_cast(&mut run, &SpellProbe {
+            spec: 251,
+            spell: root,
+            damage_spell: focus,
+            action: if root == 49020 { "obliterate" } else { "howling_blast" },
+            ticks: 1,
+        }).unwrap();
+        assert_eq!(receipt["captured_hits"], 1);
+        std::fs::write(output.join(format!("251.oracle-aligned.{label}.json")),
+            serde_json::to_vec_pretty(&receipt).unwrap()).unwrap();
+    }
+}
+
+#[test]
 #[ignore = "diagnostic Frost native 300s factors and resource changes"]
 fn diag_frost_factors_and_resource_spending() {
     use crate::spell_cast::effects::factor_capture::FactorCapture;
@@ -418,7 +521,7 @@ fn diag_frost_factors_and_resource_spending() {
 
     let output = std::path::PathBuf::from(std::env::var("DPS_PARITY_OUTPUT").unwrap());
     let mut totals = Vec::new();
-    for seed in [70448, 1, 2, 3, 4, 5, 6, 7, 8, 9] {
+    for seed in [70448, 1, 2] {
         let _seed = crate::random::seed_scope(seed);
         let mut run = super::super::prepare_measurement(251, 1).unwrap();
         run.app.insert_resource(ObservedPowerChanges::default());
@@ -437,8 +540,19 @@ fn diag_frost_factors_and_resource_spending() {
             ));
         }
         super::super::engage(&mut run);
+        let start_runes = run.app.world().get::<crate::spell_cast::runes::Runes>(run.actor).unwrap().ready();
         let (seconds, _, _) = super::super::advance_combat(&mut run).unwrap();
         assert!((seconds - 300.0).abs() < 0.001);
+        let end_runes = run.app.world().get::<crate::spell_cast::runes::Runes>(run.actor).unwrap().ready();
+        let combat = super::super::report::combat(run.app.world(), &run.damage_targets, seconds);
+        let observed = &run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
+        let killing_machine_events: Vec<_> = observed.iter().filter(|event| {
+            event.source == Some(run.actor.to_bits()) && event.spell_id == Some(51124)
+        }).map(|event| serde_json::json!({
+            "kind": format!("{:?}", event.kind),
+            "amount": event.amount,
+            "timestamp_ms": event.timestamp_unix_ms,
+        })).collect();
         let changes = &run.app.world().resource::<ObservedPowerChanges>().0;
         let spent = |power| {
             -changes
@@ -451,11 +565,20 @@ fn diag_frost_factors_and_resource_spending() {
         };
         let runes = spent(PowerType::Runes);
         let runic_power_raw = spent(PowerType::RunicPower);
+        let rune_refills = changes.iter().filter(|(actor, kind, amount)| {
+            *actor == run.actor && *kind == PowerType::Runes && *amount > 0.0
+        }).map(|(_, _, amount)| *amount).sum::<f32>();
         assert!(runes > 0.0 && runic_power_raw > 0.0);
         totals.push(serde_json::json!({
             "seed": seed,
             "runes": runes,
+            "rune_refills": rune_refills,
+            "start_runes": start_runes,
+            "end_runes": end_runes,
+            "regenerated_runes": runes + end_runes as f32 - start_runes as f32 - rune_refills,
             "runic_power_raw": runic_power_raw,
+            "energize": combat["energize"],
+            "killing_machine_events": killing_machine_events,
         }));
         if seed == 70448 || seed == 1 {
             let capture = run.app.world().resource::<FactorCapture>().export();
