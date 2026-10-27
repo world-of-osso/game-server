@@ -124,6 +124,26 @@ impl Rotation {
         actor: Entity,
         targets: &[Entity],
     ) -> Result<(), String> {
+        let pickup = {
+            let facts = HavocFacts {
+                native: NativeFacts::new(
+                    world,
+                    actor,
+                    &self.bindings,
+                    self.encounter,
+                    targets.len(),
+                )
+                .with_targets(targets.first().copied(), targets),
+                equipment: &self.equipment,
+                world,
+                actor,
+            };
+            self.driver
+                .fragment_pickup_permitted(world, actor, &facts)?
+        };
+        if let Some(permitted) = pickup {
+            server::soul_fragments::finish_pickup(world, actor, permitted)?;
+        }
         let prepared = self.prepare(world, actor, targets)?;
         let facts = HavocFacts {
             native: NativeFacts::new(world, actor, &self.bindings, self.encounter, targets.len())
@@ -144,8 +164,7 @@ impl Rotation {
     pub fn report(&self) -> Value {
         json!({"driver": "LITERAL_SIMC_HAVOC_76f8118", "decisions": self.driver.decisions,
             "native_precombat_snapshot": self.driver.snapshot,
-            "gaps": ["NATIVE_SOUL_FRAGMENT_PICKUP_UNAVAILABLE",
-                "NATIVE_HAVOC_PER_ABILITY_QUALIFICATION_OPEN", "NATIVE_DEMONSURGE_DAMAGE_UNQUALIFIED"]})
+            "gaps": ["NATIVE_HAVOC_PER_ABILITY_QUALIFICATION_OPEN", "NATIVE_DEMONSURGE_DAMAGE_UNQUALIFIED"]})
     }
 }
 
