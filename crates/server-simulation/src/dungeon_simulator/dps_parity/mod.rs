@@ -315,6 +315,15 @@ fn literal_follower_only_specs_explicitly_preserve_their_actor_restriction() {
 }
 
 fn prepare_measurement(spec_id: u32, count: usize) -> Result<Run, String> {
+    prepare_measurement_with(spec_id, count, |_| {})
+}
+
+/// `before_prepare` runs after consumables, before the driver's pre-pull plan.
+fn prepare_measurement_with(
+    spec_id: u32,
+    count: usize,
+    before_prepare: impl FnOnce(&mut Run),
+) -> Result<Run, String> {
     let (profile, traits) = read_reference(spec_id)?;
     let identity = inputs::read_actor(&profile)?;
     if let Some(driver) = measurement_driver(spec_id, &identity) {
@@ -325,6 +334,7 @@ fn prepare_measurement(spec_id: u32, count: usize) -> Result<Run, String> {
             devourer_rotation::configure_actor_reactions(run.app.world_mut(), run.actor)?;
         }
         preparation::consume_profile_food(&mut run)?;
+        before_prepare(&mut run);
         run.spec_driver = Some((driver.prepare)(&mut run)?);
         Ok(run)
     } else {
