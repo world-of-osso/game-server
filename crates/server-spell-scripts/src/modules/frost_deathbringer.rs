@@ -38,12 +38,23 @@ fn stack_mark(world: &mut World, ctx: &EffectCtx, target: Entity, critical: bool
         return;
     }
     if ctx.spell.id == 435802 && critical {
-        let primary = world.get::<WaveState>(ctx.caster).is_some_and(|state| state.primary == target);
+        let primary = world
+            .get::<WaveState>(ctx.caster)
+            .is_some_and(|state| state.primary == target);
         let modifier = if primary && auras::has_aura(world, ctx.caster, 443560) {
             1.0 + script_effect_value(world, ctx.caster, 443560, 1) / 100.0
-        } else { 1.0 };
+        } else {
+            1.0
+        };
         let value = script_effect_value(world, ctx.caster, 439851, 0) * modifier;
-        spell_cast::cast_triggered_with_effect0_amount(world, ctx.caster, 443404, Some(target), ctx.depth + 1, value);
+        spell_cast::cast_triggered_with_effect0_amount(
+            world,
+            ctx.caster,
+            443404,
+            Some(target),
+            ctx.depth + 1,
+            value,
+        );
     }
     if ctx.spell.id == 436304 {
         trigger_soul_rupture(world, ctx, target, damage);
@@ -99,15 +110,36 @@ fn stack_mark(world: &mut World, ctx: &EffectCtx, target: Entity, critical: bool
 }
 
 fn trigger_soul_rupture(world: &mut World, ctx: &EffectCtx, target: Entity, damage: f32) {
-    if !auras::has_aura(world, ctx.caster, 437161) { return; }
-    let Some(mut rupture) = spell_cast::load_triggered_spell(world, 439594, ctx.depth + 1) else { return };
+    if !auras::has_aura(world, ctx.caster, 437161) {
+        return;
+    }
+    let Some(mut rupture) = spell_cast::load_triggered_spell(world, 439594, ctx.depth + 1) else {
+        return;
+    };
     let percent = script_effect_value(world, ctx.caster, 437161, 1);
-    let effect = rupture.effects.iter_mut().find(|effect| effect.index == 0).expect("Soul Rupture damage");
+    let effect = rupture
+        .effects
+        .iter_mut()
+        .find(|effect| effect.index == 0)
+        .expect("Soul Rupture damage");
     effect.base_points = damage * percent / 100.0;
-    let radius = effect.radius[1].as_ref().expect("Soul Rupture area radius").radius;
-    let center = combat::spell_cast::targets::position(world, target).expect("Mark target position");
-    let targets = combat::spell_cast::targets::area_units(world, ctx.caster, center, radius, combat::spell_cast::targets::Relation::Enemy, 0);
-    if targets.iter().all(|candidate| *candidate == target) && auras::has_aura(world, ctx.caster, 443560) {
+    let radius = effect.radius[1]
+        .as_ref()
+        .expect("Soul Rupture area radius")
+        .radius;
+    let center =
+        combat::spell_cast::targets::position(world, target).expect("Mark target position");
+    let targets = combat::spell_cast::targets::area_units(
+        world,
+        ctx.caster,
+        center,
+        radius,
+        combat::spell_cast::targets::Relation::Enemy,
+        0,
+    );
+    if targets.iter().all(|candidate| *candidate == target)
+        && auras::has_aura(world, ctx.caster, 443560)
+    {
         spell_cast::cast_triggered(world, ctx.caster, 469169, Some(ctx.caster), ctx.depth + 1);
     }
     spell_cast::launch_triggered_spell(world, ctx.caster, &rupture, Some(target), ctx.depth + 1);
@@ -175,8 +207,16 @@ fn after_launch(world: &mut World, caster: Entity, spell: &SpellInfo, foreground
         return;
     }
     if spell.id == REAPERS_MARK && auras::has_aura(world, caster, 439851) {
-        let target = spell.cast_primary_target.expect("Wave of Souls primary target");
-        let ctx = EffectCtx { caster, spell, depth: 0, dest: None, chain_multiplier: 1.0 };
+        let target = spell
+            .cast_primary_target
+            .expect("Wave of Souls primary target");
+        let ctx = EffectCtx {
+            caster,
+            spell,
+            depth: 0,
+            dest: None,
+            chain_multiplier: 1.0,
+        };
         let first = (combat::random::random::<f64>() * 100.0) as u32;
         let radial = (-2.0 * (1.0 - combat::random::random::<f64>()).ln()).sqrt();
         let angle = std::f64::consts::TAU * combat::random::random::<f64>();
@@ -229,10 +269,17 @@ fn after_launch(world: &mut World, caster: Entity, spell: &SpellInfo, foreground
 }
 
 #[derive(Component)]
-struct WaveState { primary: Entity, returning: bool }
+struct WaveState {
+    primary: Entity,
+    returning: bool,
+}
 
 fn wave_crit_chance(world: &World, caster: Entity, _: Entity, spell: u32) -> Option<f32> {
-    (spell == 435802 && world.get::<WaveState>(caster).is_some_and(|state| state.returning)).then_some(100.0)
+    (spell == 435802
+        && world
+            .get::<WaveState>(caster)
+            .is_some_and(|state| state.returning))
+    .then_some(100.0)
 }
 
 fn wave_outbound(world: &mut World, caster: Entity, primary: Entity, depth: u8) {
@@ -244,17 +291,40 @@ fn wave_return(world: &mut World, caster: Entity, primary: Entity, depth: u8) {
 }
 
 fn launch_wave(world: &mut World, caster: Entity, primary: Entity, depth: u8, returning: bool) {
-    let Some(mut spell) = spell_cast::load_triggered_spell(world, 435802, depth) else { return };
+    let Some(mut spell) = spell_cast::load_triggered_spell(world, 435802, depth) else {
+        return;
+    };
     spell.effects.retain(|effect| effect.index == 1);
-    let radius = spell.misc.as_ref().and_then(|misc| misc.range.as_ref()).expect("Wave of Souls range").max_hostile;
-    let center = combat::spell_cast::targets::position(world, caster).expect("Wave caster position");
-    let mut targets = combat::spell_cast::targets::area_units(world, caster, center, radius, combat::spell_cast::targets::Relation::Enemy, 0);
-    if let Some(index) = targets.iter().position(|target| *target == primary) { targets.swap(0, index); }
-    world.entity_mut(caster).insert(WaveState { primary, returning });
+    let radius = spell
+        .misc
+        .as_ref()
+        .and_then(|misc| misc.range.as_ref())
+        .expect("Wave of Souls range")
+        .max_hostile;
+    let center =
+        combat::spell_cast::targets::position(world, caster).expect("Wave caster position");
+    let mut targets = combat::spell_cast::targets::area_units(
+        world,
+        caster,
+        center,
+        radius,
+        combat::spell_cast::targets::Relation::Enemy,
+        0,
+    );
+    if let Some(index) = targets.iter().position(|target| *target == primary) {
+        targets.swap(0, index);
+    }
+    world
+        .entity_mut(caster)
+        .insert(WaveState { primary, returning });
     for target in targets {
-        spell.cast_damage_multiplier = Some(if target == primary && auras::has_aura(world, caster, 443560) {
-            1.0 + script_effect_value(world, caster, 443560, 1) / 100.0
-        } else { 1.0 });
+        spell.cast_damage_multiplier = Some(
+            if target == primary && auras::has_aura(world, caster, 443560) {
+                1.0 + script_effect_value(world, caster, 443560, 1) / 100.0
+            } else {
+                1.0
+            },
+        );
         spell_cast::launch_triggered_spell(world, caster, &spell, Some(target), depth);
     }
     world.entity_mut(caster).remove::<WaveState>();

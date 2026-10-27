@@ -87,9 +87,17 @@ fn frost_hyperpyrexia_from_real_frost_strikes() {
         cast(&mut run, 49020);
         cast(&mut run, 49143);
     }
-    for _ in 0..200 { run.app.update(); }
+    for _ in 0..200 {
+        run.app.update();
+    }
     let events = &run.app.world().resource::<ObservedCombatEvents>().0;
-    assert!(events.iter().any(|event| event.spell_id == Some(458169) && event.kind == CombatLogKind::Damage && event.periodic && event.amount > 0), "actual Frost Strikes must earn Hyperpyrexia ticks");
+    assert!(
+        events.iter().any(|event| event.spell_id == Some(458169)
+            && event.kind == CombatLogKind::Damage
+            && event.periodic
+            && event.amount > 0),
+        "actual Frost Strikes must earn Hyperpyrexia ticks"
+    );
 }
 
 #[test]
@@ -630,10 +638,20 @@ fn frost_mark_earns_two_waves_of_souls() {
     super::super::engage(&mut run);
     assert!(auras::has_aura(run.app.world(), run.actor, 439851));
     cast(&mut run, 439843);
-    for _ in 0..100 { run.app.update(); }
+    for _ in 0..100 {
+        run.app.update();
+    }
     let events = &run.app.world().resource::<ObservedCombatEvents>().0;
     for target in &run.targets {
-        let hits: Vec<_> = events.iter().filter(|event| event.spell_id == Some(435802) && event.kind == CombatLogKind::Damage && event.target == Some(target.to_bits()) && event.amount > 0).collect();
+        let hits: Vec<_> = events
+            .iter()
+            .filter(|event| {
+                event.spell_id == Some(435802)
+                    && event.kind == CombatLogKind::Damage
+                    && event.target == Some(target.to_bits())
+                    && event.amount > 0
+            })
+            .collect();
         assert_eq!(hits.len(), 2, "Wave impacts per target");
         assert!(hits[1].crit, "return wave must critically strike");
         assert!(auras::has_aura(run.app.world(), *target, 443404));
@@ -650,10 +668,17 @@ fn frost_soul_rupture_from_real_mark_explosion() {
     super::super::engage(&mut run);
     assert!(auras::has_aura(run.app.world(), run.actor, 437161));
     cast(&mut run, 439843);
-    for _ in 0..500 { run.app.update(); }
+    for _ in 0..500 {
+        run.app.update();
+    }
     let events = &run.app.world().resource::<ObservedCombatEvents>().0;
-    assert!(events.iter().any(|event| event.spell_id == Some(439594) && event.kind == CombatLogKind::Damage && event.target != Some(run.targets[0].to_bits()) && event.amount > 0));
-    assert!(!events.iter().any(|event| event.spell_id == Some(439594) && event.kind == CombatLogKind::Damage && event.target == Some(run.targets[0].to_bits())));
+    assert!(events.iter().any(|event| event.spell_id == Some(439594)
+        && event.kind == CombatLogKind::Damage
+        && event.target != Some(run.targets[0].to_bits())
+        && event.amount > 0));
+    assert!(!events.iter().any(|event| event.spell_id == Some(439594)
+        && event.kind == CombatLogKind::Damage
+        && event.target == Some(run.targets[0].to_bits())));
 }
 
 #[test]
@@ -667,7 +692,9 @@ fn frost_soul_rupture_without_secondary_earns_swift_and_painful() {
     cast(&mut run, 439843);
     for _ in 0..500 {
         run.app.update();
-        if auras::has_aura(run.app.world(), run.actor, 469169) { return; }
+        if auras::has_aura(run.app.world(), run.actor, 469169) {
+            return;
+        }
     }
     panic!("single-target Mark explosion must earn Swift and Painful");
 }
@@ -1791,11 +1818,22 @@ fn frost_dark_talons_from_earned_rime_increases_icy_talons() {
         earn_rime(&mut run);
         cast(&mut run, 49184);
         if auras::has_aura(run.app.world(), run.actor, 443595) {
-            assert!(auras::has_aura(run.app.world(), run.actor, 443586), "Icy Talons must earn Dark Talons Shadowfrost");
-            let aura = run.app.world().get::<ActiveAuras>(run.actor).unwrap().iter()
-                .find(|aura| aura.spell_id == 194879 && aura.caster == run.actor).unwrap();
-            assert!(aura.stacks > 3 && aura.max_stacks >= 6,
-                "Dark Talons must grant three Icy Talons stacks and increase its cap: {aura:?}");
+            assert!(
+                auras::has_aura(run.app.world(), run.actor, 443586),
+                "Icy Talons must earn Dark Talons Shadowfrost"
+            );
+            let aura = run
+                .app
+                .world()
+                .get::<ActiveAuras>(run.actor)
+                .unwrap()
+                .iter()
+                .find(|aura| aura.spell_id == 194879 && aura.caster == run.actor)
+                .unwrap();
+            assert!(
+                aura.stacks > 3 && aura.max_stacks >= 6,
+                "Dark Talons must grant three Icy Talons stacks and increase its cap: {aura:?}"
+            );
             return;
         }
     }

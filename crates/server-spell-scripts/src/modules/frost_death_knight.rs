@@ -132,10 +132,26 @@ fn trigger_native_buff(world: &mut World, caster: Entity, source: u32) {
     }
 }
 
-fn hyperpyrexia_impact(world: &mut World, ctx: &combat::spell_cast::effects::EffectCtx, target: Entity, _: bool, damage: f32) {
-    if damage <= 0.0 || !matches!(ctx.spell.id, 222026 | 66196 | 195975)
-        || !is_frost(world, ctx.caster) || !auras::has_aura(world, ctx.caster, 456238) { return; }
-    let chance = world.resource::<SpellStore>().get(456238).and_then(|spell| spell.aura_options.as_ref()).expect("Hyperpyrexia proc chance").proc_chance as f32;
+fn hyperpyrexia_impact(
+    world: &mut World,
+    ctx: &combat::spell_cast::effects::EffectCtx,
+    target: Entity,
+    _: bool,
+    damage: f32,
+) {
+    if damage <= 0.0
+        || !matches!(ctx.spell.id, 222026 | 66196 | 195975)
+        || !is_frost(world, ctx.caster)
+        || !auras::has_aura(world, ctx.caster, 456238)
+    {
+        return;
+    }
+    let chance = world
+        .resource::<SpellStore>()
+        .get(456238)
+        .and_then(|spell| spell.aura_options.as_ref())
+        .expect("Hyperpyrexia proc chance")
+        .proc_chance as f32;
     if random::random::<f32>() * 100.0 < chance {
         let percent = spell_cast::scripts::script_effect_value(world, ctx.caster, 456238, 0);
         super::marksmanship::bank_residual(world, ctx, target, 458169, percent, damage);
@@ -794,8 +810,15 @@ fn icy_talons_started(world: &mut World, unit: Entity, aura: &auras::AuraInstanc
     }
 }
 
-fn icy_talons_ended(world: &mut World, unit: Entity, aura: &auras::AuraInstance, _: auras::RemoveReason) {
-    auras::remove_auras(world, unit, auras::RemoveReason::Consumed, |a| matches!(a.spell_id, 443595 | 443586) && a.caster == aura.caster);
+fn icy_talons_ended(
+    world: &mut World,
+    unit: Entity,
+    aura: &auras::AuraInstance,
+    _: auras::RemoveReason,
+) {
+    auras::remove_auras(world, unit, auras::RemoveReason::Consumed, |a| {
+        matches!(a.spell_id, 443595 | 443586) && a.caster == aura.caster
+    });
 }
 
 fn extend_breath(world: &mut World, caster: Entity, spent: u8) {
