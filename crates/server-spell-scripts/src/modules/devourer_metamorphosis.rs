@@ -41,16 +41,31 @@ fn register(scripts: &mut AuraScripts) {
     );
 }
 
-fn meta_mastery_multiplier(world: &World, ctx: &spell_cast::effects::EffectCtx<'_>, _: Entity, periodic: bool) -> f32 {
+fn meta_mastery_multiplier(
+    world: &World,
+    ctx: &spell_cast::effects::EffectCtx<'_>,
+    _: Entity,
+    periodic: bool,
+) -> f32 {
     if world.get::<ActiveSpec>(ctx.caster).map(|spec| spec.0) != Some(1480)
         || !auras::has_aura(world, ctx.caster, META)
     {
         return 1.0;
     }
-    let source = world.resource::<combat::spell_info::SpellStore>().get(META).expect("native Meta spell");
+    let source = world
+        .resource::<combat::spell_info::SpellStore>()
+        .get(META)
+        .expect("native Meta spell");
     let effect_index = if periodic { 4 } else { 3 };
-    let effect = source.effects.iter().find(|effect| effect.index == effect_index).expect("native Meta damage effect");
-    let class_set = source.class_options.as_ref().map_or(0, |options| options.spell_class_set);
+    let effect = source
+        .effects
+        .iter()
+        .find(|effect| effect.index == effect_index)
+        .expect("native Meta damage effect");
+    let class_set = source
+        .class_options
+        .as_ref()
+        .map_or(0, |options| options.spell_class_set);
     if !auras::spell_mods::class_mask_matches(class_set, &effect.spell_class_mask, ctx.spell) {
         return 1.0;
     }

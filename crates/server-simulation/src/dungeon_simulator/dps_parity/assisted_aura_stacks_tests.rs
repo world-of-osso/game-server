@@ -20,10 +20,20 @@ fn assisted_269_rule19596_reads_live_aura_stacks() {
     };
     for expected_stacks in 0..=2 {
         let facts = crate::spell_cast::test_harness::read_assisted_parity_facts(
-            run.app.world_mut(), actor, target, &BTreeSet::new(),
-        ).unwrap();
+            run.app.world_mut(),
+            actor,
+            target,
+            &BTreeSet::new(),
+        )
+        .unwrap();
         assert_eq!(
-            facts.player_aura_stacks.as_ref().unwrap().get(&325202).copied().unwrap_or(0),
+            facts
+                .player_aura_stacks
+                .as_ref()
+                .unwrap()
+                .get(&325202)
+                .copied()
+                .unwrap_or(0),
             expected_stacks,
         );
         assert_eq!(evaluate_rule(&rule, &facts), Ok(expected_stacks >= 2));
