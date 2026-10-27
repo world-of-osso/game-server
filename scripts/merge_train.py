@@ -589,8 +589,10 @@ def test_file(name, rev):
 def foreign_failures_only(entry, failed):
     """A combined tree also contains other entries' tests; a broad filter can select one that
     another entry added or changed and that fails for that owner (2026-10-26: Assassination's
-    in-flight Doomblade/Focus tests rejected Feral twice). A failure is this entry's unless the
-    test file is identical in the combined tree and in master merged with this entry alone."""
+    in-flight Doomblade/Focus tests rejected Feral twice). A failure is foreign only when this
+    entry leaves the test unchanged from master and the combined tree changes it. Comparing
+    only alone vs combined misread the train's own cargo fmt of a test this entry added as
+    another entry's change (2026-10-27: 59741a5cf2 landed a failing test)."""
     alone = git("merge-tree", "--write-tree", "origin/master", entry["commit"], check=False)
     if alone.returncode:
         return False
@@ -610,7 +612,10 @@ def foreign_failures_only(entry, failed):
         # Compared per test function, so this entry's own edits in a shared test file stay its own.
         fn = name.rsplit("::", 1)[-1]
         path = test_file(name, "HEAD")
-        return path is not None and body(alone_tree, path, fn) != body("HEAD", path, fn)
+        if path is None:
+            return False
+        own = body(alone_tree, path, fn)
+        return own == body("origin/master", path, fn) and own != body("HEAD", path, fn)
 
     return bool(failed) and all(foreign(name) for name in failed)
 
