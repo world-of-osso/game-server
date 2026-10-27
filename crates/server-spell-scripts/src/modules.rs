@@ -6,8 +6,8 @@ use super::combat;
 use combat::spell_cast::script_registry::SpellScriptHook;
 
 macro_rules! register_modules {
-    ($($name:ident: ($position:literal, $path:literal)),* $(,)?) => {
-        $(#[path = $path] mod $name;)*
+    ($($visibility:vis $name:ident: ($position:literal, $path:literal)),* $(,)?) => {
+        $(#[path = $path] $visibility mod $name;)*
         pub const MODULES: &[&[SpellScriptHook]] = &order_modules([
             $(($position, $name::HOOKS)),*
         ]);
@@ -81,6 +81,7 @@ register_modules! {
     clearcasting: (1000, "modules/clearcasting.rs"),
     demon_hunter_effects: (1000, "modules/demon_hunter_effects.rs"),
     destruction_crit_scaling: (2673, "modules/destruction_crit_scaling.rs"),
+    pub demon_hunter_fragments: (5777, "modules/demon_hunter_fragments.rs"),
     destruction_echo: (2676, "modules/destruction_echo.rs"),
     destruction_incinerate: (2671, "modules/destruction_incinerate.rs"),
     destruction_incinerate_targets: (2677, "modules/destruction_incinerate_targets.rs"),

@@ -5,7 +5,8 @@ use bevy::prelude::*;
 use combat::spell_cast::script_registry::SpellScriptRegistry;
 
 pub mod bombardments;
-mod modules;
+pub mod modules;
+pub use modules::demon_hunter_fragments as soul_fragments;
 
 /// Install before the first cast, in both the server and transport-free simulation.
 pub struct SpellScriptsPlugin;
@@ -13,6 +14,7 @@ pub struct SpellScriptsPlugin;
 impl Plugin for SpellScriptsPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(registry());
+        app.add_systems(FixedUpdate, soul_fragments::update);
     }
 }
 
