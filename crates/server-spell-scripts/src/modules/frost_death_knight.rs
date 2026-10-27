@@ -194,6 +194,7 @@ pub(super) fn after_launch(world: &mut World, caster: Entity, spell: &SpellInfo,
         return;
     }
     extend_winter_for_runes(world, caster, spell);
+    trigger_rune_mastery(world, caster, spell);
     if spell.id == EMPOWER_RUNE_WEAPON && auras::has_aura(world, caster, KILLING_MACHINE) {
         // SimC76f8118 sc_death_knight.cpp10236–10243: a real ready ERW grants KM.
         trigger_native_buff(world, caster, KILLING_MACHINE);
@@ -535,6 +536,20 @@ fn consume_frostreaper(world: &mut World, caster: Entity, target: Option<Entity>
     auras::remove_auras(world, target, auras::RemoveReason::Consumed, |aura| {
         aura.spell_id == 1233351 && aura.caster == caster
     });
+}
+
+fn trigger_rune_mastery(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    let rune_action = spell.power_costs.iter().any(|cost| {
+        cost.power_type == 5
+            && cost.mana_cost > 0
+            && (cost.required_aura_spell_id == 0
+                || auras::has_aura(world, caster, cost.required_aura_spell_id))
+    });
+    // SimC76f8118 sc_death_knight.cpp13081–13098/15831–15833: each rune-cost action,
+    // including a free one, rolls the source's explicitly observed 15% chance once.
+    if rune_action && auras::has_aura(world, caster, 374574) && random::random::<f32>() < 0.15 {
+        spell_cast::cast_triggered(world, caster, 374585, Some(caster), 1);
+    }
 }
 
 fn extend_winter_for_runes(world: &mut World, caster: Entity, spell: &SpellInfo) {

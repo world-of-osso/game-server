@@ -906,6 +906,38 @@ fn frost_gathering_storm_extends_winter_for_paid_and_free_spenders() {
 }
 
 #[test]
+#[ignore = "real rune spenders earn selected Rune Mastery Strength"]
+fn frost_rune_spenders_earn_rune_mastery() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::super::prepare_literal(251, 1).unwrap();
+    super::super::engage(&mut run);
+    assert!(auras::has_aura(run.app.world(), run.actor, 374574));
+    for _ in 0..24 {
+        cast(&mut run, 49020);
+        if auras::has_aura(run.app.world(), run.actor, 374585) {
+            let effect = run
+                .app
+                .world()
+                .get::<ActiveAuras>(run.actor)
+                .unwrap()
+                .iter()
+                .find(|aura| aura.spell_id == 374585)
+                .unwrap()
+                .effects
+                .iter()
+                .find(|effect| effect.index == 0)
+                .unwrap();
+            assert!(
+                effect.amount > 0.0,
+                "Rune Mastery must supply native Strength amount"
+            );
+            return;
+        }
+    }
+    panic!("real rune spenders never earned Rune Mastery");
+}
+
+#[test]
 #[ignore = "earned Rime Howling Blast gives Northwinds second target full damage"]
 fn frost_northwinds_rime_blast_secondary_damage() {
     use crate::spell_cast::test_harness::ObservedCombatEvents;
