@@ -176,6 +176,7 @@ fn apply_serrated_glaive(world: &mut World, caster: Entity, aura: &AuraInstance)
 
 fn finish_beam(world: &mut World, caster: Entity, aura: &AuraInstance) {
     if aura.caster == caster {
+        super::havoc::beam::finish_final_breath(world, caster);
         super::havoc_eternal::finish_beam(world, caster);
     }
     if aura.caster == caster && has_talent(world, caster, GAZE_TALENT) {

@@ -334,6 +334,9 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 ### Havoc literal rotation
 
+- Immolation Aura258920 deals native initial damage258921 on each in-combat application or refresh. The precombat fixture does not emit its initial hit. Selected Undying Embers1272405 rolls native effect0 on natural expiry or replacement of an active aura and, after 300ms, reapplies the aura without a cast or resource grant; replacement resets its tick phase (SimC76f8118 `sc_demon_hunter.cpp`8927–8954,8980–9040).
+- Completed Eye Beam/Gaze with selected Final Breath1266500 emits one additional native child tick scaled by the talent's effect0; interruptions do not emit it (SimC76f8118 `sc_demon_hunter.cpp`3285–3327).
+
 - Selected Isolated Prey388113 increases native Eye Beam and Gaze child damage by its effect1 percentage when exactly one enemy is resolved; it guarantees Immolation Aura initial and periodic child critical hits under the same condition (SimC76f8118 `sc_demon_hunter.cpp`3939–3946,4651–4670,4705–4717,4799–4810).
 - Landed direct Demon Hunter damage applies native Chaos Brand1490 to each affected enemy after the triggering impact; its native aura increases magic damage taken (SimC76f8118 `sc_demon_hunter.cpp`2452–2457,2594–2605).
 
@@ -353,7 +356,7 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 - Demon Hunter soul fragments retain their type, position, activation and expiry. The literal `pick_up_fragment` action selects a live fragment by its source mode and type, rechecks its condition at arrival, then consumes it through the spec's native payload. Demonic Appetite rolls native206478 on real Havoc Chaos Strike/Annihilation execution (SimC76f8118 sc_demon_hunter.cpp1656–1908,5069–5325,7579–7608).
 
-- A landed Havoc Hunt impact applies native370969's periodic payload to enemies within its native hostile range, with the primary included in the native370967 effect0 target cap (SimC76f8118 sc_demon_hunter.cpp5488–5495,5505–5511).
+- A landed Havoc Hunt impact applies native370969's periodic payload to enemies within its native hostile range, with the primary included in the native370967 effect0 target cap. In pinned bugs mode its periodic damage receives selected Demon Hide428241's native effect0 multiplier a second time (SimC76f8118 sc_demon_hunter.cpp5488–5495,5505–5511,8486–8501).
 
 - Selected Volatile Instinct1272453 triggers native Demonsurge on every hard Metamorphosis and on Demonic only when it enters, rather than extends, Metamorphosis. Hard Meta uses native1238696's delay; Demonic uses native453323's delay (SimC76f8118 sc_demon_hunter.cpp5008–5012,9160–9166,12646–12660).
 
@@ -367,6 +370,8 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 - Selected Shattered Destiny388116 accumulates native base Fury for genuinely paid literal Havoc actions only while owned162264 is live. Each native effect1 threshold extends Meta by native effect0 milliseconds; preserve the remainder across casts and exclude free/background copies and pre-Meta spending. The existing frozen resource context establishes positive payment (SimC76f8118 sc_demon_hunter.cpp2529–2555).
 
 - Selected Blind Fury203550 supplies its native effect2 amount to Eye/Gaze's existing aura85 Fury regeneration effect. The ordinary native per-five-second regeneration path supplies Fury only during that actual channel, with no weapon-hit dependency or adapter credit (SimC76f8118 sc_demon_hunter.cpp9986–9993).
+
+- Havoc Immolation Aura258920 grants its native Havoc initial Fury only; its periodic child258922 grants native Havoc tick Fury only while Burning Hatred320374 is selected. Do not apply the Vengeance energize effects to Havoc (SimC76f8118 `sc_demon_hunter.cpp`4651–4677,4784–4800).
 
 - Hard Meta191427 adds native162264's duration to live Havoc transformation instead of discarding Demonic time. The ordinary native reapplication path retains aura effects and phase (SimC76f8118 sc_demon_hunter.cpp4984–4985).
 - Actual Hunt370965 arms selected1270898's native1271144 Empowered Eye Beam. Completed Eye/Gaze with selected1270901 earns native1271092 Eternal Hunt; channel removal consumes empowerment. An actual dance consuming Eternal Hunt expires it and resets native dance recovery after500ms, not on unrelated expiration/cancellation (SimC76f8118 sc_demon_hunter.cpp4008–4017,5555,7296–7302).
@@ -648,7 +653,9 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 - A ritual's natural end grants its native Demonic Art after a gauss(200ms, 15ms) delay, replacing any held Art without summoning (`sc_warlock_init.cpp857–888`). A Hand whose cast started with the Art held, or any Ruination, consumes it. Consumption or expiry in combat summons that Art's native demon (`sc_warlock_init.cpp897–925`).
 - The Mother of Chaos summon grants native Infernal Bolt433891 with selected Secrets of the Coven. The Pit Lord summon grants native Ruination433885 with selected Ruination (`sc_warlock_actions.cpp5445–5481`). Each replacement cast consumes one stack of its buff. Ruination's primary impact drops the native three-shard Hand meteor and its three Wild Imps after gauss(395ms, 35ms) (`sc_warlock_actions.cpp5262–5333`).
 - Each Diabolist demon executes its native action once: Overlord428571 Wicked Cleave432120, Mother of Chaos428565 channeled Chaos Salvo432569 (each tick launches native432592→432596), Pit Lord434400 channeled Felseeker438973 (`sc_warlock_pets.cpp2574–2896`). They inherit base owner SP1.0, and the Overlord inherits AP1.0. Demonology multiplies their damage by 1 + native428514 effect3. Wicked Cleave applies the owner's Cloven Soul434424 with selected Cloven Souls.
-- Infernal Machine, other ritual spenders, Destruction and Diabolic Oculi remain unimplemented.
+- Infernal Machine429917 shortens the held Ritual once per paid damaging spender while an actual owned Tyrant is active; native429917 effect1 supplies the additional time. Gloom of Nathreza429899 increases Hand's native meteor damage by its effect1 per spent shard (`sc_warlock_actions.cpp302–315,2758–2770`).
+- Selected Diabolic Oculi grants Demonic Oculi1269643 on Hand, capped by native stacks. Each unhasted tick emits the stack-specific Diabolic Gaze when Looks That Kill is selected. Consuming Art detonates the held Oculi, grants one Mind's Eyes stack per Oculi when selected, and removes the Oculi (`sc_warlock_actions.cpp370–403,2838–2841,5356–5376`; `sc_warlock_init.cpp940–958`).
+- Other ritual spenders and Destruction remain unimplemented.
 
 ### Demonology literal execution and alternative Tyrant
 

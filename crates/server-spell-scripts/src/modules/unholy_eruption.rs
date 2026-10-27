@@ -72,7 +72,12 @@ fn apply_missing_plague(world: &mut World, caster: Entity, target: Entity, _dept
 /// The stored aura amount has AP/base-point snapshots, but not periodic damage
 /// modifiers. Resolve those once without executing a tick or consuming its clock.
 /// Native children ignore caster percent-done, while retaining their own taken stage.
-fn owned_tick_amount(world: &World, caster: Entity, target: Entity, plague: u32) -> Option<f32> {
+pub(super) fn owned_tick_amount(
+    world: &World,
+    caster: Entity,
+    target: Entity,
+    plague: u32,
+) -> Option<f32> {
     if !targets::is_alive(world, target) {
         return None;
     }
