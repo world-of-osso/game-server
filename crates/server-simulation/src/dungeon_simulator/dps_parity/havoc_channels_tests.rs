@@ -1161,6 +1161,37 @@ fn havoc_first_blood_splits_native_primary_and_secondary_strikes() {
 
 #[test]
 #[ignore = "requires prepared native spec577 player profile"]
+fn havoc_literal_beam_launch_and_hit_diagnostic() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_measurement(577, 1).unwrap();
+    run.app
+        .world_mut()
+        .init_resource::<crate::spell_cast::test_harness::ObservedTriggeredCasts>();
+    engage(&mut run);
+    advance_combat(&mut run).unwrap();
+    let casts = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedTriggeredCasts>()
+        .0;
+    let children = casts
+        .iter()
+        .filter(|(caster, spell, _)| *caster == run.actor && matches!(*spell, 198030 | 1287949))
+        .count();
+    let ticks = damage(&run, Some(198030)).len() + damage(&run, Some(1287949)).len();
+    let combat = report::combat(run.app.world(), &run.damage_targets, 300.0);
+    eprintln!(
+        "literal Eye/Gaze: child_casts={children} landed_ticks={ticks} actions={}",
+        combat["actions"]
+    );
+    assert!(
+        children > 0 && ticks > 0,
+        "literal fight must execute real beam children"
+    );
+}
+
+#[test]
+#[ignore = "requires prepared native spec577 player profile"]
 fn havoc_eye_beam_cadence_diagnostic() {
     let _seed = crate::random::seed_scope(70_448);
     let mut run = prepare_literal(577, 1).unwrap();
