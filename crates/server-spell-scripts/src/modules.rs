@@ -247,6 +247,7 @@ register_modules! {
     rogue_vanish: (2595, "modules/rogue_vanish.rs"),
     secondary_copies: (360, "modules/secondary_copies.rs"),
     shadow_apparitions: (2582, "modules/shadow_apparitions.rs"),
+    unholy_soul_reaper: (2534, "modules/unholy_soul_reaper.rs"),
     shadow_bolts: (2582, "modules/shadow_bolts.rs"),
     shadow_collapse: (2589, "modules/shadow_collapse.rs"),
     shadow_haunting: (2589, "modules/shadow_haunting.rs"),
