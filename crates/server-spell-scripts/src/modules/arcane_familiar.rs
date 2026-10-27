@@ -12,12 +12,13 @@ use shared::components::PowerType;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AfterQueuedTriggers(tick_familiars),
-    SpellScriptHook::AfterElementalLaunch(energize_from_assault),
+    SpellScriptHook::AfterElementalLaunch(apply_assault_talents),
 ];
 
 const FAMILIAR: u32 = 210126;
 const ASSAULT: u32 = 225119;
 const ENERGIZED: u32 = 452997;
+const ATTUNED: u32 = 1261106;
 const ENERGIZE: u32 = 454020;
 const SURGE: u32 = 365362;
 // SimC76f8118 sc_mage.cpp6363–6374: hasted3s ticks, extra assaults75ms apart.
@@ -135,8 +136,16 @@ fn resolve_pending_assaults(world: &mut World, now: f64) {
     }
 }
 
-fn energize_from_assault(world: &mut World, caster: Entity, spell: &SpellInfo, _: bool) {
-    if spell.id != ASSAULT || !has_talent(world, caster, ENERGIZED) {
+fn apply_assault_talents(world: &mut World, caster: Entity, spell: &SpellInfo, _: bool) {
+    if spell.id != ASSAULT {
+        return;
+    }
+    energize_from_assault(world, caster);
+    conjure_attuned_splinter(world, caster, spell.cast_primary_target);
+}
+
+fn energize_from_assault(world: &mut World, caster: Entity) {
+    if !has_talent(world, caster, ENERGIZED) {
         return;
     }
     // sc_mage.cpp3052–3065: one native effect2 chance per Assault execution.
@@ -160,4 +169,19 @@ fn energize_from_assault(world: &mut World, caster: Entity, spell: &SpellInfo, _
         chain_multiplier: 1.0,
     };
     spell_cast::effects::energize_unit(world, &ctx, caster, PowerType::Mana, amount, false);
+}
+
+fn conjure_attuned_splinter(world: &mut World, caster: Entity, target: Option<Entity>) {
+    if !has_talent(world, caster, ATTUNED) {
+        return;
+    }
+    // sc_mage.cpp3063–3065: each Assault independently rolls the native
+    // selected Attuned effect1 chance, then conjures one owned Splinter.
+    let chance = f64::from(script_effect_value(world, caster, ATTUNED, 0)) / 100.0;
+    if chance <= 0.0 || combat::random::random::<f64>() >= chance {
+        return;
+    }
+    if let Some(target) = target {
+        super::spellslinger::conjure_count(world, caster, target, 1);
+    }
 }
