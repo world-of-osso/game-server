@@ -60,13 +60,21 @@ fn bound_native_guardian(run: &mut Run, entry: u32, summon: u32, spells: &[u32])
         ),
         "native summon must execute"
     );
-    run.app
+    for _ in 0..40 {
+        run.app.update();
+    }
+    let creatures: Vec<_> = run
+        .app
         .world_mut()
         .query::<(Entity, &Npc, &UnitSummonedBy)>()
         .iter(run.app.world())
-        .find(|(_, npc, owner)| npc.template_id == entry && owner.0 == run.actor.to_bits())
-        .map(|(entity, _, _)| entity)
-        .expect("actual summoned guardian")
+        .map(|(entity, npc, owner)| (entity, npc.template_id, owner.0))
+        .collect();
+    creatures
+        .iter()
+        .find(|(_, template, owner)| *template == entry && *owner == run.actor.to_bits())
+        .map(|(entity, _, _)| *entity)
+        .unwrap_or_else(|| panic!("actual summoned guardian {entry}; creatures {creatures:?}"))
 }
 
 #[test]
