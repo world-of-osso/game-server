@@ -29,7 +29,11 @@ fn register_mark(scripts: &mut auras::scripts::AuraScripts) {
 }
 
 fn stack_mark(world: &mut World, ctx: &EffectCtx, target: Entity, critical: bool, damage: f32) {
-    if damage <= 0.0 || !world.get::<ActiveSpec>(ctx.caster).is_some_and(|spec| spec.0 == 251) {
+    if damage <= 0.0
+        || !world
+            .get::<ActiveSpec>(ctx.caster)
+            .is_some_and(|spec| spec.0 == 251)
+    {
         return;
     }
     if ctx.spell.id == 439843 {

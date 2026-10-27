@@ -13,7 +13,9 @@ fn after_launch(world: &mut World, caster: Entity, spell: &SpellInfo) {
         return;
     }
     let Some(stacks) = world.get::<ActiveAuras>(caster).and_then(|auras| {
-        auras.iter().find(|aura| aura.caster == caster && aura.spell_id == 1227702)
+        auras
+            .iter()
+            .find(|aura| aura.caster == caster && aura.spell_id == 1227702)
             .map(|aura| aura.stacks)
     }) else {
         return;
@@ -21,14 +23,24 @@ fn after_launch(world: &mut World, caster: Entity, spell: &SpellInfo) {
     let cost = script_effect_value(world, caster, 1221167, 0) as u8;
     let remaining = stacks.saturating_sub(cost);
     auras::remove_auras(world, caster, RemoveReason::Consumed, |aura| {
-        aura.caster == caster && (aura.spell_id == 1221171 || (aura.spell_id == 1227702 && remaining == 0))
+        aura.caster == caster
+            && (aura.spell_id == 1221171 || (aura.spell_id == 1227702 && remaining == 0))
     });
     if remaining > 0 {
-        assert!(auras::set_owned_stacks(world, caster, caster, 1227702, remaining), "native Collapsing Star soul stack");
+        assert!(
+            auras::set_owned_stacks(world, caster, caster, 1227702, remaining),
+            "native Collapsing Star soul stack"
+        );
     }
     // SimC76f8118 cpp6464–6474,6532–6533 executes the native damage child.
-    let target = spell.cast_primary_target.expect("native Collapsing Star target");
+    let target = spell
+        .cast_primary_target
+        .expect("native Collapsing Star target");
     if !spell_cast::try_cast_triggered(world, caster, 1221162, Some(target), 1) {
-        warn!(?caster, ?target, "native Collapsing Star damage 1221162 was refused");
+        warn!(
+            ?caster,
+            ?target,
+            "native Collapsing Star damage 1221162 was refused"
+        );
     }
 }
