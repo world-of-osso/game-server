@@ -167,6 +167,7 @@ Native merged buff outcomes apply or clear the caster-owned aura after the hit b
 
 ### Subtlety literal fixture
 
+- Consuming stored Shadow Techniques through Ancient Arts can launch a delayed Eviscerate or Black Powder shadow clone, with the source finisher's combo points and critical chance snapshotted (`sc_rogue.cpp3627–3665,8229–8249,8668–8701`).
 - Combo-point gains emit one native Energize receipt with actual overflow, including scripted per-hit gains. Shadow Techniques recognizes actual foreground combo-point generation, including capped gains, and collects after all native hit batches for that cast, not before delayed impacts (`sc_rogue.cpp2705–2716,8176–8204`).
 - In-combat Shadow Dance, Vanish and Stealth earn native Master of Shadows196980 when196976 is selected. Refresh preserves the periodic phase; native periodic and first-application Energy values remain authoritative (`sc_rogue.cpp5572–5575,6114–6117,6146–6149,8532–8537,11196–11204`).
 - Selected Deathstalker Shadowstrike establishes the native mark; eligible finishers consume it and Black Powder launches native Mass Casualty against secondary targets (`sc_rogue.cpp5653,6570–6594,8732–8817`).
@@ -284,6 +285,8 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 - Guaranteed critical hits predict their actual Heating Up acquisition; an observed Heating Up conversion predicts Hot Streak. A critical hit with Hot Streak already active preserves and predicts it without creating Heating Up.
 
 ### Havoc literal rotation
+
+- Selected Volatile Instinct1272453 triggers native Demonsurge on every hard Metamorphosis and on Demonic only when it enters, rather than extends, Metamorphosis. Hard Meta uses native1238696's delay; Demonic uses native453323's delay (SimC76f8118 sc_demon_hunter.cpp5008–5012,9160–9166,12646–12660).
 
 - Selected Focused Hatred452405 scales native Demonsurge452416 damage by native effect0 minus effect1 per additional resolved enemy, for one through five enemies; six or more receive no bonus (SimC76f8118 sc_demon_hunter.cpp5608–5634).
 
@@ -443,6 +446,8 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 ### Fury player parity
 
+- With selected Cold Steel, Hot Blood383959, critical Bloodthirst23881 and Bloodbath335096 impacts apply native Gushing Wound385042 to the struck target, including Unhinged impacts (`sc_warrior.cpp2679–2682,2915–2919`). Noncritical impacts do not.
+
 - Landed Bloodbath335096 applies its native bleed113344 to its actual target; subsequent landed Bloodbaths extend the existing owned bleed by its native duration (`sc_warrior.cpp2777–2785,2915–2923`).
 
 - Selected Cruelty392931 and Wrath and Fury392936 damage modifiers apply only while native Enrage184362 is active (`sc_warrior.cpp1106,4939–4947,5099–5113,7834–7835`). Their native rank values and other effects remain unchanged.
@@ -529,6 +534,11 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 - The literal267 controller commands its actual configured main pet against the current encounter primary through native pet orders (SimC76f8118 `pet.cpp67–68,149`). Preserve UNIT_PET identity, saved reaction stance, native attacks, costs and lifetime; do not substitute a guardian or manufacture pet damage.
 
+### Destruction Incinerate recipients
+
+- Actual Incinerate29722 damages its selected primary once. Without Fire and Brimstone196408 and an owned Havoc80240, it deals no secondary damage. Selected Fire and Brimstone admits every native area secondary at effect0's native25%; it excludes primary and the Havoc-marked recipient. One actual live owned Havoc recipient, even outside the FnB area, receives one impact with Havoc effect0's native50% plus selected FnB25%. Preserve native hit/crit/damage pipeline and snapshot the actual recipient multipliers at cast (SimC76f8118 actions3852–3900,3952–4002).
+- Native29722 effect1 [53,16] alone is not a talent gate: EffectAttributes0x20800 are radius flags; there are no SpellAuraRestrictions/SpellTargetRestrictions/conditions rows, and FnB label modifiers966/1886 do not match29722 labels19/16/292. Do not alter general target selectors or catalog data.
+
 ### Destruction Incinerate funding
 
 - An ordinary native Incinerate29722 primary impact keeps its existing244670 base grant. Selected Diabolic Embers387173 adds its native effect0 percentage of that base; an actual critical impact adds0.1 displayed shard scaled by the same talent. Use native PowerType raw units and the shared energize/overflow pipeline, without another base grant or resource pool (SimC76f8118 `sc_warlock_actions.cpp3927–3931,4015–4025`). Unselected noncritical hits retain the native base amount. Secondary/triggered copy relationships are separate.
@@ -540,17 +550,19 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 ### Demonology literal execution and alternative Tyrant
 
+- Actual owned Wild Imps supply native296553 availability while any remain. Ordinary196277 selects the native maximum from the pinned eligible demon pool, launches selected Imps by remaining Energy then spawn order, emits native196278 with Energy scaling only on the primary and retires the actual actors. Selected To Hell and Back derives replacement count from native1281511 and uses native279910/143622 with1250772/1281512, not fabricated actors. Source: pinned `sc_warlock_actions.cpp2980–3170` and `sc_warlock_pets.cpp919–985`.
 - During actual combat, the spec266 literal controller maintains its default primary enemy for native guardians and commands its existing configured pet through ordinary pet control. Per-action `target_if` recipients do not replace that default enemy. Precombat does not command attacks, and no owner auto-attack is injected (SimC76f8118 `pet.cpp66–68/143–148`).
 - [ ] Spec266 follower parity consumes every exported pinned profile action through shared literal execution, with native target/resource/trait/equipment facts, actual owned Imp/Tyrant counts and source-qualified readiness. Capture precedes warmup; normal default-pet and harmful-precast completion precede pull. Production dungeon kits are unchanged.
 - [ ] Actual native265187/250289 binds native Burning Cleave1264093 and repeats on the pinned hasted two-second GCD (SimC76f8118 `sc_warlock_pets.cpp1510–1548`). Both Tyrant variants inherit owner-SP1.0 from the same source policy. Native damage coefficients, target plans and normal cast admission remain authoritative. Tests require actual child impacts and observed formula power, not registry/source-string assertions.
 
 - [ ] Selected Dominion I starts its native1276166 counter on actual Tyrant completion; ordinary HoG/Ruination advance only an active counter. At its native cumulative limit, choose among the four native summon spells uniformly, redirect living duplicate unique demons as pinned, and retain one stack. Selected Dominion III refunds through actual native1276318, never by editing the pool. Native Aura Does Not Refresh keeps the original expiry while stacks advance (SimC76f8118 `buff.cpp740–743`).
 - Expected cooldown remaining time follows pinned `cooldown.cpp603–615`: use actual elapsed time since the native timer started versus its observed progress, including reductions. Ready timers return zero; a timer at its complete duration returns that duration. Queries cannot mutate history.
+- Native controlled pets and executing guardians read their owner's self-owned, uncharged passive SpellMods through native family/label matching. Preserve caster-local and frozen modifiers; active or charged owner buffs are not inherited by this path. This follows pinned `player.cpp15268–15324` owner delegation and `sc_warlock_init.cpp120–122` passive registration, not an unqualified owner-buff copy. Native334591/416230/1296573 supply Wild Imp cost, crit and damage values.
 - Executing native guardians read live owner critical chance through the same shared `combat::read_pet_owner_critical_chance` helper as native Hunter pet melee. Spell critical-chance calculations reuse that helper; native caster/target modifiers remain separate (SimC76f8118 `pet.cpp217–220`).
 - Executing native guardians inherit the live owner's spell haste for cast, GCD and hasted channel/duration clocks, retaining spell-specific caster modifiers (SimC76f8118 `pet.cpp222–226`). Creature/class identity and base spell times remain native.
 - Actual Wild Imp104317/55659 guardians cannot regenerate spent Energy (pinned `pets.cpp701/875–882`). Native pool sizes, spell costs and actual exhaustion/removal remain authoritative; other guardian regeneration is unchanged.
 - Player-controlled follower minions inherit the same player-affected attack permission as their owner, without changing either NPC identity or native summon-property ownership rules. Ordinary NPC summons remain subject to NPC-versus-neutral restrictions (SimC76f8118 `pet.cpp66–68`).
-- [ ] Dreadstalker, Imp Lord and Dominion guardians execute source-bound native actions from their actual actors. Only validated source inheritance is adopted; native coefficients and power costs are unchanged. Fresh Imp Lord initialization and its125-Energy readiness gate follow pinned `pets.cpp1680–1705`; this never resets an existing owner or pet pool. Prepared private data must publish the exact native summon-root templates through the existing importer.
+- [ ] Dreadstalker, Imp Lord and Dominion guardians execute source-bound native actions from their actual actors. Only validated source inheritance is adopted; native coefficients and power costs are unchanged. Fresh Imp Lord initialization and its125-Energy readiness gate follow pinned `pets.cpp1680–1705`; ordinary maximum-power folds retain its source-defined200 base rather than replacing it with generic100. This never resets an existing owner or pet pool. Prepared private data must publish the exact native summon-root templates through the existing importer.
 
 ### Shared live Period modifiers
 
@@ -558,8 +570,8 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 ### Shadow Priest literal parity controller
 
-- Ordinary Shadow Void Torrent263165 starts native459314 Rift at the actual hostile primary. Its hasted native driver clock skips its first travelling tick; subsequent ticks emit native447448 to enemies inside half the native447445 radius. Channel end restores full native remaining driver duration without resetting tick phase. The APL tracking fact reads459314 (SimC76f8118 `sc_priest_shadow.cpp1491–1514`, `sc_priest.cpp1606–1683/3543–3562`). Collapse remains separately qualified.
-- Ordinary Shadow Void Torrent263165 starts native459314 Rift at the actual hostile primary. Its hasted native driver clock skips its first travelling tick; subsequent ticks emit native447448 to enemies inside half the native447445 radius. Channel end restores full native remaining driver duration without resetting tick phase. The APL tracking fact reads459314 (SimC76f8118 `sc_priest_shadow.cpp1491–1514`, `sc_priest.cpp1606–1683/3543–3562`). Collapse and Darkening Horizon remain separately qualified.
+- Ordinary Shadow Void Torrent263165 starts native459314 Rift at the actual hostile primary. Its hasted native driver clock skips its first travelling tick; subsequent ticks emit native447448 to enemies inside half the native447445 radius. Channel end restores full native remaining driver duration without resetting tick phase. The APL tracking fact reads459314 (SimC76f8118 `sc_priest_shadow.cpp1491–1514`, `sc_priest.cpp1606–1683/3543–3562`).
+- With selected448403, ordinary Madness during Rift adds up to five growth stacks. Each stack increases Rift and final burst damage by the native talent effect and increases Rift radius by half a yard under pinned SimC bug behavior. Actual Rift removal emits native448405 once at its stored source primary before removing Voidheart; its native-radius selection splits damage among actual recipients and retains Shadow Weaving (SimC76f8118 `sc_priest.cpp1557–1595/1640–1650/3564–3571`, `sc_priest_shadow.cpp1329–1331`).
 - With selected449880, actual Rift applies native449887 as an aura, not a helpful cast. Channel end restores its full native duration without resetting phase; actual Rift expiry removes it, then selected1266856 earns the native Touch tail. Native school/ability bonus values remain unchanged (SimC76f8118 `sc_priest.cpp1683–1685/3540–3541/3571–3576`, `sc_priest_shadow.cpp1491–1501`).
 - With selected450405, actual Rift earns native450404, whose native3328092→450983 override and1602 charge-category modifier enable ordinary Void Blast without learned-spell grants. Literal Mind Blast is unavailable during actual Rift/Torrent; Rift expiry removes its override and restores Mind Blast (SimC76f8118 `sc_priest.cpp344–413`).
 
@@ -881,6 +893,8 @@ Stormkeeper grants its native effect4 count of next-spell uses, bounded by the n
 Native445624 supplies actual221177 Ancestors and their native lifetime after selected Stormkeeper or Ancestral Swiftness. Successful foreground spells command each living owned Ancestor once with native447419/447425 children at the retained primary. Background overloads do not command them. Native owner spell power and crit are inherited; Ancestor Lava Burst is guaranteed critical and scales with inherited crit (`sc_shaman.cpp`4342–4441,6358,7856,8163–8166,8758). Natural expiry allows selected Final Calling465717; cancellation does not. Actual Ancestor447419/447425/465717 critical hits apply selected live Elemental Fury60188 effect0's critical bonus, preserving its native amount and other spells' modifier masks (`sc_shaman.cpp`11468–11469; SimC effect indexes are one-based). Removing that owner aura removes the bonus. Ancient Fellowship and remaining pet effect inheritance still require qualification.
 
 Selected Routine Communication443445 draws once after an ordinary successful Lightning Bolt, Chain Lightning or Lava Burst execution. The native effect4/effect5 counts supply successes/total for a shuffled deck; reshuffle only after all cards are drawn. A successful draw summons the real native445624 Ancestor and447244 owner buff. Background builders, overloads and extra Chain recipients do not draw (`sc_shaman.cpp`6654–6658,7260–7263,7436–7438,13025–13033; `proc_rng.cpp`149–161).
+
+Selected Offering from Beyond443451 reduces the running Stormkeeper cooldown by its native effect0 duration for each actual Ancestor summon (`sc_shaman.cpp`11579–11596).
 
 Selected Power of the Maelstrom191861 rolls its native chance on ordinary Lightning Bolt and Chain Lightning executions. Eligible foreground spells spend one native191877 use and, with Fusion of Elements462840, execute a free instant Elemental Blast at the native Fusion effectiveness. Its overload uses the Fusion effectiveness independently of other damage modifiers (`sc_shaman.cpp`2582,3303–3311,6660–6663,7439–7444,7599–7609,7653–7674).
 
