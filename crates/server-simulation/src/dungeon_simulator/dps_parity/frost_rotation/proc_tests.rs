@@ -1807,6 +1807,47 @@ fn erw_full_recharge(run: &Run) -> f64 {
 }
 
 #[test]
+#[ignore = "actual earned Rime Howling Blast extends an active Breath"]
+fn frost_rime_howling_blast_extends_active_breath() {
+    let _seed = crate::random::seed_scope(251);
+    let mut run = super::super::prepare_literal(251, 1).unwrap();
+    super::super::engage(&mut run);
+    earn_rime(&mut run);
+    let actor = run.actor;
+    super::super::enhancement_generation_tests::cast(&mut run, 1249658, actor);
+    let expiry = |run: &Run| run.app.world().get::<ActiveAuras>(actor).unwrap().iter()
+        .find(|aura| aura.spell_id == 1249658 && aura.caster == actor).unwrap().expires_at.unwrap();
+    let before = expiry(&run);
+    let extension = crate::spell_cast::scripts::script_effect_value(run.app.world(), actor, 1249658, 2);
+    let target = run.targets[0];
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 49184, Some(target), false).unwrap();
+    assert!(!auras::has_aura(run.app.world(), actor, 59052));
+    let after = expiry(&run);
+    assert!((after - before - f64::from(extension) / 1000.0).abs() < 0.002,
+        "actual Rime spender extends active Breath: {before} -> {after}");
+}
+
+#[test]
+#[ignore = "actual earned Rime Howling Blast grants native Rage RP"]
+fn frost_rime_howling_blast_earns_rage_runic_power() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::protocol::CombatLogKind;
+    let _seed = crate::random::seed_scope(251);
+    let mut run = super::super::prepare_literal(251, 1).unwrap();
+    super::super::engage(&mut run);
+    earn_rime(&mut run);
+    let actor = run.actor;
+    assert!(auras::has_aura(run.app.world(), actor, 377076));
+    let start = run.app.world().resource::<ObservedCombatEvents>().0.len();
+    let target = run.targets[0];
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 49184, Some(target), false).unwrap();
+    run.app.update();
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0[start..];
+    assert!(events.iter().any(|event| event.source == Some(actor.to_bits()) && event.spell_id == Some(341725)
+        && event.kind == CombatLogKind::Energize), "actual Rime consumption must trigger native Rage RP");
+}
+
+#[test]
 #[ignore = "native251 earned Rime must be spent by one ordinary Howling Blast"]
 fn frost_howling_blast_spends_earned_rime() {
     let _seed = crate::random::seed_scope(251);
