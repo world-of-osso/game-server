@@ -290,6 +290,7 @@ register_modules! {
     touch_of_death: (240, "modules/touch_of_death.rs"),
     unholy_army: (2522, "modules/unholy_army.rs"),
     unholy_eruption: (2520, "modules/unholy_eruption.rs"),
+    unholy_necrotic_coil: (2525, "modules/unholy_necrotic_coil.rs"),
     unholy_putrefy: (2521, "modules/unholy_putrefy.rs"),
     unrelenting_onslaught: (714, "modules/unrelenting_onslaught.rs"),
     voltaic_blaze: (250, "modules/voltaic_blaze.rs"),

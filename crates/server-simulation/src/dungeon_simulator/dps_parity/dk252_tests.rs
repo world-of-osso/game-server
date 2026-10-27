@@ -874,3 +874,18 @@ fn dk252_raise_dead_produces_a_permanent_controlled_melee_pet() {
         "the real pet must reach and attack the selected hostile primary"
     );
 }
+
+#[test]
+#[ignore = "requires native252 profile/traits and player actor"]
+fn dk252_necrotic_coil_hits_with_physical_and_shadow_children() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 3).unwrap();
+    engage(&mut run);
+    assert!(crate::spell_cast::try_cast_triggered(run.app.world_mut(), run.actor, 1242174, Some(run.targets[0]), 1));
+    for _ in 0..40 { run.app.update(); }
+    let events = &run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
+    for spell in [1242172, 1242178] {
+        assert!(events.iter().any(|e| e.source == Some(run.actor.to_bits()) && e.spell_id == Some(spell)
+            && e.kind == CombatLogKind::Damage && e.amount > 0), "Necrotic Coil must deal damage with native child {spell}");
+    }
+}
