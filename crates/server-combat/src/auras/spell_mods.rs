@@ -328,10 +328,8 @@ fn live_modifiers<'a>(
     // power and effect reads to their owner. sc_warlock_init.cpp120–122
     // registers class/selected-talent/set passives, not every owner buff.
     // Native family/label masks still decide which pet action is affected.
-    let owner = world
-        .get::<crate::hunter_pet::HunterPet>(caster)
-        .map(|pet| pet.owner)
-        .or_else(|| crate::spell_cast::guardian::stat_owner(world, caster));
+    // Script-driven guardians without a creature spell binding are owned too.
+    let owner = super::summon_damage::ownership(world, caster).map(|(owner, _)| owner);
     let inherited = owner
         .and_then(|owner| world.get::<ActiveAuras>(owner))
         .into_iter()

@@ -19,6 +19,60 @@ const BURNING_HITS: &[u32] = &[
 #[derive(Component, Default)]
 struct InitiativeTargets(BTreeSet<Entity>);
 
+// SimC76f8118 sc_demon_hunter.cpp2105–2108,2317–2346,2370–2396,
+// 5493–5497,7854–7858: chromatic actions roll three native chances, Hunt
+// is excluded, and Felblade's damage is explicitly included.
+fn chaotic_disposition_parameters(
+    world: &World,
+    caster: Entity,
+    spell: &combat::spell_info::SpellInfo,
+) -> Option<(u32, f32, f32)> {
+    const TALENT: u32 = 428492;
+    const DEMON_HUNTER_CLASS_SET: u32 = 107;
+    const CHROMATIC: u32 = 0x7c;
+    if !super::has_talent(world, caster, TALENT)
+        || !spell
+            .class_options
+            .as_ref()
+            .is_some_and(|options| options.spell_class_set == DEMON_HUNTER_CLASS_SET)
+        || matches!(spell.id, 370965 | 370966 | 370969)
+    {
+        return None;
+    }
+    if spell.id != 213243 && spell.school_mask() & CHROMATIC != CHROMATIC {
+        return None;
+    }
+    let effect =
+        |index| combat::spell_cast::scripts::script_effect_value(world, caster, TALENT, index);
+    Some((effect(0) as u32, effect(1) / 10_000.0, effect(2) / 100.0))
+}
+
+pub(super) fn chaotic_disposition_damage(
+    world: &mut World,
+    ctx: &combat::spell_cast::effects::EffectCtx<'_>,
+    _target: Entity,
+) -> f32 {
+    let Some((rolls, chance, bonus)) = chaotic_disposition_parameters(world, ctx.caster, ctx.spell)
+    else {
+        return 1.0;
+    };
+    let successes = (0..rolls)
+        .filter(|_| combat::random::random::<f32>() < chance)
+        .count();
+    1.0 + successes as f32 * bonus
+}
+
+pub(super) fn expected_chaotic_disposition_damage(
+    world: &World,
+    caster: Entity,
+    _target: Entity,
+    spell: &combat::spell_info::SpellInfo,
+) -> f32 {
+    chaotic_disposition_parameters(world, caster, spell).map_or(1.0, |(rolls, chance, bonus)| {
+        1.0 + rolls as f32 * chance * bonus
+    })
+}
+
 pub(super) fn before_cast(world: &mut World, caster: Entity, spell: u32) {
     // SimC76f8118 sc_demon_hunter.cpp8567–8576: reset before the real
     // Vengeful Retreat damage child executes, not after its hits.
