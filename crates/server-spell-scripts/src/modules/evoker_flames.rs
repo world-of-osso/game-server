@@ -21,10 +21,12 @@ const LIVING_FLAME_HEAL: u32 = 361_509;
 const ENERGIZING_FLAME: u32 = 400_006;
 /// SimC76f8118 sc_evoker.cpp1321 `evoker.heal_eb_chance` default.
 const HEAL_ESSENCE_BURST_CHANCE: f32 = 0.9;
+const RUBY_EMBERS: u32 = 365_937;
 
 pub const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::EffectHit(effect_hit),
     SpellScriptHook::CheckTarget(check_target),
+    SpellScriptHook::EffectEnabled(ruby_embers_periodic),
     SpellScriptHook::HealthChangeObserved(chrono_flame::record_health_change),
     SpellScriptHook::NamedAuraFields(&[(431442, 0), (431442, 1), (431442, 2), (1260647, 0)]),
 ];
@@ -36,6 +38,13 @@ fn effect_hit(spell: u32, index: u8) -> Option<HitHook> {
         (LIVING_FLAME_DAMAGE | LIVING_FLAME_HEAL, 0) => Some(chrono_flame::repeat_landed_flame),
         _ => None,
     }
+}
+
+/// TC a352b1fa spell_evoker.cpp620–647: Living Flame's periodic effect1
+/// selects no target unless the caster has Ruby Embers.
+fn ruby_embers_periodic(world: &World, caster: Entity, spell: u32, index: u8) -> bool {
+    let periodic = matches!(spell, LIVING_FLAME_DAMAGE | LIVING_FLAME_HEAL) && index == 1;
+    !periodic || combat::auras::has_aura(world, caster, RUBY_EMBERS)
 }
 
 fn check_target(world: &World, _: Entity, spell: u32, _: Entity) -> Result<(), CastFailure> {
