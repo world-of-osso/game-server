@@ -2,7 +2,7 @@
 use super::combat;
 use bevy::prelude::*;
 use combat::auras::{self, ActiveAuras, RemoveReason};
-use combat::spell_cast::{script_registry::SpellScriptHook, scripts::script_effect_value};
+use combat::spell_cast::{self, script_registry::SpellScriptHook, scripts::script_effect_value};
 use combat::spell_info::SpellInfo;
 use shared::components::ActiveSpec;
 
@@ -25,5 +25,10 @@ fn after_launch(world: &mut World, caster: Entity, spell: &SpellInfo) {
     });
     if remaining > 0 {
         assert!(auras::set_owned_stacks(world, caster, caster, 1227702, remaining), "native Collapsing Star soul stack");
+    }
+    // SimC76f8118 cpp6464–6474,6532–6533 executes the native damage child.
+    let target = spell.cast_primary_target.expect("native Collapsing Star target");
+    if !spell_cast::try_cast_triggered(world, caster, 1221162, Some(target), 1) {
+        warn!(?caster, ?target, "native Collapsing Star damage 1221162 was refused");
     }
 }
