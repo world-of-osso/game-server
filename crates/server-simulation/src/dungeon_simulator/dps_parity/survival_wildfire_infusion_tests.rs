@@ -1,6 +1,7 @@
 //! Actual Kill Command shortens running Wildfire Bomb recovery by selected Wildfire Infusion.
 use super::marksmanship_mechanics_tests::cast;
 use super::*;
+use server::simc_apl::Facts;
 
 fn bomb_full_recharge(run: &Run) -> f64 {
     use crate::simc_apl_native::{Bindings, Encounter, FightStyle, NativeFacts};
