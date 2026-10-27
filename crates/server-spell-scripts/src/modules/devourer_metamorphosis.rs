@@ -41,7 +41,9 @@ fn register(scripts: &mut AuraScripts) {
 
 fn trigger_voidrush(world: &mut World, caster: Entity, spell: u32, _: u8) {
     if !matches!(spell, 1245412 | 1245483 | 1246167 | 1259431)
-        || !world.get::<KnownSpells>(caster).is_some_and(|known| known.contains(VOIDRUSH))
+        || !world
+            .get::<KnownSpells>(caster)
+            .is_some_and(|known| known.contains(VOIDRUSH))
     {
         return;
     }
@@ -99,7 +101,9 @@ fn drain_interval(world: &World, unit: Entity, stacks: u64) -> f64 {
         .is_some_and(|status| status.0);
     if out_of_combat
         || stunned
-        || world.get::<VoidrushUntil>(unit).is_some_and(|window| window.0 > spell_cast::now(world))
+        || world
+            .get::<VoidrushUntil>(unit)
+            .is_some_and(|window| window.0 > spell_cast::now(world))
         || is_protected_cast(world, unit)
     {
         rate *= 0.1;
