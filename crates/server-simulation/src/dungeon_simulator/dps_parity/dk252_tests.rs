@@ -177,6 +177,46 @@ fn dk252_horsemen_use_their_native_damage_actions() {
 }
 
 #[test]
+#[ignore = "requires private native252 Rider templates/profile and player actor"]
+fn dk252_horseman_spell_inherits_owner_melee_power() {
+    use crate::spell_cast::effects::factor_capture::FactorCapture;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 1).unwrap();
+    engage(&mut run);
+    literal_rotation::execution::execute(
+        run.app.world_mut(), run.actor,
+        literal_rotation::execution::Execution::Spell(42650, run.actor, None),
+    ).unwrap();
+    for _ in 0..60 { run.app.update(); }
+    let rider = {
+        let world = run.app.world_mut();
+        world.query::<(Entity, &shared::components::Npc, &crate::spell_cast::summon::SummonedCreature)>()
+            .iter(world).find_map(|(entity, npc, summon)|
+                (summon.owner == run.actor && npc.template_id == 221633).then_some(entity)
+            ).expect("actual Whitemane must exist")
+    };
+    run.app.world_mut().get_mut::<crate::stats::CharacterStats>(run.actor).unwrap().attack_power += 10_000.0;
+    let world = run.app.world();
+    let expected = world.get::<crate::stats::CharacterStats>(run.actor).unwrap().total_attack_power(
+        crate::stats::WeaponAttackType::MainHand, world.get::<crate::stats::StatModifiers>(run.actor),
+    ) * 0.70125;
+    run.app.insert_resource(FactorCapture::new(rider, run.targets[0], 445513, "horseman_coil", 1));
+    assert!(crate::spell_cast::try_cast_triggered(run.app.world_mut(), rider, 445513, Some(run.targets[0]), 1));
+    for _ in 0..100 {
+        run.app.update();
+        let capture = run.app.world().resource::<FactorCapture>().export();
+        if let Some(power) = capture["events"].as_array().unwrap().iter()
+            .find(|event| event["event"] == "direct_amount" && event["spell_id"] == 445513)
+            .and_then(|event| event["factors"]["a_power"].as_f64()) {
+            assert!((power - f64::from(expected)).abs() < 1.0,
+                "actual Horseman spell must inherit owner melee AP: actual={power}, expected={expected}");
+            return;
+        }
+    }
+    panic!("the actual Horseman must land native Death Coil");
+}
+
+#[test]
 #[ignore = "requires private native252 profile/traits and player actor"]
 fn dk252_real_lesser_ghoul_summon_reaches_and_melees() {
     let _seed = crate::random::seed_scope(70448);
