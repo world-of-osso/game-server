@@ -704,6 +704,60 @@ fn assert_exhausted_imps_trigger_isolated_implosion(target_count: usize) {
 }
 
 #[test]
+#[ignore = "requires private266 inputs; real Felguard owner attack power"]
+fn demonology_felguard_strike_inherits_owner_spell_power() {
+    use crate::spell_cast::effects::factor_capture::FactorCapture;
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_measurement(266, 1).unwrap();
+    // Keep owner SP stable while the actual pet reaches its next strike.
+    super::channel_timing_tests::remove_equipped_proc_drivers(&mut run);
+    engage(&mut run);
+    let pet = run
+        .app
+        .world_mut()
+        .query::<(
+            Entity,
+            &crate::hunter_pet::HunterPet,
+            &shared::components::Npc,
+        )>()
+        .iter(run.app.world())
+        .find(|(_, pet, npc)| pet.owner == run.actor && npc.template_id == 17252)
+        .map(|(pet, _, _)| pet)
+        .expect("literal precombat summons the real Felguard");
+    let owner_sp = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(run.actor)
+        .unwrap()
+        .spell_power;
+    run.app.insert_resource(FactorCapture::new(
+        pet,
+        run.targets[0],
+        30213,
+        "legion_strike",
+        1,
+    ));
+    crate::pet_control::order_companion_pet(run.app.world_mut(), run.actor, Some(run.targets[0]));
+    for _ in 0..300 {
+        run.app.update();
+    }
+    let capture = run.app.world().resource::<FactorCapture>().export();
+    let direct = capture["events"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|event| event["event"] == "direct_amount" && event["spell_id"] == 30213)
+        .expect("real Legion Strike must hit the native target");
+    let attack_power = direct["factors"]["a_power"].as_f64().unwrap();
+    // SimC76f8118 sc_warlock_pets.cpp663–668: Felguard inherits1.82412 of owner SP as AP.
+    let expected = f64::from(owner_sp) * 1.82412;
+    assert!(
+        (attack_power - expected).abs() < 1.0,
+        "Felguard AP={attack_power} expected={expected} owner SP={owner_sp}"
+    );
+}
+
+#[test]
 #[ignore = "requires private266 inputs; actual Infernal Rapidity twin bolts"]
 fn demonology_imps_emit_infernal_rapidity_twins() {
     use shared::protocol::CombatLogKind;

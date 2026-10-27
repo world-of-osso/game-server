@@ -178,6 +178,41 @@ fn dps_parity_pet_melee_actual_swings_include_source_owner_ranged_ap_contributio
 }
 
 #[test]
+#[ignore = "requires private266 inputs; actual Felguard owner-SP melee contribution"]
+fn demonology_felguard_melee_inherits_owner_spell_power() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_measurement(266, 1).unwrap();
+    super::channel_timing_tests::remove_equipped_proc_drivers(&mut run);
+    engage(&mut run);
+    let pet = run
+        .app
+        .world_mut()
+        .query::<(
+            Entity,
+            &crate::hunter_pet::HunterPet,
+            &shared::components::Npc,
+        )>()
+        .iter(run.app.world())
+        .find(|(_, pet, npc)| pet.owner == run.actor && npc.template_id == 17252)
+        .map(|(pet, _, _)| pet)
+        .expect("literal precombat summons Felguard");
+    let owner_sp = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(run.actor)
+        .unwrap()
+        .spell_power;
+    // SimC76f8118 pets.cpp663–668 provides Felguard's owner-SP→AP share.
+    let contribution = owner_sp * 1.82412 / 3.5 * 2.0;
+    let floor = mitigated_physical_floor(run.app.world(), pet, run.targets[0], contribution);
+    let hits = normalized_pet_swings(&mut run, pet, 4);
+    assert!(
+        hits.iter().all(|hit| *hit >= floor),
+        "real Felguard swings {hits:?} must include owner-SP contribution floor {floor}"
+    );
+}
+
+#[test]
 #[ignore = "native pet melee owner versatility; requires prepared parity inputs"]
 fn dps_parity_pet_melee_inherits_live_owner_versatility() {
     const OWNER_VERSATILITY: u32 = 439571;

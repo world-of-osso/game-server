@@ -168,6 +168,7 @@ fn read_attacker(world: &World, enemy: Entity) -> Result<Attacker<'_>, String> {
         spirit_wolf: None,
         hunter_owner_ap: None,
         hunter_owner_crit_pct: None,
+        pet_owner_hit_expertise: None,
     })
 }
 
