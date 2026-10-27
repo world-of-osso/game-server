@@ -1148,6 +1148,33 @@ fn frost_winter_tick_pillar_only_changes_attack_power() {
 }
 
 #[test]
+#[ignore = "diagnostic actual Freezing Tempest stack events"]
+fn diag_frost_freezing_tempest_events() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::super::prepare_measurement(251, 1).unwrap();
+    super::super::engage(&mut run);
+    let actor = run.actor;
+    let mut old = 0;
+    let mut rows = Vec::new();
+    for step in 0..1200 {
+        let start = run.app.world().resource::<ObservedCombatEvents>().0.len();
+        super::super::drive_player(&mut run).unwrap();
+        run.app.update();
+        let stacks = run.app.world().get::<ActiveAuras>(actor).and_then(|active| active.iter()
+            .find(|aura| aura.spell_id == 1297365 && aura.caster == actor).map(|aura| aura.stacks)).unwrap_or(0);
+        if stacks != old {
+            let events = &run.app.world().resource::<ObservedCombatEvents>().0[start..];
+            rows.push(serde_json::json!({"step":step,"before":old,"after":stacks,
+                "events":events.iter().map(|event| format!("{:?}:{}",event.kind,event.spell_id.unwrap_or(0))).collect::<Vec<_>>() }));
+            old = stacks;
+        }
+    }
+    let output = std::path::PathBuf::from(std::env::var("DPS_PARITY_OUTPUT").unwrap());
+    std::fs::write(output.join("251.tempest-timeline.json"), serde_json::to_vec_pretty(&rows).unwrap()).unwrap();
+}
+
+#[test]
 #[ignore = "diagnostic actual Torrent hit factor capture"]
 fn diag_frost_torrent_hit_factors() {
     use crate::spell_cast::effects::factor_capture::FactorCapture;
