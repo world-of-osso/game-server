@@ -1,6 +1,31 @@
 //! Real profile/controller boundary, not a second synthetic rotation.
 use super::*;
 
+#[test]
+#[ignore = "requires private266 inputs; Inner Demons in sustained native combat"]
+fn demonology_inner_demons_summons_in_sustained_combat() {
+    use shared::protocol::CombatLogKind;
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(266, 1).unwrap();
+    let actor = run.actor;
+    let target = run.targets[0];
+    assert!(crate::auras::has_aura(run.app.world(), actor, 267216));
+    for _ in 0..260 { run.app.update(); }
+    let count = |run: &Run| run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0.iter()
+        .filter(|event| event.source == Some(actor.to_bits()) && event.spell_id == Some(279910) && event.kind == CombatLogKind::Summon).count();
+    assert_eq!(count(&run), 0, "Inner Demons must not summon before combat");
+    crate::combat_refs::set_in_combat_with(run.app.world_mut(), actor, target);
+    for tick in 0..480 {
+        if tick % 60 == 0 {
+            crate::spell_cast::creature_cast(run.app.world_mut(), actor, 686, Some(target), false)
+                .expect("real Shadow Bolt keeps the dummy combat reference active");
+        }
+        run.app.update();
+    }
+    assert!(run.app.world().get::<shared::components::CombatStatus>(actor).is_some_and(|status| status.0), "actor must remain in real combat");
+    assert_eq!(count(&run), 2, "native unhasted 12s cadence must summon twice in 24s");
+}
+
 fn prepare_antoran_tyrant() -> (Run, Entity) {
     let mut run = prepare_literal(266, 1).unwrap();
     engage(&mut run);
