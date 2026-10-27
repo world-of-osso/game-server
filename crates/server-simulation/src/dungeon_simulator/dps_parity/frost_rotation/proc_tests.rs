@@ -527,6 +527,37 @@ fn frost_earned_rune_refill_preserves_regeneration() {
 }
 
 #[test]
+#[ignore = "real haste increases preserve rune recharge progress"]
+fn frost_active_rune_recharge_tracks_real_haste_increase() {
+    use crate::spell_cast::runes::Runes;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::super::prepare_measurement(251, 1).unwrap();
+    super::super::engage(&mut run);
+    for _ in 0..6000 {
+        let actor = run.actor;
+        let before_haste = run.app.world().get::<crate::stats::CharacterStats>(actor).unwrap().haste_pct;
+        let before = run.app.world().get::<Runes>(actor).unwrap().clone();
+        super::super::drive_player(&mut run).unwrap();
+        run.app.update();
+        let after_haste = run.app.world().get::<crate::stats::CharacterStats>(actor).unwrap().haste_pct;
+        let after = run.app.world().get::<Runes>(actor).unwrap();
+        if after_haste <= before_haste + 5.0 || before.order != after.order { continue; }
+        for rune in before.order.iter().take(3) {
+            let index = usize::from(*rune);
+            let old = before.cooldowns[index];
+            let new = after.cooldowns[index];
+            let adjusted = old * (1.0 + before_haste / 100.0) / (1.0 + after_haste / 100.0);
+            if old > 3.0 && old - adjusted > 0.15 {
+                assert!(new <= adjusted + 0.06,
+                    "real haste increase {before_haste:.2}% -> {after_haste:.2}% must rescale active rune {old:.3}s -> {adjusted:.3}s; native {new:.3}s");
+                return;
+            }
+        }
+    }
+    panic!("real rotation never increased haste with an active rune recharge");
+}
+
+#[test]
 #[ignore = "diagnostic fixed-haste native rune regeneration against pinned SimC"]
 fn diag_frost_fixed_haste_idle_rune_regeneration() {
     use crate::spell_cast::runes::Runes;
