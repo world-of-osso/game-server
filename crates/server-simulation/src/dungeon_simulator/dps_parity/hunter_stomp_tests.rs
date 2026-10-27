@@ -124,6 +124,40 @@ fn native_bm_barbed_stomps_the_pack_and_earns_mid2_cobra_fang() {
     );
 }
 
+#[test]
+#[ignore = "requires private spec253 reference inputs and native world DB"]
+fn native_bm_hogstrider_real_boar_arms_cobra() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_measurement(253, 3).expect("native literal BM fixture");
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, 472639));
+    engage(&mut run);
+    crate::combat_refs::set_in_combat_with(run.app.world_mut(), run.actor, run.targets[0]);
+    run.app.update();
+    for ready in [471878, 472324] {
+        let deadline = crate::spell_cast::now(run.app.world()) + 31.0;
+        while !crate::auras::has_aura(run.app.world(), run.actor, ready)
+            && crate::spell_cast::now(run.app.world()) < deadline
+        {
+            run.app.update();
+        }
+        assert!(crate::auras::has_aura(run.app.world(), run.actor, ready));
+        crate::spell_cast::creature_cast(
+            run.app.world_mut(), run.actor, 34026, Some(run.targets[0]), false,
+        )
+        .expect("ordinary Kill Command consumes the earned beast");
+        preparation::finish_pending_setup(&mut run).unwrap();
+    }
+    let events = &run.app.world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
+    assert!(events.iter().any(|event| {
+        matches!(event.spell_id, Some(471936 | 471938))
+            && event.kind == shared::protocol::CombatLogKind::Damage
+    }), "the earned Boar must deal actual damage");
+    // SimC76f8118 hunter.cpp4800–4846: actual Boar impacts arm Hogstrider.
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, 472640),
+        "selected Hogstrider must arm after actual Boar damage");
+}
+
 fn ordinary_cobra_damage(run: &Run) -> f64 {
     use server::simc_apl::Facts;
     let world = run.app.world();
