@@ -364,9 +364,14 @@ fn frost_mark_explosion_earns_exterminate() {
             && event.kind == CombatLogKind::Damage && event.amount > 0
     }).expect("actual Mark must explode after real damaging hits or expiry");
     assert!(events[explosion..].iter().any(|event| {
+        event.source == Some(run.actor.to_bits()) && event.spell_id == Some(434765)
+            && event.kind == CombatLogKind::AuraRemoved && event.amount > 1
+    }), "real damage must build the Mark before it explodes");
+    assert!(events[explosion..].iter().any(|event| {
         event.source == Some(run.actor.to_bits()) && event.spell_id == Some(441416)
             && matches!(event.kind, CombatLogKind::AuraApplied | CombatLogKind::AuraRefreshed)
-    }), "actual explosion must earn selected Exterminate uses");
+            && event.amount == 2
+    }), "actual explosion must earn both native Exterminate uses");
 }
 
 #[test]
