@@ -1810,24 +1810,28 @@ fn erw_full_recharge(run: &Run) -> f64 {
 #[ignore = "actual earned Rime Howling Blast extends an active Breath"]
 fn frost_rime_howling_blast_extends_active_breath() {
     let _seed = crate::random::seed_scope(251);
-    let mut run = super::super::prepare_literal(251, 1).unwrap();
+    let mut run = super::super::prepare_measurement(251, 1).unwrap();
     super::super::engage(&mut run);
-    earn_rime(&mut run);
-    cast(&mut run, 49020);
-    cast(&mut run, 49020);
     let actor = run.actor;
-    assert!(auras::has_aura(run.app.world(), actor, 59052));
-    super::super::enhancement_generation_tests::cast(&mut run, 1249658, actor);
-    let expiry = |run: &Run| run.app.world().get::<ActiveAuras>(actor).unwrap().iter()
-        .find(|aura| aura.spell_id == 1249658 && aura.caster == actor).unwrap().expires_at.unwrap();
-    let before = expiry(&run);
-    let extension = crate::spell_cast::scripts::script_effect_value(run.app.world(), actor, 1249658, 2);
     let target = run.targets[0];
-    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 49184, Some(target), false).unwrap();
-    assert!(!auras::has_aura(run.app.world(), actor, 59052));
-    let after = expiry(&run);
-    assert!((after - before - f64::from(extension) / 1000.0).abs() < 0.002,
-        "actual Rime spender extends active Breath: {before} -> {after}");
+    let extension = crate::spell_cast::scripts::script_effect_value(run.app.world(), actor, 1249658, 2);
+    for _ in 0..6000 {
+        if auras::has_aura(run.app.world(), actor, 59052) && auras::has_aura(run.app.world(), actor, 1249658) {
+            let expiry = |run: &Run| run.app.world().get::<ActiveAuras>(actor).unwrap().iter()
+                .find(|aura| aura.spell_id == 1249658 && aura.caster == actor).unwrap().expires_at.unwrap();
+            let before = expiry(&run);
+            if crate::spell_cast::creature_cast(run.app.world_mut(), actor, 49184, Some(target), false).is_ok() {
+                assert!(!auras::has_aura(run.app.world(), actor, 59052));
+                let after = expiry(&run);
+                assert!((after - before - f64::from(extension) / 1000.0).abs() < 0.002,
+                    "actual Rime spender extends active Breath: {before} -> {after}");
+                return;
+            }
+        }
+        super::super::drive_player(&mut run).unwrap();
+        run.app.update();
+    }
+    panic!("real rotation never admitted earned Rime during Breath");
 }
 
 #[test]
