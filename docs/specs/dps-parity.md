@@ -101,6 +101,8 @@ Native merged buff outcomes apply or clear the caster-owned aura after the hit b
 
 ### Beast Mastery literal fixture
 
+- Selected Huntmaster Call459730 increments native459731 once per actual Dire Beast, Dark Hound, or Bear. At its native stack cap it clears the counter and selects Fenryr459733 or Hati459739 equally; the selected owner buff459735/459738 supplies the real companion lifetime. Each companion uses live owner ranged AP and its own attacks; Fenryr launches native Ravenous Leap459753 (SimC76f8118 hunter1869–1873,1973–1982,2008,2049–2052,3715–3734,3865–3874).
+
 - Selected Dire Command378743 rolls its native chance using SimC accumulated PRD after actual BM Kill Command and summons native219199. Its native base lifetime is converted to the source's haste-scaled probabilistic swing count; Beast110063 inherits live owner ranged AP (SimC76f8118 hunter1736–1755,1935,6610–6613,8396).
 
 - Selected Wildspeaker1232739 applies native1235388 to existing DireCritters when owner Bestial Wrath succeeds. New DireCritters joining an active owner BW inherit only its remaining time, before summon-time Rend executes; stable pets keep their separate native Wrath path (SimC76f8118 hunter1866–1867,6729–6736).

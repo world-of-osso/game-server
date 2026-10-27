@@ -62,6 +62,23 @@ const GUARDIAN_POLICIES: &[GuardianPolicy] = &[
         owner_spell_share: Some(2.2275),
         owner_attack_share: Some(2.2275),
     },
+    // SimC76f8118 sc_hunter.cpp1973/2008: Fenryr and Hati inherit live owner AP2.0.
+    GuardianPolicy {
+        summons: &[459733],
+        entry: 228224,
+        spells: &[],
+        repeat_gcd: None,
+        owner_spell_share: None,
+        owner_attack_share: Some(2.0),
+    },
+    GuardianPolicy {
+        summons: &[459739],
+        entry: 228226,
+        spells: &[],
+        repeat_gcd: None,
+        owner_spell_share: None,
+        owner_attack_share: Some(2.0),
+    },
     // SimC76f8118 sc_hunter.cpp2043–2047: Bear inherits live owner AP0.6.
     // Rend is explicitly launched on summon, not an autonomous guardian cast.
     GuardianPolicy {
