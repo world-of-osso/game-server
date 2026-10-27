@@ -19,6 +19,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AfterElementalLaunch(update_empowered_spender),
     SpellScriptHook::AfterQueuedTriggers(consume_due_killing_machine),
     SpellScriptHook::AfterSpellPayment(roll_runic_empowerment),
+    SpellScriptHook::AfterPeriodicDamagePolicies(frost_fever_runic_power),
 ];
 
 const KILLING_MACHINE: u32 = 51128;
@@ -33,7 +34,7 @@ const EMPOWER_RUNE_WEAPON: u32 = 47568;
 struct KillingMachineAttempts(u32);
 
 pub(super) fn owns_proc(spell: u32) -> bool {
-    matches!(spell, KILLING_MACHINE | RIME | OBLITERATION)
+    matches!(spell, KILLING_MACHINE | RIME | OBLITERATION | 195621)
 }
 
 pub(super) fn snapshots_modifier(spell: u32) -> bool {
@@ -225,6 +226,37 @@ fn trigger_obliteration(world: &mut World, caster: Entity) {
     }
     if !spell_cast::try_cast_triggered(world, caster, 281327, Some(caster), 1) {
         warn!(?caster, "Native Obliteration rune grant refused");
+    }
+}
+
+fn frost_fever_runic_power(
+    world: &mut World,
+    ctx: &spell_cast::effects::EffectCtx,
+    _target: Entity,
+) {
+    if ctx.spell.id != 55095
+        || !is_frost(world, ctx.caster)
+        || !auras::has_aura(world, ctx.caster, 195621)
+    {
+        return;
+    }
+    let count = world
+        .query::<&auras::ActiveAuras>()
+        .iter(world)
+        .filter(|active| {
+            active
+                .iter()
+                .any(|aura| aura.spell_id == 55095 && aura.caster == ctx.caster)
+        })
+        .count();
+    if count == 0 {
+        return;
+    }
+    // SimC76f8118 sc_death_knight.cpp8006–8022: 30% divided by the
+    // square root of this caster's active Frost Fever target count.
+    let chance = 0.30 / (count as f32).sqrt();
+    if random::random::<f32>() < chance {
+        spell_cast::cast_triggered(world, ctx.caster, 195617, Some(ctx.caster), ctx.depth + 1);
     }
 }
 
