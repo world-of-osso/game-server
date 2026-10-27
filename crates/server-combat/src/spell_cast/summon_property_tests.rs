@@ -7,21 +7,15 @@ fn toyfx55_wild_initial_mana_uses_selected_level_and_requires_source_row() {
     assert_eq!(template.unit_class, 2);
     assert_eq!(template.mana_modifier, 1.0);
     assert_eq!(
-        read_wild_summon_mana(&data, &template, 20)
-            .unwrap()
-            .unwrap()
-            .max,
+        read_summon_mana(&data, &template, 20).unwrap().unwrap().max,
         490.0
     );
     assert_eq!(
-        read_wild_summon_mana(&data, &template, 30)
-            .unwrap()
-            .unwrap()
-            .max,
+        read_summon_mana(&data, &template, 30).unwrap().unwrap().max,
         852.0
     );
     data.class_level_base_mana.remove(&(30, 2));
-    assert!(read_wild_summon_mana(&data, &template, 30).is_none());
+    assert!(read_summon_mana(&data, &template, 30).is_none());
 }
 
 #[test]
