@@ -31,6 +31,17 @@ fn sample(spell: u32, retain_stormkeeper: bool) -> (f64, f64) {
             instance,
             RemoveReason::Consumed,
         );
+        // Ending Stormkeeper separately earns Flowing Elements; exclude that
+        // independent modifier from the no-Stormkeeper control.
+        if let Some(flowing) = own_aura(&run, 1300219) {
+            let instance = flowing.instance_id;
+            crate::auras::remove_instance(
+                run.app.world_mut(),
+                run.actor,
+                instance,
+                RemoveReason::Consumed,
+            );
+        }
     }
     run.app
         .world_mut()
