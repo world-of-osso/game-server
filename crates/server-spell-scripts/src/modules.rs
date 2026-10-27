@@ -125,6 +125,7 @@ register_modules! {
     fire_procs: (1000, "modules/fire_procs.rs"),
     foreground_procs: (310, "modules/foreground_procs.rs"),
     frost: (80, "modules/frost.rs"),
+    frost_blast: (2513, "modules/frost_blast.rs"),
     frost_chamber: (2511, "modules/frost_chamber.rs"),
     frost_death_knight: (1000, "modules/frost_death_knight.rs"),
     frost_icy_torrent: (2512, "modules/frost_icy_torrent.rs"),
