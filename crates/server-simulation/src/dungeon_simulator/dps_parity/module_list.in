@@ -394,3 +394,4 @@ mod warrior_stat_tests;
 mod wither_stack_tests;
 mod zathatek_tests;
 mod devourer_fragment_pickup_tests;
+mod eversong_diamond_tests;
