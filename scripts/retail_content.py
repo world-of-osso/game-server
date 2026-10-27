@@ -334,6 +334,11 @@ CLASS_SUMMON_POLICY_CHILDREN = (
     (1260745, 1235843), (1260745, 1237036),
     # SimC76f8118 sc_warlock_init.cpp539–547: Diabolic Ritual's three demons.
     (428514, 428571), (428514, 428565), (428514, 434400),
+    # SimC76f8118 sc_warlock_init.cpp33/289, 334–335, 348–353, 357–365 and
+    # actions.cpp6015–6025: Inner Demons, Summon Vilefiend, Mark of Shatug/F'harg
+    # and Dominion of Argus I summon their native Effect28 guardians.
+    (267216, 279910), (1251778, 1251781), (455449, 455465), (455450, 455476),
+    (1276163, 1276182), (1276163, 1276283), (1276163, 1282501), (1276163, 1282502),
     # SimC76f8118 sc_death_knight.cpp15401–15406: selected Unholy summon actions.
     (55090, 275430), (1247378, 1277098), (1256813, 1242294), (1256813, 1292072),
     # SimC76f8118 sc_death_knight.cpp9027–9030/13108–13110/15414–15417:
