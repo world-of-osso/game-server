@@ -321,6 +321,8 @@ CLASS_SUMMON_POLICY_CHILDREN = (
     # SimC76f8118 hunter6610–6613: selected Dire Command calls native
     # Dire Beast219199; its Effect28 supplies authentic Beast110063.
     (378743, 219199),
+    # SimC76f8118 hunter3715–3734: Huntmaster Call selects actual Fenryr or Hati.
+    (459730, 459733), (459730, 459739),
     (471876, 1222271), (471876, 472020), (471876, 471993), (448658, 448659),
     # SimC76f8118 sc_priest_shadow.cpp2206–2214: full Yogg counter summons
     # native373277, whose effect28 supplies authentic Thing From Beyond189988.
