@@ -19,6 +19,7 @@ struct PendingArmy {
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::NativeAfterCast(after_cast),
     SpellScriptHook::AfterCastUpdate(update),
+    SpellScriptHook::SummonInitialized(engage_lesser_ghoul),
 ];
 
 fn after_cast(spell: u32) -> Option<AfterCastHook> {
@@ -36,6 +37,26 @@ fn schedule_army(world: &mut World, caster: Entity, _: &SpellInfo) {
         remaining: count,
         next_summon,
     });
+}
+
+fn engage_lesser_ghoul(world: &mut World, actor: Entity) {
+    let Some(summon) = world.get::<spell_cast::summon::SummonedCreature>(actor) else {
+        return;
+    };
+    if summon.spell_id != LESSER_GHOUL {
+        return;
+    }
+    let owner = summon.owner;
+    let Some(target) = world
+        .get::<combat::networking::CombatTarget>(owner)
+        .and_then(|target| target.0)
+    else {
+        warn!(?owner, "Army lesser ghoul has no selected target");
+        return;
+    };
+    // SimC76f8118 sc_death_knight.cpp3155–3211: the real lesser ghoul
+    // engages the owner's target using the shared summon melee chase.
+    spell_cast::summon::start_melee_attack(world, actor, target);
 }
 
 fn update(world: &mut World) {
