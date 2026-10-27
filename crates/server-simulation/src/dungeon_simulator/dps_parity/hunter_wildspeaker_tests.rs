@@ -90,7 +90,9 @@ fn native_wildspeaker_dire_beasts_inherit_owner_crit() {
         .query::<(Entity, &crate::spell_cast::summon::SummonedCreature)>();
     let mut observed_actor = None;
     let mut seen = 0;
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, 459550));
     let mut critical_hits = 0;
+    let mut critical_bonuses = Vec::new();
     let mut white_critical_hits = 0;
     let mut seen_combat_events = 0;
     let mut beasts = std::collections::BTreeSet::new();
@@ -138,7 +140,7 @@ fn native_wildspeaker_dire_beasts_inherit_owner_crit() {
                 .export();
             let events = capture["events"].as_array().expect("native factor events");
             for event in &events[seen..] {
-                if event["event"] != "result" {
+                if event["event"] != "result" || event["spell_id"] != 1232922 {
                     continue;
                 }
                 let owner_crit = world
@@ -151,6 +153,9 @@ fn native_wildspeaker_dire_beasts_inherit_owner_crit() {
                 chances.push((chance, owner_crit));
                 if event["factors"]["result"] == "crit" {
                     critical_hits += 1;
+                    let bonus = event["factors"]["crit_bonus"].as_f64().expect("observed crit bonus");
+                    let effect = crate::spell_cast::scripts::script_effect_value(world, run.actor, 459550, 1);
+                    critical_bonuses.push((bonus, owner_crit, effect));
                 }
             }
             seen = events.len();
@@ -200,4 +205,9 @@ fn native_wildspeaker_dire_beasts_inherit_owner_crit() {
         white_critical_hits > 0,
         "actual Dire Beast white swings must land a natural crit"
     );
+    // SimC76f8118 sc_hunter.cpp3192–3199 scales the actual Wildspeaker
+    // critical bonus by native Go for the Throat and live owner crit.
+    assert!(critical_bonuses.iter().all(|(bonus, crit, effect)|
+        *bonus + 0.001 >= 1.0 + f64::from(*crit * *effect) / 10_000.0),
+        "actual Wildspeaker crits omit Go for the Throat: {critical_bonuses:?}");
 }
