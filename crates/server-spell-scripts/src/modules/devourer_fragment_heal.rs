@@ -1,7 +1,10 @@
 //! Devourer fragment heal's out-of-Meta stack production.
 use super::combat;
 use bevy::prelude::*;
-use combat::spell_cast::{self, script_registry::{HitHook, SpellScriptHook}};
+use combat::spell_cast::{
+    self,
+    script_registry::{HitHook, SpellScriptHook},
+};
 use shared::components::ActiveSpec;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::Hit(hit_hook)];

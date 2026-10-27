@@ -8,17 +8,38 @@ fn demonology_paid_hand_starts_and_shortens_diabolic_ritual() {
     let mut run = prepare_literal(266, 1).unwrap();
     assert!(crate::auras::has_aura(run.app.world(), run.actor, 428514));
     for _ in 0..3 {
-        crate::spell_cast::creature_cast(run.app.world_mut(), run.actor, 686, Some(run.targets[0]), false).unwrap();
+        crate::spell_cast::creature_cast(
+            run.app.world_mut(),
+            run.actor,
+            686,
+            Some(run.targets[0]),
+            false,
+        )
+        .unwrap();
         preparation::finish_pending_setup(&mut run).unwrap();
     }
     engage(&mut run);
-    crate::spell_cast::creature_cast(run.app.world_mut(), run.actor, 105174, Some(run.targets[0]), false).unwrap();
+    crate::spell_cast::creature_cast(
+        run.app.world_mut(),
+        run.actor,
+        105174,
+        Some(run.targets[0]),
+        false,
+    )
+    .unwrap();
     preparation::finish_pending_setup(&mut run).unwrap();
     let world = run.app.world();
-    let aura = world.get::<crate::auras::ActiveAuras>(run.actor).unwrap().iter()
-        .find(|aura| aura.spell_id == 431944).expect("paid Hand must start native Overlord ritual");
+    let aura = world
+        .get::<crate::auras::ActiveAuras>(run.actor)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 431944)
+        .expect("paid Hand must start native Overlord ritual");
     let remaining = aura.expires_at.unwrap() - crate::spell_cast::now(world);
-    assert!((16.8..=17.1).contains(&remaining), "three paid shards reduce native 20s ritual to 17s, got {remaining}");
+    assert!(
+        (16.8..=17.1).contains(&remaining),
+        "three paid shards reduce native 20s ritual to 17s, got {remaining}"
+    );
 }
 
 #[test]
@@ -32,15 +53,28 @@ fn demonology_inner_demons_summons_at_native_unhasted_cadence() {
         run.app.update();
     }
     let count = |run: &Run| {
-        run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0.iter()
-            .filter(|event| event.source == Some(run.actor.to_bits()) && event.spell_id == Some(279910) && event.kind == CombatLogKind::Summon).count()
+        run.app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .filter(|event| {
+                event.source == Some(run.actor.to_bits())
+                    && event.spell_id == Some(279910)
+                    && event.kind == CombatLogKind::Summon
+            })
+            .count()
     };
     assert_eq!(count(&run), 0, "Inner Demons must not summon before combat");
     crate::combat_refs::set_in_combat_with(run.app.world_mut(), run.actor, run.targets[0]);
     for _ in 0..480 {
         run.app.update();
     }
-    assert_eq!(count(&run), 2, "a uniform initial phase and 12-second native period must summon twice in 24 seconds");
+    assert_eq!(
+        count(&run),
+        2,
+        "a uniform initial phase and 12-second native period must summon twice in 24 seconds"
+    );
 }
 
 fn prepare_antoran_tyrant() -> (Run, Entity) {

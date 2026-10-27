@@ -17,18 +17,45 @@ fn devourer_literal_tracks_meta_trigger_and_voidfall_reaction() {
         }
         run.app.update();
     }
-    assert!(crate::auras::has_aura(run.app.world(), actor, 1217607), "native Meta must be acquired");
+    assert!(
+        crate::auras::has_aura(run.app.world(), actor, 1217607),
+        "native Meta must be acquired"
+    );
     let bindings = Bindings {
-        buffs: [("metamorphosis".into(), 1217607), ("voidfall_spending".into(), 1256302)].into(),
+        buffs: [
+            ("metamorphosis".into(), 1217607),
+            ("voidfall_spending".into(), 1256302),
+        ]
+        .into(),
         ..Default::default()
     };
-    let encounter = Encounter::Fixture { started_at, duration: 300.0, style: FightStyle::Patchwerk };
+    let encounter = Encounter::Fixture {
+        started_at,
+        duration: 300.0,
+        style: FightStyle::Patchwerk,
+    };
     let facts = NativeFacts::new(run.app.world(), actor, &bindings, encounter, 1);
-    let last = facts.value("buff.metamorphosis.last_trigger").expect("native Meta trigger is tracked");
-    assert!(last >= 0.0, "real acquired Meta has encounter-relative trigger time: {last}");
+    let last = facts
+        .value("buff.metamorphosis.last_trigger")
+        .expect("native Meta trigger is tracked");
+    assert!(
+        last >= 0.0,
+        "real acquired Meta has encounter-relative trigger time: {last}"
+    );
     crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 1256302, Some(actor), 1);
-    assert!(crate::auras::has_aura(run.app.world(), actor, 1256302), "native Voidfall Spending must be acquired");
-    for _ in 0..30 { run.app.update(); }
+    assert!(
+        crate::auras::has_aura(run.app.world(), actor, 1256302),
+        "native Voidfall Spending must be acquired"
+    );
+    for _ in 0..30 {
+        run.app.update();
+    }
     let facts = NativeFacts::new(run.app.world(), actor, &bindings, encounter, 1);
-    assert!(facts.value("buff.voidfall_spending.react").expect("native Voidfall reaction is tracked") >= 1.0, "acquired stack reacts within pinned maximum 1.4s");
+    assert!(
+        facts
+            .value("buff.voidfall_spending.react")
+            .expect("native Voidfall reaction is tracked")
+            >= 1.0,
+        "acquired stack reacts within pinned maximum 1.4s"
+    );
 }

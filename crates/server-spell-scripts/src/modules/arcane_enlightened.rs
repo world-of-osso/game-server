@@ -27,13 +27,23 @@ fn register(scripts: &mut auras::scripts::AuraScripts) {
 }
 
 fn activate(world: &mut World, unit: Entity, aura: &AuraInstance) {
-    if aura.caster != unit || world.get::<ActiveSpec>(unit).is_none_or(|spec| spec.0 != 62) {
+    if aura.caster != unit
+        || world
+            .get::<ActiveSpec>(unit)
+            .is_none_or(|spec| spec.0 != 62)
+    {
         return;
     }
-    auras::apply_aura(world, &AuraApplication {
-        caster: unit, target: unit, spell_id: ENLIGHTENED, effect_mask: u32::MAX,
-        source: AuraSource::Cast,
-    });
+    auras::apply_aura(
+        world,
+        &AuraApplication {
+            caster: unit,
+            target: unit,
+            spell_id: ENLIGHTENED,
+            effect_mask: u32::MAX,
+            source: AuraSource::Cast,
+        },
+    );
 }
 
 fn deactivate(world: &mut World, unit: Entity, aura: &AuraInstance, _: auras::RemoveReason) {
@@ -45,23 +55,33 @@ fn deactivate(world: &mut World, unit: Entity, aura: &AuraInstance, _: auras::Re
 }
 
 fn sample(world: &mut World, unit: Entity, aura: &AuraInstance) {
-    if aura.caster != unit { return; }
+    if aura.caster != unit {
+        return;
+    }
     let mana = world.get::<Mana>(unit).expect("Enlightened caster Mana");
     let fraction = mana.current / mana.max;
     world.entity_mut(unit).insert(EnlightenedMana(fraction));
 }
 
 fn sample_tick(world: &mut World, unit: Entity, aura: &AuraInstance, effect: u8) {
-    if effect == 0 { sample(world, unit, aura); }
+    if effect == 0 {
+        sample(world, unit, aura);
+    }
 }
 
 fn remove_sample(world: &mut World, unit: Entity, aura: &AuraInstance, _: auras::RemoveReason) {
-    if aura.caster == unit { world.entity_mut(unit).remove::<EnlightenedMana>(); }
+    if aura.caster == unit {
+        world.entity_mut(unit).remove::<EnlightenedMana>();
+    }
 }
 
 fn damage_multiplier(world: &World, caster: Entity, _: Entity, spell: &SpellInfo) -> f32 {
-    if spell.school_mask() & ARCANE_SCHOOL == 0 { return 1.0; }
-    let Some(sample) = world.get::<EnlightenedMana>(caster) else { return 1.0; };
+    if spell.school_mask() & ARCANE_SCHOOL == 0 {
+        return 1.0;
+    }
+    let Some(sample) = world.get::<EnlightenedMana>(caster) else {
+        return 1.0;
+    };
     // sc_mage.cpp6392–6399/6793–6798: source buff samples Mana every native second.
     1.0 + sample.0 * script_effect_value(world, caster, ENLIGHTENED, 1) / 100.0
 }

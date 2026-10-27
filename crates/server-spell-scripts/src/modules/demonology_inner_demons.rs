@@ -27,26 +27,42 @@ fn combat_changed(world: &mut World, unit: Entity, active: bool) {
     if !has_aura(world, unit, TALENT) {
         return;
     }
-    let period = f64::from(world.resource::<SpellStore>().get(TALENT)
-        .expect("Inner Demons native spell").effects.iter()
-        .find(|effect| effect.index == 0).expect("Inner Demons native period").aura_period_ms) / 1000.0;
+    let period = f64::from(
+        world
+            .resource::<SpellStore>()
+            .get(TALENT)
+            .expect("Inner Demons native spell")
+            .effects
+            .iter()
+            .find(|effect| effect.index == 0)
+            .expect("Inner Demons native period")
+            .aura_period_ms,
+    ) / 1000.0;
     assert!(period > 0.0, "Inner Demons requires a native period");
     // SimC76f8118 init.cpp766–771/1722–1725: uniform first phase;
     // subsequent summons use the native period without haste.
     let next = combat::spell_cast::now(world) + combat::random::random::<f64>() * period;
-    world.entity_mut(unit).insert(InnerDemonsClock { next, period });
+    world
+        .entity_mut(unit)
+        .insert(InnerDemonsClock { next, period });
 }
 
 fn summon_due(world: &mut World) {
     let now = combat::spell_cast::now(world);
-    let due: Vec<_> = world.query::<(Entity, &InnerDemonsClock)>().iter(world)
-        .filter(|(_, clock)| clock.next <= now).map(|(unit, _)| unit).collect();
+    let due: Vec<_> = world
+        .query::<(Entity, &InnerDemonsClock)>()
+        .iter(world)
+        .filter(|(_, clock)| clock.next <= now)
+        .map(|(unit, _)| unit)
+        .collect();
     for unit in due {
         if !has_aura(world, unit, TALENT) {
             world.entity_mut(unit).remove::<InnerDemonsClock>();
             continue;
         }
-        let mut clock = world.get_mut::<InnerDemonsClock>(unit).expect("due Inner Demons clock");
+        let mut clock = world
+            .get_mut::<InnerDemonsClock>(unit)
+            .expect("due Inner Demons clock");
         clock.next += clock.period;
         if !combat::spell_cast::try_cast_triggered(world, unit, SUMMON, Some(unit), 1) {
             warn!(?unit, "Inner Demons native summon refused");
