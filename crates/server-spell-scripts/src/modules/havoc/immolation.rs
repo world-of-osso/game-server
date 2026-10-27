@@ -15,15 +15,25 @@ pub(crate) fn initial_damage(world: &mut World, unit: Entity, aura: &AuraInstanc
     if aura.spell_id != IMMOLATION
         || aura.caster != unit
         || !super::is_havoc(world, unit)
-        || world
-            .get::<combat::simc_apl_native::FixturePrecombat>(unit)
-            .is_some()
+        || is_fixture_precombat(world, unit)
     {
         return;
     }
     if !spell_cast::try_cast_triggered(world, unit, 258921, None, 1) {
         error!(?unit, "Immolation Aura initial child refused");
     }
+}
+
+#[cfg(feature = "test-support")]
+fn is_fixture_precombat(world: &World, unit: Entity) -> bool {
+    world
+        .get::<combat::simc_apl_native::FixturePrecombat>(unit)
+        .is_some()
+}
+
+#[cfg(not(feature = "test-support"))]
+fn is_fixture_precombat(_: &World, _: Entity) -> bool {
+    false
 }
 
 pub(crate) fn register(scripts: &mut AuraScripts) {
