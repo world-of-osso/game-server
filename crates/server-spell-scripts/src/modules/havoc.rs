@@ -10,6 +10,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::OnCast(before_cast),
     SpellScriptHook::NativeAfterCast(demonsurge::after_cast),
     SpellScriptHook::EarlyAuraRegistration(demonsurge::register_havoc),
+    SpellScriptHook::LateAuraRegistration(immolation::register),
     SpellScriptHook::LandedDamagePolicy(damage::apply_havoc_damage_policies),
     SpellScriptHook::ActualDamageMultiplier(damage::chaotic_disposition_damage),
     SpellScriptHook::ExpectedDamageMultiplier(damage::expected_chaotic_disposition_damage),
@@ -27,6 +28,8 @@ pub(super) mod beam;
 mod damage;
 #[path = "havoc/demonsurge.rs"]
 mod demonsurge;
+#[path = "havoc/immolation.rs"]
+mod immolation;
 
 fn is_havoc(world: &World, caster: Entity) -> bool {
     world
