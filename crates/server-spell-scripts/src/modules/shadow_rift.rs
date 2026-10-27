@@ -1,16 +1,17 @@
 //! SimC76f8118 sc_priest_shadow.cpp1491–1514/sc_priest.cpp1606–1683/3543–3562.
 //! Native Torrent starts a hasted Rift driver at its actual hostile primary.
-use super::{combat, shadow_void_blast, shadow_voidheart};
+use super::{combat, shadow_collapse, shadow_void_blast, shadow_voidheart};
 use bevy::prelude::*;
 use combat::auras::scripts::{AuraScript, AuraScripts};
 use combat::auras::{self, ActiveAuras, AuraInstance, RemoveReason};
 use combat::spell_cast::script_registry::{SpellScriptHook, TargetPlanHook};
-use combat::spell_cast::{self, PlannedEffect, TargetPlan, targets};
+use combat::spell_cast::{self, targets, PlannedEffect, TargetPlan};
 use combat::spell_info::{SpellInfo, SpellStore};
 use shared::components::ActiveSpec;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AfterAuraApplication(start_rift),
+    SpellScriptHook::AfterElementalLaunch(grow_rift),
     SpellScriptHook::EarlyAuraRegistration(register),
     SpellScriptHook::TargetPlan(target_plan),
 ];
@@ -23,6 +24,7 @@ const DAMAGE: u32 = 447448;
 struct Rift {
     primary: Entity,
     ticks: u32,
+    growth: u8,
 }
 
 fn start_rift(world: &mut World, primary: Entity, aura: &AuraInstance) {
@@ -42,7 +44,11 @@ fn start_rift(world: &mut World, primary: Entity, aura: &AuraInstance) {
     auras::remove_auras(world, caster, RemoveReason::Cancelled, |aura| {
         aura.spell_id == DRIVER && aura.caster == caster
     });
-    world.entity_mut(caster).insert(Rift { primary, ticks: 0 });
+    world.entity_mut(caster).insert(Rift {
+        primary,
+        ticks: 0,
+        growth: 0,
+    });
     spell_cast::cast_triggered(world, caster, DRIVER, Some(caster), 1);
 }
 
@@ -71,10 +77,31 @@ fn pulse(world: &mut World, unit: Entity, _: &AuraInstance, index: u8) {
         return;
     }
     let primary = rift.primary;
-    spell_cast::cast_triggered(world, unit, DAMAGE, Some(primary), 1);
+    let growth = rift.growth;
+    let Some(mut damage) = spell_cast::load_triggered_spell(world, DAMAGE, 1) else {
+        return;
+    };
+    damage.cast_damage_multiplier = Some(shadow_collapse::growth_multiplier(world, unit, growth));
+    spell_cast::launch_triggered_spell(world, unit, &damage, Some(primary), 1);
+}
+
+fn grow_rift(world: &mut World, caster: Entity, spell: &SpellInfo, foreground: bool) {
+    if !foreground || spell.id != 335467 || !auras::has_aura(world, caster, 448403) {
+        return;
+    }
+    if let Some(mut rift) = world.get_mut::<Rift>(caster) {
+        rift.growth = (rift.growth + 1).min(5);
+    }
 }
 
 fn clear_rift(world: &mut World, unit: Entity, _: &AuraInstance, _: RemoveReason) {
+    let rift = world
+        .get::<Rift>(unit)
+        .map(|rift| (rift.primary, rift.growth));
+    if let Some((primary, growth)) = rift {
+        // SimC3568–3571 resolves the payload before removing Voidheart.
+        shadow_collapse::burst(world, unit, primary, growth);
+    }
     shadow_void_blast::expire_override(world, unit);
     shadow_voidheart::replace_with_touch_tail(world, unit);
     world.entity_mut(unit).remove::<Rift>();
@@ -113,7 +140,9 @@ fn plan_pulse(
     let Some(center) = targets::position(world, primary) else {
         return Vec::new();
     };
-    let radius = read_base_radius(world);
+    let growth = world.get::<Rift>(caster).map_or(0, |rift| rift.growth);
+    // Pinned SimC bugs=true applies half a yard for each growth stack.
+    let radius = read_base_radius(world) + f32::from(growth) * 0.5;
     let units = targets::area_units(world, caster, center, radius, targets::Relation::Enemy, 0);
     vec![PlannedEffect {
         index: 0,
