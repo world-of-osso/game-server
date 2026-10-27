@@ -56,6 +56,30 @@ fn dk252_festering_strike_earns_ghouls_and_next_native_scythe() {
 
 #[test]
 #[ignore = "requires private native252 profile/traits and player actor"]
+fn dk252_putrefy_summons_native_lesser_ghoul() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 1).unwrap();
+    engage(&mut run);
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(
+            1247378,
+            run.targets[0],
+            Some(run.targets[0]),
+        ),
+    )
+    .unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    let world = run.app.world_mut();
+    assert!(
+        world.query::<&shared::components::Npc>().iter(world).any(|npc| npc.template_id == 258578),
+        "Putrefy must summon its native lesser ghoul"
+    );
+}
+
+#[test]
+#[ignore = "requires private native252 profile/traits and player actor"]
 fn dk252_raise_dead_produces_a_permanent_controlled_melee_pet() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_measurement(252, 1).unwrap();
