@@ -261,12 +261,17 @@ fn dk252_dark_transformation_tracks_the_transformed_pet_on_owner() {
         run.app.world_mut(),
         run.actor,
         literal_rotation::execution::Execution::Spell(1233448, run.actor, None),
-    ).unwrap();
+    )
+    .unwrap();
     preparation::finish_pending_setup(&mut run).unwrap();
-    assert!(crate::auras::has_aura(run.app.world(), pet, 1233448),
-        "native Dark Transformation must transform the actual controlled ghoul");
-    assert!(crate::auras::has_aura(run.app.world(), run.actor, 1235391),
-        "the owner must track the actual transformed pet for the literal APL");
+    assert!(
+        crate::auras::has_aura(run.app.world(), pet, 1233448),
+        "native Dark Transformation must transform the actual controlled ghoul"
+    );
+    assert!(
+        crate::auras::has_aura(run.app.world(), run.actor, 1235391),
+        "the owner must track the actual transformed pet for the literal APL"
+    );
 }
 
 #[test]
@@ -281,12 +286,22 @@ fn dk252_single_target_uses_dark_transformation_and_putrefy() {
         .world()
         .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
         .0;
-    assert!(events.iter().any(|event| event.source == Some(run.actor.to_bits())
-        && event.spell_id == Some(1233448)
-        && event.kind == CombatLogKind::CastSuccess), "the literal ST rotation must use Dark Transformation");
-    assert!(events.iter().any(|event| event.source == Some(run.actor.to_bits())
-        && event.spell_id == Some(1247378)
-        && event.kind == CombatLogKind::CastSuccess), "the literal ST rotation must use Putrefy");
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(run.actor.to_bits())
+                && event.spell_id == Some(1233448)
+                && event.kind == CombatLogKind::CastSuccess),
+        "the literal ST rotation must use Dark Transformation"
+    );
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(run.actor.to_bits())
+                && event.spell_id == Some(1247378)
+                && event.kind == CombatLogKind::CastSuccess),
+        "the literal ST rotation must use Putrefy"
+    );
 }
 
 #[test]
