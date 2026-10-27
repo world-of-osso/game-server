@@ -151,6 +151,7 @@ pub type PeriodicDamageFinishedHook = fn(&mut World, &EffectCtx<'_>);
 pub type ActionHook = fn(&mut World, Entity, u32);
 pub type ComboPointGainHook = fn(&mut World, Entity, u32, u8);
 pub type WhiteHitHook = fn(&mut World, Entity, bool);
+pub type WhiteHandHitHook = fn(&mut World, Entity, crate::melee::Hand, bool);
 pub type WhiteImpactHook = fn(&mut World, Entity);
 pub type DirectDamageHook = fn(&mut World, &EffectCtx<'_>, Entity, bool);
 pub type OwnsProcLookup = fn(u32) -> bool;
@@ -307,6 +308,7 @@ pub enum SpellScriptHook {
     ImpactProcDamage(ContextHitHook),
     ComboPointGain(ComboPointGainHook),
     AfterWhiteHit(WhiteHitHook),
+    AfterWhiteHandHit(WhiteHandHitHook),
     AfterWhiteImpact(WhiteImpactHook),
     ReplacementDirectDamage(DirectDamageHook),
     OwnsPolicyProc(OwnsProcLookup),
@@ -954,6 +956,19 @@ pub fn combo_point_gain(world: &mut World, caster: Entity, spell: u32, depth: u8
     for hook in world.resource::<SpellScriptRegistry>().hooks() {
         if let SpellScriptHook::ComboPointGain(run) = hook {
             run(world, caster, spell, depth);
+        }
+    }
+}
+
+pub fn after_white_hand_hit(
+    world: &mut World,
+    caster: Entity,
+    hand: crate::melee::Hand,
+    critical: bool,
+) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::AfterWhiteHandHit(run) = hook {
+            run(world, caster, hand, critical);
         }
     }
 }
