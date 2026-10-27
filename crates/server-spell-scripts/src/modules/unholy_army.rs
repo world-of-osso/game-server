@@ -25,12 +25,33 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
 ];
 
 fn after_cast(spell: u32) -> Option<AfterCastHook> {
-    (spell == ARMY).then_some(schedule_army)
+    match spell {
+        ARMY => Some(schedule_army),
+        1233448 => Some(summon_magus),
+        _ => None,
+    }
 }
 
-fn schedule_army(world: &mut World, caster: Entity, _: &SpellInfo) {
+fn summon_magus(world: &mut World, caster: Entity, _: &SpellInfo) {
+    if combat::auras::has_aura(world, caster, 390196)
+        && !spell_cast::try_cast_triggered(world, caster, 317776, Some(caster), 1)
+    {
+        warn!(?caster, "native Magus of the Dead summon refused");
+    }
+}
+
+fn schedule_army(world: &mut World, caster: Entity, spell: &SpellInfo) {
     if world.get::<ActiveSpec>(caster).map(|spec| spec.0) != Some(252) {
         return;
+    }
+    // SimC76f8118 sc_death_knight.cpp9019–9035: Army raises a Magus and
+    // starts Forbidden Knowledge, whose native linked auras replace RP spenders.
+    summon_magus(world, caster, spell);
+    if combat::auras::has_aura(world, caster, 1242158) {
+        combat::auras::apply_aura(world, &combat::auras::AuraApplication {
+            caster, target: caster, spell_id: 1242223, effect_mask: 3,
+            source: combat::auras::AuraSource::Cast,
+        });
     }
     let count = spell_cast::scripts::script_effect_value(world, caster, ARMY, 0) as u32;
     assert!(count > 0, "native Army ghoul count must be positive");

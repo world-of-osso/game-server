@@ -111,13 +111,16 @@ fn set_lord_magus_lifetime(world: &mut World, actor: Entity) {
         return;
     };
     let owner = summon.owner;
-    if summon.spell_id != MAGUS_SUMMON || !combat::auras::has_aura(world, owner, LORD_OF_THE_DEAD) {
-        return;
-    }
-    // SimC76f8118 sc_death_knight.cpp6788–6798: Lord's Magus uses the
-    // selected native talent's duration, not the summon spell's base duration.
-    let duration_ms =
-        combat::spell_cast::scripts::script_effect_value(world, owner, LORD_OF_THE_DEAD, 1);
+    // SimC76f8118 sc_death_knight.cpp6788–6798: Army/DT Magi and Lord
+    // Magi use their respective selected native talent durations.
+    let (talent, effect) = match summon.spell_id {
+        317776 if combat::auras::has_aura(world, owner, 390196) => (390196, 0),
+        MAGUS_SUMMON if combat::auras::has_aura(world, owner, LORD_OF_THE_DEAD) => {
+            (LORD_OF_THE_DEAD, 1)
+        }
+        _ => return,
+    };
+    let duration_ms = combat::spell_cast::scripts::script_effect_value(world, owner, talent, effect);
     assert!(
         duration_ms > 0.0,
         "Lord of the Dead Magus duration must be positive"

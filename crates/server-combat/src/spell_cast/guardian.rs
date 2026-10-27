@@ -37,7 +37,7 @@ const GUARDIAN_POLICIES: &[GuardianPolicy] = &[
     // SimC76f8118 sc_death_knight.cpp4478–4487/4599–4605: actual Magus AP share
     // and MID2 actions; each action retains its native cast and recovery data.
     GuardianPolicy {
-        summons: &[1242294],
+        summons: &[317776, 1242294],
         entry: 163366,
         spells: &[1297055, 1297091],
         repeat_gcd: None,
