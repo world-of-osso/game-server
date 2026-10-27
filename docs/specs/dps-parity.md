@@ -1185,3 +1185,7 @@ Selected Insidious Ire earns its temporary channel bonus when one target has all
 ### Unholy controlled ghoul
 
 - Specialization Raise Dead46584 creates native26125 through the controlled-pet path, retaining the actual current-pet relationship and permanent lifetime. Native Dark Transformation must see the pet through UNIT_PET. DK inherits source-qualified owner melee AP/crit/haste, and ordinary owner casts order the real pet against the selected hostile primary. Hunter, Warlock and Mage pet policies remain unchanged.
+
+### Reign of Tyranny pet extension
+
+- On a real Demonic Tyrant summon, selected Reign of Tyranny extends each living owned Dreadstalker by 15 seconds. The pinned bug model also counts living Vilefiends for the new Tyrant’s native Demonic Power (`sc_warlock_actions.cpp3586–3620`).
