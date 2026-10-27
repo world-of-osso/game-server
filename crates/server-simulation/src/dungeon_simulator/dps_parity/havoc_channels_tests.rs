@@ -62,7 +62,11 @@ fn havoc_hunt_applies_native_dot_to_each_nearby_enemy() {
     let _seed = crate::random::seed_scope(70_448);
     let mut run = prepare_literal(577, 3).unwrap();
     let far = run.targets[2];
-    run.app.world_mut().get_mut::<Position>(far).unwrap().x += 200.0;
+    run.app
+        .world_mut()
+        .get_mut::<shared::components::Position>(far)
+        .unwrap()
+        .x += 200.0;
     cast(&mut run, 370965, false);
     preparation::finish_pending_setup(&mut run).unwrap();
     advance(&mut run, 80);
