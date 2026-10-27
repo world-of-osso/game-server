@@ -70,7 +70,7 @@ fn outlaw_zero_in_earned_by_auto_attack_is_consumed_by_bte() {
     );
     // SimC76f8118 sc_rogue.cpp3422–3430/3871: earned Zero In
     // affects the next real Between the Eyes and then expires. A later
-    // automatic swing may earn the buff again after the cast.
+    // automatic swing may earn the buff again after the cast (RED cc11f45798).
     let removed = events
         .iter()
         .position(|event| {
