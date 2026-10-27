@@ -12,6 +12,7 @@ mod arcane_touch;
 pub(crate) use arcane::register as register_arcane;
 pub(super) use arcane::{
     after_foreground as after_arcane_foreground, before_cast as before_arcane_cast,
+    missiles_channel_duration,
 };
 pub(super) use arcane_touch::record_damage as record_arcane_touch_damage;
 pub(super) use script_registry::{
@@ -128,6 +129,7 @@ pub(super) use script_registry::{
 pub(super) use script_registry::{consume_resource_value_sources, effective_resource_value};
 mod unbroken_rhythm;
 mod unholy_festering;
+mod unholy_putrefy;
 pub(crate) use unbroken_rhythm::register_unbroken_rhythm;
 mod windwalker;
 mod windwalker_children;
@@ -163,6 +165,7 @@ pub(crate) use batch3::{
     PHALANX_TALENT, WHIRLING_BLADE, cast_whirling_ravager, check_phalanx_proc,
     check_whirling_blade_proc,
 };
+pub use batch9::spawn_delayed_ground_pulses;
 pub(crate) use batch9::{ground_pulse_radius, hostile_ground_fields, owned_ground_fields};
 pub(super) use batch9::{spawn_ravager_field, update_ground_pulses};
 pub(crate) use batch19::{copy_havoc, dispersion_tick, on_dispelled, replace_havoc};
@@ -804,6 +807,7 @@ pub fn after_cast(world: &World, spell_id: u32) -> impl Iterator<Item = AfterCas
         .chain(script_registry::resource_value_after_cast(world, spell_id))
         .chain(script_registry::after_resource_values(world, spell_id))
         .chain(unholy_festering::after_cast_hook(spell_id))
+        .chain(unholy_putrefy::after_cast_hook(spell_id))
 }
 
 fn native_after_cast(world: &World, spell_id: u32) -> Option<AfterCastHook> {

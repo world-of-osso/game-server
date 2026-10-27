@@ -13,6 +13,7 @@ pub(crate) enum Execution {
     PickupFragment(server::soul_fragments::PickupPlan),
     AutoAttack(Entity),
     RetargetAutoAttack(Entity),
+    Retarget(Entity),
     // Spell, native cast unit, and selected action primary (not inferred from that unit).
     Spell(u32, Entity, Option<Entity>),
     Item(ItemUse, Entity),
@@ -120,6 +121,7 @@ impl Prepared {
                 "auto_attack",
                 "retarget_auto_attack",
                 "pick_up_fragment",
+                "retarget",
             ]
             .into_iter()
             .map(str::to_owned)
@@ -424,7 +426,15 @@ fn action_key(action: &Action, equipment: &Equipment) -> Result<Option<ActionKey
 
 fn native_targets(world: &World, actor: Entity, supplied: &[Entity]) -> Vec<Entity> {
     if !supplied.is_empty() {
-        return supplied.to_vec();
+        let mut targets = supplied.to_vec();
+        if let Some(index) = world
+            .get::<crate::networking::CombatTarget>(actor)
+            .and_then(|target| target.0)
+            .and_then(|selected| targets.iter().position(|&target| target == selected))
+        {
+            targets.swap(0, index);
+        }
+        return targets;
     }
     // A harmful precast still uses the actor's actual selected enemy, even
     // before the adapter supplies its combat candidate order.
@@ -528,6 +538,14 @@ fn primary_in_native_range(
 fn read_attacks(world: &World, actor: Entity, targets: &[Entity], ready: &mut ReadyActions) {
     let current = world.get::<crate::combat::AutoAttack>(actor);
     for (index, &target) in targets.iter().enumerate() {
+        // SimC76f8118 player.cpp10866–10889: retarget changes the actor's selected target.
+        record_ready(
+            ready,
+            "retarget",
+            target,
+            index == 0,
+            Execution::Retarget(target),
+        );
         if current.is_none() {
             record_ready(
                 ready,
@@ -867,6 +885,18 @@ pub(crate) fn execute(world: &mut World, actor: Entity, action: Execution) -> Re
                 *state = crate::creature_ai::CreatureState::Pursuing {
                     target: target.to_bits(),
                 };
+            }
+            Ok(())
+        }
+        Execution::Retarget(target) => {
+            if world.get_entity(target).is_err() {
+                return Err("selected native retarget no longer exists".into());
+            }
+            world
+                .entity_mut(actor)
+                .insert(crate::networking::CombatTarget(Some(target)));
+            if let Some(mut attack) = world.get_mut::<crate::combat::AutoAttack>(actor) {
+                attack.victim = target;
             }
             Ok(())
         }

@@ -171,7 +171,7 @@ Native merged buff outcomes apply or clear the caster-owned aura after the hit b
 
 - Consuming stored Shadow Techniques can launch a delayed builder shadow clone; Ancient Arts can also launch an Eviscerate or Black Powder shadow clone with the source finisher's combo points and critical chance snapshotted (`sc_rogue.cpp3627–3665,8175–8194,8229–8249,8668–8701`).
 - Consuming stored Shadow Techniques through Ancient Arts can launch a delayed Eviscerate or Black Powder shadow clone, with the source finisher's combo points and critical chance snapshotted (`sc_rogue.cpp3627–3665,8229–8249,8668–8701`).
-- A landed combo-point damage hit distributes Goremaw's native residual fraction across targets with the caster's active Goremaw DoT (`sc_rogue.cpp6444–6463,9011–9028`).
+- A landed combo-point damage hit, including its Shadowed Finishers and clone payloads, distributes Goremaw's native residual fraction across targets with the caster's active Goremaw DoT (`sc_rogue.cpp2840–2845,6444–6463,9011–9028`).
 - Combo-point gains emit one native Energize receipt with actual overflow, including scripted per-hit gains. Shadow Techniques recognizes actual foreground combo-point generation, including capped gains, and collects after all native hit batches for that cast, not before delayed impacts (`sc_rogue.cpp2705–2716,8176–8204`).
 - In-combat Shadow Dance, Vanish and Stealth earn native Master of Shadows196980 when196976 is selected. Refresh preserves the periodic phase; native periodic and first-application Energy values remain authoritative (`sc_rogue.cpp5572–5575,6114–6117,6146–6149,8532–8537,11196–11204`).
 - Selected Deathstalker Shadowstrike establishes the native mark; eligible finishers consume it and Black Powder launches native Mass Casualty against secondary targets (`sc_rogue.cpp5653,6570–6594,8732–8817`).
@@ -521,6 +521,10 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 - Selected196103 on actual Affliction265 makes owned Corruption146739 and Wither445474 permanent, including background Seed applications and reapplications. Preserve native effects, counters and periodic phase; do not change catalog duration or read fixture fight clocks. Pinned SimC models permanence as twice the expected fight length (`actions759–762/1072–1077`).
 - Generic DoT facts for an active permanent aura are not refreshable and have unbounded remains/duration, before finite fresh-duration/Pandemic validation. Missing/finite DoTs and buff/debuff sentinel semantics stay unchanged. Do not suppress literal casts in the adapter to hide an expiring aura.
 - Qualify the actual literal ST and recurring30s-add-wave ordering. Gate265 ST/3T and267, plus actual finite-DoT refreshability from103 or258. Count explosion hits separately from explosion actions; do not tune damage or target counts to repair excess paid Seed refreshes.
+
+### Guardian periodic haste
+
+- An actual guardian's periodic aura with native spell-haste-periodic attribute reads the same actual owner's resolved spell haste as its guardian cast time. Apply the aura's own period modifiers on the guardian, preserve native tick phase and unflagged periods, and do not substitute owners for ordinary units (SimC76f8118 `pet.cpp217–228`, `buff.cpp752,1945–1954`). Qualify actual Infernal19483→20153 tick spacing plus 265,266,253 and generic guardian controls.
 
 ### Native Infernal guardian
 
@@ -908,6 +912,8 @@ Stormkeeper grants its native effect4 count of next-spell uses, bounded by the n
 Native445624 supplies actual221177 Ancestors and their native lifetime after selected Stormkeeper or Ancestral Swiftness. Successful foreground spells command each living owned Ancestor once with native447419/447425 children at the retained primary. Background overloads do not command them. Native owner spell power and crit are inherited; Ancestor Lava Burst is guaranteed critical and scales with inherited crit (`sc_shaman.cpp`4342–4441,6358,7856,8163–8166,8758). Natural expiry allows selected Final Calling465717; cancellation does not. Actual Ancestor447419/447425/465717 critical hits apply selected live Elemental Fury60188 effect0's critical bonus, preserving its native amount and other spells' modifier masks (`sc_shaman.cpp`11468–11469; SimC effect indexes are one-based). Removing that owner aura removes the bonus. Ancient Fellowship and remaining pet effect inheritance still require qualification.
 
 Selected Routine Communication443445 draws once after an ordinary successful Lightning Bolt, Chain Lightning or Lava Burst execution. The native effect4/effect5 counts supply successes/total for a shuffled deck; reshuffle only after all cards are drawn. A successful draw summons the real native445624 Ancestor and447244 owner buff. Background builders, overloads and extra Chain recipients do not draw (`sc_shaman.cpp`6654–6658,7260–7263,7436–7438,13025–13033; `proc_rng.cpp`149–161).
+
+Selected Mountains Will Fall creates the native298762 Earthquake overload field on a mastery success and adds one during Ascendance. The field uses native298765 damage, native mastery and talent effectiveness, and its source's persistent damage multiplier; Ascendance modifies its damage while active (`sc_shaman.cpp`3175–3180,3316–3351,3379–3414,7897–7915,7953–7968).
 
 Selected Ancient Fellowship443423 draws its native shuffled deck once per natural Ancestor expiry. A successful draw summons a real replacement (`sc_shaman.cpp`4437–4439,13016–13023).
 
