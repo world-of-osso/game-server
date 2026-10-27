@@ -1015,6 +1015,36 @@ fn diag_frost_oracle_aligned_factors() {
 }
 
 #[test]
+#[ignore = "real Winter hits earn Everfrost target stacks and amplify later hits"]
+fn frost_winter_hits_earn_everfrost_target_damage() {
+    use crate::spell_cast::effects::factor_capture::FactorCapture;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::super::prepare_literal(251, 1).unwrap();
+    super::super::engage(&mut run);
+    let actor = run.actor;
+    let target = run.targets[0];
+    assert!(auras::has_aura(run.app.world(), actor, 376938));
+    run.app.insert_resource(FactorCapture::new(actor, target, 196771, "winter", 2));
+    super::super::enhancement_generation_tests::cast(&mut run, 51271, actor);
+    for _ in 0..100 {
+        run.app.update();
+        if run.app.world().resource::<FactorCapture>().export()["captured_hits"] == 2 { break; }
+    }
+    let stacks = run.app.world().get::<ActiveAuras>(target).and_then(|active| active.iter()
+        .find(|aura| aura.spell_id == 376974 && aura.caster == actor).map(|aura| aura.stacks)).unwrap_or(0);
+    assert_eq!(stacks, 2, "each real Winter hit earns a target stack");
+    let capture = run.app.world().resource::<FactorCapture>().export();
+    let hits: Vec<_> = capture["events"].as_array().unwrap().iter()
+        .filter(|event| event["spell_id"] == 196771 && event["event"] == "direct_amount").collect();
+    assert_eq!(hits.len(), 2);
+    let first = hits[0]["applied_multipliers"].as_array().unwrap().iter().find(|x| x["factor"] == "target_damage").unwrap()["value"].as_f64().unwrap();
+    let second = hits[1]["applied_multipliers"].as_array().unwrap().iter().find(|x| x["factor"] == "target_damage").unwrap()["value"].as_f64().unwrap();
+    let pct = crate::spell_cast::scripts::script_effect_value(run.app.world(), actor, 376938, 0);
+    assert!((second / first - (1.0 + f64::from(pct) / 100.0)).abs() < 0.001,
+        "the next real Winter hit uses the native earned-stack bonus: {first} -> {second}");
+}
+
+#[test]
 #[ignore = "real Winter tick is not directly amplified by Pillar"]
 fn frost_winter_tick_pillar_only_changes_attack_power() {
     use crate::spell_cast::effects::factor_capture::FactorCapture;
