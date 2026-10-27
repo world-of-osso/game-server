@@ -129,35 +129,28 @@ fn havoc_final_breath_adds_scaled_tick_on_completed_beam() {
         cast(&mut run, 198013, false);
         preparation::finish_pending_setup(&mut run).unwrap();
         let hits = damage(&run, Some(198030));
-        if selected {
-            let capture = run
-                .app
-                .world()
-                .resource::<crate::spell_cast::effects::factor_capture::FactorCapture>()
-                .export();
-            std::fs::write(
-                inputs::directory()
-                    .unwrap()
-                    .join("final-breath-factors.json"),
-                serde_json::to_string_pretty(&capture).unwrap(),
-            )
-            .unwrap();
-        }
         assert_eq!(
             hits.len(),
             if selected { 13 } else { 12 },
             "Final Breath must add exactly one real Eye Beam tick: {hits:?}"
         );
         if selected {
-            let baseline = hits[..12]
+            let capture = run
+                .app
+                .world()
+                .resource::<crate::spell_cast::effects::factor_capture::FactorCapture>()
+                .export();
+            let events: Vec<_> = capture["events"]
+                .as_array()
+                .unwrap()
                 .iter()
-                .rev()
-                .find(|hit| hit.crit == hits[12].crit)
-                .expect("matching critical result for baseline");
-            let expected = baseline.amount as f32 * 3.0;
+                .filter(|event| event["spell_id"] == 198030 && event["event"] == "result")
+                .collect();
+            let product =
+                |event: &serde_json::Value| event["factors"]["source_product"].as_f64().unwrap();
             assert!(
-                (hits[12].amount as f32 / expected - 1.0).abs() < 0.03,
-                "Final Breath must use native 300%: {hits:?}"
+                (product(events[12]) / product(events[11]) - 3.0).abs() < 0.001,
+                "Final Breath must deal three times the observed tick input"
             );
         }
     }
