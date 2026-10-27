@@ -527,6 +527,36 @@ fn frost_earned_rune_refill_preserves_regeneration() {
 }
 
 #[test]
+#[ignore = "diagnostic fixed-haste native rune regeneration against pinned SimC"]
+fn diag_frost_fixed_haste_idle_rune_regeneration() {
+    use crate::spell_cast::runes::Runes;
+    use shared::components::PowerType;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::super::prepare_literal(251, 1).unwrap();
+    super::super::engage(&mut run);
+    let actor = run.actor;
+    let haste = run.app.world().get::<crate::stats::CharacterStats>(actor).unwrap().haste_pct;
+    let expected = 10.0 / (1.0 + haste / 100.0);
+    assert_eq!(crate::spell_cast::powers::change_power(run.app.world_mut(), actor, PowerType::Runes, -6.0), Some(-6.0));
+    let start = run.app.world().resource::<Time>().elapsed_secs_f64();
+    let mut first_three = None;
+    let mut all_six = None;
+    for _ in 0..1200 {
+        run.app.update();
+        let elapsed = run.app.world().resource::<Time>().elapsed_secs_f64() - start;
+        let ready = run.app.world().get::<Runes>(actor).unwrap().ready();
+        if ready >= 3 && first_three.is_none() { first_three = Some(elapsed); }
+        if ready == 6 && all_six.is_none() { all_six = Some(elapsed); }
+    }
+    let first = first_three.expect("first three depleted runes regenerate");
+    let all = all_six.expect("remaining three depleted runes regenerate");
+    println!("fixed haste {haste}%: first three {first:.3}s, all six {all:.3}s; SimC {expected:.3}s and {:.3}s", expected * 2.0);
+    assert!((first - f64::from(expected)).abs() <= 0.10);
+    assert!((all - f64::from(expected * 2.0)).abs() <= 0.20);
+    assert_eq!(run.app.world().get::<Runes>(actor).unwrap().ready(), 6);
+}
+
+#[test]
 #[ignore = "diagnostic Frost oracle-aligned actual spell factors"]
 fn diag_frost_oracle_aligned_factors() {
     use super::super::single_spell::{SpellProbe, capture_cast};
