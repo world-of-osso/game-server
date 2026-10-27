@@ -58,12 +58,36 @@ fn selected_entropy_spawns_lesser_fragment_on_combat_entry() {
         "real damage landed"
     );
     // SimC76f8118 cpp9873–9881,9959–9967 triggers Entropy's first combat tick immediately.
+    let initial = server::soul_fragments::active_count(
+        run.app.world(),
+        actor,
+        server::soul_fragments::FragmentFilter::Lesser,
+    );
+    assert!(
+        initial > 0,
+        "Entropy creates an active lesser fragment on entering combat"
+    );
+    for _ in 0..180 {
+        run.app.update();
+    }
+    assert_eq!(
+        server::soul_fragments::active_count(
+            run.app.world(),
+            actor,
+            server::soul_fragments::FragmentFilter::Lesser
+        ),
+        initial,
+        "no second Entropy fragment before its native 12-second period"
+    );
+    for _ in 0..60 {
+        run.app.update();
+    }
     assert!(
         server::soul_fragments::active_count(
             run.app.world(),
             actor,
             server::soul_fragments::FragmentFilter::Lesser
-        ) > 0,
-        "Entropy creates an active lesser fragment on entering combat"
+        ) > initial,
+        "Entropy creates another fragment at its native 12-second period"
     );
 }
