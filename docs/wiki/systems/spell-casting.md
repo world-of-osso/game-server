@@ -144,6 +144,10 @@ Native RED2ad5: Focus8.75 versus11.072727 at26.545% haste and WW Energy11 versus
 
 Sources: native70448 `PowerType`; TC a352b1fa `Unit.cpp11058–11071` inverse `ModHasteRegen`, `StatSystem.cpp874–938` native percentage/flat ordering and its explicit haste TODO; pinned SimC76f8118 `player.cpp4950–4957` haste-affected resource formula. This does not falsely attribute completed haste scaling to TC's TODO path.
 
+## Summon missile retirement — 2026-10-26
+
+A dismissed summon with missiles in flight becomes inactive and non-selectable, and leaves replication. The server retains its source entity until its pending hits resolve, or for at most 30 seconds. It runs summon teardown once and prevents further casts during retirement. The health value is restored only while a hit resolves, so source damage reads retain it; targets remain live inputs.
+
 ## Protection producer dispatch — 2026-10-22
 
 Native Attr3 `ALWAYS_HIT` bypasses avoidance after school/mechanic immunity; missile launch still evaluates reflection. Source and deterministic native Evasion RED/control evidence live in the [producer contract](../../specs/protection-damage-producers.md#native-always_hit-defense-reader); d1335d807:4PASS17.98s/no warnings, including original charge primary/splash/stun assertions.
