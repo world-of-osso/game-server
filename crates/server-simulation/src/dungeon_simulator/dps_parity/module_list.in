@@ -343,6 +343,7 @@ mod subtlety_secret_snapshot_tests;
 mod subtlety_secret_tests;
 mod subtlety_shadow_tests;
 mod subtlety_storm_funding_tests;
+mod subtlety_storm_stealth_tests;
 mod subtlety_techniques_tests;
 mod spellslinger_hits_tests;
 mod subtlety_tests;
