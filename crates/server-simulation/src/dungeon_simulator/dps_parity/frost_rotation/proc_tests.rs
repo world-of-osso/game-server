@@ -1635,6 +1635,29 @@ fn earn_killing_machine(run: &mut Run) {
 }
 
 #[test]
+#[ignore = "earned Killing Machine changes actual Obliterate weapon hits to Frost"]
+fn frost_km_converts_obliterate_weapon_children_to_frost() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::protocol::CombatLogKind;
+    let _seed = crate::random::seed_scope(251);
+    let mut run = super::super::prepare_literal(251, 1).unwrap();
+    super::super::engage(&mut run);
+    earn_killing_machine(&mut run);
+    let actor = run.actor;
+    let start = run.app.world().resource::<ObservedCombatEvents>().0.len();
+    let target = run.targets[0];
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 49020, Some(target), false).unwrap();
+    for _ in 0..3 { run.app.update(); }
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0[start..];
+    for id in [222024, 66198] {
+        let event = events.iter().find(|event| event.source == Some(actor.to_bits())
+            && event.target == Some(target.to_bits()) && event.spell_id == Some(id)
+            && event.kind == CombatLogKind::Damage).expect("real Obliterate weapon impact");
+        assert_eq!(event.school_mask, 16, "earned Killing Machine converts weapon child {id} to Frost");
+    }
+}
+
+#[test]
 #[ignore = "native251 earned KM, real weapon children before delayed consumption"]
 fn frost_km_spenders_consume_after_weapon_impacts() {
     use crate::spell_cast::test_harness::ObservedCombatEvents;
