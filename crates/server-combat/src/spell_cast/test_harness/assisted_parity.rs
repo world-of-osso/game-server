@@ -209,6 +209,13 @@ fn read_spell_facts(
 }
 
 fn read_readiness(world: &World, actor: Entity, spell: &SpellInfo) -> Result<bool, String> {
+    // SimC76f8118 monk/sc_monk.cpp4550–4565: WDP's cooldown window gates readiness.
+    // Native aura restrictions enforce the corresponding earned caster window.
+    match super::super::aura_spell_restrictions::check_caster(world, actor, spell) {
+        Ok(()) => {}
+        Err(CastFailure::CasterAuraState) => return Ok(false),
+        Err(other) => return Err(format!("spell{}: native caster aura {other:?}", spell.id)),
+    }
     match super::super::read_healer_recovery(world, actor, spell) {
         Ok(()) => Ok(true),
         Err(CastFailure::OnCooldown | CastFailure::NoCharges | CastFailure::SchoolLockedOut) => {
