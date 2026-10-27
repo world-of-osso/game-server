@@ -218,6 +218,7 @@ register_modules! {
     subtlety_secret: (2614, "modules/subtlety_secret.rs"),
     subtlety_blades: (2613, "modules/subtlety_blades.rs"),
     subtlety_finishers: (2612, "modules/subtlety_finishers.rs"),
+    subtlety_goremaw: (2618, "modules/subtlety_goremaw.rs"),
     subtlety_master_shadows: (2616, "modules/subtlety_master_shadows.rs"),
     subtlety_shadow: (420, "modules/subtlety_shadow.rs"),
     subtlety_techniques: (2610, "modules/subtlety_techniques.rs"),

@@ -167,6 +167,7 @@ Native merged buff outcomes apply or clear the caster-owned aura after the hit b
 
 ### Subtlety literal fixture
 
+- A landed combo-point damage hit distributes Goremaw's native residual fraction across targets with the caster's active Goremaw DoT (`sc_rogue.cpp6444–6463,9011–9028`).
 - Combo-point gains emit one native Energize receipt with actual overflow, including scripted per-hit gains. Shadow Techniques recognizes actual foreground combo-point generation, including capped gains, and collects after all native hit batches for that cast, not before delayed impacts (`sc_rogue.cpp2705–2716,8176–8204`).
 - In-combat Shadow Dance, Vanish and Stealth earn native Master of Shadows196980 when196976 is selected. Refresh preserves the periodic phase; native periodic and first-application Energy values remain authoritative (`sc_rogue.cpp5572–5575,6114–6117,6146–6149,8532–8537,11196–11204`).
 - Selected Deathstalker Shadowstrike establishes the native mark; eligible finishers consume it and Black Powder launches native Mass Casualty against secondary targets (`sc_rogue.cpp5653,6570–6594,8732–8817`).
