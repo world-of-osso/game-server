@@ -366,4 +366,15 @@ fn real_collapsing_star_spends_stacks_and_ready_buff() {
         5,
         "Collapsing Star spends 30 souls and preserves remainder"
     );
+    // SimC76f8118 cpp6464–6474,6532–6533 executes native Collapsing Star damage.
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(actor.to_bits())
+                && event.spell_id == Some(1221162)
+                && event.kind == CombatLogKind::Damage
+                && event.target == Some(target.to_bits())
+                && event.amount > 0),
+        "real Collapsing Star delivers native damage to its target"
+    );
 }
