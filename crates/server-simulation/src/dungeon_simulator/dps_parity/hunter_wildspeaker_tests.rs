@@ -81,7 +81,7 @@ fn native_bm_wildspeaker_commands_existing_bear_before_consuming_next_howl() {
 
 #[test]
 #[ignore = "requires private spec253 reference inputs and native world DB"]
-fn native_wildspeaker_dire_beasts_inherit_owner_crit() {
+fn native_wildspeaker_dire_beasts_inherit_owner_crit_and_savagery() {
     let _seed = crate::random::seed_scope(70_448);
     let mut run = prepare_measurement(253, 1).expect("native literal BM fixture");
     let mut summons = run
@@ -91,13 +91,20 @@ fn native_wildspeaker_dire_beasts_inherit_owner_crit() {
     let mut observed_actor = None;
     let mut seen = 0;
     assert!(crate::auras::has_aura(run.app.world(), run.actor, 459550));
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, 424557));
+    let savagery = f64::from(crate::spell_cast::scripts::script_effect_value(
+        run.app.world(),
+        run.actor,
+        424557,
+        0,
+    )) / 100.0;
     let mut critical_hits = 0;
     let mut critical_bonuses = Vec::new();
     let mut white_critical_hits = 0;
     let mut seen_combat_events = 0;
     let mut beasts = std::collections::BTreeSet::new();
     let mut chances = Vec::new();
-    let mut printed = false;
+    let mut damage_modifiers = Vec::new();
     engage(&mut run);
     let started_at = run.app.world().resource::<Time>().elapsed();
     install_fixture_lifetimes(&mut run, started_at);
@@ -144,10 +151,11 @@ fn native_wildspeaker_dire_beasts_inherit_owner_crit() {
                 if event["event"] != "result" || event["spell_id"] != 1232922 {
                     continue;
                 }
-                if !printed {
-                    eprintln!("WILDSPEAKER_RESULT {event}");
-                    printed = true;
-                }
+                damage_modifiers.push(
+                    event["factors"]["native_spell_mod_product"]
+                        .as_f64()
+                        .unwrap(),
+                );
                 let owner_crit = world
                     .get::<crate::stats::CharacterStats>(run.actor)
                     .unwrap()
@@ -181,30 +189,6 @@ fn native_wildspeaker_dire_beasts_inherit_owner_crit() {
                 .find(|(_, summon)| summon.owner == run.actor && summon.spell_id == 219199)
                 .map(|(actor, _)| actor);
             if let Some(actor) = actor {
-                let world = run.app.world();
-                let spell = world
-                    .resource::<crate::spell_info::SpellStore>()
-                    .get(1232922)
-                    .unwrap();
-                let owner = crate::auras::spell_mods::modify(
-                    world,
-                    run.actor,
-                    spell,
-                    crate::auras::SpellModOp::HealingAndDamage,
-                    100.0,
-                );
-                let pet = crate::auras::spell_mods::modify(
-                    world,
-                    actor,
-                    spell,
-                    crate::auras::SpellModOp::HealingAndDamage,
-                    100.0,
-                );
-                eprintln!(
-                    "WILDSPEAKER_OWNER_MOD owner={owner} pet={pet} hunterpet={} savagery={}",
-                    world.get::<crate::hunter_pet::HunterPet>(actor).is_some(),
-                    crate::auras::has_aura(world, run.actor, 424557)
-                );
                 run.app.insert_resource(
                     crate::spell_cast::effects::factor_capture::FactorCapture::new(
                         actor,
@@ -222,6 +206,15 @@ fn native_wildspeaker_dire_beasts_inherit_owner_crit() {
     assert!(
         !chances.is_empty(),
         "actual Dire Beast Wildspeaker must land a hit"
+    );
+    // SimC76f8118 player.cpp15268–15324 and native424557: actual
+    // DireCritter commands use the owner's selected passive spell modifier.
+    assert!(savagery > 0.0);
+    assert!(
+        damage_modifiers
+            .iter()
+            .all(|factor| *factor + 0.001 >= 1.0 + savagery),
+        "actual Wildspeaker damage must include selected Savagery: {damage_modifiers:?}"
     );
     // SimC76f8118 pet.cpp217–220: DireCritters inherit their owner's live crit.
     assert!(
