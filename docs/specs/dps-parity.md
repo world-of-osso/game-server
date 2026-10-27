@@ -333,6 +333,8 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 ### Havoc literal rotation
 
+- Never Say Die427794's native periodic driver enables its effect0 damage percentage on effects3/4 when health reaches effect2's threshold. Preserve the pinned source's below-threshold behavior: an already-active damage bonus is not expired by that branch (SimC76f8118 `sc_demon_hunter.cpp`2197–2199,10044–10066).
+
 - Earned Serrated Glaive390155 supplies selected talent390154's effect0 percentage to its native spell modifier; the buff's class mask and lifetime still determine which real actions benefit (SimC76f8118 `sc_demon_hunter.cpp`2195–2196,7534–7539).
 
 - Selected Chaotic Disposition428492 rolls its native number of independent chances on each affected Demon Hunter chromatic-school direct or periodic damage action; each success adds its native damage percentage. The Hunt and its DoT are excluded, and Felblade damage is included (SimC76f8118 `sc_demon_hunter.cpp`2105–2108,2317–2346,2370–2396,5493–5497,7854–7858).
