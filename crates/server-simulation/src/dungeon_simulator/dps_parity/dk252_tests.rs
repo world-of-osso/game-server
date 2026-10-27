@@ -927,6 +927,22 @@ fn dk252_lord_magus_uses_selected_native_lifetime() {
 }
 
 #[test]
+#[ignore = "requires native252 profile/traits and player actor"]
+fn dk252_death_coil_deposits_rolling_devastation() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 1).unwrap();
+    engage(&mut run);
+    assert!(crate::spell_cast::try_cast_triggered(run.app.world_mut(), run.actor, 47632, Some(run.targets[0]), 1));
+    for _ in 0..30 { run.app.update(); }
+    assert!(run.app.world().get::<crate::auras::ActiveAuras>(run.targets[0]).unwrap().iter()
+        .any(|a| a.spell_id == 390271 && a.caster == run.actor));
+    for _ in 0..120 { run.app.update(); }
+    let events = &run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
+    assert!(events.iter().any(|e| e.spell_id == Some(390271) && e.kind == CombatLogKind::Damage && e.amount > 0),
+        "Coil of Devastation must tick after actual Death Coil damage");
+}
+
+#[test]
 #[ignore = "requires private native252 profile/traits and player actor"]
 fn dk252_magus_bolt_inherits_owner_melee_power() {
     use crate::spell_cast::effects::factor_capture::FactorCapture;
