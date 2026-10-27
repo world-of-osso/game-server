@@ -161,6 +161,7 @@ pub(crate) use windwalker::{
     combo_strikes_multiplier, ordinary_combo_cast, register_wdp_relationship,
 };
 
+pub use super::elemental_overload::is_overload_damage;
 pub(super) use batch3::consume_phalanx;
 pub(crate) use batch3::{
     PHALANX_TALENT, WHIRLING_BLADE, cast_whirling_ravager, check_phalanx_proc,
@@ -696,11 +697,7 @@ pub fn damage_amount(world: &World, spell_id: u32) -> Option<DamageAmountHook> {
         windwalker_dual_threat::DAMAGE => Some(windwalker_dual_threat::damage),
         windwalker_children::JADEFIRE => Some(windwalker_children::jadefire_damage),
         windwalker_children::RWK_DAMAGE => Some(windwalker_children::rushing_wind_damage),
-        super::elemental_overload::LIGHTNING_OVERLOAD
-        | super::elemental_overload::CHAIN_OVERLOAD
-        | super::elemental_overload::LAVA_OVERLOAD_DAMAGE
-        | super::elemental_overload::ICEFURY_OVERLOAD
-        | super::elemental_overload::ELEMENTAL_BLAST_OVERLOAD => {
+        id if super::elemental_overload::is_overload_damage(id) => {
             Some(super::elemental_overload::scale_damage)
         }
         crate::auras::agony::AGONY => Some(crate::auras::agony::tick_damage),
