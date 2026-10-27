@@ -74,6 +74,25 @@ fn frost_obliteration_frost_strike_earns_killing_machine() {
 }
 
 #[test]
+#[ignore = "real Frost Strikes earn native Hyperpyrexia residual ticks"]
+fn frost_hyperpyrexia_from_real_frost_strikes() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::protocol::CombatLogKind;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::super::prepare_literal(251, 1).unwrap();
+    super::super::engage(&mut run);
+    assert!(auras::has_aura(run.app.world(), run.actor, 456238));
+    for _ in 0..12 {
+        cast(&mut run, 49020);
+        cast(&mut run, 49020);
+        cast(&mut run, 49143);
+    }
+    for _ in 0..200 { run.app.update(); }
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0;
+    assert!(events.iter().any(|event| event.spell_id == Some(458169) && event.kind == CombatLogKind::Damage && event.periodic && event.amount > 0), "actual Frost Strikes must earn Hyperpyrexia ticks");
+}
+
+#[test]
 #[ignore = "native251 profile, repeated native-resource-funded Frost Strike"]
 fn frost_frost_strikes_roll_native_rime_chance() {
     let _seed = crate::random::seed_scope(251);

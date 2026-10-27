@@ -28,6 +28,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::ResolvedDamage(glacial_advance_razorice),
     SpellScriptHook::LateAuraRegistration(register_frost_auras),
     SpellScriptHook::ResolvedDamage(frostreaper_impact),
+    SpellScriptHook::ResolvedDamage(hyperpyrexia_impact),
 ];
 
 const KILLING_MACHINE: u32 = 51128;
@@ -96,6 +97,16 @@ fn trigger_native_buff(world: &mut World, caster: Entity, source: u32) {
         .trigger_spell;
     if !spell_cast::try_cast_triggered(world, caster, buff, Some(caster), 1) {
         warn!(?caster, source, buff, "Native Frost proc buff refused");
+    }
+}
+
+fn hyperpyrexia_impact(world: &mut World, ctx: &combat::spell_cast::effects::EffectCtx, target: Entity, _: bool, damage: f32) {
+    if damage <= 0.0 || !matches!(ctx.spell.id, 222026 | 66196 | 195975)
+        || !is_frost(world, ctx.caster) || !auras::has_aura(world, ctx.caster, 456238) { return; }
+    let chance = world.resource::<SpellStore>().get(456238).and_then(|spell| spell.aura_options.as_ref()).expect("Hyperpyrexia proc chance").proc_chance as f32;
+    if random::random::<f32>() * 100.0 < chance {
+        let percent = spell_cast::scripts::script_effect_value(world, ctx.caster, 456238, 0);
+        super::marksmanship::bank_residual(world, ctx, target, 458169, percent, damage);
     }
 }
 
