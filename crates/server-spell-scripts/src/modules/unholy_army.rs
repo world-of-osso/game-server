@@ -24,7 +24,7 @@ struct PendingArmy {
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::NativeAfterCast(after_cast),
     SpellScriptHook::AfterCastUpdate(update),
-    SpellScriptHook::SummonInitialized(engage_lesser_ghoul),
+    SpellScriptHook::SummonInitialized(engage_melee_summon),
 ];
 
 fn after_cast(spell: u32) -> Option<AfterCastHook> {
@@ -79,11 +79,11 @@ fn summon_apocalypse_now_riders(world: &mut World, caster: Entity) {
     }
 }
 
-fn engage_lesser_ghoul(world: &mut World, actor: Entity) {
+fn engage_melee_summon(world: &mut World, actor: Entity) {
     let Some(summon) = world.get::<spell_cast::summon::SummonedCreature>(actor) else {
         return;
     };
-    if !matches!(summon.spell_id, LESSER_GHOUL | ARMY_GHOUL) {
+    if !matches!(summon.spell_id, LESSER_GHOUL | ARMY_GHOUL) && !HORSEMEN.contains(&summon.spell_id) {
         return;
     }
     let owner = summon.owner;
@@ -91,11 +91,11 @@ fn engage_lesser_ghoul(world: &mut World, actor: Entity) {
         .get::<combat::networking::CombatTarget>(owner)
         .and_then(|target| target.0)
     else {
-        warn!(?owner, "Army lesser ghoul has no selected target");
+        warn!(?owner, "Unholy melee summon has no selected target");
         return;
     };
-    // SimC76f8118 sc_death_knight.cpp3155–3211: the real lesser ghoul
-    // engages the owner's target using the shared summon melee chase.
+    // SimC76f8118 sc_death_knight.cpp3155–3211/4849–4855: the actual
+    // lesser ghoul or Horseman uses the shared summon melee chase.
     spell_cast::summon::start_melee_attack(world, actor, target);
 }
 
