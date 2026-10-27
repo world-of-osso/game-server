@@ -42,11 +42,24 @@ fn fixture() -> Harness {
     h
 }
 
-fn hit(h: &mut Harness, spell: u32) -> u32 {
-    let before = h.health(h.npc);
-    crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, spell, Some(h.npc), 1);
+fn hit_by(h: &mut Harness, actor: Entity, spell: u32) -> u32 {
+    let start = h.inbox.log.len();
+    crate::spell_cast::cast_triggered(h.app.world_mut(), actor, spell, Some(h.npc), 1);
     h.advance(1);
-    (before - h.health(h.npc)) as u32
+    h.inbox.log[start..]
+        .iter()
+        .filter(|event| {
+            event.source == Some(actor.to_bits())
+                && event.target == Some(h.npc.to_bits())
+                && event.spell_id == Some(spell)
+                && event.kind == CombatLogKind::Damage
+        })
+        .map(|event| event.amount as u32)
+        .sum()
+}
+
+fn hit(h: &mut Harness, spell: u32) -> u32 {
+    hit_by(h, h.caster, spell)
 }
 
 fn expected_heal(h: &Harness, damage: u32) -> u32 {
@@ -92,10 +105,6 @@ fn class_completeness_native_charred_warblades_accumulates_fire_damage_then_heal
         "heal waits for native 1000ms period"
     );
     h.advance(22);
-    eprintln!(
-        "charred test diagnostic first={first} second={second} expected={expected} log={:?}",
-        h.inbox.log
-    );
     assert_eq!(
         h.health(h.caster),
         500.0 + expected as f32,
@@ -144,10 +153,7 @@ fn class_completeness_native_charred_warblades_isolates_two_recipients() {
             source: AuraSource::KnownSpell,
         },
     );
-    let before = h.health(h.npc);
-    crate::spell_cast::cast_triggered(h.app.world_mut(), other, CHAOS_HIT, Some(h.npc), 1);
-    h.advance(1);
-    let other_damage = (before - h.health(h.npc)) as u32;
+    let other_damage = hit_by(&mut h, other, CHAOS_HIT);
     assert!(other_damage > 0);
     let expected_other = expected_heal(&h, other_damage);
     assert!(expected_other > 0);
