@@ -283,6 +283,8 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 ### Havoc literal rotation
 
+- Selected Volatile Instinct1272453 triggers native Demonsurge on every hard Metamorphosis and on Demonic only when it enters, rather than extends, Metamorphosis. Hard Meta uses native1238696's delay; Demonic uses native453323's delay (SimC76f8118 sc_demon_hunter.cpp5008–5012,9160–9166,12646–12660).
+
 - Selected Focused Hatred452405 scales native Demonsurge452416 damage by native effect0 minus effect1 per additional resolved enemy, for one through five enemies; six or more receive no bonus (SimC76f8118 sc_demon_hunter.cpp5608–5634).
 
 - Selected Exergy206476 grants native208628 before Hunt370965 and Vengeful Retreat198793 execute. Refresh adds the native buff duration to its remaining time, capped at30s (SimC76f8118 sc_demon_hunter.cpp2822–2841,5501–5504,8539–8541,10010–10013).
