@@ -13,7 +13,16 @@ const INFERNAL: u32 = 1122;
 const TALENT: u32 = 417234;
 const BUFF: u32 = 417282;
 
-pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::NativeAfterCast(after_cast)];
+pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::NativeAfterCast(after_cast),
+    SpellScriptHook::OwnsPolicyProc(owns_buff_proc),
+];
+
+fn owns_buff_proc(spell: u32) -> bool {
+    // The native broad proc hint must not remove the single charge before
+    // Chaos Bolt's normal stacked-use consumer spends one earned use.
+    spell == BUFF
+}
 
 fn after_cast(spell: u32) -> Option<AfterCastHook> {
     (spell == INFERNAL).then_some(earn_uses)
