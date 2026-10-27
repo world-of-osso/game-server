@@ -336,21 +336,46 @@ fn dk252_army_summons_abomination_with_cloud_and_melee() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(252, 1).unwrap();
     engage(&mut run);
-    literal_rotation::execution::execute(run.app.world_mut(), run.actor,
-        literal_rotation::execution::Execution::Spell(42650, run.actor, None)).unwrap();
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(42650, run.actor, None),
+    )
+    .unwrap();
     preparation::finish_pending_setup(&mut run).unwrap();
-    for _ in 0..400 { run.app.update(); }
+    for _ in 0..400 {
+        run.app.update();
+    }
     let actor = {
         let world = run.app.world_mut();
-        world.query::<(Entity, &shared::components::Npc, &crate::spell_cast::summon::SummonedCreature)>()
-            .iter(world).find_map(|(entity, npc, summon)|
-                (npc.template_id == 149555 && summon.owner == run.actor && summon.spell_id == 288853).then_some(entity))
+        world
+            .query::<(
+                Entity,
+                &shared::components::Npc,
+                &crate::spell_cast::summon::SummonedCreature,
+            )>()
+            .iter(world)
+            .find_map(|(entity, npc, summon)| {
+                (npc.template_id == 149555
+                    && summon.owner == run.actor
+                    && summon.spell_id == 288853)
+                    .then_some(entity)
+            })
             .expect("Army must summon its selected native Abomination")
     };
-    let events = &run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
     for spell in [None, Some(1244347)] {
-        assert!(events.iter().any(|e| e.source == Some(actor.to_bits()) && e.spell_id == spell
-            && e.kind == CombatLogKind::Damage && e.amount > 0), "actual Abomination must deal {spell:?} damage");
+        assert!(
+            events.iter().any(|e| e.source == Some(actor.to_bits())
+                && e.spell_id == spell
+                && e.kind == CombatLogKind::Damage
+                && e.amount > 0),
+            "actual Abomination must deal {spell:?} damage"
+        );
     }
 }
 
@@ -393,12 +418,28 @@ fn dk252_putrefy_triggers_selected_apocalypse_rune() {
     engage(&mut run);
     assert!(crate::auras::has_aura(run.app.world(), run.actor, 327087));
     for _ in 0..20 {
-        assert!(crate::spell_cast::try_cast_triggered(run.app.world_mut(), run.actor, 390220, Some(run.targets[0]), 1));
+        assert!(crate::spell_cast::try_cast_triggered(
+            run.app.world_mut(),
+            run.actor,
+            390220,
+            Some(run.targets[0]),
+            1
+        ));
     }
-    for _ in 0..120 { run.app.update(); }
-    let events = &run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
-    assert!(events.iter().any(|e| e.spell_id == Some(327093) && e.kind == CombatLogKind::Damage && e.amount > 0),
-        "selected Rune of the Apocalypse must produce native Pestilence on Putrefy impacts");
+    for _ in 0..120 {
+        run.app.update();
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    assert!(
+        events
+            .iter()
+            .any(|e| e.spell_id == Some(327093) && e.kind == CombatLogKind::Damage && e.amount > 0),
+        "selected Rune of the Apocalypse must produce native Pestilence on Putrefy impacts"
+    );
 }
 
 #[test]
@@ -701,18 +742,50 @@ fn dk252_blightburst_applies_and_extends_owned_diseases() {
     let mut run = prepare_literal(252, 1).unwrap();
     engage(&mut run);
     for (impact, plague) in [(1277016, 1240996), (390220, 191587)] {
-        assert!(crate::spell_cast::try_cast_triggered(run.app.world_mut(), run.actor, impact, Some(run.targets[0]), 1));
-        let expiry = |run: &Run| run.app.world().get::<crate::auras::ActiveAuras>(run.targets[0]).unwrap()
-            .iter().find(|a| a.caster == run.actor && a.spell_id == plague).unwrap().expires_at.unwrap();
+        assert!(crate::spell_cast::try_cast_triggered(
+            run.app.world_mut(),
+            run.actor,
+            impact,
+            Some(run.targets[0]),
+            1
+        ));
+        let expiry = |run: &Run| {
+            run.app
+                .world()
+                .get::<crate::auras::ActiveAuras>(run.targets[0])
+                .unwrap()
+                .iter()
+                .find(|a| a.caster == run.actor && a.spell_id == plague)
+                .unwrap()
+                .expires_at
+                .unwrap()
+        };
         let before = expiry(&run);
-        assert!(crate::spell_cast::try_cast_triggered(run.app.world_mut(), run.actor, impact, Some(run.targets[0]), 1));
+        assert!(crate::spell_cast::try_cast_triggered(
+            run.app.world_mut(),
+            run.actor,
+            impact,
+            Some(run.targets[0]),
+            1
+        ));
         let after = expiry(&run);
-        assert!(after - before >= 2.99, "Blightburst must extend disease {plague}");
+        assert!(
+            after - before >= 2.99,
+            "Blightburst must extend disease {plague}"
+        );
     }
-    let events = &run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
     for eruption in [1241171, 1241167] {
-        assert!(events.iter().any(|e| e.spell_id == Some(eruption) && e.kind == CombatLogKind::Damage && e.amount > 0),
-            "Blightburst must erupt active disease using native child {eruption}");
+        assert!(
+            events.iter().any(|e| e.spell_id == Some(eruption)
+                && e.kind == CombatLogKind::Damage
+                && e.amount > 0),
+            "Blightburst must erupt active disease using native child {eruption}"
+        );
     }
 }
 
@@ -864,10 +937,16 @@ fn dk252_literal_rotation_observes_sudden_doom_reaction() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_measurement(252, 1).unwrap();
     engage(&mut run);
-    crate::auras::apply_aura(run.app.world_mut(), &crate::auras::AuraApplication {
-        caster: run.actor, target: run.actor, spell_id: 81340, effect_mask: 15,
-        source: crate::auras::AuraSource::Cast,
-    });
+    crate::auras::apply_aura(
+        run.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: run.actor,
+            target: run.actor,
+            spell_id: 81340,
+            effect_mask: 15,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
     for _ in 0..50 {
         drive_player(&mut run).expect("literal Unholy must handle earned Sudden Doom reaction");
         run.app.update();

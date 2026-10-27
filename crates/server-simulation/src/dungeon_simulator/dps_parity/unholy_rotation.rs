@@ -131,9 +131,18 @@ impl Rotation {
         let equipment = Equipment::load(world, actor, &mut bindings)?;
         // SimC76f8118 player.cpp1017–1020: selected APL .react reads
         // actual Sudden Doom and Vampiric Strike acquisition with reaction delay.
-        reaction::configure(world, actor, reaction::ReactionSettings {
-            mean: 0.25, stddev: 0.05, offset: 0.1, nu: 0.15, maximum: 1.4,
-        }, &[81340, 433899])?;
+        reaction::configure(
+            world,
+            actor,
+            reaction::ReactionSettings {
+                mean: 0.25,
+                stddev: 0.05,
+                offset: 0.1,
+                nu: 0.15,
+                maximum: 1.4,
+            },
+            &[81340, 433899],
+        )?;
         literal_rotation::capture_fixture(world, actor, encounter)?;
         Ok(Self {
             driver: Driver::new(load_program(profile)?),
