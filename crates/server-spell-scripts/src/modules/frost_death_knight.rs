@@ -210,8 +210,14 @@ fn consume_rime(world: &mut World, caster: Entity, spell: &SpellInfo) {
     if !used_rime {
         return;
     }
-    // SimC76f8118 sc_death_knight.cpp11637–11665: an earned Rime HB
-    // adjusts ERW by native Frostbound Will effect1, then decrements Rime.
+    // SimC76f8118 sc_death_knight.cpp11630–11665: earned Rime HB grants
+    // Rage's native RP, extends active Breath, adjusts ERW, then spends Rime.
+    if auras::has_aura(world, caster, 377076)
+        && !spell_cast::try_cast_triggered(world, caster, 341725, Some(caster), 1)
+    {
+        warn!(?caster, "Native Rage of the Frozen Champion energize refused");
+    }
+    extend_breath(world, caster, 1);
     if auras::has_aura(world, caster, FROSTBOUND_WILL) {
         let milliseconds =
             spell_cast::scripts::script_effect_value(world, caster, FROSTBOUND_WILL, 0);
