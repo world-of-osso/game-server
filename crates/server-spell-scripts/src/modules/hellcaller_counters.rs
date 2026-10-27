@@ -1,7 +1,9 @@
 //! Shared Hellcaller producers and the native Blackened Soul counter clock.
 use super::combat;
 use bevy::prelude::*;
-use combat::auras::{ActiveAuras, AuraApplication, AuraInstance, AuraSource, RemoveReason};
+use combat::auras::{
+    ActiveAuras, AuraApplication, AuraInstance, AuraSource, RemoveReason, SpellModOp,
+};
 use combat::spell_cast::{
     effects::EffectCtx, script_registry::SpellScriptHook, scripts::AfterCastHook,
 };
@@ -80,6 +82,19 @@ fn native_base(world: &World, spell: u32, index: u8) -> f32 {
         .find(|effect| effect.index == index)
         .expect("Hellcaller native effect")
         .base_points
+}
+
+/// SimC76f8118 apply_affecting_aura: Alzzin's Iniquity1266803 eff#2 adds a
+/// flat PointsIndex0 mod to Malevolence430014 eff#1 (6→8 in the debug log).
+/// Only the per-effect points op applies; damage mods stay off the count.
+fn malevolence_stacks(world: &World, caster: Entity) -> u8 {
+    let spell = world
+        .resource::<SpellStore>()
+        .get(MALEVOLENCE)
+        .expect("Hellcaller native spell");
+    let base = native_base(world, MALEVOLENCE, 0);
+    let op = SpellModOp::points_index(0).expect("effect0 points op");
+    combat::auras::spell_mods::modify(world, caster, spell, op, base) as u8
 }
 
 fn apply_native_aura(world: &mut World, caster: Entity, target: Entity, spell: u32) {
@@ -183,7 +198,7 @@ fn grant_stacks(world: &mut World, caster: Entity, target: Entity, malevolence: 
     // SimC76f8118 actions5534–5577: ordinary1, Malevolence native amount;
     // its buff adds a separate1; the global PRD adds at most one native bonus.
     let gain = if malevolence {
-        native_base(world, MALEVOLENCE, 0) as u8
+        malevolence_stacks(world, caster)
     } else {
         roll_ordinary_stack_gain(world, caster)
     };
