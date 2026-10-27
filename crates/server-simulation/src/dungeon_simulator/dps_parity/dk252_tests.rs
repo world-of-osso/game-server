@@ -331,6 +331,30 @@ fn dk252_putrefy_ghoul_impacts_the_enemy() {
 }
 
 #[test]
+#[ignore = "requires native252 profile/traits and player actor"]
+fn dk252_army_summons_abomination_with_cloud_and_melee() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 1).unwrap();
+    engage(&mut run);
+    literal_rotation::execution::execute(run.app.world_mut(), run.actor,
+        literal_rotation::execution::Execution::Spell(42650, run.actor, None)).unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    for _ in 0..400 { run.app.update(); }
+    let actor = {
+        let world = run.app.world_mut();
+        world.query::<(Entity, &shared::components::Npc, &crate::spell_cast::summon::SummonedCreature)>()
+            .iter(world).find_map(|(entity, npc, summon)|
+                (npc.template_id == 149555 && summon.owner == run.actor && summon.spell_id == 288853).then_some(entity))
+            .expect("Army must summon its selected native Abomination")
+    };
+    let events = &run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
+    for spell in [None, Some(1244347)] {
+        assert!(events.iter().any(|e| e.source == Some(actor.to_bits()) && e.spell_id == spell
+            && e.kind == CombatLogKind::Damage && e.amount > 0), "actual Abomination must deal {spell:?} damage");
+    }
+}
+
+#[test]
 #[ignore = "requires private native252 profile/traits and player actor"]
 fn dk252_putrefy_impact_raises_native_magus() {
     let _seed = crate::random::seed_scope(70448);

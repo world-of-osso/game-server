@@ -54,6 +54,16 @@ const GUARDIAN_POLICIES: &[GuardianPolicy] = &[
         owner_spell_share: None,
         owner_attack_share: Some(0.7),
     },
+    // SimC76f8118 sc_death_knight.cpp5478–5488: the actual Abomination
+    // inherits its owner's melee attack power.
+    GuardianPolicy {
+        summons: &[288853],
+        entry: 149555,
+        spells: &[],
+        repeat_gcd: None,
+        owner_spell_share: None,
+        owner_attack_share: Some(2.34),
+    },
     // SimC76f8118 sc_death_knight.cpp3621–3649: ordinary and Army
     // lesser ghouls inherit owner melee AP; Army gets the 1.4 multiplier.
     GuardianPolicy {
