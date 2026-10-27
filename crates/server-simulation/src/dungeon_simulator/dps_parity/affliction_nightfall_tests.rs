@@ -266,3 +266,82 @@ fn affliction_nightfall_channel_uses_do_not_multiply_duration_reduction() {
         "all three real channels retain all four native ticks"
     );
 }
+
+#[test]
+#[ignore = "requires private265 profile and native70448 world DB"]
+fn affliction_grasp_keeps_channel_tick_cadence_when_bloodlust_starts() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_nightfall();
+    let actor = run.actor;
+    let target = run.targets[0];
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 1261153, Some(target), false)
+        .unwrap();
+    let initial_haste = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(actor)
+        .unwrap()
+        .haste_pct;
+    let interval = run
+        .app
+        .world()
+        .get::<shared::casting::CastState>(actor)
+        .unwrap()
+        .channel_tick_interval;
+    crate::auras::apply_aura(
+        run.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: actor,
+            target: actor,
+            spell_id: 2825,
+            effect_mask: u32::MAX,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    let mut frames = Vec::new();
+    let mut seen = 0;
+    for frame in 1..=120 {
+        run.app.update();
+        let count = run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .filter(|event| {
+                event.spell_id == Some(1261153)
+                    && event.periodic
+                    && event.kind == shared::protocol::CombatLogKind::Damage
+            })
+            .count();
+        if count > seen {
+            frames.push(frame);
+            seen = count;
+        }
+        if frames.len() == 4 {
+            break;
+        }
+    }
+    let boosted = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(actor)
+        .unwrap()
+        .haste_pct;
+    assert!(
+        boosted > initial_haste,
+        "Bloodlust must increase actual haste"
+    );
+    assert_eq!(
+        frames.len(),
+        4,
+        "the native channel must deliver four ticks: {frames:?}"
+    );
+    for pair in frames.windows(2) {
+        let elapsed = (pair[1] - pair[0]) as f64 * 0.05;
+        assert!(
+            (elapsed - interval).abs() <= 0.051,
+            "SimC action.cpp:2806–2809 snapshots channel haste: {frames:?}, interval {interval}"
+        );
+    }
+}
