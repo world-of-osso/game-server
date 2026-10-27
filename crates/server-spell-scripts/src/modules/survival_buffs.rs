@@ -32,7 +32,7 @@ pub(super) fn after_tip_impact(world: &mut World, caster: Entity) {
     }
 }
 
-fn grant_self_buff(world: &mut World, caster: Entity, spell: u32) {
+pub(super) fn grant_self_buff(world: &mut World, caster: Entity, spell: u32) {
     // Full native applications retain all effects, including Mongoose's label
     // modifiers; effect0-only priming would omit selected native payloads.
     if !spell_cast::try_cast_triggered(world, caster, spell, Some(caster), 1) {

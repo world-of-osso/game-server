@@ -9,6 +9,7 @@ use combat::spell_info::SpellInfo;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::BeforeProcLaunch(spend_tip),
+    SpellScriptHook::ChannelPeriodic(periodic_tick),
     SpellScriptHook::BeforeNativeOnCast(snapshot_shellshock_targets),
     SpellScriptHook::TargetDamageMultiplier(shellshock_multiplier),
     SpellScriptHook::LateAuraRegistration(register),
@@ -19,6 +20,28 @@ const TIP: u32 = 260286;
 const BOOMSTICK_TIP: u32 = 471536;
 const BOOMSTICK_DAMAGE: u32 = 1261215;
 const SHELLSHOCK: u32 = 1252931;
+const MONGOOSE_ROUNDS: u32 = 1253945;
+const MONGOOSE_FURY: u32 = 259388;
+
+fn periodic_tick(spell: u32, effect: u8) -> Option<combat::spell_cast::script_registry::ContextHitHook> {
+    (spell == BOOMSTICK && effect == 0).then_some(emit_tick)
+}
+
+fn emit_tick(world: &mut World, ctx: &combat::spell_cast::effects::EffectCtx<'_>, unit: Entity) {
+    // SimC76f8118 sc_hunter.cpp6333–6341: emit the existing native
+    // periodic child first; then grant selected stacks once per channel tick.
+    let child = ctx.spell.effects.iter().find(|effect| effect.index == 0)
+        .expect("native Boomstick periodic effect").trigger_spell;
+    assert_ne!(child, 0, "native Boomstick periodic child");
+    spell_cast::cast_triggered(world, ctx.caster, child, Some(unit), 1);
+    if !super::cast_relationships::has_talent(world, ctx.caster, MONGOOSE_ROUNDS) {
+        return;
+    }
+    let count = script_effect_value(world, ctx.caster, MONGOOSE_ROUNDS, 0) as u8;
+    for _ in 0..count {
+        super::survival_buffs::grant_self_buff(world, ctx.caster, MONGOOSE_FURY);
+    }
+}
 
 #[derive(Component)]
 struct ShellshockTargets(usize);
