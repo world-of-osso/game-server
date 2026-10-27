@@ -18,53 +18,6 @@ fn damage(run: &Run, spell: Option<u32>) -> Vec<CombatLogEvent> {
         .collect()
 }
 
-#[test]
-#[ignore = "requires prepared native spec577 player profile"]
-fn diag_havoc_annihilation_factors() {
-    use crate::spell_cast::effects::factor_capture::FactorCapture;
-    let _seed = crate::random::seed_scope(70_448);
-    let mut run = prepare_measurement(577, 1).unwrap();
-    let actor = run.actor;
-    let target = run.targets[0];
-    run.app.insert_resource(FactorCapture::new(
-        actor,
-        target,
-        227518,
-        "annihilation_damage_1",
-        12,
-    ));
-    engage(&mut run);
-    let mut observed = 0;
-    let mut states = Vec::new();
-    advance_combat_observed(&mut run, |run| {
-        let world = run.app.world();
-        let count = world.resource::<FactorCapture>().export()["captured_hits"]
-            .as_u64()
-            .unwrap();
-        if count > observed {
-            let aura = |id| crate::auras::has_aura(world, actor, id);
-            states.push(
-                json!({"captured_hits": count, "time": crate::spell_cast::now(world),
-                "meta": aura(162264), "exergy": aura(208628), "serrated": aura(390155),
-                "never_say_die": aura(427794), "blind_focus": aura(1272364),
-                "stats": format!("{:?}", world.get::<crate::stats::CharacterStats>(actor))}),
-            );
-            observed = count;
-        }
-    })
-    .unwrap();
-    let output =
-        json!({"capture": run.app.world().resource::<FactorCapture>().export(), "states": states});
-    let path = std::path::PathBuf::from(std::env::var("DPS_PARITY_OUTPUT").unwrap())
-        .join("annihilation-native-factors.json");
-    std::fs::write(&path, serde_json::to_vec_pretty(&output).unwrap()).unwrap();
-    assert!(
-        observed > 0,
-        "real literal Annihilation must produce captured impacts"
-    );
-    eprintln!("native annihilation factor capture: {}", path.display());
-}
-
 fn advance(run: &mut Run, frames: usize) {
     for _ in 0..frames {
         run.app.update();
