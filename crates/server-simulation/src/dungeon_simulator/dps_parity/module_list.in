@@ -91,6 +91,7 @@ mod devourer_immolation_tests;
 mod devourer_burning_tests;
 mod devourer_reaction_tests;
 mod devourer_devour_tests;
+mod devourer_fragment_stack_tests;
 mod devourer_focused_ray_tests;
 #[cfg(test)]
 mod devourer_drain_tests;
