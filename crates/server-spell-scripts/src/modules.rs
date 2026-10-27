@@ -187,6 +187,7 @@ register_modules! {
     havoc_hunt_damage: (5777, "modules/havoc_hunt_damage.rs"),
     havoc_onslaught: (5776, "modules/havoc/onslaught.rs"),
     havoc_recovery: (5772, "modules/havoc/recovery.rs"),
+    havoc_immolation_fury: (5778, "modules/havoc_immolation_fury.rs"),
     hellcaller_counters: (2666, "modules/hellcaller_counters.rs"),
     hellcaller_devil_fruit: (2675, "modules/hellcaller_devil_fruit.rs"),
     hellcaller_wither: (2665, "modules/hellcaller_wither.rs"),
