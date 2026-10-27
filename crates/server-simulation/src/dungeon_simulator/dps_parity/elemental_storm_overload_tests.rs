@@ -70,7 +70,13 @@ fn elemental_stormkeeper_empowers_real_lightning_overloads() {
     for spell in [45284, 45297] {
         let (ordinary, _) = sample(spell, false);
         let (empowered, percent) = sample(spell, true);
-        let expected = 1.0 + percent / 100.0;
+        // SimC explicitly sets Stormkeeper for Lightning Bolt Overload. Chain
+        // Overload relies on its native mask, which does not match this effect.
+        let expected = if spell == 45284 {
+            1.0 + percent / 100.0
+        } else {
+            1.0
+        };
         assert!(
             (empowered / ordinary - expected).abs() < 0.02,
             "spell{spell} native overload Stormkeeper: {empowered}/{ordinary} expected {expected}"
