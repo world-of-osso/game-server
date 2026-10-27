@@ -427,6 +427,29 @@ fn diag_demonology_fel_firebolt_factors() {
 }
 
 #[test]
+#[ignore = "requires private266 inputs; Hand of Guldan first Imp Gang Boss"]
+fn demonology_hand_of_guldan_empowers_first_actual_imp() {
+    use shared::protocol::CombatLogKind;
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(266, 1).unwrap();
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, 1250768));
+    crate::spell_cast::creature_cast(run.app.world_mut(), run.actor, 686, Some(run.targets[0]), false).unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    engage(&mut run);
+    run.app.world_mut().resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>().0.clear();
+    crate::spell_cast::creature_cast(run.app.world_mut(), run.actor, 105174, Some(run.targets[0]), false).unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    for _ in 0..20 { run.app.update(); }
+    let events = &run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
+    let imps: Vec<_> = events.iter().filter(|event| event.source == Some(run.actor.to_bits()) && event.spell_id == Some(104317) && event.kind == CombatLogKind::Summon)
+        .map(|event| Entity::from_bits(event.target.unwrap())).collect();
+    assert_eq!(imps.len(), 3, "the paid Hand must summon three actual native Imps");
+    let empowered: Vec<_> = imps.iter().map(|imp| crate::auras::has_aura(run.app.world(), *imp, 1250772)).collect();
+    // SimC76f8118 actions.cpp5716–5723 empowers only index zero of this Hand's group.
+    assert_eq!(empowered, vec![true, false, false], "ordered Imp group must receive native Gang Boss");
+}
+
+#[test]
 #[ignore = "requires private266 inputs; actual Implosion retirement and native explosion"]
 fn demonology_implosion_consumes_actual_imps_and_deals_native_damage() {
     let _seed = crate::random::seed_scope(70448);
