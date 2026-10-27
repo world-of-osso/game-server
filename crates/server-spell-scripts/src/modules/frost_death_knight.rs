@@ -234,12 +234,21 @@ fn frost_fever_runic_power(
     ctx: &spell_cast::effects::EffectCtx,
     _target: Entity,
 ) {
-    if ctx.spell.id != 55095 || !is_frost(world, ctx.caster) || !auras::has_aura(world, ctx.caster, 195621) {
+    if ctx.spell.id != 55095
+        || !is_frost(world, ctx.caster)
+        || !auras::has_aura(world, ctx.caster, 195621)
+    {
         return;
     }
-    let count = world.query::<&auras::ActiveAuras>().iter(world).filter(|active| {
-        active.iter().any(|aura| aura.spell_id == 55095 && aura.caster == ctx.caster)
-    }).count();
+    let count = world
+        .query::<&auras::ActiveAuras>()
+        .iter(world)
+        .filter(|active| {
+            active
+                .iter()
+                .any(|aura| aura.spell_id == 55095 && aura.caster == ctx.caster)
+        })
+        .count();
     if count == 0 {
         return;
     }

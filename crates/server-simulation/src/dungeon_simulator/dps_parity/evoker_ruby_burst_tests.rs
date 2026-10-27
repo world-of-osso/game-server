@@ -104,5 +104,8 @@ fn evoker_ruby_burst_unused_leaping_flames_heal_the_caster() {
         .count();
     // SimC76f8118 sc_evoker.cpp6936–6951: each Leaping Flames use left after the
     // single real enemy is hit executes a Living Flame heal on the caster.
-    assert_eq!(heals, 2, "two unused Leaping Flames must each heal the caster");
+    assert_eq!(
+        heals, 2,
+        "two unused Leaping Flames must each heal the caster"
+    );
 }

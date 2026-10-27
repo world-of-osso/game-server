@@ -352,21 +352,32 @@ fn frost_fever_actual_ticks_roll_runic_power() {
         super::super::engage(&mut run);
         super::super::advance_combat(&mut run).unwrap();
         let events = &run.app.world().resource::<ObservedCombatEvents>().0;
-        let ticks = events.iter().filter(|event| {
-            event.source == Some(run.actor.to_bits())
-                && event.spell_id == Some(55095)
-                && event.kind == CombatLogKind::Damage
-                && event.periodic
-        }).count();
-        let procs = events.iter().filter(|event| {
-            event.source == Some(run.actor.to_bits())
-                && event.spell_id == Some(195617)
-                && event.kind == CombatLogKind::Energize
-        }).count();
-        assert!(ticks >= 100, "actual Frost Fever needs enough ticks: {ticks}");
+        let ticks = events
+            .iter()
+            .filter(|event| {
+                event.source == Some(run.actor.to_bits())
+                    && event.spell_id == Some(55095)
+                    && event.kind == CombatLogKind::Damage
+                    && event.periodic
+            })
+            .count();
+        let procs = events
+            .iter()
+            .filter(|event| {
+                event.source == Some(run.actor.to_bits())
+                    && event.spell_id == Some(195617)
+                    && event.kind == CombatLogKind::Energize
+            })
+            .count();
+        assert!(
+            ticks >= 100,
+            "actual Frost Fever needs enough ticks: {ticks}"
+        );
         let rate = procs as f64 / ticks as f64;
-        assert!((minimum..maximum).contains(&rate),
-            "actual {targets}T Frost Fever proc rate {rate:.3} ({procs}/{ticks}) violates pinned chance");
+        assert!(
+            (minimum..maximum).contains(&rate),
+            "actual {targets}T Frost Fever proc rate {rate:.3} ({procs}/{ticks}) violates pinned chance"
+        );
     }
 }
 

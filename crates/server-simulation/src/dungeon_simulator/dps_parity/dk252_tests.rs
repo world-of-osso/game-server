@@ -144,14 +144,19 @@ fn dk252_lesser_ghoul_melee_inherits_live_owner_attack_power() {
         .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
         .0
         .iter()
-        .filter(|event| event.source == Some(ghoul.to_bits())
-            && event.target == Some(run.targets[0].to_bits())
-            && event.kind == CombatLogKind::Damage
-            && event.spell_id.is_none()
-            && event.amount > 0)
+        .filter(|event| {
+            event.source == Some(ghoul.to_bits())
+                && event.target == Some(run.targets[0].to_bits())
+                && event.kind == CombatLogKind::Damage
+                && event.spell_id.is_none()
+                && event.amount > 0
+        })
         .map(|event| event.amount)
         .collect();
-    assert!(!hits.is_empty(), "the real lesser ghoul must land melee hits");
+    assert!(
+        !hits.is_empty(),
+        "the real lesser ghoul must land melee hits"
+    );
     assert!(
         hits.iter().any(|hit| *hit > 100),
         "native ghoul swings must include the live owner's melee AP: {hits:?}"
