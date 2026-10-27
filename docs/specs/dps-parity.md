@@ -629,6 +629,10 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 - Spec267 landed Wither445474 and Immolate157736 ticks grant0.1 displayed Soul Shard through the shared native power/overflow pipeline. A critical tick rolls its native direct spell445468/348 effect1 chance for one additional fragment. Immune ticks do not fund shards; fully absorbed landed ticks remain eligible. Native PowerType metadata supplies raw units (SimC76f8118 `sc_warlock_actions.cpp1108–1117,4047–4059`, `sc_warlock_init.cpp1319,1443`).
 - The periodic registry forwards the actual critical result. Other specializations, including Affliction Wither, receive no Destruction funding; Agony's separate threshold RNG is outside this policy.
 
+### Diabolic Ritual initial timer
+
+- Selected Demonology Diabolic Ritual starts its native Overlord timer on in-combat Hand of Gul'dan payment and reduces it per paid shard (`sc_warlock_actions.cpp278–355`). Other spenders, Infernal Machine, Destruction, Art cycling and demon summons remain unimplemented.
+
 ### Demonology literal execution and alternative Tyrant
 
 - Actual owned Wild Imps supply native296553 availability while any remain. Ordinary196277 selects the native maximum from the pinned eligible demon pool, launches selected Imps by remaining Energy then spawn order, emits native196278 with Energy scaling only on the primary and retires the actual actors. Selected To Hell and Back derives replacement count from native1281511 and uses native279910/143622 with1250772/1281512, not fabricated actors. Source: pinned `sc_warlock_actions.cpp2980–3170` and `sc_warlock_pets.cpp919–985`.

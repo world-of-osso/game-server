@@ -278,6 +278,7 @@ register_modules! {
     unholy_putrefy: (2521, "modules/unholy_putrefy.rs"),
     unrelenting_onslaught: (714, "modules/unrelenting_onslaught.rs"),
     voltaic_blaze: (250, "modules/voltaic_blaze.rs"),
+    warlock_ritual: (2669, "modules/warlock_ritual.rs"),
     warlock_seed: (2659, "modules/warlock_seed.rs"),
     warrior: (40, "modules/warrior.rs"),
     windwalker_fof: (2690, "modules/windwalker_fof.rs"),
