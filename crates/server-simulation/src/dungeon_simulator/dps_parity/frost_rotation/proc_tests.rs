@@ -342,6 +342,34 @@ fn frost_exterminate_spender_deals_both_native_hits() {
 }
 
 #[test]
+#[ignore = "native Reaper's Mark explodes and earns Exterminate from actual damage"]
+fn frost_mark_explosion_earns_exterminate() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::protocol::CombatLogKind;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::super::prepare_measurement(251, 1).unwrap();
+    super::super::engage(&mut run);
+    assert!(auras::has_aura(run.app.world(), run.actor, 441378));
+    cast(&mut run, 439843);
+    assert!(auras::has_aura(run.app.world(), run.targets[0], 434765));
+    for _ in 0..500 {
+        super::super::drive_player(&mut run).unwrap();
+        run.app.update();
+    }
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0;
+    let explosion = events.iter().position(|event| {
+        event.source == Some(run.actor.to_bits())
+            && event.target == Some(run.targets[0].to_bits())
+            && event.spell_id == Some(436304)
+            && event.kind == CombatLogKind::Damage && event.amount > 0
+    }).expect("actual Mark must explode after real damaging hits or expiry");
+    assert!(events[explosion..].iter().any(|event| {
+        event.source == Some(run.actor.to_bits()) && event.spell_id == Some(441416)
+            && matches!(event.kind, CombatLogKind::AuraApplied | CombatLogKind::AuraRefreshed)
+    }), "actual explosion must earn selected Exterminate uses");
+}
+
+#[test]
 #[ignore = "native Breath ending restores its authored runes"]
 fn frost_breath_end_restores_runes() {
     use crate::spell_cast::test_harness::ObservedCombatEvents;
