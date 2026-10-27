@@ -244,6 +244,7 @@ register_modules! {
     subtlety_shadow: (420, "modules/subtlety_shadow.rs"),
     subtlety_techniques: (2610, "modules/subtlety_techniques.rs"),
     survival: (2550, "modules/survival.rs"),
+    survival_boomstick: (2557, "modules/survival_boomstick.rs"),
     survival_buffs: (2553, "modules/survival_buffs.rs"),
     survival_mastery: (2555, "modules/survival_mastery.rs"),
     survival_pet: (2552, "modules/survival_pet.rs"),

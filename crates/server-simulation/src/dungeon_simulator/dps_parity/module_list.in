@@ -339,6 +339,7 @@ mod spellslinger_hits_tests;
 mod subtlety_tests;
 mod survival_armaments_tests;
 mod survival_bomb_tests;
+mod survival_boomstick_tests;
 mod survival_buff_tests;
 mod survival_mark_tests;
 mod survival_mechanics_tests;

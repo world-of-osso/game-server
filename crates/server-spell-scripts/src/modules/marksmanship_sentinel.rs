@@ -54,13 +54,17 @@ fn roll_queued_tip_marks(world: &mut World) {
         return;
     };
     for (caster, target) in pending {
-        if !selected(world, caster, SENTINEL) {
-            continue;
-        }
-        let chance = read_survival_mark_chance(world, caster);
-        if combat::random::random::<f32>() * 100.0 < chance {
-            grant_mark(world, caster, target);
-        }
+        roll_survival_mark(world, caster, target);
+    }
+}
+
+pub(super) fn roll_survival_mark(world: &mut World, caster: Entity, target: Entity) {
+    if !selected(world, caster, SENTINEL) {
+        return;
+    }
+    let chance = read_survival_mark_chance(world, caster);
+    if combat::random::random::<f32>() * 100.0 < chance {
+        grant_mark(world, caster, target);
     }
 }
 
