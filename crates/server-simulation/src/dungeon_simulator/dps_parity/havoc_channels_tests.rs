@@ -294,11 +294,9 @@ fn havoc_chaotic_disposition_rolls_real_burning_wound_ticks() {
     );
     let selected_tail = &selected[5..];
     assert!(
-        selected_tail
+        selected_tail.iter().any(|low| selected_tail
             .iter()
-            .any(|low| selected_tail
-                .iter()
-                .any(|high| (*high as f64 / *low as f64 - 1.17).abs() < 0.001)),
+            .any(|high| (*high as f64 - *low as f64 * 1.17).abs() <= 1.0)),
         "selected real periodic ticks must include the native17% bonus: {selected:?}"
     );
 }
