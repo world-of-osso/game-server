@@ -639,9 +639,12 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 - Spec267 landed Wither445474 and Immolate157736 ticks grant0.1 displayed Soul Shard through the shared native power/overflow pipeline. A critical tick rolls its native direct spell445468/348 effect1 chance for one additional fragment. Immune ticks do not fund shards; fully absorbed landed ticks remain eligible. Native PowerType metadata supplies raw units (SimC76f8118 `sc_warlock_actions.cpp1108–1117,4047–4059`, `sc_warlock_init.cpp1319,1443`).
 - The periodic registry forwards the actual critical result. Other specializations, including Affliction Wither, receive no Destruction funding; Agony's separate threshold RNG is outside this policy.
 
-### Diabolic Ritual initial timer
+### Diabolic Ritual, Demonic Art and Ruination
 
-- Selected Demonology Diabolic Ritual starts its native Overlord timer on in-combat Hand of Gul'dan payment and reduces it per paid shard (`sc_warlock_actions.cpp278–355`). Other spenders, Infernal Machine, Destruction, Art cycling and demon summons remain unimplemented.
+- Selected Demonology Diabolic Ritual starts on in-combat Hand of Gul'dan payment and shortens the held ritual by native effect1 seconds per paid shard (`sc_warlock_actions.cpp278–355`). The first ritual of an encounter is uniform; each ritual's natural end selects the next Overlord→Mother of Chaos→Pit Lord ritual (`sc_warlock_init.cpp927–931,1750`).
+- A ritual's natural end grants its native Demonic Art after a gauss(200ms, 15ms) delay, replacing any held Art without summoning (`sc_warlock_init.cpp857–888`). A Hand whose cast started with the Art held, or any Ruination, consumes it. Consumption or expiry in combat summons that Art's native demon (`sc_warlock_init.cpp897–925`).
+- The Mother of Chaos summon grants native Infernal Bolt433891 with selected Secrets of the Coven. The Pit Lord summon grants native Ruination433885 with selected Ruination (`sc_warlock_actions.cpp5445–5481`). Each replacement cast consumes one stack of its buff. Ruination's primary impact drops the native three-shard Hand meteor and its three Wild Imps after gauss(395ms, 35ms) (`sc_warlock_actions.cpp5262–5333`).
+- Infernal Machine, other ritual spenders, Destruction, Diabolic Oculi and the demons' own actions remain unimplemented.
 
 ### Demonology literal execution and alternative Tyrant
 
