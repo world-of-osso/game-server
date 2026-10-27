@@ -342,6 +342,23 @@ fn frost_exterminate_spender_deals_both_native_hits() {
 }
 
 #[test]
+#[ignore = "native Frost Reaper's Mark uses only its Frost direct hit"]
+fn frost_reapers_mark_deals_one_native_direct_hit() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::protocol::CombatLogKind;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::super::prepare_literal(251, 1).unwrap();
+    super::super::engage(&mut run);
+    cast(&mut run, 439843);
+    let hits = run.app.world().resource::<ObservedCombatEvents>().0.iter().filter(|event| {
+        event.source == Some(run.actor.to_bits()) && event.target == Some(run.targets[0].to_bits())
+            && event.spell_id == Some(439843) && event.kind == CombatLogKind::Damage
+            && event.amount > 0
+    }).count();
+    assert_eq!(hits, 1, "a real Frost Mark must use only its Frost damage effect");
+}
+
+#[test]
 #[ignore = "actual Obliterate impacts earn Frostreaper damage"]
 fn frost_frostreaper_follows_real_obliterate_and_frost_strike() {
     use crate::spell_cast::test_harness::ObservedCombatEvents;
