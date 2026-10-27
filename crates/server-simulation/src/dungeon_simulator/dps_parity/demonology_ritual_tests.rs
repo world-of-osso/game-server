@@ -239,8 +239,14 @@ fn demon_damage_with(summon: u32, damage: u32, ritual: bool) -> (Run, Vec<i32>) 
         .world_mut()
         .entity_mut(run.actor)
         .insert(crate::networking::CombatTarget(Some(run.targets[0])));
-    crate::spell_cast::creature_cast(run.app.world_mut(), run.actor, summon, Some(run.actor), true)
-        .expect("native Diabolist summon must be admitted");
+    crate::spell_cast::creature_cast(
+        run.app.world_mut(),
+        run.actor,
+        summon,
+        Some(run.actor),
+        true,
+    )
+    .expect("native Diabolist summon must be admitted");
     update(&mut run, 200);
     let summoned: Vec<_> = events(&run, CombatLogKind::Summon, summon)
         .iter()
@@ -268,7 +274,11 @@ fn demon_damage_with(summon: u32, damage: u32, ritual: bool) -> (Run, Vec<i32>) 
 fn demonology_overlord_casts_one_wicked_cleave() {
     // SimC76f8118 pets.cpp2574–2697: one charge, then exactly one Wicked Cleave.
     let (_, hits) = demon_damage(428571, 432120);
-    assert_eq!(hits.len(), 1, "Overlord must cleave its target exactly once: {hits:?}");
+    assert_eq!(
+        hits.len(),
+        1,
+        "Overlord must cleave its target exactly once: {hits:?}"
+    );
 }
 
 #[test]
@@ -276,7 +286,11 @@ fn demonology_overlord_casts_one_wicked_cleave() {
 fn demonology_mother_of_chaos_channels_chaos_salvo() {
     // pets.cpp2717–2790: one channeled Chaos Salvo whose ticks launch native432596.
     let (_, hits) = demon_damage(428565, 432596);
-    assert!(hits.len() >= 15, "Chaos Salvo ticks must hit the target: {}", hits.len());
+    assert!(
+        hits.len() >= 15,
+        "Chaos Salvo ticks must hit the target: {}",
+        hits.len()
+    );
 }
 
 #[test]
@@ -296,7 +310,10 @@ fn demonology_diabolic_ritual_scales_demon_damage() {
     let (_, without) = demon_damage_with(434400, 434404, false);
     // Crit rolls diverge between runs; compare each run's smallest (noncritical) tick.
     let ratio = *with.iter().min().unwrap() as f64 / *without.iter().min().unwrap() as f64;
-    assert!((0.63..=0.65).contains(&ratio), "Demonology demon damage ratio {ratio}");
+    assert!(
+        (0.63..=0.65).contains(&ratio),
+        "Demonology demon damage ratio {ratio}"
+    );
 }
 
 #[test]

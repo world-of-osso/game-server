@@ -52,7 +52,10 @@ fn demonology_owner(world: &World, demon: Entity) -> Option<Entity> {
 // pets.cpp2639–2652/2730–2743/2825–2838: Demonology multiplies each demon's
 // damage by 1 + native Diabolic Ritual effect3.
 fn demonology_multiplier(world: &World, caster: Entity, _: Entity, spell: &SpellInfo) -> f32 {
-    if !matches!(spell.id, WICKED_CLEAVE | CHAOS_SALVO_DAMAGE | FELSEEKER_DAMAGE) {
+    if !matches!(
+        spell.id,
+        WICKED_CLEAVE | CHAOS_SALVO_DAMAGE | FELSEEKER_DAMAGE
+    ) {
         return 1.0;
     }
     demonology_owner(world, caster).map_or(1.0, |owner| {
