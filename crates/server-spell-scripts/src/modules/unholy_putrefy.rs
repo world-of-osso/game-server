@@ -1,7 +1,8 @@
 //! Putrefy's real summoned ghoul travels before delivering its native payload.
 use super::combat;
 use bevy::prelude::*;
-use combat::spell_cast::{script_registry::SpellScriptHook, summon};
+use combat::class_progression::TraitLoadout;
+use combat::spell_cast::{effects::EffectCtx, script_registry::SpellScriptHook, summon};
 
 const PUTREFY_GHOUL: u32 = 1277098;
 const PUTREFY_SINGLE: u32 = 1277016;
@@ -9,16 +10,69 @@ const PUTREFY_AREA: u32 = 390220;
 const LORD_OF_THE_DEAD: u32 = 1256813;
 const MAGUS_SUMMON: u32 = 1242294;
 const LORD_SUMMON: u32 = 1292072;
+const DREAD_PLAGUE: u32 = 1240996;
+const FORBIDDEN_KNOWLEDGE: u32 = 1256566;
 
 #[derive(Component)]
 struct PutrefyImpacted;
+
+#[derive(Component, Default)]
+struct ForbiddenKnowledgeAttempts(u32);
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::SummonInitialized(start_putrefy_ghoul),
     SpellScriptHook::SummonInitialized(set_lord_magus_lifetime),
     SpellScriptHook::SummonInitialized(convert_magi_to_lord),
     SpellScriptHook::SummonExpired(raise_magus),
+    SpellScriptHook::PeriodicDamageFinished(roll_forbidden_knowledge),
 ];
+
+fn roll_forbidden_knowledge(world: &mut World, ctx: &EffectCtx<'_>) {
+    if ctx.spell.id != DREAD_PLAGUE
+        || !world.get::<TraitLoadout>(ctx.caster).is_some_and(|traits| {
+            traits
+                .active_talent_spells()
+                .any(|talent| talent.spell_id == FORBIDDEN_KNOWLEDGE)
+        })
+    {
+        return;
+    }
+    // SimC76f8118 sc_death_knight.cpp7979–7980/14832–14833: each
+    // Dread Plague tick rolls the selected native effect3 through PRD.
+    let chance = f64::from(combat::spell_cast::scripts::script_effect_value(
+        world,
+        ctx.caster,
+        FORBIDDEN_KNOWLEDGE,
+        2,
+    )) / 100.0;
+    let constant = combat::random::accumulated_proc_constant(chance);
+    if world
+        .get::<ForbiddenKnowledgeAttempts>(ctx.caster)
+        .is_none()
+    {
+        world
+            .entity_mut(ctx.caster)
+            .insert(ForbiddenKnowledgeAttempts::default());
+    }
+    let mut attempts = world
+        .get_mut::<ForbiddenKnowledgeAttempts>(ctx.caster)
+        .unwrap();
+    attempts.0 = attempts.0.saturating_add(1);
+    let success = combat::random::random::<f64>() < constant * f64::from(attempts.0);
+    if !success {
+        return;
+    }
+    attempts.0 = 0;
+    if !combat::spell_cast::try_cast_triggered(
+        world,
+        ctx.caster,
+        PUTREFY_GHOUL,
+        Some(ctx.caster),
+        1,
+    ) {
+        warn!(caster = ?ctx.caster, "Forbidden Knowledge Putrefy ghoul summon refused");
+    }
+}
 
 fn start_putrefy_ghoul(world: &mut World, actor: Entity) {
     let Some(summon) = world.get::<summon::SummonedCreature>(actor) else {

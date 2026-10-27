@@ -37,6 +37,8 @@ const fn order_modules<const N: usize>(
     ordered
 }
 
+pub use devourer_metamorphosis::devourer_base_drain_ps;
+
 register_modules! {
     affliction_absolute_corruption: (2660, "modules/affliction_absolute_corruption.rs"),
     affliction_agony: (2650, "modules/affliction_agony.rs"),
@@ -100,22 +102,26 @@ register_modules! {
     destruction_roaring_blaze: (2678, "modules/destruction_roaring_blaze.rs"),
     devastation: (10, "modules/devastation.rs"),
     devourer_void_ray: (1480, "modules/devourer_void_ray.rs"),
+    devourer_voidblade: (1480, "modules/devourer_voidblade.rs"),
     devourer_devour: (1480, "modules/devourer_devour.rs"),
     devourer_fragment_heal: (1480, "modules/devourer_fragment_heal.rs"),
     devourer_immolation: (1481, "modules/devourer_immolation.rs"),
     devourer_metamorphosis: (1483, "modules/devourer_metamorphosis.rs"),
     devourer_reap: (1480, "modules/devourer_reap.rs"),
+    devourer_reapers_toll: (1480, "modules/devourer_reapers_toll.rs"),
     echo_policies: (1001, "modules/echo_policies.rs"),
     elemental: (1000, "modules/elemental.rs"),
     elemental_ascendance: (220, "modules/elemental_ascendance.rs"),
     elemental_communication: (2620, "modules/elemental_communication.rs"),
     elemental_fellowship: (2624, "modules/elemental_fellowship.rs"),
+    elemental_flow_overload: (2640, "modules/elemental_flow_overload.rs"),
     elemental_fusion: (2621, "modules/elemental_fusion.rs"),
     elemental_lava_overload: (2626, "modules/elemental_lava_overload.rs"),
     elemental_offering: (2623, "modules/elemental_offering.rs"),
     elemental_overload_ascendance: (2627, "modules/elemental_overload_ascendance.rs"),
     elemental_primals: (2628, "modules/elemental_primals.rs"),
     elemental_quake_overload: (2625, "modules/elemental_quake_overload.rs"),
+    elemental_storm_overload: (2629, "modules/elemental_storm_overload.rs"),
     elemental_tier: (2622, "modules/elemental_tier.rs"),
     empower_evoker: (1000, "modules/empower_evoker.rs"),
     enhancement: (1000, "modules/enhancement.rs"),
@@ -300,6 +306,13 @@ mod ordering_tests {
 
     #[derive(Resource, Default)]
     struct Calls(Vec<&'static str>);
+
+    #[test]
+    fn devourer_base_drain_before_meta_uses_source_initial_rate() {
+        let mut world = World::new();
+        let actor = world.spawn_empty().id();
+        assert!((devourer_base_drain_ps(&world, actor) - 16.4).abs() < 0.0001);
+    }
 
     fn first(world: &mut World, _: Entity, _: u32, _: u8) {
         world.resource_mut::<Calls>().0.push("first");

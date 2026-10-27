@@ -50,6 +50,18 @@ fn native_value(run: &Run, spell: u32, index: u8) -> f32 {
         .base_points
 }
 
+/// SimC effectN(n).base_value() after affecting auras: TC per-effect point mods.
+fn native_points(run: &Run, spell: u32, index: u8) -> f32 {
+    let world = run.app.world();
+    let info = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(spell)
+        .unwrap();
+    let op = crate::auras::SpellModOp::points_index(index).unwrap();
+    let base = native_value(run, spell, index);
+    crate::auras::spell_mods::modify(world, run.actor, info, op, base)
+}
+
 fn apply_counter_state(run: &mut Run, stacks: u8) {
     // Explicit native SPELLVALUE_AURA_STACK precondition, not an invented producer.
     let mut spell = run
@@ -195,9 +207,10 @@ fn hellcaller_ua_without_owned_wither_creates_no_counter_or_collapse() {
 
 #[test]
 #[ignore = "requires private265 native player inputs"]
-fn hellcaller_malevolence_adds_native_six_only_to_owned_wither_and_grants_its_buff() {
-    // SimC76f8118 actions1295–1317,5534–5611: native effect0 grants6;
-    // Malevolence does not independently roll the ordinary collapse chance.
+fn hellcaller_malevolence_adds_modded_native_stacks_only_to_owned_wither_and_grants_its_buff() {
+    // SimC76f8118 actions1295–1317,5534–5611: Malevolence grants its modded
+    // effect0 and does not roll the ordinary collapse chance; its stack-gain
+    // Seeds check starts collapse at the gain (debug70448 at123.950: 9 stacks).
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(265, 3).unwrap();
     engage(&mut run);
@@ -205,8 +218,13 @@ fn hellcaller_malevolence_adds_native_six_only_to_owned_wither_and_grants_its_bu
     for target in &targets[..2] {
         apply(&mut run, *target, WITHER);
     }
-    let expected = 1 + native_value(&run, 430014, 0) as u8;
-    assert_eq!(expected, 7, "native70448 Malevolence fixture");
+    // SimC76f8118 debug: selected Alzzin's Iniquity1266803 eff#2 raises
+    // Malevolence430014 eff#1 6→8 ("Dot wither incremented by 8").
+    let expected = 1 + native_points(&run, 430014, 0) as u8;
+    assert_eq!(
+        expected, 9,
+        "native70448 Malevolence with its point modifiers"
+    );
     // The real driver resolves native TraitDefinition122451's visible action.
     // execute() takes an already resolved ID;430014 is only the talent endpoint.
     let actual = literal_rotation::execution::resolve_action(run.app.world(), run.actor, 430014)
@@ -219,18 +237,21 @@ fn hellcaller_malevolence_adds_native_six_only_to_owned_wither_and_grants_its_bu
         literal_rotation::execution::Execution::Spell(actual, run.actor, Some(targets[0])),
     )
     .unwrap();
-    preparation::finish_pending_setup(&mut run).unwrap();
+    // One frame: the queued instant effects land before the first 1s collapse tick.
+    run.app.update();
     for target in &targets[..2] {
         assert_eq!(
             owned(&run, *target, WITHER).unwrap().0,
             expected,
             "actual Malevolence must grant the native stack amount"
         );
-        assert!(
-            owned(&run, *target, COLLAPSE).is_none(),
-            "7stacks/full health must not collapse from Malevolence alone"
+        assert_eq!(
+            owned(&run, *target, COLLAPSE).map(|aura| aura.0),
+            Some(expected),
+            "the Seeds stack gate starts collapse with the granted budget"
         );
     }
+    preparation::finish_pending_setup(&mut run).unwrap();
     assert!(owned(&run, targets[2], WITHER).is_none());
     assert!(
         owned(&run, run.actor, 442726).is_some(),
