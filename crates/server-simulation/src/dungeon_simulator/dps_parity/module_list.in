@@ -228,6 +228,7 @@ mod outlaw_pistol_tests;
 mod outlaw_resource_tests;
 mod outlaw_tests;
 mod outlaw_trickster_tests;
+mod outlaw_zero_in_tests;
 mod owner_cooldown_tests;
 mod pack_leader_bear_lifetime_tests;
 mod pack_leader_fixture_tests;
