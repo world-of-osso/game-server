@@ -71,15 +71,3 @@ pub(crate) fn power_stats(world: &World, pet: Entity) -> Option<(f32, f32)> {
         .expect("native ghoul stat policy");
     Some((stats.spell_power, stats.attack_power))
 }
-
-pub(crate) fn order_on_owner_cast(world: &mut World, owner: Entity) {
-    if super::owner_class(world, owner) != Some(6) {
-        return;
-    }
-    let target = world
-        .get::<crate::networking::CombatTarget>(owner)
-        .and_then(|target| target.0);
-    if target.is_some() {
-        crate::pet_control::order_companion_pet(world, owner, target);
-    }
-}

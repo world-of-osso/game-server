@@ -36,9 +36,3 @@ fn summon_ghoul(world: &mut World, caster: Entity, spell: &SpellInfo) {
     };
     crate::hunter_pet::effect_summon_pet(world, &context, &effect);
 }
-
-pub(super) fn on_cast(world: &mut World, caster: Entity) {
-    // pet.cpp145–150/sc_death_knight.cpp3409–3438: native pet follows the
-    // owner's selected enemy and executes its actual autocast bar.
-    crate::hunter_pet::death_knight::order_on_owner_cast(world, caster);
-}

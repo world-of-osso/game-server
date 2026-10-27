@@ -217,7 +217,6 @@ pub(super) fn on_cast(world: &mut World, caster: Entity, spell_id: u32, depth: u
         _ => {}
     }
     script_registry::after_native_on_cast(world, caster, spell_id, depth);
-    unholy_pet::on_cast(world, caster);
 }
 
 /// A registered emission replaces only that parent's native periodic trigger.
