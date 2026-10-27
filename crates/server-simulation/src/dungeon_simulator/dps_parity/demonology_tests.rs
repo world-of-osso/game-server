@@ -2,12 +2,14 @@
 use super::*;
 
 #[test]
-#[ignore = "requires private266 inputs; Inner Demons actual combat-start summons"]
-fn demonology_inner_demons_summons_at_native_unhasted_cadence() {
+#[ignore = "requires private266 inputs; Inner Demons in sustained native combat"]
+fn demonology_inner_demons_summons_in_sustained_combat() {
     use shared::protocol::CombatLogKind;
     let _seed = crate::random::seed_scope(70_448);
     let mut run = prepare_literal(266, 1).unwrap();
-    assert!(crate::auras::has_aura(run.app.world(), run.actor, 267216));
+    let actor = run.actor;
+    let target = run.targets[0];
+    assert!(crate::auras::has_aura(run.app.world(), actor, 267216));
     for _ in 0..260 {
         run.app.update();
     }
@@ -18,21 +20,32 @@ fn demonology_inner_demons_summons_at_native_unhasted_cadence() {
             .0
             .iter()
             .filter(|event| {
-                event.source == Some(run.actor.to_bits())
+                event.source == Some(actor.to_bits())
                     && event.spell_id == Some(279910)
                     && event.kind == CombatLogKind::Summon
             })
             .count()
     };
     assert_eq!(count(&run), 0, "Inner Demons must not summon before combat");
-    crate::combat_refs::set_in_combat_with(run.app.world_mut(), run.actor, run.targets[0]);
-    for _ in 0..480 {
+    crate::combat_refs::set_in_combat_with(run.app.world_mut(), actor, target);
+    for tick in 0..480 {
+        if tick % 60 == 0 {
+            crate::spell_cast::creature_cast(run.app.world_mut(), actor, 686, Some(target), false)
+                .expect("real Shadow Bolt keeps the dummy combat reference active");
+        }
         run.app.update();
     }
+    assert!(
+        run.app
+            .world()
+            .get::<shared::components::CombatStatus>(actor)
+            .is_some_and(|status| status.0),
+        "actor must remain in real combat"
+    );
     assert_eq!(
         count(&run),
         2,
-        "a uniform initial phase and 12-second native period must summon twice in 24 seconds"
+        "native unhasted 12s cadence must summon twice in 24s"
     );
 }
 
@@ -928,6 +941,47 @@ fn demonology_exhausted_imps_trigger_isolated_implosion_on_three_targets() {
 }
 
 #[test]
+#[ignore = "requires private266 inputs; paid Hand starts Diabolic Ritual"]
+fn demonology_paid_hand_starts_and_shortens_diabolic_ritual() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(266, 1).unwrap();
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, 428514));
+    for _ in 0..3 {
+        crate::spell_cast::creature_cast(
+            run.app.world_mut(),
+            run.actor,
+            686,
+            Some(run.targets[0]),
+            false,
+        )
+        .unwrap();
+        preparation::finish_pending_setup(&mut run).unwrap();
+    }
+    engage(&mut run);
+    crate::spell_cast::creature_cast(
+        run.app.world_mut(),
+        run.actor,
+        105174,
+        Some(run.targets[0]),
+        false,
+    )
+    .unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    let world = run.app.world();
+    let aura = world
+        .get::<crate::auras::ActiveAuras>(run.actor)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 431944)
+        .expect("paid Hand must start native Overlord ritual");
+    let remaining = aura.expires_at.unwrap() - crate::spell_cast::now(world);
+    assert!(
+        (16.8..=17.1).contains(&remaining),
+        "three paid shards reduce native 20s ritual to 17s, got {remaining}"
+    );
+}
+
+#[test]
 #[ignore = "requires private266 inputs; Hand of Guldan first Imp Gang Boss"]
 fn demonology_hand_of_guldan_empowers_first_actual_imp() {
     use shared::protocol::CombatLogKind;
@@ -1159,6 +1213,74 @@ fn summon_native_guardian(run: &mut Run, root: u32) -> Entity {
         run.app.update();
     }
     panic!("native guardian root{root} must spawn within five seconds");
+}
+
+#[test]
+#[ignore = "requires private266 inputs; Carnivorous Stalkers actual melee proc"]
+fn demonology_dreadstalker_melee_earns_extra_dreadbites() {
+    use shared::protocol::CombatLogKind;
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(266, 1).unwrap();
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, 386194));
+    engage(&mut run);
+    run.app
+        .world_mut()
+        .entity_mut(run.actor)
+        .insert(crate::networking::CombatTarget(Some(run.targets[0])));
+    for _ in 0..20 {
+        crate::spell_cast::creature_cast(
+            run.app.world_mut(),
+            run.actor,
+            193331,
+            Some(run.actor),
+            true,
+        )
+        .unwrap();
+    }
+    let dogs: Vec<_> = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .iter()
+        .filter(|event| {
+            event.source == Some(run.actor.to_bits())
+                && event.spell_id == Some(193331)
+                && event.kind == CombatLogKind::Summon
+        })
+        .map(|event| event.target.unwrap())
+        .collect();
+    assert_eq!(dogs.len(), 20);
+    for _ in 0..300 {
+        run.app.update();
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    let swings = events
+        .iter()
+        .filter(|event| {
+            event.source.is_some_and(|source| dogs.contains(&source))
+                && event.spell_id.is_none()
+                && event.kind == CombatLogKind::Damage
+        })
+        .count();
+    let bites = events
+        .iter()
+        .filter(|event| {
+            event.source.is_some_and(|source| dogs.contains(&source))
+                && event.spell_id == Some(271971)
+                && event.kind == CombatLogKind::CastSuccess
+        })
+        .count();
+    assert!(swings > 0, "actual Dreadstalkers must melee");
+    assert!(
+        bites > dogs.len(),
+        "selected Carnivorous Stalkers must earn extra real Dreadbites: dogs={} swings={swings} bites={bites}",
+        dogs.len()
+    );
 }
 
 fn summon_native_dreadstalker(run: &mut Run) -> Entity {

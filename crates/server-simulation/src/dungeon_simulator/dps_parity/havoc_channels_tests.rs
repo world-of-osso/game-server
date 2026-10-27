@@ -163,6 +163,61 @@ fn havoc_chaos_theory_dance_grants_buff_and_offhand_consumes_it_for_refund() {
 
 #[test]
 #[ignore = "requires prepared native spec577 player profile"]
+fn havoc_chaos_theory_real_dance_grants_random_strike_critical_chance() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(577, 1).unwrap();
+    havoc_tests::earn_havoc_fury(&mut run, 80.0);
+    let actor = run.actor;
+    let target = run.targets[0];
+    cast(&mut run, 188499, true);
+    preparation::finish_pending_setup(&mut run).unwrap();
+    assert!(
+        crate::auras::has_aura(run.app.world(), actor, 390195),
+        "real Blade Dance grants Chaos Theory"
+    );
+    run.app
+        .world_mut()
+        .entity_mut(actor)
+        .remove::<crate::combat::AutoAttack>();
+    run.app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(actor)
+        .unwrap()
+        .crit_pct = 0.0;
+    for _ in 0..80 {
+        crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 222031, Some(target), 1);
+    }
+    let hits = damage(&run, Some(222031));
+    assert_eq!(hits.len(), 80, "real Chaos Strike main-hand hits must land");
+    let critical = hits.iter().filter(|hit| hit.crit).count();
+    assert!(
+        critical > 0 && critical < 80,
+        "Chaos Theory must grant a non-guaranteed crit chance, got {critical}/80"
+    );
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        actor,
+        crate::auras::RemoveReason::Consumed,
+        |aura| aura.spell_id == 390195 && aura.caster == actor,
+    );
+    run.app
+        .world_mut()
+        .resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .clear();
+    for _ in 0..80 {
+        crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 222031, Some(target), 1);
+    }
+    let baseline = damage(&run, Some(222031));
+    assert_eq!(baseline.len(), 80);
+    assert!(
+        baseline.iter().all(|hit| !hit.crit),
+        "without Chaos Theory and with zero base crit, strikes must not crit"
+    );
+}
+
+#[test]
+#[ignore = "requires prepared native spec577 player profile"]
 fn havoc_native_fragment_pickup_consumes_the_selected_fragment() {
     use server::soul_fragments::{self, FragmentFilter, FragmentKind, PickupMode};
     let _seed = crate::random::seed_scope(70_448);

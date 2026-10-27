@@ -336,7 +336,7 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 - Native Eye Beam198013 and Gaze452497 apply aura33 at −200% movement speed during the channel. Preserve that self-slow, Vengeful Retreat's real displacement and beam range: a target outside the cone range misses ticks until the channel ends and the actor can return. SimC76f8118 `sc_demon_hunter.cpp`1551–1611,8539–8620 models Retreat's return as an out-of-melee timer rather than that physical trajectory; this can produce a parity difference.
 
-- Selected Chaos Theory389687 grants native390195 on Blade Dance/Death Sweep. Its native proc modifier applies to Chaos Strike/Annihilation's off-hand refund roll; that off-hand execution consumes the buff whether or not a refund occurs (SimC76f8118 sc_demon_hunter.cpp7234–7237,7481–7515).
+- Selected Chaos Theory389687 grants native390195 on Blade Dance/Death Sweep. Each affected damage action samples an additive crit-chance bonus between native talent effect0 and effect1; the buff's native proc modifier applies to Chaos Strike/Annihilation's off-hand refund roll. That off-hand execution consumes the buff whether or not a refund occurs (SimC76f8118 sc_demon_hunter.cpp2098–2103,2413–2420,7234–7237,7481–7515).
 
 - Demon Hunter soul fragments retain their type, position, activation and expiry. The literal `pick_up_fragment` action selects a live fragment by its source mode and type, rechecks its condition at arrival, then consumes it through the spec's native payload. Demonic Appetite rolls native206478 on real Havoc Chaos Strike/Annihilation execution (SimC76f8118 sc_demon_hunter.cpp1656–1908,5069–5325,7579–7608).
 
@@ -541,6 +541,7 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 ### Controlled Imp inheritance
 
+- The controlled Imp (native CreatureFamily23) engages its target for Firebolt but never starts auto-attack. Other controlled demons keep their melee. No 70448 DB2 field marks caster pets, so the native family selects the rule (SimC76f8118 `sc_warlock_pets.cpp360–385`; Felhunter/Voidwalker/Felguard melee at 342/431/503).
 - The actual controlled Imp416 inherits live owner spell power at5.625 for SP and2.8125 for AP (SimC76f8118 `sc_warlock_pets.cpp372–375`). Controlled Sayaad1863 inherits live owner spell power at5.175 for SP and2.565 for AP, including melee AP (`sc_warlock_pets.cpp421–430`). Preserve native spell coefficients, UNIT_PET identity, pet orders, stance, costs and storage. Do not replace either pet with a guardian or fixed damage payload. Unlisted controlled pets retain their existing power policy.
 - A target's owned Whiplash6360 stacks (native aura270, mask127) increase all of that Sayaad's damage, including real white swings; another caster's stacks do not (`sc_warlock_pets.cpp447–452`).
 
@@ -628,6 +629,10 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 - Spec267 landed Wither445474 and Immolate157736 ticks grant0.1 displayed Soul Shard through the shared native power/overflow pipeline. A critical tick rolls its native direct spell445468/348 effect1 chance for one additional fragment. Immune ticks do not fund shards; fully absorbed landed ticks remain eligible. Native PowerType metadata supplies raw units (SimC76f8118 `sc_warlock_actions.cpp1108–1117,4047–4059`, `sc_warlock_init.cpp1319,1443`).
 - The periodic registry forwards the actual critical result. Other specializations, including Affliction Wither, receive no Destruction funding; Agony's separate threshold RNG is outside this policy.
 
+### Diabolic Ritual initial timer
+
+- Selected Demonology Diabolic Ritual starts its native Overlord timer on in-combat Hand of Gul'dan payment and reduces it per paid shard (`sc_warlock_actions.cpp278–355`). Other spenders, Infernal Machine, Destruction, Art cycling and demon summons remain unimplemented.
+
 ### Demonology literal execution and alternative Tyrant
 
 - Actual owned Wild Imps supply native296553 availability while any remain. Ordinary196277 selects the native maximum from the pinned eligible demon pool, launches selected Imps by remaining Energy then spawn order, emits native196278 with Energy scaling only on the primary and retires the actual actors. Selected To Hell and Back derives replacement count from native1281511 and uses native279910/143622 with1250772/1281512, not fabricated actors. Source: pinned `sc_warlock_actions.cpp2980–3170` and `sc_warlock_pets.cpp919–985`.
@@ -644,6 +649,8 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 - Pet and guardian spell damage, healing and ordinary melee use live owner versatility (SimC76f8118 `pet.hpp138–142`). The controlled Felguard inherits owner spell power as its attack and spell power through the existing demon policy (`sc_warlock_pets.cpp663–668`).
 - Wild Imp Fel Firebolt hits only its primary unless that Imp has Unstable Soul; its native effect2 supplies extra hits, repeating available recipients when needed (`sc_warlock_pets.cpp713–793`). Selected Infernal Rapidity rolls native1263941 effect1 independently per Imp, launching a free twin scaled by effect2; under bugs=1, a last cast that earns Isolated Implosion does not produce a twin (`pets.cpp713–849`).
 - Selected MID2 four-piece rolls native1296574 effect3's accumulated chance on actual Imp exhaustion. A successful Imp travels to its actual target and launches native1306077, using native196278's damage coefficient and native1296574 effects1/2 for primary and secondary damage. Under pinned bugs=1, isolated deaths do not grant Demonic Core (`sc_warlock_pets.cpp833–849/963–983`, `sc_warlock_actions.cpp3200–3290`).
+- Selected Inner Demons starts at actual combat entry with a uniformly random first phase, then summons native279910 at the native267216 period without haste (`sc_warlock_init.cpp766–771/1722–1725`). It stops outside combat.
+- Selected Carnivorous Stalkers rolls native386194 effect1 on each actual Dreadstalker melee execution and queues a real271971 Dreadbite when the guardian is ready (`sc_warlock_pets.cpp1116–1143`, `sc_warlock_init.cpp1272–1274`).
 - Selected Inner Demons starts at actual combat entry with a uniformly random first phase, then summons native279910 at the native267216 period without haste (`sc_warlock_init.cpp766–771/1722–1725`). It stops outside combat.
 - Actual Wild Imp104317/55659 guardians cannot regenerate spent Energy (pinned `pets.cpp701/875–882`). Native pool sizes, spell costs and actual exhaustion/removal remain authoritative; other guardian regeneration is unchanged. Selected Imp Gang Boss applies native1250772 to the first actual Imp of each Hand of Gul'dan group (`actions.cpp5716–5723`).
 - Player-controlled follower minions inherit the same player-affected attack permission as their owner, without changing either NPC identity or native summon-property ownership rules. Ordinary NPC summons remain subject to NPC-versus-neutral restrictions (SimC76f8118 `pet.cpp66–68`).
