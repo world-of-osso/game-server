@@ -98,7 +98,12 @@ fn queue_clone(
         .expect("native shadow clone")
         .clone();
     let (damage_bonus, crit_bonus) = darkest_night_bonus(world, caster, child, points);
-    spell.cast_damage_multiplier = Some(points * 0.5 * damage_bonus);
+    let stance_bonus = if child == 1269340 {
+        super::subtlety_storm::stance_multiplier(world, caster)
+    } else {
+        1.0
+    };
+    spell.cast_damage_multiplier = Some(points * 0.5 * damage_bonus * stance_bonus);
     spell.cast_charge_mods = Some(spell_mods::snapshot_charged_modifiers(
         world, caster, &spell,
     ));

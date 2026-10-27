@@ -187,6 +187,7 @@ Frost player reaction clocks are configured before food setup advances native fr
 
 ### Subtlety literal fixture
 
+- Shuriken Storm and its shadow clone snapshot the native rank-two stealth-stance damage bonus (`sc_rogue.cpp5817–5838,5872–5881`).
 - Eligible shadow clones can earn Shadow Techniques storage and Energy using Ancient Arts' native proc chance; Shadowcraft still controls stacks during Dance (`sc_rogue.cpp3650–3659,8159–8172`).
 - Secret Technique's landed player attack triggers earned Ancient Arts collection and can launch its native delayed shadow clone, using the parent finisher's paid points (`sc_rogue.cpp5435–5503,8668–8701`).
 - Maximum-point Eviscerate's Shadowed Finishers child and shadow clone snapshot Darkest Night's native damage and critical bonuses before the shared Deathstalker buff expires 1 ms after consumption (`sc_rogue.cpp2435–2440,2569–2578,4394–4414,8740–8746,10583–10584`).
