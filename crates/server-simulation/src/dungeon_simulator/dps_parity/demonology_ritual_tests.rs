@@ -427,7 +427,9 @@ fn demonology_art_hand_detonates_oculi_into_minds_eyes() {
     grant_art(&mut run, 428524);
     cast(&mut run, 105174);
     update(&mut run, 2);
-    assert_eq!(events(&run, CombatLogKind::Damage, 1269800).len(), 1, "one Eye Explosion");
+    let explosions = events(&run, CombatLogKind::Damage, 1269800);
+    assert_eq!(explosions.len(), 1, "one Eye Explosion");
+    assert!(explosions[0].amount > 0, "Eye Explosion must retain its Oculi damage multiplier");
     assert_eq!(own_stacks(&run, 1269879), 3, "Hand's third Oculi becomes three Mind's Eyes");
     assert_eq!(own_stacks(&run, 1269643), 0, "the explosion expires the Oculi");
 }
