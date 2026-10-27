@@ -331,6 +331,7 @@ mod subtlety_blades_tests;
 mod subtlety_clone_funding_tests;
 mod subtlety_clone_tests;
 mod subtlety_deathstalker_tests;
+mod subtlety_finishers_dark_tests;
 mod subtlety_finishers_tests;
 mod subtlety_goremaw_tests;
 mod subtlety_mass_tests;
