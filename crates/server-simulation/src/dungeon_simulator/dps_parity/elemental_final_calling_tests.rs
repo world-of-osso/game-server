@@ -32,6 +32,30 @@ fn elemental_final_calling_natural_expiry_delivers_owned_native_damage() {
         .clear();
     for _ in 0..500 {
         run.app.update();
+        if !crate::spell_cast::targets::is_alive(run.app.world(), ancestor) {
+            break;
+        }
+    }
+    assert!(
+        run.app.world().get_entity(ancestor).is_ok(),
+        "expired source remains only while its missile is in flight"
+    );
+    assert!(
+        !crate::spell_cast::targets::is_alive(run.app.world(), ancestor),
+        "expired source is inactive"
+    );
+    assert!(
+        !crate::spell_cast::try_cast_triggered(
+            run.app.world_mut(),
+            ancestor,
+            447419,
+            Some(run.targets[0]),
+            1
+        ),
+        "expired source cannot cast"
+    );
+    for _ in 0..500 {
+        run.app.update();
         if run
             .app
             .world()
@@ -47,6 +71,9 @@ fn elemental_final_calling_natural_expiry_delivers_owned_native_damage() {
         {
             break;
         }
+    }
+    for _ in 0..3 {
+        run.app.update();
     }
     assert!(
         run.app.world().get_entity(ancestor).is_err(),
