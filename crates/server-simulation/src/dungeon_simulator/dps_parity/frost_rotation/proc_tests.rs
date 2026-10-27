@@ -74,6 +74,33 @@ fn frost_obliteration_frost_strike_earns_killing_machine() {
 }
 
 #[test]
+#[ignore = "real Frost Strikes earn native Hyperpyrexia residual ticks"]
+fn frost_hyperpyrexia_from_real_frost_strikes() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::protocol::CombatLogKind;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::super::prepare_literal(251, 1).unwrap();
+    super::super::engage(&mut run);
+    assert!(auras::has_aura(run.app.world(), run.actor, 456238));
+    for _ in 0..12 {
+        cast(&mut run, 49020);
+        cast(&mut run, 49020);
+        cast(&mut run, 49143);
+    }
+    for _ in 0..200 {
+        run.app.update();
+    }
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0;
+    assert!(
+        events.iter().any(|event| event.spell_id == Some(458169)
+            && event.kind == CombatLogKind::Damage
+            && event.periodic
+            && event.amount > 0),
+        "actual Frost Strikes must earn Hyperpyrexia ticks"
+    );
+}
+
+#[test]
 #[ignore = "native251 profile, repeated native-resource-funded Frost Strike"]
 fn frost_frost_strikes_roll_native_rime_chance() {
     let _seed = crate::random::seed_scope(251);
@@ -601,6 +628,77 @@ fn frost_erw_earns_killing_machine() {
     );
 }
 
+#[test]
+#[ignore = "real Mark produces two Waves of Souls and a critical return"]
+fn frost_mark_earns_two_waves_of_souls() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::protocol::CombatLogKind;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::super::prepare_measurement(251, 3).unwrap();
+    super::super::engage(&mut run);
+    assert!(auras::has_aura(run.app.world(), run.actor, 439851));
+    cast(&mut run, 439843);
+    for _ in 0..100 {
+        run.app.update();
+    }
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0;
+    for target in &run.targets {
+        let hits: Vec<_> = events
+            .iter()
+            .filter(|event| {
+                event.spell_id == Some(435802)
+                    && event.kind == CombatLogKind::Damage
+                    && event.target == Some(target.to_bits())
+                    && event.amount > 0
+            })
+            .collect();
+        assert_eq!(hits.len(), 2, "Wave impacts per target");
+        assert!(hits[1].crit, "return wave must critically strike");
+        assert!(auras::has_aura(run.app.world(), *target, 443404));
+    }
+}
+
+#[test]
+#[ignore = "real Mark explosion releases Soul Rupture only on secondary targets"]
+fn frost_soul_rupture_from_real_mark_explosion() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::protocol::CombatLogKind;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::super::prepare_measurement(251, 3).unwrap();
+    super::super::engage(&mut run);
+    assert!(auras::has_aura(run.app.world(), run.actor, 437161));
+    cast(&mut run, 439843);
+    for _ in 0..500 {
+        run.app.update();
+    }
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0;
+    assert!(events.iter().any(|event| event.spell_id == Some(439594)
+        && event.kind == CombatLogKind::Damage
+        && event.target != Some(run.targets[0].to_bits())
+        && event.amount > 0));
+    assert!(!events.iter().any(|event| event.spell_id == Some(439594)
+        && event.kind == CombatLogKind::Damage
+        && event.target == Some(run.targets[0].to_bits())));
+}
+
+#[test]
+#[ignore = "real Mark explosion grants Swift and Painful with no secondary target"]
+fn frost_soul_rupture_without_secondary_earns_swift_and_painful() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::super::prepare_measurement(251, 1).unwrap();
+    super::super::engage(&mut run);
+    assert!(auras::has_aura(run.app.world(), run.actor, 437161));
+    assert!(auras::has_aura(run.app.world(), run.actor, 443560));
+    cast(&mut run, 439843);
+    for _ in 0..500 {
+        run.app.update();
+        if auras::has_aura(run.app.world(), run.actor, 469169) {
+            return;
+        }
+    }
+    panic!("single-target Mark explosion must earn Swift and Painful");
+}
+
 fn grim_mark_explosion(health_fraction: f32) -> i32 {
     use crate::spell_cast::test_harness::ObservedCombatEvents;
     use shared::protocol::CombatLogKind;
@@ -804,6 +902,33 @@ fn frost_gathering_storm_extends_winter_for_paid_and_free_spenders() {
     assert!(
         !auras::has_aura(run.app.world(), actor, 211805),
         "Winter ending clears Gathering Storm"
+    );
+}
+
+#[test]
+#[ignore = "real Frostwyrm's Fury grants Chosen of Frostbrood haste"]
+fn frost_fury_earns_chosen_haste() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::super::prepare_literal(251, 1).unwrap();
+    super::super::engage(&mut run);
+    assert!(auras::has_aura(run.app.world(), run.actor, 1265632));
+    let before = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(run.actor)
+        .unwrap()
+        .haste_pct;
+    cast(&mut run, 279302);
+    assert!(auras::has_aura(run.app.world(), run.actor, 1265630));
+    let after = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(run.actor)
+        .unwrap()
+        .haste_pct;
+    assert!(
+        after > before,
+        "Chosen haste must increase actual melee haste: {before} -> {after}"
     );
 }
 
@@ -1720,6 +1845,10 @@ fn frost_dark_talons_from_earned_rime_increases_icy_talons() {
         earn_rime(&mut run);
         cast(&mut run, 49184);
         if auras::has_aura(run.app.world(), run.actor, 443595) {
+            assert!(
+                auras::has_aura(run.app.world(), run.actor, 443586),
+                "Icy Talons must earn Dark Talons Shadowfrost"
+            );
             let aura = run
                 .app
                 .world()

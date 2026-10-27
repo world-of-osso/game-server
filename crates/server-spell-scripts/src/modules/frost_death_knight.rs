@@ -28,6 +28,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::ResolvedDamage(glacial_advance_razorice),
     SpellScriptHook::LateAuraRegistration(register_frost_auras),
     SpellScriptHook::ResolvedDamage(frostreaper_impact),
+    SpellScriptHook::ResolvedDamage(hyperpyrexia_impact),
 ];
 
 const KILLING_MACHINE: u32 = 51128;
@@ -131,6 +132,32 @@ fn trigger_native_buff(world: &mut World, caster: Entity, source: u32) {
     }
 }
 
+fn hyperpyrexia_impact(
+    world: &mut World,
+    ctx: &combat::spell_cast::effects::EffectCtx,
+    target: Entity,
+    _: bool,
+    damage: f32,
+) {
+    if damage <= 0.0
+        || !matches!(ctx.spell.id, 222026 | 66196 | 195975)
+        || !is_frost(world, ctx.caster)
+        || !auras::has_aura(world, ctx.caster, 456238)
+    {
+        return;
+    }
+    let chance = world
+        .resource::<SpellStore>()
+        .get(456238)
+        .and_then(|spell| spell.aura_options.as_ref())
+        .expect("Hyperpyrexia proc chance")
+        .proc_chance as f32;
+    if random::random::<f32>() * 100.0 < chance {
+        let percent = spell_cast::scripts::script_effect_value(world, ctx.caster, 456238, 0);
+        super::marksmanship::bank_residual(world, ctx, target, 458169, percent, damage);
+    }
+}
+
 pub(super) fn after_white_hit(world: &mut World, caster: Entity, critical: bool) {
     if !critical || !is_frost(world, caster) || !auras::has_aura(world, caster, KILLING_MACHINE) {
         return;
@@ -193,6 +220,20 @@ pub(super) fn after_launch(world: &mut World, caster: Entity, spell: &SpellInfo,
     // selected Frozen Dominion starts its native Winter aura from real Pillar.
     if spell.id == PILLAR && auras::has_aura(world, caster, 377226) {
         cast_buff_stacks(world, caster, 1233152, 1);
+    }
+    if spell.id == 279302 && auras::has_aura(world, caster, 1265632) {
+        let duration = world
+            .resource::<SpellStore>()
+            .get(1265630)
+            .and_then(|spell| spell.misc.as_ref())
+            .and_then(|misc| misc.duration)
+            .expect("Chosen haste duration")
+            .duration_ms as u32;
+        if auras::has_aura(world, caster, 1265630) {
+            auras::extend_owned_duration(world, caster, caster, &[1265630], duration);
+        } else {
+            spell_cast::cast_triggered(world, caster, 1265630, Some(caster), 1);
+        }
     }
     if spell.id == 279302 && auras::has_aura(world, caster, 1265633) {
         // SimC76f8118 sc_death_knight.cpp10659–10660/10694–10695:
@@ -431,6 +472,7 @@ fn extend_winter_for_runes(world: &mut World, caster: Entity, spell: &SpellInfo)
 fn register_frost_auras(scripts: &mut auras::scripts::AuraScripts) {
     scripts.0.entry(PILLAR).or_default().on_apply = Some(pillar_applied);
     scripts.0.entry(443595).or_default().on_remove = Some(dark_talons_ended);
+    scripts.0.entry(194879).or_default().on_apply = Some(icy_talons_started);
     scripts.0.entry(194879).or_default().on_remove = Some(icy_talons_ended);
     scripts.0.entry(1249658).or_default().on_remove = Some(breath_ended);
     for winter in [196770, 1233152] {
@@ -776,6 +818,12 @@ fn dark_talons_ended(
     }
 }
 
+fn icy_talons_started(world: &mut World, unit: Entity, aura: &auras::AuraInstance) {
+    if auras::has_aura(world, aura.caster, 436687) {
+        spell_cast::cast_triggered(world, aura.caster, 443586, Some(unit), 1);
+    }
+}
+
 fn icy_talons_ended(
     world: &mut World,
     unit: Entity,
@@ -783,7 +831,7 @@ fn icy_talons_ended(
     _: auras::RemoveReason,
 ) {
     auras::remove_auras(world, unit, auras::RemoveReason::Consumed, |a| {
-        a.spell_id == 443595 && a.caster == aura.caster
+        matches!(a.spell_id, 443595 | 443586) && a.caster == aura.caster
     });
 }
 
