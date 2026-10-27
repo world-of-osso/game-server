@@ -19,6 +19,19 @@ const ORB: u32 = 153626;
 const MISSILES: u32 = 5143;
 const MISSILES_TICK: u32 = 7268;
 
+/// SimC76f8118 sc_mage.cpp3270–3296 rounds a fresh Missiles channel to whole ticks.
+pub(super) fn missiles_channel_duration(
+    spell: u32,
+    duration: f32,
+    original_period: f32,
+    hasted_period: u32,
+) -> Option<u32> {
+    (spell == MISSILES).then(|| {
+        let ticks = (duration / original_period).round();
+        (ticks * hasted_period as f32).max(0.0).round() as u32
+    })
+}
+
 #[derive(Component, Default)]
 struct ClearcastingAttempts(u32);
 
