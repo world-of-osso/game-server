@@ -247,7 +247,10 @@ fn native_bm_kill_command_crit_uses_selected_go_for_the_throat() {
         let capture = world.resource::<crate::spell_cast::effects::factor_capture::FactorCapture>().export();
         let events = capture["events"].as_array().expect("native factor events");
         for event in &events[seen..] {
-            if event["event"] != "result" || event["factors"]["result"] != "crit" {
+            if event["event"] != "result"
+                || event["spell_id"] != 83381
+                || event["factors"]["result"] != "crit"
+            {
                 continue;
             }
             let observed = event["factors"]["crit_bonus"].as_f64().expect("observed crit bonus");
