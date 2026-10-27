@@ -57,6 +57,7 @@ pub(crate) struct Prepared {
     declared: BTreeSet<String>,
     moving: bool,
     cast_active: bool,
+    pickup_cast_usable: bool,
     gcd_active: bool,
     after_channel: bool,
 }
@@ -103,7 +104,13 @@ impl Prepared {
         let moving = world
             .get::<crate::networking::Moving>(actor)
             .is_some_and(|moving| moving.0);
-        let cast_active = world.get::<shared::casting::CastState>(actor).is_some();
+        let active_cast = world.get::<shared::casting::CastState>(actor);
+        let cast_active = active_cast.is_some();
+        let pickup_cast_usable = active_cast
+            .is_some_and(|cast| matches!(cast.spell_id, 473662 | 1217610))
+            && world
+                .get::<shared::components::ActiveSpec>(actor)
+                .is_some_and(|spec| spec.0 == 1480);
         let gcd_active = world
             .get::<crate::spell_cast::SpellHistory>(actor)
             .is_some_and(|history| history.has_active_gcd(crate::spell_cast::history_now(world)));
@@ -111,11 +118,12 @@ impl Prepared {
         let mut prepared = Self {
             moving,
             cast_active: cast_active && !after_channel,
+            pickup_cast_usable,
             gcd_active: gcd_active && !after_channel,
             after_channel,
             ready: BTreeMap::new(),
             limits: BTreeMap::new(),
-            pickups: fragment_pickup_plans(world, actor),
+            pickups: fragment_pickup_plans(world, actor, targets.first().copied())?,
             declared: [
                 "snapshot_stats",
                 "auto_attack",
@@ -193,7 +201,11 @@ impl Prepared {
             return Ok(false);
         }
         let while_casting = read_boolean_option(action, "use_while_casting")?.unwrap_or(false);
-        if self.cast_active && !while_casting {
+        let pickup = action.name == "pick_up_fragment";
+        if self.cast_active && pickup && !self.pickup_cast_usable {
+            return Ok(false);
+        }
+        if self.cast_active && !while_casting && !(pickup && self.pickup_cast_usable) {
             return Ok(false);
         }
         let off_gcd = read_boolean_option(action, "use_off_gcd")?.unwrap_or(false);
@@ -295,15 +307,28 @@ impl Prepared {
 fn fragment_pickup_plans(
     world: &World,
     actor: Entity,
-) -> BTreeMap<
-    (
-        server::soul_fragments::FragmentFilter,
-        server::soul_fragments::PickupMode,
-    ),
-    server::soul_fragments::PickupPlan,
+    target: Option<Entity>,
+) -> Result<
+    BTreeMap<
+        (
+            server::soul_fragments::FragmentFilter,
+            server::soul_fragments::PickupMode,
+        ),
+        server::soul_fragments::PickupPlan,
+    >,
+    String,
 > {
     use server::soul_fragments::{FragmentFilter as F, PickupMode as M};
     let mut plans = BTreeMap::new();
+    if server::soul_fragments::active_count(world, actor, F::Any) == 0 {
+        return Ok(plans);
+    }
+    let Some(target) = target else {
+        return Ok(plans);
+    };
+    if !server::soul_fragments::pickup_in_melee_range(world, actor, target)? {
+        return Ok(plans);
+    }
     for filter in [F::Any, F::Lesser, F::AnyGreater, F::AnyDemon] {
         for mode in [M::Oldest, M::Newest, M::Nearest] {
             if let Some(plan) = server::soul_fragments::plan_pickup(world, actor, filter, mode) {
@@ -311,7 +336,7 @@ fn fragment_pickup_plans(
             }
         }
     }
-    plans
+    Ok(plans)
 }
 
 fn fragment_pickup_options(
