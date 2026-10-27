@@ -114,10 +114,35 @@ fn havoc_final_breath_adds_scaled_tick_on_completed_beam() {
             .get_mut::<crate::stats::CharacterStats>(actor)
             .unwrap()
             .crit_pct = -1000.0;
+        if selected {
+            run.app.insert_resource(
+                crate::spell_cast::effects::factor_capture::FactorCapture::new(
+                    actor,
+                    primary,
+                    198030,
+                    "final_breath",
+                    20,
+                ),
+            );
+        }
         havoc_tests::earn_havoc_fury(&mut run, 30.0);
         cast(&mut run, 198013, false);
         preparation::finish_pending_setup(&mut run).unwrap();
         let hits = damage(&run, Some(198030));
+        if selected {
+            let capture = run
+                .app
+                .world()
+                .resource::<crate::spell_cast::effects::factor_capture::FactorCapture>()
+                .export();
+            std::fs::write(
+                inputs::directory()
+                    .unwrap()
+                    .join("final-breath-factors.json"),
+                serde_json::to_string_pretty(&capture).unwrap(),
+            )
+            .unwrap();
+        }
         assert_eq!(
             hits.len(),
             if selected { 13 } else { 12 },
