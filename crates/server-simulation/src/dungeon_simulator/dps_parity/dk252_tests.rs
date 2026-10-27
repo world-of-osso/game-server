@@ -117,6 +117,34 @@ fn dk252_putrefy_ghoul_impacts_the_enemy() {
 
 #[test]
 #[ignore = "requires private native252 profile/traits and player actor"]
+fn dk252_putrefy_impact_raises_native_magus() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 1).unwrap();
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, 1256813));
+    engage(&mut run);
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(
+            1247378,
+            run.targets[0],
+            Some(run.targets[0]),
+        ),
+    )
+    .unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    for _ in 0..100 {
+        run.app.update();
+    }
+    let world = run.app.world_mut();
+    assert!(
+        world.query::<&shared::components::Npc>().iter(world).any(|npc| npc.template_id == 163366),
+        "selected Lord of the Dead must raise a native Magus after Putrefy impact"
+    );
+}
+
+#[test]
+#[ignore = "requires private native252 profile/traits and player actor"]
 fn dk252_raise_dead_produces_a_permanent_controlled_melee_pet() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_measurement(252, 1).unwrap();
