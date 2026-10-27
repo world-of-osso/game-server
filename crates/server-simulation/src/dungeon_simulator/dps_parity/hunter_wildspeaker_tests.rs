@@ -55,12 +55,14 @@ fn native_bm_wildspeaker_commands_existing_bear_before_consuming_next_howl() {
                 && summon.spell_id == 219199
                 && !before_bear.contains(&entity.to_bits())
         })
-        .count();
+        .map(|(entity, _)| entity.to_bits())
+        .collect::<Vec<_>>();
     // SimC76f8118 hunter.cpp3797–3803: selected Ursine Fury summons its
     // native number of real Dire Beasts when the earned Bear is summoned.
     assert!(
-        count > 0 && new_beasts >= count,
-        "actual Bear must bring {count} Dire Beasts: spawned={new_beasts}"
+        count > 0 && new_beasts.len() >= count,
+        "actual Bear must bring {count} Dire Beasts: spawned={}",
+        new_beasts.len()
     );
     let bear = run
         .app
@@ -95,6 +97,30 @@ fn native_bm_wildspeaker_commands_existing_bear_before_consuming_next_howl() {
         0,
         "new Bear must not retroactively receive its summoning KC"
     );
+    let beast_attempts = |run: &Run, beast: u64| {
+        run.app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .filter(|event| {
+                event.source == Some(beast)
+                    && event.target == Some(run.targets[0].to_bits())
+                    && event.spell_id == Some(1232922)
+                    && matches!(
+                        event.kind,
+                        shared::protocol::CombatLogKind::Damage
+                            | shared::protocol::CombatLogKind::Miss(_)
+                    )
+            })
+            .count()
+    };
+    assert!(
+        new_beasts
+            .iter()
+            .all(|beast| beast_attempts(&run, *beast) == 0),
+        "new Dire Beasts cannot receive the command that summoned them"
+    );
     crate::spell_cast::creature_cast(
         run.app.world_mut(),
         run.actor,
@@ -108,6 +134,12 @@ fn native_bm_wildspeaker_commands_existing_bear_before_consuming_next_howl() {
         attempts(&run),
         1,
         "the existing Bear must execute one native Wildspeaker command at the actual primary"
+    );
+    assert!(
+        new_beasts
+            .iter()
+            .all(|beast| beast_attempts(&run, *beast) == 1),
+        "each existing new Dire Beast must receive the next real command"
     );
 }
 
