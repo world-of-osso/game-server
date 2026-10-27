@@ -81,7 +81,12 @@ fn summon_elemental(world: &mut World, owner: Entity, elemental: (u32, u32)) {
         .map(|duration| duration.duration_ms)
         .expect("native Primal Elemental summon duration");
     let milliseconds = u32::try_from(milliseconds).expect("finite native summon duration");
-    if let Some(expiry) = world.get_mut::<SummonedCreature>(actor).unwrap().expires_at.as_mut() {
+    if let Some(expiry) = world
+        .get_mut::<SummonedCreature>(actor)
+        .unwrap()
+        .expires_at
+        .as_mut()
+    {
         *expiry += f64::from(milliseconds) / 1000.0;
     }
     combat::auras::extend_owned_duration(world, owner, owner, &[root], milliseconds);
@@ -92,7 +97,8 @@ fn action_eligible(world: &World, actor: Entity, spell: u32, target: Entity) -> 
     match spell {
         // SimC76f8118 sc_shaman.cpp4275–4285: stormfury,if=buff.call_lightning.remains>=10.
         STORMFURY => {
-            aura_remains(world, actor, actor, CALL_LIGHTNING) >= STORMFURY_MIN_CALL_LIGHTNING_SECONDS
+            aura_remains(world, actor, actor, CALL_LIGHTNING)
+                >= STORMFURY_MIN_CALL_LIGHTNING_SECONDS
         }
         // sc_shaman.cpp4109–4117: immolate,target_if=!ticking.
         IMMOLATE => aura_remains(world, target, actor, IMMOLATE) <= 0.0,
