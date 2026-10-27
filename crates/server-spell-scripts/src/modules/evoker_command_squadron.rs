@@ -23,7 +23,25 @@ struct CommandTarget(Entity);
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AfterResourceValues(breath_hook),
     SpellScriptHook::MidAuraRegistration(register),
+    SpellScriptHook::CriticalChance(pyre_critical_chance),
 ];
+
+fn pyre_critical_chance(world: &World, caster: Entity, _target: Entity, spell: u32) -> Option<f32> {
+    if spell != PYRE || world.get::<Npc>(caster)?.template_id != ENTRY {
+        return None;
+    }
+    let summon = world.get::<SummonedCreature>(caster)?;
+    if !SUMMONS.contains(&summon.spell_id) {
+        return None;
+    }
+    // SimC76f8118 pet.cpp217–220: actual passive Commandos read live owner spell crit.
+    Some(
+        world
+            .get::<combat::stats::CharacterStats>(summon.owner)
+            .expect("native Commando owner retains character stats")
+            .crit_pct,
+    )
+}
 
 fn breath_hook(spell: u32) -> Option<AfterCastHook> {
     matches!(spell, 357210 | 433874).then_some(start_squadron)
