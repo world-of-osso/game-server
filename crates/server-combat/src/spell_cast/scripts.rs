@@ -568,7 +568,6 @@ pub fn on_effect_hit(
         (batch11::HAMMER_RIGHTEOUS, 0) => Some(batch11::hammer_wave),
         (batch3::SHRED, 2) => Some(batch11::shred_points),
         (batch11::THRASH, 0) => Some(batch11::thrash_bleed),
-        (batch10::FLURRY_DAMAGE, 0) => Some(batch10::energize_flurry),
         (batch10::FERAL_LUNGE, 0) => Some(batch10::bite_lunge),
         (batch10::HAND_OF_GULDAN, 0) => Some(batch10::launch_guldan_meteor),
         (batch9::WINTER_DAMAGE, 0) => Some(batch9::slow_winter_hit),
@@ -802,6 +801,10 @@ pub fn after_cast(world: &World, spell_id: u32) -> impl Iterator<Item = AfterCas
         .chain(
             (spell_id == 196277).then_some(super::guardian::implosion::after_cast as AfterCastHook),
         )
+        .chain(
+            (spell_id == 104318)
+                .then_some(super::guardian::implosion::after_firebolt as AfterCastHook),
+        )
         .chain(script_registry::aura_roll_after_cast(world, spell_id))
         .chain(script_registry::resource_value_after_cast(world, spell_id))
         .chain(script_registry::after_resource_values(world, spell_id))
@@ -836,7 +839,6 @@ fn native_after_cast(world: &World, spell_id: u32) -> Option<AfterCastHook> {
         batch16::RIPTIDE => Some(batch16::grant_tidal_waves),
         batch13::BESTIAL_WRATH => Some(batch13::finish_bestial_wrath),
         batch12::SHIELD_RIGHTEOUS => Some(batch12::shield_armor),
-        batch10::BLADE_FLURRY => Some(batch10::cast_flurry),
         batch10::VOIDFORM => Some(batch10::apply_voidform),
         batch10::ARCANE_SURGE => Some(batch10::apply_surge),
         batch9::CONSECRATION => Some(batch9::spawn_consecration),
