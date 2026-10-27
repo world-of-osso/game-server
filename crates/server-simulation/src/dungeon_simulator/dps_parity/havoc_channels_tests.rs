@@ -38,6 +38,18 @@ fn cast(run: &mut Run, spell: u32, self_target: bool) {
 
 #[test]
 #[ignore = "requires prepared native spec577 player profile"]
+fn havoc_mastery_precombat_trace() {
+    let _seed = crate::random::seed_scope(70_448);
+    let run = super::prepare_measurement(577, 1).unwrap();
+    eprintln!(
+        "MASTERY_FINAL {:?} {:?}",
+        report::stats(run.app.world(), run.actor),
+        run.app.world().get::<crate::auras::ActiveAuras>(run.actor)
+    );
+}
+
+#[test]
+#[ignore = "requires prepared native spec577 player profile"]
 fn havoc_damage_applies_chaos_brand_to_actual_targets() {
     let _seed = crate::random::seed_scope(70_448);
     let mut run = prepare_literal(577, 3).unwrap();
