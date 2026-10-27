@@ -71,6 +71,12 @@ fn clear_displacement_return_at_melee(world: &mut World, actor: Entity) {
     let reached = world
         .get::<crate::combat::AutoAttack>(actor)
         .is_none_or(|attack| {
+            if world
+                .get::<shared::components::Health>(attack.victim)
+                .is_none_or(|health| health.current <= 0.0)
+            {
+                return true;
+            }
             let Some(from) = world.get::<Position>(actor) else {
                 return true;
             };
