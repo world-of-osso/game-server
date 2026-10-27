@@ -95,6 +95,7 @@ mod elemental_ascendance_tests;
 mod elemental_cadence_tests;
 mod elemental_communication_tests;
 mod elemental_fellowship_tests;
+mod elemental_final_calling_tests;
 mod elemental_fusion_tests;
 mod elemental_lava_overload_tests;
 mod elemental_mechanics_tests;
