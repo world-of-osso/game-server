@@ -3,7 +3,7 @@ use super::*;
 use shared::components::PowerType;
 
 fn assert_fury_cap(spec: u32, expected: f32) {
-    let mut run = prepare_literal(spec, 1).expect("native Demon Hunter profile");
+    let mut run = prepare(spec, 1).expect("native Demon Hunter profile");
     for _ in 0..5 {
         run.app.update();
     }
