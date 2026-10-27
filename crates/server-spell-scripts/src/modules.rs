@@ -183,6 +183,7 @@ register_modules! {
     havoc_destiny: (5775, "modules/havoc/destiny.rs"),
     havoc_eternal: (5774, "modules/havoc/eternal.rs"),
     havoc_fury: (5773, "modules/havoc/fury.rs"),
+    havoc_hunt_damage: (5777, "modules/havoc_hunt_damage.rs"),
     havoc_onslaught: (5776, "modules/havoc/onslaught.rs"),
     havoc_recovery: (5772, "modules/havoc/recovery.rs"),
     hellcaller_counters: (2666, "modules/hellcaller_counters.rs"),
