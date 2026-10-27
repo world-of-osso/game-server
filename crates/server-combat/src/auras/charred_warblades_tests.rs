@@ -153,7 +153,18 @@ fn class_completeness_native_charred_warblades_isolates_two_recipients() {
             source: AuraSource::KnownSpell,
         },
     );
-    let other_damage = hit_by(&mut h, other, CHAOS_HIT);
+    crate::spell_cast::cast_triggered(h.app.world_mut(), other, CHAOS_HIT, Some(h.npc), 1);
+    h.advance(1);
+    let other_damage: u32 = drain::<shared::protocol::CombatLogEvent>(&mut h.app, other_connection)
+        .iter()
+        .filter(|event| {
+            event.source == Some(other.to_bits())
+                && event.target == Some(h.npc.to_bits())
+                && event.spell_id == Some(CHAOS_HIT)
+                && event.kind == CombatLogKind::Damage
+        })
+        .map(|event| event.amount as u32)
+        .sum();
     assert!(other_damage > 0);
     let expected_other = expected_heal(&h, other_damage);
     assert!(expected_other > 0);
