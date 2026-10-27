@@ -43,8 +43,8 @@ pub(crate) fn register(scripts: &mut AuraScripts) {
 // SimC76f8118 sc_demon_hunter.cpp8973–8980,9015–9026: refreshing
 // an active functional aura expires it and can proc Undying Embers too.
 pub(super) fn before_cast(world: &mut World, caster: Entity, spell: u32, _: u8) {
-    if spell == IMMOLATION && auras::has_aura(world, caster, IMMOLATION) {
-        roll_renewal(world, caster);
+    if spell == IMMOLATION {
+        replace_existing(world, caster);
     }
 }
 
@@ -77,10 +77,17 @@ fn roll_renewal(world: &mut World, unit: Entity) {
     queued_triggers::schedule_callback(world, &ctx, unit, 300, apply_renewal);
 }
 
-fn apply_renewal(world: &mut World, caster: Entity, target: Entity, _: u8) {
+fn replace_existing(world: &mut World, caster: Entity) {
     if auras::has_aura(world, caster, IMMOLATION) {
         roll_renewal(world, caster);
+        auras::remove_auras(world, caster, auras::RemoveReason::Replaced, |aura| {
+            aura.spell_id == IMMOLATION && aura.caster == caster
+        });
     }
+}
+
+fn apply_renewal(world: &mut World, caster: Entity, target: Entity, _: u8) {
+    replace_existing(world, caster);
     auras::apply_aura(
         world,
         &AuraApplication {
