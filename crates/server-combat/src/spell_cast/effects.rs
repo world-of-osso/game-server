@@ -367,18 +367,31 @@ pub fn power_stats(world: &World, unit: Entity, healing: bool) -> (f32, f32) {
                 .get::<CharacterStats>(summon.owner)
                 .expect("owner-scaled guardian requires native CharacterStats");
             let modifiers = world.get::<crate::stats::StatModifiers>(summon.owner);
-            // SimC76f8118 sc_death_knight.cpp4478–4487/4657–4660:
-            // Magus and Lord inherit melee AP; Hunter guardians retain ranged AP.
-            let attack_type = if matches!(
-                (summon.spell_id, entry),
-                (1242294, Some(163366)) | (1292072, Some(264321)) | (288853, Some(149555))
-            ) {
+            // SimC76f8118 sc_death_knight.cpp3621–3649/4478–4487/4657–4660/5478–5488:
+            // these actual DK guardians inherit the owner's melee attack power.
+            let lesser_ghoul = entry == Some(237409) && matches!(summon.spell_id, 275430 | 1294026);
+            let attack_type = if lesser_ghoul
+                || matches!(
+                    (summon.spell_id, entry),
+                    (317776 | 1242294, Some(163366))
+                        | (1292072, Some(264321))
+                        | (288853, Some(149555))
+                ) {
                 crate::stats::WeaponAttackType::MainHand
             } else {
                 crate::stats::WeaponAttackType::Ranged
             };
             let attack_power = owner.total_attack_power(attack_type, modifiers);
-            return (0.0, attack_power * share);
+            let armaments = lesser_ghoul
+                && world
+                    .get::<crate::class_progression::KnownSpells>(summon.owner)
+                    .is_some_and(|known| known.contains(1265971));
+            let multiplier = if armaments {
+                1.0 + super::scripts::script_effect_value(world, summon.owner, 1265971, 4) / 100.0
+            } else {
+                1.0
+            };
+            return (0.0, attack_power * share * multiplier);
         }
         if let Some(share) =
             entry.and_then(|entry| super::guardian::owner_spell_share(summon.spell_id, entry))
