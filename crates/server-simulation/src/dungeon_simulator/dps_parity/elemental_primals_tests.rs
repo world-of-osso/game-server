@@ -119,7 +119,9 @@ fn elemental_primal_fire_immolate_requires_no_current_dot() {
     let mut run = fixture();
     // SimC76f8118 sc_shaman.cpp4109–4117: do not reapply a ticking Immolate.
     let actor = bound_native_guardian(&mut run, 61029, 118291, &[118297, 57984]);
-    for _ in 0..160 {
+    // Native Immolate has a 10s cooldown and a 21s duration; cross the cooldown
+    // boundary while the first application's damage-over-time effect is active.
+    for _ in 0..300 {
         run.app.update();
     }
     let events = &run.app.world().resource::<ObservedCombatEvents>().0;
@@ -136,7 +138,12 @@ fn elemental_primal_fire_immolate_requires_no_current_dot() {
         .collect();
     assert!(
         casts.starts_with(&[118297, 57984]),
-        "a ticking Immolate yields to Fire Blast: {casts:?}"
+        "fire elemental casts Immolate then Fire Blast: {casts:?}"
+    );
+    assert_eq!(
+        casts.iter().filter(|id| **id == 118297).count(),
+        1,
+        "a ticking Immolate yields to Fire Blast after its cooldown: {casts:?}"
     );
 }
 
