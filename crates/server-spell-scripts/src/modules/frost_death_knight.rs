@@ -415,12 +415,16 @@ fn breath_ended(
 }
 
 fn earn_freezing_tempest(world: &mut World, ctx: &spell_cast::effects::EffectCtx) {
-    if ctx.spell.id != 196771 || !is_frost(world, ctx.caster)
-        || !auras::has_aura(world, ctx.caster, 1296652) {
+    if ctx.spell.id != 196771
+        || !is_frost(world, ctx.caster)
+        || !auras::has_aura(world, ctx.caster, 1296652)
+    {
         return;
     }
     let hit = spell_cast::resolving_damage(world, ctx)
-        .expect("Winter pulse retains its resolved hits").iter().any(|(_, damage)| *damage > 0.0);
+        .expect("Winter pulse retains its resolved hits")
+        .iter()
+        .any(|(_, damage)| *damage > 0.0);
     // SimC76f8118 sc_death_knight.cpp12381–12387: one stack per pulse with any hit.
     if hit && !spell_cast::try_cast_triggered(world, ctx.caster, 1297365, Some(ctx.caster), 1) {
         warn!(caster = ?ctx.caster, "Native Freezing Tempest buff refused");

@@ -1520,7 +1520,10 @@ fn demonology_tyrant_summon_grants_oblation_and_abyssal_dominion() {
     let _seed = crate::random::seed_scope(70_448);
     let mut run = prepare_literal(266, 1).unwrap();
     for talent in [1276746, 429581, 1276748] {
-        assert!(crate::auras::has_aura(run.app.world(), run.actor, talent), "selected {talent}");
+        assert!(
+            crate::auras::has_aura(run.app.world(), run.actor, talent),
+            "selected {talent}"
+        );
     }
     engage(&mut run);
     crate::spell_cast::creature_cast(
