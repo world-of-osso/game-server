@@ -721,6 +721,11 @@ def measure_spec(entry, measurement, executable, target, log, tree, previous=Non
 def write_results(entries):
     RESULTS.mkdir(parents=True, exist_ok=True)
     for entry in entries:
+        # A passing entry whose measurement failed must not read as a clean pass (Frost 64 seed 7,
+        # aabedcb472): the status is what `where`/`wait` print.
+        failed = [m for m in entry.get("measurements") or [] if "FAILED" in m]
+        if failed and "measurement FAILED" not in entry.get("status", ""):
+            entry["status"] = f"{entry.get('status', '')}; measurement FAILED ({len(failed)})".lstrip("; ")
         (RESULTS / f"{entry['id']}.json").write_text(json.dumps(entry, indent=2))
         (RUNNING / f"{entry['id']}.json").unlink(missing_ok=True)
 
