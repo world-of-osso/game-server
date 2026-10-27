@@ -33,7 +33,10 @@ fn after_damage(world: &mut World, ctx: &EffectCtx, _: Entity, _: bool, damage: 
                 .find(|(power, _)| *power == PowerType::ComboPoints)
         })
         .map_or(0.0, |(_, points)| *points);
-    if points <= 0.0 {
+    // These native payloads are dispatched only by a paid finisher; their
+    // effective points are already baked into the child damage snapshot.
+    let finisher_child = matches!(ctx.spell.id, 328082 | 319190 | 1269205 | 1269565 | 280720 | 282449 | 1269560);
+    if points <= 0.0 && !finisher_child {
         return;
     }
     let spell = world
