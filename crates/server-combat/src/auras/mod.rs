@@ -9,7 +9,8 @@
 //!   slot across casters, preserving the existing aura caster;
 //! - otherwise same spell, other caster: coexist when the aura is harmful, has a
 //!   periodic effect, vehicle-control ownership or `SPELL_ATTR3_DOT_STACKING_RULE`; otherwise the new
-//!   aura replaces the old one.
+//!   aura replaces the old one;
+//! - passive equipment auras from different slots coexist (each item owns its passive).
 //!
 //! Harmful (`AuraApplication::_InitFlags`): from itself or a non-friendly caster, an aura
 //! with a negative applied effect (`spell_info::positivity`); from a friendly caster, one
@@ -1418,7 +1419,11 @@ pub fn apply_aura_with_spell(world: &mut World, application: &AuraApplication, s
         || instance.effects.iter().any(|effect| {
             effect.period_ms > 0 || effect.aura_type == handlers::CONTROL_VEHICLE
         })
-        || attributes(&spell, 3) & ATTR3_DOT_STACKING_RULE != 0;
+        || attributes(&spell, 3) & ATTR3_DOT_STACKING_RULE != 0
+        // TC Unit.cpp3411–3412 never merges passive auras, and SpellAuras.cpp1650–1652
+        // keeps same-caster passives apart when they have a cast item: each equipped
+        // item owns its passive (two rings' identical enchants both apply).
+        || is_passive(spell) && matches!(application.source, AuraSource::Equipment(_));
     let unique = attributes(&spell, 1) & ATTR1_AURA_UNIQUE != 0;
     let shared_slot = shares_stack_slot_between_casters(spell);
     let previous_rate =
