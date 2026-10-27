@@ -213,4 +213,13 @@ fn reapers_toll_replacement_delivers_native_damage_in_meta() {
         ) >= 2,
         "real Reaper's Toll spawns its two native lesser fragments"
     );
+    // SimC76f8118 cpp6747–6753 consumes Hungering Slash and grants Voidstep.
+    assert!(
+        !crate::auras::has_aura(run.app.world(), actor, 1239525),
+        "Reaper's Toll consumes Hungering Slash"
+    );
+    assert!(
+        crate::auras::has_aura(run.app.world(), actor, 1223157),
+        "Reaper's Toll grants Voidstep"
+    );
 }
