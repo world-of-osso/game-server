@@ -281,4 +281,39 @@ fn selected_voidrush_without_charge_does_not_reduce_meta_drain() {
         remaining < 100.0,
         "normal in-combat drain after three seconds, with no Voidrush charge: {initial}->{remaining}"
     );
+    assert!(
+        crate::auras::has_aura(run.app.world(), actor, 1217607),
+        "Meta remains active"
+    );
+    crate::spell_cast::cast_for_player_with_target(
+        run.app.world_mut(),
+        actor,
+        1245483,
+        Some(target),
+    )
+    .expect("real Pierce triggers Voidrush");
+    let charge_start =
+        crate::spell_cast::powers::power_value(run.app.world(), actor, PowerType::Fury)
+            .unwrap()
+            .0;
+    for _ in 0..9 {
+        run.app.update();
+    }
+    let during = crate::spell_cast::powers::power_value(run.app.world(), actor, PowerType::Fury)
+        .unwrap()
+        .0;
+    assert!(
+        charge_start - during <= 4.0,
+        "real charge reduces drain during its short window: {charge_start}->{during}"
+    );
+    for _ in 0..30 {
+        run.app.update();
+    }
+    let after = crate::spell_cast::powers::power_value(run.app.world(), actor, PowerType::Fury)
+        .unwrap()
+        .0;
+    assert!(
+        during - after > 4.0,
+        "normal drain resumes after charge: {during}->{after}"
+    );
 }
