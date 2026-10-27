@@ -32,7 +32,12 @@ pub fn read_facts_with_dots(
         enemies
             .iter()
             .filter(|&&unit| {
-                super::super::targets::position(world, unit)
+                world.get::<ThreatTable>(unit).is_some_and(|threat| {
+                    threat
+                        .entries()
+                        .iter()
+                        .any(|entry| entry.entity == actor.to_bits())
+                }) && super::super::targets::position(world, unit)
                     .is_some_and(|point| origin.distance(point) <= 8.0)
             })
             .count() as u32,
@@ -223,21 +228,17 @@ fn combat_enemies(world: &mut World, actor: Entity) -> Result<Vec<Entity>, Strin
     let copy = *world
         .get::<crate::maps::InMap>(actor)
         .ok_or("native actor map absent")?;
-    let mut query = world.query::<(Entity, &Health, &crate::maps::InMap, &ThreatTable)>();
-    let candidates: Vec<_> = query
-        .iter(world)
-        .filter(|(_, health, map, threat)| {
-            **map == copy
-                && health.current > 0.0
-                && threat
-                    .entries()
-                    .iter()
-                    .any(|entry| entry.entity == actor.to_bits())
+    Ok(crate::combat_refs::active_opponents(world, actor)
+        .filter(|&unit| {
+            world
+                .get::<Health>(unit)
+                .is_some_and(|health| health.current > 0.0)
         })
-        .map(|(unit, ..)| unit)
-        .collect();
-    Ok(candidates
-        .into_iter()
+        .filter(|&unit| {
+            world
+                .get::<crate::maps::InMap>(unit)
+                .is_some_and(|map| *map == copy)
+        })
         .filter(|&unit| {
             super::super::targets::relation_matches(
                 world,
