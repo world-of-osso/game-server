@@ -1,3 +1,4 @@
+- 2026-10-26: Recorded [guardian periodic haste](systems/spell-casting.md#guardian-periodic-haste--2026-10-26) native RED and source-qualified actual-owner lookup.
 - 2026-10-26: Recorded [Fiendish Cruelty](systems/spell-casting.md#destruction-fiendish-cruelty--2026-10-26) actual critical-producer RED and native aura-state path.
 - 2026-10-26: Recorded [Incinerate source-qualified recipients](systems/spell-casting.md#destruction-incinerate-recipients--2026-10-26), native-data gate inspection and4 real recipient REDs.
 - 2026-10-26: Recovered [Overfiend lifecycle](systems/spell-casting.md#native-overfiend-lifecycle--2026-10-26), replacing unreachable summon wrapper with the actual-actor callback; qualification pending.
