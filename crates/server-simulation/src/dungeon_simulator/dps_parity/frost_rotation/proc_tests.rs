@@ -623,6 +623,33 @@ fn frost_earned_rune_refill_preserves_regeneration() {
 }
 
 #[test]
+#[ignore = "diagnostic native Frost first Mark and Exterminate lifecycle"]
+fn diag_frost_mark_exterminate_timeline() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::super::prepare_measurement(251, 1).unwrap();
+    super::super::engage(&mut run);
+    let mut cursor = 0;
+    let mut trace = Vec::new();
+    super::super::advance_combat_observed(&mut run, |run| {
+        let events = &run.app.world().resource::<ObservedCombatEvents>().0;
+        let time = run.app.world().resource::<Time>().elapsed_secs_f64();
+        if time < 30.0 {
+            for event in &events[cursor..] {
+                if matches!(event.spell_id, Some(439843 | 434765 | 436304 | 441416 | 441424 | 49020 | 51124)) {
+                    trace.push(serde_json::json!({"time": time, "spell": event.spell_id,
+                        "kind": format!("{:?}", event.kind), "amount": event.amount}));
+                }
+            }
+        }
+        cursor = events.len();
+    }).unwrap();
+    assert!(!trace.is_empty());
+    let output = std::path::PathBuf::from(std::env::var("DPS_PARITY_OUTPUT").unwrap());
+    std::fs::write(output.join("251.mark-timeline.json"), serde_json::to_vec_pretty(&trace).unwrap()).unwrap();
+}
+
+#[test]
 #[ignore = "real haste increases preserve rune recharge progress"]
 fn frost_active_rune_recharge_tracks_real_haste_increase() {
     use crate::spell_cast::runes::Runes;
