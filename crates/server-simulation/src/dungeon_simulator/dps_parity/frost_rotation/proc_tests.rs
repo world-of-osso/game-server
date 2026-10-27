@@ -1658,6 +1658,41 @@ fn frost_km_converts_obliterate_weapon_children_to_frost() {
 }
 
 #[test]
+#[ignore = "converted real Obliterate weapon hit applies mastery and earned Razorice"]
+fn frost_km_obliterate_weapon_uses_mastery_and_razorice() {
+    use crate::spell_cast::effects::factor_capture::FactorCapture;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::super::prepare_measurement(251, 1).unwrap();
+    super::super::engage(&mut run);
+    let actor = run.actor;
+    let target = run.targets[0];
+    for _ in 0..6000 {
+        let razorice = run.app.world().get::<ActiveAuras>(target).and_then(|active| active.iter()
+            .find(|aura| aura.spell_id == 51714 && aura.caster == actor)).cloned();
+        if auras::has_aura(run.app.world(), actor, 51124) && let Some(aura) = razorice {
+            let mastery = run.app.world().get::<crate::stats::CharacterStats>(actor).unwrap().mastery_pct / 100.0;
+            let amount = aura.effects.iter().find(|effect| effect.index == 0).unwrap().amount;
+            let expected = (1.0 + mastery) * (1.0 + amount * f32::from(aura.stacks) / 100.0);
+            run.app.insert_resource(FactorCapture::new(actor, target, 222024, "obliterate_damage", 1));
+            if crate::spell_cast::creature_cast(run.app.world_mut(), actor, 49020, Some(target), false).is_ok() {
+                for _ in 0..3 { run.app.update(); }
+                let capture = run.app.world().resource::<FactorCapture>().export();
+                let hit = capture["events"].as_array().unwrap().iter()
+                    .find(|event| event["spell_id"] == 222024 && event["event"] == "direct_amount").unwrap();
+                let product = hit["applied_multipliers"].as_array().unwrap().iter()
+                    .find(|factor| factor["factor"] == "ret_damage").unwrap()["value"].as_f64().unwrap();
+                assert!((product - f64::from(expected)).abs() < 0.001,
+                    "real converted hit uses mastery and owned Razorice: {product} vs {expected}");
+                return;
+            }
+        }
+        super::super::drive_player(&mut run).unwrap();
+        run.app.update();
+    }
+    panic!("real rotation never admitted KM Obliterate against earned Razorice");
+}
+
+#[test]
 #[ignore = "native251 earned KM, real weapon children before delayed consumption"]
 fn frost_km_spenders_consume_after_weapon_impacts() {
     use crate::spell_cast::test_harness::ObservedCombatEvents;
