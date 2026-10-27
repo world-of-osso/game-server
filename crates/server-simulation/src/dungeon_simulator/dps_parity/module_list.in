@@ -178,6 +178,7 @@ mod hunter_explosive_tests;
 mod hunter_facts;
 mod hunter_fixture;
 #[cfg(test)]
+mod hunter_dire_command_tests;
 mod hunter_focus_tests;
 mod hunter_followup_tests;
 mod hunter_howl_cycle_tests;
