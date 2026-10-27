@@ -286,7 +286,7 @@ pub(super) fn schedule_instant_background(
         spell_id,
         depth: 0,
         item_level: None,
-        damage_multiplier: None,
+        damage_multiplier: ctx.spell.cast_overload_multiplier,
     };
     world
         .resource_mut::<PendingTriggers>()
@@ -369,6 +369,7 @@ pub(crate) fn resolve_due(world: &mut World) {
                     trigger.caster,
                     trigger.spell_id,
                     Some(trigger.target),
+                    trigger.damage_multiplier,
                 ) {
                     warn!("Background spell {} skipped: {failure:?}", trigger.spell_id);
                 }

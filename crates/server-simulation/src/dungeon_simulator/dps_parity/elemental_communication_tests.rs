@@ -40,6 +40,17 @@ fn native_deck(run: &Run) -> (usize, usize) {
 
 fn assert_native_builder_deck(mut run: Run, spell: u32) {
     let (positive, total) = native_deck(&run);
+    let traits = run
+        .app
+        .world()
+        .get::<crate::class_progression::TraitLoadout>(run.actor)
+        .expect("native actor trait loadout");
+    assert!(
+        traits
+            .active_talent_spells()
+            .any(|entry| entry.spell_id == COMMUNICATION),
+        "Communication must be selected, not merely present as an aura"
+    );
     run.app
         .world_mut()
         .resource_mut::<ObservedCombatEvents>()
