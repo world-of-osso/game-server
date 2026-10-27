@@ -300,6 +300,7 @@ pub(crate) mod single_spell;
 mod snakeskin_tests;
 mod subtlety_ancient_tests;
 mod subtlety_finishers_tests;
+mod subtlety_goremaw_tests;
 mod subtlety_relentless_tests;
 mod subtlety_secret_snapshot_tests;
 mod subtlety_secret_tests;
