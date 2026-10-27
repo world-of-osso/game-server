@@ -267,6 +267,54 @@ pub(super) fn dispatch_arrivals(world: &mut World) {
     }
 }
 
+#[cfg(test)]
+mod arrival_tests {
+    use super::*;
+
+    #[derive(Resource, Default)]
+    struct Arrivals(Vec<(Entity, Entity)>);
+
+    fn record_arrival(world: &mut World, actor: Entity, target: Entity) {
+        world.resource_mut::<Arrivals>().0.push((actor, target));
+    }
+
+    #[test]
+    fn summon_arrival_waits_for_three_dimensional_reach_and_fires_once() {
+        let mut world = World::new();
+        world.init_resource::<Arrivals>();
+        let target = world
+            .spawn(Position {
+                x: 0.0,
+                y: 10.0,
+                z: 0.0,
+            })
+            .id();
+        let actor = world
+            .spawn((
+                Position {
+                    x: 0.0,
+                    y: 0.0,
+                    z: 0.0,
+                },
+                SummonArrival {
+                    target,
+                    on_arrival: record_arrival,
+                },
+            ))
+            .id();
+        dispatch_arrivals(&mut world);
+        assert!(world.resource::<Arrivals>().0.is_empty());
+        world.entity_mut(target).insert(Position {
+            x: 0.0,
+            y: 1.0,
+            z: 0.0,
+        });
+        dispatch_arrivals(&mut world);
+        dispatch_arrivals(&mut world);
+        assert_eq!(world.resource::<Arrivals>().0, [(actor, target)]);
+    }
+}
+
 /// Start an owned summon's native melee chase against its selected target.
 pub fn start_melee_attack(world: &mut World, summon: Entity, target: Entity) {
     assert!(
