@@ -802,6 +802,10 @@ pub fn after_cast(world: &World, spell_id: u32) -> impl Iterator<Item = AfterCas
         .chain(
             (spell_id == 196277).then_some(super::guardian::implosion::after_cast as AfterCastHook),
         )
+        .chain(
+            (spell_id == 104318)
+                .then_some(super::guardian::implosion::after_firebolt as AfterCastHook),
+        )
         .chain(script_registry::aura_roll_after_cast(world, spell_id))
         .chain(script_registry::resource_value_after_cast(world, spell_id))
         .chain(script_registry::after_resource_values(world, spell_id))

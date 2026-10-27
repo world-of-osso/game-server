@@ -628,6 +628,10 @@ fn wild_imp_exhausted(world: &World, actor: Entity) -> bool {
     {
         return false;
     }
+    cannot_afford_firebolt(world, actor)
+}
+
+pub(super) fn cannot_afford_firebolt(world: &World, actor: Entity) -> bool {
     let bolt = world
         .resource::<crate::spell_info::SpellStore>()
         .get(104318)

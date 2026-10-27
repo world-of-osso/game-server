@@ -745,6 +745,83 @@ fn demonology_imps_emit_infernal_rapidity_twins() {
 }
 
 #[test]
+#[ignore = "requires private266 inputs; Isolated Implosion suppresses the last Rapidity twin"]
+fn demonology_isolated_last_bolt_does_not_emit_rapidity_twin() {
+    use shared::protocol::CombatLogKind;
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(266, 1).unwrap();
+    engage(&mut run);
+    run.app
+        .world_mut()
+        .entity_mut(run.actor)
+        .insert(crate::networking::CombatTarget(Some(run.targets[0])));
+    for _ in 0..20 {
+        run.app
+            .world_mut()
+            .resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .clear();
+        crate::spell_cast::creature_cast(
+            run.app.world_mut(),
+            run.actor,
+            104317,
+            Some(run.actor),
+            true,
+        )
+        .unwrap();
+        let imp = run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .find(|event| event.spell_id == Some(104317) && event.kind == CombatLogKind::Summon)
+            .map(|event| Entity::from_bits(event.target.unwrap()))
+            .unwrap();
+        for _ in 0..600 {
+            run.app.update();
+            if run.app.world().get_entity(imp).is_err() {
+                break;
+            }
+        }
+        let events = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0;
+        if !events
+            .iter()
+            .any(|event| event.spell_id == Some(1306077) && event.kind == CombatLogKind::Damage)
+        {
+            continue;
+        }
+        let last_cast = events
+            .iter()
+            .rposition(|event| {
+                event.source == Some(imp.to_bits())
+                    && event.spell_id == Some(104318)
+                    && event.kind == CombatLogKind::CastSuccess
+            })
+            .unwrap();
+        let last_impacts = events[last_cast + 1..]
+            .iter()
+            .filter(|event| {
+                event.source == Some(imp.to_bits())
+                    && event.spell_id == Some(104318)
+                    && matches!(event.kind, CombatLogKind::Damage | CombatLogKind::Miss(_))
+            })
+            .count();
+        // SimC76f8118 pets.cpp818–849 suppresses a twin when this same last cast earns the set proc.
+        assert_eq!(
+            last_impacts, 1,
+            "isolated last cast must produce only its ordinary bolt"
+        );
+        return;
+    }
+    panic!("actual Imp exhaustion must exercise the selected accumulated set proc");
+}
+
+#[test]
 #[ignore = "requires private266 inputs; actual exhausted Imp four-piece explosion"]
 fn demonology_exhausted_imps_trigger_isolated_implosion() {
     assert_exhausted_imps_trigger_isolated_implosion(1);
