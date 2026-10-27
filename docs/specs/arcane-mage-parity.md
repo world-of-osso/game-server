@@ -5,6 +5,7 @@ Spec62 follows the pinned SimC behavior and native-value rules in [DPS parity](d
 ## What it must do
 
 - [x] The selected Arcane Familiar is granted by an actual Arcane Intellect cast; its native aura owns the maximum Mana change. Its active native aura triggers Arcane Assault at the source hasted three-second cadence. Selected Energized Familiar adds its authored Assaults during Surge and rolls its authored Mana return per Assault. Selected Attuned Familiar rolls its authored chance to conjure an owned Splinter on each Assault.
+- [x] Selected Enlightened samples the caster's Mana fraction on the native one-second aura clock and scales Arcane damage by native1217242 effect2 (`sc_mage.cpp6392–6399/6793–6798`). Its separate Mana-regeneration effect is not yet qualified.
 - [x] Eligible Blast, Barrage, Missiles, Orb and Explosion executions roll Clearcasting through accumulated PRD. `sc_mage.cpp6626–6631` uses13 in the coefficient calculation, not as an actual attempt cap. Surge grants Clearcasting without a roll.
 - [x] Improved Clearcasting stacks are independent uses sharing one proc charge. Missiles spends one stack; stack count does not multiply its cost reduction.
 - [x] Actual hostile Missiles ticks execute native7268 once and generate earned MID2 Cumulative Power and selected Salvo, Focusing Crystal and High Voltage. Its secondary damage requires an AoE talent or earned Overpowered Missiles. A fresh channel rounds its modified duration to whole modified tick periods, in addition to its initial tick (`sc_mage.cpp3270–3296`).
