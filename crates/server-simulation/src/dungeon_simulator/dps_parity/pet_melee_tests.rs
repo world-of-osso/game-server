@@ -281,6 +281,10 @@ fn dps_parity_pet_melee_live_owner_equipment_removal_and_restore_changes_swings(
     for _ in 0..4 {
         run.app.update();
     }
+    eprintln!(
+        "DIAG_GEAR_OWNER before_ap={before_ap} restored={:?}",
+        run.app.world().get::<crate::stats::CharacterStats>(owner)
+    );
     assert_eq!(
         run.app
             .world()
@@ -348,6 +352,10 @@ fn dps_parity_pet_melee_owner_only_melee_ap_buff_does_not_change_swings() {
         "native buff is owner-only, not a direct pet AP modifier"
     );
     let after = normalized_pet_swings(&mut run, pet, 1);
+    eprintln!(
+        "DIAG_MELEE_OWNER initial={initial:?} final={:?}",
+        run.app.world().get::<crate::stats::CharacterStats>(owner)
+    );
     assert!(
         crate::auras::has_aura(run.app.world(), owner, MELEE_ONLY_AP),
         "native buff must remain active during the measured swing"
