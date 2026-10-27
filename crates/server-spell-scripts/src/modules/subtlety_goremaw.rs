@@ -35,7 +35,10 @@ fn after_damage(world: &mut World, ctx: &EffectCtx, _: Entity, _: bool, damage: 
         .map_or(0.0, |(_, points)| *points);
     // These native payloads are dispatched only by a paid finisher; their
     // effective points are already baked into the child damage snapshot.
-    let finisher_child = matches!(ctx.spell.id, 328082 | 319190 | 1269205 | 1269565 | 280720 | 282449 | 1269560);
+    let finisher_child = matches!(
+        ctx.spell.id,
+        328082 | 319190 | 1269205 | 1269565 | 280720 | 282449 | 1269560
+    );
     if points <= 0.0 && !finisher_child {
         return;
     }

@@ -90,7 +90,13 @@ fn effect_handler(spell: u32, index: u8) -> Option<EffectHandler> {
     (index == 0 && driver_for_payload(spell).is_some()).then_some(deal_native_item_damage)
 }
 
-fn native_driver_budget(world: &World, caster: Entity, driver: u32, level: u16, role_scaled: bool) -> f32 {
+fn native_driver_budget(
+    world: &World,
+    caster: Entity,
+    driver: u32,
+    level: u16,
+    role_scaled: bool,
+) -> f32 {
     let mut native = world
         .resource::<SpellStore>()
         .get(driver)
@@ -125,7 +131,8 @@ fn deal_native_item_damage(
         );
         return;
     };
-    let (driver, role_scaled) = driver_for_payload(ctx.spell.id).expect("registered native item payload");
+    let (driver, role_scaled) =
+        driver_for_payload(ctx.spell.id).expect("registered native item payload");
     let mut payload = effect.clone();
     // These native damage leaves have zero BP/coefficients. SimC assigns driver
     // effect1 average; native class−9 item scaling and role data supply the value.
