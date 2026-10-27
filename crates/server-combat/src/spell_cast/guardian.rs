@@ -214,6 +214,32 @@ const GUARDIAN_POLICIES: &[GuardianPolicy] = &[
         owner_spell_share: Some(1.0),
         owner_attack_share: None,
     },
+    // SimC76f8118 pets.cpp17–19/2577–2591: Diabolist demons inherit base owner
+    // SP1.0; the Overlord's validated AP share is1.0. Native rows own the actions.
+    GuardianPolicy {
+        summons: &[428571],
+        entry: 228575,
+        spells: &[432120],
+        repeat_gcd: None,
+        owner_spell_share: Some(1.0),
+        owner_attack_share: Some(1.0),
+    },
+    GuardianPolicy {
+        summons: &[428565],
+        entry: 228576,
+        spells: &[432569],
+        repeat_gcd: None,
+        owner_spell_share: Some(1.0),
+        owner_attack_share: None,
+    },
+    GuardianPolicy {
+        summons: &[434400],
+        entry: 228574,
+        spells: &[438973],
+        repeat_gcd: None,
+        owner_spell_share: Some(1.0),
+        owner_attack_share: None,
+    },
     // SimC76f8118 pets.cpp1310–1342: validated variant inheritance. Native
     // Bile Spit/Headbutt remain distinct from the melee-linked Gloom Slash.
     GuardianPolicy {
@@ -360,6 +386,26 @@ struct GuardianActionPolicy {
 // SimC76f8118 pets.cpp1350/1382–1418: one Bile Spit per summon and an
 // unhasted five-second Headbutt cooldown. Native spell rows own the payloads.
 const GUARDIAN_ACTIONS: &[GuardianActionPolicy] = &[
+    // SimC76f8118 pets.cpp2626–2644/2758–2786/2862–2892: each Diabolist demon
+    // executes its single Wicked Cleave, Chaos Salvo or Felseeker once.
+    GuardianActionPolicy {
+        entries: &[228575],
+        spell: 432120,
+        once: true,
+        cooldown: None,
+    },
+    GuardianActionPolicy {
+        entries: &[228576],
+        spell: 432569,
+        once: true,
+        cooldown: None,
+    },
+    GuardianActionPolicy {
+        entries: &[228574],
+        spell: 438973,
+        once: true,
+        cooldown: None,
+    },
     GuardianActionPolicy {
         entries: &[135816, 226268, 226269],
         spell: 267997,

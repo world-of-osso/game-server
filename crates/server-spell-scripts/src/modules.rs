@@ -86,6 +86,7 @@ register_modules! {
     demon_hunter_effects: (1000, "modules/demon_hunter_effects.rs"),
     demonology_carnivorous: (2660, "modules/demonology_carnivorous.rs"),
     demonology_gloom_slash: (2660, "modules/demonology_gloom_slash.rs"),
+    demonology_diabolist_demons: (2660, "modules/demonology_diabolist_demons.rs"),
     demonology_firebolt: (2660, "modules/demonology_firebolt.rs"),
     demonology_inner_demons: (2660, "modules/demonology_inner_demons.rs"),
     destruction_chaotic_inferno: (2680, "modules/destruction_chaotic_inferno.rs"),
