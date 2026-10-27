@@ -90,6 +90,59 @@ fn outlaw_roll_the_bones_applies_one_exclusive_native_state() {
 
 #[test]
 #[ignore = "requires private native260 profile/traits and player actor"]
+fn outlaw_keep_it_rolling_extends_the_earned_roll_and_state() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(260, 1).unwrap();
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(1214909, run.actor, None),
+    )
+    .unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    for _ in 0..40 {
+        run.app.update();
+    }
+    let deadlines = |run: &Run| {
+        run.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(run.actor)
+            .unwrap()
+            .iter()
+            .filter(|aura| {
+                aura.caster == run.actor
+                    && [1214909, 1214933, 1214934, 1214935, 1214937].contains(&aura.spell_id)
+            })
+            .map(|aura| (aura.spell_id, aura.expires_at.unwrap()))
+            .collect::<Vec<_>>()
+    };
+    let before = deadlines(&run);
+    assert_eq!(
+        before.len(),
+        2,
+        "a real roll has its container and one state"
+    );
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(381989, run.actor, None),
+    )
+    .unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    let after = deadlines(&run);
+    assert_eq!(after.len(), 2);
+    // SimC76f8118 sc_rogue.cpp8542–8550 extends both by native effect1=30000ms.
+    for (id, previous) in before {
+        let expiry = after.iter().find(|(spell, _)| *spell == id).unwrap().1;
+        assert!(
+            (expiry - previous - 30.0).abs() < 0.001,
+            "{id}: {previous} -> {expiry}"
+        );
+    }
+}
+
+#[test]
+#[ignore = "requires private native260 profile/traits and player actor"]
 fn outlaw_literal_uses_the_known_roll_the_bones_action() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_measurement(260, 1).unwrap();

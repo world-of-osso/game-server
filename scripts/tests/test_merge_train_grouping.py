@@ -72,6 +72,65 @@ class GroupingTests(unittest.TestCase):
             self.assertTrue((root / "queue/feature.json").exists())
             self.assertFalse((root / "running/feature.json").exists())
 
+    def test_probe_waits_while_its_owner_or_descendant_probe_shares_the_tree(self):
+        with tempfile.TemporaryDirectory() as directory, ExitStack() as stack:
+            root = Path(directory)
+
+            def git(*args):
+                return subprocess.run(["git", *args], cwd=root, text=True, capture_output=True, check=True).stdout.strip()
+
+            def commit(name, parent):
+                git("checkout", "-q", "--detach", parent)
+                (root / f"{name}.rs").write_text(name)
+                git("add", f"{name}.rs")
+                git("commit", "-qm", name)
+                return git("rev-parse", "HEAD")
+
+            git("init", "-q")
+            git("config", "user.name", "Fixture")
+            git("config", "user.email", "fixture@example.test")
+            git("commit", "--allow-empty", "-qm", "base")
+            base = git("rev-parse", "HEAD")
+            red = commit("enlightened_test", base)
+            green = commit("enlightened_fix", red)
+            sibling_red = commit("rapidity_test", base)
+            other = commit("hati_fix", base)
+            unowned_red = commit("chakram_test", base)
+            unowned_green = commit("chakram_fix", unowned_red)
+
+            def probe(name, sha, owner=None):
+                return {"id": name, "commit": sha, "owner": owner, "tests": ["dps_parity::"], "measure": []}
+
+            entries = [
+                probe("red", red, "parity-62"),
+                probe("green", green, "parity-62"),
+                probe("sibling-red", sibling_red, "parity-62"),
+                probe("other", other, "parity-253"),
+                probe("unowned-red", unowned_red),
+                probe("unowned-green", unowned_green),
+            ]
+            for name in ("HOME", "TREE", "RESULTS", "QUEUE", "RUNNING", "LOGS"):
+                stack.enter_context(patch.object(train, name, root if name in ("HOME", "TREE") else root / name.lower()))
+            (root / "running").mkdir()
+            (root / "queue").mkdir()
+            for entry in entries:
+                (root / "running" / f"{entry['id']}.json").write_text("{}")
+            builds = []
+
+            def build(group, log):
+                builds.append([entry["id"] for entry in group])
+                return group, []
+
+            stack.enter_context(patch.object(train, "build_and_test", side_effect=build))
+            stack.enter_context(patch.object(train, "measure_then_write"))
+            stack.enter_context(patch.object(train, "write_results"))
+            train.run_probes(entries, [], root / "cycle.log")
+            # A RED probe built beside its owner's fix (or any probe containing it) would pass.
+            self.assertEqual(builds, [["red", "other", "unowned-red"]])
+            for deferred in ("green", "sibling-red", "unowned-green"):
+                self.assertTrue((root / "queue" / f"{deferred}.json").exists(), deferred)
+                self.assertFalse((root / "running" / f"{deferred}.json").exists(), deferred)
+
     def test_failed_and_deferred_representatives_propagate_to_group(self):
         with tempfile.TemporaryDirectory() as directory, ExitStack() as stack:
             root = Path(directory)

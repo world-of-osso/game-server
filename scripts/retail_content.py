@@ -327,6 +327,9 @@ CLASS_SUMMON_POLICY_CHILDREN = (
     # SimC76f8118 sc_priest_shadow.cpp2206–2214: full Yogg counter summons
     # native373277, whose effect28 supplies authentic Thing From Beyond189988.
     (373276, 373277),
+    # SimC76f8118 sc_shaman.cpp8638–8640/8752–8755; native Effect28
+    # 118291→61029 and 157319→77942 summon the Primal Elementals.
+    (378255, 118291), (191717, 157319),
     # SimC76f8118 sc_evoker.cpp6256–6261: Command Squadron summons two native Commandos.
     (1260745, 1235843), (1260745, 1237036),
     # SimC76f8118 sc_death_knight.cpp15401–15406: selected Unholy summon actions.

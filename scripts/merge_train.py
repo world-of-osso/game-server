@@ -929,6 +929,22 @@ def build_isolated_group(group, log, base):
     return [], []
 
 
+def without_entangled_probes(probes):
+    """Probes sharing a tree with their owner's other probe, or with a probe on the same commit line,
+    are tested with that probe's code too: a RED probe beside its own GREEN passes. Those wait."""
+    def related(entry, other):
+        same_owner = entry.get("owner") and entry.get("owner") == other.get("owner")
+        return same_owner or any(git("merge-base", "--is-ancestor", a["commit"], b["commit"], check=False).returncode == 0
+                                 for a, b in ((entry, other), (other, entry)))
+    kept = []
+    for entry in probes:
+        if any(related(entry, other) for other in kept):
+            (RUNNING / f"{entry['id']}.json").rename(QUEUE / f"{entry['id']}.json")
+        else:
+            kept.append(entry)
+    return kept
+
+
 def run_probes(probes, gated, log):
     """Probes, then the RED twins of gated landings, each in a tree that is never pushed.
     Returns the gated landings whose RED was observed."""
@@ -950,7 +966,7 @@ def run_probes(probes, gated, log):
     # Measure-only entries (baselines, remeasures) get a tree of their own. Probes with tests stay
     # shared: their verdict is pass/fail, and the landing measurement on master is the real number.
     isolated = [e for e in probes if e["measure"] and not e["tests"]]
-    shared = [e for e in probes if e not in isolated]
+    shared = without_entangled_probes([e for e in probes if e not in isolated])
     # Bound distinct isolated builds, not entries sharing a resolved parity-build tree.
     isolated_base, isolated_groups = isolated_measure_groups(isolated)
     for group in isolated_groups[ISOLATED_PER_CYCLE:]:
