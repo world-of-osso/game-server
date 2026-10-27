@@ -18,6 +18,9 @@ const CLONE: u32 = 282449;
 const ANCIENT_ARTS: u32 = 1269163;
 
 #[derive(Component)]
+struct SecretCloneHit(bool);
+
+#[derive(Component)]
 struct SecretCast {
     parent: SpellInfo,
     target: Entity,
@@ -33,6 +36,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::BeforeNativeOnCast(snapshot_secret),
     SpellScriptHook::AfterForegroundSpecial(launch_player),
     SpellScriptHook::AfterQueuedTriggers(launch_due_clones),
+    SpellScriptHook::ResolvedDamage(record_clone_hit),
     SpellScriptHook::CriticalChance(snapshot_critical_chance),
     SpellScriptHook::TargetContextDamageMultiplier(secondary_fraction),
 ];
@@ -119,7 +123,13 @@ fn launch_due_clones(world: &mut World) {
     for (caster, target, spell, count) in due {
         for _ in 0..count {
             if world.get_entity(target).is_ok() {
+                world.entity_mut(caster).insert(SecretCloneHit(false));
                 spell_cast::launch_triggered_spell(world, caster, &spell, Some(target), 1);
+                let hit = world.get::<SecretCloneHit>(caster).is_some_and(|state| state.0);
+                world.entity_mut(caster).remove::<SecretCloneHit>();
+                if hit {
+                    super::subtlety_clone::earn_clone_funding(world, caster);
+                }
             }
         }
         if world
@@ -128,6 +138,12 @@ fn launch_due_clones(world: &mut World) {
         {
             world.entity_mut(caster).remove::<SecretCast>();
         }
+    }
+}
+
+fn record_clone_hit(world: &mut World, ctx: &EffectCtx, _: Entity, _: bool, _: f32) {
+    if ctx.spell.id == CLONE && let Some(mut state) = world.get_mut::<SecretCloneHit>(ctx.caster) {
+        state.0 = true;
     }
 }
 
