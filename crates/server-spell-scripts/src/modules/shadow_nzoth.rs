@@ -19,18 +19,28 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AsynchronousAuras(&[HORRIFIC_BUFF, VISION_BUFF]),
 ];
 
-fn after_launch(world: &mut World, caster: Entity, spell: &SpellInfo, _: bool) {
-    if spell.id == MADNESS {
-        if let Some(target) = spell.cast_executed_target {
-            add_counter(world, caster, target, 12);
-        }
+fn after_launch(world: &mut World, caster: Entity, spell: &SpellInfo, foreground: bool) {
+    // SimC76f8118 priest.cpp198 and shadow.cpp576/775/1187.
+    let stacks = match spell.id {
+        MADNESS => 12,
+        8092 => 6,
+        589 if foreground => 3,
+        34914 if foreground => 4,
+        _ => return,
+    };
+    if let Some(target) = spell.cast_executed_target {
+        add_counter(world, caster, target, stacks);
     }
 }
 
 fn after_tick(world: &mut World, ctx: &EffectCtx<'_>, target: Entity, _: f32, _: bool) {
-    if matches!(ctx.spell.id, 15407 | 391403) {
-        add_counter(world, ctx.caster, target, 1);
-    }
+    let stacks = match ctx.spell.id {
+        15407 | 391403 => 1,
+        // SimC76f8118 sc_priest_shadow.cpp1436: each Torrent tick contributes two.
+        263165 => 2,
+        _ => return,
+    };
+    add_counter(world, ctx.caster, target, stacks);
 }
 
 fn apply_owned(world: &mut World, caster: Entity, target: Entity, spell_id: u32) {

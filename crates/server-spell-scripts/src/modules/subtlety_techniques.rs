@@ -128,20 +128,20 @@ fn finish_builder_launch(world: &mut World, caster: Entity, spell: &SpellInfo) {
     {
         pending.launched = true;
     }
-    collect_finished_builder(world, caster, spell.id);
+    collect_finished_builder(world, caster, spell);
 }
 
 fn collect_after_builder_hits(world: &mut World, ctx: &effects::EffectCtx<'_>) {
     if ctx.depth == 0 {
-        collect_finished_builder(world, ctx.caster, ctx.spell.id);
+        collect_finished_builder(world, ctx.caster, ctx.spell);
     }
 }
 
-fn collect_finished_builder(world: &mut World, caster: Entity, spell: u32) {
+fn collect_finished_builder(world: &mut World, caster: Entity, spell: &SpellInfo) {
     let ready = world
         .get::<BuilderGain>(caster)
-        .is_some_and(|pending| pending.spell == spell && pending.gained && pending.launched);
-    if !ready || spell_cast::has_pending_spell_hit(world, caster, spell) {
+        .is_some_and(|pending| pending.spell == spell.id && pending.gained && pending.launched);
+    if !ready || spell_cast::has_pending_spell_hit(world, caster, spell.id) {
         return;
     }
     world.entity_mut(caster).remove::<BuilderGain>();
@@ -154,6 +154,9 @@ fn collect_finished_builder(world: &mut World, caster: Entity, spell: u32) {
         .expect("native Rogue combo-point pool");
     let consumed = stored.min((maximum - current).max(0.0) as u8);
     collect_points(world, caster, instance, consumed);
+    if consumed > 0 {
+        super::subtlety_clone::schedule_builder(world, caster, spell, consumed);
+    }
     grant_ancient_arts(world, caster);
 }
 
