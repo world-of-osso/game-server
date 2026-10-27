@@ -58,7 +58,9 @@ fn after_launch(world: &mut World, caster: Entity, spell: &SpellInfo, foreground
         if let Some(instance) = instance {
             // sc_death_knight.cpp10601–10605/11909: each real spender uses one stack.
             auras::spend_stack(world, caster, instance);
-            let target = spell.cast_primary_target.expect("Exterminate spender target");
+            let target = spell
+                .cast_primary_target
+                .expect("Exterminate spender target");
             let ctx = EffectCtx {
                 caster,
                 spell,
@@ -74,7 +76,9 @@ fn after_launch(world: &mut World, caster: Entity, spell: &SpellInfo, foreground
 
 fn after_hits(world: &mut World, ctx: &EffectCtx) {
     if ctx.spell.id == 441424
-        && world.get::<ActiveSpec>(ctx.caster).is_some_and(|spec| spec.0 == 251)
+        && world
+            .get::<ActiveSpec>(ctx.caster)
+            .is_some_and(|spec| spec.0 == 251)
     {
         spell_cast::cast_triggered(world, ctx.caster, 51124, Some(ctx.caster), ctx.depth + 1);
     }
@@ -92,7 +96,9 @@ fn filter_damage_effect(
     // while effect1 is the Blood coefficient.
     if matches!(spell.id, 441424 | 441426)
         && effect == 0
-        && world.get::<ActiveSpec>(caster).is_some_and(|spec| spec.0 == 251)
+        && world
+            .get::<ActiveSpec>(caster)
+            .is_some_and(|spec| spec.0 == 251)
     {
         targets.clear();
     }

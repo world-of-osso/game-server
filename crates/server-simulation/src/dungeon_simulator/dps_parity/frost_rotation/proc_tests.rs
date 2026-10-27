@@ -327,13 +327,16 @@ fn frost_exterminate_spender_deals_both_native_hits() {
             .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
             .0;
         for spell in [441424, 441426] {
-            assert!(events.iter().any(|event| {
-                event.source == Some(run.actor.to_bits())
-                    && event.target == Some(run.targets[0].to_bits())
-                    && event.spell_id == Some(spell)
-                    && event.kind == CombatLogKind::Damage
-                    && event.amount > 0
-            }), "earned spender {spender} must deal native Exterminate hit {spell}");
+            assert!(
+                events.iter().any(|event| {
+                    event.source == Some(run.actor.to_bits())
+                        && event.target == Some(run.targets[0].to_bits())
+                        && event.spell_id == Some(spell)
+                        && event.kind == CombatLogKind::Damage
+                        && event.amount > 0
+                }),
+                "earned spender {spender} must deal native Exterminate hit {spell}"
+            );
         }
     }
 }
