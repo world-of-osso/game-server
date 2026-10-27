@@ -46,7 +46,7 @@ fn havoc_hunt_dot_uses_demon_hide_twice() {
     let normal = hunt_tick(false);
     let selected = hunt_tick(true);
     assert!(
-        (selected as f32 / normal as f32 - 1.03).abs() < 0.002,
+        (selected as f32 / normal as f32 - 1.03_f32.powi(2)).abs() < 0.002,
         "native Hunt tick {normal} -> {selected}"
     );
 }
