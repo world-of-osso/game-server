@@ -215,19 +215,32 @@ fn devourer_full_soul_stacks_admit_real_metamorphosis() {
         !crate::auras::has_aura(run.app.world(), actor, 1217607),
         "outside Meta"
     );
-    for _ in 0..49 {
+    crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 1225789, Some(actor), 1);
+    let cap = run
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(actor)
+        .and_then(|auras| {
+            auras
+                .iter()
+                .find(|aura| aura.spell_id == 1225789 && aura.caster == actor)
+        })
+        .expect("native soul stack aura")
+        .max_stacks;
+    assert_eq!(cap, 35, "selected Soul Glutton modifies the native cap");
+    for _ in 1..cap - 1 {
         crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 1225789, Some(actor), 1);
     }
     for _ in 0..20 {
-        if stacks(run.app.world(), actor, 1225789) == 49 {
+        if stacks(run.app.world(), actor, 1225789) == cap - 1 {
             break;
         }
         run.app.update();
     }
     assert_eq!(
         stacks(run.app.world(), actor, 1225789),
-        49,
-        "native stacks prepared below 50 cap"
+        cap - 1,
+        "native stacks prepared below effective cap"
     );
     assert!(
         !crate::auras::has_aura(run.app.world(), actor, 1213809),
@@ -236,7 +249,7 @@ fn devourer_full_soul_stacks_admit_real_metamorphosis() {
     consume_fragment_and_observe_heal(&mut run);
     assert_eq!(
         stacks(run.app.world(), actor, 1225789),
-        50,
+        cap,
         "real fragment heal reaches native cap"
     );
     for _ in 0..20 {
