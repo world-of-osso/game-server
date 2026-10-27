@@ -231,6 +231,67 @@ fn havoc_chaotic_disposition_rolls_real_chaos_hits_but_not_hunt() {
 
 #[test]
 #[ignore = "requires prepared native spec577 player profile"]
+fn havoc_chaotic_disposition_rolls_real_burning_wound_ticks() {
+    fn ticks(selected: bool) -> Vec<i32> {
+        let _seed = crate::random::seed_scope(70_448);
+        let mut run = prepare_literal(577, 1).unwrap();
+        preparation::finish_pending_setup(&mut run).unwrap();
+        let actor = run.actor;
+        let target = run.targets[0];
+        if !selected {
+            let known = run
+                .app
+                .world()
+                .get::<crate::class_progression::KnownSpells>(actor)
+                .unwrap();
+            let spells = known.iter().filter(|spell| *spell != 428492).collect();
+            run.app
+                .world_mut()
+                .entity_mut(actor)
+                .insert(crate::class_progression::KnownSpells::fixture(spells));
+        }
+        for frame in 0..1200 {
+            let _seed = crate::random::seed_scope(frame + 1);
+            run.app
+                .world_mut()
+                .get_mut::<crate::stats::CharacterStats>(actor)
+                .unwrap()
+                .crit_pct = -1000.0;
+            if frame % 280 == 0 {
+                crate::spell_cast::cast_triggered(
+                    run.app.world_mut(),
+                    actor,
+                    391191,
+                    Some(target),
+                    1,
+                );
+            }
+            run.app.update();
+        }
+        let hits = damage(&run, Some(391191));
+        assert!(
+            hits.len() >= 15,
+            "real Burning Wound must tick repeatedly: {hits:?}"
+        );
+        assert!(hits.iter().all(|hit| hit.periodic && !hit.crit));
+        hits.into_iter().map(|hit| hit.amount).collect()
+    }
+    let baseline = ticks(false);
+    let selected = ticks(true);
+    assert_eq!(baseline.len(), selected.len());
+    let bonuses: Vec<_> = selected
+        .iter()
+        .zip(&baseline)
+        .map(|(with, without)| *with as f64 / *without as f64)
+        .collect();
+    assert!(
+        bonuses.iter().any(|ratio| (*ratio - 1.17).abs() < 0.001),
+        "native17% bonus must occur on real periodic ticks: {bonuses:?}"
+    );
+}
+
+#[test]
+#[ignore = "requires prepared native spec577 player profile"]
 fn havoc_chaos_theory_real_dance_grants_random_strike_critical_chance() {
     let _seed = crate::random::seed_scope(70_448);
     let mut run = prepare_literal(577, 1).unwrap();
