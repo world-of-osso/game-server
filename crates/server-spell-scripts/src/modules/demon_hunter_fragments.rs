@@ -231,11 +231,8 @@ fn spawn_one(
         activated: false,
         consume_on_activation,
     };
-    let mut state = world
-        .entity_mut(owner)
-        .entry::<Fragments>()
-        .or_default()
-        .into_mut();
+    let mut entity = world.entity_mut(owner);
+    let mut state = entity.entry::<Fragments>().or_default().into_mut();
     state.next_id += 1;
     state.items.push(fragment);
     Ok(())
