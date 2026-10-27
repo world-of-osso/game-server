@@ -1034,6 +1034,12 @@ def where(args):
             print(f"{label}: {entry.get('status', '')} {entry.get('reason', '')[:300]}".rstrip())
             return
     if (RUNNING / f"{args.id}.json").exists():
+        entry = json.loads((RUNNING / f"{args.id}.json").read_text())
+        landed = git("merge-base", "--is-ancestor", entry["commit"], "origin/master", check=False)
+        if entry.get("land") and landed.returncode == 0:
+            # Pushed; the result file is written when its background measurement finishes.
+            print("landed on origin/master; measurement still running, keep waiting")
+            return
         current = HOME / "current.json"
         try:
             info = json.loads(current.read_text())
