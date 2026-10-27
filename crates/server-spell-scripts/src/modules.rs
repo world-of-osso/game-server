@@ -96,6 +96,7 @@ register_modules! {
     elemental_communication: (2620, "modules/elemental_communication.rs"),
     elemental_fellowship: (2624, "modules/elemental_fellowship.rs"),
     elemental_fusion: (2621, "modules/elemental_fusion.rs"),
+    elemental_lava_overload: (2626, "modules/elemental_lava_overload.rs"),
     elemental_offering: (2623, "modules/elemental_offering.rs"),
     elemental_quake_overload: (2625, "modules/elemental_quake_overload.rs"),
     elemental_tier: (2622, "modules/elemental_tier.rs"),
