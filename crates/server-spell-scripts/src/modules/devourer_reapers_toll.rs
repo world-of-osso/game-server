@@ -1,6 +1,7 @@
 //! SimC76f8118 sc_demon_hunter.cpp6697–6783: Reaper's Toll executes native damage.
 use super::combat;
 use bevy::prelude::*;
+use combat::auras::{self, RemoveReason};
 use combat::soul_fragments::{self, FragmentKind};
 use combat::spell_cast::{self, script_registry::SpellScriptHook};
 use combat::spell_info::SpellInfo;
@@ -32,5 +33,12 @@ fn after_launch(world: &mut World, caster: Entity, spell: &SpellInfo) {
     for _ in 0..count {
         soul_fragments::spawn(world, caster, FragmentKind::Lesser, false)
             .expect("native Reaper's Toll fragment");
+    }
+    // SimC76f8118 cpp6747–6753 consumes Hungering Slash and grants Voidstep.
+    auras::remove_auras(world, caster, RemoveReason::Consumed, |aura| {
+        aura.caster == caster && aura.spell_id == 1239525
+    });
+    if !spell_cast::try_cast_triggered(world, caster, 1223157, Some(caster), 1) {
+        warn!(?caster, "native Voidstep 1223157 was refused");
     }
 }
