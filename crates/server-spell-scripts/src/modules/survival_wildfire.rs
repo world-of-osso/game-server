@@ -18,6 +18,7 @@ const EXPLOSION: u32 = 265157;
 const ORDINARY_DOT: u32 = 269747;
 const SHRAPNEL_TALENT: u32 = 1253172;
 const SHRAPNEL_BLEED: u32 = 1253171;
+const SHRAPNEL_FOCUS: u32 = 1292687;
 // SimC76f8118 sc_hunter.cpp7064: its sourced approximation is a5yd circle
 // around the actual primary. Neither native damage record carries a radius.
 const EXPLOSION_RADIUS: f32 = 5.0;
@@ -30,6 +31,11 @@ fn explode(world: &mut World, caster: Entity, target: Entity, depth: u8) {
     // sc_hunter.cpp7134: one actual child explosion; native target planning
     // supplies its recipient list and the parent supplies cap/primary percentage.
     spell_cast::cast_triggered(world, caster, EXPLOSION, Some(target), depth + 1);
+    // sc_hunter.cpp7092–7095/8200–8205: selected Shrapnel triggers its
+    // native periodic Focus buff once per explosion execute, not per recipient.
+    if has_talent(world, caster, SHRAPNEL_TALENT) {
+        super::survival_buffs::grant_self_buff(world, caster, SHRAPNEL_FOCUS);
+    }
 }
 
 fn payload_plan(spell: u32) -> Option<(targets::Relation, TargetPlanHook)> {
