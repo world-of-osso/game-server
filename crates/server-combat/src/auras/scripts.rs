@@ -408,6 +408,7 @@ pub(super) fn register_class_scripts(
     crate::spell_cast::scripts::register_midnight_items(&mut scripts);
     super::midnight_stat_procs::register(&mut scripts);
     super::venomcursed::register(&mut scripts);
+    super::janthrazet::register(&mut scripts);
     crate::spell_cast::scripts::register_lifecycle_policies(&mut scripts, &registry);
     crate::spell_cast::scripts::register_wdp_relationship(&mut scripts);
     crate::spell_cast::scripts::register_unbroken_rhythm(&mut scripts);
