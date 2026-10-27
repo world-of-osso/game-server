@@ -176,6 +176,30 @@ fn native_wildspeaker_dire_beasts_inherit_owner_crit() {
                 .find(|(_, summon)| summon.owner == run.actor && summon.spell_id == 219199)
                 .map(|(actor, _)| actor);
             if let Some(actor) = actor {
+                let world = run.app.world();
+                let spell = world
+                    .resource::<crate::spell_info::SpellStore>()
+                    .get(1232922)
+                    .unwrap();
+                let owner = crate::auras::spell_mods::modify(
+                    world,
+                    run.actor,
+                    spell,
+                    crate::auras::SpellModOp::HealingAndDamage,
+                    100.0,
+                );
+                let pet = crate::auras::spell_mods::modify(
+                    world,
+                    actor,
+                    spell,
+                    crate::auras::SpellModOp::HealingAndDamage,
+                    100.0,
+                );
+                eprintln!(
+                    "WILDSPEAKER_OWNER_MOD owner={owner} pet={pet} hunterpet={} savagery={}",
+                    world.get::<crate::hunter_pet::HunterPet>(actor).is_some(),
+                    crate::auras::has_aura(world, run.actor, 424557)
+                );
                 run.app.insert_resource(
                     crate::spell_cast::effects::factor_capture::FactorCapture::new(
                         actor,
