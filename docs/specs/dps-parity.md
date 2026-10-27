@@ -330,6 +330,8 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 ### Havoc literal rotation
 
+- Selected Eternal Hunt1270901 applies its native effect0 percentage a second time to the final Blade Dance and Death Sweep primary and secondary strikes, not to earlier strikes (SimC76f8118 `sc_demon_hunter.cpp`7055–7065,7113–7121).
+
 - Native Eye Beam198013 and Gaze452497 apply aura33 at −200% movement speed during the channel. Preserve that self-slow, Vengeful Retreat's real displacement and beam range: a target outside the cone range misses ticks until the channel ends and the actor can return. SimC76f8118 `sc_demon_hunter.cpp`1551–1611,8539–8620 models Retreat's return as an out-of-melee timer rather than that physical trajectory; this can produce a parity difference.
 
 - Selected Chaos Theory389687 grants native390195 on Blade Dance/Death Sweep. Its native proc modifier applies to Chaos Strike/Annihilation's off-hand refund roll; that off-hand execution consumes the buff whether or not a refund occurs (SimC76f8118 sc_demon_hunter.cpp7234–7237,7481–7515).
