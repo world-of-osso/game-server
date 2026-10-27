@@ -22,6 +22,17 @@ def spawn_fingerprint(conn):
 
 
 class ClassSummonImportTests(unittest.TestCase):
+    def test_dire_command_reaches_authentic_native_beast(self):
+        source = (ROOT / "data/world.db").resolve()
+        with closing(sqlite3.connect(f"file:{source}?mode=ro", uri=True)) as conn:
+            entry = conn.execute("""SELECT EffectMiscValue_0 FROM spell_effect
+                WHERE SpellID=219199 AND DifficultyID=0 AND Effect=28""").fetchone()[0]
+            self.assertEqual(entry, 110063)
+            native = conn.execute("SELECT name FROM tdb_creature_template WHERE entry=?", (entry,)).fetchone()
+            self.assertEqual(native, ("Beast",))
+            selected = {row[0] for row in conn.execute(retail_content.CLASS_SUMMON_ENTRIES)}
+            self.assertIn(entry, selected, "selected Dire Command must retain its actual native summon dependency")
+
     def test_invocation_closure_reaches_authentic_arcane_phoenix(self):
         source = (ROOT / "data/world.db").resolve()
         with closing(sqlite3.connect(f"file:{source}?mode=ro", uri=True)) as conn:
