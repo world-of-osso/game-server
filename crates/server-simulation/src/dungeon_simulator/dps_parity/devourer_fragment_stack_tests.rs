@@ -80,11 +80,20 @@ fn batch1_fragment_heal_grants_feast_of_souls() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare(1480, 1).expect("native Devourer profile");
     let actor = run.actor;
-    assert!(run.app.world().get::<crate::class_progression::KnownSpells>(actor).is_some_and(|known| known.contains(1237270)), "selected Feast");
+    assert!(
+        run.app
+            .world()
+            .get::<crate::class_progression::KnownSpells>(actor)
+            .is_some_and(|known| known.contains(1237270)),
+        "selected Feast"
+    );
     engage(&mut run);
     assert!(!crate::auras::has_aura(run.app.world(), actor, 1232310));
     consume_fragment_and_observe_heal(&mut run);
-    assert!(crate::auras::has_aura(run.app.world(), actor, 1232310), "real fragment heal grants Feast");
+    assert!(
+        crate::auras::has_aura(run.app.world(), actor, 1232310),
+        "real fragment heal grants Feast"
+    );
 }
 
 #[test]
@@ -94,16 +103,66 @@ fn batch1_real_star_hit_grants_delayed_impending_apocalypse() {
     let mut run = prepare(1480, 1).expect("native Devourer profile");
     let actor = run.actor;
     let target = run.targets[0];
-    assert!(run.app.world().get::<crate::class_progression::KnownSpells>(actor).is_some_and(|known| known.contains(1227707)), "selected Impending Apocalypse");
+    assert!(
+        run.app
+            .world()
+            .get::<crate::class_progression::KnownSpells>(actor)
+            .is_some_and(|known| known.contains(1227707)),
+        "selected Impending Apocalypse"
+    );
     engage(&mut run);
     crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 1217605, Some(actor), 1);
-    for _ in 0..30 { run.app.update(); }
-    for _ in 0..30 { crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 1227702, Some(actor), 1); }
-    assert!(crate::auras::has_aura(run.app.world(), actor, 1221171), "star ready");
-    crate::spell_cast::cast_for_player_with_target(run.app.world_mut(), actor, 1221150, Some(target)).expect("real Star admission");
-    for _ in 0..100 { run.app.update(); }
-    assert!(run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0.iter().any(|e| e.spell_id == Some(1221162) && e.target == Some(target.to_bits()) && e.kind == CombatLogKind::Damage && e.amount > 0), "primary Star hit landed");
-    assert!(crate::auras::has_aura(run.app.world(), actor, 1227338), "Star hit grants delayed Impending Apocalypse");
+    for _ in 0..30 {
+        run.app.update();
+    }
+    for _ in 0..30 {
+        crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 1227702, Some(actor), 1);
+    }
+    assert!(
+        crate::auras::has_aura(run.app.world(), actor, 1221171),
+        "star ready"
+    );
+    crate::spell_cast::cast_for_player_with_target(
+        run.app.world_mut(),
+        actor,
+        1221150,
+        Some(target),
+    )
+    .expect("real Star admission");
+    let hit = |run: &Run| {
+        run.app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|e| {
+                e.spell_id == Some(1221162)
+                    && e.target == Some(target.to_bits())
+                    && e.kind == CombatLogKind::Damage
+                    && e.amount > 0
+            })
+    };
+    for _ in 0..100 {
+        run.app.update();
+        if hit(&run) {
+            break;
+        }
+    }
+    assert!(hit(&run), "primary Star hit landed");
+    for _ in 0..20 {
+        run.app.update();
+    }
+    assert!(
+        !crate::auras::has_aura(run.app.world(), actor, 1227338),
+        "no Apocalypse before 1.2s"
+    );
+    for _ in 0..6 {
+        run.app.update();
+    }
+    assert!(
+        crate::auras::has_aura(run.app.world(), actor, 1227338),
+        "Star hit grants Apocalypse after 1.2s"
+    );
 }
 
 fn batch1_voidblade_hit(meta: bool, mastery: f32) -> (i32, bool) {
@@ -112,15 +171,39 @@ fn batch1_voidblade_hit(meta: bool, mastery: f32) -> (i32, bool) {
     let actor = run.actor;
     let target = run.targets[0];
     engage(&mut run);
-    if meta { crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 1217605, Some(actor), 1); }
-    for _ in 0..30 { run.app.update(); }
-    assert_eq!(crate::auras::has_aura(run.app.world(), actor, 1217607), meta, "native Meta state");
-    let mut stats = run.app.world_mut().get_mut::<crate::stats::CharacterStats>(actor).unwrap();
+    if meta {
+        crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 1217605, Some(actor), 1);
+    }
+    for _ in 0..30 {
+        run.app.update();
+    }
+    assert_eq!(
+        crate::auras::has_aura(run.app.world(), actor, 1217607),
+        meta,
+        "native Meta state"
+    );
+    let mut stats = run
+        .app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(actor)
+        .unwrap();
     stats.mastery_points = mastery;
     stats.mastery_pct = mastery;
     let _hit_seed = crate::random::seed_scope(91);
     crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 1245414, Some(target), 1);
-    let hit = run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0.iter().find(|e| e.spell_id == Some(1245414) && e.target == Some(target.to_bits()) && e.kind == CombatLogKind::Damage && e.amount > 0).expect("real Voidblade child hit");
+    let hit = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .iter()
+        .find(|e| {
+            e.spell_id == Some(1245414)
+                && e.target == Some(target.to_bits())
+                && e.kind == CombatLogKind::Damage
+                && e.amount > 0
+        })
+        .expect("real Voidblade child hit");
     (hit.amount, hit.crit)
 }
 
@@ -132,7 +215,10 @@ fn batch1_meta_scales_devourer_damage_with_mastery() {
     assert_eq!(zero_crit, forty_crit, "compare same hit outcome");
     // SimC76f8118 cpp2169–2185 pairs Meta effect4 with Monster Within mastery.
     let expected = f64::from(zero) * 1.16;
-    assert!((f64::from(forty)-expected).abs() < expected * 0.02, "Meta/mastery expected {expected}, actual {forty}, zero-mastery hit {zero}");
+    assert!(
+        (f64::from(forty) - expected).abs() < expected * 0.02,
+        "Meta/mastery expected {expected}, actual {forty}, zero-mastery hit {zero}"
+    );
 }
 
 #[test]
