@@ -283,7 +283,7 @@ mod shadow_ire_tests;
 mod shadow_link_tests;
 mod shadow_mastery_tests;
 mod shadow_nzoth_tests;
-mod diag_nzoth_sources_tests;
+mod shadow_nzoth_sources_tests;
 mod shadow_rift_tests;
 mod shadow_screams_tests;
 mod shadow_slam_tests;

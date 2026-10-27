@@ -85,25 +85,25 @@ fn ordinary_source(spell: u32, expected: u8) {
 
 #[test]
 #[ignore = "requires native258 Player/profile/traits"]
-fn diag_nzoth_pain_ordinary_execution_earns_three() {
+fn shadow_nzoth_pain_ordinary_execution_earns_three() {
     ordinary_source(589, 3);
 }
 
 #[test]
 #[ignore = "requires native258 Player/profile/traits"]
-fn diag_nzoth_mind_blast_ordinary_execution_earns_six() {
+fn shadow_nzoth_mind_blast_ordinary_execution_earns_six() {
     ordinary_source(8092, 6);
 }
 
 #[test]
 #[ignore = "requires native258 Player/profile/traits"]
-fn diag_nzoth_vampiric_touch_ordinary_execution_earns_four() {
+fn shadow_nzoth_vampiric_touch_ordinary_execution_earns_four() {
     ordinary_source(34914, 4);
 }
 
 #[test]
 #[ignore = "requires native258 Player/profile/traits"]
-fn diag_nzoth_torrent_actual_ticks_earn_two_each() {
+fn shadow_nzoth_torrent_actual_ticks_earn_two_each() {
     let mut run = prepare_literal(258, 1).unwrap();
     engage(&mut run);
     cast_when_ready(&mut run, 263165);
