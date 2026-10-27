@@ -613,12 +613,16 @@ fn demonology_imp_critical_damage_inherits_demonic_brutality() {
         .unwrap()
         .base_points;
     let imp = summon_native_guardian(&mut run, 104317);
+    run.app
+        .world_mut()
+        .entity_mut(run.actor)
+        .insert(crate::networking::CombatTarget(Some(run.targets[0])));
     run.app.insert_resource(FactorCapture::new(
         imp,
         run.targets[0],
         104318,
         "fel_firebolt",
-        1,
+        10,
     ));
     crate::spell_cast::creature_cast(
         run.app.world_mut(),
@@ -628,20 +632,21 @@ fn demonology_imp_critical_damage_inherits_demonic_brutality() {
         false,
     )
     .unwrap();
-    for _ in 0..100 {
+    for _ in 0..300 {
         run.app.update();
     }
     let capture = run.app.world().resource::<FactorCapture>().export();
     let events = capture["events"].as_array().unwrap();
-    let direct = events
+    let position = events
         .iter()
+        .position(|event| event["event"] == "result" && event["factors"]["result"] == "crit")
+        .expect("actual Imp bolts must include a native critical hit");
+    let result = &events[position];
+    let direct = events[..position]
+        .iter()
+        .rev()
         .find(|event| event["event"] == "direct_amount")
         .unwrap();
-    let result = events
-        .iter()
-        .find(|event| event["event"] == "result")
-        .unwrap();
-    assert_eq!(result["factors"]["result"], "crit");
     let uncritical = direct["factors"]["amount"].as_f64().unwrap();
     let actual = result["factors"]["actual_amount"].as_f64().unwrap();
     let expected = uncritical * 2.0 * (1.0 + f64::from(effect) / 100.0);
