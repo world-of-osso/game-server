@@ -16,6 +16,10 @@ fn after_finisher_hit(world: &mut World, ctx: &EffectCtx, target: Entity, _: boo
     if ctx.depth != 0 || damage <= 0.0 || ctx.spell.cast_primary_target != Some(target) {
         return;
     }
+    award_finisher(world, ctx);
+}
+
+pub(super) fn award_finisher(world: &mut World, ctx: &EffectCtx) {
     if !world
         .get::<KnownSpells>(ctx.caster)
         .is_some_and(|known| known.contains(TALENT))
