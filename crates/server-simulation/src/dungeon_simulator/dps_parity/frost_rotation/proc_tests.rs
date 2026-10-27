@@ -342,6 +342,28 @@ fn frost_exterminate_spender_deals_both_native_hits() {
 }
 
 #[test]
+#[ignore = "actual Obliterate impacts earn Frostreaper damage"]
+fn frost_frostreaper_follows_real_obliterate_and_frost_strike() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::protocol::CombatLogKind;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::super::prepare_measurement(251, 1).unwrap();
+    super::super::engage(&mut run);
+    assert!(auras::has_aura(run.app.world(), run.actor, 1230301));
+    super::super::advance_combat(&mut run).unwrap();
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0;
+    let mark = events.iter().position(|event| {
+        event.source == Some(run.actor.to_bits()) && event.spell_id == Some(1233351)
+            && event.kind == CombatLogKind::AuraApplied
+    }).expect("actual Obliterate must earn a Frostreaper mark");
+    assert!(events[mark..].iter().any(|event| {
+        event.source == Some(run.actor.to_bits()) && event.target == Some(run.targets[0].to_bits())
+            && event.spell_id == Some(1233619) && event.kind == CombatLogKind::Damage
+            && event.amount > 0
+    }), "real earned Frostreaper marks must produce damage");
+}
+
+#[test]
 #[ignore = "actual Killing Machine consumption rolls native Murderous Efficiency"]
 fn frost_murderous_efficiency_tracks_consumed_killing_machine_stacks() {
     use crate::spell_cast::test_harness::ObservedCombatEvents;
