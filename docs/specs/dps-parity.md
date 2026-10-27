@@ -344,7 +344,7 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 - Selected Eternal Hunt1270901 applies its native effect0 percentage a second time to the final Blade Dance and Death Sweep primary and secondary strikes, not to earlier strikes (SimC76f8118 `sc_demon_hunter.cpp`7055–7065,7113–7121).
 
-- Native Eye Beam198013 and Gaze452497 apply aura33 at −200% movement speed during the channel. Preserve that self-slow, Vengeful Retreat's real displacement and beam range: a target outside the cone range misses ticks until the channel ends and the actor can return. SimC76f8118 `sc_demon_hunter.cpp`1551–1611,8539–8620 models Retreat's return as an out-of-melee timer rather than that physical trajectory; this can produce a parity difference.
+- A melee fixture returns to its selected target at native run speed after controlled displacement ends. Continue polling its APL: an otherwise-ready action outside its native target range waits without falling through, while eligible self-casts, off-GCD and in-range actions remain available. A hostile channel waits for active displacement to end so its target-range check uses the settled position. Targets stay fixed and actual casts retain native range, movement control and channel self-slow. Real Retreat followed by Eye Beam must land all twelve native ticks.
 
 - Selected Chaos Theory389687 grants native390195 on Blade Dance/Death Sweep. Each affected damage action samples an additive crit-chance bonus between native talent effect0 and effect1; the buff's native proc modifier applies to Chaos Strike/Annihilation's off-hand refund roll. That off-hand execution consumes the buff whether or not a refund occurs (SimC76f8118 sc_demon_hunter.cpp2098–2103,2413–2420,7234–7237,7481–7515).
 
@@ -639,9 +639,12 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 - Spec267 landed Wither445474 and Immolate157736 ticks grant0.1 displayed Soul Shard through the shared native power/overflow pipeline. A critical tick rolls its native direct spell445468/348 effect1 chance for one additional fragment. Immune ticks do not fund shards; fully absorbed landed ticks remain eligible. Native PowerType metadata supplies raw units (SimC76f8118 `sc_warlock_actions.cpp1108–1117,4047–4059`, `sc_warlock_init.cpp1319,1443`).
 - The periodic registry forwards the actual critical result. Other specializations, including Affliction Wither, receive no Destruction funding; Agony's separate threshold RNG is outside this policy.
 
-### Diabolic Ritual initial timer
+### Diabolic Ritual, Demonic Art and Ruination
 
-- Selected Demonology Diabolic Ritual starts its native Overlord timer on in-combat Hand of Gul'dan payment and reduces it per paid shard (`sc_warlock_actions.cpp278–355`). Other spenders, Infernal Machine, Destruction, Art cycling and demon summons remain unimplemented.
+- Selected Demonology Diabolic Ritual starts on in-combat Hand of Gul'dan payment and shortens the held ritual by native effect1 seconds per paid shard (`sc_warlock_actions.cpp278–355`). The first ritual of an encounter is uniform; each ritual's natural end selects the next Overlord→Mother of Chaos→Pit Lord ritual (`sc_warlock_init.cpp927–931,1750`).
+- A ritual's natural end grants its native Demonic Art after a gauss(200ms, 15ms) delay, replacing any held Art without summoning (`sc_warlock_init.cpp857–888`). A Hand whose cast started with the Art held, or any Ruination, consumes it. Consumption or expiry in combat summons that Art's native demon (`sc_warlock_init.cpp897–925`).
+- The Mother of Chaos summon grants native Infernal Bolt433891 with selected Secrets of the Coven. The Pit Lord summon grants native Ruination433885 with selected Ruination (`sc_warlock_actions.cpp5445–5481`). Each replacement cast consumes one stack of its buff. Ruination's primary impact drops the native three-shard Hand meteor and its three Wild Imps after gauss(395ms, 35ms) (`sc_warlock_actions.cpp5262–5333`).
+- Infernal Machine, other ritual spenders, Destruction, Diabolic Oculi and the demons' own actions remain unimplemented.
 
 ### Demonology literal execution and alternative Tyrant
 
