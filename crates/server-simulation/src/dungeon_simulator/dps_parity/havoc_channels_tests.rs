@@ -1153,18 +1153,36 @@ fn havoc_eternal_hunt_scales_only_last_dance_strikes() {
             cast(&mut run, 191427, false);
             preparation::finish_pending_setup(&mut run).unwrap();
         }
+        run.app
+            .world_mut()
+            .entity_mut(actor)
+            .remove::<crate::combat::AutoAttack>();
+        run.app
+            .world_mut()
+            .get_mut::<crate::stats::CharacterStats>(actor)
+            .unwrap()
+            .crit_pct = 1000.0;
         cast(&mut run, parent, true);
-        advance(&mut run, 50);
+        for _ in 0..50 {
+            run.app
+                .world_mut()
+                .get_mut::<crate::stats::CharacterStats>(actor)
+                .unwrap()
+                .crit_pct = 1000.0;
+            run.app.update();
+        }
         let ids = if parent == 188499 {
             [391374, 391378, 199552, 200685]
         } else {
             [393055, 393054, 210153, 210155]
         };
         ids.map(|id| {
-            damage(&run, Some(id))
-                .iter()
-                .map(|hit| hit.amount as u64)
-                .sum()
+            let hits = damage(&run, Some(id));
+            assert!(
+                hits.iter().all(|hit| hit.crit),
+                "controlled strikes must be critical: {hits:?}"
+            );
+            hits.iter().map(|hit| hit.amount as u64).sum()
         })
     }
     for parent in [188499, 210152] {
