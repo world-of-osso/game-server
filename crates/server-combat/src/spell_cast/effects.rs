@@ -367,9 +367,12 @@ pub fn power_stats(world: &World, unit: Entity, healing: bool) -> (f32, f32) {
                 .get::<CharacterStats>(summon.owner)
                 .expect("owner-scaled guardian requires native CharacterStats");
             let modifiers = world.get::<crate::stats::StatModifiers>(summon.owner);
-            // SimC76f8118 sc_death_knight.cpp4478–4487: Magus inherits melee AP;
-            // Hunter guardian policies retain their existing ranged AP basis.
-            let attack_type = if summon.spell_id == 1242294 && entry == Some(163366) {
+            // SimC76f8118 sc_death_knight.cpp4478–4487/4657–4660:
+            // Magus and Lord inherit melee AP; Hunter guardians retain ranged AP.
+            let attack_type = if matches!(
+                (summon.spell_id, entry),
+                (1242294, Some(163366)) | (1292072, Some(264321))
+            ) {
                 crate::stats::WeaponAttackType::MainHand
             } else {
                 crate::stats::WeaponAttackType::Ranged
