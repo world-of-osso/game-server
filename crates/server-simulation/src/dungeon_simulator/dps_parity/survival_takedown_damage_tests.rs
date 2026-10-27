@@ -15,7 +15,10 @@ fn survival_native_takedown_dispatches_owner_and_owned_pet_damage() {
         player_hits += usize::from(player);
         pet_hits += usize::from(pet);
     }
-    assert!(player_hits > 0 && pet_hits > 0, "both actual actors must deal positive native damage across the fixed matrix");
+    assert!(
+        player_hits > 0 && pet_hits > 0,
+        "both actual actors must deal positive native damage across the fixed matrix"
+    );
 }
 
 fn assert_takedown_outcomes(seed: u64) -> (bool, bool) {
@@ -29,15 +32,32 @@ fn assert_takedown_outcomes(seed: u64) -> (bool, bool) {
     for _ in 0..40 {
         run.app.update();
     }
-    let events = &run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
     let mut positive = [false; 2];
-    for (index, (actor, spell)) in [(run.actor, 1253859), (pet, 1253862)].into_iter().enumerate() {
+    for (index, (actor, spell)) in [(run.actor, 1253859), (pet, 1253862)]
+        .into_iter()
+        .enumerate()
+    {
         // Native fc87ee307c shows the real pet child can be dodged. Require
         // exactly one actual owned outcome for every seed, not a guaranteed hit.
-        let outcomes: Vec<_> = events.iter().filter(|event| event.source == Some(actor.to_bits())
-            && event.target == Some(run.targets[0].to_bits()) && event.spell_id == Some(spell)
-            && matches!(event.kind, CombatLogKind::Damage | CombatLogKind::Miss(_))).collect();
-        assert_eq!(outcomes.len(), 1, "seed{seed}: actual actor{actor:?} must emit one native spell{spell} outcome");
+        let outcomes: Vec<_> = events
+            .iter()
+            .filter(|event| {
+                event.source == Some(actor.to_bits())
+                    && event.target == Some(run.targets[0].to_bits())
+                    && event.spell_id == Some(spell)
+                    && matches!(event.kind, CombatLogKind::Damage | CombatLogKind::Miss(_))
+            })
+            .collect();
+        assert_eq!(
+            outcomes.len(),
+            1,
+            "seed{seed}: actual actor{actor:?} must emit one native spell{spell} outcome"
+        );
         positive[index] = outcomes[0].kind == CombatLogKind::Damage && outcomes[0].amount > 0;
     }
     (positive[0], positive[1])

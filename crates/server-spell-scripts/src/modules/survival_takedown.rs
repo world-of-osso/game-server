@@ -4,9 +4,8 @@ use bevy::prelude::*;
 use combat::spell_cast::{self, script_registry::SpellScriptHook};
 use combat::spell_info::SpellInfo;
 
-pub(super) const HOOKS: &[SpellScriptHook] = &[
-    SpellScriptHook::SuccessfulCastRelationships(after_cast),
-];
+pub(super) const HOOKS: &[SpellScriptHook] =
+    &[SpellScriptHook::SuccessfulCastRelationships(after_cast)];
 
 const TAKEDOWN: u32 = 1250646;
 const PLAYER_DAMAGE: u32 = 1253859;
