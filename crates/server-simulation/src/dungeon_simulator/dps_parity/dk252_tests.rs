@@ -188,16 +188,12 @@ fn dk252_army_cast_summons_real_melee_ghouls() {
                 )>()
                 .iter(world)
                 .filter_map(|(entity, npc, summon)| {
-                    (npc.template_id == 237409 && summon.owner == run.actor)
+                    (npc.template_id == 237409 && summon.owner == run.actor && summon.spell_id == 1294026)
                         .then_some(entity.to_bits())
                 }),
         );
     }
-    assert_eq!(
-        ghouls.len(),
-        8,
-        "Army must summon eight real native lesser ghouls"
-    );
+    assert_eq!(ghouls.len(), 8, "Army must summon eight real native Army ghouls");
     let events = &run
         .app
         .world()
