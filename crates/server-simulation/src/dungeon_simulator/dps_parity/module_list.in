@@ -210,6 +210,7 @@ mod gear_profile_tests;
 mod haste_tests;
 mod havoc_channels_tests;
 mod havoc_fact_tests;
+mod havoc_hunt_demon_hide_tests;
 mod havoc_tests;
 mod health_aura_state_tests;
 mod hellcaller_counter_tests;
