@@ -104,7 +104,9 @@ pub(super) fn on_hit(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
             apply_mark(world, ctx, target, stacks);
             // sc_rogue.cpp8743–8746: the 1ms expiry preserves the buff
             // through this finisher's child snapshots.
-            assert!(auras::set_owned_duration(world, ctx.caster, ctx.caster, DARKEST, 1));
+            assert!(auras::set_owned_duration(
+                world, ctx.caster, ctx.caster, DARKEST, 1
+            ));
         }
         return;
     }

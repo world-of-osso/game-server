@@ -142,29 +142,66 @@ fn subtlety_clone_eviscerate_snapshots_darkest_night_before_consumption() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(261, 1).unwrap();
     engage(&mut run);
-    run.app.world_mut().get_mut::<crate::stats::CharacterStats>(run.actor).unwrap().crit_pct = 0.0;
+    run.app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(run.actor)
+        .unwrap()
+        .crit_pct = 0.0;
     for id in [196911, 1269163, 457280] {
-        crate::auras::apply_aura(run.app.world_mut(), &crate::auras::AuraApplication {
-            caster: run.actor, target: run.actor, spell_id: id,
-            effect_mask: u32::MAX, source: crate::auras::AuraSource::Cast,
-        });
+        crate::auras::apply_aura(
+            run.app.world_mut(),
+            &crate::auras::AuraApplication {
+                caster: run.actor,
+                target: run.actor,
+                spell_id: id,
+                effect_mask: u32::MAX,
+                source: crate::auras::AuraSource::Cast,
+            },
+        );
     }
-    assert!(crate::auras::set_self_cast_stacks(run.app.world_mut(), run.actor, 196911, 7));
+    assert!(crate::auras::set_self_cast_stacks(
+        run.app.world_mut(),
+        run.actor,
+        196911,
+        7
+    ));
     {
-        let mut pools = run.app.world_mut().get_mut::<crate::spell_cast::powers::PowerPools>(run.actor).unwrap();
+        let mut pools = run
+            .app
+            .world_mut()
+            .get_mut::<crate::spell_cast::powers::PowerPools>(run.actor)
+            .unwrap();
         for kind in [PowerType::Energy, PowerType::ComboPoints] {
             let pool = pools.get_mut(kind).unwrap();
             pool.current = pool.max;
         }
     }
-    literal_rotation::execution::execute(run.app.world_mut(), run.actor,
-        literal_rotation::execution::Execution::Spell(196819, run.targets[0], Some(run.targets[0]))).unwrap();
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(196819, run.targets[0], Some(run.targets[0])),
+    )
+    .unwrap();
     preparation::finish_pending_setup(&mut run).unwrap();
-    let events = &run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
-    let clone = events.iter().find(|event| event.source == Some(run.actor.to_bits())
-        && event.target == Some(run.targets[0].to_bits()) && event.spell_id == Some(1269205)
-        && event.kind == CombatLogKind::Damage && event.amount > 0).expect("earned native Eviscerate clone");
-    assert!(clone.crit, "clone must retain Darkest Night's guaranteed critical chance");
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    let clone = events
+        .iter()
+        .find(|event| {
+            event.source == Some(run.actor.to_bits())
+                && event.target == Some(run.targets[0].to_bits())
+                && event.spell_id == Some(1269205)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0
+        })
+        .expect("earned native Eviscerate clone");
+    assert!(
+        clone.crit,
+        "clone must retain Darkest Night's guaranteed critical chance"
+    );
 }
 
 #[test]

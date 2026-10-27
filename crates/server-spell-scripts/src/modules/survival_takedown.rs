@@ -25,13 +25,16 @@ fn grant_twin_fangs(world: &mut World, caster: Entity, spell: &SpellInfo) {
     }
     let count = script_effect_value(world, caster, TWIN_FANGS, 0) as u8;
     for _ in 0..count {
-        auras::apply_aura(world, &AuraApplication {
-            caster,
-            target: caster,
-            spell_id: TIP,
-            effect_mask: 1,
-            source: AuraSource::Cast,
-        });
+        auras::apply_aura(
+            world,
+            &AuraApplication {
+                caster,
+                target: caster,
+                spell_id: TIP,
+                effect_mask: 1,
+                source: AuraSource::Cast,
+            },
+        );
     }
 }
 

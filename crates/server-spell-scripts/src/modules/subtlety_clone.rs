@@ -122,16 +122,26 @@ fn queue_clone(
 // sc_rogue.cpp2435–2440/2569–2578/10583–10584: maximum-point
 // Eviscerate clones snapshot both native Darkest Night bonuses.
 fn darkest_night_bonus(world: &World, caster: Entity, child: u32, points: f32) -> (f32, f32) {
-    if child != 1269205 || !powers::power_value(world, caster, PowerType::ComboPoints)
-        .is_some_and(|(_, maximum)| points >= maximum) {
+    if child != 1269205
+        || !powers::power_value(world, caster, PowerType::ComboPoints)
+            .is_some_and(|(_, maximum)| points >= maximum)
+    {
         return (1.0, 0.0);
     }
-    let Some(aura) = world.get::<ActiveAuras>(caster).and_then(|auras|
-        auras.iter().find(|aura| aura.spell_id == 457280 && aura.caster == caster)) else {
+    let Some(aura) = world.get::<ActiveAuras>(caster).and_then(|auras| {
+        auras
+            .iter()
+            .find(|aura| aura.spell_id == 457280 && aura.caster == caster)
+    }) else {
         return (1.0, 0.0);
     };
-    let amount = |index| aura.effects.iter().find(|effect| effect.index == index)
-        .expect("native Darkest Night effect").amount;
+    let amount = |index| {
+        aura.effects
+            .iter()
+            .find(|effect| effect.index == index)
+            .expect("native Darkest Night effect")
+            .amount
+    };
     (1.0 + amount(1) / 100.0, 100.0 + amount(3))
 }
 
