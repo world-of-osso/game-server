@@ -18,8 +18,14 @@ fn assert_native_elemental(root: u32, talent: u32, entry: u32, attacks: &[u32]) 
         own_aura(&run, 117013).is_some(),
         "selected native Primal Elementalist"
     );
-    crate::spell_cast::creature_cast(run.app.world_mut(), run.actor, root, Some(run.actor), false)
-        .unwrap();
+    crate::spell_cast::creature_cast(
+        run.app.world_mut(),
+        run.actor,
+        root,
+        Some(run.targets[0]),
+        false,
+    )
+    .unwrap();
     settle(&mut run);
     let elemental = run
         .app
@@ -41,6 +47,72 @@ fn assert_native_elemental(root: u32, talent: u32, entry: u32, attacks: &[u32]) 
                 && event.kind == CombatLogKind::Damage
                 && event.amount > 0),
         "actual elemental deals native owned damage"
+    );
+}
+
+fn owned_actors(run: &mut Run, entry: u32) -> Vec<(Entity, f64)> {
+    let owner = run.actor;
+    run.app
+        .world_mut()
+        .query::<(Entity, &Npc, &crate::spell_cast::summon::SummonedCreature)>()
+        .iter(run.app.world())
+        .filter(|(_, npc, summon)| npc.template_id == entry && summon.owner == owner)
+        .map(|(entity, _, summon)| (entity, summon.expires_at.unwrap()))
+        .collect()
+}
+
+#[test]
+#[ignore = "requires private262 native DB/profile"]
+fn elemental_primal_storm_resummon_extends_and_resets_actions() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = fixture();
+    // SimC76f8118 sc_shaman.cpp11555–11564: an active elemental is extended by
+    // the new duration and every action cooldown resets; no second actor.
+    let stormkeeper = |run: &mut Run| {
+        assert!(crate::spell_cast::try_cast_triggered(
+            run.app.world_mut(),
+            run.actor,
+            191634,
+            Some(run.targets[0]),
+            1
+        ));
+    };
+    stormkeeper(&mut run);
+    for _ in 0..100 {
+        run.app.update();
+    }
+    let first = owned_actors(&mut run, 77942);
+    assert_eq!(
+        first.len(),
+        1,
+        "one actual Primal Storm Elemental: {first:?}"
+    );
+    let (actor, expiry) = first[0];
+    let before = actor_casts(&run, actor, &[157348]).len();
+    assert_eq!(
+        before, 1,
+        "Call Lightning cast once, then on its 20s cooldown"
+    );
+    stormkeeper(&mut run);
+    for _ in 0..60 {
+        run.app.update();
+    }
+    let second = owned_actors(&mut run, 77942);
+    assert_eq!(
+        second.len(),
+        1,
+        "re-summon keeps the active actor: {second:?}"
+    );
+    assert_eq!(second[0].0, actor);
+    assert!(
+        (second[0].1 - (expiry + 10.0)).abs() < 1e-6,
+        "active elemental extended by native10s: {expiry} -> {}",
+        second[0].1
+    );
+    assert_eq!(
+        actor_casts(&run, actor, &[157348]).len(),
+        2,
+        "re-summon resets Call Lightning's native cooldown"
     );
 }
 
