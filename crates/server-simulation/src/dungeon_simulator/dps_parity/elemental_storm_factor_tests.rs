@@ -55,12 +55,16 @@ fn elemental_stormkeeper_first_bolt_overload_captures_live_damage_factor() {
         .expect("captured native events");
     let hit = events
         .iter()
-        .find(|event| event["spell_id"] == 45284 && event["factors"]["target_product"].is_number())
+        .find(|event| {
+            event["spell_id"] == 45284 && event["factors"]["native_done_product"].is_number()
+        })
         .expect("scheduled overload impact");
-    let product = hit["factors"]["target_product"].as_f64().unwrap();
+    let done = hit["factors"]["native_done_product"].as_f64().unwrap();
+    let versatility = hit["factors"]["versatility"].as_f64().unwrap();
+    let product = done / versatility;
     let expected = 1.0 + percent / 100.0;
     assert!(
         (product - expected).abs() < 0.001,
-        "live Stormkeeper target product {product}, expected {expected}; {hit}"
+        "live Stormkeeper damage product {product}, expected {expected}; {hit}"
     );
 }
