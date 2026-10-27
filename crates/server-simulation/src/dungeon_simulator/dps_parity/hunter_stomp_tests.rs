@@ -127,8 +127,14 @@ fn native_bm_barbed_stomps_the_pack_and_earns_mid2_cobra_fang() {
 #[test]
 #[ignore = "requires private spec253 reference inputs and native world DB"]
 fn native_bm_hogstrider_real_boar_arms_cobra() {
-    let _seed = crate::random::seed_scope(70_448);
-    let mut run = prepare_measurement(253, 3).expect("native literal BM fixture");
+    for targets in [1, 3] {
+        let _seed = crate::random::seed_scope(70_448);
+        assert_hogstrider_cobra(targets);
+    }
+}
+
+fn assert_hogstrider_cobra(targets: usize) {
+    let mut run = prepare_measurement(253, targets).expect("native literal BM fixture");
     assert!(crate::auras::has_aura(run.app.world(), run.actor, 472639));
     engage(&mut run);
     crate::combat_refs::set_in_combat_with(run.app.world_mut(), run.actor, run.targets[0]);
@@ -200,7 +206,7 @@ fn native_bm_hogstrider_real_boar_arms_cobra() {
     for target in &run.targets {
         assert!(
             hits.iter().any(|hit| hit.target == Some(target.to_bits())),
-            "earned Hogstrider Cobra must hit each of the three real targets"
+            "earned Hogstrider Cobra must hit every real target"
         );
     }
     let primary = hits
