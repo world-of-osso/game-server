@@ -125,7 +125,9 @@ fn launch_due_clones(world: &mut World) {
             if world.get_entity(target).is_ok() {
                 world.entity_mut(caster).insert(SecretCloneHit(false));
                 spell_cast::launch_triggered_spell(world, caster, &spell, Some(target), 1);
-                let hit = world.get::<SecretCloneHit>(caster).is_some_and(|state| state.0);
+                let hit = world
+                    .get::<SecretCloneHit>(caster)
+                    .is_some_and(|state| state.0);
                 world.entity_mut(caster).remove::<SecretCloneHit>();
                 if hit {
                     super::subtlety_clone::earn_clone_funding(world, caster);
@@ -142,7 +144,9 @@ fn launch_due_clones(world: &mut World) {
 }
 
 fn record_clone_hit(world: &mut World, ctx: &EffectCtx, _: Entity, _: bool, _: f32) {
-    if ctx.spell.id == CLONE && let Some(mut state) = world.get_mut::<SecretCloneHit>(ctx.caster) {
+    if ctx.spell.id == CLONE
+        && let Some(mut state) = world.get_mut::<SecretCloneHit>(ctx.caster)
+    {
         state.0 = true;
     }
 }
@@ -190,9 +194,7 @@ fn snapshot_critical_chance(
 }
 
 fn secondary_fraction(world: &World, ctx: &EffectCtx, target: Entity, _: bool) -> f32 {
-    if !matches!(ctx.spell.id, PLAYER | CLONE)
-        || ctx.spell.cast_primary_target == Some(target)
-    {
+    if !matches!(ctx.spell.id, PLAYER | CLONE) || ctx.spell.cast_primary_target == Some(target) {
         return 1.0;
     }
     // sc_rogue.cpp5392–5398: the physical player and Secret Technique
