@@ -1278,24 +1278,71 @@ fn frost_freezing_tempest_only_counts_real_winter_pulses() {
         let actor = run.actor;
         assert!(auras::has_aura(run.app.world(), actor, 1296652));
         super::super::enhancement_generation_tests::cast(&mut run, 51271, actor);
-        let hits = |run: &Run| run.app.world().resource::<ObservedCombatEvents>().0.iter()
-            .filter(|event| event.source == Some(actor.to_bits()) && event.spell_id == Some(196771)
-                && event.kind == CombatLogKind::Damage).count();
-        let stacks = |run: &Run| run.app.world().get::<ActiveAuras>(actor).and_then(|active| active.iter()
-            .find(|aura| aura.spell_id == 1297365 && aura.caster == actor).map(|aura| aura.stacks)).unwrap_or(0);
-        for _ in 0..60 { run.app.update(); if hits(&run) >= targets { break; } }
+        let hits = |run: &Run| {
+            run.app
+                .world()
+                .resource::<ObservedCombatEvents>()
+                .0
+                .iter()
+                .filter(|event| {
+                    event.source == Some(actor.to_bits())
+                        && event.spell_id == Some(196771)
+                        && event.kind == CombatLogKind::Damage
+                })
+                .count()
+        };
+        let stacks = |run: &Run| {
+            run.app
+                .world()
+                .get::<ActiveAuras>(actor)
+                .and_then(|active| {
+                    active
+                        .iter()
+                        .find(|aura| aura.spell_id == 1297365 && aura.caster == actor)
+                        .map(|aura| aura.stacks)
+                })
+                .unwrap_or(0)
+        };
+        for _ in 0..60 {
+            run.app.update();
+            if hits(&run) >= targets {
+                break;
+            }
+        }
         assert_eq!(hits(&run), targets, "first real pulse hits each target");
-        assert_eq!(stacks(&run), 1, "one actual pulse grants one stack, not one per target");
-        for _ in 0..30 { run.app.update(); }
+        assert_eq!(
+            stacks(&run),
+            1,
+            "one actual pulse grants one stack, not one per target"
+        );
+        for _ in 0..30 {
+            run.app.update();
+        }
         let previous_hits = hits(&run);
-        for _ in 0..30 { run.app.update(); if hits(&run) > previous_hits { break; } }
+        for _ in 0..30 {
+            run.app.update();
+            if hits(&run) > previous_hits {
+                break;
+            }
+        }
         assert!(hits(&run) > previous_hits);
         let before = stacks(&run);
         let target = run.targets[0];
-        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 49184, Some(target), false).unwrap();
-        for _ in 0..5 { run.app.update(); }
-        assert_eq!(hits(&run), previous_hits + targets, "no additional Winter pulse during Howling Blast");
-        assert_eq!(stacks(&run), before, "a real Howling Blast must not grant Freezing Tempest");
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 49184, Some(target), false)
+            .unwrap();
+        for _ in 0..5 {
+            run.app.update();
+        }
+        assert_eq!(
+            hits(&run),
+            previous_hits + targets,
+            "no additional Winter pulse during Howling Blast"
+        );
+        assert_eq!(
+            stacks(&run),
+            before,
+            "a real Howling Blast must not grant Freezing Tempest"
+        );
     }
 }
 
@@ -1307,10 +1354,21 @@ fn frost_winter_start_clears_earned_freezing_tempest() {
     super::super::engage(&mut run);
     let actor = run.actor;
     super::super::enhancement_generation_tests::cast(&mut run, 51271, actor);
-    for _ in 0..40 { run.app.update(); if auras::has_aura(run.app.world(), actor, 1297365) { break; } }
+    for _ in 0..40 {
+        run.app.update();
+        if auras::has_aura(run.app.world(), actor, 1297365) {
+            break;
+        }
+    }
     assert!(auras::has_aura(run.app.world(), actor, 1297365));
-    assert!(crate::spell_cast::try_cast_triggered(run.app.world_mut(), actor, 1233152, Some(actor), 1), "native Frozen Dominion Winter starts");
-    assert!(!auras::has_aura(run.app.world(), actor, 1297365), "Winter restart clears previously earned stacks");
+    assert!(
+        crate::spell_cast::try_cast_triggered(run.app.world_mut(), actor, 1233152, Some(actor), 1),
+        "native Frozen Dominion Winter starts"
+    );
+    assert!(
+        !auras::has_aura(run.app.world(), actor, 1297365),
+        "Winter restart clears previously earned stacks"
+    );
 }
 
 #[test]
@@ -1327,8 +1385,17 @@ fn diag_frost_freezing_tempest_events() {
         let start = run.app.world().resource::<ObservedCombatEvents>().0.len();
         super::super::drive_player(&mut run).unwrap();
         run.app.update();
-        let stacks = run.app.world().get::<ActiveAuras>(actor).and_then(|active| active.iter()
-            .find(|aura| aura.spell_id == 1297365 && aura.caster == actor).map(|aura| aura.stacks)).unwrap_or(0);
+        let stacks = run
+            .app
+            .world()
+            .get::<ActiveAuras>(actor)
+            .and_then(|active| {
+                active
+                    .iter()
+                    .find(|aura| aura.spell_id == 1297365 && aura.caster == actor)
+                    .map(|aura| aura.stacks)
+            })
+            .unwrap_or(0);
         if stacks != old {
             let events = &run.app.world().resource::<ObservedCombatEvents>().0[start..];
             rows.push(serde_json::json!({"step":step,"before":old,"after":stacks,
@@ -1337,7 +1404,11 @@ fn diag_frost_freezing_tempest_events() {
         }
     }
     let output = std::path::PathBuf::from(std::env::var("DPS_PARITY_OUTPUT").unwrap());
-    std::fs::write(output.join("251.tempest-timeline.json"), serde_json::to_vec_pretty(&rows).unwrap()).unwrap();
+    std::fs::write(
+        output.join("251.tempest-timeline.json"),
+        serde_json::to_vec_pretty(&rows).unwrap(),
+    )
+    .unwrap();
 }
 
 #[test]
@@ -1346,17 +1417,33 @@ fn diag_frost_torrent_hit_factors() {
     use crate::spell_cast::effects::factor_capture::FactorCapture;
     let _seed = crate::random::seed_scope(70448);
     let mut run = super::super::prepare_measurement(251, 1).unwrap();
-    run.app.insert_resource(FactorCapture::new(run.actor, run.targets[0], 439539, "icy_death_torrent", 30));
+    run.app.insert_resource(FactorCapture::new(
+        run.actor,
+        run.targets[0],
+        439539,
+        "icy_death_torrent",
+        30,
+    ));
     super::super::engage(&mut run);
     for _ in 0..1200 {
         super::super::drive_player(&mut run).unwrap();
         run.app.update();
-        if run.app.world().resource::<FactorCapture>().export()["captured_hits"].as_u64().unwrap() >= 30 { break; }
+        if run.app.world().resource::<FactorCapture>().export()["captured_hits"]
+            .as_u64()
+            .unwrap()
+            >= 30
+        {
+            break;
+        }
     }
     let capture = run.app.world().resource::<FactorCapture>().export();
     assert!(capture["captured_hits"].as_u64().unwrap() > 0);
     let output = std::path::PathBuf::from(std::env::var("DPS_PARITY_OUTPUT").unwrap());
-    std::fs::write(output.join("251.torrent-factors.json"), serde_json::to_vec_pretty(&capture).unwrap()).unwrap();
+    std::fs::write(
+        output.join("251.torrent-factors.json"),
+        serde_json::to_vec_pretty(&capture).unwrap(),
+    )
+    .unwrap();
 }
 
 #[test]

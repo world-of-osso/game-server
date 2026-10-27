@@ -34,9 +34,45 @@ fn cast_tick(world: &mut World, ctx: &EffectCtx<'_>, _unit: Entity) {
     spell_cast::cast_triggered(world, caster, child, None, 1);
 }
 
-pub(super) fn crit_chance(world: &World, caster: Entity, _: Entity, spell: u32) -> Option<f32> {
-    if spell != EYE_BEAM_DAMAGE {
-        return None;
+fn isolated(world: &World, caster: Entity, spell: u32) -> bool {
+    super::has_talent(world, caster, 388113)
+        && spell_cast::resolving_spell_targets(world, caster, spell).is_some_and(|targets| {
+            targets
+                .iter()
+                .filter(|&&target| {
+                    spell_cast::targets::relation_matches(
+                        world,
+                        caster,
+                        target,
+                        spell_cast::targets::Relation::Enemy,
+                    )
+                })
+                .count()
+                == 1
+        })
+}
+
+// SimC76f8118 sc_demon_hunter.cpp3939–3946,4651–4670,4705–4717,4799–4810.
+pub(super) fn isolated_damage(
+    world: &World,
+    ctx: &EffectCtx<'_>,
+    _: Entity,
+    periodic: bool,
+) -> f32 {
+    if !periodic
+        && matches!(ctx.spell.id, 198030 | 1287949)
+        && isolated(world, ctx.caster, ctx.spell.id)
+    {
+        1.0 + spell_cast::scripts::script_effect_value(world, ctx.caster, 388113, 1) / 100.0
+    } else {
+        1.0
     }
-    combat::auras::has_aura(world, caster, EYE_BEAM_RANK).then_some(100.0)
+}
+
+pub(super) fn crit_chance(world: &World, caster: Entity, _: Entity, spell: u32) -> Option<f32> {
+    if matches!(spell, 258921 | 258922) && isolated(world, caster, spell) {
+        return Some(100.0);
+    }
+    (spell == EYE_BEAM_DAMAGE && combat::auras::has_aura(world, caster, EYE_BEAM_RANK))
+        .then_some(100.0)
 }
