@@ -24,7 +24,10 @@ fn on_cast(world: &mut World, caster: Entity, spell: u32, depth: u8) {
 }
 
 fn spawn_fragments(world: &mut World, caster: Entity) {
-    if !world.get::<KnownSpells>(caster).is_some_and(|known| known.contains(1215617)) {
+    if !world
+        .get::<KnownSpells>(caster)
+        .is_some_and(|known| known.contains(1215617))
+    {
         return;
     }
     // SimC76f8118 sc_demon_hunter.cpp5753–5762: Predator's Thirst spawns

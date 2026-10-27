@@ -246,15 +246,19 @@ fn dk252_dread_plague_ticks_raise_forbidden_knowledge_magi() {
         "the actual Dread Plague must deal periodic damage"
     );
     assert!(
-        events.iter().any(|event| event.source == Some(run.actor.to_bits())
-            && event.spell_id == Some(1277098)
-            && event.kind == CombatLogKind::Summon),
+        events
+            .iter()
+            .any(|event| event.source == Some(run.actor.to_bits())
+                && event.spell_id == Some(1277098)
+                && event.kind == CombatLogKind::Summon),
         "selected Forbidden Knowledge must raise actual Putrefy ghouls from Dread Plague ticks"
     );
     assert!(
-        events.iter().any(|event| event.source == Some(run.actor.to_bits())
-            && event.spell_id == Some(1242294)
-            && event.kind == CombatLogKind::Summon),
+        events
+            .iter()
+            .any(|event| event.source == Some(run.actor.to_bits())
+                && event.spell_id == Some(1242294)
+                && event.kind == CombatLogKind::Summon),
         "actual Forbidden Knowledge ghouls must raise native Lord Magi"
     );
 }

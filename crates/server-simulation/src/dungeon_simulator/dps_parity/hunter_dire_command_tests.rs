@@ -142,13 +142,19 @@ fn native_hunter_dire_command_actual_kills_spawn_authentic_beasts() {
             inherited_ap_hits.push((event.amount, floor, ap));
         }
         checked_events = events.len();
-        let stats = world.get::<crate::stats::CharacterStats>(run.actor).unwrap();
+        let stats = world
+            .get::<crate::stats::CharacterStats>(run.actor)
+            .unwrap();
         previous_ap = stats.total_attack_power(
             crate::stats::WeaponAttackType::Ranged,
             world.get::<crate::stats::StatModifiers>(run.actor),
         );
         previous_mods.clear();
-        for unit in query.iter(world).map(|(pet, _, _)| pet).chain([run.actor, run.targets[0]]) {
+        for unit in query
+            .iter(world)
+            .map(|(pet, _, _)| pet)
+            .chain([run.actor, run.targets[0]])
+        {
             if let Some(mods) = world.get::<crate::auras::AuraStatMods>(unit) {
                 previous_mods.insert(unit, mods.clone());
             }
