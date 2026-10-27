@@ -1493,7 +1493,9 @@ fn demonology_gloomhound_attacks_deal_native_gloom_slash() {
     let from_dog = |spell, kind: fn(&CombatLogKind) -> bool| {
         events
             .iter()
-            .filter(|event| event.source == Some(dog.to_bits()) && event.spell_id == spell && kind(&event.kind))
+            .filter(|event| {
+                event.source == Some(dog.to_bits()) && event.spell_id == spell && kind(&event.kind)
+            })
             .count()
     };
     let melee = from_dog(None, |kind| *kind == CombatLogKind::Damage);

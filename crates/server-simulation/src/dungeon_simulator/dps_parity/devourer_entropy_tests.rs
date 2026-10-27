@@ -7,13 +7,33 @@ use shared::{components::CombatStatus, protocol::CombatLogKind};
 fn selected_entropy_starts_literal_precombat_with_25_meta_stacks() {
     let mut run = prepare(1480, 1).expect("native Devourer profile");
     let actor = run.actor;
-    assert!(!run.app.world().get::<CombatStatus>(actor).is_some_and(|s| s.0));
-    assert!(run.app.world().get::<crate::class_progression::KnownSpells>(actor).is_some_and(|known| known.contains(1261684)));
+    assert!(
+        !run.app
+            .world()
+            .get::<CombatStatus>(actor)
+            .is_some_and(|s| s.0)
+    );
+    assert!(
+        run.app
+            .world()
+            .get::<crate::class_progression::KnownSpells>(actor)
+            .is_some_and(|known| known.contains(1261684))
+    );
     let _driver = super::devourer_rotation::prepare_driver(&mut run).expect("literal precombat");
-    let stacks = run.app.world().get::<crate::auras::ActiveAuras>(actor)
-        .and_then(|auras| auras.iter().find(|aura| aura.spell_id == 1225789 && aura.caster == actor))
+    let stacks = run
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(actor)
+        .and_then(|auras| {
+            auras
+                .iter()
+                .find(|aura| aura.spell_id == 1225789 && aura.caster == actor)
+        })
         .map_or(0, |aura| aura.stacks);
-    assert_eq!(stacks, 25, "SimC Entropy defaults to effect2 precombat stacks");
+    assert_eq!(
+        stacks, 25,
+        "SimC Entropy defaults to effect2 precombat stacks"
+    );
 }
 
 #[test]
