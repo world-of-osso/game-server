@@ -68,6 +68,11 @@ fn outlaw_zero_in_earned_by_auto_attack_is_consumed_by_bte() {
                 && event.kind == CombatLogKind::Damage
                 && event.amount > 0)
     );
+    let relevant: Vec<_> = events
+        .iter()
+        .filter(|event| matches!(event.spell_id, Some(1259486 | 315341)))
+        .collect();
+    eprintln!("Zero In cast events: {relevant:?}");
     // SimC76f8118 sc_rogue.cpp3422–3430/3871: earned Zero In
     // affects the next real Between the Eyes and then expires.
     assert!(
