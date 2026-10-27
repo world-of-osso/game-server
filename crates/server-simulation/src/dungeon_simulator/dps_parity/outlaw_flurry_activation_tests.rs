@@ -27,6 +27,16 @@ fn outlaw_blade_flurry_activation_hits_each_native_enemy_once() {
         .world()
         .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
         .0;
+    // SimC76f8118 sc_rogue.cpp3974–3999 executes only the sourced
+    // activation attack, not the legacy alternate331850 hit as well.
+    assert!(
+        !events.iter().any(|event| {
+            event.source == Some(run.actor.to_bits())
+                && event.spell_id == Some(331850)
+                && matches!(event.kind, CombatLogKind::Damage | CombatLogKind::Miss(_))
+        }),
+        "one activation must not also emit the obsolete331850 attack"
+    );
     for target in &run.targets {
         let hits: Vec<_> = events
             .iter()
