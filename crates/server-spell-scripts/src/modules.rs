@@ -81,6 +81,7 @@ register_modules! {
     clearcasting: (1000, "modules/clearcasting.rs"),
     demon_hunter_effects: (1000, "modules/demon_hunter_effects.rs"),
     destruction_crit_scaling: (2673, "modules/destruction_crit_scaling.rs"),
+    demon_hunter_fragments: (5777, "modules/demon_hunter_fragments.rs"),
     destruction_echo: (2676, "modules/destruction_echo.rs"),
     destruction_fiendish: (2678, "modules/destruction_fiendish.rs"),
     destruction_incinerate: (2671, "modules/destruction_incinerate.rs"),
