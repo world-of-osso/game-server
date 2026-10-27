@@ -38,6 +38,7 @@ pub(super) fn schedule(world: &mut World, ctx: &EffectCtx, target: Entity, consu
     let child = match ctx.spell.id {
         196819 => 1269205,
         319175 => 1269565,
+        280719 => 1269560,
         _ => return,
     };
     let points = ctx
