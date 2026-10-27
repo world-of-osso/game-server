@@ -2,7 +2,9 @@
 use super::combat;
 use bevy::prelude::*;
 use combat::auras::{self, ActiveAuras, RemoveReason};
-use combat::spell_cast::{self, effects::EffectCtx, script_registry::SpellScriptHook, scripts::script_effect_value};
+use combat::spell_cast::{
+    self, effects::EffectCtx, script_registry::SpellScriptHook, scripts::script_effect_value,
+};
 use combat::spell_info::SpellInfo;
 use shared::components::ActiveSpec;
 
@@ -15,7 +17,10 @@ fn secondary_multiplier(world: &World, ctx: &EffectCtx<'_>, target: Entity, peri
     if periodic || ctx.spell.id != 1221162 {
         return 1.0;
     }
-    let primary = ctx.spell.cast_primary_target.expect("native Collapsing Star primary target");
+    let primary = ctx
+        .spell
+        .cast_primary_target
+        .expect("native Collapsing Star primary target");
     if target == primary {
         1.0
     } else {
