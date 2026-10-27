@@ -51,7 +51,11 @@ fn subtlety_focus_real_dance_amplifies_backstab_until_dance_ends() {
         .filter(|row| row["spell_id"] == 53 && row["source_spell_id"] == FOCUS)
         .map(|row| row["value"].as_f64().unwrap())
         .collect();
-    assert_eq!(focus, vec![10.0], "Backstab takes Shadow Focus effect1 once");
+    assert_eq!(
+        focus,
+        vec![10.0],
+        "Backstab takes Shadow Focus effect1 once"
+    );
 
     assert!(crate::auras::set_owned_duration(
         run.app.world_mut(),

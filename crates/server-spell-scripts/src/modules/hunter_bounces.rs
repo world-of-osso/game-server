@@ -92,9 +92,12 @@ fn schedule_bounces(
 }
 
 fn expire_chakram_tip(world: &mut World, caster: Entity, _target: Entity, _depth: u8) {
-    combat::auras::remove_auras(world, caster, combat::auras::RemoveReason::Consumed, |aura| {
-        aura.caster == caster && aura.spell_id == 1280140
-    });
+    combat::auras::remove_auras(
+        world,
+        caster,
+        combat::auras::RemoveReason::Consumed,
+        |aura| aura.caster == caster && aura.spell_id == 1280140,
+    );
 }
 
 fn read_impacts(

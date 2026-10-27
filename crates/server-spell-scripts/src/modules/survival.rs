@@ -94,9 +94,13 @@ fn roll_swipe(world: &mut World, caster: Entity) {
 pub(super) fn consume_chakram_tip(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) -> bool {
     // SimC76f8118 sc_hunter.cpp4456–4476: Chakram spends an earned Tip
     // without rolling Sentinel's Mark; its separate buff lasts through the bounces.
-    if !is_survival(world, ctx.caster) || !world.get::<ActiveAuras>(ctx.caster).is_some_and(|auras| {
-        auras.iter().any(|aura| aura.caster == ctx.caster && aura.spell_id == TIP)
-    }) {
+    if !is_survival(world, ctx.caster)
+        || !world.get::<ActiveAuras>(ctx.caster).is_some_and(|auras| {
+            auras
+                .iter()
+                .any(|aura| aura.caster == ctx.caster && aura.spell_id == TIP)
+        })
+    {
         return false;
     }
     decrement(world, ctx.caster, TIP);
