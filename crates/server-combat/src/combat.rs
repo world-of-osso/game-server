@@ -1580,9 +1580,10 @@ fn read_outcome_chances(
     } else {
         chances.miss
     };
-    // Creature miss_pct already includes its own aura54; players must subtract
-    // their caster modifier here too (Unit::MeleeSpellMissChance, Unit.cpp12525).
-    let player_hit_modifier = if attacker.creature {
+    // Only the Creature swinger's miss_pct already includes its own aura54; every
+    // Player-branch swinger, including stat-bearing creatures, subtracts it here
+    // (TC a352b1fa Unit::MeleeSpellMissChance, Unit.cpp12525).
+    let player_hit_modifier = if attacker.creature && attacker.stats.is_none() {
         0.0
     } else {
         attacker.mods.map_or(0.0, |mods| mods.melee_hit_chance_pct)
