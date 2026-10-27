@@ -94,7 +94,9 @@ fn elemental_primal_storm_resummon_extends_and_resets_actions() {
         "Call Lightning cast once, then on its 20s cooldown"
     );
     stormkeeper(&mut run);
-    for _ in 0..60 {
+    // Stormfury also resets and has priority over Call Lightning; allow its
+    // native channel to finish before observing the next Call Lightning.
+    for _ in 0..180 {
         run.app.update();
     }
     let second = owned_actors(&mut run, 77942);
@@ -109,10 +111,11 @@ fn elemental_primal_storm_resummon_extends_and_resets_actions() {
         "active elemental extended by native10s: {expiry} -> {}",
         second[0].1
     );
+    let actions = actor_casts(&run, actor, &[157348, 157375, 157331]);
     assert_eq!(
-        actor_casts(&run, actor, &[157348]).len(),
+        actions.iter().filter(|id| **id == 157348).count(),
         2,
-        "re-summon resets Call Lightning's native cooldown"
+        "re-summon resets Call Lightning's native cooldown; actions: {actions:?}"
     );
 }
 
