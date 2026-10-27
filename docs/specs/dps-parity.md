@@ -27,6 +27,9 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 ### Devourer Focused Ray
 
 - Selected Focused Ray1240203 amplifies Void Ray damage children1213649/1214595 by native effect1 when the real resolved enemy count is at most native effect2 (SimC76f8118 `sc_demon_hunter.cpp`6304–6321).
+### Devourer Metamorphosis entry
+
+- Entering native Void Metamorphosis1217607 grants 200 Fury, capped by the actor's native pool (SimC76f8118 `sc_demon_hunter.cpp`12445–12452). Drain and exit behavior are separate.
 
 ### Devourer Burning Blades
 
