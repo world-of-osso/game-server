@@ -264,7 +264,7 @@ fn read_summons(world: &mut World, owner: Entity) -> Summons {
         }
         // SimC76f8118 pets.cpp921/945 and1510–1520: real owned summons only.
         match npc.template_id {
-            55659 => result.imps += 1,
+            55659 | 143622 => result.imps += 1,
             135002 | 250289 => result.tyrants += 1,
             _ => {}
         }

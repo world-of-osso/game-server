@@ -288,33 +288,56 @@ fn modifier_totals(world: &World, caster: Entity, spell: &SpellInfo, op: SpellMo
             );
             add_modifier(sum, modifier.amount, modifier.percent)
         });
-    world.get::<ActiveAuras>(caster).map_or(frozen, |auras| {
-        matching(auras, spell, op)
-            .filter(|(aura, _)| !snapshots_periodic_modifier(aura, op))
-            .filter(|(aura, _)| {
-                spell.cast_charge_mods.is_none()
-                    || (aura.charges == 0
-                        && !crate::spell_cast::scripts::snapshots_modifier(world, aura.spell_id))
-            })
-            .fold(frozen, |sum, (aura, effect)| {
-                let amount = stacked_amount(aura, effect);
-                let percent = is_pct(effect.aura_type);
-                #[cfg(any(test, feature = "test-support"))]
-                crate::spell_cast::effects::factor_capture::record_modifier(
-                    world,
-                    caster,
-                    spell,
-                    crate::spell_cast::effects::factor_capture::ModifierSource {
-                        op: op as u8,
-                        aura_spell_id: aura.spell_id,
-                        effect_index: Some(effect.index),
-                        amount,
-                        percent,
-                    },
-                );
-                add_modifier(sum, amount, percent)
-            })
+    live_modifiers(world, caster, spell, op).fold(frozen, |sum, (aura, effect)| {
+        let amount = stacked_amount(aura, effect);
+        let percent = is_pct(effect.aura_type);
+        #[cfg(any(test, feature = "test-support"))]
+        crate::spell_cast::effects::factor_capture::record_modifier(
+            world,
+            caster,
+            spell,
+            crate::spell_cast::effects::factor_capture::ModifierSource {
+                op: op as u8,
+                aura_spell_id: aura.spell_id,
+                effect_index: Some(effect.index),
+                amount,
+                percent,
+            },
+        );
+        add_modifier(sum, amount, percent)
     })
+}
+
+fn live_modifiers<'a>(
+    world: &'a World,
+    caster: Entity,
+    spell: &'a SpellInfo,
+    op: SpellModOp,
+) -> impl Iterator<Item = (&'a AuraInstance, &'a AuraEffectState)> {
+    let local = world
+        .get::<ActiveAuras>(caster)
+        .into_iter()
+        .flat_map(move |auras| matching(auras, spell, op))
+        .filter(move |(aura, _)| !snapshots_periodic_modifier(aura, op))
+        .filter(move |(aura, _)| {
+            spell.cast_charge_mods.is_none()
+                || (aura.charges == 0
+                    && !crate::spell_cast::scripts::snapshots_modifier(world, aura.spell_id))
+        });
+    // SimC76f8118 player.cpp15268–15324 redirects pets' passive spell,
+    // power and effect reads to their owner. sc_warlock_init.cpp120–122
+    // registers class/selected-talent/set passives, not every owner buff.
+    // Native family/label masks still decide which pet action is affected.
+    let owner = world
+        .get::<crate::hunter_pet::HunterPet>(caster)
+        .map(|pet| pet.owner)
+        .or_else(|| crate::spell_cast::guardian::stat_owner(world, caster));
+    let inherited = owner
+        .and_then(|owner| world.get::<ActiveAuras>(owner))
+        .into_iter()
+        .flat_map(move |auras| matching(auras, spell, op))
+        .filter(move |(aura, _)| aura.passive && aura.charges == 0 && Some(aura.caster) == owner);
+    local.chain(inherited)
 }
 
 // An explicit native proc mask can restrict charge use more narrowly than the

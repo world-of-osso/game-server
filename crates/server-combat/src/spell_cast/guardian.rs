@@ -10,6 +10,8 @@ use super::summon::SummonedCreature;
 
 #[path = "guardian_core.rs"]
 pub(super) mod core;
+#[path = "guardian_implosion.rs"]
+pub(super) mod implosion;
 #[path = "guardian_tyrant.rs"]
 pub(super) mod tyrant;
 
@@ -18,7 +20,7 @@ const ANTORAN_ARMAMENTS: u32 = 1250921;
 
 // SimC76f8118 pets.cpp701/875–882: the actual Wild Imp consumes its
 // initial native Energy without regeneration, then fades when exhausted.
-const NO_POWER_REGEN: &[(u32, u32)] = &[(104317, 55659)];
+const NO_POWER_REGEN: &[(u32, u32)] = &[(104317, 55659), (279910, 143622)];
 
 struct GuardianPolicy {
     summons: &'static [u32],
@@ -73,6 +75,14 @@ const GUARDIAN_POLICIES: &[GuardianPolicy] = &[
     GuardianPolicy {
         summons: &[104317],
         entry: 55659,
+        spells: &[104318],
+        repeat_gcd: None,
+        owner_spell_share: Some(1.2),
+        owner_attack_share: None,
+    },
+    GuardianPolicy {
+        summons: &[279910],
+        entry: 143622,
         spells: &[104318],
         repeat_gcd: None,
         owner_spell_share: Some(1.2),
@@ -308,6 +318,14 @@ const GUARDIAN_POWERS: &[GuardianPowerPolicy] = &[GuardianPowerPolicy {
     cast_threshold: 125.0,
 }];
 
+/// Source-defined guardian bases also govern later native maximum-power folds.
+pub(super) fn power_base(entry: u32, power: PowerType) -> Option<f32> {
+    GUARDIAN_POWERS
+        .iter()
+        .find(|policy| policy.entry == entry && policy.power == power)
+        .map(|policy| policy.maximum)
+}
+
 /// SimC76f8118 pets1513: Antoran Armaments selects the alternative native root effect.
 pub(super) fn effect_enabled(world: &World, caster: Entity, spell: u32, index: u8) -> bool {
     if spell != SUMMON_DEMONIC_TYRANT || !matches!(index, 0 | 3) {
@@ -458,6 +476,7 @@ pub(super) fn initialize(world: &mut World, actor: Entity) {
             .insert(crate::hunter_pet::SummonedDemon);
     }
     apply_spawn_auras(world, actor, root, entry);
+    implosion::on_spawn(world, actor);
 }
 
 fn initialize_spirit_wolf(world: &mut World, actor: Entity, owner: Entity) {
@@ -543,6 +562,9 @@ pub(super) fn update(world: &mut World) {
         .iter(world)
         .collect();
     for actor in actors {
+        if implosion::advance(world, actor) {
+            continue;
+        }
         if wild_imp_exhausted(world, actor) {
             let owner = world.get::<SummonedCreature>(actor).unwrap().owner;
             core::on_natural_fade(world, owner);
@@ -556,7 +578,7 @@ pub(super) fn update(world: &mut World) {
 fn wild_imp_exhausted(world: &World, actor: Entity) -> bool {
     let summon = world.get::<SummonedCreature>(actor).unwrap();
     let entry = world.get::<Npc>(actor).unwrap().template_id;
-    if (summon.spell_id, entry) != (104317, 55659)
+    if !matches!((summon.spell_id, entry), (104317, 55659) | (279910, 143622))
         || world.get::<CastState>(actor).is_some()
         || world
             .resource::<super::missiles::PendingSpellHits>()
