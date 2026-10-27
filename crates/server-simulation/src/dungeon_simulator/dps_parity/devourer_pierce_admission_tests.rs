@@ -70,3 +70,87 @@ fn devourer_selected_demonsurge_admits_pierce_in_meta() {
     }
     panic!("admitted native Pierce must execute");
 }
+
+#[test]
+#[ignore = "requires DPS_PARITY_WORLD_DB and DPS_PARITY_OUTPUT with spec1480 exact profile/traits"]
+fn reapers_toll_replacement_delivers_native_damage_in_meta() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare(1480, 1).expect("native Devourer profile");
+    let actor = run.actor;
+    let target = run.targets[0];
+    engage(&mut run);
+    assert!(
+        run.app
+            .world()
+            .get::<crate::class_progression::TraitLoadout>(actor)
+            .is_some_and(|traits| traits
+                .active_talent_spells()
+                .any(|spell| spell.spell_id == 452402)),
+        "selected Demonsurge"
+    );
+    crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 1217605, Some(actor), 1);
+    for _ in 0..30 {
+        if crate::auras::has_aura(run.app.world(), actor, 1217607)
+            && !crate::auras::has_aura(run.app.world(), actor, 201453)
+        {
+            break;
+        }
+        run.app.update();
+    }
+    assert!(
+        crate::auras::has_aura(run.app.world(), actor, 1217607),
+        "native Meta active"
+    );
+    assert!(
+        !crate::auras::has_aura(run.app.world(), actor, 201453),
+        "native pacify expired"
+    );
+    for aura in [1239525, 1245523] {
+        crate::spell_cast::cast_triggered(run.app.world_mut(), actor, aura, Some(actor), 1);
+    }
+    assert!(
+        crate::auras::has_aura(run.app.world(), actor, 1239525),
+        "Hungering Slash ready"
+    );
+    assert!(
+        crate::auras::has_aura(run.app.world(), actor, 1245523),
+        "native Pierce replacement active"
+    );
+    let spell = literal_rotation::execution::resolve_action(run.app.world(), actor, 1245483)
+        .expect("Pierce resolution")
+        .expect("selected Pierce");
+    assert_eq!(spell, 1245470, "native Reaper's Toll replacement");
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        actor,
+        literal_rotation::execution::Execution::Spell(spell, target, Some(target)),
+    )
+    .expect("real Reaper's Toll admission");
+    for _ in 0..80 {
+        run.app.update();
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(actor.to_bits())
+                && event.spell_id == Some(1245470)
+                && event.kind == CombatLogKind::CastSuccess),
+        "real Reaper's Toll executes"
+    );
+    // SimC76f8118 cpp6697–6783 executes native Hungering Slash damage as Reaper's Toll.
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(actor.to_bits())
+                && event.spell_id == Some(1239127)
+                && event.kind == CombatLogKind::Damage
+                && event.target == Some(target.to_bits())
+                && event.amount > 0),
+        "Reaper's Toll delivers native target damage"
+    );
+}
