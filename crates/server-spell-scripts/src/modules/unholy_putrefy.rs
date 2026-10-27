@@ -8,6 +8,7 @@ const PUTREFY_SINGLE: u32 = 1277016;
 const PUTREFY_AREA: u32 = 390220;
 const LORD_OF_THE_DEAD: u32 = 1256813;
 const MAGUS_SUMMON: u32 = 1242294;
+const LORD_SUMMON: u32 = 1292072;
 
 #[derive(Component)]
 struct PutrefyImpacted;
@@ -15,6 +16,7 @@ struct PutrefyImpacted;
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::SummonInitialized(start_putrefy_ghoul),
     SpellScriptHook::SummonInitialized(set_lord_magus_lifetime),
+    SpellScriptHook::SummonInitialized(convert_magi_to_lord),
     SpellScriptHook::SummonExpired(raise_magus),
 ];
 
@@ -56,6 +58,47 @@ fn set_lord_magus_lifetime(world: &mut World, actor: Entity) {
     assert!(duration_ms > 0.0, "Lord of the Dead Magus duration must be positive");
     let expiry = combat::spell_cast::now(world) + f64::from(duration_ms) / 1000.0;
     world.get_mut::<summon::SummonedCreature>(actor).unwrap().expires_at = Some(expiry);
+}
+
+fn convert_magi_to_lord(world: &mut World, actor: Entity) {
+    let Some(summon) = world.get::<summon::SummonedCreature>(actor) else {
+        return;
+    };
+    if summon.spell_id != MAGUS_SUMMON {
+        return;
+    }
+    let owner = summon.owner;
+    if !combat::auras::has_aura(world, owner, LORD_OF_THE_DEAD) {
+        return;
+    }
+    // SimC76f8118 sc_death_knight.cpp4545–4574: after the actual Magus
+    // appears, consume the oldest active Magi to summon the native Lord.
+    world.commands().queue(move |world: &mut World| {
+        let required = combat::spell_cast::scripts::script_effect_value(
+            world, owner, LORD_OF_THE_DEAD, 4,
+        ) as usize;
+        assert!(required > 0, "Lord of the Dead requires native Magi count");
+        let now = combat::auras::aura_now(world);
+        let mut magi: Vec<_> = world
+            .query::<(Entity, &summon::SummonedCreature)>()
+            .iter(world)
+            .filter_map(|(entity, summon)| {
+                (summon.owner == owner && summon.spell_id == MAGUS_SUMMON)
+                    .then_some(summon.expires_at.filter(|expiry| *expiry > now).map(|expiry| (entity, expiry)))
+                    .flatten()
+            })
+            .collect();
+        if magi.len() < required {
+            return;
+        }
+        magi.sort_by(|a, b| a.1.total_cmp(&b.1));
+        for (magus, _) in magi.into_iter().take(required) {
+            summon::despawn_summon(world, magus);
+        }
+        if !combat::spell_cast::try_cast_triggered(world, owner, LORD_SUMMON, Some(owner), 1) {
+            warn!(?owner, "Native Lord of the Dead summon refused");
+        }
+    });
 }
 
 fn impact_and_dismiss(world: &mut World, actor: Entity, target: Entity) {
