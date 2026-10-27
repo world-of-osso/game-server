@@ -770,8 +770,27 @@ fn winter_target_bonuses(world: &mut World, ctx: &spell_cast::effects::EffectCtx
             if (!state.dominion_started || dominion_active) && state.dominion_targets.insert(target)
             {
                 state.dominion_started = true;
-                spell_cast::cast_triggered(world, ctx.caster, 377253, Some(ctx.caster), 1);
-                dominion_active = auras::has_aura(world, ctx.caster, 377253);
+                if dominion_active {
+                    let stacks = world
+                        .get::<auras::ActiveAuras>(ctx.caster)
+                        .and_then(|active| {
+                            active
+                                .iter()
+                                .find(|aura| aura.spell_id == 377253 && aura.caster == ctx.caster)
+                        })
+                        .expect("active Frozen Dominion")
+                        .stacks;
+                    auras::set_owned_stacks(
+                        world,
+                        ctx.caster,
+                        ctx.caster,
+                        377253,
+                        stacks.saturating_add(1),
+                    );
+                } else {
+                    spell_cast::cast_triggered(world, ctx.caster, 377253, Some(ctx.caster), 1);
+                    dominion_active = auras::has_aura(world, ctx.caster, 377253);
+                }
             }
         }
     }
