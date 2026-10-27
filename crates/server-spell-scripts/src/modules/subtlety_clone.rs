@@ -40,13 +40,6 @@ pub(super) fn schedule(world: &mut World, ctx: &EffectCtx, target: Entity, consu
         319175 => 1269565,
         _ => return,
     };
-    if !has_talent(world, ctx.caster, TALENT) {
-        return;
-    }
-    let chance = script_effect_value(world, ctx.caster, TALENT, 0) * f32::from(consumed) / 100.0;
-    if random::random::<f32>() >= chance {
-        return;
-    }
     let points = ctx
         .spell
         .cast_policy_context
@@ -57,6 +50,46 @@ pub(super) fn schedule(world: &mut World, ctx: &EffectCtx, target: Entity, consu
         .find(|(power, _)| *power == PowerType::ComboPoints)
         .expect("finisher combo-point snapshot")
         .1;
+    queue_clone(world, ctx.caster, target, child, consumed, points, 0.5);
+}
+
+// sc_rogue.cpp8175–8194: builder collection triggers its own 200 ms clone.
+pub(super) fn schedule_builder(
+    world: &mut World,
+    caster: Entity,
+    source: &SpellInfo,
+    consumed: u8,
+) {
+    let child = match source.id {
+        53 => 1269209,
+        200758 => 1269214,
+        185438 => 1269336,
+        197835 => 1269340,
+        426591 => 1269217,
+        _ => return,
+    };
+    let target = source
+        .cast_primary_target
+        .expect("native builder primary target");
+    queue_clone(world, caster, target, child, consumed, 1.0, 0.2);
+}
+
+fn queue_clone(
+    world: &mut World,
+    caster: Entity,
+    target: Entity,
+    child: u32,
+    consumed: u8,
+    points: f32,
+    delay: f64,
+) {
+    if !has_talent(world, caster, TALENT) {
+        return;
+    }
+    let chance = script_effect_value(world, caster, TALENT, 0) * f32::from(consumed) / 100.0;
+    if random::random::<f32>() >= chance {
+        return;
+    }
     let mut spell = world
         .resource::<SpellStore>()
         .get(child)
@@ -64,17 +97,15 @@ pub(super) fn schedule(world: &mut World, ctx: &EffectCtx, target: Entity, consu
         .clone();
     spell.cast_damage_multiplier = Some(points * 0.5);
     spell.cast_charge_mods = Some(spell_mods::snapshot_charged_modifiers(
-        world, ctx.caster, &spell,
+        world, caster, &spell,
     ));
-    let crit = effects::crit_chance(world, ctx.caster, target, &spell);
-    let due = spell_cast::now(world) + 0.5;
-    if world.get::<PendingClones>(ctx.caster).is_none() {
-        world
-            .entity_mut(ctx.caster)
-            .insert(PendingClones::default());
+    let crit = effects::crit_chance(world, caster, target, &spell);
+    let due = spell_cast::now(world) + delay;
+    if world.get::<PendingClones>(caster).is_none() {
+        world.entity_mut(caster).insert(PendingClones::default());
     }
     world
-        .get_mut::<PendingClones>(ctx.caster)
+        .get_mut::<PendingClones>(caster)
         .unwrap()
         .0
         .push(Clone {

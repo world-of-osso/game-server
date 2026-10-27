@@ -85,7 +85,10 @@ def test_env(entry, test):
     read-only startup-DB view of dps_parity_native.py; --env overrides both."""
     env = {}
     if entry["measure"]:
-        m = entry["measure"][0]
+        # A leading `@SPEC` token runs this test against that spec's --measure inputs, so one
+        # entry can gate other specs' fixtures (each needs its own profile/DB/actor).
+        chosen = test_spec(test)
+        m = next((m for m in entry["measure"] if m["spec"] == chosen), entry["measure"][0])
         env = {"DPS_PARITY_WORLD_DB": m["world_db"], "DPS_PARITY_OUTPUT": m["output"],
                "DPS_PARITY_SPEC": m["spec"], "DPS_PARITY_ACTOR": m.get("actor", "follower"),
                "DPS_PARITY_TARGETS": m["targets"].split(",")[0]}
@@ -294,6 +297,10 @@ def submit(args):
     if any("server-simulation" in test and "--ignored" in test for test in entry["tests"]) \
             and not entry["measure"] and not any(k.startswith("DPS_PARITY_") for k in entry["env"]):
         sys.exit("native server-simulation --ignored tests need --measure (or --env DPS_PARITY_*) inputs")
+    specs = {m["spec"] for m in entry["measure"]}
+    unknown = [t[0] for t in entry["tests"] if test_spec(t) is not None and test_spec(t) not in specs]
+    if unknown:
+        sys.exit(f"{', '.join(unknown)}: each @SPEC --test needs a --measure spec=SPEC supplying its inputs")
     QUEUE.mkdir(parents=True, exist_ok=True)
     (QUEUE / f"{entry['id']}.json").write_text(json.dumps(entry, indent=2))
     print(entry["id"])
@@ -496,9 +503,16 @@ CARGO_VALUE_FLAGS = {"-p", "--package", "-F", "--features", "--config", "--test"
                      "--message-format", "--exclude", "--color", "-Z"}
 
 
+def test_spec(test):
+    """The spec named by a leading `@SPEC` token of a --test, if any."""
+    return test[0][1:] if test and test[0].startswith("@") else None
+
+
 def split_test(test):
     """Split `--test` args into (cargo args, "--", test binary args). Cargo forwards its
     positional TESTNAME filter to the binaries, so it moves to the binary args."""
+    if test_spec(test) is not None:
+        test = test[1:]
     i = test.index("--") if "--" in test else len(test)
     cargo_args, binary_args, filters = [], list(test[i + 1:]), []
     takes_value = False
@@ -1118,7 +1132,8 @@ def main():
     s = sub.add_parser("submit")
     s.add_argument("--commit", required=True)
     s.add_argument("--owner", default=os.environ.get("PI_AGENT_ID", "unknown"))
-    s.add_argument("--test", action="append", default=[], help="cargo test arguments, quoted")
+    s.add_argument("--test", action="append", default=[],
+                   help="cargo test arguments, quoted; a leading @SPEC uses that spec's --measure inputs")
     s.add_argument("--measure", action="append", default=[],
                    help="also supplies DPS_PARITY_* and the DB view to server-simulation tests")
     s.add_argument("--env", action="append", default=[], help="KEY=VALUE for this entry's tests")
