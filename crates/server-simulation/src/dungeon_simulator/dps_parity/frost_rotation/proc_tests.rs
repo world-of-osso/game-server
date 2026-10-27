@@ -342,6 +342,20 @@ fn frost_exterminate_spender_deals_both_native_hits() {
 }
 
 #[test]
+#[ignore = "actual Empower Rune Weapon grants Killing Machine"]
+fn frost_erw_earns_killing_machine() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::super::prepare_literal(251, 1).unwrap();
+    super::super::engage(&mut run);
+    assert!(!auras::has_aura(run.app.world(), run.actor, 51124));
+    let actor = run.actor;
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 47568, Some(actor), false)
+        .expect("real Empower Rune Weapon is available");
+    assert!(auras::has_aura(run.app.world(), actor, 51124),
+        "actual Empower Rune Weapon must grant Killing Machine");
+}
+
+#[test]
 #[ignore = "native Reaper's Mark explodes and earns Exterminate from actual damage"]
 fn frost_mark_explosion_earns_exterminate() {
     use crate::spell_cast::test_harness::ObservedCombatEvents;
