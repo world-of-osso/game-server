@@ -242,6 +242,37 @@ pub struct SummonedCreature {
     pub expires_at: Option<f64>,
 }
 
+/// One-shot callback when a summoned actor reaches its selected target.
+#[derive(Component)]
+pub struct SummonArrival {
+    pub target: Entity,
+    pub on_arrival: fn(&mut World, Entity, Entity),
+}
+
+pub(super) fn dispatch_arrivals(world: &mut World) {
+    let arrivals: Vec<_> = world
+        .query::<(Entity, &Position, &SummonArrival)>()
+        .iter(world)
+        .filter_map(|(actor, position, arrival)| {
+            let target = world.get::<Position>(arrival.target)?;
+            let from = Vec3::new(position.x, position.y, position.z);
+            let victim = Vec3::new(target.x, target.y, target.z);
+            let corner = Vec3::new(target.x, position.y, target.z);
+            (crate::navigation::distance_to_reach(
+                from,
+                corner,
+                victim,
+                crate::creature_ai::CHASE_REACH,
+            ) <= 0.0)
+                .then_some((actor, arrival.target, arrival.on_arrival))
+        })
+        .collect();
+    for (actor, target, on_arrival) in arrivals {
+        world.entity_mut(actor).remove::<SummonArrival>();
+        on_arrival(world, actor, target);
+    }
+}
+
 /// Start an owned summon's native melee chase against its selected target.
 pub fn start_melee_attack(world: &mut World, summon: Entity, target: Entity) {
     assert!(
