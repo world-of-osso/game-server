@@ -20,6 +20,8 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AfterQueuedTriggers(consume_due_killing_machine),
     SpellScriptHook::AfterSpellPayment(roll_runic_empowerment),
     SpellScriptHook::AfterPeriodicDamagePolicies(frost_fever_runic_power),
+    SpellScriptHook::AfterPeriodicDamagePolicies(frost_fever_brittle),
+    SpellScriptHook::ResolvedDamage(glacial_advance_razorice),
     SpellScriptHook::LateAuraRegistration(register_frost_auras),
     SpellScriptHook::ResolvedDamage(frostreaper_impact),
 ];
@@ -402,6 +404,30 @@ fn breath_ended(
     // SimC76f8118 sc_death_knight.cpp7135–7140: ending Breath grants
     // the native 1234304 rune amount, except during encounter teardown.
     spell_cast::cast_triggered(world, unit, 1234304, Some(unit), 1);
+}
+
+fn frost_fever_brittle(world: &mut World, ctx: &spell_cast::effects::EffectCtx, target: Entity) {
+    if ctx.spell.id != 55095 || !is_frost(world, ctx.caster)
+        || !auras::has_aura(world, ctx.caster, 374504) {
+        return;
+    }
+    let chance = world.resource::<SpellStore>().get(374504)
+        .and_then(|spell| spell.aura_options.as_ref()).expect("Brittle has native proc chance").proc_chance;
+    // SimC76f8118 sc_death_knight.cpp7814–7822: each actual disease tick rolls Brittle.
+    if random::random::<f32>() * 100.0 < chance as f32
+        && !spell_cast::try_cast_triggered(world, ctx.caster, 374557, Some(target), 1) {
+        warn!(caster = ?ctx.caster, ?target, "Native Brittle debuff refused");
+    }
+}
+
+fn glacial_advance_razorice(world: &mut World, ctx: &spell_cast::effects::EffectCtx, target: Entity, _: bool, damage: f32) {
+    if ctx.spell.id != 195975 || damage <= 0.0 || !is_frost(world, ctx.caster) {
+        return;
+    }
+    // SimC76f8118 sc_death_knight.cpp11109–11122: each real Glacial Advance impact grants Razorice.
+    if !spell_cast::try_cast_triggered(world, ctx.caster, 51714, Some(target), 1) {
+        warn!(caster = ?ctx.caster, ?target, "Native Razorice debuff refused");
+    }
 }
 
 fn frost_fever_runic_power(

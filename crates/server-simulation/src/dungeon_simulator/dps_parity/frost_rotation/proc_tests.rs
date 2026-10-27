@@ -1054,7 +1054,8 @@ fn frost_fever_earns_brittle_target_damage() {
 #[ignore = "real Arctic Assault earns Razorice and amplifies Winter"]
 fn frost_arctic_assault_earns_razorice_target_damage() {
     let (ratio, stacks) = real_frost_debuff_damage_ratio(51714, 195975);
-    assert!((ratio - (1.0 + 0.03 * f32::from(stacks))).abs() < 0.001,
+    // Native 3% amplified by the selected Unholy Bond label modifier (20%).
+    assert!((ratio - (1.0 + 0.036 * f32::from(stacks))).abs() < 0.001,
         "real Razorice must apply its native per-stack value: {ratio}, stacks={stacks}");
 }
 
