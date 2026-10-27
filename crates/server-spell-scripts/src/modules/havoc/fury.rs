@@ -9,6 +9,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AfterResourceValues(after_cast),
     SpellScriptHook::AfterCounterLaunch(after_launch),
     SpellScriptHook::OwnsPolicyProc(|spell| spell == 197125),
+    SpellScriptHook::ActualCriticalChanceBonus(chaos_theory_critical_bonus),
 ];
 
 fn after_cast(spell: u32) -> Option<AfterCastHook> {
@@ -65,6 +66,39 @@ fn after_launch(world: &mut World, caster: Entity, spell: u32) {
     if matches!(spell, 199547 | 201428) {
         roll_chaos_strike_refund(world, caster);
     }
+}
+
+// SimC76f8118 sc_demon_hunter.cpp2098–2103,2413–2420 samples the talent's
+// native effect1–effect2 range separately for each affected action.
+fn chaos_theory_critical_bonus(
+    world: &World,
+    caster: Entity,
+    _target: Entity,
+    spell: &SpellInfo,
+) -> f32 {
+    const TALENT: u32 = 389687;
+    const BUFF: u32 = 390195;
+    if !has_talent(world, caster, TALENT) {
+        return 0.0;
+    }
+    let affected = world
+        .get::<combat::auras::ActiveAuras>(caster)
+        .is_some_and(|auras| {
+            auras.iter().any(|aura| {
+                aura.spell_id == BUFF
+                    && aura.caster == caster
+                    && aura.effects.iter().any(|effect| {
+                        effect.index == 0
+                            && combat::auras::spell_mods::class_mask_affects(aura, effect, spell)
+                    })
+            })
+        });
+    if !affected {
+        return 0.0;
+    }
+    let lower = combat::spell_cast::scripts::script_effect_value(world, caster, TALENT, 0);
+    let upper = combat::spell_cast::scripts::script_effect_value(world, caster, TALENT, 1);
+    lower + combat::random::random::<f32>() * (upper - lower)
 }
 
 fn roll_chaos_strike_refund(world: &mut World, caster: Entity) {

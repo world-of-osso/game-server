@@ -1088,6 +1088,12 @@ fn with_damage_crit(
 ) -> (f32, bool) {
     let roll = rand::random::<f32>() * 100.0;
     let chance = crit_chance(world, caster, target, spell);
+    let bonus = if super::attributes(spell, 2) & SPELL_ATTR2_CANT_CRIT == 0 {
+        super::script_registry::actual_critical_chance_bonus(world, caster, target, spell)
+    } else {
+        0.0
+    };
+    let chance = chance + bonus;
     let crit = roll < chance;
     if !crit {
         #[cfg(any(test, feature = "test-support"))]
