@@ -1145,7 +1145,8 @@ fn critical_damage_amount(
     );
     let bonus =
         super::scripts::elemental_ancestors::modify_critical_bonus(world, caster, spell.id, bonus);
-    let total = amount + bonus;
+    let total =
+        amount + bonus + amount * super::guardian::demonic_brutality_critical_bonus(world, caster);
     if weapon_order {
         total * multiplier
     } else {
