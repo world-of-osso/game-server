@@ -180,7 +180,9 @@ fn read_spell_facts(
     )
     .map(|_| true)
     .or_else(|error| match error {
-        CastFailure::OutOfRange | CastFailure::TooClose => Ok(false),
+        // SimC76f8118 monk/sc_monk.cpp2675–2689: an ineligible Touch of Death
+        // target makes the action unavailable, not an evaluation error.
+        CastFailure::OutOfRange | CastFailure::TooClose | CastFailure::InvalidTarget => Ok(false),
         other => Err(format!(
             "spell{}: native target admission {other:?}",
             spell.id
