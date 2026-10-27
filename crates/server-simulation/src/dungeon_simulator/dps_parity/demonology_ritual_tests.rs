@@ -380,3 +380,54 @@ fn demonology_gloom_of_nathreza_scales_hand_meteor() {
     let expected = 1.0 + 3.0 * gloom / 100.0;
     assert!(((boosted as f32 / base as f32) - expected).abs() < 0.01, "native Gloom multiplier {expected}, actual {boosted}/{base}");
 }
+
+
+fn own_stacks(run: &Run, spell: u32) -> u8 {
+    run.app
+        .world()
+        .get::<crate::auras::ActiveAuras>(run.actor)
+        .and_then(|auras| {
+            auras
+                .iter()
+                .find(|aura| aura.spell_id == spell && aura.caster == run.actor)
+                .map(|aura| aura.stacks.max(1))
+        })
+        .unwrap_or(0)
+}
+
+#[test]
+#[ignore = "requires private266 inputs; Hand earns Demonic Oculi whose ticks gaze"]
+fn demonology_hand_earns_oculi_that_gazes() {
+    // SimC76f8118 actions.cpp2840–2841, init.cpp940–958: each Hand adds an
+    // Oculi stack; each unhasted tick casts the stack-count Diabolic Gaze.
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_funded();
+    run.app.world_mut().entity_mut(run.actor).insert(crate::networking::CombatTarget(Some(run.targets[0])));
+    cast(&mut run, 105174);
+    assert_eq!(own_stacks(&run, 1269643), 1, "one paid Hand earns one Demonic Oculi");
+    update(&mut run, 30);
+    assert!(
+        !events(&run, CombatLogKind::Damage, 1269892).is_empty(),
+        "a one-stack Oculi tick must deal native Diabolic Gaze (1)"
+    );
+}
+
+#[test]
+#[ignore = "requires private266 inputs; Art-consuming Hand detonates Oculi"]
+fn demonology_art_hand_detonates_oculi_into_minds_eyes() {
+    // actions.cpp370–403/5356–5376: an Art-consuming cast explodes every Oculi
+    // stack, grants that many Mind's Eyes and expires the Oculi.
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_funded();
+    for _ in 0..2 {
+        crate::spell_cast::creature_cast(run.app.world_mut(), run.actor, 1269643, Some(run.actor), true)
+            .expect("native Demonic Oculi must apply");
+    }
+    assert_eq!(own_stacks(&run, 1269643), 2);
+    grant_art(&mut run, 428524);
+    cast(&mut run, 105174);
+    update(&mut run, 2);
+    assert_eq!(events(&run, CombatLogKind::Damage, 1269800).len(), 1, "one Eye Explosion");
+    assert_eq!(own_stacks(&run, 1269879), 3, "Hand's third Oculi becomes three Mind's Eyes");
+    assert_eq!(own_stacks(&run, 1269643), 0, "the explosion expires the Oculi");
+}
