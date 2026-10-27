@@ -166,6 +166,58 @@ fn attack_state(run: &Run) -> (Entity, Duration, Duration) {
 
 #[test]
 #[ignore = "actual native Player fixture; requires frozen parity inputs"]
+fn literal_wait_defers_cast_until_duration_then_reevaluates_condition() {
+    let (mut run, equipment) = human(1);
+    let mut driver = Driver::new(
+        Program::parse(&[
+            ("default", "wait,sec=0.2,if=target.health.pct>50"),
+            ("default", "tiger_palm"),
+        ])
+        .unwrap(),
+    );
+    let (action, execution) = select_palm(&mut run, &mut driver, &equipment);
+    driver
+        .execute(run.app.world_mut(), run.actor, action, execution)
+        .unwrap();
+    assert!(
+        casts(run.app.world(), run.actor).is_empty(),
+        "wait must not cast Tiger Palm"
+    );
+    let target = run.targets[0];
+    let mut health = run.app.world_mut().get_mut::<Health>(target).unwrap();
+    health.current = health.max * 0.25;
+    let started = crate::spell_cast::now(run.app.world());
+    while crate::spell_cast::now(run.app.world()) - started < 0.15 {
+        run.app.update();
+        let prepared = prepare_palm(&mut run, &equipment);
+        let facts = TargetFacts {
+            world: run.app.world(),
+            targets: &run.targets,
+        };
+        assert!(
+            driver
+                .select("default", &facts, &prepared, &equipment)
+                .unwrap()
+                .is_none(),
+            "a selected wait must finish even when its condition changes"
+        );
+    }
+    for _ in 0..10 {
+        run.app.update();
+    }
+    let (action, execution) = select_palm(&mut run, &mut driver, &equipment);
+    driver
+        .execute(run.app.world_mut(), run.actor, action, execution)
+        .unwrap();
+    assert_eq!(
+        casts(run.app.world(), run.actor).len(),
+        1,
+        "after wait, reevaluate the false condition and cast"
+    );
+}
+
+#[test]
+#[ignore = "actual native Player fixture; requires frozen parity inputs"]
 fn literal_player_native_cast_and_request_time_spellbook_rejection() {
     let _scope = crate::random::seed_scope(70448);
     let (mut run, equipment) = human(1);

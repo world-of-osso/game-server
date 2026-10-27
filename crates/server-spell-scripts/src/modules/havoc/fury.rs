@@ -14,6 +14,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
 fn after_cast(spell: u32) -> Option<AfterCastHook> {
     match spell {
         198013 | 452497 => Some(grant_student),
+        188499 | 210152 => Some(grant_chaos_theory),
         _ => None,
     }
 }
@@ -46,6 +47,15 @@ fn grant_student(world: &mut World, caster: Entity, _spell: &SpellInfo) {
     }
 }
 
+// SimC76f8118 sc_demon_hunter.cpp7234–7237 grants the native buff on dance.
+fn grant_chaos_theory(world: &mut World, caster: Entity, _: &SpellInfo) {
+    if has_talent(world, caster, 389687)
+        && !combat::spell_cast::try_cast_triggered(world, caster, 390195, Some(caster), 1)
+    {
+        error!("Native Chaos Theory buff cast refused");
+    }
+}
+
 fn after_launch(world: &mut World, caster: Entity, spell: u32) {
     // Native198813 is a queued triggered child, so it never runs the ordinary
     // foreground AfterCast stage. This callback follows its actual launch.
@@ -67,5 +77,15 @@ fn roll_chaos_strike_refund(world: &mut World, caster: Entity) {
         && combat::auras::procs::try_native_policy_proc(world, caster, instance)
     {
         combat::spell_cast::cast_triggered(world, caster, 193840, Some(caster), 1);
+    }
+    // SimC7513–7515 consumes the buff on the off-hand execution, even if
+    // the native refund roll fails or its ICD is still active.
+    if has_talent(world, caster, 389687) {
+        combat::auras::remove_auras(
+            world,
+            caster,
+            combat::auras::RemoveReason::Consumed,
+            |aura| aura.caster == caster && aura.spell_id == 390195,
+        );
     }
 }

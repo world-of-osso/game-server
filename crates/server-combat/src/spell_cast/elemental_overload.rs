@@ -22,6 +22,18 @@ pub(super) const LIGHTNING_OVERLOAD: u32 = 45284;
 pub(super) const CHAIN_OVERLOAD: u32 = 45297;
 const OVERLOAD_DELAY_MS: u32 = 400;
 
+/// Native damage children that use the Elemental Overload effectiveness.
+pub fn is_overload_damage(spell: u32) -> bool {
+    matches!(
+        spell,
+        LIGHTNING_OVERLOAD
+            | CHAIN_OVERLOAD
+            | LAVA_OVERLOAD_DAMAGE
+            | ICEFURY_OVERLOAD
+            | ELEMENTAL_BLAST_OVERLOAD
+    )
+}
+
 fn self_aura_amount(world: &World, caster: Entity, aura_spell: u32, index: u8) -> Option<f32> {
     let now = super::now(world);
     world

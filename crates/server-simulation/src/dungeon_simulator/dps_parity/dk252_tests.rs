@@ -144,7 +144,10 @@ fn dk252_putrefy_impact_raises_native_magus() {
     }
     let world = run.app.world_mut();
     assert!(
-        world.query::<&shared::components::Npc>().iter(world).any(|npc| npc.template_id == 163366),
+        world
+            .query::<&shared::components::Npc>()
+            .iter(world)
+            .any(|npc| npc.template_id == 163366),
         "selected Lord of the Dead must raise a native Magus after Putrefy impact"
     );
 }
