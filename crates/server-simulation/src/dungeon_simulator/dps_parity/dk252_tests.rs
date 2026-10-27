@@ -655,6 +655,28 @@ fn dk252_lord_bolt_scales_with_consumed_magus_remaining_time() {
 }
 
 #[test]
+#[ignore = "requires native252 profile/traits and player actor"]
+fn dk252_blightburst_applies_and_extends_owned_diseases() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 1).unwrap();
+    engage(&mut run);
+    for (impact, plague) in [(1277016, 1240996), (390220, 191587)] {
+        assert!(crate::spell_cast::try_cast_triggered(run.app.world_mut(), run.actor, impact, Some(run.targets[0]), 1));
+        let expiry = |run: &Run| run.app.world().get::<crate::auras::ActiveAuras>(run.targets[0]).unwrap()
+            .iter().find(|a| a.caster == run.actor && a.spell_id == plague).unwrap().expires_at.unwrap();
+        let before = expiry(&run);
+        assert!(crate::spell_cast::try_cast_triggered(run.app.world_mut(), run.actor, impact, Some(run.targets[0]), 1));
+        let after = expiry(&run);
+        assert!(after - before >= 2.99, "Blightburst must extend disease {plague}");
+    }
+    let events = &run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
+    for eruption in [1241171, 1241167] {
+        assert!(events.iter().any(|e| e.spell_id == Some(eruption) && e.kind == CombatLogKind::Damage && e.amount > 0),
+            "Blightburst must erupt active disease using native child {eruption}");
+    }
+}
+
+#[test]
 #[ignore = "requires private native252 profile/traits and player actor"]
 fn dk252_lord_magus_uses_selected_native_lifetime() {
     let _seed = crate::random::seed_scope(70448);
