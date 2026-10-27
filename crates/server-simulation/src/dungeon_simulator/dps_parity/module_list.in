@@ -118,6 +118,7 @@ mod equipped_set_tests;
 mod evoker_extended_battle_tests;
 mod evoker_command_squadron_tests;
 mod evoker_rising_damage_tests;
+mod evoker_siege_tests;
 mod evoker_sweep_burst_tests;
 mod feral_burst_tests;
 mod feral_convoke_tests;
