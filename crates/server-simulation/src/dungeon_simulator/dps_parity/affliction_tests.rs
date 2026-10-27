@@ -298,6 +298,67 @@ fn affliction_sayaad_reacts_to_owner_damage_only_when_not_passive() {
 
 #[test]
 #[ignore = "requires private265 profile and native70448 world DB"]
+fn affliction_sayaad_melee_uses_owner_hit_and_expertise() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_measurement(265, 1).unwrap();
+    let pet = crate::hunter_pet::summoned_pet(run.app.world(), run.actor).unwrap();
+    let target = run.targets[0];
+    engage(&mut run);
+    crate::pet_control::order_companion_pet(run.app.world_mut(), run.actor, Some(target));
+    run.app
+        .world_mut()
+        .resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .clear();
+    for _ in 0..12000 {
+        run.app.update();
+        let events = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0;
+        let swings: Vec<_> = events
+            .iter()
+            .filter(|event| {
+                event.source == Some(pet.to_bits())
+                    && event.target == Some(target.to_bits())
+                    && event.spell_id.is_none()
+                    && matches!(
+                        event.kind,
+                        shared::protocol::CombatLogKind::Damage
+                            | shared::protocol::CombatLogKind::Miss(_)
+                    )
+            })
+            .collect();
+        if swings.len() < 150 {
+            continue;
+        }
+        let avoided = swings
+            .iter()
+            .filter(|event| {
+                matches!(
+                    event.kind,
+                    shared::protocol::CombatLogKind::Miss(
+                        shared::protocol::MissKind::Miss | shared::protocol::MissKind::Dodge
+                    )
+                )
+            })
+            .count();
+        // SimC76f8118 pet.cpp414–420 inherits owner hit and expertise;
+        // the qualified level90 owner has 7.5% of each against level93.
+        assert_eq!(
+            avoided,
+            0,
+            "actual Sayaad white swings must retain owner hit and expertise: {avoided} avoided of {}",
+            swings.len()
+        );
+        return;
+    }
+    panic!("actual Sayaad must attempt 150 white swings");
+}
+
+#[test]
+#[ignore = "requires private265 profile and native70448 world DB"]
 fn affliction_sayaad_melee_uses_owner_critical_chance() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_measurement(265, 1).unwrap();
