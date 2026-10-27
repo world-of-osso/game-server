@@ -2,6 +2,8 @@
 use super::combat;
 use bevy::prelude::*;
 use combat::class_progression::KnownSpells;
+use combat::random::Rng;
+use combat::soul_fragments::{self, FragmentKind};
 use combat::spell_cast::{
     self,
     effects::EffectCtx,
@@ -25,6 +27,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::OnCast(snapshot_tick),
     SpellScriptHook::ChannelPeriodic(periodic_trigger),
     SpellScriptHook::TargetContextDamageMultiplier(focused_ray),
+    SpellScriptHook::AfterFireDirectHit(shatter_on_tick),
 ];
 
 fn snapshot_tick(world: &mut World, actor: Entity, spell: u32, _: u8) {
@@ -66,6 +69,27 @@ fn focused_ray(world: &World, ctx: &EffectCtx<'_>, _: Entity, periodic: bool) ->
     }
     let percent = spell_cast::scripts::script_effect_value(world, ctx.caster, FOCUSED_RAY, 0);
     1.0 + percent / 100.0
+}
+
+fn shatter_on_tick(world: &mut World, ctx: &EffectCtx<'_>, _: Entity, _: bool) {
+    if !matches!(ctx.spell.id, 1213649 | 1214595)
+        || !world.get::<KnownSpells>(ctx.caster).is_some_and(|known| known.contains(1227619))
+    {
+        return;
+    }
+    let targets = spell_cast::resolving_targets(world, ctx)
+        .expect("native Void Ray tick retains resolved targets")
+        .iter().filter(|&&target| targets::relation_matches(world, ctx.caster, target, targets::Relation::Enemy)).count();
+    assert!(targets > 0, "Void Ray hit requires a target");
+    // SimC76f8118 cpp3390–3437,6338–6344: base chance +1%, Waste Not, divided by target count.
+    let mut chance = spell_cast::scripts::script_effect_value(world, ctx.caster, 1227619, 0) + 1.0;
+    if world.get::<KnownSpells>(ctx.caster).is_some_and(|known| known.contains(1223918)) {
+        chance *= 1.0 + spell_cast::scripts::script_effect_value(world, ctx.caster, 1223918, 0) / 100.0;
+    }
+    if combat::random::thread_rng().gen_range(0.0..100.0) < chance / targets as f32 {
+        soul_fragments::spawn(world, ctx.caster, FragmentKind::Lesser, false)
+            .expect("native Shattered Souls fragment");
+    }
 }
 
 fn periodic_trigger(spell: u32, index: u8) -> Option<ContextHitHook> {
