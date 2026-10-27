@@ -92,12 +92,21 @@ fn native_wildspeaker_dire_beasts_inherit_owner_crit_and_savagery() {
     let mut seen = 0;
     assert!(crate::auras::has_aura(run.app.world(), run.actor, 459550));
     assert!(crate::auras::has_aura(run.app.world(), run.actor, 424557));
-    let savagery = f64::from(crate::spell_cast::scripts::script_effect_value(
-        run.app.world(),
-        run.actor,
-        424557,
-        0,
-    )) / 100.0;
+    let selected_passives = [(269737, 3), (424557, 0), (459542, 0)];
+    let expected_modifier: f64 = selected_passives
+        .into_iter()
+        .map(|(spell, effect)| {
+            assert!(crate::auras::has_aura(run.app.world(), run.actor, spell));
+            let amount = crate::spell_cast::scripts::script_effect_value(
+                run.app.world(),
+                run.actor,
+                spell,
+                effect,
+            );
+            assert!(amount > 0);
+            1.0 + f64::from(amount) / 100.0
+        })
+        .product();
     let mut critical_hits = 0;
     let mut critical_bonuses = Vec::new();
     let mut white_critical_hits = 0;
@@ -209,12 +218,11 @@ fn native_wildspeaker_dire_beasts_inherit_owner_crit_and_savagery() {
     );
     // SimC76f8118 player.cpp15268–15324 and native424557: actual
     // DireCritter commands use the owner's selected passive spell modifier.
-    assert!(savagery > 0.0);
     assert!(
         damage_modifiers
             .iter()
-            .all(|factor| *factor + 0.001 >= 1.0 + savagery),
-        "actual Wildspeaker damage must include selected Savagery: {damage_modifiers:?}"
+            .all(|factor| *factor + 0.001 >= expected_modifier),
+        "actual Wildspeaker damage must include selected passive modifiers: expected={expected_modifier}, actual={damage_modifiers:?}"
     );
     // SimC76f8118 pet.cpp217–220: DireCritters inherit their owner's live crit.
     assert!(
