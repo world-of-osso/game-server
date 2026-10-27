@@ -576,6 +576,31 @@ fn frost_erw_earns_killing_machine() {
     );
 }
 
+fn grim_mark_explosion(health_fraction: f32) -> i32 {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::protocol::CombatLogKind;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::super::prepare_measurement(251, 1).unwrap();
+    super::super::engage(&mut run);
+    assert!(auras::has_aura(run.app.world(), run.actor, 434905));
+    cast(&mut run, 439843);
+    let mut health = run.app.world_mut().get_mut::<shared::components::Health>(run.targets[0]).unwrap();
+    health.current = health.max * health_fraction;
+    for _ in 0..500 { run.app.update(); }
+    run.app.world().resource::<ObservedCombatEvents>().0.iter().find(|event|
+        event.source == Some(run.actor.to_bits()) && event.target == Some(run.targets[0].to_bits())
+        && event.spell_id == Some(436304) && event.kind == CombatLogKind::Damage && event.amount > 0
+    ).expect("real Mark expiration must explode").amount
+}
+
+#[test]
+#[ignore = "actual Mark explosion scales with Grim Reaper target missing health"]
+fn frost_grim_reaper_scales_real_mark_explosion() {
+    let full = grim_mark_explosion(1.0);
+    let half = grim_mark_explosion(0.5);
+    assert!((half as f32 / full as f32 - 1.15).abs() < 0.02, "full={full} half={half}");
+}
+
 #[test]
 #[ignore = "native Reaper's Mark explodes and earns Exterminate from actual damage"]
 fn frost_mark_explosion_earns_exterminate() {
