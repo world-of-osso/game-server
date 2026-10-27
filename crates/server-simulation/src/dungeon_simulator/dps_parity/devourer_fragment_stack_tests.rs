@@ -290,3 +290,80 @@ fn devourer_full_soul_stacks_admit_real_metamorphosis() {
         "Meta entry removes its ready aura"
     );
 }
+
+#[test]
+#[ignore = "requires DPS_PARITY_WORLD_DB and DPS_PARITY_OUTPUT with spec1480 exact profile/traits"]
+fn real_collapsing_star_spends_stacks_and_ready_buff() {
+    let mut run = prepare(1480, 1).expect("native Devourer profile");
+    let actor = run.actor;
+    let target = run.targets[0];
+    engage(&mut run);
+    crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 1217605, Some(actor), 1);
+    for _ in 0..30 {
+        if crate::auras::has_aura(run.app.world(), actor, 1217607)
+            && !crate::auras::has_aura(run.app.world(), actor, 201453)
+        {
+            break;
+        }
+        run.app.update();
+    }
+    assert!(
+        crate::auras::has_aura(run.app.world(), actor, 1217607),
+        "real native Meta active"
+    );
+    assert!(
+        !crate::auras::has_aura(run.app.world(), actor, 201453),
+        "pacify expired"
+    );
+    for _ in 0..35 {
+        crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 1227702, Some(actor), 1);
+    }
+    for _ in 0..20 {
+        if crate::auras::has_aura(run.app.world(), actor, 1221171) {
+            break;
+        }
+        run.app.update();
+    }
+    assert_eq!(
+        stacks(run.app.world(), actor, 1227702),
+        35,
+        "native 35 Collapsing Star stacks"
+    );
+    assert!(
+        crate::auras::has_aura(run.app.world(), actor, 1221171),
+        "native Collapsing Star ready"
+    );
+    crate::spell_cast::cast_for_player_with_target(
+        run.app.world_mut(),
+        actor,
+        1221150,
+        Some(target),
+    )
+    .expect("real Collapsing Star admission");
+    for _ in 0..100 {
+        run.app.update();
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(actor.to_bits())
+                && event.spell_id == Some(1221150)
+                && event.kind == CombatLogKind::CastSuccess),
+        "real Collapsing Star executed"
+    );
+    // SimC76f8118 cpp6529–6553 expires ready and decrements 30 selected souls on execute.
+    assert!(
+        !crate::auras::has_aura(run.app.world(), actor, 1221171),
+        "Collapsing Star consumes its ready buff"
+    );
+    assert_eq!(
+        stacks(run.app.world(), actor, 1227702),
+        5,
+        "Collapsing Star spends 30 souls and preserves remainder"
+    );
+}
