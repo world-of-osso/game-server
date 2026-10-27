@@ -88,6 +88,7 @@ mod devastation_tests;
 mod devourer_fury_cap_tests;
 mod devourer_immolation_tests;
 mod devourer_burning_tests;
+mod devourer_devour_tests;
 mod devourer_focused_ray_tests;
 #[cfg(test)]
 mod devourer_drain_tests;
@@ -340,6 +341,7 @@ mod subtlety_ancient_tests;
 mod subtlety_blades_tests;
 mod subtlety_clone_funding_tests;
 mod subtlety_clone_tests;
+mod subtlety_dance_duration_tests;
 mod subtlety_deathstalker_tests;
 mod subtlety_finishers_dark_tests;
 mod subtlety_finishers_tests;

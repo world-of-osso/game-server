@@ -613,12 +613,16 @@ fn demonology_imp_critical_damage_inherits_demonic_brutality() {
         .unwrap()
         .base_points;
     let imp = summon_native_guardian(&mut run, 104317);
+    run.app
+        .world_mut()
+        .entity_mut(run.actor)
+        .insert(crate::networking::CombatTarget(Some(run.targets[0])));
     run.app.insert_resource(FactorCapture::new(
         imp,
         run.targets[0],
         104318,
         "fel_firebolt",
-        1,
+        10,
     ));
     crate::spell_cast::creature_cast(
         run.app.world_mut(),
@@ -628,20 +632,21 @@ fn demonology_imp_critical_damage_inherits_demonic_brutality() {
         false,
     )
     .unwrap();
-    for _ in 0..100 {
+    for _ in 0..300 {
         run.app.update();
     }
     let capture = run.app.world().resource::<FactorCapture>().export();
     let events = capture["events"].as_array().unwrap();
-    let direct = events
+    let position = events
         .iter()
+        .position(|event| event["event"] == "result" && event["factors"]["result"] == "crit")
+        .expect("actual Imp bolts must include a native critical hit");
+    let result = &events[position];
+    let direct = events[..position]
+        .iter()
+        .rev()
         .find(|event| event["event"] == "direct_amount")
         .unwrap();
-    let result = events
-        .iter()
-        .find(|event| event["event"] == "result")
-        .unwrap();
-    assert_eq!(result["factors"]["result"], "crit");
     let uncritical = direct["factors"]["amount"].as_f64().unwrap();
     let actual = result["factors"]["actual_amount"].as_f64().unwrap();
     let expected = uncritical * 2.0 * (1.0 + f64::from(effect) / 100.0);
@@ -696,6 +701,129 @@ fn assert_exhausted_imps_trigger_isolated_implosion(target_count: usize) {
             "exhausted Imps must launch real selected Isolated Implosion damage on {target}"
         );
     }
+}
+
+#[test]
+#[ignore = "requires private266 inputs; actual Infernal Rapidity twin bolts"]
+fn demonology_imps_emit_infernal_rapidity_twins() {
+    use shared::protocol::CombatLogKind;
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(266, 1).unwrap();
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, 1263941));
+    engage(&mut run);
+    run.app
+        .world_mut()
+        .entity_mut(run.actor)
+        .insert(crate::networking::CombatTarget(Some(run.targets[0])));
+    for _ in 0..20 {
+        crate::spell_cast::creature_cast(
+            run.app.world_mut(),
+            run.actor,
+            104317,
+            Some(run.actor),
+            true,
+        )
+        .unwrap();
+    }
+    for _ in 0..600 {
+        run.app.update();
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    let casts = events
+        .iter()
+        .filter(|event| event.spell_id == Some(104318) && event.kind == CombatLogKind::CastSuccess)
+        .count();
+    let hits = events
+        .iter()
+        .filter(|event| event.spell_id == Some(104318) && event.kind == CombatLogKind::Damage)
+        .count();
+    assert!(casts > 0, "actual Imp bolts must complete native casts");
+    // SimC76f8118 pets.cpp721–736/818–839: per-Imp PRD launches free twin bolts.
+    assert!(
+        hits > casts,
+        "selected Infernal Rapidity must produce additional real bolt damage: casts={casts} hits={hits}"
+    );
+}
+
+#[test]
+#[ignore = "requires private266 inputs; Isolated Implosion suppresses the last Rapidity twin"]
+fn demonology_isolated_last_bolt_does_not_emit_rapidity_twin() {
+    use shared::protocol::CombatLogKind;
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(266, 1).unwrap();
+    engage(&mut run);
+    run.app
+        .world_mut()
+        .entity_mut(run.actor)
+        .insert(crate::networking::CombatTarget(Some(run.targets[0])));
+    for _ in 0..20 {
+        run.app
+            .world_mut()
+            .resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .clear();
+        crate::spell_cast::creature_cast(
+            run.app.world_mut(),
+            run.actor,
+            104317,
+            Some(run.actor),
+            true,
+        )
+        .unwrap();
+        let imp = run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .find(|event| event.spell_id == Some(104317) && event.kind == CombatLogKind::Summon)
+            .map(|event| Entity::from_bits(event.target.unwrap()))
+            .unwrap();
+        for _ in 0..600 {
+            run.app.update();
+            if run.app.world().get_entity(imp).is_err() {
+                break;
+            }
+        }
+        let events = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0;
+        if !events
+            .iter()
+            .any(|event| event.spell_id == Some(1306077) && event.kind == CombatLogKind::Damage)
+        {
+            continue;
+        }
+        let last_cast = events
+            .iter()
+            .rposition(|event| {
+                event.source == Some(imp.to_bits())
+                    && event.spell_id == Some(104318)
+                    && event.kind == CombatLogKind::CastSuccess
+            })
+            .unwrap();
+        let last_impacts = events[last_cast + 1..]
+            .iter()
+            .filter(|event| {
+                event.source == Some(imp.to_bits())
+                    && event.spell_id == Some(104318)
+                    && matches!(event.kind, CombatLogKind::Damage | CombatLogKind::Miss(_))
+            })
+            .count();
+        // SimC76f8118 pets.cpp818–849 suppresses a twin when this same last cast earns the set proc.
+        assert_eq!(
+            last_impacts, 1,
+            "isolated last cast must produce only its ordinary bolt"
+        );
+        return;
+    }
+    panic!("actual Imp exhaustion must exercise the selected accumulated set proc");
 }
 
 #[test]
