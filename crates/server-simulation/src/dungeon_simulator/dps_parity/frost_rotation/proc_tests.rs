@@ -342,6 +342,28 @@ fn frost_exterminate_spender_deals_both_native_hits() {
 }
 
 #[test]
+#[ignore = "native Frostwyrm's Fury extends an active Pillar with Chosen of Frostbrood"]
+fn frost_fury_extends_real_pillar() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::super::prepare_literal(251, 1).unwrap();
+    super::super::engage(&mut run);
+    let actor = run.actor;
+    assert!(auras::has_aura(run.app.world(), actor, 1265633));
+    super::super::enhancement_generation_tests::cast(&mut run, 51271, actor);
+    let expiration = |run: &Run| {
+        run.app.world().get::<ActiveAuras>(run.actor).unwrap().iter()
+            .find(|aura| aura.spell_id == 51271 && aura.caster == run.actor)
+            .unwrap().expires_at.unwrap()
+    };
+    let before = expiration(&run);
+    let extension_ms = crate::spell_cast::scripts::script_effect_value(run.app.world(), actor, 1265633, 0);
+    cast(&mut run, 279302);
+    let after = expiration(&run);
+    assert!((after - before - f64::from(extension_ms) / 1000.0).abs() < 0.001,
+        "real Fury must extend active Pillar by native Chosen duration: {before} -> {after}");
+}
+
+#[test]
 #[ignore = "native Frost Fever ticks use the pinned Runic Power proc rate"]
 fn frost_fever_actual_ticks_roll_runic_power() {
     use crate::spell_cast::test_harness::ObservedCombatEvents;
