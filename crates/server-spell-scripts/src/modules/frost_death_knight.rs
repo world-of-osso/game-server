@@ -20,7 +20,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AfterQueuedTriggers(consume_due_killing_machine),
     SpellScriptHook::AfterSpellPayment(roll_runic_empowerment),
     SpellScriptHook::AfterPeriodicDamagePolicies(frost_fever_runic_power),
-    SpellScriptHook::LateAuraRegistration(register_breath),
+    SpellScriptHook::LateAuraRegistration(register_frost_auras),
     SpellScriptHook::ResolvedDamage(frostreaper_impact),
 ];
 
@@ -94,6 +94,7 @@ pub(super) fn after_launch(world: &mut World, caster: Entity, spell: &SpellInfo,
     if !foreground || !is_frost(world, caster) {
         return;
     }
+    extend_winter_for_runes(world, caster, spell);
     if spell.id == EMPOWER_RUNE_WEAPON && auras::has_aura(world, caster, KILLING_MACHINE) {
         // SimC76f8118 sc_death_knight.cpp10236–10243: a real ready ERW grants KM.
         trigger_native_buff(world, caster, KILLING_MACHINE);
@@ -292,8 +293,41 @@ fn consume_frostreaper(world: &mut World, caster: Entity, target: Option<Entity>
     });
 }
 
-fn register_breath(scripts: &mut auras::scripts::AuraScripts) {
+fn extend_winter_for_runes(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    if spell.id == 196770 || !auras::has_aura(world, caster, 194912) {
+        return;
+    }
+    let winter = [196770, 1233152];
+    if !winter.iter().any(|&id| auras::has_aura(world, caster, id)) {
+        return;
+    }
+    let base_cost: i32 = spell.power_costs.iter()
+        .filter(|cost| cost.power_type == 5 && cost.mana_cost > 0
+            && (cost.required_aura_spell_id == 0 || auras::has_aura(world, caster, cost.required_aura_spell_id)))
+        .map(|cost| cost.mana_cost).sum();
+    if base_cost == 0 {
+        return;
+    }
+    // SimC76f8118 sc_death_knight.cpp13086–13095: use base rune cost,
+    // including free casts, for both stacks and the Winter extension.
+    let tenths = spell_cast::scripts::script_effect_value(world, caster, 194912, 0);
+    auras::extend_owned_duration(world, caster, caster, &winter, (tenths * 100.0 * base_cost as f32) as u32);
+    cast_buff_stacks(world, caster, 211805, base_cost as u8);
+}
+
+fn register_frost_auras(scripts: &mut auras::scripts::AuraScripts) {
     scripts.0.entry(1249658).or_default().on_remove = Some(breath_ended);
+    for winter in [196770, 1233152] {
+        scripts.0.entry(winter).or_default().on_remove = Some(winter_ended);
+    }
+}
+
+fn winter_ended(world: &mut World, unit: Entity, aura: &auras::AuraInstance, _: auras::RemoveReason) {
+    if aura.caster == unit {
+        auras::remove_auras(world, unit, auras::RemoveReason::Cancelled, |buff| {
+            buff.spell_id == 211805 && buff.caster == unit
+        });
+    }
 }
 
 fn breath_ended(
