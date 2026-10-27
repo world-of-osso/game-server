@@ -1271,6 +1271,31 @@ pub fn script_effect_value(world: &World, caster: Entity, spell_id: u32, index: 
     super::effects::modded_base_points(world, caster, spell, effect)
 }
 
+/// Start a script-defined, haste-scaled spell cooldown after a successful cast.
+pub fn start_hasted_cooldown(world: &mut World, caster: Entity, spell_id: u32, duration_ms: f32) {
+    let now = super::history_now(world);
+    let duration_ms =
+        (duration_ms / super::spell_haste_multiplier(world, caster).max(0.01)).max(0.0) as u32;
+    let mut entity = world.entity_mut(caster);
+    let mut history = entity.entry::<super::SpellHistory>().or_default();
+    let mut history = history.get_mut();
+    history.cooldown_started_at.insert(spell_id, now);
+    history
+        .spell_ready_at
+        .insert(spell_id, now + f64::from(duration_ms) / 1000.0);
+    super::send_to_owner(
+        world,
+        caster,
+        shared::protocol::SpellCooldownUpdate {
+            spell_id,
+            category: 0,
+            duration_ms,
+            remaining_ms: duration_ms,
+            is_gcd: false,
+        },
+    );
+}
+
 /// Reduce the currently running recharge or spell cooldown; never start one.
 pub fn reduce_cooldown(world: &mut World, caster: Entity, spell_id: u32, seconds: f64) {
     let now = super::history_now(world);
