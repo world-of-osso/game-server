@@ -139,8 +139,11 @@ pub(crate) fn creature_cast_instant_background(
     caster: Entity,
     spell_id: u32,
     target: Option<Entity>,
+    damage_multiplier: Option<f32>,
 ) -> Result<(), CastFailure> {
     let (mut spell, explicit) = load_creature_cast(world, caster, spell_id, target)?;
+    // SimC76f8118 sc_shaman.cpp7599–7609 retains Fusion's factor on overload.
+    spell.cast_damage_multiplier = damage_multiplier;
     if let Some(misc) = &mut spell.misc {
         misc.cast_time = None;
     }

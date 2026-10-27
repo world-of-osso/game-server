@@ -7,6 +7,8 @@
     195627,
     // SimC76f8118 sc_shaman.cpp8759: Stormkeeper stacks are independent uses.
     191634,
+    // SimC76f8118 sc_shaman.cpp3303–3305: Power stacks are independent uses.
+    191877,
     263725,
     // SimC76f8118 sc_warrior.cpp1256–1261/1324–1325: Sweeping stacks are uses.
     260708,
@@ -21,4 +23,6 @@
     260286,
     // Native470532s1/s2 EX_SUPPRESS_STACKING64; SimC parse_effects.cpp716–719.
     470532,
+    // SimC76f8118 sc_shaman.cpp12914–12924: Flowing stacks count builder uses.
+    1300219,
 ]
