@@ -19,12 +19,20 @@ struct PutrefyImpacted;
 #[derive(Component, Default)]
 struct ForbiddenKnowledgeAttempts(u32);
 
+#[derive(Component)]
+struct PendingLordDuration(f64);
+
+#[derive(Component)]
+struct LordMagusDuration(f64);
+
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::SummonInitialized(start_putrefy_ghoul),
     SpellScriptHook::SummonInitialized(set_lord_magus_lifetime),
     SpellScriptHook::SummonInitialized(convert_magi_to_lord),
+    SpellScriptHook::SummonInitialized(retain_lord_duration),
     SpellScriptHook::SummonExpired(raise_magus),
     SpellScriptHook::PeriodicDamageFinished(roll_forbidden_knowledge),
+    SpellScriptHook::TargetContextDamageMultiplier(lord_duration_multiplier),
 ];
 
 fn roll_forbidden_knowledge(world: &mut World, ctx: &EffectCtx<'_>) {
@@ -142,6 +150,8 @@ fn convert_magi_to_lord(world: &mut World, actor: Entity) {
             return;
         }
         magi.sort_by(|a, b| a.1.total_cmp(&b.1));
+        let duration = magi.iter().take(required).map(|(_, expiry)| expiry - now).sum();
+        world.entity_mut(owner).insert(PendingLordDuration(duration));
         for (magus, _) in magi.into_iter().take(required) {
             world
                 .get_mut::<summon::SummonedCreature>(magus)
@@ -149,9 +159,32 @@ fn convert_magi_to_lord(world: &mut World, actor: Entity) {
                 .expires_at = Some(now);
         }
         if !combat::spell_cast::try_cast_triggered(world, owner, LORD_SUMMON, Some(owner), 1) {
+            world.entity_mut(owner).remove::<PendingLordDuration>();
             warn!(?owner, "Native Lord of the Dead summon refused");
         }
     });
+}
+
+fn retain_lord_duration(world: &mut World, actor: Entity) {
+    let Some(summon) = world.get::<summon::SummonedCreature>(actor) else {
+        return;
+    };
+    if summon.spell_id != LORD_SUMMON {
+        return;
+    }
+    let owner = summon.owner;
+    let duration = world.entity_mut(owner).take::<PendingLordDuration>()
+        .expect("Lord summon requires consumed Magus durations");
+    world.entity_mut(actor).insert(LordMagusDuration(duration.0));
+}
+
+fn lord_duration_multiplier(world: &World, ctx: &EffectCtx<'_>, _: Entity, _: bool) -> f32 {
+    let Some(duration) = world.get::<LordMagusDuration>(ctx.caster) else {
+        return 1.0;
+    };
+    // SimC76f8118 sc_death_knight.cpp4640–4647: every remaining second
+    // of the three consumed Magi adds one percent to the actual Lord's damage.
+    1.0 + 0.01 * duration.0 as f32
 }
 
 fn impact_and_dismiss(world: &mut World, actor: Entity, target: Entity) {
