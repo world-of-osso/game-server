@@ -1015,6 +1015,34 @@ fn diag_frost_oracle_aligned_factors() {
 }
 
 #[test]
+#[ignore = "real Winter tick is not directly amplified by Pillar"]
+fn frost_winter_tick_pillar_only_changes_attack_power() {
+    use crate::spell_cast::effects::factor_capture::FactorCapture;
+    fn tick(keep_pillar: bool) -> (f64, f64) {
+        let _seed = crate::random::seed_scope(70448);
+        let mut run = super::super::prepare_literal(251, 1).unwrap();
+        super::super::engage(&mut run);
+        let actor = run.actor;
+        super::super::enhancement_generation_tests::cast(&mut run, 51271, actor);
+        assert!(auras::has_aura(run.app.world(), actor, 1233152));
+        if !keep_pillar { clear_proc(&mut run, 51271); }
+        run.app.insert_resource(FactorCapture::new(actor, run.targets[0], 196771, "remorseless_winter_damage", 1));
+        for _ in 0..100 {
+            run.app.update();
+            if run.app.world().resource::<FactorCapture>().export()["captured_hits"] == 1 { break; }
+        }
+        let capture = run.app.world().resource::<FactorCapture>().export();
+        let hit = capture["events"].as_array().unwrap().iter()
+            .find(|event| event["spell_id"] == 196771 && event["event"] == "direct_amount").unwrap();
+        (hit["factors"]["amount"].as_f64().unwrap(), hit["factors"]["a_power"].as_f64().unwrap())
+    }
+    let (with, with_ap) = tick(true);
+    let (without, without_ap) = tick(false);
+    assert!((with / with_ap - without / without_ap).abs() < 0.001,
+        "Pillar changes Winter through attack power only, not direct damage: {with}/{with_ap} vs {without}/{without_ap}");
+}
+
+#[test]
 #[ignore = "diagnostic actual Winter tick factor capture"]
 fn diag_frost_winter_tick_factors() {
     use crate::spell_cast::effects::factor_capture::FactorCapture;
