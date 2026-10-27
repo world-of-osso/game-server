@@ -1,7 +1,7 @@
 //! Assassination Deathstalker relationships from pinned SimC76f8118.
 use super::combat;
 use bevy::prelude::*;
-use shared::components::{ActiveSpec, PowerType};
+use shared::components::PowerType;
 
 use combat::auras::{self, ActiveAuras, RemoveReason, SpellModOp};
 use combat::spell_cast::{self, effects::EffectCtx};
@@ -14,13 +14,15 @@ const DARKEST_TALENT: u32 = 457058;
 const DARKEST: u32 = 457280;
 const GARROTE: u32 = 703;
 const ENVENOM: u32 = 32645;
+const SHADOWSTRIKE: u32 = 185438;
+const EVISCERATE: u32 = 196819;
+const BLACK_POWDER: u32 = 319175;
+const MASS_CASUALTY: u32 = 1273035;
+const MASS_DAMAGE: u32 = 1273061;
 
 pub(super) fn needs_context(world: &World, caster: Entity, spell: &SpellInfo) -> bool {
-    world
-        .get::<ActiveSpec>(caster)
-        .is_some_and(|spec| spec.0 == 259)
-        && auras::has_aura(world, caster, MARK_TALENT)
-        && (spell.id == GARROTE
+    auras::has_aura(world, caster, MARK_TALENT)
+        && (matches!(spell.id, GARROTE | SHADOWSTRIKE)
             || spell
                 .power_costs
                 .iter()
@@ -59,7 +61,9 @@ fn empowered(world: &World, caster: Entity, spell: &SpellInfo) -> bool {
     else {
         return false;
     };
-    spell.id == ENVENOM && combo_points(spell) >= maximum && auras::has_aura(world, caster, DARKEST)
+    matches!(spell.id, ENVENOM | EVISCERATE)
+        && combo_points(spell) >= maximum
+        && auras::has_aura(world, caster, DARKEST)
 }
 
 /// sc_rogue.cpp2435–2440/2569–2574: only the maximum-CP Envenom
@@ -89,7 +93,7 @@ pub(super) fn on_hit(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
     if !needs_context(world, ctx.caster, ctx.spell) {
         return;
     }
-    if ctx.spell.id == GARROTE {
+    if matches!(ctx.spell.id, GARROTE | SHADOWSTRIKE) {
         let stacks = native_amount(world, ctx.caster, MARK_TALENT, 0) as u8;
         apply_mark(world, ctx, target, stacks);
         return;
@@ -109,6 +113,20 @@ pub(super) fn on_hit(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
         return;
     }
     spend_mark(world, ctx, target);
+}
+
+// sc_rogue.cpp6570–6594: Mass Casualty excludes the marked primary.
+pub(super) fn filter_mass_casualty(
+    _world: &World,
+    _caster: Entity,
+    spell: &SpellInfo,
+    index: u8,
+    primary: Option<Entity>,
+    recipients: &mut Vec<Entity>,
+) {
+    if spell.id == MASS_DAMAGE && index == 0 {
+        recipients.retain(|target| Some(*target) != primary);
+    }
 }
 
 fn owned_mark(world: &World, caster: Entity, target: Entity) -> Option<u32> {
@@ -151,6 +169,22 @@ fn spend_mark(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
     };
     auras::spend_stack(world, target, instance);
     spell_cast::cast_triggered(world, ctx.caster, MARK_DAMAGE, Some(target), ctx.depth + 1);
+    if ctx.spell.id == BLACK_POWDER && auras::has_aura(world, ctx.caster, MASS_CASUALTY) {
+        let mut payload = world
+            .resource::<SpellStore>()
+            .get(MASS_DAMAGE)
+            .expect("selected Mass Casualty requires native payload")
+            .clone();
+        payload.cast_damage_multiplier =
+            Some(native_amount(world, ctx.caster, MASS_CASUALTY, 1) / 100.0);
+        spell_cast::launch_triggered_spell(
+            world,
+            ctx.caster,
+            &payload,
+            Some(target),
+            ctx.depth + 1,
+        );
+    }
     if owned_mark(world, ctx.caster, target).is_none()
         && auras::has_aura(world, ctx.caster, DARKEST_TALENT)
     {

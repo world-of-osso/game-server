@@ -168,6 +168,8 @@ Native merged buff outcomes apply or clear the caster-owned aura after the hit b
 ### Subtlety literal fixture
 
 - Combo-point gains emit one native Energize receipt with actual overflow, including scripted per-hit gains. Shadow Techniques recognizes actual foreground combo-point generation, including capped gains, and collects after all native hit batches for that cast, not before delayed impacts (`sc_rogue.cpp2705–2716,8176–8204`).
+- In-combat Shadow Dance, Vanish and Stealth earn native Master of Shadows196980 when196976 is selected. Refresh preserves the periodic phase; native periodic and first-application Energy values remain authoritative (`sc_rogue.cpp5572–5575,6114–6117,6146–6149,8532–8537,11196–11204`).
+- Selected Deathstalker Shadowstrike establishes the native mark; eligible finishers consume it and Black Powder launches native Mass Casualty against secondary targets (`sc_rogue.cpp5653,6570–6594,8732–8817`).
 - Selected native Lingering Shadow earns its native maximum counter on Shadow Dance expiry, with the pinned tick-zero decrement and rolling periodic decay from native talent effect2. Replacing the counter restarts its lifetime; it must expire rather than retain a final stack (`sc_rogue.cpp7489–7501,11182–11195`).
 - Eligible landed builders and actual MID2 four-piece finishers emit native386081 at the same recipient from the mitigated source result, preserving source crit once. Use native counter stacks, set fraction and selected Shadow-school/Lingering Darkness modifiers; no residual without earned stacks or recursive residual emission (`sc_rogue.cpp2083–2089,3701,4400–4425,5709–5851,8554–8575,10568–10580`). Native regression: `subtlety_shadow_tests.rs`; numerical parity remains separate.
 
@@ -282,6 +284,8 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 - Guaranteed critical hits predict their actual Heating Up acquisition; an observed Heating Up conversion predicts Hot Streak. A critical hit with Hot Streak already active preserves and predicts it without creating Heating Up.
 
 ### Havoc literal rotation
+
+- Selected Focused Hatred452405 scales native Demonsurge452416 damage by native effect0 minus effect1 per additional resolved enemy, for one through five enemies; six or more receive no bonus (SimC76f8118 sc_demon_hunter.cpp5608–5634).
 
 - Selected Exergy206476 grants native208628 before Hunt370965 and Vengeful Retreat198793 execute. Refresh adds the native buff duration to its remaining time, capped at30s (SimC76f8118 sc_demon_hunter.cpp2822–2841,5501–5504,8539–8541,10010–10013).
 
@@ -792,6 +796,7 @@ Named `action.<alias>.charges`, `max_charges`, `charges_fractional` and `full_re
 - Ordinary Raptor Strike rolls the selected native Swipe rank's chance. An actual upgraded Raptor Swipe consumes its replacement and cannot produce itself. Source: `sc_hunter.cpp6188,6217–6236`.
 - A real Wildfire Bomb explodes around its actual primary using pinned5yd geometry, native reduced-AoE cap and native primary-only bonus. Apply the corresponding periodic payload to every actual impact recipient with the same cap/primary effectiveness. Selected Shrapnel replaces, never duplicates, the ordinary fire DoT. Keep native damage coefficients and timing. Source: `sc_hunter.cpp7030,7039–7043,7062–7068,7083–7089,7118–7120,7134`.
 
+- Selected Sanctified Armaments1253831 banks its native second effect from each actual Raptor Strike/Swipe impact into the owned native1253836 rolling periodic on that recipient. Reuse the shared MM residual engine while preserving MM Rapid's distinct first effect. Source: `sc_hunter.cpp5708–5711,6140–6167`.
 - Selected Raptor Swipe2 applies its native second effect only to the actual hostile primary. Read the current native modified effect value, not raw35%; secondaries and base damage/soft-cap remain unchanged. Source: `sc_hunter.cpp6195–6196`.
 - Selected Spirit Bond263135 includes459722's native percentage through the existing aura/mastery engine. Its full native modifier application follows the owning mastery aura's apply/remove lifecycle; do not replace CharacterStats or add a parallel mastery/damage calculation. Source: `sc_hunter.cpp1392–1395,2586–2589,7900`.
 - Actual Raptor Strike/Swipe base executions grant native Mongoose Fury259388, including its full selected effect set, native stack cap and refresh. Do not require the named talent to create the buff. Actual primary Tip consumption grants selected Stargazer1253750 before its queued mark/ordinary pet strike; retain independent native stack expiry. Native aura values supply all damage effects; do not add manual damage factors or stat changes. Source: `sc_hunter.cpp1358–1361,6149–6155,7749,7880,8160–8165,8303–8305`.
