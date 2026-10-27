@@ -287,12 +287,13 @@ fn schedule_next_tick(world: &mut World, unit: Entity, spell: &mut SpellInfo, ti
     // the admitted channel's Period modifier after its proc use is consumed.
     // Live uncharged Period modifiers still update the next interval normally.
     spell.cast_charge_mods = effect.periodic_cast_charge_mods.clone();
+    let rate = crate::spell_cast::script_registry::periodic_tick_rate(world, caster, unit, spell);
     let (_, period) = super::periodic_timing_with_haste(
         world,
         caster,
         spell,
         effect.periodic_base_ms,
-        effect.periodic_haste_multiplier,
+        effect.periodic_haste_multiplier * rate,
     );
     let mut auras = world
         .get_mut::<ActiveAuras>(unit)
