@@ -94,7 +94,11 @@ fn update(world: &mut World) {
 
 fn execute_damage(world: &mut World, caster: Entity, pending: PendingReap) {
     let Some(mut damage) = spell_cast::load_triggered_spell(world, pending.damage, 1) else {
-        error!(?caster, spell = pending.damage, "native Reap/Cull damage missing");
+        error!(
+            ?caster,
+            spell = pending.damage,
+            "native Reap/Cull damage missing"
+        );
         return;
     };
     if world
