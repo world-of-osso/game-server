@@ -66,7 +66,8 @@ fn raise_magus(world: &mut World, actor: Entity) {
     }
     // SimC76f8118 sc_death_knight.cpp3716–3743: the native Lord chance
     // summons a Magus only after the putrefied ghoul is dismissed.
-    let chance = combat::spell_cast::scripts::script_effect_value(world, owner, LORD_OF_THE_DEAD, 0);
+    let chance =
+        combat::spell_cast::scripts::script_effect_value(world, owner, LORD_OF_THE_DEAD, 0);
     if combat::random::random::<f32>() * 100.0 >= chance {
         return;
     }
