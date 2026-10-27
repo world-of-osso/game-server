@@ -272,9 +272,18 @@ fn frost_reapers_mark_earns_echoing_fury_rune_discount() {
         super::super::engage(&mut run);
         assert!(auras::has_aura(run.app.world(), run.actor, 1265855));
         cast(&mut run, 439843);
+        let events = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0;
+        let relevant = events
+            .iter()
+            .filter(|event| matches!(event.spell_id, Some(439843 | 441416)))
+            .collect::<Vec<_>>();
         assert!(
             auras::has_aura(run.app.world(), run.actor, 441416),
-            "real Reaper's Mark must earn Exterminate"
+            "real Reaper's Mark must earn Exterminate; observed {relevant:?}"
         );
         for _ in 0..30 {
             run.app.update();
