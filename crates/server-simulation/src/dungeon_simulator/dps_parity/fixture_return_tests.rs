@@ -132,6 +132,93 @@ fn shared_fixture_retreat_then_beam_returns_before_channel() {
 
 #[test]
 #[ignore = "requires prepared native spec577 player profile"]
+fn shared_fixture_return_keeps_eligible_actions_and_waits_for_priority_range() {
+    use literal_rotation::execution::{NativeAction, Prepared};
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(577, 1).unwrap();
+    havoc_tests::start_havoc_swings(&mut run);
+    havoc_tests::earn_havoc_fury(&mut run, 80.0);
+    let actor = run.actor;
+    let boss = run.targets[0];
+    let original = *run.app.world().get::<Position>(boss).unwrap();
+    run.app.world_mut().get_mut::<Position>(actor).unwrap().x = original.x - 3.0;
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        actor,
+        literal_rotation::execution::Execution::Spell(198793, actor, Some(boss)),
+    )
+    .unwrap();
+    for _ in 0..80 {
+        run.app.update();
+        let from = run.app.world().get::<Position>(actor).unwrap();
+        if (from.x - original.x).hypot(from.z - original.z) > 20.5 {
+            break;
+        }
+    }
+    let from = run.app.world().get::<Position>(actor).unwrap();
+    assert!(
+        (from.x - original.x).hypot(from.z - original.z) > 20.0,
+        "real Retreat must put boss outside Beam range"
+    );
+    let equipment = literal_rotation::equipment::Equipment::load(
+        run.app.world(),
+        actor,
+        &mut crate::simc_apl_native::Bindings::default(),
+    )
+    .unwrap();
+    let prepared = Prepared::read(
+        run.app.world_mut(),
+        actor,
+        &run.targets,
+        &equipment,
+        [
+            NativeAction {
+                name: "eye_beam",
+                spell: 198013,
+                talent: None,
+                self_target: true,
+            },
+            NativeAction {
+                name: "throw_glaive",
+                spell: 185123,
+                talent: None,
+                self_target: false,
+            },
+            NativeAction {
+                name: "immolation_aura",
+                spell: 258920,
+                talent: None,
+                self_target: true,
+            },
+        ],
+        false,
+    )
+    .unwrap();
+    let facts = BTreeMap::<String, f64>::new();
+    for name in ["throw_glaive", "immolation_aura"] {
+        let program = server::simc_apl::Program::parse(&[("default", name)]).unwrap();
+        let selected = literal_rotation::Driver::new(program)
+            .select("default", &facts, &prepared, &equipment)
+            .unwrap();
+        assert!(
+            selected.is_some(),
+            "in-range or self action {name} must remain available while returning"
+        );
+    }
+    let program =
+        server::simc_apl::Program::parse(&[("default", "eye_beam"), ("default", "throw_glaive")])
+            .unwrap();
+    let selected = literal_rotation::Driver::new(program)
+        .select("default", &facts, &prepared, &equipment)
+        .unwrap();
+    assert!(
+        selected.is_none(),
+        "out-of-range priority Beam must wait, not fall through to Throw Glaive"
+    );
+}
+
+#[test]
+#[ignore = "requires prepared native spec577 player profile"]
 fn shared_fixture_displacement_preserves_unowned_movement_without_melee_intent() {
     let mut run = prepare_literal(577, 1).unwrap();
     assert!(
