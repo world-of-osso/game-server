@@ -886,6 +886,8 @@ Native445624 supplies actual221177 Ancestors and their native lifetime after sel
 
 Selected Routine Communication443445 draws once after an ordinary successful Lightning Bolt, Chain Lightning or Lava Burst execution. The native effect4/effect5 counts supply successes/total for a shuffled deck; reshuffle only after all cards are drawn. A successful draw summons the real native445624 Ancestor and447244 owner buff. Background builders, overloads and extra Chain recipients do not draw (`sc_shaman.cpp`6654–6658,7260–7263,7436–7438,13025–13033; `proc_rng.cpp`149–161).
 
+Selected Mountains Will Fall creates the native298762 Earthquake overload field on a mastery success and adds one during Ascendance. The field uses native298765 damage, native mastery and talent effectiveness, and its source's persistent damage multiplier; Ascendance modifies its damage while active (`sc_shaman.cpp`3175–3180,3316–3351,3379–3414,7897–7915,7953–7968).
+
 Selected Ancient Fellowship443423 draws its native shuffled deck once per natural Ancestor expiry. A successful draw summons a real replacement (`sc_shaman.cpp`4437–4439,13016–13023).
 
 Selected Offering from Beyond443451 reduces the running Stormkeeper cooldown by its native effect0 duration for each actual Ancestor summon (`sc_shaman.cpp`11579–11596).

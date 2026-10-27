@@ -95,6 +95,7 @@ register_modules! {
     elemental_fellowship: (2624, "modules/elemental_fellowship.rs"),
     elemental_fusion: (2621, "modules/elemental_fusion.rs"),
     elemental_offering: (2623, "modules/elemental_offering.rs"),
+    elemental_quake_overload: (2625, "modules/elemental_quake_overload.rs"),
     elemental_tier: (2622, "modules/elemental_tier.rs"),
     empower_evoker: (1000, "modules/empower_evoker.rs"),
     enhancement: (1000, "modules/enhancement.rs"),
