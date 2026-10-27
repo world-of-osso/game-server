@@ -6,6 +6,10 @@ fn native_hunter_dire_command_actual_kills_spawn_authentic_beasts() {
     let _seed = crate::random::seed_scope(70_448);
     let mut run = prepare_measurement(253, 1).expect("native literal BM fixture");
     assert!(crate::auras::has_aura(run.app.world(), run.actor, 378743));
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, 385810));
+    let dire_frenzy = crate::spell_cast::scripts::script_effect_value(
+        run.app.world(), run.actor, 385810, 1,
+    ) as f32 / 100.0;
     let probability = f64::from(crate::spell_cast::scripts::script_effect_value(
         run.app.world(),
         run.actor,
@@ -126,6 +130,14 @@ fn native_hunter_dire_command_actual_kills_spawn_authentic_beasts() {
             .iter()
             .all(|(hit, floor, _)| *hit as f32 >= *floor),
         "Dire Beast swings omit inherited owner AP: {inherited_ap_hits:?}"
+    );
+    // SimC76f8118 sc_hunter.cpp1877–1882: selected Dire Frenzy's
+    // authored second effect multiplies actual DireCritter damage.
+    assert!(dire_frenzy > 0.0);
+    assert!(
+        inherited_ap_hits.iter().all(|(hit, floor, _)|
+            *hit as f32 >= (*floor * (1.0 + dire_frenzy)).floor()),
+        "Dire Beast swings omit selected Dire Frenzy: {inherited_ap_hits:?}, bonus={dire_frenzy}"
     );
     let commands = run
         .app
