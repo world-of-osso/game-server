@@ -342,6 +342,52 @@ fn frost_exterminate_spender_deals_both_native_hits() {
 }
 
 #[test]
+#[ignore = "actual Mark explosion earns two independent Exterminate uses"]
+fn frost_mark_explosion_funds_two_discounted_spenders() {
+    use crate::spell_cast::runes::Runes;
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::protocol::CombatLogKind;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::super::prepare_measurement(251, 1).unwrap();
+    super::super::engage(&mut run);
+    for _ in 0..6000 {
+        super::super::drive_player(&mut run).unwrap();
+        run.app.update();
+        let exploded = run.app.world().resource::<ObservedCombatEvents>().0.iter().any(|event| {
+            event.source == Some(run.actor.to_bits()) && event.spell_id == Some(436304)
+                && event.kind == CombatLogKind::Damage
+        });
+        let stacks = run.app.world().get::<ActiveAuras>(run.actor).and_then(|active| {
+            active.iter().find(|aura| aura.spell_id == 441416 && aura.caster == run.actor)
+                .map(|aura| aura.stacks)
+        });
+        if exploded && stacks == Some(2) { break; }
+    }
+    let actor = run.actor;
+    assert!(run.app.world().get::<ActiveAuras>(actor).unwrap().iter()
+        .any(|aura| aura.spell_id == 441416 && aura.stacks == 2));
+    for remaining in [1, 0] {
+        for _ in 0..400 {
+            run.app.update();
+            if run.app.world().get::<Runes>(actor).unwrap().ready() >= 2
+                && !auras::has_aura(run.app.world(), actor, 1230959) { break; }
+        }
+        for _ in 0..30 { run.app.update(); }
+        let before = run.app.world().get::<Runes>(actor).unwrap().ready();
+        assert!(before >= 2);
+        let target = run.targets[0];
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 49020, Some(target), false)
+            .expect("ordinary rune spender after real Mark explosion");
+        let after = run.app.world().get::<Runes>(actor).unwrap().ready();
+        assert_eq!(before - after, 1, "each earned use halves the native rune cost");
+        let stacks = run.app.world().get::<ActiveAuras>(actor).and_then(|active| {
+            active.iter().find(|aura| aura.spell_id == 441416 && aura.caster == actor).map(|aura| aura.stacks)
+        }).unwrap_or(0);
+        assert_eq!(stacks, remaining, "each real spender consumes exactly one earned use");
+    }
+}
+
+#[test]
 #[ignore = "actual Reaper's Mark hit earns Grim Reaper Killing Machine"]
 fn frost_mark_hit_earns_killing_machine() {
     use crate::spell_cast::test_harness::ObservedCombatEvents;
