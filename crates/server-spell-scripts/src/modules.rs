@@ -99,6 +99,7 @@ register_modules! {
     devourer_devour: (1480, "modules/devourer_devour.rs"),
     devourer_immolation: (1481, "modules/devourer_immolation.rs"),
     devourer_metamorphosis: (1483, "modules/devourer_metamorphosis.rs"),
+    devourer_reap: (1480, "modules/devourer_reap.rs"),
     echo_policies: (1001, "modules/echo_policies.rs"),
     elemental: (1000, "modules/elemental.rs"),
     elemental_ascendance: (220, "modules/elemental_ascendance.rs"),
