@@ -7,6 +7,7 @@ use combat::spell_cast::scripts::script_effect_value;
 use combat::spell_cast::{
     effects::EffectCtx,
     queued_triggers::{self, ScaledTrigger},
+    targets,
 };
 
 pub const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::EffectHandler(hook)];
@@ -21,10 +22,14 @@ struct BouncePolicy {
     ramp_effect: u8,
     single_delay_ms: u32,
     multi_delay_ms: u32,
+    finisher_talent: u32,
+    finisher: u32,
 }
 
 // SimC76f8118 sc_hunter.cpp4410–4417/4490–4502: initial hit plus native
 // bounce count, round-robin native targets,640ms ST/130ms multi and Radiant Edge.
+// sc_hunter.cpp4427–4434/4504–4507: selected Twilight Requiem executes its
+// native area payload around the actual primary with the final bounce.
 const POLICIES: &[BouncePolicy] = &[BouncePolicy {
     parent: 1264949,
     payload: 1266081,
@@ -35,6 +40,8 @@ const POLICIES: &[BouncePolicy] = &[BouncePolicy {
     ramp_effect: 0,
     single_delay_ms: 640,
     multi_delay_ms: 130,
+    finisher_talent: 1264904,
+    finisher: 1266096,
 }];
 
 fn selected(world: &World, caster: Entity, policy: &BouncePolicy) -> bool {
@@ -61,7 +68,7 @@ pub(super) fn hook(spell: u32, index: u8) -> Option<combat::spell_cast::effects:
 fn schedule_bounces(
     world: &mut World,
     ctx: &EffectCtx<'_>,
-    _effect: &combat::spell_info::SpellEffect,
+    effect: &combat::spell_info::SpellEffect,
     target: Entity,
 ) {
     let Some(policy) = POLICIES
@@ -70,14 +77,21 @@ fn schedule_bounces(
     else {
         return;
     };
-    let Some(targets) = combat::spell_cast::resolving_targets(world, ctx).map(<[Entity]>::to_vec)
-    else {
-        error!(caster=?ctx.caster,spell=ctx.spell.id,"Bounce dispatch lacks native TargetInfos");
-        return;
-    };
-    if targets.first() != Some(&target) {
+    // SimC76f8118 sc_hunter.cpp4487–4503: one sequence per execute, at the
+    // actual primary. The native missile lands each chained unit separately.
+    if ctx.primary_target() != Some(target) {
         return;
     }
+    let targets: Vec<Entity> = std::iter::once(target)
+        .chain(targets::chain_targets(
+            world,
+            ctx.caster,
+            ctx.spell,
+            effect,
+            target,
+            targets::Relation::Enemy,
+        ))
+        .collect();
     // Native1280140 modifies bounce label5870 through shared spell mods;
     // it only needs to live until the final scheduled bounce (C++4492–4498).
     let tipped = super::survival::consume_chakram_tip(world, ctx, target);
@@ -85,6 +99,11 @@ fn schedule_bounces(
     let last_delay = impacts.last().map(|impact| impact.delay_ms);
     for request in impacts {
         queued_triggers::schedule_scaled_full_trigger(world, ctx, request);
+    }
+    if has_talent(world, ctx.caster, policy.finisher_talent)
+        && let Some(delay) = last_delay
+    {
+        queued_triggers::schedule_full_trigger(world, ctx, target, policy.finisher, delay);
     }
     if tipped && let Some(delay) = last_delay {
         queued_triggers::schedule_callback(world, ctx, ctx.caster, delay, expire_chakram_tip);
