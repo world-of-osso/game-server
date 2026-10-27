@@ -74,7 +74,14 @@ fn bound_native_guardian(run: &mut Run, entry: u32, summon: u32, spells: &[u32])
         .iter()
         .find(|(_, template, owner)| *template == entry && *owner == run.actor.to_bits())
         .map(|(entity, _, _)| *entity)
-        .unwrap_or_else(|| panic!("actual summoned guardian {entry}; creatures {creatures:?}"))
+        .unwrap_or_else(|| {
+            let world = run.app.world();
+            let template_exists = world.resource::<crate::world_data::WorldData>().templates.contains_key(&entry);
+            let spell = world.resource::<crate::spell_info::SpellStore>().get(summon).unwrap();
+            let effects: Vec<_> = spell.effects.iter().map(|e| (e.index, e.effect, e.implicit_targets, e.misc_values)).collect();
+            let events: Vec<_> = world.resource::<ObservedCombatEvents>().0.iter().filter(|e| e.source == Some(run.actor.to_bits())).map(|e| (e.kind, e.spell_id)).collect();
+            panic!("actual guardian {entry}; template={template_exists} effects={effects:?} owner events={events:?}; creatures={creatures:?}")
+        })
 }
 
 #[test]
