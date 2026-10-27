@@ -130,6 +130,46 @@ fn dk252_scourge_strike_commands_active_army_ghouls() {
 
 #[test]
 #[ignore = "requires private native252 profile/traits and player actor"]
+fn dk252_scourge_strike_commands_army_epidemic_on_three_targets() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 3).unwrap();
+    engage(&mut run);
+    literal_rotation::execution::execute(
+        run.app.world_mut(), run.actor,
+        literal_rotation::execution::Execution::Spell(42650, run.actor, None),
+    ).unwrap();
+    for _ in 0..100 { run.app.update(); }
+    let army: std::collections::HashSet<_> = {
+        let world = run.app.world_mut();
+        world.query::<(Entity, &crate::spell_cast::summon::SummonedCreature)>()
+            .iter(world).filter_map(|(entity, summon)|
+                (summon.owner == run.actor && summon.spell_id == 1294026).then_some(entity.to_bits())
+            ).collect()
+    };
+    assert_eq!(army.len(), 8, "actual Army must be present before the command");
+    literal_rotation::execution::execute(
+        run.app.world_mut(), run.actor,
+        literal_rotation::execution::Execution::Spell(85948, run.targets[0], Some(run.targets[0])),
+    ).unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    literal_rotation::execution::execute(
+        run.app.world_mut(), run.actor,
+        literal_rotation::execution::Execution::Spell(55090, run.targets[0], Some(run.targets[0])),
+    ).unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    for _ in 0..30 { run.app.update(); }
+    let events = &run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
+    let targets: std::collections::HashSet<_> = events.iter().filter_map(|event| {
+        (event.spell_id == Some(1300330) && event.kind == CombatLogKind::Damage
+            && event.source.is_some_and(|source| army.contains(&source)) && event.amount > 0)
+            .then_some(event.target).flatten()
+    }).collect();
+    assert!(run.targets.iter().all(|target| targets.contains(&target.to_bits())),
+        "actual Army Epidemic Orders must damage all three targets: {targets:?}");
+}
+
+#[test]
+#[ignore = "requires private native252 profile/traits and player actor"]
 fn dk252_real_lesser_ghoul_summon_reaches_and_melees() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(252, 1).unwrap();
