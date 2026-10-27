@@ -63,7 +63,7 @@ pub(in crate::spell_cast) fn on_remove(world: &mut World, unit: Entity) {
     }
 }
 
-fn owned_imps(world: &mut World, owner: Entity) -> Vec<Entity> {
+pub(in crate::spell_cast) fn owned_imps(world: &mut World, owner: Entity) -> Vec<Entity> {
     let units: Vec<_> = world
         .query::<(Entity, &SummonedCreature)>()
         .iter(world)

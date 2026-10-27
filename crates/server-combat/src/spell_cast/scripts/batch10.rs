@@ -138,8 +138,37 @@ fn schedule_guldan_imps(world: &mut World, caster: Entity, depth: u8) {
     };
     // Current Midnight source explicitly replaces the old180ms Imp spacing.
     let mut delay_ms = 0;
-    for _ in 0..count {
+    for index in 0..count {
         delay_ms += crate::random::thread_rng().gen_range(1..=2);
-        spell_cast::queued_triggers::schedule_full_trigger(world, &ctx, caster, 104317, delay_ms);
+        if index == 0 {
+            // SimC76f8118 actions.cpp5716–5723: only the first Imp of this Hand is a Gang Boss.
+            spell_cast::queued_triggers::schedule_callback(
+                world,
+                &ctx,
+                caster,
+                delay_ms,
+                summon_first_guldan_imp,
+            );
+        } else {
+            spell_cast::queued_triggers::schedule_full_trigger(
+                world, &ctx, caster, 104317, delay_ms,
+            );
+        }
+    }
+}
+
+fn summon_first_guldan_imp(world: &mut World, owner: Entity, _: Entity, depth: u8) {
+    let before = spell_cast::guardian::implosion::owned_imps(world, owner);
+    spell_cast::cast_triggered(world, owner, 104317, Some(owner), depth);
+    let selected = world
+        .get::<crate::class_progression::KnownSpells>(owner)
+        .is_some_and(|known| known.contains(1250768));
+    if selected {
+        for imp in spell_cast::guardian::implosion::owned_imps(world, owner)
+            .into_iter()
+            .filter(|imp| !before.contains(imp))
+        {
+            spell_cast::cast_triggered(world, imp, 1250772, Some(imp), depth);
+        }
     }
 }
