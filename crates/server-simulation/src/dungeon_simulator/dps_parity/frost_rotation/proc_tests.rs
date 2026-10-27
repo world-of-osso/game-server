@@ -1181,6 +1181,21 @@ fn frost_freezing_tempest_only_counts_real_winter_pulses() {
 }
 
 #[test]
+#[ignore = "starting a real Winter clears existing earned Freezing Tempest"]
+fn frost_winter_start_clears_earned_freezing_tempest() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::super::prepare_literal(251, 1).unwrap();
+    super::super::engage(&mut run);
+    let actor = run.actor;
+    assert!(run.app.world().get::<crate::class_progression::KnownSpells>(actor).unwrap().contains(196770), "real Winter must be known");
+    super::super::enhancement_generation_tests::cast(&mut run, 51271, actor);
+    for _ in 0..40 { run.app.update(); if auras::has_aura(run.app.world(), actor, 1297365) { break; } }
+    assert!(auras::has_aura(run.app.world(), actor, 1297365));
+    cast(&mut run, 196770);
+    assert!(!auras::has_aura(run.app.world(), actor, 1297365), "real Winter restart clears previously earned stacks");
+}
+
+#[test]
 #[ignore = "diagnostic actual Freezing Tempest stack events"]
 fn diag_frost_freezing_tempest_events() {
     use crate::spell_cast::test_harness::ObservedCombatEvents;
