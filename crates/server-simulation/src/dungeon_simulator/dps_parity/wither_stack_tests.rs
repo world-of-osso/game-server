@@ -141,6 +141,84 @@ fn wither_counter_stacks_do_not_multiply_native_periodic_damage() {
     }
 }
 
+fn shadowburn_damage_with_counter(stacks: u8) -> (i32, f64) {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(267, 1).unwrap();
+    engage(&mut run);
+    let (caster, target) = (run.actor, run.targets[0]);
+    assert!(
+        crate::auras::has_aura(run.app.world(), caster, 387252),
+        "selected Ashen Remains must supply the native incoming effect"
+    );
+    apply_counter_state(&mut run, stacks);
+    run.app
+        .world_mut()
+        .get_mut::<shared::components::Health>(target)
+        .unwrap()
+        .current *= 0.19;
+    let spell = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(17877)
+        .unwrap()
+        .clone();
+    let variance = f64::from(
+        spell
+            .effects
+            .iter()
+            .find(|effect| effect.index == 0)
+            .unwrap()
+            .variance,
+    );
+    assert!(crate::spell_cast::launch_triggered_spell(
+        run.app.world_mut(),
+        caster,
+        &spell,
+        Some(target),
+        1
+    ));
+    for _ in 0..60 {
+        if let Some(event) = run
+            .app
+            .world()
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .find(|event| {
+                event.source == Some(caster.to_bits())
+                    && event.target == Some(target.to_bits())
+                    && event.spell_id == Some(17877)
+                    && event.kind == CombatLogKind::Damage
+                    && event.amount > 0
+            })
+        {
+            assert!(
+                event.crit,
+                "selected Conflagration of Chaos guarantees this actual hit"
+            );
+            return (event.amount, variance);
+        }
+        run.app.update();
+    }
+    panic!("native Shadowburn must hit the actual Wither target");
+}
+
+#[test]
+#[ignore = "requires private267 native player inputs"]
+fn wither_counter_stacks_do_not_multiply_actual_shadowburn_damage() {
+    // SimC76f8118 actions273–275 uses d_fn(wither,false): Ashen Remains'
+    // incoming effect is active once regardless of the real Wither counter.
+    let (one, variance) = shadowburn_damage_with_counter(1);
+    let (ten, _) = shadowburn_damage_with_counter(10);
+    let spread = (1.0 + variance / 2.0) / (1.0 - variance / 2.0);
+    assert!(
+        f64::from(ten) >= f64::from(one) / spread - 2.0
+            && f64::from(ten) <= f64::from(one) * spread + 2.0,
+        "actual Shadowburn must ignore the native Wither counter: stack1={one}, stack10={ten}, native variance={variance}"
+    );
+}
+
 fn cast_wither(run: &mut Run) {
     run.app
         .world_mut()
