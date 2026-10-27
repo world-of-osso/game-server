@@ -221,7 +221,38 @@ pub(super) fn after_launch(world: &mut World, caster: Entity, spell: &SpellInfo,
     if spell.id == PILLAR && auras::has_aura(world, caster, 377226) {
         cast_buff_stacks(world, caster, 1233152, 1);
     }
-    if spell.id == 279302 && auras::has_aura(world, caster, 1265632) {
+    if spell.id == 279302 && auras::has_aura(world, caster, 1265637) {
+        let delay = world
+            .resource::<SpellStore>()
+            .get(1265640)
+            .and_then(|spell| spell.misc.as_ref())
+            .and_then(|misc| misc.duration)
+            .expect("Chosen recall delay")
+            .duration_ms as u32;
+        let ctx = combat::spell_cast::effects::EffectCtx {
+            caster,
+            spell,
+            depth: 0,
+            dest: None,
+            chain_multiplier: 1.0,
+        };
+        combat::spell_cast::queued_triggers::schedule_callback(
+            world,
+            &ctx,
+            caster,
+            delay,
+            enable_chosen_recall,
+        );
+    }
+    if matches!(spell.id, 279302 | 1265384) {
+        launch_fury_damage(world, caster, spell);
+    }
+    if spell.id == 1265384 {
+        auras::remove_auras(world, caster, auras::RemoveReason::Consumed, |aura| {
+            aura.spell_id == 1265639 && aura.caster == caster
+        });
+    }
+    if matches!(spell.id, 279302 | 1265384) && auras::has_aura(world, caster, 1265632) {
         let duration = world
             .resource::<SpellStore>()
             .get(1265630)
@@ -229,17 +260,87 @@ pub(super) fn after_launch(world: &mut World, caster: Entity, spell: &SpellInfo,
             .and_then(|misc| misc.duration)
             .expect("Chosen haste duration")
             .duration_ms as u32;
+        let scale = if spell.id == 1265384 {
+            spell_cast::scripts::script_effect_value(world, caster, 1265637, 1) / 100.0
+        } else {
+            1.0
+        };
+        let duration = (duration as f32 * scale) as u32;
         if auras::has_aura(world, caster, 1265630) {
             auras::extend_owned_duration(world, caster, caster, &[1265630], duration);
         } else {
-            spell_cast::cast_triggered(world, caster, 1265630, Some(caster), 1);
+            spell_cast::cast_triggered_with_overrides(
+                world,
+                caster,
+                1265630,
+                Some(caster),
+                1,
+                spell_cast::TriggeredSpellOverrides {
+                    duration_ms: Some(duration as i32),
+                    ..Default::default()
+                },
+            );
         }
     }
-    if spell.id == 279302 && auras::has_aura(world, caster, 1265633) {
+    if matches!(spell.id, 279302 | 1265384) && auras::has_aura(world, caster, 1265633) {
         // SimC76f8118 sc_death_knight.cpp10659–10660/10694–10695:
         // the actual Fury extends an already active Pillar by native effect1.
         let milliseconds = spell_cast::scripts::script_effect_value(world, caster, 1265633, 0);
-        auras::extend_owned_duration(world, caster, caster, &[PILLAR], milliseconds as u32);
+        let scale = if spell.id == 1265384 {
+            spell_cast::scripts::script_effect_value(world, caster, 1265637, 1) / 100.0
+        } else {
+            1.0
+        };
+        auras::extend_owned_duration(
+            world,
+            caster,
+            caster,
+            &[PILLAR],
+            (milliseconds * scale) as u32,
+        );
+    }
+}
+
+fn enable_chosen_recall(world: &mut World, caster: Entity, _: Entity, depth: u8) {
+    spell_cast::cast_triggered(world, caster, 1265639, Some(caster), depth);
+}
+
+fn launch_fury_damage(world: &mut World, caster: Entity, source: &SpellInfo) {
+    let Some(primary) = source.cast_primary_target else {
+        return;
+    };
+    let Some(mut damage) = spell_cast::load_triggered_spell(world, 279303, 1) else {
+        return;
+    };
+    let radius = source
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .expect("Fury radius")
+        .base_points;
+    let center =
+        combat::spell_cast::targets::position(world, caster).expect("Fury caster position");
+    let targets = combat::spell_cast::targets::area_units(
+        world,
+        caster,
+        center,
+        radius,
+        combat::spell_cast::targets::Relation::Enemy,
+        0,
+    );
+    let recall = if source.id == 1265384 {
+        spell_cast::scripts::script_effect_value(world, caster, 1265637, 1) / 100.0
+    } else {
+        1.0
+    };
+    for target in targets {
+        let primary_bonus = if target == primary && auras::has_aura(world, caster, 1265632) {
+            1.0 + spell_cast::scripts::script_effect_value(world, caster, 1265632, 0) / 100.0
+        } else {
+            1.0
+        };
+        damage.cast_damage_multiplier = Some(recall * primary_bonus);
+        spell_cast::launch_triggered_spell(world, caster, &damage, Some(target), 1);
     }
 }
 

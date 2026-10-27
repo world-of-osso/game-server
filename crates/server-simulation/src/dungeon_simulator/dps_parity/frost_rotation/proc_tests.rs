@@ -906,6 +906,42 @@ fn frost_gathering_storm_extends_winter_for_paid_and_free_spenders() {
 }
 
 #[test]
+#[ignore = "real Frostwyrm's Fury earns and uses Chosen recall"]
+fn frost_fury_earns_and_uses_recall() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::protocol::CombatLogKind;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::super::prepare_literal(251, 1).unwrap();
+    super::super::engage(&mut run);
+    cast(&mut run, 279302);
+    for _ in 0..40 {
+        run.app.update();
+    }
+    assert_eq!(
+        auras::overrides::resolve_spell(run.app.world(), run.actor, 279302),
+        1265384
+    );
+    cast(&mut run, 279302);
+    for _ in 0..10 {
+        run.app.update();
+    }
+    assert!(!auras::has_aura(run.app.world(), run.actor, 1265639));
+    let hits = run
+        .app
+        .world()
+        .resource::<ObservedCombatEvents>()
+        .0
+        .iter()
+        .filter(|event| {
+            event.spell_id == Some(279303)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0
+        })
+        .count();
+    assert_eq!(hits, 2, "Fury and its recall must each deal damage");
+}
+
+#[test]
 #[ignore = "real Frostwyrm's Fury grants Chosen of Frostbrood haste"]
 fn frost_fury_earns_chosen_haste() {
     let _seed = crate::random::seed_scope(70448);
