@@ -298,6 +298,54 @@ fn affliction_sayaad_reacts_to_owner_damage_only_when_not_passive() {
 
 #[test]
 #[ignore = "requires private265 profile and native70448 world DB"]
+fn affliction_sayaad_melee_uses_owner_critical_chance() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_measurement(265, 1).unwrap();
+    let owner = run.actor;
+    let pet = crate::hunter_pet::summoned_pet(run.app.world(), owner).unwrap();
+    let target = run.targets[0];
+    engage(&mut run);
+    crate::pet_control::order_companion_pet(run.app.world_mut(), owner, Some(target));
+    run.app
+        .world_mut()
+        .resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .clear();
+    for _ in 0..12000 {
+        run.app.update();
+        let world = run.app.world();
+        let swings: Vec<_> = world
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .filter(|event| {
+                event.source == Some(pet.to_bits())
+                    && event.target == Some(target.to_bits())
+                    && event.spell_id.is_none()
+                    && event.kind == shared::protocol::CombatLogKind::Damage
+            })
+            .collect();
+        if swings.len() < 150 {
+            continue;
+        }
+        // SimC76f8118 pet.cpp217–220 inherits the owner's live critical chance.
+        let actual = swings.iter().filter(|event| event.crit).count() as f32 / swings.len() as f32;
+        let owner_crit = world
+            .get::<crate::stats::CharacterStats>(owner)
+            .unwrap()
+            .crit_pct
+            / 100.0;
+        assert!(
+            (actual - owner_crit).abs() < 0.1,
+            "actual Sayaad crit {actual}, owner crit {owner_crit}"
+        );
+        return;
+    }
+    panic!("actual Sayaad must land 150 melee swings");
+}
+
+#[test]
+#[ignore = "requires private265 profile and native70448 world DB"]
 fn affliction_sayaad_melee_inherits_live_owner_power() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_measurement(265, 1).unwrap();
