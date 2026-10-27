@@ -268,10 +268,13 @@ pub(crate) fn owner_attack_share(summon: u32, entry: u32) -> Option<f32> {
     policy(summon, entry).and_then(|row| row.owner_attack_share)
 }
 
-// SimC76f8118 pets.cpp372–375/421–430: controlled Imp and Sayaad
-// inherit their validated spell and attack power from live owner SP.
-const CONTROLLED_PET_POWER_SHARES: &[(u32, f32, f32)] =
-    &[(416, 5.625, 2.8125), (1863, 5.175, 2.565)];
+// SimC76f8118 pets.cpp372–375/421–430/663–668: controlled demons
+// inherit their spell and attack power from live owner SP.
+const CONTROLLED_PET_POWER_SHARES: &[(u32, f32, f32)] = &[
+    (416, 5.625, 2.8125),
+    (1863, 5.175, 2.565),
+    (17252, 1.74228, 1.82412),
+];
 
 pub(crate) fn controlled_pet_power_shares(entry: u32) -> Option<(f32, f32)> {
     CONTROLLED_PET_POWER_SHARES
