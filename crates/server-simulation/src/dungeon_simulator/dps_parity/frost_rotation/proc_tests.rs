@@ -906,6 +906,31 @@ fn frost_gathering_storm_extends_winter_for_paid_and_free_spenders() {
 }
 
 #[test]
+#[ignore = "real Killing Machine Obliterate builds Enduring Strength for Pillar expiry"]
+fn frost_pillar_expires_into_enduring_strength() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::super::prepare_literal(251, 1).unwrap();
+    super::super::engage(&mut run);
+    earn_killing_machine(&mut run);
+    cast(&mut run, 49020);
+    for _ in 0..10 {
+        run.app.update();
+    }
+    assert!(
+        auras::has_aura(run.app.world(), run.actor, 377192),
+        "real critical Obliterate builds Enduring Strength"
+    );
+    for _ in 0..600 {
+        run.app.update();
+        if auras::has_aura(run.app.world(), run.actor, 377195) {
+            assert!(!auras::has_aura(run.app.world(), run.actor, 377192));
+            return;
+        }
+    }
+    panic!("Pillar expiration must grant Enduring Strength");
+}
+
+#[test]
 #[ignore = "actual three-target Winter earns one Biting Cold Rime and Frozen Dominion stacks"]
 fn frost_winter_earns_target_bonuses_once() {
     let _seed = crate::random::seed_scope(70448);

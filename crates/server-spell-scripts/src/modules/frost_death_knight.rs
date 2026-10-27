@@ -30,6 +30,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::LateAuraRegistration(register_frost_auras),
     SpellScriptHook::ResolvedDamage(frostreaper_impact),
     SpellScriptHook::ResolvedDamage(hyperpyrexia_impact),
+    SpellScriptHook::ResolvedDamage(enduring_strength_impact),
 ];
 
 const KILLING_MACHINE: u32 = 51128;
@@ -46,7 +47,7 @@ struct KillingMachineAttempts(u32);
 pub(super) fn owns_proc(spell: u32) -> bool {
     matches!(
         spell,
-        KILLING_MACHINE | RIME | OBLITERATION | 195621 | 1230301 | 1296652
+        KILLING_MACHINE | RIME | OBLITERATION | 195621 | 1230301 | 1296652 | 377190
     )
 }
 
@@ -573,6 +574,7 @@ fn extend_winter_for_runes(world: &mut World, caster: Entity, spell: &SpellInfo)
 
 fn register_frost_auras(scripts: &mut auras::scripts::AuraScripts) {
     scripts.0.entry(PILLAR).or_default().on_apply = Some(pillar_applied);
+    scripts.0.entry(PILLAR).or_default().on_remove = Some(pillar_ended);
     scripts.0.entry(443595).or_default().on_remove = Some(dark_talons_ended);
     scripts.0.entry(194879).or_default().on_apply = Some(icy_talons_started);
     scripts.0.entry(194879).or_default().on_remove = Some(icy_talons_ended);
@@ -580,6 +582,87 @@ fn register_frost_auras(scripts: &mut auras::scripts::AuraScripts) {
     for winter in [196770, 1233152] {
         scripts.0.entry(winter).or_default().on_remove = Some(winter_ended);
     }
+}
+
+#[derive(Component)]
+struct EnduringStrengthCooldown(f64);
+
+fn enduring_strength_impact(
+    world: &mut World,
+    ctx: &spell_cast::effects::EffectCtx,
+    _: Entity,
+    critical: bool,
+    damage: f32,
+) {
+    if !critical
+        || damage <= 0.0
+        || !matches!(ctx.spell.id, 207230 | 222024 | 66198 | 325461)
+        || !is_frost(world, ctx.caster)
+        || !auras::has_aura(world, ctx.caster, 377190)
+        || !auras::has_aura(world, ctx.caster, PILLAR)
+    {
+        return;
+    }
+    let now = spell_cast::now(world);
+    if world
+        .get::<EnduringStrengthCooldown>(ctx.caster)
+        .is_some_and(|cooldown| now < cooldown.0)
+    {
+        return;
+    }
+    let milliseconds = world
+        .resource::<SpellStore>()
+        .get(377192)
+        .and_then(|spell| spell.aura_options.as_ref())
+        .expect("Enduring Strength internal cooldown")
+        .proc_category_recovery_ms;
+    world
+        .entity_mut(ctx.caster)
+        .insert(EnduringStrengthCooldown(
+            now + f64::from(milliseconds) / 1000.0,
+        ));
+    cast_buff_stacks(world, ctx.caster, 377192, 1);
+}
+
+fn pillar_ended(
+    world: &mut World,
+    unit: Entity,
+    aura: &auras::AuraInstance,
+    reason: auras::RemoveReason,
+) {
+    if aura.caster != unit
+        || !is_frost(world, unit)
+        || !auras::has_aura(world, unit, 377190)
+        || !matches!(
+            reason,
+            auras::RemoveReason::Expired
+                | auras::RemoveReason::Consumed
+                | auras::RemoveReason::Cancelled
+        )
+    {
+        return;
+    }
+    let stacks = world
+        .get::<auras::ActiveAuras>(unit)
+        .and_then(|active| {
+            active
+                .iter()
+                .find(|a| a.spell_id == 377192 && a.caster == unit)
+        })
+        .map_or(0, |a| a.stacks);
+    spell_cast::cast_triggered(world, unit, 377195, Some(unit), 1);
+    let per_stack = spell_cast::scripts::script_effect_value(world, unit, 377190, 1);
+    let max = spell_cast::scripts::script_effect_value(world, unit, 377190, 3);
+    auras::extend_owned_duration(
+        world,
+        unit,
+        unit,
+        &[377195],
+        (per_stack * f32::from(stacks)).min(max) as u32,
+    );
+    auras::remove_auras(world, unit, auras::RemoveReason::Consumed, |a| {
+        a.spell_id == 377192 && a.caster == unit
+    });
 }
 
 fn pillar_applied(world: &mut World, unit: Entity, aura: &auras::AuraInstance) {
