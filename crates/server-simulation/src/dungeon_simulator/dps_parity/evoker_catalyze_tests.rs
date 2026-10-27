@@ -109,9 +109,8 @@ fn evoker_catalyze_actual_disintegrate_speeds_fire_breath_ticks() {
             },
         )
         .unwrap();
-        let during = record_fire_ticks(&mut run, |run, _| {
-            !has_own_aura(run, primary, DISINTEGRATE)
-        });
+        let during =
+            record_fire_ticks(&mut run, |run, _| !has_own_aura(run, primary, DISINTEGRATE));
         // SimC76f8118 sc_evoker.cpp5365–5374: each interval scheduled while the
         // actor's Disintegrate ticks on the target divides by 1 + Catalyze.
         let catalyzed: Vec<f64> = during
