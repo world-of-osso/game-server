@@ -32,6 +32,15 @@ struct GuardianPolicy {
 // SimC76f8118 pets.cpp19/705/867/1510–1548: bindings and inheritance
 // belong to the actual root/creature pair, including the alternative Tyrant.
 const GUARDIAN_POLICIES: &[GuardianPolicy] = &[
+    // SimC76f8118 sc_evoker.cpp3795–3797: native Commandos inherit live owner SP.
+    GuardianPolicy {
+        summons: &[1235843, 1237036],
+        entry: 219827,
+        spells: &[],
+        repeat_gcd: None,
+        owner_spell_share: Some(1.0),
+        owner_attack_share: None,
+    },
     // SimC76f8118 pets.cpp2050–2119: actual Infernal, native self-buff
     // clocks/children, and validated SP/AP from live owner spell power.
     GuardianPolicy {
