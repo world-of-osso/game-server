@@ -519,6 +519,64 @@ fn diag_demonology_fel_firebolt_factors() {
 }
 
 #[test]
+#[ignore = "requires private266 inputs; Demonic Brutality on actual Imp critical damage"]
+fn demonology_imp_critical_damage_inherits_demonic_brutality() {
+    use crate::spell_cast::effects::factor_capture::FactorCapture;
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(266, 1).unwrap();
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, 453908));
+    let effect = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(453908)
+        .unwrap()
+        .effects
+        .iter()
+        .find(|effect| effect.index == 1)
+        .unwrap()
+        .base_points;
+    let imp = summon_native_guardian(&mut run, 104317);
+    run.app.insert_resource(FactorCapture::new(
+        imp,
+        run.targets[0],
+        104318,
+        "fel_firebolt",
+        1,
+    ));
+    crate::spell_cast::creature_cast(
+        run.app.world_mut(),
+        imp,
+        104318,
+        Some(run.targets[0]),
+        false,
+    )
+    .unwrap();
+    for _ in 0..100 {
+        run.app.update();
+    }
+    let capture = run.app.world().resource::<FactorCapture>().export();
+    let events = capture["events"].as_array().unwrap();
+    let direct = events
+        .iter()
+        .find(|event| event["event"] == "direct_amount")
+        .unwrap();
+    let result = events
+        .iter()
+        .find(|event| event["event"] == "result")
+        .unwrap();
+    assert_eq!(result["factors"]["result"], "crit");
+    let uncritical = direct["factors"]["amount"].as_f64().unwrap();
+    let actual = result["factors"]["actual_amount"].as_f64().unwrap();
+    let expected = uncritical * 2.0 * (1.0 + f64::from(effect) / 100.0);
+    // SimC76f8118 pets.cpp185–201: bugs=1 applies native effect2 twice to the critical bonus.
+    assert!(
+        (actual - expected).abs() < 1.5,
+        "actual={actual} expected={expected}"
+    );
+}
+
+#[test]
 #[ignore = "requires private266 inputs; Hand of Guldan first Imp Gang Boss"]
 fn demonology_hand_of_guldan_empowers_first_actual_imp() {
     use shared::protocol::CombatLogKind;
