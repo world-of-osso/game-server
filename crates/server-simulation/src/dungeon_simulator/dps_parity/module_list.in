@@ -148,6 +148,7 @@ mod enhancement_unleashed_tests;
 mod equipment_input_tests;
 mod equipped_set_tests;
 mod evoker_extended_battle_tests;
+mod evoker_catalyze_tests;
 mod evoker_command_squadron_tests;
 mod evoker_commando_crit_tests;
 mod evoker_leaping_tests;
