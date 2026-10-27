@@ -906,6 +906,33 @@ fn frost_gathering_storm_extends_winter_for_paid_and_free_spenders() {
 }
 
 #[test]
+#[ignore = "real Frostwyrm's Fury grants Chosen of Frostbrood haste"]
+fn frost_fury_earns_chosen_haste() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::super::prepare_literal(251, 1).unwrap();
+    super::super::engage(&mut run);
+    assert!(auras::has_aura(run.app.world(), run.actor, 1265632));
+    let before = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(run.actor)
+        .unwrap()
+        .haste_pct;
+    cast(&mut run, 279302);
+    assert!(auras::has_aura(run.app.world(), run.actor, 1265630));
+    let after = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(run.actor)
+        .unwrap()
+        .haste_pct;
+    assert!(
+        after > before,
+        "Chosen haste must increase actual melee haste: {before} -> {after}"
+    );
+}
+
+#[test]
 #[ignore = "native Frostwyrm's Fury extends an active Pillar with Chosen of Frostbrood"]
 fn frost_fury_extends_real_pillar() {
     let _seed = crate::random::seed_scope(70448);

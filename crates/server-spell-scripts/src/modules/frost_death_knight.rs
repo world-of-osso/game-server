@@ -221,6 +221,20 @@ pub(super) fn after_launch(world: &mut World, caster: Entity, spell: &SpellInfo,
     if spell.id == PILLAR && auras::has_aura(world, caster, 377226) {
         cast_buff_stacks(world, caster, 1233152, 1);
     }
+    if spell.id == 279302 && auras::has_aura(world, caster, 1265632) {
+        let duration = world
+            .resource::<SpellStore>()
+            .get(1265630)
+            .and_then(|spell| spell.misc.as_ref())
+            .and_then(|misc| misc.duration)
+            .expect("Chosen haste duration")
+            .duration_ms as u32;
+        if auras::has_aura(world, caster, 1265630) {
+            auras::extend_owned_duration(world, caster, caster, &[1265630], duration);
+        } else {
+            spell_cast::cast_triggered(world, caster, 1265630, Some(caster), 1);
+        }
+    }
     if spell.id == 279302 && auras::has_aura(world, caster, 1265633) {
         // SimC76f8118 sc_death_knight.cpp10659–10660/10694–10695:
         // the actual Fury extends an already active Pillar by native effect1.
