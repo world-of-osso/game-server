@@ -971,6 +971,12 @@ fn build_instance(
             is_aura_effect(effect)
                 && application.effect_mask & (1 << effect.index) != 0
                 && scripts::effect_enabled(world, caster, spell.id, effect.index)
+                && crate::spell_cast::script_registry::effect_enabled(
+                    world,
+                    caster,
+                    spell.id,
+                    effect.index,
+                )
         })
         .map(|effect| build_effect(world, caster, spell, effect, now))
         .collect();
