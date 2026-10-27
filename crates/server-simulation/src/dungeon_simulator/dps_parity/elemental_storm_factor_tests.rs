@@ -55,7 +55,7 @@ fn elemental_stormkeeper_first_bolt_overload_captures_live_damage_factor() {
         .expect("captured native events");
     let hit = events
         .iter()
-        .find(|event| event["factors"]["target_product"].is_number())
+        .find(|event| event["spell_id"] == 45284 && event["factors"]["target_product"].is_number())
         .expect("scheduled overload impact");
     let product = hit["factors"]["target_product"].as_f64().unwrap();
     let expected = 1.0 + percent / 100.0;
