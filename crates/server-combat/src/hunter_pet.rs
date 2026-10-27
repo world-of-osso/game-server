@@ -31,7 +31,7 @@ use shared::components::{
     UnitSummonedBy, Zone,
 };
 use shared::level_scaling::LevelScaling;
-use shared::protocol::{NpcFlags, REACT_PASSIVE};
+use shared::protocol::{NpcFlags, REACT_ASSIST};
 use shared::spell_data::CastFailReason;
 
 use crate::auth::InWorld;
@@ -430,8 +430,8 @@ fn tamed_pet(world: &World, hunter: Entity, creature: Entity, npc: &Npc) -> Opti
         name: npc.name.clone(),
         level: world.get::<Level>(hunter).map_or(1, |level| level.0),
         family: template.family,
-        // The new pet's `CharmInfo` sets it Passive (`CharmInfo::CharmInfo`).
-        react_state: REACT_PASSIVE,
+        // Retail class pets start in Assist; saved pets retain their selected stance.
+        react_state: REACT_ASSIST,
         health: None,
         specialization: default_pet_specialization(world, template.family),
     })
@@ -468,7 +468,7 @@ fn roll_follower_duck_record(world: &World, owner: Entity) -> Result<StoredPet, 
         name: template.name.clone(),
         level: world.get::<Level>(owner).expect("follower native level").0,
         family: template.family,
-        react_state: REACT_PASSIVE,
+        react_state: REACT_ASSIST,
         health: None,
         specialization: Some(specialization),
     })
@@ -610,7 +610,7 @@ fn create_or_reuse_summon_record(world: &World, owner: Entity, entry: u32) -> St
                 name: template.name.clone(),
                 level,
                 family: template.family,
-                react_state: REACT_PASSIVE,
+                react_state: REACT_ASSIST,
                 health: None,
                 specialization: None,
             }
