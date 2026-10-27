@@ -47,3 +47,49 @@ fn devourer_soul_immolation_ticks_grant_native_fury() {
         "Soul Immolation must increase the native Fury pool"
     );
 }
+
+#[test]
+#[ignore = "requires DPS_PARITY_WORLD_DB and DPS_PARITY_OUTPUT with spec1480 exact profile/traits"]
+fn devourer_soul_immolation_periodic_ticks_spawn_lesser_fragment() {
+    let mut run = prepare_literal(1480, 1).expect("native Devourer profile");
+    let actor = run.actor;
+    engage(&mut run);
+    crate::spell_cast::cast_for_player_with_target(
+        run.app.world_mut(),
+        actor,
+        1241937,
+        Some(actor),
+    )
+    .expect("native Soul Immolation cast");
+    assert!(
+        crate::auras::has_aura(run.app.world(), actor, 1241937),
+        "native heal-over-time active"
+    );
+    for _ in 0..80 {
+        run.app.update();
+    }
+    let ticks = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .iter()
+        .filter(|event| {
+            event.source == Some(actor.to_bits())
+                && event.spell_id == Some(1242475)
+                && event.kind == CombatLogKind::Energize
+        })
+        .count();
+    assert!(
+        ticks >= 2,
+        "native Soul Immolation produced at least two ticks; got {ticks}"
+    );
+    assert!(
+        server::soul_fragments::active_count(
+            run.app.world(),
+            actor,
+            server::soul_fragments::FragmentFilter::Lesser
+        ) > 0,
+        "Soul Immolation ticks must spawn a lesser fragment"
+    );
+}
