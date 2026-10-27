@@ -20,6 +20,10 @@ fn survival_native_chakram_spends_earned_tip_and_grants_its_native_buff() {
     let start = run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0.len();
     cast(&mut run, 1264949, false);
     assert_eq!(owned_tip(&run), before - 1, "actual Chakram must spend one earned Tip");
+    let amount = run.app.world().get::<crate::auras::ActiveAuras>(run.actor).unwrap().iter()
+        .find(|aura| aura.caster == run.actor && aura.spell_id == 1280140)
+        .map(|aura| aura.effects[0].amount);
+    assert!(amount.is_some_and(|amount| amount > 0.0), "native Chakram Tip modifier must be live during bounces: {amount:?}");
     let events = &run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0[start..];
     assert!(events.iter().any(|event| event.source == Some(run.actor.to_bits())
         && event.target == Some(run.actor.to_bits()) && event.spell_id == Some(1280140)
