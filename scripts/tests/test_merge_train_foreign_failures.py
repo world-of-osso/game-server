@@ -68,5 +68,22 @@ class ForeignFailureTests(unittest.TestCase):
             {"commit": entry}, {"sim::pet_tests::other_entry_test"}))
 
 
+    def test_panic_only_in_code_another_probe_changed_is_foreign(self):
+        # 2026-10-27: 16956's Arcanoweave probe panicked midnight_stat_procs.rs:40 inside the
+        # shared probe tree and three other owners' probes were rejected for it.
+        procs = "crates/server-combat/src/auras/midnight_stat_procs.rs"
+        self.write(OTHER + "\n// probe edits only its test file\n")
+        entry = self.commit("probe")
+        self.git("checkout", "-q", "--detach", self.master)
+        (self.root / procs).parent.mkdir(parents=True, exist_ok=True)
+        (self.root / procs).write_text("fn driver() { panic!(\"native item driver effect\") }\n")
+        self.write(OTHER + "\n// probe edits only its test file\n")
+        self.commit("combined tree with another probe's production change")
+        foreign = "thread 'x' panicked at server-combat/src/auras/midnight_stat_procs.rs:40:9:\nnative item driver effect"
+        own = "thread 'x' panicked at crates/sim/src/pet_tests.rs:3:5:\nassertion failed"
+        self.assertTrue(train.foreign_panics_only({"commit": entry}, [foreign]))
+        self.assertFalse(train.foreign_panics_only({"commit": entry}, [foreign, own]))
+        self.assertFalse(train.foreign_panics_only({"commit": entry}, ["error: test failed, no panic"]))
+
 if __name__ == "__main__":
     unittest.main()
