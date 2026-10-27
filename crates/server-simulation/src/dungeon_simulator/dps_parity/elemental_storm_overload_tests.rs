@@ -77,8 +77,12 @@ fn elemental_stormkeeper_empowers_real_lightning_overloads() {
         } else {
             1.0
         };
+        // Native overload damage has 5% variance; bound both independent rolls.
+        let spread = 0.025;
+        let ratio = empowered / ordinary;
         assert!(
-            (empowered / ordinary - expected).abs() < 0.02,
+            ratio >= expected * (1.0 - spread) / (1.0 + spread)
+                && ratio <= expected * (1.0 + spread) / (1.0 - spread),
             "spell{spell} native overload Stormkeeper: {empowered}/{ordinary} expected {expected}"
         );
     }
