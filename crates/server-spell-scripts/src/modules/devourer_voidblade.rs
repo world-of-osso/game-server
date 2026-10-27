@@ -9,6 +9,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::EarlyAuraRegistration(register),
     SpellScriptHook::BeforeNativeOnCast(trigger_voidstep),
     SpellScriptHook::AfterFireDirectHit(apply_devourers_bite),
+    SpellScriptHook::AfterFireDirectHit(reset_immolation_on_hunt),
     SpellScriptHook::AfterNativeLaunch(after_launch),
 ];
 
@@ -77,6 +78,25 @@ fn apply_devourers_bite(
     if !spell_cast::try_cast_triggered(world, ctx.caster, 1241532, Some(target), ctx.depth + 1) {
         error!(?target, "native Devourer's Bite was refused");
     }
+}
+
+fn reset_immolation_on_hunt(
+    world: &mut World,
+    ctx: &spell_cast::effects::EffectCtx<'_>,
+    target: Entity,
+    _: bool,
+) {
+    if ctx.spell.id != 1246169
+        || ctx.spell.cast_primary_target != Some(target)
+        || world.get::<ActiveSpec>(ctx.caster).map(|spec| spec.0) != Some(1480)
+        || !world
+            .get::<combat::class_progression::KnownSpells>(ctx.caster)
+            .is_some_and(|known| known.contains(452409))
+    {
+        return;
+    }
+    // SimC76f8118 cpp5529–5536 restores one Soul Immolation charge on primary Hunt impact.
+    super::devourer_metamorphosis::restore_spell_charges(world, ctx.caster, 1241937, 1);
 }
 
 fn after_launch(world: &mut World, caster: Entity, spell: &SpellInfo) {

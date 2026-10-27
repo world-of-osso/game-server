@@ -98,6 +98,32 @@ fn batch3_reap_damage_hits_produce_shattered_souls() {
 
 #[test]
 #[ignore = "requires DPS_PARITY_WORLD_DB and DPS_PARITY_OUTPUT with spec1480 exact profile/traits"]
+fn batch7_reap_consumes_moment_of_craving() {
+    let mut run = prepare(1480, 1).expect("native Devourer profile");
+    let actor = run.actor;
+    let target = run.targets[0];
+    engage(&mut run);
+    spawn_active_fragments(&mut run);
+    crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 1238495, Some(actor), 1);
+    assert!(
+        crate::auras::has_aura(run.app.world(), actor, 1238495),
+        "native Moment active"
+    );
+    crate::spell_cast::cast_for_player_with_target(
+        run.app.world_mut(),
+        actor,
+        1226019,
+        Some(target),
+    )
+    .expect("native Reap");
+    assert!(
+        !crate::auras::has_aura(run.app.world(), actor, 1238495),
+        "Reap consumes Moment"
+    );
+}
+
+#[test]
+#[ignore = "requires DPS_PARITY_WORLD_DB and DPS_PARITY_OUTPUT with spec1480 exact profile/traits"]
 fn devourer_reap_consumes_active_lesser_fragments_and_hits() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare(1480, 1).expect("native Devourer profile");

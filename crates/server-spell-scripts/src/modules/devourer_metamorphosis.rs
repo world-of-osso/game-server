@@ -235,6 +235,16 @@ fn grant_entry_fury(world: &mut World, unit: Entity, aura: &AuraInstance) {
     {
         error!(?unit, "native Volatile Instinct buff was refused");
     }
+    // SimC76f8118 cpp4961–4970 resets Voidblade and Soul Immolation on Meta entry.
+    if world
+        .get::<KnownSpells>(unit)
+        .is_some_and(|known| known.contains(452409))
+    {
+        restore_spell_charges(world, unit, 1245412, u8::MAX);
+        restore_spell_charges(world, unit, 1241937, u8::MAX);
+        spell_cast::scripts::reduce_cooldown(world, unit, 1245412, f64::MAX);
+        spell_cast::scripts::reduce_cooldown(world, unit, 1241937, f64::MAX);
+    }
     // SimC76f8118 cpp6777 makes an already-ready Hungering Slash usable in Meta.
     super::devourer_voidblade::grant_reapers_replacement(world, unit);
     // SimC76f8118 sc_demon_hunter.cpp9192–9195 consumes the soul stack on entry.
@@ -249,6 +259,18 @@ fn grant_entry_fury(world: &mut World, unit: Entity, aura: &AuraInstance) {
     }
     let first = spell_cast::now(world) + drain_interval(world, unit, 0);
     world.entity_mut(unit).insert(DrainDeadline(first));
+}
+
+pub(super) fn restore_spell_charges(world: &mut World, unit: Entity, spell: u32, count: u8) {
+    let category = world
+        .resource::<combat::spell_info::SpellStore>()
+        .get(spell)
+        .expect("native reset spell")
+        .categories
+        .as_ref()
+        .expect("native reset category")
+        .charge_category;
+    spell_cast::restore_charges(world, unit, category, count);
 }
 
 fn exit_meta(world: &mut World, unit: Entity, aura: &AuraInstance, reason: RemoveReason) {
