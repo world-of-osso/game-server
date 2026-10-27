@@ -342,6 +342,28 @@ fn frost_exterminate_spender_deals_both_native_hits() {
 }
 
 #[test]
+#[ignore = "actual Reaper's Mark hit earns Grim Reaper Killing Machine"]
+fn frost_mark_hit_earns_killing_machine() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::protocol::CombatLogKind;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::super::prepare_literal(251, 1).unwrap();
+    super::super::engage(&mut run);
+    assert!(auras::has_aura(run.app.world(), run.actor, 434905));
+    assert!(!auras::has_aura(run.app.world(), run.actor, 51124));
+    let actor = run.actor;
+    let target = run.targets[0];
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 439843, Some(target), false)
+        .expect("real Reaper's Mark is available");
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0;
+    assert!(events.iter().any(|event| event.source == Some(actor.to_bits())
+        && event.target == Some(target.to_bits()) && event.spell_id == Some(439843)
+        && event.kind == CombatLogKind::Damage && event.amount > 0));
+    assert!(auras::has_aura(run.app.world(), actor, 51124),
+        "actual Mark hit must grant Killing Machine with Grim Reaper");
+}
+
+#[test]
 #[ignore = "native Frost Reaper's Mark uses only its Frost direct hit"]
 fn frost_reapers_mark_deals_one_native_direct_hit() {
     use crate::spell_cast::test_harness::ObservedCombatEvents;
