@@ -238,6 +238,13 @@ fn havoc_chaotic_disposition_rolls_real_burning_wound_ticks() {
         preparation::finish_pending_setup(&mut run).unwrap();
         let actor = run.actor;
         let target = run.targets[0];
+        crate::auras::remove_auras(
+            run.app.world_mut(),
+            actor,
+            crate::auras::RemoveReason::Cancelled,
+            |aura| aura.spell_id != 428492,
+        );
+        run.app.update();
         if !selected {
             let known = run
                 .app
