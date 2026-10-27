@@ -23,6 +23,41 @@ def spawn_fingerprint(conn):
 
 
 class ClassSummonImportTests(unittest.TestCase):
+    def test_diabolist_ritual_promotes_authentic_demon_templates(self):
+        source = Path(os.environ.get("PARITY_266_TEST_DB", ROOT / "data/world.db")).resolve()
+        expected = ((428571, 228575), (428565, 228576), (434400, 228574))
+        with tempfile.TemporaryDirectory() as directory:
+            prepared = Path(directory) / "diabolist.sqlite"
+            with closing(sqlite3.connect(f"file:{source}?mode=ro", uri=True)) as src:
+                with closing(sqlite3.connect(prepared)) as dst:
+                    src.backup(dst)
+            with closing(sqlite3.connect(prepared)) as conn, conn:
+                for spell, entry in expected:
+                    native = conn.execute("""SELECT EffectMiscValue_0 FROM spell_effect
+                        WHERE SpellID=? AND DifficultyID=0 AND Effect=28""", (spell,)).fetchone()
+                    self.assertEqual(native, (entry,))
+                    for table, key in (("content_creature_template", "entry"),
+                                       ("content_creature_template_model", "CreatureID"),
+                                       ("content_creature_template_addon", "entry")):
+                        conn.execute(f"DELETE FROM {table} WHERE {key}=?", (entry,))
+                before_spawns = spawn_fingerprint(conn)
+            subprocess.run([sys.executable, str(ROOT / "scripts/add_class_summon_templates.py"),
+                            "--db", str(prepared)], check=True, capture_output=True, text=True)
+            with closing(sqlite3.connect(f"file:{prepared}?mode=ro", uri=True)) as conn:
+                for _, entry in expected:
+                    with self.subTest(entry=entry):
+                        self.assertEqual(conn.execute("""SELECT entry,name,faction,unit_class,AIName,ScriptName
+                            FROM content_creature_template WHERE entry=?""", (entry,)).fetchone(),
+                            conn.execute("""SELECT entry,name,faction,unit_class,AIName,ScriptName
+                            FROM tdb_creature_template WHERE entry=?""", (entry,)).fetchone())
+                        actual = conn.execute("""SELECT * FROM content_creature_template_model
+                            WHERE CreatureID=? ORDER BY Idx""", (entry,)).fetchall()
+                        native = conn.execute("""SELECT CreatureID,Idx,CreatureDisplayID,DisplayScale,Probability,VerifiedBuild
+                            FROM tdb_creature_template_model WHERE CreatureID=? ORDER BY Idx""", (entry,)).fetchall()
+                        self.assertTrue(native)
+                        self.assertEqual(actual, native)
+                self.assertEqual(spawn_fingerprint(conn), before_spawns)
+
     def test_primal_elementals_are_promoted_from_real_native_summons(self):
         source = Path(os.environ.get("PARITY_262_TEST_DB", ROOT / "data/world.db")).resolve()
         with tempfile.TemporaryDirectory() as directory:

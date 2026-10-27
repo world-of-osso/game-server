@@ -68,5 +68,45 @@ class ForeignFailureTests(unittest.TestCase):
             {"commit": entry}, {"sim::pet_tests::other_entry_test"}))
 
 
+    def test_panic_only_in_code_another_probe_changed_is_foreign(self):
+        # 2026-10-27: 16956's Arcanoweave probe panicked midnight_stat_procs.rs:40 inside the
+        # shared probe tree and three other owners' probes were rejected for it.
+        procs = "crates/server-combat/src/auras/midnight_stat_procs.rs"
+        self.write(OTHER + "\n// probe edits only its test file\n")
+        entry = self.commit("probe")
+        self.git("checkout", "-q", "--detach", self.master)
+        (self.root / procs).parent.mkdir(parents=True, exist_ok=True)
+        (self.root / procs).write_text("fn driver() { panic!(\"native item driver effect\") }\n")
+        self.write(OTHER + "\n// probe edits only its test file\n")
+        self.commit("combined tree with another probe's production change")
+        foreign = "thread 'x' panicked at server-combat/src/auras/midnight_stat_procs.rs:40:9:\nnative item driver effect"
+        own = "thread 'x' panicked at crates/sim/src/pet_tests.rs:3:5:\nassertion failed"
+        self.assertTrue(train.foreign_panics_only({"commit": entry}, [foreign]))
+        self.assertFalse(train.foreign_panics_only({"commit": entry}, [foreign, own]))
+        self.assertFalse(train.foreign_panics_only({"commit": entry}, ["error: test failed, no panic"]))
+
+
+class RequeueTests(unittest.TestCase):
+    def test_deferred_check_and_test_entries_return_to_the_queue(self):
+        # 2026-10-27: a helper named like the queue-reload requeue() was shadowed by it and
+        # crash-looped the service on the first deferred entry.
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "running").mkdir()
+            (root / "queue").mkdir()
+            for name in ("check", "probe", "landed"):
+                (root / "running" / f"{name}.json").write_text("{}")
+            check = {"id": "check", "defer": True, "reason": "conflicts with queued entry"}
+            probe = {"id": "probe", "defer": True, "reason": "foreign panic"}
+            landed = {"id": "landed"}
+            with patch.object(train, "RUNNING", root / "running"), \
+                    patch.object(train, "QUEUE", root / "queue"), \
+                    patch.object(train, "write_results"), \
+                    patch.object(train, "build_checked", return_value=([probe, landed], [check])), \
+                    patch.object(train, "run_tests", return_value=([landed], [probe])):
+                passed, rejected = train.build_and_test([check, probe, landed], root / "cycle.log")
+            self.assertEqual((passed, rejected), ([landed], []))
+            self.assertEqual(sorted(p.name for p in (root / "queue").iterdir()), ["check.json", "probe.json"])
+
 if __name__ == "__main__":
     unittest.main()
