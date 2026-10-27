@@ -72,6 +72,40 @@ const GUARDIAN_POLICIES: &[GuardianPolicy] = &[
         owner_spell_share: None,
         owner_attack_share: Some(0.180431625 * 1.4),
     },
+    // SimC76f8118 sc_death_knight.cpp4849–4855: each actual Horseman
+    // inherits 0.70125 of its owner's melee attack power.
+    GuardianPolicy {
+        summons: &[444248],
+        entry: 221632,
+        spells: &[],
+        repeat_gcd: None,
+        owner_spell_share: None,
+        owner_attack_share: Some(0.70125),
+    },
+    GuardianPolicy {
+        summons: &[444251],
+        entry: 221633,
+        spells: &[],
+        repeat_gcd: None,
+        owner_spell_share: None,
+        owner_attack_share: Some(0.70125),
+    },
+    GuardianPolicy {
+        summons: &[444252],
+        entry: 221634,
+        spells: &[],
+        repeat_gcd: None,
+        owner_spell_share: None,
+        owner_attack_share: Some(0.70125),
+    },
+    GuardianPolicy {
+        summons: &[444254],
+        entry: 221635,
+        spells: &[],
+        repeat_gcd: None,
+        owner_spell_share: None,
+        owner_attack_share: Some(0.70125),
+    },
     // SimC76f8118 sc_hunter.cpp1935: Dire Beast inherits live owner AP1.0.
     GuardianPolicy {
         summons: &[219199],

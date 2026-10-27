@@ -890,10 +890,14 @@ fn auto_attack_unit(
                     .expect("owner-scaled guardian requires native CharacterStats");
                 let lesser_ghoul =
                     npc.template_id == 237409 && matches!(summon.spell_id, 275430 | 1294026);
+                let horseman = matches!(
+                    (summon.spell_id, npc.template_id),
+                    (444248, 221632) | (444251, 221633) | (444252, 221634) | (444254, 221635)
+                );
                 let power = if demon {
                     owner.spell_power.max(0.0)
                 } else {
-                    let attack_type = if lesser_ghoul {
+                    let attack_type = if lesser_ghoul || horseman {
                         crate::stats::WeaponAttackType::MainHand
                     } else {
                         crate::stats::WeaponAttackType::Ranged
