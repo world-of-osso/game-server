@@ -11,6 +11,7 @@ use combat::spell_info::{SpellInfo, SpellStore};
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AfterElementalLaunch(summon_after_launch),
     SpellScriptHook::GuardianActionEligible(action_eligible),
+    SpellScriptHook::TargetDamageMultiplier(stormfury_multiplier),
 ];
 
 const ASCENDANCE: u32 = 1219480;
@@ -91,6 +92,20 @@ fn summon_elemental(world: &mut World, owner: Entity, elemental: (u32, u32)) {
     }
     combat::auras::extend_owned_duration(world, owner, owner, &[root], milliseconds);
     spell_cast::guardian::reset_action_cooldowns(world, actor);
+}
+
+fn stormfury_multiplier(world: &World, actor: Entity, _target: Entity, spell: &SpellInfo) -> f32 {
+    if spell.id != 269005 || world.get::<Npc>(actor).is_none_or(|npc| npc.template_id != PRIMAL_STORM.1) {
+        return 1.0;
+    }
+    let target = world.get::<combat::networking::CombatTarget>(actor)
+        .and_then(|target| target.0)
+        .expect("active Stormfury retains its primary target");
+    let ticks = combat::auras::paid_periodic_ticks(world, actor, target, STORMFURY);
+    let percent = spell_cast::scripts::script_effect_value(world, actor, STORMFURY, 1);
+    // SimC76f8118 sc_shaman.cpp4160–4184: the child uses the parent channel's
+    // current scheduled tick, shared by all recipients of that tick.
+    (1.0 + percent / 100.0).powf(ticks as f32)
 }
 
 fn action_eligible(world: &World, actor: Entity, spell: u32, target: Entity) -> bool {
