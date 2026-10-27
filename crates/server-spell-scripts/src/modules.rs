@@ -193,6 +193,7 @@ register_modules! {
     rogue: (70, "modules/rogue.rs"),
     rogue_relentless: (2615, "modules/rogue_relentless.rs"),
     rogue_ruthlessness: (2609, "modules/rogue_ruthlessness.rs"),
+    rogue_ruthlessness_self: (2609, "modules/rogue_ruthlessness_self.rs"),
     rogue_supercharger: (2604, "modules/rogue_supercharger.rs"),
     rogue_vanish: (2595, "modules/rogue_vanish.rs"),
     secondary_copies: (360, "modules/secondary_copies.rs"),
