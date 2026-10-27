@@ -341,6 +341,99 @@ fn frost_exterminate_spender_deals_both_native_hits() {
     }
 }
 
+#[test]
+#[ignore = "native Frost earned rune refill preserves in-progress regeneration"]
+fn frost_earned_rune_refill_preserves_regeneration() {
+    use crate::spell_cast::test_harness::ObservedRuneRefills;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::super::prepare_measurement(251, 1).unwrap();
+    run.app.insert_resource(ObservedRuneRefills::default());
+    super::super::engage(&mut run);
+    for _ in 0..6000 {
+        super::super::drive_player(&mut run).unwrap();
+        run.app.update();
+        let observations = &run.app.world().resource::<ObservedRuneRefills>().0;
+        if let Some((_, before, after)) = observations.iter().find(|(actor, before, after)| {
+            *actor == run.actor && before.order.len() >= 4 && after.ready() == before.ready() + 1
+        }) {
+            for rune in before.order.iter().take(3) {
+                let index = usize::from(*rune);
+                assert_eq!(
+                    before.cooldowns[index], after.cooldowns[index],
+                    "earned rune refill must preserve active regeneration while a depleted rune waits"
+                );
+            }
+            return;
+        }
+    }
+    panic!("real rotation did not earn a rune refill while a depleted rune waited");
+}
+
+#[test]
+#[ignore = "diagnostic Frost native 300s factors and resource changes"]
+fn diag_frost_factors_and_resource_spending() {
+    use crate::spell_cast::effects::factor_capture::FactorCapture;
+    use crate::spell_cast::test_harness::ObservedPowerChanges;
+    use shared::components::PowerType;
+
+    let output = std::path::PathBuf::from(std::env::var("DPS_PARITY_OUTPUT").unwrap());
+    let mut totals = Vec::new();
+    for seed in [70448, 1, 2, 3, 4, 5, 6, 7, 8, 9] {
+        let _seed = crate::random::seed_scope(seed);
+        let mut run = super::super::prepare_measurement(251, 1).unwrap();
+        run.app.insert_resource(ObservedPowerChanges::default());
+        if seed == 70448 || seed == 1 {
+            let (spell, label) = if seed == 70448 {
+                (1264082, "obliterate_frost")
+            } else {
+                (49184, "howling_blast")
+            };
+            run.app.insert_resource(FactorCapture::new(
+                run.actor,
+                run.targets[0],
+                spell,
+                label,
+                20,
+            ));
+        }
+        super::super::engage(&mut run);
+        let (seconds, _, _) = super::super::advance_combat(&mut run).unwrap();
+        assert!((seconds - 300.0).abs() < 0.001);
+        let changes = &run.app.world().resource::<ObservedPowerChanges>().0;
+        let spent = |power| {
+            -changes
+                .iter()
+                .filter(|(actor, kind, amount)| {
+                    *actor == run.actor && *kind == power && *amount < 0.0
+                })
+                .map(|(_, _, amount)| *amount)
+                .sum::<f32>()
+        };
+        let runes = spent(PowerType::Runes);
+        let runic_power_raw = spent(PowerType::RunicPower);
+        assert!(runes > 0.0 && runic_power_raw > 0.0);
+        totals.push(serde_json::json!({
+            "seed": seed,
+            "runes": runes,
+            "runic_power_raw": runic_power_raw,
+        }));
+        if seed == 70448 || seed == 1 {
+            let capture = run.app.world().resource::<FactorCapture>().export();
+            assert!(capture["captured_hits"].as_u64().unwrap() > 0);
+            std::fs::write(
+                output.join(format!("251.factors.{seed}.json")),
+                serde_json::to_vec_pretty(&capture).unwrap(),
+            )
+            .unwrap();
+        }
+    }
+    std::fs::write(
+        output.join("251.power-changes.json"),
+        serde_json::to_vec_pretty(&totals).unwrap(),
+    )
+    .unwrap();
+}
+
 fn earn_rime(run: &mut Run) {
     for _ in 0..24 {
         cast(run, 49020);

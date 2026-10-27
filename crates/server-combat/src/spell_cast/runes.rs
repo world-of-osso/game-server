@@ -66,18 +66,20 @@ impl Runes {
         ready.len()
     }
 
-    /// Finish the `count` depleted runes closest to ready (the front of the order).
+    /// Replenish waiting runes before interrupting active regeneration.
     pub fn refill(&mut self, count: usize) -> usize {
-        let front: Vec<usize> = self
-            .order
-            .iter()
-            .take(count)
-            .map(|&rune| usize::from(rune))
-            .collect();
-        for &index in &front {
-            self.set(index, 0.0);
+        let mut filled = 0;
+        for _ in 0..count {
+            // SimC76f8118 sc_death_knight.cpp13334–13338 selects the first
+            // depleted rune by index before the first regenerating rune.
+            let waiting = self.order.iter().skip(MAX_RECHARGING_RUNES).min();
+            let Some(&index) = waiting.or_else(|| self.order.iter().min()) else {
+                break;
+            };
+            self.set(usize::from(index), 0.0);
+            filled += 1;
         }
-        front.len()
+        filled
     }
 
     /// The rune branch of `Player::RegenerateAll`: up to `MAX_RECHARGING_RUNES` runes
