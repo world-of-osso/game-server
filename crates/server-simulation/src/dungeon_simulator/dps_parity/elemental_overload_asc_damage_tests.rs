@@ -6,26 +6,31 @@ use shared::protocol::CombatLogKind;
 fn sample(ascendance: bool) -> (f64, f64) {
     let _seed = crate::random::seed_scope(70448);
     let mut run = fixture();
-    let percent = if ascendance {
-        crate::spell_cast::creature_cast(
+    crate::spell_cast::creature_cast(
+        run.app.world_mut(),
+        run.actor,
+        1219480,
+        Some(run.actor),
+        false,
+    )
+    .unwrap();
+    settle(&mut run);
+    let aura = own_aura(&run, 1219480).unwrap();
+    let percent = aura
+        .effects
+        .iter()
+        .find(|effect| effect.index == 7)
+        .unwrap()
+        .amount as f64;
+    let instance = aura.instance_id;
+    if !ascendance {
+        crate::auras::remove_instance(
             run.app.world_mut(),
             run.actor,
-            1219480,
-            Some(run.actor),
-            false,
-        )
-        .unwrap();
-        settle(&mut run);
-        own_aura(&run, 1219480)
-            .unwrap()
-            .effects
-            .iter()
-            .find(|effect| effect.index == 7)
-            .unwrap()
-            .amount as f64
-    } else {
-        0.0
-    };
+            instance,
+            crate::auras::RemoveReason::Cancelled,
+        );
+    }
     run.app
         .world_mut()
         .resource_mut::<ObservedCombatEvents>()
