@@ -98,7 +98,8 @@ fn subtlety_darkness_blades_expiry_amplifies_shadow_finisher_not_poison() {
         "Shadowed Finishers damage takes Lingering Darkness effect2 once"
     );
 
-    // The poison mask lives in effects 0/2; native Instant Poison must not see them.
+    // sc_rogue.cpp11001–11005: poison gains only via Dark Brew effect4,
+    // 30/(100+Deeper Daggers 8); Assassination's effects 0/2 would add 1.3x more.
     let poison = run
         .app
         .world()
@@ -122,9 +123,9 @@ fn subtlety_darkness_blades_expiry_amplifies_shadow_finisher_not_poison() {
         crate::auras::RemoveReason::Cancelled,
         |aura| aura.spell_id == DARKNESS,
     );
-    assert_eq!(
-        with_darkness,
-        poison_damage(run.app.world()),
-        "Subtlety Lingering Darkness never takes Assassination's poison effect1"
+    let ratio = with_darkness / poison_damage(run.app.world());
+    assert!(
+        (ratio - (1.0 + 30.0 / 108.0)).abs() < 1e-4,
+        "poison rises only through Dark Brew, never Assassination's effect1: {ratio}"
     );
 }
