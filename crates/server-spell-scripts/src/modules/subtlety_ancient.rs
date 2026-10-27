@@ -16,7 +16,7 @@ const TALENT: u32 = 1268939;
 const WINDOW: u32 = 1269163;
 const STORAGE: u32 = 196911;
 
-fn collect_after_finisher(world: &mut World, ctx: &EffectCtx, _: Entity, _: bool, _: f32) {
+fn collect_after_finisher(world: &mut World, ctx: &EffectCtx, target: Entity, _: bool, _: f32) {
     let combo_spender = ctx
         .spell
         .power_costs
@@ -47,6 +47,7 @@ fn collect_after_finisher(world: &mut World, ctx: &EffectCtx, _: Entity, _: bool
     for _ in 0..consumed {
         auras::spend_stack(world, ctx.caster, instance);
     }
+    super::subtlety_clone::schedule(world, ctx, target, consumed);
     auras::remove_auras(world, ctx.caster, RemoveReason::Consumed, |aura| {
         aura.spell_id == WINDOW && aura.caster == ctx.caster
     });
