@@ -154,9 +154,9 @@ fn after_launch(world: &mut World, caster: Entity, spell: &SpellInfo, foreground
                 .find(|aura| aura.spell_id == EXTERMINATE && aura.caster == caster)
                 .map(|aura| aura.instance_id)
         });
-        if let Some(instance) = instance {
-            // sc_death_knight.cpp10601–10605/11909: each real spender uses one stack.
-            auras::spend_stack(world, caster, instance);
+        if instance.is_some() {
+            // sc_death_knight.cpp10601–10605/11909: each real spender schedules one
+            // hit; native charged spell-mod consumption spends the corresponding use.
             let target = spell
                 .cast_primary_target
                 .expect("Exterminate spender target");

@@ -27,4 +27,6 @@
     470532,
     // SimC76f8118 sc_shaman.cpp12914–12924: Flowing stacks count builder uses.
     1300219,
+    // SimC76f8118 sc_death_knight.cpp10601–10605: Exterminate stacks are uses.
+    441416,
 ]
