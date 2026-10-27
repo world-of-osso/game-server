@@ -44,6 +44,87 @@ fn assert_native_elemental(root: u32, talent: u32, entry: u32, attacks: &[u32]) 
     );
 }
 
+fn bound_native_guardian(run: &mut Run, entry: u32, summon: u32, spells: &[u32]) -> Entity {
+    run.app
+        .world_mut()
+        .resource_mut::<crate::spell_cast::guardian::GuardianSpells>()
+        .spells
+        .insert(entry, spells.to_vec());
+    assert!(
+        crate::spell_cast::try_cast_triggered(
+            run.app.world_mut(),
+            run.actor,
+            summon,
+            Some(run.actor),
+            1
+        ),
+        "native summon must execute"
+    );
+    run.app
+        .world_mut()
+        .query::<(Entity, &Npc, &UnitSummonedBy)>()
+        .iter(run.app.world())
+        .find(|(_, npc, owner)| npc.template_id == entry && owner.0 == run.actor.to_bits())
+        .map(|(entity, _, _)| entity)
+        .expect("actual summoned guardian")
+}
+
+#[test]
+#[ignore = "requires private262 native DB/profile"]
+fn elemental_primal_storm_action_requires_call_lightning() {
+    let mut run = fixture();
+    // SimC76f8118 sc_shaman.cpp4275–4285: Stormfury is ineligible until
+    // Call Lightning has at least ten seconds remaining.
+    let actor = bound_native_guardian(&mut run, 77942, 157319, &[157375, 157348, 157331]);
+    for _ in 0..80 {
+        run.app.update();
+    }
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0;
+    let actions: Vec<_> = events
+        .iter()
+        .filter(|event| {
+            event.source == Some(actor.to_bits())
+                && event.kind == CombatLogKind::CastSuccess
+                && event
+                    .spell_id
+                    .is_some_and(|id| [157375, 157348, 157331].contains(&id))
+        })
+        .map(|event| event.spell_id.unwrap())
+        .collect();
+    assert_eq!(
+        actions.first(),
+        Some(&157348),
+        "Call Lightning must precede Stormfury: {actions:?}"
+    );
+}
+
+#[test]
+#[ignore = "requires private262 native DB/profile"]
+fn elemental_primal_fire_immolate_requires_no_current_dot() {
+    let mut run = fixture();
+    // SimC76f8118 sc_shaman.cpp4109–4117: do not reapply a ticking Immolate.
+    let actor = bound_native_guardian(&mut run, 61029, 118291, &[118297, 57984]);
+    for _ in 0..160 {
+        run.app.update();
+    }
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0;
+    let casts: Vec<_> = events
+        .iter()
+        .filter(|event| {
+            event.source == Some(actor.to_bits())
+                && event.kind == CombatLogKind::CastSuccess
+                && event
+                    .spell_id
+                    .is_some_and(|id| [118297, 57984].contains(&id))
+        })
+        .map(|event| event.spell_id.unwrap())
+        .collect();
+    assert!(
+        casts.starts_with(&[118297, 57984]),
+        "a ticking Immolate yields to Fire Blast: {casts:?}"
+    );
+}
+
 #[test]
 #[ignore = "requires private262 native DB/profile"]
 fn elemental_primal_fire_ascendance_summons_and_attacks() {
