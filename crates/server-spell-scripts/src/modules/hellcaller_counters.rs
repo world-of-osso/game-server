@@ -271,9 +271,10 @@ fn sync_collapse(world: &mut World, caster: Entity, target: Entity, stacks: u8) 
     if previous == stacks {
         return;
     }
-    // SimC76f8118 actions5586–5596: positive trigger refreshes the tick clock;
-    // negative decrement preserves it. Runtime policy restores permanent/max99.
-    if stacks > previous {
+    // SimC76f8118 actions5586–5596: a positive trigger starts an inactive counter.
+    // warlock.cpp124 REFRESH ticks: buff.cpp2589 restarts tick_event only for CLIP,
+    // so raising an active budget keeps its clock. Runtime restores permanent/max99.
+    if previous == 0 {
         apply_native_aura(world, caster, target, COLLAPSE);
     }
     combat::auras::set_owned_stacks(world, caster, target, COLLAPSE, stacks);
