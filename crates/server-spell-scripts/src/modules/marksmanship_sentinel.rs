@@ -102,13 +102,23 @@ fn after_damage(world: &mut World, ctx: &EffectCtx, target: Entity, critical: bo
     if ctx.spell.id == AIMED {
         schedule_blood_mark(world, ctx, target, critical);
     }
-    if ctx.spell.id == RAPID_TICK && selected(world, ctx.caster, ARMAMENTS) {
-        // sc_hunter.cpp5708–5711: resolved Rapid damage supplies effect1's
-        // share; native1253836 owns rolling carry and periodic timing.
-        let percent = script_effect_value(world, ctx.caster, ARMAMENTS, 0);
-        super::marksmanship::bank_residual(world, ctx, target, ARMAMENTS_DOT, percent, damage);
-    }
+    bank_armaments(world, ctx, target, damage);
     roll_mark_from_precise(world, ctx, target);
+}
+
+fn bank_armaments(world: &mut World, ctx: &EffectCtx, target: Entity, damage: f32) {
+    // SimC76f8118 sc_hunter.cpp5708–5711/6140–6167: MM Rapid's
+    // first effect and SV Raptor/Swipe's second effect bank each landed hit.
+    let effect = match ctx.spell.id {
+        RAPID_TICK => 0,
+        186270 | 1262293 => 1,
+        _ => return,
+    };
+    if !selected(world, ctx.caster, ARMAMENTS) {
+        return;
+    }
+    let percent = script_effect_value(world, ctx.caster, ARMAMENTS, effect);
+    super::marksmanship::bank_residual(world, ctx, target, ARMAMENTS_DOT, percent, damage);
 }
 
 fn owns_mark(world: &World, caster: Entity, target: Entity, spell: u32) -> bool {

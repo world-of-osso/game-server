@@ -13,6 +13,39 @@ const INTENSITY: u32 = 452489;
 const STACKS: u32 = 452416;
 const ABILITIES: &[u32] = &[201427, 210152, 258920, 452497, 452490];
 
+// SimC76f8118 sc_demon_hunter.cpp5608–5634: Focused Hatred uses
+// native effect0 minus effect1 per additional resolved enemy, through five.
+pub(super) fn focused_hatred(
+    world: &World,
+    ctx: &combat::spell_cast::effects::EffectCtx<'_>,
+    _target: Entity,
+    periodic: bool,
+) -> f32 {
+    const FOCUSED_HATRED: u32 = 452405;
+    if periodic || ctx.spell.id != STACKS || !super::has_talent(world, ctx.caster, FOCUSED_HATRED) {
+        return 1.0;
+    }
+    let count = combat::spell_cast::resolving_targets(world, ctx)
+        .expect("native Demonsurge damage retains resolved targets")
+        .iter()
+        .filter(|&&target| {
+            combat::spell_cast::targets::relation_matches(
+                world,
+                ctx.caster,
+                target,
+                combat::spell_cast::targets::Relation::Enemy,
+            )
+        })
+        .count();
+    if !(1..=5).contains(&count) {
+        return 1.0;
+    }
+    let effect = |index| {
+        combat::spell_cast::scripts::script_effect_value(world, ctx.caster, FOCUSED_HATRED, index)
+    };
+    1.0 + (effect(0) - effect(1) * (count - 1) as f32) / 100.0
+}
+
 #[derive(Component, Default)]
 struct DemonsurgeUses(BTreeSet<u32>);
 
