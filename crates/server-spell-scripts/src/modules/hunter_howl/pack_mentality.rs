@@ -21,22 +21,24 @@ pub(super) fn command_damage_multiplier(
         return 1.0;
     };
     let owner = pet.owner;
-    if !has_talent(world, owner, PACK_MENTALITY)
-        || !READY
-            .iter()
-            .any(|ready| combat::auras::has_aura(world, owner, *ready))
-    {
-        return 1.0;
-    }
-    // SimC76f8118 sc_hunter.cpp2764–2785 combines Alpha Predator and
-    // Pack Mentality additively; native owner spell mods already apply Alpha.
+    // SimC76f8118 sc_hunter.cpp2768–2789: the pet command multiplies
+    // 1 + Alpha Predator effect2 (+ Pack Mentality while a Howl beast is
+    // ready, combined additively) on top of the owner's passive spell mods,
+    // which separately apply Alpha Predator effect4.
     let alpha = if has_talent(world, owner, ALPHA_PREDATOR) {
         script_effect_value(world, owner, ALPHA_PREDATOR, 1)
     } else {
         0.0
     };
-    let pack = script_effect_value(world, owner, PACK_MENTALITY, 0);
-    (100.0 + alpha + pack) / (100.0 + alpha)
+    let ready = READY
+        .iter()
+        .any(|ready| combat::auras::has_aura(world, owner, *ready));
+    let pack = if ready && has_talent(world, owner, PACK_MENTALITY) {
+        script_effect_value(world, owner, PACK_MENTALITY, 0)
+    } else {
+        0.0
+    };
+    (100.0 + alpha + pack) / 100.0
 }
 
 pub(super) fn recover_cooldowns(world: &mut World, caster: Entity, consumed: u32) {

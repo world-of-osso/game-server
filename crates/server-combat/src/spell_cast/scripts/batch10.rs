@@ -49,7 +49,7 @@ pub(super) fn apply_surge(world: &mut World, caster: Entity, _spell: &SpellInfo)
 ///105174m1*86040m1. The native root costs three whole shards (30 raw),
 ///matching s1=3. SimC76f8118 actions2730–2756 schedules one Imp per shard;
 ///this native book has fixed three-shard spending, not variable1–3 spending.
-pub(super) fn launch_guldan_meteor(world: &mut World, caster: Entity, target: Entity, depth: u8) {
+pub fn launch_guldan_meteor(world: &mut World, caster: Entity, target: Entity, depth: u8) {
     if depth >= spell_cast::effects::MAX_TRIGGER_DEPTH {
         warn!("Hand of Guldan trigger depth exhausted");
         return;

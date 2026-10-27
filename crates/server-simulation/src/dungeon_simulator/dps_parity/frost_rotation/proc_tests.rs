@@ -342,6 +342,241 @@ fn frost_exterminate_spender_deals_both_native_hits() {
 }
 
 #[test]
+#[ignore = "actual Mark explosion earns two independent Exterminate uses"]
+fn frost_mark_explosion_funds_two_discounted_spenders() {
+    use crate::spell_cast::runes::Runes;
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::protocol::CombatLogKind;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::super::prepare_measurement(251, 1).unwrap();
+    super::super::engage(&mut run);
+    for _ in 0..6000 {
+        super::super::drive_player(&mut run).unwrap();
+        run.app.update();
+        let exploded = run
+            .app
+            .world()
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|event| {
+                event.source == Some(run.actor.to_bits())
+                    && event.spell_id == Some(436304)
+                    && event.kind == CombatLogKind::Damage
+            });
+        let stacks = run
+            .app
+            .world()
+            .get::<ActiveAuras>(run.actor)
+            .and_then(|active| {
+                active
+                    .iter()
+                    .find(|aura| aura.spell_id == 441416 && aura.caster == run.actor)
+                    .map(|aura| aura.stacks)
+            });
+        if exploded && stacks == Some(2) {
+            break;
+        }
+    }
+    let actor = run.actor;
+    assert!(
+        run.app
+            .world()
+            .get::<ActiveAuras>(actor)
+            .unwrap()
+            .iter()
+            .any(|aura| aura.spell_id == 441416 && aura.stacks == 2)
+    );
+    for remaining in [1, 0] {
+        for _ in 0..400 {
+            run.app.update();
+            if run.app.world().get::<Runes>(actor).unwrap().ready() >= 2
+                && !auras::has_aura(run.app.world(), actor, 1230959)
+            {
+                break;
+            }
+        }
+        for _ in 0..30 {
+            run.app.update();
+        }
+        let before = run.app.world().get::<Runes>(actor).unwrap().ready();
+        assert!(before >= 2);
+        let target = run.targets[0];
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 49020, Some(target), false)
+            .expect("ordinary rune spender after real Mark explosion");
+        let after = run.app.world().get::<Runes>(actor).unwrap().ready();
+        assert_eq!(
+            before - after,
+            1,
+            "each earned use halves the native rune cost"
+        );
+        let stacks = run
+            .app
+            .world()
+            .get::<ActiveAuras>(actor)
+            .and_then(|active| {
+                active
+                    .iter()
+                    .find(|aura| aura.spell_id == 441416 && aura.caster == actor)
+                    .map(|aura| aura.stacks)
+            })
+            .unwrap_or(0);
+        assert_eq!(
+            stacks, remaining,
+            "each real spender consumes exactly one earned use"
+        );
+    }
+}
+
+#[test]
+#[ignore = "actual Reaper's Mark hit earns Grim Reaper Killing Machine"]
+fn frost_mark_hit_earns_killing_machine() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::protocol::CombatLogKind;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::super::prepare_literal(251, 1).unwrap();
+    super::super::engage(&mut run);
+    assert!(auras::has_aura(run.app.world(), run.actor, 434905));
+    assert!(!auras::has_aura(run.app.world(), run.actor, 51124));
+    let actor = run.actor;
+    let target = run.targets[0];
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 439843, Some(target), false)
+        .expect("real Reaper's Mark is available");
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0;
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(actor.to_bits())
+                && event.target == Some(target.to_bits())
+                && event.spell_id == Some(439843)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0)
+    );
+    assert!(
+        auras::has_aura(run.app.world(), actor, 51124),
+        "actual Mark hit must grant Killing Machine with Grim Reaper"
+    );
+}
+
+#[test]
+#[ignore = "native Frost Reaper's Mark uses only its Frost direct hit"]
+fn frost_reapers_mark_deals_one_native_direct_hit() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::protocol::CombatLogKind;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::super::prepare_literal(251, 1).unwrap();
+    super::super::engage(&mut run);
+    cast(&mut run, 439843);
+    let hits = run
+        .app
+        .world()
+        .resource::<ObservedCombatEvents>()
+        .0
+        .iter()
+        .filter(|event| {
+            event.source == Some(run.actor.to_bits())
+                && event.target == Some(run.targets[0].to_bits())
+                && event.spell_id == Some(439843)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0
+        })
+        .count();
+    assert_eq!(
+        hits, 1,
+        "a real Frost Mark must use only its Frost damage effect"
+    );
+}
+
+#[test]
+#[ignore = "actual Obliterate impacts earn Frostreaper damage"]
+fn frost_frostreaper_follows_real_obliterate_and_frost_strike() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::protocol::CombatLogKind;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::super::prepare_measurement(251, 1).unwrap();
+    super::super::engage(&mut run);
+    assert!(auras::has_aura(run.app.world(), run.actor, 1230301));
+    super::super::advance_combat(&mut run).unwrap();
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0;
+    let mark = events
+        .iter()
+        .position(|event| {
+            event.source == Some(run.actor.to_bits())
+                && event.spell_id == Some(1233351)
+                && event.kind == CombatLogKind::AuraApplied
+        })
+        .expect("actual Obliterate must earn a Frostreaper mark");
+    assert!(
+        events[mark..].iter().any(|event| {
+            event.source == Some(run.actor.to_bits())
+                && event.target == Some(run.targets[0].to_bits())
+                && event.spell_id == Some(1233619)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0
+        }),
+        "real earned Frostreaper marks must produce damage"
+    );
+}
+
+#[test]
+#[ignore = "actual Killing Machine consumption rolls native Murderous Efficiency"]
+fn frost_murderous_efficiency_tracks_consumed_killing_machine_stacks() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::protocol::CombatLogKind;
+    let mut consumed = 0;
+    let mut procs = 0;
+    for seed in [70448, 1, 2] {
+        let _seed = crate::random::seed_scope(seed);
+        let mut run = super::super::prepare_measurement(251, 1).unwrap();
+        super::super::engage(&mut run);
+        assert!(auras::has_aura(run.app.world(), run.actor, 207061));
+        let actor = run.actor;
+        crate::auras::observations::start_tracking(run.app.world_mut(), actor, &[(51124, 51128)]);
+        super::super::advance_combat(&mut run).unwrap();
+        let usage = crate::auras::observations::snapshot(run.app.world());
+        consumed += usage["51124"]["consumed"].as_u64().unwrap();
+        procs += run
+            .app
+            .world()
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .filter(|event| {
+                event.source == Some(actor.to_bits())
+                    && event.spell_id == Some(207062)
+                    && event.kind == CombatLogKind::Energize
+            })
+            .count() as u64;
+    }
+    assert!(
+        consumed >= 200,
+        "need actual earned KM consumption, got {consumed}"
+    );
+    let rate = procs as f64 / consumed as f64;
+    assert!(
+        (0.10..0.30).contains(&rate),
+        "actual ME rolls must follow native 20% per consumed KM stack: {procs}/{consumed}"
+    );
+}
+
+#[test]
+#[ignore = "actual Empower Rune Weapon grants Killing Machine"]
+fn frost_erw_earns_killing_machine() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::super::prepare_literal(251, 1).unwrap();
+    super::super::engage(&mut run);
+    assert!(!auras::has_aura(run.app.world(), run.actor, 51124));
+    let actor = run.actor;
+    let target = run.targets[0];
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 47568, Some(target), false)
+        .expect("real Empower Rune Weapon is available");
+    assert!(
+        auras::has_aura(run.app.world(), actor, 51124),
+        "actual Empower Rune Weapon must grant Killing Machine"
+    );
+}
+
+#[test]
 #[ignore = "native Reaper's Mark explodes and earns Exterminate from actual damage"]
 fn frost_mark_explosion_earns_exterminate() {
     use crate::spell_cast::test_harness::ObservedCombatEvents;
@@ -416,6 +651,90 @@ fn frost_breath_end_restores_runes() {
                 && event.kind == CombatLogKind::Energize
                 && event.amount > event.overflow),
         "real Breath expiration must replenish spent runes from native 1234304"
+    );
+}
+
+#[test]
+#[ignore = "real rune spenders extend Frozen Dominion through Gathering Storm"]
+fn frost_gathering_storm_extends_winter_for_paid_and_free_spenders() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::super::prepare_literal(251, 1).unwrap();
+    super::super::engage(&mut run);
+    let actor = run.actor;
+    assert!(auras::has_aura(run.app.world(), actor, 194912));
+    super::super::enhancement_generation_tests::cast(&mut run, 51271, actor);
+    let expiration = |run: &Run| {
+        run.app
+            .world()
+            .get::<ActiveAuras>(actor)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 1233152 && aura.caster == actor)
+            .unwrap()
+            .expires_at
+            .unwrap()
+    };
+    let base_extension =
+        crate::spell_cast::scripts::script_effect_value(run.app.world(), actor, 194912, 0);
+    let before = expiration(&run);
+    cast(&mut run, 49020);
+    let paid = expiration(&run);
+    assert!(
+        (paid - before - f64::from(base_extension) * 0.2).abs() < 0.001,
+        "paid two-rune Obliterate extends Winter: {before} -> {paid}"
+    );
+    cast(&mut run, 47568);
+    let before_free = expiration(&run);
+    assert!(auras::has_aura(run.app.world(), actor, 1230959));
+    for _ in 0..30 {
+        run.app.update();
+    }
+    let runes_before = run
+        .app
+        .world()
+        .get::<crate::spell_cast::runes::Runes>(actor)
+        .unwrap()
+        .ready();
+    let target = run.targets[0];
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 49020, Some(target), false)
+        .unwrap();
+    assert_eq!(
+        run.app
+            .world()
+            .get::<crate::spell_cast::runes::Runes>(actor)
+            .unwrap()
+            .ready(),
+        runes_before
+    );
+    let free = expiration(&run);
+    assert!(!auras::has_aura(run.app.world(), actor, 1230959));
+    assert!(
+        (free - before_free - f64::from(base_extension) * 0.2).abs() < 0.001,
+        "free Obliterate still extends Winter by its base rune cost: {before_free} -> {free}"
+    );
+    let stacks = run
+        .app
+        .world()
+        .get::<ActiveAuras>(actor)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 211805 && aura.caster == actor)
+        .unwrap()
+        .stacks;
+    assert_eq!(
+        stacks, 4,
+        "both real Obliterates earn stacks per base rune cost"
+    );
+    for _ in 0..600 {
+        run.app.update();
+        if !auras::has_aura(run.app.world(), actor, 1233152) {
+            break;
+        }
+    }
+    assert!(!auras::has_aura(run.app.world(), actor, 1233152));
+    assert!(
+        !auras::has_aura(run.app.world(), actor, 211805),
+        "Winter ending clears Gathering Storm"
     );
 }
 
@@ -519,6 +838,143 @@ fn frost_earned_rune_refill_preserves_regeneration() {
 }
 
 #[test]
+#[ignore = "diagnostic native Frost first Mark and Exterminate lifecycle"]
+fn diag_frost_mark_exterminate_timeline() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::super::prepare_measurement(251, 1).unwrap();
+    super::super::engage(&mut run);
+    let mut cursor = 0;
+    let mut trace = Vec::new();
+    super::super::advance_combat_observed(&mut run, |run| {
+        let events = &run.app.world().resource::<ObservedCombatEvents>().0;
+        let time = run.app.world().resource::<Time>().elapsed_secs_f64();
+        if time < 30.0 {
+            for event in &events[cursor..] {
+                if matches!(
+                    event.spell_id,
+                    Some(439843 | 434765 | 436304 | 441416 | 441424 | 49020 | 51124)
+                ) {
+                    trace.push(serde_json::json!({"time": time, "spell": event.spell_id,
+                        "kind": format!("{:?}", event.kind), "amount": event.amount}));
+                }
+            }
+        }
+        cursor = events.len();
+    })
+    .unwrap();
+    assert!(!trace.is_empty());
+    let output = std::path::PathBuf::from(std::env::var("DPS_PARITY_OUTPUT").unwrap());
+    std::fs::write(
+        output.join("251.mark-timeline.json"),
+        serde_json::to_vec_pretty(&trace).unwrap(),
+    )
+    .unwrap();
+}
+
+#[test]
+#[ignore = "real haste increases preserve rune recharge progress"]
+fn frost_active_rune_recharge_tracks_real_haste_increase() {
+    use crate::spell_cast::runes::Runes;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::super::prepare_measurement(251, 1).unwrap();
+    super::super::engage(&mut run);
+    for _ in 0..6000 {
+        let actor = run.actor;
+        let before_haste = run
+            .app
+            .world()
+            .get::<crate::stats::CharacterStats>(actor)
+            .unwrap()
+            .haste_pct;
+        let before = run.app.world().get::<Runes>(actor).unwrap().clone();
+        super::super::drive_player(&mut run).unwrap();
+        run.app.update();
+        let after_haste = run
+            .app
+            .world()
+            .get::<crate::stats::CharacterStats>(actor)
+            .unwrap()
+            .haste_pct;
+        let after = run.app.world().get::<Runes>(actor).unwrap();
+        if after_haste <= before_haste + 5.0 || before.order != after.order {
+            continue;
+        }
+        // Aura stat recomputation can occur after rune regeneration in the same fixed tick.
+        run.app.update();
+        let settled_haste = run
+            .app
+            .world()
+            .get::<crate::stats::CharacterStats>(actor)
+            .unwrap()
+            .haste_pct;
+        let after = run.app.world().get::<Runes>(actor).unwrap();
+        if (settled_haste - after_haste).abs() > 0.001 || before.order != after.order {
+            continue;
+        }
+        for rune in before.order.iter().take(3) {
+            let index = usize::from(*rune);
+            let old = before.cooldowns[index];
+            let new = after.cooldowns[index];
+            let adjusted = old * (1.0 + before_haste / 100.0) / (1.0 + after_haste / 100.0);
+            if old > 3.0 && old - adjusted > 0.15 {
+                assert!(
+                    new <= adjusted + 0.06,
+                    "real haste increase {before_haste:.2}% -> {after_haste:.2}% must rescale active rune {old:.3}s -> {adjusted:.3}s; native {new:.3}s"
+                );
+                return;
+            }
+        }
+    }
+    panic!("real rotation never increased haste with an active rune recharge");
+}
+
+#[test]
+#[ignore = "diagnostic fixed-haste native rune regeneration against pinned SimC"]
+fn diag_frost_fixed_haste_idle_rune_regeneration() {
+    use crate::spell_cast::runes::Runes;
+    use shared::components::PowerType;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::super::prepare_literal(251, 1).unwrap();
+    super::super::engage(&mut run);
+    let actor = run.actor;
+    let haste = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(actor)
+        .unwrap()
+        .haste_pct;
+    let expected = 10.0 / (1.0 + haste / 100.0);
+    assert_eq!(
+        crate::spell_cast::powers::change_power(run.app.world_mut(), actor, PowerType::Runes, -6.0),
+        Some(-6.0)
+    );
+    let start = run.app.world().resource::<Time>().elapsed_secs_f64();
+    let mut first_three = None;
+    let mut all_six = None;
+    for _ in 0..1200 {
+        run.app.update();
+        let elapsed = run.app.world().resource::<Time>().elapsed_secs_f64() - start;
+        let ready = run.app.world().get::<Runes>(actor).unwrap().ready();
+        if ready >= 3 && first_three.is_none() {
+            first_three = Some(elapsed);
+        }
+        if ready == 6 && all_six.is_none() {
+            all_six = Some(elapsed);
+        }
+    }
+    let first = first_three.expect("first three depleted runes regenerate");
+    let all = all_six.expect("remaining three depleted runes regenerate");
+    println!(
+        "fixed haste {haste}%: first three {first:.3}s, all six {all:.3}s; SimC {expected:.3}s and {:.3}s",
+        expected * 2.0
+    );
+    assert!((first - f64::from(expected)).abs() <= 0.10);
+    assert!((all - f64::from(expected * 2.0)).abs() <= 0.20);
+    assert_eq!(run.app.world().get::<Runes>(actor).unwrap().ready(), 6);
+}
+
+#[test]
 #[ignore = "diagnostic Frost oracle-aligned actual spell factors"]
 fn diag_frost_oracle_aligned_factors() {
     use super::super::single_spell::{SpellProbe, capture_cast};
@@ -558,6 +1014,293 @@ fn diag_frost_oracle_aligned_factors() {
     }
 }
 
+fn real_frost_debuff_damage_ratio(debuff: u32, source: u32) -> (Vec<f32>, u8) {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::protocol::CombatLogKind;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::super::prepare_measurement(251, 1).unwrap();
+    super::super::engage(&mut run);
+    let actor = run.actor;
+    let target = run.targets[0];
+    for _ in 0..6000 {
+        super::super::drive_player(&mut run).unwrap();
+        run.app.update();
+        if run
+            .app
+            .world()
+            .get::<ActiveAuras>(target)
+            .is_some_and(|active| {
+                active
+                    .iter()
+                    .any(|aura| aura.spell_id == debuff && aura.caster == actor)
+            })
+        {
+            break;
+        }
+    }
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0;
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(actor.to_bits())
+                && event.target == Some(target.to_bits())
+                && event.spell_id == Some(source)
+                && event.kind == CombatLogKind::Damage),
+        "real source {source} must hit target"
+    );
+    let stacks = run
+        .app
+        .world()
+        .get::<ActiveAuras>(target)
+        .and_then(|active| {
+            active
+                .iter()
+                .find(|aura| aura.spell_id == debuff && aura.caster == actor)
+                .map(|aura| aura.stacks)
+        })
+        .unwrap_or_else(|| panic!("real source {source} must earn target debuff {debuff}"));
+    let spells: Vec<_> = [196771, 1264082, 222026]
+        .into_iter()
+        .map(|id| {
+            run.app
+                .world()
+                .resource::<crate::spell_info::SpellStore>()
+                .get(id)
+                .unwrap()
+                .clone()
+        })
+        .collect();
+    let with: Vec<_> = spells
+        .iter()
+        .map(|spell| auras::damage_taken_multiplier(run.app.world(), target, actor, spell))
+        .collect();
+    auras::remove_auras(
+        run.app.world_mut(),
+        target,
+        RemoveReason::Consumed,
+        |aura| aura.spell_id == debuff && aura.caster == actor,
+    );
+    let ratios = spells
+        .iter()
+        .zip(with)
+        .map(|(spell, value)| {
+            value / auras::damage_taken_multiplier(run.app.world(), target, actor, spell)
+        })
+        .collect();
+    (ratios, stacks)
+}
+
+#[test]
+#[ignore = "real Frost Fever ticks earn Brittle and amplify Winter"]
+fn frost_fever_earns_brittle_target_damage() {
+    let (ratios, stacks) = real_frost_debuff_damage_ratio(374557, 55095);
+    assert_eq!(stacks, 1);
+    for ratio in ratios {
+        assert!(
+            (ratio - 1.06).abs() < 0.001,
+            "real Brittle must apply its native 6%: {ratio}"
+        );
+    }
+}
+
+#[test]
+#[ignore = "real Arctic Assault earns Razorice and amplifies Winter"]
+fn frost_arctic_assault_earns_razorice_target_damage() {
+    let (ratios, stacks) = real_frost_debuff_damage_ratio(51714, 195975);
+    // Native 3% amplified by the selected Unholy Bond label modifier (20%).
+    for ratio in ratios {
+        assert!(
+            (ratio - (1.0 + 0.036 * f32::from(stacks))).abs() < 0.001,
+            "real Razorice must apply its native per-stack value: {ratio}, stacks={stacks}"
+        );
+    }
+}
+
+#[test]
+#[ignore = "diagnostic Frost target debuff production and damage-taken factors"]
+fn diag_frost_target_debuffs() {
+    use crate::spell_cast::effects::factor_capture::FactorCapture;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::super::prepare_measurement(251, 1).unwrap();
+    let actor = run.actor;
+    let target = run.targets[0];
+    run.app
+        .insert_resource(FactorCapture::new(actor, target, 196771, "winter", 30));
+    super::super::engage(&mut run);
+    let mut states = Vec::new();
+    let mut previous = String::new();
+    for step in 0..800 {
+        super::super::drive_player(&mut run).unwrap();
+        run.app.update();
+        let entries: Vec<_> = run.app.world().get::<ActiveAuras>(target).into_iter().flat_map(|active| active.iter())
+            .filter(|aura| matches!(aura.spell_id, 51714 | 376974 | 374557))
+            .map(|aura| serde_json::json!({"spell": aura.spell_id, "caster": aura.caster.to_bits(), "stacks": aura.stacks,
+                "effects": aura.effects.iter().map(|effect| serde_json::json!({"index": effect.index,"type":effect.aura_type,"amount":effect.amount})).collect::<Vec<_>>() })).collect();
+        let key = entries
+            .iter()
+            .map(|entry| entry.to_string())
+            .collect::<String>();
+        if key != previous {
+            states.push(serde_json::json!({"step": step, "auras": entries}));
+            previous = key;
+        }
+    }
+    let capture = run.app.world().resource::<FactorCapture>().export();
+    let output = std::path::PathBuf::from(std::env::var("DPS_PARITY_OUTPUT").unwrap());
+    std::fs::write(
+        output.join("251.target-debuffs.json"),
+        serde_json::to_vec_pretty(
+            &serde_json::json!({"actor":actor.to_bits(),"states":states,"capture":capture}),
+        )
+        .unwrap(),
+    )
+    .unwrap();
+}
+
+#[test]
+#[ignore = "real Winter hits earn Everfrost target stacks and amplify later hits"]
+fn frost_winter_hits_earn_everfrost_target_damage() {
+    use crate::spell_cast::effects::factor_capture::FactorCapture;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::super::prepare_literal(251, 1).unwrap();
+    super::super::engage(&mut run);
+    let actor = run.actor;
+    let target = run.targets[0];
+    assert!(auras::has_aura(run.app.world(), actor, 376938));
+    run.app
+        .insert_resource(FactorCapture::new(actor, target, 196771, "winter", 2));
+    super::super::enhancement_generation_tests::cast(&mut run, 51271, actor);
+    for _ in 0..100 {
+        run.app.update();
+        if run.app.world().resource::<FactorCapture>().export()["captured_hits"] == 2 {
+            break;
+        }
+    }
+    let stacks = run
+        .app
+        .world()
+        .get::<ActiveAuras>(target)
+        .and_then(|active| {
+            active
+                .iter()
+                .find(|aura| aura.spell_id == 376974 && aura.caster == actor)
+                .map(|aura| aura.stacks)
+        })
+        .unwrap_or(0);
+    assert_eq!(stacks, 2, "each real Winter hit earns a target stack");
+    let capture = run.app.world().resource::<FactorCapture>().export();
+    let hits: Vec<_> = capture["events"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|event| event["spell_id"] == 196771 && event["event"] == "direct_amount")
+        .collect();
+    assert_eq!(hits.len(), 2);
+    let first = hits[0]["applied_multipliers"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|x| x["factor"] == "target_damage")
+        .unwrap()["value"]
+        .as_f64()
+        .unwrap();
+    let second = hits[1]["applied_multipliers"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|x| x["factor"] == "target_damage")
+        .unwrap()["value"]
+        .as_f64()
+        .unwrap();
+    let pct = crate::spell_cast::scripts::script_effect_value(run.app.world(), actor, 376938, 0);
+    assert!(
+        (second / first - (1.0 + f64::from(pct) / 100.0)).abs() < 0.001,
+        "the next real Winter hit uses the native earned-stack bonus: {first} -> {second}"
+    );
+}
+
+#[test]
+#[ignore = "real Winter tick is not directly amplified by Pillar"]
+fn frost_winter_tick_pillar_only_changes_attack_power() {
+    use crate::spell_cast::effects::factor_capture::FactorCapture;
+    fn tick(keep_pillar: bool) -> (f64, f64) {
+        let _seed = crate::random::seed_scope(70448);
+        let mut run = super::super::prepare_literal(251, 1).unwrap();
+        super::super::engage(&mut run);
+        let actor = run.actor;
+        super::super::enhancement_generation_tests::cast(&mut run, 51271, actor);
+        assert!(auras::has_aura(run.app.world(), actor, 1233152));
+        if !keep_pillar {
+            clear_proc(&mut run, 51271);
+        }
+        run.app.insert_resource(FactorCapture::new(
+            actor,
+            run.targets[0],
+            196771,
+            "remorseless_winter_damage",
+            1,
+        ));
+        for _ in 0..100 {
+            run.app.update();
+            if run.app.world().resource::<FactorCapture>().export()["captured_hits"] == 1 {
+                break;
+            }
+        }
+        let capture = run.app.world().resource::<FactorCapture>().export();
+        let hit = capture["events"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|event| event["spell_id"] == 196771 && event["event"] == "direct_amount")
+            .unwrap();
+        (
+            hit["factors"]["amount"].as_f64().unwrap(),
+            hit["factors"]["a_power"].as_f64().unwrap(),
+        )
+    }
+    let (with, with_ap) = tick(true);
+    let (without, without_ap) = tick(false);
+    assert!(
+        (with / with_ap - without / without_ap).abs() < 0.001,
+        "Pillar changes Winter through attack power only, not direct damage: {with}/{with_ap} vs {without}/{without_ap}"
+    );
+}
+
+#[test]
+#[ignore = "diagnostic actual Winter tick factor capture"]
+fn diag_frost_winter_tick_factors() {
+    use crate::spell_cast::effects::factor_capture::FactorCapture;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::super::prepare_measurement(251, 1).unwrap();
+    run.app.insert_resource(FactorCapture::new(
+        run.actor,
+        run.targets[0],
+        196771,
+        "remorseless_winter_damage",
+        40,
+    ));
+    super::super::engage(&mut run);
+    for _ in 0..1200 {
+        super::super::drive_player(&mut run).unwrap();
+        run.app.update();
+        if run.app.world().resource::<FactorCapture>().export()["captured_hits"]
+            .as_u64()
+            .unwrap()
+            >= 40
+        {
+            break;
+        }
+    }
+    let capture = run.app.world().resource::<FactorCapture>().export();
+    assert!(capture["captured_hits"].as_u64().unwrap() > 0);
+    let output = std::path::PathBuf::from(std::env::var("DPS_PARITY_OUTPUT").unwrap());
+    std::fs::write(
+        output.join("251.winter-factors.json"),
+        serde_json::to_vec_pretty(&capture).unwrap(),
+    )
+    .unwrap();
+}
+
 #[test]
 #[ignore = "diagnostic Frost native 300s factors and resource changes"]
 fn diag_frost_factors_and_resource_spending() {
@@ -586,6 +1329,8 @@ fn diag_frost_factors_and_resource_spending() {
             ));
         }
         super::super::engage(&mut run);
+        let actor = run.actor;
+        crate::auras::observations::start_tracking(run.app.world_mut(), actor, &[(51124, 51128)]);
         let start_runes = run
             .app
             .world()
@@ -649,6 +1394,7 @@ fn diag_frost_factors_and_resource_spending() {
             "runic_power_raw": runic_power_raw,
             "energize": combat["energize"],
             "killing_machine_events": killing_machine_events,
+            "aura_usage": crate::auras::observations::snapshot(run.app.world()),
         }));
         if seed == 70448 || seed == 1 {
             let capture = run.app.world().resource::<FactorCapture>().export();

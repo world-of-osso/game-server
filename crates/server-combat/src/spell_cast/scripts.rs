@@ -116,6 +116,7 @@ pub(super) use script_registry::{
 mod midnight_items;
 mod protection_items;
 pub use batch9::spawn_consecration;
+pub use batch10::launch_guldan_meteor;
 pub(crate) use midnight_items::register as register_midnight_items;
 pub(super) use script_registry::healing_multiplier as soul_of_the_forest_direct_multiplier;
 pub(super) use script_registry::prepare_policy_spell as prepare_rogue_hero;

@@ -972,8 +972,8 @@ fn demonology_paid_hand_starts_and_shortens_diabolic_ritual() {
         .get::<crate::auras::ActiveAuras>(run.actor)
         .unwrap()
         .iter()
-        .find(|aura| aura.spell_id == 431944)
-        .expect("paid Hand must start native Overlord ritual");
+        .find(|aura| matches!(aura.spell_id, 431944 | 432815 | 432816))
+        .expect("paid Hand must start one native Diabolic Ritual");
     let remaining = aura.expires_at.unwrap() - crate::spell_cast::now(world);
     assert!(
         (16.8..=17.1).contains(&remaining),
@@ -1466,5 +1466,50 @@ fn demonology_literal_fixture_executes_profile_instead_of_native_kit() {
     assert!(
         !actions.iter().any(|row| row["spell_id"] == 702),
         "native follower Curse of Weakness is absent from the pinned APL"
+    );
+}
+
+#[test]
+#[ignore = "requires private266 inputs; Gloomhound melee and Headbutt trigger Gloom Slash"]
+fn demonology_gloomhound_attacks_deal_native_gloom_slash() {
+    use shared::protocol::CombatLogKind;
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(266, 1).unwrap();
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, 455449));
+    engage(&mut run);
+    run.app
+        .world_mut()
+        .entity_mut(run.actor)
+        .insert(crate::networking::CombatTarget(Some(run.targets[0])));
+    let dog = summon_native_guardian(&mut run, 455465);
+    for _ in 0..200 {
+        run.app.update();
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    let from_dog = |spell, kind: fn(&CombatLogKind) -> bool| {
+        events
+            .iter()
+            .filter(|event| {
+                event.source == Some(dog.to_bits()) && event.spell_id == spell && kind(&event.kind)
+            })
+            .count()
+    };
+    let melee = from_dog(None, |kind| *kind == CombatLogKind::Damage);
+    let headbutt = from_dog(Some(267999), |kind| *kind == CombatLogKind::CastSuccess);
+    let gloom = from_dog(Some(455491), |kind| {
+        matches!(kind, CombatLogKind::Damage | CombatLogKind::Miss(_))
+    });
+    assert!(
+        melee > 0 && headbutt > 0,
+        "actual Gloomhound must melee and use Headbutt: melee={melee} headbutt={headbutt}"
+    );
+    // SimC76f8118 pets.cpp1361–1373/1405–1418: every melee and Headbutt execution.
+    assert!(
+        gloom >= melee + headbutt,
+        "both melee and Headbutt must trigger real Gloom Slash: melee={melee} headbutt={headbutt} gloom={gloom}"
     );
 }

@@ -87,20 +87,23 @@ fn after_command(world: &mut World, owner: Entity, spell: &SpellInfo, foreground
     // native chance using accumulated PRD. hunter1736–1755 converts the native
     // summon lifetime into a haste-scaled, probabilistic integer swing count.
     if roll_command(world, owner) {
-        let duration = read_lifetime(world, owner);
-        let values = TriggeredSpellOverrides {
-            duration_ms: Some(duration),
-            ..Default::default()
-        };
-        if !spell_cast::cast_triggered_with_overrides(
-            world,
-            owner,
-            DIRE_BEAST,
-            Some(primary),
-            1,
-            values,
-        ) {
-            warn!(?owner, ?primary, "Native Dire Command summon refused");
-        }
+        summon_dire_beast(world, owner, primary);
+    }
+}
+
+pub(super) fn summon_dire_beast(world: &mut World, owner: Entity, primary: Entity) {
+    let values = TriggeredSpellOverrides {
+        duration_ms: Some(read_lifetime(world, owner)),
+        ..Default::default()
+    };
+    if !spell_cast::cast_triggered_with_overrides(
+        world,
+        owner,
+        DIRE_BEAST,
+        Some(primary),
+        1,
+        values,
+    ) {
+        warn!(?owner, ?primary, "Native Dire Beast summon refused");
     }
 }

@@ -20,8 +20,12 @@ const COLLAPSING_STAR: u32 = 1221150;
 #[derive(Component)]
 struct DrainDeadline(f64);
 
+#[derive(Component)]
+struct VoidrushUntil(f64);
+
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::EarlyAuraRegistration(register),
+    SpellScriptHook::OnCast(trigger_voidrush),
     SpellScriptHook::AfterNativeCastUpdate(update_drain),
 ];
 
@@ -30,15 +34,31 @@ fn register(scripts: &mut AuraScripts) {
         META,
         AuraScript {
             on_apply: Some(grant_entry_fury),
+            on_remove: Some(super::devourer_voidblade::clear_reapers_replacement),
             ..Default::default()
         },
     );
+}
+
+fn trigger_voidrush(world: &mut World, caster: Entity, spell: u32, _: u8) {
+    if !matches!(spell, 1245412 | 1245483 | 1246167 | 1259431)
+        || !world
+            .get::<KnownSpells>(caster)
+            .is_some_and(|known| known.contains(VOIDRUSH))
+    {
+        return;
+    }
+    // SimC76f8118 cpp3223–3239,9940–9943: these actions trigger a 0.5s Voidrush window.
+    let until = spell_cast::now(world) + 0.5;
+    world.entity_mut(caster).insert(VoidrushUntil(until));
 }
 
 fn grant_entry_fury(world: &mut World, unit: Entity, aura: &AuraInstance) {
     if unit != aura.caster || world.get::<ActiveSpec>(unit).map(|spec| spec.0) != Some(1480) {
         return;
     }
+    // SimC76f8118 cpp6777 makes an already-ready Hungering Slash usable in Meta.
+    super::devourer_voidblade::grant_reapers_replacement(world, unit);
     // SimC76f8118 sc_demon_hunter.cpp9192–9195 consumes the soul stack on entry.
     // The native admission aura represents that same readiness.
     auras::remove_auras(world, unit, RemoveReason::Consumed, |aura| {
@@ -84,7 +104,9 @@ fn drain_interval(world: &World, unit: Entity, stacks: u64) -> f64 {
         .is_some_and(|status| status.0);
     if out_of_combat
         || stunned
-        || auras::has_aura(world, unit, VOIDRUSH)
+        || world
+            .get::<VoidrushUntil>(unit)
+            .is_some_and(|window| window.0 > spell_cast::now(world))
         || is_protected_cast(world, unit)
     {
         rate *= 0.1;

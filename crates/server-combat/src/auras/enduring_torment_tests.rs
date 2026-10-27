@@ -10,13 +10,15 @@ const ENDURING_TORMENT: u32 = 452_410;
 const ENDURING_TORMENT_BUFF: u32 = 453_314;
 const METAMORPHOSIS_HAVOC: u32 = 162_264;
 const METAMORPHOSIS_DEVOURER: u32 = 1_217_607;
+/// Devourer Meta entry schedules its native Fury drain from this spell's effect0.
+const VOID_BUILDUP: u32 = 473_671;
 const SPEC_HAVOC: u32 = 577;
 const SPEC_DEVOURER: u32 = 1480;
 const DEMON_HUNTER: u8 = 12;
 const TICK_FRAMES: usize = 1000 / 50 + 2;
 
 fn torment_harness(spec: u32, meta: u32) -> Harness {
-    let ids = [ENDURING_TORMENT, ENDURING_TORMENT_BUFF, meta];
+    let ids = [ENDURING_TORMENT, ENDURING_TORMENT_BUFF, meta, VOID_BUILDUP];
     let mut h = harness(Vec::new(), &ids, DEMON_HUNTER).unwrap();
     let unit = h.caster;
     h.app.world_mut().entity_mut(unit).insert(ActiveSpec(spec));

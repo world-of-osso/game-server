@@ -171,9 +171,11 @@ fn generic_rolling_periodic_native_unflagged_renew_refresh_does_not_accumulate()
     let refreshed = native_aura(&h, target, RENEW);
     finish_aura(&mut h, &refreshed);
     let later = ticks(&h, target, RENEW, start);
-    assert!(!later.is_empty());
+    let (tail, full) = later.split_last().unwrap();
+    // Renew's native attr13 Pandemic carry (SimC76f8118 action.cpp684–685)
+    // leaves a fractional final payment (dot.cpp1154–1170), never a larger one.
     assert!(
-        later.iter().all(|tick| tick.amount == paid.amount),
+        full.iter().all(|tick| tick.amount == paid.amount) && tail.amount <= paid.amount,
         "unflagged native HoT must not acquire a rolling pool: {later:?}"
     );
 }

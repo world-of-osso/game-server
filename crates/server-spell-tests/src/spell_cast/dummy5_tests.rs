@@ -117,6 +117,63 @@ fn dummy5_chaos_strike_zero_chance_does_not_refund() {
 }
 
 #[test]
+fn critical_chaos_changes_actual_delayed_chaos_strike_fury_refund() {
+    let mut final_fury = Vec::new();
+    for talented in [false, true] {
+        let mut refund = world_db()
+            .unwrap()
+            .spell_store()
+            .get(197125)
+            .unwrap()
+            .clone();
+        refund.aura_options.as_mut().unwrap().proc_chance = 0;
+        let mut ids = vec![344862, 162794, 222031, 199547, 193840];
+        if talented {
+            ids.push(320413);
+        }
+        let mut h = harness_with_native_enemy_dodge_reduction(vec![refund], &ids, 12).unwrap();
+        let caster = h.caster;
+        // 30% of 350% guarantees the native proc; this is a test endpoint.
+        h.app
+            .world_mut()
+            .get_mut::<server::stats::CharacterStats>(caster)
+            .unwrap()
+            .crit_pct = 350.0;
+        if talented {
+            apply(&mut h, caster, caster, 320413, u32::MAX);
+        }
+        h.set_power(PowerType::Fury, 100.0);
+        h.cast_and_deliver(344862, Some(h.npc));
+        h.advance(3);
+        assert!(
+            !h.inbox
+                .log
+                .iter()
+                .any(|event| event.spell_id == Some(193840))
+        );
+        h.advance(5);
+        assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+        assert!(damage(&h, 199547, h.npc) > 0, "off-hand must land");
+        let refunds: Vec<_> = h
+            .inbox
+            .log
+            .iter()
+            .filter(|event| event.spell_id == Some(193840) && event.kind == CombatLogKind::Energize)
+            .collect();
+        assert_eq!(
+            refunds.len(),
+            usize::from(talented),
+            "one refund per actual off-hand"
+        );
+        if talented {
+            assert_eq!(refunds[0].amount, 20);
+        }
+        final_fury.push(h.power(PowerType::Fury));
+    }
+    assert_eq!(final_fury[1], final_fury[0] + 20.0);
+}
+
+#[test]
 fn dummy5_disintegrate_applies_three_second_slow_and_ticks() {
     let mut h = harness(Vec::new(), &[356995, 370898], 13).expect("real catalog");
     h.set_power(PowerType::Essence, 5.0);
