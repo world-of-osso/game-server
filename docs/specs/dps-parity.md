@@ -192,6 +192,7 @@ Frost player reaction clocks are configured before food setup advances native fr
 ### Subtlety literal fixture
 
 - Deepening Shadows extends earned Shadow Dance duration using the caster's raw haste-rating fraction and native effect value (`sc_rogue.cpp7457–7475`).
+- Selected Lingering Darkness457056 grants native457273 when Shadow Blades expires. Subtlety keeps its effect2/effect4 Shadow mods, label and Dark Brew effects; Assassination's poison effect1/effect3 never apply (`sc_rogue.cpp10924–10932,10982–11010`).
 - Selected Shadow Focus108209 grants native112942 when Stealth, Vanish or Shadow Dance applies and removes it once none remain (`sc_rogue.cpp7345–7362,7381–7390`).
 - Secret Technique's intrinsic delayed clones snapshot the caster's native guardian damage multiplier; the player attack does not (`sc_rogue.cpp5377–5385`).
 - Eligible shadow clones and landed intrinsic Secret Technique clones can earn Shadow Techniques storage and Energy using Ancient Arts' native proc chance; Shadowcraft still controls stacks during Dance (`sc_rogue.cpp3650–3659,5405–5413,8159–8172`).
@@ -236,6 +237,7 @@ Frost player reaction clocks are configured before food setup advances native fr
 - Native class actors use live `CharacterStats` melee crit even with NPC identity. Native Hunter pets inherit their current owner's crit; preserve their own applicable bonuses and target modifiers. Generic no-stats creatures retain native template/base crit. Do not replace class/owner crit with generic creature5% or suppress it through a generic NPC `NO_CRIT` flag (SimC76f8118 `player.cpp5125–5134`, `pet.cpp217–220`).
 - Equipment-source aura procs require actual, non-suppressed native combat references before chance, RPPM or recovery state changes. Equipment initialization and idle aura reconciliation cannot earn temporary item buffs. Ordinary class-aura eligibility remains unchanged (SimC76f8118 `action/action_callback.cpp79–82`).
 - Venomcursed armor drivers1307906/1307923/1307928 proc their native crit/mastery/haste buffs. Both signed stat amounts come from the equipped driver's native effects1/2; retain each buff's native rating masks, lifetime and refresh behavior, and the driver's ordinary proc eligibility/RPPM. No invented stats or rate changes (SimC76f8118 `unique_gear_midnight.cpp5600–5614/6600`).
+- Arcanoweave Lining1283697's linked native RPPM aura1229511 procs Arcanoweave Insight1229746. All equipped copies share one callback. The buff value sums, over equipped drivers, native effect0 times effect1 percent at each driver's item level; effect1 is a non-aura dummy, so read it from the catalog. A missing native value logs an error and grants nothing. The buff keeps its native stat type, duration and refresh; the driver keeps ordinary proc eligibility and RPPM (SimC76f8118 `unique_gear_midnight.cpp677–730`).
 - Loa Worshiper's Band1251904 rolls one eligible branch from native equipped gem descriptions: Capybara1252524 is always eligible; Peridot enables1252818. Capybara uses the equipped driver's second effect amount; Akilzon uses its own native item-scaled effect. Preserve unique-color weights, native rating masks, durations and item level. Other Loa gem branches remain unqualified.
 - Rite of Hash'ey1297654 dispatches native DUMMY-trigger rating children using the scaled BP0 already supplied by its linked equipped rank. The pinned default favors the current highest secondary60%, otherwise uniformly selects a native child; retain source single-callback dedup, native masks, values and lifetimes. Both item families reject precombat before proc chance/recovery changes, including the Cast-source linked Rite driver (`unique_gear_midnight.cpp614–671/995–1122`, `player.hpp827`, `action_callback.cpp79–82`).
 - Ordinary native haste auras multiply with converted rating haste and each other: `(1 + rating%) × Π(1 + aura%) − 1`. Retain native aura amounts/stacks, non-stacking selection, independent Crusade and autoattack-only342 factors. Native WW1205 rating plus5% ordinary haste yields33.7557%; no coefficient or rating adjustment (SimC76f8118 `player.cpp4982–4995`).
@@ -594,6 +596,9 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 ### Destruction Chaotic Inferno
 
 - Each actual Chaos Bolt116858 execution with Chaotic Inferno1244788 selected advances an accumulated PRD from the native talent effect1 chance. A success grants native1244860. Its own cast-time modifier and single charge make the next Incinerate/Infernal Bolt instant and are consumed by that cast (SimC76f8118 `sc_warlock_actions.cpp:4000–4006,4391–4398,5244–5246`, `sc_warlock_init.cpp:830–831,1331–1334`). The pinned bugs-mode rule that keeps Backdraft during that instant Incinerate is not yet qualified.
+### Destruction Soul Fire DoT
+
+- Actual Soul Fire6353 execution casts the caster's selected Wither445474 (Wither445465) or Immolate157736 on its target as a free background DoT without direct damage. The DoT starts at execution, before the missile lands, and does not need the missile to hit (SimC76f8118 `sc_warlock_actions.cpp:5102–5138`).
 
 ### Destruction Roaring Blaze
 
