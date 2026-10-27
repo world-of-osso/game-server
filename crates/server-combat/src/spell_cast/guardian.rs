@@ -37,7 +37,7 @@ const GUARDIAN_POLICIES: &[GuardianPolicy] = &[
     // SimC76f8118 sc_death_knight.cpp4478–4487/4599–4605: actual Magus AP share
     // and MID2 actions; each action retains its native cast and recovery data.
     GuardianPolicy {
-        summons: &[1242294],
+        summons: &[317776, 1242294],
         entry: 163366,
         spells: &[1297055, 1297091],
         repeat_gcd: None,
@@ -54,21 +54,31 @@ const GUARDIAN_POLICIES: &[GuardianPolicy] = &[
         owner_spell_share: None,
         owner_attack_share: Some(0.7),
     },
+    // SimC76f8118 sc_death_knight.cpp5478–5488: the actual Abomination
+    // inherits its owner's melee attack power.
+    GuardianPolicy {
+        summons: &[288853],
+        entry: 149555,
+        spells: &[],
+        repeat_gcd: None,
+        owner_spell_share: None,
+        owner_attack_share: Some(2.34),
+    },
     // SimC76f8118 sc_death_knight.cpp3621–3649: ordinary and Army
     // lesser ghouls inherit owner melee AP; Army gets the 1.4 multiplier.
     GuardianPolicy {
         summons: &[275430],
         entry: 237409,
-        spells: &[],
-        repeat_gcd: None,
+        spells: &[1278150, 199373],
+        repeat_gcd: Some(1.5),
         owner_spell_share: None,
         owner_attack_share: Some(0.180431625),
     },
     GuardianPolicy {
         summons: &[1294026],
         entry: 237409,
-        spells: &[],
-        repeat_gcd: None,
+        spells: &[1278150, 199373],
+        repeat_gcd: Some(1.5),
         owner_spell_share: None,
         owner_attack_share: Some(0.180431625 * 1.4),
     },
@@ -248,6 +258,32 @@ const GUARDIAN_POLICIES: &[GuardianPolicy] = &[
         owner_spell_share: Some(1.0),
         owner_attack_share: None,
     },
+    // SimC76f8118 pets.cpp17–19/2577–2591: Diabolist demons inherit base owner
+    // SP1.0; the Overlord's validated AP share is1.0. Native rows own the actions.
+    GuardianPolicy {
+        summons: &[428571],
+        entry: 228575,
+        spells: &[432120],
+        repeat_gcd: None,
+        owner_spell_share: Some(1.0),
+        owner_attack_share: Some(1.0),
+    },
+    GuardianPolicy {
+        summons: &[428565],
+        entry: 228576,
+        spells: &[432569],
+        repeat_gcd: None,
+        owner_spell_share: Some(1.0),
+        owner_attack_share: None,
+    },
+    GuardianPolicy {
+        summons: &[434400],
+        entry: 228574,
+        spells: &[438973],
+        repeat_gcd: None,
+        owner_spell_share: Some(1.0),
+        owner_attack_share: None,
+    },
     // SimC76f8118 pets.cpp1310–1342: validated variant inheritance. Native
     // Bile Spit/Headbutt remain distinct from the melee-linked Gloom Slash.
     GuardianPolicy {
@@ -394,6 +430,26 @@ struct GuardianActionPolicy {
 // SimC76f8118 pets.cpp1350/1382–1418: one Bile Spit per summon and an
 // unhasted five-second Headbutt cooldown. Native spell rows own the payloads.
 const GUARDIAN_ACTIONS: &[GuardianActionPolicy] = &[
+    // SimC76f8118 pets.cpp2626–2644/2758–2786/2862–2892: each Diabolist demon
+    // executes its single Wicked Cleave, Chaos Salvo or Felseeker once.
+    GuardianActionPolicy {
+        entries: &[228575],
+        spell: 432120,
+        once: true,
+        cooldown: None,
+    },
+    GuardianActionPolicy {
+        entries: &[228576],
+        spell: 432569,
+        once: true,
+        cooldown: None,
+    },
+    GuardianActionPolicy {
+        entries: &[228574],
+        spell: 438973,
+        once: true,
+        cooldown: None,
+    },
     GuardianActionPolicy {
         entries: &[135816, 226268, 226269],
         spell: 267997,
@@ -829,7 +885,10 @@ fn native_cast_targets(
     // native18/16 selectors center it on the caster. Such spells have no
     // explicit unit: do not range-check the enemy as the cast unit. Preserve
     // that enemy separately as the actual selected primary.
-    let unit = if super::targets::explicit_requirement(spell.effects.iter()).is_some() {
+    // Dreadbite's source-qualified target plan requires its selected enemy.
+    let unit = if spell.id == 271971
+        || super::targets::explicit_requirement(spell.effects.iter()).is_some()
+    {
         enemy
     } else {
         actor

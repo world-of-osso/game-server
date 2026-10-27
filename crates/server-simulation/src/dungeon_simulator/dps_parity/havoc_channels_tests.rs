@@ -38,6 +38,304 @@ fn cast(run: &mut Run, spell: u32, self_target: bool) {
 
 #[test]
 #[ignore = "requires prepared native spec577 player profile"]
+fn havoc_undying_embers_retriggers_expired_immolation() {
+    for selected in [false, true] {
+        let _seed = crate::random::seed_scope(70_448);
+        let mut run = prepare_literal(577, 1).unwrap();
+        let actor = run.actor;
+        let known = run
+            .app
+            .world()
+            .get::<crate::class_progression::KnownSpells>(actor)
+            .unwrap();
+        assert!(known.contains(1272405));
+        let spells = known
+            .iter()
+            .filter(|spell| selected || *spell != 1272405)
+            .collect();
+        run.app
+            .world_mut()
+            .entity_mut(actor)
+            .insert(crate::class_progression::KnownSpells::fixture(spells));
+        let before = run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .len();
+        for _ in 0..20 {
+            crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 258920, Some(actor), 1);
+            advance(&mut run, 220);
+        }
+        let events = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0[before..];
+        let applications = events
+            .iter()
+            .filter(|event| {
+                event.kind == CombatLogKind::AuraApplied && event.spell_id == Some(258920)
+            })
+            .count();
+        assert_eq!(
+            applications > 20,
+            selected,
+            "only selected Undying Embers must retrigger naturally expired auras; applications={applications}"
+        );
+    }
+}
+
+#[test]
+#[ignore = "requires prepared native spec577 player profile"]
+fn havoc_final_breath_adds_scaled_tick_on_completed_beam() {
+    for selected in [false, true] {
+        let _seed = crate::random::seed_scope(70_448);
+        let mut run = prepare_literal(577, 1).unwrap();
+        let actor = run.actor;
+        let primary = run.targets[0];
+        super::face_actor_toward_primary(run.app.world_mut(), actor, primary);
+        let known = run
+            .app
+            .world()
+            .get::<crate::class_progression::KnownSpells>(actor)
+            .unwrap();
+        assert!(known.contains(1266500));
+        let spells = known
+            .iter()
+            .filter(|spell| *spell != 428492 && (selected || *spell != 1266500))
+            .collect();
+        run.app
+            .world_mut()
+            .entity_mut(actor)
+            .insert(crate::class_progression::KnownSpells::fixture(spells));
+        run.app
+            .world_mut()
+            .get_mut::<crate::stats::CharacterStats>(actor)
+            .unwrap()
+            .crit_pct = -1000.0;
+        if selected {
+            run.app.insert_resource(
+                crate::spell_cast::effects::factor_capture::FactorCapture::new(
+                    actor,
+                    primary,
+                    198030,
+                    "final_breath",
+                    20,
+                ),
+            );
+        }
+        havoc_tests::earn_havoc_fury(&mut run, 30.0);
+        cast(&mut run, 198013, false);
+        preparation::finish_pending_setup(&mut run).unwrap();
+        let hits = damage(&run, Some(198030));
+        assert_eq!(
+            hits.len(),
+            if selected { 13 } else { 12 },
+            "Final Breath must add exactly one real Eye Beam tick: {hits:?}"
+        );
+        if selected {
+            let capture = run
+                .app
+                .world()
+                .resource::<crate::spell_cast::effects::factor_capture::FactorCapture>()
+                .export();
+            let events: Vec<_> = capture["events"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .filter(|event| event["spell_id"] == 198030 && event["event"] == "result")
+                .collect();
+            let product =
+                |event: &serde_json::Value| event["factors"]["source_product"].as_f64().unwrap();
+            assert!(
+                (product(events[12]) / product(events[11]) - 3.0).abs() < 0.001,
+                "Final Breath must deal three times the observed tick input"
+            );
+        }
+    }
+}
+
+#[test]
+#[ignore = "requires prepared native spec577 player profile"]
+fn havoc_rotation_immolation_aura_deals_initial_damage() {
+    let report = super::measure_seed(577, 1, 70_448).expect("real Havoc 300s rotation");
+    let actions = report["combat"]["actions"].as_array().unwrap();
+    assert!(
+        actions.iter().any(
+            |action| action["spell_id"] == 258921 && action["damage"].as_u64().unwrap_or(0) > 0
+        ),
+        "actual Immolation Aura casts must deal initial damage: {actions:?}"
+    );
+}
+
+#[test]
+#[ignore = "requires prepared native spec577 player profile"]
+fn havoc_damage_applies_chaos_brand_to_actual_targets() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(577, 3).unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    let actor = run.actor;
+    let primary = run.targets[0];
+    super::face_actor_toward_primary(run.app.world_mut(), actor, primary);
+    crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 198030, None, 1);
+    for &target in &run.targets {
+        assert!(
+            damage(&run, Some(198030))
+                .iter()
+                .any(|hit| hit.target == Some(target.to_bits()))
+        );
+        assert!(
+            crate::auras::has_aura(run.app.world(), target, 1490),
+            "DH damage must brand {target:?}"
+        );
+    }
+}
+
+#[test]
+#[ignore = "requires prepared native spec577 player profile"]
+fn havoc_chaos_brand_increases_magic_but_not_physical_damage() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(577, 1).unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    let actor = run.actor;
+    let target = run.targets[0];
+    super::face_actor_toward_primary(run.app.world_mut(), actor, target);
+    let known = run
+        .app
+        .world()
+        .get::<crate::class_progression::KnownSpells>(actor)
+        .unwrap();
+    let spells = known
+        .iter()
+        .filter(|s| ![388113, 388108, 428492, 452408].contains(s))
+        .collect();
+    run.app
+        .world_mut()
+        .entity_mut(actor)
+        .insert(crate::class_progression::KnownSpells::fixture(spells));
+    run.app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(actor)
+        .unwrap()
+        .crit_pct = -1000.0;
+    let strike = |run: &mut Run, spell| {
+        let _seed = crate::random::seed_scope(88);
+        crate::spell_cast::cast_triggered(run.app.world_mut(), actor, spell, Some(target), 1);
+        damage(run, Some(spell)).last().unwrap().amount
+    };
+    let initial = strike(&mut run, 198030);
+    let branded = strike(&mut run, 198030);
+    assert!(
+        (branded as f32 / initial as f32 - 1.03).abs() < 0.002,
+        "magic {initial} -> {branded}"
+    );
+    let physical_branded = strike(&mut run, 162243);
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        target,
+        crate::auras::RemoveReason::Expired,
+        |aura| aura.spell_id == 1490,
+    );
+    let physical_plain = strike(&mut run, 162243);
+    assert_eq!(
+        physical_branded, physical_plain,
+        "Chaos Brand must not increase physical damage"
+    );
+}
+
+fn isolated_prey_hits(spell: u32, count: usize, selected: bool) -> Vec<CombatLogEvent> {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(577, count).unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    let actor = run.actor;
+    let primary = run.targets[0];
+    super::face_actor_toward_primary(run.app.world_mut(), actor, primary);
+    let known = run
+        .app
+        .world()
+        .get::<crate::class_progression::KnownSpells>(actor)
+        .unwrap();
+    assert!(
+        known.contains(388113),
+        "real Havoc profile selects Isolated Prey"
+    );
+    let spells = known
+        .iter()
+        .filter(|spell| *spell != 428492 && (selected || *spell != 388113))
+        .collect();
+    run.app
+        .world_mut()
+        .entity_mut(actor)
+        .insert(crate::class_progression::KnownSpells::fixture(spells));
+    run.app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(actor)
+        .unwrap()
+        .crit_pct = -1000.0;
+    {
+        let _seed = crate::random::seed_scope(88);
+        crate::spell_cast::cast_triggered(run.app.world_mut(), actor, spell, None, 1);
+        run.app.update();
+    }
+    let hits = damage(&run, Some(spell));
+    assert!(
+        !hits.is_empty(),
+        "native {spell} must hit the fixture: {}",
+        report::engagement(run.app.world(), actor, &run.targets)
+    );
+    hits
+}
+
+#[test]
+#[ignore = "requires prepared native spec577 player profile"]
+fn havoc_isolated_prey_increases_both_real_beam_children_only_for_one_enemy() {
+    for spell in [198030, 1287949] {
+        for count in [1, 3] {
+            let baseline = isolated_prey_hits(spell, count, false);
+            let selected = isolated_prey_hits(spell, count, true);
+            assert_eq!(
+                baseline.len(),
+                count,
+                "native {spell} must hit every fixture enemy"
+            );
+            assert_eq!(selected.len(), count);
+            for (plain, isolated) in baseline.iter().zip(&selected) {
+                let multiplier = if count == 1 { 1.30 } else { 1.0 };
+                assert!(
+                    (f64::from(isolated.amount) - f64::from(plain.amount) * multiplier).abs()
+                        <= 2.0,
+                    "native {spell} must use single-target Isolated Prey: {plain:?} -> {isolated:?}"
+                );
+            }
+        }
+    }
+}
+
+#[test]
+#[ignore = "requires prepared native spec577 player profile"]
+fn havoc_isolated_prey_guarantees_real_immolation_initial_and_tick_crits_only_for_one_enemy() {
+    for spell in [258921, 258922] {
+        for count in [1, 3] {
+            let baseline = isolated_prey_hits(spell, count, false);
+            let selected = isolated_prey_hits(spell, count, true);
+            assert_eq!(
+                baseline.len(),
+                count,
+                "native {spell} must hit every fixture enemy"
+            );
+            assert_eq!(selected.len(), count);
+            assert!(baseline.iter().all(|hit| !hit.crit));
+            assert!(
+                selected.iter().all(|hit| hit.crit == (count == 1)),
+                "native {spell} crits depend on the actual enemy count: {selected:?}"
+            );
+        }
+    }
+}
+
+#[test]
+#[ignore = "requires prepared native spec577 player profile"]
 fn havoc_fragment_pickup_requires_melee_and_records_last_used() {
     use server::simc_apl::Facts;
     use server::soul_fragments::{self, FragmentFilter, FragmentKind, PickupMode};

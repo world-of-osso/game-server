@@ -2,6 +2,7 @@
 use super::combat;
 use bevy::prelude::*;
 use combat::class_progression::KnownSpells;
+use combat::random::Rng;
 use combat::soul_fragments::{self, FragmentFilter};
 use combat::spell_cast::{self, script_registry::SpellScriptHook, scripts::script_effect_value};
 use combat::spell_info::SpellInfo;
@@ -13,6 +14,9 @@ const CULL_DAMAGE: u32 = 1245455;
 const SHATTERED_SOULS: u32 = 1227619;
 const MOMENT_OF_CRAVING: u32 = 1238495;
 const SOULSHAPER: u32 = 1238739;
+
+#[derive(Component, Default)]
+struct SoulburstFailures(u32);
 
 struct PendingReap {
     at: f64,
@@ -54,6 +58,7 @@ fn after_launch(world: &mut World, caster: Entity, spell: &SpellInfo) {
         false,
     )
     .expect("native Reap fragment consumption");
+    trigger_soulburst(world, caster, consumed);
     let pending = PendingReap {
         at: spell_cast::now(world) + 0.220,
         target,
@@ -67,6 +72,28 @@ fn after_launch(world: &mut World, caster: Entity, spell: &SpellInfo) {
         .into_mut()
         .0
         .push(pending);
+}
+
+fn trigger_soulburst(world: &mut World, caster: Entity, consumed: usize) {
+    if !combat::auras::has_aura(world, caster, 1296615) {
+        return;
+    }
+    let threshold = script_effect_value(world, caster, 1296615, 0).max(0.0) as usize;
+    if consumed < threshold {
+        return;
+    }
+    // SimC76f8118 cpp1256–1260,3452–3465,10719–10727: capped bad-luck protection.
+    let failures = world
+        .get::<SoulburstFailures>(caster)
+        .map_or(0, |state| state.0);
+    let chance = (0.0663 + 0.0519 * f64::from(failures)).min(0.3949);
+    let proc = combat::random::thread_rng().gen_range(0.0..1.0) < chance;
+    world
+        .entity_mut(caster)
+        .insert(SoulburstFailures(if proc { 0 } else { failures + 1 }));
+    if proc && !spell_cast::try_cast_triggered(world, caster, 1297433, Some(caster), 1) {
+        error!(?caster, "native Soulburst aura was refused");
+    }
 }
 
 fn update(world: &mut World) {

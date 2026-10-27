@@ -8,24 +8,30 @@ use combat::spell_cast::script_registry::SpellScriptHook;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::OnCast(before_cast),
+    SpellScriptHook::OnCast(immolation::before_cast),
     SpellScriptHook::NativeAfterCast(demonsurge::after_cast),
     SpellScriptHook::EarlyAuraRegistration(demonsurge::register_havoc),
+    SpellScriptHook::LateAuraRegistration(immolation::register),
+    SpellScriptHook::AfterAuraApplication(immolation::initial_damage),
     SpellScriptHook::LandedDamagePolicy(damage::apply_havoc_damage_policies),
     SpellScriptHook::ActualDamageMultiplier(damage::chaotic_disposition_damage),
     SpellScriptHook::ExpectedDamageMultiplier(damage::expected_chaotic_disposition_damage),
     SpellScriptHook::AbilityUseAvailable(demonsurge::havoc_demonsurge_available),
     SpellScriptHook::ChannelPeriodic(beam::periodic_trigger),
     SpellScriptHook::CriticalChance(beam::crit_chance),
+    SpellScriptHook::TargetContextDamageMultiplier(beam::isolated_damage),
     SpellScriptHook::TargetContextDamageMultiplier(demonsurge::focused_hatred),
 ];
 use combat::class_progression::KnownSpells;
 
 #[path = "havoc/beam.rs"]
-mod beam;
+pub(super) mod beam;
 #[path = "havoc/damage.rs"]
 mod damage;
 #[path = "havoc/demonsurge.rs"]
 mod demonsurge;
+#[path = "havoc/immolation.rs"]
+mod immolation;
 
 fn is_havoc(world: &World, caster: Entity) -> bool {
     world

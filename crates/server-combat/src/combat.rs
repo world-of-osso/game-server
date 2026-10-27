@@ -496,7 +496,7 @@ fn send_attack_stopped(world: &mut World, attacker: Entity, victim: Option<Entit
 
 /// Template-owned melee interval (TC Creature::UpdateEntry), not player or pet weapons.
 #[derive(Component, Debug, Clone, Copy, PartialEq)]
-pub(crate) struct CreatureAttackTime(pub f32);
+pub struct CreatureAttackTime(pub f32);
 
 impl CreatureAttackTime {
     fn modified(self, haste_pct: f32, mods: Option<&AuraStatMods>) -> f32 {
@@ -897,7 +897,10 @@ fn auto_attack_unit(
                 let power = if demon {
                     owner.spell_power.max(0.0)
                 } else {
-                    let attack_type = if lesser_ghoul || horseman {
+                    let attack_type = if lesser_ghoul
+                        || horseman
+                        || (summon.spell_id == 288853 && npc.template_id == 149555)
+                    {
                         crate::stats::WeaponAttackType::MainHand
                     } else {
                         crate::stats::WeaponAttackType::Ranged

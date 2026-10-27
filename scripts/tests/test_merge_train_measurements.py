@@ -115,6 +115,56 @@ class MeasurementTests(unittest.TestCase):
             self.assertIn("panicked at native item driver effect", kept.read_text())
             self.assertIn("traceback tail", kept.read_text())
 
+    def test_successful_measurement_keeps_its_per_spell_reports(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            output = root / "out"
+            output.mkdir()
+            (output / "1480.native.1.json").write_text('{"Cull": 17722}')
+            (output / "1480.native.3.json").write_text('{"Cull": 40000}')
+            (output / "1480.native.1.seed-2.json").write_text("per-seed")
+            (root / "logs").mkdir()
+            passed = type("Run", (), {"stdout": "NATIVE_DPS spec1480 targets1: 114934.05\n", "stderr": ""})()
+            with patch.object(train, "LOGS", root / "logs"), patch.object(train, "TREE", root), \
+                    patch.object(train.subprocess, "run", return_value=passed):
+                train.measure_spec({"id": "entry"}, {"spec": "1480", "targets": "1,3", "world_db": "db",
+                                                     "output": str(output)}, "exe", root, root / "c.log", "t")
+            (output / "1480.native.1.json").write_text('{"Cull": 0}')
+            kept = root / "logs/entry.reports"
+            self.assertEqual((kept / "1480.native.1.json").read_text(), '{"Cull": 17722}')
+            self.assertEqual((kept / "1480.native.3.json").read_text(), '{"Cull": 40000}')
+            self.assertFalse((kept / "1480.native.1.seed-2.json").exists())
+
+    def test_concurrent_entries_sharing_an_output_measure_one_at_a_time(self):
+        import threading as th
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            output = root / "out"
+            output.mkdir()
+            (root / "logs").mkdir()
+            active, peak = [0], [0]
+            gate = th.Lock()
+
+            def run(*args, **kwargs):
+                with gate:
+                    active[0] += 1
+                    peak[0] = max(peak[0], active[0])
+                time.sleep(0.05)
+                with gate:
+                    active[0] -= 1
+                return type("Run", (), {"stdout": "NATIVE_DPS spec252 targets1: 1\n", "stderr": ""})()
+
+            measurement = {"spec": "252", "targets": "1", "world_db": "db", "output": str(output)}
+            with patch.object(train, "LOGS", root / "logs"), patch.object(train, "TREE", root), \
+                    patch.object(train.subprocess, "run", side_effect=run):
+                threads = [th.Thread(target=train.measure_spec, args=({"id": f"e{i}"}, measurement, "exe", root,
+                                                                       root / "c.log", "t")) for i in range(3)]
+                for thread in threads:
+                    thread.start()
+                for thread in threads:
+                    thread.join()
+            self.assertEqual(peak[0], 1)
+
     def test_repeated_spec_output_is_serialized_in_submission_order(self):
         with tempfile.TemporaryDirectory() as directory, ExitStack() as stack:
             root = Path(directory)

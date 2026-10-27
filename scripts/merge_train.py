@@ -732,9 +732,27 @@ def parity_executable(log):
     return None
 
 
+# Entries measured in parallel (different cycles or trees) may name the same --output: the
+# parity script rewrites <spec>.native.* there, so concurrent runs interleave reports (2026-10-27,
+# 252 Blightburst). One lock per resolved output directory and spec serializes them.
+OUTPUT_LOCKS = {}
+OUTPUT_LOCKS_GUARD = threading.Lock()
+
+
+def output_lock(measurement):
+    key = (str(Path(measurement["output"]).resolve()), measurement["spec"])
+    with OUTPUT_LOCKS_GUARD:
+        return OUTPUT_LOCKS.setdefault(key, threading.Lock())
+
+
 def measure_spec(entry, measurement, executable, target, log, tree, previous=None):
     if previous is not None:
         previous.result()
+    with output_lock(measurement):
+        return measure_spec_locked(entry, measurement, executable, target, log, tree)
+
+
+def measure_spec_locked(entry, measurement, executable, target, log, tree):
     command = [sys.executable, str(TREE / "scripts/dps_parity_measure.py"), "--executable", executable,
                "--spec", measurement["spec"], "--targets", measurement["targets"],
                "--actor", measurement.get("actor", "follower"),
@@ -745,6 +763,12 @@ def measure_spec(entry, measurement, executable, target, log, tree, previous=Non
                              | {"CARGO_TARGET_DIR": str(target)},
                              text=True, capture_output=True, check=False)
     lines = [line for line in out.stdout.splitlines() if "NATIVE_DPS" in line or "FAILED" in line]
+    # The next measurement of the same spec overwrites the shared --output; keep this entry's
+    # per-spell aggregates so landings stay comparable (2026-10-27: 1480 drop lost its reports).
+    reports = LOGS / f"{entry['id']}.reports"
+    for path in Path(measurement["output"]).glob(f"{measurement['spec']}.native.[0-9].json"):
+        reports.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(path, reports / path.name)
     if any("FAILED" in line for line in lines):
         # Native logs live in the shared --output directory, where the next measurement of the
         # same spec overwrites them (2026-10-27: two 577 failures lost their cause). Keep a copy.

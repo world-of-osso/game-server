@@ -3664,6 +3664,12 @@ struct HitFrame {
     blocked: HashSet<Entity>,
 }
 
+/// Actual TargetInfos for the innermost resolution of this spell.
+pub fn resolving_spell_targets(world: &World, caster: Entity, spell: u32) -> Option<&[Entity]> {
+    let frame = world.get_resource::<ResolvingHits>()?.0.last()?;
+    (frame.caster == caster && frame.spell_id == spell).then_some(frame.selected.as_slice())
+}
+
 /// Actual resolving TargetInfos, not mutable combat focus or only successful hits.
 /// The first entry owns native primary impact even when it misses.
 pub fn resolving_targets<'w>(world: &'w World, ctx: &EffectCtx<'_>) -> Option<&'w [Entity]> {
@@ -3923,6 +3929,7 @@ pub(super) fn cast_triggered_with_item_level(
 #[derive(Default)]
 pub struct TriggeredSpellOverrides {
     pub effect0_amount: Option<f32>,
+    pub damage_multiplier: Option<f32>,
     pub item_level: Option<u16>,
     pub effect_mask: Option<u32>,
     pub aura_stacks: Option<u8>,
@@ -3943,6 +3950,7 @@ pub fn cast_triggered_with_overrides(
         return false;
     };
     spell.cast_aura_stacks = values.aura_stacks;
+    spell.cast_damage_multiplier = values.damage_multiplier;
     spell.cast_original_caster = values.original_caster;
     spell.cast_item_level = values.item_level;
     if let Some(mask) = values.effect_mask {

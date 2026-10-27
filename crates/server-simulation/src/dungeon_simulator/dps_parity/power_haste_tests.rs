@@ -448,6 +448,86 @@ fn dps_parity_power_haste_rogue_potential_twenty_five_haste_survives_cap_and_spe
 }
 
 #[test]
+fn native_agony_ticks_use_live_bloodlust_haste() {
+    use crate::auras::{AuraApplication, AuraSource};
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::protocol::CombatLogKind;
+
+    // SimC76f8118 action.cpp:2038–2041, 2792–2809 updates HST for
+    // non-channeled hasted dots on each paid tick; an existing tick keeps its deadline.
+    let mut h = crate::spell_cast::test_harness::harness_with(vec![], &[980, 2825], 9, true)
+        .expect("native Agony and Bloodlust data");
+    h.app.init_resource::<ObservedCombatEvents>();
+    let actor = h.caster;
+    let target = h.npc;
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &AuraApplication {
+            caster: actor,
+            target,
+            spell_id: 980,
+            effect_mask: u32::MAX,
+            source: AuraSource::Cast,
+        },
+    );
+    h.advance(2);
+    let prior = h
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(actor)
+        .unwrap()
+        .haste_pct;
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &AuraApplication {
+            caster: actor,
+            target: actor,
+            spell_id: 2825,
+            effect_mask: u32::MAX,
+            source: AuraSource::Cast,
+        },
+    );
+    h.advance(2);
+    let boosted = h
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(actor)
+        .unwrap()
+        .haste_pct;
+    assert!(
+        boosted > prior,
+        "Bloodlust must actually increase caster haste: {prior} -> {boosted}"
+    );
+    let mut tick_frames = Vec::new();
+    let mut previous = 0usize;
+    for frame in 1..=140 {
+        h.advance(1);
+        let count = h
+            .app
+            .world()
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .filter(|e| e.spell_id == Some(980) && e.kind == CombatLogKind::Damage && e.periodic)
+            .count();
+        if count > previous {
+            tick_frames.push(frame);
+            previous = count;
+        }
+        if tick_frames.len() == 3 {
+            break;
+        }
+    }
+    assert_eq!(tick_frames.len(), 3, "three real Agony ticks required");
+    let first = tick_frames[1] - tick_frames[0];
+    let second = tick_frames[2] - tick_frames[1];
+    assert!(
+        first <= 35 && second <= 35,
+        "Bloodlust must shorten intervals after the first tick: {tick_frames:?}"
+    );
+}
+
+#[test]
 fn native_spell_haste_periodic_attribute_scales_real_tick_period_and_count() {
     use crate::auras::{ActiveAuras, AuraApplication, AuraSource};
     use crate::spell_cast::test_harness::ObservedCombatEvents;

@@ -61,6 +61,43 @@ fn assert_fragment_damage_boundary(run: &mut Run, before: usize, root: u32, dama
 
 #[test]
 #[ignore = "requires DPS_PARITY_WORLD_DB and DPS_PARITY_OUTPUT with spec1480 exact profile/traits"]
+fn batch3_reap_damage_hits_produce_shattered_souls() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare(1480, 1).expect("native Devourer profile");
+    let actor = run.actor;
+    let target = run.targets[0];
+    // Keep Entropy from independently producing a fragment at combat entry.
+    let spells: Vec<_> = run
+        .app
+        .world()
+        .get::<crate::class_progression::KnownSpells>(actor)
+        .unwrap()
+        .iter()
+        .filter(|&spell| spell != 1261684)
+        .collect();
+    run.app
+        .world_mut()
+        .entity_mut(actor)
+        .insert(crate::class_progression::KnownSpells::from_baseline(spells));
+    engage(&mut run);
+    for _ in 0..100 {
+        crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 1225823, Some(target), 1);
+    }
+    assert!(
+        observed(&run, 1225823, CombatLogKind::Damage, true),
+        "real Reap damage hits"
+    );
+    for _ in 0..40 {
+        run.app.update();
+    }
+    assert!(
+        soul_fragments::active_count(run.app.world(), actor, FragmentFilter::Lesser) > 0,
+        "seeded Reap hits produce lesser fragments"
+    );
+}
+
+#[test]
+#[ignore = "requires DPS_PARITY_WORLD_DB and DPS_PARITY_OUTPUT with spec1480 exact profile/traits"]
 fn devourer_reap_consumes_active_lesser_fragments_and_hits() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare(1480, 1).expect("native Devourer profile");
