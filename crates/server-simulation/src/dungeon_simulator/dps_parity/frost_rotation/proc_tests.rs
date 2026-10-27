@@ -1813,7 +1813,10 @@ fn frost_rime_howling_blast_extends_active_breath() {
     let mut run = super::super::prepare_literal(251, 1).unwrap();
     super::super::engage(&mut run);
     earn_rime(&mut run);
+    cast(&mut run, 49020);
+    cast(&mut run, 49020);
     let actor = run.actor;
+    assert!(auras::has_aura(run.app.world(), actor, 59052));
     super::super::enhancement_generation_tests::cast(&mut run, 1249658, actor);
     let expiry = |run: &Run| run.app.world().get::<ActiveAuras>(actor).unwrap().iter()
         .find(|aura| aura.spell_id == 1249658 && aura.caster == actor).unwrap().expires_at.unwrap();
