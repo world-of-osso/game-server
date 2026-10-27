@@ -135,6 +135,17 @@ fn shared_liquid_luster_profile_prepot_preserves_native_stacks_and_cooldown() {
         "literal twelve-second prepot pays two native six-second ticks"
     );
     let now = crate::spell_cast::now(run.app.world());
+    let recorded_at = run
+        .app
+        .world()
+        .get::<crate::spell_cast::SpellHistory>(actor)
+        .unwrap()
+        .last_successful_cast_at(item.on_use.spell_id)
+        .expect("prepot success history");
+    assert!(
+        (12.0..=12.2).contains(&(now - recorded_at)),
+        "prepot history ages with its actual use"
+    );
     let remaining = gleam(&run).expires_at.unwrap() - now;
     assert!(
         remaining > 17.8 && remaining <= 18.0,

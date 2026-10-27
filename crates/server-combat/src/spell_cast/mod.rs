@@ -664,11 +664,17 @@ struct SuccessfulCast {
     at: f64,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+enum SuccessKey {
+    Spell(u32),
+    PickupFragment,
+}
+
 /// Per-unit cooldown state in real elapsed server seconds (`history_now`).
 #[derive(Component, Debug, Clone, Default)]
 pub struct SpellHistory {
-    /// Ordinary successful casts only; triggered children and failed requests do not advance it.
-    successful_casts: HashMap<u32, SuccessfulCast>,
+    /// Successful foreground actions; triggered children and failed requests do not advance it.
+    successful_casts: HashMap<SuccessKey, SuccessfulCast>,
     #[cfg(any(test, feature = "test-support"))]
     gcd_casts: Vec<u32>,
     cast_sequence: u64,
@@ -695,7 +701,7 @@ impl SpellHistory {
             .iter()
             .filter_map(|spell| {
                 self.successful_casts
-                    .get(spell)
+                    .get(&SuccessKey::Spell(*spell))
                     .map(|cast| (*spell, cast.sequence))
             })
             .max_by_key(|(_, order)| *order)
@@ -706,8 +712,12 @@ impl SpellHistory {
     pub fn last_successful_cast(&self) -> Option<u32> {
         self.successful_casts
             .iter()
-            .max_by_key(|(_, cast)| cast.sequence)
-            .map(|(&spell, _)| spell)
+            .filter_map(|(key, cast)| match key {
+                SuccessKey::Spell(spell) => Some((*spell, cast.sequence)),
+                SuccessKey::PickupFragment => None,
+            })
+            .max_by_key(|(_, sequence)| *sequence)
+            .map(|(spell, _)| spell)
     }
 
     #[cfg(any(test, feature = "test-support"))]
@@ -720,13 +730,33 @@ impl SpellHistory {
 
     /// Simulation-clock completion of an ordinary successful cast, never its request.
     pub fn last_successful_cast_at(&self, spell: u32) -> Option<f64> {
-        self.successful_casts.get(&spell).map(|cast| cast.at)
+        self.successful_casts
+            .get(&SuccessKey::Spell(spell))
+            .map(|cast| cast.at)
+    }
+
+    /// Successful manual fragment-pickup action start on the simulation clock.
+    pub fn last_fragment_pickup_at(&self) -> Option<f64> {
+        self.successful_casts
+            .get(&SuccessKey::PickupFragment)
+            .map(|cast| cast.at)
+    }
+
+    pub fn record_fragment_pickup(&mut self, at: f64) {
+        self.cast_sequence += 1;
+        self.successful_casts.insert(
+            SuccessKey::PickupFragment,
+            SuccessfulCast {
+                sequence: self.cast_sequence,
+                at,
+            },
+        );
     }
 
     fn record_successful_cast(&mut self, spell: &SpellInfo, at: f64) {
         self.cast_sequence += 1;
         self.successful_casts.insert(
-            spell.id,
+            SuccessKey::Spell(spell.id),
             SuccessfulCast {
                 sequence: self.cast_sequence,
                 at,
