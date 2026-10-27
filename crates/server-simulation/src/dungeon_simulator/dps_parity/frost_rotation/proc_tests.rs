@@ -626,6 +626,22 @@ fn frost_soul_rupture_from_real_mark_explosion() {
     assert!(!events.iter().any(|event| event.spell_id == Some(439594) && event.kind == CombatLogKind::Damage && event.target == Some(run.targets[0].to_bits())));
 }
 
+#[test]
+#[ignore = "real Mark explosion grants Swift and Painful with no secondary target"]
+fn frost_soul_rupture_without_secondary_earns_swift_and_painful() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::super::prepare_measurement(251, 1).unwrap();
+    super::super::engage(&mut run);
+    assert!(auras::has_aura(run.app.world(), run.actor, 437161));
+    assert!(auras::has_aura(run.app.world(), run.actor, 443560));
+    cast(&mut run, 439843);
+    for _ in 0..500 {
+        run.app.update();
+        if auras::has_aura(run.app.world(), run.actor, 469169) { return; }
+    }
+    panic!("single-target Mark explosion must earn Swift and Painful");
+}
+
 fn grim_mark_explosion(health_fraction: f32) -> i32 {
     use crate::spell_cast::test_harness::ObservedCombatEvents;
     use shared::protocol::CombatLogKind;
