@@ -257,7 +257,10 @@ fn consume_rime(world: &mut World, caster: Entity, spell: &SpellInfo) {
     if auras::has_aura(world, caster, 377076)
         && !spell_cast::try_cast_triggered(world, caster, 341725, Some(caster), 1)
     {
-        warn!(?caster, "Native Rage of the Frozen Champion energize refused");
+        warn!(
+            ?caster,
+            "Native Rage of the Frozen Champion energize refused"
+        );
     }
     extend_breath(world, caster, 1);
     trigger_dark_talons(world, caster);

@@ -26,6 +26,7 @@ struct VoidrushUntil(f64);
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::EarlyAuraRegistration(register),
     SpellScriptHook::OnCast(trigger_voidrush),
+    SpellScriptHook::TargetContextDamageMultiplier(meta_mastery_multiplier),
     SpellScriptHook::AfterNativeCastUpdate(update_drain),
 ];
 
@@ -38,6 +39,40 @@ fn register(scripts: &mut AuraScripts) {
             ..Default::default()
         },
     );
+}
+
+fn meta_mastery_multiplier(
+    world: &World,
+    ctx: &spell_cast::effects::EffectCtx<'_>,
+    _: Entity,
+    periodic: bool,
+) -> f32 {
+    if world.get::<ActiveSpec>(ctx.caster).map(|spec| spec.0) != Some(1480)
+        || !auras::has_aura(world, ctx.caster, META)
+    {
+        return 1.0;
+    }
+    let source = world
+        .resource::<combat::spell_info::SpellStore>()
+        .get(META)
+        .expect("native Meta spell");
+    let effect_index = if periodic { 4 } else { 3 };
+    let effect = source
+        .effects
+        .iter()
+        .find(|effect| effect.index == effect_index)
+        .expect("native Meta damage effect");
+    let class_set = source
+        .class_options
+        .as_ref()
+        .map_or(0, |options| options.spell_class_set);
+    if !auras::spell_mods::class_mask_matches(class_set, &effect.spell_class_mask, ctx.spell) {
+        return 1.0;
+    }
+    // SimC76f8118 cpp2169–2185 binds Meta's direct/tick mask to Monster Within
+    // effect3/4's native mastery coefficient.
+    let mastery_effect = if periodic { 3 } else { 2 };
+    1.0 + script_effect_value(world, ctx.caster, 1238855, mastery_effect) / 100.0
 }
 
 fn trigger_voidrush(world: &mut World, caster: Entity, spell: u32, _: u8) {
