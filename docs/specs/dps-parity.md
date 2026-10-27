@@ -531,6 +531,7 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 ### Controlled Imp inheritance
 
 - The actual controlled Imp416 inherits live owner spell power at5.625 for SP and2.8125 for AP (SimC76f8118 `sc_warlock_pets.cpp372–375`). Controlled Sayaad1863 inherits live owner spell power at5.175 for SP and2.565 for AP, including melee AP (`sc_warlock_pets.cpp421–430`). Preserve native spell coefficients, UNIT_PET identity, pet orders, stance, costs and storage. Do not replace either pet with a guardian or fixed damage payload. Unlisted controlled pets retain their existing power policy.
+- A target's owned Whiplash6360 stacks (native aura270, mask127) increase all of that Sayaad's damage, including real white swings; another caster's stacks do not (`sc_warlock_pets.cpp447–452`).
 
 ### Shared pet prerequisites
 
@@ -591,6 +592,10 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 - Selected Crashing Chaos417234 earns its native417282 reverse uses on actual Summon Infernal1122 execution. The native talent effect2 sets the starting use count; each Chaos Bolt consumes one use while its native direct-damage modifier applies once, not once per use (SimC76f8118 `sc_warlock_init.cpp:839–841`, `sc_warlock_actions.cpp:4401–4403,5080–5082`).
 
+### Destruction Chaotic Inferno
+
+- Each actual Chaos Bolt116858 execution with Chaotic Inferno1244788 selected advances an accumulated PRD from the native talent effect1 chance. A success grants native1244860. Its own cast-time modifier and single charge make the next Incinerate/Infernal Bolt instant and are consumed by that cast (SimC76f8118 `sc_warlock_actions.cpp:4000–4006,4391–4398,5244–5246`, `sc_warlock_init.cpp:830–831,1331–1334`). The pinned bugs-mode rule that keeps Backdraft during that instant Incinerate is not yet qualified.
+
 ### Destruction Roaring Blaze
 
 - A selected Roaring Blaze1244310 primary Conflagrate17962 hit spreads the caster's existing Wither445474 or Immolate157736 to nearby enemies as a free background DoT, without direct damage. Prioritize targets without the caster's Immolate, as the pinned smart-target selector does even with Wither; the native effect1 count sets the limit, with one extra already-infected target in pinned `bugs=true` mode. Do not spread from Havoc copies or a primary without the caster's DoT (SimC76f8118 `sc_warlock_actions.cpp:4440–4500`, `sc_warlock.cpp:1272–1319`).
@@ -625,6 +630,7 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 - Pet and guardian spell damage, healing and ordinary melee use live owner versatility (SimC76f8118 `pet.hpp138–142`). The controlled Felguard inherits owner spell power as its attack and spell power through the existing demon policy (`sc_warlock_pets.cpp663–668`).
 - Wild Imp Fel Firebolt hits only its primary unless that Imp has Unstable Soul; its native effect2 supplies extra hits, repeating available recipients when needed (`sc_warlock_pets.cpp713–793`). Selected Infernal Rapidity rolls native1263941 effect1 independently per Imp, launching a free twin scaled by effect2; under bugs=1, a last cast that earns Isolated Implosion does not produce a twin (`pets.cpp713–849`).
 - Selected MID2 four-piece rolls native1296574 effect3's accumulated chance on actual Imp exhaustion. A successful Imp travels to its actual target and launches native1306077, using native196278's damage coefficient and native1296574 effects1/2 for primary and secondary damage. Under pinned bugs=1, isolated deaths do not grant Demonic Core (`sc_warlock_pets.cpp833–849/963–983`, `sc_warlock_actions.cpp3200–3290`).
+- Selected Inner Demons starts at actual combat entry with a uniformly random first phase, then summons native279910 at the native267216 period without haste (`sc_warlock_init.cpp766–771/1722–1725`). It stops outside combat.
 - Actual Wild Imp104317/55659 guardians cannot regenerate spent Energy (pinned `pets.cpp701/875–882`). Native pool sizes, spell costs and actual exhaustion/removal remain authoritative; other guardian regeneration is unchanged. Selected Imp Gang Boss applies native1250772 to the first actual Imp of each Hand of Gul'dan group (`actions.cpp5716–5723`).
 - Player-controlled follower minions inherit the same player-affected attack permission as their owner, without changing either NPC identity or native summon-property ownership rules. Ordinary NPC summons remain subject to NPC-versus-neutral restrictions (SimC76f8118 `pet.cpp66–68`).
 - [ ] Dreadstalker, Imp Lord and Dominion guardians execute source-bound native actions from their actual actors. Only validated source inheritance is adopted; native coefficients and power costs are unchanged. Fresh Imp Lord initialization and its125-Energy readiness gate follow pinned `pets.cpp1680–1705`; ordinary maximum-power folds retain its source-defined200 base rather than replacing it with generic100. This never resets an existing owner or pet pool. Prepared private data must publish the exact native summon-root templates through the existing importer.

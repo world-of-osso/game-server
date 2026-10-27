@@ -321,6 +321,8 @@ fn prepare_measurement(spec_id: u32, count: usize) -> Result<Run, String> {
         let mut run = spawn_literal_reference(profile, &traits, count, identity)?;
         if spec_id == 64 {
             frost_mage_rotation::configure_actor_reactions(run.app.world_mut(), run.actor)?;
+        } else if spec_id == 1480 {
+            devourer_rotation::configure_actor_reactions(run.app.world_mut(), run.actor)?;
         }
         preparation::consume_profile_food(&mut run)?;
         run.spec_driver = Some((driver.prepare)(&mut run)?);
