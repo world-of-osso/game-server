@@ -132,6 +132,7 @@ mod evoker_leaping_tests;
 mod evoker_rising_damage_tests;
 mod evoker_siege_tests;
 mod evoker_sweep_burst_tests;
+mod evoker_titanic_tests;
 mod feral_burst_tests;
 mod feral_convoke_tests;
 mod feral_growth_tests;
