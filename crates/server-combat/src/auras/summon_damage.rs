@@ -52,7 +52,7 @@ fn guardian_taken_multiplier(
     })
 }
 
-fn ownership(world: &World, unit: Entity) -> Option<(Entity, bool)> {
+pub(crate) fn ownership(world: &World, unit: Entity) -> Option<(Entity, bool)> {
     owner_and_guardian((
         world.get::<SummonedCreature>(unit),
         world.get::<HunterPet>(unit),
