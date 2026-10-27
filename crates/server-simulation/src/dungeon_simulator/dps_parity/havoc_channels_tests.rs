@@ -163,6 +163,68 @@ fn havoc_chaos_theory_dance_grants_buff_and_offhand_consumes_it_for_refund() {
 
 #[test]
 #[ignore = "requires prepared native spec577 player profile"]
+fn havoc_know_your_enemy_uses_half_of_live_crit_for_actual_damage() {
+    use crate::spell_cast::effects::factor_capture::FactorCapture;
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(577, 1).unwrap();
+    let actor = run.actor;
+    let target = run.targets[0];
+    assert!(
+        crate::auras::has_aura(run.app.world(), actor, 388118),
+        "real profile selects Know Your Enemy"
+    );
+    for _ in 0..30 {
+        run.app
+            .world_mut()
+            .get_mut::<crate::stats::CharacterStats>(actor)
+            .unwrap()
+            .crit_pct = 50.0;
+        run.app.update();
+    }
+    let crit = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(actor)
+        .unwrap()
+        .crit_pct;
+    let ranked_percent =
+        crate::spell_cast::scripts::script_effect_value(run.app.world(), actor, 388118, 1);
+    run.app.insert_resource(FactorCapture::new(
+        actor,
+        target,
+        227518,
+        "annihilation_damage_1",
+        40,
+    ));
+    for seed in 1..=40 {
+        let _seed = crate::random::seed_scope(seed);
+        crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 227518, Some(target), 1);
+    }
+    let capture = run.app.world().resource::<FactorCapture>().export();
+    let event = capture["events"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|event| {
+            event["spell_id"] == 227518
+                && event["event"] == "result"
+                && event["factors"]["result"] == "crit"
+        })
+        .expect("real Annihilation must produce a critical impact");
+    let actual = 1.0 + event["factors"]["crit_bonus"].as_f64().unwrap();
+    // Two real Eyes of the Eagle enchants each add2% to the whole critical hit.
+    let expected = 2.0
+        * 1.02
+        * 1.02
+        * (1.0 + f64::from(ranked_percent) / 100.0 * f64::from(crit) / 100.0 * 0.5);
+    assert!(
+        (actual - expected).abs() < 0.03,
+        "real critical multiplier must use the SimC half-crit factor: crit={crit}, rank={ranked_percent}, actual={actual}, expected={expected}"
+    );
+}
+
+#[test]
+#[ignore = "requires prepared native spec577 player profile"]
 fn havoc_never_say_die_low_health_does_not_start_damage_bonus() {
     let _seed = crate::random::seed_scope(70_448);
     let (profile, traits) = read_reference(577).unwrap();

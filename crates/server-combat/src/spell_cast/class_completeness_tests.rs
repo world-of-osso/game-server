@@ -919,6 +919,7 @@ fn class_completeness_native80_rune_rejection_never_grants_runic_power() {
         .insert(super::runes::Runes {
             cooldowns: vec![10.0; 6],
             order: vec![0, 1, 2, 3, 4, 5],
+            rate_duration: Some(10.0),
         });
     h.set_power(PowerType::Runes, 0.0);
     h.set_power(PowerType::RunicPower, 0.0);

@@ -7,6 +7,8 @@ use combat::spell_cast::{self, PlannedEffect, TargetPlan, effects::EffectCtx, ta
 use combat::spell_info::{SpellInfo, SpellStore};
 use shared::components::CombatStatus;
 
+#[path = "hunter_howl/hogstrider.rs"]
+mod hogstrider;
 #[path = "hunter_howl/pack_mentality.rs"]
 mod pack_mentality;
 #[path = "hunter_howl/summons.rs"]
@@ -14,6 +16,10 @@ mod summons;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::OwnsPolicyProc(owns_proc),
+    SpellScriptHook::OwnsPolicyProc(hogstrider::owns_proc),
+    SpellScriptHook::ResolvedDamage(hogstrider::after_boar_impact),
+    SpellScriptHook::BeforeDamageSnapshot(hogstrider::capture_cobra),
+    SpellScriptHook::BeforeExecutionCounterLaunch(hogstrider::consume_cobra),
     SpellScriptHook::AfterQueuedTriggers(begin_combat),
     SpellScriptHook::AfterElementalLaunch(after_launch),
     SpellScriptHook::TargetDamageMultiplier(pack_mentality::command_damage_multiplier),
@@ -139,6 +145,19 @@ fn consume_beasts(world: &mut World, caster: Entity, primary: Entity) {
             spell_cast::cast_triggered(world, caster, 471938, Some(primary), 1);
         } else if !summons::summon(world, caster, ready, primary) {
             continue;
+        }
+        if ready == 472325
+            && world
+                .get::<combat::class_progression::ActiveSpec>(caster)
+                .is_some_and(|spec| spec.0 == 253)
+            && has_talent(world, caster, 472476)
+        {
+            // SimC76f8118 hunter.cpp3797–3803: the real Bear brings the
+            // selected native number of ordinary Dire Beasts.
+            let count = spell_cast::scripts::script_effect_value(world, caster, 472476, 0) as usize;
+            for _ in 0..count {
+                super::hunter_dire_command::summon_dire_beast(world, caster, primary);
+            }
         }
         auras::remove_auras(world, caster, RemoveReason::Consumed, |aura| {
             aura.spell_id == ready

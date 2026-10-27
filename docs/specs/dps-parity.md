@@ -123,16 +123,16 @@ Frost player reaction clocks are configured before food setup advances native fr
 
 - Selected Huntmaster Call459730 increments native459731 once per actual Dire Beast, Dark Hound, or Bear. At its native stack cap it clears the counter and selects Fenryr459733 or Hati459739 equally; the selected owner buff459735/459738 supplies the real companion lifetime. Each companion uses live owner ranged AP and its own attacks; Fenryr launches native Ravenous Leap459753 (SimC76f8118 hunter1869–1873,1973–1982,2008,2049–2052,3715–3734,3865–3874).
 
-- Selected Dire Command378743 rolls its native chance using SimC accumulated PRD after actual BM Kill Command and summons native219199. Its native base lifetime is converted to the source's haste-scaled probabilistic swing count; Beast110063 inherits live owner ranged AP (SimC76f8118 hunter1736–1755,1935,6610–6613,8396).
+- Selected Dire Command378743 rolls its native chance using SimC accumulated PRD after actual BM Kill Command and summons native219199. Selected Ursine Fury472476 summons its native number of the same Dire Beasts when an earned Bear is summoned. Their native base lifetime is converted to the source's haste-scaled probabilistic swing count; Beast110063 inherits live owner ranged AP (SimC76f8118 hunter1736–1755,1935,3797–3803,6610–6613,8396).
 
 - Selected Wildspeaker1232739 applies native1235388 to existing DireCritters when owner Bestial Wrath succeeds. New DireCritters joining an active owner BW inherit only its remaining time, before summon-time Rend executes; stable pets keep their separate native Wrath path (SimC76f8118 hunter1866–1867,6729–6736).
-- Actual DireCritters inherit the owner's live critical chance for melee and spell attacks even when they have no autonomous guardian spell list (SimC76f8118 pet.cpp217–220).
+- Actual DireCritters inherit the owner's live critical chance for melee and spell attacks even when they have no autonomous guardian spell list (SimC76f8118 pet.cpp217–220). Their spells also inherit the owner's selected passive spell modifiers when native masks match, including Savagery on Wildspeaker1232922 (SimC76f8118 player.cpp15268–15324).
 
 - Selected Fury of the Wyvern472550 extends an existing earned Cry471881 after successful BM Kill Command34026, including the consuming command. Native effect2 supplies each extension and effect4 the total budget. Actual Cry removal resets the budget; white-impact stack growth does not (SimC76f8118 hunter6626–6630,8279–8287).
 
 - Selected Pack Mentality472358 reduces already-running Barbed217200 and Wildfire259495 recovery once per actually consumed Howl beast. Native effects2/3 supply the times; simultaneous Wyvern/Boar consumption pays both reductions before Stampede begins. Unused clocks remain inactive (SimC76f8118 hunter3808–3811).
-- When any Howl beast is ready, selected Pack Mentality adds its native first effect to Alpha Predator's native Kill Command damage bonus before the real owned-pet83381 hit. The bonus does not change Wildspeaker1232922 (SimC76f8118 hunter2764–2785).
-- Selected Dire Frenzy385810 multiplies actual DireCritter melee and spell damage by its native second effect. It does not affect other pets or summons (SimC76f8118 hunter1877–1882).
+- Every real owned-pet83381 hit multiplies 1 + selected Alpha Predator269737 native effect2, on top of the owner's passive spell mods (which separately apply its effect4, Savagery and Specialized Arsenal). When any Howl beast is ready, selected Pack Mentality adds its native first effect to that same term before multiplying. The term does not change Wildspeaker1232922 (SimC76f8118 hunter2768–2789).
+- Selected Dire Frenzy385810 multiplies actual DireCritter melee and spell damage by its native second effect. Real DireCritters also start native Pet Damage1284992, including the selected specialization's native modifier. Neither applies to other pets or summons (SimC76f8118 hunter1854–1869,1877–1882).
 
 - Each actual main-pet, companion or stable Nature's Ally white impact adds one stack to that owner's already active Wyvern Cry471881, including avoided outcomes. Preserve the native cap and the existing expiration; white impacts cannot create inactive Cry. Keep landed-hit producers and ordinary proc masks unchanged (SimC76f8118 hunter2974–3010).
 
@@ -148,6 +148,7 @@ Frost player reaction clocks are configured before food setup advances native fr
 - Selected Howl starts its native cooldown at combat entry and earns Wyvern, Boar and Bear readiness in order. Bestial Wrath with selected Stampede independently advances that cycle. Ordinary BM34026 and Survival259489 Kill Command consume every earned ready beast: Wyvern and Bear require actual owned native summons; Wyvern Cry follows the real Wyvern. Consuming readiness starts the native cooldown only when absent. All earned readiness and Incoming Stampede are script-owned: unrelated successful casts and triggered children cannot spend them. Only actual Kill Command consumes earned beasts; consuming Howl spends Incoming Stampede. An armed Stampede starts only after a consumed Howl and retains the selected primary, native tick-zero/periodic clock and600/900/1200ms payload delays; native201594 damages the pack without a target cap (SimC76f8118 hunter3776–3841/4864–4900/6780–6781/8240–8270/8698–8699). Bear attacks and Wildspeaker remain separately unqualified.
 
 - Selected Dire Summons472352 reduces only the owner's running Howl471877 clock after actual BM/SV Kill Command, Cobra Shot and source-qualified Survival melee Focus spenders, using native effects0/1/2/3 respectively. An exhausted clock expires through its real next-beast callback; an inactive clock stays inactive. Howl consumption precedes recovery (SimC76f8118 hunter4966/6127/6604–6624).
+- Selected Hogstrider472639 earns native472640 stacks from real Boar damage. The next Cobra Shot snapshots its native damage bonus once, selects additional enemies using the earned stacks, and consumes the aura at launch (SimC76f8118 hunter4817–4846/4944–4980).
 
 - Selected War Orders reduces already-running Kill Command cooldown/recharge after a successful Barbed Shot by native393933 effect2's time value. It does not start a cooldown or replace native charge recovery.
 
@@ -337,11 +338,13 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 - Earned Serrated Glaive390155 supplies selected talent390154's effect0 percentage to its native spell modifier; the buff's class mask and lifetime still determine which real actions benefit (SimC76f8118 `sc_demon_hunter.cpp`2195–2196,7534–7539).
 
+- Know Your Enemy388118's critical-damage modifier uses half its native ranked percentage of the owner's critical chance (SimC76f8118 `sc_demon_hunter.cpp`11998–12006).
+
 - Selected Chaotic Disposition428492 rolls its native number of independent chances on each affected Demon Hunter chromatic-school direct or periodic damage action; each success adds its native damage percentage. The Hunt and its DoT are excluded, and Felblade damage is included (SimC76f8118 `sc_demon_hunter.cpp`2105–2108,2317–2346,2370–2396,5493–5497,7854–7858).
 
 - Selected Eternal Hunt1270901 applies its native effect0 percentage a second time to the final Blade Dance and Death Sweep primary and secondary strikes, not to earlier strikes (SimC76f8118 `sc_demon_hunter.cpp`7055–7065,7113–7121).
 
-- Native Eye Beam198013 and Gaze452497 apply aura33 at −200% movement speed during the channel. Preserve that self-slow, Vengeful Retreat's real displacement and beam range: a target outside the cone range misses ticks until the channel ends and the actor can return. SimC76f8118 `sc_demon_hunter.cpp`1551–1611,8539–8620 models Retreat's return as an out-of-melee timer rather than that physical trajectory; this can produce a parity difference.
+- A melee fixture returns to its selected target at native run speed after self-displacement, including instant teleports. Continue polling its APL: an otherwise-ready action outside its native target range waits without falling through, while eligible self-casts, off-GCD and in-range actions remain available. A hostile channel waits for active displacement to end so its target-range check uses the settled position. Targets stay fixed and actual casts retain native range, movement control and channel self-slow. Real Retreat followed by Eye Beam must land all twelve native ticks.
 
 - Selected Chaos Theory389687 grants native390195 on Blade Dance/Death Sweep. Each affected damage action samples an additive crit-chance bonus between native talent effect0 and effect1; the buff's native proc modifier applies to Chaos Strike/Annihilation's off-hand refund roll. That off-hand execution consumes the buff whether or not a refund occurs (SimC76f8118 sc_demon_hunter.cpp2098–2103,2413–2420,7234–7237,7481–7515).
 
@@ -636,9 +639,12 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 - Spec267 landed Wither445474 and Immolate157736 ticks grant0.1 displayed Soul Shard through the shared native power/overflow pipeline. A critical tick rolls its native direct spell445468/348 effect1 chance for one additional fragment. Immune ticks do not fund shards; fully absorbed landed ticks remain eligible. Native PowerType metadata supplies raw units (SimC76f8118 `sc_warlock_actions.cpp1108–1117,4047–4059`, `sc_warlock_init.cpp1319,1443`).
 - The periodic registry forwards the actual critical result. Other specializations, including Affliction Wither, receive no Destruction funding; Agony's separate threshold RNG is outside this policy.
 
-### Diabolic Ritual initial timer
+### Diabolic Ritual, Demonic Art and Ruination
 
-- Selected Demonology Diabolic Ritual starts its native Overlord timer on in-combat Hand of Gul'dan payment and reduces it per paid shard (`sc_warlock_actions.cpp278–355`). Other spenders, Infernal Machine, Destruction, Art cycling and demon summons remain unimplemented.
+- Selected Demonology Diabolic Ritual starts on in-combat Hand of Gul'dan payment and shortens the held ritual by native effect1 seconds per paid shard (`sc_warlock_actions.cpp278–355`). The first ritual of an encounter is uniform; each ritual's natural end selects the next Overlord→Mother of Chaos→Pit Lord ritual (`sc_warlock_init.cpp927–931,1750`).
+- A ritual's natural end grants its native Demonic Art after a gauss(200ms, 15ms) delay, replacing any held Art without summoning (`sc_warlock_init.cpp857–888`). A Hand whose cast started with the Art held, or any Ruination, consumes it. Consumption or expiry in combat summons that Art's native demon (`sc_warlock_init.cpp897–925`).
+- The Mother of Chaos summon grants native Infernal Bolt433891 with selected Secrets of the Coven. The Pit Lord summon grants native Ruination433885 with selected Ruination (`sc_warlock_actions.cpp5445–5481`). Each replacement cast consumes one stack of its buff. Ruination's primary impact drops the native three-shard Hand meteor and its three Wild Imps after gauss(395ms, 35ms) (`sc_warlock_actions.cpp5262–5333`).
+- Infernal Machine, other ritual spenders, Destruction, Diabolic Oculi and the demons' own actions remain unimplemented.
 
 ### Demonology literal execution and alternative Tyrant
 
@@ -658,6 +664,7 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 - Selected MID2 four-piece rolls native1296574 effect3's accumulated chance on actual Imp exhaustion. A successful Imp travels to its actual target and launches native1306077, using native196278's damage coefficient and native1296574 effects1/2 for primary and secondary damage. Under pinned bugs=1, isolated deaths do not grant Demonic Core (`sc_warlock_pets.cpp833–849/963–983`, `sc_warlock_actions.cpp3200–3290`).
 - Selected Inner Demons starts at actual combat entry with a uniformly random first phase, then summons native279910 at the native267216 period without haste (`sc_warlock_init.cpp766–771/1722–1725`). It stops outside combat.
 - Selected Carnivorous Stalkers rolls native386194 effect1 on each actual Dreadstalker melee execution and queues a real271971 Dreadbite when the guardian is ready (`sc_warlock_pets.cpp1116–1143`, `sc_warlock_init.cpp1272–1274`).
+- Selected Mark of Shatug casts native455491 Gloom Slash on the attack target after each actual Gloomhound226268 melee and Headbutt267999 execution (`sc_warlock_pets.cpp1361–1373,1405–1418`).
 - Selected Inner Demons starts at actual combat entry with a uniformly random first phase, then summons native279910 at the native267216 period without haste (`sc_warlock_init.cpp766–771/1722–1725`). It stops outside combat.
 - Actual Wild Imp104317/55659 guardians cannot regenerate spent Energy (pinned `pets.cpp701/875–882`). Native pool sizes, spell costs and actual exhaustion/removal remain authoritative; other guardian regeneration is unchanged. Selected Imp Gang Boss applies native1250772 to the first actual Imp of each Hand of Gul'dan group (`actions.cpp5716–5723`).
 - Player-controlled follower minions inherit the same player-affected attack permission as their owner, without changing either NPC identity or native summon-property ownership rules. Ordinary NPC summons remain subject to NPC-versus-neutral restrictions (SimC76f8118 `pet.cpp66–68`).

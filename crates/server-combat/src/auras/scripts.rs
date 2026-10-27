@@ -827,7 +827,13 @@ fn update_crit_scaled_bonus(world: &mut World, unit: Entity, aura: &AuraInstance
     let crit_pct = world
         .get::<crate::stats::CharacterStats>(unit)
         .map_or(0.0, |stats| stats.crit_pct);
-    let amount = crit_pct * percent.amount / 100.0;
+    // SimC sc_demon_hunter.cpp:11998-12006 halves only Know Your Enemy.
+    let scale = if aura.spell_id == KNOW_YOUR_ENEMY {
+        0.5
+    } else {
+        1.0
+    };
+    let amount = crit_pct * percent.amount / 100.0 * scale;
     let Some(bonus) = world
         .get_mut::<super::ActiveAuras>(unit)
         .and_then(|auras| auras.into_inner().get_mut(aura.instance_id))

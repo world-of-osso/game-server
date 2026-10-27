@@ -352,6 +352,25 @@ fn defensives_priest_power_word_shield_absorbs_and_is_consumed() {
 }
 
 #[test]
+fn defensives_hit_capped_stat_bearing_npc_swings_always_land() {
+    // TC a352b1fa Unit::MeleeSpellMissChance subtracts the attacker's aura54
+    // hit modifier for every unit, including creatures with class stats.
+    let mut h = harness(Vec::new(), &[FIREBALL], 1).expect("real world.db required");
+    for swing in 0..100 {
+        let melee = incoming_melee(&mut h);
+        assert!(
+            melee.health_loss > 0.0,
+            "swing {swing} missed a 100% hit NPC"
+        );
+        h.app
+            .world_mut()
+            .get_mut::<shared::components::Health>(h.caster)
+            .unwrap()
+            .current = 1000.0;
+    }
+}
+
+#[test]
 fn defensives_unprotected_control_takes_full_fire_damage() {
     let mut h = harness(Vec::new(), &[FIREBALL], 1).expect("real world.db required");
     assert_eq!(incoming_fire(&mut h, INCOMING_DAMAGE), INCOMING_DAMAGE);

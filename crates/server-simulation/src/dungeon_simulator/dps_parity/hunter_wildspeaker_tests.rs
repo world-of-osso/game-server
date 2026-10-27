@@ -9,6 +9,11 @@ fn native_bm_wildspeaker_commands_existing_bear_before_consuming_next_howl() {
         crate::auras::has_aura(run.app.world(), run.actor, 1232739),
         "native profile selects Wildspeaker"
     );
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, 472476));
+    let count =
+        crate::spell_cast::scripts::script_effect_value(run.app.world(), run.actor, 472476, 0)
+            as usize;
+    let mut before_bear = std::collections::BTreeSet::new();
     engage(&mut run);
     crate::combat_refs::set_in_combat_with(run.app.world_mut(), run.actor, run.targets[0]);
     run.app.update();
@@ -20,6 +25,16 @@ fn native_bm_wildspeaker_commands_existing_bear_before_consuming_next_howl() {
             run.app.update();
         }
         assert!(crate::auras::has_aura(run.app.world(), run.actor, ready));
+        if ready == 472325 {
+            before_bear = run
+                .app
+                .world_mut()
+                .query::<(Entity, &crate::spell_cast::summon::SummonedCreature)>()
+                .iter(run.app.world())
+                .filter(|(_, summon)| summon.owner == run.actor && summon.spell_id == 219199)
+                .map(|(entity, _)| entity.to_bits())
+                .collect();
+        }
         crate::spell_cast::creature_cast(
             run.app.world_mut(),
             run.actor,
@@ -30,6 +45,25 @@ fn native_bm_wildspeaker_commands_existing_bear_before_consuming_next_howl() {
         .expect("ordinary KC consumes naturally earned beast");
         preparation::finish_pending_setup(&mut run).unwrap();
     }
+    let new_beasts = run
+        .app
+        .world_mut()
+        .query::<(Entity, &crate::spell_cast::summon::SummonedCreature)>()
+        .iter(run.app.world())
+        .filter(|(entity, summon)| {
+            summon.owner == run.actor
+                && summon.spell_id == 219199
+                && !before_bear.contains(&entity.to_bits())
+        })
+        .map(|(entity, _)| entity.to_bits())
+        .collect::<Vec<_>>();
+    // SimC76f8118 hunter.cpp3797–3803: selected Ursine Fury summons its
+    // native number of real Dire Beasts when the earned Bear is summoned.
+    assert!(
+        count > 0 && new_beasts.len() >= count,
+        "actual Bear must bring {count} Dire Beasts: spawned={}",
+        new_beasts.len()
+    );
     let bear = run
         .app
         .world_mut()
@@ -63,6 +97,30 @@ fn native_bm_wildspeaker_commands_existing_bear_before_consuming_next_howl() {
         0,
         "new Bear must not retroactively receive its summoning KC"
     );
+    let beast_attempts = |run: &Run, beast: u64| {
+        run.app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .filter(|event| {
+                event.source == Some(beast)
+                    && event.target == Some(run.targets[0].to_bits())
+                    && event.spell_id == Some(1232922)
+                    && matches!(
+                        event.kind,
+                        shared::protocol::CombatLogKind::Damage
+                            | shared::protocol::CombatLogKind::Miss(_)
+                    )
+            })
+            .count()
+    };
+    assert!(
+        new_beasts
+            .iter()
+            .all(|beast| beast_attempts(&run, *beast) == 0),
+        "new Dire Beasts cannot receive the command that summoned them"
+    );
     crate::spell_cast::creature_cast(
         run.app.world_mut(),
         run.actor,
@@ -77,11 +135,17 @@ fn native_bm_wildspeaker_commands_existing_bear_before_consuming_next_howl() {
         1,
         "the existing Bear must execute one native Wildspeaker command at the actual primary"
     );
+    assert!(
+        new_beasts
+            .iter()
+            .all(|beast| beast_attempts(&run, *beast) == 1),
+        "each existing new Dire Beast must receive the next real command"
+    );
 }
 
 #[test]
 #[ignore = "requires private spec253 reference inputs and native world DB"]
-fn native_wildspeaker_dire_beasts_inherit_owner_crit() {
+fn native_wildspeaker_dire_beasts_inherit_owner_crit_and_savagery() {
     let _seed = crate::random::seed_scope(70_448);
     let mut run = prepare_measurement(253, 1).expect("native literal BM fixture");
     let mut summons = run
@@ -91,12 +155,29 @@ fn native_wildspeaker_dire_beasts_inherit_owner_crit() {
     let mut observed_actor = None;
     let mut seen = 0;
     assert!(crate::auras::has_aura(run.app.world(), run.actor, 459550));
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, 424557));
+    let selected_passives = [(269737, 3), (424557, 0), (459542, 0)];
+    let expected_modifier: f64 = selected_passives
+        .into_iter()
+        .map(|(spell, effect)| {
+            assert!(crate::auras::has_aura(run.app.world(), run.actor, spell));
+            let amount = crate::spell_cast::scripts::script_effect_value(
+                run.app.world(),
+                run.actor,
+                spell,
+                effect,
+            );
+            assert!(amount > 0.0);
+            1.0 + f64::from(amount) / 100.0
+        })
+        .product();
     let mut critical_hits = 0;
     let mut critical_bonuses = Vec::new();
     let mut white_critical_hits = 0;
     let mut seen_combat_events = 0;
     let mut beasts = std::collections::BTreeSet::new();
     let mut chances = Vec::new();
+    let mut damage_modifiers = Vec::new();
     engage(&mut run);
     let started_at = run.app.world().resource::<Time>().elapsed();
     install_fixture_lifetimes(&mut run, started_at);
@@ -143,6 +224,11 @@ fn native_wildspeaker_dire_beasts_inherit_owner_crit() {
                 if event["event"] != "result" || event["spell_id"] != 1232922 {
                     continue;
                 }
+                damage_modifiers.push(
+                    event["factors"]["native_spell_mod_product"]
+                        .as_f64()
+                        .unwrap(),
+                );
                 let owner_crit = world
                     .get::<crate::stats::CharacterStats>(run.actor)
                     .unwrap()
@@ -193,6 +279,14 @@ fn native_wildspeaker_dire_beasts_inherit_owner_crit() {
     assert!(
         !chances.is_empty(),
         "actual Dire Beast Wildspeaker must land a hit"
+    );
+    // SimC76f8118 player.cpp15268–15324 and native424557: actual
+    // DireCritter commands use the owner's selected passive spell modifier.
+    assert!(
+        damage_modifiers
+            .iter()
+            .all(|factor| *factor + 0.001 >= expected_modifier),
+        "actual Wildspeaker damage must include selected passive modifiers: expected={expected_modifier}, actual={damage_modifiers:?}"
     );
     // SimC76f8118 pet.cpp217–220: DireCritters inherit their owner's live crit.
     assert!(
