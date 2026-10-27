@@ -41,7 +41,7 @@ fn elemental_fellowship_natural_expiries_draw_native_deck() {
             .unwrap()
             .amount as usize
     };
-    let (total, successes) = (amount(0), amount(1));
+    let (total, successes) = (amount(1), amount(2));
     assert_eq!((total, successes), (30, 6), "native Fellowship deck");
     for _ in 0..total {
         crate::spell_cast::scripts::summon_ancestor(run.app.world_mut(), run.actor, 0);
