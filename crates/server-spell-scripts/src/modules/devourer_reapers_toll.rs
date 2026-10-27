@@ -1,6 +1,7 @@
 //! SimC76f8118 sc_demon_hunter.cpp6697–6783: Reaper's Toll executes native damage.
 use super::combat;
 use bevy::prelude::*;
+use combat::soul_fragments::{self, FragmentKind};
 use combat::spell_cast::{self, script_registry::SpellScriptHook};
 use combat::spell_info::SpellInfo;
 use shared::components::ActiveSpec;
@@ -24,5 +25,12 @@ fn after_launch(world: &mut World, caster: Entity, spell: &SpellInfo) {
             ?target,
             "native Reaper's Toll damage 1239127 was refused"
         );
+        return;
+    }
+    // SimC76f8118 cpp6699–6717,6739–6742: the child spawns parent effect1's count.
+    let count = spell_cast::scripts::script_effect_value(world, caster, 1245470, 0) as usize;
+    for _ in 0..count {
+        soul_fragments::spawn(world, caster, FragmentKind::Lesser, false)
+            .expect("native Reaper's Toll fragment");
     }
 }
