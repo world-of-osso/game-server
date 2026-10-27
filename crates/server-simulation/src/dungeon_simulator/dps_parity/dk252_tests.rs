@@ -250,6 +250,62 @@ fn dk252_putrid_echoes_spends_both_charges_and_summons_two_ghouls() {
 
 #[test]
 #[ignore = "requires private native252 profile/traits and player actor"]
+fn dk252_three_real_magi_raise_the_lord_of_the_dead() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 1).unwrap();
+    engage(&mut run);
+    for _ in 0..2 {
+        literal_rotation::execution::execute(
+            run.app.world_mut(),
+            run.actor,
+            literal_rotation::execution::Execution::Spell(
+                1247378,
+                run.targets[0],
+                Some(run.targets[0]),
+            ),
+        )
+        .unwrap();
+        for _ in 0..50 {
+            run.app.update();
+        }
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    let summons = |spell| {
+        events
+            .iter()
+            .filter(|event| {
+                event.source == Some(run.actor.to_bits())
+                    && event.spell_id == Some(spell)
+                    && event.kind == CombatLogKind::Summon
+            })
+            .count()
+    };
+    assert_eq!(
+        summons(1242294),
+        3,
+        "actual Putrefy casts must produce three native Magi"
+    );
+    assert_eq!(
+        summons(1292072),
+        1,
+        "three actual Magi must be consumed to summon one native Lord of the Dead"
+    );
+    let world = run.app.world_mut();
+    assert!(
+        !world
+            .query::<&shared::components::Npc>()
+            .iter(world)
+            .any(|npc| npc.template_id == 163366),
+        "the three source Magi must actually be dismissed"
+    );
+}
+
+#[test]
+#[ignore = "requires private native252 profile/traits and player actor"]
 fn dk252_lord_magus_uses_selected_native_lifetime() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(252, 1).unwrap();
