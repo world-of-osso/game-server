@@ -21,6 +21,18 @@ fn cast_paid(run: &mut Run, spell: u32) {
 
 #[test]
 #[ignore = "requires private267 native player inputs"]
+fn destruction_roaring_blaze_conflagrate_without_primary_dot_spreads_nothing() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(267, 3).unwrap();
+    engage(&mut run);
+    cast_paid(&mut run, 17962);
+    for &target in &run.targets {
+        assert!(!crate::auras::has_aura(run.app.world(), target, 445474));
+    }
+}
+
+#[test]
+#[ignore = "requires private267 native player inputs"]
 fn destruction_roaring_blaze_actual_conflagrate_spreads_owned_wither() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(267, 3).unwrap();
