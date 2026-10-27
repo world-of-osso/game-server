@@ -9,6 +9,11 @@ fn native_bm_wildspeaker_commands_existing_bear_before_consuming_next_howl() {
         crate::auras::has_aura(run.app.world(), run.actor, 1232739),
         "native profile selects Wildspeaker"
     );
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, 472476));
+    let count =
+        crate::spell_cast::scripts::script_effect_value(run.app.world(), run.actor, 472476, 0)
+            as usize;
+    let mut before_bear = std::collections::BTreeSet::new();
     engage(&mut run);
     crate::combat_refs::set_in_combat_with(run.app.world_mut(), run.actor, run.targets[0]);
     run.app.update();
@@ -20,6 +25,16 @@ fn native_bm_wildspeaker_commands_existing_bear_before_consuming_next_howl() {
             run.app.update();
         }
         assert!(crate::auras::has_aura(run.app.world(), run.actor, ready));
+        if ready == 472325 {
+            before_bear = run
+                .app
+                .world_mut()
+                .query::<(Entity, &crate::spell_cast::summon::SummonedCreature)>()
+                .iter(run.app.world())
+                .filter(|(_, summon)| summon.owner == run.actor && summon.spell_id == 219199)
+                .map(|(entity, _)| entity.to_bits())
+                .collect();
+        }
         crate::spell_cast::creature_cast(
             run.app.world_mut(),
             run.actor,
@@ -30,6 +45,25 @@ fn native_bm_wildspeaker_commands_existing_bear_before_consuming_next_howl() {
         .expect("ordinary KC consumes naturally earned beast");
         preparation::finish_pending_setup(&mut run).unwrap();
     }
+    let new_beasts = run
+        .app
+        .world_mut()
+        .query::<(Entity, &crate::spell_cast::summon::SummonedCreature)>()
+        .iter(run.app.world())
+        .filter(|(entity, summon)| {
+            summon.owner == run.actor
+                && summon.spell_id == 219199
+                && !before_bear.contains(&entity.to_bits())
+        })
+        .map(|(entity, _)| entity.to_bits())
+        .collect::<Vec<_>>();
+    // SimC76f8118 hunter.cpp3797–3803: selected Ursine Fury summons its
+    // native number of real Dire Beasts when the earned Bear is summoned.
+    assert!(
+        count > 0 && new_beasts.len() >= count,
+        "actual Bear must bring {count} Dire Beasts: spawned={}",
+        new_beasts.len()
+    );
     let bear = run
         .app
         .world_mut()
@@ -63,6 +97,30 @@ fn native_bm_wildspeaker_commands_existing_bear_before_consuming_next_howl() {
         0,
         "new Bear must not retroactively receive its summoning KC"
     );
+    let beast_attempts = |run: &Run, beast: u64| {
+        run.app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .filter(|event| {
+                event.source == Some(beast)
+                    && event.target == Some(run.targets[0].to_bits())
+                    && event.spell_id == Some(1232922)
+                    && matches!(
+                        event.kind,
+                        shared::protocol::CombatLogKind::Damage
+                            | shared::protocol::CombatLogKind::Miss(_)
+                    )
+            })
+            .count()
+    };
+    assert!(
+        new_beasts
+            .iter()
+            .all(|beast| beast_attempts(&run, *beast) == 0),
+        "new Dire Beasts cannot receive the command that summoned them"
+    );
     crate::spell_cast::creature_cast(
         run.app.world_mut(),
         run.actor,
@@ -76,6 +134,12 @@ fn native_bm_wildspeaker_commands_existing_bear_before_consuming_next_howl() {
         attempts(&run),
         1,
         "the existing Bear must execute one native Wildspeaker command at the actual primary"
+    );
+    assert!(
+        new_beasts
+            .iter()
+            .all(|beast| beast_attempts(&run, *beast) == 1),
+        "each existing new Dire Beast must receive the next real command"
     );
 }
 

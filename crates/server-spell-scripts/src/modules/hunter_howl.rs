@@ -146,6 +146,17 @@ fn consume_beasts(world: &mut World, caster: Entity, primary: Entity) {
         } else if !summons::summon(world, caster, ready, primary) {
             continue;
         }
+        if ready == 472325
+            && world.get::<combat::class_progression::ActiveSpec>(caster).is_some_and(|spec| spec.0 == 253)
+            && has_talent(world, caster, 472476)
+        {
+            // SimC76f8118 hunter.cpp3797–3803: the real Bear brings the
+            // selected native number of ordinary Dire Beasts.
+            let count = spell_cast::scripts::script_effect_value(world, caster, 472476, 0) as usize;
+            for _ in 0..count {
+                super::hunter_dire_command::summon_dire_beast(world, caster, primary);
+            }
+        }
         auras::remove_auras(world, caster, RemoveReason::Consumed, |aura| {
             aura.spell_id == ready
         });
