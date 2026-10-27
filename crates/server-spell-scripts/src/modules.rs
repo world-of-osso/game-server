@@ -83,6 +83,7 @@ register_modules! {
     destruction_crit_scaling: (2673, "modules/destruction_crit_scaling.rs"),
     destruction_echo: (2676, "modules/destruction_echo.rs"),
     destruction_incinerate: (2671, "modules/destruction_incinerate.rs"),
+    destruction_incinerate_targets: (2677, "modules/destruction_incinerate_targets.rs"),
     destruction_infernal: (2674, "modules/destruction_infernal.rs"),
     destruction_mastery: (2672, "modules/destruction_mastery.rs"),
     destruction_overfiend: (2674, "modules/destruction_overfiend.rs"),

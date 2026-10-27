@@ -525,6 +525,11 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 - The literal267 controller commands its actual configured main pet against the current encounter primary through native pet orders (SimC76f8118 `pet.cpp67–68,149`). Preserve UNIT_PET identity, saved reaction stance, native attacks, costs and lifetime; do not substitute a guardian or manufacture pet damage.
 
+### Destruction Incinerate recipients
+
+- Actual Incinerate29722 damages its selected primary once. Without Fire and Brimstone196408 and an owned Havoc80240, it deals no secondary damage. Selected Fire and Brimstone admits every native area secondary at effect0's native25%; it excludes primary and the Havoc-marked recipient. One actual live owned Havoc recipient, even outside the FnB area, receives one impact with Havoc effect0's native50% plus selected FnB25%. Preserve native hit/crit/damage pipeline and snapshot the actual recipient multipliers at cast (SimC76f8118 actions3852–3900,3952–4002).
+- Native29722 effect1 [53,16] alone is not a talent gate: EffectAttributes0x20800 are radius flags; there are no SpellAuraRestrictions/SpellTargetRestrictions/conditions rows, and FnB label modifiers966/1886 do not match29722 labels19/16/292. Do not alter general target selectors or catalog data.
+
 ### Destruction Incinerate funding
 
 - An ordinary native Incinerate29722 primary impact keeps its existing244670 base grant. Selected Diabolic Embers387173 adds its native effect0 percentage of that base; an actual critical impact adds0.1 displayed shard scaled by the same talent. Use native PowerType raw units and the shared energize/overflow pipeline, without another base grant or resource pool (SimC76f8118 `sc_warlock_actions.cpp3927–3931,4015–4025`). Unselected noncritical hits retain the native base amount. Secondary/triggered copy relationships are separate.
