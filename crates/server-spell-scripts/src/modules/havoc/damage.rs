@@ -59,12 +59,6 @@ pub(super) fn chaotic_disposition_damage(
     let successes = (0..rolls)
         .filter(|_| combat::random::random::<f32>() < chance)
         .count();
-    if std::env::var_os("HAVOC_CHAOTIC_TRACE").is_some() {
-        eprintln!(
-            "CHAOTIC_SAMPLE spell={} rolls={rolls} chance={chance} successes={successes}",
-            ctx.spell.id
-        );
-    }
     1.0 + successes as f32 * bonus
 }
 
