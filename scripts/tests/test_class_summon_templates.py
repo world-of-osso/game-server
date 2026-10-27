@@ -33,6 +33,20 @@ class ClassSummonImportTests(unittest.TestCase):
                 self.assertEqual(conn.execute("SELECT name FROM tdb_creature_template WHERE entry=?", (entry,)).fetchone(), (name,))
                 self.assertIn(entry, selected, f"Huntmaster Call must reach native {name}")
 
+    def test_unholy_summons_reach_authentic_templates(self):
+        source = (ROOT / "data/world.db").resolve()
+        expected = {1277098: 258578, 275430: 237409, 1242294: 163366, 1292072: 264321}
+        with closing(sqlite3.connect(f"file:{source}?mode=ro", uri=True)) as conn:
+            selected = {row[0] for row in conn.execute(retail_content.CLASS_SUMMON_ENTRIES)}
+            for spell, entry in expected.items():
+                with self.subTest(spell=spell):
+                    native = conn.execute("""SELECT EffectMiscValue_0 FROM spell_effect
+                        WHERE SpellID=? AND DifficultyID=0 AND Effect=28""", (spell,)).fetchone()
+                    self.assertEqual(native, (entry,))
+                    self.assertIsNotNone(conn.execute(
+                        "SELECT name FROM tdb_creature_template WHERE entry=?", (entry,)).fetchone())
+                    self.assertIn(entry, selected)
+
     def test_dire_command_reaches_authentic_native_beast(self):
         source = (ROOT / "data/world.db").resolve()
         with closing(sqlite3.connect(f"file:{source}?mode=ro", uri=True)) as conn:
