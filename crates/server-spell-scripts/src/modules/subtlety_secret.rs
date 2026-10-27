@@ -190,7 +190,7 @@ fn snapshot_critical_chance(
 }
 
 fn secondary_fraction(world: &World, ctx: &EffectCtx, target: Entity, _: bool) -> f32 {
-    if !matches!(ctx.spell.id, PLAYER | CLONE | 1269560)
+    if !matches!(ctx.spell.id, PLAYER | CLONE)
         || ctx.spell.cast_primary_target == Some(target)
     {
         return 1.0;
