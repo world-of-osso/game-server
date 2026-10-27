@@ -10,6 +10,12 @@ fn outlaw_zero_in_earned_by_auto_attack_is_consumed_by_bte() {
     let mut run = prepare_literal(260, 1).unwrap();
     assert!(crate::auras::has_aura(run.app.world(), run.actor, 1259485));
     engage(&mut run);
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::AutoAttack(run.targets[0]),
+    )
+    .unwrap();
     for _ in 0..400 {
         run.app.update();
         if crate::auras::has_aura(run.app.world(), run.actor, 1259486) {
