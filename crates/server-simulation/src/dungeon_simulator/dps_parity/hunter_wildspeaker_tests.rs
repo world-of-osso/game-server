@@ -89,6 +89,9 @@ fn native_wildspeaker_dire_beasts_inherit_owner_crit() {
     let mut observed_actor = None;
     let mut seen = 0;
     let mut critical_hits = 0;
+    let mut white_critical_hits = 0;
+    let mut seen_combat_events = 0;
+    let mut beasts = std::collections::BTreeSet::new();
     let mut chances = Vec::new();
     engage(&mut run);
     let started_at = run.app.world().resource::<Time>().elapsed();
@@ -99,6 +102,23 @@ fn native_wildspeaker_dire_beasts_inherit_owner_crit() {
     for tick in 1..=TICKS {
         advance_fixture_frame(&mut run, started_at + frame * tick, started_at, &mut retired, &mut |_| {})
             .expect("ordinary native combat frame");
+        for (actor, summon) in summons.iter(run.app.world()) {
+            if summon.owner == run.actor && summon.spell_id == 219199 {
+                beasts.insert(actor.to_bits());
+            }
+        }
+        let events = &run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
+        for event in &events[seen_combat_events..] {
+            if event.source.is_some_and(|source| beasts.contains(&source))
+                && event.target == Some(run.targets[0].to_bits())
+                && event.spell_id.is_none()
+                && event.kind == shared::protocol::CombatLogKind::Damage
+                && event.crit
+            {
+                white_critical_hits += 1;
+            }
+        }
+        seen_combat_events = events.len();
         if let Some(actor) = observed_actor {
             let world = run.app.world();
             let capture = world.resource::<crate::spell_cast::effects::factor_capture::FactorCapture>().export();
@@ -136,4 +156,5 @@ fn native_wildspeaker_dire_beasts_inherit_owner_crit() {
     assert!(chances.iter().all(|(chance, owner)| *chance + 0.001 >= f64::from(*owner) / 100.0),
         "actual Dire Beast Wildspeaker must inherit owner crit: {chances:?}");
     assert!(critical_hits > 0, "actual Dire Beast Wildspeaker must land a natural crit");
+    assert!(white_critical_hits > 0, "actual Dire Beast white swings must land a natural crit");
 }
