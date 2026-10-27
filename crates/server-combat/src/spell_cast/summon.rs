@@ -645,7 +645,7 @@ fn calculate_wild_summon_stats(
             max: health,
         },
         armor: crate::level_scaling::CreatureArmor(base_armor * template.armor_modifier),
-        mana: read_wild_summon_mana(data, template, level)?,
+        mana: read_summon_mana(data, template, level)?,
         scaling,
         scaled_stats: scaling.map(|scaling| build_wild_summon_scaling(data, template, scaling)),
     })
@@ -671,7 +671,8 @@ fn build_wild_summon_scaling(
     )))
 }
 
-fn read_wild_summon_mana(
+/// TC Guardian::InitStatsForLevel and wild summons: class base mana x ManaModifier.
+fn read_summon_mana(
     data: &crate::world_data::WorldData,
     template: &crate::world_data::CreatureTemplate,
     level: u8,
@@ -766,6 +767,7 @@ struct SummonTemplate {
     display_scale: f32,
     speed_walk: f32,
     speed_run: f32,
+    mana: Option<shared::components::Mana>,
 }
 
 fn read_summon_template(
@@ -794,6 +796,7 @@ fn read_summon_template(
         display_scale,
         speed_walk: template.speed_walk,
         speed_run: template.speed_run,
+        mana: read_summon_mana(data, template, level)?,
     })
 }
 
@@ -985,6 +988,9 @@ fn spawn_summon(
             metadata,
         ),
     ));
+    if let Some(mana) = template.mana {
+        entity.insert(mana);
+    }
     let actor = entity.id();
     entity.world_scope(|world| {
         super::guardian::initialize(world, actor);

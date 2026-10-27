@@ -262,6 +262,25 @@ const GUARDIAN_POLICIES: &[GuardianPolicy] = &[
         owner_spell_share: Some(1.0),
         owner_attack_share: None,
     },
+    // SimC76f8118 sc_shaman.cpp4026–4042/4070–4139/4248–4315: Primal Fire and
+    // Storm APL order with owner SP1.0 x (1 + native Primal Elementalist117013
+    // effect0 80%); these native roots exist only with that talent.
+    GuardianPolicy {
+        summons: &[118291],
+        entry: 61029,
+        spells: &[117588, 118297, 57984],
+        repeat_gcd: None,
+        owner_spell_share: Some(1.8),
+        owner_attack_share: None,
+    },
+    GuardianPolicy {
+        summons: &[157319],
+        entry: 77942,
+        spells: &[157375, 157348, 157331],
+        repeat_gcd: None,
+        owner_spell_share: Some(1.8),
+        owner_attack_share: None,
+    },
 ];
 
 fn policy(summon: u32, entry: u32) -> Option<&'static GuardianPolicy> {
@@ -622,6 +641,21 @@ pub fn initialize_action_delays(
     }
 }
 
+/// Reset every bound action's cooldown, e.g. when a source re-summons an active
+/// guardian (SimC76f8118 sc_shaman.cpp11561–11564); cast state is unchanged.
+pub fn reset_action_cooldowns(world: &mut World, actor: Entity) {
+    let mut state = world
+        .get_mut::<GuardianActor>(actor)
+        .expect("cooldown reset requires an initialized native guardian");
+    state.spell_ready_at.clear();
+    let spells = state.spells.clone();
+    if let Some(mut history) = world.get_mut::<super::SpellHistory>(actor) {
+        for id in spells {
+            history.spell_ready_at.remove(&id);
+        }
+    }
+}
+
 pub(super) fn update(world: &mut World) {
     let actors: Vec<_> = world
         .query_filtered::<Entity, With<GuardianActor>>()
@@ -721,7 +755,9 @@ fn cast_first_ready(world: &mut World, actor: Entity, target: Entity) {
         };
         let repeatable = can_repeat(entry, spell);
         let targets = native_cast_targets(actor, target, spell);
-        if !read_action_timing_ready(world, actor, id, repeatable) {
+        if !read_action_timing_ready(world, actor, id, repeatable)
+            || !super::script_registry::guardian_action_eligible(world, actor, id, target)
+        {
             continue;
         }
         if super::creature_cast_with_targets(world, actor, id, targets).is_err() {

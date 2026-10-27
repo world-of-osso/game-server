@@ -629,6 +629,10 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 - Spec267 landed Wither445474 and Immolate157736 ticks grant0.1 displayed Soul Shard through the shared native power/overflow pipeline. A critical tick rolls its native direct spell445468/348 effect1 chance for one additional fragment. Immune ticks do not fund shards; fully absorbed landed ticks remain eligible. Native PowerType metadata supplies raw units (SimC76f8118 `sc_warlock_actions.cpp1108–1117,4047–4059`, `sc_warlock_init.cpp1319,1443`).
 - The periodic registry forwards the actual critical result. Other specializations, including Affliction Wither, receive no Destruction funding; Agony's separate threshold RNG is outside this policy.
 
+### Diabolic Ritual initial timer
+
+- Selected Demonology Diabolic Ritual starts its native Overlord timer on in-combat Hand of Gul'dan payment and reduces it per paid shard (`sc_warlock_actions.cpp278–355`). Other spenders, Infernal Machine, Destruction, Art cycling and demon summons remain unimplemented.
+
 ### Demonology literal execution and alternative Tyrant
 
 - Actual owned Wild Imps supply native296553 availability while any remain. Ordinary196277 selects the native maximum from the pinned eligible demon pool, launches selected Imps by remaining Energy then spawn order, emits native196278 with Energy scaling only on the primary and retires the actual actors. Selected To Hell and Back derives replacement count from native1281511 and uses native279910/143622 with1250772/1281512, not fabricated actors. Source: pinned `sc_warlock_actions.cpp2980–3170` and `sc_warlock_pets.cpp919–985`.
@@ -1002,6 +1006,8 @@ Selected Ancient Fellowship443423 draws its native shuffled deck once per natura
 Selected Offering from Beyond443451 reduces the running Stormkeeper cooldown by its native effect0 duration for each actual Ancestor summon (`sc_shaman.cpp`11579–11596).
 
 Selected Power of the Maelstrom191861 rolls its native chance on ordinary Lightning Bolt and Chain Lightning executions. Eligible foreground spells spend one native191877 use and, with Fusion of Elements462840, execute a free instant Elemental Blast at the native Fusion effectiveness. Its overload uses the Fusion effectiveness independently of other damage modifiers (`sc_shaman.cpp`2582,3303–3311,6660–6663,7439–7444,7599–7609,7653–7674).
+
+With Primal Elementalist117013, every Ascendance execution with Call of Fire378255 summons the real native118291/61029 Primal Fire Elemental, and Stormkeeper with Fury of the Storms191717 summons native157319/77942 Primal Storm. When that elemental is already active, its lifetime and the owner buff are extended by the native summon duration and its action cooldowns reset; no second actor is created. Owned guardians receive template class mana. The actors follow the pinned APL order: Meteor, Immolate only when not ticking on the target, then Fire Blast; and Stormfury only with at least10s of Call Lightning, then Call Lightning and Wind Gust. Owner spell power is inherited at1.0 times one plus the native117013 effect0 (`sc_shaman.cpp`4026–4042,4070–4139,4248–4315,8638–8640,8752–8755,11555–11570).
 
 Equipped MID2 four-piece1296626 grants native Flowing Elements1300219 uses when Stormkeeper or Ascendance ends, buffering the overlapping grant until Ascendance ends. Eligible foreground builders spend one use and earn native Overcharge1300222, which makes the next eligible spender free (`sc_shaman.cpp`12600–12608,12636–12651,12914–12924).
 
