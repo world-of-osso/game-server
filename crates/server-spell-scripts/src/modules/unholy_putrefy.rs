@@ -100,7 +100,10 @@ fn convert_magi_to_lord(world: &mut World, actor: Entity) {
         }
         magi.sort_by(|a, b| a.1.total_cmp(&b.1));
         for (magus, _) in magi.into_iter().take(required) {
-            summon::despawn_summon(world, magus);
+            world
+                .get_mut::<summon::SummonedCreature>(magus)
+                .unwrap()
+                .expires_at = Some(now);
         }
         if !combat::spell_cast::try_cast_triggered(world, owner, LORD_SUMMON, Some(owner), 1) {
             warn!(?owner, "Native Lord of the Dead summon refused");
