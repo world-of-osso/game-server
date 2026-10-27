@@ -715,6 +715,7 @@ fn dk252_death_coil_deposits_rolling_devastation() {
     let mut run = prepare_literal(252, 1).unwrap();
     engage(&mut run);
     assert!(crate::spell_cast::try_cast_triggered(run.app.world_mut(), run.actor, 47632, Some(run.targets[0]), 1));
+    for _ in 0..30 { run.app.update(); }
     assert!(run.app.world().get::<crate::auras::ActiveAuras>(run.targets[0]).unwrap().iter()
         .any(|a| a.spell_id == 390271 && a.caster == run.actor));
     for _ in 0..120 { run.app.update(); }
