@@ -81,9 +81,9 @@ fn convert_magi_to_lord(world: &mut World, actor: Entity) {
     // SimC76f8118 sc_death_knight.cpp4545–4574: after the actual Magus
     // appears, consume the oldest active Magi to summon the native Lord.
     world.commands().queue(move |world: &mut World| {
-        let required = combat::spell_cast::scripts::script_effect_value(
-            world, owner, LORD_OF_THE_DEAD, 4,
-        ) as usize;
+        let required =
+            combat::spell_cast::scripts::script_effect_value(world, owner, LORD_OF_THE_DEAD, 4)
+                as usize;
         assert!(required > 0, "Lord of the Dead requires native Magi count");
         let now = combat::auras::aura_now(world);
         let mut magi: Vec<_> = world
@@ -91,7 +91,12 @@ fn convert_magi_to_lord(world: &mut World, actor: Entity) {
             .iter(world)
             .filter_map(|(entity, summon)| {
                 (summon.owner == owner && summon.spell_id == MAGUS_SUMMON)
-                    .then_some(summon.expires_at.filter(|expiry| *expiry > now).map(|expiry| (entity, expiry)))
+                    .then_some(
+                        summon
+                            .expires_at
+                            .filter(|expiry| *expiry > now)
+                            .map(|expiry| (entity, expiry)),
+                    )
                     .flatten()
             })
             .collect();
