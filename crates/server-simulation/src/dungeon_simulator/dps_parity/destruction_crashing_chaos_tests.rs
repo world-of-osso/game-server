@@ -32,12 +32,30 @@ fn paid_cast(run: &mut Run, spell: u32) {
     }
 }
 
+fn fund_two_bolts(run: &mut Run) {
+    for _ in 0..20 {
+        let shards = crate::spell_cast::powers::power_value(
+            run.app.world(),
+            run.actor,
+            shared::components::PowerType::SoulShards,
+        )
+        .unwrap()
+        .0;
+        if shards >= 40.0 {
+            return;
+        }
+        paid_cast(run, 29722);
+    }
+    panic!("actual paid Incinerates must fund two Chaos Bolts");
+}
+
 fn first_bolt_damage(remove_earned_buff: bool) -> (i32, f64) {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(267, 1).unwrap();
     let actor = run.actor;
     let target = run.targets[0];
     engage(&mut run);
+    fund_two_bolts(&mut run);
     paid_cast(&mut run, 1122);
     assert_eq!(stacks(&run), Some(8), "actual Infernal must earn the buff");
     let native_percent = run
@@ -106,6 +124,7 @@ fn destruction_crashing_chaos_actual_infernal_earns_eight_chaos_bolt_uses() {
             .any(|talent| talent.spell_id == 417234)
     );
     engage(&mut run);
+    fund_two_bolts(&mut run);
     paid_cast(&mut run, 1122);
     // SimC76f8118 actions5080–5082 and init839–841: an actual Infernal
     // grants native eight reverse uses, not a manually granted proc buff.
