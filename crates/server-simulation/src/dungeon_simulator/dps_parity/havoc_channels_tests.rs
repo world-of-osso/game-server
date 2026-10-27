@@ -38,6 +38,88 @@ fn cast(run: &mut Run, spell: u32, self_target: bool) {
 
 #[test]
 #[ignore = "requires prepared native spec577 player profile"]
+fn havoc_fragment_pickup_requires_melee_and_records_last_used() {
+    use server::simc_apl::Facts;
+    use server::soul_fragments::{self, FragmentFilter, FragmentKind, PickupMode};
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(577, 1).unwrap();
+    let actor = run.actor;
+    let target = run.targets[0];
+    let started_at = crate::spell_cast::now(run.app.world());
+    soul_fragments::spawn(run.app.world_mut(), actor, FragmentKind::Lesser, false).unwrap();
+    advance(&mut run, 2);
+    let bindings = crate::simc_apl_native::Bindings::default();
+    let encounter = crate::simc_apl_native::Encounter::Fixture {
+        started_at,
+        duration: 300.0,
+        style: crate::simc_apl_native::FightStyle::Patchwerk,
+    };
+    let mut equipment_bindings = crate::simc_apl_native::Bindings::default();
+    let equipment = literal_rotation::equipment::Equipment::load(
+        run.app.world(),
+        actor,
+        &mut equipment_bindings,
+    )
+    .unwrap();
+    let original = *run
+        .app
+        .world()
+        .get::<shared::components::Position>(target)
+        .unwrap();
+    run.app
+        .world_mut()
+        .get_mut::<shared::components::Position>(target)
+        .unwrap()
+        .x += 100.0;
+    let prepared = literal_rotation::execution::Prepared::read(
+        run.app.world_mut(),
+        actor,
+        &run.targets,
+        &equipment,
+        std::iter::empty::<literal_rotation::execution::NativeAction<'_>>(),
+        false,
+    )
+    .unwrap();
+    let action = server::simc_apl::Action {
+        source_row: None,
+        name: "pick_up_fragment".into(),
+        target: None,
+        options: Default::default(),
+    };
+    assert!(
+        prepared.execution(&action, &equipment).unwrap().is_none(),
+        "pickup is unavailable outside melee range"
+    );
+    *run.app
+        .world_mut()
+        .get_mut::<shared::components::Position>(target)
+        .unwrap() = original;
+    let facts =
+        crate::simc_apl_native::NativeFacts::new(run.app.world(), actor, &bindings, encounter, 1);
+    assert!(
+        facts.value("action.pick_up_fragment.last_used").unwrap() < -1.0e12,
+        "unused pickup has the source minimum timestamp"
+    );
+    let plan = soul_fragments::plan_pickup(
+        run.app.world(),
+        actor,
+        FragmentFilter::Lesser,
+        PickupMode::Oldest,
+    )
+    .unwrap();
+    let at = crate::spell_cast::now(run.app.world());
+    soul_fragments::begin_pickup(run.app.world_mut(), actor, plan).unwrap();
+    let facts =
+        crate::simc_apl_native::NativeFacts::new(run.app.world(), actor, &bindings, encounter, 1);
+    assert!(
+        (facts.value("action.pick_up_fragment.last_used").unwrap() - (at - started_at)).abs()
+            < 0.001,
+        "pickup last_used records the action's native start time"
+    );
+}
+
+#[test]
+#[ignore = "requires prepared native spec577 player profile"]
 fn havoc_chaos_theory_dance_grants_buff_and_offhand_consumes_it_for_refund() {
     let _seed = crate::random::seed_scope(70_448);
     let mut run = prepare_literal(577, 1).unwrap();
