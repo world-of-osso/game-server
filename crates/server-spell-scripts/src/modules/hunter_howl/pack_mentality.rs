@@ -22,7 +22,9 @@ pub(super) fn command_damage_multiplier(
     };
     let owner = pet.owner;
     if !has_talent(world, owner, PACK_MENTALITY)
-        || !READY.iter().any(|ready| combat::auras::has_aura(world, owner, *ready))
+        || !READY
+            .iter()
+            .any(|ready| combat::auras::has_aura(world, owner, *ready))
     {
         return 1.0;
     }

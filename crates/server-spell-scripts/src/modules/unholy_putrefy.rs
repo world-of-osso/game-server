@@ -52,10 +52,17 @@ fn set_lord_magus_lifetime(world: &mut World, actor: Entity) {
     }
     // SimC76f8118 sc_death_knight.cpp6788–6798: Lord's Magus uses the
     // selected native talent's duration, not the summon spell's base duration.
-    let duration_ms = combat::spell_cast::scripts::script_effect_value(world, owner, LORD_OF_THE_DEAD, 1);
-    assert!(duration_ms > 0.0, "Lord of the Dead Magus duration must be positive");
+    let duration_ms =
+        combat::spell_cast::scripts::script_effect_value(world, owner, LORD_OF_THE_DEAD, 1);
+    assert!(
+        duration_ms > 0.0,
+        "Lord of the Dead Magus duration must be positive"
+    );
     let expiry = combat::spell_cast::now(world) + f64::from(duration_ms) / 1000.0;
-    world.get_mut::<summon::SummonedCreature>(actor).unwrap().expires_at = Some(expiry);
+    world
+        .get_mut::<summon::SummonedCreature>(actor)
+        .unwrap()
+        .expires_at = Some(expiry);
 }
 
 fn impact_and_dismiss(world: &mut World, actor: Entity, target: Entity) {

@@ -98,7 +98,6 @@ fn native_bm_pack_mentality_recovers_real_barbed_recharge_after_consuming_howl()
     );
 }
 
-
 #[test]
 #[ignore = "requires private spec253 reference inputs and native world DB"]
 fn native_bm_pack_mentality_increases_real_kill_command_damage() {
@@ -112,34 +111,67 @@ fn native_bm_pack_mentality_increases_real_kill_command_damage() {
     engage(&mut run);
     crate::combat_refs::set_in_combat_with(run.app.world_mut(), run.actor, target);
     crate::pet_control::order_companion_pet(run.app.world_mut(), run.actor, Some(target));
-    for _ in 0..40 { run.app.update(); }
+    for _ in 0..40 {
+        run.app.update();
+    }
     assert!(!crate::auras::has_aura(run.app.world(), run.actor, 471878));
-    run.app.insert_resource(FactorCapture::new(pet, target, 83381, "kill_command", 2));
+    run.app
+        .insert_resource(FactorCapture::new(pet, target, 83381, "kill_command", 2));
     crate::spell_cast::creature_cast(run.app.world_mut(), run.actor, 34026, Some(target), false)
         .expect("ordinary KC before Howl readiness");
     preparation::finish_pending_setup(&mut run).unwrap();
     for _ in 0..200 {
         run.app.update();
-        if run.app.world().resource::<FactorCapture>().export()["captured_hits"].as_u64().unwrap() >= 1 { break; }
+        if run.app.world().resource::<FactorCapture>().export()["captured_hits"]
+            .as_u64()
+            .unwrap()
+            >= 1
+        {
+            break;
+        }
     }
     let deadline = crate::spell_cast::now(run.app.world()) + 31.0;
     while !crate::auras::has_aura(run.app.world(), run.actor, 471878)
-        && crate::spell_cast::now(run.app.world()) < deadline { run.app.update(); }
-    assert!(crate::auras::has_aura(run.app.world(), run.actor, 471878), "real combat earns Wyvern readiness");
-    let alpha = crate::spell_cast::scripts::script_effect_value(run.app.world(), run.actor, 269737, 1);
-    let pack = crate::spell_cast::scripts::script_effect_value(run.app.world(), run.actor, 472358, 0);
+        && crate::spell_cast::now(run.app.world()) < deadline
+    {
+        run.app.update();
+    }
+    assert!(
+        crate::auras::has_aura(run.app.world(), run.actor, 471878),
+        "real combat earns Wyvern readiness"
+    );
+    let alpha =
+        crate::spell_cast::scripts::script_effect_value(run.app.world(), run.actor, 269737, 1);
+    let pack =
+        crate::spell_cast::scripts::script_effect_value(run.app.world(), run.actor, 472358, 0);
     crate::spell_cast::creature_cast(run.app.world_mut(), run.actor, 34026, Some(target), false)
         .expect("ordinary KC with naturally earned Howl readiness");
     preparation::finish_pending_setup(&mut run).unwrap();
     for _ in 0..200 {
         run.app.update();
-        if run.app.world().resource::<FactorCapture>().export()["captured_hits"].as_u64().unwrap() >= 2 { break; }
+        if run.app.world().resource::<FactorCapture>().export()["captured_hits"]
+            .as_u64()
+            .unwrap()
+            >= 2
+        {
+            break;
+        }
     }
     let receipt = run.app.world().resource::<FactorCapture>().export();
-    assert_eq!(receipt["captured_hits"].as_u64(), Some(2), "two actual owned-pet 83381 hits");
+    assert_eq!(
+        receipt["captured_hits"].as_u64(),
+        Some(2),
+        "two actual owned-pet 83381 hits"
+    );
     let events = receipt["events"].as_array().unwrap();
-    let results: Vec<_> = events.iter().filter(|event| event["event"] == "result" && event["spell_id"] == 83381).collect();
-    let amounts: Vec<_> = events.iter().filter(|event| event["event"] == "direct_amount" && event["spell_id"] == 83381).collect();
+    let results: Vec<_> = events
+        .iter()
+        .filter(|event| event["event"] == "result" && event["spell_id"] == 83381)
+        .collect();
+    let amounts: Vec<_> = events
+        .iter()
+        .filter(|event| event["event"] == "direct_amount" && event["spell_id"] == 83381)
+        .collect();
     assert_eq!((results.len(), amounts.len()), (2, 2));
     let normalized = |index: usize| {
         let result = &results[index]["factors"];
@@ -152,6 +184,10 @@ fn native_bm_pack_mentality_increases_real_kill_command_damage() {
     // SimC76f8118 sc_hunter.cpp2764–2785: Alpha Predator and selected
     // Pack Mentality add before multiplying the real pet command.
     let expected = (100.0 + f64::from(alpha) + f64::from(pack)) / (100.0 + f64::from(alpha));
-    assert!((actual - expected).abs() < 0.001,
-        "earned readiness must amplify actual pet KC: before={}, after={}, actual={actual}, expected={expected}, alpha={alpha}, pack={pack}", normalized(0), normalized(1));
+    assert!(
+        (actual - expected).abs() < 0.001,
+        "earned readiness must amplify actual pet KC: before={}, after={}, actual={actual}, expected={expected}, alpha={alpha}, pack={pack}",
+        normalized(0),
+        normalized(1)
+    );
 }
