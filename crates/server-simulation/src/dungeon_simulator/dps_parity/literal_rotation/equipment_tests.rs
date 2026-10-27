@@ -214,6 +214,19 @@ fn literal_equipment_native_profile_proc_default_values_follow_unset_buff_semant
 }
 
 #[test]
+#[ignore = "requires the native spec1480 selected profile and item catalog"]
+fn literal_equipment_devourer_freightrunners_flask_unset_default() {
+    let mut world = load_world();
+    let actor = equip_reference_profile(&mut world, 1480);
+    // Pinned SimC debug: 1250533 gains buff value -DBL_MIN (unset).
+    // The source trinket expression takes max with zero, not the stat grant.
+    assert_eq!(
+        read_facts(&world, actor, &["trinket.1.proc.any_dps.default_value"]),
+        vec![Ok(0.0)]
+    );
+}
+
+#[test]
 #[ignore = "unqualified native script default must stay named rather than inventing a value"]
 fn literal_equipment_native_unqualified_proc_default_value_is_explicit() {
     let mut world = load_world();

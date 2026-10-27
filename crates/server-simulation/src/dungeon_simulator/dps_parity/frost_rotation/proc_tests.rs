@@ -191,6 +191,77 @@ fn frost_rime_icebreaker_amplifies_primary_howling_blast() {
     );
 }
 
+fn bind_in_darkness_rime_damage(selected: bool) -> i32 {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::protocol::CombatLogKind;
+    let _seed = crate::random::seed_scope(251);
+    let mut run = super::super::prepare_literal(251, 1).unwrap();
+    super::super::engage(&mut run);
+    assert!(auras::has_aura(run.app.world(), run.actor, 440031));
+    earn_rime(&mut run);
+    assert!(auras::has_aura(run.app.world(), run.actor, 443532));
+    if !selected {
+        clear_proc(&mut run, 443532);
+    }
+    let start = run.app.world().resource::<ObservedCombatEvents>().0.len();
+    cast(&mut run, 49184);
+    run.app.world().resource::<ObservedCombatEvents>().0[start..]
+        .iter()
+        .find(|event| {
+            event.spell_id == Some(49184)
+                && event.kind == CombatLogKind::Damage
+                && event.target == Some(run.targets[0].to_bits())
+        })
+        .expect("earned Rime must hit its primary")
+        .amount
+}
+
+#[test]
+#[ignore = "native251 Bind in Darkness amplifies the earned Rime primary"]
+fn frost_rime_bind_in_darkness_amplifies_primary() {
+    let without = bind_in_darkness_rime_damage(false);
+    let with = bind_in_darkness_rime_damage(true);
+    assert!(
+        with as f32 > without as f32 * 1.59 && (with as f32) < without as f32 * 1.61,
+        "Bind in Darkness must apply its native 60% Rime bonus: {without} -> {with}"
+    );
+}
+
+#[test]
+#[ignore = "native251 actual Pillar and Empower Rune Weapon fund one free rune spender"]
+fn frost_erw_pillar_funds_one_free_rune_spender() {
+    use crate::spell_cast::runes::Runes;
+    for spender in [207230, 49020] {
+        let _seed = crate::random::seed_scope(251);
+        let mut run = super::super::prepare_literal(251, 3).unwrap();
+        super::super::engage(&mut run);
+        let actor = run.actor;
+        super::super::enhancement_generation_tests::cast(&mut run, 51271, actor);
+        cast(&mut run, 47568);
+        for _ in 0..30 {
+            run.app.update();
+        }
+        assert!(
+            auras::has_aura(run.app.world(), actor, 1230959),
+            "actual ERW grants the native effect"
+        );
+        let before = run.app.world().get::<Runes>(actor).unwrap().ready();
+        assert!(before >= 2);
+        let target = run.targets[0];
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, spender, Some(target), false)
+            .expect("ordinary rune spender after real Pillar and ERW");
+        let after = run.app.world().get::<Runes>(actor).unwrap().ready();
+        assert_eq!(
+            after, before,
+            "earned ERW must fund spender {spender} without consuming runes"
+        );
+        assert!(
+            !auras::has_aura(run.app.world(), actor, 1230959),
+            "the real spender consumes the earned ERW effect"
+        );
+    }
+}
+
 fn earn_rime(run: &mut Run) {
     for _ in 0..24 {
         cast(run, 49020);

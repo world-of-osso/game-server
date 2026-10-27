@@ -151,6 +151,7 @@ pub(crate) fn after_melee_hit(
 ) {
     windwalker_flurry::after_melee_hit(world, caster, hand, critical);
     script_registry::after_white_hit(world, caster, critical);
+    script_registry::after_white_hand_hit(world, caster, hand, critical);
 }
 mod xuens_battlegear;
 pub(crate) use xuens_battlegear::register_xuens_battlegear;
@@ -161,6 +162,7 @@ pub(crate) use windwalker::{
     combo_strikes_multiplier, ordinary_combo_cast, register_wdp_relationship,
 };
 
+pub use super::elemental_overload::is_overload_damage;
 pub(super) use batch3::consume_phalanx;
 pub(crate) use batch3::{
     PHALANX_TALENT, WHIRLING_BLADE, cast_whirling_ravager, check_phalanx_proc,
@@ -566,7 +568,6 @@ pub fn on_effect_hit(
         (batch11::HAMMER_RIGHTEOUS, 0) => Some(batch11::hammer_wave),
         (batch3::SHRED, 2) => Some(batch11::shred_points),
         (batch11::THRASH, 0) => Some(batch11::thrash_bleed),
-        (batch10::FLURRY_DAMAGE, 0) => Some(batch10::energize_flurry),
         (batch10::FERAL_LUNGE, 0) => Some(batch10::bite_lunge),
         (batch10::HAND_OF_GULDAN, 0) => Some(batch10::launch_guldan_meteor),
         (batch9::WINTER_DAMAGE, 0) => Some(batch9::slow_winter_hit),
@@ -696,11 +697,7 @@ pub fn damage_amount(world: &World, spell_id: u32) -> Option<DamageAmountHook> {
         windwalker_dual_threat::DAMAGE => Some(windwalker_dual_threat::damage),
         windwalker_children::JADEFIRE => Some(windwalker_children::jadefire_damage),
         windwalker_children::RWK_DAMAGE => Some(windwalker_children::rushing_wind_damage),
-        super::elemental_overload::LIGHTNING_OVERLOAD
-        | super::elemental_overload::CHAIN_OVERLOAD
-        | super::elemental_overload::LAVA_OVERLOAD_DAMAGE
-        | super::elemental_overload::ICEFURY_OVERLOAD
-        | super::elemental_overload::ELEMENTAL_BLAST_OVERLOAD => {
+        id if super::elemental_overload::is_overload_damage(id) => {
             Some(super::elemental_overload::scale_damage)
         }
         crate::auras::agony::AGONY => Some(crate::auras::agony::tick_damage),
@@ -838,7 +835,6 @@ fn native_after_cast(world: &World, spell_id: u32) -> Option<AfterCastHook> {
         batch16::RIPTIDE => Some(batch16::grant_tidal_waves),
         batch13::BESTIAL_WRATH => Some(batch13::finish_bestial_wrath),
         batch12::SHIELD_RIGHTEOUS => Some(batch12::shield_armor),
-        batch10::BLADE_FLURRY => Some(batch10::cast_flurry),
         batch10::VOIDFORM => Some(batch10::apply_voidform),
         batch10::ARCANE_SURGE => Some(batch10::apply_surge),
         batch9::CONSECRATION => Some(batch9::spawn_consecration),

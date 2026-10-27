@@ -98,7 +98,12 @@ fn queue_clone(
         .expect("native shadow clone")
         .clone();
     let (damage_bonus, crit_bonus) = darkest_night_bonus(world, caster, child, points);
-    spell.cast_damage_multiplier = Some(points * 0.5 * damage_bonus);
+    let stance_bonus = if child == 1269340 {
+        super::subtlety_storm::stance_multiplier(world, caster)
+    } else {
+        1.0
+    };
+    spell.cast_damage_multiplier = Some(points * 0.5 * damage_bonus * stance_bonus);
     spell.cast_charge_mods = Some(spell_mods::snapshot_charged_modifiers(
         world, caster, &spell,
     ));
@@ -176,13 +181,17 @@ fn launch_due(world: &mut World) {
         });
         spell_cast::launch_triggered_spell(world, caster, &clone.spell, Some(clone.target), 1);
         world.entity_mut(caster).remove::<ActiveClone>();
-        // sc_rogue.cpp3650–3659: eligible clones independently earn the
-        // native Shadow Techniques producer using Ancient Arts' chance.
-        if has_talent(world, caster, 1268936)
-            && random::random::<f32>() < script_effect_value(world, caster, 1268936, 0) / 100.0
-        {
-            super::subtlety_techniques::earn_storage(world, caster);
-        }
+        earn_clone_funding(world, caster);
+    }
+}
+
+// sc_rogue.cpp3650–3659/5405–5413: eligible clones independently earn
+// the native Shadow Techniques producer using Ancient Arts' chance.
+pub(super) fn earn_clone_funding(world: &mut World, caster: Entity) {
+    if has_talent(world, caster, 1268936)
+        && random::random::<f32>() < script_effect_value(world, caster, 1268936, 0) / 100.0
+    {
+        super::subtlety_techniques::earn_storage(world, caster);
     }
 }
 

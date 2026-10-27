@@ -363,14 +363,18 @@ pub fn power_stats(world: &World, unit: Entity, healing: bool) -> (f32, f32) {
         if let Some(share) =
             entry.and_then(|entry| super::guardian::owner_attack_share(summon.spell_id, entry))
         {
-            // Non-demon guardian policies inherit actual owner RAP. Demon
-            // policies above retain their separate spell-power-derived AP.
             let owner = world
                 .get::<CharacterStats>(summon.owner)
                 .expect("owner-scaled guardian requires native CharacterStats");
             let modifiers = world.get::<crate::stats::StatModifiers>(summon.owner);
-            let attack_power =
-                owner.total_attack_power(crate::stats::WeaponAttackType::Ranged, modifiers);
+            // SimC76f8118 sc_death_knight.cpp4478–4487: Magus inherits melee AP;
+            // Hunter guardian policies retain their existing ranged AP basis.
+            let attack_type = if summon.spell_id == 1242294 && entry == Some(163366) {
+                crate::stats::WeaponAttackType::MainHand
+            } else {
+                crate::stats::WeaponAttackType::Ranged
+            };
+            let attack_power = owner.total_attack_power(attack_type, modifiers);
             return (0.0, attack_power * share);
         }
         if let Some(share) =

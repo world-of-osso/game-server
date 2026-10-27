@@ -2,7 +2,7 @@
 //! effective points and crit before its player and two delayed clone attacks.
 use super::combat;
 use bevy::prelude::*;
-use combat::auras::{self, ActiveAuras, handlers, spell_mods};
+use combat::auras::{self, ActiveAuras, AuraStatMods, handlers, spell_mods};
 use combat::spell_cast::{
     self,
     effects::{self, EffectCtx},
@@ -16,6 +16,9 @@ const PARENT: u32 = 280719;
 const PLAYER: u32 = 280720;
 const CLONE: u32 = 282449;
 const ANCIENT_ARTS: u32 = 1269163;
+
+#[derive(Component)]
+struct SecretCloneHit(bool);
 
 #[derive(Component)]
 struct SecretCast {
@@ -33,6 +36,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::BeforeNativeOnCast(snapshot_secret),
     SpellScriptHook::AfterForegroundSpecial(launch_player),
     SpellScriptHook::AfterQueuedTriggers(launch_due_clones),
+    SpellScriptHook::ResolvedDamage(record_clone_hit),
     SpellScriptHook::CriticalChance(snapshot_critical_chance),
     SpellScriptHook::TargetContextDamageMultiplier(secondary_fraction),
 ];
@@ -87,7 +91,16 @@ fn snapshot_child(world: &World, caster: Entity, id: u32, points: f32) -> SpellI
         .get(id)
         .expect("native Secret Technique payload")
         .clone();
-    child.cast_damage_multiplier = Some(points);
+    // sc_rogue.cpp5377–5385: only the intrinsic clone snapshots the
+    // native owner guardian multiplier; the player attack does not.
+    let guardian = if id == CLONE {
+        world
+            .get::<AuraStatMods>(caster)
+            .map_or(1.0, |mods| mods.guardian_damage_mult)
+    } else {
+        1.0
+    };
+    child.cast_damage_multiplier = Some(points * guardian);
     child.cast_charge_mods = Some(spell_mods::snapshot_charged_modifiers(
         world, caster, &child,
     ));
@@ -119,7 +132,15 @@ fn launch_due_clones(world: &mut World) {
     for (caster, target, spell, count) in due {
         for _ in 0..count {
             if world.get_entity(target).is_ok() {
+                world.entity_mut(caster).insert(SecretCloneHit(false));
                 spell_cast::launch_triggered_spell(world, caster, &spell, Some(target), 1);
+                let hit = world
+                    .get::<SecretCloneHit>(caster)
+                    .is_some_and(|state| state.0);
+                world.entity_mut(caster).remove::<SecretCloneHit>();
+                if hit {
+                    super::subtlety_clone::earn_clone_funding(world, caster);
+                }
             }
         }
         if world
@@ -128,6 +149,14 @@ fn launch_due_clones(world: &mut World) {
         {
             world.entity_mut(caster).remove::<SecretCast>();
         }
+    }
+}
+
+fn record_clone_hit(world: &mut World, ctx: &EffectCtx, _: Entity, _: bool, _: f32) {
+    if ctx.spell.id == CLONE
+        && let Some(mut state) = world.get_mut::<SecretCloneHit>(ctx.caster)
+    {
+        state.0 = true;
     }
 }
 
@@ -174,9 +203,7 @@ fn snapshot_critical_chance(
 }
 
 fn secondary_fraction(world: &World, ctx: &EffectCtx, target: Entity, _: bool) -> f32 {
-    if !matches!(ctx.spell.id, PLAYER | CLONE | 1269560)
-        || ctx.spell.cast_primary_target == Some(target)
-    {
+    if !matches!(ctx.spell.id, PLAYER | CLONE) || ctx.spell.cast_primary_target == Some(target) {
         return 1.0;
     }
     // sc_rogue.cpp5392–5398: the physical player and Secret Technique
