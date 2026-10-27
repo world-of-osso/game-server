@@ -2,12 +2,12 @@
 //! dispatch native Shadow payloads while the caster's Find Weakness is active.
 use super::{cast_relationships::has_talent, combat};
 use bevy::prelude::*;
-use combat::auras::{self, ActiveAuras};
+use combat::auras::{self, ActiveAuras, SpellModOp};
 use combat::spell_cast::{
     self, effects::EffectCtx, script_registry::SpellScriptHook, scripts::script_effect_value,
     targets,
 };
-use combat::spell_info::SpellStore;
+use combat::spell_info::{ChargedSpellModifier, SpellStore};
 use shared::components::{ActiveSpec, PowerType};
 
 const FIND_WEAKNESS: u32 = 91023;
@@ -116,6 +116,19 @@ fn dispatch_shadow_finisher(world: &mut World, ctx: &EffectCtx, target: Entity) 
         .get(payload)
         .expect("native Shadowed Finishers payload")
         .clone();
-    child.cast_damage_multiplier = Some(points * fraction);
+    let (damage_bonus, crit_bonus) =
+        super::subtlety_clone::darkest_night_bonus(world, ctx.caster, payload, points);
+    child.cast_damage_multiplier = Some(points * fraction * damage_bonus);
+    if crit_bonus > 0.0 {
+        child
+            .cast_charge_mods
+            .get_or_insert_default()
+            .push(ChargedSpellModifier {
+                aura_spell_id: 457280,
+                op: SpellModOp::CritChance as i32,
+                percent: false,
+                amount: crit_bonus,
+            });
+    }
     spell_cast::launch_triggered_spell(world, ctx.caster, &child, Some(target), ctx.depth + 1);
 }
