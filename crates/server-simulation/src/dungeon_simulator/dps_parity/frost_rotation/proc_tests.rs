@@ -906,6 +906,42 @@ fn frost_gathering_storm_extends_winter_for_paid_and_free_spenders() {
 }
 
 #[test]
+#[ignore = "earned Rime Howling Blast gives Northwinds second target full damage"]
+fn frost_northwinds_rime_blast_secondary_damage() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::protocol::CombatLogKind;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::super::prepare_literal(251, 3).unwrap();
+    super::super::engage(&mut run);
+    earn_rime(&mut run);
+    let start = run.app.world().resource::<ObservedCombatEvents>().0.len();
+    cast(&mut run, 49184);
+    for _ in 0..10 {
+        run.app.update();
+    }
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0[start..];
+    let mut hits: Vec<_> = events
+        .iter()
+        .filter(|event| {
+            event.spell_id == Some(49184) && event.kind == CombatLogKind::Damage && event.amount > 0
+        })
+        .collect();
+    assert_eq!(hits.len(), 3, "three real Howling Blast hits");
+    let values: Vec<_> = hits
+        .drain(..)
+        .map(|hit| hit.amount as f32 / if hit.crit { 2.0 } else { 1.0 })
+        .collect();
+    assert!(
+        (values[0] / values[1] - 1.0).abs() < 0.05,
+        "Northwinds primary and second: {values:?}"
+    );
+    assert!(
+        values[2] < values[1] * 0.8,
+        "third target receives reduced damage: {values:?}"
+    );
+}
+
+#[test]
 #[ignore = "real Killing Machine Obliterate builds Enduring Strength for Pillar expiry"]
 fn frost_pillar_expires_into_enduring_strength() {
     let _seed = crate::random::seed_scope(70448);
