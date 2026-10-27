@@ -31,6 +31,8 @@ fn native_hunter_dire_command_actual_kills_spawn_authentic_beasts() {
     let mut moved_toward_target = false;
     let mut checked_events = 0;
     let mut inherited_ap_hits = Vec::new();
+    let mut previous_ap = 0.0;
+    let mut previous_mods = std::collections::HashMap::<Entity, crate::auras::AuraStatMods>::new();
     engage(&mut run);
     advance_combat_observed(&mut run, |run| {
         for (unit, summon, npc) in query.iter(run.app.world()) {
@@ -90,6 +92,15 @@ fn native_hunter_dire_command_actual_kills_spawn_authentic_beasts() {
                 crate::stats::WeaponAttackType::Ranged,
                 world.get::<crate::stats::StatModifiers>(run.actor),
             );
+            // Combat events can precede an aura recalculation in the same update.
+            // Compare damage only when the observed calculation inputs are stable.
+            if ap != previous_ap
+                || [pet, run.actor, run.targets[0]].into_iter().any(|unit| {
+                    previous_mods.get(&unit) != world.get::<crate::auras::AuraStatMods>(unit)
+                })
+            {
+                continue;
+            }
             let mods = world.get::<crate::auras::AuraStatMods>(pet);
             let target_mods = world.get::<crate::auras::AuraStatMods>(run.targets[0]);
             let base = ap / 3.5
@@ -131,6 +142,17 @@ fn native_hunter_dire_command_actual_kills_spawn_authentic_beasts() {
             inherited_ap_hits.push((event.amount, floor, ap));
         }
         checked_events = events.len();
+        let stats = world.get::<crate::stats::CharacterStats>(run.actor).unwrap();
+        previous_ap = stats.total_attack_power(
+            crate::stats::WeaponAttackType::Ranged,
+            world.get::<crate::stats::StatModifiers>(run.actor),
+        );
+        previous_mods.clear();
+        for unit in query.iter(world).map(|(pet, _, _)| pet).chain([run.actor, run.targets[0]]) {
+            if let Some(mods) = world.get::<crate::auras::AuraStatMods>(unit) {
+                previous_mods.insert(unit, mods.clone());
+            }
+        }
     })
     .expect("ordinary native300s literal combat");
     // SimC76f8118 sc_hunter.cpp1869–1873,1930–1938: genuine Dire
