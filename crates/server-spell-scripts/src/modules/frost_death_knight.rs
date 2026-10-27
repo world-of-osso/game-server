@@ -20,6 +20,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AfterQueuedTriggers(consume_due_killing_machine),
     SpellScriptHook::AfterSpellPayment(roll_runic_empowerment),
     SpellScriptHook::AfterPeriodicDamagePolicies(frost_fever_runic_power),
+    SpellScriptHook::LateAuraRegistration(register_breath),
 ];
 
 const KILLING_MACHINE: u32 = 51128;
@@ -111,6 +112,12 @@ pub(super) fn after_launch(world: &mut World, caster: Entity, spell: &SpellInfo,
     // selected Frozen Dominion starts its native Winter aura from real Pillar.
     if spell.id == PILLAR && auras::has_aura(world, caster, 377226) {
         cast_buff_stacks(world, caster, 1233152, 1);
+    }
+    if spell.id == 279302 && auras::has_aura(world, caster, 1265633) {
+        // SimC76f8118 sc_death_knight.cpp10659–10660/10694–10695:
+        // the actual Fury extends an already active Pillar by native effect1.
+        let milliseconds = spell_cast::scripts::script_effect_value(world, caster, 1265633, 0);
+        auras::extend_owned_duration(world, caster, caster, &[PILLAR], milliseconds as u32);
     }
 }
 
@@ -227,6 +234,33 @@ fn trigger_obliteration(world: &mut World, caster: Entity) {
     if !spell_cast::try_cast_triggered(world, caster, 281327, Some(caster), 1) {
         warn!(?caster, "Native Obliteration rune grant refused");
     }
+}
+
+fn register_breath(scripts: &mut auras::scripts::AuraScripts) {
+    scripts.0.entry(1249658).or_default().on_remove = Some(breath_ended);
+}
+
+fn breath_ended(
+    world: &mut World,
+    unit: Entity,
+    aura: &auras::AuraInstance,
+    reason: auras::RemoveReason,
+) {
+    if aura.caster != unit
+        || !is_frost(world, unit)
+        || matches!(
+            reason,
+            auras::RemoveReason::Death
+                | auras::RemoveReason::CasterGone
+                | auras::RemoveReason::Evade
+                | auras::RemoveReason::Unlearned
+        )
+    {
+        return;
+    }
+    // SimC76f8118 sc_death_knight.cpp7135–7140: ending Breath grants
+    // the native 1234304 rune amount, except during encounter teardown.
+    spell_cast::cast_triggered(world, unit, 1234304, Some(unit), 1);
 }
 
 fn frost_fever_runic_power(

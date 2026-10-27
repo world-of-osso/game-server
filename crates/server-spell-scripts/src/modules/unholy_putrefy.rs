@@ -48,20 +48,36 @@ fn roll_forbidden_knowledge(world: &mut World, ctx: &EffectCtx<'_>) {
     // SimC76f8118 sc_death_knight.cpp7979–7980/14832–14833: each
     // Dread Plague tick rolls the selected native effect3 through PRD.
     let chance = f64::from(combat::spell_cast::scripts::script_effect_value(
-        world, ctx.caster, FORBIDDEN_KNOWLEDGE, 2,
+        world,
+        ctx.caster,
+        FORBIDDEN_KNOWLEDGE,
+        2,
     )) / 100.0;
     let constant = combat::random::accumulated_proc_constant(chance);
-    if world.get::<ForbiddenKnowledgeAttempts>(ctx.caster).is_none() {
-        world.entity_mut(ctx.caster).insert(ForbiddenKnowledgeAttempts::default());
+    if world
+        .get::<ForbiddenKnowledgeAttempts>(ctx.caster)
+        .is_none()
+    {
+        world
+            .entity_mut(ctx.caster)
+            .insert(ForbiddenKnowledgeAttempts::default());
     }
-    let mut attempts = world.get_mut::<ForbiddenKnowledgeAttempts>(ctx.caster).unwrap();
+    let mut attempts = world
+        .get_mut::<ForbiddenKnowledgeAttempts>(ctx.caster)
+        .unwrap();
     attempts.0 = attempts.0.saturating_add(1);
     let success = combat::random::random::<f64>() < constant * f64::from(attempts.0);
     if !success {
         return;
     }
     attempts.0 = 0;
-    if !combat::spell_cast::try_cast_triggered(world, ctx.caster, PUTREFY_GHOUL, Some(ctx.caster), 1) {
+    if !combat::spell_cast::try_cast_triggered(
+        world,
+        ctx.caster,
+        PUTREFY_GHOUL,
+        Some(ctx.caster),
+        1,
+    ) {
         warn!(caster = ?ctx.caster, "Forbidden Knowledge Putrefy ghoul summon refused");
     }
 }

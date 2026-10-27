@@ -39,6 +39,11 @@ fn grant_entry_fury(world: &mut World, unit: Entity, aura: &AuraInstance) {
     if unit != aura.caster || world.get::<ActiveSpec>(unit).map(|spec| spec.0) != Some(1480) {
         return;
     }
+    // SimC76f8118 sc_demon_hunter.cpp9192–9195 consumes the soul stack on entry.
+    // The native admission aura represents that same readiness.
+    auras::remove_auras(world, unit, RemoveReason::Consumed, |aura| {
+        aura.caster == unit && matches!(aura.spell_id, 1225789 | 1213809)
+    });
     // SimC76f8118 sc_demon_hunter.cpp12445–12452 grants 200 Fury on Meta entry.
     // Native PowerPools owns the cap and the actual applied amount.
     if powers::change_power(world, unit, PowerType::Fury, 200.0).is_none() {
@@ -48,11 +53,13 @@ fn grant_entry_fury(world: &mut World, unit: Entity, aura: &AuraInstance) {
     world.entity_mut(unit).insert(DrainDeadline(first));
 }
 
-// SimC76f8118 sc_demon_hunter.cpp1424–1478,12462–12500: the fitted
-// rate schedules native473671 Fury events; a pending event is never retimed.
-fn drain_interval(world: &World, unit: Entity, stacks: u64) -> f64 {
-    let amount = -f64::from(script_effect_value(world, unit, VOID_BUILDUP, 0));
-    assert!(amount > 0.0, "Void Buildup must spend native Fury");
+/// SimC76f8118 sc_demon_hunter.cpp10339–10343: base drain before situational reductions.
+pub fn devourer_base_drain_ps(world: &World, unit: Entity) -> f64 {
+    let stacks = auras::paid_periodic_ticks(world, unit, unit, META);
+    base_drain_ps(world, unit, stacks)
+}
+
+fn base_drain_ps(world: &World, unit: Entity, stacks: u64) -> f64 {
     let mut rate = 15.0 + 1.40 * (0.0775 * stacks as f64).exp();
     if world
         .get::<KnownSpells>(unit)
@@ -60,6 +67,15 @@ fn drain_interval(world: &World, unit: Entity, stacks: u64) -> f64 {
     {
         rate /= 1.0 + f64::from(script_effect_value(world, unit, SOUL_GLUTTON, 1)) / 100.0;
     }
+    rate
+}
+
+// SimC76f8118 sc_demon_hunter.cpp1424–1478,12462–12500: the fitted
+// rate schedules native473671 Fury events; a pending event is never retimed.
+fn drain_interval(world: &World, unit: Entity, stacks: u64) -> f64 {
+    let amount = -f64::from(script_effect_value(world, unit, VOID_BUILDUP, 0));
+    assert!(amount > 0.0, "Void Buildup must spend native Fury");
+    let mut rate = base_drain_ps(world, unit, stacks);
     let stunned = world
         .get::<ActiveAuras>(unit)
         .is_some_and(ActiveAuras::is_stunned);
