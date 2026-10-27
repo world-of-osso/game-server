@@ -542,6 +542,11 @@ fn frost_active_rune_recharge_tracks_real_haste_increase() {
         let after_haste = run.app.world().get::<crate::stats::CharacterStats>(actor).unwrap().haste_pct;
         let after = run.app.world().get::<Runes>(actor).unwrap();
         if after_haste <= before_haste + 5.0 || before.order != after.order { continue; }
+        // Aura stat recomputation can occur after rune regeneration in the same fixed tick.
+        run.app.update();
+        let settled_haste = run.app.world().get::<crate::stats::CharacterStats>(actor).unwrap().haste_pct;
+        let after = run.app.world().get::<Runes>(actor).unwrap();
+        if (settled_haste - after_haste).abs() > 0.001 || before.order != after.order { continue; }
         for rune in before.order.iter().take(3) {
             let index = usize::from(*rune);
             let old = before.cooldowns[index];
