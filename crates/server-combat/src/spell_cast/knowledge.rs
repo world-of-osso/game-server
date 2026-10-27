@@ -113,6 +113,14 @@ fn project_known_parent(world: &World, actor: Entity, requested: u32) -> u32 {
         357210 if known.contains(433871) => 433874,
         114050 => 1219480,
         426115 => 264178,
+        // SimC76f8118 sc_demon_hunter.cpp11383: selected Demonsurge enables Pierce for Devourer.
+        452402
+            if world
+                .get::<shared::components::ActiveSpec>(actor)
+                .is_some_and(|spec| spec.0 == 1480) =>
+        {
+            1245483
+        }
         // SimC76f8118 sc_rogue.cpp10247/10300: selected Coup enables its native action.
         441423 => 441776,
         // simc_apl: Malefic Grasp — SimC76f8118 sc_warlock_init.cpp181–183/sc_warlock_actions.cpp2100.

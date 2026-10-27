@@ -79,13 +79,15 @@ fn native_bm_wildspeaker_commands_existing_bear_before_consuming_next_howl() {
     );
 }
 
-
 #[test]
 #[ignore = "requires private spec253 reference inputs and native world DB"]
 fn native_wildspeaker_dire_beasts_inherit_owner_crit() {
     let _seed = crate::random::seed_scope(70_448);
     let mut run = prepare_measurement(253, 1).expect("native literal BM fixture");
-    let mut summons = run.app.world_mut().query::<(Entity, &crate::spell_cast::summon::SummonedCreature)>();
+    let mut summons = run
+        .app
+        .world_mut()
+        .query::<(Entity, &crate::spell_cast::summon::SummonedCreature)>();
     let mut observed_actor = None;
     let mut seen = 0;
     let mut critical_hits = 0;
@@ -100,14 +102,24 @@ fn native_wildspeaker_dire_beasts_inherit_owner_crit() {
     let frame = FIGHT_DURATION / TICKS;
     let mut retired = Vec::new();
     for tick in 1..=TICKS {
-        advance_fixture_frame(&mut run, started_at + frame * tick, started_at, &mut retired, &mut |_| {})
-            .expect("ordinary native combat frame");
+        advance_fixture_frame(
+            &mut run,
+            started_at + frame * tick,
+            started_at,
+            &mut retired,
+            &mut |_| {},
+        )
+        .expect("ordinary native combat frame");
         for (actor, summon) in summons.iter(run.app.world()) {
             if summon.owner == run.actor && summon.spell_id == 219199 {
                 beasts.insert(actor.to_bits());
             }
         }
-        let events = &run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
+        let events = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0;
         for event in &events[seen_combat_events..] {
             if event.source.is_some_and(|source| beasts.contains(&source))
                 && event.target == Some(run.targets[0].to_bits())
@@ -121,40 +133,71 @@ fn native_wildspeaker_dire_beasts_inherit_owner_crit() {
         seen_combat_events = events.len();
         if let Some(actor) = observed_actor {
             let world = run.app.world();
-            let capture = world.resource::<crate::spell_cast::effects::factor_capture::FactorCapture>().export();
+            let capture = world
+                .resource::<crate::spell_cast::effects::factor_capture::FactorCapture>()
+                .export();
             let events = capture["events"].as_array().expect("native factor events");
             for event in &events[seen..] {
                 if event["event"] != "result" || event["spell_id"] != 1232922 {
                     continue;
                 }
-                let owner_crit = world.get::<crate::stats::CharacterStats>(run.actor).unwrap().crit_pct;
-                let chance = event["factors"]["crit"].as_f64().expect("observed crit chance");
+                let owner_crit = world
+                    .get::<crate::stats::CharacterStats>(run.actor)
+                    .unwrap()
+                    .crit_pct;
+                let chance = event["factors"]["crit"]
+                    .as_f64()
+                    .expect("observed crit chance");
                 chances.push((chance, owner_crit));
                 if event["factors"]["result"] == "crit" {
                     critical_hits += 1;
                 }
             }
             seen = events.len();
-            if world.get::<crate::spell_cast::summon::SummonedCreature>(actor).is_none() {
+            if world
+                .get::<crate::spell_cast::summon::SummonedCreature>(actor)
+                .is_none()
+            {
                 observed_actor = None;
             }
         }
         if observed_actor.is_none() {
-            let actor = summons.iter(run.app.world()).find(|(_, summon)|
-                summon.owner == run.actor && summon.spell_id == 219199).map(|(actor, _)| actor);
+            let actor = summons
+                .iter(run.app.world())
+                .find(|(_, summon)| summon.owner == run.actor && summon.spell_id == 219199)
+                .map(|(actor, _)| actor);
             if let Some(actor) = actor {
-                run.app.insert_resource(crate::spell_cast::effects::factor_capture::FactorCapture::new(
-                    actor, run.targets[0], 1232922, "wildspeaker", 100,
-                ));
+                run.app.insert_resource(
+                    crate::spell_cast::effects::factor_capture::FactorCapture::new(
+                        actor,
+                        run.targets[0],
+                        1232922,
+                        "wildspeaker",
+                        100,
+                    ),
+                );
                 observed_actor = Some(actor);
                 seen = 0;
             }
         }
     }
-    assert!(!chances.is_empty(), "actual Dire Beast Wildspeaker must land a hit");
+    assert!(
+        !chances.is_empty(),
+        "actual Dire Beast Wildspeaker must land a hit"
+    );
     // SimC76f8118 pet.cpp217–220: DireCritters inherit their owner's live crit.
-    assert!(chances.iter().all(|(chance, owner)| *chance + 0.001 >= f64::from(*owner) / 100.0),
-        "actual Dire Beast Wildspeaker must inherit owner crit: {chances:?}");
-    assert!(critical_hits > 0, "actual Dire Beast Wildspeaker must land a natural crit");
-    assert!(white_critical_hits > 0, "actual Dire Beast white swings must land a natural crit");
+    assert!(
+        chances
+            .iter()
+            .all(|(chance, owner)| *chance + 0.001 >= f64::from(*owner) / 100.0),
+        "actual Dire Beast Wildspeaker must inherit owner crit: {chances:?}"
+    );
+    assert!(
+        critical_hits > 0,
+        "actual Dire Beast Wildspeaker must land a natural crit"
+    );
+    assert!(
+        white_critical_hits > 0,
+        "actual Dire Beast white swings must land a natural crit"
+    );
 }

@@ -1,5 +1,5 @@
-//! SimC76f8118 unique_gear_midnight.cpp677–730: Arcanoweave Lining's native
-//! RPPM aura procs Arcanoweave Insight; the driver rows do not name the buff.
+//! SimC76f8118 unique_gear_midnight.cpp: equipped stat effects whose native
+//! rows do not carry the applied value (Arcanoweave Insight, Eversong Diamond).
 use bevy::prelude::*;
 
 use super::{
@@ -12,6 +12,9 @@ use crate::spell_info::SpellStore;
 const LINING: u32 = 1283697;
 const LINING_RPPM: u32 = 1229511;
 const INSIGHT: u32 = 1229746;
+const EVERSONG: u32 = 1258209;
+/// unique_gear_midnight.cpp45–55: Peridot, Garnet, Lapis, Amethyst descriptions.
+const GEM_COLORS: [u32; 4] = [14262, 14276, 14277, 14278];
 
 pub(super) fn register(scripts: &mut AuraScripts) {
     scripts.0.insert(
@@ -22,6 +25,64 @@ pub(super) fn register(scripts: &mut AuraScripts) {
             ..Default::default()
         },
     );
+    scripts.0.insert(
+        EVERSONG,
+        AuraScript {
+            on_apply: Some(apply_eversong_colors),
+            ..Default::default()
+        },
+    );
+}
+
+fn count_unique_gem_colors(world: &World, unit: Entity) -> Option<usize> {
+    let equipped = world.get::<crate::stats::EquippedItemModifiers>(unit)?;
+    let native = world.get_resource::<crate::stats::NativeItemInstances>()?;
+    let descriptions: std::collections::BTreeSet<u32> = equipped
+        .items
+        .iter()
+        .flat_map(|(_, item)| item.gems.iter())
+        .filter_map(|gem| native.enchants.gem_descriptions.get(gem).copied())
+        .collect();
+    Some(
+        GEM_COLORS
+            .iter()
+            .filter(|color| descriptions.contains(color))
+            .count(),
+    )
+}
+
+/// unique_gear_midnight.cpp469–477: effects2/3 (native1/2: crit damage and
+/// crit healing) become effect1 base value times the unique equipped colors.
+fn apply_eversong_colors(world: &mut World, unit: Entity, aura: &AuraInstance) {
+    let Some(colors) = count_unique_gem_colors(world, unit) else {
+        error!(
+            ?unit,
+            "Eversong Diamond holder lacks native equipped gem data"
+        );
+        return;
+    };
+    let Some(per_color) = world
+        .resource::<SpellStore>()
+        .get(EVERSONG)
+        .and_then(|spell| spell.effects.iter().find(|effect| effect.index == 0))
+        .map(|effect| effect.base_points)
+    else {
+        error!(?unit, "native Eversong Diamond1258209 lacks effect0");
+        return;
+    };
+    let Some(mut auras) = world.get_mut::<ActiveAuras>(unit) else {
+        return;
+    };
+    let Some(live) = auras.get_mut(aura.instance_id) else {
+        return;
+    };
+    for effect in live
+        .effects
+        .iter_mut()
+        .filter(|effect| matches!(effect.index, 1 | 2))
+    {
+        effect.amount = per_color * colors as f32;
+    }
 }
 
 /// unique_gear_midnight.cpp687–689: equipped copies share one callback.
