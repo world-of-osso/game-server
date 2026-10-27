@@ -20,22 +20,37 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
 ];
 
 fn schedule_apocalypse(world: &mut World, ctx: &EffectCtx<'_>, target: Entity, _: bool) {
-    if ctx.spell.id != 1221162 || ctx.spell.cast_primary_target != Some(target)
-        || !world.get::<KnownSpells>(ctx.caster).is_some_and(|known| known.contains(1227707))
+    if ctx.spell.id != 1221162 || ctx.spell.cast_primary_target != Some(target) {
+        return;
+    }
+    if !world
+        .get::<KnownSpells>(ctx.caster)
+        .is_some_and(|known| known.contains(1227707))
     {
         return;
     }
     // SimC76f8118 cpp6516–6523 grants the buff 1.2s after the primary impact.
     let deadline = spell_cast::now(world) + 1.2;
-    world.entity_mut(ctx.caster).entry::<PendingApocalypse>().or_default().into_mut().0.push(deadline);
+    world
+        .entity_mut(ctx.caster)
+        .entry::<PendingApocalypse>()
+        .or_default()
+        .into_mut()
+        .0
+        .push(deadline);
 }
 
 fn deliver_apocalypse(world: &mut World) {
     let now = spell_cast::now(world);
-    let casters: Vec<_> = world.query_filtered::<Entity, With<PendingApocalypse>>().iter(world).collect();
+    let casters: Vec<_> = world
+        .query_filtered::<Entity, With<PendingApocalypse>>()
+        .iter(world)
+        .collect();
     for caster in casters {
         let due = {
-            let mut pending = world.get_mut::<PendingApocalypse>(caster).expect("pending Apocalypse");
+            let mut pending = world
+                .get_mut::<PendingApocalypse>(caster)
+                .expect("pending Apocalypse");
             let before = pending.0.len();
             pending.0.retain(|deadline| *deadline > now);
             before - pending.0.len()
@@ -87,6 +102,21 @@ fn after_launch(world: &mut World, caster: Entity, spell: &SpellInfo) {
             auras::set_owned_stacks(world, caster, caster, 1227702, remaining),
             "native Collapsing Star soul stack"
         );
+    }
+    // SimC76f8118 cpp6507–6514 reduces shared Voidblade/Pierce recovery once.
+    if world
+        .get::<KnownSpells>(caster)
+        .is_some_and(|known| known.contains(1272422))
+    {
+        let seconds = f64::from(script_effect_value(world, caster, 1272422, 0)) / 1000.0;
+        spell_cast::scripts::reduce_cooldown(world, caster, 1245412, seconds);
+    }
+    // SimC76f8118 cpp6551–6557 resets shared Hunt/Predator's Wake recovery.
+    if world
+        .get::<KnownSpells>(caster)
+        .is_some_and(|known| known.contains(452415))
+    {
+        spell_cast::scripts::reduce_cooldown(world, caster, 1246167, f64::MAX);
     }
     // SimC76f8118 cpp6464–6474,6532–6533 executes the native damage child.
     let target = spell
