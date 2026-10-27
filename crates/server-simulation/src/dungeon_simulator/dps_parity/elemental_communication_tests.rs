@@ -1,6 +1,6 @@
 //! SimC76f8118 sc_shaman.cpp6654–6658/7436–7438/13025–13033:
 //! ordinary builder executions draw native Routine Communication's shuffled deck.
-use super::elemental_mechanics_tests::{cast, fixture};
+use super::elemental_mechanics_tests::cast;
 use super::*;
 use crate::spell_cast::test_harness::ObservedCombatEvents;
 use shared::protocol::CombatLogKind;
@@ -36,6 +36,16 @@ fn native_deck(run: &Run) -> (usize, usize) {
     let total = amount(5);
     assert_eq!((positive, total), (4, 50), "native70448 deck inputs");
     (positive, total)
+}
+
+fn fixture_without_fellowship(targets: usize) -> Run {
+    // The separate Fellowship deck can summon on expiry during these 50 casts.
+    let (profile, mut traits) = read_reference(262).unwrap();
+    traits.retain(|entry| entry.entry_id != 123632);
+    let identity = inputs::read_actor(&profile).unwrap();
+    let mut run = prepare_literal_reference(profile, &traits, targets, identity).unwrap();
+    engage(&mut run);
+    run
 }
 
 fn assert_native_builder_deck(mut run: Run, spell: u32) {
@@ -94,14 +104,12 @@ fn assert_native_builder_deck(mut run: Run, spell: u32) {
 #[ignore = "requires private262 native DB/profile"]
 fn elemental_communication_native_bolt_executions_draw_four_of_fifty() {
     let _seed = crate::random::seed_scope(70448);
-    assert_native_builder_deck(fixture(), 188196);
+    assert_native_builder_deck(fixture_without_fellowship(1), 188196);
 }
 
 #[test]
 #[ignore = "requires private262 native DB/profile"]
 fn elemental_communication_native_chain_draws_once_per_cast_not_recipient() {
     let _seed = crate::random::seed_scope(70448);
-    let mut run = prepare_literal(262, 3).unwrap();
-    engage(&mut run);
-    assert_native_builder_deck(run, 188443);
+    assert_native_builder_deck(fixture_without_fellowship(3), 188443);
 }

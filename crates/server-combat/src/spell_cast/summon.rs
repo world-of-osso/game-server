@@ -1021,6 +1021,8 @@ pub(super) fn expire_summons(world: &mut World) {
             .is_some_and(|expiry| now >= expiry)
         {
             super::scripts::elemental_ancestors::on_expire(world, entity);
+            let registry = *world.resource::<super::script_registry::SpellScriptRegistry>();
+            registry.summon_expired(world, entity);
         }
         let summon = world.get::<SummonedCreature>(entity).unwrap();
         if summon.spell_id == 104317
