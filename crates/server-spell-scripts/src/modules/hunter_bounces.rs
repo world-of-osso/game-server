@@ -78,9 +78,27 @@ fn schedule_bounces(
     if targets.first() != Some(&target) {
         return;
     }
-    for request in read_impacts(world, ctx.caster, policy, &targets) {
+    let tipped = super::survival::consume_chakram_tip(world, ctx, target);
+    let multiplier = if tipped {
+        1.0 + script_effect_value(world, ctx.caster, 1280140, 0) / 100.0
+    } else {
+        1.0
+    };
+    let impacts = read_impacts(world, ctx.caster, policy, &targets);
+    let last_delay = impacts.last().map(|impact| impact.delay_ms);
+    for mut request in impacts {
+        request.multiplier *= multiplier;
         queued_triggers::schedule_scaled_full_trigger(world, ctx, request);
     }
+    if tipped && let Some(delay) = last_delay {
+        queued_triggers::schedule_callback(world, ctx, ctx.caster, delay, expire_chakram_tip);
+    }
+}
+
+fn expire_chakram_tip(world: &mut World, caster: Entity, _target: Entity, _depth: u8) {
+    combat::auras::remove_auras(world, caster, combat::auras::RemoveReason::Consumed, |aura| {
+        aura.caster == caster && aura.spell_id == 1280140
+    });
 }
 
 fn read_impacts(
