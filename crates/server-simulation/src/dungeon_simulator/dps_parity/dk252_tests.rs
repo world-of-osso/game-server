@@ -188,6 +188,32 @@ fn dk252_putrefy_magus_casts_native_necrotic_bolt() {
 
 #[test]
 #[ignore = "requires private native252 profile/traits and player actor"]
+fn dk252_putrid_echoes_spends_both_charges_and_summons_two_ghouls() {
+    use crate::simc_apl_native::{Bindings, Encounter, FightStyle, NativeFacts};
+    use server::simc_apl::Facts;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 1).unwrap();
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, 377580));
+    let bindings = Bindings { actions: [("putrefy".into(), 1247378)].into(), ..Default::default() };
+    let encounter = Encounter::Fixture { started_at: 0.0, duration: 300.0, style: FightStyle::Patchwerk };
+    let charges = |run: &Run| NativeFacts::new(run.app.world(), run.actor, &bindings, encounter, 1)
+        .value("cooldown.putrefy.charges").unwrap();
+    assert_eq!(charges(&run), 2.0, "the fixture starts with two real Putrefy charges");
+    engage(&mut run);
+    literal_rotation::execution::execute(
+        run.app.world_mut(), run.actor,
+        literal_rotation::execution::Execution::Spell(1247378, run.targets[0], Some(run.targets[0])),
+    ).unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    let count = run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0.iter()
+        .filter(|event| event.source == Some(run.actor.to_bits())
+            && event.spell_id == Some(1277098) && event.kind == CombatLogKind::Summon).count();
+    assert_eq!(count, 2, "selected Putrid Echoes must create two native lesser ghouls");
+    assert_eq!(charges(&run), 0.0, "the second ghoul spends the other real Putrefy charge");
+}
+
+#[test]
+#[ignore = "requires private native252 profile/traits and player actor"]
 fn dk252_lord_magus_uses_selected_native_lifetime() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(252, 1).unwrap();
