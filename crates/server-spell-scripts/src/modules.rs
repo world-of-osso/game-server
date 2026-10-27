@@ -139,6 +139,7 @@ register_modules! {
     frost_blast: (2513, "modules/frost_blast.rs"),
     frost_chamber: (2511, "modules/frost_chamber.rs"),
     frost_death_knight: (1000, "modules/frost_death_knight.rs"),
+    frost_deathbringer: (2514, "modules/frost_deathbringer.rs"),
     frost_icy_torrent: (2512, "modules/frost_icy_torrent.rs"),
     frost_feedback: (419, "modules/frost_feedback.rs"),
     frost_followups: (411, "modules/frost_followups.rs"),
