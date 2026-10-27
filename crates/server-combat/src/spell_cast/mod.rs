@@ -3929,6 +3929,7 @@ pub(super) fn cast_triggered_with_item_level(
 #[derive(Default)]
 pub struct TriggeredSpellOverrides {
     pub effect0_amount: Option<f32>,
+    pub damage_multiplier: Option<f32>,
     pub item_level: Option<u16>,
     pub effect_mask: Option<u32>,
     pub aura_stacks: Option<u8>,
@@ -3949,6 +3950,7 @@ pub fn cast_triggered_with_overrides(
         return false;
     };
     spell.cast_aura_stacks = values.aura_stacks;
+    spell.cast_damage_multiplier = values.damage_multiplier;
     spell.cast_original_caster = values.original_caster;
     spell.cast_item_level = values.item_level;
     if let Some(mask) = values.effect_mask {

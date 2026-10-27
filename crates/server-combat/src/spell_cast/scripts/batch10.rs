@@ -59,7 +59,14 @@ pub fn launch_guldan_meteor(world: &mut World, caster: Entity, target: Entity, d
         .get(GULDAN_METEOR)
         .expect("Hand of Guldan requires86040")
         .clone();
-    let multiplier = script_effect_value(world, caster, HAND_OF_GULDAN, 0);
+    let shards = script_effect_value(world, caster, HAND_OF_GULDAN, 0);
+    // SimC76f8118 actions.cpp2758–2770: Gloom scales each spent shard's meteor.
+    let gloom = if crate::auras::has_aura(world, caster, 429899) {
+        script_effect_value(world, caster, 429899, 0) / 100.0
+    } else {
+        0.0
+    };
+    let multiplier = shards * (1.0 + shards * gloom);
     let mut plan = spell_cast::plan_targets(world, caster, &child, Some(target), false)
         .expect("Guldan meteor native target area");
     for effect in &mut plan {
