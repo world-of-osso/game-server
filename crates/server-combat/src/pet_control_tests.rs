@@ -29,6 +29,7 @@ const WOLF_DISPLAY: u32 = 1_413;
 const CHARACTER_ID: u64 = 1;
 const DASH: u32 = 61_684;
 const BITE: u32 = 17_253;
+const WILD_HUNT: u32 = 62_762;
 const GROWL: u32 = 2_649;
 const FURIOUS_BITE: u32 = 263_840;
 const BM_KILL_COMMAND: u32 = 34_026;
@@ -101,6 +102,7 @@ fn hunter_logged_in(path: &Path) -> Option<PetHarness> {
     let ids = [
         CALL_PET_1,
         BITE,
+        WILD_HUNT,
         GROWL,
         DASH,
         BM_KILL_COMMAND,
@@ -773,7 +775,14 @@ fn called_wolf_focus_inherits_continuous_owner_regen_even_after_a_full_pool() {
     let expected = (before + pet_rate * elapsed).min(100.0);
     assert!((focus(&p) - expected).abs() < 0.001);
 
-    p.advance(80);
+    // Wild Hunt can double the initial Bite cost. Wait for actual regeneration
+    // rather than assuming the old fixed five-second refill interval.
+    for _ in 0..200 {
+        if focus(&p) == 100.0 {
+            break;
+        }
+        p.advance(1);
+    }
     assert_eq!(focus(&p), 100.0, "continuous gain clamps at the native cap");
     p.advance(60);
     let beside = p.position(p.pet);
