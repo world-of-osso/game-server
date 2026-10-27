@@ -704,6 +704,8 @@ fn demonology_felguard_strike_inherits_owner_spell_power() {
     use crate::spell_cast::effects::factor_capture::FactorCapture;
     let _seed = crate::random::seed_scope(70_448);
     let mut run = prepare_measurement(266, 1).unwrap();
+    // Keep owner SP stable while the actual pet reaches its next strike.
+    super::channel_timing_tests::remove_equipped_proc_drivers(&mut run);
     engage(&mut run);
     let pet = run
         .app
@@ -730,9 +732,8 @@ fn demonology_felguard_strike_inherits_owner_spell_power() {
         "legion_strike",
         1,
     ));
-    crate::spell_cast::creature_cast(run.app.world_mut(), pet, 30213, Some(run.targets[0]), false)
-        .expect("real Felguard must use native Legion Strike");
-    for _ in 0..100 {
+    crate::pet_control::order_companion_pet(run.app.world_mut(), run.actor, Some(run.targets[0]));
+    for _ in 0..300 {
         run.app.update();
     }
     let capture = run.app.world().resource::<FactorCapture>().export();
