@@ -288,12 +288,19 @@ fn schedule_next_tick(world: &mut World, unit: Entity, spell: &mut SpellInfo, ti
     // Live uncharged Period modifiers still update the next interval normally.
     spell.cast_charge_mods = effect.periodic_cast_charge_mods.clone();
     let rate = crate::spell_cast::script_registry::periodic_tick_rate(world, caster, unit, spell);
+    // SimC76f8118 action.cpp:2038–2041,2792–2809 updates haste on each
+    // non-channel dot tick; channeled dots retain their cast-time haste.
+    let haste = if crate::spell_cast::is_channeled(spell) {
+        effect.periodic_haste_multiplier
+    } else {
+        super::periodic_haste_multiplier(world, caster, spell)
+    };
     let (_, period) = super::periodic_timing_with_haste(
         world,
         caster,
         spell,
         effect.periodic_base_ms,
-        effect.periodic_haste_multiplier * rate,
+        haste * rate,
     );
     let mut auras = world
         .get_mut::<ActiveAuras>(unit)

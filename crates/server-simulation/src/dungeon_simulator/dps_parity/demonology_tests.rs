@@ -1513,3 +1513,49 @@ fn demonology_gloomhound_attacks_deal_native_gloom_slash() {
         "both melee and Headbutt must trigger real Gloom Slash: melee={melee} headbutt={headbutt} gloom={gloom}"
     );
 }
+
+#[test]
+#[ignore = "requires private266 inputs; Tyrant summon grants Oblation and Abyssal Dominion"]
+fn demonology_tyrant_summon_grants_oblation_and_abyssal_dominion() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(266, 1).unwrap();
+    for talent in [1276746, 429581, 1276748] {
+        assert!(
+            crate::auras::has_aura(run.app.world(), run.actor, talent),
+            "selected {talent}"
+        );
+    }
+    engage(&mut run);
+    crate::spell_cast::creature_cast(
+        run.app.world_mut(),
+        run.actor,
+        265187,
+        Some(run.targets[0]),
+        false,
+    )
+    .unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    let world = run.app.world();
+    let now = crate::spell_cast::now(world);
+    let remaining = |spell| {
+        world
+            .get::<crate::auras::ActiveAuras>(run.actor)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == spell && aura.caster == run.actor)
+            .and_then(|aura| aura.expires_at)
+            .map(|at| at - now)
+    };
+    // SimC76f8118 actions.cpp3641–3645, init.cpp935–936.
+    let oblation = remaining(1276767).expect("Tyrant's Oblation must apply on the Tyrant summon");
+    // Reign of Tyranny's native duration modifier: SimC's 33.3% uptime is five 20s windows.
+    assert!(
+        (19.8..=20.05).contains(&oblation),
+        "native 15s Oblation plus Reign of Tyranny 5s, got {oblation}"
+    );
+    let dominion = remaining(456323).expect("Abyssal Dominion must apply on the Tyrant summon");
+    assert!(
+        (19.8..=20.05).contains(&dominion),
+        "native 15s Abyssal Dominion plus Reign of Tyranny 5s, got {dominion}"
+    );
+}

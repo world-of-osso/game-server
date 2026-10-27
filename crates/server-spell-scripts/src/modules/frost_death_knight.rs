@@ -21,6 +21,8 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AfterSpellPayment(roll_runic_empowerment),
     SpellScriptHook::AfterPeriodicDamagePolicies(frost_fever_runic_power),
     SpellScriptHook::AfterPeriodicDamagePolicies(frost_fever_brittle),
+    SpellScriptHook::AfterResolvedHits(earn_freezing_tempest),
+    SpellScriptHook::OnCast(reset_freezing_tempest),
     SpellScriptHook::ResolvedDamage(glacial_advance_razorice),
     SpellScriptHook::LateAuraRegistration(register_frost_auras),
     SpellScriptHook::ResolvedDamage(frostreaper_impact),
@@ -40,7 +42,7 @@ struct KillingMachineAttempts(u32);
 pub(super) fn owns_proc(spell: u32) -> bool {
     matches!(
         spell,
-        KILLING_MACHINE | RIME | OBLITERATION | 195621 | 1230301
+        KILLING_MACHINE | RIME | OBLITERATION | 195621 | 1230301 | 1296652
     )
 }
 
@@ -410,6 +412,32 @@ fn breath_ended(
     // SimC76f8118 sc_death_knight.cpp7135–7140: ending Breath grants
     // the native 1234304 rune amount, except during encounter teardown.
     spell_cast::cast_triggered(world, unit, 1234304, Some(unit), 1);
+}
+
+fn earn_freezing_tempest(world: &mut World, ctx: &spell_cast::effects::EffectCtx) {
+    if ctx.spell.id != 196771
+        || !is_frost(world, ctx.caster)
+        || !auras::has_aura(world, ctx.caster, 1296652)
+    {
+        return;
+    }
+    let hit = spell_cast::resolving_damage(world, ctx)
+        .expect("Winter pulse retains its resolved hits")
+        .iter()
+        .any(|(_, damage)| *damage > 0.0);
+    // SimC76f8118 sc_death_knight.cpp12381–12387: one stack per pulse with any hit.
+    if hit && !spell_cast::try_cast_triggered(world, ctx.caster, 1297365, Some(ctx.caster), 1) {
+        warn!(caster = ?ctx.caster, "Native Freezing Tempest buff refused");
+    }
+}
+
+fn reset_freezing_tempest(world: &mut World, caster: Entity, spell: u32, _: u8) {
+    if matches!(spell, 196770 | 1233152) && is_frost(world, caster) {
+        // SimC76f8118 sc_death_knight.cpp12443–12450: a new Winter clears the previous stack.
+        auras::remove_auras(world, caster, auras::RemoveReason::Consumed, |aura| {
+            aura.spell_id == 1297365 && aura.caster == caster
+        });
+    }
 }
 
 fn frost_fever_brittle(world: &mut World, ctx: &spell_cast::effects::EffectCtx, target: Entity) {
