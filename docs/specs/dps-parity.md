@@ -677,6 +677,7 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 - Selected MID2 four-piece rolls native1296574 effect3's accumulated chance on actual Imp exhaustion. A successful Imp travels to its actual target and launches native1306077, using native196278's damage coefficient and native1296574 effects1/2 for primary and secondary damage. Under pinned bugs=1, isolated deaths do not grant Demonic Core (`sc_warlock_pets.cpp833–849/963–983`, `sc_warlock_actions.cpp3200–3290`).
 - Selected Inner Demons starts at actual combat entry with a uniformly random first phase, then summons native279910 at the native267216 period without haste (`sc_warlock_init.cpp766–771/1722–1725`). It stops outside combat.
 - Selected Carnivorous Stalkers rolls native386194 effect1 on each actual Dreadstalker melee execution and queues a real271971 Dreadbite when the guardian is ready (`sc_warlock_pets.cpp1116–1143`, `sc_warlock_init.cpp1272–1274`).
+- On a real Demonic Tyrant summon, selected Reign of Tyranny extends each living owned Dreadstalker by 15 seconds. The pinned bug model also counts living Vilefiends for the new Tyrant’s native Demonic Power (`sc_warlock_actions.cpp3586–3620`).
 - Selected Mark of Shatug casts native455491 Gloom Slash on the attack target after each actual Gloomhound226268 melee and Headbutt267999 execution (`sc_warlock_pets.cpp1361–1373,1405–1418`).
 - Selected Inner Demons starts at actual combat entry with a uniformly random first phase, then summons native279910 at the native267216 period without haste (`sc_warlock_init.cpp766–771/1722–1725`). It stops outside combat.
 - Actual Wild Imp104317/55659 guardians cannot regenerate spent Energy (pinned `pets.cpp701/875–882`). Native pool sizes, spell costs and actual exhaustion/removal remain authoritative; other guardian regeneration is unchanged. Selected Imp Gang Boss applies native1250772 to the first actual Imp of each Hand of Gul'dan group (`actions.cpp5716–5723`).
@@ -1186,6 +1187,3 @@ Selected Insidious Ire earns its temporary channel bonus when one target has all
 
 - Specialization Raise Dead46584 creates native26125 through the controlled-pet path, retaining the actual current-pet relationship and permanent lifetime. Native Dark Transformation must see the pet through UNIT_PET. DK inherits source-qualified owner melee AP/crit/haste, and ordinary owner casts order the real pet against the selected hostile primary. Hunter, Warlock and Mage pet policies remain unchanged.
 
-### Reign of Tyranny pet extension
-
-- On a real Demonic Tyrant summon, selected Reign of Tyranny extends each living owned Dreadstalker by 15 seconds. The pinned bug model also counts living Vilefiends for the new Tyrant’s native Demonic Power (`sc_warlock_actions.cpp3586–3620`).
