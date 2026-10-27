@@ -118,9 +118,19 @@ fn devourer_void_ray_spends_fury_for_each_native_tick() {
         .0;
     // SimC76f8118 sc_demon_hunter.cpp6431–6455 pays native1213649's
     // 70448 cost of 5 Fury for each non-Meta channel tick.
+    // SimC76f8118 cpp3583–3698: a consumed soul can independently energize
+    // the actor during the real channel; include only observed native gains.
+    let soul_fury: i32 = run.app.world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0.iter()
+        .filter(|event| event.target == Some(run.actor.to_bits())
+            && event.spell_id == Some(1223628)
+            && event.kind == shared::protocol::CombatLogKind::Energize)
+        .map(|event| event.amount)
+        .sum();
     assert_eq!(
         after,
-        100.0 - ticks as f32 * 5.0,
+        100.0 + soul_fury as f32 - ticks as f32 * 5.0,
         "every real Void Ray tick must pay its native Fury cost"
     );
 }
