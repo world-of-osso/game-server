@@ -176,7 +176,21 @@ pub(super) fn prepare_driver(run: &mut super::Run) -> Result<Box<dyn super::Spec
     };
     let mut rotation = Rotation::load(run.app.world_mut(), run.actor, encounter)?;
     while rotation.precombat_step(run.app.world_mut(), run.actor, &run.targets)? {
+        if std::env::var_os("HAVOC_MASTERY_TRACE").is_some() {
+            eprintln!(
+                "MASTERY_TRACE before {:?} {:?}",
+                super::report::stats(run.app.world(), run.actor),
+                run.app.world().get::<crate::auras::ActiveAuras>(run.actor)
+            );
+        }
         super::preparation::finish_pending_setup(run)?;
+        if std::env::var_os("HAVOC_MASTERY_TRACE").is_some() {
+            eprintln!(
+                "MASTERY_TRACE after {:?} {:?}",
+                super::report::stats(run.app.world(), run.actor),
+                run.app.world().get::<crate::auras::ActiveAuras>(run.actor)
+            );
+        }
     }
     rotation.start_combat_at(crate::spell_cast::now(run.app.world()));
     run.gaps.retain(|gap| {
