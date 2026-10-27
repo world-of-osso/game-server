@@ -221,6 +221,7 @@ register_modules! {
     subtlety_ancient: (2611, "modules/subtlety_ancient.rs"),
     subtlety_secret: (2614, "modules/subtlety_secret.rs"),
     subtlety_blades: (2613, "modules/subtlety_blades.rs"),
+    subtlety_clone: (2617, "modules/subtlety_clone.rs"),
     subtlety_finishers: (2612, "modules/subtlety_finishers.rs"),
     subtlety_master_shadows: (2616, "modules/subtlety_master_shadows.rs"),
     subtlety_shadow: (420, "modules/subtlety_shadow.rs"),
