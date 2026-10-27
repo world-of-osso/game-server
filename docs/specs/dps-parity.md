@@ -294,6 +294,8 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 ### Havoc literal rotation
 
+- Selected Chaos Theory389687 grants native390195 on Blade Dance/Death Sweep. Its native proc modifier applies to Chaos Strike/Annihilation's off-hand refund roll; that off-hand execution consumes the buff whether or not a refund occurs (SimC76f8118 sc_demon_hunter.cpp7234–7237,7481–7515).
+
 - Demon Hunter soul fragments retain their type, position, activation and expiry. The literal `pick_up_fragment` action selects a live fragment by its source mode and type, rechecks its condition at arrival, then consumes it through the spec's native payload. Demonic Appetite rolls native206478 on real Havoc Chaos Strike/Annihilation execution (SimC76f8118 sc_demon_hunter.cpp1656–1908,5069–5325,7579–7608).
 
 - A landed Havoc Hunt impact applies native370969's periodic payload to enemies within its native hostile range, with the primary included in the native370967 effect0 target cap (SimC76f8118 sc_demon_hunter.cpp5488–5495,5505–5511).
