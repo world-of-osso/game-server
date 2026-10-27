@@ -97,6 +97,7 @@ mod elemental_fellowship_tests;
 mod elemental_fusion_tests;
 mod elemental_mechanics_tests;
 mod elemental_offering_tests;
+mod elemental_quake_overload_tests;
 mod elemental_rotation_tests;
 mod elemental_tier_tests;
 mod engagement_tests;
