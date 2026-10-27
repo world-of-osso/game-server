@@ -59,6 +59,58 @@ fn havoc_damage_applies_chaos_brand_to_actual_targets() {
     }
 }
 
+#[test]
+#[ignore = "requires prepared native spec577 player profile"]
+fn havoc_chaos_brand_increases_magic_but_not_physical_damage() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(577, 1).unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    let actor = run.actor;
+    let target = run.targets[0];
+    super::face_actor_toward_primary(run.app.world_mut(), actor, target);
+    let known = run
+        .app
+        .world()
+        .get::<crate::class_progression::KnownSpells>(actor)
+        .unwrap();
+    let spells = known
+        .iter()
+        .filter(|s| ![388113, 388108, 428492, 452408].contains(s))
+        .collect();
+    run.app
+        .world_mut()
+        .entity_mut(actor)
+        .insert(crate::class_progression::KnownSpells::fixture(spells));
+    run.app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(actor)
+        .unwrap()
+        .crit_pct = -1000.0;
+    let strike = |run: &mut Run, spell| {
+        let _seed = crate::random::seed_scope(88);
+        crate::spell_cast::cast_triggered(run.app.world_mut(), actor, spell, Some(target), 1);
+        damage(run, Some(spell)).last().unwrap().amount
+    };
+    let initial = strike(&mut run, 198030);
+    let branded = strike(&mut run, 198030);
+    assert!(
+        (branded as f32 / initial as f32 - 1.03).abs() < 0.002,
+        "magic {initial} -> {branded}"
+    );
+    let physical_branded = strike(&mut run, 162243);
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        target,
+        crate::auras::RemoveReason::Expired,
+        |aura| aura.spell_id == 1490,
+    );
+    let physical_plain = strike(&mut run, 162243);
+    assert_eq!(
+        physical_branded, physical_plain,
+        "Chaos Brand must not increase physical damage"
+    );
+}
+
 fn isolated_prey_hits(spell: u32, count: usize, selected: bool) -> Vec<CombatLogEvent> {
     let _seed = crate::random::seed_scope(70_448);
     let mut run = prepare_literal(577, count).unwrap();
