@@ -126,7 +126,7 @@ Frost player reaction clocks are configured before food setup advances native fr
 - Selected Dire Command378743 rolls its native chance using SimC accumulated PRD after actual BM Kill Command and summons native219199. Its native base lifetime is converted to the source's haste-scaled probabilistic swing count; Beast110063 inherits live owner ranged AP (SimC76f8118 hunter1736–1755,1935,6610–6613,8396).
 
 - Selected Wildspeaker1232739 applies native1235388 to existing DireCritters when owner Bestial Wrath succeeds. New DireCritters joining an active owner BW inherit only its remaining time, before summon-time Rend executes; stable pets keep their separate native Wrath path (SimC76f8118 hunter1866–1867,6729–6736).
-- Actual DireCritters inherit the owner's live critical chance for melee and spell attacks even when they have no autonomous guardian spell list (SimC76f8118 pet.cpp217–220).
+- Actual DireCritters inherit the owner's live critical chance for melee and spell attacks even when they have no autonomous guardian spell list (SimC76f8118 pet.cpp217–220). Their spells also inherit the owner's selected passive spell modifiers when native masks match, including Savagery on Wildspeaker1232922 (SimC76f8118 player.cpp15268–15324).
 
 - Selected Fury of the Wyvern472550 extends an existing earned Cry471881 after successful BM Kill Command34026, including the consuming command. Native effect2 supplies each extension and effect4 the total budget. Actual Cry removal resets the budget; white-impact stack growth does not (SimC76f8118 hunter6626–6630,8279–8287).
 

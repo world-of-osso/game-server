@@ -331,7 +331,15 @@ fn live_modifiers<'a>(
     let owner = world
         .get::<crate::hunter_pet::HunterPet>(caster)
         .map(|pet| pet.owner)
-        .or_else(|| crate::spell_cast::guardian::stat_owner(world, caster));
+        .or_else(|| crate::spell_cast::guardian::stat_owner(world, caster))
+        // SimC76f8118 player.cpp15268–15324: DireCritters also inherit
+        // selected passive spell modifiers without an autonomous guardian actor.
+        .or_else(|| {
+            world
+                .get::<crate::spell_cast::summon::SummonedCreature>(caster)
+                .filter(|summon| crate::auras::summon_damage::is_dire_critter(summon))
+                .map(|summon| summon.owner)
+        });
     let inherited = owner
         .and_then(|owner| world.get::<ActiveAuras>(owner))
         .into_iter()
