@@ -110,6 +110,7 @@ register_modules! {
     elemental_ascendance: (220, "modules/elemental_ascendance.rs"),
     elemental_communication: (2620, "modules/elemental_communication.rs"),
     elemental_fellowship: (2624, "modules/elemental_fellowship.rs"),
+    elemental_flow_overload: (2640, "modules/elemental_flow_overload.rs"),
     elemental_fusion: (2621, "modules/elemental_fusion.rs"),
     elemental_lava_overload: (2626, "modules/elemental_lava_overload.rs"),
     elemental_offering: (2623, "modules/elemental_offering.rs"),
