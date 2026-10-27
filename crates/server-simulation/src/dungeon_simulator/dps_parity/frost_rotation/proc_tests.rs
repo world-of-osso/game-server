@@ -589,11 +589,12 @@ fn frost_gathering_storm_extends_winter_for_paid_and_free_spenders() {
     let paid = expiration(&run);
     assert!((paid - before - f64::from(base_extension) * 0.2).abs() < 0.001,
         "paid two-rune Obliterate extends Winter: {before} -> {paid}");
-    super::super::enhancement_generation_tests::cast(&mut run, 47568, actor);
+    cast(&mut run, 47568);
     let before_free = expiration(&run);
     assert!(auras::has_aura(run.app.world(), actor, 1230959));
     cast(&mut run, 49020);
     let free = expiration(&run);
+    assert!(!auras::has_aura(run.app.world(), actor, 1230959));
     assert!((free - before_free - f64::from(base_extension) * 0.2).abs() < 0.001,
         "free Obliterate still extends Winter by its base rune cost: {before_free} -> {free}");
     let stacks = run.app.world().get::<ActiveAuras>(actor).unwrap().iter()
