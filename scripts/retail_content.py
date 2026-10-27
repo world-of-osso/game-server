@@ -341,6 +341,9 @@ CLASS_SUMMON_POLICY_CHILDREN = (
     (1276163, 1276182), (1276163, 1276283), (1276163, 1282501), (1276163, 1282502),
     # SimC76f8118 sc_death_knight.cpp15401–15406: selected Unholy summon actions.
     (55090, 275430), (1247378, 1277098), (1256813, 1242294), (1256813, 1292072),
+    # SimC76f8118 sc_death_knight.cpp8870–8874/9002–9008: Raise Abomination
+    # summons native 288853 alongside Army; its Effect28 supplies creature 149555.
+    (1242608, 288853),
     # SimC76f8118 sc_death_knight.cpp9027–9030/13108–13110/15414–15417:
     # Apocalypse Now and Rider's Champion summon the actual four Horsemen.
     (444040, 444248), (444040, 444251), (444040, 444252), (444040, 444254),
