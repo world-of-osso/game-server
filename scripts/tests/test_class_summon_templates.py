@@ -109,6 +109,21 @@ class ClassSummonImportTests(unittest.TestCase):
                         "SELECT name FROM tdb_creature_template WHERE entry=?", (entry,)).fetchone())
                     self.assertIn(entry, selected)
 
+    def test_rider_talents_reach_all_four_authentic_horsemen(self):
+        source = (ROOT / "data/world.db").resolve()
+        expected = ((444248, 221632), (444251, 221633),
+                    (444252, 221634), (444254, 221635))
+        with closing(sqlite3.connect(f"file:{source}?mode=ro", uri=True)) as conn:
+            selected = {row[0] for row in conn.execute(retail_content.CLASS_SUMMON_ENTRIES)}
+            for spell, entry in expected:
+                with self.subTest(spell=spell):
+                    native = conn.execute("""SELECT EffectMiscValue_0 FROM spell_effect
+                        WHERE SpellID=? AND DifficultyID=0 AND Effect=28""", (spell,)).fetchone()
+                    self.assertEqual(native, (entry,))
+                    self.assertIsNotNone(conn.execute(
+                        "SELECT name FROM tdb_creature_template WHERE entry=?", (entry,)).fetchone())
+                    self.assertIn(entry, selected)
+
     def test_dire_command_reaches_authentic_native_beast(self):
         source = (ROOT / "data/world.db").resolve()
         with closing(sqlite3.connect(f"file:{source}?mode=ro", uri=True)) as conn:
