@@ -24,11 +24,40 @@ const FOCUSED_RAY: u32 = 1240203;
 struct VoidRayTick(u32);
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::EarlyAuraRegistration(register_channel_end),
     SpellScriptHook::OnCast(snapshot_tick),
     SpellScriptHook::ChannelPeriodic(periodic_trigger),
     SpellScriptHook::TargetContextDamageMultiplier(focused_ray),
     SpellScriptHook::AfterFireDirectHit(shatter_on_tick),
 ];
+
+fn register_channel_end(scripts: &mut combat::auras::scripts::AuraScripts) {
+    scripts.0.entry(VOID_RAY).or_default().on_natural_end = Some(finish_ray);
+}
+
+fn finish_ray(world: &mut World, actor: Entity, aura: &combat::auras::AuraInstance) {
+    if actor != aura.caster { return; }
+    let known = world.get::<KnownSpells>(actor);
+    let final_breath = known.is_some_and(|known| known.contains(1266500));
+    let moment = known.is_some_and(|known| known.contains(1238488));
+    if final_breath {
+        // SimC76f8118 cpp3282–3325: a completed channel executes an additional
+        // native tick at Final Breath effect1's percentage.
+        let child = world.get::<VoidRayTick>(actor).expect("completed Ray retains tick").0;
+        let mut spell = spell_cast::load_triggered_spell(world, child, 1).expect("native Ray tick");
+        spell.cast_damage_multiplier = Some(spell_cast::scripts::script_effect_value(world, actor, 1266500, 0) / 100.0);
+        if !spell_cast::launch_triggered_spell(world, actor, &spell, None, 1) {
+            error!(?actor, "native Final Breath tick was refused");
+        }
+    }
+    if moment {
+        // SimC76f8118 cpp6392–6409: a completed Ray grants Moment and resets Reap.
+        if !spell_cast::try_cast_triggered(world, actor, 1238495, Some(actor), 1) {
+            error!(?actor, "native Moment of Craving was refused");
+        }
+        spell_cast::scripts::reduce_cooldown(world, actor, 1226019, f64::MAX);
+    }
+}
 
 fn snapshot_tick(world: &mut World, actor: Entity, spell: u32, _: u8) {
     if spell != VOID_RAY {
@@ -82,7 +111,8 @@ fn focused_ray(world: &World, ctx: &EffectCtx<'_>, _: Entity, periodic: bool) ->
 }
 
 fn shatter_on_tick(world: &mut World, ctx: &EffectCtx<'_>, _: Entity, _: bool) {
-    if !matches!(ctx.spell.id, 1213649 | 1214595)
+    let ray = matches!(ctx.spell.id, 1213649 | 1214595);
+    if !matches!(ctx.spell.id, 1213649 | 1214595 | 1221162 | 473662 | 1217610 | 1245455 | 1225823 | 1239127 | 1297432)
         || !world
             .get::<KnownSpells>(ctx.caster)
             .is_some_and(|known| known.contains(1227619))
@@ -97,16 +127,20 @@ fn shatter_on_tick(world: &mut World, ctx: &EffectCtx<'_>, _: Entity, _: bool) {
         })
         .count();
     assert!(targets > 0, "Void Ray hit requires a target");
-    // SimC76f8118 cpp3390–3437,6338–6344: base chance +1%, Waste Not, divided by target count.
+    // SimC76f8118 cpp3390–3437,6338–6344: each selected direct hit rolls
+    // base chance +1%; Ray alone applies Waste Not and divides by target count.
     let mut chance = spell_cast::scripts::script_effect_value(world, ctx.caster, 1227619, 0) + 1.0;
-    if world
+    if ray && world
         .get::<KnownSpells>(ctx.caster)
         .is_some_and(|known| known.contains(1223918))
     {
         chance *=
             1.0 + spell_cast::scripts::script_effect_value(world, ctx.caster, 1223918, 0) / 100.0;
     }
-    if combat::random::thread_rng().gen_range(0.0..100.0) < chance / targets as f32 {
+    if ray {
+        chance /= targets as f32;
+    }
+    if combat::random::thread_rng().gen_range(0.0..100.0) < chance {
         soul_fragments::spawn(world, ctx.caster, FragmentKind::Lesser, false)
             .expect("native Shattered Souls fragment");
     }
