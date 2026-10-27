@@ -19,6 +19,7 @@ const ANCIENT_ARTS: u32 = 1269163;
 
 #[derive(Component)]
 struct SecretCast {
+    parent: SpellInfo,
     target: Entity,
     player: SpellInfo,
     clone: SpellInfo,
@@ -70,6 +71,7 @@ fn snapshot_secret(world: &mut World, caster: Entity, parent: &SpellInfo, depth:
         vec![now + 1.0, now + 1.3]
     };
     world.entity_mut(caster).insert(SecretCast {
+        parent: parent.clone(),
         target,
         player,
         clone,
@@ -129,6 +131,10 @@ fn launch_due_clones(world: &mut World) {
     }
 }
 
+pub(super) fn parent_snapshot(world: &World, caster: Entity) -> Option<SpellInfo> {
+    world.get::<SecretCast>(caster).map(|state| state.parent.clone())
+}
+
 fn target_crit_modifier(world: &World, target: Entity) -> f32 {
     world.get::<ActiveAuras>(target).map_or(0.0, |auras| {
         auras.modifier(handlers::MOD_ATTACKER_MELEE_CRIT_CHANCE)
@@ -166,7 +172,7 @@ fn snapshot_critical_chance(
 }
 
 fn secondary_fraction(world: &World, ctx: &EffectCtx, target: Entity, _: bool) -> f32 {
-    if !matches!(ctx.spell.id, PLAYER | CLONE) || ctx.spell.cast_primary_target == Some(target) {
+    if !matches!(ctx.spell.id, PLAYER | CLONE | 1269560) || ctx.spell.cast_primary_target == Some(target) {
         return 1.0;
     }
     // sc_rogue.cpp5392–5398: the physical player and Secret Technique

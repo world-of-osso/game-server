@@ -169,6 +169,7 @@ Native merged buff outcomes apply or clear the caster-owned aura after the hit b
 
 ### Subtlety literal fixture
 
+- Secret Technique's landed player attack triggers earned Ancient Arts collection and can launch its native delayed shadow clone, using the parent finisher's paid points (`sc_rogue.cpp5435–5503,8668–8701`).
 - Consuming stored Shadow Techniques can launch a delayed builder shadow clone; Ancient Arts can also launch an Eviscerate or Black Powder shadow clone with the source finisher's combo points and critical chance snapshotted (`sc_rogue.cpp3627–3665,8175–8194,8229–8249,8668–8701`).
 - Consuming stored Shadow Techniques through Ancient Arts can launch a delayed Eviscerate or Black Powder shadow clone, with the source finisher's combo points and critical chance snapshotted (`sc_rogue.cpp3627–3665,8229–8249,8668–8701`).
 - A landed combo-point damage hit, including its Shadowed Finishers and clone payloads, distributes Goremaw's native residual fraction across targets with the caster's active Goremaw DoT (`sc_rogue.cpp2840–2845,6444–6463,9011–9028`).
