@@ -2,11 +2,32 @@
 use super::combat;
 use bevy::prelude::*;
 use combat::auras::{self, ActiveAuras, RemoveReason};
-use combat::spell_cast::{self, script_registry::SpellScriptHook, scripts::script_effect_value};
+use combat::spell_cast::{
+    self, effects::EffectCtx, script_registry::SpellScriptHook, scripts::script_effect_value,
+};
 use combat::spell_info::SpellInfo;
 use shared::components::ActiveSpec;
 
-pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::AfterNativeLaunch(after_launch)];
+pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::AfterNativeLaunch(after_launch),
+    SpellScriptHook::TargetContextDamageMultiplier(secondary_multiplier),
+];
+
+fn secondary_multiplier(world: &World, ctx: &EffectCtx<'_>, target: Entity, periodic: bool) -> f32 {
+    if periodic || ctx.spell.id != 1221162 {
+        return 1.0;
+    }
+    let primary = ctx
+        .spell
+        .cast_primary_target
+        .expect("native Collapsing Star primary target");
+    if target == primary {
+        1.0
+    } else {
+        // SimC76f8118 cpp6488–6495 uses the native parent effect2 percentage.
+        script_effect_value(world, ctx.caster, 1221150, 1) / 100.0
+    }
+}
 
 fn after_launch(world: &mut World, caster: Entity, spell: &SpellInfo) {
     if spell.id != 1221150 || world.get::<ActiveSpec>(caster).map(|spec| spec.0) != Some(1480) {
