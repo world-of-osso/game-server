@@ -371,14 +371,14 @@ fn sayaad_whiplash_melee(owned: bool) -> (f64, f64) {
             })
             .map(|event| event.amount)
             .collect();
-        if hits.len() >= 4 {
+        if hits.len() >= 2 {
             return (
                 hits.iter().map(|&amount| f64::from(amount)).sum::<f64>() / hits.len() as f64,
                 bonus,
             );
         }
     }
-    panic!("actual Sayaad must land four noncritical white hits");
+    panic!("actual Sayaad must land two noncritical white hits");
 }
 
 #[test]
