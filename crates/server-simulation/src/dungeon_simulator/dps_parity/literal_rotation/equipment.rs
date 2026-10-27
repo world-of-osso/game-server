@@ -255,7 +255,9 @@ impl Equipment {
                 .map(|row| row.duration)
                 .fold(0.0, f64::max)),
             "cooldown.remains" | "cooldown.ready" => read_cooldown(item, field, native),
-            "proc.any_dps.duration" => Ok(item.metadata.duration),
+            // SimC76f8118 unique_gear.cpp4288–4345 parses both spellings
+            // as the same item stat-buff expression.
+            "proc.any_dps.duration" | "buff.any_dps.duration" => Ok(item.metadata.duration),
             "proc.any_dps.up" | "proc.any_dps.remains" => read_proc_state(item, field, native),
             // SimC76f8118 unique_gear.cpp4307–4311: has_ selects the same
             // stat-buff existence expression, including both APL spellings.
