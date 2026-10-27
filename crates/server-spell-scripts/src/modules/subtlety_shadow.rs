@@ -133,7 +133,7 @@ pub(super) fn shadow_multiplier(world: &World, ctx: &EffectCtx) -> f32 {
 }
 
 pub(super) fn darkness_multiplier(world: &World, caster: Entity) -> f32 {
-    // sc_rogue.cpp8569–8572: Lingering Darkness is scripted, absent from the whitelist.
+    // sc_rogue.cpp8569–8572/10994: Subtlety's direct mod is effect2, scripted here.
     if !has_talent(world, caster, 457056) {
         return 1.0;
     }
@@ -141,7 +141,7 @@ pub(super) fn darkness_multiplier(world: &World, caster: Entity) -> f32 {
         let amount = aura
             .effects
             .iter()
-            .find(|effect| effect.index == 0)
+            .find(|effect| effect.index == 1)
             .expect("native Lingering Darkness direct bonus")
             .amount;
         1.0 + amount * f32::from(aura.stacks.max(1)) / 100.0

@@ -1,6 +1,8 @@
 //! SimC76f8118 sc_rogue.cpp2819–2853/5508–5520/8501–8508:
 //! earned Shadow Blades copies actual Rogue damage into native Shadow damage.
 use super::{cast_relationships::has_talent, combat};
+#[path = "subtlety_darkness.rs"]
+mod subtlety_darkness;
 use bevy::prelude::*;
 use combat::auras::ActiveAuras;
 use combat::spell_cast::{
@@ -20,6 +22,7 @@ const EXCLUDED: &[u32] = &[279043, 386081, 457236, 1309309];
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::ResolvedDamage(after_spell),
     SpellScriptHook::LandedDamagePolicy(after_white),
+    SpellScriptHook::LateAuraRegistration(subtlety_darkness::register),
 ];
 
 fn after_spell(world: &mut World, ctx: &EffectCtx, target: Entity, _: bool, damage: f32) {
