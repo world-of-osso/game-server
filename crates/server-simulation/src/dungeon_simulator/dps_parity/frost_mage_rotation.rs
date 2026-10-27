@@ -54,6 +54,11 @@ fn reaction_settings() -> reaction::ReactionSettings {
     }
 }
 
+pub(super) fn configure_actor_reactions(world: &mut World, actor: Entity) -> Result<(), String> {
+    let spells: Vec<_> = bindings::BUFFS.iter().map(|&(_, id)| id).collect();
+    reaction::configure(world, actor, reaction_settings(), &spells)
+}
+
 impl Rotation {
     pub fn load(
         world: &mut World,
@@ -66,8 +71,6 @@ impl Rotation {
         }
         let mut bindings = bindings::build();
         let equipment = Equipment::load(world, actor, &mut bindings)?;
-        let spells: Vec<_> = bindings::BUFFS.iter().map(|&(_, id)| id).collect();
-        reaction::configure(world, actor, reaction_settings(), &spells)?;
         literal_rotation::capture_fixture(world, actor, encounter)?;
         Ok(Self {
             driver: Driver::new(program(profile)?),
