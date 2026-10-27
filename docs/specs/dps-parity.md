@@ -443,6 +443,8 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 ### Fury player parity
 
+- With selected Cold Steel, Hot Blood383959, critical Bloodthirst23881 and Bloodbath335096 impacts apply native Gushing Wound385042 to the struck target, including Unhinged impacts (`sc_warrior.cpp2679–2682,2915–2919`). Noncritical impacts do not.
+
 - Landed Bloodbath335096 applies its native bleed113344 to its actual target; subsequent landed Bloodbaths extend the existing owned bleed by its native duration (`sc_warrior.cpp2777–2785,2915–2923`).
 
 - Selected Cruelty392931 and Wrath and Fury392936 damage modifiers apply only while native Enrage184362 is active (`sc_warrior.cpp1106,4939–4947,5099–5113,7834–7835`). Their native rank values and other effects remain unchanged.

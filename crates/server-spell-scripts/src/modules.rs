@@ -130,6 +130,7 @@ register_modules! {
     fury_bloodbath: (724, "modules/fury_bloodbath.rs"),
     fury_enrage: (723, "modules/fury_enrage.rs"),
     frost_runtime: (641, "modules/frost_runtime.rs"),
+    fury_gushing: (725, "modules/fury_gushing.rs"),
     fury_hack_and_slash: (721, "modules/fury_hack_and_slash.rs"),
     fury_rampaging_ruin: (720, "modules/fury_rampaging_ruin.rs"),
     fury_spite: (722, "modules/fury_spite.rs"),
