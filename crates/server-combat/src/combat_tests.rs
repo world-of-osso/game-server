@@ -138,6 +138,7 @@ fn run_attack_tick(app: &mut App) {
                     spirit_wolf: None,
                     hunter_owner_ap: None,
                     hunter_owner_crit_pct: None,
+                    pet_owner_hit_expertise: None,
                 };
                 let mut impact_gate = WhiteImpactGate::default();
                 for hand in [Hand::Main, Hand::Off] {
