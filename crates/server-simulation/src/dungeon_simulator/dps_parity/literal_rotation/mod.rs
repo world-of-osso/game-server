@@ -240,7 +240,7 @@ fn harmful_execution(world: &World, execution: &Execution) -> Result<bool, Strin
         Execution::Composite(_) => {
             return Err("composite precombat requires a clock-aware executor".into());
         }
-        Execution::Snapshot | Execution::CancelCast => return Ok(false),
+        Execution::Snapshot | Execution::CancelCast | Execution::Retarget(_) => return Ok(false),
         Execution::AutoAttack(_) | Execution::RetargetAutoAttack(_) => return Ok(true),
         Execution::Spell(id, _, _) => *id,
         Execution::Item(item, _) => item.on_use.spell_id,
