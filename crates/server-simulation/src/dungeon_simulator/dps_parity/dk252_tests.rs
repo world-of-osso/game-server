@@ -458,6 +458,21 @@ fn dk252_putrid_echoes_spends_both_charges_and_summons_two_ghouls() {
 }
 
 #[test]
+#[ignore = "requires native252 profile/traits and player actor"]
+fn dk252_ghoul_attacks_earn_infected_claws() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 1).unwrap();
+    engage(&mut run);
+    for _ in 0..5 {
+        assert!(crate::spell_cast::try_cast_triggered(run.app.world_mut(), run.actor, 1294026, Some(run.actor), 1));
+    }
+    for _ in 0..400 { run.app.update(); }
+    let events = &run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
+    assert!(events.iter().any(|e| e.spell_id == Some(1241786) && e.target == Some(run.targets[0].to_bits())
+        && e.kind == CombatLogKind::Damage && e.amount > 0), "actual ghoul hits must earn Infected Claws");
+}
+
+#[test]
 #[ignore = "requires private native252 profile/traits and player actor"]
 fn dk252_three_real_magi_raise_the_lord_of_the_dead() {
     let _seed = crate::random::seed_scope(70448);
