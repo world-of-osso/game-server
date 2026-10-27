@@ -64,7 +64,7 @@ fn arcane_enlightened_native_sampled_mana_increases_arcane_missiles_damage() {
     );
 }
 
-fn sampled_mana_damage_pair(selected: bool) -> Vec<f64> {
+fn sampled_mana_damage_pair(selected: bool) -> (Vec<f64>, Option<f32>) {
     let _seed = crate::random::seed_scope(70448);
     let (profile, mut traits) = read_reference(62).unwrap();
     if !selected {
@@ -85,8 +85,16 @@ fn sampled_mana_damage_pair(selected: bool) -> Vec<f64> {
         .insert_resource(FactorCapture::new(actor, target, 7268, "sampled_mana", 2));
     crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 7268, Some(target), 1);
     let end = crate::spell_cast::now(run.app.world()) + 1.2;
+    let mut ticks = crate::auras::paid_periodic_ticks(run.app.world(), actor, actor, 1217242);
+    let mut sampled = None;
     while crate::spell_cast::now(run.app.world()) < end {
         run.app.update();
+        let paid = crate::auras::paid_periodic_ticks(run.app.world(), actor, actor, 1217242);
+        if paid > ticks {
+            let mana = run.app.world().get::<Mana>(actor).unwrap();
+            sampled = Some(mana.current / mana.max);
+        }
+        ticks = paid;
     }
     crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 7268, Some(target), 1);
     let end = crate::spell_cast::now(run.app.world()) + 0.5;
@@ -94,20 +102,21 @@ fn sampled_mana_damage_pair(selected: bool) -> Vec<f64> {
         run.app.update();
     }
     let trace = run.app.world().resource::<FactorCapture>().export();
-    trace["events"]
+    let hits = trace["events"]
         .as_array()
         .unwrap()
         .iter()
         .filter(|event| event["spell_id"] == 7268 && event["event"] == "direct_amount")
         .map(|event| event["factors"]["amount"].as_f64().unwrap())
-        .collect()
+        .collect();
+    (hits, sampled)
 }
 
 #[test]
 #[ignore = "requires private native70448 Arcane player profile"]
 fn arcane_enlightened_native_mana_change_waits_for_next_periodic_tick() {
-    let without = sampled_mana_damage_pair(false);
-    let with = sampled_mana_damage_pair(true);
+    let (without, _) = sampled_mana_damage_pair(false);
+    let (with, sampled) = sampled_mana_damage_pair(true);
     assert_eq!(
         (without.len(), with.len()),
         (2, 2),
@@ -119,8 +128,10 @@ fn arcane_enlightened_native_mana_change_waits_for_next_periodic_tick() {
         before_tick > 1.029 && before_tick < 1.035,
         "half-Mana sample must survive a later Mana drop until the next tick: {before_tick}"
     );
+    let sampled = sampled.expect("native Enlightened periodic tick");
+    let expected = 1.0 + 0.06 * f64::from(sampled);
     assert!(
-        after_tick >= 1.0 && after_tick < 1.005,
-        "next tick must sample the near-empty Mana pool: {after_tick}"
+        (after_tick - expected).abs() < 0.00001,
+        "next tick must use its observed real Mana fraction {sampled}: expected {expected}, got {after_tick}"
     );
 }
