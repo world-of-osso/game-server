@@ -116,6 +116,37 @@ fn dk252_army_riders_melee_and_expire_at_selected_duration() {
 }
 
 #[test]
+#[ignore = "requires private native252 Rider templates/profile and player actor"]
+fn dk252_horsemen_melee_inherits_live_owner_attack_power() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 1).unwrap();
+    engage(&mut run);
+    run.app.world_mut().get_mut::<crate::stats::CharacterStats>(run.actor).unwrap().attack_power += 10_000.0;
+    literal_rotation::execution::execute(
+        run.app.world_mut(), run.actor,
+        literal_rotation::execution::Execution::Spell(42650, run.actor, None),
+    ).unwrap();
+    for _ in 0..100 { run.app.update(); }
+    let riders: Vec<_> = {
+        let world = run.app.world_mut();
+        world.query::<(Entity, &crate::spell_cast::summon::SummonedCreature)>()
+            .iter(world).filter_map(|(entity, summon)|
+                (summon.owner == run.actor && [444248, 444251, 444252, 444254].contains(&summon.spell_id)).then_some(entity)
+            ).collect()
+    };
+    assert_eq!(riders.len(), 4, "four real Horsemen must be present");
+    let events = &run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
+    for rider in riders {
+        let hits: Vec<_> = events.iter().filter(|event| event.source == Some(rider.to_bits())
+            && event.target == Some(run.targets[0].to_bits()) && event.spell_id.is_none()
+            && event.kind == CombatLogKind::Damage && event.amount > 0)
+            .map(|event| event.amount).collect();
+        assert!(hits.iter().any(|hit| *hit > 100),
+            "each actual Horseman must inherit live owner melee power: {hits:?}");
+    }
+}
+
+#[test]
 #[ignore = "requires private native252 profile/traits and player actor"]
 fn dk252_real_lesser_ghoul_summon_reaches_and_melees() {
     let _seed = crate::random::seed_scope(70448);
