@@ -13,12 +13,27 @@ const GRAVEDIGGER: u32 = 1265935;
 const PALMED: u32 = 1265931;
 const ENERGIZE: u32 = 1279356;
 
+#[derive(Component)]
+struct PendingGravedigger;
+
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::ResourceOnlyContext(&[BTE]),
     SpellScriptHook::AsynchronousAuras(&[BTE]),
+    SpellScriptHook::BeforeNativeOnCast(snapshot_gravedigger),
     SpellScriptHook::PreparePolicySpell(prepare_duration),
     SpellScriptHook::AfterResolvedHits(after_bte),
 ];
+
+fn snapshot_gravedigger(world: &mut World, caster: Entity, spell: &SpellInfo, depth: u8) {
+    if spell.id != BTE || depth != 0 {
+        return;
+    }
+    if auras::has_aura(world, caster, GRAVEDIGGER) {
+        world.entity_mut(caster).insert(PendingGravedigger);
+    } else {
+        world.entity_mut(caster).remove::<PendingGravedigger>();
+    }
+}
 
 fn prepare_duration(_: &World, _: Entity, spell: &mut SpellInfo) {
     if spell.id != BTE {
@@ -64,7 +79,7 @@ fn earn_extra_stack(world: &mut World, ctx: &EffectCtx) {
 }
 
 fn consume_gravedigger(world: &mut World, caster: Entity) {
-    if !auras::has_aura(world, caster, GRAVEDIGGER) {
+    if world.entity_mut(caster).take::<PendingGravedigger>().is_none() {
         return;
     }
     // sc_rogue.cpp3862–3872: the earned use returns native points, resets
