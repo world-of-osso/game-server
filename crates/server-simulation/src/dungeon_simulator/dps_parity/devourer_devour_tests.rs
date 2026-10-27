@@ -108,3 +108,55 @@ fn devourer_devour_executes_native_fury_payload() {
     );
     assert!(fury > 0.0, "Devour must increase the native Fury pool");
 }
+
+#[test]
+#[ignore = "requires DPS_PARITY_WORLD_DB and DPS_PARITY_OUTPUT with spec1480 exact profile/traits"]
+fn selected_predators_thirst_consume_spawns_native_lesser_fragment() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare(1480, 1).expect("native Devourer profile");
+    let actor = run.actor;
+    let target = run.targets[0];
+    engage(&mut run);
+    assert!(
+        run.app
+            .world()
+            .get::<crate::class_progression::KnownSpells>(actor)
+            .is_some_and(|known| known.contains(1215617)),
+        "selected Predator's Thirst"
+    );
+    assert!(
+        !crate::auras::has_aura(run.app.world(), actor, 1217607),
+        "outside Meta"
+    );
+    crate::spell_cast::cast_for_player_with_target(
+        run.app.world_mut(),
+        actor,
+        473662,
+        Some(target),
+    )
+    .expect("real native Consume");
+    for _ in 0..80 {
+        run.app.update();
+    }
+    assert!(
+        run.app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|event| event.source == Some(actor.to_bits())
+                && event.spell_id == Some(473662)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0),
+        "real Consume damage lands"
+    );
+    // SimC76f8118 cpp5753–5762: selected Predator's Thirst spawns the native count on Consume execution.
+    assert!(
+        server::soul_fragments::active_count(
+            run.app.world(),
+            actor,
+            server::soul_fragments::FragmentFilter::Lesser
+        ) > 0,
+        "Consume spawns an active lesser fragment"
+    );
+}
