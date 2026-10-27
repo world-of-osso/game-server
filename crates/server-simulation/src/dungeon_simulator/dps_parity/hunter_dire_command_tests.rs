@@ -107,23 +107,28 @@ fn native_hunter_dire_command_actual_kills_spawn_authentic_beasts() {
             }
             let mods = world.get::<crate::auras::AuraStatMods>(pet);
             let target_mods = world.get::<crate::auras::AuraStatMods>(run.targets[0]);
-            let base = ap / 3.5
-                * 2.0
-                * mods.map_or(1.0, |m| m.autoattack_damage_mult * m.damage_done(1))
-                * target_mods.map_or(1.0, |m| m.damage_taken(1))
-                * if world.get::<crate::hunter_pet::HunterPet>(pet).is_some()
-                    || summon.properties.control == SUMMON_CONTROL_PET
-                {
-                    world
-                        .get::<crate::auras::AuraStatMods>(run.actor)
-                        .unwrap()
-                        .pet_damage_mult
-                } else {
-                    world
-                        .get::<crate::auras::AuraStatMods>(run.actor)
-                        .unwrap()
-                        .guardian_damage_mult
-                };
+            let observed_pet_damage = world
+                .get::<crate::auras::ActiveAuras>(pet)
+                .and_then(|auras| auras.iter().find(|aura| aura.spell_id == 1284992))
+                .and_then(|aura| aura.effects.iter().find(|effect| effect.index == 0))
+                .map_or(1.0, |effect| 1.0 + effect.amount / 100.0);
+            let base =
+                ap / 3.5 * 2.0 * mods.map_or(1.0, |m| m.autoattack_damage_mult * m.damage_done(1))
+                    / observed_pet_damage
+                    * target_mods.map_or(1.0, |m| m.damage_taken(1))
+                    * if world.get::<crate::hunter_pet::HunterPet>(pet).is_some()
+                        || summon.properties.control == SUMMON_CONTROL_PET
+                    {
+                        world
+                            .get::<crate::auras::AuraStatMods>(run.actor)
+                            .unwrap()
+                            .pet_damage_mult
+                    } else {
+                        world
+                            .get::<crate::auras::AuraStatMods>(run.actor)
+                            .unwrap()
+                            .guardian_damage_mult
+                    };
             let pet_scaling = crate::level_scaling::UnitScaling::of(world, pet);
             let target_scaling = crate::level_scaling::UnitScaling::of(world, run.targets[0]);
             let armor = target_scaling.armor_against(
