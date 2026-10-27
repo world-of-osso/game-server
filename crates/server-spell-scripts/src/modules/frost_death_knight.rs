@@ -16,6 +16,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::SnapshotsModifier(snapshots_modifier),
     SpellScriptHook::BeforeDamageSnapshot(convert_km_weapon_school),
     SpellScriptHook::TargetContextDamageMultiplier(converted_weapon_multiplier),
+    SpellScriptHook::TargetContextDamageMultiplier(breath_secondary_multiplier),
     SpellScriptHook::AfterWhiteHit(after_white_hit),
     SpellScriptHook::AfterElementalLaunch(after_launch),
     SpellScriptHook::AfterElementalLaunch(update_empowered_spender),
@@ -83,6 +84,28 @@ fn convert_km_weapon_school(world: &World, caster: Entity, spell: &mut SpellInfo
     }
 }
 
+fn breath_secondary_multiplier(
+    world: &World,
+    ctx: &spell_cast::effects::EffectCtx,
+    target: Entity,
+    _: bool,
+) -> f32 {
+    if ctx.spell.id != 155166 || !is_frost(world, ctx.caster) {
+        return 1.0;
+    }
+    let targets = spell_cast::resolving_targets(world, ctx).expect("Breath targets");
+    let index = targets
+        .iter()
+        .position(|candidate| *candidate == target)
+        .expect("Breath target ordinal");
+    // SimC76f8118 sc_death_knight.cpp9204–9207/9244–9251 and action.cpp1564–1568.
+    if index == 0 {
+        1.0
+    } else {
+        0.8 * (1.0 / targets.len().min(20) as f32).sqrt()
+    }
+}
+
 fn converted_weapon_multiplier(
     world: &World,
     ctx: &spell_cast::effects::EffectCtx,
@@ -142,7 +165,7 @@ fn hyperpyrexia_impact(
     damage: f32,
 ) {
     if damage <= 0.0
-        || !matches!(ctx.spell.id, 222026 | 66196 | 195975)
+        || !matches!(ctx.spell.id, 222026 | 66196 | 195975 | 155166)
         || !is_frost(world, ctx.caster)
         || !auras::has_aura(world, ctx.caster, 456238)
     {
