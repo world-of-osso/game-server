@@ -1025,23 +1025,68 @@ fn real_frost_debuff_damage_ratio(debuff: u32, source: u32) -> (Vec<f32>, u8) {
     for _ in 0..6000 {
         super::super::drive_player(&mut run).unwrap();
         run.app.update();
-        if run.app.world().get::<ActiveAuras>(target).is_some_and(|active| active.iter()
-            .any(|aura| aura.spell_id == debuff && aura.caster == actor)) { break; }
+        if run
+            .app
+            .world()
+            .get::<ActiveAuras>(target)
+            .is_some_and(|active| {
+                active
+                    .iter()
+                    .any(|aura| aura.spell_id == debuff && aura.caster == actor)
+            })
+        {
+            break;
+        }
     }
     let events = &run.app.world().resource::<ObservedCombatEvents>().0;
-    assert!(events.iter().any(|event| event.source == Some(actor.to_bits()) && event.target == Some(target.to_bits())
-        && event.spell_id == Some(source) && event.kind == CombatLogKind::Damage), "real source {source} must hit target");
-    let stacks = run.app.world().get::<ActiveAuras>(target).and_then(|active| active.iter()
-        .find(|aura| aura.spell_id == debuff && aura.caster == actor).map(|aura| aura.stacks))
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(actor.to_bits())
+                && event.target == Some(target.to_bits())
+                && event.spell_id == Some(source)
+                && event.kind == CombatLogKind::Damage),
+        "real source {source} must hit target"
+    );
+    let stacks = run
+        .app
+        .world()
+        .get::<ActiveAuras>(target)
+        .and_then(|active| {
+            active
+                .iter()
+                .find(|aura| aura.spell_id == debuff && aura.caster == actor)
+                .map(|aura| aura.stacks)
+        })
         .unwrap_or_else(|| panic!("real source {source} must earn target debuff {debuff}"));
-    let spells: Vec<_> = [196771, 1264082, 222026].into_iter().map(|id| {
-        run.app.world().resource::<crate::spell_info::SpellStore>().get(id).unwrap().clone()
-    }).collect();
-    let with: Vec<_> = spells.iter().map(|spell| auras::damage_taken_multiplier(run.app.world(), target, actor, spell)).collect();
-    auras::remove_auras(run.app.world_mut(), target, RemoveReason::Consumed,
-        |aura| aura.spell_id == debuff && aura.caster == actor);
-    let ratios = spells.iter().zip(with).map(|(spell, value)|
-        value / auras::damage_taken_multiplier(run.app.world(), target, actor, spell)).collect();
+    let spells: Vec<_> = [196771, 1264082, 222026]
+        .into_iter()
+        .map(|id| {
+            run.app
+                .world()
+                .resource::<crate::spell_info::SpellStore>()
+                .get(id)
+                .unwrap()
+                .clone()
+        })
+        .collect();
+    let with: Vec<_> = spells
+        .iter()
+        .map(|spell| auras::damage_taken_multiplier(run.app.world(), target, actor, spell))
+        .collect();
+    auras::remove_auras(
+        run.app.world_mut(),
+        target,
+        RemoveReason::Consumed,
+        |aura| aura.spell_id == debuff && aura.caster == actor,
+    );
+    let ratios = spells
+        .iter()
+        .zip(with)
+        .map(|(spell, value)| {
+            value / auras::damage_taken_multiplier(run.app.world(), target, actor, spell)
+        })
+        .collect();
     (ratios, stacks)
 }
 
@@ -1050,7 +1095,12 @@ fn real_frost_debuff_damage_ratio(debuff: u32, source: u32) -> (Vec<f32>, u8) {
 fn frost_fever_earns_brittle_target_damage() {
     let (ratios, stacks) = real_frost_debuff_damage_ratio(374557, 55095);
     assert_eq!(stacks, 1);
-    for ratio in ratios { assert!((ratio - 1.06).abs() < 0.001, "real Brittle must apply its native 6%: {ratio}"); }
+    for ratio in ratios {
+        assert!(
+            (ratio - 1.06).abs() < 0.001,
+            "real Brittle must apply its native 6%: {ratio}"
+        );
+    }
 }
 
 #[test]
@@ -1058,8 +1108,12 @@ fn frost_fever_earns_brittle_target_damage() {
 fn frost_arctic_assault_earns_razorice_target_damage() {
     let (ratios, stacks) = real_frost_debuff_damage_ratio(51714, 195975);
     // Native 3% amplified by the selected Unholy Bond label modifier (20%).
-    for ratio in ratios { assert!((ratio - (1.0 + 0.036 * f32::from(stacks))).abs() < 0.001,
-        "real Razorice must apply its native per-stack value: {ratio}, stacks={stacks}"); }
+    for ratio in ratios {
+        assert!(
+            (ratio - (1.0 + 0.036 * f32::from(stacks))).abs() < 0.001,
+            "real Razorice must apply its native per-stack value: {ratio}, stacks={stacks}"
+        );
+    }
 }
 
 #[test]
@@ -1070,7 +1124,8 @@ fn diag_frost_target_debuffs() {
     let mut run = super::super::prepare_measurement(251, 1).unwrap();
     let actor = run.actor;
     let target = run.targets[0];
-    run.app.insert_resource(FactorCapture::new(actor, target, 196771, "winter", 30));
+    run.app
+        .insert_resource(FactorCapture::new(actor, target, 196771, "winter", 30));
     super::super::engage(&mut run);
     let mut states = Vec::new();
     let mut previous = String::new();
@@ -1081,12 +1136,25 @@ fn diag_frost_target_debuffs() {
             .filter(|aura| matches!(aura.spell_id, 51714 | 376974 | 374557))
             .map(|aura| serde_json::json!({"spell": aura.spell_id, "caster": aura.caster.to_bits(), "stacks": aura.stacks,
                 "effects": aura.effects.iter().map(|effect| serde_json::json!({"index": effect.index,"type":effect.aura_type,"amount":effect.amount})).collect::<Vec<_>>() })).collect();
-        let key = entries.iter().map(|entry| entry.to_string()).collect::<String>();
-        if key != previous { states.push(serde_json::json!({"step": step, "auras": entries})); previous = key; }
+        let key = entries
+            .iter()
+            .map(|entry| entry.to_string())
+            .collect::<String>();
+        if key != previous {
+            states.push(serde_json::json!({"step": step, "auras": entries}));
+            previous = key;
+        }
     }
     let capture = run.app.world().resource::<FactorCapture>().export();
     let output = std::path::PathBuf::from(std::env::var("DPS_PARITY_OUTPUT").unwrap());
-    std::fs::write(output.join("251.target-debuffs.json"), serde_json::to_vec_pretty(&serde_json::json!({"actor":actor.to_bits(),"states":states,"capture":capture})).unwrap()).unwrap();
+    std::fs::write(
+        output.join("251.target-debuffs.json"),
+        serde_json::to_vec_pretty(
+            &serde_json::json!({"actor":actor.to_bits(),"states":states,"capture":capture}),
+        )
+        .unwrap(),
+    )
+    .unwrap();
 }
 
 #[test]
@@ -1099,24 +1167,56 @@ fn frost_winter_hits_earn_everfrost_target_damage() {
     let actor = run.actor;
     let target = run.targets[0];
     assert!(auras::has_aura(run.app.world(), actor, 376938));
-    run.app.insert_resource(FactorCapture::new(actor, target, 196771, "winter", 2));
+    run.app
+        .insert_resource(FactorCapture::new(actor, target, 196771, "winter", 2));
     super::super::enhancement_generation_tests::cast(&mut run, 51271, actor);
     for _ in 0..100 {
         run.app.update();
-        if run.app.world().resource::<FactorCapture>().export()["captured_hits"] == 2 { break; }
+        if run.app.world().resource::<FactorCapture>().export()["captured_hits"] == 2 {
+            break;
+        }
     }
-    let stacks = run.app.world().get::<ActiveAuras>(target).and_then(|active| active.iter()
-        .find(|aura| aura.spell_id == 376974 && aura.caster == actor).map(|aura| aura.stacks)).unwrap_or(0);
+    let stacks = run
+        .app
+        .world()
+        .get::<ActiveAuras>(target)
+        .and_then(|active| {
+            active
+                .iter()
+                .find(|aura| aura.spell_id == 376974 && aura.caster == actor)
+                .map(|aura| aura.stacks)
+        })
+        .unwrap_or(0);
     assert_eq!(stacks, 2, "each real Winter hit earns a target stack");
     let capture = run.app.world().resource::<FactorCapture>().export();
-    let hits: Vec<_> = capture["events"].as_array().unwrap().iter()
-        .filter(|event| event["spell_id"] == 196771 && event["event"] == "direct_amount").collect();
+    let hits: Vec<_> = capture["events"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|event| event["spell_id"] == 196771 && event["event"] == "direct_amount")
+        .collect();
     assert_eq!(hits.len(), 2);
-    let first = hits[0]["applied_multipliers"].as_array().unwrap().iter().find(|x| x["factor"] == "target_damage").unwrap()["value"].as_f64().unwrap();
-    let second = hits[1]["applied_multipliers"].as_array().unwrap().iter().find(|x| x["factor"] == "target_damage").unwrap()["value"].as_f64().unwrap();
+    let first = hits[0]["applied_multipliers"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|x| x["factor"] == "target_damage")
+        .unwrap()["value"]
+        .as_f64()
+        .unwrap();
+    let second = hits[1]["applied_multipliers"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|x| x["factor"] == "target_damage")
+        .unwrap()["value"]
+        .as_f64()
+        .unwrap();
     let pct = crate::spell_cast::scripts::script_effect_value(run.app.world(), actor, 376938, 0);
-    assert!((second / first - (1.0 + f64::from(pct) / 100.0)).abs() < 0.001,
-        "the next real Winter hit uses the native earned-stack bonus: {first} -> {second}");
+    assert!(
+        (second / first - (1.0 + f64::from(pct) / 100.0)).abs() < 0.001,
+        "the next real Winter hit uses the native earned-stack bonus: {first} -> {second}"
+    );
 }
 
 #[test]
@@ -1130,21 +1230,40 @@ fn frost_winter_tick_pillar_only_changes_attack_power() {
         let actor = run.actor;
         super::super::enhancement_generation_tests::cast(&mut run, 51271, actor);
         assert!(auras::has_aura(run.app.world(), actor, 1233152));
-        if !keep_pillar { clear_proc(&mut run, 51271); }
-        run.app.insert_resource(FactorCapture::new(actor, run.targets[0], 196771, "remorseless_winter_damage", 1));
+        if !keep_pillar {
+            clear_proc(&mut run, 51271);
+        }
+        run.app.insert_resource(FactorCapture::new(
+            actor,
+            run.targets[0],
+            196771,
+            "remorseless_winter_damage",
+            1,
+        ));
         for _ in 0..100 {
             run.app.update();
-            if run.app.world().resource::<FactorCapture>().export()["captured_hits"] == 1 { break; }
+            if run.app.world().resource::<FactorCapture>().export()["captured_hits"] == 1 {
+                break;
+            }
         }
         let capture = run.app.world().resource::<FactorCapture>().export();
-        let hit = capture["events"].as_array().unwrap().iter()
-            .find(|event| event["spell_id"] == 196771 && event["event"] == "direct_amount").unwrap();
-        (hit["factors"]["amount"].as_f64().unwrap(), hit["factors"]["a_power"].as_f64().unwrap())
+        let hit = capture["events"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|event| event["spell_id"] == 196771 && event["event"] == "direct_amount")
+            .unwrap();
+        (
+            hit["factors"]["amount"].as_f64().unwrap(),
+            hit["factors"]["a_power"].as_f64().unwrap(),
+        )
     }
     let (with, with_ap) = tick(true);
     let (without, without_ap) = tick(false);
-    assert!((with / with_ap - without / without_ap).abs() < 0.001,
-        "Pillar changes Winter through attack power only, not direct damage: {with}/{with_ap} vs {without}/{without_ap}");
+    assert!(
+        (with / with_ap - without / without_ap).abs() < 0.001,
+        "Pillar changes Winter through attack power only, not direct damage: {with}/{with_ap} vs {without}/{without_ap}"
+    );
 }
 
 #[test]
@@ -1246,17 +1365,33 @@ fn diag_frost_winter_tick_factors() {
     use crate::spell_cast::effects::factor_capture::FactorCapture;
     let _seed = crate::random::seed_scope(70448);
     let mut run = super::super::prepare_measurement(251, 1).unwrap();
-    run.app.insert_resource(FactorCapture::new(run.actor, run.targets[0], 196771, "remorseless_winter_damage", 40));
+    run.app.insert_resource(FactorCapture::new(
+        run.actor,
+        run.targets[0],
+        196771,
+        "remorseless_winter_damage",
+        40,
+    ));
     super::super::engage(&mut run);
     for _ in 0..1200 {
         super::super::drive_player(&mut run).unwrap();
         run.app.update();
-        if run.app.world().resource::<FactorCapture>().export()["captured_hits"].as_u64().unwrap() >= 40 { break; }
+        if run.app.world().resource::<FactorCapture>().export()["captured_hits"]
+            .as_u64()
+            .unwrap()
+            >= 40
+        {
+            break;
+        }
     }
     let capture = run.app.world().resource::<FactorCapture>().export();
     assert!(capture["captured_hits"].as_u64().unwrap() > 0);
     let output = std::path::PathBuf::from(std::env::var("DPS_PARITY_OUTPUT").unwrap());
-    std::fs::write(output.join("251.winter-factors.json"), serde_json::to_vec_pretty(&capture).unwrap()).unwrap();
+    std::fs::write(
+        output.join("251.winter-factors.json"),
+        serde_json::to_vec_pretty(&capture).unwrap(),
+    )
+    .unwrap();
 }
 
 #[test]

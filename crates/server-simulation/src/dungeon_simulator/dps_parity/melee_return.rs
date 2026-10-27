@@ -13,7 +13,9 @@ struct DisplacementReturn;
 
 pub(super) fn returning_after_displacement(world: &World, actor: Entity) -> bool {
     world.get::<crate::combat::AutoAttack>(actor).is_some()
-        && (forced_movement(world, actor) || world.get::<DisplacementReturn>(actor).is_some())
+        && (forced_movement(world, actor)
+            || world.get::<DisplacementReturn>(actor).is_some()
+            || world.get::<ReturningToMelee>(actor).is_some())
 }
 
 struct WalkStep {
