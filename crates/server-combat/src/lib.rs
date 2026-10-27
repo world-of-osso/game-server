@@ -134,6 +134,7 @@ mod sheet_visibility;
 #[cfg(any(test, feature = "test-support"))]
 pub mod simc_apl_native;
 mod skyriding;
+pub mod soul_fragments;
 mod spawn_groups;
 mod spawn_pools;
 mod spell_area;
