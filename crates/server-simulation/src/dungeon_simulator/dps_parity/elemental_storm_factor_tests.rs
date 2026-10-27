@@ -84,6 +84,15 @@ fn elemental_stormkeeper_overload_snapshots_before_projectile_impact() {
         instance,
         crate::auras::RemoveReason::Consumed,
     );
+    if let Some(flowing) = own_aura(&run, 1300219) {
+        let instance = flowing.instance_id;
+        crate::auras::remove_instance(
+            run.app.world_mut(),
+            run.actor,
+            instance,
+            crate::auras::RemoveReason::Consumed,
+        );
+    }
     for _ in 0..40 {
         run.app.update();
     }
