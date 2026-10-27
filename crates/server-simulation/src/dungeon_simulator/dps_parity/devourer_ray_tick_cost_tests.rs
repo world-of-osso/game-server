@@ -2,6 +2,24 @@
 use super::*;
 use shared::{casting::CastState, components::PowerType};
 
+#[test]
+#[ignore = "requires DPS_PARITY_WORLD_DB and DPS_PARITY_OUTPUT with spec1480 exact profile/traits"]
+fn devourer_meta_void_ray_cast_count_respects_cooldown() {
+    let mut run = prepare(1480, 1).expect("native Devourer profile");
+    let actor = run.actor;
+    let target = run.targets[0];
+    engage(&mut run);
+    crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 1217605, Some(actor), 1);
+    for _ in 0..30 { run.app.update(); }
+    assert!(crate::auras::has_aura(run.app.world(), actor, 1217607), "real Meta active");
+    crate::spell_cast::cast_for_player_with_target(run.app.world_mut(), actor, 473728, Some(target)).expect("first Void Ray");
+    for _ in 0..80 { run.app.update(); }
+    assert!(crate::auras::has_aura(run.app.world(), actor, 1217607), "Meta remains active");
+    let _ = crate::spell_cast::cast_for_player_with_target(run.app.world_mut(), actor, 473728, Some(target));
+    let casts = run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0.iter().filter(|event| event.source == Some(actor.to_bits()) && event.spell_id == Some(473728) && event.kind == shared::protocol::CombatLogKind::CastSuccess).count();
+    assert_eq!(casts, 1, "Void Ray cannot cast twice within four seconds in Meta");
+}
+
 fn start_ray(targets: usize) -> Run {
     let mut run = prepare(1480, targets).expect("native Devourer profile");
     run.app
@@ -100,9 +118,19 @@ fn devourer_void_ray_spends_fury_for_each_native_tick() {
         .0;
     // SimC76f8118 sc_demon_hunter.cpp6431–6455 pays native1213649's
     // 70448 cost of 5 Fury for each non-Meta channel tick.
+    // SimC76f8118 cpp3583–3698: a consumed soul can independently energize
+    // the actor during the real channel; include only observed native gains.
+    let soul_fury: i32 = run.app.world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0.iter()
+        .filter(|event| event.target == Some(run.actor.to_bits())
+            && event.spell_id == Some(1223628)
+            && event.kind == shared::protocol::CombatLogKind::Energize)
+        .map(|event| event.amount)
+        .sum();
     assert_eq!(
         after,
-        100.0 - ticks as f32 * 5.0,
+        100.0 + soul_fury as f32 - ticks as f32 * 5.0,
         "every real Void Ray tick must pay its native Fury cost"
     );
 }
