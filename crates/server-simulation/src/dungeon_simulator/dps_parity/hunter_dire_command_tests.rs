@@ -75,7 +75,7 @@ fn native_hunter_dire_command_actual_kills_spawn_authentic_beasts() {
             {
                 continue;
             }
-            let Some((pet, _, _)) = query
+            let Some((pet, summon, _)) = query
                 .iter(world)
                 .find(|(pet, _, _)| pet.to_bits() == source)
             else {
@@ -94,7 +94,13 @@ fn native_hunter_dire_command_actual_kills_spawn_authentic_beasts() {
                 * 2.0
                 * mods.map_or(1.0, |m| m.autoattack_damage_mult * m.damage_done(1))
                 * target_mods.map_or(1.0, |m| m.damage_taken(1))
-                * crate::auras::summon_damage::multiplier(world, pet);
+                * if world.get::<crate::hunter_pet::HunterPet>(pet).is_some()
+                    || summon.properties.is_pet()
+                {
+                    world.get::<crate::auras::AuraStatMods>(run.actor).unwrap().pet_damage_mult
+                } else {
+                    world.get::<crate::auras::AuraStatMods>(run.actor).unwrap().guardian_damage_mult
+                };
             let pet_scaling = crate::level_scaling::UnitScaling::of(world, pet);
             let target_scaling = crate::level_scaling::UnitScaling::of(world, run.targets[0]);
             let armor = target_scaling.armor_against(
