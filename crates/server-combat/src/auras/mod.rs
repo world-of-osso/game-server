@@ -73,6 +73,7 @@ mod ret_crusade;
 pub(crate) use ret_crusade::after_spender as add_ret_crusade_spender_stacks;
 mod ret_sentence;
 pub use ret_sentence::track_cast as track_ret_sentence_cast;
+mod janthrazet;
 pub(crate) mod reward_mods;
 pub mod rogue;
 #[cfg(test)]
