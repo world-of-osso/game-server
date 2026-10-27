@@ -10,6 +10,7 @@ use combat::auras::{self, AuraInstance, RemoveReason};
 const TALENT: u32 = 452402;
 const META: u32 = 162264;
 const INTENSITY: u32 = 452489;
+const VOLATILE_INSTINCT: u32 = 1272453;
 const STACKS: u32 = 452416;
 const ABILITIES: &[u32] = &[201427, 210152, 258920, 452497, 452490];
 
@@ -113,6 +114,7 @@ pub(super) fn before_cast(world: &mut World, caster: Entity, spell: u32, depth: 
         if super::has_talent(world, caster, 452415) {
             combat::spell_cast::cast_triggered(world, caster, INTENSITY, Some(caster), depth + 1);
         }
+        trigger_meta_entry(world, caster, 1238696, depth);
         return;
     }
     if !havoc_demonsurge_available(world, caster, spell) {
@@ -133,6 +135,17 @@ pub(super) fn before_cast(world: &mut World, caster: Entity, spell: u32, depth: 
     };
     if !combat::spell_cast::try_cast_triggered(world, caster, trigger, Some(caster), depth + 1) {
         error!(trigger, "Native Demonsurge trigger refused");
+    }
+}
+
+// SimC76f8118 sc_demon_hunter.cpp5008–5012,9160–9166,12646–12660:
+// hard Meta and a new Demonic transformation use their respective native delays.
+pub(super) fn trigger_meta_entry(world: &mut World, caster: Entity, trigger: u32, depth: u8) {
+    if super::has_talent(world, caster, TALENT)
+        && super::has_talent(world, caster, VOLATILE_INSTINCT)
+        && !combat::spell_cast::try_cast_triggered(world, caster, trigger, Some(caster), depth + 1)
+    {
+        error!(trigger, "Native Volatile Instinct trigger refused");
     }
 }
 
