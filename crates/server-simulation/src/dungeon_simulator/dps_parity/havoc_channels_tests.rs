@@ -222,21 +222,6 @@ fn havoc_serrated_glaive_earned_by_chaos_strike_increases_next_strike() {
         crate::auras::has_aura(run.app.world(), actor, 390155),
         "real Chaos Strike must earn Serrated Glaive"
     );
-    eprintln!(
-        "serrated talent={} aura={:?}",
-        run.app
-            .world()
-            .get::<crate::class_progression::KnownSpells>(actor)
-            .unwrap()
-            .contains(390154),
-        run.app
-            .world()
-            .get::<crate::auras::ActiveAuras>(actor)
-            .unwrap()
-            .iter()
-            .filter(|aura| aura.spell_id == 390155)
-            .collect::<Vec<_>>()
-    );
     run.app
         .world_mut()
         .entity_mut(actor)

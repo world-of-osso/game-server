@@ -26,6 +26,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::Policies(POLICIES),
     SpellScriptHook::NativeAfterCast(after_cast),
     SpellScriptHook::LateAuraRegistration(register_channels),
+    SpellScriptHook::AfterAuraApplication(apply_serrated_glaive),
 ];
 
 fn after_cast(spell: u32) -> Option<AfterCastHook> {
@@ -126,7 +127,6 @@ fn reduce_paired_recovery(world: &mut World, caster: Entity, spell: u32, stacks:
 }
 
 fn register_channels(scripts: &mut AuraScripts) {
-    scripts.0.entry(390155).or_default().on_apply = Some(apply_serrated_glaive);
     for beam in BEAMS {
         let script = scripts.0.entry(*beam).or_default();
         script.on_apply = Some(super::havoc_fury::apply_blind_fury);
@@ -139,7 +139,7 @@ fn register_channels(scripts: &mut AuraScripts) {
 // buff's zero-valued modifier takes its amount from the selected talent.
 fn apply_serrated_glaive(world: &mut World, caster: Entity, aura: &AuraInstance) {
     const TALENT: u32 = 390154;
-    if aura.caster != caster || !has_talent(world, caster, TALENT) {
+    if aura.spell_id != 390155 || aura.caster != caster || !has_talent(world, caster, TALENT) {
         return;
     }
     let amount = combat::spell_cast::scripts::script_effect_value(world, caster, TALENT, 0);
