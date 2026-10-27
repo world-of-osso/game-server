@@ -8,9 +8,10 @@ fn native_hunter_dire_command_actual_kills_spawn_authentic_beasts() {
     let mut run = prepare_measurement(253, 1).expect("native literal BM fixture");
     assert!(crate::auras::has_aura(run.app.world(), run.actor, 378743));
     assert!(crate::auras::has_aura(run.app.world(), run.actor, 385810));
-    let dire_frenzy = crate::spell_cast::scripts::script_effect_value(
-        run.app.world(), run.actor, 385810, 1,
-    ) as f32 / 100.0;
+    let dire_frenzy =
+        crate::spell_cast::scripts::script_effect_value(run.app.world(), run.actor, 385810, 1)
+            as f32
+            / 100.0;
     let probability = f64::from(crate::spell_cast::scripts::script_effect_value(
         run.app.world(),
         run.actor,
@@ -98,9 +99,15 @@ fn native_hunter_dire_command_actual_kills_spawn_authentic_beasts() {
                 * if world.get::<crate::hunter_pet::HunterPet>(pet).is_some()
                     || summon.properties.control == SUMMON_CONTROL_PET
                 {
-                    world.get::<crate::auras::AuraStatMods>(run.actor).unwrap().pet_damage_mult
+                    world
+                        .get::<crate::auras::AuraStatMods>(run.actor)
+                        .unwrap()
+                        .pet_damage_mult
                 } else {
-                    world.get::<crate::auras::AuraStatMods>(run.actor).unwrap().guardian_damage_mult
+                    world
+                        .get::<crate::auras::AuraStatMods>(run.actor)
+                        .unwrap()
+                        .guardian_damage_mult
                 };
             let pet_scaling = crate::level_scaling::UnitScaling::of(world, pet);
             let target_scaling = crate::level_scaling::UnitScaling::of(world, run.targets[0]);
@@ -142,8 +149,9 @@ fn native_hunter_dire_command_actual_kills_spawn_authentic_beasts() {
     // authored second effect multiplies actual DireCritter damage.
     assert!(dire_frenzy > 0.0);
     assert!(
-        inherited_ap_hits.iter().all(|(hit, floor, _)|
-            *hit as f32 >= (*floor * (1.0 + dire_frenzy)).floor()),
+        inherited_ap_hits
+            .iter()
+            .all(|(hit, floor, _)| *hit as f32 >= (*floor * (1.0 + dire_frenzy)).floor()),
         "Dire Beast swings omit selected Dire Frenzy: {inherited_ap_hits:?}, bonus={dire_frenzy}"
     );
     let commands = run
