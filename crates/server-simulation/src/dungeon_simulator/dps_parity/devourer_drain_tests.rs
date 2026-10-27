@@ -67,3 +67,110 @@ fn devourer_metamorphosis_fills_fury_on_entry() {
     // SimC76f8118 sc_demon_hunter.cpp12445–12452 grants 200 Fury on entry, capped by the native pool.
     assert_eq!(current, maximum, "Void Metamorphosis entry must fill Fury");
 }
+
+#[test]
+#[ignore = "requires DPS_PARITY_WORLD_DB and DPS_PARITY_OUTPUT with spec1480 exact profile/traits"]
+fn real_meta_survives_outgoing_void_ray_damage() {
+    use shared::protocol::CombatLogKind;
+    let mut run = prepare(1480, 3).expect("native Devourer profile");
+    let actor = run.actor;
+    let target = run.targets[0];
+    engage(&mut run);
+    crate::spell_cast::cast_for_player_with_target(
+        run.app.world_mut(),
+        actor,
+        473662,
+        Some(target),
+    )
+    .expect("real Consume engages combat");
+    for _ in 0..40 {
+        run.app.update();
+    }
+    assert!(
+        run.app
+            .world()
+            .get::<shared::components::CombatStatus>(actor)
+            .is_some_and(|status| status.0),
+        "real combat"
+    );
+    for _ in 0..35 {
+        crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 1225789, Some(actor), 1);
+    }
+    for _ in 0..20 {
+        if crate::auras::has_aura(run.app.world(), actor, 1213809) {
+            break;
+        }
+        run.app.update();
+    }
+    assert!(
+        crate::auras::has_aura(run.app.world(), actor, 1213809),
+        "native Meta ready"
+    );
+    crate::spell_cast::cast_for_player_with_target(
+        run.app.world_mut(),
+        actor,
+        1217605,
+        Some(actor),
+    )
+    .expect("ordinary Meta entry");
+    for _ in 0..30 {
+        if crate::auras::has_aura(run.app.world(), actor, 1217607)
+            && !crate::auras::has_aura(run.app.world(), actor, 201453)
+        {
+            break;
+        }
+        run.app.update();
+    }
+    assert!(
+        crate::auras::has_aura(run.app.world(), actor, 1217607),
+        "Meta entered"
+    );
+    assert!(
+        !crate::auras::has_aura(run.app.world(), actor, 201453),
+        "pacify expired naturally"
+    );
+    crate::spell_cast::cast_for_player_with_target(
+        run.app.world_mut(),
+        actor,
+        473728,
+        Some(target),
+    )
+    .expect("real Void Ray in Meta");
+    for _ in 0..40 {
+        run.app.update();
+        if run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|event| {
+                event.source == Some(actor.to_bits())
+                    && event.spell_id == Some(1214595)
+                    && event.kind == CombatLogKind::Damage
+                    && event.amount > 0
+            })
+        {
+            break;
+        }
+    }
+    assert!(
+        run.app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|event| event.source == Some(actor.to_bits())
+                && event.spell_id == Some(1214595)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0),
+        "real Meta ray dealt outgoing damage"
+    );
+    for _ in 0..5 {
+        run.app.update();
+    }
+    assert!(
+        crate::auras::has_aura(run.app.world(), actor, 1217607),
+        "outgoing ray damage must not interrupt caster's Meta"
+    );
+}
