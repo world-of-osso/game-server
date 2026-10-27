@@ -188,6 +188,122 @@ fn dk252_putrefy_magus_casts_native_necrotic_bolt() {
 
 #[test]
 #[ignore = "requires private native252 profile/traits and player actor"]
+fn dk252_putrid_echoes_spends_both_charges_and_summons_two_ghouls() {
+    use crate::simc_apl_native::{Bindings, Encounter, FightStyle, NativeFacts};
+    use server::simc_apl::Facts;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 1).unwrap();
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, 377580));
+    let bindings = Bindings {
+        actions: [("putrefy".into(), 1247378)].into(),
+        ..Default::default()
+    };
+    let encounter = Encounter::Fixture {
+        started_at: 0.0,
+        duration: 300.0,
+        style: FightStyle::Patchwerk,
+    };
+    let charges = |run: &Run| {
+        NativeFacts::new(run.app.world(), run.actor, &bindings, encounter, 1)
+            .value("cooldown.putrefy.charges")
+            .unwrap()
+    };
+    let initial_charges = charges(&run);
+    assert!(
+        initial_charges >= 2.0,
+        "the fixture starts with at least two real Putrefy charges"
+    );
+    engage(&mut run);
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(
+            1247378,
+            run.targets[0],
+            Some(run.targets[0]),
+        ),
+    )
+    .unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    let count = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .iter()
+        .filter(|event| {
+            event.source == Some(run.actor.to_bits())
+                && event.spell_id == Some(1277098)
+                && event.kind == CombatLogKind::Summon
+        })
+        .count();
+    assert_eq!(
+        count, 2,
+        "selected Putrid Echoes must create two native lesser ghouls"
+    );
+    assert_eq!(
+        charges(&run),
+        initial_charges - 2.0,
+        "the second ghoul spends another real Putrefy charge"
+    );
+}
+
+#[test]
+#[ignore = "requires private native252 profile/traits and player actor"]
+fn dk252_lord_magus_uses_selected_native_lifetime() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 1).unwrap();
+    engage(&mut run);
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(
+            1247378,
+            run.targets[0],
+            Some(run.targets[0]),
+        ),
+    )
+    .unwrap();
+    let magus = (0..100)
+        .find_map(|_| {
+            run.app.update();
+            let world = run.app.world_mut();
+            world
+                .query::<(Entity, &shared::components::Npc)>()
+                .iter(world)
+                .find_map(|(actor, npc)| (npc.template_id == 163366).then_some(actor))
+        })
+        .expect("native Putrefy must create a Magus");
+    let native_ms =
+        crate::spell_cast::scripts::script_effect_value(run.app.world(), run.actor, 1256813, 1);
+    let started = crate::spell_cast::now(run.app.world());
+    let observed_expiry = run
+        .app
+        .world()
+        .get::<crate::spell_cast::summon::SummonedCreature>(magus)
+        .unwrap()
+        .expires_at;
+    let virtual_now = crate::auras::aura_now(run.app.world());
+    while crate::spell_cast::now(run.app.world()) < started + f64::from(native_ms) / 1000.0 - 1.0 {
+        run.app.update();
+    }
+    assert!(
+        run.app.world().get_entity(magus).is_ok(),
+        "the real Magus must survive until its selected native lifetime: native_ms={native_ms}, start={started}, virtual_start={virtual_now}, expiry={observed_expiry:?}, current={}, virtual_current={}",
+        crate::spell_cast::now(run.app.world()),
+        crate::auras::aura_now(run.app.world())
+    );
+    while crate::spell_cast::now(run.app.world()) < started + f64::from(native_ms) / 1000.0 + 1.0 {
+        run.app.update();
+    }
+    assert!(
+        run.app.world().get_entity(magus).is_err(),
+        "the real Magus must expire after its selected native lifetime"
+    );
+}
+
+#[test]
+#[ignore = "requires private native252 profile/traits and player actor"]
 fn dk252_magus_bolt_inherits_owner_melee_power() {
     use crate::spell_cast::effects::factor_capture::FactorCapture;
     let _seed = crate::random::seed_scope(70448);

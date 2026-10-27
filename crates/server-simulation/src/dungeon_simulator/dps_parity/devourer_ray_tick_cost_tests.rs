@@ -2,8 +2,8 @@
 use super::*;
 use shared::{casting::CastState, components::PowerType};
 
-fn start_ray() -> Run {
-    let mut run = prepare(1480, 1).expect("native Devourer profile");
+fn start_ray(targets: usize) -> Run {
+    let mut run = prepare(1480, targets).expect("native Devourer profile");
     run.app
         .init_resource::<crate::spell_cast::test_harness::ObservedTriggeredCasts>();
     let actor = run.actor;
@@ -53,8 +53,46 @@ fn advance_to_ticks(run: &mut Run, minimum: usize) {
 
 #[test]
 #[ignore = "requires DPS_PARITY_WORLD_DB and DPS_PARITY_OUTPUT with spec1480 exact profile/traits"]
+fn devourer_void_ray_three_target_hits_generate_shattered_souls() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = start_ray(3);
+    let actor = run.actor;
+    assert!(
+        run.app
+            .world()
+            .get::<crate::class_progression::KnownSpells>(actor)
+            .is_some_and(|known| known.contains(1227619)),
+        "selected Shattered Souls"
+    );
+    advance_to_ticks(&mut run, 15);
+    assert!(
+        run.app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|event| event.source == Some(actor.to_bits())
+                && event.spell_id == Some(1213649)
+                && event.amount > 0),
+        "real ray child deals positive damage"
+    );
+    for _ in 0..30 {
+        run.app.update();
+    }
+    assert!(
+        server::soul_fragments::active_count(
+            run.app.world(),
+            actor,
+            server::soul_fragments::FragmentFilter::Lesser
+        ) > 0,
+        "seeded ray hits create active Shattered Souls fragments"
+    );
+}
+
+#[test]
+#[ignore = "requires DPS_PARITY_WORLD_DB and DPS_PARITY_OUTPUT with spec1480 exact profile/traits"]
 fn devourer_void_ray_spends_fury_for_each_native_tick() {
-    let mut run = start_ray();
+    let mut run = start_ray(1);
     advance_to_ticks(&mut run, 3);
     let ticks = ray_ticks(&run);
     let after = crate::spell_cast::powers::power_value(run.app.world(), run.actor, PowerType::Fury)
@@ -72,7 +110,7 @@ fn devourer_void_ray_spends_fury_for_each_native_tick() {
 #[test]
 #[ignore = "requires DPS_PARITY_WORLD_DB and DPS_PARITY_OUTPUT with spec1480 exact profile/traits"]
 fn devourer_void_ray_stops_before_an_unaffordable_tick() {
-    let mut run = start_ray();
+    let mut run = start_ray(1);
     advance_to_ticks(&mut run, 1);
     let actor = run.actor;
     let current = crate::spell_cast::powers::power_value(run.app.world(), actor, PowerType::Fury)
