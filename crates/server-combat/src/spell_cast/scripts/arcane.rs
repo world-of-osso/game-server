@@ -20,7 +20,7 @@ const MISSILES: u32 = 5143;
 const MISSILES_TICK: u32 = 7268;
 
 /// SimC76f8118 sc_mage.cpp3270–3296 rounds a fresh Missiles channel to whole ticks.
-pub(super) fn missiles_channel_duration(
+pub(in crate::spell_cast) fn missiles_channel_duration(
     spell: u32,
     duration: f32,
     original_period: f32,
