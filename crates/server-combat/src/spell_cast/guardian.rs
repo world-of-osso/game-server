@@ -710,7 +710,9 @@ fn cast_first_ready(world: &mut World, actor: Entity, target: Entity) {
         };
         let repeatable = can_repeat(entry, spell);
         let targets = native_cast_targets(actor, target, spell);
-        if !read_action_timing_ready(world, actor, id, repeatable) {
+        if !read_action_timing_ready(world, actor, id, repeatable)
+            || !super::script_registry::guardian_action_eligible(world, actor, id, target)
+        {
             continue;
         }
         if super::creature_cast_with_targets(world, actor, id, targets).is_err() {
