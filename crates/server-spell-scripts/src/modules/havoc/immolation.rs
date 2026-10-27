@@ -9,6 +9,23 @@ use combat::spell_info::SpellStore;
 const IMMOLATION: u32 = 258920;
 const UNDYING: u32 = 1272405;
 
+// SimC76f8118 sc_demon_hunter.cpp8927–8954: each in-combat aura
+// start or refresh emits its native initial damage, including Embers renewal.
+pub(crate) fn initial_damage(world: &mut World, unit: Entity, aura: &AuraInstance) {
+    if aura.spell_id != IMMOLATION
+        || aura.caster != unit
+        || !super::is_havoc(world, unit)
+        || world
+            .get::<combat::simc_apl_native::FixturePrecombat>(unit)
+            .is_some()
+    {
+        return;
+    }
+    if !spell_cast::try_cast_triggered(world, unit, 258921, None, 1) {
+        error!(?unit, "Immolation Aura initial child refused");
+    }
+}
+
 pub(crate) fn register(scripts: &mut AuraScripts) {
     scripts.0.entry(IMMOLATION).or_default().on_natural_end = Some(renew_immolation);
 }
@@ -18,11 +35,7 @@ fn renew_immolation(world: &mut World, unit: Entity, aura: &AuraInstance) {
         return;
     }
     let chance = spell_cast::scripts::script_effect_value(world, unit, UNDYING, 0) / 100.0;
-    let roll = combat::random::thread_rng().r#gen::<f32>();
-    if std::env::var_os("IMMOLATION_TRACE").is_some() {
-        eprintln!("EMBER roll={roll} chance={chance}");
-    }
-    if roll >= chance {
+    if combat::random::thread_rng().r#gen::<f32>() >= chance {
         return;
     }
     let spell = world

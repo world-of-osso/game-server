@@ -63,7 +63,7 @@ fn havoc_undying_embers_retriggers_expired_immolation() {
             .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
             .0
             .len();
-        for _ in 0..8 {
+        for _ in 0..20 {
             crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 258920, Some(actor), 1);
             advance(&mut run, 220);
         }
@@ -79,7 +79,7 @@ fn havoc_undying_embers_retriggers_expired_immolation() {
             })
             .count();
         assert_eq!(
-            applications > 8,
+            applications > 20,
             selected,
             "only selected Undying Embers must retrigger naturally expired auras; applications={applications}"
         );
