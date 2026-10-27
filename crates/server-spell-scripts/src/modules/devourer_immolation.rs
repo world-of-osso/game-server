@@ -30,7 +30,7 @@ fn tick(world: &mut World, unit: Entity, aura: &AuraInstance, effect: u8) {
     spell_cast::cast_triggered(world, aura.caster, ENERGIZE, Some(unit), 1);
     // SimC76f8118 sc_demon_hunter.cpp5950–5958 spawns every other tick,
     // starting with the first scheduled tick.
-    let tick = combat::auras::periodic::paid_periodic_ticks(world, aura.caster, unit, SOUL_IMMOLATION);
+    let tick = combat::auras::paid_periodic_ticks(world, aura.caster, unit, SOUL_IMMOLATION);
     if tick % 2 == 1 {
         soul_fragments::spawn(world, aura.caster, FragmentKind::Lesser, false)
             .expect("native Soul Immolation fragment");
