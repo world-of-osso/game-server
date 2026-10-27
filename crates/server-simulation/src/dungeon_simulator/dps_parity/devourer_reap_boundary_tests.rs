@@ -83,13 +83,13 @@ fn batch3_reap_damage_hits_produce_shattered_souls() {
     for _ in 0..100 {
         crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 1225823, Some(target), 1);
     }
+    for _ in 0..40 {
+        run.app.update();
+    }
     assert!(
         observed(&run, 1225823, CombatLogKind::Damage, true),
         "real Reap damage hits"
     );
-    for _ in 0..40 {
-        run.app.update();
-    }
     assert!(
         soul_fragments::active_count(run.app.world(), actor, FragmentFilter::Lesser) > 0,
         "seeded Reap hits produce lesser fragments"

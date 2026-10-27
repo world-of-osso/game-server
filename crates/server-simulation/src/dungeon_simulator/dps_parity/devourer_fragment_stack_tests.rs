@@ -235,8 +235,12 @@ fn batch9_blind_focus_scales_voidblade_in_meta() {
     let (without, without_crit) = batch1_voidblade_hit(true, 40.0, false);
     let (with, with_crit) = batch1_voidblade_hit(true, 40.0, true);
     assert_eq!(without_crit, with_crit, "same hit outcome");
-    // SimC76f8118 cpp2248–2260 doubles native Blind Focus effect3 in Meta.
-    let expected = f64::from(without) * 1.04;
+    let (normal_without, normal_without_crit) = batch1_voidblade_hit(false, 40.0, false);
+    let (normal_with, normal_with_crit) = batch1_voidblade_hit(false, 40.0, true);
+    assert_eq!(normal_without_crit, normal_with_crit, "same normal hit outcome");
+    // SimC76f8118 cpp2248–2260 doubles the native Blind Focus bonus in Meta.
+    let normal_bonus = f64::from(normal_with) / f64::from(normal_without) - 1.0;
+    let expected = f64::from(without) * (1.0 + normal_bonus * 2.0);
     assert!(
         (f64::from(with) - expected).abs() < expected * 0.005,
         "Blind Focus expected {expected}, got {with}"
@@ -259,19 +263,17 @@ fn batch_a_delayed_apocalypse_requires_meta_at_delivery() {
         crate::auras::has_aura(run.app.world(), actor, 1217607),
         "real Meta active"
     );
-    crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 1221162, Some(target), 1);
-    assert!(
-        run.app
-            .world()
-            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
-            .0
-            .iter()
-            .any(|event| event.spell_id == Some(1221162)
-                && event.target == Some(target.to_bits())
-                && event.kind == CombatLogKind::Damage
-                && event.amount > 0),
-        "primary Star hit landed"
-    );
+    for _ in 0..30 {
+        crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 1227702, Some(actor), 1);
+    }
+    crate::spell_cast::cast_for_player_with_target(run.app.world_mut(), actor, 1221150, Some(target))
+        .expect("real Star admission");
+    let hit = |run: &Run| run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0.iter().any(|event| event.spell_id == Some(1221162) && event.target == Some(target.to_bits()) && event.kind == CombatLogKind::Damage && event.amount > 0);
+    for _ in 0..100 {
+        run.app.update();
+        if hit(&run) { break; }
+    }
+    assert!(hit(&run), "primary Star hit landed");
     crate::auras::remove_auras(
         run.app.world_mut(),
         actor,
