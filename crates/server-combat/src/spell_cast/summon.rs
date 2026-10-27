@@ -257,13 +257,7 @@ pub(super) fn dispatch_arrivals(world: &mut World) {
             let target = world.get::<Position>(arrival.target)?;
             let from = Vec3::new(position.x, position.y, position.z);
             let victim = Vec3::new(target.x, target.y, target.z);
-            let corner = Vec3::new(target.x, position.y, target.z);
-            (crate::navigation::distance_to_reach(
-                from,
-                corner,
-                victim,
-                crate::creature_ai::CHASE_REACH,
-            ) <= 0.0)
+            crate::navigation::within_reach(from, victim, crate::creature_ai::CHASE_REACH)
                 .then_some((actor, arrival.target, arrival.on_arrival))
         })
         .collect();
