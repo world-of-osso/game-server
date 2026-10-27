@@ -2,6 +2,41 @@ use super::*;
 use shared::protocol::CombatLogKind;
 
 #[test]
+#[ignore = "requires native252 profile/traits and player actor"]
+fn dk252_army_grants_forbidden_knowledge_and_summons_magus() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 1).unwrap();
+    engage(&mut run);
+    literal_rotation::execution::execute(
+        run.app.world_mut(), run.actor,
+        literal_rotation::execution::Execution::Spell(42650, run.actor, None),
+    ).unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, 1242223));
+    let world = run.app.world_mut();
+    assert!(world.query::<(&shared::components::Npc, &crate::spell_cast::summon::SummonedCreature)>()
+        .iter(world).any(|(npc, summon)| npc.template_id == 163366
+            && summon.owner == run.actor && summon.spell_id == 317776));
+}
+
+#[test]
+#[ignore = "requires native252 profile/traits and player actor"]
+fn dk252_dark_transformation_summons_selected_magus() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 1).unwrap();
+    engage(&mut run);
+    literal_rotation::execution::execute(
+        run.app.world_mut(), run.actor,
+        literal_rotation::execution::Execution::Spell(1233448, run.actor, None),
+    ).unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    let world = run.app.world_mut();
+    assert!(world.query::<(&shared::components::Npc, &crate::spell_cast::summon::SummonedCreature)>()
+        .iter(world).any(|(npc, summon)| npc.template_id == 163366
+            && summon.owner == run.actor && summon.spell_id == 317776));
+}
+
+#[test]
 #[ignore = "requires private native252 profile/traits and player actor"]
 fn dk252_festering_strike_earns_ghouls_and_next_native_scythe() {
     let _seed = crate::random::seed_scope(70448);
