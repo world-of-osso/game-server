@@ -121,8 +121,8 @@ fn shared_fixture_retreat_then_beam_returns_before_channel() {
         "real Retreat must move the player outside beam range: {max_distance}"
     );
     assert_eq!(
-        launches, 12,
-        "the real native channel must launch all ticks"
+        launches, 13,
+        "the real native channel must launch twelve ticks and selected Final Breath"
     );
     assert_eq!(
         hits, launches,

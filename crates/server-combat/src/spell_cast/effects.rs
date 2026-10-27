@@ -371,7 +371,7 @@ pub fn power_stats(world: &World, unit: Entity, healing: bool) -> (f32, f32) {
             // Magus and Lord inherit melee AP; Hunter guardians retain ranged AP.
             let attack_type = if matches!(
                 (summon.spell_id, entry),
-                (1242294, Some(163366)) | (1292072, Some(264321))
+                (1242294, Some(163366)) | (1292072, Some(264321)) | (288853, Some(149555))
             ) {
                 crate::stats::WeaponAttackType::MainHand
             } else {

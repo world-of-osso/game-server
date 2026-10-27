@@ -21,6 +21,13 @@ const RUINATION_IMPACT: u32 = 434636;
 const COVEN: u32 = 428518;
 const INFERNAL_BOLT_BUFF: u32 = 433891;
 const INFERNAL_BOLT: u32 = 434506;
+const DIABOLIC_OCULI: u32 = 1268709;
+const DEMONIC_OCULI: u32 = 1269643;
+const EYE_EXPLOSION: u32 = 1269800;
+const LOOKS_THAT_KILL: u32 = 1268713;
+const GAZES: [u32; 3] = [1269892, 1269886, 1269885];
+const MINDS_EYES_TALENT: u32 = 1268716;
+const MINDS_EYES: u32 = 1269879;
 
 /// SimC76f8118 init.cpp927–931: each ritual earns its Art and names the next ritual.
 struct Demon {
@@ -59,9 +66,11 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AfterSpellPayment(after_payment),
     SpellScriptHook::LateAuraRegistration(register),
     SpellScriptHook::EnemyContextHit(ruination_hit),
+    SpellScriptHook::TargetDamageMultiplier(explosion_multiplier),
 ];
 
 fn register(scripts: &mut AuraScripts) {
+    scripts.0.entry(DEMONIC_OCULI).or_default().on_periodic = Some(gaze);
     for demon in &DEMONS {
         scripts
             .0
@@ -95,10 +104,16 @@ fn after_payment(world: &mut World, caster: Entity, spell: &SpellInfo, costs: &[
     }
     match spell.id {
         HAND => {
-            // SimC actions.cpp2810–2818/2849–2851: Art consumption needs the Art at cast start.
+            // SimC actions.cpp2840–2841: each Hand execution adds a Demonic Oculi.
+            if auras::has_aura(world, caster, DIABOLIC_OCULI) {
+                grant(world, caster, DEMONIC_OCULI, 1);
+            }
+            // actions.cpp2810–2818/2849–2851: Art consumption needs the Art at cast start.
             let cast_start = spell_cast::now(world)
                 - f64::from(spell_cast::cast_time_ms(world, caster, spell).max(0)) / 1000.0;
-            consume_art(world, caster, Some(cast_start));
+            if consume_art(world, caster, Some(cast_start)) {
+                detonate_oculi(world, caster, spell.cast_primary_target);
+            }
             if in_combat(world, caster) {
                 advance_ritual(world, caster, costs);
             }
@@ -108,7 +123,9 @@ fn after_payment(world: &mut World, caster: Entity, spell: &SpellInfo, costs: &[
             if let Some(primary) = spell.cast_primary_target {
                 world.entity_mut(caster).insert(RuinationTarget(primary));
             }
-            consume_art(world, caster, None);
+            if consume_art(world, caster, None) {
+                detonate_oculi(world, caster, spell.cast_primary_target);
+            }
             spend_own_stack(world, caster, RUINATION_BUFF);
         }
         // actions.cpp5233–5240.
@@ -131,7 +148,7 @@ fn spend_own_stack(world: &mut World, caster: Entity, spell: u32) {
 }
 
 /// Spend the held Art; `granted_by` excludes an Art earned after that time.
-fn consume_art(world: &mut World, caster: Entity, granted_by: Option<f64>) {
+fn consume_art(world: &mut World, caster: Entity, granted_by: Option<f64>) -> bool {
     let held = DEMONS.iter().find_map(|demon| {
         let aura = own_aura(world, caster, demon.art)?;
         let granted = aura.expires_at? - f64::from(aura.duration_ms) / 1000.0;
@@ -141,6 +158,64 @@ fn consume_art(world: &mut World, caster: Entity, granted_by: Option<f64>) {
     });
     if let Some(instance) = held {
         auras::spend_stack(world, caster, instance);
+    }
+    held.is_some()
+}
+
+fn grant(world: &mut World, caster: Entity, buff: u32, depth: u8) {
+    if !spell_cast::try_cast_triggered(world, caster, buff, Some(caster), depth) {
+        warn!(?caster, buff, "Native Diabolist buff refused");
+    }
+}
+
+fn own_stacks(world: &World, caster: Entity, spell: u32) -> u8 {
+    own_aura(world, caster, spell).map_or(0, |aura| aura.stacks.max(1))
+}
+
+/// actions.cpp370–403/5356–5376: an Art-consuming cast grants one Mind's Eyes per
+/// held Oculi, explodes them on its target scaled by that count, then expires them.
+fn detonate_oculi(world: &mut World, caster: Entity, target: Option<Entity>) {
+    let stacks = own_stacks(world, caster, DEMONIC_OCULI);
+    let Some(target) = target.filter(|_| stacks > 0) else {
+        return;
+    };
+    if auras::has_aura(world, caster, MINDS_EYES_TALENT) {
+        for _ in 0..stacks {
+            grant(world, caster, MINDS_EYES, 1);
+        }
+    }
+    spell_cast::cast_triggered(world, caster, EYE_EXPLOSION, Some(target), 1);
+    auras::remove_auras(world, caster, RemoveReason::Consumed, |aura| {
+        aura.spell_id == DEMONIC_OCULI && aura.caster == caster
+    });
+}
+
+// init.cpp940–958: each unhasted Oculi tick casts the Diabolic Gaze matching its stacks.
+fn gaze(world: &mut World, caster: Entity, aura: &AuraInstance, index: u8) {
+    if index != 1 || aura.caster != caster || !auras::has_aura(world, caster, LOOKS_THAT_KILL) {
+        return;
+    }
+    let Some(target) = world
+        .get::<combat::networking::CombatTarget>(caster)
+        .and_then(|target| target.0)
+    else {
+        return;
+    };
+    let spell = match aura.stacks {
+        1 => GAZES[0],
+        2 => GAZES[1],
+        3 => GAZES[2],
+        _ => return,
+    };
+    spell_cast::cast_triggered(world, caster, spell, Some(target), 1);
+}
+
+/// actions.cpp5356–5363: Eye Explosion damage scales with the held Oculi.
+fn explosion_multiplier(world: &World, caster: Entity, _: Entity, spell: &SpellInfo) -> f32 {
+    if spell.id == EYE_EXPLOSION {
+        f32::from(own_stacks(world, caster, DEMONIC_OCULI))
+    } else {
+        1.0
     }
 }
 
@@ -157,10 +232,27 @@ fn advance_ritual(world: &mut World, caster: Entity, costs: &[(CostPool, f32)]) 
         .expect("native Soul Shards display units")
         .display_modifier;
     assert!(units > 0, "Soul Shards display divisor must be positive");
-    let seconds = f64::from(spell_cast::scripts::script_effect_value(
+    let mut seconds = f64::from(spell_cast::scripts::script_effect_value(
         world, caster, RITUAL, 0,
     )) * f64::from(paid)
         / f64::from(units);
+    // SimC76f8118 actions.cpp311–312: the native time bonus applies once
+    // per spender while an actual owned Demonic Tyrant is active.
+    if auras::has_aura(world, caster, 429917) {
+        let tyrant_active = world
+            .query::<(Entity, &spell_cast::summon::SummonedCreature)>()
+            .iter(world)
+            .any(|(actor, summon)| {
+                summon.owner == caster
+                    && summon.spell_id == 265187
+                    && spell_cast::targets::is_alive(world, actor)
+            });
+        if tyrant_active {
+            seconds += f64::from(spell_cast::scripts::script_effect_value(
+                world, caster, 429917, 0,
+            )) / 1000.0;
+        }
+    }
     let held = DEMONS
         .iter()
         .find(|demon| own_aura(world, caster, demon.ritual).is_some());

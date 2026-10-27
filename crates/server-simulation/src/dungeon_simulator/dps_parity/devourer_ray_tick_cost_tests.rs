@@ -55,6 +55,52 @@ fn devourer_meta_void_ray_cast_count_respects_cooldown() {
     );
 }
 
+#[test]
+#[ignore = "requires DPS_PARITY_WORLD_DB and DPS_PARITY_OUTPUT with spec1480 exact profile/traits"]
+fn batch4_complete_ray_grants_moment_and_final_breath() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = start_ray(1);
+    let actor = run.actor;
+    assert!(
+        !crate::auras::has_aura(run.app.world(), actor, 1238495),
+        "no Moment before completion"
+    );
+    for _ in 0..100 {
+        run.app.update();
+        if run.app.world().get::<CastState>(actor).is_none() {
+            break;
+        }
+    }
+    assert!(
+        run.app.world().get::<CastState>(actor).is_none(),
+        "channel completed"
+    );
+    assert!(
+        crate::auras::has_aura(run.app.world(), actor, 1238495),
+        "completed Ray grants Moment of Craving"
+    );
+    let hits: Vec<_> = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .iter()
+        .filter(|e| {
+            e.spell_id == Some(1213649)
+                && e.kind == shared::protocol::CombatLogKind::Damage
+                && e.amount > 0
+        })
+        .collect();
+    assert!(
+        hits.len() > 1,
+        "normal ticks and Final Breath damage landed"
+    );
+    assert!(
+        hits.last().unwrap().amount > hits[0].amount,
+        "Final Breath increases the final tick"
+    );
+}
+
 fn start_ray(targets: usize) -> Run {
     let mut run = prepare(1480, targets).expect("native Devourer profile");
     run.app

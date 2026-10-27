@@ -38,6 +38,139 @@ fn cast(run: &mut Run, spell: u32, self_target: bool) {
 
 #[test]
 #[ignore = "requires prepared native spec577 player profile"]
+fn havoc_undying_embers_retriggers_expired_immolation() {
+    for selected in [false, true] {
+        let _seed = crate::random::seed_scope(70_448);
+        let mut run = prepare_literal(577, 1).unwrap();
+        let actor = run.actor;
+        let known = run
+            .app
+            .world()
+            .get::<crate::class_progression::KnownSpells>(actor)
+            .unwrap();
+        assert!(known.contains(1272405));
+        let spells = known
+            .iter()
+            .filter(|spell| selected || *spell != 1272405)
+            .collect();
+        run.app
+            .world_mut()
+            .entity_mut(actor)
+            .insert(crate::class_progression::KnownSpells::fixture(spells));
+        let before = run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .len();
+        for _ in 0..20 {
+            crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 258920, Some(actor), 1);
+            advance(&mut run, 220);
+        }
+        let events = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0[before..];
+        let applications = events
+            .iter()
+            .filter(|event| {
+                event.kind == CombatLogKind::AuraApplied && event.spell_id == Some(258920)
+            })
+            .count();
+        assert_eq!(
+            applications > 20,
+            selected,
+            "only selected Undying Embers must retrigger naturally expired auras; applications={applications}"
+        );
+    }
+}
+
+#[test]
+#[ignore = "requires prepared native spec577 player profile"]
+fn havoc_final_breath_adds_scaled_tick_on_completed_beam() {
+    for selected in [false, true] {
+        let _seed = crate::random::seed_scope(70_448);
+        let mut run = prepare_literal(577, 1).unwrap();
+        let actor = run.actor;
+        let primary = run.targets[0];
+        super::face_actor_toward_primary(run.app.world_mut(), actor, primary);
+        let known = run
+            .app
+            .world()
+            .get::<crate::class_progression::KnownSpells>(actor)
+            .unwrap();
+        assert!(known.contains(1266500));
+        let spells = known
+            .iter()
+            .filter(|spell| *spell != 428492 && (selected || *spell != 1266500))
+            .collect();
+        run.app
+            .world_mut()
+            .entity_mut(actor)
+            .insert(crate::class_progression::KnownSpells::fixture(spells));
+        run.app
+            .world_mut()
+            .get_mut::<crate::stats::CharacterStats>(actor)
+            .unwrap()
+            .crit_pct = -1000.0;
+        if selected {
+            run.app.insert_resource(
+                crate::spell_cast::effects::factor_capture::FactorCapture::new(
+                    actor,
+                    primary,
+                    198030,
+                    "final_breath",
+                    20,
+                ),
+            );
+        }
+        havoc_tests::earn_havoc_fury(&mut run, 30.0);
+        cast(&mut run, 198013, false);
+        preparation::finish_pending_setup(&mut run).unwrap();
+        let hits = damage(&run, Some(198030));
+        assert_eq!(
+            hits.len(),
+            if selected { 13 } else { 12 },
+            "Final Breath must add exactly one real Eye Beam tick: {hits:?}"
+        );
+        if selected {
+            let capture = run
+                .app
+                .world()
+                .resource::<crate::spell_cast::effects::factor_capture::FactorCapture>()
+                .export();
+            let events: Vec<_> = capture["events"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .filter(|event| event["spell_id"] == 198030 && event["event"] == "result")
+                .collect();
+            let product =
+                |event: &serde_json::Value| event["factors"]["source_product"].as_f64().unwrap();
+            assert!(
+                (product(events[12]) / product(events[11]) - 3.0).abs() < 0.001,
+                "Final Breath must deal three times the observed tick input"
+            );
+        }
+    }
+}
+
+#[test]
+#[ignore = "requires prepared native spec577 player profile"]
+fn havoc_rotation_immolation_aura_deals_initial_damage() {
+    let report = super::measure_seed(577, 1, 70_448).expect("real Havoc 300s rotation");
+    let actions = report["combat"]["actions"].as_array().unwrap();
+    assert!(
+        actions.iter().any(
+            |action| action["spell_id"] == 258921 && action["damage"].as_u64().unwrap_or(0) > 0
+        ),
+        "actual Immolation Aura casts must deal initial damage: {actions:?}"
+    );
+}
+
+#[test]
+#[ignore = "requires prepared native spec577 player profile"]
 fn havoc_damage_applies_chaos_brand_to_actual_targets() {
     let _seed = crate::random::seed_scope(70_448);
     let mut run = prepare_literal(577, 3).unwrap();

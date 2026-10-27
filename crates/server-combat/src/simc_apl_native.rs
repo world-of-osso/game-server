@@ -14,6 +14,10 @@ pub fn install_open_arena(world: &mut World) {
     world.insert_resource(crate::ground::GroundMap::flat_arena(0.0));
 }
 
+/// The pinned APL is executing actions before the simulated encounter starts.
+#[derive(Component)]
+pub struct FixturePrecombat;
+
 /// Explicit fixture lifetime/role; never changes the native creature template.
 #[derive(Component, Clone, Copy)]
 pub struct FixtureTarget {
