@@ -36,6 +36,29 @@ fn cast(run: &mut Run, spell: u32, self_target: bool) {
     .expect("ordinary native Havoc cast");
 }
 
+#[test]
+#[ignore = "requires prepared native spec577 player profile"]
+fn havoc_damage_applies_chaos_brand_to_actual_targets() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(577, 3).unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    let actor = run.actor;
+    let primary = run.targets[0];
+    super::face_actor_toward_primary(run.app.world_mut(), actor, primary);
+    crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 198030, None, 1);
+    for &target in &run.targets {
+        assert!(
+            damage(&run, Some(198030))
+                .iter()
+                .any(|hit| hit.target == Some(target.to_bits()))
+        );
+        assert!(
+            crate::auras::has_aura(run.app.world(), target, 1490),
+            "DH damage must brand {target:?}"
+        );
+    }
+}
+
 fn isolated_prey_hits(spell: u32, count: usize, selected: bool) -> Vec<CombatLogEvent> {
     let _seed = crate::random::seed_scope(70_448);
     let mut run = prepare_literal(577, count).unwrap();
