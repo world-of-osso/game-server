@@ -368,6 +368,8 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 - Selected Blind Fury203550 supplies its native effect2 amount to Eye/Gaze's existing aura85 Fury regeneration effect. The ordinary native per-five-second regeneration path supplies Fury only during that actual channel, with no weapon-hit dependency or adapter credit (SimC76f8118 sc_demon_hunter.cpp9986–9993).
 
+- Havoc Immolation Aura258920 grants its native Havoc initial Fury only; its periodic child258922 grants native Havoc tick Fury only while Burning Hatred320374 is selected. Do not apply the Vengeance energize effects to Havoc (SimC76f8118 `sc_demon_hunter.cpp`4651–4677,4784–4800).
+
 - Hard Meta191427 adds native162264's duration to live Havoc transformation instead of discarding Demonic time. The ordinary native reapplication path retains aura effects and phase (SimC76f8118 sc_demon_hunter.cpp4984–4985).
 - Actual Hunt370965 arms selected1270898's native1271144 Empowered Eye Beam. Completed Eye/Gaze with selected1270901 earns native1271092 Eternal Hunt; channel removal consumes empowerment. An actual dance consuming Eternal Hunt expires it and resets native dance recovery after500ms, not on unrelated expiration/cancellation (SimC76f8118 sc_demon_hunter.cpp4008–4017,5555,7296–7302).
 
