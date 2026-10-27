@@ -4,7 +4,6 @@ use std::collections::BTreeSet;
 use bevy::prelude::*;
 
 use super::combat;
-use combat::spell_info::SpellStore;
 
 const BURNING_BLADES: u32 = 452408;
 const RESIDUAL: u32 = 453177;
@@ -53,7 +52,7 @@ pub(crate) fn apply_havoc_damage_policies(
     if spell.is_none_or(|id| BURNING_HITS.contains(&id))
         && super::has_talent(world, caster, BURNING_BLADES)
     {
-        apply_burning_blades(world, caster, target, amount);
+        super::super::demon_hunter_burning::apply(world, caster, target, amount, RESIDUAL);
     }
 }
 
@@ -71,39 +70,4 @@ fn apply_initiative(world: &mut World, caster: Entity, target: Entity) {
     if first_hit {
         combat::spell_cast::cast_triggered(world, caster, INITIATIVE_BUFF, Some(caster), 1);
     }
-}
-
-fn apply_burning_blades(world: &mut World, caster: Entity, target: Entity, damage: f32) {
-    let Some(ticks) = native_tick_count(world) else {
-        error!("Native Burning Blades453177 has no positive tick count");
-        return;
-    };
-    let percent =
-        combat::spell_cast::scripts::script_effect_value(world, caster, BURNING_BLADES, 0);
-    // Use the landed amount in attacker units, not AuraEvent.damage's scaled
-    // target-health units. Native453177's rolling-periodic flag carries unpaid
-    // damage and preserves its existing tick phase through generic refresh.
-    combat::spell_cast::cast_triggered_with_effect0_amount(
-        world,
-        caster,
-        RESIDUAL,
-        Some(target),
-        1,
-        damage * percent / 100.0 / ticks as f32,
-    );
-}
-
-fn native_tick_count(world: &World) -> Option<u32> {
-    let spell = world.resource::<SpellStore>().get(RESIDUAL)?;
-    let duration = spell.misc.as_ref()?.duration?.duration_ms;
-    let period = spell
-        .effects
-        .iter()
-        .find(|effect| effect.index == 0)?
-        .aura_period_ms;
-    if duration <= 0 || period == 0 {
-        return None;
-    }
-    let ticks = duration as u32 / period;
-    (ticks > 0).then_some(ticks)
 }

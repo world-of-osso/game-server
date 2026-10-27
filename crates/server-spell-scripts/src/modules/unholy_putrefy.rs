@@ -50,7 +50,10 @@ fn impact_and_dismiss(world: &mut World, actor: Entity, target: Entity) {
     }
     world.entity_mut(actor).insert(PutrefyImpacted);
     let now = combat::spell_cast::now(world);
-    world.get_mut::<summon::SummonedCreature>(actor).unwrap().expires_at = Some(now);
+    world
+        .get_mut::<summon::SummonedCreature>(actor)
+        .unwrap()
+        .expires_at = Some(now);
 }
 
 fn raise_magus(world: &mut World, actor: Entity) {

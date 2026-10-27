@@ -1071,10 +1071,20 @@ fn insert_summon_privacy(entity: &mut EntityWorldMut<'_>, owner: Option<PrivateS
     }
 }
 
+/// A retired summon retains source state only until its in-flight spells land.
+#[derive(Component)]
+pub(crate) struct RetiringSummon {
+    pub health: f32,
+    deadline: f64,
+}
+
+const RETIRING_SUMMON_TIMEOUT_SECONDS: f64 = 30.0;
+
 pub(super) fn expire_summons(world: &mut World) {
     let now = crate::auras::aura_now(world);
+    finish_retiring_summons(world, now);
     let expired: Vec<_> = world
-        .query::<(Entity, &SummonedCreature, &InMap)>()
+        .query_filtered::<(Entity, &SummonedCreature, &InMap), Without<RetiringSummon>>()
         .iter(world)
         .filter(|(_, summon, map)| {
             summon.expires_at.is_some_and(|expiry| now >= expiry)
@@ -1111,7 +1121,29 @@ pub(super) fn expire_summons(world: &mut World) {
     }
 }
 
+fn finish_retiring_summons(world: &mut World, now: f64) {
+    let retiring: Vec<_> = world
+        .query::<(Entity, &RetiringSummon)>()
+        .iter(world)
+        .map(|(entity, state)| (entity, state.deadline))
+        .collect();
+    for (entity, deadline) in retiring {
+        let pending = world
+            .get_resource::<super::missiles::PendingSpellHits>()
+            .is_some_and(|hits| hits.has_caster(entity));
+        if !pending || now >= deadline {
+            if pending {
+                warn!(?entity, "Retired summon exceeded missile drain timeout");
+            }
+            world.entity_mut(entity).despawn();
+        }
+    }
+}
+
 pub fn despawn_summon(world: &mut World, entity: Entity) {
+    if world.get::<RetiringSummon>(entity).is_some() {
+        return;
+    }
     super::scripts::elemental_ancestors::on_despawn(world, entity);
     if let Some(summon) = world.get::<SummonedCreature>(entity) {
         if summon.spell_id == DANCING_RUNE_WEAPON {
@@ -1136,5 +1168,30 @@ pub fn despawn_summon(world: &mut World, entity: Entity) {
     unregister_source_summon(world, entity);
     crate::battle_pets::forget_companion_actor(world, entity);
     crate::combat::combat_stop(world, entity);
-    world.entity_mut(entity).despawn();
+    let pending = world
+        .get_resource::<super::missiles::PendingSpellHits>()
+        .is_some_and(|hits| hits.has_caster(entity));
+    if pending {
+        retire_until_missiles_land(world, entity);
+    } else {
+        world.entity_mut(entity).despawn();
+    }
+}
+
+fn retire_until_missiles_land(world: &mut World, entity: Entity) {
+    let now = crate::auras::aura_now(world);
+    let health = world.get::<Health>(entity).expect("summon health").current;
+    let mut actor = world.entity_mut(entity);
+    actor.get_mut::<Health>().unwrap().current = 0.0;
+    if let Some(mut flags) = actor.get_mut::<UnitFlags>() {
+        flags.0 |= UnitFlags::NOT_SELECTABLE | UnitFlags::NON_ATTACKABLE_2;
+    }
+    if let Some(mut summon) = actor.get_mut::<SummonedCreature>() {
+        summon.expires_at = Some(now);
+    }
+    actor.remove::<Replicate>();
+    actor.insert(RetiringSummon {
+        health,
+        deadline: now + RETIRING_SUMMON_TIMEOUT_SECONDS,
+    });
 }

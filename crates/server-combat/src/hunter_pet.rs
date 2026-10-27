@@ -12,6 +12,7 @@
 //! the five active ones, hunter pet death, and pets across map transfers.
 
 mod companions;
+pub(crate) mod death_knight;
 pub(crate) use companions::{EFFECT_SUMMON_STABLED_PET, effect_summon_companion};
 mod guardians;
 pub(crate) use guardians::{
@@ -78,6 +79,10 @@ impl Plugin for HunterPetPlugin {
         app.init_resource::<PetCatalog>()
             .add_systems(Startup, load_pet_catalog)
             .add_systems(Update, load_pet_stables)
+            .add_systems(
+                Update,
+                death_knight::refresh.after(crate::stats::update_character_stats),
+            )
             .add_systems(
                 Update,
                 crate::hunter_pet_stats::refresh_owner_stats
@@ -871,6 +876,7 @@ fn spawn_pet(
     let replicate = world.get::<Replicate>(owner).is_some();
     let companion = world.get::<crate::followers::Follower>(owner).is_some();
     let power = match owner_class(world, owner)? {
+        6 => PowerType::Energy,
         CLASS_HUNTER => PowerType::Focus,
         CLASS_WARLOCK => demon_spell_power(world),
         CLASS_MAGE => PowerType::Mana,
@@ -955,7 +961,9 @@ fn spawn_pet(
             NetworkVisibility::default(),
         ));
     }
-    Some((pet.id(), stored))
+    let actor = pet.id();
+    death_knight::initialize(world, owner, actor);
+    Some((actor, stored))
 }
 
 fn owner_class(world: &World, owner: Entity) -> Option<u8> {
