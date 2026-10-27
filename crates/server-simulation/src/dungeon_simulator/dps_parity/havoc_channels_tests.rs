@@ -38,6 +38,31 @@ fn cast(run: &mut Run, spell: u32, self_target: bool) {
 
 #[test]
 #[ignore = "requires prepared native spec577 player profile"]
+fn diag_havoc_real_beam_factors() {
+    use crate::spell_cast::effects::factor_capture::FactorCapture;
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_measurement(577, 1).unwrap();
+    let actor = run.actor;
+    let target = run.targets[0];
+    run.app.insert_resource(FactorCapture::new(
+        actor,
+        target,
+        198030,
+        "eye_beam_tick",
+        40,
+    ));
+    engage(&mut run);
+    advance_combat(&mut run).unwrap();
+    let capture = run.app.world().resource::<FactorCapture>().export();
+    let path = inputs::directory()
+        .unwrap()
+        .join("beam-native-factors.json");
+    std::fs::write(&path, serde_json::to_string_pretty(&capture).unwrap()).unwrap();
+    eprintln!("real beam factor capture: {}", path.display());
+}
+
+#[test]
+#[ignore = "requires prepared native spec577 player profile"]
 fn havoc_fragment_pickup_requires_melee_and_records_last_used() {
     use server::simc_apl::Facts;
     use server::soul_fragments::{self, FragmentFilter, FragmentKind, PickupMode};
