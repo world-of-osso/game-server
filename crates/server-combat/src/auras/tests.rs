@@ -731,14 +731,19 @@ fn same_caster_refresh_resets_duration_and_other_casters_coexist() {
         return;
     };
     apply(&mut h.app, h.caster, h.npc, SHADOW_WORD_PAIN);
-    let first_expiry = auras_of(&h, h.npc, SHADOW_WORD_PAIN)[0].expires_at.unwrap();
+    let first = auras_of(&h, h.npc, SHADOW_WORD_PAIN)[0].clone();
+    let first_expiry = first.expires_at.unwrap();
+    let duration = f64::from(first.duration_ms) / 1_000.0;
     h.advance(40);
     apply(&mut h.app, h.caster, h.npc, SHADOW_WORD_PAIN);
     let aura = auras_of(&h, h.npc, SHADOW_WORD_PAIN);
     assert_eq!(aura.len(), 1);
     let refreshed = aura[0].expires_at.unwrap();
+    // SimC76f8118 action.cpp684–685: native attr13 PERIODIC_REFRESH_EXTENDS_DURATION
+    // selects Pandemic; 2s elapsed, the fresh duration carries ≤30% of it.
+    let carried = (duration - 2.0).min(duration * 0.30);
     assert!(
-        (refreshed - first_expiry - 2.0).abs() < 1e-6,
+        (refreshed - first_expiry - 2.0 - carried).abs() < 1e-3,
         "{refreshed} vs {first_expiry}"
     );
     h.advance(1);
