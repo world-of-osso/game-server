@@ -79,6 +79,7 @@ mod destruction_overfiend_rate_tests;
 mod destruction_overfiend_tests;
 mod destruction_periodic_tests;
 mod destruction_roaring_blaze_tests;
+mod destruction_soul_fire_wither_tests;
 mod destruction_tests;
 mod conductive_energy_tests;
 mod cooldown_capacity_tests;
