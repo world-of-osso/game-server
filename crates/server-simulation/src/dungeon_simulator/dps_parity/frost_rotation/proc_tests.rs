@@ -342,6 +342,34 @@ fn frost_exterminate_spender_deals_both_native_hits() {
 }
 
 #[test]
+#[ignore = "actual Killing Machine consumption rolls native Murderous Efficiency"]
+fn frost_murderous_efficiency_tracks_consumed_killing_machine_stacks() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::protocol::CombatLogKind;
+    let mut consumed = 0;
+    let mut procs = 0;
+    for seed in [70448, 1, 2] {
+        let _seed = crate::random::seed_scope(seed);
+        let mut run = super::super::prepare_measurement(251, 1).unwrap();
+        super::super::engage(&mut run);
+        assert!(auras::has_aura(run.app.world(), run.actor, 207061));
+        let actor = run.actor;
+        crate::auras::observations::start_tracking(run.app.world_mut(), actor, &[(51124, 51128)]);
+        super::super::advance_combat(&mut run).unwrap();
+        let usage = crate::auras::observations::snapshot(run.app.world());
+        consumed += usage["51124"]["consumed"].as_u64().unwrap();
+        procs += run.app.world().resource::<ObservedCombatEvents>().0.iter().filter(|event| {
+            event.source == Some(actor.to_bits()) && event.spell_id == Some(207062)
+                && event.kind == CombatLogKind::Energize
+        }).count() as u64;
+    }
+    assert!(consumed >= 200, "need actual earned KM consumption, got {consumed}");
+    let rate = procs as f64 / consumed as f64;
+    assert!((0.10..0.30).contains(&rate),
+        "actual ME rolls must follow native 20% per consumed KM stack: {procs}/{consumed}");
+}
+
+#[test]
 #[ignore = "actual Empower Rune Weapon grants Killing Machine"]
 fn frost_erw_earns_killing_machine() {
     let _seed = crate::random::seed_scope(70448);
