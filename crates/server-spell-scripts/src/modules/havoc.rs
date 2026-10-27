@@ -11,6 +11,8 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::NativeAfterCast(demonsurge::after_cast),
     SpellScriptHook::EarlyAuraRegistration(demonsurge::register_havoc),
     SpellScriptHook::LandedDamagePolicy(damage::apply_havoc_damage_policies),
+    SpellScriptHook::ActualDamageMultiplier(damage::chaotic_disposition_damage),
+    SpellScriptHook::ExpectedDamageMultiplier(damage::expected_chaotic_disposition_damage),
     SpellScriptHook::AbilityUseAvailable(demonsurge::havoc_demonsurge_available),
     SpellScriptHook::ChannelPeriodic(beam::periodic_trigger),
     SpellScriptHook::CriticalChance(beam::crit_chance),

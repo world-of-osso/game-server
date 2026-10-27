@@ -333,6 +333,8 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 ### Havoc literal rotation
 
+- Selected Chaotic Disposition428492 rolls its native number of independent chances on each affected Demon Hunter chromatic-school direct or periodic damage action; each success adds its native damage percentage. The Hunt and its DoT are excluded, and Felblade damage is included (SimC76f8118 `sc_demon_hunter.cpp`2105–2108,2317–2346,2370–2396,5493–5497,7854–7858).
+
 - Selected Eternal Hunt1270901 applies its native effect0 percentage a second time to the final Blade Dance and Death Sweep primary and secondary strikes, not to earlier strikes (SimC76f8118 `sc_demon_hunter.cpp`7055–7065,7113–7121).
 
 - Native Eye Beam198013 and Gaze452497 apply aura33 at −200% movement speed during the channel. Preserve that self-slow, Vengeful Retreat's real displacement and beam range: a target outside the cone range misses ticks until the channel ends and the actor can return. SimC76f8118 `sc_demon_hunter.cpp`1551–1611,8539–8620 models Retreat's return as an out-of-melee timer rather than that physical trajectory; this can produce a parity difference.
