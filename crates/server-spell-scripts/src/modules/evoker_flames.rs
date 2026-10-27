@@ -5,7 +5,7 @@ use combat::spell_cast::scripts::script_effect_value;
 use combat::spell_cast::{
     self, CastFailure,
     script_registry::{HitHook, SpellScriptHook},
-    targets::{Relation, relation_matches},
+    targets::{self, Relation, relation_matches},
 };
 
 #[path = "evoker_flames/chrono_flame.rs"]
@@ -29,7 +29,8 @@ pub const HOOKS: &[SpellScriptHook] = &[
 
 fn effect_hit(spell: u32, index: u8) -> Option<HitHook> {
     match (spell, index) {
-        (LIVING_FLAME | chrono_flame::CHRONO_FLAMES, 0) => Some(living_flame),
+        (LIVING_FLAME, 0) => Some(living_flame),
+        (chrono_flame::CHRONO_FLAMES, 0) => Some(ordinary_flame),
         (LIVING_FLAME_DAMAGE | LIVING_FLAME_HEAL, 0) => Some(chrono_flame::repeat_landed_flame),
         _ => None,
     }
@@ -46,12 +47,49 @@ fn check_target(world: &World, _: Entity, spell: u32, _: Entity) -> Result<(), C
 /// unit the caster can assist, damage any other; `HandleLaunchTarget` refunds
 /// Energizing Flame's percent of the mana cost on an enemy.
 fn living_flame(world: &mut World, caster: Entity, target: Entity, depth: u8) {
+    let stacks = world
+        .get::<combat::auras::ActiveAuras>(caster)
+        .and_then(|auras| {
+            auras
+                .iter()
+                .find(|aura| aura.spell_id == 370901 && aura.caster == caster)
+        })
+        .map_or(0, |aura| aura.stacks);
+    combat::auras::remove_auras(
+        world,
+        caster,
+        combat::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 370901 && aura.caster == caster,
+    );
     if relation_matches(world, caster, target, Relation::Ally) {
         spell_cast::cast_triggered(world, caster, LIVING_FLAME_HEAL, Some(target), depth + 1);
         return;
     }
     refund_energizing_flame(world, caster);
     spell_cast::cast_triggered(world, caster, LIVING_FLAME_DAMAGE, Some(target), depth + 1);
+    if stacks == 0 {
+        return;
+    }
+    let center = targets::position(world, caster).expect("Living Flame caster position");
+    let spell = world
+        .resource::<combat::spell_info::SpellStore>()
+        .get(LIVING_FLAME)
+        .expect("native Living Flame");
+    let (_, range) = targets::spell_range(spell, true);
+    let mut extras = targets::area_units(world, caster, center, range, Relation::Enemy, 0);
+    extras.retain(|&unit| unit != target);
+    for extra in extras.into_iter().take(usize::from(stacks)) {
+        spell_cast::cast_triggered(world, caster, LIVING_FLAME_DAMAGE, Some(extra), depth + 1);
+    }
+}
+
+fn ordinary_flame(world: &mut World, caster: Entity, target: Entity, depth: u8) {
+    if relation_matches(world, caster, target, Relation::Ally) {
+        spell_cast::cast_triggered(world, caster, LIVING_FLAME_HEAL, Some(target), depth + 1);
+    } else {
+        refund_energizing_flame(world, caster);
+        spell_cast::cast_triggered(world, caster, LIVING_FLAME_DAMAGE, Some(target), depth + 1);
+    }
 }
 
 fn refund_energizing_flame(world: &mut World, caster: Entity) {

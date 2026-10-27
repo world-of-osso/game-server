@@ -77,6 +77,8 @@ Sentinel reuses `marksmanship_sentinel.rs` for owned mark grants, consumption, L
 
 After Spirit landingc017250c5, canonical300s three-seed means are129144.341ST/198580.287three-target DPS (65.06%/62.32% reference), not numerical parity. Strike/Sic-Em landing5a8c96626d measured88726.483ST/145807.187three-target. Previous Sentinel landing4c9083c0c0 measured78418.654ST/140699.957three-target. Earlier455a8ad19 baseline was60195.31ST/104726.809three-target. Pack Leader is a mechanics control, not the canonical scoring fixture. Concurrent shared changes prevent isolated slice attribution.
 
+[Boomstick](../../../crates/server-spell-scripts/src/modules/survival_boomstick.rs) spends a real earned Tip before its native channel, grants471536 until channel removal and reuses the shared Stargazer, Sentinel mark and main-pet strike consumers. Native08d5fec21d reproduces Tip2→2 instead of2→1; GREEN and numerical measurement remain pending.
+
 `survival_buffs.rs` grants full native Mongoose Fury after real Raptor/Swipe execution and selected Stargazer immediately after real Tip consumption. Native70448 supplies Mongoose's20-stack cap/10% base effect and Stargazer's100-stack cap; its independent expirations use the existing asynchronous-aura engine. Full applications retain all selected Mongoose effects and label modifiers; effect0-only priming would omit them. No stat changes or manual damage multiplier.
 
 [Swipe2](../../../crates/server-spell-scripts/src/modules/survival_swipe.rs) applies its native modified rank effect only to the actual primary. The initial integrated assertion mistakenly used `native_source_amount` after the bonus was applied; probe17ee9b2065 compares actual damage with the real pre-done amount and other observed live factors instead. No stat or coefficient changes.
@@ -143,6 +145,10 @@ TC `spell_dru_rake2040–2078` checks actual stealth, not legacy231052/405834 au
 Native RED2ad5: Focus8.75 versus11.072727 at26.545% haste and WW Energy11 versus16.84 at53.09%; unflagged Mana2560 passes. Explicit-stat Rogue0/25 controls4efc fail cached facts0 versus10/12.5; those are not native-geared parity. After crate split, real capped BM/WW/Mana packetecaf has three genuine fact REDs22.15s:0 versus11.072727/16.84/2560, with applied/wire0 retained. GREEN and post-fix DPS receipts remain pending.
 
 Sources: native70448 `PowerType`; TC a352b1fa `Unit.cpp11058–11071` inverse `ModHasteRegen`, `StatSystem.cpp874–938` native percentage/flat ordering and its explicit haste TODO; pinned SimC76f8118 `player.cpp4950–4957` haste-affected resource formula. This does not falsely attribute completed haste scaling to TC's TODO path.
+
+## Summon missile retirement — 2026-10-26
+
+A dismissed summon with missiles in flight becomes inactive and non-selectable, and leaves replication. The server retains its source entity until its pending hits resolve, or for at most 30 seconds. It runs summon teardown once and prevents further casts during retirement. The health value is restored only while a hit resolves, so source damage reads retain it; targets remain live inputs.
 
 ## Protection producer dispatch — 2026-10-22
 

@@ -399,8 +399,12 @@ impl Plugin for SpellCastPlugin {
                     powers::regenerate_creature_health,
                     powers::regenerate_player_health,
                     area_aura::update_dynamic_objects.after(advance_casts),
+                    summon::dispatch_arrivals
+                        .after(crate::creature_ai::chase_system)
+                        .before(crate::combat::auto_attack_system),
                     (summon::expire_summons, guardian::update)
                         .chain()
+                        .after(summon::dispatch_arrivals)
                         .after(advance_casts),
                     crate::game_objects::summoned::expire_objects.after(advance_casts),
                     area_trigger::update_area_triggers.after(advance_casts),
@@ -2071,6 +2075,9 @@ fn validate_start_with_policy(
     explicit: Option<Entity>,
     check: StartCheck,
 ) -> Result<Option<Entity>, CastFailure> {
+    if world.get::<summon::RetiringSummon>(caster).is_some() {
+        return Err(CastFailure::CasterDead);
+    }
     if !script_registry::action_available(world, caster, spell.id) {
         return Err(CastFailure::CasterAuraState);
     }
@@ -3963,6 +3970,9 @@ pub fn plan_triggered_spell(
     explicit: Option<Entity>,
     depth: u8,
 ) -> Result<TargetPlan, CastFailure> {
+    if world.get::<summon::RetiringSummon>(caster).is_some() {
+        return Err(CastFailure::CasterDead);
+    }
     // TC a352b1fa Spell.cpp4243–4255 resolves the explicit GUID before launch;
     // a deferred proc may retain a unit that has since despawned, not a live target.
     if explicit.is_some_and(|target| world.get_entity(target).is_err()) {
