@@ -1015,6 +1015,33 @@ fn diag_frost_oracle_aligned_factors() {
 }
 
 #[test]
+#[ignore = "diagnostic Frost target debuff production and damage-taken factors"]
+fn diag_frost_target_debuffs() {
+    use crate::spell_cast::effects::factor_capture::FactorCapture;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::super::prepare_measurement(251, 1).unwrap();
+    let actor = run.actor;
+    let target = run.targets[0];
+    run.app.insert_resource(FactorCapture::new(actor, target, 196771, "winter", 30));
+    super::super::engage(&mut run);
+    let mut states = Vec::new();
+    let mut previous = String::new();
+    for step in 0..800 {
+        super::super::drive_player(&mut run).unwrap();
+        run.app.update();
+        let entries: Vec<_> = run.app.world().get::<ActiveAuras>(target).into_iter().flat_map(|active| active.iter())
+            .filter(|aura| matches!(aura.spell_id, 51714 | 376974 | 374557))
+            .map(|aura| serde_json::json!({"spell": aura.spell_id, "caster": aura.caster.to_bits(), "stacks": aura.stacks,
+                "effects": aura.effects.iter().map(|effect| serde_json::json!({"index": effect.index,"type":effect.aura_type,"amount":effect.amount})).collect::<Vec<_>>() })).collect();
+        let key = entries.iter().map(|entry| entry.to_string()).collect::<String>();
+        if key != previous { states.push(serde_json::json!({"step": step, "auras": entries})); previous = key; }
+    }
+    let capture = run.app.world().resource::<FactorCapture>().export();
+    let output = std::path::PathBuf::from(std::env::var("DPS_PARITY_OUTPUT").unwrap());
+    std::fs::write(output.join("251.target-debuffs.json"), serde_json::to_vec_pretty(&serde_json::json!({"actor":actor.to_bits(),"states":states,"capture":capture})).unwrap()).unwrap();
+}
+
+#[test]
 #[ignore = "real Winter hits earn Everfrost target stacks and amplify later hits"]
 fn frost_winter_hits_earn_everfrost_target_damage() {
     use crate::spell_cast::effects::factor_capture::FactorCapture;
