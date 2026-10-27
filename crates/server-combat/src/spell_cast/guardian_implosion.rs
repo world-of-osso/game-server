@@ -28,6 +28,12 @@ struct Imploding {
 #[derive(Component, Default)]
 struct IsolatedAttempts(u32);
 
+#[derive(Component, Default)]
+struct RapidityAttempts(u32);
+
+#[derive(Component)]
+struct PendingIsolated(Entity);
+
 pub(super) fn is_imp(world: &World, unit: Entity) -> bool {
     let Some(summon) = world.get::<SummonedCreature>(unit) else {
         return false;
@@ -225,29 +231,90 @@ pub(super) fn advance(world: &mut World, imp: Entity) -> bool {
     true
 }
 
-/// SimC76f8118 pets.cpp833–849 and actions.cpp3210–3290: the selected
-/// four-piece rolls once at real exhaustion, then the Imp travels before impact.
-pub(super) fn start_isolated(world: &mut World, imp: Entity) -> bool {
-    const SET: u32 = 1296574;
+/// SimC76f8118 pets.cpp818–849: decide the last-cast Isolated proc before
+/// rolling the independent per-Imp Rapidity twin; an isolated last cast cannot twin.
+pub(in crate::spell_cast) fn after_firebolt(
+    world: &mut World,
+    imp: Entity,
+    spell: &crate::spell_info::SpellInfo,
+) {
+    if !spell.cast_was_hardcast || !is_imp(world, imp) {
+        return;
+    }
     let owner = world.get::<SummonedCreature>(imp).unwrap().owner;
-    let selected = world
+    let primary = spell
+        .cast_primary_target
+        .expect("native Imp bolt has a primary target");
+    if guardian::cannot_afford_firebolt(world, imp)
+        && selected_isolated(world, owner)
+        && roll_isolated(world, owner)
+    {
+        world.entity_mut(imp).insert(PendingIsolated(primary));
+        return;
+    }
+    if !world
+        .get::<crate::class_progression::KnownSpells>(owner)
+        .is_some_and(|known| known.contains(1263941))
+        || !roll_rapidity(world, owner, imp)
+    {
+        return;
+    }
+    let mut twin = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(104318)
+        .unwrap()
+        .clone();
+    twin.cast_damage_multiplier =
+        Some(cast::scripts::script_effect_value(world, owner, 1263941, 1) / 100.0);
+    if !cast::launch_triggered_spell(world, imp, &twin, Some(primary), 1) {
+        warn!(
+            ?imp,
+            ?primary,
+            "native Infernal Rapidity twin could not launch"
+        );
+    }
+}
+
+fn selected_isolated(world: &World, owner: Entity) -> bool {
+    world
         .get::<crate::auras::ActiveAuras>(owner)
         .is_some_and(|auras| {
             auras.iter().any(|aura| {
-                aura.spell_id == SET && matches!(aura.source, crate::auras::AuraSource::ItemSet(_))
+                aura.spell_id == 1296574
+                    && matches!(aura.source, crate::auras::AuraSource::ItemSet(_))
             })
-        });
-    let Some(primary) = world
-        .get::<crate::networking::CombatTarget>(imp)
-        .and_then(|target| target.0)
-    else {
-        return false;
-    };
-    if !selected || !roll_isolated(world, owner) {
+        })
+}
+
+fn roll_rapidity(world: &mut World, owner: Entity, imp: Entity) -> bool {
+    let chance = f64::from(cast::scripts::script_effect_value(world, owner, 1263941, 0)) / 100.0;
+    let coefficient = prd_coefficient(chance);
+    if world.get::<RapidityAttempts>(imp).is_none() {
+        world.entity_mut(imp).insert(RapidityAttempts::default());
+    }
+    let mut attempts = world.get_mut::<RapidityAttempts>(imp).unwrap();
+    attempts.0 += 1;
+    if !crate::random::thread_rng().gen_bool((coefficient * f64::from(attempts.0)).min(1.0)) {
         return false;
     }
-    let from = cast::targets::position(world, owner).expect("isolated explosion owner position");
-    let to = cast::targets::position(world, primary).expect("isolated explosion target position");
+    attempts.0 = 0;
+    true
+}
+
+/// Source-owned projectiles drain before the reserved Imp travels and retires.
+pub(super) fn start_isolated(world: &mut World, imp: Entity) -> bool {
+    let Some(primary) = world.get::<PendingIsolated>(imp).map(|pending| pending.0) else {
+        return false;
+    };
+    let owner = world.get::<SummonedCreature>(imp).unwrap().owner;
+    let Some(from) = cast::targets::position(world, owner) else {
+        cast::summon::despawn_summon(world, imp);
+        return true;
+    };
+    let Some(to) = cast::targets::position(world, primary) else {
+        cast::summon::despawn_summon(world, imp);
+        return true;
+    };
     let due = cast::now(world) + f64::from(from.distance(to)) / 65.0;
     world.entity_mut(imp).insert(Imploding {
         owner,
@@ -278,7 +345,7 @@ fn roll_isolated(world: &mut World, owner: Entity) -> bool {
 fn prd_coefficient(chance: f64) -> f64 {
     assert!(
         chance > 0.0 && chance <= 1.0,
-        "native Isolated Implosion chance"
+        "native accumulated proc chance"
     );
     let (mut low, mut high) = (0.0, 1.0);
     for _ in 0..48 {
