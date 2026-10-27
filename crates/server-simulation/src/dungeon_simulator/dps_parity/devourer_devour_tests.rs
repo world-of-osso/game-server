@@ -39,6 +39,9 @@ fn devourer_devour_executes_native_fury_payload() {
     );
     crate::spell_cast::powers::change_power(run.app.world_mut(), actor, PowerType::Fury, -1000.0)
         .unwrap();
+    // Leave enough native Fury for Meta's real drain while Devour resolves.
+    crate::spell_cast::powers::change_power(run.app.world_mut(), actor, PowerType::Fury, 60.0)
+        .unwrap();
     literal_rotation::execution::execute(
         run.app.world_mut(),
         actor,
