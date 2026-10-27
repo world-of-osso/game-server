@@ -650,6 +650,15 @@ pub(crate) struct AutoAttackParams<'w, 's> {
     impact_gates: Query<'w, 's, &'static WhiteImpactGate>,
     scaling: Query<'w, 's, ScalingItem<'static>>,
     spirit_wolves: Query<'w, 's, &'static crate::spell_cast::guardian::SpiritWolf>,
+    guardians: Query<
+        'w,
+        's,
+        (
+            &'static crate::spell_cast::summon::SummonedCreature,
+            &'static Npc,
+            Has<crate::hunter_pet::SummonedDemon>,
+        ),
+    >,
     hunter_pets: Query<
         'w,
         's,
@@ -790,6 +799,32 @@ fn auto_attack_unit(
                 .expect("owner-scaled demon requires native CharacterStats");
             Some(owner.spell_power.max(0.0) * share)
         });
+    // SimC76f8118 sc_hunter.cpp1930–1938: Dire Beast white attacks use
+    // the same live owner AP share as its other guardian damage.
+    let guardian_owner_ap =
+        params
+            .guardians
+            .get(attacker_entity)
+            .ok()
+            .and_then(|(summon, npc, demon)| {
+                if params.spirit_wolves.get(attacker_entity).is_ok() {
+                    return None;
+                }
+                let share = crate::spell_cast::guardian::owner_attack_share(
+                    summon.spell_id,
+                    npc.template_id,
+                )?;
+                let (owner, modifiers) = params
+                    .owner_stats
+                    .get(summon.owner)
+                    .expect("owner-scaled guardian requires native CharacterStats");
+                let power = if demon {
+                    owner.spell_power.max(0.0)
+                } else {
+                    owner.total_attack_power(crate::stats::WeaponAttackType::Ranged, modifiers)
+                };
+                Some(power * share)
+            });
     let attacker = Attacker {
         entity: attacker_entity,
         position: &snapshot.position,
@@ -807,7 +842,8 @@ fn auto_attack_unit(
             .map(|(owner, modifiers)| {
                 crate::hunter_pet_stats::owner_bonus_attack_power(owner, modifiers)
             })
-            .or(demon_owner_ap),
+            .or(demon_owner_ap)
+            .or(guardian_owner_ap),
         // SimC76f8118 pet.cpp217–220: read live owner crit, not template base5%.
         hunter_owner_crit_pct: owner_crit,
         spirit_wolf: params.spirit_wolves.get(attacker_entity).ok().map(|wolf| {

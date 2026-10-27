@@ -23,6 +23,8 @@ fn native_hunter_dire_command_actual_kills_spawn_authentic_beasts() {
     let mut beasts = std::collections::BTreeSet::new();
     let mut origins = std::collections::HashMap::new();
     let mut moved_toward_target = false;
+    let mut checked_events = 0;
+    let mut inherited_ap_hits = Vec::new();
     engage(&mut run);
     advance_combat_observed(&mut run, |run| {
         for (unit, summon, npc) in query.iter(run.app.world()) {
@@ -52,8 +54,36 @@ fn native_hunter_dire_command_actual_kills_spawn_authentic_beasts() {
                 beasts.insert(unit.to_bits());
             }
         }
+        let world = run.app.world();
+        let events = &world.resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
+        for event in &events[checked_events..] {
+            let Some(source) = event.source else { continue };
+            if !beasts.contains(&source) || event.target != Some(run.targets[0].to_bits())
+                || event.spell_id.is_some() || event.kind != shared::protocol::CombatLogKind::Damage
+                || event.crit || event.glancing || event.blocked != 0 || event.absorbed != 0 {
+                continue;
+            }
+            let Some((pet, _, _)) = query.iter(world).find(|(pet, _, _)| pet.to_bits() == source) else { continue };
+            let stats = world.get::<crate::stats::CharacterStats>(run.actor).unwrap();
+            let ap = stats.total_attack_power(crate::stats::WeaponAttackType::Ranged, world.get::<crate::stats::StatModifiers>(run.actor));
+            let mods = world.get::<crate::auras::AuraStatMods>(pet);
+            let target_mods = world.get::<crate::auras::AuraStatMods>(run.targets[0]);
+            let base = ap / 3.5 * 2.0 * mods.map_or(1.0, |m| m.autoattack_damage_mult * m.damage_done(1))
+                * target_mods.map_or(1.0, |m| m.damage_taken(1))
+                * crate::auras::summon_damage::multiplier(world, pet);
+            let pet_scaling = crate::level_scaling::UnitScaling::of(world, pet);
+            let target_scaling = crate::level_scaling::UnitScaling::of(world, run.targets[0]);
+            let armor = target_scaling.armor_against(world.get::<crate::level_scaling::CreatureArmor>(run.targets[0]).unwrap().0, &pet_scaling);
+            let floor = crate::combat::armor_mitigated(base.round(), armor, &pet_scaling, &target_scaling, Some(world.resource::<crate::level_scaling::ArmorConstants>()), mods).damage.floor();
+            inherited_ap_hits.push((event.amount, floor, ap));
+        }
+        checked_events = events.len();
     })
     .expect("ordinary native300s literal combat");
+    // SimC76f8118 sc_hunter.cpp1869–1873,1930–1938: genuine Dire
+    // Beast auto attacks inherit the owner's full attack power.
+    assert!(!inherited_ap_hits.is_empty(), "fixture needs landed noncritical Dire Beast swings");
+    assert!(inherited_ap_hits.iter().all(|(hit, floor, _)| *hit as f32 >= *floor), "Dire Beast swings omit inherited owner AP: {inherited_ap_hits:?}");
     let commands = run
         .app
         .world()
