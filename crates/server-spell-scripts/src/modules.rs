@@ -288,6 +288,7 @@ register_modules! {
     survival_swipe: (2554, "modules/survival_swipe.rs"),
     survival_takedown: (2556, "modules/survival_takedown.rs"),
     survival_wildfire: (2551, "modules/survival_wildfire.rs"),
+    unholy_abomination: (2528, "modules/unholy_abomination.rs"),
     sweeping_strikes: (711, "modules/sweeping_strikes.rs"),
     unholy_blightburst: (2526, "modules/unholy_blightburst.rs"),
     swiftmend: (1000, "modules/swiftmend.rs"),
