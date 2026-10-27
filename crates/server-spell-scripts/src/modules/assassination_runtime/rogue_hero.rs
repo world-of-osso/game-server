@@ -102,9 +102,9 @@ pub(super) fn on_hit(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
         if empowered(world, ctx.caster, ctx.spell) {
             let stacks = native_amount(world, ctx.caster, DARKEST, 2) as u8;
             apply_mark(world, ctx, target, stacks);
-            auras::remove_auras(world, ctx.caster, RemoveReason::Consumed, |aura| {
-                aura.spell_id == DARKEST && aura.caster == ctx.caster
-            });
+            // sc_rogue.cpp8743–8746: the 1ms expiry preserves the buff
+            // through this finisher's child snapshots.
+            assert!(auras::set_owned_duration(world, ctx.caster, ctx.caster, DARKEST, 1));
         }
         return;
     }
