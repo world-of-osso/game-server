@@ -170,7 +170,8 @@ fn outlaw_earned_gravedigger_pays_native_points_and_resets_between_the_eyes() {
                 && event.spell_id == Some(1279356)
                 && event.kind == CombatLogKind::Energize
                 && event.amount == amount),
-        "earned Gravedigger must pay its native combo-point payload after real Bte"
+        "earned Gravedigger must pay its native combo-point payload after real Bte; events: {events:?}; auras: {:?}",
+        run.app.world().get::<crate::auras::ActiveAuras>(run.actor)
     );
     // sc_rogue.cpp3862–3872: landed earned Bte restores its running
     // cooldown, spends native Palmed uses and consumes Gravedigger.
