@@ -88,6 +88,7 @@ register_modules! {
     demonology_gloom_slash: (2660, "modules/demonology_gloom_slash.rs"),
     demonology_diabolist_demons: (2660, "modules/demonology_diabolist_demons.rs"),
     demonology_firebolt: (2660, "modules/demonology_firebolt.rs"),
+    demonology_flametouched: (2660, "modules/demonology_flametouched.rs"),
     demonology_inner_demons: (2660, "modules/demonology_inner_demons.rs"),
     demonology_pet_actions: (2660, "modules/demonology_pet_actions.rs"),
     demonology_tyrant_buffs: (2660, "modules/demonology_tyrant_buffs.rs"),
