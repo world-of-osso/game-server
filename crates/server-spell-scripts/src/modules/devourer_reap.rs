@@ -1,4 +1,4 @@
-//! Native Reap fragment consumption and source-defined delayed damage.
+//! Native Reap and Cull fragment consumption and source-defined delayed damage.
 use super::combat;
 use bevy::prelude::*;
 use combat::class_progression::KnownSpells;
@@ -8,6 +8,8 @@ use combat::spell_info::SpellInfo;
 
 const REAP: u32 = 1226019;
 const REAP_DAMAGE: u32 = 1225823;
+const CULL: u32 = 1245453;
+const CULL_DAMAGE: u32 = 1245455;
 const SHATTERED_SOULS: u32 = 1227619;
 const MOMENT_OF_CRAVING: u32 = 1238495;
 const SOULSHAPER: u32 = 1238739;
@@ -15,6 +17,7 @@ const SOULSHAPER: u32 = 1238739;
 struct PendingReap {
     at: f64,
     target: Entity,
+    damage: u32,
     consumed: usize,
 }
 
@@ -27,9 +30,13 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
 ];
 
 fn after_launch(world: &mut World, caster: Entity, spell: &SpellInfo) {
-    if spell.id != REAP {
-        return;
-    }
+    // SimC76f8118 sc_demon_hunter.cpp6265–6268: Cull inherits Reap's
+    // fragment execution and selects its own native damage child.
+    let damage = match spell.id {
+        REAP => REAP_DAMAGE,
+        CULL => CULL_DAMAGE,
+        _ => return,
+    };
     let target = spell
         .cast_primary_target
         .expect("native Reap retains its target");
@@ -50,6 +57,7 @@ fn after_launch(world: &mut World, caster: Entity, spell: &SpellInfo) {
     let pending = PendingReap {
         at: spell_cast::now(world) + 0.220,
         target,
+        damage,
         consumed,
     };
     world
@@ -85,8 +93,8 @@ fn update(world: &mut World) {
 }
 
 fn execute_damage(world: &mut World, caster: Entity, pending: PendingReap) {
-    let Some(mut damage) = spell_cast::load_triggered_spell(world, REAP_DAMAGE, 1) else {
-        error!(?caster, "native Reap damage 1225823 missing");
+    let Some(mut damage) = spell_cast::load_triggered_spell(world, pending.damage, 1) else {
+        error!(?caster, spell = pending.damage, "native Reap/Cull damage missing");
         return;
     };
     if world
@@ -97,6 +105,6 @@ fn execute_damage(world: &mut World, caster: Entity, pending: PendingReap) {
         damage.cast_damage_multiplier = Some(1.0 + pending.consumed as f32 * percent / 100.0);
     }
     if !spell_cast::launch_triggered_spell(world, caster, &damage, Some(pending.target), 1) {
-        warn!(?caster, target = ?pending.target, "native Reap damage was refused");
+        warn!(?caster, target = ?pending.target, spell = pending.damage, "native Reap/Cull damage was refused");
     }
 }
