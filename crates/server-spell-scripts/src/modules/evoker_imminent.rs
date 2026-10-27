@@ -49,6 +49,7 @@ fn register(scripts: &mut AuraScripts) {
 }
 
 fn finish_flight(world: &mut World, unit: Entity, aura: &AuraInstance, reason: RemoveReason) {
+    super::evoker_command_squadron::finish_maneuverability(world, unit, aura, reason);
     if unit == aura.caster
         && command_flight(world, unit)
         && matches!(reason, RemoveReason::ChannelEnded | RemoveReason::Expired)
