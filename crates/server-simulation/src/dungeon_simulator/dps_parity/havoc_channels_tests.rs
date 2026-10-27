@@ -1168,7 +1168,27 @@ fn havoc_literal_beam_launch_and_hit_diagnostic() {
         .world_mut()
         .init_resource::<crate::spell_cast::test_harness::ObservedTriggeredCasts>();
     engage(&mut run);
-    advance_combat(&mut run).unwrap();
+    let mut previous = 0;
+    advance_combat_observed(&mut run, |run| {
+        let world = run.app.world();
+        let children = world
+            .resource::<crate::spell_cast::test_harness::ObservedTriggeredCasts>()
+            .0
+            .iter()
+            .filter(|(caster, spell, _)| *caster == run.actor && matches!(*spell, 198030 | 1287949))
+            .count();
+        if children > previous {
+            let hits = damage(run, Some(198030)).len() + damage(run, Some(1287949)).len();
+            eprintln!(
+                "beam sample children={children} hits={hits} caster={:?} target={:?} facing={}",
+                crate::spell_cast::targets::position(world, run.actor),
+                crate::spell_cast::targets::position(world, run.targets[0]),
+                crate::spell_cast::targets::orientation(world, run.actor)
+            );
+            previous = children;
+        }
+    })
+    .unwrap();
     let casts = &run
         .app
         .world()
