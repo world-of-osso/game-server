@@ -29,7 +29,9 @@ use crate::stats::CharacterStats;
 
 mod assisted_parity;
 pub use assisted_parity::{
-    read_facts as read_assisted_parity_facts, read_request_window as read_assisted_request_window,
+    read_facts as read_assisted_parity_facts,
+    read_facts_with_dots as read_assisted_parity_facts_with_dots,
+    read_request_window as read_assisted_request_window,
 };
 
 /// Actual ranged-repeat identity; querying it never starts or resets its timer.
