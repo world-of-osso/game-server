@@ -107,6 +107,25 @@ fn devourer_devour_executes_native_fury_payload() {
         "Devour must execute the native Fury payload; Fury={fury}"
     );
     assert!(fury > 0.0, "Devour must increase the native Fury pool");
+    assert!(
+        run.app
+            .world()
+            .get::<crate::class_progression::KnownSpells>(actor)
+            .is_some_and(|known| known.contains(1215617)),
+        "selected Predator's Thirst"
+    );
+    for _ in 0..20 {
+        run.app.update();
+    }
+    // SimC76f8118 cpp5753–5762,5770–5779: Devour inherits the Consume fragment producer.
+    assert!(
+        server::soul_fragments::active_count(
+            run.app.world(),
+            actor,
+            server::soul_fragments::FragmentFilter::Lesser
+        ) > 0,
+        "real Devour spawns a lesser fragment"
+    );
 }
 
 #[test]
