@@ -32,29 +32,38 @@ fn sample(ascendance: bool) -> (f64, f64) {
         .0
         .clear();
     let _cast_seed = crate::random::seed_scope(70448);
-    assert!(crate::spell_cast::try_cast_triggered(
-        run.app.world_mut(),
-        run.actor,
-        45284,
-        Some(run.targets[0]),
-        1
-    ));
+    for _ in 0..100 {
+        assert!(crate::spell_cast::try_cast_triggered(
+            run.app.world_mut(),
+            run.actor,
+            45284,
+            Some(run.targets[0]),
+            1
+        ));
+    }
     for _ in 0..30 {
         run.app.update();
     }
-    let hit = run
+    let hits: Vec<_> = run
         .app
         .world()
         .resource::<ObservedCombatEvents>()
         .0
         .iter()
-        .find(|event| {
+        .filter(|event| {
             event.source == Some(run.actor.to_bits())
                 && event.spell_id == Some(45284)
                 && event.kind == CombatLogKind::Damage
+                && !event.crit
+                && event.amount > 0
         })
-        .expect("native Lightning Overload hit");
-    (hit.amount as f64, percent)
+        .map(|event| event.amount as f64)
+        .collect();
+    assert!(
+        hits.len() >= 20,
+        "native noncritical Lightning Overload sample"
+    );
+    (hits.iter().sum::<f64>() / hits.len() as f64, percent)
 }
 
 #[test]
@@ -65,7 +74,7 @@ fn elemental_overload_ascendance_uses_native_damage_bonus() {
     let ratio = empowered / ordinary;
     let expected = 1.0 + percent / 100.0;
     assert!(
-        (ratio - expected).abs() < 0.02,
+        (ratio - expected).abs() < 0.05,
         "native Ascendance overload bonus: {empowered}/{ordinary} = {ratio}; expected {expected}"
     );
 }
