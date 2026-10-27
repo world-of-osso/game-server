@@ -10,6 +10,7 @@ fn survival_native_takedown_dispatches_owner_and_owned_pet_damage() {
     // both distinct real-actor impact payloads on the actual hostile primary.
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(255, 1).unwrap();
+    run.app.world_mut().init_resource::<crate::spell_cast::test_harness::ObservedTriggeredCasts>();
     hunter_fixture::provision_pet(run.app.world_mut(), run.actor).unwrap();
     cast(&mut run, 883, true);
     let pet = crate::hunter_pet::summoned_pet(run.app.world(), run.actor).unwrap();
@@ -23,6 +24,8 @@ fn survival_native_takedown_dispatches_owner_and_owned_pet_damage() {
         assert!(events.iter().any(|event| event.source == Some(actor.to_bits())
             && event.target == Some(run.targets[0].to_bits()) && event.spell_id == Some(spell)
             && event.kind == CombatLogKind::Damage && event.amount > 0),
-            "actual Takedown must produce positive native spell{spell} from actor{actor:?}");
+            "actual Takedown must produce positive native spell{spell} from actor{actor:?}; outcomes={:#?}; casts={:#?}",
+            events.iter().filter(|event| matches!(event.spell_id, Some(1250646 | 1253859 | 1253862))).collect::<Vec<_>>(),
+            run.app.world().resource::<crate::spell_cast::test_harness::ObservedTriggeredCasts>().0.iter().filter(|(_, id, _)| matches!(*id, 1253859 | 1253862)).collect::<Vec<_>>());
     }
 }
