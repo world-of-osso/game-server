@@ -176,13 +176,17 @@ fn launch_due(world: &mut World) {
         });
         spell_cast::launch_triggered_spell(world, caster, &clone.spell, Some(clone.target), 1);
         world.entity_mut(caster).remove::<ActiveClone>();
-        // sc_rogue.cpp3650–3659: eligible clones independently earn the
-        // native Shadow Techniques producer using Ancient Arts' chance.
-        if has_talent(world, caster, 1268936)
-            && random::random::<f32>() < script_effect_value(world, caster, 1268936, 0) / 100.0
-        {
-            super::subtlety_techniques::earn_storage(world, caster);
-        }
+        earn_clone_funding(world, caster);
+    }
+}
+
+// sc_rogue.cpp3650–3659/5405–5413: eligible clones independently earn
+// the native Shadow Techniques producer using Ancient Arts' chance.
+pub(super) fn earn_clone_funding(world: &mut World, caster: Entity) {
+    if has_talent(world, caster, 1268936)
+        && random::random::<f32>() < script_effect_value(world, caster, 1268936, 0) / 100.0
+    {
+        super::subtlety_techniques::earn_storage(world, caster);
     }
 }
 
