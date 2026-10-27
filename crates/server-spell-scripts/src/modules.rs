@@ -88,6 +88,7 @@ register_modules! {
     demonology_gloom_slash: (2660, "modules/demonology_gloom_slash.rs"),
     demonology_firebolt: (2660, "modules/demonology_firebolt.rs"),
     demonology_inner_demons: (2660, "modules/demonology_inner_demons.rs"),
+    demonology_tyrant_buffs: (2660, "modules/demonology_tyrant_buffs.rs"),
     destruction_chaotic_inferno: (2680, "modules/destruction_chaotic_inferno.rs"),
     destruction_crashing_chaos: (2679, "modules/destruction_crashing_chaos.rs"),
     destruction_crit_scaling: (2673, "modules/destruction_crit_scaling.rs"),
