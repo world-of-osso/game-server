@@ -1174,7 +1174,8 @@ fn frost_freezing_tempest_only_counts_real_winter_pulses() {
         let before = stacks(&run);
         let target = run.targets[0];
         crate::spell_cast::creature_cast(run.app.world_mut(), actor, 49184, Some(target), false).unwrap();
-        run.app.update();
+        for _ in 0..5 { run.app.update(); }
+        assert_eq!(hits(&run), previous_hits + targets, "no additional Winter pulse during Howling Blast");
         assert_eq!(stacks(&run), before, "a real Howling Blast must not grant Freezing Tempest");
     }
 }
