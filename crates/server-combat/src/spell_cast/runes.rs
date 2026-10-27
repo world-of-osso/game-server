@@ -22,6 +22,8 @@ pub struct Runes {
     pub cooldowns: Vec<f32>,
     /// Depleted rune indexes in depletion order (`Runes::CooldownOrder`).
     pub order: Vec<u8>,
+    /// Full recharge duration at the rate used by the stored cooldowns.
+    pub(crate) rate_duration: Option<f32>,
 }
 
 impl Runes {
@@ -29,6 +31,7 @@ impl Runes {
         Self {
             cooldowns: vec![0.0; count],
             order: Vec::new(),
+            rate_duration: None,
         }
     }
 
@@ -56,6 +59,7 @@ impl Runes {
     /// `Spell::TakeRunePower`: the lowest-index ready runes start `cooldown`.
     /// Returns how many were spent.
     pub fn spend(&mut self, count: usize, cooldown: f32) -> usize {
+        self.update_rate(cooldown);
         let ready: Vec<usize> = (0..self.cooldowns.len())
             .filter(|&index| self.cooldowns[index] == 0.0)
             .take(count)
@@ -80,6 +84,17 @@ impl Runes {
             filled += 1;
         }
         filled
+    }
+
+    /// Preserve recharge progress when the native haste or rune-regen rate changes.
+    fn update_rate(&mut self, duration: f32) {
+        if let Some(previous) = self.rate_duration {
+            let factor = duration / previous;
+            for cooldown in &mut self.cooldowns {
+                *cooldown *= factor;
+            }
+        }
+        self.rate_duration = Some(duration);
     }
 
     /// The rune branch of `Player::RegenerateAll`: up to `MAX_RECHARGING_RUNES` runes
@@ -158,18 +173,25 @@ pub(super) fn regenerate_runes(
             &mut Runes,
             &mut PowerPools,
             Option<&crate::auras::ActiveAuras>,
+            Option<&crate::auras::AuraStatMods>,
+            Option<&crate::stats::CharacterStats>,
         ),
         Without<GridDormant>,
     >,
 ) {
     let dt = time.delta_secs();
-    for (unit, mut runes, mut pools, auras) in &mut units {
+    for (unit, mut runes, mut pools, auras, mods, stats) in &mut units {
         let Some(pool) = pools.bypass_change_detection().get_mut(PowerType::Runes) else {
             continue;
         };
         runes.bypass_change_detection().resize(pool.max as usize);
         if !runes.order.is_empty() {
-            runes.bypass_change_detection().regenerate(dt);
+            let duration = rune_cooldown_secs(mods, stats);
+            let runes = runes.bypass_change_detection();
+            // SimC76f8118 sc_death_knight.cpp2411–2415 updates active rune
+            // events when haste or the rune-regeneration modifier changes.
+            runes.update_rate(duration);
+            runes.regenerate(dt);
         }
         let old = pool.current;
         pool.current = runes.ready() as f32;

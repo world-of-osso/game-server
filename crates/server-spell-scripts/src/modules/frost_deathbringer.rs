@@ -29,12 +29,20 @@ fn register_mark(scripts: &mut auras::scripts::AuraScripts) {
 }
 
 fn stack_mark(world: &mut World, ctx: &EffectCtx, target: Entity, critical: bool, damage: f32) {
-    if damage <= 0.0
-        || matches!(ctx.spell.id, 439843 | 436304 | 66198 | 458169 | 439539)
-        || !world
-            .get::<ActiveSpec>(ctx.caster)
-            .is_some_and(|spec| spec.0 == 251)
-    {
+    if damage <= 0.0 || !world.get::<ActiveSpec>(ctx.caster).is_some_and(|spec| spec.0 == 251) {
+        return;
+    }
+    if ctx.spell.id == 439843 {
+        if auras::has_aura(world, ctx.caster, 434905) {
+            // SimC76f8118 sc_death_knight.cpp8550–8554: Grim Reaper's
+            // actual Mark impact grants a predictable Killing Machine stack.
+            spell_cast::cast_triggered(world, ctx.caster, 51124, Some(ctx.caster), ctx.depth + 1);
+            #[cfg(any(test, feature = "test-support"))]
+            combat::simc_apl_native::reaction::predict(world, ctx.caster, 51124);
+        }
+        return;
+    }
+    if matches!(ctx.spell.id, 436304 | 66198 | 458169 | 439539) {
         return;
     }
     let school = ctx.spell.school_mask();
@@ -146,9 +154,9 @@ fn after_launch(world: &mut World, caster: Entity, spell: &SpellInfo, foreground
                 .find(|aura| aura.spell_id == EXTERMINATE && aura.caster == caster)
                 .map(|aura| aura.instance_id)
         });
-        if let Some(instance) = instance {
-            // sc_death_knight.cpp10601–10605/11909: each real spender uses one stack.
-            auras::spend_stack(world, caster, instance);
+        if instance.is_some() {
+            // sc_death_knight.cpp10601–10605/11909: each real spender schedules one
+            // hit; native charged spell-mod consumption spends the corresponding use.
             let target = spell
                 .cast_primary_target
                 .expect("Exterminate spender target");
@@ -183,9 +191,9 @@ fn filter_damage_effect(
     _primary: Option<Entity>,
     targets: &mut Vec<Entity>,
 ) {
-    // SimC76f8118 sc_death_knight.cpp8239–8242/8300–8302: Frost uses effect2,
-    // while effect1 is the Blood coefficient.
-    if matches!(spell.id, 441424 | 441426)
+    // SimC76f8118 sc_death_knight.cpp8239–8242/8300–8302/8516–8517:
+    // Frost uses effect2 for Exterminate and effect4 for Mark, not Blood's effect1.
+    if matches!(spell.id, 439843 | 441424 | 441426)
         && effect == 0
         && world
             .get::<ActiveSpec>(caster)

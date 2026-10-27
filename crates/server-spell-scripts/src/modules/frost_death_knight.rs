@@ -20,7 +20,8 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AfterQueuedTriggers(consume_due_killing_machine),
     SpellScriptHook::AfterSpellPayment(roll_runic_empowerment),
     SpellScriptHook::AfterPeriodicDamagePolicies(frost_fever_runic_power),
-    SpellScriptHook::LateAuraRegistration(register_breath),
+    SpellScriptHook::LateAuraRegistration(register_frost_auras),
+    SpellScriptHook::ResolvedDamage(frostreaper_impact),
 ];
 
 const KILLING_MACHINE: u32 = 51128;
@@ -35,7 +36,7 @@ const EMPOWER_RUNE_WEAPON: u32 = 47568;
 struct KillingMachineAttempts(u32);
 
 pub(super) fn owns_proc(spell: u32) -> bool {
-    matches!(spell, KILLING_MACHINE | RIME | OBLITERATION | 195621)
+    matches!(spell, KILLING_MACHINE | RIME | OBLITERATION | 195621 | 1230301)
 }
 
 pub(super) fn snapshots_modifier(spell: u32) -> bool {
@@ -92,6 +93,16 @@ pub(super) fn after_white_hit(world: &mut World, caster: Entity, critical: bool)
 pub(super) fn after_launch(world: &mut World, caster: Entity, spell: &SpellInfo, foreground: bool) {
     if !foreground || !is_frost(world, caster) {
         return;
+    }
+    extend_winter_for_runes(world, caster, spell);
+    if spell.id == EMPOWER_RUNE_WEAPON && auras::has_aura(world, caster, KILLING_MACHINE) {
+        // SimC76f8118 sc_death_knight.cpp10236–10243: a real ready ERW grants KM.
+        trigger_native_buff(world, caster, KILLING_MACHINE);
+        #[cfg(any(test, feature = "test-support"))]
+        combat::simc_apl_native::reaction::predict(world, caster, 51124);
+    }
+    if spell.id == 49143 {
+        consume_frostreaper(world, caster, spell.cast_primary_target);
     }
     if matches!(spell.id, 49143 | 194913 | 49184) {
         trigger_obliteration(world, caster);
@@ -236,8 +247,87 @@ fn trigger_obliteration(world: &mut World, caster: Entity) {
     }
 }
 
-fn register_breath(scripts: &mut auras::scripts::AuraScripts) {
+fn frostreaper_impact(
+    world: &mut World,
+    ctx: &spell_cast::effects::EffectCtx,
+    target: Entity,
+    _: bool,
+    damage: f32,
+) {
+    if damage <= 0.0
+        || !matches!(ctx.spell.id, 222024 | 66198 | 325461 | 1264082 | 1264083 | 1264084)
+        || !is_frost(world, ctx.caster)
+    {
+        return;
+    }
+    let instance = world.get::<auras::ActiveAuras>(ctx.caster).and_then(|active| {
+        active.iter().find(|aura| aura.spell_id == 1230301 && aura.caster == ctx.caster)
+            .map(|aura| aura.instance_id)
+    });
+    let Some(instance) = instance else { return };
+    // SimC76f8118 sc_death_knight.cpp11854–11857: each real Obliterate
+    // strike attempts the native Frostreaper RPPM on its actual target.
+    if !auras::procs::try_native_policy_proc(world, ctx.caster, instance) {
+        return;
+    }
+    if owned_frostreaper(world, ctx.caster, target) {
+        spell_cast::cast_triggered(world, ctx.caster, 1233619, Some(target), ctx.depth + 1);
+    }
+    auras::apply_aura(world, &auras::AuraApplication {
+        caster: ctx.caster, target, spell_id: 1233351, effect_mask: 1, source: auras::AuraSource::Cast,
+    });
+}
+
+fn owned_frostreaper(world: &World, caster: Entity, target: Entity) -> bool {
+    world.get::<auras::ActiveAuras>(target).is_some_and(|active| {
+        active.iter().any(|aura| aura.spell_id == 1233351 && aura.caster == caster)
+    })
+}
+
+fn consume_frostreaper(world: &mut World, caster: Entity, target: Option<Entity>) {
+    let Some(target) = target.filter(|&target| owned_frostreaper(world, caster, target)) else { return };
+    // sc_death_knight.cpp10875–10883: Frost Strike detonates an earned mark.
+    spell_cast::cast_triggered(world, caster, 1233619, Some(target), 1);
+    auras::remove_auras(world, target, auras::RemoveReason::Consumed, |aura| {
+        aura.spell_id == 1233351 && aura.caster == caster
+    });
+}
+
+fn extend_winter_for_runes(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    if spell.id == 196770 || !auras::has_aura(world, caster, 194912) {
+        return;
+    }
+    let winter = [196770, 1233152];
+    if !winter.iter().any(|&id| auras::has_aura(world, caster, id)) {
+        return;
+    }
+    let base_cost: i32 = spell.power_costs.iter()
+        .filter(|cost| cost.power_type == 5 && cost.mana_cost > 0
+            && (cost.required_aura_spell_id == 0 || auras::has_aura(world, caster, cost.required_aura_spell_id)))
+        .map(|cost| cost.mana_cost).sum();
+    if base_cost == 0 {
+        return;
+    }
+    // SimC76f8118 sc_death_knight.cpp13086–13095: use base rune cost,
+    // including free casts, for both stacks and the Winter extension.
+    let tenths = spell_cast::scripts::script_effect_value(world, caster, 194912, 0);
+    auras::extend_owned_duration(world, caster, caster, &winter, (tenths * 100.0 * base_cost as f32) as u32);
+    cast_buff_stacks(world, caster, 211805, base_cost as u8);
+}
+
+fn register_frost_auras(scripts: &mut auras::scripts::AuraScripts) {
     scripts.0.entry(1249658).or_default().on_remove = Some(breath_ended);
+    for winter in [196770, 1233152] {
+        scripts.0.entry(winter).or_default().on_remove = Some(winter_ended);
+    }
+}
+
+fn winter_ended(world: &mut World, unit: Entity, aura: &auras::AuraInstance, _: auras::RemoveReason) {
+    if aura.caster == unit {
+        auras::remove_auras(world, unit, auras::RemoveReason::Cancelled, |buff| {
+            buff.spell_id == 211805 && buff.caster == unit
+        });
+    }
 }
 
 fn breath_ended(

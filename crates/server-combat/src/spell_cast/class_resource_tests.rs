@@ -451,7 +451,8 @@ fn rune_replication_sends_haste_scaled_duration_and_resends_rate_changes() {
     for (actual, expected) in view
         .ready_in_ms
         .iter()
-        .zip([3_900, 3_900, 3_900, 13_900, 13_900, 0])
+        // The active runes retain their recharge progress when their rate halves.
+        .zip([7_850, 7_850, 7_850, 17_850, 17_850, 0])
     {
         assert!(actual.abs_diff(expected) <= 20, "{view:?}");
     }
