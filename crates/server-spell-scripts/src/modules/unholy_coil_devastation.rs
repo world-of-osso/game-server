@@ -4,9 +4,9 @@ use bevy::prelude::*;
 use combat::spell_cast::{self, effects::EffectCtx, script_registry::SpellScriptHook, scripts::script_effect_value};
 use combat::spell_info::SpellStore;
 
-pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::SpellResidual(coil_impact)];
+pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::ResolvedDamage(coil_impact)];
 
-fn coil_impact(world: &mut World, ctx: &EffectCtx<'_>, target: Entity, amount: f32) {
+fn coil_impact(world: &mut World, ctx: &EffectCtx<'_>, target: Entity, _: bool, amount: f32) {
     if !matches!(ctx.spell.id, 47632 | 1242172 | 1242178)
         || amount <= 0.0 || !combat::auras::has_aura(world, ctx.caster, 390270) { return; }
     // SimC76f8118 sc_death_knight.cpp9803–9810/9852–9854: deposit a
