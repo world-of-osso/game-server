@@ -174,12 +174,6 @@ fn destruction_infernal_immolation_actual_tick_interval_inherits_owner_haste() {
     let mut previous_count = 0;
     let mut expected = None;
     for _ in 0..300 {
-        let before_haste = run
-            .app
-            .world()
-            .get::<crate::stats::CharacterStats>(caster)
-            .unwrap()
-            .haste_pct;
         run.app.update();
         if expected.is_none() && crate::auras::has_aura(run.app.world(), infernal, 19483) {
             let haste = run
@@ -192,52 +186,13 @@ fn destruction_infernal_immolation_actual_tick_interval_inherits_owner_haste() {
                 haste > 10.0,
                 "real native owner haste is the test input: {haste}"
             );
-            let aura = run
-                .app
-                .world()
-                .get::<crate::auras::ActiveAuras>(infernal)
-                .unwrap()
-                .iter()
-                .find(|a| a.spell_id == 19483)
-                .unwrap();
-            let period = aura
-                .effects
-                .iter()
-                .find(|e| e.index == 0)
-                .unwrap()
-                .period_ms;
-            eprintln!(
-                "infernal app: before_haste={before_haste} after_haste={haste} stored_period={period} time={}",
-                crate::spell_cast::now(run.app.world())
-            );
-            expected = Some(f64::from(native_period) / 1000.0 / (1.0 + f64::from(haste) / 100.0));
+            // SimC buff.cpp:1203-1229 applies owner passive period modifiers.
+            // Selected Destructive Rapidity 1244928 reduces this period by 10%.
+            expected =
+                Some(f64::from(native_period) / 1000.0 * 0.9 / (1.0 + f64::from(haste) / 100.0));
         }
         let count = count_immolation_hits(&run, infernal, target);
         if count > previous_count {
-            let owner = run
-                .app
-                .world()
-                .get::<crate::stats::CharacterStats>(caster)
-                .unwrap()
-                .haste_pct;
-            let aura = run
-                .app
-                .world()
-                .get::<crate::auras::ActiveAuras>(infernal)
-                .unwrap()
-                .iter()
-                .find(|a| a.spell_id == 19483)
-                .unwrap();
-            let period = aura
-                .effects
-                .iter()
-                .find(|e| e.index == 0)
-                .unwrap()
-                .period_ms;
-            eprintln!(
-                "infernal tick: time={} before_haste={before_haste} after_haste={owner} stored_period={period}",
-                crate::spell_cast::now(run.app.world())
-            );
             observed.push(crate::spell_cast::now(run.app.world()));
             previous_count = count;
         }
