@@ -5,7 +5,7 @@ use super::combat;
 use combat::auras;
 use combat::spell_cast::effects::EffectCtx;
 use combat::spell_cast::script_registry::SpellScriptHook;
-use combat::spell_cast::scripts::script_effect_value;
+use combat::spell_info::SpellStore;
 
 const HOWLING_BLAST: u32 = 49184;
 const RIME: u32 = 59052;
@@ -31,5 +31,11 @@ fn icebreaker_primary(world: &World, ctx: &EffectCtx, target: Entity, _: bool) -
     }
     // SimC76f8118 sc_death_knight.cpp11545–11551: Icebreaker amplifies
     // the earned Rime primary with the selected native talent amount.
-    1.0 + script_effect_value(world, ctx.caster, ICEBREAKER, 0) / 100.0
+    let percent = world
+        .resource::<SpellStore>()
+        .get(ICEBREAKER)
+        .and_then(|spell| spell.effects.iter().find(|effect| effect.index == 0))
+        .expect("native Icebreaker effect0")
+        .base_points;
+    1.0 + percent / 100.0
 }
