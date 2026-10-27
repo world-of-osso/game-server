@@ -138,7 +138,7 @@ fn native_wildspeaker_dire_beasts_inherit_owner_crit() {
                 .export();
             let events = capture["events"].as_array().expect("native factor events");
             for event in &events[seen..] {
-                if event["event"] != "result" {
+                if event["event"] != "result" || event["spell_id"] != 1232922 {
                     continue;
                 }
                 let owner_crit = world
