@@ -327,6 +327,8 @@ CLASS_SUMMON_POLICY_CHILDREN = (
     (373276, 373277),
     # SimC76f8118 sc_evoker.cpp6256–6261: Command Squadron summons two native Commandos.
     (1260745, 1235843), (1260745, 1237036),
+    # SimC76f8118 sc_death_knight.cpp15401–15406: selected Unholy summon actions.
+    (55090, 275430), (1247378, 1277098), (1256813, 1242294), (1256813, 1292072),
 )
 CLASS_SUMMON_POLICY_VALUES = ','.join(f'({parent},{child})' for parent, child in CLASS_SUMMON_POLICY_CHILDREN)
 CLASS_SUMMON_ENTRIES = f"""WITH RECURSIVE policy_links(parent,child) AS (
