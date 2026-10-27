@@ -89,6 +89,7 @@ register_modules! {
     destruction_mastery: (2672, "modules/destruction_mastery.rs"),
     destruction_overfiend: (2674, "modules/destruction_overfiend.rs"),
     destruction_periodic: (2670, "modules/destruction_periodic.rs"),
+    destruction_roaring_blaze: (2678, "modules/destruction_roaring_blaze.rs"),
     devastation: (10, "modules/devastation.rs"),
     echo_policies: (1001, "modules/echo_policies.rs"),
     elemental: (1000, "modules/elemental.rs"),
