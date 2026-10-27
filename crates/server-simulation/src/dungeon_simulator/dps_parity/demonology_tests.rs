@@ -1134,20 +1134,64 @@ fn demonology_dreadstalker_melee_earns_extra_dreadbites() {
     let mut run = prepare_literal(266, 1).unwrap();
     assert!(crate::auras::has_aura(run.app.world(), run.actor, 386194));
     engage(&mut run);
-    run.app.world_mut().entity_mut(run.actor).insert(crate::networking::CombatTarget(Some(run.targets[0])));
+    run.app
+        .world_mut()
+        .entity_mut(run.actor)
+        .insert(crate::networking::CombatTarget(Some(run.targets[0])));
     for _ in 0..20 {
-        crate::spell_cast::creature_cast(run.app.world_mut(), run.actor, 193331, Some(run.actor), true).unwrap();
+        crate::spell_cast::creature_cast(
+            run.app.world_mut(),
+            run.actor,
+            193331,
+            Some(run.actor),
+            true,
+        )
+        .unwrap();
     }
-    let dogs: Vec<_> = run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0.iter()
-        .filter(|event| event.source == Some(run.actor.to_bits()) && event.spell_id == Some(193331) && event.kind == CombatLogKind::Summon)
-        .map(|event| event.target.unwrap()).collect();
+    let dogs: Vec<_> = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .iter()
+        .filter(|event| {
+            event.source == Some(run.actor.to_bits())
+                && event.spell_id == Some(193331)
+                && event.kind == CombatLogKind::Summon
+        })
+        .map(|event| event.target.unwrap())
+        .collect();
     assert_eq!(dogs.len(), 20);
-    for _ in 0..300 { run.app.update(); }
-    let events = &run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
-    let swings = events.iter().filter(|event| event.source.is_some_and(|source| dogs.contains(&source)) && event.spell_id.is_none() && event.kind == CombatLogKind::Damage).count();
-    let bites = events.iter().filter(|event| event.source.is_some_and(|source| dogs.contains(&source)) && event.spell_id == Some(271971) && event.kind == CombatLogKind::CastSuccess).count();
+    for _ in 0..300 {
+        run.app.update();
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    let swings = events
+        .iter()
+        .filter(|event| {
+            event.source.is_some_and(|source| dogs.contains(&source))
+                && event.spell_id.is_none()
+                && event.kind == CombatLogKind::Damage
+        })
+        .count();
+    let bites = events
+        .iter()
+        .filter(|event| {
+            event.source.is_some_and(|source| dogs.contains(&source))
+                && event.spell_id == Some(271971)
+                && event.kind == CombatLogKind::CastSuccess
+        })
+        .count();
     assert!(swings > 0, "actual Dreadstalkers must melee");
-    assert!(bites > dogs.len(), "selected Carnivorous Stalkers must earn extra real Dreadbites: dogs={} swings={swings} bites={bites}", dogs.len());
+    assert!(
+        bites > dogs.len(),
+        "selected Carnivorous Stalkers must earn extra real Dreadbites: dogs={} swings={swings} bites={bites}",
+        dogs.len()
+    );
 }
 
 fn summon_native_dreadstalker(run: &mut Run) -> Entity {
