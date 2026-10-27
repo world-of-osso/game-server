@@ -123,6 +123,28 @@ class ClassSummonImportTests(unittest.TestCase):
                     self.assertIsNotNone(conn.execute(
                         "SELECT name FROM tdb_creature_template WHERE entry=?", (entry,)).fetchone())
                     self.assertIn(entry, selected)
+        with tempfile.TemporaryDirectory() as directory:
+            prepared = Path(directory) / "riders.sqlite"
+            with closing(sqlite3.connect(f"file:{source}?mode=ro", uri=True)) as src:
+                with closing(sqlite3.connect(prepared)) as dst:
+                    src.backup(dst)
+            with closing(sqlite3.connect(prepared)) as conn, conn:
+                for _, entry in expected:
+                    for table, key in (("content_creature_template", "entry"),
+                                       ("content_creature_template_model", "CreatureID"),
+                                       ("content_creature_template_addon", "entry")):
+                        conn.execute(f"DELETE FROM {table} WHERE {key}=?", (entry,))
+                before_spawns = spawn_fingerprint(conn)
+            subprocess.run([sys.executable, str(ROOT / "scripts/add_class_summon_templates.py"),
+                            "--db", str(prepared)], check=True, capture_output=True, text=True)
+            with closing(sqlite3.connect(f"file:{prepared}?mode=ro", uri=True)) as conn:
+                for _, entry in expected:
+                    self.assertEqual(conn.execute("SELECT name FROM content_creature_template WHERE entry=?", (entry,)).fetchone(),
+                                     conn.execute("SELECT name FROM tdb_creature_template WHERE entry=?", (entry,)).fetchone())
+                    models = conn.execute("SELECT CreatureID,Idx,CreatureDisplayID,DisplayScale,Probability,VerifiedBuild FROM tdb_creature_template_model WHERE CreatureID=? ORDER BY Idx", (entry,)).fetchall()
+                    self.assertTrue(models)
+                    self.assertEqual(conn.execute("SELECT * FROM content_creature_template_model WHERE CreatureID=? ORDER BY Idx", (entry,)).fetchall(), models)
+                self.assertEqual(spawn_fingerprint(conn), before_spawns)
 
     def test_dire_command_reaches_authentic_native_beast(self):
         source = (ROOT / "data/world.db").resolve()
