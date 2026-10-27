@@ -93,6 +93,12 @@ pub(super) fn after_launch(world: &mut World, caster: Entity, spell: &SpellInfo,
     if !foreground || !is_frost(world, caster) {
         return;
     }
+    if spell.id == EMPOWER_RUNE_WEAPON && auras::has_aura(world, caster, KILLING_MACHINE) {
+        // SimC76f8118 sc_death_knight.cpp10236–10243: a real ready ERW grants KM.
+        trigger_native_buff(world, caster, KILLING_MACHINE);
+        #[cfg(any(test, feature = "test-support"))]
+        combat::simc_apl_native::reaction::predict(world, caster, 51124);
+    }
     if matches!(spell.id, 49143 | 194913 | 49184) {
         trigger_obliteration(world, caster);
     }
