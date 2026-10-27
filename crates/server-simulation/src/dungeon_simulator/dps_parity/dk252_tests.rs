@@ -56,6 +56,48 @@ fn dk252_festering_strike_earns_ghouls_and_next_native_scythe() {
 
 #[test]
 #[ignore = "requires private native252 profile/traits and player actor"]
+fn dk252_real_lesser_ghoul_summon_reaches_and_melees() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 1).unwrap();
+    engage(&mut run);
+    assert!(crate::spell_cast::try_cast_triggered(
+        run.app.world_mut(),
+        run.actor,
+        275430,
+        Some(run.actor),
+        1,
+    ));
+    let mut ghouls = std::collections::HashSet::new();
+    for _ in 0..200 {
+        run.app.update();
+        let world = run.app.world_mut();
+        ghouls.extend(
+            world
+                .query::<(Entity, &shared::components::Npc, &crate::spell_cast::summon::SummonedCreature)>()
+                .iter(world)
+                .filter_map(|(entity, npc, summon)| {
+                    (npc.template_id == 237409 && summon.owner == run.actor).then_some(entity.to_bits())
+                }),
+        );
+    }
+    assert_eq!(ghouls.len(), 1, "the native summon must create a real lesser ghoul");
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    assert!(
+        events.iter().any(|event| event.source.is_some_and(|source| ghouls.contains(&source))
+            && event.target == Some(run.targets[0].to_bits())
+            && event.kind == CombatLogKind::Damage
+            && event.spell_id.is_none()
+            && event.amount > 0),
+        "the actual lesser ghoul must reach and melee the enemy"
+    );
+}
+
+#[test]
+#[ignore = "requires private native252 profile/traits and player actor"]
 fn dk252_army_cast_summons_real_melee_ghouls() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(252, 1).unwrap();
