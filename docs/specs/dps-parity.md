@@ -588,6 +588,10 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 - Selected Crashing Chaos417234 earns its native417282 reverse uses on actual Summon Infernal1122 execution. The native talent effect2 sets the starting use count; each Chaos Bolt consumes one use while its native direct-damage modifier applies once, not once per use (SimC76f8118 `sc_warlock_init.cpp:839–841`, `sc_warlock_actions.cpp:4401–4403,5080–5082`).
 
+### Destruction Soul Fire DoT
+
+- Actual Soul Fire6353 execution casts the caster's selected Wither445474 (Wither445465) or Immolate157736 on its target as a free background DoT without direct damage. The DoT starts at execution, before the missile lands, and does not need the missile to hit (SimC76f8118 `sc_warlock_actions.cpp:5102–5138`).
+
 ### Destruction Roaring Blaze
 
 - A selected Roaring Blaze1244310 primary Conflagrate17962 hit spreads the caster's existing Wither445474 or Immolate157736 to nearby enemies as a free background DoT, without direct damage. Prioritize targets without the caster's Immolate, as the pinned smart-target selector does even with Wither; the native effect1 count sets the limit, with one extra already-infected target in pinned `bugs=true` mode. Do not spread from Havoc copies or a primary without the caster's DoT (SimC76f8118 `sc_warlock_actions.cpp:4440–4500`, `sc_warlock.cpp:1272–1319`).
