@@ -333,6 +333,8 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 ### Havoc literal rotation
 
+- Earned Serrated Glaive390155 supplies selected talent390154's effect0 percentage to its native spell modifier; the buff's class mask and lifetime still determine which real actions benefit (SimC76f8118 `sc_demon_hunter.cpp`2195–2196,7534–7539).
+
 - Selected Chaotic Disposition428492 rolls its native number of independent chances on each affected Demon Hunter chromatic-school direct or periodic damage action; each success adds its native damage percentage. The Hunt and its DoT are excluded, and Felblade damage is included (SimC76f8118 `sc_demon_hunter.cpp`2105–2108,2317–2346,2370–2396,5493–5497,7854–7858).
 
 - Selected Eternal Hunt1270901 applies its native effect0 percentage a second time to the final Blade Dance and Death Sweep primary and secondary strikes, not to earlier strikes (SimC76f8118 `sc_demon_hunter.cpp`7055–7065,7113–7121).

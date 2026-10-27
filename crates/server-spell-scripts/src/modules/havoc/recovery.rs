@@ -26,6 +26,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::Policies(POLICIES),
     SpellScriptHook::NativeAfterCast(after_cast),
     SpellScriptHook::LateAuraRegistration(register_channels),
+    SpellScriptHook::AfterAuraApplication(apply_serrated_glaive),
 ];
 
 fn after_cast(spell: u32) -> Option<AfterCastHook> {
@@ -132,6 +133,20 @@ fn register_channels(scripts: &mut AuraScripts) {
         script.on_natural_end = Some(finish_beam);
         script.on_remove = Some(super::havoc_eternal::remove_beam);
     }
+}
+
+// SimC76f8118 sc_demon_hunter.cpp2195–2196,7534–7539: the earned native
+// buff's zero-valued modifier takes its amount from the selected talent.
+fn apply_serrated_glaive(world: &mut World, caster: Entity, aura: &AuraInstance) {
+    const TALENT: u32 = 390154;
+    if aura.spell_id != 390155 || aura.caster != caster || !has_talent(world, caster, TALENT) {
+        return;
+    }
+    let amount = combat::spell_cast::scripts::script_effect_value(world, caster, TALENT, 0);
+    assert!(
+        combat::auras::set_effect_amount(world, caster, aura.instance_id, 0, amount),
+        "native Serrated Glaive modifier must exist"
+    );
 }
 
 fn finish_beam(world: &mut World, caster: Entity, aura: &AuraInstance) {
