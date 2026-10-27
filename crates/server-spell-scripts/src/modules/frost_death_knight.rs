@@ -14,6 +14,8 @@ use combat::spell_cast::script_registry::SpellScriptHook;
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::OwnsPolicyProc(owns_proc),
     SpellScriptHook::SnapshotsModifier(snapshots_modifier),
+    SpellScriptHook::BeforeDamageSnapshot(convert_km_weapon_school),
+    SpellScriptHook::TargetContextDamageMultiplier(converted_weapon_multiplier),
     SpellScriptHook::AfterWhiteHit(after_white_hit),
     SpellScriptHook::AfterElementalLaunch(after_launch),
     SpellScriptHook::AfterElementalLaunch(update_empowered_spender),
@@ -54,6 +56,35 @@ fn is_frost(world: &World, caster: Entity) -> bool {
     world
         .get::<ActiveSpec>(caster)
         .is_some_and(|spec| spec.0 == 251)
+}
+
+fn convert_km_weapon_school(world: &World, caster: Entity, spell: &mut SpellInfo) {
+    if !is_frost(world, caster) || !matches!(spell.id, 222024 | 66198 | 325461) {
+        return;
+    }
+    let school = world.get::<auras::ActiveAuras>(caster).and_then(|active| active.iter()
+        .find(|aura| aura.spell_id == 51124 && aura.caster == caster))
+        .and_then(|aura| aura.effects.iter().find(|effect| effect.index == 1))
+        .map(|effect| effect.misc_values[0] as u32);
+    if let Some(school) = school {
+        spell.misc.as_mut().expect("native Obliterate child retains school").school_mask = school;
+    }
+}
+
+fn converted_weapon_multiplier(world: &World, ctx: &spell_cast::effects::EffectCtx, target: Entity, _: bool) -> f32 {
+    if !is_frost(world, ctx.caster) || !matches!(ctx.spell.id, 222024 | 66198 | 325461)
+        || ctx.spell.school_mask() != 16 || !world.get::<combat::class_progression::KnownSpells>(ctx.caster)
+            .is_some_and(|known| known.contains(317214)) {
+        return 1.0;
+    }
+    // SimC76f8118 sc_death_knight.cpp11807–11828: the converted physical
+    // child manually gains Frozen Heart and its caster's Razorice stacks.
+    let mastery = world.get::<CharacterStats>(ctx.caster).expect("Frost caster stats").mastery_pct / 100.0;
+    let razorice = world.get::<auras::ActiveAuras>(target).and_then(|active| active.iter()
+        .find(|aura| aura.spell_id == 51714 && aura.caster == ctx.caster))
+        .and_then(|aura| aura.effects.iter().find(|effect| effect.index == 0)
+            .map(|effect| effect.amount * f32::from(aura.stacks) / 100.0)).unwrap_or(0.0);
+    (1.0 + mastery) * (1.0 + razorice)
 }
 
 fn trigger_native_buff(world: &mut World, caster: Entity, source: u32) {
