@@ -2,7 +2,7 @@
 - 2026-10-26: Absolute landed8f4e67fed6; identified nonstacking Corruption0 passed to positive-counter API and replaced that caller with duration-only permanence. Native GREEN pending.
 ## 2026-10-26 — Arcane Familiar Intellect grant
 
-[Selected Familiar](systems/spell-casting.md#arcane-familiar-on-intellect-2026-10-26) now receives native210126 on actual Arcane Intellect. Native RED4178eeb663 reached real precombat and selected205022 but found no aura; GREEN remains pending. Separate REDc15f014bb5 observes an active owned Familiar with zero225119 impacts in7s; a downstream source-hasted3s timer now targets the actual selected enemy. GREEN remains pending; Energized/Attuned relationships remain open.
+[Selected Familiar](systems/spell-casting.md#arcane-familiar-on-intellect-2026-10-26) now receives native210126 on actual Arcane Intellect. Native RED4178eeb663 reached real precombat and selected205022 but found no aura; GREEN remains pending. Separate REDc15f014bb5 observes an active owned Familiar with zero225119 impacts in7s; a downstream source-hasted3s timer now targets the actual selected enemy. GREEN remains pending; Native REDdf4731afd6 separately exposes missing Surge extra assaults and per-assault Energized Mana. The source-native Energized behavior is implemented with GREEN pending; Attuned remains open pending a discriminating trait comparison.
 
 ## 2026-10-26 — Proc-mask-qualified charged modifiers
 

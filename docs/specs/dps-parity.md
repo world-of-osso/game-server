@@ -167,6 +167,7 @@ Native merged buff outcomes apply or clear the caster-owned aura after the hit b
 
 ### Subtlety literal fixture
 
+- Combo-point gains emit one native Energize receipt with actual overflow, including scripted per-hit gains. Shadow Techniques recognizes actual foreground combo-point generation, including capped gains, and collects after all native hit batches for that cast, not before delayed impacts (`sc_rogue.cpp2705–2716,8176–8204`).
 - Selected native Lingering Shadow earns its native maximum counter on Shadow Dance expiry, with the pinned tick-zero decrement and rolling periodic decay from native talent effect2. Replacing the counter restarts its lifetime; it must expire rather than retain a final stack (`sc_rogue.cpp7489–7501,11182–11195`).
 - Eligible landed builders and actual MID2 four-piece finishers emit native386081 at the same recipient from the mitigated source result, preserving source crit once. Use native counter stacks, set fraction and selected Shadow-school/Lingering Darkness modifiers; no residual without earned stacks or recursive residual emission (`sc_rogue.cpp2083–2089,3701,4400–4425,5709–5851,8554–8575,10568–10580`). Native regression: `subtlety_shadow_tests.rs`; numerical parity remains separate.
 
@@ -874,7 +875,13 @@ Elemental Overload callbacks are instant background actions that can execute dur
 
 Stormkeeper grants its native effect4 count of next-spell uses, bounded by the native stack cap. Retain the native single proc charge; do not represent the same uses again as extra charges. Each use carries one native modifier amount, not a stack-multiplied bonus. A successful foreground root spends one use; its background overload does not spend another (`sc_shaman.cpp`8759).
 
-Native445624 supplies actual221177 Ancestors and their native lifetime after selected Stormkeeper or Ancestral Swiftness. Successful foreground spells command each living owned Ancestor once with native447419/447425 children at the retained primary. Background overloads do not command them. Native owner spell power and crit are inherited; Ancestor Lava Burst is guaranteed critical and scales with inherited crit (`sc_shaman.cpp`4342–4441,6358,7856,8163–8166,8758). Natural expiry allows selected Final Calling465717; cancellation does not. Actual Ancestor447419/447425/465717 critical hits apply selected live Elemental Fury60188 effect0's critical bonus, preserving its native amount and other spells' modifier masks (`sc_shaman.cpp`11468–11469; SimC effect indexes are one-based). Removing that owner aura removes the bonus. Routine Communication, Ancient Fellowship and remaining pet effect inheritance still require qualification.
+Native445624 supplies actual221177 Ancestors and their native lifetime after selected Stormkeeper or Ancestral Swiftness. Successful foreground spells command each living owned Ancestor once with native447419/447425 children at the retained primary. Background overloads do not command them. Native owner spell power and crit are inherited; Ancestor Lava Burst is guaranteed critical and scales with inherited crit (`sc_shaman.cpp`4342–4441,6358,7856,8163–8166,8758). Natural expiry allows selected Final Calling465717; cancellation does not. Actual Ancestor447419/447425/465717 critical hits apply selected live Elemental Fury60188 effect0's critical bonus, preserving its native amount and other spells' modifier masks (`sc_shaman.cpp`11468–11469; SimC effect indexes are one-based). Removing that owner aura removes the bonus. Ancient Fellowship and remaining pet effect inheritance still require qualification.
+
+Selected Routine Communication443445 draws once after an ordinary successful Lightning Bolt, Chain Lightning or Lava Burst execution. The native effect4/effect5 counts supply successes/total for a shuffled deck; reshuffle only after all cards are drawn. A successful draw summons the real native445624 Ancestor and447244 owner buff. Background builders, overloads and extra Chain recipients do not draw (`sc_shaman.cpp`6654–6658,7260–7263,7436–7438,13025–13033; `proc_rng.cpp`149–161).
+
+Selected Power of the Maelstrom191861 rolls its native chance on ordinary Lightning Bolt and Chain Lightning executions. Eligible foreground spells spend one native191877 use and, with Fusion of Elements462840, execute a free instant Elemental Blast at the native Fusion effectiveness. Its overload uses the Fusion effectiveness independently of other damage modifiers (`sc_shaman.cpp`2582,3303–3311,6660–6663,7439–7444,7599–7609,7653–7674).
+
+Equipped MID2 four-piece1296626 grants native Flowing Elements1300219 uses when Stormkeeper or Ascendance ends, buffering the overlapping grant until Ascendance ends. Eligible foreground builders spend one use and earn native Overcharge1300222, which makes the next eligible spender free (`sc_shaman.cpp`12600–12608,12636–12651,12914–12924).
 
 ## Out of scope
 
@@ -998,3 +1005,10 @@ Category133 ordinary spells apply native spell haste before the independent aura
 
 - Landed owned Corruption146739 or Wither445474 ticks with selected108558 advance an independent uniform-initial/rollover threshold stream. Pinned base0.130 is normalized by active owned dots, native Creeping Death and selected Sataiel's Volition. This does not modify Wither stacks or damage.
 - Native264571 supplies stack cap, lifetime and cast-time modifiers. An admitted instant Shadow Bolt consumes one use; actual Drain Soul and Malefic Grasp executions consume one use. The additive foreground hook preserves native Shadow Bolt shard funding.
+
+### Shadow Idol of N'Zoth
+
+Selected Idol of N'Zoth tracks actual Madness executions and Mind Flay ticks per owned target. Its native thresholds trigger Horrific Vision and Vision of N'Zoth, their damage, and their native periodic Insanity buffs. The target counter rolls over at the native upper threshold.
+### Shadow Insidious Ire
+
+Selected Insidious Ire earns its temporary channel bonus when one target has all three caster-owned Pain, Vampiric Touch and Madness effects. The window lasts until the earliest expiry and may be refreshed to a later earned deadline. Its amount comes from the selected native trait effect.

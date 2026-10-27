@@ -39,6 +39,12 @@ const SPELL_ATTR4_BOUNCY_CHAIN_MISSILES: u32 = 0x0004_0000;
 pub(crate) struct PendingSpellHits(Vec<PendingHit>);
 
 impl PendingSpellHits {
+    pub(super) fn has_spell(&self, caster: Entity, spell: u32) -> bool {
+        self.0
+            .iter()
+            .any(|hit| hit.caster == caster && hit.spell.id == spell)
+    }
+
     pub(super) fn has_caster(&self, caster: Entity) -> bool {
         self.0.iter().any(|hit| hit.caster == caster)
     }
@@ -175,20 +181,16 @@ pub fn launch(world: &mut World, caster: Entity, spell: &SpellInfo, plan: Target
 /// `Spell::handle_delayed`: land every hit whose delay ran out.
 pub(super) fn resolve_due_hits(world: &mut World) {
     let now = now(world);
-    let due: Vec<PendingHit> = {
-        let Some(mut pending) = world.get_resource_mut::<PendingSpellHits>() else {
-            return;
+    loop {
+        let hit = {
+            let Some(mut pending) = world.get_resource_mut::<PendingSpellHits>() else {
+                return;
+            };
+            let Some(index) = pending.0.iter().position(|hit| hit.due <= now) else {
+                return;
+            };
+            pending.0.remove(index)
         };
-        if pending.0.iter().all(|hit| hit.due > now) {
-            return;
-        }
-        let (due, waiting) = std::mem::take(&mut pending.0)
-            .into_iter()
-            .partition(|hit| hit.due <= now);
-        pending.0 = waiting;
-        due
-    };
-    for hit in due {
         #[cfg(any(test, feature = "test-support"))]
         observe_discarded_targets(world, &hit);
         if world.get_entity(hit.caster).is_err() {

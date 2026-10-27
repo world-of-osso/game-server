@@ -117,6 +117,9 @@ pub struct SpellInfo {
     /// Read-only to hit scripts; never inferred from an effect's self/area recipients.
     #[serde(skip)]
     pub cast_primary_target: Option<Entity>,
+    /// Validated explicit unit for this execution, distinct from controller metadata.
+    #[serde(skip)]
+    pub cast_executed_target: Option<Entity>,
     /// Sourced ordinary-hit policy inputs; triggered catalog clones keep None.
     #[serde(skip)]
     pub cast_policy_context: Option<Box<CastPolicyContext>>,
@@ -160,6 +163,9 @@ pub struct SpellInfo {
     /// Scripted effectiveness on this cast's damage only, retained through flight.
     #[serde(skip)]
     pub cast_damage_multiplier: Option<f32>,
+    /// Source-selected effectiveness retained by an independent overload action.
+    #[serde(skip)]
+    pub cast_overload_multiplier: Option<f32>,
     /// Fraction of a final periodic interval, applied after damage/healing modifiers.
     #[serde(skip)]
     pub cast_periodic_fraction: Option<f32>,

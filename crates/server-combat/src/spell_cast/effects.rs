@@ -2635,6 +2635,14 @@ pub fn energize_unit(
     periodic: bool,
 ) {
     let amount = amount.max(0.0);
+    if power == PowerType::ComboPoints && amount > 0.0 {
+        if super::powers::change_power_from_effect(world, target, power, amount, ctx, periodic)
+            .is_none()
+        {
+            debug!("Spell {}: target has no {power:?} pool", ctx.spell.id);
+        }
+        return;
+    }
     let Some(gained) = super::powers::change_power(world, target, power, amount) else {
         debug!("Spell {}: target has no {power:?} pool", ctx.spell.id);
         return;
