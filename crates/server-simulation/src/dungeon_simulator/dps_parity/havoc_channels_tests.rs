@@ -226,7 +226,7 @@ fn havoc_never_say_die_low_health_does_not_start_damage_bonus() {
 
 #[test]
 #[ignore = "requires prepared native spec577 player profile"]
-fn havoc_never_say_die_driver_grants_source_damage_at_high_health() {
+fn havoc_never_say_die_keeps_earned_damage_below_threshold() {
     let _seed = crate::random::seed_scope(70_448);
     let mut run = prepare_literal(577, 1).unwrap();
     let actor = run.actor;
@@ -236,6 +236,24 @@ fn havoc_never_say_die_driver_grants_source_damage_at_high_health() {
         "real profile must select Never Say Die"
     );
     advance(&mut run, 20);
+    {
+        let mut health = run
+            .app
+            .world_mut()
+            .get_mut::<shared::components::Health>(actor)
+            .unwrap();
+        health.current = health.max * 0.4;
+    }
+    advance(&mut run, 20);
+    let health = run
+        .app
+        .world()
+        .get::<shared::components::Health>(actor)
+        .unwrap();
+    assert!(
+        health.current < health.max * 0.5,
+        "driver must observe health below the threshold"
+    );
     crate::auras::remove_auras(
         run.app.world_mut(),
         actor,
@@ -270,7 +288,7 @@ fn havoc_never_say_die_driver_grants_source_damage_at_high_health() {
     let without = damage(&run, Some(227518))[0].amount;
     assert!(
         (with as f64 - without as f64 * 1.03).abs() <= 2.0,
-        "real high-health driver grants native3% damage: {without} -> {with}"
+        "the source retains its earned native3% damage below threshold: {without} -> {with}"
     );
 }
 
