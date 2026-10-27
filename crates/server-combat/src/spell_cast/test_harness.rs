@@ -46,6 +46,10 @@ pub struct ObservedCombatEvents(pub Vec<CombatLogEvent>);
 #[derive(Resource, Default)]
 pub struct ObservedPowerChanges(pub Vec<(Entity, shared::components::PowerType, f32)>);
 
+/// Opt-in snapshots around real rune refills, before any later simulation update.
+#[derive(Resource, Default)]
+pub struct ObservedRuneRefills(pub Vec<(Entity, super::runes::Runes, super::runes::Runes)>);
+
 /// Actual successful triggered launch boundary; FULL_MASK casts have no wire SpellGo.
 #[derive(Resource, Default)]
 pub struct ObservedTriggeredCasts(pub Vec<(Entity, u32, Option<Entity>)>);

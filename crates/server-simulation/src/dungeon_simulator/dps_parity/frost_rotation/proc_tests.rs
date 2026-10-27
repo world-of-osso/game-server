@@ -342,6 +342,32 @@ fn frost_exterminate_spender_deals_both_native_hits() {
 }
 
 #[test]
+#[ignore = "native Frost earned rune refill preserves in-progress regeneration"]
+fn frost_earned_rune_refill_preserves_regeneration() {
+    use crate::spell_cast::test_harness::ObservedRuneRefills;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::super::prepare_measurement(251, 1).unwrap();
+    run.app.insert_resource(ObservedRuneRefills::default());
+    super::super::engage(&mut run);
+    for _ in 0..6000 {
+        super::super::drive_player(&mut run).unwrap();
+        run.app.update();
+        let observations = &run.app.world().resource::<ObservedRuneRefills>().0;
+        if let Some((_, before, after)) = observations.iter().find(|(actor, before, after)| {
+            *actor == run.actor && before.order.len() >= 4 && after.ready() == before.ready() + 1
+        }) {
+            for rune in before.order.iter().take(3) {
+                let index = usize::from(*rune);
+                assert_eq!(before.cooldowns[index], after.cooldowns[index],
+                    "earned rune refill must preserve active regeneration while a depleted rune waits");
+            }
+            return;
+        }
+    }
+    panic!("real rotation did not earn a rune refill while a depleted rune waited");
+}
+
+#[test]
 #[ignore = "diagnostic Frost native 300s factors and resource changes"]
 fn diag_frost_factors_and_resource_spending() {
     use crate::spell_cast::effects::factor_capture::FactorCapture;

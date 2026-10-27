@@ -335,9 +335,24 @@ fn change_power_with_source(
 ) -> Option<f32> {
     let (current, max) = power_value(world, entity, power)?;
     if power == PowerType::Runes && world.get::<super::runes::Runes>(entity).is_some() {
+        #[cfg(any(test, feature = "test-support"))]
+        let before = (delta > 0.0
+            && world.contains_resource::<super::test_harness::ObservedRuneRefills>())
+        .then(|| world.get::<super::runes::Runes>(entity).unwrap().clone());
         let changed = change_runes(world, entity, delta);
         #[cfg(any(test, feature = "test-support"))]
-        observe_power_change(world, entity, power, changed);
+        {
+            observe_power_change(world, entity, power, changed);
+            if changed > 0.0
+                && let Some(before) = before
+            {
+                let after = world.get::<super::runes::Runes>(entity).unwrap().clone();
+                world
+                    .resource_mut::<super::test_harness::ObservedRuneRefills>()
+                    .0
+                    .push((entity, before, after));
+            }
+        }
         crate::auras::power_amount_trigger::on_changed(
             world,
             entity,
