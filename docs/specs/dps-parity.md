@@ -131,6 +131,8 @@ Frost player reaction clocks are configured before food setup advances native fr
 - Selected Fury of the Wyvern472550 extends an existing earned Cry471881 after successful BM Kill Command34026, including the consuming command. Native effect2 supplies each extension and effect4 the total budget. Actual Cry removal resets the budget; white-impact stack growth does not (SimC76f8118 hunter6626–6630,8279–8287).
 
 - Selected Pack Mentality472358 reduces already-running Barbed217200 and Wildfire259495 recovery once per actually consumed Howl beast. Native effects2/3 supply the times; simultaneous Wyvern/Boar consumption pays both reductions before Stampede begins. Unused clocks remain inactive (SimC76f8118 hunter3808–3811).
+- When any Howl beast is ready, selected Pack Mentality adds its native first effect to Alpha Predator's native Kill Command damage bonus before the real owned-pet83381 hit. The bonus does not change Wildspeaker1232922 (SimC76f8118 hunter2764–2785).
+- Selected Dire Frenzy385810 multiplies actual DireCritter melee and spell damage by its native second effect. It does not affect other pets or summons (SimC76f8118 hunter1877–1882).
 
 - Each actual main-pet, companion or stable Nature's Ally white impact adds one stack to that owner's already active Wyvern Cry471881, including avoided outcomes. Preserve the native cap and the existing expiration; white impacts cannot create inactive Cry. Keep landed-hit producers and ordinary proc masks unchanged (SimC76f8118 hunter2974–3010).
 
@@ -329,6 +331,8 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 - Guaranteed critical hits predict their actual Heating Up acquisition; an observed Heating Up conversion predicts Hot Streak. A critical hit with Hot Streak already active preserves and predicts it without creating Heating Up.
 
 ### Havoc literal rotation
+
+- Selected Eternal Hunt1270901 applies its native effect0 percentage a second time to the final Blade Dance and Death Sweep primary and secondary strikes, not to earlier strikes (SimC76f8118 `sc_demon_hunter.cpp`7055–7065,7113–7121).
 
 - Native Eye Beam198013 and Gaze452497 apply aura33 at −200% movement speed during the channel. Preserve that self-slow, Vengeful Retreat's real displacement and beam range: a target outside the cone range misses ticks until the channel ends and the actor can return. SimC76f8118 `sc_demon_hunter.cpp`1551–1611,8539–8620 models Retreat's return as an out-of-melee timer rather than that physical trajectory; this can produce a parity difference.
 
