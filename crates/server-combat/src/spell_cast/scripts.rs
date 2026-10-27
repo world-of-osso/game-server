@@ -12,6 +12,7 @@ mod arcane_touch;
 pub(crate) use arcane::register as register_arcane;
 pub(super) use arcane::{
     after_foreground as after_arcane_foreground, before_cast as before_arcane_cast,
+    missiles_channel_duration,
 };
 pub(super) use arcane_touch::record_damage as record_arcane_touch_damage;
 pub(super) use script_registry::{

@@ -1126,8 +1126,11 @@ pub(crate) fn haste_channel_duration_ms(
     let duration = duration as f32 * slow;
     match crate::auras::channel_tick_timing_ms(world, caster, spell) {
         Some((original_period, hasted_period)) => {
-            let ticks = duration / original_period;
-            (hasted_period as f32 * ticks).max(0.0).round() as u32
+            scripts::missiles_channel_duration(spell.id, duration, original_period, hasted_period)
+                .unwrap_or_else(|| {
+                    let ticks = duration / original_period;
+                    (hasted_period as f32 * ticks).max(0.0).round() as u32
+                })
         }
         // Duration-only channels have no periodic clock to align (action.cpp4423–4430).
         None => (duration / haste.max(0.01)).max(0.0).round() as u32,
