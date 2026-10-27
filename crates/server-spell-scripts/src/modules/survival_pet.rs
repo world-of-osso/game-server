@@ -53,7 +53,10 @@ pub(super) fn strike_after_tip(world: &mut World, caster: Entity, target: Entity
         return;
     }
     if procs::start_policy_proc(world, caster, instance).is_none() {
-        warn!(?caster, "Native Strike as One ICD could not start after execution");
+        warn!(
+            ?caster,
+            "Native Strike as One ICD could not start after execution"
+        );
     }
 }
 

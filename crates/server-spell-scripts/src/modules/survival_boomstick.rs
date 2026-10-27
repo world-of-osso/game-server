@@ -32,7 +32,9 @@ fn spend_tip(world: &mut World, caster: Entity, spell: &SpellInfo) {
 
 fn owns_tip(world: &World, caster: Entity) -> bool {
     world.get::<ActiveAuras>(caster).is_some_and(|auras| {
-        auras.iter().any(|aura| aura.spell_id == TIP && aura.caster == caster)
+        auras
+            .iter()
+            .any(|aura| aura.spell_id == TIP && aura.caster == caster)
     })
 }
 

@@ -42,5 +42,8 @@ fn impact_and_dismiss(world: &mut World, actor: Entity, target: Entity) {
         }
     }
     let now = combat::spell_cast::now(world);
-    world.get_mut::<summon::SummonedCreature>(actor).unwrap().expires_at = Some(now);
+    world
+        .get_mut::<summon::SummonedCreature>(actor)
+        .unwrap()
+        .expires_at = Some(now);
 }
