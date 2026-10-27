@@ -61,6 +61,17 @@ fn subtlety_darkness_blades_expiry_amplifies_shadow_finisher_not_poison() {
         "Lingering Darkness lasts its native 30s: {remaining}"
     );
 
+    // sc_rogue.cpp4400–4414: Shadowed Finishers needs the caster's Find Weakness.
+    crate::auras::apply_aura(
+        run.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: actor,
+            target: actor,
+            spell_id: 1264521,
+            effect_mask: u32::MAX,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
     run.app
         .insert_resource(FactorCapture::new(actor, target, 328082, "eviscerate_bonus", 1));
     {
