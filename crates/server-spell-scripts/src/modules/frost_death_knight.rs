@@ -249,6 +249,7 @@ fn consume_rime(world: &mut World, caster: Entity, spell: &SpellInfo) {
         warn!(?caster, "Native Rage of the Frozen Champion energize refused");
     }
     extend_breath(world, caster, 1);
+    trigger_dark_talons(world, caster);
     if auras::has_aura(world, caster, FROSTBOUND_WILL) {
         let milliseconds =
             spell_cast::scripts::script_effect_value(world, caster, FROSTBOUND_WILL, 0);
@@ -394,6 +395,8 @@ fn extend_winter_for_runes(world: &mut World, caster: Entity, spell: &SpellInfo)
 
 fn register_frost_auras(scripts: &mut auras::scripts::AuraScripts) {
     scripts.0.entry(PILLAR).or_default().on_apply = Some(pillar_applied);
+    scripts.0.entry(443595).or_default().on_remove = Some(dark_talons_ended);
+    scripts.0.entry(194879).or_default().on_remove = Some(icy_talons_ended);
     scripts.0.entry(1249658).or_default().on_remove = Some(breath_ended);
     for winter in [196770, 1233152] {
         scripts.0.entry(winter).or_default().on_remove = Some(winter_ended);
@@ -680,6 +683,7 @@ fn consume_killing_machine(world: &mut World, caster: Entity, target: Entity) {
         cast_buff_stacks(world, caster, 1230916, spent);
     }
     extend_breath(world, caster, spent);
+    trigger_dark_talons(world, caster);
     trigger_bonegrinder(world, caster, spent);
     schedule_arctic_assault(world, caster, target, spent);
     if auras::has_aura(world, caster, 207061) {
@@ -690,6 +694,39 @@ fn consume_killing_machine(world: &mut World, caster: Entity, target: Entity) {
             }
         }
     }
+}
+
+fn trigger_dark_talons(world: &mut World, caster: Entity) {
+    if !auras::has_aura(world, caster, 436687) || !auras::has_aura(world, caster, 194878) {
+        return;
+    }
+    let chance = spell_cast::scripts::script_effect_value(world, caster, 436687, 0);
+    if random::random::<f32>() * 100.0 >= chance { return; }
+    let active = auras::has_aura(world, caster, 443595);
+    if !spell_cast::try_cast_triggered(world, caster, 443595, Some(caster), 1) {
+        warn!(?caster, "Native Dark Talons aura refused");
+        return;
+    }
+    if !active {
+        let stacks = spell_cast::scripts::script_effect_value(world, caster, 436687, 1) as u8;
+        if !auras::adjust_owned_stack_cap(world, caster, 194879, stacks as i8) {
+            cast_buff_stacks(world, caster, 194879, stacks);
+        }
+    }
+}
+
+fn dark_talons_ended(world: &mut World, unit: Entity, aura: &auras::AuraInstance, _: auras::RemoveReason) {
+    let amount = spell_cast::scripts::script_effect_value(world, aura.caster, 436687, 1) as u8;
+    let stacks = world.get::<auras::ActiveAuras>(unit).and_then(|active| active.iter().find(|a| a.spell_id == 194879 && a.caster == aura.caster)).map(|a| a.stacks);
+    if stacks.is_some_and(|stacks| stacks <= amount) {
+        auras::remove_auras(world, unit, auras::RemoveReason::Consumed, |a| a.spell_id == 194879 && a.caster == aura.caster);
+    } else {
+        auras::adjust_owned_stack_cap(world, unit, 194879, -(amount as i8));
+    }
+}
+
+fn icy_talons_ended(world: &mut World, unit: Entity, aura: &auras::AuraInstance, _: auras::RemoveReason) {
+    auras::remove_auras(world, unit, auras::RemoveReason::Consumed, |a| a.spell_id == 443595 && a.caster == aura.caster);
 }
 
 fn extend_breath(world: &mut World, caster: Entity, spent: u8) {
