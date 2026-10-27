@@ -644,7 +644,8 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 - Selected Demonology Diabolic Ritual starts on in-combat Hand of Gul'dan payment and shortens the held ritual by native effect1 seconds per paid shard (`sc_warlock_actions.cpp278–355`). The first ritual of an encounter is uniform; each ritual's natural end selects the next Overlord→Mother of Chaos→Pit Lord ritual (`sc_warlock_init.cpp927–931,1750`).
 - A ritual's natural end grants its native Demonic Art after a gauss(200ms, 15ms) delay, replacing any held Art without summoning (`sc_warlock_init.cpp857–888`). A Hand whose cast started with the Art held, or any Ruination, consumes it. Consumption or expiry in combat summons that Art's native demon (`sc_warlock_init.cpp897–925`).
 - The Mother of Chaos summon grants native Infernal Bolt433891 with selected Secrets of the Coven. The Pit Lord summon grants native Ruination433885 with selected Ruination (`sc_warlock_actions.cpp5445–5481`). Each replacement cast consumes one stack of its buff. Ruination's primary impact drops the native three-shard Hand meteor and its three Wild Imps after gauss(395ms, 35ms) (`sc_warlock_actions.cpp5262–5333`).
-- Infernal Machine, other ritual spenders, Destruction, Diabolic Oculi and the demons' own actions remain unimplemented.
+- Each Diabolist demon executes its native action once: Overlord428571 Wicked Cleave432120, Mother of Chaos428565 channeled Chaos Salvo432569 (each tick launches native432592→432596), Pit Lord434400 channeled Felseeker438973 (`sc_warlock_pets.cpp2574–2896`). They inherit base owner SP1.0, and the Overlord inherits AP1.0. Demonology multiplies their damage by 1 + native428514 effect3. Wicked Cleave applies the owner's Cloven Soul434424 with selected Cloven Souls.
+- Infernal Machine, other ritual spenders, Destruction and Diabolic Oculi remain unimplemented.
 
 ### Demonology literal execution and alternative Tyrant
 

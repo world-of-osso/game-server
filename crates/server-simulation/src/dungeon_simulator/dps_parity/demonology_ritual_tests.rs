@@ -217,3 +217,102 @@ fn demonology_ruination_impacts_then_summons_three_hand_imps() {
         "Ruination consumes its native buff"
     );
 }
+
+/// Damage events from the actual demon each Diabolist summon creates within ten seconds.
+fn demon_damage(summon: u32, damage: u32) -> (Run, Vec<i32>) {
+    demon_damage_with(summon, damage, true)
+}
+
+fn demon_damage_with(summon: u32, damage: u32, ritual: bool) -> (Run, Vec<i32>) {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_funded();
+    if !ritual {
+        let actor = run.actor;
+        crate::auras::remove_auras(
+            run.app.world_mut(),
+            actor,
+            crate::auras::RemoveReason::Cancelled,
+            |aura| aura.spell_id == 428514,
+        );
+    }
+    run.app
+        .world_mut()
+        .entity_mut(run.actor)
+        .insert(crate::networking::CombatTarget(Some(run.targets[0])));
+    crate::spell_cast::creature_cast(run.app.world_mut(), run.actor, summon, Some(run.actor), true)
+        .expect("native Diabolist summon must be admitted");
+    update(&mut run, 200);
+    let summoned: Vec<_> = events(&run, CombatLogKind::Summon, summon)
+        .iter()
+        .map(|event| event.target.unwrap())
+        .collect();
+    assert_eq!(summoned.len(), 1, "one actual demon from {summon}");
+    let hits: Vec<i32> = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .iter()
+        .filter(|event| {
+            event.source == Some(summoned[0])
+                && event.spell_id == Some(damage)
+                && event.kind == CombatLogKind::Damage
+        })
+        .map(|event| event.amount)
+        .collect();
+    (run, hits)
+}
+
+#[test]
+#[ignore = "requires private266 inputs; actual Overlord casts one Wicked Cleave"]
+fn demonology_overlord_casts_one_wicked_cleave() {
+    // SimC76f8118 pets.cpp2574–2697: one charge, then exactly one Wicked Cleave.
+    let (_, hits) = demon_damage(428571, 432120);
+    assert_eq!(hits.len(), 1, "Overlord must cleave its target exactly once: {hits:?}");
+}
+
+#[test]
+#[ignore = "requires private266 inputs; actual Mother of Chaos channels Chaos Salvo"]
+fn demonology_mother_of_chaos_channels_chaos_salvo() {
+    // pets.cpp2717–2790: one channeled Chaos Salvo whose ticks launch native432596.
+    let (_, hits) = demon_damage(428565, 432596);
+    assert!(hits.len() >= 15, "Chaos Salvo ticks must hit the target: {}", hits.len());
+}
+
+#[test]
+#[ignore = "requires private266 inputs; actual Pit Lord channels Felseeker"]
+fn demonology_pit_lord_channels_felseeker() {
+    // pets.cpp2795–2896: one channeled Felseeker of four native434404 ticks.
+    let (_, hits) = demon_damage(434400, 434404);
+    assert_eq!(hits.len(), 4, "Felseeker must tick four times: {hits:?}");
+}
+
+#[test]
+#[ignore = "requires private266 inputs; Demonology scales Diabolist demon damage"]
+fn demonology_diabolic_ritual_scales_demon_damage() {
+    // SimC76f8118 pets.cpp2853–2858: Demonology multiplies demon damage by
+    // 1 + native428514 effect3 (-36%).
+    let (_, with) = demon_damage_with(434400, 434404, true);
+    let (_, without) = demon_damage_with(434400, 434404, false);
+    // Crit rolls diverge between runs; compare each run's smallest (noncritical) tick.
+    let ratio = *with.iter().min().unwrap() as f64 / *without.iter().min().unwrap() as f64;
+    assert!((0.63..=0.65).contains(&ratio), "Demonology demon damage ratio {ratio}");
+}
+
+#[test]
+#[ignore = "requires private266 inputs; Wicked Cleave applies the owner's Cloven Soul"]
+fn demonology_wicked_cleave_applies_cloven_soul() {
+    // pets.cpp2670–2676: each Wicked Cleave impact triggers owner-owned434424.
+    let (run, hits) = demon_damage(428571, 432120);
+    assert_eq!(hits.len(), 1);
+    let target = run.targets[0];
+    assert!(
+        run.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(target)
+            .is_some_and(|auras| auras
+                .iter()
+                .any(|aura| aura.spell_id == 434424 && aura.caster == run.actor)),
+        "Cloven Soul must be the owner's debuff on the cleaved target"
+    );
+}
