@@ -145,6 +145,7 @@ pub type LaunchDelayLookup = fn(u32) -> Option<f32>;
 pub type DotMasteryMultiplierHook = fn(&World, Entity, Entity, u32) -> f32;
 pub type PeriodicDamageFinishedHook = fn(&mut World, &EffectCtx<'_>);
 pub type ActionHook = fn(&mut World, Entity, u32);
+pub type ComboPointGainHook = fn(&mut World, Entity, u32, u8);
 pub type WhiteHitHook = fn(&mut World, Entity, bool);
 pub type WhiteImpactHook = fn(&mut World, Entity);
 pub type DirectDamageHook = fn(&mut World, &EffectCtx<'_>, Entity, bool);
@@ -298,6 +299,7 @@ pub enum SpellScriptHook {
     AfterForegroundSpecial(AfterCastHook),
     AfterCounterLaunch(ActionHook),
     ImpactProcDamage(ContextHitHook),
+    ComboPointGain(ComboPointGainHook),
     AfterWhiteHit(WhiteHitHook),
     AfterWhiteImpact(WhiteImpactHook),
     ReplacementDirectDamage(DirectDamageHook),
@@ -922,6 +924,14 @@ pub fn after_white_impact(world: &mut World, caster: Entity) {
     for hook in world.resource::<SpellScriptRegistry>().hooks() {
         if let SpellScriptHook::AfterWhiteImpact(run) = hook {
             run(world, caster);
+        }
+    }
+}
+
+pub fn combo_point_gain(world: &mut World, caster: Entity, spell: u32, depth: u8) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::ComboPointGain(run) = hook {
+            run(world, caster, spell, depth);
         }
     }
 }

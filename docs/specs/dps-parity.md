@@ -167,6 +167,7 @@ Native merged buff outcomes apply or clear the caster-owned aura after the hit b
 
 ### Subtlety literal fixture
 
+- Combo-point gains emit one native Energize receipt with actual overflow, including scripted per-hit gains. Shadow Techniques recognizes actual foreground combo-point generation, including capped gains, and collects after all native hit batches for that cast, not before delayed impacts (`sc_rogue.cpp2705–2716,8176–8204`).
 - Selected native Lingering Shadow earns its native maximum counter on Shadow Dance expiry, with the pinned tick-zero decrement and rolling periodic decay from native talent effect2. Replacing the counter restarts its lifetime; it must expire rather than retain a final stack (`sc_rogue.cpp7489–7501,11182–11195`).
 - Eligible landed builders and actual MID2 four-piece finishers emit native386081 at the same recipient from the mitigated source result, preserving source crit once. Use native counter stacks, set fraction and selected Shadow-school/Lingering Darkness modifiers; no residual without earned stacks or recursive residual emission (`sc_rogue.cpp2083–2089,3701,4400–4425,5709–5851,8554–8575,10568–10580`). Native regression: `subtlety_shadow_tests.rs`; numerical parity remains separate.
 
@@ -1004,3 +1005,10 @@ Category133 ordinary spells apply native spell haste before the independent aura
 
 - Landed owned Corruption146739 or Wither445474 ticks with selected108558 advance an independent uniform-initial/rollover threshold stream. Pinned base0.130 is normalized by active owned dots, native Creeping Death and selected Sataiel's Volition. This does not modify Wither stacks or damage.
 - Native264571 supplies stack cap, lifetime and cast-time modifiers. An admitted instant Shadow Bolt consumes one use; actual Drain Soul and Malefic Grasp executions consume one use. The additive foreground hook preserves native Shadow Bolt shard funding.
+
+### Shadow Idol of N'Zoth
+
+Selected Idol of N'Zoth tracks actual Madness executions and Mind Flay ticks per owned target. Its native thresholds trigger Horrific Vision and Vision of N'Zoth, their damage, and their native periodic Insanity buffs. The target counter rolls over at the native upper threshold.
+### Shadow Insidious Ire
+
+Selected Insidious Ire earns its temporary channel bonus when one target has all three caster-owned Pain, Vampiric Touch and Madness effects. The window lasts until the earliest expiry and may be refreshed to a later earned deadline. Its amount comes from the selected native trait effect.
