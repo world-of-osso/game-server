@@ -26,6 +26,7 @@ fn native_huntmaster_earns_authentic_companion_from_real_beast_summons() {
     )>();
     let mut contributors = std::collections::BTreeSet::new();
     let mut companions = std::collections::BTreeSet::new();
+    let mut fenryrs = std::collections::BTreeSet::new();
     engage(&mut run);
     advance_combat_observed(&mut run, |run| {
         for (actor, summon, npc) in summons.iter(run.app.world()) {
@@ -58,6 +59,9 @@ fn native_huntmaster_earns_authentic_companion_from_real_beast_summons() {
                     summon.spell_id, crate::spell_cast::now(run.app.world()), owner_aura.expires_at, owner_aura.duration_ms
                 );
                 companions.insert(actor.to_bits());
+                if summon.spell_id == 459733 {
+                    fenryrs.insert(actor.to_bits());
+                }
             }
         }
     })
@@ -74,4 +78,31 @@ fn native_huntmaster_earns_authentic_companion_from_real_beast_summons() {
         "real beast summons must earn Fenryr or Hati: contributors={}",
         contributors.len()
     );
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    assert!(
+        events.iter().any(|event| event
+            .source
+            .is_some_and(|source| companions.contains(&source))
+            && event.target == Some(run.targets[0].to_bits())
+            && event.spell_id.is_none()
+            && matches!(
+                event.kind,
+                shared::protocol::CombatLogKind::Damage | shared::protocol::CombatLogKind::Miss(_)
+            )),
+        "actual Huntmaster companion must make white attacks against the actual primary"
+    );
+    if !fenryrs.is_empty() {
+        assert!(
+            events.iter().any(
+                |event| event.source.is_some_and(|source| fenryrs.contains(&source))
+                    && event.target == Some(run.targets[0].to_bits())
+                    && event.spell_id == Some(459753)
+            ),
+            "actual Fenryr must execute its native Ravenous Leap"
+        );
+    }
 }
