@@ -257,6 +257,17 @@ fn prepare_literal_reference(
     count: usize,
     identity: crate::followers::simulator::ParityActor,
 ) -> Result<Run, String> {
+    let mut run = spawn_literal_reference(profile, traits, count, identity)?;
+    preparation::consume_profile_food(&mut run)?;
+    Ok(run)
+}
+
+fn spawn_literal_reference(
+    profile: inputs::Profile,
+    traits: &[inputs::AllocatedTrait],
+    count: usize,
+    identity: crate::followers::simulator::ParityActor,
+) -> Result<Run, String> {
     let mut run = spawn_reference(profile, traits, count, identity)?;
     let encounter = crate::simc_apl_native::Encounter::Fixture {
         started_at: crate::spell_cast::now(run.app.world()),
@@ -264,7 +275,6 @@ fn prepare_literal_reference(
         style: crate::simc_apl_native::FightStyle::Patchwerk,
     };
     literal_rotation::capture_fixture(run.app.world_mut(), run.actor, encounter)?;
-    preparation::consume_profile_food(&mut run)?;
     Ok(run)
 }
 
@@ -307,7 +317,11 @@ fn prepare_measurement(spec_id: u32, count: usize) -> Result<Run, String> {
     let (profile, traits) = read_reference(spec_id)?;
     let identity = inputs::read_actor(&profile)?;
     if let Some(driver) = measurement_driver(spec_id, &identity) {
-        let mut run = prepare_literal_reference(profile, &traits, count, identity)?;
+        let mut run = spawn_literal_reference(profile, &traits, count, identity)?;
+        if spec_id == 64 {
+            frost_mage_rotation::configure_actor_reactions(run.app.world_mut(), run.actor)?;
+        }
+        preparation::consume_profile_food(&mut run)?;
         run.spec_driver = Some((driver.prepare)(&mut run)?);
         Ok(run)
     } else {

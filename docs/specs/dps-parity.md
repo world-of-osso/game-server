@@ -66,6 +66,8 @@ Native merged buff outcomes apply or clear the caster-owned aura after the hit b
 
 ### Frost Mage native Freezing and Shatter
 
+Frost player reaction clocks are configured before food setup advances native frames, so early passive Icicle acquisition keeps its actual reaction deadline.
+
 - Actual Frostbolt228597, Flurry228354 and Glacial Spike228600 damage adds the native1246769 Freezing counts to the caster-owned1221389 debuff. Selected Frostbite adds its native count on critical Frostbolt/Spike impacts. Each actual Ray tick adds one stack (`sc_mage.cpp3947/4055/4094–4095/4248/4304–4305/4995/7105–7127`).
 - Ice Lance228598 consumes up to native1246769 effect4 stacks from that mage's own recipient debuff and launches one native1246949 payload scaled by the consumed count. Remaining owned Freezing refreshes. Effect0 hits the primary once; selected Frostbite enables effect1 on secondary enemies only, with its native reduced-AoE cap (`sc_mage.cpp4324–4342/4428/7129–7181`). Ordinary Ice Lance snapshots native Fingers of Frost and Thermal Void at admission and retains them through its missile and228598 payload. Spend those buffs at execution. Earned Fingers pays the full native Shatter count without consuming recipient Freezing; earned Thermal doubles the count (`sc_mage.cpp4445–4473/7129–7170`).
 
