@@ -336,6 +336,10 @@ CLASS_SUMMON_POLICY_CHILDREN = (
     (428514, 428571), (428514, 428565), (428514, 434400),
     # SimC76f8118 sc_death_knight.cpp15401–15406: selected Unholy summon actions.
     (55090, 275430), (1247378, 1277098), (1256813, 1242294), (1256813, 1292072),
+    # SimC76f8118 sc_death_knight.cpp9027–9030/13108–13110/15414–15417:
+    # Apocalypse Now and Rider's Champion summon the actual four Horsemen.
+    (444040, 444248), (444040, 444251), (444040, 444252), (444040, 444254),
+    (444005, 444248), (444005, 444251), (444005, 444252), (444005, 444254),
 )
 CLASS_SUMMON_POLICY_VALUES = ','.join(f'({parent},{child})' for parent, child in CLASS_SUMMON_POLICY_CHILDREN)
 CLASS_SUMMON_ENTRIES = f"""WITH RECURSIVE policy_links(parent,child) AS (

@@ -13,6 +13,7 @@ const POWER_STRIKE: u32 = 121_817;
 const POWER_STRIKE_PROC: u32 = 129_914;
 const POWER_STRIKE_ENERGIZE: u32 = 121_283;
 const BLACKOUT_KICK: u32 = 100_784;
+const TIGER_PALM: u32 = 100_780;
 const MONK: u8 = 10;
 const TICK_FRAMES: usize = 15_000 / 50 + 2;
 
@@ -54,7 +55,12 @@ fn class_completeness_native_power_strike_casts_proc_each_tick() {
 fn class_completeness_native_power_strike_proc_adds_one_chi_on_a_melee_ability_once() {
     let mut final_chi = Vec::new();
     for proc_ready in [false, true] {
-        let ids = [POWER_STRIKE_PROC, POWER_STRIKE_ENERGIZE, BLACKOUT_KICK];
+        let ids = [
+            POWER_STRIKE_PROC,
+            POWER_STRIKE_ENERGIZE,
+            BLACKOUT_KICK,
+            TIGER_PALM,
+        ];
         let mut h = harness_with_native_enemy_dodge_reduction(Vec::new(), &ids, MONK).unwrap();
         let unit = h.caster;
         h.set_power(PowerType::Chi, 3.0);
@@ -70,7 +76,17 @@ fn class_completeness_native_power_strike_proc_adds_one_chi_on_a_melee_ability_o
                 },
             );
         }
+        // TDB spell_proc 129914 SpellFamilyMask0 0x400 (TC a352b1fa
+        // SpellMgr.cpp555–560): only Tiger Palm spends it, not Blackout Kick.
         h.cast_and_deliver(BLACKOUT_KICK, Some(h.npc));
+        h.advance(3);
+        assert_eq!(
+            has_proc(&h),
+            proc_ready,
+            "Blackout Kick is outside the family"
+        );
+        h.advance(30);
+        h.cast_and_deliver(TIGER_PALM, Some(h.npc));
         h.advance(3);
         assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
         final_chi.push(h.power(PowerType::Chi));
@@ -90,7 +106,7 @@ fn class_completeness_native_power_strike_proc_adds_one_chi_on_a_melee_ability_o
         }
         assert!(!has_proc(&h), "one-charge proc consumed by the ability");
         h.advance(30);
-        h.cast_and_deliver(BLACKOUT_KICK, Some(h.npc));
+        h.cast_and_deliver(TIGER_PALM, Some(h.npc));
         h.advance(3);
         assert_eq!(
             h.inbox

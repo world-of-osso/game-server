@@ -12,6 +12,10 @@ fn native_hunter_dire_command_actual_kills_spawn_authentic_beasts() {
         crate::spell_cast::scripts::script_effect_value(run.app.world(), run.actor, 385810, 1)
             as f32
             / 100.0;
+    let pet_damage =
+        crate::spell_cast::scripts::script_effect_value(run.app.world(), run.actor, 137015, 5)
+            as f32
+            / 100.0;
     let probability = f64::from(crate::spell_cast::scripts::script_effect_value(
         run.app.world(),
         run.actor,
@@ -103,23 +107,28 @@ fn native_hunter_dire_command_actual_kills_spawn_authentic_beasts() {
             }
             let mods = world.get::<crate::auras::AuraStatMods>(pet);
             let target_mods = world.get::<crate::auras::AuraStatMods>(run.targets[0]);
-            let base = ap / 3.5
-                * 2.0
-                * mods.map_or(1.0, |m| m.autoattack_damage_mult * m.damage_done(1))
-                * target_mods.map_or(1.0, |m| m.damage_taken(1))
-                * if world.get::<crate::hunter_pet::HunterPet>(pet).is_some()
-                    || summon.properties.control == SUMMON_CONTROL_PET
-                {
-                    world
-                        .get::<crate::auras::AuraStatMods>(run.actor)
-                        .unwrap()
-                        .pet_damage_mult
-                } else {
-                    world
-                        .get::<crate::auras::AuraStatMods>(run.actor)
-                        .unwrap()
-                        .guardian_damage_mult
-                };
+            let observed_pet_damage = world
+                .get::<crate::auras::ActiveAuras>(pet)
+                .and_then(|auras| auras.iter().find(|aura| aura.spell_id == 1284992))
+                .and_then(|aura| aura.effects.iter().find(|effect| effect.index == 0))
+                .map_or(1.0, |effect| 1.0 + effect.amount / 100.0);
+            let base =
+                ap / 3.5 * 2.0 * mods.map_or(1.0, |m| m.autoattack_damage_mult * m.damage_done(1))
+                    / observed_pet_damage
+                    * target_mods.map_or(1.0, |m| m.damage_taken(1))
+                    * if world.get::<crate::hunter_pet::HunterPet>(pet).is_some()
+                        || summon.properties.control == SUMMON_CONTROL_PET
+                    {
+                        world
+                            .get::<crate::auras::AuraStatMods>(run.actor)
+                            .unwrap()
+                            .pet_damage_mult
+                    } else {
+                        world
+                            .get::<crate::auras::AuraStatMods>(run.actor)
+                            .unwrap()
+                            .guardian_damage_mult
+                    };
             let pet_scaling = crate::level_scaling::UnitScaling::of(world, pet);
             let target_scaling = crate::level_scaling::UnitScaling::of(world, run.targets[0]);
             let armor = target_scaling.armor_against(
@@ -181,6 +190,15 @@ fn native_hunter_dire_command_actual_kills_spawn_authentic_beasts() {
             .iter()
             .all(|(hit, floor, _)| *hit as f32 >= (*floor * (1.0 + dire_frenzy)).floor()),
         "Dire Beast swings omit selected Dire Frenzy: {inherited_ap_hits:?}, bonus={dire_frenzy}"
+    );
+    // SimC76f8118 hunter.cpp1854–1856,1869,1880–1882: every real
+    // DireCritter also receives Pet Damage1284992, modified by selected BM.
+    assert!(pet_damage > 0.0);
+    assert!(
+        inherited_ap_hits.iter().all(|(hit, floor, _)| {
+            *hit as f32 >= (*floor * (1.0 + dire_frenzy) * (1.0 + pet_damage)).floor()
+        }),
+        "actual Dire Beast swings must include BM Pet Damage: bonus={pet_damage}, hits={inherited_ap_hits:?}"
     );
     let commands = run
         .app
