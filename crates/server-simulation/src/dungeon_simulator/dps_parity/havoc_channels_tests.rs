@@ -38,6 +38,45 @@ fn cast(run: &mut Run, spell: u32, self_target: bool) {
 
 #[test]
 #[ignore = "requires prepared native spec577 player profile"]
+fn diag_havoc_beam_tick_geometry() {
+    for count in [1, 3] {
+        for seed in [70_448, 1, 2] {
+            let _seed = crate::random::seed_scope(seed);
+            let mut run = prepare_measurement(577, count).unwrap();
+            run.app
+                .world_mut()
+                .init_resource::<crate::spell_cast::test_harness::ObservedTriggeredCasts>();
+            engage(&mut run);
+            let mut trigger_index = 0;
+            let mut event_index = 0;
+            let mut frames = Vec::new();
+            advance_combat_observed(&mut run, |run| {
+                let world = run.app.world();
+                let triggered = &world.resource::<crate::spell_cast::test_harness::ObservedTriggeredCasts>().0;
+                let events = &world.resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
+                let launches: Vec<_> = triggered[trigger_index..].iter().filter(|(caster, spell, _)| *caster == run.actor && matches!(*spell, 198030 | 1287949)).map(|(_, spell, _)| *spell).collect();
+                let relevant: Vec<_> = events[event_index..].iter().filter(|event| event.source == Some(run.actor.to_bits()) && ((event.kind == CombatLogKind::CastSuccess && matches!(event.spell_id, Some(198013 | 452497))) || (event.kind == CombatLogKind::Damage && matches!(event.spell_id, Some(198030 | 1287949))))).map(|event| json!({"kind": format!("{:?}", event.kind), "spell": event.spell_id, "target": event.target, "amount": event.amount, "crit": event.crit})).collect();
+                trigger_index = triggered.len();
+                event_index = events.len();
+                if launches.is_empty() && relevant.is_empty() { return; }
+                let position = |entity| crate::spell_cast::targets::position(world, entity).map(|p| [p.x, p.y, p.z]);
+                frames.push(json!({"at": crate::spell_cast::now(world), "actor": position(run.actor), "facing": crate::spell_cast::targets::orientation(world, run.actor), "targets": run.targets.iter().map(|&target| json!({"id": target.to_bits(), "position": position(target)})).collect::<Vec<_>>(), "launches": launches, "events": relevant}));
+            }).unwrap();
+            let path = inputs::directory()
+                .unwrap()
+                .join(format!("beam-geometry-{count}-{seed}.json"));
+            std::fs::write(&path, serde_json::to_string_pretty(&frames).unwrap()).unwrap();
+            eprintln!(
+                "beam diagnostic count={count} seed={seed} frames={} path={}",
+                frames.len(),
+                path.display()
+            );
+        }
+    }
+}
+
+#[test]
+#[ignore = "requires prepared native spec577 player profile"]
 fn havoc_fragment_pickup_requires_melee_and_records_last_used() {
     use server::simc_apl::Facts;
     use server::soul_fragments::{self, FragmentFilter, FragmentKind, PickupMode};
