@@ -54,7 +54,8 @@ fn native_huntmaster_earns_authentic_companion_from_real_beast_summons() {
                     .expect("source companion duration is finite");
                 assert!(
                     (expiry - owner_aura.expires_at.unwrap()).abs() < 0.002,
-                    "real companion lifetime follows native owner buff"
+                    "real companion lifetime follows native owner buff: actor={actor:?}, spell={}, now={}, companion_expiry={expiry}, buff_expiry={:?}, buff_duration_ms={}",
+                    summon.spell_id, crate::spell_cast::now(run.app.world()), owner_aura.expires_at, owner_aura.duration_ms
                 );
                 companions.insert(actor.to_bits());
             }
