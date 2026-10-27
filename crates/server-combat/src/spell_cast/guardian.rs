@@ -44,6 +44,16 @@ const GUARDIAN_POLICIES: &[GuardianPolicy] = &[
         owner_spell_share: None,
         owner_attack_share: Some(0.4664),
     },
+    // SimC76f8118 sc_death_knight.cpp4632–4680: the real Lord uses
+    // Necrotic Bolt with 0.7 of its owner's attack power in MID2.
+    GuardianPolicy {
+        summons: &[1292072],
+        entry: 264321,
+        spells: &[1297086],
+        repeat_gcd: None,
+        owner_spell_share: None,
+        owner_attack_share: Some(0.7),
+    },
     // SimC76f8118 sc_hunter.cpp1935: Dire Beast inherits live owner AP1.0.
     GuardianPolicy {
         summons: &[219199],
@@ -490,7 +500,8 @@ pub(super) fn initialize(world: &mut World, actor: Entity) {
     let summon = world.get::<SummonedCreature>(actor).unwrap();
     let root = summon.spell_id;
     let policy = policy(root, entry).filter(|_| {
-        root != 1242294 || entry != 163366 || crate::auras::has_aura(world, owner, 1296654)
+        !matches!((root, entry), (1242294, 163366) | (1292072, 264321))
+            || crate::auras::has_aura(world, owner, 1296654)
     });
     let spells = policy.map_or_else(
         || {
