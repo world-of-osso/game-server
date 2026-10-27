@@ -231,6 +231,25 @@ fn dk252_magus_bolt_inherits_owner_melee_power() {
 
 #[test]
 #[ignore = "requires private native252 profile/traits and player actor"]
+fn dk252_dark_transformation_tracks_the_transformed_pet_on_owner() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_measurement(252, 1).unwrap();
+    let pet = crate::hunter_pet::summoned_pet(run.app.world(), run.actor).unwrap();
+    engage(&mut run);
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(1233448, run.actor, None),
+    ).unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    assert!(crate::auras::has_aura(run.app.world(), pet, 1233448),
+        "native Dark Transformation must transform the actual controlled ghoul");
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, 1235391),
+        "the owner must track the actual transformed pet for the literal APL");
+}
+
+#[test]
+#[ignore = "requires private native252 profile/traits and player actor"]
 fn dk252_single_target_uses_dark_transformation_and_putrefy() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_measurement(252, 1).unwrap();
