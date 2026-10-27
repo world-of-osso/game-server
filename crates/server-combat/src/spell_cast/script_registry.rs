@@ -99,6 +99,7 @@
 //! - `AfterAuraApplication`: after successful aura storage and native apply/refresh callbacks.
 //! - `SummonInitialized`: after guardian initialization, receiving the actual spawned actor.
 //! - `SummonExpired`: at natural expiry, before the actual actor is despawned.
+//! - `GuardianActionEligible`: additive vetoes on a ready bound guardian action, before its cast.
 //! New stages own distinct callback/lookup aliases, even when signatures coincide.
 //! Within a stage, traverse module slices and entries from first to last. Never sort
 //! or deduplicate them. Adding a policy to an existing module changes only that module.
@@ -121,6 +122,8 @@ pub type SummonInitializedHook = fn(&mut World, Entity);
 /// Actual CombatStatus transitions, after native reference state is updated.
 pub type CombatStatusChangedHook = fn(&mut World, Entity, bool);
 pub type SummonExpiredHook = fn(&mut World, Entity);
+/// Actual guardian actor, its bound action and selected enemy.
+pub type GuardianActionEligibleHook = fn(&World, Entity, u32, Entity) -> bool;
 pub type AuraRedirectHook = fn(&mut World, Entity, Entity, u32, u8) -> bool;
 
 pub type AfterCastLookup = fn(u32) -> Option<AfterCastHook>;
@@ -277,6 +280,7 @@ pub enum SpellScriptHook {
     SummonInitialized(SummonInitializedHook),
     CombatStatusChanged(CombatStatusChangedHook),
     SummonExpired(SummonExpiredHook),
+    GuardianActionEligible(GuardianActionEligibleHook),
     EffectHit(EffectHitLookup),
     EffectHandler(EffectHandlerLookup),
     TargetFilter(TargetFilterHook),
@@ -1660,6 +1664,16 @@ pub fn named_healing_multiplier(world: &World, caster: Entity, spell: &SpellInfo
             _ => None,
         })
         .product()
+}
+
+pub fn guardian_action_eligible(world: &World, actor: Entity, spell: u32, target: Entity) -> bool {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .all(|hook| match hook {
+            SpellScriptHook::GuardianActionEligible(run) => run(world, actor, spell, target),
+            _ => true,
+        })
 }
 
 pub fn effect_enabled(world: &World, caster: Entity, spell: u32, index: u8) -> bool {

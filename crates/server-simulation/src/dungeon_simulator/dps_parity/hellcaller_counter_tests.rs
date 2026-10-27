@@ -329,3 +329,42 @@ fn hellcaller_seed_health_gate_collapses_to_one_then_stops() {
     assert_eq!(owned(&run, target, WITHER).unwrap(), (1, expiry));
     assert!(owned(&run, target, COLLAPSE).is_none());
 }
+
+fn elapsed(run: &Run) -> f64 {
+    run.app.world().resource::<Time>().elapsed_secs_f64()
+}
+
+#[test]
+#[ignore = "requires private265 native player inputs"]
+fn hellcaller_collapse_budget_raise_keeps_its_tick_clock() {
+    // SimC76f8118 warlock.cpp103–126 gives blackened_soul REFRESH ticks; buff.cpp2589
+    // restarts tick_event only for CLIP, so raising an active budget keeps its clock.
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(265, 1).unwrap();
+    engage(&mut run);
+    let target = run.targets[0];
+    let threshold = native_value(&run, SEEDS, 0) as u8;
+    apply_counter_state(&mut run, threshold - 1);
+    apply(&mut run, target, UA);
+    let started = elapsed(&run);
+    let budget = owned(&run, target, COLLAPSE)
+        .expect("Seeds threshold must start native collapse")
+        .0;
+    while elapsed(&run) < started + 0.5 {
+        run.app.update();
+    }
+    assert_eq!(blackened_hits(&run), 0, "no tick before the native period");
+    apply(&mut run, target, UA);
+    assert!(
+        owned(&run, target, COLLAPSE).unwrap().0 > budget,
+        "actual UA must raise the active collapse budget"
+    );
+    while blackened_hits(&run) == 0 && elapsed(&run) < started + 2.0 {
+        run.app.update();
+    }
+    let first = elapsed(&run) - started;
+    assert!(
+        first < 1.25,
+        "a raised collapse must tick on its original1s clock; first tick after {first:.2}s"
+    );
+}
