@@ -334,6 +334,9 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 ### Havoc literal rotation
 
+- Selected Isolated Prey388113 increases native Eye Beam and Gaze child damage by its effect1 percentage when exactly one enemy is resolved; it guarantees Immolation Aura initial and periodic child critical hits under the same condition (SimC76f8118 `sc_demon_hunter.cpp`3939–3946,4651–4670,4705–4717,4799–4810).
+- Landed direct Demon Hunter damage applies native Chaos Brand1490 to each affected enemy after the triggering impact; its native aura increases magic damage taken (SimC76f8118 `sc_demon_hunter.cpp`2452–2457,2594–2605).
+
 - Never Say Die427794's native periodic driver enables its effect0 damage percentage on effects3/4 when health reaches effect2's threshold. Preserve the pinned source's below-threshold behavior: an already-active damage bonus is not expired by that branch (SimC76f8118 `sc_demon_hunter.cpp`2197–2199,10044–10066).
 
 - Earned Serrated Glaive390155 supplies selected talent390154's effect0 percentage to its native spell modifier; the buff's class mask and lifetime still determine which real actions benefit (SimC76f8118 `sc_demon_hunter.cpp`2195–2196,7534–7539).
