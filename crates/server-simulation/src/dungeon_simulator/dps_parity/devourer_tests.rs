@@ -45,10 +45,20 @@ fn devourer_void_ray_produces_native_tick_damage() {
 fn devourer_rotation_casts_hungering_slash_and_reapers_toll() {
     let report = measure_seed(1480, 1, 70448).expect("real Devourer 300s rotation");
     let actions = report["combat"]["actions"].as_array().unwrap();
-    let counts: Vec<_> = [1239123, 1245470].into_iter().map(|spell| {
-        actions.iter().find(|a| a["spell_id"] == spell).and_then(|a| a["count"].as_u64()).unwrap_or(0)
-    }).collect();
-    assert!(counts.iter().all(|&count| count > 0), "rotation casts Hungering Slash and Reaper's Toll: {counts:?}");
+    let counts: Vec<_> = [1239123, 1245470]
+        .into_iter()
+        .map(|spell| {
+            actions
+                .iter()
+                .find(|a| a["spell_id"] == spell)
+                .and_then(|a| a["count"].as_u64())
+                .unwrap_or(0)
+        })
+        .collect();
+    assert!(
+        counts.iter().all(|&count| count > 0),
+        "rotation casts Hungering Slash and Reaper's Toll: {counts:?}"
+    );
 }
 
 #[test]

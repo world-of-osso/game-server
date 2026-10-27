@@ -367,7 +367,13 @@ fn pillar_applied(world: &mut World, unit: Entity, aura: &auras::AuraInstance) {
     }
     // SimC76f8118 sc_death_knight.cpp7151–7158/16942–16970 uses Pillar
     // for strength but does not parse its direct damage modifier for Frost.
-    assert!(auras::set_effect_amount(world, unit, aura.instance_id, 4, 0.0));
+    assert!(auras::set_effect_amount(
+        world,
+        unit,
+        aura.instance_id,
+        4,
+        0.0
+    ));
 }
 
 fn winter_ended(
@@ -407,20 +413,33 @@ fn breath_ended(
 }
 
 fn frost_fever_brittle(world: &mut World, ctx: &spell_cast::effects::EffectCtx, target: Entity) {
-    if ctx.spell.id != 55095 || !is_frost(world, ctx.caster)
-        || !auras::has_aura(world, ctx.caster, 374504) {
+    if ctx.spell.id != 55095
+        || !is_frost(world, ctx.caster)
+        || !auras::has_aura(world, ctx.caster, 374504)
+    {
         return;
     }
-    let chance = world.resource::<SpellStore>().get(374504)
-        .and_then(|spell| spell.aura_options.as_ref()).expect("Brittle has native proc chance").proc_chance;
+    let chance = world
+        .resource::<SpellStore>()
+        .get(374504)
+        .and_then(|spell| spell.aura_options.as_ref())
+        .expect("Brittle has native proc chance")
+        .proc_chance;
     // SimC76f8118 sc_death_knight.cpp7814–7822: each actual disease tick rolls Brittle.
     if random::random::<f32>() * 100.0 < chance as f32
-        && !spell_cast::try_cast_triggered(world, ctx.caster, 374557, Some(target), 1) {
+        && !spell_cast::try_cast_triggered(world, ctx.caster, 374557, Some(target), 1)
+    {
         warn!(caster = ?ctx.caster, ?target, "Native Brittle debuff refused");
     }
 }
 
-fn glacial_advance_razorice(world: &mut World, ctx: &spell_cast::effects::EffectCtx, target: Entity, _: bool, damage: f32) {
+fn glacial_advance_razorice(
+    world: &mut World,
+    ctx: &spell_cast::effects::EffectCtx,
+    target: Entity,
+    _: bool,
+    damage: f32,
+) {
     if ctx.spell.id != 195975 || damage <= 0.0 || !is_frost(world, ctx.caster) {
         return;
     }

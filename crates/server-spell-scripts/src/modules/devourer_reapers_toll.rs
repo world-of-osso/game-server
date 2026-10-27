@@ -10,7 +10,9 @@ use shared::components::ActiveSpec;
 pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::AfterNativeLaunch(after_launch)];
 
 fn after_launch(world: &mut World, caster: Entity, spell: &SpellInfo) {
-    if !matches!(spell.id, 1239123 | 1245470) || world.get::<ActiveSpec>(caster).map(|spec| spec.0) != Some(1480) {
+    if !matches!(spell.id, 1239123 | 1245470)
+        || world.get::<ActiveSpec>(caster).map(|spec| spec.0) != Some(1480)
+    {
         return;
     }
     // SimC76f8118 cpp6742–6744 executes the native Fury child on the parent.
