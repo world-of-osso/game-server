@@ -38,6 +38,19 @@ fn cast(run: &mut Run, spell: u32, self_target: bool) {
 
 #[test]
 #[ignore = "requires prepared native spec577 player profile"]
+fn havoc_rotation_immolation_aura_deals_initial_damage() {
+    let report = super::measure_seed(577, 1, 70_448).expect("real Havoc 300s rotation");
+    let actions = report["combat"]["actions"].as_array().unwrap();
+    assert!(
+        actions.iter().any(
+            |action| action["spell_id"] == 258921 && action["damage"].as_u64().unwrap_or(0) > 0
+        ),
+        "actual Immolation Aura casts must deal initial damage: {actions:?}"
+    );
+}
+
+#[test]
+#[ignore = "requires prepared native spec577 player profile"]
 fn havoc_damage_applies_chaos_brand_to_actual_targets() {
     let _seed = crate::random::seed_scope(70_448);
     let mut run = prepare_literal(577, 3).unwrap();
