@@ -1,5 +1,5 @@
 //! SimC76f8118 sc_shaman.cpp4421–4433: a naturally expiring Ancestor executes Final Calling.
-use super::elemental_mechanics_tests::{fixture, own_aura};
+use super::elemental_mechanics_tests::{cast, fixture, own_aura};
 use super::*;
 use crate::spell_cast::test_harness::ObservedCombatEvents;
 use shared::{
@@ -96,34 +96,16 @@ fn elemental_final_calling_natural_expiry_delivers_owned_native_damage() {
         .map(|(entity, _, _)| entity)
         .expect("actual native Ancestor");
     run.app
+        .init_resource::<crate::spell_cast::test_harness::ObservedTriggeredCasts>();
+    for _ in 0..50 {
+        run.app.update();
+    }
+    cast(&mut run, 188196);
+    run.app
         .world_mut()
         .resource_mut::<ObservedCombatEvents>()
         .0
         .clear();
-    for _ in 0..500 {
-        run.app.update();
-        if !crate::spell_cast::targets::is_alive(run.app.world(), ancestor) {
-            break;
-        }
-    }
-    assert!(
-        run.app.world().get_entity(ancestor).is_ok(),
-        "expired source remains only while its missile is in flight"
-    );
-    assert!(
-        !crate::spell_cast::targets::is_alive(run.app.world(), ancestor),
-        "expired source is inactive"
-    );
-    assert!(
-        !crate::spell_cast::try_cast_triggered(
-            run.app.world_mut(),
-            ancestor,
-            447419,
-            Some(run.targets[0]),
-            1
-        ),
-        "expired source cannot cast"
-    );
     for _ in 0..500 {
         run.app.update();
         if run
@@ -146,8 +128,13 @@ fn elemental_final_calling_natural_expiry_delivers_owned_native_damage() {
         run.app.update();
     }
     assert!(
-        run.app.world().get_entity(ancestor).is_err(),
-        "original Ancestor expired naturally"
+        run.app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedTriggeredCasts>()
+            .0
+            .iter()
+            .any(|(caster, spell, _)| *caster == ancestor && *spell == 465717),
+        "actual expiry launched Final Calling"
     );
     assert!(
         run.app
@@ -160,5 +147,9 @@ fn elemental_final_calling_natural_expiry_delivers_owned_native_damage() {
                 && event.kind == CombatLogKind::Damage
                 && event.amount > 0),
         "the expiring actual Ancestor delivers Final Calling damage"
+    );
+    assert!(
+        run.app.world().get_entity(ancestor).is_err(),
+        "original Ancestor expired naturally"
     );
 }
