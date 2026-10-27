@@ -1148,6 +1148,25 @@ fn frost_winter_tick_pillar_only_changes_attack_power() {
 }
 
 #[test]
+#[ignore = "diagnostic actual Torrent hit factor capture"]
+fn diag_frost_torrent_hit_factors() {
+    use crate::spell_cast::effects::factor_capture::FactorCapture;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::super::prepare_measurement(251, 1).unwrap();
+    run.app.insert_resource(FactorCapture::new(run.actor, run.targets[0], 439539, "icy_death_torrent", 30));
+    super::super::engage(&mut run);
+    for _ in 0..1200 {
+        super::super::drive_player(&mut run).unwrap();
+        run.app.update();
+        if run.app.world().resource::<FactorCapture>().export()["captured_hits"].as_u64().unwrap() >= 30 { break; }
+    }
+    let capture = run.app.world().resource::<FactorCapture>().export();
+    assert!(capture["captured_hits"].as_u64().unwrap() > 0);
+    let output = std::path::PathBuf::from(std::env::var("DPS_PARITY_OUTPUT").unwrap());
+    std::fs::write(output.join("251.torrent-factors.json"), serde_json::to_vec_pretty(&capture).unwrap()).unwrap();
+}
+
+#[test]
 #[ignore = "diagnostic actual Winter tick factor capture"]
 fn diag_frost_winter_tick_factors() {
     use crate::spell_cast::effects::factor_capture::FactorCapture;
