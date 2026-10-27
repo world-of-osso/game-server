@@ -17,6 +17,18 @@ pub(super) struct Rotation {
     encounter: Encounter,
 }
 
+pub(super) fn configure_actor_reactions(world: &mut World, actor: Entity) -> Result<(), String> {
+    // Pinned 1480 reference reaction fields; player.cpp1017–1020.
+    let settings = crate::simc_apl_native::reaction::ReactionSettings {
+        mean: 0.25,
+        stddev: 0.05,
+        offset: 0.1,
+        nu: 0.15,
+        maximum: 1.4,
+    };
+    crate::simc_apl_native::reaction::configure(world, actor, settings, &[1217607, 1256302])
+}
+
 fn load_program() -> Result<Program, String> {
     let rows = include_str!("devourer_rotation/76f8118.simc")
         .lines()
