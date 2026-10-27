@@ -666,9 +666,6 @@ fn advance_combat_observed(
 }
 
 fn drive_player(run: &mut Run) -> Result<(), String> {
-    if melee_return::blocks_actions(run.app.world(), run.actor) {
-        return Ok(());
-    }
     if let Some(driver) = &mut run.spec_driver {
         driver.drive(run.app.world_mut(), run.actor, &run.targets)?;
     }

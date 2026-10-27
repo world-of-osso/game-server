@@ -987,7 +987,7 @@ pub(crate) fn is_channeled(spell: &SpellInfo) -> bool {
 }
 
 /// Preserve native flags while allowing a selected script to require a real channel.
-pub(crate) fn is_channeled_for_actor(world: &World, caster: Entity, spell: &SpellInfo) -> bool {
+pub fn is_channeled_for_actor(world: &World, caster: Entity, spell: &SpellInfo) -> bool {
     is_channeled(spell) || script_registry::scripted_channel(world, caster, spell)
 }
 
@@ -1938,6 +1938,7 @@ enum StartCheck {
     Native,
     ResourceMax(PowerType),
     IgnoreCastInProgress,
+    IgnoreRange,
     ChannelDecision,
     TankHealCapability,
     HealerDecision,
@@ -1966,6 +1967,17 @@ pub fn read_native_cast_start(
     target: Entity,
 ) -> Result<Option<Entity>, CastFailure> {
     validate_start(world, caster, spell, Some(target), false)
+}
+
+/// Read all native start checks except maximum target range, without casting.
+/// Fixture controllers use this only to decide whether an out-of-range action waits.
+pub fn read_native_cast_without_max_range(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    target: Entity,
+) -> Result<Option<Entity>, CastFailure> {
+    validate_start_with_policy(world, caster, spell, Some(target), StartCheck::IgnoreRange)
 }
 
 /// SimC76f8118 dot.cpp732/984–990: ask whether an action is ready after
@@ -2128,7 +2140,11 @@ fn validate_start_with_policy(
     teleport::check_destination(world, caster, spell)?;
     let casting_blocks_start =
         world.get::<CastState>(caster).is_some() && !allows_cast_while_casting(spell);
-    if matches!(check, StartCheck::Native | StartCheck::ResourceMax(_)) && casting_blocks_start {
+    if matches!(
+        check,
+        StartCheck::Native | StartCheck::ResourceMax(_) | StartCheck::IgnoreRange
+    ) && casting_blocks_start
+    {
         return Err(CastFailure::InProgress);
     }
     validate_history(world, caster, spell, check)?;
@@ -2147,7 +2163,14 @@ fn validate_start_with_policy(
             "implicit target {id} not supported"
         )));
     }
-    let target = validate_target(world, caster, spell, explicit, Sight::Start)?;
+    let target = validate_target_with_max_range(
+        world,
+        caster,
+        spell,
+        explicit,
+        Sight::Start,
+        check != StartCheck::IgnoreRange,
+    )?;
     aura_spell_restrictions::check_target(world, caster, target, spell)?;
     toy_facing::check_cast(world, caster, spell.id, target)?;
     crate::hunter_pet::check_cast(world, caster, spell, target)?;
@@ -2291,6 +2314,17 @@ pub fn validate_target(
     explicit: Option<Entity>,
     sight: Sight,
 ) -> Result<Option<Entity>, CastFailure> {
+    validate_target_with_max_range(world, caster, spell, explicit, sight, true)
+}
+
+fn validate_target_with_max_range(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    explicit: Option<Entity>,
+    sight: Sight,
+    check_max_range: bool,
+) -> Result<Option<Entity>, CastFailure> {
     // Source51640 owns an implicit corpse-area selection, not the player's selection.
     if spell.id == toy_flag::TARGETING {
         return Ok(None);
@@ -2387,7 +2421,7 @@ pub fn validate_target(
         let (min, max) = targets::spell_range(spell, targets::is_hostile(world, caster, target));
         let max = modify(world, caster, spell, SpellModOp::Range, max);
         let distance = from.distance(to);
-        if distance > max {
+        if check_max_range && distance > max {
             return Err(CastFailure::OutOfRange);
         }
         if distance < min {
