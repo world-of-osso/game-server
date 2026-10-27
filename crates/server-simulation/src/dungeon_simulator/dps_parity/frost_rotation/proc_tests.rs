@@ -1694,6 +1694,7 @@ fn frost_dark_talons_from_earned_rime_increases_icy_talons() {
         earn_rime(&mut run);
         cast(&mut run, 49184);
         if auras::has_aura(run.app.world(), run.actor, 443595) {
+            assert!(auras::has_aura(run.app.world(), run.actor, 443586), "Icy Talons must earn Dark Talons Shadowfrost");
             let aura = run.app.world().get::<ActiveAuras>(run.actor).unwrap().iter()
                 .find(|aura| aura.spell_id == 194879 && aura.caster == run.actor).unwrap();
             assert!(aura.stacks > 3 && aura.max_stacks >= 6,

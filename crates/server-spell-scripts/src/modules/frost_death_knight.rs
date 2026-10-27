@@ -410,6 +410,7 @@ fn extend_winter_for_runes(world: &mut World, caster: Entity, spell: &SpellInfo)
 fn register_frost_auras(scripts: &mut auras::scripts::AuraScripts) {
     scripts.0.entry(PILLAR).or_default().on_apply = Some(pillar_applied);
     scripts.0.entry(443595).or_default().on_remove = Some(dark_talons_ended);
+    scripts.0.entry(194879).or_default().on_apply = Some(icy_talons_started);
     scripts.0.entry(194879).or_default().on_remove = Some(icy_talons_ended);
     scripts.0.entry(1249658).or_default().on_remove = Some(breath_ended);
     for winter in [196770, 1233152] {
@@ -739,8 +740,14 @@ fn dark_talons_ended(world: &mut World, unit: Entity, aura: &auras::AuraInstance
     }
 }
 
+fn icy_talons_started(world: &mut World, unit: Entity, aura: &auras::AuraInstance) {
+    if auras::has_aura(world, aura.caster, 436687) {
+        spell_cast::cast_triggered(world, aura.caster, 443586, Some(unit), 1);
+    }
+}
+
 fn icy_talons_ended(world: &mut World, unit: Entity, aura: &auras::AuraInstance, _: auras::RemoveReason) {
-    auras::remove_auras(world, unit, auras::RemoveReason::Consumed, |a| a.spell_id == 443595 && a.caster == aura.caster);
+    auras::remove_auras(world, unit, auras::RemoveReason::Consumed, |a| matches!(a.spell_id, 443595 | 443586) && a.caster == aura.caster);
 }
 
 fn extend_breath(world: &mut World, caster: Entity, spent: u8) {
