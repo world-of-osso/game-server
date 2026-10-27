@@ -33,14 +33,19 @@ fn devourer_metamorphosis_drains_fury_over_time() {
     engage(&mut run);
     enter_metamorphosis(&mut run);
     let initial = crate::spell_cast::powers::power_value(run.app.world(), actor, PowerType::Fury)
-        .unwrap().0;
+        .unwrap()
+        .0;
     // SimC76f8118 sc_demon_hunter.cpp1424–1478,12462–12500: events drain Fury.
     for _ in 0..40 {
         run.app.update();
     }
     let after = crate::spell_cast::powers::power_value(run.app.world(), actor, PowerType::Fury)
-        .unwrap().0;
-    assert!(after < initial, "Void Metamorphosis must drain Fury: {initial} -> {after}");
+        .unwrap()
+        .0;
+    assert!(
+        after < initial,
+        "Void Metamorphosis must drain Fury: {initial} -> {after}"
+    );
 }
 
 #[test]

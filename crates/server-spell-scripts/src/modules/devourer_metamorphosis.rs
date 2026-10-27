@@ -1,10 +1,12 @@
 //! Source-qualified Devourer Metamorphosis entry.
 use super::combat;
 use bevy::prelude::*;
+use combat::auras::scripts::{AuraScript, AuraScripts};
 use combat::auras::{self, ActiveAuras, AuraInstance, RemoveReason};
 use combat::class_progression::KnownSpells;
-use combat::auras::scripts::{AuraScript, AuraScripts};
-use combat::spell_cast::{self, powers, script_registry::SpellScriptHook, scripts::script_effect_value};
+use combat::spell_cast::{
+    self, powers, script_registry::SpellScriptHook, scripts::script_effect_value,
+};
 use shared::casting::{CastState, CastType};
 use shared::components::{ActiveSpec, CombatStatus, PowerType};
 
@@ -52,12 +54,23 @@ fn drain_interval(world: &World, unit: Entity, stacks: u64) -> f64 {
     let amount = -f64::from(script_effect_value(world, unit, VOID_BUILDUP, 0));
     assert!(amount > 0.0, "Void Buildup must spend native Fury");
     let mut rate = 15.0 + 1.40 * (0.0775 * stacks as f64).exp();
-    if world.get::<KnownSpells>(unit).is_some_and(|known| known.contains(SOUL_GLUTTON)) {
+    if world
+        .get::<KnownSpells>(unit)
+        .is_some_and(|known| known.contains(SOUL_GLUTTON))
+    {
         rate /= 1.0 + f64::from(script_effect_value(world, unit, SOUL_GLUTTON, 1)) / 100.0;
     }
-    let stunned = world.get::<ActiveAuras>(unit).is_some_and(ActiveAuras::is_stunned);
-    let out_of_combat = !world.get::<CombatStatus>(unit).is_some_and(|status| status.0);
-    if out_of_combat || stunned || auras::has_aura(world, unit, VOIDRUSH) || is_protected_cast(world, unit) {
+    let stunned = world
+        .get::<ActiveAuras>(unit)
+        .is_some_and(ActiveAuras::is_stunned);
+    let out_of_combat = !world
+        .get::<CombatStatus>(unit)
+        .is_some_and(|status| status.0);
+    if out_of_combat
+        || stunned
+        || auras::has_aura(world, unit, VOIDRUSH)
+        || is_protected_cast(world, unit)
+    {
         rate *= 0.1;
     }
     if stacks < 1 {
@@ -75,7 +88,10 @@ fn is_protected_cast(world: &World, unit: Entity) -> bool {
 
 fn update_drain(world: &mut World) {
     let now = spell_cast::now(world);
-    let units: Vec<_> = world.query_filtered::<Entity, With<DrainDeadline>>().iter(world).collect();
+    let units: Vec<_> = world
+        .query_filtered::<Entity, With<DrainDeadline>>()
+        .iter(world)
+        .collect();
     for unit in units {
         while let Some(deadline) = world.get::<DrainDeadline>(unit).map(|pending| pending.0) {
             if !auras::has_aura(world, unit, META) {
@@ -91,15 +107,21 @@ fn update_drain(world: &mut World) {
             powers::change_power(world, unit, PowerType::Fury, amount)
                 .expect("Devourer Meta requires Fury pool");
             let fury = powers::power_value(world, unit, PowerType::Fury)
-                .expect("Devourer Meta requires Fury pool").0;
+                .expect("Devourer Meta requires Fury pool")
+                .0;
             if fury <= 0.0 && !is_protected_cast(world, unit) {
-                auras::remove_auras(world, unit, RemoveReason::Expired, |aura| aura.spell_id == META && aura.caster == unit);
+                auras::remove_auras(world, unit, RemoveReason::Expired, |aura| {
+                    aura.spell_id == META && aura.caster == unit
+                });
                 world.entity_mut(unit).remove::<DrainDeadline>();
                 break;
             }
             let stacks = auras::paid_periodic_ticks(world, unit, unit, META);
             let next = deadline + drain_interval(world, unit, stacks);
-            world.get_mut::<DrainDeadline>(unit).expect("active drain").0 = next;
+            world
+                .get_mut::<DrainDeadline>(unit)
+                .expect("active drain")
+                .0 = next;
         }
     }
 }
