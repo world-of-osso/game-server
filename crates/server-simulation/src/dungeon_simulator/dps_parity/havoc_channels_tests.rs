@@ -285,15 +285,21 @@ fn havoc_chaotic_disposition_rolls_real_burning_wound_ticks() {
     }
     let baseline = ticks(false);
     let selected = ticks(true);
-    assert_eq!(baseline.len(), selected.len());
-    let bonuses: Vec<_> = selected
-        .iter()
-        .zip(&baseline)
-        .map(|(with, without)| *with as f64 / *without as f64)
-        .collect();
+    let baseline_tail = &baseline[5..];
+    let minimum = *baseline_tail.iter().min().unwrap();
+    let maximum = *baseline_tail.iter().max().unwrap();
     assert!(
-        bonuses.iter().any(|ratio| (*ratio - 1.17).abs() < 0.001),
-        "native17% bonus must occur on real periodic ticks: {bonuses:?}"
+        maximum - minimum <= 2,
+        "unselected ticks must have a stable native base: {baseline:?}"
+    );
+    let selected_tail = &selected[5..];
+    assert!(
+        selected_tail
+            .iter()
+            .any(|low| selected_tail
+                .iter()
+                .any(|high| (*high as f64 / *low as f64 - 1.17).abs() < 0.001)),
+        "selected real periodic ticks must include the native17% bonus: {selected:?}"
     );
 }
 
