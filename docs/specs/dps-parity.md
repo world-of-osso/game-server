@@ -334,6 +334,9 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 ### Havoc literal rotation
 
+- Immolation Aura258920 deals native initial damage258921 on each in-combat application or refresh. The precombat fixture does not emit its initial hit. Selected Undying Embers1272405 rolls native effect0 on natural expiry and, after 300ms, reapplies the aura without a cast or resource grant (SimC76f8118 `sc_demon_hunter.cpp`8927–8954,8980–9040).
+- Completed Eye Beam/Gaze with selected Final Breath1266500 emits one additional native child tick scaled by the talent's effect0; interruptions do not emit it (SimC76f8118 `sc_demon_hunter.cpp`3285–3327).
+
 - Selected Isolated Prey388113 increases native Eye Beam and Gaze child damage by its effect1 percentage when exactly one enemy is resolved; it guarantees Immolation Aura initial and periodic child critical hits under the same condition (SimC76f8118 `sc_demon_hunter.cpp`3939–3946,4651–4670,4705–4717,4799–4810).
 - Landed direct Demon Hunter damage applies native Chaos Brand1490 to each affected enemy after the triggering impact; its native aura increases magic damage taken (SimC76f8118 `sc_demon_hunter.cpp`2452–2457,2594–2605).
 

@@ -9,6 +9,33 @@ const GAZE: u32 = 452497;
 const EYE_BEAM_DAMAGE: u32 = 198030;
 const EYE_BEAM_RANK: u32 = 320415;
 
+// SimC76f8118 sc_demon_hunter.cpp3285–3327: a completed channel
+// snapshots one more actual tick, scaled by the selected native talent.
+pub(crate) fn finish_final_breath(world: &mut World, caster: Entity) {
+    if !super::has_talent(world, caster, 1266500) {
+        return;
+    }
+    let child = if combat::auras::has_aura(world, caster, 1271144) {
+        1287949
+    } else {
+        EYE_BEAM_DAMAGE
+    };
+    let multiplier = spell_cast::scripts::script_effect_value(world, caster, 1266500, 0) / 100.0;
+    if !spell_cast::cast_triggered_with_overrides(
+        world,
+        caster,
+        child,
+        None,
+        1,
+        spell_cast::TriggeredSpellOverrides {
+            damage_multiplier: Some(multiplier),
+            ..Default::default()
+        },
+    ) {
+        error!(?caster, child, "Final Breath native child refused");
+    }
+}
+
 pub(super) fn periodic_trigger(spell: u32, index: u8) -> Option<ContextHitHook> {
     (matches!(spell, EYE_BEAM | GAZE) && index == 0).then_some(cast_tick)
 }
