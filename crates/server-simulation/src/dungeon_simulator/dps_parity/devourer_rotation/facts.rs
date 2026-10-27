@@ -14,6 +14,11 @@ pub(super) struct DevourerFacts<'a> {
 
 impl Facts for DevourerFacts<'_> {
     fn value(&self, name: &str) -> Result<f64, String> {
+        if name == "buff.vengeful_retreat_movement.up" {
+            return Ok(f64::from(
+                retreat_movement_active(self.world, self.actor) as u8
+            ));
+        }
         if name == "active_dot.soul_immolation" {
             // SimC76f8118 sc_demon_hunter.cpp5930–5958: Soul Immolation is a self heal-over-time.
             return Ok(f64::from(
@@ -44,6 +49,32 @@ impl Facts for DevourerFacts<'_> {
     }
 }
 
+fn retreat_movement_active(world: &World, actor: Entity) -> bool {
+    let Some(history) = world.get::<crate::spell_cast::SpellHistory>(actor) else {
+        return false;
+    };
+    let Some(start) = history.last_successful_cast_at(198793) else {
+        return false;
+    };
+    // SimC76f8118 cpp8619,9980–9981 uses the native retreat duration;
+    // cpp5548–5552 cancels the movement when The Hunt executes.
+    if [1246167, 1259431].into_iter().any(|spell| {
+        history
+            .last_successful_cast_at(spell)
+            .is_some_and(|at| at > start)
+    }) {
+        return false;
+    }
+    let duration = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(198793)
+        .and_then(|spell| spell.misc.as_ref())
+        .and_then(|misc| misc.duration.as_ref())
+        .expect("native Vengeful Retreat duration")
+        .duration_ms;
+    crate::spell_cast::now(world) < start + f64::from(duration) / 1000.0
+}
+
 impl ActionFacts for DevourerFacts<'_> {
     fn target_ids(&self, action: &Action) -> Result<Vec<u64>, String> {
         self.native.target_ids(action)
@@ -53,6 +84,7 @@ impl ActionFacts for DevourerFacts<'_> {
     }
     fn value_for(&self, action: &Action, name: &str) -> Result<f64, String> {
         if name.starts_with("trinket.")
+            || name == "buff.vengeful_retreat_movement.up"
             || name == "active_dot.soul_immolation"
             || name == "soul_fragments"
             || name == "action.reap.souls_consumed"
