@@ -108,6 +108,32 @@ fn dk252_real_lesser_ghoul_summon_reaches_and_melees() {
 }
 
 #[test]
+#[ignore = "requires native252 profile/traits and player actor"]
+fn dk252_scourge_ghoul_reduces_putrefy_recharge() {
+    use crate::simc_apl_native::{Bindings, Encounter, FightStyle, NativeFacts};
+    use server::simc_apl::Facts;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 1).unwrap();
+    engage(&mut run);
+    literal_rotation::execution::execute(run.app.world_mut(), run.actor,
+        literal_rotation::execution::Execution::Spell(1247378, run.targets[0], Some(run.targets[0]))).unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    crate::auras::apply_aura(run.app.world_mut(), &crate::auras::AuraApplication {
+        caster: run.actor, target: run.actor, spell_id: 1254252, effect_mask: 3,
+        source: crate::auras::AuraSource::Cast,
+    });
+    let bindings = Bindings { actions: [("putrefy".into(), 1247378)].into(), ..Default::default() };
+    let encounter = Encounter::Fixture { started_at: 0.0, duration: 300.0, style: FightStyle::Patchwerk };
+    let read = |run: &Run| NativeFacts::new(run.app.world(), run.actor, &bindings, encounter, 1)
+        .value("cooldown.putrefy.full_recharge_time").unwrap();
+    let before = read(&run);
+    literal_rotation::execution::execute(run.app.world_mut(), run.actor,
+        literal_rotation::execution::Execution::Spell(55090, run.targets[0], Some(run.targets[0]))).unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    assert!(read(&run) < before - 2.0, "earned ghoul must reduce Putrefy recharge");
+}
+
+#[test]
 #[ignore = "requires private native252 profile/traits and player actor"]
 fn dk252_lesser_ghoul_melee_inherits_live_owner_attack_power() {
     let _seed = crate::random::seed_scope(70448);
