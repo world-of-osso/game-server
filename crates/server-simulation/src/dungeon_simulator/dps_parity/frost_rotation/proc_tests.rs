@@ -399,6 +399,35 @@ fn frost_earned_rune_refill_preserves_regeneration() {
 }
 
 #[test]
+#[ignore = "diagnostic Frost oracle-aligned actual spell factors"]
+fn diag_frost_oracle_aligned_factors() {
+    use super::super::single_spell::{SpellProbe, capture_cast};
+    let output = std::path::PathBuf::from(std::env::var("DPS_PARITY_OUTPUT").unwrap());
+    for (root, focus, label, pillar) in [
+        (49020, 1264082, "obliterate_frost", true),
+        (49184, 49184, "howling_blast", false),
+    ] {
+        let _seed = crate::random::seed_scope(70448);
+        let mut run = super::super::prepare_literal(251, 1).unwrap();
+        super::super::engage(&mut run);
+        if pillar {
+            let actor = run.actor;
+            super::super::enhancement_generation_tests::cast(&mut run, 51271, actor);
+        }
+        let receipt = capture_cast(&mut run, &SpellProbe {
+            spec: 251,
+            spell: root,
+            damage_spell: focus,
+            action: if root == 49020 { "obliterate" } else { "howling_blast" },
+            ticks: 1,
+        }).unwrap();
+        assert_eq!(receipt["captured_hits"], 1);
+        std::fs::write(output.join(format!("251.oracle-aligned.{label}.json")),
+            serde_json::to_vec_pretty(&receipt).unwrap()).unwrap();
+    }
+}
+
+#[test]
 #[ignore = "diagnostic Frost native 300s factors and resource changes"]
 fn diag_frost_factors_and_resource_spending() {
     use crate::spell_cast::effects::factor_capture::FactorCapture;
