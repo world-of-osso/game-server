@@ -16,6 +16,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::OwnsPolicyProc(owns_proc),
     SpellScriptHook::AfterQueuedTriggers(begin_combat),
     SpellScriptHook::AfterElementalLaunch(after_launch),
+    SpellScriptHook::TargetDamageMultiplier(pack_mentality::command_damage_multiplier),
     SpellScriptHook::EarlyAuraRegistration(register),
     SpellScriptHook::TargetPlan(target_plan),
 ];
