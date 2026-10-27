@@ -34,6 +34,7 @@ fn shared_fixture_displacement_preserves_unowned_movement_without_melee_intent()
 fn havoc_retreat_returns_during_movable_eye_beam() {
     let _seed = crate::random::seed_scope(70_448);
     let mut run = prepare_literal(577, 1).unwrap();
+    havoc_tests::earn_havoc_fury(&mut run, 30.0);
     havoc_tests::start_havoc_swings(&mut run);
     let actor = run.actor;
     let target = run.targets[0];
