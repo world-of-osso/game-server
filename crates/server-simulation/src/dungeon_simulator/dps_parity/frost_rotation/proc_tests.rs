@@ -1624,6 +1624,27 @@ fn earn_rime(run: &mut Run) {
     panic!("ordinary native Frost Strikes never earned Rime");
 }
 
+#[test]
+#[ignore = "actual Rime consumption earns Dark Talons and increases Icy Talons stacks"]
+fn frost_dark_talons_from_earned_rime_increases_icy_talons() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::super::prepare_literal(251, 1).unwrap();
+    super::super::engage(&mut run);
+    assert!(auras::has_aura(run.app.world(), run.actor, 436687));
+    for _ in 0..20 {
+        earn_rime(&mut run);
+        cast(&mut run, 49184);
+        if auras::has_aura(run.app.world(), run.actor, 443595) {
+            let aura = run.app.world().get::<ActiveAuras>(run.actor).unwrap().iter()
+                .find(|aura| aura.spell_id == 194879 && aura.caster == run.actor).unwrap();
+            assert!(aura.stacks > 3 && aura.max_stacks >= 6,
+                "Dark Talons must grant three Icy Talons stacks and increase its cap: {aura:?}");
+            return;
+        }
+    }
+    panic!("earned Rime casts never produced Dark Talons");
+}
+
 fn earn_killing_machine(run: &mut Run) {
     cast(run, 49020);
     cast(run, 49020);
