@@ -8,6 +8,14 @@ use shared::components::{MovementControl, Position};
 #[derive(Component)]
 struct ReturningToMelee;
 
+#[derive(Component)]
+struct DisplacementReturn;
+
+pub(super) fn blocks_actions(world: &World, actor: Entity) -> bool {
+    world.get::<crate::combat::AutoAttack>(actor).is_some()
+        && (forced_movement(world, actor) || world.get::<DisplacementReturn>(actor).is_some())
+}
+
 struct WalkStep {
     target: Entity,
     position: Position,
@@ -31,8 +39,12 @@ fn advance_actor(world: &mut World, actor: Entity, delta: f32) {
     // away from the opponent. The fixture still owns the actor's melee intent.
     // Do not override active forced movement or turn an active channel.
     if forced_movement(world, actor) {
+        if world.get::<crate::combat::AutoAttack>(actor).is_some() {
+            world.entity_mut(actor).insert(DisplacementReturn);
+        }
         return;
     }
+    clear_displacement_return_at_melee(world, actor);
     face_melee_intent(world, actor);
     let step = read_walk_step(world, actor, delta);
     if step.is_none() && world.get::<ReturningToMelee>(actor).is_none() {
@@ -52,6 +64,23 @@ fn advance_actor(world: &mut World, actor: Entity, delta: f32) {
         .collect();
     for target in opponents {
         super::face_dummy_away_from_actor(world, actor, target);
+    }
+}
+
+fn clear_displacement_return_at_melee(world: &mut World, actor: Entity) {
+    let reached = world
+        .get::<crate::combat::AutoAttack>(actor)
+        .is_none_or(|attack| {
+            let Some(from) = world.get::<Position>(actor) else {
+                return true;
+            };
+            let Some(target) = world.get::<Position>(attack.victim) else {
+                return true;
+            };
+            (target.x - from.x).hypot(target.z - from.z) <= crate::combat::MELEE_RANGE
+        });
+    if reached {
+        world.entity_mut(actor).remove::<DisplacementReturn>();
     }
 }
 
