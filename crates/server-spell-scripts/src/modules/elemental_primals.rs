@@ -11,6 +11,7 @@ use combat::spell_info::{SpellInfo, SpellStore};
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AfterElementalLaunch(summon_after_launch),
     SpellScriptHook::GuardianActionEligible(action_eligible),
+    SpellScriptHook::SummonRemoved(remove_storm_wind_gust),
     SpellScriptHook::TargetDamageMultiplier(stormfury_multiplier),
 ];
 
@@ -92,6 +93,25 @@ fn summon_elemental(world: &mut World, owner: Entity, elemental: (u32, u32)) {
     }
     combat::auras::extend_owned_duration(world, owner, owner, &[root], milliseconds);
     spell_cast::guardian::reset_action_cooldowns(world, actor);
+}
+
+// SimC76f8118 sc_shaman.cpp4330–4334 expires Wind Gust when the
+// actual Storm Elemental is dismissed, including early removal.
+fn remove_storm_wind_gust(world: &mut World, actor: Entity) {
+    let owner = world.get::<SummonedCreature>(actor).and_then(|summon| {
+        (summon.spell_id == PRIMAL_STORM.0
+            && world
+                .get::<Npc>(actor)
+                .is_some_and(|npc| npc.template_id == PRIMAL_STORM.1))
+        .then_some(summon.owner)
+    });
+    let Some(owner) = owner else { return };
+    combat::auras::remove_auras(
+        world,
+        owner,
+        combat::auras::RemoveReason::Consumed,
+        |aura| aura.spell_id == 263806 && aura.caster == owner,
+    );
 }
 
 fn stormfury_multiplier(world: &World, actor: Entity, _target: Entity, spell: &SpellInfo) -> f32 {

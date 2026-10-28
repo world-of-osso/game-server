@@ -63,6 +63,42 @@ fn owned_actors(run: &mut Run, entry: u32) -> Vec<(Entity, f64)> {
 
 #[test]
 #[ignore = "requires private262 native DB/profile"]
+fn elemental_wind_gust_ends_when_actual_primal_storm_dismisses() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = fixture();
+    crate::spell_cast::creature_cast(
+        run.app.world_mut(),
+        run.actor,
+        191634,
+        Some(run.actor),
+        false,
+    )
+    .unwrap();
+    settle(&mut run);
+    let storm = owned_actors(&mut run, 77942)
+        .first()
+        .expect("actual Primal Storm Elemental")
+        .0;
+    super::elemental_mechanics_tests::cast(&mut run, 188443);
+    assert!(
+        own_aura(&run, 263806).is_some(),
+        "real Chain Lightning while the summon lives earns Wind Gust"
+    );
+    for _ in 0..600 {
+        run.app.update();
+        if owned_actors(&mut run, 77942).is_empty() {
+            assert!(
+                own_aura(&run, 263806).is_none(),
+                "Wind Gust cannot outlive the actual dismissed elemental {storm:?}"
+            );
+            return;
+        }
+    }
+    panic!("native Primal Storm Elemental failed to expire");
+}
+
+#[test]
+#[ignore = "requires private262 native DB/profile"]
 fn elemental_primal_storm_resummon_extends_and_resets_actions() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = fixture();
