@@ -55,7 +55,8 @@ def print_healer(report):
     print('|---:|---:|---:|')
     for sample in metrics['mana_curve']:
         print(f'| {number(sample["time_seconds"])} | {number(sample["current"])} | {number(sample["max"])} |')
-    print('\nCoverage gaps:', ', '.join(report['gaps']))
+    if report.get('timeline') != 'simc_tank_dummy':
+        print('\nCoverage gaps:', ', '.join(report['gaps']))
 
 
 def print_tank(report):
