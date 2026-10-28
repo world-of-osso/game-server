@@ -3,6 +3,71 @@ use super::*;
 use crate::spell_cast::test_harness::ObservedCombatEvents;
 use shared::protocol::CombatLogKind;
 
+fn lingering_damage(retain: bool) -> (i32, f32) {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_measurement(259, 1).unwrap();
+    engage(&mut run);
+    let actor = run.actor;
+    let target = run.targets[0];
+    assert!(crate::auras::has_aura(run.app.world(), actor, 457056));
+    assert!(!crate::auras::has_aura(run.app.world(), actor, 457273));
+    crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 360194, Some(target), 1);
+    assert!(crate::auras::has_aura(run.app.world(), target, 360194));
+    assert!(!crate::auras::has_aura(run.app.world(), actor, 457273));
+    for _ in 0..400 {
+        run.app.update();
+    }
+    assert!(!crate::auras::has_aura(run.app.world(), target, 360194));
+    let aura = run
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(actor)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 457273 && aura.caster == actor)
+        .expect("Deathmark expiry grants Lingering Darkness");
+    let percent = aura
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap()
+        .amount;
+    if !retain {
+        crate::auras::remove_auras(
+            run.app.world_mut(),
+            actor,
+            crate::auras::RemoveReason::Cancelled,
+            |aura| aura.spell_id == 457273 && aura.caster == actor,
+        );
+    }
+    run.app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(actor)
+        .unwrap()
+        .crit_pct = 0.0;
+    let start = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .len();
+    let _impact_seed = crate::random::seed_scope(259);
+    crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 113780, Some(target), 1);
+    (next_damage(&mut run, Some(113780), false, start), percent)
+}
+
+#[test]
+#[ignore = "requires prepared259 native profile and world data"]
+fn assassination_deathmark_expiry_grants_lingering_damage_once() {
+    let (base, _) = lingering_damage(false);
+    let (buffed, percent) = lingering_damage(true);
+    let expected = base as f32 * (1.0 + percent / 100.0);
+    assert!(
+        (buffed as f32 - expected).abs() <= 3.0,
+        "real poison receives one native Lingering bonus: {base} -> {buffed}, expected {expected}"
+    );
+}
+
 fn next_damage(run: &mut Run, spell: Option<u32>, periodic: bool, start: usize) -> i32 {
     for _ in 0..160 {
         run.app.update();
