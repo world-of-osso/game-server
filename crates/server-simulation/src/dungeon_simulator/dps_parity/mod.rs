@@ -9,6 +9,9 @@ use std::time::{Duration, Instant};
 const TICKS: u32 = 6_000;
 const ADD_WAVE_TICKS: u32 = 600;
 const LAST_30S_START: u32 = TICKS - ADD_WAVE_TICKS;
+#[cfg(test)]
+mod tank_fixture_tests;
+
 const DUMMY_ENTRY: u32 = 31_146;
 const DUMMY_LATERAL_STEP: f32 = 0.5;
 const FIGHT_DURATION: Duration = Duration::from_secs(300);
@@ -156,7 +159,7 @@ fn spawn_targets(app: &mut App, actor: Entity, count: usize) -> Result<Vec<Entit
         .collect()
 }
 
-fn install_fixture_lifetimes(run: &mut Run, started_at: Duration) {
+pub(super) fn install_fixture_lifetimes(run: &mut Run, started_at: Duration) {
     for (index, &target) in run.targets.iter().enumerate() {
         let lifetime = if index == 0 {
             FIGHT_DURATION
