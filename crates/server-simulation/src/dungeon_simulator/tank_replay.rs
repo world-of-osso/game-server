@@ -337,6 +337,8 @@ fn replay_registered_run_with_healing(
     if level != 90 {
         return Err(format!("MID2_PLAYER_LEVEL_MISMATCH:{level}"));
     }
+    let started_at = run.app.world().resource::<Time>().elapsed();
+    super::dps_parity::install_fixture_lifetimes(&mut run, started_at);
     super::dps_parity::engage(&mut run);
     freeze_sources(run.app.world_mut(), &[(0, source)].into());
     run.app.insert_resource(Capture {
