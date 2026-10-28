@@ -50,20 +50,6 @@ pub(super) fn prepare_application(
     if rolling {
         settle_previous_ticks(world, target, new);
     }
-    if new.spell_id == 1297091 {
-        eprintln!(
-            "prepare grasp source={:?} effects={:?} old={:?} rolling={rolling} pandemic={}",
-            new.source,
-            new.effects
-                .iter()
-                .map(|e| (e.aura_type, e.period_ms))
-                .collect::<Vec<_>>(),
-            previous(world, target, new)
-                .as_ref()
-                .map(|a| (a.source, a.expires_at)),
-            has_native_pandemic(spell)
-        );
-    }
     prepare_periodic_phase(world, target, new, spell, sourced_rolling);
     if crate::spell_cast::scripts::extends_reapplication(world, new.caster, new.spell_id) {
         carry_duration(world, target, new, DurationCarry::Extend);
