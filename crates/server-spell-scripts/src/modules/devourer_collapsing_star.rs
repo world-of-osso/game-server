@@ -121,6 +121,7 @@ fn after_launch(world: &mut World, caster: Entity, spell: &SpellInfo) {
         .is_some_and(|known| known.contains(452415))
     {
         spell_cast::scripts::reduce_cooldown(world, caster, 1246167, f64::MAX);
+        spell_cast::scripts::reduce_cooldown(world, caster, 1259431, f64::MAX);
     }
     // SimC76f8118 cpp6464–6474,6532–6533 executes the native damage child.
     let target = spell

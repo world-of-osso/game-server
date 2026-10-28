@@ -101,6 +101,7 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 ### Devourer The Hunt
 
 - A landed The Hunt or Predator's Wake impact applies the native Hunt DoT1246168 to nearby enemies, including the primary, up to native370967's target cap (SimC76f8118 `sc_demon_hunter.cpp`5488–5511).
+- With Demonic Intensity, Collapsing Star resets both The Hunt and Predator's Wake cooldowns, including their shared category (SimC76f8118 `sc_demon_hunter.cpp`6551–6557).
 
 ### Devourer Burning Blades
 
