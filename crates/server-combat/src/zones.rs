@@ -736,7 +736,7 @@ pub(crate) fn notify_group_depletion(world: &mut World, creature: Entity) {
 pub(crate) struct AddonAuras(pub Vec<u32>);
 
 /// Self-cast addon auras when the creature is active (Creature::LoadCreaturesAddon `AddAura`).
-pub(crate) fn apply_addon_auras(world: &mut World) {
+pub fn apply_addon_auras(world: &mut World) {
     let pending: Vec<(Entity, Vec<u32>)> = world
         .query_filtered::<(Entity, &AddonAuras), Without<GridDormant>>()
         .iter(world)

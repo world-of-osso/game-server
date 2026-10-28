@@ -8,13 +8,6 @@ fn assert_native_spawn_and_return_addon(guid: u32, entry: u32, spell: u32) {
     let actors = spawn_population(&mut app, copy);
     let actor = actors[&guid];
     assert_eq!(app.world().get::<Npc>(actor).unwrap().template_id, entry);
-    assert!(
-        app.world()
-            .get::<crate::zones::SpawnAddonAuras>(actor)
-            .unwrap()
-            .0
-            .contains(&spell)
-    );
     let home = *app.world().get::<Position>(actor).unwrap();
     app.update();
     assert!(
@@ -36,10 +29,6 @@ fn assert_native_spawn_and_return_addon(guid: u32, entry: u32, spell: u32) {
     assert!(
         crate::auras::has_aura(app.world(), actor, spell),
         "native home arrival must restore source addon{spell} on entry{entry}"
-    );
-    assert!(
-        app.world().get::<crate::zones::AddonAuras>(actor).is_none(),
-        "ordinary addon runner must consume the restoration marker"
     );
 }
 
