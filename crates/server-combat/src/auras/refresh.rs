@@ -362,8 +362,13 @@ fn accumulate_holy_bulwark(world: &World, target: Entity, new: &mut AuraInstance
         .expect("living Holy Bulwark target")
         .max;
     let previous = previous(world, target, new)
-        .and_then(|old| old.effects.iter().find(|effect| effect.index == 0))
-        .map_or(0.0, |effect| effect.absorb_remaining);
+        .and_then(|old| {
+            old.effects
+                .iter()
+                .find(|effect| effect.index == 0)
+                .map(|effect| effect.absorb_remaining)
+        })
+        .unwrap_or(0.0);
     if let Some(shield) = new.effects.iter_mut().find(|effect| effect.index == 0) {
         shield.absorb_remaining =
             (shield.absorb_remaining + previous).min(max_health * cap_percent / 100.0);
