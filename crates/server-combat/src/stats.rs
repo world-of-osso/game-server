@@ -653,6 +653,101 @@ const EFFECT_BLOCK: u32 = 23;
 /// `ActivePlayerData` base parry and block (StatSystem.cpp:497, 664).
 const BASE_PARRY_PCT: f32 = 5.0;
 const BASE_BLOCK_PCT: f32 = 5.0;
+/// SimC 76f8118 sc_extra_data.inc `_gt_avoid_per_str_agi_by_level` denominators.
+/// Values were measured in game; the source repeats level 90 above that level.
+const PARRY_STRENGTH_DENOMINATOR: [f64; 90] = [
+    16.04048030,
+    16.04048174,
+    16.04047836,
+    16.04048090,
+    16.04048201,
+    16.04048397,
+    16.04048030,
+    16.04048564,
+    16.04048303,
+    16.04048154,
+    16.04048030,
+    16.04048240,
+    16.04048189,
+    16.04048090,
+    16.04048201,
+    16.04048058,
+    16.04048397,
+    16.65742567,
+    17.27436736,
+    17.89130905,
+    18.07618407,
+    18.26899392,
+    18.46995540,
+    18.67928401,
+    18.89720760,
+    19.12397442,
+    19.35983807,
+    19.60506246,
+    19.85992582,
+    20.12472721,
+    20.39976407,
+    20.68535814,
+    20.98185048,
+    21.28958016,
+    21.60892462,
+    21.94026619,
+    22.28399138,
+    22.64054366,
+    23.01033711,
+    23.39384147,
+    23.79153707,
+    24.20392645,
+    24.63152798,
+    25.07489315,
+    25.53459899,
+    26.01124137,
+    26.50545922,
+    27.01789453,
+    27.54925016,
+    28.10023039,
+    28.67160259,
+    29.26415205,
+    29.87869462,
+    30.51611224,
+    31.17729248,
+    31.86319076,
+    32.57480318,
+    33.31316572,
+    34.07936828,
+    34.87455424,
+    35.69991830,
+    36.55671789,
+    37.44626365,
+    38.36994416,
+    39.32918519,
+    40.32552472,
+    41.36055985,
+    42.43592403,
+    43.35844412,
+    43.48131646,
+    45.13340277,
+    45.55589989,
+    45.98235200,
+    46.41279652,
+    46.84725748,
+    47.28579037,
+    47.72843449,
+    48.17522843,
+    48.62620036,
+    49.08138040,
+    59.13534919,
+    67.37496172,
+    76.76264243,
+    87.45833414,
+    99.64429091,
+    113.52822569,
+    129.34663855,
+    147.36912101,
+    167.90275377,
+    191.29742347,
+];
+
 /// `ShieldBlock` per point of shield armor (Player.cpp:8144).
 const SHIELD_BLOCK_PER_ARMOR: f32 = 2.5;
 /// Diminishing-return `k`, dodge and parry caps by class 1-13 (StatSystem.cpp:596-697).
@@ -681,16 +776,18 @@ pub struct DefenseInputs {
     pub dodge_pct: f32,
     /// Σ MOD_PARRY_PERCENT, outside rating diminishing returns.
     pub parry_pct: f32,
+    /// Current and unmodified class/race Strength, for SimC's plate parry conversion.
+    pub strength: f32,
+    pub base_strength: f32,
     /// Σ MOD_BLOCK_PERCENT (`StatModifiers::block_pct`).
     pub block_pct: f32,
 }
 
 /// TrinityCore master's player avoidance: `Player::UpdateDodgePercentage`,
 /// `UpdateParryPercentage` and `UpdateBlockPercentage` (StatSystem.cpp:490-507,
-/// 657-715). Dodge is MOD_DODGE_PERCENT plus its rating after diminishing returns
-/// (`GetDodgeFromAgility` gives nothing, Player.cpp:5031); parry 5% plus its rating after
-/// diminishing returns, for a class with a parry cap that can parry and holds a weapon;
-/// block 5% plus MOD_BLOCK_PERCENT plus its rating, for one that can block and holds a
+/// 657-715). Dodge uses native rating DR. Warrior, Paladin and Death Knight parry
+/// uses SimC's Strength conversion and DR; other classes retain native rating DR.
+/// Block is 5% plus MOD_BLOCK_PERCENT plus its rating, for one that can block and holds a
 /// shield (StatSystem.cpp:496-501, Unit.cpp:2843-2846).
 pub fn player_defense(
     class: u8,
@@ -717,11 +814,23 @@ pub fn player_defense(
         cap * diminishing / (diminishing + cap * k) + nondiminishing
     };
     let parry = if inputs.can_parry && parry_cap > 0.0 && inputs.has_weapon {
-        diminished(
-            parry_cap,
-            BASE_PARRY_PCT + inputs.parry_pct,
-            ratings.parry / PARRY_RATING[level],
-        )
+        if matches!(class, 1 | 2 | 6) {
+            // SimC player.cpp:1682 and 5282–5298: naked Strength is not diminished;
+            // bonus Strength and rating share DR (parry factor 1, stretch .01,
+            // horizontal shift 1/.94 for these three classes).
+            let coefficient = PARRY_STRENGTH_DENOMINATOR[level.min(89)] as f32;
+            let bonus = ratings.parry / PARRY_RATING[level]
+                + (inputs.strength - inputs.base_strength) / coefficient;
+            3.0 + inputs.parry_pct
+                + inputs.base_strength / coefficient
+                + bonus / (bonus * 0.01 + 1.0 / 0.94)
+        } else {
+            diminished(
+                parry_cap,
+                BASE_PARRY_PCT + inputs.parry_pct,
+                ratings.parry / PARRY_RATING[level],
+            )
+        }
     } else {
         0.0
     };
@@ -1232,6 +1341,9 @@ pub(crate) fn update_character_stats(
                 shield_armor: gear.shield_armor,
                 dodge_pct: mods.map_or(0.0, |mods| mods.dodge_pct),
                 parry_pct: mods.map_or(0.0, |mods| mods.parry_pct),
+                strength: stats.primary.strength,
+                base_strength: base_primary_stats(class_id, race, level.0)
+                    .map_or(0.0, |base| base.strength),
                 block_pct: mods.map_or(0.0, |mods| mods.block_pct),
             },
         );
