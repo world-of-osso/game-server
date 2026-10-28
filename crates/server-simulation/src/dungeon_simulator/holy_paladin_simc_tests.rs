@@ -29,6 +29,16 @@ fn holy_paladin_heals_the_simc_dummy_party() {
         "{report}"
     );
     assert!(effective > 0.0 && raw >= effective, "{report}");
+    assert!(
+        metrics["idle_gcd_pct"].as_f64().unwrap() <= 10.0,
+        "Holy Paladin idled over 10%: {report}"
+    );
+    assert!(
+        ["20271", "35395", "24275", "26573"]
+            .iter()
+            .any(|spell| report["healer_casts"][*spell].as_u64().unwrap_or(0) > 0),
+        "Holy Paladin did not cast damage filler: {report}"
+    );
     assert_eq!(metrics["mana_curve"].as_array().unwrap().len(), 301);
     println!("HOLY_PALADIN_REPORT={report}");
 }
