@@ -330,6 +330,9 @@ CLASS_SUMMON_POLICY_CHILDREN = (
     # SimC76f8118 sc_shaman.cpp8638–8640/8752–8755; native Effect28
     # 118291→61029 and 157319→77942 summon the Primal Elementals.
     (378255, 118291), (191717, 157319),
+    # SimC76f8118 sc_shaman.cpp11579–11597: Call of the Ancestors summons
+    # an Ancestor; native 445624 Effect28 supplies creature 221177.
+    (443450, 445624),
     # SimC76f8118 sc_shaman.cpp8845–8856: Feral Spirit and Rolling Thunder
     # summon lightning wolves; native198506 Effect28 supplies Spirit Wolf100820.
     (469314, 198506),

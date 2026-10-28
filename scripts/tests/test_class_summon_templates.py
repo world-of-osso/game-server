@@ -121,6 +121,33 @@ class ClassSummonImportTests(unittest.TestCase):
                             WHERE CreatureID=? ORDER BY Idx""", (entry,)).fetchall(), native)
                 self.assertEqual(spawn_fingerprint(conn), before_spawns)
 
+    def test_call_of_the_ancestors_promotes_native_template(self):
+        source = ROOT / "data/world.db"
+        with tempfile.TemporaryDirectory() as directory:
+            prepared = Path(directory) / "ancestor.sqlite"
+            with closing(sqlite3.connect(f"file:{source}?mode=ro", uri=True)) as src:
+                with closing(sqlite3.connect(prepared)) as dst:
+                    src.backup(dst)
+            with closing(sqlite3.connect(prepared)) as conn, conn:
+                self.assertEqual(conn.execute("""SELECT EffectMiscValue_0 FROM spell_effect
+                    WHERE SpellID=445624 AND DifficultyID=0 AND Effect=28""").fetchone(), (221177,))
+                for table, key in (("content_creature_template", "entry"),
+                                   ("content_creature_template_model", "CreatureID"),
+                                   ("content_creature_template_addon", "entry")):
+                    conn.execute(f"DELETE FROM {table} WHERE {key}=221177")
+                before_spawns = spawn_fingerprint(conn)
+            subprocess.run([sys.executable, str(ROOT / "scripts/add_class_summon_templates.py"),
+                            "--db", str(prepared)], check=True, capture_output=True, text=True)
+            with closing(sqlite3.connect(f"file:{prepared}?mode=ro", uri=True)) as conn:
+                self.assertEqual(conn.execute("SELECT name FROM content_creature_template WHERE entry=221177").fetchone(),
+                                 ("Ancestor",))
+                native = conn.execute("""SELECT CreatureID,Idx,CreatureDisplayID,DisplayScale,Probability,VerifiedBuild
+                    FROM tdb_creature_template_model WHERE CreatureID=221177 ORDER BY Idx""").fetchall()
+                self.assertTrue(native)
+                self.assertEqual(conn.execute("""SELECT * FROM content_creature_template_model
+                    WHERE CreatureID=221177 ORDER BY Idx""").fetchall(), native)
+                self.assertEqual(spawn_fingerprint(conn), before_spawns)
+
     def test_primal_elementals_are_promoted_from_real_native_summons(self):
         source = Path(os.environ.get("PARITY_262_TEST_DB", ROOT / "data/world.db")).resolve()
         with tempfile.TemporaryDirectory() as directory:
