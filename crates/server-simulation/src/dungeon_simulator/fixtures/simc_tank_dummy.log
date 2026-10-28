@@ -5,4 +5,5 @@
 4.000 Enemy 'Tank_Dummy_Dungeon' performs Action 'melee_nuke_MID2_Paladin_Protection' (0) (0)
 4.000 attack_t::build_table: miss=0 dodge=0 parry=0 glance=0 crit=0
 4.000 Enemy 'Tank_Dummy_Dungeon' direct amount for Action 'melee_nuke_MID2_Paladin_Protection' (0): amount=505757.000000 initial_amount=505757.000000
+5.003 Enemy 'Tank_Dummy_Dungeon' Action 'spell_dot_MID2_Paladin_Protection' (0) hits Player 'MID2_Paladin_Protection' for 0.000000 physical damage (hit)
 7.004 Enemy 'Tank_Dummy_Dungeon' tick amount for Action 'spell_dot_MID2_Paladin_Protection' (0) on Player 'MID2_Paladin_Protection': amount=25000.000000 initial_amount=25000.000000

@@ -1955,6 +1955,60 @@ pub fn replay_simc_dummy_strike(
     deal_source_damage_and_report(world, &ctx, target, damage, Some((amount, blocked)));
 }
 
+/// Replay the landed, zero-damage direct application of SimC's physical spell_dot.
+#[cfg(any(test, feature = "test-support"))]
+pub fn replay_simc_dummy_bleed_application(world: &mut World, source: Entity, target: Entity) {
+    // SimC76f8118 sc_enemy.cpp: spell_dot's application is a physical spell hit.
+    let spell = SpellInfo {
+        misc: Some(crate::spell_info::SpellMisc {
+            school_mask: 1,
+            ..Default::default()
+        }),
+        effects: vec![SpellEffect {
+            mechanic: MECHANIC_BLEED,
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+    let ctx = EffectCtx {
+        caster: source,
+        spell: &spell,
+        depth: 0,
+        dest: None,
+        chain_multiplier: 1.0,
+    };
+    let damage = DamageInput {
+        amount: 0.0,
+        crit: false,
+        periodic: false,
+        resolved_source: false,
+        effect: None,
+        bonus_caster: source,
+    };
+    deal_source_damage_and_report(world, &ctx, target, damage, Some((0.0, false)));
+    if !super::targets::is_alive(world, target) || crate::auras::is_immune(world, target, 1) {
+        return;
+    }
+    let (actor, taken) = procs::spell_hit_masks(&spell, true);
+    procs::push_event(
+        world,
+        AuraEvent {
+            actor: source,
+            target: Some(target),
+            actor_mask: [actor, 0],
+            target_mask: [taken, 0],
+            spell_id: Some(spell.id),
+            can_proc: true,
+            cast_used_proc_modifier: false,
+            periodic: false,
+            damage: 0.0,
+            heal: None,
+            hit_mask: 0,
+            reflected: false,
+        },
+    );
+}
+
 /// Replay SimC's ID-zero tank-dummy bleed through native recipient handling.
 #[cfg(any(test, feature = "test-support"))]
 pub fn replay_simc_dummy_bleed(world: &mut World, source: Entity, target: Entity, amount: f32) {

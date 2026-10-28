@@ -576,6 +576,13 @@ fn replay_registered_run_with_healing(
                 .resource_mut::<Capture>()
                 .active_hit_scale = Some((tank, scale));
             match hit.kind {
+                Kind::BleedApplication => {
+                    crate::spell_cast::effects::replay_simc_dummy_bleed_application(
+                        run.app.world_mut(),
+                        source,
+                        tank,
+                    );
+                }
                 Kind::Bleed => {
                     raw += f64::from(amount);
                     crate::spell_cast::effects::replay_simc_dummy_bleed(
@@ -662,6 +669,7 @@ fn replay_registered_run_with_healing(
             let kind = match hit.kind {
                 Kind::Swing => "swing",
                 Kind::Strike => "strike",
+                Kind::BleedApplication => "bleed_application",
                 Kind::Bleed => "bleed",
             };
             *incoming_before_absorbs.entry(kind).or_default() +=
