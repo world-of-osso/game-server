@@ -1662,7 +1662,14 @@ pub(crate) fn deal_leech(
     };
     let dealt = deal_damage_and_report(world, ctx, target, damage);
     if dealt > 0.0 {
-        let healing = (dealt * effect.amplitude).max(0.0).round();
+        let amplitude = spell_mods::modify(
+            world,
+            ctx.caster,
+            ctx.spell,
+            SpellModOp::Amplitude,
+            effect.amplitude,
+        );
+        let healing = (dealt * amplitude).max(0.0).round();
         apply_resolved_heal(world, ctx, ctx.caster, healing, false, periodic);
     }
 }

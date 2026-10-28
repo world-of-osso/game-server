@@ -104,6 +104,39 @@ fn dummy18_blood_plague_native_tick_leech() {
     periodic_leech(55078, 6, 0, 2);
 }
 #[test]
+fn blood_plague_rapid_decomposition_increases_actual_leech() {
+    let mut h = fixture(&[55078, 194662], 6);
+    let caster = h.caster;
+    let npc = h.npc;
+    apply(&mut h, caster, caster, 194662, u32::MAX);
+    apply(&mut h, caster, npc, 55078, 1);
+    h.advance(100);
+    let damage = h
+        .inbox
+        .log
+        .iter()
+        .find(|event| {
+            event.spell_id == Some(55078) && event.kind == CombatLogKind::Damage && event.periodic
+        })
+        .expect("Blood Plague damage");
+    let heal = h
+        .inbox
+        .log
+        .iter()
+        .find(|event| {
+            event.spell_id == Some(55078) && event.kind == CombatLogKind::Heal && event.periodic
+        })
+        .expect("Blood Plague leech");
+    assert!(damage.amount > 0);
+    let expected = damage.amount as f32 * 1.25 * 1.85;
+    assert!(
+        (heal.amount as f32 - expected).abs() < 3.0,
+        "damage={}, heal={}, expected={expected}",
+        damage.amount,
+        heal.amount
+    );
+}
+#[test]
 fn dummy18_singularity_native_primary_leech_area_dummy_retained() {
     periodic_leech(205179, 9, 0, 3);
 }
