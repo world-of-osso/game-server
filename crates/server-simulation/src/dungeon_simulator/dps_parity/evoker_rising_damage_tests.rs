@@ -41,7 +41,47 @@ fn living_flame_hit(run: &mut Run, primary: Entity) -> (i32, bool) {
     panic!("actual native Living Flame must reach the selected primary");
 }
 
-fn fury_sample(selected: bool) -> ((i32, bool), (i32, bool), f64) {
+fn disintegrate_tick(run: &mut Run, primary: Entity) -> (i32, bool) {
+    let _seed = crate::random::seed_scope(1271796);
+    let before = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .len();
+    crate::spell_cast::creature_cast_with_targets(
+        run.app.world_mut(),
+        run.actor,
+        356995,
+        crate::spell_cast::CastTargets {
+            unit: primary,
+            primary: Some(primary),
+            destination: None,
+        },
+    )
+    .unwrap();
+    for _ in 0..120 {
+        run.app.update();
+        if let Some(event) = run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0[before..]
+            .iter()
+            .find(|event| {
+                event.source == Some(run.actor.to_bits())
+                    && event.target == Some(primary.to_bits())
+                    && event.spell_id == Some(356995)
+                    && event.kind == shared::protocol::CombatLogKind::Damage
+            })
+        {
+            return (event.amount, event.crit);
+        }
+    }
+    panic!("actual native Disintegrate must tick on the selected primary");
+}
+
+fn fury_sample(selected: bool) -> ((i32, bool), (i32, bool), (i32, bool), f64) {
     // The actual setup/empower sequence rolls equipment procs before the hit.
     // Reset the complete sequence, not only the final cast, for paired inputs.
     let _setup_seed = crate::random::seed_scope(70448);
@@ -108,10 +148,12 @@ fn fury_sample(selected: bool) -> ((i32, bool), (i32, bool), f64) {
         "actual Dragonrage must still fix the ordinary mastery condition at maximum Fury"
     );
     let maximum = living_flame_hit(&mut run, primary);
+    let periodic = disintegrate_tick(&mut run, primary);
     (
         before_maximum,
         maximum,
-        1.0 + f64::from(percent) * f64::from(aura.stacks) / 100.0,
+        periodic,
+        1.0 + f64::from(percent) / 100.0,
     )
 }
 
@@ -128,13 +170,25 @@ fn evoker_rising_damage_native_second_rank_applies_only_at_actual_fury_cap() {
         selected.1.1, absent.1.1,
         "matched native maximum-stack hits must retain the same crit result"
     );
-    // SimC76f8118 sc_evoker.cpp3046–3050: native rank2 percent per earned maximum stack.
-    let expected = f64::from(absent.1.0) * selected.2;
+    // SimC parse_effects.cpp716–719 honors the native EX_SUPPRESS_STACKING flag.
+    let expected = f64::from(absent.1.0) * selected.3;
     assert!(
         (f64::from(selected.1.0) - expected).abs() <= 2.0,
-        "actual maximum Fury Living Flame must receive native rank2 damage: absent={:?}, selected={:?}, factor={}",
+        "actual maximum Fury Living Flame must receive one native rank2 bonus: absent={:?}, selected={:?}, factor={}",
         absent.1,
         selected.1,
-        selected.2
+        selected.3
+    );
+    assert_eq!(
+        selected.2.1, absent.2.1,
+        "matched Disintegrate ticks retain their crit result"
+    );
+    let periodic_expected = f64::from(absent.2.0) * selected.3;
+    assert!(
+        (f64::from(selected.2.0) - periodic_expected).abs() <= 2.0,
+        "actual maximum Fury Disintegrate receives one bonus: absent={:?}, selected={:?}, factor={}",
+        absent.2,
+        selected.2,
+        selected.3
     );
 }

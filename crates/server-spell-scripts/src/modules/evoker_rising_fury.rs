@@ -46,7 +46,18 @@ fn maximum_fury_damage(world: &World, ctx: &EffectCtx<'_>, _target: Entity, peri
     if !combat::auras::spell_mods::class_mask_affects(fury, effect, ctx.spell) {
         return 1.0;
     }
-    1.0 + script_effect_value(world, ctx.caster, 1271796, 0) * f32::from(fury.stacks) / 100.0
+    // SimC parse_effects.cpp716–719: EX_SUPPRESS_STACKING makes stacks display-only.
+    let authored = world
+        .resource::<SpellStore>()
+        .get(RISING_FURY)
+        .and_then(|spell| spell.effects.iter().find(|effect| effect.index == index))
+        .expect("native Rising Fury damage effect");
+    let stacks = if authored.attributes & 0x40 != 0 {
+        1.0
+    } else {
+        f32::from(fury.stacks)
+    };
+    1.0 + script_effect_value(world, ctx.caster, 1271796, 0) * stacks / 100.0
 }
 
 fn register(scripts: &mut AuraScripts) {

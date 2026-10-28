@@ -1336,3 +1336,7 @@ Selected Insidious Ire earns its temporary channel bonus when one target has all
 ### Evoker Slipstream
 
 - A successful Deep Breath or Breath of Eons restores all Hover charges when Slipstream is selected.
+
+### Evoker Rising Fury
+
+- At maximum Rising Fury stacks, direct and periodic damage use the native rank-two bonus once when the native effect suppresses stacking.
