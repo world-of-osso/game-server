@@ -351,15 +351,9 @@ mod tests {
         let value = |spell, effect| {
             crate::spell_cast::scripts::script_effect_value(world, actor, spell, effect)
         };
-        eprintln!(
-            "Harmony native effects: base={}, coalescence={}, way={}",
-            value(450508, 0),
-            value(450529, 2),
-            value(450965, 0)
-        );
-        let expected = actual_damage * value(450508, 0) / 100.0
-            * (1.0 + value(450529, 2) / 100.0)
-            * (1.0 + value(450965, 0) / 100.0);
+        // SimC reads Way's native effect directly; the selected MID2 row is 30%.
+        let expected =
+            actual_damage * value(450508, 0) / 100.0 * (1.0 + value(450529, 2) / 100.0) * 1.3;
         assert!(
             (deposited - expected).abs() < 1.0,
             "pool={deposited}, hit={actual_damage}, expected={expected}"

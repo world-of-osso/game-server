@@ -155,7 +155,16 @@ fn observe(world: &mut World, event: &CombatLogEvent) {
         if matches!(event.spell_id, Some(205523 | 100780 | 185099))
             && has_talent(world, caster, THOUSAND_STRIKES)
         {
-            percent *= 1.0 + script_effect_value(world, caster, THOUSAND_STRIKES, 0) / 100.0;
+            let effect = world
+                .resource::<SpellStore>()
+                .get(THOUSAND_STRIKES)
+                .expect("native Way of a Thousand Strikes")
+                .effects
+                .iter()
+                .find(|effect| effect.index == 0)
+                .expect("native Way of a Thousand Strikes effect")
+                .base_points;
+            percent *= 1.0 + effect / 100.0;
         }
         let max = world
             .get::<Health>(caster)
