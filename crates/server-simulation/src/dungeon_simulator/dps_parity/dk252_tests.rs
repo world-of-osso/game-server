@@ -1869,7 +1869,8 @@ fn dk252_scourge_strike_spreads_whitemane_undeath_with_its_remaining_duration() 
     let primary = owned(run.targets[0]).expect("primary retains Undeath");
     let secondary = run.targets.iter().skip(1).find_map(|target| owned(*target)).expect("Famine must spread Undeath to another actual target");
     assert_eq!(secondary.expires_at, primary.expires_at, "new disease must clone the remaining duration");
-    assert_eq!(secondary.stacks, primary.stacks, "new disease must clone the grown stacks");
+    assert!(secondary.stacks >= primary.stacks && primary.stacks >= 2,
+        "spread must copy the grown stacks; later cleave hits may grow the copy again");
 }
 
 #[test]
