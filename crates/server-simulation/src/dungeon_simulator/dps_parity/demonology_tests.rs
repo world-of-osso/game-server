@@ -1704,3 +1704,18 @@ fn demonology_blighted_maw_follows_real_dreadbite() {
         "selected Blighted Maw must deal real native Plague damage"
     );
 }
+
+
+#[test]
+#[ignore = "requires canonical 266 inputs; no duplicate Tyrant auto swing"]
+fn demonology_antoran_tyrant_cleave_has_one_impact_per_cast() {
+    use shared::protocol::CombatLogKind;
+    let _seed = crate::random::seed_scope(70_448);
+    let (mut run, tyrant) = prepare_antoran_tyrant();
+    for _ in 0..200 { run.app.update(); }
+    let events = &run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
+    let cast = events.iter().filter(|e| e.source == Some(tyrant.to_bits()) && e.spell_id == Some(1264093) && e.kind == CombatLogKind::CastSuccess).count();
+    let impact = events.iter().filter(|e| e.source == Some(tyrant.to_bits()) && e.spell_id == Some(1264093) && matches!(e.kind, CombatLogKind::Damage | CombatLogKind::Miss(_))).count();
+    assert!(cast >= 3, "actual Tyrant must repeatedly cast Burning Cleave");
+    assert_eq!(impact, cast, "the single-target Cleave action must not also be emitted by native white-attack replacement");
+}
