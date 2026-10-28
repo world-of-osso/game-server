@@ -2,7 +2,7 @@
 //! SimC76f8118 sc_paladin.cpp1580–1590,1618–1631,1815–1935;
 //! retribution.cpp1251–1253. TC/native metadata contain no dispatch edge.
 use bevy::prelude::*;
-use shared::components::ActiveSpec;
+use shared::components::{ActiveSpec, PowerType};
 
 use super::combat;
 use combat::auras;
@@ -59,6 +59,10 @@ pub(super) fn limit_area(
 }
 
 pub(super) fn cast_child(world: &mut World, ctx: &EffectCtx, target: Entity) {
+    if world.get::<ActiveSpec>(ctx.caster).is_some_and(|spec| spec.0 == 66) {
+        cast_protection_child(world, ctx, target);
+        return;
+    }
     let is_ret = world
         .get::<ActiveSpec>(ctx.caster)
         .is_some_and(|spec| spec.0 == RETRIBUTION);
@@ -94,5 +98,21 @@ pub(super) fn cast_child(world: &mut World, ctx: &EffectCtx, target: Entity) {
             ?target,
             "Divine Toll native child dispatch refused"
         );
+    }
+}
+
+fn cast_protection_child(world: &mut World, ctx: &EffectCtx, target: Entity) {
+    if !targets::relation_matches(world, ctx.caster, target, Relation::Enemy) {
+        return;
+    }
+    // SimC76f8118 sc_paladin_protection.cpp300–314: each Toll target
+    // launches Avenger's Shield and earns effect5 Holy Power.
+    let Some(child) = world.resource::<SpellStore>().get(31935).cloned() else {
+        warn!("Divine Toll lacks native Avenger's Shield");
+        return;
+    };
+    if combat::spell_cast::launch_triggered_spell(world, ctx.caster, &child, Some(target), ctx.depth + 1) {
+        let amount = combat::spell_cast::scripts::script_effect_value(world, ctx.caster, ROOT, 4);
+        combat::spell_cast::effects::energize_unit(world, ctx, ctx.caster, PowerType::HolyPower, amount, false);
     }
 }
