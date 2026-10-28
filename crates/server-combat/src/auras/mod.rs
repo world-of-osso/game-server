@@ -261,6 +261,8 @@ pub struct AuraEffectState {
     /// Power contribution and authored cast multiplier at application.
     periodic_power_at_application: f32,
     periodic_power_multiplier: f32,
+    periodic_power_charge_mods: Option<Vec<crate::spell_info::ChargedSpellModifier>>,
+    periodic_power_item_level: Option<u16>,
     /// Qualified factor captured at application, not reconstructed from damage.
     pub persistent_multiplier: Option<f32>,
     pub misc_values: [i32; 2],
@@ -952,6 +954,8 @@ fn build_effect(
         } else {
             1.0
         },
+        periodic_power_charge_mods: spell.cast_charge_mods.clone(),
+        periodic_power_item_level: spell.cast_item_level,
         persistent_multiplier: periodic_snapshot::capture_multiplier(world, caster, spell, effect),
         misc_values: effect.misc_values,
         period_ms,

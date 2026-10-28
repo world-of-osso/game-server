@@ -380,7 +380,10 @@ pub fn periodic_live_amount(
         .expect("active periodic effect belongs to its native spell");
     // SimC76f8118 action.cpp2787–2818 updates AP/SP on each periodic tick
     // unless EX_COMPUTE_ON_CAST snapshots the periodic effect.
-    let current = effects::effect_power_bonus(world, caster, spell, effect);
+    let mut power_spell = spell.clone();
+    power_spell.cast_charge_mods = state.periodic_power_charge_mods.clone();
+    power_spell.cast_item_level = state.periodic_power_item_level;
+    let current = effects::effect_power_bonus(world, caster, &power_spell, effect);
     state.amount + (current - state.periodic_power_at_application) * state.periodic_power_multiplier
 }
 
