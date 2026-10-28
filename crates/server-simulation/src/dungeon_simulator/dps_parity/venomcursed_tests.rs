@@ -25,6 +25,8 @@ fn havoc_venomcursed_uses_actual_equipped_item_slot() {
             amount
         );
     }
+    let started = run.app.world().resource::<Time>().elapsed();
+    install_fixture_lifetimes(&mut run, started);
     engage(&mut run);
     for _ in 0..TICKS {
         run.app.update();
