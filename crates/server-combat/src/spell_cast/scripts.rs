@@ -1461,19 +1461,12 @@ pub fn extend_or_apply_shield_block(world: &mut World, caster: Entity, depth: u8
         super::cast_triggered(world, caster, SHIELD_BLOCK_AURA, Some(caster), depth + 1);
         return;
     }
-    let duration = world
+    let spell = world
         .resource::<crate::spell_info::SpellStore>()
         .get(SHIELD_BLOCK_AURA)
-        .and_then(|spell| spell.misc.as_ref().and_then(|misc| misc.duration))
-        .expect("Shield Block has a native duration")
-        .duration_ms;
-    crate::auras::extend_owned_duration(
-        world,
-        caster,
-        caster,
-        &[SHIELD_BLOCK_AURA],
-        u32::try_from(duration).expect("Shield Block duration is positive"),
-    );
+        .expect("Shield Block exists");
+    let duration = crate::auras::fresh_duration_ms(world, caster, caster, spell);
+    crate::auras::extend_owned_duration(world, caster, caster, &[SHIELD_BLOCK_AURA], duration);
 }
 
 /// TC a352b1fa spell_warrior.cpp:320-411, spell_warr_bloodthirst and
