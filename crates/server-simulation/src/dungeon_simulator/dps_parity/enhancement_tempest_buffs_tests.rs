@@ -81,6 +81,49 @@ fn wait_for_hits(run: &mut Run, spell: u32, count: usize) {
 
 #[test]
 #[ignore = "native263 reference inputs and private world database"]
+fn enhancement_tempest_secondary_targets_use_native_effectiveness() {
+    let _seed = crate::random::seed_scope(818181);
+    let mut run = prepare_literal(263, 3).unwrap();
+    engage(&mut run);
+    let actor = run.actor;
+    let primary = run.targets[0];
+    let recipients = run.targets.clone();
+    for (index, target) in recipients.into_iter().enumerate() {
+        run.app.insert_resource(
+            crate::spell_cast::effects::factor_capture::FactorCapture::new(
+                actor, target, TEMPEST, "tempest", 1,
+            ),
+        );
+        crate::spell_cast::cast_triggered(run.app.world_mut(), actor, TEMPEST, Some(primary), 1);
+        let capture = run
+            .app
+            .world()
+            .resource::<crate::spell_cast::effects::factor_capture::FactorCapture>()
+            .export();
+        let amount = capture["events"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|event| event["event"] == "direct_amount" && event["spell_id"] == TEMPEST)
+            .expect("real Tempest hits the captured recipient");
+        let multiplier = amount["applied_multipliers"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|factor| factor["factor"] == "giantkiller")
+            .unwrap()["value"]
+            .as_f64()
+            .unwrap();
+        let expected = if index == 0 { 1.0 } else { 0.65 };
+        assert!(
+            (multiplier - expected).abs() < 0.001,
+            "real Tempest target {index} multiplier {multiplier}"
+        );
+    }
+}
+
+#[test]
+#[ignore = "native263 reference inputs and private world database"]
 fn enhancement_tempest_buffs_real_tempest_earns_arc_then_chain_recasts_from_last_recipient() {
     // SimC76f8118 sc_shaman.cpp9994–10007 grants both buffs on actual Tempest.
     // 6709–6714/12437–12484 consumes Arc at the last chain hit and schedules325–425ms later.
