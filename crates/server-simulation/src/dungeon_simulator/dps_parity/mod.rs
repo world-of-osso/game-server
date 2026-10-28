@@ -88,6 +88,7 @@ spec_drivers! {
     265 => affliction_rotation,
     266 => demonology_rotation,
     267 => destruction_rotation,
+    268 => brewmaster_rotation,
     269 => windwalker_rotation,
     577 => havoc_rotation,
     1467 => devastation_rotation,
