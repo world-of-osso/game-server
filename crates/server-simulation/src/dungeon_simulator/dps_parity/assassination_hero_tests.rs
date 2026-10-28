@@ -410,9 +410,15 @@ fn assassination_hero_quietus_spends_new_mark_with_native_chance() {
     install_fixture_lifetimes(&mut run, started_at);
     assert!(crate::auras::has_aura(run.app.world(), run.actor, 1273017));
     let mark_stacks = |run: &Run| {
-        run.app.world().get::<crate::auras::ActiveAuras>(run.targets[0]).and_then(|auras| {
-            auras.iter().find(|a| a.spell_id == 457129 && a.caster == run.actor).map(|a| a.stacks)
-        })
+        run.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(run.targets[0])
+            .and_then(|auras| {
+                auras
+                    .iter()
+                    .find(|a| a.spell_id == 457129 && a.caster == run.actor)
+                    .map(|a| a.stacks)
+            })
     };
     let mut spent = 0;
     let mut retained = 0;
@@ -428,5 +434,8 @@ fn assassination_hero_quietus_spends_new_mark_with_native_chance() {
             }
         }
     }
-    assert!(spent > 0 && retained > 0, "new marks must both lose and retain a stack: spent={spent}, retained={retained}");
+    assert!(
+        spent > 0 && retained > 0,
+        "new marks must both lose and retain a stack: spent={spent}, retained={retained}"
+    );
 }
