@@ -26,6 +26,10 @@ fn protection_paladin_replays_recorded_damage_without_healer() {
     assert!(duration > 0.0);
     assert!((0.0..=1.0).contains(&report["active_mitigation_uptime"].as_f64().unwrap()));
     assert!(report["largest_spike"].as_f64().unwrap() > 0.0);
+    assert!(
+        !report["tank_casts"].as_object().unwrap().is_empty(),
+        "{report}"
+    );
     if !report["time_to_death"].is_null() {
         assert_eq!(report["time_to_death"].as_f64().unwrap(), duration);
     }
