@@ -313,6 +313,80 @@ impl super::SpecDriver for Rotation {
 mod tests {
     #[test]
     #[ignore = "requires canonical Brewmaster profile and world database"]
+    fn harmony_coalescence_spends_real_keg_damage_from_pool() {
+        let _seed = crate::random::seed_scope(70448);
+        let mut run = super::super::prepare_literal(268, 1).unwrap();
+        super::super::engage(&mut run);
+        let actor = run.actor;
+        let target = run.targets[0];
+        assert!(
+            run.app
+                .world()
+                .get::<crate::class_progression::TraitLoadout>(actor)
+                .unwrap()
+                .active_talent_spells()
+                .any(|talent| talent.spell_id == 450529)
+        );
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 100780, Some(target), false)
+            .unwrap();
+        let event = run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .find(|event| {
+                event.spell_id == Some(100780)
+                    && event.kind == shared::protocol::CombatLogKind::Damage
+            })
+            .expect("actual Tiger Palm damage");
+        let actual_damage = (event.amount - event.overflow) as f32;
+        let deposited = run
+            .app
+            .world()
+            .get::<crate::auras::harmony::HarmonyPools>(actor)
+            .unwrap()
+            .accumulator;
+        let world = run.app.world();
+        let value = |spell, effect| {
+            crate::spell_cast::scripts::script_effect_value(world, actor, spell, effect)
+        };
+        // SimC reads Way's native effect directly; the selected MID2 row is 30%.
+        let expected =
+            actual_damage * value(450508, 0) / 100.0 * (1.0 + value(450529, 2) / 100.0) * 1.3;
+        assert!(
+            (deposited - expected).abs() < 1.0,
+            "pool={deposited}, hit={actual_damage}, expected={expected}"
+        );
+        for _ in 0..40 {
+            run.app.update();
+        }
+        let before = run
+            .app
+            .world()
+            .get::<crate::auras::harmony::HarmonyPools>(actor)
+            .unwrap()
+            .accumulator;
+        assert!(before > 0.0);
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 121253, Some(target), false)
+            .unwrap();
+        for _ in 0..5 {
+            run.app.update();
+        }
+        let after = run
+            .app
+            .world()
+            .get::<crate::auras::harmony::HarmonyPools>(actor)
+            .unwrap()
+            .accumulator;
+        assert!(
+            after < before,
+            "Coalescence spends Keg Smash damage: {before} -> {after}"
+        );
+    }
+
+    #[test]
+    #[ignore = "requires canonical Brewmaster profile and world database"]
     fn harmony_real_damage_banks_and_celestial_infusion_spends() {
         let mut run = super::super::prepare_literal(268, 1).unwrap();
         super::super::engage(&mut run);
