@@ -46,6 +46,7 @@ fn launch(world: &mut World, caster: Entity, spell: &SpellInfo) {
     if consumed == 0 {
         return;
     }
+    super::vengeance_soul_cleave::trigger_untethered_rage(world, caster, consumed);
     // SimC76f8118 sc_demon_hunter.cpp5371–5390: snapshot the fragment-scaled
     // damage and deliver its native child one second after consumption.
     let pending = PendingBomb {

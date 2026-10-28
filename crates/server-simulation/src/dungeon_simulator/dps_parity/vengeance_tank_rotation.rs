@@ -549,4 +549,155 @@ mod tests {
             2
         );
     }
+    #[test]
+    #[ignore = "requires native Vengeance profile"]
+    fn soul_cleave_consumes_earned_fragments_before_delayed_damage() {
+        use super::super::*;
+        use server::soul_fragments::{self, FragmentFilter};
+        let _seed = crate::random::seed_scope(70_448);
+        let (profile, traits) = read_reference(581).unwrap();
+        let identity = inputs::read_actor(&profile).unwrap();
+        let mut run = prepare_reference(profile, &traits, 1, identity).unwrap();
+        let actor = run.actor;
+        let target = run.targets[0];
+        crate::spell_cast::cast_for_player_with_target(
+            run.app.world_mut(),
+            actor,
+            263642,
+            Some(target),
+        )
+        .unwrap();
+        for _ in 0..35 {
+            run.app.update();
+        }
+        assert_eq!(
+            soul_fragments::active_count(run.app.world(), actor, FragmentFilter::Any),
+            2
+        );
+        crate::spell_cast::cast_for_player_with_target(
+            run.app.world_mut(),
+            actor,
+            228477,
+            Some(target),
+        )
+        .unwrap();
+        run.app.update();
+        assert_eq!(
+            soul_fragments::active_count(run.app.world(), actor, FragmentFilter::Any),
+            0
+        );
+        assert!(
+            crate::auras::has_aura(run.app.world(), actor, 1270547)
+                || crate::auras::has_aura(run.app.world(), actor, 1270476),
+            "consumption must earn native Untethered Rage or Seething Anger"
+        );
+        let count = |run: &Run| {
+            run.app
+                .world()
+                .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+                .0
+                .iter()
+                .filter(|event| {
+                    event.spell_id == Some(228478)
+                        && event.kind == shared::protocol::CombatLogKind::Damage
+                })
+                .count()
+        };
+        assert_eq!(count(&run), 0, "damage child must wait for native delay");
+        for _ in 0..10 {
+            run.app.update();
+        }
+        assert_eq!(count(&run), 1, "exactly one delayed damage child");
+    }
+    #[test]
+    #[ignore = "requires native Vengeance profile"]
+    fn untethered_meta_uses_native_short_duration_and_consumes_proc() {
+        use super::super::*;
+        let (profile, traits) = read_reference(581).unwrap();
+        let identity = inputs::read_actor(&profile).unwrap();
+        let mut run = prepare_reference(profile, &traits, 1, identity).unwrap();
+        let actor = run.actor;
+        crate::auras::apply_aura(
+            run.app.world_mut(),
+            &crate::auras::AuraApplication {
+                caster: actor,
+                target: actor,
+                spell_id: 1270476,
+                effect_mask: u32::MAX,
+                source: crate::auras::AuraSource::Cast,
+            },
+        );
+        crate::spell_cast::cast_for_player_with_target(
+            run.app.world_mut(),
+            actor,
+            187827,
+            Some(actor),
+        )
+        .unwrap();
+        for _ in 0..3 {
+            run.app.update();
+        }
+        let aura = run
+            .app
+            .world()
+            .get::<crate::auras::ActiveAuras>(actor)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 187827)
+            .unwrap();
+        assert_eq!(aura.duration_ms, 10_000);
+        assert!(!crate::auras::has_aura(run.app.world(), actor, 1270476));
+    }
+    #[test]
+    #[ignore = "requires native Vengeance profile"]
+    fn untethered_meta_extends_existing_native_metamorphosis() {
+        use super::super::*;
+        let (profile, traits) = read_reference(581).unwrap();
+        let identity = inputs::read_actor(&profile).unwrap();
+        let mut run = prepare_reference(profile, &traits, 1, identity).unwrap();
+        let actor = run.actor;
+        for spell_id in [187827, 1270476] {
+            crate::auras::apply_aura(
+                run.app.world_mut(),
+                &crate::auras::AuraApplication {
+                    caster: actor,
+                    target: actor,
+                    spell_id,
+                    effect_mask: u32::MAX,
+                    source: crate::auras::AuraSource::Cast,
+                },
+            );
+        }
+        let old = run
+            .app
+            .world()
+            .get::<crate::auras::ActiveAuras>(actor)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 187827)
+            .unwrap()
+            .expires_at
+            .unwrap();
+        crate::spell_cast::cast_for_player_with_target(
+            run.app.world_mut(),
+            actor,
+            187827,
+            Some(actor),
+        )
+        .unwrap();
+        for _ in 0..3 {
+            run.app.update();
+        }
+        let new = run
+            .app
+            .world()
+            .get::<crate::auras::ActiveAuras>(actor)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 187827)
+            .unwrap()
+            .expires_at
+            .unwrap();
+        assert!((new - old - 10.0).abs() < 0.11, "old={old} new={new}");
+    }
 }
