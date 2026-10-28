@@ -274,6 +274,7 @@ mod marksmanship_mechanics_tests;
 mod melee_return;
 mod midnight_item_damage_tests;
 mod midnight_stat_items_tests;
+mod midnight_tendril_tests;
 mod multi_seed;
 mod named_action_cooldown_tests;
 mod native_pandemic_tests;

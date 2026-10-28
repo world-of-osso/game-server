@@ -57,6 +57,10 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 - Selected Burning Blades452408 applies native residual1245654 to landed Devourer weapon swings and Voidblade/Hungering Slash damage children. Preserve the native periodic timing and the existing Havoc residual453177 behavior (SimC76f8118 `sc_demon_hunter.cpp`3088–3111,5830–5847,6697–6710,6875–6878).
 
+### Twisted Horror's Tendril
+
+- Equipped1310404 earns native Devastating Power1310414 stacks from its proc driver, using the driver's item-scaled rating amount. Driver1310446 grants three stacks on its first successful proc for each actual target; its native cooldown remains in force. Applications keep their native independent stack durations (SimC76f8118 `unique_gear_midnight.cpp`4818–4875).
+
 ### Literal wait
 
 - A selected `wait` evaluates `sec` once, holds subsequent actions for that duration without interrupting attacks, and reevaluates the APL afterwards. The default is one second; nonpositive `sec` uses the source `player.available()` delay (SimC76f8118 `player.cpp`7130–7133,9706–9803).
