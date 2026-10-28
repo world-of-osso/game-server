@@ -119,6 +119,15 @@ fn carry_next_tick_duration(world: &World, target: Entity, new: &mut AuraInstanc
     };
     // SimC76f8118 action.cpp419/4618–4619: ordinary DoT refresh adds
     // the time to the next full tick to the newly triggered duration.
+    if new.spell_id == 1297091 {
+        eprintln!(
+            "grasp refresh now={now} next={} expiry={:?} period={} source={:?}",
+            effect.next_tick_at(),
+            old.expires_at,
+            effect.period_ms,
+            old.source
+        );
+    }
     let until_tick = (effect.next_tick_at() - now).max(0.0);
     let duration = f64::from(new.duration_ms) / 1000.0 + until_tick;
     new.duration_ms = (duration * 1000.0).round() as u32;

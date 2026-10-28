@@ -41,6 +41,10 @@ fn unholy_magus_recast_preserves_grasp_tick_phase() {
             if event.source != Some(magus.to_bits()) || event.spell_id != Some(1297091) {
                 continue;
             }
+            eprintln!(
+                "grasp event now={now} kind={:?} last={last_tick:?}",
+                event.kind
+            );
             if event.kind == CombatLogKind::AuraRefreshed && last_tick.is_some() {
                 refreshed = true;
                 let remaining = world
