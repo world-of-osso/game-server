@@ -2186,7 +2186,16 @@ fn deal_source_damage_and_report(
     factor_capture::record_mitigated(world, ctx, target, amount);
     #[cfg(any(test, feature = "test-support"))]
     let captured_hit = factor_capture::take_hit(world, ctx, target, &damage);
-    let (amount, absorbed) = crate::auras::absorb_damage(world, target, school, amount);
+    let (deferred, consume_ox) = if ctx.spell.id == 124255 {
+        (0.0, false)
+    } else {
+        crate::auras::stagger::snapshot(world, target)
+            .map_or((0.0, false), |stagger| stagger.deferred(amount, school))
+    };
+    if deferred > 0.0 || consume_ox {
+        crate::auras::stagger::deposit(world, target, deferred, consume_ox);
+    }
+    let (amount, absorbed) = crate::auras::absorb_damage(world, target, school, amount - deferred);
     let amount = crate::auras::damage_transfer::route(world, ctx.caster, target, school, amount);
     let (caster_scaling, target_scaling) = (
         UnitScaling::of(world, ctx.caster),
