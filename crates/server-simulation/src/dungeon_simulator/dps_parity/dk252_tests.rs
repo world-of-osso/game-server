@@ -1444,6 +1444,8 @@ fn dk252_lord_magus_uses_selected_native_lifetime() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(252, 1).unwrap();
     engage(&mut run);
+    // Forbidden Knowledge can otherwise summon a third Magus and consume this one.
+    crate::auras::remove_auras(run.app.world_mut(), run.targets[0], crate::auras::RemoveReason::Cancelled, |aura| aura.spell_id == 1240996);
     literal_rotation::execution::execute(
         run.app.world_mut(),
         run.actor,
@@ -1476,11 +1478,6 @@ fn dk252_lord_magus_uses_selected_native_lifetime() {
     let virtual_now = crate::auras::aura_now(run.app.world());
     while crate::spell_cast::now(run.app.world()) < started + f64::from(native_ms) / 1000.0 - 1.0 {
         run.app.update();
-        if run.app.world().get_entity(magus).is_err() {
-            let world = run.app.world();
-            let events = &world.resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
-            panic!("Magus disappeared at {}; summons: {:?}", crate::spell_cast::now(world), events.iter().filter(|event| event.kind == CombatLogKind::Summon).collect::<Vec<_>>());
-        }
     }
     assert!(
         run.app.world().get_entity(magus).is_ok(),
