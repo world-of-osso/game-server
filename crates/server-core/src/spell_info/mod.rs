@@ -132,6 +132,9 @@ pub struct SpellInfo {
     /// Owned bag GUID on this cast's queued/active snapshot.
     #[serde(skip)]
     pub cast_target_item_guid: Option<u64>,
+    /// This sourced cast cannot add chain targets.
+    #[serde(skip)]
+    pub cast_single_target: bool,
     /// Source TRIGGERED_IGNORE_SPELL_AND_CATEGORY_CD (0x2), on per-cast clones only.
     /// CheckCast skips SpellHistory::IsReady; HandleCooldowns does no writes.
     #[serde(skip)]

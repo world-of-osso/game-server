@@ -1194,6 +1194,9 @@ pub fn chain_targets(
     target: Entity,
     relation: Relation,
 ) -> Vec<Entity> {
+    if spell.cast_single_target {
+        return Vec::new();
+    }
     // TC a352b1fa Spell.cpp1834–1836 applies native ChainTargets modifiers
     // before deciding whether this effect chains at all.
     let max_targets = crate::auras::spell_mods::modify(

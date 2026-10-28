@@ -159,6 +159,8 @@ fn cast_periodic_attack(world: &mut World, caster: Entity, action: u32, multipli
         .expect("native periodic attack action")
         .clone();
     child.cast_damage_multiplier = Some(multiplier);
+    // SimC76f8118 sc_warrior.cpp3057–3072: Unhinged Mortal Strike does not cleave.
+    child.cast_single_target = action == 12294;
     child.cast_primary_target = Some(target);
     if !super::super::launch_triggered_spell(world, caster, &child, Some(target), 1) {
         warn!(?caster, action, "Native periodic attack refused");
