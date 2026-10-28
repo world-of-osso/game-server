@@ -1144,6 +1144,33 @@ fn dk252_putrefy_ghoul_impacts_the_enemy() {
 
 #[test]
 #[ignore = "requires native252 profile/traits and player actor"]
+fn dk252_trollbane_chains_then_scourge_strike_shatters_three_targets() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 3).unwrap();
+    engage(&mut run);
+    literal_rotation::execution::execute(run.app.world_mut(), run.actor,
+        literal_rotation::execution::Execution::Spell(42650, run.actor, None)).unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    for _ in 0..200 {
+        run.app.update();
+        if crate::auras::has_aura(run.app.world(), run.targets[0], 444826) { break; }
+    }
+    assert!(crate::auras::has_aura(run.app.world(), run.targets[0], 444826), "real Trollbane must apply native Chains of Ice");
+    literal_rotation::execution::execute(run.app.world_mut(), run.actor,
+        literal_rotation::execution::Execution::Spell(55090, run.targets[0], Some(run.targets[0]))).unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    for _ in 0..20 { run.app.update(); }
+    let events = &run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
+    for target in &run.targets {
+        assert!(events.iter().any(|event| event.source == Some(run.actor.to_bits())
+            && event.target == Some(target.to_bits()) && event.spell_id == Some(444834)
+            && event.kind == CombatLogKind::Damage && event.amount > 0),
+            "Scourge Strike must make native Icy Fury hit {target:?}");
+    }
+}
+
+#[test]
+#[ignore = "requires native252 profile/traits and player actor"]
 fn dk252_army_summons_abomination_with_cloud_and_melee() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(252, 1).unwrap();

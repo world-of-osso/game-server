@@ -111,8 +111,8 @@ const GUARDIAN_POLICIES: &[GuardianPolicy] = &[
     GuardianPolicy {
         summons: &[444254],
         entry: 221635,
-        spells: &[445507],
-        repeat_gcd: None,
+        spells: &[444826, 445507],
+        repeat_gcd: Some(1.0),
         owner_spell_share: None,
         owner_attack_share: Some(0.70125),
     },
