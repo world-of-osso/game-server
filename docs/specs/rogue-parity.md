@@ -83,7 +83,8 @@ Paths below are under `crates/server-simulation/src/dungeon_simulator/dps_parity
 - [ ] Qualify Doomblade's default aura-delay application and pending-tick duration carry against the pinned staggered-hand refresh (`player.cpp900–972`, `action.cpp4614–4617`). The isolated pool test does not qualify this timing.
 
 - [ ] Qualify these mechanics and spec259 ST/3T output against the parent contract's ±10% band.
-- [ ] Quietus Celeris, mark-target death, Unshakeable Drive's delayed consumer, and Mass Casualty remain unqualified by this slice.
+- [x] Assassination mark-consuming finishers trigger Mass Casualty on secondary targets with the caster's active Rupture. Source: `sc_rogue.cpp6570–6594,8760–8765`.
+- [ ] Quietus Celeris, mark-target death and Unshakeable Drive's delayed consumer remain unqualified by this slice.
 
 ## Out of scope
 

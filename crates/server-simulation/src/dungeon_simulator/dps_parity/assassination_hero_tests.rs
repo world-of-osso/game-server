@@ -3,6 +3,38 @@ use super::*;
 use shared::protocol::CombatLogKind;
 
 #[test]
+#[ignore = "requires prepared259 native profile and world data"]
+fn assassination_mass_casualty_hits_only_secondary_owned_rupture() {
+    use shared::components::PowerType;
+    let mut run = prepare_measurement(259, 3).unwrap();
+    engage(&mut run);
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, 1273035));
+    for (spell, target) in [(457129, run.targets[0]), (1943, run.targets[1])] {
+        crate::auras::apply_aura(run.app.world_mut(), &crate::auras::AuraApplication {
+            caster: run.actor, target, spell_id: spell, effect_mask: u32::MAX,
+            source: crate::auras::AuraSource::Cast,
+        });
+    }
+    assert!(crate::auras::set_owned_stacks(run.app.world_mut(), run.actor, run.targets[0], 457129, 3));
+    {
+        let mut pools = run.app.world_mut().get_mut::<crate::spell_cast::powers::PowerPools>(run.actor).unwrap();
+        for power in [PowerType::Energy, PowerType::ComboPoints] {
+            let pool = pools.get_mut(power).unwrap();
+            pool.current = pool.max;
+        }
+    }
+    literal_rotation::execution::execute(run.app.world_mut(), run.actor,
+        literal_rotation::execution::Execution::Spell(32645, run.targets[0], Some(run.targets[0]))).unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    let events = &run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
+    for (index, target) in run.targets.iter().enumerate() {
+        let hits = events.iter().filter(|event| event.source == Some(run.actor.to_bits()) && event.target == Some(target.to_bits())
+            && event.spell_id == Some(1273061) && event.kind == CombatLogKind::Damage && event.amount > 0).count();
+        assert_eq!(hits, usize::from(index == 1), "only secondary owned Rupture receives Mass Casualty");
+    }
+}
+
+#[test]
 #[ignore = "requires prepared259 private native DB and player actor"]
 fn assassination_hero_garrote_window_allows_real_sequential_target_spread() {
     let _seed = crate::random::seed_scope(70448);
