@@ -1,8 +1,8 @@
 //! Native Sigil of Spite detonation on the actual ground trigger's expiry.
 use super::combat;
 use bevy::prelude::*;
-use combat::spell_cast::{self, script_registry::SpellScriptHook};
 use combat::soul_fragments::{self, FragmentKind};
+use combat::spell_cast::{self, script_registry::SpellScriptHook};
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::AreaTriggerExpired(detonate)];
 
