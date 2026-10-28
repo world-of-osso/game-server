@@ -65,9 +65,21 @@ fn devourer_rotation_casts_hungering_slash_and_reapers_toll() {
 #[ignore = "requires DPS_PARITY_WORLD_DB and DPS_PARITY_OUTPUT with spec1480 exact profile/traits"]
 fn batch_c_explicit_embellishments_earn_insight() {
     let report = measure_seed(1480, 1, 70448).expect("native Devourer rotation");
-    assert_eq!(report["buff_uptime_pct"]["1283697"].as_f64(), Some(200.0), "both equipped Lining drivers remain active");
-    assert!(report["buff_uptime_pct"]["1229746"].as_f64().unwrap_or(0.0) > 0.0, "actual combat earns Insight");
-    assert!(!report["gaps"].as_array().unwrap().iter().any(|gap| gap.as_str().is_some_and(|gap| gap.contains("embellishment=arcanoweave_lining"))), "modeled option must not remain a gap");
+    assert_eq!(
+        report["buff_uptime_pct"]["1283697"].as_f64(),
+        Some(200.0),
+        "both equipped Lining drivers remain active"
+    );
+    assert!(
+        report["buff_uptime_pct"]["1229746"].as_f64().unwrap_or(0.0) > 0.0,
+        "actual combat earns Insight"
+    );
+    assert!(
+        !report["gaps"].as_array().unwrap().iter().any(|gap| gap
+            .as_str()
+            .is_some_and(|gap| gap.contains("embellishment=arcanoweave_lining"))),
+        "modeled option must not remain a gap"
+    );
 }
 
 #[test]

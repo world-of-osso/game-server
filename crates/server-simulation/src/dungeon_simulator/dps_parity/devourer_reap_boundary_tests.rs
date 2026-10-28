@@ -145,7 +145,10 @@ fn devourer_reap_consumes_active_lesser_fragments_and_hits() {
         run.app.update();
     }
     // SimC76f8118 cpp5982–5999,6081–6107 executes one Reap damage child.
-    assert!(!observed(&run, 1225827, CombatLogKind::Damage, true), "Reap must not also deal legacy child damage");
+    assert!(
+        !observed(&run, 1225827, CombatLogKind::Damage, true),
+        "Reap must not also deal legacy child damage"
+    );
 }
 
 #[test]

@@ -74,7 +74,10 @@ impl Equipment {
 
     pub fn modifiers(&self) -> ItemInstanceModifiers {
         let mut bonus_list = self.bonus_list.clone();
-        if let Some(bonus) = self.options.get("embellishment").and_then(|name| embellishment_bonus(name))
+        if let Some(bonus) = self
+            .options
+            .get("embellishment")
+            .and_then(|name| embellishment_bonus(name))
             && !bonus_list.contains(&bonus)
         {
             bonus_list.push(bonus);

@@ -190,7 +190,12 @@ fn batch1_voidblade_hit(meta: bool, mastery: f32, blind_focus: bool) -> (i32, bo
     stats.mastery_points = mastery;
     stats.mastery_pct = mastery;
     if !blind_focus {
-        crate::auras::remove_auras(run.app.world_mut(), actor, crate::auras::RemoveReason::Consumed, |aura| aura.spell_id == 1272364);
+        crate::auras::remove_auras(
+            run.app.world_mut(),
+            actor,
+            crate::auras::RemoveReason::Consumed,
+            |aura| aura.spell_id == 1272364,
+        );
     }
     let _hit_seed = crate::random::seed_scope(91);
     crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 1245414, Some(target), 1);
@@ -237,7 +242,10 @@ fn native_blind_focus_meta_scales_once() {
     // native Meta effect15 already modifies its label6000 points index2.
     let normal_bonus = f64::from(normal) / f64::from(plain) - 1.0;
     let expected = f64::from(meta_plain) * (1.0 + normal_bonus * 2.0);
-    assert!((f64::from(meta) - expected).abs() < expected * 0.005, "Meta hit {meta}, expected {expected}; normal {plain} -> {normal}, Meta baseline {meta_plain}");
+    assert!(
+        (f64::from(meta) - expected).abs() < expected * 0.005,
+        "Meta hit {meta}, expected {expected}; normal {plain} -> {normal}, Meta baseline {meta_plain}"
+    );
 }
 
 #[test]
@@ -259,12 +267,31 @@ fn batch_a_delayed_apocalypse_requires_meta_at_delivery() {
     for _ in 0..30 {
         crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 1227702, Some(actor), 1);
     }
-    crate::spell_cast::cast_for_player_with_target(run.app.world_mut(), actor, 1221150, Some(target))
-        .expect("real Star admission");
-    let hit = |run: &Run| run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0.iter().any(|event| event.spell_id == Some(1221162) && event.target == Some(target.to_bits()) && event.kind == CombatLogKind::Damage && event.amount > 0);
+    crate::spell_cast::cast_for_player_with_target(
+        run.app.world_mut(),
+        actor,
+        1221150,
+        Some(target),
+    )
+    .expect("real Star admission");
+    let hit = |run: &Run| {
+        run.app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|event| {
+                event.spell_id == Some(1221162)
+                    && event.target == Some(target.to_bits())
+                    && event.kind == CombatLogKind::Damage
+                    && event.amount > 0
+            })
+    };
     for _ in 0..100 {
         run.app.update();
-        if hit(&run) { break; }
+        if hit(&run) {
+            break;
+        }
     }
     assert!(hit(&run), "primary Star hit landed");
     crate::auras::remove_auras(
