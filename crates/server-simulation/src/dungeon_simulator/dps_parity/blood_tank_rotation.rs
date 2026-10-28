@@ -525,6 +525,7 @@ mod tests {
             .get_mut::<shared::components::Position>(actor)
             .unwrap()
             .x += 50.0;
+        assert!(!crate::auras::has_aura(run.app.world(), actor, 81141), "Death and Decay consumes its earned Crimson Scourge");
         run.app.update();
         assert!(
             !crate::auras::has_aura(run.app.world(), actor, 391459),

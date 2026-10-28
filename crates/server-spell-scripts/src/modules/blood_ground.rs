@@ -23,6 +23,7 @@ const SANGUINE_BUFF: u32 = 391459;
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::EarlyAuraRegistration(register),
     SpellScriptHook::AfterCastUpdate(sync_fields),
+    SpellScriptHook::AfterForegroundSpecial(consume_scourge),
 ];
 
 fn register(scripts: &mut AuraScripts) {
@@ -60,6 +61,15 @@ fn proc_scourge(world: &mut World, caster: Entity, _: &AuraInstance, _: Option<E
             history.remaining_cooldown_ms(spell, spell_cast::history_now(world)) as f64 / 1000.0
         });
     spell_cast::scripts::reduce_cooldown(world, caster, DECAY, remaining);
+}
+
+// SimC76f8118 sc_death_knight.cpp9702–9717 consumes the free cast's proc.
+fn consume_scourge(world: &mut World, caster: Entity, spell: &combat::spell_info::SpellInfo) {
+    if spell.id == DECAY && world.get::<ActiveSpec>(caster).is_some_and(|spec| spec.0 == 250) {
+        auras::remove_auras(world, caster, RemoveReason::Consumed, |aura| {
+            aura.spell_id == SCOURGE_BUFF && aura.caster == caster
+        });
+    }
 }
 
 #[derive(Component)]
