@@ -13,7 +13,9 @@ fn havoc_venomcursed_uses_actual_equipped_item_slot() {
     let mut run = prepare_measurement(577, 1).unwrap();
     let actor = run.actor;
     let auras = run.app.world().get::<ActiveAuras>(actor).unwrap();
-    for (id, inventory, amount) in [(1307906, 2, 550.0), (1307928, 1, 378.0)] {
+    for (id, inventory, amount, negative) in
+        [(1307906, 2, 550.0, -92.0), (1307928, 1, 378.0, -63.0)]
+    {
         let driver = auras
             .iter()
             .find(|a| a.spell_id == id && a.caster == actor)
@@ -23,6 +25,10 @@ fn havoc_venomcursed_uses_actual_equipped_item_slot() {
         assert_eq!(
             driver.effects.iter().find(|e| e.index == 0).unwrap().amount,
             amount
+        );
+        assert_eq!(
+            driver.effects.iter().find(|e| e.index == 1).unwrap().amount,
+            negative
         );
     }
     let started = run.app.world().resource::<Time>().elapsed();

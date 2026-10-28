@@ -53,14 +53,10 @@ pub(super) fn register(scripts: &mut AuraScripts) {
 }
 
 /// Item-scaled driver effect (SimC `effectN(index + 1).average(effect)`).
-fn read_driver_value(
-    world: &World,
-    unit: Entity,
-    item_level: Option<u16>,
-    index: u8,
-) -> Option<f32> {
+fn read_driver_value(world: &World, unit: Entity, driver: &AuraInstance, index: u8) -> Option<f32> {
     let mut spell = world.resource::<SpellStore>().get(DRIVER)?.clone();
-    spell.cast_item_level = item_level;
+    spell.cast_item_level = driver.cast_item_level;
+    spell.cast_item_inventory_type = driver.cast_item_inventory_type;
     let effect = spell.effects.iter().find(|effect| effect.index == index)?;
     Some(crate::spell_cast::effects::modded_base_points(
         world, unit, &spell, effect,
@@ -81,11 +77,11 @@ struct ArtifactGrant {
 fn read_artifact_grant(
     world: &World,
     unit: Entity,
-    level: Option<u16>,
+    driver: &AuraInstance,
     artifact: u32,
     previous_stacks: u8,
 ) -> Option<ArtifactGrant> {
-    let value = |index| read_driver_value(world, unit, level, index);
+    let value = |index| read_driver_value(world, unit, driver, index);
     let single = |rating, effect_mask| ArtifactGrant {
         rating,
         rating_effects: &[0],
@@ -151,8 +147,7 @@ fn apply_random_artifact(
 ) {
     let artifact = ARTIFACTS[(crate::random::random::<f64>() * ARTIFACTS.len() as f64) as usize];
     let previous = read_owned_stacks(world, unit, artifact);
-    let Some(grant) = read_artifact_grant(world, unit, driver.cast_item_level, artifact, previous)
-    else {
+    let Some(grant) = read_artifact_grant(world, unit, driver, artifact, previous) else {
         error!(
             ?unit,
             artifact, "Gebbo's Bottomless Bag lacks native driver values"
