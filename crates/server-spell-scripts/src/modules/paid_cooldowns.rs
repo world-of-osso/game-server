@@ -18,6 +18,14 @@ struct PaidCooldown {
 }
 
 const POLICIES: &[PaidCooldown] = &[
+    // SimC76f8118 sc_druid.cpp5076–5089: paid Rage reduces both Bear cooldowns.
+    PaidCooldown {
+        spec: 104,
+        passive: 393414,
+        resource: PowerType::Rage,
+        divisor_effect: 4,
+        cooldowns: &[50334, 102558],
+    },
     // SimC76f8118 sc_warrior.cpp1450–1455/1506–1517: actual paid Rage
     // divided by native Anger Management effect3 reduces Fury Avatar/Recklessness.
     PaidCooldown {
