@@ -309,6 +309,35 @@ fn simc_dummy_bleed_application_is_a_zero_damage_physical_hit() {
     );
 }
 
+#[test]
+#[ignore = "requires canonical Brewmaster profile and world database"]
+fn simc_dummy_bleed_tick_grants_elusive_brawler_but_self_damage_does_not() {
+    use crate::auras::{self, RemoveReason};
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::dps_parity::prepare_registered_player(268, 1).unwrap();
+    let tank = run.actor;
+    let source = run.targets[0];
+    assert!(auras::has_aura(run.app.world(), tank, 117906));
+    auras::remove_auras(run.app.world_mut(), tank, RemoveReason::Cancelled, |aura| {
+        aura.spell_id == 195630
+    });
+    crate::spell_cast::effects::replay_simc_dummy_bleed(run.app.world_mut(), tank, tank, 1_000.0);
+    assert!(
+        !auras::has_aura(run.app.world(), tank, 195630),
+        "self damage does not grant mastery"
+    );
+    crate::spell_cast::effects::replay_simc_dummy_bleed(
+        run.app.world_mut(),
+        source,
+        tank,
+        25_000.0,
+    );
+    assert!(
+        auras::has_aura(run.app.world(), tank, 195630),
+        "incoming physical bleed tick grants mastery"
+    );
+}
+
 fn avoided_hit(outcome: &str) -> super::healer_intake::Hit {
     super::healer_intake::Hit {
         tick: 1,
