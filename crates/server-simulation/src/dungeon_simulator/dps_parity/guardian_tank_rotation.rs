@@ -295,27 +295,74 @@ mod tests {
         let _seed = crate::random::seed_scope(70448);
         let mut run = super::super::prepare_registered_player(104, 1).unwrap();
         let actor = run.actor;
-        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 5487, Some(actor), false).unwrap();
-        for _ in 0..40 { run.app.update(); }
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 5487, Some(actor), false)
+            .unwrap();
+        for _ in 0..40 {
+            run.app.update();
+        }
         let count = |run: &mut super::super::Run| {
             let world = run.app.world_mut();
-            world.query::<&crate::spell_cast::summon::SummonedCreature>().iter(world)
-                .filter(|summon| summon.owner == actor && summon.spell_id == 1308399).count()
+            world
+                .query::<&crate::spell_cast::summon::SummonedCreature>()
+                .iter(world)
+                .filter(|summon| summon.owner == actor && summon.spell_id == 1308399)
+                .count()
         };
-        assert_eq!(count(&mut run), 0, "form casting alone cannot summon the spirit");
+        assert_eq!(
+            count(&mut run),
+            0,
+            "form casting alone cannot summon the spirit"
+        );
         for _ in 0..80 {
-            crate::spell_cast::powers::change_power(run.app.world_mut(), actor, shared::components::PowerType::Rage, 1000.0);
-            crate::spell_cast::creature_cast(run.app.world_mut(), actor, 192081, Some(actor), false).unwrap();
-            for _ in 0..25 { run.app.update(); }
-            assert!(count(&mut run) <= 1, "a new proc cannot overlap the living spirit");
-            if count(&mut run) == 1 { break; }
+            crate::spell_cast::powers::change_power(
+                run.app.world_mut(),
+                actor,
+                shared::components::PowerType::Rage,
+                1000.0,
+            );
+            crate::spell_cast::creature_cast(
+                run.app.world_mut(),
+                actor,
+                192081,
+                Some(actor),
+                false,
+            )
+            .unwrap();
+            for _ in 0..25 {
+                run.app.update();
+            }
+            assert!(
+                count(&mut run) <= 1,
+                "a new proc cannot overlap the living spirit"
+            );
+            if count(&mut run) == 1 {
+                break;
+            }
         }
-        assert_eq!(count(&mut run), 1, "actual paid Rage must eventually summon the spirit");
+        assert_eq!(
+            count(&mut run),
+            1,
+            "actual paid Rage must eventually summon the spirit"
+        );
         assert!(crate::auras::has_aura(run.app.world(), actor, 1308647));
         for _ in 0..3 {
-            crate::spell_cast::powers::change_power(run.app.world_mut(), actor, shared::components::PowerType::Rage, 1000.0);
-            crate::spell_cast::creature_cast(run.app.world_mut(), actor, 192081, Some(actor), false).unwrap();
-            for _ in 0..25 { run.app.update(); }
+            crate::spell_cast::powers::change_power(
+                run.app.world_mut(),
+                actor,
+                shared::components::PowerType::Rage,
+                1000.0,
+            );
+            crate::spell_cast::creature_cast(
+                run.app.world_mut(),
+                actor,
+                192081,
+                Some(actor),
+                false,
+            )
+            .unwrap();
+            for _ in 0..25 {
+                run.app.update();
+            }
         }
         assert_eq!(count(&mut run), 1, "active spirit blocks extra summons");
     }
