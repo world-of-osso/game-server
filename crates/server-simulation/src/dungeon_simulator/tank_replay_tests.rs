@@ -62,6 +62,42 @@ fn tank_replay_rejects_profiles_without_level_90_mid2_inputs() {
 }
 
 #[test]
+#[ignore = "requires canonical Blood profile and world database"]
+fn simc_dummy_strike_triggers_taken_melee_ability_proc() {
+    use crate::auras::RemoveReason;
+    use shared::components::Health;
+    let mut run = super::dps_parity::prepare_registered_player(250, 1).unwrap();
+    let target = run.actor;
+    let source = run.targets[0];
+    assert!(crate::auras::has_aura(run.app.world(), target, 326801));
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        target,
+        RemoveReason::Cancelled,
+        |aura| matches!(aura.spell_id, 77535 | 207203 | 326809),
+    );
+    let max = run.app.world().get::<Health>(target).unwrap().max;
+    run.app
+        .world_mut()
+        .get_mut::<Health>(target)
+        .unwrap()
+        .current = max * 0.30;
+    crate::spell_cast::effects::replay_simc_dummy_strike(
+        run.app.world_mut(),
+        source,
+        target,
+        max * 0.05,
+        false,
+        false,
+    );
+    run.app.update();
+    assert!(
+        crate::auras::has_aura(run.app.world(), target, 326809),
+        "landed melee ability must proc Rune of Sanguination"
+    );
+}
+
+#[test]
 #[ignore = "uses the native recipient, auto-only proc and SimC special damage"]
 fn simc_dummy_strike_does_not_trigger_auto_attack_procs() {
     use crate::auras::{ActiveAuras, AuraApplication, AuraSource, RemoveReason};
