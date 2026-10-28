@@ -2586,27 +2586,71 @@ fn dk252_sweeping_claws_hits_primary_once_and_each_secondary_once() {
     let mut run = prepare_measurement(252, 3).unwrap();
     let pet = crate::hunter_pet::summoned_pet(run.app.world(), run.actor).unwrap();
     engage(&mut run);
-    crate::combat::start_attack_now(run.app.world_mut(), run.actor, crate::combat::AutoAttack::new(run.targets[0]));
-    literal_rotation::execution::execute(run.app.world_mut(), run.actor,
-        literal_rotation::execution::Execution::Spell(1233448, run.actor, None)).unwrap();
+    crate::combat::start_attack_now(
+        run.app.world_mut(),
+        run.actor,
+        crate::combat::AutoAttack::new(run.targets[0]),
+    );
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(1233448, run.actor, None),
+    )
+    .unwrap();
     preparation::finish_pending_setup(&mut run).unwrap();
-    assert!(crate::spell_cast::try_cast_triggered(run.app.world_mut(), run.actor, 275430, Some(run.actor), 1));
+    assert!(crate::spell_cast::try_cast_triggered(
+        run.app.world_mut(),
+        run.actor,
+        275430,
+        Some(run.actor),
+        1
+    ));
     let lesser = {
         let world = run.app.world_mut();
-        world.query::<(Entity, &crate::spell_cast::summon::SummonedCreature)>().iter(world)
-            .find_map(|(actor, summon)| (summon.owner == run.actor && summon.spell_id == 275430).then_some(actor))
+        world
+            .query::<(Entity, &crate::spell_cast::summon::SummonedCreature)>()
+            .iter(world)
+            .find_map(|(actor, summon)| {
+                (summon.owner == run.actor && summon.spell_id == 275430).then_some(actor)
+            })
             .expect("actual lesser ghoul")
     };
-    for _ in 0..60 { run.app.update(); }
+    for _ in 0..60 {
+        run.app.update();
+    }
     for (actor, spell) in [(pet, 91778), (lesser, 1278150)] {
-        run.app.world_mut().resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>().0.clear();
-        assert!(crate::spell_cast::try_cast_triggered(run.app.world_mut(), actor, spell, Some(run.targets[0]), 1));
-        let events = &run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
+        run.app
+            .world_mut()
+            .resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .clear();
+        assert!(crate::spell_cast::try_cast_triggered(
+            run.app.world_mut(),
+            actor,
+            spell,
+            Some(run.targets[0]),
+            1
+        ));
+        let events = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0;
         for target in &run.targets {
-            let hits = events.iter().filter(|event| event.source == Some(actor.to_bits())
-                && event.target == Some(target.to_bits()) && event.spell_id == Some(spell)
-                && event.kind == CombatLogKind::Damage && event.amount > 0).count();
-            assert_eq!(hits, 1, "native Sweeping Claws {spell} must hit {target:?} once");
+            let hits = events
+                .iter()
+                .filter(|event| {
+                    event.source == Some(actor.to_bits())
+                        && event.target == Some(target.to_bits())
+                        && event.spell_id == Some(spell)
+                        && event.kind == CombatLogKind::Damage
+                        && event.amount > 0
+                })
+                .count();
+            assert_eq!(
+                hits, 1,
+                "native Sweeping Claws {spell} must hit {target:?} once"
+            );
         }
     }
 }

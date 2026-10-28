@@ -352,13 +352,16 @@ fn damage_multiplier(world: &World, ctx: &EffectCtx, target: Entity, periodic: b
     }
     // SimC76f8118 sc_paladin_retribution.cpp764–771,815–819: selected
     // Seething Flames reduces secondary Wake and flame impacts to 60%.
-    if matches!(ctx.spell.id, 255937 | 405345 | 405350)
-        && selected(world, ctx.caster, 405355)
-    {
+    if matches!(ctx.spell.id, 255937 | 405345 | 405350) && selected(world, ctx.caster, 405355) {
         let primary = if ctx.spell.id == 255937 {
-            ctx.spell.cast_primary_target.expect("Wake requires an enemy target")
+            ctx.spell
+                .cast_primary_target
+                .expect("Wake requires an enemy target")
         } else {
-            world.get::<WakePrimary>(ctx.caster).expect("Seething Flames requires its Wake target").0
+            world
+                .get::<WakePrimary>(ctx.caster)
+                .expect("Seething Flames requires its Wake target")
+                .0
         };
         if primary != target {
             multiplier *= 0.6;
@@ -488,12 +491,24 @@ fn light_within_wrath_multiplier(world: &World, ctx: &EffectCtx, _: Entity, peri
     if periodic || !selected(world, ctx.caster, 1261111) {
         return 1.0;
     }
-    let Some(auras) = world.get::<ActiveAuras>(ctx.caster) else { return 1.0 };
-    let Some(value) = auras.iter().find(|aura| aura.spell_id == 1261111 && aura.caster == ctx.caster)
+    let Some(auras) = world.get::<ActiveAuras>(ctx.caster) else {
+        return 1.0;
+    };
+    let Some(value) = auras
+        .iter()
+        .find(|aura| aura.spell_id == 1261111 && aura.caster == ctx.caster)
         .and_then(|aura| aura.effects.iter().find(|effect| effect.index == 0))
-        .map(|effect| effect.amount) else { return 1.0 };
-    let applies = auras.iter().filter(|aura| matches!(aura.spell_id, 31884 | 454351) && aura.caster == ctx.caster)
-        .any(|aura| aura.effects.iter().any(|effect| effect.index == 11
-            && spell_mods::class_mask_affects(aura, effect, ctx.spell)));
+        .map(|effect| effect.amount)
+    else {
+        return 1.0;
+    };
+    let applies = auras
+        .iter()
+        .filter(|aura| matches!(aura.spell_id, 31884 | 454351) && aura.caster == ctx.caster)
+        .any(|aura| {
+            aura.effects.iter().any(|effect| {
+                effect.index == 11 && spell_mods::class_mask_affects(aura, effect, ctx.spell)
+            })
+        });
     if applies { 1.0 + value / 100.0 } else { 1.0 }
 }

@@ -13,5 +13,7 @@ fn filter(spell: u32, effect: u8) -> Option<AreaTargetFilter> {
 }
 
 fn exclude_primary(_: &World, _: &SpellInfo, primary: Option<Entity>, targets: &mut Vec<Entity>) {
-    if let Some(primary) = primary { targets.retain(|target| *target != primary); }
+    if let Some(primary) = primary {
+        targets.retain(|target| *target != primary);
+    }
 }
