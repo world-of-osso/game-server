@@ -277,6 +277,7 @@ mod literal_ranged_attack_tests;
 pub(crate) mod literal_rotation;
 mod marksmanship_fact_tests;
 mod marksmanship_mechanics_tests;
+mod marksmanship_surging_tests;
 mod melee_return;
 mod midnight_item_damage_tests;
 mod midnight_stat_items_tests;
