@@ -120,6 +120,7 @@ fn replay_with_registry(
                 .is_some_and(|health| health.current > 0.0)
             {
                 deliver_hit(run.app.world_mut(), source, party.tank, hit, tick)?;
+                recorder.sample_minima(run.app.world());
             }
             next += 1;
         }

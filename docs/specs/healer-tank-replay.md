@@ -10,8 +10,9 @@ Replay recorded incoming damage in the native server combat simulation to compar
 - [ ] Replay hits against a dummy party through native combat, with Holy Paladin (65) as the first healer and Protection Paladin (66) as the first tank. Extend the same harness to every healer and tank specialization and their spells. The initial Holy Paladin benchmark uses its native learned Holy Light and Flash of Light; this is not complete spell coverage.
 - [ ] For each healer report effective HPS, raw HPS, overheal percentage, per-spell HPS, mana over time, and time to first party death. Sample mana at one-second intervals. Use the recorded combat duration for HPS and report no death as null.
 - [ ] For each tank report raw and mitigated damage taken and mitigation percentage, self-healing and consumed absorbs per second, time to death without a healer, active-mitigation uptime, and largest five-second damage spike. Raw incoming damage includes avoided attacks; mitigation includes avoidance. Damage taken and spike include self-sourced periodic damage from tank mechanics. Stop the tank measurement at death; report no death as null. For the initial Protection Paladin, active mitigation is Shield of the Righteous.
-- [ ] Print report tables with `scripts/healer_tank_replay.py`.
 - [ ] Mistweaver Mana Tea uses native-description-derived spending, stack cap, channel consumption and mana restoration. The pinned SimC source has no Mistweaver Mana Tea model.
+- [ ] Print report tables with `scripts/healer_tank_replay.py`. SimC healer reports include frame-sampled minimum healer mana, minimum tank health including immediately after each incoming hit, and tank damage receipts per replay second.
+- [ ] Restoration Shaman triage uses native readiness for Earth Shield, Riptide, Healing Wave, Healing Surge, Chain Heal, Healing Stream Totem, Unleash Life, Spirit Link and Mana Tide when learned. Cloudburst Totem remains blocked by absent native 157153 data.
 
 ## How it works
 

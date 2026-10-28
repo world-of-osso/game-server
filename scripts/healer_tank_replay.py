@@ -47,6 +47,10 @@ def print_healer(report):
     print('|---|---:|---:|---:|---:|')
     print(f'| {report["spec"]} | {number(metrics["effective_hps"])} | {number(metrics["raw_hps"])} | '
           f'{number(metrics["overheal_pct"])} | {number(metrics["first_death_seconds"])} |')
+    if report.get('timeline') == 'simc_tank_dummy':
+        print('\n| Minimum mana | Tank DTPS | Minimum tank health |')
+        print('|---:|---:|---:|')
+        print(f'| {number(metrics["mana_min"])} | {number(metrics["tank_dtps"])} | {number(metrics["tank_health_min"])} |')
     print('\n| Spell ID | Effective HPS | Raw HPS |')
     print('|---|---:|---:|')
     for spell, values in metrics['spell_healing'].items():

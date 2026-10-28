@@ -34,5 +34,23 @@ fn restoration_shaman_heals_the_simc_dummy_party() {
         .sum();
     assert!((spell_total - effective).abs() < 0.000001);
     assert_eq!(metrics["mana_curve"].as_array().unwrap().len(), 301);
+    assert!(metrics["tank_dtps"].as_f64().unwrap() > 0.0, "{report}");
+    assert!(
+        metrics["tank_health_min"].as_f64().unwrap() >= 0.0,
+        "{report}"
+    );
+    assert!(
+        metrics["mana_min"].as_f64().unwrap()
+            <= metrics["mana_curve"][0]["current"].as_f64().unwrap(),
+        "{report}"
+    );
+    assert!(
+        report["healer_casts"]["974"].as_u64().unwrap_or(0) > 0,
+        "Earth Shield must be cast: {report}"
+    );
+    assert!(
+        report["healer_casts"]["5394"].as_u64().unwrap_or(0) > 0,
+        "Healing Stream Totem must be cast: {report}"
+    );
     println!("RESTORATION_SHAMAN_REPORT={report}");
 }
