@@ -13,6 +13,7 @@ mod healer_metrics;
 mod healer_metrics_tests;
 mod healer_replay;
 mod healer_report;
+mod holy_paladin_replay_tests;
 mod movement;
 mod runtime;
 pub(crate) use graph::Space;

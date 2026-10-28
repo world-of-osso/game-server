@@ -147,6 +147,9 @@ pub fn spawn_party_with_healer(
     spec: u32,
 ) -> Result<Party, String> {
     let healer = healer_profiles::configure(world, spec)?;
+    if spec == 65 {
+        healer_profiles::install_holy_paladin_policy(world, level)?;
+    }
     healer_profiles::require_policy(world, &healer, level)?;
     let mut profiles = read_party_profiles(world, DEFAULT_PARTY)?;
     profiles[1] = healer;
