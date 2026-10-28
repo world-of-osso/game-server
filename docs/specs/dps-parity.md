@@ -1328,3 +1328,6 @@ Selected Insidious Ire earns its temporary channel bonus when one target has all
 ### Devastation Dragonrage
 
 - Dragonrage launches one native Pyre explosion for each enemy selected by its native target limit; each explosion hits enemies in its area.
+### Evoker Slipstream
+
+- A successful Deep Breath or Breath of Eons restores all Hover charges when Slipstream is selected.
