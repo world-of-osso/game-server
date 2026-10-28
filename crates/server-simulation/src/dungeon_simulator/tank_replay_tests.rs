@@ -16,6 +16,94 @@ fn tank_replay_rejects_profiles_without_level_90_mid2_inputs() {
 }
 
 #[test]
+#[ignore = "uses the native recipient, auto-only proc and SimC special damage"]
+fn simc_dummy_strike_does_not_trigger_auto_attack_procs() {
+    use crate::auras::{ActiveAuras, AuraApplication, AuraSource, RemoveReason};
+    let mut run = super::dps_parity::prepare_registered_player(250, 1).unwrap();
+    let target = run.actor;
+    let source = run.targets[0];
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        target,
+        RemoveReason::Cancelled,
+        |aura| aura.spell_id == 195181,
+    );
+    for _ in 0..3 {
+        crate::auras::apply_aura(
+            run.app.world_mut(),
+            &AuraApplication {
+                caster: target,
+                target,
+                spell_id: 195181,
+                effect_mask: u32::MAX,
+                source: AuraSource::Cast,
+            },
+        );
+    }
+    let stacks = |run: &super::dps_parity::Run| {
+        run.app
+            .world()
+            .get::<ActiveAuras>(target)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 195181)
+            .map_or(0, |aura| aura.stacks)
+    };
+    assert_eq!(stacks(&run), 3);
+    let before = run
+        .app
+        .world()
+        .get::<shared::components::Health>(target)
+        .unwrap()
+        .current;
+    crate::spell_cast::effects::replay_simc_dummy_strike(
+        run.app.world_mut(),
+        source,
+        target,
+        10_000.0,
+        false,
+        false,
+    );
+    run.app.update();
+    assert!(
+        run.app
+            .world()
+            .get::<shared::components::Health>(target)
+            .unwrap()
+            .current
+            < before
+    );
+    assert_eq!(
+        stacks(&run),
+        3,
+        "special attack must not consume Bone Shield"
+    );
+    let hit = super::healer_intake::Hit {
+        tick: 1,
+        source_guid: 0,
+        pack: 0,
+        target_slot: 0,
+        school: 1,
+        raw: 10_000.0,
+        level_scaling_factor: 1.0,
+        kind: super::healer_intake::HitKind::Melee {
+            hand: 0,
+            outcome: "Hit".into(),
+            level_difference: 0,
+            critical_multiplier: 1.0,
+            weapon_speed: 2.0,
+        },
+    };
+    crate::combat::replay_healer_hit(run.app.world_mut(), source, target, &hit).unwrap();
+    run.app.update();
+    assert_eq!(
+        stacks(&run),
+        2,
+        "landed auto-attack must consume one Bone Shield stack"
+    );
+}
+
+#[test]
 #[ignore = "uses the selected MID2 player and native Holy Bulwark casts"]
 fn holy_bulwark_absorbs_incoming_hits_and_grows_to_native_cap() {
     fn cast_bulwark() -> super::dps_parity::Run {

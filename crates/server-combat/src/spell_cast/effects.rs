@@ -1904,6 +1904,46 @@ pub fn damage_before_mitigation(
     .max(0.0)
 }
 
+/// Replay SimC's ID-zero melee special through native spell damage and ability procs.
+#[cfg(any(test, feature = "test-support"))]
+pub fn replay_simc_dummy_strike(
+    world: &mut World,
+    source: Entity,
+    target: Entity,
+    amount: f32,
+    crit: bool,
+    blocked: bool,
+) {
+    // SimC76f8118 sc_enemy.cpp665: melee_nuke is a physical special and may block.
+    let spell = SpellInfo {
+        misc: Some(crate::spell_info::SpellMisc {
+            school_mask: 1,
+            ..Default::default()
+        }),
+        categories: Some(Box::new(crate::spell_info::SpellCategories {
+            defense_type: 2,
+            ..Default::default()
+        })),
+        ..Default::default()
+    };
+    let ctx = EffectCtx {
+        caster: source,
+        spell: &spell,
+        depth: 0,
+        dest: None,
+        chain_multiplier: 1.0,
+    };
+    let damage = DamageInput {
+        amount,
+        crit,
+        periodic: false,
+        resolved_source: false,
+        effect: None,
+        bonus_caster: source,
+    };
+    deal_source_damage_and_report(world, &ctx, target, damage, Some((amount, blocked)));
+}
+
 /// Replay SimC's ID-zero tank-dummy bleed through native recipient handling.
 #[cfg(any(test, feature = "test-support"))]
 pub fn replay_simc_dummy_bleed(world: &mut World, source: Entity, target: Entity, amount: f32) {
