@@ -21,6 +21,10 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 - Native `PERIODIC_REFRESH_EXTENDS_DURATION` selects Pandemic carry: a refresh retains up to30% of fresh duration from the previous owned application, never reducing a longer remaining lifetime (`action.cpp684–685/4612`). Use the native attribute, not a Rip/Rake whitelist. Existing explicit Extend policies and rolling refresh retain their source precedence (`action.cpp2729–2734`); preserve native periodic phase, amounts and asynchronous deadlines.
 
+### Hunter Unnatural Causes
+
+- Selected Unnatural Causes459527 increases eligible Hunter and owned-pet damage using the native459529 family masks and labels. Below the native health threshold, increase its native damage bonus by the native talent percentage. Pinned `bugs=true` excludes direct Wildfire Bomb, Volley and Laceration (SimC76f8118 `sc_hunter.cpp`1482–1509,2640–2664,5161–5164,6934–6938,7056–7059).
+
 ### Shared channel timing
 
 - Quantize native channel tick intervals to the nearest millisecond. A hasted channel's duration is that rounded interval times its original native modified tick count, not an independently truncated hasted duration (`action.cpp4297–4314/4397–4421`).

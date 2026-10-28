@@ -421,6 +421,7 @@ mod survival_takedown_damage_tests;
 mod survival_takedown_resource_tests;
 mod survival_tests;
 mod survival_twilight_requiem_tests;
+mod survival_unnatural_causes_tests;
 mod survival_wildfire_infusion_tests;
 mod trigger_primary_tests;
 mod unholy_tests;
