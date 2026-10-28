@@ -51,6 +51,8 @@ Replay recorded incoming damage in the native server combat simulation to compar
 
 - [Protection Paladin (66)](healer-tank-replay/66.md)
 - [Protection Warrior (73)](healer-tank-replay/73.md)
+- [Discipline Priest (256)](healer-tank-replay/256.md)
+- [Holy Priest (257)](healer-tank-replay/257.md)
 
 ## Known gaps (current cycle)
 
