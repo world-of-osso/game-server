@@ -71,7 +71,7 @@ pub(super) fn prepare(
             "word_of_glory,if=target.health.pct<85&holy_power>=3",
         ),
         ("default", "flash_of_light,if=target.health.pct<50"),
-        ("default", "holy_light,if=target.health.pct<90"),
+        ("default", "holy_light,if=target.health.pct<100"),
         ("damage", "holy_shock"),
         ("damage", "hammer_of_wrath"),
         ("damage", "judgment"),

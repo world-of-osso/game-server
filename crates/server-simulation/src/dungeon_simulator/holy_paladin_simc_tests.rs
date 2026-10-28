@@ -34,7 +34,7 @@ fn holy_paladin_heals_the_simc_dummy_party() {
         "Holy Paladin idled over 10%: {report}"
     );
     assert!(
-        ["20271", "35395", "24275", "26573"]
+        ["20271", "275773", "35395", "24275", "26573"]
             .iter()
             .any(|spell| report["healer_casts"][*spell].as_u64().unwrap_or(0) > 0),
         "Holy Paladin did not cast damage filler: {report}"
