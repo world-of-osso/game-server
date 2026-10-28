@@ -10,14 +10,14 @@ Rake
 Auto-attack
 - [ ] Class-stat actors, including native followers, use every nonzero authored `SpellShapeshiftForm.CombatRoundTime` for both melee hands; zero/missing form timing uses regular equipment timing. Form changes do not restart an existing swing. Active timed forms restore ranged base time to TC's2s. Keep signed/native haste and slow modifiers.
 - [ ] Form weapon min/max scale by authored form time over TC's AP multiplier (minimum0.25s), independent of the swing clock. Ordinary and normalized weapon hits use the same terms. Preserve TC Player/non-Player AP-time selection and the existing Retail AP/DPS6 coefficient. Do not manufacture a `DamageVariance` scalar: pinned TC has no runtime consumer. See [form source/proof](../handoffs/feral-source-census.md#native-form-combat-timing).
-- [x] Main-hand, off-hand and ranged autorepeat countdowns use exact durations, with resets truncated to native integer milliseconds (TC Unit.cpp670–673/Unit.h710–713,1541). A2s attack is ready at the40th50ms tick, not41; retain each hand's phase and200ms display delay without epsilon fixes.
+- [x] Main-hand, off-hand and ranged autorepeat countdowns use exact durations, with resets truncated to native integer milliseconds (TC Unit.cpp670–673/Unit.h710–713,1541). A2s attack is ready at the40th50ms tick, not41; retain each hand's phase without epsilon fixes.
 - [x] Attack admission and hostile spell targeting honor authored UNIT_FLAG_NON_ATTACKABLE, NON_ATTACKABLE_2, NOT_SELECTABLE and IMMUNE_TO_PC. PC immunity blocks players/player-controlled sources, not independent creatures. Neutral unflagged creatures remain attackable; faction masks/lists are unchanged.
 - [x] A player's swing rolls a whole number between trunc((weapon min + AP / 6 × weapon speed) × (1 + versatility)) and the same for weapon max (Player::CalculateMinMaxDamage, StatSystem.cpp:435-485; Unit::CalculateDamage, Unit.cpp:2490-2539). AP / 6 is SimC's `WEAPON_POWER_COEFFICIENT`; TrinityCore divides by 3.5 (StatSystem.cpp:455).
 - [x] Without a weapon the main hand is unarmed: 1-2 at 2.0 s (`BASE_MINDAMAGE`/`BASE_MAXDAMAGE`).
 - [x] The swing takes the aura physical damage done, auto-attack (MOD_AUTOATTACK_DAMAGE 344) and damage taken multipliers.
 - [x] Physical school immunity prevents melee health loss and logs `Immune`; matching shields consume capacity before health loss, log `Absorb` on full absorption or damage plus absorbed amount on partial absorption, and disappear on depletion.
 - [x] The main hand swings every weapon speed / (1 + haste) (Unit::ApplyAttackTimePercentMod, Unit.cpp:11032).
-- [x] An equipped off-hand weapon swings on its own timer at half damage (UNIT_MOD_DAMAGE_OFFHAND TOTAL_PCT 0.5, Unit.cpp:350). A swing of either hand holds the other at least 200 ms away (ATTACK_DISPLAY_DELAY, Unit.cpp:2203-2230).
+- [x] An equipped off-hand weapon swings at half damage (UNIT_MOD_DAMAGE_OFFHAND TOTAL_PCT 0.5, Unit.cpp:350). Each hand's swing timer runs independently, matching pinned SimC; a swing does not delay the other hand.
 - [x] Swing rage uses the unhasted weapon speed, halved for the off hand (CalcMeleeAttackRageGain, Unit.cpp:2239-2249).
 - [x] Units without `CharacterStats` (creatures) keep their ExpectedStat or flat 10 swing every 2 s.
 
