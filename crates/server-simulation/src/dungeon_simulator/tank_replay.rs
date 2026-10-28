@@ -509,6 +509,9 @@ fn replay_registered_run_with_healing(
     let mut damage_taken_by_kind = BTreeMap::<&str, f64>::new();
     let mut outcomes = BTreeMap::<String, usize>::new();
     let mut incoming_before_absorbs = BTreeMap::<&str, f64>::new();
+    let mut incoming_by_outcome = BTreeMap::<String, f64>::new();
+    let mut defense_totals = [0.0_f64; 6];
+    let mut defense_samples = 0_u64;
     let mut aura_seconds = BTreeMap::<u32, f64>::new();
     let mut debuff_seconds: BTreeMap<u32, f64> =
         target_debuffs.iter().map(|&id| (id, 0.0)).collect();
@@ -575,6 +578,7 @@ fn replay_registered_run_with_healing(
                 .world_mut()
                 .resource_mut::<Capture>()
                 .active_hit_scale = Some((tank, scale));
+            let mut outcome_key = None;
             match hit.kind {
                 Kind::Bleed => {
                     raw += f64::from(amount);
@@ -595,16 +599,44 @@ fn replay_registered_run_with_healing(
                         table.miss,
                         table.crit,
                     )?;
-                    *outcomes
-                        .entry(format!(
-                            "{}:{outcome:?}",
-                            if hit.kind == Kind::Swing {
-                                "swing"
-                            } else {
-                                "strike"
-                            }
-                        ))
-                        .or_default() += 1;
+                    let key = format!(
+                        "{}:{outcome:?}",
+                        if hit.kind == Kind::Swing {
+                            "swing"
+                        } else {
+                            "strike"
+                        }
+                    );
+                    *outcomes.entry(key.clone()).or_default() += 1;
+                    outcome_key = Some(key);
+                    let stats = run
+                        .app
+                        .world()
+                        .get::<crate::stats::CharacterStats>(tank)
+                        .ok_or("TANK_STATS_ABSENT")?;
+                    let world = run.app.world();
+                    let source_level = crate::level_scaling::UnitScaling::of(world, source)
+                        .level_against(&crate::level_scaling::UnitScaling::of(world, tank));
+                    let constant = world
+                        .resource::<crate::level_scaling::ArmorConstants>()
+                        .at(source_level)
+                        .ok_or("DUMMY_ARMOR_CONSTANT_ABSENT")?;
+                    let damage_mult = run
+                        .app
+                        .world()
+                        .get::<crate::auras::AuraStatMods>(tank)
+                        .map_or(1.0, |mods| mods.damage_taken(1));
+                    for (total, value) in defense_totals.iter_mut().zip([
+                        stats.defense.parry,
+                        stats.defense.block,
+                        stats.armor,
+                        stats.defense.blocked_pct(constant),
+                        stats.versatility_pct / 2.0,
+                        damage_mult,
+                    ]) {
+                        *total += f64::from(value);
+                    }
+                    defense_samples += 1;
                     let recorded = Hit {
                         tick,
                         source_guid: 0,
@@ -664,8 +696,11 @@ fn replay_registered_run_with_healing(
                 Kind::Strike => "strike",
                 Kind::Bleed => "bleed",
             };
-            *incoming_before_absorbs.entry(kind).or_default() +=
-                damage + after_absorbed - before_absorbed;
+            let pre_absorb = damage + after_absorbed - before_absorbed;
+            *incoming_before_absorbs.entry(kind).or_default() += pre_absorb;
+            if let Some(key) = outcome_key {
+                *incoming_by_outcome.entry(key).or_default() += pre_absorb;
+            }
             run.app
                 .world_mut()
                 .resource_mut::<Capture>()
@@ -833,7 +868,9 @@ fn replay_registered_run_with_healing(
         "absorbs_by_spell":absorbs_by_spell,"aura_uptime":aura_uptime,
         "resource_counters":counters,"target_debuff_uptime":target_debuff_uptime,
         "rotation_status":"registered_literal_simc","duration_seconds":elapsed,"incoming_events":next,"tank_casts":casts,
-        "raw_damage":raw,"damage_taken":taken,"damage_taken_by_kind":damage_taken_by_kind,"incoming_before_absorbs":incoming_before_absorbs,"incoming_outcomes":outcomes,"self_periodic_damage_taken":self_periodic_taken,
+        "raw_damage":raw,"damage_taken":taken,"damage_taken_by_kind":damage_taken_by_kind,"incoming_before_absorbs":incoming_before_absorbs,"incoming_outcomes":outcomes,"incoming_by_outcome":incoming_by_outcome,
+        "defense_mean": ["parry_pct", "block_pct", "armor", "blocked_pct", "versatility_dr_pct", "aura_damage_multiplier"].into_iter().zip(defense_totals.map(|value| value / defense_samples.max(1) as f64)).collect::<BTreeMap<_, _>>(),
+        "self_periodic_damage_taken":self_periodic_taken,
         "mitigation_pct":(raw>0.0).then(||100.0*(raw-taken)/raw),
         "self_heal_per_second":(elapsed>0.0).then(||self_healing/elapsed),
         "absorb_per_second":(elapsed>0.0).then(||absorbed/elapsed),"time_to_death":death,
