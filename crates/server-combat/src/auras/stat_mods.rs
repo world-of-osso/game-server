@@ -509,7 +509,13 @@ fn apply_base_stat_percent(stats: &mut UnitStats, spell: u32, index: i32, amount
 }
 
 fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance, sanlayn: bool) {
-    let stacks = aura.stack_multiplier();
+    // SimC76f8118 sc_death_knight.cpp17112: Bone Shield's armor and haste
+    // apply once while the buff is active, independent of its charges.
+    let stacks = if aura.spell_id == 195181 {
+        1.0
+    } else {
+        aura.stack_multiplier()
+    };
     for effect in &aura.effects {
         let amount = effect.amount * stacks;
         let misc = effect.misc_values[0];
