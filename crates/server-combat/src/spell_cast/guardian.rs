@@ -584,10 +584,14 @@ pub(crate) struct GuardianActor {
 /// Actual executing guardians read their owner's live secondary stats.
 /// SimC76f8118 pet.cpp217–226; no creature template or class identity changes.
 pub(crate) fn stat_owner(world: &World, actor: Entity) -> Option<Entity> {
-    world.get::<GuardianActor>(actor)?;
-    world
-        .get::<SummonedCreature>(actor)
-        .map(|summon| summon.owner)
+    let summon = world.get::<SummonedCreature>(actor)?;
+    // SimC76f8118 sc_death_knight.cpp5478–5504: Abomination is a pet
+    // despite having no autonomous guardian spell binding.
+    let abomination = summon.spell_id == 288853
+        && world
+            .get::<Npc>(actor)
+            .is_some_and(|npc| npc.template_id == 149555);
+    (abomination || world.get::<GuardianActor>(actor).is_some()).then_some(summon.owner)
 }
 
 /// SimC76f8118 pets.cpp2584: the Overlord is not affected by the talent.
