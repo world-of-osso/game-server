@@ -285,6 +285,7 @@ pub(super) fn process_aura_events(world: &mut World) {
                 &queued.target_candidates,
             );
         }
+        crate::spell_cast::script_registry::aura_event(world, &event);
         crate::spell_cast::scripts::after_dance_cast_event(world, &event);
         crate::spell_cast::scripts::apply_mystic_touch_after_hit(world, &event);
     }
@@ -615,6 +616,36 @@ pub fn try_policy_proc(world: &mut World, unit: Entity, id: u32, chance: f32) ->
         return false;
     }
     start_proc_cooldown(world, unit, id, now).is_some()
+}
+
+/// Source-defined haste-scaled RPPM uses the native aura's attempt and luck clocks.
+pub fn try_source_hasted_rppm(world: &mut World, unit: Entity, id: u32, base_rate: f32) -> bool {
+    let now = aura_now(world);
+    let Some(aura) = world
+        .get::<ActiveAuras>(unit)
+        .and_then(|auras| auras.get(id))
+    else {
+        return false;
+    };
+    if now < aura.proc.next_ready_at || base_rate <= 0.0 {
+        return false;
+    }
+    let timers = aura.proc;
+    let accumulated =
+        timers.accumulated_blp + (now - timers.last_attempt_at).min(PPM_MAX_ATTEMPT_GAP);
+    let haste = world
+        .get::<crate::stats::CharacterStats>(unit)
+        .map_or(0.0, |stats| stats.haste_pct);
+    let rate = base_rate * (1.0 + haste / 100.0);
+    let chance = rppm_chance(rate, timers.last_attempt_at, accumulated, now);
+    if let Some(aura) = world
+        .get_mut::<ActiveAuras>(unit)
+        .and_then(|auras| auras.into_inner().get_mut(id))
+    {
+        aura.proc.last_attempt_at = now;
+        aura.proc.accumulated_blp = accumulated;
+    }
+    try_policy_proc(world, unit, id, chance)
 }
 
 /// Scripted execution sources reuse native RPPM attempts and internal cooldowns.
