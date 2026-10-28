@@ -1,4 +1,4 @@
-//! Pinned Survival producers; native spell/aura records retain every magnitude.
+//! Pinned Survival producers and class-specific SimC behavior.
 use super::cast_relationships::{decrement, has_talent};
 use super::combat;
 use bevy::prelude::*;
@@ -31,6 +31,15 @@ fn is_survival(world: &World, caster: Entity) -> bool {
     world
         .get::<ActiveSpec>(caster)
         .is_some_and(|spec| spec.0 == 255)
+}
+
+pub(super) fn radiant_edge_percent(world: &World, caster: Entity, native: f32) -> f32 {
+    if is_survival(world, caster) {
+        // SimC76f8118 sc_hunter.cpp9041–9046 hotfixes effect1276513 from 15 to 25.
+        25.0
+    } else {
+        native
+    }
 }
 
 fn apply_self(world: &mut World, caster: Entity, spell_id: u32) {

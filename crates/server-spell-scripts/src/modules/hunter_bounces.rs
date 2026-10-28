@@ -131,7 +131,8 @@ fn read_impacts(
         return Vec::new();
     }
     let ramp = if has_talent(world, caster, policy.ramp_talent) {
-        script_effect_value(world, caster, policy.ramp_talent, policy.ramp_effect) / 100.0
+        let native = script_effect_value(world, caster, policy.ramp_talent, policy.ramp_effect);
+        super::survival::radiant_edge_percent(world, caster, native) / 100.0
     } else {
         0.0
     };

@@ -1,11 +1,11 @@
-//! Capture real Chakram bounces and their Radiant Edge factors.
+//! Capture real Chakram bounces and the pinned Radiant Edge hotfix.
 use super::marksmanship_mechanics_tests::cast;
 use super::*;
 use crate::spell_cast::effects::factor_capture::FactorCapture;
 
 #[test]
 #[ignore = "requires native Survival255 profile and world data"]
-fn survival_chakram_bounces_apply_native_radiant_edge_ramp() {
+fn survival_chakram_bounces_apply_simc_radiant_edge_hotfix() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(255, 1).unwrap();
     hunter_fixture::provision_pet(run.app.world_mut(), run.actor).unwrap();
@@ -15,6 +15,7 @@ fn survival_chakram_bounces_apply_native_radiant_edge_ramp() {
     let percent =
         crate::spell_cast::scripts::script_effect_value(run.app.world(), run.actor, 1264903, 0)
             as f64;
+    assert_eq!(percent, 15.0, "native data must remain unchanged");
     run.app.insert_resource(FactorCapture::new(
         run.actor,
         run.targets[0],
@@ -44,7 +45,8 @@ fn survival_chakram_bounces_apply_native_radiant_edge_ramp() {
             .unwrap()["value"]
             .as_f64()
             .unwrap();
-        let expected = (1.0 + percent / 100.0).powi(index as i32 + 1);
+        // SimC76f8118 sc_hunter.cpp9041–9046 sets native15 to25.
+        let expected = 1.25_f64.powi(index as i32 + 1);
         assert!(
             (factor - expected).abs() < 0.001,
             "bounce{index}: {factor} vs {expected}"

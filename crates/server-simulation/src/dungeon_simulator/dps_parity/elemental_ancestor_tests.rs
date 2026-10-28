@@ -86,7 +86,7 @@ fn elemental_ancestor_echo_is_owned_damage_and_not_an_overload_recursion() {
     );
 }
 
-fn ancestor_lava_damage(keep_fury: bool) -> (f64, f64, f64) {
+fn ancestor_lava_damage(keep_fury: bool) -> (f64, f64, f64, f64) {
     let _seed = crate::random::seed_scope(70448);
     let mut run = fixture();
     let ancestor = stormkeeper(&mut run);
@@ -106,6 +106,12 @@ fn ancestor_lava_damage(keep_fury: bool) -> (f64, f64, f64) {
             crate::auras::RemoveReason::Consumed,
         );
     }
+    let school = run.app.world().resource::<crate::spell_info::SpellStore>()
+        .get(447419).unwrap().school_mask();
+    let critical_multiplier = [ancestor, run.actor].into_iter().map(|unit| {
+        run.app.world().get::<crate::auras::stat_mods::AuraStatMods>(unit)
+            .map_or(1.0, |mods| mods.critical_damage(school)) as f64
+    }).product();
     run.app
         .world_mut()
         .resource_mut::<ObservedCombatEvents>()
@@ -134,7 +140,7 @@ fn ancestor_lava_damage(keep_fury: bool) -> (f64, f64, f64) {
         .unwrap()
         .effects[0]
         .variance;
-    (f64::from(hit.amount), f64::from(bonus), f64::from(variance))
+    (f64::from(hit.amount), f64::from(bonus), f64::from(variance), critical_multiplier)
 }
 
 #[test]
@@ -142,10 +148,11 @@ fn ancestor_lava_damage(keep_fury: bool) -> (f64, f64, f64) {
 fn elemental_ancestor_lava_critical_bonus_uses_live_native_elemental_fury() {
     // SimC76f8118 sc_shaman.cpp11468–11469 explicitly adds the three
     // Ancestor spells to native Elemental Fury effect0's critical bonus.
-    let (ordinary, _, variance) = ancestor_lava_damage(false);
-    let (empowered, percent, _) = ancestor_lava_damage(true);
+    let (ordinary, _, variance, critical_multiplier) = ancestor_lava_damage(false);
+    let (empowered, percent, _, _) = ancestor_lava_damage(true);
     assert!(percent > 0.0);
-    let expected = ordinary * (2.0 + percent / 100.0) / 2.0;
+    let baseline_crit = 2.0 * critical_multiplier;
+    let expected = ordinary * (1.0 + (baseline_crit - 1.0) * (1.0 + percent / 100.0)) / baseline_crit;
     let spread = variance / 2.0;
     let ratio = (1.0 + spread) / (1.0 - spread);
     assert!(

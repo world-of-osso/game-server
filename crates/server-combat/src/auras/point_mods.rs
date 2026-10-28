@@ -1,11 +1,11 @@
-//! TC a352b1fa SpellAuraEffects.cpp1194–1249: label Points modifiers
-//! recalculate existing self-owned passive/permanent effects, not aura lifetimes.
+//! TC a352b1fa SpellAuraEffects.cpp1194–1249: Points modifiers recalculate
+//! existing self-owned passive/permanent effects, not aura lifetimes.
 use bevy::prelude::*;
 
 use super::{ActiveAuras, AuraEffectState, AuraInstance, SpellModOp, handlers, spell_mods};
 use crate::spell_info::{SpellInfo, SpellStore};
 
-fn is_label_points(effect: &AuraEffectState) -> bool {
+fn is_point_modifier(effect: &AuraEffectState) -> bool {
     const POINTS_OPERATIONS: &[SpellModOp] = &[
         SpellModOp::Points,
         SpellModOp::PointsIndex0,
@@ -14,14 +14,17 @@ fn is_label_points(effect: &AuraEffectState) -> bool {
         SpellModOp::PointsIndex3,
         SpellModOp::PointsIndex4,
     ];
-    let label_modifier = matches!(
+    let modifier = matches!(
         effect.aura_type,
-        handlers::ADD_FLAT_MODIFIER_BY_SPELL_LABEL | handlers::ADD_PCT_MODIFIER_BY_SPELL_LABEL
+        handlers::ADD_FLAT_MODIFIER
+            | handlers::ADD_PCT_MODIFIER
+            | handlers::ADD_FLAT_MODIFIER_BY_SPELL_LABEL
+            | handlers::ADD_PCT_MODIFIER_BY_SPELL_LABEL
     );
     let points_operation = POINTS_OPERATIONS
         .iter()
         .any(|op| *op as i32 == effect.misc_values[0]);
-    label_modifier && points_operation
+    modifier && points_operation
 }
 
 fn uses_charges(world: &World, source: &AuraInstance) -> bool {
@@ -156,7 +159,7 @@ fn collect_changed_modifiers(
                 .iter()
                 .find(|effect| effect.index == update.index)
                 .expect("updated point-modified effect");
-            is_label_points(effect).then(|| (aura.clone(), effect.clone()))
+            is_point_modifier(effect).then(|| (aura.clone(), effect.clone()))
         })
         .collect()
 }
@@ -185,7 +188,7 @@ pub(super) fn recalculate(world: &mut World, unit: Entity, source: &AuraInstance
     for effect in source
         .effects
         .iter()
-        .filter(|effect| is_label_points(effect))
+        .filter(|effect| is_point_modifier(effect))
     {
         let modifier = PointModifier {
             aura: source,
