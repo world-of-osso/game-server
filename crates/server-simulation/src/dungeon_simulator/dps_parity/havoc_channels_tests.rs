@@ -1312,6 +1312,68 @@ fn assert_onslaught_cooldown(run: &Run, expected_ready_at: Option<(u32, f64)>) {
 
 #[test]
 #[ignore = "requires prepared native spec577 player profile"]
+fn havoc_real_annihilation_and_swings_use_dummy_combat_reach() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(577, 1).unwrap();
+    havoc_tests::earn_havoc_fury(&mut run, 160.0);
+    cast(&mut run, 191427, false);
+    preparation::finish_pending_setup(&mut run).unwrap();
+    let actor = run.actor;
+    let target = run.targets[0];
+    let target_pos = *run
+        .app
+        .world()
+        .get::<shared::components::Position>(target)
+        .unwrap();
+    run.app
+        .world_mut()
+        .entity_mut(actor)
+        .remove::<crate::simc_apl_native::FixtureMovement>();
+    let actor_pos = run
+        .app
+        .world_mut()
+        .get_mut::<shared::components::Position>(actor)
+        .unwrap();
+    *actor_pos.into_inner() = shared::components::Position {
+        x: target_pos.x - 5.2,
+        ..target_pos
+    };
+    super::face_actor_toward_primary(run.app.world_mut(), actor, target);
+    run.app
+        .world_mut()
+        .resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .clear();
+    cast(&mut run, 201427, false);
+    advance(&mut run, 40);
+    assert!(
+        !damage(&run, Some(227518)).is_empty(),
+        "real Annihilation must hit at 5.2yd"
+    );
+    assert!(
+        !damage(&run, None).is_empty(),
+        "real auto-swings must hit at 5.2yd"
+    );
+    let spell = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(201427)
+        .unwrap()
+        .clone();
+    run.app
+        .world_mut()
+        .get_mut::<shared::components::Position>(actor)
+        .unwrap()
+        .x = target_pos.x - 5.4;
+    assert!(matches!(
+        crate::spell_cast::read_native_cast_start(run.app.world_mut(), actor, &spell, target),
+        Err(crate::spell_cast::CastFailure::OutOfRange)
+    ));
+}
+
+#[test]
+#[ignore = "requires prepared native spec577 player profile"]
 fn havoc_annihilation_offhand_execution_can_refund_native_fury() {
     let mut refunds = 0;
     for seed in [70_448, 1, 2] {

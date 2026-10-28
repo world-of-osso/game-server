@@ -444,6 +444,19 @@ pub fn spell_range(spell: &SpellInfo, hostile: bool) -> (f32, f32) {
     (min, if max > 0.0 { max } else { MELEE_RANGE })
 }
 
+/// Native melee-range records and the existing zero-range melee convention.
+pub fn uses_melee_range(spell: &SpellInfo, hostile: bool) -> bool {
+    let Some(range) = spell.misc.as_ref().and_then(|misc| misc.range) else {
+        return true;
+    };
+    let max = if hostile {
+        range.max_hostile
+    } else {
+        range.max_friendly
+    };
+    range.flags & 1 != 0 || max <= 0.0
+}
+
 /// Radius for target slot `slot` (TrinityCore `CalcRadius`: TargetB prefers
 /// the second radius entry).
 /// TC CalcRadius inherits both TargetA's entry and target identity when B has no entry.

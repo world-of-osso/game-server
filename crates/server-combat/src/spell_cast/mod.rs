@@ -2472,7 +2472,12 @@ fn validate_target_with_max_range(
         ) else {
             return Err(CastFailure::InvalidTarget);
         };
-        let (min, max) = targets::spell_range(spell, targets::is_hostile(world, caster, target));
+        let hostile = targets::is_hostile(world, caster, target);
+        let (min, mut max) = targets::spell_range(spell, hostile);
+        if targets::uses_melee_range(spell, hostile) {
+            max = crate::scripted_ai::model_reach::melee_range(world, caster, target)
+                .ok_or(CastFailure::InvalidTarget)?;
+        }
         let max = modify(world, caster, spell, SpellModOp::Range, max);
         let distance = from.distance(to);
         if check_max_range && distance > max {

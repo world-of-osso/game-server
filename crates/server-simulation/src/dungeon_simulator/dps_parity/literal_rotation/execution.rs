@@ -571,7 +571,14 @@ fn primary_in_native_range(
     // SimC76f8118 action.cpp2418–2430 checks the selected hostile target,
     // even when a caster-centred native spell keeps the actor as its cast unit.
     // Reuse native range and live Range modifiers; do not move either unit.
-    let (min, max) = crate::spell_cast::targets::spell_range(spell, true);
+    let (min, mut max) = crate::spell_cast::targets::spell_range(spell, true);
+    if crate::spell_cast::targets::uses_melee_range(spell, true) {
+        let Some(range) = crate::scripted_ai::model_reach::melee_range(world, actor, primary) else {
+            error!(?actor, ?primary, "Literal melee range requires sourced combat reaches");
+            return false;
+        };
+        max = range;
+    }
     let max =
         crate::auras::spell_mods::modify(world, actor, spell, crate::auras::SpellModOp::Range, max);
     let distance = from.distance(to);

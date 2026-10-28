@@ -104,6 +104,7 @@ fn run_attack_tick(app: &mut App) {
          sight: SwingSight| {
             let dt = time.delta();
             let context = SwingContext {
+                melee_range: MELEE_RANGE,
                 scaling: &scaling,
                 summon_modifiers: &summon_modifiers,
                 sight: &sight,
@@ -258,12 +259,12 @@ fn test_in_melee_range() {
     assert!(in_melee_range(
         &pos(0.0, 0.0, 0.0),
         &pos(3.0, 4.0, 0.0),
-        0.0
+        MELEE_RANGE
     ));
     assert!(!in_melee_range(
         &pos(0.0, 0.0, 0.0),
         &pos(10.0, 0.0, 0.0),
-        0.0
+        MELEE_RANGE
     ));
 }
 

@@ -9,7 +9,8 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 - An Antoran Tyrant uses the scheduled Burning Cleave action as its only swing; native1251000 must not also emit a separate white-swing replacement (`sc_warlock_pets.cpp1510–1573`).
 
 - The native encounter fixture faces the actor toward its actual primary before engagement and restores maintained melee-intent facing after forced movement finishes, including a charge that ends inside melee range. Do not turn active channels or override forced movement. Keep native directional selectors, widths and radii unchanged.
-- A fixture actor with native melee AutoAttack intent walks back into nominal melee range at its native run speed after movement abilities. Preserve forced movement ownership, native movement/cast restrictions and position=back; never suppress displacement, snap the actor or grant resources. This shared controller applies without specialization or spell-ID cases (SimC76f8118 sc_demon_hunter.cpp1559–1611).
+- Melee swings, melee-range spell admission, literal target readiness, threat selection and fixture return use the same native attacker and target combat reaches plus 4/3 yards, with a 5-yard minimum. Preserve native model data and range modifiers.
+- A fixture actor with native melee AutoAttack intent walks back into its actual melee range at its native run speed after movement abilities. Preserve forced movement ownership, native movement/cast restrictions and position=back; never suppress displacement, snap the actor or grant resources. This shared controller applies without specialization or spell-ID cases (SimC76f8118 sc_demon_hunter.cpp1559–1611).
 
 ### Unholy Magus
 
