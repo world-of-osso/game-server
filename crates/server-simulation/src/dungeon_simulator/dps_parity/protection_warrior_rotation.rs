@@ -833,6 +833,41 @@ mod tests {
     }
     #[test]
     #[ignore = "requires canonical MID2 Protection profile"]
+    fn protection_execute_applies_selected_deep_wounds() {
+        use super::super::literal_rotation::execution::{Execution, execute};
+        let mut run = super::super::prepare_measurement(73, 1).unwrap();
+        super::super::engage(&mut run);
+        let actor = run.actor;
+        let target = run.targets[0];
+        let mut health = run
+            .app
+            .world_mut()
+            .get_mut::<shared::components::Health>(target)
+            .unwrap();
+        health.current = health.max * 0.1;
+        run.app
+            .world_mut()
+            .get_mut::<crate::spell_cast::powers::PowerPools>(actor)
+            .unwrap()
+            .get_mut(shared::components::PowerType::Rage)
+            .unwrap()
+            .current = 1000.0;
+        execute(
+            run.app.world_mut(),
+            actor,
+            Execution::Spell(163201, target, Some(target)),
+        )
+        .unwrap();
+        for _ in 0..20 {
+            run.app.update();
+        }
+        assert!(
+            crate::auras::has_aura(run.app.world(), target, 262115),
+            "actual Execute must apply selected Deep Wounds"
+        );
+    }
+    #[test]
+    #[ignore = "requires canonical MID2 Protection profile"]
     fn protection_deep_wounds_refresh_preserves_pending_tick() {
         let mut run = super::super::prepare_measurement(73, 1).unwrap();
         let actor = run.actor;
