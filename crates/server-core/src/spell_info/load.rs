@@ -172,7 +172,30 @@ fn load_procs_per_minute(conn: &Connection) -> rusqlite::Result<HashMap<u32, Pro
             entry.haste_modifiers.push(modifier);
         }
     }
+    for (id, modifier) in load_ppm_aura_modifiers(conn)? {
+        if let Some(entry) = entries.get_mut(&id) {
+            entry.aura_modifiers.push(modifier);
+        }
+    }
     Ok(entries)
+}
+
+fn load_ppm_aura_modifiers(
+    conn: &Connection,
+) -> rusqlite::Result<Vec<(u32, ProcsPerMinuteAuraModifier)>> {
+    collect(
+        conn,
+        "SELECT SpellProcsPerMinuteID, Param, Coeff FROM spell_procs_per_minute_mod WHERE Type=8 AND PlayerConditionID=0 ORDER BY ID",
+        |row| {
+            Ok((
+                uint(row, 0)?,
+                ProcsPerMinuteAuraModifier {
+                    spell_id: uint(row, 1)?,
+                    coefficient: real(row, 2)?,
+                },
+            ))
+        },
+    )
 }
 
 fn load_ppm_haste_modifiers(

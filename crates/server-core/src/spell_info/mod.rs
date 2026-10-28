@@ -349,6 +349,14 @@ pub struct ProcsPerMinute {
     pub flags: u32,
     /// SpellProcsPerMinuteMod Type1; never infer haste scaling from Flags.
     pub haste_modifiers: Vec<ProcsPerMinuteHasteModifier>,
+    /// SpellProcsPerMinuteMod Type8: active aura spell and fractional rate modifier.
+    pub aura_modifiers: Vec<ProcsPerMinuteAuraModifier>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
+pub struct ProcsPerMinuteAuraModifier {
+    pub spell_id: u32,
+    pub coefficient: f32,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize)]

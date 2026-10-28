@@ -517,12 +517,19 @@ fn read_haste_modified_ppm(
     let haste = world
         .get::<crate::stats::CharacterStats>(unit)
         .map_or(0.0, |stats| stats.haste_pct);
-    ppm.haste_modifiers
+    let rate = ppm
+        .haste_modifiers
         .iter()
         .filter(|modifier| matches!(modifier.parameter, 1..=5))
         .fold(ppm.base_proc_rate, |rate, modifier| {
             rate * (1.0 + haste / 100.0 * modifier.coefficient)
-        })
+        });
+    // SimC76f8118 sc_const_data.cpp1430–1433: an active Type8 aura
+    // multiplies the native rate before the bad-luck calculation.
+    ppm.aura_modifiers
+        .iter()
+        .filter(|modifier| super::has_aura(world, unit, modifier.spell_id))
+        .fold(rate, |rate, modifier| rate * (1.0 + modifier.coefficient))
 }
 
 fn rppm_chance(ppm: f32, last_attempt: f64, accumulated_blp: f64, now: f64) -> f32 {
