@@ -43,6 +43,7 @@ Replay recorded incoming damage in the native server combat simulation to compar
 - [ ] Support replay durations other than 300 seconds with matching literal-APL encounter timing.
 - [x] Publish native victim-side melee miss, dodge and parry proc events with their hit outcomes; explicit native or sourced script masks determine which auras can react.
 - [ ] SimC's default `fake_solidarity` adds allied Reflection of Radiance opportunities that the solo native tank replay does not reproduce. Its 35 Holy Bulwark–sourced Grand Crusader procs include those simulated allied effects; their separate share is not observable from that run.
+- [x] Report adapter-registered named resource counters and target debuff uptime. Vengeance 581 records successful fragment generation, actual fragment consumption, and the owned Fiery Brand and Sigil of Flame debuffs.
 - [x] Keep no-healer tank replay as the default. An optional SimC dummy comparison applies the dummy's 75,000 external heal every five seconds and reports per-spell casts, effective self-healing, consumed absorbs and aura uptime separately.
 - [ ] Extend coverage beyond the initial two specializations.
 

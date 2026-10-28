@@ -306,6 +306,21 @@ impl super::SpecDriver for Rotation {
     fn tank_active_mitigation_auras(&self) -> Option<&'static [u32]> {
         Some(&[203819])
     }
+    fn tank_resource_counters(
+        &self,
+        world: &World,
+        actor: Entity,
+    ) -> std::collections::BTreeMap<&'static str, u64> {
+        let (generated, consumed) = server::soul_fragments::observation_counts(world, actor);
+        [
+            ("soul_fragments_generated", generated),
+            ("soul_fragments_consumed", consumed),
+        ]
+        .into()
+    }
+    fn tank_target_debuff_auras(&self) -> &'static [u32] {
+        &[207771, 204598]
+    }
     fn drive(
         &mut self,
         world: &mut World,
@@ -355,6 +370,28 @@ mod tests {
             report["tank_casts"]["228477"].as_u64().unwrap() > 0,
             "{report}"
         );
+        assert!(
+            report["resource_counters"]["soul_fragments_generated"]
+                .as_u64()
+                .unwrap()
+                > 0,
+            "{report}"
+        );
+        assert!(
+            report["resource_counters"]["soul_fragments_consumed"]
+                .as_u64()
+                .unwrap()
+                > 0,
+            "{report}"
+        );
+        assert!(
+            report["target_debuff_uptime"]["207771"].as_f64().is_some(),
+            "{report}"
+        );
+        assert!(
+            report["target_debuff_uptime"]["204598"].as_f64().unwrap() > 0.0,
+            "{report}"
+        );
         println!("VENGEANCE_TANK_REPORT={report}");
     }
     #[test]
@@ -393,6 +430,23 @@ mod tests {
         assert_eq!(
             soul_fragments::total_count(run.app.world(), actor, FragmentFilter::Lesser),
             2
+        );
+        assert_eq!(
+            soul_fragments::observation_counts(run.app.world(), actor),
+            (2, 0)
+        );
+        let consumed = soul_fragments::consume_active(
+            run.app.world_mut(),
+            actor,
+            FragmentFilter::Lesser,
+            1,
+            true,
+        )
+        .unwrap();
+        assert_eq!(consumed, 1);
+        assert_eq!(
+            soul_fragments::observation_counts(run.app.world(), actor),
+            (2, 1)
         );
     }
     #[test]

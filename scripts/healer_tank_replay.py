@@ -70,6 +70,14 @@ def print_tank(report):
                   f'{number(report["self_healing_by_spell"].get(spell, 0))} | '
                   f'{number(report["absorbs_by_spell"].get(spell, 0))} | '
                   f'{number(100 * report["aura_uptime"].get(spell, 0))} |')
+        print('\n| Resource counter | Count |')
+        print('|---|---:|')
+        for name, count in report['resource_counters'].items():
+            print(f'| {name} | {count} |')
+        print('\n| Target debuff ID | Uptime % |')
+        print('|---:|---:|')
+        for spell, uptime in report['target_debuff_uptime'].items():
+            print(f'| {spell} | {number(100 * uptime)} |')
     print('| Spec | Raw damage | Damage taken | Mitigation % | Self-heal/s | Absorb/s | Death (s) | Active mitigation % | 5s spike |')
     print('|---|---:|---:|---:|---:|---:|---:|---:|---:|')
     uptime = report['active_mitigation_uptime']

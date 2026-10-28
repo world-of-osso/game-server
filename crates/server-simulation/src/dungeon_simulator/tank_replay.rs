@@ -322,6 +322,8 @@ fn replay_registered_run_with_healing(
     use crate::simc_tank_timeline::Kind;
     let tank = run.actor;
     let source = run.targets[0];
+    let initial_counters = super::dps_parity::tank_resource_counters(&run)?;
+    let target_debuffs = super::dps_parity::tank_target_debuff_auras(&run)?;
     let spec = run
         .app
         .world()
@@ -360,6 +362,8 @@ fn replay_registered_run_with_healing(
     let mut casts = BTreeMap::<u32, usize>::new();
     let mut healing_by_spell = BTreeMap::<u32, f64>::new();
     let mut aura_seconds = BTreeMap::<u32, f64>::new();
+    let mut debuff_seconds: BTreeMap<u32, f64> =
+        target_debuffs.iter().map(|&id| (id, 0.0)).collect();
     let mut external_healing_effective = 0.0;
     for tick in 1..=duration_seconds * 20 {
         elapsed = f64::from(tick) * TICK_SECONDS;
@@ -473,6 +477,16 @@ fn replay_registered_run_with_healing(
         {
             active_seconds += TICK_SECONDS;
         }
+        if let Some(auras) = world.get::<crate::auras::ActiveAuras>(source) {
+            for (&spell, seconds) in &mut debuff_seconds {
+                if auras
+                    .iter()
+                    .any(|aura| aura.spell_id == spell && aura.caster == tank)
+                {
+                    *seconds += TICK_SECONDS;
+                }
+            }
+        }
         let active = world
             .get::<crate::auras::ActiveAuras>(tank)
             .into_iter()
@@ -533,6 +547,24 @@ fn replay_registered_run_with_healing(
         .consumed_absorbs
         .get(&tank)
         .map_or(0.0, |usage| usage.total);
+    let final_counters = super::dps_parity::tank_resource_counters(&run)?;
+    let mut counters = BTreeMap::new();
+    for (name, start) in initial_counters {
+        let end = final_counters
+            .get(name)
+            .ok_or_else(|| format!("TANK_COUNTER_DISAPPEARED:{name}"))?;
+        let delta = end
+            .checked_sub(start)
+            .ok_or_else(|| format!("TANK_COUNTER_DECREASED:{name}"))?;
+        counters.insert(name, delta);
+    }
+    if counters.len() != final_counters.len() {
+        return Err("TANK_COUNTER_SET_CHANGED".into());
+    }
+    let target_debuff_uptime: BTreeMap<u32, f64> = debuff_seconds
+        .into_iter()
+        .map(|(spell, seconds)| (spell, (seconds / elapsed).min(1.0)))
+        .collect();
     let capture = run.app.world().resource::<Capture>();
     let absorbs_by_spell: BTreeMap<u32, f64> = capture
         .consumed_absorbs_by_spell
@@ -547,6 +579,7 @@ fn replay_registered_run_with_healing(
         json!({"spec":spec,"level":level,"reference_tier":"MID2","timeline":"simc_tank_dummy",
         "external_healing":external_healing,"external_healing_effective":external_healing_effective,
         "self_healing_by_spell":healing_by_spell,"absorbs_by_spell":absorbs_by_spell,"aura_uptime":aura_uptime,
+        "resource_counters":counters,"target_debuff_uptime":target_debuff_uptime,
         "rotation_status":"registered_literal_simc","duration_seconds":elapsed,"incoming_events":next,"tank_casts":casts,
         "raw_damage":raw,"damage_taken":taken,"mitigation_pct":(raw>0.0).then(||100.0*(raw-taken)/raw),
         "self_heal_per_second":(elapsed>0.0).then(||self_healing/elapsed),

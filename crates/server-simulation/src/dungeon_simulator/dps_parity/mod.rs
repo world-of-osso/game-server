@@ -35,6 +35,18 @@ pub(crate) trait SpecDriver: std::any::Any {
     fn tank_active_mitigation_auras(&self) -> Option<&'static [u32]> {
         None
     }
+    /// Named monotonic counters read at combat start and after replay.
+    fn tank_resource_counters(
+        &self,
+        _world: &World,
+        _actor: Entity,
+    ) -> BTreeMap<&'static str, u64> {
+        BTreeMap::new()
+    }
+    /// Native target debuffs owned by this tank, sampled over replay time.
+    fn tank_target_debuff_auras(&self) -> &'static [u32] {
+        &[]
+    }
     fn report(&self) -> Value {
         Value::Null
     }
@@ -382,6 +394,22 @@ pub(crate) fn tank_mitigation_auras(run: &Run) -> Result<&'static [u32], String>
                 run.profile.spec_id
             )
         })
+}
+
+pub(crate) fn tank_resource_counters(run: &Run) -> Result<BTreeMap<&'static str, u64>, String> {
+    let driver = run
+        .spec_driver
+        .as_ref()
+        .ok_or("NATIVE_TANK_DRIVER_UNAVAILABLE")?;
+    Ok(driver.tank_resource_counters(run.app.world(), run.actor))
+}
+
+pub(crate) fn tank_target_debuff_auras(run: &Run) -> Result<&'static [u32], String> {
+    let driver = run
+        .spec_driver
+        .as_ref()
+        .ok_or("NATIVE_TANK_DRIVER_UNAVAILABLE")?;
+    Ok(driver.tank_target_debuff_auras())
 }
 
 /// `before_prepare` runs after consumables, before the driver's pre-pull plan.

@@ -80,6 +80,37 @@ fn cli_prints_a_real_protection_tank_report() {
 }
 
 #[test]
+#[ignore = "runs MID2 Vengeance resource and target-debuff reporting through the CLI"]
+fn cli_prints_vengeance_resource_counters_and_target_debuffs() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let output = std::process::Command::new("python3")
+        .arg(root.join("scripts/healer_tank_replay.py"))
+        .arg("--timeline")
+        .arg(std::env::var("HEALER_TANK_SIMC_TRACE").unwrap())
+        .arg("--profile-dir")
+        .arg(std::env::var("DPS_PARITY_OUTPUT").unwrap())
+        .arg("--spec")
+        .arg("581")
+        .arg("--executable")
+        .arg(std::env::current_exe().unwrap())
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let text = String::from_utf8(output.stdout).unwrap();
+    assert!(text.contains("| soul_fragments_generated |"), "{text}");
+    assert!(text.contains("| soul_fragments_consumed |"), "{text}");
+    assert!(text.contains("| Target debuff ID | Uptime % |"), "{text}");
+    assert!(
+        text.contains("| 207771 |") && text.contains("| 204598 |"),
+        "{text}"
+    );
+}
+
+#[test]
 #[ignore = "runs the healed MID2 SimC dummy trace through the CLI"]
 fn cli_selects_simc_dummy_healing() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
