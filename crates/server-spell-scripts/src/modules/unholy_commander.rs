@@ -4,9 +4,7 @@ use shared::components::{ActiveSpec, Npc};
 
 use super::combat;
 use combat::auras::{self, ActiveAuras, AuraApplication, AuraSource};
-use combat::spell_cast::{
-    script_registry::SpellScriptHook, scripts::AfterCastHook, summon::SummonedCreature,
-};
+use combat::spell_cast::{script_registry::SpellScriptHook, summon::SummonedCreature};
 use combat::spell_info::{SpellInfo, SpellStore};
 
 const TALENT: u32 = 390259;
@@ -14,18 +12,15 @@ const OWNER_BUFF: u32 = 390260;
 const PET_BUFF: u32 = 390264;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
-    SpellScriptHook::NativeAfterCast(after_cast),
+    SpellScriptHook::SuccessfulCastRelationships(grant_commander),
     SpellScriptHook::SummonInitialized(apply_to_new_summon),
 ];
 
-fn after_cast(spell: u32) -> Option<AfterCastHook> {
-    (spell == 1233448).then_some(grant_commander)
-}
-
-fn grant_commander(world: &mut World, owner: Entity, _: &SpellInfo) {
-    if world
-        .get::<ActiveSpec>(owner)
-        .is_none_or(|spec| spec.0 != 252)
+fn grant_commander(world: &mut World, owner: Entity, spell: &SpellInfo) {
+    if spell.id != 1233448
+        || world
+            .get::<ActiveSpec>(owner)
+            .is_none_or(|spec| spec.0 != 252)
         || !auras::has_aura(world, owner, TALENT)
     {
         return;
