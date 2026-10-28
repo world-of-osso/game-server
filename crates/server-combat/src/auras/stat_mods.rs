@@ -619,6 +619,11 @@ fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance) {
                     .amount;
                 stats.haste_pct = compound_haste_pct(stats.haste_pct, haste * 0.1 * stacks);
             }
+            // SimC76f8118 sc_rogue.cpp10423–10427 scales Alacrity's
+            // rank-resolved native value for its legacy per-combo-point behavior.
+            MELEE_SLOW if aura.spell_id == 193539 => {
+                stats.haste_pct = compound_haste_pct(stats.haste_pct, amount / 10.0);
+            }
             // SimC76f8118 player.cpp4987–4995: independent haste buffs multiply.
             MOD_MELEE_HASTE
             | MOD_RANGED_HASTE
