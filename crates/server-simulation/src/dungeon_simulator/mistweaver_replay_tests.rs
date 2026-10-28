@@ -11,6 +11,12 @@ fn mistweaver_heals_the_simc_dummy_party() {
     let raw = metrics["raw_hps"].as_f64().unwrap();
     assert!((0.0..=100.0).contains(&metrics["overheal_pct"].as_f64().unwrap()));
     assert!(report["incoming_events"].as_u64().unwrap() > 100);
+    assert!(
+        ["107428", "100784", "205523", "100780"]
+            .iter()
+            .any(|spell| report["healer_casts"][*spell].as_u64().unwrap_or(0) > 0),
+        "Mistweaver never cast damage filler: {report}"
+    );
     assert_eq!(report["tank_spec"], 66);
     assert!(
         report["tank_casts"]

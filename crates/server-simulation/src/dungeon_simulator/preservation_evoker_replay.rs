@@ -18,11 +18,14 @@ const SPELLS: &[(&str, u32, bool)] = &[
     ("emerald_communion", 370960, true),
     ("rewind", 363534, true),
     ("dream_breath", 355936, true),
+    ("temporal_anomaly", 373861, true),
+    ("verdant_embrace", 360995, false),
     ("spiritbloom", 367226, false),
     ("emerald_blossom", 355913, false),
     ("echo", 364343, false),
     ("reversion", 366155, false),
     ("living_flame", 361469, false),
+    ("disintegrate", 356995, false),
 ];
 
 struct Preservation {
@@ -56,18 +59,22 @@ pub(super) fn prepare(
     let program = Program::parse(&[
         ("default", "emerald_communion,if=mana.pct<65"),
         ("default", "rewind,if=party.injured>=3"),
-        ("default", "dream_breath,empower_to=1,if=party.injured>=2"),
+        ("default", "temporal_anomaly,if=party.injured>=2"),
+        ("default", "echo,if=target.health.pct<95&target.echo_up=0"),
+        ("default", "dream_breath,empower_to=1,if=party.injured>=1"),
         (
             "default",
             "spiritbloom,empower_to=1,if=target.health.pct<55",
         ),
-        ("default", "emerald_blossom,if=party.injured>=3"),
+        ("default", "verdant_embrace,if=target.health.pct<85"),
+        ("default", "emerald_blossom,if=party.injured>=2"),
         (
             "default",
             "reversion,if=target.health.pct<95&target.reversion_up=0",
         ),
-        ("default", "echo,if=target.health.pct<80&target.echo_up=0"),
-        ("default", "living_flame,if=target.health.pct<90"),
+        ("default", "living_flame,if=target.health.pct<95"),
+        ("damage", "disintegrate"),
+        ("damage", "living_flame"),
     ])?;
     Ok(Box::new(Preservation {
         driver: Driver::new(program),
@@ -127,13 +134,14 @@ impl Policy for Preservation {
         let Some((target, _)) = living.iter().copied().min_by(|a, b| a.1.total_cmp(&b.1)) else {
             return Ok(());
         };
-        let injured = living.iter().filter(|(_, ratio)| *ratio < 0.90).count();
+        let injured = living.iter().filter(|(_, ratio)| *ratio < 0.95).count();
         let reversion_up = crate::auras::has_aura(world, target, 366155)
             || crate::auras::has_aura(world, target, 367364);
         let echo_up = crate::auras::has_aura(world, target, 364343);
         let targets = [target];
         let actions = SPELLS
             .iter()
+            .filter(|(name, _, _)| *name != "disintegrate")
             .map(|&(name, spell, self_target)| NativeAction {
                 name,
                 spell,
@@ -151,6 +159,38 @@ impl Policy for Preservation {
         if let Some((action, execution)) =
             self.driver
                 .select("default", &facts, &prepared, &self.equipment)?
+        {
+            self.driver.execute(world, healer, action, execution)?;
+            return Ok(());
+        }
+        if injured != 0 {
+            return Ok(());
+        }
+        let enemy = party.iter().find_map(|&unit| {
+            let spec = world.get::<shared::components::ActiveSpec>(unit)?;
+            (spec.0 == 66)
+                .then(|| world.get::<crate::networking::CombatTarget>(unit)?.0)
+                .flatten()
+        });
+        let Some(enemy) = enemy else {
+            return Ok(());
+        };
+        let enemies = [enemy];
+        let actions = SPELLS
+            .iter()
+            .filter(|(name, _, _)| matches!(*name, "disintegrate" | "living_flame"))
+            .map(|&(name, spell, self_target)| NativeAction {
+                name,
+                spell,
+                self_target,
+                talent: None,
+            });
+        let prepared = Prepared::read(world, healer, &enemies, &self.equipment, actions, false)?;
+        let facts = NativeFacts::new(world, healer, &self.bindings, self.encounter, 1)
+            .with_targets(Some(enemy), &enemies);
+        if let Some((action, execution)) =
+            self.driver
+                .select("damage", &facts, &prepared, &self.equipment)?
         {
             self.driver.execute(world, healer, action, execution)?;
         }
