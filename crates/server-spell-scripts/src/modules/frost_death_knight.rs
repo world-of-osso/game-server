@@ -15,6 +15,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::OwnsPolicyProc(owns_proc),
     SpellScriptHook::SnapshotsModifier(snapshots_modifier),
     SpellScriptHook::BeforeDamageSnapshot(convert_km_weapon_school),
+    SpellScriptHook::BeforeDamageSnapshot(convert_rime_blast_school),
     SpellScriptHook::TargetContextDamageMultiplier(converted_weapon_multiplier),
     SpellScriptHook::TargetContextDamageMultiplier(breath_secondary_multiplier),
     SpellScriptHook::AfterWhiteHit(after_white_hit),
@@ -60,6 +61,28 @@ fn is_frost(world: &World, caster: Entity) -> bool {
     world
         .get::<ActiveSpec>(caster)
         .is_some_and(|spec| spec.0 == 251)
+}
+
+fn convert_rime_blast_school(world: &World, caster: Entity, spell: &mut SpellInfo) {
+    if spell.id != 49184 || !is_frost(world, caster) {
+        return;
+    }
+    let school = world
+        .get::<auras::ActiveAuras>(caster)
+        .and_then(|active| {
+            active
+                .iter()
+                .find(|aura| aura.spell_id == 443532 && aura.caster == caster)
+        })
+        .and_then(|aura| aura.effects.iter().find(|effect| effect.index == 0))
+        .map(|effect| effect.misc_values[0] as u32);
+    if let Some(school) = school {
+        spell
+            .misc
+            .as_mut()
+            .expect("Howling Blast school")
+            .school_mask = school;
+    }
 }
 
 fn convert_km_weapon_school(world: &World, caster: Entity, spell: &mut SpellInfo) {

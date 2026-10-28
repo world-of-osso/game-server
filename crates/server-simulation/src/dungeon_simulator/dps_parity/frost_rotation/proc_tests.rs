@@ -914,7 +914,27 @@ fn frost_bind_in_darkness_follows_earned_rime() {
     assert!(!auras::has_aura(run.app.world(), run.actor, 443532));
     earn_rime(&mut run);
     assert!(auras::has_aura(run.app.world(), run.actor, 443532));
+    let start = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .len();
     cast(&mut run, 49184);
+    let hit = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0[start..]
+        .iter()
+        .find(|event| {
+            event.spell_id == Some(49184) && event.kind == shared::protocol::CombatLogKind::Damage
+        })
+        .expect("earned Rime hit");
+    assert_eq!(
+        hit.school_mask, 48,
+        "Bind converts Rime Howling Blast to Shadowfrost"
+    );
     assert!(!auras::has_aura(run.app.world(), run.actor, 59052));
     assert!(!auras::has_aura(run.app.world(), run.actor, 443532));
 }
