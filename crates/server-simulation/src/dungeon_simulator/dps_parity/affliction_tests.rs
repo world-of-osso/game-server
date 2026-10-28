@@ -744,8 +744,16 @@ fn affliction_precombat_potion_after_harmful_precast_is_active_at_pull() {
     let _seed = crate::random::seed_scope(70448);
     for targets in [1, 3] {
         let run = prepare_measurement(265, targets).expect("actual literal Affliction precombat");
-        let auras = run.app.world().get::<crate::auras::ActiveAuras>(run.actor).unwrap();
-        assert!(auras.iter().any(|aura| aura.spell_id == 1295147 && aura.caster == run.actor),
-            "SimC76f8118 player.cpp6150–6182 executes the selected potion even after its first harmful precast; targets={targets}");
+        let auras = run
+            .app
+            .world()
+            .get::<crate::auras::ActiveAuras>(run.actor)
+            .unwrap();
+        assert!(
+            auras
+                .iter()
+                .any(|aura| aura.spell_id == 1295147 && aura.caster == run.actor),
+            "SimC76f8118 player.cpp6150–6182 executes the selected potion even after its first harmful precast; targets={targets}"
+        );
     }
 }
