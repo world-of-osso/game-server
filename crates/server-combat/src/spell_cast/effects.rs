@@ -2351,6 +2351,15 @@ fn push_damage_event(
             procs::PROC_DEAL_HARMFUL_PERIODIC,
             procs::PROC_TAKE_HARMFUL_PERIODIC,
         )
+    } else if ctx.spell.id == 0
+        && ctx
+            .spell
+            .categories
+            .as_ref()
+            .is_some_and(|category| category.defense_type == 2)
+    {
+        // SimC's ID-zero melee nuke bypasses a cast hit ledger but is still a melee ability.
+        procs::spell_hit_masks(ctx.spell, true)
     } else {
         (0, 0)
     };

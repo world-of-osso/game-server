@@ -62,6 +62,42 @@ fn tank_replay_rejects_profiles_without_level_90_mid2_inputs() {
 }
 
 #[test]
+#[ignore = "requires canonical Blood profile and world database"]
+fn simc_dummy_strike_triggers_taken_melee_ability_proc() {
+    use crate::auras::RemoveReason;
+    use shared::components::Health;
+    let mut run = super::dps_parity::prepare_registered_player(250, 1).unwrap();
+    let target = run.actor;
+    let source = run.targets[0];
+    assert!(crate::auras::has_aura(run.app.world(), target, 326801));
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        target,
+        RemoveReason::Cancelled,
+        |aura| matches!(aura.spell_id, 77535 | 207203 | 326809),
+    );
+    let max = run.app.world().get::<Health>(target).unwrap().max;
+    run.app
+        .world_mut()
+        .get_mut::<Health>(target)
+        .unwrap()
+        .current = max * 0.30;
+    crate::spell_cast::effects::replay_simc_dummy_strike(
+        run.app.world_mut(),
+        source,
+        target,
+        max * 0.05,
+        false,
+        false,
+    );
+    run.app.update();
+    assert!(
+        crate::auras::has_aura(run.app.world(), target, 326808),
+        "landed melee ability must proc Rune of Sanguination"
+    );
+}
+
+#[test]
 #[ignore = "uses the native recipient, auto-only proc and SimC special damage"]
 fn simc_dummy_strike_does_not_trigger_auto_attack_procs() {
     use crate::auras::{ActiveAuras, AuraApplication, AuraSource, RemoveReason};
@@ -72,7 +108,7 @@ fn simc_dummy_strike_does_not_trigger_auto_attack_procs() {
         run.app.world_mut(),
         target,
         RemoveReason::Cancelled,
-        |aura| aura.spell_id == 195181,
+        |aura| matches!(aura.spell_id, 195181 | 207203 | 77535),
     );
     for _ in 0..3 {
         crate::auras::apply_aura(
@@ -96,12 +132,6 @@ fn simc_dummy_strike_does_not_trigger_auto_attack_procs() {
             .map_or(0, |aura| aura.stacks)
     };
     assert_eq!(stacks(&run), 3);
-    let before = run
-        .app
-        .world()
-        .get::<shared::components::Health>(target)
-        .unwrap()
-        .current;
     crate::spell_cast::effects::replay_simc_dummy_strike(
         run.app.world_mut(),
         source,
@@ -114,10 +144,13 @@ fn simc_dummy_strike_does_not_trigger_auto_attack_procs() {
     assert!(
         run.app
             .world()
-            .get::<shared::components::Health>(target)
-            .unwrap()
-            .current
-            < before
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|event| event.source == Some(source.to_bits())
+                && event.target == Some(target.to_bits())
+                && event.kind == shared::protocol::CombatLogKind::Damage
+                && event.amount > 0)
     );
     assert_eq!(
         stacks(&run),
