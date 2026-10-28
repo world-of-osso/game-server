@@ -284,6 +284,27 @@ impl super::SpecDriver for Rotation {
 #[cfg(test)]
 mod tests {
     #[test]
+    #[ignore = "requires Guardian MID2 profile and native world data"]
+    fn guardian_blood_frenzy_gains_rage_only_with_owned_thrash() {
+        let mut run = super::super::prepare_registered_player(104, 1).unwrap();
+        let actor = run.actor;
+        let target = run.targets[0];
+        let rage = |run: &super::super::Run| {
+            crate::spell_cast::powers::power_value(run.app.world(), actor, shared::components::PowerType::Rage).unwrap().0
+        };
+        for _ in 0..120 { run.app.update(); }
+        let before = rage(&run);
+        for _ in 0..120 { run.app.update(); }
+        assert_eq!(rage(&run), before, "no Thrash target means no Blood Frenzy rage");
+        crate::auras::apply_aura(run.app.world_mut(), &crate::auras::AuraApplication {
+            caster: actor, target, spell_id: 192090, effect_mask: u32::MAX,
+            source: crate::auras::AuraSource::Cast,
+        });
+        for _ in 0..120 { run.app.update(); }
+        assert!(rage(&run) > before, "an owned Thrash bleed must earn periodic rage");
+    }
+
+    #[test]
     #[ignore = "requires Guardian MID2 profile and SimC dungeon-dummy trace"]
     fn guardian_matted_fur_absorbs_real_dummy_damage() {
         let trace = std::env::var("HEALER_TANK_SIMC_TRACE").expect("Guardian trace required");
