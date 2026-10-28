@@ -325,9 +325,15 @@ pub(super) fn replay_simc_with_healing(
     } else {
         Vec::new()
     };
+    let dummy_debuffs = if external_healing {
+        simc_tank_timeline::read_dummy_debuffs(path, "Tank_Dummy_Dungeon")?
+    } else {
+        Vec::new()
+    };
     let _rng = crate::random::seed_scope(seed);
     let mut run = super::dps_parity::prepare_registered_player(spec_id, 1)?;
     apply_simc_raid_buffs(&mut run, &raid_buffs)?;
+    apply_simc_dummy_debuffs(&mut run, &dummy_debuffs)?;
     let auras = super::dps_parity::tank_mitigation_auras(&run)?;
     replay_registered_run_with_healing(
         run,
@@ -337,6 +343,7 @@ pub(super) fn replay_simc_with_healing(
         external_healing,
         bloodlust_ms,
         &raid_buffs,
+        &dummy_debuffs,
     )
 }
 
@@ -353,6 +360,7 @@ pub(super) fn replay_registered_run(
         mitigation_auras,
         false,
         None,
+        &[],
         &[],
     )
 }
@@ -401,6 +409,47 @@ pub(super) fn apply_simc_raid_buffs(
     Ok(())
 }
 
+pub(super) fn apply_simc_dummy_debuffs(
+    run: &mut super::dps_parity::Run,
+    debuffs: &[simc_tank_timeline::RaidBuff],
+) -> Result<(), String> {
+    let target = run.targets[0];
+    for debuff in debuffs {
+        let world = run.app.world_mut();
+        if world
+            .resource::<crate::spell_info::SpellStore>()
+            .get(debuff.spell_id)
+            .is_none()
+        {
+            return Err(format!(
+                "SIMC_DUMMY_DEBUFF_NOT_IN_CATALOG:{}:{}",
+                debuff.name, debuff.spell_id
+            ));
+        }
+        crate::auras::apply_aura(
+            world,
+            &crate::auras::AuraApplication {
+                caster: run.actor,
+                target,
+                spell_id: debuff.spell_id,
+                effect_mask: u32::MAX,
+                source: crate::auras::AuraSource::Cast,
+            },
+        );
+        if !crate::auras::has_aura(world, target, debuff.spell_id) {
+            return Err(format!(
+                "SIMC_DUMMY_DEBUFF_NOT_APPLIED:{}:{}",
+                debuff.name, debuff.spell_id
+            ));
+        }
+    }
+    if !debuffs.is_empty() {
+        run.app.update();
+        run.app.update();
+    }
+    Ok(())
+}
+
 fn replay_registered_run_with_healing(
     mut run: super::dps_parity::Run,
     hits: &[crate::simc_tank_timeline::Hit],
@@ -409,6 +458,7 @@ fn replay_registered_run_with_healing(
     external_healing: bool,
     bloodlust_ms: Option<u64>,
     raid_buffs: &[simc_tank_timeline::RaidBuff],
+    dummy_debuffs: &[simc_tank_timeline::RaidBuff],
 ) -> Result<Value, String> {
     use crate::simc_tank_timeline::Kind;
     let tank = run.actor;
@@ -776,6 +826,7 @@ fn replay_registered_run_with_healing(
         "external_healing":external_healing,"external_healing_effective":external_healing_effective,
         "bloodlust_start_seconds":bloodlust_ms.filter(|_| bloodlust_applied).map(|ms| ms as f64 / 1000.0),
         "raid_buffs":raid_buffs.iter().map(|buff| json!({"name":buff.name,"spell_id":buff.spell_id})).collect::<Vec<_>>(),
+        "dummy_debuffs":dummy_debuffs.iter().map(|buff| json!({"name":buff.name,"spell_id":buff.spell_id})).collect::<Vec<_>>(),
         "self_healing_by_spell":healing_by_spell,"raw_self_healing_by_spell":raw_healing_by_spell,
         "periodic_damage_ticks_by_spell":periodic_ticks_by_spell,
         "energize_by_spell":energize_by_spell.iter().map(|(spell, (attempted, effective))| (spell, json!({"attempted": attempted, "effective": effective}))).collect::<BTreeMap<_, _>>(),
