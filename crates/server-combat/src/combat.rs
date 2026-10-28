@@ -593,6 +593,7 @@ type AutoAttackTargets<'w, 's> = Query<
         Has<Unkillable>,
         Option<&'static crate::scripted_ai::CreatureScriptName>,
         Option<&'static shared::components::Rotation>,
+        Option<&'static mut crate::auras::source_absorb::SourceAbsorbs>,
     ),
 >;
 
@@ -1045,6 +1046,7 @@ fn auto_attack_unit(
             continue;
         }
         let context = SwingContext {
+            now: time.elapsed_secs_f64(),
             melee_range,
             stagger: stagger.as_ref(),
             scaling: &params.scaling,
@@ -1461,6 +1463,7 @@ impl Attacker<'_> {
 
 /// World data a swing reads besides the two units.
 pub(crate) struct SwingContext<'a, 'w, 's> {
+    now: f64,
     pub melee_range: f32,
     stagger: Option<&'a crate::auras::stagger::Snapshot>,
     pub scaling: &'a Query<'w, 's, ScalingItem<'static>>,
@@ -2124,6 +2127,7 @@ fn resolve_swing(
         _unkillable,
         _script_name,
         target_rotation,
+        mut source_absorbs,
     )) = targets.get_mut(target_entity)
     else {
         return None;
@@ -2311,7 +2315,21 @@ fn resolve_swing(
             crate::auras::stagger::deposit(world, target_entity, deferred, consume_ox);
         });
     }
-    let outcome_damage = outcome_damage - deferred;
+    let mut outcome_damage = outcome_damage - deferred;
+    let mut source_absorbed = 0.0;
+    if let Some((spell, absorbed)) = crate::auras::source_absorb::consume(
+        source_absorbs.as_deref_mut(),
+        attacker.entity,
+        context.now,
+        outcome_damage,
+    ) {
+        outcome_damage -= absorbed;
+        source_absorbed = absorbed;
+        let source = attacker.entity;
+        commands.queue(move |world: &mut World| {
+            crate::auras::source_absorb::finish(world, target_entity, source, spell, absorbed);
+        });
+    }
     let absorption = crate::auras::consume_absorbs(
         avoidance
             .1
@@ -2320,7 +2338,7 @@ fn resolve_swing(
         1,
         outcome_damage,
     );
-    let absorbed = absorption.absorbed;
+    let absorbed = absorption.absorbed + source_absorbed;
     let mut remaining = absorption.remaining;
     for split in splits {
         let recipient_scaling = context.scaling.get(split.recipient).map_or(
@@ -2944,7 +2962,10 @@ pub fn replay_healer_hit(
     if deferred > 0.0 || consume_ox {
         crate::auras::stagger::deposit(world, victim, deferred, consume_ox);
     }
-    let (amount, absorbed) = crate::auras::absorb_damage(world, victim, 1, amount - deferred);
+    let (amount, source_absorbed) =
+        crate::auras::source_absorb::absorb(world, victim, attacker, amount - deferred);
+    let (amount, absorbed) = crate::auras::absorb_damage(world, victim, 1, amount);
+    let absorbed = absorbed + source_absorbed;
     let amount = crate::auras::damage_transfer::route(world, attacker, victim, 1, amount);
     let (attacker_scaling, target) = (
         UnitScaling::of(world, attacker),

@@ -84,6 +84,7 @@ pub mod rogue;
 mod rolling_periodic_tests;
 pub mod scripts;
 pub mod shapeshift;
+pub mod source_absorb;
 pub mod spell_mods;
 mod spirit_wolf;
 pub mod stagger;

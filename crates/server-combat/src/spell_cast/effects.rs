@@ -2199,7 +2199,10 @@ fn deal_source_damage_and_report(
     if deferred > 0.0 || consume_ox {
         crate::auras::stagger::deposit(world, target, deferred, consume_ox);
     }
-    let (amount, absorbed) = crate::auras::absorb_damage(world, target, school, amount - deferred);
+    let (amount, source_absorbed) =
+        crate::auras::source_absorb::absorb(world, target, ctx.caster, amount - deferred);
+    let (amount, absorbed) = crate::auras::absorb_damage(world, target, school, amount);
+    let absorbed = absorbed + source_absorbed;
     let amount = crate::auras::damage_transfer::route(world, ctx.caster, target, school, amount);
     let (caster_scaling, target_scaling) = (
         UnitScaling::of(world, ctx.caster),
