@@ -6,17 +6,29 @@ use shared::components::{Health, Position};
 use std::collections::BTreeMap;
 
 #[derive(Resource, Default)]
-struct PendingHits {
-    hits: Vec<(Entity, Entity, Hit)>,
-    error: Option<String>,
-    manual_raw_receipts: usize,
+pub(super) struct PendingHits {
+    pub(super) hits: Vec<(Entity, Entity, Hit)>,
+    pub(super) error: Option<String>,
+    pub(super) track_delivered_hits: bool,
+    pub(super) delivered_hits: Vec<Hit>,
+    pub(super) manual_raw_receipts: usize,
     replayed_hits: usize,
     non_unit_hits: usize,
 }
 
-fn deliver_hits(world: &mut World) {
+pub(super) fn deliver_hits(world: &mut World) {
     let hits = std::mem::take(&mut world.resource_mut::<PendingHits>().hits);
     for (source, target, hit) in hits {
+        if world.resource::<PendingHits>().track_delivered_hits
+            && world
+                .get::<Health>(target)
+                .is_some_and(|health| health.current > 0.0)
+        {
+            world
+                .resource_mut::<PendingHits>()
+                .delivered_hits
+                .push(hit.clone());
+        }
         let before = world.resource::<super::healer_intake::Capture>().hits.len();
         let scale = crate::level_scaling::damage_to_hp_scale(world, source, target);
         if !scale.is_finite() || scale <= 0.0 {
@@ -50,7 +62,7 @@ fn deliver_hits(world: &mut World) {
     }
 }
 
-fn freeze_sources(world: &mut World, actors: &BTreeMap<u32, Entity>) {
+pub(super) fn freeze_sources(world: &mut World, actors: &BTreeMap<u32, Entity>) {
     for &source in actors.values() {
         // The recorded clock, not a second autonomous dungeon, owns enemy actions.
         // Keep native identity/scaling/armor/auras and all recipient damage handlers.
