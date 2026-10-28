@@ -33,14 +33,18 @@ fn after_hit(world: &mut World, ctx: &EffectCtx, target: Entity, _: bool, damage
         .iter()
         .find_map(|(power, amount)| (*power == PowerType::ComboPoints).then_some(*amount))
         .expect("native Dispatch has combo-point context");
+    trigger_finisher(world, ctx, target, points);
+}
+
+pub(super) fn trigger_finisher(world: &mut World, ctx: &EffectCtx, target: Entity, points: f32) {
     earn_palmed_bullet(world, ctx, points);
     if !auras::has_aura(world, ctx.caster, GRAVEDIGGER_TWO) {
         return;
     }
     let threshold = spell_cast::scripts::script_effect_value(world, ctx.caster, GRAVEDIGGER_TWO, 0);
     if points >= threshold {
-        // SimC76f8118 sc_rogue.cpp3794/8879–8893: qualifying landed
-        // Dispatch launches the native child at its original target after 200ms.
+        // SimC76f8118 sc_rogue.cpp3794/6889–6891/8879–8893: qualifying
+        // Dispatch and Coup launch the native child at their target after 200ms.
         queued_triggers::schedule_full_trigger(world, ctx, target, SCOUNDREL_STRIKE, 200);
     }
 }
