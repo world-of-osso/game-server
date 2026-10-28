@@ -127,6 +127,7 @@ fn read_native_crit_chance(h: &Harness, attacker: Entity, victim: Entity) -> f32
     let world = h.app.world();
     let source = super::Attacker {
         entity: attacker,
+        player: world.get::<shared::components::Player>(attacker).is_some(),
         position: world.get::<shared::components::Position>(attacker).unwrap(),
         mods: world.get::<crate::auras::AuraStatMods>(attacker),
         stats: world.get::<crate::stats::CharacterStats>(attacker),

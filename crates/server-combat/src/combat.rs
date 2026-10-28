@@ -966,6 +966,13 @@ fn auto_attack_unit(
             });
     let attacker = Attacker {
         entity: attacker_entity,
+        player: params
+            .sight
+            .bodies
+            .get(attacker_entity)
+            .expect("attacker has position")
+            .6
+            .is_some(),
         position: &snapshot.position,
         mods: snapshot.mods.as_ref(),
         stats: snapshot.stats.as_ref(),
@@ -1258,6 +1265,7 @@ fn swing_aura_events(attacker: Entity, target: Entity, outcome: &SwingOutcome) -
 /// The swinging unit.
 pub(crate) struct Attacker<'a> {
     pub entity: Entity,
+    pub player: bool,
     pub position: &'a Position,
     pub mods: Option<&'a AuraStatMods>,
     /// Players: weapon, attack power, crit, haste and versatility. Units
@@ -1631,6 +1639,10 @@ fn read_outcome_chances(
     });
     let base_miss = if !attacker.creature && attacker.stats.is_none() {
         0.0
+    } else if attacker.player {
+        // SimC76f8118 attack.cpp miss_chance: retail players have no legacy
+        // 5% base miss; dual-wield white attacks retain their 19% penalty.
+        chances.miss - melee::BASE_MISS_PCT
     } else {
         chances.miss
     };

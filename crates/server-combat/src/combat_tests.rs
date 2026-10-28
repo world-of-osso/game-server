@@ -136,6 +136,7 @@ fn run_attack_tick(app: &mut App) {
                 aa.off_hand_timer = aa.off_hand_timer.saturating_sub(dt);
                 let attacker = Attacker {
                     entity,
+                    player: false,
                     position,
                     mods: None,
                     stats,
