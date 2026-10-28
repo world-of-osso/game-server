@@ -1,0 +1,304 @@
+{
+  "spec_id": 270,
+  "class": "monk",
+  "spec": "mistweaver",
+  "name": "超大炸鸡饱饱",
+  "level": "90",
+  "race": "Night Elf",
+  "role": "heal",
+  "position": "back",
+  "equipment": [
+    {
+      "slot": "head",
+      "item_id": 271875,
+      "bonus_list": [
+        6652,
+        13696,
+        13662,
+        13334,
+        13847,
+        12854
+      ],
+      "item_level_override": 334,
+      "enchant": 8017,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "neck",
+      "item_id": 268265,
+      "bonus_list": [
+        6652,
+        13668,
+        13335,
+        13848,
+        13987
+      ],
+      "item_level_override": 344,
+      "enchant": 0,
+      "gems": [
+        240983,
+        240900
+      ],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "shoulders",
+      "item_id": 271517,
+      "bonus_list": [
+        13694,
+        13440,
+        6652,
+        13697,
+        12854
+      ],
+      "item_level_override": 334,
+      "enchant": 8001,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "back",
+      "item_id": 268253,
+      "bonus_list": [
+        6652,
+        13662,
+        13335,
+        13848
+      ],
+      "item_level_override": 344,
+      "enchant": 0,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "chest",
+      "item_id": 271522,
+      "bonus_list": [
+        6652,
+        13335,
+        12854,
+        13690,
+        13698,
+        1587
+      ],
+      "item_level_override": 334,
+      "enchant": 7987,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "waist",
+      "item_id": 271436,
+      "bonus_list": [
+        6652,
+        13696,
+        13662,
+        13335,
+        10844,
+        12854
+      ],
+      "item_level_override": 334,
+      "enchant": 0,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "wrists",
+      "item_id": 244576,
+      "bonus_list": [
+        12214,
+        13667,
+        13695,
+        12497,
+        13751,
+        14001,
+        8960,
+        12384,
+        8793,
+        13836,
+        13696
+      ],
+      "item_level_override": 331,
+      "enchant": 0,
+      "gems": [
+        240900
+      ],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "hands",
+      "item_id": 271520,
+      "bonus_list": [
+        13335,
+        13691,
+        40,
+        13697,
+        12854
+      ],
+      "item_level_override": 334,
+      "enchant": 8727,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "legs",
+      "item_id": 271518,
+      "bonus_list": [
+        6652,
+        13335,
+        13848,
+        13693,
+        13698,
+        1597
+      ],
+      "item_level_override": 344,
+      "enchant": 7935,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "feet",
+      "item_id": 244569,
+      "bonus_list": [
+        12214,
+        13667,
+        12497,
+        13751,
+        14001,
+        8960,
+        12384,
+        8793,
+        13836
+      ],
+      "item_level_override": 331,
+      "enchant": 7963,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "finger1",
+      "item_id": 240949,
+      "bonus_list": [
+        12214,
+        13667,
+        12497,
+        13751,
+        14001,
+        8793,
+        13836
+      ],
+      "item_level_override": 331,
+      "enchant": 7969,
+      "gems": [
+        240900
+      ],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "finger2",
+      "item_id": 268249,
+      "bonus_list": [
+        6652,
+        13668,
+        13335,
+        12854
+      ],
+      "item_level_override": 334,
+      "enchant": 7969,
+      "gems": [
+        240900
+      ],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "trinket1",
+      "item_id": 250255,
+      "bonus_list": [
+        13440,
+        6652,
+        12699,
+        12856
+      ],
+      "item_level_override": 341,
+      "enchant": 0,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "trinket2",
+      "item_id": 270162,
+      "bonus_list": [
+        6652,
+        13334,
+        12856
+      ],
+      "item_level_override": 341,
+      "enchant": 0,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "main_hand",
+      "item_id": 268211,
+      "bonus_list": [
+        6652,
+        13335,
+        13848
+      ],
+      "item_level_override": 344,
+      "enchant": 8689,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "off_hand",
+      "item_id": 268197,
+      "bonus_list": [
+        40,
+        13335,
+        12856
+      ],
+      "item_level_override": 341,
+      "enchant": 0,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    }
+  ],
+  "consumables": {
+    "potion": "potion_of_recklessness_2",
+    "flask": "flask_of_the_blood_knights_2",
+    "food": "harandar_celebration",
+    "augmentation": "void_touched",
+    "temporary_enchant": "main_hand:thalassian_phoenix_oil_2/off_hand:thalassian_phoenix_oil_2"
+  },
+  "actions": [],
+  "talents": "C4QAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgBWmZZML2mxMz2mBmhZzMbLLzMWYmpZMDYMGAzMzMMbYGsMTAAAAAEgFbzsNbzMBAgBjBYGwAsIjZA",
+  "reference_tier": "MID2",
+  "simc_revision": "76f8118cf3f7f41dad20708e8328e1f4ab2deebc",
+  "simc_build": 70391,
+  "server_build": 70448,
+  "gear_source": "https://raider.io/characters/cn/silver-hand/超大炸鸡饱饱",
+  "talent_source": "https://raider.io/characters/cn/silver-hand/超大炸鸡饱饱",
+  "ranking_source": "https://raider.io/mythic-plus-spec-rankings/season-mn-2/world/monk/mistweaver",
+  "ranking": 1,
+  "source_region": "cn",
+  "source_realm": "Silver Hand",
+  "retrieved": "2026-10-28"
+}

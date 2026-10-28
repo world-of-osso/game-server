@@ -1,0 +1,295 @@
+{
+  "spec_id": 264,
+  "class": "shaman",
+  "spec": "restoration",
+  "name": "Driptinus",
+  "level": "90",
+  "race": "Dwarf",
+  "role": "heal",
+  "position": "back",
+  "equipment": [
+    {
+      "slot": "head",
+      "item_id": 271483,
+      "bonus_list": [
+        13335,
+        40,
+        13696,
+        13692,
+        13698,
+        12854
+      ],
+      "item_level_override": 334,
+      "enchant": 8017,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "neck",
+      "item_id": 268265,
+      "bonus_list": [
+        41,
+        13668,
+        13334,
+        13987,
+        12856
+      ],
+      "item_level_override": 341,
+      "enchant": 0,
+      "gems": [
+        240969,
+        240890
+      ],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "shoulders",
+      "item_id": 271481,
+      "bonus_list": [
+        6652,
+        12854,
+        13694,
+        13697,
+        1587
+      ],
+      "item_level_override": 334,
+      "enchant": 8001,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "back",
+      "item_id": 271478,
+      "bonus_list": [
+        6652,
+        13335,
+        12854,
+        1587
+      ],
+      "item_level_override": 334,
+      "enchant": 0,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "chest",
+      "item_id": 271486,
+      "bonus_list": [
+        6652,
+        13335,
+        13846,
+        13848,
+        13690,
+        13698,
+        1597
+      ],
+      "item_level_override": 344,
+      "enchant": 8013,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "waist",
+      "item_id": 271480,
+      "bonus_list": [
+        6652,
+        13335,
+        12854,
+        13696,
+        1587
+      ],
+      "item_level_override": 334,
+      "enchant": 0,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "wrists",
+      "item_id": 244584,
+      "bonus_list": [
+        12214,
+        12497,
+        13751,
+        14001,
+        8960,
+        12384,
+        8790,
+        13836,
+        13696
+      ],
+      "item_level_override": 331,
+      "enchant": 0,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "hands",
+      "item_id": 271484,
+      "bonus_list": [
+        13335,
+        40,
+        13691,
+        13697,
+        12854
+      ],
+      "item_level_override": 334,
+      "enchant": 8727,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "legs",
+      "item_id": 271482,
+      "bonus_list": [
+        6652,
+        13693,
+        13698,
+        12854
+      ],
+      "item_level_override": 334,
+      "enchant": 7937,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "feet",
+      "item_id": 271440,
+      "bonus_list": [
+        40,
+        13662,
+        13335,
+        10844,
+        12854
+      ],
+      "item_level_override": 334,
+      "enchant": 7963,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "finger1",
+      "item_id": 272148,
+      "bonus_list": [
+        13668,
+        12854
+      ],
+      "item_level_override": 334,
+      "enchant": 7967,
+      "gems": [
+        240916
+      ],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "finger2",
+      "item_id": 268252,
+      "bonus_list": [
+        6652,
+        13668,
+        13334,
+        12854
+      ],
+      "item_level_override": 334,
+      "enchant": 7967,
+      "gems": [
+        240906
+      ],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "trinket1",
+      "item_id": 250255,
+      "bonus_list": [
+        6652,
+        12856
+      ],
+      "item_level_override": 341,
+      "enchant": 0,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "trinket2",
+      "item_id": 270162,
+      "bonus_list": [
+        6652,
+        13335,
+        13696,
+        12856
+      ],
+      "item_level_override": 341,
+      "enchant": 0,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "main_hand",
+      "item_id": 271092,
+      "bonus_list": [
+        6652,
+        13334,
+        12856
+      ],
+      "item_level_override": 341,
+      "enchant": 7981,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "off_hand",
+      "item_id": 237831,
+      "bonus_list": [
+        12214,
+        13667,
+        13852,
+        12497,
+        13751,
+        14001,
+        8960,
+        12384,
+        8795,
+        13836
+      ],
+      "item_level_override": 337,
+      "enchant": 0,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    }
+  ],
+  "consumables": {
+    "potion": "lights_potential_2",
+    "flask": "flask_of_the_shattered_sun_2",
+    "food": "harandar_celebration",
+    "augmentation": "void_touched",
+    "temporary_enchant": "main_hand:thalassian_phoenix_oil_2,if=!talent.flametongue_weapon"
+  },
+  "actions": [],
+  "talents": "CgQAAAAAAAAAAAAAAAAAAAAAAAAAAgBAAAAzMzsstMmZmZMzYMMsAbwMW0YbAZGYDzMDzyMjRzyyMzmZMbsYMzYMmlZAAYAMzgZGAGDG",
+  "reference_tier": "MID2",
+  "simc_revision": "76f8118cf3f7f41dad20708e8328e1f4ab2deebc",
+  "simc_build": 70391,
+  "server_build": 70448,
+  "gear_source": "https://raider.io/characters/eu/argent-dawn/Driptinus",
+  "talent_source": "https://raider.io/characters/eu/argent-dawn/Driptinus",
+  "ranking_source": "https://raider.io/mythic-plus-spec-rankings/season-mn-2/world/shaman/restoration",
+  "ranking": 1,
+  "source_region": "eu",
+  "source_realm": "Argent Dawn",
+  "retrieved": "2026-10-28"
+}

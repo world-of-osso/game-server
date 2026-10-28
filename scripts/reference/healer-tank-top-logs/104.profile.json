@@ -1,0 +1,288 @@
+{
+  "spec_id": 104,
+  "class": "druid",
+  "spec": "guardian",
+  "name": "Vadanxd",
+  "level": "90",
+  "race": "Night Elf",
+  "role": "tank",
+  "position": "back",
+  "equipment": [
+    {
+      "slot": "head",
+      "item_id": 271528,
+      "bonus_list": [
+        13334,
+        6652,
+        13696,
+        13847,
+        13692,
+        13698,
+        12854
+      ],
+      "item_level_override": 334,
+      "enchant": 7961,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "neck",
+      "item_id": 268265,
+      "bonus_list": [
+        6652,
+        13668,
+        13334,
+        13987,
+        12856
+      ],
+      "item_level_override": 341,
+      "enchant": 0,
+      "gems": [
+        240983,
+        240890
+      ],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "shoulders",
+      "item_id": 271526,
+      "bonus_list": [
+        12854,
+        13694,
+        13697,
+        1587
+      ],
+      "item_level_override": 334,
+      "enchant": 8031,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "back",
+      "item_id": 239656,
+      "bonus_list": [
+        12214,
+        13667,
+        12497,
+        13751,
+        14001,
+        8960,
+        12384,
+        8790,
+        13836
+      ],
+      "item_level_override": 331,
+      "enchant": 0,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "chest",
+      "item_id": 271531,
+      "bonus_list": [
+        13334,
+        6652,
+        12854,
+        14049,
+        13690,
+        13698,
+        1587
+      ],
+      "item_level_override": 334,
+      "enchant": 7987,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "waist",
+      "item_id": 271436,
+      "bonus_list": [
+        6652,
+        13696,
+        13662,
+        13335,
+        10844,
+        12854
+      ],
+      "item_level_override": 334,
+      "enchant": 0,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "wrists",
+      "item_id": 244576,
+      "bonus_list": [
+        12214,
+        13667,
+        13695,
+        12497,
+        13751,
+        14001,
+        8960,
+        12384,
+        8790,
+        13836,
+        13696
+      ],
+      "item_level_override": 331,
+      "enchant": 0,
+      "gems": [
+        240890
+      ],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "hands",
+      "item_id": 271529,
+      "bonus_list": [
+        13334,
+        6652,
+        13691,
+        13697,
+        12854
+      ],
+      "item_level_override": 334,
+      "enchant": 8727,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "legs",
+      "item_id": 271527,
+      "bonus_list": [
+        13334,
+        13693,
+        6652,
+        13698,
+        12854
+      ],
+      "item_level_override": 334,
+      "enchant": 8159,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "feet",
+      "item_id": 268261,
+      "bonus_list": [
+        6652,
+        13662,
+        13334,
+        12854
+      ],
+      "item_level_override": 334,
+      "enchant": 7993,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "finger1",
+      "item_id": 281029,
+      "bonus_list": [
+        6652,
+        13668,
+        13334,
+        12854
+      ],
+      "item_level_override": 334,
+      "enchant": 7967,
+      "gems": [
+        240890
+      ],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "finger2",
+      "item_id": 268252,
+      "bonus_list": [
+        6652,
+        13668,
+        13334,
+        12854
+      ],
+      "item_level_override": 334,
+      "enchant": 7967,
+      "gems": [
+        240890
+      ],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "trinket1",
+      "item_id": 270165,
+      "bonus_list": [
+        6652,
+        13334,
+        13696,
+        12856
+      ],
+      "item_level_override": 341,
+      "enchant": 0,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "trinket2",
+      "item_id": 281215,
+      "bonus_list": [
+        6652,
+        13334,
+        12856
+      ],
+      "item_level_override": 341,
+      "enchant": 0,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "main_hand",
+      "item_id": 268215,
+      "bonus_list": [
+        6652,
+        13334,
+        13846,
+        12856
+      ],
+      "item_level_override": 341,
+      "enchant": 8689,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    }
+  ],
+  "consumables": {
+    "potion": "liquid_luster_2",
+    "flask": "magisters_2",
+    "food": "harandar_celebration",
+    "augmentation": "void_touched",
+    "temporary_enchant": "main_hand:thalassian_phoenix_oil_2"
+  },
+  "actions": [],
+  "talents": "CgGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgZmxsYmZMziZxMmZZZgZzwoJamZWmZmZmlxMMAAAAAgZsZAbbzMYMbDgpAAAAbYmBYxADYxCAzMAG",
+  "reference_tier": "MID2",
+  "simc_revision": "76f8118cf3f7f41dad20708e8328e1f4ab2deebc",
+  "simc_build": 70391,
+  "server_build": 70448,
+  "gear_source": "https://raider.io/characters/eu/kazzak/Vadanxd",
+  "talent_source": "https://raider.io/characters/eu/kazzak/Vadanxd",
+  "ranking_source": "https://raider.io/mythic-plus-spec-rankings/season-mn-2/world/druid/guardian",
+  "ranking": 1,
+  "source_region": "eu",
+  "source_realm": "Kazzak",
+  "retrieved": "2026-10-28"
+}

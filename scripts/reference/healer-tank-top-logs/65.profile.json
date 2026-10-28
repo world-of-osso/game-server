@@ -1,0 +1,305 @@
+{
+  "spec_id": 65,
+  "class": "paladin",
+  "spec": "holy",
+  "name": "快乐阳阳",
+  "level": "90",
+  "race": "Dwarf",
+  "role": "heal",
+  "position": "back",
+  "equipment": [
+    {
+      "slot": "head",
+      "item_id": 271465,
+      "bonus_list": [
+        13335,
+        40,
+        12854,
+        13696,
+        13692,
+        13698,
+        1587,
+        13695
+      ],
+      "item_level_override": 334,
+      "enchant": 8017,
+      "gems": [
+        240916
+      ],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "neck",
+      "item_id": 268265,
+      "bonus_list": [
+        6652,
+        13668,
+        13334,
+        13987,
+        12856
+      ],
+      "item_level_override": 341,
+      "enchant": 0,
+      "gems": [
+        240983,
+        240894
+      ],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "shoulders",
+      "item_id": 271444,
+      "bonus_list": [
+        40,
+        13662,
+        13335,
+        10844,
+        12854
+      ],
+      "item_level_override": 334,
+      "enchant": 8001,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "back",
+      "item_id": 268253,
+      "bonus_list": [
+        6652,
+        13662,
+        13335,
+        13848
+      ],
+      "item_level_override": 344,
+      "enchant": 0,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "chest",
+      "item_id": 271468,
+      "bonus_list": [
+        6652,
+        13335,
+        13848,
+        13690,
+        13698,
+        1597
+      ],
+      "item_level_override": 344,
+      "enchant": 7987,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "waist",
+      "item_id": 268259,
+      "bonus_list": [
+        6652,
+        13696,
+        13662,
+        13335,
+        13848
+      ],
+      "item_level_override": 344,
+      "enchant": 0,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "wrists",
+      "item_id": 237834,
+      "bonus_list": [
+        12214,
+        12497,
+        13751,
+        14001,
+        8960,
+        12384,
+        8792,
+        13836,
+        13696
+      ],
+      "item_level_override": 331,
+      "enchant": 0,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "hands",
+      "item_id": 271466,
+      "bonus_list": [
+        6652,
+        13335,
+        12854,
+        13691,
+        13697,
+        1587
+      ],
+      "item_level_override": 334,
+      "enchant": 0,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "legs",
+      "item_id": 271464,
+      "bonus_list": [
+        6652,
+        13335,
+        13708,
+        13848,
+        13693,
+        13698,
+        1597
+      ],
+      "item_level_override": 344,
+      "enchant": 7935,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "feet",
+      "item_id": 237828,
+      "bonus_list": [
+        12214,
+        13667,
+        12497,
+        13751,
+        14001,
+        8960,
+        12384,
+        8792,
+        13836
+      ],
+      "item_level_override": 331,
+      "enchant": 7963,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "finger1",
+      "item_id": 251148,
+      "bonus_list": [
+        13440,
+        6652,
+        13668,
+        12699,
+        12854
+      ],
+      "item_level_override": 334,
+      "enchant": 8025,
+      "gems": [
+        240894
+      ],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "finger2",
+      "item_id": 240949,
+      "bonus_list": [
+        12214,
+        13667,
+        12497,
+        13751,
+        14001,
+        8792,
+        13836
+      ],
+      "item_level_override": 331,
+      "enchant": 8025,
+      "gems": [
+        240894
+      ],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "trinket1",
+      "item_id": 270162,
+      "bonus_list": [
+        6652,
+        13335,
+        12856
+      ],
+      "item_level_override": 341,
+      "enchant": 0,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "trinket2",
+      "item_id": 270171,
+      "bonus_list": [
+        6652,
+        13335,
+        12856
+      ],
+      "item_level_override": 341,
+      "enchant": 0,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "main_hand",
+      "item_id": 268211,
+      "bonus_list": [
+        6652,
+        13335,
+        13848
+      ],
+      "item_level_override": 344,
+      "enchant": 8689,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "off_hand",
+      "item_id": 268196,
+      "bonus_list": [
+        6652,
+        13335,
+        12856
+      ],
+      "item_level_override": 341,
+      "enchant": 0,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    }
+  ],
+  "consumables": {
+    "potion": "potion_of_recklessness_2",
+    "flask": "flask_of_the_magisters_2",
+    "food": "royal_roast",
+    "augmentation": "void_touched",
+    "temporary_enchant": "main_hand:thalassian_phoenix_oil_2"
+  },
+  "actions": [],
+  "talents": "CEEAAAAAAAAAAAAAAAAAAAAAAAAAALAwMAAwyAmZWmZmlZMjhFzmZWMTTMLGzMDjZLDADAbgNWMzAgAAmZWWWaZmhN2GGsZgZ2GAgZGAmxY0A",
+  "reference_tier": "MID2",
+  "simc_revision": "76f8118cf3f7f41dad20708e8328e1f4ab2deebc",
+  "simc_build": 70391,
+  "server_build": 70448,
+  "gear_source": "https://raider.io/characters/cn/frostmourne/快乐阳阳",
+  "talent_source": "https://raider.io/characters/cn/frostmourne/快乐阳阳",
+  "ranking_source": "https://raider.io/mythic-plus-spec-rankings/season-mn-2/world/paladin/holy",
+  "ranking": 1,
+  "source_region": "cn",
+  "source_realm": "Frostmourne",
+  "retrieved": "2026-10-28"
+}
