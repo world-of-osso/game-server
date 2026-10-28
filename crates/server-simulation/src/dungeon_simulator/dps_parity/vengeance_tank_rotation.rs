@@ -1198,6 +1198,64 @@ mod tests {
 
     #[test]
     #[ignore = "requires native Vengeance profile"]
+    fn overlapping_spenders_do_not_cancel_scheduled_world_killer() {
+        use super::super::*;
+        let _seed = crate::random::seed_scope(70_448);
+        let (profile, traits) = read_reference(581).unwrap();
+        let identity = inputs::read_actor(&profile).unwrap();
+        let mut run = prepare_reference(profile, &traits, 1, identity).unwrap();
+        let actor = run.actor;
+        let target = run.targets[0];
+        engage(&mut run);
+        crate::spell_cast::cast_for_player_with_target(
+            run.app.world_mut(),
+            actor,
+            263642,
+            Some(target),
+        )
+        .unwrap();
+        for _ in 0..35 {
+            run.app.update();
+        }
+        crate::spell_cast::cast_for_player_with_target(
+            run.app.world_mut(),
+            actor,
+            187827,
+            Some(actor),
+        )
+        .unwrap();
+        for _ in 0..25 {
+            run.app.update();
+        }
+        assert!(crate::auras::has_aura(run.app.world(), actor, 1256302));
+        for _ in 0..5 {
+            assert!(crate::spell_cast::try_cast_triggered(
+                run.app.world_mut(),
+                actor,
+                228478,
+                Some(target),
+                1
+            ));
+            run.app.update();
+        }
+        for _ in 0..50 {
+            run.app.update();
+        }
+        let events = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0;
+        assert!(
+            events.iter().any(|event| event.spell_id == Some(1256617)
+                && event.kind == shared::protocol::CombatLogKind::Damage
+                && event.amount > 0),
+            "scheduled World Killer must land even when other spenders consumed its stacks"
+        );
+    }
+
+    #[test]
+    #[ignore = "requires native Vengeance profile"]
     fn mass_acceleration_earns_voidfall_and_soul_cleave_spends_it() {
         use super::super::*;
         let _seed = crate::random::seed_scope(70_448);
