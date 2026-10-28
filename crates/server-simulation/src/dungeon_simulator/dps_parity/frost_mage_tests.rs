@@ -472,6 +472,54 @@ use crate::spell_cast::test_harness::ObservedCombatEvents;
 use shared::protocol::CombatLogKind;
 
 #[test]
+#[ignore = "requires native Frost64 profile and equipped item tables"]
+fn frost_equipped_rppm_items_start_without_preloaded_proc() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_measurement(64, 1).unwrap();
+    for driver in [1310082, 1310208] {
+        assert!(crate::auras::has_aura(run.app.world(), run.actor, driver));
+    }
+    let started = run.app.world().resource::<Time>().elapsed();
+    install_fixture_lifetimes(&mut run, started);
+    engage(&mut run);
+    let hits = |run: &Run, spell| {
+        run.app
+            .world()
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .filter(|event| {
+                event.source == Some(run.actor.to_bits())
+                    && event.kind == CombatLogKind::Damage
+                    && event.spell_id == Some(spell)
+                    && event.amount > 0
+            })
+            .count()
+    };
+    // SimC76f8118 proc_rng.cpp95–115 starts every RPPM without preloaded
+    // attempt or bad-luck time; real seeded opener formerly fired both items.
+    for _ in 0..20 {
+        drive_player(&mut run).unwrap();
+        run.app.update();
+    }
+    assert!(hits(&run, 228597) > 0, "precombat Frostbolt hit must occur");
+    assert_eq!(hits(&run, 1310088), 0, "Acidbrood must not proc in opener");
+    assert_eq!(hits(&run, 1310209), 0, "Void must not proc in opener");
+    for _ in 0..1200 {
+        drive_player(&mut run).unwrap();
+        run.app.update();
+        if hits(&run, 1310088) > 0 && hits(&run, 1310209) > 0 {
+            break;
+        }
+    }
+    assert!(
+        hits(&run, 1310088) > 0,
+        "Acidbrood must still proc in combat"
+    );
+    assert!(hits(&run, 1310209) > 0, "Void must still proc in combat");
+}
+
+#[test]
 #[ignore = "requires private native70448 DB and exact Frost64 inputs"]
 fn frost_mage_literal_player_executes_precombat_and_opener() {
     let _seed = crate::random::seed_scope(70448);

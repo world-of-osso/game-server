@@ -502,13 +502,13 @@ fn read_haste_modified_ppm(
         })
 }
 
-fn rppm_chance(ppm: f32, last_attempt: f64, last_success: f64, now: f64) -> f32 {
+fn rppm_chance(ppm: f32, last_attempt: f64, accumulated_blp: f64, now: f64) -> f32 {
     if ppm <= 0.0 {
         return 0.0;
     }
     let average_interval = 60.0 / f64::from(ppm);
     let since_attempt = (now - last_attempt).min(PPM_MAX_ATTEMPT_GAP);
-    let since_success = (now - last_success).min(1000.0);
+    let since_success = accumulated_blp.min(1000.0);
     let bad_luck = (1.0 + (since_success / average_interval - 1.5) * 3.0).max(1.0);
     (bad_luck * f64::from(ppm) * since_attempt / 60.0).clamp(0.0, 1.0) as f32 * 100.0
 }
@@ -530,7 +530,7 @@ fn proc_chance(world: &mut World, unit: Entity, id: u32, now: f64) -> f32 {
         return 0.0;
     };
     // SimC76f8118 proc_rng.cpp105–114 adds at most 10 seconds per
-    // Guillotine attempt to its bad-luck clock, not the whole idle gap.
+    // attempt to the bad-luck clock, not the whole idle gap.
     let accumulated_blp =
         timers.accumulated_blp + (now - timers.last_attempt_at).min(PPM_MAX_ATTEMPT_GAP);
     let options = spell.aura_options.as_deref();
@@ -539,12 +539,7 @@ fn proc_chance(world: &mut World, unit: Entity, id: u32, now: f64) -> f32 {
         .filter(|ppm| ppm.base_proc_rate > 0.0);
     let chance = if let Some(ppm) = ppm {
         let rate = read_haste_modified_ppm(world, unit, ppm);
-        let last_success = if spell.id == crate::spell_cast::scripts::GUILLOTINE {
-            now - accumulated_blp
-        } else {
-            timers.last_success_at
-        };
-        rppm_chance(rate, timers.last_attempt_at, last_success, now)
+        rppm_chance(rate, timers.last_attempt_at, accumulated_blp, now)
     } else {
         options.map_or(0.0, |options| options.proc_chance as f32)
     };
@@ -553,9 +548,7 @@ fn proc_chance(world: &mut World, unit: Entity, id: u32, now: f64) -> f32 {
         .and_then(|auras| auras.into_inner().get_mut(id))
     {
         aura.proc.last_attempt_at = now;
-        if spell.id == crate::spell_cast::scripts::GUILLOTINE {
-            aura.proc.accumulated_blp = accumulated_blp;
-        }
+        aura.proc.accumulated_blp = accumulated_blp;
     }
     spell_mods::modify(world, unit, &spell, SpellModOp::ProcChance, chance)
 }
@@ -716,7 +709,6 @@ fn start_proc_cooldown(world: &mut World, unit: Entity, id: u32, now: f64) -> Op
     };
     let mut auras = world.get_mut::<ActiveAuras>(unit)?;
     let aura = auras.bypass_change_detection().get_mut(id)?;
-    aura.proc.last_success_at = now;
     aura.proc.accumulated_blp = 0.0;
     aura.proc.next_ready_at = now + f64::from(cooldown_ms) / 1000.0;
     Some(aura.clone())
