@@ -34,6 +34,7 @@ struct Mistweaver {
     encounter: Encounter,
     event_cursor: usize,
     incoming: VecDeque<(f64, f32)>,
+    last_area_heal: f32,
 }
 
 pub(super) fn prepare(
@@ -86,6 +87,7 @@ pub(super) fn prepare(
             .0
             .len(),
         incoming: VecDeque::new(),
+        last_area_heal: 0.0,
     }))
 }
 
@@ -131,12 +133,19 @@ impl ActionFacts for PartyFacts<'_> {
 }
 
 impl Mistweaver {
-    fn sample_incoming(&mut self, world: &World, tank: Entity) -> f32 {
+    fn sample_incoming(&mut self, world: &World, healer: Entity, tank: Entity) -> f32 {
         let now = crate::spell_cast::now(world);
         let events = &world
             .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
             .0;
+        let mut area_heal = 0.0;
         for event in &events[self.event_cursor..] {
+            if event.kind == shared::protocol::CombatLogKind::Heal
+                && event.source == Some(healer.to_bits())
+                && event.spell_id == Some(399491)
+            {
+                area_heal += event.amount.max(0) as f32;
+            }
             if event.kind == shared::protocol::CombatLogKind::Damage
                 && event.target == Some(tank.to_bits())
             {
@@ -144,6 +153,9 @@ impl Mistweaver {
             }
         }
         self.event_cursor = events.len();
+        if area_heal > 0.0 {
+            self.last_area_heal = area_heal;
+        }
         while self
             .incoming
             .front()
@@ -159,6 +171,7 @@ impl Mistweaver {
         healer: Entity,
         party: &[Entity],
         incoming_dps: f32,
+        last_area_heal: f32,
     ) -> Result<bool, String> {
         let Some(spell_id) =
             super::dps_parity::literal_rotation::execution::resolve_action(world, healer, 116670)?
@@ -187,7 +200,7 @@ impl Mistweaver {
                 )
             });
         let area = effect.implicit_targets.contains(&31);
-        let expected = per_target * if area { targets as f32 } else { 1.0 };
+        let expected = (per_target * if area { targets as f32 } else { 1.0 }).max(last_area_heal);
         Ok(expected > 0.0 && missing >= expected * 0.75 && missing + incoming_dps >= expected)
     }
 }
@@ -225,8 +238,9 @@ impl Policy for Mistweaver {
         } else {
             lowest
         };
-        let incoming_dps = self.sample_incoming(world, tank);
-        let worthwhile = Self::worthwhile_heal(world, healer, party, incoming_dps)?;
+        let incoming_dps = self.sample_incoming(world, healer, tank);
+        let worthwhile =
+            Self::worthwhile_heal(world, healer, party, incoming_dps, self.last_area_heal)?;
         let injured = living.iter().filter(|(_, ratio)| *ratio < 0.90).count();
         let renewing_up = crate::auras::has_aura(world, target, 119611)
             || crate::auras::has_aura(world, target, 115151);
