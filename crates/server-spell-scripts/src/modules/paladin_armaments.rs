@@ -258,7 +258,44 @@ fn extend_zealots_paragon(world: &mut World, caster: Entity, spell: u32) {
     combat::auras::extend_owned_duration(world, caster, caster, &[31884, 389539], duration as u32);
 }
 
+fn trigger_grand_crusader(world: &mut World, caster: Entity, spell: u32) {
+    if spell != 204019
+        || !world
+            .get::<ActiveSpec>(caster)
+            .is_some_and(|spec| spec.0 == 66)
+        || !world.get::<TraitLoadout>(caster).is_some_and(|traits| {
+            traits
+                .active_talent_spells()
+                .any(|talent| talent.spell_id == 85043)
+        })
+    {
+        return;
+    }
+    // SimC76f8118 sc_paladin_protection.cpp448–452,903–923: Blessed Hammer
+    // rolls the selected native Grand Crusader chance once per successful cast.
+    let chance = combat::spell_cast::scripts::script_effect_value(world, caster, 85043, 0);
+    if combat::random::random::<f32>() * 100.0 >= chance {
+        return;
+    }
+    let shield = world
+        .resource::<SpellStore>()
+        .get(31935)
+        .expect("Avenger's Shield")
+        .clone();
+    let now = combat::spell_cast::now(world);
+    let remaining = world
+        .get::<combat::spell_cast::SpellHistory>(caster)
+        .map_or(0, |history| history.remaining_cooldown_ms(&shield, now));
+    combat::spell_cast::scripts::reduce_cooldown(
+        world,
+        caster,
+        31935,
+        f64::from(remaining) / 1000.0,
+    );
+}
+
 fn after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    trigger_grand_crusader(world, caster, spell.id);
     extend_zealots_paragon(world, caster, spell.id);
     advance_shining_light(world, caster, spell.id);
     advance_divine_guidance(world, caster, spell.id);

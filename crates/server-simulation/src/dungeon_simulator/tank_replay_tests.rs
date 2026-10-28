@@ -104,6 +104,60 @@ fn simc_dummy_strike_does_not_trigger_auto_attack_procs() {
 }
 
 #[test]
+#[ignore = "uses the selected MID2 player and real Blessed Hammer casts"]
+fn blessed_hammer_can_reset_avengers_shield_through_grand_crusader() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::dps_parity::prepare_registered_player(66, 1).unwrap();
+    super::dps_parity::engage(&mut run);
+    let actor = run.actor;
+    let target = run.targets[0];
+    let shield = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(31935)
+        .unwrap()
+        .clone();
+    let remaining = |run: &super::dps_parity::Run| {
+        run.app
+            .world()
+            .get::<crate::spell_cast::SpellHistory>(actor)
+            .unwrap()
+            .remaining_cooldown_ms(&shield, crate::spell_cast::now(run.app.world()))
+    };
+    let mut resets = 0;
+    for _ in 0..20 {
+        if remaining(&run) == 0 {
+            crate::spell_cast::creature_cast(
+                run.app.world_mut(),
+                actor,
+                31935,
+                Some(target),
+                false,
+            )
+            .unwrap();
+            for _ in 0..40 {
+                run.app.update();
+            }
+        }
+        let before = remaining(&run);
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 204019, Some(target), false)
+            .unwrap();
+        run.app.update();
+        if before > 100 && remaining(&run) == 0 {
+            resets += 1;
+        }
+        for _ in 0..100 {
+            run.app.update();
+        }
+    }
+    assert!(
+        resets > 0,
+        "selected Grand Crusader did not reset an active Avenger's Shield cooldown"
+    );
+}
+
+#[test]
 #[ignore = "uses the selected MID2 player and a real Consecration cast"]
 fn protection_consecration_field_persists_after_cast() {
     let mut run = super::dps_parity::prepare_registered_player(66, 1).unwrap();
