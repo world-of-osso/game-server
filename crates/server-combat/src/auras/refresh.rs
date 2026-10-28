@@ -33,11 +33,13 @@ pub(super) fn prepare_application(
     target: Entity,
     new: &mut AuraInstance,
     spell: &SpellInfo,
+    forced_rolling: bool,
 ) {
     let fresh_duration_ms = new.duration_ms;
     let sourced_rolling =
         crate::spell_cast::scripts::rolls_reapplication(world, new.caster, new.spell_id);
-    let rolling = sourced_rolling
+    let rolling = forced_rolling
+        || sourced_rolling
         || spell
             .misc
             .as_ref()
@@ -45,7 +47,7 @@ pub(super) fn prepare_application(
     if rolling {
         settle_previous_ticks(world, target, new);
     }
-    prepare_periodic_phase(world, target, new, spell, sourced_rolling);
+    prepare_periodic_phase(world, target, new, spell, sourced_rolling || forced_rolling);
     if crate::spell_cast::scripts::extends_reapplication(world, new.caster, new.spell_id) {
         carry_duration(world, target, new, DurationCarry::Extend);
     } else if has_native_pandemic(spell) && !rolling {
@@ -70,12 +72,39 @@ pub(super) fn prepare_application(
     if rolling {
         // SimC76f8118 action.cpp2730–2734/4995–5015 uses the same
         // next-tick schedule and remaining-plus-fresh budget for both.
-        carry_rolling_duration(world, target, new);
+        if forced_rolling {
+            carry_duration(world, target, new, DurationCarry::Pandemic);
+        } else {
+            carry_rolling_duration(world, target, new);
+        }
         roll_remaining_periodic(world, target, new, fresh_duration_ms);
     }
     preserve_counter_only_stacks(world, target, new, spell);
     super::enhancement_power::preserve_refresh_duration(world, target, new);
     super::ret_crusade::preserve_refresh_duration(world, target, new);
+}
+
+pub(super) fn set_rolling_deposit(
+    aura: &mut AuraInstance,
+    duration_ms: u32,
+    deposit: f32,
+    now: f64,
+) {
+    let mut periodic = aura
+        .effects
+        .iter_mut()
+        .filter(|effect| effect.period_ms > 0);
+    let effect = periodic
+        .next()
+        .expect("rolling deposit requires a periodic effect");
+    assert!(
+        periodic.next().is_none(),
+        "rolling deposit requires exactly one periodic effect"
+    );
+    effect.amount = deposit * effect.period_ms as f32 / duration_ms as f32;
+    effect.periodic_power_multiplier = 0.0;
+    aura.duration_ms = duration_ms;
+    aura.expires_at = Some(now + f64::from(duration_ms) / 1000.0);
 }
 
 fn has_periodic_health_effect(aura: &AuraInstance) -> bool {
@@ -304,15 +333,32 @@ fn roll_remaining_periodic(
             let prior_amount =
                 super::periodic::periodic_live_amount(world, old.caster, spell, prior);
             let stacks = old.stack_multiplier();
-            fresh.amount = ((f64::from(prior_amount * stacks) * unpaid
-                + f64::from(fresh.amount) * fresh_ticks)
-                / future) as f32;
-            fresh.periodic_power_multiplier =
-                ((f64::from(prior.periodic_power_multiplier * stacks) * unpaid
-                    + f64::from(fresh.periodic_power_multiplier) * fresh_ticks)
-                    / future) as f32;
+            fresh.amount = redistribute_rolling_pool(
+                prior_amount * stacks,
+                unpaid,
+                fresh.amount,
+                fresh_ticks,
+                future,
+            );
+            fresh.periodic_power_multiplier = redistribute_rolling_pool(
+                prior.periodic_power_multiplier * stacks,
+                unpaid,
+                fresh.periodic_power_multiplier,
+                fresh_ticks,
+                future,
+            );
         }
     }
+}
+
+fn redistribute_rolling_pool(
+    prior: f32,
+    unpaid_ticks: f64,
+    fresh: f32,
+    fresh_ticks: f64,
+    future_ticks: f64,
+) -> f32 {
+    ((f64::from(prior) * unpaid_ticks + f64::from(fresh) * fresh_ticks) / future_ticks) as f32
 }
 
 ///190456 c3/s4: remaining shields accumulate to the native percent-health cap.
