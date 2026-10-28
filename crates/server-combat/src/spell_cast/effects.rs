@@ -1198,6 +1198,7 @@ fn with_damage_crit(
         world,
         caster,
         caster,
+        target,
         spell,
         amount,
         uses_weapon_crit_bonus_order(spell),
@@ -1221,6 +1222,7 @@ fn critical_damage_amount(
     world: &World,
     caster: Entity,
     spell_owner: Entity,
+    target: Entity,
     spell: &SpellInfo,
     amount: f32,
     weapon_order: bool,
@@ -1250,8 +1252,9 @@ fn critical_damage_amount(
     );
     let bonus =
         super::scripts::elemental_ancestors::modify_critical_bonus(world, caster, spell.id, bonus);
-    let bonus =
-        bonus * crate::hunter_pet_stats::command_critical_bonus_multiplier(world, caster, spell.id);
+    let bonus = bonus
+        * crate::hunter_pet_stats::command_critical_bonus_multiplier(world, caster, spell.id)
+        * crate::auras::critical_bonus_from_caster(world, target, caster, spell);
     let total =
         amount + bonus + amount * super::guardian::demonic_brutality_critical_bonus(world, caster);
     if weapon_order {
@@ -1322,7 +1325,7 @@ fn roll_periodic_damage_crit(
     let owner = rolled_crit.0;
     // TC SpellAuraEffects.cpp5680/5764 always uses SpellCriticalDamageBonus,
     // including periodic spells whose defense class normally uses weapon order.
-    let total = critical_damage_amount(world, caster, owner, spell, amount, false);
+    let total = critical_damage_amount(world, caster, owner, target, spell, amount, false);
     #[cfg(any(test, feature = "test-support"))]
     factor_capture::record_critical(
         world,
@@ -1407,6 +1410,7 @@ fn expected_school_damage(
         world,
         ctx.caster,
         ctx.caster,
+        target,
         ctx.spell,
         amount,
         uses_weapon_crit_bonus_order(ctx.spell),

@@ -177,7 +177,11 @@ fn stacked_amount(world: &World, aura: &AuraInstance, effect: &AuraEffectState) 
     effect.amount * stack_multiplier(world, aura, effect)
 }
 
-fn stack_multiplier(world: &World, aura: &AuraInstance, effect: &AuraEffectState) -> f32 {
+pub(super) fn stack_multiplier(
+    world: &World,
+    aura: &AuraInstance,
+    effect: &AuraEffectState,
+) -> f32 {
     // DB2 SpellEffect attribute 0x40 suppresses stacking for this effect only.
     let suppress_stacking = world
         .resource::<crate::spell_info::SpellStore>()

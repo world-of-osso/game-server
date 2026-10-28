@@ -2333,6 +2333,33 @@ pub(crate) fn damage_resilience_multiplier(
     }
 }
 
+/// Critical-damage bonus from matching target auras owned by this caster.
+pub(crate) fn critical_bonus_from_caster(
+    world: &World,
+    target: Entity,
+    caster: Entity,
+    spell: &SpellInfo,
+) -> f32 {
+    world.get::<ActiveAuras>(target).map_or(1.0, |auras| {
+        auras
+            .iter()
+            .filter(|aura| aura.caster == caster)
+            .flat_map(|aura| {
+                aura.effects
+                    .iter()
+                    .filter(|effect| {
+                        effect.aura_type == handlers::MOD_CRIT_DAMAGE_FROM_CASTER_SPELLS
+                            && spell_mods::class_mask_affects(aura, effect, spell)
+                    })
+                    .map(|effect| {
+                        1.0 + effect.amount * spell_mods::stack_multiplier(world, aura, effect)
+                            / 100.0
+                    })
+            })
+            .product()
+    })
+}
+
 /// Damage taken multiplier of `target`: MOD_DAMAGE_PERCENT_TAKEN (through
 /// `AuraStatMods`) × matching school/family/label auras cast by `attacker`.
 pub fn damage_taken_multiplier(
