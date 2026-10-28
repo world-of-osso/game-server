@@ -2434,7 +2434,6 @@ fn dk252_scourge_applied_virulent_plague_enables_morbidity_damage() {
     );
 }
 
-
 #[test]
 #[ignore = "requires native252 profile/traits and player actor"]
 fn dk252_blightburst_applies_and_extends_owned_diseases() {

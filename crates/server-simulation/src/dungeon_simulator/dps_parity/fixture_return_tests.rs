@@ -291,30 +291,76 @@ fn havoc_retreat_allows_arcane_torrent_when_melee_is_out_of_range() {
     let actor = run.actor;
     let boss = run.targets[0];
     literal_rotation::execution::execute(
-        run.app.world_mut(), actor,
+        run.app.world_mut(),
+        actor,
         literal_rotation::execution::Execution::Spell(198793, actor, Some(boss)),
-    ).unwrap();
+    )
+    .unwrap();
     for _ in 0..80 {
         run.app.update();
         let from = run.app.world().get::<Position>(actor).unwrap();
         let to = run.app.world().get::<Position>(boss).unwrap();
-        if (from.x - to.x).hypot(from.z - to.z) > 10.0 { break; }
+        if (from.x - to.x).hypot(from.z - to.z) > 10.0 {
+            break;
+        }
     }
     let equipment = literal_rotation::equipment::Equipment::load(
-        run.app.world(), actor, &mut crate::simc_apl_native::Bindings::default(),
-    ).unwrap();
-    let prepared = Prepared::read(run.app.world_mut(), actor, &run.targets, &equipment, [
-        NativeAction { name: "chaos_strike", spell: 162794, talent: None, self_target: false },
-        NativeAction { name: "arcane_torrent", spell: 202719, talent: None, self_target: true },
-    ], false).unwrap();
-    let program = server::simc_apl::Program::parse(&[("default", "chaos_strike"), ("default", "arcane_torrent")]).unwrap();
+        run.app.world(),
+        actor,
+        &mut crate::simc_apl_native::Bindings::default(),
+    )
+    .unwrap();
+    let prepared = Prepared::read(
+        run.app.world_mut(),
+        actor,
+        &run.targets,
+        &equipment,
+        [
+            NativeAction {
+                name: "chaos_strike",
+                spell: 162794,
+                talent: None,
+                self_target: false,
+            },
+            NativeAction {
+                name: "arcane_torrent",
+                spell: 202719,
+                talent: None,
+                self_target: true,
+            },
+        ],
+        false,
+    )
+    .unwrap();
+    let program = server::simc_apl::Program::parse(&[
+        ("default", "chaos_strike"),
+        ("default", "arcane_torrent"),
+    ])
+    .unwrap();
     let mut driver = literal_rotation::Driver::new(program);
-    let (action, execution) = driver.select("default", &BTreeMap::<String, f64>::new(), &prepared, &equipment).unwrap().expect("racial remains available while returning");
+    let (action, execution) = driver
+        .select(
+            "default",
+            &BTreeMap::<String, f64>::new(),
+            &prepared,
+            &equipment,
+        )
+        .unwrap()
+        .expect("racial remains available while returning");
     assert_eq!(action.name, "arcane_torrent");
-    let before = crate::spell_cast::powers::power_value(run.app.world(), actor, PowerType::Fury).unwrap().0;
-    driver.execute(run.app.world_mut(), actor, action, execution).unwrap();
-    let after = crate::spell_cast::powers::power_value(run.app.world(), actor, PowerType::Fury).unwrap().0;
-    assert!(after > before, "native racial must grant its real Fury: {before} -> {after}");
+    let before = crate::spell_cast::powers::power_value(run.app.world(), actor, PowerType::Fury)
+        .unwrap()
+        .0;
+    driver
+        .execute(run.app.world_mut(), actor, action, execution)
+        .unwrap();
+    let after = crate::spell_cast::powers::power_value(run.app.world(), actor, PowerType::Fury)
+        .unwrap()
+        .0;
+    assert!(
+        after > before,
+        "native racial must grant its real Fury: {before} -> {after}"
+    );
 }
 
 #[test]
