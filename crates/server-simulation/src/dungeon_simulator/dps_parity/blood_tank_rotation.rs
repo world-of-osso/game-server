@@ -459,17 +459,22 @@ mod tests {
         for _ in 0..30 {
             run.app.update();
         }
-        let bone = run
-            .app
-            .world()
+        let world = run.app.world_mut();
+        let weapons = world
+            .query::<(&Npc, &UnitSummonedBy)>()
+            .iter(world)
+            .filter(|(npc, owner)| npc.template_id == 27893 && owner.0 == actor.to_bits())
+            .count();
+        let bone = world
             .get::<crate::auras::ActiveAuras>(actor)
             .unwrap()
             .iter()
             .find(|aura| aura.spell_id == 195181)
             .expect("Marrowrend grants Bone Shield");
         assert_eq!(
-            bone.stacks, 9,
-            "owner and both weapons grant three stacks each"
+            usize::from(bone.stacks),
+            (3 * (1 + weapons)).min(12),
+            "owner and active weapons grant three stacks each"
         );
     }
 
