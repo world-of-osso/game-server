@@ -95,9 +95,28 @@ pub(crate) struct SummonDamageModifiers<'w, 's> {
     owners: Query<'w, 's, Ownership<'static>>,
     modifiers: Query<'w, 's, &'static AuraStatMods>,
     stats: Query<'w, 's, &'static crate::stats::CharacterStats>,
+    npcs: Query<'w, 's, &'static shared::components::Npc>,
 }
 
 impl SummonDamageModifiers<'_, '_> {
+    /// SimC76f8118 pets.cpp661–668: Felguard white swings use 1.44.
+    pub(crate) fn white_swing_multiplier(&self, unit: Entity) -> f32 {
+        if self
+            .owners
+            .get(unit)
+            .ok()
+            .is_some_and(|(_, pet)| pet.is_some())
+            && self
+                .npcs
+                .get(unit)
+                .is_ok_and(|npc| npc.template_id == 17252)
+        {
+            1.44
+        } else {
+            1.0
+        }
+    }
+
     pub(crate) fn multiplier(&self, unit: Entity) -> f32 {
         self.owners
             .get(unit)
