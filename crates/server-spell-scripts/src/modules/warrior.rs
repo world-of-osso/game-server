@@ -32,6 +32,19 @@ const POLICIES: &[Policy] = &[
             primary_only: false,
         },
     },
+    // SimC76f8118 sc_warrior.cpp6526–6540: Storm of Blood applies native
+    // Rend once per first main-hand Whirlwind impact, on every recipient.
+    Policy {
+        name: "SIMC_FURY_STORM_OF_BLOOD_REND",
+        spec: 72,
+        talent: 1299025,
+        relationship: Relationship::HitPayload {
+            parent: 199667,
+            payload: 388539,
+            self_target: false,
+            primary_only: false,
+        },
+    },
     // SimC76f8118 sc_warrior.cpp4452–4456: only Fury Execute main-hand
     // applies Deep Wounds. Native262115 retains its coefficient and rolling pool.
     Policy {

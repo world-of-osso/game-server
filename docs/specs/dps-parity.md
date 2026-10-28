@@ -602,6 +602,8 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 ### Fury player parity
 
+- Selected Storm of Blood1299025 applies native Rend388539 to each enemy hit by Whirlwind's first main-hand impact199667 (`sc_warrior.cpp6526–6540`). Later weapon hits do not reapply it.
+
 - With selected Cold Steel, Hot Blood383959, critical Bloodthirst23881 and Bloodbath335096 impacts apply native Gushing Wound385042 to the struck target, including Unhinged impacts (`sc_warrior.cpp2679–2682,2915–2919`). Noncritical impacts do not.
 
 - Landed Bloodbath335096 applies its native bleed113344 to its actual target; subsequent landed Bloodbaths extend the existing owned bleed by its native duration (`sc_warrior.cpp2777–2785,2915–2923`).

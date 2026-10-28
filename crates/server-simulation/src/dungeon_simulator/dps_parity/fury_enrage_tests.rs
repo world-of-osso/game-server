@@ -122,3 +122,32 @@ fn fury_enrage_gates_cruelty_and_wrath_before_during_and_after_expiry() {
         );
     }
 }
+
+#[test]
+#[ignore = "native player Storm of Blood applies Rend to actual Whirlwind recipients"]
+fn fury_storm_of_blood_whirlwind_applies_rend_to_three_targets() {
+    for selected in [true, false] {
+        let _seed = crate::random::seed_scope(70_448);
+        let mut run = prepare_measurement(72, 3).unwrap();
+        assert!(run.app.world().get::<shared::components::Player>(run.actor).is_some());
+        engage(&mut run);
+        let known = run.app.world().get::<crate::class_progression::KnownSpells>(run.actor).unwrap();
+        assert!(known.contains(1299025), "the measured Fury profile selects Storm of Blood");
+        if !selected {
+            let spells = known.iter().filter(|id| *id != 1299025).collect();
+            run.app.world_mut().entity_mut(run.actor).insert(crate::class_progression::KnownSpells::fixture(spells));
+        }
+        run.app.world_mut().resource_mut::<ObservedCombatEvents>().0.clear();
+        crate::spell_cast::creature_cast(run.app.world_mut(), run.actor, 190411, Some(run.targets[0]), false).unwrap();
+        for _ in 0..100 {
+            run.app.update();
+            let impacts = run.app.world().resource::<ObservedCombatEvents>().0.iter().filter(|e| e.source == Some(run.actor.to_bits()) && e.spell_id == Some(199667) && e.kind == CombatLogKind::Damage && e.amount > 0).filter_map(|e| e.target).collect::<std::collections::BTreeSet<_>>();
+            if impacts.len() == 3 { break; }
+        }
+        let impacts = run.app.world().resource::<ObservedCombatEvents>().0.iter().filter(|e| e.source == Some(run.actor.to_bits()) && e.spell_id == Some(199667) && e.kind == CombatLogKind::Damage && e.amount > 0).filter_map(|e| e.target).collect::<std::collections::BTreeSet<_>>();
+        assert_eq!(impacts.len(), 3, "actual first main-hand hits all targets");
+        for target in &run.targets {
+            assert_eq!(crate::auras::has_aura(run.app.world(), *target, 388539), selected, "Rend on actual target with selected={selected}");
+        }
+    }
+}
