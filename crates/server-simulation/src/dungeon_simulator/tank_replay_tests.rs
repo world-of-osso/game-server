@@ -886,6 +886,15 @@ fn protection_simc_dummy_healing_supports_full_comparison() {
         "Bloodlust must expire after 40 seconds: {report}"
     );
     assert_eq!(report["duration_seconds"], 300.0, "{report}");
+    let categories = report["damage_taken_by_kind"].as_object().unwrap();
+    for kind in ["swing", "strike", "bleed"] {
+        assert!(categories[kind].as_f64().unwrap() > 0.0, "{report}");
+    }
+    let total: f64 = categories
+        .values()
+        .map(|amount| amount.as_f64().unwrap())
+        .sum();
+    assert_eq!(total, report["damage_taken"].as_f64().unwrap());
     assert!(report["time_to_death"].is_null(), "{report}");
     assert!(
         report["external_healing_effective"].as_f64().unwrap() > 0.0,

@@ -456,6 +456,7 @@ fn replay_registered_run_with_healing(
     let mut raw_healing_by_spell = BTreeMap::<u32, f64>::new();
     let mut periodic_ticks_by_spell = BTreeMap::<u32, usize>::new();
     let mut energize_by_spell = BTreeMap::<u32, (i64, i64)>::new();
+    let mut damage_taken_by_kind = BTreeMap::<&str, f64>::new();
     let mut aura_seconds = BTreeMap::<u32, f64>::new();
     let mut debuff_seconds: BTreeMap<u32, f64> =
         target_debuffs.iter().map(|&id| (id, 0.0)).collect();
@@ -641,6 +642,16 @@ fn replay_registered_run_with_healing(
             {
                 let amount = f64::from(event.amount.max(0));
                 taken += amount;
+                let kind = if self_periodic {
+                    "self_periodic"
+                } else if event.periodic {
+                    "bleed"
+                } else if event.spell_id.is_some() {
+                    "strike"
+                } else {
+                    "swing"
+                };
+                *damage_taken_by_kind.entry(kind).or_default() += amount;
                 if self_periodic {
                     self_periodic_taken += amount;
                 }
@@ -719,7 +730,7 @@ fn replay_registered_run_with_healing(
         "absorbs_by_spell":absorbs_by_spell,"aura_uptime":aura_uptime,
         "resource_counters":counters,"target_debuff_uptime":target_debuff_uptime,
         "rotation_status":"registered_literal_simc","duration_seconds":elapsed,"incoming_events":next,"tank_casts":casts,
-        "raw_damage":raw,"damage_taken":taken,"self_periodic_damage_taken":self_periodic_taken,
+        "raw_damage":raw,"damage_taken":taken,"damage_taken_by_kind":damage_taken_by_kind,"self_periodic_damage_taken":self_periodic_taken,
         "mitigation_pct":(raw>0.0).then(||100.0*(raw-taken)/raw),
         "self_heal_per_second":(elapsed>0.0).then(||self_healing/elapsed),
         "absorb_per_second":(elapsed>0.0).then(||absorbed/elapsed),"time_to_death":death,
