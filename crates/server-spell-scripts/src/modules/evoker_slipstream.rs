@@ -20,9 +20,20 @@ fn reset_hover(world: &mut World, caster: Entity, _spell: &SpellInfo) {
     if !has_aura(world, caster, SLIPSTREAM) {
         return;
     }
-    let hover = world.resource::<SpellStore>().get(HOVER).expect("native Hover metadata");
-    let category = hover.categories.as_ref().expect("native Hover charge category").charge_category;
-    let recovery = hover.cooldowns.as_ref().expect("native Hover cooldown").recovery_ms;
+    let hover = world
+        .resource::<SpellStore>()
+        .get(HOVER)
+        .expect("native Hover metadata");
+    let category = hover
+        .categories
+        .as_ref()
+        .expect("native Hover charge category")
+        .charge_category;
+    let recovery = hover
+        .cooldowns
+        .as_ref()
+        .expect("native Hover cooldown")
+        .recovery_ms;
     combat::spell_cast::restore_charges(world, caster, category, u8::MAX);
     reduce_cooldown(world, caster, HOVER, f64::from(recovery) / 1000.0);
 }

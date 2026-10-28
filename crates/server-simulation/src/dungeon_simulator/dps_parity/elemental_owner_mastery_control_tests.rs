@@ -10,18 +10,35 @@ fn elemental_late_family_modifiers_recalculate_fury_and_overload_mastery() {
     // Echo Chamber changes the mastery effect used by real overloads.
     let mut run = fixture();
     let amount = |run: &super::Run, spell, index| {
-        run.app.world().get::<crate::auras::ActiveAuras>(run.actor).unwrap().iter()
-            .find(|aura| aura.caster == run.actor && aura.spell_id == spell).unwrap()
-            .effects.iter().find(|effect| effect.index == index).unwrap().amount
+        run.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(run.actor)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.caster == run.actor && aura.spell_id == spell)
+            .unwrap()
+            .effects
+            .iter()
+            .find(|effect| effect.index == index)
+            .unwrap()
+            .amount
     };
     assert_eq!(amount(&run, 60188, 0), 105.0);
     assert_eq!(amount(&run, 168534, 1), 34.375);
     assert!((overload_effectiveness(&mut run) - 0.34375).abs() < 0.001);
-    crate::auras::remove_auras(run.app.world_mut(), run.actor, crate::auras::RemoveReason::Cancelled,
-        |aura| aura.spell_id == 1270062);
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        run.actor,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 1270062,
+    );
     assert_eq!(amount(&run, 60188, 0), 75.0);
-    crate::auras::remove_auras(run.app.world_mut(), run.actor, crate::auras::RemoveReason::Cancelled,
-        |aura| aura.spell_id == 378193 || aura.spell_id == 382032);
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        run.actor,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 378193 || aura.spell_id == 382032,
+    );
     assert_eq!(amount(&run, 60188, 0), 50.0);
     assert_eq!(amount(&run, 168534, 1), 27.5);
     assert!((overload_effectiveness(&mut run) - 0.275).abs() < 0.001);
@@ -36,14 +53,32 @@ fn elemental_late_family_modifiers_recalculate_fury_and_overload_mastery() {
 }
 
 fn overload_effectiveness(run: &mut super::Run) -> f64 {
-    run.app.insert_resource(FactorCapture::new(run.actor, run.targets[0], 45297, "overload", 1));
-    assert!(crate::spell_cast::try_cast_triggered(run.app.world_mut(), run.actor, 45297, Some(run.targets[0]), 1));
-    for _ in 0..80 { run.app.update(); }
+    run.app.insert_resource(FactorCapture::new(
+        run.actor,
+        run.targets[0],
+        45297,
+        "overload",
+        1,
+    ));
+    assert!(crate::spell_cast::try_cast_triggered(
+        run.app.world_mut(),
+        run.actor,
+        45297,
+        Some(run.targets[0]),
+        1
+    ));
+    for _ in 0..80 {
+        run.app.update();
+    }
     let capture = run.app.world().resource::<FactorCapture>().export();
-    capture["events"].as_array().unwrap().iter()
+    capture["events"]
+        .as_array()
+        .unwrap()
+        .iter()
         .find(|event| event["event"] == "result")
         .expect("actual Chain Lightning Overload hit")["factors"]["native_script_product"]
-        .as_f64().unwrap()
+        .as_f64()
+        .unwrap()
 }
 
 fn player_overload_factor(remove_mastery: bool) -> f64 {

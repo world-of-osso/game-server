@@ -80,11 +80,22 @@ fn survival_boomstick_extends_existing_mongoose_stacks_only_with_four_piece() {
             .0
             .len();
         crate::spell_cast::creature_cast(
-            run.app.world_mut(), run.actor, 1261193, Some(run.targets[0]), false,
-        ).unwrap();
+            run.app.world_mut(),
+            run.actor,
+            1261193,
+            Some(run.targets[0]),
+            false,
+        )
+        .unwrap();
         for _ in 0..100 {
-            if run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0[start..]
-                .iter().any(|event| event.spell_id == Some(1261215) && event.kind == CombatLogKind::Damage) {
+            if run
+                .app
+                .world()
+                .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+                .0[start..]
+                .iter()
+                .any(|event| event.spell_id == Some(1261215) && event.kind == CombatLogKind::Damage)
+            {
                 break;
             }
             run.app.update();
@@ -92,21 +103,31 @@ fn survival_boomstick_extends_existing_mongoose_stacks_only_with_four_piece() {
         assert!(run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0[start..]
             .iter().any(|event| event.spell_id == Some(1261215) && event.kind == CombatLogKind::Damage),
             "actual Boomstick tick must land");
-        let extension = crate::spell_cast::scripts::script_effect_value(
-            run.app.world(), run.actor, 1296635, 0,
-        ) as f64 / 1000.0;
+        let extension =
+            crate::spell_cast::scripts::script_effect_value(run.app.world(), run.actor, 1296635, 0)
+                as f64
+                / 1000.0;
         let expected = deadline + if equipped { extension } else { 0.0 };
-        assert!(mongoose_deadlines(&run).iter().any(|&value| (value - expected).abs() < 0.001),
+        assert!(
+            mongoose_deadlines(&run)
+                .iter()
+                .any(|&value| (value - expected).abs() < 0.001),
             "first real Boomstick tick must extend the pre-existing stack only with four-piece; equipped={equipped}, expected={expected}, actual={:?}",
-            mongoose_deadlines(&run));
+            mongoose_deadlines(&run)
+        );
     }
 }
 
 fn mongoose_deadlines(run: &Run) -> Vec<f64> {
-    run.app.world().get::<crate::auras::ActiveAuras>(run.actor).unwrap().iter()
+    run.app
+        .world()
+        .get::<crate::auras::ActiveAuras>(run.actor)
+        .unwrap()
+        .iter()
         .find(|aura| aura.caster == run.actor && aura.spell_id == 259388)
         .expect("actual Raptor Strike must earn Mongoose Fury")
-        .stack_expirations().to_vec()
+        .stack_expirations()
+        .to_vec()
 }
 
 fn owned_tip(run: &Run) -> u8 {

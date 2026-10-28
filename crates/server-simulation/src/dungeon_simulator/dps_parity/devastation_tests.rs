@@ -45,23 +45,48 @@ fn devastation_slipstream_deep_breath_restores_all_real_hover_charges() {
         let primary = run.targets[0];
         assert!(crate::auras::has_aura(run.app.world(), actor, 441257));
         if !selected {
-            crate::auras::remove_auras(run.app.world_mut(), actor, crate::auras::RemoveReason::Unlearned, |aura| aura.spell_id == 441257);
+            crate::auras::remove_auras(
+                run.app.world_mut(),
+                actor,
+                crate::auras::RemoveReason::Unlearned,
+                |aura| aura.spell_id == 441257,
+            );
         }
         for _ in 0..2 {
-            crate::spell_cast::creature_cast(run.app.world_mut(), actor, 358267, Some(actor), false).unwrap();
+            crate::spell_cast::creature_cast(
+                run.app.world_mut(),
+                actor,
+                358267,
+                Some(actor),
+                false,
+            )
+            .unwrap();
             preparation::finish_pending_setup(&mut run).unwrap();
-            for _ in 0..21 { run.app.update(); }
+            for _ in 0..21 {
+                run.app.update();
+            }
         }
         assert!(read_native_recharge_ms(&run, 358267) > 30_000.0);
-        crate::spell_cast::creature_cast_with_targets(run.app.world_mut(), actor, 433874, crate::spell_cast::CastTargets {
-            unit: actor, primary: Some(primary), destination: None,
-        }).unwrap();
+        crate::spell_cast::creature_cast_with_targets(
+            run.app.world_mut(),
+            actor,
+            433874,
+            crate::spell_cast::CastTargets {
+                unit: actor,
+                primary: Some(primary),
+                destination: None,
+            },
+        )
+        .unwrap();
         preparation::finish_pending_setup(&mut run).unwrap();
         let remaining = read_native_recharge_ms(&run, 358267);
         if selected {
             assert_eq!(remaining, 0.0, "Slipstream resets all Hover charges");
         } else {
-            assert!(remaining > 20_000.0, "without Slipstream the ordinary recharge remains: {remaining}");
+            assert!(
+                remaining > 20_000.0,
+                "without Slipstream the ordinary recharge remains: {remaining}"
+            );
         }
     }
 }
