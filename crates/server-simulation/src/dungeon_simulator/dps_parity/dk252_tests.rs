@@ -3012,7 +3012,7 @@ fn dk252_active_diseases_use_live_owner_attack_power() {
             Some(run.targets[0]),
             1
         ));
-        let damage = |run: &Run| -> Vec<i64> {
+        let damage = |run: &Run| -> Vec<i32> {
             run.app
                 .world()
                 .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
