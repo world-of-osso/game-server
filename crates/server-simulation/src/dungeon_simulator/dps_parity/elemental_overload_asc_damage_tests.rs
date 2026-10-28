@@ -3,7 +3,7 @@ use super::elemental_mechanics_tests::{fixture, own_aura, settle};
 use crate::spell_cast::test_harness::ObservedCombatEvents;
 use shared::protocol::CombatLogKind;
 
-fn sample(ascendance: bool) -> (f64, f64) {
+fn sample(ascendance: bool) -> (f64, f64, f64, f64) {
     let _seed = crate::random::seed_scope(70448);
     let mut run = fixture();
     crate::spell_cast::creature_cast(
@@ -42,11 +42,27 @@ fn sample(ascendance: bool) -> (f64, f64) {
             );
         }
     }
+    let mastery = own_aura(&run, 168534)
+        .unwrap()
+        .effects
+        .iter()
+        .find(|effect| effect.index == 1)
+        .unwrap()
+        .amount as f64;
     run.app
         .world_mut()
         .resource_mut::<ObservedCombatEvents>()
         .0
         .clear();
+    run.app.insert_resource(
+        crate::spell_cast::effects::factor_capture::FactorCapture::new(
+            run.actor,
+            run.targets[0],
+            45284,
+            "ascendance_overload",
+            1,
+        ),
+    );
     let _cast_seed = crate::random::seed_scope(70448);
     for _ in 0..100 {
         assert!(crate::spell_cast::try_cast_triggered(
@@ -79,18 +95,46 @@ fn sample(ascendance: bool) -> (f64, f64) {
         hits.len() >= 20,
         "native noncritical Lightning Overload sample"
     );
-    (hits.iter().sum::<f64>() / hits.len() as f64, percent)
+    let capture = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::effects::factor_capture::FactorCapture>()
+        .export();
+    let target_factor = capture["events"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|event| event["event"] == "direct_amount")
+        .expect("actual overload impact")["applied_multipliers"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|factor| factor["factor"] == "giantkiller")
+        .unwrap()["value"]
+        .as_f64()
+        .unwrap();
+    (
+        hits.iter().sum::<f64>() / hits.len() as f64,
+        percent,
+        mastery,
+        target_factor,
+    )
 }
 
 #[test]
 #[ignore = "requires private262 native DB/profile"]
 fn elemental_overload_ascendance_uses_native_damage_bonus() {
-    let (ordinary, _) = sample(false);
-    let (empowered, percent) = sample(true);
-    let ratio = empowered / ordinary;
+    let (ordinary, _, ordinary_mastery, ordinary_target) = sample(false);
+    let (empowered, percent, ascended_mastery, ascended_target) = sample(true);
+    assert_eq!(
+        ordinary_mastery, ascended_mastery,
+        "Ascendance must not also change overload mastery"
+    );
+    let ratio = ascended_target / ordinary_target;
     let expected = 1.0 + percent / 100.0;
+    assert!(empowered > ordinary);
     assert!(
-        (ratio - expected).abs() < 0.05,
-        "native Ascendance overload bonus: {empowered}/{ordinary} = {ratio}; expected {expected}"
+        (ratio - expected).abs() < 0.001,
+        "actual Ascendance target multiplier: {ascended_target}/{ordinary_target} = {ratio}; expected {expected}"
     );
 }
