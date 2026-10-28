@@ -486,4 +486,79 @@ mod tests {
         assert!((after_charge - first - 6.0).abs() < 0.001);
         assert!((after_block - after_charge - 6.0).abs() < 0.001);
     }
+    #[test]
+    #[ignore = "requires canonical MID2 Protection profile"]
+    fn protection_anger_management_reduces_defensives_from_paid_ignore_pain() {
+        use super::super::literal_rotation::execution::{Execution, execute};
+        use shared::components::PowerType;
+        let _seed = crate::random::seed_scope(70448);
+        let mut run = super::super::prepare_measurement(73, 1).unwrap();
+        super::super::engage(&mut run);
+        let actor = run.actor;
+        let target = run.targets[0];
+        for spell in [107574, 871] {
+            execute(
+                run.app.world_mut(),
+                actor,
+                Execution::Spell(spell, actor, Some(target)),
+            )
+            .unwrap();
+            for _ in 0..40 {
+                run.app.update();
+            }
+        }
+        run.app
+            .world_mut()
+            .get_mut::<crate::spell_cast::powers::PowerPools>(actor)
+            .unwrap()
+            .get_mut(PowerType::Rage)
+            .unwrap()
+            .current = 1000.0;
+        let cooldown = |run: &super::super::Run, id| {
+            let world = run.app.world();
+            let spell = world
+                .resource::<crate::spell_info::SpellStore>()
+                .get(id)
+                .unwrap();
+            world
+                .get::<crate::spell_cast::SpellHistory>(actor)
+                .unwrap()
+                .remaining_cooldown_ms(spell, crate::spell_cast::history_now(world))
+        };
+        let before = [cooldown(&run, 107574), cooldown(&run, 871)];
+        assert!(before.iter().all(|value| *value > 0));
+        execute(
+            run.app.world_mut(),
+            actor,
+            Execution::Spell(190456, actor, Some(target)),
+        )
+        .unwrap();
+        let remaining = run
+            .app
+            .world()
+            .get::<crate::spell_cast::powers::PowerPools>(actor)
+            .unwrap()
+            .get(PowerType::Rage)
+            .unwrap()
+            .current;
+        let paid = 1000.0 - remaining;
+        assert!(paid > 0.0);
+        let divisor =
+            crate::spell_cast::scripts::script_effect_value(run.app.world(), actor, 152278, 1);
+        let units = run
+            .app
+            .world()
+            .resource::<crate::spell_cast::powers::PowerTypeTable>()
+            .get(PowerType::Rage)
+            .unwrap()
+            .display_modifier;
+        let expected_ms = f64::from(paid / units as f32 / divisor) * 1000.0;
+        for (spell, previous) in [107574, 871].into_iter().zip(before) {
+            let reduction = previous as f64 - cooldown(&run, spell) as f64;
+            assert!(
+                (reduction - expected_ms).abs() <= 1.0,
+                "spell={spell}: reduction={reduction}, expected={expected_ms}"
+            );
+        }
+    }
 }
