@@ -47,6 +47,12 @@ impl Rotation {
         };
         // Rejected dungeon loads cannot capture the controller or mutate identity.
         literal_rotation::capture_fixture(world, actor, encounter)?;
+        if player {
+            world
+                .get_mut::<crate::spell_cast::SpellHistory>(actor)
+                .expect("literal player retains its native spell history")
+                .enable_simc_ww_separate_rwk();
+        }
         Ok(rotation)
     }
 

@@ -690,11 +690,30 @@ pub struct SpellHistory {
     gcd_ready_at: HashMap<u32, f64>,
     /// By `ChargeCategory`.
     charges: HashMap<u32, ChargeState>,
+    /// The literal Windwalker fixture models SimC's separate RWK action clock.
+    simc_ww_rwk_charges: Option<ChargeState>,
+    simc_ww_separate_rwk: bool,
     /// By school bit index (0 Physical .. 6 Arcane).
     school_locked_until: [f64; 7],
 }
 
 impl SpellHistory {
+    /// SimC76f8118 monk1143–1204 keeps RWK and RSK on separate action cooldowns.
+    pub fn enable_simc_ww_separate_rwk(&mut self) {
+        self.simc_ww_separate_rwk = true;
+        // The spellbook snapshot may have selected RWK as the shared category's
+        // recovery source before the fixture separated the two action clocks.
+        for state in self.charges.values_mut() {
+            if state.spell_id == 467307 {
+                state.spell_id = 107428;
+            }
+        }
+    }
+
+    fn uses_simc_rwk_clock(&self, spell: &SpellInfo) -> bool {
+        self.simc_ww_separate_rwk && spell.id == 467307
+    }
+
     /// Most recent successful action within an explicit policy group.
     pub fn last_cast_in(&self, group: &[u32]) -> Option<u32> {
         group
@@ -835,19 +854,23 @@ impl SpellHistory {
         let max =
             (categories.max_charges as i32 + mods.extra_charges).clamp(0, u8::MAX as i32) as u8;
         let recovery_ms = categories.charge_recovery_ms as f32 + mods.recovery_flat_ms;
-        let state = self
-            .charges
-            .entry(categories.charge_category)
-            .or_insert(ChargeState {
-                spell_id: spell.id,
-                category: categories.charge_category,
-                max,
-                recovery_ms: 0.0,
-                recovery_mult: mods.recovery_mult,
-                pending: VecDeque::new(),
-                started_at: 0.0,
-                fully_ready_at: 0.0,
-            });
+        let initial = || ChargeState {
+            spell_id: spell.id,
+            category: categories.charge_category,
+            max,
+            recovery_ms: 0.0,
+            recovery_mult: mods.recovery_mult,
+            pending: VecDeque::new(),
+            started_at: 0.0,
+            fully_ready_at: 0.0,
+        };
+        let state = if self.uses_simc_rwk_clock(spell) {
+            self.simc_ww_rwk_charges.get_or_insert_with(initial)
+        } else {
+            self.charges
+                .entry(categories.charge_category)
+                .or_insert_with(initial)
+        };
         state.max = max;
         state.refresh(now);
         if !state.pending.is_empty() && state.recovery_mult != mods.recovery_mult {
@@ -876,6 +899,7 @@ fn sync_charge_recovery(world: &mut World) {
             history
                 .charges
                 .values()
+                .chain(history.simc_ww_rwk_charges.iter())
                 .map(move |state| (unit, state.spell_id))
         })
         .collect();
@@ -939,10 +963,12 @@ fn refresh_charge_recovery(world: &mut World, unit: Entity, spell_id: u32) {
         world.entity_mut(unit).insert(SpellHistory::default());
     }
     let mut history = world.get_mut::<SpellHistory>(unit).unwrap();
-    let before = history
-        .charges
-        .get(&category)
-        .map(|charges| charges.snapshot(now));
+    let before = if history.uses_simc_rwk_clock(&spell) {
+        history.simc_ww_rwk_charges.as_ref()
+    } else {
+        history.charges.get(&category)
+    }
+    .map(|charges| charges.snapshot(now));
     let after = history
         .charges_mut(&spell, now, mods)
         .unwrap()

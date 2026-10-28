@@ -895,6 +895,76 @@ fn literal_ww_native_earned_rwk_resets_rsk_and_consumes_its_override() {
         crate::auras::overrides::resolve_spell(run.app.world(), run.actor, 107428),
         107428
     );
+    assert!(
+        run.app
+            .world()
+            .get::<shared::components::Player>(run.actor)
+            .is_some()
+    );
+    let rsk = rotation
+        .value_for(
+            run.app.world_mut(),
+            run.actor,
+            &run.targets,
+            &action("rising_sun_kick"),
+            "cooldown.rising_sun_kick.full_recharge_time",
+        )
+        .unwrap();
+    let rwk_recharge = rotation
+        .value_for(
+            run.app.world_mut(),
+            run.actor,
+            &run.targets,
+            &rwk,
+            "cooldown.rushing_wind_kick.full_recharge_time",
+        )
+        .unwrap();
+    assert_eq!(
+        rsk, 0.0,
+        "SimC RWK must not spend the independently ready RSK charge"
+    );
+    assert!(
+        rwk_recharge > 0.0,
+        "RWK retains its own native haste-scaled recovery"
+    );
+    let rsk_action = action("rising_sun_kick");
+    let mut rsk_dispatched = false;
+    for _ in 0..1200 {
+        let prepared = Prepared::read(
+            run.app.world_mut(),
+            run.actor,
+            &run.targets,
+            &rotation.equipment,
+            bindings::execution_actions(),
+            false,
+        )
+        .unwrap();
+        if let Some(execution) = prepared
+            .execution(&rsk_action, &rotation.equipment)
+            .unwrap()
+        {
+            literal_rotation::execution::execute(run.app.world_mut(), run.actor, execution)
+                .unwrap();
+            run.app.update();
+            rsk_dispatched = true;
+            break;
+        }
+        run.app.update();
+    }
+    assert!(rsk_dispatched, "native player must cast RSK after RWK");
+    let rwk_after_rsk = rotation
+        .value_for(
+            run.app.world_mut(),
+            run.actor,
+            &run.targets,
+            &rwk,
+            "cooldown.rushing_wind_kick.full_recharge_time",
+        )
+        .unwrap();
+    assert!(
+        rwk_after_rsk > 0.0,
+        "casting RSK must not reset RWK's separate recovery"
+    );
 }
 
 #[test]
