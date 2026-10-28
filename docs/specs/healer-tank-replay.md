@@ -23,6 +23,10 @@ Replay recorded incoming damage in the native server combat simulation to compar
 
 - [Brewmaster (268)](healer-tank-replay/268.md)
 
+## Specialization notes
+
+- [Guardian Druid (104)](healer-tank-replay/104.md)
+
 ## How it works
 
 - [Replay system](../wiki/systems/healer-tank-replay.md)
