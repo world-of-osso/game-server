@@ -597,6 +597,7 @@ fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance) {
                 .target_reduction_mult
                 .push((misc as u32, 1.0 - amount / 100.0)),
             MOD_VERSATILITY => stats.versatility_pct += effect.amount.trunc() * stacks,
+            MOD_LEECH_PERCENT => stats.leech_pct += amount,
             // HandleModRating truncates each effect before ApplyRatingMod. Do not
             // triple-count the same rating for damage/healing/damage-taken bits.
             // SimC76f8118 buff.cpp3620 applies every stat_buff_t rating through stat_gain.
