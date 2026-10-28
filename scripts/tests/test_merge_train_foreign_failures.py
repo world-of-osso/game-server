@@ -108,5 +108,16 @@ class RequeueTests(unittest.TestCase):
             self.assertEqual((passed, rejected), ([landed], []))
             self.assertEqual(sorted(p.name for p in (root / "queue").iterdir()), ["check.json", "probe.json"])
 
+    def test_landing_entries_pass_the_check_without_rerunning_their_tests(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            landing = {"id": "landing", "land": True, "tests": [["-p", "server-combat", "fixture"]]}
+            with patch.object(train, "write_results"), \
+                    patch.object(train, "build_checked", return_value=([landing], [])), \
+                    patch.object(train, "run_tests") as run_tests:
+                passed, rejected = train.build_and_test([landing], root / "cycle.log")
+            run_tests.assert_not_called()
+            self.assertEqual((passed, rejected), ([landing], []))
+
 if __name__ == "__main__":
     unittest.main()
