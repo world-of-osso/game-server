@@ -379,15 +379,7 @@ fn accumulate_holy_bulwark(world: &World, target: Entity, new: &mut AuraInstance
 /// SimC76f8118 sc_death_knight.cpp6952–6983: add unpaid Blood Shield,
 /// capped by the native mastery health percentage.
 fn accumulate_blood_shield(world: &World, target: Entity, new: &mut AuraInstance) {
-    let cap_percent = world
-        .resource::<crate::spell_info::SpellStore>()
-        .get(77513)
-        .expect("Blood Shield mastery")
-        .effects
-        .iter()
-        .find(|effect| effect.index == 2)
-        .expect("Blood Shield cap")
-        .base_points;
+    let cap_percent = crate::spell_cast::scripts::script_effect_value(world, new.caster, 77513, 2);
     let max_health = world
         .get::<Health>(target)
         .expect("living Blood Shield target")
