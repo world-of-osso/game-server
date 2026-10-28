@@ -26,7 +26,7 @@ fn observe(world: &mut World, event: &CombatLogEvent) {
     ) else {
         return;
     };
-    if spell_cast::targets::is_friendly(world, defender, attacker) {
+    if !spell_cast::targets::is_hostile(world, defender, attacker) {
         return;
     }
     // SimC76f8118 sc_demon_hunter.cpp12072–12086 uses landed direct hits.
