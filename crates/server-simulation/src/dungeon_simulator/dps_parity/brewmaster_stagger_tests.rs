@@ -44,7 +44,11 @@ fn stagger_defers_a_real_hit_and_purifying_brew_clears_the_live_pool() {
     crate::spell_cast::creature_cast(run.app.world_mut(), actor, 119582, Some(actor), false)
         .unwrap();
     let after = crate::auras::stagger::pool_size(run.app.world(), actor);
-    let cleared = (before_purify * 0.5)
+    assert!(
+        before_purify * 0.6 > max_health * 0.08,
+        "fixture must exercise the selected Mantra percentage, not the minimum"
+    );
+    let cleared = (before_purify * 0.6)
         .max(max_health * 0.08)
         .min(before_purify);
     assert!(
