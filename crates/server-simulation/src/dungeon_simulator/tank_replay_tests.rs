@@ -1287,3 +1287,54 @@ fn holy_armaments_generate_holy_power_only_for_holy() {
         }
     }
 }
+
+#[test]
+#[ignore = "uses selected MID2 Protection and real Divine Toll target dispatch"]
+fn protection_divine_toll_launches_shield_and_generates_power() {
+    use crate::spell_cast::powers::PowerPools;
+    use shared::components::PowerType;
+    let mut run = super::dps_parity::prepare_registered_player(66, 1).unwrap();
+    super::dps_parity::engage(&mut run);
+    let actor = run.actor;
+    let target = run.targets[0];
+    for _ in 0..40 {
+        run.app.update();
+    }
+    run.app
+        .world_mut()
+        .get_mut::<PowerPools>(actor)
+        .unwrap()
+        .get_mut(PowerType::HolyPower)
+        .unwrap()
+        .current = 0.0;
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 375576, Some(target), false)
+        .unwrap();
+    for _ in 0..40 {
+        run.app.update();
+    }
+    let power = run
+        .app
+        .world()
+        .get::<PowerPools>(actor)
+        .unwrap()
+        .get(PowerType::HolyPower)
+        .unwrap()
+        .current;
+    assert_eq!(
+        power, 1.0,
+        "Toll gains one Holy Power for the selected enemy"
+    );
+    assert!(
+        run.app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|event| event.source == Some(actor.to_bits())
+                && event.target == Some(target.to_bits())
+                && event.spell_id == Some(31935)
+                && event.kind == shared::protocol::CombatLogKind::Damage
+                && event.amount > 0),
+        "Toll's shield must damage the enemy"
+    );
+}
