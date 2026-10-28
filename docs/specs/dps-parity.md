@@ -608,6 +608,7 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 ### Shared Hellcaller Wither counters
 
+- Mark of Xavius440046 registers effects1/3 for Affliction and all effects except1 for Destruction; thus its native Wither damage bonuses apply only to Destruction (SimC76f8118 `sc_warlock_init.cpp:82–83`).
 - Native Wither445474 keeps its actual counter stacks, but its periodic damage ignores that count. An ordinary recast preserves earned stacks without adding a refresh stack; explicit native stack applications retain normal counter advancement. Preserve native coefficients, tick phase and lifetime. Both265 and267 share this rule (SimC76f8118 `sc_warlock_actions.cpp1066,1174–1186`).
 - Wither's counter is not an ordinary damage-stack multiplier. Its target-side Ashen Remains effect applies once regardless of counter stacks (`sc_warlock_actions.cpp:273–275`); preserve the separate Dark Titan's Mark effect. Other stacking DoTs keep their existing behavior; Blackened Soul producers/collapse are separate relationships.
 - Shared265/267 Hellcaller producers must use actual Chaos Bolt/Shadowburn impacts and actual UA applications, including refresh, Fatal Echoes and seed-applied UA. Do not replace UA's independently owned expiry callbacks. Grant native Malevolence stacks/buff/damage only to its caster's active Withers; preserve each Wither lifetime and tick phase.

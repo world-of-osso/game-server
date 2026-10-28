@@ -80,10 +80,20 @@ fn counter(run: &Run) -> u8 {
 }
 
 fn first_tick_damage(spec: u32, stacks: u8) -> (f64, f64) {
+    first_tick_damage_with_mark(spec, stacks, true)
+}
+
+fn first_tick_damage_with_mark(spec: u32, stacks: u8, mark: bool) -> (f64, f64) {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(spec, 1).unwrap();
     engage(&mut run);
     let actor = run.actor;
+    assert!(crate::auras::has_aura(run.app.world(), actor, 440046), "selected Mark of Xavius required");
+    if !mark {
+        crate::auras::remove_auras(run.app.world_mut(), actor, crate::auras::RemoveReason::Cancelled, |aura| {
+            aura.spell_id == 440046 && aura.caster == actor
+        });
+    }
     apply_native_aura(&mut run, actor, 171884); // Native Denounce removes critical RNG.
     run.app.update();
     let target = run.targets[0];
@@ -124,6 +134,31 @@ fn first_tick_damage(spec: u32, stacks: u8) -> (f64, f64) {
         }
     }
     panic!("native spec{spec} Wither must deal its first periodic tick");
+}
+
+fn assert_xavius_wither_ratio(spec: u32, expected: f64) {
+    let (without_mark, variance) = first_tick_damage_with_mark(spec, 1, false);
+    let (with_mark, _) = first_tick_damage_with_mark(spec, 1, true);
+    let spread = (1.0 + variance / 2.0) / (1.0 - variance / 2.0);
+    assert!(
+        with_mark >= without_mark * expected / spread - 2.0
+            && with_mark <= without_mark * expected * spread + 2.0,
+        "spec{spec} Mark of Xavius Wither damage: without={without_mark}, with={with_mark}, expected multiplier={expected}, variance={variance}"
+    );
+}
+
+#[test]
+#[ignore = "requires private265 native profile and world DB"]
+fn affliction_mark_of_xavius_does_not_amplify_wither_ticks() {
+    // SimC76f8118 sc_warlock_init.cpp82–83 registers only effects1/3 for Affliction.
+    assert_xavius_wither_ratio(265, 1.0);
+}
+
+#[test]
+#[ignore = "requires private267 native profile and world DB"]
+fn destruction_mark_of_xavius_amplifies_wither_ticks() {
+    // SimC76f8118 sc_warlock_init.cpp82–83 keeps effect2 for Destruction.
+    assert_xavius_wither_ratio(267, 1.25);
 }
 
 #[test]
