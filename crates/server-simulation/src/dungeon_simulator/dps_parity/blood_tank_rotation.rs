@@ -285,16 +285,41 @@ mod tests {
             assert!(crate::auras::has_aura(run.app.world(), actor, 374261));
             let mut health = run.app.world_mut().get_mut::<Health>(target).unwrap();
             health.current = health.max * fraction;
-            crate::spell_cast::powers::change_power(run.app.world_mut(), actor, PowerType::RunicPower, 1000.0);
-            crate::spell_cast::creature_cast(run.app.world_mut(), actor, 49998, Some(target), false).unwrap();
-            run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0.iter().rev()
-                .find(|event| event.spell_id == Some(49998) && event.kind == CombatLogKind::Damage && event.source == Some(actor.to_bits()))
-                .expect("Death Strike hit").amount
+            crate::spell_cast::powers::change_power(
+                run.app.world_mut(),
+                actor,
+                PowerType::RunicPower,
+                1000.0,
+            );
+            crate::spell_cast::creature_cast(
+                run.app.world_mut(),
+                actor,
+                49998,
+                Some(target),
+                false,
+            )
+            .unwrap();
+            run.app
+                .world()
+                .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+                .0
+                .iter()
+                .rev()
+                .find(|event| {
+                    event.spell_id == Some(49998)
+                        && event.kind == CombatLogKind::Damage
+                        && event.source == Some(actor.to_bits())
+                })
+                .expect("Death Strike hit")
+                .amount
         }
         let full = hit(1.0) as f32;
         let half = hit(0.5) as f32;
         let low = hit(0.1) as f32;
-        assert!((half / full - 1.65).abs() < 0.01, "half={half}, full={full}");
+        assert!(
+            (half / full - 1.65).abs() < 0.01,
+            "half={half}, full={full}"
+        );
         assert!((low / full - 2.04).abs() < 0.01, "low={low}, full={full}");
     }
 
@@ -772,6 +797,78 @@ mod tests {
             !crate::auras::has_aura(run.app.world(), actor, 1264568),
             "Vampiric Strike consumes the free-cast proc"
         );
+    }
+
+    #[test]
+    #[ignore = "requires canonical world database and MID2 Blood inputs"]
+    fn blood_dancing_rune_weapons_mirror_damage_with_owner_attack_power() {
+        use shared::components::{Npc, UnitSummonedBy};
+        use shared::protocol::CombatLogKind;
+        for (owner_spell, weapon_spell) in [
+            (49998, 49998),
+            (206930, 228645),
+            (433895, 433895),
+            (50842, 50842),
+        ] {
+            let _seed = crate::random::seed_scope(70448);
+            let mut run = super::super::prepare_registered_player(250, 1).unwrap();
+            let actor = run.actor;
+            let target = run.targets[0];
+            super::super::engage(&mut run);
+            crate::spell_cast::creature_cast(run.app.world_mut(), actor, 49028, Some(actor), false)
+                .unwrap();
+            for _ in 0..40 {
+                run.app.update();
+            }
+            let world = run.app.world_mut();
+            let weapons: Vec<_> = world
+                .query::<(bevy::prelude::Entity, &Npc, &UnitSummonedBy)>()
+                .iter(world)
+                .filter(|(_, npc, owner)| npc.template_id == 27893 && owner.0 == actor.to_bits())
+                .map(|(entity, _, _)| entity)
+                .collect();
+            assert_eq!(weapons.len(), 2);
+            let stats = world.get::<crate::stats::CharacterStats>(actor).unwrap();
+            let owner_ap = stats.total_attack_power(
+                crate::stats::WeaponAttackType::MainHand,
+                world.get::<crate::stats::StatModifiers>(actor),
+            );
+            for &weapon in &weapons {
+                let (_, pet_ap) = crate::spell_cast::effects::power_stats(world, weapon, false);
+                assert!(
+                    (pet_ap - owner_ap / 3.0).abs() < 0.01,
+                    "weapon AP {pet_ap}, owner AP {owner_ap}"
+                );
+            }
+            crate::spell_cast::powers::change_power(
+                world,
+                actor,
+                shared::components::PowerType::RunicPower,
+                1000.0,
+            );
+            crate::spell_cast::creature_cast(world, actor, owner_spell, Some(target), false)
+                .unwrap();
+            for _ in 0..4 {
+                run.app.update();
+            }
+            let events = &run
+                .app
+                .world()
+                .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+                .0;
+            for weapon in weapons {
+                assert!(
+                    events
+                        .iter()
+                        .any(|event| event.source == Some(weapon.to_bits())
+                            && event.target == Some(target.to_bits())
+                            && event.spell_id == Some(weapon_spell)
+                            && event.kind == CombatLogKind::Damage
+                            && event.amount > 0),
+                    "missing weapon damage for {owner_spell}"
+                );
+            }
+        }
     }
 
     #[test]
@@ -1520,19 +1617,46 @@ mod tests {
         let actor = run.actor;
         let target = run.targets[0];
         super::super::engage(&mut run);
-        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 43265, Some(actor), false).unwrap();
-        let count = |run: &super::super::Run| run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0.iter()
-            .filter(|event| event.source == Some(actor.to_bits()) && event.target == Some(target.to_bits()) && event.spell_id == Some(52212) && event.kind == CombatLogKind::Damage && event.amount > 0).count();
-        for _ in 0..60 { run.app.update(); }
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 43265, Some(actor), false)
+            .unwrap();
+        let count = |run: &super::super::Run| {
+            run.app
+                .world()
+                .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+                .0
+                .iter()
+                .filter(|event| {
+                    event.source == Some(actor.to_bits())
+                        && event.target == Some(target.to_bits())
+                        && event.spell_id == Some(52212)
+                        && event.kind == CombatLogKind::Damage
+                        && event.amount > 0
+                })
+                .count()
+        };
+        for _ in 0..60 {
+            run.app.update();
+        }
         let inside = count(&run);
         assert!(inside >= 2, "expected periodic ground damage, got {inside}");
         let original = *run.app.world().get::<Position>(target).unwrap();
         run.app.world_mut().get_mut::<Position>(target).unwrap().x += 50.0;
-        for _ in 0..40 { run.app.update(); }
-        assert_eq!(count(&run), inside, "outside target must not take field damage");
+        for _ in 0..40 {
+            run.app.update();
+        }
+        assert_eq!(
+            count(&run),
+            inside,
+            "outside target must not take field damage"
+        );
         *run.app.world_mut().get_mut::<Position>(target).unwrap() = original;
-        for _ in 0..40 { run.app.update(); }
-        assert!(count(&run) > inside, "returning target takes field damage again");
+        for _ in 0..40 {
+            run.app.update();
+        }
+        assert!(
+            count(&run) > inside,
+            "returning target takes field damage again"
+        );
     }
 
     #[test]

@@ -34,6 +34,16 @@ struct GuardianPolicy {
 // SimC76f8118 pets.cpp19/705/867/1510–1548: bindings and inheritance
 // belong to the actual root/creature pair, including the alternative Tyrant.
 const GUARDIAN_POLICIES: &[GuardianPolicy] = &[
+    // SimC76f8118 sc_death_knight.cpp4295–4304: each Dancing Rune Weapon
+    // inherits one third of its owner's live melee attack power.
+    GuardianPolicy {
+        summons: &[49028, 1237128, 1264353],
+        entry: 27893,
+        spells: &[],
+        repeat_gcd: None,
+        owner_spell_share: None,
+        owner_attack_share: Some(1.0 / 3.0),
+    },
     // SimC76f8118 sc_death_knight.cpp4478–4487/4599–4605: actual Magus AP share
     // and MID2 actions; each action retains its native cast and recovery data.
     GuardianPolicy {
