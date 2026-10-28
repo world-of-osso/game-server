@@ -69,6 +69,7 @@ spec_drivers! {
     71 => arms_rotation,
     72 => fury_rotation,
     103 => feral_rotation,
+    250 => blood_tank_rotation,
     251 => frost_rotation,
     252 => unholy_rotation,
     253 => beast_mastery_rotation,
