@@ -239,6 +239,7 @@ pub type RogueAuraRegistrationHook = fn(&mut crate::auras::scripts::AuraScripts)
 pub type BeforeEnemyContextHitHook = fn(&mut World, &EffectCtx<'_>, Entity);
 pub type BeforeEnemyContextHitLookup = fn(u32) -> Option<BeforeEnemyContextHitHook>;
 pub type HealthChangeObservedHook = fn(&mut World, &shared::protocol::CombatLogEvent);
+pub type SourceHealHook = fn(&mut World, &EffectCtx<'_>, f32);
 pub type SupportAuraRegistrationHook = fn(&mut crate::auras::scripts::AuraScripts);
 pub type NamedAuraFields = &'static [(u32, u8)];
 pub type SnapshotLaunchAurasHook = fn(&World, Entity, &mut SpellInfo);
@@ -402,6 +403,7 @@ pub enum SpellScriptHook {
     RogueAuraRegistration(RogueAuraRegistrationHook),
     BeforeEnemyContextHit(BeforeEnemyContextHitLookup),
     HealthChangeObserved(HealthChangeObservedHook),
+    SourceHeal(SourceHealHook),
     SupportAuraRegistration(SupportAuraRegistrationHook),
     NamedAuraFields(NamedAuraFields),
     SnapshotLaunchAuras(SnapshotLaunchAurasHook),
@@ -1858,6 +1860,15 @@ pub fn before_enemy_context_hit(world: &World, spell: u32) -> Option<BeforeEnemy
             SpellScriptHook::BeforeEnemyContextHit(lookup) => lookup(spell),
             _ => None,
         })
+}
+
+/// Observe source healing before critical and target multipliers.
+pub fn source_heal(world: &mut World, ctx: &EffectCtx<'_>, amount: f32) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::SourceHeal(run) = hook {
+            run(world, ctx, amount);
+        }
+    }
 }
 
 /// Health history observes the emitted event after meters and arena bookkeeping.
