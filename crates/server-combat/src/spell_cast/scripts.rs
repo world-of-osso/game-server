@@ -158,9 +158,10 @@ mod xuens_battlegear;
 pub(crate) use xuens_battlegear::register_xuens_battlegear;
 
 pub(crate) use script_registry::health_change_observed as record_health_change;
+pub use windwalker::combo_strikes_multiplier;
 pub(crate) use windwalker::{
     DANCE_OF_CHIJI, after_dance_cast_event, apply_mystic_touch_after_hit, check_dance_proc,
-    combo_strikes_multiplier, ordinary_combo_cast, register_wdp_relationship,
+    ordinary_combo_cast, register_wdp_relationship,
 };
 
 pub use super::elemental_overload::is_overload_damage;

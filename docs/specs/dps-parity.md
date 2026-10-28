@@ -1235,6 +1235,7 @@ Selected Insidious Ire earns its temporary channel bonus when one target has all
 - Spec269 executes the pinned Windwalker action rows on native player and follower fixtures. Player measurements retain player identity and use the literal driver rather than AssistedCombat diagnostics.
 
 - Windwalker Tigereye Brew starts combat with its native initial stacks, earns one stack per native Chi threshold from qualifying casts, and transfers up to the native cap into Zenith critical chance (`sc_monk.cpp393–406,4583–4595,7170–7183`). Out-of-combat regeneration remains unimplemented.
+- Improved Touch of Death against a stronger target applies active Combo Strikes mastery to its native maximum-health damage; the weaker-creature execute branch does not (`sc_monk.cpp2701–2718`).
 - Whirling Dragon Punch emits its area damage at the initial pulse and the next two native periods; its final two native aura periods do not emit damage (`sc_monk.cpp1888–1906`).
 ### Hellbent Commander
 

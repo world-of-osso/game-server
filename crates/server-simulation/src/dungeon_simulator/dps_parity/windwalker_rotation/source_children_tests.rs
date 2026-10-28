@@ -112,6 +112,47 @@ fn literal_ww_native_source_children_fof_mid2_and_jadefire() {
 }
 
 #[test]
+#[ignore = "actual improved Touch of Death uses earned Combo Strikes on a stronger target"]
+fn literal_ww_touch_of_death_stronger_target_uses_combo_mastery() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare();
+    let caster_hp = run
+        .app
+        .world()
+        .get::<shared::components::Health>(run.actor)
+        .unwrap()
+        .max;
+    run.app
+        .world_mut()
+        .entity_mut(run.targets[0])
+        .insert(shared::components::Health {
+            current: caster_hp * 2.0,
+            max: caster_hp * 40.0,
+        });
+    super::tests::cast(&mut run, 322109);
+    let world = run.app.world();
+    let multiplier = crate::spell_cast::scripts::combo_strikes_multiplier(world, run.actor, 322109);
+    assert!(multiplier > 1.0, "the actual cast earns Combo Strikes");
+    let percent = crate::spell_cast::scripts::script_effect_value(world, run.actor, 322109, 2);
+    let expected = caster_hp * percent / 100.0 * multiplier;
+    let hit = world
+        .resource::<ObservedCombatEvents>()
+        .0
+        .iter()
+        .find(|event| {
+            event.source == Some(run.actor.to_bits())
+                && event.spell_id == Some(322109)
+                && event.kind == CombatLogKind::Damage
+        })
+        .expect("native Touch of Death must hit the stronger target");
+    assert!(
+        (hit.amount as f32 - expected.round()).abs() <= 1.0,
+        "native mastery-only damage {}, expected {expected}",
+        hit.amount
+    );
+}
+
+#[test]
 #[ignore = "actual Zenith starts native Stomp damage and resets the spent RSK cooldown"]
 fn literal_ww_native_source_children_zenith_stomp_and_rsk_reset() {
     let _seed = crate::random::seed_scope(70448);
