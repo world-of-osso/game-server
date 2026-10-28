@@ -328,6 +328,7 @@ mod ret_factor_tests;
 mod ret_hammer_sunrise_tests;
 mod ret_judgment_tests;
 mod ret_multiseed_tests;
+mod ret_player_tests;
 mod ret_proc_rate_tests;
 mod ret_purpose_tests;
 mod ret_resonance_phase_tests;
