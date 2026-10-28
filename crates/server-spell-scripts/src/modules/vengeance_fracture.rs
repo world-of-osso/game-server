@@ -27,11 +27,20 @@ fn on_impact(world: &mut World, ctx: &EffectCtx, _: Entity, _: bool, damage: f32
     if ctx.spell.id == 225919 && combat::auras::has_aura(world, ctx.caster, 187827) {
         // sc_demon_hunter.cpp8103–8108: the extra Meta fragment arrives 500ms after the main hit.
         let due = combat::auras::aura_now(world) + 0.5;
-        world.entity_mut(ctx.caster).entry::<PendingMetaFragments>().or_default().into_mut().0.push(due);
+        world
+            .entity_mut(ctx.caster)
+            .entry::<PendingMetaFragments>()
+            .or_default()
+            .into_mut()
+            .0
+            .push(due);
     }
-    let count = world.resource::<combat::spell_info::SpellStore>().get(263642)
+    let count = world
+        .resource::<combat::spell_info::SpellStore>()
+        .get(263642)
         .and_then(|spell| spell.effects.iter().find(|effect| effect.index == 0))
-        .expect("native Fracture fragment effect").base_points;
+        .expect("native Fracture fragment effect")
+        .base_points;
     if !count.is_finite() || count < 0.0 || count.fract() != 0.0 {
         error!(count, "invalid native Fracture fragment count");
         return;
@@ -48,9 +57,17 @@ fn on_impact(world: &mut World, ctx: &EffectCtx, _: Entity, _: bool, damage: f32
 fn spawn_meta_fragments(world: &mut World) {
     let now = combat::auras::aura_now(world);
     let mut due = Vec::new();
-    for (caster, mut pending) in world.query::<(Entity, &mut PendingMetaFragments)>().iter_mut(world) {
+    for (caster, mut pending) in world
+        .query::<(Entity, &mut PendingMetaFragments)>()
+        .iter_mut(world)
+    {
         pending.0.retain(|deadline| {
-            if *deadline <= now { due.push(caster); false } else { true }
+            if *deadline <= now {
+                due.push(caster);
+                false
+            } else {
+                true
+            }
         });
     }
     for caster in due {
