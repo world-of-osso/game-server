@@ -1243,10 +1243,10 @@ pub(super) fn cast_expel_harm_damage(
 ) {
     const EXPEL_HARM: u32 = 322101;
     const EXPEL_HARM_DAMAGE: u32 = 115129;
-    if ctx.spell.id != EXPEL_HARM {
+    if !matches!(ctx.spell.id, EXPEL_HARM | 451968) {
         return;
     }
-    let percent = script_effect_value(world, ctx.caster, EXPEL_HARM, 1);
+    let percent = script_effect_value(world, ctx.caster, ctx.spell.id, 1);
     super::cast_triggered_with_effect0_amount(
         world,
         ctx.caster,
