@@ -4,6 +4,62 @@ use shared::protocol::CombatLogKind;
 
 #[test]
 #[ignore = "requires private native260 player profile and traits"]
+fn outlaw_blade_flurry_copies_can_trigger_poison_on_each_secondary() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(260, 3).unwrap();
+    crate::spell_cast::cast_triggered(run.app.world_mut(), run.actor, 315584, Some(run.actor), 1);
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, 315584));
+    engage(&mut run);
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(13877, run.actor, Some(run.targets[0])),
+    )
+    .unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    run.app
+        .world_mut()
+        .resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .clear();
+    for _ in 0..100 {
+        crate::spell_cast::cast_triggered(
+            run.app.world_mut(),
+            run.actor,
+            193315,
+            Some(run.targets[0]),
+            1,
+        );
+        run.app.update();
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    for target in &run.targets[1..] {
+        assert!(
+            events
+                .iter()
+                .any(|event| event.target == Some(target.to_bits())
+                    && event.spell_id == Some(22482)
+                    && event.amount > 0),
+            "actual Blade Flurry copy must hit secondary"
+        );
+        assert!(
+            events
+                .iter()
+                .any(|event| event.target == Some(target.to_bits())
+                    && event.spell_id == Some(315585)
+                    && event.kind == CombatLogKind::Damage
+                    && event.amount > 0),
+            "actual Blade Flurry copies must roll native Instant Poison on secondary"
+        );
+    }
+}
+
+#[test]
+#[ignore = "requires private native260 player profile and traits"]
 fn outlaw_blade_flurry_transfers_native_hits_only_to_secondary_targets() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(260, 3).unwrap();
