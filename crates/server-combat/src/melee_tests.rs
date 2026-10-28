@@ -2,6 +2,45 @@ use super::*;
 use shared::components::WeaponType;
 
 #[test]
+fn player_block_is_independent_of_avoidance_and_critical_hits() {
+    let chances = MeleeChances {
+        miss: 10.0,
+        dodge: 10.0,
+        parry: 20.0,
+        block: 30.0,
+        crit: 10.0,
+        ..Default::default()
+    };
+    let mut avoided = 0;
+    let mut blocked = 0;
+    let mut critical_blocks = 0;
+    for hit in (0..10_000).step_by(100) {
+        for block in (0..10_000).step_by(100) {
+            match roll_player_melee_outcome(&chances, hit, block) {
+                MeleeOutcome::Miss | MeleeOutcome::Dodge | MeleeOutcome::Parry => avoided += 1,
+                MeleeOutcome::Block => blocked += 1,
+                MeleeOutcome::CritBlock => critical_blocks += 1,
+                _ => {}
+            }
+        }
+    }
+    assert_eq!(avoided, 4_000);
+    assert_eq!(blocked + critical_blocks, 1_800);
+    assert_eq!(critical_blocks, 300);
+    assert_eq!(
+        outcome_damage(100.0, MeleeOutcome::CritBlock, 0, 30.0),
+        (140.0, 60.0)
+    );
+    let weights = player_outcome_weights(&chances);
+    let block_weight: f64 = weights
+        .iter()
+        .filter(|(o, _)| matches!(o, MeleeOutcome::Block | MeleeOutcome::CritBlock))
+        .map(|(_, w)| w)
+        .sum();
+    assert!((block_weight - 0.18).abs() < 1e-12);
+}
+
+#[test]
 fn attack_timer_reset_uses_native_integer_milliseconds() {
     for (seconds, milliseconds) in [(2.0, 2000), (1.6, 1600), (1.6009, 1600), (0.0, 0)] {
         assert_eq!(

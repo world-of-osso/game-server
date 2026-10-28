@@ -32,6 +32,7 @@ pub(super) fn source_amount(hit: &Hit) -> Result<f64, String> {
     let kind = match outcome.as_str() {
         "Hit" => MeleeOutcome::Hit,
         "Crit" => MeleeOutcome::Crit,
+        "CritBlock" => MeleeOutcome::CritBlock,
         "Glancing" => MeleeOutcome::Glancing,
         "Block" => MeleeOutcome::Block,
         "Miss" => MeleeOutcome::Miss,
