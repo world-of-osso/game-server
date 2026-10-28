@@ -1188,3 +1188,62 @@ fn grand_crusader_advances_shared_judgment_charge() {
     }
     panic!("Grand Crusader did not advance the shared charge by 3 seconds");
 }
+
+#[test]
+#[ignore = "uses selected MID2 Protection Divine Purpose and real Holy Power spenders"]
+fn protection_divine_purpose_procs_and_pays_for_next_shield() {
+    use crate::spell_cast::powers::PowerPools;
+    use shared::components::PowerType;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::dps_parity::prepare_registered_player(66, 1).unwrap();
+    super::dps_parity::engage(&mut run);
+    let actor = run.actor;
+    let target = run.targets[0];
+    assert!(crate::auras::has_aura(run.app.world(), actor, 223817));
+    for _ in 0..50 {
+        for _ in 0..40 {
+            run.app.update();
+        }
+        run.app
+            .world_mut()
+            .get_mut::<PowerPools>(actor)
+            .unwrap()
+            .get_mut(PowerType::HolyPower)
+            .unwrap()
+            .current = 3.0;
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 53600, Some(target), false)
+            .unwrap();
+        if crate::auras::has_aura(run.app.world(), actor, 223819) {
+            for _ in 0..40 {
+                run.app.update();
+            }
+            run.app
+                .world_mut()
+                .get_mut::<PowerPools>(actor)
+                .unwrap()
+                .get_mut(PowerType::HolyPower)
+                .unwrap()
+                .current = 0.0;
+            crate::spell_cast::creature_cast(
+                run.app.world_mut(),
+                actor,
+                53600,
+                Some(target),
+                false,
+            )
+            .expect("Divine Purpose makes the next shield free");
+            assert_eq!(
+                run.app
+                    .world()
+                    .get::<PowerPools>(actor)
+                    .unwrap()
+                    .get(PowerType::HolyPower)
+                    .unwrap()
+                    .current,
+                0.0
+            );
+            return;
+        }
+    }
+    panic!("selected Divine Purpose never procced from 50 real spenders");
+}
