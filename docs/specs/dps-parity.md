@@ -1340,3 +1340,4 @@ Selected Insidious Ire earns its temporary channel bonus when one target has all
 ### Evoker Rising Fury
 
 - At maximum Rising Fury stacks, direct and periodic damage use the native rank-two bonus once when the native effect suppresses stacking.
+- Unbound Flame damage has 100% base critical-hit chance.

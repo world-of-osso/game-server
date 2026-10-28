@@ -1074,8 +1074,9 @@ fn devastation_unbound_flame_earned_native_uses_damage_the_pack_and_consume_one(
                             && event.target == Some(target.to_bits())
                             && event.spell_id == Some(1292322)
                             && event.kind == shared::protocol::CombatLogKind::Damage
-                            && event.amount > 0),
-                    "actual Unbound Flame use{used} must damage native pack recipient {target:?}"
+                            && event.amount > 0
+                            && event.crit),
+                    "actual Unbound Flame use{used} must critically damage native pack recipient {target:?}"
                 );
             }
             assert!(
