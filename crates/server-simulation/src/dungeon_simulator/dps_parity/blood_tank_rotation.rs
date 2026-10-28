@@ -361,26 +361,56 @@ mod tests {
         let target = run.targets[0];
         super::super::engage(&mut run);
         for spell_id in [1296650, 1296651] {
-            crate::auras::apply_aura(run.app.world_mut(), &AuraApplication {
-                caster: actor, target: actor, spell_id, effect_mask: u32::MAX,
-                source: AuraSource::ItemSet(2055),
-            });
+            crate::auras::apply_aura(
+                run.app.world_mut(),
+                &AuraApplication {
+                    caster: actor,
+                    target: actor,
+                    spell_id,
+                    effect_mask: u32::MAX,
+                    source: AuraSource::ItemSet(2055),
+                },
+            );
         }
         for expected in 1..=10 {
-            crate::spell_cast::powers::change_power(run.app.world_mut(), actor, PowerType::RunicPower, 1000.0);
-            crate::spell_cast::creature_cast(run.app.world_mut(), actor, 49998, Some(target), false).unwrap();
-            for _ in 0..30 { run.app.update(); }
+            crate::spell_cast::powers::change_power(
+                run.app.world_mut(),
+                actor,
+                PowerType::RunicPower,
+                1000.0,
+            );
+            crate::spell_cast::creature_cast(
+                run.app.world_mut(),
+                actor,
+                49998,
+                Some(target),
+                false,
+            )
+            .unwrap();
+            for _ in 0..30 {
+                run.app.update();
+            }
             let auras = run.app.world().get::<ActiveAuras>(actor).unwrap();
-            let debt = auras.iter().find(|aura| aura.spell_id == 1310372).expect("Death Strike builds Blood Debt");
+            let debt = auras
+                .iter()
+                .find(|aura| aura.spell_id == 1310372)
+                .expect("Death Strike builds Blood Debt");
             assert_eq!(debt.stacks, expected);
             assert_eq!(debt.effects[0].amount, 0.5);
         }
-        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 195182, Some(target), false).unwrap();
-        for _ in 0..3 { run.app.update(); }
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 195182, Some(target), false)
+            .unwrap();
+        for _ in 0..3 {
+            run.app.update();
+        }
         let auras = run.app.world().get::<ActiveAuras>(actor).unwrap();
         assert!(!auras.iter().any(|aura| aura.spell_id == 1310372));
         assert!(auras.iter().any(|aura| aura.spell_id == 1300369));
-        assert!(auras.iter().any(|aura| aura.spell_id == 195181 && aura.stacks >= 3));
+        assert!(
+            auras
+                .iter()
+                .any(|aura| aura.spell_id == 195181 && aura.stacks >= 3)
+        );
     }
 
     #[test]
