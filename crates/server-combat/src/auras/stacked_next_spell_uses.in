@@ -29,4 +29,6 @@
     1300219,
     // SimC76f8118 sc_death_knight.cpp10601–10605: Exterminate stacks are uses.
     441416,
+    // SimC76f8118 sc_rogue.cpp: Unshakeable Drive stacks are uses.
+    1248775,
 ]
