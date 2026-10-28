@@ -126,7 +126,10 @@
       "item_level_override": 331,
       "enchant": 0,
       "gems": [],
-      "crafted_stats": [],
+      "crafted_stats": [
+        32,
+        40
+      ],
       "options": {}
     },
     {
@@ -196,7 +199,10 @@
       "gems": [
         240890
       ],
-      "crafted_stats": [],
+      "crafted_stats": [
+        36,
+        40
+      ],
       "options": {}
     },
     {
