@@ -111,7 +111,9 @@ use crate::spell_cast::{effects, log_event, targets};
 use crate::spell_info::{SpellEffect, SpellInfo, SpellStore};
 use crate::stats::StatModifiers;
 pub use ignite::spread_ignite;
-pub use periodic::{count_remaining_ticks, paid_periodic_ticks, remaining_periodic_ticks};
+pub use periodic::{
+    count_remaining_ticks, paid_periodic_ticks, periodic_live_amount, remaining_periodic_ticks,
+};
 pub use spell_mods::SpellModOp;
 pub use stat_mods::AuraStatMods;
 pub(crate) use stat_mods::time_percent_mod;
@@ -256,6 +258,9 @@ pub struct AuraEffectState {
     /// caster's Points mods, plus SP/AP coefficients for damage, heal and
     /// absorb types (`handlers::scales_with_power`).
     pub amount: f32,
+    /// Power contribution and authored cast multiplier at application.
+    periodic_power_at_application: f32,
+    periodic_power_multiplier: f32,
     /// Qualified factor captured at application, not reconstructed from damage.
     pub persistent_multiplier: Option<f32>,
     pub misc_values: [i32; 2],
@@ -932,6 +937,21 @@ fn build_effect(
         immunity: effect.immunity.clone(),
         aura_type: effect.aura,
         amount,
+        periodic_power_at_application: if base_period_ms > 0
+            && handlers::scales_with_power(effect.aura)
+        {
+            crate::spell_cast::effects::effect_power_bonus(world, caster, spell, effect)
+        } else {
+            0.0
+        },
+        periodic_power_multiplier: if matches!(
+            effect.aura,
+            handlers::PERIODIC_DAMAGE | handlers::PERIODIC_LEECH
+        ) {
+            spell.cast_damage_multiplier.unwrap_or(1.0)
+        } else {
+            1.0
+        },
         persistent_multiplier: periodic_snapshot::capture_multiplier(world, caster, spell, effect),
         misc_values: effect.misc_values,
         period_ms,

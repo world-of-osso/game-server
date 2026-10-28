@@ -4,9 +4,7 @@ use bevy::prelude::*;
 
 use super::combat;
 use combat::auras::ActiveAuras;
-use combat::spell_cast::effects::{
-    DamageInput, EffectCtx, damage_before_mitigation, scaled_amount,
-};
+use combat::spell_cast::effects::{DamageInput, EffectCtx, damage_before_mitigation};
 use combat::spell_cast::script_registry::{HitHook, SpellScriptHook};
 use combat::spell_cast::scripts::AfterCastHook;
 use combat::spell_cast::scripts::script_effect_value;
@@ -17,7 +15,6 @@ const SCOURGE_STRIKE: u32 = 55090;
 const VIRULENT_PLAGUE: u32 = 191587;
 pub const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::EffectHit(effect_hit),
-    SpellScriptHook::DamageAmount(disease_amount),
     SpellScriptHook::NativeAfterCast(after_cast),
 ];
 
@@ -83,37 +80,6 @@ fn command_army(world: &mut World, caster: Entity) {
             warn!(?ghoul, order, "Native Army order refused");
         }
     }
-}
-
-fn disease_amount(spell: u32) -> Option<combat::spell_cast::script_registry::DamageAmountHook> {
-    match spell {
-        191587 => Some(virulent_amount),
-        1240996 => Some(dread_amount),
-        _ => None,
-    }
-}
-
-fn virulent_amount(world: &World, caster: Entity, _: Entity, _: f32) -> f32 {
-    live_disease_amount(world, caster, 191587)
-}
-
-fn dread_amount(world: &World, caster: Entity, _: Entity, _: f32) -> f32 {
-    live_disease_amount(world, caster, 1240996)
-}
-
-fn live_disease_amount(world: &World, caster: Entity, spell_id: u32) -> f32 {
-    // SimC76f8118 action.cpp2787–2818 updates AP on periodic ticks unless
-    // the effect has EX_COMPUTE_ON_CAST; these two native diseases do not.
-    let spell = world
-        .resource::<SpellStore>()
-        .get(spell_id)
-        .expect("active disease must have native spell data");
-    let effect = spell
-        .effects
-        .iter()
-        .find(|effect| effect.index == 0)
-        .expect("active disease must have its native periodic effect");
-    scaled_amount(world, caster, spell, effect)
 }
 
 fn effect_hit(spell: u32, index: u8) -> Option<HitHook> {
@@ -208,7 +174,8 @@ pub(super) fn owned_tick_amount(
         chain_multiplier: 1.0,
     };
     let damage = DamageInput {
-        amount: state.amount * aura.stack_multiplier(),
+        amount: combat::auras::periodic_live_amount(world, caster, spell, state)
+            * aura.stack_multiplier(),
         crit: false,
         periodic: true,
         resolved_source: false,
