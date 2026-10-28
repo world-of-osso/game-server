@@ -65,7 +65,8 @@ fn outlaw_earned_coup_executes_three_native_children_and_consumes_escalation() {
             .unwrap();
         let energy = powers.get_mut(PowerType::Energy).unwrap();
         energy.current = energy.max;
-        powers.get_mut(PowerType::ComboPoints).unwrap().current = 5.0;
+        // Below native Gravedigger's threshold; Coup's bonus points qualify it.
+        powers.get_mut(PowerType::ComboPoints).unwrap().current = 1.0;
     }
     run.app
         .world_mut()
@@ -111,6 +112,15 @@ fn outlaw_earned_coup_executes_three_native_children_and_consumes_escalation() {
                 && [Some(462140), Some(462239), Some(462240)].contains(&event.spell_id)
                 && event.kind == CombatLogKind::Damage
                 && event.amount > 0)
+    );
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(run.actor.to_bits())
+                && event.target == Some(run.targets[0].to_bits())
+                && event.spell_id == Some(1265918)
+                && matches!(event.kind, CombatLogKind::Damage | CombatLogKind::Miss(_))),
+        "Coup's bonus effective points must earn its own Scoundrel Strike"
     );
     assert!(
         !crate::auras::has_aura(run.app.world(), run.actor, 441786),

@@ -65,6 +65,9 @@ fn execute_coup(world: &mut World, ctx: &EffectCtx) {
             },
         );
     }
+    // SimC76f8118 sc_rogue.cpp6888–6891 uses Coup's bonus effective points
+    // for both selected Gravedigger finisher triggers.
+    super::outlaw_gravedigger::trigger_finisher(world, ctx, target, points + bonus_points);
     auras::remove_auras(world, ctx.caster, RemoveReason::Consumed, |aura| {
         aura.spell_id == ESCALATING && aura.caster == ctx.caster
     });
