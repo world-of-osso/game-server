@@ -71,7 +71,9 @@ fn simc_dummy_strike_does_not_trigger_auto_attack_procs() {
         false,
         false,
     );
-    run.app.update();
+    for _ in 0..4 {
+        run.app.update();
+    }
     assert!(
         run.app
             .world()
@@ -98,7 +100,9 @@ fn simc_dummy_strike_does_not_trigger_auto_attack_procs() {
         },
     };
     crate::combat::replay_healer_hit(run.app.world_mut(), source, target, &hit).unwrap();
-    run.app.update();
+    for _ in 0..4 {
+        run.app.update();
+    }
     assert_eq!(run.app.world().get::<AutoProcs>(target).unwrap().0, 1);
 }
 
