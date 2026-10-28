@@ -1027,7 +1027,26 @@ fn protection_simc_dummy_healing_supports_full_comparison() {
             "{report}"
         );
     }
+    let means = report["defense_mean"].as_object().unwrap();
+    assert!(
+        means["parry_pct"].as_f64().unwrap() > 0.0 && means["armor"].as_f64().unwrap() > 0.0,
+        "{report}"
+    );
     let outcomes = report["incoming_outcomes"].as_object().unwrap();
+    let by_outcome: f64 = report["incoming_by_outcome"]
+        .as_object()
+        .unwrap()
+        .values()
+        .map(|amount| amount.as_f64().unwrap())
+        .sum();
+    assert!(
+        (by_outcome
+            - before_absorbs["swing"].as_f64().unwrap()
+            - before_absorbs["strike"].as_f64().unwrap())
+        .abs()
+            < 0.1,
+        "{report}"
+    );
     assert_eq!(
         outcomes
             .iter()
