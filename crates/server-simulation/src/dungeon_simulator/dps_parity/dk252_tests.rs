@@ -1963,6 +1963,35 @@ fn dk252_raise_dead_produces_a_permanent_controlled_melee_pet() {
 
 #[test]
 #[ignore = "requires native252 profile/traits and player actor"]
+fn dk252_rune_spending_can_summon_a_ten_second_real_horseman() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 1).unwrap();
+    engage(&mut run);
+    for _ in 0..30 {
+        crate::spell_cast::powers::change_power(run.app.world_mut(), run.actor, shared::components::PowerType::Runes, 6.0);
+        literal_rotation::execution::execute(run.app.world_mut(), run.actor,
+            literal_rotation::execution::Execution::Spell(55090, run.targets[0], Some(run.targets[0]))).unwrap();
+        preparation::finish_pending_setup(&mut run).unwrap();
+        let now = crate::auras::aura_now(run.app.world());
+        let found = {
+            let world = run.app.world_mut();
+            world.query::<&crate::spell_cast::summon::SummonedCreature>().iter(world)
+                .find_map(|summon| (summon.owner == run.actor && [444248,444251,444252,444254].contains(&summon.spell_id))
+                    .then_some(summon.expires_at)).flatten()
+        };
+        if let Some(expiry) = found {
+            let duration = run.app.world().resource::<crate::spell_info::SpellStore>().get(454389).unwrap()
+                .misc.as_ref().unwrap().duration.unwrap().duration_ms as f64 / 1000.0;
+            assert!(expiry > now && expiry - now <= duration, "real proc rider must use its native temporary lifetime");
+            return;
+        }
+        for _ in 0..40 { run.app.update(); }
+    }
+    panic!("actual rune spenders must earn a Rider's Champion summon");
+}
+
+#[test]
+#[ignore = "requires native252 profile/traits and player actor"]
 fn dk252_dread_plague_ticks_produce_sudden_doom() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(252, 1).unwrap();
