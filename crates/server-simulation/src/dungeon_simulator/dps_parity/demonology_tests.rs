@@ -857,6 +857,11 @@ fn demonology_isolated_last_bolt_does_not_emit_rapidity_twin() {
     use shared::protocol::CombatLogKind;
     let _seed = crate::random::seed_scope(70_448);
     let mut run = prepare_literal(266, 1).unwrap();
+    let owner = run.actor;
+    // Only the Imp under test may produce an Isolated Implosion receipt.
+    crate::auras::remove_auras(run.app.world_mut(), owner, crate::auras::RemoveReason::Cancelled, |aura| {
+        aura.spell_id == 267216
+    });
     engage(&mut run);
     run.app
         .world_mut()
