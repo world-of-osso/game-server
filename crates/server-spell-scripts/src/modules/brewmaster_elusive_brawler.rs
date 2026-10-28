@@ -18,6 +18,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::EarlyAuraRegistration(register),
     SpellScriptHook::AvoidanceProcHitMask(avoidance_mask),
     SpellScriptHook::ResolvedDamage(physical_zero_hit),
+    SpellScriptHook::LandedDamagePolicy(physical_bleed_tick),
 ];
 
 // SimC76f8118 sc_monk.cpp7262–7266 grants mastery on a physical hit even
@@ -27,8 +28,28 @@ fn physical_zero_hit(world: &mut World, ctx: &EffectCtx<'_>, target: Entity, _: 
         || ctx.spell.school_mask() != 1
         || amount != 0.0
         || !ctx.spell.effects.iter().any(|effect| effect.mechanic == 15)
-        || !auras::has_aura(world, target, 117906)
     {
+        return;
+    }
+    grant_elusive_brawler(world, target);
+}
+
+// The recorded physical spell_dot ticks are ID-zero; Stagger is a self-hit.
+fn physical_bleed_tick(
+    world: &mut World,
+    source: Entity,
+    target: Entity,
+    spell: Option<u32>,
+    _: f32,
+    periodic: bool,
+) {
+    if periodic && spell == Some(0) && source != target {
+        grant_elusive_brawler(world, target);
+    }
+}
+
+fn grant_elusive_brawler(world: &mut World, target: Entity) {
+    if !auras::has_aura(world, target, 117906) {
         return;
     }
     auras::apply_aura(
