@@ -565,7 +565,10 @@ mod tests {
         assert_eq!(report["rotation_status"], "registered_literal_simc");
         assert!(report["raw_damage"].as_f64().unwrap() > 0.0);
         assert!(report["active_mitigation_uptime"].as_f64().unwrap() > 0.0);
-        assert_eq!(report["tank_casts"]["132578"], 3, "the literal APL must cast Niuzao on its valid native target");
+        assert_eq!(
+            report["tank_casts"]["132578"], 3,
+            "the literal APL must cast Niuzao on its valid native target"
+        );
         println!("HEALER_TANK_REPORT={report}");
     }
 }
