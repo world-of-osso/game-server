@@ -29,17 +29,36 @@ fn register_bulwark(scripts: &mut AuraScripts) {
     grand.on_damage_proc = Some(grand_crusader_from_avoidance);
 }
 
-fn armament_energize_handler(spell: u32, index: u8) -> Option<combat::spell_cast::effects::EffectHandler> {
+fn armament_energize_handler(
+    spell: u32,
+    index: u8,
+) -> Option<combat::spell_cast::effects::EffectHandler> {
     (matches!(spell, 432459 | 432472) && index == 1).then_some(energize_holy_armament)
 }
 
-fn energize_holy_armament(world: &mut World, ctx: &combat::spell_cast::effects::EffectCtx<'_>, effect: &combat::spell_info::SpellEffect, target: Entity) {
+fn energize_holy_armament(
+    world: &mut World,
+    ctx: &combat::spell_cast::effects::EffectCtx<'_>,
+    effect: &combat::spell_info::SpellEffect,
+    target: Entity,
+) {
     // SimC76f8118 sc_paladin.cpp2623–2625: Protection gains no Holy Power here.
-    if world.get::<ActiveSpec>(ctx.caster).is_some_and(|spec| spec.0 == 66) {
+    if world
+        .get::<ActiveSpec>(ctx.caster)
+        .is_some_and(|spec| spec.0 == 66)
+    {
         return;
     }
-    let amount = combat::spell_cast::effects::modded_base_points(world, ctx.caster, ctx.spell, effect);
-    combat::spell_cast::effects::energize_unit(world, ctx, target, PowerType::HolyPower, amount, false);
+    let amount =
+        combat::spell_cast::effects::modded_base_points(world, ctx.caster, ctx.spell, effect);
+    combat::spell_cast::effects::energize_unit(
+        world,
+        ctx,
+        target,
+        PowerType::HolyPower,
+        amount,
+        false,
+    );
 }
 
 fn selected(world: &World, caster: Entity, talent: u32) -> bool {
