@@ -85,8 +85,8 @@ fn simc_healer_fixture_replays_damage_and_reports_receipts() {
     let trace = Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("src/dungeon_simulator/fixtures/healer_simc_fixture.log");
     assert_eq!(
-        crate::dungeon_simulator::healer_replay::replay_simc(65, &trace, 12, 70448).unwrap_err(),
-        "NATIVE_HEALER_POLICY_ABSENT:65"
+        crate::dungeon_simulator::healer_replay::replay_simc(0, &trace, 12, 70448).unwrap_err(),
+        "NATIVE_HEALER_POLICY_ABSENT:0"
     );
     let registry: &[Registration] = &[(65, prepare)];
     let report = replay_with_registry(65, &trace, 12, 70448, registry).unwrap();

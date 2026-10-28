@@ -18,6 +18,7 @@ mod healer_simc_replay;
 mod holy_paladin_replay_tests;
 mod movement;
 mod replay_cli_tests;
+mod restoration_shaman_replay;
 mod runtime;
 mod tank_replay;
 mod tank_replay_tests;

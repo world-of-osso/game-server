@@ -18,7 +18,7 @@ type PreparePolicy = fn(&mut super::dps_parity::Run) -> Result<Box<dyn Policy>, 
 type Registration = (u32, PreparePolicy);
 
 // Spec owners add their own policy here. No test fixture is a production policy.
-const POLICIES: &[Registration] = &[];
+const POLICIES: &[Registration] = &[(264, super::restoration_shaman_replay::prepare)];
 
 pub(super) fn replay_simc(
     spec: u32,
