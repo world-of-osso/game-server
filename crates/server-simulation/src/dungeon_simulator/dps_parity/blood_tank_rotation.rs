@@ -284,12 +284,28 @@ mod tests {
                 break;
             }
         }
-        assert!(crate::auras::has_aura(run.app.world(), actor, 207203), "a real white hit must create Frost Shield");
+        assert!(
+            crate::auras::has_aura(run.app.world(), actor, 207203),
+            "a real white hit must create Frost Shield"
+        );
         let (_, absorbed) = crate::auras::absorb_damage(run.app.world_mut(), actor, 1, 1_000_000.0);
-        assert!(absorbed > 0.0, "incoming physical damage must consume the shield");
-        crate::auras::remove_auras(run.app.world_mut(), actor, crate::auras::RemoveReason::Consumed, |aura| aura.spell_id == 207200 || aura.spell_id == 207203);
-        for _ in 0..200 { run.app.update(); }
-        assert!(!crate::auras::has_aura(run.app.world(), actor, 207203), "white hits without the talent must not create a shield");
+        assert!(
+            absorbed > 0.0,
+            "incoming physical damage must consume the shield"
+        );
+        crate::auras::remove_auras(
+            run.app.world_mut(),
+            actor,
+            crate::auras::RemoveReason::Consumed,
+            |aura| aura.spell_id == 207200 || aura.spell_id == 207203,
+        );
+        for _ in 0..200 {
+            run.app.update();
+        }
+        assert!(
+            !crate::auras::has_aura(run.app.world(), actor, 207203),
+            "white hits without the talent must not create a shield"
+        );
     }
 
     #[test]
