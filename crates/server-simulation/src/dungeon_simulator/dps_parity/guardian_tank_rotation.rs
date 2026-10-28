@@ -25,7 +25,7 @@ const ACTIONS: &[(&str, u32, bool)] = &[
     ("swipe_bear", 213771, true),
     ("red_moon", 1252871, false),
     ("berserk", 50334, true),
-    ("lunar_beam", 204066, true),
+    ("lunar_beam", 204066, false),
     ("wild_guardian", 1269619, true),
     // SimC sc_druid.cpp9157–9161 executes the Cat child on the enemy.
     ("heart_of_the_wild", 1261867, false),
@@ -427,6 +427,7 @@ mod tests {
         assert_eq!(report["rotation_status"], "registered_literal_simc");
         assert!(report["raw_damage"].as_f64().unwrap() > 0.0);
         assert!(report["active_mitigation_uptime"].as_f64().unwrap() > 0.0);
+        assert!(report["tank_casts"]["204066"].as_u64().unwrap_or(0) > 0, "Lunar Beam must cast on the enemy while its native destination remains caster-centered");
     }
 
     #[test]
