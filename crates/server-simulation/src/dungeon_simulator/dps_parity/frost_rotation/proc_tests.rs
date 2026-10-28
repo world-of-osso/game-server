@@ -906,6 +906,57 @@ fn frost_gathering_storm_extends_winter_for_paid_and_free_spenders() {
 }
 
 #[test]
+#[ignore = "two earned Killing Machine stacks keep Frostscythe fixed crit bonus unstacked"]
+fn frostscythe_two_km_stacks_use_fixed_crit_bonus() {
+    use crate::spell_cast::effects::factor_capture::FactorCapture;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::super::prepare_literal(251, 3).unwrap();
+    super::super::engage(&mut run);
+    earn_killing_machine(&mut run);
+    cast(&mut run, 439843);
+    let stacks = run
+        .app
+        .world()
+        .get::<ActiveAuras>(run.actor)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 51124)
+        .unwrap()
+        .stacks;
+    assert_eq!(stacks, 2, "two real Killing Machine stacks");
+    run.app.insert_resource(FactorCapture::new(
+        run.actor,
+        run.targets[0],
+        207230,
+        "frostscythe",
+        1,
+    ));
+    cast(&mut run, 207230);
+    for _ in 0..10 {
+        run.app.update();
+    }
+    let capture = run.app.world().resource::<FactorCapture>().export();
+    let hit = capture["events"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|event| event["spell_id"] == 207230 && event["event"] == "direct_amount")
+        .expect("actual Frostscythe impact");
+    let crit = hit["applied_multipliers"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|item| item["factor"] == "critical_damage")
+        .unwrap()["value"]
+        .as_f64()
+        .unwrap();
+    assert!(
+        (5.4..5.8).contains(&crit),
+        "SimC bonus is 200% fixed and 25% per stack, got {crit}: {hit}"
+    );
+}
+
+#[test]
 #[ignore = "real Breath applies SimC secondary target reduction"]
 fn frost_breath_secondary_targets_are_reduced() {
     use crate::spell_cast::test_harness::ObservedCombatEvents;
@@ -1068,6 +1119,49 @@ fn frost_winter_earns_target_bonuses_once() {
         !auras::has_aura(run.app.world(), actor, 59052),
         "Biting Cold cannot trigger again in the same Winter"
     );
+}
+
+#[test]
+#[ignore = "literal rotation executes Frostwyrm's Fury and its earned recall"]
+fn frost_rotation_uses_earned_fury_recall() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::protocol::CombatLogKind;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::super::prepare_measurement(251, 1).unwrap();
+    super::super::engage(&mut run);
+    for _ in 0..4000 {
+        super::super::drive_player(&mut run).unwrap();
+        run.app.update();
+        if run
+            .app
+            .world()
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|event| {
+                event.spell_id == Some(1265384) && event.kind == CombatLogKind::CastSuccess
+            })
+        {
+            let hits = run
+                .app
+                .world()
+                .resource::<ObservedCombatEvents>()
+                .0
+                .iter()
+                .filter(|event| {
+                    event.spell_id == Some(279303)
+                        && event.kind == CombatLogKind::Damage
+                        && event.amount > 0
+                })
+                .count();
+            assert!(
+                hits >= 2,
+                "rotation Fury and recall must both damage: {hits}"
+            );
+            return;
+        }
+    }
+    panic!("literal rotation never used earned Chosen recall");
 }
 
 #[test]
@@ -2408,6 +2502,50 @@ fn frost_pillar_starts_frozen_dominion_winter() {
             "native Winter must pulse damage onto each in-range enemy{target:?}"
         );
     }
+}
+
+#[test]
+#[ignore = "three earned Rime impacts bank their real damage into Cryogenic Chamber"]
+fn frost_chamber_banks_northwinds_rime_damage() {
+    use crate::spell_cast::effects::factor_capture::FactorCapture;
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::protocol::CombatLogKind;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::super::prepare_literal(251, 3).unwrap();
+    super::super::engage(&mut run);
+    earn_rime(&mut run);
+    let start = run.app.world().resource::<ObservedCombatEvents>().0.len();
+    cast(&mut run, 49184);
+    let damage: i32 = run.app.world().resource::<ObservedCombatEvents>().0[start..]
+        .iter()
+        .filter(|event| event.spell_id == Some(49184) && event.kind == CombatLogKind::Damage)
+        .map(|event| event.amount)
+        .sum();
+    assert!(damage > 0);
+    run.app.insert_resource(FactorCapture::new(
+        run.actor,
+        run.targets[0],
+        456371,
+        "chamber",
+        1,
+    ));
+    let actor = run.actor;
+    super::super::enhancement_generation_tests::cast(&mut run, 51271, actor);
+    for _ in 0..3 {
+        run.app.update();
+    }
+    let capture = run.app.world().resource::<FactorCapture>().export();
+    let hit = capture["events"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|event| event["spell_id"] == 456371 && event["event"] == "direct_amount")
+        .expect("real Winter releases Chamber");
+    let banked = hit["factors"]["base"].as_f64().unwrap();
+    assert!(
+        (banked - f64::from(damage) * 0.15).abs() < 1.0,
+        "three real hits must each bank 15%: {damage} -> {banked}"
+    );
 }
 
 #[test]
