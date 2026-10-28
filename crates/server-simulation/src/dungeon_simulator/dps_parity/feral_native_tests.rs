@@ -3,6 +3,42 @@ use super::*;
 
 #[test]
 #[ignore = "requires exact spec103 profile/traits and native private DB"]
+fn feral_lycaras_teachings_follows_cat_form() {
+    let mut run = prepare_literal(103, 1).unwrap();
+    let actor = run.actor;
+    let crit = |run: &Run| {
+        run.app
+            .world()
+            .get::<crate::stats::CharacterStats>(actor)
+            .unwrap()
+            .crit_pct
+    };
+    let before = crit(&run);
+    assert!(crate::auras::has_aura(run.app.world(), actor, 378988));
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 768, Some(actor), false).unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    assert!(crate::auras::has_aura(run.app.world(), actor, 378990));
+    assert!(
+        (crit(&run) - before - 6.0).abs() < 0.01,
+        "rank two Cat Form grants six crit points"
+    );
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        actor,
+        crate::auras::RemoveReason::Cancelled,
+        |a| a.spell_id == 768,
+    );
+    assert!(!crate::auras::has_aura(run.app.world(), actor, 378990));
+    run.app.update();
+    assert!(
+        (crit(&run) - before).abs() < 0.01,
+        "leaving Cat Form removes the crit gain: before={before} after={}",
+        crit(&run)
+    );
+}
+
+#[test]
+#[ignore = "requires exact spec103 profile/traits and native private DB"]
 fn feral_tigers_tenacity_only_rewards_foreground_finishers() {
     use shared::protocol::CombatLogKind;
     let _seed = crate::random::seed_scope(70448);
