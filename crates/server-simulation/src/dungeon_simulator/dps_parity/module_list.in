@@ -144,6 +144,7 @@ mod unholy_devotion_tests;
 mod unholy_magus_refresh_tests;
 mod driver_tests;
 mod dummy_reference_tests;
+mod druid_fluid_form_tests;
 mod elemental_ancestor_tests;
 mod elemental_ascendance_tests;
 mod elemental_cadence_tests;
@@ -253,6 +254,7 @@ mod hellcaller_counter_tests;
 mod hellcaller_devil_fruit_tests;
 mod howl_tests;
 #[cfg(test)]
+mod guardian_berserk_form_tests;
 mod guardian_lunar_beam_tests;
 mod guardian_rampant_thorn_tests;
 mod guardian_wild_action_tests;
