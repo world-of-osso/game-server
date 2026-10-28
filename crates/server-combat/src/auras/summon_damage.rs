@@ -98,7 +98,6 @@ pub(crate) struct SummonDamageModifiers<'w, 's> {
     modifiers: Query<'w, 's, &'static AuraStatMods>,
     stats: Query<'w, 's, &'static crate::stats::CharacterStats>,
     npcs: Query<'w, 's, &'static shared::components::Npc>,
-    demons: Query<'w, 's, (), With<crate::hunter_pet::SummonedDemon>>,
     known: Query<'w, 's, &'static crate::class_progression::KnownSpells>,
     spells: Option<Res<'w, crate::spell_info::SpellStore>>,
 }
