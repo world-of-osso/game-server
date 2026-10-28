@@ -97,6 +97,8 @@ pub(crate) struct SummonDamageModifiers<'w, 's> {
     stats: Query<'w, 's, &'static crate::stats::CharacterStats>,
     npcs: Query<'w, 's, &'static shared::components::Npc>,
     demons: Query<'w, 's, (), With<crate::hunter_pet::SummonedDemon>>,
+    known: Query<'w, 's, &'static crate::class_progression::KnownSpells>,
+    spells: Option<Res<'w, crate::spell_info::SpellStore>>,
 }
 
 impl SummonDamageModifiers<'_, '_> {
@@ -116,6 +118,47 @@ impl SummonDamageModifiers<'_, '_> {
         } else {
             1.0
         }
+    }
+
+    /// SimC76f8118 pet.cpp488–494 and warlock pets.cpp185–201,663–672.
+    pub(crate) fn felguard_white_critical_multiplier(&self, unit: Entity) -> f32 {
+        let Some((_, Some(pet))) = self.owners.get(unit).ok() else {
+            return 1.0;
+        };
+        if !self
+            .npcs
+            .get(unit)
+            .is_ok_and(|npc| npc.template_id == 17252)
+        {
+            return 1.0;
+        }
+        let owner = pet.owner;
+        let owner_critical = self
+            .modifiers
+            .get(owner)
+            .map_or(1.0, |mods| mods.critical_damage(1));
+        let brutality = if self
+            .known
+            .get(owner)
+            .is_ok_and(|known| known.contains(453908))
+        {
+            let spell = self
+                .spells
+                .as_ref()
+                .expect("Demonic Brutality requires SpellStore")
+                .get(453908)
+                .expect("native Demonic Brutality");
+            spell
+                .effects
+                .iter()
+                .find(|effect| effect.index == 1)
+                .expect("Demonic Brutality effect2")
+                .base_points
+                / 100.0
+        } else {
+            0.0
+        };
+        owner_critical + brutality
     }
 
     pub(crate) fn multiplier(&self, unit: Entity) -> f32 {
