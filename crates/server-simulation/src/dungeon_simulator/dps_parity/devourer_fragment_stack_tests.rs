@@ -231,6 +231,19 @@ fn batch1_meta_scales_devourer_damage_with_mastery() {
 
 #[test]
 #[ignore = "requires DPS_PARITY_WORLD_DB and DPS_PARITY_OUTPUT with spec1480 exact profile/traits"]
+fn devourer_meta_mastery_applies_once_to_real_voidblade() {
+    let (normal, normal_crit) = batch1_voidblade_hit(false, 40.0, false);
+    let (meta, meta_crit) = batch1_voidblade_hit(true, 40.0, false);
+    assert_eq!(normal_crit, meta_crit);
+    let expected = f64::from(normal) * 1.16;
+    assert!(
+        (f64::from(meta) - expected).abs() < expected * 0.02,
+        "Meta must apply one 0.4 × mastery bonus: normal {normal}, Meta {meta}, expected {expected}"
+    );
+}
+
+#[test]
+#[ignore = "requires DPS_PARITY_WORLD_DB and DPS_PARITY_OUTPUT with spec1480 exact profile/traits"]
 fn native_blind_focus_meta_scales_once() {
     let (plain, plain_crit) = batch1_voidblade_hit(false, 40.0, false);
     let (normal, normal_crit) = batch1_voidblade_hit(false, 40.0, true);
