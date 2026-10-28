@@ -427,7 +427,10 @@ mod tests {
         assert_eq!(report["rotation_status"], "registered_literal_simc");
         assert!(report["raw_damage"].as_f64().unwrap() > 0.0);
         assert!(report["active_mitigation_uptime"].as_f64().unwrap() > 0.0);
-        assert!(report["tank_casts"]["204066"].as_u64().unwrap_or(0) > 0, "Lunar Beam must cast on the enemy while its native destination remains caster-centered");
+        assert!(
+            report["tank_casts"]["204066"].as_u64().unwrap_or(0) > 0,
+            "Lunar Beam must cast on the enemy while its native destination remains caster-centered"
+        );
     }
 
     #[test]
