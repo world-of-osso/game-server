@@ -1040,7 +1040,7 @@ fn simc_bronze_buff_shortens_real_infernal_strike_recovery() {
             .resource::<crate::spell_info::SpellStore>()
             .get(189110)
             .unwrap();
-        let bindings = super::dps_parity::vengeance_tank_rotation::bindings();
+        let bindings = crate::simc_apl_native::Bindings::default();
         let encounter = crate::simc_apl_native::Encounter::Fixture {
             started_at: 0.0,
             duration: 300.0,
