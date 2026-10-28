@@ -22,6 +22,7 @@ const BOOMSTICK_DAMAGE: u32 = 1261215;
 const SHELLSHOCK: u32 = 1252931;
 const MONGOOSE_ROUNDS: u32 = 1253945;
 const MONGOOSE_FURY: u32 = 259388;
+const SURVIVAL_FOUR_PIECE: u32 = 1296635;
 
 fn periodic_tick(
     spell: u32,
@@ -42,6 +43,11 @@ fn emit_tick(world: &mut World, ctx: &combat::spell_cast::effects::EffectCtx<'_>
         .trigger_spell;
     assert_ne!(child, 0, "native Boomstick periodic child");
     spell_cast::cast_triggered(world, ctx.caster, child, Some(unit), 1);
+    if auras::has_aura(world, ctx.caster, SURVIVAL_FOUR_PIECE) {
+        // SimC76f8118 sc_hunter.cpp6337–6338 extends all existing async stacks.
+        let milliseconds = script_effect_value(world, ctx.caster, SURVIVAL_FOUR_PIECE, 0) as u32;
+        auras::extend_owned_async_duration(world, ctx.caster, MONGOOSE_FURY, milliseconds);
+    }
     if !super::cast_relationships::has_talent(world, ctx.caster, MONGOOSE_ROUNDS) {
         return;
     }

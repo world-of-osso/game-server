@@ -2000,6 +2000,31 @@ pub fn extend_owned_duration(
     }
 }
 
+/// Extend every deadline of an existing owned asynchronous aura.
+pub fn extend_owned_async_duration(
+    world: &mut World,
+    caster: Entity,
+    spell: u32,
+    milliseconds: u32,
+) {
+    let Some(mut auras) = world.get_mut::<ActiveAuras>(caster) else {
+        return;
+    };
+    let mut changed = false;
+    for aura in &mut auras.auras {
+        if aura.caster != caster || aura.spell_id != spell || aura.stack_expirations.is_empty() {
+            continue;
+        }
+        for expiry in &mut aura.stack_expirations {
+            *expiry += f64::from(milliseconds) / 1000.0;
+        }
+        aura.expires_at = aura.stack_expirations.last().copied();
+        aura.duration_ms += milliseconds;
+        changed = true;
+    }
+    auras.dirty |= changed;
+}
+
 /// Extend owned auras without resetting tick clocks, respecting a maximum
 /// remaining duration (327541 Aetherial Kindling). Never shorten longer auras.
 pub(crate) fn extend_owned_duration_capped(
