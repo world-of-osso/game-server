@@ -27,7 +27,27 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::BeforeNativeOnCast(snapshot_meta),
     SpellScriptHook::AfterResolvedHits(finish_meta),
     SpellScriptHook::EffectHit(sigil_extension_hook),
+    SpellScriptHook::ActualDamageMultiplier(actual_focused_cleave),
+    SpellScriptHook::ExpectedDamageMultiplier(focused_cleave),
 ];
+
+fn actual_focused_cleave(
+    world: &mut World,
+    ctx: &spell_cast::effects::EffectCtx<'_>,
+    target: Entity,
+) -> f32 {
+    focused_cleave(world, ctx.caster, target, ctx.spell)
+}
+fn focused_cleave(world: &World, caster: Entity, target: Entity, spell: &SpellInfo) -> f32 {
+    if spell.id != 228478
+        || spell.cast_primary_target != Some(target)
+        || !selected(world, caster, 343207)
+    {
+        return 1.0;
+    }
+    // SimC76f8118 sc_demon_hunter.cpp8179–8185 applies Focused Cleave only to the primary target.
+    1.0 + spell_cast::scripts::script_effect_value(world, caster, 343207, 0) / 100.0
+}
 
 fn sigil_extension_hook(spell: u32, index: u8) -> Option<HitHook> {
     (spell == 228478 && index == 0).then_some(extend_sigil)
