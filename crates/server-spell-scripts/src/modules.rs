@@ -164,6 +164,7 @@ register_modules! {
     feral_growth: (1031, "modules/feral_growth.rs"),
     feral_lunar: (1030, "modules/feral_lunar.rs"),
     feral_omen: (1034, "modules/feral_omen.rs"),
+    feral_primal_fury: (1034, "modules/feral_primal_fury.rs"),
     feral_stalking: (1034, "modules/feral_stalking.rs"),
     feral_tigers_tenacity: (1034, "modules/feral_tigers_tenacity.rs"),
     feral_unseen: (1032, "modules/feral_unseen.rs"),
