@@ -75,11 +75,15 @@ def print_tank(report):
         print('External dummy healing:', 'enabled' if report['external_healing'] else 'disabled')
         print('SimC Bloodlust start (s):', number(report['bloodlust_start_seconds']))
         print('SimC raid buffs:', ', '.join(f'{buff["name"]} ({buff["spell_id"]})' for buff in report['raid_buffs']) or 'none')
-        print('\n| Spell ID | Casts | Effective self-heal | Consumed absorb | Aura uptime % |')
-        print('|---|---:|---:|---:|---:|')
-        spells = set(report['tank_casts']) | set(report['self_healing_by_spell']) | set(report['absorbs_by_spell']) | set(report['aura_uptime'])
+        print('\n| Spell ID | Casts | Periodic damage ticks | Raw self-heal | Effective self-heal | Consumed absorb | Aura uptime % |')
+        print('|---|---:|---:|---:|---:|---:|---:|')
+        spells = (set(report['tank_casts']) | set(report['periodic_damage_ticks_by_spell']) |
+                  set(report['raw_self_healing_by_spell']) | set(report['self_healing_by_spell']) |
+                  set(report['absorbs_by_spell']) | set(report['aura_uptime']))
         for spell in sorted(spells, key=int):
             print(f'| {spell} | {report["tank_casts"].get(spell, 0)} | '
+                  f'{report["periodic_damage_ticks_by_spell"].get(spell, 0)} | '
+                  f'{number(report["raw_self_healing_by_spell"].get(spell, 0))} | '
                   f'{number(report["self_healing_by_spell"].get(spell, 0))} | '
                   f'{number(report["absorbs_by_spell"].get(spell, 0))} | '
                   f'{number(100 * report["aura_uptime"].get(spell, 0))} |')

@@ -33,6 +33,10 @@ Replay recorded incoming damage in the native server combat simulation to compar
 
 - [Replay system](../wiki/systems/healer-tank-replay.md)
 
+## Tank per-spell reporting
+
+The SimC tank report includes raw and effective self-healing and outgoing periodic damage tick counts per spell.
+
 ## Implementation inventory
 
 - `crates/server-simulation/src/healer_tank_timeline.rs`: recorded incoming-hit timeline loader.

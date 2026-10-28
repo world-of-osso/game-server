@@ -313,6 +313,36 @@ mod tests {
         println!("HEALER_TANK_REPORT={report}");
     }
     #[test]
+    #[ignore = "requires canonical world database and SimC tank trace"]
+    fn tank_report_records_raw_self_healing_and_periodic_damage_ticks() {
+        let trace = std::env::var("HEALER_TANK_SIMC_TRACE").expect("SimC trace required");
+        let report = super::super::super::tank_replay::replay_simc_with_healing(
+            73,
+            std::path::Path::new(&trace),
+            300,
+            70448,
+            true,
+        )
+        .expect("Protection Warrior replay");
+        let raw = report["raw_self_healing_by_spell"]["383104"]
+            .as_f64()
+            .unwrap();
+        let effective = report["self_healing_by_spell"]["383104"].as_f64().unwrap();
+        assert!(
+            raw > effective && effective > 0.0,
+            "raw={raw} effective={effective}"
+        );
+        println!("HEALER_TANK_REPORT={report}");
+        assert!(
+            report["periodic_damage_ticks_by_spell"]
+                .as_object()
+                .unwrap()
+                .values()
+                .any(|value| value.as_u64().unwrap() > 0),
+            "periodic tick counts must be reported"
+        );
+    }
+    #[test]
     fn protection_devastator_autoattacks_reset_running_shield_slam() {
         for chance in [0.0, 100.0] {
             let seed = crate::spell_cast::test_harness::harness_with_native_enemy_dodge_reduction(
