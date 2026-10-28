@@ -1,7 +1,7 @@
 //! Healing Stream Totem's native pulse selects one injured-priority target.
 use super::combat;
 use bevy::prelude::*;
-use combat::random::seq::SliceRandom;
+use combat::random::{self as rand, seq::SliceRandom};
 use combat::spell_cast::script_registry::{AreaTargetFilter, SpellScriptHook};
 use combat::spell_info::SpellInfo;
 use shared::components::{Health, Player};
