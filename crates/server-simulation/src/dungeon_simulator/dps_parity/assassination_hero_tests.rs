@@ -250,3 +250,36 @@ fn assassination_hero_unshakeable_drive_earned_and_delayed_use() {
     run.app.update();
     assert_eq!(stacks(&run), before - 1, "one completed Mutilate consumes exactly one use");
 }
+
+#[test]
+#[ignore = "requires prepared261 private native DB and player actor"]
+fn subtlety_hero_unshakeable_drive_earned_and_delayed_use() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_measurement(261, 1).unwrap();
+    engage(&mut run);
+    let started_at = run.app.world().resource::<Time>().elapsed();
+    install_fixture_lifetimes(&mut run, started_at);
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, 1248774));
+    for _ in 0..2000 {
+        drive_player(&mut run).unwrap();
+        run.app.update();
+        if crate::auras::has_aura(run.app.world(), run.actor, 1248775) {
+            break;
+        }
+    }
+    let stacks = |run: &Run| {
+        run.app.world().get::<crate::auras::ActiveAuras>(run.actor).unwrap().iter()
+            .find(|a| a.spell_id == 1248775 && a.caster == run.actor)
+            .map_or(0, |a| a.stacks)
+    };
+    let before = stacks(&run);
+    assert!(before > 0, "spending a real mark must earn Drive");
+    assert!(crate::spell_cast::try_cast_triggered(run.app.world_mut(), run.actor, 185438, Some(run.targets[0]), 0));
+    assert_eq!(stacks(&run), before, "Shadowstrike retains Drive during its impact");
+    run.app.insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(std::time::Duration::from_millis(100)));
+    run.app.update();
+    assert_eq!(stacks(&run), before, "Drive must survive until 201ms");
+    run.app.insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(std::time::Duration::from_millis(150)));
+    run.app.update();
+    assert_eq!(stacks(&run), before - 1, "one completed Shadowstrike consumes exactly one use");
+}
