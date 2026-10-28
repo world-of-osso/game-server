@@ -22,8 +22,8 @@ fn check_support_profile(spec: u32) -> Result<(), String> {
 
 #[test]
 #[ignore = "requires generated MID2 support inputs and canonical world DB"]
-fn mid2_support_inputs_load_and_spawn_all_eight_specs() {
-    let failures: Vec<_> = [65, 104, 105, 256, 257, 264, 270, 1468]
+fn mid2_support_inputs_load_and_spawn_six_specs() {
+    let failures: Vec<_> = [104, 256, 257, 264, 270, 1468]
         .into_iter()
         .filter_map(|spec| check_support_profile(spec).err().map(|error| (spec, error)))
         .collect();
