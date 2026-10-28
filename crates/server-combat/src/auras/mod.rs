@@ -1334,6 +1334,67 @@ pub fn set_owned_stacks(
     true
 }
 
+/// SimC76f8118 sc_death_knight.cpp13740–13749: clone an owned Undeath
+/// disease to a previously uninfected target, retaining its phase and stacks.
+pub fn clone_owned_undeath(
+    world: &mut World,
+    caster: Entity,
+    source: Entity,
+    target: Entity,
+) -> bool {
+    const UNDEATH: u32 = 444633;
+    let Some(original) = world
+        .get::<ActiveAuras>(source)
+        .and_then(|auras| {
+            auras
+                .iter()
+                .find(|aura| aura.spell_id == UNDEATH && aura.caster == caster)
+        })
+        .cloned()
+    else {
+        return false;
+    };
+    if world.get::<ActiveAuras>(target).is_some_and(|auras| {
+        auras
+            .iter()
+            .any(|aura| aura.spell_id == UNDEATH && aura.caster == caster)
+    }) {
+        return false;
+    }
+    let effect_mask = original
+        .effects
+        .iter()
+        .fold(0u32, |mask, effect| mask | (1 << effect.index));
+    apply_aura(
+        world,
+        &AuraApplication {
+            caster,
+            target,
+            spell_id: UNDEATH,
+            effect_mask,
+            source: AuraSource::Cast,
+        },
+    );
+    let Some(mut auras) = world.get_mut::<ActiveAuras>(target) else {
+        return false;
+    };
+    let Some(copy) = auras
+        .auras
+        .iter_mut()
+        .find(|aura| aura.spell_id == UNDEATH && aura.caster == caster)
+    else {
+        return false;
+    };
+    let instance_id = copy.instance_id;
+    *copy = original;
+    copy.instance_id = instance_id;
+    copy.cast_primary_target = Some(target);
+    auras.dirty = true;
+    drop(auras);
+    auras_changed(world, target);
+    true
+}
+
 /// Make an existing owned aura permanent without changing its native stack rules.
 pub fn make_owned_aura_permanent(
     world: &mut World,
