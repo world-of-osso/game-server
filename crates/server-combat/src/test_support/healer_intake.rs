@@ -152,6 +152,7 @@ pub struct Capture {
     pub start_tick: u32,
     pub hits: Vec<Hit>,
     pub consumed_absorbs: BTreeMap<Entity, ConsumedAbsorbPoints>,
+    pub consumed_absorbs_by_spell: BTreeMap<(Entity, u32), f64>,
     pub active_hit_scale: Option<(Entity, f32)>,
     pub source_snapshots: BTreeMap<u32, SourceSnapshot>,
     pub gaps: Vec<String>,
@@ -229,7 +230,13 @@ pub fn spell_bonus_source(
 }
 
 /// Called only for points the native absorb consumer actually removed.
-pub fn record_absorb(world: &mut World, caster: Entity, target: Entity, amount: f32) {
+pub fn record_absorb(
+    world: &mut World,
+    caster: Entity,
+    target: Entity,
+    spell_id: u32,
+    amount: f32,
+) {
     let Some(mut capture) = world.get_resource_mut::<Capture>() else {
         return;
     };
@@ -238,8 +245,12 @@ pub fn record_absorb(world: &mut World, caster: Entity, target: Entity, amount: 
             .active_hit_scale
             .filter(|(unit, _)| *unit == target)
             .map(|(_, scale)| scale);
-        let usage = capture.consumed_absorbs.entry(caster).or_default();
         let points = f64::from(amount);
+        *capture
+            .consumed_absorbs_by_spell
+            .entry((caster, spell_id))
+            .or_default() += points;
+        let usage = capture.consumed_absorbs.entry(caster).or_default();
         usage.total += points;
         match scale {
             Some(scale) if scale == 1.0 => {}

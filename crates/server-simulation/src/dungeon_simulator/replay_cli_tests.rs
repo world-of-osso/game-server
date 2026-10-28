@@ -21,7 +21,14 @@ fn native_replay_cli_driver() {
                 .parse()
                 .unwrap();
             let seed = std::env::var("HEALER_TANK_SEED").unwrap().parse().unwrap();
-            super::tank_replay::replay_simc(spec.parse().unwrap(), Path::new(&path), duration, seed)
+            let healing = std::env::var("HEALER_TANK_EXTERNAL_HEALING").unwrap_or_default() == "1";
+            super::tank_replay::replay_simc_with_healing(
+                spec.parse().unwrap(),
+                Path::new(&path),
+                duration,
+                seed,
+                healing,
+            )
         }
         ("recorded", "65" | "66") => {
             let intake: Intake = serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap();
