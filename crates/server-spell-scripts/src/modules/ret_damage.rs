@@ -320,6 +320,19 @@ fn extend_truths_wake(world: &mut World, caster: Entity, target: Entity) {
     }
 }
 
+// SimC76f8118 sc_paladin.hpp1288–1295 excludes Truth's Wake itself
+// from its Burn to Ash target bonus while preserving the other DoTs' bonus.
+fn truths_wake_self_multiplier(world: &World, ctx: &EffectCtx, target: Entity, periodic: bool) -> f32 {
+    if !periodic || ctx.spell.id != TRUTHS_WAKE {
+        return 1.0;
+    }
+    world.get::<ActiveAuras>(target).and_then(|auras| {
+        auras.iter().find(|aura| aura.spell_id == TRUTHS_WAKE && aura.caster == ctx.caster)
+            .and_then(|aura| aura.effects.iter().find(|effect| effect.index == 4)
+                .map(|effect| 1.0 / (1.0 + effect.amount * aura.stack_multiplier() / 100.0)))
+    }).unwrap_or(1.0)
+}
+
 fn wrath_mastery_factor(world: &World, caster: Entity) -> f32 {
     1.0 + script_effect_value(world, caster, HIGHLORDS_WRATH, 2)
         / 100.0
@@ -346,7 +359,8 @@ fn effect_affects(source: &SpellInfo, index: u8, spell: &SpellInfo) -> bool {
 /// sc_paladin.hpp1258–1271: replace the native mastery factor, never stack a
 /// second base mastery multiplier on already-whitelisted Final Verdict/Blade.
 fn damage_multiplier(world: &World, ctx: &EffectCtx, target: Entity, periodic: bool) -> f32 {
-    let mut multiplier = mastery_multiplier(world, ctx, periodic);
+    let mut multiplier = mastery_multiplier(world, ctx, periodic)
+        * truths_wake_self_multiplier(world, ctx, target, periodic);
     if ctx.spell.id == LIGHT_WITHIN && ctx.spell.cast_primary_target == Some(target) {
         multiplier *= 1.0 + script_effect_value(world, ctx.caster, LIGHT_WITHIN_TALENT, 0) / 100.0;
     }
