@@ -59,6 +59,7 @@ pub(super) fn prepare_application(
     match new.spell_id {
         IGNORE_PAIN => accumulate_ignore_pain(world, target, new),
         HOLY_BULWARK_ABSORB => accumulate_holy_bulwark(world, target, new),
+        77535 => accumulate_blood_shield(world, target, new),
         SHIELD_BLOCK => carry_duration(world, target, new, DurationCarry::Extend),
         SHIELD_OF_THE_RIGHTEOUS => {
             carry_duration(world, target, new, DurationCarry::CappedExtend(3));
@@ -360,6 +361,36 @@ fn accumulate_holy_bulwark(world: &World, target: Entity, new: &mut AuraInstance
     let max_health = world
         .get::<Health>(target)
         .expect("living Holy Bulwark target")
+        .max;
+    let previous = previous(world, target, new)
+        .and_then(|old| {
+            old.effects
+                .iter()
+                .find(|effect| effect.index == 0)
+                .map(|effect| effect.absorb_remaining)
+        })
+        .unwrap_or(0.0);
+    if let Some(shield) = new.effects.iter_mut().find(|effect| effect.index == 0) {
+        shield.absorb_remaining =
+            (shield.absorb_remaining + previous).min(max_health * cap_percent / 100.0);
+    }
+}
+
+/// SimC76f8118 sc_death_knight.cpp6952–6983: add unpaid Blood Shield,
+/// capped by the native mastery health percentage.
+fn accumulate_blood_shield(world: &World, target: Entity, new: &mut AuraInstance) {
+    let cap_percent = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(77513)
+        .expect("Blood Shield mastery")
+        .effects
+        .iter()
+        .find(|effect| effect.index == 2)
+        .expect("Blood Shield cap")
+        .base_points;
+    let max_health = world
+        .get::<Health>(target)
+        .expect("living Blood Shield target")
         .max;
     let previous = previous(world, target, new)
         .and_then(|old| {

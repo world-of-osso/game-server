@@ -352,6 +352,102 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "requires canonical world database and MID2 Blood inputs"]
+    fn blood_death_strike_heals_and_creates_real_mastery_shield() {
+        use server::test_support::healer_intake::{Hit, HitKind};
+        let _seed = crate::random::seed_scope(70448);
+        let mut run = super::super::prepare_registered_player(250, 1).unwrap();
+        let actor = run.actor;
+        let target = run.targets[0];
+        super::super::engage(&mut run);
+        for _ in 0..4 {
+            run.app.update();
+        }
+        let max = run
+            .app
+            .world()
+            .get::<shared::components::Health>(actor)
+            .unwrap()
+            .max;
+        let hit = Hit {
+            tick: 0,
+            source_guid: 0,
+            pack: 0,
+            target_slot: 0,
+            school: 1,
+            raw: max * 0.7,
+            level_scaling_factor: 1.0,
+            kind: HitKind::Melee {
+                hand: 0,
+                outcome: "Hit".into(),
+                level_difference: 0,
+                critical_multiplier: 1.0,
+                weapon_speed: 2.0,
+            },
+        };
+        crate::combat::replay_healer_hit(run.app.world_mut(), target, actor, &hit).unwrap();
+        let before = run
+            .app
+            .world()
+            .get::<shared::components::Health>(actor)
+            .unwrap()
+            .current;
+        let current_max = run
+            .app
+            .world()
+            .get::<shared::components::Health>(actor)
+            .unwrap()
+            .max;
+        assert!(
+            before < current_max,
+            "incoming hit must hurt: current={before} max={current_max}"
+        );
+        for _ in 0..3 {
+            crate::auras::apply_aura(
+                run.app.world_mut(),
+                &crate::auras::AuraApplication {
+                    caster: actor,
+                    target: actor,
+                    spell_id: 273947,
+                    effect_mask: u32::MAX,
+                    source: crate::auras::AuraSource::Cast,
+                },
+            );
+        }
+        crate::spell_cast::powers::change_power(
+            run.app.world_mut(),
+            actor,
+            shared::components::PowerType::RunicPower,
+            1000.0,
+        );
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 49998, Some(target), false)
+            .unwrap();
+        for _ in 0..4 {
+            run.app.update();
+        }
+        let after = run
+            .app
+            .world()
+            .get::<shared::components::Health>(actor)
+            .unwrap()
+            .current;
+        assert!(after > before, "landed Death Strike must heal the caster");
+        assert!(
+            !crate::auras::has_aura(run.app.world(), actor, 273947),
+            "Death Strike must consume Hemostasis after healing"
+        );
+        assert!(
+            crate::auras::has_aura(run.app.world(), actor, 77535),
+            "Blood mastery must create a shield"
+        );
+        let (_, absorbed) = crate::auras::absorb_damage(run.app.world_mut(), actor, 1, max);
+        assert!(
+            absorbed > 0.0 && absorbed <= max * 0.5,
+            "actual physical damage must consume capped Blood Shield: {absorbed}"
+        );
+    }
+
+    #[test]
     #[ignore = "requires canonical world database, MID2 Blood inputs and SimC tank trace"]
     fn blood_replays_mid2_tank_dummy_with_literal_rotation() {
         let trace =
