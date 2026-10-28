@@ -844,20 +844,29 @@ fn spell_attack_type(spell: &SpellInfo) -> WeaponAttackType {
     }
 }
 
-/// One main-hand weapon hit. A creature (no `CharacterStats`) rolls its own weapon
-/// damage (`combat::creature_weapon_damage`, Unit::CalculateDamage).
-fn weapon_hit(world: &World, caster: Entity, normalized: bool) -> f32 {
+/// One spell-selected weapon hit. A creature (no `CharacterStats`) rolls its own
+/// weapon damage (`combat::creature_weapon_damage`, Unit::CalculateDamage).
+fn weapon_hit(world: &World, caster: Entity, spell: &SpellInfo, normalized: bool) -> f32 {
     if world.get::<CharacterStats>(caster).is_none() && world.get::<Npc>(caster).is_some() {
         return crate::combat::creature_weapon_damage(&UnitScaling::of(world, caster));
     }
     let (_, attack_power) = power_stats(world, caster, false);
-    let weapon = world
-        .get::<CharacterStats>(caster)
-        .map_or(WeaponDamage::UNARMED, |stats| stats.main_hand);
+    let off_hand = matches!(spell_attack_type(spell), WeaponAttackType::OffHand);
+    let weapon = match world.get::<CharacterStats>(caster) {
+        Some(stats) if off_hand => {
+            let Some(weapon) = stats.off_hand else {
+                return 0.0;
+            };
+            weapon
+        }
+        Some(stats) => stats.main_hand,
+        None => WeaponDamage::UNARMED,
+    };
     let form = crate::auras::shapeshift::attack_timing(world, caster);
     let (minimum, maximum, speed) = crate::melee::weapon_damage_terms(&weapon, normalized, form);
     let roll = minimum + rand::random::<f32>() * (maximum - minimum);
-    roll + attack_power / crate::melee::ATTACK_POWER_PER_DPS * speed
+    let amount = roll + attack_power / crate::melee::ATTACK_POWER_PER_DPS * speed;
+    if off_hand { amount * 0.5 } else { amount }
 }
 
 /// `amount` × (1 + a uniform roll in ±`variance` / 2) (SpellEffectInfo::CalcValue,
@@ -1433,16 +1442,16 @@ fn damage_from_max_health_pct(
 /// 58 WEAPON_DAMAGE and 121 NORMALIZED_WEAPON_DMG: weapon hit + BasePoints.
 fn weapon_damage(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target: Entity) {
     let normalized = effect.effect == EFFECT_NORMALIZED_WEAPON_DMG;
-    let base =
-        (weapon_hit(world, ctx.caster, normalized) + effect.base_points) * ctx.chain_multiplier;
+    let base = (weapon_hit(world, ctx.caster, ctx.spell, normalized) + effect.base_points)
+        * ctx.chain_multiplier;
     let (amount, crit) = with_damage_crit(world, ctx.caster, target, ctx.spell, base);
     deal_effect_damage(world, ctx, effect, target, amount, crit, false);
 }
 
 /// 31 WEAPON_PERCENT_DAMAGE: BasePoints% of a weapon hit.
 fn weapon_percent_damage(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target: Entity) {
-    let base =
-        weapon_hit(world, ctx.caster, false) * effect.base_points / 100.0 * ctx.chain_multiplier;
+    let base = weapon_hit(world, ctx.caster, ctx.spell, false) * effect.base_points / 100.0
+        * ctx.chain_multiplier;
     let (amount, crit) = with_damage_crit(world, ctx.caster, target, ctx.spell, base);
     deal_effect_damage(world, ctx, effect, target, amount, crit, false);
 }
