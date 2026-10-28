@@ -367,3 +367,91 @@ fn fury_surge_follows_raging_and_crushing_resets_only_when_selected() {
         }
     }
 }
+
+#[test]
+#[ignore = "requires exact Fury72 native player profile"]
+fn fury_rampaging_berserker_changes_paid_cost_and_hit_only_during_recklessness() {
+    use super::literal_rotation::execution::{Execution, execute};
+    use crate::spell_cast::powers::PowerPools;
+    use shared::components::PowerType;
+    fn probe(selected: bool, reckless: bool) -> (f32, i32) {
+        let _seed = crate::random::seed_scope(70_448);
+        let mut run = prepare_measurement(72, 1).unwrap();
+        engage(&mut run);
+        let actor = run.actor;
+        let target = run.targets[0];
+        assert!(crate::auras::has_aura(run.app.world(), actor, 1269309));
+        crate::auras::remove_auras(
+            run.app.world_mut(),
+            actor,
+            crate::auras::RemoveReason::Consumed,
+            |aura| aura.spell_id == 392792 || (!selected && aura.spell_id == 1269309),
+        );
+        if reckless {
+            crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 1719, Some(actor), 1);
+        }
+        run.app
+            .world_mut()
+            .get_mut::<CharacterStats>(actor)
+            .unwrap()
+            .crit_pct = -1000.0;
+        run.app
+            .world_mut()
+            .get_mut::<PowerPools>(actor)
+            .unwrap()
+            .get_mut(PowerType::Rage)
+            .unwrap()
+            .current = 1000.0;
+        run.app
+            .world_mut()
+            .resource_mut::<ObservedCombatEvents>()
+            .0
+            .clear();
+        execute(
+            run.app.world_mut(),
+            actor,
+            Execution::Spell(184367, target, Some(target)),
+        )
+        .unwrap();
+        let remaining = run
+            .app
+            .world()
+            .get::<PowerPools>(actor)
+            .unwrap()
+            .get(PowerType::Rage)
+            .unwrap()
+            .current;
+        for _ in 0..40 {
+            run.app.update();
+        }
+        let hit = run
+            .app
+            .world()
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .find(|e| {
+                e.source == Some(actor.to_bits())
+                    && e.spell_id == Some(201363)
+                    && e.kind == CombatLogKind::Damage
+                    && e.amount > 0
+            })
+            .expect("native final Rampage hit")
+            .amount;
+        (1000.0 - remaining, hit)
+    }
+    let ordinary = probe(false, false);
+    let talent_only = probe(true, false);
+    let reckless_only = probe(false, true);
+    let both = probe(true, true);
+    assert_eq!(ordinary.0, 800.0);
+    assert_eq!(talent_only.0, 800.0);
+    assert_eq!(reckless_only.0, 800.0);
+    assert_eq!(both.0, 500.0);
+    assert!(
+        (both.1 as f32 / reckless_only.1 as f32 - 1.10).abs() < 0.01,
+        "native hit selected={} unselected={}",
+        both.1,
+        reckless_only.1
+    );
+}
