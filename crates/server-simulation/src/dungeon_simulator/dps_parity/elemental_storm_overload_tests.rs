@@ -4,6 +4,53 @@ use crate::auras::RemoveReason;
 use crate::spell_cast::test_harness::ObservedCombatEvents;
 use shared::protocol::CombatLogKind;
 
+#[test]
+#[ignore = "requires native Elemental262 profile and world data"]
+fn elemental_chain_overload_actual_crit_matches_simc_base_snapshot() {
+    use crate::spell_cast::effects::factor_capture::FactorCapture;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = fixture();
+    run.app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(run.actor)
+        .unwrap()
+        .crit_pct = 100.0;
+    run.app.insert_resource(FactorCapture::new(
+        run.actor,
+        run.targets[0],
+        45297,
+        "chain_lightning_overload",
+        1,
+    ));
+    assert!(crate::spell_cast::try_cast_triggered(
+        run.app.world_mut(),
+        run.actor,
+        45297,
+        Some(run.targets[0]),
+        1
+    ));
+    settle(&mut run);
+    let capture = run.app.world().resource::<FactorCapture>().export();
+    let event = capture["events"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|event| event["event"] == "direct_amount" && event["spell_id"] == 45297)
+        .unwrap();
+    let crit = event["applied_multipliers"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|factor| factor["factor"] == "critical_damage")
+        .unwrap()["value"]
+        .as_f64()
+        .unwrap();
+    assert!(
+        (crit - 3.300953).abs() < 0.005,
+        "actual native critical factor {crit} versus SimC base snapshot 3.300953"
+    );
+}
+
 fn sample(spell: u32, retain_stormkeeper: bool) -> (f64, f64) {
     let _seed = crate::random::seed_scope(70448);
     let mut run = fixture();
