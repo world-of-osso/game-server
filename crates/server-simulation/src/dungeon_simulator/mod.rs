@@ -2,6 +2,7 @@
 mod batch;
 mod campaign;
 mod catalogs;
+mod chain_heal_target_tests;
 mod diagnostics;
 pub(crate) mod dps_parity;
 mod graph;

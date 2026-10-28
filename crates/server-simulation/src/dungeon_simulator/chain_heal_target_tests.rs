@@ -1,5 +1,5 @@
 //! Native target45 chain-heal selection on Merithra's Blessing.
-use super::test_harness::{harness, spawn_player};
+use crate::spell_cast::test_harness::{harness, spawn_player};
 use shared::components::Health;
 use shared::protocol::CombatLogKind;
 
@@ -24,6 +24,8 @@ fn target45_heals_friendly_primary_and_jumps_to_greatest_deficits() {
         h.app.world_mut().get_mut::<Health>(unit).unwrap().current = current;
     }
     h.cast_and_deliver(1256581, Some(primary));
+    // Native projectile speed delays the farthest jump beyond the cast frame.
+    h.advance(40);
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
     let targets: Vec<_> = h
         .inbox
