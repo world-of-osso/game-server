@@ -226,6 +226,58 @@ fn dk252_festering_scythe_uses_parent_strike_gcd() {
 
 #[test]
 #[ignore = "requires native252 profile/traits and player actor"]
+fn dk252_opener_executes_off_gcd_actions_in_one_tick() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_measurement(252, 3).unwrap();
+    engage(&mut run);
+    let mut seen = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .len();
+    let mut batches = Vec::new();
+    advance_combat_observed(&mut run, |run| {
+        let events = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0;
+        let casts: Vec<_> = events
+            .iter()
+            .skip(seen)
+            .filter(|event| {
+                event.source == Some(run.actor.to_bits())
+                    && event.kind == CombatLogKind::CastSuccess
+            })
+            .filter_map(|event| event.spell_id)
+            .collect();
+        seen = events.len();
+        if !casts.is_empty() {
+            batches.push(casts);
+        }
+    })
+    .unwrap();
+    let batch = batches
+        .iter()
+        .find(|batch| batch.contains(&1233448))
+        .expect("the real opener must cast Dark Transformation");
+    let positions: Vec<_> = [26297, 1236994, 1233448, 1247378]
+        .iter()
+        .map(|spell| batch.iter().position(|id| id == spell))
+        .collect();
+    assert!(
+        positions.iter().all(Option::is_some),
+        "Berserking, potion, Transformation, and Putrefy must share a tick: {batch:?}"
+    );
+    assert!(
+        positions.windows(2).all(|pair| pair[0] < pair[1]),
+        "opener actions must retain SimC order: {batch:?}"
+    );
+}
+
+#[test]
+#[ignore = "requires native252 profile/traits and player actor"]
 fn dk252_dark_transformation_does_not_start_a_gcd() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(252, 1).unwrap();
