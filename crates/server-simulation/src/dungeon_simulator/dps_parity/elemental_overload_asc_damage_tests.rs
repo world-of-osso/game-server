@@ -3,7 +3,7 @@ use super::elemental_mechanics_tests::{fixture, own_aura, settle};
 use crate::spell_cast::test_harness::ObservedCombatEvents;
 use shared::protocol::CombatLogKind;
 
-fn sample(ascendance: bool) -> (f64, f64) {
+fn sample(ascendance: bool) -> (f64, f64, f64) {
     let _seed = crate::random::seed_scope(70448);
     let mut run = fixture();
     crate::spell_cast::creature_cast(
@@ -42,6 +42,8 @@ fn sample(ascendance: bool) -> (f64, f64) {
             );
         }
     }
+    let mastery = own_aura(&run, 168534).unwrap().effects.iter()
+        .find(|effect| effect.index == 1).unwrap().amount as f64;
     run.app
         .world_mut()
         .resource_mut::<ObservedCombatEvents>()
@@ -79,14 +81,15 @@ fn sample(ascendance: bool) -> (f64, f64) {
         hits.len() >= 20,
         "native noncritical Lightning Overload sample"
     );
-    (hits.iter().sum::<f64>() / hits.len() as f64, percent)
+    (hits.iter().sum::<f64>() / hits.len() as f64, percent, mastery)
 }
 
 #[test]
 #[ignore = "requires private262 native DB/profile"]
 fn elemental_overload_ascendance_uses_native_damage_bonus() {
-    let (ordinary, _) = sample(false);
-    let (empowered, percent) = sample(true);
+    let (ordinary, _, ordinary_mastery) = sample(false);
+    let (empowered, percent, ascended_mastery) = sample(true);
+    assert_eq!(ordinary_mastery, ascended_mastery, "Ascendance must not also change overload mastery");
     let ratio = empowered / ordinary;
     let expected = 1.0 + percent / 100.0;
     assert!(

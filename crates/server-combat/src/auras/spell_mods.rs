@@ -89,6 +89,11 @@ fn is_pct(aura_type: u32) -> bool {
 
 /// Whether a spell-mod effect of `aura` applies to `spell`.
 pub(super) fn affects(aura: &AuraInstance, effect: &AuraEffectState, spell: &SpellInfo) -> bool {
+    // SimC76f8118 sc_shaman.cpp4848–4850/4884–4891 applies Ascendance
+    // directly to overload damage, not again to the mastery effect it reads.
+    if aura.spell_id == 1219480 && effect.index == 7 && spell.id == 168534 {
+        return false;
+    }
     match effect.aura_type {
         ADD_FLAT_MODIFIER | ADD_PCT_MODIFIER => class_mask_affects(aura, effect, spell),
         _ => u32::try_from(effect.misc_values[1])
