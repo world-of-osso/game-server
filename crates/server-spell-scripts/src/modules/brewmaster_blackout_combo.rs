@@ -16,17 +16,19 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
 ];
 
 fn register(scripts: &mut AuraScripts) {
-    scripts.0.insert(
-        196736,
-        AuraScript {
-            check_proc: Some(blackout_combo_is_cast_driven),
-            ..Default::default()
-        },
-    );
+    for spell in [196736, 228563] {
+        scripts.0.insert(
+            spell,
+            AuraScript {
+                check_proc: Some(blackout_combo_is_cast_driven),
+                ..Default::default()
+            },
+        );
+    }
 }
 
-// The catalog has no proc family or effect class mask. Its broad melee proc
-// otherwise re-grants the buff on Keg Smash and Tiger Palm after consumption.
+// The unmasked catalog procs otherwise grant or consume Combo on unrelated
+// events. SimC sc_monk.cpp865,2606 consumes it only on Tiger Palm or Keg Smash.
 fn blackout_combo_is_cast_driven(_: &World, _: &AuraInstance, _: &AuraEvent) -> bool {
     false
 }
