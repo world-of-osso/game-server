@@ -569,6 +569,23 @@ fn cast_ground_pulse(world: &mut World, entity: Entity, pulses: &GroundPulses) {
         });
         units.truncate(pulses.cap);
     }
+    // SimC76f8118 sc_warrior.cpp5820–5857: Protection earns the native
+    // Ravager resource spell once per pulse with targets, not once per target.
+    if pulses.root == RAVAGER
+        && !units.is_empty()
+        && world
+            .get::<shared::components::ActiveSpec>(pulses.caster)
+            .is_some_and(|spec| spec.0 == 73)
+        && !spell_cast::try_cast_triggered(
+            world,
+            pulses.caster,
+            334934,
+            Some(pulses.caster),
+            pulses.depth,
+        )
+    {
+        warn!(caster = ?pulses.caster, "Ravager Rage energize refused");
+    }
     let mut child = world
         .resource::<SpellStore>()
         .get(pulses.child)
