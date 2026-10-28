@@ -926,9 +926,6 @@ pub(crate) fn execute_row(
     let Execution::Spell(spell, unit, primary) = execution else {
         return Err("empower_to requires an ordinary native spell".into());
     };
-    if world.get::<shared::components::Player>(actor).is_some() {
-        return Err("player literal empower dispatch is not yet qualified".into());
-    }
     let metadata = world
         .resource::<crate::spell_info::SpellStore>()
         .get(spell)
