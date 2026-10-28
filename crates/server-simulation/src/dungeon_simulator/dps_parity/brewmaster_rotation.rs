@@ -525,6 +525,31 @@ mod tests {
 
     #[test]
     #[ignore = "requires canonical world database and SimC tank trace"]
+    fn replay_counts_stagger_self_damage_as_damage_taken() {
+        let trace = std::env::var("HEALER_TANK_SIMC_TRACE").expect("SimC trace required");
+        let report = super::super::super::tank_replay::replay_simc_with_healing(
+            268,
+            std::path::Path::new(&trace),
+            300,
+            70448,
+            true,
+        )
+        .expect("Brewmaster replay");
+        let self_damage = report["self_periodic_damage_taken"].as_f64().unwrap();
+        let taken = report["damage_taken"].as_f64().unwrap();
+        assert!(
+            self_damage > 0.0,
+            "the real Stagger ticks must be reported: {report}"
+        );
+        assert!(
+            taken > self_damage,
+            "damage taken includes dummy hits and self ticks: {report}"
+        );
+        assert!(report["largest_spike"].as_f64().unwrap() > 0.0);
+    }
+
+    #[test]
+    #[ignore = "requires canonical world database and SimC tank trace"]
     fn replays_brewmaster_dummy_pressure() {
         let trace = std::env::var("HEALER_TANK_SIMC_TRACE").expect("SimC trace required");
         let report = super::super::super::tank_replay::replay_simc(
