@@ -688,6 +688,25 @@ mod tests {
     }
     #[test]
     #[ignore = "requires canonical MID2 Protection profile"]
+    fn protection_shield_block_uses_two_native_charges() {
+        let mut run = super::super::prepare_measurement(73, 1).unwrap();
+        super::super::engage(&mut run);
+        let world = run.app.world();
+        let spell = world
+            .resource::<crate::spell_info::SpellStore>()
+            .get(2565)
+            .unwrap();
+        let category = spell.categories.as_ref().unwrap();
+        let mods = crate::auras::charge_mods(
+            world,
+            run.actor,
+            category.charge_category,
+            category.charge_type_mask,
+        );
+        assert_eq!(category.max_charges as i32 + mods.extra_charges, 2);
+    }
+    #[test]
+    #[ignore = "requires canonical MID2 Protection profile"]
     fn protection_shield_charge_extends_modified_shield_block_duration() {
         use super::super::literal_rotation::execution::{Execution, execute};
         let mut run = super::super::prepare_measurement(73, 1).unwrap();
