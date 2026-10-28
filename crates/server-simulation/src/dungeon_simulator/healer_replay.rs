@@ -6,15 +6,15 @@ use shared::components::{Health, Position};
 use std::collections::BTreeMap;
 
 #[derive(Resource, Default)]
-struct PendingHits {
-    hits: Vec<(Entity, Entity, Hit)>,
-    error: Option<String>,
+pub(super) struct PendingHits {
+    pub(super) hits: Vec<(Entity, Entity, Hit)>,
+    pub(super) error: Option<String>,
     manual_raw_receipts: usize,
     replayed_hits: usize,
     non_unit_hits: usize,
 }
 
-fn deliver_hits(world: &mut World) {
+pub(super) fn deliver_hits(world: &mut World) {
     let hits = std::mem::take(&mut world.resource_mut::<PendingHits>().hits);
     for (source, target, hit) in hits {
         let before = world.resource::<super::healer_intake::Capture>().hits.len();
@@ -50,7 +50,7 @@ fn deliver_hits(world: &mut World) {
     }
 }
 
-fn freeze_sources(world: &mut World, actors: &BTreeMap<u32, Entity>) {
+pub(super) fn freeze_sources(world: &mut World, actors: &BTreeMap<u32, Entity>) {
     for &source in actors.values() {
         // The recorded clock, not a second autonomous dungeon, owns enemy actions.
         // Keep native identity/scaling/armor/auras and all recipient damage handlers.

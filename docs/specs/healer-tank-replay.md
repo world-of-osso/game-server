@@ -9,7 +9,7 @@ Replay recorded incoming damage in the native server combat simulation to compar
 - [ ] Use `/home/osso/Projects/world-of-osso/game-server/data/world.db` for every measurement.
 - [ ] Replay hits against a dummy party through native combat, with Holy Paladin (65) as the first healer and Protection Paladin (66) as the first tank. Extend the same harness to every healer and tank specialization and their spells. The initial Holy Paladin benchmark uses its native learned Holy Light and Flash of Light; this is not complete spell coverage.
 - [ ] For each healer report effective HPS, raw HPS, overheal percentage, per-spell HPS, mana over time, and time to first party death. Sample mana at one-second intervals. Use the recorded combat duration for HPS and report no death as null.
-- [ ] For each tank report raw and mitigated damage taken and mitigation percentage, self-healing and absorbs per second, time to death without a healer, active-mitigation uptime, and largest short-window damage spike.
+- [ ] For each tank report raw and mitigated damage taken and mitigation percentage, self-healing and consumed absorbs per second, time to death without a healer, active-mitigation uptime, and largest five-second damage spike. Stop the tank measurement at death; report no death as null. For the initial Protection Paladin, active mitigation is Shield of the Righteous.
 - [ ] Print report tables with `scripts/healer_tank_replay.py`.
 
 ## How it works
@@ -22,12 +22,14 @@ Replay recorded incoming damage in the native server combat simulation to compar
 - `crates/server-simulation/src/simc_tank_timeline.rs`: SimC tank-dummy debug trace reader.
 - `crates/server-combat/src/followers/simulator/healer_profiles.rs`: benchmark-only healer configuration and initial Holy Paladin decisions.
 - `crates/server-simulation/src/dungeon_simulator/healer_metrics.rs` and `healer_replay.rs`: native healing receipts and recorded-timeline metrics.
+- `crates/server-simulation/src/dungeon_simulator/tank_replay.rs`: isolated native tank replay and metrics.
 
 ## Tests asserting this spec
 
 - `crates/server-simulation/src/healer_tank_timeline.rs`: concrete timeline loader test.
 - `crates/server-simulation/src/simc_tank_timeline.rs`: SimC dummy raw damage trace test.
 - `crates/server-simulation/src/dungeon_simulator/holy_paladin_replay_tests.rs`: native Holy Paladin replay of recorded incoming damage.
+- `crates/server-simulation/src/dungeon_simulator/tank_replay_tests.rs`: native Protection Paladin replay without a healer.
 
 ## Known gaps (current cycle)
 

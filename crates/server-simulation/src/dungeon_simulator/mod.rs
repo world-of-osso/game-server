@@ -16,6 +16,8 @@ mod healer_report;
 mod holy_paladin_replay_tests;
 mod movement;
 mod runtime;
+mod tank_replay;
+mod tank_replay_tests;
 pub(crate) use graph::Space;
 
 #[test]
