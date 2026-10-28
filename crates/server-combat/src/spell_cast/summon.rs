@@ -1146,10 +1146,17 @@ fn finish_retiring_summons(world: &mut World, now: f64) {
     }
 }
 
+/// True when an actual Imp is retiring through the ordinary Implosion, not isolated exhaustion.
+pub fn is_imploded(world: &World, entity: Entity) -> bool {
+    super::guardian::implosion::is_imploded(world, entity)
+}
+
 pub fn despawn_summon(world: &mut World, entity: Entity) {
     if world.get::<RetiringSummon>(entity).is_some() {
         return;
     }
+    let registry = *world.resource::<super::script_registry::SpellScriptRegistry>();
+    registry.summon_removed(world, entity);
     super::scripts::elemental_ancestors::on_despawn(world, entity);
     if let Some(summon) = world.get::<SummonedCreature>(entity) {
         if summon.spell_id == DANCING_RUNE_WEAPON {

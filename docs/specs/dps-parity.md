@@ -1191,3 +1191,6 @@ Selected Insidious Ire earns its temporary channel bonus when one target has all
 - Spec269 executes the pinned Windwalker action rows on native player and follower fixtures. Player measurements retain player identity and use the literal driver rather than AssistedCombat diagnostics.
 
 - Windwalker Tigereye Brew starts combat with its native initial stacks, earns one stack per native Chi threshold from qualifying casts, and transfers up to the native cap into Zenith critical chance (`sc_monk.cpp393–406,4583–4595,7170–7183`). Out-of-combat regeneration remains unimplemented.
+### Hellbent Commander
+
+- Hellbent Commander reconciles native1281559 stacks to the eligible live demon roster on the pinned randomized 5.25s heartbeat. Actual summon and demise events retain the pinned bug-model ordering, including ordinary Hand Imp and alternate Imp Implosion differences; Diabolist demons are excluded (`sc_warlock.cpp303–338`; `sc_warlock_pets.cpp203–226,992–1006,1310–1341`).
