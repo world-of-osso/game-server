@@ -181,6 +181,7 @@ register_modules! {
     fury_spite: (722, "modules/fury_spite.rs"),
     germination: (200, "modules/germination.rs"),
     giantkiller: (170, "modules/giantkiller.rs"),
+    enhancement_tempest_aoe: (2633, "modules/enhancement_tempest_aoe.rs"),
     guardian_impacts: (1000, "modules/guardian_impacts.rs"),
     havoc: (150, "modules/havoc.rs"),
     havoc_children: (5771, "modules/havoc/children.rs"),
