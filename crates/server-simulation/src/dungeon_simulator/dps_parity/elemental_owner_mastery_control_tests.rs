@@ -15,14 +15,22 @@ fn elemental_late_family_modifiers_recalculate_fury_and_overload_mastery() {
             .effects.iter().find(|effect| effect.index == index).unwrap().amount
     };
     assert_eq!(amount(&run, 60188, 0), 105.0);
-    assert_eq!(amount(&run, 168534, 1), 31.25);
-    assert!((overload_effectiveness(&mut run) - 0.3125).abs() < 0.001);
+    assert_eq!(amount(&run, 168534, 1), 34.375);
+    assert!((overload_effectiveness(&mut run) - 0.34375).abs() < 0.001);
     crate::auras::remove_auras(run.app.world_mut(), run.actor, crate::auras::RemoveReason::Cancelled,
         |aura| aura.spell_id == 1270062);
     assert_eq!(amount(&run, 60188, 0), 75.0);
     crate::auras::remove_auras(run.app.world_mut(), run.actor, crate::auras::RemoveReason::Cancelled,
         |aura| aura.spell_id == 378193 || aura.spell_id == 382032);
     assert_eq!(amount(&run, 60188, 0), 50.0);
+    assert_eq!(amount(&run, 168534, 1), 27.5);
+    assert!((overload_effectiveness(&mut run) - 0.275).abs() < 0.001);
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        run.actor,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 1270061,
+    );
     assert_eq!(amount(&run, 168534, 1), 25.0);
     assert!((overload_effectiveness(&mut run) - 0.25).abs() < 0.001);
 }
