@@ -14,6 +14,8 @@ use combat::spell_info::{CastDamageRole, SpellInfo, SpellStore};
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::BeforeNativeOnCast(before_cast),
+    SpellScriptHook::SnapshotsModifier(blade_buff_modifier),
+    SpellScriptHook::BeforeDamageSnapshot(snapshot_triggered_blade),
     SpellScriptHook::PrepareStoredDamage(prepare_stored_damage),
     SpellScriptHook::ContextHit(context_hit),
     SpellScriptHook::EnemyContextHit(enemy_context_hit),
@@ -74,6 +76,18 @@ fn selected(world: &World, caster: Entity, talent: u32) -> bool {
                 .active_talent_spells()
                 .any(|spell| spell.spell_id == talent)
         })
+}
+
+fn blade_buff_modifier(spell: u32) -> bool {
+    matches!(spell, 406086 | 402916)
+}
+
+fn snapshot_triggered_blade(world: &World, caster: Entity, spell: &mut SpellInfo) {
+    if is_ret(world, caster) && spell.id == BLADE && spell.cast_charge_mods.is_none() {
+        // SimC76f8118 Ret393–430: even the triggered Blade consumes these
+        // modifiers after snapshotting their native Light Within-adjusted amounts.
+        spell.cast_charge_mods = Some(spell_mods::snapshot_charged_modifiers(world, caster, spell));
+    }
 }
 
 /// Called after admission, before native charged modifiers are consumed.
@@ -148,8 +162,8 @@ fn consume_art_of_war(world: &mut World, caster: Entity, spell: &SpellInfo) {
     let Some(instance) = instance else {
         return;
     };
-    // sc_paladin.cpp3921; buff.cpp2821–2868: even the zero-valued modifier
-    // consumes on Blade, with the native buff's independent consumption ICD.
+    // sc_paladin.cpp3921; buff.cpp2821–2868: consume one Art of War use
+    // with the native buff's independent consumption ICD.
     let Some(aura) = auras::procs::start_policy_proc(world, caster, instance) else {
         return;
     };
