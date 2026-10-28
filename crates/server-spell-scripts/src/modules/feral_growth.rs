@@ -5,7 +5,7 @@ use super::combat;
 use bevy::prelude::*;
 use combat::auras::ActiveAuras;
 use combat::random::Rng;
-use combat::spell_cast::{effects::EffectCtx, script_registry::SpellScriptHook};
+use combat::spell_cast::{effects::EffectCtx, script_registry::SpellScriptHook, targets};
 use shared::components::ActiveSpec;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
@@ -21,6 +21,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
         (THRIVING_GROWTH, 1),
         (THRIVING_GROWTH, 5),
         (GREEN_THUMB, 0),
+        (TWIN_SPROUTS, 0),
         (bursting::RAMPANCY, 0),
         (bursting::RAMPANCY, 2),
     ]),
@@ -28,6 +29,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
 const THRIVING_GROWTH: u32 = 439528;
 const GREEN_THUMB: u32 = 1270565;
 const BLOODSEEKER_VINES: u32 = 439531;
+const TWIN_SPROUTS: u32 = 440117;
 const THRESHOLD: f64 = 1000.0;
 const RANDOM_SCALE: f64 = 2.0;
 const SOURCES: &[(u32, u8)] = &[(1079, 0), (155722, 1)];
@@ -111,5 +113,38 @@ fn roll_growth(world: &mut World, ctx: &EffectCtx<'_>, target: Entity, _: f32, _
     };
     if advance_accumulator(world, ctx.caster, scale) {
         combat::spell_cast::cast_triggered(world, ctx.caster, BLOODSEEKER_VINES, Some(target), 1);
+        apply_twin_sprouts(world, ctx.caster, target);
     }
+}
+
+// SimC76f8118 sc_druid.cpp3989–4008: prefer an undotted other target;
+// if no other enemy exists, add a second stack to the original target.
+fn apply_twin_sprouts(world: &mut World, caster: Entity, target: Entity) {
+    let Some(chance) = owned_effect(world, caster, TWIN_SPROUTS, 0) else {
+        return;
+    };
+    if combat::random::thread_rng().gen_range(0.0..100.0) >= chance {
+        return;
+    }
+    let Some(center) = targets::position(world, caster) else {
+        return;
+    };
+    let Some(spell) = world.resource::<combat::spell_info::SpellStore>().get(BLOODSEEKER_VINES) else {
+        return;
+    };
+    let (_, radius) = targets::spell_range(spell, true);
+    let mut enemies = targets::area_units(world, caster, center, radius, targets::Relation::Enemy, 0);
+    enemies.retain(|&enemy| enemy != target);
+    let undotted: Vec<_> = enemies.iter().copied().filter(|&enemy| {
+        !world.get::<ActiveAuras>(enemy).is_some_and(|auras| auras.iter().any(|aura| {
+            aura.spell_id == BLOODSEEKER_VINES && aura.caster == caster
+        }))
+    }).collect();
+    let choices = if undotted.is_empty() { &enemies } else { &undotted };
+    let recipient = if choices.is_empty() {
+        target
+    } else {
+        choices[combat::random::thread_rng().gen_range(0..choices.len())]
+    };
+    combat::spell_cast::cast_triggered(world, caster, BLOODSEEKER_VINES, Some(recipient), 1);
 }
