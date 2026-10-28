@@ -293,10 +293,12 @@ fn roll_remaining_periodic(
             + (new_expiry - fresh.next_tick_at()) * 1000.0 / f64::from(fresh.period_ms))
         .max(0.0);
         if future > 0.0 {
-            let unpaid_budget = f64::from(prior.amount * old.stack_multiplier()) * unpaid;
             let fresh_ticks = f64::from(fresh_duration_ms) / f64::from(fresh.period_ms);
-            fresh.amount =
-                ((f64::from(fresh.amount) * fresh_ticks + unpaid_budget) / future) as f32;
+            let multiplier = ((unpaid * f64::from(prior.periodic_rolling_multiplier) + fresh_ticks)
+                / future) as f32;
+            fresh.periodic_rolling_multiplier = multiplier;
+            fresh.amount *= multiplier;
+            fresh.periodic_power_multiplier *= multiplier;
         }
     }
 }
