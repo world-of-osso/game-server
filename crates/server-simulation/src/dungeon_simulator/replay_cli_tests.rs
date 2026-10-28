@@ -74,7 +74,7 @@ fn cli_prints_a_real_protection_tank_report() {
 
 #[test]
 #[ignore = "runs the MID2 SimC dummy trace through the CLI"]
-fn cli_rejects_unregistered_simc_tank_without_reporting_a_baseline() {
+fn cli_prints_registered_simc_protection_report() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
     let trace = std::env::var("HEALER_TANK_SIMC_TRACE").expect("HEALER_TANK_SIMC_TRACE required");
     let output = std::process::Command::new("python3")
@@ -85,11 +85,21 @@ fn cli_rejects_unregistered_simc_tank_without_reporting_a_baseline() {
         .arg(std::env::current_exe().unwrap())
         .output()
         .unwrap();
-    assert!(!output.status.success());
-    let error = String::from_utf8(output.stderr).unwrap();
     assert!(
-        error.contains("NATIVE_LITERAL_DRIVER_UNAVAILABLE:66"),
-        "{error}"
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
     );
-    assert!(!String::from_utf8(output.stdout).unwrap().contains("| 66 |"));
+    let text = String::from_utf8(output.stdout).unwrap();
+    assert!(
+        text.contains("SimC tank dummy, MID2 level 90; rotation: registered_literal_simc."),
+        "{text}"
+    );
+    let row = text
+        .lines()
+        .find(|line| line.starts_with("| 66 |"))
+        .expect("tank report row");
+    let cells: Vec<_> = row.split('|').map(str::trim).collect();
+    assert!(cells[2].parse::<f64>().unwrap() > 100_000.0, "{row}");
+    assert!(cells[8].parse::<f64>().unwrap() > 0.0, "{row}");
 }

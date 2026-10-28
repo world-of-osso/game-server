@@ -64,6 +64,7 @@ spec_drivers! {
     62 => arcane_rotation,
     63 => fire_rotation,
     64 => frost_mage_rotation,
+    66 => protection_paladin_rotation,
     70 => ret_rotation,
     71 => arms_rotation,
     72 => fury_rotation,
@@ -328,6 +329,9 @@ fn prepare_measurement(spec_id: u32, count: usize) -> Result<Run, String> {
 
 /// Prepare only a registered literal player driver; never substitute a follower policy.
 pub(crate) fn prepare_registered_player(spec_id: u32, count: usize) -> Result<Run, String> {
+    if !DRIVERS.iter().any(|driver| driver.spec_id == spec_id) {
+        return Err(format!("NATIVE_LITERAL_DRIVER_UNAVAILABLE:{spec_id}"));
+    }
     let (profile, _) = read_reference(spec_id)?;
     require_mid2_profile(&profile)?;
     let identity = inputs::read_actor(&profile)?;
