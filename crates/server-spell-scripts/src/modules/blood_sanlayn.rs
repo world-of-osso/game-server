@@ -65,12 +65,20 @@ fn grant_gift(world: &mut World, caster: Entity, spell: &SpellInfo) {
     {
         return;
     }
-    let duration = spell
+    let base_duration = spell
         .misc
         .as_ref()
         .and_then(|misc| misc.duration)
         .expect("Blood cooldown duration")
         .duration_ms;
+    let duration = auras::spell_mods::modify(
+        world,
+        caster,
+        spell,
+        auras::SpellModOp::Duration,
+        base_duration as f32,
+    )
+    .round() as i32;
     spell_cast::cast_triggered_with_overrides(
         world,
         caster,

@@ -272,6 +272,30 @@ impl super::SpecDriver for Rotation {
 mod tests {
     #[test]
     #[ignore = "requires canonical world database and MID2 Blood inputs"]
+    fn blood_gift_duration_includes_everlasting_bond() {
+        let mut run = super::super::prepare_registered_player(250, 1).unwrap();
+        let actor = run.actor;
+        super::super::engage(&mut run);
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 49028, Some(actor), false)
+            .unwrap();
+        for _ in 0..190 {
+            run.app.update();
+        }
+        assert!(
+            crate::auras::has_aura(run.app.world(), actor, 434153),
+            "Everlasting Bond extends the Gift past eight seconds"
+        );
+        for _ in 0..70 {
+            run.app.update();
+        }
+        assert!(
+            !crate::auras::has_aura(run.app.world(), actor, 434153),
+            "Gift expires after the twelve-second weapon duration"
+        );
+    }
+
+    #[test]
+    #[ignore = "requires canonical world database and MID2 Blood inputs"]
     fn vampiric_strike_heals_blood_player_from_native_health_percentage() {
         use shared::components::Health;
         use shared::protocol::CombatLogKind;
