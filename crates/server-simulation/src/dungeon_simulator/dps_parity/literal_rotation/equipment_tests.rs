@@ -244,10 +244,16 @@ fn literal_equipment_devourer_gebbo_unset_default() {
 fn literal_equipment_devourer_buff_and_proc_duration_match() {
     let mut world = load_world();
     let actor = equip_reference_profile(&mut world, 1480);
-    let actual = read_facts(&world, actor, &[
-        "trinket.1.proc.any_dps.duration", "trinket.1.buff.any_dps.duration",
-        "trinket.2.proc.any_dps.duration", "trinket.2.buff.any_dps.duration",
-    ]);
+    let actual = read_facts(
+        &world,
+        actor,
+        &[
+            "trinket.1.proc.any_dps.duration",
+            "trinket.1.buff.any_dps.duration",
+            "trinket.2.proc.any_dps.duration",
+            "trinket.2.buff.any_dps.duration",
+        ],
+    );
     // SimC76f8118 unique_gear.cpp3750–3764,4288–4345 uses the same
     // item-stat-buff expression for both spellings. Native Flask lasts 15s.
     assert_eq!(actual[0], Ok(15.0));
@@ -768,4 +774,24 @@ fn literal_equipment_native_passive_zero_cooldown_and_unknown_operand_boundary()
             "unknown operand {name}"
         );
     }
+}
+
+#[test]
+#[ignore = "requires native Earthstrike trinket data"]
+fn literal_equipment_detects_actual_attack_power_buff() {
+    let mut world = load_world();
+    // Earthstrike21180 uses native spell25891, whose aura99 grants attack power.
+    let actor = equip(&mut world, 21180, 270173);
+    assert_eq!(
+        read_facts(
+            &world,
+            actor,
+            &[
+                "trinket.1.has_buff.attack_power",
+                "trinket.2.has_buff.attack_power",
+                "trinket.2.proc.any_dps.default_value"
+            ]
+        ),
+        vec![Ok(1.0), Ok(0.0), Ok(0.0)]
+    );
 }

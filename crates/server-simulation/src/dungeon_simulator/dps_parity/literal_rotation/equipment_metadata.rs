@@ -27,9 +27,11 @@ const UTILITY_RATINGS: u32 = (1 << 13) | (1 << 16) | (1 << 20);
 // unique_gear.cpp3776 takes max with0. Freightrunner1250533 likewise shows
 // the unset -DBL_MIN value in the pinned 1480 SimC debug output. This is NOT
 // the stat magnitude. Gebbo1292291 creates its six stat buffs without setting
-// defaults (unique_gear_midnight.cpp3666–3734).
+// defaults (unique_gear_midnight.cpp3666–3734). Guillotine1291728 creates
+// only a damage proc, not a stat buff (unique_gear_midnight.cpp6325–6380).
 const SIMC_UNSET_PROC_DEFAULT_DRIVERS: &[u32] = &[
-    1250533, 1256896, 1259293, 1260459, 1292291, 1295058, 1293316, 1295179, 1297760, 1297761, 1297911, 1297908,
+    1250533, 1256896, 1259293, 1260459, 1292291, 1295058, 1293316, 1295179, 1297760, 1297761,
+    1297911, 1297908, 1291728,
 ];
 
 #[derive(Clone, Default)]
@@ -177,7 +179,11 @@ fn direct_buffs(spell: &SpellInfo) -> Buffs {
             .and_then(|misc| misc.duration)
             .map_or(0.0, |row| f64::from(row.duration_ms.max(0)) / 1000.0)
     };
-    let spells = if stats.is_empty() { BTreeSet::new() } else { BTreeSet::from([spell.id]) };
+    let spells = if stats.is_empty() {
+        BTreeSet::new()
+    } else {
+        BTreeSet::from([spell.id])
+    };
     Buffs {
         spells,
         stats,
@@ -209,6 +215,8 @@ fn stat_names(effect: &SpellEffect) -> Vec<&'static str> {
             .map(|(_, name)| *name)
             .collect(),
         handlers::MOD_RATING => rating_names(effect.misc_values[0] as u32),
+        // SimC76f8118 buff.cpp3453–3455 classifies flat melee/ranged AP as attack_power.
+        99 | 124 => vec!["attack_power"],
         _ => Vec::new(),
     }
 }

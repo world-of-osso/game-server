@@ -303,7 +303,14 @@ fn stat_fact(metadata: &Metadata, name: &str) -> Result<f64, String> {
     }
     if !matches!(
         name,
-        "strength" | "agility" | "intellect" | "mastery" | "versatility" | "haste" | "crit"
+        "strength"
+            | "agility"
+            | "intellect"
+            | "mastery"
+            | "versatility"
+            | "haste"
+            | "crit"
+            | "attack_power"
     ) {
         return Err(format!("unknown native item buff stat {name}"));
     }
@@ -446,8 +453,15 @@ fn read_modifiers(
 fn read_proc_state(item: &Slot, field: &str, native: &NativeFacts<'_>) -> Result<f64, String> {
     // SimC76f8118 unique_gear.cpp3776–3788: a multi-buff trinket proxy
     // takes the maximum of its matching buffs; no matching native buff is zero.
-    let property = field.strip_prefix("proc.any_dps.").expect("registered item proc fact");
-    item.metadata.buff_spells.iter().try_fold(0.0_f64, |maximum, &spell| {
-        native.owned_buff_property(spell, property).map(|value| maximum.max(value))
-    })
+    let property = field
+        .strip_prefix("proc.any_dps.")
+        .expect("registered item proc fact");
+    item.metadata
+        .buff_spells
+        .iter()
+        .try_fold(0.0_f64, |maximum, &spell| {
+            native
+                .owned_buff_property(spell, property)
+                .map(|value| maximum.max(value))
+        })
 }
