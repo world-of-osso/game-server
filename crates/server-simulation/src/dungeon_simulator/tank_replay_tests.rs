@@ -108,7 +108,7 @@ fn simc_dummy_strike_does_not_trigger_auto_attack_procs() {
 fn protection_consecration_field_persists_after_cast() {
     let mut run = super::dps_parity::prepare_registered_player(66, 1).unwrap();
     super::dps_parity::engage(&mut run);
-    for _ in 0..40 {
+    for _ in 0..200 {
         run.app.update();
     }
     let actor = run.actor;
