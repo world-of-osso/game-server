@@ -62,6 +62,10 @@ An NPC chase without a walking path must hold its actual position and use the ex
 
 Evading actors must travel frozen edges at their native speed to the native home destination (explicit HomePosition, then escort home, then spawn). Arrival must leave Returning, stop motion, restore home facing and run the same native mana/health/addon/pose/JustReachedHome behavior as production; regenerating actors do not receive an invented instant full heal. No runtime physical-navigation system may be installed to satisfy arrival.
 
+## Native addon auras
+
+Apply source creature and template addon auras at spawn and on actual home return through the production addon system. Preserve native evade removal and restoration.
+
 ## Native pet utility
 
 Production `HunterPetPlugin` and `PetControlPlugin` load native pet family/specialization/learned-spell definitions and run normal pet lifecycle/actions/AI. Immutable catalogs move between cached seeded worlds; stables, summoned pets, commands, owners and cast state never do. A transport-free leader retains the ordinary runtime-only stable initialized while it has follower identity; never invent a persistent character or transport connection to summon its pet. Native source templates remain required. Native Felguard30146 must expose learned Axe Toss89766 at the selected level in both first and cached worlds. No player spell grant or invented Hunter pet is permitted. Harness initialization omissions cannot qualify production utility coverage.

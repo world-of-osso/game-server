@@ -61,6 +61,63 @@ pub(super) fn run_stockade(seed: u64) -> Result<usize, String> {
     Ok(report.bosses_killed.len())
 }
 
+#[test]
+fn native_evade_at_home_completes_ordinary_return_lifecycle() {
+    let mut app = build_app();
+    let copy = create_copy(&mut app);
+    let actors = spawn_population(&mut app, copy);
+    let actor = actors[&20375744]; // Actual Stockade Rumbling Earth from the stalled seed12.
+    crate::creature_aggro::enter_evade_mode(app.world_mut(), actor);
+    assert_eq!(
+        app.world().get::<crate::creature_ai::CreatureState>(actor),
+        Some(&crate::creature_ai::CreatureState::Returning)
+    );
+    app.update();
+    app.update();
+    assert!(
+        app.world()
+            .get::<shared::components::Health>(actor)
+            .is_some_and(|health| health.current > 0.0)
+    );
+    assert_ne!(
+        app.world().get::<crate::creature_ai::CreatureState>(actor),
+        Some(&crate::creature_ai::CreatureState::Returning),
+        "a real living actor already at its native home must complete return instead of permanently blocking the active-fight history"
+    );
+}
+
+#[test]
+fn native_evade_walks_frozen_home_route_before_completing_return() {
+    let mut app = build_app();
+    let copy = create_copy(&mut app);
+    let actors = spawn_population(&mut app, copy);
+    let actor = actors[&20375744];
+    let home = *app.world().get::<Position>(actor).unwrap();
+    crate::creature_aggro::enter_evade_mode(app.world_mut(), actor);
+    app.world_mut().entity_mut(actor).insert(Position {
+        x: home.x + 4.0,
+        ..home
+    });
+    app.update();
+    let first_step = *app.world().get::<Position>(actor).unwrap();
+    assert!(
+        first_step.x < home.x + 4.0,
+        "Returning must enter the frozen movement adapter"
+    );
+    assert!(
+        first_step.x > home.x,
+        "returning four yards cannot teleport home in one50ms tick"
+    );
+    for _ in 0..80 {
+        app.update();
+    }
+    assert_eq!(*app.world().get::<Position>(actor).unwrap(), home);
+    assert_eq!(
+        app.world().get::<crate::creature_ai::CreatureState>(actor),
+        Some(&crate::creature_ai::CreatureState::Idle)
+    );
+}
+
 pub(super) fn build_app() -> App {
     build_cached_app(&mut None)
 }
@@ -88,6 +145,7 @@ fn build_runtime_app(catalogs: &mut Option<super::catalogs::Catalogs>) -> App {
         crate::pet_control::PetControlPlugin,
         crate::stats::StatsPlugin,
     ));
+    app.add_systems(FixedUpdate, crate::zones::apply_addon_auras);
     app.init_resource::<crate::maps::InstanceManager>();
     app.init_resource::<crate::spell_cast::test_harness::ObservedCombatEvents>();
     app.init_resource::<crate::spell_cast::holy_metrics::HolyMetrics>();
