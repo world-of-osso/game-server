@@ -200,17 +200,32 @@ fn assassination_rupture_duration_scales_through_seven_combo_points() {
         let actor = run.actor;
         let target = run.targets[0];
         {
-            let mut pools = run.app.world_mut().get_mut::<crate::spell_cast::powers::PowerPools>(actor).unwrap();
+            let mut pools = run
+                .app
+                .world_mut()
+                .get_mut::<crate::spell_cast::powers::PowerPools>(actor)
+                .unwrap();
             let energy = pools.get_mut(PowerType::Energy).unwrap();
             energy.current = energy.max;
             let combo = pools.get_mut(PowerType::ComboPoints).unwrap();
             assert!(combo.max >= points);
             combo.current = points;
         }
-        literal_rotation::execution::execute(run.app.world_mut(), actor, literal_rotation::execution::Execution::Spell(1943, target, Some(target))).unwrap();
+        literal_rotation::execution::execute(
+            run.app.world_mut(),
+            actor,
+            literal_rotation::execution::Execution::Spell(1943, target, Some(target)),
+        )
+        .unwrap();
         preparation::finish_pending_setup(&mut run).unwrap();
-        let aura = run.app.world().get::<crate::auras::ActiveAuras>(target).unwrap().iter()
-            .find(|a| a.spell_id == 1943 && a.caster == actor).expect("Rupture must land");
+        let aura = run
+            .app
+            .world()
+            .get::<crate::auras::ActiveAuras>(target)
+            .unwrap()
+            .iter()
+            .find(|a| a.spell_id == 1943 && a.caster == actor)
+            .expect("Rupture must land");
         assert_eq!(aura.duration_ms, (4000.0 * (1.0 + points)) as u32);
     }
 }
