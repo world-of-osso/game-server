@@ -457,6 +457,8 @@ fn replay_registered_run_with_healing(
     let mut periodic_ticks_by_spell = BTreeMap::<u32, usize>::new();
     let mut energize_by_spell = BTreeMap::<u32, (i64, i64)>::new();
     let mut damage_taken_by_kind = BTreeMap::<&str, f64>::new();
+    let mut outcomes = BTreeMap::<String, usize>::new();
+    let mut incoming_before_absorbs = BTreeMap::<&str, f64>::new();
     let mut aura_seconds = BTreeMap::<u32, f64>::new();
     let mut debuff_seconds: BTreeMap<u32, f64> =
         target_debuffs.iter().map(|&id| (id, 0.0)).collect();
@@ -506,6 +508,19 @@ fn replay_registered_run_with_healing(
                 return Err("SIMC_DUMMY_AMOUNT_OUT_OF_RANGE".into());
             }
             let scale = crate::level_scaling::damage_to_hp_scale(run.app.world(), source, tank);
+            let before_events = run
+                .app
+                .world()
+                .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+                .0
+                .len();
+            let before_absorbed = run
+                .app
+                .world()
+                .resource::<Capture>()
+                .consumed_absorbs
+                .get(&tank)
+                .map_or(0.0, |usage| usage.total);
             run.app
                 .world_mut()
                 .resource_mut::<Capture>()
@@ -530,6 +545,16 @@ fn replay_registered_run_with_healing(
                         table.miss,
                         table.crit,
                     )?;
+                    *outcomes
+                        .entry(format!(
+                            "{}:{outcome:?}",
+                            if hit.kind == Kind::Swing {
+                                "swing"
+                            } else {
+                                "strike"
+                            }
+                        ))
+                        .or_default() += 1;
                     let recorded = Hit {
                         tick,
                         source_guid: 0,
@@ -567,6 +592,30 @@ fn replay_registered_run_with_healing(
                     }
                 }
             }
+            let world = run.app.world();
+            let after_absorbed = world
+                .resource::<Capture>()
+                .consumed_absorbs
+                .get(&tank)
+                .map_or(0.0, |usage| usage.total);
+            let damage: f64 = world
+                .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+                .0[before_events..]
+                .iter()
+                .filter(|event| {
+                    event.source == Some(source.to_bits())
+                        && event.target == Some(tank.to_bits())
+                        && event.kind == CombatLogKind::Damage
+                })
+                .map(|event| f64::from(event.amount.max(0)))
+                .sum();
+            let kind = match hit.kind {
+                Kind::Swing => "swing",
+                Kind::Strike => "strike",
+                Kind::Bleed => "bleed",
+            };
+            *incoming_before_absorbs.entry(kind).or_default() +=
+                damage + after_absorbed - before_absorbed;
             run.app
                 .world_mut()
                 .resource_mut::<Capture>()
@@ -733,7 +782,7 @@ fn replay_registered_run_with_healing(
         "absorbs_by_spell":absorbs_by_spell,"aura_uptime":aura_uptime,
         "resource_counters":counters,"target_debuff_uptime":target_debuff_uptime,
         "rotation_status":"registered_literal_simc","duration_seconds":elapsed,"incoming_events":next,"tank_casts":casts,
-        "raw_damage":raw,"damage_taken":taken,"damage_taken_by_kind":damage_taken_by_kind,"self_periodic_damage_taken":self_periodic_taken,
+        "raw_damage":raw,"damage_taken":taken,"damage_taken_by_kind":damage_taken_by_kind,"incoming_before_absorbs":incoming_before_absorbs,"incoming_outcomes":outcomes,"self_periodic_damage_taken":self_periodic_taken,
         "mitigation_pct":(raw>0.0).then(||100.0*(raw-taken)/raw),
         "self_heal_per_second":(elapsed>0.0).then(||self_healing/elapsed),
         "absorb_per_second":(elapsed>0.0).then(||absorbed/elapsed),"time_to_death":death,
