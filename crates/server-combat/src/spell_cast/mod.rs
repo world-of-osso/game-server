@@ -834,11 +834,11 @@ impl SpellHistory {
         mods: ChargeMods,
     ) -> Option<&mut ChargeState> {
         let categories = spell.categories.as_ref()?;
-        if categories.charge_category == 0 || categories.max_charges == 0 {
-            return None;
-        }
         let max =
             (categories.max_charges as i32 + mods.extra_charges).clamp(0, u8::MAX as i32) as u8;
+        if categories.charge_category == 0 || max == 0 {
+            return None;
+        }
         let recovery_ms = categories.charge_recovery_ms as f32 + mods.recovery_flat_ms;
         let initial = || ChargeState {
             spell_id: spell.id,
@@ -933,8 +933,10 @@ fn known_charge_categories(
         .filter(|spell| spell.id != WINDWALKER_RUSHING_WIND_KICK)
         .filter_map(|spell| {
             let categories = spell.categories.as_ref()?;
-            let has_charges = categories.charge_category != 0 && categories.max_charges != 0;
-            has_charges.then(|| (categories.charge_category, spell.clone()))
+            let mods = charge_mods(world, unit, spell);
+            let max = categories.max_charges as i32 + mods.extra_charges;
+            (categories.charge_category != 0 && max > 0)
+                .then(|| (categories.charge_category, spell.clone()))
         })
         .collect()
 }
@@ -960,10 +962,19 @@ fn refresh_charge_recovery(world: &mut World, unit: Entity, spell_id: u32) {
     .map(|charges| charges.snapshot(now));
     let after = history
         .charges_mut(&spell, now, mods)
-        .unwrap()
-        .snapshot(now);
-    if before.as_ref() != Some(&after) {
-        send_charge_update(world, unit, after);
+        .map(|state| state.snapshot(now));
+    if let Some(after) = after {
+        if before.as_ref() != Some(&after) {
+            send_charge_update(world, unit, after);
+        }
+    } else if let Some(mut removed) = if spell.id == WINDWALKER_RUSHING_WIND_KICK {
+        history.rwk_charges.take()
+    } else {
+        history.charges.remove(&category)
+    } {
+        removed.max = 0;
+        removed.pending.clear();
+        send_charge_update(world, unit, removed.snapshot(now));
     }
 }
 

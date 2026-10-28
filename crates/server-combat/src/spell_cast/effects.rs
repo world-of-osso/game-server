@@ -343,6 +343,10 @@ pub fn power_stats(world: &World, unit: Entity, healing: bool) -> (f32, f32) {
         return (power, power);
     }
     if let Some(summon) = world.get::<super::summon::SummonedCreature>(unit) {
+        // TrinityCore Unit.cpp:7347–7350: totems use their owner's healing bonus.
+        if healing && summon.properties.is_totem() {
+            return power_stats(world, summon.owner, true);
+        }
         if world
             .get::<crate::hunter_pet::SummonedDemon>(unit)
             .is_some()

@@ -1,6 +1,21 @@
 use std::path::Path;
 
 #[test]
+fn zero_capacity_charge_category_keeps_native_spell_cooldown() {
+    use crate::spell_cast::test_harness::{Inbox, harness};
+    let mut h = harness(Vec::new(), &[113858], 9).unwrap();
+    h.cast_and_deliver(113858, None);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    h.advance(31);
+    h.inbox = Inbox::default();
+    h.cast_and_deliver(113858, None);
+    assert_eq!(
+        h.inbox.failed[0].reason,
+        shared::spell_data::CastFailReason::OnCooldown
+    );
+}
+
+#[test]
 #[ignore = "replays the MID2 Restoration Shaman against the SimC dummy trace"]
 fn restoration_shaman_heals_the_simc_dummy_party() {
     let trace = std::env::var("HEALER_TANK_SIMC_TRACE").expect("HEALER_TANK_SIMC_TRACE required");
