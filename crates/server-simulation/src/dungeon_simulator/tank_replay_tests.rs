@@ -104,6 +104,31 @@ fn simc_dummy_strike_does_not_trigger_auto_attack_procs() {
 }
 
 #[test]
+#[ignore = "uses the selected MID2 player and a real Consecration cast"]
+fn protection_consecration_field_persists_after_cast() {
+    let mut run = super::dps_parity::prepare_registered_player(66, 1).unwrap();
+    super::dps_parity::engage(&mut run);
+    for _ in 0..200 {
+        run.app.update();
+    }
+    let actor = run.actor;
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 26573, Some(actor), false)
+        .unwrap();
+    run.app.update();
+    assert!(crate::spell_cast::scripts::has_active_consecration(
+        run.app.world_mut(),
+        actor
+    ));
+    for _ in 0..200 {
+        run.app.update();
+    }
+    assert!(crate::spell_cast::scripts::has_active_consecration(
+        run.app.world_mut(),
+        actor
+    ));
+}
+
+#[test]
 #[ignore = "uses the selected MID2 player and actual Avenging Wrath cast"]
 fn zealots_paragon_extends_reduced_avenging_wrath_on_real_hammer() {
     use crate::auras::ActiveAuras;
@@ -291,6 +316,14 @@ fn holy_bulwark_absorbs_incoming_hits_and_grows_to_native_cap() {
         "{absorbed} != {}",
         max * 0.30
     );
+}
+
+#[test]
+#[ignore = "uses the selected MID2 Protection player and precombat APL"]
+fn protection_default_precombat_casts_holy_bulwark() {
+    let run = super::dps_parity::prepare_registered_player(66, 1).unwrap();
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, 432496));
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, 432478));
 }
 
 #[test]

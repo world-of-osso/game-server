@@ -43,22 +43,8 @@ impl Rotation {
         };
         let mut bindings = protection_rotation::bindings();
         let equipment = Equipment::load(world, actor, &mut bindings)?;
-        // SimC76f8118 sc_paladin.cpp3498–3504: the default initial armament is a coin flip.
-        if crate::random::random::<f64>() >= 0.5 {
-            crate::auras::apply_aura(
-                world,
-                &crate::auras::AuraApplication {
-                    caster: actor,
-                    target: actor,
-                    spell_id: 432478,
-                    effect_mask: 1,
-                    source: crate::auras::AuraSource::Cast,
-                },
-            );
-            if !crate::auras::has_aura(world, actor, 432478) {
-                return Err("NATIVE_ARMAMENT_OVERRIDE_INITIALIZATION_FAILED".into());
-            }
-        }
+        // SimC76f8118 sc_paladin.hpp781 and cpp3497–3504 default to Holy Bulwark;
+        // only an unrecognized explicit starting_armament option uses a random choice.
         Ok(Self {
             driver: Driver::new(program),
             bindings,
