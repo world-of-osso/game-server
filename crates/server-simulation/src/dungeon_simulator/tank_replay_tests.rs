@@ -1441,3 +1441,69 @@ fn protection_divine_toll_grants_power_and_shield_per_target() {
         );
     }
 }
+
+#[test]
+#[ignore = "uses actual selected Divine Inspiration and repeated native Judgment hits"]
+fn divine_inspiration_earns_alternating_self_armaments() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::dps_parity::prepare_registered_player(66, 1).unwrap();
+    super::dps_parity::engage(&mut run);
+    let actor = run.actor;
+    let target = run.targets[0];
+    assert!(crate::auras::has_aura(run.app.world(), actor, 432964));
+    let start = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .len();
+    for _ in 0..200 {
+        for _ in 0..60 {
+            run.app.update();
+        }
+        match crate::spell_cast::creature_cast(
+            run.app.world_mut(),
+            actor,
+            275779,
+            Some(target),
+            false,
+        ) {
+            Ok(())
+            | Err(
+                crate::spell_cast::CastFailure::NoCharges
+                | crate::spell_cast::CastFailure::OnCooldown,
+            ) => {}
+            Err(error) => panic!("Judgment refused: {error:?}"),
+        }
+    }
+    for _ in 0..20 {
+        run.app.update();
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0[start..];
+    let applications: Vec<_> = events
+        .iter()
+        .filter(|event| {
+            event.source == Some(actor.to_bits())
+                && event.target == Some(actor.to_bits())
+                && matches!(event.spell_id, Some(432496 | 432502))
+                && matches!(
+                    event.kind,
+                    shared::protocol::CombatLogKind::AuraApplied
+                        | shared::protocol::CombatLogKind::AuraRefreshed
+                )
+        })
+        .filter_map(|event| event.spell_id)
+        .collect();
+    assert!(
+        applications.len() >= 2,
+        "actual hits must earn at least two inspirations: {applications:?}"
+    );
+    assert!(
+        applications.windows(2).all(|pair| pair[0] != pair[1]),
+        "inspiration must alternate: {applications:?}"
+    );
+}

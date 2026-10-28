@@ -243,6 +243,7 @@ pub type RogueAuraRegistrationHook = fn(&mut crate::auras::scripts::AuraScripts)
 pub type BeforeEnemyContextHitHook = fn(&mut World, &EffectCtx<'_>, Entity);
 pub type BeforeEnemyContextHitLookup = fn(u32) -> Option<BeforeEnemyContextHitHook>;
 pub type HealthChangeObservedHook = fn(&mut World, &shared::protocol::CombatLogEvent);
+pub type AuraEventHook = fn(&mut World, &crate::auras::procs::AuraEvent);
 pub type RawHealHook = fn(&mut World, &EffectCtx<'_>, f32);
 pub type SupportAuraRegistrationHook = fn(&mut crate::auras::scripts::AuraScripts);
 pub type NamedAuraFields = &'static [(u32, u8)];
@@ -411,6 +412,7 @@ pub enum SpellScriptHook {
     RogueAuraRegistration(RogueAuraRegistrationHook),
     BeforeEnemyContextHit(BeforeEnemyContextHitLookup),
     HealthChangeObserved(HealthChangeObservedHook),
+    AuraEvent(AuraEventHook),
     RawHeal(RawHealHook),
     SupportAuraRegistration(SupportAuraRegistrationHook),
     NamedAuraFields(NamedAuraFields),
@@ -1918,6 +1920,14 @@ pub fn raw_heal(world: &mut World, ctx: &EffectCtx<'_>, amount: f32) {
     for hook in world.resource::<SpellScriptRegistry>().hooks() {
         if let SpellScriptHook::RawHeal(run) = hook {
             run(world, ctx, amount);
+        }
+    }
+}
+
+pub fn aura_event(world: &mut World, event: &crate::auras::procs::AuraEvent) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::AuraEvent(run) = hook {
+            run(world, event);
         }
     }
 }
