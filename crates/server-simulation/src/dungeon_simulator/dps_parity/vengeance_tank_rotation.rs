@@ -1037,6 +1037,115 @@ mod tests {
 
     #[test]
     #[ignore = "requires native Vengeance profile and canonical DB"]
+    fn vengeance_leech_observes_damage_channels_and_gear_rating() {
+        use super::super::*;
+        let _seed = crate::random::seed_scope(70_448);
+        let (profile, traits) = read_reference(581).unwrap();
+        let identity = inputs::read_actor(&profile).unwrap();
+        let mut run = prepare_reference(profile, &traits, 1, identity).unwrap();
+        let actor = run.actor;
+        let target = run.targets[0];
+        engage(&mut run);
+        for _ in 0..5 {
+            run.app.update();
+        }
+        let stats = run
+            .app
+            .world()
+            .get::<crate::stats::CharacterStats>(actor)
+            .unwrap();
+        println!(
+            "VENGEANCE_LEECH rating={} percent={}",
+            stats.ratings.leech, stats.leech_pct
+        );
+        assert_eq!(stats.ratings.leech, 55.0, "MID2 leech gear rating");
+        run.app
+            .world_mut()
+            .get_mut::<shared::components::Health>(actor)
+            .unwrap()
+            .current = 1.0;
+        for spell in [247455, 228478, 204598] {
+            let before = run
+                .app
+                .world()
+                .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+                .0
+                .len();
+            assert!(crate::spell_cast::try_cast_triggered(
+                run.app.world_mut(),
+                actor,
+                spell,
+                Some(target),
+                1
+            ));
+            for _ in 0..40 {
+                run.app.update();
+            }
+            let events = &run
+                .app
+                .world()
+                .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+                .0[before..];
+            assert!(
+                events.iter().any(|event| event.spell_id == Some(spell)
+                    && event.kind == shared::protocol::CombatLogKind::Damage
+                    && event.amount > 0),
+                "{spell} must deal damage"
+            );
+            assert!(
+                events.iter().any(|event| event.spell_id == Some(143924)
+                    && event.kind == shared::protocol::CombatLogKind::Heal
+                    && event.amount > 0),
+                "{spell} must feed pooled leech"
+            );
+        }
+        crate::auras::remove_auras(
+            run.app.world_mut(),
+            target,
+            crate::auras::RemoveReason::Consumed,
+            |aura| aura.spell_id == 204598 && aura.caster == actor,
+        );
+        for _ in 0..40 {
+            run.app.update();
+        }
+        let before = run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .len();
+        crate::auras::apply_aura(
+            run.app.world_mut(),
+            &crate::auras::AuraApplication {
+                caster: actor,
+                target,
+                spell_id: 207771,
+                effect_mask: 0b10110,
+                source: crate::auras::AuraSource::Cast,
+            },
+        );
+        for _ in 0..60 {
+            run.app.update();
+        }
+        let events = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0[before..];
+        assert!(events.iter().any(|event| event.spell_id == Some(207771)
+            && event.periodic
+            && event.kind == shared::protocol::CombatLogKind::Damage
+            && event.amount > 0));
+        assert!(
+            events.iter().any(|event| event.spell_id == Some(143924)
+                && event.kind == shared::protocol::CombatLogKind::Heal
+                && event.amount > 0),
+            "Fiery Brand ticks must feed pooled leech"
+        );
+    }
+
+    #[test]
+    #[ignore = "requires native Vengeance profile and canonical DB"]
     fn generic_leech_uses_native_aura_and_effective_damage() {
         use super::super::*;
         let (profile, traits) = read_reference(581).unwrap();
