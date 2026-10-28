@@ -1,7 +1,9 @@
 //! Imminent Demise accelerates Bladestorm's earned ticks.
 use super::combat;
 use bevy::prelude::*;
-use combat::auras::{self, ActiveAuras, AuraInstance, RemoveReason, scripts::AuraScripts};
+use combat::auras::{
+    self, ActiveAuras, AuraInstance, RemoveReason, SpellModOp, scripts::AuraScripts, spell_mods,
+};
 use combat::spell_cast::script_registry::SpellScriptHook;
 use combat::spell_info::SpellInfo;
 use shared::components::ActiveSpec;
@@ -36,22 +38,48 @@ fn tick_rate(world: &World, caster: Entity, _target: Entity, spell: &SpellInfo) 
                 .find(|aura| aura.spell_id == STACKS && aura.caster == caster)
         })
         .map_or(0, |aura| aura.stacks);
-    let duration = spell
+    let base = spell
         .misc
         .as_ref()
         .and_then(|misc| misc.duration)
         .expect("native Bladestorm has a duration")
         .duration_ms;
-    assert!(duration > 0, "native Bladestorm duration must be positive");
+    let duration = spell_mods::modify(world, caster, spell, SpellModOp::Duration, base as f32);
+    assert!(
+        duration > 0.0,
+        "modified Bladestorm duration must be positive"
+    );
     // SimC76f8118 sc_warrior.cpp3279–3299: tick time is divided by
     // (base duration seconds + earned stacks) / base duration seconds.
-    1.0 + f32::from(stacks) * 1000.0 / duration as f32
+    1.0 + f32::from(stacks) * 1000.0 / duration
 }
 
 fn register(scripts: &mut AuraScripts) {
     for &spell in BLADES {
-        scripts.0.entry(spell).or_default().on_natural_end = Some(finish_bladestorm);
+        let script = scripts.0.entry(spell).or_default();
+        script.on_apply = Some(start_bladestorm);
+        script.on_natural_end = Some(finish_bladestorm);
     }
+}
+
+fn start_bladestorm(world: &mut World, unit: Entity, aura: &AuraInstance) {
+    if !selected(world, aura.caster) {
+        return;
+    }
+    let haste = world
+        .get::<combat::stats::CharacterStats>(aura.caster)
+        .map_or(1.0, |stats| 1.0 + stats.haste_pct / 100.0);
+    assert!(haste > 0.0, "Bladestorm haste must be positive");
+    // SimC76f8118 sc_warrior.cpp3279–3285: the modified duration is hasted,
+    // while the extra Imminent Demise ticks fit inside that same duration.
+    let duration = (aura.duration_ms as f32 / haste).round() as u32;
+    assert!(auras::set_owned_duration(
+        world,
+        aura.caster,
+        unit,
+        aura.spell_id,
+        duration
+    ));
 }
 
 fn finish_bladestorm(world: &mut World, _unit: Entity, aura: &AuraInstance) {
