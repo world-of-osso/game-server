@@ -108,9 +108,9 @@ fn feral_twin_sprouts_spreads_growth_to_another_enemy() {
         for _ in 0..200 {
             run.app.update();
             if crate::auras::has_aura(run.app.world(), source, 439531)
-                && run.targets[1..].iter().any(|&target| {
-                    crate::auras::has_aura(run.app.world(), target, 439531)
-                })
+                && run.targets[1..]
+                    .iter()
+                    .any(|&target| crate::auras::has_aura(run.app.world(), target, 439531))
             {
                 return;
             }

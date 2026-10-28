@@ -129,18 +129,32 @@ fn apply_twin_sprouts(world: &mut World, caster: Entity, target: Entity) {
     let Some(center) = targets::position(world, caster) else {
         return;
     };
-    let Some(spell) = world.resource::<combat::spell_info::SpellStore>().get(BLOODSEEKER_VINES) else {
+    let Some(spell) = world
+        .resource::<combat::spell_info::SpellStore>()
+        .get(BLOODSEEKER_VINES)
+    else {
         return;
     };
     let (_, radius) = targets::spell_range(spell, true);
-    let mut enemies = targets::area_units(world, caster, center, radius, targets::Relation::Enemy, 0);
+    let mut enemies =
+        targets::area_units(world, caster, center, radius, targets::Relation::Enemy, 0);
     enemies.retain(|&enemy| enemy != target);
-    let undotted: Vec<_> = enemies.iter().copied().filter(|&enemy| {
-        !world.get::<ActiveAuras>(enemy).is_some_and(|auras| auras.iter().any(|aura| {
-            aura.spell_id == BLOODSEEKER_VINES && aura.caster == caster
-        }))
-    }).collect();
-    let choices = if undotted.is_empty() { &enemies } else { &undotted };
+    let undotted: Vec<_> = enemies
+        .iter()
+        .copied()
+        .filter(|&enemy| {
+            !world.get::<ActiveAuras>(enemy).is_some_and(|auras| {
+                auras
+                    .iter()
+                    .any(|aura| aura.spell_id == BLOODSEEKER_VINES && aura.caster == caster)
+            })
+        })
+        .collect();
+    let choices = if undotted.is_empty() {
+        &enemies
+    } else {
+        &undotted
+    };
     let recipient = if choices.is_empty() {
         target
     } else {
