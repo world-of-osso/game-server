@@ -411,7 +411,7 @@ fn tertiary_ratings_follow_curve_21025() {
 }
 
 /// A level 10 Warrior with zero Strength, a weapon, a shield, Parry and Block
-/// parries 3%, blocks 5% and dodges nothing without rating;
+/// parries 3%, blocks 3% and dodges nothing without rating;
 /// 10% of dodge rating diminishes to 65.63144 × 10 / (10 + 65.63144 × 0.956) = 9.022%.
 #[test]
 fn player_avoidance_follows_trinitycore_master() {
@@ -427,6 +427,7 @@ fn player_avoidance_follows_trinitycore_master() {
         agility: 0.0,
         base_agility: 0.0,
         block_pct: 0.0,
+        diminishing_block_pct: 0.0,
     };
     let none = player_defense(WARRIOR, 10, &CombatRatings::default(), inputs);
     assert_eq!(
@@ -434,7 +435,7 @@ fn player_avoidance_follows_trinitycore_master() {
         PlayerDefense {
             dodge: 0.0,
             parry: 3.0,
-            block: 5.0,
+            block: 3.0,
             shield_block: 250.0,
             sitting: false,
         }
@@ -541,6 +542,36 @@ fn agility_classes_gain_diminished_dodge_from_agility() {
         )
         .dodge
     );
+}
+
+#[test]
+fn plate_mastery_block_diminishes_before_flat_shield_block() {
+    let base = DefenseInputs {
+        can_block: true,
+        shield_armor: Some(100.0),
+        block_pct: 7.0,
+        diminishing_block_pct: 25.78125,
+        ..Default::default()
+    };
+    let expected = 10.0 + 25.78125 / (25.78125 * 0.0067 + 1.0 / 0.94);
+    for class in [1, 2] {
+        let normal = player_defense(class, 90, &CombatRatings::default(), base).block;
+        let shield = player_defense(
+            class,
+            90,
+            &CombatRatings::default(),
+            DefenseInputs {
+                block_pct: 107.0,
+                ..base
+            },
+        )
+        .block;
+        assert!((normal - expected).abs() < 0.001, "class {class}: {normal}");
+        assert!(
+            (shield - normal - 100.0).abs() < 0.001,
+            "class {class}: {shield}"
+        );
+    }
 }
 
 #[test]
