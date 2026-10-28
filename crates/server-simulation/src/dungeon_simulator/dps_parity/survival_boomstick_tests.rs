@@ -79,7 +79,9 @@ fn survival_boomstick_extends_existing_mongoose_stacks_only_with_four_piece() {
             .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
             .0
             .len();
-        cast(&mut run, 1261193, false);
+        crate::spell_cast::creature_cast(
+            run.app.world_mut(), run.actor, 1261193, Some(run.targets[0]), false,
+        ).unwrap();
         for _ in 0..100 {
             if run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0[start..]
                 .iter().any(|event| event.spell_id == Some(1261215) && event.kind == CombatLogKind::Damage) {
@@ -95,7 +97,8 @@ fn survival_boomstick_extends_existing_mongoose_stacks_only_with_four_piece() {
         ) as f64 / 1000.0;
         let expected = deadline + if equipped { extension } else { 0.0 };
         assert!(mongoose_deadlines(&run).iter().any(|&value| (value - expected).abs() < 0.001),
-            "first real Boomstick tick must extend the pre-existing stack only with four-piece; expected {expected}");
+            "first real Boomstick tick must extend the pre-existing stack only with four-piece; equipped={equipped}, expected={expected}, actual={:?}",
+            mongoose_deadlines(&run));
     }
 }
 
