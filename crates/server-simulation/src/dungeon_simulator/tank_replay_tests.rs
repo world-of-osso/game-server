@@ -224,7 +224,32 @@ fn brewmaster_elusive_brawler_is_consumed_by_dodge_not_miss() {
 #[test]
 #[ignore = "requires canonical Brewmaster profile and world database"]
 fn simc_dummy_bleed_application_is_a_zero_damage_physical_hit() {
-    use crate::auras::{self, RemoveReason};
+    use crate::auras::{
+        self, RemoveReason,
+        procs::{AuraEvent, PROC_TAKE_HARMFUL_SPELL},
+    };
+    use crate::spell_cast::script_registry::{SpellScriptHook, SpellScriptRegistry};
+    use bevy::prelude::*;
+    #[derive(Resource)]
+    struct SeenHit {
+        source: Entity,
+        target: Entity,
+        count: u32,
+    }
+    fn observe(world: &mut World, event: &AuraEvent) {
+        let mut seen = world.resource_mut::<SeenHit>();
+        if event.actor == seen.source
+            && event.target == Some(seen.target)
+            && event.spell_id == Some(0)
+            && !event.periodic
+            && event.damage == 0.0
+            && event.target_mask[0] & PROC_TAKE_HARMFUL_SPELL != 0
+        {
+            seen.count += 1;
+        }
+    }
+    static HOOKS: &[SpellScriptHook] = &[SpellScriptHook::AuraEvent(observe)];
+    static MODULES: &[&[SpellScriptHook]] = &[HOOKS];
     let _seed = crate::random::seed_scope(70448);
     let mut run = super::dps_parity::prepare_registered_player(268, 1).unwrap();
     let tank = run.actor;
@@ -269,6 +294,18 @@ fn simc_dummy_bleed_application_is_a_zero_damage_physical_hit() {
                     && !event.periodic
                     && event.amount == 0
             })
+    );
+    run.app.insert_resource(SeenHit {
+        source,
+        target: tank,
+        count: 0,
+    });
+    run.app.insert_resource(SpellScriptRegistry::new(MODULES));
+    run.app.update();
+    assert_eq!(
+        run.app.world().resource::<SeenHit>().count,
+        1,
+        "one direct victim spell-hit event"
     );
 }
 
