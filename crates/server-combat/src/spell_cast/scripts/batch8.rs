@@ -7,7 +7,6 @@ use crate::auras::ActiveAuras;
 use crate::spell_cast::{self, PlannedEffect, TargetPlan, targets};
 use crate::spell_info::{SpellInfo, SpellStore};
 
-pub(super) const REAP: u32 = 1226019;
 pub(super) const PROVOKE: u32 = 115546;
 pub(super) const DEMONBOLT: u32 = 264178;
 pub(super) const BREATH_OF_FIRE: u32 = 115181;
@@ -16,7 +15,6 @@ pub(super) const SANCTIFY: u32 = 34861;
 pub(super) const INCINERATE: u32 = 29722;
 pub(super) const UNSTABLE_AFFLICTION: u32 = 30108;
 pub(super) const ARCANE_BARRAGE: u32 = 44425;
-const REAP_DAMAGE: u32 = 1225827;
 pub(super) const PROVOKE_SINGLE: u32 = 116189;
 pub(super) const PROVOKE_AREA: u32 = 118635;
 const BLACK_OX_STATUE: u32 = 61146;
@@ -28,28 +26,6 @@ const INCINERATE_ENERGIZE: u32 = 244670;
 const AFFLICTION_PERIODIC: u32 = 233490;
 const BARRAGE_MANA_REFUND: u32 = 321526;
 const HUNDREDTHS_PERCENT_DENOMINATOR: f32 = 10000.0;
-
-/// Root names1225827. Its87/134 line is aimed at the hit unit's destination,
-/// extending to the authored radius, rather than a single-target substitution.
-pub(super) fn reap(world: &mut World, caster: Entity, target: Entity, depth: u8) {
-    if depth >= spell_cast::effects::MAX_TRIGGER_DEPTH {
-        warn!("Reap trigger depth exhausted");
-        return;
-    }
-    let mut child = world
-        .resource::<SpellStore>()
-        .get(REAP_DAMAGE)
-        .expect("Reap requires1225827")
-        .clone();
-    child.cast_destination = Some(
-        targets::position(world, target)
-            .expect("Reap hit unit requires position")
-            .to_array(),
-    );
-    let plan = spell_cast::plan_targets(world, caster, &child, Some(target), false)
-        .expect("Reap requires catalog line selectors");
-    spell_cast::missiles::launch(world, caster, &child, plan, depth + 1);
-}
 
 fn is_statue(world: &World, target: Entity) -> bool {
     world
