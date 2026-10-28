@@ -972,6 +972,16 @@ const SPELL_ATTR2_CANT_CRIT: u32 = 0x2000_0000;
 
 /// CritChance mods and script values precede the victim's melee crit modifier.
 pub fn crit_chance(world: &World, caster: Entity, target: Entity, spell: &SpellInfo) -> f32 {
+    spell_crit_chance(world, caster, target, spell, false)
+}
+
+fn spell_crit_chance(
+    world: &World,
+    caster: Entity,
+    target: Entity,
+    spell: &SpellInfo,
+    actual_damage: bool,
+) -> f32 {
     // SimC76f8118 engine/player/pet.cpp217–220: controlled pets inherit the
     // live owner's melee/spell crit. Scripts and target modifiers keep the pet.
     let owner = super::scripts::elemental_ancestors::owner(world, caster).unwrap_or_else(|| {
@@ -979,7 +989,7 @@ pub fn crit_chance(world: &World, caster: Entity, target: Entity, spell: &SpellI
             .get::<crate::hunter_pet::HunterPet>(caster)
             .map_or(caster, |pet| pet.owner)
     });
-    crit_chance_from_owner(world, caster, target, spell, owner)
+    crit_chance_from_owner(world, caster, target, spell, owner, actual_damage)
 }
 
 fn crit_chance_from_owner(
@@ -988,6 +998,7 @@ fn crit_chance_from_owner(
     target: Entity,
     spell: &SpellInfo,
     spell_owner: Entity,
+    actual_damage: bool,
 ) -> f32 {
     if super::attributes(spell, 2) & SPELL_ATTR2_CANT_CRIT != 0 {
         return 0.0;
@@ -1021,6 +1032,14 @@ fn crit_chance_from_owner(
         } else {
             0.0
         };
+    let chance = if actual_damage {
+        chance
+            + super::script_registry::actual_critical_chance_bonus(
+                world, caster, target, spell, chance,
+            )
+    } else {
+        chance
+    };
     let modifier = if takes_melee_crit_modifier(spell) {
         world
             .get::<crate::auras::ActiveAuras>(target)
@@ -1096,13 +1115,7 @@ fn with_damage_crit(
     amount: f32,
 ) -> (f32, bool) {
     let roll = rand::random::<f32>() * 100.0;
-    let chance = crit_chance(world, caster, target, spell);
-    let bonus = if super::attributes(spell, 2) & SPELL_ATTR2_CANT_CRIT == 0 {
-        super::script_registry::actual_critical_chance_bonus(world, caster, target, spell)
-    } else {
-        0.0
-    };
-    let chance = chance + bonus;
+    let chance = spell_crit_chance(world, caster, target, spell, true);
     let crit = roll < chance;
     if !crit {
         #[cfg(any(test, feature = "test-support"))]
@@ -1217,9 +1230,10 @@ fn roll_periodic_crit(
     caster: Entity,
     target: Entity,
     spell: &SpellInfo,
+    actual_damage: bool,
 ) -> Option<(Entity, f32)> {
     let owner = periodic_spell_owner(world, caster, spell)?;
-    let chance = crit_chance_from_owner(world, caster, target, spell, owner);
+    let chance = crit_chance_from_owner(world, caster, target, spell, owner, actual_damage);
     (rand::random::<f32>() * 100.0 < chance).then_some((owner, chance))
 }
 
@@ -1230,7 +1244,7 @@ fn roll_periodic_damage_crit(
     spell: &SpellInfo,
     amount: f32,
 ) -> (f32, bool) {
-    let Some(rolled_crit) = roll_periodic_crit(world, caster, target, spell) else {
+    let Some(rolled_crit) = roll_periodic_crit(world, caster, target, spell, true) else {
         return (amount, false);
     };
     let owner = rolled_crit.0;
@@ -1259,7 +1273,7 @@ fn roll_periodic_heal_crit(
     spell: &SpellInfo,
     amount: f32,
 ) -> (f32, bool) {
-    let Some((owner, _)) = roll_periodic_crit(world, caster, target, spell) else {
+    let Some((owner, _)) = roll_periodic_crit(world, caster, target, spell, false) else {
         return (amount, false);
     };
     (
