@@ -20,11 +20,12 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
 ];
 
 fn schedule_apocalypse(world: &mut World, ctx: &EffectCtx<'_>, target: Entity, _: bool) {
-    if ctx.spell.id != 1221162
-        || ctx.spell.cast_primary_target != Some(target)
-        || !world
-            .get::<KnownSpells>(ctx.caster)
-            .is_some_and(|known| known.contains(1227707))
+    if ctx.spell.id != 1221162 || ctx.spell.cast_primary_target != Some(target) {
+        return;
+    }
+    if !world
+        .get::<KnownSpells>(ctx.caster)
+        .is_some_and(|known| known.contains(1227707))
     {
         return;
     }
@@ -55,6 +56,10 @@ fn deliver_apocalypse(world: &mut World) {
             before - pending.0.len()
         };
         for _ in 0..due {
+            // SimC76f8118 cpp9404–9419 cancels Apocalypse if Meta has ended.
+            if !auras::has_aura(world, caster, 1217607) {
+                continue;
+            }
             if !spell_cast::try_cast_triggered(world, caster, 1227338, Some(caster), 1) {
                 error!(?caster, "native Impending Apocalypse was refused");
             }
@@ -101,6 +106,21 @@ fn after_launch(world: &mut World, caster: Entity, spell: &SpellInfo) {
             auras::set_owned_stacks(world, caster, caster, 1227702, remaining),
             "native Collapsing Star soul stack"
         );
+    }
+    // SimC76f8118 cpp6507–6514 reduces shared Voidblade/Pierce recovery once.
+    if world
+        .get::<KnownSpells>(caster)
+        .is_some_and(|known| known.contains(1272422))
+    {
+        let seconds = f64::from(script_effect_value(world, caster, 1272422, 0)) / 1000.0;
+        spell_cast::scripts::reduce_cooldown(world, caster, 1245412, seconds);
+    }
+    // SimC76f8118 cpp6551–6557 resets shared Hunt/Predator's Wake recovery.
+    if world
+        .get::<KnownSpells>(caster)
+        .is_some_and(|known| known.contains(452415))
+    {
+        spell_cast::scripts::reduce_cooldown(world, caster, 1246167, f64::MAX);
     }
     // SimC76f8118 cpp6464–6474,6532–6533 executes the native damage child.
     let target = spell

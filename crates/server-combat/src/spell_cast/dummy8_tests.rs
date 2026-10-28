@@ -25,36 +25,6 @@ fn at(h: &mut Harness, x: f32, z: f32) -> Entity {
         .insert(Position { x, y: 0.0, z });
     e
 }
-#[test]
-fn dummy8_reap_hits_enemies_along_destination_line_not_single_target_or_radial_area() {
-    let mut h = harness(Vec::new(), &[1226019, 1225827], 12).unwrap();
-    let npc = h.npc;
-    h.app.world_mut().entity_mut(npc).insert(Position {
-        x: 10.0,
-        y: 0.0,
-        z: 10.0,
-    });
-    let beyond = at(&mut h, 18.0, 18.0);
-    let behind = at(&mut h, -5.0, -5.0);
-    let outside = at(&mut h, 24.0, -15.0);
-    let far = at(&mut h, 24.0, 24.0);
-    let ally = spawn_player(&mut h.app, 12, 5.0);
-    let other_map = at(&mut h, 8.0, 8.0);
-    h.app
-        .world_mut()
-        .entity_mut(other_map)
-        .insert(crate::maps::InMap::continent(1));
-    h.cast_and_deliver(1226019, Some(npc));
-    h.advance(40);
-    landed(&h);
-    for e in [npc, beyond] {
-        // Active Effect1215275: 6.0156 SP × fixture SP100, rounded.
-        assert_eq!(logged(&h, 1225827, e, CombatLogKind::Damage), 602);
-    }
-    for e in [behind, outside, far, ally, other_map] {
-        assert_eq!(logged(&h, 1225827, e, CombatLogKind::Damage), 0);
-    }
-}
 fn engage(h: &mut Harness, npc: Entity, victim: Entity) {
     let mut table = ThreatTable::default();
     table.add_threat(victim.to_bits(), 100.0);

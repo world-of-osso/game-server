@@ -47,6 +47,65 @@ fn count_immolation_hits(run: &Run, infernal: Entity, target: Entity) -> usize {
 
 #[test]
 #[ignore = "requires private267 native player inputs"]
+fn destruction_infernal_xalan_ferocity_multiplies_actual_immolation_crit() {
+    let mut run = prepare_literal(267, 1).unwrap();
+    engage(&mut run);
+    let target = run.targets[0];
+    let actual = literal_rotation::execution::resolve_action(run.app.world(), run.actor, 1122)
+        .unwrap()
+        .expect("selected native Infernal action");
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(actual, target, Some(target)),
+    )
+    .unwrap();
+    let infernal = wait_for_actual_infernal(&mut run);
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, 440044));
+    let measure = |run: &mut Run| {
+        let spell = run
+            .app
+            .world()
+            .resource::<crate::spell_info::SpellStore>()
+            .get(20153)
+            .unwrap();
+        let baseline =
+            crate::spell_cast::effects::crit_chance(run.app.world(), infernal, target, spell);
+        run.app
+            .insert_resource(FactorCapture::new(infernal, target, 20153, "immolation", 1));
+        crate::spell_cast::cast_triggered(run.app.world_mut(), infernal, 20153, Some(target), 1);
+        let capture = run.app.world().resource::<FactorCapture>().export();
+        let actual = capture["events"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|event| event["event"] == "result")
+            .expect("real native Immolation impact")["factors"]["crit"]
+            .as_f64()
+            .unwrap() as f32
+            * 100.0;
+        (baseline, actual)
+    };
+    let (base, actual) = measure(&mut run);
+    assert!(
+        (actual - base * 1.1).abs() < 0.001,
+        "selected Ferocity: {actual} vs {base}"
+    );
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        run.actor,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 440044,
+    );
+    let (base, actual) = measure(&mut run);
+    assert!(
+        (actual - base).abs() < 0.001,
+        "without Ferocity: {actual} vs {base}"
+    );
+}
+
+#[test]
+#[ignore = "requires private267 native player inputs"]
 fn destruction_infernal_actual_native_drivers_delay_repeat_and_fund_owner() {
     // Native attack RED02e475cbb6 reaches the real89, but no repeated20153.
     let _seed = crate::random::seed_scope(70448);

@@ -6,9 +6,16 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 - Equipped Call the Swarm1310082 delivers Acidbrood1310088 through native missile1310083, and equipped Void Eruption1310208 delivers1310209. Payload damage uses the originating item's native driver effect1 budget and native role multiplier, not the zero-valued damage-leaf points. Preserve native proc eligibility/RPPM/ICD, travel, crit and full unsplit AoE.
 - The pinned `bugs=true` Void Eruption behavior does not apply its inactive Venomcursed15% bonus. Casting-item context must survive native aura proc children and their missile/trigger descendants; class procs without an item retain their existing context.
+- An Antoran Tyrant uses the scheduled Burning Cleave action as its only swing; native1251000 must not also emit a separate white-swing replacement (`sc_warlock_pets.cpp1510–1573`).
 
 - The native encounter fixture faces the actor toward its actual primary before engagement and restores maintained melee-intent facing after forced movement finishes, including a charge that ends inside melee range. Do not turn active channels or override forced movement. Keep native directional selectors, widths and radii unchanged.
 - A fixture actor with native melee AutoAttack intent walks back into nominal melee range at its native run speed after movement abilities. Preserve forced movement ownership, native movement/cast restrictions and position=back; never suppress displacement, snap the actor or grant resources. This shared controller applies without specialization or spell-ID cases (SimC76f8118 sc_demon_hunter.cpp1559–1611).
+
+### Frost Death Knight target damage
+
+- Spell modifiers with native effect attribute `0x40` do not multiply their points by aura stacks; other effects on the same aura retain their stack scaling. Killing Machine's fixed Frostscythe critical bonus uses that attribute, while its Killing Streak bonus scales per stack.
+- Northwinds gives the second Howling Blast target the same Rime-specific bonuses as the primary; later targets use the pinned reduced-AoE and secondary factors. Cryogenic Chamber banks the native fraction of each earned Rime impact up to its stack cap and releases that bank on Winter.
+- Frost Bind in Darkness follows actual Rime acquisition and removal; it must not proc independently. Its active aura converts Howling Blast to Shadowfrost. Preserve other specializations' native proc behavior.
 
 ### Native Pandemic duration carry
 
@@ -21,6 +28,10 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 - The actor's channel cadence and its periodic aura use the same native effect cadence. Declared damage/healing periods own this cadence ahead of faster auxiliary control pulses; channels without declared health emissions retain their native utility/script period. Constant haste must not create an extra expiry damage event or full proc callbacks from rounding residue. Preserve tick-zero behavior and genuine fractional native tick counts.
 - Preserve non-channel periodic quantization, channel modifier/haste snapshots, and un-hasted channel lifetimes, including four-second Convoke. For hasted non-channel periodic effects, use current caster haste when scheduling the interval after each paid tick; do not retime the already-pending tick (SimC76f8118 `action.cpp:2038–2041,2792–2809`). Do not add spell-ID branches or replace native coefficients/periods/durations.
 
+### Stormbound Emblem of Dazar
+
+- A completed or interrupted native1295275 channel grants haste1294745 for one native buff duration per completed tick. Its amount comes from the equipped native1294744 item effect (`unique_gear_midnight.cpp3863–3954`).
+
 ### Devourer Soul Immolation
 
 - Each native Soul Immolation1241937 self-HoT tick executes the native Fury payload1242475. The native aura owns its tick timing and payload values (SimC76f8118 `sc_demon_hunter.cpp`5930–5958). Fragment spawning is separate.
@@ -30,6 +41,13 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 ### Devourer Metamorphosis entry
 
 - Entering native Void Metamorphosis1217607 grants 200 Fury, capped by the actor's native pool (SimC76f8118 `sc_demon_hunter.cpp`12445–12452). Drain and exit behavior are separate.
+
+### Devourer Reap
+
+- Each Reap1226019 executes the delayed damage child1225823 once, without an additional legacy1225827 hit (SimC76f8118 `sc_demon_hunter.cpp`5982–5999,6081–6107).
+### Devourer Singular Strikes
+
+- Selected Singular Strikes1272770 amplifies only the primary Hungering Slash or Reaper's Toll damage hit1239127 by native effect2; secondary hits remain unchanged (SimC76f8118 `sc_demon_hunter.cpp`6697–6728).
 
 ### Devourer Burning Blades
 
@@ -127,6 +145,7 @@ Frost player reaction clocks are configured before food setup advances native fr
 
 - Selected Wildspeaker1232739 applies native1235388 to existing DireCritters when owner Bestial Wrath succeeds. New DireCritters joining an active owner BW inherit only its remaining time, before summon-time Rend executes; stable pets keep their separate native Wrath path (SimC76f8118 hunter1866–1867,6729–6736).
 - Actual DireCritters inherit the owner's live critical chance for melee and spell attacks even when they have no autonomous guardian spell list (SimC76f8118 pet.cpp217–220). Their spells also inherit the owner's selected passive spell modifiers when native masks match, including Savagery on Wildspeaker1232922 (SimC76f8118 player.cpp15268–15324).
+- Selected Xalan's Cruelty and Ferocity multiply owned Warlock pet spell critical chance for matching native labels, before target modifiers (`sc_warlock_pets.cpp`265–301).
 
 - Selected Fury of the Wyvern472550 extends an existing earned Cry471881 after successful BM Kill Command34026, including the consuming command. Native effect2 supplies each extension and effect4 the total budget. Actual Cry removal resets the budget; white-impact stack growth does not (SimC76f8118 hunter6626–6630,8279–8287).
 
@@ -254,6 +273,7 @@ Frost player reaction clocks are configured before food setup advances native fr
 - `void_touched_augment_rune` and `void_touched` apply the same native primary-stat rune. `flask_of_thalassian_resistance_2` grants native versatility; `lights_potential_2` configures its actual primary-stat potion use. Quality2 flask/potion identities retain native item level295 and native spell scaling, without specialization branches.
 - `flask_of_the_blood_knights_2` applies native haste. `flask_of_the_shattered_sun_2` applies native crit from item241326 (quality2, native ilvl295); its applied aura and derived rating retain native item scaling. `harandar_celebration` and `silvermoon_parade` share the native primary-stat food buff. Flask quality uses native item level; food uses native food scaling. `blooming_feast` grants only the highest native secondary rating, selected after gear/passive initialization and before configured pet casts. Do not import reference stat amounts.
 - [x] Native fixture equipment honors `redirected_base_stats`: use the donor item's native ItemSparse stat types/allocations with the original profile's item level and bonuses. Keep original equipped identity, tier/effects, armor and weapon inputs; never mutate catalogs or import reference stat values. Unknown/malformed donors fail explicitly; pinned explicit0 means no redirect. Non-redirected slots remain unchanged. Pinned76f8118 `item.cpp35–57` supplies option semantics; native70448 supplies amounts.
+- [x] Explicit `embellishment` names resolve through the pinned SimC 76f8118 embellishment table to native item bonuses and equipped effects. Unknown names remain reported as unmodeled; `none` adds no effect. Crafted stat allocations continue to use native item-instance rules.
 - [x] Reference selection uses MID2 for the eight available DPS/tank profiles and prior-tier MID1 for Evoker, labelled `SIMC_DEVASTATION_MID2_PROFILE_ABSENT`; it never silently substitutes another tier.
 - [ ] Native base-item, bonus-added and enchant equip spells use the production aura path; unequipping an item or removing a modifier removes only its owned equip aura and linked child. Item-level changes replace stale aura amounts. Native LINKED/LINKED_2 zero amounts preserve child BP0; nonzero parent amounts override child BP0, with matching removal (TrinityCore a352b1fa `SpellAuraEffects.cpp5299–5335`).
 - [x] Native equipped-set bonuses activate through the same production equipment aura path as ordinary items/enchants: count original Retail identities by native ItemSparse.ItemSet, enforce ItemSetSpell threshold/spec, skip TC legacy-inactive sets, and reconcile on equip/unequip or active-spec changes. Set-owned auras persist while eligible and are removed below threshold without removing unrelated equipment auras. No spell-ID cases or fabricated bonuses. The initial603 slice left skill/subtree selectors as named gaps; consolidation retains rt1086's already sourced native profession-rank and selected-subtree behavior rather than downgrading it. The complete native conditional-set inventory and proof boundaries live in the character-stats wiki.
@@ -560,6 +580,8 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 ### Controlled Imp inheritance
 
 - The controlled Imp (native CreatureFamily23) engages its target for Firebolt but never starts auto-attack. Other controlled demons keep their melee. No 70448 DB2 field marks caster pets, so the native family selects the rule (SimC76f8118 `sc_warlock_pets.cpp360–385`; Felhunter/Voidwalker/Felguard melee at 342/431/503).
+- A controlled Felguard17252 applies the pinned 1.44 multiplier to its actual white swings, not its spell damage (`sc_warlock_pets.cpp661–668`).
+- Statless actual Warlock demons inherit their owner's attack haste for melee swings, while retaining native creature timing and their own melee modifiers (`pet.cpp222–228`).
 - The actual controlled Imp416 inherits live owner spell power at5.625 for SP and2.8125 for AP (SimC76f8118 `sc_warlock_pets.cpp372–375`). Controlled Sayaad1863 inherits live owner spell power at5.175 for SP and2.565 for AP, including melee AP (`sc_warlock_pets.cpp421–430`). Preserve native spell coefficients, UNIT_PET identity, pet orders, stance, costs and storage. Do not replace either pet with a guardian or fixed damage payload. Unlisted controlled pets retain their existing power policy.
 - A target's owned Whiplash6360 stacks (native aura270, mask127) increase all of that Sayaad's damage, including real white swings; another caster's stacks do not (`sc_warlock_pets.cpp447–452`).
 
@@ -588,6 +610,10 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 - Generic DoT facts for an active permanent aura are not refreshable and have unbounded remains/duration, before finite fresh-duration/Pandemic validation. Missing/finite DoTs and buff/debuff sentinel semantics stay unchanged. Do not suppress literal casts in the adapter to hide an expiring aura.
 - Qualify the actual literal ST and recurring30s-add-wave ordering. Gate265 ST/3T and267, plus actual finite-DoT refreshability from103 or258. Count explosion hits separately from explosion actions; do not tune damage or target counts to repair excess paid Seed refreshes.
 
+### Pet critical damage
+
+- Actual pet and guardian spell critical hits inherit the owner's critical-damage multiplier in addition to the pet's own multiplier, including equipped effects (SimC76f8118 `pet.cpp:488–494`). Preserve each spell's critical bonus and independently applied pet modifiers.
+
 ### Guardian periodic haste
 
 - An actual guardian's periodic aura with native spell-haste-periodic attribute reads the same actual owner's resolved spell haste as its guardian cast time. Apply the aura's own period modifiers on the guardian, preserve native tick phase and unflagged periods, and do not substitute owners for ordinary units (SimC76f8118 `pet.cpp217–228`, `buff.cpp752,1945–1954`). Qualify actual Infernal19483→20153 tick spacing plus 265,266,253 and generic guardian controls.
@@ -604,6 +630,7 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 ### Shared Hellcaller Wither counters
 
+- Mark of Xavius440046 registers effects1/3 for Affliction and all effects except1 for Destruction; thus its native Wither damage bonuses apply only to Destruction (SimC76f8118 `sc_warlock_init.cpp:82–83`).
 - Native Wither445474 keeps its actual counter stacks, but its periodic damage ignores that count. An ordinary recast preserves earned stacks without adding a refresh stack; explicit native stack applications retain normal counter advancement. Preserve native coefficients, tick phase and lifetime. Both265 and267 share this rule (SimC76f8118 `sc_warlock_actions.cpp1066,1174–1186`).
 - Wither's counter is not an ordinary damage-stack multiplier. Its target-side Ashen Remains effect applies once regardless of counter stacks (`sc_warlock_actions.cpp:273–275`); preserve the separate Dark Titan's Mark effect. Other stacking DoTs keep their existing behavior; Blackened Soul producers/collapse are separate relationships.
 - Shared265/267 Hellcaller producers must use actual Chaos Bolt/Shadowburn impacts and actual UA applications, including refresh, Fatal Echoes and seed-applied UA. Do not replace UA's independently owned expiry callbacks. Grant native Malevolence stacks/buff/damage only to its caster's active Withers; preserve each Wither lifetime and tick phase.
@@ -666,6 +693,7 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 - During actual combat, the spec266 literal controller maintains its default primary enemy for native guardians and commands its existing configured pet through ordinary pet control. Per-action `target_if` recipients do not replace that default enemy. Precombat does not command attacks, and no owner auto-attack is injected (SimC76f8118 `pet.cpp66–68/143–148`).
 - [ ] Spec266 follower parity consumes every exported pinned profile action through shared literal execution, with native target/resource/trait/equipment facts, actual owned Imp/Tyrant counts and source-qualified readiness. Capture precedes warmup; normal default-pet and harmful-precast completion precede pull. Production dungeon kits are unchanged.
 - [ ] Actual native265187/250289 binds native Burning Cleave1264093 and repeats on the pinned hasted two-second GCD (SimC76f8118 `sc_warlock_pets.cpp1510–1548`). Both Tyrant variants inherit owner-SP1.0 from the same source policy. Native damage coefficients, target plans and normal cast admission remain authoritative. Tests require actual child impacts and observed formula power, not registry/source-string assertions.
+- The actual Antoran Inquisitor starts its unhasted Mind Sear1280457 channel with an immediate native1280460 tick (`sc_warlock_pets.cpp1978–2002`).
 
 - Each actual Summon Demonic Tyrant265187 execution applies selected Tyrant's Oblation1276767 and Abyssal Dominion456323 to the owner (`sc_warlock_actions.cpp3641–3645`). Native durations and modifiers apply; Abyssal Dominion additionally lasts Reign of Tyranny1276748 effect1 longer, as SimC adds it explicitly (`sc_warlock_init.cpp935–936`).
 - [ ] Selected Dominion I starts its native1276166 counter on actual Tyrant completion; ordinary HoG/Ruination advance only an active counter. At its native cumulative limit, choose among the four native summon spells uniformly, redirect living duplicate unique demons as pinned, and retain one stack. Selected Dominion III refunds through actual native1276318, never by editing the pool. Native Aura Does Not Refresh keeps the original expiry while stacks advance (SimC76f8118 `buff.cpp740–743`).
@@ -679,6 +707,7 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 - Selected MID2 four-piece rolls native1296574 effect3's accumulated chance on actual Imp exhaustion. A successful Imp travels to its actual target and launches native1306077, using native196278's damage coefficient and native1296574 effects1/2 for primary and secondary damage. Under pinned bugs=1, isolated deaths do not grant Demonic Core (`sc_warlock_pets.cpp833–849/963–983`, `sc_warlock_actions.cpp3200–3290`).
 - Selected Inner Demons starts at actual combat entry with a uniformly random first phase, then summons native279910 at the native267216 period without haste (`sc_warlock_init.cpp766–771/1722–1725`). It stops outside combat.
 - Selected Carnivorous Stalkers rolls native386194 effect1 on each actual Dreadstalker melee execution and queues a real271971 Dreadbite when the guardian is ready (`sc_warlock_pets.cpp1116–1143`, `sc_warlock_init.cpp1272–1274`).
+- On a real Demonic Tyrant summon, selected Reign of Tyranny extends each living owned Dreadstalker by 15 seconds. The pinned bug model also counts living Vilefiends for the new Tyrant’s native Demonic Power (`sc_warlock_actions.cpp3586–3620`).
 - Selected Mark of Shatug casts native455491 Gloom Slash on the attack target after each actual Gloomhound226268 melee and Headbutt267999 execution (`sc_warlock_pets.cpp1361–1373,1405–1418`).
 - Selected Inner Demons starts at actual combat entry with a uniformly random first phase, then summons native279910 at the native267216 period without haste (`sc_warlock_init.cpp766–771/1722–1725`). It stops outside combat.
 - Actual Wild Imp104317/55659 guardians cannot regenerate spent Energy (pinned `pets.cpp701/875–882`). Native pool sizes, spell costs and actual exhaustion/removal remain authoritative; other guardian regeneration is unchanged. Selected Imp Gang Boss applies native1250772 to the first actual Imp of each Hand of Gul'dan group (`actions.cpp5716–5723`).
@@ -721,7 +750,7 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 ### Literal precombat execution
 
 - [ ] Explicit literal controller handoff occurs before any native setup/warmup frames. Nonliteral fixtures retain native kit behavior; literal fixtures cannot acquire kit-cast precombat auras absent from their APL. Never delete those auras afterward to conceal a late handoff. Accepted Encounter::Fixture capture retires the actor's native FollowOwner while preserving Follower/NPC identity and native literal AA chase; rejected Dungeon capture leaves owner-follow behavior unchanged.
-- [ ] Execute precombat once in source order: eligible nonharmful actions and at most the first ready harmful action, following pinned player.cpp6138–6183. It is not a repeating priority scan. Preserve WW snapshot/item behavior.
+- [ ] Execute precombat once in source order: eligible nonharmful actions and at most the first ready harmful action, following pinned player.cpp6138–6183. Continue to execute eligible nonharmful rows after the first harmful action; skip later harmful actions. It is not a repeating priority scan. Preserve WW snapshot/item behavior.
 - [ ] Run native cast completion and GCD progression out of combat before explicit fixture CombatRefs engagement and the measured300s clock; Prowl5215 must meet native OOC readiness. Native-controller fixtures also finish their existing setup cast/GCD before pull. Demo ST must deal first native damage within10s after pull without add-wave or recurring re-engagement. No FULL_MASK, cast-time skips, resource resets or grants.
 - [ ] Initialize profile-declared class start pools/default pet before precombat, using native pool units and configured profile values. A new parity Player runs the native class-pool initializer before validating those declared values; the first ordinary frame must not replace the configured pool. Class resource tokens resolve through native PowerType metadata/display units, not a spec-specific reset. Current pinned Warlock profiles declare soul_shards0 and sayaad/felguard/imp. Precasts build resources naturally; summon_pet runs once and no-ops when the requested native pet already exists. Demo's Felguard must exist at pull.
 - [ ] Harmful precasts use the shared target-aware Prepared enemy seam, preserving exact selected identities and normal cast permission. Pool_resource uses the GREEN readiness-only requested-pool query, never live resource mutation.
@@ -1189,3 +1218,8 @@ Selected Insidious Ire earns its temporary channel bonus when one target has all
 - Specialization Raise Dead46584 creates native26125 through the controlled-pet path, retaining the actual current-pet relationship and permanent lifetime. Native Dark Transformation must see the pet through UNIT_PET. DK inherits source-qualified owner melee AP/crit/haste, and ordinary owner casts order the real pet against the selected hostile primary. Hunter, Warlock and Mage pet policies remain unchanged.
 
 - Spec269 executes the pinned Windwalker action rows on native player and follower fixtures. Player measurements retain player identity and use the literal driver rather than AssistedCombat diagnostics.
+
+- Windwalker Tigereye Brew starts combat with its native initial stacks, earns one stack per native Chi threshold from qualifying casts, and transfers up to the native cap into Zenith critical chance (`sc_monk.cpp393–406,4583–4595,7170–7183`). Out-of-combat regeneration remains unimplemented.
+### Hellbent Commander
+
+- Hellbent Commander reconciles native1281559 stacks to the eligible live demon roster on the pinned randomized 5.25s heartbeat. Actual summon and demise events retain the pinned bug-model ordering, including ordinary Hand Imp and alternate Imp Implosion differences; Diabolist demons are excluded (`sc_warlock.cpp303–338`; `sc_warlock_pets.cpp203–226,992–1006,1310–1341`).

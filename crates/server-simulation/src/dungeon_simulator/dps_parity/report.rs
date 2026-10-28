@@ -354,7 +354,12 @@ pub(super) fn gaps(profile: &super::inputs::Profile, is_player: bool) -> Vec<Str
         gaps.extend(
             item.options
                 .iter()
-                .filter(|(key, _)| key.as_str() != "redirected_base_stats")
+                .filter(|(key, value)| {
+                    key.as_str() != "redirected_base_stats"
+                        && !(key.as_str() == "embellishment"
+                            && (value.as_str() == "none"
+                                || super::inputs::embellishment_bonus(value).is_some()))
+                })
                 .map(|(key, value)| {
                     format!("ITEM_OPTION_UNMODELED:{}:{key}={value}", item.item_id)
                 }),

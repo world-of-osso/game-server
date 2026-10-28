@@ -6,9 +6,9 @@ use combat::spell_cast::{
 };
 use combat::spell_info::SpellStore;
 
-pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::SpellResidual(coil_impact)];
+pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::ResolvedDamage(coil_impact)];
 
-fn coil_impact(world: &mut World, ctx: &EffectCtx<'_>, target: Entity, amount: f32) {
+fn coil_impact(world: &mut World, ctx: &EffectCtx<'_>, target: Entity, _: bool, amount: f32) {
     if !matches!(ctx.spell.id, 47632 | 1242172 | 1242178)
         || amount <= 0.0
         || !combat::auras::has_aura(world, ctx.caster, 390270)

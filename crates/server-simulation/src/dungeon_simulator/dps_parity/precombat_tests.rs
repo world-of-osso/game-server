@@ -232,11 +232,26 @@ fn literal_precombat_stops_after_the_first_ready_harmful_native_action() {
         prepared.execution(&blackout, &equipment).unwrap().is_some(),
         "later BOK must be native-ready after real frame/GCD: readiness={native:?}, chi={chi:?}, resolved={resolved}, actor={actor_position:?}, target={target_position:?}"
     );
+    let (action, execution) = driver
+        .select("precombat", &facts, &prepared, &equipment)
+        .unwrap()
+        .expect("the later native-ready row is inspected");
+    driver
+        .execute(run.app.world_mut(), run.actor, action, execution)
+        .unwrap();
+    run.app.update();
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
     assert!(
-        driver
-            .select("precombat", &facts, &prepared, &equipment)
-            .unwrap()
-            .is_none()
+        !events
+            .iter()
+            .any(|event| event.source == Some(run.actor.to_bits())
+                && event.spell_id == Some(100784)
+                && event.kind == shared::protocol::CombatLogKind::CastSuccess),
+        "a second harmful precast must not execute"
     );
 }
 

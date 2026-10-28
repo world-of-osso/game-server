@@ -31,6 +31,17 @@ pub(super) struct Equipment {
     pub options: BTreeMap<String, String>,
 }
 
+// SimC76f8118 item.cpp2090–2111 resolves explicit names through the pinned
+// embellishment table; native ItemBonus then resolves the equipped effect.
+pub(super) fn embellishment_bonus(name: &str) -> Option<u32> {
+    include_str!("embellishments_76f8118.csv")
+        .lines()
+        .skip(2)
+        .filter_map(|line| line.split_once(','))
+        .find(|(alias, _)| alias.eq_ignore_ascii_case(name))
+        .and_then(|(_, bonus)| bonus.parse().ok())
+}
+
 impl Equipment {
     fn stat_redirect(&self, world: &World) -> Result<Option<(EquipmentSlot, u32)>, String> {
         let Some(value) = self.options.get("redirected_base_stats") else {
@@ -62,8 +73,17 @@ impl Equipment {
     }
 
     pub fn modifiers(&self) -> ItemInstanceModifiers {
+        let mut bonus_list = self.bonus_list.clone();
+        if let Some(bonus) = self
+            .options
+            .get("embellishment")
+            .and_then(|name| embellishment_bonus(name))
+            && !bonus_list.contains(&bonus)
+        {
+            bonus_list.push(bonus);
+        }
         ItemInstanceModifiers {
-            bonus_list: self.bonus_list.clone(),
+            bonus_list,
             item_level_override: self.item_level_override,
             enchant: self.enchant,
             gems: self.gems.clone(),
