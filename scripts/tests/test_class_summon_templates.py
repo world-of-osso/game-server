@@ -23,6 +23,36 @@ def spawn_fingerprint(conn):
 
 
 class ClassSummonImportTests(unittest.TestCase):
+    def test_enhancement_lightning_wolf_imports_native_template_without_spawns(self):
+        source = Path(os.environ.get("PARITY_263_TEST_DB", ROOT / "data/world.db")).resolve()
+        with tempfile.TemporaryDirectory() as directory:
+            prepared = Path(directory) / "wolf.sqlite"
+            with closing(sqlite3.connect(f"file:{source}?mode=ro", uri=True)) as src:
+                with closing(sqlite3.connect(prepared)) as dst:
+                    src.backup(dst)
+            with closing(sqlite3.connect(prepared)) as conn, conn:
+                self.assertEqual(conn.execute("""SELECT EffectMiscValue_0 FROM spell_effect
+                    WHERE SpellID=198506 AND DifficultyID=0 AND Effect=28""").fetchone(), (100820,))
+                self.assertIn(100820, {row[0] for row in conn.execute(retail_content.CLASS_SUMMON_ENTRIES)})
+                for table, key in (("content_creature_template", "entry"),
+                                   ("content_creature_template_model", "CreatureID"),
+                                   ("content_creature_template_addon", "entry")):
+                    conn.execute(f"DELETE FROM {table} WHERE {key}=100820")
+                before_spawns = spawn_fingerprint(conn)
+            subprocess.run([sys.executable, str(ROOT / "scripts/add_class_summon_templates.py"),
+                            "--db", str(prepared)], check=True, capture_output=True, text=True)
+            with closing(sqlite3.connect(f"file:{prepared}?mode=ro", uri=True)) as conn:
+                self.assertEqual(conn.execute("""SELECT entry,name,faction,unit_class,AIName,ScriptName
+                    FROM content_creature_template WHERE entry=100820""").fetchone(),
+                    conn.execute("""SELECT entry,name,faction,unit_class,AIName,ScriptName
+                    FROM tdb_creature_template WHERE entry=100820""").fetchone())
+                native = conn.execute("""SELECT CreatureID,Idx,CreatureDisplayID,DisplayScale,Probability,VerifiedBuild
+                    FROM tdb_creature_template_model WHERE CreatureID=100820 ORDER BY Idx""").fetchall()
+                self.assertTrue(native)
+                self.assertEqual(conn.execute("""SELECT * FROM content_creature_template_model
+                    WHERE CreatureID=100820 ORDER BY Idx""").fetchall(), native)
+                self.assertEqual(spawn_fingerprint(conn), before_spawns)
+
     def test_diabolist_ritual_promotes_authentic_demon_templates(self):
         source = Path(os.environ.get("PARITY_266_TEST_DB", ROOT / "data/world.db")).resolve()
         expected = ((428571, 228575), (428565, 228576), (434400, 228574))
