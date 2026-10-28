@@ -47,9 +47,6 @@ const OVERRIDE_AUTOATTACK_WITH_MELEE_SPELL: u32 = 361;
 // SimC76f8118 data_enums.hh1407: Ascendance supplies the per-hand spell override.
 const OVERRIDE_AUTOATTACK_WITH_SPELL: u32 = 367;
 /// Non-player expertise (`Unit::GetUnitDodgeChance`/`GetUnitParryChance`).
-/// A swing of one hand pushes the other hand's timer to at least this
-/// (`ATTACK_DISPLAY_DELAY`, Unit.h:643; Unit::AttackerStateUpdate, Unit.cpp:2203-2230).
-const ATTACK_DISPLAY_DELAY: Duration = Duration::from_millis(200);
 /// Base melee damage per swing of units without ExpectedStat damage.
 const BASE_DAMAGE: f32 = 10.0;
 /// Retail rage per second of swing time for each auto-attack dealt (SimC
@@ -2241,15 +2238,13 @@ fn try_swing(
     ))
 }
 
-/// Restart `hand`'s timer and hold the other hand at least
-/// `ATTACK_DISPLAY_DELAY` away, so both hands never land together.
+/// SimC schedules each weapon's next swing without delaying the other hand.
 fn reset_swing_timers(auto_attack: &mut AutoAttack, hand: Hand, swing_time: f32) {
-    let (swung, other) = match hand {
-        Hand::Main => (&mut auto_attack.timer, &mut auto_attack.off_hand_timer),
-        Hand::Off => (&mut auto_attack.off_hand_timer, &mut auto_attack.timer),
+    let swung = match hand {
+        Hand::Main => &mut auto_attack.timer,
+        Hand::Off => &mut auto_attack.off_hand_timer,
     };
     *swung = melee::attack_timer_duration(swing_time);
-    *other = (*other).max(ATTACK_DISPLAY_DELAY);
 }
 
 /// TC IsWithinMeleeRangeAt: nominal range plus attacker-owned aura153 yards.

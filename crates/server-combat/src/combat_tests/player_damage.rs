@@ -115,7 +115,8 @@ fn a_full_crit_chance_swing_is_doubled_unless_avoided_or_blocked() {
 }
 
 #[test]
-fn an_off_hand_weapon_swings_at_half_damage_200_ms_after_the_main_hand() {
+fn both_hands_swing_when_due_without_delaying_each_other() {
+    let _seed = crate::random::seed_scope(70448);
     let mut app = setup_app();
     let target = spawn_target(&mut app, pos(1.0, 0.0, 0.0), 10_000.0);
     let player = level_10_player(
@@ -128,22 +129,13 @@ fn an_off_hand_weapon_swings_at_half_damage_200_ms_after_the_main_hand() {
         },
     );
     run_attack_tick(&mut app);
-    // The main hand swings; the off hand waits ATTACK_DISPLAY_DELAY.
+    assert_eq!(
+        app.world().get::<Health>(target).unwrap().current,
+        9850.0,
+        "both due hands must deal their native 100 and 50 damage"
+    );
     let auto = app.world().get::<AutoAttack>(player).unwrap();
     assert_eq!(auto.timer, std::time::Duration::from_millis(2600));
-    assert_eq!(auto.off_hand_timer, std::time::Duration::from_millis(200));
-    let after_main = app.world().get::<Health>(target).unwrap().current;
-    assert!([10_000.0, 9_900.0].contains(&after_main), "{after_main}");
-    app.world_mut()
-        .get_mut::<AutoAttack>(player)
-        .unwrap()
-        .off_hand_timer = std::time::Duration::ZERO;
-    run_attack_tick(&mut app);
-    // 100 × 0.5 = 50 against a target without armor or avoidance (a player
-    // target only misses: 5% + 19% dual wield).
-    let off_hand = after_main - app.world().get::<Health>(target).unwrap().current;
-    assert!([0.0, 50.0].contains(&off_hand), "{off_hand}");
-    let auto = app.world().get::<AutoAttack>(player).unwrap();
     assert_eq!(auto.off_hand_timer, std::time::Duration::from_millis(2600));
 }
 
