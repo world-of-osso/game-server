@@ -16,6 +16,7 @@ mod healer_report;
 mod healer_simc_metrics;
 mod healer_simc_replay;
 mod holy_paladin_replay_tests;
+mod holy_paladin_simc;
 mod mistweaver_replay;
 mod movement;
 mod replay_cli_tests;
