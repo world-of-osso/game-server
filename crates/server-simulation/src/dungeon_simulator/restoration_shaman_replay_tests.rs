@@ -89,6 +89,13 @@ fn restoration_shaman_healing_stream_summon_applies_native_pulse() {
             .filter(|event| matches!(event.spell_id, Some(5672 | 52042)))
             .collect::<Vec<_>>()
     );
+    assert!(
+        events
+            .iter()
+            .filter(|event| event.spell_id == Some(52042))
+            .all(|event| event.target == Some(tank.to_bits())),
+        "the only injured party member must receive each pulse"
+    );
     let _ = party;
 }
 
