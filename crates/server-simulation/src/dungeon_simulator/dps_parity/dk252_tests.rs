@@ -1320,6 +1320,39 @@ fn dk252_three_real_magi_raise_the_lord_of_the_dead() {
 }
 
 #[test]
+#[ignore = "requires native252 profile/traits and player actor"]
+fn dk252_runic_spends_trigger_runic_corruption() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 1).unwrap();
+    engage(&mut run);
+    let mut earned = false;
+    for _ in 0..10 {
+        crate::spell_cast::powers::change_power(
+            run.app.world_mut(),
+            run.actor,
+            shared::components::PowerType::RunicPower,
+            1000.0,
+        );
+        literal_rotation::execution::execute(
+            run.app.world_mut(),
+            run.actor,
+            literal_rotation::execution::Execution::Spell(
+                47541,
+                run.targets[0],
+                Some(run.targets[0]),
+            ),
+        )
+        .unwrap();
+        preparation::finish_pending_setup(&mut run).unwrap();
+        earned |= crate::auras::has_aura(run.app.world(), run.actor, 51460);
+        for _ in 0..40 {
+            run.app.update();
+        }
+    }
+    assert!(earned, "real Runic Power spends must earn Runic Corruption");
+}
+
+#[test]
 #[ignore = "requires private native252 profile/traits and player actor"]
 fn dk252_real_lord_casts_necrotic_bolt_using_owner_power() {
     use crate::spell_cast::effects::factor_capture::FactorCapture;

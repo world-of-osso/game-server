@@ -18,6 +18,13 @@ from pathlib import Path
 RESULTS = Path("/home/osso/.worktrees/train/results")
 PINNED = Path("/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/dps-parity-2026-10-21")
 TARGETS = {1: "single", 3: "three"}
+# SimC reports these actions under their parent or equivalent pet spell IDs.
+NATIVE_ALIASES = {
+    253: {49966: 16827},
+    255: {49966: 16827},
+    258: {199486: 199484, 447448: 447445},
+    262: {285452: 51505, 269005: 157375},
+}
 
 
 def latest_outputs():
@@ -48,7 +55,7 @@ def reference_for(spec, count):
     return path
 
 
-def per_spell(actions, dps):
+def per_spell(actions, dps, aliases=None):
     """spell_id -> (dps, name) summed over actors."""
     spells = {}
     for action in actions:
@@ -56,6 +63,7 @@ def per_spell(actions, dps):
         spell = action.get("spell_id") or 0
         if spell == 1:
             spell = 0
+        spell = (aliases or {}).get(spell, spell)
         value, name = spells.get(spell, (0.0, action.get("name")))
         spells[spell] = (value + action.get("share_pct", 0.0) * dps / 100, name or action.get("name"))
     return spells
@@ -71,7 +79,7 @@ def compare(spec, output, count):
         print(f"{native_path}: no combat section, skipped", file=sys.stderr)
         return None
     reference = json.loads(reference_path.read_text())
-    ours = per_spell(native["actions"], native["dps"])
+    ours = per_spell(native["actions"], native["dps"], NATIVE_ALIASES.get(int(spec)))
     theirs = per_spell(reference["actions"], reference["dps"])
     rows = []
     for spell, (ref_dps, name) in theirs.items():

@@ -349,7 +349,11 @@ fn live_modifiers<'a>(
         .and_then(|owner| world.get::<ActiveAuras>(owner))
         .into_iter()
         .flat_map(move |auras| matching(auras, spell, op))
-        .filter(move |(aura, _)| aura.passive && aura.charges == 0 && Some(aura.caster) == owner);
+        .filter(move |(aura, _)| aura.passive && aura.charges == 0 && Some(aura.caster) == owner)
+        .filter(move |(aura, _)| {
+            aura.spell_id != 453908
+                || !crate::spell_cast::guardian::is_diabolist_overlord(world, caster)
+        });
     local.chain(inherited)
 }
 
