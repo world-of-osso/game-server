@@ -221,6 +221,57 @@ fn brewmaster_elusive_brawler_is_consumed_by_dodge_not_miss() {
     assert!(!auras::has_aura(run.app.world(), tank, 195630));
 }
 
+#[test]
+#[ignore = "requires canonical Brewmaster profile and world database"]
+fn simc_dummy_bleed_application_is_a_zero_damage_physical_hit() {
+    use crate::auras::{self, RemoveReason};
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::dps_parity::prepare_registered_player(268, 1).unwrap();
+    let tank = run.actor;
+    let source = run.targets[0];
+    assert!(auras::has_aura(run.app.world(), tank, 117906));
+    auras::remove_auras(run.app.world_mut(), tank, RemoveReason::Cancelled, |aura| {
+        aura.spell_id == 195630
+    });
+    let before = run
+        .app
+        .world()
+        .get::<shared::components::Health>(tank)
+        .unwrap()
+        .current;
+    crate::spell_cast::effects::replay_simc_dummy_bleed_application(
+        run.app.world_mut(),
+        source,
+        tank,
+    );
+    assert_eq!(
+        run.app
+            .world()
+            .get::<shared::components::Health>(tank)
+            .unwrap()
+            .current,
+        before
+    );
+    assert!(
+        auras::has_aura(run.app.world(), tank, 195630),
+        "physical application hit grants Elusive Brawler"
+    );
+    assert!(
+        run.app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|event| {
+                event.source == Some(source.to_bits())
+                    && event.target == Some(tank.to_bits())
+                    && event.kind == shared::protocol::CombatLogKind::Damage
+                    && !event.periodic
+                    && event.amount == 0
+            })
+    );
+}
+
 fn avoided_hit(outcome: &str) -> super::healer_intake::Hit {
     super::healer_intake::Hit {
         tick: 1,

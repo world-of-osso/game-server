@@ -255,6 +255,9 @@ fn deliver_hit(
     let scale = crate::level_scaling::damage_to_hp_scale(world, source, tank);
     world.resource_mut::<Capture>().active_hit_scale = Some((tank, scale));
     match hit.kind {
+        Kind::BleedApplication => {
+            crate::spell_cast::effects::replay_simc_dummy_bleed_application(world, source, tank)
+        }
         Kind::Bleed => {
             crate::spell_cast::effects::replay_simc_dummy_bleed(world, source, tank, amount)
         }

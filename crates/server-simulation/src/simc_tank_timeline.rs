@@ -5,6 +5,7 @@ use std::path::Path;
 pub(crate) enum Kind {
     Swing,
     Strike,
+    BleedApplication,
     Bleed,
 }
 
@@ -156,6 +157,24 @@ fn parse_trace(trace: &str, dummy: &str) -> Result<Vec<Hit>, String> {
         let Some((time, rest)) = line.split_once(' ') else {
             continue;
         };
+        if let Some(action) = rest.strip_prefix(&format!("{source}Action 'spell_dot_"))
+            && action.contains("(0) hits Player '")
+            && action.ends_with("for 0.000000 physical damage (hit)")
+        {
+            let seconds: f64 = time
+                .parse()
+                .map_err(|error| format!("invalid SimC time {time}: {error}"))?;
+            if !seconds.is_finite() || seconds < 0.0 {
+                return Err(format!("invalid SimC hit: {line}"));
+            }
+            hits.push(Hit {
+                time_ms: (seconds * 1000.0).round() as u64,
+                amount: 0.0,
+                kind: Kind::BleedApplication,
+                melee_table: None,
+            });
+            continue;
+        }
         if let Some(action) = rest.strip_prefix(&format!("{source}performs Action '")) {
             reading_melee =
                 action.starts_with("melee_main_hand_") || action.starts_with("melee_nuke_");
@@ -340,6 +359,12 @@ fn reads_simc_dummy_raw_melee_and_bleed_without_tank_heals() {
                     miss: 0.0,
                     crit: 0.0
                 })
+            },
+            Hit {
+                time_ms: 5003,
+                amount: 0.0,
+                kind: Kind::BleedApplication,
+                melee_table: None,
             },
             Hit {
                 time_ms: 7004,
