@@ -545,6 +545,81 @@ fn devourer_full_soul_stacks_admit_real_metamorphosis() {
 
 #[test]
 #[ignore = "requires DPS_PARITY_WORLD_DB and DPS_PARITY_OUTPUT with spec1480 exact profile/traits"]
+fn devourer_collapsing_star_resets_predators_wake_cooldown() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare(1480, 3).expect("native Devourer profile");
+    let actor = run.actor;
+    let target = run.targets[0];
+    engage(&mut run);
+    crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 1217605, Some(actor), 1);
+    for _ in 0..40 {
+        run.app.update();
+    }
+    assert!(crate::auras::has_aura(run.app.world(), actor, 1217607));
+    crate::spell_cast::cast_for_player_with_target(
+        run.app.world_mut(),
+        actor,
+        1259431,
+        Some(target),
+    )
+    .expect("first real Predator's Wake");
+    for _ in 0..40 {
+        run.app.update();
+    }
+    assert!(
+        crate::spell_cast::cast_for_player_with_target(
+            run.app.world_mut(),
+            actor,
+            1259431,
+            Some(target)
+        )
+        .is_err(),
+        "first cast starts its cooldown"
+    );
+    for _ in 0..35 {
+        crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 1227702, Some(actor), 1);
+    }
+    for _ in 0..20 {
+        run.app.update();
+    }
+    crate::spell_cast::cast_for_player_with_target(
+        run.app.world_mut(),
+        actor,
+        1221150,
+        Some(target),
+    )
+    .expect("real Collapsing Star");
+    for _ in 0..40 {
+        run.app.update();
+    }
+    crate::spell_cast::cast_for_player_with_target(
+        run.app.world_mut(),
+        actor,
+        1259431,
+        Some(target),
+    )
+    .expect("Collapsing Star resets the real Predator's Wake cooldown");
+    for _ in 0..40 {
+        run.app.update();
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    assert_eq!(
+        events
+            .iter()
+            .filter(|event| event.source == Some(actor.to_bits())
+                && event.spell_id == Some(1259431)
+                && event.kind == CombatLogKind::CastSuccess)
+            .count(),
+        2
+    );
+}
+
+#[test]
+#[ignore = "requires DPS_PARITY_WORLD_DB and DPS_PARITY_OUTPUT with spec1480 exact profile/traits"]
 fn real_collapsing_star_spends_stacks_and_ready_buff() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare(1480, 3).expect("native Devourer profile");
