@@ -209,3 +209,27 @@ fn fury_storm_of_blood_whirlwind_applies_rend_to_three_targets() {
         }
     }
 }
+
+#[test]
+#[ignore = "requires exact Fury72 native player profile"]
+fn fury_enrage_stat_effects_require_their_selected_talents() {
+    use crate::class_progression::KnownSpells;
+    for (frenzied, powerful) in [(false, false), (true, false), (false, true), (true, true)] {
+        let _seed = crate::random::seed_scope(70_448);
+        let mut run = prepare_measurement(72, 1).unwrap();
+        let actor = run.actor;
+        let mut spells: Vec<_> = run.app.world().get::<KnownSpells>(actor).unwrap().iter()
+            .filter(|id| !matches!(id, 383848 | 440277)).collect();
+        if frenzied { spells.push(383848); }
+        if powerful { spells.push(440277); }
+        run.app.world_mut().entity_mut(actor).insert(KnownSpells::fixture(spells));
+        let before = run.app.world().get::<CharacterStats>(actor).unwrap().clone();
+        crate::spell_cast::cast_triggered(run.app.world_mut(), actor, ENRAGE, Some(actor), 1);
+        for _ in 0..2 { run.app.update(); }
+        let after = run.app.world().get::<CharacterStats>(actor).unwrap();
+        assert!((after.mastery_points - before.mastery_points - if powerful { 15.0 } else { 0.0 }).abs() < 0.01);
+        assert!((after.leech_pct - before.leech_pct - if powerful { 3.0 } else { 0.0 }).abs() < 0.01);
+        let expected_haste = (1.0 + before.haste_pct / 100.0) * if frenzied { 1.15 } else { 1.0 };
+        assert!((1.0 + after.haste_pct / 100.0 - expected_haste).abs() < 0.001);
+    }
+}

@@ -1515,6 +1515,22 @@ pub fn apply_aura_with_spell(world: &mut World, application: &AuraApplication, s
             .iter()
             .find(|effect| effect.index == stored.index)
             .expect("applied aura effect belongs to spell");
+        // SimC76f8118 sc_warrior.cpp9623–9626 gates Enrage's stat effects
+        // on the talents that grant them; the native aura retains its values.
+        if spell.id == 184362 {
+            let required = match stored.index {
+                0 | 1 => Some(383848),
+                4 | 5 => Some(440277),
+                _ => None,
+            };
+            if required.is_some_and(|talent| {
+                !world
+                    .get::<crate::class_progression::KnownSpells>(application.caster)
+                    .is_some_and(|known| known.contains(talent))
+            }) {
+                return false;
+            }
+        }
         let immune = effect_immunity::blocks_effect(world, target, spell, effect)
             || mechanic_immunity::blocks_mechanic(world, target, spell, effect.mechanic);
         if immune {
