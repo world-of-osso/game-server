@@ -86,6 +86,7 @@ register_modules! {
     brewmaster_purify: (1000, "modules/brewmaster_purify.rs"),
     brewmaster_black_ox: (1000, "modules/brewmaster_black_ox.rs"),
     brewmaster_empty_barrel: (1000, "modules/brewmaster_empty_barrel.rs"),
+    brewmaster_keg_reset: (1000, "modules/brewmaster_keg_reset.rs"),
     brewmaster_shuffle: (1000, "modules/brewmaster_shuffle.rs"),
     monk_harmony: (1000, "modules/monk_harmony.rs"),
     blood_death_strike: (2500, "modules/blood_death_strike.rs"),
