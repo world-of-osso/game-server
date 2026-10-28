@@ -1357,3 +1357,8 @@ Selected Insidious Ire earns its temporary channel bonus when one target has all
 
 - At maximum Rising Fury stacks, direct and periodic damage use the native rank-two bonus once when the native effect suppresses stacking.
 - Unbound Flame damage has 100% base critical-hit chance.
+
+## MID2 support-spec inputs
+
+- Generate level-90 profiles for 65, 104, 105, 256, 257, 264, 270 and 1468 using `scripts/generate_mid2_support.py` and `scripts/mid2_support_manifest.json`. Copy the specified MID2 donor equipment and modifiers, with the recorded Evoker substitutions; use native spec primary stats. Record the talent source and retrieval date. These inputs do not claim a SimC healing reference.
+- Each generated profile and talent allocation must load through `read_reference` and spawn through `spawn_reference` against the canonical world database.

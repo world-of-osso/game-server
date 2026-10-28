@@ -1,0 +1,16 @@
+{
+  "rule": "Copy all MID2 equipment slots and modifiers from the named same-class or same-armor DPS profile; native spec determines primary stat. No healer SimC output is claimed.",
+  "talent_selection": "Wowhead recommended Mythic+ builds; Murlok browser returned an empty document and its indexed pages expose individual talent frequencies, not an export build.",
+  "substitutions": "105 copies Feral MID2 as approved. 1468 copies Elemental MID2; Shaman tier items become same-slot Evoker MID2 set items and the shield becomes a caster off-hand with the same base item level and bonus list. All other slots and modifiers remain unchanged.",
+  "retrieved": "2026-10-28",
+  "specs": {
+    "65": {"class": "paladin", "spec": "holy", "donor": "Paladin_Retribution", "talents": "CEEAAAAAAAAAAAAAAAAAAAAAAAAAALAwMAAD2GzMzMjZmZBmZYZsZmFjmYYMzMMmtMAMAsB2YZmZmlZbmZ2aAAAAWAmhNDMjZYGAAzMMjxoB", "source": "https://www.wowhead.com/guide/classes/paladin/holy/talent-builds-pve-healer"},
+    "104": {"class": "druid", "spec": "guardian", "donor": "Druid_Feral", "talents": "CgGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgZmxsMzMjZWMLGmZZZgZzwoJamZWmZmZmlxMAAAAAAMjFDYbbmBjZZAMFAAAYDzMALmBDYxCAzMAG", "source": "https://www.wowhead.com/guide/classes/druid/guardian/talent-builds-pve-tank"},
+    "105": {"class": "druid", "spec": "restoration", "donor": "Druid_Feral", "talents": "CkGAAAAAAAAAAAAAAAAAAAAAAMMmZZMjZmxsN8AMzsMjNbzAAAAAAAAAAglBNbGmmZMDmFzMzMLzwYAAAAAAAwAAQAAAzyMbNbzsYjxMDMzCoZAAmZAYA", "source": "https://www.wowhead.com/guide/classes/druid/restoration/talent-builds-pve-healer"},
+    "256": {"class": "priest", "spec": "discipline", "donor": "Priest_Shadow", "talents": "CAQAAAAAAAAAAAAAAAAAAAAAAADsMzMWYMGzgZzsNzMzMzMDAAAAAAAAAgxYZGMzMjNjZGsZamYwMDACgZb2WAjNDAAjZmZMYGMzgRwM", "source": "https://www.wowhead.com/guide/classes/priest/discipline/talent-builds-pve-healer"},
+    "257": {"class": "priest", "spec": "holy", "donor": "Priest_Shadow", "talents": "CEQAAAAAAAAAAAAAAAAAAAAAAwYAAAAAAAMzMmlxMjZGDzALzMzMAAAAGzsMDmZmxmxMD2wMFAzshhwYWGgxALGzsAoZMzYMYGgZmBMA", "source": "https://www.wowhead.com/guide/classes/priest/holy/talent-builds-pve-healer"},
+    "264": {"class": "shaman", "spec": "restoration", "donor": "Shaman_Elemental", "talents": "CgQAAAAAAAAAAAAAAAAAAAAAAAAAAgBAAAAzMzsstMzMzMjZGjZgFYDmxmGbDIzAbMzMY2mZMa2WmZ2MjZhFjZGDLzyAAAAzMDmZAgBzA", "source": "https://www.wowhead.com/guide/classes/shaman/restoration/talent-builds-pve-healer"},
+    "270": {"class": "monk", "spec": "mistweaver", "donor": "Monk_Windwalker", "talents": "C4QAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAghxyMLjZx2MmZsZsZZGmtZmtllZGLM0MmBMYAzyMzMDzGmhZZmAAAAAIAL2mZb2mZAAgBAYGwYgFZMDA", "source": "https://www.wowhead.com/guide/classes/monk/mistweaver/talent-builds-pve-healer"},
+    "1468": {"class": "evoker", "spec": "preservation", "donor": "Shaman_Elemental", "race": "dracthyr", "item_replacements": {"head": 271501, "shoulders": 271499, "chest": 271504, "hands": 271502, "legs": 271500, "off_hand": 268197}, "talents": "CwbBAAAAAAAAAAAAAAAAAAAAAAAAAAAmZmZ2WmZGDjxsZGw2wAAAzYmZmZMMTMmBAAAMzMTGzMzMGzAAjZgFwGYGmQ2YsZYGgZGGA", "source": "https://www.wowhead.com/guide/classes/evoker/preservation/talent-builds-pve-healer"}
+  }
+}
