@@ -1322,6 +1322,59 @@ mod tests {
     }
     #[test]
     #[ignore = "requires canonical MID2 Protection profile"]
+    fn celeritous_conclusion_follows_demolish_and_is_consumed_by_shield_slam() {
+        use super::super::literal_rotation::execution::{Execution, execute};
+        let mut run = super::super::prepare_measurement(73, 1).unwrap();
+        super::super::engage(&mut run);
+        let actor = run.actor;
+        let target = run.targets[0];
+        execute(
+            run.app.world_mut(),
+            actor,
+            Execution::Spell(436358, target, Some(target)),
+        )
+        .unwrap();
+        for _ in 0..60 {
+            run.app.update();
+        }
+        assert!(
+            crate::auras::has_aura(run.app.world(), actor, 1270843),
+            "Demolish grants haste"
+        );
+        assert!(
+            crate::auras::has_aura(run.app.world(), actor, 1270846),
+            "Demolish grants Shield Slam crit"
+        );
+        execute(
+            run.app.world_mut(),
+            actor,
+            Execution::Spell(23922, target, Some(target)),
+        )
+        .unwrap();
+        let hit = run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .find(|event| {
+                event.spell_id == Some(23922)
+                    && event.kind == shared::protocol::CombatLogKind::Damage
+            })
+            .expect("Shield Slam deals damage");
+        assert!(hit.crit, "the earned buff makes Shield Slam critical");
+        assert!(
+            !crate::auras::has_aura(run.app.world(), actor, 1270846),
+            "Shield Slam consumes its crit buff"
+        );
+        assert!(
+            crate::auras::has_aura(run.app.world(), actor, 1270843),
+            "Shield Slam keeps the haste buff"
+        );
+    }
+
+    #[test]
+    #[ignore = "requires canonical MID2 Protection profile"]
     fn protection_demolish_channel_delivers_three_hits_and_selected_decimator() {
         use super::super::literal_rotation::execution::{Execution, execute};
         use shared::protocol::CombatLogKind;
