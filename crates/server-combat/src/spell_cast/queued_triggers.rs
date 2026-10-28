@@ -18,6 +18,7 @@ enum QueuedCastKind {
     ApplyOwnedAura,
     RemoveOwnedAura,
     ScaledFullTrigger(f32),
+    AmountFullTrigger(f32),
 }
 
 pub struct DestinationTrigger {
@@ -242,6 +243,35 @@ pub fn schedule_destination_trigger(
         .push_back(trigger);
 }
 
+/// Queue a triggered spell with its effect-zero amount captured at impact.
+pub fn schedule_amount_full_trigger(
+    world: &mut World,
+    ctx: &super::EffectCtx,
+    target: Entity,
+    spell_id: u32,
+    delay_ms: u32,
+    amount: f32,
+) {
+    let due_ms = now_ms(world) + u64::from(delay_ms);
+    let trigger = QueuedTrigger {
+        kind: QueuedCastKind::AmountFullTrigger(amount),
+        caster: ctx.caster,
+        target,
+        destination: None,
+        spell_id,
+        depth: ctx.depth + 1,
+        item_level: ctx.spell.cast_item_level,
+        item_inventory_type: ctx.spell.cast_item_inventory_type,
+        damage_multiplier: None,
+    };
+    world
+        .resource_mut::<PendingTriggers>()
+        .0
+        .entry(due_ms)
+        .or_default()
+        .push_back(trigger);
+}
+
 /// A source-qualified delayed multiplier changes no native child coefficients.
 pub fn schedule_scaled_full_trigger(
     world: &mut World,
@@ -373,6 +403,23 @@ pub(crate) fn resolve_due(world: &mut World) {
                     trigger.depth,
                 ) {
                     warn!("Delayed scripted spell {} refused", trigger.spell_id);
+                }
+            }
+            QueuedCastKind::AmountFullTrigger(amount) => {
+                if !super::cast_triggered_with_overrides(
+                    world,
+                    trigger.caster,
+                    trigger.spell_id,
+                    Some(trigger.target),
+                    trigger.depth,
+                    super::TriggeredSpellOverrides {
+                        effect0_amount: Some(amount),
+                        item_level: trigger.item_level,
+                        item_inventory_type: trigger.item_inventory_type,
+                        ..Default::default()
+                    },
+                ) {
+                    warn!(spell = trigger.spell_id, "Delayed amount spell refused");
                 }
             }
             QueuedCastKind::InstantBackground => {

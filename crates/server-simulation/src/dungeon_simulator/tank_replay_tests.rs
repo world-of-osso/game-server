@@ -1077,3 +1077,71 @@ fn protection_paladin_replays_recorded_damage_without_healer() {
     }
     println!("TANK_REPLAY {report}");
 }
+
+#[test]
+#[ignore = "uses selected MID2 Protection player and real Avenger's Shield"]
+fn vanguard_shield_triggers_delayed_glory_and_power() {
+    use crate::auras::{AuraApplication, AuraSource};
+    use crate::spell_cast::powers::PowerPools;
+    use shared::components::PowerType;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::dps_parity::prepare_registered_player(66, 1).unwrap();
+    super::dps_parity::engage(&mut run);
+    let actor = run.actor;
+    let target = run.targets[0];
+    for _ in 0..40 {
+        run.app.update();
+    }
+    let power = |run: &super::dps_parity::Run| {
+        run.app
+            .world()
+            .get::<PowerPools>(actor)
+            .unwrap()
+            .pools
+            .iter()
+            .find(|p| p.power == PowerType::HolyPower)
+            .unwrap()
+            .current
+    };
+    run.app
+        .world_mut()
+        .get_mut::<PowerPools>(actor)
+        .unwrap()
+        .pools
+        .iter_mut()
+        .find(|p| p.power == PowerType::HolyPower)
+        .unwrap()
+        .current = 0.0;
+    crate::auras::apply_aura(
+        run.app.world_mut(),
+        &AuraApplication {
+            caster: actor,
+            target: actor,
+            spell_id: 1268810,
+            effect_mask: 1,
+            source: AuraSource::Cast,
+        },
+    );
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 31935, Some(target), false)
+        .unwrap();
+    for _ in 0..4 {
+        run.app.update();
+    }
+    assert_eq!(
+        power(&run),
+        0.0,
+        "Glory must not grant power before its delay"
+    );
+    for _ in 0..40 {
+        run.app.update();
+    }
+    assert_eq!(
+        power(&run),
+        3.0,
+        "delayed Glory grants selected talent Holy Power"
+    );
+    assert!(
+        crate::auras::has_aura(run.app.world(), actor, 1269179),
+        "delayed Glory must grant Valor"
+    );
+}
