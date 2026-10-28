@@ -56,6 +56,37 @@ fn paladin_tree() -> Option<&'static TraitTree> {
 }
 
 #[test]
+fn talent_lightforged_blessing_visible_to_holy_and_protection_not_retribution() {
+    let tree = paladin_tree().unwrap();
+    let purchase = Purchase {
+        node_id: 103853,
+        entry_id: 128245,
+        ranks: 1,
+    };
+    for spec_id in [65, 66] {
+        let entries =
+            build_simc_fixture_config(tree, TraitContext { spec_id, level: 90 }, &[purchase])
+                .unwrap_or_else(|error| panic!("spec {spec_id}: {error}"));
+        assert!(entries.iter().any(|entry| entry.node_id == purchase.node_id
+            && entry.entry_id == purchase.entry_id
+            && entry.total() == 1));
+    }
+    let error = build_simc_fixture_config(
+        tree,
+        TraitContext {
+            spec_id: 70,
+            level: 90,
+        },
+        &[purchase],
+    )
+    .unwrap_err();
+    assert!(
+        error.contains("103853"),
+        "Retribution must reject the node: {error}"
+    );
+}
+
+#[test]
 fn talent_starter_authored_rows_use_cumulative_ranks_and_independent_budgets() {
     let classes = classes().unwrap();
     for (class_id, spec_id) in [(2, 70), (8, 62)] {

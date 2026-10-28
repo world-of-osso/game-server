@@ -629,7 +629,7 @@ impl<'a> Checker<'a> {
         let node_ranks = self.ranks_where(|entry| entry.node_id == node.id);
         let entry_ranks =
             self.ranks_where(|entry| entry.node_id == node.id && entry.entry_id == entry_id);
-        let mut lists = vec![self.check_cond_list(&node.conds, kind, node_ranks)];
+        let mut lists = vec![self.check_node_cond_list(&node.conds, kind, node_ranks)];
         for group in node.groups.iter().filter_map(|&id| self.tree.group(id)) {
             let group_ranks = self.ranks_where(|entry| {
                 self.tree
@@ -657,6 +657,40 @@ impl<'a> Checker<'a> {
             .filter(|entry| filter(entry))
             .map(|entry| entry.ranks)
             .sum()
+    }
+
+    fn check_node_cond_list(
+        &self,
+        conds: &[TraitCond],
+        kind: TraitCondType,
+        ranks: u32,
+    ) -> CondListResult {
+        // Wowhead's live Holy client tree selects Lightforged Blessing (node
+        // 103853), whose native Visible spec-set rows separately name Holy and
+        // Protection: https://www.wowhead.com/guide/classes/paladin/holy/talent-builds-pve-healer
+        let alternatives: Vec<_> = conds
+            .iter()
+            .filter(|cond| {
+                cond.kind == TraitCondType::Visible && cond.flags & COND_FLAG_SUFFICIENT == 0
+            })
+            .collect();
+        let match_any = kind == TraitCondType::Visible
+            && !alternatives.is_empty()
+            && alternatives.iter().all(|cond| cond.spec_set_id != 0)
+            && alternatives
+                .iter()
+                .any(|cond| self.meets_cond(cond).is_ok());
+        if !match_any {
+            return self.check_cond_list(conds, kind, ranks);
+        }
+        let remaining: Vec<_> = conds
+            .iter()
+            .filter(|cond| {
+                cond.kind != TraitCondType::Visible || cond.flags & COND_FLAG_SUFFICIENT != 0
+            })
+            .cloned()
+            .collect();
+        self.check_cond_list(&remaining, kind, ranks)
     }
 
     fn check_cond_list(
