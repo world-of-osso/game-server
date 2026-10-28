@@ -3,6 +3,7 @@
 pub(super) mod protection_rotation;
 use super::healer_intake::{Capture, Hit, HitKind, Intake};
 use super::healer_replay::{PendingHits, deliver_hits, freeze_sources};
+use crate::simc_tank_timeline;
 use bevy::prelude::*;
 use serde_json::{Value, json};
 use shared::components::{Health, Position};
@@ -319,8 +320,14 @@ pub(super) fn replay_simc_with_healing(
     } else {
         None
     };
+    let raid_buffs = if external_healing {
+        simc_tank_timeline::read_raid_buffs(path)?
+    } else {
+        Vec::new()
+    };
     let _rng = crate::random::seed_scope(seed);
-    let run = super::dps_parity::prepare_registered_player(spec_id, 1)?;
+    let mut run = super::dps_parity::prepare_registered_player(spec_id, 1)?;
+    apply_simc_raid_buffs(&mut run, &raid_buffs)?;
     let auras = super::dps_parity::tank_mitigation_auras(&run)?;
     replay_registered_run_with_healing(
         run,
@@ -329,6 +336,7 @@ pub(super) fn replay_simc_with_healing(
         auras,
         external_healing,
         bloodlust_ms,
+        &raid_buffs,
     )
 }
 
@@ -338,7 +346,59 @@ pub(super) fn replay_registered_run(
     duration_seconds: u32,
     mitigation_auras: &[u32],
 ) -> Result<Value, String> {
-    replay_registered_run_with_healing(run, hits, duration_seconds, mitigation_auras, false, None)
+    replay_registered_run_with_healing(
+        run,
+        hits,
+        duration_seconds,
+        mitigation_auras,
+        false,
+        None,
+        &[],
+    )
+}
+
+pub(super) fn apply_simc_raid_buffs(
+    run: &mut super::dps_parity::Run,
+    buffs: &[simc_tank_timeline::RaidBuff],
+) -> Result<(), String> {
+    let tank = run.actor;
+    for buff in buffs {
+        let world = run.app.world_mut();
+        if world
+            .resource::<crate::spell_info::SpellStore>()
+            .get(buff.spell_id)
+            .is_none()
+        {
+            return Err(format!(
+                "SIMC_RAID_BUFF_NOT_IN_CATALOG:{}:{}",
+                buff.name, buff.spell_id
+            ));
+        }
+        if !crate::auras::has_aura(world, tank, buff.spell_id) {
+            crate::auras::apply_aura(
+                world,
+                &crate::auras::AuraApplication {
+                    caster: tank,
+                    target: tank,
+                    spell_id: buff.spell_id,
+                    effect_mask: u32::MAX,
+                    source: crate::auras::AuraSource::Cast,
+                },
+            );
+        }
+        if !crate::auras::has_aura(world, tank, buff.spell_id) {
+            return Err(format!(
+                "SIMC_RAID_BUFF_NOT_APPLIED:{}:{}",
+                buff.name, buff.spell_id
+            ));
+        }
+    }
+    if !buffs.is_empty() {
+        // Mastery-dependent aura amounts refresh after the first stat recompute.
+        run.app.update();
+        run.app.update();
+    }
+    Ok(())
 }
 
 fn replay_registered_run_with_healing(
@@ -348,6 +408,7 @@ fn replay_registered_run_with_healing(
     mitigation_auras: &[u32],
     external_healing: bool,
     bloodlust_ms: Option<u64>,
+    raid_buffs: &[simc_tank_timeline::RaidBuff],
 ) -> Result<Value, String> {
     use crate::simc_tank_timeline::Kind;
     let tank = run.actor;
@@ -630,6 +691,7 @@ fn replay_registered_run_with_healing(
         json!({"spec":spec,"level":level,"reference_tier":"MID2","timeline":"simc_tank_dummy",
         "external_healing":external_healing,"external_healing_effective":external_healing_effective,
         "bloodlust_start_seconds":bloodlust_ms.filter(|_| bloodlust_applied).map(|ms| ms as f64 / 1000.0),
+        "raid_buffs":raid_buffs.iter().map(|buff| json!({"name":buff.name,"spell_id":buff.spell_id})).collect::<Vec<_>>(),
         "self_healing_by_spell":healing_by_spell,"absorbs_by_spell":absorbs_by_spell,"aura_uptime":aura_uptime,
         "resource_counters":counters,"target_debuff_uptime":target_debuff_uptime,
         "rotation_status":"registered_literal_simc","duration_seconds":elapsed,"incoming_events":next,"tank_casts":casts,

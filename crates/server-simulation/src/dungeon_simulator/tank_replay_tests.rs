@@ -2,6 +2,52 @@ use super::healer_intake::Intake;
 use std::path::Path;
 
 #[test]
+#[ignore = "requires canonical Brewmaster profile and world database"]
+fn simc_raid_buffs_update_native_tank_stats() {
+    let mut run = super::dps_parity::prepare_registered_player(268, 1).unwrap();
+    let actor = run.actor;
+    let before = *run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(actor)
+        .unwrap();
+    let buffs = [
+        ("mark_of_the_wild", 1126),
+        ("power_word_fortitude", 21562),
+        ("battle_shout", 6673),
+        ("skyfury", 462854),
+    ]
+    .into_iter()
+    .map(|(name, spell_id)| crate::simc_tank_timeline::RaidBuff {
+        name: name.into(),
+        spell_id,
+    })
+    .collect::<Vec<_>>();
+    super::tank_replay::apply_simc_raid_buffs(&mut run, &buffs).unwrap();
+    let after = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(actor)
+        .unwrap();
+    assert_eq!(after.primary.agility, before.primary.agility);
+    assert!((after.primary.stamina - before.primary.stamina * 1.05).abs() < 2.0);
+    assert!((after.versatility_pct - before.versatility_pct - 3.0).abs() < 0.01);
+    assert!((after.mastery_points - before.mastery_points - 2.0).abs() < 0.01);
+    assert!(
+        (after.attack_power - 3783.0).abs() < 3.0,
+        "Brewmaster AP {}",
+        after.attack_power
+    );
+    for buff in buffs {
+        assert!(crate::auras::has_aura(
+            run.app.world(),
+            actor,
+            buff.spell_id
+        ));
+    }
+}
+
+#[test]
 #[ignore = "reads the pinned MID2 Protection profile"]
 fn tank_replay_rejects_profiles_without_level_90_mid2_inputs() {
     let (mut profile, _) = super::dps_parity::read_reference(66).unwrap();
