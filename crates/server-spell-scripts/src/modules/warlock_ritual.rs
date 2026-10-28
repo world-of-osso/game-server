@@ -70,6 +70,8 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
 ];
 
 fn register(scripts: &mut AuraScripts) {
+    // SimC76f8118 actions.cpp5233–5240 spends this buff only on Infernal Bolt.
+    scripts.0.entry(INFERNAL_BOLT_BUFF).or_default().check_proc = Some(infernal_proc);
     scripts.0.entry(DEMONIC_OCULI).or_default().on_periodic = Some(gaze);
     for demon in &DEMONS {
         scripts
@@ -83,6 +85,10 @@ fn register(scripts: &mut AuraScripts) {
             .or_insert(AuraScript::default())
             .on_remove = Some(art_removed);
     }
+}
+
+fn infernal_proc(world: &World, aura: &AuraInstance, _: &auras::procs::AuraEvent) -> bool {
+    world.get::<ActiveSpec>(aura.caster).is_none_or(|spec| spec.0 != 266)
 }
 
 fn diabolist(world: &World, caster: Entity) -> bool {

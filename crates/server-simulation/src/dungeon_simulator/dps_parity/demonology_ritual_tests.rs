@@ -491,3 +491,23 @@ fn demonology_art_hand_detonates_oculi_into_minds_eyes() {
         "the explosion expires the Oculi"
     );
 }
+
+
+#[test]
+#[ignore = "native Mother buff survives the Hand projectile that granted it"]
+fn demonology_infernal_bolt_survives_hand_impact() {
+    let mut run = prepare_funded();
+    grant_art(&mut run, 432794);
+    cast(&mut run, 105174);
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, INFERNAL_BOLT_BUFF));
+    for _ in 0..120 {
+        if !events(&run, CombatLogKind::Damage, 86040).is_empty() {
+            break;
+        }
+        update(&mut run, 1);
+    }
+    assert!(!events(&run, CombatLogKind::Damage, 86040).is_empty(), "actual Hand impact");
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, INFERNAL_BOLT_BUFF), "Hand impact must not consume Infernal Bolt");
+    cast(&mut run, 434506);
+    assert!(!crate::auras::has_aura(run.app.world(), run.actor, INFERNAL_BOLT_BUFF), "Infernal Bolt cast consumes its buff");
+}
