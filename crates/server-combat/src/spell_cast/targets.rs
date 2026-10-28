@@ -11,7 +11,7 @@
 //! UNIT_TARGET_ENEMY, 15
 //! UNIT_SRC_AREA_ENEMY, 16 UNIT_DEST_AREA_ENEMY, 18 DEST_CASTER, 21
 //! UNIT_TARGET_ALLY, 22 SRC_CASTER, 25 UNIT_TARGET_ANY, 30 UNIT_SRC_AREA_ALLY,
-//! 31 UNIT_DEST_AREA_ALLY, 32 DEST_CASTER_FRONT_LEFT (3 yards ahead-left of the caster
+//! 31 UNIT_DEST_AREA_ALLY, 45 UNIT_TARGET_CHAINHEAL_ALLY, 32 DEST_CASTER_FRONT_LEFT (3 yards ahead-left of the caster
 //! without a radius; collision is not modelled), 53 DEST_TARGET_ENEMY, 60 UNIT_CONE_ENTRY (units ahead of the
 //! caster that meet the effect's `conditions`), 63 DEST_TARGET_ANY, 132
 //! DEST_TARGET_ALLY, 65 DEST_TARGET_BACK (the explicit target's position moved the
@@ -172,7 +172,7 @@ fn selector(id: u32) -> Option<Selector> {
         49 => Selector::CasterOffset(-std::f32::consts::FRAC_PI_2),
         50 => Selector::CasterOffset(std::f32::consts::FRAC_PI_2),
         6 => Selector::Explicit(Enemy),
-        21 => Selector::Explicit(Ally),
+        21 | 45 => Selector::Explicit(Ally),
         57 => Selector::Explicit(Raid),
         118 => Selector::AllyOrRaid,
         25 => Selector::Explicit(Any),
@@ -1210,6 +1210,8 @@ pub fn chain_targets(
         return Vec::new();
     }
     let jumps = (max_targets - 1) as usize;
+    // TC Spell.cpp:1848,2233–2235: target45 uses the chain-heal search.
+    let chain_heal = effect.implicit_targets.contains(&45);
     let defense = spell
         .categories
         .as_ref()
@@ -1217,6 +1219,7 @@ pub fn chain_targets(
     let jump_radius = match defense {
         3 => 7.5,
         2 => 5.0,
+        _ if chain_heal => 12.5,
         _ => 10.0,
     };
     let from_caster = spell.misc.as_ref().map_or(0, |misc| misc.attributes[2])
@@ -1245,13 +1248,22 @@ pub fn chain_targets(
         let Some(from) = position(world, source) else {
             break;
         };
-        let nearest = candidates
-            .iter()
-            .enumerate()
-            .filter_map(|(slot, &unit)| Some((slot, position(world, unit)?.distance(from))))
-            .filter(|&(_, distance)| distance <= jump_radius)
-            .min_by(|a, b| a.1.total_cmp(&b.1));
-        let Some((slot, _)) = nearest else {
+        let eligible = candidates.iter().enumerate().filter_map(|(slot, &unit)| {
+            let distance = position(world, unit)?.distance(from);
+            let health = world.get::<Health>(unit)?;
+            (distance <= jump_radius).then_some((
+                slot,
+                distance,
+                (health.max - health.current).max(0.0),
+            ))
+        });
+        // TC Spell.cpp:2277–2286: chain heals choose the greatest health deficit.
+        let selected = if chain_heal {
+            eligible.max_by(|a, b| a.2.total_cmp(&b.2).then_with(|| b.1.total_cmp(&a.1)))
+        } else {
+            eligible.min_by(|a, b| a.1.total_cmp(&b.1))
+        };
+        let Some((slot, _, _)) = selected else {
             break;
         };
         let unit = candidates.remove(slot);
