@@ -101,6 +101,7 @@ mod cooldown_capacity_tests;
 mod devastation_bombardments_tests;
 mod devastation_imminent_tests;
 mod devastation_tests;
+mod devastation_verdant_tests;
 mod devourer_fury_cap_tests;
 mod devourer_immolation_tests;
 mod devourer_entropy_tests;
