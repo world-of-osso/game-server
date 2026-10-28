@@ -138,7 +138,7 @@ struct Context<'a> {
 }
 impl Facts for Context<'_> {
     fn value(&self, name: &str) -> Result<f64, String> {
-        if name.starts_with("trinket.") || name.starts_with("equipped.") {
+        if name.starts_with("trinket.") || name.starts_with("equipped.") || name.starts_with("set_bonus.") {
             self.equipment.fact(name, &self.native)
         } else {
             self.native.value(name)
@@ -147,7 +147,7 @@ impl Facts for Context<'_> {
 }
 impl ActionFacts for Context<'_> {
     fn value_for(&self, action: &Action, name: &str) -> Result<f64, String> {
-        if name.starts_with("trinket.") || name.starts_with("equipped.") {
+        if name.starts_with("trinket.") || name.starts_with("equipped.") || name.starts_with("set_bonus.") {
             self.value(name)
         } else {
             self.native.value_for(action, name)
@@ -427,6 +427,7 @@ mod tests {
         assert_eq!(report["rotation_status"], "registered_literal_simc");
         assert!(report["raw_damage"].as_f64().unwrap() > 0.0);
         assert!(report["active_mitigation_uptime"].as_f64().unwrap() > 0.0);
+        assert!(report["periodic_damage_ticks_by_spell"]["192090"].as_u64().unwrap_or(0) > 0, "landed Bear Thrash must apply its real periodic bleed");
         assert!(
             report["tank_casts"]["204066"].as_u64().unwrap_or(0) > 0,
             "Lunar Beam must cast on the enemy while its native destination remains caster-centered"
