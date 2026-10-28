@@ -353,6 +353,53 @@ mod tests {
 
     #[test]
     #[ignore = "requires canonical world database and MID2 Blood inputs"]
+    fn blood_death_strike_can_earn_and_consume_vampiric_strike() {
+        let _seed = crate::random::seed_scope(70448);
+        let mut run = super::super::prepare_registered_player(250, 1).unwrap();
+        let actor = run.actor;
+        let target = run.targets[0];
+        super::super::engage(&mut run);
+        for _ in 0..20 {
+            crate::spell_cast::powers::change_power(
+                run.app.world_mut(),
+                actor,
+                shared::components::PowerType::RunicPower,
+                1000.0,
+            );
+            crate::spell_cast::creature_cast(
+                run.app.world_mut(),
+                actor,
+                49998,
+                Some(target),
+                false,
+            )
+            .unwrap();
+            for _ in 0..30 {
+                run.app.update();
+            }
+            if crate::auras::has_aura(run.app.world(), actor, 433899) {
+                break;
+            }
+        }
+        assert!(
+            crate::auras::has_aura(run.app.world(), actor, 433899),
+            "Death Strike earns the proc"
+        );
+        let strike = crate::spell_cast::knowledge::resolve_action(run.app.world(), actor, 206930)
+            .unwrap()
+            .unwrap();
+        assert_eq!(strike, 433895);
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, strike, Some(target), false)
+            .unwrap();
+        for _ in 0..4 {
+            run.app.update();
+        }
+        assert!(!crate::auras::has_aura(run.app.world(), actor, 433899));
+        assert!(crate::auras::has_aura(run.app.world(), actor, 433925));
+    }
+
+    #[test]
+    #[ignore = "requires canonical world database and MID2 Blood inputs"]
     fn blood_sanlayn_gift_vampiric_strikes_raise_and_expire_mastery() {
         let mut run = super::super::prepare_registered_player(250, 1).unwrap();
         let actor = run.actor;
