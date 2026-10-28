@@ -1,13 +1,81 @@
 //! Sudden Doom from actual Dread Plague ticks.
 use super::combat;
 use bevy::prelude::*;
-use combat::spell_cast::{effects::EffectCtx, script_registry::SpellScriptHook};
+use combat::spell_cast::{
+    effects::EffectCtx, script_registry::SpellScriptHook, scripts::AfterCastHook,
+};
+use combat::spell_info::SpellInfo;
 
 #[derive(Component, Default)]
 struct SuddenDoomAttempts(u32);
 
-pub(super) const HOOKS: &[SpellScriptHook] =
-    &[SpellScriptHook::PeriodicDamageFinished(roll_sudden_doom)];
+#[derive(Component, Default)]
+struct PendingSuddenDoomConsumption(Vec<f64>);
+
+pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::PeriodicDamageFinished(roll_sudden_doom),
+    SpellScriptHook::AuraRollAfterCast(after_cast),
+    SpellScriptHook::AfterCastUpdate(consume_due),
+];
+
+fn after_cast(spell: u32) -> Option<AfterCastHook> {
+    matches!(spell, 47541 | 1242174 | 207317 | 383269).then_some(schedule_consumption)
+}
+
+fn schedule_consumption(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    if !combat::auras::has_aura(world, caster, 81340) {
+        return;
+    }
+    // SimC76f8118 sc_death_knight.cpp13583–13587: consume one earned
+    // stack after the spender's damage, allowing the impact to use it.
+    let delay = if matches!(spell.id, 47541 | 1242174) {
+        0.210
+    } else {
+        0.100
+    };
+    let due = combat::auras::aura_now(world) + delay;
+    if world.get::<PendingSuddenDoomConsumption>(caster).is_none() {
+        world
+            .entity_mut(caster)
+            .insert(PendingSuddenDoomConsumption::default());
+    }
+    world
+        .get_mut::<PendingSuddenDoomConsumption>(caster)
+        .unwrap()
+        .0
+        .push(due);
+}
+
+fn consume_due(world: &mut World) {
+    let now = combat::auras::aura_now(world);
+    let mut due = Vec::new();
+    for (caster, mut pending) in world
+        .query::<(Entity, &mut PendingSuddenDoomConsumption)>()
+        .iter_mut(world)
+    {
+        pending.0.retain(|&deadline| {
+            if deadline <= now {
+                due.push(caster);
+                false
+            } else {
+                true
+            }
+        });
+    }
+    for caster in due {
+        let instance = world
+            .get::<combat::auras::ActiveAuras>(caster)
+            .and_then(|auras| {
+                auras
+                    .iter()
+                    .find(|aura| aura.spell_id == 81340 && aura.caster == caster)
+                    .map(|aura| aura.instance_id)
+            });
+        if let Some(instance) = instance {
+            combat::auras::spend_stack(world, caster, instance);
+        }
+    }
+}
 
 fn roll_sudden_doom(world: &mut World, ctx: &EffectCtx<'_>) {
     let caster = ctx.caster;
