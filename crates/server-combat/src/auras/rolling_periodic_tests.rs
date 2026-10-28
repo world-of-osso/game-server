@@ -131,26 +131,13 @@ fn assert_native_full_mask_rolling(cast_child: fn(&mut Harness, Entity, u32)) {
     );
     finish_aura(&mut h, &refreshed);
     let remaining = ticks(&h, target, LANGUISH, start);
-    // SimC76f8118 dot.cpp1154–1170/action.cpp5223: preserving the native
-    // phase leaves two full payments and a final fractional payment at expiry.
-    assert_eq!(remaining.len(), total as usize + 1);
-    let period_seconds = f64::from(period) / 1000.0;
-    let final_fraction =
-        ((refreshed.expires_at.unwrap() - initial.expires_at.unwrap()) / period_seconds).fract();
-    assert!(final_fraction > 0.0 && final_fraction < 1.0);
-    // Retain the native per-tick carry oracle; only the tail is fractional.
-    let full_amount = paid.amount as f32 * (1.0 + (total - 1) as f32 / total as f32);
-    for tick in remaining.iter().take(total as usize) {
-        assert_eq!(
-            tick.amount,
-            full_amount.round() as i32,
-            "native flag must carry unpaid damage, not simply replace it"
-        );
-    }
-    assert_eq!(
-        remaining.last().unwrap().amount,
-        (f64::from(full_amount) * final_fraction).round() as i32,
-        "the final partial event scales the same native rolled amount"
+    // SimC76f8118 action.cpp4614–4617/4995–5015: one unpaid tick plus
+    // two fresh ticks is distributed over three full carried-phase ticks.
+    assert_eq!(paid.amount, 5);
+    assert_eq!(remaining.len(), 3);
+    assert!(
+        remaining.iter().all(|tick| tick.amount == 5),
+        "rolling budget must pay three full native ticks: {remaining:?}"
     );
 }
 

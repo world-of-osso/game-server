@@ -14,12 +14,6 @@ const SHIELD_BLOCK: u32 = 132404;
 const SHIELD_OF_THE_RIGHTEOUS: u32 = 132403;
 
 #[derive(Clone, Copy)]
-enum RollingBudget {
-    PerTick,
-    NativeDuration(u32),
-}
-
-#[derive(Clone, Copy)]
 enum DurationCarry {
     Pandemic,
     Extend,
@@ -58,6 +52,8 @@ pub(super) fn prepare_application(
         // selects Pandemic, not a spell-ID whitelist. Explicit Extend and
         // Rolling retain their source precedence (action.cpp2729–2734).
         carry_duration(world, target, new, DurationCarry::Pandemic);
+    } else if !rolling && has_periodic_health_effect(new) {
+        carry_next_tick_duration(world, target, new);
     }
     match new.spell_id {
         IGNORE_PAIN => accumulate_ignore_pain(world, target, new),
@@ -69,17 +65,55 @@ pub(super) fn prepare_application(
     }
     preserve_expiry(world, target, new, spell);
     if rolling {
-        let budget = if sourced_rolling {
-            carry_rolling_duration(world, target, new);
-            RollingBudget::NativeDuration(fresh_duration_ms)
-        } else {
-            RollingBudget::PerTick
-        };
-        roll_remaining_periodic(world, target, new, budget);
+        // SimC76f8118 action.cpp2730–2734/4995–5015 uses the same
+        // next-tick schedule and remaining-plus-fresh budget for both.
+        carry_rolling_duration(world, target, new);
+        roll_remaining_periodic(world, target, new, fresh_duration_ms);
     }
     preserve_counter_only_stacks(world, target, new, spell);
     super::enhancement_power::preserve_refresh_duration(world, target, new);
     super::ret_crusade::preserve_refresh_duration(world, target, new);
+}
+
+fn has_periodic_health_effect(aura: &AuraInstance) -> bool {
+    aura.effects.iter().any(|effect| {
+        effect.period_ms > 0
+            && matches!(
+                effect.aura_type,
+                super::handlers::PERIODIC_DAMAGE
+                    | super::handlers::PERIODIC_DAMAGE_PERCENT
+                    | super::handlers::PERIODIC_LEECH
+                    | super::handlers::PERIODIC_HEAL
+            )
+    })
+}
+
+fn carry_next_tick_duration(world: &World, target: Entity, new: &mut AuraInstance) {
+    let Some(old) = previous(world, target, new) else {
+        return;
+    };
+    let now = aura_now(world);
+    if old.expires_at.is_some_and(|expiry| expiry <= now) {
+        return;
+    }
+    let Some(effect) = old.effects.iter().find(|effect| {
+        effect.period_ms > 0
+            && matches!(
+                effect.aura_type,
+                super::handlers::PERIODIC_DAMAGE
+                    | super::handlers::PERIODIC_DAMAGE_PERCENT
+                    | super::handlers::PERIODIC_LEECH
+                    | super::handlers::PERIODIC_HEAL
+            )
+    }) else {
+        return;
+    };
+    // SimC76f8118 action.cpp419/4618–4619: ordinary DoT refresh adds
+    // the time to the next full tick to the newly triggered duration.
+    let until_tick = (effect.next_tick_at() - now).max(0.0);
+    let duration = f64::from(new.duration_ms) / 1000.0 + until_tick;
+    new.duration_ms = (duration * 1000.0).round() as u32;
+    new.expires_at = Some(now + duration);
 }
 
 fn preserve_counter_only_stacks(
@@ -162,9 +196,9 @@ fn settle_previous_ticks(world: &mut World, target: Entity, new: &AuraInstance) 
     }
 }
 
-/// TC a352b1fa Spell.cpp3236 and SpellAuras.cpp976–991: normal nonstacking
-/// recasts reset periodic timers; FULL_MASK's DONT_RESET_PERIODIC_TIMER,
-/// stacking and native Pandemic retain time-to-tick (SpellDefines.h291–293).
+/// SimC76f8118 action.cpp419/4618–4619 retains health-periodic phase on
+/// refresh. Native full-mask, stacking, Pandemic and sourced policies also
+/// preserve phase for other periodic effects.
 fn prepare_periodic_phase(
     world: &World,
     target: Entity,
@@ -181,7 +215,10 @@ fn prepare_periodic_phase(
     let scripted_phase = world
         .resource::<crate::spell_cast::script_registry::SpellScriptRegistry>()
         .preserves_periodic_phase(spell.id);
-    let preserve_phase = native_preserves_phase || sourced_rolling || scripted_phase;
+    let preserve_phase = native_preserves_phase
+        || sourced_rolling
+        || scripted_phase
+        || has_periodic_health_effect(new);
     if !preserve_phase {
         return;
     }
@@ -224,14 +261,13 @@ fn carry_rolling_duration(world: &World, target: Entity, new: &mut AuraInstance)
     new.expires_at = Some(now + f64::from(new.duration_ms) / 1000.0);
 }
 
-/// Native per-tick carry: TC a352b1fa SpellAuraEffects.cpp832–849.
-/// Source-qualified coefficient rolling: SimC76f8118 action.cpp4995–5016
-/// shares old unpaid + fresh native duration budget across the new schedule.
+/// SimC76f8118 action.cpp4995–5015 rolls both the fractional unpaid
+/// duration and the fresh duration across the new fractional tick schedule.
 fn roll_remaining_periodic(
     world: &World,
     target: Entity,
     new: &mut AuraInstance,
-    budget: RollingBudget,
+    fresh_duration_ms: u32,
 ) {
     let Some(old) = previous(world, target, new) else {
         return;
@@ -247,17 +283,20 @@ fn roll_remaining_periodic(
         else {
             continue;
         };
-        let unpaid = remaining_ticks(prior.next_tick_at(), old_expiry, prior.period_ms);
-        let future = remaining_ticks(fresh.next_tick_at(), new_expiry, fresh.period_ms);
-        if future > 0 {
-            let unpaid_budget = prior.amount * old.stack_multiplier() * unpaid as f32;
-            fresh.amount = match budget {
-                RollingBudget::PerTick => fresh.amount + unpaid_budget / future as f32,
-                RollingBudget::NativeDuration(duration) => {
-                    let fresh_ticks = duration as f32 / fresh.period_ms as f32;
-                    (fresh.amount * fresh_ticks + unpaid_budget) / future as f32
-                }
-            };
+        if prior.period_ms == 0 {
+            continue;
+        }
+        let unpaid = (1.0
+            + (old_expiry - prior.next_tick_at()) * 1000.0 / f64::from(prior.period_ms))
+        .max(0.0);
+        let future = (1.0
+            + (new_expiry - fresh.next_tick_at()) * 1000.0 / f64::from(fresh.period_ms))
+        .max(0.0);
+        if future > 0.0 {
+            let unpaid_budget = f64::from(prior.amount * old.stack_multiplier()) * unpaid;
+            let fresh_ticks = f64::from(fresh_duration_ms) / f64::from(fresh.period_ms);
+            fresh.amount =
+                ((f64::from(fresh.amount) * fresh_ticks + unpaid_budget) / future) as f32;
         }
     }
 }
