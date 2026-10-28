@@ -65,9 +65,28 @@ fn grant_elusive_brawler(world: &mut World, target: Entity) {
 }
 
 fn register(scripts: &mut AuraScripts) {
+    scripts.0.entry(117906).or_default().check_proc = Some(mastery_source);
     let script = scripts.0.entry(ELUSIVE_BRAWLER).or_default();
     script.check_proc = Some(is_dodge);
     script.on_proc = Some(consume_on_dodge);
+}
+
+// SimC76f8118 sc_monk.cpp1430–1439,7262–7266: only Blackout Kick
+// impacts and incoming physical hits grant the mastery, not other own attacks.
+fn mastery_source(world: &World, aura: &AuraInstance, event: &AuraEvent) -> bool {
+    if event.actor == aura.caster {
+        return event.target != Some(aura.caster) && event.spell_id == Some(205523);
+    }
+    if event.target != Some(aura.caster) {
+        return false;
+    }
+    match event.spell_id {
+        None | Some(0) => true,
+        Some(id) => world
+            .resource::<combat::spell_info::SpellStore>()
+            .get(id)
+            .is_some_and(|spell| spell.school_mask() == 1),
+    }
 }
 
 fn avoidance_mask(spell: u32) -> Option<u32> {
