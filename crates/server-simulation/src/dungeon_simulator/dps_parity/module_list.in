@@ -144,6 +144,7 @@ mod unholy_devotion_tests;
 mod unholy_magus_refresh_tests;
 mod driver_tests;
 mod dummy_reference_tests;
+mod druid_fluid_form_tests;
 mod elemental_ancestor_tests;
 mod elemental_ascendance_tests;
 mod elemental_cadence_tests;
