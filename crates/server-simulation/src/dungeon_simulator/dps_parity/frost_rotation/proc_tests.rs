@@ -906,6 +906,43 @@ fn frost_gathering_storm_extends_winter_for_paid_and_free_spenders() {
 }
 
 #[test]
+#[ignore = "real Breath applies SimC secondary target reduction"]
+fn frost_breath_secondary_targets_are_reduced() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::protocol::CombatLogKind;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::super::prepare_literal(251, 3).unwrap();
+    super::super::engage(&mut run);
+    for _ in 0..4 {
+        cast(&mut run, 49020);
+    }
+    let start = run.app.world().resource::<ObservedCombatEvents>().0.len();
+    cast(&mut run, 1249658);
+    for _ in 0..40 {
+        run.app.update();
+    }
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0[start..];
+    let hits: Vec<_> = events
+        .iter()
+        .filter(|event| {
+            event.spell_id == Some(155166)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0
+        })
+        .take(3)
+        .collect();
+    assert_eq!(hits.len(), 3, "Breath must hit all targets");
+    let values: Vec<_> = hits
+        .iter()
+        .map(|hit| hit.amount as f32 / if hit.crit { 2.0 } else { 1.0 })
+        .collect();
+    assert!(
+        (values[1] / values[0] - 0.8 / 3.0_f32.sqrt()).abs() < 0.04,
+        "Breath target reduction: {values:?}"
+    );
+}
+
+#[test]
 #[ignore = "real rune spenders earn selected Rune Mastery Strength"]
 fn frost_rune_spenders_earn_rune_mastery() {
     let _seed = crate::random::seed_scope(70448);
