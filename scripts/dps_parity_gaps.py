@@ -20,7 +20,9 @@ PINNED = Path("/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/dp
 TARGETS = {1: "single", 3: "three"}
 # SimC reports these actions under their parent or equivalent pet spell IDs.
 NATIVE_ALIASES = {
+    64: {228597: 116, 228598: 30455, 228600: 199786},
     253: {49966: 16827},
+    254: {257045: 257044, 260247: 260243},
     255: {49966: 16827},
     258: {199486: 199484, 447448: 447445},
     262: {285452: 51505, 269005: 157375},

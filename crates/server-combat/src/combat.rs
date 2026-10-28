@@ -2060,6 +2060,9 @@ fn try_swing(
     };
     let critical_multiplier = if kind == MeleeOutcome::Crit {
         attacker.mods.map_or(1.0, |mods| mods.critical_damage(1))
+            * context
+                .summon_modifiers
+                .felguard_white_critical_multiplier(attacker.entity)
     } else {
         1.0
     };

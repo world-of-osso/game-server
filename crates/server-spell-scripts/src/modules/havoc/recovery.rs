@@ -132,7 +132,7 @@ fn register_channels(scripts: &mut AuraScripts) {
         let script = scripts.0.entry(*beam).or_default();
         script.on_apply = Some(super::havoc_fury::apply_blind_fury);
         script.on_natural_end = Some(finish_beam);
-        script.on_remove = Some(super::havoc_eternal::remove_beam);
+        script.on_remove = Some(remove_beam);
     }
 }
 
@@ -172,6 +172,26 @@ fn apply_serrated_glaive(world: &mut World, caster: Entity, aura: &AuraInstance)
         combat::auras::set_effect_amount(world, caster, aura.instance_id, 0, amount),
         "native Serrated Glaive modifier must exist"
     );
+}
+
+// SimC76f8118 sc_demon_hunter.cpp3305,4002–4011 permits the final two
+// scheduled ticks to be clipped without losing the channel's earned effects.
+fn remove_beam(
+    world: &mut World,
+    caster: Entity,
+    aura: &AuraInstance,
+    reason: combat::auras::RemoveReason,
+) {
+    let interrupted = reason == combat::auras::RemoveReason::ChannelEnded
+        && aura.expires_at.is_some_and(|expiry| combat::auras::aura_now(world) < expiry);
+    if aura.caster == caster && interrupted {
+        let remaining = combat::auras::count_remaining_ticks(aura)
+            .expect("native Beam channel has a bounded tick schedule");
+        if remaining <= 2 {
+            finish_beam(world, caster, aura);
+        }
+    }
+    super::havoc_eternal::remove_beam(world, caster, aura, reason);
 }
 
 fn finish_beam(world: &mut World, caster: Entity, aura: &AuraInstance) {
