@@ -96,6 +96,7 @@ pub(crate) struct SummonDamageModifiers<'w, 's> {
     modifiers: Query<'w, 's, &'static AuraStatMods>,
     stats: Query<'w, 's, &'static crate::stats::CharacterStats>,
     npcs: Query<'w, 's, &'static shared::components::Npc>,
+    demons: Query<'w, 's, (), With<crate::hunter_pet::SummonedDemon>>,
 }
 
 impl SummonDamageModifiers<'_, '_> {
@@ -140,12 +141,27 @@ impl SummonDamageModifiers<'_, '_> {
     }
 
     pub(crate) fn pet_melee_time_multiplier(&self, unit: Entity) -> f32 {
-        let Some((owner, false)) = self.owners.get(unit).ok().and_then(owner_and_guardian) else {
+        let Some((owner, guardian)) = self.owners.get(unit).ok().and_then(owner_and_guardian)
+        else {
             return 1.0;
         };
-        self.modifiers
-            .get(owner)
-            .map_or(1.0, |mods| mods.pet_melee_time_mult)
+        let pet_modifier = if guardian {
+            1.0
+        } else {
+            self.modifiers
+                .get(owner)
+                .map_or(1.0, |mods| mods.pet_melee_time_mult)
+        };
+        // SimC76f8118 pet.cpp222–228: actual demons inherit owner attack haste.
+        // Stat-bearing actors already use their own haste in the swing clock.
+        let owner_haste = if self.demons.get(unit).is_ok() && self.stats.get(unit).is_err() {
+            self.stats
+                .get(owner)
+                .map_or(1.0, |stats| 1.0 / (1.0 + stats.haste_pct / 100.0))
+        } else {
+            1.0
+        };
+        pet_modifier * owner_haste
     }
 
     pub(crate) fn taken_multiplier(&self, unit: Entity, auras: Option<&ActiveAuras>) -> f32 {
