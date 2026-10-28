@@ -1964,8 +1964,12 @@ fn try_swing(
             };
             owner / baked
         });
-    let source_multiplier =
-        context.summon_modifiers.multiplier(attacker.entity) * inherited_versatility * versus;
+    let source_multiplier = context.summon_modifiers.multiplier(attacker.entity)
+        * context
+            .summon_modifiers
+            .white_swing_multiplier(attacker.entity)
+        * inherited_versatility
+        * versus;
     let swing = swing_damage(
         attacker,
         &weapon,
