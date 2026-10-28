@@ -36,6 +36,10 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 - Selected Inferno Arc1259047 amplifies Chain Lightning, Lightning Bolt, Elemental Blast, Earthquake damage, Earth Shock and Tempest and their overloads against each recipient with this caster's active Flame Shock. Read the percentage from the native talent (SimC76f8118 `sc_shaman.cpp`6324–6330,6618–6624,7330–7336,7411–7417,7589–7595,7678–7684,7810–7812,8192–8198,8221–8227,9858–9864,10069–10075).
 
+### Literal interrupt readiness
+
+- Literal interrupt actions require their selected enemy to be casting. Match the pinned class-specific SimC `target_ready` rules; Skull Bash bypasses the Druid casting check for fluid-form shifting (`sc_rogue.cpp4682–4687`, `sc_druid.cpp3573–3578,8174–8181`).
+
 ### Stormbound Emblem of Dazar
 
 - A completed or interrupted native1295275 channel grants haste1294745 for one native buff duration per completed tick. Its amount comes from the equipped native1294744 item effect (`unique_gear_midnight.cpp3863–3954`).
