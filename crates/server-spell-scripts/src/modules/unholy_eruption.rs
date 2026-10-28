@@ -130,7 +130,7 @@ fn apply_missing_plague(world: &mut World, caster: Entity, target: Entity, _dept
                 caster,
                 target,
                 spell_id: VIRULENT_PLAGUE,
-                effect_mask: 1,
+                effect_mask: u32::MAX,
                 source: combat::auras::AuraSource::Cast,
             },
         );

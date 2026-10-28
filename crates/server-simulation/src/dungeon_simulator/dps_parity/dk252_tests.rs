@@ -2995,6 +2995,54 @@ fn dk252_runic_spenders_consume_sudden_doom_after_damage() {
 
 #[test]
 #[ignore = "requires native252 profile/traits and player actor"]
+fn dk252_scourge_applied_virulent_plague_enables_morbidity_damage() {
+    let mut run = prepare_literal(252, 1).unwrap();
+    engage(&mut run);
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, 377592));
+    assert!(!crate::auras::has_aura(
+        run.app.world(),
+        run.targets[0],
+        191587
+    ));
+    let strike = |run: &mut Run| -> i32 {
+        let _seed = crate::random::seed_scope(70448);
+        assert!(crate::spell_cast::try_cast_triggered(
+            run.app.world_mut(),
+            run.actor,
+            55090,
+            Some(run.targets[0]),
+            1
+        ));
+        run.app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .rev()
+            .find(|event| {
+                event.source == Some(run.actor.to_bits())
+                    && event.target == Some(run.targets[0].to_bits())
+                    && event.spell_id == Some(55090)
+                    && event.kind == CombatLogKind::Damage
+            })
+            .expect("actual Scourge Strike damage")
+            .amount
+    };
+    let first = strike(&mut run);
+    assert!(crate::auras::has_aura(
+        run.app.world(),
+        run.targets[0],
+        191587
+    ));
+    let second = strike(&mut run);
+    assert!(
+        second > first,
+        "the actual plague must enable selected Morbidity on the next strike: {first} -> {second}"
+    );
+}
+
+#[test]
+#[ignore = "requires native252 profile/traits and player actor"]
 fn dk252_literal_rotation_observes_sudden_doom_reaction() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_measurement(252, 1).unwrap();
