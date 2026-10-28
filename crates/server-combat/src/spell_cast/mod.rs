@@ -336,6 +336,7 @@ mod toy_wormhole;
 mod trigger_missile_value;
 
 mod elemental_overload;
+pub use elemental_overload::roll_feedback_loop;
 pub mod queued_triggers;
 
 pub struct SpellCastPlugin;

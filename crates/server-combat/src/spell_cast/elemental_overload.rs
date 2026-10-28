@@ -7,6 +7,7 @@ use crate::auras::ActiveAuras;
 use crate::spell_info::SpellInfo;
 
 const MASTERY: u32 = 168534;
+const FEEDBACK_LOOP: u32 = 1270064;
 const STORMKEEPER: u32 = 191634;
 const ASCENDANCE: u32 = 1219480;
 const LIGHTNING_BOLT: u32 = 188196;
@@ -48,6 +49,12 @@ fn self_aura_amount(world: &World, caster: Entity, aura_spell: u32, index: u8) -
         .iter()
         .find(|effect| effect.index == index)
         .map(|effect| effect.amount)
+}
+
+/// Each earned Elemental Overload can proc Feedback Loop once, without recursion.
+pub fn roll_feedback_loop(world: &World, caster: Entity) -> bool {
+    self_aura_amount(world, caster, FEEDBACK_LOOP, 0)
+        .is_some_and(|chance| crate::random::random::<f32>() * 100.0 < chance)
 }
 
 fn stormkeeper_modified_cast(spell: &SpellInfo) -> bool {
@@ -107,6 +114,17 @@ pub(super) fn after_launch(
             overload,
             OVERLOAD_DELAY_MS,
         );
+        // SimC76f8118 sc_shaman.cpp3415–3417: each successful overload
+        // rolls Feedback Loop once; the resulting overload cannot recurse.
+        if roll_feedback_loop(world, caster) {
+            super::queued_triggers::schedule_instant_background(
+                world,
+                &ctx,
+                target,
+                overload,
+                OVERLOAD_DELAY_MS,
+            );
+        }
     }
 }
 

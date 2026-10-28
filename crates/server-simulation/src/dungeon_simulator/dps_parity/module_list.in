@@ -132,6 +132,7 @@ mod elemental_cadence_tests;
 mod elemental_communication_tests;
 mod elemental_fellowship_tests;
 mod elemental_final_calling_tests;
+mod elemental_feedback_loop_tests;
 mod elemental_flow_factor_tests;
 mod elemental_flow_overload_tests;
 mod elemental_fusion_tests;

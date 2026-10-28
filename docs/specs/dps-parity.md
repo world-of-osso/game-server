@@ -1100,7 +1100,7 @@ Elemental Blast117014 grants one native118522/173183/173184 buff after its cast;
 
 Flame Shock's literal action uses learned native470411, whose costed trigger casts188389. The DoT fact retains188389; do not grant knowledge of its unlearned payload or bypass readiness.
 
-Elemental Overload callbacks are instant background actions that can execute during a foreground hardcast without replacing its cast state. Schedule the400ms callback before parent projectile travel, not400ms after impact (`sc_shaman.cpp`3316–3351). Native child damage, resource costs and aura/target checks remain authoritative; effect160 ordinary forced casts remain unchanged (SimC76f8118 `sc_shaman.cpp`4846–4847).
+Elemental Overload callbacks are instant background actions that can execute during a foreground hardcast without replacing its cast state. Schedule the400ms callback before parent projectile travel, not400ms after impact (`sc_shaman.cpp`3316–3351). Selected Feedback Loop's third node independently rolls its native chance for one extra overload after each earned overload, including Earthquake fields; that extra cannot recurse (`sc_shaman.cpp`3393–3417). Native child damage, resource costs and aura/target checks remain authoritative; effect160 ordinary forced casts remain unchanged (SimC76f8118 `sc_shaman.cpp`4846–4847).
 
 When Lightning Bolt Overload45284 executes while Stormkeeper is active, it snapshots Stormkeeper's native effect1 damage bonus despite the unmatched native class mask. The bonus survives projectile flight. Chain Lightning Overload retains native mask behavior (`sc_shaman.cpp`3254–3257,6315–6322,7320–7327).
 
