@@ -1456,6 +1456,47 @@ fn dk252_runic_spends_trigger_runic_corruption() {
 }
 
 #[test]
+#[ignore = "requires native252 profile/traits and player actor"]
+fn dk252_abomination_critical_cloud_tracks_live_owner_mastery() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 1).unwrap();
+    engage(&mut run);
+    literal_rotation::execution::execute(run.app.world_mut(), run.actor,
+        literal_rotation::execution::Execution::Spell(42650, run.actor, None)).unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    for _ in 0..400 { run.app.update(); }
+    let abomination = {
+        let world = run.app.world_mut();
+        world.query::<(Entity, &shared::components::Npc, &crate::spell_cast::summon::SummonedCreature)>()
+            .iter(world).find_map(|(actor, npc, summon)|
+                (npc.template_id == 149555 && summon.owner == run.actor && summon.spell_id == 288853).then_some(actor))
+            .expect("Army must summon its actual Abomination")
+    };
+    run.app.world_mut().entity_mut(abomination).insert(crate::stats::CharacterStats { crit_pct: 100.0, ..Default::default() });
+    let hit = |run: &mut Run| {
+        run.app.world_mut().get_mut::<crate::stats::CharacterStats>(run.actor).unwrap().crit_pct = 100.0;
+        run.app.world_mut().resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>().0.clear();
+        assert!(crate::spell_cast::try_cast_triggered(run.app.world_mut(), abomination, 1244347, Some(abomination), 1));
+        run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0.iter()
+            .find(|event| event.source == Some(abomination.to_bits()) && event.spell_id == Some(1244347)
+                && event.kind == CombatLogKind::Damage && event.crit).expect("actual Abomination cloud must crit").amount
+    };
+    let before_mastery = run.app.world().get::<crate::stats::CharacterStats>(run.actor).unwrap().mastery_pct;
+    let before = hit(&mut run);
+    run.app.world_mut().get_mut::<crate::stats::CharacterStats>(run.actor).unwrap().mastery_pct = before_mastery + 50.0;
+    run.app.update();
+    let after_mastery = run.app.world().get::<crate::stats::CharacterStats>(run.actor).unwrap().mastery_pct;
+    assert!(after_mastery > before_mastery, "fixture must change the owner's mastery");
+    let after = hit(&mut run);
+    let effect = run.app.world().resource::<crate::spell_info::SpellStore>().get(77515).unwrap()
+        .effects.iter().find(|effect| effect.index == 5).unwrap();
+    let expected = (100.0 + effect.base_points + effect.bonus_coefficient * after_mastery)
+        / (100.0 + effect.base_points + effect.bonus_coefficient * before_mastery);
+    assert!((after as f32 / before as f32 - expected).abs() < 0.01,
+        "actual Abomination critical cloud must follow the native live mastery multiplier: {before} -> {after}, expected ratio {expected}");
+}
+
+#[test]
 #[ignore = "requires private native252 profile/traits and player actor"]
 fn dk252_real_lord_casts_necrotic_bolt_using_owner_power() {
     use crate::spell_cast::effects::factor_capture::FactorCapture;

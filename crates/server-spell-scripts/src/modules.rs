@@ -307,6 +307,7 @@ register_modules! {
     survival_takedown: (2556, "modules/survival_takedown.rs"),
     survival_wildfire: (2551, "modules/survival_wildfire.rs"),
     unholy_abomination: (2528, "modules/unholy_abomination.rs"),
+    unholy_pet_mastery: (2531, "modules/unholy_pet_mastery.rs"),
     sweeping_strikes: (711, "modules/sweeping_strikes.rs"),
     unholy_blightburst: (2526, "modules/unholy_blightburst.rs"),
     swiftmend: (1000, "modules/swiftmend.rs"),
