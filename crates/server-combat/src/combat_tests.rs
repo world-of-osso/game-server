@@ -25,6 +25,15 @@ fn setup_app() -> App {
     app.add_plugins(bevy::MinimalPlugins);
     app.init_resource::<CombatLog>();
     app.init_resource::<FactionTemplates>();
+    app.insert_resource(crate::scripted_ai::model_reach::ModelReaches(
+        std::collections::HashMap::from([(
+            1,
+            crate::scripted_ai::model_reach::ModelDimensions {
+                combat_reach: 1.5,
+                bounding_radius: 0.389,
+            },
+        )]),
+    ));
     app.update();
     app.update();
     app
@@ -62,6 +71,7 @@ fn spawn_target(app: &mut App, position: Position, hp: f32) -> Entity {
     app.world_mut()
         .spawn((
             position,
+            shared::components::ModelDisplay { display_id: 1 },
             Health {
                 current: hp,
                 max: 100.0,
