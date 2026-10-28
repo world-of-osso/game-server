@@ -60,10 +60,13 @@ def latest_outputs(order=None):
         rank = order.get(landed_commit(entry.get("status", "")))
         if rank is None or not any("NATIVE_DPS" in line for line in entry.get("measurements") or []):
             continue
+        # The train archives each entry's reports; shared output dirs get overwritten later.
+        archive = RESULTS.parent / "logs" / f"{path.stem}.reports"
         for measure in entry["measure"]:
-            report = Path(measure["output"]) / f"{measure['spec']}.native.1.json"
-            if report.exists() and (measure["spec"] not in best or rank > best[measure["spec"]][0]):
-                best[measure["spec"]] = (rank, Path(measure["output"]), entry["status"])
+            name = f"{measure['spec']}.native.1.json"
+            output = archive if (archive / name).exists() else Path(measure["output"])
+            if (output / name).exists() and (measure["spec"] not in best or rank > best[measure["spec"]][0]):
+                best[measure["spec"]] = (rank, output, entry["status"])
     return {spec: (output, status) for spec, (_, output, status) in best.items()}
 
 
