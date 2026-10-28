@@ -104,8 +104,13 @@ fn sample(ascendance: bool) -> (f64, f64, f64, f64) {
         .as_array()
         .unwrap()
         .iter()
-        .find(|event| event["event"] == "result")
-        .expect("actual overload impact")["factors"]["target_product"]
+        .find(|event| event["event"] == "direct_amount")
+        .expect("actual overload impact")["applied_multipliers"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|factor| factor["factor"] == "giantkiller")
+        .unwrap()["value"]
         .as_f64()
         .unwrap();
     (
