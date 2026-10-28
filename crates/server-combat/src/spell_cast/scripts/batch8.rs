@@ -5,7 +5,7 @@ use shared::components::{Health, Npc, PowerType, UnitSummonedBy};
 use super::script_effect_value;
 use crate::auras::ActiveAuras;
 use crate::spell_cast::{self, PlannedEffect, TargetPlan, targets};
-use crate::spell_info::{SpellInfo, SpellStore};
+use crate::spell_info::SpellInfo;
 
 pub(super) const PROVOKE: u32 = 115546;
 pub(super) const DEMONBOLT: u32 = 264178;
