@@ -16,9 +16,15 @@ struct Shower {
 #[derive(Component, Default)]
 struct Showers(Vec<Shower>);
 pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::EarlyAuraRegistration(register),
     SpellScriptHook::AfterNativeLaunch(launch),
     SpellScriptHook::AfterNativeCastUpdate(update),
 ];
+fn register(scripts: &mut combat::auras::scripts::AuraScripts) {
+    // SimC76f8118 sc_demon_hunter.cpp3177–3198 consumes this buff only on
+    // the selected spender, not on unrelated native proc-mask events.
+    scripts.0.entry(DARK_MATTER_BUFF).or_default().check_proc = Some(|_, _, _| false);
+}
 fn selected(world: &World, caster: Entity) -> bool {
     world
         .get::<combat::class_progression::TraitLoadout>(caster)
