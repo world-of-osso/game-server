@@ -435,6 +435,7 @@ fn load_aura_options(
             Ok(SpellAuraOptions {
                 proc_definition_source: None,
                 proc_family: None,
+                proc_hit_mask: 0,
                 cumulative_aura: uint(r, 1)?,
                 proc_category_recovery_ms: sint(r, 2)?,
                 proc_chance: uint(r, 3)?,

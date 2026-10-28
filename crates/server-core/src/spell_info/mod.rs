@@ -331,6 +331,8 @@ pub struct SpellAuraOptions {
     pub proc_definition_source: Option<ProcDefinitionSource>,
     /// Explicit TDB (SpellFamilyName, four SpellFamilyMask words); None uses generation.
     pub proc_family: Option<(u32, [u32; 4])>,
+    /// Explicit TDB hit outcome flags; zero retains default landed-hit behavior.
+    pub proc_hit_mask: u32,
     /// Max stacks (`CumulativeAura`).
     pub cumulative_aura: u32,
     pub proc_category_recovery_ms: i32,

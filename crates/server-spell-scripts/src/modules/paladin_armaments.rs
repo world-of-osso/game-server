@@ -14,12 +14,42 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::SuccessfulCastRelationships(after_cast),
     SpellScriptHook::LateAuraRegistration(register_bulwark),
     SpellScriptHook::AfterAbsorbConsumed(reflection_from_absorb),
+    SpellScriptHook::AvoidanceProcHitMask(grand_crusader_avoidance_mask),
 ];
 
 fn register_bulwark(scripts: &mut AuraScripts) {
     let script = scripts.0.entry(432496).or_default();
     script.on_apply = Some(initial_bulwark);
     script.on_periodic = Some(periodic_bulwark);
+    let grand = scripts.0.entry(85043).or_default();
+    grand.check_proc = Some(grand_crusader_is_avoidance);
+    grand.on_damage_proc = Some(grand_crusader_from_avoidance);
+}
+
+fn grand_crusader_avoidance_mask(spell: u32) -> Option<u32> {
+    // SimC76f8118 sc_paladin.cpp4929–4932: Grand Crusader rolls on each avoided melee.
+    (spell == 85043).then_some(
+        combat::auras::procs::PROC_HIT_MISS
+            | combat::auras::procs::PROC_HIT_DODGE
+            | combat::auras::procs::PROC_HIT_PARRY,
+    )
+}
+
+fn grand_crusader_is_avoidance(
+    _: &World,
+    _: &AuraInstance,
+    event: &combat::auras::procs::AuraEvent,
+) -> bool {
+    event.hit_mask != 0
+}
+
+fn grand_crusader_from_avoidance(
+    world: &mut World,
+    caster: Entity,
+    _: &AuraInstance,
+    _: &combat::auras::procs::AuraEvent,
+) {
+    roll_grand_crusader(world, caster);
 }
 
 fn initial_bulwark(world: &mut World, target: Entity, aura: &AuraInstance) {
@@ -260,10 +290,15 @@ fn extend_zealots_paragon(world: &mut World, caster: Entity, spell: u32) {
 }
 
 fn trigger_grand_crusader(world: &mut World, caster: Entity, spell: u32) {
-    if spell != 204019
-        || !world
-            .get::<ActiveSpec>(caster)
-            .is_some_and(|spec| spec.0 == 66)
+    if spell == 204019 {
+        roll_grand_crusader(world, caster);
+    }
+}
+
+fn roll_grand_crusader(world: &mut World, caster: Entity) {
+    if !world
+        .get::<ActiveSpec>(caster)
+        .is_some_and(|spec| spec.0 == 66)
         || !world.get::<TraitLoadout>(caster).is_some_and(|traits| {
             traits
                 .active_talent_spells()
@@ -272,8 +307,8 @@ fn trigger_grand_crusader(world: &mut World, caster: Entity, spell: u32) {
     {
         return;
     }
-    // SimC76f8118 sc_paladin_protection.cpp448–452,903–923: Blessed Hammer
-    // rolls the selected native Grand Crusader chance once per successful cast.
+    // SimC76f8118 sc_paladin_protection.cpp448–452,903–923: eligible
+    // events roll the selected native Grand Crusader chance.
     let chance = combat::spell_cast::scripts::script_effect_value(world, caster, 85043, 0);
     if combat::random::random::<f32>() * 100.0 >= chance {
         return;
