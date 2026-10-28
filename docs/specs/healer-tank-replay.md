@@ -5,7 +5,7 @@ Replay recorded incoming damage in the native server combat simulation to compar
 ## What it must do
 
 - [ ] Load incoming hits with time, damage school, raw amount and target role. Reject invalid timelines rather than silently changing them.
-- [ ] Prefer SimulationCraft tank-dummy output as the timeline source; also accept recorded World of Osso runs.
+- [ ] Prefer SimulationCraft tank-dummy output as the timeline source; also accept recorded World of Osso runs. Preserve the distinction between swings, strikes and bleeds. SimC direct damage amounts are source rolls before hit outcomes and must not be reported as post-crit damage.
 - [ ] Use `/home/osso/Projects/world-of-osso/game-server/data/world.db` for every measurement.
 - [ ] Replay hits against a dummy party through native combat, with Holy Paladin (65) as the first healer and Protection Paladin (66) as the first tank. Extend the same harness to every healer and tank specialization and their spells.
 - [ ] For each healer report effective HPS, raw HPS, overheal percentage, per-spell HPS, mana over time, and time to first party death.

@@ -1,9 +1,10 @@
-//! Pre-recipient amounts from the pinned SimC tank dummy debug trace.
+//! Pre-outcome source rolls from the pinned SimC tank dummy debug trace.
 use std::path::Path;
 
 #[derive(Debug, PartialEq)]
 enum Kind {
-    Melee,
+    Swing,
+    Strike,
     Bleed,
 }
 
@@ -30,25 +31,26 @@ fn parse_trace(trace: &str, dummy: &str) -> Result<Vec<Hit>, String> {
         let Some(rest) = rest.strip_prefix(&source) else {
             continue;
         };
-        let (kind, fields) = if let Some(fields) = rest.strip_prefix("direct amount for Action '") {
-            (Kind::Melee, fields)
+        let (direct, fields) = if let Some(fields) = rest.strip_prefix("direct amount for Action '")
+        {
+            (true, fields)
         } else if let Some(fields) = rest.strip_prefix("tick amount for Action '") {
-            (Kind::Bleed, fields)
+            (false, fields)
         } else {
             continue;
         };
         let Some((action, fields)) = fields.split_once("' (0)") else {
             continue;
         };
-        let is_dummy_damage = match kind {
-            Kind::Melee => {
-                action.starts_with("melee_main_hand_") || action.starts_with("melee_nuke_")
-            }
-            Kind::Bleed => action.starts_with("spell_dot_"),
-        };
-        if !is_dummy_damage {
+        let kind = if direct && action.starts_with("melee_main_hand_") {
+            Kind::Swing
+        } else if direct && action.starts_with("melee_nuke_") {
+            Kind::Strike
+        } else if !direct && action.starts_with("spell_dot_") {
+            Kind::Bleed
+        } else {
             continue;
-        }
+        };
         let seconds: f64 = time
             .parse()
             .map_err(|error| format!("invalid SimC time {time}: {error}"))?;
@@ -92,12 +94,12 @@ fn reads_simc_dummy_raw_melee_and_bleed_without_tank_heals() {
             Hit {
                 time_ms: 4000,
                 amount: 245737.0,
-                kind: Kind::Melee
+                kind: Kind::Swing
             },
             Hit {
                 time_ms: 4000,
                 amount: 505757.0,
-                kind: Kind::Melee
+                kind: Kind::Strike
             },
             Hit {
                 time_ms: 7004,
