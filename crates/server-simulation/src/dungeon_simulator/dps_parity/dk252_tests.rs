@@ -1645,20 +1645,41 @@ fn dk252_transformed_permanent_ghoul_uses_sweeping_claws_on_three_targets() {
     let mut run = prepare_measurement(252, 3).unwrap();
     let pet = crate::hunter_pet::summoned_pet(run.app.world(), run.actor).unwrap();
     engage(&mut run);
-    crate::combat::start_attack_now(run.app.world_mut(), run.actor, crate::combat::AutoAttack::new(run.targets[0]));
+    crate::combat::start_attack_now(
+        run.app.world_mut(),
+        run.actor,
+        crate::combat::AutoAttack::new(run.targets[0]),
+    );
     literal_rotation::execution::execute(
-        run.app.world_mut(), run.actor,
+        run.app.world_mut(),
+        run.actor,
         literal_rotation::execution::Execution::Spell(1233448, run.actor, None),
-    ).unwrap();
+    )
+    .unwrap();
     preparation::finish_pending_setup(&mut run).unwrap();
-    for _ in 0..200 { run.app.update(); }
-    let events = &run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
+    for _ in 0..200 {
+        run.app.update();
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
     for target in &run.targets {
-        assert!(events.iter().any(|event| event.source == Some(pet.to_bits())
-            && event.target == Some(target.to_bits()) && event.spell_id == Some(91778)
-            && event.kind == CombatLogKind::Damage && event.amount > 0),
+        assert!(
+            events
+                .iter()
+                .any(|event| event.source == Some(pet.to_bits())
+                    && event.target == Some(target.to_bits())
+                    && event.spell_id == Some(91778)
+                    && event.kind == CombatLogKind::Damage
+                    && event.amount > 0),
             "the transformed controlled ghoul must hit target {target:?} with native Sweeping Claws; pet={pet:?}, events={:?}",
-            events.iter().filter(|event| event.spell_id == Some(91778)).collect::<Vec<_>>());
+            events
+                .iter()
+                .filter(|event| event.spell_id == Some(91778))
+                .collect::<Vec<_>>()
+        );
     }
 }
 

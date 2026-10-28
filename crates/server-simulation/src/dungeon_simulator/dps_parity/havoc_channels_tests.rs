@@ -98,8 +98,9 @@ fn havoc_late_channel_interrupt_earns_final_breath_and_gaze() {
         havoc_tests::earn_havoc_fury(&mut run, 30.0);
         cast(&mut run, 198013, false);
         for _ in 0..200 {
-            let left = crate::auras::remaining_periodic_ticks(run.app.world(), actor, actor, 198013)
-                .expect("bounded Beam schedule");
+            let left =
+                crate::auras::remaining_periodic_ticks(run.app.world(), actor, actor, 198013)
+                    .expect("bounded Beam schedule");
             if left == remaining {
                 break;
             }
@@ -111,8 +112,14 @@ fn havoc_late_channel_interrupt_earns_final_breath_and_gaze() {
         );
         let before = damage(&run, Some(198030)).len();
         crate::spell_cast::cancel_cast(run.app.world_mut(), actor);
-        assert_eq!(damage(&run, Some(198030)).len() - before, usize::from(remaining == 2));
-        assert_eq!(crate::auras::has_aura(run.app.world(), actor, 343312), remaining == 2);
+        assert_eq!(
+            damage(&run, Some(198030)).len() - before,
+            usize::from(remaining == 2)
+        );
+        assert_eq!(
+            crate::auras::has_aura(run.app.world(), actor, 343312),
+            remaining == 2
+        );
     }
 }
 
@@ -2108,9 +2115,17 @@ fn havoc_initiative_ignores_item_damage_until_demon_hunter_hit() {
     let target = run.targets[0];
     // Guillotine's native driver supplies this child damage amount at runtime.
     crate::spell_cast::cast_triggered_with_effect0_amount(
-        run.app.world_mut(), actor, 1306624, Some(target), 1, 1000.0,
+        run.app.world_mut(),
+        actor,
+        1306624,
+        Some(target),
+        1,
+        1000.0,
     );
-    assert!(!damage(&run, Some(1306624)).is_empty(), "item must deal damage");
+    assert!(
+        !damage(&run, Some(1306624)).is_empty(),
+        "item must deal damage"
+    );
     assert!(!crate::auras::has_aura(run.app.world(), actor, 391215));
     crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 337819, Some(target), 1);
     assert!(!damage(&run, Some(337819)).is_empty(), "glaive must hit");
