@@ -272,6 +272,77 @@ impl super::SpecDriver for Rotation {
 mod tests {
     #[test]
     #[ignore = "requires canonical world database and MID2 Blood inputs"]
+    fn blood_rune_weapons_reduce_actual_incoming_strike() {
+        let mut run = super::super::prepare_registered_player(250, 1).unwrap();
+        let actor = run.actor;
+        let source = run.targets[0];
+        super::super::engage(&mut run);
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 49028, Some(actor), false)
+            .unwrap();
+        for _ in 0..4 {
+            run.app.update();
+        }
+        assert!(crate::auras::has_aura(run.app.world(), actor, 1264407));
+        let max = run
+            .app
+            .world()
+            .get::<shared::components::Health>(actor)
+            .unwrap()
+            .max;
+        crate::spell_cast::effects::replay_simc_dummy_strike(
+            run.app.world_mut(),
+            source,
+            actor,
+            100_000.0,
+            false,
+            false,
+        );
+        let with = max
+            - run
+                .app
+                .world()
+                .get::<shared::components::Health>(actor)
+                .unwrap()
+                .current;
+        crate::auras::remove_auras(
+            run.app.world_mut(),
+            actor,
+            crate::auras::RemoveReason::Cancelled,
+            |aura| aura.spell_id == 1264407,
+        );
+        for _ in 0..3 {
+            run.app.update();
+        }
+        let mut health = run
+            .app
+            .world_mut()
+            .get_mut::<shared::components::Health>(actor)
+            .unwrap();
+        health.current = health.max;
+        let max = health.max;
+        crate::spell_cast::effects::replay_simc_dummy_strike(
+            run.app.world_mut(),
+            source,
+            actor,
+            100_000.0,
+            false,
+            false,
+        );
+        let without = max
+            - run
+                .app
+                .world()
+                .get::<shared::components::Health>(actor)
+                .unwrap()
+                .current;
+        assert!(
+            with < without * 0.90,
+            "two weapons reduce the actual incoming hit: with={with}, without={without}"
+        );
+    }
+
+    #[test]
+    #[ignore = "requires canonical world database and MID2 Blood inputs"]
     fn blood_rune_spend_can_summon_dance_weapon_and_enable_parry_buff() {
         let _seed = crate::random::seed_scope(70448);
         let mut run = super::super::prepare_registered_player(250, 1).unwrap();
