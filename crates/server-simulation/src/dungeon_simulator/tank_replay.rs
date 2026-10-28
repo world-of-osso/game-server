@@ -5,7 +5,7 @@ use bevy::prelude::*;
 use serde_json::{Value, json};
 use shared::components::{Health, Position};
 use shared::protocol::CombatLogKind;
-use std::collections::{BTreeSet, VecDeque};
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 const TICK_SECONDS: f64 = 0.05;
 const SPIKE_WINDOW_SECONDS: f64 = 5.0;
@@ -101,6 +101,7 @@ pub(super) fn replay(intake: &Intake) -> Result<Value, String> {
         (0.0, 0.0, 0.0, 0.0, 0.0_f64);
     let (mut recent, mut recent_sum) = (VecDeque::<(f64, f64)>::new(), 0.0);
     let mut death = None;
+    let mut casts = BTreeMap::<u32, usize>::new();
     let mut elapsed = 0.0;
     for tick in 1..=intake.end_tick {
         while frame + 1 < intake.frames.len() && intake.frames[frame + 1].tick < tick {
@@ -162,6 +163,12 @@ pub(super) fn replay(intake: &Intake) -> Result<Value, String> {
             .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
             .0;
         for event in &events[event_cursor..] {
+            if event.source == Some(tank.to_bits())
+                && event.kind == CombatLogKind::CastSuccess
+                && let Some(spell_id) = event.spell_id
+            {
+                *casts.entry(spell_id).or_default() += 1;
+            }
             if event.target != Some(tank.to_bits()) {
                 continue;
             }
@@ -219,6 +226,6 @@ pub(super) fn replay(intake: &Intake) -> Result<Value, String> {
         "self_heal_per_second":(elapsed > 0.0).then(|| self_healing / elapsed),
         "absorb_per_second":(elapsed > 0.0).then(|| absorbed / elapsed),"time_to_death":death,
         "active_mitigation_spell":SHIELD_OF_THE_RIGHTEOUS,"active_mitigation_uptime":(elapsed > 0.0).then(|| active_seconds / elapsed),
-        "spike_window_seconds":SPIKE_WINDOW_SECONDS,"largest_spike":spike}),
+        "spike_window_seconds":SPIKE_WINDOW_SECONDS,"largest_spike":spike,"tank_casts":casts}),
     )
 }
