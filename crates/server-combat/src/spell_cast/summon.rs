@@ -562,6 +562,13 @@ fn initialize_wild_summon(
     let display_scale = read_actor_display_scale(world, actor);
     let metadata = snapshot_summon_metadata(world, ctx, properties_id, properties, display_scale);
     let private_owner = private_summon_owner(world, ctx.caster, properties.flags);
+    let faction = if properties.faction != 0 {
+        Some(UnitFactionTemplate(properties.faction))
+    } else if properties.has_source_owner() {
+        world.get::<UnitFactionTemplate>(ctx.caster).copied()
+    } else {
+        None
+    };
     let mut entity = world.entity_mut(actor);
     entity.insert((
         // Native scale1 is separate from the model's DisplayScale multiplier.
@@ -572,8 +579,8 @@ fn initialize_wild_summon(
         stats.health,
         stats.armor,
     ));
-    if properties.faction != 0 {
-        entity.insert(UnitFactionTemplate(properties.faction));
+    if let Some(faction) = faction {
+        entity.insert(faction);
     }
     if let Some(mana) = stats.mana {
         entity.insert(mana);

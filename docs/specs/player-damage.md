@@ -4,6 +4,8 @@ Players deal Retail damage: auto-attacks swing the equipped weapon with attack p
 
 ## What it must do
 
+- Source-owned default-lifecycle summons without an explicit faction inherit their owner's faction. Explicit summon-property factions and unowned wild summons retain their authored faction.
+
 - A landed auto-attack with positive raw damage grants the Rage-primary victim its earned rage even when absorbs prevent health loss. Immune and avoided attacks grant none (SimC76f8118 `sc_warrior.cpp:9489–9496`).
 
 - Absorbs consume SimC high-priority Soul Barrier before ordinary shields; ordinary shields consume smallest remaining capacity first, with name as the tie breaker (SimC76f8118 `player.cpp:8155–8268`, `sc_demon_hunter.cpp:10505–10510`). Instant absorb mechanics retain their own handling.
