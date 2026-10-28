@@ -722,8 +722,16 @@ fn replay_registered_run_with_healing(
                             source,
                             tank,
                             source_damage as f32,
-                            outcome == crate::melee::MeleeOutcome::Crit,
-                            outcome == crate::melee::MeleeOutcome::Block,
+                            matches!(
+                                outcome,
+                                crate::melee::MeleeOutcome::Crit
+                                    | crate::melee::MeleeOutcome::CritBlock
+                            ),
+                            matches!(
+                                outcome,
+                                crate::melee::MeleeOutcome::Block
+                                    | crate::melee::MeleeOutcome::CritBlock
+                            ),
                         );
                     } else {
                         crate::combat::replay_healer_hit(
