@@ -14,6 +14,9 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 ### Unholy Magus
 
 - The real Magus's Withering Grasp periodic damage can critically strike with its owner's live critical chance and its own critical damage modifiers (SimC76f8118 `sc_death_knight.cpp3070–3079/4505–4511`).
+### Unholy Commander of the Dead
+
+- Actual Dark Transformation grants the selected native Commander owner buff. While it is active, eligible Magi, Lords, lesser ghouls, Gargoyles and Abominations receive its native pet damage bonus, including guardians summoned during the window; permanent ghouls and Horsemen do not (SimC76f8118 `sc_death_knight.cpp2823–2833/3627/3853/4473/5483/8761–8762`).
 
 ### Unholy Nazgrim
 
