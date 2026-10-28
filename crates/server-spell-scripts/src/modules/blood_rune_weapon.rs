@@ -193,7 +193,17 @@ fn copy_weapon_actions(world: &mut World, caster: Entity, spell: &SpellInfo) {
                 .get::<KnownSpells>(caster)
                 .is_some_and(|known| known.contains(1265574))
         {
-            spell_cast::cast_triggered(world, weapon, 1265577, Some(weapon), 1);
+            spell_cast::cast_triggered_with_overrides(
+                world,
+                weapon,
+                1265577,
+                Some(weapon),
+                1,
+                TriggeredSpellOverrides {
+                    effect_mask: Some(1),
+                    ..Default::default()
+                },
+            );
         }
         match spell.id {
             49998 | 206930 | 50842 => {
