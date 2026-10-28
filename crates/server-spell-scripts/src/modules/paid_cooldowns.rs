@@ -27,6 +27,15 @@ const POLICIES: &[PaidCooldown] = &[
         divisor_effect: 2,
         cooldowns: &[107574, 1719],
     },
+    // SimC76f8118 sc_warrior.cpp1528–1532: Protection's paid Rage
+    // reduces Avatar and Shield Wall by effect2's native divisor.
+    PaidCooldown {
+        spec: 73,
+        passive: 152278,
+        resource: PowerType::Rage,
+        divisor_effect: 1,
+        cooldowns: &[107574, 871],
+    },
 ];
 
 fn after_payment(world: &mut World, caster: Entity, costs: &[(CostPool, f32)]) {
