@@ -240,7 +240,26 @@ fn cast_guidance_effect(
     }
 }
 
+fn extend_zealots_paragon(world: &mut World, caster: Entity, spell: u32) {
+    if !matches!(spell, 275779 | 1241413)
+        || !world
+            .get::<ActiveSpec>(caster)
+            .is_some_and(|spec| spec.0 == 66)
+        || !world.get::<TraitLoadout>(caster).is_some_and(|traits| {
+            traits
+                .active_talent_spells()
+                .any(|talent| talent.spell_id == 391142)
+        })
+    {
+        return;
+    }
+    // SimC76f8118 sc_paladin.cpp1414–1429: actual Judgment/HoW casts extend live wings.
+    let duration = combat::spell_cast::scripts::script_effect_value(world, caster, 391142, 0);
+    combat::auras::extend_owned_duration(world, caster, caster, &[31884, 389539], duration as u32);
+}
+
 fn after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    extend_zealots_paragon(world, caster, spell.id);
     advance_shining_light(world, caster, spell.id);
     advance_divine_guidance(world, caster, spell.id);
     // Native70448 spell432478 effect0 is aura332: misc432459 -> amount432472.

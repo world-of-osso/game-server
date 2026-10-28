@@ -105,7 +105,7 @@ fn simc_dummy_strike_does_not_trigger_auto_attack_procs() {
 
 #[test]
 #[ignore = "uses the selected MID2 player and actual Avenging Wrath cast"]
-fn protection_avenging_wrath_retains_native_duration() {
+fn zealots_paragon_extends_reduced_avenging_wrath_on_real_hammer() {
     use crate::auras::ActiveAuras;
     let mut run = super::dps_parity::prepare_registered_player(66, 1).unwrap();
     super::dps_parity::engage(&mut run);
@@ -124,7 +124,30 @@ fn protection_avenging_wrath_retains_native_duration() {
         .iter()
         .find(|aura| aura.spell_id == 31884)
         .unwrap();
-    assert_eq!(aura.duration_ms, 20_000);
+    assert_eq!(
+        aura.duration_ms, 12_000,
+        "selected Righteous Protector reduces the native duration"
+    );
+    let expiry = aura.expires_at.unwrap();
+    for _ in 0..40 {
+        run.app.update();
+    }
+    let target = run.targets[0];
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 1241413, Some(target), false)
+        .unwrap();
+    run.app.update();
+    let aura = run
+        .app
+        .world()
+        .get::<ActiveAuras>(actor)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 31884)
+        .unwrap();
+    assert!(
+        (aura.expires_at.unwrap() - expiry - 1.0).abs() < 0.001,
+        "{aura:?}"
+    );
 }
 
 #[test]
