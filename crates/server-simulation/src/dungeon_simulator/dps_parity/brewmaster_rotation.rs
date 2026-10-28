@@ -314,6 +314,7 @@ mod tests {
     #[test]
     #[ignore = "requires canonical Brewmaster profile and world database"]
     fn harmony_coalescence_spends_real_keg_damage_from_pool() {
+        let _seed = crate::random::seed_scope(70448);
         let mut run = super::super::prepare_literal(268, 1).unwrap();
         super::super::engage(&mut run);
         let actor = run.actor;
@@ -328,6 +329,28 @@ mod tests {
         );
         crate::spell_cast::creature_cast(run.app.world_mut(), actor, 100780, Some(target), false)
             .unwrap();
+        let event = run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .find(|event| {
+                event.spell_id == Some(100780)
+                    && event.kind == shared::protocol::CombatLogKind::Damage
+            })
+            .expect("actual Tiger Palm damage");
+        let actual_damage = (event.amount - event.overflow) as f32;
+        let deposited = run
+            .app
+            .world()
+            .get::<crate::auras::harmony::HarmonyPools>(actor)
+            .unwrap()
+            .accumulator;
+        assert!(
+            (deposited - actual_damage * 0.12 * 1.5 * 1.3).abs() < 1.0,
+            "selected Coalescence and Way scale the actual hit"
+        );
         for _ in 0..40 {
             run.app.update();
         }
