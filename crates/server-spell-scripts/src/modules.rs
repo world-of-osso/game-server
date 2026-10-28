@@ -292,6 +292,7 @@ register_modules! {
     paladin_edict: (1001, "modules/paladin_edict.rs"),
     protection_devastator: (730, "modules/protection_devastator.rs"),
     protection_fueled: (732, "modules/protection_fueled.rs"),
+    protection_outburst: (733, "modules/protection_outburst.rs"),
     protection_shield_block: (731, "modules/protection_shield_block.rs"),
     periodic_counters: (270, "modules/periodic_counters.rs"),
     pet_sets: (1000, "modules/pet_sets.rs"),
