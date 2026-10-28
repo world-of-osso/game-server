@@ -40,6 +40,7 @@ Replay recorded incoming damage in the native server combat simulation to compar
 ## Specializations
 
 - [Protection Paladin (66)](healer-tank-replay/66.md)
+- [Protection Warrior (73)](healer-tank-replay/73.md)
 
 ## Known gaps (current cycle)
 
