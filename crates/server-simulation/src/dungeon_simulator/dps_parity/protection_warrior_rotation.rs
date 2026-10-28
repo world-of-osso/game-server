@@ -438,6 +438,78 @@ mod tests {
     }
 
     #[test]
+    fn best_served_cold_increases_native_revenge_proc_frequency() {
+        use crate::auras::procs::{AuraEvent, PROC_DEAL_MELEE_SWING};
+        fn count_procs(selected: bool) -> usize {
+            let mut h = crate::spell_cast::test_harness::harness_with_native_enemy_dodge_reduction(
+                Vec::new(),
+                &[5301, 5302, 202560],
+                1,
+            )
+            .unwrap();
+            h.advance(3);
+            let caster = h.caster;
+            let target = h.npc;
+            crate::auras::remove_auras(
+                h.app.world_mut(),
+                caster,
+                crate::auras::RemoveReason::Consumed,
+                |aura| aura.spell_id == 202560,
+            );
+            if selected {
+                crate::auras::apply_aura(
+                    h.app.world_mut(),
+                    &crate::auras::AuraApplication {
+                        caster,
+                        target: caster,
+                        spell_id: 202560,
+                        effect_mask: 7,
+                        source: crate::auras::AuraSource::Cast,
+                    },
+                );
+            }
+            assert!(crate::auras::has_aura(h.app.world(), caster, 5301));
+            let mut successes = 0;
+            for seed in 1..=60 {
+                h.advance(200);
+                crate::auras::remove_auras(
+                    h.app.world_mut(),
+                    caster,
+                    crate::auras::RemoveReason::Consumed,
+                    |aura| aura.spell_id == 5302,
+                );
+                let _seed = crate::random::seed_scope(seed);
+                crate::auras::procs::push_event(
+                    h.app.world_mut(),
+                    AuraEvent {
+                        actor: caster,
+                        target: Some(target),
+                        actor_mask: [PROC_DEAL_MELEE_SWING, 0],
+                        target_mask: [0; 2],
+                        spell_id: None,
+                        can_proc: true,
+                        cast_used_proc_modifier: false,
+                        periodic: false,
+                        damage: 1.0,
+                        heal: None,
+                        hit_mask: 0,
+                        reflected: false,
+                    },
+                );
+                h.advance(1);
+                successes += usize::from(crate::auras::has_aura(h.app.world(), caster, 5302));
+            }
+            successes
+        }
+        let without = count_procs(false);
+        let with = count_procs(true);
+        assert!(
+            with > without,
+            "selected native modifier must increase real Revenge procs: {without} vs {with}"
+        );
+    }
+
+    #[test]
     fn protection_devastator_autoattacks_reset_running_shield_slam() {
         for chance in [0.0, 100.0] {
             let seed = crate::spell_cast::test_harness::harness_with_native_enemy_dodge_reduction(
