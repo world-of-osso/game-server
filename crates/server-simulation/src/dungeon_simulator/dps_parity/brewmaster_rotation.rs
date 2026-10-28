@@ -313,6 +313,47 @@ impl super::SpecDriver for Rotation {
 mod tests {
     #[test]
     #[ignore = "requires canonical Brewmaster profile and world database"]
+    fn harmony_coalescence_spends_real_keg_damage_from_pool() {
+        let mut run = super::super::prepare_literal(268, 1).unwrap();
+        super::super::engage(&mut run);
+        let actor = run.actor;
+        let target = run.targets[0];
+        assert!(
+            run.app
+                .world()
+                .get::<crate::class_progression::TraitLoadout>(actor)
+                .unwrap()
+                .active_talent_spells()
+                .any(|talent| talent.spell_id == 450529)
+        );
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 100780, Some(target), false)
+            .unwrap();
+        let before = run
+            .app
+            .world()
+            .get::<crate::auras::harmony::HarmonyPools>(actor)
+            .unwrap()
+            .accumulator;
+        assert!(before > 0.0);
+        for _ in 0..40 {
+            run.app.update();
+        }
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 121253, Some(target), false)
+            .unwrap();
+        let after = run
+            .app
+            .world()
+            .get::<crate::auras::harmony::HarmonyPools>(actor)
+            .unwrap()
+            .accumulator;
+        assert!(
+            after < before,
+            "Coalescence spends Keg Smash damage: {before} -> {after}"
+        );
+    }
+
+    #[test]
+    #[ignore = "requires canonical Brewmaster profile and world database"]
     fn harmony_real_damage_banks_and_celestial_infusion_spends() {
         let mut run = super::super::prepare_literal(268, 1).unwrap();
         super::super::engage(&mut run);

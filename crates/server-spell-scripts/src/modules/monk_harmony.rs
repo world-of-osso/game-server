@@ -17,19 +17,27 @@ const TALENT: u32 = 450508;
 const ACCUMULATOR: u32 = 450521;
 const SPENDER: u32 = 450711;
 const DAMAGE: u32 = 450763;
+const COALESCENCE: u32 = 450529;
+const THOUSAND_STRIKES: u32 = 450965;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::HealthChangeObserved(observe),
     SpellScriptHook::AfterResourceValues(spender_hook),
 ];
 
+fn has_talent(world: &World, caster: Entity, spell: u32) -> bool {
+    world.get::<TraitLoadout>(caster).is_some_and(|traits| {
+        traits
+            .active_talent_spells()
+            .any(|talent| talent.spell_id == spell)
+    })
+}
+
 fn selected(world: &World, caster: Entity) -> bool {
     world
         .get::<ActiveSpec>(caster)
         .is_some_and(|spec| spec.0 == 268)
-        && world
-            .get::<TraitLoadout>(caster)
-            .is_some_and(|traits| traits.active_talent_spells().any(|t| t.spell_id == TALENT))
+        && has_talent(world, caster, TALENT)
 }
 
 fn apply(world: &mut World, caster: Entity, spell: u32) {
@@ -119,7 +127,36 @@ fn observe(world: &mut World, event: &CombatLogEvent) {
             });
         }
     } else {
-        let percent = script_effect_value(world, caster, TALENT, effect) / 100.0;
+        let coalescence = has_talent(world, caster, COALESCENCE);
+        // sc_monk.cpp4832–4833/4919–4924: Keg spends, rather than generates.
+        if coalescence && event.spell_id == Some(121253) {
+            let percent = script_effect_value(world, caster, COALESCENCE, 1) / 100.0;
+            let Some(mut pools) = world.get_mut::<HarmonyPools>(caster) else {
+                return;
+            };
+            let used = (amount * percent).min(pools.accumulator);
+            pools.accumulator -= used;
+            let depleted = pools.accumulator <= 0.0;
+            if used > 0.0 {
+                apply_damage(world, caster, target, used);
+            }
+            if depleted {
+                auras::remove_auras(world, caster, RemoveReason::Consumed, |aura| {
+                    aura.spell_id == ACCUMULATOR && aura.caster == caster
+                });
+            }
+            return;
+        }
+        let mut percent = script_effect_value(world, caster, TALENT, effect) / 100.0;
+        if coalescence {
+            percent *= 1.0 + script_effect_value(world, caster, COALESCENCE, 2) / 100.0;
+        }
+        // sc_monk.cpp4859–4867: selected Way amplifies its listed direct actions.
+        if matches!(event.spell_id, Some(205523 | 100780 | 185099))
+            && has_talent(world, caster, THOUSAND_STRIKES)
+        {
+            percent *= 1.0 + script_effect_value(world, caster, THOUSAND_STRIKES, 0) / 100.0;
+        }
         let max = world
             .get::<Health>(caster)
             .expect("Harmony caster health")
