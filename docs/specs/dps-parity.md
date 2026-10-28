@@ -10,6 +10,11 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 - The native encounter fixture faces the actor toward its actual primary before engagement and restores maintained melee-intent facing after forced movement finishes, including a charge that ends inside melee range. Do not turn active channels or override forced movement. Keep native directional selectors, widths and radii unchanged.
 - A fixture actor with native melee AutoAttack intent walks back into nominal melee range at its native run speed after movement abilities. Preserve forced movement ownership, native movement/cast restrictions and position=back; never suppress displacement, snap the actor or grant resources. This shared controller applies without specialization or spell-ID cases (SimC76f8118 sc_demon_hunter.cpp1559–1611).
 
+### Frost Death Knight target damage
+
+- Spell modifiers with native effect attribute `0x40` do not multiply their points by aura stacks; other effects on the same aura retain their stack scaling. Killing Machine's fixed Frostscythe critical bonus uses that attribute, while its Killing Streak bonus scales per stack.
+- Northwinds gives the second Howling Blast target the same Rime-specific bonuses as the primary; later targets use the pinned reduced-AoE and secondary factors. Cryogenic Chamber banks the native fraction of each earned Rime impact up to its stack cap and releases that bank on Winter.
+
 ### Native Pandemic duration carry
 
 - Native `PERIODIC_REFRESH_EXTENDS_DURATION` selects Pandemic carry: a refresh retains up to30% of fresh duration from the previous owned application, never reducing a longer remaining lifetime (`action.cpp684–685/4612`). Use the native attribute, not a Rip/Rake whitelist. Existing explicit Extend policies and rolling refresh retain their source precedence (`action.cpp2729–2734`); preserve native periodic phase, amounts and asynchronous deadlines.
