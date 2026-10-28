@@ -272,6 +272,44 @@ impl super::SpecDriver for Rotation {
 mod tests {
     #[test]
     #[ignore = "requires canonical world database and MID2 Blood inputs"]
+    fn blood_death_strike_grants_voracious_leech() {
+        let mut run = super::super::prepare_registered_player(250, 1).unwrap();
+        let actor = run.actor;
+        let target = run.targets[0];
+        super::super::engage(&mut run);
+        assert!(crate::auras::has_aura(run.app.world(), actor, 273953));
+        let before = run
+            .app
+            .world()
+            .get::<crate::stats::CharacterStats>(actor)
+            .unwrap()
+            .leech_pct;
+        crate::spell_cast::powers::change_power(
+            run.app.world_mut(),
+            actor,
+            shared::components::PowerType::RunicPower,
+            1000.0,
+        );
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 49998, Some(target), false)
+            .unwrap();
+        for _ in 0..4 {
+            run.app.update();
+        }
+        assert!(crate::auras::has_aura(run.app.world(), actor, 274009));
+        let after = run
+            .app
+            .world()
+            .get::<crate::stats::CharacterStats>(actor)
+            .unwrap()
+            .leech_pct;
+        assert!(
+            (after - before - 15.0).abs() < 0.01,
+            "Death Strike grants the native 15% Leech: {before} -> {after}"
+        );
+    }
+
+    #[test]
+    #[ignore = "requires canonical world database and MID2 Blood inputs"]
     fn blood_gift_duration_includes_everlasting_bond() {
         let mut run = super::super::prepare_registered_player(250, 1).unwrap();
         let actor = run.actor;
