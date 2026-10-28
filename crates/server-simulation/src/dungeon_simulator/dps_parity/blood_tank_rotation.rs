@@ -801,6 +801,83 @@ mod tests {
 
     #[test]
     #[ignore = "requires canonical world database and MID2 Blood inputs"]
+    fn blood_transfusion_increases_real_weapon_damage_per_stack() {
+        use shared::components::{Npc, UnitSummonedBy};
+        use shared::protocol::CombatLogKind;
+        let mut run = super::super::prepare_registered_player(250, 1).unwrap();
+        let actor = run.actor;
+        let target = run.targets[0];
+        super::super::engage(&mut run);
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 49028, Some(actor), false)
+            .unwrap();
+        for _ in 0..40 {
+            run.app.update();
+        }
+        run.app
+            .world_mut()
+            .get_mut::<crate::stats::CharacterStats>(actor)
+            .unwrap()
+            .crit_pct = 0.0;
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 433895, Some(target), false)
+            .unwrap();
+        for _ in 0..4 {
+            run.app.update();
+        }
+        let world = run.app.world_mut();
+        let weapon = world
+            .query::<(bevy::prelude::Entity, &Npc, &UnitSummonedBy)>()
+            .iter(world)
+            .find(|(_, npc, owner)| npc.template_id == 27893 && owner.0 == actor.to_bits())
+            .unwrap()
+            .0;
+        let damage = |world: &mut bevy::prelude::World| {
+            let _seed = crate::random::seed_scope(70448);
+            let before = world
+                .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+                .0
+                .len();
+            crate::spell_cast::cast_triggered_with_overrides(
+                world,
+                weapon,
+                49998,
+                Some(target),
+                1,
+                crate::spell_cast::TriggeredSpellOverrides {
+                    effect_mask: Some(1),
+                    ..Default::default()
+                },
+            );
+            world
+                .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+                .0[before..]
+                .iter()
+                .find(|event| {
+                    event.source == Some(weapon.to_bits())
+                        && event.spell_id == Some(49998)
+                        && event.kind == CombatLogKind::Damage
+                })
+                .expect("weapon Death Strike damage")
+                .amount
+        };
+        let boosted = damage(world);
+        crate::auras::remove_auras(
+            world,
+            weapon,
+            crate::auras::RemoveReason::Cancelled,
+            |aura| aura.spell_id == 1265577,
+        );
+        for _ in 0..4 {
+            run.app.update();
+        }
+        let unboosted = damage(run.app.world_mut());
+        assert!(
+            (boosted as f32 / unboosted as f32 - 1.1).abs() < 0.01,
+            "one stack: {boosted} vs {unboosted}"
+        );
+    }
+
+    #[test]
+    #[ignore = "requires canonical world database and MID2 Blood inputs"]
     fn blood_rune_weapon_damage_uses_owner_blood_spell_modifiers() {
         use shared::components::{Npc, UnitSummonedBy};
         use shared::protocol::CombatLogKind;
