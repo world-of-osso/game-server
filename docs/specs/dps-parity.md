@@ -40,6 +40,10 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 - Entering native Void Metamorphosis1217607 grants 200 Fury, capped by the actor's native pool (SimC76f8118 `sc_demon_hunter.cpp`12445–12452). Drain and exit behavior are separate.
 
+### Devourer Singular Strikes
+
+- Selected Singular Strikes1272770 amplifies only the primary Hungering Slash or Reaper's Toll damage hit1239127 by native effect2; secondary hits remain unchanged (SimC76f8118 `sc_demon_hunter.cpp`6697–6728).
+
 ### Devourer Burning Blades
 
 - Selected Burning Blades452408 applies native residual1245654 to landed Devourer weapon swings and Voidblade/Hungering Slash damage children. Preserve the native periodic timing and the existing Havoc residual453177 behavior (SimC76f8118 `sc_demon_hunter.cpp`3088–3111,5830–5847,6697–6710,6875–6878).

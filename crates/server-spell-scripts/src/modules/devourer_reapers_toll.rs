@@ -2,12 +2,26 @@
 use super::combat;
 use bevy::prelude::*;
 use combat::auras::{self, RemoveReason};
+use combat::class_progression::KnownSpells;
 use combat::soul_fragments::{self, FragmentKind};
-use combat::spell_cast::{self, script_registry::SpellScriptHook};
+use combat::spell_cast::{self, effects::EffectCtx, script_registry::SpellScriptHook};
 use combat::spell_info::SpellInfo;
 use shared::components::ActiveSpec;
 
-pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::AfterNativeLaunch(after_launch)];
+pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::AfterNativeLaunch(after_launch),
+    SpellScriptHook::TargetContextDamageMultiplier(singular_strikes),
+];
+
+fn singular_strikes(world: &World, ctx: &EffectCtx<'_>, target: Entity, periodic: bool) -> f32 {
+    if periodic || ctx.spell.id != 1239127 || ctx.spell.cast_primary_target != Some(target)
+        || !world.get::<KnownSpells>(ctx.caster).is_some_and(|known| known.contains(1272770))
+    {
+        return 1.0;
+    }
+    // SimC76f8118 cpp6721–6728 applies effect2 only to the primary hit.
+    1.0 + spell_cast::scripts::script_effect_value(world, ctx.caster, 1272770, 1) / 100.0
+}
 
 fn after_launch(world: &mut World, caster: Entity, spell: &SpellInfo) {
     if !matches!(spell.id, 1239123 | 1245470)
