@@ -7,7 +7,7 @@ use combat::auras::{
 use combat::spell_cast::script_registry::SpellScriptHook;
 use combat::spell_info::{SpellInfo, SpellStore};
 use combat::stats::CharacterStats;
-use shared::components::Health;
+use shared::components::{ActiveSpec, Health};
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::SuccessfulCastRelationships(after_cast),
@@ -83,7 +83,54 @@ fn apply_bulwark_absorb(
     );
 }
 
+fn advance_shining_light(world: &mut World, caster: Entity, spell: u32) {
+    if !world
+        .get::<ActiveSpec>(caster)
+        .is_some_and(|spec| spec.0 == 66)
+    {
+        return;
+    }
+    if spell == 85673 {
+        combat::auras::remove_auras(world, caster, RemoveReason::Consumed, |aura| {
+            aura.spell_id == 327510 && aura.caster == caster
+        });
+        return;
+    }
+    if spell != 53600 {
+        return;
+    }
+    // SimC76f8118 sc_paladin.cpp2940–2948: every third hardcast grants a free Word of Glory.
+    let stacks = world
+        .get::<combat::auras::ActiveAuras>(caster)
+        .and_then(|auras| {
+            auras
+                .iter()
+                .find(|aura| aura.spell_id == 182104 && aura.caster == caster)
+        })
+        .map_or(0, |aura| aura.stacks);
+    let id = if stacks >= 2 {
+        combat::auras::remove_auras(world, caster, RemoveReason::Consumed, |aura| {
+            aura.spell_id == 182104 && aura.caster == caster
+        });
+        327510
+    } else {
+        182104
+    };
+    let mask = if id == 182104 { 3 } else { 1 };
+    combat::auras::apply_aura(
+        world,
+        &AuraApplication {
+            caster,
+            target: caster,
+            spell_id: id,
+            effect_mask: mask,
+            source: AuraSource::Cast,
+        },
+    );
+}
+
 fn after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    advance_shining_light(world, caster, spell.id);
     // Native70448 spell432478 effect0 is aura332: misc432459 -> amount432472.
     // SimC76f8118 sc_paladin.cpp2748–2752 alternates only on actual hardcasts.
     let Some(override_spell) = world.resource::<SpellStore>().get(432478) else {

@@ -323,6 +323,14 @@ fn protection_paladin_simc_apl_uses_shield_of_the_righteous() {
         report["absorb_per_second"].as_f64().unwrap() > 0.0,
         "{report}"
     );
+    assert!(
+        report["tank_casts"]["85673"].as_u64().unwrap_or(0) > 0,
+        "{report}"
+    );
+    assert!(
+        report["self_heal_per_second"].as_f64().unwrap() > 0.0,
+        "{report}"
+    );
     println!("SIMC_TANK_REPLAY {report}");
 }
 
