@@ -214,7 +214,10 @@ fn dk252_festering_scythe_double_hastes_its_actual_gcd() {
         "gcd.remains",
     )
     .unwrap();
-    let expected = regular / f64::from(haste);
+    // The selected talent reduces Strike's GCD, not Scythe's native GCD.
+    let base = scythe.cooldowns.as_ref().unwrap().start_recovery_ms as f32;
+    let once = ((base / haste) as u32).clamp(750, 1500);
+    let expected = f64::from((once as f32 / haste) as u32) / 1000.0;
     assert!(
         (remaining - expected).abs() < 0.003,
         "actual replacement GCD {remaining} must match double haste {expected}; normal {regular}"
