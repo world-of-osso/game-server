@@ -605,4 +605,63 @@ mod tests {
         let (_, extended) = block(&run);
         assert!((extended - expiry - 8.0).abs() < 0.001);
     }
+    #[test]
+    fn protection_fueled_by_violence_heals_from_selected_bleed_ticks() {
+        use shared::protocol::CombatLogKind;
+        for bleed in [388539, 262115] {
+            for selected in [false, true] {
+                let mut h =
+                    crate::spell_cast::test_harness::harness_with_native_enemy_dodge_reduction(
+                        Vec::new(),
+                        &[383103, 383104, bleed],
+                        1,
+                    )
+                    .unwrap();
+                h.app
+                    .world_mut()
+                    .entity_mut(h.caster)
+                    .insert(shared::components::ActiveSpec(73));
+                h.advance(3);
+                let actor = h.caster;
+                if !selected {
+                    crate::auras::remove_auras(
+                        h.app.world_mut(),
+                        actor,
+                        crate::auras::RemoveReason::Consumed,
+                        |aura| aura.spell_id == 383103,
+                    );
+                }
+                h.app
+                    .world_mut()
+                    .get_mut::<shared::components::Health>(actor)
+                    .unwrap()
+                    .current = 1000.0;
+                crate::spell_cast::cast_triggered(h.app.world_mut(), actor, bleed, Some(h.npc), 1);
+                h.advance(100);
+                let damage: f32 = h
+                    .inbox
+                    .log
+                    .iter()
+                    .filter(|e| e.spell_id == Some(bleed) && e.kind == CombatLogKind::Damage)
+                    .map(|e| e.amount as f32)
+                    .sum();
+                let heals: Vec<_> = h
+                    .inbox
+                    .log
+                    .iter()
+                    .filter(|e| e.spell_id == Some(383104) && e.kind == CombatLogKind::Heal)
+                    .collect();
+                assert!(damage > 0.0, "bleed {bleed} must tick");
+                if selected {
+                    let healing: f32 = heals.iter().map(|e| e.amount as f32).sum();
+                    assert!(
+                        healing > 0.0 && healing <= damage,
+                        "damage={damage} heal={healing}"
+                    );
+                } else {
+                    assert!(heals.is_empty(), "unselected talent must not heal");
+                }
+            }
+        }
+    }
 }
