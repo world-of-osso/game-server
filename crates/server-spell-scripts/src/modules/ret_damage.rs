@@ -20,6 +20,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AfterPolicyDirectDamage(after_direct_damage),
     SpellScriptHook::AfterPolicyPeriodicDamage(after_periodic_damage),
     SpellScriptHook::TargetContextDamageMultiplier(damage_multiplier),
+    SpellScriptHook::TargetContextDamageMultiplier(light_within_wrath_multiplier),
     SpellScriptHook::TargetPlan(target_plan),
     SpellScriptHook::AreaFilter(area_filter),
 ];
@@ -479,4 +480,20 @@ pub(super) fn exclude_primary_cleave(
 ) {
     // Ret301–310: effect2 is the coefficient for OTHER targets only.
     units.retain(|unit| Some(*unit) != explicit);
+}
+
+// SimC76f8118 sc_paladin.cpp4175–4180: Light Within supplies the value
+// of Avenging Wrath effect12; its native family mask selects the hits.
+fn light_within_wrath_multiplier(world: &World, ctx: &EffectCtx, _: Entity, periodic: bool) -> f32 {
+    if periodic || !selected(world, ctx.caster, 1261111) {
+        return 1.0;
+    }
+    let Some(auras) = world.get::<ActiveAuras>(ctx.caster) else { return 1.0 };
+    let Some(value) = auras.iter().find(|aura| aura.spell_id == 1261111 && aura.caster == ctx.caster)
+        .and_then(|aura| aura.effects.iter().find(|effect| effect.index == 0))
+        .map(|effect| effect.amount) else { return 1.0 };
+    let applies = auras.iter().filter(|aura| matches!(aura.spell_id, 31884 | 454351) && aura.caster == ctx.caster)
+        .any(|aura| aura.effects.iter().any(|effect| effect.index == 11
+            && spell_mods::class_mask_affects(aura, effect, ctx.spell)));
+    if applies { 1.0 + value / 100.0 } else { 1.0 }
 }
