@@ -132,6 +132,13 @@ fn outlaw_sinister_earns_unseen_blade_and_owned_hero_auras() {
 fn outlaw_disorienting_uses_come_from_spree_not_passive_talent_presence() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(260, 1).unwrap();
+    // Isolate Spree's bypass from the independently earned Thousand Cuts reset.
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        run.actor,
+        crate::auras::RemoveReason::Consumed,
+        |aura| aura.spell_id == 441346,
+    );
     engage(&mut run);
     assert!(crate::auras::has_aura(run.app.world(), run.actor, 441274));
     cast_builder(&mut run);
