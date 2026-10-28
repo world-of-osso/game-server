@@ -33,6 +33,10 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 - Haste-flagged periodic effects cast by a controlled pet use its owner's live spell haste, just as guardian periodic effects do. Unflagged periodic effects keep their native cadence (SimC76f8118 `pet.cpp`217–228, `action.cpp`671).
 
+### Periodic power
+
+- Periodic damage, leech and healing use the caster's current AP/SP at each tick unless a periodic effect has `EX_COMPUTE_ON_CAST`. Preserve the application-time cast and persistent factors, stored payload adjustments, stack rules and tick schedule. Scourge Strike eruptions use the current owned disease tick amount (SimC76f8118 `action.cpp:2787–2818`, `sc_death_knight.cpp:12625–12638`).
+
 ### Shared channel timing
 
 - Quantize native channel tick intervals to the nearest millisecond. A hasted channel's duration is that rounded interval times its original native modified tick count, not an independently truncated hasted duration (`action.cpp4297–4314/4397–4421`).
