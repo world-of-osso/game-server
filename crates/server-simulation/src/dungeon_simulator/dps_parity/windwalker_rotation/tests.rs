@@ -796,12 +796,17 @@ fn literal_ww_native_unselected_wdp_owner_does_not_earn_the_enabler() {
 }
 
 #[test]
-#[ignore = "native earned RWK reset and override consumption; no aura or power grants"]
-fn literal_ww_native_earned_rwk_resets_rsk_and_consumes_its_override() {
+#[ignore = "ordinary player gameplay uses separate earned RWK and RSK recharge clocks"]
+fn ww_gameplay_earned_rwk_and_rsk_have_separate_recharges() {
     let _scope = crate::random::seed_scope(70448);
     let mut run = super::super::prepare_literal(269, 1).unwrap();
     let clock = fixture(run.app.world());
     let rotation = Rotation::load(run.app.world_mut(), run.actor, clock).unwrap();
+    // The cast path below must work without any literal-fixture controller marker.
+    run.app
+        .world_mut()
+        .entity_mut(run.actor)
+        .remove::<literal_rotation::LiteralParityFixture>();
     let mut earned = false;
     for _ in 0..64 {
         cast(&mut run, 100780);

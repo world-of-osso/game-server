@@ -1322,7 +1322,7 @@ pub fn reduce_cooldown(world: &mut World, caster: Entity, spell_id: u32, seconds
         return;
     };
     if let Some(charges) = charges {
-        super::send_to_owner(world, caster, charges);
+        super::send_charge_update(world, caster, charges);
     }
     if let Some(remaining_ms) = remaining_ms {
         send_reduced_cooldown(world, caster, spell_id, remaining_ms);
@@ -1337,8 +1337,8 @@ fn reduce_running_timers(
     seconds: f64,
 ) -> (Option<shared::protocol::SpellChargesUpdate>, Option<u32>) {
     let (charge_category, category) = categories;
-    let charges = if history.simc_ww_separate_rwk && spell_id == 467307 {
-        history.simc_ww_rwk_charges.as_mut()
+    let charges = if spell_id == super::WINDWALKER_RUSHING_WIND_KICK {
+        history.rwk_charges.as_mut()
     } else {
         history.charges.get_mut(&charge_category)
     }
