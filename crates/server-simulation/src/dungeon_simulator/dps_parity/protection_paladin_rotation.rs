@@ -148,7 +148,6 @@ pub(super) fn prepare_driver(run: &mut Run) -> Result<Box<dyn SpecDriver>, Strin
         match rotation.poll_precombat(run.app.world_mut(), run.actor, &run.targets)? {
             PrecombatPoll::Waiting => super::preparation::finish_pending_setup(run)?,
             PrecombatPoll::Selected { action, execution } => {
-                println!("PROTECTION_PRECOMBAT {}", action.name);
                 super::preparation::execute_precombat_plan(
                     run,
                     &mut rotation.driver,

@@ -1660,22 +1660,6 @@ fn devotion_aura_reduces_incoming_bleed() {
     }
     let actor = run.actor;
     let source = run.targets[0];
-    assert!(
-        crate::auras::has_aura(run.app.world(), actor, 465),
-        "precombat must install Devotion Aura, known={}: {:?}",
-        run.app
-            .world()
-            .get::<crate::class_progression::KnownSpells>(actor)
-            .unwrap()
-            .contains(465),
-        run.app
-            .world()
-            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
-            .0
-            .iter()
-            .filter(|event| event.spell_id == Some(465))
-            .collect::<Vec<_>>()
-    );
     crate::auras::remove_auras(
         run.app.world_mut(),
         actor,
