@@ -50,7 +50,7 @@ fn enhancement_crackling_stacks_empower_real_doom_damage() {
         engage(&mut run);
         let actor = run.actor;
         let target = run.targets[0];
-        cast(&mut run, 384352, actor);
+        crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 384352, Some(actor), 1);
         assert!(auras::has_aura(run.app.world(), actor, 224127));
         if !keep {
             auras::remove_auras(
@@ -95,7 +95,7 @@ fn enhancement_doom_earns_independent_feral_and_rolling_crackling_stacks() {
     let mut run = prepare_literal(263, 1).unwrap();
     engage(&mut run);
     let actor = run.actor;
-    cast(&mut run, 384352, actor);
+    crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 384352, Some(actor), 1);
     let aura = run
         .app
         .world()
