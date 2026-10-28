@@ -1232,6 +1232,56 @@ fn dk252_dread_plague_ticks_raise_forbidden_knowledge_magi() {
 
 #[test]
 #[ignore = "requires native252 profile/traits and player actor"]
+fn dk252_plague_ticks_can_apply_selected_brittle() {
+    let _seed = crate::random::seed_scope(70448);
+    for disease in [191587, 1240996] {
+        let mut run = prepare_literal(252, 1).unwrap();
+        engage(&mut run);
+        assert!(crate::auras::has_aura(run.app.world(), run.actor, 374504));
+        for frame in 0..1200 {
+            if frame % 300 == 0 {
+                assert!(crate::spell_cast::try_cast_triggered(
+                    run.app.world_mut(),
+                    run.actor,
+                    disease,
+                    Some(run.targets[0]),
+                    1
+                ));
+            }
+            run.app.update();
+            if run
+                .app
+                .world()
+                .get::<crate::auras::ActiveAuras>(run.targets[0])
+                .is_some_and(|auras| {
+                    auras
+                        .iter()
+                        .any(|aura| aura.spell_id == 374557 && aura.caster == run.actor)
+                })
+            {
+                break;
+            }
+        }
+        let aura = run
+            .app
+            .world()
+            .get::<crate::auras::ActiveAuras>(run.targets[0])
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 374557 && aura.caster == run.actor)
+            .expect("actual plague ticks must apply the selected Brittle debuff");
+        assert!(
+            aura.effects
+                .iter()
+                .any(|effect| effect.index == 0 && effect.amount == 6.0),
+            "Brittle must retain its native player damage-taken value"
+        );
+    }
+}
+
+
+#[test]
+#[ignore = "requires native252 profile/traits and player actor"]
 fn dk252_reaping_grants_buff_and_increases_execute_coil_damage() {
     fn coil_damage(health_fraction: f32) -> i64 {
         let _seed = crate::random::seed_scope(70448);
@@ -2989,55 +3039,6 @@ fn dk252_runic_spenders_consume_sudden_doom_after_damage() {
         assert!(
             !crate::auras::has_aura(run.app.world(), run.actor, 81340),
             "spell {spell} must consume its earned Sudden Doom stack"
-        );
-    }
-}
-
-#[test]
-#[ignore = "requires native252 profile/traits and player actor"]
-fn dk252_plague_ticks_can_apply_selected_brittle() {
-    let _seed = crate::random::seed_scope(70448);
-    for disease in [191587, 1240996] {
-        let mut run = prepare_literal(252, 1).unwrap();
-        engage(&mut run);
-        assert!(crate::auras::has_aura(run.app.world(), run.actor, 374504));
-        for frame in 0..1200 {
-            if frame % 300 == 0 {
-                assert!(crate::spell_cast::try_cast_triggered(
-                    run.app.world_mut(),
-                    run.actor,
-                    disease,
-                    Some(run.targets[0]),
-                    1
-                ));
-            }
-            run.app.update();
-            if run
-                .app
-                .world()
-                .get::<crate::auras::ActiveAuras>(run.targets[0])
-                .is_some_and(|auras| {
-                    auras
-                        .iter()
-                        .any(|aura| aura.spell_id == 374557 && aura.caster == run.actor)
-                })
-            {
-                break;
-            }
-        }
-        let aura = run
-            .app
-            .world()
-            .get::<crate::auras::ActiveAuras>(run.targets[0])
-            .unwrap()
-            .iter()
-            .find(|aura| aura.spell_id == 374557 && aura.caster == run.actor)
-            .expect("actual plague ticks must apply the selected Brittle debuff");
-        assert!(
-            aura.effects
-                .iter()
-                .any(|effect| effect.index == 0 && effect.amount == 6.0),
-            "Brittle must retain its native player damage-taken value"
         );
     }
 }
