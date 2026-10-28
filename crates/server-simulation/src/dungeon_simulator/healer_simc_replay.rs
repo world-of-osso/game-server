@@ -144,6 +144,7 @@ fn replay_with_registry(
         {
             policy.drive(run.app.world_mut(), healer, &members)?;
         }
+        recorder.observe_idle_gcd(run.app.world());
         run.app.update();
         let world = run.app.world();
         recorder.observe_frame(world, tick);

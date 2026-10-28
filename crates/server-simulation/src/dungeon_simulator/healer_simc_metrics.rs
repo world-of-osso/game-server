@@ -1,4 +1,7 @@
 //! Healer-attributed receipts from a native SimC timeline replay.
+#[cfg(test)]
+#[path = "healer_simc_metrics_tests.rs"]
+mod tests;
 use bevy::prelude::{Entity, World};
 use serde_json::{Value, json};
 use shared::components::{Health, Mana};
@@ -21,6 +24,7 @@ pub(super) struct Recorder {
     tank_health_curve: Vec<Value>,
     tank_minimum_pct: f32,
     tank_below_35_ticks: u32,
+    idle_gcd_ticks: u32,
 }
 
 impl Recorder {
@@ -44,6 +48,7 @@ impl Recorder {
             tank_health_curve: Vec::new(),
             tank_minimum_pct: 100.0,
             tank_below_35_ticks: 0,
+            idle_gcd_ticks: 0,
         };
         recorder.sample_mana(world, 0.0);
         recorder.observe_tank_health(world, 0);
@@ -89,6 +94,21 @@ impl Recorder {
                 self.mana_min
                     .map_or(mana.current, |old| old.min(mana.current)),
             );
+        }
+    }
+
+    pub(super) fn observe_idle_gcd(&mut self, world: &World) {
+        let alive = world
+            .get::<Health>(self.healer)
+            .is_some_and(|health| health.current > 0.0);
+        let casting = world
+            .get::<shared::casting::CastState>(self.healer)
+            .is_some();
+        let gcd_active = world
+            .get::<crate::spell_cast::SpellHistory>(self.healer)
+            .is_some_and(|history| history.has_active_gcd(crate::spell_cast::history_now(world)));
+        if alive && !casting && !gcd_active {
+            self.idle_gcd_ticks += 1;
         }
     }
 
@@ -155,6 +175,7 @@ impl Recorder {
         let spells: BTreeMap<_, _> = self.spells.iter().map(|(&spell, &(raw, effective))| (spell, json!({"raw":raw,"effective":effective,"raw_hps":raw as f64 / duration,"effective_hps":effective as f64 / duration}))).collect();
         json!({"raw_hps":raw as f64 / duration,"effective_hps":effective as f64 / duration,
             "overheal_pct":(raw > 0).then(|| 100.0 * (raw - effective) as f64 / raw as f64),
+            "idle_gcd_pct":100.0 * f64::from(self.idle_gcd_ticks) / (duration * 20.0),
             "spell_healing":spells,"mana_curve":self.mana_curve,"first_death_seconds":self.first_death_seconds,
             "tank_dtps":self.tank_damage as f64 / duration,"tank_health_curve":self.tank_health_curve,
             "tank_minimum_health_pct":self.tank_minimum_pct,"tank_seconds_below_35_alive":f64::from(self.tank_below_35_ticks) / 20.0,
