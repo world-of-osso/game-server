@@ -282,6 +282,24 @@ impl super::SpecDriver for Rotation {
 #[cfg(test)]
 mod tests {
     #[test]
+    #[ignore = "requires Guardian MID2 profile and SimC dungeon-dummy trace"]
+    fn guardian_replays_dungeon_dummy_with_literal_rotation() {
+        let trace = std::env::var("HEALER_TANK_SIMC_TRACE").expect("Guardian trace required");
+        let report = super::super::super::tank_replay::replay_simc_with_healing(
+            104,
+            std::path::Path::new(&trace),
+            300,
+            70448,
+            true,
+        )
+        .expect("Guardian tank replay");
+        assert_eq!(report["spec"], 104);
+        assert_eq!(report["rotation_status"], "registered_literal_simc");
+        assert!(report["raw_damage"].as_f64().unwrap() > 0.0);
+        assert!(report["active_mitigation_uptime"].as_f64().unwrap() > 0.0);
+    }
+
+    #[test]
     #[ignore = "requires Guardian MID2 profile and native world data"]
     fn guardian_literal_adapter_executes_in_bear_form() {
         let mut run = super::super::prepare_registered_player(104, 1).unwrap();
