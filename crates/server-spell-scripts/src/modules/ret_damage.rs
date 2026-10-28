@@ -322,15 +322,29 @@ fn extend_truths_wake(world: &mut World, caster: Entity, target: Entity) {
 
 // SimC76f8118 sc_paladin.hpp1288–1295 excludes Truth's Wake itself
 // from its Burn to Ash target bonus while preserving the other DoTs' bonus.
-fn truths_wake_self_multiplier(world: &World, ctx: &EffectCtx, target: Entity, periodic: bool) -> f32 {
+fn truths_wake_self_multiplier(
+    world: &World,
+    ctx: &EffectCtx,
+    target: Entity,
+    periodic: bool,
+) -> f32 {
     if !periodic || ctx.spell.id != TRUTHS_WAKE {
         return 1.0;
     }
-    world.get::<ActiveAuras>(target).and_then(|auras| {
-        auras.iter().find(|aura| aura.spell_id == TRUTHS_WAKE && aura.caster == ctx.caster)
-            .and_then(|aura| aura.effects.iter().find(|effect| effect.index == 4)
-                .map(|effect| 1.0 / (1.0 + effect.amount * aura.stack_multiplier() / 100.0)))
-    }).unwrap_or(1.0)
+    world
+        .get::<ActiveAuras>(target)
+        .and_then(|auras| {
+            auras
+                .iter()
+                .find(|aura| aura.spell_id == TRUTHS_WAKE && aura.caster == ctx.caster)
+                .and_then(|aura| {
+                    aura.effects
+                        .iter()
+                        .find(|effect| effect.index == 4)
+                        .map(|effect| 1.0 / (1.0 + effect.amount * aura.stack_multiplier() / 100.0))
+                })
+        })
+        .unwrap_or(1.0)
 }
 
 fn wrath_mastery_factor(world: &World, caster: Entity) -> f32 {
