@@ -141,6 +141,23 @@ fn wait_for_natural_buff_expiry(run: &mut Run) {
     panic!("native1297033 failed to expire without further source actions");
 }
 
+#[test]
+#[ignore = "capture actual 3T Windwalker SCK damage factors"]
+fn diag_ww_sck_three_target_factors() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::super::prepare_measurement(269, 3).unwrap();
+    capture_ticks(&mut run);
+    super::super::advance_combat(&mut run).unwrap();
+    let capture = run.app.world().resource::<FactorCapture>().export();
+    assert!(capture["captured_hits"].as_u64().unwrap() > 0);
+    let output = std::path::PathBuf::from(std::env::var("DPS_PARITY_OUTPUT").unwrap());
+    std::fs::write(
+        output.join("269.sck-factors.json"),
+        serde_json::to_vec_pretty(&capture).unwrap(),
+    )
+    .unwrap();
+}
+
 fn capture_ticks(run: &mut Run) {
     run.app.insert_resource(FactorCapture::new(
         run.actor,
