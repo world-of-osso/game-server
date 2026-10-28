@@ -1525,6 +1525,112 @@ fn blessed_hammer_absorbs_only_next_hit_from_its_target() {
 }
 
 #[test]
+#[ignore = "uses selected MID2 Protection and real Avenger's Shield"]
+fn avengers_shield_grants_native_strength_in_adversity_parry() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::dps_parity::prepare_registered_player(66, 1).unwrap();
+    super::dps_parity::engage(&mut run);
+    for _ in 0..40 {
+        run.app.update();
+    }
+    let actor = run.actor;
+    let target = run.targets[0];
+    assert!(crate::spell_cast::try_cast_triggered(
+        run.app.world_mut(),
+        actor,
+        31935,
+        Some(target),
+        0
+    ));
+    for _ in 0..4 {
+        run.app.update();
+    }
+    let after = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(actor)
+        .unwrap()
+        .defense
+        .parry;
+    let aura = run
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(actor)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 393038)
+        .expect("real parry aura");
+    assert_eq!(aura.stacks, 1);
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        actor,
+        crate::auras::RemoveReason::Consumed,
+        |aura| aura.spell_id == 393038,
+    );
+    run.app.update();
+    let before = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(actor)
+        .unwrap()
+        .defense
+        .parry;
+    assert!(
+        (after - before - 3.0).abs() < 0.01,
+        "parry {before} -> {after}"
+    );
+}
+
+#[test]
+#[ignore = "uses selected MID2 Protection and real multi-target Avenger's Shield"]
+fn strength_in_adversity_scales_with_actual_shield_targets() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::dps_parity::prepare_registered_player(66, 3).unwrap();
+    super::dps_parity::engage(&mut run);
+    for _ in 0..40 {
+        run.app.update();
+    }
+    let actor = run.actor;
+    crate::spell_cast::creature_cast(
+        run.app.world_mut(),
+        actor,
+        31935,
+        Some(run.targets[0]),
+        false,
+    )
+    .unwrap();
+    for _ in 0..40 {
+        run.app.update();
+    }
+    let aura = run
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(actor)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 393038)
+        .expect("parry aura");
+    let hits = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .iter()
+        .filter(|event| {
+            event.source == Some(actor.to_bits())
+                && event.spell_id == Some(31935)
+                && event.kind == shared::protocol::CombatLogKind::Damage
+                && event.amount > 0
+        })
+        .count();
+    assert_eq!(
+        aura.stacks as usize, hits,
+        "each actual Shield hit grants a stack"
+    );
+    assert_eq!(hits, 3, "the fixture must exercise three Shield targets");
+}
+
+#[test]
 #[ignore = "uses selected MID2 Crusader's Judgment and native avoidance procs"]
 fn grand_crusader_advances_shared_judgment_charge() {
     let _seed = crate::random::seed_scope(70448);
@@ -1748,6 +1854,19 @@ fn protection_divine_toll_grants_power_and_shield_per_target() {
         .unwrap()
         .current;
     assert_eq!(power, 3.0);
+    let stacks = run
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(actor)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 393038)
+        .expect("Toll shield parry aura")
+        .stacks;
+    assert_eq!(
+        stacks, 3,
+        "the final Toll Shield replaces earlier casts with its three targets"
+    );
     let events = &run
         .app
         .world()
