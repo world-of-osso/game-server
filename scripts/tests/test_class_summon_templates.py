@@ -142,6 +142,36 @@ class ClassSummonImportTests(unittest.TestCase):
                         "SELECT name FROM tdb_creature_template WHERE entry=?", (entry,)).fetchone())
                     self.assertIn(entry, selected)
 
+    def test_raise_abomination_imports_native_template_without_spawns(self):
+        source = (ROOT / "data/world.db").resolve()
+        with tempfile.TemporaryDirectory() as directory:
+            prepared = Path(directory) / "abomination.sqlite"
+            with closing(sqlite3.connect(f"file:{source}?mode=ro", uri=True)) as src:
+                with closing(sqlite3.connect(prepared)) as dst:
+                    src.backup(dst)
+            with closing(sqlite3.connect(prepared)) as conn, conn:
+                self.assertEqual(conn.execute("""SELECT EffectMiscValue_0 FROM spell_effect
+                    WHERE SpellID=288853 AND DifficultyID=0 AND Effect=28""").fetchone(), (149555,))
+                for table, key in (("content_creature_template", "entry"),
+                                   ("content_creature_template_model", "CreatureID"),
+                                   ("content_creature_template_addon", "entry")):
+                    conn.execute(f"DELETE FROM {table} WHERE {key}=?", (149555,))
+                before_spawns = spawn_fingerprint(conn)
+            subprocess.run([sys.executable, str(ROOT / "scripts/add_class_summon_templates.py"),
+                            "--db", str(prepared)], check=True, capture_output=True, text=True)
+            with closing(sqlite3.connect(f"file:{prepared}?mode=ro", uri=True)) as conn:
+                template = conn.execute("""SELECT entry,name,faction,unit_class,AIName,ScriptName
+                    FROM tdb_creature_template WHERE entry=149555""").fetchone()
+                self.assertIsNotNone(template)
+                self.assertEqual(conn.execute("""SELECT entry,name,faction,unit_class,AIName,ScriptName
+                    FROM content_creature_template WHERE entry=149555""").fetchone(), template)
+                models = conn.execute("""SELECT CreatureID,Idx,CreatureDisplayID,DisplayScale,Probability,VerifiedBuild
+                    FROM tdb_creature_template_model WHERE CreatureID=149555 ORDER BY Idx""").fetchall()
+                self.assertTrue(models)
+                self.assertEqual(conn.execute("""SELECT * FROM content_creature_template_model
+                    WHERE CreatureID=149555 ORDER BY Idx""").fetchall(), models)
+                self.assertEqual(spawn_fingerprint(conn), before_spawns)
+
     def test_rider_talents_reach_all_four_authentic_horsemen(self):
         source = (ROOT / "data/world.db").resolve()
         expected = ((444248, 221632), (444251, 221633),

@@ -697,8 +697,21 @@ fn demonology_imp_critical_damage_inherits_demonic_brutality() {
         .unwrap();
     let uncritical = direct["factors"]["amount"].as_f64().unwrap();
     let actual = result["factors"]["actual_amount"].as_f64().unwrap();
-    let expected = uncritical * 2.0 * (1.0 + f64::from(effect) / 100.0);
-    // SimC76f8118 pets.cpp185–201: bugs=1 applies native effect2 twice to the critical bonus.
+    let spell = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(104318)
+        .unwrap();
+    let owner_critical = run
+        .app
+        .world()
+        .get::<crate::auras::AuraStatMods>(run.actor)
+        .unwrap()
+        .critical_damage(spell.school_mask());
+    let expected = uncritical * 2.0 * (f64::from(owner_critical) + f64::from(effect) / 100.0);
+    // SimC76f8118 pet.cpp488–494 inherits the owner multiplier; warlock
+    // pets.cpp185–201 then adds native Demonic Brutality effect2 in bugs mode.
     assert!(
         (actual - expected).abs() < 1.5,
         "actual={actual} expected={expected}"
@@ -857,6 +870,14 @@ fn demonology_isolated_last_bolt_does_not_emit_rapidity_twin() {
     use shared::protocol::CombatLogKind;
     let _seed = crate::random::seed_scope(70_448);
     let mut run = prepare_literal(266, 1).unwrap();
+    let owner = run.actor;
+    // Only the Imp under test may produce an Isolated Implosion receipt.
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        owner,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 267216,
+    );
     engage(&mut run);
     run.app
         .world_mut()
@@ -1557,5 +1578,169 @@ fn demonology_tyrant_summon_grants_oblation_and_abyssal_dominion() {
     assert!(
         (19.8..=20.05).contains(&dominion),
         "native 15s Abyssal Dominion plus Reign of Tyranny 5s, got {dominion}"
+    );
+}
+
+#[test]
+#[ignore = "requires canonical266 inputs; Dreadbite without Dreadlash is single-target"]
+fn demonology_dreadbite_without_dreadlash_hits_only_primary() {
+    use shared::protocol::CombatLogKind;
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(266, 3).unwrap();
+    assert!(!crate::auras::has_aura(run.app.world(), run.actor, 264078));
+    engage(&mut run);
+    let target = run.targets[0];
+    run.app
+        .world_mut()
+        .entity_mut(run.actor)
+        .insert(crate::networking::CombatTarget(Some(target)));
+    let dog = summon_native_dreadstalker(&mut run);
+    for _ in 0..120 {
+        run.app.update();
+    }
+    let impacts: Vec<_> = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .iter()
+        .filter(|e| {
+            e.source == Some(dog.to_bits())
+                && e.spell_id == Some(271971)
+                && e.kind == CombatLogKind::Damage
+        })
+        .collect();
+    assert!(
+        !impacts.is_empty(),
+        "real Dreadstalker must deal Dreadbite damage"
+    );
+    assert!(
+        impacts.iter().all(|e| e.target == Some(target.to_bits())),
+        "without Dreadlash every actual Dreadbite hits only primary: {impacts:?}"
+    );
+}
+
+#[test]
+#[ignore = "requires canonical266 inputs; real Felguard Felstorm"]
+fn demonology_felguard_uses_felstorm_against_native_targets() {
+    use shared::protocol::CombatLogKind;
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_measurement(266, 3).unwrap();
+    engage(&mut run);
+    let pet = run
+        .app
+        .world_mut()
+        .query::<(
+            Entity,
+            &crate::hunter_pet::HunterPet,
+            &shared::components::Npc,
+        )>()
+        .iter(run.app.world())
+        .find(|(_, pet, npc)| pet.owner == run.actor && npc.template_id == 17252)
+        .map(|(pet, _, _)| pet)
+        .expect("precombat real Felguard");
+    crate::pet_control::order_companion_pet(run.app.world_mut(), run.actor, Some(run.targets[0]));
+    for _ in 0..240 {
+        run.app.update();
+    }
+    let hits: Vec<_> = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .iter()
+        .filter(|e| {
+            e.source == Some(pet.to_bits())
+                && e.spell_id == Some(89753)
+                && e.kind == CombatLogKind::Damage
+        })
+        .collect();
+    assert!(
+        hits.len() >= 5,
+        "actual Felguard must perform the native Felstorm ticks, got {}",
+        hits.len()
+    );
+    for target in &run.targets {
+        assert!(
+            hits.iter().any(|e| e.target == Some(target.to_bits())),
+            "Felstorm must damage each native pack target"
+        );
+    }
+}
+
+#[test]
+#[ignore = "requires canonical266 inputs; Blighted Maw follows actual Dreadbite damage"]
+fn demonology_blighted_maw_follows_real_dreadbite() {
+    use shared::protocol::CombatLogKind;
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(266, 1).unwrap();
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, 1276956));
+    engage(&mut run);
+    run.app
+        .world_mut()
+        .entity_mut(run.actor)
+        .insert(crate::networking::CombatTarget(Some(run.targets[0])));
+    let dog = summon_native_dreadstalker(&mut run);
+    for _ in 0..120 {
+        run.app.update();
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    assert!(
+        events.iter().any(|e| e.source == Some(dog.to_bits())
+            && e.spell_id == Some(271971)
+            && e.kind == CombatLogKind::Damage
+            && e.amount > 0),
+        "real dog must land Dreadbite"
+    );
+    assert!(
+        events.iter().any(|e| e.source == Some(run.actor.to_bits())
+            && e.spell_id == Some(1276960)
+            && e.kind == CombatLogKind::Damage
+            && e.amount > 0),
+        "selected Blighted Maw must deal real native Plague damage"
+    );
+}
+
+#[test]
+#[ignore = "requires canonical 266 inputs; no duplicate Tyrant auto swing"]
+fn demonology_antoran_tyrant_cleave_has_one_impact_per_cast() {
+    use shared::protocol::CombatLogKind;
+    let _seed = crate::random::seed_scope(70_448);
+    let (mut run, tyrant) = prepare_antoran_tyrant();
+    for _ in 0..200 {
+        run.app.update();
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    let cast = events
+        .iter()
+        .filter(|e| {
+            e.source == Some(tyrant.to_bits())
+                && e.spell_id == Some(1264093)
+                && e.kind == CombatLogKind::CastSuccess
+        })
+        .count();
+    let impact = events
+        .iter()
+        .filter(|e| {
+            e.source == Some(tyrant.to_bits())
+                && e.spell_id == Some(1264093)
+                && matches!(e.kind, CombatLogKind::Damage | CombatLogKind::Miss(_))
+        })
+        .count();
+    assert!(
+        cast >= 3,
+        "actual Tyrant must repeatedly cast Burning Cleave"
+    );
+    assert_eq!(
+        impact, cast,
+        "the single-target Cleave action must not also be emitted by native white-attack replacement"
     );
 }

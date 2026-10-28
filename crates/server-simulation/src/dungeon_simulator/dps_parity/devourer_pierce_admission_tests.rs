@@ -4,6 +4,42 @@ use shared::protocol::CombatLogKind;
 
 #[test]
 #[ignore = "requires DPS_PARITY_WORLD_DB and DPS_PARITY_OUTPUT with spec1480 exact profile/traits"]
+fn batch5_voidblade_hit_applies_devourers_bite() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare(1480, 1).expect("native Devourer profile");
+    let actor = run.actor;
+    let target = run.targets[0];
+    engage(&mut run);
+    crate::spell_cast::cast_for_player_with_target(
+        run.app.world_mut(),
+        actor,
+        1245412,
+        Some(target),
+    )
+    .expect("native Voidblade admission");
+    for _ in 0..40 {
+        run.app.update();
+    }
+    assert!(
+        run.app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|e| e.spell_id == Some(1245414)
+                && e.target == Some(target.to_bits())
+                && e.kind == CombatLogKind::Damage
+                && e.amount > 0),
+        "Voidblade primary hit landed"
+    );
+    assert!(
+        crate::auras::has_aura(run.app.world(), target, 1241532),
+        "selected Devourer's Bite applies to target"
+    );
+}
+
+#[test]
+#[ignore = "requires DPS_PARITY_WORLD_DB and DPS_PARITY_OUTPUT with spec1480 exact profile/traits"]
 fn devourer_selected_demonsurge_admits_pierce_in_meta() {
     let mut run = prepare(1480, 1).expect("native Devourer profile");
     let actor = run.actor;

@@ -496,7 +496,7 @@ fn send_attack_stopped(world: &mut World, attacker: Entity, victim: Option<Entit
 
 /// Template-owned melee interval (TC Creature::UpdateEntry), not player or pet weapons.
 #[derive(Component, Debug, Clone, Copy, PartialEq)]
-pub(crate) struct CreatureAttackTime(pub f32);
+pub struct CreatureAttackTime(pub f32);
 
 impl CreatureAttackTime {
     fn modified(self, haste_pct: f32, mods: Option<&AuraStatMods>) -> f32 {
@@ -793,6 +793,18 @@ pub(crate) fn auto_attack_system(world: &mut World) {
         .iter(world)
         .collect();
     for attacker in attackers {
+        // SimC76f8118 pets.cpp1510–1573: Antoran Tyrant's Burning Cleave is
+        // its only swing. Native1251000 also replaces white swings with the
+        // same spell, so a separate auto-attack would duplicate it.
+        if world
+            .get::<Npc>(attacker)
+            .is_some_and(|npc| npc.template_id == 250289)
+            && world
+                .get::<crate::spell_cast::summon::SummonedCreature>(attacker)
+                .is_some_and(|summon| summon.spell_id == 265187)
+        {
+            continue;
+        }
         // Apply this attacker's commands before the next attacker reads mitigation.
         // In particular, consuming Ardent also removes its30% damage reduction now.
         let owner_crit = read_pet_owner_critical_chance(world, attacker);
@@ -890,10 +902,17 @@ fn auto_attack_unit(
                     .expect("owner-scaled guardian requires native CharacterStats");
                 let lesser_ghoul =
                     npc.template_id == 237409 && matches!(summon.spell_id, 275430 | 1294026);
+                let horseman = matches!(
+                    (summon.spell_id, npc.template_id),
+                    (444248, 221632) | (444251, 221633) | (444252, 221634) | (444254, 221635)
+                );
                 let power = if demon {
                     owner.spell_power.max(0.0)
                 } else {
-                    let attack_type = if lesser_ghoul {
+                    let attack_type = if lesser_ghoul
+                        || horseman
+                        || (summon.spell_id == 288853 && npc.template_id == 149555)
+                    {
                         crate::stats::WeaponAttackType::MainHand
                     } else {
                         crate::stats::WeaponAttackType::Ranged
@@ -1957,8 +1976,12 @@ fn try_swing(
             };
             owner / baked
         });
-    let source_multiplier =
-        context.summon_modifiers.multiplier(attacker.entity) * inherited_versatility * versus;
+    let source_multiplier = context.summon_modifiers.multiplier(attacker.entity)
+        * context
+            .summon_modifiers
+            .white_swing_multiplier(attacker.entity)
+        * inherited_versatility
+        * versus;
     let swing = swing_damage(
         attacker,
         &weapon,

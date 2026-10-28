@@ -119,9 +119,20 @@ fn native_huntmaster_each_companion_melee_inherits_owner_ap() {
             .world_mut()
             .query::<(Entity, &crate::spell_cast::summon::SummonedCreature)>();
         let mut checked_events = 0;
+        let mut previous_multipliers = std::collections::BTreeMap::new();
         engage(&mut run);
         advance_combat_observed(&mut run, |run| {
             let world = run.app.world();
+            // Combat events are observed after the frame's systems: a new Dire
+            // Beast can change the source multiplier after Hati's swing. Only
+            // compare hits when that multiplier was stable across the frame.
+            let current_multipliers: std::collections::BTreeMap<_, _> = summons
+                .iter(world)
+                .filter(|(_, summon)| {
+                    summon.owner == run.actor && matches!(summon.spell_id, 459733 | 459739)
+                })
+                .map(|(pet, _)| (pet, crate::auras::summon_damage::multiplier(world, pet)))
+                .collect();
             let events = &world
                 .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
                 .0;
@@ -143,6 +154,11 @@ fn native_huntmaster_each_companion_melee_inherits_owner_ap() {
                 }) else {
                     continue;
                 };
+                if previous_multipliers.get(&pet) != current_multipliers.get(&pet)
+                    || !previous_multipliers.contains_key(&pet)
+                {
+                    continue;
+                }
                 let owner = world
                     .get::<crate::stats::CharacterStats>(run.actor)
                     .unwrap();
@@ -183,6 +199,7 @@ fn native_huntmaster_each_companion_melee_inherits_owner_ap() {
                     .push((event.amount, floor));
             }
             checked_events = events.len();
+            previous_multipliers = current_multipliers;
         })
         .expect("ordinary native300s combat");
         if hits.contains_key(&459733) && hits.contains_key(&459739) {

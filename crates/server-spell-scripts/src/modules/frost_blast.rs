@@ -18,14 +18,39 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::TargetContextDam
 )];
 
 fn rime_primary_multiplier(world: &World, ctx: &EffectCtx, target: Entity, _: bool) -> f32 {
+    if ctx.spell.id != HOWLING_BLAST {
+        return 1.0;
+    }
+    let targets = combat::spell_cast::resolving_targets(world, ctx).expect("Howling Blast targets");
+    let index = targets
+        .iter()
+        .position(|candidate| *candidate == target)
+        .expect("Howling Blast target ordinal");
+    let northwinds = auras::has_aura(world, ctx.caster, 1230284) && index == 1;
+    let full_targets = if auras::has_aura(world, ctx.caster, 1230284) {
+        2
+    } else {
+        1
+    };
+    let mut multiplier = if index >= full_targets && targets.len() > 1 {
+        (1.0 / targets.len().min(20) as f32).sqrt()
+    } else {
+        1.0
+    };
     let earned_rime = ctx
         .spell
         .cast_charge_mods
         .iter()
         .flatten()
         .any(|modifier| modifier.aura_spell_id == RIME);
-    if ctx.spell.id != HOWLING_BLAST || ctx.primary_target() != Some(target) || !earned_rime {
-        return 1.0;
+    if index > 0 && !northwinds {
+        if earned_rime && auras::has_aura(world, ctx.caster, 376938) {
+            multiplier *= native_multiplier(world, 376938, 1);
+        }
+        multiplier /= native_multiplier(world, HOWLING_BLAST, 1);
+    }
+    if !earned_rime || (index > 0 && !northwinds) {
+        return multiplier;
     }
     // SimC76f8118 sc_death_knight.cpp11545–11555 applies each selected
     // talent's native effect separately to the earned Rime primary.
@@ -39,7 +64,7 @@ fn rime_primary_multiplier(world: &World, ctx: &EffectCtx, target: Entity, _: bo
     } else {
         1.0
     };
-    icebreaker * darkness
+    multiplier * icebreaker * darkness
 }
 
 fn native_multiplier(world: &World, spell: u32, index: u8) -> f32 {
