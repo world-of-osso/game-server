@@ -62,6 +62,8 @@ pub fn enchantment_stats(
                 let amount = scaled_amount(enchant, effect, level)?.round();
                 add_stat(&mut result.stats, effect.argument, amount)?;
             }
+            // SimC76f8118 dbc/data_enums.hh:440: on-use spells are not passive equip effects.
+            7 => {}
             kind => {
                 return Err(format!(
                     "enchantment {id} effect type {kind} is not modeled"
