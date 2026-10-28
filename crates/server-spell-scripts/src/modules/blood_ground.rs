@@ -70,10 +70,43 @@ fn consume_scourge(world: &mut World, caster: Entity, spell: &combat::spell_info
             .get::<ActiveSpec>(caster)
             .is_some_and(|spec| spec.0 == 250)
     {
+        trigger_relish(world, caster);
         auras::remove_auras(world, caster, RemoveReason::Consumed, |aura| {
             aura.spell_id == SCOURGE_BUFF && aura.caster == caster
         });
     }
+}
+
+// SimC76f8118 sc_death_knight.cpp9601–9617/9706–9712: a free DnD
+// heals per Bone Shield stack and grants its native runic-power effect.
+fn trigger_relish(world: &mut World, caster: Entity) {
+    if !auras::has_aura(world, caster, SCOURGE_BUFF)
+        || !world
+            .get::<combat::class_progression::KnownSpells>(caster)
+            .is_some_and(|known| known.contains(317610))
+    {
+        return;
+    }
+    let Some(stacks) = world.get::<ActiveAuras>(caster).and_then(|auras| {
+        auras
+            .iter()
+            .find(|aura| aura.spell_id == 195181 && aura.caster == caster)
+            .map(|aura| aura.stacks)
+    }) else {
+        return;
+    };
+    let Some(mut heal) = spell_cast::load_triggered_spell(world, 317614, 1) else {
+        return;
+    };
+    let effect = heal
+        .effects
+        .iter_mut()
+        .find(|effect| effect.index == 0)
+        .expect("Relish in Blood heal");
+    effect.base_points *= f32::from(stacks);
+    effect.bonus_coefficient *= f32::from(stacks);
+    effect.bonus_coefficient_from_ap *= f32::from(stacks);
+    spell_cast::launch_triggered_spell(world, caster, &heal, Some(caster), 1);
 }
 
 #[derive(Component)]

@@ -988,6 +988,70 @@ mod tests {
 
     #[test]
     #[ignore = "requires canonical world database and MID2 Blood inputs"]
+    fn blood_relish_in_blood_heals_and_grants_power_on_free_decay() {
+        let mut run = super::super::prepare_registered_player(250, 1).unwrap();
+        let actor = run.actor;
+        super::super::engage(&mut run);
+        assert!(
+            run.app
+                .world()
+                .get::<crate::class_progression::KnownSpells>(actor)
+                .unwrap()
+                .contains(317610)
+        );
+        for id in [195181, 195181, 195181, 81141] {
+            crate::auras::apply_aura(
+                run.app.world_mut(),
+                &crate::auras::AuraApplication {
+                    caster: actor,
+                    target: actor,
+                    spell_id: id,
+                    effect_mask: u32::MAX,
+                    source: crate::auras::AuraSource::Cast,
+                },
+            );
+        }
+        let mut health = run
+            .app
+            .world_mut()
+            .get_mut::<shared::components::Health>(actor)
+            .unwrap();
+        health.current = health.max * 0.5;
+        let before = health.current;
+        crate::spell_cast::powers::change_power(
+            run.app.world_mut(),
+            actor,
+            shared::components::PowerType::RunicPower,
+            -1000.0,
+        );
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 43265, Some(actor), false)
+            .unwrap();
+        for _ in 0..4 {
+            run.app.update();
+        }
+        let health = run
+            .app
+            .world()
+            .get::<shared::components::Health>(actor)
+            .unwrap()
+            .current;
+        let power = crate::spell_cast::powers::power_value(
+            run.app.world(),
+            actor,
+            shared::components::PowerType::RunicPower,
+        )
+        .unwrap()
+        .0;
+        assert!(health > before, "Relish in Blood must heal");
+        assert_eq!(
+            power, 100.0,
+            "Relish in Blood grants native ten Runic Power"
+        );
+        assert!(!crate::auras::has_aura(run.app.world(), actor, 81141));
+    }
+
+    #[test]
+    #[ignore = "requires canonical world database and MID2 Blood inputs"]
     fn blood_crimson_scourge_builds_real_ground_and_sanguine_follows_position() {
         let _seed = crate::random::seed_scope(70448);
         let mut run = super::super::prepare_registered_player(250, 1).unwrap();
