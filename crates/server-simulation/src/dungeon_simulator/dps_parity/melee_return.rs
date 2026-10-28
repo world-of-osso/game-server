@@ -139,7 +139,14 @@ fn read_walk_step(world: &World, actor: Entity, delta: f32) -> Option<WalkStep> 
     let from = *world.get::<Position>(actor)?;
     let to = *world.get::<Position>(target)?;
     let range = crate::scripted_ai::model_reach::melee_range(world, actor, target)?;
-    walk_toward_melee(target, from, to, range, movement::read_speed(world, actor), delta)
+    walk_toward_melee(
+        target,
+        from,
+        to,
+        range,
+        movement::read_speed(world, actor),
+        delta,
+    )
 }
 
 fn walk_toward_melee(
