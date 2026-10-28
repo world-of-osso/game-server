@@ -21,6 +21,9 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AuraEvent(divine_inspiration_event),
     SpellScriptHook::OwnsPolicyProc(|spell| spell == 432964),
     SpellScriptHook::AfterNativeCastUpdate(bind_blessed_hammer_fields),
+    SpellScriptHook::TargetDamageMultiplier(valor_shield_multiplier),
+    SpellScriptHook::AfterResolvedHits(consume_valor),
+    SpellScriptHook::AreaFilter(blaze_area_filter),
 ];
 
 fn register_bulwark(scripts: &mut AuraScripts) {
@@ -189,6 +192,42 @@ fn selected(world: &World, caster: Entity, talent: u32) -> bool {
                 .active_talent_spells()
                 .any(|entry| entry.spell_id == talent)
         })
+}
+
+fn valor_shield_multiplier(world: &World, caster: Entity, target: Entity, spell: &SpellInfo) -> f32 {
+    if spell.id == 53600 && spell.cast_primary_target == Some(target)
+        && combat::auras::has_aura(world, caster, 1269179)
+    {
+        1.0 + combat::spell_cast::scripts::script_effect_value(world, caster, 1269179, 0) / 100.0
+    } else {
+        1.0
+    }
+}
+
+fn blaze_area_filter(spell: u32, index: u8) -> Option<combat::spell_cast::script_registry::AreaTargetFilter> {
+    (spell == 1269224 && index == 0).then_some(filter_blaze_targets)
+}
+
+fn filter_blaze_targets(world: &World, _spell: &SpellInfo, primary: Option<Entity>, targets: &mut Vec<Entity>) {
+    targets.retain(|target| Some(*target) != primary);
+    let cap = world.resource::<SpellStore>().get(1267215)
+        .and_then(|source| source.effects.iter().find(|effect| effect.index == 0))
+        .expect("Glory apex Blaze target count").base_points.max(0.0) as usize;
+    targets.truncate(cap);
+}
+
+fn consume_valor(world: &mut World, ctx: &combat::spell_cast::effects::EffectCtx<'_>) {
+    if ctx.spell.id != 53600 || !combat::auras::has_aura(world, ctx.caster, 1269179) {
+        return;
+    }
+    // SimC76f8118 sc_paladin.cpp2955–2971: the action's primary damage
+    // uses Valor, then the owned buff is spent and Blaze targets secondaries.
+    if let Some(target) = ctx.primary_target() {
+        combat::spell_cast::cast_triggered(world, ctx.caster, 1269224, Some(target), ctx.depth + 1);
+    }
+    combat::auras::remove_auras(world, ctx.caster, RemoveReason::Consumed, |aura| {
+        aura.spell_id == 1269179 && aura.caster == ctx.caster
+    });
 }
 
 fn roll_vanguard(world: &mut World, caster: Entity, spell: u32) {
