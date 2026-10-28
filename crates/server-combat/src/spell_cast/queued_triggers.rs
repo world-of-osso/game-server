@@ -284,6 +284,7 @@ pub(super) fn schedule_instant_background(
     target: Entity,
     spell_id: u32,
     delay_ms: u32,
+    multiplier: f32,
 ) {
     let due_ms = now_ms(world) + u64::from(delay_ms);
     let trigger = QueuedTrigger {
@@ -295,7 +296,7 @@ pub(super) fn schedule_instant_background(
         depth: 0,
         item_level: None,
         item_inventory_type: None,
-        damage_multiplier: ctx.spell.cast_overload_multiplier,
+        damage_multiplier: Some(ctx.spell.cast_overload_multiplier.unwrap_or(1.0) * multiplier),
     };
     world
         .resource_mut::<PendingTriggers>()
