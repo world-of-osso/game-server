@@ -897,7 +897,8 @@ fn simc_dummy_debuffs_modify_real_damage_by_school() {
         spell_id,
     })
     .collect();
-    for (spell, multiplier) in [(247455, 1.03 * 1.03), (228478, 1.05 * 1.03)] {
+    // The Vengeance precombat already applies Chaos Brand; the trace must not stack it twice.
+    for (spell, multiplier) in [(247455, 1.03), (228478, 1.05 * 1.03)] {
         let base = damage(&[], spell);
         let buffed = damage(&debuffs, spell);
         assert!(
