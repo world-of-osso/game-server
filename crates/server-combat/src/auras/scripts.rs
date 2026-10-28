@@ -852,7 +852,11 @@ fn toggle_monster_rising(world: &mut World, unit: Entity, _aura: &AuraInstance, 
             world,
             unit,
             MONSTER_RISING_AGILITY,
-            &[METAMORPHOSIS_HAVOC, METAMORPHOSIS_VENGEANCE],
+            &[
+                METAMORPHOSIS_HAVOC,
+                METAMORPHOSIS_VENGEANCE,
+                METAMORPHOSIS_DEVOURER,
+            ],
         );
     }
 }

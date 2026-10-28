@@ -7,6 +7,9 @@ use shared::components::ActiveSpec;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::EarlyAuraRegistration(register),
+    SpellScriptHook::BeforeNativeOnCast(trigger_voidstep),
+    SpellScriptHook::AfterFireDirectHit(apply_devourers_bite),
+    SpellScriptHook::AfterFireDirectHit(reset_immolation_on_hunt),
     SpellScriptHook::AfterNativeLaunch(after_launch),
 ];
 
@@ -34,12 +37,74 @@ pub(super) fn clear_reapers_replacement(
     );
 }
 
+fn trigger_voidstep(world: &mut World, caster: Entity, spell: &SpellInfo, depth: u8) {
+    if spell.id != 198793
+        || world.get::<ActiveSpec>(caster).map(|spec| spec.0) != Some(1480)
+        || !combat::auras::has_aura(world, caster, 1223157)
+    {
+        return;
+    }
+    // SimC76f8118 cpp8542–8556,8610–8615 delivers Voidstep before Retreat consumes it.
+    let target = spell
+        .cast_primary_target
+        .expect("Retreat retains its target");
+    if !spell_cast::try_cast_triggered(world, caster, 1239526, Some(target), depth + 1) {
+        error!(?caster, "native Voidstep damage was refused");
+    }
+    combat::auras::remove_auras(
+        world,
+        caster,
+        combat::auras::RemoveReason::Consumed,
+        |aura| aura.caster == caster && aura.spell_id == 1223157,
+    );
+}
+
+fn apply_devourers_bite(
+    world: &mut World,
+    ctx: &spell_cast::effects::EffectCtx<'_>,
+    target: Entity,
+    _: bool,
+) {
+    if !matches!(ctx.spell.id, 1245414 | 1246169)
+        || ctx.spell.cast_primary_target != Some(target)
+        || world.get::<ActiveSpec>(ctx.caster).map(|spec| spec.0) != Some(1480)
+        || !world
+            .get::<combat::class_progression::KnownSpells>(ctx.caster)
+            .is_some_and(|known| known.contains(1240201))
+    {
+        return;
+    }
+    // SimC76f8118 cpp5518–5523,5841–5846: landed primary hit applies the target debuff.
+    if !spell_cast::try_cast_triggered(world, ctx.caster, 1241532, Some(target), ctx.depth + 1) {
+        error!(?target, "native Devourer's Bite was refused");
+    }
+}
+
+fn reset_immolation_on_hunt(
+    world: &mut World,
+    ctx: &spell_cast::effects::EffectCtx<'_>,
+    target: Entity,
+    _: bool,
+) {
+    if ctx.spell.id != 1246169
+        || ctx.spell.cast_primary_target != Some(target)
+        || world.get::<ActiveSpec>(ctx.caster).map(|spec| spec.0) != Some(1480)
+        || !world
+            .get::<combat::class_progression::KnownSpells>(ctx.caster)
+            .is_some_and(|known| known.contains(452409))
+    {
+        return;
+    }
+    // SimC76f8118 cpp5529–5536 restores one Soul Immolation charge on primary Hunt impact.
+    super::devourer_metamorphosis::restore_spell_charges(world, ctx.caster, 1241937, 1);
+}
+
 fn after_launch(world: &mut World, caster: Entity, spell: &SpellInfo) {
     if world.get::<ActiveSpec>(caster).map(|spec| spec.0) != Some(1480) {
         return;
     }
     // SimC76f8118 cpp3203–3219,5502,5830: Hunt and Voidblade/Pierce grant Hungering Slash.
-    if matches!(spell.id, 1245412 | 1245483 | 1246167)
+    if matches!(spell.id, 1245412 | 1245483 | 1246167 | 1259431)
         && world
             .get::<combat::class_progression::KnownSpells>(caster)
             .is_some_and(|known| known.contains(1239519))

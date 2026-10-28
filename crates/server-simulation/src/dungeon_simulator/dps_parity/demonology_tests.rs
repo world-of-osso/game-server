@@ -697,8 +697,21 @@ fn demonology_imp_critical_damage_inherits_demonic_brutality() {
         .unwrap();
     let uncritical = direct["factors"]["amount"].as_f64().unwrap();
     let actual = result["factors"]["actual_amount"].as_f64().unwrap();
-    let expected = uncritical * 2.0 * (1.0 + f64::from(effect) / 100.0);
-    // SimC76f8118 pets.cpp185–201: bugs=1 applies native effect2 twice to the critical bonus.
+    let spell = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(104318)
+        .unwrap();
+    let owner_critical = run
+        .app
+        .world()
+        .get::<crate::auras::AuraStatMods>(run.actor)
+        .unwrap()
+        .critical_damage(spell.school_mask());
+    let expected = uncritical * 2.0 * (f64::from(owner_critical) + f64::from(effect) / 100.0);
+    // SimC76f8118 pet.cpp488–494 inherits the owner multiplier; warlock
+    // pets.cpp185–201 then adds native Demonic Brutality effect2 in bugs mode.
     assert!(
         (actual - expected).abs() < 1.5,
         "actual={actual} expected={expected}"
@@ -857,6 +870,14 @@ fn demonology_isolated_last_bolt_does_not_emit_rapidity_twin() {
     use shared::protocol::CombatLogKind;
     let _seed = crate::random::seed_scope(70_448);
     let mut run = prepare_literal(266, 1).unwrap();
+    let owner = run.actor;
+    // Only the Imp under test may produce an Isolated Implosion receipt.
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        owner,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 267216,
+    );
     engage(&mut run);
     run.app
         .world_mut()
@@ -1681,5 +1702,45 @@ fn demonology_blighted_maw_follows_real_dreadbite() {
             && e.kind == CombatLogKind::Damage
             && e.amount > 0),
         "selected Blighted Maw must deal real native Plague damage"
+    );
+}
+
+#[test]
+#[ignore = "requires canonical 266 inputs; no duplicate Tyrant auto swing"]
+fn demonology_antoran_tyrant_cleave_has_one_impact_per_cast() {
+    use shared::protocol::CombatLogKind;
+    let _seed = crate::random::seed_scope(70_448);
+    let (mut run, tyrant) = prepare_antoran_tyrant();
+    for _ in 0..200 {
+        run.app.update();
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    let cast = events
+        .iter()
+        .filter(|e| {
+            e.source == Some(tyrant.to_bits())
+                && e.spell_id == Some(1264093)
+                && e.kind == CombatLogKind::CastSuccess
+        })
+        .count();
+    let impact = events
+        .iter()
+        .filter(|e| {
+            e.source == Some(tyrant.to_bits())
+                && e.spell_id == Some(1264093)
+                && matches!(e.kind, CombatLogKind::Damage | CombatLogKind::Miss(_))
+        })
+        .count();
+    assert!(
+        cast >= 3,
+        "actual Tyrant must repeatedly cast Burning Cleave"
+    );
+    assert_eq!(
+        impact, cast,
+        "the single-target Cleave action must not also be emitted by native white-attack replacement"
     );
 }

@@ -37,7 +37,7 @@ const GUARDIAN_POLICIES: &[GuardianPolicy] = &[
     // SimC76f8118 sc_death_knight.cpp4478–4487/4599–4605: actual Magus AP share
     // and MID2 actions; each action retains its native cast and recovery data.
     GuardianPolicy {
-        summons: &[1242294],
+        summons: &[317776, 1242294],
         entry: 163366,
         spells: &[1297055, 1297091],
         repeat_gcd: None,
@@ -69,18 +69,52 @@ const GUARDIAN_POLICIES: &[GuardianPolicy] = &[
     GuardianPolicy {
         summons: &[275430],
         entry: 237409,
-        spells: &[],
-        repeat_gcd: None,
+        spells: &[1278150, 199373],
+        repeat_gcd: Some(1.5),
         owner_spell_share: None,
         owner_attack_share: Some(0.180431625),
     },
     GuardianPolicy {
         summons: &[1294026],
         entry: 237409,
-        spells: &[],
-        repeat_gcd: None,
+        spells: &[1278150, 199373],
+        repeat_gcd: Some(1.5),
         owner_spell_share: None,
         owner_attack_share: Some(0.180431625 * 1.4),
+    },
+    // SimC76f8118 sc_death_knight.cpp4849–4855: each actual Horseman
+    // inherits 0.70125 of its owner's melee attack power.
+    GuardianPolicy {
+        summons: &[444248],
+        entry: 221632,
+        spells: &[445504],
+        repeat_gcd: None,
+        owner_spell_share: None,
+        owner_attack_share: Some(0.70125),
+    },
+    GuardianPolicy {
+        summons: &[444251],
+        entry: 221633,
+        spells: &[445513],
+        repeat_gcd: None,
+        owner_spell_share: None,
+        owner_attack_share: Some(0.70125),
+    },
+    GuardianPolicy {
+        summons: &[444252],
+        entry: 221634,
+        spells: &[445508],
+        repeat_gcd: None,
+        owner_spell_share: None,
+        owner_attack_share: Some(0.70125),
+    },
+    GuardianPolicy {
+        summons: &[444254],
+        entry: 221635,
+        spells: &[445507],
+        repeat_gcd: None,
+        owner_spell_share: None,
+        owner_attack_share: Some(0.70125),
     },
     // SimC76f8118 sc_hunter.cpp1935: Dire Beast inherits live owner AP1.0.
     GuardianPolicy {
