@@ -36,7 +36,7 @@ Replay recorded incoming damage in the native server combat simulation to compar
 ## Known gaps (current cycle)
 
 - [ ] Connect SimC tank-dummy trace input to the healer replay.
-- [ ] Register native tank APL adapters. SimC tank replay requires a registered literal parity driver and explicit active-mitigation auras; unregistered tanks fail rather than use the smoke-test policy. Protection 66 executes the pinned MID2 literal APL; Holy Bulwark absorbs, Shining Light–driven Word of Glory and Divine Guidance are exercised under incoming damage. Other native spell effects still require qualification.
+- [ ] Register native tank APL adapters. SimC tank replay requires a registered literal parity driver and explicit active-mitigation auras; unregistered tanks fail rather than use the smoke-test policy. Protection 66 executes the pinned MID2 literal APL; Holy Bulwark absorbs, Shining Light–driven Word of Glory, Divine Guidance and Blessed Hammer's Grand Crusader reset are exercised under incoming damage. Other native spell effects and Grand Crusader sources still require qualification.
 - [ ] Support replay durations other than 300 seconds with matching literal-APL encounter timing.
 - [x] Keep no-healer tank replay as the default. An optional SimC dummy comparison applies the dummy's 75,000 external heal every five seconds and reports per-spell casts, effective self-healing, consumed absorbs and aura uptime separately.
 - [ ] Extend coverage beyond the initial two specializations.
