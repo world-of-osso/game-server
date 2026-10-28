@@ -80,6 +80,7 @@ The SimC tank report includes raw and effective self-healing and outgoing period
 - [ ] Support replay durations other than 300 seconds with matching literal-APL encounter timing.
 - [x] Publish native victim-side melee miss, dodge and parry proc events with their hit outcomes; explicit native or sourced script masks determine which auras can react.
 - [x] Report adapter-registered named resource counters and target debuff uptime. Vengeance 581 records successful fragment generation, actual fragment consumption, and the owned Fiery Brand and Sigil of Flame debuffs.
+- [x] Report attempted and effective tank Energize combat-log amounts by spell. Events do not identify the resource type; a spell that grants multiple resources combines them, and changes without an Energize event are not included.
 - [x] Keep no-healer tank replay as the default. An optional SimC dummy comparison applies the dummy's 75,000 external heal every five seconds and the trace's native Bloodlust at its recorded start time; it reports the buff, per-spell casts, effective self-healing, consumed absorbs and aura uptime separately.
 - [ ] Extend coverage beyond the initial two specializations.
 

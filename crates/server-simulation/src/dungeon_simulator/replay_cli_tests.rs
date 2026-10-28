@@ -145,6 +145,50 @@ fn cli_prints_vengeance_resource_counters_and_target_debuffs() {
 }
 
 #[test]
+#[ignore = "runs the MID2 Protection dummy replay and its native Energize events"]
+fn cli_prints_tank_energize_sources() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let output = std::process::Command::new("python3")
+        .arg(root.join("scripts/healer_tank_replay.py"))
+        .args([
+            "--spec",
+            "66",
+            "--duration",
+            "300",
+            "--simc-tank-heal",
+            "--timeline",
+        ])
+        .arg(std::env::var("HEALER_TANK_SIMC_TRACE").unwrap())
+        .arg("--profile-dir")
+        .arg(std::env::var("DPS_PARITY_OUTPUT").unwrap())
+        .arg("--executable")
+        .arg(std::env::current_exe().unwrap())
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let text = String::from_utf8(output.stdout).unwrap();
+    let section = text
+        .split("| Energize spell ID | Attempted | Effective |")
+        .nth(1)
+        .expect("Energize report");
+    let row = section
+        .lines()
+        .find(|line| line.starts_with("| 204019 | "))
+        .expect("Blessed Hammer energize");
+    let cells: Vec<_> = row.split('|').map(str::trim).collect();
+    let attempted = cells[2].parse::<u32>().unwrap();
+    let effective = cells[3].parse::<u32>().unwrap();
+    assert!(
+        attempted > 0 && effective > 0 && effective <= attempted,
+        "{row}"
+    );
+}
+
+#[test]
 #[ignore = "runs a registered healer against the MID2 tank and SimC dummy trace"]
 fn cli_prints_registered_healer_report() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");

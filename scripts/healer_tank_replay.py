@@ -89,6 +89,10 @@ def print_tank(report):
                   f'{number(report["self_healing_by_spell"].get(spell, 0))} | '
                   f'{number(report["absorbs_by_spell"].get(spell, 0))} | '
                   f'{number(100 * report["aura_uptime"].get(spell, 0))} |')
+        print('\n| Energize spell ID | Attempted | Effective |')
+        print('|---:|---:|---:|')
+        for spell, values in sorted(report['energize_by_spell'].items(), key=lambda item: int(item[0])):
+            print(f'| {spell} | {values["attempted"]} | {values["effective"]} |')
         print('\n| Resource counter | Count |')
         print('|---|---:|')
         for name, count in report['resource_counters'].items():
