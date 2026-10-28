@@ -149,6 +149,45 @@ fn simc_dummy_strike_does_not_trigger_auto_attack_procs() {
     );
 }
 
+#[test]
+#[ignore = "requires canonical Brewmaster profile and world database"]
+fn brewmaster_elusive_brawler_is_consumed_by_dodge_not_miss() {
+    use crate::auras::{self, AuraApplication, AuraSource};
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::dps_parity::prepare_registered_player(268, 1).unwrap();
+    let tank = run.actor;
+    let source = run.targets[0];
+    assert!(
+        !run.app
+            .world()
+            .get::<crate::class_progression::TraitLoadout>(tank)
+            .unwrap()
+            .active_talent_spells()
+            .any(|talent| talent.spell_id == 454484)
+    );
+    for _ in 0..3 {
+        auras::apply_aura(
+            run.app.world_mut(),
+            &AuraApplication {
+                caster: tank,
+                target: tank,
+                spell_id: 195630,
+                effect_mask: u32::MAX,
+                source: AuraSource::Cast,
+            },
+        );
+    }
+    assert!(auras::has_aura(run.app.world(), tank, 195630));
+    crate::combat::replay_healer_hit(run.app.world_mut(), source, tank, &avoided_hit("Miss"))
+        .unwrap();
+    run.app.update();
+    assert!(auras::has_aura(run.app.world(), tank, 195630));
+    crate::combat::replay_healer_hit(run.app.world_mut(), source, tank, &avoided_hit("Dodge"))
+        .unwrap();
+    run.app.update();
+    assert!(!auras::has_aura(run.app.world(), tank, 195630));
+}
+
 fn avoided_hit(outcome: &str) -> super::healer_intake::Hit {
     super::healer_intake::Hit {
         tick: 1,
