@@ -304,6 +304,9 @@ fn fury_imminent_demise_accelerates_bladestorm_and_expires() {
     }
     let ordinary = spin(0);
     let enhanced = spin(3);
-    assert_eq!(ordinary, 5, "Fury's modified, hasted spin pays five actual ticks");
+    assert_eq!(
+        ordinary, 5,
+        "Fury's modified, hasted spin pays five actual ticks"
+    );
     assert_eq!(enhanced, 8, "three earned stacks add three real ticks");
 }

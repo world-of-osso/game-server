@@ -26,9 +26,19 @@ fn area_filter(spell: u32, effect: u8) -> Option<AreaTargetFilter> {
     (spell == DRAGONRAGE_PYRE && effect == 0).then_some(limit_targets)
 }
 
-fn limit_targets(_world: &World, spell: &SpellInfo, _target: Option<Entity>, units: &mut Vec<Entity>) {
-    let count = spell.effects.iter().find(|effect| effect.index == 0)
-        .expect("native Dragonrage Pyre target count").base_points.max(0.0) as usize;
+fn limit_targets(
+    _world: &World,
+    spell: &SpellInfo,
+    _target: Option<Entity>,
+    units: &mut Vec<Entity>,
+) {
+    let count = spell
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .expect("native Dragonrage Pyre target count")
+        .base_points
+        .max(0.0) as usize;
     if units.len() > count {
         units.shuffle(&mut combat::random::thread_rng());
         units.truncate(count);
