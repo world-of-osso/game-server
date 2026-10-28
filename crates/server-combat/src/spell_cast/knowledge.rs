@@ -121,6 +121,14 @@ fn project_known_parent(world: &World, actor: Entity, requested: u32) -> u32 {
         {
             1245483
         }
+        // SimC76f8118 sc_paladin.cpp3407–3410 constructs Protection's Hammer of Wrath as 1241413.
+        1241288
+            if world
+                .get::<shared::components::ActiveSpec>(actor)
+                .is_some_and(|spec| spec.0 == 66) =>
+        {
+            1241413
+        }
         // SimC76f8118 sc_rogue.cpp10247/10300: selected Coup enables its native action.
         441423 => 441776,
         // simc_apl: Malefic Grasp — SimC76f8118 sc_warlock_init.cpp181–183/sc_warlock_actions.cpp2100.
