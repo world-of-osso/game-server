@@ -108,7 +108,7 @@ fn simc_dummy_strike_does_not_trigger_auto_attack_procs() {
         run.app.world_mut(),
         target,
         RemoveReason::Cancelled,
-        |aura| aura.spell_id == 195181,
+        |aura| matches!(aura.spell_id, 195181 | 207203 | 77535),
     );
     for _ in 0..3 {
         crate::auras::apply_aura(
