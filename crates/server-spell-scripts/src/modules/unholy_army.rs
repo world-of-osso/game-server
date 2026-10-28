@@ -47,6 +47,7 @@ fn schedule_army(world: &mut World, caster: Entity, spell: &SpellInfo) {
     if world.get::<ActiveSpec>(caster).map(|spec| spec.0) != Some(252) {
         return;
     }
+    dismiss_active_lesser_ghouls(world, caster);
     // SimC76f8118 sc_death_knight.cpp9019–9035: Army raises a Magus and
     // starts Forbidden Knowledge, whose native linked auras replace RP spenders.
     summon_magus(world, caster, spell);
@@ -70,6 +71,25 @@ fn schedule_army(world: &mut World, caster: Entity, spell: &SpellInfo) {
         next_summon,
     });
     summon_apocalypse_now_riders(world, caster);
+}
+
+fn dismiss_active_lesser_ghouls(world: &mut World, caster: Entity) {
+    if combat::combat_refs::active_opponents(world, caster).next().is_none() {
+        return;
+    }
+    // SimC76f8118 sc_death_knight.cpp8987–8992: in-combat Army replaces
+    // active lesser ghouls without treating their dismissal as expiration.
+    let ghouls: Vec<_> = world
+        .query::<(Entity, &spell_cast::summon::SummonedCreature)>()
+        .iter(world)
+        .filter_map(|(actor, summon)| {
+            (summon.owner == caster && matches!(summon.spell_id, LESSER_GHOUL | ARMY_GHOUL))
+                .then_some(actor)
+        })
+        .collect();
+    for ghoul in ghouls {
+        spell_cast::summon::despawn_summon(world, ghoul);
+    }
 }
 
 fn summon_apocalypse_now_riders(world: &mut World, caster: Entity) {
