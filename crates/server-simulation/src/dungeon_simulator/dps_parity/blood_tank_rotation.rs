@@ -301,7 +301,7 @@ mod tests {
             .iter(world)
             .filter(|(npc, owner)| npc.template_id == 27893 && owner.0 == actor.to_bits())
             .count();
-        assert!(count > 0, "Dancing Rune Weapon must summon its owned actor");
+        assert_eq!(count, 2, "Everlasting Bond summons a second owned weapon");
         let bone = world
             .get::<crate::auras::ActiveAuras>(actor)
             .unwrap()
@@ -309,6 +309,50 @@ mod tests {
             .find(|aura| aura.spell_id == 195181)
             .expect("Insatiable Blade grants Bone Shield");
         assert_eq!(bone.stacks, 5);
+        let target = run.targets[0];
+        for _ in 0..130 {
+            run.app.update();
+        }
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 195292, Some(target), false)
+            .unwrap();
+        for _ in 0..30 {
+            run.app.update();
+        }
+        let bone = run
+            .app
+            .world()
+            .get::<crate::auras::ActiveAuras>(actor)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 195181)
+            .unwrap();
+        assert_eq!(
+            bone.stacks, 11,
+            "owner and both weapon casts grant two stacks each"
+        );
+        crate::auras::remove_auras(
+            run.app.world_mut(),
+            actor,
+            crate::auras::RemoveReason::Cancelled,
+            |aura| aura.spell_id == 195181,
+        );
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 195182, Some(target), false)
+            .unwrap();
+        for _ in 0..30 {
+            run.app.update();
+        }
+        let bone = run
+            .app
+            .world()
+            .get::<crate::auras::ActiveAuras>(actor)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 195181)
+            .expect("Marrowrend grants Bone Shield");
+        assert_eq!(
+            bone.stacks, 9,
+            "owner and both weapons grant three stacks each"
+        );
     }
 
     #[test]

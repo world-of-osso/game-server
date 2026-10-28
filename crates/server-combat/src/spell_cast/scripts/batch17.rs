@@ -116,6 +116,7 @@ pub(super) fn grant_bone_shield(world: &mut World, caster: Entity, target: Entit
         return;
     }
     let charges = script_effect_value(world, caster, MARROWREND, 2) as u32;
+    let caster = super::batch5::bone_shield_owner(world, caster);
     for _ in 0..charges {
         apply_named_aura(world, caster, caster, BONE_SHIELD, u32::MAX);
     }
