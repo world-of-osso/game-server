@@ -2169,6 +2169,7 @@ fn dk252_real_lord_casts_necrotic_bolt_using_owner_power() {
             crate::stats::WeaponAttackType::MainHand,
             world.get::<crate::stats::StatModifiers>(owner),
         ) * 0.7;
+        println!("lord factor diagnostic: {calculation}");
         let inherited = calculation["factors"]["a_power"].as_f64().unwrap();
         assert!(
             (inherited - f64::from(expected)).abs() < 1.0,
