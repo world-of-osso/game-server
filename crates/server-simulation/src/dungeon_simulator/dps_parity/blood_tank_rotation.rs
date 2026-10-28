@@ -353,6 +353,38 @@ mod tests {
 
     #[test]
     #[ignore = "requires canonical world database and MID2 Blood inputs"]
+    fn blood_mid2_death_strikes_build_debt_and_marrowrend_spends_it() {
+        use crate::auras::{ActiveAuras, AuraApplication, AuraSource};
+        use shared::components::PowerType;
+        let mut run = super::super::prepare_registered_player(250, 1).unwrap();
+        let actor = run.actor;
+        let target = run.targets[0];
+        super::super::engage(&mut run);
+        for spell_id in [1296650, 1296651] {
+            crate::auras::apply_aura(run.app.world_mut(), &AuraApplication {
+                caster: actor, target: actor, spell_id, effect_mask: u32::MAX,
+                source: AuraSource::ItemSet(2055),
+            });
+        }
+        for expected in 1..=10 {
+            crate::spell_cast::powers::change_power(run.app.world_mut(), actor, PowerType::RunicPower, 1000.0);
+            crate::spell_cast::creature_cast(run.app.world_mut(), actor, 49998, Some(target), false).unwrap();
+            for _ in 0..30 { run.app.update(); }
+            let auras = run.app.world().get::<ActiveAuras>(actor).unwrap();
+            let debt = auras.iter().find(|aura| aura.spell_id == 1310372).expect("Death Strike builds Blood Debt");
+            assert_eq!(debt.stacks, expected);
+            assert_eq!(debt.effects[0].amount, 0.5);
+        }
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 195182, Some(target), false).unwrap();
+        for _ in 0..3 { run.app.update(); }
+        let auras = run.app.world().get::<ActiveAuras>(actor).unwrap();
+        assert!(!auras.iter().any(|aura| aura.spell_id == 1310372));
+        assert!(auras.iter().any(|aura| aura.spell_id == 1300369));
+        assert!(auras.iter().any(|aura| aura.spell_id == 195181 && aura.stacks >= 3));
+    }
+
+    #[test]
+    #[ignore = "requires canonical world database and MID2 Blood inputs"]
     fn blood_death_strike_heals_and_creates_real_mastery_shield() {
         use server::test_support::healer_intake::{Hit, HitKind};
         let _seed = crate::random::seed_scope(70448);

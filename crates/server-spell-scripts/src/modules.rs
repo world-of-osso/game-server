@@ -87,6 +87,7 @@ register_modules! {
     monk_harmony: (1000, "modules/monk_harmony.rs"),
     blood_death_strike: (2500, "modules/blood_death_strike.rs"),
     blood_ground: (2501, "modules/blood_ground.rs"),
+    blood_mid2: (2502, "modules/blood_mid2.rs"),
     cast_grants: (120, "modules/cast_grants.rs"),
     cast_relationships: (370, "modules/cast_relationships.rs"),
     cast_resets: (90, "modules/cast_resets.rs"),
