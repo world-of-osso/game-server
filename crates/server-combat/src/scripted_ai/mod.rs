@@ -46,6 +46,7 @@ mod kikatal;
 pub mod kings_rest;
 mod kokia;
 mod lost_dwarves;
+mod magmatusk;
 pub(crate) mod maraudon;
 mod melidrussa;
 pub mod model_reach;
@@ -406,6 +407,9 @@ fn create_ai(world: &World, creature: Entity, script_name: &str) -> Option<Box<d
     if script_name == gorek::SCRIPT {
         return gorek::creature_ai(world, creature);
     }
+    if script_name == magmatusk::SCRIPT {
+        return magmatusk::creature_ai(world, creature);
+    }
     if script_name == khajin::SCRIPT {
         return khajin::creature_ai(world, creature);
     }
@@ -518,6 +522,7 @@ pub(crate) fn insert_script_name(entity: &mut EntityCommands, script_name: &str,
             neltharus_initial::CHARGATH_SCRIPT | neltharus_initial::SARGHA_SCRIPT
         )
         || script_name == gorek::SCRIPT
+        || script_name == magmatusk::SCRIPT
         || script_name == khajin::SCRIPT
         || script_name == gulping_goliath::SCRIPT
         || script_name == orator::SCRIPT

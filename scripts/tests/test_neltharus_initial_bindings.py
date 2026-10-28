@@ -9,6 +9,8 @@ import encounter_summons
 
 SOURCE = Path(__file__).resolve().parents[2] / 'data/world.db'
 PROFILES = (
+    dict(entry=181861, importer='import_magmatusk', script='boss_magmatusk',
+         binding=(2610, 0, 2494, 5369, 102604), spells='374365,375890,375251,375436'),
     dict(entry=189340, importer='import_chargath', script='boss_chargath',
          binding=(2613, 3, 2490, 5365, 108248), spells='373742,373733,373735,373424,375056'),
     dict(entry=189901, importer='import_sargha', script='boss_sargha',
@@ -45,8 +47,11 @@ class NeltharusInitialBindingTests(unittest.TestCase):
                     importer(db)
                 self.assertEqual(db.execute('SELECT ScriptName FROM content_creature_template WHERE entry=?', (entry,)).fetchone(), ('foreign',))
 
-    def test_chargath_preservation_idempotence_and_conflict(self):
+    def test_magmatusk_preservation_idempotence_and_conflict(self):
         self.assert_preserved(PROFILES[0])
 
-    def test_sargha_preservation_idempotence_and_conflict(self):
+    def test_chargath_preservation_idempotence_and_conflict(self):
         self.assert_preserved(PROFILES[1])
+
+    def test_sargha_preservation_idempotence_and_conflict(self):
+        self.assert_preserved(PROFILES[2])

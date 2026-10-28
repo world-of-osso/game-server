@@ -83,6 +83,7 @@ pub(super) fn encounter_inputs(entry: u32, map_id: u32, populate: bool) -> Arc<P
         186116 => Some("gutshot"),
         186121 => Some("wratheye"),
         189719 => Some("irideus"),
+        181861 => Some("magmatusk"),
         189340 => Some("chargath"),
         189901 => Some("sargha"),
         189478 => Some("gorek"),

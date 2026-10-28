@@ -87,6 +87,62 @@ fn completed_casts(h: &Harness, boss: Entity, spell: u32) -> usize {
         .count()
 }
 
+#[test]
+#[ignore = "Magmatusk native LittleWigs alert policy"]
+fn encounter_coverage_magmatusk_alert_policy_start_spray_and_kill_credit() {
+    let profile = InitialPhase {
+        entry: 181861,
+        bit: 0,
+        encounter: 2610,
+        first_spell: 375251,
+        first_at: 7.2,
+        counts: &[],
+    };
+    for difficulty in [1, 205] {
+        let (mut h, boss, map) = projected_initial_boss(&profile, difficulty);
+        h.engage(boss);
+        h.advance(7.0);
+        assert!(h.app.world().get::<CastState>(boss).is_none());
+        h.advance(0.4);
+        assert_eq!(
+            h.app
+                .world()
+                .get::<CastState>(boss)
+                .map(|cast| cast.spell_id),
+            Some(375251)
+        );
+        h.advance(5.0);
+        assert_eq!(completed_casts(&h, boss, 375251), 1);
+        assert!(
+            h.inbox(0)
+                .starts
+                .iter()
+                .any(|event| event.encounter_id == 2610)
+        );
+        assert!(h.inbox(1).starts.is_empty());
+        h.hit_pct(boss, 200.0);
+        h.advance(0.1);
+        assert_eq!(
+            instance_script::get_boss_state(h.app.world_mut(), map, 0),
+            Some(EncounterState::Done)
+        );
+        assert_eq!(
+            h.app
+                .world()
+                .resource::<crate::maps::InstanceManager>()
+                .completed_encounters(map),
+            1
+        );
+        assert!(
+            h.inbox(0)
+                .ends
+                .iter()
+                .any(|event| event.encounter_id == 2610 && event.success)
+        );
+        assert!(h.inbox(1).ends.is_empty());
+    }
+}
+
 fn arrival_cast_count(world: &World, caster: Entity, spell: u32) -> usize {
     world
         .resource::<crate::spell_cast::test_harness::ObservedTriggeredCasts>()
