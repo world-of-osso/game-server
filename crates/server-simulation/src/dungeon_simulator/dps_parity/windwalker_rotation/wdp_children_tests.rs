@@ -113,8 +113,8 @@ fn literal_ww_native_wdp_children_cast_once_at_primary_not_the_self_aura_unit() 
 }
 
 #[test]
-#[ignore = "native WDP periodic dummy dispatches its area child at each native250ms tick through expiry"]
-fn literal_ww_native_wdp_children_follow_all_native_aura_ticks_and_three_recipients() {
+#[ignore = "native WDP area child follows SimC's three-pulse schedule on three recipients"]
+fn literal_ww_native_wdp_children_follow_simc_schedule_and_three_recipients() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_first_cast(3);
     let aura = read_root_aura(&run);
@@ -161,16 +161,12 @@ fn literal_ww_native_wdp_children_follow_all_native_aura_ticks_and_three_recipie
         }
         count = delivered.len();
     }
-    let mut expected: Vec<u32> = (1..=aura.duration_ms / effect.period_ms)
-        .map(|tick| tick * effect.period_ms)
-        .collect();
-    if initial_tick {
-        expected.insert(0, first_frame_ms);
-    }
+    // SimC76f8118 monk1902–1906 schedules i=0 through duration/period-2.
+    let expected = vec![first_frame_ms, effect.period_ms, 2 * effect.period_ms];
     assert_eq!(
         observed.keys().copied().collect::<Vec<_>>(),
         expected,
-        "each actual native periodic tick must emit158221, including the final expiry tick"
+        "the initial pulse and first two native periods emit; the last two do not"
     );
     let targets: BTreeSet<u64> = run.targets.iter().map(|target| target.to_bits()).collect();
     for (elapsed, rows) in observed {

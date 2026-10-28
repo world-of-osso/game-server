@@ -280,6 +280,11 @@ pub struct AuraEffectState {
 }
 
 impl AuraEffectState {
+    /// Scheduled ticks paid after any authored initial tick.
+    pub fn periodic_ticks(&self) -> u64 {
+        self.periodic_ticks
+    }
+
     fn pay_periodic_tick(&mut self) {
         self.next_tick_index += 1;
         if self.initial_period_pending {
