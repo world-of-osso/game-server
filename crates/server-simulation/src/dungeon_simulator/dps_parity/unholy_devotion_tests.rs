@@ -6,7 +6,7 @@ use shared::protocol::CombatLogKind;
 
 fn observe_devotion(arrivals: usize) -> (f64, usize) {
     let _seed = crate::random::seed_scope(70448);
-    let mut run = prepare_literal(252, 1).unwrap();
+    let mut run = prepare_measurement(252, 1).unwrap();
     engage(&mut run);
     let owner = run.actor;
     let pet = crate::hunter_pet::summoned_pet(run.app.world(), owner).unwrap();
