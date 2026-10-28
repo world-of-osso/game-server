@@ -780,6 +780,39 @@ mod tests {
     }
     #[test]
     #[ignore = "requires native Vengeance profile and canonical DB"]
+    fn vengeance_felblade_deals_child_damage() {
+        use super::super::*;
+        let _seed = crate::random::seed_scope(70_448);
+        let (profile, traits) = read_reference(581).unwrap();
+        let identity = inputs::read_actor(&profile).unwrap();
+        let mut run = prepare_reference(profile, &traits, 1, identity).unwrap();
+        let actor = run.actor;
+        let target = run.targets[0];
+        crate::spell_cast::cast_for_player_with_target(
+            run.app.world_mut(),
+            actor,
+            232893,
+            Some(target),
+        )
+        .unwrap();
+        for _ in 0..20 {
+            run.app.update();
+        }
+        let events = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0;
+        assert!(
+            events.iter().any(|event| event.spell_id == Some(213243)
+                && event.kind == shared::protocol::CombatLogKind::Damage
+                && event.amount > 0),
+            "Felblade must execute its damage child"
+        );
+    }
+
+    #[test]
+    #[ignore = "requires native Vengeance profile and canonical DB"]
     fn frailty_heals_after_damage_to_affected_target() {
         use super::super::*;
         let _seed = crate::random::seed_scope(70_448);
