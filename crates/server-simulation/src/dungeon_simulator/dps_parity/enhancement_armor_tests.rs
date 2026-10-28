@@ -155,6 +155,64 @@ fn assert_actual_damage(root: u32, armorless: bool) {
 
 #[test]
 #[ignore = "native263 reference inputs and private world database"]
+fn enhancement_windlash_offhand_uses_its_weapon_and_half_damage() {
+    fn hit(spell: u32, offhand_damage: f32) -> f64 {
+        let _seed = crate::random::seed_scope(70448);
+        let mut run = prepare_root(17364);
+        let actor = run.actor;
+        let target = run.targets[0];
+        {
+            let mut stats = run
+                .app
+                .world_mut()
+                .get_mut::<crate::stats::CharacterStats>(actor)
+                .unwrap();
+            stats.main_hand.min = 500.0;
+            stats.main_hand.max = 500.0;
+            let mut offhand = stats.main_hand;
+            offhand.min = offhand_damage;
+            offhand.max = offhand_damage;
+            stats.off_hand = Some(offhand);
+        }
+        run.app.insert_resource(
+            crate::spell_cast::effects::factor_capture::FactorCapture::new(
+                actor,
+                target,
+                spell,
+                "windlash_hand",
+                1,
+            ),
+        );
+        let _damage_seed = crate::random::seed_scope(818181);
+        crate::spell_cast::cast_triggered(run.app.world_mut(), actor, spell, Some(target), 1);
+        let capture = run
+            .app
+            .world()
+            .resource::<crate::spell_cast::effects::factor_capture::FactorCapture>()
+            .export();
+        let result = capture["events"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|event| event["event"] == "result" && event["spell_id"] == spell)
+            .expect("real Windlash hand deals damage");
+        result["factors"]["raw_amount"].as_f64().unwrap()
+    }
+    let main = hit(114089, 500.0);
+    let off = hit(114093, 500.0);
+    let stronger_off = hit(114093, 1000.0);
+    assert!(
+        (off / main - 0.5).abs() < 0.001,
+        "equal weapons must give offhand half damage: {off}/{main}"
+    );
+    assert!(
+        stronger_off > off,
+        "offhand damage must use its own weapon: {stronger_off} vs {off}"
+    );
+}
+
+#[test]
+#[ignore = "native263 reference inputs and private world database"]
 fn enhancement_actual_windlash_weapon_hits_ignore_target_armor() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_root(17364);
