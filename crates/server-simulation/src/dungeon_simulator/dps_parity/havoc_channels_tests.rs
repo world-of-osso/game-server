@@ -2071,6 +2071,24 @@ fn havoc_demonsurge_native_meta_arms_one_explosion_per_ability() {
 
 #[test]
 #[ignore = "requires prepared native spec577 player profile"]
+fn havoc_initiative_ignores_item_damage_until_demon_hunter_hit() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(577, 1).unwrap();
+    let actor = run.actor;
+    let target = run.targets[0];
+    // Guillotine's native driver supplies this child damage amount at runtime.
+    crate::spell_cast::cast_triggered_with_effect0_amount(
+        run.app.world_mut(), actor, 1306624, Some(target), 1, 1000.0,
+    );
+    assert!(!damage(&run, Some(1306624)).is_empty(), "item must deal damage");
+    assert!(!crate::auras::has_aura(run.app.world(), actor, 391215));
+    crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 337819, Some(target), 1);
+    assert!(!damage(&run, Some(337819)).is_empty(), "glaive must hit");
+    assert!(crate::auras::has_aura(run.app.world(), actor, 391215));
+}
+
+#[test]
+#[ignore = "requires prepared native spec577 player profile"]
 fn havoc_initiative_first_native_hit_grants_buff_without_repeated_refresh() {
     let _seed = crate::random::seed_scope(70_448);
     let mut run = prepare_literal(577, 1).unwrap();
