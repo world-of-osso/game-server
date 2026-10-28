@@ -3413,6 +3413,72 @@ fn dk252_single_target_uses_dark_transformation_and_putrefy() {
 
 #[test]
 #[ignore = "requires native252 profile/traits and player actor"]
+fn dk252_necrotic_coil_shadow_extends_each_hit_targets_owned_diseases() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 3).unwrap();
+    engage(&mut run);
+    for target in run.targets.iter().copied().take(2) {
+        for spell_id in [191587, 1240996] {
+            crate::auras::apply_aura(
+                run.app.world_mut(),
+                &crate::auras::AuraApplication {
+                    caster: run.actor,
+                    target,
+                    spell_id,
+                    effect_mask: 1,
+                    source: crate::auras::AuraSource::Cast,
+                },
+            );
+        }
+    }
+    let expiry = |run: &Run, target: Entity, spell: u32| {
+        run.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(target)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == spell && aura.caster == run.actor)
+            .and_then(|aura| aura.expires_at)
+    };
+    let before: Vec<_> = run
+        .targets
+        .iter()
+        .copied()
+        .take(2)
+        .flat_map(|target| {
+            [191587, 1240996]
+                .into_iter()
+                .map(move |spell| (target, spell))
+        })
+        .map(|(target, spell)| (target, spell, expiry(&run, target, spell).unwrap()))
+        .collect();
+    assert!(crate::spell_cast::try_cast_triggered(
+        run.app.world_mut(),
+        run.actor,
+        1242174,
+        Some(run.targets[0]),
+        1
+    ));
+    for _ in 0..10 {
+        run.app.update();
+    }
+    let extension =
+        crate::spell_cast::scripts::script_effect_value(run.app.world(), run.actor, 77575, 2)
+            as f64
+            / 1000.0;
+    for (target, spell, old) in before {
+        let after = expiry(&run, target, spell).unwrap();
+        assert!(
+            (after - old - extension).abs() < 0.001,
+            "shadow impact must extend {spell} on {target:?} once: {old} -> {after}"
+        );
+    }
+    assert_eq!(expiry(&run, run.targets[2], 191587), None);
+    assert_eq!(expiry(&run, run.targets[2], 1240996), None);
+}
+
+#[test]
+#[ignore = "requires native252 profile/traits and player actor"]
 fn dk252_necrotic_coil_hits_with_physical_and_shadow_children() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(252, 3).unwrap();
