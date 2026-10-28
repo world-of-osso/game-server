@@ -30,14 +30,16 @@ const PROCS: &[ForegroundProc] = &[
 
 fn after_foreground_special(world: &mut World, caster: Entity, spell: &SpellInfo) {
     const DEFENSE_MELEE: u32 = 2;
-    if spell
+    let melee = spell
         .categories
         .as_ref()
-        .is_none_or(|category| category.defense_type != DEFENSE_MELEE)
-    {
-        return;
-    }
+        .is_some_and(|category| category.defense_type == DEFENSE_MELEE);
     for policy in PROCS {
+        // SimC 76f8118 sc_warrior.cpp3853–3869/3905–3910 constructs both
+        // as foreground warrior attacks despite their non-melee DB2 defense types.
+        if !melee && !(policy.passive == 29725 && matches!(spell.id, 1160 | 436358)) {
+            continue;
+        }
         let Some(instance) = read_passive_instance(world, caster, spell, policy) else {
             continue;
         };

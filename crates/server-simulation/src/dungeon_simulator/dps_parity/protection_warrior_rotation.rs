@@ -496,6 +496,60 @@ mod tests {
     }
 
     #[test]
+    fn sudden_death_accepts_demolish_and_demoralizing_shout() {
+        use crate::spell_cast::test_harness::harness_with_native_enemy_dodge_reduction;
+        let ids = [
+            29725, 52437, 163201, 280735, 1160, 436358, 440884, 440886, 440888,
+        ];
+        let seed = harness_with_native_enemy_dodge_reduction(Vec::new(), &ids, 1).unwrap();
+        let mut sudden = seed
+            .app
+            .world()
+            .resource::<server::spell_info::SpellStore>()
+            .get(29725)
+            .unwrap()
+            .clone();
+        sudden
+            .aura_options
+            .as_mut()
+            .unwrap()
+            .procs_per_minute
+            .as_mut()
+            .unwrap()
+            .base_proc_rate = 600.0;
+        for spell in [1160, 436358] {
+            for selected in [false, true] {
+                let mut h =
+                    harness_with_native_enemy_dodge_reduction(vec![sudden.clone()], &ids, 1)
+                        .unwrap();
+                h.advance(3);
+                let actor = h.caster;
+                if !selected {
+                    crate::auras::remove_auras(
+                        h.app.world_mut(),
+                        actor,
+                        crate::auras::RemoveReason::Consumed,
+                        |a| a.spell_id == 29725,
+                    );
+                }
+                h.advance(200);
+                let target = if spell == 1160 { actor } else { h.npc };
+                h.cast_and_deliver(spell, Some(target));
+                assert!(
+                    h.inbox.failed.is_empty(),
+                    "spell={spell}, failures={:?}",
+                    h.inbox.failed
+                );
+                assert_eq!(
+                    crate::auras::has_aura(h.app.world(), actor, 52437),
+                    selected,
+                    "actual foreground action {spell} must roll selected Sudden Death"
+                );
+            }
+        }
+    }
+
+    #[test]
     fn free_revenge_is_consumed_by_revenge() {
         let mut h = crate::spell_cast::test_harness::harness_with_native_enemy_dodge_reduction(
             Vec::new(),
