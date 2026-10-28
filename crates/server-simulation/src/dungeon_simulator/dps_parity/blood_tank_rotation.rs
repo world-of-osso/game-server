@@ -277,6 +277,19 @@ mod tests {
         let mut run = super::super::prepare_registered_player(250, 1).unwrap();
         let actor = run.actor;
         super::super::engage(&mut run);
+        assert!(
+            run.app
+                .world()
+                .get::<crate::class_progression::KnownSpells>(actor)
+                .unwrap()
+                .contains(377637)
+        );
+        crate::auras::remove_auras(
+            run.app.world_mut(),
+            actor,
+            crate::auras::RemoveReason::Cancelled,
+            |aura| aura.spell_id == 195181,
+        );
         crate::spell_cast::creature_cast(run.app.world_mut(), actor, 49028, Some(actor), false)
             .unwrap();
         for _ in 0..4 {
@@ -289,6 +302,13 @@ mod tests {
             .filter(|(npc, owner)| npc.template_id == 27893 && owner.0 == actor.to_bits())
             .count();
         assert!(count > 0, "Dancing Rune Weapon must summon its owned actor");
+        let bone = world
+            .get::<crate::auras::ActiveAuras>(actor)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 195181)
+            .expect("Insatiable Blade grants Bone Shield");
+        assert_eq!(bone.stacks, 5);
     }
 
     #[test]
