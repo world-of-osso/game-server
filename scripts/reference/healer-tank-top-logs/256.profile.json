@@ -1,0 +1,300 @@
+{
+  "spec_id": 256,
+  "class": "priest",
+  "spec": "discipline",
+  "name": "于笙",
+  "level": "90",
+  "race": "Night Elf",
+  "role": "heal",
+  "position": "back",
+  "equipment": [
+    {
+      "slot": "head",
+      "item_id": 271555,
+      "bonus_list": [
+        6652,
+        13335,
+        13846,
+        13696,
+        13848,
+        13692,
+        13698,
+        1597
+      ],
+      "item_level_override": 344,
+      "enchant": 8017,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "neck",
+      "item_id": 268265,
+      "bonus_list": [
+        6652,
+        13668,
+        13335,
+        13848,
+        13987
+      ],
+      "item_level_override": 344,
+      "enchant": 0,
+      "gems": [
+        240983,
+        240890
+      ],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "shoulders",
+      "item_id": 271553,
+      "bonus_list": [
+        13335,
+        13694,
+        6652,
+        13697,
+        12854
+      ],
+      "item_level_override": 334,
+      "enchant": 8001,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "back",
+      "item_id": 271550,
+      "bonus_list": [
+        6652,
+        13335,
+        13848,
+        1597
+      ],
+      "item_level_override": 344,
+      "enchant": 0,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "chest",
+      "item_id": 271558,
+      "bonus_list": [
+        13335,
+        13690,
+        6652,
+        13698,
+        12854
+      ],
+      "item_level_override": 334,
+      "enchant": 7987,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "waist",
+      "item_id": 239649,
+      "bonus_list": [
+        12214,
+        13667,
+        12497,
+        13751,
+        14001,
+        8960,
+        12384,
+        8790,
+        13836,
+        13696
+      ],
+      "item_level_override": 331,
+      "enchant": 0,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "wrists",
+      "item_id": 239648,
+      "bonus_list": [
+        12214,
+        13667,
+        12497,
+        13751,
+        14001,
+        8960,
+        12384,
+        8790,
+        13836,
+        13696
+      ],
+      "item_level_override": 331,
+      "enchant": 0,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "hands",
+      "item_id": 271556,
+      "bonus_list": [
+        13335,
+        13691,
+        6652,
+        13697,
+        12854
+      ],
+      "item_level_override": 334,
+      "enchant": 8729,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "legs",
+      "item_id": 271554,
+      "bonus_list": [
+        6652,
+        13335,
+        12854,
+        13693,
+        13698,
+        1587
+      ],
+      "item_level_override": 334,
+      "enchant": 7937,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "feet",
+      "item_id": 271557,
+      "bonus_list": [
+        6652,
+        13335,
+        13848,
+        1597
+      ],
+      "item_level_override": 344,
+      "enchant": 7963,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "finger1",
+      "item_id": 268266,
+      "bonus_list": [
+        41,
+        13668,
+        13335,
+        12854
+      ],
+      "item_level_override": 334,
+      "enchant": 8025,
+      "gems": [
+        240890
+      ],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "finger2",
+      "item_id": 240949,
+      "bonus_list": [
+        12214,
+        13667,
+        12497,
+        13751,
+        14001,
+        8790,
+        13836
+      ],
+      "item_level_override": 331,
+      "enchant": 8025,
+      "gems": [
+        240890
+      ],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "trinket1",
+      "item_id": 270162,
+      "bonus_list": [
+        6652,
+        13335,
+        12856
+      ],
+      "item_level_override": 341,
+      "enchant": 0,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "trinket2",
+      "item_id": 270167,
+      "bonus_list": [
+        6652,
+        13335,
+        12856
+      ],
+      "item_level_override": 341,
+      "enchant": 0,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "main_hand",
+      "item_id": 271092,
+      "bonus_list": [
+        6652,
+        13335,
+        13848
+      ],
+      "item_level_override": 344,
+      "enchant": 8689,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "off_hand",
+      "item_id": 268263,
+      "bonus_list": [
+        42,
+        13335,
+        12856
+      ],
+      "item_level_override": 341,
+      "enchant": 0,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    }
+  ],
+  "consumables": {
+    "potion": "lights_potential_2",
+    "flask": "flask_of_the_magisters_2",
+    "food": "silvermoon_parade",
+    "augmentation": "void_touched",
+    "temporary_enchant": "main_hand:thalassian_phoenix_oil_2"
+  },
+  "actions": [],
+  "talents": "CAQAAAAAAAAAAAAAAAAAAAAAAADsNDzyMjxMzMMbzgZmZYGAAAAAAAAAAjZWmBzMzghZwmpZiZAzsghwYWGgxgFAAYMzYMMzAMzMTwM",
+  "reference_tier": "MID2",
+  "simc_revision": "76f8118cf3f7f41dad20708e8328e1f4ab2deebc",
+  "simc_build": 70391,
+  "server_build": 70448,
+  "gear_source": "https://raider.io/characters/cn/alar/于笙",
+  "talent_source": "https://raider.io/characters/cn/alar/于笙",
+  "ranking_source": "https://raider.io/mythic-plus-spec-rankings/season-mn-2/world/priest/discipline",
+  "ranking": 1,
+  "source_region": "cn",
+  "source_realm": "Al'ar",
+  "retrieved": "2026-10-28"
+}

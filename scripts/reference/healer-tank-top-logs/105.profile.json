@@ -1,0 +1,304 @@
+{
+  "spec_id": 105,
+  "class": "druid",
+  "spec": "restoration",
+  "name": "灬火灬",
+  "level": "90",
+  "race": "Night Elf",
+  "role": "heal",
+  "position": "back",
+  "equipment": [
+    {
+      "slot": "head",
+      "item_id": 271875,
+      "bonus_list": [
+        6652,
+        13696,
+        13662,
+        13335,
+        13848,
+        13847
+      ],
+      "item_level_override": 344,
+      "enchant": 8017,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "neck",
+      "item_id": 268265,
+      "bonus_list": [
+        6652,
+        13668,
+        13334,
+        13987,
+        12856
+      ],
+      "item_level_override": 341,
+      "enchant": 0,
+      "gems": [
+        240983,
+        240892
+      ],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "shoulders",
+      "item_id": 271526,
+      "bonus_list": [
+        13335,
+        13694,
+        6652,
+        13697,
+        12854
+      ],
+      "item_level_override": 334,
+      "enchant": 8001,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "back",
+      "item_id": 268253,
+      "bonus_list": [
+        6652,
+        13662,
+        13334,
+        12854
+      ],
+      "item_level_override": 334,
+      "enchant": 4897,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "chest",
+      "item_id": 271531,
+      "bonus_list": [
+        6652,
+        13335,
+        13690,
+        13698,
+        12854
+      ],
+      "item_level_override": 334,
+      "enchant": 7987,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "waist",
+      "item_id": 268256,
+      "bonus_list": [
+        6652,
+        13696,
+        13662,
+        13334,
+        12854
+      ],
+      "item_level_override": 334,
+      "enchant": 4223,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "wrists",
+      "item_id": 244576,
+      "bonus_list": [
+        12214,
+        13667,
+        12497,
+        13751,
+        14001,
+        8793,
+        13836,
+        13696
+      ],
+      "item_level_override": 331,
+      "enchant": 0,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "hands",
+      "item_id": 271529,
+      "bonus_list": [
+        40,
+        13440,
+        13691,
+        13697,
+        12846
+      ],
+      "item_level_override": 321,
+      "enchant": 8729,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "legs",
+      "item_id": 271527,
+      "bonus_list": [
+        13334,
+        6652,
+        13693,
+        13698,
+        12854
+      ],
+      "item_level_override": 334,
+      "enchant": 7935,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "feet",
+      "item_id": 244569,
+      "bonus_list": [
+        12214,
+        13667,
+        12497,
+        13751,
+        14001,
+        8960,
+        12384,
+        8793,
+        13836
+      ],
+      "item_level_override": 331,
+      "enchant": 7963,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "finger1",
+      "item_id": 240949,
+      "bonus_list": [
+        12214,
+        13667,
+        12497,
+        13751,
+        14001,
+        8793,
+        13836
+      ],
+      "item_level_override": 331,
+      "enchant": 8025,
+      "gems": [
+        240892
+      ],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "finger2",
+      "item_id": 252258,
+      "bonus_list": [
+        13440,
+        6652,
+        13668,
+        12699,
+        12846
+      ],
+      "item_level_override": 321,
+      "enchant": 8025,
+      "gems": [
+        240892
+      ],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "trinket1",
+      "item_id": 250255,
+      "bonus_list": [
+        13440,
+        6652,
+        12699,
+        12856
+      ],
+      "item_level_override": 341,
+      "enchant": 0,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "trinket2",
+      "item_id": 270162,
+      "bonus_list": [
+        6652,
+        13335,
+        12856
+      ],
+      "item_level_override": 341,
+      "enchant": 0,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "main_hand",
+      "item_id": 271092,
+      "bonus_list": [
+        6652,
+        13334,
+        12856
+      ],
+      "item_level_override": 341,
+      "enchant": 8039,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "off_hand",
+      "item_id": 245769,
+      "bonus_list": [
+        12214,
+        13667,
+        13852,
+        12497,
+        13751,
+        14001,
+        13771,
+        8960,
+        8793,
+        13836
+      ],
+      "item_level_override": 337,
+      "enchant": 0,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    }
+  ],
+  "consumables": {
+    "potion": "liquid_luster_2",
+    "flask": "magisters_2",
+    "food": "harandar_celebration",
+    "augmentation": "void_touched",
+    "temporary_enchant": "main_hand:thalassian_phoenix_oil_2"
+  },
+  "actions": [],
+  "talents": "CkGAAAAAAAAAAAAAAAAAAAAAAMMmZZMjZmxsNMDmNjNbzAAAAAAAAAAgNDNbDmmZAmFmZmZxkZAAAAAYAAmBAgAAAmtZ2a2mZzGzMzMMzAjmBAYmBgB",
+  "reference_tier": "MID2",
+  "simc_revision": "76f8118cf3f7f41dad20708e8328e1f4ab2deebc",
+  "simc_build": 70391,
+  "server_build": 70448,
+  "gear_source": "https://raider.io/characters/cn/doomwalker/灬火灬",
+  "talent_source": "https://raider.io/characters/cn/doomwalker/灬火灬",
+  "ranking_source": "https://raider.io/mythic-plus-spec-rankings/season-mn-2/world/druid/restoration",
+  "ranking": 1,
+  "source_region": "cn",
+  "source_realm": "Doomwalker",
+  "retrieved": "2026-10-28"
+}
