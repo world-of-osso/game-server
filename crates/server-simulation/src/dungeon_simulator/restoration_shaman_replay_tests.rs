@@ -3,6 +3,8 @@ use std::path::Path;
 #[test]
 fn zero_capacity_charge_category_keeps_native_spell_cooldown() {
     use crate::spell_cast::test_harness::{Inbox, harness};
+    // Native Dark Soul: Instability has category1447 with zero base charges
+    // and its own 120-second recovery.
     let mut h = harness(Vec::new(), &[113858], 9).unwrap();
     h.cast_and_deliver(113858, None);
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
@@ -48,9 +50,21 @@ fn restoration_shaman_heals_the_simc_dummy_party() {
         report["healer_casts"]["974"].as_u64().unwrap_or(0) > 0,
         "Earth Shield must be cast: {report}"
     );
+    let streams = report["healer_casts"]["5394"].as_u64().unwrap_or(0);
     assert!(
-        report["healer_casts"]["5394"].as_u64().unwrap_or(0) > 0,
-        "Healing Stream Totem must be cast: {report}"
+        (1..=22).contains(&streams),
+        "native 30s Healing Stream charges must bound casts: {report}"
+    );
+    assert!(
+        metrics["spell_healing"]["52042"]["effective_hps"]
+            .as_f64()
+            .unwrap_or(0.0)
+            > 0.0,
+        "real Healing Stream Totem must heal the injured party: {report}"
+    );
+    assert!(
+        report["healer_casts"]["77472"].as_u64().unwrap_or(0) > 0,
+        "Healing Wave must be available between totem charges: {report}"
     );
     println!("RESTORATION_SHAMAN_REPORT={report}");
 }

@@ -633,6 +633,10 @@ pub(super) fn demonic_brutality_critical_bonus(world: &World, actor: Entity) -> 
 
 pub(super) fn initialize(world: &mut World, actor: Entity) {
     let summon = world.get::<SummonedCreature>(actor).unwrap();
+    if summon.properties.is_totem() {
+        initialize_passive_totem(world, actor);
+        return;
+    }
     // Mainline49206 uses pet-title3238, but is a temporary Gargoyle actor.
     if !summon.properties.is_guardian() && summon.spell_id != 49206 {
         return;
@@ -689,6 +693,28 @@ pub(super) fn initialize(world: &mut World, actor: Entity) {
     }
     apply_spawn_auras(world, actor, root, entry);
     implosion::on_spawn(world, actor);
+}
+
+fn initialize_passive_totem(world: &mut World, actor: Entity) {
+    // TC a352b1fa Totem.cpp InitStats/InitSummon: an instant first
+    // creature spell is passive; the second creature spell is always cast.
+    let entry = world.get::<Npc>(actor).unwrap().template_id;
+    let spells = world
+        .resource::<GuardianSpells>()
+        .spells
+        .get(&entry)
+        .cloned()
+        .unwrap_or_default();
+    for (index, id) in spells.into_iter().take(2).enumerate() {
+        let Some(spell) = world.resource::<crate::spell_info::SpellStore>().get(id) else {
+            warn!(entry, id, "Totem creature spell is absent");
+            continue;
+        };
+        if index == 0 && super::cast_time_ms(world, actor, spell) != 0 {
+            continue;
+        }
+        super::cast_triggered(world, actor, id, Some(actor), 1);
+    }
 }
 
 fn initialize_spirit_wolf(world: &mut World, actor: Entity, owner: Entity) {

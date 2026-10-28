@@ -118,7 +118,15 @@ impl Recorder {
                     }
                 }
             } else if event.kind == CombatLogKind::Heal
-                && event.source == Some(self.healer.to_bits())
+                && event
+                    .source
+                    .and_then(Entity::try_from_bits)
+                    .is_some_and(|source| {
+                        source == self.healer
+                            || world
+                                .get::<crate::spell_cast::summon::SummonedCreature>(source)
+                                .is_some_and(|summon| summon.owner == self.healer)
+                    })
             {
                 let raw = event.amount.max(0) as u64;
                 let effective = raw - (event.overflow.max(0) as u64).min(raw);
