@@ -29,6 +29,8 @@ const SPELLS: &[(&str, u32, bool)] = &[
     ("sheiluns_gift", 205406, false),
     ("vivify", 116670, false),
     ("rising_sun_kick", 107428, false),
+    ("blackout_kick", 100784, false),
+    ("tiger_palm", 100780, false),
 ];
 
 struct Mistweaver {
@@ -67,7 +69,10 @@ pub(super) fn prepare(
         ("default", "revival,if=party.injured>=3"),
         ("default", "mana_tea,if=mana.pct<65"),
         ("default", "thunder_focus_tea,if=target.health.pct<75"),
-        ("default", "renewing_mist,if=target.renewing_mist_up=0"),
+        (
+            "default",
+            "renewing_mist,if=target.health.pct<95&target.renewing_mist_up=0",
+        ),
         (
             "default",
             "enveloping_mist,if=target.health.pct<65&target.enveloping_mist_up=0",
@@ -79,6 +84,8 @@ pub(super) fn prepare(
         ("default", "vivify,if=party.heal_worthwhile"),
         ("default", "soothing_mist,if=target.health.pct<90"),
         ("damage", "rising_sun_kick"),
+        ("damage", "blackout_kick"),
+        ("damage", "tiger_palm"),
     ])?;
     Ok(Box::new(Mistweaver {
         driver: Driver::new(program),
@@ -232,7 +239,10 @@ impl Policy for Mistweaver {
         let tank_alive = living.iter().any(|(unit, _)| *unit == tank);
         let tank_mist = crate::auras::has_aura(world, tank, 119611)
             || crate::auras::has_aura(world, tank, 115151);
-        let target = if tank_alive && !tank_mist && lowest_ratio >= 0.35 {
+        let tank_injured = world
+            .get::<Health>(tank)
+            .is_some_and(|health| health.current < health.max * 0.95);
+        let target = if tank_alive && tank_injured && !tank_mist && lowest_ratio >= 0.35 {
             tank
         } else {
             lowest
@@ -251,7 +261,9 @@ impl Policy for Mistweaver {
         let targets = [target];
         let actions = SPELLS
             .iter()
-            .filter(|(name, _, _)| *name != "rising_sun_kick")
+            .filter(|(name, _, _)| {
+                !matches!(*name, "rising_sun_kick" | "blackout_kick" | "tiger_palm")
+            })
             .map(|&(name, spell, self_target)| NativeAction {
                 name,
                 spell,
@@ -284,12 +296,17 @@ impl Policy for Mistweaver {
             return Ok(());
         };
         let enemies = [enemy];
-        let damage = [NativeAction {
-            name: "rising_sun_kick",
-            spell: 107428,
-            self_target: false,
-            talent: None,
-        }];
+        let damage = SPELLS
+            .iter()
+            .filter(|(name, _, _)| {
+                matches!(*name, "rising_sun_kick" | "blackout_kick" | "tiger_palm")
+            })
+            .map(|&(name, spell, self_target)| NativeAction {
+                name,
+                spell,
+                self_target,
+                talent: None,
+            });
         let prepared = Prepared::read(world, healer, &enemies, &self.equipment, damage, false)?;
         let facts = NativeFacts::new(world, healer, &self.bindings, self.encounter, 1)
             .with_targets(Some(enemy), &enemies);
