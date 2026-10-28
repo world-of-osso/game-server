@@ -6,7 +6,7 @@ use combat::spell_cast::script_registry::SpellScriptHook;
 use combat::spell_info::SpellInfo;
 use shared::components::ActiveSpec;
 
-const BLADES: &[u32] = &[227847, 446035];
+const BLADES: &[u32] = &[446035];
 const IMMINENT: u32 = 444769;
 const SUDDEN_DEATH: u32 = 29725;
 const STACKS: u32 = 445606;
@@ -17,7 +17,9 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
 ];
 
 fn selected(world: &World, caster: Entity) -> bool {
-    world.get::<ActiveSpec>(caster).is_some_and(|spec| matches!(spec.0, 71 | 72))
+    world
+        .get::<ActiveSpec>(caster)
+        .is_some_and(|spec| spec.0 == 72)
         && auras::has_aura(world, caster, IMMINENT)
         && auras::has_aura(world, caster, SUDDEN_DEATH)
 }
@@ -26,11 +28,20 @@ fn tick_rate(world: &World, caster: Entity, _target: Entity, spell: &SpellInfo) 
     if !BLADES.contains(&spell.id) || !selected(world, caster) {
         return 1.0;
     }
-    let stacks = world.get::<ActiveAuras>(caster).and_then(|auras| {
-        auras.iter().find(|aura| aura.spell_id == STACKS && aura.caster == caster)
-    }).map_or(0, |aura| aura.stacks);
-    let duration = spell.misc.as_ref().and_then(|misc| misc.duration)
-        .expect("native Bladestorm has a duration").duration_ms;
+    let stacks = world
+        .get::<ActiveAuras>(caster)
+        .and_then(|auras| {
+            auras
+                .iter()
+                .find(|aura| aura.spell_id == STACKS && aura.caster == caster)
+        })
+        .map_or(0, |aura| aura.stacks);
+    let duration = spell
+        .misc
+        .as_ref()
+        .and_then(|misc| misc.duration)
+        .expect("native Bladestorm has a duration")
+        .duration_ms;
     assert!(duration > 0, "native Bladestorm duration must be positive");
     // SimC76f8118 sc_warrior.cpp3279–3299: tick time is divided by
     // (base duration seconds + earned stacks) / base duration seconds.

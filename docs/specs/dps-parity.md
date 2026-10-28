@@ -605,7 +605,7 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 - Selected Cruelty392931 and Wrath and Fury392936 damage modifiers apply only while native Enrage184362 is active (`sc_warrior.cpp1106,4939–4947,5099–5113,7834–7835`). Their native rank values and other effects remain unchanged.
 
-- Selected Imminent Demise444769 and Sudden Death29725 accelerate native Bladestorm periodic attacks according to earned445606 stacks. Expire those stacks at the spin's natural end (`sc_warrior.cpp3279–3299,3344–3349`).
+- Fury's selected Imminent Demise444769 and Sudden Death29725 accelerate native Bladestorm periodic attacks according to earned445606 stacks. Expire those stacks at the spin's natural end (`sc_warrior.cpp3279–3299,3344–3349`).
 
 - Selected Spite383852 applies its native rank values in tenths of a percent to damage and critical damage, as specified by the native display and SimC76f8118 `sc_warrior.cpp7894–7899`; preserve its native masks and rank curves.
 
