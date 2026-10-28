@@ -507,9 +507,10 @@ fn ww_gear_profile_blooming_feast_chooses_highest_secondary() {
     );
     for (mask, before, after) in ratings {
         if mask == expected {
-            assert!(
-                after > before,
-                "selected native rating must really increase"
+            assert_eq!(
+                after - before,
+                65.0,
+                "level90 Blooming Feast must grant its scaled rating"
             );
         } else {
             assert!(
