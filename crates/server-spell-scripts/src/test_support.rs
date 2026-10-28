@@ -1,6 +1,7 @@
 //! Native harness with the same downstream registry as the server.
 pub use crate::combat::spell_cast::test_harness::*;
 use crate::combat::spell_info::SpellInfo;
+#[cfg(feature = "test-support")]
 pub use crate::modules::{ghoul_energy, set_ghoul_energy};
 
 pub fn harness(extra: Vec<SpellInfo>, ids: &[u32], class: u8) -> Option<Harness> {
