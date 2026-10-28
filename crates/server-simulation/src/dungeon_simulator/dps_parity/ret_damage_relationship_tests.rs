@@ -483,3 +483,111 @@ fn ret_damage_sentence_explosion_applies_normal_outgoing_modifiers_to_stored_dam
     }
     panic!("native funded Sentence never discharged stored damage");
 }
+
+#[test]
+#[ignore = "native 70 player profile; Truth's Wake must not boost its own ticks"]
+fn ret_truths_wake_does_not_apply_its_dot_bonus_to_itself() {
+    use crate::spell_cast::effects::factor_capture::FactorCapture;
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_measurement(70, 1).unwrap();
+    let owner = run.actor;
+    let target = run.targets[0];
+    assert!(
+        run.app
+            .world()
+            .get::<shared::components::Player>(owner)
+            .is_some()
+    );
+    super::channel_timing_tests::remove_equipped_proc_drivers(&mut run);
+    engage(&mut run);
+    crate::spell_cast::cast_triggered(run.app.world_mut(), owner, 255937, Some(target), 1);
+    let aura = run
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(target)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 403695 && aura.caster == owner)
+        .expect("real Truth's Wake");
+    let instance = aura.instance_id;
+    let value = aura
+        .effects
+        .iter()
+        .find(|effect| effect.index == 4)
+        .unwrap()
+        .amount;
+    assert!(value > 0.0);
+    let expurgation = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(383346)
+        .unwrap();
+    let other_before =
+        crate::auras::damage_taken_multiplier(run.app.world(), target, owner, expurgation);
+    run.app.world_mut().insert_resource(FactorCapture::new(
+        owner,
+        target,
+        403695,
+        "truths_wake",
+        20,
+    ));
+    for _ in 0..120 {
+        run.app.update();
+        let capture = run.app.world().resource::<FactorCapture>().export();
+        if capture["events"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|event| event["event"] == "periodic_amount" && event["spell_id"] == 403695)
+        {
+            break;
+        }
+    }
+    assert!(crate::auras::set_effect_amount(
+        run.app.world_mut(),
+        target,
+        instance,
+        4,
+        0.0
+    ));
+    let expurgation = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(383346)
+        .unwrap();
+    let other_after =
+        crate::auras::damage_taken_multiplier(run.app.world(), target, owner, expurgation);
+    assert!(
+        (other_before / other_after - (1.0 + value / 100.0)).abs() < 0.001,
+        "other eligible DoTs retain the native target bonus"
+    );
+    for _ in 0..120 {
+        run.app.update();
+        let capture = run.app.world().resource::<FactorCapture>().export();
+        if capture["events"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|event| event["event"] == "periodic_amount" && event["spell_id"] == 403695)
+            .count()
+            >= 2
+        {
+            break;
+        }
+    }
+    let capture = run.app.world().resource::<FactorCapture>().export();
+    let hits: Vec<_> = capture["events"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|event| event["event"] == "periodic_amount" && event["spell_id"] == 403695)
+        .map(|event| event["factors"]["amount"].as_f64().unwrap())
+        .collect();
+    assert!(hits.len() >= 2, "real Truth's Wake must tick twice");
+    assert!(
+        (hits[0] / hits[1] - 1.0).abs() < 0.01,
+        "own ticks must ignore the label bonus: {hits:?}"
+    );
+}
