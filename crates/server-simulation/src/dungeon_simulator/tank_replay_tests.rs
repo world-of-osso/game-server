@@ -2,6 +2,30 @@ use super::healer_intake::Intake;
 use std::path::Path;
 
 #[test]
+#[ignore = "uses the native recorded tank source and recipient"]
+fn tank_replay_counts_parried_incoming_damage_as_mitigated() {
+    let path = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../content/dungeons/healer-benchmark/stockade-seed1.intake.json");
+    let mut intake: Intake = serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap();
+    let mut hit = intake.hits[0].clone();
+    hit.raw = 100.0;
+    if let super::healer_intake::HitKind::Melee {
+        ref mut outcome, ..
+    } = hit.kind
+    {
+        *outcome = "Parry".into();
+    } else {
+        panic!("recorded first hit must be melee");
+    }
+    intake.end_tick = hit.tick;
+    intake.hits = vec![hit];
+    let report = super::tank_replay::replay(&intake).unwrap();
+    assert_eq!(report["raw_damage"], 100.0);
+    assert_eq!(report["damage_taken"], 0.0);
+    assert_eq!(report["mitigation_pct"], 100.0);
+}
+
+#[test]
 #[ignore = "uses native recipient avoidance and the SimC dummy strike policy"]
 fn simc_dummy_melee_uses_recipient_avoidance_and_strikes_can_block() {
     use crate::melee::MeleeOutcome;

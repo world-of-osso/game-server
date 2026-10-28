@@ -11,7 +11,7 @@ const TICK_SECONDS: f64 = 0.05;
 const SPIKE_WINDOW_SECONDS: f64 = 5.0;
 const SHIELD_OF_THE_RIGHTEOUS: u32 = 132403;
 
-fn source_amount(hit: &Hit) -> Result<f64, String> {
+pub(super) fn source_amount(hit: &Hit) -> Result<f64, String> {
     let HitKind::Melee {
         ref outcome,
         level_difference,
@@ -32,6 +32,12 @@ fn source_amount(hit: &Hit) -> Result<f64, String> {
         "Parry" => MeleeOutcome::Parry,
         _ => return Err(format!("RECORDED_MELEE_OUTCOME_UNSUPPORTED:{outcome}")),
     };
+    if matches!(
+        kind,
+        MeleeOutcome::Miss | MeleeOutcome::Dodge | MeleeOutcome::Parry
+    ) {
+        return Ok(f64::from(hit.raw));
+    }
     Ok(f64::from(
         crate::melee::outcome_damage(hit.raw, kind, level_difference, 0.0).0 * critical_multiplier,
     ))
