@@ -200,13 +200,14 @@ pub fn purify(world: &mut World, target: Entity) -> f32 {
     if pool <= 0.0 {
         return 0.0;
     }
-    let store = world.resource::<SpellStore>();
     let max_health = world
         .get::<Health>(target)
         .expect("Stagger target health")
         .max;
-    let clear = (pool * effect(store, 119582, 0) / 100.0)
-        .max(max_health * effect(store, 119582, 1) / 100.0)
+    let percent = crate::spell_cast::scripts::script_effect_value(world, target, 119582, 0);
+    let minimum = crate::spell_cast::scripts::script_effect_value(world, target, 119582, 1);
+    let clear = (pool * percent / 100.0)
+        .max(max_health * minimum / 100.0)
         .min(pool);
     if clear >= pool {
         super::remove_auras(world, target, super::RemoveReason::Consumed, |aura| {
