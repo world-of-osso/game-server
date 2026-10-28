@@ -2,7 +2,7 @@
 use bevy::prelude::*;
 
 use super::combat;
-use combat::auras::ActiveAuras;
+use combat::auras::{self, ActiveAuras, RemoveReason};
 use combat::random::Rng;
 use combat::spell_cast::{
     self, CostPool, effects::EffectCtx, queued_triggers, script_registry::SpellScriptHook,
@@ -19,6 +19,7 @@ const ANSWERED_CALLING: u32 = 1308647;
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AfterPayment(on_payment),
     SpellScriptHook::AfterForegroundSpecial(spirit_attack),
+    SpellScriptHook::AfterForegroundSpecial(wild_guardian_action),
     SpellScriptHook::OwnsPolicyProc(|spell| spell == TALENT),
 ];
 
@@ -43,6 +44,13 @@ fn on_payment(world: &mut World, caster: Entity, costs: &[(CostPool, f32)]) {
     if active_spirit(world, caster) || combat::random::random::<f32>() >= chance / 100.0 {
         return;
     }
+    summon_spirit(world, caster);
+}
+
+fn summon_spirit(world: &mut World, caster: Entity) {
+    if active_spirit(world, caster) {
+        return;
+    }
     spell_cast::cast_triggered(world, caster, SUMMON, Some(caster), 1);
     if !active_spirit(world, caster) {
         return;
@@ -52,6 +60,34 @@ fn on_payment(world: &mut World, caster: Entity, costs: &[(CostPool, f32)]) {
         for spell in [33917, 77758] {
             spell_cast::scripts::reduce_cooldown(world, caster, spell, f64::MAX);
         }
+    }
+}
+
+// SimC grants the action override on Berserk/Incarnation and consumes it on use.
+fn wild_guardian_action(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    match spell.id {
+        102558 | 50334 if talent_amount(world, caster, THIRD_TALENT, 0).is_some() => {
+            let override_aura = if spell.id == 102558 { 1269616 } else { 1270277 };
+            spell_cast::cast_triggered(world, caster, override_aura, Some(caster), 1);
+        }
+        1269658 => {
+            auras::remove_auras(world, caster, RemoveReason::Consumed, |aura| {
+                aura.caster == caster && matches!(aura.spell_id, 1269616 | 1270277)
+            });
+        }
+        6807 | 400254 => {
+            let conduit = world.get::<ActiveAuras>(caster).and_then(|auras| {
+                auras
+                    .iter()
+                    .find(|aura| aura.spell_id == 1308176 && aura.caster == caster)
+                    .map(|aura| aura.instance_id)
+            });
+            if let Some(instance) = conduit {
+                auras::spend_stack(world, caster, instance);
+                summon_spirit(world, caster);
+            }
+        }
+        _ => {}
     }
 }
 

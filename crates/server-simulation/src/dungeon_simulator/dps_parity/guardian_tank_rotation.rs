@@ -26,7 +26,7 @@ const ACTIONS: &[(&str, u32, bool)] = &[
     ("red_moon", 1252871, false),
     ("berserk", 50334, true),
     ("lunar_beam", 204066, false),
-    ("wild_guardian", 1269619, true),
+    ("wild_guardian", 1269658, true),
     // SimC sc_druid.cpp9157–9161 executes the Cat child on the enemy.
     ("heart_of_the_wild", 1261867, false),
     ("convoke_the_spirits", 391528, true),
