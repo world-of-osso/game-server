@@ -155,6 +155,18 @@ fn divine_guidance_stacks_on_spenders_and_is_consumed_by_consecration() {
             .0
             .iter()
             .any(|event| event.source == Some(actor.to_bits())
+                && event.target == Some(target.to_bits())
+                && event.kind == CombatLogKind::Damage
+                && event.spell_id == Some(433808)
+                && event.amount > 0)
+    );
+    assert!(
+        run.app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|event| event.source == Some(actor.to_bits())
                 && event.target == Some(actor.to_bits())
                 && event.kind == CombatLogKind::Heal
                 && event.spell_id == Some(433807)
