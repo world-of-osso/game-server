@@ -697,8 +697,11 @@ fn demonology_imp_critical_damage_inherits_demonic_brutality() {
         .unwrap();
     let uncritical = direct["factors"]["amount"].as_f64().unwrap();
     let actual = result["factors"]["actual_amount"].as_f64().unwrap();
-    let expected = uncritical * 2.0 * (1.0 + f64::from(effect) / 100.0);
-    // SimC76f8118 pets.cpp185–201: bugs=1 applies native effect2 twice to the critical bonus.
+    let spell = run.app.world().resource::<crate::spell_info::SpellStore>().get(104318).unwrap();
+    let owner_critical = run.app.world().get::<crate::auras::AuraStatMods>(run.actor).unwrap().critical_damage(spell.school_mask());
+    let expected = uncritical * 2.0 * (f64::from(owner_critical) + f64::from(effect) / 100.0);
+    // SimC76f8118 pet.cpp488–494 inherits the owner multiplier; warlock
+    // pets.cpp185–201 then adds native Demonic Brutality effect2 in bugs mode.
     assert!(
         (actual - expected).abs() < 1.5,
         "actual={actual} expected={expected}"
