@@ -22,6 +22,16 @@ fn zero_capacity_charge_category_keeps_native_spell_cooldown() {
 fn restoration_shaman_replay_native_mana_regeneration() {
     let mut run = super::super::dps_parity::prepare_registered_player(66, 1).unwrap();
     let healer = super::super::dps_parity::spawn_second_reference_player(&mut run, 264).unwrap();
+    let known = run
+        .app
+        .world()
+        .get::<crate::class_progression::KnownSpells>(healer)
+        .unwrap();
+    println!(
+        "RESTO_SHAMAN_FLAME_SHOCK wrapper={} payload={}",
+        known.contains(470411),
+        known.contains(188389)
+    );
     let mana = run
         .app
         .world_mut()
