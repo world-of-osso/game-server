@@ -28,6 +28,10 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 - The actor's channel cadence and its periodic aura use the same native effect cadence. Declared damage/healing periods own this cadence ahead of faster auxiliary control pulses; channels without declared health emissions retain their native utility/script period. Constant haste must not create an extra expiry damage event or full proc callbacks from rounding residue. Preserve tick-zero behavior and genuine fractional native tick counts.
 - Preserve non-channel periodic quantization, channel modifier/haste snapshots, and un-hasted channel lifetimes, including four-second Convoke. For hasted non-channel periodic effects, use current caster haste when scheduling the interval after each paid tick; do not retime the already-pending tick (SimC76f8118 `action.cpp:2038–2041,2792–2809`). Do not add spell-ID branches or replace native coefficients/periods/durations.
 
+### Elemental Inferno Arc
+
+- Selected Inferno Arc1259047 amplifies Chain Lightning, Lightning Bolt, Elemental Blast, Earthquake damage, Earth Shock and Tempest and their overloads against each recipient with this caster's active Flame Shock. Read the percentage from the native talent (SimC76f8118 `sc_shaman.cpp`6324–6330,6618–6624,7330–7336,7411–7417,7589–7595,7678–7684,7810–7812,8192–8198,8221–8227,9858–9864,10069–10075).
+
 ### Stormbound Emblem of Dazar
 
 - A completed or interrupted native1295275 channel grants haste1294745 for one native buff duration per completed tick. Its amount comes from the equipped native1294744 item effect (`unique_gear_midnight.cpp3863–3954`).
@@ -915,7 +919,7 @@ Selected384355 Elemental Weapons supplies408390's native masked direct/periodic 
 
 Selected1262635 Thunder Capacitor rolls its native effect1 chance after each actual paid normal/Thorim LB, CL or Tempest execution and restores exactly the MW stacks consumed by that execution, through the existing native counter/modifier producer. Do not refund zero spends, Arc Discharge or Ride chains; do not alter the already native damage modifier. Spent-stack accounting uses the admitted native per-cast limit, not a net counter delta after refund. Sources: pinned SimC76f8118 `sc_shaman.cpp6687–6694,7462–7469,9978–9985`.
 
-Actual Windstrike weapon children115357/115360 ignore target armor. Native Doom469270 retains its Physical/Nature school but does not use Physical armor; ordinary Physical Stormstrike children remain armor-sensitive (SimC76f8118 `sc_shaman.cpp4726`, `action.cpp1686–1689`).
+Actual Windstrike weapon children115357/115360 ignore target armor. Ascendance replaces main- and offhand white swings with native Windlash114089/114093, which also ignore armor. Native Doom469270 retains its Physical/Nature school but does not use Physical armor; ordinary Physical Stormstrike children remain armor-sensitive (SimC76f8118 `sc_shaman.cpp4726,4734–4768`, `action.cpp1686–1689`).
 Selected Stormwell1264762 runs a guaranteed equipped-native Windfury callback once on each landed primary Crash187874 impact, not once per AoE recipient. Preserve its native internal cooldown, payload and Unruly Winds behavior; ordinary imbue proc chances remain unchanged (SimC76f8118 `sc_shaman.cpp6141–6145`).
 
 Native Unleashed1252431 remains Magic and cannot trigger weapon imbues. A main-hand weapon pointer and `shaman_attack_t` inheritance do not override SimC's data-Melee admission check (`sc_shaman.cpp3039–3055`, pinned SpellDataDump1252431).

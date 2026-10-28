@@ -82,44 +82,49 @@ fn wait_for_hits(run: &mut Run, spell: u32, count: usize) {
 #[test]
 #[ignore = "native263 reference inputs and private world database"]
 fn enhancement_tempest_secondary_targets_use_native_effectiveness() {
-    let _seed = crate::random::seed_scope(818181);
-    let mut run = prepare_literal(263, 3).unwrap();
-    engage(&mut run);
-    let actor = run.actor;
-    let primary = run.targets[0];
-    let recipients = run.targets.clone();
-    for (index, target) in recipients.into_iter().enumerate() {
-        run.app.insert_resource(
-            crate::spell_cast::effects::factor_capture::FactorCapture::new(
-                actor, target, TEMPEST, "tempest", 1,
-            ),
+    fn hit(primary_index: usize) -> i32 {
+        let _seed = crate::random::seed_scope(818181);
+        let mut run = prepare_literal(263, 3).unwrap();
+        engage(&mut run);
+        let actor = run.actor;
+        let recipient = run.targets[0];
+        let primary = run.targets[primary_index];
+        run.app
+            .world_mut()
+            .get_mut::<crate::stats::CharacterStats>(actor)
+            .unwrap()
+            .crit_pct = 0.0;
+        crate::auras::remove_auras(
+            run.app.world_mut(),
+            actor,
+            crate::auras::RemoveReason::Cancelled,
+            |aura| aura.spell_id == 454021,
         );
         crate::spell_cast::cast_triggered(run.app.world_mut(), actor, TEMPEST, Some(primary), 1);
-        let capture = run
+        wait_for_hits(&mut run, TEMPEST, 3);
+        let event = run
             .app
             .world()
-            .resource::<crate::spell_cast::effects::factor_capture::FactorCapture>()
-            .export();
-        let amount = capture["events"]
-            .as_array()
-            .unwrap()
+            .resource::<ObservedCombatEvents>()
+            .0
             .iter()
-            .find(|event| event["event"] == "direct_amount" && event["spell_id"] == TEMPEST)
-            .expect("real Tempest hits the captured recipient");
-        let multiplier = amount["applied_multipliers"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .find(|factor| factor["factor"] == "giantkiller")
-            .unwrap()["value"]
-            .as_f64()
-            .unwrap();
-        let expected = if index == 0 { 1.0 } else { 0.65 };
-        assert!(
-            (multiplier - expected).abs() < 0.001,
-            "real Tempest target {index} multiplier {multiplier}"
-        );
+            .find(|event| {
+                event.source == Some(actor.to_bits())
+                    && event.target == Some(recipient.to_bits())
+                    && event.spell_id == Some(TEMPEST)
+                    && event.kind == CombatLogKind::Damage
+            })
+            .expect("real Tempest hits the same recipient");
+        assert!(!event.crit, "paired control uses ordinary hits");
+        event.amount
     }
+    let primary = hit(0);
+    let secondary = hit(1);
+    let ratio = secondary as f32 / primary as f32;
+    assert!(
+        (ratio - 0.65).abs() < 0.002,
+        "same target as primary={primary}, secondary={secondary}, ratio={ratio}"
+    );
 }
 
 #[test]
