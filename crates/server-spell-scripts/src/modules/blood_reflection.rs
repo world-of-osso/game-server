@@ -1,6 +1,6 @@
 //! Bloody Reflection damages the attacker while Blood Shield survives a direct hit.
 use bevy::prelude::*;
-use shared::protocol::{CombatLogEvent, CombatLogKind};
+use shared::protocol::{CombatLogEvent, CombatLogKind, MissKind};
 
 use super::combat;
 use combat::spell_cast::{self, script_registry::SpellScriptHook};
@@ -13,7 +13,12 @@ struct ReflectionCooldown(f64);
 // SimC76f8118 sc_death_knight.cpp15540/16675–16682: surviving Blood Shield
 // and a 500ms internal cooldown. Spelltext1279633 requires direct damage.
 fn reflect(world: &mut World, event: &CombatLogEvent) {
-    if event.kind != CombatLogKind::Damage || event.periodic || event.amount + event.absorbed <= 0 {
+    if !matches!(
+        event.kind,
+        CombatLogKind::Damage | CombatLogKind::Miss(MissKind::Absorb)
+    ) || event.periodic
+        || event.amount + event.absorbed <= 0
+    {
         return;
     }
     let (Some(attacker), Some(target)) = (
