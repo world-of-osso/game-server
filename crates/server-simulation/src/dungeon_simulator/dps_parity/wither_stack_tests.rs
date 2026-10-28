@@ -88,11 +88,17 @@ fn first_tick_damage_with_mark(spec: u32, stacks: u8, mark: bool) -> (f64, f64) 
     let mut run = prepare_literal(spec, 1).unwrap();
     engage(&mut run);
     let actor = run.actor;
-    assert!(crate::auras::has_aura(run.app.world(), actor, 440046), "selected Mark of Xavius required");
+    assert!(
+        crate::auras::has_aura(run.app.world(), actor, 440046),
+        "selected Mark of Xavius required"
+    );
     if !mark {
-        crate::auras::remove_auras(run.app.world_mut(), actor, crate::auras::RemoveReason::Cancelled, |aura| {
-            aura.spell_id == 440046 && aura.caster == actor
-        });
+        crate::auras::remove_auras(
+            run.app.world_mut(),
+            actor,
+            crate::auras::RemoveReason::Cancelled,
+            |aura| aura.spell_id == 440046 && aura.caster == actor,
+        );
     }
     apply_native_aura(&mut run, actor, 171884); // Native Denounce removes critical RNG.
     run.app.update();

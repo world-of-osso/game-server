@@ -74,23 +74,39 @@ fn schedule_army(world: &mut World, caster: Entity, spell: &SpellInfo) {
 
 fn summon_apocalypse_now_riders(world: &mut World, caster: Entity) {
     if !world.get::<TraitLoadout>(caster).is_some_and(|traits| {
-        traits.active_talent_spells().any(|talent| talent.spell_id == APOCALYPSE_NOW)
+        traits
+            .active_talent_spells()
+            .any(|talent| talent.spell_id == APOCALYPSE_NOW)
     }) {
         return;
     }
     // SimC76f8118 sc_death_knight.cpp9027–9030/13651–13689: Army
     // summons all four or extends existing riders by the selected duration.
-    let duration = f64::from(spell_cast::scripts::script_effect_value(world, caster, APOCALYPSE_NOW, 1)) / 1000.0;
-    assert!(duration > 0.0, "Apocalypse Now requires a positive native duration");
+    let duration = f64::from(spell_cast::scripts::script_effect_value(
+        world,
+        caster,
+        APOCALYPSE_NOW,
+        1,
+    )) / 1000.0;
+    assert!(
+        duration > 0.0,
+        "Apocalypse Now requires a positive native duration"
+    );
     for &spell in HORSEMEN {
         let now = combat::auras::aura_now(world);
-        let existing = world.query::<(Entity, &spell_cast::summon::SummonedCreature)>()
-            .iter(world).find_map(|(actor, summon)| {
-                (summon.owner == caster && summon.spell_id == spell
-                    && summon.expires_at.is_some_and(|expiry| expiry > now)).then_some(actor)
+        let existing = world
+            .query::<(Entity, &spell_cast::summon::SummonedCreature)>()
+            .iter(world)
+            .find_map(|(actor, summon)| {
+                (summon.owner == caster
+                    && summon.spell_id == spell
+                    && summon.expires_at.is_some_and(|expiry| expiry > now))
+                .then_some(actor)
             });
         if let Some(actor) = existing {
-            let mut summon = world.get_mut::<spell_cast::summon::SummonedCreature>(actor).unwrap();
+            let mut summon = world
+                .get_mut::<spell_cast::summon::SummonedCreature>(actor)
+                .unwrap();
             *summon.expires_at.as_mut().unwrap() += duration;
             continue;
         }
@@ -98,11 +114,17 @@ fn summon_apocalypse_now_riders(world: &mut World, caster: Entity) {
             warn!(?caster, spell, "Native Horseman summon refused");
             continue;
         }
-        let actor = world.query::<(Entity, &spell_cast::summon::SummonedCreature)>()
-            .iter(world).find_map(|(actor, summon)|
+        let actor = world
+            .query::<(Entity, &spell_cast::summon::SummonedCreature)>()
+            .iter(world)
+            .find_map(|(actor, summon)| {
                 (summon.owner == caster && summon.spell_id == spell).then_some(actor)
-            ).expect("successful Horseman summon must create an actor");
-        world.get_mut::<spell_cast::summon::SummonedCreature>(actor).unwrap().expires_at = Some(now + duration);
+            })
+            .expect("successful Horseman summon must create an actor");
+        world
+            .get_mut::<spell_cast::summon::SummonedCreature>(actor)
+            .unwrap()
+            .expires_at = Some(now + duration);
     }
 }
 
@@ -110,7 +132,8 @@ fn engage_melee_summon(world: &mut World, actor: Entity) {
     let Some(summon) = world.get::<spell_cast::summon::SummonedCreature>(actor) else {
         return;
     };
-    if !matches!(summon.spell_id, LESSER_GHOUL | ARMY_GHOUL) && !HORSEMEN.contains(&summon.spell_id) {
+    if !matches!(summon.spell_id, LESSER_GHOUL | ARMY_GHOUL) && !HORSEMEN.contains(&summon.spell_id)
+    {
         return;
     }
     let owner = summon.owner;
