@@ -59,7 +59,7 @@ fn add_rune_strength(
     };
     // SimC76f8118 sc_death_knight.cpp13100–13120 uses Scourge Strike's
     // base rune cost even when free; all other qualifying actions use paid runes.
-    let runes = if spell.id == 55090 {
+    let runes: f32 = if spell.id == 55090 {
         spell
             .power_costs
             .iter()
