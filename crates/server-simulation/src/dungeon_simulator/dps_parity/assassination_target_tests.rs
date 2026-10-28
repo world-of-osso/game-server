@@ -188,3 +188,29 @@ fn assassination_target_kingsbane_does_not_count_for_lethal_dose() {
         clean.damage
     );
 }
+
+#[test]
+#[ignore = "requires prepared259 native profile and world data"]
+fn assassination_rupture_duration_scales_through_seven_combo_points() {
+    use shared::components::PowerType;
+    for points in [5.0, 6.0, 7.0] {
+        let _seed = crate::random::seed_scope(70448);
+        let mut run = prepare_measurement(259, 1).unwrap();
+        engage(&mut run);
+        let actor = run.actor;
+        let target = run.targets[0];
+        {
+            let mut pools = run.app.world_mut().get_mut::<crate::spell_cast::powers::PowerPools>(actor).unwrap();
+            let energy = pools.get_mut(PowerType::Energy).unwrap();
+            energy.current = energy.max;
+            let combo = pools.get_mut(PowerType::ComboPoints).unwrap();
+            assert!(combo.max >= points);
+            combo.current = points;
+        }
+        literal_rotation::execution::execute(run.app.world_mut(), actor, literal_rotation::execution::Execution::Spell(1943, target, Some(target))).unwrap();
+        preparation::finish_pending_setup(&mut run).unwrap();
+        let aura = run.app.world().get::<crate::auras::ActiveAuras>(target).unwrap().iter()
+            .find(|a| a.spell_id == 1943 && a.caster == actor).expect("Rupture must land");
+        assert_eq!(aura.duration_ms, (4000.0 * (1.0 + points)) as u32);
+    }
+}
