@@ -8,6 +8,7 @@ pub const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::EffectEnabled(effect_en
 use shared::components::{ActiveSpec, Player};
 
 const ENDURING_TORMENT_BUFF: u32 = 453_314;
+const MONSTER_RISING_BUFF: u32 = 452_550;
 const UNTETHERED_FURY: u32 = 452_411;
 const SPEC_HAVOC: u32 = 577;
 const SPEC_DEVOURER: u32 = 1480;
@@ -22,6 +23,11 @@ fn effect_enabled(world: &World, caster: Entity, spell: u32, index: u8) -> bool 
             let required = if index < 2 { SPEC_HAVOC } else { SPEC_DEVOURER };
             spec == Some(required)
         }
+        // SimC76f8118 cpp10195–10213 selects Intellect for Devourer and Agility for Havoc.
+        MONSTER_RISING_BUFF => !matches!(
+            (spec, index),
+            (Some(SPEC_DEVOURER), 0) | (Some(SPEC_HAVOC), 1)
+        ),
         // SimC76f8118 sc_demon_hunter.cpp11438–11445 deregisters the
         // other specialization's native max-Fury effect.
         UNTETHERED_FURY => !matches!(

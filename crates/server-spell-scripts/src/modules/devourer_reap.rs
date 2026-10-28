@@ -59,6 +59,13 @@ fn after_launch(world: &mut World, caster: Entity, spell: &SpellInfo) {
     )
     .expect("native Reap fragment consumption");
     trigger_soulburst(world, caster, consumed);
+    // SimC76f8118 cpp6083–6107 consumes Moment after using its fragment limit.
+    combat::auras::remove_auras(
+        world,
+        caster,
+        combat::auras::RemoveReason::Consumed,
+        |aura| aura.caster == caster && aura.spell_id == MOMENT_OF_CRAVING,
+    );
     let pending = PendingReap {
         at: spell_cast::now(world) + 0.220,
         target,
