@@ -1338,3 +1338,60 @@ fn protection_divine_toll_launches_shield_and_generates_power() {
         "Toll's shield must damage the enemy"
     );
 }
+
+#[test]
+#[ignore = "uses real MID2 Protection and three engaged Toll targets"]
+fn protection_divine_toll_grants_power_and_shield_per_target() {
+    use crate::spell_cast::powers::PowerPools;
+    use shared::components::PowerType;
+    let mut run = super::dps_parity::prepare_registered_player(66, 3).unwrap();
+    super::dps_parity::engage(&mut run);
+    let actor = run.actor;
+    for _ in 0..40 {
+        run.app.update();
+    }
+    run.app
+        .world_mut()
+        .get_mut::<PowerPools>(actor)
+        .unwrap()
+        .get_mut(PowerType::HolyPower)
+        .unwrap()
+        .current = 0.0;
+    crate::spell_cast::creature_cast(
+        run.app.world_mut(),
+        actor,
+        375576,
+        Some(run.targets[0]),
+        false,
+    )
+    .unwrap();
+    for _ in 0..40 {
+        run.app.update();
+    }
+    let power = run
+        .app
+        .world()
+        .get::<PowerPools>(actor)
+        .unwrap()
+        .get(PowerType::HolyPower)
+        .unwrap()
+        .current;
+    assert_eq!(power, 3.0);
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    for target in &run.targets {
+        assert!(
+            events
+                .iter()
+                .any(|event| event.source == Some(actor.to_bits())
+                    && event.target == Some(target.to_bits())
+                    && event.spell_id == Some(31935)
+                    && event.kind == shared::protocol::CombatLogKind::Damage
+                    && event.amount > 0),
+            "missing shield damage on {target:?}"
+        );
+    }
+}
