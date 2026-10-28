@@ -44,6 +44,7 @@ fn proc_new_target(world: &mut World, unit: Entity, _: &AuraInstance, target: Op
         .entity_mut(unit)
         .entry::<StruckTargets>()
         .or_default()
+        .into_mut()
         .0
         .insert(target);
     let driver = world
