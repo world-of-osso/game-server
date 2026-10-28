@@ -13,6 +13,10 @@ const TICK_SECONDS: f64 = 0.05;
 const SPIKE_WINDOW_SECONDS: f64 = 5.0;
 const SHIELD_OF_THE_RIGHTEOUS: u32 = 132403;
 
+fn self_periodic_damage(event: &shared::protocol::CombatLogEvent, tank: Entity) -> bool {
+    event.kind == CombatLogKind::Damage && event.periodic && event.source == Some(tank.to_bits())
+}
+
 pub(super) fn source_amount(hit: &Hit) -> Result<f64, String> {
     let HitKind::Melee {
         ref outcome,
@@ -107,6 +111,7 @@ pub(super) fn replay(intake: &Intake) -> Result<Value, String> {
         .len();
     let (mut raw, mut taken, mut self_healing, mut active_seconds, mut spike) =
         (0.0, 0.0, 0.0, 0.0, 0.0_f64);
+    let mut self_periodic_taken = 0.0;
     let (mut recent, mut recent_sum) = (VecDeque::<(f64, f64)>::new(), 0.0);
     let mut death = None;
     let mut casts = BTreeMap::<u32, usize>::new();
@@ -180,13 +185,18 @@ pub(super) fn replay(intake: &Intake) -> Result<Value, String> {
             if event.target != Some(tank.to_bits()) {
                 continue;
             }
+            let self_periodic = self_periodic_damage(event, tank);
             if event.kind == CombatLogKind::Damage
-                && event
-                    .source
-                    .is_some_and(|source| source_entities.contains(&source))
+                && (self_periodic
+                    || event
+                        .source
+                        .is_some_and(|source| source_entities.contains(&source)))
             {
                 let amount = f64::from(event.amount.max(0));
                 taken += amount;
+                if self_periodic {
+                    self_periodic_taken += amount;
+                }
                 recent.push_back((elapsed, amount));
                 recent_sum += amount;
                 while recent
@@ -230,7 +240,8 @@ pub(super) fn replay(intake: &Intake) -> Result<Value, String> {
         .map_or(0.0, |usage| usage.total);
     Ok(
         json!({"spec":66,"source_status":intake.source_status,"duration_seconds":elapsed,
-        "raw_damage":raw,"damage_taken":taken,"mitigation_pct":(raw > 0.0).then(|| 100.0 * (raw - taken) / raw),
+        "raw_damage":raw,"damage_taken":taken,"self_periodic_damage_taken":self_periodic_taken,
+        "mitigation_pct":(raw > 0.0).then(|| 100.0 * (raw - taken) / raw),
         "self_heal_per_second":(elapsed > 0.0).then(|| self_healing / elapsed),
         "absorb_per_second":(elapsed > 0.0).then(|| absorbed / elapsed),"time_to_death":death,
         "active_mitigation_spell":SHIELD_OF_THE_RIGHTEOUS,"active_mitigation_uptime":(elapsed > 0.0).then(|| active_seconds / elapsed),
@@ -357,6 +368,7 @@ fn replay_registered_run_with_healing(
         .len();
     let (mut raw, mut taken, mut self_healing, mut active_seconds, mut spike) =
         (0.0, 0.0, 0.0, 0.0, 0.0_f64);
+    let mut self_periodic_taken = 0.0;
     let (mut recent, mut recent_sum) = (VecDeque::<(f64, f64)>::new(), 0.0);
     let (mut next, mut elapsed, mut death) = (0, 0.0, None);
     let mut casts = BTreeMap::<u32, usize>::new();
@@ -510,9 +522,15 @@ fn replay_registered_run_with_healing(
             if event.target != Some(tank.to_bits()) {
                 continue;
             }
-            if event.kind == CombatLogKind::Damage && event.source == Some(source.to_bits()) {
+            let self_periodic = self_periodic_damage(event, tank);
+            if event.kind == CombatLogKind::Damage
+                && (event.source == Some(source.to_bits()) || self_periodic)
+            {
                 let amount = f64::from(event.amount.max(0));
                 taken += amount;
+                if self_periodic {
+                    self_periodic_taken += amount;
+                }
                 recent.push_back((elapsed, amount));
                 recent_sum += amount;
                 while recent
@@ -581,7 +599,8 @@ fn replay_registered_run_with_healing(
         "self_healing_by_spell":healing_by_spell,"absorbs_by_spell":absorbs_by_spell,"aura_uptime":aura_uptime,
         "resource_counters":counters,"target_debuff_uptime":target_debuff_uptime,
         "rotation_status":"registered_literal_simc","duration_seconds":elapsed,"incoming_events":next,"tank_casts":casts,
-        "raw_damage":raw,"damage_taken":taken,"mitigation_pct":(raw>0.0).then(||100.0*(raw-taken)/raw),
+        "raw_damage":raw,"damage_taken":taken,"self_periodic_damage_taken":self_periodic_taken,
+        "mitigation_pct":(raw>0.0).then(||100.0*(raw-taken)/raw),
         "self_heal_per_second":(elapsed>0.0).then(||self_healing/elapsed),
         "absorb_per_second":(elapsed>0.0).then(||absorbed/elapsed),"time_to_death":death,
         "active_mitigation_auras":mitigation_auras,"active_mitigation_uptime":(elapsed>0.0).then(||active_seconds/elapsed),
