@@ -65,6 +65,7 @@ pub(crate) struct Context<'a> {
     native: NativeFacts<'a>,
     equipment: &'a Equipment,
     consecration_up: bool,
+    guidance_stacks: u8,
     next_armament: Option<u8>,
     potion: &'a str,
 }
@@ -86,6 +87,16 @@ impl<'a> Context<'a> {
                 .with_targets(targets.first().copied(), targets),
             equipment,
             consecration_up,
+            guidance_stacks: world
+                .get::<crate::auras::ActiveAuras>(actor)
+                .and_then(|auras| {
+                    auras.iter().find(|aura| {
+                        aura.spell_id == 433106
+                            && aura.caster == actor
+                            && aura.source == crate::auras::AuraSource::Cast
+                    })
+                })
+                .map_or(0, |aura| aura.stacks),
             next_armament,
             potion,
         }
@@ -101,6 +112,7 @@ impl Facts for Context<'_> {
             // SimC76f8118 player.cpp12317–12335: Protection's third apex row.
             "apex.3" => self.native.value("talent.glory_of_the_vanguard_3.enabled"),
             "consecration.up" => Ok(if self.consecration_up { 1.0 } else { 0.0 }),
+            "buff.divine_guidance.stack" => Ok(f64::from(self.guidance_stacks)),
             // sc_paladin.hpp25–29: Holy Bulwark=0, Sacred Weapon=1.
             "holy_bulwark" => Ok(0.0),
             "next_armament" => self
@@ -125,6 +137,7 @@ impl ActionFacts for Context<'_> {
                 name,
                 "apex.3"
                     | "consecration.up"
+                    | "buff.divine_guidance.stack"
                     | "holy_bulwark"
                     | "next_armament"
                     | "potion.liquid_luster"
