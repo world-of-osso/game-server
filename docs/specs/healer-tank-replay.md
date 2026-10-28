@@ -23,7 +23,7 @@ Replay recorded incoming damage in the native server combat simulation to compar
 - `crates/server-combat/src/followers/simulator/healer_profiles.rs`: benchmark-only healer configuration and initial Holy Paladin decisions.
 - `crates/server-simulation/src/dungeon_simulator/healer_metrics.rs` and `healer_replay.rs`: native healing receipts and recorded-timeline metrics.
 - `crates/server-simulation/src/dungeon_simulator/tank_replay.rs`: isolated native tank replay and metrics.
-- `scripts/healer_tank_replay.py`: native recorded-intake report tables.
+- `scripts/healer_tank_replay.py`: SimC-dummy and native recorded-intake report tables.
 
 ## Tests asserting this spec
 
@@ -35,7 +35,7 @@ Replay recorded incoming damage in the native server combat simulation to compar
 
 ## Known gaps (current cycle)
 
-- [ ] Connect SimC tank-dummy trace input to the healer replay; the CLI currently accepts recorded native intakes only.
+- [ ] Connect SimC tank-dummy trace input to the healer replay; the CLI accepts SimC traces for spec 66 only.
 - [ ] Drive Protection Paladin with its MID2 SimC APL; the initial max-level SimC replay has no rotation.
 - [ ] Extend coverage beyond the initial two specializations.
 
