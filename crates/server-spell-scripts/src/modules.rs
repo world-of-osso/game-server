@@ -220,6 +220,7 @@ register_modules! {
     marksmanship_sentinel: (390, "modules/marksmanship_sentinel.rs"),
     enhancement_crackling: (2637, "modules/enhancement_crackling.rs"),
     melee_reset: (340, "modules/melee_reset.rs"),
+    item_gaze_alnseer: (1000, "modules/item_gaze_alnseer.rs"),
     midnight_item_damage: (1000, "modules/midnight_item_damage.rs"),
     midnight_stat_items: (1000, "modules/midnight_stat_items.rs"),
     midnight_stormbound: (1000, "modules/midnight_stormbound.rs"),

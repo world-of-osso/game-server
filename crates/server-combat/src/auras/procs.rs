@@ -553,6 +553,26 @@ fn proc_chance(world: &mut World, unit: Entity, id: u32, now: f64) -> f32 {
     spell_mods::modify(world, unit, &spell, SpellModOp::ProcChance, chance)
 }
 
+/// Read the native internal-cooldown deadline of an active proc aura.
+pub fn proc_deadline(world: &World, unit: Entity, id: u32) -> Option<f64> {
+    world
+        .get::<ActiveAuras>(unit)?
+        .get(id)
+        .map(|aura| aura.proc.next_ready_at)
+}
+
+/// Change one active proc aura's deadline without changing its RPPM history.
+pub fn set_proc_deadline(world: &mut World, unit: Entity, id: u32, deadline: f64) -> bool {
+    let Some(mut auras) = world.get_mut::<ActiveAuras>(unit) else {
+        return false;
+    };
+    let Some(aura) = auras.get_mut(id) else {
+        return false;
+    };
+    aura.proc.next_ready_at = deadline;
+    true
+}
+
 pub fn policy_proc_ready(world: &World, unit: Entity, id: u32) -> bool {
     let now = aura_now(world);
     world

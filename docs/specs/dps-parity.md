@@ -863,6 +863,10 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 - Spec1467 follower measurements execute all89 preserved MID1 `76f8118` APL rows through shared `literal_rotation`; retain the named missing-MID2 reference gap and complete exported allocations.
 - `empower_to` selects the real native release stage while retaining the selected hostile primary independently of self casts. Fire Breath dot facts observe native357209 owned by that actor. Disintegrate uses the shared channel decision seam, including action-bound `ticks_remain`.
 
+### Gaze of the Alnseer
+
+Equipped1256896 can grant Alnsight1266686; real eligible hits while it is active earn native1266687 stat stacks using the driver's equipped-item-scaled effect0. When Alnsight refreshes during its native750ms proc cooldown, the first hit after that deadline starts a new cooldown, the following hit bypasses it once, and that new deadline then resumes (`unique_gear_midnight.cpp`2020–2098).
+
 ### Measurement
 
 - [ ] Native measurements execute an independent300s sample for every comma-separated `DPS_PARITY_SEEDS` value, default `70448,1,2`. `report.seed` lists the actual seeds, `seed_dps` retains each native DPS, and `combat.dps` is their arithmetic mean. Invalid seed lists or a failed sample fail the measurement; no sample is silently omitted.
