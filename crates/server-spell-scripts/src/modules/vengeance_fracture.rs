@@ -8,8 +8,11 @@ use shared::components::ActiveSpec;
 pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::ResolvedDamage(on_impact)];
 
 fn on_impact(world: &mut World, ctx: &EffectCtx, _: Entity, _: bool, damage: f32) {
-    if damage <= 0.0 || !matches!(ctx.spell.id, 225919 | 225921)
-        || world.get::<ActiveSpec>(ctx.caster).is_none_or(|spec| spec.0 != 581)
+    if damage <= 0.0
+        || !matches!(ctx.spell.id, 225919 | 225921)
+        || world
+            .get::<ActiveSpec>(ctx.caster)
+            .is_none_or(|spec| spec.0 != 581)
     {
         return;
     }
