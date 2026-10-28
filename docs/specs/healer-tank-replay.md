@@ -4,7 +4,7 @@ Replay recorded incoming damage in the native server combat simulation to compar
 
 ## What it must do
 
-- [ ] Load incoming hits with time, damage school, raw amount and target role. Reject invalid timelines rather than silently changing them.
+- [ ] Load incoming hits with time, damage school, raw amount and target role. Reject invalid timelines rather than silently changing them. An optional `--party-trace` replays SimC raid-event source rolls onto the five native party slots alongside the tank trace.
 - [ ] Prefer SimulationCraft tank-dummy output as the timeline source; also accept recorded World of Osso runs. Preserve the distinction between swings, strikes and bleeds. SimC direct damage amounts are source rolls before hit outcomes and must not be reported as post-crit damage.
 - [ ] Use `/home/osso/Projects/world-of-osso/game-server/data/world.db` for every measurement. Use level-90 MID2 profile gear and selected talents for max-level measurements; Stockade is a smoke test. The replay party is single-faction; the healer adopts the tank's faction template while retaining its profile race and stats.
 - [ ] Replay hits against a dummy party through native combat, with Holy Paladin (65) as the first healer and Protection Paladin (66) as the first tank. Extend the same harness to every healer and tank specialization and their spells. The initial Holy Paladin benchmark uses its native learned Holy Light and Flash of Light; this is not complete spell coverage.
@@ -28,6 +28,12 @@ Replay recorded incoming damage in the native server combat simulation to compar
 ## Specialization notes
 
 - [Guardian Druid (104)](healer-tank-replay/104.md)
+
+## SimC party-pressure trace
+
+The second canonical healer input is `game-engine/data/diagnostics/healer-tank-replay/66.simc-party-pulse-seed70448.debug.log`. It adds a 20,000 Shadow pulse every 12 seconds from 8 seconds through 296 seconds. This is a reproducible synthetic dungeon-pressure scenario, not a measured dungeon encounter. SimC `76f8118` generates the five recipient source rolls with the MID2 Protection profile and four named copies; the native replay maps them to its tank, healer and three DPS followers. The original tank-only trace still supplies the tank's melee and bleed rolls.
+
+Generate it with the pinned `engine/simc`, the MID2 Protection profile, `copy=party_healer copy=party_damage_1 copy=party_damage_2 copy=party_damage_3 tank_dummy=Tank_Dummy_Dungeon iterations=1 threads=1 max_time=300 fixed_time=1 vary_combat_length=0 seed=70448 debug=1 'raid_events+=/damage,first=8,cooldown=12,amount=20000,type=shadow'` and the canonical output path. The copied SimC actors supply event slots, not reference healer or DPS behavior.
 
 ## How it works
 

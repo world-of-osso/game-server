@@ -37,9 +37,30 @@ pub(super) fn replay_simc(
     replay_with_registry(spec, trace, duration, seed, POLICIES)
 }
 
+pub(super) fn replay_simc_party(
+    spec: u32,
+    trace: &Path,
+    party_trace: &Path,
+    duration: u32,
+    seed: u64,
+) -> Result<Value, String> {
+    replay_with_party_registry(spec, trace, Some(party_trace), duration, seed, POLICIES)
+}
+
 fn replay_with_registry(
     spec: u32,
     trace: &Path,
+    duration: u32,
+    seed: u64,
+    registry: &[Registration],
+) -> Result<Value, String> {
+    replay_with_party_registry(spec, trace, None, duration, seed, registry)
+}
+
+fn replay_with_party_registry(
+    spec: u32,
+    trace: &Path,
+    party_trace: Option<&Path>,
     duration: u32,
     seed: u64,
     registry: &[Registration],
@@ -68,6 +89,10 @@ fn replay_with_registry(
         return Err("SIMC_REPLAY_DURATION_ZERO".into());
     }
     let hits = crate::simc_tank_timeline::read_trace(trace, "Tank_Dummy_Dungeon")?;
+    let party_hits = party_trace
+        .map(super::healer_party_trace::read)
+        .transpose()?
+        .unwrap_or_default();
     let _rng = crate::random::seed_scope(seed);
     let mut run = super::dps_parity::prepare_registered_player(66, 1)?;
     let healer = super::dps_parity::spawn_second_reference_player(&mut run, spec)?;
@@ -85,6 +110,13 @@ fn replay_with_registry(
         healer,
     )?;
     let members: Vec<_> = party.members.iter().copied().chain([tank]).collect();
+    let party_slots = [
+        tank,
+        healer,
+        party.members[0],
+        party.members[1],
+        party.members[2],
+    ];
     let source = run.targets[0];
     let started_at = run.app.world().resource::<bevy::prelude::Time>().elapsed();
     super::dps_parity::install_fixture_lifetimes(&mut run, started_at);
@@ -109,6 +141,7 @@ fn replay_with_registry(
     let mut healer_casts = std::collections::BTreeMap::<u32, u32>::new();
     let mut mitigation_ticks = 0_u32;
     let mut next = 0;
+    let mut next_party = 0;
     for tick in 1..=duration
         .checked_mul(20)
         .ok_or("SIMC_REPLAY_DURATION_OUT_OF_RANGE")?
@@ -127,6 +160,22 @@ fn replay_with_registry(
                 recorder.sample_minima(run.app.world());
             }
             next += 1;
+        }
+        while let Some(hit) = party_hits
+            .get(next_party)
+            .filter(|hit| hit.time_ms <= u64::from(tick) * 50)
+        {
+            let target = party_slots[hit.slot];
+            if run
+                .app
+                .world()
+                .get::<Health>(target)
+                .is_some_and(|health| health.current > 0.0)
+            {
+                deliver_party_hit(run.app.world_mut(), source, target, hit.amount);
+                recorder.sample_minima(run.app.world());
+            }
+            next_party += 1;
         }
         if run
             .app
@@ -172,11 +221,30 @@ fn replay_with_registry(
     }
     Ok(
         json!({"spec":spec,"level":90,"reference_tier":"MID2","timeline":"simc_tank_dummy",
-        "duration_seconds":duration,"incoming_events":next,"tank_spec":66,
+        "duration_seconds":duration,"incoming_events":next,"party_incoming_events":next_party,"tank_spec":66,
         "tank_casts":tank_casts,"healer_casts":healer_casts,
         "tank_active_mitigation_seconds":f64::from(mitigation_ticks) / 20.0,
         "metrics":recorder.report(duration)}),
     )
+}
+
+fn deliver_party_hit(world: &mut World, source: Entity, target: Entity, amount: f32) {
+    // SimC76f8118 raid_event.cpp:1814-1866: non-critical Shadow spell source roll.
+    let spell = crate::spell_info::SpellInfo {
+        misc: Some(crate::spell_info::SpellMisc {
+            school_mask: 32,
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
+    let ctx = crate::spell_cast::effects::EffectCtx {
+        caster: source,
+        spell: &spell,
+        depth: 0,
+        dest: None,
+        chain_multiplier: 1.0,
+    };
+    crate::spell_cast::effects::deal_damage(world, &ctx, target, amount, false, false);
 }
 
 fn deliver_hit(

@@ -1,0 +1,10 @@
+8.000 Enemy 'Tank_Dummy_Dungeon' direct amount for Action 'raid_damage_shadow' (0): amount=20000.000000 initial_amount=20000.000000
+8.000 Tank_Dummy_Dungeon raid_damage_shadow MID2_Paladin_Protection: snapshot_flags=0 raw_amount=20000
+8.000 Enemy 'Tank_Dummy_Dungeon' direct amount for Action 'raid_damage_shadow' (0): amount=20000.000000 initial_amount=20000.000000
+8.000 Tank_Dummy_Dungeon raid_damage_shadow party_healer: snapshot_flags=0 raw_amount=20000
+8.000 Enemy 'Tank_Dummy_Dungeon' direct amount for Action 'raid_damage_shadow' (0): amount=20000.000000 initial_amount=20000.000000
+8.000 Tank_Dummy_Dungeon raid_damage_shadow party_damage_1: snapshot_flags=0 raw_amount=20000
+8.000 Enemy 'Tank_Dummy_Dungeon' direct amount for Action 'raid_damage_shadow' (0): amount=20000.000000 initial_amount=20000.000000
+8.000 Tank_Dummy_Dungeon raid_damage_shadow party_damage_2: snapshot_flags=0 raw_amount=20000
+8.000 Enemy 'Tank_Dummy_Dungeon' direct amount for Action 'raid_damage_shadow' (0): amount=20000.000000 initial_amount=20000.000000
+8.000 Tank_Dummy_Dungeon raid_damage_shadow party_damage_3: snapshot_flags=0 raw_amount=20000

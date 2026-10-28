@@ -21,7 +21,7 @@ HEALERS = ('65', '105', '256', '257', '264', '270', '1468')
 TANKS = ('66', '73', '104', '250', '268', '581')
 
 
-def run_replay(timeline, spec, source, duration, seed, profile_dir, executable, external_healing, mode='tank'):
+def run_replay(timeline, spec, source, duration, seed, profile_dir, executable, external_healing, mode='tank', party_trace=None):
     environment = os.environ | {
         'HEALER_TANK_TIMELINE': str(timeline), 'HEALER_TANK_SPEC': str(spec),
         'HEALER_TANK_SOURCE': source, 'HEALER_TANK_MODE': mode, 'HEALER_TANK_DURATION': str(duration),
@@ -29,6 +29,8 @@ def run_replay(timeline, spec, source, duration, seed, profile_dir, executable, 
         'DPS_PARITY_OUTPUT': str(profile_dir), 'DPS_PARITY_ACTOR': 'player',
         'HEALER_TANK_EXTERNAL_HEALING': '1' if external_healing else '0',
     }
+    if party_trace is not None and mode == 'healer':
+        environment['HEALER_TANK_PARTY_TRACE'] = str(party_trace)
     if executable:
         command = [str(executable), DRIVER, '--exact', '--ignored', '--nocapture']
     else:
@@ -115,14 +117,14 @@ def build_replay_executable():
     return Path(executables[0])
 
 
-def run_all(trace_dir, executable, output_dir, jobs, profile_dir=None):
+def run_all(trace_dir, executable, output_dir, jobs, profile_dir=None, party_trace=None):
     output_dir.mkdir(parents=True, exist_ok=True)
     def run(item):
         mode, spec, healed = item
         profiles = profile_dir or ALL_PROFILES
         trace_spec = '66' if mode == 'healer' else spec
         timeline = (trace_dir / f'{trace_spec}.simc-trace.log').resolve(strict=True)
-        report = run_replay(timeline, spec, 'simc', 300, 70448, profiles, executable, healed, mode)
+        report = run_replay(timeline, spec, 'simc', 300, 70448, profiles, executable, healed, mode, party_trace)
         suffix = 'healed' if healed else 'unhealed'
         path = output_dir / f'{mode}-{spec}-{suffix}.json'
         path.write_text(json.dumps(report, indent=2) + '\n')
@@ -155,6 +157,7 @@ def run_all(trace_dir, executable, output_dir, jobs, profile_dir=None):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--timeline', type=Path, help='SimC debug trace or recorded intake JSON')
+    parser.add_argument('--party-trace', type=Path, help='SimC raid-event party damage trace for healer replays')
     parser.add_argument('--all', action='store_true', help='run all healer and tank benchmarks')
     parser.add_argument('--trace-dir', type=Path, default=TRACE_DIR, help='directory of per-tank --all traces')
     parser.add_argument('--output-dir', type=Path, help='directory for --all detail JSON reports')
@@ -177,8 +180,11 @@ def main():
         executable = args.executable.resolve(strict=True) if args.executable else build_replay_executable()
         output = args.output_dir or TRACE_DIR / datetime.now().strftime('all-%Y-%m-%d-%H%M%S')
         profiles = args.profile_dir.resolve(strict=True) if args.profile_dir else None
-        run_all(trace_dir, executable, output, args.jobs, profiles)
+        party_trace = args.party_trace.resolve(strict=True) if args.party_trace else None
+        run_all(trace_dir, executable, output, args.jobs, profiles, party_trace)
         return 0
+    if args.party_trace and (args.mode != 'healer' or args.source != 'simc'):
+        parser.error('--party-trace requires SimC healer mode or --all')
     if args.timeline is None:
         parser.error('--timeline is required unless --all is used')
     if args.simc_tank_heal and args.source != 'simc':
@@ -196,7 +202,7 @@ def main():
     executable = args.executable.resolve(strict=True) if args.executable else None
     all_specs = ('66', '73', '104', '250', '268', '581') if args.source == 'simc' else ('65', '66')
     for spec in (all_specs if args.spec == 'all' else (args.spec,)):
-        report = run_replay(timeline, spec, args.source, args.duration, args.seed, profile_dir, executable, args.simc_tank_heal, args.mode)
+        report = run_replay(timeline, spec, args.source, args.duration, args.seed, profile_dir, executable, args.simc_tank_heal, args.mode, args.party_trace.resolve(strict=True) if args.party_trace else None)
         if args.mode == 'healer' or (args.source == 'recorded' and spec == '65'):
             print_healer(report)
         else:
