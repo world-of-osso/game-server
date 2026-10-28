@@ -448,6 +448,45 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "requires canonical world database and MID2 Blood inputs"]
+    fn blood_shield_cap_follows_bloody_reflection() {
+        let mut run = super::super::prepare_registered_player(250, 1).unwrap();
+        let actor = run.actor;
+        assert!(crate::auras::has_aura(run.app.world(), actor, 1279633));
+        let max = run.app.world().get::<shared::components::Health>(actor).unwrap().max;
+        crate::spell_cast::cast_triggered_with_effect0_amount(run.app.world_mut(), actor, 77535, Some(actor), 1, max);
+        let (_, selected) = crate::auras::absorb_damage(run.app.world_mut(), actor, 1, max);
+        assert!((selected - max * 0.65).abs() < 2.0, "selected Bloody Reflection raises the actual cap: {selected}/{max}");
+        crate::auras::remove_auras(run.app.world_mut(), actor, crate::auras::RemoveReason::Cancelled, |a| a.spell_id == 1279633);
+        crate::spell_cast::cast_triggered_with_effect0_amount(run.app.world_mut(), actor, 77535, Some(actor), 1, max);
+        let (_, unselected) = crate::auras::absorb_damage(run.app.world_mut(), actor, 1, max);
+        assert!((unselected - max * 0.50).abs() < 2.0, "without Bloody Reflection the native cap is 50%: {unselected}/{max}");
+    }
+
+    #[test]
+    #[ignore = "requires canonical world database and MID2 Blood inputs"]
+    fn blood_crimson_scourge_builds_real_ground_and_sanguine_follows_position() {
+        let _seed = crate::random::seed_scope(70448);
+        let mut run = super::super::prepare_registered_player(250, 1).unwrap();
+        let actor = run.actor;
+        super::super::engage(&mut run);
+        for _ in 0..2000 {
+            super::super::drive_literal_tick(&mut run).unwrap();
+            run.app.update();
+            if crate::auras::has_aura(run.app.world(), actor, 391459) { break; }
+        }
+        assert!(crate::auras::has_aura(run.app.world(), actor, 188290), "real Death and Decay must include its caster");
+        assert!(crate::auras::has_aura(run.app.world(), actor, 391459), "selected Sanguine Ground must follow actual ground");
+        let original = *run.app.world().get::<shared::components::Position>(actor).unwrap();
+        run.app.world_mut().get_mut::<shared::components::Position>(actor).unwrap().x += 50.0;
+        run.app.update();
+        assert!(!crate::auras::has_aura(run.app.world(), actor, 391459), "leaving the ground removes the healing buff");
+        *run.app.world_mut().get_mut::<shared::components::Position>(actor).unwrap() = original;
+        run.app.update();
+        assert!(crate::auras::has_aura(run.app.world(), actor, 391459), "returning to the active field restores the buff");
+    }
+
+    #[test]
     #[ignore = "requires canonical world database, MID2 Blood inputs and SimC tank trace"]
     fn blood_replays_mid2_tank_dummy_with_literal_rotation() {
         let trace =
