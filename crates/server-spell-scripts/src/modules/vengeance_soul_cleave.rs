@@ -95,7 +95,8 @@ fn launch(world: &mut World, caster: Entity, spell: &SpellInfo) {
             .find(|effect| effect.index == index)
             .expect("native Soul Cleave effect")
     };
-    let maximum = effect(1).base_points + effect(2).base_points;
+    let maximum = spell_cast::scripts::script_effect_value(world, caster, 228477, 1)
+        + spell_cast::scripts::script_effect_value(world, caster, 228477, 2);
     assert!(
         maximum >= 0.0 && maximum.fract() == 0.0,
         "invalid native Soul Cleave fragment cap"
