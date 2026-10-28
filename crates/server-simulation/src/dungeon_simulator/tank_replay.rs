@@ -236,6 +236,27 @@ pub(super) fn replay(intake: &Intake) -> Result<Value, String> {
     )
 }
 
+/// Parse every action row from the pinned MID2 Protection profile.
+pub(super) fn protection_program(actions: &Value) -> Result<server::simc_apl::Program, String> {
+    let lines = actions.as_array().ok_or("MID2_PROTECTION_ACTIONS_ABSENT")?;
+    let mut rows = Vec::with_capacity(lines.len());
+    for line in lines {
+        let line = line.as_str().ok_or("MID2_PROTECTION_ACTION_NOT_TEXT")?;
+        let (head, action) = line
+            .split_once("+=")
+            .or_else(|| line.split_once('='))
+            .ok_or_else(|| format!("invalid MID2 Protection action: {line}"))?;
+        let list = if head == "actions" {
+            "default"
+        } else {
+            head.strip_prefix("actions.")
+                .ok_or_else(|| format!("invalid MID2 Protection list: {head}"))?
+        };
+        rows.push((list, action.strip_prefix('/').unwrap_or(action)));
+    }
+    server::simc_apl::Program::parse(&rows)
+}
+
 /// Run SimC's pre-outcome dummy pressure against the actual MID2 parity player.
 pub(super) fn replay_simc(
     path: &std::path::Path,

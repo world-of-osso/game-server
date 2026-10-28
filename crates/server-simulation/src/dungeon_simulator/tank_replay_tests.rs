@@ -2,6 +2,47 @@ use super::healer_intake::Intake;
 use std::path::Path;
 
 #[test]
+#[ignore = "reads the pinned MID2 Protection profile"]
+fn protection_apl_selects_shield_using_the_real_profile_conditions() {
+    use server::simc_apl::{Action, ActionFacts, Facts};
+    struct FactsForShield {
+        full_power: bool,
+    }
+    impl Facts for FactsForShield {
+        fn value(&self, name: &str) -> Result<f64, String> {
+            Ok(match name {
+                "holy_power" if self.full_power => 5.0,
+                "talent.instrument_of_the_divine" | "buff.valor.up" | "buff.divine_purpose.up"
+                    if !self.full_power =>
+                {
+                    1.0
+                }
+                _ => 0.0,
+            })
+        }
+    }
+    impl ActionFacts for FactsForShield {
+        fn value_for(&self, _: &Action, name: &str) -> Result<f64, String> {
+            self.value(name)
+        }
+    }
+    let (profile, _) = super::dps_parity::read_reference(66).unwrap();
+    let program = super::tank_replay::protection_program(&profile.options["actions"]).unwrap();
+    let select = |full_power| {
+        program
+            .select(
+                "default",
+                &FactsForShield { full_power },
+                &mut program.state(),
+                |action| Ok(action.name == "shield_of_the_righteous"),
+            )
+            .unwrap()
+    };
+    assert_eq!(select(true).unwrap().name, "shield_of_the_righteous");
+    assert!(select(false).is_none());
+}
+
+#[test]
 #[ignore = "requires the MID2 66 profile, canonical world database and SimC tank-dummy trace"]
 fn protection_paladin_replays_simc_pressure_with_mid2_gear() {
     let path = std::env::var("HEALER_TANK_SIMC_TRACE").expect("HEALER_TANK_SIMC_TRACE required");
