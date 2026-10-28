@@ -199,9 +199,9 @@ impl SummonDamageModifiers<'_, '_> {
                 .get(owner)
                 .map_or(1.0, |mods| mods.pet_melee_time_mult)
         };
-        // SimC76f8118 pet.cpp222–228: actual demons inherit owner attack haste.
+        // SimC76f8118 pet.cpp222–228: pets inherit live owner attack haste.
         // Stat-bearing actors already use their own haste in the swing clock.
-        let owner_haste = if self.demons.get(unit).is_ok() && self.stats.get(unit).is_err() {
+        let owner_haste = if self.stats.get(unit).is_err() {
             self.stats
                 .get(owner)
                 .map_or(1.0, |stats| 1.0 / (1.0 + stats.haste_pct / 100.0))

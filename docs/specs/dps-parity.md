@@ -22,6 +22,10 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 ### Owned pet target damage
 
 - A target aura's native effect381 modifies damage from its caster's controlled pets, while effect380 applies to that caster's guardians. Other owners and non-pet actors do not inherit either effect (SimC76f8118 `sc_death_knight.cpp17013–17025`).
+### Pet melee haste
+
+- Statless controlled pets and guardians use their owner's live attack haste for melee swings; stat-bearing pets retain their own haste clock (SimC76f8118 `pet.cpp222–228`).
+
 ### Unholy Outnumber
 
 - Each actual lesser ghoul contributes one owner Lesser Ghoul counter stack from arrival to dismissal. Selected Outnumber supplies the counter's native per-stack controlled-pet damage bonus, including temporary Putrefy ghouls (SimC76f8118 `sc_death_knight.cpp3673–3689`).

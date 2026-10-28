@@ -447,6 +447,7 @@ mod survival_unnatural_causes_tests;
 mod survival_wildfire_infusion_tests;
 mod trigger_primary_tests;
 mod unholy_tests;
+mod unholy_lesser_haste_tests;
 mod venomcursed_tests;
 mod windwalker_tigereye_tests;
 mod warrior_proc_tests;
