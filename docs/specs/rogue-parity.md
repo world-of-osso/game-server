@@ -16,6 +16,10 @@ Assassination259 combat and the shared Rogue attack-speed and Vanish paths follo
 
 - [x] Each landed native Mutilate hand funds394021 with its resolved damage times selected381673 effect0's native fraction. Native cadence, duration, rolling carry and no-second-crit flags remain authoritative. Its actual over-time snapshot retains native Implacable periodic modifiers, not the unused direct-damage Lethal Dose override. Source: `sc_rogue.cpp5131–5135,7993–7999`, `player.cpp957–964`, `residual_action.hpp147–162`.
 
+### Subtlety Premeditation
+
+- [x] Selected Premeditation grants its native buff on entering Stealth, Vanish or Shadow Dance. The next landed combo-point generator consumes it and grants its native combo points before Shadow Techniques storage is collected. Source: `sc_rogue.cpp2709–2716,7345–7355`.
+
 ### Stealth and bleed children
 
 - [x] Literal `pmultiplier` and `dot.garrote.pmultiplier` read the action target's owned Garrote application factor, not a fixed1.0. An absent bleed returns0; an applied factor persists after the stealth window and is replaced by its next real refresh. Capture only the native cast factor already applied to damage; do not change damage values. Source: `sc_rogue.cpp4551–4561`, `dot.cpp568–573`.

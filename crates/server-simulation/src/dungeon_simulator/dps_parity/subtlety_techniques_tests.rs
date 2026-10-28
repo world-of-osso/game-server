@@ -2,6 +2,43 @@
 use super::*;
 use shared::{components::PowerType, protocol::CombatLogKind};
 
+#[test]
+#[ignore = "requires private native261 profile/traits and player actor"]
+fn subtlety_premeditation_stealth_builder_grants_full_points_once() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(261, 1).unwrap();
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, 343160));
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, 343173));
+    engage(&mut run);
+    let actor = run.actor;
+    let target = run.targets[0];
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        actor,
+        literal_rotation::execution::Execution::Spell(185438, target, Some(target)),
+    )
+    .unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    let (points, maximum) =
+        crate::spell_cast::powers::power_value(run.app.world(), actor, PowerType::ComboPoints)
+            .unwrap();
+    assert_eq!(
+        points, maximum,
+        "landed native builder consumes Premeditation to fill combo points"
+    );
+    assert!(!crate::auras::has_aura(run.app.world(), actor, 343173));
+    assert!(
+        run.app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|event| event.spell_id == Some(185438)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0)
+    );
+}
+
 fn stored(run: &Run) -> u8 {
     run.app
         .world()
@@ -59,6 +96,12 @@ fn subtlety_techniques_actual_white_hits_store_points_without_spending_them() {
 fn subtlety_techniques_native_builder_collects_only_points_missing_after_base_gain() {
     let mut run = prepare_literal(261, 1).unwrap();
     engage(&mut run);
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        run.actor,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 343173,
+    );
     crate::auras::apply_aura(
         run.app.world_mut(),
         &crate::auras::AuraApplication {

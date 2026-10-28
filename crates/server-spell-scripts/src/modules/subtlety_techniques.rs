@@ -23,6 +23,8 @@ const DANCE: u32 = 185313;
 const SHADOWCRAFT: u32 = 426594;
 const ANCIENT_ARTS: u32 = 1268939;
 const ANCIENT_ARTS_BUFF: u32 = 1269163;
+const PREMEDITATION: u32 = 343160;
+const PREMEDITATION_BUFF: u32 = 343173;
 
 #[derive(Component)]
 struct WhiteProgress {
@@ -38,7 +40,7 @@ struct BuilderGain {
 }
 
 fn owns_proc(spell: u32) -> bool {
-    matches!(spell, PASSIVE | STORAGE)
+    matches!(spell, PASSIVE | STORAGE | PREMEDITATION_BUFF)
 }
 
 fn is_subtlety(world: &World, caster: Entity) -> bool {
@@ -155,6 +157,7 @@ fn collect_finished_builder(world: &mut World, caster: Entity, spell: &SpellInfo
         return;
     }
     world.entity_mut(caster).remove::<BuilderGain>();
+    collect_premeditation(world, caster);
     let Some((instance, stored)) = read_storage(world, caster) else {
         return;
     };
@@ -168,6 +171,35 @@ fn collect_finished_builder(world: &mut World, caster: Entity, spell: &SpellInfo
         super::subtlety_clone::schedule_builder(world, caster, spell, consumed);
     }
     grant_ancient_arts(world, caster);
+}
+
+fn collect_premeditation(world: &mut World, caster: Entity) {
+    let Some(instance) = world
+        .get::<ActiveAuras>(caster)
+        .and_then(|auras| {
+            auras
+                .iter()
+                .find(|aura| aura.spell_id == PREMEDITATION_BUFF && aura.caster == caster)
+        })
+        .map(|aura| aura.instance_id)
+    else {
+        return;
+    };
+    let spell = world
+        .resource::<SpellStore>()
+        .get(PREMEDITATION)
+        .expect("native Premeditation talent")
+        .clone();
+    let amount = spell_cast::scripts::script_effect_value(world, caster, PREMEDITATION, 0);
+    let ctx = effects::EffectCtx {
+        caster,
+        spell: &spell,
+        depth: 1,
+        dest: None,
+        chain_multiplier: 1.0,
+    };
+    effects::energize_unit(world, &ctx, caster, PowerType::ComboPoints, amount, false);
+    auras::remove_instance(world, caster, instance, auras::RemoveReason::Consumed);
 }
 
 fn collect_points(world: &mut World, caster: Entity, instance: u32, consumed: u8) {

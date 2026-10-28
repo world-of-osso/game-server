@@ -8,6 +8,8 @@ use combat::spell_cast;
 
 const TALENT: u32 = 108209;
 const FOCUS: u32 = 112942;
+const PREMEDITATION: u32 = 343160;
+const PREMEDITATION_BUFF: u32 = 343173;
 const STEALTH: u32 = 1784;
 const STEALTH_CHILD: u32 = 158185;
 const VANISH_BUFF: u32 = 11327;
@@ -15,8 +17,14 @@ pub(super) const DANCE: u32 = 185313;
 
 pub(super) fn grant(world: &mut World, unit: Entity, aura: &AuraInstance) {
     let stealth_like = matches!(aura.spell_id, STEALTH | VANISH_BUFF | DANCE);
-    if stealth_like && unit == aura.caster && has_talent(world, unit, TALENT) {
+    if !stealth_like || unit != aura.caster {
+        return;
+    }
+    if has_talent(world, unit, TALENT) {
         spell_cast::cast_triggered(world, unit, FOCUS, Some(unit), 1);
+    }
+    if has_talent(world, unit, PREMEDITATION) {
+        spell_cast::cast_triggered(world, unit, PREMEDITATION_BUFF, Some(unit), 1);
     }
 }
 
