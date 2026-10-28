@@ -19,6 +19,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::EnemyContextHit(death_strike_hit),
     SpellScriptHook::RawHeal(blood_shield_from_heal),
     SpellScriptHook::AfterForegroundSpecial(consume_hemostasis),
+    SpellScriptHook::TargetContextDamageMultiplier(sanguination_damage),
 ];
 const DEATH_STRIKE: u32 = 49998;
 const HEAL: u32 = 45470;
@@ -28,6 +29,21 @@ const IMPROVED: u32 = 374277;
 const VORACIOUS: u32 = 273953;
 const VAMPIRIC_BLOOD: u32 = 55233;
 const HEMOSTASIS: u32 = 273947;
+
+// SimC76f8118 sc_death_knight.cpp10070–10091: Sanguination scales the
+// owner's Death Strike with actual target missing health, capped at 80%.
+fn sanguination_damage(world: &World, ctx: &EffectCtx<'_>, target: Entity, periodic: bool) -> f32 {
+    if periodic || ctx.spell.id != DEATH_STRIKE || !blood(world, ctx.caster)
+        || !combat::auras::has_aura(world, ctx.caster, 326801) {
+        return 1.0;
+    }
+    let Some(health) = world.get::<Health>(target).filter(|health| health.max > 0.0) else {
+        return 1.0;
+    };
+    let bond = 1.0 + aura_effect(world, ctx.caster, 374261, 0).unwrap_or(0.0) / 100.0;
+    let missing = (1.0 - health.current / health.max).clamp(0.0, 0.8);
+    (1.0 + missing * (1.0 + 0.25 * bond)) * bond
+}
 
 #[derive(Component, Default)]
 struct RecentDamage {
