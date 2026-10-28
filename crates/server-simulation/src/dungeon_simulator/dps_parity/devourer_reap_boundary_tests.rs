@@ -115,6 +115,11 @@ fn devourer_reap_consumes_active_lesser_fragments_and_hits() {
     // SimC76f8118 sc_demon_hunter.cpp5981–6018,6081–6107: Reap consumes
     // active lesser fragments on execution and deals delayed native1225823 damage.
     assert_fragment_damage_boundary(&mut run, before, 1226019, 1225823);
+    for _ in 0..40 {
+        run.app.update();
+    }
+    // SimC76f8118 cpp5982–5999,6081–6107 executes one Reap damage child.
+    assert!(!observed(&run, 1225827, CombatLogKind::Damage, true), "Reap must not also deal legacy child damage");
 }
 
 #[test]
