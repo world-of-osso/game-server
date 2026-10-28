@@ -4,6 +4,79 @@ use shared::protocol::CombatLogKind;
 
 #[test]
 #[ignore = "requires private native260 player profile and traits"]
+fn outlaw_blade_flurry_applies_owned_fazed_to_its_secondary_recipient() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(260, 3).unwrap();
+    engage(&mut run);
+    crate::spell_cast::cast_triggered(
+        run.app.world_mut(),
+        run.actor,
+        441144,
+        Some(run.targets[1]),
+        1,
+    );
+    let aura = run
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(run.targets[1])
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 441224 && aura.caster == run.actor)
+        .expect("real Unseen Blade earns owned Fazed");
+    let multiplier = 1.0
+        + aura
+            .effects
+            .iter()
+            .find(|effect| effect.index == 0)
+            .unwrap()
+            .amount
+            * aura.stack_multiplier()
+            / 100.0;
+    assert!(multiplier > 1.0);
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(13877, run.actor, Some(run.targets[0])),
+    )
+    .unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    run.app
+        .world_mut()
+        .resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .clear();
+    crate::spell_cast::cast_triggered(
+        run.app.world_mut(),
+        run.actor,
+        193315,
+        Some(run.targets[0]),
+        1,
+    );
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    let copy = |target: Entity| {
+        events
+            .iter()
+            .find(|event| {
+                event.target == Some(target.to_bits())
+                    && event.spell_id == Some(22482)
+                    && event.kind == CombatLogKind::Damage
+            })
+            .expect("same source must copy to each secondary")
+            .amount as f32
+    };
+    let (marked, unmarked) = (copy(run.targets[1]), copy(run.targets[2]));
+    assert!(
+        (marked - unmarked * multiplier).abs() <= 3.0,
+        "Fazed recipient {marked} must receive native multiplier {multiplier} versus {unmarked}"
+    );
+}
+
+#[test]
+#[ignore = "requires private native260 player profile and traits"]
 fn outlaw_blade_flurry_copies_can_trigger_poison_on_each_secondary() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(260, 3).unwrap();
