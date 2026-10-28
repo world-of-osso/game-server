@@ -830,4 +830,51 @@ mod tests {
             "Shield Slam consumes outburst"
         );
     }
+    #[test]
+    #[ignore = "requires canonical MID2 Protection profile"]
+    fn protection_demolish_channel_delivers_three_hits_and_selected_decimator() {
+        use super::super::literal_rotation::execution::{Execution, execute};
+        use shared::protocol::CombatLogKind;
+        for selected in [false, true] {
+            let mut run = super::super::prepare_measurement(73, 1).unwrap();
+            super::super::engage(&mut run);
+            let actor = run.actor;
+            let target = run.targets[0];
+            if !selected {
+                crate::auras::remove_auras(
+                    run.app.world_mut(),
+                    actor,
+                    crate::auras::RemoveReason::Consumed,
+                    |aura| aura.spell_id == 1270704,
+                );
+            }
+            execute(
+                run.app.world_mut(),
+                actor,
+                Execution::Spell(436358, target, Some(target)),
+            )
+            .unwrap();
+            for _ in 0..30 {
+                run.app.update();
+            }
+            let events = &run
+                .app
+                .world()
+                .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+                .0;
+            for spell in [440884, 440886, 440888] {
+                assert!(
+                    events.iter().any(|event| event.spell_id == Some(spell)
+                        && event.kind == CombatLogKind::Damage
+                        && event.amount > 0),
+                    "missing Demolish hit {spell}"
+                );
+            }
+            assert_eq!(
+                crate::auras::has_aura(run.app.world(), target, 262115),
+                selected,
+                "only selected Decimator applies Deep Wounds"
+            );
+        }
+    }
 }
