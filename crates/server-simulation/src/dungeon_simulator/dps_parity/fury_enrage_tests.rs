@@ -455,3 +455,105 @@ fn fury_rampaging_berserker_changes_paid_cost_and_hit_only_during_recklessness()
         reckless_only.1
     );
 }
+
+#[test]
+#[ignore = "requires exact Fury72 native player profile and MID2 equipment"]
+fn fury_mid2_recklessness_extensions_follow_casts_cap_and_hard_cast_reset() {
+    use super::literal_rotation::execution::{Execution, execute};
+    use crate::spell_cast::powers::PowerPools;
+    use shared::components::PowerType;
+    for selected in [false, true] {
+        let _seed = crate::random::seed_scope(70_448);
+        let mut run = prepare_measurement(72, 1).unwrap();
+        engage(&mut run);
+        let actor = run.actor;
+        let target = run.targets[0];
+        assert!(crate::auras::has_aura(run.app.world(), actor, 1296645));
+        if !selected {
+            crate::auras::remove_auras(
+                run.app.world_mut(),
+                actor,
+                crate::auras::RemoveReason::Consumed,
+                |aura| aura.spell_id == 1296645,
+            );
+        }
+        execute(
+            run.app.world_mut(),
+            actor,
+            Execution::Spell(1719, actor, Some(target)),
+        )
+        .unwrap();
+        for _ in 0..40 {
+            run.app.update();
+        }
+        let expiry = |run: &Run| {
+            run.app
+                .world()
+                .get::<ActiveAuras>(actor)
+                .unwrap()
+                .iter()
+                .find(|a| a.spell_id == 1719 && a.caster == actor)
+                .unwrap()
+                .expires_at
+                .unwrap()
+        };
+        let initial = expiry(&run);
+        for index in 0..4 {
+            crate::spell_cast::restore_charges(run.app.world_mut(), actor, 1672, 2);
+            run.app
+                .world_mut()
+                .get_mut::<PowerPools>(actor)
+                .unwrap()
+                .get_mut(PowerType::Rage)
+                .unwrap()
+                .current = 1000.0;
+            execute(
+                run.app.world_mut(),
+                actor,
+                Execution::Spell(85288, target, Some(target)),
+            )
+            .unwrap();
+            for _ in 0..40 {
+                run.app.update();
+            }
+            let expected = if selected {
+                f64::from((index + 1).min(3)) * 2.0
+            } else {
+                0.0
+            };
+            assert!(
+                (expiry(&run) - initial - expected).abs() < 0.01,
+                "selected={selected} cast={index}"
+            );
+        }
+        run.app
+            .world_mut()
+            .entity_mut(actor)
+            .insert(crate::spell_cast::SpellHistory::default());
+        execute(
+            run.app.world_mut(),
+            actor,
+            Execution::Spell(1719, actor, Some(target)),
+        )
+        .unwrap();
+        for _ in 0..40 {
+            run.app.update();
+        }
+        let fresh = expiry(&run);
+        crate::spell_cast::restore_charges(run.app.world_mut(), actor, 1672, 2);
+        execute(
+            run.app.world_mut(),
+            actor,
+            Execution::Spell(85288, target, Some(target)),
+        )
+        .unwrap();
+        for _ in 0..2 {
+            run.app.update();
+        }
+        let expected = if selected { 2.0 } else { 0.0 };
+        assert!(
+            (expiry(&run) - fresh - expected).abs() < 0.01,
+            "hard cast resets the extension cap"
+        );
+    }
+}
