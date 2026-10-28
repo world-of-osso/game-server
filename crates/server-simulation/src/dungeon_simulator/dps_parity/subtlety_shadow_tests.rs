@@ -2,6 +2,41 @@
 use super::*;
 use shared::{components::PowerType, protocol::CombatLogKind};
 
+#[test]
+#[ignore = "requires private native261 profile/traits and player actor"]
+fn subtlety_shadow_dance_refuses_active_recast_and_allows_after_expiry() {
+    let mut run = prepare_literal(261, 3).unwrap();
+    engage(&mut run);
+    let actor = run.actor;
+    let target = run.targets[0];
+    let dance = || literal_rotation::execution::Execution::Spell(185313, actor, Some(target));
+    literal_rotation::execution::execute(run.app.world_mut(), actor, dance()).unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    assert!(crate::auras::has_aura(run.app.world(), actor, 185313));
+    let failure =
+        literal_rotation::execution::execute(run.app.world_mut(), actor, dance()).unwrap_err();
+    assert!(
+        failure.contains("CasterAuraState"),
+        "real recast must be refused: {failure}"
+    );
+    for _ in 0..600 {
+        if !crate::auras::has_aura(run.app.world(), actor, 185313) {
+            break;
+        }
+        run.app.update();
+    }
+    assert!(!crate::auras::has_aura(run.app.world(), actor, 185313));
+    assert!(
+        crate::auras::has_aura(run.app.world(), actor, 385960),
+        "expiry earns Lingering Shadow"
+    );
+    literal_rotation::execution::execute(run.app.world_mut(), actor, dance()).unwrap();
+    assert!(
+        crate::auras::has_aura(run.app.world(), actor, 185313),
+        "a new Dance succeeds after expiry"
+    );
+}
+
 fn stacks(run: &Run) -> u8 {
     run.app
         .world()

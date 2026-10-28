@@ -12,11 +12,12 @@ use combat::spell_cast::{
     effects::{self, EffectCtx},
     script_registry::SpellScriptHook,
 };
-use combat::spell_info::SpellStore;
+use combat::spell_info::{SpellInfo, SpellStore};
 use shared::components::ActiveSpec;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::LateAuraRegistration(register),
+    SpellScriptHook::CheckNativeSpell(check_dance),
     SpellScriptHook::ResolvedDamage(after_damage),
     SpellScriptHook::AfterAuraApplication(subtlety_focus::grant),
     SpellScriptHook::LateAuraRegistration(subtlety_focus::register),
@@ -34,6 +35,18 @@ fn register(scripts: &mut AuraScripts) {
     let script = scripts.0.entry(LINGERING).or_default();
     script.on_apply = Some(start_decay);
     script.on_periodic = Some(decay_tick);
+}
+
+fn check_dance(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+) -> Result<(), spell_cast::CastFailure> {
+    // SimC76f8118 sc_rogue.cpp5585–5593 does not allow Dance refreshes.
+    if spell.id == DANCE && auras::has_aura(world, caster, DANCE) {
+        return Err(spell_cast::CastFailure::CasterAuraState);
+    }
+    Ok(())
 }
 
 fn selected(world: &World, caster: Entity) -> bool {
