@@ -329,6 +329,7 @@ register_modules! {
     unholy_trollbane: (2538, "modules/unholy_trollbane.rs"),
     unholy_putrefy: (2521, "modules/unholy_putrefy.rs"),
     unholy_sudden_doom: (2523, "modules/unholy_sudden_doom.rs"),
+    unholy_brittle: (2543, "modules/unholy_brittle.rs"),
     unholy_rune_mastery: (2536, "modules/unholy_rune_mastery.rs"),
     unrelenting_onslaught: (714, "modules/unrelenting_onslaught.rs"),
     unholy_necrotic_coil: (2525, "modules/unholy_necrotic_coil.rs"),
