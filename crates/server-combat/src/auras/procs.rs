@@ -414,6 +414,11 @@ fn proc_matches(
     event_spell: Option<&SpellInfo>,
     event: &AuraEvent,
 ) -> bool {
+    // SimC76f8118 sc_death_knight.cpp16704–16718: Bone Shield loses a
+    // stack only to a successful incoming auto-attack, never a special attack.
+    if aura.spell_id == 195181 && mask[0] & PROC_TAKE_MELEE_SWING == 0 {
+        return false;
+    }
     //102351's tooltip requires damage taken, not a heal or fully absorbed hit.
     if aura.spell_id == crate::spell_cast::scripts::CENARION_WARD && event.damage <= 0.0 {
         return false;
@@ -684,7 +689,11 @@ pub(super) fn try_proc(
         return;
     }
     scripts::run_proc(world, unit, &aura, other, event);
-    if aura.charges > 0 {
+    if aura.spell_id == 195181 {
+        // SimC treats Bone Shield's proc as a stack loss, not loss of its
+        // single native proc charge. The native proc cooldown still applies.
+        super::spend_stack(world, unit, id);
+    } else if aura.charges > 0 {
         super::spend_charge(world, unit, id);
     }
 }
