@@ -1140,7 +1140,7 @@ fn finish_retiring_summons(world: &mut World, now: f64) {
             || has_lingering_grasp(world, entity);
         if !pending || now >= deadline {
             if pending {
-                warn!(?entity, "Retired summon exceeded missile drain timeout");
+                warn!(?entity, "Retired summon exceeded effect drain timeout");
             }
             world.entity_mut(entity).despawn();
         }
@@ -1187,7 +1187,7 @@ pub fn despawn_summon(world: &mut World, entity: Entity) {
         .is_some_and(|hits| hits.has_caster(entity))
         || has_lingering_grasp(world, entity);
     if pending {
-        retire_until_missiles_land(world, entity);
+        retire_until_effects_finish(world, entity);
     } else {
         world.entity_mut(entity).despawn();
     }
@@ -1212,7 +1212,7 @@ fn has_lingering_grasp(world: &mut World, caster: Entity) -> bool {
         })
 }
 
-fn retire_until_missiles_land(world: &mut World, entity: Entity) {
+fn retire_until_effects_finish(world: &mut World, entity: Entity) {
     let now = crate::auras::aura_now(world);
     let health = world.get::<Health>(entity).expect("summon health").current;
     let mut actor = world.entity_mut(entity);
