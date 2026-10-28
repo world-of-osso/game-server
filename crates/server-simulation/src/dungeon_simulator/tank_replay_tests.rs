@@ -466,6 +466,13 @@ fn protection_simc_dummy_healing_supports_full_comparison() {
         report["tank_casts"]["275779"].as_u64().unwrap_or(0) > 0,
         "{report}"
     );
+    assert!(
+        report["self_healing_by_spell"]["433807"]
+            .as_f64()
+            .unwrap_or(0.0)
+            > 0.0,
+        "{report}"
+    );
     println!("SIMC_HEALED_TANK_REPLAY {report}");
 }
 

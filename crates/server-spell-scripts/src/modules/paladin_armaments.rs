@@ -4,6 +4,7 @@ use bevy::prelude::*;
 use combat::auras::{
     AuraApplication, AuraInstance, AuraSource, RemoveReason, scripts::AuraScripts,
 };
+use combat::class_progression::TraitLoadout;
 use combat::spell_cast::script_registry::SpellScriptHook;
 use combat::spell_info::{SpellInfo, SpellStore};
 use combat::stats::CharacterStats;
@@ -129,8 +130,119 @@ fn advance_shining_light(world: &mut World, caster: Entity, spell: u32) {
     );
 }
 
+fn advance_divine_guidance(world: &mut World, caster: Entity, spell: u32) {
+    if !world
+        .get::<ActiveSpec>(caster)
+        .is_some_and(|spec| spec.0 == 66)
+        || !world.get::<TraitLoadout>(caster).is_some_and(|traits| {
+            traits
+                .active_talent_spells()
+                .any(|talent| talent.spell_id == 433106)
+        })
+    {
+        return;
+    }
+    match spell {
+        // SimC76f8118 sc_paladin.hpp1738–1740: successful Holy Power spenders grant a stack.
+        53600 | 85673 => grant_divine_guidance(world, caster),
+        // sc_paladin.cpp562–569: a hardcast consumes the accumulated stacks.
+        26573 => consume_divine_guidance(world, caster),
+        _ => {}
+    }
+}
+
+fn grant_divine_guidance(world: &mut World, caster: Entity) {
+    let mut buff = world
+        .resource::<SpellStore>()
+        .get(433106)
+        .expect("Divine Guidance spell")
+        .clone();
+    // SimC76f8118 sc_paladin.cpp3718: this source buff has five stacks.
+    buff.aura_options.get_or_insert_default().cumulative_aura = 5;
+    combat::auras::apply_aura_with_spell(
+        world,
+        &AuraApplication {
+            caster,
+            target: caster,
+            spell_id: 433106,
+            effect_mask: 1,
+            source: AuraSource::Cast,
+        },
+        &buff,
+    );
+}
+
+fn consume_divine_guidance(world: &mut World, caster: Entity) {
+    let stacks = world
+        .get::<combat::auras::ActiveAuras>(caster)
+        .and_then(|auras| {
+            auras.iter().find(|aura| {
+                aura.spell_id == 433106 && aura.caster == caster && aura.source == AuraSource::Cast
+            })
+        })
+        .map_or(0, |aura| aura.stacks);
+    if stacks == 0 {
+        return;
+    }
+    let store = world.resource::<SpellStore>();
+    let talent = store.get(433106).expect("Divine Guidance talent");
+    let coefficient = talent
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .expect("Divine Guidance AP coefficient")
+        .base_points
+        / 10.0
+        * f32::from(stacks);
+    let target = world
+        .get::<combat::networking::CombatTarget>(caster)
+        .and_then(|target| target.0);
+    if let Some(target) = target {
+        cast_guidance_effect(world, caster, target, 433808, coefficient);
+    }
+    cast_guidance_effect(world, caster, caster, 433807, coefficient * 0.3);
+    combat::auras::remove_auras(world, caster, RemoveReason::Consumed, |aura| {
+        aura.spell_id == 433106 && aura.caster == caster && aura.source == AuraSource::Cast
+    });
+}
+
+fn cast_guidance_effect(
+    world: &mut World,
+    caster: Entity,
+    target: Entity,
+    id: u32,
+    coefficient: f32,
+) {
+    let mut heal = world
+        .resource::<SpellStore>()
+        .get(id)
+        .expect("Divine Guidance effect spell")
+        .clone();
+    heal.effects
+        .iter_mut()
+        .find(|effect| effect.index == 0)
+        .expect("Divine Guidance effect")
+        .bonus_coefficient_from_ap = coefficient;
+    let amount = combat::spell_cast::effects::scaled_amount(world, caster, &heal, &heal.effects[0]);
+    let cast = combat::spell_cast::cast_triggered_with_overrides(
+        world,
+        caster,
+        id,
+        Some(target),
+        1,
+        combat::spell_cast::TriggeredSpellOverrides {
+            effect0_amount: Some(amount),
+            ..Default::default()
+        },
+    );
+    if !cast {
+        warn!("Divine Guidance spell {id} could not be cast");
+    }
+}
+
 fn after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
     advance_shining_light(world, caster, spell.id);
+    advance_divine_guidance(world, caster, spell.id);
     // Native70448 spell432478 effect0 is aura332: misc432459 -> amount432472.
     // SimC76f8118 sc_paladin.cpp2748–2752 alternates only on actual hardcasts.
     let Some(override_spell) = world.resource::<SpellStore>().get(432478) else {
