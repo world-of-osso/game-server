@@ -84,10 +84,10 @@ spec_drivers! {
     1480 => devourer_rotation,
 }
 
-struct Run {
-    app: App,
-    actor: Entity,
-    targets: Vec<Entity>,
+pub(crate) struct Run {
+    pub(crate) app: App,
+    pub(crate) actor: Entity,
+    pub(crate) targets: Vec<Entity>,
     damage_targets: Vec<Entity>,
     target_waves: Vec<Value>,
     profile: inputs::Profile,
@@ -227,7 +227,9 @@ fn spawn_add_wave(run: &mut Run, retired: &[Entity], started_at: Duration) -> Re
     Ok(())
 }
 
-fn read_reference(spec_id: u32) -> Result<(inputs::Profile, Vec<inputs::AllocatedTrait>), String> {
+pub(crate) fn read_reference(
+    spec_id: u32,
+) -> Result<(inputs::Profile, Vec<inputs::AllocatedTrait>), String> {
     let directory = inputs::directory()?;
     let profile: inputs::Profile =
         inputs::read_json(&directory.join(format!("{spec_id}.profile.json")))?;
@@ -357,7 +359,7 @@ fn prepare_reference(
     Ok(run)
 }
 
-fn spawn_reference(
+pub(crate) fn spawn_reference(
     profile: inputs::Profile,
     traits: &[inputs::AllocatedTrait],
     count: usize,

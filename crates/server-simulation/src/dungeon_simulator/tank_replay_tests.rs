@@ -2,6 +2,75 @@ use super::healer_intake::Intake;
 use std::path::Path;
 
 #[test]
+#[ignore = "requires the MID2 Protection Paladin profile and canonical world database"]
+fn protection_paladin_uses_parity_player_profile_and_equipment() {
+    let canonical = Path::new("/home/osso/Projects/world-of-osso/game-server/data/world.db")
+        .canonicalize()
+        .unwrap();
+    assert_eq!(
+        crate::test_data::world_db_path().canonicalize().unwrap(),
+        canonical
+    );
+    assert_eq!(
+        Path::new(&std::env::var("DPS_PARITY_WORLD_DB").unwrap())
+            .canonicalize()
+            .unwrap(),
+        canonical
+    );
+    let (profile, traits) = super::dps_parity::read_reference(66).unwrap();
+    assert_eq!(profile.level, "90");
+    assert_eq!(profile.race, "tauren");
+    let mut expected: Vec<_> = profile.equipment.iter().map(|item| item.item_id).collect();
+    expected.sort_unstable();
+    let run = super::dps_parity::spawn_reference(
+        profile,
+        &traits,
+        1,
+        crate::followers::simulator::ParityActor::Player { race: 6 },
+    )
+    .unwrap();
+    assert_eq!(
+        run.app
+            .world()
+            .get::<shared::components::Level>(run.actor)
+            .unwrap()
+            .0,
+        90
+    );
+    let mut actual: Vec<_> = run
+        .app
+        .world()
+        .get::<crate::stats::EquippedItems>(run.actor)
+        .unwrap()
+        .items
+        .iter()
+        .map(|(_, _, id)| *id)
+        .collect();
+    actual.sort_unstable();
+    assert_eq!(actual, expected);
+    let loadout = run
+        .app
+        .world()
+        .get::<crate::class_progression::TraitLoadout>(run.actor)
+        .unwrap();
+    assert!(
+        loadout
+            .active_talent_spells()
+            .any(|spell| spell.spell_id == 433568)
+    );
+    let modifiers = run
+        .app
+        .world()
+        .get::<crate::stats::EquippedItemModifiers>(run.actor)
+        .unwrap();
+    assert!(
+        modifiers.temporary_enchants.is_empty(),
+        "selected Rite must suppress the conditional oil"
+    );
+    assert_eq!(run.targets.len(), 1);
+}
+
+#[test]
 #[ignore = "replays a recorded Stockade intake against the canonical world database"]
 fn protection_paladin_replays_recorded_damage_without_healer() {
     let canonical = Path::new("/home/osso/Projects/world-of-osso/game-server/data/world.db")

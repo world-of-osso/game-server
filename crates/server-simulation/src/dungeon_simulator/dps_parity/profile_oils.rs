@@ -42,9 +42,14 @@ pub(super) fn supported(value: &str) -> bool {
 
 fn condition_active(world: &World, actor: Entity, expression: &Expression) -> Result<bool, String> {
     use crate::simc_apl_native::{Bindings, Encounter, NativeFacts};
-    // The shipped condition names the native talent318038, not its weapon buff.
+    // The profile conditions name native talents, not their resulting weapon buffs.
+    // SimC76f8118 MID2_Paladin_Protection.simc:13 names both Paladin rites.
     let bindings = Bindings {
-        talents: [("flametongue_weapon".into(), 318038)].into(),
+        talents: [
+            ("flametongue_weapon".into(), 318038),
+            ("rite_of_adjuration".into(), 433583),
+            ("rite_of_sanctification".into(), 433568),
+        ].into(),
         ..Default::default()
     };
     let facts = NativeFacts::new(
