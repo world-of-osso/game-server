@@ -13,6 +13,7 @@ use shared::components::{ActiveSpec, Health};
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::SuccessfulCastRelationships(after_cast),
     SpellScriptHook::LateAuraRegistration(register_bulwark),
+    SpellScriptHook::AfterAbsorbConsumed(reflection_from_absorb),
 ];
 
 fn register_bulwark(scripts: &mut AuraScripts) {
@@ -277,6 +278,40 @@ fn trigger_grand_crusader(world: &mut World, caster: Entity, spell: u32) {
     if combat::random::random::<f32>() * 100.0 >= chance {
         return;
     }
+    reset_avengers_shield(world, caster);
+}
+
+fn reflection_from_absorb(
+    world: &mut World,
+    caster: Entity,
+    victim: Entity,
+    spell: u32,
+    amount: f32,
+) {
+    if caster != victim
+        || spell != 432607
+        || amount <= 0.0
+        || !world
+            .get::<ActiveSpec>(caster)
+            .is_some_and(|spec| spec.0 == 66)
+        || !world.get::<TraitLoadout>(caster).is_some_and(|traits| {
+            let mut talents = traits.active_talent_spells();
+            talents.any(|talent| talent.spell_id == 1271466)
+                && traits
+                    .active_talent_spells()
+                    .any(|talent| talent.spell_id == 85043)
+        })
+    {
+        return;
+    }
+    // SimC76f8118 sc_paladin.hpp777–780,1002–1012: a self Bulwark absorb
+    // rolls the 20% solo chance; fake allied Solidarity stacks are not present.
+    if combat::random::random::<f32>() < 0.2 {
+        reset_avengers_shield(world, caster);
+    }
+}
+
+fn reset_avengers_shield(world: &mut World, caster: Entity) {
     let shield = world
         .resource::<SpellStore>()
         .get(31935)

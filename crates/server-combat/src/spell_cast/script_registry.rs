@@ -40,6 +40,7 @@
 //! - `MeleeResidual`: only after a landed white-hit outcome.
 //! - `LateAuraRegistration`: after retained native aura registrations.
 //! - `SuccessfulCastRelationships`: after foreground special/resource consumers.
+//! - `AfterAbsorbConsumed`: after a shield actually absorbs damage.
 //! - `GuaranteesCrit`, `IgnoresCooldown`, `SnapshotsModifier`, `ArmorIgnoredSpells`:
 //!   pure native-readiness, launch snapshot and damage classification predicates.
 //! - `PersistentCastMultiplier`: spell IDs whose existing cast factor is stored as periodic metadata.
@@ -336,6 +337,7 @@ pub enum SpellScriptHook {
     MeleeResidual(MeleeResidualHook),
     LateAuraRegistration(AuraRegistrationHook),
     SuccessfulCastRelationships(AfterCastHook),
+    AfterAbsorbConsumed(fn(&mut World, Entity, Entity, u32, f32)),
     GuaranteesCrit(CastPredicate),
     IgnoresCooldown(CastPredicate),
     SnapshotsModifier(OwnsProcLookup),
@@ -1140,6 +1142,23 @@ pub fn melee_residual(world: &mut World, caster: Entity, target: Entity, amount:
     for hook in world.resource::<SpellScriptRegistry>().hooks() {
         if let SpellScriptHook::MeleeResidual(run) = hook {
             run(world, caster, target, amount);
+        }
+    }
+}
+
+pub fn after_absorb_consumed(
+    world: &mut World,
+    caster: Entity,
+    victim: Entity,
+    spell: u32,
+    amount: f32,
+) {
+    let Some(registry) = world.get_resource::<SpellScriptRegistry>().copied() else {
+        return;
+    };
+    for hook in registry.hooks() {
+        if let SpellScriptHook::AfterAbsorbConsumed(run) = hook {
+            run(world, caster, victim, spell, amount);
         }
     }
 }

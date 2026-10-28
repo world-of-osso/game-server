@@ -104,6 +104,44 @@ fn simc_dummy_strike_does_not_trigger_auto_attack_procs() {
 }
 
 #[test]
+#[ignore = "uses real MID2 Holy Bulwark consumption and Avenger's Shield"]
+fn reflection_of_radiance_can_reset_shield_from_self_absorbs() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::dps_parity::prepare_registered_player(66, 1).unwrap();
+    super::dps_parity::engage(&mut run);
+    for _ in 0..40 {
+        run.app.update();
+    }
+    let actor = run.actor;
+    let target = run.targets[0];
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 31935, Some(target), false)
+        .unwrap();
+    let shield = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(31935)
+        .unwrap()
+        .clone();
+    let remaining = |run: &super::dps_parity::Run| {
+        run.app
+            .world()
+            .get::<crate::spell_cast::SpellHistory>(actor)
+            .unwrap()
+            .remaining_cooldown_ms(&shield, crate::spell_cast::now(run.app.world()))
+    };
+    assert!(remaining(&run) > 0);
+    for _ in 0..30 {
+        let (_, absorbed) = crate::auras::absorb_damage(run.app.world_mut(), actor, 1, 1_000.0);
+        assert!(absorbed > 0.0);
+        if remaining(&run) == 0 {
+            return;
+        }
+    }
+    panic!("real self-absorb events did not reset Avenger's Shield");
+}
+
+#[test]
 #[ignore = "uses the selected MID2 player and real Blessed Hammer casts"]
 fn blessed_hammer_can_reset_avengers_shield_through_grand_crusader() {
     let _seed = crate::random::seed_scope(70448);
