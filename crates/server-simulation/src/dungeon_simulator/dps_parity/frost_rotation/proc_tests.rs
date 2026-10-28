@@ -2462,6 +2462,50 @@ fn frost_pillar_starts_frozen_dominion_winter() {
 }
 
 #[test]
+#[ignore = "three earned Rime impacts bank their real damage into Cryogenic Chamber"]
+fn frost_chamber_banks_northwinds_rime_damage() {
+    use crate::spell_cast::effects::factor_capture::FactorCapture;
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::protocol::CombatLogKind;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::super::prepare_literal(251, 3).unwrap();
+    super::super::engage(&mut run);
+    earn_rime(&mut run);
+    let start = run.app.world().resource::<ObservedCombatEvents>().0.len();
+    cast(&mut run, 49184);
+    let damage: i32 = run.app.world().resource::<ObservedCombatEvents>().0[start..]
+        .iter()
+        .filter(|event| event.spell_id == Some(49184) && event.kind == CombatLogKind::Damage)
+        .map(|event| event.amount)
+        .sum();
+    assert!(damage > 0);
+    run.app.insert_resource(FactorCapture::new(
+        run.actor,
+        run.targets[0],
+        456371,
+        "chamber",
+        1,
+    ));
+    let actor = run.actor;
+    super::super::enhancement_generation_tests::cast(&mut run, 51271, actor);
+    for _ in 0..3 {
+        run.app.update();
+    }
+    let capture = run.app.world().resource::<FactorCapture>().export();
+    let hit = capture["events"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|event| event["spell_id"] == 456371 && event["event"] == "direct_amount")
+        .expect("real Winter releases Chamber");
+    let banked = hit["factors"]["base"].as_f64().unwrap();
+    assert!(
+        (banked - f64::from(damage) * 0.15).abs() < 1.0,
+        "three real hits must each bank 15%: {damage} -> {banked}"
+    );
+}
+
+#[test]
 #[ignore = "native251 earned Rime damage must accumulate Cryogenic Chamber and real Winter releases it"]
 fn frost_cryogenic_chamber_accumulates_earned_rime_hits_and_winter_releases() {
     use crate::spell_cast::test_harness::ObservedCombatEvents;
