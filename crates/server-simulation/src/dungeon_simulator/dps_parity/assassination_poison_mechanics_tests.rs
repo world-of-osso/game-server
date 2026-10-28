@@ -97,22 +97,57 @@ fn assassination_deathmark_repeats_earned_lethal_poison_and_kingsbane_stacks() {
     }
     assert!(crate::auras::has_aura(run.app.world(), target, 360194));
     assert!(crate::auras::has_aura(run.app.world(), target, 385627));
-    let stacks = |run: &Run| run.app.world().get::<crate::auras::ActiveAuras>(actor).unwrap().iter()
-        .find(|aura| aura.spell_id == 394095 && aura.caster == actor).map_or(0, |aura| aura.stacks);
+    let stacks = |run: &Run| {
+        run.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(actor)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 394095 && aura.caster == actor)
+            .map_or(0, |aura| aura.stacks)
+    };
     for _ in 0..300 {
         let before = stacks(&run);
-        let events_before = run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0.len();
+        let events_before = run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .len();
         drive_player(&mut run).unwrap();
         run.app.update();
-        let events = &run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0[events_before..];
-        let hits: Vec<_> = events.iter().filter(|event| event.source == Some(actor.to_bits()) && event.target == Some(target.to_bits())
-            && matches!(event.spell_id, Some(113780 | 383414)) && event.kind == shared::protocol::CombatLogKind::Damage && event.amount > 0).collect();
+        let events = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0[events_before..];
+        let hits: Vec<_> = events
+            .iter()
+            .filter(|event| {
+                event.source == Some(actor.to_bits())
+                    && event.target == Some(target.to_bits())
+                    && matches!(event.spell_id, Some(113780 | 383414))
+                    && event.kind == shared::protocol::CombatLogKind::Damage
+                    && event.amount > 0
+            })
+            .collect();
         if !hits.is_empty() {
             for spell in [113780, 383414] {
-                let count = hits.iter().filter(|event| event.spell_id == Some(spell)).count();
-                assert_eq!(count % 2, 0, "each earned lethal proc repeats during Deathmark: spell{spell} count{count}");
+                let count = hits
+                    .iter()
+                    .filter(|event| event.spell_id == Some(spell))
+                    .count();
+                assert_eq!(
+                    count % 2,
+                    0,
+                    "each earned lethal proc repeats during Deathmark: spell{spell} count{count}"
+                );
             }
-            assert_eq!(usize::from(stacks(&run) - before), hits.len(), "each actual poison hit earns one Kingsbane stack");
+            assert_eq!(
+                usize::from(stacks(&run) - before),
+                hits.len(),
+                "each actual poison hit earns one Kingsbane stack"
+            );
             return;
         }
     }
