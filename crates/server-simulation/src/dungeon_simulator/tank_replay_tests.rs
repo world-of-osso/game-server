@@ -104,6 +104,30 @@ fn simc_dummy_strike_does_not_trigger_auto_attack_procs() {
 }
 
 #[test]
+#[ignore = "uses the selected MID2 player and actual Avenging Wrath cast"]
+fn protection_avenging_wrath_retains_native_duration() {
+    use crate::auras::ActiveAuras;
+    let mut run = super::dps_parity::prepare_registered_player(66, 1).unwrap();
+    super::dps_parity::engage(&mut run);
+    for _ in 0..40 {
+        run.app.update();
+    }
+    let actor = run.actor;
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 31884, Some(actor), false)
+        .unwrap();
+    run.app.update();
+    let aura = run
+        .app
+        .world()
+        .get::<ActiveAuras>(actor)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 31884)
+        .unwrap();
+    assert_eq!(aura.duration_ms, 20_000);
+}
+
+#[test]
 #[ignore = "uses the selected MID2 player and real Protection spender casts"]
 fn divine_guidance_stacks_on_spenders_and_is_consumed_by_consecration() {
     use crate::auras::{ActiveAuras, AuraSource};
