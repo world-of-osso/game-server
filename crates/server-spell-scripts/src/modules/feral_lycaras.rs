@@ -1,4 +1,4 @@
-//! Selected Lycara's Teachings follows Cat Form.
+//! Selected Lycara's Teachings follows Cat and Bear forms.
 use bevy::prelude::*;
 
 use super::combat;
@@ -7,8 +7,10 @@ use combat::spell_cast::{self, script_registry::SpellScriptHook};
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::EarlyAuraRegistration(register)];
 const CAT_FORM: u32 = 768;
+const BEAR_FORM: u32 = 5487;
 const TEACHINGS: u32 = 378988;
 const CAT_CRIT: u32 = 378990;
+const BEAR_VERSATILITY: u32 = 378991;
 const CAT_PASSIVE: u32 = 106840;
 const HUNT: u32 = 439868;
 
@@ -16,9 +18,12 @@ fn register(scripts: &mut AuraScripts) {
     let form = scripts.0.entry(CAT_FORM).or_default();
     form.on_apply = Some(apply_form);
     form.on_remove = Some(remove_form);
+    let bear = scripts.0.entry(BEAR_FORM).or_default();
+    bear.on_apply = Some(apply_bear);
+    bear.on_remove = Some(remove_bear);
     let talent = scripts.0.entry(TEACHINGS).or_default();
     talent.on_apply = Some(apply_talent);
-    talent.on_remove = Some(remove_crit);
+    talent.on_remove = Some(remove_teachings);
     let hunt = scripts.0.entry(HUNT).or_default();
     hunt.on_apply = Some(refresh_hunt);
     hunt.on_remove = Some(remove_hunt);
@@ -32,14 +37,34 @@ fn apply_form(world: &mut World, unit: Entity, aura: &AuraInstance) {
 }
 
 fn apply_talent(world: &mut World, unit: Entity, aura: &AuraInstance) {
-    if aura.caster == unit && combat::auras::has_aura(world, unit, CAT_FORM) {
+    if aura.caster != unit {
+        return;
+    }
+    if combat::auras::has_aura(world, unit, CAT_FORM) {
         apply_crit(world, unit);
     }
+    if combat::auras::has_aura(world, unit, BEAR_FORM) {
+        apply_bear_versatility(world, unit);
+    }
+}
+
+fn apply_bear(world: &mut World, unit: Entity, aura: &AuraInstance) {
+    if aura.caster == unit {
+        apply_bear_versatility(world, unit);
+    }
+}
+
+fn apply_bear_versatility(world: &mut World, unit: Entity) {
+    apply_teachings_child(world, unit, BEAR_VERSATILITY);
 }
 
 // SimC76f8118 sc_druid.cpp3628–3636/14344–14346: Cat Form grants
 // the selected talent's rank-scaled crit amount through its native child.
 fn apply_crit(world: &mut World, unit: Entity) {
+    apply_teachings_child(world, unit, CAT_CRIT);
+}
+
+fn apply_teachings_child(world: &mut World, unit: Entity, child: u32) {
     let amount = world.get::<ActiveAuras>(unit).and_then(|auras| {
         auras
             .iter()
@@ -51,7 +76,7 @@ fn apply_crit(world: &mut World, unit: Entity) {
         spell_cast::cast_triggered_with_overrides(
             world,
             unit,
-            CAT_CRIT,
+            child,
             Some(unit),
             1,
             spell_cast::TriggeredSpellOverrides {
@@ -102,6 +127,19 @@ fn remove_crit(world: &mut World, unit: Entity, aura: &AuraInstance, _: RemoveRe
             child.spell_id == CAT_CRIT && child.caster == unit
         });
     }
+}
+
+fn remove_bear(world: &mut World, unit: Entity, aura: &AuraInstance, _: RemoveReason) {
+    if aura.caster == unit {
+        combat::auras::remove_auras(world, unit, RemoveReason::Cancelled, |child| {
+            child.spell_id == BEAR_VERSATILITY && child.caster == unit
+        });
+    }
+}
+
+fn remove_teachings(world: &mut World, unit: Entity, aura: &AuraInstance, reason: RemoveReason) {
+    remove_crit(world, unit, aura, reason);
+    remove_bear(world, unit, aura, reason);
 }
 
 fn remove_form(world: &mut World, unit: Entity, aura: &AuraInstance, reason: RemoveReason) {
