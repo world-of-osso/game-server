@@ -1599,6 +1599,8 @@ fn dk252_lord_magus_uses_selected_native_lifetime() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(252, 1).unwrap();
     engage(&mut run);
+    // Forbidden Knowledge can otherwise summon a third Magus and consume this one.
+    crate::auras::remove_auras(run.app.world_mut(), run.targets[0], crate::auras::RemoveReason::Cancelled, |aura| aura.spell_id == 1240996);
     literal_rotation::execution::execute(
         run.app.world_mut(),
         run.actor,
