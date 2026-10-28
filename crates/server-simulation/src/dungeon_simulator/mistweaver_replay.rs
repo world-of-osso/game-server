@@ -1,5 +1,8 @@
 //! Mistweaver healing decisions over native readiness and party state.
 #[cfg(test)]
+#[path = "mistweaver_mana_tea_tests.rs"]
+mod mana_tea_tests;
+#[cfg(test)]
 #[path = "mistweaver_replay_tests.rs"]
 mod tests;
 

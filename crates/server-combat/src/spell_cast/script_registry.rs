@@ -208,6 +208,7 @@ pub type PolicyTailHitHook = fn(&mut World, &EffectCtx<'_>);
 pub type PolicyTailHitLookup = fn(u32) -> Option<PolicyTailHitHook>;
 pub type AfterQueuedTriggersHook = fn(&mut World);
 pub type AfterSpellPaymentHook = fn(&mut World, Entity, &SpellInfo, &[(CostPool, f32)]);
+pub type AfterPeriodicEnergizeHook = fn(&mut World, Entity, u32, u8);
 pub type FireAuraRegistrationHook = fn(&mut crate::auras::scripts::AuraScripts);
 pub type BeforeProcLaunchHook = fn(&mut World, Entity, &SpellInfo);
 pub type AfterFireDirectHitHook = fn(&mut World, &EffectCtx<'_>, Entity, bool);
@@ -380,6 +381,7 @@ pub enum SpellScriptHook {
     PolicyTailHit(PolicyTailHitLookup),
     AfterQueuedTriggers(AfterQueuedTriggersHook),
     AfterSpellPayment(AfterSpellPaymentHook),
+    AfterPeriodicEnergize(AfterPeriodicEnergizeHook),
     FireAuraRegistration(FireAuraRegistrationHook),
     BeforeProcLaunch(BeforeProcLaunchHook),
     AfterFireDirectHit(AfterFireDirectHitHook),
@@ -1311,6 +1313,14 @@ pub fn channel_periodic(world: &World, spell: u32, index: u8) -> Option<ContextH
             SpellScriptHook::ChannelPeriodic(lookup) => lookup(spell, index),
             _ => None,
         })
+}
+
+pub fn after_periodic_energize(world: &mut World, unit: Entity, spell: u32, effect: u8) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::AfterPeriodicEnergize(run) = hook {
+            run(world, unit, spell, effect);
+        }
+    }
 }
 
 pub fn before_native_on_cast(world: &mut World, caster: Entity, spell: &SpellInfo, depth: u8) {

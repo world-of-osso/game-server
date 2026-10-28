@@ -253,6 +253,7 @@ register_modules! {
     midnight_stat_items: (1000, "modules/midnight_stat_items.rs"),
     midnight_stormbound: (1000, "modules/midnight_stormbound.rs"),
     midnight_tendril: (1000, "modules/midnight_tendril.rs"),
+    mistweaver_mana_tea: (2700, "modules/mistweaver_mana_tea.rs"),
     enhancement_imbue_mask: (2636, "modules/enhancement_imbue_mask.rs"),
     outlaw_ace: (2605, "modules/outlaw_ace.rs"),
     outlaw_bte: (2606, "modules/outlaw_bte.rs"),

@@ -451,7 +451,15 @@ fn run_tick(world: &mut World, unit: Entity, spell: &SpellInfo, tick: &Tick) {
             false,
             true,
         ),
-        PERIODIC_ENERGIZE => energize(world, &ctx, unit, tick),
+        PERIODIC_ENERGIZE => {
+            energize(world, &ctx, unit, tick);
+            crate::spell_cast::script_registry::after_periodic_energize(
+                world,
+                unit,
+                spell.id,
+                tick.effect_index,
+            );
+        }
         OBS_MOD_POWER => obs_mod_power(world, &ctx, unit, tick),
         PERIODIC_TRIGGER_SPELL
             if spell.id == crate::spell_cast::omor_orbital::ORBITAL_WHIP
