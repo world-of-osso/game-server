@@ -496,6 +496,41 @@ mod tests {
     }
 
     #[test]
+    fn free_revenge_is_consumed_by_revenge() {
+        let mut h = crate::spell_cast::test_harness::harness_with_native_enemy_dodge_reduction(
+            Vec::new(),
+            &[5302, 6572],
+            1,
+        )
+        .unwrap();
+        h.advance(3);
+        let actor = h.caster;
+        crate::auras::apply_aura(
+            h.app.world_mut(),
+            &crate::auras::AuraApplication {
+                caster: actor,
+                target: actor,
+                spell_id: 5302,
+                effect_mask: u32::MAX,
+                source: crate::auras::AuraSource::Cast,
+            },
+        );
+        h.set_power(shared::components::PowerType::Rage, 500.0);
+        let before = h.power(shared::components::PowerType::Rage);
+        h.cast_and_deliver(6572, Some(h.npc));
+        h.advance(5);
+        assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+        assert!(
+            h.power(shared::components::PowerType::Rage) >= before,
+            "Revenge is free even if the real autoattack generates Rage"
+        );
+        assert!(
+            !crate::auras::has_aura(h.app.world(), actor, 5302),
+            "one free Revenge consumes its proc"
+        );
+    }
+
+    #[test]
     fn revenge_trigger_accepts_only_white_impacts_and_incoming_avoids() {
         use crate::dungeon_simulator::healer_intake::{Hit, HitKind};
         let seed = crate::spell_cast::test_harness::harness_with_native_enemy_dodge_reduction(
