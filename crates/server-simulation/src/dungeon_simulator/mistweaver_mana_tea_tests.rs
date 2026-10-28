@@ -52,6 +52,11 @@ fn mana_tea_spending_earns_stacks_and_channel_consumes_them() {
         .unwrap(),
         Some(115294)
     );
+    // The earned stacks come from paid casts; leave room to observe restoration.
+    {
+        let mut mana = run.app.world_mut().get_mut::<Mana>(actor).unwrap();
+        mana.current = mana.max * 0.5;
+    }
     let before = run.app.world().get::<Mana>(actor).unwrap().current;
     let event_cursor = run
         .app
