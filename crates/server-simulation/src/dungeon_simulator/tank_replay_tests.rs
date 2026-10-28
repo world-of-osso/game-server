@@ -1650,6 +1650,45 @@ fn strength_in_adversity_scales_with_actual_shield_targets() {
 }
 
 #[test]
+#[ignore = "uses selected MID2 Protection and the real Devotion Aura"]
+fn devotion_aura_reduces_incoming_bleed() {
+    use shared::components::Health;
+    let mut run = super::dps_parity::prepare_registered_player(66, 1).unwrap();
+    super::dps_parity::engage(&mut run);
+    for _ in 0..40 {
+        run.app.update();
+    }
+    let actor = run.actor;
+    let source = run.targets[0];
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        actor,
+        crate::auras::RemoveReason::Consumed,
+        |aura| aura.spell_id == 432607 || aura.spell_id == 465 || aura.spell_id == 344218,
+    );
+    let hit = |run: &mut super::dps_parity::Run| {
+        let before = run.app.world().get::<Health>(actor).unwrap().current;
+        crate::spell_cast::effects::replay_simc_dummy_bleed(
+            run.app.world_mut(),
+            source,
+            actor,
+            25000.0,
+        );
+        before - run.app.world().get::<Health>(actor).unwrap().current
+    };
+    let before = hit(&mut run);
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 465, Some(actor), false).unwrap();
+    for _ in 0..4 {
+        run.app.update();
+    }
+    let after = hit(&mut run);
+    assert!(
+        before > 0.0 && after < before * 0.98,
+        "Devotion Aura did not reduce bleed: {before} -> {after}"
+    );
+}
+
+#[test]
 #[ignore = "uses selected MID2 Crusader's Judgment and native avoidance procs"]
 fn grand_crusader_advances_shared_judgment_charge() {
     let _seed = crate::random::seed_scope(70448);
