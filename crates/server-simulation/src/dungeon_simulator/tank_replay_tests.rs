@@ -16,6 +16,64 @@ fn tank_replay_rejects_profiles_without_level_90_mid2_inputs() {
 }
 
 #[test]
+#[ignore = "uses the selected MID2 66 player and native armament override"]
+fn protection_holy_armaments_alternate_after_real_casts() {
+    let (profile, traits) = super::dps_parity::read_reference(66).unwrap();
+    let mut run = super::dps_parity::spawn_reference(
+        profile,
+        &traits,
+        1,
+        crate::followers::simulator::ParityActor::Player { race: 6 },
+    )
+    .unwrap();
+    for _ in 0..4 {
+        run.app.update();
+    }
+    assert_eq!(
+        crate::spell_cast::knowledge::resolve_actor_action(run.app.world(), run.actor, 432459)
+            .unwrap(),
+        432459
+    );
+    crate::spell_cast::creature_cast(
+        run.app.world_mut(),
+        run.actor,
+        432459,
+        Some(run.actor),
+        false,
+    )
+    .unwrap();
+    for _ in 0..40 {
+        run.app.update();
+    }
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, 432478));
+    assert_eq!(
+        crate::spell_cast::knowledge::resolve_actor_action(run.app.world(), run.actor, 432459)
+            .unwrap(),
+        432472
+    );
+    let replacement =
+        crate::spell_cast::knowledge::resolve_actor_action(run.app.world(), run.actor, 432459)
+            .unwrap();
+    crate::spell_cast::creature_cast(
+        run.app.world_mut(),
+        run.actor,
+        replacement,
+        Some(run.actor),
+        false,
+    )
+    .unwrap();
+    for _ in 0..40 {
+        run.app.update();
+    }
+    assert!(!crate::auras::has_aura(run.app.world(), run.actor, 432478));
+    assert_eq!(
+        crate::spell_cast::knowledge::resolve_actor_action(run.app.world(), run.actor, 432459)
+            .unwrap(),
+        432459
+    );
+}
+
+#[test]
 #[ignore = "uses the real MID2 Protection profile and native fields"]
 fn protection_apl_reads_selected_apex_and_native_consecration() {
     use super::tank_replay::protection_rotation::{self, Context};
@@ -168,8 +226,28 @@ fn protection_apl_selects_shield_using_the_real_profile_conditions() {
 #[ignore = "requires canonical MID2 profile inputs and a SimC tank-dummy trace"]
 fn unregistered_tank_driver_fails_instead_of_using_a_follower() {
     let path = std::env::var("HEALER_TANK_SIMC_TRACE").expect("HEALER_TANK_SIMC_TRACE required");
-    let error = super::tank_replay::replay_simc(66, Path::new(&path), 300, 70448).unwrap_err();
-    assert_eq!(error, "NATIVE_LITERAL_DRIVER_UNAVAILABLE:66");
+    let error = super::tank_replay::replay_simc(0, Path::new(&path), 300, 70448).unwrap_err();
+    assert_eq!(error, "NATIVE_LITERAL_DRIVER_UNAVAILABLE:0");
+}
+
+#[test]
+#[ignore = "runs the MID2 Protection APL and SimC tank-dummy pressure"]
+fn protection_paladin_simc_apl_uses_shield_of_the_righteous() {
+    let path = std::env::var("HEALER_TANK_SIMC_TRACE").expect("HEALER_TANK_SIMC_TRACE required");
+    let report = super::tank_replay::replay_simc(66, Path::new(&path), 300, 70448).unwrap();
+    assert_eq!(report["spec"], 66);
+    assert_eq!(report["level"], 90);
+    assert_eq!(report["rotation_status"], "registered_literal_simc");
+    assert!(
+        report["tank_casts"]["53600"].as_u64().unwrap_or(0) > 0,
+        "{report}"
+    );
+    assert!(
+        report["active_mitigation_uptime"].as_f64().unwrap() > 0.0,
+        "{report}"
+    );
+    assert!(report["damage_taken"].as_f64().unwrap() > 0.0, "{report}");
+    println!("SIMC_TANK_REPLAY {report}");
 }
 
 #[test]

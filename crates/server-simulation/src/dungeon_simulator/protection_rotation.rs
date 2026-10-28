@@ -5,7 +5,7 @@ use bevy::prelude::{Entity, World};
 use server::simc_apl::{Action, ActionFacts, Facts};
 use shared::components::PowerType;
 
-const ACTIONS: &[(&str, u32)] = &[
+pub(crate) const ACTIONS: &[(&str, u32)] = &[
     ("rite_of_sanctification", 433568),
     ("rite_of_adjuration", 433583),
     ("devotion_aura", 465),
