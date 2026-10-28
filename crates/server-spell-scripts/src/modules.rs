@@ -150,6 +150,7 @@ register_modules! {
     evoker_rewind: (1000, "modules/evoker_rewind.rs"),
     evoker_rising_fury: (1000, "modules/evoker_rising_fury.rs"),
     evoker_siege: (1000, "modules/evoker_siege.rs"),
+    evoker_slipstream: (1000, "modules/evoker_slipstream.rs"),
     evoker_tier: (160, "modules/evoker_tier.rs"),
     evoker_verdant: (1000, "modules/evoker_verdant.rs"),
     execution_counters: (320, "modules/execution_counters.rs"),

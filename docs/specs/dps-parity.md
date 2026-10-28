@@ -1315,3 +1315,7 @@ Selected Insidious Ire earns its temporary channel bonus when one target has all
 ### Hellbent Commander
 
 - Hellbent Commander reconciles native1281559 stacks to the eligible live demon roster on the pinned randomized 5.25s heartbeat. Actual summon and demise events retain the pinned bug-model ordering, including ordinary Hand Imp and alternate Imp Implosion differences; Diabolist demons are excluded (`sc_warlock.cpp303–338`; `sc_warlock_pets.cpp203–226,992–1006,1310–1341`).
+
+### Evoker Slipstream
+
+- A successful Deep Breath or Breath of Eons restores all Hover charges when Slipstream is selected.
