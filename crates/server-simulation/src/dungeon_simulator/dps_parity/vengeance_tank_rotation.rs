@@ -780,6 +780,54 @@ mod tests {
     }
     #[test]
     #[ignore = "requires native Vengeance profile and canonical DB"]
+    fn frailty_heals_after_damage_to_affected_target() {
+        use super::super::*;
+        let _seed = crate::random::seed_scope(70_448);
+        let (profile, traits) = read_reference(581).unwrap();
+        let identity = inputs::read_actor(&profile).unwrap();
+        let mut run = prepare_reference(profile, &traits, 1, identity).unwrap();
+        let actor = run.actor;
+        let target = run.targets[0];
+        engage(&mut run);
+        for _ in 0..5 {
+            run.app.update();
+        }
+        run.app
+            .world_mut()
+            .get_mut::<shared::components::Health>(actor)
+            .unwrap()
+            .current = 1.0;
+        crate::auras::apply_aura(
+            run.app.world_mut(),
+            &crate::auras::AuraApplication {
+                caster: actor,
+                target,
+                spell_id: 247456,
+                effect_mask: u32::MAX,
+                source: crate::auras::AuraSource::Cast,
+            },
+        );
+        crate::combat::deal_direct_damage(run.app.world_mut(), actor, target, 1000.0);
+        for _ in 0..40 {
+            run.app.update();
+        }
+        let healing: i32 = run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .filter(|event| {
+                event.spell_id == Some(227255)
+                    && event.kind == shared::protocol::CombatLogKind::Heal
+            })
+            .map(|event| event.amount)
+            .sum();
+        assert!(healing > 0, "Frailty must heal from actual damage");
+    }
+
+    #[test]
+    #[ignore = "requires native Vengeance profile and canonical DB"]
     fn generic_leech_uses_native_aura_and_effective_damage() {
         use super::super::*;
         let (profile, traits) = read_reference(581).unwrap();
