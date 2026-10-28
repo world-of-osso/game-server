@@ -242,6 +242,7 @@ register_modules! {
     ret_tier: (1000, "modules/ret_tier.rs"),
     ret_toll: (280, "modules/ret_toll.rs"),
     retribution: (60, "modules/retribution.rs"),
+    unholy_harbinger: (2535, "modules/unholy_harbinger.rs"),
     rogue: (70, "modules/rogue.rs"),
     rogue_cloud_cover: (2609, "modules/rogue_cloud_cover.rs"),
     rogue_relentless: (2615, "modules/rogue_relentless.rs"),
