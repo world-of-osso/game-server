@@ -133,6 +133,7 @@ mod unholy_nazgrim_tests;
 mod unholy_outnumber_tests;
 #[cfg(test)]
 mod unholy_magus_crit_tests;
+mod unholy_magus_execute_tests;
 mod unholy_commander_tests;
 mod unholy_lord_lifetime_tests;
 mod unholy_devotion_tests;
