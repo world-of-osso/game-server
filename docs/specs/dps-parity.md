@@ -1103,7 +1103,7 @@ Named `action.<alias>.charges`, `max_charges`, `charges_fractional` and `full_re
 
 Only successful ordinary Lava Burst51505 grants MOTE through native16166 effect0's trigger. Its broad generated HIT proc is suppressed so Lightning Bolt cannot immediately re-grant the consumed buff (`sc_shaman.cpp`7245–7247).
 
-The Elemental MOTE policy uses the resolved native260734 effect0 amount, not an invented spell modifier or charge. It snapshots eligible cast damage, consumes the earned stack after a successful foreground launch (also triggered Flame Shock), and retains the multiplier through missile flight, periodic damage and ground fields. Background overloads do not consume it (SimC76f8118 `sc_shaman.cpp`3249–3252,3297–3300).
+The Elemental MOTE policy uses the resolved native260734 effect0 amount, not an invented spell modifier or charge. It snapshots eligible cast damage, consumes the earned stack after a successful foreground launch (also triggered Flame Shock), and retains the multiplier through missile flight, periodic damage and ground fields. Eligible overloads snapshot MOTE at parent scheduling and retain it after consumption; later MOTE gains do not alter that snapshot. Background overloads do not consume it (SimC76f8118 `sc_shaman.cpp`3249–3252,3297–3300,3316–3351,3399–3408).
 
 Elemental Blast117014 grants one native118522/173183/173184 buff after its cast; overload120588 grants it before execution. Choose uniformly among inactive buffs until all three are active, then refresh one. Native aura values and durations stay unchanged (`sc_shaman.cpp`7545–7577,7615–7620,7700–7704).
 

@@ -123,6 +123,11 @@ fn capture_damage_modifier(
     foreground: bool,
 ) -> Option<u32> {
     let rule = DAMAGE_RULES.iter().find(|rule| rule.spell == spell.id)?;
+    // Scheduled overloads carry their parent's MOTE snapshot, including an
+    // absent buff; do not re-read a later MOTE when the child executes.
+    if spell.cast_parent_owns_modifier_charges && matches!(spell.id, 45284 | 45297 | 120588) {
+        return None;
+    }
     if !selected(world, caster, MASTER_OF_ELEMENTS) {
         return None;
     }
@@ -136,8 +141,14 @@ fn capture_damage_modifier(
         .find(|effect| effect.index == 0)
         .expect("native MOTE effect0 carries the resolved talent amount")
         .amount;
-    spell.cast_damage_multiplier =
-        Some(spell.cast_damage_multiplier.unwrap_or(1.0) * (1.0 + percent / 100.0));
+    let multiplier = 1.0 + percent / 100.0;
+    spell.cast_damage_multiplier = Some(spell.cast_damage_multiplier.unwrap_or(1.0) * multiplier);
+    // SimC76f8118 sc_shaman.cpp3316–3351/3399–3408 snapshots each
+    // eligible overload before its foreground parent consumes MOTE.
+    if matches!(spell.id, 188196 | 188443 | 117014) {
+        spell.cast_overload_multiplier =
+            Some(spell.cast_overload_multiplier.unwrap_or(1.0) * multiplier);
+    }
     let consumes = match rule.consumption {
         Consumption::Always => true,
         Consumption::Foreground => foreground && !spell.cast_parent_owns_modifier_charges,
