@@ -2,7 +2,7 @@
 use super::combat;
 use bevy::prelude::*;
 use combat::class_progression::TraitLoadout;
-use combat::spell_cast::{effects::EffectCtx, script_registry::SpellScriptHook, summon};
+use combat::spell_cast::{self, effects::EffectCtx, script_registry::SpellScriptHook, summon};
 
 const PUTREFY_GHOUL: u32 = 1277098;
 const PUTREFY_SINGLE: u32 = 1277016;
@@ -12,6 +12,10 @@ const MAGUS_SUMMON: u32 = 1242294;
 const LORD_SUMMON: u32 = 1292072;
 const DREAD_PLAGUE: u32 = 1240996;
 const FORBIDDEN_KNOWLEDGE: u32 = 1256566;
+const FORBIDDEN_KNOWLEDGE_SECOND: u32 = 1256565;
+const FORBIDDEN_SACRIFICE: u32 = 1256576;
+const LESSER_GHOUL_READY: u32 = 1254252;
+const DREADBLADE: u32 = 77515;
 
 #[derive(Component)]
 struct PutrefyImpacted;
@@ -224,12 +228,64 @@ fn impact_and_dismiss(world: &mut World, actor: Entity, target: Entity) {
             warn!(?owner, ?target, spell, "Native Putrefy impact refused");
         }
     }
+    grant_forbidden_sacrifice(world, owner);
     world.entity_mut(actor).insert(PutrefyImpacted);
     let now = combat::spell_cast::now(world);
     world
         .get_mut::<summon::SummonedCreature>(actor)
         .unwrap()
         .expires_at = Some(now);
+}
+
+fn grant_forbidden_sacrifice(world: &mut World, owner: Entity) {
+    if !combat::auras::has_aura(world, owner, FORBIDDEN_KNOWLEDGE_SECOND) {
+        return;
+    }
+    // SimC76f8118 sc_death_knight.cpp3746–3750/16287–16292: each
+    // Putrefy arrival earns native ready ghouls and a mastery stack.
+    let ready = combat::spell_cast::scripts::script_effect_value(
+        world,
+        owner,
+        FORBIDDEN_KNOWLEDGE_SECOND,
+        1,
+    ) as u32;
+    for _ in 0..ready {
+        if !spell_cast::try_cast_triggered(world, owner, LESSER_GHOUL_READY, Some(owner), 1) {
+            warn!(?owner, "Forbidden Knowledge ready-ghoul grant refused");
+        }
+    }
+    let bonus = combat::spell_cast::scripts::script_effect_value(
+        world,
+        owner,
+        FORBIDDEN_KNOWLEDGE_SECOND,
+        0,
+    );
+    let coefficient = world
+        .resource::<combat::spell_info::SpellStore>()
+        .get(DREADBLADE)
+        .expect("native Dreadblade mastery")
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .expect("native Dreadblade mastery effect")
+        .bonus_coefficient;
+    assert!(
+        coefficient > 0.0,
+        "Dreadblade mastery coefficient must be positive"
+    );
+    if !spell_cast::cast_triggered_with_overrides(
+        world,
+        owner,
+        FORBIDDEN_SACRIFICE,
+        Some(owner),
+        1,
+        spell_cast::TriggeredSpellOverrides {
+            effect0_amount: Some(bonus / coefficient),
+            ..Default::default()
+        },
+    ) {
+        warn!(?owner, "Forbidden Sacrifice mastery grant refused");
+    }
 }
 
 fn raise_magus(world: &mut World, actor: Entity) {

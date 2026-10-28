@@ -1513,6 +1513,87 @@ fn dk252_putrefy_ghoul_impacts_the_enemy() {
 
 #[test]
 #[ignore = "requires native252 profile/traits and player actor"]
+fn dk252_putrefy_arrivals_grant_ready_ghouls_and_independent_mastery() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 1).unwrap();
+    engage(&mut run);
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, 1256565));
+    let baseline = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(run.actor)
+        .unwrap()
+        .mastery_points;
+    let stacks = |run: &Run, spell: u32| {
+        run.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(run.actor)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == spell && aura.caster == run.actor)
+            .map_or(0, |aura| aura.stacks)
+    };
+    let arrival = |run: &mut Run, expected: u8| {
+        assert!(crate::spell_cast::try_cast_triggered(
+            run.app.world_mut(),
+            run.actor,
+            1277098,
+            Some(run.actor),
+            1
+        ));
+        for _ in 0..200 {
+            run.app.update();
+            if stacks(run, 1256576) == expected {
+                return;
+            }
+        }
+        panic!("the actual Putrefy ghoul did not grant Forbidden Sacrifice");
+    };
+    arrival(&mut run, 1);
+    let per_ghoul =
+        crate::spell_cast::scripts::script_effect_value(run.app.world(), run.actor, 1256565, 1)
+            as u8;
+    assert_eq!(stacks(&run, 1254252), per_ghoul);
+    // Stop subsequent Dread Plague proc-driven ghoul arrivals in this timing test.
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        run.targets[0],
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 1240996,
+    );
+    for _ in 0..60 {
+        run.app.update();
+    }
+    arrival(&mut run, 2);
+    assert_eq!(stacks(&run, 1254252), 2 * per_ghoul);
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        run.targets[0],
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 1240996,
+    );
+    run.app.update();
+    let increased = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(run.actor)
+        .unwrap()
+        .mastery_points;
+    assert!(
+        increased > baseline,
+        "real arrival stacks must increase player mastery: {baseline} -> {increased}"
+    );
+    for _ in 0..300 {
+        run.app.update();
+        if stacks(&run, 1256576) == 1 {
+            return;
+        }
+    }
+    panic!("the first Forbidden Sacrifice stack must expire before the second");
+}
+
+#[test]
+#[ignore = "requires native252 profile/traits and player actor"]
 fn dk252_trollbane_chains_then_scourge_strike_shatters_three_targets() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(252, 3).unwrap();
