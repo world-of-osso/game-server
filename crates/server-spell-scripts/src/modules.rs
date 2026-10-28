@@ -168,6 +168,7 @@ register_modules! {
     evoker_dragonrage: (1000, "modules/evoker_dragonrage.rs"),
     evoker_flames: (430, "modules/evoker_flames.rs"),
     evoker_imminent: (1000, "modules/evoker_imminent.rs"),
+    evoker_merithra: (1000, "modules/evoker_merithra.rs"),
     evoker_onslaught: (1000, "modules/evoker_onslaught.rs"),
     evoker_rewind: (1000, "modules/evoker_rewind.rs"),
     evoker_rising_fury: (1000, "modules/evoker_rising_fury.rs"),
