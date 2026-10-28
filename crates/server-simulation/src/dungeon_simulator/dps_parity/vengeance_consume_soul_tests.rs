@@ -81,7 +81,7 @@ fn lesser_fragment_heals_from_health_and_recent_damage() {
         "second consumed fragment must deliver its heal"
     );
     assert!(
-        second[1] > first[0] * 2,
-        "recent incoming damage must increase healing: {second:?}"
+        second[1] > first[0] * 3 / 2 && second[1] as f32 > max * 0.015,
+        "recent incoming damage must increase healing: {second:?}, max={max}"
     );
 }
