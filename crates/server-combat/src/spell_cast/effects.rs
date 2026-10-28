@@ -2312,8 +2312,9 @@ fn heal(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target: Entity
         scaled_amount(world, ctx.caster, ctx.spell, effect),
         effect.variance,
     ) * ctx.chain_multiplier;
+    let raw = amount;
     let (amount, crit) = with_crit(world, ctx.caster, target, ctx.spell, amount);
-    apply_heal(world, ctx, target, amount, crit, false);
+    apply_heal_with_raw(world, ctx, target, amount, crit, false, Some(raw));
 }
 
 /// TC EffectHealMaxHealth: zero value selects caster max; nonzero selects missing HP.
@@ -2360,6 +2361,19 @@ pub fn apply_heal(
     crit: bool,
     periodic: bool,
 ) {
+    let raw = (!crit).then_some(amount);
+    apply_heal_with_raw(world, ctx, target, amount, crit, periodic, raw);
+}
+
+fn apply_heal_with_raw(
+    world: &mut World,
+    ctx: &EffectCtx,
+    target: Entity,
+    amount: f32,
+    crit: bool,
+    periodic: bool,
+    raw: Option<f32>,
+) {
     let done = stat_mods(world, ctx.caster).map_or(1.0, |mods| mods.healing_done_mult)
         * versatility_multiplier(world, ctx.caster)
         * crate::auras::combat_stats::healing_multiplier(world, ctx.caster, target, ctx.spell);
@@ -2379,6 +2393,15 @@ pub fn apply_heal(
             world, ctx.caster, ctx.spell, periodic,
         );
     let fraction = ctx.spell.cast_periodic_fraction.unwrap_or(1.0);
+    // SimC action.cpp1473 records periodic result_raw before the partial-tick multiplier.
+    let source = raw.map(|raw| {
+        (modded_amount(world, ctx, raw, periodic) * done * taken * named)
+            .max(0.0)
+            .round()
+    });
+    let alive = world
+        .get::<Health>(target)
+        .is_some_and(|health| health.current > 0.0);
     let amount = (modded_amount(world, ctx, amount, periodic) * done * taken * named * fraction)
         .max(0.0)
         .round();
@@ -2389,6 +2412,9 @@ pub fn apply_heal(
         (amount, crit)
     };
     apply_resolved_heal(world, ctx, target, amount, crit, periodic);
+    if alive && let Some(source) = source {
+        super::script_registry::raw_heal(world, ctx, source);
+    }
 }
 
 /// A named transfer already computed from effective healing; no second spell-power,

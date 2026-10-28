@@ -211,3 +211,148 @@ fn devastation_scarlet_healing_empowers_and_is_consumed_by_real_living_flame() {
         "unselected healing grants no damage bonus: {unselected}/{unselected_plain}"
     );
 }
+
+#[test]
+#[ignore = "requires native Devastation follower profile and world DB"]
+fn devastation_scarlet_banks_healing_before_the_critical_multiplier() {
+    fn sample(crit_pct: f32) -> (f32, bool) {
+        let _seed = crate::random::seed_scope(70448);
+        let mut run = prepare_literal(1467, 1).unwrap();
+        engage(&mut run);
+        let actor = run.actor;
+        run.app
+            .world_mut()
+            .get_mut::<crate::stats::CharacterStats>(actor)
+            .unwrap()
+            .crit_pct = crit_pct;
+        let _cast_seed = crate::random::seed_scope(818181);
+        crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 361509, Some(actor), 1);
+        preparation::finish_pending_setup(&mut run).unwrap();
+        for _ in 0..10 {
+            run.app.update();
+        }
+        let event = run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .find(|event| {
+                event.source == Some(actor.to_bits())
+                    && event.spell_id == Some(361509)
+                    && event.kind == shared::protocol::CombatLogKind::Heal
+            })
+            .expect("real native heal");
+        let critical = event.crit;
+        let stored = run
+            .app
+            .world()
+            .get::<crate::auras::ActiveAuras>(actor)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 372470 && aura.caster == actor)
+            .unwrap()
+            .effects
+            .iter()
+            .find(|effect| effect.index == 0)
+            .unwrap()
+            .amount;
+        (stored, critical)
+    }
+    let (ordinary, plain_crit) = sample(-1000.0);
+    let (critical, did_crit) = sample(1000.0);
+    assert!(
+        !plain_crit && did_crit,
+        "the actual native heals must exercise both crit paths"
+    );
+    assert!(
+        ordinary > 0.0 && (ordinary - critical).abs() < 0.1,
+        "Scarlet must use SimC result_raw, not post-crit healing: {ordinary}/{critical}"
+    );
+}
+
+#[test]
+#[ignore = "requires native Devastation follower profile and world DB"]
+fn devastation_scarlet_banks_periodic_raw_before_partial_tick_fraction() {
+    fn sample(fraction: f32, taken: f32) -> (f32, i32) {
+        let _seed = crate::random::seed_scope(70448);
+        let mut run = prepare_literal(1467, 1).unwrap();
+        engage(&mut run);
+        let actor = run.actor;
+        run.app
+            .world_mut()
+            .get_mut::<crate::stats::CharacterStats>(actor)
+            .unwrap()
+            .crit_pct = -1000.0;
+        let mut spell = run
+            .app
+            .world()
+            .resource::<crate::spell_info::SpellStore>()
+            .get(361509)
+            .unwrap()
+            .clone();
+        spell.cast_periodic_fraction = Some(fraction);
+        run.app
+            .world_mut()
+            .get_mut::<crate::auras::AuraStatMods>(actor)
+            .unwrap()
+            .healing_taken_mult = taken;
+        let ctx = crate::spell_cast::effects::EffectCtx {
+            caster: actor,
+            spell: &spell,
+            depth: 0,
+            dest: None,
+            chain_multiplier: 1.0,
+        };
+        crate::spell_cast::effects::apply_heal(
+            run.app.world_mut(),
+            &ctx,
+            actor,
+            1000.0,
+            false,
+            true,
+        );
+        let event = run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .rev()
+            .find(|event| {
+                event.spell_id == Some(361509)
+                    && event.kind == shared::protocol::CombatLogKind::Heal
+            })
+            .expect("native periodic heal");
+        let healing = event.amount;
+        let stored = run
+            .app
+            .world()
+            .get::<crate::auras::ActiveAuras>(actor)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 372470 && aura.caster == actor)
+            .unwrap()
+            .effects
+            .iter()
+            .find(|effect| effect.index == 0)
+            .unwrap()
+            .amount;
+        (stored, healing)
+    }
+    let (full, full_heal) = sample(1.0, 1.0);
+    let (partial, partial_heal) = sample(0.5, 1.0);
+    let (amplified, amplified_heal) = sample(1.0, 1.5);
+    assert!(
+        partial_heal < full_heal,
+        "partial tick must really reduce resolved healing"
+    );
+    assert!(
+        full > 0.0 && (full - partial).abs() < 0.1,
+        "SimC result_raw precedes partial tick scaling: {full}/{partial}"
+    );
+    assert!(
+        amplified_heal > full_heal && (amplified - 1.5 * full).abs() < 0.1,
+        "SimC result_raw includes the target healing multiplier: {full}/{amplified}"
+    );
+}

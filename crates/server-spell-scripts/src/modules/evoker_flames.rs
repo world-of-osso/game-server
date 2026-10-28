@@ -28,7 +28,7 @@ pub const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::CheckTarget(check_target),
     SpellScriptHook::EffectEnabled(ruby_embers_periodic),
     SpellScriptHook::HealthChangeObserved(chrono_flame::record_health_change),
-    SpellScriptHook::HealthChangeObserved(record_scarlet_heal),
+    SpellScriptHook::RawHeal(record_scarlet_heal),
     SpellScriptHook::NamedAuraFields(&[(431442, 0), (431442, 1), (431442, 2), (1260647, 0)]),
 ];
 
@@ -55,24 +55,14 @@ fn check_target(world: &World, _: Entity, spell: u32, _: Entity) -> Result<(), C
     Ok(())
 }
 
-fn record_scarlet_heal(world: &mut World, event: &shared::protocol::CombatLogEvent) {
-    if event.kind != shared::protocol::CombatLogKind::Heal || event.amount <= 0 {
-        return;
-    }
-    let (Some(source), Some(spell_id)) = (event.source, event.spell_id) else {
-        return;
-    };
-    let Some(caster) = Entity::try_from_bits(source) else {
-        return;
-    };
-    if !combat::auras::has_aura(world, caster, 372469) {
+fn record_scarlet_heal(world: &mut World, ctx: &spell_cast::effects::EffectCtx<'_>, raw: f32) {
+    let caster = ctx.caster;
+    if raw <= 0.0 || !combat::auras::has_aura(world, caster, 372469) {
         return;
     }
     let store = world.resource::<combat::spell_info::SpellStore>();
-    let Some(spell) = store.get(spell_id) else {
-        return;
-    };
-    if !spell
+    if !ctx
+        .spell
         .class_options
         .as_ref()
         .is_some_and(|options| options.spell_class_set == 224)
@@ -91,7 +81,7 @@ fn record_scarlet_heal(world: &mut World, event: &shared::protocol::CombatLogEve
     // SimC76f8118 sc_evoker.cpp1320/4347–4362: raw healing, 50% modeled overheal,
     // the selected native talent percentage, and the live Living Flame SP cap.
     let fraction = script_effect_value(world, caster, 372469, 0) / 100.0;
-    let added = event.amount as f32 * fraction * 0.5;
+    let added = raw * fraction * 0.5;
     if scarlet_value(world, caster).is_none() {
         combat::auras::apply_aura(
             world,
