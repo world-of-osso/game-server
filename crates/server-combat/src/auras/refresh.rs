@@ -58,6 +58,8 @@ pub(super) fn prepare_application(
         // selects Pandemic, not a spell-ID whitelist. Explicit Extend and
         // Rolling retain their source precedence (action.cpp2729–2734).
         carry_duration(world, target, new, DurationCarry::Pandemic);
+    } else if !rolling && has_periodic_health_effect(new) {
+        carry_next_tick_duration(world, target, new);
     }
     match new.spell_id {
         IGNORE_PAIN => accumulate_ignore_pain(world, target, new),
@@ -80,6 +82,47 @@ pub(super) fn prepare_application(
     preserve_counter_only_stacks(world, target, new, spell);
     super::enhancement_power::preserve_refresh_duration(world, target, new);
     super::ret_crusade::preserve_refresh_duration(world, target, new);
+}
+
+fn has_periodic_health_effect(aura: &AuraInstance) -> bool {
+    aura.effects.iter().any(|effect| {
+        effect.period_ms > 0
+            && matches!(
+                effect.aura_type,
+                super::handlers::PERIODIC_DAMAGE
+                    | super::handlers::PERIODIC_DAMAGE_PERCENT
+                    | super::handlers::PERIODIC_LEECH
+                    | super::handlers::PERIODIC_HEAL
+            )
+    })
+}
+
+fn carry_next_tick_duration(world: &World, target: Entity, new: &mut AuraInstance) {
+    let Some(old) = previous(world, target, new) else {
+        return;
+    };
+    let now = aura_now(world);
+    if old.expires_at.is_some_and(|expiry| expiry <= now) {
+        return;
+    }
+    let Some(effect) = old.effects.iter().find(|effect| {
+        effect.period_ms > 0
+            && matches!(
+                effect.aura_type,
+                super::handlers::PERIODIC_DAMAGE
+                    | super::handlers::PERIODIC_DAMAGE_PERCENT
+                    | super::handlers::PERIODIC_LEECH
+                    | super::handlers::PERIODIC_HEAL
+            )
+    }) else {
+        return;
+    };
+    // SimC76f8118 action.cpp419/4618–4619: ordinary DoT refresh adds
+    // the time to the next full tick to the newly triggered duration.
+    let until_tick = (effect.next_tick_at() - now).max(0.0);
+    let duration = f64::from(new.duration_ms) / 1000.0 + until_tick;
+    new.duration_ms = (duration * 1000.0).round() as u32;
+    new.expires_at = Some(now + duration);
 }
 
 fn preserve_counter_only_stacks(
@@ -162,9 +205,9 @@ fn settle_previous_ticks(world: &mut World, target: Entity, new: &AuraInstance) 
     }
 }
 
-/// TC a352b1fa Spell.cpp3236 and SpellAuras.cpp976–991: normal nonstacking
-/// recasts reset periodic timers; FULL_MASK's DONT_RESET_PERIODIC_TIMER,
-/// stacking and native Pandemic retain time-to-tick (SpellDefines.h291–293).
+/// SimC76f8118 action.cpp419/4618–4619 retains health-periodic phase on
+/// refresh. Native full-mask, stacking, Pandemic and sourced policies also
+/// preserve phase for other periodic effects.
 fn prepare_periodic_phase(
     world: &World,
     target: Entity,
@@ -181,7 +224,10 @@ fn prepare_periodic_phase(
     let scripted_phase = world
         .resource::<crate::spell_cast::script_registry::SpellScriptRegistry>()
         .preserves_periodic_phase(spell.id);
-    let preserve_phase = native_preserves_phase || sourced_rolling || scripted_phase;
+    let preserve_phase = native_preserves_phase
+        || sourced_rolling
+        || scripted_phase
+        || has_periodic_health_effect(new);
     if !preserve_phase {
         return;
     }

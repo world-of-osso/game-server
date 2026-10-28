@@ -124,6 +124,7 @@ mod dk252_tests;
 mod unholy_nazgrim_tests;
 #[cfg(test)]
 mod unholy_magus_crit_tests;
+mod unholy_magus_refresh_tests;
 mod driver_tests;
 mod dummy_reference_tests;
 mod elemental_ancestor_tests;

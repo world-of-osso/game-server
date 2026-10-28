@@ -14,6 +14,9 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 ### Unholy Magus
 
 - The real Magus's Withering Grasp periodic damage can critically strike with its owner's live critical chance and its own critical damage modifiers (SimC76f8118 `sc_death_knight.cpp3070–3079/4505–4511`).
+### Periodic refresh
+
+- An ordinary refreshed periodic damage, leech or healing effect retains its next-tick phase and adds the time to that tick to its fresh duration. Native Pandemic, sourced rolling and extension behavior keep their own duration rules (SimC76f8118 `action.cpp419/4612–4620`).
 
 ### Unholy Nazgrim
 
