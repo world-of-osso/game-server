@@ -177,6 +177,35 @@ fn swing_clocks_preserve_fractional_tick_remainder_per_hand() {
     );
 }
 
+#[test]
+fn swing_ready_while_out_of_range_does_not_accumulate_credit() {
+    let mut app = setup_app();
+    let target = spawn_target(&mut app, pos(100.0, 0.0, 0.0), 1_000_000.0);
+    let player = level_10_player(
+        &mut app,
+        target,
+        CharacterStats {
+            main_hand: HEAVY_BLADE,
+            ..default()
+        },
+    );
+    for _ in 0..4 {
+        app.world_mut()
+            .resource_mut::<Time>()
+            .advance_by(std::time::Duration::from_millis(50));
+        auto_attack_system(app.world_mut());
+    }
+    *app.world_mut().get_mut::<Position>(target).unwrap() = pos(1.0, 0.0, 0.0);
+    app.world_mut()
+        .resource_mut::<Time>()
+        .advance_by(std::time::Duration::from_millis(50));
+    auto_attack_system(app.world_mut());
+    assert_eq!(
+        app.world().get::<AutoAttack>(player).unwrap().timer,
+        std::time::Duration::from_millis(2600)
+    );
+}
+
 /// Worn Shortsword (25) from world.db, the Retail warrior starting weapon.
 fn worn_shortsword() -> Option<WeaponDamage> {
     let path = crate::test_data::world_db_path();
