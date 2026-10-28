@@ -243,7 +243,12 @@ fn fury_imminent_demise_accelerates_bladestorm_and_expires() {
     fn spin(stacks: usize) -> u64 {
         let _seed = crate::random::seed_scope(70_448);
         let mut run = super::super::prepare_measurement(72, 1).unwrap();
-        assert!(run.app.world().get::<shared::components::Player>(run.actor).is_some());
+        assert!(
+            run.app
+                .world()
+                .get::<shared::components::Player>(run.actor)
+                .is_some()
+        );
         super::super::channel_timing_tests::remove_equipped_proc_drivers(&mut run);
         super::super::engage(&mut run);
         let actor = run.actor;
@@ -253,22 +258,56 @@ fn fury_imminent_demise_accelerates_bladestorm_and_expires() {
             crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 445606, Some(actor), 1);
         }
         if stacks > 0 {
-            let auras = run.app.world().get::<crate::auras::ActiveAuras>(actor).unwrap();
-            assert_eq!(auras.iter().find(|aura| aura.spell_id == 445606).unwrap().stacks as usize, stacks);
+            let auras = run
+                .app
+                .world()
+                .get::<crate::auras::ActiveAuras>(actor)
+                .unwrap();
+            assert_eq!(
+                auras
+                    .iter()
+                    .find(|aura| aura.spell_id == 445606)
+                    .unwrap()
+                    .stacks as usize,
+                stacks
+            );
         }
         cast_native(&mut run, 446035, actor);
         assert!(crate::auras::has_aura(run.app.world(), actor, 446035));
         for _ in 0..500 {
             run.app.update();
-            if !crate::auras::has_aura(run.app.world(), actor, 446035) { break; }
+            if !crate::auras::has_aura(run.app.world(), actor, 446035) {
+                break;
+            }
         }
-        assert!(!crate::auras::has_aura(run.app.world(), actor, 446035), "the native spin completes");
-        assert!(!crate::auras::has_aura(run.app.world(), actor, 445606), "completion consumes the earned stacks");
+        assert!(
+            !crate::auras::has_aura(run.app.world(), actor, 446035),
+            "the native spin completes"
+        );
+        assert!(
+            !crate::auras::has_aura(run.app.world(), actor, 445606),
+            "completion consumes the earned stacks"
+        );
         let combat = super::super::report::combat(run.app.world(), &run.damage_targets, 6.0);
-        combat["actions"].as_array().unwrap().iter().filter(|a| a["spell_id"] == 50622).map(|a| ["hits", "misses", "dodges", "parries"].iter().map(|field| a[*field].as_u64().unwrap()).sum::<u64>()).sum()
+        combat["actions"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|a| a["spell_id"] == 50622)
+            .map(|a| {
+                ["hits", "misses", "dodges", "parries"]
+                    .iter()
+                    .map(|field| a[*field].as_u64().unwrap())
+                    .sum::<u64>()
+            })
+            .sum()
     }
     let ordinary = spin(0);
     let enhanced = spin(3);
     assert!(ordinary > 0);
-    assert_eq!(enhanced, ordinary + 3, "three earned stacks add three real ticks");
+    assert_eq!(
+        enhanced,
+        ordinary + 3,
+        "three earned stacks add three real ticks"
+    );
 }
