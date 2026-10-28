@@ -77,6 +77,7 @@ def print_tank(report):
         print('External dummy healing:', 'enabled' if report['external_healing'] else 'disabled')
         print('SimC Bloodlust start (s):', number(report['bloodlust_start_seconds']))
         print('SimC raid buffs:', ', '.join(f'{buff["name"]} ({buff["spell_id"]})' for buff in report['raid_buffs']) or 'none')
+        print('SimC dummy debuffs:', ', '.join(f'{buff["name"]} ({buff["spell_id"]})' for buff in report['dummy_debuffs']) or 'none')
         print('\n| Spell ID | Casts | Periodic damage ticks | Raw self-heal | Effective self-heal | Consumed absorb | Aura uptime % |')
         print('|---|---:|---:|---:|---:|---:|---:|')
         spells = (set(report['tank_casts']) | set(report['periodic_damage_ticks_by_spell']) |

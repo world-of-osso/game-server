@@ -76,6 +76,43 @@ fn parse_raid_buffs(trace: &str) -> Result<Vec<RaidBuff>, String> {
     Ok(buffs)
 }
 
+pub(crate) fn read_dummy_debuffs(path: &Path, dummy: &str) -> Result<Vec<RaidBuff>, String> {
+    let trace = std::fs::read_to_string(path)
+        .map_err(|error| format!("read {}: {error}", path.display()))?;
+    parse_dummy_debuffs(&trace, dummy)
+}
+
+fn parse_dummy_debuffs(trace: &str, dummy: &str) -> Result<Vec<RaidBuff>, String> {
+    let mut debuffs = Vec::new();
+    for (name, expected_id) in [
+        ("chaos_brand", 1490),
+        ("mystic_touch", 113746),
+        ("hunters_mark", 259556),
+    ] {
+        if !trace
+            .lines()
+            .any(|line| line.trim() == format!("override.{name}=1"))
+        {
+            continue;
+        }
+        let event = format!("0.000 Enemy '{dummy}' gains Buff '{name}' ({expected_id})");
+        let count = trace
+            .lines()
+            .filter(|line| line.starts_with(&event))
+            .count();
+        if count != 1 {
+            return Err(format!(
+                "expected one initial SimC dummy debuff event for {name}, found {count}"
+            ));
+        }
+        debuffs.push(RaidBuff {
+            name: name.into(),
+            spell_id: expected_id,
+        });
+    }
+    Ok(debuffs)
+}
+
 pub(crate) fn read_bloodlust_time(path: &Path, player: &str) -> Result<Option<u64>, String> {
     let trace = std::fs::read_to_string(path)
         .map_err(|error| format!("read {}: {error}", path.display()))?;
@@ -182,6 +219,26 @@ fn reads_enabled_raid_buffs_and_their_trace_spell_ids() {
         ]
     );
     assert!(parse_raid_buffs("override.skyfury=1").is_err());
+}
+
+#[test]
+fn reads_only_enabled_dummy_debuffs() {
+    let trace = "override.chaos_brand=1\noverride.mystic_touch=0\noverride.hunters_mark=1\n0.000 Enemy 'dummy' gains Buff 'chaos_brand' (1490) (stacks=1)\n0.000 Enemy 'dummy' gains Buff 'hunters_mark' (259556) (stacks=1)\n0.000 Enemy 'dummy' gains Buff 'mystic_touch' (113746) (stacks=1)";
+    assert_eq!(
+        parse_dummy_debuffs(trace, "dummy").unwrap(),
+        vec![
+            RaidBuff {
+                name: "chaos_brand".into(),
+                spell_id: 1490
+            },
+            RaidBuff {
+                name: "hunters_mark".into(),
+                spell_id: 259556
+            }
+        ]
+    );
+    assert!(parse_dummy_debuffs("override.chaos_brand=1", "dummy").is_err());
+    assert!(parse_dummy_debuffs(trace, "other").is_err());
 }
 
 #[test]

@@ -856,6 +856,58 @@ fn protection_apl_selects_shield_using_the_real_profile_conditions() {
 }
 
 #[test]
+#[ignore = "requires canonical MID2 Vengeance profile"]
+fn simc_dummy_debuffs_modify_real_damage_by_school() {
+    use crate::simc_tank_timeline::RaidBuff;
+    fn damage(debuffs: &[RaidBuff], spell: u32) -> i32 {
+        let _seed = crate::random::seed_scope(70_448);
+        let mut run = super::dps_parity::prepare_registered_player(581, 1).unwrap();
+        super::tank_replay::apply_simc_dummy_debuffs(&mut run, debuffs).unwrap();
+        super::dps_parity::engage(&mut run);
+        let actor = run.actor;
+        let target = run.targets[0];
+        assert!(crate::spell_cast::try_cast_triggered(
+            run.app.world_mut(),
+            actor,
+            spell,
+            Some(target),
+            1
+        ));
+        run.app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .find(|event| {
+                event.spell_id == Some(spell)
+                    && event.target == Some(target.to_bits())
+                    && event.kind == shared::protocol::CombatLogKind::Damage
+            })
+            .unwrap()
+            .amount
+    }
+    let debuffs: Vec<_> = [
+        ("chaos_brand", 1490),
+        ("mystic_touch", 113746),
+        ("hunters_mark", 259556),
+    ]
+    .into_iter()
+    .map(|(name, spell_id)| RaidBuff {
+        name: name.into(),
+        spell_id,
+    })
+    .collect();
+    for (spell, multiplier) in [(247455, 1.03 * 1.03), (228478, 1.05 * 1.03)] {
+        let base = damage(&[], spell);
+        let buffed = damage(&debuffs, spell);
+        assert!(
+            (buffed as f64 / base as f64 - multiplier).abs() < 0.01,
+            "spell {spell}: base {base}, debuffed {buffed}"
+        );
+    }
+}
+
+#[test]
 #[ignore = "requires canonical MID2 profile inputs and a SimC tank-dummy trace"]
 fn unregistered_tank_driver_fails_instead_of_using_a_follower() {
     let path = std::env::var("HEALER_TANK_SIMC_TRACE").expect("HEALER_TANK_SIMC_TRACE required");
