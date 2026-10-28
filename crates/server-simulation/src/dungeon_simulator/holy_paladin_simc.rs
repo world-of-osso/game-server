@@ -61,17 +61,17 @@ pub(super) fn prepare(
     literal_rotation::capture_fixture(run.app.world_mut(), healer, encounter)?;
     // SimC has no default Holy healer APL; these are native triage thresholds.
     let program = Program::parse(&[
-        ("default", "beacon_of_light,if=target.beacon_up=0"),
-        ("default", "lay_on_hands,if=target.health.pct<20"),
-        ("default", "avenging_wrath,if=target.health.pct<60"),
-        ("default", "light_of_dawn,if=party.injured>=2&holy_power>=3"),
-        ("default", "holy_shock,if=target.health.pct<95"),
         (
             "default",
-            "word_of_glory,if=target.health.pct<85&holy_power>=3",
+            "beacon_of_light,if=target.health.pct<95&target.beacon_up=0",
         ),
+        ("default", "lay_on_hands,if=target.health.pct<20"),
+        ("default", "avenging_wrath,if=target.health.pct<60"),
+        ("default", "light_of_dawn,if=party.injured>=2"),
+        ("default", "word_of_glory,if=target.health.pct<90"),
+        ("default", "holy_shock,if=target.health.pct<95"),
         ("default", "flash_of_light,if=target.health.pct<50"),
-        ("default", "holy_light,if=target.health.pct<100"),
+        ("default", "holy_light,if=target.health.pct<80"),
         ("damage", "holy_shock"),
         ("damage", "hammer_of_wrath"),
         ("damage", "judgment"),
