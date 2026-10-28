@@ -26,6 +26,10 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 - The actor's channel cadence and its periodic aura use the same native effect cadence. Declared damage/healing periods own this cadence ahead of faster auxiliary control pulses; channels without declared health emissions retain their native utility/script period. Constant haste must not create an extra expiry damage event or full proc callbacks from rounding residue. Preserve tick-zero behavior and genuine fractional native tick counts.
 - Preserve non-channel periodic quantization, channel modifier/haste snapshots, and un-hasted channel lifetimes, including four-second Convoke. For hasted non-channel periodic effects, use current caster haste when scheduling the interval after each paid tick; do not retime the already-pending tick (SimC76f8118 `action.cpp:2038–2041,2792–2809`). Do not add spell-ID branches or replace native coefficients/periods/durations.
 
+### Stormbound Emblem of Dazar
+
+- A completed or interrupted native1295275 channel grants haste1294745 for one native buff duration per completed tick. Its amount comes from the equipped native1294744 item effect (`unique_gear_midnight.cpp3863–3954`).
+
 ### Devourer Soul Immolation
 
 - Each native Soul Immolation1241937 self-HoT tick executes the native Fury payload1242475. The native aura owns its tick timing and payload values (SimC76f8118 `sc_demon_hunter.cpp`5930–5958). Fragment spawning is separate.
@@ -609,6 +613,7 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 ### Shared Hellcaller Wither counters
 
+- Mark of Xavius440046 registers effects1/3 for Affliction and all effects except1 for Destruction; thus its native Wither damage bonuses apply only to Destruction (SimC76f8118 `sc_warlock_init.cpp:82–83`).
 - Native Wither445474 keeps its actual counter stacks, but its periodic damage ignores that count. An ordinary recast preserves earned stacks without adding a refresh stack; explicit native stack applications retain normal counter advancement. Preserve native coefficients, tick phase and lifetime. Both265 and267 share this rule (SimC76f8118 `sc_warlock_actions.cpp1066,1174–1186`).
 - Wither's counter is not an ordinary damage-stack multiplier. Its target-side Ashen Remains effect applies once regardless of counter stacks (`sc_warlock_actions.cpp:273–275`); preserve the separate Dark Titan's Mark effect. Other stacking DoTs keep their existing behavior; Blackened Soul producers/collapse are separate relationships.
 - Shared265/267 Hellcaller producers must use actual Chaos Bolt/Shadowburn impacts and actual UA applications, including refresh, Fatal Echoes and seed-applied UA. Do not replace UA's independently owned expiry callbacks. Grant native Malevolence stacks/buff/damage only to its caster's active Withers; preserve each Wither lifetime and tick phase.

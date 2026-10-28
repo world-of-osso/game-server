@@ -110,6 +110,300 @@ fn dk252_festering_strike_earns_ghouls_and_next_native_scythe() {
 }
 
 #[test]
+#[ignore = "requires private native252 Rider templates/profile and player actor"]
+fn dk252_army_summons_all_four_real_riders() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 1).unwrap();
+    engage(&mut run);
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(42650, run.actor, None),
+    )
+    .unwrap();
+    for _ in 0..100 {
+        run.app.update();
+    }
+    let riders: std::collections::HashSet<_> = {
+        let world = run.app.world_mut();
+        world
+            .query::<(
+                &shared::components::Npc,
+                &crate::spell_cast::summon::SummonedCreature,
+            )>()
+            .iter(world)
+            .filter_map(|(npc, summon)| {
+                (summon.owner == run.actor
+                    && [444248, 444251, 444252, 444254].contains(&summon.spell_id))
+                .then_some(npc.template_id)
+            })
+            .collect()
+    };
+    assert_eq!(
+        riders,
+        [221632, 221633, 221634, 221635].into_iter().collect(),
+        "selected Apocalypse Now must summon all four actual native Horsemen"
+    );
+}
+
+#[test]
+#[ignore = "requires private native252 Rider templates/profile and player actor"]
+fn dk252_army_riders_melee_and_expire_at_selected_duration() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 1).unwrap();
+    engage(&mut run);
+    let started = crate::auras::aura_now(run.app.world());
+    let duration =
+        crate::spell_cast::scripts::script_effect_value(run.app.world(), run.actor, 444040, 1)
+            as f64
+            / 1000.0;
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(42650, run.actor, None),
+    )
+    .unwrap();
+    for _ in 0..100 {
+        run.app.update();
+    }
+    let riders: Vec<_> = {
+        let world = run.app.world_mut();
+        world
+            .query::<(Entity, &crate::spell_cast::summon::SummonedCreature)>()
+            .iter(world)
+            .filter_map(|(entity, summon)| {
+                (summon.owner == run.actor
+                    && [444248, 444251, 444252, 444254].contains(&summon.spell_id))
+                .then_some((entity, summon.expires_at))
+            })
+            .collect()
+    };
+    assert_eq!(riders.len(), 4, "the actual four Horsemen must be present");
+    for (_, expiry) in &riders {
+        assert!(
+            (expiry.unwrap() - started - duration).abs() < 0.2,
+            "Horseman lifetime must use selected Apocalypse Now native duration"
+        );
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    for (rider, _) in &riders {
+        assert!(
+            events
+                .iter()
+                .any(|event| event.source == Some(rider.to_bits())
+                    && event.target == Some(run.targets[0].to_bits())
+                    && event.spell_id.is_none()
+                    && event.kind == CombatLogKind::Damage
+                    && event.amount > 0),
+            "each actual Horseman must melee the selected target"
+        );
+    }
+    while crate::auras::aura_now(run.app.world()) < started + duration + 1.0 {
+        run.app.update();
+    }
+    assert!(
+        riders
+            .iter()
+            .all(|(rider, _)| run.app.world().get_entity(*rider).is_err()),
+        "Horsemen must expire after their selected native duration"
+    );
+}
+
+#[test]
+#[ignore = "requires private native252 Rider templates/profile and player actor"]
+fn dk252_horsemen_melee_inherits_live_owner_attack_power() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 1).unwrap();
+    engage(&mut run);
+    run.app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(run.actor)
+        .unwrap()
+        .attack_power += 10_000.0;
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(42650, run.actor, None),
+    )
+    .unwrap();
+    for _ in 0..100 {
+        run.app.update();
+    }
+    let riders: Vec<_> = {
+        let world = run.app.world_mut();
+        world
+            .query::<(Entity, &crate::spell_cast::summon::SummonedCreature)>()
+            .iter(world)
+            .filter_map(|(entity, summon)| {
+                (summon.owner == run.actor
+                    && [444248, 444251, 444252, 444254].contains(&summon.spell_id))
+                .then_some(entity)
+            })
+            .collect()
+    };
+    assert_eq!(riders.len(), 4, "four real Horsemen must be present");
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    for rider in riders {
+        let hits: Vec<_> = events
+            .iter()
+            .filter(|event| {
+                event.source == Some(rider.to_bits())
+                    && event.target == Some(run.targets[0].to_bits())
+                    && event.spell_id.is_none()
+                    && event.kind == CombatLogKind::Damage
+                    && event.amount > 0
+            })
+            .map(|event| event.amount)
+            .collect();
+        assert!(
+            hits.iter().any(|hit| *hit > 100),
+            "each actual Horseman must inherit live owner melee power: {hits:?}"
+        );
+    }
+}
+
+#[test]
+#[ignore = "requires private native252 Rider templates/profile and player actor"]
+fn dk252_horsemen_use_their_native_damage_actions() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 1).unwrap();
+    engage(&mut run);
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(42650, run.actor, None),
+    )
+    .unwrap();
+    for _ in 0..300 {
+        run.app.update();
+    }
+    let riders: std::collections::HashMap<_, _> = {
+        let world = run.app.world_mut();
+        world
+            .query::<(
+                Entity,
+                &shared::components::Npc,
+                &crate::spell_cast::summon::SummonedCreature,
+            )>()
+            .iter(world)
+            .filter_map(|(entity, npc, summon)| {
+                (summon.owner == run.actor
+                    && [444248, 444251, 444252, 444254].contains(&summon.spell_id))
+                .then_some((npc.template_id, entity.to_bits()))
+            })
+            .collect()
+    };
+    assert_eq!(riders.len(), 4, "four real Horsemen must be present");
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    for (entry, spell) in [
+        (221632, 445504),
+        (221633, 445513),
+        (221634, 445508),
+        (221635, 445507),
+    ] {
+        let actor = riders[&entry];
+        assert!(
+            events.iter().any(|event| event.source == Some(actor)
+                && event.target == Some(run.targets[0].to_bits())
+                && event.spell_id == Some(spell)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0),
+            "real Horseman {entry} must deal damage with native spell {spell}"
+        );
+    }
+}
+
+#[test]
+#[ignore = "requires private native252 Rider templates/profile and player actor"]
+fn dk252_horseman_spell_inherits_owner_melee_power() {
+    use crate::spell_cast::effects::factor_capture::FactorCapture;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 1).unwrap();
+    engage(&mut run);
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(42650, run.actor, None),
+    )
+    .unwrap();
+    for _ in 0..60 {
+        run.app.update();
+    }
+    let rider = {
+        let world = run.app.world_mut();
+        world
+            .query::<(
+                Entity,
+                &shared::components::Npc,
+                &crate::spell_cast::summon::SummonedCreature,
+            )>()
+            .iter(world)
+            .find_map(|(entity, npc, summon)| {
+                (summon.owner == run.actor && npc.template_id == 221633).then_some(entity)
+            })
+            .expect("actual Whitemane must exist")
+    };
+    run.app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(run.actor)
+        .unwrap()
+        .attack_power += 10_000.0;
+    let world = run.app.world();
+    let expected = world
+        .get::<crate::stats::CharacterStats>(run.actor)
+        .unwrap()
+        .total_attack_power(
+            crate::stats::WeaponAttackType::MainHand,
+            world.get::<crate::stats::StatModifiers>(run.actor),
+        )
+        * 0.70125;
+    run.app.insert_resource(FactorCapture::new(
+        rider,
+        run.targets[0],
+        445513,
+        "horseman_coil",
+        1,
+    ));
+    assert!(crate::spell_cast::try_cast_triggered(
+        run.app.world_mut(),
+        rider,
+        445513,
+        Some(run.targets[0]),
+        1
+    ));
+    for _ in 0..100 {
+        run.app.update();
+        let capture = run.app.world().resource::<FactorCapture>().export();
+        if let Some(power) = capture["events"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|event| event["event"] == "direct_amount" && event["spell_id"] == 445513)
+            .and_then(|event| event["factors"]["a_power"].as_f64())
+        {
+            assert!(
+                (power - f64::from(expected)).abs() < 1.0,
+                "actual Horseman spell must inherit owner melee AP: actual={power}, expected={expected}"
+            );
+            return;
+        }
+    }
+    panic!("the actual Horseman must land native Death Coil");
+}
+
+#[test]
 #[ignore = "requires native252 profile/traits and player actor"]
 fn dk252_lesser_ghoul_expiry_triggers_ruptured_viscera() {
     let _seed = crate::random::seed_scope(70448);
