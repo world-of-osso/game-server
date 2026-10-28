@@ -2469,6 +2469,32 @@ fn dk252_whitemane_applies_and_grows_real_undeath() {
 
 #[test]
 #[ignore = "requires native252 profile/traits and player actor"]
+fn dk252_scourge_strike_spreads_whitemane_undeath_with_its_remaining_duration() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 3).unwrap();
+    engage(&mut run);
+    literal_rotation::execution::execute(run.app.world_mut(), run.actor,
+        literal_rotation::execution::Execution::Spell(42650, run.actor, None)).unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    for _ in 0..200 {
+        run.app.update();
+        if crate::auras::has_aura(run.app.world(), run.targets[0], 444633) { break; }
+    }
+    assert!(crate::auras::has_aura(run.app.world(), run.targets[0], 444633));
+    literal_rotation::execution::execute(run.app.world_mut(), run.actor,
+        literal_rotation::execution::Execution::Spell(55090, run.targets[0], Some(run.targets[0]))).unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    let owned = |target| run.app.world().get::<crate::auras::ActiveAuras>(target).and_then(|auras|
+        auras.iter().find(|aura| aura.spell_id == 444633 && aura.caster == run.actor));
+    let primary = owned(run.targets[0]).expect("primary retains Undeath");
+    let secondary = run.targets.iter().skip(1).find_map(|target| owned(*target)).expect("Famine must spread Undeath to another actual target");
+    assert_eq!(secondary.expires_at, primary.expires_at, "new disease must clone the remaining duration");
+    assert!(secondary.stacks >= primary.stacks && primary.stacks >= 2,
+        "spread must copy the grown stacks; later cleave hits may grow the copy again");
+}
+
+#[test]
+#[ignore = "requires native252 profile/traits and player actor"]
 fn dk252_literal_rotation_observes_sudden_doom_reaction() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_measurement(252, 1).unwrap();
