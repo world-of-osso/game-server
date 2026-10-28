@@ -1567,7 +1567,7 @@ fn dk252_magus_bolt_inherits_owner_melee_power() {
 #[ignore = "requires native252 profile/traits and player actor"]
 fn dk252_death_coil_extends_real_dark_transformation() {
     let _seed = crate::random::seed_scope(70448);
-    let mut run = prepare_literal(252, 1).unwrap();
+    let mut run = prepare_measurement(252, 1).unwrap();
     engage(&mut run);
     literal_rotation::execution::execute(run.app.world_mut(), run.actor,
         literal_rotation::execution::Execution::Spell(1233448, run.actor, None)).unwrap();
