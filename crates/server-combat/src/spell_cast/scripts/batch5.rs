@@ -99,9 +99,25 @@ pub(super) fn shuriken_storm(world: &mut World, caster: Entity, _target: Entity,
     spell_cast::powers::change_power(world, caster, PowerType::ComboPoints, points);
 }
 
+/// Rune weapon copies grant Bone Shield to their owner, not the summoned weapon.
+pub(super) fn bone_shield_owner(world: &World, caster: Entity) -> Entity {
+    use shared::components::{Npc, UnitSummonedBy};
+    if world
+        .get::<Npc>(caster)
+        .is_some_and(|npc| npc.template_id == 27893)
+        && let Some(owner) = world
+            .get::<UnitSummonedBy>(caster)
+            .and_then(|owner| Entity::try_from_bits(owner.0))
+    {
+        return owner;
+    }
+    caster
+}
+
 /// 195292s3 generates Bone Shield charges. Normal aura refresh supplies its cap.
 pub(super) fn deaths_caress(world: &mut World, caster: Entity, _target: Entity, _depth: u8) {
     let charges = script_effect_value(world, caster, DEATHS_CARESS, 2) as u32;
+    let caster = bone_shield_owner(world, caster);
     for _ in 0..charges {
         crate::auras::apply_aura(
             world,
