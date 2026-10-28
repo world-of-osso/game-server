@@ -401,4 +401,56 @@ mod tests {
             );
         }
     }
+    #[test]
+    fn protection_strategist_revenge_resets_shield_slam_only_when_selected() {
+        use crate::spell_cast::test_harness::harness_with_native_enemy_dodge_reduction;
+        for selected in [false, true] {
+            let ids = [236279, 236282, 384041, 23922, 6572];
+            let seed = harness_with_native_enemy_dodge_reduction(Vec::new(), &ids, 1).unwrap();
+            let mut devastator = seed
+                .app
+                .world()
+                .resource::<server::spell_info::SpellStore>()
+                .get(236279)
+                .unwrap()
+                .clone();
+            devastator.effects[1].base_points = 100.0;
+            let mut h =
+                harness_with_native_enemy_dodge_reduction(vec![devastator], &ids, 1).unwrap();
+            h.advance(3);
+            let caster = h.caster;
+            crate::auras::remove_auras(
+                h.app.world_mut(),
+                caster,
+                crate::auras::RemoveReason::Consumed,
+                |aura| aura.spell_id == 236279 || aura.spell_id == 384041,
+            );
+            h.cast_and_deliver(23922, Some(h.npc));
+            h.advance(35);
+            if selected {
+                crate::auras::apply_aura(
+                    h.app.world_mut(),
+                    &crate::auras::AuraApplication {
+                        caster,
+                        target: caster,
+                        spell_id: 384041,
+                        effect_mask: 1,
+                        source: crate::auras::AuraSource::Cast,
+                    },
+                );
+            }
+            h.set_power(shared::components::PowerType::Rage, 1000.0);
+            h.inbox.cooldowns.clear();
+            h.cast_and_deliver(6572, Some(h.npc));
+            h.advance(5);
+            assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+            assert!(h.inbox.go.iter().any(|event| event.spell_id == 6572));
+            let reset = h
+                .inbox
+                .cooldowns
+                .iter()
+                .any(|event| event.spell_id == 23922 && event.remaining_ms == 0);
+            assert_eq!(reset, selected);
+        }
+    }
 }
