@@ -15,10 +15,10 @@ WORLD_DB = Path('/home/osso/Projects/world-of-osso/game-server/data/world.db')
 PROFILE_DIR = Path('/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/dps-parity-2026-10-21')
 
 
-def run_replay(timeline, spec, source, duration, seed, profile_dir, executable, external_healing):
+def run_replay(timeline, spec, source, duration, seed, profile_dir, executable, external_healing, mode='tank'):
     environment = os.environ | {
         'HEALER_TANK_TIMELINE': str(timeline), 'HEALER_TANK_SPEC': str(spec),
-        'HEALER_TANK_SOURCE': source, 'HEALER_TANK_DURATION': str(duration),
+        'HEALER_TANK_SOURCE': source, 'HEALER_TANK_MODE': mode, 'HEALER_TANK_DURATION': str(duration),
         'HEALER_TANK_SEED': str(seed), 'DPS_PARITY_WORLD_DB': str(WORLD_DB),
         'DPS_PARITY_OUTPUT': str(profile_dir), 'DPS_PARITY_ACTOR': 'player',
         'HEALER_TANK_EXTERNAL_HEALING': '1' if external_healing else '0',
@@ -55,7 +55,8 @@ def print_healer(report):
     print('|---:|---:|---:|')
     for sample in metrics['mana_curve']:
         print(f'| {number(sample["time_seconds"])} | {number(sample["current"])} | {number(sample["max"])} |')
-    print('\nCoverage gaps:', ', '.join(report['gaps']))
+    if report.get('timeline') != 'simc_tank_dummy':
+        print('\nCoverage gaps:', ', '.join(report['gaps']))
 
 
 def print_tank(report):
@@ -91,7 +92,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--timeline', type=Path, required=True, help='SimC debug trace or recorded intake JSON')
     parser.add_argument('--source', choices=('simc', 'recorded'), default='simc')
-    parser.add_argument('--spec', choices=('65', '66', '73', '104', '250', '268', '581', 'all'), default='66')
+    parser.add_argument('--mode', choices=('tank', 'healer'), default='tank')
+    parser.add_argument('--spec', default='66')
     parser.add_argument('--duration', type=int, default=300, help='SimC replay duration in seconds')
     parser.add_argument('--seed', type=int, default=70448)
     parser.add_argument('--simc-tank-heal', action='store_true', help='replay the SimC dummy 75000 heal every 5 seconds')
@@ -100,8 +102,10 @@ def main():
     args = parser.parse_args()
     if args.simc_tank_heal and args.source != 'simc':
         parser.error('--simc-tank-heal requires --source simc')
-    if args.source == 'simc' and args.spec == '65':
-        parser.error('SimC healer playback is not implemented')
+    if args.mode == 'healer' and (args.source != 'simc' or args.simc_tank_heal or not args.spec.isdigit()):
+        parser.error('healer mode requires a numeric spec, SimC source, and no external dummy healing')
+    if args.mode == 'tank' and args.source == 'simc' and args.spec not in ('66', '73', '104', '250', '268', '581', 'all'):
+        parser.error('unsupported SimC tank specialization')
     if args.source == 'recorded' and args.spec not in ('65', '66', 'all'):
         parser.error('recorded intake playback currently supports specs 65 and 66')
     if args.duration <= 0 or args.seed < 0:
@@ -111,8 +115,8 @@ def main():
     executable = args.executable.resolve(strict=True) if args.executable else None
     all_specs = ('66', '73', '104', '250', '268', '581') if args.source == 'simc' else ('65', '66')
     for spec in (all_specs if args.spec == 'all' else (args.spec,)):
-        report = run_replay(timeline, spec, args.source, args.duration, args.seed, profile_dir, executable, args.simc_tank_heal)
-        if spec == '65':
+        report = run_replay(timeline, spec, args.source, args.duration, args.seed, profile_dir, executable, args.simc_tank_heal, args.mode)
+        if args.mode == 'healer' or (args.source == 'recorded' and spec == '65'):
             print_healer(report)
         else:
             print_tank(report)
