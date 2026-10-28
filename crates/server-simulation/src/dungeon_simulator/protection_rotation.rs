@@ -17,7 +17,8 @@ pub(crate) const ACTIONS: &[(&str, u32)] = &[
     ("divine_toll", 375576),
     ("hammer_of_light", 427453),
     ("shield_of_the_righteous", 53600),
-    ("hammer_of_wrath", 24275),
+    // SimC76f8118 sc_paladin.cpp3410: Protection uses its own native rank.
+    ("hammer_of_wrath", 1241413),
     ("judgment", 20271),
     ("avengers_shield", 31935),
     ("blessed_hammer", 204019),
