@@ -727,10 +727,15 @@ mod tests {
                 .resource::<crate::spell_info::SpellStore>()
                 .get(187827)
                 .unwrap();
-            world
-                .get::<crate::spell_cast::SpellHistory>(actor)
+            let bindings = super::bindings();
+            let encounter = crate::simc_apl_native::Encounter::Fixture {
+                started_at: 0.0,
+                duration: 300.0,
+                style: crate::simc_apl_native::FightStyle::Patchwerk,
+            };
+            crate::simc_apl_native::NativeFacts::new(world, actor, &bindings, encounter, 1)
+                .cooldown_for_spell(spell, "full_recharge_time")
                 .unwrap()
-                .remaining_cooldown_ms(spell, crate::spell_cast::now(world))
         };
         let before = meta_remaining(&run);
         crate::spell_cast::cast_for_player_with_target(
@@ -763,8 +768,13 @@ mod tests {
             "earned meteor must damage the target"
         );
         assert!(
-            before - meta_remaining(&run) > 10_000,
-            "World Killer must reduce the real Meta cooldown on impact"
+            before - meta_remaining(&run) > 10.0,
+            "World Killer must reduce the real Meta cooldown on impact: before={before} after={} events={:?}",
+            meta_remaining(&run),
+            events
+                .iter()
+                .filter(|event| matches!(event.spell_id, Some(1256306 | 1256617)))
+                .collect::<Vec<_>>()
         );
     }
 
