@@ -23,10 +23,13 @@ struct PendingMeteor {
 }
 #[derive(Component, Default)]
 struct PendingMeteors(Vec<PendingMeteor>);
+#[derive(Component, Default)]
+struct PendingWorldKillerTargets(Vec<Entity>);
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AfterNativeLaunch(launch),
     SpellScriptHook::AfterNativeCastUpdate(update),
+    SpellScriptHook::ResolvedDamage(world_killer_impact),
 ];
 
 fn selected(world: &World, caster: Entity, spell: u32) -> bool {
@@ -181,6 +184,28 @@ fn update(world: &mut World) {
         }
     }
 }
+fn world_killer_impact(
+    world: &mut World,
+    ctx: &spell_cast::effects::EffectCtx,
+    target: Entity,
+    _: bool,
+    _: f32,
+) {
+    if ctx.spell.id != 1256617 {
+        return;
+    }
+    let Some(mut pending) = world.get_mut::<PendingWorldKillerTargets>(ctx.caster) else {
+        return;
+    };
+    let Some(index) = pending.0.iter().position(|&entity| entity == target) else {
+        return;
+    };
+    pending.0.remove(index);
+    // SimC76f8118 sc_demon_hunter.cpp6618–6631 adjusts Meta once on the missile impact.
+    let reduction = f64::from(effect(world, WORLD_KILLER, 2));
+    spell_cast::scripts::reduce_cooldown(world, ctx.caster, 187827, reduction);
+}
+
 fn launch_meteor(world: &mut World, caster: Entity, meteor: PendingMeteor) {
     let Some((stacks, _)) = own_stack(world, caster, SPENDING) else {
         return;
@@ -190,6 +215,15 @@ fn launch_meteor(world: &mut World, caster: Entity, meteor: PendingMeteor) {
         return;
     };
     // SimC76f8118 sc_demon_hunter.cpp6584–6596 consumes one stack at missile execution.
+    if meteor.spell == WORLD_KILLER_MISSILE {
+        world
+            .entity_mut(caster)
+            .entry::<PendingWorldKillerTargets>()
+            .or_default()
+            .into_mut()
+            .0
+            .push(meteor.target);
+    }
     spell_cast::cast_triggered_at_destination(world, caster, meteor.spell, position, 1);
     if stacks == 1 {
         combat::auras::remove_auras(world, caster, combat::auras::RemoveReason::Consumed, |a| {

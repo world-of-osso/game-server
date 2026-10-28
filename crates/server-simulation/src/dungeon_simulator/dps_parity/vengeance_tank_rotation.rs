@@ -721,6 +721,18 @@ mod tests {
             crate::auras::has_aura(run.app.world(), actor, 1256302),
             "Meta must earn Voidfall spending"
         );
+        let meta_remaining = |run: &Run| {
+            let world = run.app.world();
+            let spell = world
+                .resource::<crate::spell_info::SpellStore>()
+                .get(187827)
+                .unwrap();
+            world
+                .get::<crate::spell_cast::SpellHistory>(actor)
+                .unwrap()
+                .remaining_cooldown_ms(spell, crate::spell_cast::now(world))
+        };
+        let before = meta_remaining(&run);
         crate::spell_cast::cast_for_player_with_target(
             run.app.world_mut(),
             actor,
@@ -749,6 +761,10 @@ mod tests {
                 && event.kind == shared::protocol::CombatLogKind::Damage
                 && event.amount > 0),
             "earned meteor must damage the target"
+        );
+        assert!(
+            before - meta_remaining(&run) > 10_000,
+            "World Killer must reduce the real Meta cooldown on impact"
         );
     }
 
