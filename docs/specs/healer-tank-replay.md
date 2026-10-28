@@ -16,6 +16,7 @@ Replay recorded incoming damage in the native server combat simulation to compar
 
 ## Specializations
 
+- [Restoration Druid 105](healer-tank-replay/105.md)
 - [Preservation Evoker 1468](healer-tank-replay/1468.md)
 
 ## Specializations

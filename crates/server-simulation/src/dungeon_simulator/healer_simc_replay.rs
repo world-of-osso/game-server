@@ -22,6 +22,7 @@ const POLICIES: &[Registration] = &[
     (65, super::holy_paladin_simc::prepare),
     (256, super::discipline_priest_replay::prepare),
     (257, super::holy_priest_replay::prepare),
+    (105, super::restoration_druid_replay::prepare),
     (264, super::restoration_shaman_replay::prepare),
     (270, super::mistweaver_replay::prepare),
     (1468, super::preservation_evoker_replay::prepare),
