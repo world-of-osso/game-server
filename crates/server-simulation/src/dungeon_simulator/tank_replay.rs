@@ -455,6 +455,7 @@ fn replay_registered_run_with_healing(
     let mut healing_by_spell = BTreeMap::<u32, f64>::new();
     let mut raw_healing_by_spell = BTreeMap::<u32, f64>::new();
     let mut periodic_ticks_by_spell = BTreeMap::<u32, usize>::new();
+    let mut energize_by_spell = BTreeMap::<u32, (i64, i64)>::new();
     let mut aura_seconds = BTreeMap::<u32, f64>::new();
     let mut debuff_seconds: BTreeMap<u32, f64> =
         target_debuffs.iter().map(|&id| (id, 0.0)).collect();
@@ -623,6 +624,14 @@ fn replay_registered_run_with_healing(
             {
                 *periodic_ticks_by_spell.entry(spell_id).or_default() += 1;
             }
+            if event.target == Some(tank.to_bits())
+                && event.kind == CombatLogKind::Energize
+                && let Some(spell_id) = event.spell_id
+            {
+                let totals = energize_by_spell.entry(spell_id).or_default();
+                totals.0 += i64::from(event.amount);
+                totals.1 += i64::from(event.amount - event.overflow);
+            }
             if event.target != Some(tank.to_bits()) {
                 continue;
             }
@@ -706,6 +715,7 @@ fn replay_registered_run_with_healing(
         "raid_buffs":raid_buffs.iter().map(|buff| json!({"name":buff.name,"spell_id":buff.spell_id})).collect::<Vec<_>>(),
         "self_healing_by_spell":healing_by_spell,"raw_self_healing_by_spell":raw_healing_by_spell,
         "periodic_damage_ticks_by_spell":periodic_ticks_by_spell,
+        "energize_by_spell":energize_by_spell.iter().map(|(spell, (attempted, effective))| (spell, json!({"attempted": attempted, "effective": effective}))).collect::<BTreeMap<_, _>>(),
         "absorbs_by_spell":absorbs_by_spell,"aura_uptime":aura_uptime,
         "resource_counters":counters,"target_debuff_uptime":target_debuff_uptime,
         "rotation_status":"registered_literal_simc","duration_seconds":elapsed,"incoming_events":next,"tank_casts":casts,
