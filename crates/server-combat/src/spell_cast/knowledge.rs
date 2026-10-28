@@ -108,6 +108,14 @@ fn project_known_parent(world: &World, actor: Entity, requested: u32) -> u32 {
         return requested;
     }
     match requested {
+        // SimC76f8118 sc_monk.cpp1366–1369/5587: Brewmaster uses its spec action.
+        100784
+            if world
+                .get::<shared::components::ActiveSpec>(actor)
+                .is_some_and(|spec| spec.0 == 268) =>
+        {
+            205523
+        }
         // SIMC_DEVASTATION_MANEUVERABILITY_ACTION: sc_evoker.cpp6323–6327.
         // Native433871 effect0 names433874 but supplies no TraitDefinition override.
         357210 if known.contains(433871) => 433874,
