@@ -73,7 +73,7 @@ pub(super) fn prepare(
         ("default", "unleash_life,if=target.health.pct<90"),
         ("default", "healing_rain,if=party.injured>=3"),
         ("default", "chain_heal,if=party.injured>=2"),
-        ("default", "healing_wave,if=target.health.pct<100"),
+        ("default", "healing_wave,if=target.healing_wave_useful"),
         ("damage", "flame_shock"),
         ("damage", "lava_burst"),
         ("damage", "lightning_bolt"),
@@ -91,6 +91,7 @@ struct PartyFacts<'a> {
     native: NativeFacts<'a>,
     injured: usize,
     earth_shield_up: bool,
+    healing_wave_useful: bool,
 }
 
 impl Facts for PartyFacts<'_> {
@@ -98,6 +99,7 @@ impl Facts for PartyFacts<'_> {
         match name {
             "party.injured" => Ok(self.injured as f64),
             "target.earth_shield_up" => Ok(f64::from(self.earth_shield_up)),
+            "target.healing_wave_useful" => Ok(f64::from(self.healing_wave_useful)),
             _ => self.native.value(name),
         }
     }
@@ -106,7 +108,9 @@ impl Facts for PartyFacts<'_> {
 impl ActionFacts for PartyFacts<'_> {
     fn value_for(&self, action: &Action, name: &str) -> Result<f64, String> {
         match name {
-            "party.injured" | "target.earth_shield_up" => self.value(name),
+            "party.injured" | "target.earth_shield_up" | "target.healing_wave_useful" => {
+                self.value(name)
+            }
             _ => self.native.value_for(action, name),
         }
     }
@@ -143,6 +147,21 @@ impl Policy for Restoration {
                     .iter()
                     .any(|aura| aura.spell_id == 974 && aura.caster == healer)
             });
+        let spell = world
+            .resource::<crate::spell_info::SpellStore>()
+            .get(77472)
+            .ok_or("Healing Wave native spell data missing")?;
+        let effect = spell
+            .effects
+            .iter()
+            .find(|effect| effect.effect == 10)
+            .ok_or("Healing Wave native heal effect missing")?;
+        let expected_heal = crate::spell_cast::effects::scaled_amount(world, healer, spell, effect);
+        let health = world
+            .get::<Health>(target)
+            .expect("living party member health");
+        // Require room for most of the uncritical native base heal.
+        let healing_wave_useful = health.max - health.current >= expected_heal * 0.8;
         let targets = [target];
         let actions = SPELLS
             .iter()
@@ -158,6 +177,7 @@ impl Policy for Restoration {
                 .with_targets(Some(target), &targets),
             injured,
             earth_shield_up,
+            healing_wave_useful,
         };
         if let Some((action, execution)) =
             self.driver
