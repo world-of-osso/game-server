@@ -162,6 +162,10 @@ fn heal_death_strike(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
         false,
         false,
     );
+    // SimC76f8118 sc_death_knight.cpp10006–10012: the heal earns Voracious leech.
+    if combat::auras::has_aura(world, caster, VORACIOUS) {
+        spell_cast::cast_triggered(world, caster, 274009, Some(caster), ctx.depth + 1);
+    }
 }
 
 // SimC76f8118 sc_death_knight.cpp10125–10130 consumes the whole buff
