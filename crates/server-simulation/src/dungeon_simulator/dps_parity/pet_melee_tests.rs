@@ -185,15 +185,21 @@ fn demonology_felguard_melee_inherits_owner_spell_power() {
     super::channel_timing_tests::remove_equipped_proc_drivers(&mut run);
     let owner = run.actor;
     // This test holds damage modifiers stable while measuring owner-SP inheritance.
-    crate::auras::remove_auras(run.app.world_mut(), owner, crate::auras::RemoveReason::Cancelled, |aura| {
-        matches!(aura.spell_id, 1250897 | 1281559)
-    });
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        owner,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| matches!(aura.spell_id, 1250897 | 1281559),
+    );
     // Precombat may already have granted short-lived item buffs. Remove those
     // after their proc drivers so the sampled damage floor cannot expire mid-test.
     let now = crate::spell_cast::now(run.app.world());
-    crate::auras::remove_auras(run.app.world_mut(), owner, crate::auras::RemoveReason::Cancelled, |aura| {
-        aura.expires_at.is_some_and(|expiry| expiry <= now + 60.0)
-    });
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        owner,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.expires_at.is_some_and(|expiry| expiry <= now + 60.0),
+    );
     run.app.update();
     engage(&mut run);
     let pet = run
@@ -508,7 +514,6 @@ fn dps_parity_pet_melee_shared_owner_rap_source_includes_weapon_ap_in_actual_abi
     );
 }
 
-
 #[test]
 #[ignore = "requires canonical 266 inputs; Felguard source white-attack multiplier"]
 fn demonology_felguard_white_attacks_apply_source_multiplier() {
@@ -517,17 +522,45 @@ fn demonology_felguard_white_attacks_apply_source_multiplier() {
     super::channel_timing_tests::remove_equipped_proc_drivers(&mut run);
     let owner = run.actor;
     let now = crate::spell_cast::now(run.app.world());
-    crate::auras::remove_auras(run.app.world_mut(), owner, crate::auras::RemoveReason::Cancelled, |aura| {
-        matches!(aura.spell_id, 1250897 | 1281559) || aura.expires_at.is_some_and(|at| at <= now + 60.0)
-    });
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        owner,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| {
+            matches!(aura.spell_id, 1250897 | 1281559)
+                || aura.expires_at.is_some_and(|at| at <= now + 60.0)
+        },
+    );
     run.app.update();
     engage(&mut run);
-    let pet = run.app.world_mut().query::<(Entity, &crate::hunter_pet::HunterPet, &shared::components::Npc)>()
-        .iter(run.app.world()).find(|(_, pet, npc)| pet.owner == owner && npc.template_id == 17252)
-        .map(|(pet,_,_)| pet).expect("actual Felguard");
-    let sp = run.app.world().get::<crate::stats::CharacterStats>(owner).unwrap().spell_power;
+    let pet = run
+        .app
+        .world_mut()
+        .query::<(
+            Entity,
+            &crate::hunter_pet::HunterPet,
+            &shared::components::Npc,
+        )>()
+        .iter(run.app.world())
+        .find(|(_, pet, npc)| pet.owner == owner && npc.template_id == 17252)
+        .map(|(pet, _, _)| pet)
+        .expect("actual Felguard");
+    let sp = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(owner)
+        .unwrap()
+        .spell_power;
     // SimC pets.cpp661–668: the validated owner-SP share and 1.44 white factor.
-    let floor = mitigated_physical_floor(run.app.world(), pet, run.targets[0], sp * 1.82412 / 3.5 * 2.0 * 1.44);
+    let floor = mitigated_physical_floor(
+        run.app.world(),
+        pet,
+        run.targets[0],
+        sp * 1.82412 / 3.5 * 2.0 * 1.44,
+    );
     let hits = normalized_pet_swings(&mut run, pet, 4);
-    assert!(hits.iter().all(|hit| *hit >= floor), "actual Felguard swings {hits:?} must include source white factor floor {floor}");
+    assert!(
+        hits.iter().all(|hit| *hit >= floor),
+        "actual Felguard swings {hits:?} must include source white factor floor {floor}"
+    );
 }

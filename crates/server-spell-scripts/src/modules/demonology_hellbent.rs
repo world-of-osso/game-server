@@ -23,7 +23,9 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
 struct HellbentClock(f64);
 
 fn selected(world: &World, owner: Entity) -> bool {
-    world.get::<ActiveSpec>(owner).is_some_and(|spec| spec.0 == 266)
+    world
+        .get::<ActiveSpec>(owner)
+        .is_some_and(|spec| spec.0 == 266)
         && auras::has_aura(world, owner, TALENT)
 }
 
@@ -40,7 +42,9 @@ fn combat_changed(world: &mut World, owner: Entity, active: bool) {
 }
 
 fn summon_started(world: &mut World, actor: Entity) {
-    let Some(summon) = world.get::<SummonedCreature>(actor) else { return; };
+    let Some(summon) = world.get::<SummonedCreature>(actor) else {
+        return;
+    };
     let owner = summon.owner;
     // pets.cpp1310–1341: Vilefiend variants count immediately on arise.
     if matches!(summon.spell_id, 1251781 | 455465 | 455476) && selected(world, owner) {
@@ -49,15 +53,31 @@ fn summon_started(world: &mut World, actor: Entity) {
 }
 
 fn summon_removed(world: &mut World, actor: Entity) {
-    let Some(summon) = world.get::<SummonedCreature>(actor) else { return; };
+    let Some(summon) = world.get::<SummonedCreature>(actor) else {
+        return;
+    };
     let owner = summon.owner;
     let root = summon.spell_id;
-    if !selected(world, owner) { return; }
+    if !selected(world, owner) {
+        return;
+    }
     // pets.cpp992–1006/1035–1040: ordinary Hand Imps lose two on normal
     // demise and one on Implosion; alternate Imps lose one/zero. Dogs lose one.
     let lost = match root {
-        104317 => if summon::is_imploded(world, actor) { 1 } else { 2 },
-        279910 => if summon::is_imploded(world, actor) { 0 } else { 1 },
+        104317 => {
+            if summon::is_imploded(world, actor) {
+                1
+            } else {
+                2
+            }
+        }
+        279910 => {
+            if summon::is_imploded(world, actor) {
+                0
+            } else {
+                1
+            }
+        }
         193331 | 193332 => 1,
         _ => 0,
     };
@@ -72,18 +92,31 @@ fn add_stack(world: &mut World, owner: Entity) {
 
 fn remove_stacks(world: &mut World, owner: Entity, count: usize) {
     for _ in 0..count {
-        let instance = world.get::<ActiveAuras>(owner).and_then(|auras| auras.iter()
-            .find(|aura| aura.spell_id == BUFF && aura.caster == owner).map(|aura| aura.instance_id));
-        if let Some(instance) = instance { auras::spend_stack(world, owner, instance); }
+        let instance = world.get::<ActiveAuras>(owner).and_then(|auras| {
+            auras
+                .iter()
+                .find(|aura| aura.spell_id == BUFF && aura.caster == owner)
+                .map(|aura| aura.instance_id)
+        });
+        if let Some(instance) = instance {
+            auras::spend_stack(world, owner, instance);
+        }
     }
 }
 
 fn heartbeat(world: &mut World) {
     let now = spell_cast::now(world);
-    let due: Vec<_> = world.query::<(Entity, &HellbentClock)>().iter(world)
-        .filter(|(_, clock)| clock.0 <= now).map(|(owner, _)| owner).collect();
+    let due: Vec<_> = world
+        .query::<(Entity, &HellbentClock)>()
+        .iter(world)
+        .filter(|(_, clock)| clock.0 <= now)
+        .map(|(owner, _)| owner)
+        .collect();
     for owner in due {
-        if !selected(world, owner) { world.entity_mut(owner).remove::<HellbentClock>(); continue; }
+        if !selected(world, owner) {
+            world.entity_mut(owner).remove::<HellbentClock>();
+            continue;
+        }
         reconcile(world, owner);
         // sim.cpp1216–1222: each following heartbeat is Gaussian 5.25s ±25ms.
         let mut rng = combat::random::thread_rng();
@@ -95,20 +128,49 @@ fn heartbeat(world: &mut World) {
 }
 
 fn reconcile(world: &mut World, owner: Entity) {
-    let summons = world.query::<(Entity, &SummonedCreature)>().iter(world).filter(|(actor, summon)| {
-        summon.owner == owner && matches!(summon.spell_id,
-            104317 | 279910 | 193331 | 193332 | 265187 | 1276452 | 455465 | 455476 |
-            1276182 | 1276283 | 1282501 | 1282502)
-            && targets::is_alive(world, *actor)
-    }).count();
-    let pets = world.query::<(Entity, &HunterPet, &Npc)>().iter(world).filter(|(actor, pet, npc)| {
-        pet.owner == owner && npc.template_id == 17252 && targets::is_alive(world, *actor)
-    }).count();
+    let summons = world
+        .query::<(Entity, &SummonedCreature)>()
+        .iter(world)
+        .filter(|(actor, summon)| {
+            summon.owner == owner
+                && matches!(
+                    summon.spell_id,
+                    104317
+                        | 279910
+                        | 193331
+                        | 193332
+                        | 265187
+                        | 1276452
+                        | 455465
+                        | 455476
+                        | 1276182
+                        | 1276283
+                        | 1282501
+                        | 1282502
+                )
+                && targets::is_alive(world, *actor)
+        })
+        .count();
+    let pets = world
+        .query::<(Entity, &HunterPet, &Npc)>()
+        .iter(world)
+        .filter(|(actor, pet, npc)| {
+            pet.owner == owner && npc.template_id == 17252 && targets::is_alive(world, *actor)
+        })
+        .count();
     let count = summons + pets;
-    let current = world.get::<ActiveAuras>(owner).and_then(|auras| auras.iter()
-        .find(|aura| aura.spell_id == BUFF && aura.caster == owner)).map_or(0, |aura| usize::from(aura.stacks));
+    let current = world
+        .get::<ActiveAuras>(owner)
+        .and_then(|auras| {
+            auras
+                .iter()
+                .find(|aura| aura.spell_id == BUFF && aura.caster == owner)
+        })
+        .map_or(0, |aura| usize::from(aura.stacks));
     if count > current {
-        for _ in current..count { add_stack(world, owner); }
+        for _ in current..count {
+            add_stack(world, owner);
+        }
     } else {
         remove_stacks(world, owner, current - count);
     }
