@@ -18,6 +18,15 @@ fn blackout_kick_grants_combo_and_tiger_palm_consumes_it() {
     for _ in 0..24 {
         run.app.update();
     }
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 115203, Some(actor), false)
+        .unwrap();
+    for _ in 0..24 {
+        run.app.update();
+    }
+    assert!(
+        crate::auras::has_aura(run.app.world(), actor, 228563),
+        "Fortifying Brew must not consume Blackout Combo"
+    );
     crate::spell_cast::creature_cast(run.app.world_mut(), actor, 100780, Some(target), false)
         .unwrap();
     assert!(
