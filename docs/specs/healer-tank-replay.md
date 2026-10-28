@@ -82,6 +82,7 @@ The SimC tank report includes raw and effective self-healing and outgoing period
 - [x] Report adapter-registered named resource counters and target debuff uptime. Vengeance 581 records successful fragment generation, actual fragment consumption, and the owned Fiery Brand and Sigil of Flame debuffs.
 - [x] Report attempted and effective tank Energize combat-log amounts by spell. Events do not identify the resource type; a spell that grants multiple resources combines them, and changes without an Energize event are not included.
 - [x] `--seeds N` runs consecutive native tank seeds starting at `--seed` (default 70448) against the same SimC trace and reports mean and min/max casts, aura uptimes and mitigation, plus death counts. Missing spell entries count as zero; unavailable mitigation is N/A. `--all` saves each tank seed's report separately and runs each healer once with seed 70448.
+- [x] SimC tank JSON reports split damage taken into dummy swings, strikes, bleeds and self-periodic damage.
 - [x] Keep no-healer tank replay as the default. An optional SimC dummy comparison applies the dummy's 75,000 external heal every five seconds and the trace's native Bloodlust at its recorded start time; it reports the buff, per-spell casts, effective self-healing, consumed absorbs and aura uptime separately.
 - [ ] Extend coverage beyond the initial two specializations.
 
