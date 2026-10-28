@@ -43,6 +43,8 @@ const TALENTS: &[(&str, u32)] = &[
     ("charred_flesh", 218657),
     ("sigil_of_spite", 390163),
     ("soul_carver", 207407),
+    ("untethered_rage_2", 1270448),
+    ("untethered_rage_3", 1270449),
 ];
 
 pub(crate) fn bindings() -> Bindings {
@@ -92,6 +94,10 @@ impl Facts for Context<'_> {
     fn value(&self, name: &str) -> Result<f64, String> {
         if name.starts_with("trinket.") || name.starts_with("equipped.") {
             self.equipment.fact(name, &self.native)
+        } else if name == "apex.2" {
+            self.native.value("talent.untethered_rage_2.enabled")
+        } else if name == "apex.3" {
+            self.native.value("talent.untethered_rage_3.enabled")
         } else if name == "in_boss_encounter" {
             // SimC76f8118 player.cpp6659–6664: Patchwerk initializes this flag to one.
             match self.native.value("fight_style.dungeonroute")?
@@ -152,6 +158,8 @@ impl ActionFacts for Context<'_> {
             || name.starts_with("equipped.")
             || name == "in_combat"
             || name == "in_boss_encounter"
+            || name == "apex.2"
+            || name == "apex.3"
             || name.starts_with("soul_fragments")
             || name == "action.sigil_of_spite.placed"
             || name == "raid_event.adds.has_boss"
