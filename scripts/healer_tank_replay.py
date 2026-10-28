@@ -15,12 +15,13 @@ WORLD_DB = Path('/home/osso/Projects/world-of-osso/game-server/data/world.db')
 PROFILE_DIR = Path('/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/dps-parity-2026-10-21')
 
 
-def run_replay(timeline, spec, source, duration, seed, profile_dir, executable):
+def run_replay(timeline, spec, source, duration, seed, profile_dir, executable, external_healing):
     environment = os.environ | {
         'HEALER_TANK_TIMELINE': str(timeline), 'HEALER_TANK_SPEC': str(spec),
         'HEALER_TANK_SOURCE': source, 'HEALER_TANK_DURATION': str(duration),
         'HEALER_TANK_SEED': str(seed), 'DPS_PARITY_WORLD_DB': str(WORLD_DB),
         'DPS_PARITY_OUTPUT': str(profile_dir), 'DPS_PARITY_ACTOR': 'player',
+        'HEALER_TANK_EXTERNAL_HEALING': '1' if external_healing else '0',
     }
     if executable:
         command = [str(executable), DRIVER, '--exact', '--ignored', '--nocapture']
@@ -60,6 +61,15 @@ def print_healer(report):
 def print_tank(report):
     if report.get('timeline') == 'simc_tank_dummy':
         print(f'SimC tank dummy, MID2 level {report["level"]}; rotation: {report["rotation_status"]}.')
+        print('External dummy healing:', 'enabled' if report['external_healing'] else 'disabled')
+        print('\n| Spell ID | Casts | Effective self-heal | Consumed absorb | Aura uptime % |')
+        print('|---|---:|---:|---:|---:|')
+        spells = set(report['tank_casts']) | set(report['self_healing_by_spell']) | set(report['absorbs_by_spell']) | set(report['aura_uptime'])
+        for spell in sorted(spells, key=int):
+            print(f'| {spell} | {report["tank_casts"].get(spell, 0)} | '
+                  f'{number(report["self_healing_by_spell"].get(spell, 0))} | '
+                  f'{number(report["absorbs_by_spell"].get(spell, 0))} | '
+                  f'{number(100 * report["aura_uptime"].get(spell, 0))} |')
     print('| Spec | Raw damage | Damage taken | Mitigation % | Self-heal/s | Absorb/s | Death (s) | Active mitigation % | 5s spike |')
     print('|---|---:|---:|---:|---:|---:|---:|---:|---:|')
     uptime = report['active_mitigation_uptime']
@@ -76,9 +86,12 @@ def main():
     parser.add_argument('--spec', choices=('65', '66', '73', '104', '250', '268', '581', 'all'), default='66')
     parser.add_argument('--duration', type=int, default=300, help='SimC replay duration in seconds')
     parser.add_argument('--seed', type=int, default=70448)
+    parser.add_argument('--simc-tank-heal', action='store_true', help='replay the SimC dummy 75000 heal every 5 seconds')
     parser.add_argument('--profile-dir', type=Path, default=PROFILE_DIR)
     parser.add_argument('--executable', type=Path, help='existing server-simulation test executable')
     args = parser.parse_args()
+    if args.simc_tank_heal and args.source != 'simc':
+        parser.error('--simc-tank-heal requires --source simc')
     if args.source == 'simc' and args.spec == '65':
         parser.error('SimC healer playback is not implemented')
     if args.source == 'recorded' and args.spec not in ('65', '66', 'all'):
@@ -90,7 +103,7 @@ def main():
     executable = args.executable.resolve(strict=True) if args.executable else None
     all_specs = ('66', '73', '104', '250', '268', '581') if args.source == 'simc' else ('65', '66')
     for spec in (all_specs if args.spec == 'all' else (args.spec,)):
-        report = run_replay(timeline, spec, args.source, args.duration, args.seed, profile_dir, executable)
+        report = run_replay(timeline, spec, args.source, args.duration, args.seed, profile_dir, executable, args.simc_tank_heal)
         if spec == '65':
             print_healer(report)
         else:

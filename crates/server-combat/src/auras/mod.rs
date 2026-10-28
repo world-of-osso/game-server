@@ -2489,7 +2489,7 @@ pub(crate) struct AbsorbResult {
     pub remaining: f32,
     pub absorbed: f32,
     depleted: Vec<u32>,
-    contributions: Vec<(Entity, f32)>,
+    contributions: Vec<(Entity, u32, f32)>,
 }
 
 pub(crate) fn consume_absorbs(
@@ -2520,7 +2520,9 @@ pub(crate) fn consume_absorbs(
             let soaked = (result.remaining * fraction).min(effect.absorb_remaining);
             effect.absorb_remaining -= soaked;
             result.remaining -= soaked;
-            result.contributions.push((aura.caster, soaked));
+            result
+                .contributions
+                .push((aura.caster, aura.spell_id, soaked));
             if effect.absorb_remaining <= 0.0 {
                 result.depleted.push(aura.instance_id);
             }
@@ -2531,9 +2533,9 @@ pub(crate) fn consume_absorbs(
 }
 
 pub(crate) fn finish_absorbs(world: &mut World, unit: Entity, result: AbsorbResult) {
-    for (caster, soaked) in result.contributions {
+    for (caster, _spell_id, soaked) in result.contributions {
         #[cfg(any(test, feature = "test-support"))]
-        crate::test_support::healer_intake::record_absorb(world, caster, unit, soaked);
+        crate::test_support::healer_intake::record_absorb(world, caster, unit, _spell_id, soaked);
         crate::damage_meter::record_absorb(world, caster, soaked);
     }
     if !result.depleted.is_empty() {

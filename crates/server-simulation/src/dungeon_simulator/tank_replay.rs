@@ -266,6 +266,16 @@ pub(super) fn replay_simc(
     duration_seconds: u32,
     seed: u64,
 ) -> Result<Value, String> {
+    replay_simc_with_healing(spec_id, path, duration_seconds, seed, false)
+}
+
+pub(super) fn replay_simc_with_healing(
+    spec_id: u32,
+    path: &std::path::Path,
+    duration_seconds: u32,
+    seed: u64,
+    external_healing: bool,
+) -> Result<Value, String> {
     use crate::simc_tank_timeline;
     let canonical =
         std::path::Path::new("/home/osso/Projects/world-of-osso/game-server/data/world.db")
@@ -290,14 +300,24 @@ pub(super) fn replay_simc(
     let _rng = crate::random::seed_scope(seed);
     let run = super::dps_parity::prepare_registered_player(spec_id, 1)?;
     let auras = super::dps_parity::tank_mitigation_auras(&run)?;
-    replay_registered_run(run, &hits, duration_seconds, auras)
+    replay_registered_run_with_healing(run, &hits, duration_seconds, auras, external_healing)
 }
 
 pub(super) fn replay_registered_run(
+    run: super::dps_parity::Run,
+    hits: &[crate::simc_tank_timeline::Hit],
+    duration_seconds: u32,
+    mitigation_auras: &[u32],
+) -> Result<Value, String> {
+    replay_registered_run_with_healing(run, hits, duration_seconds, mitigation_auras, false)
+}
+
+fn replay_registered_run_with_healing(
     mut run: super::dps_parity::Run,
     hits: &[crate::simc_tank_timeline::Hit],
     duration_seconds: u32,
     mitigation_auras: &[u32],
+    external_healing: bool,
 ) -> Result<Value, String> {
     use crate::simc_tank_timeline::Kind;
     let tank = run.actor;
@@ -336,8 +356,23 @@ pub(super) fn replay_registered_run(
     let (mut recent, mut recent_sum) = (VecDeque::<(f64, f64)>::new(), 0.0);
     let (mut next, mut elapsed, mut death) = (0, 0.0, None);
     let mut casts = BTreeMap::<u32, usize>::new();
+    let mut healing_by_spell = BTreeMap::<u32, f64>::new();
+    let mut aura_seconds = BTreeMap::<u32, f64>::new();
+    let mut external_healing_effective = 0.0;
     for tick in 1..=duration_seconds * 20 {
         elapsed = f64::from(tick) * TICK_SECONDS;
+        if external_healing && tick % 100 == 0 && tick < duration_seconds * 20 {
+            let mut health = run
+                .app
+                .world_mut()
+                .get_mut::<Health>(tank)
+                .ok_or("TANK_HEALTH_ABSENT")?;
+            if health.current > 0.0 {
+                let amount = 75_000.0_f32.min((health.max - health.current).max(0.0));
+                health.current += amount;
+                external_healing_effective += f64::from(amount);
+            }
+        }
         while let Some(hit) = hits
             .get(next)
             .filter(|hit| hit.time_ms <= u64::from(tick) * 50)
@@ -419,6 +454,16 @@ pub(super) fn replay_registered_run(
         {
             active_seconds += TICK_SECONDS;
         }
+        let active = world
+            .get::<crate::auras::ActiveAuras>(tank)
+            .into_iter()
+            .flat_map(|auras| auras.iter())
+            .filter(|aura| aura.caster == tank && !aura.passive)
+            .map(|aura| aura.spell_id)
+            .collect::<BTreeSet<_>>();
+        for spell in active {
+            *aura_seconds.entry(spell).or_default() += TICK_SECONDS;
+        }
         let events = &world
             .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
             .0;
@@ -446,7 +491,11 @@ pub(super) fn replay_registered_run(
                 spike = spike.max(recent_sum);
             }
             if event.kind == CombatLogKind::Heal && event.source == Some(tank.to_bits()) {
-                self_healing += f64::from((event.amount - event.overflow.max(0)).max(0));
+                let effective = f64::from((event.amount - event.overflow.max(0)).max(0));
+                self_healing += effective;
+                if let Some(spell) = event.spell_id {
+                    *healing_by_spell.entry(spell).or_default() += effective;
+                }
             }
         }
         event_cursor = events.len();
@@ -465,8 +514,20 @@ pub(super) fn replay_registered_run(
         .consumed_absorbs
         .get(&tank)
         .map_or(0.0, |usage| usage.total);
+    let capture = run.app.world().resource::<Capture>();
+    let absorbs_by_spell: BTreeMap<u32, f64> = capture
+        .consumed_absorbs_by_spell
+        .iter()
+        .filter_map(|(&(caster, spell), &amount)| (caster == tank).then_some((spell, amount)))
+        .collect();
+    let aura_uptime: BTreeMap<u32, f64> = aura_seconds
+        .into_iter()
+        .map(|(spell, seconds)| (spell, seconds / elapsed))
+        .collect();
     Ok(
         json!({"spec":spec,"level":level,"reference_tier":"MID2","timeline":"simc_tank_dummy",
+        "external_healing":external_healing,"external_healing_effective":external_healing_effective,
+        "self_healing_by_spell":healing_by_spell,"absorbs_by_spell":absorbs_by_spell,"aura_uptime":aura_uptime,
         "rotation_status":"registered_literal_simc","duration_seconds":elapsed,"incoming_events":next,"tank_casts":casts,
         "raw_damage":raw,"damage_taken":taken,"mitigation_pct":(raw>0.0).then(||100.0*(raw-taken)/raw),
         "self_heal_per_second":(elapsed>0.0).then(||self_healing/elapsed),

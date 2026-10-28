@@ -21,7 +21,14 @@ fn native_replay_cli_driver() {
                 .parse()
                 .unwrap();
             let seed = std::env::var("HEALER_TANK_SEED").unwrap().parse().unwrap();
-            super::tank_replay::replay_simc(spec.parse().unwrap(), Path::new(&path), duration, seed)
+            let healing = std::env::var("HEALER_TANK_EXTERNAL_HEALING").unwrap_or_default() == "1";
+            super::tank_replay::replay_simc_with_healing(
+                spec.parse().unwrap(),
+                Path::new(&path),
+                duration,
+                seed,
+                healing,
+            )
         }
         ("recorded", "65" | "66") => {
             let intake: Intake = serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap();
@@ -70,6 +77,39 @@ fn cli_prints_a_real_protection_tank_report() {
     let cells: Vec<_> = row.split('|').map(str::trim).collect();
     assert!(cells[2].parse::<f64>().unwrap() > 0.0, "{row}");
     assert!(cells[3].parse::<f64>().unwrap() > 0.0, "{row}");
+}
+
+#[test]
+#[ignore = "runs the healed MID2 SimC dummy trace through the CLI"]
+fn cli_selects_simc_dummy_healing() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let trace = std::env::var("HEALER_TANK_SIMC_TRACE").expect("HEALER_TANK_SIMC_TRACE required");
+    let output = std::process::Command::new("python3")
+        .arg(root.join("scripts/healer_tank_replay.py"))
+        .arg("--timeline")
+        .arg(trace)
+        .arg("--simc-tank-heal")
+        .arg("--executable")
+        .arg(std::env::current_exe().unwrap())
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let text = String::from_utf8(output.stdout).unwrap();
+    assert!(text.contains("External dummy healing: enabled"), "{text}");
+    assert!(text.contains("| 432607 |"), "{text}");
+    let row = text
+        .lines()
+        .find(|line| line.starts_with("| 66 |"))
+        .expect("tank report row");
+    assert_eq!(
+        row.split('|').map(str::trim).collect::<Vec<_>>()[7],
+        "N/A",
+        "{row}"
+    );
 }
 
 #[test]

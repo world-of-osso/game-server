@@ -331,7 +331,46 @@ fn protection_paladin_simc_apl_uses_shield_of_the_righteous() {
         report["self_heal_per_second"].as_f64().unwrap() > 0.0,
         "{report}"
     );
+    assert_eq!(report["external_healing"], false);
+    let shield = report["absorbs_by_spell"]["432607"].as_f64().unwrap();
+    assert!(
+        (shield
+            - report["absorb_per_second"].as_f64().unwrap()
+                * report["duration_seconds"].as_f64().unwrap())
+        .abs()
+            < 1.0,
+        "{report}"
+    );
+    assert!(
+        report["self_healing_by_spell"]["85673"].as_f64().unwrap() > 0.0,
+        "{report}"
+    );
     println!("SIMC_TANK_REPLAY {report}");
+}
+
+#[test]
+#[ignore = "runs the MID2 Protection APL with the SimC dummy external healer"]
+fn protection_simc_dummy_healing_supports_full_comparison() {
+    let path = std::env::var("HEALER_TANK_SIMC_TRACE").expect("HEALER_TANK_SIMC_TRACE required");
+    let report =
+        super::tank_replay::replay_simc_with_healing(66, Path::new(&path), 300, 70448, true)
+            .unwrap();
+    assert_eq!(report["external_healing"], true);
+    assert_eq!(report["duration_seconds"], 300.0, "{report}");
+    assert!(report["time_to_death"].is_null(), "{report}");
+    assert!(
+        report["external_healing_effective"].as_f64().unwrap() > 0.0,
+        "{report}"
+    );
+    assert!(
+        report["absorbs_by_spell"]["432607"].as_f64().unwrap() > 0.0,
+        "{report}"
+    );
+    assert!(
+        report["aura_uptime"]["132403"].as_f64().unwrap() > 0.0,
+        "{report}"
+    );
+    println!("SIMC_HEALED_TANK_REPLAY {report}");
 }
 
 #[test]
