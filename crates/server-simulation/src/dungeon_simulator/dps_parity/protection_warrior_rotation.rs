@@ -312,4 +312,93 @@ mod tests {
         assert!(report["active_mitigation_uptime"].as_f64().unwrap() > 0.0);
         println!("HEALER_TANK_REPORT={report}");
     }
+    #[test]
+    fn protection_devastator_autoattacks_reset_running_shield_slam() {
+        for chance in [0.0, 100.0] {
+            let seed = crate::spell_cast::test_harness::harness_with_native_enemy_dodge_reduction(
+                Vec::new(),
+                &[236279, 236282, 23922],
+                1,
+            )
+            .unwrap();
+            let mut talent = seed
+                .app
+                .world()
+                .resource::<server::spell_info::SpellStore>()
+                .get(236279)
+                .unwrap()
+                .clone();
+            talent.effects[1].base_points = chance;
+            let mut h = crate::spell_cast::test_harness::harness_with_native_enemy_dodge_reduction(
+                vec![talent],
+                &[236279, 236282, 23922],
+                1,
+            )
+            .unwrap();
+            h.advance(3);
+            let caster = h.caster;
+            crate::auras::remove_auras(
+                h.app.world_mut(),
+                caster,
+                crate::auras::RemoveReason::Consumed,
+                |aura| aura.spell_id == 236279,
+            );
+            h.cast_and_deliver(23922, Some(h.npc));
+            assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+            h.advance(5);
+            let before = h
+                .app
+                .world()
+                .get::<crate::spell_cast::SpellHistory>(h.caster)
+                .unwrap()
+                .remaining_cooldown_ms(
+                    h.app
+                        .world()
+                        .resource::<server::spell_info::SpellStore>()
+                        .get(23922)
+                        .unwrap(),
+                    crate::spell_cast::history_now(h.app.world()),
+                );
+            assert!(
+                before > 0,
+                "go={:?} cooldowns={:?} failed={:?}",
+                h.inbox.go,
+                h.inbox.cooldowns,
+                h.inbox.failed
+            );
+            crate::auras::apply_aura(
+                h.app.world_mut(),
+                &crate::auras::AuraApplication {
+                    caster,
+                    target: caster,
+                    spell_id: 236279,
+                    effect_mask: 1,
+                    source: crate::auras::AuraSource::Cast,
+                },
+            );
+            h.inbox.cooldowns.clear();
+            h.attack(h.npc);
+            h.advance(45);
+            let procs = h
+                .inbox
+                .log
+                .iter()
+                .filter(|event| {
+                    event.spell_id == Some(236282)
+                        && event.kind == shared::protocol::CombatLogKind::Damage
+                })
+                .count();
+            assert!(procs > 0, "no landed Devastator proc");
+            let reset = h
+                .inbox
+                .cooldowns
+                .iter()
+                .any(|event| event.spell_id == 23922 && event.remaining_ms == 0);
+            assert_eq!(
+                reset,
+                chance == 100.0,
+                "chance={chance} initial deadline={before}"
+            );
+        }
+    }
 }
