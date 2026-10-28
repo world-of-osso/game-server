@@ -1,0 +1,83 @@
+use shared::components::Mana;
+use shared::protocol::CombatLogKind;
+
+fn stacks(world: &bevy::prelude::World, unit: bevy::prelude::Entity) -> u8 {
+    world
+        .get::<crate::auras::ActiveAuras>(unit)
+        .and_then(|auras| {
+            auras
+                .iter()
+                .find(|aura| aura.spell_id == 115867 && aura.caster == unit)
+                .map(|aura| aura.stacks)
+        })
+        .unwrap_or(0)
+}
+
+#[test]
+#[ignore = "requires the native MID2 Mistweaver profile and canonical DB"]
+fn mana_tea_spending_earns_stacks_and_channel_consumes_them() {
+    let (profile, traits) = super::super::dps_parity::read_reference(270).unwrap();
+    assert_eq!(profile.race, "troll");
+    let mut run = super::super::dps_parity::spawn_reference(
+        profile,
+        &traits,
+        1,
+        crate::followers::simulator::ParityActor::Player { race: 8 },
+    )
+    .unwrap();
+    for _ in 0..5 {
+        run.app.update();
+    }
+    let actor = run.actor;
+    assert!(crate::auras::has_aura(run.app.world(), actor, 115869));
+    assert_eq!(stacks(run.app.world(), actor), 0);
+    for _ in 0..8 {
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 399491, Some(actor), false)
+            .unwrap();
+        for _ in 0..80 {
+            run.app.update();
+        }
+    }
+    let earned = stacks(run.app.world(), actor);
+    assert!(
+        earned > 0,
+        "actual paid healing casts must earn Mana Tea stacks"
+    );
+    assert_eq!(
+        super::super::dps_parity::literal_rotation::execution::resolve_action(
+            run.app.world(),
+            actor,
+            115294
+        )
+        .unwrap(),
+        Some(115294)
+    );
+    let before = run.app.world().get::<Mana>(actor).unwrap().current;
+    let event_cursor = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .len();
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 115294, Some(actor), false)
+        .unwrap();
+    for _ in 0..80 {
+        run.app.update();
+    }
+    let after = run.app.world().get::<Mana>(actor).unwrap().current;
+    assert!(stacks(run.app.world(), actor) < earned);
+    assert!(after > before);
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0[event_cursor..];
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(actor.to_bits())
+                && event.spell_id == Some(115294)
+                && event.kind == CombatLogKind::Energize
+                && event.amount > 0)
+    );
+}

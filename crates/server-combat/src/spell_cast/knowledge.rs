@@ -120,6 +120,8 @@ fn project_known_parent(world: &World, actor: Entity, requested: u32) -> u32 {
         // Native433871 effect0 names433874 but supplies no TraitDefinition override.
         357210 if known.contains(433871) => 433874,
         114050 => 1219480,
+        // Native spell115869 Description_lang embeds spellname/spelldesc115294.
+        115869 => 115294,
         426115 => 264178,
         // SimC76f8118 sc_demon_hunter.cpp11383: selected Demonsurge enables Pierce for Devourer.
         452402
