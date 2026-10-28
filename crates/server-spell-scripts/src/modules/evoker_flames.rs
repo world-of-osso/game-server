@@ -28,6 +28,7 @@ pub const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::CheckTarget(check_target),
     SpellScriptHook::EffectEnabled(ruby_embers_periodic),
     SpellScriptHook::HealthChangeObserved(chrono_flame::record_health_change),
+    SpellScriptHook::HealthChangeObserved(record_scarlet_heal),
     SpellScriptHook::NamedAuraFields(&[(431442, 0), (431442, 1), (431442, 2), (1260647, 0)]),
 ];
 
@@ -57,6 +58,97 @@ fn check_target(world: &World, _: Entity, spell: u32, _: Entity) -> Result<(), C
 /// `spell_evo_living_flame::HandleHitTarget` (spell_evoker.cpp:505-530): heal a
 /// unit the caster can assist, damage any other; `HandleLaunchTarget` refunds
 /// Energizing Flame's percent of the mana cost on an enemy.
+#[derive(Component, Default)]
+struct ScarletAdaptation(f32);
+
+fn record_scarlet_heal(world: &mut World, event: &shared::protocol::CombatLogEvent) {
+    if event.kind != shared::protocol::CombatLogKind::Heal || event.amount <= 0 {
+        return;
+    }
+    let (Some(source), Some(spell_id)) = (event.source, event.spell_id) else {
+        return;
+    };
+    let caster = Entity::from_bits(source);
+    if !combat::auras::has_aura(world, caster, 372469) {
+        return;
+    }
+    let store = world.resource::<combat::spell_info::SpellStore>();
+    let Some(spell) = store.get(spell_id) else {
+        return;
+    };
+    if !spell
+        .class_options
+        .as_ref()
+        .is_some_and(|options| options.spell_class_set == 224)
+    {
+        return;
+    }
+    let coefficient = store
+        .get(LIVING_FLAME_DAMAGE)
+        .expect("native Living Flame damage")
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .expect("native Living Flame coefficient")
+        .bonus_coefficient;
+    let cap = combat::spell_cast::effects::power_stats(world, caster, false).0 * coefficient;
+    // SimC76f8118 sc_evoker.cpp1320/4347–4362: raw healing, 50% modeled overheal,
+    // the selected native talent percentage, and the live Living Flame SP cap.
+    let fraction = script_effect_value(world, caster, 372469, 0) / 100.0;
+    let added = event.amount as f32 * fraction * 0.5;
+    if world.get::<ScarletAdaptation>(caster).is_none() {
+        world
+            .entity_mut(caster)
+            .insert(ScarletAdaptation::default());
+    }
+    let mut value = world.get_mut::<ScarletAdaptation>(caster).unwrap();
+    value.0 = (value.0 + added).min(cap);
+    if !combat::auras::has_aura(world, caster, 372470) {
+        combat::auras::apply_aura(
+            world,
+            &combat::auras::AuraApplication {
+                caster,
+                target: caster,
+                spell_id: 372470,
+                effect_mask: u32::MAX,
+                source: combat::auras::AuraSource::Cast,
+            },
+        );
+    }
+}
+
+fn cast_scarlet_damage(world: &mut World, caster: Entity, target: Entity, depth: u8, bonus: f32) {
+    let Some(mut child) = spell_cast::load_triggered_spell(world, LIVING_FLAME_DAMAGE, depth)
+    else {
+        return;
+    };
+    let effect = child
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .expect("native Living Flame damage");
+    let base = combat::spell_cast::effects::scaled_amount(world, caster, &child, effect);
+    if base > 0.0 {
+        child.cast_damage_multiplier = Some(1.0 + bonus / base);
+    }
+    if !spell_cast::launch_triggered_spell(world, caster, &child, Some(target), depth) {
+        warn!(?caster, ?target, "native Living Flame damage refused");
+    }
+}
+
+fn take_scarlet(world: &mut World, caster: Entity) -> f32 {
+    let value = world
+        .get_mut::<ScarletAdaptation>(caster)
+        .map_or(0.0, |mut value| std::mem::take(&mut value.0));
+    combat::auras::remove_auras(
+        world,
+        caster,
+        combat::auras::RemoveReason::Consumed,
+        |aura| aura.spell_id == 372470 && aura.caster == caster,
+    );
+    value
+}
+
 fn living_flame(world: &mut World, caster: Entity, target: Entity, depth: u8) {
     let stacks = world
         .get::<combat::auras::ActiveAuras>(caster)
@@ -78,10 +170,11 @@ fn living_flame(world: &mut World, caster: Entity, target: Entity, depth: u8) {
         return;
     }
     refund_energizing_flame(world, caster);
-    spell_cast::cast_triggered(world, caster, LIVING_FLAME_DAMAGE, Some(target), depth + 1);
+    let scarlet = take_scarlet(world, caster);
+    cast_scarlet_damage(world, caster, target, depth + 1, scarlet);
     let extras = leaping_extras(world, caster, target, stacks);
     for &extra in &extras {
-        spell_cast::cast_triggered(world, caster, LIVING_FLAME_DAMAGE, Some(extra), depth + 1);
+        cast_scarlet_damage(world, caster, extra, depth + 1, scarlet);
     }
     // SimC76f8118 sc_evoker.cpp6936–6951: unused Leaping Flames heal the caster;
     // each heal hit counts for Ruby Essence Burst at heal_eb_chance.
