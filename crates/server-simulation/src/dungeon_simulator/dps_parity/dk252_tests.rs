@@ -2654,24 +2654,43 @@ fn dk252_army_replaces_active_lesser_ghouls_without_expiry_damage() {
     engage(&mut run);
     for spell in [275430, 1294026] {
         assert!(crate::spell_cast::try_cast_triggered(
-            run.app.world_mut(), run.actor, spell, Some(run.actor), 1
+            run.app.world_mut(),
+            run.actor,
+            spell,
+            Some(run.actor),
+            1
         ));
     }
-    let old: Vec<_> = run.app.world_mut()
+    let old: Vec<_> = run
+        .app
+        .world_mut()
         .query::<(Entity, &crate::spell_cast::summon::SummonedCreature)>()
         .iter(run.app.world())
-        .filter_map(|(actor, summon)|
-            (summon.owner == run.actor && matches!(summon.spell_id, 275430 | 1294026)).then_some(actor))
+        .filter_map(|(actor, summon)| {
+            (summon.owner == run.actor && matches!(summon.spell_id, 275430 | 1294026))
+                .then_some(actor)
+        })
         .collect();
     assert_eq!(old.len(), 2);
     literal_rotation::execution::execute(
-        run.app.world_mut(), run.actor,
+        run.app.world_mut(),
+        run.actor,
         literal_rotation::execution::Execution::Spell(42650, run.actor, None),
-    ).unwrap();
+    )
+    .unwrap();
     for actor in old {
-        assert!(run.app.world().get_entity(actor).is_err(), "Army must dismiss the existing lesser ghoul");
+        assert!(
+            run.app.world().get_entity(actor).is_err(),
+            "Army must dismiss the existing lesser ghoul"
+        );
     }
-    assert!(!run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0.iter()
-        .any(|event| event.spell_id == Some(1247379) && event.kind == CombatLogKind::Damage),
-        "dismissal must not cause natural-expiry Ruptured Viscera");
+    assert!(
+        !run.app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|event| event.spell_id == Some(1247379) && event.kind == CombatLogKind::Damage),
+        "dismissal must not cause natural-expiry Ruptured Viscera"
+    );
 }

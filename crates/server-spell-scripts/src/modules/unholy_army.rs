@@ -74,7 +74,10 @@ fn schedule_army(world: &mut World, caster: Entity, spell: &SpellInfo) {
 }
 
 fn dismiss_active_lesser_ghouls(world: &mut World, caster: Entity) {
-    if combat::combat_refs::active_opponents(world, caster).next().is_none() {
+    if combat::combat_refs::active_opponents(world, caster)
+        .next()
+        .is_none()
+    {
         return;
     }
     // SimC76f8118 sc_death_knight.cpp8987–8992: in-combat Army replaces
