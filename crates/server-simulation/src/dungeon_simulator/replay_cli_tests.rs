@@ -22,12 +22,22 @@ fn native_replay_cli_driver() {
                 .parse()
                 .unwrap();
             let seed = std::env::var("HEALER_TANK_SEED").unwrap().parse().unwrap();
-            super::healer_replay::replay_simc(
-                spec.parse().unwrap(),
-                Path::new(&path),
-                duration,
-                seed,
-            )
+            if let Some(party_trace) = std::env::var_os("HEALER_TANK_PARTY_TRACE") {
+                super::healer_replay::replay_simc_party(
+                    spec.parse().unwrap(),
+                    Path::new(&path),
+                    Path::new(&party_trace),
+                    duration,
+                    seed,
+                )
+            } else {
+                super::healer_replay::replay_simc(
+                    spec.parse().unwrap(),
+                    Path::new(&path),
+                    duration,
+                    seed,
+                )
+            }
         }
         ("simc", "tank", "66" | "73" | "104" | "250" | "268" | "581") => {
             let duration = std::env::var("HEALER_TANK_DURATION")

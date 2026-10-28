@@ -1,5 +1,5 @@
 //! Harness-only Holy Light fixture, not a production Holy Paladin policy.
-use super::{Policy, Registration, replay_with_registry};
+use super::{Policy, Registration, replay_with_party_registry, replay_with_registry};
 use crate::dungeon_simulator::dps_parity::literal_rotation::{
     self, Driver,
     equipment::Equipment,
@@ -80,6 +80,38 @@ impl Policy for FixturePolicy {
         }
         Ok(())
     }
+}
+
+#[test]
+#[ignore = "native replay fixture requires canonical world database"]
+fn simc_party_pulse_hits_all_five_native_party_members() {
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("src/dungeon_simulator/fixtures");
+    let registry: &[Registration] = &[(65, prepare)];
+    let report = replay_with_party_registry(
+        65,
+        &dir.join("healer_simc_fixture.log"),
+        Some(&dir.join("healer_simc_party_fixture.log")),
+        12,
+        70448,
+        registry,
+    )
+    .unwrap();
+    assert_eq!(report["party_incoming_events"], 5);
+    let party_damage = report["metrics"]["party_damage"].as_object().unwrap();
+    assert_eq!(
+        party_damage.len(),
+        5,
+        "every party member must take native damage: {report}"
+    );
+    // The tank can absorb its hit; the other four must take real health damage.
+    assert!(
+        party_damage
+            .values()
+            .filter(|v| v.as_u64().unwrap() > 0)
+            .count()
+            >= 4,
+        "{report}"
+    );
 }
 
 #[test]
