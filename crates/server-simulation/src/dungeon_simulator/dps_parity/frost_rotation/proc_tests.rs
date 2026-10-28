@@ -1122,6 +1122,49 @@ fn frost_winter_earns_target_bonuses_once() {
 }
 
 #[test]
+#[ignore = "literal rotation executes Frostwyrm's Fury and its earned recall"]
+fn frost_rotation_uses_earned_fury_recall() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::protocol::CombatLogKind;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::super::prepare_measurement(251, 1).unwrap();
+    super::super::engage(&mut run);
+    for _ in 0..4000 {
+        super::super::drive_player(&mut run).unwrap();
+        run.app.update();
+        if run
+            .app
+            .world()
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|event| {
+                event.spell_id == Some(1265384) && event.kind == CombatLogKind::CastSuccess
+            })
+        {
+            let hits = run
+                .app
+                .world()
+                .resource::<ObservedCombatEvents>()
+                .0
+                .iter()
+                .filter(|event| {
+                    event.spell_id == Some(279303)
+                        && event.kind == CombatLogKind::Damage
+                        && event.amount > 0
+                })
+                .count();
+            assert!(
+                hits >= 2,
+                "rotation Fury and recall must both damage: {hits}"
+            );
+            return;
+        }
+    }
+    panic!("literal rotation never used earned Chosen recall");
+}
+
+#[test]
 #[ignore = "real Frostwyrm's Fury earns and uses Chosen recall"]
 fn frost_fury_earns_and_uses_recall() {
     use crate::spell_cast::test_harness::ObservedCombatEvents;
