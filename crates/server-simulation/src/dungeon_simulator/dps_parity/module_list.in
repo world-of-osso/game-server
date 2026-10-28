@@ -131,6 +131,7 @@ mod elemental_final_calling_tests;
 mod elemental_flow_factor_tests;
 mod elemental_flow_overload_tests;
 mod elemental_fusion_tests;
+mod elemental_inferno_arc_tests;
 mod elemental_lava_overload_tests;
 mod elemental_mechanics_tests;
 mod elemental_offering_tests;
