@@ -2613,6 +2613,73 @@ pub(crate) fn deal_health_damage(
     crate::spell_cast::log_event(world, death_log_event(attacker, victim));
 }
 
+/// Roll the native recipient hit table for a SimC tank-dummy melee action.
+#[cfg(any(test, feature = "test-support"))]
+pub fn roll_simc_dummy_outcome(
+    world: &World,
+    source: Entity,
+    target: Entity,
+    strike: bool,
+) -> Result<(MeleeOutcome, i32), String> {
+    let position = world
+        .get::<Position>(source)
+        .ok_or("SIMC_DUMMY_POSITION_ABSENT")?;
+    let health = world
+        .get::<Health>(target)
+        .ok_or("SIMC_RECIPIENT_HEALTH_ABSENT")?;
+    let source_scaling = UnitScaling::of(world, source);
+    let target_scaling = UnitScaling::of(world, target);
+    let difference = i32::from(target_scaling.level_against(&source_scaling))
+        - i32::from(source_scaling.level_against(&target_scaling));
+    let attacker = Attacker {
+        entity: source,
+        player: false,
+        position,
+        mods: world.get::<AuraStatMods>(source),
+        stats: None,
+        haste_pct: 0.0,
+        enemy_dodge_pct: 0.0,
+        expertise_pct: 0.0,
+        creature: true,
+        authored_attack_time: None,
+        form_attack_time: None,
+        creature_flags: None,
+        temp_summoner: None,
+        spirit_wolf: None,
+        hunter_owner_ap: None,
+        hunter_owner_crit_pct: None,
+        pet_owner_hit_expertise: None,
+    };
+    let victim = swing_victim(
+        false,
+        world.get::<CharacterStats>(target),
+        difference,
+        false,
+    );
+    let mut chances = read_outcome_chances(
+        &attacker,
+        victim,
+        None,
+        true,
+        true,
+        world.get::<crate::auras::ActiveAuras>(target),
+        health,
+    );
+    // SimC76f8118 sc_enemy.cpp665: melee_nuke cannot miss, dodge or parry; it can block.
+    if strike {
+        chances.miss = 0.0;
+        chances.dodge = 0.0;
+        chances.parry = 0.0;
+    }
+    Ok((
+        melee::roll_melee_outcome(
+            &chances,
+            rand::Rng::gen_range(&mut rand::thread_rng(), 0..10_000),
+        ),
+        difference,
+    ))
+}
+
 /// Replay frozen source damage through the same recipient mitigation/commit/publication.
 #[cfg(any(test, feature = "test-support"))]
 pub fn replay_healer_hit(

@@ -1904,6 +1904,39 @@ pub fn damage_before_mitigation(
     .max(0.0)
 }
 
+/// Replay SimC's ID-zero tank-dummy bleed through native recipient handling.
+#[cfg(any(test, feature = "test-support"))]
+pub fn replay_simc_dummy_bleed(world: &mut World, source: Entity, target: Entity, amount: f32) {
+    // SimC76f8118 sc_enemy.cpp1503–1505: physical spell_dot with bleed=1, no spell ID.
+    let spell = SpellInfo {
+        misc: Some(crate::spell_info::SpellMisc {
+            school_mask: 1,
+            ..Default::default()
+        }),
+        effects: vec![SpellEffect {
+            mechanic: MECHANIC_BLEED,
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+    let ctx = EffectCtx {
+        caster: source,
+        spell: &spell,
+        depth: 0,
+        dest: None,
+        chain_multiplier: 1.0,
+    };
+    let damage = DamageInput {
+        amount,
+        crit: false,
+        periodic: true,
+        resolved_source: true,
+        effect: None,
+        bonus_caster: source,
+    };
+    deal_source_damage_and_report(world, &ctx, target, damage, Some((amount, false)));
+}
+
 #[cfg(any(test, feature = "test-support"))]
 pub fn replay_healer_hit(
     world: &mut World,
