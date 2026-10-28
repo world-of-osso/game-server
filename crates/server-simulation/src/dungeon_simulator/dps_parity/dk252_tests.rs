@@ -426,6 +426,39 @@ fn dk252_horseman_spell_inherits_owner_melee_power() {
 
 #[test]
 #[ignore = "requires native252 profile/traits and player actor"]
+fn dk252_expiring_ghoul_rupture_excludes_pet_critical_buffs() {
+    use crate::spell_cast::effects::factor_capture::FactorCapture;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 1).unwrap();
+    engage(&mut run);
+    assert!(crate::spell_cast::try_cast_triggered(run.app.world_mut(), run.actor, 275430, Some(run.actor), 1));
+    let ghoul = {
+        let world = run.app.world_mut();
+        world.query::<(Entity, &crate::spell_cast::summon::SummonedCreature)>().iter(world)
+            .find_map(|(actor, summon)| (summon.owner == run.actor && summon.spell_id == 275430).then_some(actor))
+            .expect("actual lesser ghoul must exist")
+    };
+    run.app.update();
+    assert!(crate::auras::has_aura(run.app.world(), ghoul, 1250728), "live ghoul must have Dreadblade mastery");
+    run.app.insert_resource(FactorCapture::new(ghoul, run.targets[0], 1247379, "ruptured_viscera", 1));
+    for _ in 0..250 {
+        run.app.world_mut().get_mut::<crate::stats::CharacterStats>(run.actor).unwrap().crit_pct = 100.0;
+        run.app.update();
+        let capture = run.app.world().resource::<FactorCapture>().export();
+        let Some(result) = capture["events"].as_array().unwrap().iter()
+            .find(|event| event["event"] == "result" && event["spell_id"] == 1247379) else { continue; };
+        let critical = result["factors"]["crit_bonus"].as_f64().expect("rupture must crit") + 1.0;
+        let owner_critical = run.app.world().get::<crate::auras::AuraStatMods>(run.actor)
+            .map_or(1.0, |mods| mods.critical_damage(32));
+        assert!((critical - 2.0 * f64::from(owner_critical)).abs() < 0.01,
+            "natural Ruptured Viscera must exclude expired pet crit buffs: {critical}");
+        return;
+    }
+    panic!("actual lesser ghoul must expire and deal Ruptured Viscera");
+}
+
+#[test]
+#[ignore = "requires native252 profile/traits and player actor"]
 fn dk252_lesser_ghoul_expiry_triggers_ruptured_viscera() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(252, 1).unwrap();
