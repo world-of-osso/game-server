@@ -822,6 +822,29 @@ fn dk252_real_lord_casts_necrotic_bolt_using_owner_power() {
 }
 
 #[test]
+#[ignore = "requires native252 profile/traits and player actor"]
+fn dk252_soul_reaper_spends_ready_ghouls() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 1).unwrap();
+    engage(&mut run);
+    for _ in 0..3 {
+        crate::auras::apply_aura(run.app.world_mut(), &crate::auras::AuraApplication {
+            caster: run.actor, target: run.actor, spell_id: 1254252, effect_mask: 3,
+            source: crate::auras::AuraSource::Cast,
+        });
+    }
+    { let mut hp = run.app.world_mut().get_mut::<shared::components::Health>(run.targets[0]).unwrap(); hp.current = hp.max * 0.2; }
+    literal_rotation::execution::execute(run.app.world_mut(), run.actor,
+        literal_rotation::execution::Execution::Spell(343294, run.targets[0], Some(run.targets[0]))).unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    assert!(!crate::auras::has_aura(run.app.world(), run.actor, 1254252));
+    let world = run.app.world_mut();
+    let count = world.query::<&crate::spell_cast::summon::SummonedCreature>().iter(world)
+        .filter(|summon| summon.owner == run.actor && summon.spell_id == 275430).count();
+    assert_eq!(count, 3, "Soul Reaper must turn three earned stacks into actual ghouls");
+}
+
+#[test]
 #[ignore = "requires private native252 profile/traits and player actor"]
 fn dk252_lord_bolt_scales_with_consumed_magus_remaining_time() {
     use crate::spell_cast::effects::factor_capture::FactorCapture;

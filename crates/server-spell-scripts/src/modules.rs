@@ -252,6 +252,7 @@ register_modules! {
     secondary_copies: (360, "modules/secondary_copies.rs"),
     unholy_ruptured_viscera: (2533, "modules/unholy_ruptured_viscera.rs"),
     shadow_apparitions: (2582, "modules/shadow_apparitions.rs"),
+    unholy_soul_reaper: (2534, "modules/unholy_soul_reaper.rs"),
     shadow_bolts: (2582, "modules/shadow_bolts.rs"),
     shadow_collapse: (2589, "modules/shadow_collapse.rs"),
     shadow_haunting: (2589, "modules/shadow_haunting.rs"),
