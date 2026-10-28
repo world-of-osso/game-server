@@ -1433,7 +1433,8 @@ fn school_damage(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, targe
         effect.variance,
     );
     let empower_bonus = super::scripts::empower_damage_bonus(world, ctx.caster, ctx.spell);
-    let amount = (amount + empower_bonus) * ctx.chain_multiplier;
+    let amount =
+        (amount + empower_bonus + ctx.spell.cast_direct_damage_bonus) * ctx.chain_multiplier;
     let (amount, crit) = with_damage_crit(world, ctx.caster, target, ctx.spell, amount);
     deal_effect_damage(world, ctx, effect, target, amount, crit, false);
 }

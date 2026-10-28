@@ -122,15 +122,7 @@ fn cast_scarlet_damage(world: &mut World, caster: Entity, target: Entity, depth:
     else {
         return;
     };
-    let effect = child
-        .effects
-        .iter()
-        .find(|effect| effect.index == 0)
-        .expect("native Living Flame damage");
-    let base = combat::spell_cast::effects::scaled_amount(world, caster, &child, effect);
-    if base > 0.0 {
-        child.cast_damage_multiplier = Some(1.0 + bonus / base);
-    }
+    child.cast_direct_damage_bonus = bonus;
     if !spell_cast::launch_triggered_spell(world, caster, &child, Some(target), depth) {
         warn!(?caster, ?target, "native Living Flame damage refused");
     }

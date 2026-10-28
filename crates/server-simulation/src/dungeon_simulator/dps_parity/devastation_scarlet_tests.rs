@@ -3,6 +3,55 @@ use super::*;
 
 #[test]
 #[ignore = "requires native Devastation follower profile and world DB"]
+fn devastation_scarlet_does_not_empower_ruby_embers_periodic_damage() {
+    fn periodic(heal: bool) -> i32 {
+        let _seed = crate::random::seed_scope(70448);
+        let mut run = prepare_literal(1467, 1).unwrap();
+        engage(&mut run);
+        let actor = run.actor;
+        let target = run.targets[0];
+        crate::auras::apply_aura(
+            run.app.world_mut(),
+            &crate::auras::AuraApplication {
+                caster: actor,
+                target: actor,
+                spell_id: 365937,
+                effect_mask: u32::MAX,
+                source: crate::auras::AuraSource::Cast,
+            },
+        );
+        if heal {
+            crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 361509, Some(actor), 1);
+        }
+        preparation::finish_pending_setup(&mut run).unwrap();
+        let _damage_seed = crate::random::seed_scope(818181);
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 361469, Some(target), false)
+            .unwrap();
+        for _ in 0..300 {
+            run.app.update();
+        }
+        run.app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .find(|event| {
+                event.spell_id == Some(361500)
+                    && event.periodic
+                    && event.kind == shared::protocol::CombatLogKind::Damage
+            })
+            .expect("actual Ruby Embers periodic damage")
+            .amount
+    }
+    assert_eq!(
+        periodic(true),
+        periodic(false),
+        "SimC bonus_da only affects direct Living Flame, not Ruby Embers"
+    );
+}
+
+#[test]
+#[ignore = "requires native Devastation follower profile and world DB"]
 fn devastation_scarlet_healing_empowers_and_is_consumed_by_real_living_flame() {
     fn damage(heal: bool, selected: bool) -> f64 {
         let _seed = crate::random::seed_scope(70448);
