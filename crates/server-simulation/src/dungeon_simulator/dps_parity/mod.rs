@@ -68,6 +68,7 @@ spec_drivers! {
     70 => ret_rotation,
     71 => arms_rotation,
     72 => fury_rotation,
+    73 => protection_warrior_rotation,
     103 => feral_rotation,
     250 => blood_tank_rotation,
     251 => frost_rotation,
