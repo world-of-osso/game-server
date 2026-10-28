@@ -22,19 +22,34 @@ fn owns_proc(spell: u32) -> bool {
 fn on_cast(world: &mut World, caster: Entity, spell: u32, depth: u8) {
     if !matches!(spell, 22812 | 61336)
         || !world.get::<TraitLoadout>(caster).is_some_and(|loadout| {
-            loadout.active_talent_spells().any(|talent| talent.spell_id == TALENT)
+            loadout
+                .active_talent_spells()
+                .any(|talent| talent.spell_id == TALENT)
         })
     {
         return;
     }
-    let stats = world.get::<CharacterStats>(caster).expect("Matted Fur caster stats");
+    let stats = world
+        .get::<CharacterStats>(caster)
+        .expect("Matted Fur caster stats");
     let attack_power = stats.attack_power;
     let versatility = 1.0 + stats.versatility_pct / 100.0;
     let store = world.resource::<SpellStore>();
-    let coefficient = store.get(TALENT).expect("Matted Fur talent").effects.iter()
-        .find(|effect| effect.index == 0).expect("Matted Fur trigger").base_points / 100.0;
+    let coefficient = store
+        .get(TALENT)
+        .expect("Matted Fur talent")
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .expect("Matted Fur trigger")
+        .base_points
+        / 100.0;
     let mut shield = store.get(SHIELD).expect("Matted Fur absorb").clone();
-    shield.effects.iter_mut().find(|effect| effect.index == 0)
-        .expect("Matted Fur absorb effect").base_points = attack_power * coefficient * versatility;
+    shield
+        .effects
+        .iter_mut()
+        .find(|effect| effect.index == 0)
+        .expect("Matted Fur absorb effect")
+        .base_points = attack_power * coefficient * versatility;
     spell_cast::launch_triggered_spell(world, caster, &shield, Some(caster), depth + 1);
 }

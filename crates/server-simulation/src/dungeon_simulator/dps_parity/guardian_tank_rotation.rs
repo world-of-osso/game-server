@@ -288,10 +288,18 @@ mod tests {
     fn guardian_matted_fur_absorbs_real_dummy_damage() {
         let trace = std::env::var("HEALER_TANK_SIMC_TRACE").expect("Guardian trace required");
         let report = super::super::super::tank_replay::replay_simc_with_healing(
-            104, std::path::Path::new(&trace), 300, 70448, true,
-        ).expect("Guardian tank replay");
+            104,
+            std::path::Path::new(&trace),
+            300,
+            70448,
+            true,
+        )
+        .expect("Guardian tank replay");
         let absorbed = report["absorbs_by_spell"]["385787"].as_f64().unwrap_or(0.0);
-        assert!(absorbed > 0.0, "defensive casts must earn a shield consumed by dummy hits: {report}");
+        assert!(
+            absorbed > 0.0,
+            "defensive casts must earn a shield consumed by dummy hits: {report}"
+        );
     }
 
     #[test]
