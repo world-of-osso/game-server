@@ -357,4 +357,42 @@ mod tests {
         );
         println!("VENGEANCE_TANK_REPORT={report}");
     }
+    #[test]
+    #[ignore = "requires native Vengeance profile"]
+    fn fracture_weapon_impacts_each_create_native_lesser_fragment() {
+        use super::super::*;
+        use server::soul_fragments::{self, FragmentFilter};
+        let _seed = crate::random::seed_scope(70_448);
+        let (profile, traits) = read_reference(581).unwrap();
+        let identity = inputs::read_actor(&profile).unwrap();
+        let mut run = prepare_reference(profile, &traits, 1, identity).unwrap();
+        let actor = run.actor;
+        let target = run.targets[0];
+        crate::spell_cast::cast_for_player_with_target(
+            run.app.world_mut(),
+            actor,
+            263642,
+            Some(target),
+        )
+        .unwrap();
+        for _ in 0..20 {
+            run.app.update();
+        }
+        let hits = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0;
+        for spell in [225919, 225921] {
+            assert!(
+                hits.iter()
+                    .any(|event| event.spell_id == Some(spell) && event.amount > 0),
+                "missing fracture hand {spell}"
+            );
+        }
+        assert_eq!(
+            soul_fragments::total_count(run.app.world(), actor, FragmentFilter::Lesser),
+            2
+        );
+    }
 }
