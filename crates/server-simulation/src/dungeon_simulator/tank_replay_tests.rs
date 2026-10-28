@@ -1152,3 +1152,39 @@ fn vanguard_shield_triggers_delayed_glory_and_power() {
         "delayed Glory must grant Valor"
     );
 }
+
+#[test]
+#[ignore = "uses selected MID2 Crusader's Judgment and native avoidance procs"]
+fn grand_crusader_advances_shared_judgment_charge() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::dps_parity::prepare_registered_player(66, 1).unwrap();
+    super::dps_parity::engage(&mut run);
+    let actor = run.actor;
+    let target = run.targets[0];
+    for _ in 0..40 {
+        run.app.update();
+    }
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 275779, Some(target), false)
+        .unwrap();
+    let recharge = |run: &super::dps_parity::Run| {
+        let history = run
+            .app
+            .world()
+            .get::<crate::spell_cast::SpellHistory>(actor)
+            .unwrap();
+        crate::spell_cast::test_harness::charge_recovery(history, 1663).1
+    };
+    let before = recharge(&run).expect("Judgment must start recharging");
+    for _ in 0..100 {
+        crate::combat::replay_healer_hit(run.app.world_mut(), target, actor, &avoided_hit("Parry"))
+            .unwrap();
+        run.app.update();
+        let after = recharge(&run);
+        if after.is_some_and(|deadline| before - deadline > 2.9)
+            || (after.is_none() && before - crate::spell_cast::now(run.app.world()) > 0.1)
+        {
+            return;
+        }
+    }
+    panic!("Grand Crusader did not advance the shared charge by 3 seconds");
+}

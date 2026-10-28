@@ -468,6 +468,12 @@ fn reset_avengers_shield(world: &mut World, caster: Entity) {
         .get::<combat::spell_cast::SpellHistory>(caster)
         .map_or(0, |history| history.remaining_cooldown_ms(&shield, now));
     combat::spell_cast::scripts::reduce_cooldown(world, caster, 31935, remaining as f64 / 1000.0);
+    // SimC76f8118 sc_paladin_protection.cpp946–948: every successful Grand
+    // Crusader also advances the shared Judgment/Hammer of Wrath charge.
+    if selected(world, caster, 204023) {
+        let milliseconds = combat::spell_cast::scripts::script_effect_value(world, caster, 204023, 1);
+        combat::spell_cast::scripts::reduce_cooldown(world, caster, 275779, f64::from(milliseconds) / 1000.0);
+    }
 }
 
 fn after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
