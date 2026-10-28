@@ -19,6 +19,29 @@ fn zero_capacity_charge_category_keeps_native_spell_cooldown() {
 
 #[test]
 #[ignore = "requires native MID2 tank, Shaman and canonical world DB"]
+fn restoration_shaman_replay_native_mana_regeneration() {
+    let mut run = super::super::dps_parity::prepare_registered_player(66, 1).unwrap();
+    let healer = super::super::dps_parity::spawn_second_reference_player(&mut run, 264).unwrap();
+    let mana = run
+        .app
+        .world_mut()
+        .get_mut::<shared::components::Mana>(healer)
+        .unwrap();
+    mana.into_inner().current = 200_000.0;
+    for _ in 0..20 {
+        run.app.update();
+    }
+    let rate = run
+        .app
+        .world()
+        .get::<crate::spell_cast::powers::PowerPools>(healer)
+        .unwrap()
+        .mana_regen_per_sec;
+    assert!((rate - 2000.0).abs() < 0.01, "actual mana regen: {rate}");
+}
+
+#[test]
+#[ignore = "requires native MID2 tank, Shaman and canonical world DB"]
 fn restoration_shaman_healing_stream_summon_applies_native_pulse() {
     let mut run = super::super::dps_parity::prepare_registered_player(66, 1).unwrap();
     let healer = super::super::dps_parity::spawn_second_reference_player(&mut run, 264).unwrap();
