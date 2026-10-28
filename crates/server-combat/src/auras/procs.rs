@@ -603,7 +603,13 @@ pub fn start_policy_proc(world: &mut World, unit: Entity, id: u32) -> Option<Aur
     }
 }
 
-fn try_proc(world: &mut World, unit: Entity, other: Option<Entity>, id: u32, event: &AuraEvent) {
+pub(super) fn try_proc(
+    world: &mut World,
+    unit: Entity,
+    other: Option<Entity>,
+    id: u32,
+    event: &AuraEvent,
+) {
     let now = aura_now(world);
     let ready = world
         .get::<ActiveAuras>(unit)

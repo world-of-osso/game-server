@@ -670,6 +670,8 @@ enum SuccessKey {
     PickupFragment,
 }
 
+const WINDWALKER_RUSHING_WIND_KICK: u32 = 467307;
+
 /// Per-unit cooldown state in real elapsed server seconds (`history_now`).
 #[derive(Component, Debug, Clone, Default)]
 pub struct SpellHistory {
@@ -690,6 +692,8 @@ pub struct SpellHistory {
     gcd_ready_at: HashMap<u32, f64>,
     /// By `ChargeCategory`.
     charges: HashMap<u32, ChargeState>,
+    /// RWK has its own action cooldown despite its shared native category metadata.
+    rwk_charges: Option<ChargeState>,
     /// By school bit index (0 Physical .. 6 Arcane).
     school_locked_until: [f64; 7],
 }
@@ -835,19 +839,25 @@ impl SpellHistory {
         let max =
             (categories.max_charges as i32 + mods.extra_charges).clamp(0, u8::MAX as i32) as u8;
         let recovery_ms = categories.charge_recovery_ms as f32 + mods.recovery_flat_ms;
-        let state = self
-            .charges
-            .entry(categories.charge_category)
-            .or_insert(ChargeState {
-                spell_id: spell.id,
-                category: categories.charge_category,
-                max,
-                recovery_ms: 0.0,
-                recovery_mult: mods.recovery_mult,
-                pending: VecDeque::new(),
-                started_at: 0.0,
-                fully_ready_at: 0.0,
-            });
+        let initial = || ChargeState {
+            spell_id: spell.id,
+            category: categories.charge_category,
+            max,
+            recovery_ms: 0.0,
+            recovery_mult: mods.recovery_mult,
+            pending: VecDeque::new(),
+            started_at: 0.0,
+            fully_ready_at: 0.0,
+        };
+        // SimC76f8118 action.cpp474 and monk1143–1204: RWK and RSK have
+        // separate action cooldowns, with native charge values for each.
+        let state = if spell.id == WINDWALKER_RUSHING_WIND_KICK {
+            self.rwk_charges.get_or_insert_with(initial)
+        } else {
+            self.charges
+                .entry(categories.charge_category)
+                .or_insert_with(initial)
+        };
         state.max = max;
         state.refresh(now);
         if !state.pending.is_empty() && state.recovery_mult != mods.recovery_mult {
@@ -876,6 +886,7 @@ fn sync_charge_recovery(world: &mut World) {
             history
                 .charges
                 .values()
+                .chain(history.rwk_charges.iter())
                 .map(move |state| (unit, state.spell_id))
         })
         .collect();
@@ -918,6 +929,7 @@ fn known_charge_categories(
         .expect("charge snapshot follows spellbook initialization")
         .iter()
         .filter_map(|id| store.get(id))
+        .filter(|spell| spell.id != WINDWALKER_RUSHING_WIND_KICK)
         .filter_map(|spell| {
             let categories = spell.categories.as_ref()?;
             let has_charges = categories.charge_category != 0 && categories.max_charges != 0;
@@ -939,16 +951,41 @@ fn refresh_charge_recovery(world: &mut World, unit: Entity, spell_id: u32) {
         world.entity_mut(unit).insert(SpellHistory::default());
     }
     let mut history = world.get_mut::<SpellHistory>(unit).unwrap();
-    let before = history
-        .charges
-        .get(&category)
-        .map(|charges| charges.snapshot(now));
+    let before = if spell.id == WINDWALKER_RUSHING_WIND_KICK {
+        history.rwk_charges.as_ref()
+    } else {
+        history.charges.get(&category)
+    }
+    .map(|charges| charges.snapshot(now));
     let after = history
         .charges_mut(&spell, now, mods)
         .unwrap()
         .snapshot(now);
     if before.as_ref() != Some(&after) {
-        send_to_owner(world, unit, after);
+        send_charge_update(world, unit, after);
+    }
+}
+
+/// RWK's independent clock cannot be reported as category1518, which belongs to RSK.
+fn send_charge_update(world: &mut World, unit: Entity, update: SpellChargesUpdate) {
+    if update.spell_id == WINDWALKER_RUSHING_WIND_KICK {
+        send_to_owner(
+            world,
+            unit,
+            SpellCooldownUpdate {
+                spell_id: update.spell_id,
+                category: 0,
+                duration_ms: update.recharge_ms,
+                remaining_ms: if update.current == 0 {
+                    update.remaining_ms
+                } else {
+                    0
+                },
+                is_gcd: false,
+            },
+        );
+    } else {
+        send_to_owner(world, unit, update);
     }
 }
 
@@ -4358,7 +4395,7 @@ fn start_cooldowns(world: &mut World, caster: Entity, spell: &SpellInfo) {
         );
     }
     if let Some(charges) = charges {
-        send_to_owner(world, caster, charges);
+        send_charge_update(world, caster, charges);
     }
 }
 

@@ -16,6 +16,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::LateAuraRegistration(register),
     SpellScriptHook::ResolvedDamage(apply_residual),
     SpellScriptHook::AfterDirectDamageBeforeItems(roll_auto_lock),
+    SpellScriptHook::AfterNativeOnCast(roll_surging_shots),
 ];
 
 fn register(scripts: &mut AuraScripts) {
@@ -23,6 +24,7 @@ fn register(scripts: &mut AuraScripts) {
         RAPID_FIRE,
         AuraScript {
             on_periodic: Some(cast_rapid_fire_tick),
+            on_remove: Some(expire_focus_fire),
             on_natural_end: Some(finish_rapid),
             ..Default::default()
         },
@@ -111,6 +113,49 @@ fn select_trick_targets(
         extras.truncate(count);
     }
     extras
+}
+
+// SimC76f8118 sc_hunter.cpp5489–5493/5553–5560: each foreground Aimed
+// Shot can reset Rapid Fire and earn Focus Fire using the selected native chance.
+fn roll_surging_shots(world: &mut World, caster: Entity, spell: u32, depth: u8) {
+    const SURGING_SHOTS: u32 = 391559;
+    const FOCUS_FIRE: u32 = 1277546;
+    const FOCUS_BUFF: u32 = 1277549;
+    if spell != AIMED_SHOT || depth != 0 || !selected(world, caster, SURGING_SHOTS) {
+        return;
+    }
+    let chance = script_effect_value(world, caster, SURGING_SHOTS, 2);
+    if combat::random::random::<f32>() * 100.0 >= chance {
+        return;
+    }
+    let now = spell_cast::history_now(world);
+    let rapid = world
+        .resource::<SpellStore>()
+        .get(RAPID_FIRE)
+        .expect("native Rapid Fire");
+    let remaining = world
+        .get::<spell_cast::SpellHistory>(caster)
+        .map_or(0, |history| history.remaining_cooldown_ms(rapid, now));
+    // The public remaining value truncates milliseconds; include the fraction.
+    reduce_cooldown(world, caster, RAPID_FIRE, (remaining + 1) as f64 / 1000.0);
+    if selected(world, caster, FOCUS_FIRE) {
+        spell_cast::cast_triggered(world, caster, FOCUS_BUFF, Some(caster), 1);
+    }
+}
+
+fn expire_focus_fire(
+    world: &mut World,
+    _unit: Entity,
+    aura: &AuraInstance,
+    _: auras::RemoveReason,
+) {
+    // sc_hunter.cpp5832–5837: the finished Rapid Fire consumes Focus Fire.
+    auras::remove_auras(
+        world,
+        aura.caster,
+        auras::RemoveReason::Consumed,
+        |active| active.spell_id == 1277549 && active.caster == aura.caster,
+    );
 }
 
 /// sc_hunter.cpp5833–5836/3632–3637: consume after the last Rapid tick,

@@ -120,6 +120,10 @@ mod devourer_tests;
 mod dot_duration_tests;
 mod diag_outlaw_ruthlessness_tests;
 mod dk252_tests;
+#[cfg(test)]
+mod unholy_nazgrim_tests;
+#[cfg(test)]
+mod unholy_magus_crit_tests;
 mod driver_tests;
 mod dummy_reference_tests;
 mod elemental_ancestor_tests;
@@ -273,6 +277,7 @@ mod literal_ranged_attack_tests;
 pub(crate) mod literal_rotation;
 mod marksmanship_fact_tests;
 mod marksmanship_mechanics_tests;
+mod marksmanship_surging_tests;
 mod melee_return;
 mod midnight_item_damage_tests;
 mod midnight_stat_items_tests;

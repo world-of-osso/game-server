@@ -39,6 +39,20 @@ class LatestOutputsTests(unittest.TestCase):
 
             self.assertEqual(outputs, {269: (newer, "landed in 8bbc870000")})
 
+    def test_archived_reports_win_over_a_shared_output_dir_overwritten_later(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "results").mkdir()
+            self.write_result(root, "landed", "landed in 8bbc870000", 260, mtime=1000)
+            archive = root / "logs" / "landed.reports"
+            archive.mkdir(parents=True)
+            (archive / "260.native.1.json").write_text("{}")
+            GAPS.RESULTS = root / "results"
+
+            outputs = GAPS.latest_outputs(order={"8bbc870000": 1})
+
+            self.assertEqual(outputs, {260: (archive, "landed in 8bbc870000")})
+
 
 if __name__ == "__main__":
     unittest.main()

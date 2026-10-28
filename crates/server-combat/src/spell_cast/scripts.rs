@@ -1322,7 +1322,7 @@ pub fn reduce_cooldown(world: &mut World, caster: Entity, spell_id: u32, seconds
         return;
     };
     if let Some(charges) = charges {
-        super::send_to_owner(world, caster, charges);
+        super::send_charge_update(world, caster, charges);
     }
     if let Some(remaining_ms) = remaining_ms {
         send_reduced_cooldown(world, caster, spell_id, remaining_ms);
@@ -1337,14 +1337,16 @@ fn reduce_running_timers(
     seconds: f64,
 ) -> (Option<shared::protocol::SpellChargesUpdate>, Option<u32>) {
     let (charge_category, category) = categories;
-    let charges = history
-        .charges
-        .get_mut(&charge_category)
-        .filter(|charges| charges.used() > 0)
-        .map(|charges| {
-            charges.reduce_recovery(now, seconds);
-            charges.snapshot(now)
-        });
+    let charges = if spell_id == super::WINDWALKER_RUSHING_WIND_KICK {
+        history.rwk_charges.as_mut()
+    } else {
+        history.charges.get_mut(&charge_category)
+    }
+    .filter(|charges| charges.used() > 0)
+    .map(|charges| {
+        charges.reduce_recovery(now, seconds);
+        charges.snapshot(now)
+    });
     // SimC76f8118 sc_mage.cpp5404–5407 adjusts the ability's effective
     // cooldown. Native spells may store it solely in a category (e.g.84714),
     // so reducing only spell_ready_at leaves the actual ability unchanged.

@@ -1,6 +1,7 @@
 //! Literal pinned Windwalker fixture driver; Stockade retains its native kit.
 mod bindings;
 mod facts;
+mod karma;
 mod source;
 use super::literal_rotation::{
     self, Driver,
@@ -98,7 +99,7 @@ impl Rotation {
             return Err("literal WW fixture has no native target".into());
         }
         self.cancel_channel(world, actor, targets)?;
-        let prepared = Prepared::read(
+        let mut prepared = Prepared::read(
             world,
             actor,
             targets,
@@ -106,10 +107,18 @@ impl Rotation {
             bindings::execution_actions(),
             false,
         )?;
+        karma::suppress_during_interval(world, actor, &mut prepared);
         if let Some((action, execution)) =
             self.select(world, actor, targets, "default", &prepared)?
         {
+            let karma_target = match (&*action.name, &execution) {
+                ("touch_of_karma", Execution::Spell(_, _, Some(target))) => Some(*target),
+                _ => None,
+            };
             self.driver.execute(world, actor, action, execution)?;
+            if let Some(target) = karma_target {
+                karma::apply_modeled_absorption(world, actor, target)?;
+            }
         }
         Ok(())
     }
@@ -197,6 +206,8 @@ mod flurry_tests;
 mod glory_tests;
 #[cfg(test)]
 mod hero_flurry_tests;
+#[cfg(test)]
+mod karma_model_tests;
 #[cfg(test)]
 mod momentum_tests;
 #[cfg(test)]

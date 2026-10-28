@@ -12,6 +12,8 @@ pub(crate) mod execution;
 mod gating_tests;
 #[cfg(test)]
 mod hostile_item_tests;
+#[cfg(test)]
+mod interrupt_tests;
 mod item_context;
 #[cfg(test)]
 mod precombat_poll_tests;

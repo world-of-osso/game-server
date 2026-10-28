@@ -192,6 +192,11 @@ impl Prepared {
         Ok(prepared)
     }
 
+    /// Suppress every target context for a fixture-specific action policy.
+    pub fn suppress_action(&mut self, name: &str) {
+        self.ready.retain(|(action, _), _| action != name);
+    }
+
     pub fn setup_pending(&self) -> bool {
         self.cast_active || self.gcd_active
     }
@@ -680,6 +685,11 @@ fn read_spell(
         enemies
     };
     for (index, &target) in targets.iter().enumerate() {
+        if interrupt_requires_casting_target(name)
+            && world.get::<shared::casting::CastState>(target).is_none()
+        {
+            continue;
+        }
         let native = native_readiness(world, actor, id, target, None, prepared.after_channel)?;
         let resolved = world
             .resource::<crate::spell_info::SpellStore>()
@@ -712,6 +722,17 @@ fn read_spell(
         }
     }
     Ok(())
+}
+
+// SimC76f8118 checks the target's casting state in each class's interrupt
+// target_ready override (sc_rogue.cpp4682–4687, sc_warrior.cpp4903–4909,
+// sc_mage.cpp3672–3678, sc_druid.cpp3573–3578). Skull Bash explicitly
+// bypasses that check for fluid-form shifting (sc_druid.cpp8174–8181).
+fn interrupt_requires_casting_target(name: &str) -> bool {
+    matches!(name,
+        "kick" | "rebuke" | "pummel" | "mind_freeze" | "counterspell" |
+        "wind_shear" | "spear_hand_strike" | "disrupt" | "muzzle" |
+        "counter_shot" | "silence" | "quell" | "solar_beam" | "interrupt")
 }
 
 fn read_item(

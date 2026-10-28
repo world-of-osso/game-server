@@ -11,6 +11,14 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 - The native encounter fixture faces the actor toward its actual primary before engagement and restores maintained melee-intent facing after forced movement finishes, including a charge that ends inside melee range. Do not turn active channels or override forced movement. Keep native directional selectors, widths and radii unchanged.
 - A fixture actor with native melee AutoAttack intent walks back into nominal melee range at its native run speed after movement abilities. Preserve forced movement ownership, native movement/cast restrictions and position=back; never suppress displacement, snap the actor or grant resources. This shared controller applies without specialization or spell-ID cases (SimC76f8118 sc_demon_hunter.cpp1559–1611).
 
+### Unholy Magus
+
+- The real Magus's Withering Grasp periodic damage can critically strike with its owner's live critical chance and its own critical damage modifiers (SimC76f8118 `sc_death_knight.cpp3070–3079/4505–4511`).
+
+### Unholy Nazgrim
+
+- Apocalyptic Conquest belongs to the owner while the actual Nazgrim is alive and expires on his demise. Selected Nazgrim's Conquest adds its native effect2 Strength percentage per paid rune, except Scourge Strike uses its base rune cost even when free (SimC76f8118 `sc_death_knight.cpp5405–5414/7332–7373/13100–13120`).
+
 ### Frost Death Knight target damage
 
 - Spell modifiers with native effect attribute `0x40` do not multiply their points by aura stacks; other effects on the same aura retain their stack scaling. Killing Machine's fixed Frostscythe critical bonus uses that attribute, while its Killing Streak bonus scales per stack.
@@ -39,6 +47,9 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 ### Shaman pet passive modifiers
 
 - Shaman pets retain eligible owner passive spell modifiers and native base values. Mastery-scaled Shaman action effects use the pet's own mastery, not the owner's mastery; do not remove other owner passives (SimC76f8118 `pet.cpp`217–228, `sc_shaman.cpp`3822–3833,13183–13224).
+### Literal interrupt readiness
+
+- Literal interrupt actions require their selected enemy to be casting. Match the pinned class-specific SimC `target_ready` rules; Skull Bash bypasses the Druid casting check for fluid-form shifting (`sc_rogue.cpp4682–4687`, `sc_druid.cpp3573–3578,8174–8181`).
 
 ### Stormbound Emblem of Dazar
 
@@ -231,7 +242,7 @@ Frost player reaction clocks are configured before food setup advances native fr
 - Roll the Bones resolves the native specialization action1214909; the obsolete315508 talent endpoint must not suppress it as unknown. A roll replaces old secondary states with exactly one native One of a Kind/Double Trouble/Triple Threat/Jackpot aura at55/30/10/5 odds. Selected Sleight of Hand may raise states below Triple Threat by its native chance; Loaded Dice raises once afterward and is consumed. The new state inherits the native container deadline.
 - The native four-piece source may produce Fang Strike only from Ambush or Sinister Strike. Sinister Strike's background extra attack197834 must not roll the tier proc (`sc_rogue.cpp3597,5944–5964,5991`). Read chance and payload from its native effect, rather than treating its broad101% proc hint as an unconditional damage trigger. Dispatch and white swings must not produce their own free-finisher window.
 - A finisher affected by earned Fang Strike snapshots maximum native combo-point capacity for its resource-dependent values, even when actual payment is zero. Consume that Fang Strike use after the successful ordinary cast. Match affected actions through the native aura's family mask, not a finisher-ID branch.
-- Active Blade Flurry transfers eligible landed spell/white source damage to native-capped nearby secondary enemies, never the primary. Preserve the source critical bonus before target-specific modifiers and mitigation, apply native13877 transfer fraction and learned Dancing Steel/Nimble Flurry conditions, and resolve22482 against each secondary exactly once without recopying the payload.
+- Active Blade Flurry transfers eligible landed spell/white source damage to native-capped nearby secondary enemies, never the primary. Preserve the source critical bonus before target-specific modifiers and mitigation, apply native13877 transfer fraction and learned Dancing Steel/Nimble Flurry conditions, and resolve22482 against each secondary exactly once without recopying the payload. Each landed copy can trigger selected poison coatings on its own recipient using their native chance and cooldown (`sc_rogue.cpp3899–3904,7890–7913`). Apply the recipient's owned Fazed damage effect to22482 even though its native family mask does not include that spell (`sc_rogue.cpp2530–2533,3894`).
 - Killing Spree retains its native resource-sized channel and aura lifetime from prepayment effective combo points, capped at the spend maximum. Excess effective points increase each hand's damage by native51690 effect4 instead of adding ticks; preserve that full prepayment value for the channel's lifetime (`sc_rogue.cpp4702–4714,4794–4805`). Its native tick-zero and periodic schedule independently dispatch both hand attacks to nearby hostile enemies; only scheduled ticks after tick-zero trigger native1235074 combo-point returns. Native haste and Adrenaline Rush period/duration modifiers remain authoritative (`sc_rogue.cpp4749–4838`).
 - Learned Restless Blades reduces its pinned running spell/recharge timers after an eligible finisher using frozen effective combo points, native79096 tenths-of-seconds per point and the native high-roll-state bonus. It must not start absent cooldowns or require a hostile hit context for self-targeted Slice and Dice.
 - Learned Cut to the Chase extends or starts owned native Slice and Dice only after the pinned eligible finisher lands. Freeze effective combo points before payment; use native51667 seconds per point and315496 base duration, capped at the maximum-point pandemic duration. Dispatch, Envenom, Eviscerate and Coup de Grace are the pinned consumers.
@@ -444,6 +455,7 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 ### Ret Dawnlight policies
 
 - Selected Light Within1261111 supplies its ranked native effect1 as Avenging Wrath's effect12 direct-damage modifier, restricted by the native Wrath effect's family mask (SimC76f8118 `sc_paladin.cpp4175–4180`).
+- Selected Light Within1261113 modifies Art of War406086 and Righteous Cause402916 via native label5745; foreground and triggered Blade of Justice retain those native damage modifiers when they consume the buffs (SimC76f8118 `sc_paladin_retribution.cpp:390–430`).
 
 - [x] `SIMC_RET_DAWNLIGHT_WAKE_PRODUCER`: selected spec70 Dawnlight431377 plus actual ordinary Wake255937 produces native counter431522 from the live modified talent effect0. Native raw2 plus specialization+1 supplies3; retain the native maximum6, not an initial6. No consumer is implied by the producer proof.
 - [x] `SIMC_RET_DAWNLIGHT_SPENDER_CONSUMER`: an eligible successful foreground HolyPower spender applies native431380 on the sourced target and consumes one actual431522 use. Retain native periodic payload, amounts, timing and stack cap. Pinned SimC76f8118 `sc_paladin.hpp1512–1535` owns the missing consumer relationship; `sc_paladin_retribution.cpp846–876` owns Wake production. TC has no script and DB2/TDB have no child edge/proc row. Both are explicit named policy-table entries with generic execution, never fabricated native metadata or core spell-ID branches. [Source and ordered proof](../handoffs/dawnlight-generic-proof-ledger.md).
@@ -937,6 +949,8 @@ Enhancement's selected Enhanced Imbues462796 applies only its second native effe
 
 Selected384355 Elemental Weapons supplies408390's native masked direct/periodic modifiers at talent effect0 ×0.1 per actually imbued hand. Real imbue gains/removals update the bonus; zero imbues or an unlearned talent remove it. Stormblast retains its explicit sourced exception without a second generic application. Sources: pinned SimC76f8118 `sc_shaman.cpp13212–13220`; native70448 supplies values and masks.
 
+Doom activation grants the selected Feral Spirit and Rolling Thunder Crackling Surge stacks with independent native8s and12s lifetimes (`sc_shaman.cpp`8845–8856,11600–11613). Lightning wolf actor100820 remains unmodeled; the class-summon importer includes its authentic template through native summon198506, but existing world databases require regeneration.
+
 Selected1262635 Thunder Capacitor rolls its native effect1 chance after each actual paid normal/Thorim LB, CL or Tempest execution and restores exactly the MW stacks consumed by that execution, through the existing native counter/modifier producer. Do not refund zero spends, Arc Discharge or Ride chains; do not alter the already native damage modifier. Spent-stack accounting uses the admitted native per-cast limit, not a net counter delta after refund. Sources: pinned SimC76f8118 `sc_shaman.cpp6687–6694,7462–7469,9978–9985`.
 
 Actual Windstrike weapon children115357/115360 ignore target armor. Ascendance replaces main- and offhand white swings with native Windlash114089/114093, which also ignore armor. The offhand uses its own weapon and the native half-damage factor. Native Doom469270 retains its Physical/Nature school but does not use Physical armor; ordinary Physical Stormstrike children remain armor-sensitive (SimC76f8118 `sc_shaman.cpp4726,4734–4768`, `action.cpp1686–1689`).
@@ -1033,7 +1047,7 @@ Named `action.<alias>.charges`, `max_charges`, `charges_fractional` and `full_re
 - Volley grants Trick Shots for its field duration. Aimed Shot and Rapid Fire ticks hit actual nearby secondary targets with native Trick Shots limits and secondary percentages. Outside Volley, Aimed Shot consumes one use at launch and Rapid Fire at channel completion.
 - Master Marksman banks actual critical Hunter damage into native269576 with its native period, duration and rolling unpaid carry. Selected Blood Fletching supplies the Aimed Shot share; neither producer invents a coefficient.
 - `hunter_cadence_tests` exercises the four native cast, stack, critical-damage and real-recipient boundaries.
-- Each executed Rapid Fire tick applies selected Take Aim's native Aimed recharge reduction. Actual Auto Shots roll selected Lock and Load's native chance.
+- Each executed Rapid Fire tick applies selected Take Aim's native Aimed recharge reduction. Actual Auto Shots roll selected Lock and Load's native chance. Each foreground Aimed Shot rolls selected Surging Shots' native reset chance; a success resets Rapid Fire and grants selected Focus Fire until the next Rapid Fire channel ends (`sc_hunter.cpp5489–5493,5553–5560,5715–5722,5832–5837`).
 - Selected Feathered Frenzy Trueshot force-produces an owned Sentinel's Mark at the selected hostile primary. Actual Precise spenders roll the native mark chance; Aimed impact consumes a mark into Lunar Storm's native count and payload at the pinned150ms spacing. A mark grants Moon's Blessing's native Aimed recharge reduction.
 - Actual Rapid Fire damage banks Sanctified Armaments with native residual values and carry. An Aimed critical impact applies Blood Fletching's native mark after1ms; later direct/periodic damage triggers its native bleed payload without recursive self-triggers or armor mitigation.
 - `hunter_followup_tests` covers real recharge, repeating Auto Shots, forced mark consumption and both native damage producers.
@@ -1259,6 +1273,8 @@ Selected Insidious Ire earns its temporary channel bonus when one target has all
 - Specialization Raise Dead46584 creates native26125 through the controlled-pet path, retaining the actual current-pet relationship and permanent lifetime. Native Dark Transformation must see the pet through UNIT_PET. DK inherits source-qualified owner melee AP/crit/haste, and ordinary owner casts order the real pet against the selected hostile primary. Hunter, Warlock and Mage pet policies remain unchanged.
 
 - Spec269 executes the pinned Windwalker action rows on native player and follower fixtures. Player measurements retain player identity and use the literal driver rather than AssistedCombat diagnostics.
+- In the 269 player-literal fixture only, Touch of Karma uses SimC's default 100-second interval and modeled absorbed-health fraction; the real player health and native spell values supply the redirected periodic damage (`sc_monk.cpp2735–2753,2757–2850`).
+- Rushing Wind Kick and Rising Sun Kick use separate action recharge clocks in gameplay and literal simulation; both retain native charge recovery and haste rules (`action.cpp474`, `sc_monk.cpp1143–1204`).
 
 - Windwalker Tigereye Brew starts combat with its native initial stacks, earns one stack per native Chi threshold from qualifying casts, and transfers up to the native cap into Zenith critical chance (`sc_monk.cpp393–406,4583–4595,7170–7183`). Out-of-combat regeneration remains unimplemented.
 - A Windwalker Tiger Palm that consumes an earned Combat Wisdom proc triggers native Expel Harm healing and its damage child, including overhealing in the damage basis (`sc_monk.cpp879–882,4002–4070`). Selected Strength of Spirit modifies the actual heal using the caster's current health and its native effect value (`sc_monk.cpp59–70,4028–4033`).
