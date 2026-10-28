@@ -729,6 +729,17 @@ fn trait_base_points(
     )
 }
 
+pub(crate) fn modded_base_points_without_mastery(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    effect: &SpellEffect,
+) -> f32 {
+    let base_points = calc_base_value(world, caster, spell, effect);
+    let value = trait_base_points(world, caster, spell, effect, base_points);
+    modify_base_points_with_bonus(world, caster, spell, effect, value, 0.0)
+}
+
 fn modify_base_points(
     world: &World,
     caster: Entity,
@@ -736,9 +747,19 @@ fn modify_base_points(
     effect: &SpellEffect,
     base_points: f32,
 ) -> f32 {
-    let base_points = base_points
-        + level_scaled_points(world, caster, spell, effect)
-        + crate::auras::mastery::effect_bonus(world, caster, spell, effect);
+    let mastery = crate::auras::mastery::effect_bonus(world, caster, spell, effect);
+    modify_base_points_with_bonus(world, caster, spell, effect, base_points, mastery)
+}
+
+fn modify_base_points_with_bonus(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    effect: &SpellEffect,
+    base_points: f32,
+    mastery: f32,
+) -> f32 {
+    let base_points = base_points + level_scaled_points(world, caster, spell, effect) + mastery;
     let base = spell_mods::modify(world, caster, spell, SpellModOp::Points, base_points);
     match SpellModOp::points_index(effect.index) {
         Some(op) => spell_mods::modify(world, caster, spell, op, base),

@@ -136,6 +136,7 @@ mod elemental_lava_overload_tests;
 mod elemental_mechanics_tests;
 mod elemental_offering_tests;
 mod elemental_overload_asc_damage_tests;
+mod elemental_owner_mastery_control_tests;
 mod elemental_primals_tests;
 mod elemental_quake_overload_tests;
 mod elemental_rotation_tests;

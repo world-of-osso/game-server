@@ -6,7 +6,7 @@ use shared::components::Npc;
 
 #[test]
 #[ignore = "requires private Elemental262 profile and native world data"]
-fn elemental_storm_pet_captures_actual_stormfury_factor() {
+fn elemental_storm_pet_uses_owner_passives_but_not_owner_mastery() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = fixture();
     assert!(crate::spell_cast::try_cast_triggered(
@@ -39,13 +39,21 @@ fn elemental_storm_pet_captures_actual_stormfury_factor() {
         run.app.update();
     }
     let capture = run.app.world().resource::<FactorCapture>().export();
-    println!("STORM_PET_CAPTURE {capture}");
+    let hit = capture["events"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|event| {
+            event["event"] == "result" && event["time"].as_f64().is_some_and(|time| time > 2.5)
+        })
+        .expect("actual Stormfury damage after its first scheduled tick");
+    let factor = hit["factors"]["native_spell_mod_product"].as_f64().unwrap();
+    // SimC76f8118 pet.cpp217–228 and sc_shaman.cpp13224: the pet's own
+    // mastery is zero. Owner Elemental Shaman, Resonance and Feedback Loop
+    // retain their native -10%, +3% and +10% passive effects.
+    let expected = 0.9 * 1.03 * 1.1;
     assert!(
-        capture["events"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .any(|event| event["event"] == "direct_amount"),
-        "actual Stormfury damage must be captured"
+        (factor - expected).abs() < 0.001,
+        "real Stormfury keeps owner passives without owner mastery: {factor}, expected {expected}"
     );
 }

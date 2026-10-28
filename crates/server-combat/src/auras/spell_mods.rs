@@ -165,6 +165,10 @@ fn matching<'a>(
 const STACKED_NEXT_SPELL_USES: &[u32] = &include!("stacked_next_spell_uses.in");
 
 fn stacked_amount(world: &World, aura: &AuraInstance, effect: &AuraEffectState) -> f32 {
+    effect.amount * stack_multiplier(world, aura, effect)
+}
+
+fn stack_multiplier(world: &World, aura: &AuraInstance, effect: &AuraEffectState) -> f32 {
     // DB2 SpellEffect attribute 0x40 suppresses stacking for this effect only.
     let suppress_stacking = world
         .resource::<crate::spell_info::SpellStore>()
@@ -176,12 +180,56 @@ fn stacked_amount(world: &World, aura: &AuraInstance, effect: &AuraEffectState) 
                 .find(|native| native.index == effect.index)
         })
         .is_some_and(|native| native.attributes & 0x40 != 0);
-    let stacks = if suppress_stacking || STACKED_NEXT_SPELL_USES.contains(&aura.spell_id) {
+    if suppress_stacking || STACKED_NEXT_SPELL_USES.contains(&aura.spell_id) {
         1.0
     } else {
         aura.stack_multiplier()
+    }
+}
+
+fn modifier_amount(
+    world: &World,
+    caster: Entity,
+    aura: &AuraInstance,
+    effect: &AuraEffectState,
+) -> f32 {
+    if super::summon_damage::ownership(world, caster).map(|(owner, _)| owner) != Some(aura.caster) {
+        return stacked_amount(world, aura, effect);
+    }
+    let source = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(aura.spell_id);
+    let native = source.and_then(|spell| {
+        // SimC76f8118 sc_shaman.cpp3822–3833/13183–13224 parses Shaman
+        // mastery on the pet action, so its mastery contribution uses pet stats.
+        const SHAMAN_FAMILY: u32 = 11;
+        let shaman = spell
+            .class_options
+            .as_ref()
+            .is_some_and(|class| class.spell_class_set == SHAMAN_FAMILY);
+        let mastery = spell
+            .misc
+            .as_ref()
+            .is_some_and(|misc| misc.attributes[8] & 0x2000_0000 != 0);
+        spell
+            .effects
+            .iter()
+            .find(|native| {
+                shaman && mastery && native.index == effect.index && native.bonus_coefficient != 0.0
+            })
+            .map(|native| (spell, native))
+    });
+    let Some((source, native)) = native else {
+        return stacked_amount(world, aura, effect);
     };
-    effect.amount * stacks
+    // SimC76f8118 pet.cpp217–228: pet mastery is not inherited. Keep the
+    // owner's passive point modifications and the native base value.
+    crate::spell_cast::effects::modded_base_points_without_mastery(
+        world,
+        aura.caster,
+        source,
+        native,
+    ) * stack_multiplier(world, aura, effect)
 }
 
 fn add_modifier((flat, mult): (f32, f32), amount: f32, percent: bool) -> (f32, f32) {
@@ -304,7 +352,7 @@ fn modifier_totals(world: &World, caster: Entity, spell: &SpellInfo, op: SpellMo
             add_modifier(sum, modifier.amount, modifier.percent)
         });
     live_modifiers(world, caster, spell, op).fold(frozen, |sum, (aura, effect)| {
-        let amount = stacked_amount(world, aura, effect);
+        let amount = modifier_amount(world, caster, aura, effect);
         let percent = is_pct(effect.aura_type);
         #[cfg(any(test, feature = "test-support"))]
         crate::spell_cast::effects::factor_capture::record_modifier(
