@@ -89,6 +89,8 @@ pub struct StatModifiers {
     pub haste_total_pct: f32,
     pub mastery_points: f32,
     pub versatility_pct: f32,
+    /// Aura443 adds leech percentage points outside rating diminishing returns.
+    pub leech_pct: f32,
     pub max_health_pct: f32,
     /// MOD_INCREASE_HEALTH: fixed current/max health gained on application.
     pub max_health_flat: f32,
@@ -631,7 +633,7 @@ pub fn compute_character_stats(
         mastery_points,
         versatility_pct: rating_value(ratings.versatility, VERSATILITY_RATING[level])
             + mods.versatility_pct,
-        leech_pct: tertiary_rating_value(ratings.leech, LEECH_RATING[level]),
+        leech_pct: tertiary_rating_value(ratings.leech, LEECH_RATING[level]) + mods.leech_pct,
         avoidance_pct: tertiary_rating_value(ratings.avoidance, AVOIDANCE_RATING[level]),
         speed_pct: tertiary_rating_value(ratings.speed, SPEED_RATING[level]),
         armor,

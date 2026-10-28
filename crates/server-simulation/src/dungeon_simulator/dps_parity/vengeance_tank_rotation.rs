@@ -754,4 +754,69 @@ mod tests {
             .unwrap();
         assert!((new - old - 10.0).abs() < 0.11, "old={old} new={new}");
     }
+    #[test]
+    #[ignore = "requires native Vengeance profile and canonical DB"]
+    fn generic_leech_uses_native_aura_and_effective_damage() {
+        use super::super::*;
+        let (profile, traits) = read_reference(581).unwrap();
+        let identity = inputs::read_actor(&profile).unwrap();
+        let mut run = prepare_reference(profile, &traits, 1, identity).unwrap();
+        let actor = run.actor;
+        let target = run.targets[0];
+        crate::auras::apply_aura(
+            run.app.world_mut(),
+            &crate::auras::AuraApplication {
+                caster: actor,
+                target: actor,
+                spell_id: 204909,
+                effect_mask: u32::MAX,
+                source: crate::auras::AuraSource::Cast,
+            },
+        );
+        run.app.update();
+        let leech = run
+            .app
+            .world()
+            .get::<crate::stats::CharacterStats>(actor)
+            .unwrap()
+            .leech_pct;
+        assert!(
+            leech >= 6.0,
+            "native Soul Rending must contribute leech: {leech}"
+        );
+        {
+            let mut health = run
+                .app
+                .world_mut()
+                .get_mut::<shared::components::Health>(actor)
+                .unwrap();
+            health.current = health.max / 2.0;
+        }
+        crate::combat::deal_direct_damage(run.app.world_mut(), actor, target, 1000.0);
+        let logs = |run: &Run| {
+            run.app
+                .world()
+                .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+                .0
+                .iter()
+                .filter(|event| {
+                    event.spell_id == Some(143924)
+                        && event.kind == shared::protocol::CombatLogKind::Heal
+                })
+                .count()
+        };
+        assert_eq!(logs(&run), 0, "leech is pooled, not immediate");
+        for _ in 0..40 {
+            run.app.update();
+        }
+        assert_eq!(
+            logs(&run),
+            1,
+            "the pooled native leech heal must be delivered once"
+        );
+        for _ in 0..40 {
+            run.app.update();
+        }
+        assert_eq!(logs(&run), 1, "self-leech must not feed another leech heal");
+    }
 }
