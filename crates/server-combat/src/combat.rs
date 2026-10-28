@@ -2296,6 +2296,11 @@ fn resolve_swing(
     } else {
         outcome_damage * critical_multiplier
     };
+    let blocked = if kind == MeleeOutcome::CritBlock {
+        blocked * critical_multiplier
+    } else {
+        blocked
+    };
     #[cfg(any(test, feature = "test-support"))]
     {
         let source = attacker.entity;
@@ -2968,6 +2973,11 @@ pub fn replay_healer_hit(
         0.0
     } else {
         amount * critical_multiplier
+    };
+    let blocked = if kind == MeleeOutcome::CritBlock {
+        blocked * critical_multiplier
+    } else {
+        blocked
     };
     let (deferred, consume_ox) = crate::auras::stagger::snapshot(world, victim)
         .map_or((0.0, false), |stagger| stagger.deferred(amount, 1));
