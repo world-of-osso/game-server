@@ -472,6 +472,7 @@ mod windwalker_player_tests;
 
 #[cfg(test)] mod brewmaster_infusion_tests;
 #[cfg(test)] mod brewmaster_cooldowns_tests;
+#[cfg(test)] mod brewmaster_quick_sip_tests;
 #[cfg(test)] mod brewmaster_barrel_proc_tests;
 #[cfg(test)] mod brewmaster_blackout_combo_tests;
 #[cfg(test)] mod brewmaster_purified_spirit_tests;
