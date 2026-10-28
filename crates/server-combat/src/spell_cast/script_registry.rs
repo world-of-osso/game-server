@@ -41,6 +41,7 @@
 //! - `LateAuraRegistration`: after retained native aura registrations.
 //! - `SuccessfulCastRelationships`: after foreground special/resource consumers.
 //! - `AfterAbsorbConsumed`: after a shield actually absorbs damage.
+//! - `AvoidanceProcHitMask`: sourced avoidance outcomes for a scripted proc.
 //! - `GuaranteesCrit`, `IgnoresCooldown`, `SnapshotsModifier`, `ArmorIgnoredSpells`:
 //!   pure native-readiness, launch snapshot and damage classification predicates.
 //! - `PersistentCastMultiplier`: spell IDs whose existing cast factor is stored as periodic metadata.
@@ -338,6 +339,7 @@ pub enum SpellScriptHook {
     LateAuraRegistration(AuraRegistrationHook),
     SuccessfulCastRelationships(AfterCastHook),
     AfterAbsorbConsumed(fn(&mut World, Entity, Entity, u32, f32)),
+    AvoidanceProcHitMask(fn(u32) -> Option<u32>),
     GuaranteesCrit(CastPredicate),
     IgnoresCooldown(CastPredicate),
     SnapshotsModifier(OwnsProcLookup),
@@ -1144,6 +1146,16 @@ pub fn melee_residual(world: &mut World, caster: Entity, target: Entity, amount:
             run(world, caster, target, amount);
         }
     }
+}
+
+pub fn avoidance_proc_hit_mask(world: &World, spell: u32) -> Option<u32> {
+    world
+        .get_resource::<SpellScriptRegistry>()?
+        .hooks()
+        .find_map(|hook| match hook {
+            SpellScriptHook::AvoidanceProcHitMask(run) => run(spell),
+            _ => None,
+        })
 }
 
 pub fn after_absorb_consumed(

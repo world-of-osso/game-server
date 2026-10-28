@@ -24,6 +24,7 @@ fn festering_wound_grants(spell: u32) -> usize {
             periodic: false,
             damage: 1.0,
             heal: None,
+            hit_mask: 0,
             reflected: false,
         },
     );

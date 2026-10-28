@@ -13,7 +13,8 @@ fn open_spell_database() -> Connection {
         "CREATE TABLE tdb_spell_proc (
             SpellId INTEGER PRIMARY KEY, SpellFamilyName INTEGER NOT NULL DEFAULT 0,
             SpellFamilyMask0 INTEGER NOT NULL DEFAULT 0, SpellFamilyMask1 INTEGER NOT NULL DEFAULT 0,
-            SpellFamilyMask2 INTEGER NOT NULL DEFAULT 0, SpellFamilyMask3 INTEGER NOT NULL DEFAULT 0
+            SpellFamilyMask2 INTEGER NOT NULL DEFAULT 0, SpellFamilyMask3 INTEGER NOT NULL DEFAULT 0,
+            HitMask INTEGER NOT NULL DEFAULT 0
         );",
     )
     .unwrap();

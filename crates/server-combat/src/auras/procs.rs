@@ -53,6 +53,9 @@ use crate::spell_info::{SpellInfo, SpellStore};
 pub const PROC_KILL: u32 = 0x2;
 pub const PROC_DEAL_MELEE_SWING: u32 = 0x4;
 pub const PROC_TAKE_MELEE_SWING: u32 = 0x8;
+pub const PROC_HIT_MISS: u32 = 0x04;
+pub const PROC_HIT_DODGE: u32 = 0x10;
+pub const PROC_HIT_PARRY: u32 = 0x20;
 pub const PROC_DEAL_MELEE_ABILITY: u32 = 0x10;
 pub const PROC_TAKE_MELEE_ABILITY: u32 = 0x20;
 pub const PROC_DEAL_RANGED_ABILITY: u32 = 0x100;
@@ -132,6 +135,8 @@ pub struct AuraEvent {
     pub damage: f32,
     /// Resolved healing before overheal, or None when this hit did not heal.
     pub heal: Option<f32>,
+    /// Native avoidance outcome bits; zero denotes an ordinary landed event.
+    pub hit_mask: u32,
     /// `PROC_HIT_REFLECT`: `target` reflected the actor's spell (`ProcReflectDelayed`,
     /// Spell.cpp:2412-2436). Only reflect auras proc off it, and only off it.
     pub reflected: bool,
@@ -418,6 +423,18 @@ fn proc_matches(
     // stack only to a successful incoming auto-attack, never a special attack.
     if aura.spell_id == 195181 && mask[0] & PROC_TAKE_MELEE_SWING == 0 {
         return false;
+    }
+    if event.hit_mask != 0 {
+        let scripted =
+            crate::spell_cast::script_registry::avoidance_proc_hit_mask(world, aura.spell_id);
+        let native = world
+            .get_resource::<SpellStore>()
+            .and_then(|store| store.get(aura.spell_id))
+            .and_then(|spell| spell.aura_options.as_ref())
+            .map_or(0, |options| options.proc_hit_mask);
+        if scripted.unwrap_or(native) & event.hit_mask == 0 {
+            return false;
+        }
     }
     //102351's tooltip requires damage taken, not a heal or fully absorbed hit.
     if aura.spell_id == crate::spell_cast::scripts::CENARION_WARD && event.damage <= 0.0 {

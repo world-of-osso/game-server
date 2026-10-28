@@ -156,6 +156,7 @@ fn emit_knockback_proc(world: &mut World, caster: Entity, target: Entity) {
             periodic: false,
             damage: 0.0,
             heal: None,
+            hit_mask: 0,
             reflected: false,
         },
     );

@@ -2351,6 +2351,7 @@ fn push_damage_event(
             periodic,
             damage,
             heal: None,
+            hit_mask: 0,
             reflected: false,
         },
     );
@@ -2379,6 +2380,7 @@ fn kill(world: &mut World, killer: Entity, target: Entity, can_proc: bool) {
             periodic: false,
             damage: 0.0,
             heal: None,
+            hit_mask: 0,
             reflected: false,
         },
     );
@@ -2550,6 +2552,7 @@ fn apply_resolved_heal(
                 periodic: true,
                 damage: 0.0,
                 heal: Some(amount),
+                hit_mask: 0,
                 reflected: false,
             },
         );

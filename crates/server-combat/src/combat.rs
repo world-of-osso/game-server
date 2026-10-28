@@ -1221,6 +1221,33 @@ fn record_swing(
     };
     mark_replication_changed(world.get_resource::<ReplicationDirtyQueue>(), target_entity);
     let landed = !outcome.immune && !outcome.kind.avoided();
+    if !outcome.immune {
+        let hit_mask = match outcome.kind {
+            MeleeOutcome::Miss => procs::PROC_HIT_MISS,
+            MeleeOutcome::Dodge => procs::PROC_HIT_DODGE,
+            MeleeOutcome::Parry => procs::PROC_HIT_PARRY,
+            _ => 0,
+        };
+        if hit_mask != 0 {
+            procs::push_event(
+                world,
+                AuraEvent {
+                    actor: attacker_entity,
+                    target: Some(target_entity),
+                    actor_mask: [0; 2],
+                    target_mask: [procs::PROC_TAKE_MELEE_SWING, 0],
+                    spell_id: None,
+                    can_proc: true,
+                    cast_used_proc_modifier: false,
+                    periodic: false,
+                    damage: 0.0,
+                    heal: None,
+                    hit_mask,
+                    reflected: false,
+                },
+            );
+        }
+    }
     if landed {
         crate::spell_cast::scripts::after_melee_residual(
             world,
@@ -1274,6 +1301,7 @@ fn swing_aura_events(attacker: Entity, target: Entity, outcome: &SwingOutcome) -
         periodic: false,
         damage: outcome.scaled_loss,
         heal: None,
+        hit_mask: 0,
         reflected: false,
     }];
     if outcome.npc_died || outcome.player_died {
@@ -1288,6 +1316,7 @@ fn swing_aura_events(attacker: Entity, target: Entity, outcome: &SwingOutcome) -
             periodic: false,
             damage: 0.0,
             heal: None,
+            hit_mask: 0,
             reflected: false,
         });
     }

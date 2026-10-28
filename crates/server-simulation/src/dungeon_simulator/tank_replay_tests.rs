@@ -103,6 +103,137 @@ fn simc_dummy_strike_does_not_trigger_auto_attack_procs() {
     );
 }
 
+fn avoided_hit(outcome: &str) -> super::healer_intake::Hit {
+    super::healer_intake::Hit {
+        tick: 1,
+        source_guid: 0,
+        pack: 0,
+        target_slot: 0,
+        school: 1,
+        raw: 1_000.0,
+        level_scaling_factor: 1.0,
+        kind: super::healer_intake::HitKind::Melee {
+            hand: 0,
+            outcome: outcome.into(),
+            level_difference: 0,
+            critical_multiplier: 1.0,
+            weapon_speed: 2.0,
+        },
+    }
+}
+
+#[test]
+#[ignore = "uses native TDB parry-only proc metadata and real replayed outcomes"]
+fn victim_avoidance_proc_honors_native_hit_mask() {
+    use crate::auras::{AuraApplication, AuraInstance, AuraSource};
+    use bevy::prelude::*;
+    #[derive(Component, Default)]
+    struct Hits(u32);
+    fn count(
+        world: &mut World,
+        unit: Entity,
+        _: &AuraInstance,
+        _: &crate::auras::procs::AuraEvent,
+    ) {
+        world.get_mut::<Hits>(unit).unwrap().0 += 1;
+    }
+    let mut run = super::dps_parity::prepare_registered_player(66, 1).unwrap();
+    let actor = run.actor;
+    let source = run.targets[0];
+    run.app
+        .world_mut()
+        .entity_mut(actor)
+        .insert(Hits::default());
+    run.app
+        .world_mut()
+        .resource_mut::<crate::auras::scripts::AuraScripts>()
+        .0
+        .entry(23547)
+        .or_default()
+        .on_damage_proc = Some(count);
+    crate::auras::apply_aura(
+        run.app.world_mut(),
+        &AuraApplication {
+            caster: actor,
+            target: actor,
+            spell_id: 23547,
+            effect_mask: 1,
+            source: AuraSource::Cast,
+        },
+    );
+    assert!(crate::auras::has_aura(run.app.world(), actor, 23547));
+    for outcome in ["Miss", "Dodge", "Parry"] {
+        crate::combat::replay_healer_hit(run.app.world_mut(), source, actor, &avoided_hit(outcome))
+            .unwrap();
+        run.app.update();
+        let expected = u32::from(outcome == "Parry");
+        assert_eq!(
+            run.app.world().get::<Hits>(actor).unwrap().0,
+            expected,
+            "{outcome}"
+        );
+    }
+}
+
+#[test]
+#[ignore = "uses selected MID2 Grand Crusader and real missed, dodged and parried attacks"]
+fn grand_crusader_resets_shield_after_each_avoidance_kind() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::dps_parity::prepare_registered_player(66, 1).unwrap();
+    super::dps_parity::engage(&mut run);
+    let actor = run.actor;
+    let source = run.targets[0];
+    assert!(crate::auras::has_aura(run.app.world(), actor, 85043));
+    let shield = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(31935)
+        .unwrap()
+        .clone();
+    let remaining = |run: &super::dps_parity::Run| {
+        run.app
+            .world()
+            .get::<crate::spell_cast::SpellHistory>(actor)
+            .unwrap()
+            .remaining_cooldown_ms(&shield, crate::spell_cast::now(run.app.world()))
+    };
+    for outcome in ["Miss", "Dodge", "Parry"] {
+        for _ in 0..40 {
+            run.app.update();
+        }
+        if remaining(&run) != 0 {
+            for _ in 0..320 {
+                run.app.update();
+            }
+        }
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 31935, Some(source), false)
+            .unwrap();
+        let mut observed = false;
+        for _ in 0..10 {
+            crate::combat::replay_healer_hit(
+                run.app.world_mut(),
+                source,
+                actor,
+                &avoided_hit(outcome),
+            )
+            .unwrap();
+            run.app.update();
+            if remaining(&run) == 0 {
+                observed = true;
+                break;
+            }
+            for _ in 0..21 {
+                run.app.update();
+            }
+        }
+        assert!(
+            observed,
+            "{outcome} did not reset an active Avenger's Shield cooldown"
+        );
+    }
+}
+
 #[test]
 #[ignore = "uses real MID2 Holy Bulwark consumption and Avenger's Shield"]
 fn reflection_of_radiance_can_reset_shield_from_self_absorbs() {
