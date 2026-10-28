@@ -1392,6 +1392,31 @@ fn dk252_sudden_doom_death_coil_summons_doomed_bidding_ghoul() {
 }
 
 #[test]
+#[ignore = "requires native252 profile/traits and player actor"]
+fn dk252_rune_spenders_earn_rune_mastery_strength() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 1).unwrap();
+    engage(&mut run);
+    for _ in 0..30 {
+        crate::spell_cast::powers::change_power(run.app.world_mut(), run.actor, shared::components::PowerType::Runes, 6.0);
+        literal_rotation::execution::execute(run.app.world_mut(), run.actor,
+            literal_rotation::execution::Execution::Spell(55090, run.targets[0], Some(run.targets[0]))).unwrap();
+        preparation::finish_pending_setup(&mut run).unwrap();
+        if crate::auras::has_aura(run.app.world(), run.actor, 374585) {
+            run.app.update();
+            let buffed = run.app.world().get::<crate::stats::CharacterStats>(run.actor).unwrap().primary.strength;
+            crate::auras::remove_auras(run.app.world_mut(), run.actor, crate::auras::RemoveReason::Cancelled, |aura| aura.spell_id == 374585);
+            run.app.update();
+            let unbuffed = run.app.world().get::<crate::stats::CharacterStats>(run.actor).unwrap().primary.strength;
+            assert!(buffed > unbuffed, "earned Rune Mastery must increase actual Strength: {unbuffed} -> {buffed}");
+            return;
+        }
+        for _ in 0..40 { run.app.update(); }
+    }
+    panic!("actual rune spenders must earn Rune Mastery");
+}
+
+#[test]
 #[ignore = "requires private native252 profile/traits and player actor"]
 fn dk252_putrid_echoes_spends_both_charges_and_summons_two_ghouls() {
     use crate::simc_apl_native::{Bindings, Encounter, FightStyle, NativeFacts};
