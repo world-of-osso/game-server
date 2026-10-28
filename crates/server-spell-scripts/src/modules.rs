@@ -315,6 +315,7 @@ register_modules! {
     unholy_necrotic_coil: (2525, "modules/unholy_necrotic_coil.rs"),
     unholy_coil_devastation: (2527, "modules/unholy_coil_devastation.rs"),
     voltaic_blaze: (250, "modules/voltaic_blaze.rs"),
+    unholy_doomed_bidding: (2529, "modules/unholy_doomed_bidding.rs"),
     demonology_mind_sear: (2660, "modules/demonology_mind_sear.rs"),
     warlock_ritual: (2669, "modules/warlock_ritual.rs"),
     warlock_seed: (2659, "modules/warlock_seed.rs"),

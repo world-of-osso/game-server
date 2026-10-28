@@ -1015,6 +1015,27 @@ fn dk252_putrefy_magus_casts_native_necrotic_bolt() {
 }
 
 #[test]
+#[ignore = "requires native252 profile/traits and player actor"]
+fn dk252_sudden_doom_death_coil_summons_doomed_bidding_ghoul() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 1).unwrap();
+    engage(&mut run);
+    crate::auras::apply_aura(run.app.world_mut(), &crate::auras::AuraApplication {
+        caster: run.actor, target: run.actor, spell_id: 81340, effect_mask: 15,
+        source: crate::auras::AuraSource::Cast,
+    });
+    crate::spell_cast::powers::change_power(run.app.world_mut(), run.actor, shared::components::PowerType::RunicPower, 1000.0);
+    literal_rotation::execution::execute(run.app.world_mut(), run.actor,
+        literal_rotation::execution::Execution::Spell(47541, run.targets[0], Some(run.targets[0]))).unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    for _ in 0..30 { run.app.update(); }
+    let world = run.app.world_mut();
+    assert!(world.query::<&crate::spell_cast::summon::SummonedCreature>().iter(world)
+        .any(|summon| summon.owner == run.actor && summon.spell_id == 275430),
+        "Sudden Doom Death Coil must summon a real Doomed Bidding ghoul");
+}
+
+#[test]
 #[ignore = "requires private native252 profile/traits and player actor"]
 fn dk252_putrid_echoes_spends_both_charges_and_summons_two_ghouls() {
     use crate::simc_apl_native::{Bindings, Encounter, FightStyle, NativeFacts};
