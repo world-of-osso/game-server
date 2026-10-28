@@ -14,11 +14,11 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
 ];
 
 fn extend_diseases(world: &mut World, ctx: &EffectCtx<'_>, target: Entity, _: bool) {
-    if ctx.spell.id != 1242178 {
+    if !matches!(ctx.spell.id, 47632 | 1242178) {
         return;
     }
-    // SimC76f8118 sc_death_knight.cpp9844–9861/9869–9887/13586–13603:
-    // the shadow child, not its physical parent, extends diseases on each hit.
+    // SimC76f8118 sc_death_knight.cpp9844–9861/9869–9897/13586–13603:
+    // the Coil damage or Necrotic shadow child extends diseases on each hit.
     let milliseconds = combat::spell_cast::scripts::script_effect_value(world, ctx.caster, 77575, 2)
         .max(0.0)
         .round() as u32;
