@@ -1,21 +1,21 @@
 //! Pre-outcome source rolls from the pinned SimC tank dummy debug trace.
 use std::path::Path;
 
-#[derive(Debug, PartialEq)]
-enum Kind {
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub(crate) enum Kind {
     Swing,
     Strike,
     Bleed,
 }
 
 #[derive(Debug, PartialEq)]
-struct Hit {
-    time_ms: u64,
-    amount: f64,
-    kind: Kind,
+pub(crate) struct Hit {
+    pub(crate) time_ms: u64,
+    pub(crate) amount: f64,
+    pub(crate) kind: Kind,
 }
 
-fn read_trace(path: &Path, dummy: &str) -> Result<Vec<Hit>, String> {
+pub(crate) fn read_trace(path: &Path, dummy: &str) -> Result<Vec<Hit>, String> {
     let trace = std::fs::read_to_string(path)
         .map_err(|error| format!("read {}: {error}", path.display()))?;
     parse_trace(&trace, dummy)
