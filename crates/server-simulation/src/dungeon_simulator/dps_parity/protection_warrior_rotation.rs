@@ -438,8 +438,98 @@ mod tests {
     }
 
     #[test]
+    fn revenge_trigger_accepts_only_white_impacts_and_incoming_avoids() {
+        use crate::dungeon_simulator::healer_intake::{Hit, HitKind};
+        let seed = crate::spell_cast::test_harness::harness_with_native_enemy_dodge_reduction(
+            Vec::new(),
+            &[5301, 5302],
+            1,
+        )
+        .unwrap();
+        let mut trigger = seed
+            .app
+            .world()
+            .resource::<server::spell_info::SpellStore>()
+            .get(5301)
+            .unwrap()
+            .clone();
+        trigger
+            .aura_options
+            .as_mut()
+            .unwrap()
+            .procs_per_minute
+            .as_mut()
+            .unwrap()
+            .base_proc_rate = 600.0;
+        let mut h = crate::spell_cast::test_harness::harness_with_native_enemy_dodge_reduction(
+            vec![trigger],
+            &[5301, 5302],
+            1,
+        )
+        .unwrap();
+        h.advance(3);
+        let actor = h.caster;
+        let source = h.npc;
+        assert!(crate::auras::has_aura(h.app.world(), actor, 5301));
+        for (outcome, expected) in [
+            ("Hit", false),
+            ("Miss", false),
+            ("Dodge", true),
+            ("Parry", true),
+        ] {
+            h.advance(200);
+            crate::auras::remove_auras(
+                h.app.world_mut(),
+                actor,
+                crate::auras::RemoveReason::Consumed,
+                |a| a.spell_id == 5302,
+            );
+            crate::combat::replay_healer_hit(
+                h.app.world_mut(),
+                source,
+                actor,
+                &Hit {
+                    tick: 1,
+                    source_guid: 0,
+                    pack: 0,
+                    target_slot: 0,
+                    school: 1,
+                    raw: 1.0,
+                    level_scaling_factor: 1.0,
+                    kind: HitKind::Melee {
+                        hand: 0,
+                        outcome: outcome.into(),
+                        level_difference: 0,
+                        critical_multiplier: 1.0,
+                        weapon_speed: 2.0,
+                    },
+                },
+            )
+            .unwrap();
+            h.advance(3);
+            assert_eq!(
+                crate::auras::has_aura(h.app.world(), actor, 5302),
+                expected,
+                "incoming {outcome}"
+            );
+        }
+        h.advance(200);
+        crate::auras::remove_auras(
+            h.app.world_mut(),
+            actor,
+            crate::auras::RemoveReason::Consumed,
+            |a| a.spell_id == 5302,
+        );
+        h.attack(source);
+        h.advance(3);
+        assert!(
+            crate::auras::has_aura(h.app.world(), actor, 5302),
+            "actual white impact must trigger Revenge"
+        );
+    }
+
+    #[test]
     fn best_served_cold_increases_native_revenge_proc_frequency() {
-        use crate::auras::procs::{AuraEvent, PROC_DEAL_MELEE_SWING};
         fn count_procs(selected: bool) -> usize {
             let mut h = crate::spell_cast::test_harness::harness_with_native_enemy_dodge_reduction(
                 Vec::new(),
@@ -479,23 +569,28 @@ mod tests {
                     |aura| aura.spell_id == 5302,
                 );
                 let _seed = crate::random::seed_scope(seed);
-                crate::auras::procs::push_event(
+                crate::combat::replay_healer_hit(
                     h.app.world_mut(),
-                    AuraEvent {
-                        actor: caster,
-                        target: Some(target),
-                        actor_mask: [PROC_DEAL_MELEE_SWING, 0],
-                        target_mask: [0; 2],
-                        spell_id: None,
-                        can_proc: true,
-                        cast_used_proc_modifier: false,
-                        periodic: false,
-                        damage: 1.0,
-                        heal: None,
-                        hit_mask: 0,
-                        reflected: false,
+                    target,
+                    caster,
+                    &crate::dungeon_simulator::healer_intake::Hit {
+                        tick: 1,
+                        source_guid: 0,
+                        pack: 0,
+                        target_slot: 0,
+                        school: 1,
+                        raw: 1000.0,
+                        level_scaling_factor: 1.0,
+                        kind: crate::dungeon_simulator::healer_intake::HitKind::Melee {
+                            hand: 0,
+                            outcome: "Dodge".into(),
+                            level_difference: 0,
+                            critical_multiplier: 1.0,
+                            weapon_speed: 2.0,
+                        },
                     },
-                );
+                )
+                .unwrap();
                 h.advance(1);
                 successes += usize::from(crate::auras::has_aura(h.app.world(), caster, 5302));
             }
