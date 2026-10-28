@@ -140,6 +140,7 @@ mod elemental_primals_tests;
 mod elemental_quake_overload_tests;
 mod elemental_rotation_tests;
 mod elemental_storm_factor_tests;
+mod elemental_storm_pet_factor_tests;
 mod elemental_storm_overload_tests;
 mod elemental_tier_tests;
 mod engagement_tests;
