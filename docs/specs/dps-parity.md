@@ -941,7 +941,7 @@ Enhancement's selected Enhanced Imbues462796 applies only its second native effe
 
 Selected384355 Elemental Weapons supplies408390's native masked direct/periodic modifiers at talent effect0 ×0.1 per actually imbued hand. Real imbue gains/removals update the bonus; zero imbues or an unlearned talent remove it. Stormblast retains its explicit sourced exception without a second generic application. Sources: pinned SimC76f8118 `sc_shaman.cpp13212–13220`; native70448 supplies values and masks.
 
-Doom activation grants the selected Feral Spirit and Rolling Thunder Crackling Surge stacks with independent native8s and12s lifetimes (`sc_shaman.cpp`8845–8856,11600–11613). Lightning wolf actor100820 remains unmodeled because the local world database has no template.
+Doom activation grants the selected Feral Spirit and Rolling Thunder Crackling Surge stacks with independent native8s and12s lifetimes (`sc_shaman.cpp`8845–8856,11600–11613). Lightning wolf actor100820 remains unmodeled; the class-summon importer includes its authentic template through native summon198506, but existing world databases require regeneration.
 
 Selected1262635 Thunder Capacitor rolls its native effect1 chance after each actual paid normal/Thorim LB, CL or Tempest execution and restores exactly the MW stacks consumed by that execution, through the existing native counter/modifier producer. Do not refund zero spends, Arc Discharge or Ride chains; do not alter the already native damage modifier. Spent-stack accounting uses the admitted native per-cast limit, not a net counter delta after refund. Sources: pinned SimC76f8118 `sc_shaman.cpp6687–6694,7462–7469,9978–9985`.
 
