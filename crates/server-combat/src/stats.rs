@@ -106,6 +106,8 @@ pub struct StatModifiers {
     pub parry_pct: f32,
     /// MOD_BLOCK_PERCENT: added to block chance (`player_defense`).
     pub block_pct: f32,
+    /// Mastery-derived block chance subject to block diminishing returns.
+    pub diminishing_block_pct: f32,
     /// MOD_ARMOR_PCT_FROM_STAT268: additive percentages of live primary stats.
     pub armor_from_stat_pct: UnitStats,
     /// MiscValue -2 selects the specialization's primary stat.
@@ -784,6 +786,7 @@ pub struct DefenseInputs {
     pub base_agility: f32,
     /// Σ MOD_BLOCK_PERCENT (`StatModifiers::block_pct`).
     pub block_pct: f32,
+    pub diminishing_block_pct: f32,
 }
 
 /// TrinityCore master's player avoidance: `Player::UpdateDodgePercentage`,
@@ -860,7 +863,23 @@ pub fn player_defense(
         dodge,
         parry,
         block: shield_armor.map_or(0.0, |_| {
-            BASE_BLOCK_PCT + inputs.block_pct + ratings.block / BLOCK_RATING[level]
+            if matches!(class, 1 | 2) {
+                // SimC player.cpp:5221–5236, warrior.cpp:9270 and
+                // paladin.cpp:4689: mastery and rating share block DR;
+                // flat auras, including Shield Block, remain outside it.
+                let bonus = ((ratings.block / BLOCK_RATING[level] + inputs.diminishing_block_pct)
+                    * 128.0)
+                    .round()
+                    / 128.0;
+                let diminished = if bonus > 0.0 {
+                    bonus / (bonus * 0.0067 + 1.0 / 0.94)
+                } else {
+                    0.0
+                };
+                3.0 + inputs.block_pct + diminished
+            } else {
+                BASE_BLOCK_PCT + inputs.block_pct + ratings.block / BLOCK_RATING[level]
+            }
         }),
         shield_block: inputs
             .shield_armor
@@ -1362,6 +1381,7 @@ pub(crate) fn update_character_stats(
                 base_agility: base_primary_stats(class_id, race, level.0)
                     .map_or(0.0, |base| base.agility),
                 block_pct: mods.map_or(0.0, |mods| mods.block_pct),
+                diminishing_block_pct: mods.map_or(0.0, |mods| mods.diminishing_block_pct),
             },
         );
         if *unit_stats != stats.primary {
