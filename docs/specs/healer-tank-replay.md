@@ -12,7 +12,7 @@ Replay recorded incoming damage in the native server combat simulation to compar
 - [ ] For each tank report raw and mitigated damage taken and mitigation percentage, self-healing and consumed absorbs per second, time to death without a healer, active-mitigation uptime, and largest five-second damage spike. Raw incoming damage includes avoided attacks; mitigation includes avoidance. Damage taken and spike include self-sourced periodic damage from tank mechanics. Stop the tank measurement at death; report no death as null. For the initial Protection Paladin, active mitigation is Shield of the Righteous.
 - [ ] Mistweaver Mana Tea uses native-description-derived spending, stack cap, channel consumption and mana restoration. The pinned SimC source has no Mistweaver Mana Tea model.
 - [ ] Print report tables with `scripts/healer_tank_replay.py`. SimC healer reports include frame-sampled minimum healer mana, minimum tank health including immediately after each incoming hit, and tank damage receipts per replay second.
-- [ ] Restoration Shaman triage uses native readiness for Earth Shield, Riptide, Healing Wave, Healing Surge, Chain Heal, Healing Stream Totem, Unleash Life, Spirit Link and Mana Tide when learned. Cloudburst Totem remains blocked by absent native 157153 data.
+- [ ] See [Restoration Shaman (264)](healer-tank-replay/264.md) for its replay policy and data gaps.
 
 ## How it works
 
