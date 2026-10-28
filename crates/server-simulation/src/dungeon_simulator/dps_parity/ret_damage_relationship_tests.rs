@@ -501,6 +501,12 @@ fn ret_truths_wake_does_not_apply_its_dot_bonus_to_itself() {
     super::channel_timing_tests::remove_equipped_proc_drivers(&mut run);
     engage(&mut run);
     crate::spell_cast::cast_triggered(run.app.world_mut(), owner, 255937, Some(target), 1);
+    for _ in 0..20 {
+        if crate::auras::has_aura(run.app.world(), target, 403695) {
+            break;
+        }
+        run.app.update();
+    }
     let aura = run
         .app
         .world()
