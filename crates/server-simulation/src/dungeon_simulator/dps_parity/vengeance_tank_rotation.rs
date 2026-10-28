@@ -532,17 +532,17 @@ mod tests {
             let actor = run.actor;
             let target = run.targets[0];
             engage(&mut run);
-            for _ in 0..6 {
-                assert!(crate::spell_cast::try_cast_triggered(
+            for _ in 0..3 {
+                crate::spell_cast::cast_for_player_with_target(
                     run.app.world_mut(),
                     actor,
-                    225919,
+                    263642,
                     Some(target),
-                    1
-                ));
-            }
-            for _ in 0..15 {
-                run.app.update();
+                )
+                .unwrap();
+                for _ in 0..55 {
+                    run.app.update();
+                }
             }
             assert_eq!(
                 soul_fragments::active_count(run.app.world(), actor, FragmentFilter::Any),
