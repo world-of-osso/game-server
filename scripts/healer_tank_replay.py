@@ -16,15 +16,9 @@ MARKER = 'HEALER_TANK_REPORT='
 WORLD_DB = Path('/home/osso/Projects/world-of-osso/game-server/data/world.db')
 PROFILE_DIR = Path('/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/dps-parity-2026-10-21')
 TRACE_DIR = Path('/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/healer-tank-replay')
-SUPPORT_PROFILES = PROFILE_DIR / 'support-mid2-inputs'
+ALL_PROFILES = PROFILE_DIR / 'healer-tank-all-inputs'
 HEALERS = ('65', '105', '256', '257', '264', '270', '1468')
 TANKS = ('66', '73', '104', '250', '268', '581')
-TANK_PROFILES = {
-    '66': SUPPORT_PROFILES, '73': PROFILE_DIR, '104': SUPPORT_PROFILES,
-    '250': Path('/home/osso/.worktrees/logs/tank-250-581/250'),
-    '268': Path('/home/osso/.worktrees/logs/tank-268/268'),
-    '581': Path('/home/osso/.worktrees/logs/tank-250-581/581'),
-}
 
 
 def run_replay(timeline, spec, source, duration, seed, profile_dir, executable, external_healing, mode='tank'):
@@ -124,7 +118,7 @@ def run_all(trace_dir, executable, output_dir, jobs, profile_dir=None):
     output_dir.mkdir(parents=True, exist_ok=True)
     def run(item):
         mode, spec, healed = item
-        profiles = profile_dir or (SUPPORT_PROFILES if mode == 'healer' else TANK_PROFILES[spec])
+        profiles = profile_dir or ALL_PROFILES
         trace_spec = '66' if mode == 'healer' else spec
         timeline = (trace_dir / f'{trace_spec}.simc-trace.log').resolve(strict=True)
         report = run_replay(timeline, spec, 'simc', 300, 70448, profiles, executable, healed, mode)
