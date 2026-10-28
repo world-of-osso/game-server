@@ -623,9 +623,14 @@ fn parse_variable(
         "value_else",
         "default",
         "target_if",
+        "use_off_gcd",
     ];
     if let Some(key) = options.keys().find(|key| !OPTIONS.contains(&key.as_str())) {
         return Err(format!("unsupported APL variable option {key}"));
+    }
+    // SimC76f8118 variable.cpp24–26: variable actions have no GCD and are usable while casting.
+    if options.get("use_off_gcd").is_some_and(|value| value != "1") {
+        return Err("APL variable use_off_gcd must be1".into());
     }
     let name = required_option(options, "name")?.to_ascii_lowercase();
     let default = options
