@@ -689,6 +689,52 @@ mod tests {
     }
     #[test]
     #[ignore = "requires native Vengeance profile"]
+    fn selected_vulnerability_increases_damage_to_frailty_target() {
+        use super::super::*;
+        fn second_hit(selected: bool) -> i32 {
+            let _seed = crate::random::seed_scope(70_448);
+            let (profile, mut traits) = read_reference(581).unwrap();
+            if !selected {
+                traits.retain(|trait_| trait_.entry_id != 112897);
+            }
+            let identity = inputs::read_actor(&profile).unwrap();
+            let mut run = prepare_reference(profile, &traits, 1, identity).unwrap();
+            let actor = run.actor;
+            let target = run.targets[0];
+            engage(&mut run);
+            for _ in 0..2 {
+                assert!(crate::spell_cast::try_cast_triggered(
+                    run.app.world_mut(),
+                    actor,
+                    228478,
+                    Some(target),
+                    1
+                ));
+            }
+            run.app
+                .world()
+                .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+                .0
+                .iter()
+                .filter(|event| {
+                    event.spell_id == Some(228478)
+                        && event.target == Some(target.to_bits())
+                        && event.kind == shared::protocol::CombatLogKind::Damage
+                })
+                .nth(1)
+                .unwrap()
+                .amount
+        }
+        let without = second_hit(false);
+        let with = second_hit(true);
+        assert!(
+            (with as f64 / without as f64 - 1.12).abs() < 0.01,
+            "selected Vulnerability and Soulcrush must grant 12% per existing Frailty stack: {without}/{with}"
+        );
+    }
+
+    #[test]
+    #[ignore = "requires native Vengeance profile"]
     fn focused_cleave_only_increases_the_real_primary_target() {
         use super::super::*;
         fn damage(selected: bool) -> [i32; 2] {

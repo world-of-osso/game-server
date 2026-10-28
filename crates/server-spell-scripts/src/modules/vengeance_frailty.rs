@@ -65,18 +65,49 @@ fn observe(world: &mut World, event: &CombatLogEvent) {
             .get::<combat::class_progression::KnownSpells>(source)
             .is_some_and(|known| known.contains(389958))
     {
-        // SimC76f8118 sc_demon_hunter.cpp4440–4443, 5346–5349, 8161–8164.
-        combat::auras::apply_aura(
-            world,
-            &combat::auras::AuraApplication {
-                caster: source,
-                target,
-                spell_id: 247456,
-                effect_mask: u32::MAX,
-                source: combat::auras::AuraSource::Cast,
-            },
-        );
+        apply_frailty(world, source, target);
     }
+}
+
+fn apply_frailty(world: &mut World, caster: Entity, target: Entity) {
+    let vulnerability = world
+        .get::<combat::class_progression::TraitLoadout>(caster)
+        .is_some_and(|traits| {
+            traits
+                .active_talent_spells()
+                .any(|talent| talent.spell_id == 389976)
+        });
+    let mut spell = world
+        .resource::<combat::spell_info::SpellStore>()
+        .get(247456)
+        .expect("native Frailty")
+        .clone();
+    let effect_mask = if vulnerability {
+        // SimC76f8118 sc_demon_hunter.cpp2275–2285: target damage requires
+        // Vulnerability; Soulcrush's native point modifiers remain applicable.
+        let amount = spell_cast::scripts::script_effect_value(world, caster, 389976, 0);
+        for effect in spell
+            .effects
+            .iter_mut()
+            .filter(|effect| matches!(effect.index, 3 | 4))
+        {
+            effect.base_points = amount;
+        }
+        u32::MAX
+    } else {
+        u32::MAX & !(1 << 3 | 1 << 4)
+    };
+    combat::auras::apply_aura_with_spell(
+        world,
+        &combat::auras::AuraApplication {
+            caster,
+            target,
+            spell_id: 247456,
+            effect_mask,
+            source: combat::auras::AuraSource::Cast,
+        },
+        &spell,
+    );
 }
 
 fn update(world: &mut World) {
