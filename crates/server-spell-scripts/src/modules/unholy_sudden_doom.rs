@@ -13,6 +13,7 @@ struct SuddenDoomAttempts(u32);
 struct PendingSuddenDoomConsumption(Vec<f64>);
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::OwnsPolicyProc(|spell| spell == 49530),
     SpellScriptHook::PeriodicDamageFinished(roll_sudden_doom),
     SpellScriptHook::AuraRollAfterCast(after_cast),
     SpellScriptHook::AfterCastUpdate(consume_due),

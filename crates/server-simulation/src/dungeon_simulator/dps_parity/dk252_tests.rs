@@ -2714,6 +2714,28 @@ fn dk252_scourge_strike_spreads_whitemane_undeath_with_its_remaining_duration() 
 
 #[test]
 #[ignore = "requires native252 profile/traits and player actor"]
+fn dk252_sudden_doom_requires_dread_plague_ticks() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 1).unwrap();
+    engage(&mut run);
+    for _ in 0..12 {
+        assert!(crate::spell_cast::try_cast_triggered(
+            run.app.world_mut(),
+            run.actor,
+            55090,
+            Some(run.targets[0]),
+            1
+        ));
+        run.app.update();
+    }
+    assert!(
+        !crate::auras::has_aura(run.app.world(), run.actor, 81340),
+        "unrelated direct strikes cannot grant Sudden Doom without Dread Plague ticks"
+    );
+}
+
+#[test]
+#[ignore = "requires native252 profile/traits and player actor"]
 fn dk252_runic_spenders_consume_sudden_doom_after_damage() {
     let _seed = crate::random::seed_scope(70448);
     for (spell, delay) in [(47541, 0.210), (207317, 0.100)] {
