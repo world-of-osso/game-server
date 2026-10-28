@@ -2798,6 +2798,8 @@ pub fn roll_simc_dummy_outcome(
     source: Entity,
     target: Entity,
     strike: bool,
+    miss: f32,
+    crit: f32,
 ) -> Result<(MeleeOutcome, i32), String> {
     let position = world
         .get::<Position>(source)
@@ -2843,9 +2845,11 @@ pub fn roll_simc_dummy_outcome(
         world.get::<crate::auras::ActiveAuras>(target),
         health,
     );
-    // SimC76f8118 sc_enemy.cpp665: melee_nuke cannot miss, dodge or parry; it can block.
+    // SimC76f8118 attack.cpp83 and attack.cpp276 use the trace's attacker table.
+    chances.miss = miss * 100.0;
+    chances.crit = crit * 100.0;
+    // sc_enemy.cpp665: melee_nuke cannot dodge or parry; it can block.
     if strike {
-        chances.miss = 0.0;
         chances.dodge = 0.0;
         chances.parry = 0.0;
     }

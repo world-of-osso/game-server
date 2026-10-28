@@ -259,11 +259,14 @@ fn deliver_hit(
             crate::spell_cast::effects::replay_simc_dummy_bleed(world, source, tank, amount)
         }
         Kind::Swing | Kind::Strike => {
+            let table = hit.melee_table.ok_or("SIMC_DUMMY_MELEE_TABLE_ABSENT")?;
             let (outcome, level_difference) = crate::combat::roll_simc_dummy_outcome(
                 world,
                 source,
                 tank,
                 hit.kind == Kind::Strike,
+                table.miss,
+                table.crit,
             )?;
             let recorded = Hit {
                 tick,
