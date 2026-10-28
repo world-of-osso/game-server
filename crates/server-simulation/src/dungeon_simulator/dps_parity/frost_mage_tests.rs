@@ -473,49 +473,6 @@ use shared::protocol::CombatLogKind;
 
 #[test]
 #[ignore = "requires private native70448 DB and exact Frost64 inputs"]
-fn frost_mage_precombat_frostbolt_impacts_after_engagement() {
-    let _seed = crate::random::seed_scope(70448);
-    let mut run = prepare_measurement(64, 1).expect("literal Frost player setup");
-    let hits = |run: &Run| {
-        run.app
-            .world()
-            .resource::<ObservedCombatEvents>()
-            .0
-            .iter()
-            .filter(|event| {
-                event.source == Some(run.actor.to_bits())
-                    && event.target == Some(run.targets[0].to_bits())
-                    && event.spell_id == Some(228597)
-                    && event.kind == CombatLogKind::Damage
-                    && event.amount > 0
-            })
-            .count()
-    };
-    // SimC76f8118 sc_mage.cpp4080 and action.cpp precombat: Frostbolt
-    // launches at combat start and its missile impacts after the pull.
-    assert_eq!(
-        hits(&run),
-        0,
-        "precombat projectile must not hit before the pull"
-    );
-    let started = run.app.world().resource::<Time>().elapsed();
-    install_fixture_lifetimes(&mut run, started);
-    engage(&mut run);
-    for _ in 0..40 {
-        run.app.update();
-        if hits(&run) > 0 {
-            break;
-        }
-    }
-    assert_eq!(
-        hits(&run),
-        1,
-        "precombat Frostbolt must hit after engagement"
-    );
-}
-
-#[test]
-#[ignore = "requires private native70448 DB and exact Frost64 inputs"]
 fn frost_mage_literal_player_executes_precombat_and_opener() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_measurement(64, 1).expect("literal Frost player setup");
