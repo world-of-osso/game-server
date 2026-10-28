@@ -76,7 +76,7 @@ const WDP_SINGLE_DAMAGE: u32 = 451767;
 const WDP_AREA_DAMAGE: u32 = 158221;
 
 /// SIMC_WW_WDP_DAMAGE_CHILDREN: SimC76f8118 sc_monk.cpp1888–1906/5825–5826.
-/// SIMC_WDP_TICK_SCHEDULE_DIFFERS: actual aura226 ticks, not SimC's manual timer.
+/// SimC schedules the initial area hit and skips the final two native periods.
 /// Native child geometry, caps/reduced-AoE and damage calculations remain untouched.
 pub(crate) fn register_wdp_relationship(scripts: &mut auras::scripts::AuraScripts) {
     scripts.0.insert(
@@ -89,7 +89,15 @@ pub(crate) fn register_wdp_relationship(scripts: &mut auras::scripts::AuraScript
 }
 
 fn cast_wdp_area_tick(world: &mut World, unit: Entity, aura: &auras::AuraInstance, index: u8) {
-    if index != 0 {
+    let Some(effect) = aura.effects.iter().find(|effect| effect.index == index) else {
+        return;
+    };
+    // SimC1902–1906: i = 0 through duration / base period - 2, inclusive.
+    if index != 0
+        || effect.period_ms == 0
+        || effect.periodic_ticks()
+            >= u64::from(aura.duration_ms / effect.period_ms).saturating_sub(1)
+    {
         return;
     }
     crate::spell_cast::cast_triggered(world, aura.caster, WDP_AREA_DAMAGE, Some(unit), 1);

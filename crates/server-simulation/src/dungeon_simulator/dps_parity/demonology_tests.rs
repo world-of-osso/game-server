@@ -251,6 +251,15 @@ fn demonology_antoran_tyrant_inherits_same_owner_sp_as_base_tyrant() {
 fn demonology_guardian_inherits_owner_critical_chance() {
     use crate::spell_cast::effects::factor_capture::FactorCapture;
     let (mut run, tyrant) = prepare_antoran_tyrant();
+    super::channel_timing_tests::remove_equipped_proc_drivers(&mut run);
+    let now = crate::spell_cast::now(run.app.world());
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        run.actor,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.expires_at.is_some_and(|at| at <= now + 60.0),
+    );
+    run.app.update();
     let expected = run
         .app
         .world()
@@ -715,6 +724,70 @@ fn demonology_imp_critical_damage_inherits_demonic_brutality() {
     assert!(
         (actual - expected).abs() < 1.5,
         "actual={actual} expected={expected}"
+    );
+}
+
+#[test]
+#[ignore = "requires canonical 266 inputs; actual excluded demon critical damage"]
+fn demonology_overlord_crit_excludes_demonic_brutality() {
+    use crate::spell_cast::effects::factor_capture::FactorCapture;
+    let (root, damage) = (428571, 432120);
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(266, 1).unwrap();
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, 453908));
+    engage(&mut run);
+    let pet = summon_native_guardian(&mut run, root);
+    run.app
+        .world_mut()
+        .entity_mut(run.actor)
+        .insert(crate::networking::CombatTarget(Some(run.targets[0])));
+    run.app.insert_resource(FactorCapture::new(
+        pet,
+        run.targets[0],
+        damage,
+        "excluded_demon",
+        40,
+    ));
+    crate::spell_cast::creature_cast(
+        run.app.world_mut(),
+        pet,
+        damage,
+        Some(run.targets[0]),
+        false,
+    )
+    .unwrap();
+    for _ in 0..300 {
+        run.app
+            .world_mut()
+            .get_mut::<crate::stats::CharacterStats>(run.actor)
+            .unwrap()
+            .crit_pct = 100.0;
+        run.app.update();
+    }
+    let capture = run.app.world().resource::<FactorCapture>().export();
+    let events = capture["events"].as_array().unwrap();
+    let position = events
+        .iter()
+        .position(|event| event["event"] == "result" && event["factors"]["result"] == "crit")
+        .unwrap_or_else(|| panic!("summon={root}: no critical hit: {events:?}"));
+    let result = &events[position];
+    let actual = 1.0 + result["factors"]["crit_bonus"].as_f64().unwrap();
+    let spell = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(damage)
+        .unwrap();
+    let owner_critical = run
+        .app
+        .world()
+        .get::<crate::auras::AuraStatMods>(run.actor)
+        .unwrap()
+        .critical_damage(spell.school_mask());
+    let expected = 2.0 * f64::from(owner_critical);
+    assert!(
+        (actual - expected).abs() < 0.001,
+        "summon={root} damage={damage} actual={actual} expected={expected}"
     );
 }
 
@@ -1214,6 +1287,70 @@ fn demonology_imp_lord_executes_real_greater_felbolts() {
     assert!(
         hits >= 2,
         "actual Imp Lord must launch real Greater Felbolts: hits{hits}; {note}"
+    );
+}
+
+#[test]
+#[ignore = "requires canonical 266 inputs; actual excluded demon critical damage"]
+fn demonology_dominion_crit_excludes_demonic_brutality() {
+    use crate::spell_cast::effects::factor_capture::FactorCapture;
+    let (root, damage) = (1282501, 1282507);
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(266, 1).unwrap();
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, 453908));
+    engage(&mut run);
+    let pet = summon_native_guardian(&mut run, root);
+    run.app
+        .world_mut()
+        .entity_mut(run.actor)
+        .insert(crate::networking::CombatTarget(Some(run.targets[0])));
+    run.app.insert_resource(FactorCapture::new(
+        pet,
+        run.targets[0],
+        damage,
+        "excluded_demon",
+        40,
+    ));
+    crate::spell_cast::creature_cast(
+        run.app.world_mut(),
+        pet,
+        damage,
+        Some(run.targets[0]),
+        false,
+    )
+    .unwrap();
+    for _ in 0..300 {
+        run.app
+            .world_mut()
+            .get_mut::<crate::stats::CharacterStats>(run.actor)
+            .unwrap()
+            .crit_pct = 100.0;
+        run.app.update();
+    }
+    let capture = run.app.world().resource::<FactorCapture>().export();
+    let events = capture["events"].as_array().unwrap();
+    let position = events
+        .iter()
+        .position(|event| event["event"] == "result" && event["factors"]["result"] == "crit")
+        .unwrap_or_else(|| panic!("summon={root}: no critical hit: {events:?}"));
+    let result = &events[position];
+    let actual = 1.0 + result["factors"]["crit_bonus"].as_f64().unwrap();
+    let spell = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(damage)
+        .unwrap();
+    let owner_critical = run
+        .app
+        .world()
+        .get::<crate::auras::AuraStatMods>(run.actor)
+        .unwrap()
+        .critical_damage(spell.school_mask());
+    let expected = 2.0 * f64::from(owner_critical);
+    assert!(
+        (actual - expected).abs() < 0.001,
+        "summon={root} damage={damage} actual={actual} expected={expected}"
     );
 }
 
