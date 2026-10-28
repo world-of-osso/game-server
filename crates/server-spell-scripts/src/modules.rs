@@ -216,6 +216,7 @@ register_modules! {
     giantkiller: (170, "modules/giantkiller.rs"),
     enhancement_tempest_aoe: (2633, "modules/enhancement_tempest_aoe.rs"),
     guardian_impacts: (1000, "modules/guardian_impacts.rs"),
+    guardian_ursocs_fury: (1040, "modules/guardian_ursocs_fury.rs"),
     havoc: (150, "modules/havoc.rs"),
     havoc_children: (5771, "modules/havoc/children.rs"),
     havoc_dance: (5770, "modules/havoc/dance.rs"),

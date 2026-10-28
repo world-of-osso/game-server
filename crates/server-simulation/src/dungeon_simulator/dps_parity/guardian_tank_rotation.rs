@@ -285,6 +285,25 @@ impl super::SpecDriver for Rotation {
 mod tests {
     #[test]
     #[ignore = "requires Guardian MID2 profile and SimC dungeon-dummy trace"]
+    fn guardian_ursocs_fury_absorbs_real_dummy_damage() {
+        let trace = std::env::var("HEALER_TANK_SIMC_TRACE").expect("Guardian trace required");
+        let report = super::super::super::tank_replay::replay_simc_with_healing(
+            104,
+            std::path::Path::new(&trace),
+            300,
+            70448,
+            true,
+        )
+        .expect("Guardian tank replay");
+        let absorbed = report["absorbs_by_spell"]["372505"].as_f64().unwrap_or(0.0);
+        assert!(
+            absorbed > 0.0,
+            "actual Guardian attacks must earn a shield consumed by dummy hits: {report}"
+        );
+    }
+
+    #[test]
+    #[ignore = "requires Guardian MID2 profile and SimC dungeon-dummy trace"]
     fn guardian_replays_dungeon_dummy_with_literal_rotation() {
         let trace = std::env::var("HEALER_TANK_SIMC_TRACE").expect("Guardian trace required");
         let report = super::super::super::tank_replay::replay_simc_with_healing(
