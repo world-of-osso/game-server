@@ -2,8 +2,8 @@ use super::*;
 use shared::protocol::CombatLogKind;
 
 #[test]
-#[ignore = "requires canonical 266 inputs; real Inquisitor Mind Sear initial tick"]
-fn demonology_inquisitor_mind_sear_ticks_immediately() {
+#[ignore = "requires canonical 266 inputs; real Inquisitor Mind Sear cast and channel"]
+fn demonology_inquisitor_mind_sear_ticks_after_hasted_precast() {
     let _seed = crate::random::seed_scope(70_448);
     let mut run = prepare_literal(266, 3).unwrap();
     let owner = run.actor;
@@ -22,7 +22,32 @@ fn demonology_inquisitor_mind_sear_ticks_immediately() {
         .find(|(_, summon)| summon.owner == owner && summon.spell_id == 1276283)
         .map(|(actor, _)| actor)
         .expect("real Antoran Inquisitor");
-    for _ in 0..8 {
+    let spell = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(1280457)
+        .unwrap();
+    let duration = spell.misc.as_ref().unwrap().duration.unwrap().duration_ms;
+    let cast_ms = crate::spell_cast::cast_time_ms(run.app.world(), inquisitor, spell);
+    assert!(
+        cast_ms > 0 && cast_ms < duration,
+        "native duration must receive owner haste"
+    );
+    for _ in 0..(cast_ms as usize / 50).saturating_sub(10) {
+        run.app.update();
+    }
+    assert!(
+        !run.app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|event| event.source == Some(inquisitor.to_bits())
+                && event.spell_id == Some(1280460)),
+        "Mind Sear cannot tick before its hasted cast completes"
+    );
+    for _ in 0..20 {
         run.app.update();
     }
     let hits = &run
@@ -38,7 +63,7 @@ fn demonology_inquisitor_mind_sear_ticks_immediately() {
                     && event.spell_id == Some(1280460)
                     && event.kind == CombatLogKind::Damage
                     && event.amount > 0),
-            "the native channel begins with an immediate tick against each target"
+            "the completed cast begins its channel with a tick against each target"
         );
     }
 }
