@@ -132,14 +132,14 @@ def run_all(trace_dir, executable, output_dir, jobs, profile_dir=None):
     tasks += [('tank', spec, healed) for spec in TANKS for healed in (True, False)]
     with ThreadPoolExecutor(max_workers=jobs) as pool:
         reports = dict(pool.map(run, tasks))
-    print('| Healer | Effective HPS | Raw HPS | Overheal % | Mana min | Mana end | First death (s) | Tank min health |')
-    print('|---|---:|---:|---:|---:|---:|---:|---:|')
+    print('| Healer | Effective HPS | Raw HPS | Overheal % | Mana min | Mana end | First death (s) | Tank min health | Idle % |')
+    print('|---|---:|---:|---:|---:|---:|---:|---:|---:|')
     for spec in HEALERS:
         m = reports[('healer', spec, False)]['metrics']
         print(f'| {spec} | {number(m["effective_hps"])} | {number(m["raw_hps"])} | '
               f'{number(m["overheal_pct"])} | {number(m["mana_min"])} | '
               f'{number(m["mana_curve"][-1]["current"])} | {number(m["first_death_seconds"])} | '
-              f'{number(m["tank_health_min"])} |')
+              f'{number(m["tank_health_min"])} | {number(m["idle_gcd_pct"])} |')
     print('\n| Tank | Mitigation % | Self-heal/s | Absorb/s | No-healer death (s) | Active mitigation % | 5s spike |')
     print('|---|---:|---:|---:|---:|---:|---:|')
     for spec in TANKS:
