@@ -345,6 +345,7 @@ pub struct ProcTimers {
     next_ready_at: f64,
     last_attempt_at: f64,
     last_success_at: f64,
+    accumulated_blp: f64,
 }
 
 /// One aura on a unit.
@@ -1092,6 +1093,7 @@ fn build_instance(
             }),
         proc: ProcTimers {
             next_ready_at: now,
+            accumulated_blp: 0.0,
             // SimC76f8118 proc_rng.cpp95–98 starts Guillotine's RPPM clock
             // without a preloaded attempt or bad-luck window.
             last_attempt_at: if spell.id == 1_291_728 {

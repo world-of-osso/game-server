@@ -325,6 +325,33 @@ fn protection_producers_item_guillotine_starts_without_preloaded_rppm() {
 }
 
 #[test]
+fn protection_producers_item_guillotine_caps_idle_time_per_rppm_attempt() {
+    let mut h = item_fixture(true);
+    h.advance(1200);
+    let id = h
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(h.caster)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == GUILLOTINE_DRIVER)
+        .unwrap()
+        .instance_id;
+    // Choose a repeatable roll above the native rate for one capped interval.
+    let seed = (0..1000)
+        .find(|seed| {
+            let _scope = crate::random::seed_scope(*seed);
+            crate::random::random::<f32>() > 0.95
+        })
+        .unwrap();
+    let _scope = crate::random::seed_scope(seed);
+    assert!(
+        !crate::auras::procs::try_native_policy_proc(h.app.world_mut(), h.caster, id),
+        "one long idle gap must not add more than one capped RPPM interval"
+    );
+}
+
+#[test]
 fn protection_producers_item_equipped_guillotine_emits_base_not_catalog_perfected_variant() {
     let mut h = item_fixture(true);
     let aura = h
