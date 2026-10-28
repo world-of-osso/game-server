@@ -139,6 +139,44 @@ fn both_hands_swing_when_due_without_delaying_each_other() {
     assert_eq!(auto.off_hand_timer, std::time::Duration::from_millis(2600));
 }
 
+#[test]
+fn swing_clocks_preserve_fractional_tick_remainder_per_hand() {
+    let mut app = setup_app();
+    let target = spawn_target(&mut app, pos(1.0, 0.0, 0.0), 1_000_000.0);
+    let player = level_10_player(
+        &mut app,
+        target,
+        CharacterStats {
+            main_hand: WeaponDamage {
+                speed: 0.63,
+                ..HEAVY_BLADE
+            },
+            off_hand: Some(WeaponDamage {
+                speed: 0.77,
+                ..HEAVY_BLADE
+            }),
+            ..default()
+        },
+    );
+    auto_attack_system(app.world_mut());
+    let mut counts = [1, 1];
+    for _ in 0..200 {
+        let before = app.world().get::<AutoAttack>(player).unwrap().clone();
+        app.world_mut()
+            .resource_mut::<Time>()
+            .advance_by(std::time::Duration::from_millis(50));
+        auto_attack_system(app.world_mut());
+        let after = app.world().get::<AutoAttack>(player).unwrap();
+        counts[0] += u32::from(after.timer > before.timer);
+        counts[1] += u32::from(after.off_hand_timer > before.off_hand_timer);
+    }
+    assert_eq!(
+        counts,
+        [16, 13],
+        "ten seconds must follow each weapon's continuous deadline"
+    );
+}
+
 /// Worn Shortsword (25) from world.db, the Retail warrior starting weapon.
 fn worn_shortsword() -> Option<WeaponDamage> {
     let path = crate::test_data::world_db_path();

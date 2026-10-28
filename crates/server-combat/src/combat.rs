@@ -1005,6 +1005,10 @@ fn auto_attack_unit(
         let Some(outcome) = try_swing(
             &attacker,
             hand,
+            snapshot.overshoot[match hand {
+                Hand::Main => 0,
+                Hand::Off => 1,
+            }],
             &mut params.units.p1(),
             &SwingContext {
                 melee_range,
@@ -1049,6 +1053,7 @@ fn auto_attack_unit(
 
 struct SwingSnapshot {
     auto_attack: AutoAttack,
+    overshoot: [Duration; 2],
     position: Position,
     mods: Option<AuraStatMods>,
     attack_spells: [Option<u32>; 2],
@@ -1157,8 +1162,10 @@ fn snapshot_attacker(
         (stat_mods, cast, auras),
         (creature, player, parity_actor, flags, summon, attack_time),
     ) = attackers.get_mut(entity).ok()?;
-    auto_attack.timer = auto_attack.timer.saturating_sub(dt);
-    auto_attack.off_hand_timer = auto_attack.off_hand_timer.saturating_sub(dt);
+    let overshoot = [
+        advance_swing_timer(&mut auto_attack.timer, dt),
+        advance_swing_timer(&mut auto_attack.off_hand_timer, dt),
+    ];
     // Unit::DoMeleeAttackIfReady: timers run even while casting or controlled.
     if cast_blocks_auto_attack(cast, spells)
         || auras.is_some_and(|auras| auras.cannot_auto_attack())
@@ -1171,6 +1178,7 @@ fn snapshot_attacker(
     );
     Some(SwingSnapshot {
         auto_attack: auto_attack.clone(),
+        overshoot,
         position: *position,
         mods: swing_modifiers(mods, auras, traits, entity, swing_haste_pct),
         attack_spells: [
@@ -1949,6 +1957,7 @@ fn melee_damage_splits(
 fn try_swing(
     attacker: &Attacker,
     hand: Hand,
+    overshoot: Duration,
     targets: &mut AutoAttackTargets,
     context: &SwingContext,
     target_entity: Entity,
@@ -2006,7 +2015,12 @@ fn try_swing(
     let pet_time = context
         .summon_modifiers
         .pet_melee_time_multiplier(attacker.entity);
-    reset_swing_timers(auto_attack, hand, attacker.swing_time(&weapon) * pet_time);
+    reset_swing_timers(
+        auto_attack,
+        hand,
+        attacker.swing_time(&weapon) * pet_time,
+        overshoot,
+    );
     if let Some(spell) = context.melee_override {
         queue_melee_override(commands, attacker.entity, target_entity, spell);
         return None;
@@ -2238,13 +2252,29 @@ fn try_swing(
     ))
 }
 
-/// SimC schedules each weapon's next swing without delaying the other hand.
-fn reset_swing_timers(auto_attack: &mut AutoAttack, hand: Hand, swing_time: f32) {
+/// A timer already ready before this tick has no transferable overshoot.
+fn advance_swing_timer(timer: &mut Duration, dt: Duration) -> Duration {
+    let overshoot = if timer.is_zero() {
+        Duration::ZERO
+    } else {
+        dt.saturating_sub(*timer)
+    };
+    *timer = timer.saturating_sub(dt);
+    overshoot
+}
+
+/// SimC schedules each hand independently at its exact preceding deadline.
+fn reset_swing_timers(
+    auto_attack: &mut AutoAttack,
+    hand: Hand,
+    swing_time: f32,
+    overshoot: Duration,
+) {
     let swung = match hand {
         Hand::Main => &mut auto_attack.timer,
         Hand::Off => &mut auto_attack.off_hand_timer,
     };
-    *swung = melee::attack_timer_duration(swing_time);
+    *swung = melee::attack_timer_duration(swing_time).saturating_sub(overshoot);
 }
 
 /// TC IsWithinMeleeRangeAt: nominal range plus attacker-owned aura153 yards.
