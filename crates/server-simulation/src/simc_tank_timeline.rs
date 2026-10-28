@@ -35,18 +35,19 @@ pub(crate) struct RaidBuff {
     pub spell_id: u32,
 }
 
-pub(crate) fn read_raid_buffs(path: &Path) -> Result<Vec<RaidBuff>, String> {
+pub(crate) fn read_raid_buffs(path: &Path, player: &str) -> Result<Vec<RaidBuff>, String> {
     let trace = std::fs::read_to_string(path)
         .map_err(|error| format!("read {}: {error}", path.display()))?;
-    parse_raid_buffs(&trace)
+    parse_raid_buffs(&trace, player)
 }
 
-fn parse_raid_buffs(trace: &str) -> Result<Vec<RaidBuff>, String> {
+fn parse_raid_buffs(trace: &str, player: &str) -> Result<Vec<RaidBuff>, String> {
     const NAMES: &[&str] = &[
         "mark_of_the_wild",
         "power_word_fortitude",
         "battle_shout",
         "skyfury",
+        "blessing_of_the_bronze",
     ];
     let mut buffs = Vec::new();
     for &name in NAMES {
@@ -56,7 +57,11 @@ fn parse_raid_buffs(trace: &str) -> Result<Vec<RaidBuff>, String> {
         if !enabled {
             continue;
         }
-        let prefix = format!("Raid gains Buff '{name}' (");
+        let prefix = if name == "blessing_of_the_bronze" {
+            format!("Player '{player}' gains Buff '{name}' (")
+        } else {
+            format!("Raid gains Buff '{name}' (")
+        };
         let ids: Vec<&str> = trace
             .lines()
             .filter_map(|line| line.split_once(' '))
@@ -270,7 +275,7 @@ fn parse_trace(trace: &str, dummy: &str) -> Result<Vec<Hit>, String> {
 fn reads_enabled_raid_buffs_and_their_trace_spell_ids() {
     let trace = "override.skyfury=1\noverride.mark_of_the_wild=1\noverride.battle_shout=0\n0.000 Raid gains Buff 'skyfury' (462854) (stacks=1)\n0.000 Raid gains Buff 'mark_of_the_wild' (1126) (stacks=1)\n0.000 Raid gains Buff 'battle_shout' (6673) (stacks=1)";
     assert_eq!(
-        parse_raid_buffs(trace).unwrap(),
+        parse_raid_buffs(trace, "tank").unwrap(),
         vec![
             RaidBuff {
                 name: "mark_of_the_wild".into(),
@@ -282,7 +287,25 @@ fn reads_enabled_raid_buffs_and_their_trace_spell_ids() {
             },
         ]
     );
-    assert!(parse_raid_buffs("override.skyfury=1").is_err());
+    assert!(parse_raid_buffs("override.skyfury=1", "tank").is_err());
+}
+
+#[test]
+fn reads_the_named_players_class_specific_bronze_buff() {
+    let trace = "override.blessing_of_the_bronze=1\n0.000 Player 'other' gains Buff 'blessing_of_the_bronze' (381752)\n0.000 Player 'tank' gains Buff 'blessing_of_the_bronze' (381741)";
+    assert_eq!(
+        parse_raid_buffs(trace, "tank").unwrap(),
+        vec![RaidBuff {
+            name: "blessing_of_the_bronze".into(),
+            spell_id: 381741
+        }]
+    );
+    assert!(parse_raid_buffs(trace, "missing").is_err());
+    assert!(
+        parse_raid_buffs("override.blessing_of_the_bronze=0", "tank")
+            .unwrap()
+            .is_empty()
+    );
 }
 
 #[test]

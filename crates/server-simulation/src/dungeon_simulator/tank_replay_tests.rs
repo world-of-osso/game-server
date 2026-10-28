@@ -1007,6 +1007,59 @@ fn protection_apl_selects_shield_using_the_real_profile_conditions() {
 
 #[test]
 #[ignore = "requires canonical MID2 Vengeance profile"]
+fn simc_bronze_buff_shortens_real_infernal_strike_recovery() {
+    use crate::simc_tank_timeline::RaidBuff;
+    fn recovery(bronze: bool) -> f64 {
+        let _seed = crate::random::seed_scope(70_448);
+        let mut run = super::dps_parity::prepare_registered_player(581, 1).unwrap();
+        let buffs = if bronze {
+            vec![RaidBuff {
+                name: "blessing_of_the_bronze".into(),
+                spell_id: 381741,
+            }]
+        } else {
+            Vec::new()
+        };
+        super::tank_replay::apply_simc_raid_buffs(&mut run, &buffs).unwrap();
+        if !bronze {
+            run.app.update();
+            run.app.update();
+        }
+        super::dps_parity::engage(&mut run);
+        let actor = run.actor;
+        let target = run.targets[0];
+        crate::spell_cast::cast_for_player_with_target(
+            run.app.world_mut(),
+            actor,
+            189110,
+            Some(target),
+        )
+        .unwrap();
+        let world = run.app.world();
+        let spell = world
+            .resource::<crate::spell_info::SpellStore>()
+            .get(189110)
+            .unwrap();
+        let bindings = super::dps_parity::vengeance_tank_rotation::bindings();
+        let encounter = crate::simc_apl_native::Encounter::Fixture {
+            started_at: 0.0,
+            duration: 300.0,
+            style: crate::simc_apl_native::FightStyle::Patchwerk,
+        };
+        crate::simc_apl_native::NativeFacts::new(world, actor, &bindings, encounter, 1)
+            .cooldown_for_spell(spell, "full_recharge_time")
+            .unwrap()
+    }
+    let baseline = recovery(false);
+    let reduced = recovery(true);
+    assert!(
+        baseline > 0.0 && (reduced / baseline - 0.85).abs() < 0.01,
+        "base={baseline} bronze={reduced}"
+    );
+}
+
+#[test]
+#[ignore = "requires canonical MID2 Vengeance profile"]
 fn simc_dummy_debuffs_modify_real_damage_by_school() {
     use crate::simc_tank_timeline::RaidBuff;
     fn damage(debuffs: &[RaidBuff], spell: u32) -> i32 {
