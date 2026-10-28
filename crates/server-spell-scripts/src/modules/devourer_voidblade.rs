@@ -88,7 +88,8 @@ fn apply_hunt_secondary_dots(
     _: bool,
     amount: f32,
 ) {
-    if ctx.spell.id == 1246169 && amount > 0.0
+    if ctx.spell.id == 1246169
+        && amount > 0.0
         && world.get::<ActiveSpec>(ctx.caster).map(|spec| spec.0) == Some(1480)
     {
         super::havoc_children::apply_hunt_secondary_dots(world, ctx, target, 1246168);
