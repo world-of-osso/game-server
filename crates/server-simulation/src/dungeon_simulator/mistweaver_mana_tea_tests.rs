@@ -70,19 +70,37 @@ fn mana_tea_spending_earns_stacks_and_channel_consumes_them() {
         run.app.update();
     }
     let after = run.app.world().get::<Mana>(actor).unwrap().current;
-    assert!(stacks(run.app.world(), actor) < earned);
+    let remaining = stacks(run.app.world(), actor);
+    assert!(remaining < earned);
     assert!(after > before);
+    let spell = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(115294)
+        .unwrap();
+    let effect = spell
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap();
+    let native_amount =
+        crate::spell_cast::effects::modded_base_points(run.app.world(), actor, spell, effect)
+            .trunc() as i32;
     let events = &run
         .app
         .world()
         .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
         .0[event_cursor..];
-    assert!(
-        events
-            .iter()
-            .any(|event| event.source == Some(actor.to_bits())
+    let ticks: Vec<_> = events
+        .iter()
+        .filter(|event| {
+            event.source == Some(actor.to_bits())
                 && event.spell_id == Some(115294)
                 && event.kind == CombatLogKind::Energize
-                && event.amount > 0)
-    );
+        })
+        .collect();
+    assert_eq!(ticks.len(), usize::from(earned - remaining));
+    assert!(native_amount > 0);
+    assert!(ticks.iter().all(|event| event.amount == native_amount));
 }
