@@ -78,18 +78,42 @@ fn bind_blessed_hammer_fields(world: &mut World) {
     }
 }
 
-fn blessed_hammer_hit(spell: u32) -> Option<combat::spell_cast::script_registry::EnemyContextHitHook> {
+fn blessed_hammer_hit(
+    spell: u32,
+) -> Option<combat::spell_cast::script_registry::EnemyContextHitHook> {
     (spell == 204301).then_some(grant_blessed_hammer_absorb)
 }
 
-fn grant_blessed_hammer_absorb(world: &mut World, ctx: &combat::spell_cast::effects::EffectCtx<'_>, attacker: Entity) {
-    if !selected(world, ctx.caster, 204019) { return; }
+fn grant_blessed_hammer_absorb(
+    world: &mut World,
+    ctx: &combat::spell_cast::effects::EffectCtx<'_>,
+    attacker: Entity,
+) {
+    if !selected(world, ctx.caster, 204019) {
+        return;
+    }
     // SimC76f8118 sc_paladin_protection.cpp390–395, 815–843: the next hit
     // from this enemy absorbs 30% of snapshotted attack power before shields.
-    let attack_power = world.get::<combat::stats::CharacterStats>(ctx.caster).expect("Blessed Hammer caster stats").attack_power;
+    let attack_power = world
+        .get::<combat::stats::CharacterStats>(ctx.caster)
+        .expect("Blessed Hammer caster stats")
+        .attack_power;
     let percent = combat::spell_cast::scripts::script_effect_value(world, ctx.caster, 204019, 0);
-    let duration = ctx.spell.misc.as_ref().and_then(|misc| misc.duration).expect("Blessed Hammer debuff duration").duration_ms;
-    combat::auras::source_absorb::grant(world, ctx.caster, attacker, 204301, attack_power * percent / 100.0, duration as u32);
+    let duration = ctx
+        .spell
+        .misc
+        .as_ref()
+        .and_then(|misc| misc.duration)
+        .expect("Blessed Hammer debuff duration")
+        .duration_ms;
+    combat::auras::source_absorb::grant(
+        world,
+        ctx.caster,
+        attacker,
+        204301,
+        attack_power * percent / 100.0,
+        duration as u32,
+    );
 }
 
 #[derive(Component)]

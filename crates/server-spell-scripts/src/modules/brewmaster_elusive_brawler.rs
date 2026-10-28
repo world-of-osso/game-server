@@ -30,7 +30,9 @@ fn is_dodge(_: &World, _: &AuraInstance, event: &AuraEvent) -> bool {
 
 fn consume_on_dodge(world: &mut World, unit: Entity, _: &AuraInstance, _: Option<Entity>) {
     let selected = world.get::<TraitLoadout>(unit).is_some_and(|traits| {
-        traits.active_talent_spells().any(|talent| talent.spell_id == ONE_WITH_THE_WIND)
+        traits
+            .active_talent_spells()
+            .any(|talent| talent.spell_id == ONE_WITH_THE_WIND)
     });
     let preserve = if selected {
         script_effect_value(world, unit, ONE_WITH_THE_WIND, 0) / 100.0
