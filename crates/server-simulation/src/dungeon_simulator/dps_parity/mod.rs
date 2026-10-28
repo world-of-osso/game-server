@@ -539,6 +539,13 @@ pub(crate) fn spawn_second_reference_player(run: &mut Run, spec_id: u32) -> Resu
         &traits,
         crate::followers::simulator::ParityActor::Player { race },
     )?;
+    // The reference party is single-faction, including during setup updates.
+    let faction = *run
+        .app
+        .world()
+        .get::<shared::components::UnitFactionTemplate>(run.actor)
+        .ok_or("reference tank faction absent")?;
+    run.app.world_mut().entity_mut(actor).insert(faction);
     crate::followers::simulator::assign_reference_player_id(run.app.world_mut(), actor, 2);
     for _ in 0..4 {
         run.app.update();
