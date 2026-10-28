@@ -3,6 +3,9 @@ use super::*;
 use shared::components::Position;
 use shared::protocol::CombatLogKind;
 
+#[derive(Resource, Default)]
+struct BeamStartDistance(Option<(f32, f32)>);
+
 struct RetreatThenBeam {
     driver: literal_rotation::Driver,
     equipment: literal_rotation::equipment::Equipment,
@@ -38,6 +41,16 @@ impl SpecDriver for RetreatThenBeam {
             &prepared,
             &self.equipment,
         )? {
+            let from = world
+                .get::<Position>(actor)
+                .ok_or("beam actor position absent")?;
+            let to = world
+                .get::<Position>(targets[0])
+                .ok_or("beam target position absent")?;
+            let distance = (from.x - to.x).hypot(from.z - to.z);
+            let range = crate::scripted_ai::model_reach::melee_range(world, actor, targets[0])
+                .ok_or("beam melee reach absent")?;
+            world.resource_mut::<BeamStartDistance>().0 = Some((distance, range));
             self.driver.execute(world, actor, action, execution)?;
             self.cast = true;
         }
@@ -76,6 +89,7 @@ fn shared_fixture_retreat_then_beam_returns_before_channel() {
     )
     .unwrap();
     let program = server::simc_apl::Program::parse(&[("default", "eye_beam")]).unwrap();
+    run.app.world_mut().init_resource::<BeamStartDistance>();
     run.spec_driver = Some(Box::new(RetreatThenBeam {
         driver: literal_rotation::Driver::new(program),
         equipment,
@@ -89,6 +103,16 @@ fn shared_fixture_retreat_then_beam_returns_before_channel() {
         let to = run.app.world().get::<Position>(boss).unwrap();
         max_distance = max_distance.max((from.x - to.x).hypot(from.z - to.z));
     }
+    let (distance, range) = run
+        .app
+        .world()
+        .resource::<BeamStartDistance>()
+        .0
+        .expect("real Beam cast");
+    assert!(
+        distance <= range + 0.001,
+        "Havoc channel must wait for actual melee return: distance={distance}, range={range}"
+    );
     let launches = run
         .app
         .world()

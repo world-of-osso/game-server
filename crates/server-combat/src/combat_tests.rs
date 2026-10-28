@@ -25,6 +25,16 @@ fn setup_app() -> App {
     app.add_plugins(bevy::MinimalPlugins);
     app.init_resource::<CombatLog>();
     app.init_resource::<FactionTemplates>();
+    app.init_resource::<crate::spell_cast::script_registry::SpellScriptRegistry>();
+    app.insert_resource(crate::scripted_ai::model_reach::ModelReaches(
+        std::collections::HashMap::from([(
+            1,
+            crate::scripted_ai::model_reach::ModelDimensions {
+                combat_reach: 1.5,
+                bounding_radius: 0.389,
+            },
+        )]),
+    ));
     app.update();
     app.update();
     app
@@ -62,6 +72,7 @@ fn spawn_target(app: &mut App, position: Position, hp: f32) -> Entity {
     app.world_mut()
         .spawn((
             position,
+            shared::components::ModelDisplay { display_id: 1 },
             Health {
                 current: hp,
                 max: 100.0,
@@ -104,6 +115,7 @@ fn run_attack_tick(app: &mut App) {
          sight: SwingSight| {
             let dt = time.delta();
             let context = SwingContext {
+                melee_range: MELEE_RANGE,
                 scaling: &scaling,
                 summon_modifiers: &summon_modifiers,
                 sight: &sight,
@@ -258,12 +270,12 @@ fn test_in_melee_range() {
     assert!(in_melee_range(
         &pos(0.0, 0.0, 0.0),
         &pos(3.0, 4.0, 0.0),
-        0.0
+        MELEE_RANGE
     ));
     assert!(!in_melee_range(
         &pos(0.0, 0.0, 0.0),
         &pos(10.0, 0.0, 0.0),
-        0.0
+        MELEE_RANGE
     ));
 }
 

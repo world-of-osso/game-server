@@ -12,8 +12,6 @@ pub(crate) struct CurrentVictim {
 const UPDATE_SECONDS: f64 = 1.0;
 const MELEE_THRESHOLD: f32 = 1.1;
 const RANGED_THRESHOLD: f32 = 1.3;
-const MELEE_REACH_OFFSET: f32 = 4.0 / 3.0;
-const NOMINAL_MELEE_RANGE: f32 = 5.0;
 
 struct Candidate {
     unit: Entity,
@@ -249,8 +247,8 @@ fn within_home_reach(world: &World, creature: Entity, unit: Entity) -> bool {
 }
 
 fn in_melee_range(world: &World, creature: Entity, unit: Entity) -> bool {
-    let reach = |entity| crate::scripted_ai::model_reach::combat_reach(world, entity);
-    let Some((own, victim)) = reach(creature).zip(reach(unit)) else {
+    let Some(base_range) = crate::scripted_ai::model_reach::melee_range(world, creature, unit)
+    else {
         error!(
             ?creature,
             ?unit,
@@ -265,7 +263,6 @@ fn in_melee_range(world: &World, creature: Entity, unit: Entity) -> bool {
         return false;
     };
     // Unit.cpp:691–710: IsWithinMeleeRangeAt/GetMeleeRange, inclusive distance.
-    let base_range = (own + victim + MELEE_REACH_OFFSET).max(NOMINAL_MELEE_RANGE);
     let bonus = world
         .get::<crate::auras::AuraStatMods>(creature)
         .map_or(0.0, |mods| mods.autoattack_range_bonus);

@@ -70,6 +70,13 @@ pub(crate) fn combat_reach(world: &World, unit: Entity) -> Option<f32> {
     Some(creature_combat_reach(models, display, scale))
 }
 
+/// TC Unit::GetMeleeRange: both live reaches plus the melee offset, with a 5-yard minimum.
+pub fn melee_range(world: &World, attacker: Entity, target: Entity) -> Option<f32> {
+    let attacker_reach = combat_reach(world, attacker)?;
+    let target_reach = combat_reach(world, target)?;
+    Some((attacker_reach + target_reach + 4.0 / 3.0).max(crate::combat::MELEE_RANGE))
+}
+
 /// Source-bound radius for cone boundaries. Unlike the approved reach policy,
 /// an unknown creature model does not supply a guessed radius.
 pub(crate) fn bounding_radius(world: &World, unit: Entity) -> Option<f32> {

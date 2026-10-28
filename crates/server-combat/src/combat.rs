@@ -809,19 +809,38 @@ pub(crate) fn auto_attack_system(world: &mut World) {
         }
         // Apply this attacker's commands before the next attacker reads mitigation.
         // In particular, consuming Ardent also removes its30% damage reduction now.
+        let target = world
+            .get::<AutoAttack>(attacker)
+            .expect("active attack")
+            .victim;
+        let Some(melee_range) =
+            crate::scripted_ai::model_reach::melee_range(world, attacker, target)
+        else {
+            error!(
+                ?attacker,
+                ?target,
+                "Auto-attack requires sourced combat reaches"
+            );
+            continue;
+        };
         let owner_crit = read_pet_owner_critical_chance(world, attacker);
         let owner_hit_expertise = read_pet_owner_hit_expertise(world, attacker);
         world
             .run_system_cached_with(
                 auto_attack_unit,
-                (attacker, owner_crit, owner_hit_expertise),
+                (attacker, owner_crit, owner_hit_expertise, melee_range),
             )
             .expect("auto-attack unit system must have its registered resources");
     }
 }
 
 fn auto_attack_unit(
-    In((attacker_entity, owner_crit, owner_hit_expertise)): In<(Entity, Option<f32>, Option<f32>)>,
+    In((attacker_entity, owner_crit, owner_hit_expertise, melee_range)): In<(
+        Entity,
+        Option<f32>,
+        Option<f32>,
+        f32,
+    )>,
     time: Res<Time>,
     mut params: AutoAttackParams,
 ) {
@@ -984,6 +1003,7 @@ fn auto_attack_unit(
             hand,
             &mut params.units.p1(),
             &SwingContext {
+                melee_range,
                 scaling: &params.scaling,
                 summon_modifiers: &params.summon_modifiers,
                 sight: &params.sight,
@@ -1308,6 +1328,7 @@ impl Attacker<'_> {
 
 /// World data a swing reads besides the two units.
 pub(crate) struct SwingContext<'a, 'w, 's> {
+    pub melee_range: f32,
     pub scaling: &'a Query<'w, 's, ScalingItem<'static>>,
     summon_modifiers: &'a crate::auras::summon_damage::SummonDamageModifiers<'w, 's>,
     pub armor_constants: Option<&'a ArmorConstants>,
@@ -1933,8 +1954,11 @@ fn try_swing(
     let range_bonus = attacker
         .mods
         .map_or(0.0, |mods| mods.autoattack_range_bonus);
-    if !in_melee_range(attacker.position, target_pos, range_bonus)
-        || health.current <= 0.0
+    if !in_melee_range(
+        attacker.position,
+        target_pos,
+        context.melee_range + range_bonus,
+    ) || health.current <= 0.0
         || !attackable
     {
         return None;
@@ -2191,8 +2215,7 @@ fn reset_swing_timers(auto_attack: &mut AutoAttack, hand: Hand, swing_time: f32)
 
 /// TC IsWithinMeleeRangeAt: nominal range plus attacker-owned aura153 yards.
 /// Spell range does not consume this modifier.
-fn in_melee_range(a: &Position, b: &Position, range_bonus: f32) -> bool {
-    let range = MELEE_RANGE + range_bonus;
+fn in_melee_range(a: &Position, b: &Position, range: f32) -> bool {
     distance(a, b).powi(2) <= range * range
 }
 

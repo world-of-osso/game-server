@@ -85,7 +85,11 @@ fn clear_displacement_return_at_melee(world: &mut World, actor: Entity) {
             let Some(target) = world.get::<Position>(attack.victim) else {
                 return true;
             };
-            (target.x - from.x).hypot(target.z - from.z) <= crate::combat::MELEE_RANGE
+            let Some(range) = crate::scripted_ai::model_reach::melee_range(world, actor, attack.victim) else {
+                error!(?actor, target = ?attack.victim, "Melee return requires sourced combat reaches");
+                return false;
+            };
+            (target.x - from.x).hypot(target.z - from.z) <= range
         });
     if reached {
         world.entity_mut(actor).remove::<DisplacementReturn>();
@@ -134,19 +138,21 @@ fn read_walk_step(world: &World, actor: Entity, delta: f32) -> Option<WalkStep> 
     }
     let from = *world.get::<Position>(actor)?;
     let to = *world.get::<Position>(target)?;
-    walk_toward_melee(target, from, to, movement::read_speed(world, actor), delta)
+    let range = crate::scripted_ai::model_reach::melee_range(world, actor, target)?;
+    walk_toward_melee(target, from, to, range, movement::read_speed(world, actor), delta)
 }
 
 fn walk_toward_melee(
     target: Entity,
     from: Position,
     to: Position,
+    range: f32,
     speed: f32,
     delta: f32,
 ) -> Option<WalkStep> {
     let offset = Vec3::new(to.x - from.x, 0.0, to.z - from.z);
     let distance = offset.length();
-    let remaining = distance - crate::combat::MELEE_RANGE;
+    let remaining = distance - range;
     if remaining <= 0.0 || speed <= 0.0 {
         return None;
     }
