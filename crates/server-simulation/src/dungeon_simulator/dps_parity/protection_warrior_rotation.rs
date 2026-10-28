@@ -550,6 +550,82 @@ mod tests {
     }
 
     #[test]
+    fn frothing_berserker_refunds_only_paid_revenge() {
+        use crate::spell_cast::test_harness::harness_with_native_enemy_dodge_reduction;
+        use shared::components::{ActiveSpec, PowerType};
+        use shared::protocol::CombatLogKind;
+        let seed =
+            harness_with_native_enemy_dodge_reduction(Vec::new(), &[392792, 392793, 6572, 5302], 1)
+                .unwrap();
+        let mut talent = seed
+            .app
+            .world()
+            .resource::<server::spell_info::SpellStore>()
+            .get(392792)
+            .unwrap()
+            .clone();
+        assert_eq!(talent.aura_options.as_ref().unwrap().proc_chance, 20);
+        talent.aura_options.as_mut().unwrap().proc_chance = 100;
+        for (selected, free, expected) in [
+            (true, false, true),
+            (true, true, false),
+            (false, false, false),
+        ] {
+            let known = if selected {
+                vec![392792, 392793, 6572, 5302]
+            } else {
+                vec![392793, 6572, 5302]
+            };
+            let mut h =
+                harness_with_native_enemy_dodge_reduction(vec![talent.clone()], &known, 1).unwrap();
+            h.app
+                .world_mut()
+                .entity_mut(h.caster)
+                .insert(ActiveSpec(73));
+            h.advance(3);
+            if !selected {
+                crate::auras::remove_auras(
+                    h.app.world_mut(),
+                    h.caster,
+                    crate::auras::RemoveReason::Consumed,
+                    |aura| aura.spell_id == 392792,
+                );
+            }
+            assert_eq!(
+                crate::auras::has_aura(h.app.world(), h.caster, 392792),
+                selected,
+                "talent aura setup"
+            );
+            if free {
+                crate::auras::apply_aura(
+                    h.app.world_mut(),
+                    &crate::auras::AuraApplication {
+                        caster: h.caster,
+                        target: h.caster,
+                        spell_id: 5302,
+                        effect_mask: u32::MAX,
+                        source: crate::auras::AuraSource::Cast,
+                    },
+                );
+            }
+            h.set_power(PowerType::Rage, 500.0);
+            h.cast_and_deliver(6572, Some(h.npc));
+            assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+            let refund = h.inbox.log.iter().find(|event| {
+                event.kind == CombatLogKind::Energize && event.spell_id == Some(392793)
+            });
+            assert_eq!(
+                refund.is_some(),
+                expected,
+                "selected={selected} free={free}"
+            );
+            if let Some(refund) = refund {
+                assert_eq!(refund.amount, 100);
+            }
+        }
+    }
+
+    #[test]
     fn free_revenge_is_consumed_by_revenge() {
         let mut h = crate::spell_cast::test_harness::harness_with_native_enemy_dodge_reduction(
             Vec::new(),
