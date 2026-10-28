@@ -69,6 +69,14 @@ fn holy_paladin_heals_the_simc_dummy_party() {
             .any(|x| x.as_u64().unwrap() > 0)
     );
     assert!(
+        report["healer_casts"]["31884"].as_u64().unwrap_or(0) > 0,
+        "Avenging Wrath never cast: {report}"
+    );
+    assert!(
+        report["healer_casts"]["1241413"].as_u64().unwrap_or(0) > 0,
+        "Hammer of Wrath never cast: {report}"
+    );
+    assert!(
         report["healer_casts"]["20473"].as_u64().unwrap_or(0) > 0,
         "{report}"
     );
