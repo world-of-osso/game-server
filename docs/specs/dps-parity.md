@@ -11,6 +11,10 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 - The native encounter fixture faces the actor toward its actual primary before engagement and restores maintained melee-intent facing after forced movement finishes, including a charge that ends inside melee range. Do not turn active channels or override forced movement. Keep native directional selectors, widths and radii unchanged.
 - A fixture actor with native melee AutoAttack intent walks back into nominal melee range at its native run speed after movement abilities. Preserve forced movement ownership, native movement/cast restrictions and position=back; never suppress displacement, snap the actor or grant resources. This shared controller applies without specialization or spell-ID cases (SimC76f8118 sc_demon_hunter.cpp1559–1611).
 
+### Unholy Magus
+
+- The real Magus's Withering Grasp periodic damage can critically strike with its owner's live critical chance and its own critical damage modifiers (SimC76f8118 `sc_death_knight.cpp3070–3079/4505–4511`).
+
 ### Unholy Nazgrim
 
 - Apocalyptic Conquest belongs to the owner while the actual Nazgrim is alive and expires on his demise. Selected Nazgrim's Conquest adds its native effect2 Strength percentage per paid rune, except Scourge Strike uses its base rune cost even when free (SimC76f8118 `sc_death_knight.cpp5405–5414/7332–7373/13100–13120`).

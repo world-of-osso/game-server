@@ -1257,7 +1257,15 @@ fn periodic_spell_owner(world: &World, caster: Entity, spell: &SpellInfo) -> Opt
         pet.owner
     } else {
         let summon = world.get::<super::summon::SummonedCreature>(caster)?;
-        let shares_spell_owner = summon.properties.is_pet() || summon.properties.is_totem();
+        // SimC76f8118 sc_death_knight.cpp3070–3079/4505–4511 permits
+        // the actual Magus's Withering Grasp ticks to use owner spell crit.
+        let unholy_magus = spell.id == 1297091
+            && matches!(summon.spell_id, 317776 | 1242294)
+            && world
+                .get::<shared::components::Npc>(caster)
+                .is_some_and(|npc| npc.template_id == 163366);
+        let shares_spell_owner =
+            summon.properties.is_pet() || summon.properties.is_totem() || unholy_magus;
         if !shares_spell_owner {
             return None;
         }
