@@ -23,6 +23,7 @@ const SPELLS: &[(&str, u32, bool)] = &[
     ("enveloping_mist", 124682, false),
     ("sheiluns_gift", 205406, false),
     ("vivify", 116670, false),
+    ("rising_sun_kick", 107428, false),
 ];
 
 struct Mistweaver {
@@ -32,7 +33,10 @@ struct Mistweaver {
     encounter: Encounter,
 }
 
-pub(super) fn prepare(run: &mut super::dps_parity::Run) -> Result<Box<dyn Policy>, String> {
+pub(super) fn prepare(
+    run: &mut super::dps_parity::Run,
+    healer: Entity,
+) -> Result<Box<dyn Policy>, String> {
     let mut bindings = Bindings {
         actions: SPELLS
             .iter()
@@ -42,13 +46,13 @@ pub(super) fn prepare(run: &mut super::dps_parity::Run) -> Result<Box<dyn Policy
         global_cooldown_spell: 116670,
         ..Default::default()
     };
-    let equipment = Equipment::load(run.app.world_mut(), run.actor, &mut bindings)?;
+    let equipment = Equipment::load(run.app.world_mut(), healer, &mut bindings)?;
     let encounter = Encounter::Fixture {
         started_at: crate::spell_cast::now(run.app.world()),
         duration: 300.0,
         style: FightStyle::Patchwerk,
     };
-    literal_rotation::capture_fixture(run.app.world_mut(), run.actor, encounter)?;
+    literal_rotation::capture_fixture(run.app.world_mut(), healer, encounter)?;
     // SimC76f8118 apl_monk.cpp supplies only Brewmaster and Windwalker defaults.
     let program = Program::parse(&[
         ("default", "life_cocoon,if=target.health.pct<35"),
@@ -63,8 +67,9 @@ pub(super) fn prepare(run: &mut super::dps_parity::Run) -> Result<Box<dyn Policy
             "default",
             "enveloping_mist,if=target.health.pct<65&target.enveloping_mist_up=0",
         ),
-        ("default", "sheiluns_gift,if=target.health.pct<65"),
+        ("default", "sheiluns_gift,if=target.health.pct<45"),
         ("default", "vivify,if=target.health.pct<90"),
+        ("damage", "rising_sun_kick"),
     ])?;
     Ok(Box::new(Mistweaver {
         driver: Driver::new(program),
@@ -133,6 +138,7 @@ impl Policy for Mistweaver {
         let targets = [target];
         let actions = SPELLS
             .iter()
+            .filter(|(name, _, _)| *name != "rising_sun_kick")
             .map(|&(name, spell, self_target)| NativeAction {
                 name,
                 spell,
@@ -150,6 +156,32 @@ impl Policy for Mistweaver {
         if let Some((action, execution)) =
             self.driver
                 .select("default", &facts, &prepared, &self.equipment)?
+        {
+            self.driver.execute(world, healer, action, execution)?;
+            return Ok(());
+        }
+        let enemy = party.iter().find_map(|&unit| {
+            let spec = world.get::<shared::components::ActiveSpec>(unit)?;
+            (spec.0 == 66)
+                .then(|| world.get::<crate::networking::CombatTarget>(unit)?.0)
+                .flatten()
+        });
+        let Some(enemy) = enemy else {
+            return Ok(());
+        };
+        let enemies = [enemy];
+        let damage = [NativeAction {
+            name: "rising_sun_kick",
+            spell: 107428,
+            self_target: false,
+            talent: None,
+        }];
+        let prepared = Prepared::read(world, healer, &enemies, &self.equipment, damage, false)?;
+        let facts = NativeFacts::new(world, healer, &self.bindings, self.encounter, 1)
+            .with_targets(Some(enemy), &enemies);
+        if let Some((action, execution)) =
+            self.driver
+                .select("damage", &facts, &prepared, &self.equipment)?
         {
             self.driver.execute(world, healer, action, execution)?;
         }

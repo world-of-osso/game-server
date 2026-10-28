@@ -191,6 +191,53 @@ pub fn spawn_party_for_healer_player(world: &mut World, healer: Entity) -> Resul
     })
 }
 
+/// Assign the headless reference player its distinct group identity.
+pub fn assign_reference_player_id(world: &mut World, player: Entity, id: u64) {
+    world
+        .entity_mut(player)
+        .insert(crate::persistence::ClientId(id));
+}
+
+/// Form a native party around separate MID2 tank and healer players.
+pub fn spawn_party_for_reference_healer(
+    world: &mut World,
+    tank: Entity,
+    healer: Entity,
+) -> Result<Party, String> {
+    let copy = *world
+        .get::<crate::maps::InMap>(tank)
+        .ok_or("tank copy absent")?;
+    if world.get::<crate::maps::InMap>(healer) != Some(&copy) {
+        return Err("healer is not in tank copy".into());
+    }
+    let profiles = read_party_profiles(world, DEFAULT_PARTY)?;
+    let companions: Vec<_> = [2, 3, 4]
+        .into_iter()
+        .map(|index| profiles[index].clone())
+        .collect();
+    let mut members = spawning::spawn_members(world, tank, &companions)?;
+    party::join_members_with_player(
+        world,
+        tank,
+        shared::group::GroupRole::Tank,
+        &members,
+        Some((healer, shared::group::GroupRole::Healer)),
+    )?;
+    world
+        .entity_mut(tank)
+        .insert(stockade_diagnostic::DiagnosticParty {
+            copy,
+            members: members.clone(),
+            player_role: shared::group::GroupRole::Tank,
+        });
+    members.push(healer);
+    Ok(Party {
+        owner: tank,
+        tank,
+        members,
+    })
+}
+
 fn spawn_configured_party(
     world: &mut World,
     copy: crate::maps::InMap,

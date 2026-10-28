@@ -14,7 +14,7 @@ pub(super) trait Policy {
     fn drive(&mut self, world: &mut World, healer: Entity, party: &[Entity]) -> Result<(), String>;
 }
 
-type PreparePolicy = fn(&mut super::dps_parity::Run) -> Result<Box<dyn Policy>, String>;
+type PreparePolicy = fn(&mut super::dps_parity::Run, Entity) -> Result<Box<dyn Policy>, String>;
 type Registration = (u32, PreparePolicy);
 
 // Spec owners add their own policy here. No test fixture is a production policy.
@@ -63,24 +63,20 @@ fn replay_with_registry(
         return Err("SIMC_REPLAY_DURATION_ZERO".into());
     }
     let hits = crate::simc_tank_timeline::read_trace(trace, "Tank_Dummy_Dungeon")?;
-    let (profile, traits) = super::dps_parity::read_reference(spec)?;
-    super::dps_parity::require_mid2_profile(&profile)?;
-    let race = super::dps_parity::read_reference_race(&profile.race)?;
     let _rng = crate::random::seed_scope(seed);
-    let mut run = super::dps_parity::spawn_reference(
-        profile,
-        &traits,
-        1,
-        crate::followers::simulator::ParityActor::Player { race },
+    let mut run = super::dps_parity::prepare_registered_player(66, 1)?;
+    let healer = super::dps_parity::spawn_second_reference_player(&mut run, spec)?;
+    let tank = run.actor;
+    let party = crate::followers::simulator::spawn_party_for_reference_healer(
+        run.app.world_mut(),
+        tank,
+        healer,
     )?;
-    for _ in 0..4 {
-        run.app.update();
-    }
-    let healer = run.actor;
-    let party =
-        crate::followers::simulator::spawn_party_for_healer_player(run.app.world_mut(), healer)?;
-    let members: Vec<_> = party.members.iter().copied().chain([healer]).collect();
+    let members: Vec<_> = party.members.iter().copied().chain([tank]).collect();
     let source = run.targets[0];
+    let started_at = run.app.world().resource::<bevy::prelude::Time>().elapsed();
+    super::dps_parity::install_fixture_lifetimes(&mut run, started_at);
+    super::dps_parity::engage(&mut run);
     super::healer_replay::freeze_sources(run.app.world_mut(), &[(0, source)].into());
     run.app.insert_resource(Capture {
         members: members.clone(),
@@ -88,8 +84,18 @@ fn replay_with_registry(
         ..Default::default()
     });
     crate::combat_refs::set_in_combat_with(run.app.world_mut(), party.tank, source);
-    let mut policy = prepare(&mut run)?;
+    let mut policy = prepare(&mut run, healer)?;
+    let mitigation_auras = super::dps_parity::tank_mitigation_auras(&run)?;
     let mut recorder = Recorder::start(run.app.world(), healer, members.clone());
+    let mut tank_event_cursor = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .len();
+    let mut tank_casts = std::collections::BTreeMap::<u32, u32>::new();
+    let mut healer_casts = std::collections::BTreeMap::<u32, u32>::new();
+    let mut mitigation_ticks = 0_u32;
     let mut next = 0;
     for tick in 1..=duration
         .checked_mul(20)
@@ -112,17 +118,50 @@ fn replay_with_registry(
         if run
             .app
             .world()
+            .get::<Health>(tank)
+            .is_some_and(|health| health.current > 0.0)
+        {
+            super::dps_parity::drive_literal_tick(&mut run)?;
+        }
+        if run
+            .app
+            .world()
             .get::<Health>(healer)
             .is_some_and(|health| health.current > 0.0)
         {
             policy.drive(run.app.world_mut(), healer, &members)?;
         }
         run.app.update();
-        recorder.observe_frame(run.app.world(), tick);
+        let world = run.app.world();
+        recorder.observe_frame(world, tick);
+        if mitigation_auras
+            .iter()
+            .any(|&aura| crate::auras::has_aura(world, tank, aura))
+        {
+            mitigation_ticks += 1;
+        }
+        let events = &world
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0;
+        for event in &events[tank_event_cursor..] {
+            if event.kind == shared::protocol::CombatLogKind::CastSuccess {
+                if let Some(spell) = event.spell_id {
+                    if event.source == Some(tank.to_bits()) {
+                        *tank_casts.entry(spell).or_default() += 1;
+                    } else if event.source == Some(healer.to_bits()) {
+                        *healer_casts.entry(spell).or_default() += 1;
+                    }
+                }
+            }
+        }
+        tank_event_cursor = events.len();
     }
     Ok(
         json!({"spec":spec,"level":90,"reference_tier":"MID2","timeline":"simc_tank_dummy",
-        "duration_seconds":duration,"incoming_events":next,"metrics":recorder.report(duration)}),
+        "duration_seconds":duration,"incoming_events":next,"tank_spec":66,
+        "tank_casts":tank_casts,"healer_casts":healer_casts,
+        "tank_active_mitigation_seconds":f64::from(mitigation_ticks) / 20.0,
+        "metrics":recorder.report(duration)}),
     )
 }
 
