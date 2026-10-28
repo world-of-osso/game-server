@@ -20,8 +20,19 @@ fn on_summon(world: &mut World, actor: Entity) {
     }
     let owner = summon.owner;
     // SimC76f8118 sc_death_knight.cpp4541–4547/16273–16277: each real
-    // Magus triggers the selected Unholy Aura haste stack on its owner.
-    if !spell_cast::try_cast_triggered(world, owner, 1268917, Some(owner), 1) {
+    // Magus grants a haste stack valued by the selected talent's first effect.
+    let haste = spell_cast::scripts::script_effect_value(world, owner, 377440, 0);
+    if !spell_cast::cast_triggered_with_overrides(
+        world,
+        owner,
+        1268917,
+        Some(owner),
+        1,
+        spell_cast::TriggeredSpellOverrides {
+            effect0_amount: Some(haste),
+            ..Default::default()
+        },
+    ) {
         warn!(?owner, "native Unholy Aura haste buff refused");
     }
 }
