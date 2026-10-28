@@ -3,6 +3,52 @@ use super::*;
 
 #[test]
 #[ignore = "requires exact spec103 profile/traits and native private DB"]
+fn feral_hunt_beneath_applies_cat_form_damage_modifiers() {
+    use crate::auras::spell_mods::{SpellModOp, modify};
+    let mut run = prepare_literal(103, 1).unwrap();
+    let actor = run.actor;
+    assert!(crate::auras::has_aura(run.app.world(), actor, 439868));
+    let spell = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(1079)
+        .unwrap()
+        .clone();
+    let values = |run: &Run| {
+        [
+            SpellModOp::HealingAndDamage,
+            SpellModOp::PeriodicHealingAndDamage,
+        ]
+        .map(|op| modify(run.app.world(), actor, &spell, op, 100.0))
+    };
+    let before = values(&run);
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 768, Some(actor), false).unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    let in_form = values(&run);
+    for i in 0..2 {
+        assert!(
+            (in_form[i] / before[i] - 1.03).abs() < 0.0001,
+            "cat damage modifier {i}: {before:?} -> {in_form:?}"
+        );
+    }
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        actor,
+        crate::auras::RemoveReason::Cancelled,
+        |a| a.spell_id == 768,
+    );
+    let after = values(&run);
+    for i in 0..2 {
+        assert!(
+            (after[i] - before[i]).abs() < 0.001,
+            "cat modifier must end on leaving form"
+        );
+    }
+}
+
+#[test]
+#[ignore = "requires exact spec103 profile/traits and native private DB"]
 fn feral_lycaras_teachings_follows_cat_form() {
     let mut run = prepare_literal(103, 1).unwrap();
     let actor = run.actor;
