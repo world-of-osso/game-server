@@ -28,7 +28,7 @@ pub const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::CheckTarget(check_target),
     SpellScriptHook::EffectEnabled(ruby_embers_periodic),
     SpellScriptHook::HealthChangeObserved(chrono_flame::record_health_change),
-    SpellScriptHook::SourceHeal(record_scarlet_heal),
+    SpellScriptHook::RawHeal(record_scarlet_heal),
     SpellScriptHook::NamedAuraFields(&[(431442, 0), (431442, 1), (431442, 2), (1260647, 0)]),
 ];
 

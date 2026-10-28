@@ -274,7 +274,7 @@ fn devastation_scarlet_banks_healing_before_the_critical_multiplier() {
 #[test]
 #[ignore = "requires native Devastation follower profile and world DB"]
 fn devastation_scarlet_banks_periodic_raw_before_partial_tick_fraction() {
-    fn sample(fraction: f32) -> (f32, i32) {
+    fn sample(fraction: f32, taken: f32) -> (f32, i32) {
         let _seed = crate::random::seed_scope(70448);
         let mut run = prepare_literal(1467, 1).unwrap();
         engage(&mut run);
@@ -292,6 +292,11 @@ fn devastation_scarlet_banks_periodic_raw_before_partial_tick_fraction() {
             .unwrap()
             .clone();
         spell.cast_periodic_fraction = Some(fraction);
+        run.app
+            .world_mut()
+            .get_mut::<crate::auras::AuraStatMods>(actor)
+            .unwrap()
+            .healing_taken_mult = taken;
         let ctx = crate::spell_cast::effects::EffectCtx {
             caster: actor,
             spell: &spell,
@@ -335,8 +340,9 @@ fn devastation_scarlet_banks_periodic_raw_before_partial_tick_fraction() {
             .amount;
         (stored, healing)
     }
-    let (full, full_heal) = sample(1.0);
-    let (partial, partial_heal) = sample(0.5);
+    let (full, full_heal) = sample(1.0, 1.0);
+    let (partial, partial_heal) = sample(0.5, 1.0);
+    let (amplified, amplified_heal) = sample(1.0, 1.5);
     assert!(
         partial_heal < full_heal,
         "partial tick must really reduce resolved healing"
@@ -344,5 +350,9 @@ fn devastation_scarlet_banks_periodic_raw_before_partial_tick_fraction() {
     assert!(
         full > 0.0 && (full - partial).abs() < 0.1,
         "SimC result_raw precedes partial tick scaling: {full}/{partial}"
+    );
+    assert!(
+        amplified_heal > full_heal && (amplified - 1.5 * full).abs() < 0.1,
+        "SimC result_raw includes the target healing multiplier: {full}/{amplified}"
     );
 }

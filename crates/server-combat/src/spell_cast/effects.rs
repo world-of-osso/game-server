@@ -2314,7 +2314,7 @@ fn heal(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target: Entity
     ) * ctx.chain_multiplier;
     let raw = amount;
     let (amount, crit) = with_crit(world, ctx.caster, target, ctx.spell, amount);
-    apply_heal_with_source(world, ctx, target, amount, crit, false, Some(raw));
+    apply_heal_with_raw(world, ctx, target, amount, crit, false, Some(raw));
 }
 
 /// TC EffectHealMaxHealth: zero value selects caster max; nonzero selects missing HP.
@@ -2362,10 +2362,10 @@ pub fn apply_heal(
     periodic: bool,
 ) {
     let raw = (!crit).then_some(amount);
-    apply_heal_with_source(world, ctx, target, amount, crit, periodic, raw);
+    apply_heal_with_raw(world, ctx, target, amount, crit, periodic, raw);
 }
 
-fn apply_heal_with_source(
+fn apply_heal_with_raw(
     world: &mut World,
     ctx: &EffectCtx,
     target: Entity,
@@ -2395,7 +2395,7 @@ fn apply_heal_with_source(
     let fraction = ctx.spell.cast_periodic_fraction.unwrap_or(1.0);
     // SimC action.cpp1473 records periodic result_raw before the partial-tick multiplier.
     let source = raw.map(|raw| {
-        (modded_amount(world, ctx, raw, periodic) * done * named)
+        (modded_amount(world, ctx, raw, periodic) * done * taken * named)
             .max(0.0)
             .round()
     });
@@ -2413,7 +2413,7 @@ fn apply_heal_with_source(
     };
     apply_resolved_heal(world, ctx, target, amount, crit, periodic);
     if alive && let Some(source) = source {
-        super::script_registry::source_heal(world, ctx, source);
+        super::script_registry::raw_heal(world, ctx, source);
     }
 }
 
