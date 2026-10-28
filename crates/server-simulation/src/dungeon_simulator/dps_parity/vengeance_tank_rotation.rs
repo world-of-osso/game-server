@@ -395,4 +395,47 @@ mod tests {
             2
         );
     }
+    #[test]
+    #[ignore = "requires native Vengeance profile"]
+    fn fracture_metamorphosis_fragment_arrives_after_500ms() {
+        use super::super::*;
+        use server::soul_fragments::{self, FragmentFilter};
+        let _seed = crate::random::seed_scope(70_448);
+        let (profile, traits) = read_reference(581).unwrap();
+        let identity = inputs::read_actor(&profile).unwrap();
+        let mut run = prepare_reference(profile, &traits, 1, identity).unwrap();
+        let actor = run.actor;
+        let target = run.targets[0];
+        crate::auras::apply_aura(
+            run.app.world_mut(),
+            &crate::auras::AuraApplication {
+                caster: actor,
+                target: actor,
+                spell_id: 187827,
+                effect_mask: u32::MAX,
+                source: crate::auras::AuraSource::Cast,
+            },
+        );
+        crate::spell_cast::cast_for_player_with_target(
+            run.app.world_mut(),
+            actor,
+            263642,
+            Some(target),
+        )
+        .unwrap();
+        for _ in 0..5 {
+            run.app.update();
+        }
+        assert_eq!(
+            soul_fragments::total_count(run.app.world(), actor, FragmentFilter::Lesser),
+            2
+        );
+        for _ in 0..10 {
+            run.app.update();
+        }
+        assert_eq!(
+            soul_fragments::total_count(run.app.world(), actor, FragmentFilter::Lesser),
+            3
+        );
+    }
 }
