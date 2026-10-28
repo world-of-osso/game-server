@@ -10,7 +10,8 @@ import dps_parity_gaps as gaps
 class GapAliasTests(unittest.TestCase):
     def test_native_children_are_compared_with_reference_parents(self):
         for spec, parent, child in [(253, 16827, 49966), (255, 16827, 49966),
-                                    (258, 199484, 199486), (258, 447445, 447448)]:
+                                    (258, 199484, 199486), (258, 447445, 447448),
+                                    (262, 51505, 285452), (262, 157375, 269005)]:
             with self.subTest(spec=spec, parent=parent), tempfile.TemporaryDirectory() as tmp:
                 root = Path(tmp)
                 native = {"combat": {"dps": 1000, "actions": [
