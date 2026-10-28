@@ -176,7 +176,7 @@ fn dk252_festering_strike_earns_ghouls_and_next_native_scythe() {
 
 #[test]
 #[ignore = "requires native252 profile/traits and player actor"]
-fn dk252_festering_scythe_double_hastes_its_actual_gcd() {
+fn dk252_festering_scythe_uses_parent_strike_gcd() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(252, 1).unwrap();
     engage(&mut run);
@@ -202,15 +202,6 @@ fn dk252_festering_scythe_double_hastes_its_actual_gcd() {
     .unwrap();
     preparation::finish_pending_setup(&mut run).unwrap();
     assert!(crate::auras::has_aura(run.app.world(), run.actor, 458123));
-    let haste = 1.0
-        + run
-            .app
-            .world()
-            .get::<crate::stats::CharacterStats>(run.actor)
-            .unwrap()
-            .haste_pct
-            / 100.0;
-    assert!(haste > 1.0);
     let regular =
         crate::spell_cast::native_apl::gcd_value(run.app.world(), run.actor, &strike, "gcd")
             .unwrap();
@@ -227,13 +218,69 @@ fn dk252_festering_scythe_double_hastes_its_actual_gcd() {
         "gcd.remains",
     )
     .unwrap();
-    // The selected talent reduces Strike's GCD, not Scythe's native GCD.
-    let base = scythe.cooldowns.as_ref().unwrap().start_recovery_ms as f32;
-    let once = ((base / haste) as u32).clamp(750, 1500);
-    let expected = f64::from((once as f32 / haste) as u32) / 1000.0;
     assert!(
-        (remaining - expected).abs() < 0.003,
-        "actual replacement GCD {remaining} must match double haste {expected}; normal {regular}"
+        (remaining - regular).abs() < 0.003,
+        "actual replacement GCD {remaining} must match parent Strike {regular}"
+    );
+}
+
+#[test]
+#[ignore = "requires native252 profile/traits and player actor"]
+fn dk252_dark_transformation_does_not_start_a_gcd() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 1).unwrap();
+    engage(&mut run);
+    let transformation = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(1233448)
+        .unwrap()
+        .clone();
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(1233448, run.actor, None),
+    )
+    .unwrap();
+    assert!(
+        run.app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|event| event.source == Some(run.actor.to_bits())
+                && event.spell_id == Some(1233448)
+                && event.kind == CombatLogKind::CastSuccess),
+        "Dark Transformation must actually cast"
+    );
+    let remaining = crate::spell_cast::native_apl::gcd_value(
+        run.app.world(),
+        run.actor,
+        &transformation,
+        "gcd.remains",
+    )
+    .unwrap();
+    assert_eq!(
+        remaining, 0.0,
+        "Dark Transformation must leave the GCD free"
+    );
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(85948, run.targets[0], Some(run.targets[0])),
+    )
+    .unwrap();
+    assert!(
+        run.app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|event| event.source == Some(run.actor.to_bits())
+                && event.spell_id == Some(85948)
+                && event.kind == CombatLogKind::CastSuccess),
+        "Festering Strike must cast immediately afterward"
     );
 }
 

@@ -2849,6 +2849,19 @@ fn start_gcd(world: &mut World, caster: Entity, spell: &SpellInfo) {
 }
 
 fn gcd_duration_ms(world: &World, caster: Entity, spell: &SpellInfo) -> u32 {
+    // SimC76f8118 sc_death_knight.cpp8746: Dark Transformation is off GCD.
+    if spell.id == 1233448 {
+        return 0;
+    }
+    // SimC starts the Festering Strike GCD before its Scythe replacement;
+    // seed70448 debug records the parent action starting that GCD.
+    if spell.id == 458128 {
+        let parent = world
+            .resource::<SpellStore>()
+            .get(85948)
+            .expect("Festering Scythe requires its native Strike parent");
+        return gcd_duration_ms(world, caster, parent);
+    }
     let base_gcd_ms = spell
         .cooldowns
         .as_ref()
@@ -2865,14 +2878,7 @@ fn gcd_duration_ms(world: &World, caster: Entity, spell: &SpellInfo) -> u32 {
     // Only a 750-1500 ms GCD is modified (Spell.cpp:9195-9198).
     if (MIN_GCD_MS..=MAX_GCD_MS).contains(&base_gcd_ms) {
         let gcd_ms = gcd_haste::ordinary_spell_ms(world, caster, spell, gcd_ms);
-        let gcd_ms = haste_regen_gcd_ms(world, caster, spell, gcd_ms);
-        // SimC76f8118 sc_death_knight.cpp10465–10473: bugs=true applies
-        // melee haste a second time to Festering Scythe's already-hasted GCD.
-        if spell.id == 458128 {
-            (gcd_ms as f32 / spell_haste_multiplier(world, caster).max(0.01)) as u32
-        } else {
-            gcd_ms
-        }
+        haste_regen_gcd_ms(world, caster, spell, gcd_ms)
     } else {
         gcd_ms
     }
