@@ -22,10 +22,17 @@ fn selected_purpose(world: &World, caster: Entity) -> Option<(f32, u32)> {
     let traits = world.get::<TraitLoadout>(caster)?;
     let auras = world.get::<ActiveAuras>(caster)?;
     for &(talent, buff) in PURPOSE {
-        if traits.active_talent_spells().any(|spell| spell.spell_id == talent) {
+        if traits
+            .active_talent_spells()
+            .any(|spell| spell.spell_id == talent)
+        {
             let aura = auras.iter().find(|aura| aura.spell_id == talent)?;
-            let chance = aura.effects.iter().find(|effect| effect.index == 0)
-                .expect("Divine Purpose talent retains chance effect0").amount;
+            let chance = aura
+                .effects
+                .iter()
+                .find(|effect| effect.index == 0)
+                .expect("Divine Purpose talent retains chance effect0")
+                .amount;
             return Some((chance, buff));
         }
     }
