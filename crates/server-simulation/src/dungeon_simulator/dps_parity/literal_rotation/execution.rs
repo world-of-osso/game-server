@@ -531,6 +531,11 @@ fn filter_primary_range(
     }) else {
         return state;
     };
+    // SimC76f8118 player.cpp9045–9057: Arcane Torrent targets the actor and
+    // is non-harmful despite the native area dispel effect.
+    if spell.id == 202719 {
+        return state;
+    }
     let harmful = crate::spell_info::positivity::negative_effects(
         world.resource::<crate::spell_info::SpellStore>(),
         spell,
