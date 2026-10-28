@@ -564,3 +564,77 @@ fn demonology_felguard_white_attacks_apply_source_multiplier() {
         "actual Felguard swings {hits:?} must include source white factor floor {floor}"
     );
 }
+
+#[test]
+#[ignore = "requires canonical 266 inputs; Felguard white critical damage"]
+fn demonology_felguard_white_critical_inherits_owner_and_brutality() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_measurement(266, 1).unwrap();
+    super::channel_timing_tests::remove_equipped_proc_drivers(&mut run);
+    let owner = run.actor;
+    let now = crate::spell_cast::now(run.app.world());
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        owner,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| {
+            matches!(aura.spell_id, 1250897 | 1281559)
+                || aura.expires_at.is_some_and(|at| at <= now + 60.0)
+        },
+    );
+    run.app.update();
+    engage(&mut run);
+    let pet = run
+        .app
+        .world_mut()
+        .query::<(
+            Entity,
+            &crate::hunter_pet::HunterPet,
+            &shared::components::Npc,
+        )>()
+        .iter(run.app.world())
+        .find(|(_, pet, npc)| pet.owner == owner && npc.template_id == 17252)
+        .map(|(entity, _, _)| entity)
+        .expect("actual Felguard");
+    let effect = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(453908)
+        .unwrap()
+        .effects
+        .iter()
+        .find(|effect| effect.index == 1)
+        .unwrap()
+        .base_points;
+    let owner_critical = run
+        .app
+        .world()
+        .get::<crate::auras::AuraStatMods>(owner)
+        .unwrap()
+        .critical_damage(1);
+    run.app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(owner)
+        .unwrap()
+        .crit_pct = 0.0;
+    collect_native_pet_swings(&mut run, pet, 8);
+    let hits: Vec<_> = pet_melee_events(run.app.world(), pet, run.targets[0]).collect();
+    assert!(hits.iter().all(|hit| !hit.crit));
+    let ordinary = hits.iter().map(|hit| hit.amount as f32).sum::<f32>() / hits.len() as f32;
+    run.app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(owner)
+        .unwrap()
+        .crit_pct = 100.0;
+    collect_native_pet_swings(&mut run, pet, 8);
+    let hits: Vec<_> = pet_melee_events(run.app.world(), pet, run.targets[0]).collect();
+    assert!(hits.iter().all(|hit| hit.crit));
+    let critical = hits.iter().map(|hit| hit.amount as f32).sum::<f32>() / hits.len() as f32;
+    let expected = 2.0 * (owner_critical + effect / 100.0);
+    let actual = critical / ordinary;
+    assert!(
+        (actual / expected - 1.0).abs() < 0.1,
+        "actual crit ratio {actual}, expected {expected}"
+    );
+}
