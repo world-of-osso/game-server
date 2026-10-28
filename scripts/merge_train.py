@@ -17,6 +17,7 @@ executable. `--probe` entries (e.g. a RED proof) are built and tested but never 
 import argparse
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -752,6 +753,29 @@ def measure_spec(entry, measurement, executable, target, log, tree, previous=Non
         return measure_spec_locked(entry, measurement, executable, target, log, tree)
 
 
+def measurement_inputs(measurement):
+    """What a measurement depends on besides the tree: the spec, DB, actor, targets and the
+    profile/trait inputs in its output directory. Equal inputs on one tree give equal results."""
+    output = Path(measurement["output"])
+    spec = measurement["spec"]
+    inputs = [(output / f"{spec}.{name}.json").read_bytes() if (output / f"{spec}.{name}.json").exists() else b""
+              for name in ("profile", "selected-traits-active")]
+    return (spec, str(Path(measurement["world_db"]).resolve()), measurement.get("actor", "follower"),
+            measurement["targets"], hashlib.sha256(b"\0".join(inputs)).hexdigest())
+
+
+def share_measurement(entry, measurement, first, first_entry):
+    """Another entry on the same tree already measures these inputs: wait for it and reuse its
+    numbers and reports instead of running the same 10 seeds again (user, 2026-10-28)."""
+    lines = first.result()
+    source = LOGS / f"{first_entry['id']}.reports"
+    reports = LOGS / f"{entry['id']}.reports"
+    for path in source.glob(f"{measurement['spec']}.native.[0-9].json"):
+        reports.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(path, reports / path.name)
+    return lines
+
+
 def measure_spec_locked(entry, measurement, executable, target, log, tree):
     command = [sys.executable, str(TREE / "scripts/dps_parity_measure.py"), "--executable", executable,
                "--spec", measurement["spec"], "--targets", measurement["targets"],
@@ -885,6 +909,8 @@ def requeue_entries(entries):
 
 # Measurements run in the background so the next cycle can build meanwhile.
 MEASURER = ThreadPoolExecutor(MEASURE_PARALLEL)
+# Shared measurements only wait on a MEASURER future, so they must not hold a MEASURER worker.
+SHARERS = ThreadPoolExecutor(64)
 MEASURING = set()  # futures; a reload waits until they finish
 
 
@@ -934,12 +960,19 @@ def measure_then_write(entries, log):
         for index, measurement in enumerate(entry["measure"]):
             # The parity script writes a spec-level timing file as well as target reports.
             key = (str(Path(measurement["output"]).resolve()), measurement["spec"])
-            previous = previous_by_output.get(key)
-            future = MEASURER.submit(measure_spec, entry, measurement, str(copy), target, log, tree, previous)
-            previous_by_output[key] = future
+            inputs = measurement_inputs(measurement)
+            if inputs in shared:
+                first, first_entry = shared[inputs]
+                future = SHARERS.submit(share_measurement, entry, measurement, first, first_entry)
+            else:
+                previous = previous_by_output.get(key)
+                future = MEASURER.submit(measure_spec, entry, measurement, str(copy), target, log, tree, previous)
+                previous_by_output[key] = future
+                shared[inputs] = (future, entry)
             MEASURING.add(future)
             future.add_done_callback(lambda done, index=index: finish(index, done))
 
+    shared = {}  # measurement inputs -> (future, entry) for the first entry measuring them
     for entry in measured:
         schedule(entry)
 

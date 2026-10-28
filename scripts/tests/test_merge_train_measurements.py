@@ -203,6 +203,50 @@ class MeasurementTests(unittest.TestCase):
             self.assertEqual(json.loads((root / "results/duplicate.json").read_text())["measurements"],
                              ["NATIVE_DPS target 1", "NATIVE_DPS target 3"])
 
+    def test_entries_with_equal_inputs_on_one_tree_share_a_single_measurement(self):
+        with tempfile.TemporaryDirectory() as directory, ExitStack() as stack:
+            root = Path(directory)
+            executable = root / "server_simulation"
+            executable.write_text("fixture")
+            for name in ("HOME", "RESULTS", "QUEUE", "RUNNING", "LOGS"):
+                stack.enter_context(patch.object(train, name, root if name == "HOME" else root / name.lower()))
+            stack.enter_context(patch.object(train, "MEASURING", set()))
+            stack.enter_context(patch.object(train, "parity_executable", return_value=str(executable)))
+            stack.enter_context(patch.object(train, "tree_id", return_value="tree-abc"))
+            outputs = {}
+            for name, profile in (("first", "same"), ("second", "same"), ("other", "different")):
+                outputs[name] = root / name
+                outputs[name].mkdir()
+                (outputs[name] / "252.profile.json").write_text(profile)
+                (outputs[name] / "252.selected-traits-active.json").write_text("[]")
+            runs = []
+
+            def fake_run(command, **kwargs):
+                output = Path(command[command.index("--output") + 1])
+                runs.append(output.name)
+                (output / "252.native.1.json").write_text(output.name)
+                return type("Result", (), {"stdout": f"NATIVE_DPS spec252 targets1: {output.name}\n",
+                                           "stderr": ""})()
+
+            stack.enter_context(patch.object(train.subprocess, "run", side_effect=fake_run))
+            pool = stack.enter_context(ThreadPoolExecutor(max_workers=2))
+            stack.enter_context(patch.object(train, "MEASURER", pool))
+            entries = [{"id": name, "measure": [{"spec": "252", "targets": "1", "world_db": "db",
+                                                  "output": str(outputs[name])}]}
+                       for name in ("first", "second", "other")]
+            train.measure_then_write(entries, root / "cycle.log")
+            deadline = time.monotonic() + 5
+            while time.monotonic() < deadline and not all(
+                    (root / f"results/{name}.json").exists() for name in outputs):
+                time.sleep(0.01)
+
+            def result(name):
+                return json.loads((root / f"results/{name}.json").read_text())["measurements"]
+            self.assertEqual(sorted(runs), ["first", "other"])
+            self.assertEqual(result("second"), result("first"))
+            self.assertEqual(result("other"), ["NATIVE_DPS spec252 targets1: other"])
+            self.assertEqual((root / "logs/second.reports/252.native.1.json").read_text(), "first")
+
     def test_cycle_events_cover_operation_boundaries_with_tree_ids(self):
         with tempfile.TemporaryDirectory() as directory, ExitStack() as stack:
             root = Path(directory)
