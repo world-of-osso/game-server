@@ -28,7 +28,7 @@ const SPELLS: &[(&str, u32, bool)] = &[
 ];
 
 const DAMAGE_SPELLS: &[(&str, u32, bool)] = &[
-    ("flame_shock", 188389, false),
+    ("flame_shock", 470411, false),
     ("lava_burst", 51505, false),
     ("lightning_bolt", 188196, false),
 ];
