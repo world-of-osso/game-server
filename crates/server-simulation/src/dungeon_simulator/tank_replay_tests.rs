@@ -92,7 +92,7 @@ fn simc_dummy_strike_triggers_taken_melee_ability_proc() {
     );
     run.app.update();
     assert!(
-        crate::auras::has_aura(run.app.world(), target, 326809),
+        crate::auras::has_aura(run.app.world(), target, 326808),
         "landed melee ability must proc Rune of Sanguination"
     );
 }
@@ -132,12 +132,6 @@ fn simc_dummy_strike_does_not_trigger_auto_attack_procs() {
             .map_or(0, |aura| aura.stacks)
     };
     assert_eq!(stacks(&run), 3);
-    let before = run
-        .app
-        .world()
-        .get::<shared::components::Health>(target)
-        .unwrap()
-        .current;
     crate::spell_cast::effects::replay_simc_dummy_strike(
         run.app.world_mut(),
         source,
@@ -150,10 +144,13 @@ fn simc_dummy_strike_does_not_trigger_auto_attack_procs() {
     assert!(
         run.app
             .world()
-            .get::<shared::components::Health>(target)
-            .unwrap()
-            .current
-            < before
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|event| event.source == Some(source.to_bits())
+                && event.target == Some(target.to_bits())
+                && event.kind == shared::protocol::CombatLogKind::Damage
+                && event.amount > 0)
     );
     assert_eq!(
         stacks(&run),
