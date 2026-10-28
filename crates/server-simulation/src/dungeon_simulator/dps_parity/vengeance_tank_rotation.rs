@@ -689,6 +689,47 @@ mod tests {
     }
     #[test]
     #[ignore = "requires native Vengeance profile"]
+    fn vengeful_beast_extends_hardcast_metamorphosis() {
+        use super::super::*;
+        fn duration(selected: bool) -> f64 {
+            let (profile, mut traits) = read_reference(581).unwrap();
+            if !selected {
+                traits.retain(|trait_| trait_.entry_id != 112899);
+            }
+            let identity = inputs::read_actor(&profile).unwrap();
+            let mut run = prepare_reference(profile, &traits, 1, identity).unwrap();
+            let actor = run.actor;
+            let target = run.targets[0];
+            engage(&mut run);
+            crate::spell_cast::cast_for_player_with_target(
+                run.app.world_mut(),
+                actor,
+                187827,
+                Some(target),
+            )
+            .unwrap();
+            let now = crate::spell_cast::now(run.app.world());
+            run.app
+                .world()
+                .get::<crate::auras::ActiveAuras>(actor)
+                .unwrap()
+                .iter()
+                .find(|aura| aura.spell_id == 187827)
+                .unwrap()
+                .expires_at
+                .unwrap()
+                - now
+        }
+        let base = duration(false);
+        let extended = duration(true);
+        assert!(
+            (base - 15.0).abs() < 0.05 && (extended - 20.0).abs() < 0.05,
+            "base {base}, selected {extended}"
+        );
+    }
+
+    #[test]
+    #[ignore = "requires native Vengeance profile"]
     fn fiery_demise_increases_fire_damage_to_branded_target() {
         use super::super::*;
         fn meteor(selected: bool) -> i32 {
