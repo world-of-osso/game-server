@@ -43,6 +43,9 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 ### Shaman pet passive modifiers
 
 - Shaman pets retain eligible owner passive spell modifiers and native base values. Mastery-scaled Shaman action effects use the pet's own mastery, not the owner's mastery; do not remove other owner passives (SimC76f8118 `pet.cpp`217–228, `sc_shaman.cpp`3822–3833,13183–13224).
+### Literal interrupt readiness
+
+- Literal interrupt actions require their selected enemy to be casting. Match the pinned class-specific SimC `target_ready` rules; Skull Bash bypasses the Druid casting check for fluid-form shifting (`sc_rogue.cpp4682–4687`, `sc_druid.cpp3573–3578,8174–8181`).
 
 ### Stormbound Emblem of Dazar
 
