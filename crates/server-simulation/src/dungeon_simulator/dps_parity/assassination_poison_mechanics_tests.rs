@@ -83,6 +83,43 @@ fn rogue_kingsbane_earned_poison_hits_stack_native_ramp_until_dot_ends() {
 }
 
 #[test]
+#[ignore = "requires prepared259 native profile and world data"]
+fn assassination_deathmark_repeats_earned_lethal_poison_and_kingsbane_stacks() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_measurement(259, 1).unwrap();
+    engage(&mut run);
+    let actor = run.actor;
+    let target = run.targets[0];
+    let started = run.app.world().resource::<Time>().elapsed();
+    install_fixture_lifetimes(&mut run, started);
+    for spell in [2818, 360194, 385627] {
+        crate::spell_cast::cast_triggered(run.app.world_mut(), actor, spell, Some(target), 1);
+    }
+    assert!(crate::auras::has_aura(run.app.world(), target, 360194));
+    assert!(crate::auras::has_aura(run.app.world(), target, 385627));
+    let stacks = |run: &Run| run.app.world().get::<crate::auras::ActiveAuras>(actor).unwrap().iter()
+        .find(|aura| aura.spell_id == 394095 && aura.caster == actor).map_or(0, |aura| aura.stacks);
+    for _ in 0..300 {
+        let before = stacks(&run);
+        let events_before = run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0.len();
+        drive_player(&mut run).unwrap();
+        run.app.update();
+        let events = &run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0[events_before..];
+        let hits: Vec<_> = events.iter().filter(|event| event.source == Some(actor.to_bits()) && event.target == Some(target.to_bits())
+            && matches!(event.spell_id, Some(113780 | 383414)) && event.kind == shared::protocol::CombatLogKind::Damage && event.amount > 0).collect();
+        if !hits.is_empty() {
+            for spell in [113780, 383414] {
+                let count = hits.iter().filter(|event| event.spell_id == Some(spell)).count();
+                assert_eq!(count % 2, 0, "each earned lethal proc repeats during Deathmark: spell{spell} count{count}");
+            }
+            assert_eq!(usize::from(stacks(&run) - before), hits.len(), "each actual poison hit earns one Kingsbane stack");
+            return;
+        }
+    }
+    panic!("real rotation must earn a lethal poison proc during Deathmark");
+}
+
+#[test]
 #[ignore = "requires prepared259 private native DB and player actor"]
 fn rogue_envenom_consumes_earned_native_amplifying_poison_threshold() {
     let _seed = crate::random::seed_scope(70448);
