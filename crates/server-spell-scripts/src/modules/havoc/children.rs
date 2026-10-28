@@ -43,7 +43,7 @@ fn cast_felblade_child(world: &mut World, caster: Entity, spell: &SpellInfo) {
 
 fn after_damage(world: &mut World, ctx: &EffectCtx, target: Entity, _crit: bool, amount: f32) {
     if ctx.spell.id == 370966 && amount > 0.0 && has_talent(world, ctx.caster, 370965) {
-        apply_hunt_secondary_dots(world, ctx, target);
+        apply_hunt_secondary_dots(world, ctx, target, 370969);
     }
     // SimC7524–7551 rolls Onslaught before the eligible Essence Break child.
     super::havoc_onslaught::roll_from_offhand(world, ctx, target, amount);
@@ -65,14 +65,13 @@ fn after_damage(world: &mut World, ctx: &EffectCtx, target: Entity, _crit: bool,
 
 // SimC76f8118 sc_demon_hunter.cpp5488–5495,5505–5511: Hunt's
 // impact applies its native DoT to up to the native370967 effect0 targets.
-fn apply_hunt_secondary_dots(world: &mut World, ctx: &EffectCtx, primary: Entity) {
-    const DOT: u32 = 370969;
+pub(super) fn apply_hunt_secondary_dots(world: &mut World, ctx: &EffectCtx, primary: Entity, dot_id: u32) {
     let cap = combat::spell_cast::scripts::script_effect_value(world, ctx.caster, 370967, 0) as u32;
     let Some(center) = combat::spell_cast::targets::position(world, ctx.caster) else {
         error!("Native Hunt caster position absent");
         return;
     };
-    let Some(dot) = world.resource::<SpellStore>().get(DOT) else {
+    let Some(dot) = world.resource::<SpellStore>().get(dot_id) else {
         error!("Native Hunt DoT absent");
         return;
     };
@@ -94,7 +93,7 @@ fn apply_hunt_secondary_dots(world: &mut World, ctx: &EffectCtx, primary: Entity
         .filter(|target| *target != primary)
         .take(cap as usize - 1)
     {
-        combat::spell_cast::cast_triggered(world, ctx.caster, DOT, Some(target), ctx.depth + 1);
+        combat::spell_cast::cast_triggered(world, ctx.caster, dot_id, Some(target), ctx.depth + 1);
     }
 }
 

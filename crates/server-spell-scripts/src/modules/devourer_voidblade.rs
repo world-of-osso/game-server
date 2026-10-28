@@ -10,6 +10,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::BeforeNativeOnCast(trigger_voidstep),
     SpellScriptHook::AfterFireDirectHit(apply_devourers_bite),
     SpellScriptHook::AfterFireDirectHit(reset_immolation_on_hunt),
+    SpellScriptHook::ResolvedDamage(apply_hunt_secondary_dots),
     SpellScriptHook::AfterNativeLaunch(after_launch),
 ];
 
@@ -77,6 +78,20 @@ fn apply_devourers_bite(
     // SimC76f8118 cpp5518–5523,5841–5846: landed primary hit applies the target debuff.
     if !spell_cast::try_cast_triggered(world, ctx.caster, 1241532, Some(target), ctx.depth + 1) {
         error!(?target, "native Devourer's Bite was refused");
+    }
+}
+
+fn apply_hunt_secondary_dots(
+    world: &mut World,
+    ctx: &spell_cast::effects::EffectCtx<'_>,
+    target: Entity,
+    _: bool,
+    amount: f32,
+) {
+    if ctx.spell.id == 1246169 && amount > 0.0
+        && world.get::<ActiveSpec>(ctx.caster).map(|spec| spec.0) == Some(1480)
+    {
+        super::havoc_children::apply_hunt_secondary_dots(world, ctx, target, 1246168);
     }
 }
 
