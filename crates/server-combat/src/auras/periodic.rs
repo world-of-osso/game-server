@@ -254,24 +254,24 @@ fn run_ticks(world: &mut World, unit: Entity, ticks: Vec<Tick>) {
         else {
             continue;
         };
-        if let Some(aura) = world
+        let aura = world
             .get::<ActiveAuras>(unit)
             .and_then(|auras| auras.get(tick.instance_id))
-            && let Some(effect) = aura
-                .effects
-                .iter()
-                .find(|effect| effect.index == tick.effect_index)
+            .expect("retained periodic aura");
+        let effect = aura
+            .effects
+            .iter()
+            .find(|effect| effect.index == tick.effect_index)
+            .expect("retained periodic effect");
+        let stacks = if world
+            .resource::<crate::spell_cast::script_registry::SpellScriptRegistry>()
+            .counter_only_dot_stacks(aura.spell_id)
         {
-            let stacks = if world
-                .resource::<crate::spell_cast::script_registry::SpellScriptRegistry>()
-                .counter_only_dot_stacks(aura.spell_id)
-            {
-                1.0
-            } else {
-                aura.stack_multiplier()
-            };
-            tick.amount = periodic_live_amount(world, tick.caster, &spell, effect) * stacks;
-        }
+            1.0
+        } else {
+            aura.stack_multiplier()
+        };
+        tick.amount = periodic_live_amount(world, tick.caster, &spell, effect) * stacks;
         spell.cast_periodic_fraction = Some(tick.fraction);
         spell.cast_periodic_ordinal = Some(tick.ordinal);
         spell.cast_primary_target = tick.cast_primary_target;
