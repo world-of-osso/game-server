@@ -272,6 +272,27 @@ impl super::SpecDriver for Rotation {
 mod tests {
     #[test]
     #[ignore = "requires canonical world database and MID2 Blood inputs"]
+    fn blood_dancing_rune_weapon_spawns_owned_actor() {
+        use shared::components::{Npc, UnitSummonedBy};
+        let mut run = super::super::prepare_registered_player(250, 1).unwrap();
+        let actor = run.actor;
+        super::super::engage(&mut run);
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 49028, Some(actor), false)
+            .unwrap();
+        for _ in 0..4 {
+            run.app.update();
+        }
+        let world = run.app.world_mut();
+        let count = world
+            .query::<(&Npc, &UnitSummonedBy)>()
+            .iter(world)
+            .filter(|(npc, owner)| npc.template_id == 27893 && owner.0 == actor.to_bits())
+            .count();
+        assert!(count > 0, "Dancing Rune Weapon must summon its owned actor");
+    }
+
+    #[test]
+    #[ignore = "requires canonical world database and MID2 Blood inputs"]
     fn blood_bone_shield_stats_do_not_scale_with_stacks() {
         let mut run = super::super::prepare_registered_player(250, 1).unwrap();
         let actor = run.actor;
