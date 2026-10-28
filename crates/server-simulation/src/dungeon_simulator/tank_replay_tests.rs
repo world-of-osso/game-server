@@ -311,6 +311,50 @@ fn simc_dummy_bleed_application_is_a_zero_damage_physical_hit() {
 
 #[test]
 #[ignore = "requires canonical Brewmaster profile and world database"]
+fn elusive_brawler_only_procs_from_blackout_and_incoming_physical_hits() {
+    use crate::auras::{self, RemoveReason};
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::dps_parity::prepare_registered_player(268, 1).unwrap();
+    super::dps_parity::engage(&mut run);
+    let tank = run.actor;
+    let source = run.targets[0];
+    auras::remove_auras(run.app.world_mut(), tank, RemoveReason::Cancelled, |aura| {
+        aura.spell_id == 195630
+    });
+    for spell in [100780, 121253] {
+        crate::spell_cast::creature_cast(run.app.world_mut(), tank, spell, Some(source), false)
+            .unwrap();
+        for _ in 0..40 {
+            run.app.update();
+        }
+        assert!(
+            !auras::has_aura(run.app.world(), tank, 195630),
+            "spell {spell} must not grant mastery"
+        );
+    }
+    crate::spell_cast::creature_cast(run.app.world_mut(), tank, 205523, Some(source), false)
+        .unwrap();
+    for _ in 0..40 {
+        run.app.update();
+    }
+    assert!(
+        auras::has_aura(run.app.world(), tank, 195630),
+        "Blackout Kick grants mastery"
+    );
+    auras::remove_auras(run.app.world_mut(), tank, RemoveReason::Cancelled, |aura| {
+        aura.spell_id == 195630
+    });
+    crate::combat::replay_healer_hit(run.app.world_mut(), source, tank, &avoided_hit("Hit"))
+        .unwrap();
+    run.app.update();
+    assert!(
+        auras::has_aura(run.app.world(), tank, 195630),
+        "incoming physical melee hit grants mastery"
+    );
+}
+
+#[test]
+#[ignore = "requires canonical Brewmaster profile and world database"]
 fn simc_dummy_bleed_tick_grants_elusive_brawler_but_self_damage_does_not() {
     use crate::auras::{self, RemoveReason};
     let _seed = crate::random::seed_scope(70448);
