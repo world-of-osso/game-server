@@ -698,15 +698,17 @@ mod tests {
         let actor = run.actor;
         let target = run.targets[0];
         engage(&mut run);
-        crate::spell_cast::cast_for_player_with_target(
-            run.app.world_mut(),
-            actor,
-            263642,
-            Some(target),
-        )
-        .unwrap();
-        for _ in 0..35 {
-            run.app.update();
+        for _ in 0..2 {
+            crate::spell_cast::cast_for_player_with_target(
+                run.app.world_mut(),
+                actor,
+                263642,
+                Some(target),
+            )
+            .unwrap();
+            for _ in 0..35 {
+                run.app.update();
+            }
         }
         crate::spell_cast::cast_for_player_with_target(
             run.app.world_mut(),
