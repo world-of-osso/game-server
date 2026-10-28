@@ -1559,9 +1559,11 @@ fn modded_amount(world: &World, ctx: &EffectCtx, amount: f32, periodic: bool) ->
     // SimC76f8118 sc_hunter.cpp2537–2545/2776–2786: pet abilities read
     // their owner's matching talent/buff effects. Native masks and amounts
     // decide applicability; the pet remains the actual damage caster.
-    let owner = world
-        .get::<crate::hunter_pet::HunterPet>(ctx.caster)
-        .map_or(ctx.caster, |pet| pet.owner);
+    let owner = super::guardian::rune_weapon_owner(world, ctx.caster).unwrap_or_else(|| {
+        world
+            .get::<crate::hunter_pet::HunterPet>(ctx.caster)
+            .map_or(ctx.caster, |pet| pet.owner)
+    });
     spell_mods::modify(world, owner, ctx.spell, op, amount)
 }
 
