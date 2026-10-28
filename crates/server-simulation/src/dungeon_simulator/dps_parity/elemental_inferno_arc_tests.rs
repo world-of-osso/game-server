@@ -22,19 +22,17 @@ fn captured_target_factor(run: &mut Run, spell: u32) -> f64 {
         run.app.update();
     }
     let capture = run.app.world().resource::<FactorCapture>().export();
-    capture["events"]
+    let factors = capture["events"]
         .as_array()
         .unwrap()
         .iter()
-        .find(|event| event["event"] == "direct_amount")
+        .find(|event| event["event"] == "direct_amount" && event["spell_id"] == spell)
         .expect("actual native damage result")["applied_multipliers"]
         .as_array()
-        .unwrap()
-        .iter()
-        .find(|factor| factor["factor"] == "giantkiller")
-        .expect("target-qualified multiplier")["value"]
-        .as_f64()
-        .unwrap()
+        .unwrap();
+    ["giantkiller", "target_damage"].into_iter().map(|name| {
+        factors.iter().find(|factor| factor["factor"] == name).unwrap()["value"].as_f64().unwrap()
+    }).product()
 }
 
 #[test]
@@ -69,7 +67,7 @@ fn elemental_inferno_arc_requires_owned_flame_shock_on_recipient() {
     assert!((plain - 1.0).abs() < 0.001, "no Flame Shock: {plain}");
     assert!(
         (affected - (1.0 + percent / 100.0)).abs() < 0.001,
-        "real Flame Shock amplifies native Chain Overload: {affected}"
+        "real Flame Shock amplifies native Chain Overload once: {affected}"
     );
     assert!(
         (removed - 1.0).abs() < 0.001,

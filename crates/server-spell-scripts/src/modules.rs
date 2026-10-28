@@ -127,7 +127,6 @@ register_modules! {
     elemental_fellowship: (2624, "modules/elemental_fellowship.rs"),
     elemental_flow_overload: (2640, "modules/elemental_flow_overload.rs"),
     elemental_fusion: (2621, "modules/elemental_fusion.rs"),
-    elemental_inferno_arc: (2641, "modules/elemental_inferno_arc.rs"),
     elemental_lava_overload: (2626, "modules/elemental_lava_overload.rs"),
     elemental_offering: (2623, "modules/elemental_offering.rs"),
     elemental_overload_ascendance: (2627, "modules/elemental_overload_ascendance.rs"),
