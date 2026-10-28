@@ -13,6 +13,7 @@ Replay recorded incoming damage in the native server combat simulation to compar
 - [ ] In SimC dummy comparison mode, apply and report the trace-declared Mark of the Wild, Power Word: Fortitude, Battle Shout and Skyfury raid buffs using their trace spell IDs. Do not add them to raid-free DPS parity or no-healer replay.
 - [ ] Mistweaver Mana Tea uses native-description-derived spending, stack cap, channel consumption and mana restoration. The pinned SimC source has no Mistweaver Mana Tea model.
 - [ ] Print report tables with `scripts/healer_tank_replay.py`. SimC healer reports include frame-sampled minimum healer mana, minimum tank health including immediately after each incoming hit, and tank damage receipts per replay second.
+- [ ] `--all` runs all seven healers on the Protection Paladin trace and six tanks on their respective 300-second seed-70448 SimC dummy traces, with both externally healed and no-healer tank runs. Run replays in parallel and print healer and tank summary tables; write per-spell details in dated output files.
 - [ ] See [Restoration Shaman (264)](healer-tank-replay/264.md) for its replay policy and data gaps.
 
 ## Specializations
