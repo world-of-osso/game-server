@@ -801,6 +801,52 @@ mod tests {
 
     #[test]
     #[ignore = "requires canonical world database and MID2 Blood inputs"]
+    fn blood_vampiric_strike_hits_primary_target_once_and_heals() {
+        use shared::protocol::CombatLogKind;
+        let mut run = super::super::prepare_registered_player(250, 1).unwrap();
+        let actor = run.actor;
+        let target = run.targets[0];
+        super::super::engage(&mut run);
+        let world = run.app.world_mut();
+        let mut health = world.get_mut::<shared::components::Health>(actor).unwrap();
+        health.current = health.max * 0.5;
+        crate::spell_cast::creature_cast(world, actor, 433895, Some(target), false).unwrap();
+        for _ in 0..4 {
+            run.app.update();
+        }
+        let events = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0;
+        let hits = events
+            .iter()
+            .filter(|event| {
+                event.source == Some(actor.to_bits())
+                    && event.target == Some(target.to_bits())
+                    && event.spell_id == Some(433895)
+                    && event.kind == CombatLogKind::Damage
+                    && event.amount > 0
+            })
+            .count();
+        assert_eq!(
+            hits, 1,
+            "Blood uses one damage effect on the primary target"
+        );
+        assert!(
+            events
+                .iter()
+                .any(|event| event.source == Some(actor.to_bits())
+                    && event.target == Some(actor.to_bits())
+                    && event.spell_id == Some(434422)
+                    && event.kind == CombatLogKind::Heal
+                    && event.amount > 0),
+            "Vampiric Strike still heals"
+        );
+    }
+
+    #[test]
+    #[ignore = "requires canonical world database and MID2 Blood inputs"]
     fn blood_transfusion_increases_real_weapon_damage_per_stack() {
         use shared::components::{Npc, UnitSummonedBy};
         use shared::protocol::CombatLogKind;
