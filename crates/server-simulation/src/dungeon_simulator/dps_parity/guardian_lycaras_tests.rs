@@ -24,6 +24,7 @@ fn guardian_lycaras_bear_versatility_follows_form_transitions() {
         talent_amount
     );
     assert!(talent_amount > 0.0);
+    run.app.update();
     let spell = crate::spell_info::SpellInfo::default();
     let with_versatility =
         crate::auras::damage_taken_multiplier(run.app.world(), actor, run.targets[0], &spell);
@@ -33,6 +34,7 @@ fn guardian_lycaras_bear_versatility_follows_form_transitions() {
         crate::auras::RemoveReason::Cancelled,
         |aura| aura.spell_id == 378991 && aura.caster == actor,
     );
+    run.app.update();
     let without_versatility =
         crate::auras::damage_taken_multiplier(run.app.world(), actor, run.targets[0], &spell);
     assert!(
