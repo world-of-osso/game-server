@@ -286,7 +286,18 @@ mod tests {
         assert_eq!(report["level"], 90);
         assert!(report["incoming_events"].as_u64().unwrap() > 0, "{report}");
         assert!(report["raw_damage"].as_f64().unwrap() > 0.0, "{report}");
-        assert!(report["active_mitigation_uptime"].is_number(), "{report}");
+        assert!(
+            report["active_mitigation_uptime"].as_f64().unwrap() > 0.0,
+            "{report}"
+        );
+        assert!(
+            report["tank_casts"]["49998"].as_u64().unwrap() > 0,
+            "{report}"
+        );
+        assert!(
+            report["tank_casts"]["195292"].as_u64().unwrap() > 0,
+            "{report}"
+        );
         println!("BLOOD_TANK_REPORT={report}");
     }
 }
