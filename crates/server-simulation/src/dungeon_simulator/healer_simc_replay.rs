@@ -19,6 +19,7 @@ type Registration = (u32, PreparePolicy);
 
 // Spec owners add their own policy here. No test fixture is a production policy.
 const POLICIES: &[Registration] = &[
+    (65, super::holy_paladin_simc::prepare),
     (264, super::restoration_shaman_replay::prepare),
     (270, super::mistweaver_replay::prepare),
 ];
@@ -67,6 +68,13 @@ fn replay_with_registry(
     let mut run = super::dps_parity::prepare_registered_player(66, 1)?;
     let healer = super::dps_parity::spawn_second_reference_player(&mut run, spec)?;
     let tank = run.actor;
+    // This fixture is a single-faction party; preserve the healer's profile race.
+    let faction = *run
+        .app
+        .world()
+        .get::<shared::components::UnitFactionTemplate>(tank)
+        .ok_or("reference tank faction absent")?;
+    run.app.world_mut().entity_mut(healer).insert(faction);
     let party = crate::followers::simulator::spawn_party_for_reference_healer(
         run.app.world_mut(),
         tank,
