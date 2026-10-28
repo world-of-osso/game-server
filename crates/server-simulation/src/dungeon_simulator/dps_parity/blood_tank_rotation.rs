@@ -285,16 +285,41 @@ mod tests {
             assert!(crate::auras::has_aura(run.app.world(), actor, 374261));
             let mut health = run.app.world_mut().get_mut::<Health>(target).unwrap();
             health.current = health.max * fraction;
-            crate::spell_cast::powers::change_power(run.app.world_mut(), actor, PowerType::RunicPower, 1000.0);
-            crate::spell_cast::creature_cast(run.app.world_mut(), actor, 49998, Some(target), false).unwrap();
-            run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0.iter().rev()
-                .find(|event| event.spell_id == Some(49998) && event.kind == CombatLogKind::Damage && event.source == Some(actor.to_bits()))
-                .expect("Death Strike hit").amount
+            crate::spell_cast::powers::change_power(
+                run.app.world_mut(),
+                actor,
+                PowerType::RunicPower,
+                1000.0,
+            );
+            crate::spell_cast::creature_cast(
+                run.app.world_mut(),
+                actor,
+                49998,
+                Some(target),
+                false,
+            )
+            .unwrap();
+            run.app
+                .world()
+                .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+                .0
+                .iter()
+                .rev()
+                .find(|event| {
+                    event.spell_id == Some(49998)
+                        && event.kind == CombatLogKind::Damage
+                        && event.source == Some(actor.to_bits())
+                })
+                .expect("Death Strike hit")
+                .amount
         }
         let full = hit(1.0) as f32;
         let half = hit(0.5) as f32;
         let low = hit(0.1) as f32;
-        assert!((half / full - 1.65).abs() < 0.01, "half={half}, full={full}");
+        assert!(
+            (half / full - 1.65).abs() < 0.01,
+            "half={half}, full={full}"
+        );
         assert!((low / full - 2.04).abs() < 0.01, "low={low}, full={full}");
     }
 

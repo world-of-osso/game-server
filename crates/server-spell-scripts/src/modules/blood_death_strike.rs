@@ -33,11 +33,17 @@ const HEMOSTASIS: u32 = 273947;
 // SimC76f8118 sc_death_knight.cpp10070–10091: Sanguination scales the
 // owner's Death Strike with actual target missing health, capped at 80%.
 fn sanguination_damage(world: &World, ctx: &EffectCtx<'_>, target: Entity, periodic: bool) -> f32 {
-    if periodic || ctx.spell.id != DEATH_STRIKE || !blood(world, ctx.caster)
-        || !combat::auras::has_aura(world, ctx.caster, 326801) {
+    if periodic
+        || ctx.spell.id != DEATH_STRIKE
+        || !blood(world, ctx.caster)
+        || !combat::auras::has_aura(world, ctx.caster, 326801)
+    {
         return 1.0;
     }
-    let Some(health) = world.get::<Health>(target).filter(|health| health.max > 0.0) else {
+    let Some(health) = world
+        .get::<Health>(target)
+        .filter(|health| health.max > 0.0)
+    else {
         return 1.0;
     };
     let bond = 1.0 + aura_effect(world, ctx.caster, 374261, 0).unwrap_or(0.0) / 100.0;
