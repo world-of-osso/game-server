@@ -59,14 +59,20 @@ fn elemental_inferno_arc_requires_owned_flame_shock_on_recipient() {
         1,
     ));
     let affected = captured_target_factor(&mut run, 45297);
-    let unrelated = captured_target_factor(&mut run, 285466);
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        run.targets[0],
+        crate::auras::RemoveReason::Consumed,
+        |aura| aura.spell_id == 188389 && aura.caster == run.actor,
+    );
+    let removed = captured_target_factor(&mut run, 45297);
     assert!((plain - 1.0).abs() < 0.001, "no Flame Shock: {plain}");
     assert!(
         (affected - (1.0 + percent / 100.0)).abs() < 0.001,
         "real Flame Shock amplifies native Chain Overload: {affected}"
     );
     assert!(
-        (unrelated - 1.0).abs() < 0.001,
-        "Lava Overload is excluded: {unrelated}"
+        (removed - 1.0).abs() < 0.001,
+        "removing the owned Flame Shock removes its factor: {removed}"
     );
 }
