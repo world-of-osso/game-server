@@ -129,9 +129,6 @@ impl Driver {
         if self.selected_precombat && prepared.setup_pending() {
             return Err("PRECOMBAT_WAIT_REQUIRED: advance native frames via poll_precombat".into());
         }
-        if self.selected_precombat && self.precombat_harmful_executed {
-            return Ok(None);
-        }
         let item_context = item_context::ItemContext {
             facts,
             equipment,
@@ -193,6 +190,12 @@ impl Driver {
         execution: Execution,
     ) -> Result<(), String> {
         let ends_precombat = self.selected_precombat && harmful_execution(world, &execution)?;
+        // SimC76f8118 player.cpp6150–6182 executes one harmful precombat
+        // action but continues scanning and executes later non-harmful rows.
+        if ends_precombat && self.precombat_harmful_executed {
+            self.pending_line = None;
+            return Ok(());
+        }
         let fragment_row = if matches!(execution, Execution::PickupFragment(_)) {
             Some(
                 action
