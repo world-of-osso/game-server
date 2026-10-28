@@ -30,9 +30,17 @@ fn captured_target_factor(run: &mut Run, spell: u32) -> f64 {
         .expect("actual native damage result")["applied_multipliers"]
         .as_array()
         .unwrap();
-    ["giantkiller", "target_damage"].into_iter().map(|name| {
-        factors.iter().find(|factor| factor["factor"] == name).unwrap()["value"].as_f64().unwrap()
-    }).product()
+    ["giantkiller", "target_damage"]
+        .into_iter()
+        .map(|name| {
+            factors
+                .iter()
+                .find(|factor| factor["factor"] == name)
+                .unwrap()["value"]
+                .as_f64()
+                .unwrap()
+        })
+        .product()
 }
 
 #[test]

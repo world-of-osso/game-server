@@ -49,7 +49,8 @@ fn condition_active(world: &World, actor: Entity, expression: &Expression) -> Re
             ("flametongue_weapon".into(), 318038),
             ("rite_of_adjuration".into(), 433583),
             ("rite_of_sanctification".into(), 433568),
-        ].into(),
+        ]
+        .into(),
         ..Default::default()
     };
     let facts = NativeFacts::new(
