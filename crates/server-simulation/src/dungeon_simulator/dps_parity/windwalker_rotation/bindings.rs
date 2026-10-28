@@ -136,7 +136,6 @@ fn self_target(name: &str) -> bool {
     matches!(
         name,
         "zenith"
-            | "touch_of_karma"
             | "spinning_crane_kick"
             | "invoke_xuen_the_white_tiger"
             | "berserking"

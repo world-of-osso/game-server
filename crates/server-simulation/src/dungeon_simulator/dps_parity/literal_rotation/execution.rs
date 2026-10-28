@@ -192,6 +192,11 @@ impl Prepared {
         Ok(prepared)
     }
 
+    /// Suppress every target context for a fixture-specific action policy.
+    pub fn suppress_action(&mut self, name: &str) {
+        self.ready.retain(|(action, _), _| action != name);
+    }
+
     pub fn setup_pending(&self) -> bool {
         self.cast_active || self.gcd_active
     }
