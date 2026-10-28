@@ -396,6 +396,30 @@ mod tests {
     }
     #[test]
     #[ignore = "requires native Vengeance profile"]
+    fn fiery_brand_impact_applies_target_and_caster_auras() {
+        use super::super::*;
+        let _seed = crate::random::seed_scope(70_448);
+        let (profile, traits) = read_reference(581).unwrap();
+        let identity = inputs::read_actor(&profile).unwrap();
+        let mut run = prepare_reference(profile, &traits, 1, identity).unwrap();
+        let actor = run.actor;
+        let target = run.targets[0];
+        crate::spell_cast::cast_for_player_with_target(
+            run.app.world_mut(),
+            actor,
+            204021,
+            Some(target),
+        )
+        .unwrap();
+        for _ in 0..20 {
+            run.app.update();
+        }
+        assert!(crate::auras::has_aura(run.app.world(), target, 207771));
+        assert!(crate::auras::has_aura(run.app.world(), actor, 207771));
+    }
+
+    #[test]
+    #[ignore = "requires native Vengeance profile"]
     fn fracture_weapon_impacts_each_create_native_lesser_fragment() {
         use super::super::*;
         use server::soul_fragments::{self, FragmentFilter};
