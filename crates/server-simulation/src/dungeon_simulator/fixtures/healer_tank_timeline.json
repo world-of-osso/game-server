@@ -1,0 +1,7 @@
+{
+  "hits": [
+    {"time_ms": 250, "school": 1, "amount": 1250.0, "target_role": "tank"},
+    {"time_ms": 1300, "school": 4, "amount": 350.5, "target_role": "healer"},
+    {"time_ms": 1300, "school": 32, "amount": 700.0, "target_role": "damage"}
+  ]
+}
