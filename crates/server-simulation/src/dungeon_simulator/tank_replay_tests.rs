@@ -967,6 +967,30 @@ fn protection_simc_dummy_healing_supports_full_comparison() {
         .map(|amount| amount.as_f64().unwrap())
         .sum();
     assert_eq!(total, report["damage_taken"].as_f64().unwrap());
+    let before_absorbs = report["incoming_before_absorbs"].as_object().unwrap();
+    for kind in ["swing", "strike", "bleed"] {
+        assert!(
+            before_absorbs[kind].as_f64().unwrap() >= categories[kind].as_f64().unwrap(),
+            "{report}"
+        );
+    }
+    let outcomes = report["incoming_outcomes"].as_object().unwrap();
+    assert_eq!(
+        outcomes
+            .iter()
+            .filter(|(kind, _)| kind.starts_with("swing:"))
+            .map(|(_, count)| count.as_u64().unwrap())
+            .sum::<u64>(),
+        148
+    );
+    assert_eq!(
+        outcomes
+            .iter()
+            .filter(|(kind, _)| kind.starts_with("strike:"))
+            .map(|(_, count)| count.as_u64().unwrap())
+            .sum::<u64>(),
+        10
+    );
     assert!(report["time_to_death"].is_null(), "{report}");
     assert!(
         report["external_healing_effective"].as_f64().unwrap() > 0.0,
