@@ -364,6 +364,8 @@ pub struct ProcTimers {
 pub struct AuraInstance {
     pub instance_id: u32,
     pub spell_id: u32,
+    /// Native spell name, used to break ties between equal absorb amounts.
+    absorb_name: String,
     pub caster: Entity,
     pub source: AuraSource,
     /// Item-level snapshot of the applied aura effects.
@@ -1093,6 +1095,7 @@ fn build_instance(
     AuraInstance {
         instance_id: 0,
         spell_id: spell.id,
+        absorb_name: spell.name.to_lowercase().replace(' ', "_"),
         caster,
         source: application.source,
         cast_item_level: spell.cast_item_level,
@@ -2508,7 +2511,7 @@ pub(crate) fn melee_damage_from_caster(auras: Option<&ActiveAuras>, attacker: En
 }
 
 /// SCHOOL_ABSORB 69: matching absorbs (MiscValue school mask) soak damage,
-/// oldest aura first; a depleted absorb removes its aura. Returns
+/// priority absorbs first, then smallest capacity first; a depleted absorb removes its aura. Returns
 /// `(damage left, absorbed)`.
 pub fn absorb_damage(world: &mut World, unit: Entity, school_mask: u32, amount: f32) -> (f32, f32) {
     let result = consume_absorbs(
@@ -2547,25 +2550,52 @@ pub(crate) fn consume_absorbs(
     let Some(auras) = auras else {
         return result;
     };
-    for aura in &mut auras.auras {
+    // SimC76f8118 player.cpp8155–8164, 8170–8270; Soul Barrier is the
+    // high-priority aura in sc_demon_hunter.cpp10505–10510. Instant absorbs
+    // such as Brambles are handled by their own damage mechanics.
+    let mut candidates = auras
+        .auras
+        .iter()
+        .enumerate()
+        .flat_map(|(aura_index, aura)| {
+            aura.effects
+                .iter()
+                .enumerate()
+                .filter_map(move |(effect_index, effect)| {
+                    (effect.aura_type == handlers::SCHOOL_ABSORB
+                        && effect.misc_values[0] as u32 & school != 0
+                        && effect.absorb_remaining > 0.0)
+                        .then_some((aura_index, effect_index))
+                })
+        })
+        .collect::<Vec<_>>();
+    candidates.sort_by(|&(a, ae), &(b, be)| {
+        let left = &auras.auras[a];
+        let right = &auras.auras[b];
+        (left.spell_id != 227225)
+            .cmp(&(right.spell_id != 227225))
+            .then_with(|| {
+                left.effects[ae]
+                    .absorb_remaining
+                    .total_cmp(&right.effects[be].absorb_remaining)
+            })
+            .then_with(|| left.absorb_name.cmp(&right.absorb_name))
+    });
+    for (aura_index, effect_index) in candidates {
+        if result.remaining <= 0.0 {
+            break;
+        }
+        let aura = &mut auras.auras[aura_index];
         let fraction = refresh::absorb_fraction(aura);
-        for effect in aura.effects.iter_mut().filter(|effect| {
-            effect.aura_type == handlers::SCHOOL_ABSORB
-                && effect.misc_values[0] as u32 & school != 0
-                && effect.absorb_remaining > 0.0
-        }) {
-            if result.remaining <= 0.0 {
-                break;
-            }
-            let soaked = (result.remaining * fraction).min(effect.absorb_remaining);
-            effect.absorb_remaining -= soaked;
-            result.remaining -= soaked;
-            result
-                .contributions
-                .push((aura.caster, aura.spell_id, soaked));
-            if effect.absorb_remaining <= 0.0 {
-                result.depleted.push(aura.instance_id);
-            }
+        let effect = &mut aura.effects[effect_index];
+        let soaked = (result.remaining * fraction).min(effect.absorb_remaining);
+        effect.absorb_remaining -= soaked;
+        result.remaining -= soaked;
+        result
+            .contributions
+            .push((aura.caster, aura.spell_id, soaked));
+        if effect.absorb_remaining <= 0.0 {
+            result.depleted.push(aura.instance_id);
         }
     }
     result.absorbed = amount - result.remaining;
