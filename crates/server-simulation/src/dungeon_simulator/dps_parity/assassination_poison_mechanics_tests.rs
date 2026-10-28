@@ -202,3 +202,34 @@ fn rogue_envenom_consumes_earned_native_amplifying_poison_threshold() {
     }
     panic!("rotation must earn Amplifying Poison's native threshold and cast Envenom");
 }
+
+#[test]
+#[ignore = "requires prepared259 native profile and world data"]
+fn assassination_regicide_uses_earned_kingsbane_stacks_and_decays() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_measurement(259, 1).unwrap();
+    engage(&mut run);
+    let started = run.app.world().resource::<Time>().elapsed();
+    install_fixture_lifetimes(&mut run, started);
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, 1250325));
+    let stacks = |run: &Run, spell| run.app.world().get::<crate::auras::ActiveAuras>(run.actor).unwrap().iter()
+        .find(|a| a.spell_id == spell && a.caster == run.actor).map_or(0, |a| a.stacks);
+    let mut previous_ramp = 0;
+    for _ in 0..1000 {
+        drive_player(&mut run).unwrap();
+        run.app.update();
+        let ramp = stacks(&run, 394095);
+        let reward = stacks(&run, 1250331);
+        if previous_ramp >= 5 && ramp == 0 {
+            assert_eq!(reward, previous_ramp / 5, "real Kingsbane stacks grant native haste stacks");
+            let haste = run.app.world().get::<crate::stats::CharacterStats>(run.actor).unwrap().haste_pct;
+            for _ in 0..41 { run.app.update(); }
+            assert_eq!(stacks(&run, 1250331), reward - 1, "one native two-second tick consumes one stack");
+            let after = run.app.world().get::<crate::stats::CharacterStats>(run.actor).unwrap().haste_pct;
+            assert!(after < haste, "losing an earned stack must reduce haste");
+            return;
+        }
+        previous_ramp = ramp;
+    }
+    panic!("literal rotation must earn and complete Kingsbane");
+}
