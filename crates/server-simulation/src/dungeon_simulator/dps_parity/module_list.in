@@ -254,6 +254,7 @@ mod hellcaller_devil_fruit_tests;
 mod howl_tests;
 #[cfg(test)]
 mod guardian_rampant_thorn_tests;
+mod guardian_wild_action_tests;
 mod hunter_bear_tests;
 mod hunter_bloodshed_tests;
 mod hunter_cadence_tests;
