@@ -24,8 +24,14 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
 
 fn register(scripts: &mut AuraScripts) {
     let entry = scripts.0.entry(ALNSIGHT).or_default();
+    entry.check_proc = Some(is_simc_hit);
     entry.on_proc = Some(grant_stat);
     entry.on_remove = Some(clear_bypass);
+}
+
+fn is_simc_hit(_world: &World, _aura: &AuraInstance, event: &procs::AuraEvent) -> bool {
+    // SimC emits no action hit for Alnsight activation or Permeating Chill's native helper.
+    !matches!(event.spell_id, Some(ALNSIGHT | 370898))
 }
 
 fn after_application(world: &mut World, unit: Entity, aura: &AuraInstance) {
@@ -53,10 +59,17 @@ fn grant_stat(world: &mut World, unit: Entity, aura: &AuraInstance, _other: Opti
                 .expect("active Alnsight proc deadline");
             let now = combat::spell_cast::now(world);
             assert!(procs::set_proc_deadline(world, unit, aura.instance_id, now));
-            world.entity_mut(unit).insert(BypassDeadline::Restore(deadline));
+            world
+                .entity_mut(unit)
+                .insert(BypassDeadline::Restore(deadline));
         }
         Some(BypassDeadline::Restore(deadline)) => {
-            assert!(procs::set_proc_deadline(world, unit, aura.instance_id, deadline));
+            assert!(procs::set_proc_deadline(
+                world,
+                unit,
+                aura.instance_id,
+                deadline
+            ));
             world.entity_mut(unit).remove::<BypassDeadline>();
         }
         None => {}
