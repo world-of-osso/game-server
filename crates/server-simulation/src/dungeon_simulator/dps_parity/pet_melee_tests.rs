@@ -183,6 +183,11 @@ fn demonology_felguard_melee_inherits_owner_spell_power() {
     let _seed = crate::random::seed_scope(70_448);
     let mut run = prepare_measurement(266, 1).unwrap();
     super::channel_timing_tests::remove_equipped_proc_drivers(&mut run);
+    let owner = run.actor;
+    // This test holds damage modifiers stable while measuring owner-SP inheritance.
+    crate::auras::remove_auras(run.app.world_mut(), owner, crate::auras::RemoveReason::Cancelled, |aura| {
+        matches!(aura.spell_id, 1250897 | 1281559)
+    });
     engage(&mut run);
     let pet = run
         .app
