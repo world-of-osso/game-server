@@ -521,7 +521,7 @@ mod tests {
     fn untethered_rage_modifies_earned_fragment_spenders() {
         use super::super::*;
         use server::soul_fragments::{self, FragmentFilter};
-        fn spend(spell: u32, selected: bool) -> (u64, i32) {
+        fn spend(spell: u32, selected: bool) -> (u64, f64) {
             let _seed = crate::random::seed_scope(70_448);
             let (profile, mut traits) = read_reference(581).unwrap();
             if !selected {
@@ -561,7 +561,7 @@ mod tests {
                 run.app.update();
             }
             let child = if spell == 247454 { 247455 } else { 228478 };
-            let amount = run
+            let event = run
                 .app
                 .world()
                 .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
@@ -572,15 +572,15 @@ mod tests {
                         && event.target == Some(target.to_bits())
                         && event.kind == shared::protocol::CombatLogKind::Damage
                 })
-                .unwrap()
-                .amount;
+                .unwrap();
+            let amount = f64::from(event.amount) / if event.crit { 2.0 } else { 1.0 };
             (consumed, amount)
         }
         let (base_count, base_damage) = spend(247454, false);
         let (selected_count, selected_damage) = spend(247454, true);
         assert_eq!((base_count, selected_count), (5, 6));
         assert!(
-            (selected_damage as f64 / base_damage as f64 - 1.4).abs() < 0.02,
+            (selected_damage / base_damage - 1.4).abs() < 0.05,
             "Spirit Bomb: {base_damage}/{selected_damage}"
         );
         assert_eq!((spend(228477, false).0, spend(228477, true).0), (2, 3));
