@@ -648,4 +648,56 @@ mod tests {
         assert_eq!(aura.duration_ms, 10_000);
         assert!(!crate::auras::has_aura(run.app.world(), actor, 1270476));
     }
+    #[test]
+    #[ignore = "requires native Vengeance profile"]
+    fn untethered_meta_extends_existing_native_metamorphosis() {
+        use super::super::*;
+        let (profile, traits) = read_reference(581).unwrap();
+        let identity = inputs::read_actor(&profile).unwrap();
+        let mut run = prepare_reference(profile, &traits, 1, identity).unwrap();
+        let actor = run.actor;
+        for spell_id in [187827, 1270476] {
+            crate::auras::apply_aura(
+                run.app.world_mut(),
+                &crate::auras::AuraApplication {
+                    caster: actor,
+                    target: actor,
+                    spell_id,
+                    effect_mask: u32::MAX,
+                    source: crate::auras::AuraSource::Cast,
+                },
+            );
+        }
+        let old = run
+            .app
+            .world()
+            .get::<crate::auras::ActiveAuras>(actor)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 187827)
+            .unwrap()
+            .expires_at
+            .unwrap();
+        crate::spell_cast::cast_for_player_with_target(
+            run.app.world_mut(),
+            actor,
+            187827,
+            Some(actor),
+        )
+        .unwrap();
+        for _ in 0..3 {
+            run.app.update();
+        }
+        let new = run
+            .app
+            .world()
+            .get::<crate::auras::ActiveAuras>(actor)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 187827)
+            .unwrap()
+            .expires_at
+            .unwrap();
+        assert!((new - old - 10.0).abs() < 0.11, "old={old} new={new}");
+    }
 }
