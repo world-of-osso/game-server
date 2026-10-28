@@ -220,6 +220,7 @@ impl Driver {
         } else {
             None
         };
+        let continues_tick = !matches!(execution, Execution::Wait(_));
         match execution {
             Execution::Snapshot => self.snapshot = Some(super::report::stats(world, actor)),
             Execution::Wait(deadline) => self.wait_until = Some(deadline),
@@ -239,6 +240,9 @@ impl Driver {
         }
         self.precombat_harmful_executed |= ends_precombat;
         self.decisions += 1;
+        if let Some(mut progress) = world.get_resource_mut::<super::LiteralTickProgress>() {
+            progress.0 = continues_tick;
+        }
         Ok(())
     }
 

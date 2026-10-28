@@ -667,9 +667,37 @@ fn advance_combat_observed(
     Ok((seconds, buff_uptimes, samples))
 }
 
+#[derive(Resource, Default)]
+struct LiteralTickProgress(bool);
+
+fn drive_literal_tick(run: &mut Run) -> Result<(), String> {
+    let world = run.app.world_mut();
+    world.init_resource::<LiteralTickProgress>();
+    for _ in 0..128 {
+        world.resource_mut::<LiteralTickProgress>().0 = false;
+        let gcd_before = world
+            .get::<crate::spell_cast::SpellHistory>(run.actor)
+            .is_some_and(|history| history.has_active_gcd(crate::spell_cast::history_now(world)));
+        let cast_before = world.get::<shared::casting::CastState>(run.actor).is_some();
+        run.spec_driver
+            .as_mut()
+            .expect("literal driver is present")
+            .drive(world, run.actor, &run.targets)?;
+        let progressed = world.resource::<LiteralTickProgress>().0;
+        let gcd_after = world
+            .get::<crate::spell_cast::SpellHistory>(run.actor)
+            .is_some_and(|history| history.has_active_gcd(crate::spell_cast::history_now(world)));
+        let cast_after = world.get::<shared::casting::CastState>(run.actor).is_some();
+        if !progressed || (!gcd_before && gcd_after) || (!cast_before && cast_after) {
+            return Ok(());
+        }
+    }
+    Err("literal rotation exceeded 128 same-tick actions".into())
+}
+
 fn drive_player(run: &mut Run) -> Result<(), String> {
-    if let Some(driver) = &mut run.spec_driver {
-        driver.drive(run.app.world_mut(), run.actor, &run.targets)?;
+    if run.spec_driver.is_some() {
+        drive_literal_tick(run)?;
     }
     if let Some(rotation) = &mut run.player_rotation {
         rotation.drive(run.app.world_mut(), run.actor, run.targets[0])?;
