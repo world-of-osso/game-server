@@ -129,6 +129,25 @@ fn devastation_scarlet_healing_empowers_and_is_consumed_by_real_living_flame() {
             heal && selected,
             "only selected Scarlet Adaptation stores actual native healing"
         );
+        if heal && selected {
+            let stored = run
+                .app
+                .world()
+                .get::<crate::auras::ActiveAuras>(actor)
+                .unwrap()
+                .iter()
+                .find(|aura| aura.spell_id == 372470 && aura.caster == actor)
+                .unwrap()
+                .effects
+                .iter()
+                .find(|effect| effect.index == 0)
+                .unwrap()
+                .amount;
+            assert!(
+                stored > 0.0,
+                "the visible native aura owns the stored healing"
+            );
+        }
         run.app.insert_resource(
             crate::spell_cast::effects::factor_capture::FactorCapture::new(
                 actor,

@@ -55,12 +55,6 @@ fn check_target(world: &World, _: Entity, spell: u32, _: Entity) -> Result<(), C
     Ok(())
 }
 
-/// `spell_evo_living_flame::HandleHitTarget` (spell_evoker.cpp:505-530): heal a
-/// unit the caster can assist, damage any other; `HandleLaunchTarget` refunds
-/// Energizing Flame's percent of the mana cost on an enemy.
-#[derive(Component, Default)]
-struct ScarletAdaptation(f32);
-
 fn record_scarlet_heal(world: &mut World, event: &shared::protocol::CombatLogEvent) {
     if event.kind != shared::protocol::CombatLogKind::Heal || event.amount <= 0 {
         return;
@@ -68,7 +62,9 @@ fn record_scarlet_heal(world: &mut World, event: &shared::protocol::CombatLogEve
     let (Some(source), Some(spell_id)) = (event.source, event.spell_id) else {
         return;
     };
-    let caster = Entity::from_bits(source);
+    let Some(caster) = Entity::try_from_bits(source) else {
+        return;
+    };
     if !combat::auras::has_aura(world, caster, 372469) {
         return;
     }
@@ -96,14 +92,7 @@ fn record_scarlet_heal(world: &mut World, event: &shared::protocol::CombatLogEve
     // the selected native talent percentage, and the live Living Flame SP cap.
     let fraction = script_effect_value(world, caster, 372469, 0) / 100.0;
     let added = event.amount as f32 * fraction * 0.5;
-    if world.get::<ScarletAdaptation>(caster).is_none() {
-        world
-            .entity_mut(caster)
-            .insert(ScarletAdaptation::default());
-    }
-    let mut value = world.get_mut::<ScarletAdaptation>(caster).unwrap();
-    value.0 = (value.0 + added).min(cap);
-    if !combat::auras::has_aura(world, caster, 372470) {
+    if scarlet_value(world, caster).is_none() {
         combat::auras::apply_aura(
             world,
             &combat::auras::AuraApplication {
@@ -115,6 +104,28 @@ fn record_scarlet_heal(world: &mut World, event: &shared::protocol::CombatLogEve
             },
         );
     }
+    let (instance, current) = scarlet_value(world, caster).expect("native Scarlet Adaptation aura");
+    assert!(combat::auras::set_effect_amount(
+        world,
+        caster,
+        instance,
+        0,
+        (current + added).min(cap)
+    ));
+}
+
+fn scarlet_value(world: &World, caster: Entity) -> Option<(u32, f32)> {
+    let aura = world
+        .get::<combat::auras::ActiveAuras>(caster)?
+        .iter()
+        .find(|aura| aura.spell_id == 372470 && aura.caster == caster)?;
+    let value = aura
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .expect("native Scarlet Adaptation value")
+        .amount;
+    Some((aura.instance_id, value))
 }
 
 fn cast_scarlet_damage(world: &mut World, caster: Entity, target: Entity, depth: u8, bonus: f32) {
@@ -129,9 +140,7 @@ fn cast_scarlet_damage(world: &mut World, caster: Entity, target: Entity, depth:
 }
 
 fn take_scarlet(world: &mut World, caster: Entity) -> f32 {
-    let value = world
-        .get_mut::<ScarletAdaptation>(caster)
-        .map_or(0.0, |mut value| std::mem::take(&mut value.0));
+    let value = scarlet_value(world, caster).map_or(0.0, |(_, value)| value);
     combat::auras::remove_auras(
         world,
         caster,
@@ -141,6 +150,9 @@ fn take_scarlet(world: &mut World, caster: Entity) -> f32 {
     value
 }
 
+/// `spell_evo_living_flame::HandleHitTarget` (spell_evoker.cpp:505-530): heal a
+/// unit the caster can assist, damage any other; `HandleLaunchTarget` refunds
+/// Energizing Flame's percent of the mana cost on an enemy.
 fn living_flame(world: &mut World, caster: Entity, target: Entity, depth: u8) {
     let stacks = world
         .get::<combat::auras::ActiveAuras>(caster)
