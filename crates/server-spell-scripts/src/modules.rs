@@ -82,6 +82,7 @@ register_modules! {
     assassination_white: (2591, "modules/assassination_white.rs"),
     aura_rolls: (110, "modules/aura_rolls.rs"),
     beast_mastery: (20, "modules/beast_mastery.rs"),
+    brewmaster_cooldowns: (1000, "modules/brewmaster_cooldowns.rs"),
     brewmaster_purify: (1000, "modules/brewmaster_purify.rs"),
     brewmaster_empty_barrel: (1000, "modules/brewmaster_empty_barrel.rs"),
     brewmaster_shuffle: (1000, "modules/brewmaster_shuffle.rs"),
