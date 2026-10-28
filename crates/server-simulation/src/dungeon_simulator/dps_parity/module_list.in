@@ -121,6 +121,8 @@ mod dot_duration_tests;
 mod diag_outlaw_ruthlessness_tests;
 mod dk252_tests;
 #[cfg(test)]
+mod pet_owned_target_tests;
+#[cfg(test)]
 mod unholy_nazgrim_tests;
 #[cfg(test)]
 mod unholy_magus_crit_tests;

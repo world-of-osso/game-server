@@ -18,6 +18,10 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 - Actual Dark Transformation grants the selected native Commander owner buff. While it is active, eligible Magi, Lords, lesser ghouls, Gargoyles and Abominations receive its native pet damage bonus, including guardians summoned during the window; permanent ghouls and Horsemen do not (SimC76f8118 `sc_death_knight.cpp2823–2833/3627/3853/4473/5483/8761–8762`).
 
+### Owned pet target damage
+
+- A target aura's native effect381 modifies damage from its caster's controlled pets, while effect380 applies to that caster's guardians. Other owners and non-pet actors do not inherit either effect (SimC76f8118 `sc_death_knight.cpp17013–17025`).
+
 ### Unholy Nazgrim
 
 - Apocalyptic Conquest belongs to the owner while the actual Nazgrim is alive and expires on his demise. Selected Nazgrim's Conquest adds its native effect2 Strength percentage per paid rune, except Scourge Strike uses its base rune cost even when free (SimC76f8118 `sc_death_knight.cpp5405–5414/7332–7373/13100–13120`).

@@ -1,4 +1,4 @@
-//! SimC76f8118 parse_effects: pet429, guardian531 and caster's guardian380.
+//! SimC76f8118 parse_effects: pet429, guardian531 and owner-target effects380/381.
 use super::{ActiveAuras, AuraStatMods, handlers};
 use crate::hunter_pet::HunterPet;
 use crate::spell_cast::summon::SummonedCreature;
@@ -45,12 +45,14 @@ fn owner_multiplier(mods: &AuraStatMods, guardian: bool) -> f32 {
     }
 }
 
-fn guardian_taken_multiplier(
-    ownership: Option<(Entity, bool)>,
-    auras: Option<&ActiveAuras>,
-) -> f32 {
-    let Some((owner, true)) = ownership else {
+fn owner_taken_multiplier(ownership: Option<(Entity, bool)>, auras: Option<&ActiveAuras>) -> f32 {
+    let Some((owner, guardian)) = ownership else {
         return 1.0;
+    };
+    let kind = if guardian {
+        handlers::MOD_DAMAGE_FROM_CASTER_GUARDIAN
+    } else {
+        handlers::MOD_DAMAGE_FROM_CASTER_PET
     };
     auras.map_or(1.0, |auras| {
         auras
@@ -60,7 +62,7 @@ fn guardian_taken_multiplier(
                 let stacks = aura.stack_multiplier();
                 aura.effects
                     .iter()
-                    .filter(|effect| effect.aura_type == handlers::MOD_DAMAGE_FROM_CASTER_GUARDIAN)
+                    .filter(|effect| effect.aura_type == kind)
                     .map(move |effect| 1.0 + effect.amount * stacks / 100.0)
             })
             .product()
@@ -86,7 +88,7 @@ pub fn multiplier(world: &World, unit: Entity) -> f32 {
 }
 
 pub(crate) fn taken_multiplier(world: &World, unit: Entity, auras: Option<&ActiveAuras>) -> f32 {
-    guardian_taken_multiplier(ownership(world, unit), auras)
+    owner_taken_multiplier(ownership(world, unit), auras)
 }
 
 /// Reads native ownership without aliasing melee's mutable health/aura query.
@@ -211,6 +213,6 @@ impl SummonDamageModifiers<'_, '_> {
 
     pub(crate) fn taken_multiplier(&self, unit: Entity, auras: Option<&ActiveAuras>) -> f32 {
         let ownership = self.owners.get(unit).ok().and_then(owner_and_guardian);
-        guardian_taken_multiplier(ownership, auras)
+        owner_taken_multiplier(ownership, auras)
     }
 }
