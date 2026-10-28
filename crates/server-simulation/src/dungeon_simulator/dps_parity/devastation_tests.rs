@@ -2,6 +2,40 @@
 use super::*;
 
 #[test]
+#[ignore = "requires native Devastation follower profile and world DB"]
+fn devastation_two_native_hover_casts_extend_the_active_duration() {
+    let mut run = prepare_literal(1467, 1).unwrap();
+    let actor = run.actor;
+    let cast_hover = |run: &mut Run| {
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 358267, Some(actor), false)
+            .unwrap();
+        preparation::finish_pending_setup(run).unwrap();
+    };
+    let hover = |run: &Run| {
+        run.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(actor)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 358267 && aura.caster == actor)
+            .expect("native Hover aura")
+            .clone()
+    };
+    cast_hover(&mut run);
+    let first = hover(&run);
+    for _ in 0..20 {
+        run.app.update();
+    }
+    cast_hover(&mut run);
+    let second = hover(&run);
+    let expected = first.expires_at.unwrap() + f64::from(first.duration_ms) / 1000.0;
+    assert!(
+        (second.expires_at.unwrap() - expected).abs() < 0.06,
+        "second actual Hover must extend, not replace, its existing deadline"
+    );
+}
+
+#[test]
 #[ignore = "requires private native DB and exact Devastation profile"]
 fn devastation_literal_empower_rows_preserve_rank_and_primary() {
     let duration = |rank: u8| {
