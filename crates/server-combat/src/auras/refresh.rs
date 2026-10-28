@@ -14,12 +14,6 @@ const SHIELD_BLOCK: u32 = 132404;
 const SHIELD_OF_THE_RIGHTEOUS: u32 = 132403;
 
 #[derive(Clone, Copy)]
-enum RollingBudget {
-    PerTick,
-    NativeDuration(u32),
-}
-
-#[derive(Clone, Copy)]
 enum DurationCarry {
     Pandemic,
     Extend,
@@ -71,15 +65,10 @@ pub(super) fn prepare_application(
     }
     preserve_expiry(world, target, new, spell);
     if rolling {
-        // Both the native rolling flag and scripted rolling use SimC's
-        // next-full-tick duration; their damage budgets stay distinct.
+        // SimC76f8118 action.cpp2730–2734/4995–5015 uses the same
+        // next-tick schedule and remaining-plus-fresh budget for both.
         carry_rolling_duration(world, target, new);
-        let budget = if sourced_rolling {
-            RollingBudget::NativeDuration(fresh_duration_ms)
-        } else {
-            RollingBudget::PerTick
-        };
-        roll_remaining_periodic(world, target, new, budget);
+        roll_remaining_periodic(world, target, new, fresh_duration_ms);
     }
     preserve_counter_only_stacks(world, target, new, spell);
     super::enhancement_power::preserve_refresh_duration(world, target, new);
@@ -272,14 +261,13 @@ fn carry_rolling_duration(world: &World, target: Entity, new: &mut AuraInstance)
     new.expires_at = Some(now + f64::from(new.duration_ms) / 1000.0);
 }
 
-/// Native per-tick carry: TC a352b1fa SpellAuraEffects.cpp832–849.
-/// Source-qualified coefficient rolling: SimC76f8118 action.cpp4995–5016
-/// shares old unpaid + fresh native duration budget across the new schedule.
+/// SimC76f8118 action.cpp4995–5015 rolls both the fractional unpaid
+/// duration and the fresh duration across the new fractional tick schedule.
 fn roll_remaining_periodic(
     world: &World,
     target: Entity,
     new: &mut AuraInstance,
-    budget: RollingBudget,
+    fresh_duration_ms: u32,
 ) {
     let Some(old) = previous(world, target, new) else {
         return;
@@ -295,17 +283,20 @@ fn roll_remaining_periodic(
         else {
             continue;
         };
-        let unpaid = remaining_ticks(prior.next_tick_at(), old_expiry, prior.period_ms);
-        let future = remaining_ticks(fresh.next_tick_at(), new_expiry, fresh.period_ms);
-        if future > 0 {
-            let unpaid_budget = prior.amount * old.stack_multiplier() * unpaid as f32;
-            fresh.amount = match budget {
-                RollingBudget::PerTick => fresh.amount + unpaid_budget / future as f32,
-                RollingBudget::NativeDuration(duration) => {
-                    let fresh_ticks = duration as f32 / fresh.period_ms as f32;
-                    (fresh.amount * fresh_ticks + unpaid_budget) / future as f32
-                }
-            };
+        if prior.period_ms == 0 {
+            continue;
+        }
+        let unpaid = (1.0
+            + (old_expiry - prior.next_tick_at()) * 1000.0 / f64::from(prior.period_ms))
+        .max(0.0);
+        let future = (1.0
+            + (new_expiry - fresh.next_tick_at()) * 1000.0 / f64::from(fresh.period_ms))
+        .max(0.0);
+        if future > 0.0 {
+            let unpaid_budget = f64::from(prior.amount * old.stack_multiplier()) * unpaid;
+            let fresh_ticks = f64::from(fresh_duration_ms) / f64::from(fresh.period_ms);
+            fresh.amount =
+                ((f64::from(fresh.amount) * fresh_ticks + unpaid_budget) / future) as f32;
         }
     }
 }
