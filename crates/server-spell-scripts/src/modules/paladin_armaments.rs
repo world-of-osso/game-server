@@ -200,14 +200,17 @@ fn valor_shield_multiplier(
     target: Entity,
     spell: &SpellInfo,
 ) -> f32 {
-    if spell.id == 53600
-        && spell.cast_primary_target == Some(target)
-        && combat::auras::has_aura(world, caster, 1269179)
-    {
-        1.0 + combat::spell_cast::scripts::script_effect_value(world, caster, 1269179, 0) / 100.0
-    } else {
-        1.0
+    if spell.id != 53600 || spell.cast_primary_target != Some(target) {
+        return 1.0;
     }
+    let stacks = world
+        .get::<combat::auras::ActiveAuras>(caster)
+        .and_then(|auras| auras.iter().find(|aura| aura.spell_id == 1269179 && aura.caster == caster))
+        .map_or(0, |aura| aura.stacks);
+    if stacks == 0 {
+        return 1.0;
+    }
+    1.0 + f32::from(stacks) * combat::spell_cast::scripts::script_effect_value(world, caster, 1269179, 0) / 100.0
 }
 
 fn blaze_area_filter(
