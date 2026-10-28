@@ -413,6 +413,11 @@ mod tests {
         super::super::engage(&mut run);
         let actor = run.actor;
         let target = run.targets[0];
+        assert_eq!(
+            crate::spell_cast::knowledge::resolve_actor_action(run.app.world(), actor, 100784)
+                .unwrap(),
+            205523
+        );
         crate::spell_cast::creature_cast(run.app.world_mut(), actor, 121253, Some(target), false)
             .unwrap();
         let now = crate::spell_cast::now(run.app.world());
