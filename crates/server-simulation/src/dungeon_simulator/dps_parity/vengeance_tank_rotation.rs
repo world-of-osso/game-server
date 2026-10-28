@@ -689,6 +689,56 @@ mod tests {
     }
     #[test]
     #[ignore = "requires native Vengeance profile"]
+    fn catastrophe_rolls_damage_from_real_meteor_impacts() {
+        use super::super::*;
+        fn damage(meteors: usize) -> i32 {
+            let _seed = crate::random::seed_scope(70_448);
+            let (profile, traits) = read_reference(581).unwrap();
+            let identity = inputs::read_actor(&profile).unwrap();
+            let mut run = prepare_reference(profile, &traits, 1, identity).unwrap();
+            let actor = run.actor;
+            let target = run.targets[0];
+            engage(&mut run);
+            let position = crate::spell_cast::targets::position(run.app.world(), target).unwrap();
+            for _ in 0..meteors {
+                crate::spell_cast::cast_triggered_at_destination(
+                    run.app.world_mut(),
+                    actor,
+                    1256306,
+                    position,
+                    1,
+                );
+                for _ in 0..5 {
+                    run.app.update();
+                }
+            }
+            assert!(crate::auras::has_aura(run.app.world(), target, 1256667));
+            for _ in 0..240 {
+                run.app.update();
+            }
+            run.app
+                .world()
+                .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+                .0
+                .iter()
+                .filter(|event| {
+                    event.spell_id == Some(1256667)
+                        && event.periodic
+                        && event.kind == shared::protocol::CombatLogKind::Damage
+                })
+                .map(|event| event.amount)
+                .sum()
+        }
+        let one = damage(1);
+        let two = damage(2);
+        assert!(
+            one > 0 && two > one,
+            "two actual impacts must deposit more rolling damage: {one}/{two}"
+        );
+    }
+
+    #[test]
+    #[ignore = "requires native Vengeance profile"]
     fn fallout_initial_immolation_hit_creates_a_lesser_fragment() {
         use super::super::*;
         use server::soul_fragments::{self, FragmentFilter};

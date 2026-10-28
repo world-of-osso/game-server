@@ -116,6 +116,7 @@ register_modules! {
     destruction_chaotic_inferno: (2680, "modules/destruction_chaotic_inferno.rs"),
     destruction_crashing_chaos: (2679, "modules/destruction_crashing_chaos.rs"),
     destruction_crit_scaling: (2673, "modules/destruction_crit_scaling.rs"),
+    demon_hunter_catastrophe: (5819, "modules/demon_hunter_catastrophe.rs"),
     demon_hunter_fragments: (5777, "modules/demon_hunter_fragments.rs"),
     generic_leech: (9800, "modules/generic_leech.rs"),
     demon_hunter_sigil_spite: (5810, "modules/demon_hunter_sigil_spite.rs"),
