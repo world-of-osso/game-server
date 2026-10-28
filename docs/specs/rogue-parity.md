@@ -35,6 +35,10 @@ Assassination259 combat and the shared Rogue attack-speed and Vanish paths follo
 
 - [x] When Kingsbane's earned ramp ends, selected Regicide's Reward grants one native haste stack per talent effect0 ramp stacks; the native periodic interval removes one stack at a time. Source: `sc_rogue.cpp4967–4975,11158–11162`.
 
+### Inspiring Strike
+
+- [x] Refreshing active Envenom with selected Inspiring Strike grants its native damage bonus on Envenom's direct, periodic and auto-attack masks until Envenom expires. The tier bonus remains a separate multiplicative factor. Source: `sc_rogue.cpp4357–4375,11141–11152`.
+
 ### Rupture
 
 - [x] Rupture's duration is its native base duration times one plus effective combo points, without the native five-point duration cap. Source: `sc_rogue.cpp5235–5240`.
