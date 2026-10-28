@@ -156,6 +156,41 @@ pub fn spawn_party_with_healer(
     spawn_profiled_party(world, copy, at, level, profiles)
 }
 
+/// Attach four native companions to an existing parity healer player.
+pub fn spawn_party_for_healer_player(world: &mut World, healer: Entity) -> Result<Party, String> {
+    let copy = *world
+        .get::<crate::maps::InMap>(healer)
+        .ok_or("healer copy absent")?;
+    let profiles = read_party_profiles(world, DEFAULT_PARTY)?;
+    let companions: Vec<_> = [0, 2, 3, 4]
+        .into_iter()
+        .map(|index| profiles[index].clone())
+        .collect();
+    let members = spawning::spawn_members(world, healer, &companions)?;
+    party::join_members(world, healer, shared::group::GroupRole::Healer, &members)?;
+    world
+        .entity_mut(healer)
+        .insert(stockade_diagnostic::DiagnosticParty {
+            copy,
+            members: members.clone(),
+            player_role: shared::group::GroupRole::Healer,
+        });
+    let tank = members
+        .iter()
+        .copied()
+        .find(|unit| {
+            world
+                .get::<Follower>(*unit)
+                .is_some_and(|follower| follower.profile.role == shared::group::GroupRole::Tank)
+        })
+        .ok_or("simulator party lacks tank")?;
+    Ok(Party {
+        owner: healer,
+        tank,
+        members,
+    })
+}
+
 fn spawn_configured_party(
     world: &mut World,
     copy: crate::maps::InMap,
