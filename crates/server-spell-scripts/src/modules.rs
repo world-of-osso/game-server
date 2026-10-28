@@ -299,6 +299,7 @@ register_modules! {
     protection_devastator: (730, "modules/protection_devastator.rs"),
     skyfury: (1002, "modules/skyfury.rs"),
     protection_fueled: (732, "modules/protection_fueled.rs"),
+    protection_fray: (1004, "modules/protection_fray.rs"),
     protection_outburst: (733, "modules/protection_outburst.rs"),
     protection_revenge: (1003, "modules/protection_revenge.rs"),
     protection_shield_block: (731, "modules/protection_shield_block.rs"),

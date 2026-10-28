@@ -438,6 +438,64 @@ mod tests {
     }
 
     #[test]
+    fn into_the_fray_tracks_actual_nearby_units_and_haste() {
+        use crate::spell_cast::test_harness::{harness_with, spawn_player};
+        let mut h = harness_with(Vec::new(), &[202603, 202602], 1, true).unwrap();
+        let actor = h.caster;
+        let allies: Vec<_> = [2.0, 4.0, 8.0]
+            .into_iter()
+            .map(|x| spawn_player(&mut h.app, 1, x))
+            .collect();
+        h.advance(30);
+        let read = |h: &crate::spell_cast::test_harness::Harness| {
+            let world = h.app.world();
+            let aura = world
+                .get::<crate::auras::ActiveAuras>(actor)
+                .unwrap()
+                .iter()
+                .find(|a| a.spell_id == 202602)
+                .unwrap();
+            (
+                aura.stacks,
+                world
+                    .get::<crate::stats::CharacterStats>(actor)
+                    .unwrap()
+                    .haste_pct,
+            )
+        };
+        let (stacks, four_haste) = read(&h);
+        assert_eq!(
+            stacks, 4,
+            "three nearby allies and one enemy reach the native cap"
+        );
+        for ally in allies {
+            h.app
+                .world_mut()
+                .get_mut::<shared::components::Position>(ally)
+                .unwrap()
+                .x = 20.0;
+        }
+        h.advance(30);
+        let (stacks, one_haste) = read(&h);
+        assert_eq!(stacks, 1, "only the real nearby enemy remains");
+        assert!(
+            four_haste > one_haste,
+            "native haste must decrease with nearby stacks"
+        );
+        let enemy = h.npc;
+        h.app
+            .world_mut()
+            .get_mut::<shared::components::Position>(enemy)
+            .unwrap()
+            .x = 20.0;
+        h.advance(30);
+        assert!(
+            !crate::auras::has_aura(h.app.world(), actor, 202602),
+            "no units means no haste aura"
+        );
+    }
+
+    #[test]
     fn revenge_trigger_accepts_only_white_impacts_and_incoming_avoids() {
         use crate::dungeon_simulator::healer_intake::{Hit, HitKind};
         let seed = crate::spell_cast::test_harness::harness_with_native_enemy_dodge_reduction(
