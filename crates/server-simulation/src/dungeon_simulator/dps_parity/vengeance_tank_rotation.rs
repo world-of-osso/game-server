@@ -1238,6 +1238,10 @@ mod tests {
             ));
             run.app.update();
         }
+        assert!(
+            !crate::auras::has_aura(run.app.world(), actor, 1256302),
+            "other spenders must exhaust the stacks before the scheduled World Killer"
+        );
         for _ in 0..50 {
             run.app.update();
         }
