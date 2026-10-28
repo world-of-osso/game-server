@@ -27,7 +27,8 @@ const ACTIONS: &[(&str, u32, bool)] = &[
     ("berserk", 50334, true),
     ("lunar_beam", 204066, true),
     ("wild_guardian", 1269619, true),
-    ("heart_of_the_wild", 1261867, true),
+    // SimC sc_druid.cpp9157–9161 executes the Cat child on the enemy.
+    ("heart_of_the_wild", 1261867, false),
     ("convoke_the_spirits", 391528, true),
     ("sundering_roar", 1253799, true),
     ("rake", 1822, false),
@@ -318,6 +319,19 @@ mod tests {
         assert!(
             ironfur,
             "native Guardian rotation earns and spends Rage on Ironfur"
+        );
+        let events = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0;
+        assert!(
+            events
+                .iter()
+                .any(|event| event.source == Some(run.actor.to_bits())
+                    && event.spell_id == Some(1261868)
+                    && event.kind == shared::protocol::CombatLogKind::CastSuccess),
+            "the selected Cat-form Heart of the Wild must cast on the enemy"
         );
         assert_eq!(
             super::super::tank_mitigation_auras(&run).unwrap(),
