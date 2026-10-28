@@ -97,6 +97,7 @@ register_modules! {
     blood_sanlayn: (2503, "modules/blood_sanlayn.rs"),
     blood_boiling: (2504, "modules/blood_boiling.rs"),
     blood_rune_weapon: (2505, "modules/blood_rune_weapon.rs"),
+    blood_reflection: (2507, "modules/blood_reflection.rs"),
     cast_grants: (120, "modules/cast_grants.rs"),
     cast_relationships: (370, "modules/cast_relationships.rs"),
     cast_resets: (90, "modules/cast_resets.rs"),

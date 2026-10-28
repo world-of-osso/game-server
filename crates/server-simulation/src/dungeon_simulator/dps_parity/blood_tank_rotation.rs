@@ -272,6 +272,70 @@ impl super::SpecDriver for Rotation {
 mod tests {
     #[test]
     #[ignore = "requires canonical world database and MID2 Blood inputs"]
+    fn bloody_reflection_requires_surviving_shield_and_respects_cooldown() {
+        use shared::protocol::CombatLogKind;
+        let mut run = super::super::prepare_registered_player(250, 1).unwrap();
+        let actor = run.actor;
+        let attacker = run.targets[0];
+        assert!(crate::auras::has_aura(run.app.world(), actor, 1279633));
+        crate::auras::remove_auras(
+            run.app.world_mut(),
+            actor,
+            crate::auras::RemoveReason::Cancelled,
+            |aura| matches!(aura.spell_id, 77535 | 207203),
+        );
+        crate::spell_cast::cast_triggered_with_effect0_amount(
+            run.app.world_mut(),
+            actor,
+            77535,
+            Some(actor),
+            1,
+            500_000.0,
+        );
+        let strike = |run: &mut super::super::Run| {
+            crate::spell_cast::effects::replay_simc_dummy_strike(
+                run.app.world_mut(),
+                attacker,
+                actor,
+                10_000.0,
+                false,
+                false,
+            )
+        };
+        let count = |run: &super::super::Run| {
+            run.app
+                .world()
+                .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+                .0
+                .iter()
+                .filter(|event| {
+                    event.spell_id == Some(1279656)
+                        && event.kind == CombatLogKind::Damage
+                        && event.target == Some(attacker.to_bits())
+                })
+                .count()
+        };
+        strike(&mut run);
+        assert_eq!(count(&run), 1, "surviving shield reflects the actual hit");
+        strike(&mut run);
+        assert_eq!(count(&run), 1, "same-time hit is inside the 500ms cooldown");
+        for _ in 0..12 {
+            run.app.update();
+        }
+        strike(&mut run);
+        assert_eq!(count(&run), 2, "reflection is available after cooldown");
+        crate::auras::remove_auras(
+            run.app.world_mut(),
+            actor,
+            crate::auras::RemoveReason::Cancelled,
+            |aura| matches!(aura.spell_id, 77535 | 207203),
+        );
+        strike(&mut run);
+        assert_eq!(count(&run), 2, "no Blood Shield means no reflection");
+    }
+
+    #[test]
+    #[ignore = "requires canonical world database and MID2 Blood inputs"]
     fn blood_death_strike_grants_voracious_leech() {
         let mut run = super::super::prepare_registered_player(250, 1).unwrap();
         let actor = run.actor;
