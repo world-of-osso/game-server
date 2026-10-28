@@ -69,7 +69,11 @@ fn unholy_commander_tracks_real_dark_transformation_and_magus_damage() {
     preparation::finish_pending_setup(&mut run).unwrap();
     assert!(crate::auras::has_aura(run.app.world(), run.actor, 390260));
     let percent =
-        crate::spell_cast::scripts::script_effect_value(run.app.world(), run.actor, 390259, 1);
+        crate::spell_cast::scripts::script_effect_value(run.app.world(), run.actor, 390264, 0);
+    assert!(
+        percent > 0.0,
+        "selected native Commander must provide a pet damage bonus"
+    );
     let after = next_bolt(&mut run, magus);
     assert!(
         (after / before - (1.0 + f64::from(percent) / 100.0)).abs() < 0.001,

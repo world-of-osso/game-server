@@ -5,7 +5,7 @@ use shared::components::{ActiveSpec, Npc};
 use super::combat;
 use combat::auras::{self, ActiveAuras, AuraApplication, AuraSource};
 use combat::spell_cast::{script_registry::SpellScriptHook, summon::SummonedCreature};
-use combat::spell_info::{SpellInfo, SpellStore};
+use combat::spell_info::SpellInfo;
 
 const TALENT: u32 = 390259;
 const OWNER_BUFF: u32 = 390260;
@@ -91,18 +91,7 @@ fn apply_pet_buff(world: &mut World, owner: Entity, pet: Entity) {
     }
     // Native390264 effect1 is modified by talent390259 effect2; retain its
     // native school mask and synchronize the lifetime with the owner's buff.
-    let amount = combat::spell_cast::scripts::script_effect_value(world, owner, TALENT, 1);
-    let mut buff = world
-        .resource::<SpellStore>()
-        .get(PET_BUFF)
-        .expect("native Commander pet aura")
-        .clone();
-    buff.effects
-        .iter_mut()
-        .find(|effect| effect.index == 0)
-        .expect("native Commander damage effect")
-        .base_points = amount;
-    auras::apply_aura_with_spell(
+    auras::apply_aura(
         world,
         &AuraApplication {
             caster: owner,
@@ -111,7 +100,6 @@ fn apply_pet_buff(world: &mut World, owner: Entity, pet: Entity) {
             effect_mask: 1,
             source: AuraSource::Cast,
         },
-        &buff,
     );
     auras::set_owned_duration(world, owner, pet, PET_BUFF, remaining_ms);
 }
