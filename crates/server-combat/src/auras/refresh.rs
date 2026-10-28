@@ -12,6 +12,7 @@ const IGNORE_PAIN: u32 = 190456;
 const PROTECTION_WARRIOR: u32 = 73;
 const SHIELD_BLOCK: u32 = 132404;
 const SHIELD_OF_THE_RIGHTEOUS: u32 = 132403;
+const HOLY_BULWARK_ABSORB: u32 = 432607;
 
 #[derive(Clone, Copy)]
 enum DurationCarry {
@@ -57,6 +58,7 @@ pub(super) fn prepare_application(
     }
     match new.spell_id {
         IGNORE_PAIN => accumulate_ignore_pain(world, target, new),
+        HOLY_BULWARK_ABSORB => accumulate_holy_bulwark(world, target, new),
         SHIELD_BLOCK => carry_duration(world, target, new, DurationCarry::Extend),
         SHIELD_OF_THE_RIGHTEOUS => {
             carry_duration(world, target, new, DurationCarry::CappedExtend(3));
@@ -341,6 +343,30 @@ fn accumulate_ignore_pain(world: &World, target: Entity, new: &mut AuraInstance)
     if let Some(shield) = new.effects.iter_mut().find(|effect| effect.index == 0) {
         shield.absorb_remaining =
             (shield.absorb_remaining + previous).min(max_health * percent / 100.0);
+    }
+}
+
+/// SimC76f8118 sc_paladin.hpp:990–999: retain unspent 432607 up to the native cap.
+fn accumulate_holy_bulwark(world: &World, target: Entity, new: &mut AuraInstance) {
+    let cap_percent = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(432496)
+        .expect("Holy Bulwark source spell")
+        .effects
+        .iter()
+        .find(|effect| effect.index == 4)
+        .expect("Holy Bulwark cap effect")
+        .base_points;
+    let max_health = world
+        .get::<Health>(target)
+        .expect("living Holy Bulwark target")
+        .max;
+    let previous = previous(world, target, new)
+        .and_then(|old| old.effects.iter().find(|effect| effect.index == 0))
+        .map_or(0.0, |effect| effect.absorb_remaining);
+    if let Some(shield) = new.effects.iter_mut().find(|effect| effect.index == 0) {
+        shield.absorb_remaining =
+            (shield.absorb_remaining + previous).min(max_health * cap_percent / 100.0);
     }
 }
 

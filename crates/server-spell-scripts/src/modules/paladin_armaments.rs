@@ -1,12 +1,87 @@
 //! Holy Armaments alternate through the native action-bar override aura.
 use super::combat;
 use bevy::prelude::*;
-use combat::auras::{AuraApplication, AuraSource, RemoveReason};
+use combat::auras::{
+    AuraApplication, AuraInstance, AuraSource, RemoveReason, scripts::AuraScripts,
+};
 use combat::spell_cast::script_registry::SpellScriptHook;
 use combat::spell_info::{SpellInfo, SpellStore};
+use combat::stats::CharacterStats;
+use shared::components::Health;
 
-pub(super) const HOOKS: &[SpellScriptHook] =
-    &[SpellScriptHook::SuccessfulCastRelationships(after_cast)];
+pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::SuccessfulCastRelationships(after_cast),
+    SpellScriptHook::LateAuraRegistration(register_bulwark),
+];
+
+fn register_bulwark(scripts: &mut AuraScripts) {
+    let script = scripts.0.entry(432496).or_default();
+    script.on_apply = Some(initial_bulwark);
+    script.on_periodic = Some(periodic_bulwark);
+}
+
+fn initial_bulwark(world: &mut World, target: Entity, aura: &AuraInstance) {
+    apply_bulwark_absorb(world, target, aura.caster, 1, true);
+}
+
+fn periodic_bulwark(world: &mut World, target: Entity, aura: &AuraInstance, index: u8) {
+    if index == 1 {
+        apply_bulwark_absorb(world, target, aura.caster, 3, false);
+    }
+}
+
+fn apply_bulwark_absorb(
+    world: &mut World,
+    target: Entity,
+    caster: Entity,
+    index: u8,
+    initial: bool,
+) {
+    // SimC76f8118 sc_paladin.hpp:990–999, 1066–1072: percent/10 of maximum health;
+    // versatility applies to the initial grant, not the periodic increment.
+    let store = world.resource::<SpellStore>();
+    let source = store.get(432496).expect("Holy Bulwark source spell");
+    let percent = source
+        .effects
+        .iter()
+        .find(|effect| effect.index == index)
+        .expect("Holy Bulwark shield amount")
+        .base_points;
+    let mut shield = store
+        .get(432607)
+        .expect("Holy Bulwark absorb spell")
+        .clone();
+    let health = world
+        .get::<Health>(target)
+        .expect("living Holy Bulwark target")
+        .max;
+    let versatility = if initial {
+        1.0 + world
+            .get::<CharacterStats>(caster)
+            .expect("Holy Bulwark caster stats")
+            .versatility_pct
+            / 100.0
+    } else {
+        1.0
+    };
+    shield
+        .effects
+        .iter_mut()
+        .find(|effect| effect.index == 0)
+        .expect("Holy Bulwark absorb effect")
+        .base_points = health * percent / 1000.0 * versatility;
+    combat::auras::apply_aura_with_spell(
+        world,
+        &AuraApplication {
+            caster,
+            target,
+            spell_id: 432607,
+            effect_mask: 1,
+            source: AuraSource::Cast,
+        },
+        &shield,
+    );
+}
 
 fn after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
     // Native70448 spell432478 effect0 is aura332: misc432459 -> amount432472.
