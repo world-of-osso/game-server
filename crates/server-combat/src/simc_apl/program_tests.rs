@@ -303,3 +303,59 @@ fn simc_apl_invalid_control_does_not_become_an_empty_list_or_zero_variable() {
         .unwrap_err();
     assert!(error.contains("recursive APL call_action_list"), "{error}");
 }
+
+#[test]
+fn cycling_variable_max_uses_each_target_and_resets_each_pass() {
+    struct Targets(Vec<(u64, f64)>);
+    impl Facts for Targets {
+        fn value(&self, name: &str) -> Result<f64, String> {
+            match name {
+                "active_enemies" => Ok(self.0.len() as f64),
+                _ => Err(format!("unknown {name}")),
+            }
+        }
+    }
+    impl ActionFacts for Targets {
+        fn target_ids(&self, _: &Action) -> Result<Vec<u64>, String> {
+            Ok(self.0.iter().map(|v| v.0).collect())
+        }
+        fn value_for(&self, action: &Action, name: &str) -> Result<f64, String> {
+            if name == "target.time_to_die" {
+                let target = action.target.unwrap_or(self.0[0].0);
+                Ok(self.0.iter().find(|v| v.0 == target).unwrap().1)
+            } else {
+                self.value(name)
+            }
+        }
+    }
+    let program = Program::parse(&[
+        ("default", "cycling_variable,name=dung_pull_ttd,op=reset"),
+        (
+            "default",
+            "cycling_variable,name=dung_pull_ttd,op=max,value=target.time_to_die",
+        ),
+        ("default", "attack,if=variable.dung_pull_ttd>10"),
+    ])
+    .unwrap();
+    let mut state = program.state();
+    let chosen = program
+        .select(
+            "default",
+            &Targets(vec![(1, 4.0), (2, 15.0), (3, 8.0)]),
+            &mut state,
+            |_| Ok(true),
+        )
+        .unwrap();
+    assert_eq!(chosen.unwrap().name, "attack");
+    assert_eq!(state.value("dung_pull_ttd"), Some(15.0));
+    let chosen = program
+        .select(
+            "default",
+            &Targets(vec![(1, 3.0), (2, 6.0)]),
+            &mut state,
+            |_| Ok(true),
+        )
+        .unwrap();
+    assert!(chosen.is_none());
+    assert_eq!(state.value("dung_pull_ttd"), Some(6.0));
+}
