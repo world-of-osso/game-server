@@ -12,10 +12,12 @@ import argparse
 import glob
 import json
 import os
+import subprocess
 import sys
 from pathlib import Path
 
 RESULTS = Path("/home/osso/.worktrees/train/results")
+REPO = Path(__file__).resolve().parent.parent
 PINNED = Path("/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/dps-parity-2026-10-21")
 TARGETS = {1: "single", 3: "three"}
 # SimC reports these actions under their parent or equivalent pet spell IDs.
@@ -29,19 +31,37 @@ NATIVE_ALIASES = {
 }
 
 
-def latest_outputs():
-    """spec -> output dir of the newest result with a successful measurement."""
+def master_order():
+    """commit -> position in master's first-parent history (higher is newer)."""
+    commits = subprocess.run(
+        ["git", "rev-list", "--first-parent", "origin/master"],
+        cwd=REPO, capture_output=True, text=True, check=True).stdout.split()
+    return {commit: len(commits) - index for index, commit in enumerate(commits)}
+
+
+def landed_commit(status):
+    """The master commit a result landed in, from `landed in <sha>[; ...]`."""
+    if not status.startswith("landed in "):
+        return None
+    return status[len("landed in "):].split(";")[0].strip()
+
+
+def latest_outputs(order=None):
+    """spec -> output dir of the measured result that landed latest in master history.
+
+    Ranked by master ancestry, not file time: a slow measurement of an older landing
+    must not replace a newer landing's result."""
+    order = master_order() if order is None else order
     best = {}
     for path in RESULTS.glob("*.json"):
         entry = json.loads(path.read_text())
-        if not any("NATIVE_DPS" in line for line in entry.get("measurements") or []):
+        rank = order.get(landed_commit(entry.get("status", "")))
+        if rank is None or not any("NATIVE_DPS" in line for line in entry.get("measurements") or []):
             continue
         for measure in entry["measure"]:
             report = Path(measure["output"]) / f"{measure['spec']}.native.1.json"
-            if report.exists():
-                stamp = report.stat().st_mtime
-                if measure["spec"] not in best or stamp > best[measure["spec"]][0]:
-                    best[measure["spec"]] = (stamp, Path(measure["output"]), entry["status"])
+            if report.exists() and (measure["spec"] not in best or rank > best[measure["spec"]][0]):
+                best[measure["spec"]] = (rank, Path(measure["output"]), entry["status"])
     return {spec: (output, status) for spec, (_, output, status) in best.items()}
 
 
