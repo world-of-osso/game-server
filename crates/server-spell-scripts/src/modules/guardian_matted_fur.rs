@@ -35,15 +35,7 @@ fn on_cast(world: &mut World, caster: Entity, spell: u32, depth: u8) {
     let attack_power = stats.attack_power;
     let versatility = 1.0 + stats.versatility_pct / 100.0;
     let store = world.resource::<SpellStore>();
-    let coefficient = store
-        .get(TALENT)
-        .expect("Matted Fur talent")
-        .effects
-        .iter()
-        .find(|effect| effect.index == 0)
-        .expect("Matted Fur trigger")
-        .base_points
-        / 100.0;
+    let coefficient = spell_cast::scripts::script_effect_value(world, caster, TALENT, 0) / 100.0;
     let mut shield = store.get(SHIELD).expect("Matted Fur absorb").clone();
     shield
         .effects

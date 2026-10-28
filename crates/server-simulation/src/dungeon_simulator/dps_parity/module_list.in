@@ -260,6 +260,7 @@ mod guardian_galactic_tests;
 mod guardian_gore_tests;
 mod guardian_lunar_beam_tests;
 mod guardian_lycaras_tests;
+mod guardian_matted_rank_tests;
 mod guardian_moon_guardian_tests;
 mod guardian_rampant_damage_tests;
 mod guardian_rampant_thorn_tests;
