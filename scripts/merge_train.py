@@ -860,7 +860,11 @@ def build_and_test(entries, log):
         entry["status"] = "rejected"
     write_results([e for e in rejected if not e["id"].endswith("-red")])
     requeue_entries(deferred)
-    passed, failed = run_tests(tree, log)
+    # Landing owners run their new test once before submitting; the train does not rerun it
+    # (user, 2026-10-28). Only probes, which exist to run tests, still run them here.
+    probes = [e for e in tree if not e.get("land")]
+    passed, failed = run_tests(probes, log) if probes else ([], [])
+    passed += [e for e in tree if e.get("land")]
     deferred = [e for e in failed if e.pop("defer", False)]
     failed = [e for e in failed if e not in deferred]
     requeue_entries(deferred)
