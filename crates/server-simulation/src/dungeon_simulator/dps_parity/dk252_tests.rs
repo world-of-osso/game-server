@@ -225,6 +225,58 @@ fn dk252_festering_scythe_double_hastes_its_actual_gcd() {
 }
 
 #[test]
+#[ignore = "requires native252 profile/traits and player actor"]
+fn dk252_festering_strike_and_scythe_do_not_grant_wound_runic_power() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 1).unwrap();
+    engage(&mut run);
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, 197147));
+    run.app
+        .world_mut()
+        .resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .clear();
+    for _ in 0..2 {
+        literal_rotation::execution::execute(
+            run.app.world_mut(),
+            run.actor,
+            literal_rotation::execution::Execution::Spell(
+                85948,
+                run.targets[0],
+                Some(run.targets[0]),
+            ),
+        )
+        .unwrap();
+        preparation::finish_pending_setup(&mut run).unwrap();
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    for spell in [85948, 458128] {
+        assert!(
+            events.iter().any(|event| event.spell_id == Some(spell)
+                && event.source == Some(run.actor.to_bits())
+                && event.kind == CombatLogKind::CastSuccess),
+            "actual Festering action {spell} must execute"
+        );
+    }
+    assert!(
+        events.iter().any(|event| event.spell_id == Some(85948)
+            && event.kind == CombatLogKind::Energize
+            && event.amount == 200),
+        "native Strike must retain its 20 RP gain"
+    );
+    assert!(
+        !events
+            .iter()
+            .any(|event| event.spell_id == Some(195757) && event.kind == CombatLogKind::Energize),
+        "neither action may grant legacy wound RP"
+    );
+}
+
+#[test]
 #[ignore = "requires private native252 Rider templates/profile and player actor"]
 fn dk252_army_summons_all_four_real_riders() {
     let _seed = crate::random::seed_scope(70448);

@@ -339,6 +339,7 @@ register_modules! {
     voltaic_blaze: (250, "modules/voltaic_blaze.rs"),
     unholy_doomed_bidding: (2529, "modules/unholy_doomed_bidding.rs"),
     unholy_claw_targets: (2542, "modules/unholy_claw_targets.rs"),
+    unholy_wound: (2543, "modules/unholy_wound.rs"),
     demonology_mind_sear: (2660, "modules/demonology_mind_sear.rs"),
     warlock_ritual: (2669, "modules/warlock_ritual.rs"),
     warlock_seed: (2659, "modules/warlock_seed.rs"),
