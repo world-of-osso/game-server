@@ -1500,6 +1500,28 @@ pub fn apply_aura(world: &mut World, application: &AuraApplication) {
 
 /// Apply a source-owned spell clone, retaining item-level and native amount snapshots.
 pub fn apply_aura_with_spell(world: &mut World, application: &AuraApplication, spell: &SpellInfo) {
+    apply_aura_inner(world, application, spell, None);
+}
+
+/// Apply a finite periodic aura whose fresh contribution is a total damage budget.
+/// The caller owns admission and must select the periodic effect in `application`.
+pub fn apply_rolling_periodic_deposit(
+    world: &mut World,
+    application: &AuraApplication,
+    spell: &SpellInfo,
+    duration_ms: u32,
+    deposit: f32,
+) {
+    assert!(duration_ms > 0 && deposit.is_finite() && deposit >= 0.0);
+    apply_aura_inner(world, application, spell, Some((duration_ms, deposit)));
+}
+
+fn apply_aura_inner(
+    world: &mut World,
+    application: &AuraApplication,
+    spell: &SpellInfo,
+    rolling_deposit: Option<(u32, f32)>,
+) {
     let target = application.target;
     if world.get_entity(target).is_err() || world.get_entity(application.caster).is_err() {
         return;
@@ -1553,7 +1575,16 @@ pub fn apply_aura_with_spell(world: &mut World, application: &AuraApplication, s
     if instance.effects.is_empty() {
         return;
     }
-    refresh::prepare_application(world, target, &mut instance, spell);
+    if let Some((duration_ms, deposit)) = rolling_deposit {
+        refresh::set_rolling_deposit(&mut instance, duration_ms, deposit, now);
+    }
+    refresh::prepare_application(
+        world,
+        target,
+        &mut instance,
+        spell,
+        rolling_deposit.is_some(),
+    );
     log_unhandled_types(world, &instance);
     ensure_aura_components(world, target);
     mechanic_immunity::remove_matching(world, target, &instance);

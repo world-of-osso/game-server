@@ -275,3 +275,58 @@ fn generic_rolling_periodic_native_unflagged_renew_refresh_does_not_accumulate()
         "unflagged native HoT must not acquire a rolling pool: {later:?}"
     );
 }
+
+#[test]
+fn stagger_deposits_preserve_phase_and_roll_unpaid_budget() {
+    const STAGGER: u32 = 124255;
+    let mut h = native_fixture();
+    let target = h.caster;
+    let spell = h
+        .app
+        .world()
+        .resource::<SpellStore>()
+        .get(STAGGER)
+        .unwrap()
+        .clone();
+    let application = super::AuraApplication {
+        caster: target,
+        target,
+        spell_id: STAGGER,
+        effect_mask: 1,
+        source: super::AuraSource::Cast,
+    };
+    super::apply_rolling_periodic_deposit(h.app.world_mut(), &application, &spell, 10_000, 2_000.0);
+    let initial = native_aura(&h, target, STAGGER);
+    assert_eq!(initial.duration_ms, 10_000);
+    assert_eq!(initial.effects[0].amount, 100.0);
+    super::apply_rolling_periodic_deposit(h.app.world_mut(), &application, &spell, 10_000, 1_000.0);
+    let same_time = native_aura(&h, target, STAGGER);
+    assert_eq!(same_time.duration_ms, 13_000);
+    assert!(
+        (same_time.effects[0].next_tick_at() - initial.effects[0].next_tick_at()).abs() < 0.001
+    );
+    assert!((same_time.effects[0].amount - 3_000.0 / 26.0).abs() < 0.01);
+    let paid = first_tick(&mut h, target, STAGGER);
+    assert!(paid.amount > 0);
+    let before = native_aura(&h, target, STAGGER);
+    let deadline = before.effects[0].next_tick_at();
+    while aura_now(h.app.world()) < deadline - 0.25 {
+        h.advance(1);
+    }
+    let now = aura_now(h.app.world());
+    let old_expiry = before.expires_at.unwrap();
+    let unpaid = 1.0 + (old_expiry - deadline) * 2.0;
+    super::apply_rolling_periodic_deposit(h.app.world_mut(), &application, &spell, 10_000, 1_000.0);
+    let refreshed = native_aura(&h, target, STAGGER);
+    let effect = &refreshed.effects[0];
+    assert!((effect.next_tick_at() - deadline).abs() < 0.001);
+    let future = 1.0 + (refreshed.expires_at.unwrap() - deadline) * 2.0;
+    let expected = (f64::from(before.effects[0].amount) * unpaid + 1_000.0) / future;
+    assert!((f64::from(effect.amount) - expected).abs() < 0.01);
+    assert!((refreshed.expires_at.unwrap() - (now + 13.0)).abs() < 0.002);
+    let start = h.app.world().resource::<ObservedCombatEvents>().0.len();
+    while aura_now(h.app.world()) < deadline + 0.1 {
+        h.advance(1);
+    }
+    assert_eq!(ticks(&h, target, STAGGER, start).len(), 1);
+}
