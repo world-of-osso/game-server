@@ -96,6 +96,11 @@ fn simc_healer_fixture_replays_damage_and_reports_receipts() {
     assert_eq!(report["incoming_events"], 3);
     assert_eq!(report["level"], 90);
     let metrics = &report["metrics"];
+    let idle = metrics["idle_gcd_pct"].as_f64().unwrap();
+    assert!(
+        (0.0..100.0).contains(&idle),
+        "cast fixture must contain both busy and idle time: {report}"
+    );
     let effective = metrics["effective_hps"].as_f64().unwrap();
     let raw = metrics["raw_hps"].as_f64().unwrap();
     assert!(effective > 0.0 && raw >= effective, "{report}");
