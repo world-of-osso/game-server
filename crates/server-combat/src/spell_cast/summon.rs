@@ -1194,6 +1194,12 @@ pub fn despawn_summon(world: &mut World, entity: Entity) {
 }
 
 fn has_lingering_grasp(world: &mut World, caster: Entity) -> bool {
+    if !world
+        .get::<SummonedCreature>(caster)
+        .is_some_and(|summon| matches!(summon.spell_id, 317776 | 1242294))
+    {
+        return false;
+    }
     // SimC76f8118 sc_death_knight.cpp4545–4574: a consumed Magus's
     // existing Withering Grasp continues after the pet is dismissed.
     world
