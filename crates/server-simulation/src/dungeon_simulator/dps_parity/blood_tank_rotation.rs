@@ -404,6 +404,22 @@ mod tests {
             .filter(|(npc, owner)| npc.template_id == 27893 && owner.0 == actor.to_bits())
             .count();
         assert_eq!(count, 2, "Everlasting Bond summons a second owned weapon");
+        let dance = world
+            .get::<crate::auras::ActiveAuras>(actor)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 1264407)
+            .expect("weapons grant Dance of Midnight defense");
+        assert_eq!(dance.stacks, 2);
+        assert_eq!(
+            dance
+                .effects
+                .iter()
+                .find(|effect| effect.index == 3)
+                .unwrap()
+                .amount,
+            -6.0
+        );
         let bone = world
             .get::<crate::auras::ActiveAuras>(actor)
             .unwrap()

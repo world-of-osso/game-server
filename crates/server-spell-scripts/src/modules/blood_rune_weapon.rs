@@ -19,10 +19,14 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AfterForegroundSpecial(consume_dance),
     SpellScriptHook::AfterPayment(spawn_dance_weapon),
     SpellScriptHook::AfterCastUpdate(sync_rune_weapon_buff),
+    SpellScriptHook::AsynchronousAuras(&[1264407]),
 ];
 
 #[derive(Component, Default)]
 struct DanceAttempts(u32);
+
+#[derive(Component)]
+struct RegisteredRuneWeapon;
 
 // SimC76f8118 sc_death_knight.cpp13063–13075/14820–14822: 12.5%
 // accumulated chance on rune spending; the source explicitly says it is not in data.
@@ -64,17 +68,40 @@ fn spawn_dance_weapon(world: &mut World, caster: Entity, costs: &[(CostPool, f32
 fn sync_rune_weapon_buff(world: &mut World) {
     let now = spell_cast::now(world);
     let weapons: Vec<_> = world
-        .query::<&spell_cast::summon::SummonedCreature>()
+        .query::<(
+            Entity,
+            &spell_cast::summon::SummonedCreature,
+            Option<&RegisteredRuneWeapon>,
+        )>()
         .iter(world)
-        .filter(|summon| matches!(summon.spell_id, 49028 | 1237128 | 1264353))
-        .filter_map(|summon| {
+        .filter(|(_, summon, _)| matches!(summon.spell_id, 49028 | 1237128 | 1264353))
+        .filter_map(|(entity, summon, registered)| {
             summon
                 .expires_at
                 .filter(|end| *end > now)
-                .map(|end| (summon.owner, end))
+                .map(|end| (entity, summon.owner, end, registered.is_none()))
         })
         .collect();
-    for (owner, end) in weapons {
+    for (weapon, owner, end, is_new) in weapons {
+        if is_new {
+            world.entity_mut(weapon).insert(RegisteredRuneWeapon);
+            if world
+                .get::<KnownSpells>(owner)
+                .is_some_and(|known| known.contains(1264405))
+            {
+                spell_cast::cast_triggered_with_overrides(
+                    world,
+                    owner,
+                    1264407,
+                    Some(owner),
+                    1,
+                    TriggeredSpellOverrides {
+                        duration_ms: Some(((end - now) * 1000.0).round() as i32),
+                        ..Default::default()
+                    },
+                );
+            }
+        }
         let remaining = world
             .get::<auras::ActiveAuras>(owner)
             .and_then(|auras| {
