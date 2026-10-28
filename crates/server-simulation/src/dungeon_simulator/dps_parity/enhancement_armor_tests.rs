@@ -155,6 +155,25 @@ fn assert_actual_damage(root: u32, armorless: bool) {
 
 #[test]
 #[ignore = "native263 reference inputs and private world database"]
+fn enhancement_actual_windlash_weapon_hits_ignore_target_armor() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_root(17364);
+    apply_armor_control(&mut run, false);
+    let actor = run.actor;
+    let target = run.targets[0];
+    run.app.insert_resource(
+        crate::spell_cast::effects::factor_capture::FactorCapture::new(
+            actor, target, 114089, "windlash", 4,
+        ),
+    );
+    for spell in [114089, 114093] {
+        crate::spell_cast::cast_triggered(run.app.world_mut(), actor, spell, Some(target), 1);
+    }
+    assert_armor_response(&run, &[114089, 114093], false);
+}
+
+#[test]
+#[ignore = "native263 reference inputs and private world database"]
 fn enhancement_actual_physical_stormstrike_is_reduced_by_target_armor() {
     assert_actual_damage(17364, false);
     assert_actual_damage(17364, true);

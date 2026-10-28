@@ -26,6 +26,38 @@ fn damage_hits(run: &Run, spell: u32, target: Entity) -> usize {
 
 #[test]
 #[ignore = "native263 reference inputs and private world database"]
+fn shaman263_ascendance_replaces_both_real_swing_hands_with_windlash() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(263, 1).unwrap();
+    engage(&mut run);
+    let actor = run.actor;
+    let target = run.targets[0];
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        actor,
+        literal_rotation::execution::Execution::AutoAttack(target),
+    )
+    .unwrap();
+    cast(&mut run, 114051, actor);
+    assert!(crate::auras::has_aura(run.app.world(), actor, 114051));
+    for _ in 0..180 {
+        if damage_hits(&run, 114089, target) > 0 && damage_hits(&run, 114093, target) > 0 {
+            break;
+        }
+        run.app.update();
+    }
+    assert!(
+        damage_hits(&run, 114089, target) > 0,
+        "main-hand swing becomes actual Windlash"
+    );
+    assert!(
+        damage_hits(&run, 114093, target) > 0,
+        "off-hand swing becomes actual Windlash"
+    );
+}
+
+#[test]
+#[ignore = "native263 reference inputs and private world database"]
 fn shaman263_static_accumulation_stops_when_its_last_real_mode_expires() {
     // SimC76f8118 sc_shaman.cpp12840–12860: mode lifetime, not raw Static's15s, owns this aura.
     let _seed = crate::random::seed_scope(70448);
