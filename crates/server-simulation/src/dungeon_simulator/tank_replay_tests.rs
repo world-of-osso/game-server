@@ -1206,7 +1206,7 @@ fn valor_empowers_one_shield_and_blazes_secondary_targets() {
     use crate::spell_cast::test_harness::ObservedCombatEvents;
     use shared::protocol::CombatLogKind;
 
-    fn shield(valor: bool) -> (i32, bool, Vec<u64>, u64) {
+    fn shield(valor_stacks: u8) -> (i32, bool, Vec<u64>, u64) {
         let _seed = crate::random::seed_scope(70448);
         let mut run = super::dps_parity::prepare_registered_player(66, 2).unwrap();
         super::dps_parity::engage(&mut run);
@@ -1215,7 +1215,7 @@ fn valor_empowers_one_shield_and_blazes_secondary_targets() {
         }
         let actor = run.actor;
         let target = run.targets[0];
-        if valor {
+        for _ in 0..valor_stacks {
             crate::auras::apply_aura(
                 run.app.world_mut(),
                 &AuraApplication {
@@ -1261,8 +1261,14 @@ fn valor_empowers_one_shield_and_blazes_secondary_targets() {
             run.targets[1].to_bits(),
         )
     }
-    let (normal, _, no_blaze, _) = shield(false);
-    let (empowered, remains, blaze, secondary) = shield(true);
+    let (normal, _, no_blaze, _) = shield(0);
+    let (empowered, remains, blaze, secondary) = shield(1);
+    let (two_stacks, two_remains, _, _) = shield(2);
+    assert!(
+        (two_stacks as f32 / normal as f32 - 3.0).abs() < 0.01,
+        "{normal} vs {two_stacks}"
+    );
+    assert!(!two_remains, "Shield consumes all Valor stacks");
     assert!(
         (empowered as f32 / normal as f32 - 2.0).abs() < 0.01,
         "{normal} vs {empowered}"
