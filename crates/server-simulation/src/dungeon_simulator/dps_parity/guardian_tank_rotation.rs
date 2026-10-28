@@ -334,19 +334,43 @@ mod tests {
     fn guardian_ursocs_guidance_reduces_incarnation_for_paid_ironfur() {
         let mut run = super::super::prepare_registered_player(104, 1).unwrap();
         let actor = run.actor;
-        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 5487, Some(actor), false).unwrap();
-        for _ in 0..40 { run.app.update(); }
-        crate::spell_cast::scripts::start_hasted_cooldown(run.app.world_mut(), actor, 102558, 180000.0);
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 5487, Some(actor), false)
+            .unwrap();
+        for _ in 0..40 {
+            run.app.update();
+        }
+        crate::spell_cast::scripts::start_hasted_cooldown(
+            run.app.world_mut(),
+            actor,
+            102558,
+            180000.0,
+        );
         let remaining = |run: &super::super::Run| {
             let world = run.app.world();
-            let spell = world.resource::<crate::spell_info::SpellStore>().get(102558).unwrap();
-            world.get::<crate::spell_cast::SpellHistory>(actor).unwrap().remaining_cooldown_ms(spell, crate::spell_cast::now(world))
+            let spell = world
+                .resource::<crate::spell_info::SpellStore>()
+                .get(102558)
+                .unwrap();
+            world
+                .get::<crate::spell_cast::SpellHistory>(actor)
+                .unwrap()
+                .remaining_cooldown_ms(spell, crate::spell_cast::now(world))
         };
-        crate::spell_cast::powers::change_power(run.app.world_mut(), actor, shared::components::PowerType::Rage, 1000.0);
+        crate::spell_cast::powers::change_power(
+            run.app.world_mut(),
+            actor,
+            shared::components::PowerType::Rage,
+            1000.0,
+        );
         let before = remaining(&run);
-        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 192081, Some(actor), false).unwrap();
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 192081, Some(actor), false)
+            .unwrap();
         let after = remaining(&run);
-        assert_eq!(before - after, 1600, "40 paid rage divided by the native 25 rage/second divisor");
+        assert_eq!(
+            before - after,
+            1600,
+            "40 paid rage divided by the native 25 rage/second divisor"
+        );
     }
 
     #[test]
