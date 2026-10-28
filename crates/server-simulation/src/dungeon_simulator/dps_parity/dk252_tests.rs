@@ -447,12 +447,19 @@ fn dk252_scourge_strike_spends_ready_ghoul_and_summons_it() {
     .unwrap();
     preparation::finish_pending_setup(&mut run).unwrap();
     let ready = |run: &Run| {
-        run.app.world().get::<crate::auras::ActiveAuras>(run.actor).unwrap().iter()
+        run.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(run.actor)
+            .unwrap()
+            .iter()
             .find(|aura| aura.spell_id == 1254252 && aura.caster == run.actor)
             .map_or(0, |aura| aura.stacks)
     };
     let initial = ready(&run);
-    assert!(initial > 0, "actual Festering Strike must earn ready ghouls");
+    assert!(
+        initial > 0,
+        "actual Festering Strike must earn ready ghouls"
+    );
     literal_rotation::execution::execute(
         run.app.world_mut(),
         run.actor,
@@ -460,11 +467,22 @@ fn dk252_scourge_strike_spends_ready_ghoul_and_summons_it() {
     )
     .unwrap();
     preparation::finish_pending_setup(&mut run).unwrap();
-    assert_eq!(ready(&run), initial - 1, "Scourge Strike must spend one earned ready ghoul");
-    assert!(run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0.iter()
-        .any(|event| event.source == Some(run.actor.to_bits())
-            && event.spell_id == Some(275430) && event.kind == CombatLogKind::Summon),
-        "the spent ready ghoul must become an actual native lesser ghoul");
+    assert_eq!(
+        ready(&run),
+        initial - 1,
+        "Scourge Strike must spend one earned ready ghoul"
+    );
+    assert!(
+        run.app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|event| event.source == Some(run.actor.to_bits())
+                && event.spell_id == Some(275430)
+                && event.kind == CombatLogKind::Summon),
+        "the spent ready ghoul must become an actual native lesser ghoul"
+    );
 }
 
 #[test]
@@ -474,37 +492,69 @@ fn dk252_scourge_strike_commands_active_army_ghouls() {
     let mut run = prepare_literal(252, 1).unwrap();
     engage(&mut run);
     literal_rotation::execution::execute(
-        run.app.world_mut(), run.actor,
+        run.app.world_mut(),
+        run.actor,
         literal_rotation::execution::Execution::Spell(42650, run.actor, None),
-    ).unwrap();
-    for _ in 0..100 { run.app.update(); }
+    )
+    .unwrap();
+    for _ in 0..100 {
+        run.app.update();
+    }
     let army: std::collections::HashSet<_> = {
         let world = run.app.world_mut();
-        world.query::<(Entity, &crate::spell_cast::summon::SummonedCreature)>()
-            .iter(world).filter_map(|(entity, summon)|
-                (summon.owner == run.actor && summon.spell_id == 1294026).then_some(entity.to_bits())
-            ).collect()
+        world
+            .query::<(Entity, &crate::spell_cast::summon::SummonedCreature)>()
+            .iter(world)
+            .filter_map(|(entity, summon)| {
+                (summon.owner == run.actor && summon.spell_id == 1294026)
+                    .then_some(entity.to_bits())
+            })
+            .collect()
     };
-    assert_eq!(army.len(), 8, "actual Army must be present before the command");
+    assert_eq!(
+        army.len(),
+        8,
+        "actual Army must be present before the command"
+    );
     literal_rotation::execution::execute(
-        run.app.world_mut(), run.actor,
+        run.app.world_mut(),
+        run.actor,
         literal_rotation::execution::Execution::Spell(85948, run.targets[0], Some(run.targets[0])),
-    ).unwrap();
+    )
+    .unwrap();
     preparation::finish_pending_setup(&mut run).unwrap();
     assert!(crate::auras::has_aura(run.app.world(), run.actor, 1254252));
     literal_rotation::execution::execute(
-        run.app.world_mut(), run.actor,
+        run.app.world_mut(),
+        run.actor,
         literal_rotation::execution::Execution::Spell(55090, run.targets[0], Some(run.targets[0])),
-    ).unwrap();
+    )
+    .unwrap();
     preparation::finish_pending_setup(&mut run).unwrap();
-    for _ in 0..30 { run.app.update(); }
-    let events = &run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
-    let commanded: std::collections::HashSet<_> = events.iter().filter_map(|event| {
-        (event.spell_id == Some(1294264) && event.kind == CombatLogKind::Damage
-            && event.target == Some(run.targets[0].to_bits()) && event.amount > 0)
-            .then_some(event.source).flatten().filter(|source| army.contains(source))
-    }).collect();
-    assert_eq!(commanded, army, "each actual Army ghoul must execute native Death Order");
+    for _ in 0..30 {
+        run.app.update();
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    let commanded: std::collections::HashSet<_> = events
+        .iter()
+        .filter_map(|event| {
+            (event.spell_id == Some(1294264)
+                && event.kind == CombatLogKind::Damage
+                && event.target == Some(run.targets[0].to_bits())
+                && event.amount > 0)
+                .then_some(event.source)
+                .flatten()
+                .filter(|source| army.contains(source))
+        })
+        .collect();
+    assert_eq!(
+        commanded, army,
+        "each actual Army ghoul must execute native Death Order"
+    );
 }
 
 #[test]
@@ -515,33 +565,70 @@ fn dk252_army_death_order_inherits_owner_melee_power() {
     let mut run = prepare_literal(252, 1).unwrap();
     engage(&mut run);
     literal_rotation::execution::execute(
-        run.app.world_mut(), run.actor,
+        run.app.world_mut(),
+        run.actor,
         literal_rotation::execution::Execution::Spell(42650, run.actor, None),
-    ).unwrap();
-    for _ in 0..100 { run.app.update(); }
+    )
+    .unwrap();
+    for _ in 0..100 {
+        run.app.update();
+    }
     let ghoul = {
         let world = run.app.world_mut();
-        world.query::<(Entity, &crate::spell_cast::summon::SummonedCreature)>()
-            .iter(world).find_map(|(entity, summon)|
+        world
+            .query::<(Entity, &crate::spell_cast::summon::SummonedCreature)>()
+            .iter(world)
+            .find_map(|(entity, summon)| {
                 (summon.owner == run.actor && summon.spell_id == 1294026).then_some(entity)
-            ).expect("actual Army ghoul must exist")
+            })
+            .expect("actual Army ghoul must exist")
     };
-    run.app.world_mut().get_mut::<crate::stats::CharacterStats>(run.actor).unwrap().attack_power += 10_000.0;
+    run.app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(run.actor)
+        .unwrap()
+        .attack_power += 10_000.0;
     let world = run.app.world();
-    let expected = world.get::<crate::stats::CharacterStats>(run.actor).unwrap().total_attack_power(
-        crate::stats::WeaponAttackType::MainHand, world.get::<crate::stats::StatModifiers>(run.actor),
-    ) * 0.180431625 * 1.4
-        * (1.0 + crate::spell_cast::scripts::script_effect_value(world, run.actor, 1265971, 4) / 100.0);
-    run.app.insert_resource(FactorCapture::new(ghoul, run.targets[0], 1294264, "death_order", 1));
-    assert!(crate::spell_cast::try_cast_triggered(run.app.world_mut(), ghoul, 1294264, Some(run.targets[0]), 1));
+    let expected = world
+        .get::<crate::stats::CharacterStats>(run.actor)
+        .unwrap()
+        .total_attack_power(
+            crate::stats::WeaponAttackType::MainHand,
+            world.get::<crate::stats::StatModifiers>(run.actor),
+        )
+        * 0.180431625
+        * 1.4
+        * (1.0
+            + crate::spell_cast::scripts::script_effect_value(world, run.actor, 1265971, 4)
+                / 100.0);
+    run.app.insert_resource(FactorCapture::new(
+        ghoul,
+        run.targets[0],
+        1294264,
+        "death_order",
+        1,
+    ));
+    assert!(crate::spell_cast::try_cast_triggered(
+        run.app.world_mut(),
+        ghoul,
+        1294264,
+        Some(run.targets[0]),
+        1
+    ));
     for _ in 0..100 {
         run.app.update();
         let capture = run.app.world().resource::<FactorCapture>().export();
-        if let Some(power) = capture["events"].as_array().unwrap().iter()
+        if let Some(power) = capture["events"]
+            .as_array()
+            .unwrap()
+            .iter()
             .find(|event| event["event"] == "direct_amount" && event["spell_id"] == 1294264)
-            .and_then(|event| event["factors"]["a_power"].as_f64()) {
-            assert!((power - f64::from(expected)).abs() < 1.0,
-                "actual Army order must inherit selected owner melee AP: actual={power}, expected={expected}");
+            .and_then(|event| event["factors"]["a_power"].as_f64())
+        {
+            assert!(
+                (power - f64::from(expected)).abs() < 1.0,
+                "actual Army order must inherit selected owner melee AP: actual={power}, expected={expected}"
+            );
             return;
         }
     }
@@ -555,37 +642,69 @@ fn dk252_scourge_strike_commands_army_epidemic_on_three_targets() {
     let mut run = prepare_literal(252, 3).unwrap();
     engage(&mut run);
     literal_rotation::execution::execute(
-        run.app.world_mut(), run.actor,
+        run.app.world_mut(),
+        run.actor,
         literal_rotation::execution::Execution::Spell(42650, run.actor, None),
-    ).unwrap();
-    for _ in 0..100 { run.app.update(); }
+    )
+    .unwrap();
+    for _ in 0..100 {
+        run.app.update();
+    }
     let army: std::collections::HashSet<_> = {
         let world = run.app.world_mut();
-        world.query::<(Entity, &crate::spell_cast::summon::SummonedCreature)>()
-            .iter(world).filter_map(|(entity, summon)|
-                (summon.owner == run.actor && summon.spell_id == 1294026).then_some(entity.to_bits())
-            ).collect()
+        world
+            .query::<(Entity, &crate::spell_cast::summon::SummonedCreature)>()
+            .iter(world)
+            .filter_map(|(entity, summon)| {
+                (summon.owner == run.actor && summon.spell_id == 1294026)
+                    .then_some(entity.to_bits())
+            })
+            .collect()
     };
-    assert_eq!(army.len(), 8, "actual Army must be present before the command");
+    assert_eq!(
+        army.len(),
+        8,
+        "actual Army must be present before the command"
+    );
     literal_rotation::execution::execute(
-        run.app.world_mut(), run.actor,
+        run.app.world_mut(),
+        run.actor,
         literal_rotation::execution::Execution::Spell(85948, run.targets[0], Some(run.targets[0])),
-    ).unwrap();
+    )
+    .unwrap();
     preparation::finish_pending_setup(&mut run).unwrap();
     literal_rotation::execution::execute(
-        run.app.world_mut(), run.actor,
+        run.app.world_mut(),
+        run.actor,
         literal_rotation::execution::Execution::Spell(55090, run.targets[0], Some(run.targets[0])),
-    ).unwrap();
+    )
+    .unwrap();
     preparation::finish_pending_setup(&mut run).unwrap();
-    for _ in 0..30 { run.app.update(); }
-    let events = &run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
-    let targets: std::collections::HashSet<_> = events.iter().filter_map(|event| {
-        (event.spell_id == Some(1300330) && event.kind == CombatLogKind::Damage
-            && event.source.is_some_and(|source| army.contains(&source)) && event.amount > 0)
-            .then_some(event.target).flatten()
-    }).collect();
-    assert!(run.targets.iter().all(|target| targets.contains(&target.to_bits())),
-        "actual Army Epidemic Orders must damage all three targets: {targets:?}");
+    for _ in 0..30 {
+        run.app.update();
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    let targets: std::collections::HashSet<_> = events
+        .iter()
+        .filter_map(|event| {
+            (event.spell_id == Some(1300330)
+                && event.kind == CombatLogKind::Damage
+                && event.source.is_some_and(|source| army.contains(&source))
+                && event.amount > 0)
+                .then_some(event.target)
+                .flatten()
+        })
+        .collect();
+    assert!(
+        run.targets
+            .iter()
+            .all(|target| targets.contains(&target.to_bits())),
+        "actual Army Epidemic Orders must damage all three targets: {targets:?}"
+    );
 }
 
 #[test]
@@ -1461,39 +1580,112 @@ fn dk252_abomination_critical_cloud_tracks_live_owner_mastery() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(252, 1).unwrap();
     engage(&mut run);
-    literal_rotation::execution::execute(run.app.world_mut(), run.actor,
-        literal_rotation::execution::Execution::Spell(42650, run.actor, None)).unwrap();
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(42650, run.actor, None),
+    )
+    .unwrap();
     preparation::finish_pending_setup(&mut run).unwrap();
-    for _ in 0..400 { run.app.update(); }
+    for _ in 0..400 {
+        run.app.update();
+    }
     let abomination = {
         let world = run.app.world_mut();
-        world.query::<(Entity, &shared::components::Npc, &crate::spell_cast::summon::SummonedCreature)>()
-            .iter(world).find_map(|(actor, npc, summon)|
-                (npc.template_id == 149555 && summon.owner == run.actor && summon.spell_id == 288853).then_some(actor))
+        world
+            .query::<(
+                Entity,
+                &shared::components::Npc,
+                &crate::spell_cast::summon::SummonedCreature,
+            )>()
+            .iter(world)
+            .find_map(|(actor, npc, summon)| {
+                (npc.template_id == 149555
+                    && summon.owner == run.actor
+                    && summon.spell_id == 288853)
+                    .then_some(actor)
+            })
             .expect("Army must summon its actual Abomination")
     };
-    run.app.world_mut().entity_mut(abomination).insert(crate::stats::CharacterStats { crit_pct: 100.0, ..Default::default() });
+    run.app
+        .world_mut()
+        .entity_mut(abomination)
+        .insert(crate::stats::CharacterStats {
+            crit_pct: 100.0,
+            ..Default::default()
+        });
     let hit = |run: &mut Run| {
-        run.app.world_mut().get_mut::<crate::stats::CharacterStats>(run.actor).unwrap().crit_pct = 100.0;
-        run.app.world_mut().resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>().0.clear();
-        assert!(crate::spell_cast::try_cast_triggered(run.app.world_mut(), abomination, 1244347, Some(abomination), 1));
-        run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0.iter()
-            .find(|event| event.source == Some(abomination.to_bits()) && event.spell_id == Some(1244347)
-                && event.kind == CombatLogKind::Damage && event.crit).expect("actual Abomination cloud must crit").amount
+        run.app
+            .world_mut()
+            .get_mut::<crate::stats::CharacterStats>(run.actor)
+            .unwrap()
+            .crit_pct = 100.0;
+        run.app
+            .world_mut()
+            .resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .clear();
+        assert!(crate::spell_cast::try_cast_triggered(
+            run.app.world_mut(),
+            abomination,
+            1244347,
+            Some(abomination),
+            1
+        ));
+        run.app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .find(|event| {
+                event.source == Some(abomination.to_bits())
+                    && event.spell_id == Some(1244347)
+                    && event.kind == CombatLogKind::Damage
+                    && event.crit
+            })
+            .expect("actual Abomination cloud must crit")
+            .amount
     };
-    let before_mastery = run.app.world().get::<crate::stats::CharacterStats>(run.actor).unwrap().mastery_pct;
+    let before_mastery = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(run.actor)
+        .unwrap()
+        .mastery_pct;
     let before = hit(&mut run);
-    run.app.world_mut().get_mut::<crate::stats::CharacterStats>(run.actor).unwrap().mastery_pct = before_mastery + 50.0;
+    run.app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(run.actor)
+        .unwrap()
+        .mastery_pct = before_mastery + 50.0;
     run.app.update();
-    let after_mastery = run.app.world().get::<crate::stats::CharacterStats>(run.actor).unwrap().mastery_pct;
-    assert!(after_mastery > before_mastery, "fixture must change the owner's mastery");
+    let after_mastery = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(run.actor)
+        .unwrap()
+        .mastery_pct;
+    assert!(
+        after_mastery > before_mastery,
+        "fixture must change the owner's mastery"
+    );
     let after = hit(&mut run);
-    let effect = run.app.world().resource::<crate::spell_info::SpellStore>().get(77515).unwrap()
-        .effects.iter().find(|effect| effect.index == 5).unwrap();
+    let effect = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(77515)
+        .unwrap()
+        .effects
+        .iter()
+        .find(|effect| effect.index == 5)
+        .unwrap();
     let expected = (100.0 + effect.base_points + effect.bonus_coefficient * after_mastery)
         / (100.0 + effect.base_points + effect.bonus_coefficient * before_mastery);
-    assert!((after as f32 / before as f32 - expected).abs() < 0.01,
-        "actual Abomination critical cloud must follow the native live mastery multiplier: {before} -> {after}, expected ratio {expected}");
+    assert!(
+        (after as f32 / before as f32 - expected).abs() < 0.01,
+        "actual Abomination critical cloud must follow the native live mastery multiplier: {before} -> {after}, expected ratio {expected}"
+    );
 }
 
 #[test]
@@ -1744,7 +1936,12 @@ fn dk252_lord_magus_uses_selected_native_lifetime() {
     let mut run = prepare_literal(252, 1).unwrap();
     engage(&mut run);
     // Forbidden Knowledge can otherwise summon a third Magus and consume this one.
-    crate::auras::remove_auras(run.app.world_mut(), run.targets[0], crate::auras::RemoveReason::Cancelled, |aura| aura.spell_id == 1240996);
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        run.targets[0],
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 1240996,
+    );
     literal_rotation::execution::execute(
         run.app.world_mut(),
         run.actor,
@@ -1776,7 +1973,12 @@ fn dk252_lord_magus_uses_selected_native_lifetime() {
         .expires_at;
     let virtual_now = crate::auras::aura_now(run.app.world());
     while crate::spell_cast::now(run.app.world()) < started + f64::from(native_ms) / 1000.0 - 1.0 {
-        crate::auras::remove_auras(run.app.world_mut(), run.targets[0], crate::auras::RemoveReason::Cancelled, |aura| aura.spell_id == 1240996);
+        crate::auras::remove_auras(
+            run.app.world_mut(),
+            run.targets[0],
+            crate::auras::RemoveReason::Cancelled,
+            |aura| aura.spell_id == 1240996,
+        );
         run.app.update();
     }
     assert!(
@@ -2027,23 +2229,53 @@ fn dk252_whitemane_applies_and_grows_real_undeath() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(252, 1).unwrap();
     engage(&mut run);
-    literal_rotation::execution::execute(run.app.world_mut(), run.actor,
-        literal_rotation::execution::Execution::Spell(42650, run.actor, None)).unwrap();
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(42650, run.actor, None),
+    )
+    .unwrap();
     preparation::finish_pending_setup(&mut run).unwrap();
-    let stacks = |run: &Run| run.app.world().get::<crate::auras::ActiveAuras>(run.targets[0])
-        .and_then(|auras| auras.iter().find(|aura| aura.spell_id == 444633 && aura.caster == run.actor).map(|aura| aura.stacks));
+    let stacks = |run: &Run| {
+        run.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(run.targets[0])
+            .and_then(|auras| {
+                auras
+                    .iter()
+                    .find(|aura| aura.spell_id == 444633 && aura.caster == run.actor)
+                    .map(|aura| aura.stacks)
+            })
+    };
     for _ in 0..200 {
         run.app.update();
-        if stacks(&run).is_some() { break; }
+        if stacks(&run).is_some() {
+            break;
+        }
     }
     let before = stacks(&run).expect("the real Whitemane must apply owner Undeath");
-    for _ in 0..100 { run.app.update(); }
+    for _ in 0..100 {
+        run.app.update();
+    }
     let after = stacks(&run).expect("Undeath must remain active");
-    assert!(after > before, "actual periodic ticks must grow Undeath stacks: {before} -> {after}");
-    assert!(run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0.iter()
-        .any(|event| event.source == Some(run.actor.to_bits()) && event.target == Some(run.targets[0].to_bits())
-            && event.spell_id == Some(444633) && event.periodic && event.kind == CombatLogKind::Damage && event.amount > 0),
-        "owner Undeath must deal real periodic damage");
+    assert!(
+        after > before,
+        "actual periodic ticks must grow Undeath stacks: {before} -> {after}"
+    );
+    assert!(
+        run.app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|event| event.source == Some(run.actor.to_bits())
+                && event.target == Some(run.targets[0].to_bits())
+                && event.spell_id == Some(444633)
+                && event.periodic
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0),
+        "owner Undeath must deal real periodic damage"
+    );
 }
 
 #[test]

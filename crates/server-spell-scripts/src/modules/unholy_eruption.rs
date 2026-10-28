@@ -24,7 +24,9 @@ fn after_cast(spell: u32) -> Option<AfterCastHook> {
 
 fn spend_ready_ghoul(world: &mut World, caster: Entity, _: &SpellInfo) {
     let Some(instance) = world.get::<ActiveAuras>(caster).and_then(|auras| {
-        auras.iter().find(|aura| aura.spell_id == 1254252 && aura.caster == caster)
+        auras
+            .iter()
+            .find(|aura| aura.spell_id == 1254252 && aura.caster == caster)
             .map(|aura| aura.instance_id)
     }) else {
         return;
@@ -40,24 +42,37 @@ fn spend_ready_ghoul(world: &mut World, caster: Entity, _: &SpellInfo) {
 }
 
 fn command_army(world: &mut World, caster: Entity) {
-    let Some(target) = world.get::<combat::networking::CombatTarget>(caster).and_then(|target| target.0) else {
-        warn!(?caster, "Scourge Strike Army command has no selected target");
+    let Some(target) = world
+        .get::<combat::networking::CombatTarget>(caster)
+        .and_then(|target| target.0)
+    else {
+        warn!(
+            ?caster,
+            "Scourge Strike Army command has no selected target"
+        );
         return;
     };
     let mut enemies: Vec<_> = std::iter::once(target)
         .chain(combat::combat_refs::active_opponents(world, caster))
-        .filter(|enemy| targets::is_alive(world, *enemy)
-            && targets::relation_matches(world, caster, *enemy, targets::Relation::Enemy))
+        .filter(|enemy| {
+            targets::is_alive(world, *enemy)
+                && targets::relation_matches(world, caster, *enemy, targets::Relation::Enemy)
+        })
         .collect();
     enemies.sort_unstable_by_key(|enemy| enemy.to_bits());
     enemies.dedup();
     let order = if enemies.len() >= 3 { 1300330 } else { 1294264 };
     let now = combat::auras::aura_now(world);
-    let ghouls: Vec<_> = world.query::<(Entity, &spell_cast::summon::SummonedCreature)>()
-        .iter(world).filter_map(|(actor, summon)| {
-            (summon.owner == caster && summon.spell_id == 1294026
-                && summon.expires_at.is_some_and(|expiry| expiry > now)).then_some(actor)
-        }).collect();
+    let ghouls: Vec<_> = world
+        .query::<(Entity, &spell_cast::summon::SummonedCreature)>()
+        .iter(world)
+        .filter_map(|(actor, summon)| {
+            (summon.owner == caster
+                && summon.spell_id == 1294026
+                && summon.expires_at.is_some_and(|expiry| expiry > now))
+            .then_some(actor)
+        })
+        .collect();
     // SimC76f8118 sc_death_knight.cpp6766–6771: actual Army ghouls
     // execute Death Order or Epidemic Order, not a synthetic owner hit.
     for ghoul in ghouls {
