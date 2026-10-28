@@ -127,13 +127,20 @@ pub(super) fn filter_mass_casualty(
     recipients: &mut Vec<Entity>,
 ) {
     if spell.id == MASS_DAMAGE && index == 0 {
-        let assassination = world.get::<ActiveSpec>(caster).is_some_and(|spec| spec.0 == 259);
+        let assassination = world
+            .get::<ActiveSpec>(caster)
+            .is_some_and(|spec| spec.0 == 259);
         let now = spell_cast::now(world);
         recipients.retain(|target| {
-            Some(*target) != primary && (!assassination || world.get::<ActiveAuras>(*target).is_some_and(|auras| {
-                auras.iter().any(|aura| aura.spell_id == 1943 && aura.caster == caster
-                    && aura.expires_at.is_none_or(|at| at > now))
-            }))
+            Some(*target) != primary
+                && (!assassination
+                    || world.get::<ActiveAuras>(*target).is_some_and(|auras| {
+                        auras.iter().any(|aura| {
+                            aura.spell_id == 1943
+                                && aura.caster == caster
+                                && aura.expires_at.is_none_or(|at| at > now)
+                        })
+                    }))
         });
     }
 }
@@ -178,8 +185,12 @@ fn spend_mark(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
     };
     auras::spend_stack(world, target, instance);
     spell_cast::cast_triggered(world, ctx.caster, MARK_DAMAGE, Some(target), ctx.depth + 1);
-    let assassination = world.get::<ActiveSpec>(ctx.caster).is_some_and(|spec| spec.0 == 259);
-    if (assassination || ctx.spell.id == BLACK_POWDER) && auras::has_aura(world, ctx.caster, MASS_CASUALTY) {
+    let assassination = world
+        .get::<ActiveSpec>(ctx.caster)
+        .is_some_and(|spec| spec.0 == 259);
+    if (assassination || ctx.spell.id == BLACK_POWDER)
+        && auras::has_aura(world, ctx.caster, MASS_CASUALTY)
+    {
         let mut payload = world
             .resource::<SpellStore>()
             .get(MASS_DAMAGE)
