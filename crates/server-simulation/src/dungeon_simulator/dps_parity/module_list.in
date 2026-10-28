@@ -72,6 +72,7 @@ mod composite_precombat_tests;
 mod demonology_flametouched_tests;
 mod demonology_hellbent_tests;
 mod demonology_reign_tests;
+mod demonology_mind_sear_tests;
 mod demonology_ritual_tests;
 mod demonology_stormbound_tests;
 mod demonology_tests;
