@@ -19,6 +19,39 @@ fn zero_capacity_charge_category_keeps_native_spell_cooldown() {
 
 #[test]
 #[ignore = "requires native MID2 tank, Shaman and canonical world DB"]
+fn restoration_shaman_replay_native_mana_regeneration() {
+    let mut run = super::super::dps_parity::prepare_registered_player(66, 1).unwrap();
+    let healer = super::super::dps_parity::spawn_second_reference_player(&mut run, 264).unwrap();
+    let known = run
+        .app
+        .world()
+        .get::<crate::class_progression::KnownSpells>(healer)
+        .unwrap();
+    println!(
+        "RESTO_SHAMAN_FLAME_SHOCK wrapper={} payload={}",
+        known.contains(470411),
+        known.contains(188389)
+    );
+    let mana = run
+        .app
+        .world_mut()
+        .get_mut::<shared::components::Mana>(healer)
+        .unwrap();
+    mana.into_inner().current = 200_000.0;
+    for _ in 0..20 {
+        run.app.update();
+    }
+    let rate = run
+        .app
+        .world()
+        .get::<crate::spell_cast::powers::PowerPools>(healer)
+        .unwrap()
+        .mana_regen_per_sec;
+    assert!((rate - 2000.0).abs() < 0.01, "actual mana regen: {rate}");
+}
+
+#[test]
+#[ignore = "requires native MID2 tank, Shaman and canonical world DB"]
 fn restoration_shaman_healing_stream_summon_applies_native_pulse() {
     let mut run = super::super::dps_parity::prepare_registered_player(66, 1).unwrap();
     let healer = super::super::dps_parity::spawn_second_reference_player(&mut run, 264).unwrap();
@@ -147,6 +180,17 @@ fn restoration_shaman_heals_the_simc_dummy_party() {
     assert!(
         report["healer_casts"]["77472"].as_u64().unwrap_or(0) > 0,
         "Healing Wave must be available between totem charges: {report}"
+    );
+    let casts = report["healer_casts"].as_object().unwrap();
+    let total: u64 = casts.values().filter_map(|count| count.as_u64()).sum();
+    assert!(total > 100, "healer must remain active: {report}");
+    assert!(
+        casts.get("470411").and_then(|v| v.as_u64()).unwrap_or(0) > 0,
+        "Flame Shock should fill healthy periods: {report}"
+    );
+    assert!(
+        casts.get("51505").and_then(|v| v.as_u64()).unwrap_or(0) > 0,
+        "Lava Burst should fill healthy periods: {report}"
     );
     println!("RESTORATION_SHAMAN_REPORT={report}");
 }
