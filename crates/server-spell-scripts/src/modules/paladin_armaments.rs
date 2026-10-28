@@ -286,12 +286,7 @@ fn trigger_grand_crusader(world: &mut World, caster: Entity, spell: u32) {
     let remaining = world
         .get::<combat::spell_cast::SpellHistory>(caster)
         .map_or(0, |history| history.remaining_cooldown_ms(&shield, now));
-    combat::spell_cast::scripts::reduce_cooldown(
-        world,
-        caster,
-        31935,
-        f64::from(remaining) / 1000.0,
-    );
+    combat::spell_cast::scripts::reduce_cooldown(world, caster, 31935, remaining as f64 / 1000.0);
 }
 
 fn after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
