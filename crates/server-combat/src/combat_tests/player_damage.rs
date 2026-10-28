@@ -71,6 +71,25 @@ fn a_players_swing_is_weapon_plus_attack_power_through_the_creatures_armor() {
 }
 
 #[test]
+fn source_bound_absorb_is_consumed_once_by_real_dual_wield_swings() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut app = setup_app();
+    let target = spawn_target(&mut app, pos(1.0, 0.0, 0.0), 10_000.0);
+    let attacker = level_10_player(
+        &mut app,
+        target,
+        CharacterStats {
+            main_hand: HEAVY_BLADE,
+            off_hand: Some(HEAVY_BLADE),
+            ..default()
+        },
+    );
+    crate::auras::source_absorb::grant(app.world_mut(), target, attacker, 204301, 40.0, 10_000);
+    run_attack_tick(&mut app);
+    assert_eq!(app.world().get::<Health>(target).unwrap().current, 9890.0);
+}
+
+#[test]
 fn the_swing_timer_is_the_weapon_speed_over_haste() {
     for (haste_pct, expected_millis) in [(0.0, 2600), (30.0, 2000)] {
         let mut app = setup_app();

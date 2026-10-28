@@ -115,6 +115,7 @@ fn run_attack_tick(app: &mut App) {
          sight: SwingSight| {
             let dt = time.delta();
             let context = SwingContext {
+                now: time.elapsed_secs_f64(),
                 melee_range: MELEE_RANGE,
                 stagger: None,
                 scaling: &scaling,

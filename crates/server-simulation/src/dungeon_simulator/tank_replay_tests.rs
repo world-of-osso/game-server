@@ -1292,6 +1292,66 @@ fn valor_empowers_one_shield_and_blazes_secondary_targets() {
 }
 
 #[test]
+#[ignore = "uses real MID2 Protection Blessed Hammer and dummy attacks"]
+fn blessed_hammer_absorbs_only_next_hit_from_its_target() {
+    use shared::components::Health;
+    let mut run = super::dps_parity::prepare_registered_player(66, 2).unwrap();
+    super::dps_parity::engage(&mut run);
+    for _ in 0..40 {
+        run.app.update();
+    }
+    let actor = run.actor;
+    let attacker = run.targets[0];
+    let other = run.targets[1];
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        actor,
+        crate::auras::RemoveReason::Consumed,
+        |aura| aura.spell_id == 432607,
+    );
+    let damage = |run: &mut super::dps_parity::Run, source| {
+        let before = run.app.world().get::<Health>(actor).unwrap().current;
+        crate::spell_cast::effects::replay_simc_dummy_bleed(
+            run.app.world_mut(),
+            source,
+            actor,
+            25000.0,
+        );
+        before - run.app.world().get::<Health>(actor).unwrap().current
+    };
+    let normal = damage(&mut run, attacker);
+    assert!(normal > 0.0, "baseline hit must reach health");
+    assert!(crate::spell_cast::try_cast_triggered(
+        run.app.world_mut(),
+        actor,
+        204301,
+        Some(attacker),
+        0
+    ));
+    let other_damage = damage(&mut run, other);
+    let reduced = damage(&mut run, attacker);
+    let next = damage(&mut run, attacker);
+    assert!(
+        (other_damage - normal).abs() < 2.0,
+        "other attacker consumed the debuff: {normal} {other_damage}"
+    );
+    let ap = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(actor)
+        .unwrap()
+        .attack_power;
+    assert!(
+        (normal - reduced - 0.30 * ap).abs() < 3.0,
+        "expected AP-scaled absorb: {normal} {reduced} AP {ap}"
+    );
+    assert!(
+        (next - normal).abs() < 2.0,
+        "absorb must be one hit: {normal} {next}"
+    );
+}
+
+#[test]
 #[ignore = "uses selected MID2 Crusader's Judgment and native avoidance procs"]
 fn grand_crusader_advances_shared_judgment_charge() {
     let _seed = crate::random::seed_scope(70448);
