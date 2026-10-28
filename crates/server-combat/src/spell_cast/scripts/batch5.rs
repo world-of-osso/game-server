@@ -126,7 +126,11 @@ fn has_owned(world: &World, caster: Entity, target: Entity, id: u32) -> bool {
 
 /// 207317 names212739 for each of your Virulent Plagues and77575s3 for extension.
 pub(super) fn epidemic(world: &mut World, caster: Entity, target: Entity, depth: u8) {
-    let virulent = has_owned(world, caster, target, VIRULENT_PLAGUE);
+    // SimC76f8118 sc_death_knight.cpp10335–10370: Epidemic impacts only
+    // targets carrying this caster's Virulent Plague.
+    if !has_owned(world, caster, target, VIRULENT_PLAGUE) {
+        return;
+    }
     let milliseconds = script_effect_value(world, caster, OUTBREAK, 2) as u32;
     crate::auras::extend_owned_duration(
         world,
@@ -135,9 +139,7 @@ pub(super) fn epidemic(world: &mut World, caster: Entity, target: Entity, depth:
         &[DREAD_PLAGUE, VIRULENT_PLAGUE],
         milliseconds,
     );
-    if virulent {
-        spell_cast::cast_triggered(world, caster, EPIDEMIC_DAMAGE, Some(target), depth + 1);
-    }
+    spell_cast::cast_triggered(world, caster, EPIDEMIC_DAMAGE, Some(target), depth + 1);
 }
 
 /// The infected enemy receives212739s1; other nearby foes receive212739s2.

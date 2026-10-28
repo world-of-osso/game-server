@@ -314,6 +314,17 @@ fn dummy5_epidemic_eruptions_require_owned_virulent_plague() {
     let ally = spawn_player(&mut h.app, 6, 4.0);
     apply(&mut h, caster, primary, 191587, 1);
     apply(&mut h, caster, primary, 1240996, 1);
+    apply(&mut h, caster, near, 1240996, 1);
+    let dread_only_expiry = h
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(near)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 1240996 && aura.caster == caster)
+        .unwrap()
+        .expires_at
+        .unwrap();
     apply(&mut h, foreign, foreign, 191587, 1);
     apply(&mut h, caster, far, 191587, 1);
     let expiry = h
@@ -346,6 +357,20 @@ fn dummy5_epidemic_eruptions_require_owned_virulent_plague() {
         .expires_at
         .unwrap();
     assert!((after - expiry - 1.0).abs() < 0.001);
+    let dread_after = h
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(near)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 1240996 && aura.caster == caster)
+        .unwrap()
+        .expires_at
+        .unwrap();
+    assert_eq!(
+        dread_after, dread_only_expiry,
+        "Epidemic must not extend Dread Plague without owned Virulent Plague"
+    );
 }
 
 fn lava_burst(flame_shock: bool, rank: bool) -> Harness {
