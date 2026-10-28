@@ -122,6 +122,7 @@ register_modules! {
     demon_hunter_catastrophe: (5819, "modules/demon_hunter_catastrophe.rs"),
     demon_hunter_fragments: (5777, "modules/demon_hunter_fragments.rs"),
     demon_hunter_meteor_shower: (5820, "modules/demon_hunter_meteor_shower.rs"),
+    demon_hunter_reactive: (5823, "modules/demon_hunter_reactive.rs"),
     demon_hunter_otherworldly_focus: (5821, "modules/demon_hunter_otherworldly_focus.rs"),
     generic_leech: (9800, "modules/generic_leech.rs"),
     demon_hunter_sigil_spite: (5810, "modules/demon_hunter_sigil_spite.rs"),
