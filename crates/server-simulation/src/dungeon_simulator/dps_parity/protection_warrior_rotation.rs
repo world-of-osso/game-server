@@ -362,6 +362,82 @@ mod tests {
         println!("HEALER_TANK_REPORT={report}");
     }
     #[test]
+    fn skyfury_repeats_white_swings_without_resetting_the_timer() {
+        use crate::spell_cast::test_harness::harness_with_native_enemy_dodge_reduction;
+        use server::spell_info::SpellStore;
+        let seed = harness_with_native_enemy_dodge_reduction(
+            Vec::new(),
+            &[462854, 236279, 236282, 23922],
+            1,
+        )
+        .unwrap();
+        let mut skyfury = seed
+            .app
+            .world()
+            .resource::<SpellStore>()
+            .get(462854)
+            .unwrap()
+            .clone();
+        let options = skyfury.aura_options.as_mut().unwrap();
+        assert_eq!(options.proc_chance, 20);
+        assert_eq!(options.proc_type_mask[0] & 4, 4);
+        assert_eq!(options.proc_category_recovery_ms, 100);
+        options.proc_chance = 100;
+        let mut h = harness_with_native_enemy_dodge_reduction(
+            vec![skyfury],
+            &[462854, 236279, 236282, 23922],
+            1,
+        )
+        .unwrap();
+        h.advance(3);
+        let caster = h.caster;
+        for spell_id in [462854, 236279] {
+            crate::auras::apply_aura(
+                h.app.world_mut(),
+                &crate::auras::AuraApplication {
+                    caster,
+                    target: caster,
+                    spell_id,
+                    effect_mask: 1,
+                    source: crate::auras::AuraSource::Cast,
+                },
+            );
+        }
+        h.attack(h.npc);
+        h.advance(2);
+        let timer = h
+            .app
+            .world()
+            .get::<crate::combat::AutoAttack>(caster)
+            .unwrap()
+            .timer;
+        h.advance(3);
+        let after = h
+            .app
+            .world()
+            .get::<crate::combat::AutoAttack>(caster)
+            .unwrap()
+            .timer;
+        assert!(
+            after < timer,
+            "repeat must not reset the normal swing timer"
+        );
+        let procs = h
+            .inbox
+            .log
+            .iter()
+            .filter(|event| {
+                event.spell_id == Some(236282)
+                    && event.kind == shared::protocol::CombatLogKind::Damage
+            })
+            .count();
+        assert!(
+            procs >= 2,
+            "both original and repeat must trigger Devastator: {procs}"
+        );
+    }
+
+    #[test]
     fn protection_devastator_autoattacks_reset_running_shield_slam() {
         for chance in [0.0, 100.0] {
             let seed = crate::spell_cast::test_harness::harness_with_native_enemy_dodge_reduction(

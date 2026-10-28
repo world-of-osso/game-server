@@ -832,24 +832,54 @@ pub(crate) fn auto_attack_system(world: &mut World) {
                     owner_hit_expertise,
                     melee_range,
                     stagger,
+                    None,
                 ),
             )
             .expect("auto-attack unit system must have its registered resources");
     }
 }
 
+/// Repeat a landed white swing without advancing or resetting its normal timer.
+pub fn repeat_melee_swing(world: &mut World, attacker: Entity, target: Entity, hand: Hand) {
+    let Some(melee_range) = crate::scripted_ai::model_reach::melee_range(world, attacker, target)
+    else {
+        return;
+    };
+    let owner_crit = read_pet_owner_critical_chance(world, attacker);
+    let owner_hit_expertise = read_pet_owner_hit_expertise(world, attacker);
+    let stagger = crate::auras::stagger::snapshot(world, target);
+    world
+        .run_system_cached_with(
+            auto_attack_unit,
+            (
+                attacker,
+                owner_crit,
+                owner_hit_expertise,
+                melee_range,
+                stagger,
+                Some((hand, target)),
+            ),
+        )
+        .expect("repeat swing system must have its registered resources");
+}
+
 fn auto_attack_unit(
-    In((attacker_entity, owner_crit, owner_hit_expertise, melee_range, stagger)): In<(
+    In((attacker_entity, owner_crit, owner_hit_expertise, melee_range, stagger, repeat)): In<(
         Entity,
         Option<f32>,
         Option<f32>,
         f32,
         Option<crate::auras::stagger::Snapshot>,
+        Option<(Hand, Entity)>,
     )>,
     time: Res<Time>,
     mut params: AutoAttackParams,
 ) {
-    let dt = time.delta();
+    let dt = if repeat.is_some() {
+        Duration::ZERO
+    } else {
+        time.delta()
+    };
     let mut swings = Vec::new();
     let mut redirect_health = HashMap::new();
     // Release the attacker's read of ActiveAuras before mutating the victim's
@@ -861,6 +891,7 @@ fn auto_attack_unit(
         params.forms.as_deref(),
         params.spells.as_deref(),
         params.traits.get(attacker_entity).ok(),
+        repeat.is_some(),
     ) else {
         return;
     };
@@ -870,7 +901,7 @@ fn auto_attack_unit(
         .copied()
         .unwrap_or_default();
     let mut impact_gate = initial_gate;
-    let target_entity = snapshot.auto_attack.victim;
+    let target_entity = repeat.map_or(snapshot.auto_attack.victim, |(_, target)| target);
     let observer = params
         .invisibility
         .get(attacker_entity)
@@ -1010,45 +1041,67 @@ fn auto_attack_unit(
         }),
     };
     for hand in [Hand::Main, Hand::Off] {
-        let Some(outcome) = try_swing(
-            &attacker,
-            hand,
-            snapshot.overshoot[match hand {
-                Hand::Main => 0,
-                Hand::Off => 1,
-            }],
-            &mut params.units.p1(),
-            &SwingContext {
-                melee_range,
-                stagger: stagger.as_ref(),
-                scaling: &params.scaling,
-                summon_modifiers: &params.summon_modifiers,
-                sight: &params.sight,
-                armor_constants: params.armor_constants.as_deref(),
-                spells: params.spells.as_deref(),
-                impact_replacement: snapshot.impact_replacement,
-                melee_override: match hand {
-                    Hand::Main => snapshot.attack_spells[0],
-                    Hand::Off => snapshot.attack_spells[1],
-                },
-                creature_types: crate::unit_creature_type::CreatureTypes {
-                    races: params.race_types.as_deref(),
-                    forms: params.forms.as_deref(),
-                    data: params.world_data.as_deref(),
-                },
+        if repeat.is_some_and(|(repeated_hand, _)| repeated_hand != hand) {
+            continue;
+        }
+        let context = SwingContext {
+            melee_range,
+            stagger: stagger.as_ref(),
+            scaling: &params.scaling,
+            summon_modifiers: &params.summon_modifiers,
+            sight: &params.sight,
+            armor_constants: params.armor_constants.as_deref(),
+            spells: params.spells.as_deref(),
+            impact_replacement: snapshot.impact_replacement,
+            melee_override: match hand {
+                Hand::Main => snapshot.attack_spells[0],
+                Hand::Off => snapshot.attack_spells[1],
             },
-            target_entity,
-            &mut snapshot.auto_attack,
-            &mut impact_gate,
-            &mut params.commands,
-            &mut redirect_health,
-        ) else {
+            creature_types: crate::unit_creature_type::CreatureTypes {
+                races: params.race_types.as_deref(),
+                forms: params.forms.as_deref(),
+                data: params.world_data.as_deref(),
+            },
+        };
+        let outcome = if repeat.is_some() {
+            resolve_swing(
+                &attacker,
+                hand,
+                &mut params.units.p1(),
+                &context,
+                target_entity,
+                &mut impact_gate,
+                &mut params.commands,
+                &mut redirect_health,
+                true,
+            )
+            .flatten()
+        } else {
+            try_swing(
+                &attacker,
+                hand,
+                snapshot.overshoot[match hand {
+                    Hand::Main => 0,
+                    Hand::Off => 1,
+                }],
+                &mut params.units.p1(),
+                &context,
+                target_entity,
+                &mut snapshot.auto_attack,
+                &mut impact_gate,
+                &mut params.commands,
+                &mut redirect_health,
+            )
+        };
+        let Some(outcome) = outcome else {
             continue;
         };
         swings.push((attacker_entity, target_entity, outcome));
     }
-    if let Ok((_, mut auto_attack, ..)) = params.units.p0().get_mut(attacker_entity) {
-        *auto_attack = snapshot.auto_attack;
+    if repeat.is_none() {
+        if let Ok((_, mut auto_attack, ..)) = params.units.p0().get_mut(attacker_entity) {
+            *auto_attack = snapshot.auto_attack;
+        }
     }
     if impact_gate != initial_gate {
         params.commands.entity(attacker_entity).insert(impact_gate);
@@ -1161,6 +1214,7 @@ fn snapshot_attacker(
     forms: Option<&crate::auras::shapeshift::ShapeshiftForms>,
     spells: Option<&crate::spell_info::SpellStore>,
     traits: Option<&crate::class_progression::TraitLoadout>,
+    repeat: bool,
 ) -> Option<SwingSnapshot> {
     let (
         _,
@@ -1176,8 +1230,9 @@ fn snapshot_attacker(
         advance_swing_timer(&mut auto_attack.off_hand_timer, dt),
     ];
     // Unit::DoMeleeAttackIfReady: timers run even while casting or controlled.
-    if cast_blocks_auto_attack(cast, spells)
-        || auras.is_some_and(|auras| auras.cannot_auto_attack())
+    if !repeat
+        && (cast_blocks_auto_attack(cast, spells)
+            || auras.is_some_and(|auras| auras.cannot_auto_attack()))
     {
         return None;
     }
@@ -1622,8 +1677,9 @@ fn roll_outcome(
     in_front: bool,
     target_auras: Option<&crate::auras::ActiveAuras>,
     target_health: &Health,
+    cannot_miss: bool,
 ) -> MeleeOutcome {
-    let chances = read_outcome_chances(
+    let mut chances = read_outcome_chances(
         attacker,
         victim,
         flags,
@@ -1632,6 +1688,9 @@ fn roll_outcome(
         target_auras,
         target_health,
     );
+    if cannot_miss {
+        chances.miss = 0.0;
+    }
     melee::roll_melee_outcome(
         &chances,
         rand::Rng::gen_range(&mut rand::thread_rng(), 0..10_000),
@@ -2013,6 +2072,42 @@ fn try_swing(
         return None;
     }
     let weapon = attacker.weapon(hand)?;
+    let result = resolve_swing(
+        attacker,
+        hand,
+        targets,
+        context,
+        target_entity,
+        impact_gate,
+        commands,
+        redirect_health,
+        false,
+    )?;
+    let pet_time = context
+        .summon_modifiers
+        .pet_melee_time_multiplier(attacker.entity);
+    reset_swing_timers(
+        auto_attack,
+        hand,
+        attacker.swing_time(&weapon) * pet_time,
+        overshoot,
+    );
+    result
+}
+
+/// Resolve a swing without changing either hand's timer. `None` means it could not swing.
+fn resolve_swing(
+    attacker: &Attacker,
+    hand: Hand,
+    targets: &mut AutoAttackTargets,
+    context: &SwingContext,
+    target_entity: Entity,
+    impact_gate: &mut WhiteImpactGate,
+    commands: &mut Commands,
+    redirect_health: &mut HashMap<Entity, f32>,
+    cannot_miss: bool,
+) -> Option<Option<SwingCommitReceipt>> {
+    let weapon = attacker.weapon(hand)?;
     let splits = melee_damage_splits(targets, context, target_entity, attacker.entity);
     let Ok((
         target_pos,
@@ -2051,18 +2146,9 @@ fn try_swing(
         context.sight.send_blocked_swing(commands, attacker.entity);
         return None;
     }
-    let pet_time = context
-        .summon_modifiers
-        .pet_melee_time_multiplier(attacker.entity);
-    reset_swing_timers(
-        auto_attack,
-        hand,
-        attacker.swing_time(&weapon) * pet_time,
-        overshoot,
-    );
     if let Some(spell) = context.melee_override {
         queue_melee_override(commands, attacker.entity, target_entity, spell);
-        return None;
+        return Some(None);
     }
     let unit = |entity| {
         context.scaling.get(entity).map_or(
@@ -2155,6 +2241,7 @@ fn try_swing(
         in_front,
         avoidance.1.as_deref(),
         &health,
+        cannot_miss,
     );
     let immune = crate::auras::immune_to_school(avoidance.1.as_deref(), 1);
     if let Some(spell) = crate::spell_cast::scripts::replace_white_impact(
@@ -2163,7 +2250,7 @@ fn try_swing(
         !kind.avoided() && !immune,
     ) {
         queue_melee_override(commands, attacker.entity, target_entity, spell);
-        return None;
+        return Some(None);
     }
     // Unit::DealMeleeDamage → DealDamage (Unit.cpp:1185-1186): every swing, missed or
     // not, stands a player victim up.
@@ -2292,12 +2379,12 @@ fn try_swing(
         player_died: false,
         duel_defeated: false,
     };
-    Some(queue_swing_commit(
+    Some(Some(queue_swing_commit(
         commands,
         attacker.entity,
         target_entity,
         outcome,
-    ))
+    )))
 }
 
 /// A timer already ready before this tick has no transferable overshoot.

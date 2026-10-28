@@ -292,6 +292,7 @@ register_modules! {
     paladin_edict: (1001, "modules/paladin_edict.rs"),
     protection_demolish: (734, "modules/protection_demolish.rs"),
     protection_devastator: (730, "modules/protection_devastator.rs"),
+    skyfury: (1002, "modules/skyfury.rs"),
     protection_fueled: (732, "modules/protection_fueled.rs"),
     protection_outburst: (733, "modules/protection_outburst.rs"),
     protection_shield_block: (731, "modules/protection_shield_block.rs"),
