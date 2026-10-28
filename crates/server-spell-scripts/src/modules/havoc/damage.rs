@@ -102,7 +102,18 @@ pub(crate) fn apply_havoc_damage_policies(
     ) {
         return;
     }
-    apply_initiative(world, caster, target);
+    // SimC76f8118 sc_demon_hunter.cpp2450–2459: Initiative belongs to
+    // demon_hunter_action_t impacts, not item or other generic proc actions.
+    let dh_action = spell.is_none_or(|id| {
+        world
+            .resource::<combat::spell_info::SpellStore>()
+            .get(id)
+            .and_then(|info| info.class_options.as_ref())
+            .is_some_and(|options| options.spell_class_set == 107)
+    });
+    if dh_action {
+        apply_initiative(world, caster, target);
+    }
     if spell.is_none_or(|id| BURNING_HITS.contains(&id))
         && super::has_talent(world, caster, BURNING_BLADES)
     {

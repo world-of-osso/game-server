@@ -354,6 +354,8 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 ### Havoc literal rotation
 
+- Havoc Immolation Aura258920 grants its native Havoc initial Fury only; its periodic child258922 grants native Havoc tick Fury only while Burning Hatred320374 is selected. Do not apply the Vengeance energize effects to Havoc (SimC76f8118 `sc_demon_hunter.cpp`4651–4677,4784–4800).
+
 - Immolation Aura258920 deals native initial damage258921 on each in-combat application or refresh. The precombat fixture does not emit its initial hit. Selected Undying Embers1272405 rolls native effect0 on natural expiry or replacement of an active aura and, after 300ms, reapplies the aura without a cast or resource grant; replacement resets its tick phase (SimC76f8118 `sc_demon_hunter.cpp`8927–8954,8980–9040).
 - Completed Eye Beam/Gaze with selected Final Breath1266500 emits one additional native child tick scaled by the talent's effect0; interruptions do not emit it (SimC76f8118 `sc_demon_hunter.cpp`3285–3327).
 
@@ -912,6 +914,8 @@ Selected Stormwell1264762 runs a guaranteed equipped-native Windfury callback on
 
 Native Unleashed1252431 remains Magic and cannot trigger weapon imbues. A main-hand weapon pointer and `shaman_attack_t` inheritance do not override SimC's data-Melee admission check (`sc_shaman.cpp3039–3055`, pinned SpellDataDump1252431).
 
+Enhancement Tempest applies its native effect2 damage percentage to secondary targets, without reducing the primary (`sc_shaman.cpp`9875–9881; `action.cpp`1553–1555).
+
 Spec263 parity executes the pinned MID2 Enhancement action rows through the shared literal evaluator, using native action admission, equipment and aura/target facts. A real player uses this driver without loading AssistedCombat diagnostic inputs; no follower profile is fabricated. Windfury/Flametongue setup occurs only in precombat. Thorim's LB/CL choice follows successful foreground LB/CL/Tempest dispatch and Tempest target count. This selects actions; it does not certify the underlying Enhancement proc, counter or damage mechanics.
 
 Enhancement native melee procs generate the real344179 counter and187881 modifier together. Foreground affected spells snapshot their native modifiers at launch and consume up to the live187880 effect1 limit; expiry removes the modifier. Voltaic Blaze grants its native effect1 stack count once per execution. Windfury/Flametongue setup resolves the native weapon-enchant payload for the equipped hand; eligible landed melee runs native proc chance/modifiers and25504/10444 damage, without recursive Windfury procs. The third attack uses native390288 Unruly Winds, not384355 Elemental Weapons. Sources: pinned SimC `sc_shaman.cpp2640–2675,3039–3055,10123–10125,10919–11023,11870–11988`.
@@ -1225,6 +1229,7 @@ Selected Insidious Ire earns its temporary channel bonus when one target has all
 - Spec269 executes the pinned Windwalker action rows on native player and follower fixtures. Player measurements retain player identity and use the literal driver rather than AssistedCombat diagnostics.
 
 - Windwalker Tigereye Brew starts combat with its native initial stacks, earns one stack per native Chi threshold from qualifying casts, and transfers up to the native cap into Zenith critical chance (`sc_monk.cpp393–406,4583–4595,7170–7183`). Out-of-combat regeneration remains unimplemented.
+- Whirling Dragon Punch emits its area damage at the initial pulse and the next two native periods; its final two native aura periods do not emit damage (`sc_monk.cpp1888–1906`).
 ### Hellbent Commander
 
 - Hellbent Commander reconciles native1281559 stacks to the eligible live demon roster on the pinned randomized 5.25s heartbeat. Actual summon and demise events retain the pinned bug-model ordering, including ordinary Hand Imp and alternate Imp Implosion differences; Diabolist demons are excluded (`sc_warlock.cpp303–338`; `sc_warlock_pets.cpp203–226,992–1006,1310–1341`).
