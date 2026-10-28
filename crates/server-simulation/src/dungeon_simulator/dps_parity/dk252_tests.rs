@@ -56,6 +56,17 @@ fn dk252_real_magus_summon_earns_unholy_aura_haste() {
         "the real Magus must earn Unholy Aura"
     );
     run.app.update();
+    let stacks = run
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(run.actor)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 1268917 && aura.caster == run.actor)
+        .unwrap()
+        .stacks;
+    let per_stack =
+        crate::spell_cast::scripts::script_effect_value(run.app.world(), run.actor, 377440, 0);
     let buffed = run
         .app
         .world()
@@ -75,9 +86,11 @@ fn dk252_real_magus_summon_earns_unholy_aura_haste() {
         .get::<crate::stats::CharacterStats>(run.actor)
         .unwrap()
         .haste_pct;
+    let actual = (1.0 + buffed / 100.0) / (1.0 + unbuffed / 100.0);
+    let expected = 1.0 + per_stack * f32::from(stacks) / 100.0;
     assert!(
-        buffed > unbuffed,
-        "earned Unholy Aura must increase live owner haste: {unbuffed} -> {buffed}"
+        (actual - expected).abs() < 0.001,
+        "actual Magi must grant selected talent haste: {unbuffed} -> {buffed}, stacks={stacks}, expected factor={expected}"
     );
 }
 
