@@ -172,12 +172,13 @@ fn copy_weapon_actions(world: &mut World, caster: Entity, spell: &SpellInfo) {
         }
         return;
     }
-    if !matches!(spell.id, 195292 | 195182) {
+    if !matches!(spell.id, 195292 | 195182 | 49998 | 206930 | 433895 | 50842) {
         return;
     }
-    let Some(target) = spell.cast_primary_target else {
+    let target = spell.cast_primary_target;
+    if spell.id != 50842 && target.is_none() {
         return;
-    };
+    }
     let weapons: Vec<Entity> = world
         .query::<(Entity, &Npc, &UnitSummonedBy)>()
         .iter(world)
@@ -185,7 +186,38 @@ fn copy_weapon_actions(world: &mut World, caster: Entity, spell: &SpellInfo) {
         .map(|(entity, _, _)| entity)
         .collect();
     for weapon in weapons {
-        spell_cast::cast_triggered(world, weapon, spell.id, Some(target), 1);
+        match spell.id {
+            49998 | 206930 | 50842 => {
+                let (copy, mask) = match spell.id {
+                    49998 => (49998, 1),
+                    206930 => (228645, 1 << 1),
+                    50842 => (50842, 1),
+                    _ => unreachable!(),
+                };
+                spell_cast::cast_triggered_with_overrides(
+                    world,
+                    weapon,
+                    copy,
+                    target,
+                    1,
+                    TriggeredSpellOverrides {
+                        effect_mask: Some(mask),
+                        ..Default::default()
+                    },
+                );
+            }
+            433895 => {
+                let Some(mut copy) = spell_cast::load_triggered_spell(world, 433895, 1) else {
+                    continue;
+                };
+                copy.effects.retain(|effect| effect.index == 4);
+                copy.effects[0].implicit_targets = [6, 0];
+                spell_cast::launch_triggered_spell(world, weapon, &copy, target, 1);
+            }
+            _ => {
+                spell_cast::cast_triggered(world, weapon, spell.id, target, 1);
+            }
+        }
     }
 }
 

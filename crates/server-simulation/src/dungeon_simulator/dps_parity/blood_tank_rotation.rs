@@ -801,6 +801,78 @@ mod tests {
 
     #[test]
     #[ignore = "requires canonical world database and MID2 Blood inputs"]
+    fn blood_dancing_rune_weapons_mirror_damage_with_owner_attack_power() {
+        use shared::components::{Npc, UnitSummonedBy};
+        use shared::protocol::CombatLogKind;
+        for (owner_spell, weapon_spell) in [
+            (49998, 49998),
+            (206930, 228645),
+            (433895, 433895),
+            (50842, 50842),
+        ] {
+            let _seed = crate::random::seed_scope(70448);
+            let mut run = super::super::prepare_registered_player(250, 1).unwrap();
+            let actor = run.actor;
+            let target = run.targets[0];
+            super::super::engage(&mut run);
+            crate::spell_cast::creature_cast(run.app.world_mut(), actor, 49028, Some(actor), false)
+                .unwrap();
+            for _ in 0..40 {
+                run.app.update();
+            }
+            let world = run.app.world_mut();
+            let weapons: Vec<_> = world
+                .query::<(bevy::prelude::Entity, &Npc, &UnitSummonedBy)>()
+                .iter(world)
+                .filter(|(_, npc, owner)| npc.template_id == 27893 && owner.0 == actor.to_bits())
+                .map(|(entity, _, _)| entity)
+                .collect();
+            assert_eq!(weapons.len(), 2);
+            let stats = world.get::<crate::stats::CharacterStats>(actor).unwrap();
+            let owner_ap = stats.total_attack_power(
+                crate::stats::WeaponAttackType::MainHand,
+                world.get::<crate::stats::StatModifiers>(actor),
+            );
+            for &weapon in &weapons {
+                let (_, pet_ap) = crate::spell_cast::effects::power_stats(world, weapon, false);
+                assert!(
+                    (pet_ap - owner_ap / 3.0).abs() < 0.01,
+                    "weapon AP {pet_ap}, owner AP {owner_ap}"
+                );
+            }
+            crate::spell_cast::powers::change_power(
+                world,
+                actor,
+                shared::components::PowerType::RunicPower,
+                1000.0,
+            );
+            crate::spell_cast::creature_cast(world, actor, owner_spell, Some(target), false)
+                .unwrap();
+            for _ in 0..4 {
+                run.app.update();
+            }
+            let events = &run
+                .app
+                .world()
+                .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+                .0;
+            for weapon in weapons {
+                assert!(
+                    events
+                        .iter()
+                        .any(|event| event.source == Some(weapon.to_bits())
+                            && event.target == Some(target.to_bits())
+                            && event.spell_id == Some(weapon_spell)
+                            && event.kind == CombatLogKind::Damage
+                            && event.amount > 0),
+                    "missing weapon damage for {owner_spell}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    #[ignore = "requires canonical world database and MID2 Blood inputs"]
     fn blood_dancing_rune_weapon_spawns_owned_actor() {
         use shared::components::{Npc, UnitSummonedBy};
         let mut run = super::super::prepare_registered_player(250, 1).unwrap();
