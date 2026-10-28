@@ -251,6 +251,49 @@ fn literal_ww_combat_wisdom_tiger_palm_deals_expel_harm_damage() {
     );
 }
 
+fn combat_wisdom_heal_at_health(fraction: f32) -> i32 {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare();
+    for _ in 0..400 {
+        if crate::auras::has_aura(run.app.world(), run.actor, 129914) {
+            break;
+        }
+        run.app.update();
+    }
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, 129914));
+    let mut health = run
+        .app
+        .world_mut()
+        .get_mut::<shared::components::Health>(run.actor)
+        .unwrap();
+    health.current = health.max * fraction;
+    let before = run.app.world().resource::<ObservedCombatEvents>().0.len();
+    super::tests::cast(&mut run, 100780);
+    run.app.world().resource::<ObservedCombatEvents>().0[before..]
+        .iter()
+        .find(|event| {
+            event.source == Some(run.actor.to_bits())
+                && event.spell_id == Some(451968)
+                && event.kind == CombatLogKind::Heal
+        })
+        .expect("earned Combat Wisdom produces its actual heal")
+        .amount
+}
+
+#[test]
+#[ignore = "Strength of Spirit uses live caster health on the actual Combat Wisdom heal"]
+fn literal_ww_combat_wisdom_strength_of_spirit_uses_current_health() {
+    let full = combat_wisdom_heal_at_health(1.0);
+    let half = combat_wisdom_heal_at_health(0.5);
+    // Native Strength of Spirit supplies 100%; SimC adds 1 + missing * percent
+    // as the parsed direct-heal bonus, on top of the base multiplier.
+    assert!(full > 0);
+    assert!(
+        (f64::from(half) / f64::from(full) - 1.25).abs() < 0.001,
+        "actual full-health heal {full}, half-health heal {half}"
+    );
+}
+
 fn fof_done_products(targets: usize, recipient: usize) -> Vec<f64> {
     let mut run = prepare_targets(targets);
     run.app.insert_resource(FactorCapture::new(
