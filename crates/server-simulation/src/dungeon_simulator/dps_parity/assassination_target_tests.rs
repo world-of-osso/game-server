@@ -12,28 +12,64 @@ fn assassination_systemic_failure_amplifies_masked_hits_only_on_owned_garrote() 
     engage(&mut run);
     let actor = run.actor;
     let target = run.targets[0];
-    let percent = run.app.world().get::<crate::auras::ActiveAuras>(actor).unwrap().iter()
-        .find(|aura| aura.spell_id == 381652 && aura.caster == actor).unwrap().effects.iter()
-        .find(|effect| effect.index == 0).unwrap().amount as f64;
+    let percent = run
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(actor)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 381652 && aura.caster == actor)
+        .unwrap()
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap()
+        .amount as f64;
     let capture = |run: &mut Run, spell: u32| {
-        run.app.insert_resource(FactorCapture::new(actor, target, spell, "systemic", 1));
-        assert!(crate::spell_cast::try_cast_triggered(run.app.world_mut(), actor, spell, Some(target), 1));
+        run.app
+            .insert_resource(FactorCapture::new(actor, target, spell, "systemic", 1));
+        assert!(crate::spell_cast::try_cast_triggered(
+            run.app.world_mut(),
+            actor,
+            spell,
+            Some(target),
+            1
+        ));
         let receipt = run.app.world().resource::<FactorCapture>().export();
-        let factors = receipt["events"].as_array().unwrap().iter()
-            .find(|event| event["event"] == "direct_amount" && event["spell_id"] == spell).unwrap()
-            ["applied_multipliers"].as_array().unwrap();
-        factors.iter().find(|factor| factor["factor"] == "giantkiller").unwrap()["value"].as_f64().unwrap()
+        let factors = receipt["events"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|event| event["event"] == "direct_amount" && event["spell_id"] == spell)
+            .unwrap()["applied_multipliers"]
+            .as_array()
+            .unwrap();
+        factors
+            .iter()
+            .find(|factor| factor["factor"] == "giantkiller")
+            .unwrap()["value"]
+            .as_f64()
+            .unwrap()
     };
     let clean = capture(&mut run, 5374);
     crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 703, Some(target), 1);
     assert!(crate::auras::has_aura(run.app.world(), target, 703));
     let affected = capture(&mut run, 5374);
-    assert!((affected / clean - (1.0 + percent / 100.0)).abs() < 0.001,
-        "Garrote grants its native target bonus once: {clean} -> {affected}");
-    crate::auras::remove_auras(run.app.world_mut(), target, crate::auras::RemoveReason::Cancelled,
-        |aura| aura.spell_id == 703 && aura.caster == actor);
+    assert!(
+        (affected / clean - (1.0 + percent / 100.0)).abs() < 0.001,
+        "Garrote grants its native target bonus once: {clean} -> {affected}"
+    );
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        target,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 703 && aura.caster == actor,
+    );
     let removed = capture(&mut run, 5374);
-    assert!((removed - clean).abs() < 0.001, "removing Garrote removes the bonus");
+    assert!(
+        (removed - clean).abs() < 0.001,
+        "removing Garrote removes the bonus"
+    );
 }
 
 struct PoisonSample {

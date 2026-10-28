@@ -90,11 +90,27 @@ fn zoldyck(auras: &ActiveAuras, caster: Entity, health: Option<&Health>) -> f32 
     }
 }
 
-fn systemic_failure(auras: &ActiveAuras, caster: Entity, target: Option<&ActiveAuras>, spell: &SpellInfo) -> f32 {
-    let Some(talent) = owned(auras, caster, SYSTEMIC_FAILURE) else { return 1.0 };
-    let Some(garrote) = target.and_then(|target| owned(target, caster, GARROTE)) else { return 1.0 };
-    let affected = garrote.effects.iter().any(|effect| effect.index == 3 && spell_mods::class_mask_affects(garrote, effect, spell));
-    if affected { 1.0 + native_amount(talent, 0) / 100.0 } else { 1.0 }
+fn systemic_failure(
+    auras: &ActiveAuras,
+    caster: Entity,
+    target: Option<&ActiveAuras>,
+    spell: &SpellInfo,
+) -> f32 {
+    let Some(talent) = owned(auras, caster, SYSTEMIC_FAILURE) else {
+        return 1.0;
+    };
+    let Some(garrote) = target.and_then(|target| owned(target, caster, GARROTE)) else {
+        return 1.0;
+    };
+    let affected = garrote
+        .effects
+        .iter()
+        .any(|effect| effect.index == 3 && spell_mods::class_mask_affects(garrote, effect, spell));
+    if affected {
+        1.0 + native_amount(talent, 0) / 100.0
+    } else {
+        1.0
+    }
 }
 
 fn multiplier(world: &World, caster: Entity, target: Entity, spell: &SpellInfo) -> f32 {
