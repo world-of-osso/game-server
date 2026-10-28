@@ -219,11 +219,7 @@ impl Rotation {
                 spell,
                 self_target: matches!(
                     name,
-                    "demon_spikes"
-                        | "immolation_aura"
-                        | "fel_devastation"
-                        | "soul_cleave"
-                        | "spirit_bomb"
+                    "demon_spikes" | "immolation_aura" | "fel_devastation" | "spirit_bomb"
                 ),
                 talent: None,
             }),
@@ -345,6 +341,10 @@ mod tests {
         );
         assert!(
             report["tank_casts"]["203720"].as_u64().unwrap() > 0,
+            "{report}"
+        );
+        assert!(
+            report["tank_casts"]["228477"].as_u64().unwrap() > 0,
             "{report}"
         );
         println!("VENGEANCE_TANK_REPORT={report}");
