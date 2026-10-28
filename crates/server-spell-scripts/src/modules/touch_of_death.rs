@@ -35,7 +35,14 @@ pub(super) fn damage(world: &World, caster: Entity, target: Entity, _amount: f32
     let victim = world.get::<Health>(target).expect("living target health");
     let weaker_creature = world.get::<Npc>(target).is_some() && victim.current < monk.max;
     let index = if weaker_creature { 3 } else { 2 };
-    monk.max * script_effect_value(world, caster, TOUCH_OF_DEATH, index) / 100.0
+    let amount = monk.max * script_effect_value(world, caster, TOUCH_OF_DEATH, index) / 100.0;
+    if weaker_creature {
+        amount
+    } else {
+        // SimC76f8118 sc_monk.cpp2701–2718: only the improved-health branch
+        // receives active Combo Strikes; its native flags suppress other modifiers.
+        amount * combat::spell_cast::scripts::combo_strikes_multiplier(world, caster, TOUCH_OF_DEATH)
+    }
 }
 
 /// 70391 descriptions require a weaker creature, or the learned improved rank

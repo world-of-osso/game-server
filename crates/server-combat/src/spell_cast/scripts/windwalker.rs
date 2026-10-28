@@ -270,7 +270,7 @@ pub(crate) fn ordinary_combo_cast(world: &mut World, caster: Entity, spell: &Spe
 /// TC has no115636 script; DB2 owns the coefficient, not SimC's numeric value.
 /// Eligibility covers the published kit's damage actions/children only. Utility,
 /// white hits and unrelated procs neither consume the state nor gain mastery.
-pub(crate) fn combo_strikes_multiplier(world: &World, caster: Entity, spell: u32) -> f32 {
+pub fn combo_strikes_multiplier(world: &World, caster: Entity, spell: u32) -> f32 {
     let active = world
         .get::<ComboStrikes>(caster)
         .is_some_and(|state| state.active);

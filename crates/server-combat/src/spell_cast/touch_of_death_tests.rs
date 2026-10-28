@@ -131,7 +131,7 @@ fn touch_of_death_flag_control_ordinary_fire_blast_keeps_damage_modifiers() {
 
 #[test]
 fn touch_of_death_native_eligible_damage_uses_max_health_despite_armor_and_modifiers() {
-    for (current, expected) in [(999.0, 0.0), (1400.0, 1050.0)] {
+    for (current, expected_damage) in [(999.0, 1000), (1400.0, 350)] {
         let mut h = harness(
             Vec::new(),
             &[TOUCH_OF_DEATH, IMPROVED_TOUCH_OF_DEATH, 8599, 871],
@@ -156,21 +156,17 @@ fn touch_of_death_native_eligible_damage_uses_max_health_despite_armor_and_modif
         apply_native_damage_modifiers(&mut h);
         h.cast_and_deliver(TOUCH_OF_DEATH, Some(h.npc));
         assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
-        assert_eq!(
-            h.health(h.npc),
-            expected,
-            "native maxhealth damage; outcomes {:?}",
-            h.inbox.log
-        );
-        assert!(
-            h.inbox
-                .log
-                .iter()
-                .any(|event| event.spell_id == Some(TOUCH_OF_DEATH)
-                    && event.kind == CombatLogKind::Damage
-                    && event.amount > 0
-                    && !event.crit)
-        );
+        let hit = h
+            .inbox
+            .log
+            .iter()
+            .find(|event| {
+                event.spell_id == Some(TOUCH_OF_DEATH) && event.kind == CombatLogKind::Damage
+            })
+            .expect("native Touch of Death damage");
+        // Auto attacks may also land during delivery; assert the spell's own event.
+        assert_eq!(hit.amount, expected_damage);
+        assert!(!hit.crit);
     }
 }
 
