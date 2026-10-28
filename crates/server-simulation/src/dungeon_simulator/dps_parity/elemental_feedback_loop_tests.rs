@@ -1,32 +1,60 @@
 //! Feedback Loop's extra overload uses actual native spell impacts.
 use super::elemental_mechanics_tests::{cast, fixture, settle};
 use super::*;
-use crate::auras::{ActiveAuras, RemoveReason};
+use crate::auras::{ActiveAuras, AuraApplication, AuraSource, RemoveReason};
 use crate::spell_cast::test_harness::ObservedCombatEvents;
 use shared::protocol::CombatLogKind;
+
+fn set_feedback_chance(run: &mut Run, chance: f32) {
+    let native = run
+        .app
+        .world()
+        .get::<ActiveAuras>(run.actor)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 1270064 && aura.caster == run.actor)
+        .unwrap();
+    assert_eq!(
+        native
+            .effects
+            .iter()
+            .find(|effect| effect.index == 0)
+            .unwrap()
+            .amount,
+        25.0
+    );
+    let mut spell = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(1270064)
+        .unwrap()
+        .clone();
+    spell
+        .effects
+        .iter_mut()
+        .find(|effect| effect.index == 0)
+        .unwrap()
+        .base_points = chance;
+    crate::auras::apply_aura_with_spell(
+        run.app.world_mut(),
+        &AuraApplication {
+            caster: run.actor,
+            target: run.actor,
+            spell_id: 1270064,
+            effect_mask: crate::auras::aura_effect_mask(&spell),
+            source: AuraSource::Cast,
+        },
+        &spell,
+    );
+}
 
 fn overload_hits(force_feedback: bool) -> usize {
     let _seed = crate::random::seed_scope(70448);
     let mut run = fixture();
     assert!(crate::auras::has_aura(run.app.world(), run.actor, 1270064));
     if force_feedback {
-        let mut auras = run
-            .app
-            .world_mut()
-            .get_mut::<ActiveAuras>(run.actor)
-            .unwrap();
-        let aura = auras
-            .auras
-            .iter_mut()
-            .find(|aura| aura.spell_id == 1270064 && aura.caster == run.actor)
-            .unwrap();
-        let effect = aura
-            .effects
-            .iter_mut()
-            .find(|effect| effect.index == 0)
-            .unwrap();
-        assert_eq!(effect.amount, 25.0, "real selected Feedback Loop chance");
-        effect.amount = 100.0; // Deterministic boundary: every earned overload procs once.
+        set_feedback_chance(&mut run, 100.0); // Deterministic proc boundary.
     } else {
         crate::auras::remove_auras(
             run.app.world_mut(),
@@ -67,35 +95,7 @@ fn quake_overload_hits(force_feedback: bool) -> usize {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(262, 3).unwrap();
     engage(&mut run);
-    {
-        let mut auras = run
-            .app
-            .world_mut()
-            .get_mut::<ActiveAuras>(run.actor)
-            .unwrap();
-        let mastery = auras
-            .auras
-            .iter_mut()
-            .find(|aura| aura.spell_id == 168534 && aura.caster == run.actor)
-            .unwrap();
-        mastery
-            .effects
-            .iter_mut()
-            .find(|effect| effect.index == 0)
-            .unwrap()
-            .amount = 0.0;
-        let feedback = auras
-            .auras
-            .iter_mut()
-            .find(|aura| aura.spell_id == 1270064 && aura.caster == run.actor)
-            .unwrap();
-        feedback
-            .effects
-            .iter_mut()
-            .find(|effect| effect.index == 0)
-            .unwrap()
-            .amount = if force_feedback { 100.0 } else { 0.0 };
-    }
+    set_feedback_chance(&mut run, if force_feedback { 100.0 } else { 0.0 });
     let mut powers = run
         .app
         .world_mut()
