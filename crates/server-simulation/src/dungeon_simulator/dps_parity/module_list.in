@@ -412,6 +412,7 @@ mod survival_mark_tests;
 mod survival_mechanics_tests;
 mod survival_mongoose_rounds_tests;
 mod survival_pet_expertise_tests;
+mod survival_pet_bleed_haste_tests;
 mod survival_pet_strike_tests;
 mod survival_sentinel_tests;
 mod survival_shellshock_tests;

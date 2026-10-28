@@ -21,6 +21,10 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 - Native `PERIODIC_REFRESH_EXTENDS_DURATION` selects Pandemic carry: a refresh retains up to30% of fresh duration from the previous owned application, never reducing a longer remaining lifetime (`action.cpp684–685/4612`). Use the native attribute, not a Rip/Rake whitelist. Existing explicit Extend policies and rolling refresh retain their source precedence (`action.cpp2729–2734`); preserve native periodic phase, amounts and asynchronous deadlines.
 
+### Controlled-pet periodic haste
+
+- Haste-flagged periodic effects cast by a controlled pet use its owner's live spell haste, just as guardian periodic effects do. Unflagged periodic effects keep their native cadence (SimC76f8118 `pet.cpp`217–228, `action.cpp`671).
+
 ### Shared channel timing
 
 - Quantize native channel tick intervals to the nearest millisecond. A hasted channel's duration is that rounded interval times its original native modified tick count, not an independently truncated hasted duration (`action.cpp4297–4314/4397–4421`).
