@@ -159,6 +159,21 @@ fn read_secondary_targets(
     .collect()
 }
 
+// SimC76f8118 sc_rogue.cpp2530–2533/3894 explicitly adds Fazed's
+// recipient damage effect to Blade Flurry despite its native family mask.
+fn fazed_multiplier(world: &World, caster: Entity, target: Entity) -> f32 {
+    world.get::<ActiveAuras>(target).map_or(1.0, |auras| {
+        auras
+            .iter()
+            .find(|aura| aura.spell_id == 441224 && aura.caster == caster)
+            .and_then(|aura| {
+                aura.effects.iter().find(|effect| effect.index == 0)
+                    .map(|effect| 1.0 + effect.amount * aura.stack_multiplier() / 100.0)
+            })
+            .unwrap_or(1.0)
+    })
+}
+
 fn deliver_secondary(
     world: &mut World,
     source: &CopySource,
@@ -181,6 +196,11 @@ fn deliver_secondary(
     };
     for target in recipients {
         let versus = effects::creature_type_damage_multiplier(world, source.caster, target, &spell);
-        effects::deal_copied_damage(world, &ctx, target, amount * versus);
+        let immune = combat::auras::is_immune(world, target, spell.school_mask());
+        let fazed = fazed_multiplier(world, source.caster, target);
+        effects::deal_copied_damage(world, &ctx, target, amount * versus * fazed);
+        if !immune {
+            combat::auras::rogue::after_blade_flurry_copy(world, source.caster, target, amount);
+        }
     }
 }

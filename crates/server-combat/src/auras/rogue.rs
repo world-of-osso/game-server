@@ -59,6 +59,35 @@ pub(super) fn register(scripts: &mut AuraScripts) {
     );
 }
 
+/// SimC76f8118 sc_rogue.cpp3899–3904/7890–7913: each landed Blade
+/// Flurry copy can trigger the Rogue's selected poison coatings.
+pub fn after_blade_flurry_copy(world: &mut World, caster: Entity, target: Entity, damage: f32) {
+    const COATINGS: &[u32] = &[2823, 315584, 3408, 381637, 381664];
+    let ids: Vec<_> = world
+        .get::<ActiveAuras>(caster)
+        .into_iter()
+        .flat_map(|auras| auras.iter())
+        .filter(|aura| aura.caster == caster && COATINGS.contains(&aura.spell_id))
+        .map(|aura| aura.instance_id)
+        .collect();
+    let event = procs::AuraEvent {
+        actor: caster,
+        target: Some(target),
+        actor_mask: [procs::PROC_DEAL_MELEE_ABILITY, 0],
+        target_mask: [procs::PROC_TAKE_MELEE_ABILITY, 0],
+        spell_id: Some(22482),
+        can_proc: true,
+        cast_used_proc_modifier: false,
+        periodic: false,
+        damage,
+        heal: None,
+        reflected: false,
+    };
+    for id in ids {
+        procs::try_proc(world, caster, Some(target), id, &event);
+    }
+}
+
 // SimC76f8118 sc_rogue.cpp3021–3025: Instant Poison dispatches its
 // native effect0 child on the earned proc recipient, for every Rogue spec.
 fn apply_native_coating(
