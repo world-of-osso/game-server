@@ -63,6 +63,7 @@ def print_tank(report):
     if report.get('timeline') == 'simc_tank_dummy':
         print(f'SimC tank dummy, MID2 level {report["level"]}; rotation: {report["rotation_status"]}.')
         print('External dummy healing:', 'enabled' if report['external_healing'] else 'disabled')
+        print('SimC Bloodlust start (s):', number(report['bloodlust_start_seconds']))
         print('\n| Spell ID | Casts | Effective self-heal | Consumed absorb | Aura uptime % |')
         print('|---|---:|---:|---:|---:|')
         spells = set(report['tank_casts']) | set(report['self_healing_by_spell']) | set(report['absorbs_by_spell']) | set(report['aura_uptime'])
