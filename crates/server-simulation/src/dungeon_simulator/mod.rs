@@ -26,6 +26,7 @@ mod merithra_replay_tests;
 mod mistweaver_replay;
 mod movement;
 mod preservation_empower_tests;
+mod preservation_evoker_replay;
 mod replay_cli_tests;
 mod restoration_shaman_replay;
 mod runtime;
