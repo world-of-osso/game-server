@@ -44,6 +44,9 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 ### Devourer Reap
 
 - Each Reap1226019 executes the delayed damage child1225823 once, without an additional legacy1225827 hit (SimC76f8118 `sc_demon_hunter.cpp`5982–5999,6081–6107).
+### Devourer Singular Strikes
+
+- Selected Singular Strikes1272770 amplifies only the primary Hungering Slash or Reaper's Toll damage hit1239127 by native effect2; secondary hits remain unchanged (SimC76f8118 `sc_demon_hunter.cpp`6697–6728).
 
 ### Devourer Burning Blades
 

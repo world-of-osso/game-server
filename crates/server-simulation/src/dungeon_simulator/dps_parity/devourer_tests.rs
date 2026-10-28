@@ -156,3 +156,39 @@ fn devourer_native_measurement_selects_literal_driver() {
         Some("LITERAL_SIMC_DEVOURER_76f8118")
     );
 }
+
+fn singular_strikes_hits(selected: bool) -> Vec<(i32, bool)> {
+    use shared::protocol::CombatLogKind;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare(1480, 3).expect("native Devourer profile");
+    let actor = run.actor;
+    let known = run.app.world().get::<crate::class_progression::KnownSpells>(actor).unwrap();
+    assert!(known.contains(1272770), "profile selects Singular Strikes");
+    if !selected {
+        let spells: Vec<_> = known.iter().filter(|&id| id != 1272770).collect();
+        run.app.world_mut().entity_mut(actor).insert(crate::class_progression::KnownSpells::from_baseline(spells));
+    }
+    engage(&mut run);
+    crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 1239525, Some(actor), 1);
+    let _hit_seed = crate::random::seed_scope(91);
+    crate::spell_cast::cast_for_player_with_target(run.app.world_mut(), actor, 1239123, Some(run.targets[0])).expect("real Hungering Slash");
+    for _ in 0..40 { run.app.update(); }
+    let events = &run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
+    run.targets.iter().map(|target| {
+        let hit = events.iter().find(|event| event.spell_id == Some(1239127) && event.target == Some(target.to_bits()) && event.kind == CombatLogKind::Damage && event.amount > 0).expect("actual Hungering Slash hit");
+        (hit.amount, hit.crit)
+    }).collect()
+}
+
+#[test]
+#[ignore = "requires DPS_PARITY_WORLD_DB and DPS_PARITY_OUTPUT with spec1480 exact profile/traits"]
+fn singular_strikes_amplifies_only_the_primary_hungering_slash_hit() {
+    let without = singular_strikes_hits(false);
+    let with = singular_strikes_hits(true);
+    for index in 0..3 {
+        assert_eq!(without[index].1, with[index].1, "same hit outcome");
+        let factor = if index == 0 { 1.5 } else { 1.0 };
+        let expected = f64::from(without[index].0) * factor;
+        assert!((f64::from(with[index].0) - expected).abs() < expected * 0.005, "target {index}: {} vs {expected}", with[index].0);
+    }
+}
