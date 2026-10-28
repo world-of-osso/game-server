@@ -37,15 +37,18 @@ Replay recorded incoming damage in the native server combat simulation to compar
 - `crates/server-simulation/src/dungeon_simulator/dps_parity/brewmaster_stagger_tests.rs`: Brewmaster incoming damage, Stagger ticks and Purifying Brew.
 - `crates/server-simulation/src/dungeon_simulator/replay_cli_tests.rs`: CLI output from a native tank replay.
 
+## Specializations
+
+- [Protection Paladin (66)](healer-tank-replay/66.md)
+
 ## Known gaps (current cycle)
 
 - [ ] Blood 250: SimC `76f8118` applies Hemostasis twice to Death Strike healing (parsed action modifier and `death_strike_heal_t::action_multiplier`). Its debug trace shows `1.08²` for one 8% stack, about 8% more than one application. The source does not identify this as an in-game behavior; native gameplay applies it once. Blood Shield inherits the raw-heal difference.
 
 - [ ] Connect SimC tank-dummy trace input to the healer replay.
-- [ ] Register native tank APL adapters. Guardian 104 uses the pinned default Guardian APL and reports Ironfur, Frenzied Regeneration, Barkskin and Rage of the Sleeper as active mitigation. SimC tank replay requires a registered literal parity driver and explicit active-mitigation auras; unregistered tanks fail rather than use the smoke-test policy. Protection 66 executes the pinned MID2 literal APL; Holy Bulwark absorbs, Shining Light–driven Word of Glory, Divine Guidance and Grand Crusader's Avenger's Shield reset and Crusader's Judgment recharge are exercised under incoming damage. Other native spell effects and Grand Crusader sources still require qualification.
+- [ ] Register native tank APL adapters. Guardian 104 uses the pinned default Guardian APL and reports Ironfur, Frenzied Regeneration, Barkskin and Rage of the Sleeper as active mitigation. SimC tank replay requires a registered literal parity driver and explicit active-mitigation auras; unregistered tanks fail rather than use the smoke-test policy.
 - [ ] Support replay durations other than 300 seconds with matching literal-APL encounter timing.
 - [x] Publish native victim-side melee miss, dodge and parry proc events with their hit outcomes; explicit native or sourced script masks determine which auras can react.
-- [ ] SimC's default `fake_solidarity` adds allied Reflection of Radiance opportunities that the solo native tank replay does not reproduce. Its 35 Holy Bulwark–sourced Grand Crusader procs include those simulated allied effects; their separate share is not observable from that run.
 - [x] Report adapter-registered named resource counters and target debuff uptime. Vengeance 581 records successful fragment generation, actual fragment consumption, and the owned Fiery Brand and Sigil of Flame debuffs.
 - [x] Keep no-healer tank replay as the default. An optional SimC dummy comparison applies the dummy's 75,000 external heal every five seconds and the trace's native Bloodlust at its recorded start time; it reports the buff, per-spell casts, effective self-healing, consumed absorbs and aura uptime separately.
 - [ ] Extend coverage beyond the initial two specializations.
