@@ -132,7 +132,7 @@ fn shared_fixture_retreat_then_beam_returns_before_channel() {
 
 #[test]
 #[ignore = "requires prepared native spec577 player profile"]
-fn shared_fixture_return_keeps_eligible_actions_and_waits_for_priority_range() {
+fn shared_fixture_return_skips_out_of_range_priority_actions() {
     use literal_rotation::execution::{NativeAction, Prepared};
     let _seed = crate::random::seed_scope(70_448);
     let mut run = prepare_literal(577, 1).unwrap();
@@ -217,9 +217,10 @@ fn shared_fixture_return_keeps_eligible_actions_and_waits_for_priority_range() {
     let selected = literal_rotation::Driver::new(program)
         .select("default", &facts, &prepared, &equipment)
         .unwrap();
-    assert!(
-        selected.is_none(),
-        "out-of-range priority Beam must wait, not fall through to Throw Glaive"
+    assert_eq!(
+        selected.map(|(action, _)| action.name),
+        Some("throw_glaive".into()),
+        "out-of-range priority Beam must not block an in-range Throw Glaive"
     );
     crate::spell_cast::powers::change_power(
         run.app.world_mut(),
@@ -280,7 +281,45 @@ fn shared_fixture_return_keeps_eligible_actions_and_waits_for_priority_range() {
 
 #[test]
 #[ignore = "requires prepared native spec577 player profile"]
-fn shared_fixture_native_blink_waits_for_melee_return() {
+fn havoc_retreat_allows_arcane_torrent_when_melee_is_out_of_range() {
+    use literal_rotation::execution::{NativeAction, Prepared};
+    use shared::components::PowerType;
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(577, 1).unwrap();
+    havoc_tests::start_havoc_swings(&mut run);
+    havoc_tests::earn_havoc_fury(&mut run, 80.0);
+    let actor = run.actor;
+    let boss = run.targets[0];
+    literal_rotation::execution::execute(
+        run.app.world_mut(), actor,
+        literal_rotation::execution::Execution::Spell(198793, actor, Some(boss)),
+    ).unwrap();
+    for _ in 0..80 {
+        run.app.update();
+        let from = run.app.world().get::<Position>(actor).unwrap();
+        let to = run.app.world().get::<Position>(boss).unwrap();
+        if (from.x - to.x).hypot(from.z - to.z) > 10.0 { break; }
+    }
+    let equipment = literal_rotation::equipment::Equipment::load(
+        run.app.world(), actor, &mut crate::simc_apl_native::Bindings::default(),
+    ).unwrap();
+    let prepared = Prepared::read(run.app.world_mut(), actor, &run.targets, &equipment, [
+        NativeAction { name: "chaos_strike", spell: 162794, talent: None, self_target: false },
+        NativeAction { name: "arcane_torrent", spell: 202719, talent: None, self_target: true },
+    ], false).unwrap();
+    let program = server::simc_apl::Program::parse(&[("default", "chaos_strike"), ("default", "arcane_torrent")]).unwrap();
+    let mut driver = literal_rotation::Driver::new(program);
+    let (action, execution) = driver.select("default", &BTreeMap::<String, f64>::new(), &prepared, &equipment).unwrap().expect("racial remains available while returning");
+    assert_eq!(action.name, "arcane_torrent");
+    let before = crate::spell_cast::powers::power_value(run.app.world(), actor, PowerType::Fury).unwrap().0;
+    driver.execute(run.app.world_mut(), actor, action, execution).unwrap();
+    let after = crate::spell_cast::powers::power_value(run.app.world(), actor, PowerType::Fury).unwrap().0;
+    assert!(after > before, "native racial must grant its real Fury: {before} -> {after}");
+}
+
+#[test]
+#[ignore = "requires prepared native spec577 player profile"]
+fn shared_fixture_native_blink_skips_out_of_range_melee() {
     use literal_rotation::execution::{NativeAction, Prepared};
     let _seed = crate::random::seed_scope(70_448);
     let mut run = prepare_literal(577, 1).unwrap();
@@ -338,9 +377,10 @@ fn shared_fixture_native_blink_waits_for_melee_return() {
             &equipment,
         )
         .unwrap();
-    assert!(
-        selected.is_none(),
-        "the higher-priority melee action must wait for real return after instant displacement"
+    assert_eq!(
+        selected.map(|(action, _)| action.name),
+        Some("throw_glaive".into()),
+        "out-of-range melee must not block an in-range action after Blink"
     );
 }
 
