@@ -290,6 +290,7 @@ register_modules! {
     paid_cooldowns: (130, "modules/paid_cooldowns.rs"),
     paladin_armaments: (1000, "modules/paladin_armaments.rs"),
     paladin_edict: (1001, "modules/paladin_edict.rs"),
+    protection_demolish: (734, "modules/protection_demolish.rs"),
     protection_devastator: (730, "modules/protection_devastator.rs"),
     protection_fueled: (732, "modules/protection_fueled.rs"),
     protection_outburst: (733, "modules/protection_outburst.rs"),
