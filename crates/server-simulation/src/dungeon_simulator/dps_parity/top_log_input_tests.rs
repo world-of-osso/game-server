@@ -9,7 +9,9 @@ fn top_log_support_inputs_spawn_and_grant_natures_cure() {
         let result = (|| -> Result<(), String> {
             let (profile, traits) = read_reference(spec)?;
             let identity = inputs::read_actor(&profile)?;
-            let run = spawn_reference(profile, &traits, 1, identity)?;
+            let mut run = spawn_reference(profile, &traits, 1, identity)?;
+            // Run native equipment synchronization, including on-use enchant 4897.
+            run.app.update();
             if spec == 105 {
                 let world = run.app.world();
                 let known = world
