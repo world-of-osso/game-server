@@ -48,10 +48,24 @@ fn update_pet(world: &mut World, pet: Entity, owner: Entity, now: f64) {
         .get::<CharacterStats>(owner)
         .expect("ghoul owner stats")
         .haste_pct;
+    let devotion = world
+        .get::<combat::auras::ActiveAuras>(pet)
+        .and_then(|auras| auras.iter().find(|aura| aura.spell_id == 1270491))
+        .and_then(|aura| {
+            aura.effects
+                .iter()
+                .find(|effect| effect.index == 2)
+                .map(|effect| effect.amount * aura.stack_multiplier())
+        })
+        .unwrap_or(0.0);
     let energy = world.get::<Energy>(pet).unwrap();
-    // SimC76f8118 sc_death_knight.cpp3168–3180: 100 Energy, 10/s with haste.
+    // SimC76f8118 sc_death_knight.cpp3168–3180/3399–3405: ghoul Energy
+    // regenerates with owner haste and each active Unholy Devotion stack.
     let value = (energy.value
-        + (now - energy.updated).max(0.0) * 10.0 * (1.0 + f64::from(haste) / 100.0))
+        + (now - energy.updated).max(0.0)
+            * 10.0
+            * (1.0 + f64::from(haste) / 100.0)
+            * (1.0 + f64::from(devotion) / 100.0))
         .min(100.0);
     let ready = energy.ready;
     let mut energy = world.get_mut::<Energy>(pet).unwrap();
