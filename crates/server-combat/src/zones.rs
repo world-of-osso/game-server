@@ -630,6 +630,11 @@ pub fn unsummon(world: &mut World, summon: Entity) {
         return;
     };
     crate::scripted_ai::boss_ai::notify_summoner_despawn(world, summoner, summon);
+    // Remove an NPC follower's active pet before its owner leaves the world;
+    // fixed-step power regeneration can run before the ownerless-pet cleanup.
+    if let Some(pet) = crate::hunter_pet::summoned_pet(world, summon) {
+        crate::hunter_pet::remove_pet(world, pet);
+    }
     if let Ok(entity) = world.get_entity_mut(summon) {
         entity.despawn();
     }

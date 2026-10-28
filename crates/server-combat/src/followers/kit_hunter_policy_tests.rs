@@ -377,3 +377,19 @@ fn rotation_fidelity_253_native_frenzy_shortens_pet_melee_interval() {
         "owner passive must not become a synthetic pet buff"
     );
 }
+
+#[test]
+fn unsummoning_hunter_follower_removes_its_pet_before_next_fixed_tick() {
+    let (mut h, follower, pet) = prepare_native_duck(90);
+    h.app
+        .world_mut()
+        .entity_mut(follower)
+        .insert(crate::zones::TempSummon { summoner: h.caster });
+    crate::zones::unsummon(h.app.world_mut(), follower);
+    assert!(h.app.world().get_entity(follower).is_err());
+    assert!(
+        h.app.world().get_entity(pet).is_err(),
+        "pet must leave with its follower owner"
+    );
+    h.advance(2);
+}
