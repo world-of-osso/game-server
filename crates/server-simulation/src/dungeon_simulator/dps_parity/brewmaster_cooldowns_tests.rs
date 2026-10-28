@@ -21,18 +21,33 @@ fn selected_salsalabim_keg_smash_resets_breath_of_fire() {
     engage(&mut run);
     let actor = run.actor;
     let target = run.targets[0];
-    assert!(run.app.world().get::<crate::class_progression::TraitLoadout>(actor)
-        .unwrap().active_talent_spells().any(|talent| talent.spell_id == 383697));
-    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 115181, Some(target), false).unwrap();
-    for _ in 0..40 { run.app.update(); }
+    assert!(
+        run.app
+            .world()
+            .get::<crate::class_progression::TraitLoadout>(actor)
+            .unwrap()
+            .active_talent_spells()
+            .any(|talent| talent.spell_id == 383697)
+    );
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 115181, Some(target), false)
+        .unwrap();
+    for _ in 0..40 {
+        run.app.update();
+    }
     let remaining = |run: &Run| {
         let world = run.app.world();
-        let spell = world.resource::<crate::spell_info::SpellStore>().get(115181).unwrap();
-        world.get::<crate::spell_cast::SpellHistory>(actor).unwrap()
+        let spell = world
+            .resource::<crate::spell_info::SpellStore>()
+            .get(115181)
+            .unwrap();
+        world
+            .get::<crate::spell_cast::SpellHistory>(actor)
+            .unwrap()
             .remaining_cooldown_ms(spell, crate::spell_cast::history_now(world))
     };
     assert!(remaining(&run) > 0);
-    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 121253, Some(target), false).unwrap();
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 121253, Some(target), false)
+        .unwrap();
     assert_eq!(remaining(&run), 0, "Keg Smash resets Breath of Fire");
 }
 
