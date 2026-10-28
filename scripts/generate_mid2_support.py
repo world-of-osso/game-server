@@ -39,7 +39,8 @@ def generate(spec, rule, simc, wrapper, output):
     )
     traits_path = output / f"{spec}.selected-traits-active.json"
     subprocess.run([str(wrapper), str(traits_path), str(metadata)], check=True)
-    traits = parse_selected_talents(traits_path.read_text())
+    traits = [trait for trait in parse_selected_talents(traits_path.read_text())
+              if trait["node_id"] not in rule.get("excluded_nodes", [])]
     traits_path.write_text(json.dumps(traits, indent=2) + "\n")
     (output / f"{spec}.profile.json").write_text(json.dumps(profile, indent=2) + "\n")
     metadata.unlink()
