@@ -660,7 +660,10 @@ fn enduring_strength_impact(
 ) {
     if !critical
         || damage <= 0.0
-        || !matches!(ctx.spell.id, 207230 | 222024 | 66198 | 325461)
+        || !matches!(
+            ctx.spell.id,
+            207230 | 222024 | 66198 | 325461 | 1264082 | 1264083 | 1264084
+        )
         || !is_frost(world, ctx.caster)
         || !auras::has_aura(world, ctx.caster, 377190)
         || !auras::has_aura(world, ctx.caster, PILLAR)
