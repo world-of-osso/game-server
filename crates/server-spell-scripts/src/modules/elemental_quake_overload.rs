@@ -76,6 +76,11 @@ fn after_quake(world: &mut World, caster: Entity, parent: &SpellInfo, foreground
         spell_cast::scripts::spawn_delayed_ground_pulses(
             world, caster, &overload, DAMAGE, center, DELAY_MS,
         );
+        if spell_cast::roll_feedback_loop(world, caster) {
+            spell_cast::scripts::spawn_delayed_ground_pulses(
+                world, caster, &overload, DAMAGE, center, DELAY_MS,
+            );
+        }
     }
 }
 
