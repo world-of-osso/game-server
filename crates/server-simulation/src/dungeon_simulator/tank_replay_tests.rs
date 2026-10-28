@@ -16,6 +16,78 @@ fn tank_replay_rejects_profiles_without_level_90_mid2_inputs() {
 }
 
 #[test]
+#[ignore = "uses the selected MID2 player and native Holy Bulwark casts"]
+fn holy_bulwark_absorbs_incoming_hits_and_grows_to_native_cap() {
+    fn cast_bulwark() -> super::dps_parity::Run {
+        let (profile, traits) = super::dps_parity::read_reference(66).unwrap();
+        let mut run = super::dps_parity::spawn_reference(
+            profile,
+            &traits,
+            1,
+            crate::followers::simulator::ParityActor::Player { race: 6 },
+        )
+        .unwrap();
+        for _ in 0..4 {
+            run.app.update();
+        }
+        crate::spell_cast::creature_cast(
+            run.app.world_mut(),
+            run.actor,
+            432459,
+            Some(run.actor),
+            false,
+        )
+        .unwrap();
+        for _ in 0..2 {
+            run.app.update();
+        }
+        assert!(crate::auras::has_aura(run.app.world(), run.actor, 432496));
+        run
+    }
+    let mut run = cast_bulwark();
+    let max = run
+        .app
+        .world()
+        .get::<shared::components::Health>(run.actor)
+        .unwrap()
+        .max;
+    let vers = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(run.actor)
+        .unwrap()
+        .versatility_pct;
+    let (_, consumed) = crate::auras::absorb_damage(run.app.world_mut(), run.actor, 1, max * 0.01);
+    assert!((consumed - max * 0.01).abs() < 2.0);
+    for _ in 0..40 {
+        run.app.update();
+    }
+    let (_, remaining) = crate::auras::absorb_damage(run.app.world_mut(), run.actor, 1, max);
+    let expected = max * (0.15 * (1.0 + vers / 100.0) + 0.02 - 0.01);
+    assert!(
+        (remaining - expected).abs() < 2.0,
+        "{remaining} != {expected}"
+    );
+
+    let mut run = cast_bulwark();
+    let max = run
+        .app
+        .world()
+        .get::<shared::components::Health>(run.actor)
+        .unwrap()
+        .max;
+    for _ in 0..360 {
+        run.app.update();
+    }
+    let (_, absorbed) = crate::auras::absorb_damage(run.app.world_mut(), run.actor, 1, max);
+    assert!(
+        (absorbed - max * 0.30).abs() < 2.0,
+        "{absorbed} != {}",
+        max * 0.30
+    );
+}
+
+#[test]
 #[ignore = "uses the selected MID2 66 player and native armament override"]
 fn protection_holy_armaments_alternate_after_real_casts() {
     let (profile, traits) = super::dps_parity::read_reference(66).unwrap();
@@ -247,6 +319,18 @@ fn protection_paladin_simc_apl_uses_shield_of_the_righteous() {
         "{report}"
     );
     assert!(report["damage_taken"].as_f64().unwrap() > 0.0, "{report}");
+    assert!(
+        report["absorb_per_second"].as_f64().unwrap() > 0.0,
+        "{report}"
+    );
+    assert!(
+        report["tank_casts"]["85673"].as_u64().unwrap_or(0) > 0,
+        "{report}"
+    );
+    assert!(
+        report["self_heal_per_second"].as_f64().unwrap() > 0.0,
+        "{report}"
+    );
     println!("SIMC_TANK_REPLAY {report}");
 }
 
