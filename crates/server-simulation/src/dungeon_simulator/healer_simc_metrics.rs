@@ -9,6 +9,8 @@ pub(super) struct Recorder {
     healer: Entity,
     tank: Entity,
     members: Vec<Entity>,
+    tank_health_min: Option<f32>,
+    mana_min: Option<f32>,
     event_cursor: usize,
     spells: BTreeMap<u32, (u64, u64)>,
     party_damage: BTreeMap<u64, u64>,
@@ -27,6 +29,8 @@ impl Recorder {
             healer,
             tank,
             members,
+            tank_health_min: None,
+            mana_min: None,
             event_cursor: world
                 .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
                 .0
@@ -43,6 +47,7 @@ impl Recorder {
         };
         recorder.sample_mana(world, 0.0);
         recorder.observe_tank_health(world, 0);
+        recorder.sample_minima(world);
         recorder
     }
 
@@ -72,8 +77,24 @@ impl Recorder {
         }
     }
 
+    pub(super) fn sample_minima(&mut self, world: &World) {
+        if let Some(health) = world.get::<Health>(self.tank) {
+            self.tank_health_min = Some(
+                self.tank_health_min
+                    .map_or(health.current, |old| old.min(health.current)),
+            );
+        }
+        if let Some(mana) = world.get::<Mana>(self.healer) {
+            self.mana_min = Some(
+                self.mana_min
+                    .map_or(mana.current, |old| old.min(mana.current)),
+            );
+        }
+    }
+
     pub(super) fn observe_frame(&mut self, world: &World, tick: u32) {
         self.observe_tank_health(world, tick);
+        self.sample_minima(world);
         let seconds = f64::from(tick) / 20.0;
         if tick % 20 == 0 {
             self.sample_mana(world, seconds);
@@ -97,7 +118,15 @@ impl Recorder {
                     }
                 }
             } else if event.kind == CombatLogKind::Heal
-                && event.source == Some(self.healer.to_bits())
+                && event
+                    .source
+                    .and_then(Entity::try_from_bits)
+                    .is_some_and(|source| {
+                        source == self.healer
+                            || world
+                                .get::<crate::spell_cast::summon::SummonedCreature>(source)
+                                .is_some_and(|summon| summon.owner == self.healer)
+                    })
             {
                 let raw = event.amount.max(0) as u64;
                 let effective = raw - (event.overflow.max(0) as u64).min(raw);
@@ -129,6 +158,7 @@ impl Recorder {
             "spell_healing":spells,"mana_curve":self.mana_curve,"first_death_seconds":self.first_death_seconds,
             "tank_dtps":self.tank_damage as f64 / duration,"tank_health_curve":self.tank_health_curve,
             "tank_minimum_health_pct":self.tank_minimum_pct,"tank_seconds_below_35_alive":f64::from(self.tank_below_35_ticks) / 20.0,
+            "mana_min":self.mana_min,"tank_health_min":self.tank_health_min,
             "party_damage":self.party_damage,"party_healing":self.party_healing})
     }
 }

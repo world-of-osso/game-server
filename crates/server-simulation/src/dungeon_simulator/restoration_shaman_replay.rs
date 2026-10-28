@@ -15,6 +15,10 @@ use shared::components::{Health, PowerType};
 
 const SPELLS: &[(&str, u32, bool)] = &[
     ("mana_tide_totem", 16191, true),
+    ("spirit_link_totem", 98008, true),
+    ("healing_stream_totem", 5394, true),
+    ("earth_shield", 974, false),
+    ("unleash_life", 73685, false),
     ("healing_tide_totem", 108280, true),
     ("healing_rain", 73920, true),
     ("riptide", 61295, false),
@@ -52,12 +56,16 @@ pub(super) fn prepare(
     literal_rotation::capture_fixture(run.app.world_mut(), healer, encounter)?;
     let program = Program::parse(&[
         ("default", "mana_tide_totem,if=mana.pct<75"),
+        ("default", "spirit_link_totem,if=target.health.pct<35"),
         ("default", "healing_tide_totem,if=party.injured>=3"),
+        ("default", "earth_shield,if=target.earth_shield_up=0"),
+        ("default", "healing_stream_totem,if=target.health.pct<90"),
         (
             "default",
             "riptide,if=target.health.pct<95&target.riptide_up=0",
         ),
         ("default", "healing_surge,if=target.health.pct<45"),
+        ("default", "unleash_life,if=target.health.pct<90"),
         ("default", "healing_rain,if=party.injured>=3"),
         ("default", "chain_heal,if=party.injured>=2"),
         ("default", "healing_wave,if=target.health.pct<90"),
@@ -74,6 +82,7 @@ struct PartyFacts<'a> {
     native: NativeFacts<'a>,
     injured: usize,
     riptide_up: bool,
+    earth_shield_up: bool,
 }
 
 impl Facts for PartyFacts<'_> {
@@ -81,6 +90,7 @@ impl Facts for PartyFacts<'_> {
         match name {
             "party.injured" => Ok(self.injured as f64),
             "target.riptide_up" => Ok(f64::from(self.riptide_up)),
+            "target.earth_shield_up" => Ok(f64::from(self.earth_shield_up)),
             _ => self.native.value(name),
         }
     }
@@ -89,7 +99,7 @@ impl Facts for PartyFacts<'_> {
 impl ActionFacts for PartyFacts<'_> {
     fn value_for(&self, action: &Action, name: &str) -> Result<f64, String> {
         match name {
-            "party.injured" | "target.riptide_up" => self.value(name),
+            "party.injured" | "target.riptide_up" | "target.earth_shield_up" => self.value(name),
             _ => self.native.value_for(action, name),
         }
     }
@@ -120,6 +130,13 @@ impl Policy for Restoration {
         };
         let injured = living.iter().filter(|(_, ratio)| *ratio < 0.90).count();
         let riptide_up = crate::auras::has_aura(world, target, 61295);
+        let earth_shield_up = world
+            .get::<crate::auras::ActiveAuras>(target)
+            .is_some_and(|auras| {
+                auras
+                    .iter()
+                    .any(|aura| aura.spell_id == 974 && aura.caster == healer)
+            });
         let targets = [target];
         let actions = SPELLS
             .iter()
@@ -135,6 +152,7 @@ impl Policy for Restoration {
                 .with_targets(Some(target), &targets),
             injured,
             riptide_up,
+            earth_shield_up,
         };
         if let Some((action, execution)) =
             self.driver

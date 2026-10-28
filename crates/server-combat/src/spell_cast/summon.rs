@@ -135,6 +135,7 @@ impl SummonProperties {
                         0 | TITLE_PET
                             | TITLE_GUARDIAN
                             | TITLE_MINION
+                            | TITLE_TOTEM
                             | TITLE_COMPANION
                             | TITLE_RUNEBLADE
                             | TITLE_ASSISTANT
