@@ -758,4 +758,76 @@ mod tests {
             }
         }
     }
+    #[test]
+    #[ignore = "requires canonical MID2 Protection profile"]
+    fn protection_violent_outburst_tracks_paid_rage_and_grants_ignore_pain() {
+        use super::super::literal_rotation::execution::{Execution, execute};
+        use shared::components::PowerType;
+        let mut run = super::super::prepare_measurement(73, 1).unwrap();
+        super::super::engage(&mut run);
+        let actor = run.actor;
+        let target = run.targets[0];
+        let threshold =
+            crate::spell_cast::scripts::script_effect_value(run.app.world(), actor, 386477, 0);
+        let units = run
+            .app
+            .world()
+            .resource::<crate::spell_cast::powers::PowerTypeTable>()
+            .get(PowerType::Rage)
+            .unwrap()
+            .display_modifier as f32;
+        assert!(crate::auras::has_aura(run.app.world(), actor, 386477));
+        let mut paid = 0.0;
+        while paid < threshold {
+            assert!(!crate::auras::has_aura(run.app.world(), actor, 386478));
+            run.app
+                .world_mut()
+                .get_mut::<crate::spell_cast::powers::PowerPools>(actor)
+                .unwrap()
+                .get_mut(PowerType::Rage)
+                .unwrap()
+                .current = 1000.0;
+            execute(
+                run.app.world_mut(),
+                actor,
+                Execution::Spell(190456, actor, Some(target)),
+            )
+            .unwrap();
+            let remaining = run
+                .app
+                .world()
+                .get::<crate::spell_cast::powers::PowerPools>(actor)
+                .unwrap()
+                .get(PowerType::Rage)
+                .unwrap()
+                .current;
+            let spent = (1000.0 - remaining) / units;
+            assert!(spent > 0.0);
+            paid += spent;
+            for _ in 0..25 {
+                run.app.update();
+            }
+        }
+        assert!(crate::auras::has_aura(run.app.world(), actor, 386478));
+        crate::auras::remove_auras(
+            run.app.world_mut(),
+            actor,
+            crate::auras::RemoveReason::Consumed,
+            |aura| aura.spell_id == 190456,
+        );
+        execute(
+            run.app.world_mut(),
+            actor,
+            Execution::Spell(23922, target, Some(target)),
+        )
+        .unwrap();
+        assert!(
+            crate::auras::has_aura(run.app.world(), actor, 190456),
+            "Shield Slam grants Ignore Pain"
+        );
+        assert!(
+            !crate::auras::has_aura(run.app.world(), actor, 386478),
+            "Shield Slam consumes outburst"
+        );
+    }
 }
