@@ -165,7 +165,7 @@ fn batch1_real_star_hit_grants_delayed_impending_apocalypse() {
     );
 }
 
-fn batch1_voidblade_hit(meta: bool, mastery: f32) -> (i32, bool) {
+fn batch1_voidblade_hit(meta: bool, mastery: f32, blind_focus: bool) -> (i32, bool) {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare(1480, 1).expect("native Devourer profile");
     let actor = run.actor;
@@ -189,6 +189,9 @@ fn batch1_voidblade_hit(meta: bool, mastery: f32) -> (i32, bool) {
         .unwrap();
     stats.mastery_points = mastery;
     stats.mastery_pct = mastery;
+    if !blind_focus {
+        crate::auras::remove_auras(run.app.world_mut(), actor, crate::auras::RemoveReason::Consumed, |aura| aura.spell_id == 1272364);
+    }
     let _hit_seed = crate::random::seed_scope(91);
     crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 1245414, Some(target), 1);
     let hit = run
@@ -210,8 +213,8 @@ fn batch1_voidblade_hit(meta: bool, mastery: f32) -> (i32, bool) {
 #[test]
 #[ignore = "requires DPS_PARITY_WORLD_DB and DPS_PARITY_OUTPUT with spec1480 exact profile/traits"]
 fn batch1_meta_scales_devourer_damage_with_mastery() {
-    let (zero, zero_crit) = batch1_voidblade_hit(true, 0.0);
-    let (forty, forty_crit) = batch1_voidblade_hit(true, 40.0);
+    let (zero, zero_crit) = batch1_voidblade_hit(true, 0.0, true);
+    let (forty, forty_crit) = batch1_voidblade_hit(true, 40.0, true);
     assert_eq!(zero_crit, forty_crit, "compare same hit outcome");
     // SimC76f8118 cpp2169–2185 pairs Meta effect4 with Monster Within mastery.
     let expected = f64::from(zero) * 1.16;
@@ -219,6 +222,22 @@ fn batch1_meta_scales_devourer_damage_with_mastery() {
         (f64::from(forty) - expected).abs() < expected * 0.02,
         "Meta/mastery expected {expected}, actual {forty}, zero-mastery hit {zero}"
     );
+}
+
+#[test]
+#[ignore = "requires DPS_PARITY_WORLD_DB and DPS_PARITY_OUTPUT with spec1480 exact profile/traits"]
+fn native_blind_focus_meta_scales_once() {
+    let (plain, plain_crit) = batch1_voidblade_hit(false, 40.0, false);
+    let (normal, normal_crit) = batch1_voidblade_hit(false, 40.0, true);
+    let (meta_plain, meta_plain_crit) = batch1_voidblade_hit(true, 40.0, false);
+    let (meta, meta_crit) = batch1_voidblade_hit(true, 40.0, true);
+    assert_eq!(plain_crit, normal_crit);
+    assert_eq!(meta_plain_crit, meta_crit);
+    // SimC76f8118 cpp2248–2260 doubles Blind Focus effect3 in Meta;
+    // native Meta effect15 already modifies its label6000 points index2.
+    let normal_bonus = f64::from(normal) / f64::from(plain) - 1.0;
+    let expected = f64::from(meta_plain) * (1.0 + normal_bonus * 2.0);
+    assert!((f64::from(meta) - expected).abs() < expected * 0.005, "Meta hit {meta}, expected {expected}; normal {plain} -> {normal}, Meta baseline {meta_plain}");
 }
 
 #[test]
