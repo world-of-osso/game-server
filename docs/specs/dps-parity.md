@@ -89,6 +89,7 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 ### Devourer Metamorphosis entry
 
 - Entering native Void Metamorphosis1217607 grants 200 Fury, capped by the actor's native pool (SimC76f8118 `sc_demon_hunter.cpp`12445–12452). Drain and exit behavior are separate.
+- Void Metamorphosis damage effects4/5 use Monster Within mastery once, not both their raw aura amount and the mastery-scaled amount (SimC76f8118 `sc_demon_hunter.cpp`2174–2185).
 
 ### Devourer Reap
 

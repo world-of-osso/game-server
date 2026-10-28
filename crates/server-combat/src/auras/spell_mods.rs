@@ -143,7 +143,11 @@ fn matching<'a>(
         aura.effects
             .iter()
             .filter(move |effect| {
-                is_spell_mod(effect.aura_type)
+                // SimC76f8118 sc_demon_hunter.cpp2174–2185 binds these Meta
+                // effects to Monster Within; the Devourer damage hook applies
+                // that live mastery value. Do not also apply the raw aura amount.
+                !(aura.spell_id == 1217607 && matches!(effect.index, 3 | 4))
+                    && is_spell_mod(effect.aura_type)
                     && effect.misc_values[0] == op as i32
                     && affects(aura, effect, spell)
             })
