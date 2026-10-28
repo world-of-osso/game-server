@@ -788,9 +788,10 @@ fn literal_equipment_detects_actual_attack_power_buff() {
             actor,
             &[
                 "trinket.1.has_buff.attack_power",
-                "trinket.2.has_buff.attack_power"
+                "trinket.2.has_buff.attack_power",
+                "trinket.2.proc.any_dps.default_value"
             ]
         ),
-        vec![Ok(1.0), Ok(0.0)]
+        vec![Ok(1.0), Ok(0.0), Ok(0.0)]
     );
 }
