@@ -577,7 +577,8 @@ fn replay_registered_run_with_healing(
             super::dps_parity::drive_literal_tick(&mut run)
                 .map_err(|error| format!("native APL tick {tick}: {error}"))?;
         }
-        run.app.update();
+        let boundary = started_at + std::time::Duration::from_millis(u64::from(tick) * 50);
+        super::dps_parity::advance_fixture_step(&mut run, boundary)?;
         let world = run.app.world();
         if mitigation_auras
             .iter()

@@ -673,7 +673,7 @@ fn next_fixture_boundary(run: &Run, frame_end: Duration) -> Duration {
     frame_end.min(boundary)
 }
 
-fn advance_fixture_step(run: &mut Run, boundary: Duration) -> Result<(), String> {
+pub(super) fn advance_fixture_step(run: &mut Run, boundary: Duration) -> Result<(), String> {
     let now = run.app.world().resource::<Time>().elapsed();
     let delta = boundary
         .checked_sub(now)

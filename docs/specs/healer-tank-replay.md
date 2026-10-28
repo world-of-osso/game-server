@@ -41,7 +41,7 @@ Generate it with the pinned `engine/simc`, the MID2 Protection profile, `copy=pa
 
 ## Tank per-spell reporting
 
-The SimC tank report includes raw and effective self-healing and outgoing periodic damage tick counts per spell.
+The SimC tank report includes raw and effective self-healing and outgoing periodic damage tick counts per spell. Its fixed-time target health uses the same encounter clock as the DPS parity fixture, so execute-phase abilities use the projected target health.
 
 ## Implementation inventory
 
