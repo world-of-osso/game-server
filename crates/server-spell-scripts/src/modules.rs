@@ -321,6 +321,7 @@ register_modules! {
     touch_of_death: (240, "modules/touch_of_death.rs"),
     unholy_reaping: (2524, "modules/unholy_reaping.rs"),
     unholy_mograine: (2540, "modules/unholy_mograine.rs"),
+    unholy_nazgrim: (2540, "modules/unholy_nazgrim.rs"),
     unholy_army: (2522, "modules/unholy_army.rs"),
     unholy_eruption: (2520, "modules/unholy_eruption.rs"),
     unholy_trollbane: (2538, "modules/unholy_trollbane.rs"),
