@@ -1153,6 +1153,12 @@ fn critical_damage_amount(
     let multiplier = world
         .get::<AuraStatMods>(caster)
         .map_or(1.0, |mods| mods.critical_damage(spell.school_mask()));
+    // SimC76f8118 pet.cpp488–494: actual pets inherit the owner's critical
+    // damage multiplier in addition to their own, including equipment auras.
+    let owner_multiplier = crate::auras::summon_damage::ownership(world, caster)
+        .and_then(|(owner, _)| world.get::<AuraStatMods>(owner))
+        .map_or(1.0, |mods| mods.critical_damage(spell.school_mask()));
+    let multiplier = multiplier * owner_multiplier;
     let base_bonus = if weapon_order {
         amount
     } else {
