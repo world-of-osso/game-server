@@ -545,8 +545,18 @@ fn filter_primary_range(
     if !harmful && !(returning && channel) {
         return state;
     }
-    let unstable_channel =
-        returning && super::super::melee_return::forced_movement(world, actor) && channel;
+    let dh = world
+        .get::<shared::components::ActiveSpec>(actor)
+        .is_some_and(|spec| matches!(spec.0, 577 | 581 | 1480));
+    let outside_melee = crate::spell_cast::targets::position(world, actor)
+        .zip(crate::spell_cast::targets::position(world, primary))
+        .zip(crate::scripted_ai::model_reach::melee_range(world, actor, primary))
+        .is_some_and(|((from, to), range)| from.distance(to) > range);
+    // SimC76f8118 sc_demon_hunter.cpp2477–2486: a DH channel is unavailable
+    // while the actor is out of melee, even if its own spell range is longer.
+    let unstable_channel = returning
+        && channel
+        && (super::super::melee_return::forced_movement(world, actor) || (dh && outside_melee));
     if !unstable_channel && primary_in_native_range(world, actor, spell, primary) {
         return state;
     }
