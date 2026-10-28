@@ -92,6 +92,14 @@ impl Facts for Context<'_> {
     fn value(&self, name: &str) -> Result<f64, String> {
         if name.starts_with("trinket.") || name.starts_with("equipped.") {
             self.equipment.fact(name, &self.native)
+        } else if name == "in_boss_encounter" {
+            // SimC76f8118 player.cpp6659–6664: Patchwerk initializes this flag to one.
+            match self.native.value("fight_style.dungeonroute")?
+                + self.native.value("fight_style.dungeonslice")?
+            {
+                0.0 => Ok(1.0),
+                _ => Err("NATIVE_DUNGEON_BOSS_ENCOUNTER_UNAVAILABLE".into()),
+            }
         } else if name == "in_combat" {
             self.world
                 .get::<shared::components::CombatStatus>(self.actor)
@@ -143,6 +151,7 @@ impl ActionFacts for Context<'_> {
         if name.starts_with("trinket.")
             || name.starts_with("equipped.")
             || name == "in_combat"
+            || name == "in_boss_encounter"
             || name.starts_with("soul_fragments")
             || name == "action.sigil_of_spite.placed"
             || name == "raid_event.adds.has_boss"
