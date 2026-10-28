@@ -67,3 +67,60 @@ fn demonology_inquisitor_mind_sear_ticks_after_hasted_precast() {
         );
     }
 }
+
+#[test]
+#[ignore = "requires canonical 266 inputs; overlapping Inquisitor cast and channel"]
+fn demonology_inquisitor_recasts_mind_sear_during_channel() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(266, 1).unwrap();
+    let owner = run.actor;
+    engage(&mut run);
+    run.app
+        .world_mut()
+        .entity_mut(owner)
+        .insert(crate::networking::CombatTarget(Some(run.targets[0])));
+    run.app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(owner)
+        .unwrap()
+        .haste_pct = 150.0;
+    crate::spell_cast::creature_cast(run.app.world_mut(), owner, 1276283, Some(owner), true)
+        .unwrap();
+    let inquisitor = run
+        .app
+        .world_mut()
+        .query::<(Entity, &crate::spell_cast::summon::SummonedCreature)>()
+        .iter(run.app.world())
+        .find(|(_, summon)| summon.owner == owner && summon.spell_id == 1276283)
+        .map(|(actor, _)| actor)
+        .expect("real Antoran Inquisitor");
+    for _ in 0..190 {
+        run.app
+            .world_mut()
+            .get_mut::<crate::stats::CharacterStats>(owner)
+            .unwrap()
+            .haste_pct = 150.0;
+        run.app.update();
+    }
+    assert!(
+        run.app.world().get_entity(inquisitor).is_ok(),
+        "native ten-second summon remains alive"
+    );
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    let casts = events
+        .iter()
+        .filter(|event| {
+            event.source == Some(inquisitor.to_bits())
+                && event.spell_id == Some(1280457)
+                && event.kind == CombatLogKind::CastSuccess
+        })
+        .count();
+    assert!(
+        casts >= 2,
+        "real Inquisitor must complete a second Mind Sear cast during its channel, got {casts}"
+    );
+}
