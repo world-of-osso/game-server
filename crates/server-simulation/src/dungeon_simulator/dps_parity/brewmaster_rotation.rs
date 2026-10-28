@@ -340,6 +340,9 @@ mod tests {
         assert!(before > 0.0);
         crate::spell_cast::creature_cast(run.app.world_mut(), actor, 121253, Some(target), false)
             .unwrap();
+        for _ in 0..5 {
+            run.app.update();
+        }
         let after = run
             .app
             .world()
