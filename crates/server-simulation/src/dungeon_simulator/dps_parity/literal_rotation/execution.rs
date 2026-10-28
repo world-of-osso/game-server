@@ -729,10 +729,23 @@ fn read_spell(
 // sc_mage.cpp3672–3678, sc_druid.cpp3573–3578). Skull Bash explicitly
 // bypasses that check for fluid-form shifting (sc_druid.cpp8174–8181).
 fn interrupt_requires_casting_target(name: &str) -> bool {
-    matches!(name,
-        "kick" | "rebuke" | "pummel" | "mind_freeze" | "counterspell" |
-        "wind_shear" | "spear_hand_strike" | "disrupt" | "muzzle" |
-        "counter_shot" | "silence" | "quell" | "solar_beam" | "interrupt")
+    matches!(
+        name,
+        "kick"
+            | "rebuke"
+            | "pummel"
+            | "mind_freeze"
+            | "counterspell"
+            | "wind_shear"
+            | "spear_hand_strike"
+            | "disrupt"
+            | "muzzle"
+            | "counter_shot"
+            | "silence"
+            | "quell"
+            | "solar_beam"
+            | "interrupt"
+    )
 }
 
 fn read_item(
