@@ -597,3 +597,38 @@ fn ret_truths_wake_does_not_apply_its_dot_bonus_to_itself() {
         "own ticks must ignore the label bonus: {hits:?}"
     );
 }
+
+#[test]
+#[ignore = "native player Light Within increases foreground and triggered Blade"]
+fn ret_damage_light_within_buffs_apply_to_blade_before_consumption() {
+    fn blade_damage(buff: Option<u32>, triggered_blade: bool) -> i64 {
+        let _seed = crate::random::seed_scope(70_448);
+        let mut run = prepare_measurement(70, 1).unwrap();
+        assert!(run.app.world().get::<shared::components::Player>(run.actor).is_some());
+        super::channel_timing_tests::remove_equipped_proc_drivers(&mut run);
+        engage(&mut run);
+        run.app.world_mut().get_mut::<crate::stats::CharacterStats>(run.actor).unwrap().crit_pct = 0.0;
+        if let Some(id) = buff {
+            crate::spell_cast::cast_triggered(run.app.world_mut(), run.actor, id, Some(run.actor), 1);
+            let aura = run.app.world().get::<crate::auras::ActiveAuras>(run.actor).unwrap().iter().find(|a| a.spell_id == id).unwrap();
+            assert_eq!(aura.effects[0].amount, 80.0, "native Light Within modifies the buff effect");
+        }
+        run.app.world_mut().resource_mut::<ObservedCombatEvents>().0.clear();
+        if triggered_blade {
+            triggered(&mut run, 184575);
+        } else {
+            crate::spell_cast::creature_cast(run.app.world_mut(), run.actor, 184575, Some(run.targets[0]), false).unwrap();
+        }
+        ticks(&mut run, 30);
+        assert!(!crate::auras::has_aura(run.app.world(), run.actor, buff.unwrap_or(406086)), "the actual Blade consumed the buff");
+        damage(&run, 184575)
+    }
+    for triggered_blade in [false, true] {
+        let base = blade_damage(None, triggered_blade);
+        assert!(base > 0);
+        for buff in [406086, 402916] {
+            let enhanced = blade_damage(Some(buff), triggered_blade);
+            assert!(((enhanced as f64 / base as f64) - 1.8).abs() < 0.01, "buff {buff}, triggered={triggered_blade}, base={base}, enhanced={enhanced}");
+        }
+    }
+}
