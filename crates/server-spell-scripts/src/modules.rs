@@ -83,6 +83,7 @@ register_modules! {
     aura_rolls: (110, "modules/aura_rolls.rs"),
     beast_mastery: (20, "modules/beast_mastery.rs"),
     brewmaster_shuffle: (1000, "modules/brewmaster_shuffle.rs"),
+    monk_harmony: (1000, "modules/monk_harmony.rs"),
     blood_death_strike: (2500, "modules/blood_death_strike.rs"),
     cast_grants: (120, "modules/cast_grants.rs"),
     cast_relationships: (370, "modules/cast_relationships.rs"),
