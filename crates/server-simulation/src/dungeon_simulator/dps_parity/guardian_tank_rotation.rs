@@ -290,18 +290,43 @@ mod tests {
         let actor = run.actor;
         let target = run.targets[0];
         let rage = |run: &super::super::Run| {
-            crate::spell_cast::powers::power_value(run.app.world(), actor, shared::components::PowerType::Rage).unwrap().0
+            crate::spell_cast::powers::power_value(
+                run.app.world(),
+                actor,
+                shared::components::PowerType::Rage,
+            )
+            .unwrap()
+            .0
         };
-        for _ in 0..120 { run.app.update(); }
+        for _ in 0..120 {
+            run.app.update();
+        }
         let before = rage(&run);
-        for _ in 0..120 { run.app.update(); }
-        assert_eq!(rage(&run), before, "no Thrash target means no Blood Frenzy rage");
-        crate::auras::apply_aura(run.app.world_mut(), &crate::auras::AuraApplication {
-            caster: actor, target, spell_id: 192090, effect_mask: u32::MAX,
-            source: crate::auras::AuraSource::Cast,
-        });
-        for _ in 0..120 { run.app.update(); }
-        assert!(rage(&run) > before, "an owned Thrash bleed must earn periodic rage");
+        for _ in 0..120 {
+            run.app.update();
+        }
+        assert_eq!(
+            rage(&run),
+            before,
+            "no Thrash target means no Blood Frenzy rage"
+        );
+        crate::auras::apply_aura(
+            run.app.world_mut(),
+            &crate::auras::AuraApplication {
+                caster: actor,
+                target,
+                spell_id: 192090,
+                effect_mask: u32::MAX,
+                source: crate::auras::AuraSource::Cast,
+            },
+        );
+        for _ in 0..120 {
+            run.app.update();
+        }
+        assert!(
+            rage(&run) > before,
+            "an owned Thrash bleed must earn periodic rage"
+        );
     }
 
     #[test]

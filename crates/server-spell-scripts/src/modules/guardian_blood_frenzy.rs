@@ -27,12 +27,23 @@ fn earn_rage(world: &mut World, unit: Entity, aura: &AuraInstance, effect: u8) {
     if aura.caster != unit || effect != 0 {
         return;
     }
-    let cap = aura.effects.iter().find(|effect| effect.index == 0)
-        .expect("Blood Frenzy target cap").amount.max(0.0) as usize;
+    let cap = aura
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .expect("Blood Frenzy target cap")
+        .amount
+        .max(0.0) as usize;
     let mut query = world.query::<&ActiveAuras>();
-    let targets = query.iter(world).filter(|auras| {
-        auras.iter().any(|dot| dot.spell_id == THRASH_BLEED && dot.caster == unit)
-    }).count().min(cap);
+    let targets = query
+        .iter(world)
+        .filter(|auras| {
+            auras
+                .iter()
+                .any(|dot| dot.spell_id == THRASH_BLEED && dot.caster == unit)
+        })
+        .count()
+        .min(cap);
     for _ in 0..targets {
         spell_cast::cast_triggered(world, unit, ENERGIZE, Some(unit), 1);
     }
