@@ -137,6 +137,12 @@ fn demonology_imploded_imps_preserve_tyrant_demonic_power() {
     .unwrap();
     for _ in 0..100 {
         run.app.update();
+        if imps
+            .iter()
+            .all(|imp| run.app.world().get_entity(*imp).is_err())
+        {
+            break;
+        }
     }
     assert!(
         imps.iter()
