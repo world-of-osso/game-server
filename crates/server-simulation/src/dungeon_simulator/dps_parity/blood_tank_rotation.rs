@@ -464,6 +464,29 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "requires canonical world database and MID2 Blood inputs"]
+    fn blood_crimson_scourge_builds_real_ground_and_sanguine_follows_position() {
+        let _seed = crate::random::seed_scope(70448);
+        let mut run = super::super::prepare_registered_player(250, 1).unwrap();
+        let actor = run.actor;
+        super::super::engage(&mut run);
+        for _ in 0..2000 {
+            super::super::drive_literal_tick(&mut run).unwrap();
+            run.app.update();
+            if crate::auras::has_aura(run.app.world(), actor, 391459) { break; }
+        }
+        assert!(crate::auras::has_aura(run.app.world(), actor, 188290), "real Death and Decay must include its caster");
+        assert!(crate::auras::has_aura(run.app.world(), actor, 391459), "selected Sanguine Ground must follow actual ground");
+        let original = *run.app.world().get::<shared::components::Position>(actor).unwrap();
+        run.app.world_mut().get_mut::<shared::components::Position>(actor).unwrap().x += 50.0;
+        run.app.update();
+        assert!(!crate::auras::has_aura(run.app.world(), actor, 391459), "leaving the ground removes the healing buff");
+        *run.app.world_mut().get_mut::<shared::components::Position>(actor).unwrap() = original;
+        run.app.update();
+        assert!(crate::auras::has_aura(run.app.world(), actor, 391459), "returning to the active field restores the buff");
+    }
+
+    #[test]
     #[ignore = "requires canonical world database, MID2 Blood inputs and SimC tank trace"]
     fn blood_replays_mid2_tank_dummy_with_literal_rotation() {
         let trace =

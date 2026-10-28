@@ -83,6 +83,7 @@ register_modules! {
     aura_rolls: (110, "modules/aura_rolls.rs"),
     beast_mastery: (20, "modules/beast_mastery.rs"),
     blood_death_strike: (2500, "modules/blood_death_strike.rs"),
+    blood_ground: (2501, "modules/blood_ground.rs"),
     cast_grants: (120, "modules/cast_grants.rs"),
     cast_relationships: (370, "modules/cast_relationships.rs"),
     cast_resets: (90, "modules/cast_resets.rs"),
