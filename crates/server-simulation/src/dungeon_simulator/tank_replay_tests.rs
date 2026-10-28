@@ -1028,11 +1028,16 @@ fn simc_bronze_buff_shortens_real_infernal_strike_recovery() {
         super::dps_parity::engage(&mut run);
         let actor = run.actor;
         let target = run.targets[0];
-        crate::spell_cast::cast_for_player_with_target(
+        let destination = crate::spell_cast::targets::position(run.app.world(), target).unwrap();
+        crate::spell_cast::cast_for_player_with_targets(
             run.app.world_mut(),
             actor,
             189110,
-            Some(target),
+            crate::spell_cast::CastTargets {
+                unit: target,
+                primary: Some(target),
+                destination: Some(destination.to_array()),
+            },
         )
         .unwrap();
         let world = run.app.world();
