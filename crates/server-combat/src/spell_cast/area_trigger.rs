@@ -206,11 +206,16 @@ fn update_trigger(world: &mut World, entity: Entity) {
         meteor::remove_exited(world, &trigger, &[]);
         if owner_map.is_some() && owner_map == trigger_map {
             if let Some(position) = world.get::<Position>(entity).copied() {
-                meteor::expire_delay(
-                    world,
-                    &trigger,
-                    Vec3::new(position.x, position.y, position.z),
-                );
+                let center = Vec3::new(position.x, position.y, position.z);
+                meteor::expire_delay(world, &trigger, center);
+                if trigger.expires_at.is_some_and(|expiry| now >= expiry) {
+                    super::script_registry::area_trigger_expired(
+                        world,
+                        trigger.caster,
+                        trigger.spell_id,
+                        center,
+                    );
+                }
             }
         }
         debug!("Despawn area trigger {entity}: spell {}", trigger.spell_id);

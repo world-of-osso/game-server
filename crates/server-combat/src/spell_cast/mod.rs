@@ -4081,7 +4081,7 @@ pub fn cast_triggered_with_effect0_amount(
 }
 
 /// Full-mask triggered cast at an authored destination, retaining native selectors and flight.
-pub(crate) fn cast_triggered_at_destination(
+pub fn cast_triggered_at_destination(
     world: &mut World,
     caster: Entity,
     spell_id: u32,

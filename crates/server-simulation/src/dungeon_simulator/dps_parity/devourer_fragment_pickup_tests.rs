@@ -25,6 +25,28 @@ fn spawned_fragment_counts_follow_native_activation() {
 }
 
 #[test]
+#[ignore = "requires native spec581 player profile and DB"]
+fn sigil_of_spite_detonates_native_damage_and_fragments_at_expiry() {
+    let _seed = crate::random::seed_scope(70_448);
+    let (profile, traits) = read_reference(581).unwrap();
+    let identity = inputs::read_actor(&profile).unwrap();
+    let mut run = prepare_reference(profile, &traits, 1, identity).unwrap();
+    let actor = run.actor;
+    let target = run.targets[0];
+    let position = crate::spell_cast::targets::position(run.app.world(), target).unwrap();
+    let health = |run: &Run| run.app.world().get::<shared::components::Health>(target).unwrap().current;
+    let before = health(&run);
+    crate::spell_cast::cast_for_player_with_targets(run.app.world_mut(), actor, 390163,
+        crate::spell_cast::CastTargets { unit: target, primary: Some(target), destination: Some(position.to_array()) }).unwrap();
+    run.app.update();
+    assert_eq!(health(&run), before, "sigil cannot detonate on placement");
+    assert_eq!(soul_fragments::total_count(run.app.world(), actor, FragmentFilter::Lesser), 0);
+    for _ in 0..50 { run.app.update(); }
+    assert!(health(&run) < before, "sigil must damage its native target at expiry");
+    assert_eq!(soul_fragments::total_count(run.app.world(), actor, FragmentFilter::Lesser), 3);
+}
+
+#[test]
 #[ignore = "requires native spec1480 player profile and DB"]
 fn devourer_fragment_pickup_is_available_during_real_consume_cast() {
     let _seed = crate::random::seed_scope(70_448);

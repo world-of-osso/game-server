@@ -184,6 +184,7 @@ pub type AfterModifierConsumptionHook = fn(&mut World, Entity, &SpellInfo);
 pub type AfterForegroundSpenderHook = fn(&mut World, Entity, &SpellInfo, Option<Entity>);
 pub type AfterSpenderProcHook = fn(&mut World, Entity, &SpellInfo, Option<Entity>);
 pub type AfterElementalLaunchHook = fn(&mut World, Entity, &SpellInfo, bool);
+pub type AreaTriggerExpiredHook = fn(&mut World, Entity, u32, Vec3);
 pub type BeforeDirectDamagePoliciesHook = fn(&mut World, &EffectCtx<'_>, Entity, bool);
 pub type AfterPeriodicDamagePoliciesHook = fn(&mut World, &EffectCtx<'_>, Entity);
 pub type EmpowerCompleteHook =
@@ -359,6 +360,7 @@ pub enum SpellScriptHook {
     AfterForegroundSpender(AfterForegroundSpenderHook),
     AfterSpenderProc(AfterSpenderProcHook),
     AfterElementalLaunch(AfterElementalLaunchHook),
+    AreaTriggerExpired(AreaTriggerExpiredHook),
     BeforeDirectDamagePolicies(BeforeDirectDamagePoliciesHook),
     AfterPeriodicDamagePolicies(AfterPeriodicDamagePoliciesHook),
     EmpowerCompletion(EmpowerCompleteLookup),
@@ -1762,6 +1764,14 @@ pub fn snapshot_native_aura_amount(
             SpellScriptHook::SnapshotNativeAuraAmount(run) => run(world, spell, index, amount),
             _ => amount,
         })
+}
+
+pub fn area_trigger_expired(world: &mut World, caster: Entity, spell: u32, position: Vec3) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::AreaTriggerExpired(run) = hook {
+            run(world, caster, spell, position);
+        }
+    }
 }
 
 pub fn after_cast_update(world: &mut World) {
