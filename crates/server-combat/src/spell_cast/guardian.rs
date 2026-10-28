@@ -601,7 +601,21 @@ pub(crate) fn stat_owner(world: &World, actor: Entity) -> Option<Entity> {
         && world
             .get::<Npc>(actor)
             .is_some_and(|npc| npc.template_id == 149555);
-    (abomination || world.get::<GuardianActor>(actor).is_some()).then_some(summon.owner)
+    (abomination
+        || rune_weapon_owner(world, actor).is_some()
+        || world.get::<GuardianActor>(actor).is_some())
+    .then_some(summon.owner)
+}
+
+/// SimC76f8118 sc_death_knight.cpp4295–4304: actual rune weapons are pets
+/// even though they do not have autonomous guardian spell bindings.
+pub(crate) fn rune_weapon_owner(world: &World, actor: Entity) -> Option<Entity> {
+    let summon = world.get::<SummonedCreature>(actor)?;
+    (matches!(summon.spell_id, 49028 | 1237128 | 1264353)
+        && world
+            .get::<Npc>(actor)
+            .is_some_and(|npc| npc.template_id == 27893))
+    .then_some(summon.owner)
 }
 
 /// SimC76f8118 pets.cpp2584: the Overlord is not affected by the talent.
