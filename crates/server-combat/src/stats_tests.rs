@@ -424,6 +424,8 @@ fn player_avoidance_follows_trinitycore_master() {
         parry_pct: 0.0,
         strength: 0.0,
         base_strength: 0.0,
+        agility: 0.0,
+        base_agility: 0.0,
         block_pct: 0.0,
     };
     let none = player_defense(WARRIOR, 10, &CombatRatings::default(), inputs);
@@ -468,6 +470,76 @@ fn player_avoidance_follows_trinitycore_master() {
     assert_eq!(
         player_defense(WARRIOR, 10, &CombatRatings::default(), no_block).block,
         0.0
+    );
+}
+
+#[test]
+fn agility_classes_gain_diminished_dodge_from_agility() {
+    let inputs = DefenseInputs {
+        agility: 2620.0,
+        base_agility: 618.0,
+        dodge_pct: 5.0,
+        ..Default::default()
+    };
+    let ratings = CombatRatings::default();
+    let base = player_defense(10, 90, &ratings, inputs).dodge;
+    assert!((base - 20.18695).abs() < 0.001, "Monk dodge {base}");
+    let higher = player_defense(
+        10,
+        90,
+        &ratings,
+        DefenseInputs {
+            agility: 4620.0,
+            ..inputs
+        },
+    )
+    .dodge;
+    assert!(
+        higher > base && higher < base + 10.0,
+        "diminished agility dodge {base} -> {higher}"
+    );
+    let rated = player_defense(
+        10,
+        90,
+        &CombatRatings {
+            dodge: 5.0 * crate::character_stats_data::DODGE_RATING[89],
+            ..default()
+        },
+        inputs,
+    )
+    .dodge;
+    assert!(
+        (rated - 23.92289).abs() < 0.001,
+        "Agility and dodge rating share DR: {rated}"
+    );
+    assert!((player_defense(11, 90, &ratings, inputs).dodge - 20.44645).abs() < 0.001);
+    assert!((player_defense(12, 90, &ratings, inputs).dodge - 19.45072).abs() < 0.001);
+    for class in [3, 4, 7, 10, 11, 12] {
+        let low = player_defense(class, 90, &ratings, inputs).dodge;
+        let high = player_defense(
+            class,
+            90,
+            &ratings,
+            DefenseInputs {
+                agility: 4620.0,
+                ..inputs
+            },
+        )
+        .dodge;
+        assert!(high > low, "class {class}: {low} -> {high}");
+    }
+    assert_eq!(
+        player_defense(1, 90, &ratings, inputs).dodge,
+        player_defense(
+            1,
+            90,
+            &ratings,
+            DefenseInputs {
+                agility: 4620.0,
+                ..inputs
+            }
+        )
+        .dodge
     );
 }
 
