@@ -4,6 +4,7 @@ mod campaign;
 mod catalogs;
 mod chain_heal_target_tests;
 mod diagnostics;
+mod discipline_priest_replay;
 pub(crate) mod dps_parity;
 mod friendly_cone_tests;
 mod graph;
