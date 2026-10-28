@@ -86,7 +86,9 @@ fn divine_inspiration_event(world: &mut World, event: &combat::auras::procs::Aur
         | procs::PROC_DEAL_HELPFUL_ABILITY
         | procs::PROC_DEAL_HELPFUL_SPELL
         | procs::PROC_DEAL_HELPFUL_PERIODIC;
-    if event.can_proc
+    // SimC76f8118 sc_paladin.cpp1361–1376 lets the sourced Edict child
+    // participate in ordinary callbacks despite its triggered native cast.
+    if (event.can_proc || event.spell_id == Some(1300662))
         && event.actor_mask[0] & MASK != 0
         && (event.damage > 0.0 || event.heal.is_some())
     {

@@ -1641,3 +1641,124 @@ fn blessed_hammer_can_earn_divine_inspiration() {
         "armaments must alternate: {applications:?}"
     );
 }
+
+#[test]
+#[ignore = "uses equipped MID2 Protection set and real generator impacts"]
+fn protection_mid2_edict_follows_generator_hits_only_with_four_piece() {
+    use crate::auras::{ActiveAuras, AuraSource, RemoveReason};
+    use shared::protocol::CombatLogKind;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::dps_parity::prepare_registered_player(66, 1).unwrap();
+    super::dps_parity::engage(&mut run);
+    let actor = run.actor;
+    let target = run.targets[0];
+    assert!(
+        run.app
+            .world()
+            .get::<ActiveAuras>(actor)
+            .unwrap()
+            .iter()
+            .any(|aura| aura.spell_id == 1296659 && matches!(aura.source, AuraSource::ItemSet(_))),
+        "the profile must equip the real four-piece"
+    );
+    let count = |run: &super::dps_parity::Run| {
+        run.app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .filter(|event| {
+                event.source == Some(actor.to_bits())
+                    && event.target == Some(target.to_bits())
+                    && event.spell_id == Some(1300662)
+                    && event.kind == CombatLogKind::Damage
+                    && event.amount > 0
+            })
+            .count()
+    };
+    for (spell, expected) in [(275779, 1), (1241413, 1), (204019, 2)] {
+        for _ in 0..80 {
+            run.app.update();
+        }
+        let before = count(&run);
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, spell, Some(target), false)
+            .unwrap();
+        for _ in 0..100 {
+            run.app.update();
+        }
+        assert_eq!(count(&run) - before, expected, "source spell {spell}");
+    }
+    crate::auras::remove_auras(run.app.world_mut(), actor, RemoveReason::Consumed, |aura| {
+        aura.spell_id == 1296659 && matches!(aura.source, AuraSource::ItemSet(_))
+    });
+    for _ in 0..80 {
+        run.app.update();
+    }
+    let before = count(&run);
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 275779, Some(target), false)
+        .unwrap();
+    for _ in 0..40 {
+        run.app.update();
+    }
+    assert_eq!(
+        count(&run),
+        before,
+        "without the equipped set aura no Edict can be earned"
+    );
+}
+
+#[test]
+#[ignore = "uses real triggered Edict damage and selected native Inspiration"]
+fn unrelenting_edict_impacts_can_earn_divine_inspiration() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::dps_parity::prepare_registered_player(66, 1).unwrap();
+    super::dps_parity::engage(&mut run);
+    let actor = run.actor;
+    let target = run.targets[0];
+    let start = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .len();
+    for _ in 0..200 {
+        for _ in 0..60 {
+            run.app.update();
+        }
+        crate::spell_cast::cast_triggered_with_effect0_amount(
+            run.app.world_mut(),
+            actor,
+            1300662,
+            Some(target),
+            1,
+            100.0,
+        );
+    }
+    for _ in 0..20 {
+        run.app.update();
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0[start..];
+    let applications: Vec<_> = events
+        .iter()
+        .filter(|event| {
+            event.source == Some(actor.to_bits())
+                && event.target == Some(actor.to_bits())
+                && matches!(event.spell_id, Some(432496 | 432502))
+                && matches!(
+                    event.kind,
+                    shared::protocol::CombatLogKind::AuraApplied
+                        | shared::protocol::CombatLogKind::AuraRefreshed
+                )
+        })
+        .filter_map(|event| event.spell_id)
+        .collect();
+    assert!(
+        applications.len() >= 2,
+        "real Edict hits must earn Inspirations: {applications:?}"
+    );
+    assert!(applications.windows(2).all(|pair| pair[0] != pair[1]));
+}

@@ -287,6 +287,7 @@ register_modules! {
     outlaw_zero_in: (2609, "modules/outlaw_zero_in.rs"),
     paid_cooldowns: (130, "modules/paid_cooldowns.rs"),
     paladin_armaments: (1000, "modules/paladin_armaments.rs"),
+    paladin_edict: (1001, "modules/paladin_edict.rs"),
     protection_devastator: (730, "modules/protection_devastator.rs"),
     protection_fueled: (732, "modules/protection_fueled.rs"),
     protection_shield_block: (731, "modules/protection_shield_block.rs"),
