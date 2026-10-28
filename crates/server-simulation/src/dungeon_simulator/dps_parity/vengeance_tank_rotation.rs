@@ -689,6 +689,48 @@ mod tests {
     }
     #[test]
     #[ignore = "requires native Vengeance profile"]
+    fn fallout_initial_immolation_hit_creates_a_lesser_fragment() {
+        use super::super::*;
+        use server::soul_fragments::{self, FragmentFilter};
+        let _seed = crate::random::seed_scope(70_448);
+        let (profile, traits) = read_reference(581).unwrap();
+        let identity = inputs::read_actor(&profile).unwrap();
+        let mut run = prepare_reference(profile, &traits, 1, identity).unwrap();
+        let actor = run.actor;
+        engage(&mut run);
+        for _ in 0..5 {
+            run.app.update();
+        }
+        let before = soul_fragments::total_count(run.app.world(), actor, FragmentFilter::Lesser);
+        crate::spell_cast::cast_for_player_with_target(
+            run.app.world_mut(),
+            actor,
+            258920,
+            Some(actor),
+        )
+        .unwrap();
+        for _ in 0..5 {
+            run.app.update();
+        }
+        let after = soul_fragments::total_count(run.app.world(), actor, FragmentFilter::Lesser);
+        assert_eq!(
+            after,
+            before + 1,
+            "single-target Fallout must generate one real fragment"
+        );
+        assert!(
+            run.app
+                .world()
+                .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+                .0
+                .iter()
+                .any(|event| event.spell_id == Some(258921)
+                    && event.kind == shared::protocol::CombatLogKind::Damage)
+        );
+    }
+
+    #[test]
+    #[ignore = "requires native Vengeance profile"]
     fn mass_acceleration_earns_voidfall_and_soul_cleave_spends_it() {
         use super::super::*;
         let _seed = crate::random::seed_scope(70_448);
