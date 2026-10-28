@@ -239,6 +239,7 @@ register_modules! {
     guardian_berserk_form: (1046, "modules/guardian_berserk_form.rs"),
     guardian_flashing_claws: (1048, "modules/guardian_flashing_claws.rs"),
     guardian_gore: (1049, "modules/guardian_gore.rs"),
+    guardian_galactic: (1050, "modules/guardian_galactic.rs"),
     druid_fluid_form: (1047, "modules/druid_fluid_form.rs"),
     guardian_rampant_thorn: (1044, "modules/guardian_rampant_thorn.rs"),
     guardian_lunar_beam: (1045, "modules/guardian_lunar_beam.rs"),
