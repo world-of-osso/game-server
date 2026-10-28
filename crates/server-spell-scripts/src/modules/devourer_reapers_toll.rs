@@ -14,8 +14,12 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
 ];
 
 fn singular_strikes(world: &World, ctx: &EffectCtx<'_>, target: Entity, periodic: bool) -> f32 {
-    if periodic || ctx.spell.id != 1239127 || ctx.spell.cast_primary_target != Some(target)
-        || !world.get::<KnownSpells>(ctx.caster).is_some_and(|known| known.contains(1272770))
+    if periodic
+        || ctx.spell.id != 1239127
+        || ctx.spell.cast_primary_target != Some(target)
+        || !world
+            .get::<KnownSpells>(ctx.caster)
+            .is_some_and(|known| known.contains(1272770))
     {
         return 1.0;
     }
