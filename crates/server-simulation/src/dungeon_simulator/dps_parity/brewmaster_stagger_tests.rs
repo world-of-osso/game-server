@@ -140,3 +140,38 @@ fn stagger_mid_tick_refresh_preserves_deadline_and_small_pool_clears() {
     );
     assert!(!crate::auras::has_aura(run.app.world(), actor, 124255));
 }
+
+#[test]
+#[ignore = "requires canonical Brewmaster profile and world database"]
+fn stagger_defers_incoming_magic_spell_damage() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(268, 1).unwrap();
+    engage(&mut run);
+    let actor = run.actor;
+    let attacker = run.targets[0];
+    let hit = Hit {
+        tick: 0,
+        source_guid: 1,
+        pack: 0,
+        target_slot: 0,
+        school: 4,
+        raw: 100_000.0,
+        level_scaling_factor: 1.0,
+        kind: HitKind::Spell {
+            spell_id: 133,
+            depth: 0,
+            bonus_source_guid: None,
+            effect_index: Some(0),
+            periodic: false,
+            crit: false,
+            resolved_source: true,
+            blocked: false,
+        },
+    };
+    crate::spell_cast::effects::replay_healer_hit(run.app.world_mut(), attacker, actor, &hit)
+        .unwrap();
+    assert!(
+        crate::auras::stagger::pool_size(run.app.world(), actor) > 0.0,
+        "actual incoming magic must be deferred"
+    );
+}
