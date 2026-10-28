@@ -609,4 +609,43 @@ mod tests {
         }
         assert_eq!(count(&run), 1, "exactly one delayed damage child");
     }
+    #[test]
+    #[ignore = "requires native Vengeance profile"]
+    fn untethered_meta_uses_native_short_duration_and_consumes_proc() {
+        use super::super::*;
+        let (profile, traits) = read_reference(581).unwrap();
+        let identity = inputs::read_actor(&profile).unwrap();
+        let mut run = prepare_reference(profile, &traits, 1, identity).unwrap();
+        let actor = run.actor;
+        crate::auras::apply_aura(
+            run.app.world_mut(),
+            &crate::auras::AuraApplication {
+                caster: actor,
+                target: actor,
+                spell_id: 1270476,
+                effect_mask: u32::MAX,
+                source: crate::auras::AuraSource::Cast,
+            },
+        );
+        crate::spell_cast::cast_for_player_with_target(
+            run.app.world_mut(),
+            actor,
+            187827,
+            Some(actor),
+        )
+        .unwrap();
+        for _ in 0..3 {
+            run.app.update();
+        }
+        let aura = run
+            .app
+            .world()
+            .get::<crate::auras::ActiveAuras>(actor)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 187827)
+            .unwrap();
+        assert_eq!(aura.duration_ms, 10_000);
+        assert!(!crate::auras::has_aura(run.app.world(), actor, 1270476));
+    }
 }

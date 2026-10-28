@@ -14,10 +14,15 @@ struct PendingCleave {
 #[derive(Component, Default)]
 struct PendingCleaves(Vec<PendingCleave>);
 
+#[derive(Component)]
+struct UntetheredMetaDuration(u32);
+
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::EffectEnabled(disable_native_child),
     SpellScriptHook::AfterNativeLaunch(launch),
     SpellScriptHook::AfterNativeCastUpdate(update),
+    SpellScriptHook::BeforeNativeOnCast(snapshot_meta),
+    SpellScriptHook::AfterResolvedHits(finish_meta),
 ];
 
 fn selected(world: &World, caster: Entity, spell: u32) -> bool {
@@ -107,6 +112,54 @@ pub(super) fn trigger_untethered_rage(world: &mut World, caster: Entity, consume
             error!(?caster, "Seething Anger stack refused");
         }
     }
+}
+
+fn snapshot_meta(world: &mut World, caster: Entity, spell: &SpellInfo, _: u8) {
+    if spell.id != 187827 || !combat::auras::has_aura(world, caster, 1270476) {
+        return;
+    }
+    let now = spell_cast::now(world);
+    let remaining = world
+        .get::<combat::auras::ActiveAuras>(caster)
+        .and_then(|auras| {
+            auras
+                .iter()
+                .find(|aura| aura.spell_id == 187827 && aura.caster == caster)
+        })
+        .and_then(|aura| aura.expires_at)
+        .map_or(0.0, |expiry| (expiry - now).max(0.0));
+    let seconds = world
+        .resource::<combat::spell_info::SpellStore>()
+        .get(1270444)
+        .and_then(|spell| spell.effects.iter().find(|effect| effect.index == 0))
+        .expect("native Untethered Rage duration")
+        .base_points;
+    assert!(seconds > 0.0, "invalid native Untethered Rage duration");
+    world.entity_mut(caster).insert(UntetheredMetaDuration(
+        ((remaining + f64::from(seconds)) * 1000.0).round() as u32,
+    ));
+}
+
+fn finish_meta(world: &mut World, ctx: &spell_cast::effects::EffectCtx) {
+    if ctx.spell.id != 187827 {
+        return;
+    }
+    let Some(duration) = world
+        .entity_mut(ctx.caster)
+        .take::<UntetheredMetaDuration>()
+    else {
+        return;
+    };
+    assert!(
+        combat::auras::set_owned_duration(world, ctx.caster, ctx.caster, 187827, duration.0),
+        "native Metamorphosis aura absent"
+    );
+    combat::auras::remove_auras(
+        world,
+        ctx.caster,
+        combat::auras::RemoveReason::Consumed,
+        |aura| aura.spell_id == 1270476 && aura.caster == ctx.caster,
+    );
 }
 
 fn update(world: &mut World) {
