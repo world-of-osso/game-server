@@ -61,6 +61,8 @@ const BUFFS: &[(&str, u32)] = &[
     ("rip", 1079),
 ];
 const TALENTS: &[(&str, u32)] = &[
+    ("convoke_the_spirits", 391528),
+    ("ravage", 441583),
     ("heart_of_the_wild", 1261867),
     ("fluid_form", 449193),
     ("killing_blow", 1252994),
