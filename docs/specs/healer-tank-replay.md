@@ -39,7 +39,7 @@ Replay recorded incoming damage in the native server combat simulation to compar
 
 ## Known gaps (current cycle)
 
-- [ ] Blood 250: SimC `76f8118` applies Hemostasis twice to Death Strike healing (parsed action modifier and `death_strike_heal_t::action_multiplier`). Its debug trace shows `1.08²` for one 8% stack, about 8% more than one application. The source does not identify this as an in-game behavior; native gameplay applies it once. Blood Shield inherits the raw-heal difference.
+- [Blood Death Knight 250](healer-tank-replay/250.md): spec-specific replay notes and known reference differences.
 
 - [x] Guardian Ursoc's Fury grants the native cumulative 372505 absorb from actual Thrash and Maul-family damage, including Thrash ticks, capped at 30% max health. Source: `sc_druid.cpp5148–5188,5600–5604,5912–5920`.
 - [ ] Connect SimC tank-dummy trace input to the healer replay.
