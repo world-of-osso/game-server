@@ -63,9 +63,19 @@ pub(super) fn moonfire(world: &mut World, caster: Entity, target: Entity, depth:
 /// TC a352b1fa spell_warrior.cpp2096–2144: slow and known-Rend hooks share landed hits.
 pub(super) fn thunder_clap(world: &mut World, caster: Entity, target: Entity, depth: u8) {
     spell_cast::cast_triggered(world, caster, THUNDER_CLAP_SLOW, Some(target), depth + 1);
+    let protection = world
+        .get::<shared::components::ActiveSpec>(caster)
+        .is_some_and(|spec| spec.0 == 73);
+    // SimC 76f8118 sc_warrior.cpp 3968–3970/4103–4105:
+    // Protection's Blood and Thunder, not the Arms Rend talent, enables the bleed.
+    let talent = if protection {
+        384277
+    } else {
+        super::batch13::REND
+    };
     let knows_rend = world
         .get::<crate::class_progression::KnownSpells>(caster)
-        .is_some_and(|known| known.contains(super::batch13::REND));
+        .is_some_and(|known| known.contains(talent));
     if knows_rend {
         spell_cast::cast_triggered(world, caster, THUNDER_CLAP_REND, Some(target), depth + 1);
     }

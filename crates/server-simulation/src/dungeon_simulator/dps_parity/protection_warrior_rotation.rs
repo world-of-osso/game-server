@@ -694,4 +694,49 @@ mod tests {
             }
         }
     }
+    #[test]
+    fn protection_blood_and_thunder_applies_rend_from_landed_clap_and_blast() {
+        use shared::protocol::CombatLogKind;
+        for action in [6343, 435222] {
+            for selected in [false, true] {
+                let mut observed = false;
+                for _ in 0..8 {
+                    let mut ids = vec![action, 388539, 435203];
+                    if selected {
+                        ids.push(384277);
+                    }
+                    let mut h =
+                        crate::spell_cast::test_harness::harness_with_native_enemy_dodge_reduction(
+                            Vec::new(),
+                            &ids,
+                            1,
+                        )
+                        .unwrap();
+                    h.app
+                        .world_mut()
+                        .entity_mut(h.caster)
+                        .insert(shared::components::ActiveSpec(73));
+                    h.advance(3);
+                    h.cast_and_deliver(action, Some(h.npc));
+                    h.advance(20);
+                    let landed = h.inbox.log.iter().any(|event| {
+                        event.spell_id == Some(action)
+                            && event.kind == CombatLogKind::Damage
+                            && event.amount > 0
+                    });
+                    if !landed {
+                        continue;
+                    }
+                    assert_eq!(
+                        crate::auras::has_aura(h.app.world(), h.npc, 388539),
+                        selected,
+                        "action={action} selected={selected}"
+                    );
+                    observed = true;
+                    break;
+                }
+                assert!(observed, "action={action} must land");
+            }
+        }
+    }
 }
