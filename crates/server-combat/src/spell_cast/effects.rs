@@ -1920,10 +1920,10 @@ pub fn replay_simc_dummy_strike(
             school_mask: 1,
             ..Default::default()
         }),
-        categories: Some(crate::spell_info::SpellCategories {
+        categories: Some(Box::new(crate::spell_info::SpellCategories {
             defense_type: 2,
             ..Default::default()
-        }),
+        })),
         ..Default::default()
     };
     let ctx = EffectCtx {
