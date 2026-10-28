@@ -42,6 +42,36 @@ print('HEALER_TANK_REPORT=' + json.dumps(report))
             self.assertEqual(json.loads((output / 'healer-105-unhealed.json').read_text())['metrics']['spell_healing']['123']['effective_hps'], 10)
             self.assertEqual(json.loads((output / 'tank-581-unhealed.json').read_text())['time_to_death'], 42)
 
+    def test_multiseed_aggregates_real_cli_outputs_and_keeps_seed_details(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            for spec in ('66', '73', '104', '250', '268', '581'):
+                (root / f'{spec}.simc-trace.log').write_text(spec)
+            executable = root / 'replay'
+            executable.write_text('''#!/usr/bin/env python3
+import json, os
+spec = os.environ['HEALER_TANK_SPEC']
+seed = int(os.environ['HEALER_TANK_SEED'])
+if os.environ['HEALER_TANK_MODE'] == 'healer':
+    assert seed == 70448
+    report = {'metrics': {'effective_hps': 10, 'raw_hps': 20, 'overheal_pct': 50, 'mana_min': 30, 'mana_curve': [{'current': 40}], 'first_death_seconds': None, 'tank_health_min': 60, 'idle_gcd_pct': 12}}
+else:
+    assert seed in (70448, 70449)
+    healed = os.environ['HEALER_TANK_EXTERNAL_HEALING'] == '1'
+    report = {'spec': spec, 'external_healing': healed, 'mitigation_pct': 40 + 20 * (seed - 70448), 'time_to_death': None if healed or seed == 70448 else 20, 'active_mitigation_uptime': 0.2 + 0.2 * (seed - 70448), 'tank_casts': {'123': 2} if seed == 70448 else {}, 'aura_uptime': {'456': 0.5} if seed == 70449 else {}}
+print('HEALER_TANK_REPORT=' + json.dumps(report))
+''')
+            executable.chmod(0o755)
+            output = root / 'results'
+            result = subprocess.run(['python3', str(SCRIPT), '--all', '--seeds', '2', '--trace-dir', str(root), '--profile-dir', str(root), '--executable', str(executable), '--output-dir', str(output), '--jobs', '3'], text=True, capture_output=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn('| 66 | 50.00 (40.00–60.00) | 30.00 (20.00–40.00) | 0/2 | 1/2 |', result.stdout)
+            self.assertIn('| 123 | 1.00 (0.00–2.00) | 0.00 (0.00–0.00) |', result.stdout)
+            self.assertIn('| 456 | 0.00 (0.00–0.00) | 25.00 (0.00–50.00) |', result.stdout)
+            self.assertEqual(len(list(output.glob('*.json'))), 31)
+            self.assertEqual(json.loads((output / 'tank-66-unhealed-seed70449.json').read_text())['time_to_death'], 20)
+
+
 
 if __name__ == '__main__':
     unittest.main()
