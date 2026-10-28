@@ -121,6 +121,7 @@ register_modules! {
     vengeance_fiery_brand: (5814, "modules/vengeance_fiery_brand.rs"),
     vengeance_fracture: (5811, "modules/vengeance_fracture.rs"),
     vengeance_frailty: (5815, "modules/vengeance_frailty.rs"),
+    vengeance_mass_acceleration: (5816, "modules/vengeance_mass_acceleration.rs"),
     vengeance_soul_cleave: (5813, "modules/vengeance_soul_cleave.rs"),
     vengeance_spirit_bomb: (5812, "modules/vengeance_spirit_bomb.rs"),
     destruction_echo: (2676, "modules/destruction_echo.rs"),

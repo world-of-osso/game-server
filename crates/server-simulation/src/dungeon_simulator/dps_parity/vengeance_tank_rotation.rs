@@ -689,6 +689,49 @@ mod tests {
     }
     #[test]
     #[ignore = "requires native Vengeance profile"]
+    fn mass_acceleration_resets_spirit_bomb_after_metamorphosis() {
+        use super::super::*;
+        let (profile, traits) = read_reference(581).unwrap();
+        let identity = inputs::read_actor(&profile).unwrap();
+        let mut run = prepare_reference(profile, &traits, 1, identity).unwrap();
+        let actor = run.actor;
+        crate::spell_cast::scripts::start_hasted_cooldown(
+            run.app.world_mut(),
+            actor,
+            247454,
+            10_000.0,
+        );
+        let remaining = |run: &Run| {
+            let world = run.app.world();
+            let spell = world
+                .resource::<crate::spell_info::SpellStore>()
+                .get(247454)
+                .unwrap();
+            world
+                .get::<crate::spell_cast::SpellHistory>(actor)
+                .unwrap()
+                .remaining_cooldown_ms(spell, crate::spell_cast::now(world))
+        };
+        assert!(remaining(&run) > 0);
+        crate::spell_cast::cast_for_player_with_target(
+            run.app.world_mut(),
+            actor,
+            187827,
+            Some(actor),
+        )
+        .unwrap();
+        for _ in 0..3 {
+            run.app.update();
+        }
+        assert_eq!(
+            remaining(&run),
+            0,
+            "selected Mass Acceleration must reset the active Spirit Bomb cooldown"
+        );
+    }
+
+    #[test]
+    #[ignore = "requires native Vengeance profile"]
     fn untethered_meta_uses_native_short_duration_and_consumes_proc() {
         use super::super::*;
         let (profile, traits) = read_reference(581).unwrap();
