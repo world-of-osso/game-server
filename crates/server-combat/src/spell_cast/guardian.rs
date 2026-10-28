@@ -590,6 +590,13 @@ pub(crate) fn stat_owner(world: &World, actor: Entity) -> Option<Entity> {
         .map(|summon| summon.owner)
 }
 
+/// SimC76f8118 pets.cpp2584: the Overlord is not affected by the talent.
+pub(crate) fn is_diabolist_overlord(world: &World, actor: Entity) -> bool {
+    world
+        .get::<SummonedCreature>(actor)
+        .is_some_and(|summon| summon.spell_id == 428571)
+}
+
 /// SimC76f8118 pets.cpp185–201: bugs=1 applies the native talent's
 /// effect2 twice to each actual warlock demon's critical damage bonus.
 pub(super) fn demonic_brutality_critical_bonus(world: &World, actor: Entity) -> f32 {
@@ -597,6 +604,7 @@ pub(super) fn demonic_brutality_critical_bonus(world: &World, actor: Entity) -> 
     if world
         .get::<crate::hunter_pet::SummonedDemon>(actor)
         .is_none()
+        || is_diabolist_overlord(world, actor)
     {
         return 0.0;
     }
