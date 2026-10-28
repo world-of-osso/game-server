@@ -263,6 +263,7 @@ register_modules! {
     unholy_ruptured_viscera: (2533, "modules/unholy_ruptured_viscera.rs"),
     shadow_apparitions: (2582, "modules/shadow_apparitions.rs"),
     unholy_soul_reaper: (2534, "modules/unholy_soul_reaper.rs"),
+    unholy_undeath: (2531, "modules/unholy_undeath.rs"),
     shadow_bolts: (2582, "modules/shadow_bolts.rs"),
     unholy_runic_corruption: (2537, "modules/unholy_runic_corruption.rs"),
     shadow_collapse: (2589, "modules/shadow_collapse.rs"),

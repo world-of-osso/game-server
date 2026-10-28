@@ -1982,6 +1982,31 @@ fn dk252_dark_transformation_tracks_the_transformed_pet_on_owner() {
 
 #[test]
 #[ignore = "requires native252 profile/traits and player actor"]
+fn dk252_whitemane_applies_and_grows_real_undeath() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 1).unwrap();
+    engage(&mut run);
+    literal_rotation::execution::execute(run.app.world_mut(), run.actor,
+        literal_rotation::execution::Execution::Spell(42650, run.actor, None)).unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    let stacks = |run: &Run| run.app.world().get::<crate::auras::ActiveAuras>(run.targets[0])
+        .and_then(|auras| auras.iter().find(|aura| aura.spell_id == 444633 && aura.caster == run.actor).map(|aura| aura.stacks));
+    for _ in 0..200 {
+        run.app.update();
+        if stacks(&run).is_some() { break; }
+    }
+    let before = stacks(&run).expect("the real Whitemane must apply owner Undeath");
+    for _ in 0..100 { run.app.update(); }
+    let after = stacks(&run).expect("Undeath must remain active");
+    assert!(after > before, "actual periodic ticks must grow Undeath stacks: {before} -> {after}");
+    assert!(run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0.iter()
+        .any(|event| event.source == Some(run.actor.to_bits()) && event.target == Some(run.targets[0].to_bits())
+            && event.spell_id == Some(444633) && event.periodic && event.kind == CombatLogKind::Damage && event.amount > 0),
+        "owner Undeath must deal real periodic damage");
+}
+
+#[test]
+#[ignore = "requires native252 profile/traits and player actor"]
 fn dk252_literal_rotation_observes_sudden_doom_reaction() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_measurement(252, 1).unwrap();
