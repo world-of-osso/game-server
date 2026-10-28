@@ -940,6 +940,12 @@ mod tests {
                             && event.amount > 0),
                     "missing weapon damage for {owner_spell}"
                 );
+                if owner_spell == 433895 {
+                    assert!(
+                        crate::auras::has_aura(run.app.world(), weapon, 1265577),
+                        "Vampiric Strike grants each weapon Transfusion"
+                    );
+                }
             }
         }
     }

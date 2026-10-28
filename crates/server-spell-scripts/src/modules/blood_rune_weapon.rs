@@ -19,7 +19,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AfterForegroundSpecial(consume_dance),
     SpellScriptHook::AfterPayment(spawn_dance_weapon),
     SpellScriptHook::AfterCastUpdate(sync_rune_weapon_buff),
-    SpellScriptHook::AsynchronousAuras(&[1264407]),
+    SpellScriptHook::AsynchronousAuras(&[1264407, 1265577]),
 ];
 
 #[derive(Component, Default)]
@@ -186,6 +186,15 @@ fn copy_weapon_actions(world: &mut World, caster: Entity, spell: &SpellInfo) {
         .map(|(entity, _, _)| entity)
         .collect();
     for weapon in weapons {
+        // SimC76f8118 sc_death_knight.cpp13856–13883: each owner
+        // Vampiric Strike grants an independent Transfusion stack to each weapon.
+        if spell.id == 433895
+            && world
+                .get::<KnownSpells>(caster)
+                .is_some_and(|known| known.contains(1265574))
+        {
+            spell_cast::cast_triggered(world, weapon, 1265577, Some(weapon), 1);
+        }
         match spell.id {
             49998 | 206930 | 50842 => {
                 let (copy, mask) = match spell.id {
