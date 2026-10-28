@@ -472,25 +472,6 @@ use crate::spell_cast::test_harness::ObservedCombatEvents;
 use shared::protocol::CombatLogKind;
 
 #[test]
-#[ignore = "local native first-item-proc diagnostic"]
-fn frost_item_proc_first_second_diagnostic() {
-    let _seed = crate::random::seed_scope(70448);
-    let mut run = prepare_measurement(64, 1).unwrap();
-    let start = run.app.world().resource::<Time>().elapsed();
-    install_fixture_lifetimes(&mut run, start);
-    engage(&mut run);
-    for _ in 0..20 {
-        drive_player(&mut run).unwrap();
-        run.app.update();
-    }
-    for event in &run.app.world().resource::<ObservedCombatEvents>().0 {
-        if event.kind == CombatLogKind::Damage && event.source == Some(run.actor.to_bits()) {
-            println!("damage {:?} {}", event.spell_id, event.amount);
-        }
-    }
-}
-
-#[test]
 #[ignore = "requires private native70448 DB and exact Frost64 inputs"]
 fn frost_mage_literal_player_executes_precombat_and_opener() {
     let _seed = crate::random::seed_scope(70448);
