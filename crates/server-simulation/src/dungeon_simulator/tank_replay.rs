@@ -310,21 +310,19 @@ pub(super) fn replay_simc_with_healing(
         return Err("NATIVE_LITERAL_ENCOUNTER_REQUIRES_300_SECONDS".into());
     }
     let hits = simc_tank_timeline::read_trace(path, "Tank_Dummy_Dungeon")?;
-    let bloodlust_ms = if external_healing {
+    let (bloodlust_ms, raid_buffs) = if external_healing {
         let (profile, _) = super::dps_parity::read_reference(spec_id)?;
         let name = profile
             .options
             .get("name")
             .and_then(|value| value.as_str())
             .ok_or("SIMC_PROFILE_NAME_ABSENT")?;
-        simc_tank_timeline::read_bloodlust_time(path, name)?
+        (
+            simc_tank_timeline::read_bloodlust_time(path, name)?,
+            simc_tank_timeline::read_raid_buffs(path, name)?,
+        )
     } else {
-        None
-    };
-    let raid_buffs = if external_healing {
-        simc_tank_timeline::read_raid_buffs(path)?
-    } else {
-        Vec::new()
+        (None, Vec::new())
     };
     let dummy_debuffs = if external_healing {
         simc_tank_timeline::read_dummy_debuffs(path, "Tank_Dummy_Dungeon")?
