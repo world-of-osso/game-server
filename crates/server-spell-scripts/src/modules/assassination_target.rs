@@ -11,6 +11,8 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::TargetDamageMult
 const MASTERY: u32 = 76803;
 const LETHAL_DOSE: u32 = 381640;
 const ZOLDYCK: u32 = 381798;
+const SYSTEMIC_FAILURE: u32 = 381652;
+const GARROTE: u32 = 703;
 const ENVENOM: u32 = 32645;
 const INTERNAL_BLEEDING: u32 = 381628;
 const MUTILATED_FLESH: u32 = 394021;
@@ -88,6 +90,13 @@ fn zoldyck(auras: &ActiveAuras, caster: Entity, health: Option<&Health>) -> f32 
     }
 }
 
+fn systemic_failure(auras: &ActiveAuras, caster: Entity, target: Option<&ActiveAuras>, spell: &SpellInfo) -> f32 {
+    let Some(talent) = owned(auras, caster, SYSTEMIC_FAILURE) else { return 1.0 };
+    let Some(garrote) = target.and_then(|target| owned(target, caster, GARROTE)) else { return 1.0 };
+    let affected = garrote.effects.iter().any(|effect| effect.index == 3 && spell_mods::class_mask_affects(garrote, effect, spell));
+    if affected { 1.0 + native_amount(talent, 0) / 100.0 } else { 1.0 }
+}
+
 fn multiplier(world: &World, caster: Entity, target: Entity, spell: &SpellInfo) -> f32 {
     let Some(auras) = world.get::<ActiveAuras>(caster) else {
         return 1.0;
@@ -109,5 +118,7 @@ fn multiplier(world: &World, caster: Entity, target: Entity, spell: &SpellInfo) 
     } else {
         1.0
     };
-    dose * execute
+    // SimC76f8118 sc_rogue.cpp1708–1710/2520–2522: Garrote's native
+    // effect4 mask selects hits while its own bleed is active on this target.
+    dose * execute * systemic_failure(auras, caster, world.get::<ActiveAuras>(target), spell)
 }
