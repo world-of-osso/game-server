@@ -141,6 +141,47 @@ fn wait_for_natural_buff_expiry(run: &mut Run) {
     panic!("native1297033 failed to expire without further source actions");
 }
 
+#[test]
+fn efficient_training_does_not_boost_windwalker_sck() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare();
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, 450989));
+    let spell = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(TICK)
+        .unwrap()
+        .clone();
+    let amount = |run: &Run| {
+        crate::auras::spell_mods::modify(
+            run.app.world(),
+            run.actor,
+            &spell,
+            crate::auras::spell_mods::SpellModOp::HealingAndDamage,
+            100.0,
+        )
+    };
+    let windwalker = amount(&run);
+    run.app
+        .world_mut()
+        .entity_mut(run.actor)
+        .insert(shared::components::ActiveSpec(268));
+    let brewmaster = amount(&run);
+    assert!((brewmaster / windwalker - 1.2).abs() < 0.0001);
+    run.app
+        .world_mut()
+        .entity_mut(run.actor)
+        .insert(shared::components::ActiveSpec(269));
+    let before = tick_damage(&run).len();
+    cast_parent(&mut run);
+    finish_parent(&mut run);
+    assert!(
+        tick_damage(&run).len() > before,
+        "ordinary SCK produces real damage"
+    );
+}
+
 fn capture_ticks(run: &mut Run) {
     run.app.insert_resource(FactorCapture::new(
         run.actor,
