@@ -75,9 +75,9 @@ fn unholy_grasp_ticks_after_magus_is_consumed() {
                 && event.kind == CombatLogKind::Damage
         })
         .count();
-    assert!(
-        ticks > 0,
-        "the consumed Magus's actual Grasp must keep ticking"
+    assert_eq!(
+        ticks, 3,
+        "the consumed Magus's actual Grasp must pay all three native ticks"
     );
     assert!(
         run.app.world().get_entity(magus).is_err(),
