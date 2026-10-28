@@ -1,7 +1,8 @@
 //! Earned Trickster strikes and their native aura/counter lifecycle.
 use super::combat;
 use bevy::prelude::*;
-use combat::auras::{self, ActiveAuras};
+use combat::auras::scripts::{AuraScript, AuraScripts};
+use combat::auras::{self, ActiveAuras, AuraInstance, RemoveReason};
 use combat::random::Rng;
 use combat::spell_cast::scripts::script_effect_value;
 use combat::spell_cast::{self, effects::EffectCtx, script_registry::SpellScriptHook};
@@ -26,12 +27,31 @@ const DEVIOUS: u32 = 441263;
 struct DisorientingUses(u8);
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::LateAuraRegistration(register),
     SpellScriptHook::OwnsPolicyProc(owns_proc),
     SpellScriptHook::BeforeNativeOnCast(prepare_spree),
     SpellScriptHook::AfterNativeOnCast(after_unseen_execute),
     SpellScriptHook::SpellResidual(after_builder_residual),
     SpellScriptHook::ResolvedDamage(after_hit),
 ];
+
+fn register(scripts: &mut AuraScripts) {
+    scripts.0.insert(
+        441346,
+        AuraScript {
+            on_proc: Some(reset_unseen_cooldown),
+            ..Default::default()
+        },
+    );
+}
+
+// SimC76f8118 sc_rogue.cpp11539–11564: the selected native melee RPPM
+// proc expires Unseen Blade's quiet cooldown, without bypassing its native ICD.
+fn reset_unseen_cooldown(world: &mut World, caster: Entity, _: &AuraInstance, _: Option<Entity>) {
+    auras::remove_auras(world, caster, RemoveReason::Consumed, |aura| {
+        aura.spell_id == QUIET && aura.caster == caster
+    });
+}
 
 fn owns_proc(spell: u32) -> bool {
     spell == TALENT
