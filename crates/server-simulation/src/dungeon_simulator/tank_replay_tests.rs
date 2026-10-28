@@ -1507,3 +1507,137 @@ fn divine_inspiration_earns_alternating_self_armaments() {
         "inspiration must alternate: {applications:?}"
     );
 }
+
+#[test]
+#[ignore = "uses real Protection Blessed Hammer field and native damage effects"]
+fn blessed_hammer_field_hits_nearby_enemies_twice_on_schedule() {
+    use shared::components::Position;
+    use shared::protocol::CombatLogKind;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::dps_parity::prepare_registered_player(66, 2).unwrap();
+    super::dps_parity::engage(&mut run);
+    let actor = run.actor;
+    let near = run.targets[0];
+    let far = run.targets[1];
+    for _ in 0..40 {
+        run.app.update();
+    }
+    let center = *run.app.world().get::<Position>(actor).unwrap();
+    run.app.world_mut().entity_mut(near).insert(Position {
+        x: center.x + 3.0,
+        ..center
+    });
+    run.app.world_mut().entity_mut(far).insert(Position {
+        x: center.x + 20.0,
+        ..center
+    });
+    let start = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .len();
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 204019, Some(near), false)
+        .unwrap();
+    let count = |run: &super::dps_parity::Run, target: bevy::prelude::Entity| {
+        run.app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0[start..]
+            .iter()
+            .filter(|event| {
+                event.source == Some(actor.to_bits())
+                    && event.target == Some(target.to_bits())
+                    && event.spell_id == Some(204301)
+                    && event.kind == CombatLogKind::Damage
+                    && event.amount > 0
+            })
+            .count()
+    };
+    for _ in 0..20 {
+        run.app.update();
+    }
+    assert_eq!(
+        count(&run, near),
+        0,
+        "no instant hit before the first pulse"
+    );
+    for _ in 0..15 {
+        run.app.update();
+    }
+    assert_eq!(count(&run, near), 1, "first pulse at 1.25 seconds");
+    for _ in 0..60 {
+        run.app.update();
+    }
+    assert_eq!(count(&run, near), 2, "second pulse at 3.75 seconds");
+    assert_eq!(count(&run, far), 0, "outside radius must not be hit");
+    for _ in 0..40 {
+        run.app.update();
+    }
+    assert_eq!(count(&run, near), 2, "field expires without a third pulse");
+}
+
+#[test]
+#[ignore = "uses selected Divine Inspiration and real Blessed Hammer casts"]
+fn blessed_hammer_can_earn_divine_inspiration() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::dps_parity::prepare_registered_player(66, 1).unwrap();
+    super::dps_parity::engage(&mut run);
+    let actor = run.actor;
+    let target = run.targets[0];
+    let start = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .len();
+    for _ in 0..200 {
+        for _ in 0..60 {
+            run.app.update();
+        }
+        match crate::spell_cast::creature_cast(
+            run.app.world_mut(),
+            actor,
+            204019,
+            Some(target),
+            false,
+        ) {
+            Ok(())
+            | Err(
+                crate::spell_cast::CastFailure::NoCharges
+                | crate::spell_cast::CastFailure::OnCooldown,
+            ) => {}
+            Err(error) => panic!("Blessed Hammer refused: {error:?}"),
+        }
+    }
+    for _ in 0..20 {
+        run.app.update();
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0[start..];
+    let applications: Vec<_> = events
+        .iter()
+        .filter(|event| {
+            event.source == Some(actor.to_bits())
+                && event.target == Some(actor.to_bits())
+                && matches!(event.spell_id, Some(432496 | 432502))
+                && matches!(
+                    event.kind,
+                    shared::protocol::CombatLogKind::AuraApplied
+                        | shared::protocol::CombatLogKind::AuraRefreshed
+                )
+        })
+        .filter_map(|event| event.spell_id)
+        .collect();
+    assert!(
+        applications.len() >= 2,
+        "actual Blessed Hammer casts must earn Inspirations: {applications:?}"
+    );
+    assert!(
+        applications.windows(2).all(|pair| pair[0] != pair[1]),
+        "armaments must alternate: {applications:?}"
+    );
+}
