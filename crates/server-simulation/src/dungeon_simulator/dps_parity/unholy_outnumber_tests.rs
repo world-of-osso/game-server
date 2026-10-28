@@ -7,7 +7,7 @@ use crate::spell_cast::summon::SummonedCreature;
 #[ignore = "requires native252 profile and lesser ghoul templates"]
 fn unholy_outnumber_tracks_actual_lesser_ghoul_lifetimes() {
     let _seed = crate::random::seed_scope(70448);
-    let mut run = prepare_literal(252, 1).unwrap();
+    let mut run = prepare_measurement(252, 1).unwrap();
     engage(&mut run);
     assert!(crate::auras::has_aura(run.app.world(), run.actor, 1241705));
     let pet = crate::hunter_pet::summoned_pet(run.app.world(), run.actor).unwrap();
