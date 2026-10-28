@@ -15,6 +15,9 @@ pub const PROC2_CAST_SUCCESSFUL: u32 = 0x4;
 pub fn scripted_proc_mask(id: u32) -> Option<[u32; 2]> {
     match id {
         DANCE_OF_CHIJI | INUNDATE => Some([0, PROC2_CAST_SUCCESSFUL]),
+        // SimC76f8118 sc_death_knight.cpp16686–16700: Dance of Midnight
+        // triggers on the Blood owner's parry while Dancing Rune Weapon is active.
+        1264351 => Some([0x28, 0]),
         _ => None,
     }
 }

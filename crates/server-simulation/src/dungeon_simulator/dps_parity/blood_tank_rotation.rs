@@ -272,6 +272,62 @@ impl super::SpecDriver for Rotation {
 mod tests {
     #[test]
     #[ignore = "requires canonical world database and MID2 Blood inputs"]
+    fn blood_parry_during_rune_weapon_grants_free_vampiric_strike() {
+        use server::test_support::healer_intake::{Hit, HitKind};
+        let mut run = super::super::prepare_registered_player(250, 1).unwrap();
+        let actor = run.actor;
+        let source = run.targets[0];
+        super::super::engage(&mut run);
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 49028, Some(actor), false)
+            .unwrap();
+        for _ in 0..30 {
+            run.app.update();
+        }
+        let hit = Hit {
+            tick: 0,
+            source_guid: 0,
+            pack: 0,
+            target_slot: 0,
+            school: 1,
+            raw: 100.0,
+            level_scaling_factor: 1.0,
+            kind: HitKind::Melee {
+                hand: 0,
+                outcome: "Parry".into(),
+                level_difference: 0,
+                critical_multiplier: 1.0,
+                weapon_speed: 2.0,
+            },
+        };
+        crate::combat::replay_healer_hit(run.app.world_mut(), source, actor, &hit).unwrap();
+        run.app.update();
+        assert!(
+            crate::auras::has_aura(run.app.world(), actor, 1264568),
+            "actual parry earns Dance of Midnight"
+        );
+        crate::spell_cast::powers::change_power(
+            run.app.world_mut(),
+            actor,
+            shared::components::PowerType::Runes,
+            -6.0,
+        );
+        let strike = crate::spell_cast::knowledge::resolve_action(run.app.world(), actor, 206930)
+            .unwrap()
+            .unwrap();
+        assert_eq!(strike, 433895);
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, strike, Some(source), false)
+            .unwrap();
+        for _ in 0..4 {
+            run.app.update();
+        }
+        assert!(
+            !crate::auras::has_aura(run.app.world(), actor, 1264568),
+            "Vampiric Strike consumes the free-cast proc"
+        );
+    }
+
+    #[test]
+    #[ignore = "requires canonical world database and MID2 Blood inputs"]
     fn blood_dancing_rune_weapon_spawns_owned_actor() {
         use shared::components::{Npc, UnitSummonedBy};
         let mut run = super::super::prepare_registered_player(250, 1).unwrap();

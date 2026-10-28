@@ -1,7 +1,9 @@
 //! Insatiable Blade's Bone Shield stacks on Dancing Rune Weapon.
 use super::combat;
 use bevy::prelude::*;
-use combat::auras::{self, AuraApplication, AuraSource};
+use combat::auras::{
+    self, AuraApplication, AuraInstance, AuraSource, RemoveReason, procs::AuraEvent,
+};
 use combat::class_progression::KnownSpells;
 use combat::spell_cast::{self, script_registry::SpellScriptHook};
 use combat::spell_info::{SpellInfo, SpellStore};
@@ -10,7 +12,37 @@ use shared::components::{ActiveSpec, Npc, UnitSummonedBy};
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AfterForegroundSpecial(grant_bones),
     SpellScriptHook::AfterForegroundSpecial(copy_weapon_actions),
+    SpellScriptHook::EarlyAuraRegistration(register_dance),
+    SpellScriptHook::AvoidanceProcHitMask(dance_avoidance_mask),
+    SpellScriptHook::AfterForegroundSpecial(consume_dance),
 ];
+
+fn register_dance(scripts: &mut combat::auras::scripts::AuraScripts) {
+    let dance = scripts.0.entry(1264351).or_default();
+    dance.check_proc = Some(dance_parry);
+    dance.on_proc = Some(grant_dance);
+}
+
+fn dance_avoidance_mask(spell: u32) -> Option<u32> {
+    (spell == 1264351).then_some(combat::auras::procs::PROC_HIT_PARRY)
+}
+
+fn dance_parry(world: &World, aura: &AuraInstance, event: &AuraEvent) -> bool {
+    event.hit_mask & combat::auras::procs::PROC_HIT_PARRY != 0
+        && auras::has_aura(world, aura.caster, 81256)
+}
+
+fn grant_dance(world: &mut World, caster: Entity, _: &AuraInstance, _: Option<Entity>) {
+    spell_cast::cast_triggered(world, caster, 1264568, Some(caster), 1);
+}
+
+fn consume_dance(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    if matches!(spell.id, 206930 | 433895) {
+        auras::remove_auras(world, caster, RemoveReason::Consumed, |aura| {
+            aura.spell_id == 1264568 && aura.caster == caster
+        });
+    }
+}
 
 // SimC76f8118 sc_death_knight.cpp9523–9527/13955–13965 summons the
 // selected second weapon and mirrors the owner's Bone Shield generators.
