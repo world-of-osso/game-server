@@ -327,6 +327,27 @@ mod tests {
         for _ in 0..12 {
             run.app.update();
         }
+        let hit = server::test_support::healer_intake::Hit {
+            tick: 0,
+            source_guid: 0,
+            pack: 0,
+            target_slot: 0,
+            school: 1,
+            raw: 10_000.0,
+            level_scaling_factor: 1.0,
+            kind: server::test_support::healer_intake::HitKind::Melee {
+                hand: 0,
+                outcome: "Hit".into(),
+                level_difference: 0,
+                critical_multiplier: 1.0,
+                weapon_speed: 2.0,
+            },
+        };
+        crate::combat::replay_healer_hit(run.app.world_mut(), attacker, actor, &hit).unwrap();
+        assert_eq!(count(&run), 3, "a fully absorbed white swing also reflects");
+        for _ in 0..12 {
+            run.app.update();
+        }
         crate::auras::remove_auras(
             run.app.world_mut(),
             actor,
@@ -334,7 +355,7 @@ mod tests {
             |aura| matches!(aura.spell_id, 77535 | 207203),
         );
         strike(&mut run);
-        assert_eq!(count(&run), 2, "no Blood Shield means no reflection");
+        assert_eq!(count(&run), 3, "no Blood Shield means no reflection");
     }
 
     #[test]
