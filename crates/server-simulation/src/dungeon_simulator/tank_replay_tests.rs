@@ -2,6 +2,34 @@ use super::healer_intake::Intake;
 use std::path::Path;
 
 #[test]
+#[ignore = "uses native recipient avoidance and the SimC dummy strike policy"]
+fn simc_dummy_melee_uses_recipient_avoidance_and_strikes_can_block() {
+    use crate::melee::MeleeOutcome;
+    let _rng = crate::random::seed_scope(1);
+    let mut h = crate::spell_cast::test_harness::harness(Vec::new(), &[], 5).unwrap();
+    let mut stats = h
+        .app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(h.caster)
+        .unwrap();
+    stats.defense.dodge = 0.0;
+    stats.defense.parry = 100.0;
+    stats.defense.block = 100.0;
+    drop(stats);
+    let mut saw_parry = false;
+    for _ in 0..100 {
+        let (swing, _) =
+            crate::combat::roll_simc_dummy_outcome(h.app.world(), h.npc, h.caster, false).unwrap();
+        assert!(matches!(swing, MeleeOutcome::Miss | MeleeOutcome::Parry));
+        saw_parry |= swing == MeleeOutcome::Parry;
+        let (strike, _) =
+            crate::combat::roll_simc_dummy_outcome(h.app.world(), h.npc, h.caster, true).unwrap();
+        assert_eq!(strike, MeleeOutcome::Block);
+    }
+    assert!(saw_parry);
+}
+
+#[test]
 #[ignore = "uses native recipient armor and absorb data"]
 fn simc_dummy_bleed_uses_native_absorbs_but_not_armor() {
     let mut h = crate::spell_cast::test_harness::harness(Vec::new(), &[17], 5).unwrap();
