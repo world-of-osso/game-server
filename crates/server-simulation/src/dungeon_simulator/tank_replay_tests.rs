@@ -1028,14 +1028,38 @@ fn simc_dummy_melee_uses_recipient_avoidance_and_strikes_can_block() {
     let mut saw_parry = false;
     for _ in 0..100 {
         let (swing, _) =
-            crate::combat::roll_simc_dummy_outcome(h.app.world(), h.npc, h.caster, false).unwrap();
-        assert!(matches!(swing, MeleeOutcome::Miss | MeleeOutcome::Parry));
+            crate::combat::roll_simc_dummy_outcome(h.app.world(), h.npc, h.caster, false, 0.0, 0.0)
+                .unwrap();
+        assert_eq!(swing, MeleeOutcome::Parry);
         saw_parry |= swing == MeleeOutcome::Parry;
         let (strike, _) =
-            crate::combat::roll_simc_dummy_outcome(h.app.world(), h.npc, h.caster, true).unwrap();
+            crate::combat::roll_simc_dummy_outcome(h.app.world(), h.npc, h.caster, true, 0.0, 0.0)
+                .unwrap();
         assert_eq!(strike, MeleeOutcome::Block);
     }
     assert!(saw_parry);
+    let mut stats = h
+        .app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(h.caster)
+        .unwrap();
+    stats.defense.parry = 0.0;
+    stats.defense.block = 0.0;
+    drop(stats);
+    for _ in 0..100 {
+        assert_eq!(
+            crate::combat::roll_simc_dummy_outcome(h.app.world(), h.npc, h.caster, false, 1.0, 0.0)
+                .unwrap()
+                .0,
+            MeleeOutcome::Miss
+        );
+        assert_eq!(
+            crate::combat::roll_simc_dummy_outcome(h.app.world(), h.npc, h.caster, false, 0.0, 1.0)
+                .unwrap()
+                .0,
+            MeleeOutcome::Crit
+        );
+    }
 }
 
 #[test]

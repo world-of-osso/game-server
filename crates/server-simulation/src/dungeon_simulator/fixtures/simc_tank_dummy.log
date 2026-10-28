@@ -1,4 +1,8 @@
 0.000 Enemy 'Tank_Dummy_Dungeon' direct amount for Action 'tank_heal' (0): amount=75000.000000 initial_amount=75000.000000
+4.000 Enemy 'Tank_Dummy_Dungeon' performs Action 'melee_main_hand_MID2_Paladin_Protection' (0) (0)
+4.000 attack_t::build_table: miss=0 dodge=0.1 parry=0 glance=0 crit=0
 4.000 Enemy 'Tank_Dummy_Dungeon' direct amount for Action 'melee_main_hand_MID2_Paladin_Protection' (0): amount=245737.000000 initial_amount=245737.000000
+4.000 Enemy 'Tank_Dummy_Dungeon' performs Action 'melee_nuke_MID2_Paladin_Protection' (0) (0)
+4.000 attack_t::build_table: miss=0 dodge=0 parry=0 glance=0 crit=0
 4.000 Enemy 'Tank_Dummy_Dungeon' direct amount for Action 'melee_nuke_MID2_Paladin_Protection' (0): amount=505757.000000 initial_amount=505757.000000
 7.004 Enemy 'Tank_Dummy_Dungeon' tick amount for Action 'spell_dot_MID2_Paladin_Protection' (0) on Player 'MID2_Paladin_Protection': amount=25000.000000 initial_amount=25000.000000

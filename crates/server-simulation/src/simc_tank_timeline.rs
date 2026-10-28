@@ -8,11 +8,18 @@ pub(crate) enum Kind {
     Bleed,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub(crate) struct MeleeTable {
+    pub(crate) miss: f32,
+    pub(crate) crit: f32,
+}
+
 #[derive(Debug, PartialEq)]
 pub(crate) struct Hit {
     pub(crate) time_ms: u64,
     pub(crate) amount: f64,
     pub(crate) kind: Kind,
+    pub(crate) melee_table: Option<MeleeTable>,
 }
 
 pub(crate) fn read_trace(path: &Path, dummy: &str) -> Result<Vec<Hit>, String> {
@@ -106,10 +113,37 @@ fn parse_bloodlust_time(trace: &str, player: &str) -> Result<Option<u64>, String
 fn parse_trace(trace: &str, dummy: &str) -> Result<Vec<Hit>, String> {
     let source = format!("Enemy '{dummy}' ");
     let mut hits = Vec::new();
+    let mut melee_table = None;
+    let mut reading_melee = false;
     for line in trace.lines() {
         let Some((time, rest)) = line.split_once(' ') else {
             continue;
         };
+        if let Some(action) = rest.strip_prefix(&format!("{source}performs Action '")) {
+            reading_melee =
+                action.starts_with("melee_main_hand_") || action.starts_with("melee_nuke_");
+            melee_table = None;
+        }
+        if reading_melee && let Some(fields) = rest.strip_prefix("attack_t::build_table: ") {
+            let value = |name: &str| -> Result<f32, String> {
+                let prefix = format!("{name}=");
+                let raw = fields
+                    .split_whitespace()
+                    .find_map(|field| field.strip_prefix(&prefix))
+                    .ok_or_else(|| format!("missing {name} in SimC attack table: {line}"))?;
+                let value: f32 = raw
+                    .parse()
+                    .map_err(|error| format!("invalid {name}: {error}"))?;
+                if !value.is_finite() || !(0.0..=1.0).contains(&value) {
+                    return Err(format!("invalid {name} in SimC attack table: {line}"));
+                }
+                Ok(value)
+            };
+            melee_table = Some(MeleeTable {
+                miss: value("miss")?,
+                crit: value("crit")?,
+            });
+        }
         let Some(rest) = rest.strip_prefix(&source) else {
             continue;
         };
@@ -149,10 +183,21 @@ fn parse_trace(trace: &str, dummy: &str) -> Result<Vec<Hit>, String> {
         if !seconds.is_finite() || seconds < 0.0 || !amount.is_finite() || amount < 0.0 {
             return Err(format!("invalid SimC hit: {line}"));
         }
+        let table = if kind == Kind::Bleed {
+            None
+        } else {
+            Some(
+                melee_table
+                    .take()
+                    .ok_or_else(|| format!("missing SimC attack table: {line}"))?,
+            )
+        };
+        reading_melee = false;
         hits.push(Hit {
             time_ms: (seconds * 1000.0).round() as u64,
             amount,
             kind,
+            melee_table: table,
         });
     }
     if hits.is_empty()
@@ -193,6 +238,27 @@ fn reads_bloodlust_only_for_the_named_player() {
 }
 
 #[test]
+fn reads_each_dummy_attacker_table_and_rejects_missing_tables() {
+    let trace = "1.000 Enemy 'Tank_Dummy_Dungeon' performs Action 'melee_main_hand_tank' (0)\n1.000 attack_t::build_table: miss=0.1 dodge=0 parry=0 glance=0 crit=0.2\n1.000 Enemy 'Tank_Dummy_Dungeon' direct amount for Action 'melee_main_hand_tank' (0): amount=100\n2.000 Enemy 'Tank_Dummy_Dungeon' performs Action 'melee_nuke_tank' (0)\n2.000 attack_t::build_table: miss=0 dodge=0 parry=0 glance=0 crit=0.3\n2.000 Enemy 'Tank_Dummy_Dungeon' direct amount for Action 'melee_nuke_tank' (0): amount=200";
+    let hits = parse_trace(trace, "Tank_Dummy_Dungeon").unwrap();
+    assert_eq!(
+        hits[0].melee_table,
+        Some(MeleeTable {
+            miss: 0.1,
+            crit: 0.2
+        })
+    );
+    assert_eq!(
+        hits[1].melee_table,
+        Some(MeleeTable {
+            miss: 0.0,
+            crit: 0.3
+        })
+    );
+    assert!(parse_trace("1.000 Enemy 'Tank_Dummy_Dungeon' direct amount for Action 'melee_main_hand_tank' (0): amount=100", "Tank_Dummy_Dungeon").is_err());
+}
+
+#[test]
 fn reads_simc_dummy_raw_melee_and_bleed_without_tank_heals() {
     let path = Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("src/dungeon_simulator/fixtures/simc_tank_dummy.log");
@@ -203,17 +269,26 @@ fn reads_simc_dummy_raw_melee_and_bleed_without_tank_heals() {
             Hit {
                 time_ms: 4000,
                 amount: 245737.0,
-                kind: Kind::Swing
+                kind: Kind::Swing,
+                melee_table: Some(MeleeTable {
+                    miss: 0.0,
+                    crit: 0.0
+                })
             },
             Hit {
                 time_ms: 4000,
                 amount: 505757.0,
-                kind: Kind::Strike
+                kind: Kind::Strike,
+                melee_table: Some(MeleeTable {
+                    miss: 0.0,
+                    crit: 0.0
+                })
             },
             Hit {
                 time_ms: 7004,
                 amount: 25000.0,
-                kind: Kind::Bleed
+                kind: Kind::Bleed,
+                melee_table: None
             },
         ]
     );

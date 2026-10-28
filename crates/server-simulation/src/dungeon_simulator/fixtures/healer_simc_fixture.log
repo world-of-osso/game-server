@@ -1,3 +1,7 @@
+1.000 Enemy 'Tank_Dummy_Dungeon' performs Action 'melee_main_hand_1' (0)
+1.000 attack_t::build_table: miss=0 dodge=0 parry=0 glance=0 crit=0
 1.000 Enemy 'Tank_Dummy_Dungeon' direct amount for Action 'melee_main_hand_1' (0) amount=245000
+3.000 Enemy 'Tank_Dummy_Dungeon' performs Action 'melee_nuke_1' (0)
+3.000 attack_t::build_table: miss=0 dodge=0 parry=0 glance=0 crit=0
 3.000 Enemy 'Tank_Dummy_Dungeon' direct amount for Action 'melee_nuke_1' (0) amount=245000
 6.000 Enemy 'Tank_Dummy_Dungeon' tick amount for Action 'spell_dot_1' (0) amount=25000

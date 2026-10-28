@@ -521,11 +521,14 @@ fn replay_registered_run_with_healing(
                     );
                 }
                 Kind::Swing | Kind::Strike => {
+                    let table = hit.melee_table.ok_or("SIMC_DUMMY_MELEE_TABLE_ABSENT")?;
                     let (outcome, level_difference) = crate::combat::roll_simc_dummy_outcome(
                         run.app.world(),
                         source,
                         tank,
                         hit.kind == Kind::Strike,
+                        table.miss,
+                        table.crit,
                     )?;
                     let recorded = Hit {
                         tick,
