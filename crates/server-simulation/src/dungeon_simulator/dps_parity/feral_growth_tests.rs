@@ -93,6 +93,32 @@ fn feral_native_vines_applications_expire_independently() {
     );
 }
 
+#[test]
+#[ignore = "requires exact spec103 profile/traits and native private DB"]
+fn feral_twin_sprouts_spreads_growth_to_another_enemy() {
+    let _scope = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(103, 3).unwrap();
+    let actor = run.actor;
+    let source = run.targets[0];
+    assert!(crate::auras::has_aura(run.app.world(), actor, 440117));
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 768, Some(actor), false).unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    for _ in 0..10 {
+        cast_native_spell_after_regeneration(&mut run, 1822);
+        for _ in 0..200 {
+            run.app.update();
+            if crate::auras::has_aura(run.app.world(), source, 439531)
+                && run.targets[1..]
+                    .iter()
+                    .any(|&target| crate::auras::has_aura(run.app.world(), target, 439531))
+            {
+                return;
+            }
+        }
+    }
+    panic!("Twin Sprouts did not spread an actual Growth proc to another enemy");
+}
+
 pub(super) fn cast_native_spell_after_regeneration(run: &mut Run, spell: u32) {
     for _ in 0..600 {
         match crate::spell_cast::creature_cast(

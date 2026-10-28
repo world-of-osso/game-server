@@ -1,7 +1,7 @@
 //! Assassination Deathstalker relationships from pinned SimC76f8118.
 use super::combat;
 use bevy::prelude::*;
-use shared::components::PowerType;
+use shared::components::{ActiveSpec, PowerType};
 
 use combat::auras::{self, ActiveAuras, RemoveReason, SpellModOp};
 use combat::spell_cast::{self, effects::EffectCtx};
@@ -119,15 +119,29 @@ pub(super) fn on_hit(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
 
 // sc_rogue.cpp6570–6594: Mass Casualty excludes the marked primary.
 pub(super) fn filter_mass_casualty(
-    _world: &World,
-    _caster: Entity,
+    world: &World,
+    caster: Entity,
     spell: &SpellInfo,
     index: u8,
     primary: Option<Entity>,
     recipients: &mut Vec<Entity>,
 ) {
     if spell.id == MASS_DAMAGE && index == 0 {
-        recipients.retain(|target| Some(*target) != primary);
+        let assassination = world
+            .get::<ActiveSpec>(caster)
+            .is_some_and(|spec| spec.0 == 259);
+        let now = spell_cast::now(world);
+        recipients.retain(|target| {
+            Some(*target) != primary
+                && (!assassination
+                    || world.get::<ActiveAuras>(*target).is_some_and(|auras| {
+                        auras.iter().any(|aura| {
+                            aura.spell_id == 1943
+                                && aura.caster == caster
+                                && aura.expires_at.is_none_or(|at| at > now)
+                        })
+                    }))
+        });
     }
 }
 
@@ -171,14 +185,19 @@ fn spend_mark(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
     };
     auras::spend_stack(world, target, instance);
     spell_cast::cast_triggered(world, ctx.caster, MARK_DAMAGE, Some(target), ctx.depth + 1);
-    if ctx.spell.id == BLACK_POWDER && auras::has_aura(world, ctx.caster, MASS_CASUALTY) {
+    let assassination = world
+        .get::<ActiveSpec>(ctx.caster)
+        .is_some_and(|spec| spec.0 == 259);
+    if (assassination || ctx.spell.id == BLACK_POWDER)
+        && auras::has_aura(world, ctx.caster, MASS_CASUALTY)
+    {
         let mut payload = world
             .resource::<SpellStore>()
             .get(MASS_DAMAGE)
             .expect("selected Mass Casualty requires native payload")
             .clone();
         payload.cast_damage_multiplier =
-            Some(native_amount(world, ctx.caster, MASS_CASUALTY, 1) / 100.0);
+            Some(native_amount(world, ctx.caster, MASS_CASUALTY, u8::from(!assassination)) / 100.0);
         spell_cast::launch_triggered_spell(
             world,
             ctx.caster,

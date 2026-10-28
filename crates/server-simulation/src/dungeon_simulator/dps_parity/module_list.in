@@ -47,6 +47,7 @@ mod arms_tests;
 mod assassination_doomblade_tests;
 mod assassination_energy_tests;
 mod assassination_envenom_tier_tests;
+mod assassination_finish_job_tests;
 mod assassination_focus_tests;
 mod assassination_garrote_snapshot_tests;
 mod assassination_hero_tests;

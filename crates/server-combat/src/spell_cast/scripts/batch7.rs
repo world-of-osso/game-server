@@ -13,6 +13,7 @@ pub(super) const COLOSSUS_SMASH: u32 = 167105;
 pub(super) const HEART_STRIKE: u32 = 206930;
 pub(super) const RADIANCE: u32 = 194509;
 pub(super) const RAGING_BLOW: u32 = 85288;
+pub(super) const CRUSHING_BLOW: u32 = 335097;
 pub(super) const WHIRLWIND: u32 = 190411;
 pub(super) const VERDANT_EMBRACE: u32 = 360995;
 pub(super) const RAKE: u32 = 1822;
@@ -21,6 +22,10 @@ const HEARTBREAKER: u32 = 221536;
 const HEARTBREAKER_ENERGIZE: u32 = 210738;
 const ATONEMENT: u32 = 194384;
 const IMPROVED_RAGING_BLOW: u32 = 383854;
+const WRATH_AND_FURY: u32 = 392936;
+const ENRAGE: u32 = 184362;
+const SURGE_OF_ADRENALINE: u32 = 1265359;
+const SURGE_BUFF: u32 = 1265560;
 const ALWAYS_ANGRY: u32 = 280270;
 const IMPROVED_WHIRLWIND: u32 = 12950;
 const WHIRLWIND_ENERGIZE: u32 = 280715;
@@ -129,9 +134,9 @@ fn select_radiance_allies(
     units
 }
 
-/// TC spell_warr_raging_blow_cooldown_reset; own tooltip gates its s1 chance
-/// on383854. Restore ONE charge (not every charge or a fresh cooldown).
-/// Wrath and Fury / Surge of Adrenaline variants remain unimplemented.
+/// SimC76f8118 sc_warrior.cpp4995–5034/5170–5199: both weapon attacks
+/// can reset one charge, with Wrath and Fury's chance while Enraged; a
+/// successful reset grants the selected Surge of Adrenaline buff.
 pub(super) fn roll_raging_blow_reset(
     world: &mut World,
     caster: Entity,
@@ -141,7 +146,12 @@ pub(super) fn roll_raging_blow_reset(
     if !crate::auras::has_aura(world, caster, IMPROVED_RAGING_BLOW) {
         return;
     }
-    let chance = script_effect_value(world, caster, RAGING_BLOW, 0);
+    let mut chance = script_effect_value(world, caster, RAGING_BLOW, 0);
+    if crate::auras::has_aura(world, caster, ENRAGE)
+        && crate::auras::has_aura(world, caster, WRATH_AND_FURY)
+    {
+        chance += script_effect_value(world, caster, WRATH_AND_FURY, 0);
+    }
     if rand::random::<f32>() * 100.0 >= chance {
         return;
     }
@@ -155,6 +165,9 @@ pub(super) fn roll_raging_blow_reset(
         .charge_category;
     spell_cast::cast_triggered(world, caster, ALWAYS_ANGRY, Some(caster), depth + 1);
     spell_cast::restore_charges(world, caster, category, 1);
+    if crate::auras::has_aura(world, caster, SURGE_OF_ADRENALINE) {
+        spell_cast::cast_triggered(world, caster, SURGE_BUFF, Some(caster), depth + 1);
+    }
 }
 
 ///190411s1 base Rage, s2 per target with12950, at most s3 targets.

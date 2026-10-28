@@ -15,6 +15,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
 const VANISH: u32 = 1856;
 const VANISH_BUFF: u32 = 11327;
 const STEALTH: u32 = 1784;
+const STEALTH_FORM: u32 = 158188;
 const MELEE_COMBAT_START: u32 = 0x200;
 const DOES_NOT_BREAK_STEALTH: u32 = 0x20;
 
@@ -79,7 +80,8 @@ fn after_cast(world: &mut World, caster: Entity, spell: u32, depth: u8) {
 
 fn register(scripts: &mut AuraScripts) {
     let script = scripts.0.entry(VANISH_BUFF).or_default();
-    script.before_remove_reactions = Some(expire_to_stealth);
+    script.on_apply = Some(apply_stealth_form);
+    script.before_remove_reactions = Some(remove_stealth_form);
     script.check_proc = Some(breaks_vanish);
 }
 
@@ -99,7 +101,14 @@ fn breaks_vanish(world: &World, _aura: &AuraInstance, event: &AuraEvent) -> bool
         .is_some_and(|misc| misc.attributes[1] & DOES_NOT_BREAK_STEALTH != 0)
 }
 
-fn expire_to_stealth(world: &mut World, unit: Entity, aura: &AuraInstance, reason: RemoveReason) {
+fn apply_stealth_form(world: &mut World, unit: Entity, aura: &AuraInstance) {
+    spell_cast::cast_triggered(world, aura.caster, STEALTH_FORM, Some(unit), 1);
+}
+
+fn remove_stealth_form(world: &mut World, unit: Entity, aura: &AuraInstance, reason: RemoveReason) {
+    combat::auras::remove_auras(world, unit, reason, |child| {
+        child.spell_id == STEALTH_FORM && child.caster == aura.caster
+    });
     if unit == aura.caster && reason == RemoveReason::Expired {
         // Apply before the generic last-stealth check: natural expiry does not
         // start the post-stealth window while actual Stealth remains active.

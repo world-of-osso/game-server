@@ -3,6 +3,124 @@ use super::*;
 
 #[test]
 #[ignore = "requires spec103 profile/traits and native private DB"]
+fn feral_primal_fury_credits_one_critical_swipe_not_each_target() {
+    use shared::protocol::CombatLogKind;
+    fn swipe_rewards(crit_pct: f32) -> (usize, usize) {
+        let _seed = crate::random::seed_scope(70448);
+        let mut run = prepare_measurement(103, 3).unwrap();
+        engage(&mut run);
+        let actor = run.actor;
+        assert!(crate::auras::has_aura(run.app.world(), actor, 159286));
+        run.app
+            .world_mut()
+            .get_mut::<crate::stats::CharacterStats>(actor)
+            .unwrap()
+            .crit_pct = crit_pct;
+        let before = run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .len();
+        literal_rotation::execution::execute(
+            run.app.world_mut(),
+            actor,
+            literal_rotation::execution::Execution::Spell(
+                106785,
+                run.targets[0],
+                Some(run.targets[0]),
+            ),
+        )
+        .unwrap();
+        run.app.update();
+        let events = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0[before..];
+        let hits = events
+            .iter()
+            .filter(|event| {
+                event.spell_id == Some(106785)
+                    && event.kind == CombatLogKind::Damage
+                    && event.source == Some(actor.to_bits())
+            })
+            .count();
+        let rewards = events
+            .iter()
+            .filter(|event| {
+                event.spell_id == Some(16953)
+                    && event.kind == CombatLogKind::Energize
+                    && event.source == Some(actor.to_bits())
+            })
+            .count();
+        (hits, rewards)
+    }
+    let critical = swipe_rewards(100.0);
+    let normal = swipe_rewards(0.0);
+    assert_eq!(
+        critical,
+        (3, 1),
+        "three critical hits earn one builder reward"
+    );
+    assert_eq!(
+        normal,
+        (3, 0),
+        "noncritical builder hits do not earn Primal Fury"
+    );
+}
+
+#[test]
+#[ignore = "requires spec103 profile/traits and native private DB"]
+fn feral_clearcasting_real_stacks_fund_one_swipe_each() {
+    let _seed = crate::random::seed_scope(103135700);
+    let mut run = prepare_measurement(103, 1).unwrap();
+    let actor = run.actor;
+    let target = run.targets[0];
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        actor,
+        literal_rotation::execution::Execution::AutoAttack(target),
+    )
+    .unwrap();
+    let stacks = |run: &Run| {
+        run.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(actor)
+            .and_then(|auras| {
+                auras
+                    .iter()
+                    .find(|aura| aura.spell_id == 135700 && aura.caster == actor)
+            })
+            .map_or(0, |aura| aura.stacks)
+    };
+    for _ in 0..12000 {
+        run.app.update();
+        if stacks(&run) == 2 {
+            break;
+        }
+    }
+    assert_eq!(
+        stacks(&run),
+        2,
+        "real Cat swings must earn both selected Moment of Clarity uses"
+    );
+    run.app
+        .world_mut()
+        .entity_mut(actor)
+        .remove::<crate::combat::AutoAttack>();
+    feral_growth_tests::cast_native_spell_after_regeneration(&mut run, 106785);
+    assert_eq!(
+        stacks(&run),
+        1,
+        "one actual Swipe spends one Clearcasting stack"
+    );
+    feral_growth_tests::cast_native_spell_after_regeneration(&mut run, 106785);
+    assert_eq!(stacks(&run), 0, "a second Swipe spends the remaining stack");
+}
+
+#[test]
+#[ignore = "requires spec103 profile/traits and native private DB"]
 fn feral_omen_rolls_per_real_cat_swing_instead_of_every_swing() {
     use shared::protocol::CombatLogKind;
     let _seed = crate::random::seed_scope(70448);

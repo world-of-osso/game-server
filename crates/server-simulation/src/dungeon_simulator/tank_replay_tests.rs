@@ -2,23 +2,195 @@ use super::healer_intake::Intake;
 use std::path::Path;
 
 #[test]
-#[ignore = "requires the MID2 66 profile, canonical world database and SimC tank-dummy trace"]
-fn protection_paladin_replays_simc_pressure_with_mid2_gear() {
-    let path = std::env::var("HEALER_TANK_SIMC_TRACE").expect("HEALER_TANK_SIMC_TRACE required");
-    let report = super::tank_replay::replay_simc(Path::new(&path), 300, 70448).unwrap();
-    assert_eq!(report["spec"], 66);
-    assert_eq!(report["level"], 90);
-    assert_eq!(report["reference_tier"], "MID2");
-    assert_eq!(report["timeline"], "simc_tank_dummy");
-    assert_eq!(report["rotation_status"], "not_implemented");
-    assert!(report["incoming_events"].as_u64().unwrap() > 0, "{report}");
+#[ignore = "reads the pinned MID2 Protection profile"]
+fn tank_replay_rejects_profiles_without_level_90_mid2_inputs() {
+    let (mut profile, _) = super::dps_parity::read_reference(66).unwrap();
+    super::dps_parity::require_mid2_profile(&profile).unwrap();
+    profile.level = "89".into();
+    assert!(super::dps_parity::require_mid2_profile(&profile).is_err());
+    profile.level = "90".into();
+    profile
+        .options
+        .insert("reference_tier".into(), serde_json::json!("MID1"));
+    assert!(super::dps_parity::require_mid2_profile(&profile).is_err());
+}
+
+#[test]
+#[ignore = "uses the real MID2 Protection profile and native fields"]
+fn protection_apl_reads_selected_apex_and_native_consecration() {
+    use super::tank_replay::protection_rotation::{self, Context};
+    use server::simc_apl::Facts;
+    let (profile, traits) = super::dps_parity::read_reference(66).unwrap();
+    let potion = profile.consumables["potion"].clone();
+    let mut run = super::dps_parity::spawn_reference(
+        profile,
+        &traits,
+        1,
+        crate::followers::simulator::ParityActor::Player { race: 6 },
+    )
+    .unwrap();
+    for _ in 0..4 {
+        run.app.update();
+    }
+    let mut bindings = protection_rotation::bindings();
+    let equipment = super::dps_parity::literal_rotation::equipment::Equipment::load(
+        run.app.world(),
+        run.actor,
+        &mut bindings,
+    )
+    .unwrap();
+    let encounter = crate::simc_apl_native::Encounter::Fixture {
+        started_at: crate::spell_cast::now(run.app.world()),
+        duration: 300.0,
+        style: crate::simc_apl_native::FightStyle::Patchwerk,
+    };
+    let active =
+        crate::spell_cast::scripts::has_active_consecration(run.app.world_mut(), run.actor);
+    let context = Context::new(
+        run.app.world(),
+        run.actor,
+        &run.targets,
+        &bindings,
+        &equipment,
+        encounter,
+        active,
+        None,
+        &potion,
+    );
+    assert_eq!(context.value("apex.3").unwrap(), 1.0);
+    assert_eq!(
+        context
+            .value("talent.instrument_of_the_divine.enabled")
+            .unwrap(),
+        1.0
+    );
+    assert_eq!(context.value("consecration.up").unwrap(), 0.0);
+    assert_eq!(context.value("potion.liquid_luster").unwrap(), 1.0);
+    crate::spell_cast::creature_cast(run.app.world_mut(), run.actor, 26573, None, false).unwrap();
+    for _ in 0..5 {
+        run.app.update();
+    }
+    let active =
+        crate::spell_cast::scripts::has_active_consecration(run.app.world_mut(), run.actor);
+    let context = Context::new(
+        run.app.world(),
+        run.actor,
+        &run.targets,
+        &bindings,
+        &equipment,
+        encounter,
+        active,
+        None,
+        &potion,
+    );
+    assert_eq!(context.value("consecration.up").unwrap(), 1.0);
     assert!(
-        report["raw_damage"].as_f64().unwrap() > 100_000.0,
+        context.value("next_armament").is_err(),
+        "uninitialized armament state must not be invented"
+    );
+}
+
+#[test]
+#[ignore = "uses the native Consecration ground field"]
+fn protection_apl_consecration_tracks_field_not_caster_position() {
+    let mut h = crate::spell_cast::test_harness::harness(Vec::new(), &[26573, 81297], 2).unwrap();
+    assert!(!crate::spell_cast::scripts::has_active_consecration(
+        h.app.world_mut(),
+        h.caster
+    ));
+    h.cast_and_deliver(26573, None);
+    h.advance(5);
+    assert!(crate::spell_cast::scripts::has_active_consecration(
+        h.app.world_mut(),
+        h.caster
+    ));
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(shared::components::Position {
+            x: 40.0,
+            y: 0.0,
+            z: 0.0,
+        });
+    assert!(crate::spell_cast::scripts::has_active_consecration(
+        h.app.world_mut(),
+        h.caster
+    ));
+    h.advance(340);
+    assert!(!crate::spell_cast::scripts::has_active_consecration(
+        h.app.world_mut(),
+        h.caster
+    ));
+}
+
+#[test]
+#[ignore = "reads the pinned MID2 Protection profile"]
+fn protection_apl_selects_shield_using_the_real_profile_conditions() {
+    use server::simc_apl::{Action, ActionFacts, Facts};
+    struct FactsForShield {
+        full_power: bool,
+    }
+    impl Facts for FactsForShield {
+        fn value(&self, name: &str) -> Result<f64, String> {
+            Ok(match name {
+                "holy_power" if self.full_power => 5.0,
+                "talent.instrument_of_the_divine" | "buff.valor.up" | "buff.divine_purpose.up"
+                    if !self.full_power =>
+                {
+                    1.0
+                }
+                _ => 0.0,
+            })
+        }
+    }
+    impl ActionFacts for FactsForShield {
+        fn value_for(&self, _: &Action, name: &str) -> Result<f64, String> {
+            self.value(name)
+        }
+    }
+    let (profile, _) = super::dps_parity::read_reference(66).unwrap();
+    let program = super::tank_replay::protection_program(&profile.options["actions"]).unwrap();
+    let select = |full_power| {
+        program
+            .select(
+                "default",
+                &FactsForShield { full_power },
+                &mut program.state(),
+                |action| Ok(action.name == "shield_of_the_righteous"),
+            )
+            .unwrap()
+    };
+    assert_eq!(select(true).unwrap().name, "shield_of_the_righteous");
+    assert!(select(false).is_none());
+}
+
+#[test]
+#[ignore = "requires canonical MID2 profile inputs and a SimC tank-dummy trace"]
+fn unregistered_tank_driver_fails_instead_of_using_a_follower() {
+    let path = std::env::var("HEALER_TANK_SIMC_TRACE").expect("HEALER_TANK_SIMC_TRACE required");
+    let error = super::tank_replay::replay_simc(66, Path::new(&path), 300, 70448).unwrap_err();
+    assert_eq!(error, "NATIVE_LITERAL_DRIVER_UNAVAILABLE:66");
+}
+
+#[test]
+#[ignore = "runs a registered parity actor against SimC dummy pressure"]
+fn registered_parity_driver_runs_during_real_incoming_damage() {
+    let path = std::env::var("HEALER_TANK_SIMC_TRACE").expect("HEALER_TANK_SIMC_TRACE required");
+    let hits =
+        crate::simc_tank_timeline::read_trace(Path::new(&path), "Tank_Dummy_Dungeon").unwrap();
+    let _rng = crate::random::seed_scope(70448);
+    // Feral is an existing player driver used to exercise shared dispatch, not a tank measurement.
+    let run = super::dps_parity::prepare_registered_player(103, 1).unwrap();
+    let report = super::tank_replay::replay_registered_run(run, &hits, 300, &[]).unwrap();
+    assert_eq!(report["spec"], 103);
+    assert_eq!(report["level"], 90);
+    assert_eq!(report["rotation_status"], "registered_literal_simc");
+    assert!(report["incoming_events"].as_u64().unwrap() > 0, "{report}");
+    assert!(report["damage_taken"].as_f64().unwrap() > 0.0, "{report}");
+    assert!(
+        !report["tank_casts"].as_object().unwrap().is_empty(),
         "{report}"
     );
-    assert!(report["damage_taken"].as_f64().unwrap() > 0.0, "{report}");
-    assert!(report["largest_spike"].as_f64().unwrap() > 0.0, "{report}");
-    println!("SIMC_TANK_REPLAY {report}");
 }
 
 #[test]
