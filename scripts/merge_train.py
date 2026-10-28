@@ -732,9 +732,27 @@ def parity_executable(log):
     return None
 
 
+# Entries measured in parallel (different cycles or trees) may name the same --output: the
+# parity script rewrites <spec>.native.* there, so concurrent runs interleave reports (2026-10-27,
+# 252 Blightburst). One lock per resolved output directory and spec serializes them.
+OUTPUT_LOCKS = {}
+OUTPUT_LOCKS_GUARD = threading.Lock()
+
+
+def output_lock(measurement):
+    key = (str(Path(measurement["output"]).resolve()), measurement["spec"])
+    with OUTPUT_LOCKS_GUARD:
+        return OUTPUT_LOCKS.setdefault(key, threading.Lock())
+
+
 def measure_spec(entry, measurement, executable, target, log, tree, previous=None):
     if previous is not None:
         previous.result()
+    with output_lock(measurement):
+        return measure_spec_locked(entry, measurement, executable, target, log, tree)
+
+
+def measure_spec_locked(entry, measurement, executable, target, log, tree):
     command = [sys.executable, str(TREE / "scripts/dps_parity_measure.py"), "--executable", executable,
                "--spec", measurement["spec"], "--targets", measurement["targets"],
                "--actor", measurement.get("actor", "follower"),

@@ -1276,6 +1276,29 @@ pub fn set_self_cast_stacks(world: &mut World, unit: Entity, spell_id: u32, stac
     set_owned_stacks(world, unit, unit, spell_id, stacks)
 }
 
+/// Adjust an existing aura's stack cap and stacks without refreshing its lifetime.
+pub fn adjust_owned_stack_cap(world: &mut World, unit: Entity, spell_id: u32, delta: i8) -> bool {
+    let Some(mut auras) = world.get_mut::<ActiveAuras>(unit) else {
+        return false;
+    };
+    let Some(aura) = auras
+        .auras
+        .iter_mut()
+        .find(|aura| aura.spell_id == spell_id && aura.caster == unit)
+    else {
+        return false;
+    };
+    aura.max_stacks = aura.max_stacks.saturating_add_signed(delta).max(1);
+    aura.stacks = aura
+        .stacks
+        .saturating_add_signed(delta)
+        .clamp(1, aura.max_stacks);
+    auras.dirty = true;
+    drop(auras);
+    auras_changed(world, unit);
+    true
+}
+
 /// Set a caster-owned counter without changing its lifetime or periodic phase.
 pub fn set_owned_stacks(
     world: &mut World,

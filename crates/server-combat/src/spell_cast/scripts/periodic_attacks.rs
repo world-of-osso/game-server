@@ -12,6 +12,12 @@ struct RollingReapplication {
 }
 
 const ROLLING_REAPPLICATIONS: &[RollingReapplication] = &[
+    // SimC76f8118 sc_death_knight.cpp7095–7104: Hyperpyrexia is a rolling residual.
+    RollingReapplication {
+        specs: &[251],
+        passive: 456238,
+        payload: 458169,
+    },
     // SimC76f8118 sc_warrior.cpp3798–3805 forces coefficient-based Deep
     // Wounds rolling; action.cpp2730/4614/4995 supplies its refresh budget/lifetime.
     RollingReapplication {

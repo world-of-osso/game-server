@@ -125,6 +125,7 @@ pub type SummonInitializedHook = fn(&mut World, Entity);
 /// Actual CombatStatus transitions, after native reference state is updated.
 pub type CombatStatusChangedHook = fn(&mut World, Entity, bool);
 pub type SummonExpiredHook = fn(&mut World, Entity);
+pub type SummonRemovedHook = fn(&mut World, Entity);
 /// Actual guardian actor, its bound action and selected enemy.
 pub type GuardianActionEligibleHook = fn(&World, Entity, u32, Entity) -> bool;
 pub type AuraRedirectHook = fn(&mut World, Entity, Entity, u32, u8) -> bool;
@@ -150,7 +151,7 @@ pub type DamageAmountHook = fn(&World, Entity, Entity, f32) -> f32;
 pub type DamageAmountLookup = fn(u32) -> Option<DamageAmountHook>;
 pub type AutoRepeatHook = fn(&mut World, Entity, Entity);
 pub type CriticalChanceHook = fn(&World, Entity, Entity, u32) -> Option<f32>;
-pub type ActualCriticalChanceBonusHook = fn(&World, Entity, Entity, &SpellInfo) -> f32;
+pub type ActualCriticalChanceBonusHook = fn(&World, Entity, Entity, &SpellInfo, f32) -> f32;
 pub type AuraRegistrationHook = fn(&mut crate::auras::scripts::AuraScripts);
 pub type LaunchDelayLookup = fn(u32) -> Option<f32>;
 pub type DotMasteryMultiplierHook = fn(&World, Entity, Entity, u32) -> f32;
@@ -284,6 +285,7 @@ pub enum SpellScriptHook {
     SummonInitialized(SummonInitializedHook),
     CombatStatusChanged(CombatStatusChangedHook),
     SummonExpired(SummonExpiredHook),
+    SummonRemoved(SummonRemovedHook),
     GuardianActionEligible(GuardianActionEligibleHook),
     EffectHit(EffectHitLookup),
     EffectHandler(EffectHandlerLookup),
@@ -483,6 +485,14 @@ impl SpellScriptRegistry {
     pub fn summon_expired(self, world: &mut World, actor: Entity) {
         for hook in self.hooks() {
             if let SpellScriptHook::SummonExpired(run) = hook {
+                run(world, actor);
+            }
+        }
+    }
+
+    pub fn summon_removed(self, world: &mut World, actor: Entity) {
+        for hook in self.hooks() {
+            if let SpellScriptHook::SummonRemoved(run) = hook {
                 run(world, actor);
             }
         }
@@ -905,13 +915,14 @@ pub fn actual_critical_chance_bonus(
     caster: Entity,
     target: Entity,
     spell: &SpellInfo,
+    chance: f32,
 ) -> f32 {
     world
         .resource::<SpellScriptRegistry>()
         .hooks()
         .filter_map(|hook| match hook {
             SpellScriptHook::ActualCriticalChanceBonus(run) => {
-                Some(run(world, caster, target, spell))
+                Some(run(world, caster, target, spell, chance))
             }
             _ => None,
         })

@@ -293,7 +293,9 @@ fn measurement_driver(
 #[test]
 fn literal_spec_selection_applies_to_player_and_follower() {
     use crate::followers::simulator::ParityActor;
-    for spec_id in [63, 64, 71, 72, 253, 254, 258, 259, 260, 262, 263, 577, 1467] {
+    for spec_id in [
+        63, 64, 71, 72, 253, 254, 258, 259, 260, 262, 263, 269, 577, 1467,
+    ] {
         for identity in [ParityActor::Player { race: 1 }, ParityActor::Follower] {
             assert!(
                 measurement_driver(spec_id, &identity).is_some(),
@@ -308,7 +310,7 @@ fn literal_spec_selection_applies_to_player_and_follower() {
 #[test]
 fn literal_follower_only_specs_explicitly_preserve_their_actor_restriction() {
     use crate::followers::simulator::ParityActor;
-    for spec_id in [70, 266, 269] {
+    for spec_id in [70, 266] {
         assert!(measurement_driver(spec_id, &ParityActor::Follower).is_some());
         assert!(measurement_driver(spec_id, &ParityActor::Player { race: 1 }).is_none());
     }

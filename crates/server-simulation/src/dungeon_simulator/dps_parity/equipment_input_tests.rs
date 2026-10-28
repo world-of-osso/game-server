@@ -67,6 +67,39 @@ fn equip_base_slot(
 }
 
 #[test]
+#[ignore = "requires prepared1480 profile and native database"]
+fn explicit_embellishment_options_install_distinct_native_drivers() {
+    for (name, driver) in [
+        ("arcanoweave_lining", 1283697),
+        ("sunfire_silk_lining", 1241711),
+        ("devouring_banding", 1244238),
+    ] {
+        let mut run = super::prepare(1480, 1).expect("native profile");
+        let actor = run.actor;
+        let mut profile: inputs::Profile =
+            inputs::read_json(&inputs::directory().unwrap().join("1480.profile.json")).unwrap();
+        profile.equipment.retain(|item| item.slot == "wrists");
+        profile.equipment[0]
+            .options
+            .insert("embellishment".into(), name.into());
+        inputs::equip(run.app.world_mut(), actor, &profile).unwrap();
+        for _ in 0..3 {
+            run.app.update();
+        }
+        assert!(
+            crate::auras::has_aura(run.app.world(), actor, driver),
+            "{name} installs native equipped driver {driver}"
+        );
+        assert!(
+            !super::report::gaps(&profile, true)
+                .iter()
+                .any(|gap| gap.contains(&format!("embellishment={name}"))),
+            "recognized option has no unmodeled gap"
+        );
+    }
+}
+
+#[test]
 fn dps_parity_equipment_redirected_base_stats_are_modeled_without_hiding_other_options() {
     let profile: inputs::Profile = serde_json::from_value(serde_json::json!({
         "spec_id": 103, "level": "90", "race": "night_elf", "consumables": {},

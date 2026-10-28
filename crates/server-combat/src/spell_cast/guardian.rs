@@ -37,7 +37,7 @@ const GUARDIAN_POLICIES: &[GuardianPolicy] = &[
     // SimC76f8118 sc_death_knight.cpp4478–4487/4599–4605: actual Magus AP share
     // and MID2 actions; each action retains its native cast and recovery data.
     GuardianPolicy {
-        summons: &[1242294],
+        summons: &[317776, 1242294],
         entry: 163366,
         spells: &[1297055, 1297091],
         repeat_gcd: None,
@@ -54,23 +54,67 @@ const GUARDIAN_POLICIES: &[GuardianPolicy] = &[
         owner_spell_share: None,
         owner_attack_share: Some(0.7),
     },
+    // SimC76f8118 sc_death_knight.cpp5478–5488: the actual Abomination
+    // inherits its owner's melee attack power.
+    GuardianPolicy {
+        summons: &[288853],
+        entry: 149555,
+        spells: &[],
+        repeat_gcd: None,
+        owner_spell_share: None,
+        owner_attack_share: Some(2.34),
+    },
     // SimC76f8118 sc_death_knight.cpp3621–3649: ordinary and Army
     // lesser ghouls inherit owner melee AP; Army gets the 1.4 multiplier.
     GuardianPolicy {
         summons: &[275430],
         entry: 237409,
-        spells: &[],
-        repeat_gcd: None,
+        spells: &[1278150, 199373],
+        repeat_gcd: Some(1.5),
         owner_spell_share: None,
         owner_attack_share: Some(0.180431625),
     },
     GuardianPolicy {
         summons: &[1294026],
         entry: 237409,
-        spells: &[],
-        repeat_gcd: None,
+        spells: &[1278150, 199373],
+        repeat_gcd: Some(1.5),
         owner_spell_share: None,
         owner_attack_share: Some(0.180431625 * 1.4),
+    },
+    // SimC76f8118 sc_death_knight.cpp4849–4855: each actual Horseman
+    // inherits 0.70125 of its owner's melee attack power.
+    GuardianPolicy {
+        summons: &[444248],
+        entry: 221632,
+        spells: &[445504],
+        repeat_gcd: None,
+        owner_spell_share: None,
+        owner_attack_share: Some(0.70125),
+    },
+    GuardianPolicy {
+        summons: &[444251],
+        entry: 221633,
+        spells: &[445513],
+        repeat_gcd: None,
+        owner_spell_share: None,
+        owner_attack_share: Some(0.70125),
+    },
+    GuardianPolicy {
+        summons: &[444252],
+        entry: 221634,
+        spells: &[445508],
+        repeat_gcd: None,
+        owner_spell_share: None,
+        owner_attack_share: Some(0.70125),
+    },
+    GuardianPolicy {
+        summons: &[444254],
+        entry: 221635,
+        spells: &[445507],
+        repeat_gcd: None,
+        owner_spell_share: None,
+        owner_attack_share: Some(0.70125),
     },
     // SimC76f8118 sc_hunter.cpp1935: Dire Beast inherits live owner AP1.0.
     GuardianPolicy {
@@ -546,6 +590,13 @@ pub(crate) fn stat_owner(world: &World, actor: Entity) -> Option<Entity> {
         .map(|summon| summon.owner)
 }
 
+/// SimC76f8118 pets.cpp2584: the Overlord is not affected by the talent.
+pub(crate) fn is_diabolist_overlord(world: &World, actor: Entity) -> bool {
+    world
+        .get::<SummonedCreature>(actor)
+        .is_some_and(|summon| summon.spell_id == 428571)
+}
+
 /// SimC76f8118 pets.cpp185–201: bugs=1 applies the native talent's
 /// effect2 twice to each actual warlock demon's critical damage bonus.
 pub(super) fn demonic_brutality_critical_bonus(world: &World, actor: Entity) -> f32 {
@@ -553,6 +604,7 @@ pub(super) fn demonic_brutality_critical_bonus(world: &World, actor: Entity) -> 
     if world
         .get::<crate::hunter_pet::SummonedDemon>(actor)
         .is_none()
+        || is_diabolist_overlord(world, actor)
     {
         return 0.0;
     }
@@ -841,7 +893,10 @@ fn native_cast_targets(
     // native18/16 selectors center it on the caster. Such spells have no
     // explicit unit: do not range-check the enemy as the cast unit. Preserve
     // that enemy separately as the actual selected primary.
-    let unit = if super::targets::explicit_requirement(spell.effects.iter()).is_some() {
+    // Dreadbite's source-qualified target plan requires its selected enemy.
+    let unit = if spell.id == 271971
+        || super::targets::explicit_requirement(spell.effects.iter()).is_some()
+    {
         enemy
     } else {
         actor

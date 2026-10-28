@@ -2,6 +2,61 @@ use super::*;
 use shared::protocol::CombatLogKind;
 
 #[test]
+#[ignore = "requires native252 profile/traits and player actor"]
+fn dk252_army_grants_forbidden_knowledge_and_summons_magus() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 1).unwrap();
+    engage(&mut run);
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(42650, run.actor, None),
+    )
+    .unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, 1242223));
+    let world = run.app.world_mut();
+    assert!(
+        world
+            .query::<(
+                &shared::components::Npc,
+                &crate::spell_cast::summon::SummonedCreature
+            )>()
+            .iter(world)
+            .any(|(npc, summon)| npc.template_id == 163366
+                && summon.owner == run.actor
+                && summon.spell_id == 317776)
+    );
+}
+
+#[test]
+#[ignore = "requires native252 profile/traits and player actor"]
+fn dk252_dark_transformation_summons_selected_magus() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 1).unwrap();
+    engage(&mut run);
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(1233448, run.actor, None),
+    )
+    .unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    let world = run.app.world_mut();
+    assert!(
+        world
+            .query::<(
+                &shared::components::Npc,
+                &crate::spell_cast::summon::SummonedCreature
+            )>()
+            .iter(world)
+            .any(|(npc, summon)| npc.template_id == 163366
+                && summon.owner == run.actor
+                && summon.spell_id == 317776)
+    );
+}
+
+#[test]
 #[ignore = "requires private native252 profile/traits and player actor"]
 fn dk252_festering_strike_earns_ghouls_and_next_native_scythe() {
     let _seed = crate::random::seed_scope(70448);
@@ -55,6 +110,330 @@ fn dk252_festering_strike_earns_ghouls_and_next_native_scythe() {
 }
 
 #[test]
+#[ignore = "requires private native252 Rider templates/profile and player actor"]
+fn dk252_army_summons_all_four_real_riders() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 1).unwrap();
+    engage(&mut run);
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(42650, run.actor, None),
+    )
+    .unwrap();
+    for _ in 0..100 {
+        run.app.update();
+    }
+    let riders: std::collections::HashSet<_> = {
+        let world = run.app.world_mut();
+        world
+            .query::<(
+                &shared::components::Npc,
+                &crate::spell_cast::summon::SummonedCreature,
+            )>()
+            .iter(world)
+            .filter_map(|(npc, summon)| {
+                (summon.owner == run.actor
+                    && [444248, 444251, 444252, 444254].contains(&summon.spell_id))
+                .then_some(npc.template_id)
+            })
+            .collect()
+    };
+    assert_eq!(
+        riders,
+        [221632, 221633, 221634, 221635].into_iter().collect(),
+        "selected Apocalypse Now must summon all four actual native Horsemen"
+    );
+}
+
+#[test]
+#[ignore = "requires private native252 Rider templates/profile and player actor"]
+fn dk252_army_riders_melee_and_expire_at_selected_duration() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 1).unwrap();
+    engage(&mut run);
+    let started = crate::auras::aura_now(run.app.world());
+    let duration =
+        crate::spell_cast::scripts::script_effect_value(run.app.world(), run.actor, 444040, 1)
+            as f64
+            / 1000.0;
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(42650, run.actor, None),
+    )
+    .unwrap();
+    for _ in 0..100 {
+        run.app.update();
+    }
+    let riders: Vec<_> = {
+        let world = run.app.world_mut();
+        world
+            .query::<(Entity, &crate::spell_cast::summon::SummonedCreature)>()
+            .iter(world)
+            .filter_map(|(entity, summon)| {
+                (summon.owner == run.actor
+                    && [444248, 444251, 444252, 444254].contains(&summon.spell_id))
+                .then_some((entity, summon.expires_at))
+            })
+            .collect()
+    };
+    assert_eq!(riders.len(), 4, "the actual four Horsemen must be present");
+    for (_, expiry) in &riders {
+        assert!(
+            (expiry.unwrap() - started - duration).abs() < 0.2,
+            "Horseman lifetime must use selected Apocalypse Now native duration"
+        );
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    for (rider, _) in &riders {
+        assert!(
+            events
+                .iter()
+                .any(|event| event.source == Some(rider.to_bits())
+                    && event.target == Some(run.targets[0].to_bits())
+                    && event.spell_id.is_none()
+                    && event.kind == CombatLogKind::Damage
+                    && event.amount > 0),
+            "each actual Horseman must melee the selected target"
+        );
+    }
+    while crate::auras::aura_now(run.app.world()) < started + duration + 1.0 {
+        run.app.update();
+    }
+    assert!(
+        riders
+            .iter()
+            .all(|(rider, _)| run.app.world().get_entity(*rider).is_err()),
+        "Horsemen must expire after their selected native duration"
+    );
+}
+
+#[test]
+#[ignore = "requires private native252 Rider templates/profile and player actor"]
+fn dk252_horsemen_melee_inherits_live_owner_attack_power() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 1).unwrap();
+    engage(&mut run);
+    run.app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(run.actor)
+        .unwrap()
+        .attack_power += 10_000.0;
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(42650, run.actor, None),
+    )
+    .unwrap();
+    for _ in 0..100 {
+        run.app.update();
+    }
+    let riders: Vec<_> = {
+        let world = run.app.world_mut();
+        world
+            .query::<(Entity, &crate::spell_cast::summon::SummonedCreature)>()
+            .iter(world)
+            .filter_map(|(entity, summon)| {
+                (summon.owner == run.actor
+                    && [444248, 444251, 444252, 444254].contains(&summon.spell_id))
+                .then_some(entity)
+            })
+            .collect()
+    };
+    assert_eq!(riders.len(), 4, "four real Horsemen must be present");
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    for rider in riders {
+        let hits: Vec<_> = events
+            .iter()
+            .filter(|event| {
+                event.source == Some(rider.to_bits())
+                    && event.target == Some(run.targets[0].to_bits())
+                    && event.spell_id.is_none()
+                    && event.kind == CombatLogKind::Damage
+                    && event.amount > 0
+            })
+            .map(|event| event.amount)
+            .collect();
+        assert!(
+            hits.iter().any(|hit| *hit > 100),
+            "each actual Horseman must inherit live owner melee power: {hits:?}"
+        );
+    }
+}
+
+#[test]
+#[ignore = "requires private native252 Rider templates/profile and player actor"]
+fn dk252_horsemen_use_their_native_damage_actions() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 1).unwrap();
+    engage(&mut run);
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(42650, run.actor, None),
+    )
+    .unwrap();
+    for _ in 0..300 {
+        run.app.update();
+    }
+    let riders: std::collections::HashMap<_, _> = {
+        let world = run.app.world_mut();
+        world
+            .query::<(
+                Entity,
+                &shared::components::Npc,
+                &crate::spell_cast::summon::SummonedCreature,
+            )>()
+            .iter(world)
+            .filter_map(|(entity, npc, summon)| {
+                (summon.owner == run.actor
+                    && [444248, 444251, 444252, 444254].contains(&summon.spell_id))
+                .then_some((npc.template_id, entity.to_bits()))
+            })
+            .collect()
+    };
+    assert_eq!(riders.len(), 4, "four real Horsemen must be present");
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    for (entry, spell) in [
+        (221632, 445504),
+        (221633, 445513),
+        (221634, 445508),
+        (221635, 445507),
+    ] {
+        let actor = riders[&entry];
+        assert!(
+            events.iter().any(|event| event.source == Some(actor)
+                && event.target == Some(run.targets[0].to_bits())
+                && event.spell_id == Some(spell)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0),
+            "real Horseman {entry} must deal damage with native spell {spell}"
+        );
+    }
+}
+
+#[test]
+#[ignore = "requires private native252 Rider templates/profile and player actor"]
+fn dk252_horseman_spell_inherits_owner_melee_power() {
+    use crate::spell_cast::effects::factor_capture::FactorCapture;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 1).unwrap();
+    engage(&mut run);
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(42650, run.actor, None),
+    )
+    .unwrap();
+    for _ in 0..60 {
+        run.app.update();
+    }
+    let rider = {
+        let world = run.app.world_mut();
+        world
+            .query::<(
+                Entity,
+                &shared::components::Npc,
+                &crate::spell_cast::summon::SummonedCreature,
+            )>()
+            .iter(world)
+            .find_map(|(entity, npc, summon)| {
+                (summon.owner == run.actor && npc.template_id == 221633).then_some(entity)
+            })
+            .expect("actual Whitemane must exist")
+    };
+    run.app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(run.actor)
+        .unwrap()
+        .attack_power += 10_000.0;
+    let world = run.app.world();
+    let expected = world
+        .get::<crate::stats::CharacterStats>(run.actor)
+        .unwrap()
+        .total_attack_power(
+            crate::stats::WeaponAttackType::MainHand,
+            world.get::<crate::stats::StatModifiers>(run.actor),
+        )
+        * 0.70125;
+    run.app.insert_resource(FactorCapture::new(
+        rider,
+        run.targets[0],
+        445513,
+        "horseman_coil",
+        1,
+    ));
+    assert!(crate::spell_cast::try_cast_triggered(
+        run.app.world_mut(),
+        rider,
+        445513,
+        Some(run.targets[0]),
+        1
+    ));
+    for _ in 0..100 {
+        run.app.update();
+        let capture = run.app.world().resource::<FactorCapture>().export();
+        if let Some(power) = capture["events"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|event| event["event"] == "direct_amount" && event["spell_id"] == 445513)
+            .and_then(|event| event["factors"]["a_power"].as_f64())
+        {
+            assert!(
+                (power - f64::from(expected)).abs() < 1.0,
+                "actual Horseman spell must inherit owner melee AP: actual={power}, expected={expected}"
+            );
+            return;
+        }
+    }
+    panic!("the actual Horseman must land native Death Coil");
+}
+
+#[test]
+#[ignore = "requires native252 profile/traits and player actor"]
+fn dk252_lesser_ghoul_expiry_triggers_ruptured_viscera() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 1).unwrap();
+    engage(&mut run);
+    assert!(crate::spell_cast::try_cast_triggered(
+        run.app.world_mut(),
+        run.actor,
+        275430,
+        Some(run.actor),
+        1
+    ));
+    for _ in 0..300 {
+        run.app.update();
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    assert!(
+        events.iter().any(|e| e.spell_id == Some(1247379)
+            && e.target == Some(run.targets[0].to_bits())
+            && e.kind == CombatLogKind::Damage
+            && e.amount > 0),
+        "expired real ghoul must deal native Ruptured Viscera damage"
+    );
+}
+
+#[test]
 #[ignore = "requires private native252 profile/traits and player actor"]
 fn dk252_real_lesser_ghoul_summon_reaches_and_melees() {
     let _seed = crate::random::seed_scope(70448);
@@ -104,6 +483,63 @@ fn dk252_real_lesser_ghoul_summon_reaches_and_melees() {
                 && event.amount > 0
         ),
         "the actual lesser ghoul must reach and melee the enemy"
+    );
+}
+
+#[test]
+#[ignore = "requires native252 profile/traits and player actor"]
+fn dk252_scourge_ghoul_reduces_putrefy_recharge() {
+    use crate::simc_apl_native::{Bindings, Encounter, FightStyle, NativeFacts};
+    use server::simc_apl::Facts;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 1).unwrap();
+    engage(&mut run);
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(
+            1247378,
+            run.targets[0],
+            Some(run.targets[0]),
+        ),
+    )
+    .unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    crate::auras::apply_aura(
+        run.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: run.actor,
+            target: run.actor,
+            spell_id: 1254252,
+            effect_mask: 3,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    let bindings = Bindings {
+        actions: [("putrefy".into(), 1247378)].into(),
+        ..Default::default()
+    };
+    let encounter = Encounter::Fixture {
+        started_at: 0.0,
+        duration: 300.0,
+        style: FightStyle::Patchwerk,
+    };
+    let read = |run: &Run| {
+        NativeFacts::new(run.app.world(), run.actor, &bindings, encounter, 1)
+            .value("cooldown.putrefy.full_recharge_time")
+            .unwrap()
+    };
+    let before = read(&run);
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(55090, run.targets[0], Some(run.targets[0])),
+    )
+    .unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    assert!(
+        read(&run) < before - 2.0,
+        "earned ghoul must reduce Putrefy recharge"
     );
 }
 
@@ -264,6 +700,64 @@ fn dk252_dread_plague_ticks_raise_forbidden_knowledge_magi() {
 }
 
 #[test]
+#[ignore = "requires native252 profile/traits and player actor"]
+fn dk252_reaping_grants_buff_and_increases_execute_coil_damage() {
+    fn coil_damage(health_fraction: f32) -> i64 {
+        let _seed = crate::random::seed_scope(70448);
+        let mut run = prepare_literal(252, 1).unwrap();
+        engage(&mut run);
+        {
+            let mut hp = run
+                .app
+                .world_mut()
+                .get_mut::<shared::components::Health>(run.targets[0])
+                .unwrap();
+            hp.current = hp.max * health_fraction;
+        }
+        assert!(crate::spell_cast::try_cast_triggered(
+            run.app.world_mut(),
+            run.actor,
+            47632,
+            Some(run.targets[0]),
+            1
+        ));
+        for _ in 0..30 {
+            run.app.update();
+        }
+        run.app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .find(|event| {
+                event.source == Some(run.actor.to_bits())
+                    && event.target == Some(run.targets[0].to_bits())
+                    && event.spell_id == Some(47632)
+                    && event.kind == CombatLogKind::Damage
+            })
+            .expect("native Death Coil child must hit")
+            .amount
+            .into()
+    }
+    let above = coil_damage(0.9);
+    let below = coil_damage(0.2);
+    assert!(
+        below > above,
+        "selected Reaping must increase execute damage: {above} vs {below}"
+    );
+    let mut run = prepare_literal(252, 1).unwrap();
+    engage(&mut run);
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(1233448, run.actor, None),
+    )
+    .unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, 1242654));
+}
+
+#[test]
 #[ignore = "requires private native252 profile/traits and player actor"]
 fn dk252_putrefy_summons_native_lesser_ghoul() {
     let _seed = crate::random::seed_scope(70448);
@@ -294,6 +788,50 @@ fn dk252_putrefy_summons_native_lesser_ghoul() {
                 && event.target.is_some()),
         "Putrefy must summon its native lesser ghoul"
     );
+}
+
+#[test]
+#[ignore = "requires native252 profile/traits and player actor"]
+fn dk252_lesser_ghoul_uses_claw_then_transformed_sweeping_claws() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 1).unwrap();
+    engage(&mut run);
+    assert!(crate::spell_cast::try_cast_triggered(
+        run.app.world_mut(),
+        run.actor,
+        1294026,
+        Some(run.actor),
+        1
+    ));
+    for _ in 0..160 {
+        run.app.update();
+    }
+    crate::auras::apply_aura(
+        run.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: run.actor,
+            target: run.actor,
+            spell_id: 1235391,
+            effect_mask: 1,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    for _ in 0..160 {
+        run.app.update();
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    for spell in [199373, 1278150] {
+        assert!(
+            events.iter().any(|e| e.spell_id == Some(spell)
+                && e.kind == CombatLogKind::Damage
+                && e.amount > 0),
+            "actual lesser ghoul must damage with native {spell}"
+        );
+    }
 }
 
 #[test]
@@ -331,6 +869,55 @@ fn dk252_putrefy_ghoul_impacts_the_enemy() {
 }
 
 #[test]
+#[ignore = "requires native252 profile/traits and player actor"]
+fn dk252_army_summons_abomination_with_cloud_and_melee() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 1).unwrap();
+    engage(&mut run);
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(42650, run.actor, None),
+    )
+    .unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    for _ in 0..400 {
+        run.app.update();
+    }
+    let actor = {
+        let world = run.app.world_mut();
+        world
+            .query::<(
+                Entity,
+                &shared::components::Npc,
+                &crate::spell_cast::summon::SummonedCreature,
+            )>()
+            .iter(world)
+            .find_map(|(entity, npc, summon)| {
+                (npc.template_id == 149555
+                    && summon.owner == run.actor
+                    && summon.spell_id == 288853)
+                    .then_some(entity)
+            })
+            .expect("Army must summon its selected native Abomination")
+    };
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    for spell in [None, Some(1244347)] {
+        assert!(
+            events.iter().any(|e| e.source == Some(actor.to_bits())
+                && e.spell_id == spell
+                && e.kind == CombatLogKind::Damage
+                && e.amount > 0),
+            "actual Abomination must deal {spell:?} damage"
+        );
+    }
+}
+
+#[test]
 #[ignore = "requires private native252 profile/traits and player actor"]
 fn dk252_putrefy_impact_raises_native_magus() {
     let _seed = crate::random::seed_scope(70448);
@@ -358,6 +945,38 @@ fn dk252_putrefy_impact_raises_native_magus() {
             .iter(world)
             .any(|npc| npc.template_id == 163366),
         "selected Lord of the Dead must raise a native Magus after Putrefy impact"
+    );
+}
+
+#[test]
+#[ignore = "requires native252 profile/traits and player actor"]
+fn dk252_putrefy_triggers_selected_apocalypse_rune() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 1).unwrap();
+    engage(&mut run);
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, 327087));
+    for _ in 0..20 {
+        assert!(crate::spell_cast::try_cast_triggered(
+            run.app.world_mut(),
+            run.actor,
+            390220,
+            Some(run.targets[0]),
+            1
+        ));
+    }
+    for _ in 0..120 {
+        run.app.update();
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    assert!(
+        events
+            .iter()
+            .any(|e| e.spell_id == Some(327093) && e.kind == CombatLogKind::Damage && e.amount > 0),
+        "selected Rune of the Apocalypse must produce native Pestilence on Putrefy impacts"
     );
 }
 
@@ -475,6 +1094,38 @@ fn dk252_putrid_echoes_spends_both_charges_and_summons_two_ghouls() {
         charges(&run),
         initial_charges - 2.0,
         "the second ghoul spends another real Putrefy charge"
+    );
+}
+
+#[test]
+#[ignore = "requires native252 profile/traits and player actor"]
+fn dk252_ghoul_attacks_earn_infected_claws() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 1).unwrap();
+    engage(&mut run);
+    for _ in 0..5 {
+        assert!(crate::spell_cast::try_cast_triggered(
+            run.app.world_mut(),
+            run.actor,
+            1294026,
+            Some(run.actor),
+            1
+        ));
+    }
+    for _ in 0..400 {
+        run.app.update();
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    assert!(
+        events.iter().any(|e| e.spell_id == Some(1241786)
+            && e.target == Some(run.targets[0].to_bits())
+            && e.kind == CombatLogKind::Damage
+            && e.amount > 0),
+        "actual ghoul hits must earn Infected Claws"
     );
 }
 
@@ -601,6 +1252,52 @@ fn dk252_real_lord_casts_necrotic_bolt_using_owner_power() {
 }
 
 #[test]
+#[ignore = "requires native252 profile/traits and player actor"]
+fn dk252_soul_reaper_spends_ready_ghouls() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 1).unwrap();
+    engage(&mut run);
+    for _ in 0..3 {
+        crate::auras::apply_aura(
+            run.app.world_mut(),
+            &crate::auras::AuraApplication {
+                caster: run.actor,
+                target: run.actor,
+                spell_id: 1254252,
+                effect_mask: 3,
+                source: crate::auras::AuraSource::Cast,
+            },
+        );
+    }
+    {
+        let mut hp = run
+            .app
+            .world_mut()
+            .get_mut::<shared::components::Health>(run.targets[0])
+            .unwrap();
+        hp.current = hp.max * 0.2;
+    }
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(343294, run.targets[0], Some(run.targets[0])),
+    )
+    .unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    assert!(!crate::auras::has_aura(run.app.world(), run.actor, 1254252));
+    let world = run.app.world_mut();
+    let count = world
+        .query::<&crate::spell_cast::summon::SummonedCreature>()
+        .iter(world)
+        .filter(|summon| summon.owner == run.actor && summon.spell_id == 275430)
+        .count();
+    assert_eq!(
+        count, 3,
+        "Soul Reaper must turn three earned stacks into actual ghouls"
+    );
+}
+
+#[test]
 #[ignore = "requires private native252 profile/traits and player actor"]
 fn dk252_lord_bolt_scales_with_consumed_magus_remaining_time() {
     use crate::spell_cast::effects::factor_capture::FactorCapture;
@@ -676,6 +1373,60 @@ fn dk252_lord_bolt_scales_with_consumed_magus_remaining_time() {
 }
 
 #[test]
+#[ignore = "requires native252 profile/traits and player actor"]
+fn dk252_blightburst_applies_and_extends_owned_diseases() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 1).unwrap();
+    engage(&mut run);
+    for (impact, plague) in [(1277016, 1240996), (390220, 191587)] {
+        assert!(crate::spell_cast::try_cast_triggered(
+            run.app.world_mut(),
+            run.actor,
+            impact,
+            Some(run.targets[0]),
+            1
+        ));
+        let expiry = |run: &Run| {
+            run.app
+                .world()
+                .get::<crate::auras::ActiveAuras>(run.targets[0])
+                .unwrap()
+                .iter()
+                .find(|a| a.caster == run.actor && a.spell_id == plague)
+                .unwrap()
+                .expires_at
+                .unwrap()
+        };
+        let before = expiry(&run);
+        assert!(crate::spell_cast::try_cast_triggered(
+            run.app.world_mut(),
+            run.actor,
+            impact,
+            Some(run.targets[0]),
+            1
+        ));
+        let after = expiry(&run);
+        assert!(
+            after - before >= 2.99,
+            "Blightburst must extend disease {plague}"
+        );
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    for eruption in [1241171, 1241167] {
+        assert!(
+            events.iter().any(|e| e.spell_id == Some(eruption)
+                && e.kind == CombatLogKind::Damage
+                && e.amount > 0),
+            "Blightburst must erupt active disease using native child {eruption}"
+        );
+    }
+}
+
+#[test]
 #[ignore = "requires private native252 profile/traits and player actor"]
 fn dk252_lord_magus_uses_selected_native_lifetime() {
     let _seed = crate::random::seed_scope(70448);
@@ -726,6 +1477,46 @@ fn dk252_lord_magus_uses_selected_native_lifetime() {
     assert!(
         run.app.world().get_entity(magus).is_err(),
         "the real Magus must expire after its selected native lifetime"
+    );
+}
+
+#[test]
+#[ignore = "requires native252 profile/traits and player actor"]
+fn dk252_death_coil_deposits_rolling_devastation() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 1).unwrap();
+    engage(&mut run);
+    assert!(crate::spell_cast::try_cast_triggered(
+        run.app.world_mut(),
+        run.actor,
+        47632,
+        Some(run.targets[0]),
+        1
+    ));
+    for _ in 0..30 {
+        run.app.update();
+    }
+    assert!(
+        run.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(run.targets[0])
+            .unwrap()
+            .iter()
+            .any(|a| a.spell_id == 390271 && a.caster == run.actor)
+    );
+    for _ in 0..120 {
+        run.app.update();
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    assert!(
+        events
+            .iter()
+            .any(|e| e.spell_id == Some(390271) && e.kind == CombatLogKind::Damage && e.amount > 0),
+        "Coil of Devastation must tick after actual Death Coil damage"
     );
 }
 
@@ -818,6 +1609,28 @@ fn dk252_dark_transformation_tracks_the_transformed_pet_on_owner() {
 }
 
 #[test]
+#[ignore = "requires native252 profile/traits and player actor"]
+fn dk252_literal_rotation_observes_sudden_doom_reaction() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_measurement(252, 1).unwrap();
+    engage(&mut run);
+    crate::auras::apply_aura(
+        run.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: run.actor,
+            target: run.actor,
+            spell_id: 81340,
+            effect_mask: 15,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    for _ in 0..50 {
+        drive_player(&mut run).expect("literal Unholy must handle earned Sudden Doom reaction");
+        run.app.update();
+    }
+}
+
+#[test]
 #[ignore = "requires private native252 profile/traits and player actor"]
 fn dk252_single_target_uses_dark_transformation_and_putrefy() {
     let _seed = crate::random::seed_scope(70448);
@@ -845,6 +1658,44 @@ fn dk252_single_target_uses_dark_transformation_and_putrefy() {
                 && event.kind == CombatLogKind::CastSuccess),
         "the literal ST rotation must use Putrefy"
     );
+}
+
+#[test]
+#[ignore = "requires native252 profile/traits and player actor"]
+fn dk252_necrotic_coil_hits_with_physical_and_shadow_children() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 3).unwrap();
+    engage(&mut run);
+    assert!(crate::spell_cast::try_cast_triggered(
+        run.app.world_mut(),
+        run.actor,
+        1242174,
+        Some(run.targets[0]),
+        1
+    ));
+    for _ in 0..40 {
+        run.app.update();
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    for spell in [1242172, 1242178] {
+        let hits = events
+            .iter()
+            .filter(|e| {
+                e.source == Some(run.actor.to_bits())
+                    && e.spell_id == Some(spell)
+                    && e.kind == CombatLogKind::Damage
+                    && e.amount > 0
+            })
+            .count();
+        assert_eq!(
+            hits, 3,
+            "Necrotic Coil must hit each target once with child {spell}"
+        );
+    }
 }
 
 #[test]
@@ -894,4 +1745,26 @@ fn dk252_raise_dead_produces_a_permanent_controlled_melee_pet() {
                 && event.amount > 0),
         "the real pet must reach and attack the selected hostile primary"
     );
+}
+
+#[test]
+#[ignore = "requires native252 profile/traits and player actor"]
+fn dk252_dread_plague_ticks_produce_sudden_doom() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 1).unwrap();
+    engage(&mut run);
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, 49530));
+    assert!(crate::spell_cast::try_cast_triggered(
+        run.app.world_mut(),
+        run.actor,
+        1240996,
+        Some(run.targets[0]),
+        1,
+    ));
+    let mut earned = false;
+    for _ in 0..600 {
+        run.app.update();
+        earned |= crate::auras::has_aura(run.app.world(), run.actor, 81340);
+    }
+    assert!(earned, "Dread Plague ticks must earn selected Sudden Doom");
 }

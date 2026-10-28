@@ -572,7 +572,6 @@ pub fn on_effect_hit(
         (batch10::HAND_OF_GULDAN, 0) => Some(batch10::launch_guldan_meteor),
         (batch9::WINTER_DAMAGE, 0) => Some(batch9::slow_winter_hit),
         (batch9::RADIANCE, 1) => Some(batch9::apply_radiance_atonement),
-        (batch8::REAP, 0) => Some(batch8::reap),
         (batch8::PROVOKE, 0) => Some(batch8::provoke),
         (batch8::BREATH_OF_FIRE, 0) => Some(batch8::breath_of_fire),
         (batch8::FAN_OF_KNIVES, 0) => Some(batch8::fan_of_knives),

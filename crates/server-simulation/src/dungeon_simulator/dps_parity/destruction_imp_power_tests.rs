@@ -94,3 +94,63 @@ fn destruction_imp_native_firebolt_inherits_validated_live_owner_power() {
     }
     panic!("explicitly ordered native Imp must land a real3110 before power is qualified");
 }
+
+#[test]
+#[ignore = "requires private267 native player profile"]
+fn destruction_imp_firebolt_inherits_owner_critical_damage() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(267, 1).unwrap();
+    let owner = run.actor;
+    preparation::start_configured_native_pet(&mut run).unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    let imp = crate::hunter_pet::summoned_pet(run.app.world(), owner).unwrap();
+    let target = run.targets[0];
+    let spell = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(3110)
+        .unwrap();
+    let owner_critical = run
+        .app
+        .world()
+        .get::<crate::auras::AuraStatMods>(owner)
+        .unwrap()
+        .critical_damage(spell.school_mask());
+    assert!(
+        owner_critical > 1.0,
+        "the actual owner must wear its critical-damage enchants"
+    );
+    engage(&mut run);
+    crate::pet_control::order_companion_pet(run.app.world_mut(), owner, Some(target));
+    run.app
+        .insert_resource(FactorCapture::new(imp, target, 3110, "firebolt", 30));
+    for _ in 0..600 {
+        run.app.update();
+    }
+    let capture = run.app.world().resource::<FactorCapture>().export();
+    let events = capture["events"].as_array().unwrap();
+    let position = events
+        .iter()
+        .position(|event| {
+            event["event"] == "result"
+                && event["spell_id"] == 3110
+                && event["factors"]["result"] == "crit"
+        })
+        .expect("actual Firebolt must critically hit");
+    let result = &events[position];
+    let direct = events[..position]
+        .iter()
+        .rev()
+        .find(|event| event["event"] == "direct_amount" && event["spell_id"] == 3110)
+        .unwrap();
+    let uncritical = direct["factors"]["amount"].as_f64().unwrap();
+    let actual = result["factors"]["actual_amount"].as_f64().unwrap();
+    // SimC76f8118 pet.cpp488–494 inherits the owner's critical-damage
+    // multiplier; its equipment aura applies to the whole critical hit.
+    let expected = uncritical * 2.0 * f64::from(owner_critical);
+    assert!(
+        (actual - expected).abs() < 2.0,
+        "critical Firebolt {actual}, expected {expected}"
+    );
+}
