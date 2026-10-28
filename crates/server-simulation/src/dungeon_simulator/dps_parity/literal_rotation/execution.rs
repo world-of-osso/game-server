@@ -10,7 +10,6 @@ use std::collections::{BTreeMap, BTreeSet};
 pub(crate) enum Execution {
     Snapshot,
     Wait(f64),
-    WaitForRange,
     CancelCast,
     PickupFragment(server::soul_fragments::PickupPlan),
     AutoAttack(Entity),
@@ -44,7 +43,6 @@ type ReadyActions = BTreeMap<ActionKey, Execution>;
 struct NativeReadiness {
     ready: bool,
     limited: Option<PowerType>,
-    wait_for_range: bool,
 }
 
 pub(crate) struct Prepared {
@@ -533,6 +531,11 @@ fn filter_primary_range(
     }) else {
         return state;
     };
+    // SimC76f8118 player.cpp9045–9057: Arcane Torrent targets the actor and
+    // is non-harmful despite the native area dispel effect.
+    if spell.id == 202719 {
+        return state;
+    }
     let harmful = crate::spell_info::positivity::negative_effects(
         world.resource::<crate::spell_info::SpellStore>(),
         spell,
@@ -548,9 +551,8 @@ fn filter_primary_range(
         return state;
     }
     NativeReadiness {
-        ready: state.ready && returning,
+        ready: false,
         limited: None,
-        wait_for_range: state.ready && returning,
     }
 }
 
@@ -618,11 +620,6 @@ fn record_probe(
     execution: Execution,
 ) {
     if state.ready {
-        let execution = if state.wait_for_range {
-            Execution::WaitForRange
-        } else {
-            execution
-        };
         prepared.ready.insert(key.clone(), execution.clone());
         if default {
             prepared.ready.insert((key.0.clone(), None), execution);
@@ -821,31 +818,20 @@ fn native_readiness(
         spell.cast_item_level = Some(item.item_level);
         spell.cast_retail_item_id = Some(item.item_id);
     }
-    let mut admission = if after_channel {
+    let admission = if after_channel {
         crate::spell_cast::read_native_cast_after_channel(world, actor, &spell, target)
     } else {
         crate::spell_cast::read_native_cast_start(world, actor, &spell, target)
     };
-    let mut wait_for_range = false;
-    if !after_channel
-        && matches!(admission, Err(crate::spell_cast::CastFailure::OutOfRange))
-        && super::super::melee_return::returning_after_displacement(world, actor)
-    {
-        admission =
-            crate::spell_cast::read_native_cast_without_max_range(world, actor, &spell, target);
-        wait_for_range = admission.is_ok();
-    }
     match admission {
         Ok(_) => Ok(NativeReadiness {
             ready: true,
             limited: None,
-            wait_for_range,
         }),
         Err(crate::spell_cast::CastFailure::NotEnoughPower(_)) if after_channel => {
             Ok(NativeReadiness {
                 ready: false,
                 limited: None,
-                wait_for_range: false,
             })
         }
         Err(crate::spell_cast::CastFailure::NotEnoughPower(power)) => {
@@ -855,7 +841,6 @@ fn native_readiness(
                 Ok(_) => Ok(NativeReadiness {
                     ready: false,
                     limited: Some(power),
-                    wait_for_range: false,
                 }),
                 Err(reason) => refused_admission(id, reason),
             }
@@ -897,7 +882,6 @@ fn refused_admission(
         _ => Ok(NativeReadiness {
             ready: false,
             limited: None,
-            wait_for_range: false,
         }),
     }
 }
@@ -949,7 +933,7 @@ pub(crate) fn execute_row(
 
 pub(crate) fn execute(world: &mut World, actor: Entity, action: Execution) -> Result<(), String> {
     match action {
-        Execution::Snapshot | Execution::Wait(_) | Execution::WaitForRange => {
+        Execution::Snapshot | Execution::Wait(_) => {
             Err("snapshot and wait execution belong to the literal driver".into())
         }
         Execution::PickupFragment(plan) => server::soul_fragments::begin_pickup(world, actor, plan),

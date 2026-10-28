@@ -169,9 +169,6 @@ impl Driver {
                 .execution_in(&action, equipment, &self.program)?
                 .ok_or("selected literal action lost native readiness")?
         };
-        if matches!(execution, Execution::WaitForRange) {
-            return Ok(None);
-        }
         self.pending_line = line_deadline(&action, facts, &self.variables)?;
         self.selected_list = list.into();
         Ok(Some((action, execution)))
@@ -302,7 +299,6 @@ fn harmful_execution(world: &World, execution: &Execution) -> Result<bool, Strin
         }
         Execution::Snapshot
         | Execution::Wait(_)
-        | Execution::WaitForRange
         | Execution::CancelCast
         | Execution::PickupFragment(_)
         | Execution::Retarget(_) => return Ok(false),
