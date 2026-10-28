@@ -256,6 +256,8 @@ pub struct AuraEffectState {
     pub index: u8,
     pub immunity: Option<Box<crate::spell_info::SpellImmunityDefinition>>,
     pub aura_type: u32,
+    /// Native effect attributes, including whether stacks scale this effect.
+    pub attributes: u32,
     /// Per-stack amount computed at application: `BasePoints` with the
     /// caster's Points mods, plus SP/AP coefficients for damage, heal and
     /// absorb types (`handlers::scales_with_power`).
@@ -962,6 +964,7 @@ fn build_effect(
     let extra_initial_period = attributes(spell, 5) & ATTR5_EXTRA_INITIAL_PERIOD != 0;
     AuraEffectState {
         index: effect.index,
+        attributes: effect.attributes,
         immunity: effect.immunity.clone(),
         aura_type: effect.aura,
         amount,

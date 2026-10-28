@@ -272,6 +272,110 @@ impl super::SpecDriver for Rotation {
 mod tests {
     #[test]
     #[ignore = "requires canonical world database and MID2 Blood inputs"]
+    fn blood_bone_shield_stats_do_not_scale_with_stacks() {
+        let mut run = super::super::prepare_registered_player(250, 1).unwrap();
+        let actor = run.actor;
+        crate::auras::remove_auras(
+            run.app.world_mut(),
+            actor,
+            crate::auras::RemoveReason::Cancelled,
+            |aura| aura.spell_id == 195181,
+        );
+        let application = crate::auras::AuraApplication {
+            caster: actor,
+            target: actor,
+            spell_id: 195181,
+            effect_mask: u32::MAX,
+            source: crate::auras::AuraSource::Cast,
+        };
+        crate::auras::apply_aura(run.app.world_mut(), &application);
+        for _ in 0..4 {
+            run.app.update();
+        }
+        let one = run
+            .app
+            .world()
+            .get::<crate::stats::CharacterStats>(actor)
+            .unwrap()
+            .clone();
+        for _ in 0..4 {
+            crate::auras::apply_aura(run.app.world_mut(), &application);
+        }
+        for _ in 0..4 {
+            run.app.update();
+        }
+        let five = run
+            .app
+            .world()
+            .get::<crate::stats::CharacterStats>(actor)
+            .unwrap();
+        let auras = run
+            .app
+            .world()
+            .get::<crate::auras::ActiveAuras>(actor)
+            .unwrap();
+        assert_eq!(
+            auras
+                .iter()
+                .find(|aura| aura.spell_id == 195181)
+                .unwrap()
+                .stacks,
+            5
+        );
+        assert!((one.haste_pct - five.haste_pct).abs() < 0.01);
+        assert!((one.armor - five.armor).abs() < 0.01);
+    }
+
+    #[test]
+    #[ignore = "requires canonical world database and MID2 Blood inputs"]
+    fn flagged_fury_of_the_ages_haste_does_not_scale_with_stacks() {
+        let mut run = super::super::prepare_registered_player(250, 1).unwrap();
+        let actor = run.actor;
+        let application = crate::auras::AuraApplication {
+            caster: actor,
+            target: actor,
+            spell_id: 347490,
+            effect_mask: u32::MAX,
+            source: crate::auras::AuraSource::Cast,
+        };
+        crate::auras::apply_aura(run.app.world_mut(), &application);
+        for _ in 0..4 {
+            run.app.update();
+        }
+        let one = run
+            .app
+            .world()
+            .get::<crate::stats::CharacterStats>(actor)
+            .unwrap()
+            .haste_pct;
+        crate::auras::apply_aura(run.app.world_mut(), &application);
+        for _ in 0..4 {
+            run.app.update();
+        }
+        let two = run
+            .app
+            .world()
+            .get::<crate::stats::CharacterStats>(actor)
+            .unwrap()
+            .haste_pct;
+        let auras = run
+            .app
+            .world()
+            .get::<crate::auras::ActiveAuras>(actor)
+            .unwrap();
+        assert_eq!(
+            auras
+                .iter()
+                .find(|aura| aura.spell_id == 347490)
+                .unwrap()
+                .stacks,
+            2
+        );
+        assert!((one - two).abs() < 0.01);
+    }
+
+    #[test]
+    #[ignore = "requires canonical world database and MID2 Blood inputs"]
     fn blood_bone_shield_loses_one_stack_on_landed_swings_after_icd() {
         use crate::auras::{ActiveAuras, AuraApplication, AuraSource};
         use server::test_support::healer_intake::{Hit, HitKind};

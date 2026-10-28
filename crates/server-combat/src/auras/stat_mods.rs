@@ -509,8 +509,13 @@ fn apply_base_stat_percent(stats: &mut UnitStats, spell: u32, index: i32, amount
 }
 
 fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance, sanlayn: bool) {
-    let stacks = aura.stack_multiplier();
     for effect in &aura.effects {
+        // Native effect attribute 0x40 keeps this effect independent of aura stacks.
+        let stacks = if effect.attributes & 0x40 != 0 {
+            1.0
+        } else {
+            aura.stack_multiplier()
+        };
         let amount = effect.amount * stacks;
         let misc = effect.misc_values[0];
         let combat = &mut acc.combat;
