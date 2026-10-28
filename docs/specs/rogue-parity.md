@@ -16,6 +16,10 @@ Assassination259 combat and the shared Rogue attack-speed and Vanish paths follo
 
 - [x] Each landed native Mutilate hand funds394021 with its resolved damage times selected381673 effect0's native fraction. Native cadence, duration, rolling carry and no-second-crit flags remain authoritative. Its actual over-time snapshot retains native Implacable periodic modifiers, not the unused direct-damage Lethal Dose override. Source: `sc_rogue.cpp5131–5135,7993–7999`, `player.cpp957–964`, `residual_action.hpp147–162`.
 
+### Subtlety Shadow Dance
+
+- [x] An active Shadow Dance prevents a new Dance cast; admission resumes after the buff expires. Source: `sc_rogue.cpp5585–5593`.
+
 ### Subtlety Premeditation
 
 - [x] Selected Premeditation grants its native buff on entering Stealth, Vanish or Shadow Dance. The next landed combo-point generator consumes it and grants its native combo points before Shadow Techniques storage is collected. Source: `sc_rogue.cpp2709–2716,7345–7355`.
