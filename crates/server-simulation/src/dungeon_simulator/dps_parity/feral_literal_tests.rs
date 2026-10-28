@@ -3,6 +3,72 @@ use super::*;
 
 #[test]
 #[ignore = "requires spec103 profile/traits and native private DB"]
+fn feral_omen_rolls_per_real_cat_swing_instead_of_every_swing() {
+    use shared::protocol::CombatLogKind;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_measurement(103, 1).unwrap();
+    let actor = run.actor;
+    let target = run.targets[0];
+    assert!(crate::auras::has_aura(run.app.world(), actor, 16864));
+    assert!(crate::auras::has_aura(run.app.world(), actor, 236068));
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        actor,
+        literal_rotation::execution::Execution::AutoAttack(target),
+    )
+    .unwrap();
+    let mut seen = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .len();
+    let mut swings = 0;
+    let mut procs = 0;
+    for _ in 0..12000 {
+        run.app.update();
+        let events = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0;
+        swings += events
+            .iter()
+            .skip(seen)
+            .filter(|event| {
+                event.source == Some(actor.to_bits())
+                    && event.target == Some(target.to_bits())
+                    && event.kind == CombatLogKind::Damage
+                    && event.spell_id.is_none()
+                    && !event.periodic
+            })
+            .count();
+        seen = events.len();
+        if crate::auras::has_aura(run.app.world(), actor, 135700) {
+            procs += 1;
+            crate::auras::remove_auras(
+                run.app.world_mut(),
+                actor,
+                crate::auras::RemoveReason::Cancelled,
+                |aura| aura.spell_id == 135700,
+            );
+        }
+        if swings >= 200 {
+            break;
+        }
+    }
+    assert!(
+        swings >= 200,
+        "fixture must execute 200 real Cat swings, got {swings}"
+    );
+    assert!(
+        (10..=55).contains(&procs),
+        "7 PPM plus native Moment of Clarity must produce a bounded rate, not a proc per swing: {procs}/{swings}"
+    );
+}
+
+#[test]
+#[ignore = "requires spec103 profile/traits and native private DB"]
 fn feral_literal_clearcasting_reaction_observes_real_proc_before_aoe_decision() {
     use server::simc_apl::Facts;
     let _seed = crate::random::seed_scope(103135700);
