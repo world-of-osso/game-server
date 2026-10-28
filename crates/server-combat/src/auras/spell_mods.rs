@@ -424,7 +424,17 @@ fn live_modifiers<'a>(
             aura.spell_id != 453908
                 || !crate::spell_cast::guardian::is_diabolist_overlord(world, caster)
         });
-    local.chain(inherited)
+    local.chain(inherited).filter(move |(aura, effect)| {
+        // SimC 76f8118 sc_hunter.cpp:7966–7969 selects the No Mercy
+        // specialization effect for both the hunter and inherited pet modifiers.
+        if aura.spell_id != 472660 {
+            return true;
+        }
+        let spec = world
+            .get::<shared::components::ActiveSpec>(aura.caster)
+            .map(|spec| spec.0);
+        !matches!((spec, effect.index), (Some(253), 1) | (Some(255), 0))
+    })
 }
 
 // An explicit native proc mask can restrict charge use more narrowly than the
