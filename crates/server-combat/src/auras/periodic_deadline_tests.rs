@@ -133,3 +133,55 @@ fn periodic_power_changes_are_live_unless_native_effect_snapshots() {
         }
     }
 }
+
+#[test]
+fn periodic_healing_uses_live_healing_power() {
+    let mut h = harness(Vec::new(), &[139], 5).unwrap();
+    let stats = h
+        .app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(h.caster)
+        .unwrap();
+    stats.into_inner().crit_pct = 0.0;
+    let health = h
+        .app
+        .world_mut()
+        .get_mut::<shared::components::Health>(h.caster)
+        .unwrap()
+        .into_inner();
+    health.current = 1_000.0;
+    health.max = 100_000.0;
+    apply_aura(
+        h.app.world_mut(),
+        &AuraApplication {
+            caster: h.caster,
+            target: h.caster,
+            spell_id: 139,
+            effect_mask: 1,
+            source: AuraSource::Cast,
+        },
+    );
+    let heals = |h: &crate::spell_cast::test_harness::Harness| -> Vec<i32> {
+        h.inbox
+            .log
+            .iter()
+            .filter(|event| {
+                event.spell_id == Some(139) && event.kind == CombatLogKind::Heal && event.periodic
+            })
+            .map(|event| event.amount)
+            .collect()
+    };
+    h.advance(65);
+    let first = *heals(&h).first().expect("first actual Renew tick");
+    h.app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(h.caster)
+        .unwrap()
+        .healing_power += 300.0;
+    h.advance(60);
+    let second = *heals(&h).get(1).expect("second actual Renew tick");
+    assert!(
+        second > first * 2,
+        "periodic healing must use current healing power: {first} -> {second}"
+    );
+}
