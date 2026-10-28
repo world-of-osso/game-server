@@ -251,6 +251,15 @@ fn demonology_antoran_tyrant_inherits_same_owner_sp_as_base_tyrant() {
 fn demonology_guardian_inherits_owner_critical_chance() {
     use crate::spell_cast::effects::factor_capture::FactorCapture;
     let (mut run, tyrant) = prepare_antoran_tyrant();
+    super::channel_timing_tests::remove_equipped_proc_drivers(&mut run);
+    let now = crate::spell_cast::now(run.app.world());
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        run.actor,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.expires_at.is_some_and(|at| at <= now + 60.0),
+    );
+    run.app.update();
     let expected = run
         .app
         .world()
