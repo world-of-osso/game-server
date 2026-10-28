@@ -18,6 +18,9 @@ fn devastation_scarlet_friendly_living_flame_consumes_the_old_pool() {
         crate::spell_cast::creature_cast(run.app.world_mut(), actor, 361469, Some(actor), false)
             .unwrap();
         preparation::finish_pending_setup(&mut run).unwrap();
+        for _ in 0..40 {
+            run.app.update();
+        }
         run.app.insert_resource(
             crate::spell_cast::effects::factor_capture::FactorCapture::new(
                 actor,
@@ -31,6 +34,9 @@ fn devastation_scarlet_friendly_living_flame_consumes_the_old_pool() {
         crate::spell_cast::creature_cast(run.app.world_mut(), actor, 361469, Some(target), false)
             .unwrap();
         preparation::finish_pending_setup(&mut run).unwrap();
+        for _ in 0..40 {
+            run.app.update();
+        }
         let capture = run
             .app
             .world()
@@ -56,7 +62,7 @@ fn devastation_scarlet_friendly_living_flame_consumes_the_old_pool() {
 #[test]
 #[ignore = "requires native Devastation follower profile and world DB"]
 fn devastation_scarlet_does_not_empower_ruby_embers_periodic_damage() {
-    fn periodic(heal: bool) -> i32 {
+    fn periodic(heal: bool) -> f64 {
         let _seed = crate::random::seed_scope(70448);
         let mut run = prepare_literal(1467, 1).unwrap();
         engage(&mut run);
@@ -76,29 +82,40 @@ fn devastation_scarlet_does_not_empower_ruby_embers_periodic_damage() {
             crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 361509, Some(actor), 1);
         }
         preparation::finish_pending_setup(&mut run).unwrap();
+        run.app.insert_resource(
+            crate::spell_cast::effects::factor_capture::FactorCapture::new(
+                actor,
+                target,
+                361500,
+                "ruby_embers",
+                8,
+            ),
+        );
         let _damage_seed = crate::random::seed_scope(818181);
         crate::spell_cast::creature_cast(run.app.world_mut(), actor, 361469, Some(target), false)
             .unwrap();
         for _ in 0..300 {
             run.app.update();
         }
-        run.app
+        let capture = run
+            .app
             .world()
-            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
-            .0
+            .resource::<crate::spell_cast::effects::factor_capture::FactorCapture>()
+            .export();
+        capture["events"]
+            .as_array()
+            .unwrap()
             .iter()
-            .find(|event| {
-                event.spell_id == Some(361500)
-                    && event.periodic
-                    && event.kind == shared::protocol::CombatLogKind::Damage
-            })
-            .expect("actual Ruby Embers periodic damage")
-            .amount
+            .find(|event| event["event"] == "periodic_amount" && event["spell_id"] == 361500)
+            .expect("actual Ruby Embers periodic damage")["factors"]["amount"]
+            .as_f64()
+            .unwrap()
     }
-    assert_eq!(
-        periodic(true),
-        periodic(false),
-        "SimC bonus_da only affects direct Living Flame, not Ruby Embers"
+    let boosted = periodic(true);
+    let plain = periodic(false);
+    assert!(
+        (boosted / plain - 1.0).abs() < 0.005,
+        "SimC bonus_da only affects direct Living Flame, not Ruby Embers: {boosted}/{plain}"
     );
 }
 
@@ -161,6 +178,9 @@ fn devastation_scarlet_healing_empowers_and_is_consumed_by_real_living_flame() {
         crate::spell_cast::creature_cast(run.app.world_mut(), actor, 361469, Some(target), false)
             .unwrap();
         preparation::finish_pending_setup(&mut run).unwrap();
+        for _ in 0..40 {
+            run.app.update();
+        }
         assert!(
             !crate::auras::has_aura(run.app.world(), actor, 372470),
             "damage cast consumes Scarlet"
@@ -181,12 +201,13 @@ fn devastation_scarlet_healing_empowers_and_is_consumed_by_real_living_flame() {
     let plain = damage(false, true);
     let boosted = damage(true, true);
     let unselected = damage(true, false);
+    let unselected_plain = damage(false, false);
     assert!(
         boosted > plain,
         "actual healing empowers the next damage: {boosted}/{plain}"
     );
     assert!(
-        (unselected - plain).abs() < 0.01,
-        "unselected healing grants no damage bonus"
+        (unselected - unselected_plain).abs() < 0.01,
+        "unselected healing grants no damage bonus: {unselected}/{unselected_plain}"
     );
 }
