@@ -167,7 +167,9 @@ fn fazed_multiplier(world: &World, caster: Entity, target: Entity) -> f32 {
             .iter()
             .find(|aura| aura.spell_id == 441224 && aura.caster == caster)
             .and_then(|aura| {
-                aura.effects.iter().find(|effect| effect.index == 0)
+                aura.effects
+                    .iter()
+                    .find(|effect| effect.index == 0)
                     .map(|effect| 1.0 + effect.amount * aura.stack_multiplier() / 100.0)
             })
             .unwrap_or(1.0)

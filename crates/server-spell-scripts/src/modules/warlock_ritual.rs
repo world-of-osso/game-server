@@ -88,7 +88,9 @@ fn register(scripts: &mut AuraScripts) {
 }
 
 fn infernal_proc(world: &World, aura: &AuraInstance, _: &auras::procs::AuraEvent) -> bool {
-    world.get::<ActiveSpec>(aura.caster).is_none_or(|spec| spec.0 != 266)
+    world
+        .get::<ActiveSpec>(aura.caster)
+        .is_none_or(|spec| spec.0 != 266)
 }
 
 fn diabolist(world: &World, caster: Entity) -> bool {
