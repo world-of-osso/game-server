@@ -100,6 +100,7 @@ mod conductive_energy_tests;
 mod cooldown_capacity_tests;
 mod devastation_bombardments_tests;
 mod devastation_dragonrage_tests;
+mod devastation_gaze_tests;
 mod devastation_imminent_tests;
 mod devastation_infinity_tests;
 mod devastation_onslaught_tests;
