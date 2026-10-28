@@ -31,7 +31,10 @@ fn after_cast(spell: u32) -> Option<AfterCastHook> {
 }
 
 fn cast_felblade_child(world: &mut World, caster: Entity, spell: &SpellInfo) {
-    if !has_talent(world, caster, FELBLADE) {
+    if !world
+        .get::<combat::class_progression::KnownSpells>(caster)
+        .is_some_and(|known| known.contains(FELBLADE))
+    {
         return;
     }
     let Some(target) = spell.cast_primary_target else {
@@ -65,7 +68,12 @@ fn after_damage(world: &mut World, ctx: &EffectCtx, target: Entity, _crit: bool,
 
 // SimC76f8118 sc_demon_hunter.cpp5488–5495,5505–5511: Hunt's
 // impact applies its native DoT to up to the native370967 effect0 targets.
-pub(super) fn apply_hunt_secondary_dots(world: &mut World, ctx: &EffectCtx, primary: Entity, dot_id: u32) {
+pub(super) fn apply_hunt_secondary_dots(
+    world: &mut World,
+    ctx: &EffectCtx,
+    primary: Entity,
+    dot_id: u32,
+) {
     let cap = combat::spell_cast::scripts::script_effect_value(world, ctx.caster, 370967, 0) as u32;
     let Some(center) = combat::spell_cast::targets::position(world, ctx.caster) else {
         error!("Native Hunt caster position absent");
