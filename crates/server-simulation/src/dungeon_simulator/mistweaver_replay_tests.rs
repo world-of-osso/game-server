@@ -24,10 +24,12 @@ fn mistweaver_heals_the_simc_dummy_party() {
             .as_f64()
             .is_none_or(|time| time > 4.0)
     );
-    assert!(
-        report["healer_casts"]["116670"].as_u64().unwrap_or(0) > 0,
-        "Vivify never cast: {report}"
-    );
+    // Selected native trait entry 124904 replaces Vivify116670 with Sheilun399491.
+    let vivify_casts = report["healer_casts"]["399491"].as_u64().unwrap();
+    let vivify_raw = metrics["spell_healing"]["399491"]["raw"].as_u64().unwrap();
+    let raw_per_cast = vivify_raw as f64 / vivify_casts as f64;
+    assert!((1_000.0..500_000.0).contains(&raw_per_cast), "{report}");
+    assert!(report["healer_casts"]["107428"].as_u64().unwrap_or(0) > 0);
     assert!(effective > 0.0 && raw >= effective, "{report}");
     let spells = metrics["spell_healing"].as_object().unwrap();
     assert!(!spells.is_empty());
