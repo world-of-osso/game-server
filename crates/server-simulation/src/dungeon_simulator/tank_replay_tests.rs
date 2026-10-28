@@ -2,6 +2,43 @@ use super::healer_intake::Intake;
 use std::path::Path;
 
 #[test]
+#[ignore = "uses native recipient armor and absorb data"]
+fn simc_dummy_bleed_uses_native_absorbs_but_not_armor() {
+    let mut h = crate::spell_cast::test_harness::harness(Vec::new(), &[17], 5).unwrap();
+    h.app
+        .insert_resource(crate::test_data::world_data().armor_constants.clone());
+    h.app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(h.caster)
+        .unwrap()
+        .armor = 5000.0;
+    let before = h.health(h.caster);
+    crate::spell_cast::effects::replay_simc_dummy_bleed(h.app.world_mut(), h.npc, h.caster, 200.0);
+    assert_eq!(
+        before - h.health(h.caster),
+        200.0,
+        "physical bleed bypasses armor"
+    );
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: h.caster,
+            target: h.caster,
+            spell_id: 17,
+            effect_mask: 1,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    let shielded = h.health(h.caster);
+    crate::spell_cast::effects::replay_simc_dummy_bleed(h.app.world_mut(), h.npc, h.caster, 200.0);
+    assert_eq!(
+        h.health(h.caster),
+        shielded,
+        "native shield absorbs the bleed"
+    );
+}
+
+#[test]
 #[ignore = "requires the MID2 Protection Paladin profile and canonical world database"]
 fn protection_paladin_uses_parity_player_profile_and_equipment() {
     let canonical = Path::new("/home/osso/Projects/world-of-osso/game-server/data/world.db")
