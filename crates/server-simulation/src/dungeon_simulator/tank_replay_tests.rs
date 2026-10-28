@@ -18,59 +18,38 @@ fn tank_replay_rejects_profiles_without_level_90_mid2_inputs() {
 #[test]
 #[ignore = "uses the native recipient, auto-only proc and SimC special damage"]
 fn simc_dummy_strike_does_not_trigger_auto_attack_procs() {
-    use crate::auras::{AuraApplication, AuraInstance, AuraSource};
-    use bevy::prelude::*;
-    #[derive(Component, Default)]
-    struct AutoProcs(u32);
-    fn count_auto(world: &mut World, unit: Entity, _: &AuraInstance, _: Option<Entity>) {
-        world.get_mut::<AutoProcs>(unit).unwrap().0 += 1;
-    }
-    let (profile, traits) = super::dps_parity::read_reference(66).unwrap();
-    let mut run = super::dps_parity::spawn_reference(
-        profile,
-        &traits,
-        1,
-        crate::followers::simulator::ParityActor::Player { race: 6 },
-    )
-    .unwrap();
+    use crate::auras::{ActiveAuras, AuraApplication, AuraSource, RemoveReason};
+    let mut run = super::dps_parity::prepare_registered_player(250, 1).unwrap();
     let target = run.actor;
     let source = run.targets[0];
-    run.app
-        .world_mut()
-        .entity_mut(target)
-        .insert(AutoProcs::default());
-    run.app
-        .world_mut()
-        .resource_mut::<crate::auras::scripts::AuraScripts>()
-        .0
-        .entry(15097)
-        .or_default()
-        .on_proc = Some(count_auto);
-    crate::auras::apply_aura(
+    crate::auras::remove_auras(
         run.app.world_mut(),
-        &AuraApplication {
-            caster: target,
-            target,
-            spell_id: 15097,
-            effect_mask: 1,
-            source: AuraSource::Cast,
-        },
+        target,
+        RemoveReason::Cancelled,
+        |aura| aura.spell_id == 195181,
     );
-    assert!(crate::auras::has_aura(run.app.world(), target, 15097));
-    let info = run
-        .app
-        .world()
-        .resource::<crate::spell_info::SpellStore>()
-        .get(15097)
-        .unwrap();
-    assert!(
-        info.aura_options
-            .as_ref()
+    for _ in 0..3 {
+        crate::auras::apply_aura(
+            run.app.world_mut(),
+            &AuraApplication {
+                caster: target,
+                target,
+                spell_id: 195181,
+                effect_mask: u32::MAX,
+                source: AuraSource::Cast,
+            },
+        );
+    }
+    let stacks = |run: &super::dps_parity::Run| {
+        run.app
+            .world()
+            .get::<ActiveAuras>(target)
             .unwrap()
-            .proc_definition_source
-            .is_some(),
-        "{info:?}"
-    );
+            .iter()
+            .find(|aura| aura.spell_id == 195181)
+            .map_or(0, |aura| aura.stacks)
+    };
+    assert_eq!(stacks(&run), 3);
     let before = run
         .app
         .world()
@@ -85,9 +64,7 @@ fn simc_dummy_strike_does_not_trigger_auto_attack_procs() {
         false,
         false,
     );
-    for _ in 0..4 {
-        run.app.update();
-    }
+    run.app.update();
     assert!(
         run.app
             .world()
@@ -96,8 +73,11 @@ fn simc_dummy_strike_does_not_trigger_auto_attack_procs() {
             .current
             < before
     );
-    assert_eq!(run.app.world().get::<AutoProcs>(target).unwrap().0, 0);
-    assert!(crate::auras::has_aura(run.app.world(), target, 15097));
+    assert_eq!(
+        stacks(&run),
+        3,
+        "special attack must not consume Bone Shield"
+    );
     let hit = super::healer_intake::Hit {
         tick: 1,
         source_guid: 0,
@@ -109,16 +89,18 @@ fn simc_dummy_strike_does_not_trigger_auto_attack_procs() {
         kind: super::healer_intake::HitKind::Melee {
             hand: 0,
             outcome: "Hit".into(),
-            level_difference: -2,
+            level_difference: 0,
             critical_multiplier: 1.0,
             weapon_speed: 2.0,
         },
     };
     crate::combat::replay_healer_hit(run.app.world_mut(), source, target, &hit).unwrap();
-    for _ in 0..4 {
-        run.app.update();
-    }
-    assert_eq!(run.app.world().get::<AutoProcs>(target).unwrap().0, 1);
+    run.app.update();
+    assert_eq!(
+        stacks(&run),
+        2,
+        "landed auto-attack must consume one Bone Shield stack"
+    );
 }
 
 #[test]
