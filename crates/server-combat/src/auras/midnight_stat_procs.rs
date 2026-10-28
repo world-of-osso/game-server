@@ -103,10 +103,12 @@ fn read_driver_value(
     world: &World,
     unit: Entity,
     item_level: Option<u16>,
+    item_inventory_type: Option<u8>,
     index: u8,
 ) -> Option<f32> {
     let mut spell = world.resource::<SpellStore>().get(LINING)?.clone();
     spell.cast_item_level = item_level;
+    spell.cast_item_inventory_type = item_inventory_type;
     let effect = spell.effects.iter().find(|effect| effect.index == index)?;
     Some(crate::spell_cast::effects::modded_base_points(
         world, unit, &spell, effect,
@@ -116,17 +118,19 @@ fn read_driver_value(
 /// unique_gear_midnight.cpp682–685: each equipped driver adds its effect0
 /// value times its effect1 player share to the one buff.
 fn read_insight_amount(world: &World, unit: Entity) -> Option<f32> {
-    let levels: Vec<Option<u16>> = world
+    let sources: Vec<_> = world
         .get::<ActiveAuras>(unit)?
         .iter()
         .filter(|aura| aura.spell_id == LINING && matches!(aura.source, AuraSource::Equipment(_)))
-        .map(|aura| aura.cast_item_level)
+        .map(|aura| (aura.cast_item_level, aura.cast_item_inventory_type))
         .collect();
-    levels.into_iter().try_fold(0.0, |sum, level| {
-        let value = read_driver_value(world, unit, level, 0)?;
-        let share = read_driver_value(world, unit, level, 1)?;
-        Some(sum + value * share / 100.0)
-    })
+    sources
+        .into_iter()
+        .try_fold(0.0, |sum, (level, inventory_type)| {
+            let value = read_driver_value(world, unit, level, inventory_type, 0)?;
+            let share = read_driver_value(world, unit, level, inventory_type, 1)?;
+            Some(sum + value * share / 100.0)
+        })
 }
 
 fn apply_insight(world: &mut World, unit: Entity, _rppm: &AuraInstance, _other: Option<Entity>) {

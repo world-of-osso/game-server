@@ -383,6 +383,7 @@ pub fn periodic_live_amount(
     let mut power_spell = spell.clone();
     power_spell.cast_charge_mods = state.periodic_power_charge_mods.clone();
     power_spell.cast_item_level = state.periodic_power_item_level;
+    power_spell.cast_item_inventory_type = state.periodic_power_item_inventory_type;
     let current = effects::effect_power_bonus(world, caster, &power_spell, effect);
     state.amount + (current - state.periodic_power_at_application) * state.periodic_power_multiplier
 }

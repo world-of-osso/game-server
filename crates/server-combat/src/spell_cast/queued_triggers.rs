@@ -42,6 +42,7 @@ struct QueuedTrigger {
     spell_id: u32,
     depth: u8,
     item_level: Option<u16>,
+    item_inventory_type: Option<u8>,
     damage_multiplier: Option<f32>,
 }
 
@@ -88,6 +89,7 @@ pub fn schedule(
         spell_id: effect.trigger_spell,
         depth: ctx.depth + 1,
         item_level: ctx.spell.cast_item_level,
+        item_inventory_type: ctx.spell.cast_item_inventory_type,
         damage_multiplier: super::scripts::frost_flurry_damage_multiplier(
             world, ctx.caster, ctx.spell, child.id,
         ),
@@ -117,6 +119,7 @@ pub(super) fn schedule_force_cast(
         spell_id: effect.trigger_spell,
         depth: 0,
         item_level: None,
+        item_inventory_type: None,
         damage_multiplier: None,
     };
     world
@@ -144,6 +147,7 @@ pub fn schedule_full_trigger(
         spell_id,
         depth: ctx.depth + 1,
         item_level: ctx.spell.cast_item_level,
+        item_inventory_type: ctx.spell.cast_item_inventory_type,
         damage_multiplier: None,
     };
     world
@@ -172,6 +176,7 @@ pub fn schedule_callback(
         spell_id: ctx.spell.id,
         depth: ctx.depth + 1,
         item_level: ctx.spell.cast_item_level,
+        item_inventory_type: ctx.spell.cast_item_inventory_type,
         damage_multiplier: None,
     };
     world
@@ -200,6 +205,7 @@ pub fn schedule_buff_outcome(world: &mut World, caster: Entity, spell_id: u32, g
         spell_id,
         depth: 1,
         item_level: None,
+        item_inventory_type: None,
         damage_multiplier: None,
     };
     world
@@ -225,6 +231,7 @@ pub fn schedule_destination_trigger(
         spell_id: request.spell_id,
         depth: ctx.depth + 1,
         item_level: ctx.spell.cast_item_level,
+        item_inventory_type: ctx.spell.cast_item_inventory_type,
         damage_multiplier: None,
     };
     world
@@ -258,6 +265,7 @@ pub fn schedule_scaled_full_trigger(
         spell_id: request.spell_id,
         depth: ctx.depth + 1,
         item_level: ctx.spell.cast_item_level,
+        item_inventory_type: ctx.spell.cast_item_inventory_type,
         damage_multiplier: None,
     };
     world
@@ -286,6 +294,7 @@ pub(super) fn schedule_instant_background(
         spell_id,
         depth: 0,
         item_level: None,
+        item_inventory_type: None,
         damage_multiplier: ctx.spell.cast_overload_multiplier,
     };
     world
@@ -302,6 +311,7 @@ fn resolve_costed_trigger(world: &mut World, trigger: QueuedTrigger) {
         return;
     };
     spell.cast_item_level = trigger.item_level;
+    spell.cast_item_inventory_type = trigger.item_inventory_type;
     spell.cast_destination = trigger.destination;
     spell.cast_damage_multiplier = trigger.damage_multiplier;
     // Retain Effect64's native payment/check path with its frozen launch value.
@@ -352,6 +362,7 @@ pub(crate) fn resolve_due(world: &mut World) {
                     continue;
                 };
                 spell.cast_item_level = trigger.item_level;
+                spell.cast_item_inventory_type = trigger.item_inventory_type;
                 spell.cast_destination = trigger.destination;
                 if !super::launch_triggered_spell(
                     world,
@@ -387,6 +398,7 @@ pub(crate) fn resolve_due(world: &mut World) {
                     continue;
                 };
                 spell.cast_item_level = trigger.item_level;
+                spell.cast_item_inventory_type = trigger.item_inventory_type;
                 spell.cast_damage_multiplier = Some(multiplier);
                 if !super::launch_triggered_spell(
                     world,

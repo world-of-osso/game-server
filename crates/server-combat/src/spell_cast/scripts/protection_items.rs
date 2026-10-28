@@ -98,6 +98,7 @@ pub(crate) fn cast_guillotine(
         spell_cast::TriggeredSpellOverrides {
             effect0_amount: Some(amount),
             item_level: aura.cast_item_level,
+            item_inventory_type: aura.cast_item_inventory_type,
             ..Default::default()
         },
     );

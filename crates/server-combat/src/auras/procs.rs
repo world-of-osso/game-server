@@ -655,6 +655,7 @@ pub(super) fn try_proc(
                 effect0_amount: (effect.aura_type == PROC_TRIGGER_SPELL_WITH_VALUE)
                     .then_some(effect.amount),
                 item_level: aura.cast_item_level,
+                item_inventory_type: aura.cast_item_inventory_type,
                 ..Default::default()
             },
         );

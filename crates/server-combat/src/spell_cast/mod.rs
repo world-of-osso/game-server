@@ -1596,6 +1596,14 @@ fn cast_granted_with_item_context(
         .ok_or(CastFailure::UnknownSpell)
         .and_then(|mut spell| {
             spell.cast_item_level = item_level;
+            spell.cast_item_inventory_type = retail_item_id.map(|id| {
+                world
+                    .resource::<crate::item_templates::ItemTemplates>()
+                    .retail
+                    .get(&id)
+                    .expect("used retail item template")
+                    .inventory_type
+            });
             spell.cast_retail_item_id = retail_item_id;
             if let Some(cooldown) =
                 item_cooldown.filter(|cd| cd.category != 0 && cd.category_ms > 0)
@@ -4003,6 +4011,7 @@ pub struct TriggeredSpellOverrides {
     pub effect0_amount: Option<f32>,
     pub damage_multiplier: Option<f32>,
     pub item_level: Option<u16>,
+    pub item_inventory_type: Option<u8>,
     pub effect_mask: Option<u32>,
     pub aura_stacks: Option<u8>,
     pub original_caster: Option<Entity>,
@@ -4025,6 +4034,7 @@ pub fn cast_triggered_with_overrides(
     spell.cast_damage_multiplier = values.damage_multiplier;
     spell.cast_original_caster = values.original_caster;
     spell.cast_item_level = values.item_level;
+    spell.cast_item_inventory_type = values.item_inventory_type;
     if let Some(mask) = values.effect_mask {
         spell
             .effects

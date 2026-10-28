@@ -34,6 +34,7 @@ fn build_stat_buff(world: &World, driver: &AuraInstance) -> SpellInfo {
         .expect("native Venomcursed stat buff")
         .clone();
     buff.cast_item_level = driver.cast_item_level;
+    buff.cast_item_inventory_type = driver.cast_item_inventory_type;
     for index in 0..2 {
         let amount = driver
             .effects

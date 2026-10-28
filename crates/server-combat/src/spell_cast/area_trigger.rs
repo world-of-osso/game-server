@@ -62,6 +62,7 @@ pub struct SpellAreaTrigger {
     pub relation: Relation,
     pub depth: u8,
     pub cast_item_level: Option<u16>,
+    pub cast_item_inventory_type: Option<u8>,
     pub inside: HashSet<Entity>,
 }
 
@@ -146,6 +147,7 @@ pub(super) fn create_area_trigger(world: &mut World, ctx: &EffectCtx, effect: &S
                 relation,
                 depth: ctx.depth + 1,
                 cast_item_level: ctx.spell.cast_item_level,
+                cast_item_inventory_type: ctx.spell.cast_item_inventory_type,
                 inside: HashSet::new(),
             },
             Position {
@@ -256,13 +258,17 @@ fn apply_trigger_spells(
                 meteor::cast_burn_on_entry(world, trigger, unit);
                 continue;
             }
-            super::cast_triggered_with_item_level(
+            super::cast_triggered_with_overrides(
                 world,
                 trigger.caster,
                 trigger.trigger_spell,
                 Some(unit),
                 trigger.depth,
-                trigger.cast_item_level,
+                super::TriggeredSpellOverrides {
+                    item_level: trigger.cast_item_level,
+                    item_inventory_type: trigger.cast_item_inventory_type,
+                    ..Default::default()
+                },
             );
         }
     }

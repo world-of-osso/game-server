@@ -40,6 +40,7 @@ fn apply_soul_fang_alacrity(
         .expect("native Soul Fang Alacrity")
         .clone();
     buff.cast_item_level = driver.cast_item_level;
+    buff.cast_item_inventory_type = driver.cast_item_inventory_type;
     buff.effects
         .iter_mut()
         .find(|effect| effect.index == 0)

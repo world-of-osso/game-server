@@ -53,6 +53,8 @@ pub(super) fn on_applied(world: &mut World, target: Entity, aura: &AuraInstance)
             depth,
             spell_cast::TriggeredSpellOverrides {
                 effect0_amount: (effect.amount != 0.0).then_some(effect.amount),
+                item_level: aura.cast_item_level,
+                item_inventory_type: aura.cast_item_inventory_type,
                 ..Default::default()
             },
         );
