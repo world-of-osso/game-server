@@ -453,4 +453,37 @@ mod tests {
             assert_eq!(reset, selected);
         }
     }
+    #[test]
+    fn protection_shield_block_and_charge_add_native_aura_duration() {
+        let mut h = crate::spell_cast::test_harness::harness_with_native_enemy_dodge_reduction(
+            Vec::new(),
+            &[2565, 132404, 231847, 385952, 385953, 385954],
+            1,
+        )
+        .unwrap();
+        h.advance(3);
+        h.set_power(shared::components::PowerType::Rage, 1000.0);
+        h.cast_and_deliver(2565, Some(h.caster));
+        let expiry = |h: &crate::spell_cast::test_harness::Harness| {
+            h.app
+                .world()
+                .get::<crate::auras::ActiveAuras>(h.caster)
+                .unwrap()
+                .iter()
+                .find(|a| a.spell_id == 132404)
+                .unwrap()
+                .expires_at
+                .unwrap()
+        };
+        let first = expiry(&h);
+        h.advance(35);
+        h.cast_and_deliver(385952, Some(h.npc));
+        let after_charge = expiry(&h);
+        h.advance(35);
+        h.cast_and_deliver(2565, Some(h.caster));
+        let after_block = expiry(&h);
+        assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+        assert!((after_charge - first - 6.0).abs() < 0.001);
+        assert!((after_block - after_charge - 6.0).abs() < 0.001);
+    }
 }
