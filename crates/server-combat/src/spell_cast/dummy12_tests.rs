@@ -522,6 +522,55 @@ fn dummy12_rake_bleed_snapshots_stealth_bonus_across_later_rank_removal() {
 }
 
 #[test]
+fn dummy12_rake_live_power_keeps_its_stealth_snapshot() {
+    let mut ticks = Vec::new();
+    for empowered in [false, true] {
+        let mut h = harness_with_native_enemy_dodge_reduction(
+            Vec::new(),
+            &[1822, 155722, 231052, 5215, 768, 163505],
+            11,
+        )
+        .unwrap();
+        let caster = h.caster;
+        h.app
+            .world_mut()
+            .get_mut::<crate::stats::CharacterStats>(caster)
+            .unwrap()
+            .crit_pct = 0.0;
+        apply(&mut h, caster, caster, 768, u32::MAX);
+        apply(&mut h, caster, caster, 231052, u32::MAX);
+        if empowered {
+            apply(&mut h, caster, caster, 5215, 1);
+        }
+        super::execute_cast(
+            h.app.world_mut(),
+            caster,
+            world_db().unwrap().store.get(1822).unwrap(),
+            Some(h.npc),
+        )
+        .unwrap();
+        h.advance(1);
+        crate::auras::remove_auras(
+            h.app.world_mut(),
+            caster,
+            crate::auras::RemoveReason::Cancelled,
+            |a| a.spell_id == 5215 || a.spell_id == 231052,
+        );
+        h.app
+            .world_mut()
+            .get_mut::<crate::stats::CharacterStats>(caster)
+            .unwrap()
+            .attack_power += 300.0;
+        h.advance(70);
+        ticks.push(*damage(&h, 155722, h.npc).first().expect("actual Rake tick"));
+    }
+    assert!(
+        ticks[1] as f32 > ticks[0] as f32 * 1.45 && (ticks[1] as f32) < ticks[0] as f32 * 1.75,
+        "live AP must retain the earned Rake stealth factor: {ticks:?}"
+    );
+}
+
+#[test]
 fn dummy12_unstable_affliction_vulnerability_is_owned_not_stacked_and_expires() {
     let mut h = harness(Vec::new(), &[30108, 233490, 108853], 9).unwrap();
     let caster = h.caster;

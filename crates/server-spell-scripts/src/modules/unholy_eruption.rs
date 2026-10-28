@@ -174,7 +174,8 @@ pub(super) fn owned_tick_amount(
         chain_multiplier: 1.0,
     };
     let damage = DamageInput {
-        amount: state.amount * aura.stack_multiplier(),
+        amount: combat::auras::periodic_live_amount(world, caster, spell, state)
+            * aura.stack_multiplier(),
         crit: false,
         periodic: true,
         resolved_source: false,

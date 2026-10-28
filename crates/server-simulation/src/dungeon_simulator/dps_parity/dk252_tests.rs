@@ -2995,6 +2995,136 @@ fn dk252_runic_spenders_consume_sudden_doom_after_damage() {
 
 #[test]
 #[ignore = "requires native252 profile/traits and player actor"]
+fn dk252_scourge_eruption_uses_live_disease_attack_power() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 1).unwrap();
+    engage(&mut run);
+    run.app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(run.actor)
+        .unwrap()
+        .crit_pct = 0.0;
+    assert!(crate::spell_cast::try_cast_triggered(
+        run.app.world_mut(),
+        run.actor,
+        191587,
+        Some(run.targets[0]),
+        1
+    ));
+    let hit = |run: &mut Run| {
+        assert!(crate::spell_cast::try_cast_triggered(
+            run.app.world_mut(),
+            run.actor,
+            55090,
+            Some(run.targets[0]),
+            1
+        ));
+        for _ in 0..20 {
+            run.app.update();
+        }
+    };
+    let eruptions = |run: &Run| -> Vec<i32> {
+        run.app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .filter(|event| {
+                event.spell_id == Some(1241167)
+                    && event.kind == CombatLogKind::Damage
+                    && event.target == Some(run.targets[0].to_bits())
+                    && event.amount > 0
+            })
+            .map(|event| event.amount)
+            .collect()
+    };
+    hit(&mut run);
+    let first = *eruptions(&run).first().expect("first Scourge eruption");
+    run.app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(run.actor)
+        .unwrap()
+        .attack_power += 10_000.0;
+    hit(&mut run);
+    let second = *eruptions(&run).get(1).expect("second Scourge eruption");
+    assert!(
+        second > first * 2,
+        "eruption must use current disease tick power: {first} -> {second}"
+    );
+}
+
+#[test]
+#[ignore = "requires native252 profile/traits and player actor"]
+fn dk252_active_diseases_use_live_owner_attack_power() {
+    let _seed = crate::random::seed_scope(70448);
+    for disease in [191587, 1240996] {
+        let mut run = prepare_literal(252, 1).unwrap();
+        engage(&mut run);
+        run.app
+            .world_mut()
+            .get_mut::<crate::stats::CharacterStats>(run.actor)
+            .unwrap()
+            .crit_pct = 0.0;
+        assert!(crate::spell_cast::try_cast_triggered(
+            run.app.world_mut(),
+            run.actor,
+            disease,
+            Some(run.targets[0]),
+            1
+        ));
+        let damage = |run: &Run| -> Vec<i32> {
+            run.app
+                .world()
+                .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+                .0
+                .iter()
+                .filter(|event| {
+                    event.spell_id == Some(disease)
+                        && event.kind == CombatLogKind::Damage
+                        && event.target == Some(run.targets[0].to_bits())
+                        && event.amount > 0
+                })
+                .map(|event| event.amount)
+                .collect()
+        };
+        for _ in 0..300 {
+            if !damage(&run).is_empty() {
+                break;
+            }
+            run.app.update();
+        }
+        let initial = damage(&run);
+        let first = *initial.last().expect("initial real disease tick");
+        let before = initial.len();
+        // Native Heroic Defender effect0 supplies a persistent +300% AP
+        // intervention through the real aura and stat-recalculation path.
+        crate::auras::apply_aura(
+            run.app.world_mut(),
+            &crate::auras::AuraApplication {
+                caster: run.actor,
+                target: run.actor,
+                spell_id: 103421,
+                effect_mask: 1,
+                source: crate::auras::AuraSource::Cast,
+            },
+        );
+        for _ in 0..300 {
+            run.app.update();
+            if damage(&run).len() > before {
+                break;
+            }
+        }
+        let ticks = damage(&run);
+        assert!(
+            ticks.iter().skip(before).any(|&amount| amount > first * 2),
+            "disease {disease} must use current AP without reapplication: {first} -> {:?}",
+            &ticks[before..]
+        );
+    }
+}
+
+#[test]
+#[ignore = "requires native252 profile/traits and player actor"]
 fn dk252_literal_rotation_observes_sudden_doom_reaction() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_measurement(252, 1).unwrap();

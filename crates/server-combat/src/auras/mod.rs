@@ -111,7 +111,9 @@ use crate::spell_cast::{effects, log_event, targets};
 use crate::spell_info::{SpellEffect, SpellInfo, SpellStore};
 use crate::stats::StatModifiers;
 pub use ignite::spread_ignite;
-pub use periodic::{count_remaining_ticks, paid_periodic_ticks, remaining_periodic_ticks};
+pub use periodic::{
+    count_remaining_ticks, paid_periodic_ticks, periodic_live_amount, remaining_periodic_ticks,
+};
 pub use spell_mods::SpellModOp;
 pub use stat_mods::AuraStatMods;
 pub(crate) use stat_mods::time_percent_mod;
@@ -256,6 +258,11 @@ pub struct AuraEffectState {
     /// caster's Points mods, plus SP/AP coefficients for damage, heal and
     /// absorb types (`handlers::scales_with_power`).
     pub amount: f32,
+    /// Power contribution and authored cast multiplier at application.
+    periodic_power_at_application: f32,
+    periodic_power_multiplier: f32,
+    periodic_power_charge_mods: Option<Vec<crate::spell_info::ChargedSpellModifier>>,
+    periodic_power_item_level: Option<u16>,
     /// Qualified factor captured at application, not reconstructed from damage.
     pub persistent_multiplier: Option<f32>,
     pub misc_values: [i32; 2],
@@ -912,18 +919,35 @@ fn build_effect(
     } else {
         crate::spell_cast::effects::modded_base_points(world, caster, spell, effect)
     };
-    // A cast's scripted damage multiplier persists in its actual periodic payload.
-    let amount = if matches!(
+    let cast_multiplier = if matches!(
         effect.aura,
         handlers::PERIODIC_DAMAGE | handlers::PERIODIC_LEECH
     ) {
-        amount * spell.cast_damage_multiplier.unwrap_or(1.0)
+        spell.cast_damage_multiplier.unwrap_or(1.0)
     } else {
-        amount
+        1.0
     };
-    let amount = scripts::snapshot_aura_amount(world, caster, spell, effect, amount);
-    let amount = augmentation::snapshot_amount(world, caster, spell.id, effect.index, amount);
+    let snapshot = |value| {
+        let value =
+            scripts::snapshot_aura_amount(world, caster, spell, effect, value * cast_multiplier);
+        augmentation::snapshot_amount(world, caster, spell.id, effect.index, value)
+    };
+    let raw_amount = amount;
+    let amount = snapshot(raw_amount);
     let base_period_ms = periodic_base_interval_ms(spell, effect);
+    let periodic_power = if base_period_ms > 0 && handlers::scales_with_power(effect.aura) {
+        crate::spell_cast::effects::effect_power_bonus(world, caster, spell, effect)
+    } else {
+        0.0
+    };
+    let periodic_power_multiplier =
+        if base_period_ms == 0 || !handlers::scales_with_power(effect.aura) {
+            0.0
+        } else if periodic_power == 0.0 {
+            snapshot(raw_amount + 1.0) - amount
+        } else {
+            (amount - snapshot(raw_amount - periodic_power)) / periodic_power
+        };
     let haste = periodic_haste_multiplier(world, caster, spell);
     let (_, period_ms) = periodic_timing_with_haste(world, caster, spell, base_period_ms, haste);
     let extra_initial_period = attributes(spell, 5) & ATTR5_EXTRA_INITIAL_PERIOD != 0;
@@ -932,6 +956,10 @@ fn build_effect(
         immunity: effect.immunity.clone(),
         aura_type: effect.aura,
         amount,
+        periodic_power_at_application: periodic_power,
+        periodic_power_multiplier,
+        periodic_power_charge_mods: spell.cast_charge_mods.clone(),
+        periodic_power_item_level: spell.cast_item_level,
         persistent_multiplier: periodic_snapshot::capture_multiplier(world, caster, spell, effect),
         misc_values: effect.misc_values,
         period_ms,

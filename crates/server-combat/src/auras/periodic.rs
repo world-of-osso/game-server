@@ -237,7 +237,7 @@ fn run_matching_ticks(world: &mut World, unit: Entity, until: f64, only: Option<
 }
 
 fn run_ticks(world: &mut World, unit: Entity, ticks: Vec<Tick>) {
-    for tick in ticks {
+    for mut tick in ticks {
         let alive = world
             .get::<ActiveAuras>(unit)
             .is_some_and(|auras| auras.get(tick.instance_id).is_some());
@@ -254,6 +254,24 @@ fn run_ticks(world: &mut World, unit: Entity, ticks: Vec<Tick>) {
         else {
             continue;
         };
+        let aura = world
+            .get::<ActiveAuras>(unit)
+            .and_then(|auras| auras.get(tick.instance_id))
+            .expect("retained periodic aura");
+        let effect = aura
+            .effects
+            .iter()
+            .find(|effect| effect.index == tick.effect_index)
+            .expect("retained periodic effect");
+        let stacks = if world
+            .resource::<crate::spell_cast::script_registry::SpellScriptRegistry>()
+            .counter_only_dot_stacks(aura.spell_id)
+        {
+            1.0
+        } else {
+            aura.stack_multiplier()
+        };
+        tick.amount = periodic_live_amount(world, tick.caster, &spell, effect) * stacks;
         spell.cast_periodic_fraction = Some(tick.fraction);
         spell.cast_periodic_ordinal = Some(tick.ordinal);
         spell.cast_primary_target = tick.cast_primary_target;
@@ -334,6 +352,39 @@ fn end_aura_at_full_health(world: &mut World, unit: Entity, tick: &Tick) -> bool
         crate::spell_cast::end_cast(world, tick.caster);
     }
     true
+}
+
+/// Current per-stack amount for an already applied periodic effect.
+pub fn periodic_live_amount(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    state: &super::AuraEffectState,
+) -> f32 {
+    const COMPUTE_ON_CAST: u32 = 1 << 16;
+    if !matches!(
+        state.aura_type,
+        PERIODIC_DAMAGE | PERIODIC_LEECH | PERIODIC_HEAL
+    ) || spell.effects.iter().any(|effect| {
+        matches!(
+            effect.aura,
+            PERIODIC_DAMAGE | PERIODIC_LEECH | PERIODIC_HEAL
+        ) && effect.attributes & COMPUTE_ON_CAST != 0
+    }) {
+        return state.amount;
+    }
+    let effect = spell
+        .effects
+        .iter()
+        .find(|effect| effect.index == state.index)
+        .expect("active periodic effect belongs to its native spell");
+    // SimC76f8118 action.cpp2787–2818 updates AP/SP on each periodic tick
+    // unless EX_COMPUTE_ON_CAST snapshots the periodic effect.
+    let mut power_spell = spell.clone();
+    power_spell.cast_charge_mods = state.periodic_power_charge_mods.clone();
+    power_spell.cast_item_level = state.periodic_power_item_level;
+    let current = effects::effect_power_bonus(world, caster, &power_spell, effect);
+    state.amount + (current - state.periodic_power_at_application) * state.periodic_power_multiplier
 }
 
 fn run_tick(world: &mut World, unit: Entity, spell: &SpellInfo, tick: &Tick) {
