@@ -402,7 +402,15 @@ pub(super) fn replay_registered_run(
                 .active_hit_scale = None;
             next += 1;
         }
-        super::dps_parity::drive_literal_tick(&mut run)?;
+        if run
+            .app
+            .world()
+            .get::<Health>(tank)
+            .is_some_and(|health| health.current > 0.0)
+        {
+            super::dps_parity::drive_literal_tick(&mut run)
+                .map_err(|error| format!("native APL tick {tick}: {error}"))?;
+        }
         run.app.update();
         let world = run.app.world();
         if mitigation_auras
