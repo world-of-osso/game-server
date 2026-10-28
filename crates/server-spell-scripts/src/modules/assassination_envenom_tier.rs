@@ -26,7 +26,11 @@ fn prepare_inspiring_strike(world: &World, caster: Entity, spell: &mut SpellInfo
         0.0
     };
     // SimC treats tier and Inspiring Strike as separate multiplicative buffs.
-    for effect in spell.effects.iter_mut().filter(|effect| matches!(effect.index, 7..=9)) {
+    for effect in spell
+        .effects
+        .iter_mut()
+        .filter(|effect| matches!(effect.index, 7..=9))
+    {
         effect.base_points += value * (1.0 + tier / 100.0);
     }
 }
