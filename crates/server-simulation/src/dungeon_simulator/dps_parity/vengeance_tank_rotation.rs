@@ -689,6 +689,61 @@ mod tests {
     }
     #[test]
     #[ignore = "requires native Vengeance profile"]
+    fn mass_acceleration_earns_voidfall_and_soul_cleave_spends_it() {
+        use super::super::*;
+        let _seed = crate::random::seed_scope(70_448);
+        let (profile, traits) = read_reference(581).unwrap();
+        let identity = inputs::read_actor(&profile).unwrap();
+        let mut run = prepare_reference(profile, &traits, 1, identity).unwrap();
+        let actor = run.actor;
+        let target = run.targets[0];
+        crate::spell_cast::cast_for_player_with_target(
+            run.app.world_mut(),
+            actor,
+            187827,
+            Some(actor),
+        )
+        .unwrap();
+        for _ in 0..25 {
+            run.app.update();
+        }
+        assert!(
+            crate::auras::has_aura(run.app.world(), actor, 1256302),
+            "Meta must earn Voidfall spending"
+        );
+        crate::spell_cast::cast_for_player_with_target(
+            run.app.world_mut(),
+            actor,
+            228477,
+            Some(target),
+        )
+        .unwrap();
+        for _ in 0..50 {
+            run.app.update();
+        }
+        assert!(
+            !crate::auras::has_aura(run.app.world(), actor, 1256302),
+            "Soul Cleave must spend the earned stacks"
+        );
+        assert!(
+            crate::auras::has_aura(run.app.world(), actor, 1256322),
+            "spent meteors earn Final Hour"
+        );
+        let events = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0;
+        assert!(
+            events.iter().any(|event| event.spell_id == Some(1256306)
+                && event.kind == shared::protocol::CombatLogKind::Damage
+                && event.amount > 0),
+            "earned meteor must damage the target"
+        );
+    }
+
+    #[test]
+    #[ignore = "requires native Vengeance profile"]
     fn mass_acceleration_resets_spirit_bomb_after_metamorphosis() {
         use super::super::*;
         let (profile, traits) = read_reference(581).unwrap();

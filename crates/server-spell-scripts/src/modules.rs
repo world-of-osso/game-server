@@ -124,6 +124,7 @@ register_modules! {
     vengeance_mass_acceleration: (5816, "modules/vengeance_mass_acceleration.rs"),
     vengeance_soul_cleave: (5813, "modules/vengeance_soul_cleave.rs"),
     vengeance_spirit_bomb: (5812, "modules/vengeance_spirit_bomb.rs"),
+    vengeance_voidfall: (5817, "modules/vengeance_voidfall.rs"),
     destruction_echo: (2676, "modules/destruction_echo.rs"),
     destruction_fiendish: (2678, "modules/destruction_fiendish.rs"),
     discipline_atonement: (2560, "modules/discipline_atonement.rs"),
