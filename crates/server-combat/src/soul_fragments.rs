@@ -79,6 +79,18 @@ struct Fragments {
     pickup: Option<Pickup>,
     incoming: Vec<Incoming>,
     next_id: u64,
+    #[cfg(any(test, feature = "test-support"))]
+    generated: u64,
+    #[cfg(any(test, feature = "test-support"))]
+    consumed: u64,
+}
+
+/// Counts successful native spawns and actual removals for consumption.
+#[cfg(any(test, feature = "test-support"))]
+pub fn observation_counts(world: &World, owner: Entity) -> (u64, u64) {
+    world
+        .get::<Fragments>(owner)
+        .map_or((0, 0), |state| (state.generated, state.consumed))
 }
 
 pub fn roll_owned(world: &mut World, owner: Entity, spell: u32) -> bool {
@@ -231,6 +243,10 @@ fn spawn_one(
     let mut state = entity.entry::<Fragments>().or_default().into_mut();
     state.next_id += 1;
     state.items.push(fragment);
+    #[cfg(any(test, feature = "test-support"))]
+    {
+        state.generated += 1;
+    }
     Ok(())
 }
 
@@ -464,6 +480,10 @@ pub fn consume_active(
         if filter.matches(fragment.kind) && fragment.active_at <= now && now < fragment.expires_at {
             if instant {
                 immediate.push(state.items.remove(index).kind);
+                #[cfg(any(test, feature = "test-support"))]
+                {
+                    state.consumed += 1;
+                }
             } else {
                 consume(&mut state, index, now, speed, owner_position);
             }
@@ -482,6 +502,10 @@ pub fn consume_active(
 
 fn consume(state: &mut Fragments, index: usize, now: f64, speed: f32, owner_position: Vec3) {
     let fragment = state.items.remove(index);
+    #[cfg(any(test, feature = "test-support"))]
+    {
+        state.consumed += 1;
+    }
     let distance = fragment.position.distance(owner_position);
     let delay = if speed == 0.0 {
         0.0
