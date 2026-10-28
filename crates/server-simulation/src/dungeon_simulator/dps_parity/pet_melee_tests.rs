@@ -221,7 +221,7 @@ fn demonology_felguard_melee_inherits_owner_spell_power() {
         .unwrap()
         .spell_power;
     // SimC76f8118 pets.cpp663–668 provides Felguard's owner-SP→AP share.
-    let contribution = owner_sp * 1.82412 / 3.5 * 2.0;
+    let contribution = owner_sp * 1.82412 / 6.0 * 2.0;
     let floor = mitigated_physical_floor(run.app.world(), pet, run.targets[0], contribution);
     let hits = normalized_pet_swings(&mut run, pet, 4);
     assert!(
@@ -556,12 +556,35 @@ fn demonology_felguard_white_attacks_apply_source_multiplier() {
         run.app.world(),
         pet,
         run.targets[0],
-        sp * 1.82412 / 3.5 * 2.0 * 1.44,
+        sp * 1.82412 / 6.0 * 2.0 * 1.44,
     );
-    let hits = normalized_pet_swings(&mut run, pet, 4);
+    let hits = normalized_pet_swings(&mut run, pet, 8);
     assert!(
         hits.iter().all(|hit| *hit >= floor),
         "actual Felguard swings {hits:?} must include source white factor floor {floor}"
+    );
+    let stats = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(owner)
+        .unwrap();
+    let expected = mitigated_physical_floor(
+        run.app.world(),
+        pet,
+        run.targets[0],
+        sp * 1.82412 / 6.0 * 2.0 * 1.44 * (1.0 + stats.versatility_pct / 100.0),
+    );
+    let ordinary: Vec<_> = pet_melee_events(run.app.world(), pet, run.targets[0])
+        .filter(|event| !event.crit)
+        .map(|event| event.amount as f32)
+        .collect();
+    assert!(
+        !ordinary.is_empty(),
+        "actual Felguard must have an ordinary hit"
+    );
+    assert!(
+        ordinary.iter().all(|hit| (*hit - expected).abs() <= 2.0),
+        "Felguard hits {ordinary:?} must use zero base weapon and owner AP/6; expected {expected}"
     );
 }
 

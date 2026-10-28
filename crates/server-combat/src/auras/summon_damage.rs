@@ -102,10 +102,8 @@ pub(crate) struct SummonDamageModifiers<'w, 's> {
 }
 
 impl SummonDamageModifiers<'_, '_> {
-    /// SimC76f8118 pets.cpp661–668: Felguard white swings use 1.44.
-    pub(crate) fn white_swing_multiplier(&self, unit: Entity) -> f32 {
-        if self
-            .owners
+    pub(crate) fn is_controlled_felguard(&self, unit: Entity) -> bool {
+        self.owners
             .get(unit)
             .ok()
             .is_some_and(|(_, pet)| pet.is_some())
@@ -113,7 +111,11 @@ impl SummonDamageModifiers<'_, '_> {
                 .npcs
                 .get(unit)
                 .is_ok_and(|npc| npc.template_id == 17252)
-        {
+    }
+
+    /// SimC76f8118 pets.cpp661–668: Felguard white swings use 1.44.
+    pub(crate) fn white_swing_multiplier(&self, unit: Entity) -> f32 {
+        if self.is_controlled_felguard(unit) {
             1.44
         } else {
             1.0

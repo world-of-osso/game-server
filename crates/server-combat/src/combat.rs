@@ -1362,14 +1362,21 @@ fn swing_damage(
     taken: f32,
     additional_mult: f32,
     source_mult: f32,
+    felguard: bool,
 ) -> SwingDamage {
-    let base = roll_swing_base(attacker, weapon, hand, scaling);
+    // SimC76f8118 weapon.hpp24–32 and pets.cpp660–671: Felguard's weapon
+    // starts with zero damage; attack.cpp29 and attack.hpp13 use AP / 6.
+    let base = if felguard {
+        0.0
+    } else {
+        roll_swing_base(attacker, weapon, hand, scaling)
+    };
     // TC Guardian::UpdateDamagePhysical1423: owner-derived AP is additive
     // before the same damage/armor/outcome path. Intrinsic pet AP and weapon
     // damage remain unqualified; do not import TC's fake primary-stat values.
-    let owner_bonus = attacker
-        .hunter_owner_ap
-        .map_or(0.0, |power| power / 3.5 * AUTO_ATTACK_INTERVAL);
+    let owner_bonus = attacker.hunter_owner_ap.map_or(0.0, |power| {
+        power / if felguard { 6.0 } else { 3.5 } * AUTO_ATTACK_INTERVAL
+    });
     let base = base + owner_bonus;
     SwingDamage {
         amount: apply_swing_multipliers(base, attacker.mods, taken, additional_mult),
@@ -2000,6 +2007,9 @@ fn try_swing(
                 .summon_modifiers
                 .taken_multiplier(attacker.entity, avoidance.1.as_deref()),
         source_multiplier,
+        context
+            .summon_modifiers
+            .is_controlled_felguard(attacker.entity),
     );
     let armored = armor_mitigated(
         swing.amount,
