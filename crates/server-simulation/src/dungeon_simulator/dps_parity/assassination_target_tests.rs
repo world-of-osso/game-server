@@ -229,3 +229,47 @@ fn assassination_rupture_duration_scales_through_seven_combo_points() {
         assert_eq!(aura.duration_ms, (4000.0 * (1.0 + points)) as u32);
     }
 }
+
+#[test]
+#[ignore = "requires prepared259 native profile and world data"]
+fn assassination_inspiring_strike_requires_envenom_refresh() {
+    use shared::components::PowerType;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_measurement(259, 1).unwrap();
+    engage(&mut run);
+    let actor = run.actor;
+    let target = run.targets[0];
+    assert!(crate::auras::has_aura(run.app.world(), actor, 1250036));
+    let fill = |run: &mut Run| {
+        let mut pools = run.app.world_mut().get_mut::<crate::spell_cast::powers::PowerPools>(actor).unwrap();
+        for power in [PowerType::Energy, PowerType::ComboPoints] {
+            let pool = pools.get_mut(power).unwrap();
+            pool.current = pool.max;
+        }
+    };
+    let cast = |run: &mut Run| {
+        literal_rotation::execution::execute(run.app.world_mut(), actor,
+            literal_rotation::execution::Execution::Spell(32645, target, Some(target))).unwrap();
+        preparation::finish_pending_setup(run).unwrap();
+    };
+    let bonus = |run: &Run| run.app.world().get::<crate::auras::ActiveAuras>(actor).unwrap().iter()
+        .find(|a| a.spell_id == 32645 && a.caster == actor).unwrap().effects.iter()
+        .find(|effect| effect.index == 9).unwrap().amount;
+    fill(&mut run);
+    cast(&mut run);
+    let first = bonus(&run);
+    let first_white = run.app.world().get::<crate::auras::AuraStatMods>(actor).unwrap().autoattack_damage_mult;
+    for _ in 0..25 { run.app.update(); }
+    fill(&mut run);
+    cast(&mut run);
+    let refreshed = bonus(&run);
+    let refreshed_white = run.app.world().get::<crate::auras::AuraStatMods>(actor).unwrap().autoattack_damage_mult;
+    assert!((refreshed_white / first_white - 1.05).abs() < 0.001, "refresh must increase actual auto-attack damage by 5%");
+    assert!((refreshed - (first + 5.0 * (1.0 + first / 100.0))).abs() < 0.001,
+        "the native 5% Inspiring Strike multiplier applies only after refresh: {first} -> {refreshed}");
+    for _ in 0..200 { run.app.update(); }
+    assert!(!crate::auras::has_aura(run.app.world(), actor, 32645));
+    fill(&mut run);
+    cast(&mut run);
+    assert!((bonus(&run) - first).abs() < 0.001, "a fresh Envenom cannot retain Inspiring Strike");
+}
