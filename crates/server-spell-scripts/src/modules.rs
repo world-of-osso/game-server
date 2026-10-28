@@ -312,6 +312,7 @@ register_modules! {
     warrior: (40, "modules/warrior.rs"),
     windwalker_fof: (2690, "modules/windwalker_fof.rs"),
     windwalker_momentum: (50, "modules/windwalker_momentum.rs"),
+    windwalker_tigereye: (1000, "modules/windwalker_tigereye.rs"),
     windwalker_zenith: (30, "modules/windwalker_zenith.rs"),
     zathatek_breath: (1000, "modules/zathatek_breath.rs"),
     // sc_paladin.cpp1757–1783: HoW echo follows Judgment and Sun Sear (priority1000).

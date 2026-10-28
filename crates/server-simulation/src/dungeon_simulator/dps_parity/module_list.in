@@ -418,6 +418,7 @@ mod survival_wildfire_infusion_tests;
 mod trigger_primary_tests;
 mod unholy_tests;
 mod venomcursed_tests;
+mod windwalker_tigereye_tests;
 mod warrior_proc_tests;
 mod warrior_stat_tests;
 mod wither_stack_tests;
