@@ -45,6 +45,38 @@ use super::*;
 use shared::protocol::CombatLogKind;
 
 #[test]
+#[ignore = "requires native1480 player profile and three real targets"]
+fn devourer_predators_wake_applies_hunt_dot_to_nearby_enemies() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(1480, 3).expect("native Devourer profile");
+    let actor = run.actor;
+    let primary = run.targets[0];
+    engage(&mut run);
+    crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 1259431, Some(primary), 1);
+    for _ in 0..160 {
+        run.app.update();
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    for target in &run.targets {
+        assert!(
+            events
+                .iter()
+                .any(|event| event.source == Some(actor.to_bits())
+                    && event.target == Some(target.to_bits())
+                    && event.spell_id == Some(1246168)
+                    && event.kind == CombatLogKind::Damage
+                    && event.periodic
+                    && event.amount > 0),
+            "Predator's Wake must deliver real Hunt periodic damage to {target:?}"
+        );
+    }
+}
+
+#[test]
 #[ignore = "requires DPS_PARITY_WORLD_DB and DPS_PARITY_OUTPUT with spec1480 exact profile/traits"]
 fn devourer_weapon_hits_apply_native_burning_blades() {
     let _seed = crate::random::seed_scope(70_448);
