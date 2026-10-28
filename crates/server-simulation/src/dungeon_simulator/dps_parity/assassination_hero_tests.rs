@@ -415,8 +415,10 @@ fn assassination_hero_quietus_spends_new_mark_with_native_chance() {
         crate::auras::remove_auras(run.app.world_mut(), target, crate::auras::RemoveReason::Consumed, |a| a.spell_id == 457129 && a.caster == actor);
         let events_before = run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0.len();
         assert!(crate::spell_cast::try_cast_triggered(run.app.world_mut(), actor, 703, Some(target), 0));
-        let stacks = run.app.world().get::<crate::auras::ActiveAuras>(target).unwrap().iter()
-            .find(|a| a.spell_id == 457129 && a.caster == actor).unwrap().stacks;
+        let Some(stacks) = run.app.world().get::<crate::auras::ActiveAuras>(target).unwrap().iter()
+            .find(|a| a.spell_id == 457129 && a.caster == actor).map(|a| a.stacks) else {
+                continue; // Garrote missed, so no mark was established.
+            };
         let hits = run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0[events_before..].iter()
             .filter(|e| e.spell_id == Some(457157) && e.kind == CombatLogKind::Damage).count();
         match stacks {
