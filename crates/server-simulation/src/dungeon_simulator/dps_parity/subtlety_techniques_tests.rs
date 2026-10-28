@@ -6,7 +6,7 @@ use shared::{components::PowerType, protocol::CombatLogKind};
 #[ignore = "requires private native261 profile/traits and player actor"]
 fn subtlety_premeditation_stealth_builder_grants_full_points_once() {
     let _seed = crate::random::seed_scope(70448);
-    let mut run = prepare_literal(261, 1).unwrap();
+    let mut run = prepare_measurement(261, 1).unwrap();
     assert!(crate::auras::has_aura(run.app.world(), run.actor, 343160));
     assert!(crate::auras::has_aura(run.app.world(), run.actor, 343173));
     engage(&mut run);
