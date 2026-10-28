@@ -2,6 +2,81 @@ use super::healer_intake::Intake;
 use std::path::Path;
 
 #[test]
+#[ignore = "uses the real MID2 Protection profile and native fields"]
+fn protection_apl_reads_selected_apex_and_native_consecration() {
+    use super::tank_replay::protection_rotation::{self, Context};
+    use server::simc_apl::Facts;
+    let (profile, traits) = super::dps_parity::read_reference(66).unwrap();
+    let potion = profile.consumables["potion"].clone();
+    let mut run = super::dps_parity::spawn_reference(
+        profile,
+        &traits,
+        1,
+        crate::followers::simulator::ParityActor::Player { race: 6 },
+    )
+    .unwrap();
+    for _ in 0..4 {
+        run.app.update();
+    }
+    let mut bindings = protection_rotation::bindings();
+    let equipment = super::dps_parity::literal_rotation::equipment::Equipment::load(
+        run.app.world(),
+        run.actor,
+        &mut bindings,
+    )
+    .unwrap();
+    let encounter = crate::simc_apl_native::Encounter::Fixture {
+        started_at: crate::spell_cast::now(run.app.world()),
+        duration: 300.0,
+        style: crate::simc_apl_native::FightStyle::Patchwerk,
+    };
+    let active =
+        crate::spell_cast::scripts::has_active_consecration(run.app.world_mut(), run.actor);
+    let context = Context::new(
+        run.app.world(),
+        run.actor,
+        &run.targets,
+        &bindings,
+        &equipment,
+        encounter,
+        active,
+        None,
+        &potion,
+    );
+    assert_eq!(context.value("apex.3").unwrap(), 1.0);
+    assert_eq!(
+        context
+            .value("talent.instrument_of_the_divine.enabled")
+            .unwrap(),
+        1.0
+    );
+    assert_eq!(context.value("consecration.up").unwrap(), 0.0);
+    assert_eq!(context.value("potion.liquid_luster").unwrap(), 1.0);
+    crate::spell_cast::creature_cast(run.app.world_mut(), run.actor, 26573, None, false).unwrap();
+    for _ in 0..5 {
+        run.app.update();
+    }
+    let active =
+        crate::spell_cast::scripts::has_active_consecration(run.app.world_mut(), run.actor);
+    let context = Context::new(
+        run.app.world(),
+        run.actor,
+        &run.targets,
+        &bindings,
+        &equipment,
+        encounter,
+        active,
+        None,
+        &potion,
+    );
+    assert_eq!(context.value("consecration.up").unwrap(), 1.0);
+    assert!(
+        context.value("next_armament").is_err(),
+        "uninitialized armament state must not be invented"
+    );
+}
+
+#[test]
 #[ignore = "uses the native Consecration ground field"]
 fn protection_apl_consecration_tracks_field_not_caster_position() {
     let mut h = crate::spell_cast::test_harness::harness(Vec::new(), &[26573, 81297], 2).unwrap();
