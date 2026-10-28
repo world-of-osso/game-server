@@ -119,7 +119,7 @@ fn protection_consecration_field_persists_after_cast() {
         run.app.world_mut(),
         actor
     ));
-    for _ in 0..100 {
+    for _ in 0..200 {
         run.app.update();
     }
     assert!(crate::spell_cast::scripts::has_active_consecration(
