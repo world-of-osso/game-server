@@ -14,8 +14,22 @@ fn native_replay_cli_driver() {
     let path = std::env::var("HEALER_TANK_TIMELINE").expect("HEALER_TANK_TIMELINE is required");
     let spec = std::env::var("HEALER_TANK_SPEC").expect("HEALER_TANK_SPEC is required");
     let source = std::env::var("HEALER_TANK_SOURCE").expect("HEALER_TANK_SOURCE is required");
-    let report = match (source.as_str(), spec.as_str()) {
-        ("simc", "66" | "73" | "104" | "250" | "268" | "581") => {
+    let mode = std::env::var("HEALER_TANK_MODE").unwrap_or_else(|_| "tank".into());
+    let report = match (source.as_str(), mode.as_str(), spec.as_str()) {
+        ("simc", "healer", _) => {
+            let duration = std::env::var("HEALER_TANK_DURATION")
+                .unwrap()
+                .parse()
+                .unwrap();
+            let seed = std::env::var("HEALER_TANK_SEED").unwrap().parse().unwrap();
+            super::healer_replay::replay_simc(
+                spec.parse().unwrap(),
+                Path::new(&path),
+                duration,
+                seed,
+            )
+        }
+        ("simc", "tank", "66" | "73" | "104" | "250" | "268" | "581") => {
             let duration = std::env::var("HEALER_TANK_DURATION")
                 .unwrap()
                 .parse()
@@ -30,7 +44,7 @@ fn native_replay_cli_driver() {
                 healing,
             )
         }
-        ("recorded", "65" | "66") => {
+        ("recorded", "tank", "65" | "66") => {
             let intake: Intake = serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap();
             if spec == "65" {
                 super::healer_replay::replay(&intake, 65)
@@ -38,7 +52,7 @@ fn native_replay_cli_driver() {
                 super::tank_replay::replay(&intake)
             }
         }
-        _ => panic!("unsupported replay source/spec: {source}/{spec}"),
+        _ => panic!("unsupported replay source/mode/spec: {source}/{mode}/{spec}"),
     }
     .expect("native replay failed");
     println!("HEALER_TANK_REPORT={report}");
@@ -108,6 +122,44 @@ fn cli_prints_vengeance_resource_counters_and_target_debuffs() {
         text.contains("| 207771 |") && text.contains("| 204598 |"),
         "{text}"
     );
+}
+
+#[test]
+#[ignore = "runs a registered healer against the MID2 tank and SimC dummy trace"]
+fn cli_prints_registered_healer_report() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let output = std::process::Command::new("python3")
+        .arg(root.join("scripts/healer_tank_replay.py"))
+        .args([
+            "--mode",
+            "healer",
+            "--spec",
+            "264",
+            "--duration",
+            "30",
+            "--timeline",
+        ])
+        .arg(std::env::var("HEALER_TANK_SIMC_TRACE").unwrap())
+        .arg("--profile-dir")
+        .arg(std::env::var("DPS_PARITY_OUTPUT").unwrap())
+        .arg("--executable")
+        .arg(std::env::current_exe().unwrap())
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let text = String::from_utf8(output.stdout).unwrap();
+    let row = text
+        .lines()
+        .find(|line| line.starts_with("| 264 |"))
+        .expect("healer report row");
+    let cells: Vec<_> = row.split('|').map(str::trim).collect();
+    assert!(cells[2].parse::<f64>().unwrap() > 0.0, "{row}");
+    assert!(text.contains("| Spell ID | Effective HPS | Raw HPS |"));
+    assert!(text.contains("| Time (s) | Mana | Max mana |"));
 }
 
 #[test]
