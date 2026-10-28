@@ -125,6 +125,8 @@ mod pet_owned_target_tests;
 #[cfg(test)]
 mod unholy_nazgrim_tests;
 #[cfg(test)]
+mod unholy_outnumber_tests;
+#[cfg(test)]
 mod unholy_magus_crit_tests;
 mod unholy_commander_tests;
 mod driver_tests;
