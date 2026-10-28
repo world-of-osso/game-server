@@ -74,23 +74,22 @@ fn apply_buff(world: &mut World, unit: Entity, driver: &AuraInstance, stacks: u8
         .expect("native Tendril stat buff")
         .clone();
     buff.cast_item_level = driver.cast_item_level;
+    buff.cast_aura_stacks = Some(stacks);
     buff.effects
         .iter_mut()
         .find(|effect| effect.index == 0)
         .expect("native Tendril rating effect")
         .base_points = amount;
     let mask = auras::aura_effect_mask(&buff);
-    for _ in 0..stacks {
-        auras::apply_aura_with_spell(
-            world,
-            &AuraApplication {
-                caster: unit,
-                target: unit,
-                spell_id: BUFF,
-                effect_mask: mask,
-                source: AuraSource::Cast,
-            },
-            &buff,
-        );
-    }
+    auras::apply_aura_with_spell(
+        world,
+        &AuraApplication {
+            caster: unit,
+            target: unit,
+            spell_id: BUFF,
+            effect_mask: mask,
+            source: AuraSource::Cast,
+        },
+        &buff,
+    );
 }
