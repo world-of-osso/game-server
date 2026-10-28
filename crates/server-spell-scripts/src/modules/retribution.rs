@@ -10,19 +10,28 @@ const POLICIES: &[Policy] = &[
         name: "PALADIN_HOLY_WRATH_HAMMER_OVERRIDE",
         spec: 65,
         talent: 1241288,
-        relationship: Relationship::LinkedAura { parent: 31884, payload: 1241410 },
+        relationship: Relationship::LinkedAura {
+            parent: 31884,
+            payload: 1241410,
+        },
     },
     Policy {
         name: "PALADIN_PROTECTION_WRATH_HAMMER_OVERRIDE",
         spec: 66,
         talent: 1241288,
-        relationship: Relationship::LinkedAura { parent: 31884, payload: 1241410 },
+        relationship: Relationship::LinkedAura {
+            parent: 31884,
+            payload: 1241410,
+        },
     },
     Policy {
         name: "PALADIN_RETRIBUTION_WRATH_HAMMER_OVERRIDE",
         spec: 70,
         talent: 1241288,
-        relationship: Relationship::LinkedAura { parent: 31884, payload: 1241410 },
+        relationship: Relationship::LinkedAura {
+            parent: 31884,
+            payload: 1241410,
+        },
     },
     // SimC76f8118 sc_paladin.hpp1492–1496/1581–1594: every spender
     // impact extends owned Dawnlight; primary Storm adds its multi-DoT bonus.
