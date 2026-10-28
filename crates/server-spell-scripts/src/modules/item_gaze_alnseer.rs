@@ -2,7 +2,7 @@
 use super::combat;
 use bevy::prelude::*;
 use combat::auras::procs;
-use combat::auras::scripts::{AuraScript, AuraScripts};
+use combat::auras::scripts::AuraScripts;
 use combat::auras::{AuraApplication, AuraInstance, AuraSource, RemoveReason};
 use combat::spell_cast::script_registry::SpellScriptHook;
 use combat::spell_info::SpellStore;
