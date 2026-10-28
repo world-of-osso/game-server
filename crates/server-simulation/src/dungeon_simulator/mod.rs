@@ -15,6 +15,7 @@ mod healer_replay;
 mod healer_report;
 mod holy_paladin_replay_tests;
 mod movement;
+mod replay_cli_tests;
 mod runtime;
 mod tank_replay;
 mod tank_replay_tests;

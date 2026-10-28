@@ -23,6 +23,7 @@ Replay recorded incoming damage in the native server combat simulation to compar
 - `crates/server-combat/src/followers/simulator/healer_profiles.rs`: benchmark-only healer configuration and initial Holy Paladin decisions.
 - `crates/server-simulation/src/dungeon_simulator/healer_metrics.rs` and `healer_replay.rs`: native healing receipts and recorded-timeline metrics.
 - `crates/server-simulation/src/dungeon_simulator/tank_replay.rs`: isolated native tank replay and metrics.
+- `scripts/healer_tank_replay.py`: native recorded-intake report tables.
 
 ## Tests asserting this spec
 
@@ -30,10 +31,11 @@ Replay recorded incoming damage in the native server combat simulation to compar
 - `crates/server-simulation/src/simc_tank_timeline.rs`: SimC dummy raw damage trace test.
 - `crates/server-simulation/src/dungeon_simulator/holy_paladin_replay_tests.rs`: native Holy Paladin replay of recorded incoming damage.
 - `crates/server-simulation/src/dungeon_simulator/tank_replay_tests.rs`: native Protection Paladin replay without a healer.
+- `crates/server-simulation/src/dungeon_simulator/replay_cli_tests.rs`: CLI output from a native tank replay.
 
 ## Known gaps (current cycle)
 
-- [ ] Import source timelines, run native replay, and produce healer and tank reports.
+- [ ] Connect SimC tank-dummy trace input to both native replay runners; the CLI currently accepts recorded native intakes only.
 - [ ] Extend coverage beyond the initial two specializations.
 
 ## Out of scope
