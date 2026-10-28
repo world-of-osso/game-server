@@ -207,7 +207,9 @@ fn world_killer_impact(
 }
 
 fn launch_meteor(world: &mut World, caster: Entity, meteor: PendingMeteor) {
-    let stacks = own_stack(world, caster, SPENDING).map_or(0, |(stacks, _)| stacks);
+    let Some((stacks, _)) = own_stack(world, caster, SPENDING) else {
+        return;
+    };
     let Some(position) = spell_cast::targets::position(world, meteor.target) else {
         error!(?caster, "Voidfall target position missing");
         return;
@@ -227,7 +229,7 @@ fn launch_meteor(world: &mut World, caster: Entity, meteor: PendingMeteor) {
         combat::auras::remove_auras(world, caster, combat::auras::RemoveReason::Consumed, |a| {
             a.spell_id == SPENDING && a.caster == caster
         });
-    } else if stacks > 1 {
+    } else {
         assert!(combat::auras::set_self_cast_stacks(
             world,
             caster,
