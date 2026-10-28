@@ -10,6 +10,8 @@ use shared::components::PowerType;
 const DEADLY_POISON: u32 = 2823;
 const INSTANT_POISON: u32 = 315584;
 const DEADLY_INSTANT: u32 = 113780;
+const AMPLIFYING_POISON: u32 = 381664;
+const DEATHMARK: u32 = 360194;
 const VENOMOUS_WOUNDS: u32 = 79134;
 const SEAL_FATE: u32 = 14190;
 const SWIFT_SLASHER: u32 = 381988;
@@ -32,6 +34,7 @@ pub(super) fn register(scripts: &mut AuraScripts) {
         DEADLY_POISON,
         AuraScript {
             on_proc: Some(apply_deadly_poison),
+            on_damage_proc: Some(duplicate_deathmark_poison),
             ..Default::default()
         },
     );
@@ -39,6 +42,14 @@ pub(super) fn register(scripts: &mut AuraScripts) {
         INSTANT_POISON,
         AuraScript {
             on_proc: Some(apply_native_coating),
+            on_damage_proc: Some(duplicate_deathmark_poison),
+            ..Default::default()
+        },
+    );
+    scripts.0.insert(
+        AMPLIFYING_POISON,
+        AuraScript {
+            on_damage_proc: Some(duplicate_deathmark_poison),
             ..Default::default()
         },
     );
@@ -142,6 +153,61 @@ fn apply_deadly_poison(
         spell_cast::cast_triggered(world, caster, DEADLY_INSTANT, Some(target), 1);
     }
     spell_cast::cast_triggered(world, caster, dot, Some(target), 1);
+}
+
+// SimC76f8118 sc_rogue.cpp2928–2935: a successful non-guaranteed
+// lethal coating proc repeats once against the caster's active Deathmark.
+fn duplicate_deathmark_poison(
+    world: &mut World,
+    caster: Entity,
+    aura: &AuraInstance,
+    event: &procs::AuraEvent,
+) {
+    let Some(target) = event.target else { return };
+    let now = spell_cast::now(world);
+    let marked = world.get::<ActiveAuras>(target).is_some_and(|auras| {
+        auras.iter().any(|mark| {
+            mark.spell_id == DEATHMARK
+                && mark.caster == caster
+                && mark.expires_at.is_none_or(|at| at > now)
+        })
+    });
+    if !marked
+        || event.spell_id == Some(185565)
+        || (event.spell_id == Some(703) && super::has_aura(world, caster, 1264856))
+    {
+        return;
+    }
+    let spell = world
+        .resource::<SpellStore>()
+        .get(aura.spell_id)
+        .expect("native lethal coating");
+    let base = spell
+        .aura_options
+        .as_ref()
+        .expect("native lethal proc chance")
+        .proc_chance as f32;
+    let chance =
+        super::spell_mods::modify(world, caster, spell, super::SpellModOp::ProcChance, base);
+    if chance >= 100.0 {
+        return;
+    }
+    if aura.spell_id == DEADLY_POISON {
+        apply_deadly_poison(world, caster, aura, Some(target));
+    } else {
+        let index = if aura.spell_id == AMPLIFYING_POISON {
+            2
+        } else {
+            0
+        };
+        let child = aura
+            .effects
+            .iter()
+            .find(|effect| effect.index == index)
+            .expect("native lethal poison child")
+            .trigger_spell;
+        spell_cast::cast_triggered(world, caster, child, Some(target), 1);
+    }
 }
 
 /// SimC76f8118 sc_rogue.cpp2948–2954/4975/11155–11156: every

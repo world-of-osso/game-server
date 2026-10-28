@@ -6,7 +6,7 @@ Assassination259 combat and the shared Rogue attack-speed and Vanish paths follo
 
 ### Poison and finisher state
 
-- [x] Positive lethal-poison direct hits against the caster's active385627 Kingsbane grant native394095 stacks. Periodic poison ticks, other casters and unmarked targets do not qualify. Native amounts/cap determine periodic damage; the ramp ends with its owned dot. Source: `sc_rogue.cpp2948–2954,4975,11155–11156`.
+- [x] Positive lethal-poison direct hits against the caster's active385627 Kingsbane grant native394095 stacks. Periodic poison ticks, other casters and unmarked targets do not qualify. Native amounts/cap determine periodic damage; the ramp ends with its owned dot. A non-guaranteed lethal-poison proc repeats once against the caster's active Deathmark. Source: `sc_rogue.cpp2928–2935,2948–2954,4975,11155–11156`.
 - [x] Envenom snapshots Amplifying Poison's native bonus at its native owned383414 stack threshold, then consumes exactly that threshold before generating new poison. Preserve other casters' stacks and sub-threshold state. Source: `sc_rogue.cpp4281–4310`.
 - [x] Selected MID2 two-piece supplies its native effect2 bonus to Envenom's direct, periodic and auto-attack damage effects for the buff's lifetime. Source: `sc_rogue.cpp11249–11259`.
 - [x] A real Deathmark application grants selected Finish the Job's native direct, periodic and auto-attack damage window. Source: `sc_rogue.cpp4208–4217`.
