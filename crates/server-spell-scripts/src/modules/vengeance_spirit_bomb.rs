@@ -16,7 +16,6 @@ struct PendingBombs(Vec<PendingBomb>);
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AfterNativeLaunch(launch),
     SpellScriptHook::AfterNativeCastUpdate(update),
-    SpellScriptHook::ResolvedDamage(apply_frailty),
 ];
 
 fn launch(world: &mut World, caster: Entity, spell: &SpellInfo) {
@@ -61,32 +60,6 @@ fn launch(world: &mut World, caster: Entity, spell: &SpellInfo) {
         .into_mut()
         .0
         .push(pending);
-}
-
-fn apply_frailty(
-    world: &mut World,
-    ctx: &spell_cast::effects::EffectCtx,
-    target: Entity,
-    _: bool,
-    damage: f32,
-) {
-    if ctx.spell.id == 247455
-        && damage > 0.0
-        && world
-            .get::<combat::class_progression::KnownSpells>(ctx.caster)
-            .is_some_and(|known| known.contains(389958))
-    {
-        combat::auras::apply_aura(
-            world,
-            &combat::auras::AuraApplication {
-                caster: ctx.caster,
-                target,
-                spell_id: 247456,
-                effect_mask: u32::MAX,
-                source: combat::auras::AuraSource::Cast,
-            },
-        );
-    }
 }
 
 fn update(world: &mut World) {
