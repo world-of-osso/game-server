@@ -31,6 +31,10 @@ Assassination259 combat and the shared Rogue attack-speed and Vanish paths follo
 - [x] Successful Rupture with selected381627 applies native381628 at its captured effective-CP multiplier, minimum1, without another payment. Preserve native coefficients, cadence and duration. Source: `sc_rogue.cpp5257–5264,6200–6203`.
 - [x] Successful Kingsbane with selected1265387 starts1265787; each native effect1 tick casts1265794 and1265795 at its retained impacted target. Target loss does not select a replacement; removing the driver clears its target. Source: `sc_rogue.cpp4891–4905,4954–4958`.
 
+### Rupture
+
+- [x] Rupture's duration is its native base duration times one plus effective combo points, without the native five-point duration cap. Source: `sc_rogue.cpp5235–5240`.
+
 ### Deathstalker
 
 - [x] Selected Quietus Celeris may immediately spend one stack of each newly established Deathstalker's Mark, at the native effect0/effect1 probability. Source: `sc_rogue.cpp8804–8815`.

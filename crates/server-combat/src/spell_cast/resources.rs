@@ -74,12 +74,14 @@ fn is_rogue_finisher(spell: &SpellInfo) -> bool {
             .any(|cost| cost.power_type == PowerType::ComboPoints as i32)
 }
 
-fn snapshot_duration(duration: &mut SpellDuration, combo: f32) {
+fn snapshot_duration(duration: &mut SpellDuration, combo: f32, rupture: bool) {
     if duration.per_resource_ms == 0 {
         return;
     }
     duration.duration_ms += (duration.per_resource_ms as f32 * combo) as i32;
-    if duration.max_duration_ms > 0 {
+    // SimC76f8118 sc_rogue.cpp5235–5240 scales Rupture through all effective
+    // combo points, including points beyond the native five-point maximum.
+    if !rupture && duration.max_duration_ms > 0 {
         duration.duration_ms = duration.duration_ms.min(duration.max_duration_ms);
     }
     duration.per_resource_ms = 0;
@@ -137,7 +139,7 @@ pub(super) fn snapshot(
             .into_iter()
             .flatten()
         {
-            snapshot_duration(duration, combo);
+            snapshot_duration(duration, combo, spell.id == 1943);
         }
     }
     // SimC76f8118 sc_rogue.cpp2320–2334 scales every direct Rogue
