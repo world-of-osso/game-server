@@ -7,7 +7,7 @@ use crate::spell_cast::effects::factor_capture::FactorCapture;
 #[ignore = "requires native252 profile and actual controlled ghoul"]
 fn unholy_controlled_pet_receives_owner_target_pet_debuff() {
     let _seed = crate::random::seed_scope(70448);
-    let mut run = prepare_literal(252, 1).unwrap();
+    let mut run = prepare_measurement(252, 1).unwrap();
     engage(&mut run);
     let pet = crate::hunter_pet::summoned_pet(run.app.world(), run.actor).unwrap();
     let spell = run
