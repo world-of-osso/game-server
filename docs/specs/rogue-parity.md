@@ -27,7 +27,9 @@ Assassination259 combat and the shared Rogue attack-speed and Vanish paths follo
 - [x] Successful Rupture with selected381627 applies native381628 at its captured effective-CP multiplier, minimum1, without another payment. Preserve native coefficients, cadence and duration. Source: `sc_rogue.cpp5257–5264,6200–6203`.
 - [x] Successful Kingsbane with selected1265387 starts1265787; each native effect1 tick casts1265794 and1265795 at its retained impacted target. Target loss does not select a replacement; removing the driver clears its target. Source: `sc_rogue.cpp4891–4905,4954–4958`.
 
-### Assassination Deathstalker
+### Deathstalker
+
+- [x] Spending an owned Deathstalker's Mark grants selected Unshakeable Drive 1248775. Stacks count uses, not damage magnitude; affected foreground attacks consume one after 201 ms, including Mutilate. Source: `sc_rogue.cpp1919–1921,8754–8759`.
 
 - [x] Native Garrote establishes one owned457129 mark using selected457052 effect0 stacks. Transfer it off the previous target without refreshing the same target's existing mark. Finishers meeting effect1's native CP threshold consume one stack and deal457157 damage. Source: `sc_rogue.cpp4599,8732–8817`.
 - [x] Depletion with selected457058 grants457280 after1ms, including native Energy. A maximum-CP Envenom retains its native damage/critical bonus, reapplies the native mark count and consumes Darkest Night. Lower-CP casts consume neither marks nor Darkest Night while it is active. This lifecycle qualification is spec259-only. Source: `sc_rogue.cpp2435–2440,2569–2574,8732–8817`.

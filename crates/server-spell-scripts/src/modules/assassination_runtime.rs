@@ -16,6 +16,7 @@ pub const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::PolicyContextRequired(needs_context),
     SpellScriptHook::PreparePolicySpell(rogue_hero::prepare),
     SpellScriptHook::BeforePolicyPrimaryHit(on_primary_hit),
+    SpellScriptHook::AfterResolvedHits(rogue_hero::consume_drive),
     SpellScriptHook::TargetFilter(rogue_hero::filter_mass_casualty),
     SpellScriptHook::RogueAuraRegistration(rogue_children::register),
     SpellScriptHook::BeforeEnemyContextHit(poison_hit),

@@ -19,6 +19,9 @@ const EVISCERATE: u32 = 196819;
 const BLACK_POWDER: u32 = 319175;
 const MASS_CASUALTY: u32 = 1273035;
 const MASS_DAMAGE: u32 = 1273061;
+const UNSHAKEABLE_TALENT: u32 = 1248774;
+const UNSHAKEABLE: u32 = 1248775;
+const MUTILATE: u32 = 1329;
 
 pub(super) fn needs_context(world: &World, caster: Entity, spell: &SpellInfo) -> bool {
     auras::has_aura(world, caster, MARK_TALENT)
@@ -179,11 +182,45 @@ fn apply_mark(world: &mut World, ctx: &EffectCtx<'_>, target: Entity, stacks: u8
     spell_cast::launch_triggered_spell(world, ctx.caster, &mark, Some(target), ctx.depth + 1);
 }
 
+/// SimC76f8118 sc_rogue.cpp1919–1921: delay each foreground use so
+/// both Mutilate hands and Shadow Clone attacks retain the buff.
+pub(super) fn consume_drive(world: &mut World, ctx: &EffectCtx<'_>) {
+    if ctx.depth != 0 {
+        return;
+    }
+    let affected = world.get::<ActiveAuras>(ctx.caster).is_some_and(|auras| {
+        auras.iter().any(|aura| {
+            aura.spell_id == UNSHAKEABLE
+                && aura.caster == ctx.caster
+                && (ctx.spell.id == MUTILATE
+                    || aura.effects.iter().any(|effect| {
+                        combat::auras::spell_mods::class_mask_affects(aura, effect, ctx.spell)
+                    }))
+        })
+    });
+    if affected {
+        spell_cast::queued_triggers::schedule_callback(world, ctx, ctx.caster, 201, spend_drive);
+    }
+}
+
+fn spend_drive(world: &mut World, caster: Entity, _target: Entity, _depth: u8) {
+    let instance = world.get::<ActiveAuras>(caster).and_then(|auras| {
+        auras.iter().find(|aura| aura.spell_id == UNSHAKEABLE && aura.caster == caster)
+            .map(|aura| aura.instance_id)
+    });
+    if let Some(instance) = instance {
+        auras::spend_stack(world, caster, instance);
+    }
+}
+
 fn spend_mark(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
     let Some(instance) = owned_mark(world, ctx.caster, target) else {
         return;
     };
     auras::spend_stack(world, target, instance);
+    if auras::has_aura(world, ctx.caster, UNSHAKEABLE_TALENT) {
+        spell_cast::cast_triggered(world, ctx.caster, UNSHAKEABLE, Some(ctx.caster), ctx.depth + 1);
+    }
     spell_cast::cast_triggered(world, ctx.caster, MARK_DAMAGE, Some(target), ctx.depth + 1);
     let assassination = world
         .get::<ActiveSpec>(ctx.caster)
