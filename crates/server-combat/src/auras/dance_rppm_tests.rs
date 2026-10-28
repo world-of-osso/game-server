@@ -57,7 +57,7 @@ fn rotation_fidelity_windwalker_dance_rppm_uses_native_regen_haste_modifier() {
         elapsed > 0.0,
         "ordinary fixture time elapsed since passive initialization"
     );
-    let since_success = (now - aura.proc.last_success_at).min(1000.0);
+    let since_success = (aura.proc.accumulated_blp + elapsed).min(1000.0);
     let bad_luck = (1.0 + (since_success / (60.0 / effective_ppm) - 1.5) * 3.0).max(1.0);
     let expected = (bad_luck * effective_ppm * elapsed / 60.0).clamp(0.0, 1.0) as f32 * 100.0;
     let actual = proc_chance(h.app.world_mut(), unit, aura.instance_id, now);
