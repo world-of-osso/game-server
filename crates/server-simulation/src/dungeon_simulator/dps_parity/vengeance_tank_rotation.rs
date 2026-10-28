@@ -516,7 +516,7 @@ mod tests {
             &crate::auras::AuraApplication {
                 caster: actor,
                 target,
-                spell_id: 17,
+                spell_id: 69787,
                 effect_mask: u32::MAX,
                 source: crate::auras::AuraSource::Cast,
             },
@@ -539,7 +539,10 @@ mod tests {
         assert!(
             hits.iter()
                 .any(|event| matches!(event.spell_id, Some(225919 | 225921)) && event.absorbed > 0),
-            "native shield must absorb a Fracture impact"
+            "native shield must absorb a Fracture impact: {:?}",
+            hits.iter()
+                .filter(|event| matches!(event.spell_id, Some(225919 | 225921)))
+                .collect::<Vec<_>>()
         );
         assert_eq!(
             soul_fragments::total_count(run.app.world(), actor, FragmentFilter::Lesser),
