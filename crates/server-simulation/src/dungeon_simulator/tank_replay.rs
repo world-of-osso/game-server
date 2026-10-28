@@ -261,11 +261,12 @@ pub(super) fn protection_program(actions: &Value) -> Result<server::simc_apl::Pr
 
 /// Run SimC's pre-outcome dummy pressure against the actual MID2 parity player.
 pub(super) fn replay_simc(
+    spec_id: u32,
     path: &std::path::Path,
     duration_seconds: u32,
     seed: u64,
 ) -> Result<Value, String> {
-    use crate::simc_tank_timeline::{self, Kind};
+    use crate::simc_tank_timeline;
     let canonical =
         std::path::Path::new("/home/osso/Projects/world-of-osso/game-server/data/world.db")
             .canonicalize()
@@ -282,26 +283,41 @@ pub(super) fn replay_simc(
     {
         return Err("SIMC_REPLAY_REQUIRES_CANONICAL_WORLD_DB".into());
     }
-    if duration_seconds == 0 {
-        return Err("SIMC_REPLAY_DURATION_ZERO".into());
+    if duration_seconds != 300 {
+        return Err("NATIVE_LITERAL_ENCOUNTER_REQUIRES_300_SECONDS".into());
     }
     let hits = simc_tank_timeline::read_trace(path, "Tank_Dummy_Dungeon")?;
-    let (profile, traits) = super::dps_parity::read_reference(66)?;
-    if profile.level != "90" || profile.race != "tauren" {
-        return Err("SIMC_MID2_PROTECTION_PROFILE_MISMATCH".into());
-    }
     let _rng = crate::random::seed_scope(seed);
-    let mut run = super::dps_parity::spawn_reference(
-        profile,
-        &traits,
-        1,
-        crate::followers::simulator::ParityActor::Player { race: 6 },
-    )?;
+    let run = super::dps_parity::prepare_registered_player(spec_id, 1)?;
+    let auras = super::dps_parity::tank_mitigation_auras(&run)?;
+    replay_registered_run(run, &hits, duration_seconds, auras)
+}
+
+pub(super) fn replay_registered_run(
+    mut run: super::dps_parity::Run,
+    hits: &[crate::simc_tank_timeline::Hit],
+    duration_seconds: u32,
+    mitigation_auras: &[u32],
+) -> Result<Value, String> {
+    use crate::simc_tank_timeline::Kind;
     let tank = run.actor;
     let source = run.targets[0];
-    for _ in 0..4 {
-        run.app.update();
+    let spec = run
+        .app
+        .world()
+        .get::<shared::components::ActiveSpec>(tank)
+        .ok_or("NATIVE_PLAYER_SPEC_ABSENT")?
+        .0;
+    let level = run
+        .app
+        .world()
+        .get::<shared::components::Level>(tank)
+        .ok_or("NATIVE_PLAYER_LEVEL_ABSENT")?
+        .0;
+    if level != 90 {
+        return Err(format!("MID2_PLAYER_LEVEL_MISMATCH:{level}"));
     }
+    super::dps_parity::engage(&mut run);
     freeze_sources(run.app.world_mut(), &[(0, source)].into());
     run.app.insert_resource(Capture {
         members: vec![tank],
@@ -319,6 +335,7 @@ pub(super) fn replay_simc(
         (0.0, 0.0, 0.0, 0.0, 0.0_f64);
     let (mut recent, mut recent_sum) = (VecDeque::<(f64, f64)>::new(), 0.0);
     let (mut next, mut elapsed, mut death) = (0, 0.0, None);
+    let mut casts = BTreeMap::<u32, usize>::new();
     for tick in 1..=duration_seconds * 20 {
         elapsed = f64::from(tick) * TICK_SECONDS;
         while let Some(hit) = hits
@@ -385,15 +402,33 @@ pub(super) fn replay_simc(
                 .active_hit_scale = None;
             next += 1;
         }
+        if run
+            .app
+            .world()
+            .get::<Health>(tank)
+            .is_some_and(|health| health.current > 0.0)
+        {
+            super::dps_parity::drive_literal_tick(&mut run)
+                .map_err(|error| format!("native APL tick {tick}: {error}"))?;
+        }
         run.app.update();
         let world = run.app.world();
-        if crate::auras::has_aura(world, tank, SHIELD_OF_THE_RIGHTEOUS) {
+        if mitigation_auras
+            .iter()
+            .any(|&aura| crate::auras::has_aura(world, tank, aura))
+        {
             active_seconds += TICK_SECONDS;
         }
         let events = &world
             .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
             .0;
         for event in &events[event_cursor..] {
+            if event.source == Some(tank.to_bits())
+                && event.kind == CombatLogKind::CastSuccess
+                && let Some(spell_id) = event.spell_id
+            {
+                *casts.entry(spell_id).or_default() += 1;
+            }
             if event.target != Some(tank.to_bits()) {
                 continue;
             }
@@ -431,12 +466,12 @@ pub(super) fn replay_simc(
         .get(&tank)
         .map_or(0.0, |usage| usage.total);
     Ok(
-        json!({"spec":66,"level":90,"reference_tier":"MID2","timeline":"simc_tank_dummy",
-        "rotation_status":"not_implemented","duration_seconds":elapsed,"incoming_events":next,
+        json!({"spec":spec,"level":level,"reference_tier":"MID2","timeline":"simc_tank_dummy",
+        "rotation_status":"registered_literal_simc","duration_seconds":elapsed,"incoming_events":next,"tank_casts":casts,
         "raw_damage":raw,"damage_taken":taken,"mitigation_pct":(raw>0.0).then(||100.0*(raw-taken)/raw),
         "self_heal_per_second":(elapsed>0.0).then(||self_healing/elapsed),
         "absorb_per_second":(elapsed>0.0).then(||absorbed/elapsed),"time_to_death":death,
-        "active_mitigation_spell":SHIELD_OF_THE_RIGHTEOUS,"active_mitigation_uptime":(elapsed>0.0).then(||active_seconds/elapsed),
+        "active_mitigation_auras":mitigation_auras,"active_mitigation_uptime":(elapsed>0.0).then(||active_seconds/elapsed),
         "spike_window_seconds":SPIKE_WINDOW_SECONDS,"largest_spike":spike}),
     )
 }
