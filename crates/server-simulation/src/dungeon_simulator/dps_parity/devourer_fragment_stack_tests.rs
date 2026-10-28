@@ -599,6 +599,9 @@ fn devourer_collapsing_star_resets_predators_wake_cooldown() {
         Some(target),
     )
     .expect("Collapsing Star resets the real Predator's Wake cooldown");
+    for _ in 0..10 {
+        run.app.update();
+    }
     let events = &run
         .app
         .world()
