@@ -2,10 +2,10 @@
 use super::combat;
 use bevy::prelude::*;
 use combat::auras::ActiveAuras;
+use combat::spell_cast::scripts::script_effect_value;
 use combat::spell_cast::{
     self, effects::EffectCtx, script_registry::SpellScriptHook, summon::SummonedCreature,
 };
-use combat::spell_cast::scripts::script_effect_value;
 use combat::spell_info::{SpellInfo, SpellStore};
 use shared::components::{Npc, Position};
 
@@ -29,17 +29,25 @@ fn whitemane_coil(world: &mut World, owner: Entity, spell: &SpellInfo, target: O
         .query::<(Entity, &SummonedCreature)>()
         .iter(world)
         .find_map(|(actor, summon)| {
-            (summon.owner == owner && summon.spell_id == 444251
+            (summon.owner == owner
+                && summon.spell_id == 444251
                 && summon.expires_at.is_some_and(|expiry| expiry > now))
-                .then_some(actor)
+            .then_some(actor)
         });
     let Some(rider) = rider else { return };
     // SimC76f8118 sc_death_knight.cpp5091–5096/13575–13579:
     // each actual Coil commands the active Whitemane's background Coil.
     let multiplier = script_effect_value(world, owner, 1265949, 1) / 100.0;
     if !spell_cast::cast_triggered_with_overrides(
-        world, rider, 445513, Some(target), 1,
-        spell_cast::TriggeredSpellOverrides { damage_multiplier: Some(multiplier), ..Default::default() },
+        world,
+        rider,
+        445513,
+        Some(target),
+        1,
+        spell_cast::TriggeredSpellOverrides {
+            damage_multiplier: Some(multiplier),
+            ..Default::default()
+        },
     ) {
         warn!(?rider, "Whitemane Let Terror Reign Coil refused");
     }

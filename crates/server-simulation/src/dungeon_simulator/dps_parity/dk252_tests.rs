@@ -2652,23 +2652,56 @@ fn dk252_death_coil_commands_active_whitemane() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(252, 1).unwrap();
     engage(&mut run);
-    literal_rotation::execution::execute(run.app.world_mut(), run.actor,
-        literal_rotation::execution::Execution::Spell(42650, run.actor, None)).unwrap();
-    for _ in 0..60 { run.app.update(); }
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(42650, run.actor, None),
+    )
+    .unwrap();
+    for _ in 0..60 {
+        run.app.update();
+    }
     let rider = {
         let world = run.app.world_mut();
-        world.query::<(Entity, &crate::spell_cast::summon::SummonedCreature)>().iter(world)
-            .find_map(|(actor, summon)| (summon.owner == run.actor && summon.spell_id == 444251).then_some(actor))
+        world
+            .query::<(Entity, &crate::spell_cast::summon::SummonedCreature)>()
+            .iter(world)
+            .find_map(|(actor, summon)| {
+                (summon.owner == run.actor && summon.spell_id == 444251).then_some(actor)
+            })
             .expect("active Whitemane")
     };
-    run.app.world_mut().resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>().0.clear();
-    crate::spell_cast::powers::change_power(run.app.world_mut(), run.actor,
-        shared::components::PowerType::RunicPower, 1000.0);
-    literal_rotation::execution::execute(run.app.world_mut(), run.actor,
-        literal_rotation::execution::Execution::Spell(47541, run.targets[0], Some(run.targets[0]))).unwrap();
-    for _ in 0..20 { run.app.update(); }
-    assert!(run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0.iter()
-        .any(|event| event.source == Some(rider.to_bits()) && event.target == Some(run.targets[0].to_bits())
-            && event.spell_id == Some(445513) && event.kind == CombatLogKind::Damage && event.amount > 0),
-        "an actual Death Coil must command active Whitemane to hit the same target");
+    run.app
+        .world_mut()
+        .resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .clear();
+    crate::spell_cast::powers::change_power(
+        run.app.world_mut(),
+        run.actor,
+        shared::components::PowerType::RunicPower,
+        1000.0,
+    );
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(47541, run.targets[0], Some(run.targets[0])),
+    )
+    .unwrap();
+    for _ in 0..20 {
+        run.app.update();
+    }
+    assert!(
+        run.app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|event| event.source == Some(rider.to_bits())
+                && event.target == Some(run.targets[0].to_bits())
+                && event.spell_id == Some(445513)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0),
+        "an actual Death Coil must command active Whitemane to hit the same target"
+    );
 }
