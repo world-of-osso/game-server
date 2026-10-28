@@ -349,7 +349,8 @@ mod tests {
             .accumulator;
         assert!(
             (deposited - actual_damage * 0.12 * 1.5 * 1.3).abs() < 1.0,
-            "selected Coalescence and Way scale the actual hit"
+            "selected Coalescence and Way scale actual hit: pool={deposited}, hit={actual_damage}, expected={}",
+            actual_damage * 0.12 * 1.5 * 1.3
         );
         for _ in 0..40 {
             run.app.update();
