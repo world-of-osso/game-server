@@ -36,27 +36,74 @@ struct NextInspirationArmament(u32);
 
 fn divine_inspiration_event(world: &mut World, event: &combat::auras::procs::AuraEvent) {
     use combat::auras::procs;
-    const MASK: u32 = procs::PROC_DEAL_MELEE_ABILITY | procs::PROC_DEAL_RANGED_ABILITY
-        | procs::PROC_DEAL_HARMFUL_ABILITY | procs::PROC_DEAL_HARMFUL_SPELL
-        | procs::PROC_DEAL_HELPFUL_ABILITY | procs::PROC_DEAL_HELPFUL_SPELL
+    const MASK: u32 = procs::PROC_DEAL_MELEE_ABILITY
+        | procs::PROC_DEAL_RANGED_ABILITY
+        | procs::PROC_DEAL_HARMFUL_ABILITY
+        | procs::PROC_DEAL_HARMFUL_SPELL
+        | procs::PROC_DEAL_HELPFUL_ABILITY
+        | procs::PROC_DEAL_HELPFUL_SPELL
         | procs::PROC_DEAL_HELPFUL_PERIODIC;
-    if !event.can_proc || event.actor_mask[0] & MASK == 0 || (event.damage <= 0.0 && event.heal.is_none()) || !world.get::<TraitLoadout>(event.actor).is_some_and(|traits| traits.active_talent_spells().any(|talent| talent.spell_id == 432964)) {
+    if !event.can_proc
+        || event.actor_mask[0] & MASK == 0
+        || (event.damage <= 0.0 && event.heal.is_none())
+        || !world
+            .get::<TraitLoadout>(event.actor)
+            .is_some_and(|traits| {
+                traits
+                    .active_talent_spells()
+                    .any(|talent| talent.spell_id == 432964)
+            })
+    {
         return;
     }
-    let Some(id) = world.get::<combat::auras::ActiveAuras>(event.actor).and_then(|auras| {
-        auras.iter().find(|aura| aura.spell_id == 432964 && aura.caster == event.actor).map(|aura| aura.instance_id)
-    }) else { return; };
+    let Some(id) = world
+        .get::<combat::auras::ActiveAuras>(event.actor)
+        .and_then(|auras| {
+            auras
+                .iter()
+                .find(|aura| aura.spell_id == 432964 && aura.caster == event.actor)
+                .map(|aura| aura.instance_id)
+        })
+    else {
+        return;
+    };
     // SimC76f8118 sc_paladin.cpp4116–4147: .55 RPPM, haste and bad-luck scaling.
-    if !procs::try_source_hasted_rppm(world, event.actor, id, 0.55) { return; }
-    let next = world.get::<NextInspirationArmament>(event.actor).map(|value| value.0)
-        .unwrap_or_else(|| if combat::random::random::<f32>() < 0.5 { 432496 } else { 432502 });
-    combat::auras::apply_aura(world, &AuraApplication {
-        caster: event.actor, target: event.actor, spell_id: next, effect_mask: u32::MAX, source: AuraSource::Cast,
-    });
-    world.entity_mut(event.actor).insert(NextInspirationArmament(if next == 432496 { 432502 } else { 432496 }));
+    if !procs::try_source_hasted_rppm(world, event.actor, id, 0.55) {
+        return;
+    }
+    let next = world
+        .get::<NextInspirationArmament>(event.actor)
+        .map(|value| value.0)
+        .unwrap_or_else(|| {
+            if combat::random::random::<f32>() < 0.5 {
+                432496
+            } else {
+                432502
+            }
+        });
+    combat::auras::apply_aura(
+        world,
+        &AuraApplication {
+            caster: event.actor,
+            target: event.actor,
+            spell_id: next,
+            effect_mask: u32::MAX,
+            source: AuraSource::Cast,
+        },
+    );
+    world
+        .entity_mut(event.actor)
+        .insert(NextInspirationArmament(if next == 432496 {
+            432502
+        } else {
+            432496
+        }));
 }
 
-fn armament_energize_handler(spell: u32, index: u8) -> Option<combat::spell_cast::effects::EffectHandler> {
+fn armament_energize_handler(
+    spell: u32,
+    index: u8,
+) -> Option<combat::spell_cast::effects::EffectHandler> {
     (matches!(spell, 432459 | 432472) && index == 1).then_some(energize_holy_armament)
 }
 
