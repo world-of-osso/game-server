@@ -15,6 +15,41 @@ fn fortifying_remaining(run: &Run) -> u64 {
 
 #[test]
 #[ignore = "requires canonical Brewmaster profile and world database"]
+fn selected_fortifying_brew_uses_talent_health_increase() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(268, 1).unwrap();
+    engage(&mut run);
+    let actor = run.actor;
+    assert!(
+        run.app
+            .world()
+            .get::<crate::class_progression::TraitLoadout>(actor)
+            .unwrap()
+            .active_talent_spells()
+            .any(|talent| talent.spell_id == 388917)
+    );
+    let before = run
+        .app
+        .world()
+        .get::<shared::components::Health>(actor)
+        .unwrap()
+        .max;
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 115203, Some(actor), false)
+        .unwrap();
+    let after = run
+        .app
+        .world()
+        .get::<shared::components::Health>(actor)
+        .unwrap()
+        .max;
+    assert!(
+        (after - before * 1.10).abs() < 20.0,
+        "Fortifying Brew max health {before} -> {after}"
+    );
+}
+
+#[test]
+#[ignore = "requires canonical Brewmaster profile and world database"]
 fn selected_salsalabim_keg_smash_resets_breath_of_fire() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(268, 1).unwrap();
