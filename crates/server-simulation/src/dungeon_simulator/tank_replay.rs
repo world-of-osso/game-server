@@ -1,4 +1,6 @@
 //! Isolated tank decisions under a frozen native incoming-damage recording.
+#[path = "protection_rotation.rs"]
+pub(super) mod protection_rotation;
 use super::healer_intake::{Capture, Hit, HitKind, Intake};
 use super::healer_replay::{PendingHits, deliver_hits, freeze_sources};
 use bevy::prelude::*;
