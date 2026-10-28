@@ -51,10 +51,13 @@ fn protection_holy_armaments_alternate_after_real_casts() {
             .unwrap(),
         432472
     );
+    let replacement =
+        crate::spell_cast::knowledge::resolve_actor_action(run.app.world(), run.actor, 432459)
+            .unwrap();
     crate::spell_cast::creature_cast(
         run.app.world_mut(),
         run.actor,
-        432459,
+        replacement,
         Some(run.actor),
         false,
     )
