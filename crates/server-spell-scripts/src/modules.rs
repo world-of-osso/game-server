@@ -73,6 +73,7 @@ register_modules! {
     arms_tactician: (713, "modules/arms_tactician.rs"),
     assassination_doomblade: (2594, "modules/assassination_doomblade.rs"),
     assassination_envenom_tier: (2594, "modules/assassination_envenom_tier.rs"),
+    assassination_finish_job: (2594, "modules/assassination_finish_job.rs"),
     assassination_focus: (2592, "modules/assassination_focus.rs"),
     assassination_garrote: (2595, "modules/assassination_garrote.rs"),
     assassination_kingsbane: (2593, "modules/assassination_kingsbane.rs"),
