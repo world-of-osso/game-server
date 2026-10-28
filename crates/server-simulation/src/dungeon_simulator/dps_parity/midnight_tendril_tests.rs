@@ -26,12 +26,14 @@ fn midnight_tendril_native_damage_earns_stacking_critical_rating() {
     assert!(item_level.is_some());
     engage(&mut run);
     let mut highest = 0;
+    let mut first_stacks = None;
     advance_combat_observed(&mut run, |run| {
         let auras = run.app.world().get::<ActiveAuras>(run.actor).unwrap();
         if let Some(buff) = auras
             .iter()
             .find(|aura| aura.spell_id == 1310414 && aura.caster == run.actor)
         {
+            first_stacks.get_or_insert(buff.stacks);
             highest = highest.max(buff.stacks);
             let actual = buff
                 .effects
@@ -48,7 +50,11 @@ fn midnight_tendril_native_damage_earns_stacking_critical_rating() {
     })
     .unwrap();
     assert!(
-        highest >= 3,
-        "real damage must grant new-target stacks: {highest}"
+        first_stacks.is_some_and(|stacks| stacks >= 3),
+        "first real damage must grant three new-target stacks: {first_stacks:?}"
+    );
+    assert!(
+        highest > first_stacks.unwrap(),
+        "later damage earns additional stacks"
     );
 }
