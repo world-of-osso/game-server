@@ -3,6 +3,70 @@ use super::*;
 
 #[test]
 #[ignore = "requires exact spec103 profile/traits and native private DB"]
+fn feral_tigers_tenacity_only_rewards_foreground_finishers() {
+    use shared::protocol::CombatLogKind;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_measurement(103, 3).unwrap();
+    let actor = run.actor;
+    let charges = |run: &Run| {
+        run.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(actor)
+            .and_then(|auras| {
+                auras
+                    .iter()
+                    .find(|aura| aura.spell_id == 391873 && aura.caster == actor)
+            })
+            .map_or(0, |aura| aura.charges)
+    };
+    let grants = |run: &Run| {
+        run.app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .filter(|event| {
+                event.source == Some(actor.to_bits())
+                    && event.spell_id == Some(391874)
+                    && event.kind == CombatLogKind::Energize
+            })
+            .count()
+    };
+    assert_eq!(
+        charges(&run),
+        0,
+        "precombat actions must not grant Tiger's Tenacity"
+    );
+    assert_eq!(
+        grants(&run),
+        0,
+        "precombat must not generate its combo point"
+    );
+    engage(&mut run);
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        actor,
+        literal_rotation::execution::Execution::Spell(5217, actor, None),
+    )
+    .unwrap();
+    run.app.update();
+    assert_eq!(charges(&run), 3, "Tiger's Fury earns three native charges");
+    assert_eq!(grants(&run), 0, "applying the buff is not a finisher");
+    feral_growth_tests::cast_native_spell_after_regeneration(&mut run, 1822);
+    assert_eq!(charges(&run), 3, "Rake must not consume a finisher charge");
+    assert_eq!(grants(&run), 0, "Rake must not trigger the finisher reward");
+    feral_growth_tests::cast_native_spell_after_regeneration(&mut run, 1079);
+    run.app.update();
+    assert_eq!(
+        charges(&run),
+        2,
+        "one actual Rip consumes exactly one charge"
+    );
+    assert_eq!(grants(&run), 1, "one actual Rip grants exactly one reward");
+}
+
+#[test]
+#[ignore = "requires exact spec103 profile/traits and native private DB"]
 fn feral_exact_magisters_token_applies_native_mastery_flask() {
     let run = prepare_literal(103, 1).expect("exact selected Feral profile");
     let stats = report::stats(run.app.world(), run.actor);
