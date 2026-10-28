@@ -15,6 +15,8 @@ const BLACKOUT_COMBO: u32 = 228563;
 const FACE_PALM: u32 = 389942;
 const MEDITATIVE_FOCUS: u32 = 1271105;
 const INFUSION: u32 = 1241059;
+const SALSALABIMS_STRENGTH: u32 = 383697;
+const BREATH_OF_FIRE: u32 = 115181;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AfterResourceValues(cast_hook),
@@ -88,6 +90,23 @@ fn keg_smash(world: &mut World, caster: Entity, spell: &SpellInfo) {
         }
     }
     brew_reduction(world, caster, reduction);
+    if selected(world, caster, SALSALABIMS_STRENGTH) {
+        // SimC76f8118 sc_monk.cpp2589–2592 resets Breath of Fire on Keg Smash.
+        let breath = world
+            .resource::<SpellStore>()
+            .get(BREATH_OF_FIRE)
+            .expect("Breath of Fire spell");
+        let now = combat::spell_cast::history_now(world);
+        let remaining = world
+            .get::<combat::spell_cast::SpellHistory>(caster)
+            .map_or(0, |history| history.remaining_cooldown_ms(breath, now));
+        reduce_cooldown(
+            world,
+            caster,
+            BREATH_OF_FIRE,
+            (remaining as f64 + 1.0) / 1000.0,
+        );
+    }
     consume_combo(world, caster, spell);
 }
 
