@@ -18,7 +18,7 @@ fn protection_paladin_replays_recorded_damage_without_healer() {
     assert_eq!(report["spec"], 66);
     let raw = report["raw_damage"].as_f64().unwrap();
     let taken = report["damage_taken"].as_f64().unwrap();
-    assert!(raw > 0.0 && taken > 0.0, "{report}");
+    assert!(raw > 0.0 && taken > 0.0 && taken <= raw, "{report}");
     assert!(
         (report["mitigation_pct"].as_f64().unwrap() - 100.0 * (raw - taken) / raw).abs() < 1e-6
     );

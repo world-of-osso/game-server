@@ -79,6 +79,9 @@ pub(super) fn replay(intake: &Intake) -> Result<Value, String> {
         ..Default::default()
     });
     app.init_resource::<PendingHits>();
+    app.world_mut()
+        .resource_mut::<PendingHits>()
+        .track_delivered_hits = true;
     app.add_systems(
         FixedUpdate,
         deliver_hits
@@ -89,7 +92,6 @@ pub(super) fn replay(intake: &Intake) -> Result<Value, String> {
     let mut next_hit = 0;
     let mut frame = 0;
     let mut active_sources = BTreeSet::new();
-    let mut raw_cursor = 0;
     let mut event_cursor = app
         .world()
         .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
@@ -139,12 +141,19 @@ pub(super) fn replay(intake: &Intake) -> Result<Value, String> {
         if let Some(error) = app.world_mut().resource_mut::<PendingHits>().error.take() {
             return Err(error);
         }
-        let world = app.world();
-        let recorded = &world.resource::<Capture>().hits;
-        for hit in &recorded[raw_cursor..] {
+        let delivered =
+            std::mem::take(&mut app.world_mut().resource_mut::<PendingHits>().delivered_hits);
+        for hit in &delivered {
             raw += source_amount(hit)?;
         }
-        raw_cursor = recorded.len();
+        let world = app.world();
+        let recorded = world.resource::<Capture>().hits.len();
+        let manual = world.resource::<PendingHits>().manual_raw_receipts;
+        if recorded != manual {
+            return Err(format!(
+                "UNRECORDED_NATIVE_INCOMING_DAMAGE:tick={tick}:observed={recorded}:manual={manual}"
+            ));
+        }
         elapsed = f64::from(tick) * TICK_SECONDS;
         if crate::auras::has_aura(world, tank, SHIELD_OF_THE_RIGHTEOUS) {
             active_seconds += TICK_SECONDS;
