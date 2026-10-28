@@ -272,6 +272,87 @@ impl super::SpecDriver for Rotation {
 mod tests {
     #[test]
     #[ignore = "requires canonical world database and MID2 Blood inputs"]
+    fn health_defenses_proc_only_below_threshold_and_obey_cooldowns() {
+        use shared::components::Health;
+        let mut run = super::super::prepare_registered_player(250, 1).unwrap();
+        let target = run.actor;
+        let source = run.targets[0];
+        let max = run.app.world().get::<Health>(target).unwrap().max;
+        let strike = |run: &mut super::super::Run| {
+            crate::auras::remove_auras(
+                run.app.world_mut(),
+                target,
+                crate::auras::RemoveReason::Cancelled,
+                |aura| matches!(aura.spell_id, 77535 | 207203),
+            );
+            crate::spell_cast::effects::replay_simc_dummy_strike(
+                run.app.world_mut(),
+                source,
+                target,
+                max * 0.05,
+                false,
+                false,
+            );
+            for _ in 0..4 {
+                run.app.update();
+            }
+        };
+        strike(&mut run);
+        assert!(!crate::auras::has_aura(run.app.world(), target, 326808));
+        assert!(!crate::auras::has_aura(run.app.world(), target, 313015));
+        run.app
+            .world_mut()
+            .get_mut::<Health>(target)
+            .unwrap()
+            .current = max * 0.30;
+        strike(&mut run);
+        assert!(
+            crate::auras::has_aura(run.app.world(), target, 326808),
+            "damage below 35% grants Sanguination"
+        );
+        assert!(
+            crate::auras::has_aura(run.app.world(), target, 326809),
+            "Sanguination applies Satiated"
+        );
+        assert!(!crate::auras::has_aura(run.app.world(), target, 313015));
+        run.app
+            .world_mut()
+            .get_mut::<Health>(target)
+            .unwrap()
+            .current = max * 0.15;
+        strike(&mut run);
+        assert!(
+            crate::auras::has_aura(run.app.world(), target, 313015),
+            "damage below 20% grants Recently Failed"
+        );
+        let heals = |run: &super::super::Run| {
+            run.app
+                .world()
+                .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+                .0
+                .iter()
+                .filter(|event| {
+                    event.spell_id == Some(313010)
+                        && event.kind == shared::protocol::CombatLogKind::Heal
+                })
+                .count()
+        };
+        assert_eq!(heals(&run), 1);
+        run.app
+            .world_mut()
+            .get_mut::<Health>(target)
+            .unwrap()
+            .current = max * 0.15;
+        strike(&mut run);
+        assert_eq!(
+            heals(&run),
+            1,
+            "Recently Failed prevents another Failsafe heal"
+        );
+    }
+
+    #[test]
+    #[ignore = "requires canonical world database and MID2 Blood inputs"]
     fn permafrost_white_hits_create_consumable_frost_shield() {
         let _seed = crate::random::seed_scope(70448);
         let mut run = super::super::prepare_registered_player(250, 1).unwrap();
