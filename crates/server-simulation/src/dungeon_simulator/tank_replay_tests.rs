@@ -104,6 +104,65 @@ fn simc_dummy_strike_does_not_trigger_auto_attack_procs() {
 }
 
 #[test]
+#[ignore = "uses the selected MID2 player and real Protection spender casts"]
+fn divine_guidance_stacks_on_spenders_and_is_consumed_by_consecration() {
+    use crate::auras::{ActiveAuras, AuraSource};
+    use crate::spell_cast::powers::PowerPools;
+    use shared::components::{Health, PowerType};
+    use shared::protocol::CombatLogKind;
+    let mut run = super::dps_parity::prepare_registered_player(66, 1).unwrap();
+    super::dps_parity::engage(&mut run);
+    let actor = run.actor;
+    let target = run.targets[0];
+    let stacks = |run: &super::dps_parity::Run| {
+        run.app
+            .world()
+            .get::<ActiveAuras>(actor)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 433106 && aura.source == AuraSource::Cast)
+            .map_or(0, |aura| aura.stacks)
+    };
+    for expected in 1..=5 {
+        let mut pools = run.app.world_mut().get_mut::<PowerPools>(actor).unwrap();
+        let pool = pools
+            .pools
+            .iter_mut()
+            .find(|pool| pool.power == PowerType::HolyPower)
+            .unwrap();
+        pool.current = pool.max;
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 53600, Some(target), false)
+            .unwrap();
+        for _ in 0..40 {
+            run.app.update();
+        }
+        assert_eq!(stacks(&run), expected);
+    }
+    {
+        let mut health = run.app.world_mut().get_mut::<Health>(actor).unwrap();
+        health.current = health.max * 0.5;
+    }
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 26573, Some(actor), false)
+        .unwrap();
+    for _ in 0..4 {
+        run.app.update();
+    }
+    assert_eq!(stacks(&run), 0);
+    assert!(
+        run.app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|event| event.source == Some(actor.to_bits())
+                && event.target == Some(actor.to_bits())
+                && event.kind == CombatLogKind::Heal
+                && event.spell_id == Some(433807)
+                && event.amount > 0)
+    );
+}
+
+#[test]
 #[ignore = "uses the selected MID2 player and native Holy Bulwark casts"]
 fn holy_bulwark_absorbs_incoming_hits_and_grows_to_native_cap() {
     fn cast_bulwark() -> super::dps_parity::Run {
