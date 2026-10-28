@@ -121,6 +121,7 @@ register_modules! {
     vengeance_spirit_bomb: (5812, "modules/vengeance_spirit_bomb.rs"),
     destruction_echo: (2676, "modules/destruction_echo.rs"),
     destruction_fiendish: (2678, "modules/destruction_fiendish.rs"),
+    discipline_atonement: (2560, "modules/discipline_atonement.rs"),
     destruction_incinerate: (2671, "modules/destruction_incinerate.rs"),
     destruction_incinerate_targets: (2677, "modules/destruction_incinerate_targets.rs"),
     destruction_infernal: (2674, "modules/destruction_infernal.rs"),

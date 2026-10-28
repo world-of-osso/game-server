@@ -8,6 +8,7 @@ mod census_e77_dk_tests;
 mod census_e77_priest_tests;
 mod creature_trigger_aura_tests;
 mod creature_trigger_dead_caster_tests;
+mod discipline_atonement_tests;
 mod dummy5_tests;
 mod dummy7_tests;
 mod dummy8_defense_tests;
