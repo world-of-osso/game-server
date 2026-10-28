@@ -38,7 +38,7 @@ const fn order_modules<const N: usize>(
 }
 
 pub use devourer_metamorphosis::devourer_base_drain_ps;
-#[cfg(any(test, feature = "test-support"))]
+#[cfg(feature = "test-support")]
 pub use unholy_permanent_claws::{ghoul_energy, set_ghoul_energy};
 
 register_modules! {
