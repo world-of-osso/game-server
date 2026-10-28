@@ -3,6 +3,55 @@ use super::*;
 
 #[test]
 #[ignore = "requires spec103 profile/traits and native private DB"]
+fn feral_clearcasting_real_stacks_fund_one_swipe_each() {
+    let _seed = crate::random::seed_scope(103135700);
+    let mut run = prepare_measurement(103, 1).unwrap();
+    let actor = run.actor;
+    let target = run.targets[0];
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        actor,
+        literal_rotation::execution::Execution::AutoAttack(target),
+    )
+    .unwrap();
+    let stacks = |run: &Run| {
+        run.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(actor)
+            .and_then(|auras| {
+                auras
+                    .iter()
+                    .find(|aura| aura.spell_id == 135700 && aura.caster == actor)
+            })
+            .map_or(0, |aura| aura.stacks)
+    };
+    for _ in 0..12000 {
+        run.app.update();
+        if stacks(&run) == 2 {
+            break;
+        }
+    }
+    assert_eq!(
+        stacks(&run),
+        2,
+        "real Cat swings must earn both selected Moment of Clarity uses"
+    );
+    run.app
+        .world_mut()
+        .entity_mut(actor)
+        .remove::<crate::combat::AutoAttack>();
+    feral_growth_tests::cast_native_spell_after_regeneration(&mut run, 106785);
+    assert_eq!(
+        stacks(&run),
+        1,
+        "one actual Swipe spends one Clearcasting stack"
+    );
+    feral_growth_tests::cast_native_spell_after_regeneration(&mut run, 106785);
+    assert_eq!(stacks(&run), 0, "a second Swipe spends the remaining stack");
+}
+
+#[test]
+#[ignore = "requires spec103 profile/traits and native private DB"]
 fn feral_omen_rolls_per_real_cat_swing_instead_of_every_swing() {
     use shared::protocol::CombatLogKind;
     let _seed = crate::random::seed_scope(70448);
