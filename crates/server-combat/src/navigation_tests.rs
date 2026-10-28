@@ -167,12 +167,18 @@ fn ready_step(nav: &mut Navigation, entity: Entity, request: MoveRequest) -> Ste
 
 #[test]
 #[ignore = "requires canonical2519 assets and FOLLOWER_NAV_CANONICAL"]
-fn navigation_gorek_partial_corridors_walk_and_repath_to_target() {
-    assert_canonical_route_arrives(
-        2519,
-        Vec3::new(70.6448, 72.6027, 779.064),
-        Vec3::new(-264.45807, 125.19722, 503.5),
-    );
+fn navigation_neltharus_entrance_walks_to_all_four_bosses() {
+    let entrance = Vec3::new(70.6448, 72.6027, 779.064);
+    // Source placements from neltharus-packet-3, converted to engine coordinates.
+    for (entry, target) in [
+        (181861, Vec3::new(-211.1, 99.34897, 932.7)),
+        (189340, Vec3::new(-232.125, 56.94021, 674.9625)),
+        (189478, Vec3::new(-264.45807, 125.19722, 503.5)),
+        (189901, Vec3::new(-380.025, 63.997375, 772.8375)),
+    ] {
+        eprintln!("Neltharus source placement entry={entry}");
+        assert_canonical_route_arrives(2519, entrance, target);
+    }
 }
 
 #[test]
