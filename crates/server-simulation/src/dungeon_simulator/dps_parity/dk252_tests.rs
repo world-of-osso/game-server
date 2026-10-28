@@ -162,6 +162,69 @@ fn dk252_festering_strike_earns_ghouls_and_next_native_scythe() {
 }
 
 #[test]
+#[ignore = "requires native252 profile/traits and player actor"]
+fn dk252_festering_scythe_double_hastes_its_actual_gcd() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 1).unwrap();
+    engage(&mut run);
+    let strike = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(85948)
+        .unwrap()
+        .clone();
+    let scythe = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(458128)
+        .unwrap()
+        .clone();
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(85948, run.targets[0], Some(run.targets[0])),
+    )
+    .unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, 458123));
+    let haste = 1.0
+        + run
+            .app
+            .world()
+            .get::<crate::stats::CharacterStats>(run.actor)
+            .unwrap()
+            .haste_pct
+            / 100.0;
+    assert!(haste > 1.0);
+    let regular =
+        crate::spell_cast::native_apl::gcd_value(run.app.world(), run.actor, &strike, "gcd")
+            .unwrap();
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(85948, run.targets[0], Some(run.targets[0])),
+    )
+    .unwrap();
+    let remaining = crate::spell_cast::native_apl::gcd_value(
+        run.app.world(),
+        run.actor,
+        &scythe,
+        "gcd.remains",
+    )
+    .unwrap();
+    // The selected talent reduces Strike's GCD, not Scythe's native GCD.
+    let base = scythe.cooldowns.as_ref().unwrap().start_recovery_ms as f32;
+    let once = ((base / haste) as u32).clamp(750, 1500);
+    let expected = f64::from((once as f32 / haste) as u32) / 1000.0;
+    assert!(
+        (remaining - expected).abs() < 0.003,
+        "actual replacement GCD {remaining} must match double haste {expected}; normal {regular}"
+    );
+}
+
+#[test]
 #[ignore = "requires private native252 Rider templates/profile and player actor"]
 fn dk252_army_summons_all_four_real_riders() {
     let _seed = crate::random::seed_scope(70448);
