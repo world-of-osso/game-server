@@ -57,6 +57,9 @@ const BURN_TO_ASH: u32 = 446663;
 const SUN_SEAR_TALENT: u32 = 431413;
 const AVATAR_TALENT: u32 = 431425;
 
+#[derive(Component)]
+struct WakePrimary(Entity);
+
 fn is_ret(world: &World, caster: Entity) -> bool {
     world
         .get::<ActiveSpec>(caster)
@@ -81,6 +84,10 @@ fn before_cast(world: &mut World, caster: Entity, spell: &SpellInfo, depth: u8) 
     let Some(target) = spell.cast_primary_target else {
         return;
     };
+    if spell.id == 255937 && selected(world, caster, 405355) {
+        // Native self-targeted delayed flames retain the Wake cast's enemy target.
+        world.entity_mut(caster).insert(WakePrimary(target));
+    }
     if spell.id == BLADE {
         schedule_light_within(world, caster, spell, target, depth);
         consume_art_of_war(world, caster, spell);
@@ -341,6 +348,20 @@ fn damage_multiplier(world: &World, ctx: &EffectCtx, target: Entity, periodic: b
     let mut multiplier = mastery_multiplier(world, ctx, periodic);
     if ctx.spell.id == LIGHT_WITHIN && ctx.spell.cast_primary_target == Some(target) {
         multiplier *= 1.0 + script_effect_value(world, ctx.caster, LIGHT_WITHIN_TALENT, 0) / 100.0;
+    }
+    // SimC76f8118 sc_paladin_retribution.cpp764–771,815–819: selected
+    // Seething Flames reduces secondary Wake and flame impacts to 60%.
+    if matches!(ctx.spell.id, 255937 | 405345 | 405350)
+        && selected(world, ctx.caster, 405355)
+    {
+        let primary = if ctx.spell.id == 255937 {
+            ctx.spell.cast_primary_target.expect("Wake requires an enemy target")
+        } else {
+            world.get::<WakePrimary>(ctx.caster).expect("Seething Flames requires its Wake target").0
+        };
+        if primary != target {
+            multiplier *= 0.6;
+        }
     }
     multiplier
 }
