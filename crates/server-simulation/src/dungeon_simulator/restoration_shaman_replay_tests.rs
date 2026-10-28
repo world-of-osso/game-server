@@ -18,6 +18,71 @@ fn zero_capacity_charge_category_keeps_native_spell_cooldown() {
 }
 
 #[test]
+#[ignore = "requires native MID2 tank, Shaman and canonical world DB"]
+fn restoration_shaman_healing_stream_summon_applies_native_pulse() {
+    let mut run = super::super::dps_parity::prepare_registered_player(66, 1).unwrap();
+    let healer = super::super::dps_parity::spawn_second_reference_player(&mut run, 264).unwrap();
+    let tank = run.actor;
+    let party = crate::followers::simulator::spawn_party_for_reference_healer(
+        run.app.world_mut(),
+        tank,
+        healer,
+    )
+    .unwrap();
+    let mut health = run
+        .app
+        .world_mut()
+        .get_mut::<shared::components::Health>(tank)
+        .unwrap();
+    health.current = health.max * 0.5;
+    drop(health);
+    super::super::dps_parity::literal_rotation::execution::execute(
+        run.app.world_mut(),
+        healer,
+        super::super::dps_parity::literal_rotation::execution::Execution::Spell(
+            5394,
+            healer,
+            Some(tank),
+        ),
+    )
+    .unwrap();
+    for _ in 0..50 {
+        run.app.update();
+    }
+    let world = run.app.world_mut();
+    let actors: Vec<_> = world
+        .query::<(
+            bevy::prelude::Entity,
+            &shared::components::Npc,
+            &crate::spell_cast::summon::SummonedCreature,
+        )>()
+        .iter(world)
+        .filter(|(_, npc, summon)| npc.template_id == 3527 && summon.owner == healer)
+        .map(|(entity, _, _)| entity)
+        .collect();
+    assert!(
+        !actors.is_empty(),
+        "actual Healing Stream summon must exist"
+    );
+    assert!(
+        actors
+            .iter()
+            .any(|actor| crate::auras::has_aura(world, *actor, 5672)),
+        "totem must apply its native periodic aura: {actors:?}"
+    );
+    let events = &world
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    assert!(
+        events.iter().any(|event| event.spell_id == Some(52042)
+            && event.amount > 0
+            && event.target == Some(tank.to_bits())),
+        "native pulse must heal the injured tank"
+    );
+    let _ = party;
+}
+
+#[test]
 #[ignore = "replays the MID2 Restoration Shaman against the SimC dummy trace"]
 fn restoration_shaman_heals_the_simc_dummy_party() {
     let trace = std::env::var("HEALER_TANK_SIMC_TRACE").expect("HEALER_TANK_SIMC_TRACE required");
