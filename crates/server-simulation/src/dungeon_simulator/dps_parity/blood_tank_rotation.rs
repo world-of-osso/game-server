@@ -310,7 +310,7 @@ mod tests {
             .expect("Insatiable Blade grants Bone Shield");
         assert_eq!(bone.stacks, 5);
         let target = run.targets[0];
-        for _ in 0..30 {
+        for _ in 0..130 {
             run.app.update();
         }
         crate::spell_cast::creature_cast(run.app.world_mut(), actor, 195292, Some(target), false)
