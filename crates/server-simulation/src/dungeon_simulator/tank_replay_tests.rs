@@ -311,6 +311,60 @@ fn simc_dummy_bleed_application_is_a_zero_damage_physical_hit() {
 
 #[test]
 #[ignore = "requires canonical Brewmaster profile and world database"]
+fn critical_blackout_kick_grants_elusive_footwork_stack() {
+    use crate::auras::{self, ActiveAuras, RemoveReason};
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::dps_parity::prepare_registered_player(268, 1).unwrap();
+    super::dps_parity::engage(&mut run);
+    let tank = run.actor;
+    let target = run.targets[0];
+    assert!(
+        run.app
+            .world()
+            .get::<crate::class_progression::TraitLoadout>(tank)
+            .unwrap()
+            .active_talent_spells()
+            .any(|talent| talent.spell_id == 387046)
+    );
+    auras::remove_auras(run.app.world_mut(), tank, RemoveReason::Cancelled, |aura| {
+        aura.spell_id == 195630
+    });
+    run.app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(tank)
+        .unwrap()
+        .crit_pct = 100.0;
+    crate::spell_cast::creature_cast(run.app.world_mut(), tank, 205523, Some(target), false)
+        .unwrap();
+    for _ in 0..40 {
+        run.app.update();
+    }
+    assert!(
+        run.app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|event| event.spell_id == Some(205523)
+                && event.crit
+                && event.target == Some(target.to_bits()))
+    );
+    let stacks = run
+        .app
+        .world()
+        .get::<ActiveAuras>(tank)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 195630)
+        .map_or(0, |aura| aura.stacks);
+    assert_eq!(
+        stacks, 2,
+        "one base mastery stack and one selected Elusive Footwork stack"
+    );
+}
+
+#[test]
+#[ignore = "requires canonical Brewmaster profile and world database"]
 fn elusive_brawler_only_procs_from_blackout_and_incoming_physical_hits() {
     use crate::auras::{self, RemoveReason};
     let _seed = crate::random::seed_scope(70448);

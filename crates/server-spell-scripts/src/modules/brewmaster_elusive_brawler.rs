@@ -13,11 +13,13 @@ use combat::spell_cast::{
 
 const ELUSIVE_BRAWLER: u32 = 195630;
 const ONE_WITH_THE_WIND: u32 = 454484;
+const ELUSIVE_FOOTWORK: u32 = 387046;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::EarlyAuraRegistration(register),
     SpellScriptHook::AvoidanceProcHitMask(avoidance_mask),
     SpellScriptHook::ResolvedDamage(physical_zero_hit),
+    SpellScriptHook::ResolvedDamage(critical_blackout_kick),
     SpellScriptHook::LandedDamagePolicy(physical_bleed_tick),
 ];
 
@@ -35,6 +37,31 @@ fn physical_zero_hit(world: &mut World, ctx: &EffectCtx<'_>, target: Entity, _: 
 }
 
 // The recorded physical spell_dot ticks are ID-zero; Stagger is a self-hit.
+// SimC76f8118 sc_monk.cpp1430–1439 adds Elusive Footwork stacks on a critical impact.
+fn critical_blackout_kick(
+    world: &mut World,
+    ctx: &EffectCtx<'_>,
+    target: Entity,
+    critical: bool,
+    _: f32,
+) {
+    if ctx.spell.id != 205523
+        || !critical
+        || target == ctx.caster
+        || !world.get::<TraitLoadout>(ctx.caster).is_some_and(|traits| {
+            traits
+                .active_talent_spells()
+                .any(|talent| talent.spell_id == ELUSIVE_FOOTWORK)
+        })
+    {
+        return;
+    }
+    let extra = script_effect_value(world, ctx.caster, ELUSIVE_FOOTWORK, 1).max(0.0) as u32;
+    for _ in 0..extra {
+        grant_elusive_brawler(world, ctx.caster);
+    }
+}
+
 fn physical_bleed_tick(
     world: &mut World,
     source: Entity,
