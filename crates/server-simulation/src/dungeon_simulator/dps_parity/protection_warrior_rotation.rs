@@ -550,6 +550,66 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "requires canonical MID2 Protection profile"]
+    fn thunderlord_reduces_demoralizing_shout_per_hit_with_cap() {
+        use super::super::literal_rotation::execution::{Execution, execute};
+        for (targets, selected, expected_ms) in [(1, true, 1500), (4, true, 4500), (1, false, 0)] {
+            let mut run = super::super::prepare_measurement(73, targets).unwrap();
+            super::super::engage(&mut run);
+            let actor = run.actor;
+            let target = run.targets[0];
+            if !selected {
+                crate::auras::remove_auras(
+                    run.app.world_mut(),
+                    actor,
+                    crate::auras::RemoveReason::Consumed,
+                    |aura| aura.spell_id == 385840,
+                );
+            }
+            execute(
+                run.app.world_mut(),
+                actor,
+                Execution::Spell(1160, actor, Some(actor)),
+            )
+            .unwrap();
+            for _ in 0..30 {
+                run.app.update();
+            }
+            let shout = run
+                .app
+                .world()
+                .resource::<server::spell_info::SpellStore>()
+                .get(1160)
+                .unwrap()
+                .clone();
+            let now = crate::spell_cast::history_now(run.app.world());
+            let before = run
+                .app
+                .world()
+                .get::<crate::spell_cast::SpellHistory>(actor)
+                .unwrap()
+                .remaining_cooldown_ms(&shout, now);
+            execute(
+                run.app.world_mut(),
+                actor,
+                Execution::Spell(6343, target, Some(target)),
+            )
+            .unwrap();
+            let after = run
+                .app
+                .world()
+                .get::<crate::spell_cast::SpellHistory>(actor)
+                .unwrap()
+                .remaining_cooldown_ms(&shout, now);
+            assert_eq!(
+                before - after,
+                expected_ms,
+                "targets={targets} selected={selected}"
+            );
+        }
+    }
+
+    #[test]
     fn frothing_berserker_refunds_only_paid_revenge() {
         use crate::spell_cast::test_harness::harness_with_native_enemy_dodge_reduction;
         use shared::components::{ActiveSpec, PowerType};
