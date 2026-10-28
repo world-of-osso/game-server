@@ -343,6 +343,25 @@ mod tests {
         );
     }
     #[test]
+    #[ignore = "requires canonical world database and SimC tank trace"]
+    fn tank_replay_enters_fixed_time_execute_phase() {
+        let trace = std::env::var("HEALER_TANK_SIMC_TRACE").expect("SimC trace required");
+        let report = super::super::super::tank_replay::replay_simc_with_healing(
+            73,
+            std::path::Path::new(&trace),
+            300,
+            70448,
+            true,
+        )
+        .expect("Protection Warrior replay");
+        let executes = report["tank_casts"]["163201"].as_u64().unwrap_or(0);
+        assert!(
+            executes >= 15,
+            "fixed-time execute phase must produce paid executes: {executes}"
+        );
+        println!("HEALER_TANK_REPORT={report}");
+    }
+    #[test]
     fn protection_devastator_autoattacks_reset_running_shield_slam() {
         for chance in [0.0, 100.0] {
             let seed = crate::spell_cast::test_harness::harness_with_native_enemy_dodge_reduction(
