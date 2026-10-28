@@ -3,7 +3,7 @@ use super::combat;
 use bevy::prelude::*;
 use combat::soul_fragments::{self, FragmentFilter};
 use combat::spell_cast::{self, script_registry::SpellScriptHook};
-use combat::spell_info::{SpellInfo, SpellStore};
+use combat::spell_info::SpellInfo;
 
 struct PendingBomb {
     at: f64,
@@ -22,19 +22,8 @@ fn launch(world: &mut World, caster: Entity, spell: &SpellInfo) {
     if spell.id != 247454 {
         return;
     }
-    let source = world
-        .resource::<SpellStore>()
-        .get(247454)
-        .expect("native Spirit Bomb");
-    let effect = |index| {
-        source
-            .effects
-            .iter()
-            .find(|effect| effect.index == index)
-            .expect("native Spirit Bomb effect")
-            .base_points
-    };
-    let (percent, maximum) = (effect(0), effect(1));
+    let percent = spell_cast::scripts::script_effect_value(world, caster, 247454, 0);
+    let maximum = spell_cast::scripts::script_effect_value(world, caster, 247454, 1);
     assert!(
         maximum >= 0.0 && maximum.fract() == 0.0,
         "invalid Spirit Bomb fragment cap"

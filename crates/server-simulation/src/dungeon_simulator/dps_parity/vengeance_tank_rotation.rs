@@ -518,6 +518,76 @@ mod tests {
     }
     #[test]
     #[ignore = "requires native Vengeance profile"]
+    fn untethered_rage_modifies_earned_fragment_spenders() {
+        use super::super::*;
+        use server::soul_fragments::{self, FragmentFilter};
+        fn spend(spell: u32, selected: bool) -> (u64, f64) {
+            let _seed = crate::random::seed_scope(70_448);
+            let (profile, mut traits) = read_reference(581).unwrap();
+            if !selected {
+                traits.retain(|trait_| trait_.entry_id != 137042);
+            }
+            let identity = inputs::read_actor(&profile).unwrap();
+            let mut run = prepare_reference(profile, &traits, 1, identity).unwrap();
+            let actor = run.actor;
+            let target = run.targets[0];
+            engage(&mut run);
+            for _ in 0..3 {
+                crate::spell_cast::cast_for_player_with_target(
+                    run.app.world_mut(),
+                    actor,
+                    263642,
+                    Some(target),
+                )
+                .unwrap();
+                for _ in 0..55 {
+                    run.app.update();
+                }
+            }
+            assert_eq!(
+                soul_fragments::active_count(run.app.world(), actor, FragmentFilter::Any),
+                6
+            );
+            let before = soul_fragments::observation_counts(run.app.world(), actor).1;
+            crate::spell_cast::cast_for_player_with_target(
+                run.app.world_mut(),
+                actor,
+                spell,
+                Some(target),
+            )
+            .unwrap();
+            let consumed = soul_fragments::observation_counts(run.app.world(), actor).1 - before;
+            for _ in 0..30 {
+                run.app.update();
+            }
+            let child = if spell == 247454 { 247455 } else { 228478 };
+            let event = run
+                .app
+                .world()
+                .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+                .0
+                .iter()
+                .find(|event| {
+                    event.spell_id == Some(child)
+                        && event.target == Some(target.to_bits())
+                        && event.kind == shared::protocol::CombatLogKind::Damage
+                })
+                .unwrap();
+            let amount = f64::from(event.amount) / if event.crit { 2.0 } else { 1.0 };
+            (consumed, amount)
+        }
+        let (base_count, base_damage) = spend(247454, false);
+        let (selected_count, selected_damage) = spend(247454, true);
+        assert_eq!((base_count, selected_count), (5, 6));
+        assert!(
+            (selected_damage / base_damage - 1.4).abs() < 0.05,
+            "Spirit Bomb: {base_damage}/{selected_damage}"
+        );
+        assert_eq!((spend(228477, false).0, spend(228477, true).0), (2, 3));
+    }
+
+    #[test]
+    #[ignore = "requires native Vengeance profile"]
     fn spirit_bomb_consumes_earned_fragments_and_deals_delayed_damage() {
         use super::super::*;
         use server::soul_fragments::{self, FragmentFilter};
