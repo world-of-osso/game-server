@@ -342,6 +342,14 @@ fn damage_multiplier(world: &World, ctx: &EffectCtx, target: Entity, periodic: b
     if ctx.spell.id == LIGHT_WITHIN && ctx.spell.cast_primary_target == Some(target) {
         multiplier *= 1.0 + script_effect_value(world, ctx.caster, LIGHT_WITHIN_TALENT, 0) / 100.0;
     }
+    // SimC76f8118 sc_paladin_retribution.cpp764–771,815–819: selected
+    // Seething Flames reduces secondary Wake and flame impacts to 60%.
+    if matches!(ctx.spell.id, 255937 | 405345 | 405350)
+        && selected(world, ctx.caster, 405355)
+        && ctx.spell.cast_primary_target.is_some_and(|primary| primary != target)
+    {
+        multiplier *= 0.6;
+    }
     multiplier
 }
 

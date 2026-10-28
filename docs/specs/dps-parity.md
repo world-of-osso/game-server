@@ -68,7 +68,7 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 ### Retribution literal fixture
 
-Spec70 uses its pinned literal APL for native Player and Follower identities. Preserve the native actor identity, ordered precombat and existing report contract.
+Spec70 uses its pinned literal APL for native Player and Follower identities. Preserve the native actor identity, ordered precombat and existing report contract. With selected Seething Flames405355, Wake255937 and its two flame impacts405345/405350 deal 60% damage to secondary targets (SimC76f8118 `sc_paladin_retribution.cpp764–771,815–819`).
 
 ### Feral literal fixture
 
