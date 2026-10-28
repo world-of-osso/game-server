@@ -206,9 +206,22 @@ pub fn purify(world: &mut World, target: Entity) -> f32 {
         .max;
     let percent = crate::spell_cast::scripts::script_effect_value(world, target, 119582, 0);
     let minimum = crate::spell_cast::scripts::script_effect_value(world, target, 119582, 1);
-    let clear = (pool * percent / 100.0)
-        .max(max_health * minimum / 100.0)
-        .min(pool);
+    let clear = (pool * percent / 100.0).max(max_health * minimum / 100.0);
+    clear_pool(world, target, pool, clear)
+}
+
+/// Clear a fraction of the live pool without changing its tick phase.
+pub fn purify_fraction(world: &mut World, target: Entity, fraction: f32) -> f32 {
+    settle_due_ticks(world, target);
+    let pool = pool_size(world, target);
+    clear_pool(world, target, pool, pool * fraction)
+}
+
+fn clear_pool(world: &mut World, target: Entity, pool: f32, clear: f32) -> f32 {
+    let clear = clear.clamp(0.0, pool);
+    if clear == 0.0 {
+        return 0.0;
+    }
     if clear >= pool {
         super::remove_auras(world, target, super::RemoveReason::Consumed, |aura| {
             aura.spell_id == STAGGER_DAMAGE && aura.caster == target
