@@ -59,7 +59,10 @@ pub(super) fn limit_area(
 }
 
 pub(super) fn cast_child(world: &mut World, ctx: &EffectCtx, target: Entity) {
-    if world.get::<ActiveSpec>(ctx.caster).is_some_and(|spec| spec.0 == 66) {
+    if world
+        .get::<ActiveSpec>(ctx.caster)
+        .is_some_and(|spec| spec.0 == 66)
+    {
         cast_protection_child(world, ctx, target);
         return;
     }
@@ -111,8 +114,21 @@ fn cast_protection_child(world: &mut World, ctx: &EffectCtx, target: Entity) {
         warn!("Divine Toll lacks native Avenger's Shield");
         return;
     };
-    if combat::spell_cast::launch_triggered_spell(world, ctx.caster, &child, Some(target), ctx.depth + 1) {
+    if combat::spell_cast::launch_triggered_spell(
+        world,
+        ctx.caster,
+        &child,
+        Some(target),
+        ctx.depth + 1,
+    ) {
         let amount = combat::spell_cast::scripts::script_effect_value(world, ctx.caster, ROOT, 4);
-        combat::spell_cast::effects::energize_unit(world, ctx, ctx.caster, PowerType::HolyPower, amount, false);
+        combat::spell_cast::effects::energize_unit(
+            world,
+            ctx,
+            ctx.caster,
+            PowerType::HolyPower,
+            amount,
+            false,
+        );
     }
 }
