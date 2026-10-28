@@ -1,23 +1,29 @@
 //! Healer-attributed receipts from a native SimC timeline replay.
 use bevy::prelude::{Entity, World};
 use serde_json::{Value, json};
-use shared::components::Mana;
+use shared::components::{Health, Mana};
 use shared::protocol::CombatLogKind;
 use std::collections::BTreeMap;
 
 pub(super) struct Recorder {
     healer: Entity,
+    tank: Entity,
     members: Vec<Entity>,
     event_cursor: usize,
     spells: BTreeMap<u32, (u64, u64)>,
     mana_curve: Vec<Value>,
     first_death_seconds: Option<f64>,
+    tank_damage: u64,
+    tank_health_curve: Vec<Value>,
+    tank_minimum_pct: f32,
+    tank_below_35_ticks: u32,
 }
 
 impl Recorder {
-    pub(super) fn start(world: &World, healer: Entity, members: Vec<Entity>) -> Self {
+    pub(super) fn start(world: &World, healer: Entity, tank: Entity, members: Vec<Entity>) -> Self {
         let mut recorder = Self {
             healer,
+            tank,
             members,
             event_cursor: world
                 .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
@@ -26,8 +32,13 @@ impl Recorder {
             spells: BTreeMap::new(),
             mana_curve: Vec::new(),
             first_death_seconds: None,
+            tank_damage: 0,
+            tank_health_curve: Vec::new(),
+            tank_minimum_pct: 100.0,
+            tank_below_35_ticks: 0,
         };
         recorder.sample_mana(world, 0.0);
+        recorder.observe_tank_health(world, 0);
         recorder
     }
 
@@ -39,7 +50,26 @@ impl Recorder {
         }
     }
 
+    fn observe_tank_health(&mut self, world: &World, tick: u32) {
+        let Some(health) = world.get::<Health>(self.tank) else {
+            return;
+        };
+        let pct = if health.max > 0.0 {
+            100.0 * health.current.max(0.0) / health.max
+        } else {
+            0.0
+        };
+        self.tank_minimum_pct = self.tank_minimum_pct.min(pct);
+        if tick > 0 && health.current > 0.0 && pct < 35.0 {
+            self.tank_below_35_ticks += 1;
+        }
+        if tick % 20 == 0 {
+            self.tank_health_curve.push(json!({"time_seconds":f64::from(tick) / 20.0,"current":health.current,"max":health.max,"pct":pct}));
+        }
+    }
+
     pub(super) fn observe_frame(&mut self, world: &World, tick: u32) {
+        self.observe_tank_health(world, tick);
         let seconds = f64::from(tick) / 20.0;
         if tick % 20 == 0 {
             self.sample_mana(world, seconds);
@@ -54,6 +84,8 @@ impl Recorder {
             }
             if event.kind == CombatLogKind::Death {
                 self.first_death_seconds.get_or_insert(seconds);
+            } else if event.kind == CombatLogKind::Damage && target == Some(self.tank) {
+                self.tank_damage += (event.amount - event.overflow.max(0)).max(0) as u64;
             } else if event.kind == CombatLogKind::Heal
                 && event.source == Some(self.healer.to_bits())
             {
@@ -78,6 +110,8 @@ impl Recorder {
         let spells: BTreeMap<_, _> = self.spells.iter().map(|(&spell, &(raw, effective))| (spell, json!({"raw":raw,"effective":effective,"raw_hps":raw as f64 / duration,"effective_hps":effective as f64 / duration}))).collect();
         json!({"raw_hps":raw as f64 / duration,"effective_hps":effective as f64 / duration,
             "overheal_pct":(raw > 0).then(|| 100.0 * (raw - effective) as f64 / raw as f64),
-            "spell_healing":spells,"mana_curve":self.mana_curve,"first_death_seconds":self.first_death_seconds})
+            "spell_healing":spells,"mana_curve":self.mana_curve,"first_death_seconds":self.first_death_seconds,
+            "tank_dtps":self.tank_damage as f64 / duration,"tank_health_curve":self.tank_health_curve,
+            "tank_minimum_health_pct":self.tank_minimum_pct,"tank_seconds_below_35_alive":f64::from(self.tank_below_35_ticks) / 20.0})
     }
 }

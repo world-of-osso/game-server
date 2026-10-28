@@ -9,6 +9,10 @@ fn mistweaver_heals_the_simc_dummy_party() {
     let metrics = &report["metrics"];
     let effective = metrics["effective_hps"].as_f64().unwrap();
     let raw = metrics["raw_hps"].as_f64().unwrap();
+    assert!(
+        metrics["overheal_pct"].as_f64().unwrap() < 76.72,
+        "triage must improve on the original 76.73% overheal: {report}"
+    );
     assert!(report["incoming_events"].as_u64().unwrap() > 100);
     assert_eq!(report["tank_spec"], 66);
     assert!(
@@ -39,5 +43,9 @@ fn mistweaver_heals_the_simc_dummy_party() {
         .sum();
     assert!((spell_total - effective).abs() < 0.000001);
     assert_eq!(metrics["mana_curve"].as_array().unwrap().len(), 301);
+    assert_eq!(metrics["tank_health_curve"].as_array().unwrap().len(), 301);
+    assert!(metrics["tank_dtps"].as_f64().unwrap() > 0.0);
+    assert!(metrics["tank_minimum_health_pct"].as_f64().unwrap() < 100.0);
+    assert!(metrics["tank_seconds_below_35_alive"].as_f64().unwrap() >= 0.0);
     println!("MISTWEAVER_REPORT={report}");
 }

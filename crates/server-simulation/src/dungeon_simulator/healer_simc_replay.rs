@@ -86,7 +86,7 @@ fn replay_with_registry(
     crate::combat_refs::set_in_combat_with(run.app.world_mut(), party.tank, source);
     let mut policy = prepare(&mut run, healer)?;
     let mitigation_auras = super::dps_parity::tank_mitigation_auras(&run)?;
-    let mut recorder = Recorder::start(run.app.world(), healer, members.clone());
+    let mut recorder = Recorder::start(run.app.world(), healer, tank, members.clone());
     let mut tank_event_cursor = run
         .app
         .world()

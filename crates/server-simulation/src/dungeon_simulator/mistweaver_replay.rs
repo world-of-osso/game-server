@@ -13,6 +13,7 @@ use crate::simc_apl_native::{Bindings, Encounter, FightStyle, NativeFacts};
 use bevy::prelude::{Entity, World};
 use server::simc_apl::{Action, ActionFacts, Facts, Program};
 use shared::components::{Health, PowerType};
+use std::collections::VecDeque;
 
 const SPELLS: &[(&str, u32, bool)] = &[
     ("mana_tea", 115294, true),
@@ -31,6 +32,8 @@ struct Mistweaver {
     bindings: Bindings,
     equipment: Equipment,
     encounter: Encounter,
+    event_cursor: usize,
+    incoming: VecDeque<(f64, f32)>,
 }
 
 pub(super) fn prepare(
@@ -59,16 +62,16 @@ pub(super) fn prepare(
         ("default", "revival,if=party.injured>=3"),
         ("default", "mana_tea,if=mana.pct<65"),
         ("default", "thunder_focus_tea,if=target.health.pct<75"),
-        (
-            "default",
-            "renewing_mist,if=target.health.pct<95&target.renewing_mist_up=0",
-        ),
+        ("default", "renewing_mist,if=target.renewing_mist_up=0"),
         (
             "default",
             "enveloping_mist,if=target.health.pct<65&target.enveloping_mist_up=0",
         ),
-        ("default", "sheiluns_gift,if=target.health.pct<45"),
-        ("default", "vivify,if=target.health.pct<90"),
+        (
+            "default",
+            "sheiluns_gift,if=target.health.pct<45&party.heal_worthwhile",
+        ),
+        ("default", "vivify,if=party.heal_worthwhile"),
         ("damage", "rising_sun_kick"),
     ])?;
     Ok(Box::new(Mistweaver {
@@ -76,6 +79,13 @@ pub(super) fn prepare(
         bindings,
         equipment,
         encounter,
+        event_cursor: run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .len(),
+        incoming: VecDeque::new(),
     }))
 }
 
@@ -84,6 +94,7 @@ struct PartyFacts<'a> {
     injured: usize,
     renewing_up: bool,
     enveloping_up: bool,
+    worthwhile: bool,
 }
 
 impl Facts for PartyFacts<'_> {
@@ -92,6 +103,7 @@ impl Facts for PartyFacts<'_> {
             "party.injured" => Ok(self.injured as f64),
             "target.renewing_mist_up" => Ok(f64::from(self.renewing_up)),
             "target.enveloping_mist_up" => Ok(f64::from(self.enveloping_up)),
+            "party.heal_worthwhile" => Ok(f64::from(self.worthwhile)),
             _ => self.native.value(name),
         }
     }
@@ -100,9 +112,10 @@ impl Facts for PartyFacts<'_> {
 impl ActionFacts for PartyFacts<'_> {
     fn value_for(&self, action: &Action, name: &str) -> Result<f64, String> {
         match name {
-            "party.injured" | "target.renewing_mist_up" | "target.enveloping_mist_up" => {
-                self.value(name)
-            }
+            "party.injured"
+            | "target.renewing_mist_up"
+            | "target.enveloping_mist_up"
+            | "party.heal_worthwhile" => self.value(name),
             _ => self.native.value_for(action, name),
         }
     }
@@ -117,6 +130,68 @@ impl ActionFacts for PartyFacts<'_> {
     }
 }
 
+impl Mistweaver {
+    fn sample_incoming(&mut self, world: &World, tank: Entity) -> f32 {
+        let now = crate::spell_cast::now(world);
+        let events = &world
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0;
+        for event in &events[self.event_cursor..] {
+            if event.kind == shared::protocol::CombatLogKind::Damage
+                && event.target == Some(tank.to_bits())
+            {
+                self.incoming.push_back((now, event.amount.max(0) as f32));
+            }
+        }
+        self.event_cursor = events.len();
+        while self
+            .incoming
+            .front()
+            .is_some_and(|(time, _)| *time <= now - 5.0)
+        {
+            self.incoming.pop_front();
+        }
+        self.incoming.iter().map(|(_, amount)| amount).sum::<f32>() / 5.0
+    }
+
+    fn worthwhile_heal(
+        world: &World,
+        healer: Entity,
+        party: &[Entity],
+        incoming_dps: f32,
+    ) -> Result<bool, String> {
+        let Some(spell_id) =
+            super::dps_parity::literal_rotation::execution::resolve_action(world, healer, 116670)?
+        else {
+            return Ok(false);
+        };
+        let spell = world
+            .resource::<crate::spell_info::SpellStore>()
+            .get(spell_id)
+            .ok_or("Mistweaver heal definition absent")?;
+        let effect = spell
+            .effects
+            .iter()
+            .find(|effect| effect.effect == 10)
+            .ok_or("Mistweaver direct heal effect absent")?;
+        let per_target =
+            crate::spell_cast::effects::scaled_amount(world, healer, spell, effect).max(0.0);
+        let (missing, targets) = party
+            .iter()
+            .filter_map(|unit| world.get::<Health>(*unit))
+            .filter(|health| health.current > 0.0)
+            .fold((0.0, 0_u32), |(missing, targets), health| {
+                (
+                    missing + (health.max - health.current).max(0.0),
+                    targets + 1,
+                )
+            });
+        let area = effect.implicit_targets.contains(&31);
+        let expected = per_target * if area { targets as f32 } else { 1.0 };
+        Ok(expected > 0.0 && missing >= expected * 0.75 && missing + incoming_dps >= expected)
+    }
+}
+
 impl Policy for Mistweaver {
     fn drive(&mut self, world: &mut World, healer: Entity, party: &[Entity]) -> Result<(), String> {
         let living: Vec<_> = party
@@ -128,9 +203,30 @@ impl Policy for Mistweaver {
                     .then_some((unit, health.current / health.max))
             })
             .collect();
-        let Some((target, _)) = living.iter().copied().min_by(|a, b| a.1.total_cmp(&b.1)) else {
+        let Some((lowest, lowest_ratio)) =
+            living.iter().copied().min_by(|a, b| a.1.total_cmp(&b.1))
+        else {
             return Ok(());
         };
+        let tank = party
+            .iter()
+            .copied()
+            .find(|&unit| {
+                world
+                    .get::<shared::components::ActiveSpec>(unit)
+                    .is_some_and(|spec| spec.0 == 66)
+            })
+            .ok_or("Mistweaver party tank absent")?;
+        let tank_alive = living.iter().any(|(unit, _)| *unit == tank);
+        let tank_mist = crate::auras::has_aura(world, tank, 119611)
+            || crate::auras::has_aura(world, tank, 115151);
+        let target = if tank_alive && !tank_mist && lowest_ratio >= 0.35 {
+            tank
+        } else {
+            lowest
+        };
+        let incoming_dps = self.sample_incoming(world, tank);
+        let worthwhile = Self::worthwhile_heal(world, healer, party, incoming_dps)?;
         let injured = living.iter().filter(|(_, ratio)| *ratio < 0.90).count();
         let renewing_up = crate::auras::has_aura(world, target, 119611)
             || crate::auras::has_aura(world, target, 115151);
@@ -152,6 +248,7 @@ impl Policy for Mistweaver {
             injured,
             renewing_up,
             enveloping_up,
+            worthwhile,
         };
         if let Some((action, execution)) =
             self.driver
