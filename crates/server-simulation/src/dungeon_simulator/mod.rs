@@ -27,6 +27,7 @@ mod mistweaver_replay;
 mod movement;
 mod preservation_empower_tests;
 mod replay_cli_tests;
+mod restoration_druid_replay;
 mod restoration_shaman_replay;
 mod runtime;
 mod tank_replay;
