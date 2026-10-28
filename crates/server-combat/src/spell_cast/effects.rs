@@ -608,10 +608,15 @@ pub(crate) fn spell_scaling_value(spell: &SpellInfo, effect: &SpellEffect, level
     let row = (level as usize)
         .checked_sub(1)
         .and_then(|index| SPELL_SCALING.get(index));
-    let value = match (row, column) {
+    let mut value = match (row, column) {
         (Some(row), Some(column)) => row[column] * effect.coefficient,
         _ => 0.0,
     };
+    if effect.scaling_class == -7 && row.is_some() {
+        // SimC76f8118 spell_data.cpp315–345 uses the trinket rating multiplier
+        // at the effective character level for player-scaled class -7 effects.
+        value *= crate::character_stats_data::COMBAT_RATING_MULT_BY_ILVL[(level - 1) as usize][2];
+    }
     if value > 0.0 && value < 1.0 {
         1.0
     } else {
