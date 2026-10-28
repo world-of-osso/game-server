@@ -49,8 +49,9 @@ pub(super) fn apply_modeled_absorption(
         .get(REDIRECT)
         .ok_or("Karma redirect missing")?;
     let duration = dot
-        .duration
+        .misc
         .as_ref()
+        .and_then(|misc| misc.duration.as_ref())
         .ok_or("Karma redirect duration missing")?
         .duration_ms;
     let period = dot
