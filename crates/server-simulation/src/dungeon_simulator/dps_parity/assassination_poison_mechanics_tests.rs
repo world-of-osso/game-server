@@ -260,3 +260,32 @@ fn assassination_regicide_uses_earned_kingsbane_stacks_and_decays() {
     }
     panic!("literal rotation must earn and complete Kingsbane");
 }
+
+#[test]
+#[ignore = "requires prepared259 native profile and world data"]
+fn assassination_regicide_triggers_when_kingsbane_target_dies() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_measurement(259, 1).unwrap();
+    engage(&mut run);
+    let started = run.app.world().resource::<Time>().elapsed();
+    install_fixture_lifetimes(&mut run, started);
+    let actor = run.actor;
+    let target = run.targets[0];
+    let stacks = |run: &Run, spell| run.app.world().get::<crate::auras::ActiveAuras>(actor).unwrap().iter()
+        .find(|a| a.spell_id == spell && a.caster == actor).map_or(0, |a| a.stacks);
+    for _ in 0..600 {
+        drive_player(&mut run).unwrap();
+        run.app.update();
+        let ramp = stacks(&run, 394095);
+        if ramp >= 5 {
+            run.app.world_mut().entity_mut(target).remove::<crate::creature_scripts::TrainingDummy>();
+            run.app.world_mut().get_mut::<shared::components::Health>(target).unwrap().current = 1.0;
+            assert!(crate::spell_cast::try_cast_triggered(run.app.world_mut(), actor, 113780, Some(target), 1));
+            for _ in 0..20 { run.app.update(); }
+            assert_eq!(stacks(&run, 394095), 0, "death must end the earned ramp immediately");
+            assert_eq!(stacks(&run, 1250331), ramp / 5, "target death grants the earned reward");
+            return;
+        }
+    }
+    panic!("actual Kingsbane must earn five poison stacks");
+}
