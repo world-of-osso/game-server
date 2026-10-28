@@ -3,6 +3,50 @@ use super::*;
 use crate::spell_cast::effects::factor_capture::FactorCapture;
 use std::time::Duration;
 
+#[test]
+#[ignore = "native263 reference inputs and private world database"]
+fn enhancement_enhanced_imbues_applies_only_its_selected_native_effect() {
+    fn flametongue(selected: bool) -> f64 {
+        let _seed = crate::random::seed_scope(70448);
+        let mut run = prepare_literal(263, 1).unwrap();
+        engage(&mut run);
+        let actor = run.actor;
+        let target = run.targets[0];
+        assert!(crate::auras::has_aura(run.app.world(), actor, 462796));
+        if !selected {
+            crate::auras::remove_auras(
+                run.app.world_mut(),
+                actor,
+                crate::auras::RemoveReason::Cancelled,
+                |aura| aura.spell_id == 462796,
+            );
+        }
+        run.app
+            .insert_resource(FactorCapture::new(actor, target, 10444, "flametongue", 1));
+        let _damage_seed = crate::random::seed_scope(818181);
+        crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 10444, Some(target), 1);
+        for _ in 0..40 {
+            let capture = run.app.world().resource::<FactorCapture>().export();
+            if let Some(event) = capture["events"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|event| event["event"] == "result" && event["spell_id"] == 10444)
+            {
+                return event["factors"]["raw_amount"].as_f64().unwrap();
+            }
+            run.app.update();
+        }
+        panic!("real Flametongue impact must land");
+    }
+    let selected = flametongue(true);
+    let plain = flametongue(false);
+    assert!(
+        (selected / plain - 1.15).abs() < 0.001,
+        "Enhanced Imbues effect2 only: {selected}/{plain}"
+    );
+}
+
 const ELEMENTAL_WEAPONS: u32 = 384355;
 const BOLT: u32 = 188196;
 const IMBUES: &[(u32, u32)] = &[(33757, 319773), (318038, 319778)];
