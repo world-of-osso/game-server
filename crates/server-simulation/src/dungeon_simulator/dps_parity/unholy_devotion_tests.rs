@@ -9,6 +9,11 @@ fn observe_devotion(arrivals: usize) -> (f64, usize) {
     let mut run = prepare_measurement(252, 1).unwrap();
     engage(&mut run);
     let owner = run.actor;
+    crate::combat::start_attack_now(
+        run.app.world_mut(),
+        owner,
+        crate::combat::AutoAttack::new(run.targets[0]),
+    );
     let pet = crate::hunter_pet::summoned_pet(run.app.world(), owner).unwrap();
     for _ in 0..arrivals {
         assert!(crate::spell_cast::try_cast_triggered(
