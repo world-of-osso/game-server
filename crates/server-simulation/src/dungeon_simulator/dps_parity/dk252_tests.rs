@@ -940,9 +940,15 @@ fn dk252_grave_mastery_increases_actual_magus_critical_damage() {
     let hit = |run: &mut Run| {
         run.app.world_mut().resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>().0.clear();
         assert!(crate::spell_cast::try_cast_triggered(run.app.world_mut(), magus, 1297055, Some(target), 1));
-        run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0.iter()
-            .find(|event| event.source == Some(magus.to_bits()) && event.spell_id == Some(1297055)
-                && event.kind == CombatLogKind::Damage && event.crit).expect("actual Magus bolt must crit").amount
+        for _ in 0..40 {
+            run.app.update();
+            if let Some(amount) = run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0.iter()
+                .find(|event| event.source == Some(magus.to_bits()) && event.spell_id == Some(1297055)
+                    && event.kind == CombatLogKind::Damage && event.crit).map(|event| event.amount) {
+                return amount;
+            }
+        }
+        panic!("actual Magus bolt must land and crit");
     };
     let without = hit(&mut run);
     assert!(crate::spell_cast::try_cast_triggered(run.app.world_mut(), magus, 1238902, Some(magus), 1));
