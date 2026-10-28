@@ -3,6 +3,21 @@ use super::*;
 use crate::spell_cast::effects::factor_capture::FactorCapture;
 use crate::spell_cast::summon::SummonedCreature;
 
+fn lord_actor(run: &Run) -> Entity {
+    let capture = run.app.world().resource::<FactorCapture>().export();
+    let actor: u64 = capture["events"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|x| x["event"] == "direct_amount")
+        .unwrap()["actor"]
+        .as_str()
+        .unwrap()
+        .parse()
+        .unwrap();
+    Entity::from_bits(actor)
+}
+
 #[test]
 #[ignore = "local native252 Magus factor diagnostic"]
 fn unholy_magus_actual_opener_factors_diagnostic() {
@@ -42,6 +57,25 @@ fn unholy_magus_actual_opener_factors_diagnostic() {
                 .iter()
                 .find(|row| row["event"] == "direct_amount")
             {
+                println!(
+                    "lord owner commander {:?}, lord aura {:?}",
+                    run.app
+                        .world()
+                        .get::<crate::auras::ActiveAuras>(run.actor)
+                        .map(|a| a
+                            .iter()
+                            .filter(|x| x.spell_id == 390260 || x.spell_id == 390259)
+                            .map(|x| (x.spell_id, x.caster.to_bits()))
+                            .collect::<Vec<_>>()),
+                    run.app
+                        .world()
+                        .get::<crate::auras::ActiveAuras>(lord_actor(&run))
+                        .map(|a| a
+                            .iter()
+                            .filter(|x| x.spell_id == 390264)
+                            .map(|x| (x.spell_id, x.caster.to_bits()))
+                            .collect::<Vec<_>>())
+                );
                 println!(
                     "opener lord elapsed={} hit={hit}",
                     run.app.world().resource::<Time>().elapsed_secs_f64() - started.as_secs_f64()
