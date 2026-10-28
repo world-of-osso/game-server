@@ -14,6 +14,11 @@ pub fn install_open_arena(world: &mut World) {
     world.insert_resource(crate::ground::GroundMap::flat_arena(0.0));
 }
 
+/// A SimC comparison trace declares its target bleeding without an actual bleed spell.
+#[cfg(any(test, feature = "test-support"))]
+#[derive(Component)]
+pub struct FixtureBleeding;
+
 /// The pinned APL is executing actions before the simulated encounter starts.
 #[derive(Component)]
 pub struct FixturePrecombat;

@@ -44,6 +44,7 @@ pub(crate) fn read_raid_buffs(path: &Path, player: &str) -> Result<Vec<RaidBuff>
 fn parse_raid_buffs(trace: &str, player: &str) -> Result<Vec<RaidBuff>, String> {
     const NAMES: &[&str] = &[
         "mark_of_the_wild",
+        "arcane_intellect",
         "power_word_fortitude",
         "battle_shout",
         "skyfury",
@@ -101,6 +102,7 @@ fn parse_dummy_debuffs(trace: &str, dummy: &str) -> Result<Vec<RaidBuff>, String
         ("chaos_brand", 1490),
         ("mystic_touch", 113746),
         ("hunters_mark", 259556),
+        ("mortal_wounds", 115804),
     ] {
         if !trace
             .lines()
@@ -124,6 +126,32 @@ fn parse_dummy_debuffs(trace: &str, dummy: &str) -> Result<Vec<RaidBuff>, String
         });
     }
     Ok(debuffs)
+}
+
+pub(crate) fn read_dummy_bleeding(path: &Path, dummy: &str) -> Result<bool, String> {
+    let trace = std::fs::read_to_string(path)
+        .map_err(|error| format!("read {}: {error}", path.display()))?;
+    parse_dummy_bleeding(&trace, dummy)
+}
+
+fn parse_dummy_bleeding(trace: &str, dummy: &str) -> Result<bool, String> {
+    if !trace
+        .lines()
+        .any(|line| line.trim() == "override.bleeding=1")
+    {
+        return Ok(false);
+    }
+    let event = format!("0.000 Enemy '{dummy}' gains Buff 'bleeding' (0)");
+    let count = trace
+        .lines()
+        .filter(|line| line.starts_with(&event))
+        .count();
+    if count != 1 {
+        return Err(format!(
+            "expected one initial SimC dummy bleeding event, found {count}"
+        ));
+    }
+    Ok(true)
 }
 
 pub(crate) fn read_bloodlust_time(path: &Path, player: &str) -> Result<Option<u64>, String> {
@@ -326,6 +354,28 @@ fn reads_only_enabled_dummy_debuffs() {
     );
     assert!(parse_dummy_debuffs("override.chaos_brand=1", "dummy").is_err());
     assert!(parse_dummy_debuffs(trace, "other").is_err());
+}
+
+#[test]
+fn reads_trace_declared_intellect_mortal_wounds_and_bleeding() {
+    let trace = "override.arcane_intellect=1\noverride.mortal_wounds=1\noverride.bleeding=1\n0.000 Raid gains Buff 'arcane_intellect' (1459)\n0.000 Enemy 'dummy' gains Buff 'mortal_wounds' (115804)\n0.000 Enemy 'dummy' gains Buff 'bleeding' (0)";
+    assert_eq!(
+        parse_raid_buffs(trace, "tank").unwrap(),
+        vec![RaidBuff {
+            name: "arcane_intellect".into(),
+            spell_id: 1459
+        }]
+    );
+    assert_eq!(
+        parse_dummy_debuffs(trace, "dummy").unwrap(),
+        vec![RaidBuff {
+            name: "mortal_wounds".into(),
+            spell_id: 115804
+        }]
+    );
+    assert!(parse_dummy_bleeding(trace, "dummy").unwrap());
+    assert!(!parse_dummy_bleeding("override.bleeding=0", "dummy").unwrap());
+    assert!(parse_dummy_bleeding(trace, "other").is_err());
 }
 
 #[test]
