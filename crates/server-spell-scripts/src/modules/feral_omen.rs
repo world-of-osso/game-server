@@ -19,6 +19,9 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
 
 fn register(scripts: &mut AuraScripts) {
     scripts.0.entry(OMEN).or_default().check_proc = Some(non_feral_only);
+    // Feral Clearcasting is consumed by its admitted cost modifier, not by
+    // the independent broad native aura proc mask.
+    scripts.0.entry(CLEARCASTING).or_default().check_proc = Some(non_feral_only);
 }
 
 fn non_feral_only(world: &World, aura: &AuraInstance, _: &AuraEvent) -> bool {
