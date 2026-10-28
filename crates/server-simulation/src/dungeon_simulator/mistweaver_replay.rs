@@ -22,6 +22,7 @@ const SPELLS: &[(&str, u32, bool)] = &[
     ("thunder_focus_tea", 116680, true),
     ("renewing_mist", 115151, false),
     ("enveloping_mist", 124682, false),
+    ("soothing_mist", 115175, false),
     ("sheiluns_gift", 205406, false),
     ("vivify", 116670, false),
     ("rising_sun_kick", 107428, false),
@@ -73,6 +74,7 @@ pub(super) fn prepare(
             "sheiluns_gift,if=target.health.pct<45&party.heal_worthwhile",
         ),
         ("default", "vivify,if=party.heal_worthwhile"),
+        ("default", "soothing_mist,if=target.health.pct<90"),
         ("damage", "rising_sun_kick"),
     ])?;
     Ok(Box::new(Mistweaver {
@@ -200,6 +202,14 @@ impl Mistweaver {
                 )
             });
         let area = effect.implicit_targets.contains(&31);
+        let injured = party
+            .iter()
+            .filter_map(|unit| world.get::<Health>(*unit))
+            .filter(|health| health.current > 0.0 && health.current < health.max * 0.90)
+            .count();
+        if area && injured < 3 {
+            return Ok(false);
+        }
         let expected = (per_target * if area { targets as f32 } else { 1.0 }).max(last_area_heal);
         Ok(expected > 0.0 && missing >= expected * 0.75 && missing + incoming_dps >= expected)
     }
