@@ -142,13 +142,23 @@ fn grant_regicide(world: &mut World, caster: Entity, ramp: &AuraInstance) {
     spell_cast::launch_triggered_spell(world, caster, &buff, Some(caster), 1);
 }
 
-fn finish_kingsbane_on_death(world: &mut World, _target: Entity, dot: &AuraInstance, reason: RemoveReason) {
+fn finish_kingsbane_on_death(
+    world: &mut World,
+    _target: Entity,
+    dot: &AuraInstance,
+    reason: RemoveReason,
+) {
     if reason != RemoveReason::Death {
         return;
     }
-    let ramp = world.get::<auras::ActiveAuras>(dot.caster).and_then(|auras| {
-        auras.iter().find(|a| a.spell_id == KINGSBANE_RAMP && a.caster == dot.caster).cloned()
-    });
+    let ramp = world
+        .get::<auras::ActiveAuras>(dot.caster)
+        .and_then(|auras| {
+            auras
+                .iter()
+                .find(|a| a.spell_id == KINGSBANE_RAMP && a.caster == dot.caster)
+                .cloned()
+        });
     if let Some(ramp) = ramp {
         grant_regicide(world, dot.caster, &ramp);
         auras::remove_instance(world, dot.caster, ramp.instance_id, RemoveReason::Consumed);
