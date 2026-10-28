@@ -265,6 +265,47 @@ pub fn total_count(world: &World, owner: Entity, filter: FragmentFilter) -> usiz
     active_count(world, owner, filter) + inactive_count(world, owner, filter)
 }
 
+// SimC76f8118 sc_demon_hunter.cpp1912/12540–12542 keeps this native
+// caster aura in step with the actual active fragment lifecycle.
+fn sync_vengeance_aura(world: &mut World, owner: Entity) {
+    if spec(world, owner).ok() != Some(581) {
+        return;
+    }
+    let count = active_count(world, owner, FragmentFilter::Any);
+    if count == 0 {
+        combat::auras::remove_auras(
+            world,
+            owner,
+            combat::auras::RemoveReason::Consumed,
+            |aura| aura.spell_id == 203981 && aura.caster == owner,
+        );
+        return;
+    }
+    if !combat::auras::has_aura(world, owner, 203981) {
+        combat::auras::apply_aura(
+            world,
+            &combat::auras::AuraApplication {
+                caster: owner,
+                target: owner,
+                spell_id: 203981,
+                effect_mask: u32::MAX,
+                source: combat::auras::AuraSource::Cast,
+            },
+        );
+    }
+    assert!(
+        combat::auras::set_self_cast_stacks(
+            world,
+            owner,
+            203981,
+            count
+                .try_into()
+                .expect("fragment count exceeds native stack capacity")
+        ),
+        "native Soul Fragments aura unavailable"
+    );
+}
+
 /// SimC76f8118 sc_demon_hunter.cpp5129–5131 and action.cpp2428–2430.
 pub fn pickup_in_melee_range(world: &World, owner: Entity, target: Entity) -> Result<bool, String> {
     let from = position(world, owner).ok_or("fragment owner position missing")?;
@@ -393,6 +434,7 @@ pub fn finish_pickup(world: &mut World, owner: Entity, permitted: bool) -> Resul
         consume(&mut state, index, now, speed, owner_position);
     }
     world.entity_mut(owner).insert(state);
+    sync_vengeance_aura(world, owner);
     Ok(())
 }
 
@@ -431,6 +473,7 @@ pub fn consume_active(
         }
     }
     world.entity_mut(owner).insert(state);
+    sync_vengeance_aura(world, owner);
     for kind in immediate {
         cast_consume(world, owner, specialization, kind);
     }
@@ -521,6 +564,7 @@ fn update_owner(world: &mut World, owner: Entity, now: f64) -> Result<(), String
         }
     });
     world.entity_mut(owner).insert(state);
+    sync_vengeance_aura(world, owner);
     for kind in due {
         cast_consume(world, owner, specialization, kind);
     }
