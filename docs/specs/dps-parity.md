@@ -14,6 +14,7 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 - Spell modifiers with native effect attribute `0x40` do not multiply their points by aura stacks; other effects on the same aura retain their stack scaling. Killing Machine's fixed Frostscythe critical bonus uses that attribute, while its Killing Streak bonus scales per stack.
 - Northwinds gives the second Howling Blast target the same Rime-specific bonuses as the primary; later targets use the pinned reduced-AoE and secondary factors. Cryogenic Chamber banks the native fraction of each earned Rime impact up to its stack cap and releases that bank on Winter.
+- Frost Bind in Darkness follows actual Rime acquisition and removal; it must not proc independently. Preserve other specializations' native proc behavior.
 
 ### Native Pandemic duration carry
 
