@@ -85,6 +85,7 @@ register_modules! {
     brewmaster_cooldowns: (1000, "modules/brewmaster_cooldowns.rs"),
     brewmaster_purify: (1000, "modules/brewmaster_purify.rs"),
     brewmaster_black_ox: (1000, "modules/brewmaster_black_ox.rs"),
+    brewmaster_blackout_combo: (1000, "modules/brewmaster_blackout_combo.rs"),
     brewmaster_empty_barrel: (1000, "modules/brewmaster_empty_barrel.rs"),
     brewmaster_keg_reset: (1000, "modules/brewmaster_keg_reset.rs"),
     brewmaster_shuffle: (1000, "modules/brewmaster_shuffle.rs"),

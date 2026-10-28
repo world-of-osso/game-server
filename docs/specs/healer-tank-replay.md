@@ -18,6 +18,10 @@ Replay recorded incoming damage in the native server combat simulation to compar
 
 - [Preservation Evoker 1468](healer-tank-replay/1468.md)
 
+## Specializations
+
+- [Brewmaster (268)](healer-tank-replay/268.md)
+
 ## How it works
 
 - [Replay system](../wiki/systems/healer-tank-replay.md)
