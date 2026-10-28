@@ -172,14 +172,16 @@ fn periodic_healing_uses_live_healing_power() {
             .collect()
     };
     h.advance(65);
-    let first = *heals(&h).first().expect("first actual Renew tick");
+    let initial = heals(&h);
+    let first = *initial.last().expect("first actual Renew tick");
+    let before = initial.len();
     h.app
         .world_mut()
         .get_mut::<crate::stats::CharacterStats>(h.caster)
         .unwrap()
         .healing_power += 300.0;
     h.advance(60);
-    let second = *heals(&h).get(1).expect("second actual Renew tick");
+    let second = *heals(&h).get(before).expect("next actual Renew tick");
     assert!(
         second > first * 2,
         "periodic healing must use current healing power: {first} -> {second}"

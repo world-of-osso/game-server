@@ -3093,20 +3093,22 @@ fn dk252_active_diseases_use_live_owner_attack_power() {
             }
             run.app.update();
         }
-        let first = *damage(&run).first().expect("initial real disease tick");
+        let initial = damage(&run);
+        let first = *initial.last().expect("initial real disease tick");
+        let before = initial.len();
         run.app
             .world_mut()
             .get_mut::<crate::stats::CharacterStats>(run.actor)
             .unwrap()
             .attack_power += 10_000.0;
         for _ in 0..300 {
-            if damage(&run).len() >= 2 {
+            if damage(&run).len() > before {
                 break;
             }
             run.app.update();
         }
         let ticks = damage(&run);
-        let second = *ticks.get(1).expect("next real disease tick");
+        let second = *ticks.get(before).expect("next real disease tick");
         assert!(
             second > first * 2,
             "disease {disease} must use current AP without reapplication: {first} -> {second}"
