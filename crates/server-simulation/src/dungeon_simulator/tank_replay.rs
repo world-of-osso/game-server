@@ -541,6 +541,10 @@ fn replay_registered_run_with_healing(
     let mut incoming_by_outcome = BTreeMap::<String, f64>::new();
     let mut defense_totals = [0.0_f64; 6];
     let mut defense_samples = 0_u64;
+    let mut dusk_samples = 0_u64;
+    let mut dusk_reduction_sum = 0.0_f64;
+    let mut dusk_constant_counterfactual_reduction = 0.0_f64;
+    let mut block_sources = BTreeMap::<u32, f64>::new();
     let mut aura_seconds = BTreeMap::<u32, f64>::new();
     let mut debuff_seconds: BTreeMap<u32, f64> =
         target_debuffs.iter().map(|&id| (id, 0.0)).collect();
@@ -589,6 +593,17 @@ fn replay_registered_run_with_healing(
             if !amount.is_finite() {
                 return Err("SIMC_DUMMY_AMOUNT_OUT_OF_RANGE".into());
             }
+            let world = run.app.world();
+            let health = world.get::<Health>(tank).ok_or("TANK_HEALTH_ABSENT")?;
+            let maximum_dusk = world
+                .get::<crate::auras::ActiveAuras>(tank)
+                .and_then(|auras| auras.iter().find(|aura| aura.spell_id == 1241945))
+                .and_then(|aura| aura.effects.iter().find(|effect| effect.index == 0))
+                .map_or(0.0, |effect| f64::from(effect.amount) / 100.0);
+            let dusk_reduction =
+                maximum_dusk * f64::from((1.0 - health.current / health.max).clamp(0.0, 1.0));
+            dusk_reduction_sum += dusk_reduction;
+            dusk_samples += 1;
             let scale = crate::level_scaling::damage_to_hp_scale(run.app.world(), source, tank);
             let before_events = run
                 .app
@@ -673,6 +688,16 @@ fn replay_registered_run_with_healing(
                         *total += f64::from(value);
                     }
                     defense_samples += 1;
+                    if let Some(auras) = world.get::<crate::auras::ActiveAuras>(tank) {
+                        for aura in auras.iter() {
+                            for effect in
+                                aura.effects.iter().filter(|effect| effect.aura_type == 51)
+                            {
+                                *block_sources.entry(aura.spell_id).or_default() +=
+                                    f64::from(effect.amount * aura.stack_multiplier());
+                            }
+                        }
+                    }
                     let recorded = Hit {
                         tick,
                         source_guid: 0,
@@ -734,6 +759,8 @@ fn replay_registered_run_with_healing(
                 Kind::Bleed => "bleed",
             };
             let pre_absorb = damage + after_absorbed - before_absorbed;
+            dusk_constant_counterfactual_reduction +=
+                pre_absorb * (maximum_dusk - dusk_reduction) / (1.0 - dusk_reduction);
             *incoming_before_absorbs.entry(kind).or_default() += pre_absorb;
             if let Some(key) = outcome_key {
                 *incoming_by_outcome.entry(key).or_default() += pre_absorb;
@@ -919,6 +946,9 @@ fn replay_registered_run_with_healing(
         "rotation_status":"registered_literal_simc","duration_seconds":elapsed,"incoming_events":next,"tank_casts":casts,
         "raw_damage":raw,"damage_taken":taken,"damage_taken_by_kind":damage_taken_by_kind,"incoming_before_absorbs":incoming_before_absorbs,"incoming_outcomes":outcomes,"incoming_by_outcome":incoming_by_outcome,
         "defense_mean":defense_mean,
+        "dusk_mean_reduction": (dusk_samples > 0).then(|| dusk_reduction_sum / dusk_samples as f64),
+        "dusk_constant_counterfactual_pre_absorb": dusk_constant_counterfactual_reduction,
+        "block_sources_mean":block_sources.iter().map(|(spell, amount)| (spell, amount / defense_samples.max(1) as f64)).collect::<BTreeMap<_,_>>(),
         "self_periodic_damage_taken":self_periodic_taken,
         "mitigation_pct":(raw>0.0).then(||100.0*(raw-taken)/raw),
         "self_heal_per_second":(elapsed>0.0).then(||self_healing/elapsed),
