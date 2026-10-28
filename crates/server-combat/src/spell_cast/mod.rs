@@ -3005,6 +3005,7 @@ fn execute_cast_with_primary(
             periodic: false,
             damage: 0.0,
             heal: None,
+            hit_mask: 0,
             reflected: false,
         },
     );
@@ -3883,6 +3884,7 @@ fn push_hit_events(
                 periodic: false,
                 damage: amount,
                 heal: None,
+                hit_mask: 0,
                 reflected: false,
             },
         );
@@ -3928,6 +3930,7 @@ fn push_hit_events(
                 periodic: false,
                 damage,
                 heal,
+                hit_mask: 0,
                 reflected: false,
             },
         );

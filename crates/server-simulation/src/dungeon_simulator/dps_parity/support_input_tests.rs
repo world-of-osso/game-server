@@ -22,6 +22,12 @@ fn check_support_profile(spec: u32) -> Result<(), String> {
 
 #[test]
 #[ignore = "requires generated MID2 support inputs and canonical world DB"]
+fn mid2_support_restoration_druid_input_loads_and_spawns() {
+    check_support_profile(105).unwrap();
+}
+
+#[test]
+#[ignore = "requires generated MID2 support inputs and canonical world DB"]
 fn mid2_support_inputs_load_and_spawn_six_specs() {
     let failures: Vec<_> = [104, 256, 257, 264, 270, 1468]
         .into_iter()

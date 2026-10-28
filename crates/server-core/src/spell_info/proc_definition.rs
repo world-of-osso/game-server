@@ -33,22 +33,30 @@ const TRIGGER_AURAS: &[u32] = &[
 pub(super) fn load(conn: &Connection, spells: &mut [SpellInfo]) -> rusqlite::Result<()> {
     let mut statement = conn.prepare(
         "SELECT SpellId, SpellFamilyName, SpellFamilyMask0, SpellFamilyMask1,
-                SpellFamilyMask2, SpellFamilyMask3 FROM tdb_spell_proc",
+                SpellFamilyMask2, SpellFamilyMask3, HitMask FROM tdb_spell_proc",
     )?;
     let explicit = statement
         .query_map([], |row| {
             let mask =
                 [2, 3, 4, 5].map(|column| row.get::<_, i64>(column).map(|value| value as u32));
             let [a, b, c, d] = mask;
-            Ok((row.get(0)?, (row.get(1)?, [a?, b?, c?, d?])))
+            Ok((
+                row.get(0)?,
+                (row.get(1)?, [a?, b?, c?, d?], row.get::<_, i64>(6)? as u32),
+            ))
         })?
-        .collect::<rusqlite::Result<HashMap<u32, (u32, [u32; 4])>>>()?;
+        .collect::<rusqlite::Result<HashMap<u32, (u32, [u32; 4], u32)>>>()?;
     for spell in spells {
         let source = definition_source(spell, &explicit);
         if source.is_some() {
             let options = spell.aura_options.get_or_insert_default();
             options.proc_definition_source = source;
-            options.proc_family = explicit.get(&spell.id).copied();
+            options.proc_family = explicit
+                .get(&spell.id)
+                .map(|&(family, mask, _)| (family, mask));
+            options.proc_hit_mask = explicit
+                .get(&spell.id)
+                .map_or(0, |&(_, _, hit_mask)| hit_mask);
         } else if let Some(options) = spell.aura_options.as_mut() {
             // Stacks, charges and raw DB2 fields remain available to non-proc consumers.
             options.proc_definition_source = None;
@@ -60,7 +68,7 @@ pub(super) fn load(conn: &Connection, spells: &mut [SpellInfo]) -> rusqlite::Res
 
 fn definition_source(
     spell: &SpellInfo,
-    explicit: &HashMap<u32, (u32, [u32; 4])>,
+    explicit: &HashMap<u32, (u32, [u32; 4], u32)>,
 ) -> Option<ProcDefinitionSource> {
     if explicit.contains_key(&spell.id) {
         return Some(ProcDefinitionSource::ExplicitTdb);
