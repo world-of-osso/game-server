@@ -4,7 +4,11 @@ use shared::components::{ActiveSpec, Health};
 use shared::protocol::{CombatLogEvent, CombatLogKind};
 
 use super::combat;
-use combat::auras::{self, AuraApplication, AuraSource, RemoveReason, harmony::HarmonyPools};
+use combat::auras::{
+    self, AuraApplication, AuraInstance, AuraSource, RemoveReason,
+    harmony::HarmonyPools,
+    scripts::{AuraScript, AuraScripts},
+};
 use combat::class_progression::TraitLoadout;
 use combat::spell_cast::{
     self,
@@ -19,11 +23,82 @@ const SPENDER: u32 = 450711;
 const DAMAGE: u32 = 450763;
 const COALESCENCE: u32 = 450529;
 const THOUSAND_STRIKES: u32 = 450965;
+const PURIFIED_SPIRIT: u32 = 450867;
+const PURIFIED_DAMAGE: u32 = 450820;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::MidAuraRegistration(register_spender),
     SpellScriptHook::HealthChangeObserved(observe),
     SpellScriptHook::AfterResourceValues(spender_hook),
 ];
+
+fn register_spender(scripts: &mut AuraScripts) {
+    scripts.0.insert(
+        SPENDER,
+        AuraScript {
+            on_remove: Some(expire_spender),
+            ..Default::default()
+        },
+    );
+}
+
+fn expire_spender(world: &mut World, caster: Entity, _: &AuraInstance, _: RemoveReason) {
+    release_purified_spirit(world, caster);
+}
+
+fn release_purified_spirit(world: &mut World, caster: Entity) {
+    if !has_talent(world, caster, PURIFIED_SPIRIT) {
+        return;
+    }
+    let Some(mut pools) = world.get_mut::<HarmonyPools>(caster) else {
+        return;
+    };
+    let amount = std::mem::take(&mut pools.spender);
+    if amount <= 0.0 {
+        return;
+    }
+    let Some(target) = world
+        .get::<combat::networking::CombatTarget>(caster)
+        .and_then(|target| target.0)
+    else {
+        return;
+    };
+    let spell = world
+        .resource::<SpellStore>()
+        .get(PURIFIED_DAMAGE)
+        .expect("native Purified Spirit damage")
+        .clone();
+    let effect = spell
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .expect("native Purified Spirit tick");
+    let duration = spell
+        .misc
+        .as_ref()
+        .and_then(|misc| misc.duration)
+        .expect("native Purified Spirit duration")
+        .duration_ms;
+    assert!(
+        duration > 0 && effect.aura_period_ms > 0,
+        "native Purified Spirit timing"
+    );
+    let targets =
+        spell_cast::targets::select_targets(world, caster, Some(target), &spell, effect, 0, false)
+            .expect("native Purified Spirit target selection");
+    if targets.is_empty() {
+        return;
+    }
+    let ticks = duration as f32 / effect.aura_period_ms as f32;
+    spell_cast::cast_triggered_with_effect0_amount(
+        world,
+        caster,
+        PURIFIED_DAMAGE,
+        Some(target),
+        1,
+        amount / ticks / targets.len() as f32,
+    );
+}
 
 fn has_talent(world: &World, caster: Entity, spell: u32) -> bool {
     world.get::<TraitLoadout>(caster).is_some_and(|traits| {
@@ -60,6 +135,9 @@ fn spender_hook(spell: u32) -> Option<AfterCastHook> {
 fn start_spender(world: &mut World, caster: Entity, _: &SpellInfo) {
     if !selected(world, caster) {
         return;
+    }
+    if auras::has_aura(world, caster, SPENDER) {
+        release_purified_spirit(world, caster);
     }
     let amount = world
         .get::<HarmonyPools>(caster)
