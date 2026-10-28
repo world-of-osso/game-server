@@ -2989,7 +2989,12 @@ fn record_swing_events(world: &mut World, attacker: Entity, target: Entity, outc
         Hand::Main => outcome.weapon_speed,
         Hand::Off => outcome.weapon_speed / 2.0,
     };
-    reward_swing_rage(world, attacker, target, rage_secs, damage);
+    let source_damage = if outcome.immune {
+        0.0
+    } else {
+        outcome.residual_source
+    };
+    reward_swing_rage(world, attacker, target, rage_secs, source_damage);
     crate::spell_cast::log_event(world, swing_log_event(attacker, target, &outcome));
     crate::spell_cast::script_registry::landed_damage_policies(
         world, attacker, target, None, damage, false,
@@ -3031,8 +3036,8 @@ struct RageFromHitsTakenReadyAt(f64);
 /// speed, half for the off hand) × 1.75 rage scaled by
 /// MOD_RAGE_FROM_DAMAGE_DEALT, rounded to 0.1 rage (SimC `trigger_rage_gain`;
 /// CalcMeleeAttackRageGain, Unit.cpp:2239-2249); the victim gains 3 rage when
-/// the swing did damage. Only units whose primary power is rage gain it
-/// (AzerothCore `Unit::DealDamage` `HasActivePowerType(POWER_RAGE)`).
+/// the landed swing has raw damage, even if absorbed (SimC76f8118
+/// sc_warrior.cpp9489–9496). Only units whose primary power is rage gain it.
 fn reward_swing_rage(
     world: &mut World,
     attacker: Entity,

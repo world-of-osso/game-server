@@ -73,6 +73,31 @@ fn each_auto_attack_taken_gives_3_rage() {
 }
 
 #[test]
+fn absorbed_auto_attack_taken_still_gives_rage() {
+    let mut h = warrior(&[17]).expect("real world.db required");
+    let (caster, npc) = (h.caster, h.npc);
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster,
+            target: caster,
+            spell_id: 17,
+            effect_mask: 1,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    let health = h.health(caster);
+    attack(&mut h, npc, caster);
+    h.advance(2);
+    assert_eq!(h.health(caster), health, "the hit must be fully absorbed");
+    assert_eq!(
+        h.power(PowerType::Rage),
+        30.0,
+        "a landed absorbed attack still earns rage"
+    );
+}
+
+#[test]
 fn rage_from_hits_taken_has_a_one_second_cooldown() {
     let Some(mut h) = warrior(&[]) else {
         return;
