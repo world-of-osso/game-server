@@ -137,7 +137,7 @@ fn convert_magi_to_lord(world: &mut World, actor: Entity) {
     let Some(summon) = world.get::<summon::SummonedCreature>(actor) else {
         return;
     };
-    if summon.spell_id != MAGUS_SUMMON {
+    if !matches!(summon.spell_id, 317776 | MAGUS_SUMMON) {
         return;
     }
     let owner = summon.owner;
@@ -156,7 +156,7 @@ fn convert_magi_to_lord(world: &mut World, actor: Entity) {
             .query::<(Entity, &summon::SummonedCreature)>()
             .iter(world)
             .filter_map(|(entity, summon)| {
-                (summon.owner == owner && summon.spell_id == MAGUS_SUMMON)
+                (summon.owner == owner && matches!(summon.spell_id, 317776 | MAGUS_SUMMON))
                     .then_some(
                         summon
                             .expires_at

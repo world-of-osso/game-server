@@ -1486,6 +1486,35 @@ fn dk252_ghoul_attacks_earn_infected_claws() {
 }
 
 #[test]
+#[ignore = "requires native252 profile/traits and player actor"]
+fn dk252_dark_transformation_and_putrefy_magi_together_raise_lord() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_measurement(252, 1).unwrap();
+    engage(&mut run);
+    literal_rotation::execution::execute(run.app.world_mut(), run.actor,
+        literal_rotation::execution::Execution::Spell(1233448, run.actor, None)).unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    let has_summon = |run: &mut Run, spell| {
+        let world = run.app.world_mut();
+        world.query::<&crate::spell_cast::summon::SummonedCreature>().iter(world)
+            .any(|summon| summon.owner == run.actor && summon.spell_id == spell)
+    };
+    assert!(has_summon(&mut run, 317776), "Dark Transformation must create its real Magus");
+    for _ in 0..40 { run.app.update(); }
+    literal_rotation::execution::execute(run.app.world_mut(), run.actor,
+        literal_rotation::execution::Execution::Spell(1247378, run.targets[0], Some(run.targets[0]))).unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    for _ in 0..200 {
+        run.app.update();
+        if has_summon(&mut run, 1292072) {
+            assert!(!has_summon(&mut run, 317776), "Lord conversion must consume the Dark Transformation Magus");
+            return;
+        }
+    }
+    panic!("Dark Transformation and Putrefy Magi must combine into the real Lord");
+}
+
+#[test]
 #[ignore = "requires private native252 profile/traits and player actor"]
 fn dk252_three_real_magi_raise_the_lord_of_the_dead() {
     let _seed = crate::random::seed_scope(70448);
