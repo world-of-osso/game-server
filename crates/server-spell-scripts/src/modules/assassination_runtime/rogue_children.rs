@@ -13,6 +13,9 @@ const RUPTURE: u32 = 1943;
 const INTERNAL_BLEEDING: u32 = 381627;
 const INTERNAL_PAYLOAD: u32 = 381628;
 const KINGSBANE: u32 = 385627;
+const KINGSBANE_RAMP: u32 = 394095;
+const REGICIDE_TALENT: u32 = 1250325;
+const REGICIDE_BUFF: u32 = 1250331;
 const IMPLACABLE: u32 = 1265387;
 const IMPLACABLE_DRIVER: u32 = 1265787;
 const IMPLACABLE_HITS: &[u32] = &[1265794, 1265795];
@@ -21,6 +24,14 @@ const IMPLACABLE_HITS: &[u32] = &[1265794, 1265795];
 struct ImplacableTarget(Entity);
 
 pub(crate) fn register(scripts: &mut AuraScripts) {
+    scripts.0.insert(KINGSBANE_RAMP, AuraScript {
+        on_natural_end: Some(grant_regicide),
+        ..Default::default()
+    });
+    scripts.0.insert(REGICIDE_BUFF, AuraScript {
+        on_periodic: Some(decay_regicide),
+        ..Default::default()
+    });
     scripts.0.insert(
         IMPLACABLE_DRIVER,
         AuraScript {
@@ -90,6 +101,28 @@ pub(super) fn poison_hit(world: &mut World, ctx: &EffectCtx<'_>, target: Entity)
         .is_some_and(|(_, damage)| *damage > 0.0);
     if positive {
         auras::rogue::after_poison_hit(world, ctx, target);
+    }
+}
+
+// SimC76f8118 sc_rogue.cpp4967–4975/11158–11162: each five earned
+// Kingsbane stacks grant one native haste stack, lost every native two seconds.
+fn grant_regicide(world: &mut World, caster: Entity, ramp: &AuraInstance) {
+    let Some(divisor) = world.get::<auras::ActiveAuras>(caster).and_then(|auras| {
+        auras.iter().find(|a| a.spell_id == REGICIDE_TALENT && a.caster == caster)
+            .and_then(|a| a.effects.iter().find(|effect| effect.index == 0))
+            .map(|effect| effect.amount as u8)
+    }) else { return };
+    let stacks = ramp.stacks / divisor;
+    if stacks == 0 { return; }
+    let mut buff = world.resource::<SpellStore>().get(REGICIDE_BUFF)
+        .expect("selected Regicide requires its native buff").clone();
+    buff.cast_aura_stacks = Some(stacks);
+    spell_cast::launch_triggered_spell(world, caster, &buff, Some(caster), 1);
+}
+
+fn decay_regicide(world: &mut World, caster: Entity, buff: &AuraInstance, index: u8) {
+    if index == 1 {
+        auras::spend_stack(world, caster, buff.instance_id);
     }
 }
 
