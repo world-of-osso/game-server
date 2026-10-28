@@ -1632,6 +1632,7 @@ fn dk252_lord_magus_uses_selected_native_lifetime() {
         .expires_at;
     let virtual_now = crate::auras::aura_now(run.app.world());
     while crate::spell_cast::now(run.app.world()) < started + f64::from(native_ms) / 1000.0 - 1.0 {
+        crate::auras::remove_auras(run.app.world_mut(), run.targets[0], crate::auras::RemoveReason::Cancelled, |aura| aura.spell_id == 1240996);
         run.app.update();
     }
     assert!(
