@@ -41,6 +41,7 @@ Replay recorded incoming damage in the native server combat simulation to compar
 
 - [ ] Blood 250: SimC `76f8118` applies Hemostasis twice to Death Strike healing (parsed action modifier and `death_strike_heal_t::action_multiplier`). Its debug trace shows `1.08²` for one 8% stack, about 8% more than one application. The source does not identify this as an in-game behavior; native gameplay applies it once. Blood Shield inherits the raw-heal difference.
 
+- [x] Guardian Ursoc's Fury grants the native cumulative 372505 absorb from actual Thrash and Maul-family damage, including Thrash ticks, capped at 30% max health. Source: `sc_druid.cpp5148–5188,5600–5604,5912–5920`.
 - [ ] Connect SimC tank-dummy trace input to the healer replay.
 - [ ] Register native tank APL adapters. Guardian 104 uses the pinned default Guardian APL and reports Ironfur, Frenzied Regeneration, Barkskin and Rage of the Sleeper as active mitigation. SimC tank replay requires a registered literal parity driver and explicit active-mitigation auras; unregistered tanks fail rather than use the smoke-test policy. Protection 66 executes the pinned MID2 literal APL; Holy Bulwark absorbs, Shining Light–driven Word of Glory, Divine Guidance and Blessed Hammer's Grand Crusader reset are exercised under incoming damage. Other native spell effects and Grand Crusader sources still require qualification.
 - [ ] Support replay durations other than 300 seconds with matching literal-APL encounter timing.
