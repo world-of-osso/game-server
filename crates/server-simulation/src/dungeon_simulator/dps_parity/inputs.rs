@@ -7,7 +7,7 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 #[derive(Deserialize)]
-pub(super) struct Profile {
+pub(crate) struct Profile {
     pub spec_id: u32,
     pub level: String,
     pub race: String,
@@ -20,7 +20,7 @@ pub(super) struct Profile {
 }
 
 #[derive(Deserialize)]
-pub(super) struct Equipment {
+pub(crate) struct Equipment {
     pub slot: String,
     pub item_id: u32,
     pub bonus_list: Vec<u32>,
@@ -278,7 +278,7 @@ fn dps_parity_simc_hero_spec_gate_98931_is_fixture_only() {
 }
 
 #[derive(Deserialize)]
-pub(super) struct AllocatedTrait {
+pub(crate) struct AllocatedTrait {
     pub node_id: u32,
     pub entry_id: u32,
     pub ranks: u32,
