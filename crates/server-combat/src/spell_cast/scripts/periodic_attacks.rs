@@ -21,7 +21,7 @@ const ROLLING_REAPPLICATIONS: &[RollingReapplication] = &[
     // SimC76f8118 sc_warrior.cpp3798–3805 forces coefficient-based Deep
     // Wounds rolling; action.cpp2730/4614/4995 supplies its refresh budget/lifetime.
     RollingReapplication {
-        specs: &[71, 72],
+        specs: &[71, 72, 73],
         passive: 1261060,
         payload: 262115,
     },
