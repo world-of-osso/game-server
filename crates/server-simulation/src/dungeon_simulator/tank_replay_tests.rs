@@ -81,7 +81,7 @@ fn simc_dummy_strike_does_not_trigger_auto_attack_procs() {
             < before
     );
     assert_eq!(run.app.world().get::<AutoProcs>(target).unwrap().0, 0);
-    let hit = crate::test_support::healer_intake::Hit {
+    let hit = super::healer_intake::Hit {
         tick: 1,
         source_guid: 0,
         pack: 0,
@@ -89,7 +89,7 @@ fn simc_dummy_strike_does_not_trigger_auto_attack_procs() {
         school: 1,
         raw: 10_000.0,
         level_scaling_factor: 1.0,
-        kind: crate::test_support::healer_intake::HitKind::Melee {
+        kind: super::healer_intake::HitKind::Melee {
             hand: 0,
             outcome: "Hit".into(),
             level_difference: -2,
