@@ -20,6 +20,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::EffectHandler(armament_energize_handler),
     SpellScriptHook::AuraEvent(divine_inspiration_event),
     SpellScriptHook::OwnsPolicyProc(|spell| spell == 432964),
+    SpellScriptHook::AfterNativeCastUpdate(bind_blessed_hammer_fields),
 ];
 
 fn register_bulwark(scripts: &mut AuraScripts) {
@@ -29,6 +30,48 @@ fn register_bulwark(scripts: &mut AuraScripts) {
     let grand = scripts.0.entry(85043).or_default();
     grand.check_proc = Some(grand_crusader_is_avoidance);
     grand.on_damage_proc = Some(grand_crusader_from_avoidance);
+}
+
+#[derive(Component)]
+struct BoundBlessedHammer;
+
+fn bind_blessed_hammer_fields(world: &mut World) {
+    use combat::spell_cast::{area_trigger::SpellAreaTrigger, targets::Relation};
+    let fields: Vec<_> = world
+        .query_filtered::<(Entity, &SpellAreaTrigger), Without<BoundBlessedHammer>>()
+        .iter(world)
+        .filter(|(_, field)| field.spell_id == 204019)
+        .map(|(entity, field)| (entity, field.caster, field.expires_at))
+        .collect();
+    for (entity, caster, expiry) in fields {
+        let Some(expiry) = expiry else {
+            warn!(?entity, "Blessed Hammer field lacks native duration");
+            continue;
+        };
+        let duration = {
+            let spell = world
+                .resource::<SpellStore>()
+                .get(204019)
+                .expect("Blessed Hammer spell");
+            combat::spell_cast::duration_ms(world, caster, spell)
+        };
+        if duration <= 0 {
+            warn!(?caster, "Blessed Hammer duration is invalid");
+            continue;
+        }
+        // SimC76f8118 sc_paladin_protection.cpp358–366,465–490: its default
+        // approximates two strikes at 25% and 75% of duration, within 9 yards.
+        // Native create-properties6006 are absent, so orbit geometry is unknown.
+        let mut field = world
+            .get_mut::<SpellAreaTrigger>(entity)
+            .expect("live hammer field");
+        field.trigger_spell = 204301;
+        field.radius = 9.0;
+        field.relation = Relation::Enemy;
+        field.period_ms = duration as u32 / 2;
+        field.next_tick_at = expiry - f64::from(duration) * 0.00075;
+        world.entity_mut(entity).insert(BoundBlessedHammer);
+    }
 }
 
 #[derive(Component)]
@@ -43,36 +86,39 @@ fn divine_inspiration_event(world: &mut World, event: &combat::auras::procs::Aur
         | procs::PROC_DEAL_HELPFUL_ABILITY
         | procs::PROC_DEAL_HELPFUL_SPELL
         | procs::PROC_DEAL_HELPFUL_PERIODIC;
-    if !event.can_proc
-        || event.actor_mask[0] & MASK == 0
-        || (event.damage <= 0.0 && event.heal.is_none())
-        || !world
-            .get::<TraitLoadout>(event.actor)
-            .is_some_and(|traits| {
-                traits
-                    .active_talent_spells()
-                    .any(|talent| talent.spell_id == 432964)
-            })
+    if event.can_proc
+        && event.actor_mask[0] & MASK != 0
+        && (event.damage > 0.0 || event.heal.is_some())
     {
+        roll_divine_inspiration(world, event.actor);
+    }
+}
+
+fn roll_divine_inspiration(world: &mut World, caster: Entity) {
+    if !world.get::<TraitLoadout>(caster).is_some_and(|traits| {
+        traits
+            .active_talent_spells()
+            .any(|talent| talent.spell_id == 432964)
+    }) {
         return;
     }
     let Some(id) = world
-        .get::<combat::auras::ActiveAuras>(event.actor)
+        .get::<combat::auras::ActiveAuras>(caster)
         .and_then(|auras| {
             auras
                 .iter()
-                .find(|aura| aura.spell_id == 432964 && aura.caster == event.actor)
+                .find(|aura| aura.spell_id == 432964 && aura.caster == caster)
                 .map(|aura| aura.instance_id)
         })
     else {
         return;
     };
     // SimC76f8118 sc_paladin.cpp4116–4147: .55 RPPM, haste and bad-luck scaling.
-    if !procs::try_source_hasted_rppm(world, event.actor, id, 0.55) {
+    if !combat::auras::procs::try_source_hasted_rppm(world, caster, id, 0.55) {
         return;
     }
     let next = world
-        .get::<NextInspirationArmament>(event.actor)
+        .get::<NextInspirationArmament>(caster)
         .map(|value| value.0)
         .unwrap_or_else(|| {
             if combat::random::random::<f32>() < 0.5 {
@@ -84,15 +130,15 @@ fn divine_inspiration_event(world: &mut World, event: &combat::auras::procs::Aur
     combat::auras::apply_aura(
         world,
         &AuraApplication {
-            caster: event.actor,
-            target: event.actor,
+            caster,
+            target: caster,
             spell_id: next,
             effect_mask: u32::MAX,
             source: AuraSource::Cast,
         },
     );
     world
-        .entity_mut(event.actor)
+        .entity_mut(caster)
         .insert(NextInspirationArmament(if next == 432496 {
             432502
         } else {
@@ -588,6 +634,19 @@ fn reset_avengers_shield(world: &mut World, caster: Entity) {
 
 fn after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
     roll_vanguard(world, caster, spell.id);
+    if spell.id == 204019
+        && spell.cast_primary_target.is_some_and(|target| {
+            combat::spell_cast::targets::relation_matches(
+                world,
+                caster,
+                target,
+                combat::spell_cast::targets::Relation::Enemy,
+            )
+        })
+    {
+        // SimC76f8118 treats the zero-damage hit on the action target as the proc source.
+        roll_divine_inspiration(world, caster);
+    }
     trigger_grand_crusader(world, caster, spell.id);
     extend_zealots_paragon(world, caster, spell.id);
     advance_shining_light(world, caster, spell.id);
