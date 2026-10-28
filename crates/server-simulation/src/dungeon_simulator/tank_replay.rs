@@ -524,7 +524,7 @@ fn replay_registered_run_with_healing(
         .collect();
     let aura_uptime: BTreeMap<u32, f64> = aura_seconds
         .into_iter()
-        .map(|(spell, seconds)| (spell, seconds / elapsed))
+        .map(|(spell, seconds)| (spell, (seconds / elapsed).min(1.0)))
         .collect();
     Ok(
         json!({"spec":spec,"level":level,"reference_tier":"MID2","timeline":"simc_tank_dummy",
