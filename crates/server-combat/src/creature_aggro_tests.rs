@@ -56,6 +56,7 @@ fn aggro_app() -> App {
     .unwrap();
     app.insert_resource(crate::scripted_ai::model_reach::load_model_reaches(&conn).unwrap());
     app.insert_resource(faction_templates());
+    app.init_resource::<crate::spell_cast::script_registry::SpellScriptRegistry>();
     app.add_plugins((CombatPlugin, CreatureAiPlugin, CreatureAggroPlugin));
     app.update();
     app
