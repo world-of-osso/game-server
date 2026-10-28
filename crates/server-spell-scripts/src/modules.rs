@@ -102,6 +102,7 @@ register_modules! {
     destruction_crashing_chaos: (2679, "modules/destruction_crashing_chaos.rs"),
     destruction_crit_scaling: (2673, "modules/destruction_crit_scaling.rs"),
     demon_hunter_fragments: (5777, "modules/demon_hunter_fragments.rs"),
+    demon_hunter_sigil_spite: (5810, "modules/demon_hunter_sigil_spite.rs"),
     destruction_echo: (2676, "modules/destruction_echo.rs"),
     destruction_fiendish: (2678, "modules/destruction_fiendish.rs"),
     destruction_incinerate: (2671, "modules/destruction_incinerate.rs"),
