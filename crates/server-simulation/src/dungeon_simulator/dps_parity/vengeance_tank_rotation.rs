@@ -689,6 +689,52 @@ mod tests {
     }
     #[test]
     #[ignore = "requires native Vengeance profile"]
+    fn otherworldly_focus_scales_real_meteor_recipients() {
+        use super::super::*;
+        fn meteor(selected: bool, count: usize) -> i32 {
+            let _seed = crate::random::seed_scope(70_448);
+            let (profile, mut traits) = read_reference(581).unwrap();
+            if !selected {
+                traits.retain(|trait_| trait_.entry_id != 135661);
+            }
+            let identity = inputs::read_actor(&profile).unwrap();
+            let mut run = prepare_reference(profile, &traits, count, identity).unwrap();
+            let actor = run.actor;
+            let target = run.targets[0];
+            engage(&mut run);
+            let position = crate::spell_cast::targets::position(run.app.world(), target).unwrap();
+            crate::spell_cast::cast_triggered_at_destination(
+                run.app.world_mut(),
+                actor,
+                1256306,
+                position,
+                1,
+            );
+            run.app
+                .world()
+                .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+                .0
+                .iter()
+                .find(|event| {
+                    event.spell_id == Some(1256306)
+                        && event.target == Some(target.to_bits())
+                        && event.kind == shared::protocol::CombatLogKind::Damage
+                })
+                .unwrap()
+                .amount
+        }
+        for (count, expected) in [(1, 1.35), (2, 1.30)] {
+            let without = meteor(false, count);
+            let with = meteor(true, count);
+            assert!(
+                (with as f64 / without as f64 - expected).abs() < 0.01,
+                "actual {count}-target damage: {without}/{with}"
+            );
+        }
+    }
+
+    #[test]
+    #[ignore = "requires native Vengeance profile"]
     fn selected_vulnerability_increases_damage_to_frailty_target() {
         use super::super::*;
         fn second_hit(selected: bool) -> i32 {
