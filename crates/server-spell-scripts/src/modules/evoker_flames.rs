@@ -61,7 +61,8 @@ fn record_scarlet_heal(world: &mut World, ctx: &spell_cast::effects::EffectCtx<'
         return;
     }
     let store = world.resource::<combat::spell_info::SpellStore>();
-    if !ctx.spell
+    if !ctx
+        .spell
         .class_options
         .as_ref()
         .is_some_and(|options| options.spell_class_set == 224)

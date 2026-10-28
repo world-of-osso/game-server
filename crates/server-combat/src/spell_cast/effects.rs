@@ -2393,8 +2393,9 @@ fn apply_heal_with_source(
             world, ctx.caster, ctx.spell, periodic,
         );
     let fraction = ctx.spell.cast_periodic_fraction.unwrap_or(1.0);
+    // SimC action.cpp1473 records periodic result_raw before the partial-tick multiplier.
     let source = raw.map(|raw| {
-        (modded_amount(world, ctx, raw, periodic) * done * named * fraction)
+        (modded_amount(world, ctx, raw, periodic) * done * named)
             .max(0.0)
             .round()
     });
