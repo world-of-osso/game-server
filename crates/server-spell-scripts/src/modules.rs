@@ -143,6 +143,7 @@ register_modules! {
     evoker_burnout: (1000, "modules/evoker_burnout.rs"),
     evoker_catalyze: (1000, "modules/evoker_catalyze.rs"),
     evoker_command_squadron: (1000, "modules/evoker_command_squadron.rs"),
+    evoker_dragonrage: (1000, "modules/evoker_dragonrage.rs"),
     evoker_flames: (430, "modules/evoker_flames.rs"),
     evoker_imminent: (1000, "modules/evoker_imminent.rs"),
     evoker_rewind: (1000, "modules/evoker_rewind.rs"),
