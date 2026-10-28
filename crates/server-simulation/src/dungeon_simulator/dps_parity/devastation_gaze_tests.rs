@@ -15,10 +15,14 @@ fn stacks(run: &Run) -> u8 {
 fn hit(run: &mut Run) {
     let actor = run.actor;
     let target = run.targets[0];
-    crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 361500, Some(target), 1);
-    for _ in 0..2 {
-        run.app.update();
+    let count = |run: &Run| run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0.iter().filter(|event| event.source == Some(actor.to_bits()) && event.target == Some(target.to_bits()) && event.spell_id == Some(361500) && event.kind == shared::protocol::CombatLogKind::Damage && event.amount > 0).count();
+    let before = count(run);
+    for _ in 0..5 {
+        crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 361500, Some(target), 1);
+        for _ in 0..2 { run.app.update(); }
+        if count(run) > before { return; }
     }
+    panic!("five native Living Flame attempts produced no landed damage");
 }
 
 #[test]
@@ -127,9 +131,15 @@ fn devastation_equipped_gaze_earns_stat_stacks_and_refresh_bypasses_one_icd() {
     hit(&mut run);
     assert_eq!(stacks(&run), first, "the existing cooldown must finish after refresh");
     for _ in 0..20 { run.app.update(); }
+    let aura = run.app.world().get::<ActiveAuras>(actor).unwrap().iter().find(|aura| aura.spell_id == 1266686 && aura.caster == actor).unwrap();
+    let instance = aura.instance_id;
+    let deadline = crate::auras::procs::proc_deadline(run.app.world(), actor, instance).unwrap();
+    let now = crate::spell_cast::now(run.app.world());
+    let level = aura.cast_item_level;
     hit(&mut run);
     let regular = stacks(&run);
-    assert_eq!(regular, first + 1, "the first post-refresh proc starts its normal cooldown");
+    let after = crate::auras::procs::proc_deadline(run.app.world(), actor, instance);
+    assert_eq!(regular, first + 1, "the first post-refresh proc starts its normal cooldown: now={now} deadline={deadline} after={after:?} level={level:?}");
     hit(&mut run);
     let bypassed = stacks(&run);
     assert_eq!(bypassed, regular + 1, "the following real hit bypasses that cooldown once");
