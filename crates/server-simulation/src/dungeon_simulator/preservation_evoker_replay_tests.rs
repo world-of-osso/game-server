@@ -10,6 +10,14 @@ fn preservation_evoker_heals_the_simc_dummy_party() {
     let effective = metrics["effective_hps"].as_f64().unwrap();
     let raw = metrics["raw_hps"].as_f64().unwrap();
     assert!(report["incoming_events"].as_u64().unwrap() > 100);
+    assert!(
+        report["healer_casts"]["364343"].as_u64().unwrap_or(0) > 0,
+        "Echo never cast: {report}"
+    );
+    assert!(
+        report["healer_casts"]["355936"].as_u64().unwrap_or(0) > 0,
+        "Dream Breath never cast: {report}"
+    );
     assert_eq!(report["tank_spec"], 66);
     assert!(report["tank_active_mitigation_seconds"].as_f64().unwrap() > 0.0);
     assert!(
