@@ -1142,6 +1142,27 @@ mod tests {
                 && event.amount > 0),
             "Fiery Brand ticks must feed pooled leech"
         );
+        crate::spell_cast::cast_for_player_with_target(
+            run.app.world_mut(),
+            actor,
+            187827,
+            Some(actor),
+        )
+        .unwrap();
+        for _ in 0..3 {
+            run.app.update();
+        }
+        let meta_leech = run
+            .app
+            .world()
+            .get::<crate::stats::CharacterStats>(actor)
+            .unwrap()
+            .leech_pct;
+        println!("VENGEANCE_META_LEECH percent={meta_leech}");
+        assert!(
+            (meta_leech - 20.79709).abs() < 0.01,
+            "Meta must apply Soul Rending's native leech modifier"
+        );
     }
 
     #[test]
