@@ -87,6 +87,8 @@ impl Facts for Context<'_> {
     fn value(&self, name: &str) -> Result<f64, String> {
         if name.starts_with("trinket.") || name.starts_with("equipped.") {
             self.equipment.fact(name, &self.native)
+        } else if name == "hero_tree.sanlayn" {
+            self.native.value("hero_tree.san'layn")
         } else {
             self.native.value(name)
         }
@@ -95,7 +97,10 @@ impl Facts for Context<'_> {
 
 impl ActionFacts for Context<'_> {
     fn value_for(&self, action: &Action, name: &str) -> Result<f64, String> {
-        if name.starts_with("trinket.") || name.starts_with("equipped.") {
+        if name.starts_with("trinket.")
+            || name.starts_with("equipped.")
+            || name == "hero_tree.sanlayn"
+        {
             self.value(name)
         } else {
             self.native.value_for(action, name)
