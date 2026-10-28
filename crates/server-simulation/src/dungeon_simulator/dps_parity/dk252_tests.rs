@@ -1476,6 +1476,11 @@ fn dk252_lord_magus_uses_selected_native_lifetime() {
     let virtual_now = crate::auras::aura_now(run.app.world());
     while crate::spell_cast::now(run.app.world()) < started + f64::from(native_ms) / 1000.0 - 1.0 {
         run.app.update();
+        if run.app.world().get_entity(magus).is_err() {
+            let world = run.app.world();
+            let events = &world.resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
+            panic!("Magus disappeared at {}; summons: {:?}", crate::spell_cast::now(world), events.iter().filter(|event| event.kind == CombatLogKind::Summon).collect::<Vec<_>>());
+        }
     }
     assert!(
         run.app.world().get_entity(magus).is_ok(),
