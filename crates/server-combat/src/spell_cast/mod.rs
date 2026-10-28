@@ -233,6 +233,8 @@ pub mod powers;
 mod precombat_item;
 pub use precombat_item::age_precombat_item_use;
 #[cfg(test)]
+mod chain_heal_target_tests;
+#[cfg(test)]
 mod protective_growth_tests;
 #[cfg(test)]
 mod raid_area_tests;
