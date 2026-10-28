@@ -45,9 +45,44 @@ fn is_precombat(_: &World, _: Entity) -> bool {
 }
 
 fn effect_hit(spell: u32, index: u8) -> Option<HitHook> {
-    (spell == 258921 && index == 0).then_some(fallout)
+    match (spell, index) {
+        (258921, 0) => Some(initial_hit),
+        (258922, 0) => Some(extend_charred_flesh),
+        _ => None,
+    }
 }
-fn fallout(world: &mut World, caster: Entity, _: Entity, _: u8) {
+fn initial_hit(world: &mut World, caster: Entity, target: Entity, depth: u8) {
+    fallout(world, caster);
+    extend_charred_flesh(world, caster, target, depth);
+}
+fn extend_charred_flesh(world: &mut World, caster: Entity, target: Entity, _: u8) {
+    if !is_vengeance(world, caster)
+        || !world
+            .get::<combat::class_progression::TraitLoadout>(caster)
+            .is_some_and(|traits| {
+                traits
+                    .active_talent_spells()
+                    .any(|talent| talent.spell_id == 336639)
+            })
+    {
+        return;
+    }
+    // SimC76f8118 sc_demon_hunter.cpp4739–4750: each landed Immolation
+    // impact extends the caster's actual Fiery Brand and Sigil of Flame.
+    let milliseconds = spell_cast::scripts::script_effect_value(world, caster, 336639, 0);
+    assert!(
+        milliseconds >= 0.0 && milliseconds.fract() == 0.0,
+        "invalid Charred Flesh duration"
+    );
+    combat::auras::extend_owned_duration(
+        world,
+        caster,
+        target,
+        &[207771, 204598],
+        milliseconds as u32,
+    );
+}
+fn fallout(world: &mut World, caster: Entity) {
     if !is_vengeance(world, caster)
         || !world
             .get::<combat::class_progression::TraitLoadout>(caster)

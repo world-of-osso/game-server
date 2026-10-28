@@ -40,7 +40,7 @@ const TALENTS: &[(&str, u32)] = &[
     ("fiery_demise", 389220),
     ("soul_sigils", 395446),
     ("fallout", 227174),
-    ("charred_flesh", 218657),
+    ("charred_flesh", 336639),
     ("sigil_of_spite", 390163),
     ("soul_carver", 207407),
     ("untethered_rage_2", 1270448),
@@ -687,6 +687,61 @@ mod tests {
         }
         assert_eq!(count(&run), 1, "exactly one delayed damage child");
     }
+    #[test]
+    #[ignore = "requires native Vengeance profile"]
+    fn charred_flesh_extends_real_brand_and_sigil_on_immolation_hit() {
+        use super::super::*;
+        let _seed = crate::random::seed_scope(70_448);
+        let (profile, traits) = read_reference(581).unwrap();
+        let identity = inputs::read_actor(&profile).unwrap();
+        let mut run = prepare_reference(profile, &traits, 1, identity).unwrap();
+        let actor = run.actor;
+        let target = run.targets[0];
+        engage(&mut run);
+        crate::spell_cast::cast_for_player_with_target(
+            run.app.world_mut(),
+            actor,
+            204021,
+            Some(target),
+        )
+        .unwrap();
+        assert!(crate::spell_cast::try_cast_triggered(
+            run.app.world_mut(),
+            actor,
+            204598,
+            Some(target),
+            1
+        ));
+        for _ in 0..5 {
+            run.app.update();
+        }
+        let expiry = |run: &Run, id| {
+            run.app
+                .world()
+                .get::<crate::auras::ActiveAuras>(target)
+                .unwrap()
+                .iter()
+                .find(|aura| aura.spell_id == id && aura.caster == actor)
+                .unwrap()
+                .expires_at
+                .unwrap()
+        };
+        let before = [expiry(&run, 207771), expiry(&run, 204598)];
+        assert!(crate::spell_cast::try_cast_triggered(
+            run.app.world_mut(),
+            actor,
+            258921,
+            None,
+            1
+        ));
+        for (index, id) in [207771, 204598].into_iter().enumerate() {
+            assert!(
+                (expiry(&run, id) - before[index] - 0.5).abs() < 0.001,
+                "rank 2 Charred Flesh must extend {id} by 500ms"
+            );
+        }
+    }
+
     #[test]
     #[ignore = "requires native Vengeance profile"]
     fn metamorphosis_and_spirit_bomb_earn_meteor_shower() {
