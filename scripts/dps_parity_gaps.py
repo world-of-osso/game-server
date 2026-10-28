@@ -23,6 +23,7 @@ TARGETS = {1: "single", 3: "three"}
 # SimC reports these actions under their parent or equivalent pet spell IDs.
 NATIVE_ALIASES = {
     64: {228597: 116, 228598: 30455, 228600: 199786},
+    252: {47632: 47541},
     253: {49966: 16827},
     254: {257045: 257044, 260247: 260243},
     255: {49966: 16827},
