@@ -21,6 +21,61 @@ pub(crate) fn read_trace(path: &Path, dummy: &str) -> Result<Vec<Hit>, String> {
     parse_trace(&trace, dummy)
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct RaidBuff {
+    pub name: String,
+    pub spell_id: u32,
+}
+
+pub(crate) fn read_raid_buffs(path: &Path) -> Result<Vec<RaidBuff>, String> {
+    let trace = std::fs::read_to_string(path)
+        .map_err(|error| format!("read {}: {error}", path.display()))?;
+    parse_raid_buffs(&trace)
+}
+
+fn parse_raid_buffs(trace: &str) -> Result<Vec<RaidBuff>, String> {
+    const NAMES: &[&str] = &[
+        "mark_of_the_wild",
+        "power_word_fortitude",
+        "battle_shout",
+        "skyfury",
+    ];
+    let mut buffs = Vec::new();
+    for &name in NAMES {
+        let enabled = trace
+            .lines()
+            .any(|line| line.trim() == format!("override.{name}=1"));
+        if !enabled {
+            continue;
+        }
+        let prefix = format!("Raid gains Buff '{name}' (");
+        let ids: Vec<&str> = trace
+            .lines()
+            .filter_map(|line| line.split_once(' '))
+            .filter(|(time, _)| *time == "0.000")
+            .filter_map(|(_, event)| event.strip_prefix(&prefix))
+            .filter_map(|rest| rest.split_once(')').map(|(id, _)| id))
+            .collect();
+        if ids.len() != 1 {
+            return Err(format!(
+                "expected one initial SimC raid buff event for {name}, found {}",
+                ids.len()
+            ));
+        }
+        let spell_id: u32 = ids[0]
+            .parse()
+            .map_err(|error| format!("invalid {name} spell ID: {error}"))?;
+        if spell_id == 0 {
+            return Err(format!("invalid zero spell ID for {name}"));
+        }
+        buffs.push(RaidBuff {
+            name: name.into(),
+            spell_id,
+        });
+    }
+    Ok(buffs)
+}
+
 pub(crate) fn read_bloodlust_time(path: &Path, player: &str) -> Result<Option<u64>, String> {
     let trace = std::fs::read_to_string(path)
         .map_err(|error| format!("read {}: {error}", path.display()))?;
@@ -108,6 +163,25 @@ fn parse_trace(trace: &str, dummy: &str) -> Result<Vec<Hit>, String> {
         return Err("SimC tank dummy trace has no ordered damage events".into());
     }
     Ok(hits)
+}
+
+#[test]
+fn reads_enabled_raid_buffs_and_their_trace_spell_ids() {
+    let trace = "override.skyfury=1\noverride.mark_of_the_wild=1\noverride.battle_shout=0\n0.000 Raid gains Buff 'skyfury' (462854) (stacks=1)\n0.000 Raid gains Buff 'mark_of_the_wild' (1126) (stacks=1)\n0.000 Raid gains Buff 'battle_shout' (6673) (stacks=1)";
+    assert_eq!(
+        parse_raid_buffs(trace).unwrap(),
+        vec![
+            RaidBuff {
+                name: "mark_of_the_wild".into(),
+                spell_id: 1126
+            },
+            RaidBuff {
+                name: "skyfury".into(),
+                spell_id: 462854
+            },
+        ]
+    );
+    assert!(parse_raid_buffs("override.skyfury=1").is_err());
 }
 
 #[test]
