@@ -194,8 +194,14 @@ fn selected(world: &World, caster: Entity, talent: u32) -> bool {
         })
 }
 
-fn valor_shield_multiplier(world: &World, caster: Entity, target: Entity, spell: &SpellInfo) -> f32 {
-    if spell.id == 53600 && spell.cast_primary_target == Some(target)
+fn valor_shield_multiplier(
+    world: &World,
+    caster: Entity,
+    target: Entity,
+    spell: &SpellInfo,
+) -> f32 {
+    if spell.id == 53600
+        && spell.cast_primary_target == Some(target)
         && combat::auras::has_aura(world, caster, 1269179)
     {
         1.0 + combat::spell_cast::scripts::script_effect_value(world, caster, 1269179, 0) / 100.0
@@ -204,15 +210,27 @@ fn valor_shield_multiplier(world: &World, caster: Entity, target: Entity, spell:
     }
 }
 
-fn blaze_area_filter(spell: u32, index: u8) -> Option<combat::spell_cast::script_registry::AreaTargetFilter> {
+fn blaze_area_filter(
+    spell: u32,
+    index: u8,
+) -> Option<combat::spell_cast::script_registry::AreaTargetFilter> {
     (spell == 1269224 && index == 0).then_some(filter_blaze_targets)
 }
 
-fn filter_blaze_targets(world: &World, _spell: &SpellInfo, primary: Option<Entity>, targets: &mut Vec<Entity>) {
+fn filter_blaze_targets(
+    world: &World,
+    _spell: &SpellInfo,
+    primary: Option<Entity>,
+    targets: &mut Vec<Entity>,
+) {
     targets.retain(|target| Some(*target) != primary);
-    let cap = world.resource::<SpellStore>().get(1267215)
+    let cap = world
+        .resource::<SpellStore>()
+        .get(1267215)
         .and_then(|source| source.effects.iter().find(|effect| effect.index == 0))
-        .expect("Glory apex Blaze target count").base_points.max(0.0) as usize;
+        .expect("Glory apex Blaze target count")
+        .base_points
+        .max(0.0) as usize;
     targets.truncate(cap);
 }
 
