@@ -5,17 +5,47 @@ use server::simc_apl::Facts;
 #[ignore = "requires native Outlaw260 profile and world data"]
 fn outlaw_alacrity_uses_simc_rank_scaled_haste() {
     let mut run = prepare_literal(260, 1).unwrap();
-    let auras = run.app.world().get::<crate::auras::ActiveAuras>(run.actor).unwrap();
-    let effect = auras.iter().find(|aura| aura.caster == run.actor && aura.spell_id == 193539)
-        .expect("selected Alacrity").effects.iter().find(|effect| effect.index == 0).unwrap();
-    assert_eq!(effect.amount, 30.0, "native rank-two value remains unchanged");
-    let with = run.app.world().get::<crate::stats::CharacterStats>(run.actor).unwrap().haste_pct;
-    crate::auras::remove_auras(run.app.world_mut(), run.actor, crate::auras::RemoveReason::Cancelled,
-        |aura| aura.spell_id == 193539);
+    let auras = run
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(run.actor)
+        .unwrap();
+    let effect = auras
+        .iter()
+        .find(|aura| aura.caster == run.actor && aura.spell_id == 193539)
+        .expect("selected Alacrity")
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap();
+    assert_eq!(
+        effect.amount, 30.0,
+        "native rank-two value remains unchanged"
+    );
+    let with = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(run.actor)
+        .unwrap()
+        .haste_pct;
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        run.actor,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 193539,
+    );
     run.app.update();
-    let without = run.app.world().get::<crate::stats::CharacterStats>(run.actor).unwrap().haste_pct;
+    let without = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(run.actor)
+        .unwrap()
+        .haste_pct;
     let ratio = (1.0 + with / 100.0) / (1.0 + without / 100.0);
-    assert!((ratio - 1.03).abs() < 0.001, "actual selected Alacrity haste ratio {ratio}");
+    assert!(
+        (ratio - 1.03).abs() < 0.001,
+        "actual selected Alacrity haste ratio {ratio}"
+    );
 }
 
 #[test]

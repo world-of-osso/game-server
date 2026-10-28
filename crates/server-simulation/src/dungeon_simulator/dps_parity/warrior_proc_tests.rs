@@ -115,24 +115,61 @@ fn arms_unhinged_mortal_strike_does_not_consume_or_cleave_sweeping_strikes() {
     let actor = run.actor;
     let primary = run.targets[0];
     super::literal_rotation::execution::execute(
-        run.app.world_mut(), actor,
+        run.app.world_mut(),
+        actor,
         super::literal_rotation::execution::Execution::Spell(260708, actor, Some(actor)),
-    ).unwrap();
-    let uses = |run: &super::Run| run.app.world().get::<crate::auras::ActiveAuras>(actor).unwrap()
-        .iter().find(|aura| aura.spell_id == 260708 && aura.caster == actor).unwrap().stacks;
+    )
+    .unwrap();
+    let uses = |run: &super::Run| {
+        run.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(actor)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 260708 && aura.caster == actor)
+            .unwrap()
+            .stacks
+    };
     let initial_uses = uses(&run);
-    for _ in 0..60 { run.app.update(); }
+    for _ in 0..60 {
+        run.app.update();
+    }
     super::literal_rotation::execution::execute(
-        run.app.world_mut(), actor,
+        run.app.world_mut(),
+        actor,
         super::literal_rotation::execution::Execution::Spell(227847, actor, Some(primary)),
-    ).unwrap();
-    for _ in 0..100 { run.app.update(); }
-    let hits: Vec<_> = run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
-        .0.iter().filter(|event| event.kind == shared::protocol::CombatLogKind::Damage
-            && event.source == Some(actor.to_bits()) && event.spell_id == Some(12294) && event.amount > 0).collect();
-    assert!(!hits.is_empty(), "Unhinged must produce actual Mortal Strikes");
-    assert!(hits.iter().all(|event| event.target == Some(primary.to_bits())), "Unhinged must not hit secondary targets: {hits:?}");
-    assert_eq!(uses(&run), initial_uses, "Unhinged must not consume Sweeping Strikes uses");
+    )
+    .unwrap();
+    for _ in 0..100 {
+        run.app.update();
+    }
+    let hits: Vec<_> = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .iter()
+        .filter(|event| {
+            event.kind == shared::protocol::CombatLogKind::Damage
+                && event.source == Some(actor.to_bits())
+                && event.spell_id == Some(12294)
+                && event.amount > 0
+        })
+        .collect();
+    assert!(
+        !hits.is_empty(),
+        "Unhinged must produce actual Mortal Strikes"
+    );
+    assert!(
+        hits.iter()
+            .all(|event| event.target == Some(primary.to_bits())),
+        "Unhinged must not hit secondary targets: {hits:?}"
+    );
+    assert_eq!(
+        uses(&run),
+        initial_uses,
+        "Unhinged must not consume Sweeping Strikes uses"
+    );
 }
 
 #[test]
