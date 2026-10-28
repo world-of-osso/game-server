@@ -1342,7 +1342,6 @@ fn dk252_plague_ticks_can_apply_selected_brittle() {
     }
 }
 
-
 #[test]
 #[ignore = "requires native252 profile/traits and player actor"]
 fn dk252_reaping_grants_buff_and_increases_execute_coil_damage() {
