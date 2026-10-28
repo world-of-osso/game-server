@@ -36,7 +36,10 @@ fn after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
     let cap = script_effect_value(world, caster, SET_BONUS, 2) as u32;
     let duration_ms = script_effect_value(world, caster, SET_BONUS, 1) as u32;
     let mut entity = world.entity_mut(caster);
-    let mut counter = entity.entry::<RecklessnessExtensions>().or_default();
+    let mut counter = entity
+        .entry::<RecklessnessExtensions>()
+        .or_default()
+        .into_mut();
     if counter.0 >= cap {
         return;
     }
