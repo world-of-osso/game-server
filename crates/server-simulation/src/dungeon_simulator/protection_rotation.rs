@@ -42,7 +42,7 @@ const TALENTS: &[(&str, u32)] = &[
     ("glory_of_the_vanguard_3", 1267215),
 ];
 
-pub(super) fn bindings() -> Bindings {
+pub(crate) fn bindings() -> Bindings {
     let names = |entries: &[(&str, u32)]| {
         entries
             .iter()
@@ -59,7 +59,7 @@ pub(super) fn bindings() -> Bindings {
     }
 }
 
-pub(super) struct Context<'a> {
+pub(crate) struct Context<'a> {
     native: NativeFacts<'a>,
     equipment: &'a Equipment,
     consecration_up: bool,
@@ -68,7 +68,7 @@ pub(super) struct Context<'a> {
 }
 
 impl<'a> Context<'a> {
-    pub(super) fn new(
+    pub(crate) fn new(
         world: &'a World,
         actor: Entity,
         targets: &'a [Entity],
