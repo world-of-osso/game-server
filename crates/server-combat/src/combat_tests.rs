@@ -132,8 +132,10 @@ fn run_attack_tick(app: &mut App) {
             let mut redirect_health = std::collections::HashMap::new();
             for (entity, mut aa, position, stats) in &mut attackers {
                 let te = aa.victim;
-                aa.timer = aa.timer.saturating_sub(dt);
-                aa.off_hand_timer = aa.off_hand_timer.saturating_sub(dt);
+                let overshoot = [
+                    advance_swing_timer(&mut aa.timer, dt),
+                    advance_swing_timer(&mut aa.off_hand_timer, dt),
+                ];
                 let attacker = Attacker {
                     entity,
                     player: false,
@@ -158,6 +160,10 @@ fn run_attack_tick(app: &mut App) {
                     if try_swing(
                         &attacker,
                         hand,
+                        overshoot[match hand {
+                            Hand::Main => 0,
+                            Hand::Off => 1,
+                        }],
                         &mut targets,
                         &context,
                         te,
