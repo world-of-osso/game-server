@@ -354,6 +354,8 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 ### Havoc literal rotation
 
+- Havoc Immolation Aura258920 grants its native Havoc initial Fury only; its periodic child258922 grants native Havoc tick Fury only while Burning Hatred320374 is selected. Do not apply the Vengeance energize effects to Havoc (SimC76f8118 `sc_demon_hunter.cpp`4651–4677,4784–4800).
+
 - Immolation Aura258920 deals native initial damage258921 on each in-combat application or refresh. The precombat fixture does not emit its initial hit. Selected Undying Embers1272405 rolls native effect0 on natural expiry or replacement of an active aura and, after 300ms, reapplies the aura without a cast or resource grant; replacement resets its tick phase (SimC76f8118 `sc_demon_hunter.cpp`8927–8954,8980–9040).
 - Completed Eye Beam/Gaze with selected Final Breath1266500 emits one additional native child tick scaled by the talent's effect0; interruptions do not emit it (SimC76f8118 `sc_demon_hunter.cpp`3285–3327).
 
