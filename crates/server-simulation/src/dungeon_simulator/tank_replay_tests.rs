@@ -319,6 +319,14 @@ fn holy_bulwark_absorbs_incoming_hits_and_grows_to_native_cap() {
 }
 
 #[test]
+#[ignore = "uses the selected MID2 Protection player and precombat APL"]
+fn protection_default_precombat_casts_holy_bulwark() {
+    let run = super::dps_parity::prepare_registered_player(66, 1).unwrap();
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, 432496));
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, 432478));
+}
+
+#[test]
 #[ignore = "uses the selected MID2 66 player and native armament override"]
 fn protection_holy_armaments_alternate_after_real_casts() {
     let (profile, traits) = super::dps_parity::read_reference(66).unwrap();
