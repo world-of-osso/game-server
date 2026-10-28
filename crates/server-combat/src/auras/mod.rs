@@ -111,7 +111,7 @@ use crate::spell_cast::{effects, log_event, targets};
 use crate::spell_info::{SpellEffect, SpellInfo, SpellStore};
 use crate::stats::StatModifiers;
 pub use ignite::spread_ignite;
-pub use periodic::{paid_periodic_ticks, remaining_periodic_ticks};
+pub use periodic::{count_remaining_ticks, paid_periodic_ticks, remaining_periodic_ticks};
 pub use spell_mods::SpellModOp;
 pub use stat_mods::AuraStatMods;
 pub(crate) use stat_mods::time_percent_mod;

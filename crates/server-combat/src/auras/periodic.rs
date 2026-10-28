@@ -162,7 +162,8 @@ pub fn remaining_periodic_ticks(
         .try_fold(0, |maximum, ticks| ticks.map(|ticks| maximum.max(ticks)))
 }
 
-fn count_remaining_ticks(aura: &super::AuraInstance) -> Result<u32, String> {
+/// Read remaining scheduled ticks from an aura detached by channel cancellation.
+pub fn count_remaining_ticks(aura: &super::AuraInstance) -> Result<u32, String> {
     let periodic: Vec<_> = aura
         .effects
         .iter()

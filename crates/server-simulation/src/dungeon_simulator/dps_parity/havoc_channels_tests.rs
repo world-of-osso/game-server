@@ -88,6 +88,36 @@ fn havoc_undying_embers_retriggers_expired_immolation() {
 
 #[test]
 #[ignore = "requires prepared native spec577 player profile"]
+fn havoc_late_channel_interrupt_earns_final_breath_and_gaze() {
+    for remaining in [3, 2] {
+        let _seed = crate::random::seed_scope(70_448);
+        let mut run = prepare_literal(577, 1).unwrap();
+        let actor = run.actor;
+        let primary = run.targets[0];
+        super::face_actor_toward_primary(run.app.world_mut(), actor, primary);
+        havoc_tests::earn_havoc_fury(&mut run, 30.0);
+        cast(&mut run, 198013, false);
+        for _ in 0..200 {
+            let left = crate::auras::remaining_periodic_ticks(run.app.world(), actor, actor, 198013)
+                .expect("bounded Beam schedule");
+            if left == remaining {
+                break;
+            }
+            advance(&mut run, 1);
+        }
+        assert_eq!(
+            crate::auras::remaining_periodic_ticks(run.app.world(), actor, actor, 198013).unwrap(),
+            remaining,
+        );
+        let before = damage(&run, Some(198030)).len();
+        crate::spell_cast::cancel_cast(run.app.world_mut(), actor);
+        assert_eq!(damage(&run, Some(198030)).len() - before, usize::from(remaining == 2));
+        assert_eq!(crate::auras::has_aura(run.app.world(), actor, 343312), remaining == 2);
+    }
+}
+
+#[test]
+#[ignore = "requires prepared native spec577 player profile"]
 fn havoc_final_breath_adds_scaled_tick_on_completed_beam() {
     for selected in [false, true] {
         let _seed = crate::random::seed_scope(70_448);
