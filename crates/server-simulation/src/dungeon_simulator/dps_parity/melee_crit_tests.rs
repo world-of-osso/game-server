@@ -75,3 +75,42 @@ fn literal_native_melee_crit_class_npc_uses_character_stats() {
     queue.apply(world);
     assert_critical_rate(&mut run, actor, base + white_bonus);
 }
+
+#[test]
+#[ignore = "native Fury player white swings respect selected Focus in Chaos and Enrage"]
+fn fury_focus_in_chaos_prevents_only_enraged_white_misses() {
+    fn misses(selected: bool, enraged: bool) -> usize {
+        let _seed = crate::random::seed_scope(70_448);
+        let mut run = prepare_measurement(72, 1).unwrap();
+        assert!(run.app.world().get::<shared::components::Player>(run.actor).is_some());
+        let actor = run.actor;
+        assert!(run.app.world().get::<crate::class_progression::TraitLoadout>(actor).unwrap().active_talent_spells().any(|spell| spell.spell_id == 383486));
+        if !selected {
+            run.app.world_mut().entity_mut(actor).insert(crate::class_progression::TraitLoadout::default());
+        }
+        super::channel_timing_tests::remove_equipped_proc_drivers(&mut run);
+        engage(&mut run);
+        let world = run.app.world_mut();
+        let mut queue = bevy::ecs::world::CommandQueue::default();
+        let mut commands = Commands::new(&mut queue, world);
+        crate::combat::start_attack(&mut commands, actor, run.targets[0], None);
+        queue.apply(world);
+        for _ in 0..6000 {
+            if enraged && !crate::auras::has_aura(run.app.world(), actor, 184362) {
+                crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 184362, Some(actor), 1);
+            } else if !enraged {
+                crate::auras::remove_auras(run.app.world_mut(), actor, crate::auras::RemoveReason::Consumed, |aura| aura.spell_id == 184362 && aura.caster == actor);
+            }
+            run.app.update();
+            let events = &run.app.world().resource::<ObservedCombatEvents>().0;
+            if events.iter().filter(|e| e.source == Some(actor.to_bits()) && e.spell_id.is_none() && matches!(e.kind, CombatLogKind::Damage | CombatLogKind::Miss(_))).count() >= 60 {
+                let combat = report::combat(run.app.world(), &run.damage_targets, 1.0);
+                return combat["actions"].as_array().unwrap().iter().filter(|a| a["spell_id"].is_null() && a["actor"] == actor.to_bits()).map(|a| a["misses"].as_u64().unwrap() as usize).sum();
+            }
+        }
+        panic!("expected 60 actual player white attempts");
+    }
+    assert_eq!(misses(true, true), 0, "selected Focus prevents white misses during Enrage");
+    assert!(misses(true, false) > 0, "without Enrage normal misses remain");
+    assert!(misses(false, true) > 0, "without Focus normal misses remain while Enraged");
+}

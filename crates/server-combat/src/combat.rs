@@ -1087,6 +1087,35 @@ fn queue_melee_override(commands: &mut Commands, caster: Entity, target: Entity,
     });
 }
 
+fn swing_modifiers(
+    mods: Option<&AuraStatMods>,
+    auras: Option<&crate::auras::ActiveAuras>,
+    traits: Option<&crate::class_progression::TraitLoadout>,
+    actor: Entity,
+    haste: f32,
+) -> Option<AuraStatMods> {
+    let mut result =
+        mods.map(|mods| crate::auras::rogue::fold_swift_slasher(mods, auras, actor, haste));
+    let focus = traits.is_some_and(|traits| {
+        traits
+            .active_talent_spells()
+            .any(|spell| spell.spell_id == 383486)
+    });
+    let enraged = auras.is_some_and(|auras| {
+        auras
+            .iter()
+            .any(|aura| aura.spell_id == 184362 && aura.caster == actor)
+    });
+    if focus && enraged {
+        // SimC76f8118 sc_warrior.cpp2074–2080: Focus in Chaos gives white swings
+        // 100% hit while Enraged; dodge and parry remain independent.
+        result
+            .get_or_insert_with(AuraStatMods::default)
+            .melee_hit_chance_pct = 100.0;
+    }
+    result
+}
+
 fn snapshot_attacker(
     attackers: &mut AutoAttackers,
     entity: Entity,
@@ -1119,9 +1148,7 @@ fn snapshot_attacker(
     Some(SwingSnapshot {
         auto_attack: auto_attack.clone(),
         position: *position,
-        mods: mods.map(|modifiers| {
-            crate::auras::rogue::fold_swift_slasher(modifiers, auras, entity, swing_haste_pct)
-        }),
+        mods: swing_modifiers(mods, auras, traits, entity, swing_haste_pct),
         attack_spells: [
             read_melee_override(auras, Hand::Main),
             read_melee_override(auras, Hand::Off),
