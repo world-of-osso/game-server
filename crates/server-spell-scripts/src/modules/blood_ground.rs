@@ -65,7 +65,11 @@ fn proc_scourge(world: &mut World, caster: Entity, _: &AuraInstance, _: Option<E
 
 // SimC76f8118 sc_death_knight.cpp9702–9717 consumes the free cast's proc.
 fn consume_scourge(world: &mut World, caster: Entity, spell: &combat::spell_info::SpellInfo) {
-    if spell.id == DECAY && world.get::<ActiveSpec>(caster).is_some_and(|spec| spec.0 == 250) {
+    if spell.id == DECAY
+        && world
+            .get::<ActiveSpec>(caster)
+            .is_some_and(|spec| spec.0 == 250)
+    {
         auras::remove_auras(world, caster, RemoveReason::Consumed, |aura| {
             aura.spell_id == SCOURGE_BUFF && aura.caster == caster
         });
@@ -73,12 +77,14 @@ fn consume_scourge(world: &mut World, caster: Entity, spell: &combat::spell_info
 }
 
 #[derive(Component)]
-struct InBloodDecay;
+struct InBloodDecay {
+    grace_until: Option<f64>,
+}
 #[derive(Component)]
 struct HasBloodDecay;
 
-// SimC76f8118 sc_death_knight.cpp9680–9686: the selected ground buff is
-// present only while the caster is in their actual active DnD field.
+// SimC76f8118 sc_death_knight.cpp9678–9681 retains the ground buff for
+// four seconds when the last Death and Decay field expires.
 fn sync_fields(world: &mut World) {
     let now = spell_cast::now(world);
     let fields: Vec<_> = world
@@ -114,7 +120,8 @@ fn sync_fields(world: &mut World) {
         )
     };
     for (actor, position) in actors {
-        if fields.iter().any(|(caster, _)| *caster == actor) {
+        let active = fields.iter().any(|(caster, _)| *caster == actor);
+        if active {
             world.entity_mut(actor).insert(HasBloodDecay);
         } else {
             world.entity_mut(actor).remove::<HasBloodDecay>();
@@ -125,11 +132,19 @@ fn sync_fields(world: &mut World) {
                     .distance(Vec3::new(center.x, center.y, center.z))
                     <= radius
         });
-        let was_inside = world.get::<InBloodDecay>(actor).is_some();
-        if inside {
-            if !was_inside {
-                world.entity_mut(actor).insert(InBloodDecay);
-            }
+        let grace = if inside {
+            world
+                .entity_mut(actor)
+                .insert(InBloodDecay { grace_until: None });
+            true
+        } else if !active {
+            world
+                .get_mut::<InBloodDecay>(actor)
+                .is_some_and(|mut state| now < *state.grace_until.get_or_insert(now + 4.0))
+        } else {
+            false
+        };
+        if grace {
             if !auras::has_aura(world, actor, IN_DECAY) {
                 apply(world, actor, IN_DECAY);
             }
@@ -138,7 +153,7 @@ fn sync_fields(world: &mut World) {
             {
                 apply(world, actor, SANGUINE_BUFF);
             }
-        } else if was_inside {
+        } else if world.get::<InBloodDecay>(actor).is_some() {
             world.entity_mut(actor).remove::<InBloodDecay>();
             auras::remove_auras(world, actor, RemoveReason::Cancelled, |aura| {
                 aura.caster == actor && matches!(aura.spell_id, IN_DECAY | SANGUINE_BUFF)
