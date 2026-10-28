@@ -611,6 +611,9 @@ fn extend_winter_for_runes(world: &mut World, caster: Entity, spell: &SpellInfo)
 }
 
 fn register_frost_auras(scripts: &mut auras::scripts::AuraScripts) {
+    scripts.0.entry(440031).or_default().check_proc = Some(bind_native_proc_allowed);
+    scripts.0.entry(RIME_BUFF).or_default().on_apply = Some(rime_applied);
+    scripts.0.entry(RIME_BUFF).or_default().on_remove = Some(rime_ended);
     scripts.0.entry(PILLAR).or_default().on_apply = Some(pillar_applied);
     scripts.0.entry(PILLAR).or_default().on_remove = Some(pillar_ended);
     scripts.0.entry(443595).or_default().on_remove = Some(dark_talons_ended);
@@ -701,6 +704,28 @@ fn pillar_ended(
     auras::remove_auras(world, unit, auras::RemoveReason::Consumed, |a| {
         a.spell_id == 377192 && a.caster == unit
     });
+}
+
+fn bind_native_proc_allowed(
+    world: &World,
+    aura: &auras::AuraInstance,
+    _: &auras::procs::AuraEvent,
+) -> bool {
+    !is_frost(world, aura.caster)
+}
+
+fn rime_applied(world: &mut World, unit: Entity, aura: &auras::AuraInstance) {
+    if aura.caster == unit && is_frost(world, unit) && auras::has_aura(world, unit, 440031) {
+        spell_cast::cast_triggered(world, unit, 443532, Some(unit), 1);
+    }
+}
+
+fn rime_ended(world: &mut World, unit: Entity, aura: &auras::AuraInstance, _: auras::RemoveReason) {
+    if aura.caster == unit && is_frost(world, unit) {
+        auras::remove_auras(world, unit, auras::RemoveReason::Consumed, |buff| {
+            buff.spell_id == 443532 && buff.caster == unit
+        });
+    }
 }
 
 fn pillar_applied(world: &mut World, unit: Entity, aura: &auras::AuraInstance) {
