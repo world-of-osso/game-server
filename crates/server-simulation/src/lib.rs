@@ -18,3 +18,4 @@ mod spell_cast {
 
 mod add_up_tests;
 mod dungeon_simulator;
+mod healer_tank_timeline;
