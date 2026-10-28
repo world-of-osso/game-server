@@ -9,7 +9,9 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::TargetDamageMult
 
 fn multiplier(world: &World, caster: Entity, _target: Entity, spell: &SpellInfo) -> f32 {
     if spell.id != 60103
-        || !world.get::<ActiveSpec>(caster).is_some_and(|spec| spec.0 == 263)
+        || !world
+            .get::<ActiveSpec>(caster)
+            .is_some_and(|spec| spec.0 == 263)
         || !combat::auras::has_aura(world, caster, 319778)
     {
         return 1.0;

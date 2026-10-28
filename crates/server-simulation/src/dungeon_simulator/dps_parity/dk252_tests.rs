@@ -1172,12 +1172,27 @@ fn dk252_runic_spends_trigger_runic_corruption() {
     engage(&mut run);
     let mut earned = false;
     for _ in 0..10 {
-        crate::spell_cast::powers::change_power(run.app.world_mut(), run.actor, shared::components::PowerType::RunicPower, 1000.0);
-        literal_rotation::execution::execute(run.app.world_mut(), run.actor,
-            literal_rotation::execution::Execution::Spell(47541, run.targets[0], Some(run.targets[0]))).unwrap();
+        crate::spell_cast::powers::change_power(
+            run.app.world_mut(),
+            run.actor,
+            shared::components::PowerType::RunicPower,
+            1000.0,
+        );
+        literal_rotation::execution::execute(
+            run.app.world_mut(),
+            run.actor,
+            literal_rotation::execution::Execution::Spell(
+                47541,
+                run.targets[0],
+                Some(run.targets[0]),
+            ),
+        )
+        .unwrap();
         preparation::finish_pending_setup(&mut run).unwrap();
         earned |= crate::auras::has_aura(run.app.world(), run.actor, 51460);
-        for _ in 0..40 { run.app.update(); }
+        for _ in 0..40 {
+            run.app.update();
+        }
     }
     assert!(earned, "real Runic Power spends must earn Runic Corruption");
 }
