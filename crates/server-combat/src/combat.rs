@@ -793,6 +793,18 @@ pub(crate) fn auto_attack_system(world: &mut World) {
         .iter(world)
         .collect();
     for attacker in attackers {
+        // SimC76f8118 pets.cpp1510–1573: Antoran Tyrant's Burning Cleave is
+        // its only swing. Native1251000 also replaces white swings with the
+        // same spell, so a separate auto-attack would duplicate it.
+        if world
+            .get::<Npc>(attacker)
+            .is_some_and(|npc| npc.template_id == 250289)
+            && world
+                .get::<crate::spell_cast::summon::SummonedCreature>(attacker)
+                .is_some_and(|summon| summon.spell_id == 265187)
+        {
+            continue;
+        }
         // Apply this attacker's commands before the next attacker reads mitigation.
         // In particular, consuming Ardent also removes its30% damage reduction now.
         let owner_crit = read_pet_owner_critical_chance(world, attacker);
