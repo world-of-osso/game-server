@@ -2301,6 +2301,37 @@ fn dk252_literal_rotation_observes_sudden_doom_reaction() {
 }
 
 #[test]
+#[ignore = "requires native252 profile/traits and player actor"]
+fn dk252_mograine_decay_hits_targets_and_extends_owned_disease() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 3).unwrap();
+    engage(&mut run);
+    assert!(crate::spell_cast::try_cast_triggered(run.app.world_mut(), run.actor, 1240996, Some(run.targets[0]), 1));
+    let expiry = |run: &Run| run.app.world().get::<crate::auras::ActiveAuras>(run.targets[0]).unwrap().iter()
+        .find(|aura| aura.spell_id == 1240996 && aura.caster == run.actor).unwrap().expires_at.unwrap();
+    let before = expiry(&run);
+    literal_rotation::execution::execute(run.app.world_mut(), run.actor,
+        literal_rotation::execution::Execution::Spell(42650, run.actor, None)).unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, 444505), "selected Mograine's Might must affect the owner");
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, 188290), "Mograine's Might must grant the owner's Death and Decay state");
+    for _ in 0..50 { run.app.update(); }
+    assert!(expiry(&run) > before, "actual Mograine decay impacts must extend the owner's disease");
+    let mograine = {
+        let world = run.app.world_mut();
+        world.query::<(Entity, &crate::spell_cast::summon::SummonedCreature)>().iter(world)
+            .find_map(|(actor, summon)| (summon.owner == run.actor && summon.spell_id == 444248).then_some(actor))
+            .expect("Army must summon actual Mograine")
+    };
+    let events = &run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
+    for target in &run.targets {
+        assert!(events.iter().any(|event| event.source == Some(mograine.to_bits()) && event.spell_id == Some(1251951)
+            && event.target == Some(target.to_bits()) && event.kind == CombatLogKind::Damage && event.amount > 0),
+            "Mograine's actual Death and Decay must hit {target:?}");
+    }
+}
+
+#[test]
 #[ignore = "requires private native252 profile/traits and player actor"]
 fn dk252_single_target_uses_dark_transformation_and_putrefy() {
     let _seed = crate::random::seed_scope(70448);
