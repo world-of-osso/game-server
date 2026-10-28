@@ -410,8 +410,8 @@ fn tertiary_ratings_follow_curve_21025() {
     );
 }
 
-/// TC master avoidance (StatSystem.cpp:490-715): a level 10 Warrior with a weapon, a
-/// shield, Parry and Block parries 5%, blocks 5% and dodges nothing without rating;
+/// A level 10 Warrior with zero Strength, a weapon, a shield, Parry and Block
+/// parries 3%, blocks 5% and dodges nothing without rating;
 /// 10% of dodge rating diminishes to 65.63144 × 10 / (10 + 65.63144 × 0.956) = 9.022%.
 #[test]
 fn player_avoidance_follows_trinitycore_master() {
@@ -422,6 +422,8 @@ fn player_avoidance_follows_trinitycore_master() {
         shield_armor: Some(100.0),
         dodge_pct: 0.0,
         parry_pct: 0.0,
+        strength: 0.0,
+        base_strength: 0.0,
         block_pct: 0.0,
     };
     let none = player_defense(WARRIOR, 10, &CombatRatings::default(), inputs);
@@ -429,7 +431,7 @@ fn player_avoidance_follows_trinitycore_master() {
         none,
         PlayerDefense {
             dodge: 0.0,
-            parry: 5.0,
+            parry: 3.0,
             block: 5.0,
             shield_block: 250.0,
             sitting: false,
@@ -467,6 +469,35 @@ fn player_avoidance_follows_trinitycore_master() {
         player_defense(WARRIOR, 10, &CombatRatings::default(), no_block).block,
         0.0
     );
+}
+
+#[test]
+fn plate_strength_grants_diminished_parry() {
+    let inputs = DefenseInputs {
+        can_parry: true,
+        has_weapon: true,
+        strength: 1912.9742,
+        base_strength: 191.29742,
+        ..Default::default()
+    };
+    for class in [1, 2, 6] {
+        let initial = player_defense(class, 90, &CombatRatings::default(), inputs).parry;
+        let stronger = player_defense(
+            class,
+            90,
+            &CombatRatings::default(),
+            DefenseInputs {
+                strength: 3825.9485,
+                ..inputs
+            },
+        )
+        .parry;
+        assert!((initial - 11.8).abs() < 0.001, "class {class}: {initial}");
+        assert!(
+            (stronger - (4.0 + 19.0 / (0.19 + 1.0 / 0.94))).abs() < 0.001,
+            "class {class}: {stronger}"
+        );
+    }
 }
 
 const SPEC_ARCANE: u32 = 62;
