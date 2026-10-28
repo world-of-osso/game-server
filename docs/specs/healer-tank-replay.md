@@ -13,6 +13,10 @@ Replay recorded incoming damage in the native server combat simulation to compar
 - [ ] Print report tables with `scripts/healer_tank_replay.py`.
 - [ ] Mistweaver Mana Tea uses native-description-derived spending, stack cap, channel consumption and mana restoration. The pinned SimC source has no Mistweaver Mana Tea model.
 
+## Specializations
+
+- [Brewmaster (268)](healer-tank-replay/268.md)
+
 ## How it works
 
 - [Replay system](../wiki/systems/healer-tank-replay.md)
