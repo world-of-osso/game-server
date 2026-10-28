@@ -1002,6 +1002,74 @@ mod tests {
 
     #[test]
     #[ignore = "requires native Vengeance profile"]
+    fn vengeance_mid2_four_piece_doubles_damage_on_real_sigil_target() {
+        use super::super::*;
+        fn hit(spell: u32, equipped: bool, sigil: bool) -> f64 {
+            let _seed = crate::random::seed_scope(70_448);
+            let (profile, traits) = read_reference(581).unwrap();
+            let identity = inputs::read_actor(&profile).unwrap();
+            let mut run = prepare_reference(profile, &traits, 1, identity).unwrap();
+            let actor = run.actor;
+            let target = run.targets[0];
+            engage(&mut run);
+            assert!(crate::auras::has_aura(run.app.world(), actor, 1296614));
+            if !equipped {
+                crate::auras::remove_auras(
+                    run.app.world_mut(),
+                    actor,
+                    crate::auras::RemoveReason::Cancelled,
+                    |aura| aura.spell_id == 1296614,
+                );
+            }
+            if sigil {
+                assert!(crate::spell_cast::try_cast_triggered(
+                    run.app.world_mut(),
+                    actor,
+                    204598,
+                    Some(target),
+                    1
+                ));
+                assert!(crate::auras::has_aura(run.app.world(), target, 204598));
+            }
+            assert!(crate::spell_cast::try_cast_triggered(
+                run.app.world_mut(),
+                actor,
+                spell,
+                Some(target),
+                1
+            ));
+            let event = run
+                .app
+                .world()
+                .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+                .0
+                .iter()
+                .find(|event| {
+                    event.spell_id == Some(spell)
+                        && event.target == Some(target.to_bits())
+                        && event.kind == shared::protocol::CombatLogKind::Damage
+                })
+                .unwrap();
+            f64::from(event.amount) / if event.crit { 2.0 } else { 1.0 }
+        }
+        for spell in [258921, 258922, 389860] {
+            let without_tier = hit(spell, false, true);
+            let with_tier = hit(spell, true, true);
+            assert!(
+                (with_tier / without_tier - 2.0).abs() < 0.02,
+                "spell {spell}: {without_tier}/{with_tier}"
+            );
+            let without_sigil = hit(spell, false, false);
+            let tier_without_sigil = hit(spell, true, false);
+            assert!(
+                (tier_without_sigil / without_sigil - 1.0).abs() < 0.02,
+                "spell {spell} without Sigil: {without_sigil}/{tier_without_sigil}"
+            );
+        }
+    }
+
+    #[test]
+    #[ignore = "requires native Vengeance profile"]
     fn vengeance_mid2_soul_cleave_extends_real_sigil() {
         use super::super::*;
         let _seed = crate::random::seed_scope(70_448);
