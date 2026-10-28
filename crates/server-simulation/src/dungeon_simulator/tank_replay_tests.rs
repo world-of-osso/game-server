@@ -2,6 +2,20 @@ use super::healer_intake::Intake;
 use std::path::Path;
 
 #[test]
+#[ignore = "reads the pinned MID2 Protection profile"]
+fn tank_replay_rejects_profiles_without_level_90_mid2_inputs() {
+    let (mut profile, _) = super::dps_parity::read_reference(66).unwrap();
+    super::dps_parity::require_mid2_profile(&profile).unwrap();
+    profile.level = "89".into();
+    assert!(super::dps_parity::require_mid2_profile(&profile).is_err());
+    profile.level = "90".into();
+    profile
+        .options
+        .insert("reference_tier".into(), serde_json::json!("MID1"));
+    assert!(super::dps_parity::require_mid2_profile(&profile).is_err());
+}
+
+#[test]
 #[ignore = "uses the real MID2 Protection profile and native fields"]
 fn protection_apl_reads_selected_apex_and_native_consecration() {
     use super::tank_replay::protection_rotation::{self, Context};

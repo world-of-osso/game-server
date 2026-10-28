@@ -329,6 +329,7 @@ fn prepare_measurement(spec_id: u32, count: usize) -> Result<Run, String> {
 /// Prepare only a registered literal player driver; never substitute a follower policy.
 pub(crate) fn prepare_registered_player(spec_id: u32, count: usize) -> Result<Run, String> {
     let (profile, _) = read_reference(spec_id)?;
+    require_mid2_profile(&profile)?;
     let identity = inputs::read_actor(&profile)?;
     if !matches!(
         identity,
@@ -340,6 +341,22 @@ pub(crate) fn prepare_registered_player(spec_id: u32, count: usize) -> Result<Ru
         return Err(format!("NATIVE_LITERAL_DRIVER_UNAVAILABLE:{spec_id}"));
     }
     prepare_measurement(spec_id, count)
+}
+
+pub(crate) fn require_mid2_profile(profile: &inputs::Profile) -> Result<(), String> {
+    if profile.level != "90"
+        || profile
+            .options
+            .get("reference_tier")
+            .and_then(Value::as_str)
+            != Some("MID2")
+    {
+        return Err(format!(
+            "NATIVE_TANK_REPLAY_REQUIRES_MID2_LEVEL_90:{}",
+            profile.spec_id
+        ));
+    }
+    Ok(())
 }
 
 pub(crate) fn tank_mitigation_auras(run: &Run) -> Result<&'static [u32], String> {
