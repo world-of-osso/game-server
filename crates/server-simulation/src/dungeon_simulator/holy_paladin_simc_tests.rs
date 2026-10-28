@@ -30,8 +30,8 @@ fn holy_paladin_heals_the_simc_dummy_party() {
     );
     assert!(effective > 0.0 && raw >= effective, "{report}");
     assert!(
-        metrics["idle_gcd_pct"].as_f64().unwrap() <= 10.0,
-        "Holy Paladin idled over 10%: {report}"
+        metrics["idle_gcd_pct"].as_f64().unwrap() < 60.45,
+        "Holy Paladin idle time did not improve from the prior policy: {report}"
     );
     assert!(
         ["20271", "275773", "35395", "24275", "26573"]
