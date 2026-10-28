@@ -655,7 +655,7 @@ const BASE_PARRY_PCT: f32 = 5.0;
 const BASE_BLOCK_PCT: f32 = 5.0;
 /// SimC 76f8118 sc_extra_data.inc `_gt_avoid_per_str_agi_by_level` denominators.
 /// Values were measured in game; the source repeats level 90 above that level.
-const PARRY_STRENGTH_DENOMINATOR: [f64; 90] = [
+const AVOIDANCE_STAT_DENOMINATOR: [f64; 90] = [
     16.04048030,
     16.04048174,
     16.04047836,
@@ -779,14 +779,17 @@ pub struct DefenseInputs {
     /// Current and unmodified class/race Strength, for SimC's plate parry conversion.
     pub strength: f32,
     pub base_strength: f32,
+    /// Current and unmodified class/race Agility for the dodge conversion.
+    pub agility: f32,
+    pub base_agility: f32,
     /// Σ MOD_BLOCK_PERCENT (`StatModifiers::block_pct`).
     pub block_pct: f32,
 }
 
 /// TrinityCore master's player avoidance: `Player::UpdateDodgePercentage`,
 /// `UpdateParryPercentage` and `UpdateBlockPercentage` (StatSystem.cpp:490-507,
-/// 657-715). Dodge uses native rating DR. Warrior, Paladin and Death Knight parry
-/// uses SimC's Strength conversion and DR; other classes retain native rating DR.
+/// 657-715). Agility classes use SimC's Agility conversion and dodge DR;
+/// Warrior, Paladin and Death Knight parry use its Strength conversion and DR.
 /// Block is 5% plus MOD_BLOCK_PERCENT plus its rating, for one that can block and holds a
 /// shield (StatSystem.cpp:496-501, Unit.cpp:2843-2846).
 pub fn player_defense(
@@ -818,7 +821,7 @@ pub fn player_defense(
             // SimC player.cpp:1682 and 5282–5298: naked Strength is not diminished;
             // bonus Strength and rating share DR (parry factor 1, stretch .01,
             // horizontal shift 1/.94 for these three classes).
-            let coefficient = PARRY_STRENGTH_DENOMINATOR[level.min(89)] as f32;
+            let coefficient = AVOIDANCE_STAT_DENOMINATOR[level.min(89)] as f32;
             let bonus = ratings.parry / PARRY_RATING[level]
                 + (inputs.strength - inputs.base_strength) / coefficient;
             3.0 + inputs.parry_pct
@@ -834,16 +837,27 @@ pub fn player_defense(
     } else {
         0.0
     };
-    let shield_armor = inputs.shield_armor.filter(|_| inputs.can_block);
-    PlayerDefense {
-        // TrinityCore master, StatSystem.cpp Player::UpdateDodgePercentage:
-        // https://github.com/TrinityCore/TrinityCore/blob/master/src/server/game/Entities/Unit/StatSystem.cpp
-        // Aura points are not halved or subject to rating diminishing returns.
-        dodge: diminished(
+    let dodge = if matches!(class, 3 | 4 | 7 | 10 | 11 | 12) {
+        // SimC76f8118 player.cpp1639–1657,5251–5267: base Agility is
+        // undiminished; bonus Agility and dodge rating share class-specific DR.
+        let coefficient = AVOIDANCE_STAT_DENOMINATOR[level.min(89)] as f32;
+        let bonus = ratings.dodge / DODGE_RATING[level]
+            + (inputs.agility - inputs.base_agility) / coefficient;
+        let vertical = if class == 12 { 0.02 } else { 0.01 };
+        let horizontal = if class == 11 { 1.0 / 0.97 } else { 1.0 / 0.94 };
+        3.0 + inputs.dodge_pct
+            + inputs.base_agility / coefficient
+            + bonus / (bonus * vertical + horizontal)
+    } else {
+        diminished(
             dodge_cap,
             inputs.dodge_pct,
             ratings.dodge / DODGE_RATING[level],
-        ),
+        )
+    };
+    let shield_armor = inputs.shield_armor.filter(|_| inputs.can_block);
+    PlayerDefense {
+        dodge,
         parry,
         block: shield_armor.map_or(0.0, |_| {
             BASE_BLOCK_PCT + inputs.block_pct + ratings.block / BLOCK_RATING[level]
@@ -1344,6 +1358,9 @@ pub(crate) fn update_character_stats(
                 strength: stats.primary.strength,
                 base_strength: base_primary_stats(class_id, race, level.0)
                     .map_or(0.0, |base| base.strength),
+                agility: stats.primary.agility,
+                base_agility: base_primary_stats(class_id, race, level.0)
+                    .map_or(0.0, |base| base.agility),
                 block_pct: mods.map_or(0.0, |mods| mods.block_pct),
             },
         );
