@@ -259,6 +259,7 @@ register_modules! {
     shadow_apparitions: (2582, "modules/shadow_apparitions.rs"),
     unholy_soul_reaper: (2534, "modules/unholy_soul_reaper.rs"),
     shadow_bolts: (2582, "modules/shadow_bolts.rs"),
+    unholy_runic_corruption: (2537, "modules/unholy_runic_corruption.rs"),
     shadow_collapse: (2589, "modules/shadow_collapse.rs"),
     shadow_haunting: (2589, "modules/shadow_haunting.rs"),
     shadow_horizon: (2588, "modules/shadow_horizon.rs"),
