@@ -18,7 +18,7 @@ const ANSWERED_CALLING: u32 = 1308647;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AfterPayment(on_payment),
-    SpellScriptHook::AfterForegroundSpecial(spirit_attack),
+    SpellScriptHook::AfterResolvedHits(spirit_attack),
     SpellScriptHook::AfterForegroundSpecial(wild_guardian_action),
     SpellScriptHook::OwnsPolicyProc(|spell| spell == TALENT),
 ];
@@ -105,8 +105,9 @@ fn active_spirit(world: &mut World, caster: Entity) -> bool {
 
 // Mangle and Thrash execute one Spirit's Wrath at a random live enemy; its
 // native energize is immediate and the damage lands after the source 200ms travel.
-fn spirit_attack(world: &mut World, caster: Entity, spell: &SpellInfo) {
-    if !matches!(spell.id, 33917 | 77758) || !active_spirit(world, caster) {
+fn spirit_attack(world: &mut World, ctx: &EffectCtx<'_>) {
+    let caster = ctx.caster;
+    if !matches!(ctx.spell.id, 33917 | 77758) || !active_spirit(world, caster) {
         return;
     }
     let Some(origin) = targets::position(world, caster) else {
@@ -127,12 +128,5 @@ fn spirit_attack(world: &mut World, caster: Entity, spell: &SpellInfo) {
     if talent_amount(world, caster, THIRD_TALENT, 0).is_some() {
         spell_cast::cast_triggered(world, caster, 1308125, Some(caster), 1);
     }
-    let ctx = EffectCtx {
-        caster,
-        spell,
-        depth: 0,
-        dest: None,
-        chain_multiplier: 1.0,
-    };
-    queued_triggers::schedule_full_trigger(world, &ctx, target, 1308093, 200);
+    queued_triggers::schedule_full_trigger(world, ctx, target, 1308093, 200);
 }

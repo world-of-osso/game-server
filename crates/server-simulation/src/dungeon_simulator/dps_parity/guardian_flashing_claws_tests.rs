@@ -30,6 +30,20 @@ fn guardian_flashing_claws_repeats_thrash_after_half_second() {
         0,
         100.0
     ));
+    crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 1308399, Some(actor), 1);
+    let wrath_hits = |run: &Run| {
+        run.app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .filter(|e| {
+                e.kind == CombatLogKind::Damage
+                    && e.spell_id == Some(1308093)
+                    && e.target == Some(target.to_bits())
+            })
+            .count()
+    };
     let hits = |run: &Run| {
         run.app
             .world()
@@ -58,4 +72,12 @@ fn guardian_flashing_claws_repeats_thrash_after_half_second() {
         run.app.update();
     }
     assert_eq!(hits(&run), 2);
+    for _ in 0..6 {
+        run.app.update();
+    }
+    assert_eq!(
+        wrath_hits(&run),
+        2,
+        "both the original and repeated Thrash trigger Spirit's Wrath"
+    );
 }
