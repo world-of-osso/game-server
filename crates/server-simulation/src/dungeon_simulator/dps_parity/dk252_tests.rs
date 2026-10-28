@@ -3560,6 +3560,83 @@ fn dk252_necrotic_coil_shadow_extends_each_hit_targets_owned_diseases() {
 
 #[test]
 #[ignore = "requires native252 profile/traits and player actor"]
+fn dk252_death_coil_extends_owned_diseases_only_after_projectile_hit() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 1).unwrap();
+    engage(&mut run);
+    run.app
+        .world_mut()
+        .get_mut::<shared::components::Position>(run.targets[0])
+        .unwrap()
+        .x += 20.0;
+    for spell_id in [191587, 1240996] {
+        crate::auras::apply_aura(
+            run.app.world_mut(),
+            &crate::auras::AuraApplication {
+                caster: run.actor,
+                target: run.targets[0],
+                spell_id,
+                effect_mask: 1,
+                source: crate::auras::AuraSource::Cast,
+            },
+        );
+    }
+    let expiry = |run: &Run, spell: u32| {
+        run.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(run.targets[0])
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == spell && aura.caster == run.actor)
+            .unwrap()
+            .expires_at
+            .unwrap()
+    };
+    let before = [expiry(&run, 191587), expiry(&run, 1240996)];
+    assert!(crate::spell_cast::try_cast_triggered(
+        run.app.world_mut(),
+        run.actor,
+        47541,
+        Some(run.targets[0]),
+        1
+    ));
+    assert_eq!(
+        [expiry(&run, 191587), expiry(&run, 1240996)],
+        before,
+        "launch must not extend diseases"
+    );
+    for _ in 0..40 {
+        run.app.update();
+        let hit = run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|event| {
+                event.spell_id == Some(47632)
+                    && event.target == Some(run.targets[0].to_bits())
+                    && event.kind == CombatLogKind::Damage
+            });
+        if hit {
+            break;
+        }
+    }
+    let extension =
+        crate::spell_cast::scripts::script_effect_value(run.app.world(), run.actor, 77575, 2)
+            as f64
+            / 1000.0;
+    for (spell, old) in [191587, 1240996].into_iter().zip(before) {
+        let after = expiry(&run, spell);
+        assert!(
+            (after - old - extension).abs() < 0.001,
+            "actual Coil impact must extend {spell}: {old} -> {after}"
+        );
+    }
+}
+
+#[test]
+#[ignore = "requires native252 profile/traits and player actor"]
 fn dk252_necrotic_coil_hits_with_physical_and_shadow_children() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(252, 3).unwrap();

@@ -420,9 +420,6 @@ const DEATH_COIL: u32 = 47_541;
 const DEATH_COIL_DAMAGE: u32 = 47_632;
 const DEATH_COIL_HEAL: u32 = 47_633;
 const LICHBORNE: u32 = 49_039;
-const OUTBREAK: u32 = 77_575;
-const DREAD_PLAGUE: u32 = 1_240_996;
-const VIRULENT_PLAGUE: u32 = 191_587;
 const CHAIN_HEAL: u32 = 1_064;
 const DEMON_SPIKES: u32 = 203_720;
 const DEMON_SPIKES_AURA: u32 = 203_819;
@@ -1135,8 +1132,8 @@ fn is_undead(world: &World, target: Entity) -> bool {
         .is_some_and(|template| template.creature_type == 6)
 }
 
-/// TC a352b1fa spell_dk.cpp:589-609 names the 47632 damage bridge.
-/// Retail47541 additionally names47633 healing and $77575s3 plague extension.
+/// TC a352b1fa spell_dk.cpp:589-609 names the 47632 damage bridge;
+/// Retail47541 also names47633 healing.
 fn death_coil(world: &mut World, caster: Entity, target: Entity, depth: u8) {
     let child = if relation_matches(world, caster, target, Relation::Ally) {
         DEATH_COIL_HEAL
@@ -1144,16 +1141,6 @@ fn death_coil(world: &mut World, caster: Entity, target: Entity, depth: u8) {
         DEATH_COIL_DAMAGE
     };
     super::cast_triggered(world, caster, child, Some(target), depth + 1);
-    let milliseconds = script_effect_value(world, caster, OUTBREAK, 2)
-        .max(0.0)
-        .round() as u32;
-    crate::auras::extend_owned_duration(
-        world,
-        caster,
-        target,
-        &[DREAD_PLAGUE, VIRULENT_PLAGUE],
-        milliseconds,
-    );
 }
 
 /// TC a352b1fa spell_evoker.cpp:601-618 spell_evo_pyre casts 357212 at
