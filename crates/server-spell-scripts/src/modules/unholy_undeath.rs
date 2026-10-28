@@ -14,16 +14,18 @@ struct UndeathReady(f64);
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::SummonInitialized(initialize),
-    SpellScriptHook::AfterForegroundSpender(whitemane_coil),
+    SpellScriptHook::AfterForegroundSpender(whitemane_spender),
+    SpellScriptHook::TargetFilter(exclude_epidemic_primary),
     SpellScriptHook::AfterCastUpdate(update),
     SpellScriptHook::AfterPeriodicDamagePolicies(grow),
 ];
 
-fn whitemane_coil(world: &mut World, owner: Entity, spell: &SpellInfo, target: Option<Entity>) {
-    if !matches!(spell.id, 47541 | 1242174) || !combat::auras::has_aura(world, owner, 1265949) {
+fn whitemane_spender(world: &mut World, owner: Entity, spell: &SpellInfo, target: Option<Entity>) {
+    if !matches!(spell.id, 47541 | 1242174 | 207317 | 383269)
+        || !combat::auras::has_aura(world, owner, 1265949)
+    {
         return;
     }
-    let Some(target) = target else { return };
     let now = combat::auras::aura_now(world);
     let rider = world
         .query::<(Entity, &SummonedCreature)>()
@@ -38,6 +40,11 @@ fn whitemane_coil(world: &mut World, owner: Entity, spell: &SpellInfo, target: O
     // SimC76f8118 sc_death_knight.cpp5091–5096/13575–13579:
     // each actual Coil commands the active Whitemane's background Coil.
     let multiplier = script_effect_value(world, owner, 1265949, 1) / 100.0;
+    if matches!(spell.id, 207317 | 383269) {
+        whitemane_epidemic(world, owner, rider, multiplier);
+        return;
+    }
+    let Some(target) = target else { return };
     if !spell_cast::cast_triggered_with_overrides(
         world,
         rider,
@@ -50,6 +57,60 @@ fn whitemane_coil(world: &mut World, owner: Entity, spell: &SpellInfo, target: O
         },
     ) {
         warn!(?rider, "Whitemane Let Terror Reign Coil refused");
+    }
+}
+
+fn whitemane_epidemic(world: &mut World, owner: Entity, rider: Entity, multiplier: f32) {
+    let mut targets: Vec<_> = combat::combat_refs::active_opponents(world, owner)
+        .filter(|&target| {
+            spell_cast::targets::is_alive(world, target)
+                && world.get::<ActiveAuras>(target).is_some_and(|auras| {
+                    auras
+                        .iter()
+                        .any(|aura| aura.caster == owner && aura.spell_id == 191587)
+                })
+        })
+        .collect();
+    targets.sort_unstable_by_key(|target| target.to_bits());
+    targets.truncate(20);
+    // SimC76f8118 sc_death_knight.cpp5150–5180: each infected enemy
+    // receives the primary hit and a secondary-only splash; the cap is eight.
+    let soft_cap = if targets.len() > 8 {
+        (8.0 / targets.len() as f32).sqrt()
+    } else {
+        1.0
+    };
+    for target in targets {
+        if !spell_cast::cast_triggered_with_overrides(
+            world,
+            rider,
+            1237172,
+            Some(target),
+            1,
+            spell_cast::TriggeredSpellOverrides {
+                damage_multiplier: Some(multiplier * soft_cap),
+                ..Default::default()
+            },
+        ) {
+            warn!(
+                ?rider,
+                ?target,
+                "Whitemane Let Terror Reign Epidemic refused"
+            );
+        }
+    }
+}
+
+fn exclude_epidemic_primary(
+    _: &World,
+    _: Entity,
+    spell: &SpellInfo,
+    index: u8,
+    primary: Option<Entity>,
+    targets: &mut Vec<Entity>,
+) {
+    if spell.id == 1237172 && index == 1 {
+        targets.retain(|target| Some(*target) != primary);
     }
 }
 
