@@ -875,6 +875,55 @@ fn dk252_lesser_ghoul_melee_inherits_live_owner_attack_power() {
 
 #[test]
 #[ignore = "requires private native252 profile/traits and player actor"]
+fn dk252_army_replaces_active_lesser_ghouls_without_expiry_damage() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 1).unwrap();
+    engage(&mut run);
+    for spell in [275430, 1294026] {
+        assert!(crate::spell_cast::try_cast_triggered(
+            run.app.world_mut(),
+            run.actor,
+            spell,
+            Some(run.actor),
+            1
+        ));
+    }
+    let old: Vec<_> = run
+        .app
+        .world_mut()
+        .query::<(Entity, &crate::spell_cast::summon::SummonedCreature)>()
+        .iter(run.app.world())
+        .filter_map(|(actor, summon)| {
+            (summon.owner == run.actor && matches!(summon.spell_id, 275430 | 1294026))
+                .then_some(actor)
+        })
+        .collect();
+    assert_eq!(old.len(), 2);
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(42650, run.actor, None),
+    )
+    .unwrap();
+    for actor in old {
+        assert!(
+            run.app.world().get_entity(actor).is_err(),
+            "Army must dismiss the existing lesser ghoul"
+        );
+    }
+    assert!(
+        !run.app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|event| event.spell_id == Some(1247379) && event.kind == CombatLogKind::Damage),
+        "dismissal must not cause natural-expiry Ruptured Viscera"
+    );
+}
+
+#[test]
+#[ignore = "requires private native252 profile/traits and player actor"]
 fn dk252_army_cast_summons_real_melee_ghouls() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(252, 1).unwrap();
@@ -2644,53 +2693,4 @@ fn dk252_dread_plague_ticks_produce_sudden_doom() {
         earned |= crate::auras::has_aura(run.app.world(), run.actor, 81340);
     }
     assert!(earned, "Dread Plague ticks must earn selected Sudden Doom");
-}
-
-#[test]
-#[ignore = "requires private native252 profile/traits and player actor"]
-fn dk252_army_replaces_active_lesser_ghouls_without_expiry_damage() {
-    let _seed = crate::random::seed_scope(70448);
-    let mut run = prepare_literal(252, 1).unwrap();
-    engage(&mut run);
-    for spell in [275430, 1294026] {
-        assert!(crate::spell_cast::try_cast_triggered(
-            run.app.world_mut(),
-            run.actor,
-            spell,
-            Some(run.actor),
-            1
-        ));
-    }
-    let old: Vec<_> = run
-        .app
-        .world_mut()
-        .query::<(Entity, &crate::spell_cast::summon::SummonedCreature)>()
-        .iter(run.app.world())
-        .filter_map(|(actor, summon)| {
-            (summon.owner == run.actor && matches!(summon.spell_id, 275430 | 1294026))
-                .then_some(actor)
-        })
-        .collect();
-    assert_eq!(old.len(), 2);
-    literal_rotation::execution::execute(
-        run.app.world_mut(),
-        run.actor,
-        literal_rotation::execution::Execution::Spell(42650, run.actor, None),
-    )
-    .unwrap();
-    for actor in old {
-        assert!(
-            run.app.world().get_entity(actor).is_err(),
-            "Army must dismiss the existing lesser ghoul"
-        );
-    }
-    assert!(
-        !run.app
-            .world()
-            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
-            .0
-            .iter()
-            .any(|event| event.spell_id == Some(1247379) && event.kind == CombatLogKind::Damage),
-        "dismissal must not cause natural-expiry Ruptured Viscera"
-    );
 }
