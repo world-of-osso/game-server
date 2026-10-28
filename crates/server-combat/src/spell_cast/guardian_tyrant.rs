@@ -83,6 +83,11 @@ pub(crate) fn on_despawn(world: &mut World, actor: Entity) {
     if !is_roster_summon(summon.spell_id, entry) {
         return;
     }
+    // SimC76f8118 pets.cpp953–959: imploded Wild Imps retain their
+    // Demonic Power stack under the pinned bug model.
+    if matches!(summon.spell_id, 104317 | 279910) && cast::summon::is_imploded(world, actor) {
+        return;
+    }
     for tyrant in read_active_tyrants(world, owner) {
         let instance = world
             .get::<crate::auras::ActiveAuras>(tyrant)
