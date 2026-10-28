@@ -330,6 +330,29 @@ mod tests {
             bone.stacks, 11,
             "owner and both weapon casts grant two stacks each"
         );
+        crate::auras::remove_auras(
+            run.app.world_mut(),
+            actor,
+            crate::auras::RemoveReason::Cancelled,
+            |aura| aura.spell_id == 195181,
+        );
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 195182, Some(target), false)
+            .unwrap();
+        for _ in 0..30 {
+            run.app.update();
+        }
+        let bone = run
+            .app
+            .world()
+            .get::<crate::auras::ActiveAuras>(actor)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 195181)
+            .expect("Marrowrend grants Bone Shield");
+        assert_eq!(
+            bone.stacks, 9,
+            "owner and both weapons grant three stacks each"
+        );
     }
 
     #[test]
