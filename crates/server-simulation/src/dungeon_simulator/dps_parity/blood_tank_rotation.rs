@@ -315,7 +315,7 @@ mod tests {
         }
         crate::spell_cast::creature_cast(run.app.world_mut(), actor, 195292, Some(target), false)
             .unwrap();
-        for _ in 0..4 {
+        for _ in 0..30 {
             run.app.update();
         }
         let bone = run
