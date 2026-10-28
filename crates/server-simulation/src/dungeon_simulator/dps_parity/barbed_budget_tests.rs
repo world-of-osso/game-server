@@ -42,20 +42,39 @@ fn no_mercy_bm_barbed_damage_uses_only_bm_effect() {
     fn first_tick(with_talent: bool) -> f64 {
         let _seed = crate::random::seed_scope(70_448);
         let mut run = prepare_budget_player();
-        assert!(run.app.world().get::<ActiveAuras>(run.actor).unwrap().iter().any(|a| a.spell_id == 472660));
+        assert!(
+            run.app
+                .world()
+                .get::<ActiveAuras>(run.actor)
+                .unwrap()
+                .iter()
+                .any(|a| a.spell_id == 472660)
+        );
         if !with_talent {
             let actor = run.actor;
-            crate::auras::remove_auras(run.app.world_mut(), actor, crate::auras::RemoveReason::Unlearned, |a| a.spell_id == 472660);
+            crate::auras::remove_auras(
+                run.app.world_mut(),
+                actor,
+                crate::auras::RemoveReason::Unlearned,
+                |a| a.spell_id == 472660,
+            );
         }
         observe_lifetime(&mut run, false);
         run.app.world().resource::<FactorCapture>().export()["events"]
-            .as_array().unwrap().iter()
+            .as_array()
+            .unwrap()
+            .iter()
             .find(|event| event["event"] == "periodic_amount" && event["spell_id"] == BARBED_SHOT)
-            .unwrap()["factors"]["amount"].as_f64().unwrap()
+            .unwrap()["factors"]["amount"]
+            .as_f64()
+            .unwrap()
     }
     let with = first_tick(true);
     let without = first_tick(false);
-    assert!((with / without - 1.10).abs() < 0.001, "No Mercy BM tick ratio: {with}/{without}");
+    assert!(
+        (with / without - 1.10).abs() < 0.001,
+        "No Mercy BM tick ratio: {with}/{without}"
+    );
 }
 
 fn aura_snapshot(run: &Run) -> Option<Value> {
