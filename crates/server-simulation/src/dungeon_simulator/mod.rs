@@ -13,6 +13,8 @@ mod healer_metrics;
 mod healer_metrics_tests;
 mod healer_replay;
 mod healer_report;
+mod healer_simc_metrics;
+mod healer_simc_replay;
 mod holy_paladin_replay_tests;
 mod movement;
 mod replay_cli_tests;

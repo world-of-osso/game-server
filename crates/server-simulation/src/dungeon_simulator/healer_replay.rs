@@ -227,6 +227,15 @@ fn healer_benchmark_counts_nonunit_hit_absorbed_point_share() {
     assert_eq!(summary["gap_moot_for_intake"], false);
 }
 
+pub(super) fn replay_simc(
+    spec: u32,
+    trace: &std::path::Path,
+    duration: u32,
+    seed: u64,
+) -> Result<Value, String> {
+    super::healer_simc_replay::replay_simc(spec, trace, duration, seed)
+}
+
 pub(super) fn replay(intake: &Intake, spec: u32) -> Result<Value, String> {
     if intake.schema != 1 || intake.map_id != 34 || intake.difficulty_id != 1 {
         return Err("INTAKE_SCHEMA_OR_STOCKADE_NORMAL_COPY_MISMATCH".into());

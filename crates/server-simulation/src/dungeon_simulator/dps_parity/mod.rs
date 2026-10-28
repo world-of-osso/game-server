@@ -2,6 +2,7 @@
 include!("module_list.in");
 use crate::simc_apl_native::{FixtureAdds, FixtureTarget};
 use bevy::prelude::*;
+pub(crate) use inputs::read_reference_race;
 use serde_json::{Value, json};
 use std::collections::BTreeMap;
 use std::time::{Duration, Instant};
