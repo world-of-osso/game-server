@@ -63,6 +63,15 @@ fn devourer_rotation_casts_hungering_slash_and_reapers_toll() {
 
 #[test]
 #[ignore = "requires DPS_PARITY_WORLD_DB and DPS_PARITY_OUTPUT with spec1480 exact profile/traits"]
+fn batch_c_explicit_embellishments_earn_insight() {
+    let report = measure_seed(1480, 1, 70448).expect("native Devourer rotation");
+    assert_eq!(report["buff_uptime_pct"]["1283697"].as_f64(), Some(200.0), "both equipped Lining drivers remain active");
+    assert!(report["buff_uptime_pct"]["1229746"].as_f64().unwrap_or(0.0) > 0.0, "actual combat earns Insight");
+    assert!(!report["gaps"].as_array().unwrap().iter().any(|gap| gap.as_str().is_some_and(|gap| gap.contains("embellishment=arcanoweave_lining"))), "modeled option must not remain a gap");
+}
+
+#[test]
+#[ignore = "requires DPS_PARITY_WORLD_DB and DPS_PARITY_OUTPUT with spec1480 exact profile/traits"]
 fn batch2_real_rotation_produces_soulburst() {
     let report = measure_seed(1480, 1, 70448).expect("native Devourer rotation");
     let actions = report["combat"]["actions"].as_array().unwrap();
@@ -72,6 +81,57 @@ fn batch2_real_rotation_produces_soulburst() {
             .any(|action| action["spell_id"] == 1297432
                 && action["damage"].as_u64().unwrap_or(0) > 0),
         "selected tier proc must produce real Soulburst damage"
+    );
+}
+
+#[test]
+#[ignore = "requires DPS_PARITY_WORLD_DB and DPS_PARITY_OUTPUT with spec1480 exact profile/traits"]
+fn batch6_real_rotation_produces_voidsurge() {
+    let report = measure_seed(1480, 1, 70448).expect("native Devourer rotation");
+    let actions = report["combat"]["actions"].as_array().unwrap();
+    assert!(
+        actions
+            .iter()
+            .any(|action| action["spell_id"] == 1246160
+                && action["damage"].as_u64().unwrap_or(0) > 0),
+        "selected Demonsurge must produce real Voidsurge damage"
+    );
+}
+
+#[test]
+#[ignore = "requires DPS_PARITY_WORLD_DB and DPS_PARITY_OUTPUT with spec1480 exact profile/traits"]
+fn batch8_monster_rising_follows_metamorphosis() {
+    let mut run = prepare(1480, 1).expect("native Devourer profile");
+    let actor = run.actor;
+    engage(&mut run);
+    for _ in 0..30 {
+        run.app.update();
+    }
+    assert!(
+        crate::auras::has_aura(run.app.world(), actor, 452550),
+        "Monster Rising active outside Meta"
+    );
+    crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 1217605, Some(actor), 1);
+    for _ in 0..30 {
+        run.app.update();
+    }
+    assert!(
+        crate::auras::has_aura(run.app.world(), actor, 1217607),
+        "native Meta active"
+    );
+    assert!(
+        !crate::auras::has_aura(run.app.world(), actor, 452550),
+        "Monster Rising absent during Meta"
+    );
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        actor,
+        crate::auras::RemoveReason::Consumed,
+        |aura| aura.spell_id == 1217607,
+    );
+    assert!(
+        crate::auras::has_aura(run.app.world(), actor, 452550),
+        "Monster Rising returns after Meta"
     );
 }
 

@@ -23,10 +23,19 @@ struct DrainDeadline(f64);
 #[derive(Component)]
 struct VoidrushUntil(f64);
 
+#[derive(Component, Default)]
+struct VoidSurges {
+    available: u8,
+    pending: Vec<(f64, Entity)>,
+}
+
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::EarlyAuraRegistration(register),
     SpellScriptHook::OnCast(trigger_voidrush),
+    SpellScriptHook::AfterNativeLaunch(trigger_voidsurge),
     SpellScriptHook::TargetContextDamageMultiplier(meta_mastery_multiplier),
+    SpellScriptHook::TargetContextDamageMultiplier(focused_hatred),
+    SpellScriptHook::AfterNativeCastUpdate(update_voidsurge),
     SpellScriptHook::AfterNativeCastUpdate(update_drain),
 ];
 
@@ -75,6 +84,111 @@ fn meta_mastery_multiplier(
     1.0 + script_effect_value(world, ctx.caster, 1238855, mastery_effect) / 100.0
 }
 
+fn focused_hatred(
+    world: &World,
+    ctx: &spell_cast::effects::EffectCtx<'_>,
+    _: Entity,
+    periodic: bool,
+) -> f32 {
+    if periodic
+        || ctx.spell.id != 1246160
+        || !world
+            .get::<KnownSpells>(ctx.caster)
+            .is_some_and(|known| known.contains(452405))
+    {
+        return 1.0;
+    }
+    // SimC76f8118 cpp5615–5634: effect1 minus effect2 per additional target, up to five targets.
+    let targets = spell_cast::resolving_targets(world, ctx)
+        .expect("native Voidsurge targets")
+        .iter()
+        .filter(|&&target| {
+            spell_cast::targets::relation_matches(
+                world,
+                ctx.caster,
+                target,
+                spell_cast::targets::Relation::Enemy,
+            )
+        })
+        .count();
+    if targets == 0 || targets > 5 {
+        return 1.0;
+    }
+    let base = script_effect_value(world, ctx.caster, 452405, 0);
+    let step = script_effect_value(world, ctx.caster, 452405, 1);
+    1.0 + (base - step * (targets - 1) as f32) / 100.0
+}
+
+fn trigger_voidsurge(world: &mut World, caster: Entity, spell: &combat::spell_info::SpellInfo) {
+    let bit = match spell.id {
+        1245483 => 1,
+        1245470 => 2,
+        1259431 => 4,
+        _ => return,
+    };
+    let Some(state) = world.get::<VoidSurges>(caster) else {
+        return;
+    };
+    if state.available & bit == 0 {
+        return;
+    }
+    let target = spell
+        .cast_primary_target
+        .expect("Voidsurge action retains primary target");
+    let volatile = auras::has_aura(world, caster, 1272462);
+    let delay = world
+        .resource::<combat::spell_info::SpellStore>()
+        .get(1246161)
+        .expect("native Voidsurge trigger")
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .expect("native Voidsurge effect")
+        .misc_values[0] as f64
+        / 1000.0;
+    let due = spell_cast::now(world) + delay;
+    let mut state = world
+        .get_mut::<VoidSurges>(caster)
+        .expect("active Voidsurge state");
+    state.available &= !bit;
+    state.pending.push((due, target));
+    if volatile {
+        state.pending.push((due, target));
+    }
+    if volatile {
+        auras::remove_auras(world, caster, RemoveReason::Consumed, |aura| {
+            aura.caster == caster && aura.spell_id == 1272462
+        });
+    }
+    // SimC76f8118 cpp2692–2709,12680–12700: one delayed surge per primed ability,
+    // with one additional surge when Volatile Instinct is consumed.
+}
+
+fn update_voidsurge(world: &mut World) {
+    let now = spell_cast::now(world);
+    let casters: Vec<_> = world
+        .query_filtered::<Entity, With<VoidSurges>>()
+        .iter(world)
+        .collect();
+    for caster in casters {
+        let due = {
+            let mut state = world
+                .get_mut::<VoidSurges>(caster)
+                .expect("Voidsurge state");
+            let (ready, later): (Vec<_>, Vec<_>) = std::mem::take(&mut state.pending)
+                .into_iter()
+                .partition(|(at, _)| *at <= now);
+            state.pending = later;
+            ready
+        };
+        for (_, target) in due {
+            if !spell_cast::try_cast_triggered(world, caster, 1246160, Some(target), 1) {
+                error!(?caster, ?target, "native Voidsurge was refused");
+            }
+        }
+    }
+}
+
 fn trigger_voidrush(world: &mut World, caster: Entity, spell: u32, _: u8) {
     if !matches!(spell, 1245412 | 1245483 | 1246167 | 1259431)
         || !world
@@ -92,6 +206,49 @@ fn grant_entry_fury(world: &mut World, unit: Entity, aura: &AuraInstance) {
     if unit != aura.caster || world.get::<ActiveSpec>(unit).map(|spec| spec.0) != Some(1480) {
         return;
     }
+    // SimC76f8118 cpp9204–9215 removes Monster Rising and Enduring Torment in Meta.
+    auras::remove_auras(world, unit, RemoveReason::Consumed, |aura| {
+        aura.caster == unit && matches!(aura.spell_id, 452550 | 453314)
+    });
+    // SimC76f8118 cpp4949–4955,9217–9220 primes the selected Void-Scarred effects.
+    if world
+        .get::<KnownSpells>(unit)
+        .is_some_and(|known| known.contains(452402))
+    {
+        world
+            .entity_mut(unit)
+            .entry::<VoidSurges>()
+            .or_default()
+            .into_mut()
+            .available = 7;
+        if !spell_cast::try_cast_triggered(world, unit, 452435, Some(unit), 1) {
+            error!(?unit, "native Demonsurge buff was refused");
+        }
+    }
+    if world
+        .get::<KnownSpells>(unit)
+        .is_some_and(|known| known.contains(452415))
+        && !spell_cast::try_cast_triggered(world, unit, 1245496, Some(unit), 1)
+    {
+        error!(?unit, "native Demonic Intensity buff was refused");
+    }
+    if world
+        .get::<KnownSpells>(unit)
+        .is_some_and(|known| known.contains(1272453))
+        && !spell_cast::try_cast_triggered(world, unit, 1272462, Some(unit), 1)
+    {
+        error!(?unit, "native Volatile Instinct buff was refused");
+    }
+    // SimC76f8118 cpp4961–4970 resets Voidblade and Soul Immolation on Meta entry.
+    if world
+        .get::<KnownSpells>(unit)
+        .is_some_and(|known| known.contains(452409))
+    {
+        restore_spell_charges(world, unit, 1245412, u8::MAX);
+        restore_spell_charges(world, unit, 1241937, u8::MAX);
+        spell_cast::scripts::reduce_cooldown(world, unit, 1245412, f64::MAX);
+        spell_cast::scripts::reduce_cooldown(world, unit, 1241937, f64::MAX);
+    }
     // SimC76f8118 cpp6777 makes an already-ready Hungering Slash usable in Meta.
     super::devourer_voidblade::grant_reapers_replacement(world, unit);
     // SimC76f8118 sc_demon_hunter.cpp9192–9195 consumes the soul stack on entry.
@@ -108,10 +265,32 @@ fn grant_entry_fury(world: &mut World, unit: Entity, aura: &AuraInstance) {
     world.entity_mut(unit).insert(DrainDeadline(first));
 }
 
+pub(super) fn restore_spell_charges(world: &mut World, unit: Entity, spell: u32, count: u8) {
+    let category = world
+        .resource::<combat::spell_info::SpellStore>()
+        .get(spell)
+        .expect("native reset spell")
+        .categories
+        .as_ref()
+        .expect("native reset category")
+        .charge_category;
+    spell_cast::restore_charges(world, unit, category, count);
+}
+
 fn exit_meta(world: &mut World, unit: Entity, aura: &AuraInstance, reason: RemoveReason) {
     super::devourer_voidblade::clear_reapers_replacement(world, unit, aura, reason);
     if unit != aura.caster || world.get::<ActiveSpec>(unit).map(|spec| spec.0) != Some(1480) {
         return;
+    }
+    // SimC76f8118 cpp9231–9238 restores selected non-Meta stat buffs.
+    for (talent, buff) in [(452414, 452550), (452410, 453314)] {
+        if world
+            .get::<KnownSpells>(unit)
+            .is_some_and(|known| known.contains(talent))
+            && !spell_cast::try_cast_triggered(world, unit, buff, Some(unit), 1)
+        {
+            error!(?unit, buff, "native non-Meta stat buff was refused");
+        }
     }
     // SimC76f8118 cpp9239–9266 clears Fury before converting remaining souls.
     powers::change_power(world, unit, PowerType::Fury, -f32::MAX).expect("Devourer Fury pool");
@@ -137,8 +316,15 @@ fn exit_meta(world: &mut World, unit: Entity, aura: &AuraInstance, reason: Remov
         let amount = script_effect_value(world, unit, 1277769, 0) * f32::from(stacks);
         spell_cast::cast_triggered_with_effect0_amount(world, unit, 1277769, Some(unit), 1, amount);
     }
+    if let Some(mut state) = world.get_mut::<VoidSurges>(unit) {
+        state.available = 0;
+    }
     auras::remove_auras(world, unit, RemoveReason::Consumed, |aura| {
-        aura.caster == unit && matches!(aura.spell_id, 1221171 | 1227702 | 1242504 | 1227338)
+        aura.caster == unit
+            && matches!(
+                aura.spell_id,
+                1221171 | 1227702 | 1242504 | 1227338 | 452435 | 1245496 | 1246160 | 1272462
+            )
     });
     spell_cast::scripts::reduce_cooldown(world, unit, VOID_RAY, f64::MAX);
     if world
