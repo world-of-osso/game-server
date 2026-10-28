@@ -53,7 +53,7 @@ fn observe_player_white_miss_rate(hit_modifier: f32) -> f32 {
     let mut commands = Commands::new(&mut queue, world);
     crate::combat::start_attack(&mut commands, actor, run.targets[0], None);
     queue.apply(world);
-    for _ in 0..600 {
+    for _ in 0..1000 {
         let mut attack = run.app.world_mut().get_mut::<crate::combat::AutoAttack>(actor).unwrap();
         attack.timer = std::time::Duration::ZERO;
         attack.off_hand_timer = std::time::Duration::ZERO;
