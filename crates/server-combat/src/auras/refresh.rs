@@ -444,16 +444,16 @@ fn accumulate_blood_shield(world: &World, target: Entity, new: &mut AuraInstance
     }
 }
 
-///190456s2: every hit only spends its authored fraction of incoming damage.
+/// Ignore Pain and Celestial Infusion spend their authored fraction of each hit.
 pub(super) fn absorb_fraction(aura: &AuraInstance) -> f32 {
-    if aura.spell_id != IGNORE_PAIN {
+    if !matches!(aura.spell_id, IGNORE_PAIN | 1241059) {
         return 1.0;
     }
     let percent = aura
         .effects
         .iter()
         .find(|effect| effect.index == 1)
-        .expect("Ignore Pain absorb fraction field")
+        .expect("fractional absorb percentage")
         .amount;
     (percent / 100.0).clamp(0.0, 1.0)
 }
