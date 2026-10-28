@@ -151,7 +151,7 @@ pub type DamageAmountHook = fn(&World, Entity, Entity, f32) -> f32;
 pub type DamageAmountLookup = fn(u32) -> Option<DamageAmountHook>;
 pub type AutoRepeatHook = fn(&mut World, Entity, Entity);
 pub type CriticalChanceHook = fn(&World, Entity, Entity, u32) -> Option<f32>;
-pub type ActualCriticalChanceBonusHook = fn(&World, Entity, Entity, &SpellInfo) -> f32;
+pub type ActualCriticalChanceBonusHook = fn(&World, Entity, Entity, &SpellInfo, f32) -> f32;
 pub type AuraRegistrationHook = fn(&mut crate::auras::scripts::AuraScripts);
 pub type LaunchDelayLookup = fn(u32) -> Option<f32>;
 pub type DotMasteryMultiplierHook = fn(&World, Entity, Entity, u32) -> f32;
@@ -915,13 +915,14 @@ pub fn actual_critical_chance_bonus(
     caster: Entity,
     target: Entity,
     spell: &SpellInfo,
+    chance: f32,
 ) -> f32 {
     world
         .resource::<SpellScriptRegistry>()
         .hooks()
         .filter_map(|hook| match hook {
             SpellScriptHook::ActualCriticalChanceBonus(run) => {
-                Some(run(world, caster, target, spell))
+                Some(run(world, caster, target, spell, chance))
             }
             _ => None,
         })

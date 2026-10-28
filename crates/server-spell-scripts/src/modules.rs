@@ -193,6 +193,7 @@ register_modules! {
     havoc_recovery: (5772, "modules/havoc/recovery.rs"),
     hellcaller_counters: (2666, "modules/hellcaller_counters.rs"),
     hellcaller_devil_fruit: (2675, "modules/hellcaller_devil_fruit.rs"),
+    hellcaller_pet_crit: (2675, "modules/hellcaller_pet_crit.rs"),
     hellcaller_wither: (2665, "modules/hellcaller_wither.rs"),
     holy_runtime: (2570, "modules/holy_runtime.rs"),
     hot_streak: (1000, "modules/hot_streak.rs"),

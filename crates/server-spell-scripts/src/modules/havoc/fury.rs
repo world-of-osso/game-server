@@ -75,6 +75,7 @@ fn chaos_theory_critical_bonus(
     caster: Entity,
     _target: Entity,
     spell: &SpellInfo,
+    _chance: f32,
 ) -> f32 {
     const TALENT: u32 = 389687;
     const BUFF: u32 = 390195;
