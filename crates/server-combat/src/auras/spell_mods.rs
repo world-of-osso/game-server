@@ -333,6 +333,15 @@ fn live_modifiers<'a>(
         .get::<ActiveAuras>(caster)
         .into_iter()
         .flat_map(move |auras| matching(auras, spell, op))
+        // SimC76f8118 sc_monk.cpp6037–6040 disables Efficient Training effect5
+        // specifically for Windwalker; its other specialization retains it.
+        .filter(move |(aura, effect)| {
+            !(aura.spell_id == 450989
+                && effect.index == 4
+                && world
+                    .get::<shared::components::ActiveSpec>(caster)
+                    .is_some_and(|spec| spec.0 == 269))
+        })
         .filter(move |(aura, _)| !snapshots_periodic_modifier(aura, op))
         .filter(move |(aura, _)| {
             spell.cast_charge_mods.is_none()

@@ -142,20 +142,44 @@ fn wait_for_natural_buff_expiry(run: &mut Run) {
 }
 
 #[test]
-#[ignore = "capture actual 3T Windwalker SCK damage factors"]
-fn diag_ww_sck_three_target_factors() {
+fn efficient_training_does_not_boost_windwalker_sck() {
     let _seed = crate::random::seed_scope(70448);
-    let mut run = super::super::prepare_measurement(269, 3).unwrap();
-    capture_ticks(&mut run);
-    super::super::advance_combat(&mut run).unwrap();
-    let capture = run.app.world().resource::<FactorCapture>().export();
-    assert!(capture["captured_hits"].as_u64().unwrap() > 0);
-    let output = std::path::PathBuf::from(std::env::var("DPS_PARITY_OUTPUT").unwrap());
-    std::fs::write(
-        output.join("269.sck-factors.json"),
-        serde_json::to_vec_pretty(&capture).unwrap(),
-    )
-    .unwrap();
+    let mut run = prepare();
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, 450989));
+    let spell = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(TICK)
+        .unwrap()
+        .clone();
+    let amount = |run: &Run| {
+        crate::auras::spell_mods::modify(
+            run.app.world(),
+            run.actor,
+            &spell,
+            crate::auras::spell_mods::SpellModOp::HealingAndDamage,
+            100.0,
+        )
+    };
+    let windwalker = amount(&run);
+    run.app
+        .world_mut()
+        .entity_mut(run.actor)
+        .insert(shared::components::ActiveSpec(268));
+    let brewmaster = amount(&run);
+    assert!((brewmaster / windwalker - 1.2).abs() < 0.0001);
+    run.app
+        .world_mut()
+        .entity_mut(run.actor)
+        .insert(shared::components::ActiveSpec(269));
+    let before = tick_damage(&run).len();
+    cast_parent(&mut run);
+    finish_parent(&mut run);
+    assert!(
+        tick_damage(&run).len() > before,
+        "ordinary SCK produces real damage"
+    );
 }
 
 fn capture_ticks(run: &mut Run) {
