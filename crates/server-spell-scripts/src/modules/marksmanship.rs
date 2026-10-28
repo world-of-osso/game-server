@@ -129,22 +129,33 @@ fn roll_surging_shots(world: &mut World, caster: Entity, spell: u32, depth: u8) 
         return;
     }
     let now = spell_cast::history_now(world);
-    let rapid = world.resource::<SpellStore>().get(RAPID_FIRE).expect("native Rapid Fire");
-    let remaining = world.get::<spell_cast::SpellHistory>(caster)
+    let rapid = world
+        .resource::<SpellStore>()
+        .get(RAPID_FIRE)
+        .expect("native Rapid Fire");
+    let remaining = world
+        .get::<spell_cast::SpellHistory>(caster)
         .map_or(0, |history| history.remaining_cooldown_ms(rapid, now));
-    if remaining > 0 {
-        reduce_cooldown(world, caster, RAPID_FIRE, (remaining + 1) as f64 / 1000.0);
-    }
+    // The public remaining value truncates milliseconds; include the fraction.
+    reduce_cooldown(world, caster, RAPID_FIRE, (remaining + 1) as f64 / 1000.0);
     if selected(world, caster, FOCUS_FIRE) {
         spell_cast::cast_triggered(world, caster, FOCUS_BUFF, Some(caster), 1);
     }
 }
 
-fn expire_focus_fire(world: &mut World, _unit: Entity, aura: &AuraInstance, _: auras::RemoveReason) {
+fn expire_focus_fire(
+    world: &mut World,
+    _unit: Entity,
+    aura: &AuraInstance,
+    _: auras::RemoveReason,
+) {
     // sc_hunter.cpp5832–5837: the finished Rapid Fire consumes Focus Fire.
-    auras::remove_auras(world, aura.caster, auras::RemoveReason::Consumed, |active| {
-        active.spell_id == 1277549 && active.caster == aura.caster
-    });
+    auras::remove_auras(
+        world,
+        aura.caster,
+        auras::RemoveReason::Consumed,
+        |active| active.spell_id == 1277549 && active.caster == aura.caster,
+    );
 }
 
 /// sc_hunter.cpp5833–5836/3632–3637: consume after the last Rapid tick,
