@@ -467,3 +467,5 @@ mod devourer_fragment_pickup_tests;
 mod eversong_diamond_tests;
 
 mod windwalker_player_tests;
+
+#[cfg(test)] mod brewmaster_shuffle_tests;
