@@ -12,12 +12,14 @@ class AllReplayTest(unittest.TestCase):
     def test_all_runs_all_specs_and_writes_details(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
-            trace = root / 'trace.log'
-            trace.write_text('fixture')
+            for spec in ('66', '73', '104', '250', '268', '581'):
+                (root / f'{spec}.simc-trace.log').write_text(spec)
             executable = root / 'replay'
             executable.write_text('''#!/usr/bin/env python3
 import json, os
 spec = os.environ['HEALER_TANK_SPEC']
+trace_spec = '66' if os.environ['HEALER_TANK_MODE'] == 'healer' else spec
+assert open(os.environ['HEALER_TANK_TIMELINE']).read() == trace_spec
 assert os.environ['HEALER_TANK_DURATION'] == '300'
 assert os.environ['HEALER_TANK_SEED'] == '70448'
 if os.environ['HEALER_TANK_MODE'] == 'healer':
@@ -29,7 +31,7 @@ print('HEALER_TANK_REPORT=' + json.dumps(report))
 ''')
             executable.chmod(0o755)
             output = root / 'results'
-            result = subprocess.run(['python3', str(SCRIPT), '--all', '--timeline', str(trace),
+            result = subprocess.run(['python3', str(SCRIPT), '--all', '--trace-dir', str(root),
                                      '--profile-dir', str(root), '--executable', str(executable),
                                      '--output-dir', str(output), '--jobs', '3'],
                                     text=True, capture_output=True, env=os.environ)

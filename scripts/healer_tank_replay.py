@@ -15,7 +15,7 @@ DRIVER = 'dungeon_simulator::replay_cli_tests::native_replay_cli_driver'
 MARKER = 'HEALER_TANK_REPORT='
 WORLD_DB = Path('/home/osso/Projects/world-of-osso/game-server/data/world.db')
 PROFILE_DIR = Path('/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/dps-parity-2026-10-21')
-TRACE = Path('/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/healer-tank-replay/66.simc-tank-dummy-seed70448.debug.log')
+TRACE_DIR = Path('/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/healer-tank-replay')
 SUPPORT_PROFILES = PROFILE_DIR / 'support-mid2-inputs'
 HEALERS = ('65', '105', '256', '257', '264', '270', '1468')
 TANKS = ('66', '73', '104', '250', '268', '581')
@@ -120,11 +120,13 @@ def build_replay_executable():
     return Path(executables[0])
 
 
-def run_all(timeline, executable, output_dir, jobs, profile_dir=None):
+def run_all(trace_dir, executable, output_dir, jobs, profile_dir=None):
     output_dir.mkdir(parents=True, exist_ok=True)
     def run(item):
         mode, spec, healed = item
         profiles = profile_dir or (SUPPORT_PROFILES if mode == 'healer' else TANK_PROFILES[spec])
+        trace_spec = '66' if mode == 'healer' else spec
+        timeline = (trace_dir / f'{trace_spec}.simc-trace.log').resolve(strict=True)
         report = run_replay(timeline, spec, 'simc', 300, 70448, profiles, executable, healed, mode)
         suffix = 'healed' if healed else 'unhealed'
         path = output_dir / f'{mode}-{spec}-{suffix}.json'
@@ -159,6 +161,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--timeline', type=Path, help='SimC debug trace or recorded intake JSON')
     parser.add_argument('--all', action='store_true', help='run all healer and tank benchmarks')
+    parser.add_argument('--trace-dir', type=Path, default=TRACE_DIR, help='directory of per-tank --all traces')
     parser.add_argument('--output-dir', type=Path, help='directory for --all detail JSON reports')
     parser.add_argument('--jobs', type=int, default=min(4, len(os.sched_getaffinity(0))), help='parallel --all replays')
     parser.add_argument('--source', choices=('simc', 'recorded'), default='simc')
@@ -173,11 +176,13 @@ def main():
     if args.all:
         if args.jobs <= 0:
             parser.error('--jobs must be positive')
-        timeline = (args.timeline or TRACE).resolve(strict=True)
+        if args.timeline:
+            parser.error('--all uses per-tank traces from --trace-dir, not --timeline')
+        trace_dir = args.trace_dir.resolve(strict=True)
         executable = args.executable.resolve(strict=True) if args.executable else build_replay_executable()
-        output = args.output_dir or TRACE.parent / datetime.now().strftime('all-%Y-%m-%d-%H%M%S')
+        output = args.output_dir or TRACE_DIR / datetime.now().strftime('all-%Y-%m-%d-%H%M%S')
         profiles = args.profile_dir.resolve(strict=True) if args.profile_dir else None
-        run_all(timeline, executable, output, args.jobs, profiles)
+        run_all(trace_dir, executable, output, args.jobs, profiles)
         return 0
     if args.timeline is None:
         parser.error('--timeline is required unless --all is used')
