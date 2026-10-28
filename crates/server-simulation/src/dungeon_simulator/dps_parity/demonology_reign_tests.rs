@@ -149,9 +149,17 @@ fn demonology_imploded_imps_preserve_tyrant_demonic_power() {
             .all(|imp| run.app.world().get_entity(*imp).is_err()),
         "actual imps must implode"
     );
+    // Implosion can summon new Inner Demons, which add their own stacks.
+    let new_imps = run
+        .app
+        .world_mut()
+        .query::<&crate::spell_cast::summon::SummonedCreature>()
+        .iter(run.app.world())
+        .filter(|summon| summon.owner == owner && summon.spell_id == 279910)
+        .count() as u16;
     assert_eq!(
-        stacks(run.app.world()),
-        before,
-        "implosion retains Tyrant Demonic Power stacks"
+        u16::from(stacks(run.app.world())),
+        u16::from(before) + new_imps,
+        "imploded Imps retain their stacks and new Imps add theirs"
     );
 }
