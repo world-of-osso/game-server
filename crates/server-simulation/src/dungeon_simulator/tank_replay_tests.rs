@@ -57,6 +57,20 @@ fn simc_dummy_strike_does_not_trigger_auto_attack_procs() {
         },
     );
     assert!(crate::auras::has_aura(run.app.world(), target, 15097));
+    let info = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(15097)
+        .unwrap();
+    assert!(
+        info.aura_options
+            .as_ref()
+            .unwrap()
+            .proc_definition_source
+            .is_some(),
+        "{info:?}"
+    );
     let before = run
         .app
         .world()
@@ -83,6 +97,7 @@ fn simc_dummy_strike_does_not_trigger_auto_attack_procs() {
             < before
     );
     assert_eq!(run.app.world().get::<AutoProcs>(target).unwrap().0, 0);
+    assert!(crate::auras::has_aura(run.app.world(), target, 15097));
     let hit = super::healer_intake::Hit {
         tick: 1,
         source_guid: 0,
