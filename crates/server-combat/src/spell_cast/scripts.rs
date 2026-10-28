@@ -579,7 +579,7 @@ pub fn on_effect_hit(
         (batch8::UNSTABLE_AFFLICTION, 0) => Some(batch8::unstable_affliction),
         (batch7::COLOSSUS_SMASH, 0) => Some(batch7::apply_colossus_wound),
         (batch7::HEART_STRIKE, 0) => Some(batch7::energize_heartbreaker),
-        (batch7::RAGING_BLOW, 0) => Some(batch7::roll_raging_blow_reset),
+        (batch7::RAGING_BLOW | batch7::CRUSHING_BLOW, 0) => Some(batch7::roll_raging_blow_reset),
         (batch7::WHIRLWIND, 1) => Some(batch7::energize_whirlwind),
         (batch7::RAKE, 0) => Some(batch7::stun_rake),
         (batch6::SUNFIRE, 0) => Some(batch6::sunfire),

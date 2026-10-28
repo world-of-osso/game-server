@@ -307,3 +307,63 @@ fn enrage_talent_gate_preserves_non_fury_casters() {
             .any(|effect| effect.index == 5 && effect.amount == 3.0)
     );
 }
+
+#[test]
+#[ignore = "requires exact Fury72 native player profile"]
+fn fury_surge_follows_raging_and_crushing_resets_only_when_selected() {
+    for action in [85288, 335097] {
+        for selected in [false, true] {
+            let _seed = crate::random::seed_scope(70_448);
+            let mut run = prepare_measurement(72, 1).unwrap();
+            let actor = run.actor;
+            let target = run.targets[0];
+            assert!(crate::auras::has_aura(run.app.world(), actor, 383854));
+            assert!(crate::auras::has_aura(run.app.world(), actor, 1265359));
+            if !selected {
+                crate::auras::remove_auras(
+                    run.app.world_mut(),
+                    actor,
+                    crate::auras::RemoveReason::Consumed,
+                    |aura| aura.spell_id == 1265359,
+                );
+            }
+            for _ in 0..40 {
+                crate::spell_cast::cast_triggered(
+                    run.app.world_mut(),
+                    actor,
+                    action,
+                    Some(target),
+                    1,
+                );
+                if crate::auras::has_aura(run.app.world(), actor, 1265560) {
+                    break;
+                }
+            }
+            assert_eq!(
+                crate::auras::has_aura(run.app.world(), actor, 1265560),
+                selected,
+                "action={action} selected={selected}"
+            );
+            if selected {
+                let aura = run
+                    .app
+                    .world()
+                    .get::<ActiveAuras>(actor)
+                    .unwrap()
+                    .iter()
+                    .find(|aura| aura.spell_id == 1265560)
+                    .unwrap();
+                assert!(
+                    aura.effects
+                        .iter()
+                        .any(|effect| effect.index == 0 && effect.amount == 30.0)
+                );
+                assert!(
+                    aura.effects
+                        .iter()
+                        .any(|effect| effect.index == 1 && effect.amount == 30.0)
+                );
+            }
+        }
+    }
+}
