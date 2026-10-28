@@ -1573,11 +1573,15 @@ fn dk252_death_coil_extends_real_dark_transformation() {
         literal_rotation::execution::Execution::Spell(1233448, run.actor, None)).unwrap();
     preparation::finish_pending_setup(&mut run).unwrap();
     let pet = crate::hunter_pet::summoned_pet(run.app.world(), run.actor).unwrap();
-    let expiry = |run: &Run, entity, spell| run.app.world().get::<crate::auras::ActiveAuras>(entity).unwrap()
-        .iter().find(|a| a.caster == run.actor && a.spell_id == spell).unwrap().expires_at.unwrap();
+    let expiry = |run: &Run, entity, spell| {
+        let auras = run.app.world().get::<crate::auras::ActiveAuras>(entity).expect("entity aura list");
+        let aura = auras.iter().find(|a| a.caster == run.actor && a.spell_id == spell)
+            .unwrap_or_else(|| panic!("missing aura {spell} on {entity:?}: {:?}", auras.iter().map(|a| (a.spell_id, a.caster)).collect::<Vec<_>>()));
+        aura.expires_at.unwrap_or_else(|| panic!("aura {spell} on {entity:?} has no expiry"))
+    };
     let owner_before = expiry(&run, run.actor, 1235391);
     let pet_before = expiry(&run, pet, 1233448);
-    crate::spell_cast::powers::change_power(run.app.world_mut(), run.actor, shared::components::PowerType::RunicPower, 100.0);
+    crate::spell_cast::powers::change_power(run.app.world_mut(), run.actor, shared::components::PowerType::RunicPower, 1000.0);
     literal_rotation::execution::execute(run.app.world_mut(), run.actor,
         literal_rotation::execution::Execution::Spell(47541, run.targets[0], Some(run.targets[0]))).unwrap();
     preparation::finish_pending_setup(&mut run).unwrap();
