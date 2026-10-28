@@ -9,6 +9,7 @@ fn mistweaver_heals_the_simc_dummy_party() {
     let metrics = &report["metrics"];
     let effective = metrics["effective_hps"].as_f64().unwrap();
     let raw = metrics["raw_hps"].as_f64().unwrap();
+    assert!((0.0..=100.0).contains(&metrics["overheal_pct"].as_f64().unwrap()));
     assert!(report["incoming_events"].as_u64().unwrap() > 100);
     assert_eq!(report["tank_spec"], 66);
     assert!(
@@ -24,12 +25,17 @@ fn mistweaver_heals_the_simc_dummy_party() {
             .as_f64()
             .is_none_or(|time| time > 4.0)
     );
-    // Selected native trait entry 124904 replaces Vivify116670 with Sheilun399491.
-    let vivify_casts = report["healer_casts"]["399491"].as_u64().unwrap();
-    let vivify_raw = metrics["spell_healing"]["399491"]["raw"].as_u64().unwrap();
-    let raw_per_cast = vivify_raw as f64 / vivify_casts as f64;
-    assert!((1_000.0..500_000.0).contains(&raw_per_cast), "{report}");
-    assert!(report["healer_casts"]["107428"].as_u64().unwrap_or(0) > 0);
+    assert!(
+        report["healer_casts"]["115175"].as_u64().unwrap_or(0) > 0,
+        "Soothing Mist never cast: {report}"
+    );
+    assert!(
+        metrics["spell_healing"]["115175"]["effective_hps"]
+            .as_f64()
+            .unwrap_or(0.0)
+            > 0.0,
+        "Soothing Mist did not heal: {report}"
+    );
     assert!(effective > 0.0 && raw >= effective, "{report}");
     let spells = metrics["spell_healing"].as_object().unwrap();
     assert!(!spells.is_empty());
@@ -39,5 +45,9 @@ fn mistweaver_heals_the_simc_dummy_party() {
         .sum();
     assert!((spell_total - effective).abs() < 0.000001);
     assert_eq!(metrics["mana_curve"].as_array().unwrap().len(), 301);
+    assert_eq!(metrics["tank_health_curve"].as_array().unwrap().len(), 301);
+    assert!(metrics["tank_dtps"].as_f64().unwrap() > 0.0);
+    assert!(metrics["tank_minimum_health_pct"].as_f64().unwrap() < 100.0);
+    assert!(metrics["tank_seconds_below_35_alive"].as_f64().unwrap() >= 0.0);
     println!("MISTWEAVER_REPORT={report}");
 }
