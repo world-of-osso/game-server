@@ -689,6 +689,68 @@ mod tests {
     }
     #[test]
     #[ignore = "requires native Vengeance profile"]
+    fn metamorphosis_and_spirit_bomb_earn_meteor_shower() {
+        use super::super::*;
+        let _seed = crate::random::seed_scope(70_448);
+        let (profile, traits) = read_reference(581).unwrap();
+        let identity = inputs::read_actor(&profile).unwrap();
+        let mut run = prepare_reference(profile, &traits, 1, identity).unwrap();
+        let actor = run.actor;
+        let target = run.targets[0];
+        engage(&mut run);
+        for _ in 0..2 {
+            crate::spell_cast::cast_for_player_with_target(
+                run.app.world_mut(),
+                actor,
+                263642,
+                Some(target),
+            )
+            .unwrap();
+            for _ in 0..35 {
+                run.app.update();
+            }
+        }
+        crate::spell_cast::cast_for_player_with_target(
+            run.app.world_mut(),
+            actor,
+            187827,
+            Some(actor),
+        )
+        .unwrap();
+        for _ in 0..25 {
+            run.app.update();
+        }
+        assert!(crate::auras::has_aura(run.app.world(), actor, 1256308));
+        literal_rotation::execution::execute(
+            run.app.world_mut(),
+            actor,
+            literal_rotation::execution::Execution::Spell(247454, actor, Some(target)),
+        )
+        .unwrap();
+        for _ in 0..160 {
+            run.app.update();
+        }
+        assert!(!crate::auras::has_aura(run.app.world(), actor, 1256308));
+        let hits = run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .filter(|event| {
+                event.spell_id == Some(1264130)
+                    && event.target == Some(target.to_bits())
+                    && event.kind == shared::protocol::CombatLogKind::Damage
+            })
+            .count();
+        assert_eq!(
+            hits, 12,
+            "earned shower must deal all native pulses to the real target"
+        );
+    }
+
+    #[test]
+    #[ignore = "requires native Vengeance profile"]
     fn catastrophe_rolls_damage_from_real_meteor_impacts() {
         use super::super::*;
         fn damage(meteors: usize) -> i32 {
