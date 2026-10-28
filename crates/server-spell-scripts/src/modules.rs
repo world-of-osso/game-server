@@ -100,6 +100,7 @@ register_modules! {
     cast_relationships: (370, "modules/cast_relationships.rs"),
     cast_resets: (90, "modules/cast_resets.rs"),
     clearcasting: (1000, "modules/clearcasting.rs"),
+    death_knight_permafrost: (2506, "modules/death_knight_permafrost.rs"),
     demon_hunter_burning: (1482, "modules/demon_hunter_burning.rs"),
     demon_hunter_effects: (1000, "modules/demon_hunter_effects.rs"),
     demonology_reign: (2660, "modules/demonology_reign.rs"),

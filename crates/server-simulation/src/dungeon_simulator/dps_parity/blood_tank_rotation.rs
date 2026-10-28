@@ -272,6 +272,28 @@ impl super::SpecDriver for Rotation {
 mod tests {
     #[test]
     #[ignore = "requires canonical world database and MID2 Blood inputs"]
+    fn permafrost_white_hits_create_consumable_frost_shield() {
+        let _seed = crate::random::seed_scope(70448);
+        let mut run = super::super::prepare_registered_player(250, 1).unwrap();
+        let actor = run.actor;
+        assert!(crate::auras::has_aura(run.app.world(), actor, 207200));
+        super::super::engage(&mut run);
+        for _ in 0..200 {
+            run.app.update();
+            if crate::auras::has_aura(run.app.world(), actor, 207203) {
+                break;
+            }
+        }
+        assert!(crate::auras::has_aura(run.app.world(), actor, 207203), "a real white hit must create Frost Shield");
+        let (_, absorbed) = crate::auras::absorb_damage(run.app.world_mut(), actor, 1, 1_000_000.0);
+        assert!(absorbed > 0.0, "incoming physical damage must consume the shield");
+        crate::auras::remove_auras(run.app.world_mut(), actor, crate::auras::RemoveReason::Consumed, |aura| aura.spell_id == 207200 || aura.spell_id == 207203);
+        for _ in 0..200 { run.app.update(); }
+        assert!(!crate::auras::has_aura(run.app.world(), actor, 207203), "white hits without the talent must not create a shield");
+    }
+
+    #[test]
+    #[ignore = "requires canonical world database and MID2 Blood inputs"]
     fn blood_rune_weapons_reduce_actual_incoming_strike() {
         let mut run = super::super::prepare_registered_player(250, 1).unwrap();
         let actor = run.actor;
