@@ -235,3 +235,185 @@ pub(super) fn replay(intake: &Intake) -> Result<Value, String> {
         "spike_window_seconds":SPIKE_WINDOW_SECONDS,"largest_spike":spike,"tank_casts":casts}),
     )
 }
+
+/// Run SimC's pre-outcome dummy pressure against the actual MID2 parity player.
+pub(super) fn replay_simc(
+    path: &std::path::Path,
+    duration_seconds: u32,
+    seed: u64,
+) -> Result<Value, String> {
+    use crate::simc_tank_timeline::{self, Kind};
+    let canonical =
+        std::path::Path::new("/home/osso/Projects/world-of-osso/game-server/data/world.db")
+            .canonicalize()
+            .map_err(|error| format!("canonical world database: {error}"))?;
+    let selected = std::env::var_os("DPS_PARITY_WORLD_DB").ok_or("DPS_PARITY_WORLD_DB absent")?;
+    if std::path::Path::new(&selected)
+        .canonicalize()
+        .map_err(|error| error.to_string())?
+        != canonical
+        || crate::test_data::world_db_path()
+            .canonicalize()
+            .map_err(|error| error.to_string())?
+            != canonical
+    {
+        return Err("SIMC_REPLAY_REQUIRES_CANONICAL_WORLD_DB".into());
+    }
+    if duration_seconds == 0 {
+        return Err("SIMC_REPLAY_DURATION_ZERO".into());
+    }
+    let hits = simc_tank_timeline::read_trace(path, "Tank_Dummy_Dungeon")?;
+    let (profile, traits) = super::dps_parity::read_reference(66)?;
+    if profile.level != "90" || profile.race != "tauren" {
+        return Err("SIMC_MID2_PROTECTION_PROFILE_MISMATCH".into());
+    }
+    let _rng = crate::random::seed_scope(seed);
+    let mut run = super::dps_parity::spawn_reference(
+        profile,
+        &traits,
+        1,
+        crate::followers::simulator::ParityActor::Player { race: 6 },
+    )?;
+    let tank = run.actor;
+    let source = run.targets[0];
+    for _ in 0..4 {
+        run.app.update();
+    }
+    freeze_sources(run.app.world_mut(), &[(0, source)].into());
+    run.app.insert_resource(Capture {
+        members: vec![tank],
+        sources: [(source, (0, 0))].into(),
+        ..Default::default()
+    });
+    crate::combat_refs::set_in_combat_with(run.app.world_mut(), tank, source);
+    let mut event_cursor = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .len();
+    let (mut raw, mut taken, mut self_healing, mut active_seconds, mut spike) =
+        (0.0, 0.0, 0.0, 0.0, 0.0_f64);
+    let (mut recent, mut recent_sum) = (VecDeque::<(f64, f64)>::new(), 0.0);
+    let (mut next, mut elapsed, mut death) = (0, 0.0, None);
+    for tick in 1..=duration_seconds * 20 {
+        elapsed = f64::from(tick) * TICK_SECONDS;
+        while let Some(hit) = hits
+            .get(next)
+            .filter(|hit| hit.time_ms <= u64::from(tick) * 50)
+        {
+            if !run
+                .app
+                .world()
+                .get::<Health>(tank)
+                .is_some_and(|health| health.current > 0.0)
+            {
+                break;
+            }
+            let amount = hit.amount as f32;
+            if !amount.is_finite() {
+                return Err("SIMC_DUMMY_AMOUNT_OUT_OF_RANGE".into());
+            }
+            let scale = crate::level_scaling::damage_to_hp_scale(run.app.world(), source, tank);
+            run.app
+                .world_mut()
+                .resource_mut::<Capture>()
+                .active_hit_scale = Some((tank, scale));
+            match hit.kind {
+                Kind::Bleed => {
+                    raw += f64::from(amount);
+                    crate::spell_cast::effects::replay_simc_dummy_bleed(
+                        run.app.world_mut(),
+                        source,
+                        tank,
+                        amount,
+                    );
+                }
+                Kind::Swing | Kind::Strike => {
+                    let (outcome, level_difference) = crate::combat::roll_simc_dummy_outcome(
+                        run.app.world(),
+                        source,
+                        tank,
+                        hit.kind == Kind::Strike,
+                    )?;
+                    let recorded = Hit {
+                        tick,
+                        source_guid: 0,
+                        pack: 0,
+                        target_slot: 0,
+                        school: 1,
+                        raw: amount,
+                        level_scaling_factor: scale,
+                        kind: HitKind::Melee {
+                            hand: 0,
+                            outcome: format!("{outcome:?}"),
+                            level_difference,
+                            critical_multiplier: 1.0,
+                            weapon_speed: 2.0,
+                        },
+                    };
+                    raw += source_amount(&recorded)?;
+                    crate::combat::replay_healer_hit(run.app.world_mut(), source, tank, &recorded)?;
+                }
+            }
+            run.app
+                .world_mut()
+                .resource_mut::<Capture>()
+                .active_hit_scale = None;
+            next += 1;
+        }
+        run.app.update();
+        let world = run.app.world();
+        if crate::auras::has_aura(world, tank, SHIELD_OF_THE_RIGHTEOUS) {
+            active_seconds += TICK_SECONDS;
+        }
+        let events = &world
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0;
+        for event in &events[event_cursor..] {
+            if event.target != Some(tank.to_bits()) {
+                continue;
+            }
+            if event.kind == CombatLogKind::Damage && event.source == Some(source.to_bits()) {
+                let amount = f64::from(event.amount.max(0));
+                taken += amount;
+                recent.push_back((elapsed, amount));
+                recent_sum += amount;
+                while recent
+                    .front()
+                    .is_some_and(|(time, _)| *time <= elapsed - SPIKE_WINDOW_SECONDS)
+                {
+                    recent_sum -= recent.pop_front().unwrap().1;
+                }
+                spike = spike.max(recent_sum);
+            }
+            if event.kind == CombatLogKind::Heal && event.source == Some(tank.to_bits()) {
+                self_healing += f64::from((event.amount - event.overflow.max(0)).max(0));
+            }
+        }
+        event_cursor = events.len();
+        if world
+            .get::<Health>(tank)
+            .is_none_or(|health| health.current <= 0.0)
+        {
+            death = Some(elapsed);
+            break;
+        }
+    }
+    let absorbed = run
+        .app
+        .world()
+        .resource::<Capture>()
+        .consumed_absorbs
+        .get(&tank)
+        .map_or(0.0, |usage| usage.total);
+    Ok(
+        json!({"spec":66,"level":90,"reference_tier":"MID2","timeline":"simc_tank_dummy",
+        "rotation_status":"not_implemented","duration_seconds":elapsed,"incoming_events":next,
+        "raw_damage":raw,"damage_taken":taken,"mitigation_pct":(raw>0.0).then(||100.0*(raw-taken)/raw),
+        "self_heal_per_second":(elapsed>0.0).then(||self_healing/elapsed),
+        "absorb_per_second":(elapsed>0.0).then(||absorbed/elapsed),"time_to_death":death,
+        "active_mitigation_spell":SHIELD_OF_THE_RIGHTEOUS,"active_mitigation_uptime":(elapsed>0.0).then(||active_seconds/elapsed),
+        "spike_window_seconds":SPIKE_WINDOW_SECONDS,"largest_spike":spike}),
+    )
+}

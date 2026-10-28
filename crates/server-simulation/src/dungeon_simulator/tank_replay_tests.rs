@@ -2,6 +2,26 @@ use super::healer_intake::Intake;
 use std::path::Path;
 
 #[test]
+#[ignore = "requires the MID2 66 profile, canonical world database and SimC tank-dummy trace"]
+fn protection_paladin_replays_simc_pressure_with_mid2_gear() {
+    let path = std::env::var("HEALER_TANK_SIMC_TRACE").expect("HEALER_TANK_SIMC_TRACE required");
+    let report = super::tank_replay::replay_simc(Path::new(&path), 300, 70448).unwrap();
+    assert_eq!(report["spec"], 66);
+    assert_eq!(report["level"], 90);
+    assert_eq!(report["reference_tier"], "MID2");
+    assert_eq!(report["timeline"], "simc_tank_dummy");
+    assert_eq!(report["rotation_status"], "not_implemented");
+    assert!(report["incoming_events"].as_u64().unwrap() > 0, "{report}");
+    assert!(
+        report["raw_damage"].as_f64().unwrap() > 100_000.0,
+        "{report}"
+    );
+    assert!(report["damage_taken"].as_f64().unwrap() > 0.0, "{report}");
+    assert!(report["largest_spike"].as_f64().unwrap() > 0.0, "{report}");
+    println!("SIMC_TANK_REPLAY {report}");
+}
+
+#[test]
 #[ignore = "uses the native recorded tank source and recipient"]
 fn tank_replay_counts_parried_incoming_damage_as_mitigated() {
     let path = Path::new(env!("CARGO_MANIFEST_DIR"))
