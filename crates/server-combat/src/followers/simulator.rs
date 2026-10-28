@@ -191,6 +191,13 @@ pub fn spawn_party_for_healer_player(world: &mut World, healer: Entity) -> Resul
     })
 }
 
+/// Assign the headless reference player its distinct group identity.
+pub fn assign_reference_player_id(world: &mut World, player: Entity, id: u64) {
+    world
+        .entity_mut(player)
+        .insert(crate::persistence::ClientId(id));
+}
+
 /// Form a native party around separate MID2 tank and healer players.
 pub fn spawn_party_for_reference_healer(
     world: &mut World,

@@ -2,7 +2,6 @@
 include!("module_list.in");
 use crate::simc_apl_native::{FixtureAdds, FixtureTarget};
 use bevy::prelude::*;
-pub(crate) use inputs::read_reference_race;
 use serde_json::{Value, json};
 use std::collections::BTreeMap;
 use std::time::{Duration, Instant};
@@ -509,10 +508,7 @@ pub(crate) fn spawn_second_reference_player(run: &mut Run, spec_id: u32) -> Resu
         &traits,
         crate::followers::simulator::ParityActor::Player { race },
     )?;
-    run.app
-        .world_mut()
-        .entity_mut(actor)
-        .insert(server::persistence::ClientId(2));
+    crate::followers::simulator::assign_reference_player_id(run.app.world_mut(), actor, 2);
     for _ in 0..4 {
         run.app.update();
     }
