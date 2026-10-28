@@ -24,6 +24,7 @@ const POLICIES: &[Registration] = &[
     (257, super::holy_priest_replay::prepare),
     (264, super::restoration_shaman_replay::prepare),
     (270, super::mistweaver_replay::prepare),
+    (1468, super::preservation_evoker_replay::prepare),
 ];
 
 pub(super) fn replay_simc(
