@@ -17,6 +17,19 @@ struct Energy {
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::AfterCastUpdate(update)];
 
+#[cfg(any(test, feature = "test-support"))]
+pub fn set_ghoul_energy(world: &mut World, pet: Entity, value: f64) {
+    let now = combat::auras::aura_now(world);
+    let mut energy = world.get_mut::<Energy>(pet).expect("actual ghoul Energy");
+    energy.value = value;
+    energy.updated = now;
+}
+
+#[cfg(any(test, feature = "test-support"))]
+pub fn ghoul_energy(world: &World, pet: Entity) -> f64 {
+    world.get::<Energy>(pet).expect("actual ghoul Energy").value
+}
+
 fn update(world: &mut World) {
     let now = combat::auras::aura_now(world);
     let pets: Vec<_> = world
