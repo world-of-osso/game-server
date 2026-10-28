@@ -76,6 +76,10 @@ fn dummy4_kill_shot_is_usable_strictly_below_twenty_percent() {
 }
 
 fn mangle(with_rank: bool, bleeding: bool) -> f32 {
+    mangle_with_trace_bleeding(with_rank, bleeding, false)
+}
+
+fn mangle_with_trace_bleeding(with_rank: bool, bleeding: bool, trace_bleeding: bool) -> f32 {
     let mut ids = vec![33917, 5487, 703];
     if with_rank {
         ids.push(231064);
@@ -90,6 +94,12 @@ fn mangle(with_rank: bool, bleeding: bool) -> f32 {
     }
     if bleeding {
         aura(&mut h, caster, npc, 703);
+    }
+    if trace_bleeding {
+        h.app
+            .world_mut()
+            .entity_mut(npc)
+            .insert(crate::simc_apl_native::FixtureBleeding);
     }
     h.cast_and_deliver(33917, Some(npc));
     h.advance(5);
@@ -107,6 +117,13 @@ fn dummy4_mangle_rank_increases_damage_against_bleeding_target() {
     let base = mangle(false, true);
     let bonus = mangle(true, true);
     assert!((bonus / base - 1.2).abs() < 0.07, "{base} -> {bonus}");
+}
+
+#[test]
+fn trace_bleeding_enables_real_mangle_damage_bonus() {
+    let base = mangle_with_trace_bleeding(true, false, false);
+    let traced = mangle_with_trace_bleeding(true, false, true);
+    assert!((traced / base - 1.2).abs() < 0.07, "{base} -> {traced}");
 }
 
 #[test]

@@ -1105,6 +1105,71 @@ fn protection_apl_selects_shield_using_the_real_profile_conditions() {
 
 #[test]
 #[ignore = "requires canonical MID2 Vengeance profile"]
+fn traced_mortal_wounds_reduce_dummy_healing_for_the_encounter() {
+    use crate::simc_tank_timeline::RaidBuff;
+    fn heal(wounded: bool) -> f32 {
+        let _seed = crate::random::seed_scope(70_448);
+        let mut run = super::dps_parity::prepare_registered_player(581, 1).unwrap();
+        let debuffs = if wounded {
+            vec![RaidBuff {
+                name: "mortal_wounds".into(),
+                spell_id: 115804,
+            }]
+        } else {
+            Vec::new()
+        };
+        super::tank_replay::apply_simc_dummy_debuffs(&mut run, &debuffs).unwrap();
+        for _ in 0..220 {
+            run.app.update();
+        }
+        let actor = run.actor;
+        let target = run.targets[0];
+        let mut health = run
+            .app
+            .world_mut()
+            .get_mut::<shared::components::Health>(target)
+            .unwrap();
+        health.current = health.max / 2.0;
+        let before = health.current;
+        let spell = run
+            .app
+            .world()
+            .resource::<crate::spell_info::SpellStore>()
+            .get(213011)
+            .unwrap()
+            .clone();
+        let ctx = crate::spell_cast::effects::EffectCtx {
+            caster: actor,
+            spell: &spell,
+            depth: 1,
+            dest: None,
+            chain_multiplier: 1.0,
+        };
+        crate::spell_cast::effects::apply_heal(
+            run.app.world_mut(),
+            &ctx,
+            target,
+            1000.0,
+            false,
+            false,
+        );
+        run.app
+            .world()
+            .get::<shared::components::Health>(target)
+            .unwrap()
+            .current
+            - before
+    }
+    let base = heal(false);
+    let reduced = heal(true);
+    assert!(
+        base > 0.0 && (reduced / base - 0.5).abs() < 0.01,
+        "dummy heal {base}/{reduced}"
+    );
+}
+
+#[test]
+#[ignore = "requires canonical MID2 Vengeance profile"]
 fn simc_bronze_buff_shortens_real_infernal_strike_recovery() {
     use crate::simc_tank_timeline::RaidBuff;
     fn recovery(bronze: bool) -> f64 {
