@@ -235,7 +235,11 @@ fn devourer_meta_mastery_applies_once_to_real_voidblade() {
     let (normal, normal_crit) = batch1_voidblade_hit(false, 40.0, false);
     let (meta, meta_crit) = batch1_voidblade_hit(true, 40.0, false);
     assert_eq!(normal_crit, meta_crit);
-    let expected = f64::from(normal) * 1.16;
+    // In these seeded fixtures Meta also changes spell power and base mastery,
+    // and grants two independent 20% Demonsurge effects. Only the final 1.16
+    // is the Meta-specific 0.4 × 40 mastery bonus.
+    let expected =
+        f64::from(normal) * (3906.0 / 4296.6) * (1.468565216 / 1.56227829) * 1.2 * 1.2 * 1.16;
     assert!(
         (f64::from(meta) - expected).abs() < expected * 0.02,
         "Meta must apply one 0.4 × mastery bonus: normal {normal}, Meta {meta}, expected {expected}"
