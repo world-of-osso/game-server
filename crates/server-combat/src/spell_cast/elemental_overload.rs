@@ -8,6 +8,7 @@ use crate::spell_info::SpellInfo;
 
 const MASTERY: u32 = 168534;
 const FEEDBACK_LOOP: u32 = 1270064;
+const MOUNTAINS_WILL_FALL: u32 = 381726;
 const STORMKEEPER: u32 = 191634;
 const ASCENDANCE: u32 = 1219480;
 const LIGHTNING_BOLT: u32 = 188196;
@@ -82,6 +83,20 @@ pub(super) fn after_launch(
         ELEMENTAL_BLAST => ELEMENTAL_BLAST_OVERLOAD,
         _ => return,
     };
+    // SimC76f8118 sc_shaman.cpp7600–7617/7652–7656 requires Mountains
+    // for Blast overloads and removes its scalar for the Fusion variant.
+    let multiplier = if spell.id == ELEMENTAL_BLAST {
+        let Some(percent) = self_aura_amount(world, caster, MOUNTAINS_WILL_FALL, 0) else {
+            return;
+        };
+        if spell.cast_parent_owns_modifier_charges {
+            1.0
+        } else {
+            percent / 100.0
+        }
+    } else {
+        1.0
+    };
     let Some(chance) = self_aura_amount(world, caster, MASTERY, 0) else {
         return;
     };
@@ -113,6 +128,7 @@ pub(super) fn after_launch(
             target,
             overload,
             OVERLOAD_DELAY_MS,
+            multiplier,
         );
         // SimC76f8118 sc_shaman.cpp3415–3417: each successful overload
         // rolls Feedback Loop once; the resulting overload cannot recurse.
@@ -123,6 +139,7 @@ pub(super) fn after_launch(
                 target,
                 overload,
                 OVERLOAD_DELAY_MS,
+                multiplier,
             );
         }
     }
