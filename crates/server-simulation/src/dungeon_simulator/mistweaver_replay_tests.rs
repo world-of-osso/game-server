@@ -1,6 +1,38 @@
 use std::path::Path;
 
 #[test]
+#[ignore = "replays the MID2 Mistweaver against the SimC party pulse"]
+fn mistweaver_uses_sheilun_on_party_damage() {
+    let trace = std::env::var("HEALER_TANK_SIMC_TRACE").expect("HEALER_TANK_SIMC_TRACE required");
+    let party_trace =
+        std::env::var("HEALER_TANK_PARTY_TRACE").expect("HEALER_TANK_PARTY_TRACE required");
+    let report = super::super::healer_simc_replay::replay_simc_party(
+        270,
+        Path::new(&trace),
+        Path::new(&party_trace),
+        300,
+        70448,
+    )
+    .unwrap();
+    assert!(
+        report["party_incoming_events"].as_u64().unwrap() > 100,
+        "{report}"
+    );
+    assert!(
+        report["healer_casts"]["399491"].as_u64().unwrap_or(0) > 0,
+        "Sheilun's Gift never cast: {report}"
+    );
+    assert!(
+        report["metrics"]["spell_healing"]["399491"]["effective_hps"]
+            .as_f64()
+            .unwrap_or(0.0)
+            > 0.0,
+        "Sheilun's Gift did not heal: {report}"
+    );
+    println!("MISTWEAVER_PARTY_REPORT={report}");
+}
+
+#[test]
 #[ignore = "replays the MID2 Mistweaver against the SimC dummy trace"]
 fn mistweaver_heals_the_simc_dummy_party() {
     let trace = std::env::var("HEALER_TANK_SIMC_TRACE").expect("HEALER_TANK_SIMC_TRACE required");

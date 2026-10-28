@@ -77,10 +77,7 @@ pub(super) fn prepare(
             "default",
             "enveloping_mist,if=target.health.pct<65&target.enveloping_mist_up=0",
         ),
-        (
-            "default",
-            "sheiluns_gift,if=target.health.pct<45&party.heal_worthwhile",
-        ),
+        ("default", "sheiluns_gift,if=party.heal_worthwhile"),
         ("default", "vivify,if=party.heal_worthwhile"),
         ("default", "soothing_mist,if=target.health.pct<90"),
         ("damage", "rising_sun_kick"),
@@ -183,6 +180,7 @@ impl Mistweaver {
         world: &World,
         healer: Entity,
         target: Entity,
+        party: &[Entity],
         incoming_dps: f32,
         last_tank_heal: f32,
     ) -> Result<bool, String> {
@@ -205,7 +203,16 @@ impl Mistweaver {
         let health = world
             .get::<Health>(target)
             .ok_or("Mistweaver target health absent")?;
-        let missing = (health.max - health.current).max(0.0);
+        let missing = if spell_id == 399491 {
+            party
+                .iter()
+                .filter_map(|&unit| world.get::<Health>(unit))
+                .filter(|health| health.current > 0.0)
+                .map(|health| (health.max - health.current).max(0.0))
+                .sum()
+        } else {
+            (health.max - health.current).max(0.0)
+        };
         let expected = per_target.max(last_tank_heal);
         Ok(expected > 0.0 && missing >= expected * 0.75 && missing + incoming_dps >= expected)
     }
@@ -253,7 +260,8 @@ impl Policy for Mistweaver {
         } else {
             0.0
         };
-        let worthwhile = Self::worthwhile_heal(world, healer, target, incoming_dps, last_heal)?;
+        let worthwhile =
+            Self::worthwhile_heal(world, healer, target, party, incoming_dps, last_heal)?;
         let injured = living.iter().filter(|(_, ratio)| *ratio < 0.90).count();
         let renewing_up = crate::auras::has_aura(world, target, 119611)
             || crate::auras::has_aura(world, target, 115151);
