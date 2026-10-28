@@ -313,6 +313,7 @@ register_modules! {
     unholy_reaping: (2524, "modules/unholy_reaping.rs"),
     unholy_army: (2522, "modules/unholy_army.rs"),
     unholy_eruption: (2520, "modules/unholy_eruption.rs"),
+    unholy_trollbane: (2538, "modules/unholy_trollbane.rs"),
     unholy_putrefy: (2521, "modules/unholy_putrefy.rs"),
     unholy_sudden_doom: (2523, "modules/unholy_sudden_doom.rs"),
     unrelenting_onslaught: (714, "modules/unrelenting_onslaught.rs"),
