@@ -515,6 +515,10 @@ mod tests {
             crate::auras::has_aura(run.app.world(), actor, 391459),
             "selected Sanguine Ground must follow actual ground"
         );
+        assert!(
+            !crate::auras::has_aura(run.app.world(), actor, 81141),
+            "Death and Decay consumes its earned Crimson Scourge"
+        );
         let original = *run
             .app
             .world()
@@ -538,6 +542,29 @@ mod tests {
         assert!(
             crate::auras::has_aura(run.app.world(), actor, 391459),
             "returning to the active field restores the buff"
+        );
+        let expiry = run
+            .app
+            .world_mut()
+            .query::<&crate::spell_cast::area_trigger::SpellAreaTrigger>()
+            .iter(run.app.world())
+            .find(|field| field.spell_id == 43265 && field.caster == actor)
+            .unwrap()
+            .expires_at
+            .unwrap();
+        while crate::spell_cast::now(run.app.world()) < expiry + 3.0 {
+            run.app.update();
+        }
+        assert!(
+            crate::auras::has_aura(run.app.world(), actor, 391459),
+            "Sanguine Ground persists during the four-second expiration grace"
+        );
+        while crate::spell_cast::now(run.app.world()) < expiry + 4.2 {
+            run.app.update();
+        }
+        assert!(
+            !crate::auras::has_aura(run.app.world(), actor, 391459),
+            "Sanguine Ground expires after its grace"
         );
     }
 
