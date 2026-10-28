@@ -47,11 +47,47 @@ pub(crate) fn configure(world: &World, spec: u32) -> Result<Profile, String> {
     // No source DPS/tank decisions become an alternate healer's implicit policy.
     profile.attack_spell = 0;
     profile.cooldown_spell = 0;
-    profile.heal_spell = 0;
+    profile.heal_spell = if spec == 65 { 82326 } else { 0 };
     profile.taunt_spell = 0;
     profile.form_spell = 0;
     profile.melee = false;
     Ok(profile)
+}
+
+/// Install the benchmark's explicit initial Holy Paladin decisions in this app only.
+pub(super) fn install_holy_paladin_policy(world: &mut World, level: u8) -> Result<(), String> {
+    use crate::followers::kit::{Conditions, Entry, Slot, Target};
+
+    let (known, _) = crate::class_progression::evaluate_npc_starter(
+        world.resource::<crate::spell_info::ClassSpells>(),
+        2,
+        65,
+        level,
+    )?;
+    let spells = [82326, 19750];
+    if spells
+        .iter()
+        .any(|id| !known.iter().any(|spell| spell.spell_id == *id))
+    {
+        return Err("NATIVE_HOLY_PALADIN_BASE_HEALS_ABSENT".into());
+    }
+    let mut catalog = world.resource_mut::<FollowerCatalog>();
+    catalog.kits.retain(|entry| entry.spec_id != 65);
+    for spell_id in spells {
+        catalog.kits.push(Entry {
+            spec_id: 65,
+            spell_id,
+            min_level: level,
+            max_level: level,
+            slot: Slot::Heal,
+            conditions: Conditions {
+                target: Target::Party,
+                health_below: Some(0.80),
+                ..Default::default()
+            },
+        });
+    }
+    Ok(())
 }
 
 pub(super) fn require_policy(world: &World, profile: &Profile, level: u8) -> Result<(), String> {

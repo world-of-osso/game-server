@@ -6,7 +6,7 @@ use shared::components::Position;
 #[ignore = "explicit alternate benchmark actor/policy admission"]
 fn healer_benchmark_alternate_specs_require_explicit_native_policy() {
     let (mut h, _) = level32(209072);
-    let missing = [65, 256, 264, 270, 1468];
+    let missing = [256, 264, 270, 1468];
     let mut catalog = h.app.world_mut().resource_mut::<FollowerCatalog>();
     catalog.kits = catalog
         .kits
