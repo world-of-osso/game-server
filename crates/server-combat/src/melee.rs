@@ -19,7 +19,7 @@ pub const ATTACK_POWER_PER_DPS: f32 = 6.0;
 /// UNIT_MOD_DAMAGE_OFFHAND TOTAL_PCT (Unit.cpp:350).
 const OFF_HAND_DAMAGE_MULTIPLIER: f32 = 0.5;
 /// Unit::GetUnitMissChance (Unit.cpp:2825-2830).
-const BASE_MISS_PCT: f32 = 5.0;
+pub(crate) const BASE_MISS_PCT: f32 = 5.0;
 /// Auto-attacks while dual wielding (Unit.cpp:12509-12512).
 const DUAL_WIELD_MISS_PCT: f32 = 19.0;
 /// A creature's dodge, parry and block before level difference

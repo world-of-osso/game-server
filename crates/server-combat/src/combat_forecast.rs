@@ -148,6 +148,7 @@ fn read_attacker(world: &World, enemy: Entity) -> Result<Attacker<'_>, String> {
     let auras = world.get::<crate::auras::ActiveAuras>(enemy);
     Ok(Attacker {
         entity: enemy,
+        player: false,
         position: world
             .get::<Position>(enemy)
             .ok_or("source creature lacks position")?,

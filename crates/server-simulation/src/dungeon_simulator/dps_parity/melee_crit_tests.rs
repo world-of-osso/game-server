@@ -39,6 +39,44 @@ fn observe_white_crit(run: &mut Run, source: Entity) -> (usize, f32) {
     );
 }
 
+fn observe_player_white_miss_rate(hit_modifier: f32) -> f32 {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_measurement(577, 1).unwrap();
+    let actor = run.actor;
+    assert!(run.app.world().get::<shared::components::Player>(actor).is_some());
+    assert!(run.app.world().get::<CharacterStats>(actor).unwrap().off_hand.is_some());
+    run.app.world_mut().get_mut::<AuraStatMods>(actor).unwrap().melee_hit_chance_pct = hit_modifier;
+    super::channel_timing_tests::remove_equipped_proc_drivers(&mut run);
+    engage(&mut run);
+    let world = run.app.world_mut();
+    let mut queue = bevy::ecs::world::CommandQueue::default();
+    let mut commands = Commands::new(&mut queue, world);
+    crate::combat::start_attack(&mut commands, actor, run.targets[0], None);
+    queue.apply(world);
+    for _ in 0..600 {
+        let mut attack = run.app.world_mut().get_mut::<crate::combat::AutoAttack>(actor).unwrap();
+        attack.timer = std::time::Duration::ZERO;
+        attack.off_hand_timer = std::time::Duration::ZERO;
+        run.app.update();
+    }
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0;
+    let whites: Vec<_> = events.iter().filter(|event| event.source == Some(actor.to_bits())
+        && event.spell_id.is_none()
+        && matches!(event.kind, CombatLogKind::Damage | CombatLogKind::Miss(_))).collect();
+    let misses = whites.iter().filter(|event| matches!(event.kind, CombatLogKind::Miss(shared::protocol::MissKind::Miss))).count();
+    assert!(whites.len() >= 800, "expected actual dual-wield swings, got {}", whites.len());
+    misses as f32 / whites.len() as f32
+}
+
+#[test]
+#[ignore = "real Havoc player dual-wield white swings use the retail miss table"]
+fn havoc_player_white_swings_use_retail_dual_wield_miss_rate() {
+    let normal = observe_player_white_miss_rate(0.0);
+    let modified = observe_player_white_miss_rate(10.0);
+    assert!((0.16..=0.22).contains(&normal), "expected 19% misses, got {normal:.3}");
+    assert!((0.06..=0.12).contains(&modified), "expected 9% misses after hit modifier, got {modified:.3}");
+}
+
 fn assert_critical_rate(run: &mut Run, source: Entity, expected: f32) {
     let (attempts, observed) = observe_white_crit(run, source);
     eprintln!(
