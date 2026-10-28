@@ -24,6 +24,21 @@ fn guardian_lycaras_bear_versatility_follows_form_transitions() {
         talent_amount
     );
     assert!(talent_amount > 0.0);
+    let spell = crate::spell_info::SpellInfo::default();
+    let with_versatility =
+        crate::auras::damage_taken_multiplier(run.app.world(), actor, run.targets[0], &spell);
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        actor,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 378991 && aura.caster == actor,
+    );
+    let without_versatility =
+        crate::auras::damage_taken_multiplier(run.app.world(), actor, run.targets[0], &spell);
+    assert!(
+        with_versatility < without_versatility,
+        "Bear versatility must reduce incoming damage"
+    );
     for _ in 0..40 {
         run.app.update();
     }
