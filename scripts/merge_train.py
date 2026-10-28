@@ -818,6 +818,15 @@ def take_queue():
     return drop_superseded(sorted(entries, key=lambda e: e["submitted"]))
 
 
+def inherit_gates(new, old):
+    """The superseding entry keeps the stale entry's tests and measured specs, so a resubmit
+    or descendant never lands with fewer gates than the entry it replaced."""
+    new["tests"] = new["tests"] + [test for test in old["tests"] if test not in new["tests"]]
+    measured = {measure["spec"] for measure in new["measure"]}
+    new["measure"] = new["measure"] + [m for m in old["measure"] if m["spec"] not in measured]
+    (RUNNING / f"{new['id']}.json").write_text(json.dumps(new, indent=2))
+
+
 def drop_superseded(entries):
     """A landing entry whose commit is an ancestor of a later landing entry from the same
     owner is a stale version of it (owners resubmit after fixing compile errors); a
@@ -833,6 +842,7 @@ def drop_superseded(entries):
             if same and new["tests"] == old["tests"] or not same and new["owner"] == old["owner"] \
                     and git("merge-base", "--is-ancestor", old["commit"], new["commit"], check=False).returncode == 0:
                 old["status"], old["reason"] = "rejected", f"superseded by {new['id']}"
+                inherit_gates(new, old)
                 stale.append(old)
                 break
     write_results(stale)
