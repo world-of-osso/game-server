@@ -1165,6 +1165,7 @@ impl ActionFacts for NativeFacts<'_> {
             "run_action_list"
             | "call_action_list"
             | "auto_attack"
+            | "cycling_variable"
             | "retarget_auto_attack"
             | "retarget" => None,
             _ => Some(self.action_spell(&action.name)?),

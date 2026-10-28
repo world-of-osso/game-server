@@ -709,6 +709,20 @@ fn affliction_literal_three_target_profile_keeps_foreground_history() {
 
 #[test]
 #[ignore = "requires private265 profile and native70448 world DB"]
+fn affliction_three_targets_execute_cycling_variables() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_measurement(265, 3).unwrap();
+    engage(&mut run);
+    for _ in 0..1200 {
+        drive_player(&mut run).unwrap();
+        run.app.update();
+    }
+    let combat = report::combat(run.app.world(), &run.targets, 60.0);
+    assert!(combat["total_damage"].as_u64().unwrap() > 0);
+}
+
+#[test]
+#[ignore = "requires private265 profile and native70448 world DB"]
 fn affliction_literal_fixture_executes_profile_instead_of_assisted_kit() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_measurement(265, 1).unwrap();
