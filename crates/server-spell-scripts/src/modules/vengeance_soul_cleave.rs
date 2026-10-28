@@ -3,7 +3,10 @@ use super::combat;
 use bevy::prelude::*;
 use combat::random::Rng;
 use combat::soul_fragments::{self, FragmentFilter};
-use combat::spell_cast::{self, script_registry::SpellScriptHook};
+use combat::spell_cast::{
+    self,
+    script_registry::{HitHook, SpellScriptHook},
+};
 use combat::spell_info::SpellInfo;
 
 struct PendingCleave {
@@ -23,7 +26,46 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AfterNativeCastUpdate(update),
     SpellScriptHook::BeforeNativeOnCast(snapshot_meta),
     SpellScriptHook::AfterResolvedHits(finish_meta),
+    SpellScriptHook::EffectHit(sigil_extension_hook),
+    SpellScriptHook::ActualDamageMultiplier(actual_focused_cleave),
+    SpellScriptHook::ExpectedDamageMultiplier(focused_cleave),
 ];
+
+fn actual_focused_cleave(
+    world: &mut World,
+    ctx: &spell_cast::effects::EffectCtx<'_>,
+    target: Entity,
+) -> f32 {
+    focused_cleave(world, ctx.caster, target, ctx.spell)
+}
+fn focused_cleave(world: &World, caster: Entity, target: Entity, spell: &SpellInfo) -> f32 {
+    if spell.id != 228478
+        || spell.cast_primary_target != Some(target)
+        || !selected(world, caster, 343207)
+    {
+        return 1.0;
+    }
+    // SimC76f8118 sc_demon_hunter.cpp8179–8185 applies Focused Cleave only to the primary target.
+    1.0 + spell_cast::scripts::script_effect_value(world, caster, 343207, 0) / 100.0
+}
+
+fn sigil_extension_hook(spell: u32, index: u8) -> Option<HitHook> {
+    (spell == 228478 && index == 0).then_some(extend_sigil)
+}
+
+fn extend_sigil(world: &mut World, caster: Entity, target: Entity, _: u8) {
+    if !combat::auras::has_aura(world, caster, 1296613) {
+        return;
+    }
+    // SimC76f8118 sc_demon_hunter.cpp8145–8175: the equipped MID2 2pc
+    // extends the target's active Sigil of Flame on each Soul Cleave hit.
+    let milliseconds = spell_cast::scripts::script_effect_value(world, caster, 1296613, 1);
+    assert!(
+        milliseconds >= 0.0 && milliseconds.fract() == 0.0,
+        "invalid MID2 Sigil extension"
+    );
+    combat::auras::extend_owned_duration(world, caster, target, &[204598], milliseconds as u32);
+}
 
 fn selected(world: &World, caster: Entity, spell: u32) -> bool {
     world

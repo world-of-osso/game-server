@@ -689,6 +689,118 @@ mod tests {
     }
     #[test]
     #[ignore = "requires native Vengeance profile"]
+    fn focused_cleave_only_increases_the_real_primary_target() {
+        use super::super::*;
+        fn damage(selected: bool) -> [i32; 2] {
+            let _seed = crate::random::seed_scope(70_448);
+            let (profile, mut traits) = read_reference(581).unwrap();
+            if !selected {
+                traits.retain(|trait_| trait_.entry_id != 112891);
+            }
+            let identity = inputs::read_actor(&profile).unwrap();
+            let mut run = prepare_reference(profile, &traits, 2, identity).unwrap();
+            let actor = run.actor;
+            let targets = [run.targets[0], run.targets[1]];
+            engage(&mut run);
+            assert!(crate::spell_cast::try_cast_triggered(
+                run.app.world_mut(),
+                actor,
+                228478,
+                Some(targets[0]),
+                1
+            ));
+            let events = &run
+                .app
+                .world()
+                .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+                .0;
+            targets.map(|target| {
+                events
+                    .iter()
+                    .filter(|event| {
+                        event.spell_id == Some(228478)
+                            && event.target == Some(target.to_bits())
+                            && event.kind == shared::protocol::CombatLogKind::Damage
+                    })
+                    .map(|event| event.amount)
+                    .sum()
+            })
+        }
+        let baseline = damage(false);
+        let selected = damage(true);
+        assert!(
+            baseline[0] > 0 && baseline[1] > 0,
+            "both real recipients must be hit"
+        );
+        assert!(
+            (selected[0] as f64 / baseline[0] as f64 - 1.6).abs() < 0.01,
+            "primary: {baseline:?} {selected:?}"
+        );
+        assert_eq!(
+            selected[1], baseline[1],
+            "secondary: {baseline:?} {selected:?}"
+        );
+    }
+
+    #[test]
+    #[ignore = "requires native Vengeance profile"]
+    fn vengeance_mid2_soul_cleave_extends_real_sigil() {
+        use super::super::*;
+        let _seed = crate::random::seed_scope(70_448);
+        let (profile, traits) = read_reference(581).unwrap();
+        let identity = inputs::read_actor(&profile).unwrap();
+        let mut run = prepare_reference(profile, &traits, 1, identity).unwrap();
+        let actor = run.actor;
+        let target = run.targets[0];
+        engage(&mut run);
+        assert!(crate::auras::has_aura(run.app.world(), actor, 1296613));
+        assert!(crate::spell_cast::try_cast_triggered(
+            run.app.world_mut(),
+            actor,
+            204598,
+            Some(target),
+            1
+        ));
+        crate::spell_cast::cast_for_player_with_target(
+            run.app.world_mut(),
+            actor,
+            263642,
+            Some(target),
+        )
+        .unwrap();
+        for _ in 0..35 {
+            run.app.update();
+        }
+        let expiry = |run: &Run| {
+            run.app
+                .world()
+                .get::<crate::auras::ActiveAuras>(target)
+                .unwrap()
+                .iter()
+                .find(|aura| aura.spell_id == 204598 && aura.caster == actor)
+                .unwrap()
+                .expires_at
+                .unwrap()
+        };
+        let before = expiry(&run);
+        crate::spell_cast::cast_for_player_with_target(
+            run.app.world_mut(),
+            actor,
+            228477,
+            Some(target),
+        )
+        .unwrap();
+        for _ in 0..10 {
+            run.app.update();
+        }
+        assert!(
+            (expiry(&run) - before - 2.0).abs() < 0.001,
+            "equipped MID2 must extend the actual Sigil by 2s"
+        );
+    }
+
+    #[test]
+    #[ignore = "requires native Vengeance profile"]
     fn charred_flesh_extends_real_brand_and_sigil_on_immolation_hit() {
         use super::super::*;
         let _seed = crate::random::seed_scope(70_448);
