@@ -196,6 +196,7 @@ register_modules! {
     hellcaller_devil_fruit: (2675, "modules/hellcaller_devil_fruit.rs"),
     hellcaller_pet_crit: (2675, "modules/hellcaller_pet_crit.rs"),
     hellcaller_wither: (2665, "modules/hellcaller_wither.rs"),
+    enhancement_overcharge: (2634, "modules/enhancement_overcharge.rs"),
     holy_runtime: (2570, "modules/holy_runtime.rs"),
     hot_streak: (1000, "modules/hot_streak.rs"),
     hunter_bear: (2532, "modules/hunter_bear.rs"),

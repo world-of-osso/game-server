@@ -118,6 +118,69 @@ fn shaman263_real_strike_dispatches_ride_the_lightning_to_native_chain_targets()
 
 #[test]
 #[ignore = "native263 reference inputs and private world database"]
+fn shaman263_overcharge_scales_real_nature_crit_with_live_owner_crit() {
+    use crate::spell_cast::effects::factor_capture::FactorCapture;
+    let mut run = prepare_literal(263, 1).unwrap();
+    engage(&mut run);
+    let actor = run.actor;
+    let target = run.targets[0];
+    assert!(crate::auras::has_aura(run.app.world(), actor, 1251026));
+    let measure = |run: &mut Run, crit: f32| {
+        run.app
+            .world_mut()
+            .get_mut::<crate::stats::CharacterStats>(actor)
+            .unwrap()
+            .crit_pct = crit;
+        run.app
+            .insert_resource(FactorCapture::new(actor, target, 469270, "doom", 1));
+        crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 469270, Some(target), 1);
+        for _ in 0..40 {
+            let capture = run.app.world().resource::<FactorCapture>().export();
+            if let Some(event) = capture["events"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|event| event["event"] == "result" && event["spell_id"] == 469270)
+            {
+                assert_eq!(event["factors"]["result"], "crit");
+                return 1.0 + event["factors"]["crit_bonus"].as_f64().unwrap();
+            }
+            run.app.update();
+        }
+        panic!("real Doom Winds impact must occur");
+    };
+    let with_100 = measure(&mut run, 100.0);
+    let with_150 = measure(&mut run, 150.0);
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        actor,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 1251026,
+    );
+    let without = measure(&mut run, 100.0);
+    let ordinary = run
+        .app
+        .world()
+        .get::<crate::auras::stat_mods::AuraStatMods>(actor)
+        .unwrap()
+        .critical_damage(9) as f64;
+    // Native spell crit-bonus modifiers apply after the whole-crit multiplier.
+    let bonus_multiplier = (without - 1.0) / (2.0 * ordinary - 1.0);
+    let expected = |overcharge: f64| 1.0 + (2.0 * ordinary * overcharge - 1.0) * bonus_multiplier;
+    assert!(
+        (with_100 - expected(1.2)).abs() < 0.001,
+        "100% crit: {with_100} vs {}",
+        expected(1.2)
+    );
+    assert!(
+        (with_150 - expected(1.3)).abs() < 0.001,
+        "150% crit: {with_150} vs {}",
+        expected(1.3)
+    );
+}
+
+#[test]
+#[ignore = "native263 reference inputs and private world database"]
 fn shaman263_real_doom_winds_emits_its_native_area_pulse_on_apply_and_periodically() {
     // SimC76f8118 sc_shaman.cpp8782–8790/12848–12869: actual mode aura owns these ticks.
     let _seed = crate::random::seed_scope(70448);
