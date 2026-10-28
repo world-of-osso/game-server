@@ -246,6 +246,25 @@ pub fn active_count(world: &World, owner: Entity, filter: FragmentFilter) -> usi
     })
 }
 
+/// Count spawned fragments that have not activated yet.
+/// SimC76f8118 sc_demon_hunter.cpp12424–12432.
+pub fn inactive_count(world: &World, owner: Entity, filter: FragmentFilter) -> usize {
+    let now = combat::auras::aura_now(world);
+    world.get::<Fragments>(owner).map_or(0, |state| {
+        state
+            .items
+            .iter()
+            .filter(|f| now < f.active_at && filter.matches(f.kind))
+            .count()
+    })
+}
+
+/// Count active and not-yet-active spawned fragments.
+/// SimC76f8118 sc_demon_hunter.cpp12434–12446.
+pub fn total_count(world: &World, owner: Entity, filter: FragmentFilter) -> usize {
+    active_count(world, owner, filter) + inactive_count(world, owner, filter)
+}
+
 /// SimC76f8118 sc_demon_hunter.cpp5129–5131 and action.cpp2428–2430.
 pub fn pickup_in_melee_range(world: &World, owner: Entity, target: Entity) -> Result<bool, String> {
     let from = position(world, owner).ok_or("fragment owner position missing")?;

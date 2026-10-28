@@ -4,6 +4,24 @@ use server::soul_fragments::{self, FragmentFilter, FragmentKind};
 
 #[test]
 #[ignore = "requires native spec1480 player profile and DB"]
+fn spawned_fragment_counts_follow_native_activation() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(1480, 1).unwrap();
+    let actor = run.actor;
+    soul_fragments::spawn(run.app.world_mut(), actor, FragmentKind::Lesser, false).unwrap();
+    let counts = |run: &Run| {
+        let world = run.app.world();
+        (soul_fragments::active_count(world, actor, FragmentFilter::Lesser),
+         soul_fragments::inactive_count(world, actor, FragmentFilter::Lesser),
+         soul_fragments::total_count(world, actor, FragmentFilter::Lesser))
+    };
+    assert_eq!(counts(&run), (0, 1, 1));
+    for _ in 0..10 { run.app.update(); }
+    assert_eq!(counts(&run), (1, 0, 1));
+}
+
+#[test]
+#[ignore = "requires native spec1480 player profile and DB"]
 fn devourer_fragment_pickup_is_available_during_real_consume_cast() {
     let _seed = crate::random::seed_scope(70_448);
     let mut run = prepare_literal(1480, 1).unwrap();
