@@ -2173,6 +2173,7 @@ fn resolve_swing(
         context,
     );
     let taken = target_mods.map_or(1.0, |mods| mods.damage_taken(1))
+        * crate::auras::dusk_damage_multiplier(avoidance.1.as_deref(), &health)
         * crate::auras::melee_damage_from_caster(avoidance.1.as_deref(), attacker.entity)
         * armor
             .1
@@ -2920,6 +2921,9 @@ pub fn replay_healer_hit(
     let auras = world.get::<crate::auras::ActiveAuras>(victim);
     let stats = world.get::<CharacterStats>(victim);
     let taken = target_mods.map_or(1.0, |mods| mods.damage_taken(1))
+        * world.get::<Health>(victim).map_or(1.0, |health| {
+            crate::auras::dusk_damage_multiplier(auras, health)
+        })
         * crate::auras::melee_damage_from_caster(auras, attacker)
         * stats.map_or(1.0, CharacterStats::versatility_damage_taken_multiplier);
     let taken = mods.map_or(taken, |mods| mods.bypass_damage_reduction(1, taken));

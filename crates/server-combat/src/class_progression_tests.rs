@@ -431,6 +431,19 @@ fn guild_perks_preserve_pvp_replacements_and_profession_spell_identity() {
 }
 
 #[test]
+fn devotion_is_known_by_paladins_in_each_spec() {
+    let classes = class_spells().unwrap();
+    assert!(known_ids(&classes, HUMAN, PALADIN, 1, 0).contains(&465));
+    for spec in [65, 66, 70] {
+        assert!(
+            known_ids(&classes, HUMAN, PALADIN, 90, spec).contains(&465),
+            "spec {spec}"
+        );
+    }
+    assert!(!known_ids(&classes, HUMAN, WARRIOR, 90, SPEC_ARMS).contains(&465));
+}
+
+#[test]
 fn paladin_known_spells_follow_required_level_and_race_mask() {
     let Some(classes) = class_spells() else {
         return;
