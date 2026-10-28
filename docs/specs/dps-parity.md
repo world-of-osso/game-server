@@ -1270,6 +1270,7 @@ Selected Insidious Ire earns its temporary channel bonus when one target has all
 
 - Spec269 executes the pinned Windwalker action rows on native player and follower fixtures. Player measurements retain player identity and use the literal driver rather than AssistedCombat diagnostics.
 - In the 269 player-literal fixture only, Touch of Karma uses SimC's default 100-second interval and modeled absorbed-health fraction; the real player health and native spell values supply the redirected periodic damage (`sc_monk.cpp2735–2753,2757–2850`).
+- Rushing Wind Kick and Rising Sun Kick use separate action recharge clocks in gameplay and literal simulation; both retain native charge recovery and haste rules (`action.cpp474`, `sc_monk.cpp1143–1204`).
 
 - Windwalker Tigereye Brew starts combat with its native initial stacks, earns one stack per native Chi threshold from qualifying casts, and transfers up to the native cap into Zenith critical chance (`sc_monk.cpp393–406,4583–4595,7170–7183`). Out-of-combat regeneration remains unimplemented.
 - A Windwalker Tiger Palm that consumes an earned Combat Wisdom proc triggers native Expel Harm healing and its damage child, including overhealing in the damage basis (`sc_monk.cpp879–882,4002–4070`). Selected Strength of Spirit modifies the actual heal using the caster's current health and its native effect value (`sc_monk.cpp59–70,4028–4033`).

@@ -364,6 +364,43 @@ fn literal_ww_native_zenith_target_if_preserves_enemy_context_and_self_aura() {
     );
 }
 
+#[test]
+#[ignore = "requires native269 profile and literal opener"]
+fn windwalker_first_fists_opener_does_not_preload_dance() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::super::prepare_measurement(269, 1).unwrap();
+    install_target_lifetimes(&mut run);
+    super::super::engage(&mut run);
+    let mut rotation = (run.spec_driver.take().unwrap() as Box<dyn std::any::Any>)
+        .downcast::<Rotation>()
+        .unwrap();
+    for _ in 0..200 {
+        rotation
+            .drive(run.app.world_mut(), run.actor, &run.targets)
+            .unwrap();
+        run.app.update();
+        let first_fists = run
+            .app
+            .world()
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|event| {
+                event.source == Some(run.actor.to_bits())
+                    && event.spell_id == Some(113656)
+                    && event.kind == CombatLogKind::CastSuccess
+            });
+        if first_fists {
+            assert!(
+                !crate::auras::has_aura(run.app.world(), run.actor, 325202),
+                "seed70448 first real Fists must not gain a preloaded Dance proc"
+            );
+            return;
+        }
+    }
+    panic!("literal opener must cast Fists of Fury");
+}
+
 fn run_literal(count: usize) {
     let _scope = crate::random::seed_scope(70448);
     let mut run = super::super::prepare_measurement(269, count).unwrap();
@@ -759,12 +796,17 @@ fn literal_ww_native_unselected_wdp_owner_does_not_earn_the_enabler() {
 }
 
 #[test]
-#[ignore = "native earned RWK reset and override consumption; no aura or power grants"]
-fn literal_ww_native_earned_rwk_resets_rsk_and_consumes_its_override() {
+#[ignore = "ordinary player gameplay uses separate earned RWK and RSK recharge clocks"]
+fn ww_gameplay_earned_rwk_and_rsk_have_separate_recharges() {
     let _scope = crate::random::seed_scope(70448);
     let mut run = super::super::prepare_literal(269, 1).unwrap();
     let clock = fixture(run.app.world());
     let rotation = Rotation::load(run.app.world_mut(), run.actor, clock).unwrap();
+    // The cast path below must work without any literal-fixture controller marker.
+    run.app
+        .world_mut()
+        .entity_mut(run.actor)
+        .remove::<literal_rotation::LiteralParityFixture>();
     let mut earned = false;
     for _ in 0..64 {
         cast(&mut run, 100780);
@@ -857,6 +899,76 @@ fn literal_ww_native_earned_rwk_resets_rsk_and_consumes_its_override() {
     assert_eq!(
         crate::auras::overrides::resolve_spell(run.app.world(), run.actor, 107428),
         107428
+    );
+    assert!(
+        run.app
+            .world()
+            .get::<shared::components::Player>(run.actor)
+            .is_some()
+    );
+    let rsk = rotation
+        .value_for(
+            run.app.world_mut(),
+            run.actor,
+            &run.targets,
+            &action("rising_sun_kick"),
+            "cooldown.rising_sun_kick.full_recharge_time",
+        )
+        .unwrap();
+    let rwk_recharge = rotation
+        .value_for(
+            run.app.world_mut(),
+            run.actor,
+            &run.targets,
+            &rwk,
+            "cooldown.rushing_wind_kick.full_recharge_time",
+        )
+        .unwrap();
+    assert_eq!(
+        rsk, 0.0,
+        "SimC RWK must not spend the independently ready RSK charge"
+    );
+    assert!(
+        rwk_recharge > 0.0,
+        "RWK retains its own native haste-scaled recovery"
+    );
+    let rsk_action = action("rising_sun_kick");
+    let mut rsk_dispatched = false;
+    for _ in 0..1200 {
+        let prepared = Prepared::read(
+            run.app.world_mut(),
+            run.actor,
+            &run.targets,
+            &rotation.equipment,
+            bindings::execution_actions(),
+            false,
+        )
+        .unwrap();
+        if let Some(execution) = prepared
+            .execution(&rsk_action, &rotation.equipment)
+            .unwrap()
+        {
+            literal_rotation::execution::execute(run.app.world_mut(), run.actor, execution)
+                .unwrap();
+            run.app.update();
+            rsk_dispatched = true;
+            break;
+        }
+        run.app.update();
+    }
+    assert!(rsk_dispatched, "native player must cast RSK after RWK");
+    let rwk_after_rsk = rotation
+        .value_for(
+            run.app.world_mut(),
+            run.actor,
+            &run.targets,
+            &rwk,
+            "cooldown.rushing_wind_kick.full_recharge_time",
+        )
+        .unwrap();
+    assert!(
+        rwk_after_rsk > 0.0,
+        "casting RSK must not reset RWK's separate recovery"
     );
 }
 
