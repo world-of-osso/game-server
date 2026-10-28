@@ -11,6 +11,7 @@ pub(super) const SINISTER_STRIKE: u32 = 193315;
 pub(super) const HAMMER_RIGHTEOUS: u32 = 53595;
 pub(super) const BLADE_JUSTICE: u32 = 184575;
 pub(super) const THRASH: u32 = 106830;
+pub(super) const BEAR_THRASH: u32 = 77758;
 const HAMMER_WAVE: u32 = 88263;
 const BLADE_TALENT: u32 = 403826;
 const THRASH_BLEED: u32 = 405233;
@@ -104,12 +105,21 @@ pub(super) fn shred_points(world: &mut World, caster: Entity, _target: Entity, _
 
 ///106830 explicitly names405233o1/d: only the named bleed, not other variants.
 pub(super) fn thrash_bleed(world: &mut World, caster: Entity, target: Entity, _depth: u8) {
+    apply_thrash_bleed(world, caster, target, THRASH_BLEED);
+}
+
+/// SimC76f8118 sc_druid.cpp5911–5965: landed Bear Thrash applies its own bleed.
+pub(super) fn bear_thrash_bleed(world: &mut World, caster: Entity, target: Entity, _depth: u8) {
+    apply_thrash_bleed(world, caster, target, 192090);
+}
+
+fn apply_thrash_bleed(world: &mut World, caster: Entity, target: Entity, bleed: u32) {
     crate::auras::apply_aura(
         world,
         &AuraApplication {
             caster,
             target,
-            spell_id: THRASH_BLEED,
+            spell_id: bleed,
             effect_mask: 1,
             source: AuraSource::Cast,
         },

@@ -568,6 +568,7 @@ pub fn on_effect_hit(
         (batch11::HAMMER_RIGHTEOUS, 0) => Some(batch11::hammer_wave),
         (batch3::SHRED, 2) => Some(batch11::shred_points),
         (batch11::THRASH, 0) => Some(batch11::thrash_bleed),
+        (batch11::BEAR_THRASH, 0) => Some(batch11::bear_thrash_bleed),
         (batch10::FERAL_LUNGE, 0) => Some(batch10::bite_lunge),
         (batch10::HAND_OF_GULDAN, 0) => Some(batch10::launch_guldan_meteor),
         (batch9::WINTER_DAMAGE, 0) => Some(batch9::slow_winter_hit),
