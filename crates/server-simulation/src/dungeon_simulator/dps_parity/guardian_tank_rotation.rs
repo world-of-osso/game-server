@@ -57,6 +57,7 @@ const BUFFS: &[(&str, u32)] = &[
     ("feline_potential_counter", 441701),
     ("lunar_beam", 204066),
     ("thrash", 192090),
+    ("moonfire", 164812),
     ("red_moon", 1253582),
     ("rake", 155722),
     ("rip", 1079),
