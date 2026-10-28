@@ -356,11 +356,14 @@ pub fn compute(auras: &ActiveAuras, player_controlled_npc: bool) -> (StatModifie
         always_flight: 1.0,
         ..default()
     };
+    let sanlayn = auras
+        .iter()
+        .any(|aura| matches!(aura.spell_id, 77513 | 77515));
     for aura in auras.iter() {
-        apply_aura(&mut acc, aura);
+        apply_aura(&mut acc, aura, sanlayn);
     }
     apply_inspired_intellect(&mut acc.stats, auras);
-    apply_blood_queen_mastery(&mut acc.stats, auras);
+    apply_blood_queen_stats(&mut acc.stats, auras);
     let run = if acc.mounted {
         pct(acc.fastest_mounted) * acc.always_mounted.max(pct(acc.mounted_not_stack))
     } else {
@@ -395,27 +398,40 @@ pub fn compute(auras: &ActiveAuras, player_controlled_npc: bool) -> (StatModifie
     (acc.stats, acc.combat)
 }
 
-// SimC76f8118 sc_death_knight.cpp7403–7431: Thrill supplies 0.1 times
-// its Blood effect per Essence stack; active Gift amplifies that value.
-fn apply_blood_queen_mastery(stats: &mut StatModifiers, auras: &ActiveAuras) {
-    if !auras.iter().any(|aura| aura.spell_id == 77513) {
+// SimC76f8118 sc_death_knight.cpp7403–7431/17164–17169: Essence's
+// haste is one tenth of its native amount; Gift amplifies haste and Thrill.
+fn apply_blood_queen_stats(stats: &mut StatModifiers, auras: &ActiveAuras) {
+    let blood = auras.iter().any(|aura| aura.spell_id == 77513);
+    let unholy = auras.iter().any(|aura| aura.spell_id == 77515);
+    if !blood && !unholy {
         return;
     }
     let Some(essence) = auras.iter().find(|aura| aura.spell_id == 433925) else {
         return;
     };
-    let Some(thrill) = auras.iter().find(|aura| aura.spell_id == 1265547) else {
-        return;
-    };
-    let Some(value) = thrill.effects.iter().find(|effect| effect.index == 1) else {
-        return;
-    };
+    let gift_index = if blood { 3 } else { 0 };
     let gift = auras
         .iter()
         .find(|aura| aura.spell_id == 434153)
-        .and_then(|aura| aura.effects.iter().find(|effect| effect.index == 3))
+        .and_then(|aura| {
+            aura.effects
+                .iter()
+                .find(|effect| effect.index == gift_index)
+        })
         .map_or(0.0, |effect| effect.amount / 100.0);
-    stats.mastery_points += value.amount / 10.0 * essence.stack_multiplier() * (1.0 + gift);
+    let multiplier = essence.stack_multiplier() * (1.0 + gift);
+    if let Some(haste) = essence.effects.iter().find(|effect| effect.index == 0) {
+        stats.haste_pct = compound_haste_pct(stats.haste_pct, haste.amount / 10.0 * multiplier);
+    }
+    let thrill_index = if blood { 1 } else { 0 };
+    if let Some(thrill) = auras.iter().find(|aura| aura.spell_id == 1265547)
+        && let Some(value) = thrill
+            .effects
+            .iter()
+            .find(|effect| effect.index == thrill_index)
+    {
+        stats.mastery_points += value.amount / 10.0 * multiplier;
+    }
 }
 
 fn apply_inspired_intellect(stats: &mut StatModifiers, auras: &ActiveAuras) {
@@ -492,7 +508,7 @@ fn apply_base_stat_percent(stats: &mut UnitStats, spell: u32, index: i32, amount
     }
 }
 
-fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance) {
+fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance, sanlayn: bool) {
     let stacks = aura.stack_multiplier();
     for effect in &aura.effects {
         let amount = effect.amount * stacks;
@@ -645,6 +661,7 @@ fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance) {
             }
             // SimC76f8118 sc_rogue.cpp10423–10427 scales Alacrity's
             // rank-resolved native value for its legacy per-combo-point behavior.
+            MELEE_SLOW if aura.spell_id == 433925 && sanlayn => {}
             MELEE_SLOW if aura.spell_id == 193539 => {
                 stats.haste_pct = compound_haste_pct(stats.haste_pct, amount / 10.0);
             }

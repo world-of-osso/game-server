@@ -917,7 +917,11 @@ fn build_effect(
     effect: &SpellEffect,
     now: f64,
 ) -> AuraEffectState {
-    let amount = if let Some(amount) = scripts::absorb_amount(world, caster, spell, effect) {
+    // SimC76f8118 sc_death_knight.cpp17164–17169 applies Gift dynamically;
+    // do not snapshot its label modifiers into Essence's haste and apply them twice.
+    let amount = if spell.id == 433925 && effect.index == 0 {
+        effect.base_points
+    } else if let Some(amount) = scripts::absorb_amount(world, caster, spell, effect) {
         amount
     } else if handlers::scales_with_power(effect.aura) {
         crate::spell_cast::effects::scaled_amount(world, caster, spell, effect)
