@@ -134,6 +134,7 @@ mod unholy_outnumber_tests;
 #[cfg(test)]
 mod unholy_magus_crit_tests;
 mod unholy_commander_tests;
+mod unholy_lord_lifetime_tests;
 mod unholy_magus_refresh_tests;
 mod driver_tests;
 mod dummy_reference_tests;

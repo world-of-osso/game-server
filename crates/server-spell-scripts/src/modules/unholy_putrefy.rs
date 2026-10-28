@@ -116,10 +116,11 @@ fn set_lord_magus_lifetime(world: &mut World, actor: Entity) {
     };
     let owner = summon.owner;
     // SimC76f8118 sc_death_knight.cpp6788–6798: Army/DT Magi and Lord
-    // Magi use their respective selected native talent durations.
+    // Magi and the Lord use their respective selected native talent durations
+    // (sc_death_knight.cpp14752–14758).
     let (talent, effect) = match summon.spell_id {
         317776 if combat::auras::has_aura(world, owner, 390196) => (390196, 0),
-        MAGUS_SUMMON if combat::auras::has_aura(world, owner, LORD_OF_THE_DEAD) => {
+        MAGUS_SUMMON | LORD_SUMMON if combat::auras::has_aura(world, owner, LORD_OF_THE_DEAD) => {
             (LORD_OF_THE_DEAD, 1)
         }
         _ => return,

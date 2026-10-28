@@ -1300,7 +1300,7 @@ Selected Insidious Ire earns its temporary channel bonus when one target has all
 
 ### Unholy Putrefy summons
 
-- Native Putrefy summons its lesser ghoul. The actual ghoul travels to the selected enemy before delivering native single-target and area damage; it is then dismissed. Selected Lord of the Dead uses its native chance to raise a Magus after that dismissal. A MID2 two-piece Magus casts its native Necrotic Bolt and Withering Grasp using the source-qualified share of owner melee attack power. Do not substitute caster-only damage or invent creature data.
+- Native Putrefy summons its lesser ghoul. The actual ghoul travels to the selected enemy before delivering native single-target and area damage; it is then dismissed. Selected Lord of the Dead uses its native chance to raise a Magus after that dismissal. A MID2 two-piece Magus casts its native Necrotic Bolt and Withering Grasp using the source-qualified share of owner melee attack power. A Lord formed from real Magi lasts for the selected Lord of the Dead talent's effect2 duration (SimC76f8118 `sc_death_knight.cpp14752–14758`). Do not substitute caster-only damage or invent creature data.
 
 ### Unholy Festering ready states
 
