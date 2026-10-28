@@ -1538,6 +1538,30 @@ mod tests {
 
     #[test]
     #[ignore = "requires canonical world database and MID2 Blood inputs"]
+    fn blood_death_and_decay_pulses_only_inside_its_real_field() {
+        use shared::components::Position;
+        use shared::protocol::CombatLogKind;
+        let mut run = super::super::prepare_registered_player(250, 1).unwrap();
+        let actor = run.actor;
+        let target = run.targets[0];
+        super::super::engage(&mut run);
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 43265, Some(actor), false).unwrap();
+        let count = |run: &super::super::Run| run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0.iter()
+            .filter(|event| event.source == Some(actor.to_bits()) && event.target == Some(target.to_bits()) && event.spell_id == Some(52212) && event.kind == CombatLogKind::Damage && event.amount > 0).count();
+        for _ in 0..60 { run.app.update(); }
+        let inside = count(&run);
+        assert!(inside >= 2, "expected periodic ground damage, got {inside}");
+        let original = *run.app.world().get::<Position>(target).unwrap();
+        run.app.world_mut().get_mut::<Position>(target).unwrap().x += 50.0;
+        for _ in 0..40 { run.app.update(); }
+        assert_eq!(count(&run), inside, "outside target must not take field damage");
+        *run.app.world_mut().get_mut::<Position>(target).unwrap() = original;
+        for _ in 0..40 { run.app.update(); }
+        assert!(count(&run) > inside, "returning target takes field damage again");
+    }
+
+    #[test]
+    #[ignore = "requires canonical world database and MID2 Blood inputs"]
     fn blood_relish_in_blood_heals_and_grants_power_on_free_decay() {
         let mut run = super::super::prepare_registered_player(250, 1).unwrap();
         let actor = run.actor;

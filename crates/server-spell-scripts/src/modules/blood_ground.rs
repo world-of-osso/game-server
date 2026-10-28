@@ -23,6 +23,7 @@ const SANGUINE_BUFF: u32 = 391459;
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::EarlyAuraRegistration(register),
     SpellScriptHook::AfterCastUpdate(sync_fields),
+    SpellScriptHook::AreaTriggerExpired(expire_decay),
     SpellScriptHook::AfterForegroundSpecial(consume_scourge),
 ];
 
@@ -116,18 +117,60 @@ struct InBloodDecay {
 #[derive(Component)]
 struct HasBloodDecay;
 
+#[derive(Component)]
+struct DecayPulse(f64);
+
+// SimC76f8118 sc_death_knight.cpp9573–9584/9640–9655/9727–9735:
+// the field pulses immediately, once per authored period, and on expiration.
+fn pulse_decay(world: &mut World, caster: Entity, center: Vec3) {
+    spell_cast::cast_triggered_at_destination(world, caster, 52212, center, 1);
+}
+
+fn expire_decay(world: &mut World, caster: Entity, spell: u32, center: Vec3) {
+    if spell == DECAY
+        && world
+            .get::<ActiveSpec>(caster)
+            .is_some_and(|spec| spec.0 == 250)
+    {
+        pulse_decay(world, caster, center);
+    }
+}
+
 // SimC76f8118 sc_death_knight.cpp9678–9681 retains the ground buff for
 // four seconds when the last Death and Decay field expires.
 fn sync_fields(world: &mut World) {
     let now = spell_cast::now(world);
     let fields: Vec<_> = world
-        .query::<(&SpellAreaTrigger, &Position)>()
+        .query::<(Entity, &SpellAreaTrigger, &Position, Option<&DecayPulse>)>()
         .iter(world)
-        .filter(|(field, _)| {
+        .filter(|(_, field, _, _)| {
             field.spell_id == DECAY && field.expires_at.is_none_or(|end| end > now)
         })
-        .map(|(field, position)| (field.caster, *position))
+        .map(|(entity, field, position, pulse)| {
+            (entity, field.caster, *position, pulse.map(|pulse| pulse.0))
+        })
         .collect();
+    for &(entity, caster, position, next) in &fields {
+        if world
+            .get::<ActiveSpec>(caster)
+            .is_some_and(|spec| spec.0 == 250)
+            && next.is_none_or(|next| now >= next)
+        {
+            let period = world
+                .resource::<SpellStore>()
+                .get(DECAY)
+                .expect("active Death and Decay")
+                .effects
+                .iter()
+                .find(|effect| effect.index == 2)
+                .expect("Death and Decay pulse period")
+                .aura_period_ms;
+            pulse_decay(world, caster, Vec3::new(position.x, position.y, position.z));
+            world
+                .entity_mut(entity)
+                .insert(DecayPulse(next.unwrap_or(now) + f64::from(period) / 1000.0));
+        }
+    }
     let actors: Vec<_> = world
         .query::<(Entity, &ActiveSpec, &Position)>()
         .iter(world)
@@ -153,13 +196,13 @@ fn sync_fields(world: &mut World) {
         )
     };
     for (actor, position) in actors {
-        let active = fields.iter().any(|(caster, _)| *caster == actor);
+        let active = fields.iter().any(|(_, caster, _, _)| *caster == actor);
         if active {
             world.entity_mut(actor).insert(HasBloodDecay);
         } else {
             world.entity_mut(actor).remove::<HasBloodDecay>();
         }
-        let inside = fields.iter().any(|(caster, center)| {
+        let inside = fields.iter().any(|(_, caster, center, _)| {
             *caster == actor
                 && Vec3::new(position.x, position.y, position.z)
                     .distance(Vec3::new(center.x, center.y, center.z))
