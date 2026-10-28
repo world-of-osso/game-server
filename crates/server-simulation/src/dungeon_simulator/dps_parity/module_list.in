@@ -473,3 +473,4 @@ mod windwalker_player_tests;
 #[cfg(test)] mod brewmaster_shuffle_tests;
 
 #[cfg(test)] mod brewmaster_stagger_tests;
+#[cfg(test)] mod brewmaster_empty_barrel_tests;
