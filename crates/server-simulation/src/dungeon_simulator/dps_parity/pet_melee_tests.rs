@@ -188,6 +188,13 @@ fn demonology_felguard_melee_inherits_owner_spell_power() {
     crate::auras::remove_auras(run.app.world_mut(), owner, crate::auras::RemoveReason::Cancelled, |aura| {
         matches!(aura.spell_id, 1250897 | 1281559)
     });
+    // Precombat may already have granted short-lived item buffs. Remove those
+    // after their proc drivers so the sampled damage floor cannot expire mid-test.
+    let now = crate::spell_cast::now(run.app.world());
+    crate::auras::remove_auras(run.app.world_mut(), owner, crate::auras::RemoveReason::Cancelled, |aura| {
+        aura.expires_at.is_some_and(|expiry| expiry <= now + 60.0)
+    });
+    run.app.update();
     engage(&mut run);
     let pet = run
         .app
