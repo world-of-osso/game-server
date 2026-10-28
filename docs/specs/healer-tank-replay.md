@@ -19,10 +19,12 @@ Replay recorded incoming damage in the native server combat simulation to compar
 ## Implementation inventory
 
 - `crates/server-simulation/src/healer_tank_timeline.rs`: recorded incoming-hit timeline loader.
+- `crates/server-simulation/src/simc_tank_timeline.rs`: SimC tank-dummy debug trace reader.
 
 ## Tests asserting this spec
 
 - `crates/server-simulation/src/healer_tank_timeline.rs`: concrete timeline loader test.
+- `crates/server-simulation/src/simc_tank_timeline.rs`: SimC dummy raw damage trace test.
 
 ## Known gaps (current cycle)
 
