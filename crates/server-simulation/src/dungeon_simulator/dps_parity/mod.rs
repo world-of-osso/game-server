@@ -90,6 +90,7 @@ spec_drivers! {
     267 => destruction_rotation,
     269 => windwalker_rotation,
     577 => havoc_rotation,
+    581 => vengeance_tank_rotation,
     1467 => devastation_rotation,
     1480 => devourer_rotation,
 }
