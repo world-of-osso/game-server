@@ -300,6 +300,7 @@ register_modules! {
     swiftmend: (1000, "modules/swiftmend.rs"),
     unholy_apocalypse_rune: (2530, "modules/unholy_apocalypse_rune.rs"),
     touch_of_death: (240, "modules/touch_of_death.rs"),
+    unholy_reaping: (2524, "modules/unholy_reaping.rs"),
     unholy_army: (2522, "modules/unholy_army.rs"),
     unholy_eruption: (2520, "modules/unholy_eruption.rs"),
     unholy_putrefy: (2521, "modules/unholy_putrefy.rs"),
