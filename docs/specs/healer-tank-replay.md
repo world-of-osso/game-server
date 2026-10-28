@@ -35,6 +35,8 @@ Replay recorded incoming damage in the native server combat simulation to compar
 
 ## Known gaps (current cycle)
 
+- [ ] Blood 250: SimC `76f8118` applies Hemostasis twice to Death Strike healing (parsed action modifier and `death_strike_heal_t::action_multiplier`). Its debug trace shows `1.08²` for one 8% stack, about 8% more than one application. The source does not identify this as an in-game behavior; native gameplay applies it once. Blood Shield inherits the raw-heal difference.
+
 - [ ] Connect SimC tank-dummy trace input to the healer replay.
 - [ ] Register native tank APL adapters. SimC tank replay requires a registered literal parity driver and explicit active-mitigation auras; unregistered tanks fail rather than use the smoke-test policy. Protection 66 executes the pinned MID2 literal APL; Holy Bulwark absorbs, Shining Light–driven Word of Glory and Divine Guidance are exercised under incoming damage. Other native spell effects still require qualification.
 - [ ] Support replay durations other than 300 seconds with matching literal-APL encounter timing.
