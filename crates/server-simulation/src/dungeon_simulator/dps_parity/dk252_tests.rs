@@ -918,6 +918,41 @@ fn dk252_army_summons_abomination_with_cloud_and_melee() {
 }
 
 #[test]
+#[ignore = "requires native252 profile/traits and player actor"]
+fn dk252_grave_mastery_increases_actual_magus_critical_damage() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 1).unwrap();
+    engage(&mut run);
+    literal_rotation::execution::execute(
+        run.app.world_mut(), run.actor,
+        literal_rotation::execution::Execution::Spell(1247378, run.targets[0], Some(run.targets[0])),
+    ).unwrap();
+    let magus = (0..100).find_map(|_| {
+        run.app.update();
+        let world = run.app.world_mut();
+        world.query::<(Entity, &shared::components::Npc)>().iter(world)
+            .find_map(|(entity, npc)| (npc.template_id == 163366).then_some(entity))
+    }).expect("Putrefy must summon an actual Magus");
+    assert!(crate::auras::has_aura(run.app.world(), magus, 1238902));
+    run.app.world_mut().get_mut::<crate::stats::CharacterStats>(run.actor).unwrap().crit_pct = 100.0;
+    crate::auras::remove_auras(run.app.world_mut(), magus, crate::auras::RemoveReason::Cancelled, |aura| aura.spell_id == 1238902);
+    let target = run.targets[0];
+    let hit = |run: &mut Run| {
+        run.app.world_mut().resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>().0.clear();
+        assert!(crate::spell_cast::try_cast_triggered(run.app.world_mut(), magus, 1297055, Some(target), 1));
+        run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0.iter()
+            .find(|event| event.source == Some(magus.to_bits()) && event.spell_id == Some(1297055)
+                && event.kind == CombatLogKind::Damage && event.crit).expect("actual Magus bolt must crit").amount
+    };
+    let without = hit(&mut run);
+    assert!(crate::spell_cast::try_cast_triggered(run.app.world_mut(), magus, 1238902, Some(magus), 1));
+    let with = hit(&mut run);
+    let expected = 1.0 + crate::spell_cast::scripts::script_effect_value(run.app.world(), magus, 1238902, 0) / 100.0;
+    assert!((with as f32 / without as f32 - expected).abs() < 0.01,
+        "native Grave Mastery must increase the real Magus critical hit: {without} -> {with}");
+}
+
+#[test]
 #[ignore = "requires private native252 profile/traits and player actor"]
 fn dk252_putrefy_impact_raises_native_magus() {
     let _seed = crate::random::seed_scope(70448);
