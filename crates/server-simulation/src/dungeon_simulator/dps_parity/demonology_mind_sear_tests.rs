@@ -111,16 +111,21 @@ fn demonology_inquisitor_recasts_mind_sear_during_channel() {
         .world()
         .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
         .0;
-    let casts = events
-        .iter()
-        .filter(|event| {
-            event.source == Some(inquisitor.to_bits())
-                && event.spell_id == Some(1280457)
-                && event.kind == CombatLogKind::CastSuccess
-        })
-        .count();
     assert!(
-        casts >= 2,
-        "real Inquisitor must complete a second Mind Sear cast during its channel, got {casts}"
+        events.iter().any(|event| {
+            event.source == Some(inquisitor.to_bits())
+                && event.target == Some(run.targets[0].to_bits())
+                && event.spell_id == Some(1280457)
+                && event.kind == CombatLogKind::AuraRefreshed
+        }),
+        "real Inquisitor must refresh its channel during the second execute"
+    );
+    assert!(
+        run.app
+            .world()
+            .get::<shared::casting::CastState>(inquisitor)
+            .is_some_and(|state| state.spell_id == 1280457
+                && state.cast_type == shared::casting::CastType::Channel),
+        "the original channel must still be active after the repeat"
     );
 }
