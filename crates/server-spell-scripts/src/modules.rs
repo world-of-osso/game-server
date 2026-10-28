@@ -232,6 +232,7 @@ register_modules! {
     guardian_impacts: (1000, "modules/guardian_impacts.rs"),
     guardian_ursocs_fury: (1040, "modules/guardian_ursocs_fury.rs"),
     guardian_blood_frenzy: (1042, "modules/guardian_blood_frenzy.rs"),
+    guardian_berserk_form: (1046, "modules/guardian_berserk_form.rs"),
     guardian_rampant_thorn: (1044, "modules/guardian_rampant_thorn.rs"),
     guardian_lunar_beam: (1045, "modules/guardian_lunar_beam.rs"),
     guardian_wild_guardian: (1043, "modules/guardian_wild_guardian.rs"),
