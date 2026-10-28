@@ -798,6 +798,21 @@ fn energize_power_strike(
     _other: Option<Entity>,
 ) {
     crate::spell_cast::cast_triggered(world, unit, POWER_STRIKE_ENERGIZE, Some(unit), 1);
+    let windwalker = world
+        .get::<shared::components::ActiveSpec>(unit)
+        .is_some_and(|spec| spec.0 == 269);
+    let selected = world
+        .get::<crate::class_progression::TraitLoadout>(unit)
+        .is_some_and(|traits| {
+            traits
+                .active_talent_spells()
+                .any(|spell| spell.spell_id == 121817)
+        });
+    if windwalker && selected {
+        // SimC76f8118 sc_monk.cpp879–882: the earned Combat Wisdom use
+        // also executes the native Expel Harm heal after Tiger Palm lands.
+        crate::spell_cast::cast_triggered(world, unit, 451968, Some(unit), 1);
+    }
 }
 
 /// TC a352b1fa spell_monk_power_strike_periodic: only effect0 casts 129914.

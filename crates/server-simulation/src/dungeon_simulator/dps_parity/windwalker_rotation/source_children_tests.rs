@@ -183,6 +183,33 @@ fn literal_ww_native_source_children_wdp_uses_native_mastery() {
     assert!(empowered, "actual WDP damage must include native mastery");
 }
 
+#[test]
+#[ignore = "native Combat Wisdom proc makes Tiger Palm launch real Expel Harm damage"]
+fn literal_ww_combat_wisdom_tiger_palm_deals_expel_harm_damage() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare();
+    for _ in 0..400 {
+        if crate::auras::has_aura(run.app.world(), run.actor, 129914) {
+            break;
+        }
+        run.app.update();
+    }
+    assert!(
+        crate::auras::has_aura(run.app.world(), run.actor, 129914),
+        "selected native Combat Wisdom must earn its periodic proc"
+    );
+    let before = hits(&run, 115129);
+    super::tests::cast(&mut run, 100780);
+    assert!(
+        hits(&run, 115129) > before,
+        "the actual Tiger Palm proc must emit native Expel Harm damage"
+    );
+    assert!(
+        !crate::auras::has_aura(run.app.world(), run.actor, 129914),
+        "the earned proc is consumed by Tiger Palm"
+    );
+}
+
 fn fof_done_products(targets: usize, recipient: usize) -> Vec<f64> {
     let mut run = prepare_targets(targets);
     run.app.insert_resource(FactorCapture::new(
