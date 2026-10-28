@@ -608,6 +608,13 @@ pub(super) fn demonic_brutality_critical_bonus(world: &World, actor: Entity) -> 
     {
         return 0.0;
     }
+    // SimC76f8118 pets.cpp1845 excludes Dominion of Argus guardians.
+    if world
+        .get::<SummonedCreature>(actor)
+        .is_some_and(|summon| matches!(summon.spell_id, 1282501 | 1282502 | 1276283 | 1276182))
+    {
+        return 0.0;
+    }
     let Some((owner, _)) = crate::auras::summon_damage::ownership(world, actor) else {
         return 0.0;
     };
