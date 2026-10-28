@@ -228,6 +228,7 @@ pub enum MeleeOutcome {
     Glancing,
     Block,
     Crit,
+    CritBlock,
     Hit,
 }
 
@@ -270,6 +271,25 @@ pub fn roll_melee_outcome(chances: &MeleeChances, roll: u32) -> MeleeOutcome {
     MeleeOutcome::Hit
 }
 
+/// Player victims roll block independently after a landed attack.
+pub fn roll_player_melee_outcome(
+    chances: &MeleeChances,
+    hit_roll: u32,
+    block_roll: u32,
+) -> MeleeOutcome {
+    let mut hit_chances = *chances;
+    hit_chances.block = 0.0;
+    let outcome = roll_melee_outcome(&hit_chances, hit_roll);
+    if block_roll >= (chances.block * 100.0).clamp(0.0, 10_000.0) as u32 {
+        return outcome;
+    }
+    match outcome {
+        MeleeOutcome::Hit => MeleeOutcome::Block,
+        MeleeOutcome::Crit => MeleeOutcome::CritBlock,
+        _ => outcome,
+    }
+}
+
 /// Exact probability masses of the existing quantized native roll, for forecasts.
 pub(crate) fn outcome_weights(chances: &MeleeChances) -> Vec<(MeleeOutcome, f64)> {
     let mut boundaries = vec![0, 10_000];
@@ -293,6 +313,28 @@ pub(crate) fn outcome_weights(chances: &MeleeChances) -> Vec<(MeleeOutcome, f64)
         .collect()
 }
 
+pub(crate) fn player_outcome_weights(chances: &MeleeChances) -> Vec<(MeleeOutcome, f64)> {
+    let mut hit_chances = *chances;
+    hit_chances.block = 0.0;
+    let block = f64::from((chances.block * 100.0).clamp(0.0, 10_000.0) as u32) / 10_000.0;
+    let mut weights = Vec::new();
+    for (outcome, weight) in outcome_weights(&hit_chances) {
+        let blocked = match outcome {
+            MeleeOutcome::Hit => Some(MeleeOutcome::Block),
+            MeleeOutcome::Crit => Some(MeleeOutcome::CritBlock),
+            _ => None,
+        };
+        if let Some(blocked) = blocked {
+            weights.push((outcome, weight * (1.0 - block)));
+            weights.push((blocked, weight * block));
+        } else {
+            weights.push((outcome, weight));
+        }
+    }
+    weights.retain(|(_, weight)| *weight > 0.0);
+    weights
+}
+
 /// Damage after the outcome and the amount blocked: misses, dodges and
 /// parries do none, a crit doubles, a glancing blow loses 10% per level of
 /// difference (at most 3), a block stops `blocked_pct` (`CREATURE_BLOCKED_PCT`
@@ -310,7 +352,12 @@ pub fn outcome_damage(
             let reduce = 1.0 - level_difference.min(3) as f32 * 0.1;
             ((reduce * damage).trunc(), 0.0)
         }
-        MeleeOutcome::Block => {
+        MeleeOutcome::Block | MeleeOutcome::CritBlock => {
+            let damage = if outcome == MeleeOutcome::CritBlock {
+                damage * 2.0
+            } else {
+                damage
+            };
             let blocked = (damage * blocked_pct / 100.0).trunc();
             (damage - blocked, blocked)
         }

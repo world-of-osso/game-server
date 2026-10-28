@@ -20,6 +20,7 @@ struct SwingProjection<'a> {
     target_scaling: UnitScaling<'a>,
     target: Entity,
     chances: melee::MeleeChances,
+    player_victim: bool,
     target_mods: Option<&'a AuraStatMods>,
     armor: f32,
     versus: f32,
@@ -239,6 +240,7 @@ fn read_swing_projection(
         target_scaling,
         target: tank,
         chances,
+        player_victim: matches!(victim, Victim::Player(_)),
         target_mods: world.get::<AuraStatMods>(tank),
         armor,
         versus,
@@ -308,7 +310,7 @@ fn outcome_health_loss(projection: &SwingProjection, damage: f32, outcome: Melee
         projection.level_difference,
         projection.blocked_pct,
     );
-    let critical = if outcome == MeleeOutcome::Crit {
+    let critical = if matches!(outcome, MeleeOutcome::Crit | MeleeOutcome::CritBlock) {
         projection
             .attacker
             .mods
@@ -330,15 +332,23 @@ fn outcome_health_loss(projection: &SwingProjection, damage: f32, outcome: Melee
 
 fn expected_damage(world: &World, projection: &SwingProjection, base: f32) -> f64 {
     let damage = armored_damage(world, projection, base);
-    melee::outcome_weights(&projection.chances)
+    projection_outcome_weights(projection)
         .into_iter()
         .map(|(outcome, weight)| outcome_health_loss(projection, damage, outcome) * weight)
         .sum()
 }
 
+fn projection_outcome_weights(projection: &SwingProjection) -> Vec<(MeleeOutcome, f64)> {
+    if projection.player_victim {
+        melee::player_outcome_weights(&projection.chances)
+    } else {
+        melee::outcome_weights(&projection.chances)
+    }
+}
+
 fn largest_damage(world: &World, projection: &SwingProjection, base: f32) -> f64 {
     let damage = armored_damage(world, projection, base);
-    melee::outcome_weights(&projection.chances)
+    projection_outcome_weights(projection)
         .into_iter()
         .map(|(outcome, _)| outcome_health_loss(projection, damage, outcome))
         .fold(0.0, f64::max)
