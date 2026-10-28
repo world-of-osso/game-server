@@ -11,6 +11,8 @@ const ADD_WAVE_TICKS: u32 = 600;
 const LAST_30S_START: u32 = TICKS - ADD_WAVE_TICKS;
 #[cfg(test)]
 mod tank_fixture_tests;
+#[cfg(test)]
+mod vengeance_consume_soul_tests;
 
 const DUMMY_ENTRY: u32 = 31_146;
 const DUMMY_LATERAL_STEP: f32 = 0.5;
