@@ -15,6 +15,11 @@ use server::simc_apl::{Action, ActionFacts, Facts, Program};
 use shared::components::{Health, PowerType};
 
 const SPELLS: &[(&str, u32, bool)] = &[
+    ("tranquility", 740, true),
+    ("convoke_the_spirits", 391528, true),
+    ("grove_guardians", 102693, false),
+    ("wild_growth", 48438, false),
+    ("efflorescence", 145205, false),
     ("ironbark", 102342, false),
     ("swiftmend", 18562, false),
     ("lifebloom", 33763, false),
@@ -22,7 +27,10 @@ const SPELLS: &[(&str, u32, bool)] = &[
     ("regrowth", 8936, false),
 ];
 
+const DAMAGE_SPELLS: &[(&str, u32, bool)] = &[("moonfire", 8921, false), ("wrath", 5176, false)];
+
 struct Restoration {
+    enemy: Entity,
     driver: Driver,
     bindings: Bindings,
     equipment: Equipment,
@@ -36,6 +44,7 @@ pub(super) fn prepare(
     let mut bindings = Bindings {
         actions: SPELLS
             .iter()
+            .chain(DAMAGE_SPELLS.iter())
             .map(|(name, spell, _)| ((*name).into(), *spell))
             .collect(),
         resources: [("mana".into(), PowerType::Mana)].into(),
@@ -52,8 +61,19 @@ pub(super) fn prepare(
     // Pinned SimC has no supported Restoration healing APL; these are explicit
     // native triage decisions, not a claim of a SimC healer rotation.
     let program = Program::parse(&[
+        (
+            "default",
+            "tranquility,if=target.health.pct<35&party.injured>=2",
+        ),
         ("default", "ironbark,if=target.health.pct<35"),
-        ("default", "swiftmend,if=target.health.pct<60"),
+        ("default", "swiftmend,if=target.health.pct<100"),
+        ("default", "wild_growth,if=party.injured>=2"),
+        (
+            "default",
+            "efflorescence,if=party.injured>=2&party.efflorescence_up=0",
+        ),
+        ("default", "grove_guardians,if=target.health.pct<95"),
+        ("default", "convoke_the_spirits,if=party.injured>=2"),
         (
             "default",
             "lifebloom,if=target.health.pct<95&target.lifebloom_up=0",
@@ -63,8 +83,11 @@ pub(super) fn prepare(
             "rejuvenation,if=target.health.pct<95&target.rejuvenation_up=0",
         ),
         ("default", "regrowth,if=target.health.pct<90"),
+        ("damage", "moonfire,if=target.moonfire_up=0"),
+        ("damage", "wrath"),
     ])?;
     Ok(Box::new(Restoration {
+        enemy: run.targets[0],
         driver: Driver::new(program),
         bindings,
         equipment,
@@ -76,12 +99,18 @@ struct PartyFacts<'a> {
     native: NativeFacts<'a>,
     lifebloom_up: bool,
     rejuvenation_up: bool,
+    injured: usize,
+    efflorescence_up: bool,
+    moonfire_up: bool,
 }
 impl Facts for PartyFacts<'_> {
     fn value(&self, name: &str) -> Result<f64, String> {
         match name {
             "target.lifebloom_up" => Ok(f64::from(self.lifebloom_up)),
             "target.rejuvenation_up" => Ok(f64::from(self.rejuvenation_up)),
+            "party.injured" => Ok(self.injured as f64),
+            "party.efflorescence_up" => Ok(f64::from(self.efflorescence_up)),
+            "target.moonfire_up" => Ok(f64::from(self.moonfire_up)),
             _ => self.native.value(name),
         }
     }
@@ -89,7 +118,11 @@ impl Facts for PartyFacts<'_> {
 impl ActionFacts for PartyFacts<'_> {
     fn value_for(&self, action: &Action, name: &str) -> Result<f64, String> {
         match name {
-            "target.lifebloom_up" | "target.rejuvenation_up" => self.value(name),
+            "target.lifebloom_up"
+            | "target.rejuvenation_up"
+            | "party.injured"
+            | "party.efflorescence_up"
+            | "target.moonfire_up" => self.value(name),
             _ => self.native.value_for(action, name),
         }
     }
@@ -129,6 +162,18 @@ impl Policy for Restoration {
         let Some(target) = target else {
             return Ok(());
         };
+        let injured = party
+            .iter()
+            .filter(|unit| {
+                world
+                    .get::<Health>(**unit)
+                    .is_some_and(|h| h.current > 0.0 && h.current < h.max * 0.90)
+            })
+            .count();
+        let efflorescence_up = world
+            .query::<&crate::spell_cast::summon::SummonedCreature>()
+            .iter(world)
+            .any(|summon| summon.owner == healer && summon.spell_id == 145205);
         let targets = [target];
         let actions = SPELLS
             .iter()
@@ -144,10 +189,39 @@ impl Policy for Restoration {
                 .with_targets(Some(target), &targets),
             lifebloom_up: has_owned_hot(world, healer, target, 33763),
             rejuvenation_up: has_owned_hot(world, healer, target, 774),
+            injured,
+            efflorescence_up,
+            moonfire_up: false,
         };
         if let Some((action, execution)) =
             self.driver
                 .select("default", &facts, &prepared, &self.equipment)?
+        {
+            self.driver.execute(world, healer, action, execution)?;
+            return Ok(());
+        }
+        let targets = [self.enemy];
+        let actions = DAMAGE_SPELLS
+            .iter()
+            .map(|&(name, spell, self_target)| NativeAction {
+                name,
+                spell,
+                self_target,
+                talent: None,
+            });
+        let prepared = Prepared::read(world, healer, &targets, &self.equipment, actions, false)?;
+        let facts = PartyFacts {
+            native: NativeFacts::new(world, healer, &self.bindings, self.encounter, 1)
+                .with_targets(Some(self.enemy), &targets),
+            lifebloom_up: false,
+            rejuvenation_up: false,
+            injured,
+            efflorescence_up,
+            moonfire_up: has_owned_hot(world, healer, self.enemy, 164812),
+        };
+        if let Some((action, execution)) =
+            self.driver
+                .select("damage", &facts, &prepared, &self.equipment)?
         {
             self.driver.execute(world, healer, action, execution)?;
         }
