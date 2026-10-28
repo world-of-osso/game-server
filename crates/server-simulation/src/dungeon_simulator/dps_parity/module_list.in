@@ -135,6 +135,7 @@ mod unholy_outnumber_tests;
 mod unholy_magus_crit_tests;
 mod unholy_commander_tests;
 mod unholy_lord_lifetime_tests;
+mod unholy_grasp_retirement_tests;
 mod unholy_devotion_tests;
 mod unholy_magus_refresh_tests;
 mod driver_tests;

@@ -1077,7 +1077,7 @@ fn insert_summon_privacy(entity: &mut EntityWorldMut<'_>, owner: Option<PrivateS
     }
 }
 
-/// A retired summon retains source state only until its in-flight spells land.
+/// A retired summon retains source state while its in-flight spells or Grasp ticks remain.
 #[derive(Component)]
 pub(crate) struct RetiringSummon {
     pub health: f32,
@@ -1136,7 +1136,8 @@ fn finish_retiring_summons(world: &mut World, now: f64) {
     for (entity, deadline) in retiring {
         let pending = world
             .get_resource::<super::missiles::PendingSpellHits>()
-            .is_some_and(|hits| hits.has_caster(entity));
+            .is_some_and(|hits| hits.has_caster(entity))
+            || has_lingering_grasp(world, entity);
         if !pending || now >= deadline {
             if pending {
                 warn!(?entity, "Retired summon exceeded missile drain timeout");
@@ -1183,12 +1184,26 @@ pub fn despawn_summon(world: &mut World, entity: Entity) {
     crate::combat::combat_stop(world, entity);
     let pending = world
         .get_resource::<super::missiles::PendingSpellHits>()
-        .is_some_and(|hits| hits.has_caster(entity));
+        .is_some_and(|hits| hits.has_caster(entity))
+        || has_lingering_grasp(world, entity);
     if pending {
         retire_until_missiles_land(world, entity);
     } else {
         world.entity_mut(entity).despawn();
     }
+}
+
+fn has_lingering_grasp(world: &mut World, caster: Entity) -> bool {
+    // SimC76f8118 sc_death_knight.cpp4545–4574: a consumed Magus's
+    // existing Withering Grasp continues after the pet is dismissed.
+    world
+        .query::<&crate::auras::ActiveAuras>()
+        .iter(world)
+        .any(|auras| {
+            auras
+                .iter()
+                .any(|aura| aura.caster == caster && aura.spell_id == 1297091)
+        })
 }
 
 fn retire_until_missiles_land(world: &mut World, entity: Entity) {
