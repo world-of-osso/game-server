@@ -294,7 +294,7 @@ fn measurement_driver(
 fn literal_spec_selection_applies_to_player_and_follower() {
     use crate::followers::simulator::ParityActor;
     for spec_id in [
-        63, 64, 71, 72, 253, 254, 258, 259, 260, 262, 263, 269, 577, 1467,
+        63, 64, 70, 71, 72, 253, 254, 258, 259, 260, 262, 263, 269, 577, 1467,
     ] {
         for identity in [ParityActor::Player { race: 1 }, ParityActor::Follower] {
             assert!(
