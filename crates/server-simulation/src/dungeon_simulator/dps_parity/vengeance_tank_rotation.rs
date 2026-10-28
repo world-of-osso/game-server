@@ -1242,6 +1242,16 @@ mod tests {
             !crate::auras::has_aura(run.app.world(), actor, 1256302),
             "other spenders must exhaust the stacks before the scheduled World Killer"
         );
+        assert!(
+            !run.app
+                .world()
+                .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+                .0
+                .iter()
+                .any(|event| event.spell_id == Some(1256617)
+                    && event.kind == shared::protocol::CombatLogKind::Damage),
+            "World Killer must still be pending"
+        );
         for _ in 0..50 {
             run.app.update();
         }
