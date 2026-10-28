@@ -324,6 +324,9 @@ mod tests {
         }
         strike(&mut run);
         assert_eq!(count(&run), 2, "reflection is available after cooldown");
+        for _ in 0..12 {
+            run.app.update();
+        }
         crate::auras::remove_auras(
             run.app.world_mut(),
             actor,
