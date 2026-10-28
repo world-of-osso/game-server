@@ -3183,7 +3183,11 @@ fn reward_swing_rage(
         let bonus_pct = world
             .get::<AuraStatMods>(attacker)
             .map_or(0.0, |mods| mods.rage_from_damage_dealt_pct);
-        let rage = swing_secs * RAGE_PER_SWING_SECOND * (1.0 + bonus_pct / 100.0);
+        let (war_machine_sum, war_machine_multiplier) = war_machine_rage_modifier(world, attacker);
+        let rage = swing_secs
+            * RAGE_PER_SWING_SECOND
+            * (1.0 + (bonus_pct - war_machine_sum) / 100.0)
+            * war_machine_multiplier;
         change_rage(world, attacker, (rage * RAGE_RAW_PER_RAGE).round());
     }
     if damage > 0.0
@@ -3192,6 +3196,40 @@ fn reward_swing_rage(
     {
         change_rage(world, target, RAGE_PER_HIT_TAKEN * RAGE_RAW_PER_RAGE);
     }
+}
+
+/// SimC76f8118 sc_warrior.cpp2008–2019, 2134–2160: War Machine's
+/// three native effects are specialization alternatives, multiplied separately.
+fn war_machine_rage_modifier(world: &World, unit: Entity) -> (f32, f32) {
+    let index = match world
+        .get::<shared::components::ActiveSpec>(unit)
+        .map(|spec| spec.0)
+    {
+        Some(71) => 1,
+        Some(72) => 2,
+        Some(73) => 3,
+        _ => return (0.0, 1.0),
+    };
+    let Some(aura) = world
+        .get::<crate::auras::ActiveAuras>(unit)
+        .and_then(|auras| {
+            auras
+                .iter()
+                .find(|aura| aura.spell_id == 262231 && aura.caster == unit)
+        })
+    else {
+        return (0.0, 1.0);
+    };
+    let effects = aura
+        .effects
+        .iter()
+        .filter(|effect| effect.aura_type == crate::auras::handlers::MOD_RAGE_FROM_DAMAGE_DEALT);
+    let total = effects.clone().map(|effect| effect.amount).sum();
+    let selected = effects
+        .filter(|effect| effect.index == index)
+        .map(|effect| effect.amount)
+        .sum::<f32>();
+    (total, 1.0 + selected / 100.0)
 }
 
 fn has_rage_primary_power(world: &World, unit: Entity) -> bool {
