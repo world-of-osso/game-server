@@ -5,7 +5,7 @@ use combat::auras::ActiveAuras;
 use combat::spell_cast::{
     self, effects::EffectCtx, script_registry::SpellScriptHook, summon::SummonedCreature,
 };
-use combat::spell_cast::scripts::{AfterCastHook, script_effect_value};
+use combat::spell_cast::scripts::script_effect_value;
 use combat::spell_info::{SpellInfo, SpellStore};
 use shared::components::{Npc, Position};
 
@@ -14,25 +14,16 @@ struct UndeathReady(f64);
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::SummonInitialized(initialize),
-    SpellScriptHook::AuraRollAfterCast(after_cast),
+    SpellScriptHook::AfterForegroundSpender(whitemane_coil),
     SpellScriptHook::AfterCastUpdate(update),
     SpellScriptHook::AfterPeriodicDamagePolicies(grow),
 ];
 
-fn after_cast(spell: u32) -> Option<AfterCastHook> {
-    matches!(spell, 47541 | 1242174).then_some(whitemane_coil)
-}
-
-fn whitemane_coil(world: &mut World, owner: Entity, _: &SpellInfo) {
-    if !combat::auras::has_aura(world, owner, 1265949) {
+fn whitemane_coil(world: &mut World, owner: Entity, spell: &SpellInfo, target: Option<Entity>) {
+    if !matches!(spell.id, 47541 | 1242174) || !combat::auras::has_aura(world, owner, 1265949) {
         return;
     }
-    let Some(target) = world
-        .get::<combat::networking::CombatTarget>(owner)
-        .and_then(|target| target.0)
-    else {
-        return;
-    };
+    let Some(target) = target else { return };
     let now = combat::auras::aura_now(world);
     let rider = world
         .query::<(Entity, &SummonedCreature)>()
