@@ -10,6 +10,24 @@ fn mistweaver_heals_the_simc_dummy_party() {
     let effective = metrics["effective_hps"].as_f64().unwrap();
     let raw = metrics["raw_hps"].as_f64().unwrap();
     assert!(report["incoming_events"].as_u64().unwrap() > 100);
+    assert_eq!(report["tank_spec"], 66);
+    assert!(
+        report["tank_casts"]
+            .as_object()
+            .unwrap()
+            .values()
+            .any(|count| count.as_u64().unwrap() > 0)
+    );
+    assert!(report["tank_active_mitigation_seconds"].as_f64().unwrap() > 0.0);
+    assert!(
+        metrics["first_death_seconds"]
+            .as_f64()
+            .is_none_or(|time| time > 4.0)
+    );
+    assert!(
+        report["healer_casts"]["116670"].as_u64().unwrap_or(0) > 0,
+        "Vivify never cast: {report}"
+    );
     assert!(effective > 0.0 && raw >= effective, "{report}");
     let spells = metrics["spell_healing"].as_object().unwrap();
     assert!(!spells.is_empty());

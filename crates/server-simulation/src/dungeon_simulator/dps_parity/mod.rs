@@ -427,7 +427,6 @@ pub(crate) fn spawn_reference(
     count: usize,
     identity: crate::followers::simulator::ParityActor,
 ) -> Result<Run, String> {
-    let spec_id = profile.spec_id;
     let mut app = super::runtime::build_app();
     app.add_systems(Last, melee_return::advance);
     inputs::install_reference_catalogs(&mut app)?;
@@ -435,31 +434,7 @@ pub(crate) fn spawn_reference(
     // Origin-centered parity fixtures have no frozen dungeon geometry.
     app.world_mut().remove_resource::<super::Space>();
     crate::simc_apl_native::install_open_arena(app.world_mut());
-    let level = profile
-        .level
-        .parse()
-        .map_err(|error| format!("reference level: {error}"))?;
-    let actor = crate::followers::simulator::spawn_parity_attacker(
-        app.world_mut(),
-        spec_id,
-        level,
-        copy,
-        identity,
-    )?;
-    // Pinned player.cpp1288: this Patchwerk fixture configures no movement event.
-    app.world_mut()
-        .entity_mut(actor)
-        .insert(crate::simc_apl_native::FixtureMovement {
-            distance_to_move: 0.0,
-        });
-    let race = inputs::read_reference_race(&profile.race)?;
-    app.world_mut()
-        .entity_mut(actor)
-        .insert(server::test_support::ReferenceRace(race));
-    inputs::equip(app.world_mut(), actor, &profile)?;
-    inputs::install_traits(app.world_mut(), actor, traits)?;
-    profile_initialization::initialize_declared_powers(app.world_mut(), actor, &profile)?;
-    profile_effects::install(app.world_mut(), actor, &profile)?;
+    let actor = spawn_reference_actor(&mut app, copy, &profile, traits, identity)?;
     let targets = spawn_targets(&mut app, actor, count)?;
     let target_waves = vec![
         json!({"at": 0.0, "entities": targets.iter().map(|unit| unit.to_bits()).collect::<Vec<_>>()}),
@@ -480,6 +455,70 @@ pub(crate) fn spawn_reference(
         player_rotation: None,
         spec_driver: None,
     })
+}
+
+fn spawn_reference_actor(
+    app: &mut App,
+    copy: crate::maps::InMap,
+    profile: &inputs::Profile,
+    traits: &[inputs::AllocatedTrait],
+    identity: crate::followers::simulator::ParityActor,
+) -> Result<Entity, String> {
+    let level = profile
+        .level
+        .parse()
+        .map_err(|error| format!("reference level: {error}"))?;
+    let actor = crate::followers::simulator::spawn_parity_attacker(
+        app.world_mut(),
+        profile.spec_id,
+        level,
+        copy,
+        identity,
+    )?;
+    // Pinned player.cpp1288: this Patchwerk fixture configures no movement event.
+    app.world_mut()
+        .entity_mut(actor)
+        .insert(crate::simc_apl_native::FixtureMovement {
+            distance_to_move: 0.0,
+        });
+    let race = inputs::read_reference_race(&profile.race)?;
+    app.world_mut()
+        .entity_mut(actor)
+        .insert(server::test_support::ReferenceRace(race));
+    inputs::equip(app.world_mut(), actor, profile)?;
+    inputs::install_traits(app.world_mut(), actor, traits)?;
+    profile_initialization::initialize_declared_powers(app.world_mut(), actor, profile)?;
+    profile_effects::install(app.world_mut(), actor, profile)?;
+    Ok(actor)
+}
+
+/// Install a second MID2 player in the registered actor's existing native world.
+pub(crate) fn spawn_second_reference_player(run: &mut Run, spec_id: u32) -> Result<Entity, String> {
+    let (profile, traits) = read_reference(spec_id)?;
+    require_mid2_profile(&profile)?;
+    let race = inputs::read_reference_race(&profile.race)?;
+    let copy = *run
+        .app
+        .world()
+        .get::<crate::maps::InMap>(run.actor)
+        .ok_or("reference tank copy absent")?;
+    let actor = spawn_reference_actor(
+        &mut run.app,
+        copy,
+        &profile,
+        &traits,
+        crate::followers::simulator::ParityActor::Player { race },
+    )?;
+    run.app
+        .world_mut()
+        .entity_mut(actor)
+        .insert(server::persistence::ClientId(2));
+    for _ in 0..4 {
+        run.app.update();
+    }
+    profile_effects::install_food(run.app.world_mut(), actor, &profile)?;
+    preparation::finish_pending_setup(run)?;
+    Ok(actor)
 }
 
 fn fixture_player(run: &Run) -> Entity {

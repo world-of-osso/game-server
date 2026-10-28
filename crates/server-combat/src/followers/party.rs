@@ -230,29 +230,23 @@ pub(super) fn join_members(
     role: GroupRole,
     members: &[Entity],
 ) -> Result<(), String> {
+    join_members_with_player(world, owner, role, members, None)
+}
+
+pub(super) fn join_members_with_player(
+    world: &mut World,
+    owner: Entity,
+    role: GroupRole,
+    members: &[Entity],
+    player: Option<(Entity, GroupRole)>,
+) -> Result<(), String> {
     let difficulty = world
         .get::<DungeonDifficulty>(owner)
         .ok_or("companion owner has no dungeon difficulty")?
         .0;
     let id = world.get::<ClientId>(owner).ok_or("owner logged out")?.0;
-    let player = world.get::<Player>(owner).ok_or("owner is not a player")?;
-    let online_player = OnlineMember {
-        entity: owner.to_bits(),
-        name: player.name.clone(),
-        class: player.class,
-        level: world.get::<UnitLevel>(owner).ok_or("owner level absent")?.0,
-        portrait: crate::group::portrait_appearance(
-            player,
-            world.get::<shared::components::EquipmentAppearance>(owner),
-        ),
-        dungeon_difficulty: difficulty,
-        raid_difficulty: world
-            .get::<crate::maps::RaidDifficulty>(owner)
-            .copied()
-            .unwrap_or_default(),
-    };
-    let mut online = OnlineView::from([(id, online_player)]);
-    let companion_roles: Vec<_> = members
+    let mut online = OnlineView::from([(id, online_player(world, owner, difficulty)?)]);
+    let mut companion_roles: Vec<_> = members
         .iter()
         .map(|&unit| {
             let follower = world.get::<Follower>(unit).expect("spawned follower");
@@ -271,6 +265,14 @@ pub(super) fn join_members(
             (Follower::member_id(unit), follower.profile.role)
         })
         .collect();
+    if let Some((player, role)) = player {
+        let player_id = world
+            .get::<ClientId>(player)
+            .ok_or("party player logged out")?
+            .0;
+        online.insert(player_id, online_player(world, player, difficulty)?);
+        companion_roles.push((player_id, role));
+    }
     let mut registry = world.resource_mut::<GroupRegistry>();
     let group = registry.create_companion_party(id, role, &companion_roles, &online)?;
     let roster = registry
@@ -290,6 +292,30 @@ pub(super) fn join_members(
         }
     }
     Ok(())
+}
+
+fn online_player(world: &World, entity: Entity, difficulty: u32) -> Result<OnlineMember, String> {
+    let player = world
+        .get::<Player>(entity)
+        .ok_or("party member is not a player")?;
+    Ok(OnlineMember {
+        entity: entity.to_bits(),
+        name: player.name.clone(),
+        class: player.class,
+        level: world
+            .get::<UnitLevel>(entity)
+            .ok_or("party player level absent")?
+            .0,
+        portrait: crate::group::portrait_appearance(
+            player,
+            world.get::<shared::components::EquipmentAppearance>(entity),
+        ),
+        dungeon_difficulty: difficulty,
+        raid_difficulty: world
+            .get::<crate::maps::RaidDifficulty>(entity)
+            .copied()
+            .unwrap_or_default(),
+    })
 }
 
 fn end_run(world: &mut World, player: Entity, run: &FollowerRun) {

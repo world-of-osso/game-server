@@ -17,19 +17,22 @@ struct FixturePolicy {
     encounter: Encounter,
 }
 
-fn prepare(run: &mut crate::dungeon_simulator::dps_parity::Run) -> Result<Box<dyn Policy>, String> {
+fn prepare(
+    run: &mut crate::dungeon_simulator::dps_parity::Run,
+    healer: Entity,
+) -> Result<Box<dyn Policy>, String> {
     let mut bindings = Bindings {
         actions: [("holy_light".into(), 82326)].into(),
         global_cooldown_spell: 82326,
         ..Default::default()
     };
-    let equipment = Equipment::load(run.app.world_mut(), run.actor, &mut bindings)?;
+    let equipment = Equipment::load(run.app.world_mut(), healer, &mut bindings)?;
     let encounter = Encounter::Fixture {
         started_at: crate::spell_cast::now(run.app.world()),
         duration: 12.0,
         style: FightStyle::Patchwerk,
     };
-    literal_rotation::capture_fixture(run.app.world_mut(), run.actor, encounter)?;
+    literal_rotation::capture_fixture(run.app.world_mut(), healer, encounter)?;
     let program =
         server::simc_apl::Program::parse(&[("default", "holy_light,if=target.health.pct<95")])?;
     Ok(Box::new(FixturePolicy {

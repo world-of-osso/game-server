@@ -30,7 +30,10 @@ struct Restoration {
     encounter: Encounter,
 }
 
-pub(super) fn prepare(run: &mut super::dps_parity::Run) -> Result<Box<dyn Policy>, String> {
+pub(super) fn prepare(
+    run: &mut super::dps_parity::Run,
+    healer: Entity,
+) -> Result<Box<dyn Policy>, String> {
     let mut bindings = Bindings {
         actions: SPELLS
             .iter()
@@ -40,13 +43,13 @@ pub(super) fn prepare(run: &mut super::dps_parity::Run) -> Result<Box<dyn Policy
         global_cooldown_spell: 77472,
         ..Default::default()
     };
-    let equipment = Equipment::load(run.app.world_mut(), run.actor, &mut bindings)?;
+    let equipment = Equipment::load(run.app.world_mut(), healer, &mut bindings)?;
     let encounter = Encounter::Fixture {
         started_at: crate::spell_cast::now(run.app.world()),
         duration: 300.0,
         style: FightStyle::Patchwerk,
     };
-    literal_rotation::capture_fixture(run.app.world_mut(), run.actor, encounter)?;
+    literal_rotation::capture_fixture(run.app.world_mut(), healer, encounter)?;
     let program = Program::parse(&[
         ("default", "mana_tide_totem,if=mana.pct<75"),
         ("default", "healing_tide_totem,if=party.injured>=3"),
