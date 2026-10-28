@@ -1,0 +1,49 @@
+//! SimC76f8118 sc_druid.cpp5076–5121 and 11350–11356.
+use bevy::prelude::*;
+
+use super::combat;
+use combat::auras::ActiveAuras;
+use combat::spell_cast::{self, CostPool, script_registry::SpellScriptHook, summon::SummonedCreature};
+use shared::components::PowerType;
+
+const TALENT: u32 = 1269614;
+const THIRD_TALENT: u32 = 1269619;
+const SUMMON: u32 = 1308399;
+const ANSWERED_CALLING: u32 = 1308647;
+
+pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::AfterPayment(on_payment),
+    SpellScriptHook::OwnsPolicyProc(|spell| spell == TALENT),
+];
+
+fn talent_amount(world: &World, caster: Entity, spell: u32, index: u8) -> Option<f32> {
+    world.get::<ActiveAuras>(caster)?.iter()
+        .find(|aura| aura.spell_id == spell && aura.caster == caster)?
+        .effects.iter().find(|effect| effect.index == index).map(|effect| effect.amount)
+}
+
+fn on_payment(world: &mut World, caster: Entity, costs: &[(CostPool, f32)]) {
+    if spell_cast::spent(costs, PowerType::Rage) <= 0.0 {
+        return;
+    }
+    let Some(chance) = talent_amount(world, caster, TALENT, 1) else { return };
+    let now = spell_cast::now(world);
+    let mut summons = world.query::<&SummonedCreature>();
+    if summons.iter(world).any(|summon| summon.owner == caster && summon.spell_id == SUMMON
+        && summon.expires_at.is_none_or(|end| end > now))
+        || combat::random::random::<f32>() >= chance / 100.0
+    {
+        return;
+    }
+    spell_cast::cast_triggered(world, caster, SUMMON, Some(caster), 1);
+    let mut summons = world.query::<&SummonedCreature>();
+    if !summons.iter(world).any(|summon| summon.owner == caster && summon.spell_id == SUMMON) {
+        return;
+    }
+    if talent_amount(world, caster, THIRD_TALENT, 0).is_some() {
+        spell_cast::cast_triggered(world, caster, ANSWERED_CALLING, Some(caster), 1);
+        for spell in [33917, 77758] {
+            spell_cast::scripts::reduce_cooldown(world, caster, spell, f64::MAX);
+        }
+    }
+}

@@ -230,6 +230,7 @@ register_modules! {
     guardian_impacts: (1000, "modules/guardian_impacts.rs"),
     guardian_ursocs_fury: (1040, "modules/guardian_ursocs_fury.rs"),
     guardian_blood_frenzy: (1042, "modules/guardian_blood_frenzy.rs"),
+    guardian_wild_guardian: (1043, "modules/guardian_wild_guardian.rs"),
     guardian_matted_fur: (1041, "modules/guardian_matted_fur.rs"),
     havoc: (150, "modules/havoc.rs"),
     havoc_children: (5771, "modules/havoc/children.rs"),
