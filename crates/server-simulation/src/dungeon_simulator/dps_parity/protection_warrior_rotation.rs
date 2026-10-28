@@ -561,4 +561,48 @@ mod tests {
             );
         }
     }
+    #[test]
+    #[ignore = "requires canonical MID2 Protection profile"]
+    fn protection_shield_charge_extends_modified_shield_block_duration() {
+        use super::super::literal_rotation::execution::{Execution, execute};
+        let mut run = super::super::prepare_measurement(73, 1).unwrap();
+        super::super::engage(&mut run);
+        let actor = run.actor;
+        let target = run.targets[0];
+        run.app
+            .world_mut()
+            .get_mut::<crate::spell_cast::powers::PowerPools>(actor)
+            .unwrap()
+            .get_mut(shared::components::PowerType::Rage)
+            .unwrap()
+            .current = 1000.0;
+        execute(
+            run.app.world_mut(),
+            actor,
+            Execution::Spell(2565, actor, Some(target)),
+        )
+        .unwrap();
+        let block = |run: &super::super::Run| {
+            let auras = run
+                .app
+                .world()
+                .get::<crate::auras::ActiveAuras>(actor)
+                .unwrap();
+            let aura = auras.iter().find(|a| a.spell_id == 132404).unwrap();
+            (aura.duration_ms, aura.expires_at.unwrap())
+        };
+        let (duration, expiry) = block(&run);
+        assert_eq!(duration, 8000, "rank-2 Enduring Defenses adds two seconds");
+        for _ in 0..40 {
+            run.app.update();
+        }
+        execute(
+            run.app.world_mut(),
+            actor,
+            Execution::Spell(385952, target, Some(target)),
+        )
+        .unwrap();
+        let (_, extended) = block(&run);
+        assert!((extended - expiry - 8.0).abs() < 0.001);
+    }
 }
