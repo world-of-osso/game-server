@@ -4,8 +4,8 @@ use bevy::prelude::*;
 use super::combat;
 use combat::auras::{self, ActiveAuras, AuraInstance, scripts::AuraScripts};
 use combat::random::seq::SliceRandom;
-use combat::spell_cast::{self, script_registry::SpellScriptHook, targets};
-use combat::spell_info::{SpellInfo, SpellStore};
+use combat::spell_cast::{self, effects::EffectCtx, script_registry::SpellScriptHook, targets};
+use combat::spell_info::SpellStore;
 
 const SET: u32 = 1296608;
 const FORMS: &[u32] = &[102558, 50334];
@@ -17,7 +17,7 @@ struct Extension {
 }
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
-    SpellScriptHook::AfterForegroundSpecial(after_cast),
+    SpellScriptHook::AfterResolvedHits(after_cast),
     SpellScriptHook::EarlyAuraRegistration(register),
 ];
 
@@ -83,8 +83,9 @@ fn tick(world: &mut World, caster: Entity, aura: &AuraInstance, effect: u8) {
     }
 }
 
-fn after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
-    if spell.id != 77758 {
+fn after_cast(world: &mut World, ctx: &EffectCtx<'_>) {
+    let caster = ctx.caster;
+    if ctx.spell.id != 77758 {
         return;
     }
     let Some(auras) = world.get::<ActiveAuras>(caster) else {

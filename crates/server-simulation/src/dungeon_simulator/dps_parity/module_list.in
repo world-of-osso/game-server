@@ -255,6 +255,7 @@ mod hellcaller_devil_fruit_tests;
 mod howl_tests;
 #[cfg(test)]
 mod guardian_berserk_form_tests;
+mod guardian_flashing_claws_tests;
 mod guardian_lunar_beam_tests;
 mod guardian_rampant_damage_tests;
 mod guardian_rampant_thorn_tests;
