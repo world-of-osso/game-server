@@ -1247,3 +1247,43 @@ fn protection_divine_purpose_procs_and_pays_for_next_shield() {
     }
     panic!("selected Divine Purpose never procced from 50 real spenders");
 }
+
+#[test]
+#[ignore = "uses the approved MID2 Holy and Protection players and native armament spells"]
+fn holy_armaments_generate_holy_power_only_for_holy() {
+    use crate::spell_cast::powers::PowerPools;
+    use shared::components::PowerType;
+    let mut run = super::dps_parity::prepare_registered_player(66, 1).unwrap();
+    let holy = super::dps_parity::spawn_second_reference_player(&mut run, 65).unwrap();
+    let protection = run.actor;
+    for (actor, expected) in [(protection, 0.0), (holy, 3.0)] {
+        for spell in [432459, 432472] {
+            run.app
+                .world_mut()
+                .get_mut::<PowerPools>(actor)
+                .unwrap()
+                .get_mut(PowerType::HolyPower)
+                .unwrap()
+                .current = 0.0;
+            assert!(crate::spell_cast::try_cast_triggered(
+                run.app.world_mut(),
+                actor,
+                spell,
+                Some(actor),
+                1
+            ));
+            for _ in 0..20 {
+                run.app.update();
+            }
+            let actual = run
+                .app
+                .world()
+                .get::<PowerPools>(actor)
+                .unwrap()
+                .get(PowerType::HolyPower)
+                .unwrap()
+                .current;
+            assert_eq!(actual, expected, "spec actor {actor:?}, spell {spell}");
+        }
+    }
+}
