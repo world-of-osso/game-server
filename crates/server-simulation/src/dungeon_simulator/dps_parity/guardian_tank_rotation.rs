@@ -291,6 +291,49 @@ impl super::SpecDriver for Rotation {
 mod tests {
     #[test]
     #[ignore = "requires Guardian MID2 profile and native world data"]
+    fn guardian_spirit_wrath_follows_real_mangle_with_delayed_damage() {
+        let mut run = super::super::prepare_registered_player(104, 1).unwrap();
+        let actor = run.actor;
+        let target = run.targets[0];
+        super::super::engage(&mut run);
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 5487, Some(actor), false)
+            .unwrap();
+        for _ in 0..40 {
+            run.app.update();
+        }
+        crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 1308399, Some(actor), 1);
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 33917, Some(target), false)
+            .unwrap();
+        let observed = |run: &super::super::Run| {
+            run.app
+                .world()
+                .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+                .0
+                .iter()
+                .filter(|event| {
+                    event.source == Some(actor.to_bits())
+                        && event.target == Some(target.to_bits())
+                        && event.spell_id == Some(1308093)
+                        && event.kind == shared::protocol::CombatLogKind::Damage
+                })
+                .count()
+        };
+        assert_eq!(
+            observed(&run),
+            0,
+            "Spirit's Wrath cannot land at the Mangle cast"
+        );
+        for _ in 0..10 {
+            run.app.update();
+        }
+        assert_eq!(
+            observed(&run),
+            1,
+            "one real Mangle with an active spirit must land one delayed Spirit's Wrath"
+        );
+    }
+    #[test]
+    #[ignore = "requires Guardian MID2 profile and native world data"]
     fn guardian_answered_calling_requires_paid_rage_and_single_summon() {
         let _seed = crate::random::seed_scope(70448);
         let mut run = super::super::prepare_registered_player(104, 1).unwrap();

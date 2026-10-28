@@ -3,9 +3,12 @@ use bevy::prelude::*;
 
 use super::combat;
 use combat::auras::ActiveAuras;
+use combat::random::Rng;
 use combat::spell_cast::{
-    self, CostPool, script_registry::SpellScriptHook, summon::SummonedCreature,
+    self, CostPool, effects::EffectCtx, queued_triggers, script_registry::SpellScriptHook,
+    summon::SummonedCreature, targets,
 };
+use combat::spell_info::{SpellInfo, SpellStore};
 use shared::components::PowerType;
 
 const TALENT: u32 = 1269614;
@@ -15,6 +18,7 @@ const ANSWERED_CALLING: u32 = 1308647;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AfterPayment(on_payment),
+    SpellScriptHook::AfterForegroundSpecial(spirit_attack),
     SpellScriptHook::OwnsPolicyProc(|spell| spell == TALENT),
 ];
 
@@ -36,22 +40,11 @@ fn on_payment(world: &mut World, caster: Entity, costs: &[(CostPool, f32)]) {
     let Some(chance) = talent_amount(world, caster, TALENT, 1) else {
         return;
     };
-    let now = spell_cast::now(world);
-    let mut summons = world.query::<&SummonedCreature>();
-    if summons.iter(world).any(|summon| {
-        summon.owner == caster
-            && summon.spell_id == SUMMON
-            && summon.expires_at.is_none_or(|end| end > now)
-    }) || combat::random::random::<f32>() >= chance / 100.0
-    {
+    if active_spirit(world, caster) || combat::random::random::<f32>() >= chance / 100.0 {
         return;
     }
     spell_cast::cast_triggered(world, caster, SUMMON, Some(caster), 1);
-    let mut summons = world.query::<&SummonedCreature>();
-    if !summons
-        .iter(world)
-        .any(|summon| summon.owner == caster && summon.spell_id == SUMMON)
-    {
+    if !active_spirit(world, caster) {
         return;
     }
     if talent_amount(world, caster, THIRD_TALENT, 0).is_some() {
@@ -60,4 +53,50 @@ fn on_payment(world: &mut World, caster: Entity, costs: &[(CostPool, f32)]) {
             spell_cast::scripts::reduce_cooldown(world, caster, spell, f64::MAX);
         }
     }
+}
+
+fn active_spirit(world: &mut World, caster: Entity) -> bool {
+    let now = spell_cast::now(world);
+    world
+        .query::<&SummonedCreature>()
+        .iter(world)
+        .any(|summon| {
+            summon.owner == caster
+                && summon.spell_id == SUMMON
+                && summon.expires_at.is_none_or(|end| end > now)
+        })
+}
+
+// Mangle and Thrash execute one Spirit's Wrath at a random live enemy; its
+// native energize is immediate and the damage lands after the source 200ms travel.
+fn spirit_attack(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    if !matches!(spell.id, 33917 | 77758) || !active_spirit(world, caster) {
+        return;
+    }
+    let Some(origin) = targets::position(world, caster) else {
+        return;
+    };
+    let range = world
+        .resource::<SpellStore>()
+        .get(1308093)
+        .and_then(|spell| spell.misc.as_ref())
+        .and_then(|misc| misc.range)
+        .expect("Spirit's Wrath native range")
+        .max_hostile;
+    let candidates = targets::area_units(world, caster, origin, range, targets::Relation::Enemy, 0);
+    if candidates.is_empty() {
+        return;
+    }
+    let target = candidates[combat::random::thread_rng().gen_range(0..candidates.len())];
+    if talent_amount(world, caster, THIRD_TALENT, 0).is_some() {
+        spell_cast::cast_triggered(world, caster, 1308125, Some(caster), 1);
+    }
+    let ctx = EffectCtx {
+        caster,
+        spell,
+        depth: 0,
+        dest: None,
+        chain_multiplier: 1.0,
+    };
+    queued_triggers::schedule_full_trigger(world, &ctx, target, 1308093, 200);
 }
