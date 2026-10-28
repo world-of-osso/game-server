@@ -438,4 +438,66 @@ mod tests {
             3
         );
     }
+    #[test]
+    #[ignore = "requires native Vengeance profile"]
+    fn spirit_bomb_consumes_earned_fragments_and_deals_delayed_damage() {
+        use super::super::*;
+        use server::soul_fragments::{self, FragmentFilter};
+        let _seed = crate::random::seed_scope(70_448);
+        let (profile, traits) = read_reference(581).unwrap();
+        let identity = inputs::read_actor(&profile).unwrap();
+        let mut run = prepare_reference(profile, &traits, 1, identity).unwrap();
+        let actor = run.actor;
+        let target = run.targets[0];
+        for _ in 0..2 {
+            crate::spell_cast::cast_for_player_with_target(
+                run.app.world_mut(),
+                actor,
+                263642,
+                Some(target),
+            )
+            .unwrap();
+            for _ in 0..35 {
+                run.app.update();
+            }
+        }
+        let active = soul_fragments::active_count(run.app.world(), actor, FragmentFilter::Any);
+        assert!(active >= 2);
+        assert!(crate::auras::has_aura(run.app.world(), actor, 203981));
+        crate::spell_cast::cast_for_player_with_target(
+            run.app.world_mut(),
+            actor,
+            247454,
+            Some(actor),
+        )
+        .unwrap();
+        for _ in 0..5 {
+            run.app.update();
+        }
+        assert_eq!(
+            soul_fragments::active_count(run.app.world(), actor, FragmentFilter::Any),
+            0
+        );
+        assert!(!crate::auras::has_aura(run.app.world(), actor, 203981));
+        let has_damage = |run: &Run| {
+            run.app
+                .world()
+                .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+                .0
+                .iter()
+                .any(|event| {
+                    event.spell_id == Some(247455)
+                        && event.amount > 0
+                        && event.kind == shared::protocol::CombatLogKind::Damage
+                })
+        };
+        assert!(!has_damage(&run));
+        for _ in 0..25 {
+            run.app.update();
+        }
+        assert!(
+            has_damage(&run),
+            "native Spirit Bomb child must damage after its delay"
+        );
+    }
 }

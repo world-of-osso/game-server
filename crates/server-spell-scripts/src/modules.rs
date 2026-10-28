@@ -106,6 +106,7 @@ register_modules! {
     demon_hunter_fragments: (5777, "modules/demon_hunter_fragments.rs"),
     demon_hunter_sigil_spite: (5810, "modules/demon_hunter_sigil_spite.rs"),
     vengeance_fracture: (5811, "modules/vengeance_fracture.rs"),
+    vengeance_spirit_bomb: (5812, "modules/vengeance_spirit_bomb.rs"),
     destruction_echo: (2676, "modules/destruction_echo.rs"),
     destruction_fiendish: (2678, "modules/destruction_fiendish.rs"),
     destruction_incinerate: (2671, "modules/destruction_incinerate.rs"),
