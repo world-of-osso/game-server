@@ -92,6 +92,11 @@ impl Facts for Context<'_> {
     fn value(&self, name: &str) -> Result<f64, String> {
         if name.starts_with("trinket.") || name.starts_with("equipped.") {
             self.equipment.fact(name, &self.native)
+        } else if name == "in_combat" {
+            self.world
+                .get::<shared::components::CombatStatus>(self.actor)
+                .map(|status| f64::from(status.0 as u8))
+                .ok_or("NATIVE_COMBAT_STATUS_UNAVAILABLE".into())
         } else if name == "soul_fragments" {
             Ok(server::soul_fragments::active_count(
                 self.world,
@@ -137,6 +142,7 @@ impl ActionFacts for Context<'_> {
     fn value_for(&self, action: &Action, name: &str) -> Result<f64, String> {
         if name.starts_with("trinket.")
             || name.starts_with("equipped.")
+            || name == "in_combat"
             || name.starts_with("soul_fragments")
             || name == "action.sigil_of_spite.placed"
             || name == "raid_event.adds.has_boss"
