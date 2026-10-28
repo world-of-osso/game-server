@@ -16,8 +16,9 @@ fn expire(world: &mut World, actor: Entity) {
     }
     // SimC76f8118 sc_death_knight.cpp3697–3704: the two pet critical
     // multipliers expire before the actual ghoul's Ruptured Viscera.
-    combat::auras::remove_auras(world, actor, combat::auras::RemoveReason::Expired,
-        |aura| matches!(aura.spell_id, 1238902 | 1250728) && aura.caster == actor);
+    combat::auras::remove_auras(world, actor, combat::auras::RemoveReason::Expired, |aura| {
+        matches!(aura.spell_id, 1238902 | 1250728) && aura.caster == actor
+    });
     if !spell_cast::try_cast_triggered(world, actor, 1247379, Some(actor), 1) {
         warn!(
             ?actor,

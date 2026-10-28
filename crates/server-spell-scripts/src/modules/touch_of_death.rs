@@ -41,7 +41,8 @@ pub(super) fn damage(world: &World, caster: Entity, target: Entity, _amount: f32
     } else {
         // SimC76f8118 sc_monk.cpp2701–2718: only the improved-health branch
         // receives active Combo Strikes; its native flags suppress other modifiers.
-        amount * combat::spell_cast::scripts::combo_strikes_multiplier(world, caster, TOUCH_OF_DEATH)
+        amount
+            * combat::spell_cast::scripts::combo_strikes_multiplier(world, caster, TOUCH_OF_DEATH)
     }
 }
 

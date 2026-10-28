@@ -35,19 +35,50 @@ fn dk252_real_magus_summon_earns_unholy_aura_haste() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(252, 1).unwrap();
     engage(&mut run);
-    literal_rotation::execution::execute(run.app.world_mut(), run.actor,
-        literal_rotation::execution::Execution::Spell(1247378, run.targets[0], Some(run.targets[0]))).unwrap();
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(
+            1247378,
+            run.targets[0],
+            Some(run.targets[0]),
+        ),
+    )
+    .unwrap();
     for _ in 0..100 {
         run.app.update();
-        if crate::auras::has_aura(run.app.world(), run.actor, 1268917) { break; }
+        if crate::auras::has_aura(run.app.world(), run.actor, 1268917) {
+            break;
+        }
     }
-    assert!(crate::auras::has_aura(run.app.world(), run.actor, 1268917), "the real Magus must earn Unholy Aura");
+    assert!(
+        crate::auras::has_aura(run.app.world(), run.actor, 1268917),
+        "the real Magus must earn Unholy Aura"
+    );
     run.app.update();
-    let buffed = run.app.world().get::<crate::stats::CharacterStats>(run.actor).unwrap().haste_pct;
-    crate::auras::remove_auras(run.app.world_mut(), run.actor, crate::auras::RemoveReason::Cancelled, |aura| aura.spell_id == 1268917);
+    let buffed = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(run.actor)
+        .unwrap()
+        .haste_pct;
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        run.actor,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 1268917,
+    );
     run.app.update();
-    let unbuffed = run.app.world().get::<crate::stats::CharacterStats>(run.actor).unwrap().haste_pct;
-    assert!(buffed > unbuffed, "earned Unholy Aura must increase live owner haste: {unbuffed} -> {buffed}");
+    let unbuffed = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(run.actor)
+        .unwrap()
+        .haste_pct;
+    assert!(
+        buffed > unbuffed,
+        "earned Unholy Aura must increase live owner haste: {unbuffed} -> {buffed}"
+    );
 }
 
 #[test]
@@ -431,27 +462,64 @@ fn dk252_expiring_ghoul_rupture_excludes_pet_critical_buffs() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(252, 1).unwrap();
     engage(&mut run);
-    assert!(crate::spell_cast::try_cast_triggered(run.app.world_mut(), run.actor, 275430, Some(run.actor), 1));
+    assert!(crate::spell_cast::try_cast_triggered(
+        run.app.world_mut(),
+        run.actor,
+        275430,
+        Some(run.actor),
+        1
+    ));
     let ghoul = {
         let world = run.app.world_mut();
-        world.query::<(Entity, &crate::spell_cast::summon::SummonedCreature)>().iter(world)
-            .find_map(|(actor, summon)| (summon.owner == run.actor && summon.spell_id == 275430).then_some(actor))
+        world
+            .query::<(Entity, &crate::spell_cast::summon::SummonedCreature)>()
+            .iter(world)
+            .find_map(|(actor, summon)| {
+                (summon.owner == run.actor && summon.spell_id == 275430).then_some(actor)
+            })
             .expect("actual lesser ghoul must exist")
     };
     run.app.update();
-    assert!(crate::auras::has_aura(run.app.world(), ghoul, 1250728), "live ghoul must have Dreadblade mastery");
-    run.app.insert_resource(FactorCapture::new(ghoul, run.targets[0], 1247379, "ruptured_viscera", 1));
+    assert!(
+        crate::auras::has_aura(run.app.world(), ghoul, 1250728),
+        "live ghoul must have Dreadblade mastery"
+    );
+    run.app.insert_resource(FactorCapture::new(
+        ghoul,
+        run.targets[0],
+        1247379,
+        "ruptured_viscera",
+        1,
+    ));
     for _ in 0..250 {
-        run.app.world_mut().get_mut::<crate::stats::CharacterStats>(run.actor).unwrap().crit_pct = 100.0;
+        run.app
+            .world_mut()
+            .get_mut::<crate::stats::CharacterStats>(run.actor)
+            .unwrap()
+            .crit_pct = 100.0;
         run.app.update();
         let capture = run.app.world().resource::<FactorCapture>().export();
-        let Some(result) = capture["events"].as_array().unwrap().iter()
-            .find(|event| event["event"] == "result" && event["spell_id"] == 1247379) else { continue; };
-        let critical = result["factors"]["crit_bonus"].as_f64().expect("rupture must crit") + 1.0;
-        let owner_critical = run.app.world().get::<crate::auras::AuraStatMods>(run.actor)
+        let Some(result) = capture["events"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|event| event["event"] == "result" && event["spell_id"] == 1247379)
+        else {
+            continue;
+        };
+        let critical = result["factors"]["crit_bonus"]
+            .as_f64()
+            .expect("rupture must crit")
+            + 1.0;
+        let owner_critical = run
+            .app
+            .world()
+            .get::<crate::auras::AuraStatMods>(run.actor)
             .map_or(1.0, |mods| mods.critical_damage(32));
-        assert!((critical - 2.0 * f64::from(owner_critical)).abs() < 0.01,
-            "natural Ruptured Viscera must exclude expired pet crit buffs: {critical}");
+        assert!(
+            (critical - 2.0 * f64::from(owner_critical)).abs() < 0.01,
+            "natural Ruptured Viscera must exclude expired pet crit buffs: {critical}"
+        );
         return;
     }
     panic!("actual lesser ghoul must expire and deal Ruptured Viscera");
@@ -1595,20 +1663,55 @@ fn dk252_rune_spenders_earn_rune_mastery_strength() {
     let mut run = prepare_literal(252, 1).unwrap();
     engage(&mut run);
     for _ in 0..30 {
-        crate::spell_cast::powers::change_power(run.app.world_mut(), run.actor, shared::components::PowerType::Runes, 6.0);
-        literal_rotation::execution::execute(run.app.world_mut(), run.actor,
-            literal_rotation::execution::Execution::Spell(55090, run.targets[0], Some(run.targets[0]))).unwrap();
+        crate::spell_cast::powers::change_power(
+            run.app.world_mut(),
+            run.actor,
+            shared::components::PowerType::Runes,
+            6.0,
+        );
+        literal_rotation::execution::execute(
+            run.app.world_mut(),
+            run.actor,
+            literal_rotation::execution::Execution::Spell(
+                55090,
+                run.targets[0],
+                Some(run.targets[0]),
+            ),
+        )
+        .unwrap();
         preparation::finish_pending_setup(&mut run).unwrap();
         if crate::auras::has_aura(run.app.world(), run.actor, 374585) {
             run.app.update();
-            let buffed = run.app.world().get::<crate::stats::CharacterStats>(run.actor).unwrap().primary.strength;
-            crate::auras::remove_auras(run.app.world_mut(), run.actor, crate::auras::RemoveReason::Cancelled, |aura| aura.spell_id == 374585);
+            let buffed = run
+                .app
+                .world()
+                .get::<crate::stats::CharacterStats>(run.actor)
+                .unwrap()
+                .primary
+                .strength;
+            crate::auras::remove_auras(
+                run.app.world_mut(),
+                run.actor,
+                crate::auras::RemoveReason::Cancelled,
+                |aura| aura.spell_id == 374585,
+            );
             run.app.update();
-            let unbuffed = run.app.world().get::<crate::stats::CharacterStats>(run.actor).unwrap().primary.strength;
-            assert!(buffed > unbuffed, "earned Rune Mastery must increase actual Strength: {unbuffed} -> {buffed}");
+            let unbuffed = run
+                .app
+                .world()
+                .get::<crate::stats::CharacterStats>(run.actor)
+                .unwrap()
+                .primary
+                .strength;
+            assert!(
+                buffed > unbuffed,
+                "earned Rune Mastery must increase actual Strength: {unbuffed} -> {buffed}"
+            );
             return;
         }
-        for _ in 0..40 { run.app.update(); }
+        for _ in 0..40 {
+            run.app.update();
+        }
     }
     panic!("actual rune spenders must earn Rune Mastery");
 }
@@ -1713,23 +1816,45 @@ fn dk252_dark_transformation_and_putrefy_magi_together_raise_lord() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_measurement(252, 1).unwrap();
     engage(&mut run);
-    literal_rotation::execution::execute(run.app.world_mut(), run.actor,
-        literal_rotation::execution::Execution::Spell(1233448, run.actor, None)).unwrap();
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(1233448, run.actor, None),
+    )
+    .unwrap();
     preparation::finish_pending_setup(&mut run).unwrap();
     let has_summon = |run: &mut Run, spell| {
         let world = run.app.world_mut();
-        world.query::<&crate::spell_cast::summon::SummonedCreature>().iter(world)
+        world
+            .query::<&crate::spell_cast::summon::SummonedCreature>()
+            .iter(world)
             .any(|summon| summon.owner == run.actor && summon.spell_id == spell)
     };
-    assert!(has_summon(&mut run, 317776), "Dark Transformation must create its real Magus");
-    for _ in 0..40 { run.app.update(); }
-    literal_rotation::execution::execute(run.app.world_mut(), run.actor,
-        literal_rotation::execution::Execution::Spell(1247378, run.targets[0], Some(run.targets[0]))).unwrap();
+    assert!(
+        has_summon(&mut run, 317776),
+        "Dark Transformation must create its real Magus"
+    );
+    for _ in 0..40 {
+        run.app.update();
+    }
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(
+            1247378,
+            run.targets[0],
+            Some(run.targets[0]),
+        ),
+    )
+    .unwrap();
     preparation::finish_pending_setup(&mut run).unwrap();
     for _ in 0..200 {
         run.app.update();
         if has_summon(&mut run, 1292072) {
-            assert!(!has_summon(&mut run, 317776), "Lord conversion must consume the Dark Transformation Magus");
+            assert!(
+                !has_summon(&mut run, 317776),
+                "Lord conversion must consume the Dark Transformation Magus"
+            );
             return;
         }
     }
@@ -2535,24 +2660,56 @@ fn dk252_scourge_strike_spreads_whitemane_undeath_with_its_remaining_duration() 
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(252, 3).unwrap();
     engage(&mut run);
-    literal_rotation::execution::execute(run.app.world_mut(), run.actor,
-        literal_rotation::execution::Execution::Spell(42650, run.actor, None)).unwrap();
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(42650, run.actor, None),
+    )
+    .unwrap();
     preparation::finish_pending_setup(&mut run).unwrap();
     for _ in 0..200 {
         run.app.update();
-        if crate::auras::has_aura(run.app.world(), run.targets[0], 444633) { break; }
+        if crate::auras::has_aura(run.app.world(), run.targets[0], 444633) {
+            break;
+        }
     }
-    assert!(crate::auras::has_aura(run.app.world(), run.targets[0], 444633));
-    literal_rotation::execution::execute(run.app.world_mut(), run.actor,
-        literal_rotation::execution::Execution::Spell(55090, run.targets[0], Some(run.targets[0]))).unwrap();
+    assert!(crate::auras::has_aura(
+        run.app.world(),
+        run.targets[0],
+        444633
+    ));
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(55090, run.targets[0], Some(run.targets[0])),
+    )
+    .unwrap();
     preparation::finish_pending_setup(&mut run).unwrap();
-    let owned = |target| run.app.world().get::<crate::auras::ActiveAuras>(target).and_then(|auras|
-        auras.iter().find(|aura| aura.spell_id == 444633 && aura.caster == run.actor));
+    let owned = |target| {
+        run.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(target)
+            .and_then(|auras| {
+                auras
+                    .iter()
+                    .find(|aura| aura.spell_id == 444633 && aura.caster == run.actor)
+            })
+    };
     let primary = owned(run.targets[0]).expect("primary retains Undeath");
-    let secondary = run.targets.iter().skip(1).find_map(|target| owned(*target)).expect("Famine must spread Undeath to another actual target");
-    assert_eq!(secondary.expires_at, primary.expires_at, "new disease must clone the remaining duration");
-    assert!(secondary.stacks >= primary.stacks && primary.stacks >= 2,
-        "spread must copy the grown stacks; later cleave hits may grow the copy again");
+    let secondary = run
+        .targets
+        .iter()
+        .skip(1)
+        .find_map(|target| owned(*target))
+        .expect("Famine must spread Undeath to another actual target");
+    assert_eq!(
+        secondary.expires_at, primary.expires_at,
+        "new disease must clone the remaining duration"
+    );
+    assert!(
+        secondary.stacks >= primary.stacks && primary.stacks >= 2,
+        "spread must copy the grown stacks; later cleave hits may grow the copy again"
+    );
 }
 
 #[test]
@@ -2583,28 +2740,73 @@ fn dk252_mograine_decay_hits_targets_and_extends_owned_disease() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(252, 3).unwrap();
     engage(&mut run);
-    assert!(crate::spell_cast::try_cast_triggered(run.app.world_mut(), run.actor, 1240996, Some(run.targets[0]), 1));
-    let expiry = |run: &Run| run.app.world().get::<crate::auras::ActiveAuras>(run.targets[0]).unwrap().iter()
-        .find(|aura| aura.spell_id == 1240996 && aura.caster == run.actor).unwrap().expires_at.unwrap();
+    assert!(crate::spell_cast::try_cast_triggered(
+        run.app.world_mut(),
+        run.actor,
+        1240996,
+        Some(run.targets[0]),
+        1
+    ));
+    let expiry = |run: &Run| {
+        run.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(run.targets[0])
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 1240996 && aura.caster == run.actor)
+            .unwrap()
+            .expires_at
+            .unwrap()
+    };
     let before = expiry(&run);
-    literal_rotation::execution::execute(run.app.world_mut(), run.actor,
-        literal_rotation::execution::Execution::Spell(42650, run.actor, None)).unwrap();
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(42650, run.actor, None),
+    )
+    .unwrap();
     preparation::finish_pending_setup(&mut run).unwrap();
-    assert!(crate::auras::has_aura(run.app.world(), run.actor, 444505), "selected Mograine's Might must affect the owner");
-    assert!(crate::auras::has_aura(run.app.world(), run.actor, 188290), "Mograine's Might must grant the owner's Death and Decay state");
-    for _ in 0..50 { run.app.update(); }
-    assert!(expiry(&run) > before, "actual Mograine decay impacts must extend the owner's disease");
+    assert!(
+        crate::auras::has_aura(run.app.world(), run.actor, 444505),
+        "selected Mograine's Might must affect the owner"
+    );
+    assert!(
+        crate::auras::has_aura(run.app.world(), run.actor, 188290),
+        "Mograine's Might must grant the owner's Death and Decay state"
+    );
+    for _ in 0..50 {
+        run.app.update();
+    }
+    assert!(
+        expiry(&run) > before,
+        "actual Mograine decay impacts must extend the owner's disease"
+    );
     let mograine = {
         let world = run.app.world_mut();
-        world.query::<(Entity, &crate::spell_cast::summon::SummonedCreature)>().iter(world)
-            .find_map(|(actor, summon)| (summon.owner == run.actor && summon.spell_id == 444248).then_some(actor))
+        world
+            .query::<(Entity, &crate::spell_cast::summon::SummonedCreature)>()
+            .iter(world)
+            .find_map(|(actor, summon)| {
+                (summon.owner == run.actor && summon.spell_id == 444248).then_some(actor)
+            })
             .expect("Army must summon actual Mograine")
     };
-    let events = &run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
     for target in &run.targets {
-        assert!(events.iter().any(|event| event.source == Some(mograine.to_bits()) && event.spell_id == Some(1251951)
-            && event.target == Some(target.to_bits()) && event.kind == CombatLogKind::Damage && event.amount > 0),
-            "Mograine's actual Death and Decay must hit {target:?}");
+        assert!(
+            events
+                .iter()
+                .any(|event| event.source == Some(mograine.to_bits())
+                    && event.spell_id == Some(1251951)
+                    && event.target == Some(target.to_bits())
+                    && event.kind == CombatLogKind::Damage
+                    && event.amount > 0),
+            "Mograine's actual Death and Decay must hit {target:?}"
+        );
     }
 }
 
