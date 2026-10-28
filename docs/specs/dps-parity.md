@@ -64,6 +64,9 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 ### Twisted Horror's Tendril
 
 - Equipped1310404 earns native Devastating Power1310414 stacks from its proc driver, using the driver's item-scaled rating amount. Driver1310446 grants three stacks on its first successful proc for each actual target; its native cooldown remains in force. Applications keep their native independent stack durations (SimC76f8118 `unique_gear_midnight.cpp`4818–4875).
+### Hunter Unnatural Causes
+
+- Selected Unnatural Causes459527 increases eligible Hunter and owned-pet damage using the native459529 family masks and labels. Below the native health threshold, increase its native damage bonus by the native talent percentage. Pinned `bugs=true` excludes direct Wildfire Bomb, Volley and Laceration (SimC76f8118 `sc_hunter.cpp`1482–1509,2640–2664,5161–5164,6934–6938,7056–7059).
 
 ### Literal wait
 
