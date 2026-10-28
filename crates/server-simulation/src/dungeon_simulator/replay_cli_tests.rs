@@ -145,6 +145,59 @@ fn cli_prints_vengeance_resource_counters_and_target_debuffs() {
 }
 
 #[test]
+#[ignore = "runs two real MID2 Protection dummy replays through the CLI"]
+fn cli_aggregates_two_real_tank_seeds() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let run = |extra: &[&str]| {
+        let output = std::process::Command::new("python3")
+            .arg(root.join("scripts/healer_tank_replay.py"))
+            .args(["--spec", "66", "--simc-tank-heal", "--timeline"])
+            .arg(std::env::var("HEALER_TANK_SIMC_TRACE").unwrap())
+            .arg("--profile-dir")
+            .arg(std::env::var("DPS_PARITY_OUTPUT").unwrap())
+            .arg("--executable")
+            .arg(std::env::current_exe().unwrap())
+            .args(extra)
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        String::from_utf8(output.stdout).unwrap()
+    };
+    let cast_count = |text: &str| -> f64 {
+        text.lines()
+            .find(|line| line.starts_with("| 53600 | "))
+            .expect("Shield of the Righteous row")
+            .split('|')
+            .nth(2)
+            .unwrap()
+            .trim()
+            .parse()
+            .unwrap()
+    };
+    let first = cast_count(&run(&["--seed", "70448"]));
+    let second = cast_count(&run(&["--seed", "70449"]));
+    let aggregate = run(&["--seeds", "2"]);
+    let expected = format!(
+        "| 53600 | {:.2} ({:.2}–{:.2}) |",
+        (first + second) / 2.0,
+        first.min(second),
+        first.max(second)
+    );
+    assert!(
+        aggregate.contains(&expected),
+        "expected {expected}: {aggregate}"
+    );
+    assert!(
+        aggregate.contains("2 seeds 70448–70449") && aggregate.contains("/2 |"),
+        "{aggregate}"
+    );
+}
+
+#[test]
 #[ignore = "runs the MID2 Protection dummy replay and its native Energize events"]
 fn cli_prints_tank_energize_sources() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");

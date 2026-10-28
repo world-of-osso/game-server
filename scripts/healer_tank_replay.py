@@ -125,36 +125,86 @@ def build_replay_executable():
     return Path(executables[0])
 
 
-def run_all(trace_dir, executable, output_dir, jobs, profile_dir=None, party_trace=None):
+def summarize(values):
+    values = [value for value in values if value is not None]
+    if not values:
+        return None
+    return {'mean': sum(values) / len(values), 'min': min(values), 'max': max(values)}
+
+
+def format_range(values):
+    result = summarize(values)
+    if result is None:
+        return 'N/A'
+    return f'{result["mean"]:.2f} ({result["min"]:.2f}–{result["max"]:.2f})'
+
+
+def print_tank_aggregate(reports, seeds):
+    print(f'Tank {reports[0]["spec"]}; {len(seeds)} seeds {seeds[0]}–{seeds[-1]}; one canonical SimC trace.')
+    print('External dummy healing:', 'enabled' if reports[0]['external_healing'] else 'disabled')
+    print('Values are mean (min–max); absent spell casts and auras count as zero.')
+    print('\n| Spell ID | Casts | Aura uptime % |')
+    print('|---:|---:|---:|')
+    spells = set().union(*(set(r['tank_casts']) | set(r['aura_uptime']) for r in reports))
+    for spell in sorted(spells, key=int):
+        casts = [r['tank_casts'].get(spell, 0) for r in reports]
+        uptime = [100 * r['aura_uptime'].get(spell, 0) for r in reports]
+        print(f'| {spell} | {format_range(casts)} | {format_range(uptime)} |')
+    print('\n| Spec | Mitigation % | Active mitigation % | Deaths |')
+    print('|---|---:|---:|---:|')
+    mitigation = format_range([r['mitigation_pct'] for r in reports])
+    uptime = format_range([None if r['active_mitigation_uptime'] is None else 100 * r['active_mitigation_uptime'] for r in reports])
+    deaths = sum(r['time_to_death'] is not None for r in reports)
+    print(f'| {reports[0]["spec"]} | {mitigation} | {uptime} | {deaths}/{len(reports)} |')
+
+
+def run_all(trace_dir, executable, output_dir, jobs, profile_dir=None, party_trace=None, seeds=(70448,)):
     output_dir.mkdir(parents=True, exist_ok=True)
     def run(item):
-        mode, spec, healed = item
+        mode, spec, healed, seed = item
         profiles = profile_dir or ALL_PROFILES
         trace_spec = '66' if mode == 'healer' else spec
         timeline = (trace_dir / f'{trace_spec}.simc-trace.log').resolve(strict=True)
-        report = run_replay(timeline, spec, 'simc', 300, 70448, profiles, executable, healed, mode, party_trace)
+        report = run_replay(timeline, spec, 'simc', 300, seed, profiles, executable, healed, mode, party_trace)
         suffix = 'healed' if healed else 'unhealed'
-        path = output_dir / f'{mode}-{spec}-{suffix}.json'
+        seed_suffix = f'-seed{seed}' if mode == 'tank' and len(seeds) > 1 else ''
+        path = output_dir / f'{mode}-{spec}-{suffix}{seed_suffix}.json'
         path.write_text(json.dumps(report, indent=2) + '\n')
         return item, report
 
-    tasks = [('healer', spec, False) for spec in HEALERS]
-    tasks += [('tank', spec, healed) for spec in TANKS for healed in (True, False)]
+    tasks = [('healer', spec, False, 70448) for spec in HEALERS]
+    tasks += [('tank', spec, healed, seed) for spec in TANKS for healed in (True, False) for seed in seeds]
     with ThreadPoolExecutor(max_workers=jobs) as pool:
         reports = dict(pool.map(run, tasks))
     print('| Healer | Effective HPS | Raw HPS | Overheal % | Mana min | Mana end | First death (s) | Tank min health | Idle % |')
     print('|---|---:|---:|---:|---:|---:|---:|---:|---:|')
     for spec in HEALERS:
-        m = reports[('healer', spec, False)]['metrics']
+        m = reports[('healer', spec, False, 70448)]['metrics']
         print(f'| {spec} | {number(m["effective_hps"])} | {number(m["raw_hps"])} | '
               f'{number(m["overheal_pct"])} | {number(m["mana_min"])} | '
               f'{number(m["mana_curve"][-1]["current"])} | {number(m["first_death_seconds"])} | '
               f'{number(m["tank_health_min"])} | {number(m["idle_gcd_pct"])} |')
+    if len(seeds) > 1:
+        print(f'\nTank aggregates: {len(seeds)} seeds {seeds[0]}–{seeds[-1]}; values are mean (min–max). Healers use seed 70448.')
+        print('| Tank | Healed mitigation % | Healed active mitigation % | Healed deaths | No-healer deaths |')
+        print('|---|---:|---:|---:|---:|')
+        for spec in TANKS:
+            healed = [reports[('tank', spec, True, seed)] for seed in seeds]
+            unhealed = [reports[('tank', spec, False, seed)] for seed in seeds]
+            mitigation = format_range([r['mitigation_pct'] for r in healed])
+            uptime = format_range([None if r['active_mitigation_uptime'] is None else 100 * r['active_mitigation_uptime'] for r in healed])
+            deaths = lambda rows: sum(r['time_to_death'] is not None for r in rows)
+            print(f'| {spec} | {mitigation} | {uptime} | {deaths(healed)}/{len(seeds)} | {deaths(unhealed)}/{len(seeds)} |')
+        for spec in TANKS:
+            for healed in (True, False):
+                print_tank_aggregate([reports[('tank', spec, healed, seed)] for seed in seeds], seeds)
+        print(f'\nDetails: {output_dir}')
+        return
     print('\n| Tank | Mitigation % | Self-heal/s | Absorb/s | No-healer death (s) | Active mitigation % | 5s spike |')
     print('|---|---:|---:|---:|---:|---:|---:|')
     for spec in TANKS:
-        healed = reports[('tank', spec, True)]
-        unhealed = reports[('tank', spec, False)]
+        healed = reports[('tank', spec, True, seeds[0])]
+        unhealed = reports[('tank', spec, False, seeds[0])]
         uptime = healed['active_mitigation_uptime']
         print(f'| {spec} | {number(healed["mitigation_pct"])} | {number(healed["self_heal_per_second"])} | '
               f'{number(healed["absorb_per_second"])} | {number(unhealed["time_to_death"])} | '
@@ -175,10 +225,14 @@ def main():
     parser.add_argument('--spec', default='66')
     parser.add_argument('--duration', type=int, default=300, help='SimC replay duration in seconds')
     parser.add_argument('--seed', type=int, default=70448)
+    parser.add_argument('--seeds', type=int, default=1, help='number of consecutive tank seeds starting at --seed')
     parser.add_argument('--simc-tank-heal', action='store_true', help='replay the SimC dummy 75000 heal every 5 seconds')
     parser.add_argument('--profile-dir', type=Path, help='directory containing profile and trait inputs')
     parser.add_argument('--executable', type=Path, help='existing server-simulation test executable')
     args = parser.parse_args()
+    if args.seeds <= 0 or args.seed < 0:
+        parser.error('--seeds must be positive and --seed must be nonnegative')
+    seeds = tuple(range(args.seed, args.seed + args.seeds))
     if args.all:
         if args.jobs <= 0:
             parser.error('--jobs must be positive')
@@ -189,8 +243,10 @@ def main():
         output = args.output_dir or TRACE_DIR / datetime.now().strftime('all-%Y-%m-%d-%H%M%S')
         profiles = args.profile_dir.resolve(strict=True) if args.profile_dir else None
         party_trace = args.party_trace.resolve(strict=True) if args.party_trace else None
-        run_all(trace_dir, executable, output, args.jobs, profiles, party_trace)
+        run_all(trace_dir, executable, output, args.jobs, profiles, party_trace, seeds)
         return 0
+    if args.seeds > 1 and (args.mode != 'tank' or args.source != 'simc'):
+        parser.error('--seeds greater than one requires SimC tank mode')
     if args.party_trace and (args.mode != 'healer' or args.source != 'simc'):
         parser.error('--party-trace requires SimC healer mode or --all')
     if args.timeline is None:
@@ -210,8 +266,11 @@ def main():
     executable = args.executable.resolve(strict=True) if args.executable else None
     all_specs = ('66', '73', '104', '250', '268', '581') if args.source == 'simc' else ('65', '66')
     for spec in (all_specs if args.spec == 'all' else (args.spec,)):
-        report = run_replay(timeline, spec, args.source, args.duration, args.seed, profile_dir, executable, args.simc_tank_heal, args.mode, args.party_trace.resolve(strict=True) if args.party_trace else None)
-        if args.mode == 'healer' or (args.source == 'recorded' and spec == '65'):
+        reports = [run_replay(timeline, spec, args.source, args.duration, seed, profile_dir, executable, args.simc_tank_heal, args.mode, args.party_trace.resolve(strict=True) if args.party_trace else None) for seed in seeds]
+        report = reports[0]
+        if len(seeds) > 1:
+            print_tank_aggregate(reports, seeds)
+        elif args.mode == 'healer' or (args.source == 'recorded' and spec == '65'):
             print_healer(report)
         else:
             print_tank(report)
