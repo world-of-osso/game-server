@@ -13,5 +13,18 @@ fn restoration_druid_heals_the_simc_dummy_party() {
     assert!(effective > 0.0 && raw >= effective, "{report}");
     assert!(!metrics["spell_healing"].as_object().unwrap().is_empty());
     assert_eq!(metrics["mana_curve"].as_array().unwrap().len(), 301);
+    let casts = report["healer_casts"].as_object().unwrap();
+    assert!(
+        casts.get("18562").and_then(|v| v.as_u64()).unwrap_or(0) > 0,
+        "Swiftmend must be used: {report}"
+    );
+    assert!(
+        casts.get("8921").and_then(|v| v.as_u64()).unwrap_or(0) > 0,
+        "Moonfire must be used: {report}"
+    );
+    assert!(
+        casts.get("5176").and_then(|v| v.as_u64()).unwrap_or(0) > 0,
+        "Wrath must be used: {report}"
+    );
     println!("RESTORATION_DRUID_REPORT={report}");
 }
