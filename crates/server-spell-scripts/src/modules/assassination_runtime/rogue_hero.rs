@@ -22,6 +22,7 @@ const MASS_DAMAGE: u32 = 1273061;
 const UNSHAKEABLE_TALENT: u32 = 1248774;
 const UNSHAKEABLE: u32 = 1248775;
 const MUTILATE: u32 = 1329;
+const QUIETUS: u32 = 1273017;
 
 pub(super) fn needs_context(world: &World, caster: Entity, spell: &SpellInfo) -> bool {
     auras::has_aura(world, caster, MARK_TALENT)
@@ -180,6 +181,14 @@ fn apply_mark(world: &mut World, ctx: &EffectCtx<'_>, target: Entity, stacks: u8
         .clone();
     mark.cast_aura_stacks = Some(stacks);
     spell_cast::launch_triggered_spell(world, ctx.caster, &mark, Some(target), ctx.depth + 1);
+    // sc_rogue.cpp8804–8815: each new mark may immediately spend one stack.
+    if auras::has_aura(world, ctx.caster, QUIETUS) {
+        let chance = native_amount(world, ctx.caster, QUIETUS, 0)
+            / native_amount(world, ctx.caster, QUIETUS, 1);
+        if combat::random::random::<f32>() < chance {
+            spend_mark(world, ctx, target);
+        }
+    }
 }
 
 /// SimC76f8118 sc_rogue.cpp1919–1921: delay each foreground use so

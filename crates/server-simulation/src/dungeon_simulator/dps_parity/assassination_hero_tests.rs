@@ -399,3 +399,34 @@ fn subtlety_hero_unshakeable_drive_earned_and_delayed_use() {
         "one completed Shadowstrike consumes exactly one use"
     );
 }
+
+#[test]
+#[ignore = "requires prepared259 native profile and world data"]
+fn assassination_hero_quietus_spends_new_mark_with_native_chance() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_measurement(259, 1).unwrap();
+    engage(&mut run);
+    let started_at = run.app.world().resource::<Time>().elapsed();
+    install_fixture_lifetimes(&mut run, started_at);
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, 1273017));
+    let mark_stacks = |run: &Run| {
+        run.app.world().get::<crate::auras::ActiveAuras>(run.targets[0]).and_then(|auras| {
+            auras.iter().find(|a| a.spell_id == 457129 && a.caster == run.actor).map(|a| a.stacks)
+        })
+    };
+    let mut spent = 0;
+    let mut retained = 0;
+    for _ in 0..6000 {
+        let before = mark_stacks(&run);
+        drive_player(&mut run).unwrap();
+        run.app.update();
+        if before.is_none() {
+            match mark_stacks(&run) {
+                Some(2) => spent += 1,
+                Some(3) => retained += 1,
+                _ => {}
+            }
+        }
+    }
+    assert!(spent > 0 && retained > 0, "new marks must both lose and retain a stack: spent={spent}, retained={retained}");
+}
