@@ -233,6 +233,11 @@ struct BrewmasterFacts<'a> {
 impl Facts for BrewmasterFacts<'_> {
     fn value(&self, name: &str) -> Result<f64, String> {
         match name {
+            "health.max" => self
+                .world
+                .get::<shared::components::Health>(self.actor)
+                .map(|health| f64::from(health.max))
+                .ok_or_else(|| "Brewmaster health unavailable".into()),
             // SimC player.cpp12317–12335 and sc_monk.cpp5774–5776.
             "buff.aspect_of_harmony_accumulator.value" => Ok(f64::from(
                 self.world
@@ -257,6 +262,7 @@ impl ActionFacts for BrewmasterFacts<'_> {
             || name.starts_with("equipped.")
             || name.starts_with("apex.")
             || name == "buff.aspect_of_harmony_accumulator.value"
+            || name == "health.max"
         {
             self.value(name)
         } else {
@@ -367,6 +373,10 @@ mod tests {
             server::simc_apl::Facts::value(&facts, "buff.aspect_of_harmony_accumulator.value")
                 .unwrap(),
             f64::from(healed_bank)
+        );
+        assert_eq!(
+            server::simc_apl::Facts::value(&facts, "health.max").unwrap(),
+            f64::from(world.get::<shared::components::Health>(actor).unwrap().max)
         );
         for _ in 0..40 {
             run.app.update();
