@@ -152,7 +152,7 @@ pub(super) fn roll_raging_blow_reset(
     {
         chance += script_effect_value(world, caster, WRATH_AND_FURY, 0);
     }
-    if crate::random::random::<f32>() * 100.0 >= chance {
+    if rand::random::<f32>() * 100.0 >= chance {
         return;
     }
     let category = world
