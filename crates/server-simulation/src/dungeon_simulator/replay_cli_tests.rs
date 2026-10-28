@@ -59,6 +59,16 @@ fn native_replay_cli_driver() {
 }
 
 #[test]
+fn all_replay_cli_summarizes_parallel_results() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let status = std::process::Command::new("python3")
+        .arg(root.join("scripts/tests/test_healer_tank_all.py"))
+        .status()
+        .unwrap();
+    assert!(status.success());
+}
+
+#[test]
 #[ignore = "runs the native tank replay through the CLI"]
 fn cli_prints_a_real_protection_tank_report() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
