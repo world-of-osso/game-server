@@ -48,6 +48,25 @@ fn protection_paladin_uses_parity_player_profile_and_equipment() {
         .collect();
     actual.sort_unstable();
     assert_eq!(actual, expected);
+    let loadout = run
+        .app
+        .world()
+        .get::<crate::class_progression::TraitLoadout>(run.actor)
+        .unwrap();
+    assert!(
+        loadout
+            .active_talent_spells()
+            .any(|spell| spell.spell_id == 433568)
+    );
+    let modifiers = run
+        .app
+        .world()
+        .get::<crate::stats::EquippedItemModifiers>(run.actor)
+        .unwrap();
+    assert!(
+        modifiers.temporary_enchants.is_empty(),
+        "selected Rite must suppress the conditional oil"
+    );
     assert_eq!(run.targets.len(), 1);
 }
 
