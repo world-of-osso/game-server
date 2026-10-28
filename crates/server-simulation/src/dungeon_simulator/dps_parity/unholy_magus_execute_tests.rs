@@ -47,19 +47,22 @@ fn execute_factor(
     spell: u32,
     periodic: bool,
     health_percent: f32,
+    cast: bool,
 ) -> f64 {
     let target = run.targets[0];
     let mut health = run.app.world_mut().get_mut::<Health>(target).unwrap();
     health.current = health.max * health_percent / 100.0;
     run.app
         .insert_resource(FactorCapture::new(pet, target, spell, "magus_execute", 1));
-    assert!(crate::spell_cast::try_cast_triggered(
-        run.app.world_mut(),
-        pet,
-        spell,
-        Some(target),
-        1
-    ));
+    if cast {
+        assert!(crate::spell_cast::try_cast_triggered(
+            run.app.world_mut(),
+            pet,
+            spell,
+            Some(target),
+            1
+        ));
+    }
     for _ in 0..160 {
         run.app.update();
         let capture = run.app.world().resource::<FactorCapture>().export();
@@ -108,8 +111,9 @@ fn unholy_magus_four_piece_uses_live_target_health_boundary() {
             1296655,
             effect,
         );
-        let above = execute_factor(&mut run, pet, spell, periodic, threshold + 1.0);
-        let at = execute_factor(&mut run, pet, spell, periodic, threshold);
+        let above = execute_factor(&mut run, pet, spell, periodic, threshold + 1.0, true);
+        // Withering Grasp must react to health crossing the boundary without a recast.
+        let at = execute_factor(&mut run, pet, spell, periodic, threshold, !periodic);
         assert!(
             (at / above - (1.0 + f64::from(bonus) / 100.0)).abs() < 0.001,
             "native action {spell} must gain the four-piece bonus at the threshold: {above} -> {at}"
