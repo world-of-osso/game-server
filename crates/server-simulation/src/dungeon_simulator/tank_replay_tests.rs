@@ -1660,6 +1660,17 @@ fn devotion_aura_reduces_incoming_bleed() {
     }
     let actor = run.actor;
     let source = run.targets[0];
+    assert!(
+        run.app
+            .world()
+            .get::<crate::class_progression::KnownSpells>(actor)
+            .unwrap()
+            .contains(465)
+    );
+    assert!(
+        crate::auras::has_aura(run.app.world(), actor, 465),
+        "precombat must cast Devotion Aura"
+    );
     crate::auras::remove_auras(
         run.app.world_mut(),
         actor,
@@ -1686,6 +1697,88 @@ fn devotion_aura_reduces_incoming_bleed() {
         before > 0.0 && after < before * 0.98,
         "Devotion Aura did not reduce bleed: {before} -> {after}"
     );
+}
+
+#[test]
+#[ignore = "uses selected MID2 Protection and real Blessing of Dusk"]
+fn dusk_scales_real_bleed_damage_with_current_health() {
+    use shared::components::Health;
+    let mut run = super::dps_parity::prepare_registered_player(66, 1).unwrap();
+    super::dps_parity::engage(&mut run);
+    let actor = run.actor;
+    let source = run.targets[0];
+    let aura = run
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(actor)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 1241945)
+        .expect("selected Dusk aura");
+    let maximum = aura
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap()
+        .amount;
+    assert!(
+        (maximum - 20.0).abs() < 0.01,
+        "Protection-modified Dusk maximum: {maximum}"
+    );
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        actor,
+        crate::auras::RemoveReason::Consumed,
+        |aura| aura.spell_id == 432607,
+    );
+    for (health_pct, expected) in [(1.0, 1.0), (0.5, 0.9), (0.1, 0.82)] {
+        let max = run.app.world().get::<Health>(actor).unwrap().max;
+        run.app
+            .world_mut()
+            .get_mut::<Health>(actor)
+            .unwrap()
+            .current = max * health_pct;
+        let before = run.app.world().get::<Health>(actor).unwrap().current;
+        crate::spell_cast::effects::replay_simc_dummy_bleed(
+            run.app.world_mut(),
+            source,
+            actor,
+            10_000.0,
+        );
+        let actual = before - run.app.world().get::<Health>(actor).unwrap().current;
+        crate::auras::remove_auras(
+            run.app.world_mut(),
+            actor,
+            crate::auras::RemoveReason::Consumed,
+            |aura| aura.spell_id == 1241945,
+        );
+        run.app
+            .world_mut()
+            .get_mut::<Health>(actor)
+            .unwrap()
+            .current = before;
+        crate::spell_cast::effects::replay_simc_dummy_bleed(
+            run.app.world_mut(),
+            source,
+            actor,
+            10_000.0,
+        );
+        let baseline = before - run.app.world().get::<Health>(actor).unwrap().current;
+        assert!(
+            (actual / baseline - expected).abs() < 0.002,
+            "health {health_pct}: {actual}/{baseline} expected {expected}"
+        );
+        crate::auras::apply_aura(
+            run.app.world_mut(),
+            &crate::auras::AuraApplication {
+                caster: actor,
+                target: actor,
+                spell_id: 1241945,
+                effect_mask: u32::MAX,
+                source: crate::auras::AuraSource::KnownSpell,
+            },
+        );
+    }
 }
 
 #[test]
