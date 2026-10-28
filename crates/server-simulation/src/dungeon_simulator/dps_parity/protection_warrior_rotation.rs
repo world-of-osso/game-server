@@ -832,6 +832,42 @@ mod tests {
         assert!((extended - expiry - 8.0).abs() < 0.001);
     }
     #[test]
+    #[ignore = "requires canonical MID2 Protection profile"]
+    fn protection_deep_wounds_refresh_preserves_pending_tick() {
+        let mut run = super::super::prepare_measurement(73, 1).unwrap();
+        let actor = run.actor;
+        let target = run.targets[0];
+        let ticks = |run: &super::super::Run| {
+            run.app
+                .world()
+                .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+                .0
+                .iter()
+                .filter(|event| {
+                    event.source == Some(actor.to_bits())
+                        && event.target == Some(target.to_bits())
+                        && event.spell_id == Some(262115)
+                        && event.periodic
+                        && event.kind == shared::protocol::CombatLogKind::Damage
+                })
+                .count()
+        };
+        crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 262115, Some(target), 1);
+        for _ in 0..10 {
+            run.app.update();
+        }
+        let before = ticks(&run);
+        crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 262115, Some(target), 1);
+        for _ in 0..160 {
+            run.app.update();
+        }
+        assert_eq!(
+            ticks(&run) - before,
+            7,
+            "refresh must retain the pending tick and add six fresh ticks"
+        );
+    }
+    #[test]
     fn protection_fueled_by_violence_heals_from_selected_bleed_ticks() {
         use shared::protocol::CombatLogKind;
         for bleed in [388539, 262115] {
