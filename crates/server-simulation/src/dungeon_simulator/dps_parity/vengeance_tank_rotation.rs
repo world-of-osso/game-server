@@ -689,6 +689,102 @@ mod tests {
     }
     #[test]
     #[ignore = "requires native Vengeance profile"]
+    fn vengeful_beast_extends_hardcast_metamorphosis() {
+        use super::super::*;
+        fn duration(selected: bool) -> f64 {
+            let (profile, mut traits) = read_reference(581).unwrap();
+            if !selected {
+                traits.retain(|trait_| trait_.entry_id != 112899);
+            }
+            let identity = inputs::read_actor(&profile).unwrap();
+            let mut run = prepare_reference(profile, &traits, 1, identity).unwrap();
+            let actor = run.actor;
+            let target = run.targets[0];
+            engage(&mut run);
+            crate::spell_cast::cast_for_player_with_target(
+                run.app.world_mut(),
+                actor,
+                187827,
+                Some(target),
+            )
+            .unwrap();
+            let now = crate::spell_cast::now(run.app.world());
+            run.app
+                .world()
+                .get::<crate::auras::ActiveAuras>(actor)
+                .unwrap()
+                .iter()
+                .find(|aura| aura.spell_id == 187827)
+                .unwrap()
+                .expires_at
+                .unwrap()
+                - now
+        }
+        let base = duration(false);
+        let extended = duration(true);
+        assert!(
+            (base - 15.0).abs() < 0.05 && (extended - 20.0).abs() < 0.05,
+            "base {base}, selected {extended}"
+        );
+    }
+
+    #[test]
+    #[ignore = "requires native Vengeance profile"]
+    fn fiery_demise_increases_fire_damage_to_branded_target() {
+        use super::super::*;
+        fn meteor(selected: bool) -> i32 {
+            let _seed = crate::random::seed_scope(70_448);
+            let (profile, mut traits) = read_reference(581).unwrap();
+            if !selected {
+                traits.retain(|trait_| trait_.entry_id != 112872);
+            }
+            let identity = inputs::read_actor(&profile).unwrap();
+            let mut run = prepare_reference(profile, &traits, 1, identity).unwrap();
+            let actor = run.actor;
+            let target = run.targets[0];
+            engage(&mut run);
+            crate::spell_cast::cast_for_player_with_target(
+                run.app.world_mut(),
+                actor,
+                204021,
+                Some(target),
+            )
+            .unwrap();
+            for _ in 0..5 {
+                run.app.update();
+            }
+            assert!(crate::auras::has_aura(run.app.world(), target, 207771));
+            let position = crate::spell_cast::targets::position(run.app.world(), target).unwrap();
+            crate::spell_cast::cast_triggered_at_destination(
+                run.app.world_mut(),
+                actor,
+                1256306,
+                position,
+                1,
+            );
+            run.app
+                .world()
+                .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+                .0
+                .iter()
+                .find(|event| {
+                    event.spell_id == Some(1256306)
+                        && event.target == Some(target.to_bits())
+                        && event.kind == shared::protocol::CombatLogKind::Damage
+                })
+                .unwrap()
+                .amount
+        }
+        let without = meteor(false);
+        let with = meteor(true);
+        assert!(
+            (with as f64 / without as f64 - 1.3).abs() < 0.01,
+            "rank 2 Fiery Demise: {without}/{with}"
+        );
+    }
+
+    #[test]
+    #[ignore = "requires native Vengeance profile"]
     fn otherworldly_focus_scales_real_meteor_recipients() {
         use super::super::*;
         fn meteor(selected: bool, count: usize) -> i32 {
@@ -1097,6 +1193,82 @@ mod tests {
                 .iter()
                 .any(|event| event.spell_id == Some(258921)
                     && event.kind == shared::protocol::CombatLogKind::Damage)
+        );
+    }
+
+    #[test]
+    #[ignore = "requires native Vengeance profile"]
+    fn overlapping_spenders_do_not_cancel_scheduled_world_killer() {
+        use super::super::*;
+        let _seed = crate::random::seed_scope(70_448);
+        let (profile, traits) = read_reference(581).unwrap();
+        let identity = inputs::read_actor(&profile).unwrap();
+        let mut run = prepare_reference(profile, &traits, 1, identity).unwrap();
+        let actor = run.actor;
+        let target = run.targets[0];
+        engage(&mut run);
+        crate::spell_cast::cast_for_player_with_target(
+            run.app.world_mut(),
+            actor,
+            263642,
+            Some(target),
+        )
+        .unwrap();
+        for _ in 0..35 {
+            run.app.update();
+        }
+        crate::spell_cast::cast_for_player_with_target(
+            run.app.world_mut(),
+            actor,
+            187827,
+            Some(actor),
+        )
+        .unwrap();
+        for _ in 0..25 {
+            run.app.update();
+        }
+        assert!(crate::auras::has_aura(run.app.world(), actor, 1256302));
+        for _ in 0..5 {
+            assert!(crate::spell_cast::try_cast_triggered(
+                run.app.world_mut(),
+                actor,
+                228478,
+                Some(target),
+                1
+            ));
+            run.app.update();
+        }
+        assert!(
+            !crate::auras::has_aura(run.app.world(), actor, 1256302),
+            "other spenders must exhaust the stacks before the scheduled World Killer"
+        );
+        assert!(
+            !run.app
+                .world()
+                .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+                .0
+                .iter()
+                .any(|event| event.spell_id == Some(1256617)
+                    && event.kind == shared::protocol::CombatLogKind::Damage),
+            "World Killer must still be pending"
+        );
+        for _ in 0..50 {
+            run.app.update();
+        }
+        let events = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0;
+        assert!(
+            events
+                .iter()
+                .filter(|event| event.spell_id == Some(1256617)
+                    && event.kind == shared::protocol::CombatLogKind::Damage
+                    && event.amount > 0)
+                .count()
+                >= 2,
+            "scheduled World Killers must land even when other spenders consumed their stacks"
         );
     }
 
