@@ -95,11 +95,8 @@ fn roll_builder(world: &mut World, caster: Entity) {
     }
     let chance = f64::from(effect(world, VOIDFALL, 2)) / 100.0;
     let coefficient = combat::random::accumulated_proc_constant(chance);
-    let mut attempts = world
-        .entity_mut(caster)
-        .entry::<VoidfallAttempts>()
-        .or_default()
-        .into_mut();
+    let mut entity = world.entity_mut(caster);
+    let mut attempts = entity.entry::<VoidfallAttempts>().or_default().into_mut();
     attempts.0 += 1;
     let success = combat::random::random::<f64>() < coefficient * f64::from(attempts.0);
     if success {
