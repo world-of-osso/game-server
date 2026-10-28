@@ -77,7 +77,17 @@ fn restoration_shaman_healing_stream_summon_applies_native_pulse() {
         events.iter().any(|event| event.spell_id == Some(52042)
             && event.amount > 0
             && event.target == Some(tank.to_bits())),
-        "native pulse must heal the injured tank"
+        "native pulse must heal the injured tank; store={}, totem faction={:?}, tank faction={:?}, events={:?}",
+        world
+            .resource::<crate::spell_info::SpellStore>()
+            .get(52042)
+            .is_some(),
+        world.get::<shared::components::UnitFactionTemplate>(actors[0]),
+        world.get::<shared::components::UnitFactionTemplate>(tank),
+        events
+            .iter()
+            .filter(|event| matches!(event.spell_id, Some(5672 | 52042)))
+            .collect::<Vec<_>>()
     );
     let _ = party;
 }
