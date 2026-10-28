@@ -133,3 +133,70 @@ fn write_verdict_receipt(mode: &str, receipt: &Value) {
     std::fs::write(&path, serde_json::to_vec_pretty(receipt).unwrap()).unwrap();
     eprintln!("RET_FV_FACTORS mode={mode} path={}", path.display());
 }
+
+#[test]
+#[ignore = "requires native 70 player profile; Light Within and Avenging Wrath"]
+fn ret_light_within_applies_native_rank_to_wrath_verdict() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_measurement(70, 1).unwrap();
+    let owner = run.actor;
+    assert!(
+        run.app
+            .world()
+            .get::<shared::components::Player>(owner)
+            .is_some()
+    );
+    super::channel_timing_tests::remove_equipped_proc_drivers(&mut run);
+    engage(&mut run);
+    crate::spell_cast::cast_triggered(run.app.world_mut(), owner, 31884, Some(owner), 1);
+    assert!(crate::auras::has_aura(run.app.world(), owner, 31884));
+    let value = run
+        .app
+        .world()
+        .get::<ActiveAuras>(owner)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 1261111 && aura.caster == owner)
+        .unwrap()
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap()
+        .amount;
+    run.app.world_mut().insert_resource(FactorCapture::new(
+        owner,
+        run.targets[0],
+        383328,
+        "verdict",
+        20,
+    ));
+    crate::spell_cast::cast_triggered(run.app.world_mut(), owner, 383328, Some(run.targets[0]), 1);
+    for _ in 0..10 {
+        run.app.update();
+    }
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        owner,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 1261111,
+    );
+    crate::spell_cast::cast_triggered(run.app.world_mut(), owner, 383328, Some(run.targets[0]), 1);
+    for _ in 0..10 {
+        run.app.update();
+    }
+    let capture = run.app.world().resource::<FactorCapture>().export();
+    let amounts: Vec<_> = capture["events"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|event| event["event"] == "direct_amount" && event["spell_id"] == 383328)
+        .map(|event| event["factors"]["amount"].as_f64().unwrap())
+        .collect();
+    assert_eq!(amounts.len(), 2, "two real Final Verdict impacts");
+    let ratio = amounts[0] / amounts[1];
+    let expected = 1.0 + f64::from(value) / 100.0;
+    assert!(
+        (ratio - expected).abs() < 0.01,
+        "actual={ratio}, native-ranked expected={expected}"
+    );
+}
