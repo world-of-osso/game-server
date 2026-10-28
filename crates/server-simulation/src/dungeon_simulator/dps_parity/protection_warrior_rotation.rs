@@ -704,6 +704,16 @@ mod tests {
             category.charge_type_mask,
         );
         assert_eq!(category.max_charges as i32 + mods.extra_charges, 2);
+        let haste = world
+            .get::<crate::stats::CharacterStats>(run.actor)
+            .unwrap()
+            .haste_pct;
+        assert!(haste > 0.0);
+        assert!(
+            (mods.recovery_mult - 1.0 / (1.0 + haste / 100.0)).abs() < 0.0001,
+            "Shield Block recharge must use native haste: haste={haste}, multiplier={}",
+            mods.recovery_mult
+        );
     }
     #[test]
     #[ignore = "requires canonical MID2 Protection profile"]
