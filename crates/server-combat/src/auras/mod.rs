@@ -86,6 +86,7 @@ pub mod scripts;
 pub mod shapeshift;
 pub mod spell_mods;
 mod spirit_wolf;
+pub mod stagger;
 pub mod stat_mods;
 pub(crate) mod stealth;
 pub mod summon_damage;

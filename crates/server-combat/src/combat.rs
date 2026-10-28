@@ -822,21 +822,29 @@ pub(crate) fn auto_attack_system(world: &mut World) {
         };
         let owner_crit = read_pet_owner_critical_chance(world, attacker);
         let owner_hit_expertise = read_pet_owner_hit_expertise(world, attacker);
+        let stagger = crate::auras::stagger::snapshot(world, target);
         world
             .run_system_cached_with(
                 auto_attack_unit,
-                (attacker, owner_crit, owner_hit_expertise, melee_range),
+                (
+                    attacker,
+                    owner_crit,
+                    owner_hit_expertise,
+                    melee_range,
+                    stagger,
+                ),
             )
             .expect("auto-attack unit system must have its registered resources");
     }
 }
 
 fn auto_attack_unit(
-    In((attacker_entity, owner_crit, owner_hit_expertise, melee_range)): In<(
+    In((attacker_entity, owner_crit, owner_hit_expertise, melee_range, stagger)): In<(
         Entity,
         Option<f32>,
         Option<f32>,
         f32,
+        Option<crate::auras::stagger::Snapshot>,
     )>,
     time: Res<Time>,
     mut params: AutoAttackParams,
@@ -1012,6 +1020,7 @@ fn auto_attack_unit(
             &mut params.units.p1(),
             &SwingContext {
                 melee_range,
+                stagger: stagger.as_ref(),
                 scaling: &params.scaling,
                 summon_modifiers: &params.summon_modifiers,
                 sight: &params.sight,
@@ -1398,6 +1407,7 @@ impl Attacker<'_> {
 /// World data a swing reads besides the two units.
 pub(crate) struct SwingContext<'a, 'w, 's> {
     pub melee_range: f32,
+    stagger: Option<&'a crate::auras::stagger::Snapshot>,
     pub scaling: &'a Query<'w, 's, ScalingItem<'static>>,
     summon_modifiers: &'a crate::auras::summon_damage::SummonDamageModifiers<'w, 's>,
     pub armor_constants: Option<&'a ArmorConstants>,
@@ -2206,6 +2216,15 @@ fn try_swing(
             crate::test_support::healer_intake::record(world, source, target_entity, 1, raw, kind)
         });
     }
+    let (deferred, consume_ox) = context
+        .stagger
+        .map_or((0.0, false), |stagger| stagger.deferred(outcome_damage, 1));
+    if deferred > 0.0 || consume_ox {
+        commands.queue(move |world: &mut World| {
+            crate::auras::stagger::deposit(world, target_entity, deferred, consume_ox);
+        });
+    }
+    let outcome_damage = outcome_damage - deferred;
     let absorption = crate::auras::consume_absorbs(
         avoidance
             .1
@@ -2833,7 +2852,12 @@ pub fn replay_healer_hit(
     } else {
         amount * critical_multiplier
     };
-    let (amount, absorbed) = crate::auras::absorb_damage(world, victim, 1, amount);
+    let (deferred, consume_ox) = crate::auras::stagger::snapshot(world, victim)
+        .map_or((0.0, false), |stagger| stagger.deferred(amount, 1));
+    if deferred > 0.0 || consume_ox {
+        crate::auras::stagger::deposit(world, victim, deferred, consume_ox);
+    }
+    let (amount, absorbed) = crate::auras::absorb_damage(world, victim, 1, amount - deferred);
     let amount = crate::auras::damage_transfer::route(world, attacker, victim, 1, amount);
     let (attacker_scaling, target) = (
         UnitScaling::of(world, attacker),

@@ -470,3 +470,5 @@ mod eversong_diamond_tests;
 mod windwalker_player_tests;
 
 #[cfg(test)] mod brewmaster_shuffle_tests;
+
+#[cfg(test)] mod brewmaster_stagger_tests;

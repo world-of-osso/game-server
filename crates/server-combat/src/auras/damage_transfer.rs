@@ -96,7 +96,13 @@ pub(crate) fn deliver(
     amount: f32,
 ) {
     if amount > 0.0 {
-        let (remaining, absorbed) = super::absorb_damage(world, split.recipient, school, amount);
+        let (deferred, consume_ox) = super::stagger::snapshot(world, split.recipient)
+            .map_or((0.0, false), |stagger| stagger.deferred(amount, school));
+        if deferred > 0.0 || consume_ox {
+            super::stagger::deposit(world, split.recipient, deferred, consume_ox);
+        }
+        let (remaining, absorbed) =
+            super::absorb_damage(world, split.recipient, school, amount - deferred);
         crate::combat::deal_health_damage(
             world,
             attacker,

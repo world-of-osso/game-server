@@ -155,7 +155,11 @@ impl Rotation {
         targets: &[Entity],
         precombat: bool,
     ) -> Result<bool, String> {
-        let prepared = self.read_prepared(world, actor, targets)?;
+        let mut prepared = self.read_prepared(world, actor, targets)?;
+        // SimC sc_monk.cpp3498–3505 requires a ticking Stagger pool.
+        if !precombat && !crate::auras::has_aura(world, actor, 124255) {
+            prepared.suppress_action("purifying_brew");
+        }
         let facts = BrewmasterFacts {
             world,
             actor,

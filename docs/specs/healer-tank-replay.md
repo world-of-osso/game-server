@@ -31,6 +31,7 @@ Replay recorded incoming damage in the native server combat simulation to compar
 - `crates/server-simulation/src/simc_tank_timeline.rs`: SimC dummy raw damage trace test.
 - `crates/server-simulation/src/dungeon_simulator/holy_paladin_replay_tests.rs`: native Holy Paladin replay of recorded incoming damage.
 - `crates/server-simulation/src/dungeon_simulator/tank_replay_tests.rs`: native Protection Paladin replay without a healer.
+- `crates/server-simulation/src/dungeon_simulator/dps_parity/brewmaster_stagger_tests.rs`: Brewmaster incoming damage, Stagger ticks and Purifying Brew.
 - `crates/server-simulation/src/dungeon_simulator/replay_cli_tests.rs`: CLI output from a native tank replay.
 
 ## Known gaps (current cycle)
