@@ -212,8 +212,15 @@ fn assassination_regicide_uses_earned_kingsbane_stacks_and_decays() {
     let started = run.app.world().resource::<Time>().elapsed();
     install_fixture_lifetimes(&mut run, started);
     assert!(crate::auras::has_aura(run.app.world(), run.actor, 1250325));
-    let stacks = |run: &Run, spell| run.app.world().get::<crate::auras::ActiveAuras>(run.actor).unwrap().iter()
-        .find(|a| a.spell_id == spell && a.caster == run.actor).map_or(0, |a| a.stacks);
+    let stacks = |run: &Run, spell| {
+        run.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(run.actor)
+            .unwrap()
+            .iter()
+            .find(|a| a.spell_id == spell && a.caster == run.actor)
+            .map_or(0, |a| a.stacks)
+    };
     let mut previous_ramp = 0;
     for _ in 0..1000 {
         drive_player(&mut run).unwrap();
@@ -221,11 +228,31 @@ fn assassination_regicide_uses_earned_kingsbane_stacks_and_decays() {
         let ramp = stacks(&run, 394095);
         let reward = stacks(&run, 1250331);
         if previous_ramp >= 5 && ramp == 0 {
-            assert_eq!(reward, previous_ramp / 5, "real Kingsbane stacks grant native haste stacks");
-            let haste = run.app.world().get::<crate::stats::CharacterStats>(run.actor).unwrap().haste_pct;
-            for _ in 0..41 { run.app.update(); }
-            assert_eq!(stacks(&run, 1250331), reward - 1, "one native two-second tick consumes one stack");
-            let after = run.app.world().get::<crate::stats::CharacterStats>(run.actor).unwrap().haste_pct;
+            assert_eq!(
+                reward,
+                previous_ramp / 5,
+                "real Kingsbane stacks grant native haste stacks"
+            );
+            let haste = run
+                .app
+                .world()
+                .get::<crate::stats::CharacterStats>(run.actor)
+                .unwrap()
+                .haste_pct;
+            for _ in 0..41 {
+                run.app.update();
+            }
+            assert_eq!(
+                stacks(&run, 1250331),
+                reward - 1,
+                "one native two-second tick consumes one stack"
+            );
+            let after = run
+                .app
+                .world()
+                .get::<crate::stats::CharacterStats>(run.actor)
+                .unwrap()
+                .haste_pct;
             assert!(after < haste, "losing an earned stack must reduce haste");
             return;
         }

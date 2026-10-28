@@ -29,32 +29,52 @@ fn register_bulwark(scripts: &mut AuraScripts) {
 }
 
 fn selected(world: &World, caster: Entity, talent: u32) -> bool {
-    world.get::<ActiveSpec>(caster).is_some_and(|spec| spec.0 == 66)
+    world
+        .get::<ActiveSpec>(caster)
+        .is_some_and(|spec| spec.0 == 66)
         && world.get::<TraitLoadout>(caster).is_some_and(|traits| {
-            traits.active_talent_spells().any(|entry| entry.spell_id == talent)
+            traits
+                .active_talent_spells()
+                .any(|entry| entry.spell_id == talent)
         })
 }
 
 fn roll_vanguard(world: &mut World, caster: Entity, spell: u32) {
     // SimC76f8118 sc_paladin.cpp1518–1521: Judgment rolls 20%.
-    if spell == 275779 && selected(world, caster, 1267203)
-        && combat::random::random::<f32>() < 0.2
+    if spell == 275779 && selected(world, caster, 1267203) && combat::random::random::<f32>() < 0.2
     {
-        combat::auras::apply_aura(world, &AuraApplication {
-            caster, target: caster, spell_id: 1268810, effect_mask: 1, source: AuraSource::Cast,
-        });
+        combat::auras::apply_aura(
+            world,
+            &AuraApplication {
+                caster,
+                target: caster,
+                spell_id: 1268810,
+                effect_mask: 1,
+                source: AuraSource::Cast,
+            },
+        );
     }
 }
 
-fn glory_from_shield(world: &mut World, ctx: &combat::spell_cast::effects::EffectCtx<'_>, target: Entity, _: bool, amount: f32) {
-    if ctx.spell.id != 31935 || ctx.primary_target() != Some(target)
-        || !selected(world, ctx.caster, 1267203) {
+fn glory_from_shield(
+    world: &mut World,
+    ctx: &combat::spell_cast::effects::EffectCtx<'_>,
+    target: Entity,
+    _: bool,
+    amount: f32,
+) {
+    if ctx.spell.id != 31935
+        || ctx.primary_target() != Some(target)
+        || !selected(world, ctx.caster, 1267203)
+    {
         return;
     }
     // SimC76f8118 sc_paladin_protection.cpp248–258: wings at apex 3
     // bypass the Vanguard requirement; otherwise consume its stack.
     let apex = selected(world, ctx.caster, 1267215)
-        && [31884, 389539].iter().any(|id| combat::auras::has_aura(world, ctx.caster, *id));
+        && [31884, 389539]
+            .iter()
+            .any(|id| combat::auras::has_aura(world, ctx.caster, *id));
     if !apex && !combat::auras::has_aura(world, ctx.caster, 1268810) {
         return;
     }
@@ -65,26 +85,55 @@ fn glory_from_shield(world: &mut World, ctx: &combat::spell_cast::effects::Effec
     }
     let percent = combat::spell_cast::scripts::script_effect_value(world, ctx.caster, 1267203, 0);
     combat::spell_cast::queued_triggers::schedule_amount_full_trigger(
-        world, ctx, target, 1269175, 300, amount * percent / 100.0,
+        world,
+        ctx,
+        target,
+        1269175,
+        300,
+        amount * percent / 100.0,
     );
 }
 
 fn glory_on_cast(world: &mut World, caster: Entity, spell: u32, depth: u8) {
-    if spell != 1269175 { return; }
+    if spell != 1269175 {
+        return;
+    }
     // SimC76f8118 sc_paladin_protection.cpp128–137: the child grants power
     // and Valor when the corresponding apex talents are selected.
     if selected(world, caster, 1267211) {
         let amount = combat::spell_cast::scripts::script_effect_value(world, caster, 1267211, 1);
-        let source = world.resource::<SpellStore>().get(1269175).expect("Glory child").clone();
+        let source = world
+            .resource::<SpellStore>()
+            .get(1269175)
+            .expect("Glory child")
+            .clone();
         let ctx = combat::spell_cast::effects::EffectCtx {
-            caster, spell: &source, depth, dest: None, chain_multiplier: 1.0,
+            caster,
+            spell: &source,
+            depth,
+            dest: None,
+            chain_multiplier: 1.0,
         };
-        combat::spell_cast::effects::energize_unit(world, &ctx, caster, PowerType::HolyPower, amount, false);
+        combat::spell_cast::effects::energize_unit(
+            world,
+            &ctx,
+            caster,
+            PowerType::HolyPower,
+            amount,
+            false,
+        );
     }
     if selected(world, caster, 1267215) {
-        combat::auras::apply_aura(world, &AuraApplication {
-            caster, target: caster, spell_id: 1269179, effect_mask: 1, source: AuraSource::Cast,
-        });
+        combat::auras::apply_aura(
+            world,
+            &AuraApplication {
+                caster,
+                target: caster,
+                spell_id: 1269179,
+                effect_mask: 1,
+                source: AuraSource::Cast,
+            },
+        );
     }
 }
 

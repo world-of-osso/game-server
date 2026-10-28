@@ -24,14 +24,20 @@ const IMPLACABLE_HITS: &[u32] = &[1265794, 1265795];
 struct ImplacableTarget(Entity);
 
 pub(crate) fn register(scripts: &mut AuraScripts) {
-    scripts.0.insert(KINGSBANE_RAMP, AuraScript {
-        on_natural_end: Some(grant_regicide),
-        ..Default::default()
-    });
-    scripts.0.insert(REGICIDE_BUFF, AuraScript {
-        on_periodic: Some(decay_regicide),
-        ..Default::default()
-    });
+    scripts.0.insert(
+        KINGSBANE_RAMP,
+        AuraScript {
+            on_natural_end: Some(grant_regicide),
+            ..Default::default()
+        },
+    );
+    scripts.0.insert(
+        REGICIDE_BUFF,
+        AuraScript {
+            on_periodic: Some(decay_regicide),
+            ..Default::default()
+        },
+    );
     scripts.0.insert(
         IMPLACABLE_DRIVER,
         AuraScript {
@@ -108,14 +114,23 @@ pub(super) fn poison_hit(world: &mut World, ctx: &EffectCtx<'_>, target: Entity)
 // Kingsbane stacks grant one native haste stack, lost every native two seconds.
 fn grant_regicide(world: &mut World, caster: Entity, ramp: &AuraInstance) {
     let Some(divisor) = world.get::<auras::ActiveAuras>(caster).and_then(|auras| {
-        auras.iter().find(|a| a.spell_id == REGICIDE_TALENT && a.caster == caster)
+        auras
+            .iter()
+            .find(|a| a.spell_id == REGICIDE_TALENT && a.caster == caster)
             .and_then(|a| a.effects.iter().find(|effect| effect.index == 0))
             .map(|effect| effect.amount as u8)
-    }) else { return };
+    }) else {
+        return;
+    };
     let stacks = ramp.stacks / divisor;
-    if stacks == 0 { return; }
-    let mut buff = world.resource::<SpellStore>().get(REGICIDE_BUFF)
-        .expect("selected Regicide requires its native buff").clone();
+    if stacks == 0 {
+        return;
+    }
+    let mut buff = world
+        .resource::<SpellStore>()
+        .get(REGICIDE_BUFF)
+        .expect("selected Regicide requires its native buff")
+        .clone();
     buff.cast_aura_stacks = Some(stacks);
     spell_cast::launch_triggered_spell(world, caster, &buff, Some(caster), 1);
 }
