@@ -13,6 +13,8 @@ enum Assignment {
         otherwise: Expression,
     },
     Reset,
+    Max(Expression),
+    Min(Expression),
 }
 
 #[derive(Debug)]
@@ -21,6 +23,7 @@ enum Body {
     Variable {
         name: String,
         assignment: Assignment,
+        cycling: bool,
     },
     Call(String),
     Run(String),
@@ -261,8 +264,20 @@ impl Program {
                 continue;
             };
             match &rule.body {
-                Body::Variable { name, assignment } => {
-                    self.assign(name, assignment, &action, selection)?
+                Body::Variable {
+                    name,
+                    assignment,
+                    cycling,
+                } => {
+                    if *cycling && selection.facts.value_for(&action, "active_enemies")? > 1.0 {
+                        for target in selection.facts.target_ids(&action)? {
+                            let mut target_action = action.clone();
+                            target_action.target = Some(target);
+                            self.assign(name, assignment, &target_action, selection)?;
+                        }
+                    } else {
+                        self.assign(name, assignment, &action, selection)?;
+                    }
                 }
                 Body::Call(name) => {
                     let action = self.select_list(name, selection)?;
@@ -316,6 +331,12 @@ impl Program {
                 selected.evaluate(&bound)?
             }
             Assignment::Reset => *self.defaults.get(name).expect("declared variable default"),
+            Assignment::Max(expression) => {
+                selection.variables.values[name].max(expression.evaluate(&bound)?)
+            }
+            Assignment::Min(expression) => {
+                selection.variables.values[name].min(expression.evaluate(&bound)?)
+            }
         };
         let current = selection.variables.values.get_mut(name).ok_or_else(|| {
             format!("unknown APL operand variable.{name}; state must come from this program")
@@ -534,7 +555,9 @@ fn parse_rule(literal: &str, defaults: &mut BTreeMap<String, f64>) -> Result<Rul
         .map(|literal| parse_target_selector(literal))
         .transpose()?;
     let body = match name {
-        "variable" => parse_variable(&action.options, defaults)?,
+        "variable" | "cycling_variable" => {
+            parse_variable(&action.options, defaults, name == "cycling_variable")?
+        }
         "pool_resource" => pooling::parse(&action)?,
         "call_action_list" => {
             if action
@@ -613,6 +636,7 @@ fn parse_cycle_limit(options: &BTreeMap<String, String>) -> Result<Option<usize>
 fn parse_variable(
     options: &BTreeMap<String, String>,
     defaults: &mut BTreeMap<String, f64>,
+    cycling: bool,
 ) -> Result<Body, String> {
     // SimC76f8118 apl_priest.cpp aoe_variables: variables inherit action target_if.
     const OPTIONS: &[&str] = &[
@@ -642,7 +666,11 @@ fn parse_variable(
     // variable.cpp118–133: first declaration owns the default, initially zero.
     defaults.entry(name.clone()).or_insert(default);
     let assignment = parse_assignment(options)?;
-    Ok(Body::Variable { name, assignment })
+    Ok(Body::Variable {
+        name,
+        assignment,
+        cycling,
+    })
 }
 
 fn parse_assignment(options: &BTreeMap<String, String>) -> Result<Assignment, String> {
@@ -655,6 +683,8 @@ fn parse_assignment(options: &BTreeMap<String, String>) -> Result<Assignment, St
             otherwise: option_expression(options, "value_else")?,
         }),
         "reset" => Ok(Assignment::Reset),
+        "max" => Ok(Assignment::Max(option_expression(options, "value")?)),
+        "min" => Ok(Assignment::Min(option_expression(options, "value")?)),
         _ => Err(format!("unsupported APL variable operation {operation}")),
     }
 }
