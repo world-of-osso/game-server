@@ -2,7 +2,7 @@
 use super::combat;
 use bevy::prelude::*;
 use combat::class_progression::TraitLoadout;
-use combat::spell_cast::{effects::EffectCtx, script_registry::SpellScriptHook, summon};
+use combat::spell_cast::{self, effects::EffectCtx, script_registry::SpellScriptHook, summon};
 
 const PUTREFY_GHOUL: u32 = 1277098;
 const PUTREFY_SINGLE: u32 = 1277016;
