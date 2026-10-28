@@ -10,6 +10,43 @@ use bevy::prelude::{Entity, World};
 use shared::components::Health;
 use std::path::Path;
 
+#[test]
+#[ignore = "requires canonical world database and healer-tank profiles"]
+fn reference_healer_remains_alive_during_single_faction_setup() {
+    let mut run = crate::dungeon_simulator::dps_parity::prepare_registered_player(66, 1).unwrap();
+    let tank = run.actor;
+    crate::spell_cast::cast_triggered(run.app.world_mut(), tank, 1308399, Some(tank), 1);
+    let world = run.app.world_mut();
+    assert!(
+        world
+            .query::<&crate::spell_cast::summon::SummonedCreature>()
+            .iter(world)
+            .any(|summon| summon.owner == tank && summon.spell_id == 1308399),
+        "real tank summon must be present before healer setup"
+    );
+    let healer =
+        crate::dungeon_simulator::dps_parity::spawn_second_reference_player(&mut run, 65).unwrap();
+    let world = run.app.world();
+    assert_eq!(
+        world.get::<shared::components::UnitFactionTemplate>(healer),
+        world.get::<shared::components::UnitFactionTemplate>(tank)
+    );
+    assert!(
+        world.get::<Health>(healer).unwrap().current > 0.0,
+        "a same-party healer must survive all setup updates"
+    );
+    let events = &world
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    assert!(
+        !events
+            .iter()
+            .any(|event| event.target == Some(healer.to_bits())
+                && event.kind == shared::protocol::CombatLogKind::Damage),
+        "a tank summon must not attack the reference healer during setup"
+    );
+}
+
 struct FixturePolicy {
     driver: Driver,
     bindings: Bindings,
