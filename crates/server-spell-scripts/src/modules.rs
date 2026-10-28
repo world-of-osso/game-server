@@ -38,6 +38,8 @@ const fn order_modules<const N: usize>(
 }
 
 pub use devourer_metamorphosis::devourer_base_drain_ps;
+#[cfg(any(test, feature = "test-support"))]
+pub use unholy_permanent_claws::{ghoul_energy, set_ghoul_energy};
 
 register_modules! {
     affliction_absolute_corruption: (2660, "modules/affliction_absolute_corruption.rs"),
@@ -330,6 +332,7 @@ register_modules! {
     unholy_nazgrim: (2540, "modules/unholy_nazgrim.rs"),
     unholy_commander: (2540, "modules/unholy_commander.rs"),
     unholy_outnumber: (2540, "modules/unholy_outnumber.rs"),
+    unholy_devotion: (2544, "modules/unholy_devotion.rs"),
     unholy_army: (2522, "modules/unholy_army.rs"),
     unholy_eruption: (2520, "modules/unholy_eruption.rs"),
     unholy_trollbane: (2538, "modules/unholy_trollbane.rs"),

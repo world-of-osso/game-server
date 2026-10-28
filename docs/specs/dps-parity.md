@@ -25,6 +25,9 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 ### Pet melee haste
 
 - Statless controlled pets and guardians use their owner's live attack haste for melee swings; stat-bearing pets retain their own haste clock (SimC76f8118 `pet.cpp222–228`).
+### Unholy Devotion
+
+- Each Putrefy arrival grants the permanent ghoul an independently expiring Unholy Devotion stack. Each stack increases its melee swing speed and Energy regeneration by the native effects (SimC76f8118 `sc_death_knight.cpp3390–3405,3719–3741`).
 
 ### Unholy Outnumber
 
