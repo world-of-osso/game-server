@@ -20,7 +20,13 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::MidAuraRegistration(register),
     SpellScriptHook::AfterResourceValues(cast_hook),
     SpellScriptHook::TargetContextDamageMultiplier(maximum_fury_damage),
+    SpellScriptHook::ActualCriticalChanceBonus(unbound_flame_crit),
 ];
+
+fn unbound_flame_crit(_: &World, _: Entity, _: Entity, spell: &SpellInfo, _: f32) -> f32 {
+    // SimC76f8118 sc_evoker.cpp7445: Unbound Flame starts with 100% base crit.
+    if spell.id == 1292322 { 100.0 } else { 0.0 }
+}
 
 fn maximum_fury_damage(world: &World, ctx: &EffectCtx<'_>, _target: Entity, periodic: bool) -> f32 {
     let Some(auras) = world.get::<ActiveAuras>(ctx.caster) else {
