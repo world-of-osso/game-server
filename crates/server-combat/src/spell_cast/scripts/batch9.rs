@@ -390,6 +390,16 @@ pub fn spawn_consecration(world: &mut World, caster: Entity, spell: &crate::spel
     spawn_ground_pulses(world, &ctx, &spell.effects[0]);
 }
 
+/// SimC76f8118 sc_paladin.cpp5058–5060: the APL checks the owned active field, not position.
+#[cfg(any(test, feature = "test-support"))]
+pub fn has_active_consecration(world: &mut World, caster: Entity) -> bool {
+    let now = crate::auras::aura_now(world);
+    world
+        .query::<&GroundPulses>()
+        .iter(world)
+        .any(|field| field.caster == caster && field.root == CONSECRATION && field.expires_at > now)
+}
+
 ///53595's condition is positional and owner-specific, not just an aura flag.
 pub(super) fn inside_owned_consecration(world: &mut World, caster: Entity) -> bool {
     let Some(position) = targets::position(world, caster) else {

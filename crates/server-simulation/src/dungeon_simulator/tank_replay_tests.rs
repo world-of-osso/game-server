@@ -2,6 +2,39 @@ use super::healer_intake::Intake;
 use std::path::Path;
 
 #[test]
+#[ignore = "uses the native Consecration ground field"]
+fn protection_apl_consecration_tracks_field_not_caster_position() {
+    let mut h = crate::spell_cast::test_harness::harness(Vec::new(), &[26573, 81297], 2).unwrap();
+    assert!(!crate::spell_cast::scripts::has_active_consecration(
+        h.app.world_mut(),
+        h.caster
+    ));
+    h.cast_and_deliver(26573, None);
+    h.advance(5);
+    assert!(crate::spell_cast::scripts::has_active_consecration(
+        h.app.world_mut(),
+        h.caster
+    ));
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(shared::components::Position {
+            x: 40.0,
+            y: 0.0,
+            z: 0.0,
+        });
+    assert!(crate::spell_cast::scripts::has_active_consecration(
+        h.app.world_mut(),
+        h.caster
+    ));
+    h.advance(340);
+    assert!(!crate::spell_cast::scripts::has_active_consecration(
+        h.app.world_mut(),
+        h.caster
+    ));
+}
+
+#[test]
 #[ignore = "reads the pinned MID2 Protection profile"]
 fn protection_apl_selects_shield_using_the_real_profile_conditions() {
     use server::simc_apl::{Action, ActionFacts, Facts};

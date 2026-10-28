@@ -115,6 +115,8 @@ pub(super) use script_registry::{
 };
 mod midnight_items;
 mod protection_items;
+#[cfg(any(test, feature = "test-support"))]
+pub use batch9::has_active_consecration;
 pub use batch9::spawn_consecration;
 pub use batch10::launch_guldan_meteor;
 pub(crate) use midnight_items::register as register_midnight_items;
