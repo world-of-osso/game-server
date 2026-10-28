@@ -44,6 +44,8 @@ const UNIT_MISS_CHANCE_PCT: f32 = 5.0;
 const MOD_ENEMY_DODGE: u32 = 251;
 /// TC Unit::AttackerStateUpdate reads native per-hand replacement spells.
 const OVERRIDE_AUTOATTACK_WITH_MELEE_SPELL: u32 = 361;
+// SimC76f8118 data_enums.hh1407: Ascendance supplies the per-hand spell override.
+const OVERRIDE_AUTOATTACK_WITH_SPELL: u32 = 367;
 /// Non-player expertise (`Unit::GetUnitDodgeChance`/`GetUnitParryChance`).
 /// A swing of one hand pushes the other hand's timer to at least this
 /// (`ATTACK_DISPLAY_DELAY`, Unit.h:643; Unit::AttackerStateUpdate, Unit.cpp:2203-2230).
@@ -1060,7 +1062,12 @@ fn read_melee_override(auras: Option<&crate::auras::ActiveAuras>, hand: Hand) ->
     let mut effects = auras?
         .iter()
         .flat_map(|aura| &aura.effects)
-        .filter(|effect| effect.aura_type == OVERRIDE_AUTOATTACK_WITH_MELEE_SPELL);
+        .filter(|effect| {
+            matches!(
+                effect.aura_type,
+                OVERRIDE_AUTOATTACK_WITH_MELEE_SPELL | OVERRIDE_AUTOATTACK_WITH_SPELL
+            )
+        });
     let spell = match hand {
         Hand::Main => effects.next()?.trigger_spell,
         Hand::Off => {
