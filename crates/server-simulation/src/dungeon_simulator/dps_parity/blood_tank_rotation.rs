@@ -272,6 +272,40 @@ impl super::SpecDriver for Rotation {
 mod tests {
     #[test]
     #[ignore = "requires canonical world database and MID2 Blood inputs"]
+    fn vampiric_strike_heals_blood_player_from_native_health_percentage() {
+        use shared::components::Health;
+        use shared::protocol::CombatLogKind;
+        let mut run = super::super::prepare_registered_player(250, 1).unwrap();
+        let actor = run.actor;
+        let target = run.targets[0];
+        super::super::engage(&mut run);
+        let max = run.app.world().get::<Health>(actor).unwrap().max;
+        run.app
+            .world_mut()
+            .get_mut::<Health>(actor)
+            .unwrap()
+            .current = max * 0.5;
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 433895, Some(target), false)
+            .unwrap();
+        for _ in 0..10 {
+            run.app.update();
+        }
+        let heals = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0;
+        assert!(
+            heals.iter().any(|event| event.spell_id == Some(434422)
+                && event.kind == CombatLogKind::Heal
+                && event.amount >= (max * 0.01) as i32
+                && event.overflow < event.amount),
+            "Vampiric Strike must heal from its native percentage"
+        );
+    }
+
+    #[test]
+    #[ignore = "requires canonical world database and MID2 Blood inputs"]
     fn health_defenses_proc_only_below_threshold_and_obey_cooldowns() {
         use shared::components::Health;
         let mut run = super::super::prepare_registered_player(250, 1).unwrap();
