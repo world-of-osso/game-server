@@ -26,11 +26,15 @@ impl Rotation {
         if !matches!(encounter, Encounter::Fixture { .. }) {
             return Err("DUNGEON_TTD_UNAVAILABLE: literal Ret requires a Fixture encounter".into());
         }
-        if !world
+        let follower = world
             .get::<crate::followers::Follower>(actor)
-            .is_some_and(|follower| follower.profile.spec_id == 70)
-        {
-            return Err("literal Ret fixture requires its actual spec70 follower".into());
+            .is_some_and(|follower| follower.profile.spec_id == 70);
+        let player = world.get::<shared::components::Player>(actor).is_some()
+            && world
+                .get::<shared::components::ActiveSpec>(actor)
+                .is_some_and(|spec| spec.0 == 70);
+        if !follower && !player {
+            return Err("literal Ret fixture requires a native spec70 actor".into());
         }
         let mut bindings = bindings();
         let equipment = Equipment::load(world, actor, &mut bindings)?;

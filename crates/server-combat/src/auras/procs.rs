@@ -529,13 +529,22 @@ fn proc_chance(world: &mut World, unit: Entity, id: u32, now: f64) -> f32 {
     else {
         return 0.0;
     };
+    // SimC76f8118 proc_rng.cpp105–114 adds at most 10 seconds per
+    // Guillotine attempt to its bad-luck clock, not the whole idle gap.
+    let accumulated_blp =
+        timers.accumulated_blp + (now - timers.last_attempt_at).min(PPM_MAX_ATTEMPT_GAP);
     let options = spell.aura_options.as_deref();
     let ppm = options
         .and_then(|options| options.procs_per_minute.as_ref())
         .filter(|ppm| ppm.base_proc_rate > 0.0);
     let chance = if let Some(ppm) = ppm {
         let rate = read_haste_modified_ppm(world, unit, ppm);
-        rppm_chance(rate, timers.last_attempt_at, timers.last_success_at, now)
+        let last_success = if spell.id == crate::spell_cast::scripts::GUILLOTINE {
+            now - accumulated_blp
+        } else {
+            timers.last_success_at
+        };
+        rppm_chance(rate, timers.last_attempt_at, last_success, now)
     } else {
         options.map_or(0.0, |options| options.proc_chance as f32)
     };
@@ -544,6 +553,9 @@ fn proc_chance(world: &mut World, unit: Entity, id: u32, now: f64) -> f32 {
         .and_then(|auras| auras.into_inner().get_mut(id))
     {
         aura.proc.last_attempt_at = now;
+        if spell.id == crate::spell_cast::scripts::GUILLOTINE {
+            aura.proc.accumulated_blp = accumulated_blp;
+        }
     }
     spell_mods::modify(world, unit, &spell, SpellModOp::ProcChance, chance)
 }
@@ -705,6 +717,7 @@ fn start_proc_cooldown(world: &mut World, unit: Entity, id: u32, now: f64) -> Op
     let mut auras = world.get_mut::<ActiveAuras>(unit)?;
     let aura = auras.bypass_change_detection().get_mut(id)?;
     aura.proc.last_success_at = now;
+    aura.proc.accumulated_blp = 0.0;
     aura.proc.next_ready_at = now + f64::from(cooldown_ms) / 1000.0;
     Some(aura.clone())
 }

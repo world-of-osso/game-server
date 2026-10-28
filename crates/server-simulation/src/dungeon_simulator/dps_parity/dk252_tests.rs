@@ -918,6 +918,67 @@ fn dk252_army_summons_abomination_with_cloud_and_melee() {
 }
 
 #[test]
+#[ignore = "requires native252 profile/traits and player actor"]
+fn dk252_abomination_cloud_and_melee_inherit_live_owner_crit() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 1).unwrap();
+    engage(&mut run);
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(42650, run.actor, None),
+    )
+    .unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    for _ in 0..400 {
+        run.app
+            .world_mut()
+            .get_mut::<crate::stats::CharacterStats>(run.actor)
+            .unwrap()
+            .crit_pct = 100.0;
+        run.app.update();
+    }
+    let actor = {
+        let world = run.app.world_mut();
+        world
+            .query::<(
+                Entity,
+                &shared::components::Npc,
+                &crate::spell_cast::summon::SummonedCreature,
+            )>()
+            .iter(world)
+            .find_map(|(entity, npc, summon)| {
+                (npc.template_id == 149555
+                    && summon.owner == run.actor
+                    && summon.spell_id == 288853)
+                    .then_some(entity)
+            })
+            .expect("Army must summon its selected Abomination")
+    };
+    assert_eq!(
+        crate::combat::read_pet_owner_critical_chance(run.app.world(), actor),
+        Some(100.0)
+    );
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    for spell in [None, Some(1244347)] {
+        assert!(
+            events
+                .iter()
+                .any(|event| event.source == Some(actor.to_bits())
+                    && event.spell_id == spell
+                    && event.kind == CombatLogKind::Damage
+                    && event.crit
+                    && event.amount > 0),
+            "Abomination {spell:?} must critically hit using its owner's live crit"
+        );
+    }
+}
+
+#[test]
 #[ignore = "requires private native252 profile/traits and player actor"]
 fn dk252_putrefy_impact_raises_native_magus() {
     let _seed = crate::random::seed_scope(70448);
@@ -1636,6 +1697,60 @@ fn dk252_magus_bolt_inherits_owner_melee_power() {
         return;
     }
     panic!("the actual Magus must complete a native Necrotic Bolt");
+}
+
+#[test]
+#[ignore = "requires native252 profile/traits and player actor"]
+fn dk252_death_coil_extends_real_dark_transformation() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_measurement(252, 1).unwrap();
+    engage(&mut run);
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(1233448, run.actor, None),
+    )
+    .unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    let pet = crate::hunter_pet::summoned_pet(run.app.world(), run.actor).unwrap();
+    let expiry = |run: &Run, entity, spell| {
+        let auras = run
+            .app
+            .world()
+            .get::<crate::auras::ActiveAuras>(entity)
+            .expect("entity aura list");
+        let aura = auras
+            .iter()
+            .find(|a| a.caster == run.actor && a.spell_id == spell)
+            .unwrap_or_else(|| {
+                panic!(
+                    "missing aura {spell} on {entity:?}: {:?}",
+                    auras
+                        .iter()
+                        .map(|a| (a.spell_id, a.caster))
+                        .collect::<Vec<_>>()
+                )
+            });
+        aura.expires_at
+            .unwrap_or_else(|| panic!("aura {spell} on {entity:?} has no expiry"))
+    };
+    let owner_before = expiry(&run, run.actor, 1235391);
+    let pet_before = expiry(&run, pet, 1233448);
+    crate::spell_cast::powers::change_power(
+        run.app.world_mut(),
+        run.actor,
+        shared::components::PowerType::RunicPower,
+        1000.0,
+    );
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(47541, run.targets[0], Some(run.targets[0])),
+    )
+    .unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    assert!(expiry(&run, run.actor, 1235391) >= owner_before + 0.99);
+    assert!(expiry(&run, pet, 1233448) >= pet_before + 0.99);
 }
 
 #[test]

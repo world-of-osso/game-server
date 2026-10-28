@@ -1171,7 +1171,9 @@ fn critical_damage_amount(
     let owner_multiplier = crate::auras::summon_damage::ownership(world, caster)
         .and_then(|(owner, _)| world.get::<AuraStatMods>(owner))
         .map_or(1.0, |mods| mods.critical_damage(spell.school_mask()));
-    let multiplier = multiplier * owner_multiplier;
+    let multiplier = multiplier
+        * owner_multiplier
+        * super::script_registry::actual_critical_damage_multiplier(world, caster, spell);
     let base_bonus = if weapon_order {
         amount
     } else {
