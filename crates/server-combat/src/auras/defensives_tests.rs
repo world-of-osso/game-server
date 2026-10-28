@@ -338,6 +338,56 @@ fn shield_remaining(h: &Harness) -> f32 {
         .unwrap_or(0.0)
 }
 
+fn apply_test_absorb(h: &mut Harness, spell_id: u32, amount: f32) {
+    let mut spell = h
+        .app
+        .world()
+        .resource::<SpellStore>()
+        .get(17)
+        .unwrap()
+        .clone();
+    spell.id = spell_id;
+    let effect = &mut spell.effects[0];
+    effect.base_points = amount;
+    effect.bonus_coefficient = 0.0;
+    effect.bonus_coefficient_from_ap = 0.0;
+    crate::auras::apply_aura_with_spell(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: h.caster,
+            target: h.caster,
+            spell_id,
+            effect_mask: 1,
+            source: crate::auras::AuraSource::Cast,
+        },
+        &spell,
+    );
+}
+
+fn remaining_for(h: &Harness, id: u32) -> f32 {
+    h.app
+        .world()
+        .get::<ActiveAuras>(h.caster)
+        .unwrap()
+        .iter()
+        .filter(|aura| aura.spell_id == id)
+        .flat_map(|aura| &aura.effects)
+        .map(|effect| effect.absorb_remaining)
+        .sum()
+}
+
+#[test]
+fn defensives_absorbs_prioritize_soul_barrier_then_smallest() {
+    let mut h = harness(Vec::new(), &[17, FIREBALL], 5).expect("real world.db required");
+    apply_test_absorb(&mut h, 17, 400.0);
+    apply_test_absorb(&mut h, 385787, 80.0);
+    apply_test_absorb(&mut h, 227225, 200.0);
+    assert_eq!(incoming_fire(&mut h, 250.0), 0.0);
+    assert_eq!(remaining_for(&h, 227225), 0.0);
+    assert_eq!(remaining_for(&h, 385787), 30.0);
+    assert_eq!(remaining_for(&h, 17), 400.0);
+}
+
 #[test]
 fn defensives_priest_power_word_shield_absorbs_and_is_consumed() {
     let mut h = cast_defensive(5, 17, &[]);

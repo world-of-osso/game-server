@@ -4,6 +4,8 @@ Players deal Retail damage: auto-attacks swing the equipped weapon with attack p
 
 ## What it must do
 
+- Absorbs consume SimC high-priority Soul Barrier before ordinary shields; ordinary shields consume smallest remaining capacity first, with name as the tie breaker (SimC76f8118 `player.cpp:8155–8268`, `sc_demon_hunter.cpp:10505–10510`). Instant absorb mechanics retain their own handling.
+
 Rake
 - [x] Actual stealth enables native1822 effect3's initial damage bonus and163505 stun without requiring legacy231052/405834 aura grants. Ordinary unstealthed damage stays unchanged. Preserve the existing bleed snapshot path and native coefficients; new persistent multiplier fields are outside this eligibility change. Source: TC a352b1fa `spell_druid.cpp2040–2078`; actual selected-profile precombat buffs precede Prowl and native GCD remains authoritative.
 
