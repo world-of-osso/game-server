@@ -23,7 +23,7 @@ assert open(os.environ['HEALER_TANK_TIMELINE']).read() == trace_spec
 assert os.environ['HEALER_TANK_DURATION'] == '300'
 assert os.environ['HEALER_TANK_SEED'] == '70448'
 if os.environ['HEALER_TANK_MODE'] == 'healer':
-    report = {'spec': spec, 'metrics': {'effective_hps': 10, 'raw_hps': 20, 'overheal_pct': 50, 'mana_min': 30, 'mana_curve': [{'current': 40}], 'first_death_seconds': None, 'tank_health_min': 60, 'spell_healing': {'123': {'effective_hps': 10}}}}
+    report = {'spec': spec, 'metrics': {'effective_hps': 10, 'raw_hps': 20, 'overheal_pct': 50, 'mana_min': 30, 'mana_curve': [{'current': 40}], 'first_death_seconds': None, 'tank_health_min': 60, 'idle_gcd_pct': 12.5, 'spell_healing': {'123': {'effective_hps': 10}}}}
 else:
     healed = os.environ['HEALER_TANK_EXTERNAL_HEALING'] == '1'
     report = {'spec': spec, 'mitigation_pct': 50, 'self_heal_per_second': 10, 'absorb_per_second': 5, 'time_to_death': None if healed else 42, 'active_mitigation_uptime': 0.5, 'largest_spike': 900, 'self_healing_by_spell': {'123': 100}}
@@ -36,7 +36,7 @@ print('HEALER_TANK_REPORT=' + json.dumps(report))
                                      '--output-dir', str(output), '--jobs', '3'],
                                     text=True, capture_output=True, env=os.environ)
             self.assertEqual(result.returncode, 0, result.stderr)
-            self.assertIn('| 105 | 10.00 | 20.00 | 50.00 | 30.00 | 40.00 | N/A | 60.00 |', result.stdout)
+            self.assertIn('| 105 | 10.00 | 20.00 | 50.00 | 30.00 | 40.00 | N/A | 60.00 | 12.50 |', result.stdout)
             self.assertIn('| 581 | 50.00 | 10.00 | 5.00 | 42.00 | 50.00 | 900.00 |', result.stdout)
             self.assertEqual(len(list(output.glob('*.json'))), 19)
             self.assertEqual(json.loads((output / 'healer-105-unhealed.json').read_text())['metrics']['spell_healing']['123']['effective_hps'], 10)
