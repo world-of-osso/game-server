@@ -136,6 +136,7 @@ register_modules! {
     enhancement: (1000, "modules/enhancement.rs"),
     enhancement_armor: (2630, "modules/enhancement_armor.rs"),
     enhancement_availability: (2631, "modules/enhancement_availability.rs"),
+    enhancement_lava_lash: (2632, "modules/enhancement_lava_lash.rs"),
     essence_burst: (140, "modules/essence_burst.rs"),
     evoker_bombardments: (1000, "modules/evoker_bombardments.rs"),
     evoker_burnout: (1000, "modules/evoker_burnout.rs"),

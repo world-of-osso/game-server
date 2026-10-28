@@ -43,6 +43,37 @@ fn enhancement_selected_unruly_winds_always_adds_its_native_third_attack() {
 
 #[test]
 #[ignore = "native263 reference inputs and private world database"]
+fn enhancement_lava_lash_actual_offhand_flametongue_bonus() {
+    use crate::spell_cast::effects::factor_capture::FactorCapture;
+    let mut run = prepare_literal(263, 1).unwrap();
+    let actor = run.actor;
+    enhancement_generation_tests::cast(&mut run, 318038, actor);
+    assert!(crate::auras::has_aura(run.app.world(), actor, 319778));
+    // Remove the separate per-imbued-hand talent so this tests only Lava Lash's own bonus.
+    crate::auras::remove_auras(run.app.world_mut(), actor, crate::auras::RemoveReason::Cancelled, |aura| aura.spell_id == 384355);
+    engage(&mut run);
+    let target = run.targets[0];
+    let measure = |run: &mut Run| {
+        run.app.insert_resource(FactorCapture::new(actor, target, 60103, "lava_lash", 1));
+        let _seed = crate::random::seed_scope(818181);
+        crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 60103, Some(target), 1);
+        for _ in 0..40 {
+            let capture = run.app.world().resource::<FactorCapture>().export();
+            if let Some(event) = capture["events"].as_array().unwrap().iter().find(|event| event["event"] == "result" && event["spell_id"] == 60103) {
+                return event["factors"]["raw_amount"].as_f64().unwrap();
+            }
+            run.app.update();
+        }
+        panic!("real Lava Lash must hit");
+    };
+    let imbued = measure(&mut run);
+    crate::auras::remove_auras(run.app.world_mut(), actor, crate::auras::RemoveReason::Cancelled, |aura| aura.spell_id == 319778);
+    let plain = measure(&mut run);
+    assert!((imbued / plain - 2.0).abs() < 0.001, "actual Lava Lash with/without offhand Flametongue: {imbued}/{plain}");
+}
+
+#[test]
+#[ignore = "native263 reference inputs and private world database"]
 fn enhancement_tempest_requires_its_actual_proc_not_only_the_selected_talent() {
     let mut run = prepare_literal(263, 1).unwrap();
     assert!(!crate::auras::has_aura(run.app.world(), run.actor, 454015));
