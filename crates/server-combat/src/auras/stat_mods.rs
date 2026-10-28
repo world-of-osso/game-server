@@ -360,6 +360,7 @@ pub fn compute(auras: &ActiveAuras, player_controlled_npc: bool) -> (StatModifie
         apply_aura(&mut acc, aura);
     }
     apply_inspired_intellect(&mut acc.stats, auras);
+    apply_blood_queen_mastery(&mut acc.stats, auras);
     let run = if acc.mounted {
         pct(acc.fastest_mounted) * acc.always_mounted.max(pct(acc.mounted_not_stack))
     } else {
@@ -392,6 +393,29 @@ pub fn compute(auras: &ActiveAuras, player_controlled_npc: bool) -> (StatModifie
     acc.stats.haste_pct = compound_haste_pct(acc.stats.haste_pct, acc.haste_not_stack);
     acc.stats.haste_total_pct = super::ret_crusade::haste_total_pct(auras);
     (acc.stats, acc.combat)
+}
+
+// SimC76f8118 sc_death_knight.cpp7403–7431: Thrill supplies 0.1 times
+// its Blood effect per Essence stack; active Gift amplifies that value.
+fn apply_blood_queen_mastery(stats: &mut StatModifiers, auras: &ActiveAuras) {
+    if !auras.iter().any(|aura| aura.spell_id == 77513) {
+        return;
+    }
+    let Some(essence) = auras.iter().find(|aura| aura.spell_id == 433925) else {
+        return;
+    };
+    let Some(thrill) = auras.iter().find(|aura| aura.spell_id == 1265547) else {
+        return;
+    };
+    let Some(value) = thrill.effects.iter().find(|effect| effect.index == 1) else {
+        return;
+    };
+    let gift = auras
+        .iter()
+        .find(|aura| aura.spell_id == 434153)
+        .and_then(|aura| aura.effects.iter().find(|effect| effect.index == 3))
+        .map_or(0.0, |effect| effect.amount / 100.0);
+    stats.mastery_points += value.amount / 10.0 * essence.stack_multiplier() * (1.0 + gift);
 }
 
 fn apply_inspired_intellect(stats: &mut StatModifiers, auras: &ActiveAuras) {
