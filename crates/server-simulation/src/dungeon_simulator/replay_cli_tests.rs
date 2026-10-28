@@ -15,13 +15,13 @@ fn native_replay_cli_driver() {
     let spec = std::env::var("HEALER_TANK_SPEC").expect("HEALER_TANK_SPEC is required");
     let source = std::env::var("HEALER_TANK_SOURCE").expect("HEALER_TANK_SOURCE is required");
     let report = match (source.as_str(), spec.as_str()) {
-        ("simc", "66") => {
+        ("simc", "66" | "73" | "104" | "250" | "268" | "581") => {
             let duration = std::env::var("HEALER_TANK_DURATION")
                 .unwrap()
                 .parse()
                 .unwrap();
             let seed = std::env::var("HEALER_TANK_SEED").unwrap().parse().unwrap();
-            super::tank_replay::replay_simc(Path::new(&path), duration, seed)
+            super::tank_replay::replay_simc(spec.parse().unwrap(), Path::new(&path), duration, seed)
         }
         ("recorded", "65" | "66") => {
             let intake: Intake = serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap();
@@ -74,7 +74,7 @@ fn cli_prints_a_real_protection_tank_report() {
 
 #[test]
 #[ignore = "runs the MID2 SimC dummy trace through the CLI"]
-fn cli_prints_mid2_simc_tank_pressure() {
+fn cli_rejects_unregistered_simc_tank_without_reporting_a_baseline() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
     let trace = std::env::var("HEALER_TANK_SIMC_TRACE").expect("HEALER_TANK_SIMC_TRACE required");
     let output = std::process::Command::new("python3")
@@ -85,20 +85,11 @@ fn cli_prints_mid2_simc_tank_pressure() {
         .arg(std::env::current_exe().unwrap())
         .output()
         .unwrap();
+    assert!(!output.status.success());
+    let error = String::from_utf8(output.stderr).unwrap();
     assert!(
-        output.status.success(),
-        "{}",
-        String::from_utf8_lossy(&output.stderr)
+        error.contains("NATIVE_LITERAL_DRIVER_UNAVAILABLE:66"),
+        "{error}"
     );
-    let text = String::from_utf8(output.stdout).unwrap();
-    assert!(
-        text.contains("SimC tank dummy, MID2 level 90; rotation: not_implemented."),
-        "{text}"
-    );
-    let row = text
-        .lines()
-        .find(|line| line.starts_with("| 66 |"))
-        .expect("tank report row");
-    let cells: Vec<_> = row.split('|').map(str::trim).collect();
-    assert!(cells[2].parse::<f64>().unwrap() > 100_000.0, "{row}");
+    assert!(!String::from_utf8(output.stdout).unwrap().contains("| 66 |"));
 }

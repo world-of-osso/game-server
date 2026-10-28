@@ -35,8 +35,9 @@ Replay recorded incoming damage in the native server combat simulation to compar
 
 ## Known gaps (current cycle)
 
-- [ ] Connect SimC tank-dummy trace input to the healer replay; the CLI accepts SimC traces for spec 66 only.
-- [ ] Drive Protection Paladin with its MID2 SimC APL; the initial max-level SimC replay has no rotation.
+- [ ] Connect SimC tank-dummy trace input to the healer replay.
+- [ ] Register native tank APL adapters. SimC tank replay requires a registered literal parity driver and explicit active-mitigation auras; unregistered tanks fail rather than use the smoke-test policy.
+- [ ] Support replay durations other than 300 seconds with matching literal-APL encounter timing.
 - [ ] Extend coverage beyond the initial two specializations.
 
 ## Out of scope

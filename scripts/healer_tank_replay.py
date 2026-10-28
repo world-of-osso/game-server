@@ -20,7 +20,7 @@ def run_replay(timeline, spec, source, duration, seed, profile_dir, executable):
         'HEALER_TANK_TIMELINE': str(timeline), 'HEALER_TANK_SPEC': str(spec),
         'HEALER_TANK_SOURCE': source, 'HEALER_TANK_DURATION': str(duration),
         'HEALER_TANK_SEED': str(seed), 'DPS_PARITY_WORLD_DB': str(WORLD_DB),
-        'DPS_PARITY_OUTPUT': str(profile_dir),
+        'DPS_PARITY_OUTPUT': str(profile_dir), 'DPS_PARITY_ACTOR': 'player',
     }
     if executable:
         command = [str(executable), DRIVER, '--exact', '--ignored', '--nocapture']
@@ -73,20 +73,23 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--timeline', type=Path, required=True, help='SimC debug trace or recorded intake JSON')
     parser.add_argument('--source', choices=('simc', 'recorded'), default='simc')
-    parser.add_argument('--spec', choices=('65', '66', 'all'), default='66')
+    parser.add_argument('--spec', choices=('65', '66', '73', '104', '250', '268', '581', 'all'), default='66')
     parser.add_argument('--duration', type=int, default=300, help='SimC replay duration in seconds')
     parser.add_argument('--seed', type=int, default=70448)
     parser.add_argument('--profile-dir', type=Path, default=PROFILE_DIR)
     parser.add_argument('--executable', type=Path, help='existing server-simulation test executable')
     args = parser.parse_args()
-    if args.source == 'simc' and args.spec != '66':
-        parser.error('SimC timeline playback currently supports only spec 66')
+    if args.source == 'simc' and args.spec == '65':
+        parser.error('SimC healer playback is not implemented')
+    if args.source == 'recorded' and args.spec not in ('65', '66', 'all'):
+        parser.error('recorded intake playback currently supports specs 65 and 66')
     if args.duration <= 0 or args.seed < 0:
         parser.error('duration must be positive and seed must be nonnegative')
     timeline = args.timeline.resolve(strict=True)
     profile_dir = args.profile_dir.resolve(strict=True)
     executable = args.executable.resolve(strict=True) if args.executable else None
-    for spec in (('65', '66') if args.spec == 'all' else (args.spec,)):
+    all_specs = ('66', '73', '104', '250', '268', '581') if args.source == 'simc' else ('65', '66')
+    for spec in (all_specs if args.spec == 'all' else (args.spec,)):
         report = run_replay(timeline, spec, args.source, args.duration, args.seed, profile_dir, executable)
         if spec == '65':
             print_healer(report)

@@ -151,23 +151,32 @@ fn protection_apl_selects_shield_using_the_real_profile_conditions() {
 }
 
 #[test]
-#[ignore = "requires the MID2 66 profile, canonical world database and SimC tank-dummy trace"]
-fn protection_paladin_replays_simc_pressure_with_mid2_gear() {
+#[ignore = "requires canonical MID2 profile inputs and a SimC tank-dummy trace"]
+fn unregistered_tank_driver_fails_instead_of_using_a_follower() {
     let path = std::env::var("HEALER_TANK_SIMC_TRACE").expect("HEALER_TANK_SIMC_TRACE required");
-    let report = super::tank_replay::replay_simc(Path::new(&path), 300, 70448).unwrap();
-    assert_eq!(report["spec"], 66);
+    let error = super::tank_replay::replay_simc(66, Path::new(&path), 300, 70448).unwrap_err();
+    assert_eq!(error, "NATIVE_LITERAL_DRIVER_UNAVAILABLE:66");
+}
+
+#[test]
+#[ignore = "runs a registered parity actor against SimC dummy pressure"]
+fn registered_parity_driver_runs_during_real_incoming_damage() {
+    let path = std::env::var("HEALER_TANK_SIMC_TRACE").expect("HEALER_TANK_SIMC_TRACE required");
+    let hits =
+        crate::simc_tank_timeline::read_trace(Path::new(&path), "Tank_Dummy_Dungeon").unwrap();
+    let _rng = crate::random::seed_scope(70448);
+    // Feral is an existing player driver used to exercise shared dispatch, not a tank measurement.
+    let run = super::dps_parity::prepare_registered_player(103, 1).unwrap();
+    let report = super::tank_replay::replay_registered_run(run, &hits, 300, &[]).unwrap();
+    assert_eq!(report["spec"], 103);
     assert_eq!(report["level"], 90);
-    assert_eq!(report["reference_tier"], "MID2");
-    assert_eq!(report["timeline"], "simc_tank_dummy");
-    assert_eq!(report["rotation_status"], "not_implemented");
+    assert_eq!(report["rotation_status"], "registered_literal_simc");
     assert!(report["incoming_events"].as_u64().unwrap() > 0, "{report}");
+    assert!(report["damage_taken"].as_f64().unwrap() > 0.0, "{report}");
     assert!(
-        report["raw_damage"].as_f64().unwrap() > 100_000.0,
+        !report["tank_casts"].as_object().unwrap().is_empty(),
         "{report}"
     );
-    assert!(report["damage_taken"].as_f64().unwrap() > 0.0, "{report}");
-    assert!(report["largest_spike"].as_f64().unwrap() > 0.0, "{report}");
-    println!("SIMC_TANK_REPLAY {report}");
 }
 
 #[test]

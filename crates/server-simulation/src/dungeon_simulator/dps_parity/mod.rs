@@ -16,7 +16,7 @@ const ADD_LIFETIME: Duration = Duration::from_secs(30);
 // SimC76f8118 raid_event.cpp2700–2701: equal cooldown/duration adds10ms.
 const ADD_INTERVAL: Duration = Duration::from_millis(30_010);
 
-trait SpecDriver: std::any::Any {
+pub(crate) trait SpecDriver: std::any::Any {
     fn supports_actor(_identity: &crate::followers::simulator::ParityActor) -> bool
     where
         Self: Sized,
@@ -27,6 +27,10 @@ trait SpecDriver: std::any::Any {
     fn drive(&mut self, world: &mut World, actor: Entity, targets: &[Entity])
     -> Result<(), String>;
     fn label(&self) -> &'static str;
+    /// Tank adapters must explicitly identify their native active-mitigation auras.
+    fn tank_active_mitigation_auras(&self) -> Option<&'static [u32]> {
+        None
+    }
     fn report(&self) -> Value {
         Value::Null
     }
@@ -322,6 +326,35 @@ fn prepare_measurement(spec_id: u32, count: usize) -> Result<Run, String> {
     prepare_measurement_with(spec_id, count, |_| {})
 }
 
+/// Prepare only a registered literal player driver; never substitute a follower policy.
+pub(crate) fn prepare_registered_player(spec_id: u32, count: usize) -> Result<Run, String> {
+    let (profile, _) = read_reference(spec_id)?;
+    let identity = inputs::read_actor(&profile)?;
+    if !matches!(
+        identity,
+        crate::followers::simulator::ParityActor::Player { .. }
+    ) {
+        return Err("TANK_REPLAY_REQUIRES_PLAYER_ACTOR".into());
+    }
+    if measurement_driver(spec_id, &identity).is_none() {
+        return Err(format!("NATIVE_LITERAL_DRIVER_UNAVAILABLE:{spec_id}"));
+    }
+    prepare_measurement(spec_id, count)
+}
+
+pub(crate) fn tank_mitigation_auras(run: &Run) -> Result<&'static [u32], String> {
+    run.spec_driver
+        .as_ref()
+        .and_then(|driver| driver.tank_active_mitigation_auras())
+        .filter(|auras| !auras.is_empty())
+        .ok_or_else(|| {
+            format!(
+                "NATIVE_TANK_MITIGATION_AURAS_UNAVAILABLE:{}",
+                run.profile.spec_id
+            )
+        })
+}
+
 /// `before_prepare` runs after consumables, before the driver's pre-pull plan.
 fn prepare_measurement_with(
     spec_id: u32,
@@ -457,7 +490,7 @@ fn face_actor_toward_primary(world: &mut World, actor: Entity, primary: Entity) 
         .y = orientation + std::f32::consts::FRAC_PI_2;
 }
 
-fn engage(run: &mut Run) {
+pub(crate) fn engage(run: &mut Run) {
     face_actor_toward_primary(run.app.world_mut(), run.actor, run.targets[0]);
     for &target in &run.targets {
         face_dummy_away_from_actor(run.app.world_mut(), run.actor, target);
@@ -672,7 +705,7 @@ fn advance_combat_observed(
 #[derive(Resource, Default)]
 struct LiteralTickProgress(bool);
 
-fn drive_literal_tick(run: &mut Run) -> Result<(), String> {
+pub(crate) fn drive_literal_tick(run: &mut Run) -> Result<(), String> {
     let world = run.app.world_mut();
     world.init_resource::<LiteralTickProgress>();
     for _ in 0..128 {
