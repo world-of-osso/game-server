@@ -21,6 +21,33 @@ pub(crate) fn read_trace(path: &Path, dummy: &str) -> Result<Vec<Hit>, String> {
     parse_trace(&trace, dummy)
 }
 
+pub(crate) fn read_bloodlust_time(path: &Path, player: &str) -> Result<Option<u64>, String> {
+    let trace = std::fs::read_to_string(path)
+        .map_err(|error| format!("read {}: {error}", path.display()))?;
+    parse_bloodlust_time(&trace, player)
+}
+
+fn parse_bloodlust_time(trace: &str, player: &str) -> Result<Option<u64>, String> {
+    let event = format!("Player '{player}' gains Buff 'bloodlust' (2825)");
+    let mut time = None;
+    for line in trace.lines() {
+        let Some((seconds, rest)) = line.split_once(' ') else {
+            continue;
+        };
+        if !rest.starts_with(&event) {
+            continue;
+        }
+        let seconds: f64 = seconds
+            .parse()
+            .map_err(|error| format!("invalid Bloodlust time: {error}"))?;
+        if !seconds.is_finite() || seconds < 0.0 || time.is_some() {
+            return Err("invalid or repeated SimC Bloodlust event".into());
+        }
+        time = Some((seconds * 1000.0).round() as u64);
+    }
+    Ok(time)
+}
+
 fn parse_trace(trace: &str, dummy: &str) -> Result<Vec<Hit>, String> {
     let source = format!("Enemy '{dummy}' ");
     let mut hits = Vec::new();
@@ -81,6 +108,14 @@ fn parse_trace(trace: &str, dummy: &str) -> Result<Vec<Hit>, String> {
         return Err("SimC tank dummy trace has no ordered damage events".into());
     }
     Ok(hits)
+}
+
+#[test]
+fn reads_bloodlust_only_for_the_named_player() {
+    let trace = "0.000 Player 'tank' gains Buff 'bloodlust' (2825) (stacks=1)\n3.000 Player 'other' gains Buff 'bloodlust' (2825)";
+    assert_eq!(parse_bloodlust_time(trace, "tank").unwrap(), Some(0));
+    assert_eq!(parse_bloodlust_time(trace, "other").unwrap(), Some(3000));
+    assert_eq!(parse_bloodlust_time(trace, "missing").unwrap(), None);
 }
 
 #[test]

@@ -808,6 +808,7 @@ fn protection_paladin_simc_apl_uses_shield_of_the_righteous() {
         "{report}"
     );
     assert_eq!(report["external_healing"], false);
+    assert!(report["bloodlust_start_seconds"].is_null());
     let shield = report["absorbs_by_spell"]["432607"].as_f64().unwrap();
     assert!(
         (shield
@@ -832,6 +833,12 @@ fn protection_simc_dummy_healing_supports_full_comparison() {
         super::tank_replay::replay_simc_with_healing(66, Path::new(&path), 300, 70448, true)
             .unwrap();
     assert_eq!(report["external_healing"], true);
+    assert_eq!(report["bloodlust_start_seconds"], 0.0);
+    let uptime = report["aura_uptime"]["2825"].as_f64().unwrap();
+    assert!(
+        (0.13..0.14).contains(&uptime),
+        "Bloodlust must expire after 40 seconds: {report}"
+    );
     assert_eq!(report["duration_seconds"], 300.0, "{report}");
     assert!(report["time_to_death"].is_null(), "{report}");
     assert!(

@@ -183,6 +183,7 @@ fn cli_selects_simc_dummy_healing() {
     );
     let text = String::from_utf8(output.stdout).unwrap();
     assert!(text.contains("External dummy healing: enabled"), "{text}");
+    assert!(text.contains("SimC Bloodlust start (s): 0.00"), "{text}");
     assert!(text.contains("| 432607 |"), "{text}");
     let row = text
         .lines()

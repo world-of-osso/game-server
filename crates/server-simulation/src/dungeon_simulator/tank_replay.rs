@@ -308,10 +308,28 @@ pub(super) fn replay_simc_with_healing(
         return Err("NATIVE_LITERAL_ENCOUNTER_REQUIRES_300_SECONDS".into());
     }
     let hits = simc_tank_timeline::read_trace(path, "Tank_Dummy_Dungeon")?;
+    let bloodlust_ms = if external_healing {
+        let (profile, _) = super::dps_parity::read_reference(spec_id)?;
+        let name = profile
+            .options
+            .get("name")
+            .and_then(|value| value.as_str())
+            .ok_or("SIMC_PROFILE_NAME_ABSENT")?;
+        simc_tank_timeline::read_bloodlust_time(path, name)?
+    } else {
+        None
+    };
     let _rng = crate::random::seed_scope(seed);
     let run = super::dps_parity::prepare_registered_player(spec_id, 1)?;
     let auras = super::dps_parity::tank_mitigation_auras(&run)?;
-    replay_registered_run_with_healing(run, &hits, duration_seconds, auras, external_healing)
+    replay_registered_run_with_healing(
+        run,
+        &hits,
+        duration_seconds,
+        auras,
+        external_healing,
+        bloodlust_ms,
+    )
 }
 
 pub(super) fn replay_registered_run(
@@ -320,7 +338,7 @@ pub(super) fn replay_registered_run(
     duration_seconds: u32,
     mitigation_auras: &[u32],
 ) -> Result<Value, String> {
-    replay_registered_run_with_healing(run, hits, duration_seconds, mitigation_auras, false)
+    replay_registered_run_with_healing(run, hits, duration_seconds, mitigation_auras, false, None)
 }
 
 fn replay_registered_run_with_healing(
@@ -329,6 +347,7 @@ fn replay_registered_run_with_healing(
     duration_seconds: u32,
     mitigation_auras: &[u32],
     external_healing: bool,
+    bloodlust_ms: Option<u64>,
 ) -> Result<Value, String> {
     use crate::simc_tank_timeline::Kind;
     let tank = run.actor;
@@ -377,8 +396,22 @@ fn replay_registered_run_with_healing(
     let mut debuff_seconds: BTreeMap<u32, f64> =
         target_debuffs.iter().map(|&id| (id, 0.0)).collect();
     let mut external_healing_effective = 0.0;
+    let mut bloodlust_applied = false;
     for tick in 1..=duration_seconds * 20 {
         elapsed = f64::from(tick) * TICK_SECONDS;
+        if !bloodlust_applied && bloodlust_ms.is_some_and(|time| time <= u64::from(tick - 1) * 50) {
+            crate::auras::apply_aura(
+                run.app.world_mut(),
+                &crate::auras::AuraApplication {
+                    caster: tank,
+                    target: tank,
+                    spell_id: 2825,
+                    effect_mask: u32::MAX,
+                    source: crate::auras::AuraSource::Cast,
+                },
+            );
+            bloodlust_applied = true;
+        }
         if external_healing && tick % 100 == 0 && tick < duration_seconds * 20 {
             let mut health = run
                 .app
@@ -596,6 +629,7 @@ fn replay_registered_run_with_healing(
     Ok(
         json!({"spec":spec,"level":level,"reference_tier":"MID2","timeline":"simc_tank_dummy",
         "external_healing":external_healing,"external_healing_effective":external_healing_effective,
+        "bloodlust_start_seconds":bloodlust_ms.filter(|_| bloodlust_applied).map(|ms| ms as f64 / 1000.0),
         "self_healing_by_spell":healing_by_spell,"absorbs_by_spell":absorbs_by_spell,"aura_uptime":aura_uptime,
         "resource_counters":counters,"target_debuff_uptime":target_debuff_uptime,
         "rotation_status":"registered_literal_simc","duration_seconds":elapsed,"incoming_events":next,"tank_casts":casts,
