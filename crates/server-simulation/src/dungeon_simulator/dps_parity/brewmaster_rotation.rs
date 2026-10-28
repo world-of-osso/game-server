@@ -19,7 +19,8 @@ const ACTIONS: &[(&str, u32, bool)] = &[
     ("purifying_brew", 119582, true),
     ("fortifying_brew", 115203, true),
     ("chi_burst", 123986, false),
-    ("invoke_niuzao", 132578, true),
+    // DB2 132578 summons against the selected enemy, as in SimC sc_monk.cpp.
+    ("invoke_niuzao", 132578, false),
     ("tiger_palm", 100780, false),
     ("exploding_keg", 325153, false),
     ("empty_the_cellar", 1263438, false),
@@ -552,17 +553,19 @@ mod tests {
     #[ignore = "requires canonical world database and SimC tank trace"]
     fn replays_brewmaster_dummy_pressure() {
         let trace = std::env::var("HEALER_TANK_SIMC_TRACE").expect("SimC trace required");
-        let report = super::super::super::tank_replay::replay_simc(
+        let report = super::super::super::tank_replay::replay_simc_with_healing(
             268,
             std::path::Path::new(&trace),
             300,
             70448,
+            true,
         )
         .expect("Brewmaster replay");
         assert_eq!(report["spec"], 268);
         assert_eq!(report["rotation_status"], "registered_literal_simc");
         assert!(report["raw_damage"].as_f64().unwrap() > 0.0);
         assert!(report["active_mitigation_uptime"].as_f64().unwrap() > 0.0);
+        assert_eq!(report["tank_casts"]["132578"], 3, "the literal APL must cast Niuzao on its valid native target");
         println!("HEALER_TANK_REPORT={report}");
     }
 }
