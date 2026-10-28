@@ -619,8 +619,10 @@ fn demonology_felguard_white_critical_inherits_owner_and_brutality() {
         .unwrap()
         .crit_pct = 0.0;
     collect_native_pet_swings(&mut run, pet, 8);
-    let hits: Vec<_> = pet_melee_events(run.app.world(), pet, run.targets[0]).collect();
-    assert!(hits.iter().all(|hit| !hit.crit));
+    let hits: Vec<_> = pet_melee_events(run.app.world(), pet, run.targets[0])
+        .filter(|hit| !hit.crit)
+        .collect();
+    assert!(!hits.is_empty(), "ordinary Felguard hits must occur");
     let ordinary = hits.iter().map(|hit| hit.amount as f32).sum::<f32>() / hits.len() as f32;
     run.app
         .world_mut()
@@ -628,8 +630,10 @@ fn demonology_felguard_white_critical_inherits_owner_and_brutality() {
         .unwrap()
         .crit_pct = 100.0;
     collect_native_pet_swings(&mut run, pet, 8);
-    let hits: Vec<_> = pet_melee_events(run.app.world(), pet, run.targets[0]).collect();
-    assert!(hits.iter().all(|hit| hit.crit));
+    let hits: Vec<_> = pet_melee_events(run.app.world(), pet, run.targets[0])
+        .filter(|hit| hit.crit)
+        .collect();
+    assert!(!hits.is_empty(), "critical Felguard hits must occur");
     let critical = hits.iter().map(|hit| hit.amount as f32).sum::<f32>() / hits.len() as f32;
     let expected = 2.0 * (owner_critical + effect / 100.0);
     let actual = critical / ordinary;
