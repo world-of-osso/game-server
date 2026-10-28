@@ -276,3 +276,34 @@ fn fury_enrage_stat_effects_require_their_selected_talents() {
         assert!((1.0 + after.haste_pct / 100.0 - expected_haste).abs() < 0.001);
     }
 }
+
+#[test]
+#[ignore = "requires exact Fury72 native player profile"]
+fn enrage_talent_gate_preserves_non_fury_casters() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_measurement(72, 1).unwrap();
+    let actor = run.actor;
+    run.app
+        .world_mut()
+        .entity_mut(actor)
+        .remove::<shared::components::ActiveSpec>();
+    crate::spell_cast::cast_triggered(run.app.world_mut(), actor, ENRAGE, Some(actor), 1);
+    let aura = run
+        .app
+        .world()
+        .get::<ActiveAuras>(actor)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == ENRAGE)
+        .unwrap();
+    assert!(
+        aura.effects
+            .iter()
+            .any(|effect| effect.index == 4 && effect.amount == 15.0)
+    );
+    assert!(
+        aura.effects
+            .iter()
+            .any(|effect| effect.index == 5 && effect.amount == 3.0)
+    );
+}
