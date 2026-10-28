@@ -65,6 +65,19 @@ fn holy_priest_spells_target_the_tank_and_pay_native_mana() {
             .resource_mut::<ObservedPowerChanges>()
             .0
             .clear();
+        let expected_cost: f32 = {
+            let world = run.app.world();
+            let spell = world
+                .resource::<crate::spell_info::SpellStore>()
+                .get(id)
+                .unwrap();
+            crate::spell_cast::applicable_costs(world, healer, spell)
+                .unwrap()
+                .into_iter()
+                .filter(|(pool, _, _)| *pool == crate::spell_cast::CostPool::Power(PowerType::Mana))
+                .map(|(_, amount, _)| amount)
+                .sum()
+        };
         cast_for_player_with_targets(
             run.app.world_mut(),
             healer,
@@ -81,12 +94,18 @@ fn holy_priest_spells_target_the_tank_and_pay_native_mana() {
         }
         let world = run.app.world();
         let costs = &world.resource::<ObservedPowerChanges>().0;
+        let paid: f32 = costs
+            .iter()
+            .filter(|&&(actor, power, amount)| {
+                actor == healer && power == PowerType::Mana && amount < 0.0
+            })
+            .map(|&(_, _, amount)| -amount)
+            .sum();
         assert!(
-            costs.iter().any(|&(actor, power, amount)| actor == healer
-                && power == PowerType::Mana
-                && amount < 0.0),
-            "spell {id} did not charge mana: {costs:?}"
+            expected_cost > 0.0 && (paid - expected_cost).abs() < 1.0,
+            "spell {id}: paid {paid}, native cost {expected_cost}"
         );
+        println!("HOLY_MANA spell={id} paid={paid} native={expected_cost}");
         if id == 139 {
             assert!(
                 world
