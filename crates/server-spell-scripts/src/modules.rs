@@ -219,6 +219,7 @@ register_modules! {
     midnight_item_damage: (1000, "modules/midnight_item_damage.rs"),
     midnight_stat_items: (1000, "modules/midnight_stat_items.rs"),
     midnight_stormbound: (1000, "modules/midnight_stormbound.rs"),
+    midnight_tendril: (1000, "modules/midnight_tendril.rs"),
     outlaw_ace: (2605, "modules/outlaw_ace.rs"),
     outlaw_bte: (2606, "modules/outlaw_bte.rs"),
     outlaw_coup: (2608, "modules/outlaw_coup.rs"),
