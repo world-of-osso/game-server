@@ -1054,11 +1054,11 @@ mod tests {
             .world()
             .get::<crate::stats::CharacterStats>(actor)
             .unwrap();
-        println!(
-            "VENGEANCE_LEECH rating={} percent={}",
-            stats.ratings.leech, stats.leech_pct
-        );
         assert_eq!(stats.ratings.leech, 55.0, "MID2 leech gear rating");
+        assert!(
+            (stats.leech_pct - 10.79709).abs() < 0.01,
+            "native Soul Rending and rating"
+        );
         run.app
             .world_mut()
             .get_mut::<shared::components::Health>(actor)
@@ -1158,7 +1158,6 @@ mod tests {
             .get::<crate::stats::CharacterStats>(actor)
             .unwrap()
             .leech_pct;
-        println!("VENGEANCE_META_LEECH percent={meta_leech}");
         assert!(
             (meta_leech - 20.79709).abs() < 0.01,
             "Meta must apply Soul Rending's native leech modifier"
