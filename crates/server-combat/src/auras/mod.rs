@@ -1092,8 +1092,18 @@ fn build_instance(
             }),
         proc: ProcTimers {
             next_ready_at: now,
-            last_attempt_at: now - 10.0,
-            last_success_at: now - 120.0,
+            // SimC76f8118 proc_rng.cpp95–98 starts Guillotine's RPPM clock
+            // without a preloaded attempt or bad-luck window.
+            last_attempt_at: if spell.id == 1_291_728 {
+                now
+            } else {
+                now - 10.0
+            },
+            last_success_at: if spell.id == 1_291_728 {
+                now
+            } else {
+                now - 120.0
+            },
         },
     }
 }

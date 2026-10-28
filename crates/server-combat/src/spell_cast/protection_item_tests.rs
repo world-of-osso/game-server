@@ -306,6 +306,25 @@ fn devastate(h: &mut Harness) {
 }
 
 #[test]
+fn protection_producers_item_guillotine_starts_without_preloaded_rppm() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut h = item_fixture(true);
+    h.cast_and_deliver(DEVASTATE, Some(h.npc));
+    assert!(
+        h.inbox.log.iter().any(|event| {
+            event.spell_id == Some(DEVASTATE) && event.kind == CombatLogKind::Damage
+        }),
+        "the first real attack must land"
+    );
+    assert!(
+        !h.inbox.log.iter().any(|event| {
+            event.spell_id == Some(GUILLOTINE_DAMAGE) && event.kind == CombatLogKind::Damage
+        }),
+        "the equipped item's first attack must not receive a preloaded RPPM proc"
+    );
+}
+
+#[test]
 fn protection_producers_item_equipped_guillotine_emits_base_not_catalog_perfected_variant() {
     let mut h = item_fixture(true);
     let aura = h
