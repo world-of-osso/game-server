@@ -210,7 +210,21 @@ fn grand_crusader_resets_shield_after_each_avoidance_kind() {
         crate::spell_cast::creature_cast(run.app.world_mut(), actor, 31935, Some(source), false)
             .unwrap();
         let mut observed = false;
-        for _ in 0..10 {
+        for _ in 0..40 {
+            if remaining(&run) < 100 {
+                crate::spell_cast::creature_cast(
+                    run.app.world_mut(),
+                    actor,
+                    31935,
+                    Some(source),
+                    false,
+                )
+                .unwrap();
+                for _ in 0..40 {
+                    run.app.update();
+                }
+            }
+            let before = remaining(&run);
             crate::combat::replay_healer_hit(
                 run.app.world_mut(),
                 source,
@@ -219,7 +233,7 @@ fn grand_crusader_resets_shield_after_each_avoidance_kind() {
             )
             .unwrap();
             run.app.update();
-            if remaining(&run) == 0 {
+            if before > 100 && remaining(&run) == 0 {
                 observed = true;
                 break;
             }
