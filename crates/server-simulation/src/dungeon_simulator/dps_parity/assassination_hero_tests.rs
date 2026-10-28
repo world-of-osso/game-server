@@ -399,3 +399,31 @@ fn subtlety_hero_unshakeable_drive_earned_and_delayed_use() {
         "one completed Shadowstrike consumes exactly one use"
     );
 }
+
+#[test]
+#[ignore = "requires prepared259 native profile and world data"]
+fn assassination_hero_quietus_spends_new_mark_with_native_chance() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_measurement(259, 1).unwrap();
+    engage(&mut run);
+    let actor = run.actor;
+    let target = run.targets[0];
+    assert!(crate::auras::has_aura(run.app.world(), actor, 1273017));
+    let mut spent = 0;
+    let mut retained = 0;
+    for _ in 0..40 {
+        crate::auras::remove_auras(run.app.world_mut(), target, crate::auras::RemoveReason::Consumed, |a| a.spell_id == 457129 && a.caster == actor);
+        let events_before = run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0.len();
+        assert!(crate::spell_cast::try_cast_triggered(run.app.world_mut(), actor, 703, Some(target), 0));
+        let stacks = run.app.world().get::<crate::auras::ActiveAuras>(target).unwrap().iter()
+            .find(|a| a.spell_id == 457129 && a.caster == actor).unwrap().stacks;
+        let hits = run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0[events_before..].iter()
+            .filter(|e| e.spell_id == Some(457157) && e.kind == CombatLogKind::Damage).count();
+        match stacks {
+            2 => { spent += 1; assert_eq!(hits, 1); }
+            3 => { retained += 1; assert_eq!(hits, 0); }
+            _ => panic!("unexpected new mark stack count {stacks}"),
+        }
+    }
+    assert!(spent > 0 && retained > 0, "native chance must both spend and retain marks");
+}

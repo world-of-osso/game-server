@@ -29,6 +29,8 @@ Assassination259 combat and the shared Rogue attack-speed and Vanish paths follo
 
 ### Deathstalker
 
+- [x] Selected Quietus Celeris may immediately spend one stack of each newly established Deathstalker's Mark, at the native effect0/effect1 probability. Source: `sc_rogue.cpp8804–8815`.
+
 - [x] Spending an owned Deathstalker's Mark grants selected Unshakeable Drive 1248775. Stacks count uses, not damage magnitude; affected foreground attacks consume one after 201 ms, including Mutilate. Source: `sc_rogue.cpp1919–1921,8754–8759`.
 
 - [x] Native Garrote establishes one owned457129 mark using selected457052 effect0 stacks. Transfer it off the previous target without refreshing the same target's existing mark. Finishers meeting effect1's native CP threshold consume one stack and deal457157 damage. Source: `sc_rogue.cpp4599,8732–8817`.
