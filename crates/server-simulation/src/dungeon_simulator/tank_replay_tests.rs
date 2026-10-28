@@ -1200,6 +1200,83 @@ fn vanguard_shield_triggers_delayed_glory_and_power() {
 }
 
 #[test]
+#[ignore = "uses selected MID2 Protection player and real Shield of the Righteous"]
+fn valor_empowers_one_shield_and_blazes_secondary_targets() {
+    use crate::auras::{AuraApplication, AuraSource};
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::protocol::CombatLogKind;
+
+    fn shield(valor: bool) -> (i32, bool, Vec<u64>, u64) {
+        let _seed = crate::random::seed_scope(70448);
+        let mut run = super::dps_parity::prepare_registered_player(66, 2).unwrap();
+        super::dps_parity::engage(&mut run);
+        for _ in 0..40 {
+            run.app.update();
+        }
+        let actor = run.actor;
+        let target = run.targets[0];
+        if valor {
+            crate::auras::apply_aura(
+                run.app.world_mut(),
+                &AuraApplication {
+                    caster: actor,
+                    target: actor,
+                    spell_id: 1269179,
+                    effect_mask: 1,
+                    source: AuraSource::Cast,
+                },
+            );
+        }
+        let _hit_seed = crate::random::seed_scope(454545);
+        assert!(crate::spell_cast::try_cast_triggered(
+            run.app.world_mut(),
+            actor,
+            53600,
+            Some(target),
+            0
+        ));
+        for _ in 0..10 {
+            run.app.update();
+        }
+        let events = &run.app.world().resource::<ObservedCombatEvents>().0;
+        let damage = events
+            .iter()
+            .find(|event| {
+                event.source == Some(actor.to_bits())
+                    && event.target == Some(target.to_bits())
+                    && event.spell_id == Some(53600)
+                    && event.kind == CombatLogKind::Damage
+            })
+            .expect("shield hit")
+            .amount;
+        let blaze = events
+            .iter()
+            .filter(|event| event.spell_id == Some(1269224) && event.kind == CombatLogKind::Damage)
+            .filter_map(|event| event.target)
+            .collect();
+        (
+            damage,
+            crate::auras::has_aura(run.app.world(), actor, 1269179),
+            blaze,
+            run.targets[1].to_bits(),
+        )
+    }
+    let (normal, _, no_blaze, _) = shield(false);
+    let (empowered, remains, blaze, secondary) = shield(true);
+    assert!(
+        (empowered as f32 / normal as f32 - 2.0).abs() < 0.01,
+        "{normal} vs {empowered}"
+    );
+    assert!(!remains, "Shield consumes Valor");
+    assert!(no_blaze.is_empty());
+    assert_eq!(
+        blaze,
+        vec![secondary],
+        "Blaze hits the secondary, not the primary"
+    );
+}
+
+#[test]
 #[ignore = "uses selected MID2 Crusader's Judgment and native avoidance procs"]
 fn grand_crusader_advances_shared_judgment_charge() {
     let _seed = crate::random::seed_scope(70448);
