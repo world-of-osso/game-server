@@ -66,6 +66,7 @@ fn cast_execute_damage(
         return;
     };
     child.cast_item_level = ctx.spell.cast_item_level;
+    child.cast_item_inventory_type = ctx.spell.cast_item_inventory_type;
     child.cast_destination = ctx.spell.cast_destination;
     child.cast_damage_multiplier = ctx.spell.cast_damage_multiplier;
     if let Err(failure) =

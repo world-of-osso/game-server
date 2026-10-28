@@ -103,6 +103,14 @@ fn resolve_slot_spells(
                 .cloned()
                 .unwrap_or_else(|| panic!("equipped item {item_id} spell {id} absent"));
             spell.cast_item_level = Some(item_level);
+            spell.cast_item_inventory_type = Some(
+                world
+                    .resource::<crate::item_templates::ItemTemplates>()
+                    .retail
+                    .get(&item_id)
+                    .expect("equipped native item template")
+                    .inventory_type,
+            );
             (slot, spell)
         })
         .collect()

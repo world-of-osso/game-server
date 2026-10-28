@@ -264,6 +264,7 @@ pub struct AuraEffectState {
     periodic_rolling_multiplier: f32,
     periodic_power_charge_mods: Option<Vec<crate::spell_info::ChargedSpellModifier>>,
     periodic_power_item_level: Option<u16>,
+    periodic_power_item_inventory_type: Option<u8>,
     /// Qualified factor captured at application, not reconstructed from damage.
     pub persistent_multiplier: Option<f32>,
     pub misc_values: [i32; 2],
@@ -364,6 +365,8 @@ pub struct AuraInstance {
     pub source: AuraSource,
     /// Item-level snapshot of the applied aura effects.
     pub cast_item_level: Option<u16>,
+    /// Source item inventory type for item-scaled rating effects.
+    pub cast_item_inventory_type: Option<u8>,
     /// Selected action primary retained for periodic hit relationships; None stays unknown.
     cast_primary_target: Option<Entity>,
     /// Learned trait identity/rank at application, for passive relearning.
@@ -962,6 +965,7 @@ fn build_effect(
         periodic_rolling_multiplier: 1.0,
         periodic_power_charge_mods: spell.cast_charge_mods.clone(),
         periodic_power_item_level: spell.cast_item_level,
+        periodic_power_item_inventory_type: spell.cast_item_inventory_type,
         persistent_multiplier: periodic_snapshot::capture_multiplier(world, caster, spell, effect),
         misc_values: effect.misc_values,
         period_ms,
@@ -1085,6 +1089,7 @@ fn build_instance(
         caster,
         source: application.source,
         cast_item_level: spell.cast_item_level,
+        cast_item_inventory_type: spell.cast_item_inventory_type,
         cast_primary_target: spell.cast_primary_target,
         trait_info: world
             .get::<TraitLoadout>(caster)

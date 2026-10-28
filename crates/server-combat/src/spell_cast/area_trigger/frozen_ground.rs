@@ -53,6 +53,7 @@ fn build_trigger(world: &World, ctx: &EffectCtx, now: f64) -> Result<SpellAreaTr
         relation: definition.relation,
         depth: ctx.depth + 1,
         cast_item_level: ctx.spell.cast_item_level,
+        cast_item_inventory_type: ctx.spell.cast_item_inventory_type,
         inside: HashSet::new(),
     })
 }

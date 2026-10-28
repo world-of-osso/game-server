@@ -106,6 +106,7 @@ fn collect_updates(world: &World, unit: Entity, modifier: &PointModifier<'_>) ->
         .flat_map(|aura| {
             let spell = super::lookup_spell(world, aura.spell_id).map(|mut spell| {
                 spell.cast_item_level = aura.cast_item_level;
+                spell.cast_item_inventory_type = aura.cast_item_inventory_type;
                 spell
             });
             aura.effects.iter().filter_map(move |state| {

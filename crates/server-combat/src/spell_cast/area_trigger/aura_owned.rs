@@ -76,7 +76,8 @@ fn build_trigger(aura: &AuraInstance, definition: &FieldDefinition, now: f64) ->
         next_tick_at: now,
         relation: definition.relation,
         depth: 1,
-        cast_item_level: None,
+        cast_item_level: aura.cast_item_level,
+        cast_item_inventory_type: aura.cast_item_inventory_type,
         inside: HashSet::new(),
     }
 }

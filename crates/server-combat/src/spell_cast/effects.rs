@@ -568,14 +568,30 @@ fn item_spell_scaling_value(world: &World, spell: &SpellInfo, effect: &SpellEffe
     };
     let mut value = row[column] * effect.coefficient;
     if effect.scaling_class == -7 {
-        // SimC76f8118 spell_data.cpp424–441: special scale7 applies the native
-        // trinket combat-rating multiplier to its item budget before rounding.
-        value *= tables.rating_multiplier[usize::from(level) - 1][2];
+        // SimC76f8118 spell_data.cpp358–399 chooses the source item's rating
+        // column; an itemless scaling level uses the trinket column.
+        if let Some(column) = spell
+            .cast_item_inventory_type
+            .map_or(Some(2), item_rating_column)
+        {
+            value *= tables.rating_multiplier[usize::from(level) - 1][column];
+        }
     }
     if value > 0.0 && value < 1.0 {
         1.0
     } else {
         value
+    }
+}
+
+/// SimC76f8118 sc_item_data.cpp1824–1857: an invalid inventory type has no multiplier.
+fn item_rating_column(inventory_type: u8) -> Option<usize> {
+    match inventory_type {
+        2 | 11 => Some(3),
+        12 => Some(2),
+        13 | 15 | 17 | 21 | 22 | 25 | 26 => Some(1),
+        1 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 14 | 16 | 20 | 23 => Some(0),
+        _ => None,
     }
 }
 
@@ -2808,6 +2824,7 @@ pub(super) fn trigger_missile_at_destination(
     };
     child.cast_destination = Some(destination.position.to_array());
     child.cast_item_level = ctx.spell.cast_item_level;
+    child.cast_item_inventory_type = ctx.spell.cast_item_inventory_type;
     if let Err(error) = cast_destination_missile_child(world, ctx.caster, &child, ctx.depth + 1) {
         warn!(
             "Spell {} missile child {} failed: {error:?}",
@@ -2841,6 +2858,7 @@ fn trigger_spell(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, targe
     };
     spell.cast_destination = ctx.spell.cast_destination;
     spell.cast_item_level = ctx.spell.cast_item_level;
+    spell.cast_item_inventory_type = ctx.spell.cast_item_inventory_type;
     spell.cast_damage_multiplier =
         super::scripts::frost_flurry_damage_multiplier(world, ctx.caster, ctx.spell, spell.id);
     if let Some(multiplier) =

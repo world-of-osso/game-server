@@ -11,6 +11,7 @@ fn prepare_child(world: &World, ctx: &EffectCtx<'_>, effect: &SpellEffect) -> Op
         child_effect.base_points = value;
     }
     child.cast_item_level = ctx.spell.cast_item_level;
+    child.cast_item_inventory_type = ctx.spell.cast_item_inventory_type;
     child.cast_original_caster = ctx.spell.cast_original_caster;
     Some(child)
 }

@@ -104,6 +104,9 @@ pub struct SpellInfo {
     /// Kept on the per-cast clone through cast bars, missiles, and aura snapshots.
     #[serde(skip)]
     pub cast_item_level: Option<u16>,
+    /// Inventory type of the source item, retained for item rating scaling.
+    #[serde(skip)]
+    pub cast_item_inventory_type: Option<u8>,
     /// Source SPELLVALUE_AURA_STACK on this cast, retained through missile snapshots.
     #[serde(skip)]
     pub cast_aura_stacks: Option<u8>,

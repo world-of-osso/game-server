@@ -7,6 +7,45 @@ use shared::protocol::CombatLogKind;
 const DRIVERS: [u32; 3] = [1307906, 1307923, 1307928];
 
 #[test]
+#[ignore = "real Havoc neck and armor procs use their source item rating columns"]
+fn havoc_venomcursed_uses_actual_equipped_item_slot() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_measurement(577, 1).unwrap();
+    let actor = run.actor;
+    let auras = run.app.world().get::<ActiveAuras>(actor).unwrap();
+    for (id, inventory, amount) in [(1307906, 2, 550.0), (1307928, 1, 378.0)] {
+        let driver = auras
+            .iter()
+            .find(|a| a.spell_id == id && a.caster == actor)
+            .unwrap();
+        assert_eq!(driver.cast_item_level, Some(344));
+        assert_eq!(driver.cast_item_inventory_type, Some(inventory));
+        assert_eq!(
+            driver.effects.iter().find(|e| e.index == 0).unwrap().amount,
+            amount
+        );
+    }
+    engage(&mut run);
+    for _ in 0..TICKS {
+        run.app.update();
+        drive_player(&mut run).unwrap();
+        let auras = run.app.world().get::<ActiveAuras>(actor).unwrap();
+        if let Some(buff) = auras
+            .iter()
+            .find(|a| a.spell_id == 1307910 && a.caster == actor)
+        {
+            assert_eq!(
+                buff.effects.iter().find(|e| e.index == 0).unwrap().amount,
+                550.0
+            );
+            assert_eq!(buff.cast_item_inventory_type, Some(2));
+            return;
+        }
+    }
+    panic!("native Havoc combat did not produce the equipped neck crit proc");
+}
+
+#[test]
 #[ignore = "native269 BIS wears actual crit/mastery/haste Venomcursed bonus lists"]
 fn simc_apl_venomcursed_native_all_three_gear_stat_procs() {
     let _seed = crate::random::seed_scope(70_448);
