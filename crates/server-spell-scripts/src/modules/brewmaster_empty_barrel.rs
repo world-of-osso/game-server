@@ -1,7 +1,11 @@
 //! SimC76f8118 sc_monk.cpp2613–2616: Keg Smash consumes Empty Barrel.
 use super::combat;
 use bevy::prelude::*;
-use combat::auras::{self, AuraApplication, AuraSource, RemoveReason};
+use combat::auras::{
+    self, AuraApplication, AuraInstance, AuraSource, RemoveReason,
+    procs::AuraEvent,
+    scripts::{AuraScript, AuraScripts},
+};
 use combat::class_progression::TraitLoadout;
 use combat::spell_cast::{self, script_registry::SpellScriptHook, scripts::AfterCastHook};
 use combat::spell_info::SpellInfo;
@@ -9,7 +13,27 @@ use combat::spell_info::SpellInfo;
 const EMPTY_BARREL: u32 = 1265307;
 const EMPTY_BARREL_DAMAGE: u32 = 1265133;
 
-pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::AfterResourceValues(cast_hook)];
+pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::EarlyAuraRegistration(register),
+    SpellScriptHook::AfterResourceValues(cast_hook),
+];
+
+fn register(scripts: &mut AuraScripts) {
+    scripts
+        .0
+        .entry(1265129)
+        .or_insert(AuraScript::default())
+        .check_proc = Some(is_brew_cast);
+}
+
+// SimC76f8118 sc_monk.cpp6911–6919: the unmasked native proc only accepts registered Brews.
+fn is_brew_cast(_: &World, aura: &AuraInstance, event: &AuraEvent) -> bool {
+    event.actor == aura.caster
+        && matches!(
+            event.spell_id,
+            Some(115399 | 119582 | 115203 | 120954 | 322507 | 1241059)
+        )
+}
 
 fn cast_hook(spell: u32) -> Option<AfterCastHook> {
     match spell {
