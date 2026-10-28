@@ -15,6 +15,13 @@ struct PackState {
 }
 
 #[derive(Serialize)]
+struct ManaSample {
+    time_seconds: f64,
+    current: f32,
+    max: f32,
+}
+
+#[derive(Serialize)]
 struct PullEnd {
     pack: u32,
     engaged_at: f64,
@@ -37,6 +44,11 @@ pub(super) struct Recorder {
     tank_hot_seconds: BTreeMap<u32, f64>,
     any_hot_seconds: f64,
     party_deaths: u64,
+    first_death_seconds: Option<f64>,
+    started_at: f64,
+    next_mana_sample_at: f64,
+    mana_curve: Vec<ManaSample>,
+    spell_healing: BTreeMap<u32, (u64, u64)>,
     raw_healing: u64,
     overhealing: u64,
     idle_gcd_seconds: f64,
@@ -132,6 +144,16 @@ pub(super) fn start(
                 .is_some_and(|status| status.0)
         }),
     };
+    let started_at = world.resource::<Time<Virtual>>().elapsed_secs_f64();
+    let mana_curve = world
+        .get::<Mana>(healer)
+        .map(|mana| ManaSample {
+            time_seconds: 0.0,
+            current: mana.current,
+            max: mana.max,
+        })
+        .into_iter()
+        .collect();
     Recorder {
         healer,
         tank: party.tank,
@@ -145,6 +167,11 @@ pub(super) fn start(
         tank_hot_seconds: available_periodic_heals(world, healer),
         any_hot_seconds: 0.0,
         party_deaths: 0,
+        first_death_seconds: None,
+        started_at,
+        next_mana_sample_at: started_at + 1.0,
+        mana_curve,
+        spell_healing: BTreeMap::new(),
         raw_healing: 0,
         overhealing: 0,
         idle_gcd_seconds: 0.0,
@@ -200,6 +227,16 @@ impl Recorder {
             }),
         });
         self.observe_combat_coverage(world, dt);
+        if now >= self.next_mana_sample_at {
+            if let Some(mana) = world.get::<Mana>(self.healer) {
+                self.mana_curve.push(ManaSample {
+                    time_seconds: now - self.started_at,
+                    current: mana.current,
+                    max: mana.max,
+                });
+            }
+            self.next_mana_sample_at += 1.0;
+        }
         let events = &world.resource::<ObservedCombatEvents>().0;
         for event in &events[self.event_cursor..] {
             self.observe_event(world, event, now);
@@ -265,13 +302,24 @@ impl Recorder {
                     && target.is_some_and(|unit| self.members.contains(&unit)) =>
             {
                 let raw = event.amount.max(0) as u64;
+                let overheal = (event.overflow.max(0) as u64).min(raw);
                 self.raw_healing += raw;
-                self.overhealing += (event.overflow.max(0) as u64).min(raw);
+                self.overhealing += overheal;
+                let spell = self
+                    .spell_healing
+                    .entry(event.spell_id.unwrap_or(0))
+                    .or_default();
+                spell.0 += raw;
+                spell.1 += raw - overheal;
             }
             CombatLogKind::Damage => self.observe_pack_engagement(source, target, now),
             CombatLogKind::Death => {
                 if let Some(target) = target {
-                    self.party_deaths += u64::from(self.members.contains(&target));
+                    if self.members.contains(&target) {
+                        self.party_deaths += 1;
+                        self.first_death_seconds
+                            .get_or_insert(now - self.started_at);
+                    }
                     self.observe_pack_death(world, target, now);
                 }
             }
@@ -367,6 +415,11 @@ impl Recorder {
             },
             "dungeon_healing": {
                 "party_deaths": self.party_deaths,
+                "first_death_seconds": self.first_death_seconds,
+                "mana_curve": self.mana_curve,
+                "spell_healing": self.spell_healing.iter().map(|(spell, (raw, effective))| {
+                    (spell.to_string(), serde_json::json!({"raw":raw,"effective":effective}))
+                }).collect::<BTreeMap<_, _>>(),
                 "raw_healing": self.raw_healing,
                 "effective_healing": self.raw_healing - self.overhealing,
                 "absorbed_damage": absorbed,

@@ -18,8 +18,30 @@ fn holy_paladin_heals_recorded_native_incoming_damage() {
     assert_eq!(report["status"], "native");
     assert_eq!(report["intake_hits"], intake.hits.len());
     assert!(report["native_damage_receipts"].as_u64().unwrap() > 0);
+    let metrics = &report["metrics"];
+    let effective = metrics["effective_hps"].as_f64().unwrap();
+    let raw = metrics["raw_hps"].as_f64().unwrap();
+    assert!(effective > 0.0 && raw >= effective);
+    let spells = metrics["spell_healing"].as_object().unwrap();
+    let per_spell: f64 = spells
+        .values()
+        .map(|spell| spell["effective_hps"].as_f64().unwrap())
+        .sum();
+    assert!((effective - per_spell).abs() < 1e-6);
+    let mana = metrics["mana_curve"].as_array().unwrap();
+    assert!(mana.len() > 1);
     assert!(
-        report["metrics"]["effective_healing"].as_f64().unwrap() > 0.0,
-        "{report}"
+        mana.windows(2)
+            .all(|pair| pair[0]["time_seconds"].as_f64().unwrap()
+                < pair[1]["time_seconds"].as_f64().unwrap())
     );
+    assert_eq!(
+        metrics["first_death_seconds"].is_null(),
+        metrics["party_deaths"] == 0
+    );
+    println!(
+        "| spec | effective HPS | raw HPS | overheal % | first death (s) |\n| 65 | {effective:.2} | {raw:.2} | {} | {} |",
+        metrics["overheal_pct"], metrics["first_death_seconds"]
+    );
+    println!("spell_healing={spells:?}; mana_samples={}", mana.len());
 }

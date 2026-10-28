@@ -358,6 +358,21 @@ pub(super) fn replay(intake: &Intake, spec: u32) -> Result<Value, String> {
         (recorded_combat > 0.0)
             .then(|| metrics["effective_healing"].as_f64().unwrap() / recorded_combat)
     );
+    metrics["raw_hps"] = json!(
+        (recorded_combat > 0.0).then(|| metrics["raw_healing"].as_f64().unwrap() / recorded_combat)
+    );
+    for spell in metrics["spell_healing"]
+        .as_object_mut()
+        .unwrap()
+        .values_mut()
+    {
+        spell["raw_hps"] = json!(
+            (recorded_combat > 0.0).then(|| spell["raw"].as_f64().unwrap() / recorded_combat)
+        );
+        spell["effective_hps"] = json!(
+            (recorded_combat > 0.0).then(|| spell["effective"].as_f64().unwrap() / recorded_combat)
+        );
+    }
     metrics["effective_throughput_hps"] = json!((recorded_combat > 0.0).then(|| {
         metrics["effective_healing_plus_absorbed_damage"]
             .as_f64()
