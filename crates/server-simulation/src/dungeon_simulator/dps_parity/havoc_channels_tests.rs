@@ -38,6 +38,22 @@ fn cast(run: &mut Run, spell: u32, self_target: bool) {
 
 #[test]
 #[ignore = "requires prepared native spec577 player profile"]
+fn havoc_immolation_aura_ticks_for_native_modified_duration() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(577, 1).unwrap();
+    let actor = run.actor;
+    let known = run.app.world().get::<crate::class_progression::KnownSpells>(actor).unwrap();
+    let spells = known.iter().filter(|spell| *spell != 1272405).collect();
+    run.app.world_mut().entity_mut(actor).insert(crate::class_progression::KnownSpells::fixture(spells));
+    run.app.world_mut().resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>().0.clear();
+    crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 258920, Some(actor), 1);
+    advance(&mut run, 220);
+    let ticks = damage(&run, Some(258922));
+    assert_eq!(ticks.len(), 10, "native 320377 adds its duration to 258920; ten real periodic hits must reach a stationary target: {ticks:?}");
+}
+
+#[test]
+#[ignore = "requires prepared native spec577 player profile"]
 fn havoc_undying_embers_retriggers_expired_immolation() {
     for selected in [false, true] {
         let _seed = crate::random::seed_scope(70_448);
