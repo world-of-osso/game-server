@@ -205,7 +205,9 @@ pub(super) fn consume_drive(world: &mut World, ctx: &EffectCtx<'_>) {
 
 fn spend_drive(world: &mut World, caster: Entity, _target: Entity, _depth: u8) {
     let instance = world.get::<ActiveAuras>(caster).and_then(|auras| {
-        auras.iter().find(|aura| aura.spell_id == UNSHAKEABLE && aura.caster == caster)
+        auras
+            .iter()
+            .find(|aura| aura.spell_id == UNSHAKEABLE && aura.caster == caster)
             .map(|aura| aura.instance_id)
     });
     if let Some(instance) = instance {
@@ -219,7 +221,13 @@ fn spend_mark(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
     };
     auras::spend_stack(world, target, instance);
     if auras::has_aura(world, ctx.caster, UNSHAKEABLE_TALENT) {
-        spell_cast::cast_triggered(world, ctx.caster, UNSHAKEABLE, Some(ctx.caster), ctx.depth + 1);
+        spell_cast::cast_triggered(
+            world,
+            ctx.caster,
+            UNSHAKEABLE,
+            Some(ctx.caster),
+            ctx.depth + 1,
+        );
     }
     spell_cast::cast_triggered(world, ctx.caster, MARK_DAMAGE, Some(target), ctx.depth + 1);
     let assassination = world
