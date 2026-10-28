@@ -2,7 +2,6 @@
 use bevy::prelude::*;
 
 use super::combat;
-use combat::auras;
 use combat::class_progression::{ActiveSpec, TraitLoadout};
 use combat::spell_cast::{self, script_registry::SpellScriptHook};
 use combat::spell_info::{SpellInfo, SpellStore};
@@ -89,11 +88,5 @@ fn roll_power(world: &mut World, caster: Entity) {
         warn!(?caster, "Native Power of the Maelstrom buff refused");
         return;
     }
-    let stacks = world
-        .resource::<SpellStore>()
-        .get(POWER)
-        .and_then(|spell| spell.aura_options.as_ref())
-        .expect("native Power stack limit")
-        .cumulative_aura as u8;
-    auras::set_self_cast_stacks(world, caster, POWER, stacks);
+    // SimC76f8118 buff.cpp1037–1054: each trigger adds one stack, up to the native cap.
 }

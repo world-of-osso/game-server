@@ -236,7 +236,14 @@ fn elemental_fusion_native_builders_earn_power_then_lava_spends_one_and_casts_fr
     }
     let power = own_aura(&run, POWER)
         .expect("ordinary native Bolts must earn Power at the native15% chance with seed70448");
-    assert_eq!(power.stacks, 2, "native191877 grants two eligible uses");
+    assert_eq!(power.stacks, 1, "the first native proc grants one use");
+    for _ in 0..100 {
+        cast(&mut run, BOLT);
+        if own_aura(&run, POWER).is_some_and(|aura| aura.stacks == 2) {
+            break;
+        }
+    }
+    assert_eq!(own_aura(&run, POWER).unwrap().stacks, 2, "a later proc adds the second use");
     let before = cast_events(&run, BLAST);
     assert!(crate::spell_cast::try_cast_triggered(
         run.app.world_mut(),
