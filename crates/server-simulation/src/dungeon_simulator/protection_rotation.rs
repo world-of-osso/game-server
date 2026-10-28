@@ -17,7 +17,8 @@ pub(crate) const ACTIONS: &[(&str, u32)] = &[
     ("divine_toll", 375576),
     ("hammer_of_light", 427453),
     ("shield_of_the_righteous", 53600),
-    ("hammer_of_wrath", 24275),
+    // SimC76f8118 sc_paladin.cpp3410: Protection uses its own native rank.
+    ("hammer_of_wrath", 1241413),
     ("judgment", 20271),
     ("avengers_shield", 31935),
     ("blessed_hammer", 204019),
@@ -27,6 +28,7 @@ pub(crate) const ACTIONS: &[(&str, u32)] = &[
 ];
 const BUFFS: &[(&str, u32)] = &[
     ("avenging_wrath", 31884),
+    ("sentinel", 389539),
     ("hammer_of_light_ready", 427441),
     ("undisputed_ruling", 432629),
     ("divine_guidance", 433106),
@@ -137,6 +139,15 @@ impl ActionFacts for Context<'_> {
         self.native.target_ids(action)
     }
     fn target_ready(&self, action: &Action) -> Result<bool, String> {
+        // SimC76f8118 sc_paladin.cpp1536–1539,1799–1801: Judgment and
+        // Hammer of Wrath are mutually exclusive while wings are active.
+        if matches!(action.name.as_str(), "hammer_of_wrath" | "judgment") {
+            let wings = self.native.value("buff.avenging_wrath.up")? != 0.0
+                || self.native.value("buff.sentinel.up")? != 0.0;
+            if (action.name == "hammer_of_wrath") != wings {
+                return Ok(false);
+            }
+        }
         self.native.target_ready(action)
     }
     fn primary_resource(&self) -> Result<String, String> {
