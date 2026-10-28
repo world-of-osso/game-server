@@ -10,6 +10,20 @@ fn discipline_priest_heals_simc_dummy_party() {
     let raw = metrics["raw_hps"].as_f64().unwrap();
     assert!(report["incoming_events"].as_u64().unwrap() > 100);
     assert!(effective > 0.0 && raw >= effective, "{report}");
+    let casts = report["healer_casts"].as_object().unwrap();
+    let total: u64 = casts.values().map(|value| value.as_u64().unwrap()).sum();
+    assert!(
+        total >= 200,
+        "Discipline policy spent too much time idle: {report}"
+    );
+    assert!(
+        casts
+            .get("585")
+            .and_then(|value| value.as_u64())
+            .unwrap_or(0)
+            > 0,
+        "Discipline did not cast Smite: {report}"
+    );
     assert!(
         metrics["spell_healing"]["94472"]["effective_hps"]
             .as_f64()

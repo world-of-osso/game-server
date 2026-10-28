@@ -27,6 +27,9 @@ const SPELLS: &[(&str, u32, bool)] = &[
     ("renew", 139, false),
     ("flash_heal", 2061, false),
     ("heal", 2060, false),
+    ("halo", 120517, true),
+    ("holy_fire", 14914, false),
+    ("smite", 585, false),
 ];
 struct Holy {
     driver: Driver,
@@ -66,13 +69,13 @@ pub(super) fn prepare(
         ("default", "sanctify,if=party.injured>=3"),
         ("default", "circle,if=party.injured>=3"),
         ("default", "prayer_of_healing,if=party.injured>=3"),
-        ("default", "prayer_of_mending,if=target.health.pct<90"),
+        ("default", "prayer_of_mending"),
+        ("default", "halo"),
         ("default", "renew,if=target.health.pct<85&target.renew_up=0"),
-        ("default", "flash_heal,if=target.health.pct<45"),
-        (
-            "default",
-            "heal,if=target.health.pct<90&party.heal_worthwhile",
-        ),
+        ("default", "flash_heal,if=party.heal_worthwhile"),
+        ("default", "heal,if=party.heal_worthwhile"),
+        ("damage", "holy_fire"),
+        ("damage", "smite"),
     ])?;
     Ok(Box::new(Holy {
         driver: Driver::new(program),
@@ -130,21 +133,22 @@ impl Policy for Holy {
         let injured = living.iter().filter(|(_, ratio)| *ratio < 0.85).count();
         let spell = world
             .resource::<crate::spell_info::SpellStore>()
-            .get(2060)
-            .ok_or("Holy Heal definition absent")?;
+            .get(2061)
+            .ok_or("Holy Flash Heal definition absent")?;
         let effect = spell
             .effects
             .iter()
             .find(|effect| effect.effect == 10)
-            .ok_or("Holy Heal effect absent")?;
+            .ok_or("Holy Flash Heal effect absent")?;
         let expected = crate::spell_cast::effects::scaled_amount(world, healer, spell, effect);
         let health = world
             .get::<Health>(target)
             .ok_or("Holy target health absent")?;
-        let worthwhile = expected > 0.0 && health.max - health.current >= expected * 0.75;
+        let worthwhile = expected > 0.0 && health.max - health.current >= expected * 0.80;
         let targets = [target];
         let actions = SPELLS
             .iter()
+            .filter(|(name, _, _)| !["holy_fire", "smite"].contains(name))
             .map(|&(name, spell, self_target)| NativeAction {
                 name,
                 spell,
@@ -164,6 +168,37 @@ impl Policy for Holy {
                 .select("default", &facts, &prepared, &self.equipment)?
         {
             self.driver.execute(world, healer, action, execution)?;
+            return Ok(());
+        }
+        {
+            let enemy = party.iter().find_map(|&unit| {
+                let spec = world.get::<shared::components::ActiveSpec>(unit)?;
+                (spec.0 == 66)
+                    .then(|| world.get::<crate::networking::CombatTarget>(unit)?.0)
+                    .flatten()
+            });
+            if let Some(enemy) = enemy {
+                let targets = [enemy];
+                let actions = SPELLS
+                    .iter()
+                    .filter(|(name, _, _)| ["holy_fire", "smite"].contains(name))
+                    .map(|&(name, spell, self_target)| NativeAction {
+                        name,
+                        spell,
+                        self_target,
+                        talent: None,
+                    });
+                let prepared =
+                    Prepared::read(world, healer, &targets, &self.equipment, actions, false)?;
+                let facts = NativeFacts::new(world, healer, &self.bindings, self.encounter, 1)
+                    .with_targets(Some(enemy), &targets);
+                if let Some((action, execution)) =
+                    self.driver
+                        .select("damage", &facts, &prepared, &self.equipment)?
+                {
+                    self.driver.execute(world, healer, action, execution)?;
+                }
+            }
         }
         Ok(())
     }
