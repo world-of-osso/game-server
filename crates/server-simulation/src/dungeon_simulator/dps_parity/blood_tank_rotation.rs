@@ -272,6 +272,62 @@ impl super::SpecDriver for Rotation {
 mod tests {
     #[test]
     #[ignore = "requires canonical world database and MID2 Blood inputs"]
+    fn blood_parry_during_rune_weapon_grants_free_vampiric_strike() {
+        use server::test_support::healer_intake::{Hit, HitKind};
+        let mut run = super::super::prepare_registered_player(250, 1).unwrap();
+        let actor = run.actor;
+        let source = run.targets[0];
+        super::super::engage(&mut run);
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 49028, Some(actor), false)
+            .unwrap();
+        for _ in 0..30 {
+            run.app.update();
+        }
+        let hit = Hit {
+            tick: 0,
+            source_guid: 0,
+            pack: 0,
+            target_slot: 0,
+            school: 1,
+            raw: 100.0,
+            level_scaling_factor: 1.0,
+            kind: HitKind::Melee {
+                hand: 0,
+                outcome: "Parry".into(),
+                level_difference: 0,
+                critical_multiplier: 1.0,
+                weapon_speed: 2.0,
+            },
+        };
+        crate::combat::replay_healer_hit(run.app.world_mut(), source, actor, &hit).unwrap();
+        run.app.update();
+        assert!(
+            crate::auras::has_aura(run.app.world(), actor, 1264568),
+            "actual parry earns Dance of Midnight"
+        );
+        crate::spell_cast::powers::change_power(
+            run.app.world_mut(),
+            actor,
+            shared::components::PowerType::Runes,
+            -6.0,
+        );
+        let strike = crate::spell_cast::knowledge::resolve_action(run.app.world(), actor, 206930)
+            .unwrap()
+            .unwrap();
+        assert_eq!(strike, 433895);
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, strike, Some(source), false)
+            .unwrap();
+        for _ in 0..4 {
+            run.app.update();
+        }
+        assert!(
+            !crate::auras::has_aura(run.app.world(), actor, 1264568),
+            "Vampiric Strike consumes the free-cast proc"
+        );
+    }
+
+    #[test]
+    #[ignore = "requires canonical world database and MID2 Blood inputs"]
     fn blood_dancing_rune_weapon_spawns_owned_actor() {
         use shared::components::{Npc, UnitSummonedBy};
         let mut run = super::super::prepare_registered_player(250, 1).unwrap();
@@ -984,6 +1040,70 @@ mod tests {
             (unselected - max * 0.50).abs() < 2.0,
             "without Bloody Reflection the native cap is 50%: {unselected}/{max}"
         );
+    }
+
+    #[test]
+    #[ignore = "requires canonical world database and MID2 Blood inputs"]
+    fn blood_relish_in_blood_heals_and_grants_power_on_free_decay() {
+        let mut run = super::super::prepare_registered_player(250, 1).unwrap();
+        let actor = run.actor;
+        super::super::engage(&mut run);
+        assert!(
+            run.app
+                .world()
+                .get::<crate::class_progression::KnownSpells>(actor)
+                .unwrap()
+                .contains(317610)
+        );
+        for id in [195181, 195181, 195181, 81141] {
+            crate::auras::apply_aura(
+                run.app.world_mut(),
+                &crate::auras::AuraApplication {
+                    caster: actor,
+                    target: actor,
+                    spell_id: id,
+                    effect_mask: u32::MAX,
+                    source: crate::auras::AuraSource::Cast,
+                },
+            );
+        }
+        let mut health = run
+            .app
+            .world_mut()
+            .get_mut::<shared::components::Health>(actor)
+            .unwrap();
+        health.current = health.max * 0.5;
+        let before = health.current;
+        crate::spell_cast::powers::change_power(
+            run.app.world_mut(),
+            actor,
+            shared::components::PowerType::RunicPower,
+            -1000.0,
+        );
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 43265, Some(actor), false)
+            .unwrap();
+        for _ in 0..4 {
+            run.app.update();
+        }
+        let health = run
+            .app
+            .world()
+            .get::<shared::components::Health>(actor)
+            .unwrap()
+            .current;
+        let power = crate::spell_cast::powers::power_value(
+            run.app.world(),
+            actor,
+            shared::components::PowerType::RunicPower,
+        )
+        .unwrap()
+        .0;
+        assert!(health > before, "Relish in Blood must heal");
+        assert_eq!(
+            power, 100.0,
+            "Relish in Blood grants native ten Runic Power"
+        );
+        assert!(!crate::auras::has_aura(run.app.world(), actor, 81141));
     }
 
     #[test]
