@@ -39,6 +39,63 @@ fn unseen_hits(run: &Run) -> usize {
 
 #[test]
 #[ignore = "requires private native260 player profile and traits"]
+fn outlaw_thousand_cuts_white_hits_reset_earned_unseen_cooldown() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(260, 1).unwrap();
+    engage(&mut run);
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, 441346));
+    cast_builder(&mut run);
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, 459485));
+    let first = unseen_hits(&run);
+    run.app
+        .world_mut()
+        .entity_mut(run.actor)
+        .insert(crate::combat::AutoAttack::new(run.targets[0]));
+    for frame in 0..3000 {
+        if frame % 20 == 0 {
+            // Keep the real cooldown aura alive so natural expiration cannot pass this test.
+            crate::spell_cast::cast_triggered(
+                run.app.world_mut(),
+                run.actor,
+                459485,
+                Some(run.actor),
+                1,
+            );
+        }
+        run.app.update();
+        if !crate::auras::has_aura(run.app.world(), run.actor, 459485) {
+            let white_hits = run
+                .app
+                .world()
+                .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+                .0
+                .iter()
+                .filter(|event| {
+                    event.source == Some(run.actor.to_bits())
+                        && event.spell_id.is_none()
+                        && event.kind == CombatLogKind::Damage
+                        && event.amount > 0
+                })
+                .count();
+            assert!(
+                white_hits > 0,
+                "actual melee swings must earn the native RPPM proc"
+            );
+            cast_builder(&mut run);
+            assert!(
+                unseen_hits(&run) > first,
+                "earned Thousand Cuts reset permits the next real Unseen Blade"
+            );
+            return;
+        }
+    }
+    panic!(
+        "selected Thousand Cuts never reset the continuously refreshed cooldown after real melee swings"
+    );
+}
+
+#[test]
+#[ignore = "requires private native260 player profile and traits"]
 fn outlaw_sinister_earns_unseen_blade_and_owned_hero_auras() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(260, 1).unwrap();
