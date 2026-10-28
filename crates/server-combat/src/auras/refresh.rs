@@ -71,8 +71,10 @@ pub(super) fn prepare_application(
     }
     preserve_expiry(world, target, new, spell);
     if rolling {
+        // Both the native rolling flag and scripted rolling use SimC's
+        // next-full-tick duration; their damage budgets stay distinct.
+        carry_rolling_duration(world, target, new);
         let budget = if sourced_rolling {
-            carry_rolling_duration(world, target, new);
             RollingBudget::NativeDuration(fresh_duration_ms)
         } else {
             RollingBudget::PerTick
