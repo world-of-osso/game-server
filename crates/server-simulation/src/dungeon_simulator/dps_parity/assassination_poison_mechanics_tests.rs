@@ -281,6 +281,7 @@ fn assassination_regicide_triggers_when_kingsbane_target_dies() {
             run.app.world_mut().entity_mut(target).remove::<crate::creature_scripts::TrainingDummy>();
             run.app.world_mut().get_mut::<shared::components::Health>(target).unwrap().current = 1.0;
             assert!(crate::spell_cast::try_cast_triggered(run.app.world_mut(), actor, 113780, Some(target), 1));
+            for _ in 0..20 { run.app.update(); }
             assert_eq!(stacks(&run, 394095), 0, "death must end the earned ramp immediately");
             assert_eq!(stacks(&run, 1250331), ramp / 5, "target death grants the earned reward");
             return;
