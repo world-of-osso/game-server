@@ -352,6 +352,48 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "requires canonical world database and MID2 Unholy inputs"]
+    fn unholy_essence_haste_uses_unholy_gift_multiplier() {
+        let mut run = super::super::prepare_registered_player(252, 1).unwrap();
+        let actor = run.actor;
+        for _ in 0..4 {
+            run.app.update();
+        }
+        let before = run
+            .app
+            .world()
+            .get::<crate::stats::CharacterStats>(actor)
+            .unwrap()
+            .haste_pct;
+        for spell_id in [433925, 434153] {
+            crate::auras::apply_aura(
+                run.app.world_mut(),
+                &crate::auras::AuraApplication {
+                    caster: actor,
+                    target: actor,
+                    spell_id,
+                    effect_mask: u32::MAX,
+                    source: crate::auras::AuraSource::Cast,
+                },
+            );
+        }
+        for _ in 0..4 {
+            run.app.update();
+        }
+        let after = run
+            .app
+            .world()
+            .get::<crate::stats::CharacterStats>(actor)
+            .unwrap()
+            .haste_pct;
+        let expected = ((1.0 + before / 100.0) * 1.018 - 1.0) * 100.0;
+        assert!(
+            (after - expected).abs() < 0.05,
+            "Unholy Gift scales one Essence stack by 1.8: before={before} after={after}"
+        );
+    }
+
+    #[test]
     #[ignore = "requires canonical world database and MID2 Blood inputs"]
     fn blood_boiling_point_proc_consumes_and_echoes_blood_boil() {
         let _seed = crate::random::seed_scope(70448);
@@ -477,6 +519,12 @@ mod tests {
             run.app.update();
         }
         assert!(crate::auras::has_aura(run.app.world(), actor, 434153));
+        let before_haste = run
+            .app
+            .world()
+            .get::<crate::stats::CharacterStats>(actor)
+            .unwrap()
+            .haste_pct;
         let strike = crate::spell_cast::knowledge::resolve_action(run.app.world(), actor, 206930)
             .unwrap()
             .expect("Heart Strike resolves");
@@ -496,6 +544,16 @@ mod tests {
             .get::<crate::stats::CharacterStats>(actor)
             .unwrap()
             .mastery_points;
+        let during_haste = run
+            .app
+            .world()
+            .get::<crate::stats::CharacterStats>(actor)
+            .unwrap()
+            .haste_pct;
+        assert!(
+            (during_haste - ((1.0 + before_haste / 100.0) * 1.03 - 1.0) * 100.0).abs() < 0.05,
+            "one Essence stack grants 3% haste during Blood Gift: before={before_haste}, during={during_haste}"
+        );
         assert!(
             during >= before + 0.59,
             "Gift amplifies one Blood Thrill stack: before={before} during={during}"
@@ -510,9 +568,28 @@ mod tests {
             .get::<crate::stats::CharacterStats>(actor)
             .unwrap()
             .mastery_points;
+        crate::auras::apply_aura(
+            run.app.world_mut(),
+            &crate::auras::AuraApplication {
+                caster: actor,
+                target: actor,
+                spell_id: 433925,
+                effect_mask: u32::MAX,
+                source: crate::auras::AuraSource::Cast,
+            },
+        );
+        for _ in 0..3 {
+            run.app.update();
+        }
+        let renewed = run
+            .app
+            .world()
+            .get::<crate::stats::CharacterStats>(actor)
+            .unwrap()
+            .mastery_points;
         assert!(
-            (after - before).abs() < 0.01,
-            "expired Essence restores mastery"
+            (renewed - after - 0.2).abs() < 0.01,
+            "without Gift, one Essence stack adds 0.2 mastery points"
         );
     }
 
