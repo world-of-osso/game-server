@@ -171,5 +171,16 @@ fn restoration_shaman_heals_the_simc_dummy_party() {
         report["healer_casts"]["77472"].as_u64().unwrap_or(0) > 0,
         "Healing Wave must be available between totem charges: {report}"
     );
+    let casts = report["healer_casts"].as_object().unwrap();
+    let total: u64 = casts.values().filter_map(|count| count.as_u64()).sum();
+    assert!(total > 100, "healer must remain active: {report}");
+    assert!(
+        casts.get("188389").and_then(|v| v.as_u64()).unwrap_or(0) > 0,
+        "Flame Shock should fill healthy periods: {report}"
+    );
+    assert!(
+        casts.get("51505").and_then(|v| v.as_u64()).unwrap_or(0) > 0,
+        "Lava Burst should fill healthy periods: {report}"
+    );
     println!("RESTORATION_SHAMAN_REPORT={report}");
 }
