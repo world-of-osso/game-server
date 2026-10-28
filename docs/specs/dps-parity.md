@@ -854,7 +854,7 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 ### Devastation literal rotation
 
 - Spec1467 follower measurements execute all89 preserved MID1 `76f8118` APL rows through shared `literal_rotation`; retain the named missing-MID2 reference gap and complete exported allocations.
-- Scarlet Adaptation stores the selected native percentage of actual Evoker healing, applies pinned SimC's 50% modeled overheal and Living Flame spell-power cap, and adds the stored amount to each damage recipient of the next Living Flame before consuming it (`sc_evoker.cpp`4347–4362/5195–5201/6930–6934).
+- Scarlet Adaptation stores the selected native percentage of actual Evoker healing, applies pinned SimC's 50% modeled overheal and Living Flame spell-power cap, and consumes it on the next Living Flame, adding the stored amount to each damage recipient (`sc_evoker.cpp`4347–4362/5195–5201/6930–6934).
 - `empower_to` selects the real native release stage while retaining the selected hostile primary independently of self casts. Fire Breath dot facts observe native357209 owned by that actor. Disintegrate uses the shared channel decision seam, including action-bound `ticks_remain`.
 
 ### Measurement

@@ -3,6 +3,58 @@ use super::*;
 
 #[test]
 #[ignore = "requires native Devastation follower profile and world DB"]
+fn devastation_scarlet_friendly_living_flame_consumes_the_old_pool() {
+    fn damage(preheal: bool) -> f64 {
+        let _seed = crate::random::seed_scope(70448);
+        let mut run = prepare_literal(1467, 1).unwrap();
+        engage(&mut run);
+        let actor = run.actor;
+        let target = run.targets[0];
+        if preheal {
+            crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 361509, Some(actor), 1);
+        }
+        preparation::finish_pending_setup(&mut run).unwrap();
+        let _cast_seed = crate::random::seed_scope(91234);
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 361469, Some(actor), false)
+            .unwrap();
+        preparation::finish_pending_setup(&mut run).unwrap();
+        run.app.insert_resource(
+            crate::spell_cast::effects::factor_capture::FactorCapture::new(
+                actor,
+                target,
+                361500,
+                "living_flame",
+                1,
+            ),
+        );
+        let _damage_seed = crate::random::seed_scope(818181);
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 361469, Some(target), false)
+            .unwrap();
+        preparation::finish_pending_setup(&mut run).unwrap();
+        let capture = run
+            .app
+            .world()
+            .resource::<crate::spell_cast::effects::factor_capture::FactorCapture>()
+            .export();
+        capture["events"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|event| event["event"] == "result" && event["spell_id"] == 361500)
+            .expect("actual damage after the friendly cast")["factors"]["raw_amount"]
+            .as_f64()
+            .unwrap()
+    }
+    let previous_pool = damage(true);
+    let no_previous_pool = damage(false);
+    assert!(
+        (previous_pool - no_previous_pool).abs() < 0.01,
+        "friendly Living Flame consumes the old pool before its own heal: {previous_pool}/{no_previous_pool}"
+    );
+}
+
+#[test]
+#[ignore = "requires native Devastation follower profile and world DB"]
 fn devastation_scarlet_does_not_empower_ruby_embers_periodic_damage() {
     fn periodic(heal: bool) -> i32 {
         let _seed = crate::random::seed_scope(70448);

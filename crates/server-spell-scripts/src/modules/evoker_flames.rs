@@ -156,13 +156,13 @@ fn living_flame(world: &mut World, caster: Entity, target: Entity, depth: u8) {
         combat::auras::RemoveReason::Cancelled,
         |aura| aura.spell_id == 370901 && aura.caster == caster,
     );
+    let scarlet = take_scarlet(world, caster);
     if relation_matches(world, caster, target, Relation::Ally) {
         spell_cast::cast_triggered(world, caster, LIVING_FLAME_HEAL, Some(target), depth + 1);
         super::essence_burst::roll_ruby_essence_burst(world, caster);
         return;
     }
     refund_energizing_flame(world, caster);
-    let scarlet = take_scarlet(world, caster);
     cast_scarlet_damage(world, caster, target, depth + 1, scarlet);
     let extras = leaping_extras(world, caster, target, stacks);
     for &extra in &extras {
