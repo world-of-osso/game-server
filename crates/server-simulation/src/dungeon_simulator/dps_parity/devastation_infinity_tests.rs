@@ -3,6 +3,71 @@ use super::*;
 
 #[test]
 #[ignore = "requires native Devastation follower profile and world DB"]
+fn devastation_eye_of_infinity_empowers_real_scintillation_primary() {
+    fn damage(selected: bool) -> f64 {
+        let _seed = crate::random::seed_scope(70448);
+        let mut run = prepare_literal(1467, 1).unwrap();
+        engage(&mut run);
+        let actor = run.actor;
+        let target = run.targets[0];
+        assert!(crate::auras::has_aura(run.app.world(), actor, 370821));
+        if !selected {
+            crate::auras::remove_auras(
+                run.app.world_mut(),
+                actor,
+                crate::auras::RemoveReason::Unlearned,
+                |aura| aura.spell_id == 411165,
+            );
+        }
+        run.app.insert_resource(
+            crate::spell_cast::effects::factor_capture::FactorCapture::new(
+                actor,
+                target,
+                359077,
+                "scintillation",
+                1,
+            ),
+        );
+        let _damage_seed = crate::random::seed_scope(818181);
+        for _ in 0..5 {
+            crate::spell_cast::creature_cast(
+                run.app.world_mut(),
+                actor,
+                356995,
+                Some(target),
+                false,
+            )
+            .unwrap();
+            preparation::finish_pending_setup(&mut run).unwrap();
+            for _ in 0..80 {
+                run.app.update();
+            }
+            let capture = run
+                .app
+                .world()
+                .resource::<crate::spell_cast::effects::factor_capture::FactorCapture>()
+                .export();
+            if let Some(value) = capture["events"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|event| event["event"] == "result" && event["spell_id"] == 359077)
+                .and_then(|event| event["factors"]["raw_amount"].as_f64())
+            {
+                return value;
+            }
+        }
+        panic!("actual Disintegrate did not trigger Scintillation");
+    }
+    let ratio = damage(true) / damage(false);
+    assert!(
+        (ratio - 1.15).abs() < 0.001,
+        "native15% applies to Scintillation primary: {ratio}"
+    );
+}
+
+#[test]
+#[ignore = "requires native Devastation follower profile and world DB"]
 fn devastation_eye_of_infinity_empowers_only_real_surge_primary() {
     fn damage(selected: bool, target_index: usize) -> f64 {
         let _seed = crate::random::seed_scope(70448);
