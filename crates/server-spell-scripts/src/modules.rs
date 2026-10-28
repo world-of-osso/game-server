@@ -314,6 +314,7 @@ register_modules! {
     unholy_pet_mastery: (2531, "modules/unholy_pet_mastery.rs"),
     sweeping_strikes: (711, "modules/sweeping_strikes.rs"),
     unholy_blightburst: (2526, "modules/unholy_blightburst.rs"),
+    unholy_aura: (2541, "modules/unholy_aura.rs"),
     swiftmend: (1000, "modules/swiftmend.rs"),
     unholy_apocalypse_rune: (2530, "modules/unholy_apocalypse_rune.rs"),
     touch_of_death: (240, "modules/touch_of_death.rs"),

@@ -31,6 +31,27 @@ fn dk252_army_grants_forbidden_knowledge_and_summons_magus() {
 
 #[test]
 #[ignore = "requires native252 profile/traits and player actor"]
+fn dk252_real_magus_summon_earns_unholy_aura_haste() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 1).unwrap();
+    engage(&mut run);
+    literal_rotation::execution::execute(run.app.world_mut(), run.actor,
+        literal_rotation::execution::Execution::Spell(1247378, run.targets[0], Some(run.targets[0]))).unwrap();
+    for _ in 0..100 {
+        run.app.update();
+        if crate::auras::has_aura(run.app.world(), run.actor, 1268917) { break; }
+    }
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, 1268917), "the real Magus must earn Unholy Aura");
+    run.app.update();
+    let buffed = run.app.world().get::<crate::stats::CharacterStats>(run.actor).unwrap().haste_pct;
+    crate::auras::remove_auras(run.app.world_mut(), run.actor, crate::auras::RemoveReason::Cancelled, |aura| aura.spell_id == 1268917);
+    run.app.update();
+    let unbuffed = run.app.world().get::<crate::stats::CharacterStats>(run.actor).unwrap().haste_pct;
+    assert!(buffed > unbuffed, "earned Unholy Aura must increase live owner haste: {unbuffed} -> {buffed}");
+}
+
+#[test]
+#[ignore = "requires native252 profile/traits and player actor"]
 fn dk252_dark_transformation_summons_selected_magus() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(252, 1).unwrap();
