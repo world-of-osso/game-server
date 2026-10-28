@@ -1505,7 +1505,7 @@ fn chaos_strike_initial(world: &mut World, caster: Entity, target: Entity, depth
 }
 
 /// Fortifying Brew's DUMMY cast applies 120954 with custom health and damage
-/// amounts from 115203 (local catalog: +20%, -20%). Retail snapshots a fixed
+/// amounts. Retail snapshots a fixed
 /// health gain at cast time and removes that same gain when the buff expires:
 /// simulationcraft/simc, midnight, buffs::fortifying_brew_t::trigger/expire_override
 /// https://github.com/simulationcraft/simc/blob/midnight/engine/class_modules/monk/sc_monk.cpp
@@ -1536,7 +1536,16 @@ fn fortifying_brew(world: &mut World, caster: Entity, _target: Entity, _depth: u
 
 fn customize_fortifying_brew(world: &World, caster: Entity) -> Option<SpellInfo> {
     let store = world.resource::<crate::spell_info::SpellStore>();
-    let cast = store.get(FORTIFYING_BREW)?;
+    // SimC76f8118 sc_monk.cpp4454 reads the selected class talent, not its
+    // visible action. Native 388917 supplies 10%; action 115203 supplies 20%.
+    let selected = world
+        .get::<crate::class_progression::TraitLoadout>(caster)
+        .is_some_and(|traits| {
+            traits
+                .active_talent_spells()
+                .any(|talent| talent.spell_id == 388917)
+        });
+    let cast = store.get(if selected { 388917 } else { FORTIFYING_BREW })?;
     let mut buff = store.get(FORTIFYING_BREW_BUFF)?.clone();
     let health_percent = cast
         .effects
