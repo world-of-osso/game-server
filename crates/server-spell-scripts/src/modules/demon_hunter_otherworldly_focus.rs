@@ -8,14 +8,11 @@ use combat::spell_info::SpellInfo;
 use shared::components::ActiveSpec;
 
 const FOCUS: u32 = 1253817;
-pub(super) const HOOKS: &[SpellScriptHook] = &[
-    SpellScriptHook::ActualDamageMultiplier(actual),
-    SpellScriptHook::ExpectedDamageMultiplier(multiplier),
-];
+pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::ActualDamageMultiplier(actual)];
 fn actual(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) -> f32 {
     multiplier(world, ctx.caster, target, ctx.spell)
 }
-fn multiplier(world: &World, caster: Entity, _: Entity, spell: &SpellInfo) -> f32 {
+fn multiplier(world: &mut World, caster: Entity, _: Entity, spell: &SpellInfo) -> f32 {
     if !world
         .get::<combat::class_progression::TraitLoadout>(caster)
         .is_some_and(|traits| {
