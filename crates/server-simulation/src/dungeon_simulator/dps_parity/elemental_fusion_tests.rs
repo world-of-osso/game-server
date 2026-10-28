@@ -243,7 +243,11 @@ fn elemental_fusion_native_builders_earn_power_then_lava_spends_one_and_casts_fr
             break;
         }
     }
-    assert_eq!(own_aura(&run, POWER).unwrap().stacks, 2, "a later proc adds the second use");
+    assert_eq!(
+        own_aura(&run, POWER).unwrap().stacks,
+        2,
+        "a later proc adds the second use"
+    );
     let before = cast_events(&run, BLAST);
     assert!(crate::spell_cast::try_cast_triggered(
         run.app.world_mut(),
