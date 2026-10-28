@@ -1,6 +1,5 @@
 //! The pet mastery correction must not change the owning player's own damage.
 use super::elemental_mechanics_tests::fixture;
-use super::*;
 use crate::spell_cast::effects::factor_capture::FactorCapture;
 
 fn player_overload_factor(remove_mastery: bool) -> f64 {
