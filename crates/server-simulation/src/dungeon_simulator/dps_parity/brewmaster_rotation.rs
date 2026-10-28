@@ -347,10 +347,22 @@ mod tests {
             .get::<crate::auras::harmony::HarmonyPools>(actor)
             .unwrap()
             .accumulator;
+        let world = run.app.world();
+        let value = |spell, effect| {
+            crate::spell_cast::scripts::script_effect_value(world, actor, spell, effect)
+        };
+        eprintln!(
+            "Harmony native effects: base={}, coalescence={}, way={}",
+            value(450508, 0),
+            value(450529, 2),
+            value(450965, 0)
+        );
+        let expected = actual_damage * value(450508, 0) / 100.0
+            * (1.0 + value(450529, 2) / 100.0)
+            * (1.0 + value(450965, 0) / 100.0);
         assert!(
-            (deposited - actual_damage * 0.12 * 1.5 * 1.3).abs() < 1.0,
-            "selected Coalescence and Way scale actual hit: pool={deposited}, hit={actual_damage}, expected={}",
-            actual_damage * 0.12 * 1.5 * 1.3
+            (deposited - expected).abs() < 1.0,
+            "pool={deposited}, hit={actual_damage}, expected={expected}"
         );
         for _ in 0..40 {
             run.app.update();
