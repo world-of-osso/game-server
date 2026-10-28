@@ -856,6 +856,17 @@ fn replay_registered_run_with_healing(
         .into_iter()
         .map(|(spell, seconds)| (spell, (seconds / elapsed).min(1.0)))
         .collect();
+    let defense_mean: BTreeMap<_, _> = [
+        "parry_pct",
+        "block_pct",
+        "armor",
+        "blocked_pct",
+        "versatility_dr_pct",
+        "aura_damage_multiplier",
+    ]
+    .into_iter()
+    .zip(defense_totals.map(|value| value / defense_samples.max(1) as f64))
+    .collect();
     Ok(
         json!({"spec":spec,"level":level,"reference_tier":"MID2","timeline":"simc_tank_dummy",
         "external_healing":external_healing,"external_healing_effective":external_healing_effective,
@@ -869,7 +880,7 @@ fn replay_registered_run_with_healing(
         "resource_counters":counters,"target_debuff_uptime":target_debuff_uptime,
         "rotation_status":"registered_literal_simc","duration_seconds":elapsed,"incoming_events":next,"tank_casts":casts,
         "raw_damage":raw,"damage_taken":taken,"damage_taken_by_kind":damage_taken_by_kind,"incoming_before_absorbs":incoming_before_absorbs,"incoming_outcomes":outcomes,"incoming_by_outcome":incoming_by_outcome,
-        "defense_mean": ["parry_pct", "block_pct", "armor", "blocked_pct", "versatility_dr_pct", "aura_damage_multiplier"].into_iter().zip(defense_totals.map(|value| value / defense_samples.max(1) as f64)).collect::<BTreeMap<_, _>>(),
+        "defense_mean":defense_mean,
         "self_periodic_damage_taken":self_periodic_taken,
         "mitigation_pct":(raw>0.0).then(||100.0*(raw-taken)/raw),
         "self_heal_per_second":(elapsed>0.0).then(||self_healing/elapsed),
