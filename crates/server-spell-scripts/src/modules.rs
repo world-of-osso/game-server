@@ -324,6 +324,7 @@ register_modules! {
     unholy_sudden_doom: (2523, "modules/unholy_sudden_doom.rs"),
     unrelenting_onslaught: (714, "modules/unrelenting_onslaught.rs"),
     unholy_necrotic_coil: (2525, "modules/unholy_necrotic_coil.rs"),
+    unholy_rider_proc: (2539, "modules/unholy_rider_proc.rs"),
     unholy_coil_devastation: (2527, "modules/unholy_coil_devastation.rs"),
     voltaic_blaze: (250, "modules/voltaic_blaze.rs"),
     unholy_doomed_bidding: (2529, "modules/unholy_doomed_bidding.rs"),
