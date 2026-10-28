@@ -278,17 +278,48 @@ mod tests {
         let mut run = super::super::prepare_registered_player(250, 1).unwrap();
         let actor = run.actor;
         let source = run.targets[0];
-        crate::auras::remove_auras(run.app.world_mut(), actor, crate::auras::RemoveReason::Cancelled, |a| a.spell_id == 195181);
+        crate::auras::remove_auras(
+            run.app.world_mut(),
+            actor,
+            crate::auras::RemoveReason::Cancelled,
+            |a| a.spell_id == 195181,
+        );
         for _ in 0..3 {
-            crate::auras::apply_aura(run.app.world_mut(), &AuraApplication {
-                caster: actor, target: actor, spell_id: 195181, effect_mask: u32::MAX, source: AuraSource::Cast,
-            });
+            crate::auras::apply_aura(
+                run.app.world_mut(),
+                &AuraApplication {
+                    caster: actor,
+                    target: actor,
+                    spell_id: 195181,
+                    effect_mask: u32::MAX,
+                    source: AuraSource::Cast,
+                },
+            );
         }
-        let stacks = |run: &super::super::Run| run.app.world().get::<ActiveAuras>(actor).unwrap().iter().find(|a| a.spell_id == 195181).map_or(0, |a| a.stacks);
+        let stacks = |run: &super::super::Run| {
+            run.app
+                .world()
+                .get::<ActiveAuras>(actor)
+                .unwrap()
+                .iter()
+                .find(|a| a.spell_id == 195181)
+                .map_or(0, |a| a.stacks)
+        };
         let hit = |outcome: &str| Hit {
-            tick: 0, source_guid: 0, pack: 0, target_slot: 0, school: 1, raw: 100.0,
+            tick: 0,
+            source_guid: 0,
+            pack: 0,
+            target_slot: 0,
+            school: 1,
+            raw: 100.0,
             level_scaling_factor: 1.0,
-            kind: HitKind::Melee { hand: 0, outcome: outcome.into(), level_difference: 0, critical_multiplier: 1.0, weapon_speed: 2.0 },
+            kind: HitKind::Melee {
+                hand: 0,
+                outcome: outcome.into(),
+                level_difference: 0,
+                critical_multiplier: 1.0,
+                weapon_speed: 2.0,
+            },
         };
         assert_eq!(stacks(&run), 3);
         crate::combat::replay_healer_hit(run.app.world_mut(), source, actor, &hit("Miss")).unwrap();
@@ -296,14 +327,28 @@ mod tests {
         assert_eq!(stacks(&run), 3, "misses must not consume Bone Shield");
         crate::combat::replay_healer_hit(run.app.world_mut(), source, actor, &hit("Hit")).unwrap();
         run.app.update();
-        assert_eq!(stacks(&run), 2, "a landed swing removes one stack, not the whole aura");
+        assert_eq!(
+            stacks(&run),
+            2,
+            "a landed swing removes one stack, not the whole aura"
+        );
         crate::combat::replay_healer_hit(run.app.world_mut(), source, actor, &hit("Hit")).unwrap();
         run.app.update();
-        assert_eq!(stacks(&run), 2, "the native ICD blocks a second immediate stack loss");
-        for _ in 0..52 { run.app.update(); }
+        assert_eq!(
+            stacks(&run),
+            2,
+            "the native ICD blocks a second immediate stack loss"
+        );
+        for _ in 0..52 {
+            run.app.update();
+        }
         crate::combat::replay_healer_hit(run.app.world_mut(), source, actor, &hit("Hit")).unwrap();
         run.app.update();
-        assert_eq!(stacks(&run), 1, "a later landed swing consumes one more stack");
+        assert_eq!(
+            stacks(&run),
+            1,
+            "a later landed swing consumes one more stack"
+        );
     }
 
     #[test]
