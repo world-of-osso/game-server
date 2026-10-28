@@ -201,6 +201,7 @@ register_modules! {
     enhancement_overcharge: (2634, "modules/enhancement_overcharge.rs"),
     holy_runtime: (2570, "modules/holy_runtime.rs"),
     hot_streak: (1000, "modules/hot_streak.rs"),
+    enhancement_converging: (2635, "modules/enhancement_converging.rs"),
     hunter_bear: (2532, "modules/hunter_bear.rs"),
     hunter_bounces: (440, "modules/hunter_bounces.rs"),
     hunter_command_wildspeaker: (2530, "modules/hunter_wildspeaker.rs"),

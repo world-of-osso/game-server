@@ -166,6 +166,72 @@ fn damage_count(run: &Run, spell: u32) -> usize {
 
 #[test]
 #[ignore = "native263 reference inputs and private world database"]
+fn enhancement_converging_crash_hits_empower_both_actual_strike_hands() {
+    use crate::spell_cast::effects::factor_capture::FactorCapture;
+    fn strike(with_stacks: bool) -> [f64; 2] {
+        let _seed = crate::random::seed_scope(70448);
+        let mut run = prepare_literal(263, 3).unwrap();
+        engage(&mut run);
+        let actor = run.actor;
+        let target = run.targets[0];
+        cast(&mut run, 187874, target);
+        let buff = run
+            .app
+            .world()
+            .get::<ActiveAuras>(actor)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 198300 && aura.caster == actor)
+            .expect("actual three-target Crash earns Converging Storms");
+        assert_eq!(buff.stacks, 3);
+        if !with_stacks {
+            crate::auras::remove_auras(
+                run.app.world_mut(),
+                actor,
+                crate::auras::RemoveReason::Cancelled,
+                |aura| aura.spell_id == 198300,
+            );
+        }
+        run.app
+            .insert_resource(FactorCapture::new(actor, target, 32175, "strike", 12));
+        cast(&mut run, 17364, target);
+        for _ in 0..60 {
+            if damage_count(&run, 32175) > 0
+                && damage_count(&run, 32176) > 0
+                && !crate::auras::has_aura(run.app.world(), actor, 198300)
+            {
+                break;
+            }
+            run.app.update();
+        }
+        assert!(
+            !crate::auras::has_aura(run.app.world(), actor, 198300),
+            "actual Strike consumes the earned stacks after both hands"
+        );
+        let capture = run.app.world().resource::<FactorCapture>().export();
+        [32175, 32176].map(|spell| {
+            capture["events"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|event| event["event"] == "result" && event["spell_id"] == spell)
+                .expect("each actual weapon hand hits")["factors"]["raw_amount"]
+                .as_f64()
+                .unwrap()
+        })
+    }
+    let boosted = strike(true);
+    let plain = strike(false);
+    for (boosted, plain) in boosted.into_iter().zip(plain) {
+        assert!(
+            (boosted / plain - 1.75).abs() < 0.01,
+            "three native25% stacks: {boosted}/{plain}"
+        );
+    }
+}
+
+#[test]
+#[ignore = "native263 reference inputs and private world database"]
 fn enhancement_stormstrike_triggers_one_native_crash_lightning_payload() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(263, 1).unwrap();

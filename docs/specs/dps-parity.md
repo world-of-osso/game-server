@@ -924,6 +924,8 @@ Selected Stormwell1264762 runs a guaranteed equipped-native Windfury callback on
 
 Native Unleashed1252431 remains Magic and cannot trigger weapon imbues. A main-hand weapon pointer and `shaman_attack_t` inheritance do not override SimC's data-Melee admission check (`sc_shaman.cpp3039–3055`, pinned SpellDataDump1252431).
 
+Converging Storms grants one native198300 stack per landed Crash Lightning target. Stormstrike and Windstrike consume the stacks after both weapon hits (`sc_shaman.cpp`5591–5604,6094–6100).
+
 Enhancement Tempest applies its native effect2 damage percentage to secondary targets, without reducing the primary (`sc_shaman.cpp`9875–9881; `action.cpp`1553–1555).
 
 Spec263 parity executes the pinned MID2 Enhancement action rows through the shared literal evaluator, using native action admission, equipment and aura/target facts. A real player uses this driver without loading AssistedCombat diagnostic inputs; no follower profile is fabricated. Windfury/Flametongue setup occurs only in precombat. Thorim's LB/CL choice follows successful foreground LB/CL/Tempest dispatch and Tempest target count. This selects actions; it does not certify the underlying Enhancement proc, counter or damage mechanics.
