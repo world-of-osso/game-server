@@ -11,6 +11,7 @@ const HOWLING_BLAST: u32 = 49184;
 const RIME: u32 = 59052;
 const ICEBREAKER: u32 = 392950;
 const BIND_IN_DARKNESS: u32 = 440031;
+const BIND_BUFF: u32 = 443532;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::TargetContextDamageMultiplier(
     rime_primary_multiplier,
@@ -58,7 +59,7 @@ fn rime_primary_multiplier(world: &World, ctx: &EffectCtx, target: Entity, _: bo
     } else {
         1.0
     };
-    let darkness = if auras::has_aura(world, ctx.caster, BIND_IN_DARKNESS) {
+    let darkness = if auras::has_aura(world, ctx.caster, BIND_BUFF) {
         native_multiplier(world, BIND_IN_DARKNESS, 3)
     } else {
         1.0
