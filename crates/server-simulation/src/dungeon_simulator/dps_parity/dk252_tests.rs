@@ -56,6 +56,17 @@ fn dk252_real_magus_summon_earns_unholy_aura_haste() {
         "the real Magus must earn Unholy Aura"
     );
     run.app.update();
+    let stacks = run
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(run.actor)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 1268917 && aura.caster == run.actor)
+        .unwrap()
+        .stacks;
+    let per_stack =
+        crate::spell_cast::scripts::script_effect_value(run.app.world(), run.actor, 377440, 0);
     let buffed = run
         .app
         .world()
@@ -75,9 +86,11 @@ fn dk252_real_magus_summon_earns_unholy_aura_haste() {
         .get::<crate::stats::CharacterStats>(run.actor)
         .unwrap()
         .haste_pct;
+    let actual = (1.0 + buffed / 100.0) / (1.0 + unbuffed / 100.0);
+    let expected = 1.0 + per_stack * f32::from(stacks) / 100.0;
     assert!(
-        buffed > unbuffed,
-        "earned Unholy Aura must increase live owner haste: {unbuffed} -> {buffed}"
+        (actual - expected).abs() < 0.001,
+        "actual Magi must grant selected talent haste: {unbuffed} -> {buffed}, stacks={stacks}, expected factor={expected}"
     );
 }
 
@@ -163,7 +176,7 @@ fn dk252_festering_strike_earns_ghouls_and_next_native_scythe() {
 
 #[test]
 #[ignore = "requires native252 profile/traits and player actor"]
-fn dk252_festering_scythe_double_hastes_its_actual_gcd() {
+fn dk252_festering_scythe_uses_parent_strike_gcd() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(252, 1).unwrap();
     engage(&mut run);
@@ -189,15 +202,6 @@ fn dk252_festering_scythe_double_hastes_its_actual_gcd() {
     .unwrap();
     preparation::finish_pending_setup(&mut run).unwrap();
     assert!(crate::auras::has_aura(run.app.world(), run.actor, 458123));
-    let haste = 1.0
-        + run
-            .app
-            .world()
-            .get::<crate::stats::CharacterStats>(run.actor)
-            .unwrap()
-            .haste_pct
-            / 100.0;
-    assert!(haste > 1.0);
     let regular =
         crate::spell_cast::native_apl::gcd_value(run.app.world(), run.actor, &strike, "gcd")
             .unwrap();
@@ -214,13 +218,121 @@ fn dk252_festering_scythe_double_hastes_its_actual_gcd() {
         "gcd.remains",
     )
     .unwrap();
-    // The selected talent reduces Strike's GCD, not Scythe's native GCD.
-    let base = scythe.cooldowns.as_ref().unwrap().start_recovery_ms as f32;
-    let once = ((base / haste) as u32).clamp(750, 1500);
-    let expected = f64::from((once as f32 / haste) as u32) / 1000.0;
     assert!(
-        (remaining - expected).abs() < 0.003,
-        "actual replacement GCD {remaining} must match double haste {expected}; normal {regular}"
+        (remaining - regular).abs() < 0.003,
+        "actual replacement GCD {remaining} must match parent Strike {regular}"
+    );
+}
+
+#[test]
+#[ignore = "requires native252 profile/traits and player actor"]
+fn dk252_dark_transformation_does_not_start_a_gcd() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 1).unwrap();
+    engage(&mut run);
+    let transformation = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(1233448)
+        .unwrap()
+        .clone();
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(1233448, run.actor, None),
+    )
+    .unwrap();
+    assert!(
+        run.app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|event| event.source == Some(run.actor.to_bits())
+                && event.spell_id == Some(1233448)
+                && event.kind == CombatLogKind::CastSuccess),
+        "Dark Transformation must actually cast"
+    );
+    let remaining = crate::spell_cast::native_apl::gcd_value(
+        run.app.world(),
+        run.actor,
+        &transformation,
+        "gcd.remains",
+    )
+    .unwrap();
+    assert_eq!(
+        remaining, 0.0,
+        "Dark Transformation must leave the GCD free"
+    );
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(85948, run.targets[0], Some(run.targets[0])),
+    )
+    .unwrap();
+    assert!(
+        run.app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|event| event.source == Some(run.actor.to_bits())
+                && event.spell_id == Some(85948)
+                && event.kind == CombatLogKind::CastSuccess),
+        "Festering Strike must cast immediately afterward"
+    );
+}
+
+#[test]
+#[ignore = "requires native252 profile/traits and player actor"]
+fn dk252_festering_strike_and_scythe_do_not_grant_wound_runic_power() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 1).unwrap();
+    engage(&mut run);
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, 197147));
+    run.app
+        .world_mut()
+        .resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .clear();
+    for _ in 0..2 {
+        literal_rotation::execution::execute(
+            run.app.world_mut(),
+            run.actor,
+            literal_rotation::execution::Execution::Spell(
+                85948,
+                run.targets[0],
+                Some(run.targets[0]),
+            ),
+        )
+        .unwrap();
+        preparation::finish_pending_setup(&mut run).unwrap();
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    for spell in [85948, 458128] {
+        assert!(
+            events.iter().any(|event| event.spell_id == Some(spell)
+                && event.source == Some(run.actor.to_bits())
+                && event.kind == CombatLogKind::CastSuccess),
+            "actual Festering action {spell} must execute"
+        );
+    }
+    assert!(
+        events.iter().any(|event| event.spell_id == Some(85948)
+            && event.kind == CombatLogKind::Energize
+            && event.amount == 200),
+        "native Strike must retain its 20 RP gain"
+    );
+    assert!(
+        !events
+            .iter()
+            .any(|event| event.spell_id == Some(195757) && event.kind == CombatLogKind::Energize),
+        "neither action may grant legacy wound RP"
     );
 }
 
@@ -1509,6 +1621,87 @@ fn dk252_putrefy_ghoul_impacts_the_enemy() {
             && event.amount > 0),
         "the summoned Putrefy ghoul must deliver native single-target impact damage"
     );
+}
+
+#[test]
+#[ignore = "requires native252 profile/traits and player actor"]
+fn dk252_putrefy_arrivals_grant_ready_ghouls_and_independent_mastery() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 1).unwrap();
+    engage(&mut run);
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, 1256565));
+    let baseline = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(run.actor)
+        .unwrap()
+        .mastery_points;
+    let stacks = |run: &Run, spell: u32| {
+        run.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(run.actor)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == spell && aura.caster == run.actor)
+            .map_or(0, |aura| aura.stacks)
+    };
+    let arrival = |run: &mut Run, expected: u8| {
+        assert!(crate::spell_cast::try_cast_triggered(
+            run.app.world_mut(),
+            run.actor,
+            1277098,
+            Some(run.actor),
+            1
+        ));
+        for _ in 0..200 {
+            run.app.update();
+            if stacks(run, 1256576) == expected {
+                return;
+            }
+        }
+        panic!("the actual Putrefy ghoul did not grant Forbidden Sacrifice");
+    };
+    arrival(&mut run, 1);
+    let per_ghoul =
+        crate::spell_cast::scripts::script_effect_value(run.app.world(), run.actor, 1256565, 1)
+            as u8;
+    assert_eq!(stacks(&run, 1254252), per_ghoul);
+    // Stop subsequent Dread Plague proc-driven ghoul arrivals in this timing test.
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        run.targets[0],
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 1240996,
+    );
+    for _ in 0..60 {
+        run.app.update();
+    }
+    arrival(&mut run, 2);
+    assert_eq!(stacks(&run, 1254252), 2 * per_ghoul);
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        run.targets[0],
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 1240996,
+    );
+    run.app.update();
+    let increased = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(run.actor)
+        .unwrap()
+        .mastery_points;
+    assert!(
+        increased > baseline,
+        "real arrival stacks must increase player mastery: {baseline} -> {increased}"
+    );
+    for _ in 0..300 {
+        run.app.update();
+        if stacks(&run, 1256576) == 1 {
+            return;
+        }
+    }
+    panic!("the first Forbidden Sacrifice stack must expire before the second");
 }
 
 #[test]
@@ -3409,6 +3602,149 @@ fn dk252_single_target_uses_dark_transformation_and_putrefy() {
                 && event.kind == CombatLogKind::CastSuccess),
         "the literal ST rotation must use Putrefy"
     );
+}
+
+#[test]
+#[ignore = "requires native252 profile/traits and player actor"]
+fn dk252_necrotic_coil_shadow_extends_each_hit_targets_owned_diseases() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 3).unwrap();
+    engage(&mut run);
+    for target in run.targets.iter().copied().take(2) {
+        for spell_id in [191587, 1240996] {
+            crate::auras::apply_aura(
+                run.app.world_mut(),
+                &crate::auras::AuraApplication {
+                    caster: run.actor,
+                    target,
+                    spell_id,
+                    effect_mask: 1,
+                    source: crate::auras::AuraSource::Cast,
+                },
+            );
+        }
+    }
+    let expiry = |run: &Run, target: Entity, spell: u32| {
+        run.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(target)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == spell && aura.caster == run.actor)
+            .and_then(|aura| aura.expires_at)
+    };
+    let before: Vec<_> = run
+        .targets
+        .iter()
+        .copied()
+        .take(2)
+        .flat_map(|target| {
+            [191587, 1240996]
+                .into_iter()
+                .map(move |spell| (target, spell))
+        })
+        .map(|(target, spell)| (target, spell, expiry(&run, target, spell).unwrap()))
+        .collect();
+    assert!(crate::spell_cast::try_cast_triggered(
+        run.app.world_mut(),
+        run.actor,
+        1242174,
+        Some(run.targets[0]),
+        1
+    ));
+    for _ in 0..10 {
+        run.app.update();
+    }
+    let extension =
+        crate::spell_cast::scripts::script_effect_value(run.app.world(), run.actor, 77575, 2)
+            as f64
+            / 1000.0;
+    for (target, spell, old) in before {
+        let after = expiry(&run, target, spell).unwrap();
+        assert!(
+            (after - old - extension).abs() < 0.001,
+            "shadow impact must extend {spell} on {target:?} once: {old} -> {after}"
+        );
+    }
+    assert_eq!(expiry(&run, run.targets[2], 191587), None);
+    assert_eq!(expiry(&run, run.targets[2], 1240996), None);
+}
+
+#[test]
+#[ignore = "requires native252 profile/traits and player actor"]
+fn dk252_death_coil_extends_owned_diseases_only_after_projectile_hit() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(252, 1).unwrap();
+    engage(&mut run);
+    run.app
+        .world_mut()
+        .get_mut::<shared::components::Position>(run.targets[0])
+        .unwrap()
+        .x += 20.0;
+    for spell_id in [191587, 1240996] {
+        crate::auras::apply_aura(
+            run.app.world_mut(),
+            &crate::auras::AuraApplication {
+                caster: run.actor,
+                target: run.targets[0],
+                spell_id,
+                effect_mask: 1,
+                source: crate::auras::AuraSource::Cast,
+            },
+        );
+    }
+    let expiry = |run: &Run, spell: u32| {
+        run.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(run.targets[0])
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == spell && aura.caster == run.actor)
+            .unwrap()
+            .expires_at
+            .unwrap()
+    };
+    let before = [expiry(&run, 191587), expiry(&run, 1240996)];
+    assert!(crate::spell_cast::try_cast_triggered(
+        run.app.world_mut(),
+        run.actor,
+        47541,
+        Some(run.targets[0]),
+        1
+    ));
+    assert_eq!(
+        [expiry(&run, 191587), expiry(&run, 1240996)],
+        before,
+        "launch must not extend diseases"
+    );
+    for _ in 0..40 {
+        run.app.update();
+        let hit = run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|event| {
+                event.spell_id == Some(47632)
+                    && event.target == Some(run.targets[0].to_bits())
+                    && event.kind == CombatLogKind::Damage
+            });
+        if hit {
+            break;
+        }
+    }
+    let extension =
+        crate::spell_cast::scripts::script_effect_value(run.app.world(), run.actor, 77575, 2)
+            as f64
+            / 1000.0;
+    for (spell, old) in [191587, 1240996].into_iter().zip(before) {
+        let after = expiry(&run, spell);
+        assert!(
+            (after - old - extension).abs() < 0.001,
+            "actual Coil impact must extend {spell}: {old} -> {after}"
+        );
+    }
 }
 
 #[test]

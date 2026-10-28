@@ -1,6 +1,5 @@
 //! Master of the Elements survives consumption between launch and overload flight.
 use super::elemental_mechanics_tests::{cast, fixture, own_aura, settle};
-use super::*;
 use crate::auras::RemoveReason;
 use crate::spell_cast::effects::factor_capture::FactorCapture;
 

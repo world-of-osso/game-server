@@ -25,6 +25,9 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 ### Unholy Outnumber
 
 - Each actual lesser ghoul contributes one owner Lesser Ghoul counter stack from arrival to dismissal. Selected Outnumber supplies the counter's native per-stack controlled-pet damage bonus, including temporary Putrefy ghouls (SimC76f8118 `sc_death_knight.cpp3673–3689`).
+### Periodic refresh
+
+- An ordinary refreshed periodic damage, leech or healing effect retains its next-tick phase and adds the time to that tick to its fresh duration. Native Pandemic, sourced rolling and extension behavior keep their own duration rules (SimC76f8118 `action.cpp419/4612–4620`).
 
 ### Unholy Nazgrim
 
@@ -599,11 +602,15 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 ### Fury player parity
 
+- Selected Storm of Blood1299025 applies native Rend388539 to each enemy hit by Whirlwind's first main-hand impact199667 (`sc_warrior.cpp6526–6540`). Later weapon hits do not reapply it.
+
 - With selected Cold Steel, Hot Blood383959, critical Bloodthirst23881 and Bloodbath335096 impacts apply native Gushing Wound385042 to the struck target, including Unhinged impacts (`sc_warrior.cpp2679–2682,2915–2919`). Noncritical impacts do not.
 
 - Landed Bloodbath335096 applies its native bleed113344 to its actual target; subsequent landed Bloodbaths extend the existing owned bleed by its native duration (`sc_warrior.cpp2777–2785,2915–2923`).
 
 - Selected Cruelty392931 and Wrath and Fury392936 damage modifiers apply only while native Enrage184362 is active (`sc_warrior.cpp1106,4939–4947,5099–5113,7834–7835`). Their native rank values and other effects remain unchanged.
+
+- Fury's selected Imminent Demise444769 and Sudden Death29725 accelerate native Bladestorm periodic attacks according to earned445606 stacks. Expire those stacks at the spin's natural end (`sc_warrior.cpp3279–3299,3344–3349`).
 
 - Selected Spite383852 applies its native rank values in tenths of a percent to damage and critical damage, as specified by the native display and SimC76f8118 `sc_warrior.cpp7894–7899`; preserve its native masks and rank curves.
 
@@ -620,7 +627,7 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 - Native Sudden Death29725 rolls its own RPPM and ICD once per foreground Warrior special execution, not on autos or background impacts; a success grants52437 and resets Execute. Selected Imminent Demise444769 independently counts Slayer's Strike445579 executions, including background ones; its native effect0 threshold grants Sudden Death and resets Execute without rolling the ordinary producer's ICD (SimC76f8118 `sc_warrior.cpp1710–1718,2428–2435`).
 
 - [x] Spec72 uses `--actor player` and the complete pinned MID2 Fury APL through shared `literal_rotation`. Capture literal control before native setup, execute ordered precombat and submit normal native casts. Do not invent a follower profile. Native overrides select Reckless Abandon and Unrelenting Onslaught variants; native stats, costs, coefficients and trait legality remain authoritative.
-- [x] Fury Deep Wounds1261060 accepts only actual Execute main-hand280849 impacts; Whirlwind cannot grant it (SimC76f8118 `sc_warrior.cpp4452–4456`). Preserve native262115 damage and rolling periodic behavior; do not alter Arms71 producers. Source-qualified Deep Wounds rolling refresh retains the pending full tick plus a fresh native duration, redistributing old unpaid and new native damage budgets across that schedule (`sc_warrior.cpp3798–3805`, `action.cpp4614–4617,4995–5016`). Other native rolling spells retain their existing per-tick contracts.
+- [x] Fury Deep Wounds1261060 accepts only actual Execute main-hand280849 impacts; Whirlwind cannot grant it (SimC76f8118 `sc_warrior.cpp4452–4456`). Preserve native262115 damage and rolling periodic behavior; do not alter Arms71 producers. Source-qualified Deep Wounds rolling refresh retains the pending full tick plus a fresh native duration, redistributing old unpaid and new native damage budgets across that schedule (`sc_warrior.cpp3798–3805`, `action.cpp4614–4617,4995–5016`). Native rolling spells use the same remaining-plus-fresh budget across the carried tick schedule.
 - [x] Anger Management152278 reduces running Fury Avatar/Recklessness cooldowns from actual paid Rage, using native PowerType display units and effect2's Rage-per-second divisor; free background casts do not contribute (`sc_warrior.cpp1450–1455,1506–1517`).
 - A landed native Bladestorm main-hand50622 tick dispatches its native effect1 off-hand area95738 once for Fury72 with an actual off-hand weapon, not once per main-hand recipient. Arms cannot acquire that off-hand attack (`sc_warrior.cpp3249–3254,3335–3340`). Native child damage and area selectors remain authoritative.
 - [x] Selected Unhinged386628 dispatches Arms71 Mortal Strike12294 or Fury72's live native Bloodthirst23881 variant on odd Bladestorm227847/446035 effect0 ticks, including catch-up ticks and excluding tick0, using the actual selected hostile target and native effect1 damage multiplier. Preserve ordinary parent pulses (`sc_warrior.cpp3257–3275,3313–3335`).
@@ -1124,6 +1131,8 @@ Elemental Overload callbacks are instant background actions that can execute dur
 When Lightning Bolt Overload45284 executes while Stormkeeper is active, it snapshots Stormkeeper's native effect1 damage bonus despite the unmatched native class mask. The bonus survives projectile flight. Chain Lightning Overload retains native mask behavior (`sc_shaman.cpp`3254–3257,6315–6322,7320–7327).
 
 Stormkeeper grants its native effect4 count of next-spell uses, bounded by the native stack cap. Retain the native single proc charge; do not represent the same uses again as extra charges. Each use carries one native modifier amount, not a stack-multiplied bonus. A successful foreground root spends one use; its background overload does not spend another (`sc_shaman.cpp`8759).
+
+Primal Storm Elemental dismissal removes the owner's earned Wind Gust263806, including early dismissal; its native infinite aura must not outlive the actual summon (`sc_shaman.cpp4330–4334`).
 
 Native445624 supplies actual221177 Ancestors and their native lifetime after selected Stormkeeper or Ancestral Swiftness. Successful foreground spells command each living owned Ancestor once with native447419/447425 children at the retained primary. Background overloads do not command them. Native owner spell power and crit are inherited; Ancestor Lava Burst is guaranteed critical and scales with inherited crit (`sc_shaman.cpp`4342–4441,6358,7856,8163–8166,8758). Natural expiry allows selected Final Calling465717; cancellation does not. Actual Ancestor447419/447425/465717 critical hits apply selected live Elemental Fury60188 effect0's critical bonus, preserving its native amount and other spells' modifier masks (`sc_shaman.cpp`11468–11469; SimC effect indexes are one-based). Removing that owner aura removes the bonus. Ancient Fellowship and remaining pet effect inheritance still require qualification.
 

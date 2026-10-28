@@ -11,6 +11,7 @@ use bevy::prelude::*;
 use shared::protocol::{CombatLogEvent, CombatLogKind};
 
 const LANGUISH: u32 = 71_023;
+const DEEP_WOUNDS: u32 = 262_115;
 const RENEW: u32 = 139;
 const ROLLING_PERIODIC: u32 = 0x4000;
 
@@ -131,26 +132,72 @@ fn assert_native_full_mask_rolling(cast_child: fn(&mut Harness, Entity, u32)) {
     );
     finish_aura(&mut h, &refreshed);
     let remaining = ticks(&h, target, LANGUISH, start);
-    // SimC76f8118 dot.cpp1154–1170/action.cpp5223: preserving the native
-    // phase leaves two full payments and a final fractional payment at expiry.
-    assert_eq!(remaining.len(), total as usize + 1);
-    let period_seconds = f64::from(period) / 1000.0;
-    let final_fraction =
-        ((refreshed.expires_at.unwrap() - initial.expires_at.unwrap()) / period_seconds).fract();
-    assert!(final_fraction > 0.0 && final_fraction < 1.0);
-    // Retain the native per-tick carry oracle; only the tail is fractional.
-    let full_amount = paid.amount as f32 * (1.0 + (total - 1) as f32 / total as f32);
-    for tick in remaining.iter().take(total as usize) {
-        assert_eq!(
-            tick.amount,
-            full_amount.round() as i32,
-            "native flag must carry unpaid damage, not simply replace it"
-        );
+    // SimC76f8118 action.cpp4614–4617/4995–5015: one unpaid tick plus
+    // two fresh ticks is distributed over three full carried-phase ticks.
+    assert_eq!(paid.amount, 5);
+    assert_eq!(remaining.len(), 3);
+    assert!(
+        remaining.iter().all(|tick| tick.amount == 5),
+        "rolling budget must pay three full native ticks: {remaining:?}"
+    );
+}
+
+#[test]
+fn rolling_deep_wounds_tracks_live_attack_power_across_refresh() {
+    fn set_power(h: &mut Harness, power: f32) {
+        let mut stats = h
+            .app
+            .world_mut()
+            .get_mut::<crate::stats::CharacterStats>(h.caster)
+            .unwrap();
+        stats.attack_power = power;
+        stats.crit_pct = 0.0;
     }
-    assert_eq!(
-        remaining.last().unwrap().amount,
-        (f64::from(full_amount) * final_fraction).round() as i32,
-        "the final partial event scales the same native rolled amount"
+
+    let mut rolling = native_fixture();
+    let target = rolling.npc;
+    set_power(&mut rolling, 1_000.0);
+    cast_native_child(&mut rolling, target, DEEP_WOUNDS);
+    first_tick(&mut rolling, target, DEEP_WOUNDS);
+    let prior = native_aura(&rolling, target, DEEP_WOUNDS);
+    let effect = prior
+        .effects
+        .iter()
+        .find(|effect| effect.period_ms > 0)
+        .unwrap();
+    let period = f64::from(effect.period_ms) / 1_000.0;
+    let unpaid = 1.0 + (prior.expires_at.unwrap() - effect.next_tick_at()) / period;
+    set_power(&mut rolling, 2_000.0);
+    cast_native_child(&mut rolling, target, DEEP_WOUNDS);
+    let refreshed = native_aura(&rolling, target, DEEP_WOUNDS);
+    let effect = refreshed
+        .effects
+        .iter()
+        .find(|effect| effect.period_ms > 0)
+        .unwrap();
+    let future = 1.0 + (refreshed.expires_at.unwrap() - effect.next_tick_at()) / period;
+    let fresh_ticks = f64::from(prior.duration_ms) / f64::from(effect.period_ms);
+    let multiplier = (unpaid + fresh_ticks) / future;
+    assert!(multiplier > 1.1);
+
+    let mut control = native_fixture();
+    let control_target = control.npc;
+    set_power(&mut control, 2_000.0);
+    cast_native_child(&mut control, control_target, DEEP_WOUNDS);
+    let fresh = first_tick(&mut control, control_target, DEEP_WOUNDS).amount;
+    let refreshed_tick = first_tick(&mut rolling, target, DEEP_WOUNDS).amount;
+    assert!(
+        (f64::from(refreshed_tick) - f64::from(fresh) * multiplier).abs() <= 2.0,
+        "refresh must use current AP for the entire rolled multiplier: fresh={fresh}, rolled={refreshed_tick}, multiplier={multiplier}"
+    );
+
+    set_power(&mut rolling, 4_000.0);
+    set_power(&mut control, 4_000.0);
+    let live = first_tick(&mut control, control_target, DEEP_WOUNDS).amount;
+    let rolled_live = first_tick(&mut rolling, target, DEEP_WOUNDS).amount;
+    assert!(
+        (f64::from(rolled_live) - f64::from(live) * multiplier).abs() <= 2.0,
+        "later AP changes must scale with the entire rolled multiplier: fresh={live}, rolled={rolled_live}, multiplier={multiplier}"
     );
 }
 

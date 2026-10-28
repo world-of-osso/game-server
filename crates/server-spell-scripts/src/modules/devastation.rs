@@ -252,6 +252,13 @@ fn causality_tick(
 }
 
 const POLICIES: &[Policy] = &[
+    // SimC76f8118 sc_evoker.cpp10521–10524: successive Hovers extend remaining time.
+    Policy {
+        name: "SIMC_DEVASTATION_HOVER_REAPPLICATION_EXTEND",
+        spec: 1467,
+        talent: 358267,
+        relationship: Relationship::ReapplicationExtend { payload: 358267 },
+    },
     // sc_evoker.cpp5718/8888–8891: overlapping Maneuverability burns extend.
     Policy {
         name: "SIMC_DEVASTATION_MELT_ARMOR_REAPPLICATION_EXTEND",

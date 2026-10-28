@@ -3,11 +3,33 @@ use super::combat;
 use bevy::prelude::*;
 use combat::spell_cast::{
     self,
+    effects::EffectCtx,
     script_registry::{HitHook, SpellScriptHook},
     targets,
 };
 
-pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::EffectHit(effect_hit)];
+pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::EffectHit(effect_hit),
+    SpellScriptHook::AfterPolicyDirectDamage(extend_diseases),
+];
+
+fn extend_diseases(world: &mut World, ctx: &EffectCtx<'_>, target: Entity, _: bool) {
+    if !matches!(ctx.spell.id, 47632 | 1242178) {
+        return;
+    }
+    // SimC76f8118 sc_death_knight.cpp9844–9861/9869–9897/13586–13603:
+    // the Coil damage or Necrotic shadow child extends diseases on each hit.
+    let milliseconds = combat::spell_cast::scripts::script_effect_value(world, ctx.caster, 77575, 2)
+        .max(0.0)
+        .round() as u32;
+    combat::auras::extend_owned_duration(
+        world,
+        ctx.caster,
+        target,
+        &[1240996, 191587],
+        milliseconds,
+    );
+}
 
 fn effect_hit(spell: u32, index: u8) -> Option<HitHook> {
     match (spell, index) {
