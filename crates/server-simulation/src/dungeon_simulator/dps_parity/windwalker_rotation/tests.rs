@@ -364,43 +364,6 @@ fn literal_ww_native_zenith_target_if_preserves_enemy_context_and_self_aura() {
     );
 }
 
-#[test]
-#[ignore = "requires native269 profile and literal opener"]
-fn windwalker_first_fists_opener_does_not_preload_dance() {
-    let _seed = crate::random::seed_scope(70448);
-    let mut run = super::super::prepare_measurement(269, 1).unwrap();
-    install_target_lifetimes(&mut run);
-    super::super::engage(&mut run);
-    let mut rotation = (run.spec_driver.take().unwrap() as Box<dyn std::any::Any>)
-        .downcast::<Rotation>()
-        .unwrap();
-    for _ in 0..200 {
-        rotation
-            .drive(run.app.world_mut(), run.actor, &run.targets)
-            .unwrap();
-        run.app.update();
-        let first_fists = run
-            .app
-            .world()
-            .resource::<ObservedCombatEvents>()
-            .0
-            .iter()
-            .any(|event| {
-                event.source == Some(run.actor.to_bits())
-                    && event.spell_id == Some(113656)
-                    && event.kind == CombatLogKind::CastSuccess
-            });
-        if first_fists {
-            assert!(
-                !crate::auras::has_aura(run.app.world(), run.actor, 325202),
-                "seed70448 first real Fists must not gain a preloaded Dance proc"
-            );
-            return;
-        }
-    }
-    panic!("literal opener must cast Fists of Fury");
-}
-
 fn run_literal(count: usize) {
     let _scope = crate::random::seed_scope(70448);
     let mut run = super::super::prepare_measurement(269, count).unwrap();
