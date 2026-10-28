@@ -1148,24 +1148,49 @@ fn dk252_trollbane_chains_then_scourge_strike_shatters_three_targets() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(252, 3).unwrap();
     engage(&mut run);
-    literal_rotation::execution::execute(run.app.world_mut(), run.actor,
-        literal_rotation::execution::Execution::Spell(42650, run.actor, None)).unwrap();
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(42650, run.actor, None),
+    )
+    .unwrap();
     preparation::finish_pending_setup(&mut run).unwrap();
     for _ in 0..200 {
         run.app.update();
-        if crate::auras::has_aura(run.app.world(), run.targets[0], 444826) { break; }
+        if crate::auras::has_aura(run.app.world(), run.targets[0], 444826) {
+            break;
+        }
     }
-    assert!(crate::auras::has_aura(run.app.world(), run.targets[0], 444826), "real Trollbane must apply native Chains of Ice");
-    literal_rotation::execution::execute(run.app.world_mut(), run.actor,
-        literal_rotation::execution::Execution::Spell(55090, run.targets[0], Some(run.targets[0]))).unwrap();
+    assert!(
+        crate::auras::has_aura(run.app.world(), run.targets[0], 444826),
+        "real Trollbane must apply native Chains of Ice"
+    );
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(55090, run.targets[0], Some(run.targets[0])),
+    )
+    .unwrap();
     preparation::finish_pending_setup(&mut run).unwrap();
-    for _ in 0..20 { run.app.update(); }
-    let events = &run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
+    for _ in 0..20 {
+        run.app.update();
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
     for target in &run.targets {
-        assert!(events.iter().any(|event| event.source == Some(run.actor.to_bits())
-            && event.target == Some(target.to_bits()) && event.spell_id == Some(444834)
-            && event.kind == CombatLogKind::Damage && event.amount > 0),
-            "Scourge Strike must make native Icy Fury hit {target:?}");
+        assert!(
+            events
+                .iter()
+                .any(|event| event.source == Some(run.actor.to_bits())
+                    && event.target == Some(target.to_bits())
+                    && event.spell_id == Some(444834)
+                    && event.kind == CombatLogKind::Damage
+                    && event.amount > 0),
+            "Scourge Strike must make native Icy Fury hit {target:?}"
+        );
     }
 }
 
@@ -1317,38 +1342,88 @@ fn dk252_grave_mastery_increases_actual_magus_critical_damage() {
     let mut run = prepare_literal(252, 1).unwrap();
     engage(&mut run);
     literal_rotation::execution::execute(
-        run.app.world_mut(), run.actor,
-        literal_rotation::execution::Execution::Spell(1247378, run.targets[0], Some(run.targets[0])),
-    ).unwrap();
-    let magus = (0..100).find_map(|_| {
-        run.app.update();
-        let world = run.app.world_mut();
-        world.query::<(Entity, &shared::components::Npc)>().iter(world)
-            .find_map(|(entity, npc)| (npc.template_id == 163366).then_some(entity))
-    }).expect("Putrefy must summon an actual Magus");
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(
+            1247378,
+            run.targets[0],
+            Some(run.targets[0]),
+        ),
+    )
+    .unwrap();
+    let magus = (0..100)
+        .find_map(|_| {
+            run.app.update();
+            let world = run.app.world_mut();
+            world
+                .query::<(Entity, &shared::components::Npc)>()
+                .iter(world)
+                .find_map(|(entity, npc)| (npc.template_id == 163366).then_some(entity))
+        })
+        .expect("Putrefy must summon an actual Magus");
     assert!(crate::auras::has_aura(run.app.world(), magus, 1238902));
-    run.app.world_mut().get_mut::<crate::stats::CharacterStats>(run.actor).unwrap().crit_pct = 100.0;
-    crate::auras::remove_auras(run.app.world_mut(), magus, crate::auras::RemoveReason::Cancelled, |aura| aura.spell_id == 1238902);
+    run.app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(run.actor)
+        .unwrap()
+        .crit_pct = 100.0;
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        magus,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 1238902,
+    );
     let target = run.targets[0];
     let hit = |run: &mut Run| {
-        run.app.world_mut().resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>().0.clear();
-        assert!(crate::spell_cast::try_cast_triggered(run.app.world_mut(), magus, 1297055, Some(target), 1));
+        run.app
+            .world_mut()
+            .resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .clear();
+        assert!(crate::spell_cast::try_cast_triggered(
+            run.app.world_mut(),
+            magus,
+            1297055,
+            Some(target),
+            1
+        ));
         for _ in 0..40 {
             run.app.update();
-            if let Some(amount) = run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0.iter()
-                .find(|event| event.source == Some(magus.to_bits()) && event.spell_id == Some(1297055)
-                    && event.kind == CombatLogKind::Damage && event.crit).map(|event| event.amount) {
+            if let Some(amount) = run
+                .app
+                .world()
+                .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+                .0
+                .iter()
+                .find(|event| {
+                    event.source == Some(magus.to_bits())
+                        && event.spell_id == Some(1297055)
+                        && event.kind == CombatLogKind::Damage
+                        && event.crit
+                })
+                .map(|event| event.amount)
+            {
                 return amount;
             }
         }
         panic!("actual Magus bolt must land and crit");
     };
     let without = hit(&mut run);
-    assert!(crate::spell_cast::try_cast_triggered(run.app.world_mut(), magus, 1238902, Some(magus), 1));
+    assert!(crate::spell_cast::try_cast_triggered(
+        run.app.world_mut(),
+        magus,
+        1238902,
+        Some(magus),
+        1
+    ));
     let with = hit(&mut run);
-    let expected = 1.0 + crate::spell_cast::scripts::script_effect_value(run.app.world(), magus, 1238902, 0) / 100.0;
-    assert!((with as f32 / without as f32 - expected).abs() < 0.01,
-        "native Grave Mastery must increase the real Magus critical hit: {without} -> {with}");
+    let expected = 1.0
+        + crate::spell_cast::scripts::script_effect_value(run.app.world(), magus, 1238902, 0)
+            / 100.0;
+    assert!(
+        (with as f32 / without as f32 - expected).abs() < 0.01,
+        "native Grave Mastery must increase the real Magus critical hit: {without} -> {with}"
+    );
 }
 
 #[test]
@@ -2492,24 +2567,59 @@ fn dk252_rune_spending_can_summon_a_ten_second_real_horseman() {
     let mut run = prepare_literal(252, 1).unwrap();
     engage(&mut run);
     for _ in 0..30 {
-        crate::spell_cast::powers::change_power(run.app.world_mut(), run.actor, shared::components::PowerType::Runes, 6.0);
-        literal_rotation::execution::execute(run.app.world_mut(), run.actor,
-            literal_rotation::execution::Execution::Spell(55090, run.targets[0], Some(run.targets[0]))).unwrap();
+        crate::spell_cast::powers::change_power(
+            run.app.world_mut(),
+            run.actor,
+            shared::components::PowerType::Runes,
+            6.0,
+        );
+        literal_rotation::execution::execute(
+            run.app.world_mut(),
+            run.actor,
+            literal_rotation::execution::Execution::Spell(
+                55090,
+                run.targets[0],
+                Some(run.targets[0]),
+            ),
+        )
+        .unwrap();
         preparation::finish_pending_setup(&mut run).unwrap();
         let now = crate::auras::aura_now(run.app.world());
         let found = {
             let world = run.app.world_mut();
-            world.query::<&crate::spell_cast::summon::SummonedCreature>().iter(world)
-                .find_map(|summon| (summon.owner == run.actor && [444248,444251,444252,444254].contains(&summon.spell_id))
-                    .then_some(summon.expires_at)).flatten()
+            world
+                .query::<&crate::spell_cast::summon::SummonedCreature>()
+                .iter(world)
+                .find_map(|summon| {
+                    (summon.owner == run.actor
+                        && [444248, 444251, 444252, 444254].contains(&summon.spell_id))
+                    .then_some(summon.expires_at)
+                })
+                .flatten()
         };
         if let Some(expiry) = found {
-            let duration = run.app.world().resource::<crate::spell_info::SpellStore>().get(454389).unwrap()
-                .misc.as_ref().unwrap().duration.unwrap().duration_ms as f64 / 1000.0;
-            assert!(expiry > now && expiry - now <= duration, "real proc rider must use its native temporary lifetime");
+            let duration = run
+                .app
+                .world()
+                .resource::<crate::spell_info::SpellStore>()
+                .get(454389)
+                .unwrap()
+                .misc
+                .as_ref()
+                .unwrap()
+                .duration
+                .unwrap()
+                .duration_ms as f64
+                / 1000.0;
+            assert!(
+                expiry > now && expiry - now <= duration,
+                "real proc rider must use its native temporary lifetime"
+            );
             return;
         }
-        for _ in 0..40 { run.app.update(); }
+        for _ in 0..40 {
+            run.app.update();
+        }
     }
     panic!("actual rune spenders must earn a Rider's Champion summon");
 }
