@@ -90,6 +90,7 @@ register_modules! {
     blood_ground: (2501, "modules/blood_ground.rs"),
     blood_mid2: (2502, "modules/blood_mid2.rs"),
     blood_sanlayn: (2503, "modules/blood_sanlayn.rs"),
+    blood_boiling: (2504, "modules/blood_boiling.rs"),
     cast_grants: (120, "modules/cast_grants.rs"),
     cast_relationships: (370, "modules/cast_relationships.rs"),
     cast_resets: (90, "modules/cast_resets.rs"),

@@ -353,6 +353,63 @@ mod tests {
 
     #[test]
     #[ignore = "requires canonical world database and MID2 Blood inputs"]
+    fn blood_boiling_point_proc_consumes_and_echoes_blood_boil() {
+        let _seed = crate::random::seed_scope(70448);
+        let mut run = super::super::prepare_registered_player(250, 1).unwrap();
+        let actor = run.actor;
+        let target = run.targets[0];
+        super::super::engage(&mut run);
+        for _ in 0..30 {
+            crate::spell_cast::creature_cast(
+                run.app.world_mut(),
+                actor,
+                206930,
+                Some(target),
+                false,
+            )
+            .unwrap();
+            for _ in 0..30 {
+                run.app.update();
+            }
+            if crate::auras::has_aura(run.app.world(), actor, 1265968) {
+                break;
+            }
+        }
+        assert!(crate::auras::has_aura(run.app.world(), actor, 1265968));
+        let start = run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .len();
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 50842, None, false).unwrap();
+        for _ in 0..4 {
+            run.app.update();
+        }
+        assert!(!crate::auras::has_aura(run.app.world(), actor, 1265968));
+        assert!(crate::auras::has_aura(run.app.world(), actor, 1265982));
+        for _ in 0..70 {
+            run.app.update();
+        }
+        let events = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0[start..];
+        let hits = events
+            .iter()
+            .filter(|event| {
+                event.source == Some(actor.to_bits())
+                    && event.target == Some(target.to_bits())
+                    && event.spell_id == Some(50842)
+                    && event.kind == shared::protocol::CombatLogKind::Damage
+            })
+            .count();
+        assert_eq!(hits, 2, "one Blood Boil hit and one delayed echo");
+    }
+
+    #[test]
+    #[ignore = "requires canonical world database and MID2 Blood inputs"]
     fn blood_death_strike_can_earn_and_consume_vampiric_strike() {
         let _seed = crate::random::seed_scope(70448);
         let mut run = super::super::prepare_registered_player(250, 1).unwrap();
