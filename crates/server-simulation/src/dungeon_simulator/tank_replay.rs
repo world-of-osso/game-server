@@ -429,8 +429,25 @@ fn replay_registered_run_with_healing(
                             weapon_speed: 2.0,
                         },
                     };
-                    raw += source_amount(&recorded)?;
-                    crate::combat::replay_healer_hit(run.app.world_mut(), source, tank, &recorded)?;
+                    let source_damage = source_amount(&recorded)?;
+                    raw += source_damage;
+                    if hit.kind == Kind::Strike {
+                        crate::spell_cast::effects::replay_simc_dummy_strike(
+                            run.app.world_mut(),
+                            source,
+                            tank,
+                            source_damage as f32,
+                            outcome == crate::melee::MeleeOutcome::Crit,
+                            outcome == crate::melee::MeleeOutcome::Block,
+                        );
+                    } else {
+                        crate::combat::replay_healer_hit(
+                            run.app.world_mut(),
+                            source,
+                            tank,
+                            &recorded,
+                        )?;
+                    }
                 }
             }
             run.app

@@ -16,6 +16,93 @@ fn tank_replay_rejects_profiles_without_level_90_mid2_inputs() {
 }
 
 #[test]
+#[ignore = "uses the native recipient, auto-only proc and SimC special damage"]
+fn simc_dummy_strike_does_not_trigger_auto_attack_procs() {
+    use crate::auras::{AuraApplication, AuraInstance, AuraSource};
+    use bevy::prelude::*;
+    #[derive(Component, Default)]
+    struct AutoProcs(u32);
+    fn count_auto(world: &mut World, unit: Entity, _: &AuraInstance, _: Option<Entity>) {
+        world.get_mut::<AutoProcs>(unit).unwrap().0 += 1;
+    }
+    let (profile, traits) = super::dps_parity::read_reference(66).unwrap();
+    let mut run = super::dps_parity::spawn_reference(
+        profile,
+        &traits,
+        1,
+        crate::followers::simulator::ParityActor::Player { race: 6 },
+    )
+    .unwrap();
+    let target = run.actor;
+    let source = run.targets[0];
+    run.app
+        .world_mut()
+        .entity_mut(target)
+        .insert(AutoProcs::default());
+    run.app
+        .world_mut()
+        .resource_mut::<crate::auras::scripts::AuraScripts>()
+        .0
+        .entry(15097)
+        .or_default()
+        .on_proc = Some(count_auto);
+    crate::auras::apply_aura(
+        run.app.world_mut(),
+        &AuraApplication {
+            caster: target,
+            target,
+            spell_id: 15097,
+            effect_mask: 1,
+            source: AuraSource::Cast,
+        },
+    );
+    assert!(crate::auras::has_aura(run.app.world(), target, 15097));
+    let before = run
+        .app
+        .world()
+        .get::<shared::components::Health>(target)
+        .unwrap()
+        .current;
+    crate::spell_cast::effects::replay_simc_dummy_strike(
+        run.app.world_mut(),
+        source,
+        target,
+        10_000.0,
+        false,
+        false,
+    );
+    run.app.update();
+    assert!(
+        run.app
+            .world()
+            .get::<shared::components::Health>(target)
+            .unwrap()
+            .current
+            < before
+    );
+    assert_eq!(run.app.world().get::<AutoProcs>(target).unwrap().0, 0);
+    let hit = crate::test_support::healer_intake::Hit {
+        tick: 1,
+        source_guid: 0,
+        pack: 0,
+        target_slot: 0,
+        school: 1,
+        raw: 10_000.0,
+        level_scaling_factor: 1.0,
+        kind: crate::test_support::healer_intake::HitKind::Melee {
+            hand: 0,
+            outcome: "Hit".into(),
+            level_difference: -2,
+            critical_multiplier: 1.0,
+            weapon_speed: 2.0,
+        },
+    };
+    crate::combat::replay_healer_hit(run.app.world_mut(), source, target, &hit).unwrap();
+    run.app.update();
+    assert_eq!(run.app.world().get::<AutoProcs>(target).unwrap().0, 1);
+}
+
+#[test]
 #[ignore = "uses the selected MID2 player and native Holy Bulwark casts"]
 fn holy_bulwark_absorbs_incoming_hits_and_grows_to_native_cap() {
     fn cast_bulwark() -> super::dps_parity::Run {
