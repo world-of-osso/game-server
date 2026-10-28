@@ -142,8 +142,9 @@ enum Selector {
     /// Units in the cone ahead of the caster meeting the effect's conditions
     /// (`TARGET_CHECK_ENTRY`).
     ConeEntry,
-    ///24: hostile cone along the caster's facing, using native ConeDegrees.
+    ///24/59: hostile/friendly cone along the caster's facing, using native ConeDegrees.
     ConeEnemy,
+    ConeAlly,
     ///129: hostile rectangle along caster facing, using native Width/CalcRadius.
     CasterLine,
     ///104: hostile cone aimed from the caster toward the selected destination.
@@ -207,6 +208,8 @@ fn selector(id: u32) -> Option<Selector> {
         27 => Selector::Master,
         92 => Selector::Summoner,
         24 => Selector::ConeEnemy,
+        // TC a352b1fa SpellInfo.cpp:307: caster-centered friendly cone.
+        59 => Selector::ConeAlly,
         // TC SpellInfo.cpp maps both to caster-reference CONE/ENTRY/FRONT.
         60 | 110 => Selector::ConeEntry,
         104 => Selector::ConeToDest,
@@ -280,6 +283,7 @@ pub(crate) fn provides_non_caster_unit_target(effect: &SpellEffect) -> bool {
                     | Selector::DynObj(_)
                     | Selector::ConeEntry
                     | Selector::ConeEnemy
+                    | Selector::ConeAlly
                     | Selector::CasterLine
                     | Selector::ConeToDest
                     | Selector::LineToDest
@@ -705,12 +709,15 @@ pub(super) fn select_targets_and_destination(
                 ));
             }
             Selector::ConeEnemy
+            | Selector::ConeAlly
             | Selector::CasterLine
             | Selector::ConeToDest
             | Selector::LineToDest => {
                 selected_any = true;
-                let destination = if matches!(selector, Selector::ConeEnemy | Selector::CasterLine)
-                {
+                let destination = if matches!(
+                    selector,
+                    Selector::ConeEnemy | Selector::ConeAlly | Selector::CasterLine
+                ) {
                     None
                 } else {
                     spell
@@ -1045,7 +1052,11 @@ fn directed_units(
         caster,
         origin,
         radius(effect, slot),
-        Relation::Enemy,
+        if effect.implicit_targets[slot] == 59 {
+            Relation::Ally
+        } else {
+            Relation::Enemy
+        },
         0,
     );
     units.retain(|&unit| {
@@ -1657,6 +1668,7 @@ pub fn shared_selection_checks_radius(effect: &SpellEffect) -> bool {
                     | Selector::NearbyEntry
                     | Selector::ConeEntry
                     | Selector::ConeEnemy
+                    | Selector::ConeAlly
                     | Selector::CasterLine
                     | Selector::ConeToDest
                     | Selector::LineToDest

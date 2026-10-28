@@ -5,6 +5,7 @@ mod catalogs;
 mod chain_heal_target_tests;
 mod diagnostics;
 pub(crate) mod dps_parity;
+mod friendly_cone_tests;
 mod graph;
 mod healer_benchmark_tests;
 mod healer_coefficient_tests;
