@@ -5,9 +5,11 @@ use combat::auras::{
     self, AuraApplication, AuraInstance, AuraSource, RemoveReason, procs::AuraEvent,
 };
 use combat::class_progression::KnownSpells;
-use combat::spell_cast::{self, script_registry::SpellScriptHook};
+use combat::spell_cast::{
+    self, CostPool, TriggeredSpellOverrides, script_registry::SpellScriptHook,
+};
 use combat::spell_info::{SpellInfo, SpellStore};
-use shared::components::{ActiveSpec, Npc, UnitSummonedBy};
+use shared::components::{ActiveSpec, Npc, PowerType, UnitSummonedBy};
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AfterForegroundSpecial(grant_bones),
@@ -15,7 +17,89 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::EarlyAuraRegistration(register_dance),
     SpellScriptHook::AvoidanceProcHitMask(dance_avoidance_mask),
     SpellScriptHook::AfterForegroundSpecial(consume_dance),
+    SpellScriptHook::AfterPayment(spawn_dance_weapon),
+    SpellScriptHook::AfterCastUpdate(sync_rune_weapon_buff),
 ];
+
+#[derive(Component, Default)]
+struct DanceAttempts(u32);
+
+// SimC76f8118 sc_death_knight.cpp13063–13075/14820–14822: 12.5%
+// accumulated chance on rune spending; the source explicitly says it is not in data.
+fn spawn_dance_weapon(world: &mut World, caster: Entity, costs: &[(CostPool, f32)]) {
+    if !world
+        .get::<ActiveSpec>(caster)
+        .is_some_and(|spec| spec.0 == 250)
+        || !world
+            .get::<KnownSpells>(caster)
+            .is_some_and(|known| known.contains(1264506))
+    {
+        return;
+    }
+    let runes = costs
+        .iter()
+        .filter_map(|(pool, amount)| {
+            (*pool == CostPool::Power(PowerType::Runes)).then_some(*amount)
+        })
+        .sum::<f32>();
+    if runes <= 0.0 {
+        return;
+    }
+    for _ in 0..runes as u32 {
+        let mut state = world
+            .entity_mut(caster)
+            .entry::<DanceAttempts>()
+            .or_default();
+        let mut state = state.get_mut();
+        state.0 += 1;
+        let chance = combat::random::accumulated_proc_constant(0.125) * f64::from(state.0);
+        if combat::random::random::<f64>() < chance {
+            state.0 = 0;
+            drop(state);
+            spell_cast::cast_triggered(world, caster, 1264353, Some(caster), 1);
+        }
+    }
+}
+
+// The DRW parry buff follows the longest-lived real weapon, including Dance spawns.
+fn sync_rune_weapon_buff(world: &mut World) {
+    let now = spell_cast::now(world);
+    let weapons: Vec<_> = world
+        .query::<&spell_cast::summon::SummonedCreature>()
+        .iter(world)
+        .filter(|summon| matches!(summon.spell_id, 49028 | 1237128 | 1264353))
+        .filter_map(|summon| {
+            summon
+                .expires_at
+                .filter(|end| *end > now)
+                .map(|end| (summon.owner, end))
+        })
+        .collect();
+    for (owner, end) in weapons {
+        let remaining = world
+            .get::<auras::ActiveAuras>(owner)
+            .and_then(|auras| {
+                auras
+                    .iter()
+                    .find(|aura| aura.spell_id == 81256 && aura.caster == owner)
+                    .and_then(|aura| aura.expires_at)
+            })
+            .unwrap_or(now);
+        if end > remaining + 0.001 {
+            spell_cast::cast_triggered_with_overrides(
+                world,
+                owner,
+                81256,
+                Some(owner),
+                1,
+                TriggeredSpellOverrides {
+                    duration_ms: Some(((end - now) * 1000.0).round() as i32),
+                    ..Default::default()
+                },
+            );
+        }
+    }
+}
 
 fn register_dance(scripts: &mut combat::auras::scripts::AuraScripts) {
     let dance = scripts.0.entry(1264351).or_default();
