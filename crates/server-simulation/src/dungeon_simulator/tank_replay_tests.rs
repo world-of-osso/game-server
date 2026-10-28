@@ -16,6 +16,61 @@ fn tank_replay_rejects_profiles_without_level_90_mid2_inputs() {
 }
 
 #[test]
+#[ignore = "uses the selected MID2 66 player and native armament override"]
+fn protection_holy_armaments_alternate_after_real_casts() {
+    let (profile, traits) = super::dps_parity::read_reference(66).unwrap();
+    let mut run = super::dps_parity::spawn_reference(
+        profile,
+        &traits,
+        1,
+        crate::followers::simulator::ParityActor::Player { race: 6 },
+    )
+    .unwrap();
+    for _ in 0..4 {
+        run.app.update();
+    }
+    assert_eq!(
+        crate::spell_cast::knowledge::resolve_actor_action(run.app.world(), run.actor, 432459)
+            .unwrap(),
+        432459
+    );
+    crate::spell_cast::creature_cast(
+        run.app.world_mut(),
+        run.actor,
+        432459,
+        Some(run.actor),
+        false,
+    )
+    .unwrap();
+    for _ in 0..40 {
+        run.app.update();
+    }
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, 432478));
+    assert_eq!(
+        crate::spell_cast::knowledge::resolve_actor_action(run.app.world(), run.actor, 432459)
+            .unwrap(),
+        432472
+    );
+    crate::spell_cast::creature_cast(
+        run.app.world_mut(),
+        run.actor,
+        432459,
+        Some(run.actor),
+        false,
+    )
+    .unwrap();
+    for _ in 0..40 {
+        run.app.update();
+    }
+    assert!(!crate::auras::has_aura(run.app.world(), run.actor, 432478));
+    assert_eq!(
+        crate::spell_cast::knowledge::resolve_actor_action(run.app.world(), run.actor, 432459)
+            .unwrap(),
+        432459
+    );
+}
+
+#[test]
 #[ignore = "uses the real MID2 Protection profile and native fields"]
 fn protection_apl_reads_selected_apex_and_native_consecration() {
     use super::tank_replay::protection_rotation::{self, Context};
