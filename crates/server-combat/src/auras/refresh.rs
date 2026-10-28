@@ -294,11 +294,20 @@ fn roll_remaining_periodic(
         .max(0.0);
         if future > 0.0 {
             let fresh_ticks = f64::from(fresh_duration_ms) / f64::from(fresh.period_ms);
-            let multiplier = ((unpaid * f64::from(prior.periodic_rolling_multiplier) + fresh_ticks)
+            let spell = world
+                .resource::<crate::spell_info::SpellStore>()
+                .get(old.spell_id)
+                .expect("rolling periodic spell must exist");
+            let prior_amount =
+                super::periodic::periodic_live_amount(world, old.caster, spell, prior);
+            let stacks = old.stack_multiplier();
+            fresh.amount = ((f64::from(prior_amount * stacks) * unpaid
+                + f64::from(fresh.amount) * fresh_ticks)
                 / future) as f32;
-            fresh.periodic_rolling_multiplier = multiplier;
-            fresh.amount *= multiplier;
-            fresh.periodic_power_multiplier *= multiplier;
+            fresh.periodic_power_multiplier =
+                ((f64::from(prior.periodic_power_multiplier * stacks) * unpaid
+                    + f64::from(fresh.periodic_power_multiplier) * fresh_ticks)
+                    / future) as f32;
         }
     }
 }

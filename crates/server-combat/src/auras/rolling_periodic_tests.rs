@@ -143,6 +143,55 @@ fn assert_native_full_mask_rolling(cast_child: fn(&mut Harness, Entity, u32)) {
 }
 
 #[test]
+fn ignite_refresh_preserves_unequal_deposit_budgets() {
+    const IGNITE: u32 = 12654;
+    fn deposit(h: &mut Harness, target: Entity, amount: f32) {
+        crate::spell_cast::cast_triggered_with_effect0_amount(
+            h.app.world_mut(),
+            h.caster,
+            IGNITE,
+            Some(target),
+            1,
+            amount,
+        );
+        h.advance(1);
+    }
+
+    let mut rolling = native_fixture();
+    let target = rolling.npc;
+    deposit(&mut rolling, target, 100.0);
+    let first = first_tick(&mut rolling, target, IGNITE).amount;
+    let prior = native_aura(&rolling, target, IGNITE);
+    let old_effect = prior
+        .effects
+        .iter()
+        .find(|effect| effect.period_ms > 0)
+        .unwrap();
+    let period = f64::from(old_effect.period_ms) / 1000.0;
+    let unpaid = 1.0 + (prior.expires_at.unwrap() - old_effect.next_tick_at()) / period;
+
+    let mut control = native_fixture();
+    let control_target = control.npc;
+    deposit(&mut control, control_target, 20.0);
+    let fresh = first_tick(&mut control, control_target, IGNITE).amount;
+    deposit(&mut rolling, target, 20.0);
+    let refreshed = native_aura(&rolling, target, IGNITE);
+    let effect = refreshed
+        .effects
+        .iter()
+        .find(|effect| effect.period_ms > 0)
+        .unwrap();
+    let future = 1.0 + (refreshed.expires_at.unwrap() - effect.next_tick_at()) / period;
+    let fresh_ticks = f64::from(prior.duration_ms) / f64::from(effect.period_ms);
+    let expected = (f64::from(first) * unpaid + f64::from(fresh) * fresh_ticks) / future;
+    let tick = first_tick(&mut rolling, target, IGNITE).amount;
+    assert!(
+        (f64::from(tick) - expected).abs() <= 2.0,
+        "unequal Ignite deposits must retain their own unpaid budgets: first={first}, fresh={fresh}, expected={expected}, tick={tick}"
+    );
+}
+
+#[test]
 fn rolling_deep_wounds_tracks_live_attack_power_across_refresh() {
     fn set_power(h: &mut Harness, power: f32) {
         let mut stats = h
