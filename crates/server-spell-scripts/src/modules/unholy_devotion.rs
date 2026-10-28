@@ -14,7 +14,7 @@ fn grant_devotion(world: &mut World, owner: Entity, spell: u32, depth: u8) {
     };
     // SimC76f8118 sc_death_knight.cpp3719–3741: each Putrefied ghoul
     // grants an independently expiring native Unholy Devotion stack.
-    if !spell_cast::try_cast_triggered(world, owner, 1270491, Some(pet), depth + 1) {
+    if !spell_cast::try_cast_triggered(world, pet, 1270491, Some(pet), depth + 1) {
         warn!(?owner, ?pet, "Unholy Devotion application refused");
     }
 }
