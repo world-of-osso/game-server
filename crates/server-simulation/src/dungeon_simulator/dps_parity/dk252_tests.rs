@@ -3096,26 +3096,21 @@ fn dk252_active_diseases_use_live_owner_attack_power() {
         let initial = damage(&run);
         let first = *initial.last().expect("initial real disease tick");
         let before = initial.len();
-        let base_power = run
-            .app
-            .world()
-            .get::<crate::stats::CharacterStats>(run.actor)
-            .unwrap()
-            .attack_power;
+        // Native Heroic Defender effect0 supplies a persistent +300% AP
+        // intervention through the real aura and stat-recalculation path.
+        crate::auras::apply_aura(
+            run.app.world_mut(),
+            &crate::auras::AuraApplication {
+                caster: run.actor,
+                target: run.actor,
+                spell_id: 103421,
+                effect_mask: 1,
+                source: crate::auras::AuraSource::Cast,
+            },
+        );
         for _ in 0..300 {
-            // Other real aura updates can rebuild CharacterStats; keep the
-            // test's live-power intervention in force until a tick observes it.
-            run.app
-                .world_mut()
-                .get_mut::<crate::stats::CharacterStats>(run.actor)
-                .unwrap()
-                .attack_power = base_power + 10_000.0;
             run.app.update();
-            if damage(&run)
-                .iter()
-                .skip(before)
-                .any(|&amount| amount > first * 2)
-            {
+            if damage(&run).len() > before {
                 break;
             }
         }
