@@ -379,6 +379,92 @@ fn dk252_horsemen_use_their_native_damage_actions() {
 
 #[test]
 #[ignore = "requires private native252 Rider templates/profile and player actor"]
+fn dk252_epidemic_commands_whitemane_on_each_infected_target() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_measurement(252, 3).unwrap();
+    engage(&mut run);
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(42650, run.actor, None),
+    )
+    .unwrap();
+    for _ in 0..60 {
+        run.app.update();
+    }
+    let rider = {
+        let world = run.app.world_mut();
+        world
+            .query::<(Entity, &crate::spell_cast::summon::SummonedCreature)>()
+            .iter(world)
+            .find_map(|(actor, summon)| {
+                (summon.owner == run.actor && summon.spell_id == 444251).then_some(actor)
+            })
+            .expect("active Whitemane")
+    };
+    for &target in &run.targets {
+        crate::auras::apply_aura(
+            run.app.world_mut(),
+            &crate::auras::AuraApplication {
+                caster: run.actor,
+                target,
+                spell_id: 191587,
+                effect_mask: 1,
+                source: crate::auras::AuraSource::Cast,
+            },
+        );
+    }
+    run.app
+        .world_mut()
+        .resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .clear();
+    crate::spell_cast::powers::change_power(
+        run.app.world_mut(),
+        run.actor,
+        shared::components::PowerType::RunicPower,
+        1000.0,
+    );
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(207317, run.targets[0], Some(run.targets[0])),
+    )
+    .unwrap();
+    for _ in 0..40 {
+        run.app.update();
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    let hits: Vec<_> = events
+        .iter()
+        .filter(|event| {
+            event.source == Some(rider.to_bits())
+                && event.spell_id == Some(1237172)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0
+        })
+        .collect();
+    assert_eq!(
+        hits.len(),
+        9,
+        "three infected targets require three primary and six splash hits"
+    );
+    for target in &run.targets {
+        assert_eq!(
+            hits.iter()
+                .filter(|event| event.target == Some(target.to_bits()))
+                .count(),
+            3
+        );
+    }
+}
+
+#[test]
+#[ignore = "requires private native252 Rider templates/profile and player actor"]
 fn dk252_horseman_spell_inherits_owner_melee_power() {
     use crate::spell_cast::effects::factor_capture::FactorCapture;
     let _seed = crate::random::seed_scope(70448);
