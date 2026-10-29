@@ -680,6 +680,11 @@ fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance, sanlayn: bool) {
                 stats.haste_pct = compound_haste_pct(stats.haste_pct, amount);
             }
             MOD_CASTING_SPEED_NOT_STACK => acc.haste_not_stack = acc.haste_not_stack.max(amount),
+            // SimC76f8118 sc_monk.cpp6175–6190: the selected Training aura's
+            // dummy effect is the live Stagger-level mastery contribution.
+            DUMMY if aura.spell_id == 383714 && effect.index == 0 => {
+                stats.mastery_points += amount;
+            }
             MASTERY => stats.mastery_points += amount,
             // Player::ApplyModOverrideSpellPowerByAPPercent adds each aura's amount
             // (AuraEffect::HandleOverrideSpellPowerByAttackPower, SpellAuraEffects.cpp:3997-4008).
