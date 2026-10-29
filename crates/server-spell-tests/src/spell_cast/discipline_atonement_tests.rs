@@ -34,6 +34,8 @@ fn divine_aegis_accumulates_critical_flash_heals_and_absorbs_damage() {
     )
     .unwrap();
     h.app
+        .init_resource::<super::test_harness::ObservedCombatEvents>();
+    h.app
         .world_mut()
         .entity_mut(h.caster)
         .insert(ActiveSpec(256));
@@ -96,8 +98,10 @@ fn divine_aegis_accumulates_critical_flash_heals_and_absorbs_damage() {
     );
     h.advance(2);
     let hit = h
-        .inbox
-        .log
+        .app
+        .world()
+        .resource::<super::test_harness::ObservedCombatEvents>()
+        .0
         .iter()
         .rev()
         .find(|event| {
@@ -105,7 +109,15 @@ fn divine_aegis_accumulates_critical_flash_heals_and_absorbs_damage() {
                 && event.spell_id == Some(133)
                 && event.target == Some(ally.to_bits())
         })
-        .expect("actual shield consumption");
+        .unwrap_or_else(|| {
+            panic!(
+                "actual shield consumption: {:?}",
+                h.app
+                    .world()
+                    .resource::<super::test_harness::ObservedCombatEvents>()
+                    .0
+            )
+        });
     assert!(
         (hit.absorbed as f32 - expected).abs() <= 2.0,
         "Aegis must accumulate 30% of effective critical heals: expected {expected}, got {hit:?}"
