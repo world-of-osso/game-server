@@ -146,10 +146,16 @@ impl FloorResolver {
         let mut matching = vec![false; candidates.len()];
         let mut anchors = known_hints.to_vec();
         for hint in &request.neighbor_hints {
-            if let Ok(hint_floors) = self.candidates(request.map, hint.x, hint.y) {
-                if hint_floors.len() == 1 {
-                    anchors.push((hint.x, hint.y, hint_floors[0].z, hint.guid.clone()));
+            let hint_floors = match self.candidates(request.map, hint.x, hint.y) {
+                Ok(floors) => floors,
+                Err(error) => {
+                    return Resolution::Gap {
+                        gap: Gap::MissingGeometry { error },
+                    };
                 }
+            };
+            if hint_floors.len() == 1 {
+                anchors.push((hint.x, hint.y, hint_floors[0].z, hint.guid.clone()));
             }
         }
         let mut matching_hints: Vec<Vec<String>> = vec![Vec::new(); candidates.len()];
