@@ -5,6 +5,50 @@ use shared::components::{ActiveSpec, Health};
 use shared::protocol::CombatLogKind;
 
 #[test]
+fn shield_discipline_returns_mana_when_real_shields_are_depleted() {
+    use shared::components::PowerType;
+    for (spell, talent) in [(17, true), (1253593, true), (17, false)] {
+        let mut h = harness(Vec::new(), &[17, 1253593, 197045, 47755, 194384, 81749], 5).unwrap();
+        let caster = h.caster;
+        h.app.world_mut().entity_mut(caster).insert(ActiveSpec(256));
+        if talent {
+            crate::auras::apply_aura(
+                h.app.world_mut(),
+                &crate::auras::AuraApplication {
+                    caster,
+                    target: caster,
+                    spell_id: 197045,
+                    effect_mask: u32::MAX,
+                    source: crate::auras::AuraSource::Cast,
+                },
+            );
+        }
+        let ally = spawn_player(&mut h.app, 5, 1.0);
+        super::cast_triggered(h.app.world_mut(), caster, spell, Some(ally), 1);
+        assert!(
+            crate::auras::has_aura(h.app.world(), ally, spell),
+            "real shield {spell} applied"
+        );
+        super::powers::change_power(h.app.world_mut(), caster, PowerType::Mana, -500.0);
+        let before = super::powers::power_value(h.app.world(), caster, PowerType::Mana).unwrap();
+        let (_, absorbed) =
+            crate::auras::absorb_damage(h.app.world_mut(), ally, None, 1, 1_000_000.0);
+        assert!(absorbed > 0.0 && !crate::auras::has_aura(h.app.world(), ally, spell));
+        let after = super::powers::power_value(h.app.world(), caster, PowerType::Mana).unwrap();
+        let expected = if talent {
+            (before.1 * 0.005).trunc()
+        } else {
+            0.0
+        };
+        assert_eq!(
+            after.0 - before.0,
+            expected,
+            "shield {spell}, talent={talent}"
+        );
+    }
+}
+
+#[test]
 fn discipline_flash_heal_applies_atonement_even_at_full_health() {
     let mut h = harness(Vec::new(), &[2061, 194384, 81749, 94472], 5).unwrap();
     h.app
@@ -558,6 +602,61 @@ fn discipline_death_summons_shadowfiend_only_in_execute_range() {
                 "every eligible hit summons exactly one fiend"
             );
         }
+    }
+}
+
+#[test]
+#[ignore = "real class summons require the prepared native creature database"]
+fn discipline_fiend_landed_swings_restore_owner_mana() {
+    use super::test_harness::{ObservedCombatEvents, prepare_class_world};
+    use shared::components::PowerType;
+    let prepared = prepare_class_world();
+    for (summon, talent, mana_spell, percentage) in [
+        (1280172, 34433, 343727, 0.005),
+        (200174, 200174, 123051, 0.002),
+    ] {
+        let mut h = harness(Vec::new(), &[summon, talent, mana_spell], 5).unwrap();
+        h.app.insert_resource(prepared.world_data());
+        let conn = rusqlite::Connection::open_with_flags(
+            &world_db().unwrap().powers_db,
+            rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+        )
+        .unwrap();
+        h.app
+            .insert_resource(super::summon::load_summon_properties(&conn).unwrap());
+        h.app.init_resource::<ObservedCombatEvents>();
+        h.app.world_mut().entity_mut(h.caster).insert((
+            ActiveSpec(256),
+            crate::class_progression::KnownSpells::fixture(vec![talent, summon]),
+            server::networking::CombatTarget(Some(h.npc)),
+        ));
+        super::powers::change_power(h.app.world_mut(), h.caster, PowerType::Mana, -500.0);
+        let maximum = super::powers::power_value(h.app.world(), h.caster, PowerType::Mana)
+            .unwrap()
+            .1;
+        h.cast_and_deliver(summon, Some(h.npc));
+        h.advance(60);
+        let events = &h.app.world().resource::<ObservedCombatEvents>().0;
+        let gains: Vec<_> = events
+            .iter()
+            .filter(|event| {
+                event.kind == CombatLogKind::Energize
+                    && event.spell_id == Some(mana_spell)
+                    && event.target == Some(h.caster.to_bits())
+            })
+            .collect();
+        assert!(
+            !gains.is_empty(),
+            "summon {summon} must energize its owner: {events:?}; failed={:?}, go={:?}",
+            h.inbox.failed,
+            h.inbox.go
+        );
+        assert!(
+            gains
+                .iter()
+                .all(|event| event.amount == (maximum * percentage) as i32),
+            "unexpected fiend mana amounts: {gains:?}"
+        );
     }
 }
 
