@@ -256,6 +256,72 @@ fn atonement_transfers_critical_smite_before_absorb_but_not_fireball() {
 }
 
 #[test]
+fn atonement_applies_separate_injured_and_full_health_soft_caps() {
+    let mut h = harness(Vec::new(), &[194384, 81749, 94472, 585], 5).unwrap();
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(ActiveSpec(256));
+    *h.app.world_mut().get_mut::<Health>(h.npc).unwrap() = Health {
+        current: 100_000.0,
+        max: 100_000.0,
+    };
+    let allies: Vec<_> = (0..7)
+        .map(|index| spawn_player(&mut h.app, 5, index as f32))
+        .collect();
+    for (index, &ally) in allies.iter().enumerate() {
+        *h.app.world_mut().get_mut::<Health>(ally).unwrap() = Health {
+            current: if index == 6 { 10_000.0 } else { 1_000.0 },
+            max: 10_000.0,
+        };
+        crate::auras::apply_aura(
+            h.app.world_mut(),
+            &crate::auras::AuraApplication {
+                caster: h.caster,
+                target: ally,
+                spell_id: 194384,
+                effect_mask: u32::MAX,
+                source: crate::auras::AuraSource::Cast,
+            },
+        );
+    }
+    h.inbox.log.clear();
+    h.cast_and_deliver(585, Some(h.npc));
+    h.advance(60);
+    let damage = h
+        .inbox
+        .log
+        .iter()
+        .find(|event| event.kind == CombatLogKind::Damage && event.spell_id == Some(585))
+        .expect("real Smite damage");
+    let base = damage.amount as f32 * 0.46;
+    for (index, ally) in allies.into_iter().enumerate() {
+        let heal = h
+            .inbox
+            .log
+            .iter()
+            .find(|event| {
+                event.kind == CombatLogKind::Heal
+                    && event.spell_id == Some(94472)
+                    && event.target == Some(ally.to_bits())
+            })
+            .expect("each marked ally receives Atonement");
+        let factor = if index == 6 {
+            (5.0_f32 / 7.0).powf(0.75)
+        } else {
+            (5.0_f32 / 6.0).powf(0.75)
+        };
+        assert!(
+            (heal.amount - (base * factor).round() as i32).abs() <= 1,
+            "target {index}: {heal:?}"
+        );
+        if index == 6 {
+            assert_eq!(heal.overflow, heal.amount);
+        }
+    }
+}
+
+#[test]
 fn atonement_shadow_word_pain_uses_native_abyssal_reverie() {
     let mut h = harness(Vec::new(), &[17, 194384, 81749, 94472, 589, 373054], 5).unwrap();
     h.app
