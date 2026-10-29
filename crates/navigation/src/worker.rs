@@ -1,7 +1,7 @@
 //! Owned navigation queries off the simulation thread; no synchronous wait API.
-use crate::{NavigationMap, NavigationPath};
+use crate::{NavigationMap, NavigationPath, NavigationPlan};
 use glam::Vec3;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{self, Receiver, SyncSender, TrySendError};
@@ -58,6 +58,7 @@ struct Mailbox {
     entities: BTreeMap<u64, u64>,
     ready: BTreeMap<u64, Response>,
     failure: Option<String>,
+    cancelled: BTreeSet<u64>,
 }
 
 impl Mailbox {
@@ -78,7 +79,10 @@ impl Mailbox {
         for (entity, request) in outgoing {
             match request {
                 Some(request) => self.queue(request),
-                None => self.cancel(entity),
+                None => {
+                    self.cancel(entity);
+                    self.cancelled.insert(entity);
+                }
             }
         }
     }
@@ -323,14 +327,31 @@ fn supervise_worker(
 
 fn run_worker(root: &Path, mailbox: &Mutex<Mailbox>, receiver: &Receiver<()>, stop: &AtomicBool) {
     let mut maps = BTreeMap::new();
+    let mut plans: BTreeMap<u64, (u32, NavigationPlan)> = BTreeMap::new();
     while receiver.recv().is_ok() {
         loop {
             if stop.load(Ordering::Acquire) {
                 return;
             }
-            let request = mailbox.lock().expect("navigation queue lock").pop();
+            let request = {
+                let mut mailbox = mailbox.lock().expect("navigation queue lock");
+                for entity in std::mem::take(&mut mailbox.cancelled) {
+                    plans.remove(&entity);
+                }
+                mailbox.pop()
+            };
             let Some(request) = request else { break };
-            let result = query_owned_map(root, &mut maps, request.map_id, request.query);
+            let entry = plans
+                .entry(request.entity)
+                .or_insert_with(|| (request.map_id, NavigationPlan::default()));
+            if entry.0 != request.map_id {
+                *entry = (request.map_id, NavigationPlan::default());
+            }
+            let result =
+                query_owned_map(root, &mut maps, request.map_id, request.query, &mut entry.1);
+            if result.is_err() || entry.1.is_empty() {
+                plans.remove(&request.entity);
+            }
             let response = Response {
                 entity: request.entity,
                 id: request.id,
@@ -349,6 +370,7 @@ fn query_owned_map(
     maps: &mut BTreeMap<u32, Option<NavigationMap>>,
     map_id: u32,
     query: Query,
+    plan: &mut NavigationPlan,
 ) -> Result<Option<Output>, String> {
     #[cfg(test)]
     if matches!(query, Query::Panic) {
@@ -360,12 +382,16 @@ fn query_owned_map(
     let Some(map) = maps.get_mut(&map_id).expect("owned map inserted") else {
         return Ok(None);
     };
-    run_query(map, query).map(Some)
+    run_query(map, query, plan).map(Some)
 }
 
-fn run_query(map: &mut NavigationMap, query: Query) -> Result<Output, String> {
+fn run_query(
+    map: &mut NavigationMap,
+    query: Query,
+    plan: &mut NavigationPlan,
+) -> Result<Output, String> {
     let output = match query {
-        Query::Path { from, to } => Output::Path(map.path(from, to)?),
+        Query::Path { from, to } => Output::Path(map.path_with_plan(from, to, plan)?),
         Query::SmoothPath { from, to } => Output::Path(NavigationPath {
             points: map.smooth_waypoint_path(from, to)?,
             complete: true,

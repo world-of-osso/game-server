@@ -14,7 +14,11 @@ fn request(entity: u64, id: u64, map_id: u32) -> Request {
 }
 
 fn drain(worker: &mut Worker) -> Vec<Response> {
-    let deadline = Instant::now() + Duration::from_secs(5);
+    drain_with_timeout(worker, Duration::from_secs(5))
+}
+
+fn drain_with_timeout(worker: &mut Worker, timeout: Duration) -> Vec<Response> {
+    let deadline = Instant::now() + timeout;
     let mut responses = Vec::new();
     while !worker.is_idle() {
         let batch = worker.poll();
@@ -32,6 +36,56 @@ fn drain(worker: &mut Worker) -> Vec<Response> {
         std::thread::yield_now();
     }
     responses
+}
+
+#[test]
+#[ignore = "requires FOLLOWER_NAV_CANONICAL canonical2516 assets"]
+fn worker_keeps_long_route_plans_separate_across_movers_and_cancel() {
+    let root = std::path::PathBuf::from(std::env::var_os("FOLLOWER_NAV_CANONICAL").unwrap());
+    let mut worker = Worker::new(root);
+    let start = Vec3::new(-559.8952, 340.06406, -1631.8356);
+    let end = Vec3::new(-1593.5763, 467.57016, -2037.4996);
+    let mut positions = [start, start];
+    let mut completed = [false, false];
+    let mut seen = [
+        std::collections::HashSet::new(),
+        std::collections::HashSet::new(),
+    ];
+    for step in 1..=100 {
+        for index in 0..2 {
+            if !completed[index] {
+                worker.submit(Request {
+                    entity: index as u64 + 1,
+                    id: step,
+                    map_id: 2516,
+                    query: Query::Path {
+                        from: positions[index],
+                        to: end,
+                    },
+                });
+            }
+        }
+        for response in drain_with_timeout(&mut worker, Duration::from_secs(60)) {
+            let index = response.entity as usize - 1;
+            let Some(Output::Path(path)) = response.result.unwrap() else {
+                panic!("expected path")
+            };
+            let endpoint = *path.points.last().expect("empty leg");
+            assert!(
+                seen[index].insert(endpoint.to_array().map(f32::to_bits)),
+                "mover repeated an endpoint"
+            );
+            positions[index] = endpoint;
+            completed[index] = path.complete;
+        }
+        if step == 1 {
+            worker.cancel(2);
+        }
+        if completed.iter().all(|value| *value) {
+            return;
+        }
+    }
+    panic!("movers did not finish their routes");
 }
 
 #[test]

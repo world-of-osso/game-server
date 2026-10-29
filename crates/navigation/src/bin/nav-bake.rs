@@ -102,6 +102,12 @@ fn run_on_grid(args: &Args, subdivisions: u32) -> Result<(), String> {
             dir.display()
         ));
     }
+    let started = Instant::now();
+    navigation::NavigationMap::open(&dir)?.bake_portal_graph()?;
+    eprintln!(
+        "portal graph baked in {:.3}s",
+        started.elapsed().as_secs_f64()
+    );
     Ok(())
 }
 
