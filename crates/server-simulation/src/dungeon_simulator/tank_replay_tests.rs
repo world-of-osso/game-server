@@ -3,6 +3,99 @@ use std::path::Path;
 
 #[test]
 #[ignore = "requires canonical Brewmaster profile and world database"]
+fn training_of_niuzao_tracks_live_stagger_levels() {
+    use crate::auras::{self, ActiveAuras, RemoveReason};
+    use crate::stats::CharacterStats;
+    use shared::components::Health;
+
+    let mut run = super::dps_parity::prepare_registered_player(268, 1).unwrap();
+    let tank = run.actor;
+    let source = run.targets[0];
+    for _ in 0..4 {
+        run.app.update();
+    }
+    let baseline = run
+        .app
+        .world()
+        .get::<CharacterStats>(tank)
+        .unwrap()
+        .mastery_points;
+    let per_level =
+        crate::spell_cast::scripts::script_effect_value(run.app.world(), tank, 383714, 0);
+    crate::spell_cast::effects::replay_simc_dummy_strike(
+        run.app.world_mut(),
+        source,
+        tank,
+        100_000.0,
+        false,
+        false,
+    );
+    for _ in 0..4 {
+        run.app.update();
+    }
+    let world = run.app.world();
+    let pool = auras::stagger::pool_size(world, tank);
+    let max = world.get::<Health>(tank).unwrap().max;
+    assert!(
+        pool > 0.0 && pool < max * 0.2,
+        "real hit creates light Stagger: {pool}/{max}"
+    );
+    assert!(
+        (world.get::<CharacterStats>(tank).unwrap().mastery_points - baseline - per_level).abs()
+            < 0.01
+    );
+    for (fraction, level) in [(0.4_f32, 2.0_f32), (0.8, 3.0)] {
+        let world = run.app.world_mut();
+        let pool = auras::stagger::pool_size(world, tank);
+        let aura = world
+            .get::<ActiveAuras>(tank)
+            .unwrap()
+            .iter()
+            .find(|a| a.spell_id == 124255)
+            .unwrap();
+        let instance = aura.instance_id;
+        let current = aura.effects[0].amount;
+        assert!(auras::set_effect_amount(
+            world,
+            tank,
+            instance,
+            0,
+            current * (max * fraction) / pool
+        ));
+        for _ in 0..4 {
+            run.app.update();
+        }
+        let mastery = run
+            .app
+            .world()
+            .get::<CharacterStats>(tank)
+            .unwrap()
+            .mastery_points;
+        assert!(
+            (mastery - baseline - level * per_level).abs() < 0.01,
+            "fraction {fraction}, mastery {mastery}, baseline {baseline}"
+        );
+    }
+    auras::remove_auras(run.app.world_mut(), tank, RemoveReason::Cancelled, |a| {
+        a.spell_id == 124255
+    });
+    for _ in 0..4 {
+        run.app.update();
+    }
+    assert!(
+        (run.app
+            .world()
+            .get::<CharacterStats>(tank)
+            .unwrap()
+            .mastery_points
+            - baseline)
+            .abs()
+            < 0.01
+    );
+}
+
+#[test]
+#[ignore = "requires canonical Brewmaster profile and world database"]
 fn simc_raid_buffs_update_native_tank_stats() {
     let mut run = super::dps_parity::prepare_registered_player(268, 1).unwrap();
     let actor = run.actor;
