@@ -19,6 +19,8 @@ const DECAY: u32 = 43265;
 const IN_DECAY: u32 = 188290;
 const SANGUINE: u32 = 391458;
 const SANGUINE_BUFF: u32 = 391459;
+const BLOODSOAKED: u32 = 434033;
+const BLOODSOAKED_BUFF: u32 = 434034;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::EarlyAuraRegistration(register),
@@ -237,10 +239,18 @@ fn sync_fields(world: &mut World) {
             {
                 apply(world, actor, SANGUINE_BUFF);
             }
+            // SimC76f8118 sc_death_knight.cpp:7451–7470: the same field
+            // also enables Blood-soaked Ground while its talent is selected.
+            if auras::has_aura(world, actor, BLOODSOAKED)
+                && !auras::has_aura(world, actor, BLOODSOAKED_BUFF)
+            {
+                apply(world, actor, BLOODSOAKED_BUFF);
+            }
         } else if world.get::<InBloodDecay>(actor).is_some() {
             world.entity_mut(actor).remove::<InBloodDecay>();
             auras::remove_auras(world, actor, RemoveReason::Cancelled, |aura| {
-                aura.caster == actor && matches!(aura.spell_id, IN_DECAY | SANGUINE_BUFF)
+                aura.caster == actor
+                    && matches!(aura.spell_id, IN_DECAY | SANGUINE_BUFF | BLOODSOAKED_BUFF)
             });
         }
     }

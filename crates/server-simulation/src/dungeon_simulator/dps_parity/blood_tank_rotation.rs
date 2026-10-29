@@ -3033,6 +3033,123 @@ mod tests {
 
     #[test]
     #[ignore = "requires canonical world database and MID2 Blood inputs"]
+    fn blood_soaked_ground_reduces_incoming_strike() {
+        use shared::components::Health;
+        fn strike(ground: bool) -> f32 {
+            let _seed = crate::random::seed_scope(70448);
+            let mut run = super::super::prepare_registered_player(250, 1).unwrap();
+            let actor = run.actor;
+            let source = run.targets[0];
+            if ground {
+                crate::auras::apply_aura(
+                    run.app.world_mut(),
+                    &crate::auras::AuraApplication {
+                        caster: actor,
+                        target: actor,
+                        spell_id: 434034,
+                        effect_mask: u32::MAX,
+                        source: crate::auras::AuraSource::Cast,
+                    },
+                );
+            }
+            run.app.update();
+            crate::auras::remove_auras(
+                run.app.world_mut(),
+                actor,
+                crate::auras::RemoveReason::Cancelled,
+                |aura| matches!(aura.spell_id, 77535 | 207203),
+            );
+            let before = run.app.world().get::<Health>(actor).unwrap().current;
+            crate::spell_cast::effects::replay_simc_dummy_strike(
+                run.app.world_mut(),
+                source,
+                actor,
+                100_000.0,
+                false,
+                false,
+            );
+            before - run.app.world().get::<Health>(actor).unwrap().current
+        }
+        let unprotected = strike(false);
+        let protected = strike(true);
+        assert!(
+            (protected / unprotected - 0.92).abs() < 0.001,
+            "strike {unprotected} -> {protected}"
+        );
+    }
+
+    #[test]
+    #[ignore = "requires canonical world database and MID2 Blood inputs"]
+    fn blood_soaked_ground_increases_death_strike_vampiric_proc_chance() {
+        use shared::components::{Health, PowerType};
+        let mut run = super::super::prepare_registered_player(250, 1).unwrap();
+        let actor = run.actor;
+        let target = run.targets[0];
+        super::super::engage(&mut run);
+        let mut found = false;
+        for draw_offset in 0..96 {
+            let mut outcomes = [false; 2];
+            for (index, ground) in [false, true].into_iter().enumerate() {
+                crate::auras::remove_auras(
+                    run.app.world_mut(),
+                    actor,
+                    crate::auras::RemoveReason::Cancelled,
+                    |aura| matches!(aura.spell_id, 433899 | 434153 | 434034),
+                );
+                if ground {
+                    crate::auras::apply_aura(
+                        run.app.world_mut(),
+                        &crate::auras::AuraApplication {
+                            caster: actor,
+                            target: actor,
+                            spell_id: 434034,
+                            effect_mask: u32::MAX,
+                            source: crate::auras::AuraSource::Cast,
+                        },
+                    );
+                }
+                let mut health = run.app.world_mut().get_mut::<Health>(target).unwrap();
+                health.current = health.max;
+                crate::spell_cast::powers::change_power(
+                    run.app.world_mut(),
+                    actor,
+                    PowerType::RunicPower,
+                    1000.0,
+                );
+                let seed = crate::random::seed_scope(70448);
+                for _ in 0..draw_offset {
+                    let _: f32 = crate::random::random();
+                }
+                crate::spell_cast::creature_cast(
+                    run.app.world_mut(),
+                    actor,
+                    49998,
+                    Some(target),
+                    false,
+                )
+                .unwrap();
+                for _ in 0..4 {
+                    run.app.update();
+                }
+                outcomes[index] = crate::auras::has_aura(run.app.world(), actor, 433899);
+                drop(seed);
+                for _ in 0..40 {
+                    run.app.update();
+                }
+            }
+            if outcomes == [false, true] {
+                found = true;
+                break;
+            }
+        }
+        assert!(
+            found,
+            "Blood-soaked Ground must turn a qualifying Death Strike roll into a proc"
+        );
+    }
+
+    #[test]
+    #[ignore = "requires canonical world database and MID2 Blood inputs"]
     fn blood_crimson_scourge_builds_real_ground_and_sanguine_follows_position() {
         let _seed = crate::random::seed_scope(70448);
         let mut run = super::super::prepare_registered_player(250, 1).unwrap();
@@ -3054,6 +3171,10 @@ mod tests {
             "selected Sanguine Ground must follow actual ground"
         );
         assert!(
+            crate::auras::has_aura(run.app.world(), actor, 434034),
+            "selected Blood-soaked Ground must follow actual ground"
+        );
+        assert!(
             !crate::auras::has_aura(run.app.world(), actor, 81141),
             "Death and Decay consumes its earned Crimson Scourge"
         );
@@ -3072,6 +3193,10 @@ mod tests {
             !crate::auras::has_aura(run.app.world(), actor, 391459),
             "leaving the ground removes the healing buff"
         );
+        assert!(
+            !crate::auras::has_aura(run.app.world(), actor, 434034),
+            "leaving the ground removes Blood-soaked Ground"
+        );
         *run.app
             .world_mut()
             .get_mut::<shared::components::Position>(actor)
@@ -3080,6 +3205,10 @@ mod tests {
         assert!(
             crate::auras::has_aura(run.app.world(), actor, 391459),
             "returning to the active field restores the buff"
+        );
+        assert!(
+            crate::auras::has_aura(run.app.world(), actor, 434034),
+            "returning restores Blood-soaked Ground"
         );
         let expiry = run
             .app
