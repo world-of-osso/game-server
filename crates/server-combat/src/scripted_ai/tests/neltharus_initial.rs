@@ -143,6 +143,34 @@ fn encounter_coverage_magmatusk_alert_policy_start_spray_and_kill_credit() {
     }
 }
 
+#[test]
+#[ignore = "Magmatusk native LittleWigs alert policy"]
+fn encounter_coverage_magmatusk_charge_and_mutation_alerts() {
+    let profile = InitialPhase {
+        entry: 181861,
+        bit: 0,
+        encounter: 2610,
+        first_spell: 375251,
+        first_at: 7.2,
+        counts: &[],
+    };
+    for difficulty in [1, 205] {
+        let (mut h, boss, _) = projected_initial_boss(&profile, difficulty);
+        h.engage(boss);
+        h.advance(36.0);
+        assert_eq!(
+            completed_casts(&h, boss, 375436),
+            1,
+            "Charge selector projected{difficulty}"
+        );
+        assert_eq!(
+            completed_casts(&h, boss, 374365),
+            1,
+            "Mutation projected{difficulty}"
+        );
+    }
+}
+
 fn arrival_cast_count(world: &World, caster: Entity, spell: u32) -> usize {
     world
         .resource::<crate::spell_cast::test_harness::ObservedTriggeredCasts>()
