@@ -130,6 +130,38 @@ fn observed_times(observed: &[(u32, f64)], spell: u32, origin: f64) -> Vec<f64> 
 }
 
 #[test]
+fn azure_telash_energy_phase_return_and_ordinary_death_credit() {
+    let (mut h, telash) = center_cast_fixture();
+    let map = *h.app.world().get::<InMap>(telash).unwrap();
+    assert_eq!(count_go(&h, telash, ZERO), 1);
+    assert_eq!(count_go(&h, telash, FROST), 1);
+    assert!(h.has_aura(telash, SHIELD));
+    let center = at(&h, telash);
+    complete_center_cast(&mut h, telash);
+    h.advance(super::azure_jump_charge::read_source_jump_seconds(714) + 0.2);
+    assert!(
+        at(&h, telash).distance(center) > 1.0,
+        "actual return landing leaves center"
+    );
+    assert!(h.has_aura(telash, ICE));
+    assert!(!h.has_aura(telash, SHIELD));
+    h.hit_pct(telash, 200.0);
+    h.advance(0.1);
+    assert_eq!(
+        instance_script::get_boss_state(h.app.world_mut(), map, 2),
+        Some(EncounterState::Done)
+    );
+    assert_ne!(
+        h.app
+            .world()
+            .resource::<crate::maps::InstanceManager>()
+            .completed_encounters(map)
+            & (1 << 1),
+        0
+    );
+}
+
+#[test]
 fn azure_telash_native_aftercast_returns_to_current_max_threat_nearest_point_and_resumes() {
     for (index, point) in RETURN_POINTS.into_iter().enumerate() {
         let (mut h, telash) = center_cast_fixture();
