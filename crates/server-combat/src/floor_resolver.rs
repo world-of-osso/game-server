@@ -5,12 +5,10 @@ use bevy::math::Vec3;
 use navigation::NavigationMap;
 use serde::{Deserialize, Serialize};
 
-pub use crate::ground::Floor;
+pub use crate::ground::{Floor, FloorGeometry, MissingGeometry};
 #[cfg(test)]
 #[path = "floor_resolver_tests.rs"]
 mod tests;
-
-use crate::ground::FloorGeometry;
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct Hint {
@@ -71,7 +69,10 @@ impl FloorResolver {
     }
 
     fn candidates(&mut self, map: u32, x: f32, y: f32) -> Result<Vec<Floor>, String> {
-        let candidates = self.geometry.candidate_floors(map, x, y)?;
+        let candidates = self
+            .geometry
+            .candidate_floors(map, x, y)
+            .map_err(|error| error.0)?;
         if !self.maps.contains_key(&map) {
             self.maps.insert(
                 map,

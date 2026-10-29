@@ -69,6 +69,9 @@ pub struct Floor {
     pub source: &'static str,
 }
 
+#[derive(Clone, Debug)]
+pub struct MissingGeometry(pub String);
+
 /// Strict offline geometry reader: missing input never becomes an empty floor set.
 pub struct FloorGeometry {
     ground: GroundMap,
@@ -83,7 +86,17 @@ impl FloorGeometry {
         }
     }
 
-    pub fn candidate_floors(&mut self, map_id: u32, x: f32, y: f32) -> Result<Vec<Floor>, String> {
+    pub fn candidate_floors(
+        &mut self,
+        map_id: u32,
+        x: f32,
+        y: f32,
+    ) -> Result<Vec<Floor>, MissingGeometry> {
+        self.read_candidate_floors(map_id, x, y)
+            .map_err(MissingGeometry)
+    }
+
+    fn read_candidate_floors(&mut self, map_id: u32, x: f32, y: f32) -> Result<Vec<Floor>, String> {
         let (bx, _, bz) = crate::terrain_height::wow_to_bevy(x, y, 0.0);
         if !self.ground.maps.contains_key(&map_id) {
             let wdt = self
