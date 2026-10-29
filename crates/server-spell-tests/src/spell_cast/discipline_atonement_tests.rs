@@ -264,6 +264,16 @@ fn discipline_fiend_spells_transfer_pet_damage_to_atonement() {
     for spell in [1280172, 200174, 451235] {
         let mut h = harness(Vec::new(), &[17, 194384, 81749, 94472, spell, 451435], 5).unwrap();
         h.app.insert_resource(prepared.world_data());
+        if spell == 451235 {
+            assert!(
+                h.app
+                    .world()
+                    .resource::<server::world_data::WorldData>()
+                    .templates
+                    .contains_key(&224466),
+                "prepared Voidwraith template missing"
+            );
+        }
         let conn = rusqlite::Connection::open_with_flags(
             &world_db().unwrap().powers_db,
             rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
@@ -332,6 +342,19 @@ fn discipline_fiend_spells_transfer_pet_damage_to_atonement() {
             .iter()
             .find_map(|(entity, owner, id)| (*owner == h.caster && *id == spell).then_some(*entity))
             .unwrap_or_else(|| panic!("summon {spell} not present immediately: {summons:?}"));
+        assert_eq!(
+            h.app
+                .world()
+                .get::<shared::components::UnitLevel>(actor)
+                .unwrap()
+                .0,
+            h.app
+                .world()
+                .get::<shared::components::Level>(h.caster)
+                .unwrap()
+                .0,
+            "summon {spell} must inherit its owner's level"
+        );
         h.advance(60);
         let events = &h.app.world().resource::<ObservedCombatEvents>().0;
         assert!(
