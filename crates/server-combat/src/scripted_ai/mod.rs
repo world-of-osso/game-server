@@ -29,6 +29,7 @@ mod candle_king;
 pub(crate) mod caster_chase;
 pub mod creature_text;
 mod dailcry;
+pub(crate) mod darkness;
 mod doragosa;
 mod emberon;
 pub mod event_map;
@@ -382,6 +383,9 @@ pub(crate) fn read_scheduled_damage(world: &World, source: Entity) -> Vec<Schedu
 /// `ScriptMgr` registration by ScriptName, else the `AIName` SmartAI; `None` for names
 /// without a ported script.
 fn create_ai(world: &World, creature: Entity, script_name: &str) -> Option<Box<dyn CreatureAi>> {
+    if darkness::is_darkness(world, creature) {
+        return darkness::creature_ai(world, creature);
+    }
     if script_name == SMART_AI || script_name.is_empty() {
         return smart_ai::creature_ai(world, creature);
     }

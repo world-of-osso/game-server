@@ -171,6 +171,12 @@ fn decode_encounter_inputs(
             .into_iter()
             .filter(|spawn| u32::from(spawn.map) == map_id)
             .collect()
+    } else if entry == 208745 {
+        // The Darkness's withheld placement enters this copy after Candle King DONE.
+        crate::world_data::load_spawns(&conn)
+            .into_iter()
+            .filter(|spawn| u32::from(spawn.map) == map_id && spawn.template_entry == 208747)
+            .collect()
     } else {
         Vec::new()
     };

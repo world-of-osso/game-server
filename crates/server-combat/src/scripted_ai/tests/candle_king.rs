@@ -10,6 +10,8 @@ const MOLDS: u32 = 420659;
 const MIND: u32 = 426145;
 const PICKAXE: u32 = 421274;
 const THROW: u32 = 420696;
+const DARKNESS: u32 = 208747;
+const DARKNESS_BIT: u32 = 1;
 
 fn candle_copy(difficulty: u32) -> (Harness, Entity, InMap) {
     let (mut h, boss, map) = bound_boss_at_difficulty(CANDLE_KING, MAP, BIT, difficulty, None);
@@ -283,4 +285,116 @@ fn encounter_coverage_candle_king_evade_rearms_without_credit() {
             0
         );
     }
+}
+
+fn darkness_actors(h: &mut Harness, map: InMap) -> Vec<Entity> {
+    h.app
+        .world_mut()
+        .query::<(Entity, &InMap, &shared::components::Npc)>()
+        .iter(h.app.world())
+        .filter(|(_, copy, npc)| **copy == map && npc.template_id == DARKNESS)
+        .map(|(actor, _, _)| actor)
+        .collect()
+}
+
+fn fill_copy(h: &mut Harness, map: InMap, dead_bosses: Vec<u32>) {
+    let mut queue = bevy::ecs::world::CommandQueue::default();
+    let mut commands = Commands::new(&mut queue, h.app.world());
+    crate::zones::spawn_map_creatures(
+        &mut commands,
+        h.app.world().resource::<WorldData>(),
+        crate::zones::MapContent {
+            map,
+            difficulty_id: 205,
+            dead_bosses,
+        },
+        false,
+        None,
+    );
+    queue.apply(h.app.world_mut());
+}
+
+#[test]
+fn darkness_copy_fill_waits_for_saved_candle_king_done() {
+    let (mut h, _, _) = candle_copy(205);
+    let fresh = InMap {
+        map_id: MAP,
+        instance_id: 901,
+    };
+    let saved = InMap {
+        map_id: MAP,
+        instance_id: 902,
+    };
+    fill_copy(&mut h, fresh, Vec::new());
+    fill_copy(&mut h, saved, vec![CANDLE_KING]);
+    assert!(
+        darkness_actors(&mut h, fresh).is_empty(),
+        "DARKNESS_ACTIVATION_UNSOURCED: absent before Candle King"
+    );
+    assert_eq!(darkness_actors(&mut h, saved).len(), 1);
+}
+
+#[test]
+fn darkness_appears_on_candle_king_done_and_ends_at_logged_55_percent() {
+    let (mut h, candle_king, map) = candle_copy(205);
+    assert!(darkness_actors(&mut h, map).is_empty());
+    let player = h.player();
+    crate::combat::kill_unit(h.app.world_mut(), player, candle_king);
+    h.advance(0.1);
+    let [darkness] = darkness_actors(&mut h, map)[..] else {
+        panic!("one Darkness after Candle King DONE");
+    };
+    let spawn = h
+        .app
+        .world()
+        .resource::<WorldData>()
+        .spawns
+        .iter()
+        .find(|spawn| spawn.map == MAP as u16 && spawn.template_entry == DARKNESS)
+        .cloned()
+        .unwrap();
+    let position = *h.app.world().get::<Position>(darkness).unwrap();
+    assert!((position.x - spawn.position_x).abs() < 0.01);
+    assert!((position.z + spawn.position_y).abs() < 0.01);
+    h.engage(darkness);
+    h.advance(0.1);
+    assert_eq!(
+        get_boss_state(h.app.world_mut(), map, DARKNESS_BIT),
+        Some(EncounterState::InProgress)
+    );
+    h.set_health_pct(darkness, 56.0);
+    h.hit_pct(darkness, 0.5);
+    h.advance(0.1);
+    assert_eq!(
+        get_boss_state(h.app.world_mut(), map, DARKNESS_BIT),
+        Some(EncounterState::InProgress),
+        "55.5% keeps fighting"
+    );
+    h.hit_pct(darkness, 3.0);
+    h.advance(0.1);
+    assert_eq!(
+        get_boss_state(h.app.world_mut(), map, DARKNESS_BIT),
+        Some(EncounterState::Done)
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .resource::<crate::maps::InstanceManager>()
+            .completed_encounters(map),
+        (1 << BIT) | (1 << DARKNESS_BIT)
+    );
+    assert!(
+        h.inbox(0)
+            .ends
+            .iter()
+            .any(|end| end.encounter_id == 2788 && end.success)
+    );
+    h.advance(60.0);
+    let living = darkness_actors(&mut h, map).into_iter().any(|actor| {
+        h.app
+            .world()
+            .get::<crate::combat::DeathState>(actor)
+            .is_none()
+    });
+    assert!(!living, "the ended Darkness leaves and does not respawn");
 }

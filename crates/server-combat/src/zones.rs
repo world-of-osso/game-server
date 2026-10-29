@@ -219,6 +219,39 @@ pub(crate) fn reset_spawn_group(world: &mut World, map: crate::maps::InMap, grou
     queue.apply(world);
 }
 
+/// Spawn the copy's placements of `entry` that copy fill withheld (`spawn_map_creatures`).
+/// Replicated when the copy's other creatures are.
+pub(crate) fn spawn_withheld_entry(world: &mut World, map: crate::maps::InMap, entry: u32) {
+    let replicate = world
+        .query_filtered::<&crate::maps::InMap, (With<shared::components::Npc>, With<Replicate>)>()
+        .iter(world)
+        .any(|copy| *copy == map);
+    let difficulty = map_difficulty_id(world, map);
+    let mut queue = bevy::ecs::world::CommandQueue::default();
+    world.init_resource::<crate::ground::GroundMap>();
+    world.resource_scope(|world, mut ground: Mut<crate::ground::GroundMap>| {
+        let data = world.resource::<WorldData>();
+        let spawns = data
+            .spawns_by_map
+            .get(&(map.map_id as u16))
+            .into_iter()
+            .flatten()
+            .map(|&index| &data.spawns[index])
+            .filter(|spawn| spawn.template_entry == entry && spawn.spawns_at(difficulty));
+        let mut commands = Commands::new(&mut queue, world);
+        spawn_creatures(
+            &mut commands,
+            data,
+            map,
+            difficulty,
+            replicate,
+            spawns,
+            Some(&mut ground),
+        );
+    });
+    queue.apply(world);
+}
+
 /// Removing the dead actor also removes its old respawn timer; keep living GUIDs.
 fn remove_dead_group_members(
     world: &mut World,
@@ -293,6 +326,7 @@ pub fn spawn_map_creatures(
                 && spawn.spawns_at(content.difficulty_id)
                 && !content.dead_bosses.contains(&spawn.template_entry)
                 && !withheld.contains(&spawn.guid)
+                && !crate::scripted_ai::darkness::withheld_at_fill(&content, spawn.template_entry)
         });
     let entities = spawn_creatures(
         commands,
