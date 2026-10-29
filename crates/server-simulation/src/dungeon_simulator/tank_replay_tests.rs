@@ -2167,7 +2167,8 @@ fn devotion_aura_reduces_incoming_bleed() {
 #[test]
 #[ignore = "uses selected MID2 Protection and native Faith's Armor"]
 fn protection_shield_grants_faiths_armor_with_native_modifier() {
-    use shared::components::{PowerPools, PowerType};
+    use crate::spell_cast::powers::PowerPools;
+    use shared::components::PowerType;
     let mut run = super::dps_parity::prepare_registered_player(66, 1).unwrap();
     super::dps_parity::engage(&mut run);
     let actor = run.actor;
