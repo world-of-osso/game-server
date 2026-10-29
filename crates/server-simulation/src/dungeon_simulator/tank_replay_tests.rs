@@ -909,6 +909,7 @@ fn holy_bulwark_refresh_regrants_initial_absorb() {
     );
     assert!(!crate::auras::has_aura(run.app.world(), actor, 432607));
     let before_counts = super::tank_replay::bulwark_observations(run.app.world(), actor);
+    assert!(before_counts.0 >= 1, "precombat start was not captured");
     crate::auras::apply_aura(
         run.app.world_mut(),
         &crate::auras::AuraApplication {
