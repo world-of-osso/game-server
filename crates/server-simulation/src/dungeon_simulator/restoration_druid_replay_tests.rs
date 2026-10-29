@@ -18,6 +18,13 @@ fn master_shapeshifter_refunds_only_five_point_cat_finishers() {
         h.app.init_resource::<ObservedCombatEvents>();
         h.cast_and_deliver(768, Some(h.caster));
         h.advance(40);
+        println!(
+            "CAT_POOLS {:?}; FAILURES {:?}",
+            h.app
+                .world()
+                .get::<crate::spell_cast::powers::PowerPools>(h.caster),
+            h.inbox.failed
+        );
         h.set_power(PowerType::Energy, 100.0);
         h.set_power(PowerType::ComboPoints, points);
         h.set_power(PowerType::Mana, 1000.0);
