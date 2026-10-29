@@ -5,6 +5,43 @@ use shared::components::{ActiveSpec, Health};
 use shared::protocol::CombatLogKind;
 
 #[test]
+fn discipline_prompt_prognosis_amplifies_only_the_third_penance_bolt() {
+    let mut h = harness(Vec::new(), &[47540, 47758, 47757, 47666, 47750, 1246799], 5).unwrap();
+    h.app
+        .init_resource::<super::test_harness::ObservedCombatEvents>();
+    let caster = h.caster;
+    h.app.world_mut().entity_mut(caster).insert((
+        ActiveSpec(256),
+        crate::class_progression::KnownSpells::fixture(vec![47540, 1246799]),
+    ));
+    h.app
+        .world_mut()
+        .get_mut::<server::stats::CharacterStats>(caster)
+        .unwrap()
+        .crit_pct = 0.0;
+    h.cast_and_deliver(47540, Some(h.npc));
+    h.advance(70);
+    let events = &h
+        .app
+        .world()
+        .resource::<super::test_harness::ObservedCombatEvents>()
+        .0;
+    let damage: Vec<_> = events
+        .iter()
+        .filter(|event| event.kind == CombatLogKind::Damage && event.spell_id == Some(47666))
+        .collect();
+    assert_eq!(damage.len(), 3);
+    assert!(
+        damage[1].amount < damage[0].amount * 2,
+        "the second bolt is unmodified: {damage:?}"
+    );
+    assert!(
+        damage[2].amount > damage[0].amount * 2,
+        "the third bolt gets the native 125% bonus: {damage:?}"
+    );
+}
+
+#[test]
 fn discipline_penance_twinsight_heals_and_holy_ray_increases_later_bolts() {
     let mut h = harness(
         Vec::new(),

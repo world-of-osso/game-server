@@ -19,6 +19,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::HealthChangeObserved(mark_flash_heal),
     SpellScriptHook::ResolvedHeal(divine_aegis),
     SpellScriptHook::RawResolvedDamage(transfer_damage),
+    SpellScriptHook::DamageAmount(penance_bolt_damage),
     SpellScriptHook::EffectHit(shadowfiend_death_hit),
     SpellScriptHook::MeleeRawResolved(transfer_pet_melee),
     SpellScriptHook::MeleeResidual(fiend_mana_on_landed_melee),
@@ -349,6 +350,22 @@ fn transfer_damage(
     if damage.spell.id == 47666 && is_discipline(world, caster) {
         finish_penance_bolt(world, caster);
     }
+}
+
+fn penance_bolt_damage(spell: u32) -> Option<combat::spell_cast::script_registry::DamageAmountHook> {
+    (spell == 47666).then_some(apply_prompt_prognosis)
+}
+
+fn apply_prompt_prognosis(world: &World, caster: Entity, _target: Entity, amount: f32) -> f32 {
+    if !is_discipline(world, caster)
+        || !world.get::<PenanceBolts>(caster).is_some_and(|bolts| bolts.0 == 2)
+        || !world.get::<combat::class_progression::KnownSpells>(caster).is_some_and(|known| known.contains(1246799))
+    {
+        return amount;
+    }
+    // SimC76f8118 sc_priest_discipline.cpp:490-494 applies Prompt Prognosis at current_tick 2.
+    let bonus = combat::spell_cast::scripts::script_effect_value(world, caster, 1246799, 0);
+    amount * (1.0 + bonus / 100.0)
 }
 
 fn select_twinsight_recipient(world: &mut World, caster: Entity) -> Option<Entity> {
