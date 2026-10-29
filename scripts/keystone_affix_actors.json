@@ -1,0 +1,17 @@
+[
+  {
+    "creature_id": 229227,
+    "spell_id": 461870,
+    "spell_name": "Xal'atath's Bargain",
+    "affix_names": [
+      "Xal'atath's Bargain: Ascendant",
+      "Xal'atath's Bargain: Frenzied",
+      "Xal'atath's Bargain: Voidbound",
+      "Xal'atath's Bargain: Oblivion",
+      "Xal'atath's Bargain: Devour",
+      "Xal'atath's Bargain: Pulsar"
+    ],
+    "source": "WoWCombatLog-100126_203256.txt:738045,738052",
+    "policy": "KEYSTONE_AFFIX_UNIT_BY_NATIVE_SPELL_NAME"
+  }
+]

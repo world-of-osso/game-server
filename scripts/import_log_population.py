@@ -135,17 +135,34 @@ def affix_summons(db):
     ''')}
 
 
-def retire_affix_spawns(db, summons, maps, report):
+def affix_actors(db):
+    """Validate log-cited affix casters against native spell and affix names."""
+    records = json.loads(Path(__file__).with_name('keystone_affix_actors.json').read_text())
+    actors = {}
+    for record in records:
+        spell = db.execute('SELECT Name_lang FROM spell_name WHERE ID=?', (record['spell_id'],)).fetchone()
+        if spell != (record['spell_name'],):
+            raise ValueError(f"keystone actor spell source missing or changed: {record['spell_id']}")
+        names = {row[0] for row in db.execute(
+            'SELECT Name_lang FROM keystone_affix WHERE Name_lang LIKE ?', (record['spell_name'] + ': %',))}
+        if names != set(record['affix_names']):
+            raise ValueError(f"keystone affix family missing or changed: {record['spell_name']}")
+        actors[record['creature_id']] = record
+    return actors
+
+
+def retire_affix_spawns(db, summons, actors, maps, report):
     rows = db.execute('''SELECT p.guid,p.map,p.npc_id,p.source_key
         FROM log_derived_population AS p
         JOIN content_creature AS c ON c.guid=p.guid
         WHERE p.policy=? AND c.Comment=?''', (POLICY, POLICY)).fetchall()
     for guid, map_id, npc_id, source_key in rows:
-        if map_id not in maps or npc_id not in summons:
+        if map_id not in maps or (npc_id not in summons and npc_id not in actors):
             continue
         db.execute('DELETE FROM content_creature WHERE guid=?', (guid,))
         db.execute('DELETE FROM log_derived_population WHERE guid=?', (guid,))
-        report[map_id]['gaps'].append({'source_key': source_key, 'reason': 'AFFIX_SUMMON_RETIRED'})
+        reason = actors[npc_id]['policy'] if npc_id in actors else 'AFFIX_SUMMON_RETIRED'
+        report[map_id]['gaps'].append({'source_key': source_key, 'reason': reason})
 
 
 def retire_encounter_duplicates(db, radius=10.0):
@@ -187,7 +204,8 @@ def import_population(destination, records, radius=10.0):
             entry INTEGER NOT NULL, table_name TEXT NOT NULL, row_key TEXT NOT NULL, policy TEXT NOT NULL,
             PRIMARY KEY (table_name,row_key))''')
         summons = affix_summons(db)
-        retire_affix_spawns(db, summons, {int(record['map']) for record in records}, report)
+        actors = affix_actors(db)
+        retire_affix_spawns(db, summons, actors, {int(record['map']) for record in records}, report)
         next_guid = db.execute('SELECT COALESCE(MAX(guid), 0) + 1 FROM content_creature').fetchone()[0]
         matched, existing_positions = match_existing(db, records, radius)
         for record in records:
@@ -196,8 +214,9 @@ def import_population(destination, records, radius=10.0):
             source_key = record['source_key']
             if not source_key or not record.get('z_method') or not record.get('observation_event') or not record.get('observation_time'):
                 raise ValueError(f'incomplete provenance for {source_key!r}')
-            if npc_id in summons:
-                result['gaps'].append({'source_key': source_key, 'reason': 'AFFIX_SUMMON'})
+            if npc_id in summons or npc_id in actors:
+                reason = actors[npc_id]['policy'] if npc_id in actors else 'AFFIX_SUMMON'
+                result['gaps'].append({'source_key': source_key, 'reason': reason})
                 continue
             existing = db.execute('SELECT guid FROM log_derived_population WHERE source_key=?', (source_key,)).fetchone()
             if existing:

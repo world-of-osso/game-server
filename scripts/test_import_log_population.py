@@ -20,6 +20,36 @@ def record(key, x, npc=123):
 
 
 class ImportTest(unittest.TestCase):
+    def test_keystone_caster_is_retired_but_unlinked_stalker_remains(self):
+        fixture = json.loads((Path(__file__).parent / 'tests/fixtures/log-population-tdb.json').read_text())
+        with tempfile.TemporaryDirectory() as directory:
+            copy = Path(directory) / 'world-copy.db'
+            with sqlite3.connect(copy) as db:
+                for table, data in fixture.items():
+                    db.execute(data['sql'])
+                    for row in data['rows']:
+                        db.execute(f"INSERT INTO {table} VALUES ({','.join('?' for _ in row)})", row)
+                db.executescript('''CREATE TABLE log_derived_population (
+                    guid INTEGER PRIMARY KEY, source_key TEXT NOT NULL UNIQUE, map INTEGER NOT NULL,
+                    npc_id INTEGER NOT NULL, z_method TEXT NOT NULL, observed_event TEXT NOT NULL,
+                    observed_time TEXT NOT NULL, observed_level INTEGER, policy TEXT NOT NULL,
+                    observation_json TEXT NOT NULL);''')
+                for guid, map_id, entry in [(3276416036,1762,229227), (3276416302,2813,229227),
+                                             (3276416485,2825,229227), (3276416397,2813,234359)]:
+                    db.execute('INSERT INTO content_creature(guid,id1,map,Comment) VALUES (?,?,?,?)',
+                               (guid,map_id,entry,module.POLICY))
+                    db.execute('INSERT INTO log_derived_population VALUES (?,?,?,?,?,?,?,?,?,?)',
+                               (guid,str(guid),map_id,entry,'floor','SPELL_CAST_SUCCESS','time',90,module.POLICY,'{}'))
+            records = [dict(record('observed-' + str(map_id), 100, npc=229227), map=map_id)
+                       for map_id in (1762,2813,2825)]
+            report = module.import_population(copy, records)
+            for map_id in ('1762','2813','2825'):
+                self.assertEqual([gap['reason'] for gap in report[map_id]['gaps']],
+                                 ['KEYSTONE_AFFIX_UNIT_BY_NATIVE_SPELL_NAME'] * 2)
+            with sqlite3.connect(copy) as db:
+                self.assertEqual(db.execute('SELECT guid,id1 FROM content_creature').fetchall(), [(3276416397,234359)])
+                self.assertEqual(db.execute('SELECT guid,npc_id FROM log_derived_population').fetchall(), [(3276416397,234359)])
+
     def test_affix_summons_are_not_static_spawns_and_prior_imports_are_retired(self):
         fixture = json.loads((Path(__file__).parent / 'tests/fixtures/log-population-tdb.json').read_text())
         with tempfile.TemporaryDirectory() as directory:
