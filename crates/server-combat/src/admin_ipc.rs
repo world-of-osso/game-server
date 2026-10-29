@@ -553,6 +553,27 @@ fn dispatch(
         });
         return;
     }
+    if let AdminRequest::StageCorpseLoot {
+        character_name,
+        item_id,
+    } = &cmd.request
+    {
+        let (name, item_id) = (character_name.clone(), *item_id);
+        queries.commands.queue(move |world: &mut World| {
+            let response = match crate::loot::stage_corpse_loot(world, &name, item_id) {
+                Ok(corpse) => AdminResponse::CorpseLootStaged {
+                    character_name: name,
+                    item_id,
+                    corpse,
+                },
+                Err(error) => AdminResponse::Error(error),
+            };
+            if cmd.respond.send(response).is_err() {
+                warn!("admin corpse loot response receiver disconnected");
+            }
+        });
+        return;
+    }
     let commands = &mut queries.commands;
     let players = &mut queries.players;
     let equipment_query = &mut queries.equipment;
@@ -560,7 +581,9 @@ fn dispatch(
     let roster_update_senders = &mut queries.roster_senders;
 
     let response = match cmd.request {
-        AdminRequest::StageFollowerParty { .. } => unreachable!("queued world operation above"),
+        AdminRequest::StageFollowerParty { .. } | AdminRequest::StageCorpseLoot { .. } => {
+            unreachable!("queued world operation above")
+        }
         AdminRequest::Ping => AdminResponse::Pong,
         AdminRequest::CombatLog { .. }
         | AdminRequest::GrantItem { .. }

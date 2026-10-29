@@ -220,6 +220,12 @@ enum AdminRequest {
         faction_id: u32,
         value: i32,
     },
+    /// Live proofs only: one controlled `item_id` loot slot on the nearest corpse the
+    /// character tapped.
+    StageCorpseLoot {
+        character_name: String,
+        item_id: u32,
+    },
     SetAppearance {
         character_name: String,
         appearance: CharacterAppearance,
@@ -460,6 +466,11 @@ enum AdminResponse {
         faction_id: u32,
         value: i32,
     },
+    CorpseLootStaged {
+        character_name: String,
+        item_id: u32,
+        corpse: u64,
+    },
     AppearanceSet {
         character_name: String,
         appearance: CharacterAppearance,
@@ -607,6 +618,9 @@ fn print_usage() {
     eprintln!("  game-server-admin quest-complete <character_name> <quest_id>");
     eprintln!("  game-server-admin set-durability <character_name> <percent>");
     eprintln!("  game-server-admin set-reputation <character_name> <faction_id> <value>");
+    eprintln!(
+        "  game-server-admin stage-corpse-loot <character_name> <item_id> (live proofs only)"
+    );
     eprintln!(
         "  game-server-admin set-appearance <character_name> <sex> <skin_color> <face> <eye_color> <hair_style> <hair_color> <facial_style>"
     );
@@ -782,6 +796,13 @@ fn parse_request(args: &[String]) -> AdminRequest {
             }
         }
         "set-durability" => parse_set_durability(args),
+        "stage-corpse-loot" => {
+            require_args(args, 4, "stage-corpse-loot <character_name> <item_id>");
+            AdminRequest::StageCorpseLoot {
+                character_name: args[2].clone(),
+                item_id: parse_number(&args[3], "item_id"),
+            }
+        }
         "set-reputation" => {
             require_args(
                 args,

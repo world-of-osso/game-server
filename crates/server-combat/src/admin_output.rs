@@ -275,6 +275,13 @@ fn print_character_response(response: &AdminResponse) -> bool {
         } => {
             println!("Reputation set: {character_name} faction {faction_id} -> {value}");
         }
+        AdminResponse::CorpseLootStaged {
+            character_name,
+            item_id,
+            corpse,
+        } => {
+            println!("Corpse loot staged: {character_name} item {item_id} on corpse {corpse}");
+        }
         AdminResponse::AppearanceSet {
             character_name,
             appearance,
