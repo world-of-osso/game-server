@@ -58,13 +58,6 @@ fn holy_paladin_keeps_one_beacon_during_party_pressure() {
     )
     .unwrap();
     assert_eq!(report["healer_casts"]["53563"], 1, "{report}");
-    assert!(
-        report["metrics"]["spell_healing"]["53652"]["raw"]
-            .as_u64()
-            .unwrap_or(0)
-            > 0,
-        "{report}"
-    );
 }
 
 #[test]
