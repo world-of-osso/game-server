@@ -5,6 +5,7 @@ import csv
 import json
 import re
 import sqlite3
+from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -160,6 +161,35 @@ def annotate_bosses(runs, database):
                 cast['known_boss'] = encounter['units'][cast['guid']]['npc_id'] in known
 
 
+def summarize_encounters(runs):
+    grouped = defaultdict(list)
+    for run in runs:
+        for encounter in run['encounters']:
+            if encounter.get('success'):
+                grouped[(run['map'], encounter['id'], encounter['name'])].append(encounter)
+    result = []
+    for (map_id, encounter_id, name), kills in sorted(grouped.items()):
+        spells = defaultdict(lambda: {'first_cast_seconds': [], 'interval_seconds': []})
+        for kill in kills:
+            by_actor = defaultdict(list)
+            for cast in kill['casts']:
+                if cast.get('known_boss'):
+                    unit = kill['units'][cast['guid']]
+                    key = (unit['npc_id'], cast['spell_id'], cast['event'])
+                    by_actor[(key, cast['guid'])].append(cast['seconds_from_pull'])
+            for (key, _), times in by_actor.items():
+                times.sort()
+                spells[key]['first_cast_seconds'].append(times[0])
+                spells[key]['interval_seconds'].extend(b - a for a, b in zip(times, times[1:]))
+        result.append({'map': map_id, 'encounter_id': encounter_id, 'name': name,
+                       'successful_pulls': len(kills),
+                       'spells': [{'npc_id': key[0], 'spell_id': key[1], 'event': key[2], **values,
+                                   'interval_range_seconds': [min(values['interval_seconds']), max(values['interval_seconds'])]
+                                   if values['interval_seconds'] else None}
+                                  for key, values in sorted(spells.items())]})
+    return result
+
+
 def read_trash_timers(path):
     """Read the generated addon data as text, without executing its Lua."""
     timers = {}
@@ -217,6 +247,7 @@ def main():
     parser.add_argument("--precombat-samples", type=Path)
     parser.add_argument("--trash-data", type=Path)
     parser.add_argument("--world-db", type=Path)
+    parser.add_argument("--encounter-summary", type=Path)
     parser.add_argument("logs", type=Path, nargs="+")
     args = parser.parse_args()
     paths = [f for p in args.logs for f in (sorted(p.glob("*.txt")) if p.is_dir() else [p])]
@@ -235,6 +266,9 @@ def main():
     if args.floor_requests:
         args.floor_requests.parent.mkdir(parents=True, exist_ok=True)
         args.floor_requests.write_text(json.dumps(floor_requests(runs), indent=2) + "\n", encoding="utf-8")
+    if args.encounter_summary:
+        args.encounter_summary.parent.mkdir(parents=True, exist_ok=True)
+        args.encounter_summary.write_text(json.dumps(summarize_encounters(runs), indent=2) + "\n", encoding="utf-8")
 
 
 if __name__ == "__main__":

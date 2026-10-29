@@ -49,6 +49,11 @@ class CensusTest(unittest.TestCase):
         self.assertEqual(encounter['known_boss_npc_ids'], [123])
         self.assertEqual(encounter['casts'][0]['seconds_from_pull'], 1.5)
         self.assertTrue(encounter['casts'][0]['known_boss'])
+        second = dict(encounter['casts'][0], seconds_from_pull=6.5)
+        encounter['casts'].append(second)
+        summary = module.summarize_encounters(runs)[0]
+        self.assertEqual(summary['spells'][0]['first_cast_seconds'], [1.5])
+        self.assertEqual(summary['spells'][0]['interval_range_seconds'], [5.0, 5.0])
 
     def test_addon_timers_are_matched_by_challenge_and_npc(self):
         with tempfile.TemporaryDirectory() as directory:
