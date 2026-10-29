@@ -43,7 +43,9 @@ pub(super) fn spawn(world: &mut World, owner: Entity, profile: Profile) -> Resul
     let (x, y, z) = crate::terrain_height::bevy_to_wow(position.x, position.y, position.z);
     let unit = crate::zones::summon_creature(world, owner, profile.entry, [x, y, z, 0.0])
         .ok_or_else(|| format!("authentic follower template {} unavailable", profile.entry))?;
-    if let Err(error) = initialize(world, owner, unit, profile) {
+    if let Err(error) = initialize(world, owner, unit, profile.clone())
+        .and_then(|()| super::gear::equip(world, unit, &profile))
+    {
         world.despawn(unit);
         return Err(error);
     }
