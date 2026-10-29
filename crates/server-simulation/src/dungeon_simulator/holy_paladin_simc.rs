@@ -134,7 +134,15 @@ impl Policy for HolyPaladin {
         let Some((target, _)) = living.iter().copied().min_by(|a, b| a.1.total_cmp(&b.1)) else {
             return Ok(());
         };
-        let beacon_up = crate::auras::has_aura(world, target, 53563);
+        let beacon_up = living.iter().any(|(unit, _)| {
+            world
+                .get::<crate::auras::ActiveAuras>(*unit)
+                .is_some_and(|auras| {
+                    auras
+                        .iter()
+                        .any(|aura| aura.spell_id == 53563 && aura.caster == healer)
+                })
+        });
         let injured = living.iter().filter(|(_, ratio)| *ratio < 0.95).count();
         let targets = [target];
         let actions = SPELLS
