@@ -207,7 +207,7 @@ impl Recorder {
         if let Some(payments) =
             world.get::<crate::spell_cast::ObservedResourcePayments>(self.healer)
         {
-            for &(spell, pool, amount) in &payments.0 {
+            for &(spell, pool, amount) in &payments.payments {
                 if pool == crate::spell_cast::CostPool::Power(shared::components::PowerType::Mana) {
                     *mana_spent.entry(spell).or_default() += f64::from(amount);
                 }
@@ -220,7 +220,7 @@ impl Recorder {
             .collect();
         let mana_regenerated = world
             .get::<crate::spell_cast::ObservedResourcePayments>(self.healer)
-            .map_or(0.0, |observed| observed.1);
+            .map_or(0.0, |observed| observed.mana_regenerated);
         json!({"mana_spent_by_spell":mana_spent,"passive_mana_regenerated":mana_regenerated,"resource_energizes_by_spell":energizes,"fiend_rolls":fiend_rolls,"fiend_summons":fiend_summons,"fiend_pre_mitigation_damage":fiend.0,"fiend_atonement_raw":fiend.1,"fiend_atonement_effective":fiend.2,
             "raw_hps":raw as f64 / duration,"effective_hps":effective as f64 / duration,
             "consumed_absorbs_by_spell":absorbs,

@@ -1147,7 +1147,7 @@ fn replay_registered_run_with_healing(
         .world()
         .get::<crate::spell_cast::ObservedResourcePayments>(tank)
         .unwrap()
-        .0
+        .payments
     {
         let resource = match pool {
             crate::spell_cast::CostPool::Power(power) => format!("{power:?}").to_lowercase(),
