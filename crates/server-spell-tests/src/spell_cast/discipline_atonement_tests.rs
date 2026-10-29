@@ -286,6 +286,11 @@ fn discipline_fiend_spells_transfer_pet_damage_to_atonement() {
             ActiveSpec(256),
             server::networking::CombatTarget(Some(h.npc)),
         ));
+        h.app
+            .world_mut()
+            .get_mut::<server::stats::CharacterStats>(h.caster)
+            .unwrap()
+            .spell_power = 1_000.0;
         *h.app.world_mut().get_mut::<Health>(h.caster).unwrap() = Health {
             current: 1_000.0,
             max: 10_000.0,
