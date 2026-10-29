@@ -1,6 +1,6 @@
 //! Bounded consumers of local Mainline rows; archive guardian bindings remain authoritative.
 use bevy::prelude::*;
-use shared::components::PowerType;
+use shared::components::{ActiveSpec, PowerType};
 
 use super::script_effect_value;
 use crate::auras::{ActiveAuras, AuraApplication, AuraSource};
@@ -156,7 +156,25 @@ fn within_shield_arc(offset: Vec3, forward: Vec3, half_arc: f32) -> bool {
 
 ///53600 explicitly names132403s1/d. Apply once, including empty cones.
 pub(super) fn shield_armor(world: &mut World, caster: Entity, _spell: &SpellInfo) {
-    crate::auras::apply_aura(
+    let mut shield = world
+        .resource::<SpellStore>()
+        .get(SHIELD_ARMOR)
+        .expect("Shield of the Righteous armor spell")
+        .clone();
+    if world
+        .get::<ActiveSpec>(caster)
+        .is_some_and(|spec| spec.0 == 66)
+    {
+        // SimC76f8118 sc_paladin.cpp:4649–4659 takes armor from modified effect 1.
+        let amount = script_effect_value(world, caster, SHIELD_ARMOR, 0);
+        shield
+            .effects
+            .iter_mut()
+            .find(|effect| effect.index == 1)
+            .expect("Shield of the Righteous armor effect")
+            .base_points = amount;
+    }
+    crate::auras::apply_aura_with_spell(
         world,
         &AuraApplication {
             caster,
@@ -166,6 +184,7 @@ pub(super) fn shield_armor(world: &mut World, caster: Entity, _spell: &SpellInfo
             effect_mask: (1 << 1) | (1 << 2),
             source: AuraSource::Cast,
         },
+        &shield,
     );
 }
 
