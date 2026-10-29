@@ -6,16 +6,28 @@ use navigation::NavigationMap;
 use serde::{Deserialize, Serialize};
 
 pub use crate::ground::Floor;
+#[cfg(test)]
+#[path = "floor_resolver_tests.rs"]
+mod tests;
+
 use crate::ground::FloorGeometry;
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct Hint {
+    #[serde(default)]
+    pub guid: String,
     pub x: f32,
     pub y: f32,
 }
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct Request {
+    #[serde(default)]
+    pub file: String,
+    #[serde(default)]
+    pub run_start: String,
+    #[serde(default)]
+    pub guid: String,
     pub map: u32,
     pub x: f32,
     pub y: f32,
@@ -79,6 +91,14 @@ impl FloorResolver {
     }
 
     pub fn resolve(&mut self, request: &Request) -> Resolution {
+        self.resolve_with_known_hints(request, &[])
+    }
+
+    pub fn resolve_with_known_hints(
+        &mut self,
+        request: &Request,
+        known_hints: &[(f32, f32, f32)],
+    ) -> Resolution {
         let candidates = match self.candidates(request.map, request.x, request.y) {
             Ok(candidates) => candidates,
             Err(error) => {
@@ -94,26 +114,35 @@ impl FloorResolver {
             };
         }
         let mut matching = vec![false; candidates.len()];
+        let mut anchors = known_hints.to_vec();
         for hint in &request.neighbor_hints {
-            let Ok(hint_floors) = self.candidates(request.map, hint.x, hint.y) else {
-                continue;
-            };
-            if hint_floors.len() != 1 {
-                continue;
+            if let Ok(hint_floors) = self.candidates(request.map, hint.x, hint.y) {
+                if hint_floors.len() == 1 {
+                    anchors.push((hint.x, hint.y, hint_floors[0].z));
+                }
             }
-            let start = point(hint.x, hint.y, hint_floors[0].z);
-            let max_distance =
-                (start - point(request.x, request.y, hint_floors[0].z)).length() * 3.0 + 15.0;
+        }
+        for (x, y, z) in anchors {
+            let start = point(x, y, z);
+            let max_distance = (start - point(request.x, request.y, z)).length() * 3.0 + 15.0;
             let nav = self.maps.get_mut(&request.map).unwrap();
             for (index, candidate) in candidates.iter().enumerate() {
                 let end = point(request.x, request.y, candidate.z);
-                if let Ok(path) = nav.complete_path(start, end) {
-                    let length: f32 = path
-                        .windows(2)
-                        .map(|points| points[0].distance(points[1]))
-                        .sum();
-                    if length <= max_distance {
-                        matching[index] = true;
+                match nav.complete_path(start, end) {
+                    Ok(path) => {
+                        let length: f32 = path
+                            .windows(2)
+                            .map(|points| points[0].distance(points[1]))
+                            .sum();
+                        if length <= max_distance {
+                            matching[index] = true;
+                        }
+                    }
+                    Err(error) if error.starts_with("unreachable target") => {}
+                    Err(error) => {
+                        return Resolution::Gap {
+                            gap: Gap::MissingGeometry { error },
+                        };
                     }
                 }
             }
