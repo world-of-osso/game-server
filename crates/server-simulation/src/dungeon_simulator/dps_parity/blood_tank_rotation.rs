@@ -2804,8 +2804,9 @@ mod tests {
     #[test]
     #[ignore = "requires canonical world database and MID2 Blood inputs"]
     fn blood_boiling_point_proc_consumes_and_echoes_blood_boil() {
+        use shared::components::{Npc, UnitSummonedBy};
         let _seed = crate::random::seed_scope(70448);
-        let mut run = super::super::prepare_registered_player(250, 1).unwrap();
+        let mut run = super::super::prepare_registered_player(250, 3).unwrap();
         let actor = run.actor;
         let target = run.targets[0];
         super::super::engage(&mut run);
@@ -2826,6 +2827,28 @@ mod tests {
             }
         }
         assert!(crate::auras::has_aura(run.app.world(), actor, 1265968));
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 49028, Some(actor), false)
+            .unwrap();
+        for _ in 0..30 {
+            run.app.update();
+        }
+        let world = run.app.world_mut();
+        let weapons: Vec<_> = world
+            .query::<(
+                bevy::prelude::Entity,
+                &Npc,
+                &UnitSummonedBy,
+                &crate::spell_cast::summon::SummonedCreature,
+            )>()
+            .iter(world)
+            .filter(|(_, npc, owner, summon)| {
+                npc.template_id == 27893
+                    && owner.0 == actor.to_bits()
+                    && matches!(summon.spell_id, 49028 | 1237128)
+            })
+            .map(|(entity, _, _, _)| entity)
+            .collect();
+        assert_eq!(weapons.len(), 2);
         let start = run
             .app
             .world()
@@ -2856,6 +2879,23 @@ mod tests {
             })
             .count();
         assert_eq!(hits, 2, "one Blood Boil hit and one delayed echo");
+        for weapon in weapons {
+            for target in &run.targets {
+                let hits = events
+                    .iter()
+                    .filter(|event| {
+                        event.source == Some(weapon.to_bits())
+                            && event.target == Some(target.to_bits())
+                            && event.spell_id == Some(50842)
+                            && event.kind == shared::protocol::CombatLogKind::Damage
+                    })
+                    .count();
+                assert_eq!(
+                    hits, 2,
+                    "each weapon must mirror both the original Blood Boil and its delayed echo on every target"
+                );
+            }
+        }
     }
 
     #[test]

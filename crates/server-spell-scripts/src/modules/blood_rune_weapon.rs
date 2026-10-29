@@ -284,7 +284,7 @@ fn consume_dance(world: &mut World, caster: Entity, spell: &SpellInfo) {
 
 // SimC76f8118 sc_death_knight.cpp9523–9527/13955–13965 summons the
 // selected second weapon and mirrors the owner's Bone Shield generators.
-fn copy_weapon_actions(world: &mut World, caster: Entity, spell: &SpellInfo) {
+pub(super) fn copy_weapon_actions(world: &mut World, caster: Entity, spell: &SpellInfo) {
     if !world
         .get::<ActiveSpec>(caster)
         .is_some_and(|spec| spec.0 == 250)
