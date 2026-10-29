@@ -81,6 +81,9 @@ fn main() -> Result<(), Box<dyn Error>> {
             break;
         }
     }
-    serde_json::to_writer(File::create(&args[2])?, &output)?;
+    let output_path = Path::new(&args[2]);
+    let temporary_path = output_path.with_extension("json.tmp");
+    serde_json::to_writer(File::create(&temporary_path)?, &output)?;
+    std::fs::rename(temporary_path, output_path)?;
     Ok(())
 }
