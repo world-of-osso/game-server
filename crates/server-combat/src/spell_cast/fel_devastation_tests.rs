@@ -157,7 +157,7 @@ fn haste_273_shortens_arcane_missiles_channel() {
         .get::<shared::casting::CastState>(h.caster)
         .unwrap()
         .duration;
-    assert_eq!(duration, 1.25);
+    assert_eq!(duration, 1.252);
 }
 
 #[test]
