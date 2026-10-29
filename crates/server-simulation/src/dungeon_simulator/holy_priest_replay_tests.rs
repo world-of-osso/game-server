@@ -2,6 +2,58 @@ use std::path::Path;
 
 #[test]
 #[ignore = "requires native Holy Priest spell data"]
+fn piety_redistributes_flash_heal_overhealing() {
+    use crate::spell_cast::test_harness::{ObservedCombatEvents, harness, spawn_player};
+    use shared::components::Health;
+    use shared::protocol::CombatLogKind;
+    let mut h = harness(Vec::new(), &[2061, 1246802, 443126], 10).unwrap();
+    h.app.init_resource::<ObservedCombatEvents>();
+    let full = spawn_player(&mut h.app, 10, 3.0);
+    let first = spawn_player(&mut h.app, 10, 4.0);
+    let second = spawn_player(&mut h.app, 10, 5.0);
+    for unit in [first, second] {
+        *h.app.world_mut().get_mut::<Health>(unit).unwrap() = Health {
+            current: 1.0,
+            max: 100_000.0,
+        };
+    }
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: h.caster,
+            target: h.caster,
+            spell_id: 1246802,
+            effect_mask: u32::MAX,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    crate::spell_cast::creature_cast(h.app.world_mut(), h.caster, 2061, Some(full), true).unwrap();
+    h.advance(2);
+    let events = &h.app.world().resource::<ObservedCombatEvents>().0;
+    let source = events
+        .iter()
+        .find(|e| {
+            e.kind == CombatLogKind::Heal
+                && e.spell_id == Some(2061)
+                && e.target == Some(full.to_bits())
+        })
+        .expect("Flash Heal must land");
+    assert!(source.overflow > 0);
+    for ally in [first, second] {
+        let heal = events
+            .iter()
+            .find(|e| {
+                e.kind == CombatLogKind::Heal
+                    && e.spell_id == Some(443126)
+                    && e.target == Some(ally.to_bits())
+            })
+            .expect("Piety must heal injured ally");
+        assert!((heal.amount as f32 - source.overflow as f32 * 0.1).abs() <= 1.0);
+    }
+}
+
+#[test]
+#[ignore = "requires native Holy Priest spell data"]
 fn ultimate_serenity_heals_nearby_injured_allies() {
     use crate::spell_cast::test_harness::{ObservedCombatEvents, harness, spawn_player};
     use shared::components::Health;

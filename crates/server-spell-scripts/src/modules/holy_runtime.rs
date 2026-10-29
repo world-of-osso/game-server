@@ -36,6 +36,7 @@ pub const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AreaFilter(prayer_of_mending::area_filter),
     SpellScriptHook::AreaFilter(holy_priest::serenity_area_filter),
     SpellScriptHook::ContextHit(holy_priest::serenity_hit),
+    SpellScriptHook::ResolvedHeal(holy_priest::piety),
     SpellScriptHook::TargetPlan(target_plan),
 ];
 

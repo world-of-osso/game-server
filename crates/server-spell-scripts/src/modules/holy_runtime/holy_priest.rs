@@ -58,6 +58,32 @@ fn select_serenity_allies(
     units.truncate(spell.effects[1].base_points.max(0.0) as usize);
 }
 
+pub(super) fn piety(world: &mut World, ctx: &combat::spell_cast::effects::EffectCtx, _target: Entity, raw: f32, effective: f32) {
+    use combat::spell_cast::{effects, targets::{self, Relation}};
+    use shared::components::Health;
+    const TALENT: u32 = 1_246_802;
+    const HEAL: u32 = 443_126;
+    if ctx.spell.id == HEAL || raw <= effective || !has_aura(world, ctx.caster, TALENT) {
+        return;
+    }
+    let spell = world.resource::<SpellStore>().get(HEAL).expect("Piety heal missing").clone();
+    let Some(center) = targets::position(world, ctx.caster) else { return };
+    let mut allies = targets::area_units(world, ctx.caster, center, targets::radius(&spell.effects[0], 1), Relation::Ally, 0);
+    allies.retain(|unit| world.get::<Health>(*unit).is_some_and(|h| h.current > 0.0 && h.current < h.max));
+    allies.sort_by(|a, b| {
+        let a = world.get::<Health>(*a).unwrap();
+        let b = world.get::<Health>(*b).unwrap();
+        (a.current / a.max).total_cmp(&(b.current / b.max))
+    });
+    let count = super::script_effect_value(world, ctx.caster, TALENT, 1).max(0.0) as usize;
+    allies.truncate(count);
+    if allies.is_empty() { return; }
+    let percent = super::script_effect_value(world, ctx.caster, TALENT, 0) / 100.0;
+    let amount = (raw - effective) * percent / allies.len() as f32;
+    let heal = effects::EffectCtx { caster: ctx.caster, spell: &spell, depth: ctx.depth + 1, dest: None, chain_multiplier: 1.0 };
+    for ally in allies { effects::apply_fixed_heal(world, &heal, ally, amount); }
+}
+
 pub(crate) const APOTHEOSIS: u32 = 200183;
 const SURGE_TALENT: u32 = 109186;
 const SURGE_BUFF: u32 = 114255;
