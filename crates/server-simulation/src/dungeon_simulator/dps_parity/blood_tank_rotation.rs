@@ -2242,6 +2242,56 @@ mod tests {
 
     #[test]
     #[ignore = "requires canonical world database and MID2 Blood inputs"]
+    fn blood_vampiric_strike_earns_heartbreaker_per_target() {
+        use shared::protocol::CombatLogKind;
+        let mut run = super::super::prepare_registered_player(250, 3).unwrap();
+        let actor = run.actor;
+        let target = run.targets[0];
+        super::super::engage(&mut run);
+        crate::spell_cast::powers::change_power(
+            run.app.world_mut(),
+            actor,
+            shared::components::PowerType::RunicPower,
+            -10000.0,
+        );
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 433895, Some(target), false)
+            .unwrap();
+        for _ in 0..4 {
+            run.app.update();
+        }
+        let events = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0;
+        let hits = events
+            .iter()
+            .filter(|event| {
+                event.source == Some(actor.to_bits())
+                    && event.spell_id == Some(433895)
+                    && event.kind == CombatLogKind::Damage
+                    && event.amount > 0
+            })
+            .count();
+        let gained: i32 = events
+            .iter()
+            .filter(|event| {
+                event.source == Some(actor.to_bits())
+                    && event.spell_id == Some(210738)
+                    && event.kind == CombatLogKind::Energize
+            })
+            .map(|event| event.amount)
+            .sum();
+        assert!(hits >= 2, "Vampiric Strike must land on multiple enemies");
+        assert_eq!(
+            gained,
+            hits as i32 * 20,
+            "Heartbreaker grants two runic power per hit"
+        );
+    }
+
+    #[test]
+    #[ignore = "requires canonical world database and MID2 Blood inputs"]
     fn blood_transfusion_increases_real_weapon_damage_per_stack() {
         use shared::components::{Npc, UnitSummonedBy};
         use shared::protocol::CombatLogKind;
