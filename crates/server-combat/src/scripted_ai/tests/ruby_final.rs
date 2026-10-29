@@ -103,6 +103,30 @@ fn ruby_final_erkhart_logged_clocks() {
 }
 
 #[test]
+fn ruby_final_kyrakka_half_health_also_starts_landing() {
+    for difficulty in [1, 205] {
+        let (mut h, erkhart, kyrakka, _) = ruby_copy(difficulty);
+        h.engage(erkhart);
+        h.advance(1.0);
+        for _ in 0..100 {
+            if h.health(kyrakka).current <= h.health(kyrakka).max * 0.5 {
+                break;
+            }
+            h.hit_pct(kyrakka, 1.0);
+        }
+        let health = h.health(kyrakka);
+        assert!(health.current > health.max * 0.4 && health.current <= health.max * 0.5);
+        h.advance(0.5);
+        let movement = h
+            .app
+            .world()
+            .get::<crate::scripted_ai::movement::PointMovement>(kyrakka)
+            .expect("Kyrakka's health also begins landing");
+        assert!((movement.target.x - 1798.47).abs() < 0.01);
+    }
+}
+
+#[test]
 fn ruby_final_logged_clocks_and_stage_anchor() {
     for difficulty in [1, 205] {
         let (mut h, erkhart, kyrakka, _) = ruby_copy(difficulty);
@@ -117,15 +141,22 @@ fn ruby_final_logged_clocks_and_stage_anchor() {
             .insert_resource(crate::spell_cast::test_harness::ObservedCombatEvents::default());
         h.engage(erkhart);
         h.advance(1.0);
-        for _ in 0..20 {
+        assert!(
+            h.app
+                .world()
+                .get::<crate::scripted_ai::movement::PointMovement>(kyrakka)
+                .is_none(),
+            "stage must not move before the threshold"
+        );
+        for _ in 0..100 {
             if h.health(erkhart).current <= h.health(erkhart).max * 0.5 {
                 break;
             }
-            h.hit_pct(erkhart, 5.0);
+            h.hit_pct(erkhart, 1.0);
         }
         let health = h.health(erkhart);
         assert!(
-            health.current > 0.0 && health.current <= health.max * 0.5,
+            health.current > health.max * 0.4 && health.current <= health.max * 0.5,
             "real damage must cross phase threshold: {health:?}"
         );
         h.advance(1.0);
