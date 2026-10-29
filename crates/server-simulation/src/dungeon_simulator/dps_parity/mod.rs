@@ -882,6 +882,9 @@ fn measure(spec_id: u32, count: usize) -> Result<Value, String> {
 fn measure_seed(spec_id: u32, count: usize, seed: u64) -> Result<Value, String> {
     let _seed_scope = crate::random::seed_scope(seed);
     let mut run = prepare_measurement(spec_id, count)?;
+    if run.spec_driver.is_none() {
+        return Err(format!("NATIVE_LITERAL_DRIVER_UNAVAILABLE:{spec_id}"));
+    }
     let before = report::stats(run.app.world(), run.actor);
     let targets = target_snapshot(&run);
     engage(&mut run);
@@ -928,6 +931,13 @@ fn beast_mastery_literal_fixture_casts_reference_actions() {
             "literal Auto Shot/Barbed Shot must execute: {spell}; {combat}"
         );
     }
+}
+
+#[test]
+#[ignore = "requires native Demonology profile and player actor"]
+fn dps_measurement_rejects_demonology_player_without_literal_driver() {
+    let error = measure_seed(266, 1, 70448).unwrap_err();
+    assert_eq!(error, "NATIVE_LITERAL_DRIVER_UNAVAILABLE:266");
 }
 
 #[test]
