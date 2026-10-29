@@ -1,6 +1,53 @@
 use std::path::Path;
 
 #[test]
+#[ignore = "requires native top-character profiles and world database"]
+fn restoration_shaman_uses_chain_lightning_only_against_a_pack() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::components::Health;
+    use shared::protocol::CombatLogKind;
+    let mut run = super::super::dps_parity::prepare_registered_player(66, 2).unwrap();
+    let tank = run.actor;
+    let healer = super::super::dps_parity::spawn_second_reference_player(&mut run, 264).unwrap();
+    let add = run.targets[1];
+    run.app.world_mut().get_mut::<Health>(add).unwrap().current = 0.0;
+    let mut policy = super::prepare(&mut run, healer).unwrap();
+    for _ in 0..200 {
+        policy
+            .drive(run.app.world_mut(), healer, &[tank, healer])
+            .unwrap();
+        run.app.update();
+    }
+    assert!(
+        !run.app
+            .world()
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|e| e.source == Some(healer.to_bits())
+                && e.spell_id == Some(188443)
+                && e.kind == CombatLogKind::CastSuccess)
+    );
+    {
+        let mut hp = run.app.world_mut().get_mut::<Health>(add).unwrap();
+        hp.current = hp.max;
+    }
+    for _ in 0..300 {
+        policy
+            .drive(run.app.world_mut(), healer, &[tank, healer])
+            .unwrap();
+        run.app.update();
+    }
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0;
+    assert!(
+        events.iter().any(|e| e.source == Some(healer.to_bits())
+            && e.spell_id == Some(188443)
+            && e.kind == CombatLogKind::CastSuccess),
+        "Chain Lightning must cast against a pack: {events:?}"
+    );
+}
+
+#[test]
 #[ignore = "requires top-character profiles, native DB and SimC party pulse"]
 fn restoration_shaman_uses_surging_totem_throughout_party_pulse() {
     let trace = std::env::var("HEALER_TANK_TIMELINE").unwrap();

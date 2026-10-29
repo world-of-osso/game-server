@@ -32,6 +32,7 @@ const SPELLS: &[(&str, u32, bool)] = &[
 const DAMAGE_SPELLS: &[(&str, u32, bool)] = &[
     ("flame_shock", 470411, false),
     ("lava_burst", 51505, false),
+    ("chain_lightning", 188443, false),
     ("lightning_bolt", 188196, false),
 ];
 
@@ -83,6 +84,7 @@ pub(super) fn prepare(
         ("default", "healing_wave,if=target.healing_wave_useful"),
         ("damage", "flame_shock"),
         ("damage", "lava_burst"),
+        ("damage", "chain_lightning,if=active_enemies>=2"),
         ("damage", "lightning_bolt"),
     ])?;
     Ok(Box::new(Restoration {
@@ -226,7 +228,25 @@ impl Policy for Restoration {
             self.driver.execute(world, healer, action, execution)?;
             return Ok(());
         }
-        let targets = [self.enemy];
+        let spell = world
+            .resource::<crate::spell_info::SpellStore>()
+            .get(188443)
+            .ok_or("Chain Lightning native spell data missing")?
+            .clone();
+        let effect = spell
+            .effects
+            .iter()
+            .find(|effect| effect.effect == 2)
+            .ok_or("Chain Lightning damage effect missing")?;
+        let mut targets = vec![self.enemy];
+        targets.extend(crate::spell_cast::targets::chain_targets(
+            world,
+            healer,
+            &spell,
+            effect,
+            self.enemy,
+            crate::spell_cast::targets::Relation::Enemy,
+        ));
         let actions = DAMAGE_SPELLS
             .iter()
             .map(|&(name, spell, self_target)| NativeAction {
@@ -236,7 +256,7 @@ impl Policy for Restoration {
                 talent: None,
             });
         let prepared = Prepared::read(world, healer, &targets, &self.equipment, actions, false)?;
-        let facts = NativeFacts::new(world, healer, &self.bindings, self.encounter, 1)
+        let facts = NativeFacts::new(world, healer, &self.bindings, self.encounter, targets.len())
             .with_targets(Some(self.enemy), &targets);
         if let Some((action, execution)) =
             self.driver
