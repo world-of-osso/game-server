@@ -167,6 +167,8 @@ class CensusTest(unittest.TestCase):
         self.assertEqual(zones[0]['session_kind'], 'zone')
         self.assertEqual([unit['npc_id'] for unit in zones[0]['creatures'].values()], [123])
         self.assertEqual([unit['npc_id'] for unit in keys[0]['creatures'].values()], [456])
+        summary = module.summarize_population(keys + zones)[0]
+        self.assertEqual((summary['runs'], summary['zone_sessions']), (1, 1))
 
     def test_runs_creatures_and_summon_destinations(self):
         with tempfile.TemporaryDirectory() as directory:

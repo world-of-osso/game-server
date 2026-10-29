@@ -403,8 +403,11 @@ def cluster_safe_samples(runs, samples):
 def summarize_population(runs, database=None):
     maps = {}
     for run in runs:
-        group = maps.setdefault(run['map'], {'map': run['map'], 'runs': 0, 'npcs': {}})
-        group['runs'] += 1
+        group = maps.setdefault(run['map'], {'map': run['map'], 'runs': 0, 'zone_sessions': 0, 'npcs': {}})
+        if run.get('session_kind') == 'zone':
+            group['zone_sessions'] += 1
+        else:
+            group['runs'] += 1
         counts = defaultdict(int)
         for unit in run['creatures'].values():
             entry = group['npcs'].setdefault(unit['npc_id'], {'npc_id': unit['npc_id'],
