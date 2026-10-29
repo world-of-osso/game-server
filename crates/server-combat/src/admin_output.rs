@@ -268,6 +268,13 @@ fn print_character_response(response: &AdminResponse) -> bool {
         } => {
             println!("Durability set: {character_name} -> {percent}%");
         }
+        AdminResponse::ReputationSet {
+            character_name,
+            faction_id,
+            value,
+        } => {
+            println!("Reputation set: {character_name} faction {faction_id} -> {value}");
+        }
         AdminResponse::AppearanceSet {
             character_name,
             appearance,

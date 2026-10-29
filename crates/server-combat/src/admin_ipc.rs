@@ -757,6 +757,11 @@ fn dispatch(
             character_name,
             percent,
         } => handle_set_durability(db, commands, &character_name, percent),
+        AdminRequest::SetReputation {
+            character_name,
+            faction_id,
+            value,
+        } => handle_set_reputation(db, commands, &character_name, faction_id, value),
         AdminRequest::SetAppearance {
             character_name,
             appearance,
