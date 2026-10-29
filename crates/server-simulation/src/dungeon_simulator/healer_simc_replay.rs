@@ -35,7 +35,7 @@ pub(crate) fn spawn_reference_party(
     healer: Entity,
 ) -> Result<crate::followers::simulator::Party, String> {
     let party = crate::followers::simulator::spawn_party_for_reference_healer(world, tank, healer)?;
-    super::dps_parity::equip_companions(world, &party.members)?;
+    super::dps_parity::equip_companions(world, &party)?;
     Ok(party)
 }
 
