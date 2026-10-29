@@ -5,6 +5,7 @@ import json
 import math
 import sqlite3
 import sys
+from contextlib import closing
 from collections import Counter, defaultdict
 from pathlib import Path
 
@@ -150,7 +151,7 @@ def retire_affix_spawns(db, summons, report):
 def import_population(destination, records, radius=10.0):
     destination = validate_copy(destination)
     report = defaultdict(lambda: {'imported': 0, 'already_present': 0, 'gaps': [], 'templates_from_tdb': set(), 'templates_absent': set()})
-    with sqlite3.connect(destination) as db:
+    with closing(sqlite3.connect(destination)) as db, db:
         db.execute('BEGIN IMMEDIATE')
         db.execute('''CREATE TABLE IF NOT EXISTS log_derived_population (
             guid INTEGER PRIMARY KEY, source_key TEXT NOT NULL UNIQUE, map INTEGER NOT NULL,

@@ -4,6 +4,7 @@ import shutil
 import sqlite3
 import tempfile
 import unittest
+from contextlib import closing
 from pathlib import Path
 
 spec = importlib.util.spec_from_file_location('import_log_population', Path(__file__).with_name('import_log_population.py'))
@@ -23,7 +24,7 @@ class ImportTest(unittest.TestCase):
         fixture = json.loads((Path(__file__).parent / 'tests/fixtures/log-population-tdb.json').read_text())
         with tempfile.TemporaryDirectory() as directory:
             copy = Path(directory) / 'world-copy.db'
-            with sqlite3.connect(copy) as db:
+            with closing(sqlite3.connect(copy)) as db, db:
                 for table, data in fixture.items():
                     db.execute(data['sql'])
                     for row in data['rows']:
@@ -33,14 +34,14 @@ class ImportTest(unittest.TestCase):
                 db.execute("INSERT INTO content_creature(guid,id1,map,position_x,position_y,position_z,Comment) VALUES(1,229296,2521,10,20,30,'authored')")
             records = [record('affix', 100, npc=229296), record('ordinary', 200)]
             module.import_population(copy, records)
-            with sqlite3.connect(copy) as db:
+            with closing(sqlite3.connect(copy)) as db, db:
                 db.execute("INSERT INTO keystone_affix VALUES(148,?)", ("Xal'atath's Bargain: Ascendant",))
                 db.execute("INSERT INTO spell_name VALUES(461936,?)", ("Xal'atath's Bargain: Ascendant",))
                 db.execute('INSERT INTO spell_effect VALUES(461936,28,229296)')
             report = module.import_population(copy, records)
             self.assertIn('AFFIX_SUMMON_RETIRED', [gap['reason'] for gap in report['2521']['gaps']])
             self.assertIn('AFFIX_SUMMON', [gap['reason'] for gap in report['2521']['gaps']])
-            with sqlite3.connect(copy) as db:
+            with closing(sqlite3.connect(copy)) as db, db:
                 self.assertEqual(db.execute('SELECT id1,Comment FROM content_creature ORDER BY guid').fetchall(),
                                  [(229296, 'authored'), (123, module.POLICY)])
                 self.assertEqual(db.execute('SELECT source_key FROM log_derived_population').fetchall(), [('ordinary',)])
