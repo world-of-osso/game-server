@@ -79,13 +79,13 @@ Ten seeds give a survivor-count standard deviation of about 1.6 near 50%, so adj
 
 ## Ten-seed healed replay versus corrected SimC
 
-Measured on master `93a42f1f4a`: each tank's SimC trace, external dummy healing, native seeds 70448–70457. SimC is the mean of `collected_data.dtps` over ten measured iterations, after absorbs and including self-Stagger. `timeline_dmg_taken` sums run about 9% higher (consistent with 11 iterations divided by 10); do not use them. The corrected references remove SimC double applications and the Demon Spikes armor omission recorded in `healer-tank-replay/73.md`, `268.md` and `581.md`, and SimC's extra 100% Ursoc's Fury shield recorded in `104.md`. Reports and `SUMMARY.md` are in `game-engine/data/diagnostics/healer-tank-replay/all-10seeds-93a42f1f4a/`.
+Measured on master `93a42f1f4a`: each tank's SimC trace, external dummy healing, native seeds 70448–70457. SimC is the mean of `collected_data.dtps` over ten measured iterations, after absorbs and including self-Stagger. `timeline_dmg_taken` sums run about 9% higher (consistent with 11 iterations divided by 10); do not use them. The corrected references remove SimC double applications and the Demon Spikes armor omission recorded in `healer-tank-replay/73.md`, `268.md` and `581.md`, and SimC's extra 100% Ursoc's Fury shield recorded in `104.md`. Reports and `SUMMARY.md` are in `game-engine/data/diagnostics/healer-tank-replay/all-10seeds-93a42f1f4a/`. Rows marked with a later commit were rerun after that tank's fixes; see its page.
 
 | Tank | Native taken | SimC | Δ | Healed / unhealed deaths |
 |---|---:|---:|---:|---:|
-| 66 | 3,798,647 | 3,249,867 (solo, `fake_solidarity=0`) | +16.9% | 0 / 4 |
+| 66 | 3,316,668 (`745943a0a`) | 3,249,867 (solo, `fake_solidarity=0`) | +2.1% | 0 / 0 |
 | 73 | 3,010,673 | 2,951,770 (corrected) | +2.0% | 0 / 0 |
-| 104 | 2,132,723 | 1,901,807 (corrected: Ursoc's Fury percentage) | +12.1% | 0 / 0 |
+| 104 | 1,741,972 (`04110b594`) | 1,901,807 (corrected: Ursoc's Fury percentage) | −8.4% | 0 / 0 |
 | 250 | 101,591 | 88,144 (canonical) | +15.3% | 0 / 0 |
 | 268 | 3,465,194 | 3,471,015 (corrected) | −0.2% | 0 / 0 |
 | 581 | 5,922,231 | 5,812,546 (corrected) | +1.9% | 0 / 0 |
