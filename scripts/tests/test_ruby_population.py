@@ -23,6 +23,7 @@ class RubyPopulationTests(unittest.TestCase):
                 self.assertIn('FOLLOWER_PLACEMENT_XY_FROM_JOURNAL_ENCOUNTER_UIMAP', comment)
                 self.assertEqual(db.execute('SELECT count(*) FROM content_creature').fetchone()[0], before + 1)
                 self.assertEqual(db.execute('SELECT faction,unit_flags FROM content_creature_template WHERE entry=190484').fetchone(), (16, 64))
+                self.assertEqual(db.execute('SELECT entry,ScriptName FROM content_creature_template WHERE entry IN (190484,190485) ORDER BY entry').fetchall(), [(190484, 'boss_kyrakka_erkhart'), (190485, 'boss_kyrakka_erkhart')])
                 self.assertEqual(db.execute('SELECT encounter_id,bit FROM raid_encounter_creature WHERE map_id=2521 AND creature_entry=190484').fetchone(), (2623, 2))
                 with self.assertRaisesRegex(ValueError, 'GUID already occupied'):
                     import_population(db)

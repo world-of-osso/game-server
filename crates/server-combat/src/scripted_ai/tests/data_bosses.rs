@@ -141,6 +141,8 @@ mod omrogg;
 mod orator;
 #[path = "porung.rs"]
 mod porung;
+#[path = "ruby_final.rs"]
+mod ruby_final;
 #[path = "skarmorak.rs"]
 mod skarmorak;
 #[path = "talondras.rs"]
@@ -242,6 +244,10 @@ pub(crate) fn prepare_encounter_database(
     source
         .execute("VACUUM INTO ?1", [path.to_str().unwrap()])
         .expect("snapshot canonical encounter data without writing source");
+    if encounter == "ruby-final" {
+        run_preparation_script("ruby_population.py", &["--db".as_ref(), path.as_os_str()]);
+        return (directory, path);
+    }
     if ["gargolmar", "omor"].contains(&encounter) {
         let dump = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("../../data/reference/tdb1210/TDB_full_world_1210.26091_2026_09_09.sql");

@@ -37,6 +37,11 @@ def import_population(db):
     # LOG_OBSERVED_HOSTILE_ENCOUNTER_ACTOR: all four logs show hostile190484
     # taking player damage; faction and flags come from her encounter partner.
     db.execute('UPDATE content_creature_template SET faction=?,unit_flags=? WHERE entry=190484', partner)
+    for entry in (190484, 190485):
+        binding = db.execute('SELECT AIName,ScriptName FROM content_creature_template WHERE entry=?', (entry,)).fetchone()
+        if binding not in (('', ''), ('', 'boss_kyrakka_erkhart')):
+            raise ValueError(f'conflicting Ruby actor script {entry}')
+        db.execute("UPDATE content_creature_template SET ScriptName='boss_kyrakka_erkhart' WHERE entry=?", (entry,))
     db.execute('UPDATE content_creature SET position_x=?,position_y=?,position_z=?,Comment=? WHERE guid=63521000',
                (*ERKHART_XY, ERKHART_Z, POLICY + f'; anchors={ERKHART_ANCHORS}; replaced xyz={placeholder[3:6]}; ' + placeholder[2]))
     db.execute('INSERT INTO content_creature(guid,id1,map,position_x,position_y,position_z,spawnDifficulties,Comment) VALUES(?,?,?,?,?,?,?,?)',
