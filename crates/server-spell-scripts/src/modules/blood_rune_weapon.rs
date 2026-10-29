@@ -206,10 +206,9 @@ fn copy_weapon_actions(world: &mut World, caster: Entity, spell: &SpellInfo) {
             );
         }
         match spell.id {
-            49998 | 206930 | 50842 => {
+            49998 | 50842 => {
                 let (copy, mask) = match spell.id {
                     49998 => (49998, 1),
-                    206930 => (228645, 1 << 1),
                     50842 => (50842, 1),
                     _ => unreachable!(),
                 };
@@ -224,6 +223,27 @@ fn copy_weapon_actions(world: &mut World, caster: Entity, spell: &SpellInfo) {
                         ..Default::default()
                     },
                 );
+            }
+            206930 => {
+                let Some(mut copy) = spell_cast::load_triggered_spell(world, 228645, 1) else {
+                    continue;
+                };
+                let base = copy
+                    .effects
+                    .iter()
+                    .find(|effect| effect.index == 1)
+                    .expect("rune weapon Heart Strike")
+                    .chain_targets;
+                let targets = auras::spell_mods::modify(
+                    world,
+                    caster,
+                    &copy,
+                    auras::SpellModOp::ChainTargets,
+                    base as f32,
+                ) as i32;
+                copy.effects.retain(|effect| effect.index == 1);
+                copy.effects[0].chain_targets = targets;
+                spell_cast::launch_triggered_spell(world, weapon, &copy, target, 1);
             }
             433895 => {
                 let Some(mut copy) = spell_cast::load_triggered_spell(world, 433895, 1) else {
