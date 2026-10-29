@@ -2,6 +2,71 @@ use std::path::Path;
 
 #[test]
 #[ignore = "requires native Restoration Druid spell data"]
+fn swiftmend_triggers_three_blooms_on_owned_lifebloom() {
+    use crate::spell_cast::test_harness::{ObservedCombatEvents, harness, spawn_player};
+    use shared::protocol::CombatLogKind;
+    let mut h = harness(Vec::new(), &[774, 18562, 33763, 33778, 1244470], 11).unwrap();
+    h.app.init_resource::<ObservedCombatEvents>();
+    let lifebloom_target = spawn_player(&mut h.app, 11, 3.0);
+    let swiftmend_target = spawn_player(&mut h.app, 11, 5.0);
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: h.caster,
+            target: h.caster,
+            spell_id: 1244470,
+            effect_mask: u32::MAX,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    crate::spell_cast::creature_cast(
+        h.app.world_mut(),
+        h.caster,
+        33763,
+        Some(lifebloom_target),
+        true,
+    )
+    .unwrap();
+    crate::spell_cast::creature_cast(
+        h.app.world_mut(),
+        h.caster,
+        774,
+        Some(swiftmend_target),
+        true,
+    )
+    .unwrap();
+    h.advance(2);
+    crate::spell_cast::creature_cast(
+        h.app.world_mut(),
+        h.caster,
+        18562,
+        Some(swiftmend_target),
+        true,
+    )
+    .unwrap();
+    h.advance(30);
+    let events = &h.app.world().resource::<ObservedCombatEvents>().0;
+    let blooms: Vec<_> = events
+        .iter()
+        .filter(|e| {
+            e.kind == CombatLogKind::Heal
+                && e.spell_id == Some(33778)
+                && e.target == Some(lifebloom_target.to_bits())
+        })
+        .collect();
+    assert_eq!(
+        blooms.len(),
+        3,
+        "Swiftmend must trigger three Lifebloom blooms: {events:?}"
+    );
+    assert!(
+        crate::auras::has_aura(h.app.world(), lifebloom_target, 33763),
+        "frenzy must not consume Lifebloom"
+    );
+}
+
+#[test]
+#[ignore = "requires native Restoration Druid spell data"]
 fn wild_growth_grows_one_selected_talent_bloom() {
     use crate::spell_cast::test_harness::{harness, spawn_player};
     use shared::components::Health;
