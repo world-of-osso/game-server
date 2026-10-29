@@ -957,10 +957,47 @@ fn dps_parity_native_bis_dummy_records_300s() {
         .expect("numeric target count");
     assert!(matches!(count, 1 | 3));
     let result = measure(spec, count);
-    let output = match &result {
+    let mut output = match &result {
         Ok(report) => report.clone(),
         Err(error) => json!({"spec_id": spec, "target_count": count, "measurement_error": error}),
     };
+    if result.is_ok()
+        && count == 1
+        && matches!(spec, 66 | 73 | 104 | 250 | 268 | 581)
+        && std::env::var_os("HEALER_TANK_MEASURE_REPLAYS").is_some()
+    {
+        let seeds: Vec<u64> = if spec == 581 {
+            std::env::var("HEALER_TANK_SEEDS")
+                .expect("HEALER_TANK_SEEDS")
+                .split(',')
+                .map(|seed| seed.parse().expect("numeric tank replay seed"))
+                .collect()
+        } else {
+            vec![70448]
+        };
+        let directory = std::path::Path::new(
+            "/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/healer-tank-replay",
+        );
+        let trace = directory.join(format!("{spec}.simc-trace.log"));
+        let mut reports = Vec::new();
+        for seed in seeds {
+            let replay =
+                super::tank_replay::replay_simc_with_healing(spec, &trace, 300, seed, true)
+                    .expect("tank replay measurement");
+            assert_eq!(replay["tank_dummy_scenario"]["attacker_level"], 92);
+            assert!(
+                (replay["tank_dummy_scenario"]["armor_constant"]
+                    .as_f64()
+                    .unwrap()
+                    - 4531.03)
+                    .abs()
+                    < 0.01
+            );
+            assert!(replay["damage_taken"].as_f64().unwrap() > 0.0);
+            reports.push(json!({"seed":seed,"report":replay}));
+        }
+        output["tank_replays"] = json!(reports);
+    }
     let file = inputs::directory()
         .unwrap()
         .join(format!("{spec}.native.{count}.json"));

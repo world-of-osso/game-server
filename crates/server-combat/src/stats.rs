@@ -198,6 +198,8 @@ pub struct CharacterStats {
     pub healing_power: f32,
     /// Melee AP; ranged casts use the separate source RangedAttackPower field.
     pub attack_power: f32,
+    /// Attack power percentage retained for the weapon damage roll.
+    pub attack_power_pct: f32,
     pub ranged_attack_power: f32,
     pub weapon_attack_power: WeaponAttackPower,
     pub crit_pct: f32,
@@ -627,6 +629,7 @@ pub fn compute_character_stats(
         spell_power,
         healing_power,
         attack_power,
+        attack_power_pct: mods.attack_power_pct,
         ranged_attack_power,
         weapon_attack_power: WeaponAttackPower::default(),
         crit_pct: BASE_CRIT_PCT + rating_value(ratings.crit, CRIT_RATING[level]) + mods.crit_pct,

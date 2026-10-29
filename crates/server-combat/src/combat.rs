@@ -1517,16 +1517,24 @@ fn roll_swing_base(
         return rand::Rng::gen_range(&mut rng, weapon.min + bonus..=weapon.max + bonus);
     }
     match attacker.stats {
-        Some(stats) => melee::roll_weapon_damage(
-            melee::weapon_damage_range(
-                weapon,
-                stats.attack_power,
-                stats.versatility_pct,
-                hand,
-                attacker.form_attack_time,
-            ),
-            rand::Rng::r#gen(&mut rng),
-        ),
+        Some(stats) => {
+            // SimC76f8118 action.cpp1429–1439: AP multipliers scale the weapon
+            // roll too; CharacterStats already includes them in attack_power.
+            let multiplier = 1.0 + stats.attack_power_pct / 100.0;
+            let mut scaled_weapon = weapon.clone();
+            scaled_weapon.min *= multiplier;
+            scaled_weapon.max *= multiplier;
+            melee::roll_weapon_damage(
+                melee::weapon_damage_range(
+                    &scaled_weapon,
+                    stats.attack_power,
+                    stats.versatility_pct,
+                    hand,
+                    attacker.form_attack_time,
+                ),
+                rand::Rng::r#gen(&mut rng),
+            )
+        }
         None => creature_weapon_damage(scaling),
     }
 }
