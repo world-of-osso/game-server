@@ -23,9 +23,19 @@ fn preservation_consume_flame_consumes_dream_breath_on_verdant_embrace() {
             source: crate::auras::AuraSource::Cast,
         },
     );
-    crate::spell_cast::creature_cast(h.app.world_mut(), h.caster, 355941, Some(h.caster), true)
-        .unwrap();
-    h.advance(45);
+    // The rank-1 empower release sets the child's duration to eight 2-second ticks.
+    let mut dream = h
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(355941)
+        .unwrap()
+        .clone();
+    let duration = dream.misc.as_mut().unwrap().duration.as_mut().unwrap();
+    duration.duration_ms = 16_000;
+    duration.max_duration_ms = 16_000;
+    crate::spell_cast::execute_cast(h.app.world_mut(), h.caster, &dream, Some(h.caster)).unwrap();
+    h.advance(1);
     let expiry = |h: &crate::spell_cast::test_harness::Harness, phase: &str| {
         h.app
             .world()
