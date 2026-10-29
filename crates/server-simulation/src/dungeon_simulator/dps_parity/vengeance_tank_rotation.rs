@@ -129,12 +129,6 @@ impl Facts for Context<'_> {
                 self.actor,
                 server::soul_fragments::FragmentFilter::Any,
             ) as f64)
-        } else if name == "raid_event.adds.has_boss" {
-            if self.native.value("raid_event.adds.exists")? == 0.0 {
-                Ok(0.0)
-            } else {
-                Err("NATIVE_ADD_EVENT_BOSS_METADATA_UNAVAILABLE".into())
-            }
         } else if name == "action.sigil_of_spite.placed" {
             let now = crate::spell_cast::now(self.world);
             Ok(self.world.iter_entities().any(|entity| {
