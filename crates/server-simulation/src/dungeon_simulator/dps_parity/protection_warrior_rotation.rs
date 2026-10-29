@@ -682,6 +682,74 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "requires canonical MID2 Protection profile"]
+    fn thunderlord_counts_fully_absorbed_thunder_blast_targets() {
+        use super::super::literal_rotation::execution::{Execution, execute};
+        use shared::protocol::CombatLogKind;
+        let mut run = super::super::prepare_measurement(73, 1).unwrap();
+        super::super::engage(&mut run);
+        let actor = run.actor;
+        let target = run.targets[0];
+        execute(
+            run.app.world_mut(),
+            actor,
+            Execution::Spell(1160, actor, Some(actor)),
+        )
+        .unwrap();
+        for _ in 0..30 {
+            run.app.update();
+        }
+        crate::spell_cast::cast_triggered_with_effect0_amount(
+            run.app.world_mut(),
+            target,
+            17,
+            Some(target),
+            1,
+            1_000_000_000.0,
+        );
+        let shout = run
+            .app
+            .world()
+            .resource::<server::spell_info::SpellStore>()
+            .get(1160)
+            .unwrap()
+            .clone();
+        let now = crate::spell_cast::history_now(run.app.world());
+        let before = run
+            .app
+            .world()
+            .get::<crate::spell_cast::SpellHistory>(actor)
+            .unwrap()
+            .remaining_cooldown_ms(&shout, now);
+        assert!(crate::spell_cast::try_cast_triggered(
+            run.app.world_mut(),
+            actor,
+            435222,
+            Some(target),
+            1
+        ));
+        let events = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0;
+        assert!(
+            events.iter().any(|event| event.spell_id == Some(435222)
+                && event.kind == CombatLogKind::Damage
+                && event.amount == 0
+                && event.absorbed > 0),
+            "Thunder Blast must be fully absorbed"
+        );
+        let after = run
+            .app
+            .world()
+            .get::<crate::spell_cast::SpellHistory>(actor)
+            .unwrap()
+            .remaining_cooldown_ms(&shout, now);
+        assert_eq!(before - after, 1500);
+    }
+
+    #[test]
     fn frothing_berserker_refunds_only_paid_revenge() {
         use crate::spell_cast::test_harness::harness_with_native_enemy_dodge_reduction;
         use shared::components::{ActiveSpec, PowerType};
