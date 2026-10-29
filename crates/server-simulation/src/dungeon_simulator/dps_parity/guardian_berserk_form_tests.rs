@@ -4,6 +4,71 @@ use crate::auras::ActiveAuras;
 
 #[test]
 #[ignore = "requires Guardian profile and native world data"]
+fn guardian_star_cascade_comes_from_foreground_landed_thrash() {
+    use shared::protocol::CombatLogKind;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_registered_player(104, 1).unwrap();
+    let actor = run.actor;
+    let target = run.targets[0];
+    engage(&mut run);
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 5487, Some(actor), false).unwrap();
+    for _ in 0..40 {
+        run.app.update();
+    }
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        actor,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 393427,
+    );
+    run.app
+        .world_mut()
+        .resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .clear();
+    for _ in 0..15 {
+        crate::spell_cast::scripts::reduce_cooldown(run.app.world_mut(), actor, 77758, f64::MAX);
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 77758, Some(target), false)
+            .unwrap();
+        for _ in 0..40 {
+            run.app.update();
+        }
+    }
+    let count = |run: &Run| {
+        run.app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .filter(|event| {
+                event.source == Some(actor.to_bits())
+                    && event.target == Some(target.to_bits())
+                    && event.spell_id == Some(197626)
+                    && event.kind == CombatLogKind::Damage
+                    && event.amount > 0
+            })
+            .count()
+    };
+    let foreground = count(&run);
+    assert!(
+        foreground > 0 && foreground <= 15,
+        "15 landed foreground Thrashes earned {foreground} cascades"
+    );
+    for _ in 0..15 {
+        crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 77758, Some(target), 1);
+    }
+    for _ in 0..40 {
+        run.app.update();
+    }
+    assert_eq!(
+        count(&run),
+        foreground,
+        "background Thrash cannot trigger Star Cascade"
+    );
+}
+
+#[test]
+#[ignore = "requires Guardian profile and native world data"]
 fn guardian_heart_in_cat_executes_empowered_feral_frenzy() {
     use shared::protocol::CombatLogKind;
     let mut run = prepare_registered_player(104, 1).unwrap();
