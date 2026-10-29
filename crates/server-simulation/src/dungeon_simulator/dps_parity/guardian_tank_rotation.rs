@@ -579,6 +579,85 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "requires Guardian MID2 profile and native world data"]
+    fn guardian_thrash_and_moonfire_reduce_dummy_bleed_on_the_druid() {
+        use crate::spell_cast::test_harness::ObservedCombatEvents;
+        use shared::protocol::CombatLogKind;
+        let mut run = super::super::prepare_registered_player(104, 1).unwrap();
+        let actor = run.actor;
+        let target = run.targets[0];
+        super::super::engage(&mut run);
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 5487, Some(actor), false)
+            .unwrap();
+        for _ in 0..40 {
+            run.app.update();
+        }
+        // One 25,000 dummy bleed tick, measured with no shield to absorb it.
+        let bleed = |run: &mut super::super::Run| {
+            crate::auras::remove_auras(
+                run.app.world_mut(),
+                actor,
+                crate::auras::RemoveReason::Cancelled,
+                |aura| matches!(aura.spell_id, 372505 | 385787),
+            );
+            crate::spell_cast::effects::replay_simc_dummy_bleed(
+                run.app.world_mut(),
+                target,
+                actor,
+                25_000.0,
+            );
+            run.app
+                .world()
+                .resource::<ObservedCombatEvents>()
+                .0
+                .iter()
+                .rev()
+                .find(|event| {
+                    event.source == Some(target.to_bits())
+                        && event.target == Some(actor.to_bits())
+                        && event.kind == CombatLogKind::Damage
+                })
+                .expect("dummy bleed tick")
+                .amount as f32
+        };
+        for spell in [77758, 8921] {
+            for _ in 0..40 {
+                run.app.update();
+            }
+            crate::spell_cast::creature_cast(run.app.world_mut(), actor, spell, Some(target), false)
+                .unwrap();
+        }
+        for _ in 0..10 {
+            run.app.update();
+        }
+        let stacks = run
+            .app
+            .world()
+            .get::<crate::auras::ActiveAuras>(target)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 192090 && aura.caster == actor)
+            .expect("Bear Thrash bleed")
+            .stacks;
+        let debuffed = bleed(&mut run);
+        crate::auras::remove_auras(
+            run.app.world_mut(),
+            target,
+            crate::auras::RemoveReason::Cancelled,
+            |aura| aura.caster == actor && matches!(aura.spell_id, 192090 | 164812),
+        );
+        let plain = bleed(&mut run);
+        // SimC76f8118 104 trace: Rend and Tear Thrash -3% per stack, rank-two
+        // Scintillating Moonlight Moonfire -12% on damage the target deals to the Druid.
+        let expected = (1.0 - 0.03 * f32::from(stacks)) * 0.88;
+        assert!(
+            (debuffed / plain - expected).abs() < 0.002,
+            "stacks={stacks} plain={plain} debuffed={debuffed} ratio={}",
+            debuffed / plain
+        );
+    }
+
+    #[test]
     #[ignore = "requires Guardian MID2 profile and SimC dungeon-dummy trace"]
     fn guardian_ursocs_fury_absorbs_real_dummy_damage() {
         let trace = std::env::var("HEALER_TANK_SIMC_TRACE").expect("Guardian trace required");

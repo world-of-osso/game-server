@@ -105,22 +105,24 @@ pub(super) fn shred_points(world: &mut World, caster: Entity, _target: Entity, _
 
 ///106830 explicitly names405233o1/d: only the named bleed, not other variants.
 pub(super) fn thrash_bleed(world: &mut World, caster: Entity, target: Entity, _depth: u8) {
-    apply_thrash_bleed(world, caster, target, THRASH_BLEED);
+    apply_thrash_bleed(world, caster, target, THRASH_BLEED, 1);
 }
 
 /// SimC76f8118 sc_druid.cpp5911–5965: landed Bear Thrash applies its own bleed.
+/// Its talent-modified effects (Rend and Tear's damage and damage-to-Druid
+/// terms, sc_druid.cpp14380) belong to the same debuff.
 pub(super) fn bear_thrash_bleed(world: &mut World, caster: Entity, target: Entity, _depth: u8) {
-    apply_thrash_bleed(world, caster, target, 192090);
+    apply_thrash_bleed(world, caster, target, 192090, u32::MAX);
 }
 
-fn apply_thrash_bleed(world: &mut World, caster: Entity, target: Entity, bleed: u32) {
+fn apply_thrash_bleed(world: &mut World, caster: Entity, target: Entity, bleed: u32, mask: u32) {
     crate::auras::apply_aura(
         world,
         &AuraApplication {
             caster,
             target,
             spell_id: bleed,
-            effect_mask: 1,
+            effect_mask: mask,
             source: AuraSource::Cast,
         },
     );
