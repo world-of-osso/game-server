@@ -371,6 +371,29 @@ impl GroundMap {
         map: crate::maps::InMap,
         feet: Vec3,
     ) -> GroundProbe {
+        let center = self.player_solid_point(map, feet);
+        let tolerance = shared::movement::GROUND_SNAP_THRESHOLD;
+        if matches!(center, GroundProbe::Supported(height) if height >= feet.y - tolerance)
+            || matches!(center, GroundProbe::Unloaded)
+        {
+            return center;
+        }
+        let radius = shared::los::body::BODY_RADIUS;
+        [Vec3::X, Vec3::NEG_X, Vec3::Z, Vec3::NEG_Z]
+            .into_iter()
+            .filter_map(
+                |direction| match self.player_solid_point(map, feet + direction * radius) {
+                    GroundProbe::Supported(height) if (height - feet.y).abs() <= tolerance => {
+                        Some(height)
+                    }
+                    _ => None,
+                },
+            )
+            .max_by(f32::total_cmp)
+            .map_or(center, GroundProbe::Supported)
+    }
+
+    fn player_solid_point(&mut self, map: crate::maps::InMap, feet: Vec3) -> GroundProbe {
         let base = self.sample_ground_at(map.map_id, feet, false, true);
         self.add_live_height(map, feet, base)
     }

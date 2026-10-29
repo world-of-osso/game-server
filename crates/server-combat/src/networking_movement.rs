@@ -710,6 +710,25 @@ mod steep_floor_tests {
 
     #[test]
     #[ignore = "requires Neltharus ground assets in GAME_SERVER_GROUND_DIR"]
+    fn neltharus_authority_supports_upper_return_seam() {
+        let data = PathBuf::from(std::env::var_os("GAME_SERVER_GROUND_DIR").unwrap());
+        let mut ground = GroundMap::new(&data, HashMap::from([(2519, 4289128)]));
+        let map = InMap::continent(2519);
+        let feet = Vec3::new(-116.38565, 122.8751, 580.4976);
+        let GroundProbe::Supported(height) = ground.player_solid_ground_in(map, feet) else {
+            panic!("seam has no footprint support");
+        };
+        assert!((height - 122.8751).abs() < 0.3, "seam support {height}");
+        let envelope = LandEnvelope {
+            airborne: None,
+            jumping: false,
+            feather_fall: false,
+        };
+        assert!((land_height(&mut ground, map, feet, feet, envelope) - feet.y).abs() < 0.3);
+    }
+
+    #[test]
+    #[ignore = "requires Neltharus ground assets in GAME_SERVER_GROUND_DIR"]
     fn neltharus_authority_admits_recorded_gorek_return_step() {
         let data = PathBuf::from(std::env::var_os("GAME_SERVER_GROUND_DIR").unwrap());
         let mut ground = GroundMap::new(&data, HashMap::from([(2519, 4289128)]));
