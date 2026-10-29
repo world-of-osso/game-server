@@ -271,6 +271,8 @@ fn discipline_death_summons_shadowfiend_only_in_execute_range() {
     h.app
         .insert_resource(super::summon::load_summon_properties(&conn).unwrap());
     h.app.init_resource::<ObservedCombatEvents>();
+    h.app
+        .init_resource::<super::test_harness::FiendAtonementReceipts>();
     h.app.world_mut().entity_mut(h.caster).insert((
         ActiveSpec(256),
         crate::class_progression::KnownSpells::fixture(vec![32379, 34433]),
@@ -320,9 +322,20 @@ fn discipline_death_summons_shadowfiend_only_in_execute_range() {
         if current > 200_000.0 {
             assert_eq!(summons, 0, "no execute-range proc above 20%");
         } else {
+            let rolls = &h
+                .app
+                .world()
+                .resource::<super::test_harness::FiendAtonementReceipts>()
+                .2;
+            assert!(rolls.iter().all(|(_, _, _, chance)| *chance == 40.0));
+            let successes = rolls.iter().filter(|(_, _, roll, _)| *roll < 40.0).count();
             assert!(
-                summons > 0,
-                "seeded execute hits must produce a Shadowfiend"
+                successes > 0 && successes < rolls.len(),
+                "seeded rolls must contain both outcomes"
+            );
+            assert_eq!(
+                summons, successes,
+                "each successful 40% roll summons exactly one fiend"
             );
         }
     }

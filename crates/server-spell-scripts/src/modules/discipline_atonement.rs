@@ -333,7 +333,16 @@ fn proc_shadowfiend(world: &mut World, caster: Entity, target: Entity, depth: u8
     if health.max <= 0.0 || health.current * 100.0 > health.max * threshold {
         return;
     }
-    let chance = combat::spell_cast::scripts::script_effect_value(world, caster, 34433, 2);
+    // SimC reads the talent's data percent, without spell effect modifiers.
+    let chance = world
+        .resource::<SpellStore>()
+        .get(34433)
+        .expect("Shadowfiend talent")
+        .effects
+        .iter()
+        .find(|effect| effect.index == 2)
+        .expect("Shadowfiend proc chance")
+        .base_points;
     let roll = combat::random::random::<f32>() * 100.0;
     #[cfg(any(test, feature = "test-support"))]
     {
