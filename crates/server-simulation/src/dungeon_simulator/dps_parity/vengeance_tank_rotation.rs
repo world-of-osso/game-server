@@ -370,8 +370,20 @@ mod tests {
             report["tank_casts"]["228477"].as_u64().unwrap() > 0,
             "{report}"
         );
-        assert!(report["outgoing_damage_by_spell"]["225919"].as_i64().unwrap() > 0, "{report}");
-        assert!(report["resource_spent_by_spell"]["228477"]["fury"].as_f64().unwrap() >= 30.0, "{report}");
+        assert!(
+            report["outgoing_damage_by_spell"]["225919"]
+                .as_i64()
+                .unwrap()
+                > 0,
+            "{report}"
+        );
+        assert!(
+            report["resource_spent_by_spell"]["228477"]["fury"]
+                .as_f64()
+                .unwrap()
+                >= 30.0,
+            "{report}"
+        );
         assert!(
             report["resource_counters"]["soul_fragments_generated"]
                 .as_u64()
