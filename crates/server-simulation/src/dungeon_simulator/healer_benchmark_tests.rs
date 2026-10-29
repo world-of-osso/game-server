@@ -44,6 +44,8 @@ fn small_fight() -> serde_json::Value {
     .unwrap();
     let graph = super::graph::Graph {
         map_id: 34,
+        follower_difficulty: 0,
+        follower_boss_entries: Vec::new(),
         entrance: [0.0; 2],
         entrance_height: 0.0,
         entrance_pack: 0,

@@ -1630,58 +1630,86 @@ mod tests {
         use shared::components::{Npc, UnitSummonedBy};
         use shared::protocol::CombatLogKind;
         let _seed = crate::random::seed_scope(70448);
-        let mut run = super::super::prepare_registered_player(250, 1).unwrap();
-        let owner = run.actor;
-        let target = run.targets[0];
-        super::super::engage(&mut run);
-        crate::spell_cast::creature_cast(run.app.world_mut(), owner, 49028, Some(owner), false)
-            .unwrap();
-        for _ in 0..4 {
-            run.app.update();
-        }
-        let world = run.app.world_mut();
-        let beast = world
-            .query::<(bevy::prelude::Entity, &Npc, &UnitSummonedBy)>()
-            .iter(world)
-            .find(|(_, npc, summoned)| npc.template_id == 217228 && summoned.0 == owner.to_bits())
-            .expect("real owned Blood Beast")
-            .0;
-        let owner_stats = world.get::<crate::stats::CharacterStats>(owner).unwrap();
-        let owner_ap = owner_stats.total_attack_power(
-            crate::stats::WeaponAttackType::MainHand,
-            world.get::<crate::stats::StatModifiers>(owner),
-        );
-        let (_, beast_ap) = crate::spell_cast::effects::power_stats(world, beast, false);
-        assert!((beast_ap - 3.0 * owner_ap).abs() < 0.01);
-        for _ in 0..220 {
-            run.app.update();
-        }
-        let events = &run
-            .app
-            .world()
-            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
-            .0;
-        for spell in [None, Some(434574)] {
+        for targets in [1, 3] {
+            let mut run = super::super::prepare_registered_player(250, targets).unwrap();
+            let owner = run.actor;
+            let target = run.targets[0];
+            super::super::engage(&mut run);
+            for &target in &run.targets {
+                run.app
+                    .world_mut()
+                    .entity_mut(target)
+                    .insert(shared::components::UnitLevel(93));
+            }
+            crate::spell_cast::creature_cast(run.app.world_mut(), owner, 49028, Some(owner), false)
+                .unwrap();
+            for _ in 0..4 {
+                run.app.update();
+            }
+            let world = run.app.world_mut();
+            let beast = world
+                .query::<(bevy::prelude::Entity, &Npc, &UnitSummonedBy)>()
+                .iter(world)
+                .find(|(_, npc, summoned)| {
+                    npc.template_id == 217228 && summoned.0 == owner.to_bits()
+                })
+                .expect("real owned Blood Beast")
+                .0;
+            assert_eq!(
+                world.get::<shared::components::UnitLevel>(beast).unwrap().0,
+                90
+            );
+            let owner_stats = world.get::<crate::stats::CharacterStats>(owner).unwrap();
+            let owner_ap = owner_stats.total_attack_power(
+                crate::stats::WeaponAttackType::MainHand,
+                world.get::<crate::stats::StatModifiers>(owner),
+            );
+            let (_, beast_ap) = crate::spell_cast::effects::power_stats(world, beast, false);
+            assert!((beast_ap - 3.0 * owner_ap).abs() < 0.01);
+            for _ in 0..220 {
+                run.app.update();
+            }
+            let events = &run
+                .app
+                .world()
+                .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+                .0;
+            for spell in [None, Some(434574)] {
+                assert!(
+                    events
+                        .iter()
+                        .any(|event| event.source == Some(beast.to_bits())
+                            && event.target == Some(target.to_bits())
+                            && event.spell_id == spell
+                            && event.kind == CombatLogKind::Damage
+                            && event.amount > 0),
+                    "Blood Beast damage {spell:?}"
+                );
+            }
+            let swings = events
+                .iter()
+                .filter(|event| {
+                    event.source == Some(beast.to_bits())
+                        && event.target == Some(target.to_bits())
+                        && event.spell_id.is_none()
+                        && event.kind == CombatLogKind::Damage
+                        && event.amount > 0
+                })
+                .count();
+            assert!(
+                swings >= 8,
+                "Blood Beast should keep swinging for its ten-second lifetime, got {swings}"
+            );
             assert!(
                 events
                     .iter()
-                    .any(|event| event.source == Some(beast.to_bits())
-                        && event.target == Some(target.to_bits())
-                        && event.spell_id == spell
+                    .any(|event| event.source == Some(owner.to_bits())
+                        && event.spell_id == Some(434246)
                         && event.kind == CombatLogKind::Damage
                         && event.amount > 0),
-                "Blood Beast damage {spell:?}"
+                "Blood Beast expiration must erupt"
             );
         }
-        assert!(
-            events
-                .iter()
-                .any(|event| event.source == Some(owner.to_bits())
-                    && event.spell_id == Some(434246)
-                    && event.kind == CombatLogKind::Damage
-                    && event.amount > 0),
-            "Blood Beast expiration must erupt"
-        );
     }
 
     #[test]
@@ -2946,6 +2974,189 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    #[ignore = "requires canonical world database and MID2 Blood inputs"]
+    fn blood_plague_ticks_apply_selected_brittle() {
+        let _seed = crate::random::seed_scope(70448);
+        let mut run = super::super::prepare_registered_player(250, 3).unwrap();
+        let actor = run.actor;
+        super::super::engage(&mut run);
+        assert!(crate::auras::has_aura(run.app.world(), actor, 374504));
+        let mut seen = [false; 3];
+        for frame in 0..1800 {
+            if frame % 300 == 0 {
+                crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 50842, None, 1);
+            }
+            run.app.update();
+            for (index, &target) in run.targets.iter().enumerate() {
+                if let Some(aura) = run
+                    .app
+                    .world()
+                    .get::<crate::auras::ActiveAuras>(target)
+                    .and_then(|auras| {
+                        auras
+                            .iter()
+                            .find(|aura| aura.spell_id == 374557 && aura.caster == actor)
+                    })
+                {
+                    assert!(
+                        aura.effects
+                            .iter()
+                            .any(|effect| effect.index == 0 && effect.amount == 6.0)
+                    );
+                    seen[index] = true;
+                }
+            }
+            if seen.iter().all(|hit| *hit) {
+                break;
+            }
+        }
+        assert!(
+            seen.into_iter().all(|hit| hit),
+            "Blood Plague ticks must apply Brittle to each enemy"
+        );
+    }
+
+    #[test]
+    #[ignore = "requires canonical world database and MID2 Blood inputs"]
+    fn boiling_point_increases_foreground_blood_boil_damage() {
+        use shared::protocol::CombatLogKind;
+        fn damage(empowered: bool) -> i32 {
+            let mut run = super::super::prepare_registered_player(250, 1).unwrap();
+            let actor = run.actor;
+            let target = run.targets[0];
+            super::super::engage(&mut run);
+            run.app
+                .world_mut()
+                .get_mut::<crate::stats::CharacterStats>(actor)
+                .unwrap()
+                .crit_pct = 0.0;
+            for (unit, spell) in [(target, 55078), (actor, 1265968)] {
+                if spell == 1265968 && !empowered {
+                    continue;
+                }
+                crate::auras::apply_aura(
+                    run.app.world_mut(),
+                    &crate::auras::AuraApplication {
+                        caster: actor,
+                        target: unit,
+                        spell_id: spell,
+                        effect_mask: u32::MAX,
+                        source: crate::auras::AuraSource::Cast,
+                    },
+                );
+            }
+            let before = run
+                .app
+                .world()
+                .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+                .0
+                .len();
+            let _seed = crate::random::seed_scope(70448);
+            crate::spell_cast::creature_cast(run.app.world_mut(), actor, 50842, None, false)
+                .unwrap();
+            for _ in 0..4 {
+                run.app.update();
+            }
+            run.app
+                .world()
+                .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+                .0[before..]
+                .iter()
+                .find(|event| {
+                    event.source == Some(actor.to_bits())
+                        && event.target == Some(target.to_bits())
+                        && event.spell_id == Some(50842)
+                        && event.kind == CombatLogKind::Damage
+                })
+                .unwrap()
+                .amount
+        }
+        let normal = damage(false);
+        let empowered = damage(true);
+        assert!(
+            (empowered as f32 / normal as f32 - 1.5).abs() < 0.02,
+            "Boiling Point must multiply Blood Boil: {normal} -> {empowered}"
+        );
+    }
+
+    #[test]
+    #[ignore = "requires canonical world database and MID2 Blood inputs"]
+    fn rune_weapon_plague_ticks_after_dismissal_without_mirroring_new_casts() {
+        use shared::components::{Npc, UnitSummonedBy};
+        use shared::protocol::CombatLogKind;
+        let mut run = super::super::prepare_registered_player(250, 1).unwrap();
+        let actor = run.actor;
+        let target = run.targets[0];
+        super::super::engage(&mut run);
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 49028, Some(actor), false)
+            .unwrap();
+        for _ in 0..30 {
+            run.app.update();
+        }
+        let weapon = run
+            .app
+            .world_mut()
+            .query::<(bevy::prelude::Entity, &Npc, &UnitSummonedBy)>()
+            .iter(run.app.world())
+            .find(|(_, npc, owner)| npc.template_id == 27893 && owner.0 == actor.to_bits())
+            .unwrap()
+            .0;
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 50842, None, false).unwrap();
+        for _ in 0..4 {
+            run.app.update();
+        }
+        assert!(
+            run.app
+                .world()
+                .get::<crate::auras::ActiveAuras>(target)
+                .unwrap()
+                .iter()
+                .any(|aura| aura.spell_id == 55078 && aura.caster == weapon)
+        );
+        let before = run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .len();
+        crate::spell_cast::summon::despawn_summon(run.app.world_mut(), weapon);
+        for _ in 0..35 {
+            run.app.update();
+        }
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 50842, None, false).unwrap();
+        for _ in 0..100 {
+            run.app.update();
+        }
+        let events = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0[before..];
+        assert!(
+            events
+                .iter()
+                .any(|event| event.source == Some(weapon.to_bits())
+                    && event.spell_id == Some(55078)
+                    && event.kind == CombatLogKind::Damage
+                    && event.periodic)
+        );
+        assert!(
+            !events
+                .iter()
+                .any(|event| event.source == Some(weapon.to_bits())
+                    && event.spell_id == Some(50842)
+                    && event.kind == CombatLogKind::Damage)
+        );
+        for _ in 0..600 {
+            run.app.update();
+        }
+        assert!(
+            run.app.world().get_entity(weapon).is_err(),
+            "retired weapon must be removed after its plague expires"
+        );
     }
 
     #[test]

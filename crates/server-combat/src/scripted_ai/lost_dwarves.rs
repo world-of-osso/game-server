@@ -1,7 +1,7 @@
 //! LittleWigs2777a9d TheLostDwarves.lua + native70448.
 //! LOST_DWARVES_SURRENDER_AT_10PCT_LUA is explicit project completion policy.
 use bevy::prelude::*;
-use shared::components::{Health, Npc, ThreatTable};
+use shared::components::{Health, Npc, ThreatTable, UnitFactionTemplate};
 
 use super::boss_ai::{BossAi, BossScript, boss_update_ai};
 use super::{CreatureAi, Ctx};
@@ -18,10 +18,14 @@ const SHIELD: u32 = 369677;
 const BULWARK: u32 = 369602;
 const LONGBOAT: u32 = 375924;
 const SURRENDER_FRACTION: f32 = 0.1;
+// LOST_DWARVES_FRIENDLY_FACTION_INFERRED: LittleWigs VerifyEnable observes
+// friendly/UnitCanAttack at 10%; TDB 191912–191914 use this same-model faction.
+const FRIENDLY_FACTION: u32 = 35;
 
 #[derive(Component)]
 struct Surrendered {
     reset_pending: bool,
+    original_faction: UnitFactionTemplate,
 }
 
 pub(super) fn limit_loss(health: &Health, loss: f32) -> f32 {
@@ -138,10 +142,18 @@ fn next_repeat(durations: &[u64], index: &mut usize) -> u64 {
 
 fn surrender(ctx: &mut Ctx, boss_id: u32) {
     let map = ctx.map().expect("Lost Dwarves instance");
+    let original_faction = *ctx
+        .world
+        .get::<UnitFactionTemplate>(ctx.me)
+        .expect("Lost Dwarves must have their sourced faction");
     ctx.world.entity_mut(ctx.me).insert(Surrendered {
         reset_pending: false,
+        original_faction,
     });
     crate::creature_aggro::enter_evade_mode(ctx.world, ctx.me);
+    ctx.world
+        .entity_mut(ctx.me)
+        .insert(UnitFactionTemplate(FRIENDLY_FACTION));
     // Stop re-engagement without inventing a friendly faction or immunity flags.
     ctx.world.entity_mut(ctx.me).remove::<ThreatTable>();
     let surrendered = ctx
@@ -191,10 +203,11 @@ fn update_surrender_state(ctx: &mut Ctx) -> bool {
     if surrendered.reset_pending && recovered {
         // Native home/regen must cross10% before sight-aggro is restored;
         // otherwise it re-surrenders before the first out-of-combat regen tick.
+        let original_faction = surrendered.original_faction;
         ctx.world
             .entity_mut(ctx.me)
             .remove::<Surrendered>()
-            .insert(ThreatTable::default());
+            .insert((ThreatTable::default(), original_faction));
     }
     true
 }

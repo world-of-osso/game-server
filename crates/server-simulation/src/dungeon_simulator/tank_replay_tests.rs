@@ -2153,6 +2153,21 @@ fn simc_dummy_debuffs_modify_real_damage_by_school() {
 }
 
 #[test]
+#[ignore = "requires Protection Paladin inputs and a SimC tank-dummy trace"]
+fn replay_reports_sacred_weapon_strikes() {
+    let path = std::env::var("HEALER_TANK_SIMC_TRACE").expect("HEALER_TANK_SIMC_TRACE required");
+    let report = super::tank_replay::replay_simc(66, Path::new(&path), 300, 70448).unwrap();
+    let hits = report["outgoing_damage_hits_by_spell"]["432616"]
+        .as_u64()
+        .unwrap();
+    let damage = report["outgoing_damage_by_spell"]["432616"]
+        .as_i64()
+        .unwrap();
+    assert!(hits > 0, "Sacred Weapon must land at least one strike");
+    assert!(damage > 0, "Sacred Weapon strikes must deal damage");
+}
+
+#[test]
 #[ignore = "requires canonical MID2 profile inputs and a SimC tank-dummy trace"]
 fn unregistered_tank_driver_fails_instead_of_using_a_follower() {
     let path = std::env::var("HEALER_TANK_SIMC_TRACE").expect("HEALER_TANK_SIMC_TRACE required");
@@ -4002,8 +4017,18 @@ fn grand_crusader_advances_shared_judgment_charge() {
             .unwrap();
         crate::spell_cast::test_harness::charge_recovery(history, 1663).1
     };
-    let before = recharge(&run).expect("Judgment must start recharging");
     for _ in 0..100 {
+        if recharge(&run).is_none() {
+            crate::spell_cast::creature_cast(
+                run.app.world_mut(),
+                actor,
+                275779,
+                Some(target),
+                false,
+            )
+            .unwrap();
+        }
+        let before = recharge(&run).expect("Judgment must be recharging");
         crate::combat::replay_healer_hit(run.app.world_mut(), target, actor, &avoided_hit("Parry"))
             .unwrap();
         run.app.update();
@@ -4012,6 +4037,10 @@ fn grand_crusader_advances_shared_judgment_charge() {
             || (after.is_none() && before - crate::spell_cast::now(run.app.world()) > 0.1)
         {
             return;
+        }
+        // Native 85043 has a one-second proc cooldown; space the replayed swings.
+        for _ in 0..21 {
+            run.app.update();
         }
     }
     panic!("Grand Crusader did not advance the shared charge by 3 seconds");

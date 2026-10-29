@@ -26,6 +26,14 @@ const DOORS: &[Door] = &[
         entry: 420154,
         encounter: 2829,
     },
+    // BLAZIKON_DOOR_UNLOCK_LOG_CORRELATED: TC has no door data for 11DU_Foundry_Door01_Large.
+    // WCL WBYDm1N6JTZzCFnd fight 3 pulls 5-8 (through Blazikon's kill) have no player west
+    // of WoW x=371.5; pull 9 reaches x=224 beyond the door at x=336.8. Trigger unsourced.
+    Door {
+        map_id: 2651,
+        entry: 430175,
+        encounter: 2826,
+    },
 ];
 
 /// `AddDoor` on copy fill and `UpdateDoorState` on every boss state change.

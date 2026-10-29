@@ -171,15 +171,19 @@ fn install_native_follow_movement(app: &mut App) {
 }
 
 fn create_native_follower_fixture() -> (Harness, Entity) {
+    create_native_follower_fixture_for(209057)
+}
+
+fn create_native_follower_fixture_for(entry: u32) -> (Harness, Entity) {
     let (mut h, follower, _) =
-        spawn_profile_fixture_with_plugins(209057, install_native_follow_movement);
+        spawn_profile_fixture_with_plugins(entry, install_native_follow_movement);
     h.app
         .insert_resource(GroundMap::new(&assets(), HashMap::from([(MAP, WDT)])));
     crate::navigation::install_fixture(
         &mut h.app,
         crate::navigation::Navigation::new(&navigation_root()),
     );
-    place_follower_on_upper(&mut h, follower);
+    place_follower_on_upper(&mut h, follower, entry);
     h.app
         .world_mut()
         .entity_mut(h.caster)
@@ -192,13 +196,13 @@ fn create_native_follower_fixture() -> (Harness, Entity) {
     (h, follower)
 }
 
-fn place_follower_on_upper(h: &mut Harness, follower: Entity) {
+fn place_follower_on_upper(h: &mut Harness, follower: Entity, entry: u32) {
     let (speed_walk, speed_run) = {
         let template = &h
             .app
             .world()
             .resource::<crate::world_data::WorldData>()
-            .templates[&209057];
+            .templates[&entry];
         (template.speed_walk, template.speed_run)
     };
     h.app.world_mut().entity_mut(follower).insert((
@@ -403,4 +407,41 @@ fn darkflame_trackyard_follower_advances_toward_unreachable_slot_point() {
         gap(before) < gap(TRACKYARD_FROM) - 10.0,
         "follower walks toward the slot point: {before:?}"
     );
+}
+
+/// Live 2026-10-29 instance 9: idle faction-0 Menial Laborers (210148) beside Ol' Waxbeard
+/// never start an attack (`Creature::CanStartAttack` needs a hostile reaction), yet they
+/// held the healer's regroup indefinitely. Only a watcher that would aggro holds a non-tank.
+#[test]
+#[ignore = "requires actual2651 navigation/ground and imported follower profile"]
+fn darkflame_non_tank_approach_holds_only_for_watchers_that_would_aggro() {
+    let from = Vec3::new(365.0142, 87.06531, -32.37358);
+    let owner = Vec3::new(421.7417, 87.0782, -29.7178);
+    let on_path = Vec3::new(393.4, 87.07, -31.0);
+    // Actual factions: Royal Wicklighter 210812's 16 and Menial Laborer 210148's 0.
+    for (faction, held) in [(16, true), (0, false)] {
+        let (mut h, healer) = create_native_follower_fixture_for(209072);
+        *h.app.world_mut().get_mut::<Position>(healer).unwrap() = position(from);
+        *h.app.world_mut().get_mut::<Position>(h.caster).unwrap() = position(owner);
+        let watcher = crate::spell_cast::test_harness::spawn_npc(&mut h.app, 0.0);
+        h.app.world_mut().entity_mut(watcher).insert((
+            position(on_path),
+            InMap::continent(MAP),
+            shared::components::UnitFactionTemplate(faction),
+            shared::components::UnitLevel(80),
+            crate::creature_aggro::AggroRange,
+            crate::creature_ai::CreatureState::Idle,
+        ));
+        h.advance(1);
+        let mut hold = None;
+        for _ in 0..4 {
+            hold = Some(super::positioning::hold_unsafe_approach(
+                h.app.world_mut(),
+                healer,
+                h.caster,
+            ));
+            crate::navigation::drain_fixture(&mut h.app);
+        }
+        assert_eq!(hold, Some(held), "watcher faction {faction}");
+    }
 }
