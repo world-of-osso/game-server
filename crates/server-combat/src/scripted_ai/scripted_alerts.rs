@@ -51,7 +51,7 @@ const PROFILES: &[(u32, &[Ability])] = &[
     (
         2606,
         &[
-            ability(372864, 372864, None, true),
+            ability(372863, 372864, None, true),
             ability(372107, 372110, Some(Medium), true),
             ability(372858, 372858, Some(Medium), true),
         ],

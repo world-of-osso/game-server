@@ -16,13 +16,13 @@ def import_templates(conn):
             raise ValueError(f'missing native template {entry}')
         if not conn.execute('SELECT 1 FROM tdb_creature_template_model WHERE CreatureID=?', (entry,)).fetchone():
             raise ValueError(f'missing native model {entry}')
-    retail_content.create_retail_map_table(conn)
-    retail_content.create_difficulty_table(conn)
-    conn.create_function('health_expansion', 1, retail_content.health_expansion, deterministic=True)
     missing = [entry for entry in ENTRIES if not conn.execute(
         'SELECT 1 FROM content_creature_template WHERE entry=?', (entry,)
     ).fetchone()]
     if missing:
+        retail_content.create_retail_map_table(conn)
+        retail_content.create_difficulty_table(conn)
+        conn.create_function('health_expansion', 1, retail_content.health_expansion, deterministic=True)
         retail_content.insert_tdb_templates(conn, ','.join(map(str, missing)))
     for entry in ENTRIES:
         conn.execute('INSERT OR IGNORE INTO content_creature_template_model SELECT * FROM tdb_creature_template_model WHERE CreatureID=?', (entry,))

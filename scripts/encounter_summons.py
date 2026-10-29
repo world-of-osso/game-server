@@ -728,10 +728,15 @@ def import_kokia(connection):
     runtime = connection.execute('SELECT name,AIName,ScriptName FROM content_creature_template WHERE entry=189232').fetchone()
     if runtime not in [('Kokia Blazehoof','',''), ('Kokia Blazehoof','','boss_kokia_blazehoof')]:
         raise ValueError('Kokia runtime binding conflicts with local Lua port')
-    for spell, expected in [(372864,(3,0,0)),(372110,(3,0,372107)),(372858,(6,23,372859))]:
+    for spell, expected in [(372863,(3,0,0)),(372110,(3,0,372107)),(372858,(6,23,372859))]:
         effect = connection.execute('SELECT Effect,EffectAura,EffectTriggerSpell FROM spell_effect WHERE SpellID=? AND DifficultyID=0 AND EffectIndex=0',(spell,)).fetchone()
         if effect != expected:
             raise ValueError(f'Kokia native current effect/child{spell} changed')
+    summon = connection.execute('SELECT Effect,EffectMiscValue_0 FROM spell_effect WHERE SpellID=1309540 AND DifficultyID=0 AND EffectIndex=1').fetchone()
+    if summon != (28,189886):
+        raise ValueError('Kokia native ritual summon changed')
+    from ruby_native_templates import import_templates
+    import_templates(connection)
     primary, _ = encounter_cpp_bindings.PROFILES['kokia']
     rows = encounter_cpp_bindings.prepare_bindings(connection, [primary])
     connection.executescript(encounter_cpp_bindings.binding_sql(rows))
