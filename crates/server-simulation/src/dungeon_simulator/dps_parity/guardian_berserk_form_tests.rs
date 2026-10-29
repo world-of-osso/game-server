@@ -4,6 +4,115 @@ use crate::auras::ActiveAuras;
 
 #[test]
 #[ignore = "requires Guardian profile and native world data"]
+fn guardian_heart_in_cat_executes_empowered_feral_frenzy() {
+    use shared::protocol::CombatLogKind;
+    let mut run = prepare_registered_player(104, 1).unwrap();
+    let actor = run.actor;
+    let target = run.targets[0];
+    engage(&mut run);
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 768, Some(actor), false).unwrap();
+    for _ in 0..40 {
+        run.app.update();
+    }
+    run.app
+        .world_mut()
+        .resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .clear();
+    crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 274838, Some(target), 1);
+    let control = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .iter()
+        .find(|event| {
+            event.source == Some(actor.to_bits())
+                && event.target == Some(target.to_bits())
+                && event.spell_id == Some(274838)
+                && event.kind == CombatLogKind::Damage
+                && !event.periodic
+        })
+        .expect("unempowered Frenzy hit");
+    let control_damage = control.amount as f32 / if control.crit { 2.0 } else { 1.0 };
+    crate::spell_cast::powers::change_power(
+        run.app.world_mut(),
+        actor,
+        shared::components::PowerType::ComboPoints,
+        -5.0,
+    );
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        target,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 274838 && aura.caster == actor,
+    );
+    run.app
+        .world_mut()
+        .resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .clear();
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 1261868, Some(target), false)
+        .unwrap();
+    for _ in 0..100 {
+        run.app.update();
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    let impacts: Vec<_> = events
+        .iter()
+        .filter(|event| {
+            event.source == Some(actor.to_bits())
+                && event.target == Some(target.to_bits())
+                && event.spell_id == Some(274838)
+                && event.kind == CombatLogKind::Damage
+                && !event.periodic
+        })
+        .collect();
+    let ticks = events
+        .iter()
+        .filter(|event| {
+            event.source == Some(actor.to_bits())
+                && event.target == Some(target.to_bits())
+                && event.spell_id == Some(274838)
+                && event.kind == CombatLogKind::Damage
+                && event.periodic
+        })
+        .count();
+    let normalized = impacts
+        .iter()
+        .map(|event| event.amount as f32 / if event.crit { 2.0 } else { 1.0 })
+        .sum::<f32>()
+        / impacts.len() as f32;
+    assert!(
+        normalized > control_damage * 8.0 && normalized < control_damage * 12.0,
+        "Heart damage {normalized} vs unempowered {control_damage}"
+    );
+    assert_eq!(
+        impacts.len(),
+        5,
+        "Cat Heart executes five Feral Frenzy hits"
+    );
+    assert!(impacts.iter().all(|event| event.amount > 0));
+    assert!(ticks > 0, "the empowered frenzy applies its native bleed");
+    let combo = crate::spell_cast::powers::power_value(
+        run.app.world(),
+        actor,
+        shared::components::PowerType::ComboPoints,
+    )
+    .unwrap()
+    .0;
+    assert_eq!(
+        combo, 5.0,
+        "the five native children earn five combo points"
+    );
+}
+
+#[test]
+#[ignore = "requires Guardian profile and native world data"]
 fn guardian_mangle_earns_rank_scaled_vicious_brambles() {
     use shared::protocol::CombatLogKind;
     let mut run = prepare_registered_player(104, 1).unwrap();
