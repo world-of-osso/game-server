@@ -2217,6 +2217,55 @@ fn devotion_aura_reduces_incoming_bleed() {
 }
 
 #[test]
+#[ignore = "uses selected MID2 Focused Enmity and real Avenger's Shield impacts"]
+fn focused_enmity_counts_engaged_enemies_not_chain_targets() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::components::Position;
+    use shared::protocol::CombatLogKind;
+
+    fn shield(second_engaged: bool) -> f64 {
+        let _seed = crate::random::seed_scope(70448);
+        let mut run = super::dps_parity::prepare_registered_player(66, 2).unwrap();
+        super::dps_parity::engage(&mut run);
+        let actor = run.actor;
+        let primary = run.targets[0];
+        let secondary = run.targets[1];
+        run.app
+            .world_mut()
+            .get_mut::<Position>(secondary)
+            .unwrap()
+            .x += 100.0;
+        if !second_engaged {
+            crate::combat::combat_stop(run.app.world_mut(), secondary);
+        }
+        let start = run.app.world().resource::<ObservedCombatEvents>().0.len();
+        let _hit_seed = crate::random::seed_scope(454545);
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 31935, Some(primary), false)
+            .unwrap();
+        for _ in 0..40 {
+            run.app.update();
+        }
+        let events = &run.app.world().resource::<ObservedCombatEvents>().0[start..];
+        let hit = events
+            .iter()
+            .find(|event| {
+                event.source == Some(actor.to_bits())
+                    && event.target == Some(primary.to_bits())
+                    && event.spell_id == Some(31935)
+                    && event.kind == CombatLogKind::Damage
+            })
+            .expect("Shield must hit primary");
+        f64::from(hit.amount) / if hit.crit { 2.0 } else { 1.0 }
+    }
+    let single = shield(false);
+    let multiple = shield(true);
+    assert!(
+        (1.99..2.01).contains(&(single / multiple)),
+        "single={single} multiple={multiple}"
+    );
+}
+
+#[test]
 #[ignore = "uses selected MID2 Ferren Marcus and real Avenger's Shield chain"]
 fn ferren_marcus_empowers_only_primary_shield_target() {
     use crate::spell_cast::test_harness::ObservedCombatEvents;
