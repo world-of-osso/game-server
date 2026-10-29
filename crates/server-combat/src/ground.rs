@@ -63,6 +63,122 @@ pub enum GroundProbe {
     Supported(f32),
 }
 
+#[derive(Clone, Debug, serde::Serialize)]
+pub struct Floor {
+    pub z: f32,
+    pub source: &'static str,
+}
+
+/// Strict offline geometry reader: missing input never becomes an empty floor set.
+pub struct FloorGeometry {
+    ground: GroundMap,
+    strict_tiles: HashMap<(u32, u32, u32), Result<Vec<WmoCollision>, String>>,
+}
+
+impl FloorGeometry {
+    pub fn new(data_dir: &Path, wdts: HashMap<u32, u32>) -> Self {
+        Self {
+            ground: GroundMap::new(data_dir, wdts),
+            strict_tiles: HashMap::new(),
+        }
+    }
+
+    pub fn candidate_floors(&mut self, map_id: u32, x: f32, y: f32) -> Result<Vec<Floor>, String> {
+        let (bx, _, bz) = crate::terrain_height::wow_to_bevy(x, y, 0.0);
+        if !self.ground.maps.contains_key(&map_id) {
+            let wdt = self
+                .ground
+                .wdts
+                .get(&map_id)
+                .ok_or_else(|| format!("map {map_id}: no WDT"))?;
+            let map = MapGround::open(&self.ground.data_dir, *wdt)?;
+            self.ground.maps.insert(map_id, Some(map));
+        }
+        let map = self
+            .ground
+            .maps
+            .get_mut(&map_id)
+            .and_then(Option::as_mut)
+            .ok_or("missing map geometry")?;
+        let mut floors = Vec::new();
+        if let Some(wmo) = &map.global_wmo {
+            append_wmo_floors(&mut floors, std::slice::from_ref(wmo), bx, bz);
+        } else {
+            let tile_id = bevy_to_tile(bx, bz);
+            let key = (map_id, tile_id.0, tile_id.1);
+            if !self.strict_tiles.contains_key(&key) {
+                let result = load_strict_tile_wmos(map, tile_id);
+                self.strict_tiles.insert(key, result);
+            }
+            let wmos = self.strict_tiles[&key].as_ref().map_err(Clone::clone)?;
+            let tile = map
+                .tile(tile_id)
+                .ok_or_else(|| format!("map {map_id}: missing terrain tile {tile_id:?}"))?;
+            if let Some(z) = tile.terrain.height_at_bevy(bx, bz) {
+                floors.push(Floor {
+                    z,
+                    source: "terrain",
+                });
+            }
+            append_wmo_floors(&mut floors, wmos, bx, bz);
+        }
+        let m2_dir = self.ground.data_dir.join(format!("los/{map_id}/m2"));
+        let tile_id = bevy_to_tile(bx, bz);
+        let m2_tile = m2_dir.join(format!("{}_{}.los", tile_id.0, tile_id.1));
+        if !m2_tile.is_file() {
+            return Err(format!("missing M2 tile {}", m2_tile.display()));
+        }
+        let m2 = self
+            .ground
+            .m2_floors
+            .entry(map_id)
+            .or_insert_with(|| los::LosMap::new(&m2_dir));
+        floors.extend(
+            m2.floor_heights(bx, bz)?
+                .into_iter()
+                .map(|z| Floor { z, source: "m2" }),
+        );
+        Ok(floors)
+    }
+}
+
+fn append_wmo_floors(floors: &mut Vec<Floor>, wmos: &[WmoCollision], x: f32, z: f32) {
+    let mut heights = Vec::new();
+    for wmo in wmos {
+        wmo.floor_heights(x, z, 100_000.0, -100_000.0, &mut heights);
+    }
+    floors.extend(heights.into_iter().map(|z| Floor { z, source: "wmo" }));
+}
+
+fn load_strict_tile_wmos(
+    map: &mut MapGround,
+    (row, col): (u32, u32),
+) -> Result<Vec<WmoCollision>, String> {
+    let source = map.source.as_ref().ok_or("missing tile source")?;
+    let files = source.tiles[col as usize * MAP_TILES + row as usize];
+    let data_dir = source.data_dir.clone();
+    let data = read_client_file(&data_dir, "terrain", files.obj0, "adt")?;
+    let Some(modf) = find_chunk(&data, b"MODF")? else {
+        return Ok(Vec::new());
+    };
+    if modf.len() % MODF_ENTRY_SIZE != 0 {
+        return Err("truncated MODF".into());
+    }
+    modf.chunks_exact(MODF_ENTRY_SIZE)
+        .map(|entry| {
+            let placement = parse_modf_entry(entry)?;
+            if !map.wmo_models.contains_key(&placement.fdid) {
+                map.wmo_models
+                    .insert(placement.fdid, load_wmo_groups(&data_dir, placement.fdid)?);
+            }
+            Ok(WmoCollision::new(
+                placement.world_from_local(),
+                map.wmo_models[&placement.fdid].clone(),
+            ))
+        })
+        .collect()
+}
+
 struct TileGround {
     terrain: TerrainHeightMap,
     /// Area/liquid/flight-bound queries need terrain, not WMO collision.

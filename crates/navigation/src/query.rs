@@ -78,6 +78,20 @@ impl NavigationMap {
         Ok(map)
     }
 
+    /// Project a column candidate to a baked polygon within the agent's step height.
+    pub fn floor_polygon(&mut self, point: Vec3) -> Result<Option<Vec3>, String> {
+        self.load_around(point, point)?;
+        let filter = filter();
+        match self.nearest(point, &filter) {
+            Ok((_, projected)) => {
+                let projected = Vec3::from_array(projected);
+                Ok(((projected.y - point.y).abs() <= crate::AGENT_CLIMB).then_some(projected))
+            }
+            Err(error) if error.starts_with("no walkable polygon near ") => Ok(None),
+            Err(error) => Err(error),
+        }
+    }
+
     /// Native MovePositionToFirstCollision's Detour walkable-surface ray.
     pub fn first_collision(&mut self, start: Vec3, end: Vec3) -> Result<Vec3, String> {
         self.load_around(start, end)?;
