@@ -431,6 +431,22 @@ fn discipline_fiend_spells_transfer_pet_damage_to_atonement() {
             receipt.0 > 0.0 && receipt.1 > 0.0 && receipt.2 > 0.0,
             "fiend damage and transfer receipts: {receipt:?}"
         );
+        if spell == 1280172 || spell == 200174 {
+            let fiends = &h
+                .app
+                .world()
+                .resource::<super::test_harness::FiendAtonementReceipts>()
+                .1;
+            let hits = &fiends
+                .iter()
+                .find(|fiend| fiend.actor == actor)
+                .unwrap()
+                .landed_raw;
+            assert!(
+                hits.iter().any(|hit| *hit > 80.0),
+                "fiend melee must inherit owner SP: {hits:?}"
+            );
+        }
         assert!(
             events.iter().any(|event| event.kind == CombatLogKind::Heal
                 && event.source == Some(h.caster.to_bits())

@@ -154,6 +154,7 @@ fn run_attack_tick(app: &mut App) {
                     temp_summoner: None,
                     spirit_wolf: None,
                     hunter_owner_ap: None,
+                    priest_fiend_owner_damage: None,
                     hunter_owner_crit_pct: None,
                     pet_owner_hit_expertise: None,
                 };

@@ -145,6 +145,7 @@ fn read_native_crit_chance(h: &Harness, attacker: Entity, victim: Entity) -> f32
             .map(|s| s.summoner),
         spirit_wolf: None,
         hunter_owner_ap: None,
+        priest_fiend_owner_damage: None,
         hunter_owner_crit_pct: None,
         pet_owner_hit_expertise: None,
     };
