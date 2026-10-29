@@ -13,11 +13,14 @@ use shared::components::{ActiveSpec, Npc, PowerType, UnitSummonedBy};
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AfterForegroundSpecial(grant_bones),
+    SpellScriptHook::AfterForegroundSpecial(start_mist),
     SpellScriptHook::AfterForegroundSpecial(copy_weapon_actions),
     SpellScriptHook::EarlyAuraRegistration(register_dance),
     SpellScriptHook::AvoidanceProcHitMask(dance_avoidance_mask),
     SpellScriptHook::AfterForegroundSpecial(consume_dance),
     SpellScriptHook::AfterPayment(spawn_dance_weapon),
+    SpellScriptHook::AfterPayment(track_mist_spending),
+    SpellScriptHook::AfterPolicyDirectDamage(grant_mist_power),
     SpellScriptHook::AfterCastUpdate(sync_rune_weapon_buff),
     SpellScriptHook::AsynchronousAuras(&[1264407, 1265577]),
 ];
@@ -27,6 +30,110 @@ struct DanceAttempts(u32);
 
 #[derive(Component)]
 struct RegisteredRuneWeapon;
+
+#[derive(Component, Default)]
+struct BloodMistState {
+    spent: f32,
+    hits: u32,
+}
+
+// SimC76f8118 sc_death_knight.cpp9138–9160/9532–9533/12483–12497/13198–13199.
+fn start_mist(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    if spell.id == 49028
+        && world
+            .get::<ActiveSpec>(caster)
+            .is_some_and(|spec| spec.0 == 250)
+        && world
+            .get::<KnownSpells>(caster)
+            .is_some_and(|known| known.contains(1263743))
+    {
+        world.entity_mut(caster).insert(BloodMistState::default());
+        spell_cast::cast_triggered(world, caster, 1263729, Some(caster), 1);
+    }
+}
+
+fn reset_mist_hits(world: &mut World, unit: Entity, _: &AuraInstance, effect: u8) {
+    if effect == 0
+        && let Some(mut state) = world.get_mut::<BloodMistState>(unit)
+    {
+        state.hits = 0;
+    }
+}
+
+fn grant_mist_power(
+    world: &mut World,
+    ctx: &spell_cast::effects::EffectCtx<'_>,
+    _: Entity,
+    _: bool,
+) {
+    if ctx.spell.id != 1263752 {
+        return;
+    }
+    let cap = world
+        .resource::<SpellStore>()
+        .get(1263729)
+        .expect("Blood Mist")
+        .effects
+        .iter()
+        .find(|effect| effect.index == 2)
+        .expect("Blood Mist target cap")
+        .base_points as u32;
+    let Some(mut state) = world.get_mut::<BloodMistState>(ctx.caster) else {
+        return;
+    };
+    if state.hits >= cap {
+        return;
+    }
+    state.hits += 1;
+    spell_cast::cast_triggered(world, ctx.caster, 1263774, Some(ctx.caster), ctx.depth + 1);
+}
+
+fn track_mist_spending(world: &mut World, caster: Entity, costs: &[(CostPool, f32)]) {
+    let spent: f32 = costs
+        .iter()
+        .filter_map(|(pool, amount)| {
+            (*pool == CostPool::Power(PowerType::RunicPower)).then_some(*amount / 10.0)
+        })
+        .sum();
+    if let Some(mut state) = world.get_mut::<BloodMistState>(caster) {
+        state.spent += spent;
+    }
+}
+
+fn finish_mist(world: &mut World, unit: Entity, aura: &AuraInstance, reason: RemoveReason) {
+    let Some(state) = world.entity_mut(unit).take::<BloodMistState>() else {
+        return;
+    };
+    if reason != RemoveReason::Expired
+        || aura.caster != unit
+        || !world
+            .get::<KnownSpells>(unit)
+            .is_some_and(|known| known.contains(1263781))
+    {
+        return;
+    }
+    let percent = world
+        .resource::<SpellStore>()
+        .get(1263789)
+        .expect("Sanguinary Burst modifier")
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .expect("Sanguinary Burst amount")
+        .base_points
+        / 100.0;
+    spell_cast::cast_triggered_with_overrides(
+        world,
+        unit,
+        1263786,
+        Some(unit),
+        1,
+        TriggeredSpellOverrides {
+            damage_multiplier: Some(1.0 + state.spent * percent),
+            ..Default::default()
+        },
+    );
+}
 
 // SimC76f8118 sc_death_knight.cpp13063–13075/14820–14822: 12.5%
 // accumulated chance on rune spending; the source explicitly says it is not in data.
@@ -128,6 +235,9 @@ fn sync_rune_weapon_buff(world: &mut World) {
 }
 
 fn register_dance(scripts: &mut combat::auras::scripts::AuraScripts) {
+    let mist = scripts.0.entry(1263729).or_default();
+    mist.on_periodic = Some(reset_mist_hits);
+    mist.on_remove = Some(finish_mist);
     let dance = scripts.0.entry(1264351).or_default();
     dance.check_proc = Some(dance_parry);
     dance.on_proc = Some(grant_dance);
