@@ -16,6 +16,7 @@ pub(super) struct Recorder {
     mana_min: Option<f32>,
     event_cursor: usize,
     spells: BTreeMap<u32, (u64, u64)>,
+    initial_absorbs: BTreeMap<u32, f64>,
     party_damage: BTreeMap<u64, u64>,
     party_healing: BTreeMap<u64, (u64, u64)>,
     mana_curve: Vec<Value>,
@@ -40,6 +41,7 @@ impl Recorder {
                 .0
                 .len(),
             spells: BTreeMap::new(),
+            initial_absorbs: healer_absorbs(world, healer),
             party_damage: BTreeMap::new(),
             party_healing: BTreeMap::new(),
             mana_curve: Vec::new(),
@@ -164,7 +166,7 @@ impl Recorder {
         self.event_cursor = events.len();
     }
 
-    pub(super) fn report(&self, duration_seconds: u32) -> Value {
+    pub(super) fn report(&self, world: &World, duration_seconds: u32) -> Value {
         let (raw, effective) = self.spells.values().fold(
             (0_u64, 0_u64),
             |(raw, effective), &(spell_raw, spell_effective)| {
@@ -173,7 +175,15 @@ impl Recorder {
         );
         let duration = f64::from(duration_seconds);
         let spells: BTreeMap<_, _> = self.spells.iter().map(|(&spell, &(raw, effective))| (spell, json!({"raw":raw,"effective":effective,"raw_hps":raw as f64 / duration,"effective_hps":effective as f64 / duration}))).collect();
+        let absorbs: BTreeMap<_, _> = healer_absorbs(world, self.healer)
+            .into_iter()
+            .filter_map(|(spell, amount)| {
+                let consumed = amount - self.initial_absorbs.get(&spell).copied().unwrap_or(0.0);
+                (consumed > 0.0).then_some((spell, consumed))
+            })
+            .collect();
         json!({"raw_hps":raw as f64 / duration,"effective_hps":effective as f64 / duration,
+            "consumed_absorbs_by_spell":absorbs,
             "overheal_pct":(raw > 0).then(|| 100.0 * (raw - effective) as f64 / raw as f64),
             "idle_gcd_pct":100.0 * f64::from(self.idle_gcd_ticks) / (duration * 20.0),
             "spell_healing":spells,"mana_curve":self.mana_curve,"first_death_seconds":self.first_death_seconds,
@@ -182,4 +192,19 @@ impl Recorder {
             "mana_min":self.mana_min,"tank_health_min":self.tank_health_min,
             "party_damage":self.party_damage,"party_healing":self.party_healing})
     }
+}
+
+fn healer_absorbs(world: &World, healer: Entity) -> BTreeMap<u32, f64> {
+    world
+        .get_resource::<super::healer_intake::Capture>()
+        .map(|capture| {
+            capture
+                .consumed_absorbs_by_spell
+                .iter()
+                .filter_map(|(&(caster, spell), &amount)| {
+                    (caster == healer).then_some((spell, amount))
+                })
+                .collect()
+        })
+        .unwrap_or_default()
 }

@@ -217,7 +217,7 @@ fn replay_with_party_registry(
         "duration_seconds":duration,"incoming_events":next,"party_incoming_events":next_party,"tank_spec":66,
         "tank_casts":tank_casts,"healer_casts":healer_casts,
         "tank_active_mitigation_seconds":f64::from(mitigation_ticks) / 20.0,
-        "metrics":recorder.report(duration)}),
+        "metrics":recorder.report(run.app.world(), duration)}),
     )
 }
 
