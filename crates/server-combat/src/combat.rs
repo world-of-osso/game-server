@@ -970,6 +970,7 @@ fn auto_attack_unit(
                     let attack_type = if lesser_ghoul
                         || horseman
                         || (summon.spell_id == 288853 && npc.template_id == 149555)
+                        || (summon.spell_id == 434237 && npc.template_id == 217228)
                     {
                         crate::stats::WeaponAttackType::MainHand
                     } else {
