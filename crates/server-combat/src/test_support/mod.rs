@@ -21,3 +21,7 @@ pub struct LiteralParityFixture;
 /// Profile race for an explicit reference fixture; this does not turn an NPC into a Player.
 #[derive(bevy::prelude::Component)]
 pub struct ReferenceRace(pub u8);
+
+/// Successful Divine Inspiration procs on a fixture actor.
+#[derive(bevy::prelude::Component, Default)]
+pub struct DivineInspirationProcs(pub u32);

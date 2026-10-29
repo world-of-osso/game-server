@@ -864,6 +864,7 @@ fn holy_bulwark_refresh_regrants_initial_absorb() {
     let (_, consumed) = crate::auras::absorb_damage(run.app.world_mut(), actor, 1, max);
     assert!(consumed > 0.0);
     assert!(!crate::auras::has_aura(run.app.world(), actor, 432607));
+    let before_counts = super::tank_replay::bulwark_observations(run.app.world(), actor);
     crate::auras::apply_aura(
         run.app.world_mut(),
         &crate::auras::AuraApplication {
@@ -874,6 +875,9 @@ fn holy_bulwark_refresh_regrants_initial_absorb() {
             source: crate::auras::AuraSource::Cast,
         },
     );
+    let after_counts = super::tank_replay::bulwark_observations(run.app.world(), actor);
+    assert_eq!(after_counts.0, before_counts.0);
+    assert_eq!(after_counts.1, before_counts.1 + 1);
     let (_, refreshed) = crate::auras::absorb_damage(run.app.world_mut(), actor, 1, max);
     let expected = max * 0.15 * (1.0 + vers / 100.0);
     assert!(
@@ -3279,6 +3283,7 @@ fn divine_inspiration_earns_alternating_self_armaments() {
     let actor = run.actor;
     let target = run.targets[0];
     assert!(crate::auras::has_aura(run.app.world(), actor, 432964));
+    let before_procs = super::tank_replay::bulwark_observations(run.app.world(), actor).2;
     let start = run
         .app
         .world()
@@ -3334,6 +3339,8 @@ fn divine_inspiration_earns_alternating_self_armaments() {
         applications.windows(2).all(|pair| pair[0] != pair[1]),
         "inspiration must alternate: {applications:?}"
     );
+    let procs = super::tank_replay::bulwark_observations(run.app.world(), actor).2 - before_procs;
+    assert_eq!(procs as usize, applications.len());
 }
 
 #[test]

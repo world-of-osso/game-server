@@ -167,6 +167,10 @@ fn roll_divine_inspiration(world: &mut World, caster: Entity) {
     if !combat::auras::procs::try_source_hasted_rppm(world, caster, id, 0.55) {
         return;
     }
+    #[cfg(any(test, feature = "test-support"))]
+    {
+        world.entity_mut(caster).entry::<combat::test_support::DivineInspirationProcs>().or_default().get_mut().0 += 1;
+    }
     let next = world
         .get::<NextInspirationArmament>(caster)
         .map(|value| value.0)

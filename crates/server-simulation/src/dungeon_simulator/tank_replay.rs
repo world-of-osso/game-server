@@ -37,6 +37,29 @@ const TANK_DUNGEON_DIFFICULTY: u32 = 23;
 const TANK_DUNGEON_TUNING: u32 = 3025;
 const TANK_DUNGEON_SEASON: u32 = 120;
 
+pub(super) fn bulwark_observations(world: &World, tank: Entity) -> (usize, usize, u32) {
+    let events = &world
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    let mut starts = 0;
+    let mut refreshes = 0;
+    for event in events.iter().filter(|event| {
+        event.source == Some(tank.to_bits())
+            && event.target == Some(tank.to_bits())
+            && event.spell_id == Some(432496)
+    }) {
+        match event.kind {
+            CombatLogKind::AuraApplied => starts += 1,
+            CombatLogKind::AuraRefreshed => refreshes += 1,
+            _ => {}
+        }
+    }
+    let procs = world
+        .get::<server::test_support::DivineInspirationProcs>(tank)
+        .map_or(0, |count| count.0);
+    (starts, refreshes, procs)
+}
+
 fn self_periodic_damage(event: &shared::protocol::CombatLogEvent, tank: Entity) -> bool {
     event.kind == CombatLogKind::Damage && event.periodic && event.source == Some(tank.to_bits())
 }
@@ -1070,6 +1093,11 @@ fn replay_registered_run_with_healing(
         )
         .ok_or("SIMC_DUMMY_ARMOR_CONSTANT_ABSENT")?;
     report["tank_dummy_scenario"] = json!({"difficulty":TANK_DUNGEON_DIFFICULTY,"content_tuning":TANK_DUNGEON_TUNING,"season":TANK_DUNGEON_SEASON,"attacker_level":attacker.level_against(&defender),"armor_constant":armor_constant});
+    let (bulwark_starts, bulwark_refreshes, divine_inspiration_procs) =
+        bulwark_observations(world, tank);
+    report["holy_bulwark_applications"] =
+        json!({"starts": bulwark_starts, "refreshes": bulwark_refreshes});
+    report["divine_inspiration_procs"] = json!(divine_inspiration_procs);
     report["precombat_casts"] = json!(precombat_casts);
     report["outgoing_damage_by_spell"] = json!(outgoing_damage_by_spell);
     report["resource_spent_by_spell"] = json!(resource_spent_by_spell);
