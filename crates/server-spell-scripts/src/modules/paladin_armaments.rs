@@ -14,6 +14,7 @@ use shared::protocol::EquipmentSlot;
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::SuccessfulCastRelationships(after_cast),
     SpellScriptHook::LateAuraRegistration(register_bulwark),
+    SpellScriptHook::AfterAuraApplication(initial_bulwark),
     SpellScriptHook::AfterAbsorbConsumed(reflection_from_absorb),
     SpellScriptHook::AvoidanceProcHitMask(grand_crusader_avoidance_mask),
     SpellScriptHook::ResolvedDamage(glory_from_shield),
@@ -35,7 +36,6 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
 
 fn register_bulwark(scripts: &mut AuraScripts) {
     let script = scripts.0.entry(432496).or_default();
-    script.on_apply = Some(initial_bulwark);
     script.on_periodic = Some(periodic_bulwark);
     let grand = scripts.0.entry(85043).or_default();
     grand.check_proc = Some(grand_crusader_is_avoidance);
@@ -523,7 +523,9 @@ fn grand_crusader_from_avoidance(
 }
 
 fn initial_bulwark(world: &mut World, target: Entity, aura: &AuraInstance) {
-    apply_bulwark_absorb(world, target, aura.caster, 1, true);
+    if aura.spell_id == 432496 {
+        apply_bulwark_absorb(world, target, aura.caster, 1, true);
+    }
 }
 
 fn periodic_bulwark(world: &mut World, target: Entity, aura: &AuraInstance, index: u8) {

@@ -844,6 +844,45 @@ fn divine_guidance_stacks_on_spenders_and_is_consumed_by_consecration() {
 }
 
 #[test]
+#[ignore = "uses selected MID2 Holy Bulwark parent refresh"]
+fn holy_bulwark_refresh_regrants_initial_absorb() {
+    let mut run = super::dps_parity::prepare_registered_player(66, 1).unwrap();
+    let actor = run.actor;
+    assert!(crate::auras::has_aura(run.app.world(), actor, 432496));
+    let max = run
+        .app
+        .world()
+        .get::<shared::components::Health>(actor)
+        .unwrap()
+        .max;
+    let vers = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(actor)
+        .unwrap()
+        .versatility_pct;
+    let (_, consumed) = crate::auras::absorb_damage(run.app.world_mut(), actor, 1, max);
+    assert!(consumed > 0.0);
+    assert!(!crate::auras::has_aura(run.app.world(), actor, 432607));
+    crate::auras::apply_aura(
+        run.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: actor,
+            target: actor,
+            spell_id: 432496,
+            effect_mask: u32::MAX,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    let (_, refreshed) = crate::auras::absorb_damage(run.app.world_mut(), actor, 1, max);
+    let expected = max * 0.15 * (1.0 + vers / 100.0);
+    assert!(
+        (refreshed - expected).abs() < 2.0,
+        "refresh={refreshed} expected={expected}"
+    );
+}
+
+#[test]
 #[ignore = "uses the selected MID2 player and native Holy Bulwark casts"]
 fn holy_bulwark_absorbs_incoming_hits_and_grows_to_native_cap() {
     fn cast_bulwark() -> super::dps_parity::Run {
