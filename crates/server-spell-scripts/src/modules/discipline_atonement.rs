@@ -34,8 +34,18 @@ fn initialize_fiend(world: &mut World, actor: Entity) {
         return;
     };
     let (owner, spell) = (summon.owner, summon.spell_id);
+    #[cfg(any(test, feature = "test-support"))]
+    let expires = summon.expires_at;
     if !is_discipline(world, owner) || !matches!(spell, 1280172 | 123040 | 200174 | 451235) {
         return;
+    }
+    #[cfg(any(test, feature = "test-support"))]
+    {
+        let started = combat::spell_cast::now(world);
+        let owner_spell_power = world.get::<combat::stats::CharacterStats>(owner).expect("fiend owner stats").spell_power;
+        if let Some(mut receipts) = world.get_resource_mut::<crate::test_support::FiendAtonementReceipts>() {
+            receipts.1.push(crate::test_support::FiendSummonReceipt { actor, owner, spell, started, expires, owner_spell_power, landed_raw: Vec::new() });
+        }
     }
     let Some(target) = world
         .get::<combat::networking::CombatTarget>(owner)
@@ -311,7 +321,13 @@ fn transfer_pet_melee(world: &mut World, source: Entity, target: Entity, raw: f3
     if !matches!(summon.spell_id, 1280172 | 123040 | 200174) {
         return;
     }
-    transfer_atonement(world, summon.owner, target, crit, raw, 1, false, true);
+    let owner = summon.owner;
+    #[cfg(any(test, feature = "test-support"))]
+    if let Some(mut receipts) = world.get_resource_mut::<crate::test_support::FiendAtonementReceipts>()
+        && let Some(receipt) = receipts.1.iter_mut().find(|receipt| receipt.actor == source) {
+        receipt.landed_raw.push(raw);
+    }
+    transfer_atonement(world, owner, target, crit, raw, 1, false, true);
 }
 
 fn transfer_atonement(

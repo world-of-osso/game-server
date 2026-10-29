@@ -6,7 +6,20 @@ use std::collections::HashMap;
 
 /// Optional replay-only receipts: pre-mitigation fiend damage and raw/effective transfers by owner.
 #[derive(Resource, Default)]
-pub struct FiendAtonementReceipts(pub HashMap<Entity, (f64, f64, f64)>);
+pub struct FiendAtonementReceipts(
+    pub HashMap<Entity, (f64, f64, f64)>,
+    pub Vec<FiendSummonReceipt>,
+);
+
+pub struct FiendSummonReceipt {
+    pub actor: Entity,
+    pub owner: Entity,
+    pub spell: u32,
+    pub started: f64,
+    pub expires: Option<f64>,
+    pub owner_spell_power: f32,
+    pub landed_raw: Vec<f32>,
+}
 #[cfg(all(feature = "test-support", not(test)))]
 pub use crate::modules::{ghoul_energy, set_ghoul_energy};
 
