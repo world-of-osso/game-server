@@ -1,0 +1,31 @@
+import sqlite3
+import tempfile
+import unittest
+from pathlib import Path
+
+from ruby_population import ERKHART_XY, KYRAKKA_XY, import_population
+
+ROOT = Path(__file__).resolve().parents[2]
+
+
+class RubyPopulationTests(unittest.TestCase):
+    def test_copy_replaces_only_placeholder_and_adds_kyrakka(self):
+        with tempfile.TemporaryDirectory() as directory:
+            with sqlite3.connect((ROOT / 'data/world.db').resolve().as_uri() + '?mode=ro', uri=True) as source, sqlite3.connect(Path(directory) / 'copy.sqlite') as db:
+                source.backup(db)
+                before = db.execute('SELECT count(*) FROM content_creature').fetchone()[0]
+                with db:
+                    import_population(db, 312.8, 312.9)
+                self.assertEqual(db.execute('SELECT position_x,position_y,position_z FROM content_creature WHERE guid=63521000').fetchone(), (*ERKHART_XY, 312.9))
+                self.assertEqual(db.execute('SELECT position_x,position_y,position_z FROM content_creature WHERE guid=63521001').fetchone(), (*KYRAKKA_XY, 312.8))
+                comment = db.execute('SELECT Comment FROM content_creature WHERE guid=63521000').fetchone()[0]
+                self.assertIn('LOG_DERIVED_POPULATION', comment)
+                self.assertIn('FOLLOWER_PLACEMENT_XY_FROM_JOURNAL_ENCOUNTER_UIMAP', comment)
+                self.assertEqual(db.execute('SELECT count(*) FROM content_creature').fetchone()[0], before + 1)
+                self.assertEqual(db.execute('SELECT encounter_id,bit FROM raid_encounter_creature WHERE map_id=2521 AND creature_entry=190484').fetchone(), (2623, 2))
+                with self.assertRaisesRegex(ValueError, 'GUID already occupied'):
+                    import_population(db, 312.8, 312.9)
+
+
+if __name__ == '__main__':
+    unittest.main()

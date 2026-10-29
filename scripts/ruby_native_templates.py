@@ -34,7 +34,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--db', required=True, type=Path)
     args = parser.parse_args()
-    if args.db.name == 'world.db' or not args.db.is_file():
+    canonical = Path(__file__).resolve().parents[1] / 'data/world.db'
+    if not args.db.is_file() or args.db.name == 'world.db' or args.db.samefile(canonical):
         parser.error('provide an existing prepared copy, not world.db')
     with closing(sqlite3.connect(args.db)) as conn, conn:
         import_templates(conn)
