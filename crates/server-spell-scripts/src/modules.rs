@@ -95,6 +95,7 @@ register_modules! {
     brewmaster_elusive_brawler: (1000, "modules/brewmaster_elusive_brawler.rs"),
     brewmaster_keg_reset: (1000, "modules/brewmaster_keg_reset.rs"),
     brewmaster_overwhelming_force: (1000, "modules/brewmaster_overwhelming_force.rs"),
+    brewmaster_niuzao: (1000, "modules/brewmaster_niuzao.rs"),
     brewmaster_shuffle: (1000, "modules/brewmaster_shuffle.rs"),
     brewmaster_special_delivery: (1000, "modules/brewmaster_special_delivery.rs"),
     brewmaster_walk_ox: (1000, "modules/brewmaster_walk_ox.rs"),

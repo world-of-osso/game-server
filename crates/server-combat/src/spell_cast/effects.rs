@@ -377,7 +377,8 @@ pub fn power_stats(world: &World, unit: Entity, healing: bool) -> (f32, f32) {
             let attack_type = if lesser_ghoul
                 || matches!(
                     (summon.spell_id, entry),
-                    (317776 | 1242294, Some(163366))
+                    (132578, Some(73967))
+                        | (317776 | 1242294, Some(163366))
                         | (49028 | 1237128 | 1264353, Some(27893))
                         | (434237, Some(217228))
                         | (1292072, Some(264321))

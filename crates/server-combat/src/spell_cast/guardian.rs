@@ -34,6 +34,15 @@ struct GuardianPolicy {
 // SimC76f8118 pets.cpp19/705/867/1510–1548: bindings and inheritance
 // belong to the actual root/creature pair, including the alternative Tyrant.
 const GUARDIAN_POLICIES: &[GuardianPolicy] = &[
+    // SimC76f8118 sc_monk_pets.cpp425–435: Niuzao inherits its owner's AP.
+    GuardianPolicy {
+        summons: &[132578],
+        entry: 73967,
+        spells: &[],
+        repeat_gcd: None,
+        owner_spell_share: None,
+        owner_attack_share: Some(1.0),
+    },
     // SimC76f8118 sc_death_knight.cpp4709–4780: Blood Beast casts
     // Corrupted Blood and inherits three times the owner's melee AP.
     GuardianPolicy {

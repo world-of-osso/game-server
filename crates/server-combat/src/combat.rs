@@ -989,6 +989,7 @@ fn auto_attack_unit(
                         || horseman
                         || (summon.spell_id == 288853 && npc.template_id == 149555)
                         || (summon.spell_id == 434237 && npc.template_id == 217228)
+                        || (summon.spell_id == 132578 && npc.template_id == 73967)
                     {
                         crate::stats::WeaponAttackType::MainHand
                     } else {
