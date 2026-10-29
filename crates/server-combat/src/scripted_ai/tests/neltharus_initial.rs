@@ -502,7 +502,14 @@ fn encounter_coverage_sargha_native_shield_expiry_rearms_gold() {
         h.advance(25.0);
         assert!(
             completed_casts(&h, boss, 377017) >= 2,
-            "expired shield re-arms native Gold projected{difficulty}"
+            "expired shield re-arms native Gold projected{difficulty}; auras={:?} health={:?} casts={:?}",
+            h.app.world().get::<crate::auras::ActiveAuras>(boss),
+            h.health(h.player()),
+            h.inbox(0)
+                .spell_gos
+                .iter()
+                .map(|go| go.spell_id)
+                .collect::<Vec<_>>()
         );
     }
 }
