@@ -29,11 +29,17 @@ pub(super) fn snapshot_channel(world: &mut World, caster: Entity, spell: u32) {
     } else {
         EYE_BEAM_DAMAGE
     };
-    world.entity_mut(caster).insert(ChannelTick { parent: spell, child });
+    world.entity_mut(caster).insert(ChannelTick {
+        parent: spell,
+        child,
+    });
 }
 
 fn channel_child(world: &World, caster: Entity, parent: u32) -> Option<u32> {
-    world.get::<ChannelTick>(caster).filter(|snapshot| snapshot.parent == parent).map(|snapshot| snapshot.child)
+    world
+        .get::<ChannelTick>(caster)
+        .filter(|snapshot| snapshot.parent == parent)
+        .map(|snapshot| snapshot.child)
 }
 
 pub(crate) fn clear_channel(world: &mut World, caster: Entity, parent: u32) {
