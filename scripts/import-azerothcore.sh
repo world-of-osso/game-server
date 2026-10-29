@@ -7,6 +7,7 @@
 # Retail profession trainers + skill tier caps, Retail creature models and the Retail
 # creature spawns of maps 0/1, areatrigger teleports and graveyards: TrinityCore TDB1210 excerpts
 # (data/reference/tdb1210/<table>.sql) → mysql_dump.py --prefix tdb_ → tdb_* tables
+# Guild rewards: TDB1210 guild_rewards* excerpts → tdb_guild_rewards* (guild_rewards_schema.sql)
 # Server-read content_* tables: content_policy.py (Retail-first ID mapping)
 #
 # Usage: FOREVER_DB2_SOURCE=/path/to/forever-db2 ./scripts/import-azerothcore.sh [path/to/azerothcore/data/sql/base/db_world]
@@ -75,10 +76,13 @@ for table in "${TDB_TABLES[@]}"; do
     TDB_ARGS+=("$table=$f")
 done
 
-if [[ ! -f "$TDB_DIR/spell_area.sql" ]]; then
-    echo "ERROR: Missing TDB excerpt: $TDB_DIR/spell_area.sql" >&2
-    exit 1
-fi
+# Guild reward excerpts: scripts/import_guild_rewards.py --dump <full TDB world dump> writes them.
+for table in spell_area guild_rewards guild_rewards_req_achievements; do
+    if [[ ! -f "$TDB_DIR/$table.sql" ]]; then
+        echo "ERROR: Missing TDB excerpt: $TDB_DIR/$table.sql" >&2
+        exit 1
+    fi
+done
 
 python3 "$SCRIPT_DIR/db2.py" check --csv-root "$DB2_CSV_ROOT"
 python3 "$SCRIPT_DIR/crafting_data.py" --check --source-dir "$CRAFTING_SOURCE_DIR"
@@ -100,6 +104,8 @@ python3 "$SCRIPT_DIR/mysql_dump.py" --db "$DB_PATH" --schema "$SCHEMA_SQL" "${DU
 echo "  Importing TDB tables ..."
 python3 "$SCRIPT_DIR/mysql_dump.py" --db "$DB_PATH" --schema "$SCRIPT_DIR/tdb_schema.sql" --prefix tdb_ "${TDB_ARGS[@]}"
 python3 "$SCRIPT_DIR/mysql_dump.py" --db "$DB_PATH" --schema "$SCRIPT_DIR/spell_area_schema.sql" --prefix tdb_ "spell_area=$TDB_DIR/spell_area.sql"
+python3 "$SCRIPT_DIR/mysql_dump.py" --db "$DB_PATH" --schema "$SCRIPT_DIR/guild_rewards_schema.sql" --prefix tdb_ \
+    "guild_rewards=$TDB_DIR/guild_rewards.sql" "guild_rewards_req_achievements=$TDB_DIR/guild_rewards_req_achievements.sql"
 python3 "$SCRIPT_DIR/retail_action_bars.py" --db "$DB_PATH"
 
 # --- Retail DB2 CSV import (build-pinned, see db2.py) ---
