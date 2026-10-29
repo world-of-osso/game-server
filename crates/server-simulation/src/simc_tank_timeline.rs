@@ -26,6 +26,7 @@ pub(crate) struct Hit {
 #[derive(Debug, PartialEq)]
 pub(crate) struct Scenario {
     pub(crate) dummy: String,
+    pub(crate) player: String,
     pub(crate) target_level: Option<u8>,
     pub(crate) armor_constant: f32,
     pub(crate) heals: Vec<(u64, f32)>,
@@ -74,6 +75,7 @@ fn parse_scenario(trace: &str) -> Result<Scenario, String> {
     }
     let heal_marker = format!("Enemy '{dummy}' Action 'tank_heal' (0) heals Player '");
     let mut heals = Vec::new();
+    let mut player = None;
     for line in trace.lines() {
         let Some((time, event)) = line.split_once(' ') else {
             continue;
@@ -81,9 +83,16 @@ fn parse_scenario(trace: &str) -> Result<Scenario, String> {
         let Some(rest) = event.strip_prefix(&heal_marker) else {
             continue;
         };
-        let (_, amount) = rest
+        let (name, amount) = rest
             .split_once(" for ")
             .ok_or("SimC tank heal amount absent")?;
+        let name = name
+            .strip_suffix('\'')
+            .ok_or("SimC tank heal target absent")?;
+        if player.as_deref().is_some_and(|previous| previous != name) {
+            return Err("SimC tank heals have multiple targets".into());
+        }
+        player = Some(name.to_owned());
         let seconds = time
             .parse::<f64>()
             .map_err(|error| format!("invalid SimC heal time: {error}"))?;
@@ -103,6 +112,7 @@ fn parse_scenario(trace: &str) -> Result<Scenario, String> {
     }
     Ok(Scenario {
         dummy,
+        player: player.ok_or("SimC tank heal target absent")?,
         target_level,
         armor_constant,
         heals,
@@ -388,11 +398,12 @@ fn parse_trace(trace: &str, dummy: &str) -> Result<Vec<Hit>, String> {
 
 #[test]
 fn reads_actual_dummy_level_armor_and_healing() {
-    let trace = "target_level=93\n0.000 Enemy 'Fluffy_Pillow' base armor coefficient set to 3430.\n0.000 Enemy 'Fluffy_Pillow' actions.default=/auto_attack,damage=1000000\n0.000 Enemy 'Fluffy_Pillow' Action 'tank_heal' (0) heals Player 'Tank' for 300000 (0) (hit)\n5.000 Enemy 'Fluffy_Pillow' Action 'tank_heal' (0) heals Player 'Tank' for 300000 (1) (hit)";
+    let trace = "target_level=93\n0.000 Enemy 'Fluffy_Pillow' base armor coefficient set to 3430.\n0.000 Enemy 'Fluffy_Pillow' actions.default=/auto_attack,damage=1000000\n0.000 Enemy 'Fluffy_Pillow' Action 'tank_heal' (0) heals Player 'Tank'layn' for 300000 (0) (hit)\n5.000 Enemy 'Fluffy_Pillow' Action 'tank_heal' (0) heals Player 'Tank'layn' for 300000 (1) (hit)";
     assert_eq!(
         parse_scenario(trace).unwrap(),
         Scenario {
             dummy: "Fluffy_Pillow".into(),
+            player: "Tank'layn".into(),
             target_level: Some(93),
             armor_constant: 3430.0,
             heals: vec![(0, 300000.0), (5000, 300000.0)],

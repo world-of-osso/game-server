@@ -426,15 +426,9 @@ pub(super) fn replay_simc_with_targets(
     let mut hits = simc_tank_timeline::read_trace(path, &scenario.dummy)?;
     scale_pressure(&mut hits, pressure_scale);
     let (bloodlust_ms, raid_buffs) = if external_healing {
-        let (profile, _) = super::dps_parity::read_reference(spec_id)?;
-        let name = profile
-            .options
-            .get("name")
-            .and_then(|value| value.as_str())
-            .ok_or("SIMC_PROFILE_NAME_ABSENT")?;
         (
-            simc_tank_timeline::read_bloodlust_time(path, name)?,
-            simc_tank_timeline::read_raid_buffs(path, name)?,
+            simc_tank_timeline::read_bloodlust_time(path, &scenario.player)?,
+            simc_tank_timeline::read_raid_buffs(path, &scenario.player)?,
         )
     } else {
         (None, Vec::new())
@@ -528,6 +522,7 @@ pub(super) fn replay_registered_run(
         false,
         &crate::simc_tank_timeline::Scenario {
             dummy: "Tank_Dummy_Dungeon".into(),
+            player: String::new(),
             target_level: None,
             armor_constant: 4531.03,
             heals: Vec::new(),
