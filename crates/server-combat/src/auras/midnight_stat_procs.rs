@@ -34,7 +34,7 @@ pub(super) fn register(scripts: &mut AuraScripts) {
     );
 }
 
-fn count_unique_gem_colors(world: &World, unit: Entity) -> Option<usize> {
+pub(crate) fn count_unique_gem_colors(world: &World, unit: Entity) -> Option<usize> {
     let equipped = world.get::<crate::stats::EquippedItemModifiers>(unit)?;
     let native = world.get_resource::<crate::stats::NativeItemInstances>()?;
     let descriptions: std::collections::BTreeSet<u32> = equipped

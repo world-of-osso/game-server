@@ -25,6 +25,44 @@ const FIRE: u32 = 1279599;
 const FIRE_DAMAGE: u32 = 1286970;
 const LINGERING: u32 = 1287555;
 const LINGERING_DAMAGE: u32 = 1287663;
+const IRIS_DRIVER: u32 = 1251906;
+const IRIS_DAMAGE: u32 = 1252389;
+const BANDOLIER: u32 = 1251905;
+
+// SimC76f8118 unique_gear_midnight.cpp898–919: the proc's otherwise empty
+// periodic effect takes the equipped driver's item-scaled amount.
+pub(crate) fn iris_dot_amount(
+    world: &World,
+    caster: Entity,
+    spell: u32,
+    index: u8,
+    amount: f32,
+) -> f32 {
+    if spell != IRIS_DAMAGE || index != 0 {
+        return amount;
+    }
+    let Some(driver) = world
+        .get::<ActiveAuras>(caster)
+        .and_then(|auras| auras.iter().find(|aura| aura.spell_id == IRIS_DRIVER))
+    else {
+        return amount;
+    };
+    let level = driver
+        .cast_item_level
+        .expect("Prismatic Focusing Iris equipped item level");
+    let colors = crate::auras::midnight_stat_procs::count_unique_gem_colors(world, caster)
+        .expect("Prismatic Focusing Iris equipped gems");
+    let gem_percent = native_amount(world, caster, IRIS_DRIVER, 2, Some(level)) / 100.0;
+    let bandolier = if crate::auras::has_aura(world, caster, BANDOLIER) {
+        2.0
+    } else {
+        1.0
+    };
+    native_amount(world, caster, IRIS_DRIVER, 0, Some(level))
+        * role(world, caster, IRIS_DRIVER)
+        * (1.0 + gem_percent * colors as f32)
+        * bandolier
+}
 
 pub(crate) fn register(scripts: &mut AuraScripts) {
     font::register(scripts);

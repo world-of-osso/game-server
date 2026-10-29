@@ -311,6 +311,8 @@ pub(super) fn snapshot_aura_amount(
     amount: f32,
 ) -> f32 {
     let amount =
+        crate::spell_cast::scripts::iris_dot_amount(world, caster, spell.id, effect.index, amount);
+    let amount =
         crate::spell_cast::scripts::snapshot_rod_amount(world, spell, effect.index, amount);
     let amount = if effect.aura == super::PERIODIC_DAMAGE_AURA {
         super::spell_mods::snapshot_periodic_amount(world, caster, spell, amount)
