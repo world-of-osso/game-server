@@ -423,6 +423,7 @@ pub fn set_boss_state(world: &mut World, map: InMap, boss_id: u32, state: Encoun
     super::wailing_caverns::on_boss_state_changed(world, map, encounter_id, state);
     super::hellfire_ramparts::on_boss_state_changed(world, map, encounter_id, state);
     super::darkness::on_boss_state_changed(world, map, encounter_id, state);
+    super::door_data::update_doors(world, map);
     true
 }
 

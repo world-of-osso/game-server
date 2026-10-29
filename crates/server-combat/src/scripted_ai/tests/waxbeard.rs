@@ -17,6 +17,29 @@ fn actors(h: &mut Harness, map: InMap, entry: u32) -> Vec<Entity> {
         .collect()
 }
 
+const WAXBEARD_GATE: u32 = 420154;
+const CATACOMBS_GATE: u32 = 430177;
+
+/// Replicated collision of the copy's one `entry` door.
+fn door_blocks(h: &mut Harness, map: InMap, entry: u32) -> bool {
+    let doors: Vec<bool> = h
+        .app
+        .world_mut()
+        .query::<(
+            &InMap,
+            &shared::protocol::GameObjectInfo,
+            &shared::protocol::GameObjectCollision,
+        )>()
+        .iter(h.app.world())
+        .filter(|(copy, info, _)| **copy == map && info.entry == entry)
+        .map(|(_, _, collision)| collision.0)
+        .collect();
+    let [blocks] = doors[..] else {
+        panic!("one {entry} door in the copy: {doors:?}");
+    };
+    blocks
+}
+
 fn position(h: &Harness, actor: Entity) -> Vec3 {
     let position = h.app.world().get::<Position>(actor).unwrap();
     Vec3::new(position.x, position.y, position.z)
@@ -70,4 +93,41 @@ fn waxbeard_rides_the_filled_mount_and_its_death_completes_the_encounter() {
         h.app.world().get_entity(rider).is_err(),
         "rider leaves with its mount"
     );
+}
+
+#[test]
+fn waxbeard_gate_opens_when_the_encounter_is_done() {
+    let (mut h, _, map) =
+        encounter_fixture(RIDER, MAP, BIT, 205, None, EncounterState::NotStarted, true);
+    h.app
+        .add_systems(Update, crate::vehicle::accessory::install_accessories);
+    h.app
+        .add_systems(FixedPostUpdate, crate::vehicle::accessory::seat_accessories);
+    h.advance(0.1);
+    assert!(
+        door_blocks(&mut h, map, WAXBEARD_GATE),
+        "closed before the kill"
+    );
+    let [mount] = actors(&mut h, map, MOUNT)[..] else {
+        panic!("one filled mount");
+    };
+    let player = h.player();
+    crate::combat::kill_unit(h.app.world_mut(), player, mount);
+    h.advance(0.1);
+    assert!(
+        !door_blocks(&mut h, map, WAXBEARD_GATE),
+        "open after 2829 DONE"
+    );
+    assert!(
+        door_blocks(&mut h, map, CATACOMBS_GATE),
+        "the Candle King's gate stays closed"
+    );
+}
+
+#[test]
+fn waxbeard_gate_fills_open_in_a_copy_saved_past_waxbeard() {
+    let (mut h, _, map) = encounter_fixture(RIDER, MAP, BIT, 205, None, EncounterState::Done, true);
+    h.advance(0.1);
+    assert!(!door_blocks(&mut h, map, WAXBEARD_GATE));
+    assert!(door_blocks(&mut h, map, CATACOMBS_GATE));
 }
