@@ -838,6 +838,15 @@ mod tests {
             1
         ));
         h.advance(1);
+        assert!(
+            h.inbox
+                .log
+                .iter()
+                .any(|event| event.spell_id == Some(236282)
+                    && event.kind == shared::protocol::CombatLogKind::Damage
+                    && event.amount > 0),
+            "the background impact must land"
+        );
         assert_eq!(
             crate::auras::procs::proc_deadline(h.app.world(), caster, instance),
             deadline,
