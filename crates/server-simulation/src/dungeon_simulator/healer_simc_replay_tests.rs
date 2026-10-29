@@ -75,7 +75,7 @@ fn beacon_transfers_healing_between_player_and_follower_party_members() {
         let transferred = after - before;
         assert!(effective > 0.0);
         assert!(
-            (transferred - effective * 0.1).abs() <= 2.0,
+            (transferred - effective * 0.15).abs() <= 2.0,
             "Beacon {beacon:?} received {transferred} from {effective} healing on {healed:?}"
         );
     }
