@@ -2217,6 +2217,52 @@ fn devotion_aura_reduces_incoming_bleed() {
 }
 
 #[test]
+#[ignore = "uses selected MID2 Instrument and real Shield of the Righteous damage"]
+fn instrument_scales_shield_damage_from_pre_spend_holy_power() {
+    use crate::spell_cast::powers::PowerPools;
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::components::PowerType;
+    use shared::protocol::CombatLogKind;
+    fn shield(power: f32) -> i32 {
+        let _seed = crate::random::seed_scope(70448);
+        let mut run = super::dps_parity::prepare_registered_player(66, 1).unwrap();
+        super::dps_parity::engage(&mut run);
+        let actor = run.actor;
+        let target = run.targets[0];
+        run.app
+            .world_mut()
+            .get_mut::<PowerPools>(actor)
+            .unwrap()
+            .get_mut(PowerType::HolyPower)
+            .unwrap()
+            .current = power;
+        let start = run.app.world().resource::<ObservedCombatEvents>().0.len();
+        let _hit_seed = crate::random::seed_scope(454545);
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 53600, Some(target), false)
+            .unwrap();
+        for _ in 0..4 {
+            run.app.update();
+        }
+        run.app.world().resource::<ObservedCombatEvents>().0[start..]
+            .iter()
+            .find(|event| {
+                event.source == Some(actor.to_bits())
+                    && event.target == Some(target.to_bits())
+                    && event.spell_id == Some(53600)
+                    && event.kind == CombatLogKind::Damage
+            })
+            .expect("Shield must damage its target")
+            .amount
+    }
+    let three = shield(3.0);
+    let five = shield(5.0);
+    assert!(
+        three > 0 && (five as f64 / three as f64 - 2.0).abs() < 0.01,
+        "two extra Holy Power must double Shield damage: {three} -> {five}"
+    );
+}
+
+#[test]
 #[ignore = "uses selected MID2 Protection and native Shield of the Righteous"]
 fn protection_shield_uses_modified_armor_effect() {
     use crate::spell_cast::powers::PowerPools;
