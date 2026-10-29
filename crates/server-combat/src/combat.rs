@@ -3215,6 +3215,7 @@ fn reward_swing_rage(
     }
     if damage > 0.0
         && has_rage_primary_power(world, target)
+        && !crate::auras::has_aura(world, target, 1178)
         && take_hit_rage_cooldown(world, target)
     {
         change_rage(world, target, RAGE_PER_HIT_TAKEN * RAGE_RAW_PER_RAGE);

@@ -238,6 +238,7 @@ register_modules! {
     guardian_ursocs_fury: (1040, "modules/guardian_ursocs_fury.rs"),
     guardian_blood_frenzy: (1042, "modules/guardian_blood_frenzy.rs"),
     guardian_berserk_form: (1046, "modules/guardian_berserk_form.rs"),
+    guardian_bear_rage: (1052, "modules/guardian_bear_rage.rs"),
     guardian_flashing_claws: (1048, "modules/guardian_flashing_claws.rs"),
     guardian_gore: (1049, "modules/guardian_gore.rs"),
     guardian_galactic: (1050, "modules/guardian_galactic.rs"),
