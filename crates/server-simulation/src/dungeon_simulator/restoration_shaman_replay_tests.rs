@@ -9,7 +9,12 @@ fn healing_rain_triggers_tidewaters_on_owned_riptides() {
     };
     use shared::components::{Health, Mana};
     use shared::protocol::CombatLogKind;
-    let mut h = harness(Vec::new(), &[73920, 73921, 61295, 462424, 462425], 7).unwrap();
+    let mut h = harness(
+        Vec::new(),
+        &[73920, 73921, 444995, 61295, 462424, 462425],
+        7,
+    )
+    .unwrap();
     h.app.init_resource::<ObservedCombatEvents>();
     let first = spawn_player(&mut h.app, 7, 3.0);
     let second = spawn_player(&mut h.app, 7, 5.0);
@@ -66,6 +71,33 @@ fn healing_rain_triggers_tidewaters_on_owned_riptides() {
             .iter()
             .any(|e| e.spell_id == Some(462425) && e.target == Some(other.to_bits()))
     );
+    h.app
+        .world_mut()
+        .resource_mut::<ObservedCombatEvents>()
+        .0
+        .clear();
+    cast_for_player_with_targets(
+        h.app.world_mut(),
+        h.caster,
+        444995,
+        CastTargets {
+            unit: h.caster,
+            primary: Some(h.caster),
+            destination: Some([3.0, 0.0, 0.0]),
+        },
+    )
+    .unwrap();
+    h.advance(100);
+    let events = &h.app.world().resource::<ObservedCombatEvents>().0;
+    for unit in [first, second] {
+        assert!(
+            events.iter().any(|e| e.kind == CombatLogKind::Heal
+                && e.spell_id == Some(462425)
+                && e.target == Some(unit.to_bits())
+                && e.amount > 0),
+            "Surging Totem must trigger Tidewaters: {events:?}"
+        );
+    }
 }
 
 #[test]
