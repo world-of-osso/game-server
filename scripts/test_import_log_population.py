@@ -39,6 +39,12 @@ class ImportTest(unittest.TestCase):
                                  db.execute('SELECT CreatureID,CreatureDisplayID FROM tdb_creature_template_model').fetchall())
                 self.assertEqual(db.execute('SELECT DifficultyID FROM content_creature_template_difficulty ORDER BY DifficultyID').fetchall(), [(1,), (2,), (23,)])
                 self.assertEqual(db.execute('SELECT entry,policy FROM log_derived_templates').fetchall(), [(189886, module.POLICY)])
+                self.assertEqual(db.execute('SELECT table_name,row_key FROM log_derived_template_rows ORDER BY table_name,row_key').fetchall(),
+                    [('content_creature_template', '[189886]'),
+                     ('content_creature_template_difficulty', '[189886,1]'),
+                     ('content_creature_template_difficulty', '[189886,23]'),
+                     ('content_creature_template_difficulty', '[189886,2]'),
+                     ('content_creature_template_model', '[189886,0]')])
             with sqlite3.connect(source) as db:
                 self.assertEqual(db.execute('SELECT COUNT(*) FROM content_creature_template').fetchone()[0], 0)
 
