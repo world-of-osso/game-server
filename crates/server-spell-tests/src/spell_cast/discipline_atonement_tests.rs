@@ -5,6 +5,50 @@ use shared::components::{ActiveSpec, Health};
 use shared::protocol::CombatLogKind;
 
 #[test]
+fn shield_discipline_returns_mana_when_real_shields_are_depleted() {
+    use shared::components::PowerType;
+    for (spell, talent) in [(17, true), (1253593, true), (17, false)] {
+        let mut h = harness(Vec::new(), &[17, 1253593, 197045, 47755, 194384, 81749], 5).unwrap();
+        let caster = h.caster;
+        h.app.world_mut().entity_mut(caster).insert(ActiveSpec(256));
+        if talent {
+            crate::auras::apply_aura(
+                h.app.world_mut(),
+                &crate::auras::AuraApplication {
+                    caster,
+                    target: caster,
+                    spell_id: 197045,
+                    effect_mask: u32::MAX,
+                    source: crate::auras::AuraSource::Cast,
+                },
+            );
+        }
+        let ally = spawn_player(&mut h.app, 5, 1.0);
+        super::cast_triggered(h.app.world_mut(), caster, spell, Some(ally), 1);
+        assert!(
+            crate::auras::has_aura(h.app.world(), ally, spell),
+            "real shield {spell} applied"
+        );
+        super::powers::change_power(h.app.world_mut(), caster, PowerType::Mana, -500.0);
+        let before = super::powers::power_value(h.app.world(), caster, PowerType::Mana).unwrap();
+        let (_, absorbed) =
+            crate::auras::absorb_damage(h.app.world_mut(), ally, None, 1, 1_000_000.0);
+        assert!(absorbed > 0.0 && !crate::auras::has_aura(h.app.world(), ally, spell));
+        let after = super::powers::power_value(h.app.world(), caster, PowerType::Mana).unwrap();
+        let expected = if talent {
+            (before.1 * 0.005).trunc()
+        } else {
+            0.0
+        };
+        assert_eq!(
+            after.0 - before.0,
+            expected,
+            "shield {spell}, talent={talent}"
+        );
+    }
+}
+
+#[test]
 fn discipline_flash_heal_applies_atonement_even_at_full_health() {
     let mut h = harness(Vec::new(), &[2061, 194384, 81749, 94472], 5).unwrap();
     h.app

@@ -12,6 +12,7 @@ use shared::protocol::{CombatLogEvent, CombatLogKind};
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AfterAuraApplication(apply_mark),
+    SpellScriptHook::LateAuraRegistration(register_shield_discipline),
     SpellScriptHook::NativeAfterCast(master_the_darkness_action),
     SpellScriptHook::AfterAbsorbConsumed(discharge_void_shield),
     SpellScriptHook::HealthChangeObserved(mark_flash_heal),
@@ -23,6 +24,24 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AfterNativeCastUpdate(update_voidwraith),
     SpellScriptHook::ConsumedEffectValues(&[(81749, 0)]),
 ];
+
+fn register_shield_discipline(scripts: &mut auras::scripts::AuraScripts) {
+    for spell in [17, 1253593] {
+        scripts.0.entry(spell).or_default().on_remove = Some(shield_discipline);
+    }
+}
+
+fn shield_discipline(world: &mut World, _target: Entity, aura: &AuraInstance, _reason: auras::RemoveReason) {
+    let caster = aura.caster;
+    // SimC76f8118 sc_priest.cpp:50-61,114-125: only an early shield expiration returns mana.
+    if !auras::has_aura(world, caster, 197045)
+        || !aura.expires_at.is_some_and(|expiry| expiry > combat::spell_cast::now(world))
+    {
+        return;
+    }
+    let percent = combat::spell_cast::scripts::script_effect_value(world, caster, 47755, 0) / 100.0;
+    combat::spell_cast::cast_triggered_with_effect0_amount(world, caster, 47755, Some(caster), 1, percent);
+}
 
 #[derive(Component)]
 struct VoidwraithAttack {
