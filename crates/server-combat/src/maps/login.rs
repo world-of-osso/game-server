@@ -29,6 +29,7 @@ pub(crate) struct LoginMaps<'w> {
     housing: Option<Res<'w, crate::housing::HousingAvailability>>,
     database: Option<Res<'w, crate::persistence::GameDatabase>>,
     pvp: Option<Res<'w, crate::pvp::PvpServerState>>,
+    follower_runs: Option<Res<'w, crate::followers::DisconnectedRuns>>,
 }
 
 /// Where a character enters the world.
@@ -55,6 +56,15 @@ impl LoginMaps<'_> {
     ) -> Option<LoginPlace> {
         let (map_id, position, returned_from_pvp) =
             self.battleground_login_location(character_id, map_id, position);
+        if let Some(copy) = self
+            .follower_runs
+            .as_ref()
+            .and_then(|runs| runs.copy(character_id))
+            && copy.map_id == map_id
+            && self.instances.copy_difficulty(copy).is_some()
+        {
+            return self.place(copy, position);
+        }
         self.restore_housing_admission(map_id, character_id)?;
         let entrant: InstanceEntrant = super::transfer::entrant_for(
             self.groups.as_deref(),
