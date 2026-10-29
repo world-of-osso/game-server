@@ -25,7 +25,7 @@ def coverage(populations, clusters, safe_clusters, preparation_gaps, imports):
         outcome = imports.get(str(map_id), {})
         import_gaps = Counter(gap['reason'] for gap in outcome.get('gaps', []))
         projected, absent = outcome.get('templates_from_tdb'), outcome.get('templates_absent')
-        report.append({'map': map_id, 'runs': population['runs'], 'zone_sessions': population.get('zone_sessions', 0),
+        report.append({'map': map_id, 'runs': population['runs'], 'zone_segments_retained': population.get('zone_segments_retained', 0),
             'observed_npc_ids': len(population['npcs']),
             'tdb_rows': population['authored']['tdb_creature']['count'],
             'content_rows': population['authored']['content_creature']['count'],
