@@ -1359,6 +1359,15 @@ fn record_swing(
         }
     }
     let caused_damage = outcome.damage > 0.0;
+    if landed && caused_damage {
+        crate::spell_cast::script_registry::melee_raw_resolved(
+            world,
+            attacker_entity,
+            target_entity,
+            outcome.transfer_source,
+            matches!(outcome.kind, MeleeOutcome::Crit | MeleeOutcome::CritBlock),
+        );
+    }
     record_swing_events(world, attacker_entity, target_entity, outcome);
     if caused_damage {
         // TC Unit::DealMeleeDamage: after health/death and only for damaging swings.
@@ -2035,6 +2044,7 @@ struct SwingOutcome {
     absorbed: f32,
     /// Landed source before victim multipliers, armor, block, absorption or scaling.
     residual_source: f32,
+    transfer_source: f32,
     damage: f32,
     /// `damage` in the target's health units (level scaling).
     scaled_loss: f32,
@@ -2447,6 +2457,8 @@ fn resolve_swing(
         immune,
         absorbed,
         residual_source,
+        transfer_source: melee::outcome_damage(swing.raw, kind, level_difference, 0.0).0
+            * critical_multiplier,
         damage,
         scaled_loss,
         incoming_loss,
@@ -3074,6 +3086,8 @@ pub fn replay_healer_hit(
         immune,
         absorbed,
         residual_source,
+        transfer_source: melee::outcome_damage(hit.raw, kind, level_difference, 0.0).0
+            * critical_multiplier,
         damage,
         scaled_loss,
         incoming_loss: health_loss(world.get::<TrainingDummy>(victim).is_some(), scaled_loss),

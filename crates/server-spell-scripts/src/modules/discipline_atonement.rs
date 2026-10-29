@@ -16,8 +16,72 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AfterAbsorbConsumed(discharge_void_shield),
     SpellScriptHook::HealthChangeObserved(mark_flash_heal),
     SpellScriptHook::RawResolvedDamage(transfer_damage),
+    SpellScriptHook::MeleeRawResolved(transfer_pet_melee),
+    SpellScriptHook::SummonInitialized(initialize_fiend),
+    SpellScriptHook::AfterNativeCastUpdate(update_voidwraith),
     SpellScriptHook::ConsumedEffectValues(&[(81749, 0)]),
 ];
+
+#[derive(Component)]
+struct VoidwraithAttack {
+    target: Entity,
+    next: f64,
+}
+
+fn initialize_fiend(world: &mut World, actor: Entity) {
+    let Some(summon) = world.get::<combat::spell_cast::summon::SummonedCreature>(actor) else {
+        return;
+    };
+    let (owner, spell) = (summon.owner, summon.spell_id);
+    if !is_discipline(world, owner) || !matches!(spell, 1280172 | 123040 | 200174 | 451235) {
+        return;
+    }
+    let Some(target) = world
+        .get::<combat::networking::CombatTarget>(owner)
+        .and_then(|target| target.0)
+    else {
+        warn!(?owner, spell, "Discipline summon has no selected enemy");
+        return;
+    };
+    if spell == 451235 {
+        let now = combat::spell_cast::now(world);
+        world
+            .entity_mut(actor)
+            .insert(VoidwraithAttack { target, next: now });
+    } else {
+        combat::spell_cast::summon::start_melee_attack(world, actor, target);
+    }
+}
+
+fn update_voidwraith(world: &mut World) {
+    let now = combat::spell_cast::now(world);
+    let due: Vec<_> = world
+        .query::<(
+            Entity,
+            &VoidwraithAttack,
+            &combat::spell_cast::summon::SummonedCreature,
+        )>()
+        .iter(world)
+        .filter(|(_, state, _)| state.next <= now)
+        .map(|(actor, state, summon)| (actor, state.target, summon.owner))
+        .collect();
+    for (actor, target, owner) in due {
+        if !combat::spell_cast::targets::is_alive(world, target) {
+            continue;
+        }
+        let haste = world
+            .get::<combat::stats::CharacterStats>(owner)
+            .map_or(1.0, |stats| 1.0 + stats.haste_pct / 100.0);
+        world
+            .get_mut::<VoidwraithAttack>(actor)
+            .expect("live Voidwraith")
+            .next = now + 1.5 / f64::from(haste.max(0.01));
+        // SimC76f8118 sc_priest_pets.cpp:500-555: Voidwraith casts Void Flay.
+        if !combat::spell_cast::try_cast_triggered(world, actor, 451435, Some(target), 1) {
+            warn!(?actor, ?target, "Voidwraith Void Flay could not be cast");
+        }
+    }
+}
 
 #[derive(Component)]
 struct DarknessDeck {
@@ -196,8 +260,54 @@ fn transfer_damage(
         585, 589, 8092, 32379, 47666, 373130, 390832, 120696, 390964, 132157, 450215, 447448,
         448405, 1280134, 1253828, 421543,
     ];
-    let caster = damage.caster;
-    if caster == target || !is_discipline(world, caster) || !TRIGGERS.contains(&damage.spell.id) {
+    let source = damage.caster;
+    let (caster, pet_spell) =
+        if let Some(summon) = world.get::<combat::spell_cast::summon::SummonedCreature>(source) {
+            if !matches!(summon.spell_id, 1280172 | 123040 | 200174 | 451235)
+                || !matches!(damage.spell.id, 451435 | 373442)
+            {
+                return;
+            }
+            (summon.owner, true)
+        } else {
+            if !TRIGGERS.contains(&damage.spell.id) {
+                return;
+            }
+            (source, false)
+        };
+    transfer_atonement(
+        world,
+        caster,
+        target,
+        crit,
+        raw,
+        damage.spell.school_mask(),
+        pet_spell,
+        false,
+    );
+}
+
+fn transfer_pet_melee(world: &mut World, source: Entity, target: Entity, raw: f32, crit: bool) {
+    let Some(summon) = world.get::<combat::spell_cast::summon::SummonedCreature>(source) else {
+        return;
+    };
+    if !matches!(summon.spell_id, 1280172 | 123040 | 200174) {
+        return;
+    }
+    transfer_atonement(world, summon.owner, target, crit, raw, 1, false, true);
+}
+
+fn transfer_atonement(
+    world: &mut World,
+    caster: Entity,
+    target: Entity,
+    crit: bool,
+    raw: f32,
+    school: u32,
+    pet_spell: bool,
+    pet_melee: bool,
+) {
+    if caster == target || !is_discipline(world, caster) {
         return;
     }
     let now = combat::spell_cast::now(world);
@@ -228,6 +338,15 @@ fn transfer_damage(
         .expect("Atonement share")
         .base_points
         / 100.0;
+    let pet_bonus = store
+        .get(81749)
+        .expect("Atonement passive")
+        .effects
+        .iter()
+        .find(|effect| effect.index == 2)
+        .expect("Atonement pet share")
+        .base_points
+        / 100.0;
     let cap = store
         .get(81749)
         .expect("Atonement passive")
@@ -247,12 +366,23 @@ fn transfer_damage(
         .and_then(|aura| aura.effects.iter().find(|effect| effect.index == 0))
         .map_or(0.0, |effect| effect.amount);
     // SimC76f8118 sc_priest.hpp:1418-1425: Grace increases healing on Atoned allies.
-    let school = damage.spell.school_mask();
     let mut transfer = raw * fraction * (1.0 + mastery / 100.0);
+    if pet_melee {
+        transfer *= 1.0 + pet_bonus;
+    }
     // SimC76f8118 sc_priest.hpp:1547-1565 applies these source-school bonuses.
     for (aura, effect, applies) in [
-        (373054, 0, school & 32 != 0),
-        (1272359, 3, school & 2 != 0),
+        (
+            373054,
+            0,
+            !pet_melee
+                && if pet_spell {
+                    school & 32 == 0
+                } else {
+                    school & 32 != 0
+                },
+        ),
+        (1272359, 3, !pet_spell && !pet_melee && school & 2 != 0),
         (449887, 1, true),
     ] {
         if applies && auras::has_aura(world, caster, aura) {
