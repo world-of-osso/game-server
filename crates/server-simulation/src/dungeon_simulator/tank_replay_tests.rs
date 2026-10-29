@@ -1530,6 +1530,22 @@ fn simc_dummy_melee_uses_recipient_avoidance_and_strikes_can_block() {
 }
 
 #[test]
+#[ignore = "uses MID2 plate tank profiles and the native stat pipeline"]
+fn plate_tank_profiles_receive_simc_base_dodge() {
+    for spec in [66, 73] {
+        let run = super::dps_parity::prepare_registered_player(spec, 1).unwrap();
+        let dodge = run
+            .app
+            .world()
+            .get::<crate::stats::CharacterStats>(run.actor)
+            .unwrap()
+            .defense
+            .dodge;
+        assert!((dodge - 3.0).abs() < 0.01, "spec {spec} base dodge {dodge}");
+    }
+}
+
+#[test]
 #[ignore = "runs all six native MID2 tank dummy replays"]
 fn all_tanks_use_dungeon_season_combat_inputs() {
     let directory = Path::new(
