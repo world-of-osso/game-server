@@ -84,6 +84,19 @@ fn floor_resolver_neltharus_real_data() {
             "{result:?}"
         );
     }
+    let later_request = Request {
+        x: -248.0,
+        y: -603.0,
+        neighbor_hints: vec![Hint {
+            guid: "later".to_owned(),
+            x: -244.0,
+            y: -603.0,
+        }],
+        ..request.clone()
+    };
+    assert!(
+        matches!(resolver.resolve(&later_request), Resolution::Resolved { z, method: "neighbor_path", hint_ids, .. } if z.abs() < 1.0 && hint_ids == ["later"])
+    );
     let ruby_wdt: u32 = db
         .query_row("SELECT WdtFileDataID FROM map WHERE ID=2521", [], |row| {
             row.get(0)
