@@ -210,11 +210,17 @@ fn apply_rite_of_sanctification(
         warn!("Rite of Sanctification requires equipped item modifiers");
         return;
     };
-    if items.temporary_enchants.iter().any(|(slot, _)| *slot == EquipmentSlot::MainHand) {
+    if items
+        .temporary_enchants
+        .iter()
+        .any(|(slot, _)| *slot == EquipmentSlot::MainHand)
+    {
         warn!("Rite of Sanctification cannot replace a temporary weapon enchant");
         return;
     }
-    items.temporary_enchants.push((EquipmentSlot::MainHand, effect.misc_values[0] as u32));
+    items
+        .temporary_enchants
+        .push((EquipmentSlot::MainHand, effect.misc_values[0] as u32));
 }
 
 fn armament_energize_handler(
