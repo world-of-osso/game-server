@@ -182,7 +182,7 @@ fn frenzy_direct_hit_is_armored_but_its_bleed_is_not() {
         .world()
         .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
         .0;
-    let total = |target, periodic| -> f32 {
+    let total = |target: bevy::prelude::Entity, periodic: bool| -> f32 {
         events
             .iter()
             .filter(|event| {
