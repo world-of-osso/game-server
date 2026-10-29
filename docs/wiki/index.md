@@ -1,3 +1,4 @@
+- [Stockade both-skin walks](investigations/follower-data.md#stockade-both-skin-physical-walks--2026-10-28) — Normal diagnostic parties walked and cleared all three encounters in both skins; not Retail admission.
 - [Guardian periodic haste](systems/spell-casting.md#guardian-periodic-haste--2026-10-26) — actual Infernal interval RED; generic actual-owner fix and cross-spec gates pending.
 - [Fiendish Cruelty](systems/spell-casting.md#destruction-fiendish-cruelty--2026-10-26) — native critical-producer RED, earned Shadowburn proc/consumption qualification pending.
 - [Incinerate recipient policy](systems/spell-casting.md#destruction-incinerate-recipients--2026-10-26) — native area is not talent-gated; actual untalented/FnB/Havoc REDs, GREEN pending.
