@@ -143,15 +143,26 @@ fn mistweaver_uses_spinning_crane_kick_only_against_a_pack() {
             .unwrap();
         run.app.update();
     }
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0;
+    let casts: Vec<_> = events
+        .iter()
+        .filter(|e| e.source == Some(healer.to_bits()) && e.kind == CombatLogKind::CastSuccess)
+        .map(|e| e.spell_id)
+        .collect();
+    let known = run
+        .app
+        .world()
+        .get::<crate::class_progression::KnownSpells>(healer)
+        .unwrap()
+        .contains(101546);
+    let positions = [healer, enemy, add]
+        .map(|unit| crate::spell_cast::targets::position(run.app.world(), unit));
+    let healths = [enemy, add].map(|unit| run.app.world().get::<Health>(unit).copied());
+    println!(
+        "PACK_DIAGNOSTIC known={known} positions={positions:?} healths={healths:?} casts={casts:?}"
+    );
     assert!(
-        run.app
-            .world()
-            .resource::<ObservedCombatEvents>()
-            .0
-            .iter()
-            .any(|e| e.source == Some(healer.to_bits())
-                && e.spell_id == Some(101546)
-                && e.kind == CombatLogKind::CastSuccess),
+        casts.contains(&Some(101546)),
         "Mistweaver must use Spinning Crane Kick against a pack"
     );
 }
