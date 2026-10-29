@@ -965,11 +965,15 @@ pub(crate) fn chase_system(
             commands.entity(entity).remove::<CannotReachTarget>();
         }
         if next_position != *pos {
-            let feet = Vec3::new(next_position.x, next_position.y, next_position.z);
-            next_position.y = run_ground(
-                probe_ground(ground.as_deref_mut(), map, feet),
-                next_position.y,
-            );
+            next_position.y = if follower_reach.is_some() {
+                follower_footprint_ground(ground.as_deref_mut(), map, *pos, next_position)
+            } else {
+                let feet = Vec3::new(next_position.x, next_position.y, next_position.z);
+                run_ground(
+                    probe_ground(ground.as_deref_mut(), map, feet),
+                    next_position.y,
+                )
+            };
         }
         let mut stride = Stride::moving(*pos, next_position, CreatureMotion::Run, run_speed);
         if stride.facing.is_none() {
@@ -1530,8 +1534,12 @@ fn pet_motion_system(
         };
         let mut next = next_position;
         if next != here {
-            let feet = Vec3::new(next.x, next.y, next.z);
-            next.y = run_ground(probe_ground(ground.as_deref_mut(), map, feet), next.y);
+            next.y = if companion_pet.is_some() {
+                follower_footprint_ground(ground.as_deref_mut(), map, here, next)
+            } else {
+                let feet = Vec3::new(next.x, next.y, next.z);
+                run_ground(probe_ground(ground.as_deref_mut(), map, feet), next.y)
+            };
         }
         let mut stride = if next == here {
             Stride::still(here)
