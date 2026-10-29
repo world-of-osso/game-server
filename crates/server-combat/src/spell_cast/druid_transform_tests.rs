@@ -21,6 +21,7 @@ fn druid() -> Harness {
             252216,
             33917,
             77758,
+            8921,
             6795,
         ],
         11,
@@ -47,6 +48,39 @@ fn cast_form(h: &mut Harness, id: u32) {
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
     h.advance(35);
     h.inbox = Inbox::default();
+}
+
+#[test]
+fn druid_foreground_spell_resets_swing_but_mangle_and_form_do_not() {
+    for (spell, should_reset) in [(8921, true), (33917, false), (768, false)] {
+        let mut h = druid();
+        cast_form(&mut h, BEAR);
+        let npc = h.npc;
+        h.attack(npc);
+        h.advance(3);
+        h.advance(20);
+        h.inbox.log.clear();
+        h.cast_and_deliver(spell, Some(if spell == 768 { h.caster } else { npc }));
+        assert!(
+            h.inbox.failed.is_empty(),
+            "spell {spell}: {:?}",
+            h.inbox.failed
+        );
+        h.inbox.log.clear();
+        h.advance(35);
+        let swings = h
+            .inbox
+            .log
+            .iter()
+            .filter(|event| {
+                event.source == Some(h.caster.to_bits())
+                    && event.target == Some(npc.to_bits())
+                    && event.spell_id.is_none()
+                    && event.kind == CombatLogKind::Damage
+            })
+            .count();
+        assert_eq!(swings == 0, should_reset, "spell {spell} swings={swings}");
+    }
 }
 
 #[test]

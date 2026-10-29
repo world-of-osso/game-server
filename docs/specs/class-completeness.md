@@ -1,5 +1,9 @@
 # Level-80 class completeness audit and shared cast behavior
 
+## Druid foreground spell swing timing
+
+Pinned SimC76f8118 `sc_druid.cpp:2513–2533` reschedules the main-hand swing to a full hasted weapon interval when a foreground, non-proc Druid spell with a nonzero trigger GCD executes. Its form actions and Heart of the Wild explicitly opt out (`sc_druid.cpp:3583–3593,9130–9134`); melee attacks such as Mangle do not use this spell base. Triggered and background casts do not reset the swing.
+
 ## Caster-and-ability critical chance slice — 2026-10-22
 
 - Native308 on the recipient sums chance only for the aura's caster and matching native class-family/effect mask. Pinned TC's actual308 consumer is Magic defense1; do not invent a melee/ranged/defense0 consumer from its comment. Preserve native CANT_CRIT and existing base/spell/script chance rules.

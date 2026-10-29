@@ -2982,6 +2982,7 @@ fn execute_cast_with_primary(
     // TC Spell.cpp3843–3869: OnCast precedes TakePower and SendSpellGo.
     scripts::before_ret_damage_cast(world, caster, spell, 0);
     scripts::on_cast(world, caster, spell.id, 0);
+    druid_transform::reset_swing_for_spell(world, caster, spell);
     take_cast_resources(world, caster, spell, &costs);
     start_cooldowns(world, caster, spell);
     scripts::ordinary_combo_cast(world, caster, spell);
