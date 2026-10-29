@@ -2,6 +2,43 @@ use std::path::Path;
 
 #[test]
 #[ignore = "requires native Restoration Shaman spell data"]
+fn earthliving_imbue_allows_riptide_to_apply_its_hot() {
+    use crate::spell_cast::{
+        CastTargets, cast_for_player_with_targets,
+        test_harness::{ObservedCombatEvents, harness, spawn_player},
+    };
+    let mut h = harness(Vec::new(), &[382021, 382022, 382024, 61295], 7).unwrap();
+    h.app.init_resource::<ObservedCombatEvents>();
+    let ally = spawn_player(&mut h.app, 7, 3.0);
+    cast_for_player_with_targets(
+        h.app.world_mut(),
+        h.caster,
+        382021,
+        CastTargets {
+            unit: h.caster,
+            primary: Some(h.caster),
+            destination: None,
+        },
+    )
+    .unwrap();
+    h.advance(50);
+    assert!(
+        crate::auras::has_aura(h.app.world(), h.caster, 382022),
+        "imbue must apply its native buff"
+    );
+    for _ in 0..100 {
+        crate::spell_cast::creature_cast(h.app.world_mut(), h.caster, 61295, Some(ally), true)
+            .unwrap();
+        h.advance(2);
+        if crate::auras::has_aura(h.app.world(), ally, 382024) {
+            return;
+        }
+    }
+    panic!("Earthliving did not proc in 100 Riptides");
+}
+
+#[test]
+#[ignore = "requires native Restoration Shaman spell data"]
 fn critical_riptide_can_trigger_ancestral_awakening() {
     use crate::spell_cast::test_harness::{ObservedCombatEvents, harness, spawn_player};
     use shared::components::Health;
