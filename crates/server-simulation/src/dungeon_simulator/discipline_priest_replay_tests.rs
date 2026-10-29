@@ -105,6 +105,105 @@ fn discipline_soulcoiler_real_item_channels_five_fractional_barriers() {
     );
 }
 #[test]
+#[ignore = "requires selected Discipline profile and native 70448 data"]
+fn discipline_smite_and_penance_capture_matched_stat_factors() {
+    use super::super::dps_parity::literal_rotation::execution::{Execution, execute};
+    use crate::spell_cast::effects::factor_capture::FactorCapture;
+    for (root, focus) in [(585, 585), (47540, 47666)] {
+        let _seed = crate::random::seed_scope(70448);
+        let mut run = super::super::dps_parity::prepare_registered_player(66, 1).unwrap();
+        let healer =
+            super::super::dps_parity::spawn_second_reference_player(&mut run, 256).unwrap();
+        let target = run.targets[0];
+        let mut stats = run
+            .app
+            .world_mut()
+            .get_mut::<crate::stats::CharacterStats>(healer)
+            .unwrap();
+        stats.spell_power = 3567.0;
+        stats.versatility_pct = 5.6667;
+        stats.crit_pct = 0.0;
+        run.app.insert_resource(FactorCapture::new(
+            healer,
+            target,
+            focus,
+            "disc_matched",
+            32,
+        ));
+        execute(
+            run.app.world_mut(),
+            healer,
+            Execution::Spell(root, target, Some(target)),
+        )
+        .unwrap();
+        for _ in 0..100 {
+            run.app.update();
+        }
+        let trace = run.app.world().resource::<FactorCapture>().export();
+        assert!(
+            trace["captured_hits"].as_u64().unwrap_or(0) > 0,
+            "real spell {focus}: {trace}"
+        );
+        println!("DISC_FACTOR_{focus}={trace}");
+    }
+}
+
+#[test]
+#[ignore = "requires the selected real Discipline profile and canonical world database"]
+fn discipline_policy_applies_pain_and_does_not_refresh_early() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::protocol::CombatLogKind;
+    let mut run = super::super::dps_parity::prepare_registered_player(66, 1).unwrap();
+    let tank = run.actor;
+    let healer = super::super::dps_parity::spawn_second_reference_player(&mut run, 256).unwrap();
+    let party = crate::followers::simulator::spawn_party_for_reference_healer(
+        run.app.world_mut(),
+        tank,
+        healer,
+    )
+    .unwrap();
+    let mut members = party.members.clone();
+    members.push(tank);
+    let enemy = run.targets[0];
+    run.app
+        .world_mut()
+        .entity_mut(tank)
+        .insert(crate::networking::CombatTarget(Some(enemy)));
+    let mut policy = super::prepare(&mut run, healer).unwrap();
+    policy.drive(run.app.world_mut(), healer, &members).unwrap();
+    for _ in 0..40 {
+        run.app.update();
+    }
+    assert!(
+        crate::auras::has_aura(run.app.world(), enemy, 589),
+        "Pain must apply to the enemy"
+    );
+    let casts = |run: &super::super::dps_parity::Run| {
+        run.app
+            .world()
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .filter(|event| {
+                event.kind == CombatLogKind::CastSuccess
+                    && event.source == Some(healer.to_bits())
+                    && event.spell_id == Some(589)
+            })
+            .count()
+    };
+    assert_eq!(casts(&run), 1);
+    policy.drive(run.app.world_mut(), healer, &members).unwrap();
+    for _ in 0..40 {
+        run.app.update();
+    }
+    assert_eq!(
+        casts(&run),
+        1,
+        "fresh Pain must not be recast before its pandemic window"
+    );
+}
+
+#[test]
 #[ignore = "requires the selected real Discipline profile and canonical world database"]
 fn discipline_shield_policy_prefers_atoned_ally_and_uses_void_proc() {
     use crate::spell_cast::test_harness::ObservedCombatEvents;

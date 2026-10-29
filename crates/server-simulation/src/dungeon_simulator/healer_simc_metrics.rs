@@ -18,6 +18,7 @@ pub(super) struct Recorder {
     event_cursor: usize,
     spells: BTreeMap<u32, (u64, u64)>,
     energizes: BTreeMap<u32, (u64, u64)>,
+    damage: BTreeMap<u32, (u64, u64)>,
     initial_absorbs: BTreeMap<u32, f64>,
     party_damage: BTreeMap<u64, u64>,
     party_healing: BTreeMap<u64, (u64, u64)>,
@@ -45,6 +46,7 @@ impl Recorder {
                 .len(),
             spells: BTreeMap::new(),
             energizes: BTreeMap::new(),
+            damage: BTreeMap::new(),
             initial_absorbs: healer_absorbs(world, healer),
             party_damage: BTreeMap::new(),
             party_healing: BTreeMap::new(),
@@ -130,6 +132,11 @@ impl Recorder {
             .0;
         for event in &events[self.event_cursor..] {
             let target = event.target.and_then(Entity::try_from_bits);
+            if event.kind == CombatLogKind::Damage && event.source == Some(self.healer.to_bits()) {
+                let entry = self.damage.entry(event.spell_id.unwrap_or(0)).or_default();
+                entry.0 += 1;
+                entry.1 += event.amount.max(0) as u64;
+            }
             if !target.is_some_and(|unit| self.members.contains(&unit)) {
                 continue;
             }
@@ -218,10 +225,15 @@ impl Recorder {
             .iter()
             .map(|(&spell, &(raw, effective))| (spell, json!({"raw":raw,"effective":effective})))
             .collect();
+        let damage: BTreeMap<_, _> = self
+            .damage
+            .iter()
+            .map(|(&spell, &(hits, amount))| (spell, json!({"hits":hits,"amount":amount})))
+            .collect();
         let mana_regenerated = world
             .get::<crate::spell_cast::ObservedResourcePayments>(self.healer)
             .map_or(0.0, |observed| observed.mana_regenerated);
-        json!({"mana_spent_by_spell":mana_spent,"passive_mana_regenerated":mana_regenerated,"resource_energizes_by_spell":energizes,"fiend_rolls":fiend_rolls,"fiend_summons":fiend_summons,"fiend_pre_mitigation_damage":fiend.0,"fiend_atonement_raw":fiend.1,"fiend_atonement_effective":fiend.2,
+        json!({"damage_by_spell":damage,"mana_spent_by_spell":mana_spent,"passive_mana_regenerated":mana_regenerated,"resource_energizes_by_spell":energizes,"fiend_rolls":fiend_rolls,"fiend_summons":fiend_summons,"fiend_pre_mitigation_damage":fiend.0,"fiend_atonement_raw":fiend.1,"fiend_atonement_effective":fiend.2,
             "raw_hps":raw as f64 / duration,"effective_hps":effective as f64 / duration,
             "consumed_absorbs_by_spell":absorbs,
             "overheal_pct":(raw > 0).then(|| 100.0 * (raw - effective) as f64 / raw as f64),

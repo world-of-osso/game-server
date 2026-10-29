@@ -5,6 +5,69 @@ use shared::components::{ActiveSpec, Health};
 use shared::protocol::CombatLogKind;
 
 #[test]
+fn discipline_penance_twinsight_heals_and_holy_ray_increases_later_bolts() {
+    let mut h = harness(
+        Vec::new(),
+        &[47540, 47758, 47757, 47666, 47750, 372969, 1235193, 440742],
+        5,
+    )
+    .unwrap();
+    h.app
+        .init_resource::<super::test_harness::ObservedCombatEvents>();
+    let caster = h.caster;
+    h.app.world_mut().entity_mut(caster).insert((
+        ActiveSpec(256),
+        crate::class_progression::KnownSpells::fixture(vec![47540, 372969, 440742]),
+    ));
+    h.app
+        .world_mut()
+        .get_mut::<server::stats::CharacterStats>(caster)
+        .unwrap()
+        .crit_pct = 0.0;
+    *h.app.world_mut().get_mut::<Health>(caster).unwrap() = Health {
+        current: 500.0,
+        max: 10_000.0,
+    };
+    let ally = spawn_player(&mut h.app, 5, 1.0);
+    *h.app.world_mut().get_mut::<Health>(ally).unwrap() = Health {
+        current: 500.0,
+        max: 10_000.0,
+    };
+    h.cast_and_deliver(47540, Some(h.npc));
+    h.advance(70);
+    let events = &h
+        .app
+        .world()
+        .resource::<super::test_harness::ObservedCombatEvents>()
+        .0;
+    let damage: Vec<_> = events
+        .iter()
+        .filter(|event| {
+            event.kind == CombatLogKind::Damage
+                && event.source == Some(caster.to_bits())
+                && event.spell_id == Some(47666)
+        })
+        .collect();
+    let heals: Vec<_> = events
+        .iter()
+        .filter(|event| {
+            event.kind == CombatLogKind::Heal
+                && event.source == Some(caster.to_bits())
+                && event.spell_id == Some(47750)
+        })
+        .collect();
+    assert_eq!(damage.len(), 3, "real channel damage: {events:?}");
+    assert_eq!(heals.len(), 3, "Twinsight heals once per bolt: {events:?}");
+    assert!(heals.iter().all(
+        |event| event.target == Some(caster.to_bits()) || event.target == Some(ally.to_bits())
+    ));
+    assert!(
+        damage[2].amount > damage[0].amount,
+        "Holy Ray increases subsequent real bolts: {damage:?}"
+    );
+}
+
+#[test]
 fn shield_discipline_returns_mana_when_real_shields_are_depleted() {
     use shared::components::PowerType;
     for (spell, talent) in [(17, true), (1253593, true), (17, false)] {

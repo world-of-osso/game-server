@@ -7,11 +7,12 @@ use combat::spell_cast::{
     script_registry::SpellScriptHook,
 };
 use combat::spell_info::{SpellInfo, SpellStore};
-use shared::components::ActiveSpec;
+use shared::components::{ActiveSpec, Health, Player};
 use shared::protocol::{CombatLogEvent, CombatLogKind};
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AfterAuraApplication(apply_mark),
+    SpellScriptHook::OnCast(start_penance),
     SpellScriptHook::LateAuraRegistration(register_shield_discipline),
     SpellScriptHook::NativeAfterCast(master_the_darkness_action),
     SpellScriptHook::AfterAbsorbConsumed(discharge_void_shield),
@@ -25,6 +26,18 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AfterNativeCastUpdate(update_voidwraith),
     SpellScriptHook::ConsumedEffectValues(&[(81749, 0)]),
 ];
+
+#[derive(Component, Default)]
+struct PenanceBolts(u32);
+
+fn start_penance(world: &mut World, caster: Entity, spell: u32, _depth: u8) {
+    if spell != 47540 || !is_discipline(world, caster) {
+        return;
+    }
+    // SimC76f8118 sc_priest_discipline.cpp:579-582 resets Holy Ray at channel start.
+    auras::remove_auras(world, caster, auras::RemoveReason::Consumed, |aura| aura.spell_id == 1235193 && aura.caster == caster);
+    world.entity_mut(caster).insert(PenanceBolts::default());
+}
 
 fn register_shield_discipline(scripts: &mut auras::scripts::AuraScripts) {
     for spell in [17, 1253593] {
@@ -347,6 +360,48 @@ fn transfer_damage(
         pet_spell,
         false,
     );
+    if damage.spell.id == 47666 && is_discipline(world, caster) {
+        finish_penance_bolt(world, caster);
+    }
+}
+
+fn select_twinsight_recipient(world: &mut World, caster: Entity) -> Option<Entity> {
+    let map = *world.get::<combat::maps::InMap>(caster)?;
+    let candidates: Vec<_> = world.query::<(Entity, &Health, &combat::maps::InMap, Option<&Player>, Option<&combat::followers::Follower>)>()
+        .iter(world)
+        .filter(|(_, health, unit_map, player, follower)| health.current > 0.0 && **unit_map == map && (player.is_some() || follower.is_some()))
+        .map(|(unit, _, _, _, _)| unit)
+        .filter(|&unit| combat::spell_cast::targets::relation_matches(world, caster, unit, combat::spell_cast::targets::Relation::Ally))
+        .collect();
+    if candidates.is_empty() { return None; }
+    Some(candidates[(combat::random::random::<f32>() * candidates.len() as f32) as usize])
+}
+
+fn finish_penance_bolt(world: &mut World, caster: Entity) {
+    let Some(mut bolts) = world.get_mut::<PenanceBolts>(caster) else { return; };
+    bolts.0 += 1;
+    let bolt = bolts.0;
+    let selected = |world: &World, talent| world.get::<combat::class_progression::KnownSpells>(caster).is_some_and(|known| known.contains(talent));
+    let twinsight = bolt <= 4 && selected(world, 440742);
+    let mut stacks = 1;
+    if twinsight && let Some(target) = select_twinsight_recipient(world, caster) {
+        // SimC76f8118 sc_priest_discipline.cpp:463-484 schedules one healing and one damage bolt.
+        let mut spell = world.resource::<SpellStore>().get(47750).expect("Twinsight Penance heal must exist").clone();
+        for effect in &mut spell.effects {
+            if effect.implicit_targets[0] == 77 {
+                effect.implicit_targets[0] = 21;
+            }
+        }
+        if combat::spell_cast::launch_triggered_spell(world, caster, &spell, Some(target), 1) {
+            stacks += 1;
+        }
+    }
+    if selected(world, 372969) {
+        // SimC76f8118 sc_priest_discipline.cpp:304-310,350-358: each bolt advances Holy Ray.
+        for _ in 0..stacks {
+            auras::apply_aura(world, &AuraApplication { caster, target: caster, spell_id: 1235193, effect_mask: u32::MAX, source: AuraSource::Cast });
+        }
+    }
 }
 
 fn shadowfiend_death_hit(

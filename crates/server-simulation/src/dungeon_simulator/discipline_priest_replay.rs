@@ -5,7 +5,9 @@ use super::dps_parity::literal_rotation::{
     execution::{NativeAction, Prepared},
 };
 use super::healer_simc_replay::Policy;
-use crate::simc_apl_native::{Bindings, Encounter, FightStyle, NativeFacts};
+use crate::simc_apl_native::{
+    Bindings, DotRefresh, DotRefreshPolicy, Encounter, FightStyle, NativeFacts, native_dot_spell,
+};
 use bevy::prelude::{Entity, World};
 use server::simc_apl::{Action, ActionFacts, Facts, Program};
 use shared::components::{ActiveSpec, Health, PowerType};
@@ -23,6 +25,7 @@ const SPELLS: &[(&str, u32, bool)] = &[
     ("evangelism", 246287, true),
     ("penance", 47540, false),
     ("flash_heal", 2061, false),
+    ("shadow_word_pain", 589, false),
     ("shadow_word_death", 32379, false),
     ("mind_blast", 8092, false),
     ("smite", 585, false),
@@ -40,6 +43,15 @@ pub(super) fn prepare(
     let mut bindings = Bindings {
         actions: SPELLS.iter().map(|(n, id, _)| ((*n).into(), *id)).collect(),
         resources: [("mana".into(), PowerType::Mana)].into(),
+        buffs: [("shadow_word_pain".into(), 589)].into(),
+        dot_refresh: [(
+            "shadow_word_pain".into(),
+            DotRefresh {
+                resolve: native_dot_spell,
+                policy: DotRefreshPolicy::Pandemic,
+            },
+        )]
+        .into(),
         global_cooldown_spell: 17,
         ..Default::default()
     };
@@ -55,6 +67,7 @@ pub(super) fn prepare(
             "item",
             "use_item,name=soulcoiler_ritual_vessel,use_off_gcd=1,if=gcd.remains>=0.75*gcd.max",
         ),
+        ("dot", "shadow_word_pain,if=refreshable"),
         ("default", "pain_suppression,if=target.health.pct<35"),
         ("default", "barrier,if=party.injured>=3"),
         ("default", "radiance,if=party.injured>=3"),
@@ -220,6 +233,23 @@ impl Policy for Discipline {
             .iter()
             .filter(|(unit, _)| atonement_remaining(world, healer, *unit) > 0.0)
             .count();
+        let enemy = world
+            .get::<crate::networking::CombatTarget>(tank)
+            .and_then(|target| target.0);
+        // SimC76f8118 apl_priest.cpp:234: refresh Pain before other actions.
+        if let Some(enemy) = enemy
+            && self.select(
+                world,
+                healer,
+                enemy,
+                injured,
+                active_atonements,
+                "dot",
+                &["shadow_word_pain"],
+            )?
+        {
+            return Ok(());
+        }
         if self.select(
             world,
             healer,
@@ -253,9 +283,6 @@ impl Policy for Discipline {
         )? {
             return Ok(());
         }
-        let enemy = world
-            .get::<crate::networking::CombatTarget>(tank)
-            .and_then(|target| target.0);
         if let Some(enemy) = enemy {
             world
                 .entity_mut(healer)
