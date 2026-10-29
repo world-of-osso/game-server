@@ -8,7 +8,7 @@ use shared::components::{ActiveSpec, Health, Position};
 #[test]
 #[ignore = "requires canonical world.db"]
 fn instrument_player_death_group_range_and_refresh() {
-    let mut h = harness_with_plugins(vec![], &[404752, 31884], 2, false, |app| {
+    let mut h = harness_with_plugins(vec![], &[404752, 31884, 5384], 2, false, |app| {
         app.add_plugins(crate::death::DeathPlugin);
     })
     .expect("world.db");
@@ -116,6 +116,33 @@ fn instrument_player_death_group_range_and_refresh() {
         .world_mut()
         .entity_mut(paladin)
         .insert(KnownSpells::fixture(vec![404752, 31884]));
+    h.app.world_mut().get_mut::<Health>(member).unwrap().current = 1000.0;
+    h.app
+        .world_mut()
+        .entity_mut(member)
+        .remove::<crate::death::PlayerDeathState>();
+    let before_feign = h
+        .app
+        .world()
+        .resource::<ObservedTriggeredCasts>()
+        .0
+        .iter()
+        .filter(|(_, spell, _)| *spell == 31884)
+        .count();
+    crate::spell_cast::cast_triggered(h.app.world_mut(), member, 5384, Some(member), 1);
+    h.advance(2);
+    assert!(crate::auras::has_aura(h.app.world(), member, 5384));
+    assert!(h.app.world().get::<Health>(member).unwrap().current > 0.0);
+    assert_eq!(
+        h.app
+            .world()
+            .resource::<ObservedTriggeredCasts>()
+            .0
+            .iter()
+            .filter(|(_, spell, _)| *spell == 31884)
+            .count(),
+        before_feign
+    );
     let count = h.app.world().resource::<ObservedTriggeredCasts>().0.len();
     let creature = spawn_npc(&mut h.app, 1.0);
     h.app
@@ -136,5 +163,12 @@ fn instrument_player_death_group_range_and_refresh() {
     assert_eq!(
         h.app.world().resource::<ObservedTriggeredCasts>().0.len(),
         count
+    );
+    crate::combat::kill_unit(h.app.world_mut(), h.npc, member);
+    h.advance(2);
+    assert_eq!(
+        h.app.world().resource::<ObservedTriggeredCasts>().0.len(),
+        count,
+        "a dead paladin must not receive a proc when a group member dies"
     );
 }
