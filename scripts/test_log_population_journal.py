@@ -15,7 +15,8 @@ class JournalTest(unittest.TestCase):
             root = Path(directory)
             (root / 'JournalEncounter.csv').write_text('ID,DungeonEncounterID\n20,2609\n')
             (root / 'JournalEncounterCreature.csv').write_text(
-                'ID,JournalEncounterID,Name_lang,CreatureDisplayInfoID\n30,20,Observed Add,55\n')
+                'ID,JournalEncounterID,Name_lang,CreatureDisplayInfoID,Description_lang\n'
+                '31,20,Other,56,"two\nlines"\n30,20,Observed Add,55,\n')
             db = root / 'world.db'
             with sqlite3.connect(db) as conn:
                 conn.execute('CREATE TABLE tdb_creature_template_model(CreatureID,CreatureDisplayID)')
@@ -27,7 +28,7 @@ class JournalTest(unittest.TestCase):
             module.annotate(runs, module.journal_actors(root), db)
         encounter = runs[0]['encounters'][0]
         self.assertEqual(encounter['journal_actor_evidence'][0]['candidate_npc_ids'], [123])
-        self.assertEqual(encounter['journal_actor_evidence'][0]['actor_line'], 2)
+        self.assertEqual(encounter['journal_actor_evidence'][0]['actor_line'], 4)
         self.assertTrue(encounter['casts'][0]['journal_actor'])
         self.assertFalse(encounter['casts'][0]['known_boss'])
         summary = module.census.summarize_encounters(runs)
