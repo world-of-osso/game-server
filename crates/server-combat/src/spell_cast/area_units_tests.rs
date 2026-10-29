@@ -51,4 +51,11 @@ fn area_units_selects_only_living_nearby_units_in_the_same_copy() {
         "area_units mean: {:.2} us/call (30000 distant units)",
         start.elapsed().as_secs_f64() * 10_000.0
     );
+    for n in 0..5_000 {
+        spawn(&mut app, map, 1_000.0 + n as f32, 100.0);
+    }
+    assert_eq!(
+        area_units(app.world_mut(), caster, Vec3::ZERO, 10.0, Relation::Any, 0),
+        vec![caster, near]
+    );
 }
