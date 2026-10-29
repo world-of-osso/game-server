@@ -1175,11 +1175,22 @@ mod tests {
             super::super::engage(&mut run);
             assert!(crate::auras::has_aura(run.app.world(), actor, 137008));
             if !blood_modifier {
-                crate::auras::remove_auras(run.app.world_mut(), actor, crate::auras::RemoveReason::Cancelled, |aura| aura.spell_id == 137008 && aura.caster == actor);
-                crate::auras::apply_aura(run.app.world_mut(), &crate::auras::AuraApplication {
-                    caster: actor, target: actor, spell_id: 137008,
-                    effect_mask: u32::MAX & !(1 << 13), source: crate::auras::AuraSource::Cast,
-                });
+                crate::auras::remove_auras(
+                    run.app.world_mut(),
+                    actor,
+                    crate::auras::RemoveReason::Cancelled,
+                    |aura| aura.spell_id == 137008 && aura.caster == actor,
+                );
+                crate::auras::apply_aura(
+                    run.app.world_mut(),
+                    &crate::auras::AuraApplication {
+                        caster: actor,
+                        target: actor,
+                        spell_id: 137008,
+                        effect_mask: u32::MAX & !(1 << 13),
+                        source: crate::auras::AuraSource::Cast,
+                    },
+                );
             }
             crate::auras::apply_aura(
                 run.app.world_mut(),
