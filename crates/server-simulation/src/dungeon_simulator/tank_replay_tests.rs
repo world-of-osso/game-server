@@ -2165,6 +2165,81 @@ fn devotion_aura_reduces_incoming_bleed() {
 }
 
 #[test]
+#[ignore = "uses selected MID2 Protection and real incoming magic damage"]
+fn protection_shield_reduces_real_magic_damage() {
+    use super::healer_intake::{Hit, HitKind};
+    use crate::spell_cast::powers::PowerPools;
+    use shared::components::{Health, PowerType};
+    let mut run = super::dps_parity::prepare_registered_player(66, 1).unwrap();
+    super::dps_parity::engage(&mut run);
+    let actor = run.actor;
+    let source = run.targets[0];
+    run.app
+        .world_mut()
+        .get_mut::<PowerPools>(actor)
+        .unwrap()
+        .get_mut(PowerType::HolyPower)
+        .unwrap()
+        .current = 5.0;
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 53600, Some(source), false)
+        .unwrap();
+    for _ in 0..4 {
+        run.app.update();
+    }
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        actor,
+        crate::auras::RemoveReason::Consumed,
+        |aura| [432607, 1239002, 204301].contains(&aura.spell_id),
+    );
+    let hit = Hit {
+        tick: 0,
+        source_guid: 0,
+        pack: 0,
+        target_slot: 0,
+        school: 4,
+        raw: 10000.0,
+        level_scaling_factor: 1.0,
+        kind: HitKind::Spell {
+            spell_id: 133,
+            depth: 0,
+            bonus_source_guid: None,
+            effect_index: None,
+            periodic: false,
+            crit: false,
+            resolved_source: true,
+            blocked: false,
+        },
+    };
+    let damage = |run: &mut super::dps_parity::Run| {
+        let max = run.app.world().get::<Health>(actor).unwrap().max;
+        run.app
+            .world_mut()
+            .get_mut::<Health>(actor)
+            .unwrap()
+            .current = max;
+        crate::spell_cast::effects::replay_healer_hit(run.app.world_mut(), source, actor, &hit)
+            .unwrap();
+        max - run.app.world().get::<Health>(actor).unwrap().current
+    };
+    let with = damage(&mut run);
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        actor,
+        crate::auras::RemoveReason::Consumed,
+        |aura| aura.spell_id == 132403,
+    );
+    for _ in 0..4 {
+        run.app.update();
+    }
+    let without = damage(&mut run);
+    assert!(
+        without > 0.0 && (with / without - 0.88).abs() < 0.005,
+        "magic: {with}/{without}"
+    );
+}
+
+#[test]
 #[ignore = "uses selected MID2 Protection and native Rite of Sanctification"]
 fn protection_rite_grants_native_strength_and_armor() {
     let mut run = super::dps_parity::prepare_registered_player(66, 1).unwrap();
