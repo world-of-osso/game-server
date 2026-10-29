@@ -157,6 +157,33 @@ pub(super) fn snapshot(
         return spell;
     }
     let multiplier = match spell.id {
+        53600
+            if world
+                .get::<crate::class_progression::TraitLoadout>(caster)
+                .is_some_and(|traits| {
+                    traits
+                        .active_talent_spells()
+                        .any(|talent| talent.spell_id == 1277162)
+                }) =>
+        {
+            // SimC76f8118 sc_paladin.cpp:2978–2988 snapshots Holy Power before spending.
+            let current = powers::power_value(world, caster, PowerType::HolyPower)
+                .expect("Shield of the Righteous requires Holy Power")
+                .0;
+            let base_cost = source
+                .power_costs
+                .iter()
+                .find(|cost| cost.power_type == 9 && cost.required_aura_spell_id == 0)
+                .expect("Shield of the Righteous base Holy Power cost")
+                .mana_cost as f32;
+            let cap = super::scripts::script_effect_value(world, caster, 1277162, 1);
+            let percent = super::scripts::script_effect_value(world, caster, 1277162, 0);
+            let overflow = (current - base_cost).clamp(0.0, cap);
+            spell.cast_damage_multiplier = Some(
+                spell.cast_damage_multiplier.unwrap_or(1.0) * (1.0 + percent * overflow / 100.0),
+            );
+            return spell;
+        }
         id if EXECUTE_PARENTS.contains(&id) => {
             let rage_multiplier = execute_damage_multiplier(world, caster, &spell, costs);
             spell.cast_damage_multiplier =
