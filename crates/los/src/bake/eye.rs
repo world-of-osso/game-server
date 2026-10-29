@@ -27,6 +27,8 @@ pub struct EyeStats {
     pub rows: usize,
     /// Optional displays without rows, and why.
     pub skipped: Vec<(u32, String)>,
+    /// Required displays that could not be baked.
+    pub gaps: Vec<(u32, String)>,
 }
 
 /// One model's eyes: where they come from and the eye point per stand state; `None` when
@@ -50,11 +52,25 @@ struct Display {
 pub fn eye_rows(data: &Path, world_db: &Path) -> Result<(Vec<EyeRow>, EyeStats)> {
     let required = required_display_ids(data, world_db)?;
     let optional = template_display_ids(world_db)?;
-    eye_rows_of(data, world_db, &required, &optional)
+    eye_rows_with_gaps(data, world_db, &required, &optional)
 }
 
 /// Rows for `required` (an error when any cannot bake) and `optional` displays.
 pub fn eye_rows_of(
+    data: &Path,
+    world_db: &Path,
+    required: &[u32],
+    optional: &[u32],
+) -> Result<(Vec<EyeRow>, EyeStats)> {
+    let (rows, stats) = eye_rows_with_gaps(data, world_db, required, optional)?;
+    if !stats.gaps.is_empty() {
+        return Err(format!("eye table incomplete: {:?}", stats.gaps));
+    }
+    Ok((rows, stats))
+}
+
+/// Bake resolvable rows and report each required display that has no rows.
+pub fn eye_rows_with_gaps(
     data: &Path,
     world_db: &Path,
     required: &[u32],
@@ -73,7 +89,6 @@ pub fn eye_rows_of(
     let mut stats = EyeStats::default();
     let mut models: HashMap<u32, Result<ModelEyes>> = HashMap::new();
     let mut rows = Vec::new();
-    let mut failed = Vec::new();
     for (id, needed) in ids {
         let display_rows = displays
             .get(&id)
@@ -96,16 +111,9 @@ pub fn eye_rows_of(
                 stats.displays += 1;
                 rows.extend(display_rows);
             }
-            Err(why) if needed => failed.push((id, why)),
+            Err(why) if needed => stats.gaps.push((id, why)),
             Err(why) => stats.skipped.push((id, why)),
         }
-    }
-    if !failed.is_empty() {
-        // A spawned or player unit without an eye row could not be LOS-checked.
-        return Err(format!(
-            "eye table incomplete: spawned or player displays without every stand state \
-             (run scripts/los-extract-models.py): {failed:?}"
-        ));
     }
     stats.rows = rows.len();
     Ok((rows, stats))

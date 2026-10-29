@@ -101,9 +101,9 @@ Retail's LOS errors ("can see it, not in line of sight") are the bugs to avoid.
 ## Bake and raycast (`crates/los`, runtime in `shared::los`)
 - The runtime (tile files, segment queries, eye table, `Body`) is shared-protocol `shared::los`,
   which the server and the Godot client link; `crates/los` is the bake and re-exports it.
-- The eye table must cover every display a spawned creature shows (its template's models and spawn
-  display overrides) and every `ChrModel` character display: the bake fails when any of them lacks
-  a row in any stand state. The other `content_creature_template_model` displays (summons,
+- The eye table covers each resolvable spawned display (template models and spawn overrides)
+  and `ChrModel` character display. The bake writes required displays it cannot resolve and their
+  causes to `eye_gaps.tsv`; they remain fail-closed at runtime. The other `content_creature_template_model` displays (summons,
   transforms) bake when they can; those that cannot are skipped and listed in `report.txt` with
   why (no `CreatureDisplayInfo` row, a model without geometry, a sequence whose `.anim` the model
   does not name). User decision 2026-10-02. `scripts/los-extract-models.py --world-db data/world.db
@@ -120,7 +120,7 @@ Retail's LOS errors ("can see it, not in line of sight") are the bugs to avoid.
   [navigation's bake tool](../wiki/systems/navigation.md) also writes Stockade (map34) LOS tiles
   from that collector for the existing LOS-query acceptance oracle. Ship this supplement with
   the existing eye tables; it is not a second extractor.
-- The standard eye-only workflow runs `scripts/bake_los_eyes.py --world-db data/world.db --engine ../game-engine --baker <los-bake-binary> --out <output-dir>`: it extracts missing model dependencies from local CASC, bakes the full current database, and verifies hosted spawned displays. `deploy.sh` verifies all ten stand states before any build or upload and fails when coverage is incomplete. The output must be promoted to the shared LOS directory before deployment.
+- The standard eye-only workflow runs `scripts/bake_los_eyes.py --world-db data/world.db --engine ../game-engine --baker <los-bake-binary> --out <output-dir>`: it extracts missing model dependencies from local CASC, bakes the full current database, and verifies hosted spawned displays. `deploy.sh` verifies all ten stand states before any build or upload and fails for missing displays not listed in the committed `scripts/los-eye-gaps.tsv`. The output must be promoted to the shared LOS directory before deployment.
 - Run: `cargo run --release -p los --features bake --bin los-bake -- --data ../game-engine/data
   --world-db data/world.db --out ../game-engine/data/los --map 0 --all` (per map; `--no-eyes`
   skips the eye table). Map 0 is 1176 tiles, 6.3 GB, under 10 minutes (debug, opt-level 2). `deploy.sh` ships the

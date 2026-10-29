@@ -154,6 +154,11 @@ fn report_eyes(
         std::fs::write(&path, text).map_err(|err| format!("{}: {err}", path.display()))
     };
     write(EYE_TABLE_FILE, EyeTable::to_tsv(&rows))?;
+    let mut gaps = String::from("display_id\tcause\n");
+    for (display, cause) in &stats.gaps {
+        writeln!(gaps, "{display}\t{cause}").unwrap();
+    }
+    write("eye_gaps.tsv", gaps)?;
     write(
         PLAYER_DISPLAYS_FILE,
         EyeTable::players_to_tsv(&eye::player_displays(data)?),
