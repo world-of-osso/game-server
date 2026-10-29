@@ -322,6 +322,10 @@ After encounter 2609 is Done, interaction with the lower Radiant Drake 194667 ca
 
 Source: https://gist.github.com/aquadeus/073cdfe1f5f64d275c002bd26f69d642 ; captured Wowhead NPC 194654 ability list; local 70448 `taxi_path_node` and `spell_effect`; `/home/osso/.worktrees/ruby-walk/upper-floor-samples.json`.
 
+### Academy Eagle population
+
+`EAGLE_SPAWNS_SINGLE_RUN` uses the three first observed Alpha Eagle192333 positions in WCL `gWkPyzwJ2mbxRtdr` fight3, with navmesh detail heights. The existing multi-run matcher cannot identify individual eagles across runs: candidate spreads are 12–14yd. The user approved this one-run population because all three runs contain three eagles in the same area; `tjnzpa3Axg6QLHfJ` fight1 and `BVaP1FzZW9rbyTv6` fight7 corroborate the group. First combat observations are not authored spawn points; patrols remain unknown. TDB records faction0 for both Alpha and Territorial Eagles; WCL identifies the Alpha Eagles as hostile. The project uses Crawth's TDB faction16 for the Alpha Eagle runtime template until the authored eagle faction is available.
+
 ### Academy entrance pad approximation
 
 The actual map2526 entrance Jump Pad NPC195564 at (1440.6,-2827.3,951.742) is the trigger; the existing NPC interaction reach supplies the proximity boundary, not a sourced pad volume. The owner and owned followers travel along a project-authored ballistic arc, not an authored flight path. The destination XY (1511.15,-2926.35) is the first downstream positioned player cast in WCL `tjnzpa3Axg6QLHfJ` fight1 at +15.150s; Z900.57 comes from the native navmesh detail projection. This observation is not a logged landing. Other first downstream observations include `BVaP1FzZW9rbyTv6` fight7 at +18.208s (1546.5,-2964.5) and `gWkPyzwJ2mbxRtdr` fight3 at +21.132s (1590.31,-2943.85), consistent with later travel but not a common exact landing. Replace this approximation if the authored transport becomes available.

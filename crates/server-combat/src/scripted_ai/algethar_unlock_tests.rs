@@ -34,6 +34,28 @@ fn die(world: &mut World, entity: Entity) {
 }
 
 #[test]
+#[ignore = "requires real Academy baked LOS geometry"]
+fn academy_crawth_descent_clears_real_geometry() {
+    let root = std::path::PathBuf::from(
+        std::env::var_os("GAME_SERVER_GROUND_DIR").expect("ground assets"),
+    );
+    let mut map = los::LosMap::new(&root.join("los/2526"));
+    let start = Vec3::new(2430.3, 959.735, 2978.93);
+    let end = Vec3::new(2369.31, 912.2291, 3041.47);
+    let duration = start.distance(end) / 50.0;
+    let height = shared::skyriding::GRAVITY * duration * duration / 8.0;
+    let at = |t: f32| start.lerp(end, t) + Vec3::Y * (height * 4.0 * t * (1.0 - t) + 1.0);
+    for i in 0..100 {
+        let from = at(i as f32 / 100.0);
+        let to = at((i + 1) as f32 / 100.0);
+        assert!(
+            map.clear(from, to).unwrap(),
+            "collision on Crawth descent segment {i}: {from:?} -> {to:?}"
+        );
+    }
+}
+
+#[test]
 fn academy_intro_unlocks_only_after_local_pack_dies_and_crawth_lands() {
     let mut app = App::new();
     app.insert_resource(Time::<()>::default());
