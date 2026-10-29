@@ -1508,6 +1508,16 @@ fn effect_dest_slot(
     dest: Option<Dest>,
 ) -> Option<Dest> {
     let selector = selector(id)?;
+    // TC a352b1fa Spell.cpp SelectImplicitTargetDestTargets: a target-referenced
+    // destination without an object target keeps the explicit destination
+    // (CastSpell(Position) children such as Wild Eruption 375650).
+    let target_referenced = matches!(
+        selector,
+        Selector::CenterExplicit(_) | Selector::DestTargetOffset(_) | Selector::DestTargetRandom
+    );
+    if target_referenced && explicit.is_none() {
+        return dest;
+    }
     let point = match selector {
         Selector::ChannelDestination => {
             return channel_destination(world, caster);

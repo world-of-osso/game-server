@@ -11,6 +11,8 @@ mod azure_absolute_zero;
 mod azure_blade;
 #[path = "azure_combat.rs"]
 mod azure_combat;
+#[path = "azure_evade.rs"]
+mod azure_evade;
 #[path = "azure_explosive_brand.rs"]
 mod azure_explosive_brand;
 #[path = "azure_frost_bomb.rs"]
@@ -43,6 +45,8 @@ mod azure_sprouts;
 mod azure_telash;
 #[path = "azure_telash_return.rs"]
 mod azure_telash_return;
+#[path = "azure_tender.rs"]
+mod azure_tender;
 #[path = "broggok.rs"]
 mod broggok;
 #[path = "bromach.rs"]

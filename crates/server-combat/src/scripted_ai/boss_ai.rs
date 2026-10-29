@@ -11,6 +11,8 @@ use bevy::prelude::*;
 use super::instance_script::{self, EncounterState};
 use super::{Ctx, EventMap, Hook};
 
+const EVADE_RESPAWN_SECONDS: u32 = 30;
+
 /// `SummonList`: the creatures a boss summoned.
 #[derive(Debug, Default)]
 pub struct SummonList(Vec<Entity>);
@@ -154,4 +156,17 @@ pub fn boss_update_ai<S: BossScript>(script: &mut S, ctx: &mut Ctx, diff_ms: u32
 /// The hook a summon's despawn raises on its summoner.
 pub(crate) fn notify_summoner_despawn(world: &mut World, summoner: Entity, summon: Entity) {
     super::dispatch(world, summoner, Hook::SummonedCreatureDespawn(summon));
+}
+
+/// TC `BossAI::_DespawnAtEvade` with its default 30s respawn. Generic evade has
+/// already run `_EnterEvadeMode`; a temporary summon is unsummoned instead.
+pub(super) fn despawn_at_evade(ctx: &mut Ctx, boss_id: u32) {
+    let map = ctx.map().expect("boss instance map");
+    instance_script::send_disengage_unit(ctx.world, map, ctx.me);
+    if ctx.world.get::<crate::zones::TempSummon>(ctx.me).is_some() {
+        crate::zones::unsummon(ctx.world, ctx.me);
+        return;
+    }
+    super::smart_ai::lifetimes::despawn_creature(ctx.world, ctx.me, EVADE_RESPAWN_SECONDS);
+    instance_script::set_boss_state(ctx.world, map, boss_id, EncounterState::Fail);
 }

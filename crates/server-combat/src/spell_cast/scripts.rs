@@ -330,6 +330,9 @@ pub(super) fn effect_handler(
     if (spell, index) == (321507, 0) {
         return Some(arcane_touch::apply);
     }
+    if (spell, index) == (crate::scripted_ai::azure_vault::WILD_ERUPTION, 0) {
+        return Some(crate::scripted_ai::azure_vault::cast_wild_eruption_missile);
+    }
     batch13::effect_handler(spell, index)
 }
 

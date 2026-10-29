@@ -19,7 +19,6 @@ const SAY_SHADOW_STORM: u8 = 1;
 const SAY_DEATH: u8 = 2;
 const EVENT_TWISTED_ELEMENTS: u32 = 1;
 const EVENT_SHADOW_STORM: u32 = 2;
-const EVADE_RESPAWN_SECONDS: u32 = 30;
 const GORDOTH_SCRIPT: &str = "boss_lava_guard_gordoth";
 const GORDOTH_BOSS_ID: u32 = 3;
 const GROUND_RUPTURE: u32 = 119999;
@@ -153,7 +152,7 @@ impl CreatureAi for Koranthal {
     }
 
     fn enter_evade_mode(&mut self, ctx: &mut Ctx) {
-        despawn_at_evade(ctx, BOSS_ID);
+        super::boss_ai::despawn_at_evade(ctx, BOSS_ID);
     }
 
     fn just_summoned(&mut self, ctx: &mut Ctx, summon: Entity) {
@@ -189,24 +188,6 @@ impl BossScript for Koranthal {
             _ => {}
         }
     }
-}
-
-/// Both bosses use the source _DespawnAtEvade default30s. Generic evade has
-/// already run _EnterEvadeMode/Reset; a temporary summon is unsummoned instead.
-fn despawn_at_evade(ctx: &mut Ctx, boss_id: u32) {
-    let map = ctx.map().expect("Ragefire boss instance map");
-    instance_script::send_disengage_unit(ctx.world, map, ctx.me);
-    if ctx.world.get::<crate::zones::TempSummon>(ctx.me).is_some() {
-        crate::zones::unsummon(ctx.world, ctx.me);
-        return;
-    }
-    super::smart_ai::lifetimes::despawn_creature(ctx.world, ctx.me, EVADE_RESPAWN_SECONDS);
-    instance_script::set_boss_state(
-        ctx.world,
-        map,
-        boss_id,
-        instance_script::EncounterState::Fail,
-    );
 }
 
 struct Gordoth {
@@ -381,7 +362,7 @@ impl CreatureAi for Gordoth {
     }
 
     fn enter_evade_mode(&mut self, ctx: &mut Ctx) {
-        despawn_at_evade(ctx, GORDOTH_BOSS_ID);
+        super::boss_ai::despawn_at_evade(ctx, GORDOTH_BOSS_ID);
     }
 
     fn just_summoned(&mut self, ctx: &mut Ctx, summon: Entity) {
@@ -516,7 +497,7 @@ impl CreatureAi for Adarogg {
     }
 
     fn enter_evade_mode(&mut self, ctx: &mut Ctx) {
-        despawn_at_evade(ctx, ADAROGG_BOSS_ID);
+        super::boss_ai::despawn_at_evade(ctx, ADAROGG_BOSS_ID);
     }
 
     fn do_action(&mut self, ctx: &mut Ctx, action: i32) {
@@ -649,7 +630,7 @@ impl CreatureAi for Slagmaw {
     }
 
     fn enter_evade_mode(&mut self, ctx: &mut Ctx) {
-        despawn_at_evade(ctx, SLAGMAW_BOSS_ID);
+        super::boss_ai::despawn_at_evade(ctx, SLAGMAW_BOSS_ID);
     }
 
     fn just_summoned(&mut self, ctx: &mut Ctx, summon: Entity) {
