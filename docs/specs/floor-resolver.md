@@ -4,11 +4,11 @@ The floor resolver supplies WoW-coordinate heights for log positions without ass
 
 ## What it must do
 
-- [ ] Enumerate terrain, WMO and M2 walkable surfaces; report missing required geometry instead of resolving from incomplete data.
+- [x] Enumerate terrain, WMO and M2 walkable surfaces; report missing required geometry instead of resolving from incomplete data.
 - [ ] Retain only surfaces near a baked navigation polygon within the agent step height.
-- [ ] Resolve a single candidate; for several candidates, use connected neighbor floors within plausible travel distance or return all candidates as a named gap.
+- [x] Resolve a single candidate; for several candidates, use connected neighbor floors within plausible travel distance or return all candidates as a named gap.
 - [ ] Use authored creature and game-object rows within 15 yards as anchors only when their heights agree within the agent step height. Exclude log-derived and journal-tagged content rows. Record the source row IDs.
-- [ ] Record the IDs of neighbor hints that support a neighbor-path resolution.
+- [x] Record the IDs of neighbor hints that support a neighbor-path resolution.
 - [ ] Treat `ui_map_id` only as metadata; do not filter candidates by UI-map Z bounds.
 - [ ] Read a JSON request array and write one result per input row in the same order.
 
@@ -32,7 +32,7 @@ See [ground assets](../wiki/systems/ground-assets.md).
 
 ## Known gaps (current cycle)
 
-- [ ] Qualify stacked Neltharus floors, missing tiles and hint selection on real data.
+None.
 
 ## Out of scope
 
