@@ -401,6 +401,25 @@ mod tests {
         for _ in 0..12 {
             run.app.update();
         }
+        let parry = server::test_support::healer_intake::Hit {
+            kind: server::test_support::healer_intake::HitKind::Melee {
+                hand: 0,
+                outcome: "Parry".into(),
+                level_difference: 0,
+                critical_multiplier: 1.0,
+                weapon_speed: 2.0,
+            },
+            ..hit
+        };
+        crate::combat::replay_healer_hit(run.app.world_mut(), attacker, actor, &parry).unwrap();
+        assert_eq!(
+            count(&run),
+            4,
+            "a parry with surviving Blood Shield reflects"
+        );
+        for _ in 0..12 {
+            run.app.update();
+        }
         crate::auras::remove_auras(
             run.app.world_mut(),
             actor,
@@ -408,7 +427,7 @@ mod tests {
             |aura| matches!(aura.spell_id, 77535 | 207203),
         );
         strike(&mut run);
-        assert_eq!(count(&run), 3, "no Blood Shield means no reflection");
+        assert_eq!(count(&run), 4, "no Blood Shield means no reflection");
     }
 
     #[test]
@@ -935,6 +954,18 @@ mod tests {
                 run.app.update();
             }
             if crate::auras::has_aura(run.app.world(), actor, 374585) {
+                let aura = run
+                    .app
+                    .world()
+                    .get::<crate::auras::ActiveAuras>(actor)
+                    .unwrap()
+                    .iter()
+                    .find(|aura| aura.spell_id == 374585)
+                    .unwrap();
+                assert_eq!(
+                    aura.effects[0].amount, 6.0,
+                    "rank-two Rune Mastery Strength"
+                );
                 let buffed = run
                     .app
                     .world()
@@ -964,6 +995,86 @@ mod tests {
             }
         }
         panic!("Blood rune spenders must earn Rune Mastery");
+    }
+
+    #[test]
+    #[ignore = "requires canonical world database and MID2 Blood inputs"]
+    fn blood_rune_mastery_rolls_on_free_and_costed_triggered_strikes() {
+        use shared::components::PowerType;
+        for triggered in [false, true] {
+            let _seed = crate::random::seed_scope(70448);
+            let mut run = super::super::prepare_registered_player(250, 1).unwrap();
+            let actor = run.actor;
+            let target = run.targets[0];
+            super::super::engage(&mut run);
+            let mut earned = false;
+            for _ in 0..30 {
+                crate::spell_cast::powers::change_power(
+                    run.app.world_mut(),
+                    actor,
+                    PowerType::Runes,
+                    6.0,
+                );
+                if triggered {
+                    assert!(crate::spell_cast::cast_costed_trigger_with_context(
+                        run.app.world_mut(),
+                        actor,
+                        433895,
+                        Some(target),
+                        1,
+                        None,
+                        None
+                    ));
+                } else {
+                    crate::auras::apply_aura(
+                        run.app.world_mut(),
+                        &crate::auras::AuraApplication {
+                            caster: actor,
+                            target: actor,
+                            spell_id: 1264568,
+                            effect_mask: u32::MAX,
+                            source: crate::auras::AuraSource::Cast,
+                        },
+                    );
+                    let before = crate::spell_cast::powers::power_value(
+                        run.app.world(),
+                        actor,
+                        PowerType::Runes,
+                    )
+                    .unwrap()
+                    .0;
+                    crate::spell_cast::creature_cast(
+                        run.app.world_mut(),
+                        actor,
+                        433895,
+                        Some(target),
+                        false,
+                    )
+                    .unwrap();
+                    assert_eq!(
+                        crate::spell_cast::powers::power_value(
+                            run.app.world(),
+                            actor,
+                            PowerType::Runes
+                        )
+                        .unwrap()
+                        .0,
+                        before
+                    );
+                }
+                for _ in 0..4 {
+                    run.app.update();
+                }
+                if crate::auras::has_aura(run.app.world(), actor, 374585) {
+                    earned = true;
+                    break;
+                }
+                for _ in 0..40 {
+                    run.app.update();
+                }
+            }
+            assert!(earned, "Rune Mastery must proc for triggered={triggered}");
+        }
     }
 
     #[test]
@@ -2941,6 +3052,123 @@ mod tests {
 
     #[test]
     #[ignore = "requires canonical world database and MID2 Blood inputs"]
+    fn blood_soaked_ground_reduces_incoming_strike() {
+        use shared::components::Health;
+        fn strike(ground: bool) -> f32 {
+            let _seed = crate::random::seed_scope(70448);
+            let mut run = super::super::prepare_registered_player(250, 1).unwrap();
+            let actor = run.actor;
+            let source = run.targets[0];
+            if ground {
+                crate::auras::apply_aura(
+                    run.app.world_mut(),
+                    &crate::auras::AuraApplication {
+                        caster: actor,
+                        target: actor,
+                        spell_id: 434034,
+                        effect_mask: u32::MAX,
+                        source: crate::auras::AuraSource::Cast,
+                    },
+                );
+            }
+            run.app.update();
+            crate::auras::remove_auras(
+                run.app.world_mut(),
+                actor,
+                crate::auras::RemoveReason::Cancelled,
+                |aura| matches!(aura.spell_id, 77535 | 207203),
+            );
+            let before = run.app.world().get::<Health>(actor).unwrap().current;
+            crate::spell_cast::effects::replay_simc_dummy_strike(
+                run.app.world_mut(),
+                source,
+                actor,
+                100_000.0,
+                false,
+                false,
+            );
+            before - run.app.world().get::<Health>(actor).unwrap().current
+        }
+        let unprotected = strike(false);
+        let protected = strike(true);
+        assert!(
+            (protected / unprotected - 0.92).abs() < 0.001,
+            "strike {unprotected} -> {protected}"
+        );
+    }
+
+    #[test]
+    #[ignore = "requires canonical world database and MID2 Blood inputs"]
+    fn blood_soaked_ground_increases_death_strike_vampiric_proc_chance() {
+        use shared::components::{Health, PowerType};
+        let mut run = super::super::prepare_registered_player(250, 1).unwrap();
+        let actor = run.actor;
+        let target = run.targets[0];
+        super::super::engage(&mut run);
+        let mut found = false;
+        for draw_offset in 0..96 {
+            let mut outcomes = [false; 2];
+            for (index, ground) in [false, true].into_iter().enumerate() {
+                crate::auras::remove_auras(
+                    run.app.world_mut(),
+                    actor,
+                    crate::auras::RemoveReason::Cancelled,
+                    |aura| matches!(aura.spell_id, 433899 | 434153 | 434034),
+                );
+                if ground {
+                    crate::auras::apply_aura(
+                        run.app.world_mut(),
+                        &crate::auras::AuraApplication {
+                            caster: actor,
+                            target: actor,
+                            spell_id: 434034,
+                            effect_mask: u32::MAX,
+                            source: crate::auras::AuraSource::Cast,
+                        },
+                    );
+                }
+                let mut health = run.app.world_mut().get_mut::<Health>(target).unwrap();
+                health.current = health.max;
+                crate::spell_cast::powers::change_power(
+                    run.app.world_mut(),
+                    actor,
+                    PowerType::RunicPower,
+                    1000.0,
+                );
+                let seed = crate::random::seed_scope(70448);
+                for _ in 0..draw_offset {
+                    let _: f32 = crate::random::random();
+                }
+                crate::spell_cast::creature_cast(
+                    run.app.world_mut(),
+                    actor,
+                    49998,
+                    Some(target),
+                    false,
+                )
+                .unwrap();
+                for _ in 0..4 {
+                    run.app.update();
+                }
+                outcomes[index] = crate::auras::has_aura(run.app.world(), actor, 433899);
+                drop(seed);
+                for _ in 0..40 {
+                    run.app.update();
+                }
+            }
+            if outcomes == [false, true] {
+                found = true;
+                break;
+            }
+        }
+        assert!(
+            found,
+            "Blood-soaked Ground must turn a qualifying Death Strike roll into a proc"
+        );
+    }
+
+    #[test]
+    #[ignore = "requires canonical world database and MID2 Blood inputs"]
     fn blood_crimson_scourge_builds_real_ground_and_sanguine_follows_position() {
         let _seed = crate::random::seed_scope(70448);
         let mut run = super::super::prepare_registered_player(250, 1).unwrap();
@@ -2962,6 +3190,10 @@ mod tests {
             "selected Sanguine Ground must follow actual ground"
         );
         assert!(
+            crate::auras::has_aura(run.app.world(), actor, 434034),
+            "selected Blood-soaked Ground must follow actual ground"
+        );
+        assert!(
             !crate::auras::has_aura(run.app.world(), actor, 81141),
             "Death and Decay consumes its earned Crimson Scourge"
         );
@@ -2980,6 +3212,10 @@ mod tests {
             !crate::auras::has_aura(run.app.world(), actor, 391459),
             "leaving the ground removes the healing buff"
         );
+        assert!(
+            !crate::auras::has_aura(run.app.world(), actor, 434034),
+            "leaving the ground removes Blood-soaked Ground"
+        );
         *run.app
             .world_mut()
             .get_mut::<shared::components::Position>(actor)
@@ -2988,6 +3224,10 @@ mod tests {
         assert!(
             crate::auras::has_aura(run.app.world(), actor, 391459),
             "returning to the active field restores the buff"
+        );
+        assert!(
+            crate::auras::has_aura(run.app.world(), actor, 434034),
+            "returning restores Blood-soaked Ground"
         );
         let expiry = run
             .app

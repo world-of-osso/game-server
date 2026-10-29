@@ -392,6 +392,11 @@ fn vampiric_proc(world: &mut World, caster: Entity, spell: &SpellInfo) {
             .base_points
     };
     let mut chance = effect(433901, 0);
+    // SimC76f8118 sc_death_knight.cpp:13842–13843: Blood-soaked Ground
+    // adds the selected talent's second effect to the proc chance.
+    if auras::has_aura(world, caster, 434034) {
+        chance += effect(434033, 1);
+    }
     if world
         .get::<KnownSpells>(caster)
         .is_some_and(|known| known.contains(434263))
