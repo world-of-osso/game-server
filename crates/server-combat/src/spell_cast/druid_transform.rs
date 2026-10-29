@@ -16,6 +16,7 @@ const BEAR: u32 = 5487;
 // Foreground SimC druid_spell_base_t actions; form actions and Heart of the
 // Wild explicitly opt out. The numbers after each action are sc_druid.cpp lines.
 const DRUID_SWING_RESET_SPELLS: &[u32] = &[
+    192081, // Ironfur: 5326
     204066, // Lunar Beam: 5356
     145205, // Efflorescence: 6101
     102342, // Ironbark: 6179
@@ -49,6 +50,7 @@ const DRUID_SWING_RESET_SPELLS: &[u32] = &[
     194153,  // Starfire: 8480
     78674,   // Starsurge: 8580, 8633
     93402,   // Sunfire: 8730
+    61336,   // Survival Instincts: 8791
     202347,  // Stellar Flare: 8812
     102401,  // Wild Charge: 8842
     88747,   // Wild Mushroom: 8882

@@ -4,6 +4,28 @@ use crate::auras::ActiveAuras;
 
 #[test]
 #[ignore = "requires Guardian profile and native world data"]
+fn druid_foreground_spell_resets_swing_but_mangle_and_form_do_not() {
+    use shared::protocol::CombatLogKind;
+    for (spell, should_reset) in [(8921, true), (33917, false), (768, false)] {
+        let mut run = prepare_registered_player(104, 1).unwrap();
+        let actor = run.actor;
+        let target = run.targets[0];
+        engage(&mut run);
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 5487, Some(actor), false).unwrap();
+        for _ in 0..40 { run.app.update(); }
+        run.app.world_mut().entity_mut(actor).insert(crate::combat::AutoAttack::new(target));
+        for _ in 0..21 { run.app.update(); }
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, spell, Some(if spell == 768 { actor } else { target }), false).unwrap();
+        run.app.world_mut().resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>().0.clear();
+        for _ in 0..35 { run.app.update(); }
+        let swings = run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0.iter()
+            .filter(|event| event.source == Some(actor.to_bits()) && event.target == Some(target.to_bits()) && event.spell_id.is_none() && event.kind == CombatLogKind::Damage).count();
+        assert_eq!(swings == 0, should_reset, "spell {spell} swings={swings}");
+    }
+}
+
+#[test]
+#[ignore = "requires Guardian profile and native world data"]
 fn guardian_bear_passive_changes_stamina_and_swing_rage_only_in_bear() {
     let mut run = prepare_registered_player(104, 1).unwrap();
     let actor = run.actor;
