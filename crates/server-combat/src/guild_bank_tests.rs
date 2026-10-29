@@ -382,7 +382,7 @@ fn guild_bank_moves_split_merge_swap_and_preserve_item_metadata() {
 }
 
 #[test]
-fn guild_bank_cross_tab_swap_checks_both_rights_and_consumes_both_allowances() {
+fn guild_bank_moves_cross_tab_swap_checks_both_rights_and_consumes_both_allowances() {
     let Some(mut h) = harness() else {
         panic!("world fixture must load")
     };
