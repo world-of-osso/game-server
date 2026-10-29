@@ -59,6 +59,42 @@ fn missing_m2_solid_companion_keeps_solid_ground_unloaded() {
     );
 }
 
+#[test]
+#[ignore = "requires a private Neltharus solid M2 bake in M2_REAL_GROUND"]
+fn neltharus_real_m2_solid_companion_supports_player() {
+    let data = PathBuf::from(std::env::var_os("M2_REAL_GROUND").unwrap());
+    let mut ground = GroundMap::new(&data, HashMap::from([(2519, 4289128)]));
+    let map = crate::maps::InMap::continent(2519);
+    let candidates = [
+        Vec3::new(-145.7191, 46.6855, 834.2512),
+        Vec3::new(-41.106, 50.2199, 737.4225),
+        Vec3::new(-46.971, 50.5717, 744.8711),
+        Vec3::new(-46.2131, 50.7774, 746.6439),
+        Vec3::new(-59.3248, 46.3166, 828.0685),
+        Vec3::new(-73.4981, 39.8711, 826.7625),
+        Vec3::new(-73.7469, 46.4709, 763.7499),
+        Vec3::new(-106.7553, 40.0974, 709.3105),
+    ];
+    let mut witnessed = None;
+    for feet in candidates {
+        let walkable = ground.ground_in(map, feet);
+        let solid = ground.player_solid_ground_in(map, feet);
+        eprintln!("real M2 candidate {feet:?}: walkable={walkable:?}, solid={solid:?}");
+        if let GroundProbe::Supported(height) = solid {
+            let lower =
+                !matches!(walkable, GroundProbe::Supported(other) if other >= height - 0.01);
+            if lower && (height - feet.y).abs() < 0.02 {
+                witnessed = Some((feet, height));
+                break;
+            }
+        }
+    }
+    assert!(
+        witnessed.is_some(),
+        "no real steep M2 face selected by player ground"
+    );
+}
+
 fn data_dir() -> PathBuf {
     std::env::var_os("GAME_SERVER_GROUND_DIR")
         .map(PathBuf::from)
