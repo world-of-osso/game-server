@@ -130,18 +130,21 @@ impl Driver {
         equipment: &Equipment,
     ) -> Result<Option<(Action, Execution)>, String> {
         if let Some((action, execution, deadline)) = self.queued.take() {
-            if prepared.now() < deadline {
-                self.queued = Some((action, execution, deadline));
-                return Ok(None);
-            }
-            if prepared.permits_row(&action)? && facts.target_ready(&action)? {
-                match prepared.execution_in(&action, equipment, &self.program)? {
-                    Some(Execution::Queue(_, delay)) => {
-                        self.queued = Some((action, execution, prepared.now() + delay));
-                    }
-                    Some(_) => return Ok(Some((action, execution))),
-                    None => {}
+            let ready = prepared.permits_row(&action)? && facts.target_ready(&action)?;
+            let current = if ready {
+                prepared.execution_in(&action, equipment, &self.program)?
+            } else {
+                None
+            };
+            match current {
+                Some(Execution::Queue(_, delay)) => {
+                    self.queued = Some((action, execution, prepared.now() + delay));
                 }
+                Some(_) => return Ok(Some((action, execution))),
+                None if prepared.now() < deadline => {
+                    self.queued = Some((action, execution, deadline));
+                }
+                None => {}
             }
             return Ok(None);
         }
