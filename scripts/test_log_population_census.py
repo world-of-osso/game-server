@@ -1,6 +1,7 @@
 import importlib.util
 import io
 import json
+import sqlite3
 import tempfile
 import unittest
 from pathlib import Path
@@ -28,6 +29,26 @@ class CensusTest(unittest.TestCase):
         fields[0] = 'SPELL_AURA_APPLIED'
         fields.insert(12, 'DEBUFF')
         self.assertEqual(module.advanced_position(fields)['guid'], fields[5])
+
+    def test_encounter_casts_and_known_boss_identity(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'combat.txt'
+            path.write_text(
+                '10/3/2026 20:23:31.000-5  CHALLENGE_MODE_START,"Ruby Life Pools",2521,399,15,[]\n'
+                '10/3/2026 20:23:32.000-5  ENCOUNTER_START,2609,"Boss",8,5,2521\n'
+                '10/3/2026 20:23:33.500-5  SPELL_CAST_START,Creature-0-1-2521-42-123-ABCD,"Boss",0xa48,0,Player-1,"Player",0x511,0,456,"Spell",1\n'
+                '10/3/2026 20:23:40.000-5  ENCOUNTER_END,2609,"Boss",8,5,1,8000\n')
+            db = Path(directory) / 'world.db'
+            with sqlite3.connect(db) as conn:
+                conn.execute('CREATE TABLE raid_encounter_creature (map_id, encounter_id, creature_entry)')
+                conn.execute('INSERT INTO raid_encounter_creature VALUES (2521, 2609, 123)')
+            runs = census([path], {2521})
+            module.annotate_bosses(runs, db)
+        encounter = runs[0]['encounters'][0]
+        self.assertTrue(encounter['success'])
+        self.assertEqual(encounter['known_boss_npc_ids'], [123])
+        self.assertEqual(encounter['casts'][0]['seconds_from_pull'], 1.5)
+        self.assertTrue(encounter['casts'][0]['known_boss'])
 
     def test_addon_timers_are_matched_by_challenge_and_npc(self):
         with tempfile.TemporaryDirectory() as directory:

@@ -4,6 +4,7 @@ import argparse
 import csv
 import json
 import re
+import sqlite3
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -58,6 +59,7 @@ def census(paths, maps, samples=None):
     runs = []
     for path in sorted(paths):
         current = None
+        encounter = None
         engaged = set()
         with path.open(encoding="utf-8", errors="replace") as source:
             for line in source:
@@ -68,17 +70,37 @@ def census(paths, maps, samples=None):
                 if event == "CHALLENGE_MODE_START":
                     fields = next(csv.reader([payload]))
                     current = None
+                    encounter = None
                     engaged = set()
-                    if len(fields) > 2 and fields[2].isdigit() and int(fields[2]) in maps:
+                    if len(fields) > 3 and fields[2].isdigit() and int(fields[2]) in maps:
                         current = {"file": path.name, "map": int(fields[2]), "start": timestamp,
-                                   "name": fields[1], "challenge_id": int(fields[3]), "creatures": {}}
+                                   "name": fields[1], "challenge_id": int(fields[3]), "creatures": {},
+                                   "encounters": []}
                         runs.append(current)
                     continue
-                if event in ("CHALLENGE_MODE_END", "ZONE_CHANGE"):
-                    if event == "CHALLENGE_MODE_END":
-                        current = None
+                if event == "CHALLENGE_MODE_END":
+                    current = None
+                    encounter = None
                     continue
-                if current is None or "Creature-" not in payload:
+                if current is None:
+                    continue
+                if event == 'ENCOUNTER_START':
+                    fields = next(csv.reader([payload]))
+                    encounter = {'id': int(fields[1]), 'name': fields[2], 'start': timestamp,
+                                 'units': {}, 'casts': [], 'phase_markers': []}
+                    current['encounters'].append(encounter)
+                    continue
+                if event == 'ENCOUNTER_END':
+                    fields = next(csv.reader([payload]))
+                    if encounter is not None and int(fields[1]) == encounter['id']:
+                        encounter['end'] = timestamp
+                        encounter['success'] = fields[5] == '1'
+                        encounter = None
+                    continue
+                if encounter is not None and 'PHASE' in event:
+                    encounter['phase_markers'].append({'event': event, 'time': timestamp,
+                                                       'fields': next(csv.reader([payload]))[1:]})
+                if "Creature-" not in payload:
                     continue
                 fields = next(csv.reader([payload]))
                 if len(fields) < 9:
@@ -94,8 +116,13 @@ def census(paths, maps, samples=None):
                                                        "instance": parts[4], "name": fields[index + 1],
                                                        "first_seen": timestamp, "first_event": event,
                                                        "summoned": False})
+                    if encounter is not None:
+                        encounter['units'][guid] = {'npc_id': int(parts[5]), 'name': fields[index + 1]}
                     if event == "SPELL_SUMMON" and index == 5:
                         item["summoned"] = True
+                if encounter is not None and event in ('SPELL_CAST_START', 'SPELL_CAST_SUCCESS') and fields[1].startswith('Creature-') and len(fields) > 11:
+                    encounter['casts'].append({'guid': fields[1], 'event': event, 'spell_id': int(fields[9]),
+                        'name': fields[10], 'seconds_from_pull': (timestamp_value(timestamp) - timestamp_value(encounter['start'])).total_seconds()})
                 position = advanced_position(fields)
                 if position and position['guid'] in current['creatures']:
                     item = current['creatures'][position['guid']]
@@ -116,6 +143,21 @@ def census(paths, maps, samples=None):
                     ):
                         item['position_neighbors'].append(observation)
     return runs
+
+
+def annotate_bosses(runs, database):
+    with sqlite3.connect(f'file:{database}?mode=ro', uri=True) as conn:
+        rows = conn.execute('SELECT map_id, encounter_id, creature_entry FROM raid_encounter_creature')
+        bosses = {}
+        for map_id, encounter_id, creature_entry in rows:
+            bosses.setdefault((map_id, encounter_id), set()).add(creature_entry)
+    for run in runs:
+        for encounter in run['encounters']:
+            known = bosses.get((run['map'], encounter['id']), set())
+            encounter['known_boss_npc_ids'] = sorted(known)
+            encounter['unclassified_npc_ids'] = sorted({u['npc_id'] for u in encounter['units'].values()} - known)
+            for cast in encounter['casts']:
+                cast['known_boss'] = encounter['units'][cast['guid']]['npc_id'] in known
 
 
 def read_trash_timers(path):
@@ -174,6 +216,7 @@ def main():
     parser.add_argument("--floor-requests", type=Path)
     parser.add_argument("--precombat-samples", type=Path)
     parser.add_argument("--trash-data", type=Path)
+    parser.add_argument("--world-db", type=Path)
     parser.add_argument("logs", type=Path, nargs="+")
     args = parser.parse_args()
     paths = [f for p in args.logs for f in (sorted(p.glob("*.txt")) if p.is_dir() else [p])]
@@ -185,6 +228,8 @@ def main():
         runs = census(paths, set(args.map))
     if args.trash_data:
         annotate_trash(runs, read_trash_timers(args.trash_data))
+    if args.world_db:
+        annotate_bosses(runs, args.world_db)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps({"runs": runs}, indent=2) + "\n", encoding="utf-8")
     if args.floor_requests:
