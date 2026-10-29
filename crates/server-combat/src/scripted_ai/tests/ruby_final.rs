@@ -28,7 +28,6 @@ fn ruby_final_joint_death_grants_only_one_copy_credit() {
     for difficulty in [1, 205] {
         let (mut h, erkhart, kyrakka, map) = ruby_copy(difficulty);
         h.engage(erkhart);
-        h.engage(kyrakka);
         h.advance(0.2);
         assert!(
             h.inbox(0)
@@ -70,7 +69,7 @@ fn ruby_final_joint_death_grants_only_one_copy_credit() {
 #[test]
 fn ruby_final_erkhart_logged_clocks() {
     for difficulty in [1, 205] {
-        let (mut h, erkhart, kyrakka, _) = ruby_copy(difficulty);
+        let (mut h, erkhart, _kyrakka, _) = ruby_copy(difficulty);
         let origin = h.app.world().resource::<Time>().elapsed_secs_f64();
         h.app
             .insert_resource(super::cast_admission::CastAdmissions {
@@ -79,7 +78,6 @@ fn ruby_final_erkhart_logged_clocks() {
                 entries: Vec::new(),
             });
         h.engage(erkhart);
-        h.engage(kyrakka);
         h.advance(55.0);
         let attempts = &h
             .app
@@ -118,7 +116,6 @@ fn ruby_final_logged_clocks_and_stage_anchor() {
         h.app
             .insert_resource(crate::spell_cast::test_harness::ObservedCombatEvents::default());
         h.engage(erkhart);
-        h.engage(kyrakka);
         h.advance(1.0);
         for _ in 0..20 {
             if h.health(erkhart).current <= h.health(erkhart).max * 0.5 {
@@ -149,12 +146,12 @@ fn ruby_final_logged_clocks_and_stage_anchor() {
         assert!(
             attempts
                 .iter()
-                .any(|a| a.spell == 381525 && (a.time - 2.713).abs() < 0.2)
+                .any(|a| a.spell == 381525 && a.result.is_ok() && (a.time - 2.713).abs() < 0.2)
         );
         assert!(
             attempts
                 .iter()
-                .any(|a| a.spell == 381602 && (a.time - 15.608).abs() < 0.2)
+                .any(|a| a.spell == 381602 && a.result.is_ok() && (a.time - 15.608).abs() < 0.2)
         );
         assert!(
             h.app
@@ -180,8 +177,23 @@ fn ruby_final_logged_clocks_and_stage_anchor() {
         assert!(
             attempts
                 .iter()
-                .any(|a| a.spell == 381605 && a.result.is_ok()),
+                .any(|a| a.spell == 381605 && a.result.is_ok() && (a.time - 39.87).abs() < 0.3),
             "stage2 native cast after181089: {attempts:?}"
+        );
+        h.advance(18.0);
+        let attempts = &h
+            .app
+            .world()
+            .resource::<super::cast_admission::CastAdmissions>()
+            .entries;
+        let phase_casts: Vec<_> = attempts
+            .iter()
+            .filter(|a| a.spell == 381605 && a.result.is_ok())
+            .collect();
+        assert!(phase_casts.len() >= 2, "phase2 repeat: {attempts:?}");
+        assert!(
+            (phase_casts[1].time - phase_casts[0].time - 16.987).abs() < 2.0,
+            "phase repeat with native occupancy: {phase_casts:?}"
         );
     }
 }
