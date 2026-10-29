@@ -6,6 +6,7 @@ use shared::{components::Health, protocol::CombatLogKind};
 #[ignore = "requires Guardian MID2 profile and native world data"]
 fn guardian_lunar_beam_earns_caster_owned_atmospheric_exposure() {
     use crate::auras::ActiveAuras;
+    let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_registered_player(104, 1).unwrap();
     let actor = run.actor;
     let target = run.targets[0];
