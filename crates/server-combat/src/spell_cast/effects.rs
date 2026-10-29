@@ -1224,7 +1224,7 @@ fn with_damage_crit(
     (total, true)
 }
 
-fn critical_damage_amount(
+pub(crate) fn critical_damage_amount(
     world: &World,
     caster: Entity,
     spell_owner: Entity,
@@ -2382,6 +2382,7 @@ fn deal_source_damage_and_report(
     if !resolved_source {
         super::scripts::enhancement_weapon_damage(world, ctx, target, amount);
         super::script_registry::resolved_damage(world, ctx, target, crit, amount);
+        crate::auras::life_givers_flame::record_damage(world, ctx, target, crit, amount);
     }
     if periodic {
         crate::auras::rogue::after_bleed_tick(world, ctx, target);

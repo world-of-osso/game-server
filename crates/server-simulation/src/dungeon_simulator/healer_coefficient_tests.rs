@@ -3,6 +3,67 @@ use shared::components::Health;
 use shared::protocol::CombatLogKind;
 
 #[test]
+#[ignore = "checks Life-Giver's Flame against native Fire Breath damage"]
+fn preservation_life_givers_flame_splits_fire_breath_damage() {
+    let spells = [371426, 371441, 357209];
+    let mut h = crate::spell_cast::test_harness::harness(Vec::new(), &spells, 13).unwrap();
+    h.app
+        .init_resource::<crate::spell_cast::test_harness::ObservedCombatEvents>();
+    let ally = crate::spell_cast::test_harness::spawn_player(&mut h.app, 13, 3.0);
+    for unit in [h.caster, ally] {
+        *h.app.world_mut().get_mut::<Health>(unit).unwrap() = Health {
+            current: 1.0,
+            max: 100_000.0,
+        };
+    }
+    h.app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(h.caster)
+        .unwrap()
+        .crit_pct = 0.0;
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: h.caster,
+            target: h.caster,
+            spell_id: 371426,
+            effect_mask: u32::MAX,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    crate::spell_cast::creature_cast(h.app.world_mut(), h.caster, 357209, Some(h.npc), true)
+        .unwrap();
+    h.advance(8);
+    let events = &h
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    let damage: i32 = events
+        .iter()
+        .filter(|event| {
+            event.kind == CombatLogKind::Damage && event.spell_id == Some(357209) && !event.periodic
+        })
+        .map(|event| event.amount)
+        .sum();
+    assert!(damage > 0, "Fire Breath must damage an enemy");
+    for target in [h.caster, ally] {
+        let heal = events
+            .iter()
+            .find(|event| {
+                event.kind == CombatLogKind::Heal
+                    && event.spell_id == Some(371441)
+                    && event.target == Some(target.to_bits())
+            })
+            .expect("Life-Giver's Flame must heal each injured ally");
+        assert!(
+            (heal.amount as f32 - damage as f32 * 0.8 / 2.0).abs() <= 2.0,
+            "{heal:?}"
+        );
+    }
+}
+
+#[test]
 #[ignore = "checks Consume Flame against the native Dream Breath and Verdant Embrace"]
 fn preservation_consume_flame_consumes_dream_breath_on_verdant_embrace() {
     let spells = [444088, 355941, 360995, 361195, 445495];
