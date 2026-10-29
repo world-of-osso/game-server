@@ -18,6 +18,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::ResolvedDamage(glory_from_shield),
     SpellScriptHook::OnCast(glory_on_cast),
     SpellScriptHook::EffectHandler(armament_energize_handler),
+    SpellScriptHook::EffectHandler(rite_of_sanctification_handler),
     SpellScriptHook::AuraEvent(divine_inspiration_event),
     SpellScriptHook::OwnsPolicyProc(|spell| spell == 432964),
     SpellScriptHook::AfterNativeCastUpdate(bind_blessed_hammer_fields),
@@ -188,6 +189,32 @@ fn roll_divine_inspiration(world: &mut World, caster: Entity) {
         } else {
             432496
         }));
+}
+
+fn rite_of_sanctification_handler(
+    spell: u32,
+    index: u8,
+) -> Option<combat::spell_cast::effects::EffectHandler> {
+    (spell == 433568 && index == 0).then_some(apply_rite_of_sanctification)
+}
+
+fn apply_rite_of_sanctification(
+    world: &mut World,
+    ctx: &combat::spell_cast::effects::EffectCtx<'_>,
+    _: &combat::spell_info::SpellEffect,
+    target: Entity,
+) {
+    // SimC76f8118 sc_paladin.cpp:2010–2020; DB2 enchant 7143 grants 433550.
+    combat::auras::apply_aura(
+        world,
+        &AuraApplication {
+            caster: ctx.caster,
+            target,
+            spell_id: 433550,
+            effect_mask: u32::MAX,
+            source: AuraSource::Cast,
+        },
+    );
 }
 
 fn armament_energize_handler(
