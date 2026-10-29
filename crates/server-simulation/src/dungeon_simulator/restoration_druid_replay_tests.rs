@@ -78,7 +78,7 @@ fn master_shapeshifter_restores_mana_from_actual_wrath() {
     use crate::spell_cast::test_harness::{ObservedCombatEvents, harness};
     use shared::components::Mana;
     use shared::protocol::CombatLogKind;
-    let mut h = harness(Vec::new(), &[5176, 289237, 411146], 11).unwrap();
+    let mut h = harness(Vec::new(), &[5176, 289237, 411144, 411146], 11).unwrap();
     h.app.init_resource::<ObservedCombatEvents>();
     h.app
         .world_mut()
@@ -161,7 +161,7 @@ fn master_shapeshifter_restores_mana_from_bear_form_ironfur() {
         !events.iter().any(|e| e.spell_id == Some(411144)),
         "Bear Form itself must not trigger Ironfur mana: {events:?}"
     );
-    h.set_power(PowerType::Rage, 100.0);
+    h.set_power(PowerType::Rage, 1000.0);
     h.cast_and_deliver(192081, Some(h.caster));
     h.advance(5);
     let events = &h.app.world().resource::<ObservedCombatEvents>().0;
