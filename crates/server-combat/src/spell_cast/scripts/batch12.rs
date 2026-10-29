@@ -162,7 +162,8 @@ pub(super) fn shield_armor(world: &mut World, caster: Entity, _spell: &SpellInfo
             caster,
             target: caster,
             spell_id: SHIELD_ARMOR,
-            effect_mask: 1 << 1,
+            // SimC76f8118 sc_paladin.cpp:4751–4753 also applies its magic reduction.
+            effect_mask: (1 << 1) | (1 << 2),
             source: AuraSource::Cast,
         },
     );
