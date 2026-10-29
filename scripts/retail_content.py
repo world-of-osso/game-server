@@ -350,6 +350,9 @@ CLASS_SUMMON_POLICY_CHILDREN = (
     # SimC76f8118 sc_death_knight.cpp8870–8874/9002–9008: Raise Abomination
     # summons native 288853 alongside Army; its Effect28 supplies creature 149555.
     (1242608, 288853),
+    # SimC76f8118 sc_death_knight.cpp9529–9530/4730–4740: The Blood is Life
+    # summons the native Blood Beast via spell434237 effect28.
+    (434260, 434237),
     # SimC76f8118 sc_death_knight.cpp9027–9030/13108–13110/15414–15417:
     # Apocalypse Now and Rider's Champion summon the actual four Horsemen.
     (444040, 444248), (444040, 444251), (444040, 444252), (444040, 444254),
