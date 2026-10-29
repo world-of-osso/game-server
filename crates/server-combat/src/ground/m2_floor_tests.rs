@@ -96,6 +96,49 @@ fn neltharus_real_m2_solid_companion_supports_player() {
     );
 }
 
+#[test]
+#[ignore = "requires canonical Neltharus ground assets"]
+fn neltharus_follower_keeps_upper_floor_at_recorded_drop() {
+    let data = data_dir();
+    let mut ground = GroundMap::new(&data, HashMap::from([(2519, 4289128)]));
+    let map = crate::maps::InMap::continent(2519);
+    let from = shared::components::Position {
+        x: -122.77629,
+        y: 122.80975,
+        z: 580.558,
+    };
+    let to = shared::components::Position {
+        x: -122.85992,
+        y: 123.0,
+        z: 580.92346,
+    };
+    let height =
+        crate::creature_ai::follower_footprint_ground(Some(&mut ground), Some(&map), from, to);
+    assert!(
+        (height - 122.875114).abs() < 0.05,
+        "follower dropped to {height}"
+    );
+}
+
+#[test]
+fn follower_footprint_does_not_bridge_a_wide_drop() {
+    let mut ground = GroundMap::flat_arena(94.0);
+    let map = crate::maps::InMap::continent(2519);
+    let from = shared::components::Position {
+        x: 0.0,
+        y: 123.0,
+        z: 0.0,
+    };
+    let to = shared::components::Position {
+        x: 0.0,
+        y: 123.0,
+        z: 1.0,
+    };
+    let height =
+        crate::creature_ai::follower_footprint_ground(Some(&mut ground), Some(&map), from, to);
+    assert_eq!(height, 94.0);
+}
+
 fn data_dir() -> PathBuf {
     std::env::var_os("GAME_SERVER_GROUND_DIR")
         .map(PathBuf::from)

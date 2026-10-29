@@ -332,6 +332,33 @@ fn run_ground(probe: GroundProbe, from_y: f32) -> f32 {
     }
 }
 
+/// Resolve a routed follower's support across the navigation agent's footprint.
+pub(crate) fn follower_footprint_ground(
+    ground: Option<&mut GroundMap>,
+    map: Option<&InMap>,
+    from: Position,
+    to: Position,
+) -> f32 {
+    let mut ground = ground;
+    let direction = Vec2::new(to.x - from.x, to.z - from.z).normalize_or_zero();
+    let center = Vec3::new(to.x, from.y, to.z);
+    let offset = Vec3::new(direction.x, 0.0, direction.y) * navigation::AGENT_RADIUS;
+    let probes = [center, center - offset, center + offset];
+    let supported = probes
+        .into_iter()
+        .filter_map(
+            |feet| match probe_ground(ground.as_deref_mut(), map, feet) {
+                GroundProbe::Supported(height) => Some(height),
+                GroundProbe::Unloaded | GroundProbe::Unsupported => None,
+            },
+        )
+        .max_by(f32::total_cmp);
+    run_ground(
+        supported.map_or(GroundProbe::Unsupported, GroundProbe::Supported),
+        from.y,
+    )
+}
+
 /// Exact runtime support for a routed foot position (Recast contours approximate it).
 fn sample_movement_ground(
     ground: Option<&mut GroundMap>,
@@ -1287,7 +1314,11 @@ fn follow_owner_system(
         let (x, z) = (next_position.x, next_position.z);
         if next_position != *pos {
             let feet = Vec3::new(x, pos.y, z);
-            next_position.y = run_ground(probe_ground(ground.as_deref_mut(), map, feet), pos.y);
+            next_position.y = if companion.is_some() {
+                follower_footprint_ground(ground.as_deref_mut(), map, *pos, next_position)
+            } else {
+                run_ground(probe_ground(ground.as_deref_mut(), map, feet), pos.y)
+            };
         }
         let mut stride = Stride::moving(*pos, next_position, CreatureMotion::Run, run_speed);
         follow.moving = !reached;

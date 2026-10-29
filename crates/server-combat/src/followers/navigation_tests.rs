@@ -100,6 +100,50 @@ fn follower_follow_routes_around_actual_stockade_walls_without_crossing_collisio
 }
 
 #[test]
+#[ignore = "requires Neltharus ground and navigation bakes"]
+fn neltharus_follower_crosses_recorded_ground_seam() {
+    let data = crate::ground::ground_data_dir();
+    let (mut h, unit, _) = spawn_profile_fixture(209057);
+    h.app.world_mut().despawn(h.npc);
+    h.app
+        .world_mut()
+        .get_mut::<crate::networking::CombatTarget>(h.caster)
+        .unwrap()
+        .0 = None;
+    let from = Position {
+        x: -122.77629,
+        y: 122.80975,
+        z: 580.558,
+    };
+    let owner = Position {
+        x: -126.6111,
+        y: 122.8751,
+        z: 584.6361,
+    };
+    let map = InMap::continent(2519);
+    h.app.world_mut().entity_mut(h.caster).insert((owner, map));
+    h.app.world_mut().entity_mut(unit).insert((from, map));
+    h.app
+        .insert_resource(GroundMap::new(&data, HashMap::from([(2519, 4289128)])));
+    h.app
+        .insert_resource(crate::navigation::Navigation::new(&data.join("navmesh")));
+    crate::creature_ai::install_follower_follow_fixture(&mut h.app);
+    let mut farthest = 0.0_f32;
+    let mut crossed_seam = false;
+    for tick in 0..200 {
+        h.advance(1);
+        let at = *h.app.world().get::<Position>(unit).unwrap();
+        farthest = farthest.max((at.x - from.x).hypot(at.z - from.z));
+        crossed_seam |= at.z >= 581.123 && (at.x + 122.86).abs() < 1.0;
+        assert!(at.y > 120.0, "tank fell at tick {tick}: {at:?}");
+    }
+    assert!(
+        farthest > 0.5 && crossed_seam,
+        "tank did not follow through the seam"
+    );
+}
+
+#[test]
 #[ignore = "requires FOLLOWER_RUBY_DATA and FOLLOWER_RUBY_GROUND authored private bakes"]
 fn follower_ruby_regroup_walks_from_entrance_across_metalplate_to_boss_floor() {
     let data = PathBuf::from(std::env::var_os("FOLLOWER_RUBY_DATA").unwrap());
