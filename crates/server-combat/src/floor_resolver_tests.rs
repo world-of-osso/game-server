@@ -88,6 +88,8 @@ fn floor_resolver_neltharus_real_data() {
         x: -248.0,
         y: -603.0,
         neighbor_hints: vec![Hint {
+            file: String::new(),
+            run_start: String::new(),
             guid: "later".to_owned(),
             x: -244.0,
             y: -603.0,

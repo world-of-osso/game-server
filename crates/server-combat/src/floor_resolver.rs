@@ -13,6 +13,10 @@ mod tests;
 #[derive(Clone, Debug, Deserialize)]
 pub struct Hint {
     #[serde(default)]
+    pub file: String,
+    #[serde(default)]
+    pub run_start: String,
+    #[serde(default)]
     pub guid: String,
     pub x: f32,
     pub y: f32,
