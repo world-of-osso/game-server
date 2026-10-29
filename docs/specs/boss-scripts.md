@@ -370,7 +370,7 @@ Leveling tier begins at locally sourced MinLevelSquish7 (Ragefire Chasm, then De
 
 ## Ruby Life Pools source hooks
 
-Pinned TC `ruby_life_pools.cpp` has four spell scripts and no boss AIs. Local Melidrussa/Kokia/Kyrakka/Erkhart templates have empty AIName/ScriptName; no boss schedules are inferred.
+Pinned TC `ruby_life_pools.cpp` has four spell scripts and no boss AIs. Its original templates have empty AIName/ScriptName; the separate local boss policies above do not claim TC-authored schedules.
 
 - [x] Ice Shield384933 effect0 periodic dummy refreshes existing372749 duration without reapplying/refilling the shield; missing shield stays missing. Respect local DB2's immediate initial tick, then1s period.
 - [x] Excavate372793 effect0 periodic dummy casts373497 triggered from the original caster on the bearer; stops after removal. Respect local DB2's immediate initial tick, then1s period.
