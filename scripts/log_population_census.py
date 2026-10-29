@@ -276,7 +276,7 @@ def connected_observations(observations, radius):
 def assign_component(key, observations, margin_threshold):
     by_run = defaultdict(list)
     for point in observations:
-        by_run[(point['file'], point['run_start'])].append(point)
+        by_run[(point['file'], point.get('episode_start', point['run_start']))].append(point)
     anchor_run = max(sorted(by_run), key=lambda run: len(by_run[run]))
     anchors = sorted(by_run[anchor_run], key=lambda point: point['guid'])
     slots = [{'map': key[0], 'npc_id': key[1], 'ui_map_id': key[2], 'ambiguous_match': False,
@@ -326,8 +326,8 @@ def cluster_population(runs, radius=10.0, margin_threshold=1.0):
             if pos is None or unit['summoned'] or unit.get('player_controlled', False) or unit.get('control_flags_invalid', False):
                 continue
             key = (run['map'], unit['npc_id'], pos['ui_map_id'])
-            groups[key].append({'file': run['file'], 'run_start': run['start'], 'guid': guid,
-                'spawn_uid': unit['spawn_uid'], 'x': pos['x'], 'y': pos['y'], 'time': pos['time'], 'event': pos['event'],
+            groups[key].append({'file': run['file'], 'run_start': unit.get('position_source_run_start', run['start']),
+                'episode_start': run['start'], 'guid': guid, 'spawn_uid': unit['spawn_uid'], 'x': pos['x'], 'y': pos['y'], 'time': pos['time'], 'event': pos['event'],
                 'facing': pos['facing'], 'level': pos['level'], 'summoned': unit['summoned']})
     clusters = []
     for key, observations in sorted(groups.items()):
@@ -394,7 +394,8 @@ def cluster_safe_samples(runs, samples):
         for guid, unit in run['creatures'].items():
             key = (run['file'], run['start'], guid)
             if key in selected:
-                copy['creatures'][guid] = {**unit, 'first_position': selected[key]}
+                copy['creatures'][guid] = {**unit, 'first_position': selected[key],
+                                           'position_source_run_start': selected[key]['run_start']}
         safe_runs.append(copy)
     return cluster_population(safe_runs)
 
