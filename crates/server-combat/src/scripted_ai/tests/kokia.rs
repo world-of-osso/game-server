@@ -212,6 +212,20 @@ fn encounter_coverage_kokia_ritual_summons_after_success() {
 }
 
 #[test]
+fn encounter_coverage_kokia_interrupted_ritual_does_not_summon() {
+    let (mut h, boss, _) = kokia_copy(205);
+    h.engage(boss);
+    h.advance(9.0);
+    assert_eq!(
+        h.app.world().get::<CastState>(boss).unwrap().spell_id,
+        372863
+    );
+    crate::spell_cast::cancel_cast(h.app.world_mut(), boss);
+    h.advance(6.0);
+    assert!(h.creatures_of(189886).is_empty());
+}
+
+#[test]
 fn encounter_coverage_kokia_native_searing_periodic_weapon_damage_qualifies() {
     for difficulty in [1, 205] {
         let (mut h, boss, _) = kokia_copy(difficulty);
