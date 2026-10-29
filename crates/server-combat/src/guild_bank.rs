@@ -30,7 +30,7 @@ use shared::protocol::{
 };
 
 use crate::auth::InWorld;
-use crate::bank::{BankTabPrices, TAB_NAME_LETTERS, new_tab};
+use crate::bank::{BankTabPrices, new_tab};
 use crate::bank_storage::{self, TabsFull};
 use crate::gold::{GoldUpdateQueue, MAX_MONEY};
 use crate::inventory::{inventory_model::InventoryModel, load_model};
@@ -47,6 +47,8 @@ use crate::persistence::{self, GameDatabase};
 const GUILD_BANK_MONEY_LIMIT: u64 = 0x7_FFFF_FFFF_FFFF;
 /// Retail tab info text length (`GuildBankTabInfoEditBox` letters="500").
 const TAB_TEXT_LETTERS: usize = 500;
+/// IconSelectorEditBox in Mainline SharedUIPanelTemplates.xml allows 16 letters.
+const GUILD_TAB_NAME_LETTERS: usize = 16;
 
 /// Hour (UTC) at which daily guild bank allowances reset; Retail's daily reset.
 /// `GAME_SERVER_DAILY_RESET_HOUR_UTC` overrides the default 15 (Retail US, 15:00 UTC).
@@ -771,7 +773,7 @@ fn set_tab_info(
 ) -> GuildBankResult {
     member.vault_for(req.object)?;
     let name = req.name.trim();
-    if name.is_empty() || name.chars().count() > TAB_NAME_LETTERS {
+    if name.is_empty() || name.chars().count() > GUILD_TAB_NAME_LETTERS {
         return Err(GuildBankError::WrongTab);
     }
     let mut guild = load_guild(vault.db(), member.guild_id);

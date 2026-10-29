@@ -286,6 +286,33 @@ fn only_the_guild_master_buys_tabs_and_edits_tab_info() {
 }
 
 #[test]
+fn guild_tab_info_accepts_retail_sixteen_character_name_and_rejects_longer() {
+    let Some(mut h) = harness() else {
+        panic!("world fixture must load")
+    };
+    let vault = leader_with_tab(&mut h);
+    h.send::<_, GuildBankChannel>(GuildBankSetTabInfo {
+        object: vault.to_bits(),
+        tab: 0,
+        name: "SixteenLetters!!".into(),
+        icon: 132374,
+    });
+    let view = contents(&mut h);
+    assert_eq!(view.tabs[0].name, "SixteenLetters!!");
+    assert_eq!(view.tabs[0].icon, 132374);
+    h.send::<_, GuildBankChannel>(GuildBankSetTabInfo {
+        object: vault.to_bits(),
+        tab: 0,
+        name: "SeventeenLetters!".into(),
+        icon: 132375,
+    });
+    assert_eq!(failures(&mut h), vec![GuildBankError::WrongTab]);
+    let stored = load_guild(h.db(), GUILD);
+    assert_eq!(stored.tabs[0].name, "SixteenLetters!!");
+    assert_eq!(stored.tabs[0].icon, 132374);
+}
+
+#[test]
 fn daily_reset_starts_the_day_at_the_reset_hour() {
     let reset = DailyReset { hour_utc: 15 };
     // 2026-09-24 14:59:59 UTC and 15:00:00 UTC.
