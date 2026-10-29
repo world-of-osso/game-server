@@ -935,6 +935,18 @@ mod tests {
                 run.app.update();
             }
             if crate::auras::has_aura(run.app.world(), actor, 374585) {
+                let aura = run
+                    .app
+                    .world()
+                    .get::<crate::auras::ActiveAuras>(actor)
+                    .unwrap()
+                    .iter()
+                    .find(|aura| aura.spell_id == 374585)
+                    .unwrap();
+                assert_eq!(
+                    aura.effects[0].amount, 6.0,
+                    "rank-two Rune Mastery Strength"
+                );
                 let buffed = run
                     .app
                     .world()
