@@ -1298,6 +1298,83 @@ fn holy_bulwark_absorbs_incoming_hits_and_grows_to_native_cap() {
 }
 
 #[test]
+#[ignore = "uses the selected MID2 Protection player and native Valiance"]
+fn valiance_free_word_of_glory_shortens_holy_armaments_recharge() {
+    use crate::auras::{AuraApplication, AuraSource};
+    // Returns how far Word of Glory moved the pending Holy Armaments recharge.
+    let recharge_shift = |free_word: bool| {
+        let (profile, traits) = super::dps_parity::read_reference(66).unwrap();
+        let mut run = super::dps_parity::spawn_reference(
+            profile,
+            &traits,
+            1,
+            crate::followers::simulator::ParityActor::Player { race: 6 },
+        )
+        .unwrap();
+        for _ in 0..4 {
+            run.app.update();
+        }
+        let actor = run.actor;
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 432459, Some(actor), false)
+            .unwrap();
+        for _ in 0..40 {
+            run.app.update();
+        }
+        let pending = |run: &super::dps_parity::Run| {
+            let history = run
+                .app
+                .world()
+                .get::<crate::spell_cast::SpellHistory>(actor)
+                .unwrap();
+            crate::spell_cast::test_harness::charge_recovery(history, 2220)
+                .1
+                .unwrap()
+        };
+        let before = pending(&run);
+        if free_word {
+            crate::auras::apply_aura(
+                run.app.world_mut(),
+                &AuraApplication {
+                    caster: actor,
+                    target: actor,
+                    spell_id: 327510,
+                    effect_mask: u32::MAX,
+                    source: AuraSource::Cast,
+                },
+            );
+        } else {
+            let mut pools = run
+                .app
+                .world_mut()
+                .get_mut::<crate::spell_cast::powers::PowerPools>(actor)
+                .unwrap();
+            pools
+                .get_mut(shared::components::PowerType::HolyPower)
+                .unwrap()
+                .current = 3.0;
+        }
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 85673, Some(actor), false)
+            .unwrap();
+        run.app.update();
+        assert!(
+            !crate::auras::has_aura(run.app.world(), actor, 327510),
+            "Word of Glory consumes free Shining Light"
+        );
+        pending(&run) - before
+    };
+    let free = recharge_shift(true);
+    let paid = recharge_shift(false);
+    assert!(
+        (free + 3.0).abs() < 1e-3,
+        "free Word of Glory moved recharge by {free}"
+    );
+    assert!(
+        paid.abs() < 1e-3,
+        "paid Word of Glory moved recharge by {paid}"
+    );
+}
+
+#[test]
 #[ignore = "uses the selected MID2 Protection player and precombat APL"]
 fn protection_default_precombat_casts_holy_bulwark() {
     let run = super::dps_parity::prepare_registered_player(66, 1).unwrap();

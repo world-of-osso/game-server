@@ -604,9 +604,28 @@ fn advance_shining_light(world: &mut World, caster: Entity, spell: u32) {
         return;
     }
     if spell == 85673 {
+        let free = world
+            .get::<combat::auras::ActiveAuras>(caster)
+            .is_some_and(|auras| {
+                auras
+                    .iter()
+                    .any(|aura| aura.spell_id == 327510 && aura.caster == caster)
+            });
         combat::auras::remove_auras(world, caster, RemoveReason::Consumed, |aura| {
             aura.spell_id == 327510 && aura.caster == caster
         });
+        if free && selected(world, caster, 432919) {
+            // SimC76f8118 sc_paladin.cpp1263–1268: Valiance shortens Holy Armaments
+            // when Word of Glory consumes free Shining Light.
+            let milliseconds =
+                combat::spell_cast::scripts::script_effect_value(world, caster, 432919, 0);
+            combat::spell_cast::scripts::reduce_cooldown(
+                world,
+                caster,
+                432459,
+                f64::from(milliseconds) / 1000.0,
+            );
+        }
         return;
     }
     if spell != 53600 {
