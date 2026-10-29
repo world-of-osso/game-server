@@ -448,6 +448,13 @@ pub(super) fn register_aura_scripts(mut scripts: ResMut<AuraScripts>) {
         },
     );
     scripts.0.insert(
+        CONSUMING_STOMP,
+        AuraScript {
+            on_remove: Some(consume_stomp_target),
+            ..Default::default()
+        },
+    );
+    scripts.0.insert(
         EXPLOSIVE_BRAND,
         AuraScript {
             on_remove: Some(explode_expired_brand),
@@ -461,6 +468,22 @@ pub(super) fn register_aura_scripts(mut scripts: ResMut<AuraScripts>) {
             ..Default::default()
         },
     );
+}
+
+/// TC boss_leymor.cpp:374720 effect0/PERIODIC_TRIGGER_SPELL kills its target on removal.
+fn consume_stomp_target(
+    world: &mut World,
+    target: Entity,
+    aura: &AuraInstance,
+    _reason: RemoveReason,
+) {
+    if aura
+        .effects
+        .iter()
+        .any(|effect| effect.index == 0 && effect.aura_type == handlers::PERIODIC_TRIGGER_SPELL)
+    {
+        crate::combat::kill_unit(world, target, target);
+    }
 }
 
 /// TC389453 effect0/PERIODIC_DUMMY: SetPower(primary, GetPower(ENERGY) +2).
