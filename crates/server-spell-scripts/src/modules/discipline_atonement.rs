@@ -12,6 +12,7 @@ use shared::protocol::{CombatLogEvent, CombatLogKind};
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AfterAuraApplication(apply_mark),
+    SpellScriptHook::HealthChangeObserved(mark_flash_heal),
     SpellScriptHook::HealthChangeObserved(transfer_damage),
     SpellScriptHook::ConsumedEffectValues(&[(81749, 0)]),
 ];
@@ -32,6 +33,31 @@ fn apply_mark(world: &mut World, target: Entity, aura: &AuraInstance) {
             source: AuraSource::Cast,
         },
     );
+}
+
+fn mark_flash_heal(world: &mut World, event: &CombatLogEvent) {
+    if event.kind != CombatLogKind::Heal || event.spell_id != Some(2061) {
+        return;
+    }
+    let (Some(caster), Some(target)) = (
+        event.source.and_then(Entity::try_from_bits),
+        event.target.and_then(Entity::try_from_bits),
+    ) else {
+        return;
+    };
+    if is_discipline(world, caster) {
+        // SimC 76f8118 sc_priest.cpp:1782-1792: Flash Heal applies Atonement on impact.
+        auras::apply_aura(
+            world,
+            &AuraApplication {
+                caster,
+                target,
+                spell_id: 194384,
+                effect_mask: u32::MAX,
+                source: AuraSource::Cast,
+            },
+        );
+    }
 }
 
 fn is_discipline(world: &World, caster: Entity) -> bool {

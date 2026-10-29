@@ -5,6 +5,27 @@ use shared::components::{ActiveSpec, Health};
 use shared::protocol::CombatLogKind;
 
 #[test]
+fn discipline_flash_heal_applies_atonement_even_at_full_health() {
+    let mut h = harness(Vec::new(), &[2061, 194384, 81749, 94472], 5).unwrap();
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(ActiveSpec(256));
+    let ally = spawn_player(&mut h.app, 5, 1.0);
+    h.cast_and_deliver(2061, Some(ally));
+    h.advance(80);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert!(
+        h.app
+            .world()
+            .get::<ActiveAuras>(ally)
+            .unwrap()
+            .iter()
+            .any(|a| { a.spell_id == 194384 && a.caster == h.caster })
+    );
+}
+
+#[test]
 fn shield_absorbs_hit_and_smite_heals_its_atoned_ally() {
     let mut h = harness(Vec::new(), &[17, 139, 194384, 81749, 94472, 585, 133], 5).unwrap();
     h.app
