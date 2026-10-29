@@ -1,8 +1,9 @@
 //! SimC76f8118 sc_druid.cpp7871–7947,12694–12749.
 use super::combat;
 use bevy::prelude::*;
-use combat::auras::{self, AuraInstance, RemoveReason, procs::AuraEvent, scripts::AuraScripts};
-use combat::spell_cast::{self, script_registry::SpellScriptHook};
+use combat::auras::{self, ActiveAuras, AuraInstance, RemoveReason, procs::AuraEvent, scripts::AuraScripts};
+use combat::random::seq::SliceRandom;
+use combat::spell_cast::{self, effects::EffectCtx, script_registry::SpellScriptHook, targets};
 use combat::spell_info::SpellStore;
 
 const TALENT: u32 = 203964;
@@ -11,7 +12,41 @@ const MOON_GUARDIAN: u32 = 429520;
 const MOONFIRE: u32 = 8921;
 const MOONFIRE_DAMAGE: u32 = 164812;
 
-pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::EarlyAuraRegistration(register)];
+pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::EarlyAuraRegistration(register),
+    SpellScriptHook::ContextHit(moonfire_hit),
+];
+
+fn moonfire_hit(spell: u32) -> Option<fn(&mut World, &EffectCtx<'_>, Entity)> {
+    (spell == MOONFIRE).then_some(copy_twin_moonfire)
+}
+
+// SimC76f8118 sc_druid.cpp7897–7944: Twin Moonfire copies to another enemy.
+fn copy_twin_moonfire(world: &mut World, ctx: &EffectCtx<'_>, primary: Entity) {
+    let caster = ctx.caster;
+    if !world.get::<combat::class_progression::TraitLoadout>(caster).is_some_and(|traits| {
+        traits.active_talent_spells().any(|spell| spell.spell_id == 372567)
+    }) {
+        return;
+    }
+    let Some(origin) = targets::position(world, caster) else { return };
+    let range = ctx.spell.misc.as_ref().and_then(|misc| misc.range)
+        .expect("Moonfire native range").max_hostile;
+    let mut enemies = targets::area_units(world, caster, origin, range, targets::Relation::Enemy, 0);
+    if !enemies.contains(&primary) { return; }
+    enemies.retain(|&target| target != primary);
+    enemies.shuffle(&mut combat::random::thread_rng());
+    enemies.sort_by(|&a, &b| {
+        let expiry = |target| world.get::<ActiveAuras>(target)
+            .and_then(|auras| auras.iter().find(|a| a.spell_id == MOONFIRE_DAMAGE && a.caster == caster))
+            .and_then(|aura| aura.expires_at).unwrap_or(0.0);
+        if ctx.depth == 0 { expiry(a).total_cmp(&expiry(b)) }
+        else { (expiry(a) > 0.0).cmp(&(expiry(b) > 0.0)) }
+    });
+    if let Some(&target) = enemies.first() {
+        spell_cast::cast_triggered(world, caster, MOONFIRE_DAMAGE, Some(target), ctx.depth + 1);
+    }
+}
 
 fn register(scripts: &mut AuraScripts) {
     let script = scripts.0.entry(TALENT).or_default();

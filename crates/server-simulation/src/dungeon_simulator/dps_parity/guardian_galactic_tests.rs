@@ -54,6 +54,73 @@ fn guardian_galactic_mangle_does_not_proc_from_its_self_effect() {
 
 #[test]
 #[ignore = "requires Guardian Galactic Guardian profile and native world data"]
+fn twin_moonfire_copies_foreground_and_galactic_casts_to_other_enemies() {
+    let mut run = prepare_registered_player(104, 3).unwrap();
+    let actor = run.actor;
+    let primary = run.targets[0];
+    engage(&mut run);
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 5487, Some(actor), false).unwrap();
+    for _ in 0..40 {
+        run.app.update();
+    }
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 8921, Some(primary), false)
+        .unwrap();
+    for _ in 0..3 {
+        run.app.update();
+    }
+    let dotted = |run: &Run| {
+        run.targets
+            .iter()
+            .copied()
+            .filter(|target| {
+                run.app
+                    .world()
+                    .get::<ActiveAuras>(*target)
+                    .is_some_and(|auras| {
+                        auras
+                            .iter()
+                            .any(|aura| aura.spell_id == 164812 && aura.caster == actor)
+                    })
+            })
+            .collect::<Vec<_>>()
+    };
+    let first = dotted(&run);
+    assert_eq!(first.len(), 2, "foreground Moonfire must hit two targets");
+    assert!(first.contains(&primary));
+    let passive = run
+        .app
+        .world()
+        .get::<ActiveAuras>(actor)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 203964 && aura.caster == actor)
+        .unwrap()
+        .instance_id;
+    for _ in 0..30 {
+        run.app.update();
+    }
+    assert_eq!(dotted(&run).len(), 2);
+    assert!(auras::set_effect_amount(
+        run.app.world_mut(),
+        actor,
+        passive,
+        0,
+        100.0
+    ));
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 33917, Some(primary), false)
+        .unwrap();
+    for _ in 0..3 {
+        run.app.update();
+    }
+    assert_eq!(
+        dotted(&run).len(),
+        3,
+        "Galactic Guardian must copy Moonfire to the undotted enemy"
+    );
+}
+
+#[test]
+#[ignore = "requires Guardian Galactic Guardian profile and native world data"]
 fn guardian_galactic_proc_casts_and_empowers_moonfire() {
     let mut run = prepare_registered_player(104, 1).unwrap();
     let actor = run.actor;
