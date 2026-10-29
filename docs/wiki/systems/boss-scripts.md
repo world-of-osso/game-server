@@ -143,7 +143,7 @@ Dummy children for1214325/474018,444034-driven Torrent phase/repeat, and Dash419
 
 [Contract](../../specs/boss-scripts.md#kokia-current-retail-partial-boundary). User-approved four-kill logs supersede the earlier LittleWigs-only Ritual/timer approximation: native372863 completion triggers native1309540 summon189886, with log-median timers and actor-scoped observed Energy refill. Native372858 retains actual372859 weapon damage; Boulder retains native2.5s casting. The unknown383804 periodic-dummy Energy relationship remains unproved.
 
-Earlier d1af8bded proof covered the superseded Lua-clock approximation. Current local targeted10/10 tests cover Normal/projected205 successful and interrupted Ritual, summon, Energy refill, ongoing lanes, damage, reset and isolated credit; train integration is pending. Boulder projectile, Wounds behavior and full-fight proof remain open.
+Earlier d1af8bded proof covered the superseded Lua-clock approximation. Local targeted10/10 tests cover Normal/projected205 successful and interrupted Ritual, summon, Energy refill, ongoing lanes, damage, reset and isolated credit. The combined train gate landed in d15d8bcf3342e3127df58d87d8f0c9b00381be3e, including the missing-Energy-pool safety test. Boulder projectile, Wounds behavior and full-fight proof remain open.
 
 ## Melidrussa current Retail partial — 2026-10-21
 
@@ -354,7 +354,7 @@ Seismic's source `TRIGGERED_IGNORE_SPELL_AND_CATEGORY_CD`0x2 becomes `SpellInfo:
 
 [Contract](../../specs/boss-scripts.md#ruby-final-logged-policy). Four successful logs establish both actors, cast medians, 181089→381605 delay and joint death; LittleWigs confirms the stage2 boundary but not the 181089 producer. The named median-delay approximation waits for Kyrakka's observed landing XY; its interim Z and the two post-pull placement Z values use sourced neighbor geometry. The copy importer retains the replaced journal placement in its provenance. Native health and damage remain untouched.
 
-Local targeted3/3 tests pass on Normal and projected205 for one-actor pull/peer engagement, native cast lanes, movement/phase and first-death versus joint credit. Target46 local2/2 tests cover nearest same-copy selection, native unit-entry conditions and no-match failure; conditioned gameobject/focus cases remain unqualified. Train integration and whole-dungeon completion are pending.
+Local targeted4/4 tests pass on Normal and projected205 for one-actor pull/peer engagement, either-actor half-health threshold, native cast lanes, movement/phase and first-death versus joint credit. Target46 local2/2 tests cover nearest same-copy selection, native unit-entry conditions and no-match failure; conditioned gameobject/focus cases remain unqualified. The preceding three-test encounter gate landed in d15d8bcf3342e3127df58d87d8f0c9b00381be3e; the additional threshold test and whole-dungeon completion remain separate.
 
 ## Ruby Life Pools spell hooks
 
