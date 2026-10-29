@@ -115,6 +115,8 @@ fn ruby_final_logged_clocks_and_stage_anchor() {
                 origin,
                 entries: Vec::new(),
             });
+        h.app
+            .insert_resource(crate::spell_cast::test_harness::ObservedCombatEvents::default());
         h.engage(erkhart);
         h.engage(kyrakka);
         h.advance(1.0);
@@ -154,22 +156,11 @@ fn ruby_final_logged_clocks_and_stage_anchor() {
                 .iter()
                 .any(|a| a.spell == 381602 && (a.time - 15.608).abs() < 0.2)
         );
-        eprintln!(
-            "stage 181089 log={:?}, gos={:?}, Kyrakka attempts={attempts:?}",
-            h.inbox(0)
-                .log
-                .iter()
-                .filter(|event| event.spell_id == Some(181089))
-                .collect::<Vec<_>>(),
-            h.inbox(0)
-                .spell_gos
-                .iter()
-                .filter(|go| go.spell_id == 181089)
-                .collect::<Vec<_>>()
-        );
         assert!(
-            h.inbox(0)
-                .log
+            h.app
+                .world()
+                .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+                .0
                 .iter()
                 .any(|event| event.kind == CombatLogKind::CastSuccess
                     && event.spell_id == Some(181089)
@@ -181,17 +172,6 @@ fn ruby_final_logged_clocks_and_stage_anchor() {
             "stage2 must wait for its anchor delay"
         );
         h.advance(2.0);
-        eprintln!(
-            "stage: position={:?} movement={:?} erkhart_health={:?} kyrakka_state={:?}",
-            h.app.world().get::<Position>(kyrakka),
-            h.app
-                .world()
-                .get::<crate::scripted_ai::movement::PointMovement>(kyrakka),
-            h.app.world().get::<Health>(erkhart),
-            h.app
-                .world()
-                .get::<crate::creature_ai::CreatureState>(kyrakka)
-        );
         let attempts = &h
             .app
             .world()
