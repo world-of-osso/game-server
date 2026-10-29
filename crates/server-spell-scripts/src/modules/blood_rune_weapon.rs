@@ -314,6 +314,9 @@ pub(super) fn copy_weapon_actions(world: &mut World, caster: Entity, spell: &Spe
         .map(|(entity, _, _)| entity)
         .collect();
     for weapon in weapons {
+        if !spell_cast::targets::is_alive(world, weapon) {
+            continue;
+        }
         // SimC76f8118 sc_death_knight.cpp13856–13883: each owner
         // Vampiric Strike grants an independent Transfusion stack to each weapon.
         if spell.id == 433895

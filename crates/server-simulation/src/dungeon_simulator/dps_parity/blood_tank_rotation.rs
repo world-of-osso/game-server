@@ -2978,6 +2978,83 @@ mod tests {
 
     #[test]
     #[ignore = "requires canonical world database and MID2 Blood inputs"]
+    fn rune_weapon_plague_ticks_after_dismissal_without_mirroring_new_casts() {
+        use shared::components::{Npc, UnitSummonedBy};
+        use shared::protocol::CombatLogKind;
+        let mut run = super::super::prepare_registered_player(250, 1).unwrap();
+        let actor = run.actor;
+        let target = run.targets[0];
+        super::super::engage(&mut run);
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 49028, Some(actor), false)
+            .unwrap();
+        for _ in 0..30 {
+            run.app.update();
+        }
+        let weapon = run
+            .app
+            .world_mut()
+            .query::<(bevy::prelude::Entity, &Npc, &UnitSummonedBy)>()
+            .iter(run.app.world())
+            .find(|(_, npc, owner)| npc.template_id == 27893 && owner.0 == actor.to_bits())
+            .unwrap()
+            .0;
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 50842, None, false).unwrap();
+        for _ in 0..4 {
+            run.app.update();
+        }
+        assert!(
+            run.app
+                .world()
+                .get::<crate::auras::ActiveAuras>(target)
+                .unwrap()
+                .iter()
+                .any(|aura| aura.spell_id == 55078 && aura.caster == weapon)
+        );
+        let before = run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .len();
+        crate::spell_cast::summon::despawn_summon(run.app.world_mut(), weapon);
+        for _ in 0..35 {
+            run.app.update();
+        }
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 50842, None, false).unwrap();
+        for _ in 0..100 {
+            run.app.update();
+        }
+        let events = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0[before..];
+        assert!(
+            events
+                .iter()
+                .any(|event| event.source == Some(weapon.to_bits())
+                    && event.spell_id == Some(55078)
+                    && event.kind == CombatLogKind::Damage
+                    && event.periodic)
+        );
+        assert!(
+            !events
+                .iter()
+                .any(|event| event.source == Some(weapon.to_bits())
+                    && event.spell_id == Some(50842)
+                    && event.kind == CombatLogKind::Damage)
+        );
+        for _ in 0..600 {
+            run.app.update();
+        }
+        assert!(
+            run.app.world().get_entity(weapon).is_err(),
+            "retired weapon must be removed after its plague expires"
+        );
+    }
+
+    #[test]
+    #[ignore = "requires canonical world database and MID2 Blood inputs"]
     fn blood_death_strike_can_earn_and_consume_vampiric_strike() {
         let _seed = crate::random::seed_scope(70448);
         let mut run = super::super::prepare_registered_player(250, 1).unwrap();
