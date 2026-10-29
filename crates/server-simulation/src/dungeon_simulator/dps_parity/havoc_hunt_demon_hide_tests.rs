@@ -1,4 +1,4 @@
-//! SimC76f8118 sc_demon_hunter.cpp8486–8501: Hunt's bugs-mode periodic multiplier.
+//! Hunt DoT must not inherit SimC's Soulscar-only Demon Hide double dip.
 use super::*;
 use shared::protocol::CombatLogKind;
 
@@ -42,11 +42,11 @@ fn hunt_tick(selected: bool) -> i32 {
 
 #[test]
 #[ignore = "requires prepared native spec577 player profile"]
-fn havoc_hunt_dot_uses_demon_hide_twice() {
+fn havoc_hunt_dot_does_not_double_apply_demon_hide() {
     let normal = hunt_tick(false);
     let selected = hunt_tick(true);
     assert!(
-        (selected as f32 / normal as f32 - 1.03_f32.powi(2)).abs() < 0.002,
+        (selected as f32 / normal as f32 - 1.03).abs() < 0.002,
         "native Hunt tick {normal} -> {selected}"
     );
 }
