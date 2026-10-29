@@ -8,10 +8,11 @@ fn healer_benchmark_core_direct_heal_amounts_match_db2_tc_ledger() {
     // DB2 SpellEffect, DifficultyID0. TC a352b1fa Unit.cpp7345–7456:
     // unmodified heal = base + healing power × BonusCoefficient (+ AP term).
     // These rows all have base0/AP0; Variance0.05 means ±2.5%, not ±5%.
-    let cases: [(u32, u8, u32, f32, f32); 15] = [
+    let cases: [(u32, u8, u32, f32, f32); 16] = [
         (65, 2, 19750, 315.6, 0.05),
         (65, 2, 82326, 3250.0, 0.05),
         (65, 2, 25914, 1117.0, 0.05),
+        (65, 2, 85673, 415.8, 0.05),
         (256, 5, 2061, 682.0, 0.05),
         (256, 5, 47750, 401.1, 0.05),
         (257, 5, 2060, 972.861, 0.05),
