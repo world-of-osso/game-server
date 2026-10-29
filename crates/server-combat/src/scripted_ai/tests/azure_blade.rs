@@ -205,8 +205,8 @@ fn encounter_coverage_azureblade_native_bounded_rotation_and_image_chain() {
         }
         assert_eq!(
             cast_count(&h, boss, 384132),
-            0,
-            "energy/phase mechanic is a named unsourced gap"
+            1,
+            "first Overwhelming Energy alert requests a native cast"
         );
         assert!(
             h.inbox(1)
