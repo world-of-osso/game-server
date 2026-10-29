@@ -1795,9 +1795,14 @@ fn read_outcome_chances(
     let base_miss = if !attacker.creature && attacker.stats.is_none() {
         0.0
     } else if attacker.player {
-        // SimC76f8118 attack.cpp miss_chance: retail players have no legacy
-        // 5% base miss; dual-wield white attacks retain their 19% penalty.
-        chances.miss - melee::BASE_MISS_PCT
+        // SimC76f8118 attack.cpp83–103 and player.cpp1620–1622: creature
+        // miss starts at 3%, changes 1.5% per signed level, and players
+        // have 7.5% hit; white dual-wield attacks retain the 19% penalty.
+        let adjustment = match victim {
+            Victim::Creature { level_difference } => 3.0 + 1.5 * level_difference as f32 - 7.5,
+            Victim::Player(_) => 0.0,
+        };
+        chances.miss - melee::BASE_MISS_PCT + adjustment
     } else {
         chances.miss
     };
