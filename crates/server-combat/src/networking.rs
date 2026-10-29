@@ -784,7 +784,8 @@ pub(crate) fn apply_terrain_gravity(
         let (next_pos, next_vert_vel, next_fall_tracker, mut next_health, fall) =
             calculate_gravity_state(
                 entity,
-                (ground.ground_in(*map, feet), surface),
+                // The same footprint support movement authority admits the player onto.
+                (ground.player_solid_ground_in(*map, feet), surface),
                 *pos,
                 *vert_vel,
                 fall_tracker.for_epoch(control.epoch, pos.y),

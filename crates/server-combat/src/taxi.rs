@@ -473,7 +473,16 @@ fn fly_taxis(
                 teleported(dirty_queue.as_deref(), entity, &mut control);
             }
             commands.entity(entity).queue(finish_flight);
+            commands.queue(move |world: &mut World| fall_after_flight(world, entity));
         }
+    }
+}
+
+/// A creature that loses flight above the floor falls (`SetCanFly(false)` →
+/// `MotionMaster::MoveFall`, `AuraEffect::HandleAuraAllowFlight`); a player's client drops it.
+fn fall_after_flight(world: &mut World, rider: Entity) {
+    if world.get_entity(rider).is_ok() && world.get::<Player>(rider).is_none() {
+        crate::scripted_ai::fall_movement::move_fall(world, rider, 0);
     }
 }
 
