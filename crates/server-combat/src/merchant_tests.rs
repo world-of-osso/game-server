@@ -4,6 +4,8 @@
 mod economic;
 #[path = "merchant_guild_repair_tests.rs"]
 mod guild_repair;
+#[path = "merchant_guild_reward_tests.rs"]
+mod guild_rewards;
 #[path = "merchant_mount_cost_tests.rs"]
 mod mount_costs;
 #[path = "owned_commerce_buyback_tests.rs"]

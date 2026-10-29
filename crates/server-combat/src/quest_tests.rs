@@ -1744,6 +1744,64 @@ fn join_the_battle_accepted_from_mcbride_and_turned_in_at_willem_is_persisted() 
 }
 
 #[test]
+fn guild_member_turning_in_join_the_battle_earns_guild_reputation() {
+    use shared::protocol::ReputationStateUpdate;
+    use shared::reputation::CharacterReputation;
+    let Some(mut app) = setup_app_with(|app| register::<ReputationStateUpdate>(app)) else {
+        return;
+    };
+    let client = spawn_client(&mut app, 1);
+    add_message_pair::<ReputationStateUpdate>(&mut app, client.connection);
+    app.world_mut()
+        .entity_mut(client.player)
+        .insert(CharacterReputation::default());
+    crate::persistence_character::set_character_guild_by_id(
+        db(&app),
+        client.character_id,
+        7,
+        "Quest Guild",
+    )
+    .unwrap();
+    let mcbride = spawn_npc(&mut app, MARSHAL_MCBRIDE, 2.0);
+    let willem = spawn_npc(&mut app, DEPUTY_WILLEM, 3.0);
+    mark_rewarded(&app, &client, BEATING_THEM_BACK);
+    mark_rewarded(&app, &client, LIONS_FOR_LAMBS);
+    enter_world(&mut app, &client);
+    accept(&mut app, &client, mcbride, JOIN_THE_BATTLE);
+    let guild_value = |app: &App| {
+        app.world()
+            .get::<CharacterReputation>(client.player)
+            .unwrap()
+            .get_value(crate::guild_rewards::GUILD_FACTION)
+    };
+    assert_eq!(guild_value(&app), 0, "accepting earns nothing");
+    turn_in(&mut app, &client, willem, JOIN_THE_BATTLE, None);
+    assert!(received::<QuestFailed>(&mut app, &client).is_empty());
+    // warcraft.wiki.gg 5.0.4: 60000 guild XP, 1 reputation per 360.
+    assert_eq!(guild_value(&app), 166);
+    let update = received::<ReputationStateUpdate>(&mut app, &client)
+        .pop()
+        .expect("guild reputation update");
+    assert_eq!(
+        update.message.as_deref(),
+        Some("gained 166 reputation with Guild")
+    );
+    let guild = update
+        .snapshot
+        .unwrap()
+        .entries
+        .into_iter()
+        .find(|entry| entry.faction_id == crate::guild_rewards::GUILD_FACTION)
+        .unwrap();
+    assert_eq!((guild.value, guild.standing.as_str()), (166, "Neutral"));
+    assert_eq!(
+        persistence::load_reputation(db(&app), client.character_id, || unreachable!())
+            .get_value(crate::guild_rewards::GUILD_FACTION),
+        166
+    );
+}
+
+#[test]
 fn lions_for_lambs_is_blocked_until_beating_them_back_is_turned_in() {
     let Some(mut app) = setup_app() else { return };
     let client = spawn_client(&mut app, 1);

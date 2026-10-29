@@ -108,6 +108,7 @@ impl Plugin for GuildPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<crate::gold::GoldUpdateQueue>()
             .init_resource::<crate::guild_news_network::Subscribers>()
+            .init_resource::<crate::guild_rewards::GuildRewardCatalog>()
             .add_systems(
                 PostUpdate,
                 crate::guild_news_network::publish.before(crate::inventory::InventoryDeltas),
@@ -125,6 +126,7 @@ impl Plugin for GuildPlugin {
                     process_set_officer_note_requests,
                     guild_ranks::process_rank_requests,
                     crate::guild_news_network::receive,
+                    crate::guild_rewards::answer_reward_requests,
                 )
                     .chain(),
             );

@@ -1105,6 +1105,9 @@ fn startup_load_world_data(mut commands: Commands) {
         crate::merchant::load_vendor_catalog(&conn).expect("Failed to load content_npc_vendor");
     info!("Loaded {} vendor lists", vendors.vendors.len());
     commands.insert_resource(vendors);
+    commands.insert_resource(crate::guild_rewards::load_guild_reward_catalog(&conn).expect(
+        "Failed to load tdb_guild_rewards; run scripts/import_guild_rewards.py on a world.db copy",
+    ));
     let professions = crate::profession::load_profession_data(&conn)
         .expect("Failed to load profession data; run scripts/import-azerothcore.sh");
     commands.insert_resource(professions);
