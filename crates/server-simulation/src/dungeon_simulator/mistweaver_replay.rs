@@ -29,6 +29,7 @@ const SPELLS: &[(&str, u32, bool)] = &[
     ("sheiluns_gift", 205406, false),
     ("vivify", 116670, false),
     ("rising_sun_kick", 107428, false),
+    ("spinning_crane_kick", 101546, true),
     ("blackout_kick", 100784, false),
     ("tiger_palm", 100780, false),
 ];
@@ -81,6 +82,7 @@ pub(super) fn prepare(
         ("default", "vivify,if=party.heal_worthwhile"),
         ("default", "soothing_mist,if=target.health.pct<90"),
         ("damage", "rising_sun_kick"),
+        ("damage", "spinning_crane_kick,if=active_enemies>=2"),
         ("damage", "blackout_kick"),
         ("damage", "tiger_palm"),
     ])?;
@@ -270,7 +272,10 @@ impl Policy for Mistweaver {
         let actions = SPELLS
             .iter()
             .filter(|(name, _, _)| {
-                !matches!(*name, "rising_sun_kick" | "blackout_kick" | "tiger_palm")
+                !matches!(
+                    *name,
+                    "rising_sun_kick" | "spinning_crane_kick" | "blackout_kick" | "tiger_palm"
+                )
             })
             .map(|&(name, spell, self_target)| NativeAction {
                 name,
@@ -303,11 +308,31 @@ impl Policy for Mistweaver {
         let Some(enemy) = enemy else {
             return Ok(());
         };
-        let enemies = [enemy];
+        let pulse = world
+            .resource::<crate::spell_info::SpellStore>()
+            .get(107270)
+            .ok_or("Spinning Crane Kick pulse missing")?;
+        let radius = crate::spell_cast::targets::radius(&pulse.effects[0], 1);
+        let center = crate::spell_cast::targets::position(world, healer)
+            .ok_or("Mistweaver position missing")?;
+        let mut enemies = crate::spell_cast::targets::area_units(
+            world,
+            healer,
+            center,
+            radius,
+            crate::spell_cast::targets::Relation::Enemy,
+            0,
+        );
+        if !enemies.contains(&enemy) {
+            enemies = vec![enemy];
+        }
         let damage = SPELLS
             .iter()
             .filter(|(name, _, _)| {
-                matches!(*name, "rising_sun_kick" | "blackout_kick" | "tiger_palm")
+                matches!(
+                    *name,
+                    "rising_sun_kick" | "spinning_crane_kick" | "blackout_kick" | "tiger_palm"
+                )
             })
             .map(|&(name, spell, self_target)| NativeAction {
                 name,
@@ -316,7 +341,7 @@ impl Policy for Mistweaver {
                 talent: None,
             });
         let prepared = Prepared::read(world, healer, &enemies, &self.equipment, damage, false)?;
-        let facts = NativeFacts::new(world, healer, &self.bindings, self.encounter, 1)
+        let facts = NativeFacts::new(world, healer, &self.bindings, self.encounter, enemies.len())
             .with_targets(Some(enemy), &enemies);
         if let Some((action, execution)) =
             self.driver
