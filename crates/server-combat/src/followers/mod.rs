@@ -207,6 +207,10 @@ pub(crate) fn population_difficulty(difficulty: u32) -> u32 {
     }
 }
 
+pub(crate) fn retire_owner(world: &mut World, owner: Entity) {
+    party::retire_owner(world, owner);
+}
+
 pub fn update_ai(world: &mut World) {
     ai::update(world);
 }
