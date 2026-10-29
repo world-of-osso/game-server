@@ -132,8 +132,18 @@ fn haste_173_adds_fel_devastation_ticks_without_shortening_channel() {
 
 #[test]
 fn haste_273_shortens_arcane_missiles_channel() {
-    let mut h = harness(Vec::new(), &[5143, 7268], 8).unwrap();
+    let mut h = harness(Vec::new(), &[5143, 7268, 263725], 8).unwrap();
     h.advance(3);
+    auras::apply_aura(
+        h.app.world_mut(),
+        &auras::AuraApplication {
+            caster: h.caster,
+            target: h.caster,
+            spell_id: 263725,
+            effect_mask: u32::MAX,
+            source: auras::AuraSource::Cast,
+        },
+    );
     h.app
         .world_mut()
         .get_mut::<CharacterStats>(h.caster)
