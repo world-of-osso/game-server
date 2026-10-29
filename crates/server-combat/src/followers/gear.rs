@@ -1,11 +1,18 @@
 //! Source dungeon gear candidates directly from the active Journal and LFG data.
+#[cfg(test)]
+#[path = "gear/equip_tests.rs"]
+mod equip_tests;
 pub mod levels;
 pub mod select;
 use std::collections::{BTreeSet, HashMap};
 use std::path::Path;
 
-use rusqlite::Connection;
+use bevy::prelude::*;
+use rusqlite::{Connection, OpenFlags};
 use serde::Deserialize;
+
+use shared::components::Level;
+use shared::item_data::ItemDefinitionSource;
 
 #[derive(Deserialize)]
 struct JournalInstance {
@@ -115,6 +122,153 @@ pub fn read_dungeon_item_pools(
             Ok((map, items.iter().copied().collect()))
         })
         .collect()
+}
+
+/// Active source data needed to select and scale a follower's equipment.
+#[derive(Resource)]
+pub struct FollowerGearSource {
+    pools: HashMap<u32, Vec<JournalGearCandidate>>,
+    levels: levels::DungeonItemLevels,
+    database: std::path::PathBuf,
+}
+
+pub fn load_source(database: &Path, db2: &Path) -> Result<FollowerGearSource, String> {
+    let db = Connection::open_with_flags(database, OpenFlags::SQLITE_OPEN_READ_ONLY)
+        .map_err(|error| format!("open follower gear source: {error}"))?;
+    Ok(FollowerGearSource {
+        pools: read_dungeon_item_pools(&db, db2)?,
+        levels: levels::DungeonItemLevels::read(db2)?,
+        database: database.to_owned(),
+    })
+}
+
+pub(super) fn load_startup(mut commands: Commands) {
+    let database = Path::new(crate::spell_info::WORLD_DB_PATH);
+    let db2 = database
+        .parent()
+        .expect("world database directory")
+        .join("db2/active");
+    match load_source(database, &db2) {
+        Ok(source) => {
+            commands.insert_resource(source);
+        }
+        Err(error) => error!("Follower gear source unavailable: {error}"),
+    }
+}
+
+/// Equip source items at the current dungeon loot level through normal item instances.
+pub(super) fn equip(
+    world: &mut World,
+    actor: Entity,
+    profile: &super::Profile,
+) -> Result<(), String> {
+    let source = world
+        .get_resource::<FollowerGearSource>()
+        .ok_or("FOLLOWER_GEAR_SOURCE_UNAVAILABLE")?;
+    let copy = *world
+        .get::<crate::maps::InMap>(actor)
+        .ok_or("follower gear map unavailable")?;
+    let difficulty = crate::zones::map_difficulty_id(world, copy);
+    let level = world
+        .get::<Level>(actor)
+        .ok_or("follower gear level unavailable")?
+        .0;
+    let pool = source
+        .pools
+        .get(&copy.map_id)
+        .ok_or_else(|| format!("FOLLOWER_GEAR_DUNGEON_UNAVAILABLE map{}", copy.map_id))?;
+    let templates = world
+        .get_resource::<crate::item_templates::ItemTemplates>()
+        .ok_or("follower gear item templates unavailable")?;
+    let native = world
+        .get_resource::<crate::stats::NativeItemInstances>()
+        .ok_or("follower gear item bonuses unavailable")?;
+    let scaling = world
+        .get_resource::<crate::item_stats::ItemScalingTables>()
+        .ok_or("follower gear item stats unavailable")?;
+    let classes = world
+        .get_resource::<crate::spell_info::ClassSpells>()
+        .ok_or("follower gear classes unavailable")?;
+    let spec = classes
+        .classes
+        .iter()
+        .find(|class| class.class_id == profile.class_id)
+        .and_then(|class| {
+            class
+                .specs
+                .iter()
+                .find(|spec| spec.spec_id == profile.spec_id)
+        })
+        .ok_or("follower gear specialization unavailable")?;
+    let known = world
+        .get::<crate::class_progression::KnownSpells>(actor)
+        .ok_or("follower gear spellbook unavailable")?;
+    let spells = world
+        .get_resource::<crate::spell_info::SpellStore>()
+        .ok_or("follower gear spells unavailable")?;
+    let selection = select::select_items(
+        pool,
+        copy.map_id,
+        profile.class_id,
+        crate::stats::PrimaryStat::from_priority(spec.primary_stat_priority),
+        profile.spec_id,
+        known,
+        spells,
+        templates,
+    );
+    if !selection.missing.is_empty() {
+        return Err(format!(
+            "FOLLOWER_GEAR_SLOTS_UNAVAILABLE spec{}: {:?}",
+            profile.spec_id, selection.missing
+        ));
+    }
+    let representative = pool
+        .iter()
+        .filter(|item| {
+            item.source_map == copy.map_id && item.difficulty_mask == -1 && item.faction_mask == -1
+        })
+        .find_map(|item| {
+            templates
+                .get(ItemDefinitionSource::Retail, item.item_id)
+                .filter(|template| template.inventory_type != 0)
+                .map(|template| (item.item_id, template))
+        })
+        .ok_or("FOLLOWER_GEAR_DUNGEON_LOOT_UNAVAILABLE")?;
+    let db = Connection::open_with_flags(&source.database, OpenFlags::SQLITE_OPEN_READ_ONLY)
+        .map_err(|error| format!("open follower gear database: {error}"))?;
+    let item_level = source.levels.resolve(
+        &db,
+        copy.map_id,
+        difficulty,
+        level,
+        representative.0,
+        representative.1,
+        &native.bonuses,
+        scaling,
+    )?;
+    let modifiers = selection
+        .items
+        .iter()
+        .map(|(slot, _, _)| {
+            (
+                *slot,
+                crate::item_instance::ItemInstanceModifiers {
+                    item_level_override: Some(item_level),
+                    ..Default::default()
+                },
+            )
+        })
+        .collect();
+    world.entity_mut(actor).insert((
+        crate::stats::EquippedItems {
+            items: selection.items,
+        },
+        crate::stats::EquippedItemModifiers {
+            items: modifiers,
+            ..Default::default()
+        },
+    ));
+    Ok(())
 }
 
 #[cfg(test)]

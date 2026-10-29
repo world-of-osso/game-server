@@ -224,7 +224,11 @@ impl Plugin for FollowerPlugin {
             .init_resource::<FollowerCatalog>()
             .add_systems(
                 Startup,
-                (catalog::load_startup, stockade_diagnostic::load_request),
+                (
+                    catalog::load_startup,
+                    gear::load_startup,
+                    stockade_diagnostic::load_request,
+                ),
             )
             .add_systems(
                 Update,
