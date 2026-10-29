@@ -519,6 +519,35 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "requires Guardian MID2 profile and native world data"]
+    fn guardian_ursocs_fury_shields_only_the_native_fraction_of_thrash_damage() {
+        use crate::auras::ActiveAuras;
+        use shared::protocol::CombatLogKind;
+        let mut run = super::super::prepare_registered_player(104, 1).unwrap();
+        let actor = run.actor;
+        let target = run.targets[0];
+        super::super::engage(&mut run);
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 5487, Some(actor), false).unwrap();
+        for _ in 0..40 { run.app.update(); }
+        let amount = |spell| run.app.world().get::<ActiveAuras>(actor).unwrap().iter()
+            .find(|aura| aura.spell_id == spell && aura.caster == actor)
+            .and_then(|aura| aura.effects.iter().find(|effect| effect.index == 0))
+            .map_or(0.0, |effect| effect.amount);
+        let multiplier = amount(377210) / 100.0 * (1.0 + amount(33873) / 100.0) * (1.0 + amount(377796) / 100.0);
+        assert_eq!(amount(377210), 35.0);
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 77758, Some(target), false).unwrap();
+        let world = run.app.world();
+        let damage = world.resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0.iter()
+            .find(|event| event.source == Some(actor.to_bits()) && event.target == Some(target.to_bits()) && event.spell_id == Some(77758) && event.kind == CombatLogKind::Damage)
+            .expect("real Thrash damage").amount as f32;
+        let shield = world.get::<ActiveAuras>(actor).unwrap().iter()
+            .find(|aura| aura.spell_id == 372505 && aura.caster == actor).expect("earned Ursoc shield")
+            .effects.iter().find(|effect| effect.index == 0).unwrap().amount;
+        assert!(damage > 0.0);
+        assert!((shield - damage * multiplier).abs() <= 2.0, "damage={damage} shield={shield} multiplier={multiplier}");
+    }
+
+    #[test]
     #[ignore = "requires Guardian MID2 profile and SimC dungeon-dummy trace"]
     fn guardian_ursocs_fury_absorbs_real_dummy_damage() {
         let trace = std::env::var("HEALER_TANK_SIMC_TRACE").expect("Guardian trace required");

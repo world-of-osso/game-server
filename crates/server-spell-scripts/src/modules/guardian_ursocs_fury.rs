@@ -32,7 +32,8 @@ fn grant_shield(world: &mut World, ctx: &EffectCtx<'_>, _target: Entity, _crit: 
     };
     let nurturing = selected_amount(world, caster, 33873).unwrap_or(0.0);
     let recovery = selected_amount(world, caster, 377796).unwrap_or(0.0);
-    let multiplier = 1.0 + percent / 100.0 * (1.0 + nurturing / 100.0) * (1.0 + recovery / 100.0);
+    // Native 377210 grants its percentage of damage, not SimC76f8118's extra 1.0 (sc_druid.cpp5170).
+    let multiplier = percent / 100.0 * (1.0 + nurturing / 100.0) * (1.0 + recovery / 100.0);
     let mut shield = world
         .resource::<SpellStore>()
         .get(SHIELD)
