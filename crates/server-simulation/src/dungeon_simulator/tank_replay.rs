@@ -13,7 +13,11 @@ use std::collections::{BTreeMap, BTreeSet, VecDeque};
 const TICK_SECONDS: f64 = 0.05;
 const SPIKE_WINDOW_SECONDS: f64 = 5.0;
 
-fn sampled_blocked_pct(world: &World, source: Entity, tank: Entity) -> Result<f32, String> {
+pub(super) fn sampled_blocked_pct(
+    world: &World,
+    source: Entity,
+    tank: Entity,
+) -> Result<f32, String> {
     let attacker = crate::level_scaling::UnitScaling::of(world, source);
     let defender = crate::level_scaling::UnitScaling::of(world, tank);
     let constant = attacker
