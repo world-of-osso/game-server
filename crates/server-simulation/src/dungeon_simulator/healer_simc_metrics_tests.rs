@@ -4,6 +4,60 @@ use shared::casting::CastState;
 use shared::components::Health;
 
 #[test]
+#[ignore = "requires native spell data"]
+fn healer_report_counts_only_consumed_owned_shields() {
+    let mut h = crate::spell_cast::test_harness::harness(Vec::new(), &[133, 17], 5).unwrap();
+    h.app
+        .init_resource::<crate::spell_cast::test_harness::ObservedCombatEvents>();
+    h.app.insert_resource(super::super::healer_intake::Capture {
+        members: vec![h.caster],
+        sources: [(h.npc, (6, 6))].into(),
+        ..Default::default()
+    });
+    let recorder = Recorder::start(h.app.world(), h.caster, h.caster, vec![h.caster]);
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: h.caster,
+            target: h.caster,
+            spell_id: 17,
+            effect_mask: 1,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    assert_eq!(
+        recorder.report(h.app.world(), 1)["consumed_absorbs_by_spell"],
+        serde_json::json!({})
+    );
+    let spell = h
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(133)
+        .unwrap()
+        .clone();
+    let before = h.health(h.caster);
+    crate::spell_cast::effects::deal_damage_shield(
+        h.app.world_mut(),
+        &crate::spell_cast::effects::EffectCtx {
+            caster: h.npc,
+            spell: &spell,
+            depth: 1,
+            dest: None,
+            chain_multiplier: 1.0,
+        },
+        h.npc,
+        h.caster,
+        200.0,
+    );
+    assert_eq!(h.health(h.caster), before);
+    assert_eq!(
+        recorder.report(h.app.world(), 1)["consumed_absorbs_by_spell"]["17"],
+        200.0
+    );
+}
+
+#[test]
 #[ignore = "requires the MID2 Holy player and canonical world database"]
 fn idle_gcd_excludes_native_global_cooldown_after_an_instant_cast() {
     let mut run = super::super::dps_parity::prepare_registered_player(66, 1).unwrap();
@@ -16,7 +70,7 @@ fn idle_gcd_excludes_native_global_cooldown_after_an_instant_cast() {
     for _ in 0..19 {
         recorder.observe_idle_gcd(run.app.world());
     }
-    assert_eq!(recorder.report(1)["idle_gcd_pct"], 5.0);
+    assert_eq!(recorder.report(run.app.world(), 1)["idle_gcd_pct"], 5.0);
 }
 
 #[test]
@@ -51,5 +105,5 @@ fn idle_gcd_counts_only_living_frames_without_cast_or_channel() {
     for _ in 0..5 {
         recorder.observe_idle_gcd(&world);
     }
-    assert_eq!(recorder.report(1)["idle_gcd_pct"], 25.0);
+    assert_eq!(recorder.report(&world, 1)["idle_gcd_pct"], 25.0);
 }
