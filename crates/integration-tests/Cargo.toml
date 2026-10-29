@@ -10,7 +10,7 @@ publish = false
 path = "src/lib.rs"
 
 [dependencies]
-shared = { git = "https://github.com/world-of-osso/shared-protocol.git", rev = "7ccaa40b3736c9d2d962dc2bf04932238d873716" }
+shared = { git = "https://github.com/world-of-osso/shared-protocol.git", rev = "feaf01ac7d170a23abfe3759f982f9baad9066ee" }
 bevy = { version = "0.19", default-features = false, features = [
     "bevy_log", "bevy_state",
 ] }
