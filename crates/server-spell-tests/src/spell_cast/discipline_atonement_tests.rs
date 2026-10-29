@@ -89,6 +89,18 @@ fn master_the_darkness_mind_blast_earns_void_shield_and_absorb_discharges() {
         .insert(ActiveSpec(256));
     let ally_one = spawn_player(&mut h.app, 5, 1.0);
     let ally_two = spawn_player(&mut h.app, 5, 2.0);
+    let marked = spawn_player(&mut h.app, 5, 3.0);
+    let ally_three = spawn_player(&mut h.app, 5, 4.0);
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: h.caster,
+            target: marked,
+            spell_id: 194384,
+            effect_mask: u32::MAX,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
     crate::auras::apply_aura(
         h.app.world_mut(),
         &crate::auras::AuraApplication {
@@ -111,11 +123,20 @@ fn master_the_darkness_mind_blast_earns_void_shield_and_absorb_discharges() {
         crate::auras::has_aura(h.app.world(), h.caster, 1253593),
         "Shield must resolve to Void Shield"
     );
-    for ally in [ally_one, ally_two] {
-        assert!(
-            crate::auras::has_aura(h.app.world(), ally, 1253593),
-            "Void Shield must protect three allies"
-        );
+    let protected: Vec<_> = [ally_one, ally_two, ally_three]
+        .into_iter()
+        .filter(|&ally| crate::auras::has_aura(h.app.world(), ally, 1253593))
+        .collect();
+    assert_eq!(
+        protected.len(),
+        2,
+        "Void Shield protects the primary and two unmarked allies"
+    );
+    assert!(
+        !crate::auras::has_aura(h.app.world(), marked, 1253593),
+        "unmarked allies take priority"
+    );
+    for ally in protected {
         assert!(
             crate::auras::has_aura(h.app.world(), ally, 194384),
             "Void Shield must apply Atonement"
