@@ -176,6 +176,62 @@ fn divine_aegis_accumulates_critical_flash_heals_and_absorbs_damage() {
 }
 
 #[test]
+fn divine_aegis_does_not_trigger_from_critical_atonement() {
+    let mut h = harness(
+        Vec::new(),
+        &[585, 17, 194384, 81749, 94472, 47515, 47753],
+        5,
+    )
+    .unwrap();
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(ActiveSpec(256));
+    h.app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(h.caster)
+        .unwrap()
+        .crit_pct = 100.0;
+    let ally = spawn_player(&mut h.app, 5, 1.0);
+    *h.app.world_mut().get_mut::<Health>(ally).unwrap() = Health {
+        current: 1_000.0,
+        max: 10_000.0,
+    };
+    *h.app.world_mut().get_mut::<Health>(h.npc).unwrap() = Health {
+        current: 100_000.0,
+        max: 100_000.0,
+    };
+    for (target, spell) in [(h.caster, 47515), (ally, 194384)] {
+        crate::auras::apply_aura(
+            h.app.world_mut(),
+            &crate::auras::AuraApplication {
+                caster: h.caster,
+                target,
+                spell_id: spell,
+                effect_mask: u32::MAX,
+                source: crate::auras::AuraSource::Cast,
+            },
+        );
+    }
+    h.cast_and_deliver(585, Some(h.npc));
+    h.advance(70);
+    assert!(
+        h.inbox
+            .log
+            .iter()
+            .any(|event| event.kind == CombatLogKind::Heal
+                && event.spell_id == Some(94472)
+                && event.crit
+                && event.target == Some(ally.to_bits())),
+        "real critical Atonement must occur"
+    );
+    assert!(
+        !crate::auras::has_aura(h.app.world(), ally, 47753),
+        "Atonement cannot trigger Divine Aegis"
+    );
+}
+
+#[test]
 fn master_the_darkness_penance_draws_one_proc_per_four_casts() {
     let mut h = harness(
         Vec::new(),

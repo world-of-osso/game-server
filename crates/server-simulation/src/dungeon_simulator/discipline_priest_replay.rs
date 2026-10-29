@@ -57,18 +57,18 @@ pub(super) fn prepare(
         ("default", "void_shield,if=party.darkness_up"),
         (
             "default",
-            "shield,if=target.atonement_up=0&target.shield_up=0",
+            "shield,if=party.active_atonements<=5&target.atonement_up=0&target.shield_up=0",
         ),
         ("default", "evangelism,if=party.injured>=3"),
         ("heal", "penance,if=target.health.pct<45"),
         (
             "heal",
-            "flash_heal,if=target.atonement_up=0&(mana.pct*7.5>=fight_remains|party.shield_discipline&mana.pct*18>=fight_remains|mana.pct>=90)",
+            "flash_heal,if=target.atonement_remains<=gcd.max&(mana.pct*7.5>=fight_remains|party.shield_discipline&mana.pct*18>=fight_remains|mana.pct>=90)",
         ),
         ("damage", "penance"),
         ("damage", "mind_blast"),
         ("damage", "shadow_word_death,if=target.health.pct<=20"),
-        ("damage", "smite"),
+        ("filler", "smite"),
     ])?;
     Ok(Box::new(Discipline {
         driver: Driver::new(program),
@@ -77,11 +77,27 @@ pub(super) fn prepare(
         encounter,
     }))
 }
+fn atonement_remaining(world: &World, healer: Entity, target: Entity) -> f64 {
+    let now = crate::spell_cast::now(world);
+    world
+        .get::<crate::auras::ActiveAuras>(target)
+        .into_iter()
+        .flat_map(|auras| auras.iter())
+        .filter(|aura| aura.spell_id == 194384 && aura.caster == healer)
+        .map(|aura| {
+            aura.expires_at
+                .map_or(f64::INFINITY, |expires| (expires - now).max(0.0))
+        })
+        .fold(0.0, f64::max)
+}
+
 struct PartyFacts<'a> {
     native: NativeFacts<'a>,
     injured: usize,
+    active_atonements: usize,
     shield: bool,
     atonement: bool,
+    atonement_remains: f64,
     darkness: bool,
     shield_discipline: bool,
 }
@@ -89,8 +105,10 @@ impl Facts for PartyFacts<'_> {
     fn value(&self, name: &str) -> Result<f64, String> {
         match name {
             "party.injured" => Ok(self.injured as f64),
+            "party.active_atonements" => Ok(self.active_atonements as f64),
             "target.shield_up" => Ok(f64::from(self.shield)),
             "target.atonement_up" => Ok(f64::from(self.atonement)),
+            "target.atonement_remains" => Ok(self.atonement_remains),
             "party.darkness_up" => Ok(f64::from(self.darkness)),
             "party.shield_discipline" => Ok(f64::from(self.shield_discipline)),
             _ => self.native.value(name),
@@ -101,8 +119,10 @@ impl ActionFacts for PartyFacts<'_> {
     fn value_for(&self, action: &Action, name: &str) -> Result<f64, String> {
         match name {
             "party.injured"
+            | "party.active_atonements"
             | "target.shield_up"
             | "target.atonement_up"
+            | "target.atonement_remains"
             | "party.darkness_up"
             | "party.shield_discipline" => self.value(name),
             _ => self.native.value_for(action, name),
@@ -125,6 +145,7 @@ impl Discipline {
         healer: Entity,
         target: Entity,
         injured: usize,
+        active_atonements: usize,
         list: &str,
         names: &[&str],
     ) -> Result<bool, String> {
@@ -139,19 +160,16 @@ impl Discipline {
                 talent: None,
             });
         let prepared = Prepared::read(world, healer, &targets, &self.equipment, actions, false)?;
-        let atonement = world
-            .get::<crate::auras::ActiveAuras>(target)
-            .is_some_and(|auras| {
-                auras
-                    .iter()
-                    .any(|a| a.spell_id == 194384 && a.caster == healer)
-            });
+        let atonement_remains = atonement_remaining(world, healer, target);
+        let atonement = atonement_remains > 0.0;
         let facts = PartyFacts {
             native: NativeFacts::new(world, healer, &self.bindings, self.encounter, 1)
                 .with_targets(Some(target), &targets),
             injured,
+            active_atonements,
             shield: crate::auras::has_aura(world, target, 17),
             atonement,
+            atonement_remains,
             darkness: crate::auras::has_aura(world, healer, 1253591),
             shield_discipline: crate::auras::has_aura(world, healer, 197045),
         };
@@ -194,11 +212,16 @@ impl Policy for Discipline {
             tank
         };
         let injured = living.iter().filter(|(_, ratio)| *ratio < 0.85).count();
+        let active_atonements = living
+            .iter()
+            .filter(|(unit, _)| atonement_remaining(world, healer, *unit) > 0.0)
+            .count();
         if self.select(
             world,
             healer,
             target,
             injured,
+            active_atonements,
             "default",
             &[
                 "pain_suppression",
@@ -216,25 +239,63 @@ impl Policy for Discipline {
             healer,
             lowest,
             injured,
+            active_atonements,
             "heal",
-            &["penance", "flash_heal"],
+            &["penance"],
         )? {
             return Ok(());
         }
         let enemy = world
             .get::<crate::networking::CombatTarget>(tank)
-            .and_then(|t| t.0);
+            .and_then(|target| target.0);
         if let Some(enemy) = enemy {
             world
                 .entity_mut(healer)
                 .insert(crate::networking::CombatTarget(Some(enemy)));
+            if self.select(
+                world,
+                healer,
+                enemy,
+                injured,
+                active_atonements,
+                "damage",
+                &["penance", "mind_blast", "shadow_word_death"],
+            )? {
+                return Ok(());
+            }
+        }
+        let flash_target = living
+            .iter()
+            .min_by(|(left, _), (right, _)| {
+                let score = |unit| {
+                    atonement_remaining(world, healer, unit)
+                        + if unit == healer { 20.0 } else { 0.0 }
+                };
+                score(*left).total_cmp(&score(*right))
+            })
+            .map(|(unit, _)| *unit);
+        if let Some(target) = flash_target
+            && self.select(
+                world,
+                healer,
+                target,
+                injured,
+                active_atonements,
+                "heal",
+                &["flash_heal"],
+            )?
+        {
+            return Ok(());
+        }
+        if let Some(enemy) = enemy {
             let _ = self.select(
                 world,
                 healer,
                 enemy,
                 injured,
-                "damage",
-                &["penance", "mind_blast", "shadow_word_death", "smite"],
+                active_atonements,
+                "filler",
+                &["smite"],
             )?;
         }
         Ok(())
