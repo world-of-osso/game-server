@@ -9,7 +9,7 @@ fn healing_rain_triggers_tidewaters_on_owned_riptides() {
     };
     use shared::components::{Health, Mana};
     use shared::protocol::CombatLogKind;
-    let mut h = harness(Vec::new(), &[73920, 61295, 462424, 462425], 7).unwrap();
+    let mut h = harness(Vec::new(), &[73920, 73921, 61295, 462424, 462425], 7).unwrap();
     h.app.init_resource::<ObservedCombatEvents>();
     let first = spawn_player(&mut h.app, 7, 3.0);
     let second = spawn_player(&mut h.app, 7, 5.0);
