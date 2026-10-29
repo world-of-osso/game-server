@@ -699,6 +699,30 @@ mod tests {
 
     #[test]
     #[ignore = "requires canonical world database and MID2 Blood inputs"]
+    fn blood_dance_rolls_once_per_rune_payment() {
+        fn first_spawn(runes: f32) -> u32 {
+            let _seed = crate::random::seed_scope(70448);
+            let mut run = super::super::prepare_registered_player(250, 1).unwrap();
+            let actor = run.actor;
+            super::super::engage(&mut run);
+            for attempt in 1..=30 {
+                crate::spell_cast::script_registry::after_payment(
+                    run.app.world_mut(), actor,
+                    &[(crate::spell_cast::CostPool::Power(shared::components::PowerType::Runes), runes)],
+                );
+                let world = run.app.world_mut();
+                if world.query::<&crate::spell_cast::summon::SummonedCreature>().iter(world)
+                    .any(|summon| summon.owner == actor && summon.spell_id == 1264353) {
+                    return attempt;
+                }
+            }
+            panic!("no Dance weapon after 30 payments")
+        }
+        assert_eq!(first_spawn(1.0), first_spawn(2.0), "each payment gets one proc roll regardless of rune count");
+    }
+
+    #[test]
+    #[ignore = "requires canonical world database and MID2 Blood inputs"]
     fn blood_rune_spend_can_summon_dance_weapon_and_enable_parry_buff() {
         let _seed = crate::random::seed_scope(70448);
         let mut run = super::super::prepare_registered_player(250, 1).unwrap();

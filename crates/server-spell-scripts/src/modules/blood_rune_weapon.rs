@@ -163,18 +163,17 @@ fn spawn_dance_weapon(world: &mut World, caster: Entity, costs: &[(CostPool, f32
     if runes <= 0.0 {
         return;
     }
-    for _ in 0..runes as u32 {
-        let mut entity = world.entity_mut(caster);
-        let mut state = entity.entry::<DanceAttempts>().or_default();
-        let mut state = state.get_mut();
-        state.0 += 1;
-        let chance = combat::random::accumulated_proc_constant(0.125) * f64::from(state.0);
-        if combat::random::random::<f64>() < chance {
-            state.0 = 0;
-            drop(state);
-            drop(entity);
-            spell_cast::cast_triggered(world, caster, 1264353, Some(caster), 1);
-        }
+    // SimC76f8118 sc_death_knight.cpp13072–13075 rolls once per rune resource loss.
+    let mut entity = world.entity_mut(caster);
+    let mut state = entity.entry::<DanceAttempts>().or_default();
+    let mut state = state.get_mut();
+    state.0 += 1;
+    let chance = combat::random::accumulated_proc_constant(0.125) * f64::from(state.0);
+    if combat::random::random::<f64>() < chance {
+        state.0 = 0;
+        drop(state);
+        drop(entity);
+        spell_cast::cast_triggered(world, caster, 1264353, Some(caster), 1);
     }
 }
 
