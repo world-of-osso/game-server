@@ -353,6 +353,73 @@ fn process_activate_taxi(
     }
 }
 
+/// Start the lead-approved Ruby ferry approximation. The source action set and
+/// vehicle seat are unavailable; see the follower-dungeon spec for the inference.
+pub(crate) fn start_ruby_ferry(world: &mut World, player: Entity, npc: Entity) {
+    const RUBY_MAP: u32 = 2521;
+    const RUBY_PATH: u32 = 11715;
+    const RADIANT_DRAKE_DISPLAY: u32 = 107204;
+    let Some(map) = world.get::<crate::maps::InMap>(player).copied() else {
+        return;
+    };
+    if map.map_id != RUBY_MAP || world.get::<crate::maps::InMap>(npc) != Some(&map) {
+        return;
+    }
+    let Some(npc_position) = world.get::<Position>(npc) else {
+        return;
+    };
+    let lower_spawn = Vec3::new(1540.7935, 131.9674, 246.033);
+    if Vec3::new(npc_position.x, npc_position.y, npc_position.z).distance(lower_spawn) > 1.0 {
+        return;
+    }
+    let encounter = crate::scripted_ai::instance_script::boss_id_for_encounter(world, map, 2609);
+    if encounter.and_then(|id| crate::scripted_ai::instance_script::get_boss_state(world, map, id))
+        != Some(crate::scripted_ai::instance_script::EncounterState::Done)
+    {
+        return;
+    }
+    let Some(points) = world.resource::<TaxiNetwork>().scripted_path(RUBY_PATH) else {
+        error!("Ruby ferry TaxiPath {RUBY_PATH} is unavailable");
+        return;
+    };
+    let mut riders = vec![player];
+    let followers: Vec<Entity> = world
+        .query::<(Entity, &crate::followers::Follower, &crate::maps::InMap)>()
+        .iter(world)
+        .filter_map(|(entity, follower, current)| {
+            (follower.owner == player && *current == map).then_some(entity)
+        })
+        .collect();
+    riders.extend(followers);
+    if riders.iter().any(|&rider| {
+        world.get::<TaxiFlight>(rider).is_some()
+            || world.get::<Mounted>(rider).is_some()
+            || world.get::<Position>(rider).is_none()
+            || world.get::<Rotation>(rider).is_none()
+    }) {
+        error!("Ruby ferry party contains a rider who cannot start flight");
+        return;
+    }
+    for rider in riders {
+        world.entity_mut(rider).insert((
+            TaxiFlight {
+                points: points.clone(),
+                next: 0,
+            },
+            Mounted {
+                mount_display_id: RADIANT_DRAKE_DISPLAY,
+                ..Default::default()
+            },
+        ));
+        if let Some(mut control) = world.get_mut::<MovementControl>(rider) {
+            control.controlled = true;
+        }
+        if let Some(queue) = world.get_resource::<ReplicationDirtyQueue>() {
+            queue.mark(rider);
+        }
+    }
+}
+
 /// Move `position` up to `step` yards along the flight; true once it landed.
 pub(crate) fn advance_flight(flight: &mut TaxiFlight, position: &mut Vec3, mut step: f32) -> bool {
     while let Some(&target) = flight.points.get(flight.next) {
@@ -376,7 +443,7 @@ type Flyers<'w, 's> = Query<
         &'static mut TaxiFlight,
         &'static mut Position,
         &'static mut Rotation,
-        &'static mut MovementControl,
+        Option<&'static mut MovementControl>,
     ),
 >;
 
@@ -387,7 +454,7 @@ fn fly_taxis(
     mut commands: Commands,
 ) {
     let step = FLIGHT_SPEED * time.delta_secs();
-    for (entity, mut flight, mut position, mut rotation, mut control) in &mut flyers {
+    for (entity, mut flight, mut position, mut rotation, control) in &mut flyers {
         let start = Vec3::new(position.x, position.y, position.z);
         let mut next = start;
         let landed = advance_flight(&mut flight, &mut next, step);
@@ -402,7 +469,9 @@ fn fly_taxis(
         };
         crate::interest::mark_interest_position_changed(dirty_queue.as_deref(), entity);
         if landed {
-            teleported(dirty_queue.as_deref(), entity, &mut control);
+            if let Some(mut control) = control {
+                teleported(dirty_queue.as_deref(), entity, &mut control);
+            }
             commands.entity(entity).queue(finish_flight);
         }
     }
@@ -413,9 +482,10 @@ pub(crate) fn finish_flight(mut player: EntityWorldMut) {
     if !player.contains::<TaxiFlight>() {
         return;
     }
-    player
-        .remove::<(TaxiFlight, Mounted)>()
-        .insert(MovementSpeed(RUN_SPEED));
+    player.remove::<(TaxiFlight, Mounted)>();
+    if player.contains::<Player>() {
+        player.insert(MovementSpeed(RUN_SPEED));
+    }
     if let Some(mut control) = player.get_mut::<MovementControl>() {
         control.controlled = false;
     }

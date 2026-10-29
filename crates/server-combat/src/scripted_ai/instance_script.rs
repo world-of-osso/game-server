@@ -305,7 +305,7 @@ pub(crate) fn creature_group_depleted(
 }
 
 /// Runtime slot of an encounter identity, independent of source ordinals/DB2 bits.
-pub(super) fn boss_id_for_encounter(world: &mut World, map: InMap, encounter: u32) -> Option<u32> {
+pub(crate) fn boss_id_for_encounter(world: &mut World, map: InMap, encounter: u32) -> Option<u32> {
     instance_script(world, map)?
         .bosses
         .iter()

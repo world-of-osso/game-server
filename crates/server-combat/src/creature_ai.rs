@@ -76,6 +76,7 @@ type Roaming = (
     Without<crate::scripted_ai::fall_movement::FallMovement>,
     Without<crate::navigation::collision_drop::CollisionDropMovement>,
     Without<crate::spell_cast::charge::ChargeMovement>,
+    Without<crate::taxi::TaxiFlight>,
 );
 /// Active creatures that are not confused, feared or in flight: chase and leash run.
 pub(crate) type ActiveUncontrolled = (
@@ -87,6 +88,7 @@ pub(crate) type ActiveUncontrolled = (
     Without<crate::scripted_ai::fall_movement::FallMovement>,
     Without<crate::navigation::collision_drop::CollisionDropMovement>,
     Without<crate::spell_cast::charge::ChargeMovement>,
+    Without<crate::taxi::TaxiFlight>,
 );
 
 pub struct CreatureAiPlugin;
