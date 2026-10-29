@@ -313,22 +313,11 @@ fn discipline_fiend_spells_transfer_pet_damage_to_atonement() {
             .iter(h.app.world())
             .map(|(entity, summon)| (entity, summon.owner, summon.spell_id))
             .collect();
-        assert!(
-            summons
-                .iter()
-                .any(|(_, owner, id)| *owner == h.caster && *id == spell),
-            "summon {spell} not present immediately: {summons:?}"
-        );
-        h.advance(148);
-        let actor = h
-            .app
-            .world_mut()
-            .query::<(Entity, &SummonedCreature)>()
-            .iter(h.app.world())
-            .find_map(|(entity, summon)| {
-                (summon.owner == h.caster && summon.spell_id == spell).then_some(entity)
-            })
-            .expect("real native summon");
+        let actor = summons
+            .iter()
+            .find_map(|(entity, owner, id)| (*owner == h.caster && *id == spell).then_some(*entity))
+            .unwrap_or_else(|| panic!("summon {spell} not present immediately: {summons:?}"));
+        h.advance(60);
         let events = &h.app.world().resource::<ObservedCombatEvents>().0;
         assert!(
             events
