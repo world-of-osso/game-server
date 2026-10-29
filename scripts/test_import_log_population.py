@@ -1,4 +1,5 @@
 import importlib.util
+import json
 import shutil
 import sqlite3
 import tempfile
@@ -18,6 +19,29 @@ def record(key, x, npc=123):
 
 
 class ImportTest(unittest.TestCase):
+    def test_projects_tdb_template_and_models_on_copy(self):
+        fixture = json.loads((Path(__file__).parent / 'tests/fixtures/log-population-tdb.json').read_text())
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / 'world.db'
+            copy = Path(directory) / 'world-copy.db'
+            with sqlite3.connect(source) as db:
+                for table, data in fixture.items():
+                    db.execute(data['sql'])
+                    for row in data['rows']:
+                        db.execute(f"INSERT INTO {table} VALUES ({','.join('?' for _ in row)})", row)
+            shutil.copyfile(source, copy)
+            report = module.import_population(copy, [record('tdb', 100, npc=189886), record('absent', 200, npc=99999999)])
+            self.assertEqual(report['2521']['templates_from_tdb'], [189886])
+            self.assertEqual(report['2521']['templates_absent'], [99999999])
+            with sqlite3.connect(copy) as db:
+                self.assertEqual(db.execute('SELECT entry FROM content_creature_template').fetchall(), [(189886,)])
+                self.assertEqual(db.execute('SELECT CreatureID,CreatureDisplayID FROM content_creature_template_model').fetchall(),
+                                 db.execute('SELECT CreatureID,CreatureDisplayID FROM tdb_creature_template_model').fetchall())
+                self.assertEqual(db.execute('SELECT DifficultyID FROM content_creature_template_difficulty ORDER BY DifficultyID').fetchall(), [(1,), (2,), (23,)])
+                self.assertEqual(db.execute('SELECT entry,policy FROM log_derived_templates').fetchall(), [(189886, module.POLICY)])
+            with sqlite3.connect(source) as db:
+                self.assertEqual(db.execute('SELECT COUNT(*) FROM content_creature_template').fetchone()[0], 0)
+
     def test_copy_only_import_preserves_authored_and_tags_sourced_row(self):
         with tempfile.TemporaryDirectory() as directory:
             source = Path(directory) / 'world.db'
