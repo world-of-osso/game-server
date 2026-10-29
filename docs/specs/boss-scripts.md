@@ -23,6 +23,7 @@
 - TC a352b1fa `LoadDoorData`/`UpdateDoorState` (`OpenWhenDone`): a listed door is READY (closed, collision on) until its encounter is DONE, then ACTIVE. Applied at copy fill (saved DONE included) and on every boss state change.
 - GO_CATACOMBS_GATE 430177 follows The Candle King (2787), per TC `instance_darkflame_cleft.cpp` doorData.
 - `WAXBEARD_GATE_UNLOCK_LOG_CORRELATED`: 11DU_CATACOMBS_GATE01 420154 (TDB state 1, no TC door data) follows Ol' Waxbeard (2829). WCL WBYDm1N6JTZzCFnd fight 3 has no player position past WoW y=-11.4 before the kill and pull 5 at y=-123 beyond the gate. The exact retail trigger is unsourced.
+- `BLAZIKON_DOOR_UNLOCK_LOG_CORRELATED`: 11DU_Foundry_Door01_Large 430175 (TDB state 1, no TC door data) follows Blazikon (2826). WCL WBYDm1N6JTZzCFnd fight 3 pulls 5-8 (through the kill) have no player west of WoW x=371.5; pull 9 reaches x=224 beyond the door at x=336.8. The exact retail trigger is unsourced.
 
 ## TWW The Darkness logged actor and 55% end
 
