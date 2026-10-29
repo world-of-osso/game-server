@@ -101,6 +101,62 @@ fn mistweaver_ancient_teachings_splits_damage_and_preserves_critical_result() {
 }
 
 #[test]
+#[ignore = "requires native top-character profiles and world database"]
+fn mistweaver_uses_spinning_crane_kick_only_against_a_pack() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::components::Health;
+    use shared::protocol::CombatLogKind;
+    let mut run = super::super::dps_parity::prepare_registered_player(66, 2).unwrap();
+    let tank = run.actor;
+    let healer = super::super::dps_parity::spawn_second_reference_player(&mut run, 270).unwrap();
+    let enemy = run.targets[0];
+    let add = run.targets[1];
+    run.app
+        .world_mut()
+        .entity_mut(tank)
+        .insert(crate::networking::CombatTarget(Some(enemy)));
+    run.app.world_mut().get_mut::<Health>(add).unwrap().current = 0.0;
+    let mut policy = super::prepare(&mut run, healer).unwrap();
+    for _ in 0..150 {
+        policy
+            .drive(run.app.world_mut(), healer, &[tank, healer])
+            .unwrap();
+        run.app.update();
+    }
+    assert!(
+        !run.app
+            .world()
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|e| e.source == Some(healer.to_bits())
+                && e.spell_id == Some(101546)
+                && e.kind == CombatLogKind::CastSuccess)
+    );
+    {
+        let mut hp = run.app.world_mut().get_mut::<Health>(add).unwrap();
+        hp.current = hp.max;
+    }
+    for _ in 0..250 {
+        policy
+            .drive(run.app.world_mut(), healer, &[tank, healer])
+            .unwrap();
+        run.app.update();
+    }
+    assert!(
+        run.app
+            .world()
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|e| e.source == Some(healer.to_bits())
+                && e.spell_id == Some(101546)
+                && e.kind == CombatLogKind::CastSuccess),
+        "Mistweaver must use Spinning Crane Kick against a pack"
+    );
+}
+
+#[test]
 #[ignore = "replays the MID2 Mistweaver against the SimC party pulse"]
 fn mistweaver_uses_sheilun_on_party_damage() {
     let trace = std::env::var("HEALER_TANK_SIMC_TRACE").expect("HEALER_TANK_SIMC_TRACE required");
