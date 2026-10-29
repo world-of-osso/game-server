@@ -9,6 +9,7 @@ use std::collections::HashMap;
 pub struct FiendAtonementReceipts(
     pub HashMap<Entity, (f64, f64, f64)>,
     pub Vec<FiendSummonReceipt>,
+    pub Vec<(Entity, f64, f32, f32)>,
 );
 
 pub struct FiendSummonReceipt {

@@ -334,7 +334,17 @@ fn proc_shadowfiend(world: &mut World, caster: Entity, target: Entity, depth: u8
         return;
     }
     let chance = combat::spell_cast::scripts::script_effect_value(world, caster, 34433, 2);
-    if combat::random::random::<f32>() * 100.0 < chance {
+    let roll = combat::random::random::<f32>() * 100.0;
+    #[cfg(any(test, feature = "test-support"))]
+    {
+        let now = combat::spell_cast::now(world);
+        if let Some(mut receipts) =
+            world.get_resource_mut::<crate::test_support::FiendAtonementReceipts>()
+        {
+            receipts.2.push((caster, now, roll, chance));
+        }
+    }
+    if roll < chance {
         combat::spell_cast::cast_triggered(world, caster, 1280172, Some(target), depth + 1);
     }
 }

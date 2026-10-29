@@ -190,7 +190,8 @@ impl Recorder {
             .copied()
             .unwrap_or_default();
         let fiend_summons: Vec<_> = world.get_resource::<server_spell_scripts::test_support::FiendAtonementReceipts>().into_iter().flat_map(|receipts| &receipts.1).filter(|receipt| receipt.owner == self.healer).map(|receipt| json!({"spell": receipt.spell, "spawn_seconds": receipt.started - self.started_at, "scheduled_lifetime_seconds": receipt.expires.map(|expires| expires - receipt.started), "owner_spell_power": receipt.owner_spell_power, "landed_pre_mitigation_hits": receipt.landed_raw})).collect();
-        json!({"fiend_summons":fiend_summons,"fiend_pre_mitigation_damage":fiend.0,"fiend_atonement_raw":fiend.1,"fiend_atonement_effective":fiend.2,
+        let fiend_rolls: Vec<_> = world.get_resource::<server_spell_scripts::test_support::FiendAtonementReceipts>().into_iter().flat_map(|receipts| &receipts.2).filter(|(owner, _, _, _)| *owner == self.healer).map(|(_, time, roll, chance)| json!({"time_seconds":time - self.started_at,"roll_pct":roll,"chance_pct":chance})).collect();
+        json!({"fiend_rolls":fiend_rolls,"fiend_summons":fiend_summons,"fiend_pre_mitigation_damage":fiend.0,"fiend_atonement_raw":fiend.1,"fiend_atonement_effective":fiend.2,
             "raw_hps":raw as f64 / duration,"effective_hps":effective as f64 / duration,
             "consumed_absorbs_by_spell":absorbs,
             "overheal_pct":(raw > 0).then(|| 100.0 * (raw - effective) as f64 / raw as f64),
