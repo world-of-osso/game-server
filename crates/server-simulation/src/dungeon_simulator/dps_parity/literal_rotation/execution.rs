@@ -890,7 +890,9 @@ fn native_readiness(
             limited: None,
             queue_delay: None,
         }),
-        Err(crate::spell_cast::CastFailure::OnCooldown | crate::spell_cast::CastFailure::NoCharges) => {
+        Err(crate::spell_cast::CastFailure::OnCooldown | crate::spell_cast::CastFailure::NoCharges)
+            if item.is_none() =>
+        {
             match crate::spell_cast::read_native_cast_for_cooldown_queue(
                 world, actor, &spell, target, after_channel,
             ) {
