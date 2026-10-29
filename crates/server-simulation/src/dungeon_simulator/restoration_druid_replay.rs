@@ -80,7 +80,7 @@ pub(super) fn prepare(
         ),
         (
             "default",
-            "rejuvenation,if=target.health.pct<95&target.rejuvenation_up=0",
+            "rejuvenation,if=target.health.pct<95&target.rejuvenation_covered=0",
         ),
         ("default", "regrowth,if=target.health.pct<90"),
         ("damage", "moonfire,if=target.moonfire_up=0"),
@@ -98,7 +98,7 @@ pub(super) fn prepare(
 struct PartyFacts<'a> {
     native: NativeFacts<'a>,
     lifebloom_up: bool,
-    rejuvenation_up: bool,
+    rejuvenation_covered: bool,
     injured: usize,
     efflorescence_up: bool,
     moonfire_up: bool,
@@ -107,7 +107,7 @@ impl Facts for PartyFacts<'_> {
     fn value(&self, name: &str) -> Result<f64, String> {
         match name {
             "target.lifebloom_up" => Ok(f64::from(self.lifebloom_up)),
-            "target.rejuvenation_up" => Ok(f64::from(self.rejuvenation_up)),
+            "target.rejuvenation_covered" => Ok(f64::from(self.rejuvenation_covered)),
             "party.injured" => Ok(self.injured as f64),
             "party.efflorescence_up" => Ok(f64::from(self.efflorescence_up)),
             "target.moonfire_up" => Ok(f64::from(self.moonfire_up)),
@@ -119,7 +119,7 @@ impl ActionFacts for PartyFacts<'_> {
     fn value_for(&self, action: &Action, name: &str) -> Result<f64, String> {
         match name {
             "target.lifebloom_up"
-            | "target.rejuvenation_up"
+            | "target.rejuvenation_covered"
             | "party.injured"
             | "party.efflorescence_up"
             | "target.moonfire_up" => self.value(name),
@@ -188,7 +188,9 @@ impl Policy for Restoration {
             native: NativeFacts::new(world, healer, &self.bindings, self.encounter, 1)
                 .with_targets(Some(target), &targets),
             lifebloom_up: has_owned_hot(world, healer, target, 33763),
-            rejuvenation_up: has_owned_hot(world, healer, target, 774),
+            rejuvenation_covered: has_owned_hot(world, healer, target, 774)
+                && (!crate::auras::has_aura(world, healer, 155675)
+                    || has_owned_hot(world, healer, target, 155777)),
             injured,
             efflorescence_up,
             moonfire_up: false,
@@ -214,7 +216,7 @@ impl Policy for Restoration {
             native: NativeFacts::new(world, healer, &self.bindings, self.encounter, 1)
                 .with_targets(Some(self.enemy), &targets),
             lifebloom_up: false,
-            rejuvenation_up: false,
+            rejuvenation_covered: false,
             injured,
             efflorescence_up,
             moonfire_up: has_owned_hot(world, healer, self.enemy, 164812),
