@@ -12,6 +12,10 @@ pub(in crate::spell_cast) const EXECUTE_PARENTS: &[u32] = &[163201, 281000];
 const ROGUE_SPELL_FAMILY: u32 = 8;
 const FEROCIOUS_BITE: u32 = 22568;
 
+/// Optional, per-caster record of successfully paid cast costs.
+#[derive(Component, Default)]
+pub struct ObservedResourcePayments(pub Vec<(u32, CostPool, f32)>);
+
 /// CalcPowerCost's optional branch: signed, power/family-masked caster total.
 pub(super) fn additional_optional_cost(
     world: &World,

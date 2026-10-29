@@ -240,6 +240,7 @@ pub(crate) mod recovery_rate;
 mod reflect;
 mod resource_facts;
 mod resources;
+pub use resources::ObservedResourcePayments;
 pub mod runes;
 pub mod script_registry;
 pub mod scripts;
@@ -4269,6 +4270,14 @@ fn take_cast_resources(
         return;
     }
     spend_costs(world, caster, costs);
+    if let Some(mut observed) = world.get_mut::<ObservedResourcePayments>(caster) {
+        observed.0.extend(
+            costs
+                .iter()
+                .filter(|(_, amount)| *amount > 0.0)
+                .map(|&(pool, amount)| (spell.id, pool, amount)),
+        );
+    }
     script_registry::after_payment(world, caster, costs);
     scripts::roll_runic_empowerment(world, caster, spell, costs);
     scripts::empower_gargoyles(world, caster, costs);
