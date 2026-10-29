@@ -978,8 +978,7 @@ fn replay_registered_run_with_healing(
             .entry(resource)
             .or_default() += f64::from(amount);
     }
-    Ok(
-        json!({"spec":spec,"level":level,"reference_tier":"MID2","timeline":"simc_tank_dummy",
+    let mut report = json!({"spec":spec,"level":level,"reference_tier":"MID2","timeline":"simc_tank_dummy",
         "external_healing":external_healing,"external_healing_effective":external_healing_effective,
         "bloodlust_start_seconds":bloodlust_ms.filter(|_| bloodlust_applied).map(|ms| ms as f64 / 1000.0),
         "raid_buffs":raid_buffs.iter().map(|buff| json!({"name":buff.name,"spell_id":buff.spell_id})).collect::<Vec<_>>(),
@@ -987,7 +986,6 @@ fn replay_registered_run_with_healing(
         "dummy_bleeding":dummy_bleeding,
         "self_healing_by_spell":healing_by_spell,"raw_self_healing_by_spell":raw_healing_by_spell,
         "periodic_damage_ticks_by_spell":periodic_ticks_by_spell,
-        "outgoing_damage_by_spell":outgoing_damage_by_spell,"resource_spent_by_spell":resource_spent_by_spell,
         "energize_by_spell":energize_by_spell.iter().map(|(spell, (attempted, effective))| (spell, json!({"attempted": attempted, "effective": effective}))).collect::<BTreeMap<_, _>>(),
         "absorbs_by_spell":absorbs_by_spell,"aura_uptime":aura_uptime,
         "resource_counters":counters,"target_debuff_uptime":target_debuff_uptime,
@@ -1002,6 +1000,8 @@ fn replay_registered_run_with_healing(
         "self_heal_per_second":(elapsed>0.0).then(||self_healing/elapsed),
         "absorb_per_second":(elapsed>0.0).then(||absorbed/elapsed),"time_to_death":death,
         "active_mitigation_auras":mitigation_auras,"active_mitigation_uptime":(elapsed>0.0).then(||active_seconds/elapsed),
-        "spike_window_seconds":SPIKE_WINDOW_SECONDS,"largest_spike":spike}),
-    )
+        "spike_window_seconds":SPIKE_WINDOW_SECONDS,"largest_spike":spike});
+    report["outgoing_damage_by_spell"] = json!(outgoing_damage_by_spell);
+    report["resource_spent_by_spell"] = json!(resource_spent_by_spell);
+    Ok(report)
 }
