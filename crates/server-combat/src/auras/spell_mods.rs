@@ -152,6 +152,9 @@ fn matching<'a>(
                 // effects to Monster Within; the Devourer damage hook applies
                 // that live mastery value. Do not also apply the raw aura amount.
                 !(aura.spell_id == 1217607 && matches!(effect.index, 3 | 4))
+                    // SimC76f8118 sc_demon_hunter.cpp3088–3110 deposits
+                    // post-Exergy damage; applying Exergy again is a double dip.
+                    && !(aura.spell_id == 208628 && effect.index == 1 && spell.id == 453177)
                     && is_spell_mod(effect.aura_type)
                     && effect.misc_values[0] == op as i32
                     && affects(aura, effect, spell)
