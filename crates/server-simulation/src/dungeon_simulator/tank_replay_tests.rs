@@ -1530,6 +1530,43 @@ fn simc_dummy_melee_uses_recipient_avoidance_and_strikes_can_block() {
 }
 
 #[test]
+#[ignore = "uses native player defense and actual melee outcome rolls"]
+fn higher_level_attacker_reduces_player_avoidance() {
+    use crate::melee::MeleeOutcome;
+    use shared::components::UnitLevel;
+    let _rng = crate::random::seed_scope(70448);
+    let mut h = crate::spell_cast::test_harness::harness(Vec::new(), &[], 12).unwrap();
+    h.app.world_mut().entity_mut(h.caster).insert(UnitLevel(90));
+    h.app.world_mut().entity_mut(h.npc).insert(UnitLevel(92));
+    let mut stats = h
+        .app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(h.caster)
+        .unwrap();
+    stats.defense.dodge = 3.0;
+    stats.defense.parry = 3.0;
+    stats.defense.block = 0.0;
+    drop(stats);
+    for _ in 0..1000 {
+        let (outcome, difference) =
+            crate::combat::roll_simc_dummy_outcome(h.app.world(), h.npc, h.caster, false, 0.0, 0.0)
+                .unwrap();
+        assert_eq!(difference, -2);
+        assert_eq!(outcome, MeleeOutcome::Hit);
+    }
+    h.app.world_mut().entity_mut(h.npc).insert(UnitLevel(90));
+    let avoided = (0..1000)
+        .filter(|_| {
+            crate::combat::roll_simc_dummy_outcome(h.app.world(), h.npc, h.caster, false, 0.0, 0.0)
+                .unwrap()
+                .0
+                .avoided()
+        })
+        .count();
+    assert!(avoided > 0, "equal-level attacks retain defense");
+}
+
+#[test]
 #[ignore = "uses native recipient armor and absorb data"]
 fn simc_dummy_bleed_uses_native_absorbs_but_not_armor() {
     let mut h = crate::spell_cast::test_harness::harness(Vec::new(), &[17], 5).unwrap();

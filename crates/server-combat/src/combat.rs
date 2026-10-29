@@ -1914,10 +1914,14 @@ fn swing_victim(
     if is_npc {
         Victim::Creature { level_difference }
     } else {
-        Victim::Player(PlayerDefense {
-            sitting,
-            ..player.map_or_else(Default::default, |stats| stats.defense)
-        })
+        let mut defense = player.map_or_else(Default::default, |stats| stats.defense);
+        if player.is_some() {
+            // SimC76f8118 attack.cpp:106-123,400-424: both chances use defender minus attacker level.
+            let adjustment = level_difference as f32 * 1.5;
+            defense.dodge = (defense.dodge + adjustment).max(0.0);
+            defense.parry = (defense.parry + adjustment).max(0.0);
+        }
+        Victim::Player(PlayerDefense { sitting, ..defense })
     }
 }
 

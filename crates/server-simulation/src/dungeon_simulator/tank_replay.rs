@@ -509,6 +509,19 @@ fn replay_registered_run_with_healing(
     if level != 90 {
         return Err(format!("MID2_PLAYER_LEVEL_MISMATCH:{level}"));
     }
+    // SimC76f8118 sc_enemy.cpp:1214-1220: the tank dungeon dummy is two levels above the player.
+    run.app
+        .world_mut()
+        .entity_mut(source)
+        .insert(shared::components::UnitLevel(level + 2));
+    run.app
+        .world_mut()
+        .entity_mut(source)
+        .remove::<shared::level_scaling::LevelScaling>();
+    run.app
+        .world_mut()
+        .entity_mut(source)
+        .remove::<crate::level_scaling::ScaledStats>();
     let started_at = run.app.world().resource::<Time>().elapsed();
     super::dps_parity::install_fixture_lifetimes(&mut run, started_at);
     super::dps_parity::engage(&mut run);
