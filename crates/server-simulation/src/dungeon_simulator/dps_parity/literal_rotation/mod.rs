@@ -97,6 +97,10 @@ impl Driver {
         }
     }
 
+    pub fn precombat_exhausted(&self) -> bool {
+        self.precombat_cursor >= self.program.actions().filter(|(list, _)| *list == "precombat").count()
+    }
+
     /// The caller advances native frames and resamples without consuming busy rows.
     pub fn poll_precombat(
         &mut self,
