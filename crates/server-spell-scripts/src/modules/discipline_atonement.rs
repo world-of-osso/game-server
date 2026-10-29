@@ -16,6 +16,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AfterAbsorbConsumed(discharge_void_shield),
     SpellScriptHook::HealthChangeObserved(mark_flash_heal),
     SpellScriptHook::RawResolvedDamage(transfer_damage),
+    SpellScriptHook::RawResolvedDamage(proc_shadowfiend),
     SpellScriptHook::MeleeRawResolved(transfer_pet_melee),
     SpellScriptHook::SummonInitialized(initialize_fiend),
     SpellScriptHook::AfterNativeCastUpdate(update_voidwraith),
@@ -285,6 +286,22 @@ fn transfer_damage(
         pet_spell,
         false,
     );
+}
+
+fn proc_shadowfiend(world: &mut World, damage: &EffectCtx<'_>, target: Entity, _crit: bool, _raw: f32) {
+    let caster = damage.caster;
+    if damage.spell.id != 32379 || !is_discipline(world, caster)
+        || !world.get::<combat::class_progression::KnownSpells>(caster).is_some_and(|known| known.contains(34433))
+    {
+        return;
+    }
+    let threshold = combat::spell_cast::scripts::script_effect_value(world, caster, 32379, 2);
+    let Some(health) = world.get::<shared::components::Health>(target) else { return; };
+    if health.max <= 0.0 || health.current * 100.0 > health.max * threshold { return; }
+    let chance = combat::spell_cast::scripts::script_effect_value(world, caster, 34433, 2);
+    if combat::random::random::<f32>() * 100.0 < chance {
+        combat::spell_cast::cast_triggered(world, caster, 1280172, Some(target), 1);
+    }
 }
 
 fn transfer_pet_melee(world: &mut World, source: Entity, target: Entity, raw: f32, crit: bool) {

@@ -22,7 +22,7 @@ const SPELLS: &[(&str, u32, bool)] = &[
     ("shield", 17, false),
     ("evangelism", 246287, true),
     ("penance", 47540, false),
-    ("shadowfiend", 34433, false),
+    ("shadow_word_death", 32379, false),
     ("mind_blast", 8092, false),
     ("smite", 585, false),
 ];
@@ -60,9 +60,9 @@ pub(super) fn prepare(
         ),
         ("default", "evangelism,if=party.injured>=3"),
         ("heal", "penance,if=target.health.pct<45"),
-        ("damage", "shadowfiend,if=party.injured>=1"),
         ("damage", "penance"),
         ("damage", "mind_blast"),
+        ("damage", "shadow_word_death,if=target.health.pct<=20"),
         ("damage", "smite"),
     ])?;
     Ok(Box::new(Discipline {
@@ -208,13 +208,16 @@ impl Policy for Discipline {
             .get::<crate::networking::CombatTarget>(tank)
             .and_then(|t| t.0);
         if let Some(enemy) = enemy {
+            world
+                .entity_mut(healer)
+                .insert(crate::networking::CombatTarget(Some(enemy)));
             let _ = self.select(
                 world,
                 healer,
                 enemy,
                 injured,
                 "damage",
-                &["penance", "shadowfiend", "mind_blast", "smite"],
+                &["penance", "mind_blast", "shadow_word_death", "smite"],
             )?;
         }
         Ok(())

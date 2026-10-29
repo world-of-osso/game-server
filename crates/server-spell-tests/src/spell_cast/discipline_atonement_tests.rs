@@ -257,6 +257,55 @@ fn atonement_transfers_critical_smite_before_absorb_but_not_fireball() {
 
 #[test]
 #[ignore = "real class summons require the prepared native creature database"]
+fn discipline_death_summons_shadowfiend_only_in_execute_range() {
+    use super::test_harness::{ObservedCombatEvents, prepare_class_world};
+    let _seed = crate::random::seed_scope(70448);
+    let prepared = prepare_class_world();
+    let mut h = harness(Vec::new(), &[32379, 34433, 1280172, 81749, 94472], 5).unwrap();
+    h.app.insert_resource(prepared.world_data());
+    let conn = rusqlite::Connection::open_with_flags(
+        &world_db().unwrap().powers_db,
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    h.app
+        .insert_resource(super::summon::load_summon_properties(&conn).unwrap());
+    h.app.init_resource::<ObservedCombatEvents>();
+    h.app.world_mut().entity_mut(h.caster).insert((
+        ActiveSpec(256),
+        crate::class_progression::KnownSpells::fixture(vec![32379, 34433]),
+        server::networking::CombatTarget(Some(h.npc)),
+    ));
+    for current in [900_000.0, 100_000.0] {
+        for _ in 0..12 {
+            *h.app.world_mut().get_mut::<Health>(h.npc).unwrap() = Health {
+                current,
+                max: 1_000_000.0,
+            };
+            super::cast_triggered(h.app.world_mut(), h.caster, 32379, Some(h.npc), 1);
+            h.advance(1);
+        }
+        let summons = h
+            .app
+            .world()
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .filter(|event| event.kind == CombatLogKind::Summon && event.spell_id == Some(1280172))
+            .count();
+        if current > 200_000.0 {
+            assert_eq!(summons, 0, "no execute-range proc above 20%");
+        } else {
+            assert!(
+                summons > 0,
+                "seeded execute hits must produce a Shadowfiend"
+            );
+        }
+    }
+}
+
+#[test]
+#[ignore = "real class summons require the prepared native creature database"]
 fn discipline_fiend_spells_transfer_pet_damage_to_atonement() {
     use super::summon::SummonedCreature;
     use super::test_harness::{ObservedCombatEvents, prepare_class_world};
