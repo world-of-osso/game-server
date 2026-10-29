@@ -154,6 +154,19 @@ fn ruby_final_logged_clocks_and_stage_anchor() {
                 .iter()
                 .any(|a| a.spell == 381602 && (a.time - 15.608).abs() < 0.2)
         );
+        eprintln!(
+            "stage 181089 log={:?}, gos={:?}, Kyrakka attempts={attempts:?}",
+            h.inbox(0)
+                .log
+                .iter()
+                .filter(|event| event.spell_id == Some(181089))
+                .collect::<Vec<_>>(),
+            h.inbox(0)
+                .spell_gos
+                .iter()
+                .filter(|go| go.spell_id == 181089)
+                .collect::<Vec<_>>()
+        );
         assert!(
             h.inbox(0)
                 .log

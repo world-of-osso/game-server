@@ -78,6 +78,8 @@ impl CreatureAi for RubyFinal {
     fn movement_inform(&mut self, _ctx: &mut Ctx, kind: MotionType, id: u32) {
         if kind == MotionType::Point && id == LANDING_POINT {
             self.landed = true;
+            #[cfg(test)]
+            eprintln!("ruby landing callback");
         }
     }
 
@@ -97,6 +99,8 @@ impl CreatureAi for RubyFinal {
     fn update_ai(&mut self, ctx: &mut Ctx, diff_ms: u32) {
         if self.entry == KYRAKKA && !self.phase_pending && ctx.is_engaged() && either_at_half(ctx) {
             self.phase_pending = true;
+            #[cfg(test)]
+            eprintln!("ruby phase threshold actor={:?}", ctx.me);
             ctx.move_point(ctx.me, LANDING_POINT, LANDING);
             self.stage_remaining_ms = Some(STAGE_DELAY_MS);
         }
@@ -117,6 +121,8 @@ impl RubyFinal {
             return;
         }
         self.stage_remaining_ms = None;
+        #[cfg(test)]
+        eprintln!("ruby stage timer elapsed after landing");
         let Some(peer) = find_peer(ctx, KYRAKKA) else {
             warn!("Ruby stage event cannot find Erkhart");
             return;
