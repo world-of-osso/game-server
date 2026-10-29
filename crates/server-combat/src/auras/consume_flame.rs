@@ -11,7 +11,7 @@ const CONSUME_HEAL: u32 = 445495;
 pub(crate) fn consume_dream_breath(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
     let duration_effect = match ctx.spell.id {
         361195 => 4,
-        355916 => 0,
+        355916 | 361361 => 0,
         _ => return,
     };
     let caster = ctx.caster;
