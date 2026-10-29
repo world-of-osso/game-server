@@ -43,6 +43,60 @@ fn twist_of_fate_triggers_from_preimpact_health_for_real_spells() {
 }
 
 #[test]
+fn twist_of_fate_increases_real_priest_damage_and_healing() {
+    for (spell, kind) in [(585, CombatLogKind::Damage), (2061, CombatLogKind::Heal)] {
+        let mut amounts = Vec::new();
+        for active in [false, true] {
+            let _seed = crate::random::seed_scope(70448);
+            let mut h = harness(Vec::new(), &[585, 2061, 390972, 390978], 5).unwrap();
+            h.app
+                .init_resource::<super::test_harness::ObservedCombatEvents>();
+            let caster = h.caster;
+            let target = if spell == 2061 {
+                spawn_player(&mut h.app, 5, 2.0)
+            } else {
+                h.npc
+            };
+            *h.app.world_mut().get_mut::<Health>(target).unwrap() = Health {
+                current: 80_000.0,
+                max: 100_000.0,
+            };
+            if active {
+                crate::auras::apply_aura(
+                    h.app.world_mut(),
+                    &crate::auras::AuraApplication {
+                        caster,
+                        target: caster,
+                        spell_id: 390978,
+                        effect_mask: u32::MAX,
+                        source: crate::auras::AuraSource::Cast,
+                    },
+                );
+            }
+            h.cast_and_deliver(spell, Some(target));
+            h.advance(50);
+            let event = h
+                .app
+                .world()
+                .resource::<super::test_harness::ObservedCombatEvents>()
+                .0
+                .iter()
+                .find(|event| {
+                    event.kind == kind
+                        && event.spell_id == Some(spell)
+                        && event.target == Some(target.to_bits())
+                })
+                .unwrap();
+            amounts.push(event.amount);
+        }
+        assert!(
+            (amounts[1] as f32 - amounts[0] as f32 * 1.05).abs() <= 2.0,
+            "spell {spell}: {amounts:?}"
+        );
+    }
+}
+
+#[test]
 fn discipline_penance_extends_only_its_casters_real_pain() {
     for selected in [false, true] {
         let mut h = harness(
