@@ -22,6 +22,8 @@ mod aoe_avoidance_tests;
 pub mod area_aura;
 pub mod area_trigger;
 #[cfg(test)]
+mod area_units_tests;
+#[cfg(test)]
 mod attack_power_tests;
 pub mod aura_spell_restrictions;
 pub(crate) mod auto_repeat;
@@ -344,6 +346,7 @@ pub struct SpellCastPlugin;
 
 impl Plugin for SpellCastPlugin {
     fn build(&self, app: &mut App) {
+        crate::maps::units::install(app);
         app.init_resource::<script_registry::SpellScriptRegistry>();
         #[cfg(any(test, feature = "test-support"))]
         app.insert_resource(toy_requirements::fixture());
