@@ -12,7 +12,10 @@ fn after_cast(spell: u32) -> Option<AfterCastHook> {
 }
 
 fn energize(world: &mut World, caster: Entity, _: &SpellInfo) {
-    if world.get::<ActiveSpec>(caster).is_some_and(|spec| spec.0 == 581) {
+    if world
+        .get::<ActiveSpec>(caster)
+        .is_some_and(|spec| spec.0 == 581)
+    {
         // SimC 76f8118 sc_demon_hunter.cpp:4469-4473,11262 executes the Vengeance energize on cast.
         spell_cast::cast_triggered(world, caster, 389787, Some(caster), 1);
     }
