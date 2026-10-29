@@ -30,6 +30,26 @@ class CensusTest(unittest.TestCase):
         fields.insert(12, 'DEBUFF')
         self.assertEqual(module.advanced_position(fields)['guid'], fields[5])
 
+    def test_cross_run_candidate_and_ambiguous_matches(self):
+        def run(file, points):
+            units = {}
+            for guid, x in points:
+                units[guid] = {'npc_id': 123, 'spawn_uid': guid, 'summoned': False,
+                    'first_position': {'x': x, 'y': 0, 'ui_map_id': 9, 'time': 't',
+                                       'event': 'SPELL_DAMAGE', 'facing': 1, 'level': 90}}
+            return {'map': 2521, 'file': file, 'start': 'start', 'creatures': units}
+        clusters = module.cluster_population([run('a', [('a1', 0)]),
+                                              run('b', [('b1', 7)])])
+        self.assertEqual(len(clusters), 1)
+        self.assertEqual(clusters[0]['classification'], 'patrol_candidate')
+        self.assertEqual(len(clusters[0]['unverified_candidate_path']), 2)
+        self.assertEqual(clusters[0]['gap'], 'PARTIAL_PATROL_NAVMESH_AND_PHASE_UNVERIFIED')
+        ambiguous = module.cluster_population([run('a', [('a1', 0), ('a2', 1)]),
+                                               run('b', [('b1', 0.5)])])
+        self.assertEqual(len(ambiguous), 3)
+        self.assertTrue(ambiguous[2]['ambiguous_match'])
+        self.assertEqual(ambiguous[2]['classification'], 'insufficient_or_ambiguous')
+
     def test_encounter_casts_and_known_boss_identity(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / 'combat.txt'

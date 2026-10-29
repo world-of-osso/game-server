@@ -164,6 +164,67 @@ def annotate_bosses(runs, database):
                 cast['known_boss'] = encounter['units'][cast['guid']]['npc_id'] in known
 
 
+def cluster_population(runs, radius=10.0):
+    """Propose 2-D matches; ambiguous matches are kept separate, not resolved."""
+    clusters = []
+    index_by_unit = defaultdict(list)
+    for run in runs:
+        incoming = []
+        run_id = (run['file'], run['start'])
+        for guid, unit in sorted(run['creatures'].items()):
+            pos = unit.get('first_position')
+            if pos is None:
+                continue
+            candidates = []
+            key = (run['map'], unit['npc_id'], pos['ui_map_id'])
+            for index in index_by_unit[key]:
+                cluster = clusters[index]
+                if run_id in cluster['_runs']:
+                    continue
+                anchor = cluster['observations'][0]
+                if (anchor['x'] - pos['x']) ** 2 + (anchor['y'] - pos['y']) ** 2 <= radius ** 2:
+                    candidates.append(index)
+            incoming.append((guid, unit, pos, candidates))
+        claims = defaultdict(int)
+        for _, _, _, candidates in incoming:
+            if len(candidates) == 1:
+                claims[candidates[0]] += 1
+        for guid, unit, pos, candidates in incoming:
+            if len(candidates) == 1 and claims[candidates[0]] == 1:
+                cluster = clusters[candidates[0]]
+            else:
+                cluster = {'map': run['map'], 'npc_id': unit['npc_id'], 'ui_map_id': pos['ui_map_id'],
+                           'ambiguous_match': bool(candidates), 'observations': [], '_runs': set()}
+                index_by_unit[(run['map'], unit['npc_id'], pos['ui_map_id'])].append(len(clusters))
+                clusters.append(cluster)
+            cluster['_runs'].add(run_id)
+            cluster['observations'].append({'file': run['file'], 'run_start': run['start'], 'guid': guid,
+                'spawn_uid': unit['spawn_uid'], 'x': pos['x'], 'y': pos['y'], 'time': pos['time'], 'event': pos['event'],
+                'facing': pos['facing'], 'level': pos['level'], 'summoned': unit['summoned']})
+    for cluster in clusters:
+        del cluster['_runs']
+        observations = cluster['observations']
+        spread = max((((a['x'] - b['x']) ** 2 + (a['y'] - b['y']) ** 2) ** 0.5
+                      for a in observations for b in observations), default=0.0)
+        cluster['spread_xy'] = spread
+        if len(observations) < 2 or cluster['ambiguous_match']:
+            cluster['classification'] = 'insufficient_or_ambiguous'
+        elif spread > 5:
+            cluster['classification'] = 'patrol_candidate'
+        else:
+            cluster['classification'] = 'stationary_candidate'
+        if cluster['classification'] == 'patrol_candidate':
+            remaining = list(observations)
+            route = [remaining.pop(0)]
+            while remaining:
+                last = route[-1]
+                nearest = min(range(len(remaining)), key=lambda i: (remaining[i]['x'] - last['x']) ** 2 + (remaining[i]['y'] - last['y']) ** 2)
+                route.append(remaining.pop(nearest))
+            cluster['unverified_candidate_path'] = [{'x': point['x'], 'y': point['y']} for point in route]
+            cluster['gap'] = 'PARTIAL_PATROL_NAVMESH_AND_PHASE_UNVERIFIED'
+    return clusters
+
+
 def summarize_population(runs, database=None):
     maps = {}
     for run in runs:
@@ -283,6 +344,7 @@ def main():
     parser.add_argument("--world-db", type=Path)
     parser.add_argument("--encounter-summary", type=Path)
     parser.add_argument("--population-summary", type=Path)
+    parser.add_argument("--clusters", type=Path)
     parser.add_argument("logs", type=Path, nargs="+")
     args = parser.parse_args()
     paths = [f for p in args.logs for f in (sorted(p.glob("*.txt")) if p.is_dir() else [p])]
@@ -307,6 +369,9 @@ def main():
     if args.population_summary:
         args.population_summary.parent.mkdir(parents=True, exist_ok=True)
         args.population_summary.write_text(json.dumps(summarize_population(runs, args.world_db), indent=2) + "\n", encoding="utf-8")
+    if args.clusters:
+        args.clusters.parent.mkdir(parents=True, exist_ok=True)
+        args.clusters.write_text(json.dumps(cluster_population(runs), indent=2) + "\n", encoding="utf-8")
 
 
 if __name__ == "__main__":
