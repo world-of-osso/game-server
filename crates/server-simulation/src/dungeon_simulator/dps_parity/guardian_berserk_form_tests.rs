@@ -10,14 +10,43 @@ fn guardian_incarnation_resets_real_mangle_and_thrash_cooldowns() {
         let actor = run.actor;
         let target = run.targets[0];
         engage(&mut run);
-        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 5487, Some(actor), false).unwrap();
-        for _ in 0..40 { run.app.update(); }
-        crate::spell_cast::creature_cast(run.app.world_mut(), actor, spell, Some(target), false).unwrap();
-        for _ in 0..25 { run.app.update(); }
-        assert!(crate::spell_cast::creature_cast(run.app.world_mut(), actor, spell, Some(target), false).is_err(), "{spell} must be on cooldown before Incarnation");
-        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 102558, Some(actor), false).unwrap();
-        for _ in 0..25 { run.app.update(); }
-        assert!(crate::spell_cast::creature_cast(run.app.world_mut(), actor, spell, Some(target), false).is_ok(), "Incarnation must reset {spell}");
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 5487, Some(actor), false)
+            .unwrap();
+        for _ in 0..40 {
+            run.app.update();
+        }
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, spell, Some(target), false)
+            .unwrap();
+        for _ in 0..25 {
+            run.app.update();
+        }
+        assert!(
+            crate::spell_cast::creature_cast(
+                run.app.world_mut(),
+                actor,
+                spell,
+                Some(target),
+                false
+            )
+            .is_err(),
+            "{spell} must be on cooldown before Incarnation"
+        );
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 102558, Some(actor), false)
+            .unwrap();
+        for _ in 0..25 {
+            run.app.update();
+        }
+        assert!(
+            crate::spell_cast::creature_cast(
+                run.app.world_mut(),
+                actor,
+                spell,
+                Some(target),
+                false
+            )
+            .is_ok(),
+            "Incarnation must reset {spell}"
+        );
     }
 }
 
