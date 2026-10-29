@@ -410,12 +410,28 @@ fn dps_parity_ret_instrument_wrath_triggers_selected_riders() {
     let actor = run.actor;
     assert!(has(&run, 1263782));
     assert!(crate::spell_cast::cast_triggered_with_overrides(
-        run.app.world_mut(), actor, AVENGING_WRATH, Some(actor), 1,
-        crate::spell_cast::TriggeredSpellOverrides { fixed_aura_duration_ms: Some(9000), ..Default::default() },
+        run.app.world_mut(),
+        actor,
+        AVENGING_WRATH,
+        Some(actor),
+        1,
+        crate::spell_cast::TriggeredSpellOverrides {
+            fixed_aura_duration_ms: Some(9000),
+            ..Default::default()
+        },
     ));
-    for _ in 0..4 { run.app.update(); }
-    let auras = run.app.world().get::<crate::auras::ActiveAuras>(actor).unwrap();
-    let wrath = auras.iter().find(|aura| aura.spell_id == AVENGING_WRATH).unwrap();
+    for _ in 0..4 {
+        run.app.update();
+    }
+    let auras = run
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(actor)
+        .unwrap();
+    let wrath = auras
+        .iter()
+        .find(|aura| aura.spell_id == AVENGING_WRATH)
+        .unwrap();
     assert_eq!(wrath.duration_ms, 9000);
     assert!(has(&run, LEGACY_BUFF));
     assert!(has(&run, 445206));
