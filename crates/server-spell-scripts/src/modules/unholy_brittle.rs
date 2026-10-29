@@ -9,7 +9,10 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::AfterPeriodicDam
 
 fn tick(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
     if !matches!(ctx.spell.id, 191587 | 1240996 | 55095 | 55078)
-        || !matches!(world.get::<ActiveSpec>(ctx.caster).map(|spec| spec.0), Some(250 | 252))
+        || !matches!(
+            world.get::<ActiveSpec>(ctx.caster).map(|spec| spec.0),
+            Some(250 | 252)
+        )
         || !combat::auras::has_aura(world, ctx.caster, 374504)
     {
         return;
