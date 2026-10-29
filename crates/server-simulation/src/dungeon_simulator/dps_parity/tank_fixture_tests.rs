@@ -49,13 +49,14 @@ fn tank_dps_replay_uses_reference_incoming_and_all_targets() {
     assert!(report["time_to_death"].is_null(), "{report}");
     assert!(report["incoming_events"].as_u64().unwrap() > 100);
     assert!(report["external_healing_effective"].as_f64().unwrap() > 0.0);
+    let targets = report["combat"]["damage_by_target"].as_array().unwrap();
+    assert_eq!(targets.len(), 21, "all ten add waves must be recorded");
     assert!(
-        report["combat"]["damage_by_target"]
-            .as_array()
-            .unwrap()
-            .len()
-            >= 3
+        targets
+            .iter()
+            .all(|target| target["damage"].as_u64().unwrap() > 0)
     );
+    assert_eq!(report["target_waves"].as_array().unwrap().len(), 10);
     assert!(
         report["melee_rage"]["taken"].as_f64().unwrap_or(0.0) > 0.0,
         "incoming attacks must grant Rage: {report}"

@@ -117,7 +117,7 @@ pub(crate) struct Run {
     pub(crate) actor: Entity,
     pub(crate) targets: Vec<Entity>,
     damage_targets: Vec<Entity>,
-    target_waves: Vec<Value>,
+    pub(crate) target_waves: Vec<Value>,
     profile: inputs::Profile,
     gaps: Vec<String>,
     player_rotation: Option<player_rotation::PlayerRotation>,
@@ -679,7 +679,7 @@ pub(super) fn apply_fixed_time_target_health(run: &mut Run, at: Duration) -> Res
     Ok(())
 }
 
-fn next_fixture_boundary(run: &Run, frame_end: Duration) -> Duration {
+pub(crate) fn next_fixture_boundary(run: &Run, frame_end: Duration) -> Duration {
     let Some(adds) = run.app.world().get::<FixtureAdds>(run.actor) else {
         return frame_end;
     };
@@ -705,7 +705,7 @@ pub(super) fn advance_fixture_step(run: &mut Run, boundary: Duration) -> Result<
     Ok(())
 }
 
-fn apply_fixture_add_events(
+pub(crate) fn apply_fixture_add_events(
     run: &mut Run,
     retired: &mut Vec<Entity>,
     started_at: Duration,
@@ -742,7 +742,7 @@ fn advance_fixture_frame(
     Ok(())
 }
 
-fn capture_engagement(run: &Run) -> Value {
+pub(crate) fn capture_engagement(run: &Run) -> Value {
     let mut sample = report::engagement(run.app.world(), run.actor, &run.targets);
     // The last add retirement is270.09s, inside the final30s qualification window.
     // Keep live target inspection, but never subtract a retired wave's earned damage.

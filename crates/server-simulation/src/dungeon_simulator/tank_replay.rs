@@ -789,6 +789,8 @@ fn replay_registered_run_with_healing(
     let mut debuff_seconds: BTreeMap<u32, f64> =
         target_debuffs.iter().map(|&id| (id, 0.0)).collect();
     let mut external_healing_effective = 0.0;
+    let mut engagement_samples = vec![super::dps_parity::capture_engagement(&run)];
+    let mut retired = Vec::new();
     let mut bloodlust_applied = false;
     for tick in 1..=duration_seconds * 20 {
         elapsed = f64::from(tick) * TICK_SECONDS;
@@ -1036,13 +1038,25 @@ fn replay_registered_run_with_healing(
             .app
             .world()
             .get::<Health>(tank)
-            .is_some_and(|health| health.current > 0.0)
+            .is_none_or(|health| health.current <= 0.0)
         {
-            super::dps_parity::drive_literal_tick(&mut run)
-                .map_err(|error| format!("native APL tick {tick}: {error}"))?;
+            death = Some(elapsed);
+            break;
         }
+        super::dps_parity::drive_literal_tick(&mut run)
+            .map_err(|error| format!("native APL tick {tick}: {error}"))?;
         let boundary = started_at + std::time::Duration::from_millis(u64::from(tick) * 50);
-        super::dps_parity::advance_fixture_step(&mut run, boundary)?;
+        while run.app.world().resource::<Time>().elapsed() < boundary {
+            let next = super::dps_parity::next_fixture_boundary(&run, boundary);
+            super::dps_parity::advance_fixture_step(&mut run, next)?;
+            super::dps_parity::apply_fixture_add_events(&mut run, &mut retired, started_at)?;
+            if next < boundary {
+                super::dps_parity::drive_literal_tick(&mut run)?;
+            }
+        }
+        if matches!(tick, 1 | 20 | 5400 | 6000) {
+            engagement_samples.push(super::dps_parity::capture_engagement(&run));
+        }
         let world = run.app.world();
         if mitigation_auras
             .iter()
@@ -1268,6 +1282,9 @@ fn replay_registered_run_with_healing(
         "season":dungeon.then_some(TANK_DUNGEON_SEASON),
         "attacker_level":attacker.level_against(&defender),"armor_constant":armor_constant});
     report["combat"] = super::dps_parity::combat_report(&run, elapsed);
+    report["actor_kind"] = json!("player");
+    report["target_waves"] = json!(run.target_waves);
+    report["engagement_samples"] = json!(engagement_samples);
     let (bulwark_starts, bulwark_refreshes, divine_inspiration_procs) =
         bulwark_observations(world, tank);
     report["holy_bulwark_applications"] =
