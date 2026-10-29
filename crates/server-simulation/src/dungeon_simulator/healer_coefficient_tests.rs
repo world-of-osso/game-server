@@ -3,6 +3,38 @@ use shared::components::Health;
 use shared::protocol::CombatLogKind;
 
 #[test]
+#[ignore = "checks Preservation Dream Breath's native healing coefficients"]
+fn preservation_dream_breath_child_matches_native_coefficients() {
+    // 70448 SpellEffect 889437/1037451: HoT 0.5352, direct 0.9216.
+    let mut h = crate::spell_cast::test_harness::harness(Vec::new(), &[355941], 13).unwrap();
+    h.app
+        .init_resource::<crate::spell_cast::test_harness::ObservedCombatEvents>();
+    *h.app.world_mut().get_mut::<Health>(h.caster).unwrap() = Health {
+        current: 1.0,
+        max: 100_000.0,
+    };
+    crate::spell_cast::creature_cast(h.app.world_mut(), h.caster, 355941, Some(h.caster), true)
+        .unwrap();
+    h.advance(45);
+    let events = &h
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    for (periodic, expected) in [(false, 92), (true, 54)] {
+        let heal = events.iter().find(|event| {
+            event.kind == CombatLogKind::Heal
+                && event.periodic == periodic
+                && event.spell_id == Some(355941)
+                && event.target == Some(h.caster.to_bits())
+        });
+        let heal = heal.expect("Dream Breath child must deliver the native heal");
+        assert!((heal.amount - expected).abs() <= 1, "{heal:?}");
+        assert_eq!(heal.overflow, 0);
+    }
+}
+
+#[test]
 #[ignore = "checks Preservation Reversion's native periodic healing coefficient"]
 fn preservation_reversion_tick_matches_native_coefficient() {
     // 70448 SpellEffect 907578: coefficient 0.4275, period 2000 ms, variance 0.
