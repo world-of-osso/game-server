@@ -4,6 +4,79 @@ use crate::auras::ActiveAuras;
 
 #[test]
 #[ignore = "requires Guardian profile and native world data"]
+fn guardian_mangle_earns_rank_scaled_vicious_brambles() {
+    use shared::protocol::CombatLogKind;
+    let mut run = prepare_registered_player(104, 1).unwrap();
+    let actor = run.actor;
+    let target = run.targets[0];
+    engage(&mut run);
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 5487, Some(actor), false).unwrap();
+    for _ in 0..40 {
+        run.app.update();
+    }
+    let percent = run
+        .app
+        .world()
+        .get::<ActiveAuras>(actor)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 1269617 && aura.caster == actor)
+        .unwrap()
+        .effects
+        .iter()
+        .find(|effect| effect.index == 1)
+        .unwrap()
+        .amount;
+    assert!(percent > 0.0);
+    run.app
+        .world_mut()
+        .resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .clear();
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 33917, Some(target), false)
+        .unwrap();
+    for _ in 0..200 {
+        run.app.update();
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    let mangle = events
+        .iter()
+        .find(|event| {
+            event.source == Some(actor.to_bits())
+                && event.target == Some(target.to_bits())
+                && event.spell_id == Some(33917)
+                && event.kind == CombatLogKind::Damage
+        })
+        .expect("real Mangle damage")
+        .amount;
+    let ticks: i32 = events
+        .iter()
+        .filter(|event| {
+            event.source == Some(actor.to_bits())
+                && event.target == Some(target.to_bits())
+                && event.spell_id == Some(1270065)
+                && event.kind == CombatLogKind::Damage
+                && event.periodic
+        })
+        .map(|event| event.amount)
+        .sum();
+    assert!(
+        mangle > 0 && ticks > 0,
+        "Mangle {mangle} must earn native rolling damage, got {ticks}"
+    );
+    let expected = mangle as f32 * percent / 100.0;
+    assert!(
+        ticks as f32 >= expected * 0.5 && ticks as f32 <= expected * 2.0,
+        "Mangle {mangle}, talent {percent}%, residual {ticks}"
+    );
+}
+
+#[test]
+#[ignore = "requires Guardian profile and native world data"]
 fn guardian_bear_entry_grants_rage_and_leaving_discards_it() {
     use crate::spell_cast::powers::power_value;
     use shared::components::PowerType;

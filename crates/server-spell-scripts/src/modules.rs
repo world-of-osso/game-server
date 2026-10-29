@@ -236,6 +236,7 @@ register_modules! {
     enhancement_tempest_aoe: (2633, "modules/enhancement_tempest_aoe.rs"),
     guardian_impacts: (1000, "modules/guardian_impacts.rs"),
     guardian_ursocs_fury: (1040, "modules/guardian_ursocs_fury.rs"),
+    guardian_vicious_brambles: (1052, "modules/guardian_vicious_brambles.rs"),
     guardian_blood_frenzy: (1042, "modules/guardian_blood_frenzy.rs"),
     guardian_berserk_form: (1046, "modules/guardian_berserk_form.rs"),
     guardian_flashing_claws: (1048, "modules/guardian_flashing_claws.rs"),
