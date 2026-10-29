@@ -62,6 +62,7 @@ def census(paths, maps, samples=None):
         current = None
         encounter = None
         engaged = set()
+        activity = {}
         with path.open(encoding="utf-8", errors="replace") as source:
             for line in source:
                 timestamp, sep, payload = line.partition("  ")
@@ -73,6 +74,7 @@ def census(paths, maps, samples=None):
                     current = None
                     encounter = None
                     engaged = set()
+                    activity = {}
                     if len(fields) > 3 and fields[2].isdigit() and int(fields[2]) in maps:
                         current = {"file": path.name, "map": int(fields[2]), "start": timestamp,
                                    "name": fields[1], "challenge_id": int(fields[3]), "creatures": {},
@@ -106,7 +108,12 @@ def census(paths, maps, samples=None):
                 fields = next(csv.reader([payload]))
                 if len(fields) < 9:
                     continue
-                engaged.update(engagement_guids(fields))
+                for guid in engagement_guids(fields):
+                    engaged.add(guid)
+                    activity.setdefault(guid, {}).setdefault('first_hostile_time', timestamp)
+                if event in ('SPELL_CAST_START', 'SPELL_CAST_SUCCESS') and fields[1].startswith('Creature-'):
+                    engaged.add(fields[1])
+                    activity.setdefault(fields[1], {}).setdefault('first_cast_time', timestamp)
                 for index in (1, 5):
                     guid = fields[index]
                     parts = guid.split("-")
@@ -118,6 +125,7 @@ def census(paths, maps, samples=None):
                                                        "first_seen": timestamp, "first_event": event,
                                                        "first_encounter_id": encounter['id'] if encounter else None,
                                                        "seen_outside_encounter": False, "summoned": False})
+                    item.update(activity.get(guid, {}))
                     if encounter is None:
                         item['seen_outside_encounter'] = True
                     if encounter is not None:
@@ -162,6 +170,18 @@ def annotate_bosses(runs, database):
             encounter['unclassified_npc_ids'] = sorted({u['npc_id'] for u in encounter['units'].values()} - known)
             for cast in encounter['casts']:
                 cast['known_boss'] = encounter['units'][cast['guid']]['npc_id'] in known
+
+
+def filter_safe_samples(runs, source, output, margin_seconds=3.0):
+    activity = {(run['file'], run['start'], guid): unit
+                for run in runs for guid, unit in run['creatures'].items()}
+    for line in source:
+        sample = json.loads(line)
+        unit = activity[(sample['file'], sample['run_start'], sample['guid'])]
+        boundaries = [timestamp_value(unit[key]) for key in ('first_hostile_time', 'first_cast_time') if key in unit]
+        if boundaries and (min(boundaries) - timestamp_value(sample['time'])).total_seconds() < margin_seconds:
+            continue
+        output.write(json.dumps(sample, separators=(',', ':')) + '\n')
 
 
 def cluster_population(runs, radius=10.0):
@@ -340,6 +360,7 @@ def main():
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--floor-requests", type=Path)
     parser.add_argument("--precombat-samples", type=Path)
+    parser.add_argument("--safe-samples", type=Path)
     parser.add_argument("--trash-data", type=Path)
     parser.add_argument("--world-db", type=Path)
     parser.add_argument("--encounter-summary", type=Path)
@@ -354,6 +375,12 @@ def main():
             runs = census(paths, set(args.map), samples)
     else:
         runs = census(paths, set(args.map))
+    if args.safe_samples:
+        if not args.precombat_samples:
+            parser.error('--safe-samples requires --precombat-samples')
+        args.safe_samples.parent.mkdir(parents=True, exist_ok=True)
+        with args.precombat_samples.open(encoding='utf-8') as source, args.safe_samples.open('w', encoding='utf-8') as output:
+            filter_safe_samples(runs, source, output)
     if args.trash_data:
         annotate_trash(runs, read_trash_timers(args.trash_data))
     if args.world_db:
