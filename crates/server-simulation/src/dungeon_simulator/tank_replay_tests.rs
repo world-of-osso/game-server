@@ -1697,6 +1697,8 @@ fn sacred_weapon_procs_strike_the_dummy_with_the_lone_target_bonus() {
     use crate::spell_cast::test_harness::ObservedCombatEvents;
     use shared::protocol::CombatLogKind;
 
+    let _seed = crate::random::seed_scope(70448);
+    // Non-crit strikes on one unit; Holy damage ignores armor.
     let strikes = |run: &super::dps_parity::Run, unit: bevy::prelude::Entity| {
         run.app
             .world()
@@ -1708,45 +1710,53 @@ fn sacred_weapon_procs_strike_the_dummy_with_the_lone_target_bonus() {
                     && event.target == Some(unit.to_bits())
                     && event.spell_id == Some(432616)
                     && event.kind == CombatLogKind::Damage
+                    && !event.crit
             })
             .map(|event| event.amount)
             .collect::<Vec<_>>()
     };
-    // The worn weapon procs from auto attacks over 15 s of its 20 s lifetime.
+    // Native 432502 procs from abilities, not swings: a Shield every 2 s for 30 s.
     let mut run = engaged_protection_paladin();
-    apply_self_aura(&mut run, 432502);
-    for _ in 0..300 {
-        run.app.update();
+    let (actor, target) = (run.actor, run.targets[0]);
+    for round in 0..15 {
+        if round % 9 == 0 {
+            apply_self_aura(&mut run, 432502);
+        }
+        set_holy_power(&mut run, 3.0);
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 53600, Some(target), false)
+            .unwrap();
+        for _ in 0..40 {
+            run.app.update();
+        }
     }
     assert!(
-        !strikes(&run, run.targets[0]).is_empty(),
+        !strikes(&run, target).is_empty(),
         "Sacred Weapon strikes the dummy"
     );
-    // Lowest strike per dummy; crits only raise amounts and Holy damage ignores armor.
-    let lowest = |dummies: usize| {
-        let mut run = super::dps_parity::prepare_registered_player(66, dummies).unwrap();
-        super::dps_parity::engage(&mut run);
-        let (actor, primary) = (run.actor, run.targets[0]);
+    // Two dummies share each strike; out of the 8 yd radius, the primary stands alone.
+    let mut run = super::dps_parity::prepare_registered_player(66, 2).unwrap();
+    super::dps_parity::engage(&mut run);
+    let (actor, primary, secondary) = (run.actor, run.targets[0], run.targets[1]);
+    let strike = |run: &mut super::dps_parity::Run| {
         for _ in 0..12 {
             crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 432616, Some(primary), 1);
             run.app.update();
         }
-        run.targets
-            .iter()
-            .map(|&unit| {
-                strikes(&run, unit)
-                    .into_iter()
-                    .min()
-                    .expect("every dummy is struck")
-            })
-            .collect::<Vec<_>>()
     };
-    let lone = lowest(1);
-    let pair = lowest(2);
-    assert_eq!(pair.len(), 2);
-    let ratio = lone[0] as f32 / pair[0] as f32;
+    strike(&mut run);
+    let shared = strikes(&run, primary);
+    assert!(!shared.is_empty() && !strikes(&run, secondary).is_empty());
+    run.app
+        .world_mut()
+        .get_mut::<shared::components::Position>(secondary)
+        .unwrap()
+        .x += 100.0;
+    strike(&mut run);
+    let lone = strikes(&run, primary)[shared.len()..].to_vec();
+    assert!(!lone.is_empty());
+    let ratio = *lone.iter().min().unwrap() as f32 / *shared.iter().min().unwrap() as f32;
     assert!(
-        (ratio - 1.5).abs() < 0.02,
+        (ratio - 1.5).abs() < 0.01,
         "lone-target strike ratio {ratio}"
     );
 }
