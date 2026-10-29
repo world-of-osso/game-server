@@ -826,6 +826,48 @@ mod tests {
     }
 
     #[test]
+    fn frothing_protection_refund_does_not_fire_for_arms_mortal_strike() {
+        use crate::spell_cast::test_harness::harness_with_native_enemy_dodge_reduction;
+        use shared::components::{ActiveSpec, PowerType};
+        use shared::protocol::CombatLogKind;
+        let ids = [392792, 392793, 12294];
+        let seed = harness_with_native_enemy_dodge_reduction(Vec::new(), &ids, 1).unwrap();
+        let mut talent = seed
+            .app
+            .world()
+            .resource::<server::spell_info::SpellStore>()
+            .get(392792)
+            .unwrap()
+            .clone();
+        talent.aura_options.as_mut().unwrap().proc_chance = 100;
+        let mut h = harness_with_native_enemy_dodge_reduction(vec![talent], &ids, 1).unwrap();
+        h.app
+            .world_mut()
+            .entity_mut(h.caster)
+            .insert(ActiveSpec(71));
+        h.advance(3);
+        assert!(crate::auras::has_aura(h.app.world(), h.caster, 392792));
+        h.set_power(PowerType::Rage, 1000.0);
+        h.cast_and_deliver(12294, Some(h.npc));
+        assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+        assert!(
+            h.inbox
+                .log
+                .iter()
+                .any(|event| event.spell_id == Some(12294) && event.kind == CombatLogKind::Damage)
+        );
+        assert!(
+            !h.inbox
+                .log
+                .iter()
+                .any(|event| event.spell_id == Some(392793)
+                    && event.kind == CombatLogKind::Energize
+                    && event.amount == 150),
+            "Arms must not receive the Protection 50% refund of 300 raw Rage"
+        );
+    }
+
+    #[test]
     fn free_revenge_is_consumed_by_revenge() {
         let mut h = crate::spell_cast::test_harness::harness_with_native_enemy_dodge_reduction(
             Vec::new(),
@@ -888,16 +930,6 @@ mod tests {
         h.advance(100);
         let caster = h.caster;
         let npc = h.npc;
-        let instance = h
-            .app
-            .world()
-            .get::<crate::auras::ActiveAuras>(caster)
-            .unwrap()
-            .iter()
-            .find(|aura| aura.spell_id == 29725)
-            .unwrap()
-            .instance_id;
-        let deadline = crate::auras::procs::proc_deadline(h.app.world(), caster, instance);
         assert!(crate::spell_cast::try_cast_triggered(
             h.app.world_mut(),
             caster,
@@ -915,10 +947,9 @@ mod tests {
                     && event.amount > 0),
             "the background impact must land"
         );
-        assert_eq!(
-            crate::auras::procs::proc_deadline(h.app.world(), caster, instance),
-            deadline,
-            "background hit must not consume the proc cooldown"
+        assert!(
+            !crate::auras::has_aura(h.app.world(), caster, 52437),
+            "background hit must not grant Sudden Death"
         );
         h.cast_and_deliver(6343, Some(npc));
         assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
