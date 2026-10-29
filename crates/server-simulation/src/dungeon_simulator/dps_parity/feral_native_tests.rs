@@ -212,6 +212,74 @@ fn feral_prev_gcd_tracks_successful_foreground_gcd_casts_only() {
 
 #[test]
 #[ignore = "requires DPS_PARITY_WORLD_DB and DPS_PARITY_OUTPUT with spec103 exact profile/traits"]
+fn feral_frenzy_rolls_five_hits_into_one_bleed() {
+    use shared::protocol::CombatLogKind;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(103, 2).expect("selected Feral profile");
+    let actor = run.actor;
+    let single = run.targets[0];
+    let rolling = run.targets[1];
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 768, Some(actor), false).unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    for target in [single, rolling] {
+        crate::spell_cast::cast_triggered_with_overrides(
+            run.app.world_mut(),
+            actor,
+            274838,
+            Some(target),
+            1,
+            crate::spell_cast::TriggeredSpellOverrides {
+                effect_mask: Some(0b1011),
+                ..Default::default()
+            },
+        );
+    }
+    for _ in 0..4 {
+        for _ in 0..4 {
+            run.app.update();
+        }
+        crate::spell_cast::cast_triggered_with_overrides(
+            run.app.world_mut(),
+            actor,
+            274838,
+            Some(rolling),
+            1,
+            crate::spell_cast::TriggeredSpellOverrides {
+                effect_mask: Some(0b1011),
+                ..Default::default()
+            },
+        );
+    }
+    for _ in 0..120 {
+        run.app.update();
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    let first_tick = |target: bevy::prelude::Entity| {
+        let e = events
+            .iter()
+            .find(|e| {
+                e.target == Some(target.to_bits())
+                    && e.source == Some(actor.to_bits())
+                    && e.spell_id == Some(274838)
+                    && e.kind == CombatLogKind::Damage
+                    && e.periodic
+            })
+            .unwrap();
+        e.amount as f32 / if e.crit { 2.0 } else { 1.0 }
+    };
+    let ratio = first_tick(rolling) / first_tick(single);
+    assert!(
+        ratio > 3.0 && ratio < 5.5,
+        "five child hits must accumulate their bleed budget, first tick ratio {ratio}"
+    );
+}
+
+#[test]
+#[ignore = "requires DPS_PARITY_WORLD_DB and DPS_PARITY_OUTPUT with spec103 exact profile/traits"]
 fn feral_frenzy_selected_profile_executes_native_children_and_earns_combo_points() {
     let mut run = prepare_literal(103, 1).expect("selected Feral profile");
     let actor = run.actor;
