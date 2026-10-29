@@ -6,9 +6,10 @@ use combat::auras::{ActiveAuras, procs};
 use combat::spell_cast::script_registry::SpellScriptHook;
 use combat::spell_info::{SpellInfo, SpellStore};
 
-pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::AfterForegroundSpecial(
-    after_foreground_special,
-)];
+pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::OwnsPolicyProc(|spell| spell == 29725),
+    SpellScriptHook::AfterForegroundSpecial(after_foreground_special),
+];
 
 struct ForegroundProc {
     class_set: u32,

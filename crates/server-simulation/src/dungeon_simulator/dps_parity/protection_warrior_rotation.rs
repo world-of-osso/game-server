@@ -793,6 +793,65 @@ mod tests {
     }
 
     #[test]
+    fn sudden_death_background_hit_does_not_consume_foreground_proc_window() {
+        use crate::spell_cast::test_harness::harness_with_native_enemy_dodge_reduction;
+        let ids = [29725, 52437, 236282, 6343, 163201, 280735];
+        let seed = harness_with_native_enemy_dodge_reduction(Vec::new(), &ids, 1).unwrap();
+        let mut passive = seed
+            .app
+            .world()
+            .resource::<server::spell_info::SpellStore>()
+            .get(29725)
+            .unwrap()
+            .clone();
+        passive
+            .aura_options
+            .as_mut()
+            .unwrap()
+            .procs_per_minute
+            .as_mut()
+            .unwrap()
+            .base_proc_rate = 600.0;
+        let mut h = harness_with_native_enemy_dodge_reduction(vec![passive], &ids, 1).unwrap();
+        h.app
+            .world_mut()
+            .entity_mut(h.caster)
+            .insert(shared::components::ActiveSpec(73));
+        h.advance(100);
+        let caster = h.caster;
+        let npc = h.npc;
+        let instance = h
+            .app
+            .world()
+            .get::<crate::auras::ActiveAuras>(caster)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 29725)
+            .unwrap()
+            .instance_id;
+        let deadline = crate::auras::procs::proc_deadline(h.app.world(), caster, instance);
+        assert!(crate::spell_cast::try_cast_triggered(
+            h.app.world_mut(),
+            caster,
+            236282,
+            Some(npc),
+            1
+        ));
+        h.advance(1);
+        assert_eq!(
+            crate::auras::procs::proc_deadline(h.app.world(), caster, instance),
+            deadline,
+            "background hit must not consume the proc cooldown"
+        );
+        h.cast_and_deliver(6343, Some(npc));
+        assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+        assert!(
+            crate::auras::has_aura(h.app.world(), caster, 52437),
+            "foreground attack earns Sudden Death"
+        );
+    }
+
+    #[test]
     fn revenge_trigger_accepts_only_white_impacts_and_incoming_avoids() {
         use crate::dungeon_simulator::healer_intake::{Hit, HitKind};
         let seed = crate::spell_cast::test_harness::harness_with_native_enemy_dodge_reduction(
