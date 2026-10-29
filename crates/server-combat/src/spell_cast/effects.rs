@@ -1646,7 +1646,8 @@ pub fn deal_damage_shield(
 }
 
 /// Leech copies effective damage, after mitigation/absorption and excluding overkill.
-/// Its DB2 amplitude is a multiplier, not a second spell-power or crit roll.
+/// Native leech uses DB2 amplitude without a second spell-power or crit roll;
+/// a registered spell policy can instead supply a direct critical heal.
 pub(crate) fn deal_leech(
     world: &mut World,
     ctx: &EffectCtx,
@@ -1666,6 +1667,11 @@ pub(crate) fn deal_leech(
     };
     let dealt = deal_damage_and_report(world, ctx, target, damage);
     if dealt > 0.0 {
+        if let Some(healing) = super::script_registry::leech_heal_override(world, ctx, dealt) {
+            let (healing, crit) = with_crit(world, ctx.caster, ctx.caster, ctx.spell, healing);
+            apply_resolved_heal(world, ctx, ctx.caster, healing, crit, false);
+            return;
+        }
         let amplitude = spell_mods::modify(
             world,
             ctx.caster,

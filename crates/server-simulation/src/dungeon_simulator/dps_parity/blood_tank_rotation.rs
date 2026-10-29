@@ -432,6 +432,73 @@ mod tests {
 
     #[test]
     #[ignore = "requires canonical world database and MID2 Blood inputs"]
+    fn blood_plague_direct_heal_uses_tick_damage_and_independent_crit() {
+        use shared::components::Health;
+        use shared::protocol::CombatLogKind;
+        let _seed = crate::random::seed_scope(70448);
+        let mut run = super::super::prepare_registered_player(250, 1).unwrap();
+        let actor = run.actor;
+        let target = run.targets[0];
+        let mut health = run.app.world_mut().get_mut::<Health>(actor).unwrap();
+        health.current = health.max * 0.1;
+        for _ in 0..5 {
+            crate::auras::apply_aura(
+                run.app.world_mut(),
+                &crate::auras::AuraApplication {
+                    caster: actor,
+                    target,
+                    spell_id: 55078,
+                    effect_mask: 1,
+                    source: crate::auras::AuraSource::Cast,
+                },
+            );
+            for _ in 0..250 {
+                run.app.update();
+            }
+        }
+        let events = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0;
+        let relevant: Vec<_> = events
+            .iter()
+            .filter(|event| {
+                event.spell_id == Some(55078)
+                    && matches!(event.kind, CombatLogKind::Damage | CombatLogKind::Heal)
+            })
+            .collect();
+        let mut pairs = 0;
+        let mut independent = false;
+        for pair in relevant.windows(2) {
+            let (damage, heal) = (pair[0], pair[1]);
+            if damage.kind != CombatLogKind::Damage || heal.kind != CombatLogKind::Heal {
+                continue;
+            }
+            pairs += 1;
+            assert!(!heal.periodic, "SimC emits a direct heal");
+            if !heal.crit {
+                assert!(
+                    (heal.amount as f32 / damage.amount as f32 - 1.85).abs() < 0.01,
+                    "damage={} heal={}",
+                    damage.amount,
+                    heal.amount
+                );
+            }
+            independent |= damage.crit != heal.crit;
+        }
+        assert!(
+            pairs >= 10,
+            "expected real plague ticks and heals, got {pairs}"
+        );
+        assert!(
+            independent,
+            "heal crit must be rolled independently of the damage crit"
+        );
+    }
+
+    #[test]
+    #[ignore = "requires canonical world database and MID2 Blood inputs"]
     fn blood_death_strike_grants_voracious_leech() {
         let mut run = super::super::prepare_registered_player(250, 1).unwrap();
         let actor = run.actor;

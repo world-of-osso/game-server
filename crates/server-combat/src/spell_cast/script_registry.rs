@@ -220,6 +220,7 @@ pub type LaunchDamageModifierHook =
     fn(&World, Entity, &SpellInfo) -> Option<crate::spell_info::ChargedSpellModifier>;
 pub type MidAuraRegistrationHook = fn(&mut crate::auras::scripts::AuraScripts);
 pub type HealingMultiplierHook = fn(&World, Entity, &SpellInfo, bool) -> f32;
+pub type LeechHealOverrideHook = fn(&World, &EffectCtx<'_>, f32) -> Option<f32>;
 pub type SnapshotHealingAuraHook =
     fn(&World, Entity, &SpellInfo, &crate::spell_info::SpellEffect, f32) -> f32;
 
@@ -394,6 +395,7 @@ pub enum SpellScriptHook {
     LaunchDamageModifier(LaunchDamageModifierHook),
     MidAuraRegistration(MidAuraRegistrationHook),
     HealingMultiplier(HealingMultiplierHook),
+    LeechHealOverride(LeechHealOverrideHook),
     SnapshotHealingAura(SnapshotHealingAuraHook),
     ProcCharges(ProcChargesHook),
     ExtraComboPoints(ExtraComboPointsHook),
@@ -1545,6 +1547,16 @@ pub fn before_judgment_on_cast(world: &mut World, caster: Entity, spell: u32, de
             run(world, caster, spell, depth);
         }
     }
+}
+
+pub fn leech_heal_override(world: &World, ctx: &EffectCtx<'_>, damage: f32) -> Option<f32> {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .find_map(|hook| match hook {
+            SpellScriptHook::LeechHealOverride(run) => run(world, ctx, damage),
+            _ => None,
+        })
 }
 
 pub fn healing_multiplier(world: &World, caster: Entity, spell: &SpellInfo, periodic: bool) -> f32 {
