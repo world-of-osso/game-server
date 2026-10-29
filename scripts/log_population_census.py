@@ -273,7 +273,8 @@ def assign_component(key, observations, margin_threshold):
         assignment, best = minimum_assignment(costs)
         for row, slot in enumerate(assignment):
             slots[slot]['observations'].append(points[row])
-            slots[slot]['candidate_observations'].append(points[row])
+            if points[row] not in slots[slot]['candidate_observations']:
+                slots[slot]['candidate_observations'].append(points[row])
             if len(anchors) > 1:
                 alternative = [list(values) for values in costs]
                 alternative[row][slot] = math.inf
