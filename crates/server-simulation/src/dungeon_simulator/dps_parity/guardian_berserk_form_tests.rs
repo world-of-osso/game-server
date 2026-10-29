@@ -35,6 +35,12 @@ fn guardian_heart_in_cat_executes_empowered_feral_frenzy() {
         })
         .expect("unempowered Frenzy hit");
     let control_damage = control.amount as f32 / if control.crit { 2.0 } else { 1.0 };
+    crate::spell_cast::powers::change_power(
+        run.app.world_mut(),
+        actor,
+        shared::components::PowerType::ComboPoints,
+        -5.0,
+    );
     crate::auras::remove_auras(
         run.app.world_mut(),
         target,
@@ -92,6 +98,17 @@ fn guardian_heart_in_cat_executes_empowered_feral_frenzy() {
     );
     assert!(impacts.iter().all(|event| event.amount > 0));
     assert!(ticks > 0, "the empowered frenzy applies its native bleed");
+    let combo = crate::spell_cast::powers::power_value(
+        run.app.world(),
+        actor,
+        shared::components::PowerType::ComboPoints,
+    )
+    .unwrap()
+    .0;
+    assert_eq!(
+        combo, 5.0,
+        "the five native children earn five combo points"
+    );
 }
 
 #[test]
