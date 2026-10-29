@@ -1,15 +1,138 @@
-//! Explicitly partial Current Retail LittleWigs2777a9d clocks, native70448 effects.
-//! Source immunity stays intact: Ancient/Crawth unlock ingress is not authored.
+//! Current Retail LittleWigs2777a9d clocks, native70448 effects.
+//! Academy unlocks are log-correlated project policy, not sourced scripts.
 use bevy::prelude::*;
 
 use super::boss_ai::{BossAi, BossScript, boss_update_ai};
 use super::{CreatureAi, Ctx};
+
+#[cfg(test)]
+#[path = "algethar_unlock_tests.rs"]
+mod unlock_tests;
 
 pub(super) const ANCIENT_SCRIPT: &str = "boss_overgrown_ancient";
 const BARKBREAKER: u32 = 388544;
 const GERMINATE: u32 = 388796;
 const BRANCH_OUT: u32 = 388623;
 const BURST_FORTH: u32 = 388923;
+
+#[derive(Component)]
+struct CrawthDescent;
+
+/// WCL deaths correlate each intro with the last member of its local pack.
+/// Positions are Bevy coordinates; the Crawth landing is the first cited boss
+/// cast position, projected onto the native detail mesh, not a logged landing.
+pub(crate) fn on_unit_death(world: &mut World, dead: Entity) {
+    use shared::components::Npc;
+    let Some(npc) = world.get::<Npc>(dead) else {
+        return;
+    };
+    let (boss_entry, center, radius) = match npc.template_id {
+        197219 => (196482, Vec2::new(1766.25, 3086.41), 80.0),
+        192333 => (191736, Vec2::new(2365.0, 3050.0), 40.0),
+        _ => return,
+    };
+    let entry = npc.template_id;
+    let Some(map) = world.get::<crate::maps::InMap>(dead).copied() else {
+        return;
+    };
+    if map.map_id != 2526 || !in_intro_area(world, dead, center, radius) {
+        return;
+    }
+    let living = world
+        .query::<(
+            Entity,
+            &Npc,
+            &crate::maps::InMap,
+            Option<&crate::combat::DeathState>,
+        )>()
+        .iter(world)
+        .any(|(entity, npc, current, death)| {
+            npc.template_id == entry
+                && *current == map
+                && death.is_none()
+                && in_intro_area(world, entity, center, radius)
+        });
+    if living {
+        return;
+    }
+    let boss = world
+        .query::<(Entity, &Npc, &crate::maps::InMap)>()
+        .iter(world)
+        .find_map(|(entity, npc, current)| {
+            (npc.template_id == boss_entry && *current == map).then_some(entity)
+        });
+    let Some(boss) = boss else { return };
+    if world
+        .get::<shared::components::UnitFlags>(boss)
+        .is_none_or(|flags| flags.0 & shared::components::UnitFlags::IMMUNE_TO_PC == 0)
+    {
+        return;
+    }
+    if boss_entry == 191736 {
+        if world.get::<CrawthDescent>(boss).is_some() {
+            return;
+        }
+        world.entity_mut(boss).insert(CrawthDescent);
+        super::jump_movement::move_jump(
+            world,
+            boss,
+            0,
+            shared::components::Position {
+                x: 2369.31,
+                y: 912.2291,
+                z: 3041.47,
+            },
+            50.0,
+            0.0,
+        );
+    } else {
+        unlock_boss(world, boss);
+    }
+}
+
+fn in_intro_area(world: &World, entity: Entity, center: Vec2, radius: f32) -> bool {
+    world
+        .get::<crate::creature_ai::SpawnPoint>(entity)
+        .is_some_and(|spawn| Vec2::new(spawn.x, spawn.z).distance(center) <= radius)
+}
+
+pub(super) fn finish_crawth_descent(
+    mut commands: Commands,
+    landed: Query<
+        (Entity, &shared::components::Position),
+        (
+            With<CrawthDescent>,
+            Without<super::jump_movement::JumpMovement>,
+        ),
+    >,
+) {
+    for (entity, position) in &landed {
+        let point = Vec3::new(position.x, position.y, position.z);
+        if point.distance(Vec3::new(2369.31, 912.2291, 3041.47)) > 0.1 {
+            error!("Crawth descent ended away from the logged arena position: {point:?}");
+            continue;
+        }
+        commands.entity(entity).remove::<CrawthDescent>();
+        commands.queue(move |world: &mut World| unlock_boss(world, entity));
+    }
+}
+
+fn unlock_boss(world: &mut World, boss: Entity) {
+    use shared::components::{ThreatTable, UnitFlags};
+    let Some(mut flags) = world.get_mut::<UnitFlags>(boss) else {
+        return;
+    };
+    if flags.0 & UnitFlags::IMMUNE_TO_PC == 0 {
+        return;
+    }
+    flags.0 &= !(UnitFlags::IMMUNE_TO_PC | UnitFlags::IMMUNE_TO_NPC);
+    world.entity_mut(boss).insert((
+        ThreatTable::default(),
+        crate::creature_ai::CreatureState::Idle,
+        crate::creature_aggro::AggroRange,
+    ));
+    crate::spell_cast::mark_dirty(world, boss);
+}
 
 pub(super) fn is_creature_script(name: &str) -> bool {
     matches!(

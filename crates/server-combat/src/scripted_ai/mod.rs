@@ -16,7 +16,7 @@
 //! See `docs/specs/boss-scripts.md`.
 
 use crate::random as rand;
-mod algethar_academy;
+pub(crate) mod algethar_academy;
 mod anubzekt;
 pub(crate) mod azure_vault;
 mod azureblade;
@@ -143,7 +143,14 @@ impl Plugin for ScriptedAiPlugin {
             .add_systems(FixedPreUpdate, trigger_just_appeared)
             .add_systems(FixedPostUpdate, hellfire_ramparts::update_instance_resets)
             .add_systems(FixedPostUpdate, hellfire_ramparts::liquid_fire::update)
-            .add_systems(FixedPreUpdate, jump_movement::release_finished_jumps)
+            .add_systems(
+                FixedPreUpdate,
+                (
+                    jump_movement::release_finished_jumps,
+                    algethar_academy::finish_crawth_descent,
+                )
+                    .chain(),
+            )
             .add_systems(FixedPreUpdate, fall_movement::release_finished_falls)
             .add_systems(
                 FixedUpdate,
