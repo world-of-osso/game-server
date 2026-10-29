@@ -2629,6 +2629,20 @@ fn apply_resolved_heal(
     event.crit = crit;
     event.periodic = periodic;
     log_event(world, event);
+    let percent_based = !periodic
+        && ctx
+            .spell
+            .effects
+            .iter()
+            .any(|effect| effect.effect == EFFECT_HEAL_PCT);
+    super::script_registry::heal_received(
+        world,
+        target,
+        ctx.spell.id,
+        amount,
+        effective,
+        percent_based,
+    );
     if !periodic {
         super::record_hit_heal(world, ctx.caster, ctx.spell.id, target, amount);
         super::scripts::heal_beacon(world, ctx, target, effective);

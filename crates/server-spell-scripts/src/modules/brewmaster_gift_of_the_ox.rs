@@ -22,14 +22,17 @@ struct Orbs(VecDeque<f64>);
 #[derive(Component, Default)]
 struct DamageAccumulator(f32);
 
-#[derive(Component)]
-struct ConsumingOrbs;
+#[derive(Component, Default)]
+struct ConsumingOrbs {
+    effective: f32,
+}
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::EarlyAuraRegistration(register),
     SpellScriptHook::AfterCastUpdate(expire_orbs),
     SpellScriptHook::ExpelHarmHeal(consume_orbs),
     SpellScriptHook::IncomingDamageBeforeMitigation(accumulate_damage),
+    SpellScriptHook::HealReceived(record_consumed_orb_healing),
     SpellScriptHook::NamedHealingMultiplier(orb_healing_multiplier),
 ];
 
@@ -125,23 +128,29 @@ fn expire_orbs(world: &mut World) {
 
 fn consume_orbs(world: &mut World, actor: Entity) -> f32 {
     let count = world.get::<Orbs>(actor).map_or(0, |orbs| orbs.0.len());
-    let mut effective = 0.0;
-    world.entity_mut(actor).insert(ConsumingOrbs);
+    world.entity_mut(actor).insert(ConsumingOrbs::default());
     for _ in 0..count {
         world.get_mut::<Orbs>(actor).unwrap().0.pop_front();
-        let before = world
-            .get::<Health>(actor)
-            .expect("orb owner health")
-            .current;
         spell_cast::cast_triggered(world, actor, TRIGGER, Some(actor), 1);
-        effective += world
-            .get::<Health>(actor)
-            .expect("orb owner health")
-            .current
-            - before;
     }
+    let effective = world.get::<ConsumingOrbs>(actor).unwrap().effective;
     world.entity_mut(actor).remove::<ConsumingOrbs>();
     effective
+}
+
+fn record_consumed_orb_healing(
+    world: &mut World,
+    target: Entity,
+    spell: u32,
+    _: f32,
+    effective: f32,
+    _: bool,
+) {
+    if spell == TRIGGER
+        && let Some(mut consuming) = world.get_mut::<ConsumingOrbs>(target)
+    {
+        consuming.effective += effective;
+    }
 }
 
 fn orb_healing_multiplier(
