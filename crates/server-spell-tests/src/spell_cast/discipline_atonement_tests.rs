@@ -282,8 +282,32 @@ fn discipline_death_summons_shadowfiend_only_in_execute_range() {
                 current,
                 max: 1_000_000.0,
             };
+            let before = h
+                .app
+                .world()
+                .resource::<ObservedCombatEvents>()
+                .0
+                .iter()
+                .filter(|event| {
+                    event.kind == CombatLogKind::Summon && event.spell_id == Some(1280172)
+                })
+                .count();
             super::cast_triggered(h.app.world_mut(), h.caster, 32379, Some(h.npc), 1);
             h.advance(1);
+            let after = h
+                .app
+                .world()
+                .resource::<ObservedCombatEvents>()
+                .0
+                .iter()
+                .filter(|event| {
+                    event.kind == CombatLogKind::Summon && event.spell_id == Some(1280172)
+                })
+                .count();
+            assert!(
+                after - before <= 1,
+                "each Death cast may proc at most one fiend"
+            );
         }
         let summons = h
             .app

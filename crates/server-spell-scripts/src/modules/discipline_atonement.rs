@@ -16,7 +16,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AfterAbsorbConsumed(discharge_void_shield),
     SpellScriptHook::HealthChangeObserved(mark_flash_heal),
     SpellScriptHook::RawResolvedDamage(transfer_damage),
-    SpellScriptHook::RawResolvedDamage(proc_shadowfiend),
+    SpellScriptHook::EffectHit(shadowfiend_death_hit),
     SpellScriptHook::MeleeRawResolved(transfer_pet_melee),
     SpellScriptHook::SummonInitialized(initialize_fiend),
     SpellScriptHook::AfterNativeCastUpdate(update_voidwraith),
@@ -42,9 +42,22 @@ fn initialize_fiend(world: &mut World, actor: Entity) {
     #[cfg(any(test, feature = "test-support"))]
     {
         let started = combat::spell_cast::now(world);
-        let owner_spell_power = world.get::<combat::stats::CharacterStats>(owner).expect("fiend owner stats").spell_power;
-        if let Some(mut receipts) = world.get_resource_mut::<crate::test_support::FiendAtonementReceipts>() {
-            receipts.1.push(crate::test_support::FiendSummonReceipt { actor, owner, spell, started, expires, owner_spell_power, landed_raw: Vec::new() });
+        let owner_spell_power = world
+            .get::<combat::stats::CharacterStats>(owner)
+            .expect("fiend owner stats")
+            .spell_power;
+        if let Some(mut receipts) =
+            world.get_resource_mut::<crate::test_support::FiendAtonementReceipts>()
+        {
+            receipts.1.push(crate::test_support::FiendSummonReceipt {
+                actor,
+                owner,
+                spell,
+                started,
+                expires,
+                owner_spell_power,
+                landed_raw: Vec::new(),
+            });
         }
     }
     let Some(target) = world
@@ -298,19 +311,31 @@ fn transfer_damage(
     );
 }
 
-fn proc_shadowfiend(world: &mut World, damage: &EffectCtx<'_>, target: Entity, _crit: bool, _raw: f32) {
-    let caster = damage.caster;
-    if damage.spell.id != 32379 || !is_discipline(world, caster)
-        || !world.get::<combat::class_progression::KnownSpells>(caster).is_some_and(|known| known.contains(34433))
+fn shadowfiend_death_hit(
+    spell: u32,
+    index: u8,
+) -> Option<combat::spell_cast::script_registry::HitHook> {
+    (spell == 32379 && index == 1).then_some(proc_shadowfiend)
+}
+
+fn proc_shadowfiend(world: &mut World, caster: Entity, target: Entity, depth: u8) {
+    if !is_discipline(world, caster)
+        || !world
+            .get::<combat::class_progression::KnownSpells>(caster)
+            .is_some_and(|known| known.contains(34433))
     {
         return;
     }
     let threshold = combat::spell_cast::scripts::script_effect_value(world, caster, 32379, 2);
-    let Some(health) = world.get::<shared::components::Health>(target) else { return; };
-    if health.max <= 0.0 || health.current * 100.0 > health.max * threshold { return; }
+    let Some(health) = world.get::<shared::components::Health>(target) else {
+        return;
+    };
+    if health.max <= 0.0 || health.current * 100.0 > health.max * threshold {
+        return;
+    }
     let chance = combat::spell_cast::scripts::script_effect_value(world, caster, 34433, 2);
     if combat::random::random::<f32>() * 100.0 < chance {
-        combat::spell_cast::cast_triggered(world, caster, 1280172, Some(target), 1);
+        combat::spell_cast::cast_triggered(world, caster, 1280172, Some(target), depth + 1);
     }
 }
 
@@ -323,8 +348,13 @@ fn transfer_pet_melee(world: &mut World, source: Entity, target: Entity, raw: f3
     }
     let owner = summon.owner;
     #[cfg(any(test, feature = "test-support"))]
-    if let Some(mut receipts) = world.get_resource_mut::<crate::test_support::FiendAtonementReceipts>()
-        && let Some(receipt) = receipts.1.iter_mut().find(|receipt| receipt.actor == source) {
+    if let Some(mut receipts) =
+        world.get_resource_mut::<crate::test_support::FiendAtonementReceipts>()
+        && let Some(receipt) = receipts
+            .1
+            .iter_mut()
+            .find(|receipt| receipt.actor == source)
+    {
         receipt.landed_raw.push(raw);
     }
     transfer_atonement(world, owner, target, crit, raw, 1, false, true);
@@ -344,7 +374,10 @@ fn transfer_atonement(
         return;
     }
     #[cfg(any(test, feature = "test-support"))]
-    if (pet_melee || pet_spell) && let Some(mut receipts) = world.get_resource_mut::<crate::test_support::FiendAtonementReceipts>() {
+    if (pet_melee || pet_spell)
+        && let Some(mut receipts) =
+            world.get_resource_mut::<crate::test_support::FiendAtonementReceipts>()
+    {
         receipts.0.entry(caster).or_default().0 += f64::from(raw);
     }
     let now = combat::spell_cast::now(world);
@@ -451,12 +484,21 @@ fn transfer_atonement(
             1.0
         };
         #[cfg(any(test, feature = "test-support"))]
-        let before = world.get::<shared::components::Health>(ally).map(|health| health.current);
+        let before = world
+            .get::<shared::components::Health>(ally)
+            .map(|health| health.current);
         apply_critical_transfer_heal(world, &ctx, ally, transfer * factor, crit);
         #[cfg(any(test, feature = "test-support"))]
-        if (pet_melee || pet_spell) && let Some(before) = before {
-            let after = world.get::<shared::components::Health>(ally).expect("healed ally").current;
-            if let Some(mut receipts) = world.get_resource_mut::<crate::test_support::FiendAtonementReceipts>() {
+        if (pet_melee || pet_spell)
+            && let Some(before) = before
+        {
+            let after = world
+                .get::<shared::components::Health>(ally)
+                .expect("healed ally")
+                .current;
+            if let Some(mut receipts) =
+                world.get_resource_mut::<crate::test_support::FiendAtonementReceipts>()
+            {
                 let receipt = receipts.0.entry(caster).or_default();
                 receipt.1 += f64::from((transfer * factor).max(0.0).round());
                 receipt.2 += f64::from(after - before);
