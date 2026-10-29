@@ -1,26 +1,6 @@
 //! Native harness with the same downstream registry as the server.
 pub use crate::combat::spell_cast::test_harness::*;
 use crate::combat::spell_info::SpellInfo;
-use bevy::prelude::{Entity, Resource};
-use std::collections::HashMap;
-
-/// Optional replay-only receipts: pre-mitigation fiend damage and raw/effective transfers by owner.
-#[derive(Resource, Default)]
-pub struct FiendAtonementReceipts(
-    pub HashMap<Entity, (f64, f64, f64)>,
-    pub Vec<FiendSummonReceipt>,
-    pub Vec<(Entity, f64, f32, f32)>,
-);
-
-pub struct FiendSummonReceipt {
-    pub actor: Entity,
-    pub owner: Entity,
-    pub spell: u32,
-    pub started: f64,
-    pub expires: Option<f64>,
-    pub owner_spell_power: f32,
-    pub landed_raw: Vec<f32>,
-}
 #[cfg(all(feature = "test-support", not(test)))]
 pub use crate::modules::{ghoul_energy, set_ghoul_energy};
 

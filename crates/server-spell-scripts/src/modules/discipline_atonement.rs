@@ -47,17 +47,19 @@ fn initialize_fiend(world: &mut World, actor: Entity) {
             .expect("fiend owner stats")
             .spell_power;
         if let Some(mut receipts) =
-            world.get_resource_mut::<crate::test_support::FiendAtonementReceipts>()
+            world.get_resource_mut::<combat::spell_cast::test_harness::FiendAtonementReceipts>()
         {
-            receipts.1.push(crate::test_support::FiendSummonReceipt {
-                actor,
-                owner,
-                spell,
-                started,
-                expires,
-                owner_spell_power,
-                landed_raw: Vec::new(),
-            });
+            receipts
+                .1
+                .push(combat::spell_cast::test_harness::FiendSummonReceipt {
+                    actor,
+                    owner,
+                    spell,
+                    started,
+                    expires,
+                    owner_spell_power,
+                    landed_raw: Vec::new(),
+                });
         }
     }
     let Some(target) = world
@@ -340,7 +342,7 @@ fn proc_shadowfiend(world: &mut World, caster: Entity, target: Entity, depth: u8
     {
         let now = combat::spell_cast::now(world);
         if let Some(mut receipts) =
-            world.get_resource_mut::<crate::test_support::FiendAtonementReceipts>()
+            world.get_resource_mut::<combat::spell_cast::test_harness::FiendAtonementReceipts>()
         {
             receipts.2.push((caster, now, roll, chance));
         }
@@ -360,7 +362,7 @@ fn transfer_pet_melee(world: &mut World, source: Entity, target: Entity, raw: f3
     let owner = summon.owner;
     #[cfg(any(test, feature = "test-support"))]
     if let Some(mut receipts) =
-        world.get_resource_mut::<crate::test_support::FiendAtonementReceipts>()
+        world.get_resource_mut::<combat::spell_cast::test_harness::FiendAtonementReceipts>()
         && let Some(receipt) = receipts
             .1
             .iter_mut()
@@ -387,7 +389,7 @@ fn transfer_atonement(
     #[cfg(any(test, feature = "test-support"))]
     if (pet_melee || pet_spell)
         && let Some(mut receipts) =
-            world.get_resource_mut::<crate::test_support::FiendAtonementReceipts>()
+            world.get_resource_mut::<combat::spell_cast::test_harness::FiendAtonementReceipts>()
     {
         receipts.0.entry(caster).or_default().0 += f64::from(raw);
     }
@@ -508,7 +510,7 @@ fn transfer_atonement(
                 .expect("healed ally")
                 .current;
             if let Some(mut receipts) =
-                world.get_resource_mut::<crate::test_support::FiendAtonementReceipts>()
+                world.get_resource_mut::<combat::spell_cast::test_harness::FiendAtonementReceipts>()
             {
                 let receipt = receipts.0.entry(caster).or_default();
                 receipt.1 += f64::from((transfer * factor).max(0.0).round());
