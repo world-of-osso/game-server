@@ -1,3 +1,4 @@
+- 2026-10-29: Added [healer and tank replay](systems/healer-tank-replay.md), including the WCL reference boundary and specialization links.
 - 2026-10-28: Added the [offline floor resolver](systems/ground-assets.md#offline-floor-resolver); train qualification pending.
 - 2026-10-28: Recorded [Ruby final log-derived policy](systems/boss-scripts.md#ruby-final-log-derived-policy--2026-10-28) and revised Kokia evidence; train integration pending.
 - 2026-10-28: Recorded [Ruby final log-derived policy](systems/boss-scripts.md#ruby-final-log-derived-policy--2026-10-28) and revised Kokia evidence; combined gate landed d15d8bcf3342e3127df58d87d8f0c9b00381be3e.
