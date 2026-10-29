@@ -12,21 +12,52 @@ fn native_bm_wrath_triggers_thundering_hooves_from_permanent_pets() {
         .filter(|pet| !crate::hunter_pet::is_stabled_guardian(run.app.world(), *pet))
         .collect();
     assert_eq!(pets.len(), 2);
-    let before = run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0.len();
-    crate::spell_cast::creature_cast(run.app.world_mut(), run.actor, 19574, Some(run.targets[0]), false)
-        .expect("ordinary Bestial Wrath");
-    let events = &run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0[before..];
+    let before = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .len();
+    crate::spell_cast::creature_cast(
+        run.app.world_mut(),
+        run.actor,
+        19574,
+        Some(run.targets[0]),
+        false,
+    )
+    .expect("ordinary Bestial Wrath");
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0[before..];
     for pet in pets {
         for target in &run.targets {
-            let hits: Vec<_> = events.iter().filter(|event| event.source == Some(pet.to_bits())
-                && event.target == Some(target.to_bits()) && event.spell_id == Some(201754)
-                && matches!(event.kind, CombatLogKind::Damage | CombatLogKind::Miss(_))).collect();
-            assert_eq!(hits.len(), 1, "each permanent pet must Stomp each target once");
+            let hits: Vec<_> = events
+                .iter()
+                .filter(|event| {
+                    event.source == Some(pet.to_bits())
+                        && event.target == Some(target.to_bits())
+                        && event.spell_id == Some(201754)
+                        && matches!(event.kind, CombatLogKind::Damage | CombatLogKind::Miss(_))
+                })
+                .collect();
+            assert_eq!(
+                hits.len(),
+                1,
+                "each permanent pet must Stomp each target once"
+            );
         }
     }
-    assert_eq!(events.iter().filter(|event| event.spell_id == Some(201754)
-        && matches!(event.kind, CombatLogKind::Damage | CombatLogKind::Miss(_))).count(), 6,
-        "Nature's Ally and the two-piece echo must not add Hooves impacts");
+    assert_eq!(
+        events
+            .iter()
+            .filter(|event| event.spell_id == Some(201754)
+                && matches!(event.kind, CombatLogKind::Damage | CombatLogKind::Miss(_)))
+            .count(),
+        6,
+        "Nature's Ally and the two-piece echo must not add Hooves impacts"
+    );
 }
 
 #[test]

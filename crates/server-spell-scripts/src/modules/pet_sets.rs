@@ -132,15 +132,25 @@ pub(super) fn after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
 // triggers a scaled Stomp from the permanent pets, excluding Nature's Ally.
 fn cast_thundering_hooves(world: &mut World, caster: Entity, spell: &SpellInfo) {
     const TALENT: u32 = 459693;
-    if !world.get::<KnownSpells>(caster).is_some_and(|spells| spells.contains(TALENT)) {
+    if !world
+        .get::<KnownSpells>(caster)
+        .is_some_and(|spells| spells.contains(TALENT))
+    {
         return;
     }
     let Some(target) = spell.cast_primary_target else {
-        warn!(?caster, "Bestial Wrath lacks a target for Thundering Hooves");
+        warn!(
+            ?caster,
+            "Bestial Wrath lacks a target for Thundering Hooves"
+        );
         return;
     };
     let percent = spell_cast::scripts::script_effect_value(world, caster, TALENT, 0);
-    let mut stomp = world.resource::<SpellStore>().get(201754).expect("native Stomp payload").clone();
+    let mut stomp = world
+        .resource::<SpellStore>()
+        .get(201754)
+        .expect("native Stomp payload")
+        .clone();
     stomp.cast_damage_multiplier = Some(percent / 100.0);
     let depth = spell_cast::next_trigger_depth(world);
     for pet in combat::hunter_pet::active_owned_pets(world, caster) {

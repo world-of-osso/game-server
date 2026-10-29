@@ -66,11 +66,17 @@ fn is_discipline(world: &World, caster: Entity) -> bool {
         .is_some_and(|spec| spec.0 == 256)
 }
 
-fn transfer_damage(world: &mut World, damage: &EffectCtx<'_>, target: Entity, crit: bool, raw: f32) {
+fn transfer_damage(
+    world: &mut World,
+    damage: &EffectCtx<'_>,
+    target: Entity,
+    crit: bool,
+    raw: f32,
+) {
     // SimC 76f8118 priest_spell_t sets triggers_atonement on these damage actions.
     const TRIGGERS: &[u32] = &[
-        585, 589, 8092, 32379, 47666, 373130, 390832, 120696, 390964, 132157,
-        450215, 447448, 448405, 1280134, 1253828, 421543,
+        585, 589, 8092, 32379, 47666, 373130, 390832, 120696, 390964, 132157, 450215, 447448,
+        448405, 1280134, 1253828, 421543,
     ];
     let caster = damage.caster;
     if caster == target || !is_discipline(world, caster) || !TRIGGERS.contains(&damage.spell.id) {
