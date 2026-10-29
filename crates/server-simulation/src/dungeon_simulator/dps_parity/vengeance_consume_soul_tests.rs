@@ -85,3 +85,11 @@ fn lesser_fragment_heals_from_health_and_recent_damage() {
         "recent incoming damage must increase healing: {second:?}, max={max}"
     );
 }
+
+#[test]
+#[ignore = "requires canonical world database and MID2 Vengeance profile"]
+fn fragment_cap_overflow_survives_queued_three_target_seed_five() {
+    let report = measure_seed(581, 3, 5).unwrap();
+    assert_eq!(report["simulated_seconds"], 300.0);
+    assert!(report["combat"]["total_damage"].as_f64().unwrap() > 0.0);
+}
