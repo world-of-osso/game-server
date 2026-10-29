@@ -8,6 +8,7 @@ mod darkflame_drop_tests;
 mod empower_policy;
 #[cfg(test)]
 mod form_combat_tests;
+pub mod gear;
 mod hazards;
 #[cfg(test)]
 mod healer_benchmark_profile_tests;
