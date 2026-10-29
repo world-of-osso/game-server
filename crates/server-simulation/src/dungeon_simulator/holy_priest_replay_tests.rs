@@ -1,6 +1,28 @@
 use std::path::Path;
 
 #[test]
+#[ignore = "requires top-character profiles, native DB and SimC party pulse"]
+fn holy_priest_uses_serenity_and_benediction_in_party_pulse() {
+    let trace = std::env::var("HEALER_TANK_TIMELINE").unwrap();
+    let party = std::env::var("HEALER_TANK_PARTY_TRACE").unwrap();
+    let report = super::super::healer_replay::replay_simc_party(
+        257,
+        Path::new(&trace),
+        Path::new(&party),
+        300,
+        70448,
+    )
+    .unwrap();
+    for id in ["2050", "1262763"] {
+        assert!(
+            report["healer_casts"][id].as_u64().unwrap_or(0) > 0,
+            "Holy policy must cast {id}: {report}"
+        );
+    }
+    println!("HOLY_POLICY_REPORT={report}");
+}
+
+#[test]
 #[ignore = "requires native Holy Priest spell data"]
 fn divine_hymn_pulses_emit_scaled_cosmic_ripple() {
     use crate::spell_cast::test_harness::{ObservedCombatEvents, harness, spawn_player};

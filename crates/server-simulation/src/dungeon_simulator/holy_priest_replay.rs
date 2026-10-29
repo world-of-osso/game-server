@@ -62,10 +62,7 @@ pub(super) fn prepare(
         ("default", "divine_hymn,if=party.injured>=3"),
         ("default", "apotheosis,if=target.health.pct<35"),
         ("default", "symbol_of_hope,if=mana.pct<60"),
-        (
-            "default",
-            "serenity,if=target.health.pct<60&party.heal_worthwhile",
-        ),
+        ("default", "serenity,if=party.heal_worthwhile"),
         ("default", "sanctify,if=party.injured>=3"),
         ("default", "circle,if=party.injured>=3"),
         ("default", "prayer_of_healing,if=party.injured>=3"),
