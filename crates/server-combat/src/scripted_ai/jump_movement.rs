@@ -25,7 +25,7 @@ pub(crate) struct JumpOptions {
     pub no_facing_control: bool,
 }
 
-#[derive(Component, Debug, Clone, Copy)]
+#[derive(Component, Debug, Clone)]
 pub struct JumpMovement {
     id: u32,
     from: Vec3,
@@ -34,6 +34,8 @@ pub struct JumpMovement {
     duration_ms: u32,
     elapsed_ms: u32,
     no_facing_control: bool,
+    progress_curve: Vec<(f32, f32)>,
+    arrival_spell: Option<u32>,
 }
 
 type Jumpers = (
@@ -106,13 +108,17 @@ fn calculate_jump(id: u32, from: Vec3, to: Vec3, options: JumpOptions) -> Option
     } else {
         requested_speed.min(MAX_JUMP_SPEED)
     };
-    if speed < 0.01 {
+    if speed < 0.01 && !(options.time_mode && distance == 0.0) {
         return None;
     }
-    let seconds = distance / speed;
+    let seconds = if distance == 0.0 {
+        options.speed
+    } else {
+        distance / speed
+    };
     let height = (shared::skyriding::GRAVITY * seconds * seconds / 8.0)
         .clamp(options.min_height, options.max_height);
-    let duration_ms = MIN_DURATION_MS + (distance * (1000.0 / speed)) as u32;
+    let duration_ms = MIN_DURATION_MS + (seconds * 1000.0) as u32;
     Some(JumpMovement {
         id,
         from,
@@ -121,6 +127,8 @@ fn calculate_jump(id: u32, from: Vec3, to: Vec3, options: JumpOptions) -> Option
         duration_ms,
         elapsed_ms: 0,
         no_facing_control: options.no_facing_control,
+        progress_curve: Vec::new(),
+        arrival_spell: None,
     })
 }
 
@@ -138,7 +146,8 @@ pub(crate) fn release_finished_jumps(
 }
 
 fn spline_position(jump: &JumpMovement) -> Position {
-    let t = jump.elapsed_ms as f32 / jump.duration_ms as f32;
+    let elapsed = jump.elapsed_ms as f32 / jump.duration_ms as f32;
+    let t = curve_progress(&jump.progress_curve, elapsed);
     let mut position = jump.from.lerp(jump.to, t);
     position.y += jump.height * 4.0 * t * (1.0 - t);
     Position {
@@ -148,11 +157,54 @@ fn spline_position(jump: &JumpMovement) -> Position {
     }
 }
 
+fn curve_progress(points: &[(f32, f32)], time: f32) -> f32 {
+    if points.is_empty() {
+        return time;
+    }
+    if time <= points[0].0 {
+        return points[0].1;
+    }
+    let right = points.partition_point(|point| point.0 <= time);
+    if right == points.len() {
+        return points[right - 1].1;
+    }
+    let (x0, y0) = points[right - 1];
+    let (x1, y1) = points[right];
+    y0 + (time - x0) / (x1 - x0) * (y1 - y0)
+}
+
+pub(crate) fn configure_spell_jump(
+    world: &mut World,
+    unit: Entity,
+    curve: Vec<(f32, f32)>,
+    arrival_spell: u32,
+) {
+    if let Some(mut jump) = world.get_mut::<JumpMovement>(unit) {
+        jump.progress_curve = curve;
+        jump.arrival_spell = Some(arrival_spell);
+    }
+}
+
 pub(crate) fn advance_jumps(world: &mut World) {
     let dt_ms = world.resource::<Time>().delta().as_millis() as u32;
     for (entity, arrival) in update_jump_positions(world, dt_ms) {
         publish_jump_position(world, entity);
         if let Some(id) = arrival {
+            let arrival_spell = world
+                .get::<JumpMovement>(entity)
+                .and_then(|jump| jump.arrival_spell);
+            if let Some(spell) = arrival_spell
+                && let Some(position) = world.get::<Position>(entity)
+            {
+                let destination = Vec3::new(position.x, position.y, position.z);
+                crate::spell_cast::cast_triggered_at_destination(
+                    world,
+                    entity,
+                    spell,
+                    destination,
+                    1,
+                );
+            }
             super::dispatch(world, entity, Hook::MovementInform(MotionType::Effect, id));
         }
     }

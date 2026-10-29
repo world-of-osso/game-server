@@ -246,9 +246,22 @@ fn spell_teleport_ground_leap_rejects_out_of_range_and_nonfinite_destinations() 
 }
 
 #[test]
-fn spell_teleport_infernal_strike_refuses_jump254_progress_curve1636_only() {
+fn infernal_strike_follows_native_progress_curve_and_damages_on_arrival() {
     use lightyear::prelude::*;
-    let mut h = harness(Vec::new(), &[189110], 12).unwrap();
+    let mut h = harness(Vec::new(), &[189110, 189112], 12).unwrap();
+    h.app.add_systems(
+        FixedUpdate,
+        (
+            crate::scripted_ai::jump_movement::release_finished_jumps,
+            crate::scripted_ai::jump_movement::advance_jumps,
+        )
+            .chain(),
+    );
+    h.app.world_mut().entity_mut(h.npc).insert(Position {
+        x: 30.0,
+        y: 2.0,
+        z: -10.0,
+    });
     h.app
         .insert_resource(crate::test_data::world_data().clone());
     let fury_before = h.power(shared::components::PowerType::Fury);
@@ -281,14 +294,28 @@ fn spell_teleport_infernal_strike_refuses_jump254_progress_curve1636_only() {
         .send::<shared::protocol::CombatChannel>(request);
     h.advance(4);
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
-    assert_eq!(
-        *h.app.world().get::<Position>(h.caster).unwrap(),
-        Position {
-            x: 10.0,
-            y: 2.0,
-            z: -10.0
-        },
-        "JUMP254_PROGRESS_CURVE: source param2/curve1636 is not a teleport"
+    h.advance(6);
+    let midway = *h.app.world().get::<Position>(h.caster).unwrap();
+    assert!(
+        midway.x > 10.0 && midway.x < 30.0 && midway.y > 2.0,
+        "{midway:?}"
+    );
+    assert!(
+        !h.inbox
+            .log
+            .iter()
+            .any(|event| event.spell_id == Some(189112))
+    );
+    h.advance(20);
+    let landed = *h.app.world().get::<Position>(h.caster).unwrap();
+    assert!((landed.x - 30.0).abs() < 0.01, "{landed:?}");
+    assert!(
+        h.inbox
+            .log
+            .iter()
+            .any(|event| event.spell_id == Some(189112) && event.amount > 0),
+        "{:?}",
+        h.inbox.log
     );
     assert!(h.inbox.go.iter().any(|go| go.spell_id == 189110));
     assert!(h.inbox.cooldowns.iter().any(|update| {
