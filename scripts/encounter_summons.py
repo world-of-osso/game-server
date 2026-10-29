@@ -728,7 +728,7 @@ def import_kokia(connection):
     runtime = connection.execute('SELECT name,AIName,ScriptName FROM content_creature_template WHERE entry=189232').fetchone()
     if runtime not in [('Kokia Blazehoof','',''), ('Kokia Blazehoof','','boss_kokia_blazehoof')]:
         raise ValueError('Kokia runtime binding conflicts with local Lua port')
-    for spell, expected in [(372863,(3,0,0)),(372110,(3,0,372107)),(372858,(6,23,372859))]:
+    for spell, expected in [(372863,(3,0,1309540)),(372110,(3,0,372107)),(372858,(6,23,372859))]:
         effect = connection.execute('SELECT Effect,EffectAura,EffectTriggerSpell FROM spell_effect WHERE SpellID=? AND DifficultyID=0 AND EffectIndex=0',(spell,)).fetchone()
         if effect != expected:
             raise ValueError(f'Kokia native current effect/child{spell} changed')

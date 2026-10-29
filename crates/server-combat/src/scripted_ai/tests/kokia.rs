@@ -165,7 +165,7 @@ fn encounter_coverage_kokia_current_retail_inputs_qualify() {
     let conn =
         Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
     for (spell, expected) in [
-        (372863, (3, 0, 0)),
+        (372863, (3, 0, 1309540)),
         (372110, (3, 0, 372107)),
         (SEARING_BLOWS, (6, 23, 372859)),
     ] {
