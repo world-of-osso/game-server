@@ -26,6 +26,57 @@ fn discipline_flash_heal_applies_atonement_even_at_full_health() {
 }
 
 #[test]
+fn shadow_mend_override_heals_and_applies_atonement() {
+    let mut h = harness(
+        Vec::new(),
+        &[2061, 186263, 1252217, 194384, 81749, 94472],
+        5,
+    )
+    .unwrap();
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(ActiveSpec(256));
+    let ally = spawn_player(&mut h.app, 5, 1.0);
+    *h.app.world_mut().get_mut::<Health>(ally).unwrap() = Health {
+        current: 500.0,
+        max: 10_000.0,
+    };
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: h.caster,
+            target: h.caster,
+            spell_id: 1252217,
+            effect_mask: u32::MAX,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    h.cast_and_deliver(2061, Some(ally));
+    h.advance(80);
+    assert!(
+        h.inbox.failed.is_empty(),
+        "override cast failed: {:?}",
+        h.inbox.failed
+    );
+    assert!(
+        h.inbox
+            .log
+            .iter()
+            .any(|event| event.kind == CombatLogKind::Heal
+                && event.spell_id == Some(186263)
+                && event.target == Some(ally.to_bits())
+                && event.amount > 0),
+        "Flash Heal must resolve as Shadow Mend: {:?}",
+        h.inbox.log
+    );
+    assert!(
+        crate::auras::has_aura(h.app.world(), ally, 194384),
+        "Shadow Mend applies Atonement"
+    );
+}
+
+#[test]
 fn divine_aegis_accumulates_critical_flash_heals_and_absorbs_damage() {
     let mut h = harness(
         Vec::new(),

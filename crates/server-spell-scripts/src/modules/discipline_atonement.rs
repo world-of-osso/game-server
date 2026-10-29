@@ -245,7 +245,7 @@ fn apply_mark(world: &mut World, target: Entity, aura: &AuraInstance) {
 }
 
 fn mark_flash_heal(world: &mut World, event: &CombatLogEvent) {
-    if event.kind != CombatLogKind::Heal || event.spell_id != Some(2061) {
+    if event.kind != CombatLogKind::Heal || !matches!(event.spell_id, Some(2061 | 186263)) {
         return;
     }
     let (Some(caster), Some(target)) = (
@@ -255,7 +255,8 @@ fn mark_flash_heal(world: &mut World, event: &CombatLogEvent) {
         return;
     };
     if is_discipline(world, caster) {
-        // SimC 76f8118 sc_priest.cpp:1782-1792: Flash Heal applies Atonement on impact.
+        // Flash Heal applies Atonement in SimC; WCL VxFtGRafyAbKmnd9 fight 10
+        // shows the selected Shadow Mend override applies it on the same recipient.
         auras::apply_aura(
             world,
             &AuraApplication {
