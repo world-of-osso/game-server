@@ -2525,10 +2525,12 @@ fn kill(world: &mut World, killer: Entity, target: Entity, can_proc: bool) {
 }
 
 fn heal(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target: Entity) {
+    let effectiveness = ctx.spell.cast_healing_multiplier.unwrap_or(1.0);
     let amount = with_variance(
         scaled_amount(world, ctx.caster, ctx.spell, effect),
         effect.variance,
-    ) * ctx.chain_multiplier;
+    ) * ctx.chain_multiplier
+        * effectiveness;
     let raw = amount;
     let (amount, crit) = with_crit(world, ctx.caster, target, ctx.spell, amount);
     apply_heal_with_raw(world, ctx, target, amount, crit, false, Some(raw));

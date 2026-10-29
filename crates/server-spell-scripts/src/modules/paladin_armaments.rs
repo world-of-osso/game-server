@@ -32,6 +32,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AfterResolvedHits(consume_valor),
     SpellScriptHook::AfterResolvedHits(consume_bulwark_of_righteous_fury),
     SpellScriptHook::AreaFilter(blaze_area_filter),
+    SpellScriptHook::AfterSpenderStacks(advance_afterimage),
 ];
 
 fn register_bulwark(scripts: &mut AuraScripts) {
@@ -605,26 +606,11 @@ fn advance_shining_light(world: &mut World, caster: Entity, cast: &SpellInfo) {
     }
     let spell = cast.id;
     if spell == 85673 {
-        // The cast's charge modifiers record the Shining Light aura that paid for it.
-        let free = cast
-            .cast_charge_mods
-            .iter()
-            .flatten()
-            .any(|modifier| modifier.aura_spell_id == 327510);
         combat::auras::remove_auras(world, caster, RemoveReason::Consumed, |aura| {
             aura.spell_id == 327510 && aura.caster == caster
         });
-        if free && selected(world, caster, 432919) {
-            // SimC76f8118 sc_paladin.cpp1263–1268: Valiance shortens Holy Armaments
-            // when Word of Glory consumes free Shining Light.
-            let milliseconds =
-                combat::spell_cast::scripts::script_effect_value(world, caster, 432919, 0);
-            combat::spell_cast::scripts::reduce_cooldown(
-                world,
-                caster,
-                432459,
-                f64::from(milliseconds) / 1000.0,
-            );
+        if consumed_shining_light(cast) {
+            apply_valiance(world, caster);
         }
         return;
     }
@@ -659,6 +645,106 @@ fn advance_shining_light(world: &mut World, caster: Entity, cast: &SpellInfo) {
             source: AuraSource::Cast,
         },
     );
+}
+
+/// The cast's charge modifiers record the Shining Light aura that paid for it.
+fn consumed_shining_light(cast: &SpellInfo) -> bool {
+    cast.cast_charge_mods
+        .iter()
+        .flatten()
+        .any(|modifier| modifier.aura_spell_id == 327510)
+}
+
+/// SimC76f8118 sc_paladin.cpp1263–1268: selected Valiance shortens Holy Armaments
+/// whenever a Word of Glory executes with free Shining Light.
+fn apply_valiance(world: &mut World, caster: Entity) {
+    if !selected(world, caster, 432919) {
+        return;
+    }
+    let milliseconds = combat::spell_cast::scripts::script_effect_value(world, caster, 432919, 0);
+    combat::spell_cast::scripts::reduce_cooldown(
+        world,
+        caster,
+        432459,
+        f64::from(milliseconds) / 1000.0,
+    );
+}
+
+fn owned_stacks(world: &World, caster: Entity, spell: u32) -> u8 {
+    world
+        .get::<combat::auras::ActiveAuras>(caster)
+        .and_then(|auras| {
+            auras
+                .iter()
+                .find(|aura| aura.spell_id == spell && aura.caster == caster)
+        })
+        .map_or(0, |aura| aura.stacks)
+}
+
+fn set_afterimage_stacks(world: &mut World, caster: Entity, stacks: u8) {
+    if stacks == 0 {
+        combat::auras::remove_auras(world, caster, RemoveReason::Consumed, |aura| {
+            aura.spell_id == 400745 && aura.caster == caster
+        });
+        return;
+    }
+    if owned_stacks(world, caster, 400745) == 0 {
+        combat::auras::apply_aura(
+            world,
+            &AuraApplication {
+                caster,
+                target: caster,
+                spell_id: 400745,
+                effect_mask: u32::MAX,
+                source: AuraSource::Cast,
+            },
+        );
+    }
+    combat::auras::set_self_cast_stacks(world, caster, 400745, stacks);
+}
+
+/// SimC76f8118 sc_paladin.hpp1545–1568,1747–1757: each foreground spender adds its
+/// Holy Power cost to Afterimage (free spenders count their base cost). A Word of
+/// Glory that starts at the threshold spends it and echoes onto the caster at the
+/// talent's effectiveness; the echo is a Word of Glory and also triggers Valiance.
+fn advance_afterimage(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    if !selected(world, caster, 385414) {
+        return;
+    }
+    let Some(spent) = spell
+        .power_costs
+        .iter()
+        .find(|cost| cost.power_type == PowerType::HolyPower as i32)
+        .map(|cost| cost.mana_cost.clamp(0, i32::from(u8::MAX)) as u8)
+    else {
+        return;
+    };
+    let before = owned_stacks(world, caster, 400745);
+    if spent > 0 {
+        set_afterimage_stacks(world, caster, before.saturating_add(spent));
+    }
+    let threshold = combat::spell_cast::scripts::script_effect_value(world, caster, 385414, 2) as u8;
+    if spell.id != 85673 || before < threshold {
+        return;
+    }
+    let remaining = owned_stacks(world, caster, 400745).saturating_sub(threshold);
+    set_afterimage_stacks(world, caster, remaining);
+    let effectiveness =
+        combat::spell_cast::scripts::script_effect_value(world, caster, 385414, 0) / 100.0;
+    combat::spell_cast::cast_triggered_with_overrides(
+        world,
+        caster,
+        85673,
+        Some(caster),
+        1,
+        combat::spell_cast::TriggeredSpellOverrides {
+            healing_multiplier: Some(effectiveness),
+            ..Default::default()
+        },
+    );
+    if consumed_shining_light(spell) {
+        apply_valiance(world, caster);
+    }
 }
 
 fn advance_divine_guidance(world: &mut World, caster: Entity, spell: u32) {

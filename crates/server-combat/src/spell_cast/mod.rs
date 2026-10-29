@@ -4041,6 +4041,7 @@ pub(super) fn cast_triggered_with_item_level(
 pub struct TriggeredSpellOverrides {
     pub effect0_amount: Option<f32>,
     pub damage_multiplier: Option<f32>,
+    pub healing_multiplier: Option<f32>,
     pub item_level: Option<u16>,
     pub item_inventory_type: Option<u8>,
     pub effect_mask: Option<u32>,
@@ -4066,6 +4067,7 @@ pub fn cast_triggered_with_overrides(
     spell.cast_aura_stacks = values.aura_stacks;
     spell.cast_fixed_aura_duration_ms = values.fixed_aura_duration_ms;
     spell.cast_damage_multiplier = values.damage_multiplier;
+    spell.cast_healing_multiplier = values.healing_multiplier;
     spell.cast_original_caster = values.original_caster;
     spell.cast_item_level = values.item_level;
     spell.cast_item_inventory_type = values.item_inventory_type;

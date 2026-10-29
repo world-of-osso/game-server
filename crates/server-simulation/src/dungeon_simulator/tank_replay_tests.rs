@@ -1375,6 +1375,78 @@ fn valiance_free_word_of_glory_shortens_holy_armaments_recharge() {
 }
 
 #[test]
+#[ignore = "uses the selected MID2 Protection player and native Afterimage"]
+fn afterimage_threshold_word_of_glory_echoes_onto_the_paladin() {
+    use crate::auras::{AuraApplication, AuraSource};
+    let (profile, traits) = super::dps_parity::read_reference(66).unwrap();
+    let mut run = super::dps_parity::spawn_reference(
+        profile,
+        &traits,
+        1,
+        crate::followers::simulator::ParityActor::Player { race: 6 },
+    )
+    .unwrap();
+    for _ in 0..4 {
+        run.app.update();
+    }
+    let actor = run.actor;
+    let world = run.app.world_mut();
+    crate::auras::apply_aura(
+        world,
+        &AuraApplication {
+            caster: actor,
+            target: actor,
+            spell_id: 400745,
+            effect_mask: u32::MAX,
+            source: AuraSource::Cast,
+        },
+    );
+    assert!(crate::auras::set_self_cast_stacks(world, actor, 400745, 20));
+    world
+        .get_mut::<crate::spell_cast::powers::PowerPools>(actor)
+        .unwrap()
+        .get_mut(shared::components::PowerType::HolyPower)
+        .unwrap()
+        .current = 3.0;
+    let mut health = world.get_mut::<shared::components::Health>(actor).unwrap();
+    health.current = health.max * 0.1;
+    let before = world
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .len();
+    crate::spell_cast::creature_cast(world, actor, 85673, Some(actor), false).unwrap();
+    run.app.update();
+    let heals: Vec<_> = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0[before..]
+        .iter()
+        .filter(|event| {
+            event.kind == shared::protocol::CombatLogKind::Heal
+                && event.spell_id == Some(85673)
+                && event.target == Some(actor.to_bits())
+        })
+        .map(|event| (event.amount + event.overflow, event.crit))
+        .collect();
+    println!("AFTERIMAGE_HEALS {heals:?}");
+    assert_eq!(
+        heals.len(),
+        2,
+        "Word of Glory and its Afterimage echo: {heals:?}"
+    );
+    let stacks = run
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(actor)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 400745)
+        .map_or(0, |aura| aura.stacks);
+    assert_eq!(stacks, 3, "20 stored + 3 spent - 20 echoed");
+}
+
+#[test]
 #[ignore = "uses the selected MID2 Protection player and precombat APL"]
 fn protection_default_precombat_casts_holy_bulwark() {
     let run = super::dps_parity::prepare_registered_player(66, 1).unwrap();
