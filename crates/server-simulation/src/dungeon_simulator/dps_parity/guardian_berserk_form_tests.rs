@@ -4,6 +4,56 @@ use crate::auras::ActiveAuras;
 
 #[test]
 #[ignore = "requires Guardian profile and native world data"]
+fn guardian_bear_passive_changes_stamina_and_swing_rage_only_in_bear() {
+    let mut run = prepare_registered_player(104, 1).unwrap();
+    let actor = run.actor;
+    let stats = |run: &Run| {
+        run.app
+            .world()
+            .get::<crate::stats::CharacterStats>(actor)
+            .unwrap()
+            .primary
+            .stamina
+    };
+    let rage_mod = |run: &Run| {
+        run.app
+            .world()
+            .get::<crate::auras::AuraStatMods>(actor)
+            .unwrap()
+            .rage_from_damage_dealt_pct
+    };
+    let baseline_stamina = stats(&run);
+    let baseline_rage_mod = rage_mod(&run);
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 5487, Some(actor), false).unwrap();
+    for _ in 0..40 {
+        run.app.update();
+    }
+    assert!(
+        stats(&run) > baseline_stamina,
+        "Bear Form must increase stamina"
+    );
+    assert_eq!(
+        rage_mod(&run),
+        baseline_rage_mod - 8.0,
+        "Bear passive must reduce swing Rage"
+    );
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 768, Some(actor), false).unwrap();
+    for _ in 0..40 {
+        run.app.update();
+    }
+    assert_eq!(
+        rage_mod(&run),
+        baseline_rage_mod,
+        "leaving Bear Form must remove its Rage modifier"
+    );
+    assert!(
+        stats(&run) < baseline_stamina * 1.01,
+        "leaving Bear Form must remove its stamina bonus"
+    );
+}
+
+#[test]
+#[ignore = "requires Guardian profile and native world data"]
 fn guardian_incarnation_resets_real_mangle_and_thrash_cooldowns() {
     for spell in [33917, 77758] {
         let mut run = prepare_registered_player(104, 1).unwrap();
