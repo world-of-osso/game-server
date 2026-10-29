@@ -331,6 +331,8 @@ fn discipline_fiend_spells_transfer_pet_damage_to_atonement() {
         h.app
             .insert_resource(super::summon::load_summon_properties(&conn).unwrap());
         h.app.init_resource::<ObservedCombatEvents>();
+        h.app
+            .init_resource::<super::test_harness::FiendAtonementReceipts>();
         h.app.world_mut().entity_mut(h.caster).insert((
             ActiveSpec(256),
             server::networking::CombatTarget(Some(h.npc)),
@@ -419,6 +421,15 @@ fn discipline_fiend_spells_transfer_pet_damage_to_atonement() {
                     && event.target == Some(h.npc.to_bits())
                     && event.amount > 0),
             "summon {spell} must actually damage its target: {events:?}"
+        );
+        let receipt = h
+            .app
+            .world()
+            .resource::<super::test_harness::FiendAtonementReceipts>()
+            .0[&h.caster];
+        assert!(
+            receipt.0 > 0.0 && receipt.1 > 0.0 && receipt.2 > 0.0,
+            "fiend damage and transfer receipts: {receipt:?}"
         );
         assert!(
             events.iter().any(|event| event.kind == CombatLogKind::Heal

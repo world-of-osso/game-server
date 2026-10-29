@@ -115,6 +115,8 @@ fn replay_with_party_registry(
     super::dps_parity::install_fixture_lifetimes(&mut run, started_at);
     super::dps_parity::engage(&mut run);
     super::healer_replay::freeze_sources(run.app.world_mut(), &[(0, source)].into());
+    run.app
+        .init_resource::<server_spell_scripts::test_support::FiendAtonementReceipts>();
     run.app.insert_resource(Capture {
         members: members.clone(),
         sources: [(source, (0, 0))].into(),

@@ -327,6 +327,10 @@ fn transfer_atonement(
     if caster == target || !is_discipline(world, caster) {
         return;
     }
+    #[cfg(any(test, feature = "test-support"))]
+    if (pet_melee || pet_spell) && let Some(mut receipts) = world.get_resource_mut::<crate::test_support::FiendAtonementReceipts>() {
+        receipts.0.entry(caster).or_default().0 += f64::from(raw);
+    }
     let now = combat::spell_cast::now(world);
     let recipients: Vec<_> = world
         .query::<(Entity, &ActiveAuras, &shared::components::Health)>()
@@ -430,6 +434,17 @@ fn transfer_atonement(
         } else {
             1.0
         };
+        #[cfg(any(test, feature = "test-support"))]
+        let before = world.get::<shared::components::Health>(ally).map(|health| health.current);
         apply_critical_transfer_heal(world, &ctx, ally, transfer * factor, crit);
+        #[cfg(any(test, feature = "test-support"))]
+        if (pet_melee || pet_spell) && let Some(before) = before {
+            let after = world.get::<shared::components::Health>(ally).expect("healed ally").current;
+            if let Some(mut receipts) = world.get_resource_mut::<crate::test_support::FiendAtonementReceipts>() {
+                let receipt = receipts.0.entry(caster).or_default();
+                receipt.1 += f64::from((transfer * factor).max(0.0).round());
+                receipt.2 += f64::from(after - before);
+            }
+        }
     }
 }

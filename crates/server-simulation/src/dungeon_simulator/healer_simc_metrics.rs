@@ -182,7 +182,13 @@ impl Recorder {
                 (consumed > 0.0).then_some((spell, consumed))
             })
             .collect();
-        json!({"raw_hps":raw as f64 / duration,"effective_hps":effective as f64 / duration,
+        let fiend = world
+            .get_resource::<server_spell_scripts::test_support::FiendAtonementReceipts>()
+            .and_then(|receipts| receipts.0.get(&self.healer))
+            .copied()
+            .unwrap_or_default();
+        json!({"fiend_pre_mitigation_damage":fiend.0,"fiend_atonement_raw":fiend.1,"fiend_atonement_effective":fiend.2,
+            "raw_hps":raw as f64 / duration,"effective_hps":effective as f64 / duration,
             "consumed_absorbs_by_spell":absorbs,
             "overheal_pct":(raw > 0).then(|| 100.0 * (raw - effective) as f64 / raw as f64),
             "idle_gcd_pct":100.0 * f64::from(self.idle_gcd_ticks) / (duration * 20.0),
