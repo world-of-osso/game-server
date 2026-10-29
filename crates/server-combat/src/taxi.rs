@@ -49,7 +49,7 @@ const RUN_SPEED: f32 = 7.0;
 
 /// A flight in progress: Bevy-space points still to fly through.
 #[derive(Component, Debug, Clone, PartialEq)]
-pub(crate) struct TaxiFlight {
+pub struct TaxiFlight {
     pub points: Vec<Vec3>,
     pub next: usize,
 }
