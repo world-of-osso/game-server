@@ -138,6 +138,14 @@ fn discipline_priest_heals_simc_dummy_party() {
     );
     assert!(
         casts
+            .get("1291894")
+            .and_then(|value| value.as_u64())
+            .unwrap_or(0)
+            > 0,
+        "equipped Soulcoiler must be used by the replay: {report}"
+    );
+    assert!(
+        casts
             .get("186263")
             .and_then(|value| value.as_u64())
             .unwrap_or(0)
