@@ -183,7 +183,11 @@ pub(super) fn prepare_driver(run: &mut super::Run) -> Result<Box<dyn super::Spec
         if rotation.driver.precombat_exhausted() {
             // SimC76f8118 player.cpp6153–6189 executes the final precombat
             // action at pull without waiting for its foreground GCD.
-            if let Some(mut history) = run.app.world_mut().get_mut::<crate::spell_cast::SpellHistory>(run.actor) {
+            if let Some(mut history) = run
+                .app
+                .world_mut()
+                .get_mut::<crate::spell_cast::SpellHistory>(run.actor)
+            {
                 history.clear_fixture_precombat_gcd();
             }
             break;
