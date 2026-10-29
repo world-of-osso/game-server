@@ -1,6 +1,34 @@
 use std::path::Path;
 
 #[test]
+#[ignore = "replays the Preservation Evoker against party pressure"]
+fn preservation_casts_fire_breath_and_heals_from_damage() {
+    let trace = std::env::var("HEALER_TANK_SIMC_TRACE").expect("HEALER_TANK_SIMC_TRACE required");
+    let party = std::env::var("HEALER_TANK_PARTY_TRACE").expect("HEALER_TANK_PARTY_TRACE required");
+    let report = super::super::healer_replay::replay_simc_party(
+        1468,
+        Path::new(&trace),
+        Path::new(&party),
+        300,
+        70448,
+    )
+    .unwrap();
+    assert!(
+        report["healer_casts"]["357208"].as_u64().unwrap_or(0) > 0,
+        "Fire Breath was never cast: {}",
+        report["healer_casts"]
+    );
+    assert!(
+        report["metrics"]["spell_healing"]["371441"]["raw"]
+            .as_u64()
+            .unwrap_or(0)
+            > 0,
+        "Life-Giver's Flame did not heal: {}",
+        report["metrics"]["spell_healing"]
+    );
+}
+
+#[test]
 #[ignore = "replays the MID2 Preservation Evoker against the SimC dummy trace"]
 fn preservation_evoker_heals_the_simc_dummy_party() {
     let trace = std::env::var("HEALER_TANK_SIMC_TRACE").expect("HEALER_TANK_SIMC_TRACE required");

@@ -25,6 +25,7 @@ const SPELLS: &[(&str, u32, bool)] = &[
     ("echo", 364343, false),
     ("reversion", 366155, false),
     ("living_flame", 361469, false),
+    ("fire_breath", 357208, false),
     ("disintegrate", 356995, false),
 ];
 
@@ -73,6 +74,7 @@ pub(super) fn prepare(
             "reversion,if=target.health.pct<95&target.reversion_up=0",
         ),
         ("default", "living_flame,if=target.health.pct<95"),
+        ("damage", "fire_breath,empower_to=1"),
         ("damage", "disintegrate"),
         ("damage", "living_flame"),
     ])?;
@@ -141,7 +143,7 @@ impl Policy for Preservation {
         let targets = [target];
         let actions = SPELLS
             .iter()
-            .filter(|(name, _, _)| *name != "disintegrate")
+            .filter(|(name, _, _)| !matches!(*name, "disintegrate" | "fire_breath"))
             .map(|&(name, spell, self_target)| NativeAction {
                 name,
                 spell,
@@ -178,7 +180,7 @@ impl Policy for Preservation {
         let enemies = [enemy];
         let actions = SPELLS
             .iter()
-            .filter(|(name, _, _)| matches!(*name, "disintegrate" | "living_flame"))
+            .filter(|(name, _, _)| matches!(*name, "fire_breath" | "disintegrate" | "living_flame"))
             .map(|&(name, spell, self_target)| NativeAction {
                 name,
                 spell,
