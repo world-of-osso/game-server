@@ -37,6 +37,8 @@ def main():
     canonical = Path(__file__).resolve().parents[1] / 'data/world.db'
     if not args.db.is_file() or args.db.name == 'world.db' or args.db.samefile(canonical):
         parser.error('provide an existing prepared copy, not world.db')
+    if args.db.is_symlink() or args.db.stat().st_nlink != 1:
+        parser.error('copy must be an independent regular file')
     with closing(sqlite3.connect(args.db)) as conn, conn:
         import_templates(conn)
     print('imported native Ruby templates and models; no spawn changes')

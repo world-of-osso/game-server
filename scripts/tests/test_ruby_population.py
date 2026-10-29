@@ -1,4 +1,7 @@
+import os
 import sqlite3
+import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -9,6 +12,21 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 class RubyPopulationTests(unittest.TestCase):
+    def test_importers_reject_linked_databases(self):
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / 'original.sqlite'
+            source.touch()
+            symlink = Path(directory) / 'symlink.sqlite'
+            symlink.symlink_to(source)
+            hardlink = Path(directory) / 'hardlink.sqlite'
+            os.link(source, hardlink)
+            for script in ('ruby_population.py', 'ruby_native_templates.py'):
+                for path in (symlink, hardlink):
+                    result = subprocess.run([sys.executable, str(ROOT / 'scripts' / script), '--db', str(path)], capture_output=True, text=True)
+                    self.assertNotEqual(result.returncode, 0)
+                    self.assertIn('independent regular file', result.stderr)
+                    self.assertEqual(source.stat().st_size, 0)
+
     def test_copy_replaces_only_placeholder_and_adds_kyrakka(self):
         with tempfile.TemporaryDirectory() as directory:
             with sqlite3.connect((ROOT / 'data/world.db').resolve().as_uri() + '?mode=ro', uri=True) as source, sqlite3.connect(Path(directory) / 'copy.sqlite') as db:
