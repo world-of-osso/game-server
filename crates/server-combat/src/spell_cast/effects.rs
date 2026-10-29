@@ -1763,15 +1763,18 @@ fn mechanic_damage_multiplier(
     1.0 + percent / 100.0
 }
 
-/// Unit.cpp1243–1257: spell blocks double integer percentage before truncating
-/// the resulting amount, with a full-block cap. Critical block is not a crit hit.
+/// Spell blocks double integer percentage before truncating the resulting amount.
+/// SimC's warrior critical-block cap is 85%; critical block is not a crit hit.
 fn spell_block_damage(world: &World, ctx: &EffectCtx, target: Entity, amount: f32) -> (f32, f32) {
     let mut percent = spell_block_percent(world, ctx.caster, target).trunc();
     if crate::combat::roll_critical_block(world.get::<crate::auras::ActiveAuras>(target)) {
         // TC Unit.cpp1248 reads638 on the attacker, not the blocking recipient.
         let multiplier =
             stat_mods(world, ctx.caster).map_or(1.0, |mods| mods.critical_block_amount_mult);
-        percent = (percent * 2.0 * multiplier).trunc();
+        percent = (percent * 2.0 * multiplier).trunc().min(
+            crate::melee::critical_block_cap(world.get::<crate::auras::ActiveAuras>(target))
+                * 100.0,
+        );
     }
     let blocked = (amount * percent / 100.0).trunc().min(amount);
     (amount - blocked, blocked)
@@ -1794,7 +1797,9 @@ fn spell_block_percent(world: &World, caster: Entity, target: Entity) -> f32 {
         .resource::<ArmorConstants>()
         .at(caster.level_against(&victim))
         .expect("native armor constant for blocked spell caster level");
-    stats.defense.blocked_pct(constant)
+    stats
+        .defense
+        .blocked_pct_with_auras(constant, world.get::<crate::auras::ActiveAuras>(target))
 }
 
 /// TC Unit.cpp6922–6929: these attributes exclude percent-done modifiers.

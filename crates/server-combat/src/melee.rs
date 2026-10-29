@@ -158,6 +158,39 @@ impl PlayerDefense {
         }
         (self.shield_block / (self.shield_block + armor_constant)).min(MAX_ARMOR_MITIGATION) * 100.0
     }
+
+    /// SimC76f8118 sc_warrior.cpp:9292–9302: Brace for Impact's native
+    /// second effect increases shield block value for each active stack.
+    pub fn blocked_pct_with_auras(
+        &self,
+        armor_constant: f32,
+        auras: Option<&crate::auras::ActiveAuras>,
+    ) -> f32 {
+        let percent = auras
+            .into_iter()
+            .flat_map(|auras| auras.iter())
+            .filter(|aura| aura.spell_id == 386029)
+            .flat_map(|aura| {
+                aura.effects
+                    .iter()
+                    .filter(|effect| effect.index == 1)
+                    .map(move |effect| effect.amount * aura.stack_multiplier())
+            })
+            .sum::<f32>();
+        let mut defense = *self;
+        defense.shield_block *= 1.0 + percent / 100.0;
+        defense.blocked_pct(armor_constant)
+    }
+}
+
+/// SimC76f8118 sc_warrior.cpp:9517–9522 caps a warrior critical block
+/// at the same 85% resistance cap as armor.
+pub(crate) fn critical_block_cap(auras: Option<&crate::auras::ActiveAuras>) -> f32 {
+    if auras.is_some_and(|auras| auras.iter().any(|aura| aura.spell_id == 76857)) {
+        MAX_ARMOR_MITIGATION
+    } else {
+        1.0
+    }
 }
 
 /// Hit-table chances in percent, in roll order.

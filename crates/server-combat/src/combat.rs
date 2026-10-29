@@ -1962,12 +1962,15 @@ fn blocked_pct(
     attacker: &UnitScaling,
     target: &UnitScaling,
     constants: Option<&ArmorConstants>,
+    auras: Option<&crate::auras::ActiveAuras>,
 ) -> f32 {
     match victim {
         Victim::Creature { .. } => melee::CREATURE_BLOCKED_PCT,
         Victim::Player(defense) => constants
             .and_then(|constants| attacker.armor_constant(target, constants))
-            .map_or(0.0, |constant| defense.blocked_pct(constant)),
+            .map_or(0.0, |constant| {
+                defense.blocked_pct_with_auras(constant, auras)
+            }),
     }
 }
 
@@ -1997,9 +2000,11 @@ fn roll_critical_block_damage(
     attacker_mods: Option<&AuraStatMods>,
 ) -> (f32, f32) {
     if roll_critical_block(auras) {
-        // TC doubles the truncated block, then applies the attacker's638 multiplier.
+        // Double the truncated block, then apply the attacker's638 multiplier.
+        // SimC76f8118 sc_warrior.cpp:9517–9522 caps warrior critical block at 85%.
         let multiplier = attacker_mods.map_or(1.0, |mods| mods.critical_block_amount_mult);
-        let critical_blocked = (blocked * 2.0 * multiplier).trunc();
+        let cap = ((damage + blocked) * melee::critical_block_cap(auras)).trunc();
+        let critical_blocked = (blocked * 2.0 * multiplier).trunc().min(cap);
         (damage - (critical_blocked - blocked), critical_blocked)
     } else {
         (damage, blocked)
@@ -2308,7 +2313,13 @@ fn resolve_swing(
         armored,
         kind,
         level_difference,
-        blocked_pct(victim, &attacker_scaling, &target, context.armor_constants),
+        blocked_pct(
+            victim,
+            &attacker_scaling,
+            &target,
+            context.armor_constants,
+            avoidance.1.as_deref(),
+        ),
     );
     let (outcome_damage, blocked) =
         if matches!(kind, MeleeOutcome::Block | MeleeOutcome::CritBlock) && !immune {
@@ -3012,6 +3023,7 @@ pub fn replay_healer_hit(
             &attacker_scaling,
             &target,
             world.get_resource::<ArmorConstants>(),
+            auras,
         ),
     );
     let immune = crate::auras::immune_to_school(auras, 1);
