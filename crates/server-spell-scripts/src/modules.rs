@@ -87,6 +87,7 @@ register_modules! {
     brewmaster_black_ox: (1000, "modules/brewmaster_black_ox.rs"),
     brewmaster_blackout_combo: (1000, "modules/brewmaster_blackout_combo.rs"),
     brewmaster_empty_barrel: (1000, "modules/brewmaster_empty_barrel.rs"),
+    brewmaster_gift_of_the_ox: (1000, "modules/brewmaster_gift_of_the_ox.rs"),
     brewmaster_elusive_brawler: (1000, "modules/brewmaster_elusive_brawler.rs"),
     brewmaster_keg_reset: (1000, "modules/brewmaster_keg_reset.rs"),
     brewmaster_shuffle: (1000, "modules/brewmaster_shuffle.rs"),
