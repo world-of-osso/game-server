@@ -263,7 +263,8 @@ def assign_component(key, observations, margin_threshold):
     anchor_run = max(sorted(by_run), key=lambda run: len(by_run[run]))
     anchors = sorted(by_run[anchor_run], key=lambda point: point['guid'])
     slots = [{'map': key[0], 'npc_id': key[1], 'ui_map_id': key[2], 'ambiguous_match': False,
-              'assignment_margin_yards': None, 'observations': [point]} for point in anchors]
+              'assignment_margin_yards': None, 'observations': [point],
+              'candidate_observations': [point]} for point in anchors]
     for run in sorted(by_run):
         if run == anchor_run:
             continue
@@ -272,6 +273,7 @@ def assign_component(key, observations, margin_threshold):
         assignment, best = minimum_assignment(costs)
         for row, slot in enumerate(assignment):
             slots[slot]['observations'].append(points[row])
+            slots[slot]['candidate_observations'].append(points[row])
             if len(anchors) > 1:
                 alternative = [list(values) for values in costs]
                 alternative[row][slot] = math.inf
@@ -288,6 +290,12 @@ def assign_component(key, observations, margin_threshold):
                         candidate['assignment_margin_yards'] = margin if prior is None else min(prior, margin)
                         if margin < margin_threshold:
                             candidate['ambiguous_match'] = True
+                    if margin < margin_threshold:
+                        for i, alternate_slot in enumerate(alternative_assignment):
+                            if assignment[i] != alternate_slot:
+                                candidate = slots[alternate_slot]['candidate_observations']
+                                if points[i] not in candidate:
+                                    candidate.append(points[i])
     return slots
 
 
@@ -312,6 +320,14 @@ def cluster_population(runs, radius=10.0, margin_threshold=1.0):
         spread = max((math.hypot(a['x'] - b['x'], a['y'] - b['y'])
                       for a in observations for b in observations), default=0.0)
         cluster['spread_xy'] = spread
+        if cluster['ambiguous_match']:
+            candidates = cluster['candidate_observations']
+            candidate_spread = max((math.hypot(a['x'] - b['x'], a['y'] - b['y'])
+                                    for a in candidates for b in candidates), default=0.0)
+            cluster['candidate_spread_yards'] = candidate_spread
+            if candidate_spread <= 5.0:
+                cluster['candidate_centroid'] = {'x': sum(p['x'] for p in candidates) / len(candidates),
+                                                  'y': sum(p['y'] for p in candidates) / len(candidates)}
         if len(observations) < 2 or cluster['ambiguous_match']:
             cluster['classification'] = 'insufficient_or_ambiguous'
         elif spread > 5:
@@ -328,6 +344,19 @@ def cluster_population(runs, radius=10.0, margin_threshold=1.0):
             cluster['unverified_candidate_path'] = [{'x': point['x'], 'y': point['y']} for point in route]
             cluster['gap'] = 'PARTIAL_PATROL_NAVMESH_AND_PHASE_UNVERIFIED'
     return clusters
+
+
+def centroid_requests(clusters):
+    requests = []
+    for index, cluster in enumerate(clusters):
+        centroid = cluster.get('candidate_centroid')
+        if centroid is None:
+            continue
+        first = cluster['observations'][0]
+        requests.append({'cluster_index': index, 'file': first['file'], 'run_start': first['run_start'],
+                         'guid': first['guid'], 'map': cluster['map'], 'x': centroid['x'], 'y': centroid['y'],
+                         'ui_map_id': cluster['ui_map_id'], 'neighbor_hints': cluster['candidate_observations']})
+    return requests
 
 
 def cluster_safe_samples(runs, samples):
@@ -474,6 +503,7 @@ def main():
     parser.add_argument("--encounter-summary", type=Path)
     parser.add_argument("--population-summary", type=Path)
     parser.add_argument("--clusters", type=Path)
+    parser.add_argument("--centroid-requests", type=Path)
     parser.add_argument("logs", type=Path, nargs="+")
     args = parser.parse_args()
     paths = [f for p in args.logs for f in (sorted(p.glob("*.txt")) if p.is_dir() else [p])]
@@ -511,9 +541,14 @@ def main():
     if args.population_summary:
         args.population_summary.parent.mkdir(parents=True, exist_ok=True)
         args.population_summary.write_text(json.dumps(summarize_population(runs, args.world_db), indent=2) + "\n", encoding="utf-8")
-    if args.clusters:
-        args.clusters.parent.mkdir(parents=True, exist_ok=True)
-        args.clusters.write_text(json.dumps(cluster_population(runs), indent=2) + "\n", encoding="utf-8")
+    if args.clusters or args.centroid_requests:
+        clusters = cluster_population(runs)
+        if args.clusters:
+            args.clusters.parent.mkdir(parents=True, exist_ok=True)
+            args.clusters.write_text(json.dumps(clusters, indent=2) + "\n", encoding="utf-8")
+        if args.centroid_requests:
+            args.centroid_requests.parent.mkdir(parents=True, exist_ok=True)
+            args.centroid_requests.write_text(json.dumps(centroid_requests(clusters), indent=2) + "\n", encoding="utf-8")
 
 
 if __name__ == "__main__":
