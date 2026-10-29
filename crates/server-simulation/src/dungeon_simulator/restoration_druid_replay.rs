@@ -15,6 +15,7 @@ use server::simc_apl::{Action, ActionFacts, Facts, Program};
 use shared::components::{Health, PowerType};
 
 const SPELLS: &[(&str, u32, bool)] = &[
+    ("innervate", 29166, true),
     ("tranquility", 740, true),
     ("convoke_the_spirits", 391528, true),
     ("grove_guardians", 102693, false),
@@ -61,6 +62,7 @@ pub(super) fn prepare(
     // Pinned SimC has no supported Restoration healing APL; these are explicit
     // native triage decisions, not a claim of a SimC healer rotation.
     let program = Program::parse(&[
+        ("default", "innervate,if=mana.pct<75"),
         (
             "default",
             "tranquility,if=target.health.pct<35&party.injured>=2",

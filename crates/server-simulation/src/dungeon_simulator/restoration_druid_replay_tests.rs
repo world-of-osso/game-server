@@ -1,6 +1,37 @@
 use std::path::Path;
 
 #[test]
+#[ignore = "requires native top-character profiles and world database"]
+fn restoration_druid_uses_innervate_at_low_mana() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::components::Mana;
+    use shared::protocol::CombatLogKind;
+    let mut run = super::super::dps_parity::prepare_registered_player(66, 1).unwrap();
+    let tank = run.actor;
+    let healer = super::super::dps_parity::spawn_second_reference_player(&mut run, 105).unwrap();
+    let mut policy = super::prepare(&mut run, healer).unwrap();
+    {
+        let mut mana = run.app.world_mut().get_mut::<Mana>(healer).unwrap();
+        mana.current = mana.max * 0.5;
+    }
+    for _ in 0..120 {
+        policy
+            .drive(run.app.world_mut(), healer, &[tank, healer])
+            .unwrap();
+        run.app.update();
+    }
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0;
+    assert!(
+        events.iter().any(|e| e.source == Some(healer.to_bits())
+            && e.target == Some(healer.to_bits())
+            && e.spell_id == Some(29166)
+            && e.kind == CombatLogKind::Energize
+            && e.amount > 0),
+        "Innervate must restore mana: {events:?}"
+    );
+}
+
+#[test]
 #[ignore = "requires native Restoration Druid spell data"]
 fn master_shapeshifter_refunds_only_five_point_cat_finishers() {
     use crate::spell_cast::test_harness::{
