@@ -198,6 +198,10 @@
 - `encounter_summons.py --encounter melidrussa` authenticates native wrapper→child metadata, blank TDB source identity, source spawn9001489/difficulties and TC/DB2 primary; prepare2609/map2521bit1 binding and explicitly local `boss_melidrussa_chillworn` on independent copies. Preserve stats/difficulties/models/addons/population and unrelated credit. Never grant Infused Whelp primary credit or create205 stats.
 - Named gaps: `MELIDRUSSA_CHILLSTORM_SELECTOR_UNSCRIPTED` (1311543→372851 selector/aura chain), `MELIDRUSSA_HAILBOMBS_SELECTOR_UNSCRIPTED` (396042 dummy→missile placement), `MELIDRUSSA_WHELP_PHASE_UNSOURCED` (Whelps/Bulwark/Frost Overload transitions). Native implicit targets are defaults; no guessed single-target/aura/summon forwarding. Whole encounter/follower clear/native visuals/loot/persistence remain unproved.
 
+## Azure primary credit preparation
+
+- `scripts/azure_encounter_bindings.py` prepares four TC-primary/70448 encounter and Journal identity bindings only on an independent database copy. It requires the local script bindings and rejects conflicting credit. This does not certify a follower clear.
+
 ## Telash phase and credit boundary
 
 - Difficulty205 phase proof connects real60-to100 energy progression, Absolute Zero center cast, return landing and encounter2583/bit1 ordinary death credit. The fixture's player health buffer does not prove party survivability or a follower clear.
