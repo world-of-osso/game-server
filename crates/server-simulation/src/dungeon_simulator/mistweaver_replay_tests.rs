@@ -137,12 +137,24 @@ fn mistweaver_uses_spinning_crane_kick_only_against_a_pack() {
         let mut hp = run.app.world_mut().get_mut::<Health>(add).unwrap();
         hp.current = hp.max;
     }
+    let spell = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(101546)
+        .unwrap()
+        .clone();
+    let mut checks = std::collections::BTreeMap::new();
     for _ in 0..250 {
+        let admission =
+            crate::spell_cast::read_native_cast_start(run.app.world_mut(), healer, &spell, healer);
+        *checks.entry(format!("{admission:?}")).or_insert(0) += 1;
         policy
             .drive(run.app.world_mut(), healer, &[tank, healer])
             .unwrap();
         run.app.update();
     }
+    println!("PACK_ADMISSION {checks:?}");
     let events = &run.app.world().resource::<ObservedCombatEvents>().0;
     let casts: Vec<_> = events
         .iter()
