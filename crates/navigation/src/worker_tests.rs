@@ -142,6 +142,58 @@ fn worker_loads_graph_before_the_first_long_request() {
 }
 
 #[test]
+#[ignore = "requires FOLLOWER_NAV_CANONICAL canonical2519 assets"]
+fn worker_reports_missing_corrupt_and_mismatched_preloaded_graphs() {
+    use std::os::unix::fs::symlink;
+    let source =
+        std::path::PathBuf::from(std::env::var_os("FOLLOWER_NAV_CANONICAL").unwrap()).join("2519");
+    let temp = tempfile::tempdir().unwrap();
+    let map = temp.path().join("2519");
+    std::fs::create_dir(&map).unwrap();
+    for entry in std::fs::read_dir(&source).unwrap() {
+        let path = entry.unwrap().path();
+        if path.extension().is_some_and(|ext| ext == "nav") {
+            symlink(&path, map.join(path.file_name().unwrap())).unwrap();
+        }
+    }
+    let graph = map.join("portal-graph.json");
+    for case in ["missing", "corrupt", "mismatch"] {
+        if case == "corrupt" {
+            std::fs::write(&graph, b"bad graph").unwrap();
+        }
+        if case == "mismatch" {
+            std::fs::copy(source.join("portal-graph.json"), &graph).unwrap();
+            let extra_tile = map.join("0_0.nav");
+            assert!(!extra_tile.exists());
+            std::fs::write(extra_tile, b"changed").unwrap();
+        }
+        let mut worker = Worker::new(temp.path().to_owned());
+        worker.submit(Request {
+            entity: 1,
+            id: 1,
+            map_id: 2519,
+            query: Query::Path {
+                from: Vec3::new(-257.87, 123.38, 489.73),
+                to: Vec3::new(-211.1, 99.34897, 932.7),
+            },
+        });
+        let error = drain_with_timeout(&mut worker, Duration::from_secs(60))
+            .pop()
+            .unwrap()
+            .result
+            .unwrap_err();
+        assert!(
+            error.contains(if case == "mismatch" {
+                "digest mismatch"
+            } else {
+                "portal-graph.json"
+            }),
+            "{case}: {error}"
+        );
+    }
+}
+
+#[test]
 #[ignore = "requires FOLLOWER_NAV_CANONICAL canonical2516 assets"]
 fn worker_keeps_long_route_plans_separate_across_movers_and_cancel() {
     let root = std::path::PathBuf::from(std::env::var_os("FOLLOWER_NAV_CANONICAL").unwrap());
