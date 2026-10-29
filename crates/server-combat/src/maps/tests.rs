@@ -3293,6 +3293,70 @@ fn releasing_in_the_stockade_resurrects_the_player_at_the_stockade_graveyard() {
     assert_eq!(world.get::<Health>(player.player).unwrap().current, 50.0);
 }
 
+#[test]
+fn ruby_dungeon_release_revives_at_the_linked_exterior_safe_location() {
+    let mut h = harness().expect("world database");
+    let copy = InMap {
+        map_id: 2521,
+        instance_id: 77,
+    };
+    let player = h.spawn(1, copy, Vec3::new(1563.0, -241.0, 126.0147));
+    let corpse = Corpse {
+        player: 1,
+        map_id: 2521,
+        x: 1563.0,
+        y: -241.0,
+        z: 126.0147,
+        created_at: 0,
+    };
+    h.app.world_mut().entity_mut(player.player).insert((
+        Health {
+            current: 0.0,
+            max: 100.0,
+        },
+        PlayerDeathState {
+            state: DeathState::Dead,
+            corpse: Some(corpse),
+            graveyard: None,
+        },
+    ));
+    let store = map_store().unwrap().clone();
+    let exit = store
+        .entrance_exit_location(2521)
+        .expect("sourced Ruby exit safe location");
+    assert_eq!(exit.map_id, 2444);
+    assert!(close(exit.position, Vec3::new(1341.3, -132.202, 137.45)));
+    let entity = player.player;
+    h.app
+        .world_mut()
+        .run_system_once(
+            move |mut commands: Commands, mut deaths: Query<&mut PlayerDeathState>| {
+                let map = store.map(2521).unwrap();
+                crate::death::release_spirit_in_dungeon(
+                    entity,
+                    &bevy(Vec3::new(1563.0, -241.0, 126.0147)),
+                    &mut deaths.get_mut(entity).unwrap(),
+                    map,
+                    &store,
+                    &mut commands,
+                )
+                .unwrap();
+            },
+        )
+        .unwrap();
+    h.advance(1);
+    assert_eq!(h.new_worlds(&player).pop().unwrap().map_id, 2444);
+    h.ack(&player);
+    assert_eq!(h.map_of(&player), Some(InMap::continent(2444)));
+    assert!(close(h.position(&player), exit.position));
+    let world = h.app.world();
+    assert_eq!(
+        world.get::<PlayerDeathState>(entity).unwrap().state,
+        DeathState::Alive
+    );
+    assert_eq!(world.get::<Health>(entity).unwrap().current, 50.0);
+}
+
 // --- Difficulties and instance locks (Grim Batol, map 670) ---
 
 /// `areatrigger_teleport` 6179 "Grim Batol Entrance" box center in the Twilight Highlands.

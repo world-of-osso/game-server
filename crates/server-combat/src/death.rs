@@ -324,8 +324,8 @@ fn process_release_spirit_requests(
 
 /// `Player::RepopAtGraveyard` in a dungeon (Player.cpp:4720-4764): the corpse turns to
 /// bones and the player is teleported to the closest graveyard of the dungeon's zone
-/// (`ObjectMgr::GetClosestGraveyard`) and resurrected there (`TELE_REVIVE_AT_TELEPORT`).
-/// A WMO-only dungeon's zone is its `Map.db2` AreaTableID (`TerrainInfo::GetAreaId`).
+/// and resurrected there (`TELE_REVIVE_AT_TELEPORT`). If no zone graveyard is
+/// imported, the approved dungeon rule uses the reciprocal exit's exterior safe location.
 pub(crate) fn release_spirit_in_dungeon(
     player: Entity,
     position: &Position,
@@ -345,7 +345,10 @@ pub(crate) fn release_spirit_in_dungeon(
     };
     let grave =
         crate::maps::graveyard::closest_graveyard_in_zone(maps, &location, map.area_table_id)
-            .ok_or_else(|| "unable to release spirit here".to_string())?;
+            .or_else(|| maps.entrance_exit_location(map.id))
+            .ok_or_else(|| {
+                "unable to release spirit: no dungeon graveyard or linked exterior exit".to_string()
+            })?;
     death_state.state = DeathState::Ghost;
     death_state.corpse = None;
     death_state.graveyard = None;
