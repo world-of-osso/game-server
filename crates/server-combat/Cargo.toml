@@ -46,6 +46,10 @@ tokio = { version = "1", features = ["rt-multi-thread"] }
 peercred-ipc = { git = "https://github.com/Osso/peercred-ipc.git", tag = "v0.2.0" }
 rusqlite = { version = "0.35", features = ["bundled"] }
 serde_json = "1"
+# HTTP parsing and responses; cryptographic primitives and base64 are already in the workspace graph.
+tiny_http = "0.12"
+ring = "0.17"
+base64 = "0.22"
 # Installed AdventureJournal CSV, including quoted localized text; no ad-hoc parser.
 csv = "1.4"
 # Local wall clock for the game time (GameTime::GetWowTime).
