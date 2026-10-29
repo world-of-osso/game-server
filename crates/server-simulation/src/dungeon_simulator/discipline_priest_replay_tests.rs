@@ -106,6 +106,46 @@ fn discipline_soulcoiler_real_item_channels_five_fractional_barriers() {
 }
 #[test]
 #[ignore = "requires selected Discipline profile and native 70448 data"]
+fn discipline_pain_observes_power_of_dark_side_procs() {
+    use super::super::dps_parity::literal_rotation::execution::{Execution, execute};
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::protocol::CombatLogKind;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::super::dps_parity::prepare_registered_player(66, 1).unwrap();
+    let healer = super::super::dps_parity::spawn_second_reference_player(&mut run, 256).unwrap();
+    let target = run.targets[0];
+    execute(
+        run.app.world_mut(),
+        healer,
+        Execution::Spell(589, target, Some(target)),
+    )
+    .unwrap();
+    for _ in 0..400 {
+        run.app.update();
+    }
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0;
+    let ticks = events
+        .iter()
+        .filter(|event| {
+            event.spell_id == Some(589) && event.kind == CombatLogKind::Damage && event.periodic
+        })
+        .count();
+    let procs = events
+        .iter()
+        .filter(|event| {
+            event.spell_id == Some(198069)
+                && matches!(
+                    event.kind,
+                    CombatLogKind::AuraApplied | CombatLogKind::AuraRefreshed
+                )
+        })
+        .count();
+    assert!(ticks > 0, "real Pain ticks required");
+    println!("POWER_OF_DARK_SIDE pain_ticks={ticks} procs={procs}");
+}
+
+#[test]
+#[ignore = "requires selected Discipline profile and native 70448 data"]
 fn discipline_smite_and_penance_capture_matched_stat_factors() {
     use super::super::dps_parity::literal_rotation::execution::{Execution, execute};
     use crate::spell_cast::effects::factor_capture::FactorCapture;
