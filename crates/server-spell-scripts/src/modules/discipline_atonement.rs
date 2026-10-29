@@ -32,16 +32,30 @@ fn register_shield_discipline(scripts: &mut auras::scripts::AuraScripts) {
     }
 }
 
-fn shield_discipline(world: &mut World, _target: Entity, aura: &AuraInstance, _reason: auras::RemoveReason) {
+fn shield_discipline(
+    world: &mut World,
+    _target: Entity,
+    aura: &AuraInstance,
+    _reason: auras::RemoveReason,
+) {
     let caster = aura.caster;
     // SimC76f8118 sc_priest.cpp:50-61,114-125: only an early shield expiration returns mana.
     if !auras::has_aura(world, caster, 197045)
-        || !aura.expires_at.is_some_and(|expiry| expiry > combat::spell_cast::now(world))
+        || !aura
+            .expires_at
+            .is_some_and(|expiry| expiry > combat::spell_cast::now(world))
     {
         return;
     }
     let percent = combat::spell_cast::scripts::script_effect_value(world, caster, 47755, 0) / 100.0;
-    combat::spell_cast::cast_triggered_with_effect0_amount(world, caster, 47755, Some(caster), 1, percent);
+    combat::spell_cast::cast_triggered_with_effect0_amount(
+        world,
+        caster,
+        47755,
+        Some(caster),
+        1,
+        percent,
+    );
 }
 
 #[derive(Component)]
@@ -423,8 +437,16 @@ fn fiend_mana_on_landed_melee(world: &mut World, source: Entity, _target: Entity
         123040 | 200174 if known.contains(123040) || known.contains(200174) => (123051, 100.0),
         _ => return,
     };
-    let percent = combat::spell_cast::scripts::script_effect_value(world, owner, spell, 0) / divisor;
-    combat::spell_cast::cast_triggered_with_effect0_amount(world, source, spell, Some(owner), 1, percent);
+    let percent =
+        combat::spell_cast::scripts::script_effect_value(world, owner, spell, 0) / divisor;
+    combat::spell_cast::cast_triggered_with_effect0_amount(
+        world,
+        source,
+        spell,
+        Some(owner),
+        1,
+        percent,
+    );
 }
 
 fn transfer_pet_melee(world: &mut World, source: Entity, target: Entity, raw: f32, crit: bool) {
