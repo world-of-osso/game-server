@@ -3,6 +3,7 @@
 import argparse
 import csv
 import json
+import math
 import re
 import sqlite3
 from collections import defaultdict
@@ -124,7 +125,12 @@ def census(paths, maps, samples=None):
                                                        "instance": parts[4], "name": fields[index + 1],
                                                        "first_seen": timestamp, "first_event": event,
                                                        "first_encounter_id": encounter['id'] if encounter else None,
-                                                       "seen_outside_encounter": False, "summoned": False})
+                                                       "seen_outside_encounter": False, "summoned": False,
+                                                       "player_controlled": False, "control_flags_invalid": False})
+                    try:
+                        item['player_controlled'] |= bool(int(fields[index + 2], 0) & 0x100)
+                    except ValueError:
+                        item['control_flags_invalid'] = True
                     item.update(activity.get(guid, {}))
                     if encounter is None:
                         item['seen_outside_encounter'] = True
@@ -184,49 +190,126 @@ def filter_safe_samples(runs, source, output, margin_seconds=3.0):
         output.write(json.dumps(sample, separators=(',', ':')) + '\n')
 
 
-def cluster_population(runs, radius=10.0):
-    """Propose 2-D matches; ambiguous matches are kept separate, not resolved."""
-    clusters = []
-    index_by_unit = defaultdict(list)
+def minimum_assignment(costs):
+    """Minimum-cost rectangular assignment, with one column per observation slot."""
+    rows, columns = len(costs), len(costs[0])
+    if rows > columns:
+        raise ValueError('more observations than slots')
+    u, v, matching, previous = [0.0] * (rows + 1), [0.0] * (columns + 1), [0] * (columns + 1), [0] * (columns + 1)
+    for row in range(1, rows + 1):
+        matching[0] = row
+        column = 0
+        best = [math.inf] * (columns + 1)
+        used = [False] * (columns + 1)
+        while True:
+            used[column] = True
+            current = matching[column]
+            delta, next_column = math.inf, 0
+            for candidate in range(1, columns + 1):
+                if not used[candidate]:
+                    value = costs[current - 1][candidate - 1] - u[current] - v[candidate]
+                    if value < best[candidate]:
+                        best[candidate], previous[candidate] = value, column
+                    if best[candidate] < delta:
+                        delta, next_column = best[candidate], candidate
+            if not math.isfinite(delta):
+                return None, math.inf
+            for candidate in range(columns + 1):
+                if used[candidate]:
+                    u[matching[candidate]] += delta
+                    v[candidate] -= delta
+                else:
+                    best[candidate] -= delta
+            column = next_column
+            if matching[column] == 0:
+                break
+        while column:
+            prior = previous[column]
+            matching[column] = matching[prior]
+            column = prior
+    assignment = [None] * rows
+    for column in range(1, columns + 1):
+        if matching[column]:
+            assignment[matching[column] - 1] = column - 1
+    return assignment, sum(costs[i][slot] for i, slot in enumerate(assignment))
+
+
+def connected_observations(observations, radius):
+    parents = list(range(len(observations)))
+    cells = defaultdict(list)
+    def root(index):
+        while parents[index] != index:
+            parents[index] = parents[parents[index]]
+            index = parents[index]
+        return index
+    for index, point in enumerate(observations):
+        cell = (math.floor(point['x'] / radius), math.floor(point['y'] / radius))
+        for x in range(cell[0] - 1, cell[0] + 2):
+            for y in range(cell[1] - 1, cell[1] + 2):
+                for other in cells[(x, y)]:
+                    if math.hypot(point['x'] - observations[other]['x'], point['y'] - observations[other]['y']) <= radius:
+                        parents[root(index)] = root(other)
+        cells[cell].append(index)
+    groups = defaultdict(list)
+    for index, point in enumerate(observations):
+        groups[root(index)].append(point)
+    return list(groups.values())
+
+
+def assign_component(key, observations, margin_threshold):
+    by_run = defaultdict(list)
+    for point in observations:
+        by_run[(point['file'], point['run_start'])].append(point)
+    anchor_run = max(sorted(by_run), key=lambda run: len(by_run[run]))
+    anchors = sorted(by_run[anchor_run], key=lambda point: point['guid'])
+    slots = [{'map': key[0], 'npc_id': key[1], 'ui_map_id': key[2], 'ambiguous_match': False,
+              'assignment_margin_yards': None, 'observations': [point]} for point in anchors]
+    for run in sorted(by_run):
+        if run == anchor_run:
+            continue
+        points = sorted(by_run[run], key=lambda point: point['guid'])
+        costs = [[math.hypot(point['x'] - anchor['x'], point['y'] - anchor['y']) for anchor in anchors] for point in points]
+        assignment, best = minimum_assignment(costs)
+        for row, slot in enumerate(assignment):
+            slots[slot]['observations'].append(points[row])
+            if len(anchors) > 1:
+                alternative = [list(values) for values in costs]
+                alternative[row][slot] = math.inf
+                alternative_assignment, next_best = minimum_assignment(alternative)
+                margin = next_best - best
+                if math.isfinite(margin):
+                    affected = {assigned for i, assigned in enumerate(assignment)
+                                if assignment[i] != alternative_assignment[i]}
+                    affected.update(assigned for i, assigned in enumerate(alternative_assignment)
+                                    if assignment[i] != alternative_assignment[i])
+                    for affected_slot in affected:
+                        candidate = slots[affected_slot]
+                        prior = candidate['assignment_margin_yards']
+                        candidate['assignment_margin_yards'] = margin if prior is None else min(prior, margin)
+                        if margin < margin_threshold:
+                            candidate['ambiguous_match'] = True
+    return slots
+
+
+def cluster_population(runs, radius=10.0, margin_threshold=1.0):
+    """Assign observations to maximum-per-run slots within connected 2-D areas."""
+    groups = defaultdict(list)
     for run in runs:
-        incoming = []
-        run_id = (run['file'], run['start'])
         for guid, unit in sorted(run['creatures'].items()):
             pos = unit.get('first_position')
-            if pos is None:
+            if pos is None or unit['summoned'] or unit.get('player_controlled', False) or unit.get('control_flags_invalid', False):
                 continue
-            candidates = []
             key = (run['map'], unit['npc_id'], pos['ui_map_id'])
-            for index in index_by_unit[key]:
-                cluster = clusters[index]
-                if run_id in cluster['_runs']:
-                    continue
-                anchor = cluster['observations'][0]
-                if (anchor['x'] - pos['x']) ** 2 + (anchor['y'] - pos['y']) ** 2 <= radius ** 2:
-                    candidates.append(index)
-            incoming.append((guid, unit, pos, candidates))
-        claims = defaultdict(int)
-        for _, _, _, candidates in incoming:
-            if len(candidates) == 1:
-                claims[candidates[0]] += 1
-        for guid, unit, pos, candidates in incoming:
-            if len(candidates) == 1 and claims[candidates[0]] == 1:
-                cluster = clusters[candidates[0]]
-            else:
-                for index in candidates:
-                    clusters[index]['ambiguous_match'] = True
-                cluster = {'map': run['map'], 'npc_id': unit['npc_id'], 'ui_map_id': pos['ui_map_id'],
-                           'ambiguous_match': bool(candidates), 'observations': [], '_runs': set()}
-                index_by_unit[(run['map'], unit['npc_id'], pos['ui_map_id'])].append(len(clusters))
-                clusters.append(cluster)
-            cluster['_runs'].add(run_id)
-            cluster['observations'].append({'file': run['file'], 'run_start': run['start'], 'guid': guid,
+            groups[key].append({'file': run['file'], 'run_start': run['start'], 'guid': guid,
                 'spawn_uid': unit['spawn_uid'], 'x': pos['x'], 'y': pos['y'], 'time': pos['time'], 'event': pos['event'],
                 'facing': pos['facing'], 'level': pos['level'], 'summoned': unit['summoned']})
+    clusters = []
+    for key, observations in sorted(groups.items()):
+        for component in connected_observations(observations, radius):
+            clusters.extend(assign_component(key, component, margin_threshold))
     for cluster in clusters:
-        del cluster['_runs']
         observations = cluster['observations']
-        spread = max((((a['x'] - b['x']) ** 2 + (a['y'] - b['y']) ** 2) ** 0.5
+        spread = max((math.hypot(a['x'] - b['x'], a['y'] - b['y'])
                       for a in observations for b in observations), default=0.0)
         cluster['spread_xy'] = spread
         if len(observations) < 2 or cluster['ambiguous_match']:
