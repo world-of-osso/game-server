@@ -519,6 +519,10 @@ fn replay_registered_run_with_healing(
         ..Default::default()
     });
     crate::combat_refs::set_in_combat_with(run.app.world_mut(), tank, source);
+    run.app
+        .world_mut()
+        .entity_mut(tank)
+        .insert(crate::spell_cast::ObservedResourcePayments::default());
     let mut event_cursor = run
         .app
         .world()
@@ -534,6 +538,7 @@ fn replay_registered_run_with_healing(
     let mut healing_by_spell = BTreeMap::<u32, f64>::new();
     let mut raw_healing_by_spell = BTreeMap::<u32, f64>::new();
     let mut periodic_ticks_by_spell = BTreeMap::<u32, usize>::new();
+    let mut outgoing_damage_by_spell = BTreeMap::<u32, i64>::new();
     let mut energize_by_spell = BTreeMap::<u32, (i64, i64)>::new();
     let mut damage_taken_by_kind = BTreeMap::<&str, f64>::new();
     let mut outcomes = BTreeMap::<String, usize>::new();
@@ -827,6 +832,22 @@ fn replay_registered_run_with_healing(
             {
                 *casts.entry(spell_id).or_default() += 1;
             }
+            if event.target == Some(source.to_bits())
+                && event.kind == CombatLogKind::Damage
+                && event
+                    .source
+                    .and_then(Entity::try_from_bits)
+                    .is_some_and(|actor| {
+                        actor == tank
+                            || world
+                                .get::<crate::spell_cast::summon::SummonedCreature>(actor)
+                                .is_some_and(|summon| summon.owner == tank)
+                    })
+            {
+                *outgoing_damage_by_spell
+                    .entry(event.spell_id.unwrap_or(0))
+                    .or_default() += i64::from((event.amount - event.overflow.max(0)).max(0));
+            }
             if event.source == Some(tank.to_bits())
                 && event.kind == CombatLogKind::Damage
                 && event.periodic
@@ -939,8 +960,25 @@ fn replay_registered_run_with_healing(
     .into_iter()
     .zip(defense_totals.map(|value| value / defense_samples.max(1) as f64))
     .collect();
-    Ok(
-        json!({"spec":spec,"level":level,"reference_tier":"MID2","timeline":"simc_tank_dummy",
+    let mut resource_spent_by_spell = BTreeMap::<u32, BTreeMap<String, f64>>::new();
+    for &(spell, pool, amount) in &run
+        .app
+        .world()
+        .get::<crate::spell_cast::ObservedResourcePayments>(tank)
+        .unwrap()
+        .0
+    {
+        let resource = match pool {
+            crate::spell_cast::CostPool::Power(power) => format!("{power:?}").to_lowercase(),
+            crate::spell_cast::CostPool::Health => "health".to_owned(),
+        };
+        *resource_spent_by_spell
+            .entry(spell)
+            .or_default()
+            .entry(resource)
+            .or_default() += f64::from(amount);
+    }
+    let mut report = json!({"spec":spec,"level":level,"reference_tier":"MID2","timeline":"simc_tank_dummy",
         "external_healing":external_healing,"external_healing_effective":external_healing_effective,
         "bloodlust_start_seconds":bloodlust_ms.filter(|_| bloodlust_applied).map(|ms| ms as f64 / 1000.0),
         "raid_buffs":raid_buffs.iter().map(|buff| json!({"name":buff.name,"spell_id":buff.spell_id})).collect::<Vec<_>>(),
@@ -962,6 +1000,8 @@ fn replay_registered_run_with_healing(
         "self_heal_per_second":(elapsed>0.0).then(||self_healing/elapsed),
         "absorb_per_second":(elapsed>0.0).then(||absorbed/elapsed),"time_to_death":death,
         "active_mitigation_auras":mitigation_auras,"active_mitigation_uptime":(elapsed>0.0).then(||active_seconds/elapsed),
-        "spike_window_seconds":SPIKE_WINDOW_SECONDS,"largest_spike":spike}),
-    )
+        "spike_window_seconds":SPIKE_WINDOW_SECONDS,"largest_spike":spike});
+    report["outgoing_damage_by_spell"] = json!(outgoing_damage_by_spell);
+    report["resource_spent_by_spell"] = json!(resource_spent_by_spell);
+    Ok(report)
 }
