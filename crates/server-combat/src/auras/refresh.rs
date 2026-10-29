@@ -13,6 +13,8 @@ const PROTECTION_WARRIOR: u32 = 73;
 const SHIELD_BLOCK: u32 = 132404;
 const SHIELD_OF_THE_RIGHTEOUS: u32 = 132403;
 const HOLY_BULWARK_ABSORB: u32 = 432607;
+const HOLY_BULWARK: u32 = 432496;
+const SACRED_WEAPON: u32 = 432502;
 
 #[derive(Clone, Copy)]
 enum DurationCarry {
@@ -50,6 +52,10 @@ pub(super) fn prepare_application(
     prepare_periodic_phase(world, target, new, spell, sourced_rolling || forced_rolling);
     if crate::spell_cast::scripts::extends_reapplication(world, new.caster, new.spell_id) {
         carry_duration(world, target, new, DurationCarry::Extend);
+    } else if matches!(new.spell_id, HOLY_BULWARK | SACRED_WEAPON) {
+        // SimC76f8118 sc_paladin.cpp3693–3708 overrides the native Pandemic flag:
+        // a refreshed armament keeps its remainder, capped at two durations.
+        carry_duration(world, target, new, DurationCarry::CappedExtend(2));
     } else if has_native_pandemic(spell) && !rolling {
         // SimC76f8118 action.cpp684–685/4612: the native refresh flag
         // selects Pandemic, not a spell-ID whitelist. Explicit Extend and

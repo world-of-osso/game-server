@@ -38,6 +38,11 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
 fn register_bulwark(scripts: &mut AuraScripts) {
     let script = scripts.0.entry(432496).or_default();
     script.on_periodic = Some(periodic_bulwark);
+    for armament in [432496, 432502] {
+        let script = scripts.0.entry(armament).or_default();
+        script.on_refresh = Some(lay_down_refreshed_armament);
+        script.on_remove = Some(lay_down_removed_armament);
+    }
     let grand = scripts.0.entry(85043).or_default();
     grand.check_proc = Some(grand_crusader_is_avoidance);
     grand.on_damage_proc = Some(grand_crusader_from_avoidance);
@@ -538,6 +543,39 @@ fn initial_bulwark(world: &mut World, target: Entity, aura: &AuraInstance) {
     }
 }
 
+fn lay_down_refreshed_armament(world: &mut World, unit: Entity, aura: &AuraInstance) {
+    lay_down_arms(world, unit, aura);
+}
+
+fn lay_down_removed_armament(
+    world: &mut World,
+    unit: Entity,
+    aura: &AuraInstance,
+    _: RemoveReason,
+) {
+    lay_down_arms(world, unit, aura);
+}
+
+/// SimC76f8118 sc_paladin.cpp2838–2852, 3693–3710: a self armament that
+/// expires, or is refreshed while live, grants Shining Light and shortens Lay on Hands.
+fn lay_down_arms(world: &mut World, unit: Entity, aura: &AuraInstance) {
+    if aura.caster != unit || !selected(world, unit, 432866) {
+        return;
+    }
+    combat::auras::apply_aura(
+        world,
+        &AuraApplication {
+            caster: unit,
+            target: unit,
+            spell_id: 327510,
+            effect_mask: 1,
+            source: AuraSource::Cast,
+        },
+    );
+    let milliseconds = combat::spell_cast::scripts::script_effect_value(world, unit, 432866, 0);
+    combat::spell_cast::scripts::reduce_cooldown(world, unit, 633, f64::from(milliseconds) / 1000.0);
+}
+
 fn periodic_bulwark(world: &mut World, target: Entity, aura: &AuraInstance, index: u8) {
     if index == 1 {
         apply_bulwark_absorb(world, target, aura.caster, 3, false);
@@ -606,9 +644,7 @@ fn advance_shining_light(world: &mut World, caster: Entity, cast: &SpellInfo) {
     }
     let spell = cast.id;
     if spell == 85673 {
-        combat::auras::remove_auras(world, caster, RemoveReason::Consumed, |aura| {
-            aura.spell_id == 327510 && aura.caster == caster
-        });
+        // Its charge modifier already spent one of the two Shining Light stacks.
         if consumed_shining_light(cast) {
             apply_valiance(world, caster);
         }
@@ -743,9 +779,23 @@ fn advance_afterimage(world: &mut World, caster: Entity, spell: &SpellInfo) {
             ..Default::default()
         },
     );
-    if consumed_shining_light(spell) {
-        apply_valiance(world, caster);
-    }
+    echo_forge(world, caster, 447246, caster);
+    // SimC76f8118 sc_paladin.cpp1261–1268, sc_paladin.hpp1644–1648: the echo
+    // executes as a Word of Glory after its parent spent a stack, so only a
+    // remaining Shining Light shortens Holy Armaments and is spent.
+    let Some(shining_light) = world
+        .get::<combat::auras::ActiveAuras>(caster)
+        .and_then(|auras| {
+            auras
+                .iter()
+                .find(|aura| aura.spell_id == 327510 && aura.caster == caster)
+        })
+        .map(|aura| aura.instance_id)
+    else {
+        return;
+    };
+    apply_valiance(world, caster);
+    combat::auras::spend_stack(world, caster, shining_light);
 }
 
 fn advance_divine_guidance(world: &mut World, caster: Entity, spell: u32) {
@@ -855,6 +905,54 @@ fn cast_guidance_effect(
     );
     if !cast {
         warn!("Divine Guidance spell {id} could not be cast");
+    }
+}
+
+/// SimC76f8118 sc_paladin.cpp305–309, 3724–3728: selected Blessing of the Forge
+/// starts its 434132-duration buff with Avenging Wrath and summons a Sacred Weapon.
+fn summon_forge(world: &mut World, caster: Entity, spell: u32) {
+    if spell != 31884 || !selected(world, caster, 433011) {
+        return;
+    }
+    let store = world.resource::<SpellStore>();
+    let duration = store
+        .get(434132)
+        .and_then(|forge| forge.misc.as_ref()?.duration)
+        .expect("Blessing of the Forge duration");
+    // Native434132 effect1 triggers dummy aura434255, whose own duration is infinite.
+    let mut marker = store.get(434255).expect("Blessing of the Forge aura").clone();
+    marker.misc.as_mut().expect("Blessing of the Forge misc").duration = Some(duration);
+    for (spell_id, aura) in [(434255, Some(marker)), (432502, None)] {
+        let application = AuraApplication {
+            caster,
+            target: caster,
+            spell_id,
+            effect_mask: u32::MAX,
+            source: AuraSource::Cast,
+        };
+        match aura {
+            Some(aura) => combat::auras::apply_aura_with_spell(world, &application, &aura),
+            None => combat::auras::apply_aura(world, &application),
+        }
+    }
+}
+
+/// SimC76f8118 sc_paladin.cpp1286–1289, 2951–2954: during the buff, Word of Glory
+/// echoes Sacred Word on its target and Shield of the Righteous echoes Forge's Reckoning.
+fn echo_forge(world: &mut World, caster: Entity, echo: u32, target: Entity) {
+    if combat::auras::has_aura(world, caster, 434255) {
+        combat::spell_cast::cast_triggered(world, caster, echo, Some(target), 1);
+    }
+}
+
+fn echo_forge_spender(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    let echo = match spell.id {
+        85673 => 447246,
+        53600 => 447258,
+        _ => return,
+    };
+    if let Some(target) = spell.cast_primary_target {
+        echo_forge(world, caster, echo, target);
     }
 }
 
@@ -989,6 +1087,8 @@ fn after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
     }
     trigger_grand_crusader(world, caster, spell.id);
     extend_zealots_paragon(world, caster, spell.id);
+    summon_forge(world, caster, spell.id);
+    echo_forge_spender(world, caster, spell);
     advance_shining_light(world, caster, spell);
     advance_divine_guidance(world, caster, spell.id);
     // Native70448 spell432478 effect0 is aura332: misc432459 -> amount432472.

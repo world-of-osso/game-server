@@ -1708,6 +1708,7 @@ fn apply_aura_inner(
         crate::stand_state::on_aura_applied(world, target, aura.interrupt_flags, stuns(&aura));
     }
     if kind == CombatLogKind::AuraRefreshed {
+        scripts::run_refresh(world, target, &aura);
         linked::on_reapplied(world, target, &aura);
         crate::spell_cast::recovery_rate::on_refreshed(
             world,
