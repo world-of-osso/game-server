@@ -1024,7 +1024,16 @@ fn replay_registered_run_with_healing(
         "absorb_per_second":(elapsed>0.0).then(||absorbed/elapsed),"time_to_death":death,
         "active_mitigation_auras":mitigation_auras,"active_mitigation_uptime":(elapsed>0.0).then(||active_seconds/elapsed),
         "spike_window_seconds":SPIKE_WINDOW_SECONDS,"largest_spike":spike});
-    report["tank_dummy_scenario"] = json!({"difficulty":TANK_DUNGEON_DIFFICULTY,"content_tuning":TANK_DUNGEON_TUNING,"season":TANK_DUNGEON_SEASON});
+    let world = run.app.world();
+    let attacker = crate::level_scaling::UnitScaling::of(world, source);
+    let defender = crate::level_scaling::UnitScaling::of(world, tank);
+    let armor_constant = attacker
+        .armor_constant(
+            &defender,
+            world.resource::<crate::level_scaling::ArmorConstants>(),
+        )
+        .ok_or("SIMC_DUMMY_ARMOR_CONSTANT_ABSENT")?;
+    report["tank_dummy_scenario"] = json!({"difficulty":TANK_DUNGEON_DIFFICULTY,"content_tuning":TANK_DUNGEON_TUNING,"season":TANK_DUNGEON_SEASON,"attacker_level":attacker.level_against(&defender),"armor_constant":armor_constant});
     report["outgoing_damage_by_spell"] = json!(outgoing_damage_by_spell);
     report["resource_spent_by_spell"] = json!(resource_spent_by_spell);
     Ok(report)

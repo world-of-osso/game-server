@@ -1530,6 +1530,29 @@ fn simc_dummy_melee_uses_recipient_avoidance_and_strikes_can_block() {
 }
 
 #[test]
+#[ignore = "runs all six native MID2 tank dummy replays"]
+fn all_tanks_use_dungeon_season_combat_inputs() {
+    let directory = Path::new(
+        "/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/healer-tank-replay",
+    );
+    for spec in [66, 73, 104, 250, 268, 581] {
+        let trace = directory.join(format!("{spec}.simc-trace.log"));
+        let report =
+            super::tank_replay::replay_simc_with_healing(spec, &trace, 300, 70448, true).unwrap();
+        assert_eq!(report["spec"], spec, "{report}");
+        assert_eq!(
+            report["tank_dummy_scenario"]["attacker_level"], 92,
+            "{report}"
+        );
+        let k = report["tank_dummy_scenario"]["armor_constant"]
+            .as_f64()
+            .unwrap();
+        assert!((k - 4531.03).abs() < 0.01, "spec {spec} K={k}");
+        assert!(report["raw_damage"].as_f64().unwrap() > 0.0, "{report}");
+    }
+}
+
+#[test]
 #[ignore = "uses native player defense and actual melee outcome rolls"]
 fn higher_level_attacker_reduces_player_avoidance() {
     use crate::melee::MeleeOutcome;
