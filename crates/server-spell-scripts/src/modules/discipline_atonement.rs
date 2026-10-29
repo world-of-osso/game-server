@@ -228,6 +228,17 @@ fn transfer_damage(
         .base_points
         / 100.0;
     let spell = store.get(94472).expect("Atonement heal").clone();
+    let mastery = world
+        .get::<ActiveAuras>(caster)
+        .and_then(|auras| {
+            auras
+                .iter()
+                .find(|aura| aura.spell_id == 271534 && aura.caster == caster)
+        })
+        .and_then(|aura| aura.effects.iter().find(|effect| effect.index == 0))
+        .map_or(0.0, |effect| effect.amount);
+    // SimC76f8118 sc_priest.hpp:1418-1425: Grace increases healing on Atoned allies.
+    let transfer = raw * fraction * (1.0 + mastery / 100.0);
     let ctx = EffectCtx {
         caster,
         spell: &spell,
@@ -236,6 +247,6 @@ fn transfer_damage(
         chain_multiplier: 1.0,
     };
     for ally in recipients {
-        apply_critical_transfer_heal(world, &ctx, ally, raw * fraction, crit);
+        apply_critical_transfer_heal(world, &ctx, ally, transfer, crit);
     }
 }
