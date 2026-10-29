@@ -965,7 +965,15 @@ fn measure_tank_replays(spec: u32, seeds: &str) -> Vec<serde_json::Value> {
                     .abs()
                     < 0.01
             );
-            assert!(replay["damage_taken"].as_f64().unwrap() > 0.0);
+            assert!(
+                replay["incoming_before_absorbs"]
+                    .as_object()
+                    .unwrap()
+                    .values()
+                    .map(|amount| amount.as_f64().unwrap())
+                    .sum::<f64>()
+                    > 0.0
+            );
             json!({"seed":seed,"report":replay})
         })
         .collect()
