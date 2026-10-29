@@ -49,9 +49,15 @@ class CensusTest(unittest.TestCase):
         self.assertEqual(len(module.cluster_population([run('a', [('a1', 0)]), summoned])[0]['observations']), 1)
         ambiguous = module.cluster_population([run('a', [('a1', 0), ('a2', 1)]),
                                                run('b', [('b1', 0.5)])])
-        self.assertEqual(len(ambiguous), 3)
-        self.assertTrue(ambiguous[2]['ambiguous_match'])
-        self.assertEqual(ambiguous[2]['classification'], 'insufficient_or_ambiguous')
+        self.assertEqual(len(ambiguous), 2)
+        self.assertTrue(all(cluster['ambiguous_match'] for cluster in ambiguous))
+        self.assertEqual(ambiguous[0]['assignment_margin_yards'], 0.0)
+        self.assertEqual(ambiguous[0]['classification'], 'insufficient_or_ambiguous')
+        distinct = module.cluster_population([run('a', [('a1', 0), ('a2', 8)]),
+                                              run('b', [('b1', 0.1), ('b2', 8.1)])])
+        self.assertEqual(len(distinct), 2)
+        self.assertTrue(all(not cluster['ambiguous_match'] for cluster in distinct))
+        self.assertTrue(all(len(cluster['observations']) == 2 for cluster in distinct))
         runs = [run('a', [('a1', 0)]), run('b', [('b1', 7)])]
         samples = [dict(runs[i]['creatures'][guid]['first_position'], file=runs[i]['file'],
                         run_start='start', guid=guid, seconds_from_start=2)
