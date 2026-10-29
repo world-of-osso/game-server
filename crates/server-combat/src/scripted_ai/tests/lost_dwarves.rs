@@ -108,6 +108,56 @@ fn encounter_coverage_lost_dwarves_overkill_surrenders_alive_and_all_three_grant
 }
 
 #[test]
+fn encounter_coverage_lost_dwarves_sustained_damage_surrenders_all_three() {
+    let (mut h, baelog, map) = dwarf_copy(DWARVES[0], 205);
+    let conn =
+        Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    let (eric, _) = spawn_authored_actor(&mut h.app, &conn, DWARVES[1], map, 205);
+    let (olaf, _) = spawn_authored_actor(&mut h.app, &conn, DWARVES[2], map, 205);
+    let actors = [baelog, eric, olaf];
+    for actor in actors {
+        h.engage(actor);
+    }
+    for round in 0..9 {
+        let damage_pct = if round == 8 { 20.0 } else { 10.0 };
+        for actor in actors {
+            h.hit_pct(actor, damage_pct);
+        }
+        h.advance(2.0);
+        if round < 8 {
+            assert_eq!(
+                h.app
+                    .world()
+                    .resource::<crate::maps::InstanceManager>()
+                    .completed_encounters(map),
+                0,
+                "no encounter credit before the three surrenders"
+            );
+        }
+    }
+    assert_eq!(
+        h.app
+            .world()
+            .resource::<crate::maps::InstanceManager>()
+            .completed_encounters(map),
+        1,
+        "sustained damage to all three grants encounter credit; health={:?}, state={:?}",
+        actors.map(|actor| h.health(actor)),
+        actors.map(|actor| h
+            .app
+            .world()
+            .get::<crate::creature_ai::CreatureState>(actor)
+            .copied())
+    );
+    for actor in actors {
+        assert!(
+            h.health(actor).current > 0.0,
+            "surrendered dwarf remains alive"
+        );
+    }
+}
+
+#[test]
 fn encounter_coverage_lost_dwarves_all_actor_current_lanes_and_native_completions() {
     for difficulty in [1, 205] {
         // Native Bulwark Attributes1/0x40 channels for12s; its occupancy delays

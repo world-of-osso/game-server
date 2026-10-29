@@ -27,6 +27,10 @@ pub(crate) struct AutoRepeat {
 }
 
 impl AutoRepeat {
+    pub(crate) fn targets(&self, target: Entity) -> bool {
+        self.target == target
+    }
+
     /// Follow the attack decision without starting another shot or resetting its timer.
     pub(crate) fn retarget_auto_shot(&mut self, target: Entity) -> bool {
         if self.spell_id != AUTO_SHOT {
