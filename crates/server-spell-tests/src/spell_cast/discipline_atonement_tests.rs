@@ -296,7 +296,22 @@ fn discipline_fiend_spells_transfer_pet_damage_to_atonement() {
         );
         if spell == 451235 {
             let position = super::targets::position(h.app.world(), h.npc).unwrap();
-            super::cast_triggered_at_destination(h.app.world_mut(), h.caster, spell, position, 1);
+            let mut native = world_db()
+                .unwrap()
+                .spell_store()
+                .get(spell)
+                .unwrap()
+                .clone();
+            native.cast_destination = Some(position.to_array());
+            super::plan_triggered_spell(h.app.world_mut(), h.caster, &native, None, 1)
+                .unwrap_or_else(|failure| panic!("Voidwraith destination plan: {failure:?}"));
+            assert!(super::launch_triggered_spell(
+                h.app.world_mut(),
+                h.caster,
+                &native,
+                None,
+                1
+            ));
         } else {
             h.cast_and_deliver(spell, Some(h.npc));
         }
