@@ -213,6 +213,8 @@ def cluster_population(runs, radius=10.0):
             if len(candidates) == 1 and claims[candidates[0]] == 1:
                 cluster = clusters[candidates[0]]
             else:
+                for index in candidates:
+                    clusters[index]['ambiguous_match'] = True
                 cluster = {'map': run['map'], 'npc_id': unit['npc_id'], 'ui_map_id': pos['ui_map_id'],
                            'ambiguous_match': bool(candidates), 'observations': [], '_runs': set()}
                 index_by_unit[(run['map'], unit['npc_id'], pos['ui_map_id'])].append(len(clusters))
