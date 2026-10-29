@@ -3,6 +3,69 @@ use crate::maps::instances::{InstanceEntrant, InstanceResetResult, Now};
 use crate::maps::locks::InstanceLocks;
 
 #[test]
+fn neltharus_follower_checkpoint_restores_difficulty_and_position_on_login() {
+    use bevy::ecs::system::RunSystemOnce;
+    let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
+    let maps = crate::maps::store::load_map_store(&conn).unwrap();
+    let entrant = InstanceEntrant {
+        character_id: 37,
+        leader: 37,
+        difficulty_id: 205,
+        ..Default::default()
+    };
+    let now = Now {
+        elapsed: 0.0,
+        unix: 1_790_000_000,
+    };
+    let mut instances = crate::maps::InstanceManager::default();
+    let copy = instances.create_map(&maps, 2519, entrant, now).unwrap().map;
+    instances.update_instance_lock(copy, &[], 12, Some(2), now.unix);
+    let file = tempfile::NamedTempFile::new().unwrap();
+    {
+        let db = redb::Database::create(file.path()).unwrap();
+        crate::persistence::create_tables(&db);
+        let normal: Vec<_> = instances.normal_locks.values().cloned().collect();
+        crate::maps::persistence::save_instance_locks(&db, &instances.locks.saved(), &normal);
+    }
+    let db = redb::Database::open(file.path()).unwrap();
+    let locks = InstanceLocks::from_saved(crate::maps::persistence::load_instance_locks(&db));
+    let normal = crate::maps::persistence::load_normal_instance_locks(&db);
+    let mut app = App::new();
+    app.insert_resource(maps)
+        .insert_resource(crate::maps::InstanceManager::with_locks_and_normal(
+            locks, normal,
+        ))
+        .insert_resource(Time::<()>::default());
+    let position = shared::components::Position {
+        x: -248.251,
+        y: -468.9084,
+        z: 123.114,
+    };
+    let place = app
+        .world_mut()
+        .run_system_once(
+            move |mut commands: Commands, mut login: crate::maps::LoginMaps| {
+                login.resolve(
+                    &mut commands,
+                    37,
+                    1,
+                    crate::maps::RaidDifficulty::default(),
+                    2519,
+                    position,
+                )
+            },
+        )
+        .unwrap()
+        .unwrap();
+    assert_eq!(place.map, copy);
+    assert_eq!(place.position, position);
+    let instances = app.world().resource::<crate::maps::InstanceManager>();
+    assert_eq!(instances.copy_difficulty(copy).unwrap().difficulty_id, 205);
+    assert_eq!(instances.initial_done_bosses(copy), 12);
+    assert_eq!(instances.completed_encounters(copy), 4);
+}
+
+#[test]
 fn dungeonach_normal_stockade_checkpoint_reopens_and_manual_reset_clears_it() {
     let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
     let maps = crate::maps::store::load_map_store(&conn).unwrap();

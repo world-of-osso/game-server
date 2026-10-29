@@ -241,6 +241,19 @@ impl InstanceManager {
         }
     }
 
+    /// Restore the difficulty of the normal copy a character logged out in.
+    pub fn normal_login_checkpoint(&self, character: u64, map_id: u32) -> Option<(InMap, u32)> {
+        let id = *self.recent_by_character.get(&(character, map_id))?;
+        let lock = self.normal_locks.get(&id)?;
+        (lock.owner == character && lock.map_id == map_id).then_some((
+            InMap {
+                map_id,
+                instance_id: id,
+            },
+            lock.difficulty_id,
+        ))
+    }
+
     /// The instance id the owner's lock or the recent instance names, and the
     /// difficulty it is at (the lock's).
     fn bound_instance<'a>(
