@@ -212,6 +212,39 @@ fn feral_prev_gcd_tracks_successful_foreground_gcd_casts_only() {
 
 #[test]
 #[ignore = "requires spec103 profile and native world data"]
+fn tigers_fury_grants_savage_fury_energy_regeneration() {
+    use shared::components::PowerType;
+    let mut run = prepare_literal(103, 1).unwrap();
+    let actor = run.actor;
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 768, Some(actor), false).unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    assert!(crate::auras::has_aura(run.app.world(), actor, 449645));
+    crate::spell_cast::powers::change_power(run.app.world_mut(), actor, PowerType::Energy, -140.0);
+    for _ in 0..20 {
+        run.app.update();
+    }
+    let baseline =
+        crate::spell_cast::powers::power_value(run.app.world(), actor, PowerType::Energy)
+            .unwrap()
+            .0;
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 5217, Some(actor), false).unwrap();
+    assert!(crate::auras::has_aura(run.app.world(), actor, 449646));
+    crate::spell_cast::powers::change_power(run.app.world_mut(), actor, PowerType::Energy, -140.0);
+    for _ in 0..20 {
+        run.app.update();
+    }
+    let empowered =
+        crate::spell_cast::powers::power_value(run.app.world(), actor, PowerType::Energy)
+            .unwrap()
+            .0;
+    assert!(
+        empowered > baseline * 1.25,
+        "Savage Fury regen {empowered} vs {baseline}"
+    );
+}
+
+#[test]
+#[ignore = "requires spec103 profile and native world data"]
 fn berserk_stores_overflow_until_real_finisher() {
     use shared::components::PowerType;
     let mut run = prepare_literal(103, 1).unwrap();
