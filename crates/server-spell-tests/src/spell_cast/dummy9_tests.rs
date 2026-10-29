@@ -246,6 +246,20 @@ fn dummy9_fracture_requires_both_meta_and_rank_for_fifteen_additional_fury() {
     }
 }
 #[test]
+fn sigil_of_flame_grants_fury_only_to_vengeance() {
+    for (spec, expected) in [(581, 25.0), (577, 0.0)] {
+        let mut h = harness(Vec::new(), &[204596, 389787], 12).unwrap();
+        h.app
+            .world_mut()
+            .entity_mut(h.caster)
+            .insert(shared::components::ActiveSpec(spec));
+        h.set_power(PowerType::Fury, 0.0);
+        ground(&mut h, 204596, [10.0, 0.0, 3.0]);
+        landed(&h);
+        assert_eq!(h.power(PowerType::Fury), expected, "spec {spec}");
+    }
+}
+#[test]
 fn dummy9_void_step_teleports_to_requested_location_preserving_map() {
     let mut h = harness(Vec::new(), &[1234796], 12).unwrap();
     let before = *h.app.world().get::<crate::maps::InMap>(h.caster).unwrap();
