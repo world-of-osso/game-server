@@ -2978,6 +2978,49 @@ mod tests {
 
     #[test]
     #[ignore = "requires canonical world database and MID2 Blood inputs"]
+    fn blood_plague_ticks_apply_selected_brittle() {
+        let _seed = crate::random::seed_scope(70448);
+        let mut run = super::super::prepare_registered_player(250, 3).unwrap();
+        let actor = run.actor;
+        super::super::engage(&mut run);
+        assert!(crate::auras::has_aura(run.app.world(), actor, 374504));
+        let mut seen = [false; 3];
+        for frame in 0..1800 {
+            if frame % 300 == 0 {
+                crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 50842, None, 1);
+            }
+            run.app.update();
+            for (index, &target) in run.targets.iter().enumerate() {
+                if let Some(aura) = run
+                    .app
+                    .world()
+                    .get::<crate::auras::ActiveAuras>(target)
+                    .and_then(|auras| {
+                        auras
+                            .iter()
+                            .find(|aura| aura.spell_id == 374557 && aura.caster == actor)
+                    })
+                {
+                    assert!(
+                        aura.effects
+                            .iter()
+                            .any(|effect| effect.index == 0 && effect.amount == 6.0)
+                    );
+                    seen[index] = true;
+                }
+            }
+            if seen.iter().all(|hit| *hit) {
+                break;
+            }
+        }
+        assert!(
+            seen.into_iter().all(|hit| hit),
+            "Blood Plague ticks must apply Brittle to each enemy"
+        );
+    }
+
+    #[test]
+    #[ignore = "requires canonical world database and MID2 Blood inputs"]
     fn boiling_point_increases_foreground_blood_boil_damage() {
         use shared::protocol::CombatLogKind;
         fn damage(empowered: bool) -> i32 {
