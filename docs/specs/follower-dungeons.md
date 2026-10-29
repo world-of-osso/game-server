@@ -325,3 +325,9 @@ Lingering damage after an enemy's native Death (for example Hogger86604) remains
 
 Idle follow and combat/heal approach choices for non-tank followers must not cross an unpulled aggressive hostile's native sight circle. Use actual same-copy live hostile positions and native per-recipient attack distance, including both model reaches and level scaling; no pack-specific offsets or fixed fake radii. Hold an unsafe approach while continuing native casts that are valid from the safe current position. The tank retains its pull planner. Actual accidental combat still takes precedence and already-dead packs are skipped in the authored route.
 
+## Log-derived population policy
+
+The user approved their Retail combat logs as evidence for follower-catalog populations and encounter timers where authored data is absent. `LOG_DERIVED_POPULATION` rows are additions, not replacements for TrinityCore or existing content. The importer operates only on a database copy, records per-row observation and floor-resolution provenance, and tags added spawns and projected TDB templates for retirement. Missing raw and runtime templates remain named gaps. A log position is an event observation, not an authored idle spawn; the log has no Z, and floor resolution must use sourced collision geometry. Where the floor is ambiguous or missing, do not import the placement. Observed level remains provenance; do not mutate shared template levels to fit one observation. A missing facing is a gap because the template has no facing field.
+
+Patrol evidence requires at least three distinct runs and a navmesh-validated route. Otherwise keep an imported spawn stationary and report `PATROL_UNOBSERVED`; unseen creatures, patrol routes, formation offsets and boss phases are not implied by logs. Combat movement, summon identities and ambiguous cross-run matches remain explicit limitations. [Extraction and coverage](../wiki/investigations/log-derived-population.md).
+
