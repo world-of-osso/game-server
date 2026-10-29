@@ -241,6 +241,12 @@ impl InstanceManager {
         }
     }
 
+    /// `LFGMgr::MakeNewGroup` puts a queued player in a new group before `TeleportPlayer`,
+    /// and a new group has no recent copy: the queued run resolves a fresh one.
+    pub fn forget_recent_instance(&mut self, character: u64, map_id: u32) {
+        self.recent_by_character.remove(&(character, map_id));
+    }
+
     /// Restore the difficulty of the normal copy a character logged out in.
     pub fn normal_login_checkpoint(&self, character: u64, map_id: u32) -> Option<(InMap, u32)> {
         let id = *self.recent_by_character.get(&(character, map_id))?;
@@ -272,20 +278,9 @@ impl InstanceManager {
                 .unwrap_or(entries);
             return Some((Some(lock.instance_id), entries, owner));
         }
-        let recent = if entries.has_reset_schedule() {
-            None
-        } else {
-            self.recent_instance(map_id, entrant).or_else(|| {
-                self.normal_locks
-                    .values()
-                    .find(|lock| {
-                        lock.owner == owner
-                            && lock.map_id == map_id
-                            && lock.difficulty_id == entries.difficulty_id
-                    })
-                    .map(|lock| lock.instance_id)
-            })
-        };
+        let recent = (!entries.has_reset_schedule())
+            .then(|| self.recent_instance(map_id, entrant))
+            .flatten();
         Some((recent, entries, owner))
     }
 
