@@ -103,8 +103,10 @@ def match_existing(db, records, radius):
         if position is not None:
             groups[(int(record['map']), int(record['npc_id']))].append((source_key, position))
     matched = set()
+    existing = {}
     for (map_id, npc_id), entries in groups.items():
         positions = load_existing_positions(db, map_id, npc_id)
+        existing[(map_id, npc_id)] = positions
         if not positions:
             continue
         # A dummy costs more than every possible sum of real distances, so match
@@ -119,7 +121,7 @@ def match_existing(db, records, radius):
         for (source_key, _), column in zip(entries, assignment):
             if column < len(positions):
                 matched.add(source_key)
-    return matched
+    return matched, existing
 
 
 def import_population(destination, records, radius=10.0):
@@ -137,7 +139,7 @@ def import_population(destination, records, radius=10.0):
             entry INTEGER NOT NULL, table_name TEXT NOT NULL, row_key TEXT NOT NULL, policy TEXT NOT NULL,
             PRIMARY KEY (table_name,row_key))''')
         next_guid = db.execute('SELECT COALESCE(MAX(guid), 0) + 1 FROM content_creature').fetchone()[0]
-        matched = match_existing(db, records, radius)
+        matched, existing_positions = match_existing(db, records, radius)
         for record in records:
             map_id, npc_id = int(record['map']), int(record['npc_id'])
             result = report[map_id]
@@ -155,6 +157,9 @@ def import_population(destination, records, radius=10.0):
             x, y, z, facing = values
             if source_key in matched:
                 result['already_present'] += 1
+                continue
+            if any(math.dist((x, y, z), position) <= 3.0 for position in existing_positions.get((map_id, npc_id), ())):
+                result['gaps'].append({'source_key': source_key, 'reason': 'AUTHORED_SPAWN_NEARBY_AMBIGUOUS'})
                 continue
             if not db.execute('SELECT 1 FROM content_creature_template WHERE entry=?', (npc_id,)).fetchone():
                 gap = prepare_tdb_template(db, npc_id)
