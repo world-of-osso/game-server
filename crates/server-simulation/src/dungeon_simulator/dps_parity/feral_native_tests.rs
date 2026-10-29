@@ -223,13 +223,28 @@ fn panthers_guile_fills_combo_points_after_real_shred() {
     assert!(crate::auras::has_aura(run.app.world(), actor, 1280316));
     let mut filled = 0;
     for _ in 0..40 {
-        crate::spell_cast::powers::change_power(run.app.world_mut(), actor, PowerType::ComboPoints, -5.0);
+        crate::spell_cast::powers::change_power(
+            run.app.world_mut(),
+            actor,
+            PowerType::ComboPoints,
+            -5.0,
+        );
         crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 5221, Some(target), 1);
-        let combo = crate::spell_cast::powers::power_value(run.app.world(), actor, PowerType::ComboPoints).unwrap().0;
-        if combo == 5.0 { filled += 1; }
-        for _ in 0..4 { run.app.update(); }
+        let combo =
+            crate::spell_cast::powers::power_value(run.app.world(), actor, PowerType::ComboPoints)
+                .unwrap()
+                .0;
+        if combo == 5.0 {
+            filled += 1;
+        }
+        for _ in 0..4 {
+            run.app.update();
+        }
     }
-    assert!(filled > 0, "selected Panther's Guile must fill combo points on Shred");
+    assert!(
+        filled > 0,
+        "selected Panther's Guile must fill combo points on Shred"
+    );
 }
 
 #[test]

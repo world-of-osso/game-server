@@ -10,17 +10,34 @@ fn arms_slayer_malice_execute_applies_one_specialization_effect() {
         let target = run.targets[0];
         assert!(crate::auras::has_aura(run.app.world(), actor, 444779));
         if !with_talent {
-            crate::auras::remove_auras(run.app.world_mut(), actor, crate::auras::RemoveReason::Unlearned, |aura| aura.spell_id == 444779);
+            crate::auras::remove_auras(
+                run.app.world_mut(),
+                actor,
+                crate::auras::RemoveReason::Unlearned,
+                |aura| aura.spell_id == 444779,
+            );
         }
         engage(&mut run);
         crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 260798, Some(target), 1);
-        run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0.iter()
-            .find(|event| event.source == Some(actor.to_bits()) && event.spell_id == Some(260798) && event.kind == shared::protocol::CombatLogKind::Damage)
-            .expect("native Execute damage").amount as u32
+        run.app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .find(|event| {
+                event.source == Some(actor.to_bits())
+                    && event.spell_id == Some(260798)
+                    && event.kind == shared::protocol::CombatLogKind::Damage
+            })
+            .expect("native Execute damage")
+            .amount as u32
     }
     let without = damage(false);
     let with = damage(true);
-    assert!((with as f64 / without as f64 - 1.15).abs() < 0.001, "Execute damage {without} -> {with}");
+    assert!(
+        (with as f64 / without as f64 - 1.15).abs() < 0.001,
+        "Execute damage {without} -> {with}"
+    );
 }
 
 fn slayer_hits(run: &Run) -> usize {
