@@ -699,6 +699,30 @@ mod tests {
 
     #[test]
     #[ignore = "requires canonical world database and MID2 Blood inputs"]
+    fn blood_dance_rolls_once_per_rune_payment() {
+        fn first_spawn(runes: f32) -> u32 {
+            let _seed = crate::random::seed_scope(70448);
+            let mut run = super::super::prepare_registered_player(250, 1).unwrap();
+            let actor = run.actor;
+            super::super::engage(&mut run);
+            for attempt in 1..=30 {
+                crate::spell_cast::script_registry::after_payment(
+                    run.app.world_mut(), actor,
+                    &[(crate::spell_cast::CostPool::Power(shared::components::PowerType::Runes), runes)],
+                );
+                let world = run.app.world_mut();
+                if world.query::<&crate::spell_cast::summon::SummonedCreature>().iter(world)
+                    .any(|summon| summon.owner == actor && summon.spell_id == 1264353) {
+                    return attempt;
+                }
+            }
+            panic!("no Dance weapon after 30 payments")
+        }
+        assert_eq!(first_spawn(1.0), first_spawn(2.0), "each payment gets one proc roll regardless of rune count");
+    }
+
+    #[test]
+    #[ignore = "requires canonical world database and MID2 Blood inputs"]
     fn blood_rune_spend_can_summon_dance_weapon_and_enable_parry_buff() {
         let _seed = crate::random::seed_scope(70448);
         let mut run = super::super::prepare_registered_player(250, 1).unwrap();
@@ -864,12 +888,16 @@ mod tests {
     fn blood_sanguinary_burst_increases_with_real_runic_power_spending() {
         use shared::components::PowerType;
         use shared::protocol::CombatLogKind;
-        fn burst(spell: Option<u32>) -> f32 {
+        fn burst(spell: Option<u32>, improved: bool) -> (f32, f32) {
             let _seed = crate::random::seed_scope(70448);
             let mut run = super::super::prepare_registered_player(250, 1).unwrap();
             let actor = run.actor;
             let target = run.targets[0];
             super::super::engage(&mut run);
+            run.app.world_mut().entity_mut(actor).insert(crate::spell_cast::ObservedResourcePayments::default());
+            if !improved {
+                crate::auras::remove_auras(run.app.world_mut(), actor, crate::auras::RemoveReason::Cancelled, |aura| aura.spell_id == 374277 && aura.caster == actor);
+            }
             crate::auras::apply_aura(
                 run.app.world_mut(),
                 &crate::auras::AuraApplication {
@@ -921,16 +949,22 @@ mod tests {
                         && event.kind == CombatLogKind::Damage
                 })
                 .expect("Sanguinary Burst damage");
-            event.amount as f32 / if event.crit { 2.0808 } else { 1.0 }
+            let paid = run.app.world().get::<crate::spell_cast::ObservedResourcePayments>(actor).unwrap().0.iter()
+                .filter(|(id, pool, _)| *id == 49998 && *pool == crate::spell_cast::CostPool::Power(PowerType::RunicPower))
+                .map(|(_, _, amount)| *amount / 10.0).sum();
+            (event.amount as f32 / if event.crit { 2.0808 } else { 1.0 }, paid)
         }
-        let baseline = burst(None);
-        let generated = burst(Some(433895));
+        let (baseline, _) = burst(None, true);
+        let (generated, _) = burst(Some(433895), true);
         assert!(
             (generated / baseline - 1.0).abs() < 0.10,
             "generated={generated} baseline={baseline}"
         );
-        let spent = burst(Some(49998));
-        assert!(spent > baseline * 1.4, "spent={spent} baseline={baseline}");
+        let (spent, paid) = burst(Some(49998), true);
+        let (control, control_paid) = burst(Some(49998), false);
+        assert!(paid > 0.0 && control_paid > paid);
+        let expected = (1.0 + (paid + 5.0) * 0.02) / (1.0 + control_paid * 0.02);
+        assert!((spent / control - expected).abs() < 0.03, "spent={spent} control={control} paid={paid} control_paid={control_paid}");
     }
 
     #[test]

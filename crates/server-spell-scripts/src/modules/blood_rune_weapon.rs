@@ -19,7 +19,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AvoidanceProcHitMask(dance_avoidance_mask),
     SpellScriptHook::AfterForegroundSpecial(consume_dance),
     SpellScriptHook::AfterPayment(spawn_dance_weapon),
-    SpellScriptHook::AfterPayment(track_mist_spending),
+    SpellScriptHook::AfterSpellPayment(track_mist_spending),
     SpellScriptHook::AfterPolicyDirectDamage(grant_mist_power),
     SpellScriptHook::AfterCastUpdate(sync_rune_weapon_buff),
     SpellScriptHook::AsynchronousAuras(&[1264407, 1265577]),
@@ -88,14 +88,20 @@ fn grant_mist_power(
     spell_cast::cast_triggered(world, ctx.caster, 1263774, Some(ctx.caster), ctx.depth + 1);
 }
 
-fn track_mist_spending(world: &mut World, caster: Entity, costs: &[(CostPool, f32)]) {
-    let spent: f32 = costs
+fn track_mist_spending(world: &mut World, caster: Entity, spell: &SpellInfo, costs: &[(CostPool, f32)]) {
+    let mut spent: f32 = costs
         .iter()
         .filter_map(|(pool, amount)| {
             (*pool == CostPool::Power(PowerType::RunicPower) && *amount > 0.0)
                 .then_some(*amount / 10.0)
         })
         .sum();
+    // SimC76f8118 sc_death_knight.cpp13183–13199 adds back Improved Death Strike's reduction.
+    if spent > 0.0 && spell.id == 49998 && auras::has_aura(world, caster, 374277) {
+        let reduction = world.resource::<SpellStore>().get(374277).expect("Improved Death Strike")
+            .effects.iter().find(|effect| effect.index == 4).expect("Blood runic power reduction").base_points;
+        spent -= reduction / 10.0;
+    }
     if let Some(mut state) = world.get_mut::<BloodMistState>(caster) {
         state.spent += spent;
     }
@@ -157,18 +163,17 @@ fn spawn_dance_weapon(world: &mut World, caster: Entity, costs: &[(CostPool, f32
     if runes <= 0.0 {
         return;
     }
-    for _ in 0..runes as u32 {
-        let mut entity = world.entity_mut(caster);
-        let mut state = entity.entry::<DanceAttempts>().or_default();
-        let mut state = state.get_mut();
-        state.0 += 1;
-        let chance = combat::random::accumulated_proc_constant(0.125) * f64::from(state.0);
-        if combat::random::random::<f64>() < chance {
-            state.0 = 0;
-            drop(state);
-            drop(entity);
-            spell_cast::cast_triggered(world, caster, 1264353, Some(caster), 1);
-        }
+    // SimC76f8118 sc_death_knight.cpp13072–13075 rolls once per rune resource loss.
+    let mut entity = world.entity_mut(caster);
+    let mut state = entity.entry::<DanceAttempts>().or_default();
+    let mut state = state.get_mut();
+    state.0 += 1;
+    let chance = combat::random::accumulated_proc_constant(0.125) * f64::from(state.0);
+    if combat::random::random::<f64>() < chance {
+        state.0 = 0;
+        drop(state);
+        drop(entity);
+        spell_cast::cast_triggered(world, caster, 1264353, Some(caster), 1);
     }
 }
 
