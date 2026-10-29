@@ -27,6 +27,10 @@ struct JournalItem {
     encounter: u32,
     #[serde(rename = "ItemID")]
     item: u32,
+    #[serde(rename = "DifficultyMask")]
+    difficulty_mask: i64,
+    #[serde(rename = "FactionMask")]
+    faction_mask: i64,
     #[serde(rename = "DisplaySeasonID")]
     season: u32,
     #[serde(rename = "WorldStateExpressionID")]
@@ -46,12 +50,21 @@ fn read_rows<T: serde::de::DeserializeOwned>(
         .map_err(|error| format!("read {}: {error}", path.display()))
 }
 
+/// A Journal row retaining its source dungeon and native availability masks.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub struct JournalGearCandidate {
+    pub item_id: u32,
+    pub source_map: u32,
+    pub difficulty_mask: i64,
+    pub faction_mask: i64,
+}
+
 /// Return actual unconditional Journal items from the same ContentTuning expansion.
 /// Conditional/seasonal Journal rows need separate state and are not inferred.
 pub fn read_dungeon_item_pools(
     db: &Connection,
     db2: &Path,
-) -> Result<HashMap<u32, Vec<u32>>, String> {
+) -> Result<HashMap<u32, Vec<JournalGearCandidate>>, String> {
     let mut statement = db.prepare("SELECT d.map_id,t.ExpansionID FROM follower_lfg_dungeons d JOIN content_tuning t ON t.ID=d.content_tuning_id WHERE d.difficulty_id=205 ORDER BY d.map_id")
         .map_err(|error| format!("read follower dungeon tiers: {error}"))?;
     let tiers: HashMap<u32, i32> = statement
@@ -67,18 +80,26 @@ pub fn read_dungeon_item_pools(
         .into_iter()
         .filter_map(|row| instances.get(&row.instance).map(|map| (row.id, *map)))
         .collect();
-    let mut by_tier: HashMap<i32, BTreeSet<u32>> = HashMap::new();
+    let mut by_tier: HashMap<i32, BTreeSet<JournalGearCandidate>> = HashMap::new();
     for row in read_rows::<JournalItem>(db2, "JournalEncounterItem.csv")? {
         if row.season != 0 || row.world_state != 0 {
             continue;
         }
-        let Some(tier) = encounters
-            .get(&row.encounter)
-            .and_then(|map| tiers.get(map))
-        else {
+        let Some(map) = encounters.get(&row.encounter) else {
             continue;
         };
-        by_tier.entry(*tier).or_default().insert(row.item);
+        let Some(tier) = tiers.get(map) else {
+            continue;
+        };
+        by_tier
+            .entry(*tier)
+            .or_default()
+            .insert(JournalGearCandidate {
+                item_id: row.item,
+                source_map: *map,
+                difficulty_mask: row.difficulty_mask,
+                faction_mask: row.faction_mask,
+            });
     }
     tiers
         .into_iter()
@@ -105,19 +126,27 @@ mod tests {
         let db = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
         let db2 = path.parent().unwrap().join("db2/active");
         let pools = read_dungeon_item_pools(&db, &db2).unwrap();
-        assert!(pools[&2515].contains(&193633), "Azure Leymor ring");
+        let has_item = |map, item| {
+            pools[&map]
+                .iter()
+                .any(|candidate| candidate.item_id == item)
+        };
+        assert!(has_item(2515, 193633), "Azure Leymor ring");
         assert!(
-            pools[&2515].contains(&193691),
-            "Ruby item from the same expansion"
+            pools[&2515]
+                .iter()
+                .any(|candidate| candidate.item_id == 193633
+                    && candidate.source_map == 2515
+                    && candidate.difficulty_mask == -1
+                    && candidate.faction_mask == -1),
+            "retain source availability"
         );
+        assert!(has_item(2515, 193691), "Ruby item from the same expansion");
         assert!(
-            !pools[&2515].contains(&219294),
+            !has_item(2515, 219294),
             "Rookery belongs to the next expansion"
         );
-        assert!(
-            pools[&2648].contains(&219294),
-            "Rookery item stays in its own tier"
-        );
+        assert!(has_item(2648, 219294), "Rookery item stays in its own tier");
         assert_eq!(pools[&2515], pools[&2521], "same-tier pool is shared");
         assert_ne!(
             pools[&2515], pools[&2662],
