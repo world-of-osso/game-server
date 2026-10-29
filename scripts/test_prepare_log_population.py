@@ -1,4 +1,8 @@
 import importlib.util
+import json
+import subprocess
+import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -8,6 +12,28 @@ spec.loader.exec_module(module)
 
 
 class PrepareTest(unittest.TestCase):
+    def test_cli_combines_key_and_zone_floor_batches(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            run = {'file': 'a', 'start': 'zone', 'map': 2521,
+                   'creatures': {'g': {'npc_id': 123, 'seen_outside_encounter': True}}, 'encounters': []}
+            obs = {'file': 'a', 'run_start': 'zone', 'guid': 'g', 'x': 10, 'y': 20,
+                   'time': '10/3/2026 20:23:32.000-5', 'event': 'SPELL_DAMAGE',
+                   'facing': 1.5, 'level': 90, 'summoned': False}
+            cluster = {'map': 2521, 'npc_id': 123, 'ui_map_id': 9, 'ambiguous_match': False, 'observations': [obs]}
+            request = {'file': 'a', 'run_start': 'zone', 'guid': 'g', 'map': 2521, 'x': 10, 'y': 20, 'ui_map_id': 9}
+            files = {'census': {'runs': [run]}, 'clusters': [cluster], 'requests': [], 'resolved': [],
+                     'extra-requests': [request], 'extra-resolved': [{'z': 30, 'method': 'single_candidate'}]}
+            args = []
+            for name, data in files.items():
+                path = root / (name + '.json')
+                path.write_text(json.dumps(data))
+                args += ['--' + name, str(path)]
+            output, gaps = root / 'output.json', root / 'gaps.json'
+            subprocess.run([sys.executable, '-I', str(Path(__file__).with_name('prepare_log_population.py')),
+                            *args, '--output', str(output), '--gaps', str(gaps)], check=True)
+            self.assertEqual(json.loads(output.read_text())[0]['z'], 30)
+
     def test_joins_resolved_floor_and_excludes_unresolved_and_summon(self):
         guid = 'Creature-0-1-2521-42-123-ABCD'
         run = {'file': 'a', 'start': 'start', 'map': 2521,
