@@ -222,13 +222,17 @@ mod tests {
         let bonuses = load_bonus_tables(&conn).unwrap();
         let items = crate::item_templates::load_item_templates(&path).unwrap();
         let scaling = crate::item_stats::load_item_scaling_tables(&path).unwrap();
-        for (item_id, list, expected) in
-            [(193633, 6710, 73), (193633, 13487, 76), (219294, 11338, 79)]
-        {
+        for (item_id, list, player_level, expected) in [
+            (193633, 6710, 30, 33),
+            (193633, 6710, 70, 73),
+            (193633, 13487, 70, 76),
+            (219294, 11338, 70, 79),
+        ] {
             let template = items
                 .get(shared::item_data::ItemDefinitionSource::Retail, item_id)
                 .unwrap();
-            let resolved = apply_item_bonuses(&template.scaling, &[list], &bonuses, 70).unwrap();
+            let resolved =
+                apply_item_bonuses(&template.scaling, &[list], &bonuses, player_level).unwrap();
             let stats = super::super::item_instance_stats(
                 &resolved.scaling,
                 template.inventory_type,
