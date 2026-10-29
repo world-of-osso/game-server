@@ -1512,6 +1512,7 @@ mod tests {
     fn protection_execute_applies_one_deep_wounds_budget() {
         use super::super::literal_rotation::execution::{Execution, execute};
         use shared::protocol::CombatLogKind;
+        let _seed = crate::random::seed_scope(70448);
         let mut run = super::super::prepare_measurement(73, 2).unwrap();
         super::super::engage(&mut run);
         let actor = run.actor;
