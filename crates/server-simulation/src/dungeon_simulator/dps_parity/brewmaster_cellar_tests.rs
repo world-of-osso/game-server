@@ -1,4 +1,22 @@
 //! Exploding Keg grants the five-hit Empty the Cellar action and Brew recovery.
+
+#[test]
+#[ignore = "requires canonical Brewmaster profile and SimC tank trace"]
+fn literal_replay_casts_earned_cellar() {
+    let trace = std::env::var("HEALER_TANK_SIMC_TRACE").expect("SimC trace required");
+    let report = super::super::tank_replay::replay_simc_with_healing(
+        268,
+        std::path::Path::new(&trace),
+        300,
+        70448,
+        true,
+    )
+    .expect("Brewmaster replay");
+    assert!(
+        report["tank_casts"]["1263438"].as_u64().unwrap_or(0) > 0,
+        "literal APL must spend the earned Cellar action: {report}"
+    );
+}
 use super::*;
 use shared::protocol::CombatLogKind;
 
@@ -10,6 +28,10 @@ fn cellar_spends_earned_buff_and_reduces_brew_recharge_per_hit() {
     engage(&mut run);
     let actor = run.actor;
     let target = run.targets[0];
+    assert!(
+        crate::spell_cast::knowledge::resolve_actor_action(run.app.world(), actor, 1263438)
+            .is_err()
+    );
     crate::spell_cast::creature_cast(run.app.world_mut(), actor, 119582, Some(target), false)
         .unwrap();
     for _ in 0..30 {
@@ -23,6 +45,11 @@ fn cellar_spends_earned_buff_and_reduces_brew_recharge_per_hit() {
     crate::spell_cast::creature_cast(run.app.world_mut(), actor, 325153, Some(target), false)
         .unwrap();
     assert!(crate::auras::has_aura(run.app.world(), actor, 1262768));
+    assert_eq!(
+        crate::spell_cast::knowledge::resolve_actor_action(run.app.world(), actor, 1263438)
+            .unwrap(),
+        1263438
+    );
     for _ in 0..30 {
         run.app.update();
     }
@@ -52,6 +79,10 @@ fn cellar_spends_earned_buff_and_reduces_brew_recharge_per_hit() {
     crate::spell_cast::creature_cast(run.app.world_mut(), actor, 1263438, Some(target), false)
         .unwrap();
     assert!(!crate::auras::has_aura(run.app.world(), actor, 1262768));
+    assert!(
+        crate::spell_cast::knowledge::resolve_actor_action(run.app.world(), actor, 1263438)
+            .is_err()
+    );
     for _ in 0..30 {
         run.app.update();
     }

@@ -40,7 +40,7 @@ pub fn resolve_actor_action(
     if crate::auras::is_passive(spell) {
         return Err(CastFailure::NotKnown);
     }
-    if known.contains(resolved) {
+    if known.contains(resolved) || triggered_action_is_known(world, actor, known, resolved) {
         return Ok(resolved);
     }
     for parent in known.iter() {
@@ -49,6 +49,24 @@ pub fn resolve_actor_action(
         }
     }
     Err(CastFailure::UnknownSpell)
+}
+
+// Aura333 names both the known base action and its temporarily granted action.
+fn triggered_action_is_known(
+    world: &World,
+    actor: Entity,
+    known: &KnownSpells,
+    action: u32,
+) -> bool {
+    world
+        .get::<crate::auras::ActiveAuras>(actor)
+        .is_some_and(|auras| {
+            auras.iter().flat_map(|aura| &aura.effects).any(|effect| {
+                effect.aura_type == crate::auras::handlers::OVERRIDE_ACTIONBAR_SPELLS_TRIGGERED
+                    && effect.amount as u32 == action
+                    && known.contains(effect.misc_values[0] as u32)
+            })
+        })
 }
 
 /// Fixture consumers normalize unavailable knowledge without hiding other errors.
