@@ -60,12 +60,25 @@ fn floor_resolver_neltharus_real_data() {
     };
     assert!(candidates.iter().any(|floor| (floor.z - 0.0).abs() < 1.0));
     assert!(candidates.iter().any(|floor| (floor.z - 133.6).abs() < 1.0));
-    for expected in [0.0, 133.6] {
-        let result = resolver.resolve_with_hints(
-            &request,
-            &[(-250.0, -550.0, expected, "unit".to_owned())],
-            &[],
-        );
+    for (x, y, expected) in [
+        (-250.0, -550.0, 0.0),
+        (-256.0, -539.0, 58.765),
+        (-268.0, -543.0, 123.003),
+        (-250.0, -550.0, 133.6),
+    ] {
+        let request = Request {
+            x,
+            y,
+            ..request.clone()
+        };
+        assert!(matches!(
+            resolver.resolve(&request),
+            Resolution::Gap {
+                gap: Gap::NamedGap { .. }
+            }
+        ));
+        let result =
+            resolver.resolve_with_hints(&request, &[(x, y, expected, "unit".to_owned())], &[]);
         assert!(
             matches!(result, Resolution::Resolved { z, method: "neighbor_path", .. } if (z - expected).abs() < 1.0),
             "{result:?}"
