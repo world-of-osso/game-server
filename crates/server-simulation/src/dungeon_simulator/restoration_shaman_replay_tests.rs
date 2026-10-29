@@ -1,6 +1,74 @@
 use std::path::Path;
 
 #[test]
+#[ignore = "requires native Restoration Shaman spell data"]
+fn healing_rain_triggers_tidewaters_on_owned_riptides() {
+    use crate::spell_cast::{
+        CastTargets, cast_for_player_with_targets,
+        test_harness::{ObservedCombatEvents, harness, spawn_player},
+    };
+    use shared::components::{Health, Mana};
+    use shared::protocol::CombatLogKind;
+    let mut h = harness(Vec::new(), &[73920, 61295, 462424, 462425], 7).unwrap();
+    h.app.init_resource::<ObservedCombatEvents>();
+    let first = spawn_player(&mut h.app, 7, 3.0);
+    let second = spawn_player(&mut h.app, 7, 5.0);
+    let other = spawn_player(&mut h.app, 7, 6.0);
+    for unit in [first, second, other] {
+        *h.app.world_mut().get_mut::<Health>(unit).unwrap() = Health {
+            current: 1.0,
+            max: 100_000.0,
+        };
+    }
+    *h.app.world_mut().get_mut::<Mana>(h.caster).unwrap() = Mana {
+        current: 250_000.0,
+        max: 250_000.0,
+    };
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: h.caster,
+            target: h.caster,
+            spell_id: 462424,
+            effect_mask: u32::MAX,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    for unit in [first, second] {
+        crate::spell_cast::creature_cast(h.app.world_mut(), h.caster, 61295, Some(unit), true)
+            .unwrap();
+    }
+    h.advance(2);
+    cast_for_player_with_targets(
+        h.app.world_mut(),
+        h.caster,
+        73920,
+        CastTargets {
+            unit: h.caster,
+            primary: Some(h.caster),
+            destination: Some([3.0, 0.0, 0.0]),
+        },
+    )
+    .unwrap();
+    h.advance(100);
+    let events = &h.app.world().resource::<ObservedCombatEvents>().0;
+    for unit in [first, second] {
+        assert!(
+            events.iter().any(|e| e.kind == CombatLogKind::Heal
+                && e.spell_id == Some(462425)
+                && e.target == Some(unit.to_bits())
+                && e.amount > 0),
+            "{events:?}"
+        );
+    }
+    assert!(
+        !events
+            .iter()
+            .any(|e| e.spell_id == Some(462425) && e.target == Some(other.to_bits()))
+    );
+}
+
+#[test]
 fn zero_capacity_charge_category_keeps_native_spell_cooldown() {
     use crate::spell_cast::test_harness::{Inbox, harness};
     // Native Dark Soul: Instability has category1447 with zero base charges

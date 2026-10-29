@@ -348,6 +348,7 @@ register_modules! {
     unholy_infected_claws: (2532, "modules/unholy_infected_claws.rs"),
     restoration_everbloom: (1050, "modules/restoration_everbloom.rs"),
     restoration_healing_stream: (2640, "modules/restoration_healing_stream.rs"),
+    restoration_tidewaters: (2640, "modules/restoration_tidewaters.rs"),
     ret_aurora: (1000, "modules/ret_aurora.rs"),
     ret_damage: (1000, "modules/ret_damage.rs"),
     ret_empyrean: (1000, "modules/ret_empyrean.rs"),
