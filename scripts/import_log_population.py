@@ -23,11 +23,22 @@ def validate_copy(path):
     return path
 
 
+def template_row_keys(db, npc_id):
+    tables = (('content_creature_template', 'entry', ('entry',)),
+              ('content_creature_template_difficulty', 'entry', ('entry', 'DifficultyID')),
+              ('content_creature_template_model', 'CreatureID', ('CreatureID', 'Idx')),
+              ('content_creature_template_addon', 'entry', ('entry',)))
+    return {(table, json.dumps(row, separators=(',', ':')))
+            for table, key, columns in tables
+            for row in db.execute(f"SELECT {','.join(columns)} FROM {table} WHERE {key}=?", (npc_id,))}
+
+
 def prepare_tdb_template(db, npc_id):
     if not db.execute('SELECT 1 FROM tdb_creature_template WHERE entry=?', (npc_id,)).fetchone():
         return 'TEMPLATE_ABSENT_FROM_TDB_AND_CONTENT'
     if not db.execute('SELECT 1 FROM tdb_creature_template_difficulty WHERE Entry=? AND DifficultyID=0', (npc_id,)).fetchone():
         return 'TDB_BASE_DIFFICULTY_UNAVAILABLE'
+    previous_rows = template_row_keys(db, npc_id)
     db.execute('DROP TABLE IF EXISTS temp.tdb_difficulty')
     db.execute('CREATE TEMP TABLE tdb_difficulty AS SELECT * FROM tdb_creature_template_difficulty WHERE Entry=? AND DifficultyID=0', (npc_id,))
     db.create_function('health_expansion', 1, retail_content.health_expansion, deterministic=True)
@@ -47,6 +58,9 @@ def prepare_tdb_template(db, npc_id):
     db.execute('INSERT OR IGNORE INTO content_creature_template_model SELECT * FROM tdb_creature_template_model WHERE CreatureID=?', (npc_id,))
     db.execute(f'INSERT OR IGNORE INTO content_creature_template_addon SELECT entry,{retail_content.ADDON_COLUMNS} FROM tdb_creature_template_addon WHERE entry=?', (npc_id,))
     db.execute('INSERT INTO log_derived_templates VALUES (?,?)', (npc_id, POLICY))
+    added_rows = template_row_keys(db, npc_id) - previous_rows
+    db.executemany('INSERT INTO log_derived_template_rows VALUES (?,?,?,?)',
+                   [(npc_id, table, key, POLICY) for table, key in sorted(added_rows)])
     return None
 
 
@@ -72,6 +86,9 @@ def import_population(destination, records, radius=10.0):
             observed_time TEXT NOT NULL, observed_level INTEGER, policy TEXT NOT NULL,
             observation_json TEXT NOT NULL)''')
         db.execute('CREATE TABLE IF NOT EXISTS log_derived_templates (entry INTEGER PRIMARY KEY, policy TEXT NOT NULL)')
+        db.execute('''CREATE TABLE IF NOT EXISTS log_derived_template_rows (
+            entry INTEGER NOT NULL, table_name TEXT NOT NULL, row_key TEXT NOT NULL, policy TEXT NOT NULL,
+            PRIMARY KEY (table_name,row_key))''')
         next_guid = db.execute('SELECT COALESCE(MAX(guid), 0) + 1 FROM content_creature').fetchone()[0]
         for record in records:
             map_id, npc_id = int(record['map']), int(record['npc_id'])
