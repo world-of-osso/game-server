@@ -218,7 +218,10 @@ impl Recorder {
             .iter()
             .map(|(&spell, &(raw, effective))| (spell, json!({"raw":raw,"effective":effective})))
             .collect();
-        json!({"mana_spent_by_spell":mana_spent,"resource_energizes_by_spell":energizes,"fiend_rolls":fiend_rolls,"fiend_summons":fiend_summons,"fiend_pre_mitigation_damage":fiend.0,"fiend_atonement_raw":fiend.1,"fiend_atonement_effective":fiend.2,
+        let mana_regenerated = world
+            .get::<crate::spell_cast::ObservedResourcePayments>(self.healer)
+            .map_or(0.0, |observed| observed.1);
+        json!({"mana_spent_by_spell":mana_spent,"passive_mana_regenerated":mana_regenerated,"resource_energizes_by_spell":energizes,"fiend_rolls":fiend_rolls,"fiend_summons":fiend_summons,"fiend_pre_mitigation_damage":fiend.0,"fiend_atonement_raw":fiend.1,"fiend_atonement_effective":fiend.2,
             "raw_hps":raw as f64 / duration,"effective_hps":effective as f64 / duration,
             "consumed_absorbs_by_spell":absorbs,
             "overheal_pct":(raw > 0).then(|| 100.0 * (raw - effective) as f64 / raw as f64),
