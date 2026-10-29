@@ -1,4 +1,6 @@
 import importlib.util
+import io
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -26,6 +28,24 @@ class CensusTest(unittest.TestCase):
         fields[0] = 'SPELL_AURA_APPLIED'
         fields.insert(12, 'DEBUFF')
         self.assertEqual(module.advanced_position(fields)['guid'], fields[5])
+
+    def test_position_samples_stop_when_unit_is_engaged(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'combat.txt'
+            guid = 'Creature-0-1-2521-42-123-ABCD'
+            advanced = f'{guid},0,100,100,0,0,0,0,0,0,0,0,0,0,10.0,20.0,2095,1.5,90'
+            path.write_text(
+                '10/3/2026 20:23:31.000-5  CHALLENGE_MODE_START,"Ruby Life Pools",2521,399,15,[]\n'
+                f'10/3/2026 20:23:32.000-5  SPELL_CAST_SUCCESS,{guid},"Mob",0xa48,0,0000000000000000,nil,0,0,1,"Idle",1,{advanced}\n'
+                f'10/3/2026 20:23:33.000-5  SPELL_DAMAGE,Player-1,"Player",0x511,0,{guid},"Mob",0xa48,0,1,"Hit",1,{advanced},1\n'
+                f'10/3/2026 20:23:34.000-5  SPELL_CAST_SUCCESS,{guid},"Mob",0xa48,0,0000000000000000,nil,0,0,1,"Idle",1,{advanced}\n'
+            )
+            samples = io.StringIO()
+            census([path], {2521}, samples)
+        rows = [json.loads(line) for line in samples.getvalue().splitlines()]
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]['guid'], guid)
+        self.assertEqual(rows[0]['seconds_from_start'], 1.0)
 
     def test_floor_requests_keep_run_identity_and_neighbor_hints(self):
         position = {'x': 10.0, 'y': 20.0, 'ui_map_id': 2095}
