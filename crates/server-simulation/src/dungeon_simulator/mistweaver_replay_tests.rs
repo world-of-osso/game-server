@@ -1,6 +1,106 @@
 use std::path::Path;
 
 #[test]
+#[ignore = "checks 70448 Ancient Teachings from an actual Monk attack"]
+fn mistweaver_ancient_teachings_splits_damage_and_preserves_critical_result() {
+    use shared::components::Health;
+    use shared::protocol::CombatLogKind;
+
+    let spells = [100780, 388023, 388024, 388025, 467293];
+    let mut h = crate::spell_cast::test_harness::harness(Vec::new(), &spells, 10).unwrap();
+    h.app
+        .init_resource::<crate::spell_cast::test_harness::ObservedCombatEvents>();
+    let ally = crate::spell_cast::test_harness::spawn_player(&mut h.app, 10, 3.0);
+    for unit in [h.caster, ally] {
+        *h.app.world_mut().get_mut::<Health>(unit).unwrap() = Health {
+            current: 1.0,
+            max: 100_000.0,
+        };
+    }
+    *h.app.world_mut().get_mut::<Health>(h.npc).unwrap() = Health {
+        current: 100_000.0,
+        max: 100_000.0,
+    };
+    for spell_id in [388023, 467293] {
+        crate::auras::apply_aura(
+            h.app.world_mut(),
+            &crate::auras::AuraApplication {
+                caster: h.caster,
+                target: h.caster,
+                spell_id,
+                effect_mask: u32::MAX,
+                source: crate::auras::AuraSource::Cast,
+            },
+        );
+    }
+    assert_eq!(
+        crate::spell_cast::scripts::script_effect_value(h.app.world(), h.caster, 388023, 0),
+        345.0
+    );
+    h.app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(h.caster)
+        .unwrap()
+        .crit_pct = 0.0;
+    crate::spell_cast::creature_cast(h.app.world_mut(), h.caster, 100780, Some(h.npc), true)
+        .unwrap();
+    h.advance(2);
+    let events = &h
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    let damage = events
+        .iter()
+        .find(|event| event.kind == CombatLogKind::Damage && event.spell_id == Some(100780))
+        .expect("Tiger Palm must deal damage");
+    assert!(!damage.crit);
+    for unit in [h.caster, ally] {
+        let heal = events
+            .iter()
+            .find(|event| {
+                event.kind == CombatLogKind::Heal
+                    && event.spell_id == Some(388024)
+                    && event.target == Some(unit.to_bits())
+            })
+            .expect("Ancient Teachings must heal each ally");
+        assert!(!heal.crit);
+        assert!((heal.amount as f32 - damage.amount as f32 * 3.45 / 2.0).abs() <= 3.0);
+    }
+    let start = events.len();
+    h.app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(h.caster)
+        .unwrap()
+        .crit_pct = 100.0;
+    crate::spell_cast::creature_cast(h.app.world_mut(), h.caster, 100780, Some(h.npc), true)
+        .unwrap();
+    h.advance(2);
+    let events = &h
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0[start..];
+    let damage = events
+        .iter()
+        .find(|event| event.kind == CombatLogKind::Damage && event.spell_id == Some(100780))
+        .expect("critical Tiger Palm must deal damage");
+    assert!(damage.crit);
+    for unit in [h.caster, ally] {
+        let heal = events
+            .iter()
+            .find(|event| {
+                event.kind == CombatLogKind::Heal
+                    && event.spell_id == Some(388025)
+                    && event.target == Some(unit.to_bits())
+            })
+            .expect("critical Ancient Teachings must heal each ally");
+        assert!(heal.crit);
+        assert!((heal.amount as f32 - damage.amount as f32 * 3.45 / 2.0).abs() <= 3.0);
+    }
+}
+
+#[test]
 #[ignore = "replays the MID2 Mistweaver against the SimC party pulse"]
 fn mistweaver_uses_sheilun_on_party_damage() {
     let trace = std::env::var("HEALER_TANK_SIMC_TRACE").expect("HEALER_TANK_SIMC_TRACE required");
