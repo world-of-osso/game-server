@@ -356,7 +356,7 @@ Lingering damage after an enemy's native Death (for example Hogger86604) remains
 
 ## Native-sight-safe non-tank positioning
 
-Idle follow and combat/heal approach choices for non-tank followers must not cross an unpulled aggressive hostile's native sight circle. Use actual same-copy live hostile positions and native per-recipient attack distance, including both model reaches and level scaling; no pack-specific offsets or fixed fake radii. Hold an unsafe approach while continuing native casts that are valid from the safe current position. The tank retains its pull planner. Actual accidental combat still takes precedence and already-dead packs are skipped in the authored route.
+Idle follow and combat/heal approach choices for non-tank followers must not cross an unpulled aggressive hostile's native sight circle. A watcher counts only when its faction reaction to the follower is Hostile (TC `Creature::CanStartAttack`); attackable neutral units such as faction-0 Menial Laborer 210148 never aggro and never hold a follower. Regression: `darkflame_drop_tests.rs::darkflame_non_tank_approach_holds_only_for_watchers_that_would_aggro`. Use actual same-copy live hostile positions and native per-recipient attack distance, including both model reaches and level scaling; no pack-specific offsets or fixed fake radii. Hold an unsafe approach while continuing native casts that are valid from the safe current position. The tank retains its pull planner. Actual accidental combat still takes precedence and already-dead packs are skipped in the authored route.
 
 ## Log-derived population policy
 

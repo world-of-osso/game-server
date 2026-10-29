@@ -1,10 +1,11 @@
 //! Project positioning policy: non-tanks do not approach through idle native sight circles.
 use bevy::ecs::system::SystemState;
 use bevy::prelude::*;
-use shared::components::Health;
+use shared::components::{Health, UnitFactionTemplate};
 
 use super::{kit_ai, pull_route};
 use crate::creature_aggro::AggroDistance;
+use crate::faction::{FactionTemplates, Reaction};
 use crate::maps::InMap;
 use crate::navigation::{Goal, Navigation};
 use crate::spell_cast::targets;
@@ -117,8 +118,19 @@ fn is_unpulled_hostile(world: &World, unit: Entity, watcher: Entity) -> bool {
     let idle = world
         .get::<crate::creature_ai::CreatureState>(watcher)
         .is_some_and(|state| state.is_idle());
+    // Creature::CanStartAttack: aggro needs a hostile reaction, not just attackability.
+    let hostile = world
+        .get::<UnitFactionTemplate>(watcher)
+        .is_some_and(|faction| {
+            let follower = world.get::<UnitFactionTemplate>(unit).map_or(0, |f| f.0);
+            world
+                .resource::<FactionTemplates>()
+                .reaction(faction.0, follower)
+                == Reaction::Hostile
+        });
     aggressive
         && alive
         && idle
+        && hostile
         && targets::relation_matches(world, unit, watcher, targets::Relation::Enemy)
 }
