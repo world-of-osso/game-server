@@ -324,9 +324,9 @@ fn aura_stat_native_422_scales_incoming_shield_capacity_once_not_each_hit() {
         .unwrap()
         .healing_power = 1000.0;
     apply(&mut h, 17, 0); //native4.638×SP =4638, ×1.15 =5334 rounded.
-    let (remaining, absorbed) = absorb_damage(h.app.world_mut(), caster, 1, 5000.0);
+    let (remaining, absorbed) = absorb_damage(h.app.world_mut(), caster, None, 1, 5000.0);
     assert_eq!((remaining, absorbed), (0.0, 5000.0));
-    let (remaining, absorbed) = absorb_damage(h.app.world_mut(), caster, 1, 1000.0);
+    let (remaining, absorbed) = absorb_damage(h.app.world_mut(), caster, None, 1, 1000.0);
     assert_eq!((remaining, absorbed), (666.0, 334.0));
     assert!(!has_aura(h.app.world(), caster, 17));
 }

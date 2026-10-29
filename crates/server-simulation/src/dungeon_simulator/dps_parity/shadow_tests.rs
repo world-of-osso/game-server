@@ -97,7 +97,7 @@ fn native_apl_target_absorb_tracks_real_shield_and_depletion() {
         .amount;
     // Keep the damage near real shield capacity: f32::MAX loses this subtraction.
     let (_, absorbed) =
-        crate::auras::absorb_damage(run.app.world_mut(), actor, 0x7f, capacity + 1.0);
+        crate::auras::absorb_damage(run.app.world_mut(), actor, None, 0x7f, capacity + 1.0);
     assert_eq!(absorbed, capacity);
     assert_eq!(has_absorb(run.app.world()), 0.0);
     crate::auras::apply_aura(run.app.world_mut(), &application);

@@ -2427,8 +2427,9 @@ fn resolve_swing(
         });
     }
     let damage = crate::level_scaling::damage_dealt(&attacker_scaling, &target, remaining);
+    let attacker_entity = attacker.entity;
     commands.queue(move |world: &mut World| {
-        crate::auras::finish_absorbs(world, target_entity, absorption)
+        crate::auras::finish_absorbs(world, target_entity, Some(attacker_entity), absorption)
     });
     let scaled_loss = crate::level_scaling::health_loss(&attacker_scaling, &target, damage);
     // Commit health-sensitive limits and real rescue children in swing order.
@@ -3047,7 +3048,7 @@ pub fn replay_healer_hit(
     }
     let (amount, source_absorbed) =
         crate::auras::source_absorb::absorb(world, victim, attacker, amount - deferred);
-    let (amount, absorbed) = crate::auras::absorb_damage(world, victim, 1, amount);
+    let (amount, absorbed) = crate::auras::absorb_damage(world, victim, Some(attacker), 1, amount);
     let absorbed = absorbed + source_absorbed;
     let amount = crate::auras::damage_transfer::route(world, attacker, victim, 1, amount);
     let (attacker_scaling, target) = (

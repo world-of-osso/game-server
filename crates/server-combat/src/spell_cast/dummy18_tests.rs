@@ -245,10 +245,10 @@ fn dummy18_ignore_pain_soaks_native_fraction_and_accumulates_to_health_cap() {
         .entity_mut(caster)
         .insert(shared::components::ActiveSpec(73));
     apply(&mut h, caster, caster, 190456, u32::MAX);
-    let (left, absorbed) = crate::auras::absorb_damage(h.app.world_mut(), caster, 4, 100.0);
+    let (left, absorbed) = crate::auras::absorb_damage(h.app.world_mut(), caster, None, 4, 100.0);
     assert_eq!((left, absorbed), (50.0, 50.0));
     apply(&mut h, caster, caster, 190456, u32::MAX);
-    let (left, absorbed) = crate::auras::absorb_damage(h.app.world_mut(), caster, 4, 1000.0);
+    let (left, absorbed) = crate::auras::absorb_damage(h.app.world_mut(), caster, None, 4, 1000.0);
     assert_eq!((left, absorbed), (700.0, 300.0));
     assert!(!crate::auras::has_aura(h.app.world(), caster, 190456));
 }
@@ -402,7 +402,7 @@ fn dummy18_ignore_pain_versatility_scales_budget_below_cap() {
     stats.attack_power = 1.0;
     stats.versatility_pct = 100.0;
     apply(&mut h, caster, caster, 190456, u32::MAX);
-    let (_, absorbed) = crate::auras::absorb_damage(h.app.world_mut(), caster, 4, 100.0);
+    let (_, absorbed) = crate::auras::absorb_damage(h.app.world_mut(), caster, None, 4, 100.0);
     let coefficient =
         world_db().unwrap().store.get(190456).unwrap().effects[0].bonus_coefficient_from_ap;
     // TC a352b1fa Unit.cpp:7725-7737 rounds the received shield budget,

@@ -2553,7 +2553,13 @@ pub(crate) fn melee_damage_from_caster(auras: Option<&ActiveAuras>, attacker: En
 /// SCHOOL_ABSORB 69: matching absorbs (MiscValue school mask) soak damage,
 /// priority absorbs first, then smallest capacity first; a depleted absorb removes its aura. Returns
 /// `(damage left, absorbed)`.
-pub fn absorb_damage(world: &mut World, unit: Entity, school_mask: u32, amount: f32) -> (f32, f32) {
+pub fn absorb_damage(
+    world: &mut World,
+    unit: Entity,
+    attacker: Option<Entity>,
+    school_mask: u32,
+    amount: f32,
+) -> (f32, f32) {
     let result = consume_absorbs(
         world
             .get_mut::<ActiveAuras>(unit)
@@ -2563,7 +2569,7 @@ pub fn absorb_damage(world: &mut World, unit: Entity, school_mask: u32, amount: 
         amount,
     );
     let damage = (result.remaining, result.absorbed);
-    finish_absorbs(world, unit, result);
+    finish_absorbs(world, unit, attacker, result);
     damage
 }
 
@@ -2642,13 +2648,18 @@ pub(crate) fn consume_absorbs(
     result
 }
 
-pub(crate) fn finish_absorbs(world: &mut World, unit: Entity, result: AbsorbResult) {
+pub(crate) fn finish_absorbs(
+    world: &mut World,
+    unit: Entity,
+    attacker: Option<Entity>,
+    result: AbsorbResult,
+) {
     for (caster, spell_id, soaked) in result.contributions {
         #[cfg(any(test, feature = "test-support"))]
         crate::test_support::healer_intake::record_absorb(world, caster, unit, spell_id, soaked);
         crate::damage_meter::record_absorb(world, caster, soaked);
         crate::spell_cast::script_registry::after_absorb_consumed(
-            world, caster, unit, spell_id, soaked,
+            world, caster, unit, attacker, spell_id, soaked,
         );
     }
     if !result.depleted.is_empty() {

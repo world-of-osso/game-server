@@ -6,19 +6,85 @@ use combat::spell_cast::{
     effects::{EffectCtx, apply_critical_transfer_heal},
     script_registry::SpellScriptHook,
 };
-use combat::spell_info::SpellStore;
+use combat::spell_info::{SpellInfo, SpellStore};
 use shared::components::ActiveSpec;
 use shared::protocol::{CombatLogEvent, CombatLogKind};
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AfterAuraApplication(apply_mark),
+    SpellScriptHook::NativeAfterCast(master_the_darkness_action),
+    SpellScriptHook::AfterAbsorbConsumed(discharge_void_shield),
     SpellScriptHook::HealthChangeObserved(mark_flash_heal),
     SpellScriptHook::RawResolvedDamage(transfer_damage),
     SpellScriptHook::ConsumedEffectValues(&[(81749, 0)]),
 ];
 
+#[derive(Component)]
+struct DarknessDeck {
+    cards: u8,
+    success: bool,
+}
+
+fn master_the_darkness_action(spell: u32) -> Option<combat::spell_cast::scripts::AfterCastHook> {
+    matches!(spell, 47540 | 8092 | 1253593).then_some(after_darkness_action)
+}
+
+fn after_darkness_action(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    if !is_discipline(world, caster) {
+        return;
+    }
+    if spell.id == 1253593 {
+        auras::remove_auras(world, caster, auras::RemoveReason::Consumed, |aura| {
+            aura.spell_id == 1253591 && aura.caster == caster
+        });
+        return;
+    }
+    let proc = if spell.id == 8092 {
+        auras::has_aura(world, caster, 1253827)
+    } else if auras::has_aura(world, caster, 1253590) {
+        draw_darkness_card(world, caster)
+    } else {
+        false
+    };
+    if proc {
+        // SimC76f8118 sc_priest_discipline.cpp:588-594,793-796; sc_priest.cpp:216-218.
+        auras::apply_aura(world, &AuraApplication {
+            caster, target: caster, spell_id: 1253591, effect_mask: u32::MAX, source: AuraSource::Cast,
+        });
+    }
+}
+
+fn draw_darkness_card(world: &mut World, caster: Entity) -> bool {
+    if world.get::<DarknessDeck>(caster).is_none_or(|deck| deck.cards == 0) {
+        world.entity_mut(caster).insert(DarknessDeck { cards: 4, success: true });
+    }
+    let mut deck = world.get_mut::<DarknessDeck>(caster).unwrap();
+    let drawn = deck.success && combat::random::random::<f32>() < 1.0 / f32::from(deck.cards);
+    deck.cards -= 1;
+    if drawn { deck.success = false; }
+    drawn
+}
+
+fn discharge_void_shield(world: &mut World, caster: Entity, _victim: Entity, attacker: Option<Entity>, spell: u32, amount: f32) {
+    if spell != 1253593 || amount <= 0.0 || !auras::has_aura(world, caster, 1253827) {
+        return;
+    }
+    let is_enemy = |world: &World, target| {
+        combat::spell_cast::targets::is_alive(world, target)
+            && combat::spell_cast::targets::relation_matches(world, caster, target, combat::spell_cast::targets::Relation::Enemy)
+    };
+    let target = attacker.filter(|&target| is_enemy(world, target)).or_else(|| {
+        let enemies: Vec<_> = world.query::<Entity>().iter(world).filter(|&target| is_enemy(world, target)).collect();
+        if enemies.is_empty() { None } else { Some(enemies[(combat::random::random::<f32>() * enemies.len() as f32) as usize]) }
+    });
+    let Some(target) = target else { return; };
+    let percent = combat::spell_cast::scripts::script_effect_value(world, caster, 1253827, 0);
+    // SimC76f8118 sc_priest.cpp:84-105: each actual absorbed contribution discharges.
+    combat::spell_cast::cast_triggered_with_effect0_amount(world, caster, 1253828, Some(target), 1, amount * percent / 100.0);
+}
+
 fn apply_mark(world: &mut World, target: Entity, aura: &AuraInstance) {
-    if !matches!(aura.spell_id, 17 | 139) || !is_discipline(world, aura.caster) {
+    if !matches!(aura.spell_id, 17 | 139 | 1253593) || !is_discipline(world, aura.caster) {
         return;
     }
     // SimC76f8118 sc_priest.cpp:2003-2011: Shield applies Atonement on impact.

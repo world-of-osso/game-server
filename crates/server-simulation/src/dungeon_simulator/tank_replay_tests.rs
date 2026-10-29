@@ -784,7 +784,8 @@ fn reflection_of_radiance_can_reset_shield_from_self_absorbs() {
     };
     assert!(remaining(&run) > 0);
     for _ in 0..30 {
-        let (_, absorbed) = crate::auras::absorb_damage(run.app.world_mut(), actor, 1, 1_000.0);
+        let (_, absorbed) =
+            crate::auras::absorb_damage(run.app.world_mut(), actor, None, 1, 1_000.0);
         assert!(absorbed > 0.0);
         if remaining(&run) == 0 {
             return;
@@ -1167,7 +1168,7 @@ fn tank_raid_buffs_apply_before_precombat_bulwark_snapshot() {
         .get::<crate::stats::CharacterStats>(actor)
         .unwrap()
         .versatility_pct;
-    let (_, shield) = crate::auras::absorb_damage(run.app.world_mut(), actor, 1, max);
+    let (_, shield) = crate::auras::absorb_damage(run.app.world_mut(), actor, None, 1, max);
     assert!((max - 1_492_640.0).abs() < 10.0, "max health {max}");
     assert!((vers - 23.8889).abs() < 0.01, "versatility {vers}");
     assert!(
@@ -1194,7 +1195,7 @@ fn holy_bulwark_refresh_regrants_initial_absorb() {
         .get::<crate::stats::CharacterStats>(actor)
         .unwrap()
         .versatility_pct;
-    let (_, consumed) = crate::auras::absorb_damage(run.app.world_mut(), actor, 1, max);
+    let (_, consumed) = crate::auras::absorb_damage(run.app.world_mut(), actor, None, 1, max);
     let expected = max * 0.15 * (1.0 + vers / 100.0);
     assert!(
         (consumed - expected).abs() < 2.0,
@@ -1216,7 +1217,7 @@ fn holy_bulwark_refresh_regrants_initial_absorb() {
     let after_counts = super::tank_replay::bulwark_observations(run.app.world(), actor);
     assert_eq!(after_counts.0, before_counts.0);
     assert_eq!(after_counts.1, before_counts.1 + 1);
-    let (_, refreshed) = crate::auras::absorb_damage(run.app.world_mut(), actor, 1, max);
+    let (_, refreshed) = crate::auras::absorb_damage(run.app.world_mut(), actor, None, 1, max);
     assert!(
         (refreshed - expected).abs() < 2.0,
         "refresh={refreshed} expected={expected}"
@@ -1265,12 +1266,13 @@ fn holy_bulwark_absorbs_incoming_hits_and_grows_to_native_cap() {
         .get::<crate::stats::CharacterStats>(run.actor)
         .unwrap()
         .versatility_pct;
-    let (_, consumed) = crate::auras::absorb_damage(run.app.world_mut(), run.actor, 1, max * 0.01);
+    let (_, consumed) =
+        crate::auras::absorb_damage(run.app.world_mut(), run.actor, None, 1, max * 0.01);
     assert!((consumed - max * 0.01).abs() < 2.0);
     for _ in 0..40 {
         run.app.update();
     }
-    let (_, remaining) = crate::auras::absorb_damage(run.app.world_mut(), run.actor, 1, max);
+    let (_, remaining) = crate::auras::absorb_damage(run.app.world_mut(), run.actor, None, 1, max);
     let expected = max * (0.15 * (1.0 + vers / 100.0) + 0.02 - 0.01);
     assert!(
         (remaining - expected).abs() < 2.0,
@@ -1287,7 +1289,7 @@ fn holy_bulwark_absorbs_incoming_hits_and_grows_to_native_cap() {
     for _ in 0..360 {
         run.app.update();
     }
-    let (_, absorbed) = crate::auras::absorb_damage(run.app.world_mut(), run.actor, 1, max);
+    let (_, absorbed) = crate::auras::absorb_damage(run.app.world_mut(), run.actor, None, 1, max);
     assert!(
         (absorbed - max * 0.30).abs() < 2.0,
         "{absorbed} != {}",
