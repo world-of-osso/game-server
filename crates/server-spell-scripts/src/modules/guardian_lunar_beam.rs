@@ -44,7 +44,6 @@ fn schedule_heals(world: &mut World, caster: Entity, spell: &SpellInfo) {
         chain_multiplier: 1.0,
     };
     for delay in (1000..=duration).step_by(1000) {
-        queued_triggers::schedule_full_trigger(world, &ctx, caster, 204069, delay);
         queued_triggers::schedule_destination_trigger(
             world,
             &ctx,
@@ -55,5 +54,6 @@ fn schedule_heals(world: &mut World, caster: Entity, spell: &SpellInfo) {
                 destination: origin.to_array(),
             },
         );
+        queued_triggers::schedule_full_trigger(world, &ctx, caster, 204069, delay);
     }
 }

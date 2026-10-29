@@ -79,6 +79,31 @@ fn guardian_lunar_beam_damages_enemies_in_the_original_ground_area() {
     }
     let near = count(&run);
     assert_eq!(near, 2, "two ground pulses must damage the nearby enemy");
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    let damage_index = events
+        .iter()
+        .position(|event| {
+            event.spell_id == Some(414613)
+                && event.kind == CombatLogKind::Damage
+                && event.target == Some(target.to_bits())
+        })
+        .unwrap();
+    let heal_index = events
+        .iter()
+        .position(|event| {
+            event.spell_id == Some(204069)
+                && event.kind == CombatLogKind::Heal
+                && event.target == Some(actor.to_bits())
+        })
+        .unwrap();
+    assert!(
+        damage_index < heal_index,
+        "the pulse damages before its self-heal"
+    );
     run.app
         .world_mut()
         .get_mut::<shared::components::Position>(target)
