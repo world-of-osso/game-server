@@ -5,7 +5,7 @@ import json
 import math
 import sqlite3
 import sys
-from collections import defaultdict
+from collections import Counter, defaultdict
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -50,9 +50,20 @@ def prepare_tdb_template(db, npc_id):
     return None
 
 
+def load_existing_positions(db, map_id, npc_id):
+    populations = []
+    for table, column in (('tdb_creature', 'id'), ('content_creature', 'id1')):
+        rows = db.execute(f'SELECT position_x,position_y,position_z FROM {table} WHERE map=? AND {column}=?',
+                          (map_id, npc_id))
+        populations.append(Counter(tuple(row) for row in rows))
+    counts = populations[0] | populations[1]
+    return [position for position, count in sorted(counts.items()) for _ in range(count)]
+
+
 def import_population(destination, records, radius=10.0):
     destination = validate_copy(destination)
     report = defaultdict(lambda: {'imported': 0, 'already_present': 0, 'gaps': [], 'templates_from_tdb': set(), 'templates_absent': set()})
+    existing_positions = {}
     with sqlite3.connect(destination) as db:
         db.execute('BEGIN IMMEDIATE')
         db.execute('''CREATE TABLE IF NOT EXISTS log_derived_population (
@@ -72,7 +83,12 @@ def import_population(destination, records, radius=10.0):
             if existing:
                 result['already_present'] += 1
                 continue
-            if record.get('population_kind') != 'likely_spawn' or record.get('summoned') is not False or record.get('identity_ambiguous') is not False:
+            ambiguous = record.get('identity_ambiguous')
+            centroid_ok = (ambiguous is True and record.get('position_method') == 'candidate_centroid'
+                           and isinstance(record.get('candidate_spread_yards'), (int, float))
+                           and math.isfinite(record['candidate_spread_yards'])
+                           and 0 <= record['candidate_spread_yards'] <= 5)
+            if record.get('population_kind') != 'likely_spawn' or record.get('summoned') is not False or not (ambiguous is False or centroid_ok):
                 result['gaps'].append({'source_key': source_key, 'reason': 'SUMMON_OR_AMBIGUOUS_IDENTITY'})
                 continue
             values = [record.get(key) for key in ('x', 'y', 'z', 'facing')]
@@ -80,16 +96,17 @@ def import_population(destination, records, radius=10.0):
                 result['gaps'].append({'source_key': source_key, 'reason': 'POSITION_OR_FACING_UNAVAILABLE'})
                 continue
             x, y, z, facing = values
-            present = False
-            for table, column in (('tdb_creature', 'id'), ('content_creature', 'id1')):
-                rows = db.execute(f'SELECT position_x, position_y, position_z FROM {table} WHERE map=? AND {column}=?',
-                                  (map_id, npc_id))
-                if any((px-x)**2 + (py-y)**2 + (pz-z)**2 <= radius**2 for px, py, pz in rows):
-                    present = True
-                    break
-            if present:
-                result['already_present'] += 1
-                continue
+            key = (map_id, npc_id)
+            if key not in existing_positions:
+                existing_positions[key] = load_existing_positions(db, map_id, npc_id)
+            candidates = [(sum((a-b)**2 for a, b in zip(position, (x, y, z))), index)
+                          for index, position in enumerate(existing_positions[key])]
+            if candidates:
+                distance, index = min(candidates)
+                if distance <= radius ** 2:
+                    existing_positions[key].pop(index)
+                    result['already_present'] += 1
+                    continue
             if not db.execute('SELECT 1 FROM content_creature_template WHERE entry=?', (npc_id,)).fetchone():
                 gap = prepare_tdb_template(db, npc_id)
                 if gap:
