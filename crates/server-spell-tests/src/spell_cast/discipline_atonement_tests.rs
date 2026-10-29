@@ -261,7 +261,12 @@ fn discipline_death_summons_shadowfiend_only_in_execute_range() {
     use super::test_harness::{ObservedCombatEvents, prepare_class_world};
     let _seed = crate::random::seed_scope(70448);
     let prepared = prepare_class_world();
-    let mut h = harness(Vec::new(), &[32379, 34433, 1280172, 81749, 94472], 5).unwrap();
+    let mut h = harness(
+        Vec::new(),
+        &[32379, 34433, 1280172, 81749, 94472, 137032],
+        5,
+    )
+    .unwrap();
     h.app.insert_resource(prepared.world_data());
     let conn = rusqlite::Connection::open_with_flags(
         &world_db().unwrap().powers_db,
@@ -278,6 +283,16 @@ fn discipline_death_summons_shadowfiend_only_in_execute_range() {
         crate::class_progression::KnownSpells::fixture(vec![32379, 34433]),
         server::networking::CombatTarget(Some(h.npc)),
     ));
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: h.caster,
+            target: h.caster,
+            spell_id: 137032,
+            effect_mask: u32::MAX,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
     for current in [900_000.0, 100_000.0] {
         for _ in 0..12 {
             *h.app.world_mut().get_mut::<Health>(h.npc).unwrap() = Health {
@@ -327,15 +342,14 @@ fn discipline_death_summons_shadowfiend_only_in_execute_range() {
                 .world()
                 .resource::<super::test_harness::FiendAtonementReceipts>()
                 .2;
-            assert!(rolls.iter().all(|(_, _, _, chance)| *chance == 40.0));
-            let successes = rolls.iter().filter(|(_, _, roll, _)| *roll < 40.0).count();
             assert!(
-                successes > 0 && successes < rolls.len(),
-                "seeded rolls must contain both outcomes"
+                rolls.iter().all(|(_, _, _, chance)| *chance == 100.0),
+                "native Discipline passive raises the 40% base chance to 100%"
             );
             assert_eq!(
-                summons, successes,
-                "each successful 40% roll summons exactly one fiend"
+                summons,
+                rolls.len(),
+                "every eligible hit summons exactly one fiend"
             );
         }
     }
