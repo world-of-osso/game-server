@@ -136,6 +136,7 @@ register_modules! {
     vengeance_mid2: (5822, "modules/vengeance_mid2.rs"),
     vengeance_sigil: (5822, "modules/vengeance_sigil.rs"),
     vengeance_soul_cleave: (5813, "modules/vengeance_soul_cleave.rs"),
+    vengeance_soul_sigils: (5822, "modules/vengeance_soul_sigils.rs"),
     vengeance_spirit_bomb: (5812, "modules/vengeance_spirit_bomb.rs"),
     vengeance_voidfall: (5817, "modules/vengeance_voidfall.rs"),
     destruction_echo: (2676, "modules/destruction_echo.rs"),

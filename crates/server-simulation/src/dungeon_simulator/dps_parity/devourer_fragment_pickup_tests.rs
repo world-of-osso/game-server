@@ -77,8 +77,50 @@ fn sigil_of_spite_detonates_native_damage_and_fragments_at_expiry() {
     assert!(damage, "sigil must damage its native target at expiry");
     assert_eq!(
         soul_fragments::total_count(run.app.world(), actor, FragmentFilter::Lesser),
-        3
+        4
     );
+}
+
+#[test]
+#[ignore = "requires native spec581 player profile and DB"]
+fn soul_sigils_grants_one_fragment_per_sigil_with_enemy_hits() {
+    for (spell, count, empty, expected) in [
+        (204596, 1, false, 1),
+        (204596, 3, false, 1),
+        (204596, 1, true, 0),
+        (390163, 3, false, 4),
+        (390163, 1, true, 3),
+    ] {
+        let _seed = crate::random::seed_scope(70_448);
+        let (profile, traits) = read_reference(581).unwrap();
+        let identity = inputs::read_actor(&profile).unwrap();
+        let mut run = prepare_reference(profile, &traits, count, identity).unwrap();
+        let actor = run.actor;
+        let target = run.targets[0];
+        let mut position = crate::spell_cast::targets::position(run.app.world(), target).unwrap();
+        if empty {
+            position.z += 20.0;
+        }
+        crate::spell_cast::cast_for_player_with_targets(
+            run.app.world_mut(),
+            actor,
+            spell,
+            crate::spell_cast::CastTargets {
+                unit: target,
+                primary: Some(target),
+                destination: Some(position.to_array()),
+            },
+        )
+        .unwrap();
+        for _ in 0..70 {
+            run.app.update();
+        }
+        assert_eq!(
+            soul_fragments::observation_counts(run.app.world(), actor).0,
+            expected,
+            "spell {spell}, targets {count}, empty {empty}"
+        );
+    }
 }
 
 #[test]
