@@ -16,7 +16,7 @@ const BRANCH_OUT: u32 = 388623;
 const BURST_FORTH: u32 = 388923;
 
 #[derive(Component)]
-struct CrawthDescent;
+pub(super) struct CrawthDescent;
 
 /// WCL deaths correlate each intro with the last member of its local pack.
 /// Positions are Bevy coordinates; the Crawth landing is the first cited boss
