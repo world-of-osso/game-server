@@ -3213,12 +3213,13 @@ fn reward_swing_rage(
             * war_machine_multiplier;
         change_rage(world, attacker, (rage * RAGE_RAW_PER_RAGE).round());
     }
-    if damage > 0.0
-        && has_rage_primary_power(world, target)
-        && !crate::auras::has_aura(world, target, 1178)
-        && take_hit_rage_cooldown(world, target)
-    {
-        change_rage(world, target, RAGE_PER_HIT_TAKEN * RAGE_RAW_PER_RAGE);
+    if damage > 0.0 {
+        if !reward_bear_melee_hit_rage(world, target)
+            && has_rage_primary_power(world, target)
+            && take_hit_rage_cooldown(world, target, RAGE_FROM_HITS_TAKEN_COOLDOWN_SECS)
+        {
+            change_rage(world, target, RAGE_PER_HIT_TAKEN * RAGE_RAW_PER_RAGE);
+        }
     }
 }
 
@@ -3256,6 +3257,32 @@ fn war_machine_rage_modifier(world: &World, unit: Entity) -> (f32, f32) {
     (total, 1.0 + selected / 100.0)
 }
 
+/// SimC76f8118 sc_druid.cpp12480–12500: passive 1178 grants its effect 3
+/// on landed melee swings and specials, including hits consumed by absorbs.
+pub(crate) fn reward_bear_melee_hit_rage(world: &mut World, unit: Entity) -> bool {
+    let amount = world
+        .get::<crate::auras::ActiveAuras>(unit)
+        .and_then(|auras| {
+            auras
+                .iter()
+                .find(|aura| aura.spell_id == 1178 && aura.caster == unit)
+                .and_then(|aura| aura.effects.iter().find(|effect| effect.index == 2))
+                .map(|effect| effect.amount)
+        });
+    let Some(amount) = amount else { return false };
+    let recovery = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(1178)
+        .and_then(|spell| spell.aura_options.as_ref())
+        .expect("Bear Form passive requires its native proc recovery")
+        .proc_category_recovery_ms as f64
+        / 1000.0;
+    if has_rage_primary_power(world, unit) && take_hit_rage_cooldown(world, unit, recovery) {
+        change_rage(world, unit, amount * RAGE_RAW_PER_RAGE);
+    }
+    true
+}
+
 fn has_rage_primary_power(world: &World, unit: Entity) -> bool {
     world
         .get::<PowerPools>(unit)
@@ -3263,7 +3290,7 @@ fn has_rage_primary_power(world: &World, unit: Entity) -> bool {
 }
 
 /// Start the hit-taken rage cooldown; false while it is running.
-fn take_hit_rage_cooldown(world: &mut World, unit: Entity) -> bool {
+fn take_hit_rage_cooldown(world: &mut World, unit: Entity, cooldown: f64) -> bool {
     let now = world.resource::<Time>().elapsed_secs_f64();
     if world
         .get::<RageFromHitsTakenReadyAt>(unit)
@@ -3271,9 +3298,9 @@ fn take_hit_rage_cooldown(world: &mut World, unit: Entity) -> bool {
     {
         return false;
     }
-    world.entity_mut(unit).insert(RageFromHitsTakenReadyAt(
-        now + RAGE_FROM_HITS_TAKEN_COOLDOWN_SECS,
-    ));
+    world
+        .entity_mut(unit)
+        .insert(RageFromHitsTakenReadyAt(now + cooldown));
     true
 }
 
