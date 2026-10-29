@@ -31,7 +31,7 @@ fn roll_galactic(world: &World, aura: &AuraInstance, event: &AuraEvent) -> bool 
         return false;
     }
     if event.actor != aura.caster
-        || event.damage <= 0.0
+        || (event.target == Some(aura.caster) && event.damage <= 0.0)
         || !event.can_proc
         || event.target.is_none()
         || matches!(event.spell_id, Some(MOONFIRE | MOONFIRE_DAMAGE))
