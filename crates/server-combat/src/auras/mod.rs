@@ -49,6 +49,7 @@ mod ignite;
 mod incoming_spell_masks;
 pub mod invisibility;
 mod item_requirements;
+pub(crate) mod life_givers_flame;
 pub mod lifebind;
 mod light_of_titans;
 mod linked;
