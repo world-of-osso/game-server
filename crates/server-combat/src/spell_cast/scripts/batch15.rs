@@ -111,13 +111,13 @@ pub(crate) fn replace_beacon(world: &mut World, unit: Entity, aura: &crate::aura
 
 fn same_group(world: &World, a: Entity, b: Entity) -> bool {
     let (Some(a), Some(b), Some(groups)) = (
-        world.get::<crate::persistence::ClientId>(a),
-        world.get::<crate::persistence::ClientId>(b),
+        crate::spell_cast::targets::raid_member_id(world, a),
+        crate::spell_cast::targets::raid_member_id(world, b),
         world.get_resource::<crate::group::GroupRegistry>(),
     ) else {
         return false;
     };
-    groups.is_in_same_group(a.0, b.0)
+    groups.is_in_same_group(a, b)
 }
 
 ///53563: only effective direct healing on another party/raid member transfers.
