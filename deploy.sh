@@ -10,6 +10,8 @@ GROUND_DIR="${STATE_DIR}/ground"
 GROUND_LIST="$(mktemp)"
 trap 'rm -f "$GROUND_LIST"' EXIT
 
+python3 scripts/check_los_eyes.py --world-db data/world.db --table ../game-engine/data/los/eye_heights.tsv
+
 echo "Building release (Debian bookworm, glibc 2.36: runs on sakuin's older glibc)..."
 # A host `cargo build` links against the deploying machine's glibc (Arch: 2.43),
 # which sakuin's NixOS glibc cannot load.

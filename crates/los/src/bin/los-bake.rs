@@ -30,6 +30,7 @@ struct Args {
     all: bool,
     cutoff: Option<f32>,
     no_eyes: bool,
+    eyes_only: bool,
     m2_only: bool,
     probe: Option<(Vec3, Vec3)>,
 }
@@ -44,6 +45,15 @@ fn main() {
 fn run() -> Result<(), String> {
     let args = parse_args()?;
     let out = args.out.clone().ok_or("--out is required")?;
+    if args.eyes_only {
+        let data = args.data.as_ref().ok_or("--data is required")?;
+        let world_db = args.world_db.as_ref().ok_or("--world-db is required")?;
+        std::fs::create_dir_all(&out).map_err(|err| format!("{}: {err}", out.display()))?;
+        let mut report = String::new();
+        report_eyes(&mut report, data, world_db, &out)?;
+        std::fs::write(out.join("eye_report.txt"), report).map_err(|err| err.to_string())?;
+        return Ok(());
+    }
     let map = args.map.ok_or("--map is required")?;
     if let Some((a, b)) = args.probe {
         return probe(&out.join(map.to_string()), a, b);
@@ -322,6 +332,7 @@ fn parse_args() -> Result<Args, String> {
             "--all" => args.all = true,
             "--cutoff" => args.cutoff = Some(number(&value()?)?),
             "--no-eyes" => args.no_eyes = true,
+            "--eyes-only" => args.eyes_only = true,
             "--m2-only" => args.m2_only = true,
             "--probe" => {
                 let raw = value()?;
