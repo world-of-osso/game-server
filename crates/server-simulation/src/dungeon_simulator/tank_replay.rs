@@ -12,6 +12,21 @@ use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 const TICK_SECONDS: f64 = 0.05;
 const SPIKE_WINDOW_SECONDS: f64 = 5.0;
+
+fn sampled_blocked_pct(world: &World, source: Entity, tank: Entity) -> Result<f32, String> {
+    let attacker = crate::level_scaling::UnitScaling::of(world, source);
+    let defender = crate::level_scaling::UnitScaling::of(world, tank);
+    let constant = attacker
+        .armor_constant(
+            &defender,
+            world.resource::<crate::level_scaling::ArmorConstants>(),
+        )
+        .ok_or("DUMMY_ARMOR_CONSTANT_ABSENT")?;
+    let stats = world
+        .get::<crate::stats::CharacterStats>(tank)
+        .ok_or("TANK_STATS_ABSENT")?;
+    Ok(stats.defense.blocked_pct(constant))
+}
 const SHIELD_OF_THE_RIGHTEOUS: u32 = 132403;
 // SimC Tank_Dummy_Dungeon: native dungeon difficulty 23, MID2 season 120.
 const TANK_DUNGEON_DIFFICULTY: u32 = 23;
@@ -690,12 +705,7 @@ fn replay_registered_run_with_healing(
                         .get::<crate::stats::CharacterStats>(tank)
                         .ok_or("TANK_STATS_ABSENT")?;
                     let world = run.app.world();
-                    let source_level = crate::level_scaling::UnitScaling::of(world, source)
-                        .level_against(&crate::level_scaling::UnitScaling::of(world, tank));
-                    let constant = world
-                        .resource::<crate::level_scaling::ArmorConstants>()
-                        .at(source_level)
-                        .ok_or("DUMMY_ARMOR_CONSTANT_ABSENT")?;
+                    let blocked_pct = sampled_blocked_pct(world, source, tank)?;
                     let damage_mult = run
                         .app
                         .world()
@@ -705,7 +715,7 @@ fn replay_registered_run_with_healing(
                         stats.defense.parry,
                         stats.defense.block,
                         stats.armor,
-                        stats.defense.blocked_pct(constant),
+                        blocked_pct,
                         stats.versatility_pct / 2.0,
                         damage_mult,
                     ]) {
