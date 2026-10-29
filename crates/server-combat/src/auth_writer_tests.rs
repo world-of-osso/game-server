@@ -57,6 +57,66 @@ fn password_login_app(db: GameDatabase) -> (App, Entity) {
 }
 
 #[test]
+fn password_verification_does_not_block_server_updates() {
+    use argon2::password_hash::{PasswordHasher, SaltString};
+    use argon2::{Algorithm, Argon2, Params, Version};
+
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let raw = redb::Database::create(file.path()).unwrap();
+    persistence::create_tables(&raw);
+    let (account, _) =
+        persistence_accounts::register_account(&raw, "coldpassword", "fixture-password").unwrap();
+    let argon = Argon2::new(
+        Algorithm::Argon2id,
+        Version::V0x13,
+        Params::new(19_456, 60, 1, None).unwrap(),
+    );
+    let salt = SaltString::encode_b64(b"login-stall-test").unwrap();
+    let hash = argon
+        .hash_password(b"fixture-password", &salt)
+        .unwrap()
+        .to_string();
+    let txn = raw.begin_write().unwrap();
+    {
+        let mut passwords = txn.open_table(persistence::PASSWORDS).unwrap();
+        passwords.insert(account, hash.as_bytes()).unwrap();
+    }
+    txn.commit().unwrap();
+    let start = Instant::now();
+    persistence_accounts::validate_login_credentials(
+        &raw,
+        None,
+        "coldpassword",
+        "fixture-password",
+    )
+    .unwrap();
+    let verification_time = start.elapsed();
+    let (mut app, connection) = password_login_app(GameDatabase::new(raw));
+    let start = Instant::now();
+    app.update();
+    app.update();
+    let update_time = start.elapsed();
+    assert!(
+        update_time < verification_time / 2,
+        "login update {update_time:?} blocked for credential verification {verification_time:?}"
+    );
+    let deadline = Instant::now() + Duration::from_secs(30);
+    while app.world().resource::<LoginReplies>().0.is_empty() {
+        assert!(Instant::now() < deadline, "login never completed");
+        app.update();
+        std::thread::yield_now();
+    }
+    assert!(app.world().resource::<LoginReplies>().0[0].success);
+    assert_eq!(
+        app.world()
+            .get::<Authenticated>(connection)
+            .unwrap()
+            .account_id,
+        account
+    );
+}
+
+#[test]
 fn password_login_returns_while_writer_is_held_and_publishes_only_a_durable_token() {
     let file = tempfile::NamedTempFile::new().unwrap();
     let raw = redb::Database::create(file.path()).unwrap();
