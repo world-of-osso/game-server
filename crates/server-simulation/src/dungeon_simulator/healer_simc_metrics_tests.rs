@@ -51,6 +51,36 @@ fn healer_report_records_real_mana_payment_by_spell() {
 
 #[test]
 #[ignore = "requires native spell data"]
+fn healer_report_records_actual_damage_to_enemy() {
+    use shared::protocol::CombatLogKind;
+    let mut h = crate::spell_cast::test_harness::harness(Vec::new(), &[585], 5).unwrap();
+    h.app
+        .init_resource::<crate::spell_cast::test_harness::ObservedCombatEvents>();
+    let mut recorder = Recorder::start(h.app.world(), h.caster, h.caster, vec![h.caster]);
+    h.cast_and_deliver(585, Some(h.npc));
+    h.advance(80);
+    recorder.observe_frame(h.app.world(), 80);
+    let events = &h
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    let hit = events
+        .iter()
+        .find(|event| {
+            event.kind == CombatLogKind::Damage
+                && event.spell_id == Some(585)
+                && event.source == Some(h.caster.to_bits())
+                && event.target == Some(h.npc.to_bits())
+        })
+        .expect("actual Smite damage");
+    let report = recorder.report(h.app.world(), 4);
+    assert_eq!(report["damage_by_spell"]["585"]["hits"], 1);
+    assert_eq!(report["damage_by_spell"]["585"]["amount"], hit.amount);
+}
+
+#[test]
+#[ignore = "requires native spell data"]
 fn healer_report_records_passive_mana_regeneration() {
     let mut h = crate::spell_cast::test_harness::harness_with(Vec::new(), &[], 5, true).unwrap();
     h.app
