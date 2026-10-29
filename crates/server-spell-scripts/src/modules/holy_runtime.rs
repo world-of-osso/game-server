@@ -37,6 +37,7 @@ pub const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AreaFilter(holy_priest::serenity_area_filter),
     SpellScriptHook::ContextHit(holy_priest::serenity_hit),
     SpellScriptHook::ResolvedHeal(holy_priest::piety),
+    SpellScriptHook::ResolvedHeal(holy_priest::benediction_from_mending),
     SpellScriptHook::TargetPlan(target_plan),
 ];
 
@@ -49,7 +50,7 @@ fn after_cast(spell: u32) -> Option<AfterCastHook> {
     match spell {
         holy_priest::APOTHEOSIS => Some(holy_priest::restore_holy_words),
         prayer_of_mending::PRAYER => Some(holy_priest::reduce_word_on_mending),
-        FLASH_HEAL => Some(flash_heal),
+        FLASH_HEAL | 1_262_763 => Some(flash_heal),
         PRAYER_OF_HEALING => Some(prayer),
         _ => None,
     }
@@ -60,13 +61,16 @@ fn target_plan(spell: u32) -> Option<(Relation, TargetPlanHook)> {
 }
 
 /// 2050s2 is the number of seconds removed when Flash Heal is cast.
-fn flash_heal(world: &mut World, caster: Entity, _spell: &SpellInfo) {
+fn flash_heal(world: &mut World, caster: Entity, spell: &SpellInfo) {
     if world.resource::<SpellStore>().get(SERENITY).is_some() {
         let seconds = script_effect_value(world, caster, SERENITY, 1);
         let seconds = holy_priest::holy_word_reduction(world, caster, seconds);
         reduce_cooldown(world, caster, SERENITY, seconds);
     }
     holy_priest::spend_surge(world, caster);
+    if spell.id == 1_262_763 {
+        holy_priest::spend_benediction(world, caster);
+    }
 }
 
 /// 34861s3: Prayer of Healing reduces an existing recharge by six seconds.
