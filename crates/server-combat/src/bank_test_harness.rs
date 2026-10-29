@@ -175,6 +175,7 @@ pub(crate) fn spawn_connection(
                 pair::<InteractionOpened>(),
                 pair::<InteractionClosed>(),
                 pair::<InteractionFailed>(),
+                pair::<GuildBankMove>(),
             ),
             (
                 pair::<BankContents>(),

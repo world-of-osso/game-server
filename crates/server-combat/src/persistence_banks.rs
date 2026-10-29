@@ -119,6 +119,8 @@ pub enum GuildBankLogKindData {
     BuyTab,
     /// TrinityCore `GUILD_BANK_LOG_REPAIR_MONEY`.
     RepairMoney,
+    /// Bank-to-bank movement; `copper` stores the destination tab index.
+    MoveItem,
 }
 
 #[derive(bitcode::Encode, bitcode::Decode, Debug, Clone, PartialEq)]
@@ -265,6 +267,21 @@ pub fn save_bank_move(
     inventory: Option<&InventoryRecord>,
 ) {
     save_bank_moves(db, character_id, [owner], inventory);
+}
+
+/// Persist a guild-bank rearrangement and split-item metadata atomically.
+pub(crate) fn save_guild_bank_rearrangement(
+    db: &Database,
+    character_id: u64,
+    owner: BankOwner<'_>,
+    clones: &[(u64, u64)],
+) {
+    let txn = db.begin_write().expect("begin guild bank rearrangement");
+    write_bank_owner(&txn, character_id, owner);
+    for &(source, destination) in clones {
+        super::inventory_store::copy_item_metadata_in(&txn, source, destination);
+    }
+    txn.commit().expect("commit guild bank rearrangement");
 }
 
 /// `save_bank_move` for several banks in one transaction.
@@ -494,6 +511,117 @@ pub(crate) fn migrate_guild_ranks(db: &Database) {
     txn.commit()
         .expect("Failed to commit guild layout migration");
     bevy::log::info!("Migrated {migrated} guilds to layout version {GUILD_LAYOUT_VERSION}");
+}
+
+/// `SERVER_SETTINGS` key of the `GuildBankLogs` layout version.
+pub(crate) const GUILD_BANK_LOG_LAYOUT_KEY: &str = "guild_bank_log_layout_version";
+/// 1 added `MoveItem`: bitcode packs six and seven enum variants differently.
+pub(crate) const GUILD_BANK_LOG_LAYOUT_VERSION: u32 = 1;
+
+/// Log kinds before `MoveItem`. Rows from before `RepairMoney` use the same packing.
+#[derive(bitcode::Decode)]
+enum GuildBankLogKindV0 {
+    DepositItem,
+    WithdrawItem,
+    DepositMoney,
+    WithdrawMoney,
+    BuyTab,
+    RepairMoney,
+}
+
+#[derive(bitcode::Decode)]
+struct GuildBankLogDataV0 {
+    kind: GuildBankLogKindV0,
+    actor: String,
+    item_id: u32,
+    item_name: String,
+    count: u32,
+    copper: u64,
+    time: u64,
+}
+
+#[derive(bitcode::Decode)]
+struct GuildBankLogsV0 {
+    tabs: Vec<Vec<GuildBankLogDataV0>>,
+    money: Vec<GuildBankLogDataV0>,
+}
+
+impl From<GuildBankLogDataV0> for GuildBankLogData {
+    fn from(old: GuildBankLogDataV0) -> Self {
+        let kind = match old.kind {
+            GuildBankLogKindV0::DepositItem => GuildBankLogKindData::DepositItem,
+            GuildBankLogKindV0::WithdrawItem => GuildBankLogKindData::WithdrawItem,
+            GuildBankLogKindV0::DepositMoney => GuildBankLogKindData::DepositMoney,
+            GuildBankLogKindV0::WithdrawMoney => GuildBankLogKindData::WithdrawMoney,
+            GuildBankLogKindV0::BuyTab => GuildBankLogKindData::BuyTab,
+            GuildBankLogKindV0::RepairMoney => GuildBankLogKindData::RepairMoney,
+        };
+        Self {
+            kind,
+            actor: old.actor,
+            item_id: old.item_id,
+            item_name: old.item_name,
+            count: old.count,
+            copper: old.copper,
+            time: old.time,
+        }
+    }
+}
+
+impl From<GuildBankLogsV0> for GuildBankLogs {
+    fn from(old: GuildBankLogsV0) -> Self {
+        let upgrade = |log: Vec<GuildBankLogDataV0>| log.into_iter().map(Into::into).collect();
+        Self {
+            tabs: old.tabs.into_iter().map(upgrade).collect(),
+            money: upgrade(old.money),
+        }
+    }
+}
+
+/// Rewrite stored guild bank logs from layout 0 to 1 atomically, once.
+pub(crate) fn migrate_guild_bank_logs(db: &Database) {
+    let txn = db
+        .begin_write()
+        .expect("Failed to begin guild bank log migration");
+    if super::layout_version(&txn, GUILD_BANK_LOG_LAYOUT_KEY) >= GUILD_BANK_LOG_LAYOUT_VERSION {
+        return;
+    }
+    let migrated = {
+        let mut table = txn
+            .open_table(GUILD_BANK_LOGS)
+            .expect("Failed to open guild bank logs for migration");
+        let rows: Vec<(u32, GuildBankLogs)> = table
+            .iter()
+            .expect("Failed to iterate guild bank logs")
+            .map(|row| {
+                let (key, value) = row.expect("Failed to read guild bank log row");
+                let logs =
+                    bitcode::decode::<GuildBankLogsV0>(value.value()).unwrap_or_else(|error| {
+                        panic!(
+                            "Failed to migrate guild {} bank logs: {error:?}",
+                            key.value()
+                        )
+                    });
+                (key.value(), GuildBankLogs::from(logs))
+            })
+            .collect();
+        for (guild_id, logs) in &rows {
+            table
+                .insert(*guild_id, bitcode::encode(logs).as_slice())
+                .expect("Failed to write migrated guild bank logs");
+        }
+        rows.len()
+    };
+    super::set_layout_version(
+        &txn,
+        GUILD_BANK_LOG_LAYOUT_KEY,
+        GUILD_BANK_LOG_LAYOUT_VERSION,
+    );
+    txn.commit()
+        .expect("Failed to commit guild bank log migration");
+    bevy::log::info!(
+        "Migrated {migrated} guild bank logs to layout version {GUILD_BANK_LOG_LAYOUT_VERSION}"
+    );
 }
 
 pub(crate) fn create_bank_tables(txn: &WriteTransaction) {

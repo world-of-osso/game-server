@@ -5,7 +5,8 @@ use shared::item_data::ItemDefinitionSource;
 use shared::protocol::TransmogChoice;
 use std::collections::HashMap;
 
-const ITEM_TRANSMOGS: TableDefinition<u64, &[u8]> = TableDefinition::new("item_transmogs");
+pub(crate) const ITEM_TRANSMOGS: TableDefinition<u64, &[u8]> =
+    TableDefinition::new("item_transmogs");
 
 #[derive(bitcode::Encode, bitcode::Decode, Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct ItemTransmog {

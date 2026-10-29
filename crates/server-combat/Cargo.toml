@@ -21,7 +21,7 @@ wow-adt = { git = "https://github.com/world-of-osso/wow-formats.git", rev = "882
 wow-wmo = { git = "https://github.com/world-of-osso/wow-formats.git", rev = "882b2fc748c0365dad315375d0827e1f066f733f", default-features = false }
 # Static seat offsets only; activation tracks and rendering data are not needed by vehicles.
 wow-m2 = { git = "https://github.com/world-of-osso/wow-formats.git", rev = "882b2fc748c0365dad315375d0827e1f066f733f", default-features = false, features = ["attachments"] }
-shared = { git = "https://github.com/world-of-osso/shared-protocol.git", rev = "feaf01ac7d170a23abfe3759f982f9baad9066ee" }
+shared = { git = "https://github.com/world-of-osso/shared-protocol.git", rev = "e05cebba044cbbd90922bbc9876a434d6616d0d9" }
 # Read-only packet iteration and exact send-stage ordering for diagnostic census only.
 lightyear_link = { version = "0.28", optional = true, features = ["test_utils"] }
 lightyear_transport = { version = "0.28", optional = true }
