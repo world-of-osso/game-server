@@ -8,6 +8,13 @@ fn master_shapeshifter_restores_mana_from_actual_wrath() {
     use shared::protocol::CombatLogKind;
     let mut h = harness(Vec::new(), &[5176, 289237, 411146], 11).unwrap();
     h.app.init_resource::<ObservedCombatEvents>();
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(crate::class_progression::KnownSpells::fixture(vec![
+            5176, 411146,
+        ]));
+    h.advance(3);
     *h.app.world_mut().get_mut::<Mana>(h.caster).unwrap() = Mana {
         current: 5000.0,
         max: 10_000.0,
