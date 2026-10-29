@@ -716,7 +716,7 @@ fn replay_registered_run_with_healing(
     let mut cast_timeline = Vec::new();
     let mut damage_taken_by_kind = BTreeMap::<&str, f64>::new();
     let mut outcomes = BTreeMap::<String, usize>::new();
-    let mut outcome_sequence = Vec::<String>::new();
+    let mut outcome_sequence = Vec::<Value>::new();
     let mut incoming_before_absorbs = BTreeMap::<&str, f64>::new();
     let mut incoming_by_outcome = BTreeMap::<String, f64>::new();
     let mut defense_totals = [0.0_f64; 6];
@@ -842,7 +842,6 @@ fn replay_registered_run_with_healing(
                         }
                     );
                     *outcomes.entry(key.clone()).or_default() += 1;
-                    outcome_sequence.push(format!("{outcome:?}"));
                     outcome_key = Some(key);
                     let stats = run
                         .app
@@ -867,6 +866,12 @@ fn replay_registered_run_with_healing(
                         *total += f64::from(value);
                     }
                     defense_samples += 1;
+                    outcome_sequence.push(json!({
+                        "outcome": format!("{outcome:?}"),
+                        "parry_pct": stats.defense.parry,
+                        "dodge_pct": stats.defense.dodge,
+                        "block_pct": stats.defense.block,
+                    }));
                     if let Some(auras) = world.get::<crate::auras::ActiveAuras>(tank) {
                         for aura in auras.iter() {
                             for effect in

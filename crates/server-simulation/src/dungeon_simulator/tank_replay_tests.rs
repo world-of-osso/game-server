@@ -1700,6 +1700,11 @@ fn unregistered_tank_driver_fails_instead_of_using_a_follower() {
 #[ignore = "requires canonical MID2 profile inputs and the six SimC tank traces"]
 fn pressure_scale_keeps_same_seed_attack_outcomes_for_every_tank() {
     let traces = std::env::var("HEALER_TANK_TRACE_DIR").expect("HEALER_TANK_TRACE_DIR required");
+    let chances = |attack: &serde_json::Value| {
+        ["parry_pct", "dodge_pct", "block_pct"].map(|chance| attack[chance].as_f64().unwrap())
+    };
+    // Blood's Dance of Midnight and Brewmaster's Elusive Brawler change avoidance
+    // through the tank's own procs and decisions; equal chances must roll equally.
     for spec in [66, 73, 104, 250, 268, 581] {
         let path = Path::new(&traces).join(format!("{spec}.simc-trace.log"));
         let outcomes = |scale| {
@@ -1716,7 +1721,20 @@ fn pressure_scale_keeps_same_seed_attack_outcomes_for_every_tank() {
         let pressured = outcomes(2.0);
         let shared = normal.len().min(pressured.len());
         assert!(shared >= 40, "spec {spec}: only {shared} shared attacks");
-        assert_eq!(normal[..shared], pressured[..shared], "spec {spec}");
+        let mismatch = (0..shared).find(|&attack| {
+            let same_chances = chances(&normal[attack]) == chances(&pressured[attack]);
+            same_chances && normal[attack]["outcome"] != pressured[attack]["outcome"]
+        });
+        assert_eq!(
+            mismatch,
+            None,
+            "spec {spec}: equal chances rolled differently ({} at 1.0x, {} at 2.0x)",
+            mismatch.map_or(serde_json::Value::Null, |attack| normal[attack].clone()),
+            mismatch.map_or(serde_json::Value::Null, |attack| pressured[attack].clone()),
+        );
+        if matches!(spec, 66 | 73 | 104 | 581) {
+            assert_eq!(normal[..shared], pressured[..shared], "spec {spec}");
+        }
     }
 }
 
