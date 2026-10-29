@@ -2649,6 +2649,32 @@ mod tests {
 
     #[test]
     #[ignore = "requires canonical world database and MID2 Blood inputs"]
+    fn blood_visceral_strength_requires_free_decay() {
+        for free in [false, true] {
+            let mut run = super::super::prepare_registered_player(250, 1).unwrap();
+            let actor = run.actor;
+            super::super::engage(&mut run);
+            assert!(run.app.world().get::<crate::class_progression::KnownSpells>(actor).unwrap().contains(434157));
+            crate::auras::remove_auras(run.app.world_mut(), actor, crate::auras::RemoveReason::Cancelled, |aura| matches!(aura.spell_id, 81141 | 461130));
+            if free {
+                crate::auras::apply_aura(run.app.world_mut(), &crate::auras::AuraApplication {
+                    caster: actor, target: actor, spell_id: 81141, effect_mask: u32::MAX,
+                    source: crate::auras::AuraSource::Cast,
+                });
+            }
+            let before = run.app.world().get::<crate::stats::CharacterStats>(actor).unwrap().primary.strength;
+            crate::spell_cast::creature_cast(run.app.world_mut(), actor, 43265, Some(actor), false).unwrap();
+            for _ in 0..4 { run.app.update(); }
+            let world = run.app.world();
+            assert_eq!(crate::auras::has_aura(world, actor, 461130), free);
+            let after = world.get::<crate::stats::CharacterStats>(actor).unwrap().primary.strength;
+            if free { assert!(after > before * 1.05, "strength {before} -> {after}"); }
+            else { assert!((after - before).abs() < 0.01, "strength {before} -> {after}"); }
+        }
+    }
+
+    #[test]
+    #[ignore = "requires canonical world database and MID2 Blood inputs"]
     fn blood_crimson_scourge_builds_real_ground_and_sanguine_follows_position() {
         let _seed = crate::random::seed_scope(70448);
         let mut run = super::super::prepare_registered_player(250, 1).unwrap();
