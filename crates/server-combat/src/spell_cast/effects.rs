@@ -379,6 +379,7 @@ pub fn power_stats(world: &World, unit: Entity, healing: bool) -> (f32, f32) {
                     (summon.spell_id, entry),
                     (317776 | 1242294, Some(163366))
                         | (49028 | 1237128 | 1264353, Some(27893))
+                        | (434237, Some(217228))
                         | (1292072, Some(264321))
                         | (288853, Some(149555))
                         | (444248, Some(221632))

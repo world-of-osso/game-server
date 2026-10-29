@@ -801,6 +801,66 @@ mod tests {
 
     #[test]
     #[ignore = "requires canonical world database and MID2 Blood inputs"]
+    fn blood_beast_attacks_and_eruptions_use_real_owned_summon() {
+        use shared::components::{Npc, UnitSummonedBy};
+        use shared::protocol::CombatLogKind;
+        let _seed = crate::random::seed_scope(70448);
+        let mut run = super::super::prepare_registered_player(250, 1).unwrap();
+        let owner = run.actor;
+        let target = run.targets[0];
+        super::super::engage(&mut run);
+        crate::spell_cast::creature_cast(run.app.world_mut(), owner, 49028, Some(owner), false)
+            .unwrap();
+        for _ in 0..4 {
+            run.app.update();
+        }
+        let world = run.app.world_mut();
+        let beast = world
+            .query::<(bevy::prelude::Entity, &Npc, &UnitSummonedBy)>()
+            .iter(world)
+            .find(|(_, npc, summoned)| npc.template_id == 217228 && summoned.0 == owner.to_bits())
+            .expect("real owned Blood Beast")
+            .0;
+        let owner_stats = world.get::<crate::stats::CharacterStats>(owner).unwrap();
+        let owner_ap = owner_stats.total_attack_power(
+            crate::stats::WeaponAttackType::MainHand,
+            world.get::<crate::stats::StatModifiers>(owner),
+        );
+        let (_, beast_ap) = crate::spell_cast::effects::power_stats(world, beast, false);
+        assert!((beast_ap - 3.0 * owner_ap).abs() < 0.01);
+        for _ in 0..220 {
+            run.app.update();
+        }
+        let events = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0;
+        for spell in [None, Some(434574)] {
+            assert!(
+                events
+                    .iter()
+                    .any(|event| event.source == Some(beast.to_bits())
+                        && event.target == Some(target.to_bits())
+                        && event.spell_id == spell
+                        && event.kind == CombatLogKind::Damage
+                        && event.amount > 0),
+                "Blood Beast damage {spell:?}"
+            );
+        }
+        assert!(
+            events
+                .iter()
+                .any(|event| event.source == Some(owner.to_bits())
+                    && event.spell_id == Some(434246)
+                    && event.kind == CombatLogKind::Damage
+                    && event.amount > 0),
+            "Blood Beast expiration must erupt"
+        );
+    }
+
+    #[test]
+    #[ignore = "requires canonical world database and MID2 Blood inputs"]
     fn blood_sanguinary_burst_increases_with_real_runic_power_spending() {
         use shared::components::PowerType;
         use shared::protocol::CombatLogKind;

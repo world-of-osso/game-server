@@ -19,7 +19,113 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::EffectEnabled(blood_vampiric_damage_effect),
     SpellScriptHook::AfterPolicyDirectDamage(infliction_of_sorrow),
     SpellScriptHook::TargetFilter(limit_vampiric_targets),
+    SpellScriptHook::AfterForegroundSpecial(summon_blood_beast),
+    SpellScriptHook::SummonInitialized(initialize_blood_beast),
+    SpellScriptHook::LandedDamagePolicy(accumulate_beast_damage),
+    SpellScriptHook::SummonExpired(erupt_blood_beast),
 ];
+
+#[derive(Component, Default)]
+struct BloodBeastDamage(f32);
+
+// SimC76f8118 sc_death_knight.cpp4692–4793/9529–9530: the real beast
+// attacks, records its actual damage and erupts when its summon expires.
+fn summon_blood_beast(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    if spell.id == 49028
+        && world
+            .get::<ActiveSpec>(caster)
+            .is_some_and(|spec| spec.0 == 250)
+        && world
+            .get::<KnownSpells>(caster)
+            .is_some_and(|known| known.contains(434260))
+    {
+        spell_cast::cast_triggered(world, caster, 434237, Some(caster), 1);
+    }
+}
+
+fn initialize_blood_beast(world: &mut World, beast: Entity) {
+    let Some(summon) = world.get::<spell_cast::summon::SummonedCreature>(beast) else {
+        return;
+    };
+    if summon.spell_id != 434237 {
+        return;
+    }
+    let owner = summon.owner;
+    world.entity_mut(beast).insert((
+        BloodBeastDamage::default(),
+        combat::combat::CreatureAttackTime(1.0),
+    ));
+    let Some(target) = world
+        .get::<combat::networking::CombatTarget>(owner)
+        .and_then(|target| target.0)
+    else {
+        warn!(?owner, "Blood Beast has no selected target");
+        return;
+    };
+    spell_cast::summon::start_melee_attack(world, beast, target);
+}
+
+fn accumulate_beast_damage(
+    world: &mut World,
+    attacker: Entity,
+    _: Entity,
+    spell: Option<u32>,
+    amount: f32,
+    periodic: bool,
+) {
+    if !periodic
+        && matches!(spell, None | Some(434574))
+        && let Some(mut state) = world.get_mut::<BloodBeastDamage>(attacker)
+    {
+        state.0 += amount.max(0.0);
+    }
+}
+
+fn erupt_blood_beast(world: &mut World, beast: Entity) {
+    let Some(state) = world.get::<BloodBeastDamage>(beast) else {
+        return;
+    };
+    let damage = state.0;
+    let owner = world
+        .get::<spell_cast::summon::SummonedCreature>(beast)
+        .expect("Blood Beast summon")
+        .owner;
+    let Some(target) = world
+        .get::<combat::networking::CombatTarget>(owner)
+        .and_then(|target| target.0)
+    else {
+        return;
+    };
+    let Some(position) = world.get::<shared::components::Position>(target).copied() else {
+        return;
+    };
+    let percent = world
+        .resource::<SpellStore>()
+        .get(434260)
+        .expect("The Blood is Life")
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .expect("Blood eruption percentage")
+        .base_points
+        / 100.0;
+    let Some(mut eruption) = spell_cast::load_triggered_spell(world, 434246, 1) else {
+        return;
+    };
+    let effect = eruption
+        .effects
+        .iter_mut()
+        .find(|effect| effect.index == 0)
+        .expect("Blood eruption damage");
+    effect.base_points = damage * percent;
+    eruption.cast_destination = Some([position.x, position.y, position.z]);
+    eruption
+        .misc
+        .as_mut()
+        .expect("Blood eruption attributes")
+        .attributes[2] |= 0x2000_0000;
+    spell_cast::launch_triggered_spell(world, owner, &eruption, Some(target), 1);
+}
 
 // SimC76f8118 sc_death_knight.cpp11325–11329: Blood's Vampiric Strike
 // uses effect 5, not the separate Unholy damage effect 1.
