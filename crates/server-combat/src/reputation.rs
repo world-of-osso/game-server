@@ -154,7 +154,10 @@ fn apply_npc_kill_reputation(
     Some(format_change_message(&changes, registry))
 }
 
-fn format_change_message(changes: &[RepChangeResult], registry: &FactionRegistry) -> String {
+pub(crate) fn format_change_message(
+    changes: &[RepChangeResult],
+    registry: &FactionRegistry,
+) -> String {
     let mut message = primary_change_message(changes[0], registry);
     append_spillover_message(&mut message, spillover_changes(changes, registry));
     message

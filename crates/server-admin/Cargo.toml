@@ -7,7 +7,7 @@ rust-version.workspace = true
 [dependencies]
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-shared = { git = "https://github.com/world-of-osso/shared-protocol.git", rev = "e05cebba044cbbd90922bbc9876a434d6616d0d9" }
+shared = { git = "https://github.com/world-of-osso/shared-protocol.git", rev = "7773df472ceaf0595ea4ba5962fa7d2363b55e45" }
 # Concrete request/response codecs and the existing local socket task compile here.
 peercred-ipc = { git = "https://github.com/Osso/peercred-ipc.git", tag = "v0.2.0" }
 tokio = { version = "1", features = ["rt-multi-thread"] }
