@@ -34,6 +34,19 @@ mod caster_ability_crit_tests;
 #[cfg(any(test, feature = "test-support"))]
 #[path = "factor_capture.rs"]
 pub mod factor_capture;
+/// Production builds keep the armor capture call site; it records nothing.
+#[cfg(not(any(test, feature = "test-support")))]
+mod factor_capture {
+    pub(crate) fn record_armor(
+        _: &super::World,
+        _: super::Entity,
+        _: super::Entity,
+        _: &super::SpellInfo,
+        _: f32,
+        _: &crate::combat::ArmorMitigation,
+    ) {
+    }
+}
 #[cfg(test)]
 #[path = "windwalker_mastery_tests.rs"]
 mod windwalker_mastery_tests;
@@ -1012,7 +1025,6 @@ fn armor_reduced(
         world.get_resource::<ArmorConstants>(),
         world.get::<crate::auras::AuraStatMods>(caster),
     );
-    #[cfg(any(test, feature = "test-support"))]
     factor_capture::record_armor(world, caster, target, spell, amount, &mitigation);
     mitigation.damage
 }
