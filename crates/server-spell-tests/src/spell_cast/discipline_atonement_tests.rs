@@ -5,6 +5,151 @@ use shared::components::{ActiveSpec, Health};
 use shared::protocol::CombatLogKind;
 
 #[test]
+fn discipline_evangelism_cast_triggers_scaled_radiance_and_marks_allies() {
+    let mut primary_heals = Vec::new();
+    for root in [194509, 472433] {
+        let _seed = crate::random::seed_scope(70448);
+        let mut h = harness(Vec::new(), &[194509, 472433, 194384, 81749], 5).unwrap();
+        h.app
+            .init_resource::<super::test_harness::ObservedCombatEvents>();
+        let caster = h.caster;
+        h.app.world_mut().entity_mut(caster).insert(ActiveSpec(256));
+        h.app
+            .world_mut()
+            .get_mut::<server::stats::CharacterStats>(caster)
+            .unwrap()
+            .crit_pct = 0.0;
+        let primary = spawn_player(&mut h.app, 5, 2.0);
+        *h.app.world_mut().get_mut::<Health>(primary).unwrap() = Health {
+            current: 100.0,
+            max: 10_000.0,
+        };
+        let ally = spawn_player(&mut h.app, 5, 3.0);
+        *h.app.world_mut().get_mut::<Health>(ally).unwrap() = Health {
+            current: 100.0,
+            max: 10_000.0,
+        };
+        h.cast_and_deliver(root, Some(primary));
+        h.advance(80);
+        assert!(
+            h.inbox.failed.is_empty(),
+            "real cast failed: {:?}",
+            h.inbox.failed
+        );
+        let events = &h
+            .app
+            .world()
+            .resource::<super::test_harness::ObservedCombatEvents>()
+            .0;
+        let heal = events
+            .iter()
+            .find(|event| {
+                event.kind == CombatLogKind::Heal
+                    && event.spell_id == Some(194509)
+                    && event.target == Some(primary.to_bits())
+            })
+            .expect("primary receives real Radiance heal");
+        assert!(crate::auras::has_aura(h.app.world(), primary, 194384));
+        assert!(crate::auras::has_aura(h.app.world(), ally, 194384));
+        primary_heals.push(heal.amount);
+    }
+    let ratio = primary_heals[1] as f32 / primary_heals[0] as f32;
+    assert!(
+        (1.3..1.7).contains(&ratio),
+        "Evangelism Radiance uses native 150%: {primary_heals:?}"
+    );
+}
+
+#[test]
+fn discipline_dark_side_is_consumed_and_snapshotted_for_all_penance_bolts() {
+    let mut damage_sets = Vec::new();
+    for empowered in [false, true] {
+        let _seed = crate::random::seed_scope(70448);
+        let mut h = harness(Vec::new(), &[47540, 47758, 47757, 47666, 47750, 198069], 5).unwrap();
+        h.app
+            .init_resource::<super::test_harness::ObservedCombatEvents>();
+        let caster = h.caster;
+        h.app.world_mut().entity_mut(caster).insert(ActiveSpec(256));
+        h.app
+            .world_mut()
+            .get_mut::<server::stats::CharacterStats>(caster)
+            .unwrap()
+            .crit_pct = 0.0;
+        if empowered {
+            crate::auras::apply_aura(
+                h.app.world_mut(),
+                &crate::auras::AuraApplication {
+                    caster,
+                    target: caster,
+                    spell_id: 198069,
+                    effect_mask: u32::MAX,
+                    source: crate::auras::AuraSource::Cast,
+                },
+            );
+        }
+        h.cast_and_deliver(47540, Some(h.npc));
+        h.advance(70);
+        assert!(!crate::auras::has_aura(h.app.world(), caster, 198069));
+        let events = &h
+            .app
+            .world()
+            .resource::<super::test_harness::ObservedCombatEvents>()
+            .0;
+        let damage: Vec<_> = events
+            .iter()
+            .filter(|event| event.kind == CombatLogKind::Damage && event.spell_id == Some(47666))
+            .map(|event| event.amount)
+            .collect();
+        assert_eq!(damage.len(), 3);
+        damage_sets.push(damage);
+    }
+    for (base, empowered) in damage_sets[0].iter().zip(&damage_sets[1]) {
+        let ratio = *empowered as f32 / *base as f32;
+        assert!(
+            (1.2..1.4).contains(&ratio),
+            "Dark Side must persist through each real bolt: {damage_sets:?}"
+        );
+    }
+}
+
+#[test]
+fn discipline_prompt_prognosis_amplifies_only_the_third_penance_bolt() {
+    let mut h = harness(Vec::new(), &[47540, 47758, 47757, 47666, 47750, 1246799], 5).unwrap();
+    h.app
+        .init_resource::<super::test_harness::ObservedCombatEvents>();
+    let caster = h.caster;
+    h.app.world_mut().entity_mut(caster).insert((
+        ActiveSpec(256),
+        crate::class_progression::KnownSpells::fixture(vec![47540, 1246799]),
+    ));
+    h.app
+        .world_mut()
+        .get_mut::<server::stats::CharacterStats>(caster)
+        .unwrap()
+        .crit_pct = 0.0;
+    h.cast_and_deliver(47540, Some(h.npc));
+    h.advance(70);
+    let events = &h
+        .app
+        .world()
+        .resource::<super::test_harness::ObservedCombatEvents>()
+        .0;
+    let damage: Vec<_> = events
+        .iter()
+        .filter(|event| event.kind == CombatLogKind::Damage && event.spell_id == Some(47666))
+        .collect();
+    assert_eq!(damage.len(), 3);
+    assert!(
+        damage[1].amount < damage[0].amount * 2,
+        "the second bolt is unmodified: {damage:?}"
+    );
+    assert!(
+        damage[2].amount > damage[0].amount * 2,
+        "the third bolt gets the native 125% bonus: {damage:?}"
+    );
+}
+
+#[test]
 fn discipline_penance_twinsight_heals_and_holy_ray_increases_later_bolts() {
     let mut h = harness(
         Vec::new(),
