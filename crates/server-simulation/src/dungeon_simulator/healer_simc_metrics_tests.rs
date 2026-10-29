@@ -9,8 +9,9 @@ fn healer_report_counts_only_consumed_owned_shields() {
     let mut h = crate::spell_cast::test_harness::harness(Vec::new(), &[133, 17], 5).unwrap();
     h.app
         .init_resource::<crate::spell_cast::test_harness::ObservedCombatEvents>();
+    let other_healer = crate::spell_cast::test_harness::spawn_player(&mut h.app, 5, 2.0);
     h.app.insert_resource(super::super::healer_intake::Capture {
-        members: vec![h.caster],
+        members: vec![h.caster, other_healer],
         sources: [(h.npc, (6, 6))].into(),
         ..Default::default()
     });
@@ -54,6 +55,36 @@ fn healer_report_counts_only_consumed_owned_shields() {
     assert_eq!(
         recorder.report(h.app.world(), 1)["consumed_absorbs_by_spell"]["17"],
         200.0
+    );
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: other_healer,
+            target: other_healer,
+            spell_id: 17,
+            effect_mask: 1,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    let before = h.health(other_healer);
+    crate::spell_cast::effects::deal_damage_shield(
+        h.app.world_mut(),
+        &crate::spell_cast::effects::EffectCtx {
+            caster: h.npc,
+            spell: &spell,
+            depth: 1,
+            dest: None,
+            chain_multiplier: 1.0,
+        },
+        h.npc,
+        other_healer,
+        100.0,
+    );
+    assert_eq!(h.health(other_healer), before);
+    assert_eq!(
+        recorder.report(h.app.world(), 1)["consumed_absorbs_by_spell"]["17"],
+        200.0,
+        "the other healer's consumed shield must not be attributed to this healer"
     );
 }
 

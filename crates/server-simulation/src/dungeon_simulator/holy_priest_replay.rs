@@ -1,4 +1,4 @@
-//! Native Holy Priest priorities; SimC 76f8118 has no Priest healer APL.
+//! Native Holy Priest priorities; the SimC 76f8118 healer APL is experimental.
 use super::dps_parity::literal_rotation::{
     self, Driver,
     equipment::Equipment,
