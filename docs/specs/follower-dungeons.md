@@ -333,6 +333,8 @@ Patrol evidence requires at least three distinct runs and a navmesh-validated ro
 
 ### Copy-only coverage, 2026-10-28
 
+**Superseded diagnostic:** A later copy review found three near-authored duplicates. The importer now rejects unmatched slots within three yards of an existing same-NPC row; a fresh-copy rerun is pending. Do not use the counts below as final import coverage.
+
 These are position-assignment slots, not proven authored spawn counts. Existing rows are one-to-one matches within ten yards in 3-D, not identity proof. The importer was run on a database copy only. `P` is `POSITION_Z_UNRESOLVED`, `A` is `AMBIGUOUS_SPAWN_IDENTITY`, `C` is `CENTROID_Z_UNRESOLVED`, and `E` is `MID_ENCOUNTER_ONLY_ID`. `PATROL_UNOBSERVED` applies to every imported slot.
 
 | Dungeon (map) | Slots | Imported | Nearby existing | Preparation gaps | TDB template IDs projected | IDs absent in both sources |
