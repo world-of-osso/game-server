@@ -210,6 +210,14 @@
 
 - TC `boss_leymor.cpp` removes native374720 effect0 periodic-trigger aura by killing its target, on any removal reason. TDB condition restricts this effect to190509 Ley-Line Sprouts. Their ordinary death callback owns Arcane Power stack removal; Leymor uses encounter2582/bit0 ordinary death credit. This does not certify the full follower clear.
 
+## Leymor Arcane Tender and evade lifecycle
+
+- TC `npc_arcane_tender` (191164): on appearing and on reaching home, channel Stasis Ritual375732 on this copy's Leymor; its effect0 periodic dummy makes the Tender cast375738 untargeted (native conditions select Leymor). Native EnteringCombat channel interrupt ends the ritual. In combat: Wild Eruption375652 at12s and Erratic Growth375596 at22s, each repeating at the same interval, waiting while casting.
+- Wild Eruption effect0 hits up to three players within40yd (TDB condition: players only, so followers are never targets). Each hit casts375650 at the effect destination, which TC's `GetHitDest` makes the caster position; the missile's375647 creates field25515. This is a literal TC port, not Retail target placement.
+- Erratic Growth375596 applies aura495 to one enemy within40yd. Aura495 (TC `HandleTriggerSpellOnExpire`) is generic: on expiry only, MiscValue0 0 casts the trigger spell from the aura target, otherwise from the aura caster, always at the aura target. Here the Tender casts375602 (transform + 6s stun).
+- Leymor and Telash forward `JustSummoned`/`SummonedCreatureDespawn` to BossAI, so engaged summons zone into combat. Their evade despawns all summons, then `_DespawnAtEvade` (default30s respawn, encounter Fail). The respawned Telash re-summons its Runes on appearing.
+- Named gaps: `LEYMOR_ARCANE_ERUPTION_MOVEMENT_FORCE_UNSUPPORTED` (TC AT375749 applies a gravity movement force to players; the runtime has no movement-force protocol). `LEYMOR_SAPPY_BURST_EFFECT2_ABSENT_70448` (Mythic Volatile Sapling196559: TC kills it from375591 effect2, which 70448 does not have; a literal port leaves an immortal Sapling, so it is not ported).
+
 ## Umbrelskul Lua-clock partial boundary
 
 - Explicit lead-approved partial Lua-clock/native70448 port: Umbrelskul186738/map2515, saved ordinal3/encounter2584/native completionbit2. LittleWigs2777a9d `Dragonflight/TheAzureVault/Umbrelskul.lua` supplies ability countdowns, not a complete executable TC script.
