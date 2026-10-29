@@ -1,7 +1,7 @@
 //! Partial Azureblade Lua-clock port, explicitly approved for the follower dungeon.
 //! LittleWigs2777a9d Dragonflight/TheAzureVault/Azureblade.lua supplies first-phase
 //! request clocks/counts only. Native70448 supplies cast times, targets and children.
-//! AZUREBLADE_ENERGY_PHASE_UNSOURCED: no invented center/energy/illusion phase.
+//! AZUREBLADE_ENERGY_PHASE_UNSOURCED: no invented center movement or illusion spawns.
 use bevy::prelude::*;
 
 use super::boss_ai::{BossAi, BossScript, boss_update_ai};
@@ -12,6 +12,7 @@ pub(super) const SCRIPT: &str = "boss_azureblade";
 const ARCANE_CLEAVE: u32 = 372222;
 const SUMMON_DRACONIC_IMAGE: u32 = 384223;
 const ANCIENT_ORB: u32 = 385578;
+const OVERWHELMING_ENERGY: u32 = 384132;
 
 pub(super) fn creature_ai(boss: BossAi) -> Box<dyn CreatureAi> {
     Box::new(Azureblade {
@@ -54,6 +55,7 @@ impl CreatureAi for Azureblade {
         self.boss.events.schedule(SUMMON_DRACONIC_IMAGE, 3_300);
         self.boss.events.schedule(ARCANE_CLEAVE, 5_200);
         self.boss.events.schedule(ANCIENT_ORB, 10_600);
+        self.boss.events.schedule(OVERWHELMING_ENERGY, 32_900);
     }
 
     fn just_summoned(&mut self, ctx: &mut Ctx, summon: Entity) {
@@ -94,6 +96,10 @@ impl BossScript for Azureblade {
                 // Native explicit enemy6 plus destination87/caster-front47.
                 ctx.do_cast_victim(ANCIENT_ORB);
                 repeat_lua_event(&mut self.boss.events, &mut self.orbs_remaining, 15_800);
+            }
+            OVERWHELMING_ENERGY => {
+                // LittleWigs initial alert; native cast and admission remain authoritative.
+                ctx.do_cast_self(OVERWHELMING_ENERGY);
             }
             _ => {}
         }

@@ -84,6 +84,31 @@ fn encounter_coverage_azureblade_ordinary_cleave_damage_qualifies() {
 }
 
 #[test]
+fn encounter_coverage_azureblade_first_overwhelming_energy_and_credit() {
+    let (mut h, boss, map) = azureblade_copy(205);
+    h.engage(boss);
+    h.advance(32.8);
+    assert_eq!(cast_count(&h, boss, 384132), 0);
+    h.advance(5.0);
+    assert_eq!(cast_count(&h, boss, 384132), 1, "native first-stage cast");
+    assert!(h.has_aura(boss, 384132), "native energy phase aura");
+    h.hit_pct(boss, 200.0);
+    h.advance(0.1);
+    assert_eq!(
+        instance_script::get_boss_state(h.app.world_mut(), map, ORDINAL),
+        Some(EncounterState::Done)
+    );
+    assert_ne!(
+        h.app
+            .world()
+            .resource::<crate::maps::InstanceManager>()
+            .completed_encounters(map)
+            & (1 << COMPLETION_BIT),
+        0
+    );
+}
+
+#[test]
 fn encounter_coverage_azureblade_first_cleave_uses_lua_clock() {
     let (mut h, boss, _) = azureblade_copy(205);
     h.engage(boss);
