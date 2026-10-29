@@ -245,6 +245,7 @@ pub type BeforeEnemyContextHitLookup = fn(u32) -> Option<BeforeEnemyContextHitHo
 pub type HealthChangeObservedHook = fn(&mut World, &shared::protocol::CombatLogEvent);
 pub type AuraEventHook = fn(&mut World, &crate::auras::procs::AuraEvent);
 pub type RawHealHook = fn(&mut World, &EffectCtx<'_>, f32);
+pub type ExpelHarmHealHook = fn(&mut World, Entity) -> f32;
 pub type SupportAuraRegistrationHook = fn(&mut crate::auras::scripts::AuraScripts);
 pub type NamedAuraFields = &'static [(u32, u8)];
 pub type SnapshotLaunchAurasHook = fn(&World, Entity, &mut SpellInfo);
@@ -414,6 +415,7 @@ pub enum SpellScriptHook {
     HealthChangeObserved(HealthChangeObservedHook),
     AuraEvent(AuraEventHook),
     RawHeal(RawHealHook),
+    ExpelHarmHeal(ExpelHarmHealHook),
     SupportAuraRegistration(SupportAuraRegistrationHook),
     NamedAuraFields(NamedAuraFields),
     SnapshotLaunchAuras(SnapshotLaunchAurasHook),
@@ -1913,6 +1915,18 @@ pub fn before_enemy_context_hit(world: &World, spell: u32) -> Option<BeforeEnemy
             SpellScriptHook::BeforeEnemyContextHit(lookup) => lookup(spell),
             _ => None,
         })
+}
+
+/// Consume earned healing before Expel Harm calculates its damage payload.
+pub fn expel_harm_heal(world: &mut World, caster: Entity) -> f32 {
+    let registry = *world.resource::<SpellScriptRegistry>();
+    registry
+        .hooks()
+        .filter_map(|hook| match hook {
+            SpellScriptHook::ExpelHarmHeal(run) => Some(run(world, caster)),
+            _ => None,
+        })
+        .sum()
 }
 
 /// Observe healing after source and target multipliers but before critical and partial-tick scaling.
