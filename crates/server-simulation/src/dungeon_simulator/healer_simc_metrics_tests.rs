@@ -51,6 +51,37 @@ fn healer_report_records_real_mana_payment_by_spell() {
 
 #[test]
 #[ignore = "requires native spell data"]
+fn healer_report_records_effective_resource_energize() {
+    let mut h = crate::spell_cast::test_harness::harness(Vec::new(), &[47755], 5).unwrap();
+    h.app
+        .init_resource::<crate::spell_cast::test_harness::ObservedCombatEvents>();
+    let caster = h.caster;
+    let mut recorder = Recorder::start(h.app.world(), caster, caster, vec![caster]);
+    crate::spell_cast::powers::change_power(
+        h.app.world_mut(),
+        caster,
+        shared::components::PowerType::Mana,
+        -100.0,
+    );
+    crate::spell_cast::cast_triggered_with_effect0_amount(
+        h.app.world_mut(),
+        caster,
+        47755,
+        Some(caster),
+        1,
+        0.5,
+    );
+    recorder.observe_frame(h.app.world(), 1);
+    let report = recorder.report(h.app.world(), 1);
+    assert_eq!(
+        report["resource_energizes_by_spell"]["47755"]["effective"],
+        5
+    );
+    assert_eq!(report["resource_energizes_by_spell"]["47755"]["raw"], 5);
+}
+
+#[test]
+#[ignore = "requires native spell data"]
 fn healer_report_counts_only_consumed_owned_shields() {
     let mut h = crate::spell_cast::test_harness::harness(Vec::new(), &[133, 17], 5).unwrap();
     h.app
