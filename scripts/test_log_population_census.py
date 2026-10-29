@@ -29,6 +29,22 @@ class CensusTest(unittest.TestCase):
         fields.insert(12, 'DEBUFF')
         self.assertEqual(module.advanced_position(fields)['guid'], fields[5])
 
+    def test_addon_timers_are_matched_by_challenge_and_npc(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'TrashCDData.lua'
+            path.write_text('    [399] = {\n            [123] = {\n                    [456] = {\n'
+                            '                        first = 6.8,\n'
+                            '                        cd = { 18.4, 20 },\n')
+            timers = module.read_trash_timers(path)
+            runs = [{'challenge_id': 399, 'creatures': {'g': {'npc_id': 123}}},
+                    {'challenge_id': 400, 'creatures': {'g': {'npc_id': 123}}}]
+            module.annotate_trash(runs, timers)
+            timer = runs[0]['creatures']['g']['addon_trash_timers'][0]
+            self.assertEqual((timer['spell_id'], timer['first_seconds'], timer['interval_seconds']),
+                             (456, 6.8, [18.4, 20.0]))
+            self.assertEqual((timer['source'], timer['line']), (str(path), 3))
+            self.assertNotIn('addon_trash_timers', runs[1]['creatures']['g'])
+
     def test_position_samples_stop_when_unit_is_engaged(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / 'combat.txt'

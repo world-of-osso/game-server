@@ -3,6 +3,7 @@
 import argparse
 import csv
 import json
+import re
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -70,7 +71,7 @@ def census(paths, maps, samples=None):
                     engaged = set()
                     if len(fields) > 2 and fields[2].isdigit() and int(fields[2]) in maps:
                         current = {"file": path.name, "map": int(fields[2]), "start": timestamp,
-                                   "name": fields[1], "creatures": {}}
+                                   "name": fields[1], "challenge_id": int(fields[3]), "creatures": {}}
                         runs.append(current)
                     continue
                 if event in ("CHALLENGE_MODE_END", "ZONE_CHANGE"):
@@ -117,6 +118,39 @@ def census(paths, maps, samples=None):
     return runs
 
 
+def read_trash_timers(path):
+    """Read the generated addon data as text, without executing its Lua."""
+    timers = {}
+    challenge = npc = spell = None
+    for number, line in enumerate(path.read_text(encoding='utf-8').splitlines(), 1):
+        match = re.match(r'^( *)(?:\[(\d+)\] = \{|(first|cd) = (.*),)$', line)
+        if not match:
+            continue
+        indent, key, field, value = match.groups()
+        if key is not None:
+            if len(indent) == 4:
+                challenge = int(key)
+            elif len(indent) == 12:
+                npc = int(key)
+            elif len(indent) == 20:
+                spell = {'spell_id': int(key), 'source': str(path), 'line': number}
+                timers.setdefault((challenge, npc), []).append(spell)
+        elif len(indent) == 24 and spell is not None:
+            if field == 'first' and re.fullmatch(r'-?\d+(?:\.\d+)?', value):
+                spell['first_seconds'] = float(value)
+            elif field == 'cd' and re.fullmatch(r'\{[\d., ]*\}', value):
+                spell['interval_seconds'] = [float(x.strip()) for x in value[1:-1].split(',') if x.strip()]
+    return timers
+
+
+def annotate_trash(runs, timers):
+    for run in runs:
+        for creature in run['creatures'].values():
+            spells = timers.get((run['challenge_id'], creature['npc_id']))
+            if spells:
+                creature['addon_trash_timers'] = spells
+
+
 def floor_requests(runs):
     requests = []
     for run in runs:
@@ -139,6 +173,7 @@ def main():
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--floor-requests", type=Path)
     parser.add_argument("--precombat-samples", type=Path)
+    parser.add_argument("--trash-data", type=Path)
     parser.add_argument("logs", type=Path, nargs="+")
     args = parser.parse_args()
     paths = [f for p in args.logs for f in (sorted(p.glob("*.txt")) if p.is_dir() else [p])]
@@ -148,6 +183,8 @@ def main():
             runs = census(paths, set(args.map), samples)
     else:
         runs = census(paths, set(args.map))
+    if args.trash_data:
+        annotate_trash(runs, read_trash_timers(args.trash_data))
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps({"runs": runs}, indent=2) + "\n", encoding="utf-8")
     if args.floor_requests:
