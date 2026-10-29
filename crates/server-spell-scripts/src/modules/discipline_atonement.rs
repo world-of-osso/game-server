@@ -17,6 +17,9 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::NativeAfterCast(master_the_darkness_action),
     SpellScriptHook::AfterAbsorbConsumed(discharge_void_shield),
     SpellScriptHook::HealthChangeObserved(mark_flash_heal),
+    SpellScriptHook::SpellHealthImpact(trigger_twist_of_fate),
+    SpellScriptHook::ActualDamageMultiplier(twist_damage_multiplier),
+    SpellScriptHook::HealingMultiplier(twist_healing_multiplier),
     SpellScriptHook::ResolvedHeal(divine_aegis),
     SpellScriptHook::RawResolvedDamage(transfer_damage),
     SpellScriptHook::DamageAmount(penance_bolt_damage),
@@ -28,6 +31,47 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AfterNativeCastUpdate(update_voidwraith),
     SpellScriptHook::ConsumedEffectValues(&[(81749, 0)]),
 ];
+
+fn is_priest_spell(spell: &SpellInfo) -> bool {
+    spell.class_options.as_ref().is_some_and(|options| options.spell_class_set == 6)
+}
+
+fn trigger_twist_of_fate(world: &mut World, ctx: &EffectCtx<'_>, target: Entity, before: f32, _healing: bool) {
+    let caster = ctx.caster;
+    if !is_priest_spell(ctx.spell)
+        || !world.get::<combat::class_progression::KnownSpells>(caster).is_some_and(|known| known.contains(390972))
+    {
+        return;
+    }
+    let Some(health) = world.get::<Health>(target) else { return };
+    let threshold = combat::spell_cast::scripts::script_effect_value(world, caster, 390972, 2);
+    if before * 100.0 >= health.max * threshold {
+        return;
+    }
+    auras::apply_aura(world, &AuraApplication {
+        caster,
+        target: caster,
+        spell_id: 390978,
+        effect_mask: u32::MAX,
+        source: AuraSource::Cast,
+    });
+}
+
+fn twist_multiplier(world: &World, caster: Entity, spell: &SpellInfo) -> f32 {
+    if is_priest_spell(spell) && auras::has_aura(world, caster, 390978) {
+        1.0 + combat::spell_cast::scripts::script_effect_value(world, caster, 390972, 0) / 100.0
+    } else {
+        1.0
+    }
+}
+
+fn twist_damage_multiplier(world: &mut World, ctx: &EffectCtx<'_>, _target: Entity) -> f32 {
+    twist_multiplier(world, ctx.caster, ctx.spell)
+}
+
+fn twist_healing_multiplier(world: &World, caster: Entity, spell: &SpellInfo, _periodic: bool) -> f32 {
+    twist_multiplier(world, caster, spell)
+}
 
 #[derive(Component)]
 struct PenanceBolts {

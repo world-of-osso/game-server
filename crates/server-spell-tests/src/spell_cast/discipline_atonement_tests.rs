@@ -5,6 +5,98 @@ use shared::components::{ActiveSpec, Health};
 use shared::protocol::CombatLogKind;
 
 #[test]
+fn twist_of_fate_triggers_from_preimpact_health_for_real_spells() {
+    for (spell, healing) in [(585, false), (2061, true)] {
+        for (selected, health_pct, expected) in [
+            (true, 34.0, true),
+            (true, 35.0, false),
+            (false, 34.0, false),
+        ] {
+            let mut h = harness(Vec::new(), &[585, 2061, 390972, 390978], 5).unwrap();
+            let caster = h.caster;
+            let target = if healing {
+                spawn_player(&mut h.app, 5, 2.0)
+            } else {
+                h.npc
+            };
+            h.app.world_mut().entity_mut(caster).insert((
+                ActiveSpec(256),
+                crate::class_progression::KnownSpells::fixture(if selected {
+                    vec![585, 2061, 390972]
+                } else {
+                    vec![585, 2061]
+                }),
+            ));
+            *h.app.world_mut().get_mut::<Health>(target).unwrap() = Health {
+                current: health_pct * 1000.0,
+                max: 100_000.0,
+            };
+            h.cast_and_deliver(spell, Some(target));
+            h.advance(50);
+            assert_eq!(
+                crate::auras::has_aura(h.app.world(), caster, 390978),
+                expected,
+                "spell {spell}, selected {selected}, health {health_pct}%"
+            );
+        }
+    }
+}
+
+#[test]
+fn twist_of_fate_increases_real_priest_damage_and_healing() {
+    for (spell, kind) in [(585, CombatLogKind::Damage), (2061, CombatLogKind::Heal)] {
+        let mut amounts = Vec::new();
+        for active in [false, true] {
+            let _seed = crate::random::seed_scope(70448);
+            let mut h = harness(Vec::new(), &[585, 2061, 390972, 390978], 5).unwrap();
+            h.app
+                .init_resource::<super::test_harness::ObservedCombatEvents>();
+            let caster = h.caster;
+            let target = if spell == 2061 {
+                spawn_player(&mut h.app, 5, 2.0)
+            } else {
+                h.npc
+            };
+            *h.app.world_mut().get_mut::<Health>(target).unwrap() = Health {
+                current: 80_000.0,
+                max: 100_000.0,
+            };
+            if active {
+                crate::auras::apply_aura(
+                    h.app.world_mut(),
+                    &crate::auras::AuraApplication {
+                        caster,
+                        target: caster,
+                        spell_id: 390978,
+                        effect_mask: u32::MAX,
+                        source: crate::auras::AuraSource::Cast,
+                    },
+                );
+            }
+            h.cast_and_deliver(spell, Some(target));
+            h.advance(50);
+            let event = h
+                .app
+                .world()
+                .resource::<super::test_harness::ObservedCombatEvents>()
+                .0
+                .iter()
+                .find(|event| {
+                    event.kind == kind
+                        && event.spell_id == Some(spell)
+                        && event.target == Some(target.to_bits())
+                })
+                .unwrap();
+            amounts.push(event.amount);
+        }
+        assert!(
+            (amounts[1] as f32 - amounts[0] as f32 * 1.05).abs() <= 2.0,
+            "spell {spell}: {amounts:?}"
+        );
+    }
+}
+
+#[test]
 fn discipline_penance_extends_only_its_casters_real_pain() {
     for selected in [false, true] {
         let mut h = harness(

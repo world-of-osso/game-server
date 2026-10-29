@@ -251,6 +251,7 @@ pub type RogueAuraRegistrationHook = fn(&mut crate::auras::scripts::AuraScripts)
 pub type BeforeEnemyContextHitHook = fn(&mut World, &EffectCtx<'_>, Entity);
 pub type BeforeEnemyContextHitLookup = fn(u32) -> Option<BeforeEnemyContextHitHook>;
 pub type HealthChangeObservedHook = fn(&mut World, &shared::protocol::CombatLogEvent);
+pub type SpellHealthImpactHook = fn(&mut World, &EffectCtx<'_>, Entity, f32, bool);
 pub type AuraEventHook = fn(&mut World, &crate::auras::procs::AuraEvent);
 pub type RawHealHook = fn(&mut World, &EffectCtx<'_>, f32);
 pub type ExpelHarmHealHook = fn(&mut World, Entity) -> f32;
@@ -430,6 +431,7 @@ pub enum SpellScriptHook {
     RogueAuraRegistration(RogueAuraRegistrationHook),
     BeforeEnemyContextHit(BeforeEnemyContextHitLookup),
     HealthChangeObserved(HealthChangeObservedHook),
+    SpellHealthImpact(SpellHealthImpactHook),
     AuraEvent(AuraEventHook),
     RawHeal(RawHealHook),
     ExpelHarmHeal(ExpelHarmHealHook),
@@ -2089,6 +2091,21 @@ pub fn aura_event(world: &mut World, event: &crate::auras::procs::AuraEvent) {
     for hook in world.resource::<SpellScriptRegistry>().hooks() {
         if let SpellScriptHook::AuraEvent(run) = hook {
             run(world, event);
+        }
+    }
+}
+
+/// Notify scripts of a landed spell impact with the target's exact pre-impact health.
+pub fn spell_health_impact(
+    world: &mut World,
+    ctx: &EffectCtx<'_>,
+    target: Entity,
+    before: f32,
+    healing: bool,
+) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::SpellHealthImpact(run) = hook {
+            run(world, ctx, target, before, healing);
         }
     }
 }
