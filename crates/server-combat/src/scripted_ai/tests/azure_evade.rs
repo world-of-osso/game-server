@@ -59,19 +59,16 @@ fn azure_telash_evade_despawns_runes_and_respawned_boss_resummons_them() {
 #[test]
 fn azure_leymor_owns_engaged_sprouts_and_evade_despawns_them() {
     let (mut h, leymor) = super::azure_combat::wake_leymor();
+    let map = *h.app.world().get::<InMap>(leymor).unwrap();
+    super::azure_sprouts::prepare_sprout_templates(&mut h);
+    super::azure_sprouts::install_azure_ground(&mut h, map);
     h.engage(leymor);
-    h.advance(3.6);
+    // Same clock as prepare_leymor_for_later_clock: the 3s cast plus missile flights.
+    h.advance(6.0);
     let sprouts = living(&mut h, SPROUT);
     assert_eq!(sprouts.len(), 14, "first native Ley-Line Sprouts");
-    assert!(
-        sprouts.iter().all(|&sprout| {
-            h.app
-                .world()
-                .get::<shared::components::CombatStatus>(sprout)
-                .is_some_and(|status| status.0)
-        }),
-        "BossAI::JustSummoned zones each engaged summon into combat"
-    );
+    // Sprouts are IMMUNE_TO_PC|NPC (unit_flags 0x300): BossAI::JustSummoned's
+    // DoZoneInCombat skips them (CanBeginCombat), but summons still owns them.
     crate::creature_aggro::enter_evade_mode(h.app.world_mut(), leymor);
     h.advance(0.1);
     assert!(
