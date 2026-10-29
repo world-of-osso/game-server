@@ -2244,6 +2244,94 @@ fn devotion_aura_reduces_incoming_bleed() {
 }
 
 #[test]
+#[ignore = "uses selected MID2 Greater Judgment and real Protection spell impacts"]
+fn protection_judgment_empowers_and_is_consumed_by_shield() {
+    use crate::spell_cast::powers::PowerPools;
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::components::PowerType;
+    use shared::protocol::CombatLogKind;
+    fn shield(with_mark: bool) -> i32 {
+        let _seed = crate::random::seed_scope(70448);
+        let mut run = super::dps_parity::prepare_registered_player(66, 1).unwrap();
+        super::dps_parity::engage(&mut run);
+        let actor = run.actor;
+        let target = run.targets[0];
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 275779, Some(target), false)
+            .unwrap();
+        for _ in 0..40 {
+            run.app.update();
+        }
+        let aura = run
+            .app
+            .world()
+            .get::<crate::auras::ActiveAuras>(target)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 197277 && aura.caster == actor)
+            .expect("Judgment must mark its target");
+        assert!(
+            aura.effects
+                .iter()
+                .any(|effect| effect.index == 0 && (effect.amount - 50.0).abs() < 0.01)
+        );
+        let before_stacks = aura.stacks;
+        if !with_mark {
+            crate::auras::remove_auras(
+                run.app.world_mut(),
+                target,
+                crate::auras::RemoveReason::Consumed,
+                |aura| aura.spell_id == 197277 && aura.caster == actor,
+            );
+        }
+        run.app
+            .world_mut()
+            .get_mut::<PowerPools>(actor)
+            .unwrap()
+            .get_mut(PowerType::HolyPower)
+            .unwrap()
+            .current = 3.0;
+        let start = run.app.world().resource::<ObservedCombatEvents>().0.len();
+        let _hit_seed = crate::random::seed_scope(454545);
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 53600, Some(target), false)
+            .unwrap();
+        for _ in 0..4 {
+            run.app.update();
+        }
+        if with_mark {
+            let after = run
+                .app
+                .world()
+                .get::<crate::auras::ActiveAuras>(target)
+                .unwrap()
+                .iter()
+                .find(|aura| aura.spell_id == 197277 && aura.caster == actor)
+                .map_or(0, |aura| aura.stacks);
+            assert_eq!(
+                after + 1,
+                before_stacks,
+                "Shield must consume one Judgment use"
+            );
+        }
+        run.app.world().resource::<ObservedCombatEvents>().0[start..]
+            .iter()
+            .find(|event| {
+                event.source == Some(actor.to_bits())
+                    && event.target == Some(target.to_bits())
+                    && event.spell_id == Some(53600)
+                    && event.kind == CombatLogKind::Damage
+            })
+            .expect("Shield must damage its target")
+            .amount
+    }
+    let without = shield(false);
+    let with = shield(true);
+    assert!(
+        without > 0 && (with as f64 / without as f64 - 1.5).abs() < 0.01,
+        "Judgment must increase Shield damage by 50%: {without} -> {with}"
+    );
+}
+
+#[test]
 #[ignore = "uses selected MID2 Bulwark and real Shield casts"]
 fn avengers_shield_grants_bulwark_for_the_next_shield() {
     use crate::spell_cast::powers::PowerPools;
