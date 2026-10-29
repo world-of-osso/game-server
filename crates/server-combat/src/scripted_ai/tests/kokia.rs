@@ -482,3 +482,78 @@ fn encounter_coverage_kokia_evade_rearms_current_source_lanes() {
         "reset resumes19 then20 source durations/native2.5s casts"
     );
 }
+
+/// Spawn the copy's real authored game objects and return its Fire Wall's state and collision.
+fn spawn_fire_wall(h: &mut Harness, map: InMap) -> (u8, bool) {
+    let canonical = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let objects = crate::game_objects::load_game_object_spawns(&canonical).unwrap();
+    let mut queue = bevy::ecs::world::CommandQueue::default();
+    let mut commands = Commands::new(&mut queue, h.app.world());
+    let content = crate::zones::MapContent {
+        map,
+        difficulty_id: 205,
+        dead_bosses: Vec::new(),
+    };
+    crate::maps::transfer::queue_map_content(&mut commands, None, Some(&objects), content, None);
+    queue.apply(h.app.world_mut());
+    fire_wall(h, map)
+}
+
+fn fire_wall(h: &mut Harness, map: InMap) -> (u8, bool) {
+    let mut walls = h.app.world_mut().query::<(
+        &shared::protocol::GameObjectInfo,
+        &InMap,
+        &crate::game_objects::GameObjectState,
+        &shared::protocol::GameObjectCollision,
+    )>();
+    let walls: Vec<_> = walls
+        .iter(h.app.world())
+        .filter(|(info, copy, ..)| info.entry == 377194 && **copy == map)
+        .map(|(_, _, state, collision)| (state.0, collision.0))
+        .collect();
+    assert_eq!(walls.len(), 1, "one authored Fire Wall per copy");
+    walls[0]
+}
+
+#[test]
+fn kokia_fire_wall_opens_only_when_kokia_is_done() {
+    let (mut h, _, map) = kokia_copy(205);
+    assert_eq!(
+        spawn_fire_wall(&mut h, map),
+        (1, true),
+        "closed before Kokia"
+    );
+    instance_script::set_boss_state(h.app.world_mut(), map, BIT, EncounterState::InProgress);
+    assert_eq!(
+        instance_script::get_boss_state(h.app.world_mut(), map, BIT),
+        Some(EncounterState::InProgress)
+    );
+    assert_eq!(fire_wall(&mut h, map), (1, true), "closed while engaged");
+    assert!(instance_script::set_boss_state(
+        h.app.world_mut(),
+        map,
+        BIT,
+        EncounterState::Done
+    ));
+    assert_eq!(
+        fire_wall(&mut h, map),
+        (0, false),
+        "open, without collision"
+    );
+}
+
+#[test]
+fn kokia_fire_wall_spawns_open_in_a_copy_with_kokia_done() {
+    let (mut h, _, map) = kokia_copy(205);
+    assert!(instance_script::set_boss_state(
+        h.app.world_mut(),
+        map,
+        BIT,
+        EncounterState::Done
+    ));
+    assert_eq!(spawn_fire_wall(&mut h, map), (0, false));
+}

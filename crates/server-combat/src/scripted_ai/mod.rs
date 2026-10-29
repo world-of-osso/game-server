@@ -31,6 +31,7 @@ pub mod creature_text;
 mod dailcry;
 mod doragosa;
 mod emberon;
+pub(crate) mod encounter_doors;
 pub mod event_map;
 mod gorek;
 mod granyth;
