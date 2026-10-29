@@ -216,56 +216,52 @@ def run_all(trace_dir, executable, output_dir, jobs, profile_dir=None, party_tra
     print(f'\nDetails: {output_dir}')
 
 
+PRESSURE_GRID = tuple(1.0 + 0.25 * step for step in range(17))
+
+
 def run_pressure_sweep(trace_dir, executable, output_dir, jobs, profiles, seeds):
+    """Replay every tank at every grid scale and seed; no bisection, because the
+    survivor count is not guaranteed to fall monotonically with scale."""
     output_dir.mkdir(parents=True, exist_ok=True)
-    results = []
+
+    def replay(item):
+        spec, scale, seed = item
+        timeline = (trace_dir / f'{spec}.simc-trace.log').resolve(strict=True)
+        report = run_replay(timeline, spec, 'simc', 300, seed, profiles, executable, False, pressure_scale=scale)
+        (output_dir / f'tank-{spec}-scale{scale:.2f}-seed{seed}.json').write_text(json.dumps(report, indent=2) + '\n')
+        return item, report
+
+    tasks = [(spec, scale, seed) for spec in TANKS for scale in PRESSURE_GRID for seed in seeds]
     with ThreadPoolExecutor(max_workers=jobs) as pool:
-        for spec in TANKS:
-            timeline = (trace_dir / f'{spec}.simc-trace.log').resolve(strict=True)
-            cache = {}
-
-            def measure(scale):
-                if scale not in cache:
-                    def replay(seed):
-                        report = run_replay(timeline, spec, 'simc', 300, seed, profiles, executable, False,
-                                            pressure_scale=scale)
-                        (output_dir / f'tank-{spec}-scale{scale:.4f}-seed{seed}.json').write_text(
-                            json.dumps(report, indent=2) + '\n')
-                        return report
-                    cache[scale] = list(pool.map(replay, seeds))
-                return cache[scale]
-
-            def survives(step):
-                return sum(r['time_to_death'] is None for r in measure(step / 20)) >= 5
-
-            low, high = 0, 20
-            while survives(high):
-                low, high = high, high * 2
-                if high > 20480:
-                    raise RuntimeError(f'{spec}: no failing pressure bound')
-            while high - low > 1:
-                middle = (low + high) // 2
-                if survives(middle):
-                    low = middle
-                else:
-                    high = middle
-            if low == 0:
-                raise RuntimeError(f'{spec}: no surviving scale at 0.05 resolution')
-            scale = low / 20
-            baseline = measure(1.0)
-            stressed = measure(scale * 1.25)
-            net = sum(r['damage_taken'] / r['duration_seconds'] - r['self_heal_per_second']
-                      for r in baseline) / len(baseline)
-            death = sum(r['time_to_death'] if r['time_to_death'] is not None else 300.0
-                        for r in stressed) / len(stressed)
-            results.append({'spec': spec, 'survival_scale': scale, 'mean_time_to_death_125': death,
-                            'net_damage_per_second': net})
-    results.sort(key=lambda row: row['survival_scale'], reverse=True)
-    (output_dir / 'summary.json').write_text(json.dumps({'seeds': list(seeds), 'results': results}, indent=2) + '\n')
-    print('| Tank | Survival scale | Mean time at 1.25× survival scale (s) | Net damage/s at 1.0× |')
-    print('|---|---:|---:|---:|')
+        reports = dict(pool.map(replay, tasks))
+    grid = {spec: [summarize_pressure(scale, [reports[(spec, scale, seed)] for seed in seeds])
+                   for scale in PRESSURE_GRID] for spec in TANKS}
+    results = []
+    for spec in TANKS:
+        first_failure = next((index for index, cell in enumerate(grid[spec]) if 2 * cell['survivors'] < len(seeds)),
+                             len(PRESSURE_GRID))
+        survival_scale = PRESSURE_GRID[first_failure - 1] if first_failure else None
+        baseline = [reports[(spec, 1.0, seed)] for seed in seeds]
+        net = sum(r['damage_taken'] / r['duration_seconds'] - r['self_heal_per_second'] for r in baseline) / len(baseline)
+        results.append({'spec': spec, 'survival_scale': survival_scale, 'net_damage_per_second': net})
+    results.sort(key=lambda row: row['survival_scale'] or 0.0, reverse=True)
+    summary = {'seeds': list(seeds), 'scales': list(PRESSURE_GRID), 'grid': grid, 'results': results}
+    (output_dir / 'summary.json').write_text(json.dumps(summary, indent=2) + '\n')
+    print('| Scale | ' + ' | '.join(TANKS) + ' |')
+    print('|---:|' + '---:|' * len(TANKS))
+    for index, scale in enumerate(PRESSURE_GRID):
+        cells = [f'{grid[spec][index]["survivors"]}/{len(seeds)}, {grid[spec][index]["mean_time"]:.0f} s' for spec in TANKS]
+        print(f'| {scale:.2f} | ' + ' | '.join(cells) + ' |')
+    print('\n| Tank | Survival scale | Net damage/s at 1.0× |')
+    print('|---|---:|---:|')
     for row in results:
-        print(f'| {row["spec"]} | {row["survival_scale"]:.2f} | {row["mean_time_to_death_125"]:.2f} | {row["net_damage_per_second"]:.2f} |')
+        print(f'| {row["spec"]} | {number(row["survival_scale"])} | {row["net_damage_per_second"]:.2f} |')
+
+
+def summarize_pressure(scale, reports):
+    survivors = sum(report['time_to_death'] is None for report in reports)
+    mean_time = sum(report['time_to_death'] or 300.0 for report in reports) / len(reports)
+    return {'scale': scale, 'survivors': survivors, 'mean_time': mean_time}
 
 
 def main():
