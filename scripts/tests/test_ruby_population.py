@@ -3,7 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from ruby_population import ERKHART_XY, KYRAKKA_XY, import_population
+from ruby_population import ERKHART_XY, ERKHART_Z, KYRAKKA_XY, KYRAKKA_Z, import_population
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -15,9 +15,9 @@ class RubyPopulationTests(unittest.TestCase):
                 source.backup(db)
                 before = db.execute('SELECT count(*) FROM content_creature').fetchone()[0]
                 with db:
-                    import_population(db, 312.8, 312.9)
-                self.assertEqual(db.execute('SELECT position_x,position_y,position_z FROM content_creature WHERE guid=63521000').fetchone(), (*ERKHART_XY, 312.9))
-                self.assertEqual(db.execute('SELECT position_x,position_y,position_z FROM content_creature WHERE guid=63521001').fetchone(), (*KYRAKKA_XY, 312.8))
+                    import_population(db)
+                self.assertEqual(db.execute('SELECT position_x,position_y,position_z FROM content_creature WHERE guid=63521000').fetchone(), (*ERKHART_XY, ERKHART_Z))
+                self.assertEqual(db.execute('SELECT position_x,position_y,position_z FROM content_creature WHERE guid=63521001').fetchone(), (*KYRAKKA_XY, KYRAKKA_Z))
                 comment = db.execute('SELECT Comment FROM content_creature WHERE guid=63521000').fetchone()[0]
                 self.assertIn('LOG_DERIVED_POPULATION', comment)
                 self.assertIn('FOLLOWER_PLACEMENT_XY_FROM_JOURNAL_ENCOUNTER_UIMAP', comment)
@@ -25,7 +25,7 @@ class RubyPopulationTests(unittest.TestCase):
                 self.assertEqual(db.execute('SELECT faction,unit_flags FROM content_creature_template WHERE entry=190484').fetchone(), (16, 64))
                 self.assertEqual(db.execute('SELECT encounter_id,bit FROM raid_encounter_creature WHERE map_id=2521 AND creature_entry=190484').fetchone(), (2623, 2))
                 with self.assertRaisesRegex(ValueError, 'GUID already occupied'):
-                    import_population(db, 312.8, 312.9)
+                    import_population(db)
 
 
 if __name__ == '__main__':
