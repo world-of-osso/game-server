@@ -38,7 +38,7 @@ const fn order_modules<const N: usize>(
 }
 
 pub use devourer_metamorphosis::devourer_base_drain_ps;
-#[cfg(feature = "test-support")]
+#[cfg(all(feature = "test-support", not(test)))]
 pub use unholy_permanent_claws::{ghoul_energy, set_ghoul_energy};
 
 register_modules! {
@@ -83,14 +83,22 @@ register_modules! {
     aura_rolls: (110, "modules/aura_rolls.rs"),
     beast_mastery: (20, "modules/beast_mastery.rs"),
     brewmaster_cooldowns: (1000, "modules/brewmaster_cooldowns.rs"),
+    brewmaster_chi_burst: (1000, "modules/brewmaster_chi_burst.rs"),
+    brewmaster_celestial_fortune: (1000, "modules/brewmaster_celestial_fortune.rs"),
+    brewmaster_dragonfire: (1000, "modules/brewmaster_dragonfire.rs"),
     brewmaster_purify: (1000, "modules/brewmaster_purify.rs"),
     brewmaster_black_ox: (1000, "modules/brewmaster_black_ox.rs"),
     brewmaster_blackout_combo: (1000, "modules/brewmaster_blackout_combo.rs"),
     brewmaster_empty_barrel: (1000, "modules/brewmaster_empty_barrel.rs"),
     brewmaster_gift_of_the_ox: (1000, "modules/brewmaster_gift_of_the_ox.rs"),
+    brewmaster_harmonic_surge: (1000, "modules/brewmaster_harmonic_surge.rs"),
     brewmaster_elusive_brawler: (1000, "modules/brewmaster_elusive_brawler.rs"),
     brewmaster_keg_reset: (1000, "modules/brewmaster_keg_reset.rs"),
+    brewmaster_overwhelming_force: (1000, "modules/brewmaster_overwhelming_force.rs"),
+    brewmaster_niuzao: (1000, "modules/brewmaster_niuzao.rs"),
     brewmaster_shuffle: (1000, "modules/brewmaster_shuffle.rs"),
+    brewmaster_special_delivery: (1000, "modules/brewmaster_special_delivery.rs"),
+    brewmaster_walk_ox: (1000, "modules/brewmaster_walk_ox.rs"),
     monk_harmony: (1000, "modules/monk_harmony.rs"),
     blood_death_strike: (2500, "modules/blood_death_strike.rs"),
     blood_ground: (2501, "modules/blood_ground.rs"),
@@ -99,6 +107,8 @@ register_modules! {
     blood_boiling: (2504, "modules/blood_boiling.rs"),
     blood_rune_weapon: (2505, "modules/blood_rune_weapon.rs"),
     blood_reflection: (2507, "modules/blood_reflection.rs"),
+    bloodied_blade: (2508, "modules/bloodied_blade.rs"),
+    blood_ossuary: (2509, "modules/blood_ossuary.rs"),
     cast_grants: (120, "modules/cast_grants.rs"),
     cast_relationships: (370, "modules/cast_relationships.rs"),
     cast_resets: (90, "modules/cast_resets.rs"),
@@ -239,6 +249,9 @@ register_modules! {
     enhancement_tempest_aoe: (2633, "modules/enhancement_tempest_aoe.rs"),
     guardian_impacts: (1000, "modules/guardian_impacts.rs"),
     guardian_ursocs_fury: (1040, "modules/guardian_ursocs_fury.rs"),
+    guardian_vicious_brambles: (1052, "modules/guardian_vicious_brambles.rs"),
+    guardian_star_cascade: (1053, "modules/guardian_star_cascade.rs"),
+    druid_atmospheric_exposure: (1054, "modules/druid_atmospheric_exposure.rs"),
     guardian_blood_frenzy: (1042, "modules/guardian_blood_frenzy.rs"),
     guardian_berserk_form: (1046, "modules/guardian_berserk_form.rs"),
     guardian_flashing_claws: (1048, "modules/guardian_flashing_claws.rs"),

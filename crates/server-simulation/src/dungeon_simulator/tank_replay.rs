@@ -12,6 +12,25 @@ use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 const TICK_SECONDS: f64 = 0.05;
 const SPIKE_WINDOW_SECONDS: f64 = 5.0;
+
+pub(super) fn sampled_blocked_pct(
+    world: &World,
+    source: Entity,
+    tank: Entity,
+) -> Result<f32, String> {
+    let attacker = crate::level_scaling::UnitScaling::of(world, source);
+    let defender = crate::level_scaling::UnitScaling::of(world, tank);
+    let constant = attacker
+        .armor_constant(
+            &defender,
+            world.resource::<crate::level_scaling::ArmorConstants>(),
+        )
+        .ok_or("DUMMY_ARMOR_CONSTANT_ABSENT")?;
+    let stats = world
+        .get::<crate::stats::CharacterStats>(tank)
+        .ok_or("TANK_STATS_ABSENT")?;
+    Ok(stats.defense.blocked_pct(constant))
+}
 const SHIELD_OF_THE_RIGHTEOUS: u32 = 132403;
 // SimC Tank_Dummy_Dungeon: native dungeon difficulty 23, MID2 season 120.
 const TANK_DUNGEON_DIFFICULTY: u32 = 23;
@@ -607,15 +626,30 @@ fn replay_registered_run_with_healing(
             bloodlust_applied = true;
         }
         if external_healing && tick % 100 == 0 && tick < duration_seconds * 20 {
-            let mut health = run
-                .app
-                .world_mut()
-                .get_mut::<Health>(tank)
-                .ok_or("TANK_HEALTH_ABSENT")?;
-            if health.current > 0.0 {
-                let amount = 75_000.0_f32.min((health.max - health.current).max(0.0));
-                health.current += amount;
+            let effective = {
+                let mut health = run
+                    .app
+                    .world_mut()
+                    .get_mut::<Health>(tank)
+                    .ok_or("TANK_HEALTH_ABSENT")?;
+                if health.current > 0.0 {
+                    let amount = 75_000.0_f32.min((health.max - health.current).max(0.0));
+                    health.current += amount;
+                    Some(amount)
+                } else {
+                    None
+                }
+            };
+            if let Some(amount) = effective {
                 external_healing_effective += f64::from(amount);
+                crate::spell_cast::script_registry::heal_received(
+                    run.app.world_mut(),
+                    tank,
+                    0,
+                    75_000.0,
+                    amount,
+                    false,
+                );
             }
         }
         while let Some(hit) = hits
@@ -704,12 +738,7 @@ fn replay_registered_run_with_healing(
                         .get::<crate::stats::CharacterStats>(tank)
                         .ok_or("TANK_STATS_ABSENT")?;
                     let world = run.app.world();
-                    let source_level = crate::level_scaling::UnitScaling::of(world, source)
-                        .level_against(&crate::level_scaling::UnitScaling::of(world, tank));
-                    let constant = world
-                        .resource::<crate::level_scaling::ArmorConstants>()
-                        .at(source_level)
-                        .ok_or("DUMMY_ARMOR_CONSTANT_ABSENT")?;
+                    let blocked_pct = sampled_blocked_pct(world, source, tank)?;
                     let damage_mult = run
                         .app
                         .world()
@@ -719,7 +748,7 @@ fn replay_registered_run_with_healing(
                         stats.defense.parry,
                         stats.defense.block,
                         stats.armor,
-                        stats.defense.blocked_pct(constant),
+                        blocked_pct,
                         stats.versatility_pct / 2.0,
                         damage_mult,
                     ]) {
@@ -1044,5 +1073,12 @@ fn replay_registered_run_with_healing(
     report["precombat_casts"] = json!(precombat_casts);
     report["outgoing_damage_by_spell"] = json!(outgoing_damage_by_spell);
     report["resource_spent_by_spell"] = json!(resource_spent_by_spell);
+    report["melee_rage"] = json!(
+        capture
+            .melee_rage
+            .iter()
+            .filter_map(|(&(unit, source), &amount)| (unit == tank).then_some((source, amount)))
+            .collect::<BTreeMap<_, _>>()
+    );
     Ok(report)
 }

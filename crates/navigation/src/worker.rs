@@ -1,7 +1,7 @@
 //! Owned navigation queries off the simulation thread; no synchronous wait API.
-use crate::{NavigationMap, NavigationPath};
+use crate::{NavigationMap, NavigationPath, NavigationPlan};
 use glam::Vec3;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{self, Receiver, SyncSender, TrySendError};
@@ -58,6 +58,7 @@ struct Mailbox {
     entities: BTreeMap<u64, u64>,
     ready: BTreeMap<u64, Response>,
     failure: Option<String>,
+    cancelled: BTreeSet<u64>,
 }
 
 impl Mailbox {
@@ -78,7 +79,10 @@ impl Mailbox {
         for (entity, request) in outgoing {
             match request {
                 Some(request) => self.queue(request),
-                None => self.cancel(entity),
+                None => {
+                    self.cancel(entity);
+                    self.cancelled.insert(entity);
+                }
             }
         }
     }
@@ -101,9 +105,110 @@ impl Mailbox {
     }
 }
 
-/// Main-thread handle. Outgoing updates and retained completions coalesce by entity.
-/// The wake channel contains at most one notification, never a queue of jobs.
+/// Main-thread handle. Each map has a worker so a cold tile read cannot block another map.
 pub struct Worker {
+    lanes: BTreeMap<u32, WorkerLane>,
+    unbaked: WorkerLane,
+    owners: BTreeMap<u64, u32>,
+    current: BTreeMap<u64, u64>,
+    pending: BTreeMap<u64, u64>,
+    failure: Option<String>,
+}
+
+impl Worker {
+    pub fn new(root: PathBuf) -> Self {
+        let (lanes, failure) = match preload_maps(&root) {
+            Ok(maps) => (
+                maps.into_iter()
+                    .map(|(id, map)| (id, WorkerLane::new(BTreeMap::from([(id, map)]))))
+                    .collect(),
+                None,
+            ),
+            Err(error) => (
+                BTreeMap::new(),
+                Some(format!("navigation worker could not start: {error}")),
+            ),
+        };
+        Self {
+            lanes,
+            unbaked: WorkerLane::new(BTreeMap::new()),
+            owners: BTreeMap::new(),
+            current: BTreeMap::new(),
+            pending: BTreeMap::new(),
+            failure,
+        }
+    }
+
+    fn lane(&mut self, map_id: u32) -> &mut WorkerLane {
+        self.lanes.get_mut(&map_id).unwrap_or(&mut self.unbaked)
+    }
+
+    pub fn submit(&mut self, request: Request) {
+        if self
+            .current
+            .get(&request.entity)
+            .is_some_and(|id| *id >= request.id)
+        {
+            return;
+        }
+        if let Some(old_map) = self.owners.get(&request.entity).copied() {
+            if old_map != request.map_id {
+                self.lane(old_map).cancel(request.entity);
+            }
+        }
+        self.owners.insert(request.entity, request.map_id);
+        self.current.insert(request.entity, request.id);
+        self.pending.insert(request.entity, request.id);
+        self.lane(request.map_id).submit(request);
+    }
+
+    pub fn cancel(&mut self, entity: u64) {
+        if let Some(map_id) = self.owners.remove(&entity) {
+            self.lane(map_id).cancel(entity);
+        }
+        self.current.remove(&entity);
+        self.pending.remove(&entity);
+    }
+
+    pub fn is_idle(&self) -> bool {
+        self.pending.is_empty()
+    }
+
+    pub fn poll(&mut self) -> Vec<Response> {
+        if let Some(error) = &self.failure {
+            return std::mem::take(&mut self.pending)
+                .into_iter()
+                .map(|(entity, id)| Response {
+                    entity,
+                    id,
+                    result: Err(error.clone()),
+                })
+                .collect();
+        }
+        let mut responses = Vec::new();
+        for lane in self
+            .lanes
+            .values_mut()
+            .chain(std::iter::once(&mut self.unbaked))
+        {
+            if !lane.is_idle() || !lane.outgoing.is_empty() {
+                responses.extend(lane.poll());
+            }
+        }
+        responses.retain(|response| {
+            self.current.get(&response.entity) == Some(&response.id)
+                && self.pending.get(&response.entity) == Some(&response.id)
+        });
+        for response in &responses {
+            self.pending.remove(&response.entity);
+        }
+        responses.sort_by_key(|response| (response.entity, response.id));
+        responses
+    }
+}
+
+/// One map's bounded queue and exclusively owned navigation state.
+struct WorkerLane {
     mailbox: Arc<Mutex<Mailbox>>,
     wake: SyncSender<()>,
     thread: Option<JoinHandle<()>>,
@@ -114,12 +219,12 @@ pub struct Worker {
     stop: Arc<AtomicBool>,
 }
 
-impl Worker {
-    pub fn new(root: PathBuf) -> Self {
+impl WorkerLane {
+    fn new(maps: MapCache) -> Self {
         let mailbox = Arc::new(Mutex::new(Mailbox::default()));
         let (wake, receiver) = mpsc::sync_channel(1);
         let stop = Arc::new(AtomicBool::new(false));
-        let spawned = spawn_worker(root, mailbox.clone(), receiver, stop.clone());
+        let spawned = spawn_worker(maps, mailbox.clone(), receiver, stop.clone());
         let (thread, failure) = match spawned {
             Ok(thread) => (Some(thread), None),
             Err(error) => {
@@ -275,15 +380,44 @@ impl Worker {
     }
 }
 
-impl Drop for Worker {
+impl Drop for WorkerLane {
     fn drop(&mut self) {
         self.stop.store(true, Ordering::Release);
         // Dropping the sole wake sender wakes an idle receiver; never join on a tick.
     }
 }
 
+type MapCache = BTreeMap<u32, Result<Option<NavigationMap>, String>>;
+
+fn preload_maps(root: &Path) -> Result<MapCache, String> {
+    let entries = match std::fs::read_dir(root) {
+        Ok(entries) => entries,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(BTreeMap::new()),
+        Err(error) => return Err(format!("{}: {error}", root.display())),
+    };
+    let mut maps = BTreeMap::new();
+    for entry in entries {
+        let entry = entry.map_err(|error| format!("{}: {error}", root.display()))?;
+        let Some(id) = entry
+            .file_name()
+            .to_str()
+            .and_then(|name| name.parse::<u32>().ok())
+        else {
+            continue;
+        };
+        let result = open_baked_map(&entry.path()).map(|map| {
+            map.map(|mut map| {
+                map.preload_hierarchy();
+                map
+            })
+        });
+        maps.insert(id, result);
+    }
+    Ok(maps)
+}
+
 fn spawn_worker(
-    root: PathBuf,
+    maps: MapCache,
     mailbox: Arc<Mutex<Mailbox>>,
     receiver: Receiver<()>,
     stop: Arc<AtomicBool>,
@@ -291,12 +425,12 @@ fn spawn_worker(
     std::thread::Builder::new()
         .name("navigation".into())
         .spawn(move || {
-            supervise_worker(root, mailbox, receiver, stop);
+            supervise_worker(maps, mailbox, receiver, stop);
         })
 }
 
 fn supervise_worker(
-    root: PathBuf,
+    maps: MapCache,
     mailbox: Arc<Mutex<Mailbox>>,
     receiver: Receiver<()>,
     stop: Arc<AtomicBool>,
@@ -304,7 +438,7 @@ fn supervise_worker(
     let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
         // Publish the panic reason before dropping the receiver; disconnection
         // must not race ahead of the explicit worker failure.
-        run_worker(&root, &mailbox, &receiver, &stop);
+        run_worker(maps, &mailbox, &receiver, &stop);
     }));
     if let Err(panic) = result {
         let detail = panic
@@ -321,16 +455,36 @@ fn supervise_worker(
     }
 }
 
-fn run_worker(root: &Path, mailbox: &Mutex<Mailbox>, receiver: &Receiver<()>, stop: &AtomicBool) {
-    let mut maps = BTreeMap::new();
+fn run_worker(
+    mut maps: MapCache,
+    mailbox: &Mutex<Mailbox>,
+    receiver: &Receiver<()>,
+    stop: &AtomicBool,
+) {
+    let mut plans: BTreeMap<u64, (u32, NavigationPlan)> = BTreeMap::new();
     while receiver.recv().is_ok() {
         loop {
             if stop.load(Ordering::Acquire) {
                 return;
             }
-            let request = mailbox.lock().expect("navigation queue lock").pop();
+            let request = {
+                let mut mailbox = mailbox.lock().expect("navigation queue lock");
+                for entity in std::mem::take(&mut mailbox.cancelled) {
+                    plans.remove(&entity);
+                }
+                mailbox.pop()
+            };
             let Some(request) = request else { break };
-            let result = query_owned_map(root, &mut maps, request.map_id, request.query);
+            let entry = plans
+                .entry(request.entity)
+                .or_insert_with(|| (request.map_id, NavigationPlan::default()));
+            if entry.0 != request.map_id {
+                *entry = (request.map_id, NavigationPlan::default());
+            }
+            let result = query_owned_map(&mut maps, request.map_id, request.query, &mut entry.1);
+            if result.is_err() || entry.1.is_empty() {
+                plans.remove(&request.entity);
+            }
             let response = Response {
                 entity: request.entity,
                 id: request.id,
@@ -345,27 +499,31 @@ fn run_worker(root: &Path, mailbox: &Mutex<Mailbox>, receiver: &Receiver<()>, st
 }
 
 fn query_owned_map(
-    root: &Path,
-    maps: &mut BTreeMap<u32, Option<NavigationMap>>,
+    maps: &mut MapCache,
     map_id: u32,
     query: Query,
+    plan: &mut NavigationPlan,
 ) -> Result<Option<Output>, String> {
     #[cfg(test)]
     if matches!(query, Query::Panic) {
         panic!("controlled navigation worker death")
     }
-    if !maps.contains_key(&map_id) {
-        maps.insert(map_id, open_baked_map(&root.join(map_id.to_string()))?);
-    }
-    let Some(map) = maps.get_mut(&map_id).expect("owned map inserted") else {
+    let Some(map) = maps.get_mut(&map_id) else {
         return Ok(None);
     };
-    run_query(map, query).map(Some)
+    let Some(map) = map.as_mut().map_err(|error| error.clone())? else {
+        return Ok(None);
+    };
+    run_query(map, query, plan).map(Some)
 }
 
-fn run_query(map: &mut NavigationMap, query: Query) -> Result<Output, String> {
+fn run_query(
+    map: &mut NavigationMap,
+    query: Query,
+    plan: &mut NavigationPlan,
+) -> Result<Output, String> {
     let output = match query {
-        Query::Path { from, to } => Output::Path(map.path(from, to)?),
+        Query::Path { from, to } => Output::Path(map.path_with_plan(from, to, plan)?),
         Query::SmoothPath { from, to } => Output::Path(NavigationPath {
             points: map.smooth_waypoint_path(from, to)?,
             complete: true,

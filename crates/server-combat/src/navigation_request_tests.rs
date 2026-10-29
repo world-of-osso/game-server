@@ -199,13 +199,14 @@ fn navigation_chase_cancel_does_not_strand_an_unrelated_probe() {
 fn navigation_player_probe_old_map_is_invalidated_before_publication() {
     let (nav, _dir) = fixture();
     let mut app = App::new();
-    app.add_plugins((MinimalPlugins, NavigationPlugin));
+    app.add_plugins(MinimalPlugins);
+    install_publication(&mut app);
     app.insert_resource(Time::<Fixed>::from_duration(Duration::from_millis(50)));
     app.insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
         Duration::from_millis(50),
     ));
-    app.update();
     app.insert_resource(nav);
+    app.update();
     let actor = app
         .world_mut()
         .spawn((start(), crate::maps::InMap::continent(0)))
@@ -235,13 +236,14 @@ fn navigation_player_probe_old_map_is_invalidated_before_publication() {
 fn navigation_teleport_map_change_cancels_an_inflight_old_map_result() {
     let (nav, _dir) = fixture();
     let mut app = App::new();
-    app.add_plugins((MinimalPlugins, NavigationPlugin));
+    app.add_plugins(MinimalPlugins);
+    install_publication(&mut app);
     app.insert_resource(Time::<Fixed>::from_duration(Duration::from_millis(50)));
     app.insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
         Duration::from_millis(50),
     ));
-    app.update();
     app.insert_resource(nav);
+    app.update();
     let actor = app
         .world_mut()
         .spawn((

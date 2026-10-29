@@ -150,6 +150,22 @@ impl AutoAttack {
     }
 }
 
+/// Reschedule the active main-hand swing using its current form and haste.
+pub(crate) fn reset_player_main_hand_swing(world: &mut World, unit: Entity) {
+    let Some(stats) = world.get::<CharacterStats>(unit) else {
+        return;
+    };
+    let base = crate::auras::shapeshift::attack_timing(world, unit)
+        .map_or(stats.main_hand.speed, |form| form.seconds);
+    let slow = world.get::<AuraStatMods>(unit).map_or(1.0, |mods| {
+        mods.attack_cast_time_mult * mods.attack_time_mult * mods.melee_ranged_attack_time_mult
+    });
+    let interval = melee::attack_timer_duration(melee::swing_time(base, stats.haste_pct) * slow);
+    if let Some(mut attack) = world.get_mut::<AutoAttack>(unit) {
+        attack.timer = interval;
+    }
+}
+
 /// Marks a dead NPC awaiting respawn.
 #[derive(Component, Debug)]
 pub struct DeathState {
@@ -973,6 +989,7 @@ fn auto_attack_unit(
                         || horseman
                         || (summon.spell_id == 288853 && npc.template_id == 149555)
                         || (summon.spell_id == 434237 && npc.template_id == 217228)
+                        || (summon.spell_id == 132578 && npc.template_id == 73967)
                     {
                         crate::stats::WeaponAttackType::MainHand
                     } else {
@@ -2337,6 +2354,18 @@ fn resolve_swing(
             crate::test_support::healer_intake::record(world, source, target_entity, 1, raw, kind)
         });
     }
+    if !immune {
+        let source_damage =
+            melee::outcome_damage(swing.raw, kind, level_difference, 0.0).0 * critical_multiplier;
+        commands.queue(move |world: &mut World| {
+            crate::spell_cast::script_registry::incoming_damage_before_mitigation(
+                world,
+                target_entity,
+                None,
+                source_damage,
+            );
+        });
+    }
     let (deferred, consume_ox) = context
         .stagger
         .map_or((0.0, false), |stagger| stagger.deferred(outcome_damage, 1));
@@ -3001,6 +3030,16 @@ pub fn replay_healer_hit(
     } else {
         blocked
     };
+    if !immune {
+        let source_damage =
+            melee::outcome_damage(hit.raw, kind, level_difference, 0.0).0 * critical_multiplier;
+        crate::spell_cast::script_registry::incoming_damage_before_mitigation(
+            world,
+            victim,
+            None,
+            source_damage,
+        );
+    }
     let (deferred, consume_ox) = crate::auras::stagger::snapshot(world, victim)
         .map_or((0.0, false), |stagger| stagger.deferred(amount, 1));
     if deferred > 0.0 || consume_ox {
@@ -3206,13 +3245,20 @@ fn reward_swing_rage(
             * RAGE_PER_SWING_SECOND
             * (1.0 + (bonus_pct - war_machine_sum) / 100.0)
             * war_machine_multiplier;
-        change_rage(world, attacker, (rage * RAGE_RAW_PER_RAGE).round());
+        change_rage(world, attacker, (rage * RAGE_RAW_PER_RAGE).round(), "swing");
     }
-    if damage > 0.0
-        && has_rage_primary_power(world, target)
-        && take_hit_rage_cooldown(world, target)
-    {
-        change_rage(world, target, RAGE_PER_HIT_TAKEN * RAGE_RAW_PER_RAGE);
+    if damage > 0.0 {
+        if !reward_bear_melee_hit_rage(world, target)
+            && has_rage_primary_power(world, target)
+            && take_hit_rage_cooldown(world, target, RAGE_FROM_HITS_TAKEN_COOLDOWN_SECS)
+        {
+            change_rage(
+                world,
+                target,
+                RAGE_PER_HIT_TAKEN * RAGE_RAW_PER_RAGE,
+                "taken",
+            );
+        }
     }
 }
 
@@ -3250,6 +3296,32 @@ fn war_machine_rage_modifier(world: &World, unit: Entity) -> (f32, f32) {
     (total, 1.0 + selected / 100.0)
 }
 
+/// SimC76f8118 sc_druid.cpp12480–12500: passive 1178 grants its effect 3
+/// on landed melee swings and specials, including hits consumed by absorbs.
+pub(crate) fn reward_bear_melee_hit_rage(world: &mut World, unit: Entity) -> bool {
+    let amount = world
+        .get::<crate::auras::ActiveAuras>(unit)
+        .and_then(|auras| {
+            auras
+                .iter()
+                .find(|aura| aura.spell_id == 1178 && aura.caster == unit)
+                .and_then(|aura| aura.effects.iter().find(|effect| effect.index == 2))
+                .map(|effect| effect.amount)
+        });
+    let Some(amount) = amount else { return false };
+    let recovery = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(1178)
+        .and_then(|spell| spell.aura_options.as_ref())
+        .expect("Bear Form passive requires its native proc recovery")
+        .proc_category_recovery_ms as f64
+        / 1000.0;
+    if has_rage_primary_power(world, unit) && take_hit_rage_cooldown(world, unit, recovery) {
+        change_rage(world, unit, amount * RAGE_RAW_PER_RAGE, "taken");
+    }
+    true
+}
+
 fn has_rage_primary_power(world: &World, unit: Entity) -> bool {
     world
         .get::<PowerPools>(unit)
@@ -3257,7 +3329,7 @@ fn has_rage_primary_power(world: &World, unit: Entity) -> bool {
 }
 
 /// Start the hit-taken rage cooldown; false while it is running.
-fn take_hit_rage_cooldown(world: &mut World, unit: Entity) -> bool {
+fn take_hit_rage_cooldown(world: &mut World, unit: Entity, cooldown: f64) -> bool {
     let now = world.resource::<Time>().elapsed_secs_f64();
     if world
         .get::<RageFromHitsTakenReadyAt>(unit)
@@ -3265,14 +3337,18 @@ fn take_hit_rage_cooldown(world: &mut World, unit: Entity) -> bool {
     {
         return false;
     }
-    world.entity_mut(unit).insert(RageFromHitsTakenReadyAt(
-        now + RAGE_FROM_HITS_TAKEN_COOLDOWN_SECS,
-    ));
+    world
+        .entity_mut(unit)
+        .insert(RageFromHitsTakenReadyAt(now + cooldown));
     true
 }
 
-fn change_rage(world: &mut World, unit: Entity, raw: f32) {
-    crate::spell_cast::powers::change_power(world, unit, PowerType::Rage, raw);
+fn change_rage(world: &mut World, unit: Entity, raw: f32, _source: &'static str) {
+    let _gained = crate::spell_cast::powers::change_power(world, unit, PowerType::Rage, raw);
+    #[cfg(any(test, feature = "test-support"))]
+    if let Some(amount) = _gained {
+        crate::test_support::healer_intake::record_melee_rage(world, unit, _source, amount);
+    }
 }
 
 /// Tick respawn timers and restore dead NPCs when ready; a pooled creature's pool

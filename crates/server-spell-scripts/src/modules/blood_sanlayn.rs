@@ -16,8 +16,10 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AfterForegroundSpecial(grant_gift),
     SpellScriptHook::AfterForegroundSpecial(vampiric_proc),
     SpellScriptHook::EffectHandler(vampiric_heal_handler),
+    SpellScriptHook::LeechHealOverride(blood_plague_leech),
     SpellScriptHook::EffectEnabled(blood_vampiric_damage_effect),
     SpellScriptHook::AfterPolicyDirectDamage(infliction_of_sorrow),
+    SpellScriptHook::TargetContextDamageMultiplier(inevitable_disease_damage),
     SpellScriptHook::TargetFilter(limit_vampiric_targets),
     SpellScriptHook::AfterForegroundSpecial(summon_blood_beast),
     SpellScriptHook::SummonInitialized(initialize_blood_beast),
@@ -27,6 +29,44 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
 
 #[derive(Component, Default)]
 struct BloodBeastDamage(f32);
+
+// SimC76f8118 sc_death_knight.cpp:7801–7812,7825–7830: Blood disease
+// damage rises linearly with target missing health and caps at 90% missing.
+fn inevitable_disease_damage(
+    world: &World,
+    ctx: &EffectCtx<'_>,
+    target: Entity,
+    periodic: bool,
+) -> f32 {
+    if !periodic
+        || ctx.spell.id != 55078
+        || !world
+            .get::<ActiveSpec>(ctx.caster)
+            .is_some_and(|spec| spec.0 == 250)
+    {
+        return 1.0;
+    }
+    let Some(amount) = world
+        .get::<auras::ActiveAuras>(ctx.caster)
+        .and_then(|auras| {
+            auras
+                .iter()
+                .find(|aura| aura.spell_id == 1280658 && aura.caster == ctx.caster)
+        })
+        .and_then(|aura| aura.effects.iter().find(|effect| effect.index == 1))
+        .map(|effect| effect.amount / 100.0)
+    else {
+        return 1.0;
+    };
+    let Some(health) = world
+        .get::<Health>(target)
+        .filter(|health| health.max > 0.0)
+    else {
+        return 1.0;
+    };
+    let missing = (1.0 - health.current / health.max).clamp(0.0, 0.9);
+    1.0 + amount * missing / 0.9
+}
 
 // SimC76f8118 sc_death_knight.cpp4692–4793/9529–9530: the real beast
 // attacks, records its actual damage and erupts when its summon expires.
@@ -281,6 +321,26 @@ fn limit_vampiric_targets(
     targets.truncate(base + bonus);
 }
 
+// SimC76f8118 sc_death_knight.cpp:6992–7037,7864–7872: Blood Plague
+// heals actual tick damage through a direct, independently critical heal.
+fn blood_plague_leech(world: &World, ctx: &EffectCtx<'_>, damage: f32) -> Option<f32> {
+    if ctx.spell.id != 55078
+        || !world
+            .get::<ActiveSpec>(ctx.caster)
+            .is_some_and(|spec| spec.0 == 250)
+    {
+        return None;
+    }
+    let multiplier = auras::spell_mods::modify(
+        world,
+        ctx.caster,
+        ctx.spell,
+        auras::SpellModOp::Amplitude,
+        1.0,
+    );
+    Some(damage * multiplier)
+}
+
 fn vampiric_heal_handler(spell: u32, index: u8) -> Option<EffectHandler> {
     (spell == 434422 && index == 0).then_some(vampiric_heal)
 }
@@ -392,6 +452,11 @@ fn vampiric_proc(world: &mut World, caster: Entity, spell: &SpellInfo) {
             .base_points
     };
     let mut chance = effect(433901, 0);
+    // SimC76f8118 sc_death_knight.cpp:13842–13843: Blood-soaked Ground
+    // adds the selected talent's second effect to the proc chance.
+    if auras::has_aura(world, caster, 434034) {
+        chance += effect(434033, 1);
+    }
     if world
         .get::<KnownSpells>(caster)
         .is_some_and(|known| known.contains(434263))

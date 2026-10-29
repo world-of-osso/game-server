@@ -141,6 +141,14 @@ pub(crate) fn send(world: &mut World) {
 /// Real creature death boundary, shared by melee, spells and periodic damage.
 /// Only unambiguous authored single-creature encounters receive generic credit.
 pub(crate) fn record_creature_death(world: &mut World, creature: Entity) {
+    // The Ruby final script owns the joint-death condition; generic single-boss
+    // credit must not mark the encounter complete on either actor alone.
+    if world
+        .get::<crate::scripted_ai::CreatureScriptName>(creature)
+        .is_some_and(|name| name.0 == crate::scripted_ai::ruby_final::SCRIPT)
+    {
+        return;
+    }
     let Some(map) = world.get::<InMap>(creature).copied() else {
         return;
     };

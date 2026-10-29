@@ -401,6 +401,25 @@ mod tests {
         for _ in 0..12 {
             run.app.update();
         }
+        let parry = server::test_support::healer_intake::Hit {
+            kind: server::test_support::healer_intake::HitKind::Melee {
+                hand: 0,
+                outcome: "Parry".into(),
+                level_difference: 0,
+                critical_multiplier: 1.0,
+                weapon_speed: 2.0,
+            },
+            ..hit
+        };
+        crate::combat::replay_healer_hit(run.app.world_mut(), attacker, actor, &parry).unwrap();
+        assert_eq!(
+            count(&run),
+            4,
+            "a parry with surviving Blood Shield reflects"
+        );
+        for _ in 0..12 {
+            run.app.update();
+        }
         crate::auras::remove_auras(
             run.app.world_mut(),
             actor,
@@ -408,7 +427,137 @@ mod tests {
             |aura| matches!(aura.spell_id, 77535 | 207203),
         );
         strike(&mut run);
-        assert_eq!(count(&run), 3, "no Blood Shield means no reflection");
+        assert_eq!(count(&run), 4, "no Blood Shield means no reflection");
+    }
+
+    #[test]
+    #[ignore = "requires canonical world database and MID2 Blood inputs"]
+    fn blood_inevitable_scales_plague_with_target_missing_health() {
+        use shared::components::Health;
+        use shared::protocol::CombatLogKind;
+        fn tick(health_fraction: f32, talent: bool) -> i32 {
+            let _seed = crate::random::seed_scope(70448);
+            let mut run = super::super::prepare_registered_player(250, 1).unwrap();
+            let actor = run.actor;
+            let target = run.targets[0];
+            assert!(crate::auras::has_aura(run.app.world(), actor, 1280658));
+            if !talent {
+                crate::auras::remove_auras(
+                    run.app.world_mut(),
+                    actor,
+                    crate::auras::RemoveReason::Cancelled,
+                    |aura| aura.spell_id == 1280658,
+                );
+            }
+            let mut health = run.app.world_mut().get_mut::<Health>(target).unwrap();
+            health.current = health.max * health_fraction;
+            crate::auras::apply_aura(
+                run.app.world_mut(),
+                &crate::auras::AuraApplication {
+                    caster: actor,
+                    target,
+                    spell_id: 55078,
+                    effect_mask: 1,
+                    source: crate::auras::AuraSource::Cast,
+                },
+            );
+            for _ in 0..100 {
+                run.app.update();
+                let events = &run
+                    .app
+                    .world()
+                    .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+                    .0;
+                if let Some(event) = events.iter().find(|event| {
+                    event.spell_id == Some(55078)
+                        && event.kind == CombatLogKind::Damage
+                        && event.periodic
+                }) {
+                    return event.amount;
+                }
+            }
+            panic!("Blood Plague did not tick");
+        }
+        let full = tick(1.0, true) as f32;
+        let half = tick(0.55, true) as f32;
+        let capped = tick(0.10, true) as f32;
+        let unselected = tick(0.10, false) as f32;
+        assert!((half / full - 1.15).abs() < 0.01, "full={full} half={half}");
+        assert!(
+            (capped / full - 1.30).abs() < 0.01,
+            "full={full} capped={capped}"
+        );
+        assert!(
+            (unselected / full - 1.0).abs() < 0.01,
+            "full={full} without talent={unselected}"
+        );
+    }
+
+    #[test]
+    #[ignore = "requires canonical world database and MID2 Blood inputs"]
+    fn blood_plague_direct_heal_uses_tick_damage_and_independent_crit() {
+        use shared::components::Health;
+        use shared::protocol::CombatLogKind;
+        let _seed = crate::random::seed_scope(70448);
+        let mut run = super::super::prepare_registered_player(250, 1).unwrap();
+        let actor = run.actor;
+        let target = run.targets[0];
+        let mut health = run.app.world_mut().get_mut::<Health>(actor).unwrap();
+        health.current = health.max * 0.1;
+        for _ in 0..5 {
+            crate::auras::apply_aura(
+                run.app.world_mut(),
+                &crate::auras::AuraApplication {
+                    caster: actor,
+                    target,
+                    spell_id: 55078,
+                    effect_mask: 1,
+                    source: crate::auras::AuraSource::Cast,
+                },
+            );
+            for _ in 0..250 {
+                run.app.update();
+            }
+        }
+        let events = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0;
+        let relevant: Vec<_> = events
+            .iter()
+            .filter(|event| {
+                event.spell_id == Some(55078)
+                    && matches!(event.kind, CombatLogKind::Damage | CombatLogKind::Heal)
+            })
+            .collect();
+        let mut pairs = 0;
+        let mut independent = false;
+        for pair in relevant.windows(2) {
+            let (damage, heal) = (pair[0], pair[1]);
+            if damage.kind != CombatLogKind::Damage || heal.kind != CombatLogKind::Heal {
+                continue;
+            }
+            pairs += 1;
+            assert!(!heal.periodic, "SimC emits a direct heal");
+            if !heal.crit {
+                assert!(
+                    (heal.amount as f32 / damage.amount as f32 - 1.85).abs() < 0.01,
+                    "damage={} heal={}",
+                    damage.amount,
+                    heal.amount
+                );
+            }
+            independent |= damage.crit != heal.crit;
+        }
+        assert!(
+            pairs >= 10,
+            "expected real plague ticks and heals, got {pairs}"
+        );
+        assert!(
+            independent,
+            "heal crit must be rolled independently of the damage crit"
+        );
     }
 
     #[test]
@@ -862,6 +1011,87 @@ mod tests {
 
     #[test]
     #[ignore = "requires canonical world database and MID2 Blood inputs"]
+    fn blood_dance_weapon_buffs_follow_real_summon_lifetimes() {
+        let mut run = super::super::prepare_registered_player(250, 1).unwrap();
+        let actor = run.actor;
+        super::super::engage(&mut run);
+        let summon = |run: &mut super::super::Run| {
+            assert!(crate::spell_cast::try_cast_triggered(
+                run.app.world_mut(),
+                actor,
+                1264353,
+                Some(actor),
+                1
+            ));
+            for _ in 0..4 {
+                run.app.update();
+            }
+            let world = run.app.world_mut();
+            world
+                .query::<&crate::spell_cast::summon::SummonedCreature>()
+                .iter(world)
+                .filter(|summon| summon.owner == actor && summon.spell_id == 1264353)
+                .filter_map(|summon| summon.expires_at)
+                .max_by(f64::total_cmp)
+                .unwrap()
+        };
+        let first_end = summon(&mut run);
+        let first_buff_end = run
+            .app
+            .world()
+            .get::<crate::auras::ActiveAuras>(actor)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 81256)
+            .unwrap()
+            .expires_at
+            .unwrap();
+        assert!(
+            (first_buff_end - first_end).abs() < 0.06,
+            "weapon {first_end}, parry buff {first_buff_end}"
+        );
+        for _ in 0..40 {
+            run.app.update();
+        }
+        let second_end = summon(&mut run);
+        let stack_count = |run: &super::super::Run| {
+            run.app
+                .world()
+                .get::<crate::auras::ActiveAuras>(actor)
+                .unwrap()
+                .iter()
+                .find(|aura| aura.spell_id == 1264407)
+                .map_or(0, |aura| aura.stacks)
+        };
+        assert_eq!(stack_count(&run), 2);
+        while crate::spell_cast::now(run.app.world()) < first_end + 0.15 {
+            run.app.update();
+        }
+        assert_eq!(
+            stack_count(&run),
+            1,
+            "first weapon's Strength stack expires with it"
+        );
+        assert!(
+            crate::auras::has_aura(run.app.world(), actor, 81256),
+            "second weapon keeps parry buff"
+        );
+        while crate::spell_cast::now(run.app.world()) < second_end + 0.15 {
+            run.app.update();
+        }
+        assert_eq!(
+            stack_count(&run),
+            0,
+            "last Strength stack expires with the last weapon"
+        );
+        assert!(
+            !crate::auras::has_aura(run.app.world(), actor, 81256),
+            "parry buff ends with the last weapon"
+        );
+    }
+
+    #[test]
+    #[ignore = "requires canonical world database and MID2 Blood inputs"]
     fn blood_rune_spend_can_summon_dance_weapon_and_enable_parry_buff() {
         let _seed = crate::random::seed_scope(70448);
         let mut run = super::super::prepare_registered_player(250, 1).unwrap();
@@ -904,6 +1134,437 @@ mod tests {
             crate::auras::has_aura(run.app.world(), actor, 81256),
             "real weapon enables the DRW parry buff"
         );
+    }
+
+    #[test]
+    #[ignore = "requires canonical world database and MID2 Blood inputs"]
+    fn blood_ossuary_tracks_bone_shield_and_death_strike_cost() {
+        use server::test_support::healer_intake::{Hit, HitKind};
+        use shared::components::PowerType;
+        fn scenario(
+            stacks: usize,
+            lose_stack: bool,
+            selected: bool,
+            improved: bool,
+        ) -> (bool, f32) {
+            let mut run = super::super::prepare_registered_player(250, 1).unwrap();
+            let actor = run.actor;
+            let target = run.targets[0];
+            super::super::engage(&mut run);
+            if !selected {
+                let known = run
+                    .app
+                    .world()
+                    .get::<crate::class_progression::KnownSpells>(actor)
+                    .unwrap()
+                    .iter()
+                    .filter(|&id| id != 219786)
+                    .collect();
+                run.app
+                    .world_mut()
+                    .entity_mut(actor)
+                    .insert(crate::class_progression::KnownSpells::fixture(known));
+            }
+            crate::auras::remove_auras(
+                run.app.world_mut(),
+                actor,
+                crate::auras::RemoveReason::Cancelled,
+                |aura| {
+                    matches!(aura.spell_id, 195181 | 219788)
+                        || (!improved && aura.spell_id == 374277)
+                },
+            );
+            for _ in 0..stacks {
+                crate::auras::apply_aura(
+                    run.app.world_mut(),
+                    &crate::auras::AuraApplication {
+                        caster: actor,
+                        target: actor,
+                        spell_id: 195181,
+                        effect_mask: u32::MAX,
+                        source: crate::auras::AuraSource::Cast,
+                    },
+                );
+            }
+            if lose_stack {
+                let hit = Hit {
+                    tick: 0,
+                    source_guid: 0,
+                    pack: 0,
+                    target_slot: 0,
+                    school: 1,
+                    raw: 1000.0,
+                    level_scaling_factor: 1.0,
+                    kind: HitKind::Melee {
+                        hand: 0,
+                        outcome: "Hit".into(),
+                        level_difference: 0,
+                        critical_multiplier: 1.0,
+                        weapon_speed: 2.0,
+                    },
+                };
+                crate::combat::replay_healer_hit(run.app.world_mut(), target, actor, &hit).unwrap();
+                run.app.update();
+            }
+            let active = crate::auras::has_aura(run.app.world(), actor, 219788);
+            crate::spell_cast::powers::change_power(
+                run.app.world_mut(),
+                actor,
+                PowerType::RunicPower,
+                1000.0,
+            );
+            let before = crate::spell_cast::powers::power_value(
+                run.app.world(),
+                actor,
+                PowerType::RunicPower,
+            )
+            .unwrap()
+            .0;
+            crate::spell_cast::creature_cast(
+                run.app.world_mut(),
+                actor,
+                49998,
+                Some(target),
+                false,
+            )
+            .unwrap();
+            let after = crate::spell_cast::powers::power_value(
+                run.app.world(),
+                actor,
+                PowerType::RunicPower,
+            )
+            .unwrap()
+            .0;
+            (active, before - after)
+        }
+        assert_eq!(scenario(4, false, true, true), (false, 400.0));
+        assert_eq!(scenario(5, false, true, true), (true, 350.0));
+        assert_eq!(scenario(5, true, true, true), (false, 400.0));
+        assert_eq!(scenario(5, false, false, true), (false, 400.0));
+        assert_eq!(scenario(5, false, true, false), (true, 400.0));
+        assert_eq!(scenario(4, false, true, false), (false, 450.0));
+    }
+
+    #[test]
+    #[ignore = "requires canonical world database and MID2 Blood inputs"]
+    fn blood_rune_spenders_earn_rune_mastery_strength() {
+        use shared::components::PowerType;
+        let _seed = crate::random::seed_scope(70448);
+        let mut run = super::super::prepare_registered_player(250, 1).unwrap();
+        let actor = run.actor;
+        let target = run.targets[0];
+        super::super::engage(&mut run);
+        assert!(crate::auras::has_aura(run.app.world(), actor, 374574));
+        for _ in 0..30 {
+            crate::spell_cast::powers::change_power(
+                run.app.world_mut(),
+                actor,
+                PowerType::Runes,
+                6.0,
+            );
+            crate::spell_cast::creature_cast(
+                run.app.world_mut(),
+                actor,
+                206930,
+                Some(target),
+                false,
+            )
+            .unwrap();
+            for _ in 0..4 {
+                run.app.update();
+            }
+            if crate::auras::has_aura(run.app.world(), actor, 374585) {
+                let aura = run
+                    .app
+                    .world()
+                    .get::<crate::auras::ActiveAuras>(actor)
+                    .unwrap()
+                    .iter()
+                    .find(|aura| aura.spell_id == 374585)
+                    .unwrap();
+                assert_eq!(
+                    aura.effects[0].amount, 6.0,
+                    "rank-two Rune Mastery Strength"
+                );
+                let buffed = run
+                    .app
+                    .world()
+                    .get::<crate::stats::CharacterStats>(actor)
+                    .unwrap()
+                    .primary
+                    .strength;
+                crate::auras::remove_auras(
+                    run.app.world_mut(),
+                    actor,
+                    crate::auras::RemoveReason::Cancelled,
+                    |aura| aura.spell_id == 374585,
+                );
+                run.app.update();
+                let unbuffed = run
+                    .app
+                    .world()
+                    .get::<crate::stats::CharacterStats>(actor)
+                    .unwrap()
+                    .primary
+                    .strength;
+                assert!(buffed > unbuffed, "{unbuffed} -> {buffed}");
+                return;
+            }
+            for _ in 0..40 {
+                run.app.update();
+            }
+        }
+        panic!("Blood rune spenders must earn Rune Mastery");
+    }
+
+    #[test]
+    #[ignore = "requires canonical world database and MID2 Blood inputs"]
+    fn blood_rune_mastery_rolls_on_free_and_costed_triggered_strikes() {
+        use shared::components::PowerType;
+        for triggered in [false, true] {
+            let _seed = crate::random::seed_scope(70448);
+            let mut run = super::super::prepare_registered_player(250, 1).unwrap();
+            let actor = run.actor;
+            let target = run.targets[0];
+            super::super::engage(&mut run);
+            let mut earned = false;
+            for _ in 0..30 {
+                crate::spell_cast::powers::change_power(
+                    run.app.world_mut(),
+                    actor,
+                    PowerType::Runes,
+                    6.0,
+                );
+                if triggered {
+                    assert!(crate::spell_cast::cast_costed_trigger_with_context(
+                        run.app.world_mut(),
+                        actor,
+                        433895,
+                        Some(target),
+                        1,
+                        None,
+                        None
+                    ));
+                } else {
+                    crate::auras::apply_aura(
+                        run.app.world_mut(),
+                        &crate::auras::AuraApplication {
+                            caster: actor,
+                            target: actor,
+                            spell_id: 1264568,
+                            effect_mask: u32::MAX,
+                            source: crate::auras::AuraSource::Cast,
+                        },
+                    );
+                    let before = crate::spell_cast::powers::power_value(
+                        run.app.world(),
+                        actor,
+                        PowerType::Runes,
+                    )
+                    .unwrap()
+                    .0;
+                    crate::spell_cast::creature_cast(
+                        run.app.world_mut(),
+                        actor,
+                        433895,
+                        Some(target),
+                        false,
+                    )
+                    .unwrap();
+                    assert_eq!(
+                        crate::spell_cast::powers::power_value(
+                            run.app.world(),
+                            actor,
+                            PowerType::Runes
+                        )
+                        .unwrap()
+                        .0,
+                        before
+                    );
+                }
+                for _ in 0..4 {
+                    run.app.update();
+                }
+                if crate::auras::has_aura(run.app.world(), actor, 374585) {
+                    earned = true;
+                    break;
+                }
+                for _ in 0..40 {
+                    run.app.update();
+                }
+            }
+            assert!(earned, "Rune Mastery must proc for triggered={triggered}");
+        }
+    }
+
+    #[test]
+    #[ignore = "requires canonical world database and MID2 Blood inputs"]
+    fn bloodied_blade_parries_grant_strength_then_strike() {
+        use server::test_support::healer_intake::{Hit, HitKind};
+        let mut run = super::super::prepare_registered_player(250, 1).unwrap();
+        let actor = run.actor;
+        let source = run.targets[0];
+        super::super::engage(&mut run);
+        crate::auras::remove_auras(
+            run.app.world_mut(),
+            actor,
+            crate::auras::RemoveReason::Cancelled,
+            |aura| matches!(aura.spell_id, 460499 | 460500 | 433899),
+        );
+        let hit = Hit {
+            tick: 0,
+            source_guid: 0,
+            pack: 0,
+            target_slot: 0,
+            school: 1,
+            raw: 100.0,
+            level_scaling_factor: 1.0,
+            kind: HitKind::Melee {
+                hand: 0,
+                outcome: "Parry".into(),
+                level_difference: 0,
+                critical_multiplier: 1.0,
+                weapon_speed: 2.0,
+            },
+        };
+        let before = run
+            .app
+            .world()
+            .get::<crate::stats::CharacterStats>(actor)
+            .unwrap()
+            .primary
+            .strength;
+        for _ in 0..8 {
+            crate::combat::replay_healer_hit(run.app.world_mut(), source, actor, &hit).unwrap();
+            for _ in 0..12 {
+                run.app.update();
+            }
+        }
+        let aura = run
+            .app
+            .world()
+            .get::<crate::auras::ActiveAuras>(actor)
+            .unwrap()
+            .iter()
+            .find(|a| a.spell_id == 460499)
+            .expect("eight parries grant stacks");
+        assert_eq!(aura.stacks, 8);
+        assert_eq!(aura.effects[0].amount, 0.5);
+        let stacked = run
+            .app
+            .world()
+            .get::<crate::stats::CharacterStats>(actor)
+            .unwrap()
+            .primary
+            .strength;
+        assert!(stacked > before * 1.03, "{before} -> {stacked}");
+        crate::combat::replay_healer_hit(run.app.world_mut(), source, actor, &hit).unwrap();
+        for _ in 0..4 {
+            run.app.update();
+        }
+        assert!(!crate::auras::has_aura(run.app.world(), actor, 460499));
+        assert!(crate::auras::has_aura(run.app.world(), actor, 460500));
+        let events = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0;
+        assert!(
+            events
+                .iter()
+                .any(|event| event.spell_id == Some(460501) && event.amount > 0),
+            "final parry causes Heart Strike damage"
+        );
+    }
+
+    #[test]
+    #[ignore = "requires canonical world database and MID2 Blood inputs"]
+    fn bloodied_blade_vampiric_strike_requires_and_spends_a_rune() {
+        use server::test_support::healer_intake::{Hit, HitKind};
+        use shared::components::PowerType;
+        for funded in [false, true] {
+            let mut run = super::super::prepare_registered_player(250, 1).unwrap();
+            let actor = run.actor;
+            let source = run.targets[0];
+            super::super::engage(&mut run);
+            crate::auras::remove_auras(
+                run.app.world_mut(),
+                actor,
+                crate::auras::RemoveReason::Cancelled,
+                |aura| matches!(aura.spell_id, 460499 | 460500 | 433899 | 434153),
+            );
+            for id in [
+                460499, 460499, 460499, 460499, 460499, 460499, 460499, 460499, 433899,
+            ] {
+                crate::auras::apply_aura(
+                    run.app.world_mut(),
+                    &crate::auras::AuraApplication {
+                        caster: actor,
+                        target: actor,
+                        spell_id: id,
+                        effect_mask: u32::MAX,
+                        source: crate::auras::AuraSource::Cast,
+                    },
+                );
+            }
+            if !funded {
+                crate::spell_cast::powers::change_power(
+                    run.app.world_mut(),
+                    actor,
+                    PowerType::Runes,
+                    -6.0,
+                );
+            }
+            let before =
+                crate::spell_cast::powers::power_value(run.app.world(), actor, PowerType::Runes)
+                    .unwrap()
+                    .0;
+            let hit = Hit {
+                tick: 0,
+                source_guid: 0,
+                pack: 0,
+                target_slot: 0,
+                school: 1,
+                raw: 100.0,
+                level_scaling_factor: 1.0,
+                kind: HitKind::Melee {
+                    hand: 0,
+                    outcome: "Parry".into(),
+                    level_difference: 0,
+                    critical_multiplier: 1.0,
+                    weapon_speed: 2.0,
+                },
+            };
+            crate::combat::replay_healer_hit(run.app.world_mut(), source, actor, &hit).unwrap();
+            for _ in 0..4 {
+                run.app.update();
+            }
+            assert!(crate::auras::has_aura(run.app.world(), actor, 460500));
+            assert_eq!(
+                crate::auras::has_aura(run.app.world(), actor, 433899),
+                !funded
+            );
+            let after =
+                crate::spell_cast::powers::power_value(run.app.world(), actor, PowerType::Runes)
+                    .unwrap()
+                    .0;
+            if funded {
+                assert_eq!(after, before - 1.0);
+            } else {
+                assert_eq!(after, before);
+            }
+            let events = &run
+                .app
+                .world()
+                .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+                .0;
+            assert_eq!(
+                events
+                    .iter()
+                    .any(|event| event.spell_id == Some(433895) && event.amount > 0),
+                funded
+            );
+        }
     }
 
     #[test]
@@ -1364,12 +2025,18 @@ mod tests {
     #[ignore = "requires canonical world database and MID2 Blood inputs"]
     fn blood_infliction_scales_with_remaining_plague_duration() {
         use shared::protocol::CombatLogKind;
-        fn sample(duration: u32, blood_modifier: bool) -> i32 {
+        fn sample(duration: u32, blood_modifier: bool, health_fraction: f32) -> i32 {
             let _seed = crate::random::seed_scope(70448);
             let mut run = super::super::prepare_registered_player(250, 1).unwrap();
             let actor = run.actor;
             let target = run.targets[0];
             super::super::engage(&mut run);
+            let mut health = run
+                .app
+                .world_mut()
+                .get_mut::<shared::components::Health>(target)
+                .unwrap();
+            health.current = health.max * health_fraction;
             assert!(crate::auras::has_aura(run.app.world(), actor, 137008));
             if !blood_modifier {
                 crate::auras::remove_auras(
@@ -1431,16 +2098,21 @@ mod tests {
                 .expect("Infliction damage")
                 .amount
         }
-        let short = sample(6000, true);
-        let long = sample(12000, true);
+        let short = sample(6000, true, 1.0);
+        let long = sample(12000, true, 1.0);
         assert!(
             long > short * 3 / 2 && long < short * 3,
             "remaining disease: {short} vs {long}"
         );
-        let unmodified = sample(12000, false);
+        let unmodified = sample(12000, false, 1.0);
         assert!(
             (long as f32 / unmodified as f32 - 2.0).abs() < 0.02,
             "Blood passive must add its native 10 percentage points: {long} vs {unmodified}"
+        );
+        let low_health = sample(12000, true, 0.10);
+        assert!(
+            (low_health as f32 / long as f32 - 1.30).abs() < 0.02,
+            "Inevitable must scale Infliction's remaining disease: {long} vs {low_health}"
         );
     }
 
@@ -2649,6 +3321,185 @@ mod tests {
 
     #[test]
     #[ignore = "requires canonical world database and MID2 Blood inputs"]
+    fn blood_visceral_strength_requires_free_decay() {
+        for free in [false, true] {
+            let mut run = super::super::prepare_registered_player(250, 1).unwrap();
+            let actor = run.actor;
+            super::super::engage(&mut run);
+            assert!(
+                run.app
+                    .world()
+                    .get::<crate::class_progression::KnownSpells>(actor)
+                    .unwrap()
+                    .contains(434157)
+            );
+            crate::auras::remove_auras(
+                run.app.world_mut(),
+                actor,
+                crate::auras::RemoveReason::Cancelled,
+                |aura| matches!(aura.spell_id, 81141 | 461130),
+            );
+            if free {
+                crate::auras::apply_aura(
+                    run.app.world_mut(),
+                    &crate::auras::AuraApplication {
+                        caster: actor,
+                        target: actor,
+                        spell_id: 81141,
+                        effect_mask: u32::MAX,
+                        source: crate::auras::AuraSource::Cast,
+                    },
+                );
+            }
+            let before = run
+                .app
+                .world()
+                .get::<crate::stats::CharacterStats>(actor)
+                .unwrap()
+                .primary
+                .strength;
+            crate::spell_cast::creature_cast(run.app.world_mut(), actor, 43265, Some(actor), false)
+                .unwrap();
+            for _ in 0..4 {
+                run.app.update();
+            }
+            let world = run.app.world();
+            assert_eq!(crate::auras::has_aura(world, actor, 461130), free);
+            let after = world
+                .get::<crate::stats::CharacterStats>(actor)
+                .unwrap()
+                .primary
+                .strength;
+            if free {
+                assert!(after > before * 1.05, "strength {before} -> {after}");
+            } else {
+                assert!(
+                    (after - before).abs() < 0.01,
+                    "strength {before} -> {after}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    #[ignore = "requires canonical world database and MID2 Blood inputs"]
+    fn blood_soaked_ground_reduces_incoming_strike() {
+        use shared::components::Health;
+        fn strike(ground: bool) -> f32 {
+            let _seed = crate::random::seed_scope(70448);
+            let mut run = super::super::prepare_registered_player(250, 1).unwrap();
+            let actor = run.actor;
+            let source = run.targets[0];
+            if ground {
+                crate::auras::apply_aura(
+                    run.app.world_mut(),
+                    &crate::auras::AuraApplication {
+                        caster: actor,
+                        target: actor,
+                        spell_id: 434034,
+                        effect_mask: u32::MAX,
+                        source: crate::auras::AuraSource::Cast,
+                    },
+                );
+            }
+            run.app.update();
+            crate::auras::remove_auras(
+                run.app.world_mut(),
+                actor,
+                crate::auras::RemoveReason::Cancelled,
+                |aura| matches!(aura.spell_id, 77535 | 207203),
+            );
+            let before = run.app.world().get::<Health>(actor).unwrap().current;
+            crate::spell_cast::effects::replay_simc_dummy_strike(
+                run.app.world_mut(),
+                source,
+                actor,
+                100_000.0,
+                false,
+                false,
+            );
+            before - run.app.world().get::<Health>(actor).unwrap().current
+        }
+        let unprotected = strike(false);
+        let protected = strike(true);
+        assert!(
+            (protected / unprotected - 0.92).abs() < 0.001,
+            "strike {unprotected} -> {protected}"
+        );
+    }
+
+    #[test]
+    #[ignore = "requires canonical world database and MID2 Blood inputs"]
+    fn blood_soaked_ground_increases_death_strike_vampiric_proc_chance() {
+        use shared::components::{Health, PowerType};
+        let mut run = super::super::prepare_registered_player(250, 1).unwrap();
+        let actor = run.actor;
+        let target = run.targets[0];
+        super::super::engage(&mut run);
+        let mut found = false;
+        for draw_offset in 0..96 {
+            let mut outcomes = [false; 2];
+            for (index, ground) in [false, true].into_iter().enumerate() {
+                crate::auras::remove_auras(
+                    run.app.world_mut(),
+                    actor,
+                    crate::auras::RemoveReason::Cancelled,
+                    |aura| matches!(aura.spell_id, 433899 | 434153 | 434034),
+                );
+                if ground {
+                    crate::auras::apply_aura(
+                        run.app.world_mut(),
+                        &crate::auras::AuraApplication {
+                            caster: actor,
+                            target: actor,
+                            spell_id: 434034,
+                            effect_mask: u32::MAX,
+                            source: crate::auras::AuraSource::Cast,
+                        },
+                    );
+                }
+                let mut health = run.app.world_mut().get_mut::<Health>(target).unwrap();
+                health.current = health.max;
+                crate::spell_cast::powers::change_power(
+                    run.app.world_mut(),
+                    actor,
+                    PowerType::RunicPower,
+                    1000.0,
+                );
+                let seed = crate::random::seed_scope(70448);
+                for _ in 0..draw_offset {
+                    let _: f32 = crate::random::random();
+                }
+                crate::spell_cast::creature_cast(
+                    run.app.world_mut(),
+                    actor,
+                    49998,
+                    Some(target),
+                    false,
+                )
+                .unwrap();
+                for _ in 0..4 {
+                    run.app.update();
+                }
+                outcomes[index] = crate::auras::has_aura(run.app.world(), actor, 433899);
+                drop(seed);
+                for _ in 0..40 {
+                    run.app.update();
+                }
+            }
+            if outcomes == [false, true] {
+                found = true;
+                break;
+            }
+        }
+        assert!(
+            found,
+            "Blood-soaked Ground must turn a qualifying Death Strike roll into a proc"
+        );
+    }
+
+    #[test]
+    #[ignore = "requires canonical world database and MID2 Blood inputs"]
     fn blood_crimson_scourge_builds_real_ground_and_sanguine_follows_position() {
         let _seed = crate::random::seed_scope(70448);
         let mut run = super::super::prepare_registered_player(250, 1).unwrap();
@@ -2670,6 +3521,10 @@ mod tests {
             "selected Sanguine Ground must follow actual ground"
         );
         assert!(
+            crate::auras::has_aura(run.app.world(), actor, 434034),
+            "selected Blood-soaked Ground must follow actual ground"
+        );
+        assert!(
             !crate::auras::has_aura(run.app.world(), actor, 81141),
             "Death and Decay consumes its earned Crimson Scourge"
         );
@@ -2688,6 +3543,10 @@ mod tests {
             !crate::auras::has_aura(run.app.world(), actor, 391459),
             "leaving the ground removes the healing buff"
         );
+        assert!(
+            !crate::auras::has_aura(run.app.world(), actor, 434034),
+            "leaving the ground removes Blood-soaked Ground"
+        );
         *run.app
             .world_mut()
             .get_mut::<shared::components::Position>(actor)
@@ -2696,6 +3555,10 @@ mod tests {
         assert!(
             crate::auras::has_aura(run.app.world(), actor, 391459),
             "returning to the active field restores the buff"
+        );
+        assert!(
+            crate::auras::has_aura(run.app.world(), actor, 434034),
+            "returning restores Blood-soaked Ground"
         );
         let expiry = run
             .app

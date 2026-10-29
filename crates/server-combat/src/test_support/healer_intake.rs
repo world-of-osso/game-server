@@ -153,9 +153,18 @@ pub struct Capture {
     pub hits: Vec<Hit>,
     pub consumed_absorbs: BTreeMap<Entity, ConsumedAbsorbPoints>,
     pub consumed_absorbs_by_spell: BTreeMap<(Entity, u32), f64>,
+    pub melee_rage: BTreeMap<(Entity, &'static str), f64>,
     pub active_hit_scale: Option<(Entity, f32)>,
     pub source_snapshots: BTreeMap<u32, SourceSnapshot>,
     pub gaps: Vec<String>,
+}
+
+pub fn record_melee_rage(world: &mut World, unit: Entity, source: &'static str, amount: f32) {
+    if let Some(mut capture) = world.get_resource_mut::<Capture>() {
+        if capture.members.contains(&unit) {
+            *capture.melee_rage.entry((unit, source)).or_default() += f64::from(amount) / 10.0;
+        }
+    }
 }
 
 pub fn record(

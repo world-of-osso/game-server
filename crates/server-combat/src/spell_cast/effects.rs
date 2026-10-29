@@ -377,7 +377,8 @@ pub fn power_stats(world: &World, unit: Entity, healing: bool) -> (f32, f32) {
             let attack_type = if lesser_ghoul
                 || matches!(
                     (summon.spell_id, entry),
-                    (317776 | 1242294, Some(163366))
+                    (132578, Some(73967))
+                        | (317776 | 1242294, Some(163366))
                         | (49028 | 1237128 | 1264353, Some(27893))
                         | (434237, Some(217228))
                         | (1292072, Some(264321))
@@ -940,15 +941,14 @@ const MECHANIC_BLEED: u32 = 15;
 
 /// SimC76f8118 action.cpp1686–1690: armor applies only to pure Physical
 /// damage, not hybrid schools. Native bleed and explicit bypass rules remain.
-fn reduced_by_armor(world: &World, spell: &SpellInfo) -> bool {
+fn reduced_by_armor(world: &World, spell: &SpellInfo, effect: Option<&SpellEffect>) -> bool {
+    // SimC76f8118 sc_druid.cpp2481–2506 checks the damaging effect, not an
+    // unrelated bleed effect on the same spell.
     let bleed = spell
         .categories
         .as_ref()
         .is_some_and(|categories| categories.mechanic == MECHANIC_BLEED)
-        || spell
-            .effects
-            .iter()
-            .any(|effect| effect.mechanic == MECHANIC_BLEED);
+        || effect.is_some_and(|effect| effect.mechanic == MECHANIC_BLEED);
     spell.school_mask() == 1 && !bleed && !super::script_registry::ignores_armor(world, spell.id)
 }
 
@@ -1451,7 +1451,7 @@ fn expected_damage_after_mitigation(
     );
     let ignores_mitigation =
         super::attributes(ctx.spell, 4) & ATTR4_IGNORE_DAMAGE_TAKEN_MODIFIERS != 0;
-    if !ignores_mitigation && reduced_by_armor(world, ctx.spell) {
+    if !ignores_mitigation && reduced_by_armor(world, ctx.spell, Some(effect)) {
         armor_reduced(world, ctx.caster, target, amount, ctx.spell)
     } else {
         amount
@@ -1646,7 +1646,8 @@ pub fn deal_damage_shield(
 }
 
 /// Leech copies effective damage, after mitigation/absorption and excluding overkill.
-/// Its DB2 amplitude is a multiplier, not a second spell-power or crit roll.
+/// Native leech uses DB2 amplitude without a second spell-power or crit roll;
+/// a registered spell policy can instead supply a direct critical heal.
 pub(crate) fn deal_leech(
     world: &mut World,
     ctx: &EffectCtx,
@@ -1666,6 +1667,11 @@ pub(crate) fn deal_leech(
     };
     let dealt = deal_damage_and_report(world, ctx, target, damage);
     if dealt > 0.0 {
+        if let Some(healing) = super::script_registry::leech_heal_override(world, ctx, dealt) {
+            let (healing, crit) = with_crit(world, ctx.caster, ctx.caster, ctx.spell, healing);
+            apply_resolved_heal(world, ctx, ctx.caster, healing, crit, false);
+            return;
+        }
         let amplitude = spell_mods::modify(
             world,
             ctx.caster,
@@ -2040,7 +2046,7 @@ pub fn replay_simc_dummy_bleed(world: &mut World, source: Entity, target: Entity
         crit: false,
         periodic: true,
         resolved_source: true,
-        effect: None,
+        effect: Some(&spell.effects[0]),
         bonus_caster: source,
     };
     deal_source_damage_and_report(world, &ctx, target, damage, Some((amount, false)));
@@ -2201,6 +2207,12 @@ fn deal_source_damage_and_report(
     }
     let target_multiplier = damage_taken(world, ctx, target, &damage);
     let cast_multiplier = cast_damage_multiplier(ctx.spell);
+    super::script_registry::incoming_damage_before_mitigation(
+        world,
+        target,
+        Some(ctx.spell.id),
+        source_amount * cast_multiplier,
+    );
     let creature = if resolved_source || ignores_caster_damage_modifiers(ctx.spell) {
         1.0
     } else {
@@ -2232,7 +2244,7 @@ fn deal_source_damage_and_report(
         crate::auras::area_avoidance::reduce_damage(world, target, ctx.spell, effect, false, amount)
     };
     let amount = if super::attributes(ctx.spell, 4) & ATTR4_IGNORE_DAMAGE_TAKEN_MODIFIERS == 0
-        && reduced_by_armor(world, ctx.spell)
+        && reduced_by_armor(world, ctx.spell, effect)
     {
         armor_reduced(world, ctx.caster, target, amount, ctx.spell)
     } else {
@@ -2251,6 +2263,16 @@ fn deal_source_damage_and_report(
     } else {
         amount
     };
+    if amount > 0.0
+        && !periodic
+        && ctx
+            .spell
+            .categories
+            .as_ref()
+            .is_some_and(|category| category.defense_type == 2)
+    {
+        crate::combat::reward_bear_melee_hit_rage(world, target);
+    }
     #[cfg(any(test, feature = "test-support"))]
     factor_capture::record_mitigated(world, ctx, target, amount);
     #[cfg(any(test, feature = "test-support"))]
@@ -2623,6 +2645,20 @@ fn apply_resolved_heal(
     event.crit = crit;
     event.periodic = periodic;
     log_event(world, event);
+    let percent_based = !periodic
+        && ctx
+            .spell
+            .effects
+            .iter()
+            .any(|effect| effect.effect == EFFECT_HEAL_PCT);
+    super::script_registry::heal_received(
+        world,
+        target,
+        ctx.spell.id,
+        amount,
+        effective,
+        percent_based,
+    );
     if !periodic {
         super::record_hit_heal(world, ctx.caster, ctx.spell.id, target, amount);
         super::scripts::heal_beacon(world, ctx, target, effective);

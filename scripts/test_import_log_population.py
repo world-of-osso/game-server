@@ -39,8 +39,73 @@ class ImportTest(unittest.TestCase):
                                  db.execute('SELECT CreatureID,CreatureDisplayID FROM tdb_creature_template_model').fetchall())
                 self.assertEqual(db.execute('SELECT DifficultyID FROM content_creature_template_difficulty ORDER BY DifficultyID').fetchall(), [(1,), (2,), (23,)])
                 self.assertEqual(db.execute('SELECT entry,policy FROM log_derived_templates').fetchall(), [(189886, module.POLICY)])
+                self.assertEqual(db.execute('SELECT table_name,row_key FROM log_derived_template_rows ORDER BY table_name,row_key').fetchall(),
+                    [('content_creature_template', '[189886]'),
+                     ('content_creature_template_difficulty', '[189886,1]'),
+                     ('content_creature_template_difficulty', '[189886,23]'),
+                     ('content_creature_template_difficulty', '[189886,2]'),
+                     ('content_creature_template_model', '[189886,0]')])
             with sqlite3.connect(source) as db:
                 self.assertEqual(db.execute('SELECT COUNT(*) FROM content_creature_template').fetchone()[0], 0)
+
+    def test_authored_matching_maximizes_matches_before_distance(self):
+        fixture = json.loads((Path(__file__).parent / 'tests/fixtures/log-population-tdb.json').read_text())
+        with tempfile.TemporaryDirectory() as directory:
+            copy = Path(directory) / 'world-copy.db'
+            with sqlite3.connect(copy) as db:
+                for table, data in fixture.items():
+                    db.execute(data['sql'])
+                    for row in data['rows']:
+                        db.execute(f"INSERT INTO {table} VALUES ({','.join('?' for _ in row)})", row)
+                db.executemany('INSERT INTO tdb_creature(guid,id,map,position_x,position_y,position_z) VALUES(?,189886,2521,?,20,30)', [(1, 0), (2, 18)])
+            report = module.import_population(copy, [record('flexible', 9, npc=189886), record('constrained', 0, npc=189886)])
+            self.assertEqual((report['2521']['already_present'], report['2521']['imported']), (2, 0))
+            with sqlite3.connect(copy) as db:
+                self.assertEqual(db.execute('SELECT COUNT(*) FROM content_creature').fetchone()[0], 0)
+
+    def test_assigned_authored_row_still_excludes_three_yard_duplicates(self):
+        fixture = json.loads((Path(__file__).parent / 'tests/fixtures/log-population-tdb.json').read_text())
+        with tempfile.TemporaryDirectory() as directory:
+            copy = Path(directory) / 'world-copy.db'
+            with sqlite3.connect(copy) as db:
+                for table, data in fixture.items():
+                    db.execute(data['sql'])
+                    for row in data['rows']:
+                        db.execute(f"INSERT INTO {table} VALUES ({','.join('?' for _ in row)})", row)
+                db.executemany('INSERT INTO content_creature(guid,id1,map,position_x,position_y,position_z) VALUES(?,?,?,?,20,30)',
+                               [(63813220, 236525, 2813, 0), (63993120, 261557, 2993, 0),
+                                (63993117, 261557, 2993, 10)])
+            inputs = []
+            for name, npc, map_id, x in [('matched-a',236525,2813,0), ('duplicate-a',236525,2813,0.26),
+                                         ('matched-b',261557,2993,0), ('duplicate-b',261557,2993,0.79),
+                                         ('matched-c',261557,2993,10), ('duplicate-c',261557,2993,11.52)]:
+                inputs.append(dict(record(name, x, npc=npc), map=map_id))
+            report = module.import_population(copy, inputs)
+            self.assertEqual((report['2813']['already_present'], report['2813']['imported']), (1, 0))
+            self.assertEqual((report['2993']['already_present'], report['2993']['imported']), (2, 0))
+            self.assertEqual([g['reason'] for g in report['2813']['gaps']], ['AUTHORED_SPAWN_NEARBY_AMBIGUOUS'])
+            self.assertEqual([g['reason'] for g in report['2993']['gaps']], ['AUTHORED_SPAWN_NEARBY_AMBIGUOUS'] * 2)
+            with sqlite3.connect(copy) as db:
+                self.assertEqual(db.execute('SELECT COUNT(*) FROM content_creature').fetchone()[0], 3)
+
+    def test_nearby_slots_are_not_collapsed_or_matched_twice(self):
+        fixture = json.loads((Path(__file__).parent / 'tests/fixtures/log-population-tdb.json').read_text())
+        with tempfile.TemporaryDirectory() as directory:
+            copy = Path(directory) / 'world-copy.db'
+            with sqlite3.connect(copy) as db:
+                for table, data in fixture.items():
+                    db.execute(data['sql'])
+                    for row in data['rows']:
+                        db.execute(f"INSERT INTO {table} VALUES ({','.join('?' for _ in row)})", row)
+                db.execute('INSERT INTO tdb_creature(guid,id,map,position_x,position_y,position_z) VALUES(1,189886,2521,100,20,30)')
+            centroid = dict(record('two', 101, npc=189886), identity_ambiguous=True,
+                            position_method='candidate_centroid', candidate_spread_yards=4.0)
+            report = module.import_population(copy, [record('one', 100, npc=189886), centroid,
+                                                      record('three', 200, npc=189886), record('four', 201, npc=189886)])
+            self.assertEqual((report['2521']['already_present'], report['2521']['imported']), (1, 2))
+            self.assertIn('AUTHORED_SPAWN_NEARBY_AMBIGUOUS', [gap['reason'] for gap in report['2521']['gaps']])
+            with sqlite3.connect(copy) as db:
+                self.assertEqual(db.execute('SELECT COUNT(*) FROM content_creature').fetchone()[0], 2)
 
     def test_copy_only_import_preserves_authored_and_tags_sourced_row(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -70,6 +135,7 @@ class ImportTest(unittest.TestCase):
                                  ('LOG_DERIVED_POPULATION', 30, 1.5))
                 self.assertEqual(db.execute('SELECT source_key,z_method,observed_level FROM log_derived_population').fetchone(),
                                  ('new', 'single_walkable_floor', 90))
+                self.assertEqual(json.loads(db.execute('SELECT observation_json FROM log_derived_population').fetchone()[0])['observation_event'], 'SPELL_DAMAGE')
             self.assertEqual(module.import_population(copy, [record('new', 100)])['2521']['already_present'], 1)
             with sqlite3.connect(source) as db:
                 self.assertEqual(db.execute('SELECT COUNT(*) FROM content_creature').fetchone()[0], 1)

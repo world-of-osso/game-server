@@ -96,6 +96,12 @@ pub(crate) fn deliver(
     amount: f32,
 ) {
     if amount > 0.0 {
+        crate::spell_cast::script_registry::incoming_damage_before_mitigation(
+            world,
+            split.recipient,
+            Some(split.spell),
+            amount,
+        );
         let (deferred, consume_ox) = super::stagger::snapshot(world, split.recipient)
             .map_or((0.0, false), |stagger| stagger.deferred(amount, school));
         if deferred > 0.0 || consume_ox {

@@ -52,6 +52,7 @@ mod equipment_admin_types;
 pub mod equipment_effects;
 mod experience;
 pub mod faction;
+pub mod floor_resolver;
 pub mod followers;
 mod friends;
 mod game_objects;

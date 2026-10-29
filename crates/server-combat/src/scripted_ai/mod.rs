@@ -57,6 +57,7 @@ pub(crate) mod nethekurse;
 pub(crate) mod nethekurse_intro;
 pub(crate) mod orator;
 pub(crate) mod ragefire_chasm;
+pub(crate) mod ruby_final;
 pub(crate) mod ruby_life_pools;
 mod scripted_alerts;
 pub(crate) mod shattered_halls;

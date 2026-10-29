@@ -11,6 +11,10 @@ pub use polygons::read_walkable_polygons;
 #[path = "collision_drop.rs"]
 mod collision_drop;
 pub use collision_drop::CollisionDrop;
+#[cfg(feature = "bake")]
+mod connectivity_probe;
+mod hierarchy_bake;
+mod hierarchy_route;
 #[path = "smooth.rs"]
 mod smooth;
 #[path = "visibility.rs"]
@@ -21,6 +25,20 @@ struct Corridor {
     end: [f32; 3],
     polygons: Vec<dtPolyRef>,
     complete: bool,
+}
+
+/// Per-mover continuation of a long route; the worker owns its lifetime.
+#[derive(Default)]
+pub struct NavigationPlan {
+    target: Option<Vec3>,
+    remaining: Vec<u32>,
+    expected_cluster: Option<u32>,
+}
+
+impl NavigationPlan {
+    pub fn is_empty(&self) -> bool {
+        self.target.is_none()
+    }
 }
 
 /// A walkable segment; an incomplete end is not arrival at the requested target.
@@ -54,6 +72,7 @@ pub struct NavigationMap {
     subtile_width: Option<f32>,
     mesh: *mut dtNavMesh,
     query: *mut dtNavMeshQuery,
+    hierarchy: Option<Result<std::sync::Arc<crate::hierarchy::PortalGraph>, String>>,
 }
 
 // SAFETY: pointers are exclusively owned, no thread-affine state; use requires &mut.
@@ -70,12 +89,33 @@ impl NavigationMap {
                 subtile_width: None,
                 mesh: dtAllocNavMesh(),
                 query: dtAllocNavMeshQuery(),
+                hierarchy: None,
             }
         };
         if map.mesh.is_null() || map.query.is_null() {
             return Err("Detour allocation failed".into());
         }
         Ok(map)
+    }
+
+    /// Project a column candidate to a baked polygon within the agent's step height.
+    pub fn floor_polygon(&mut self, point: Vec3) -> Result<Option<Vec3>, String> {
+        self.load_around(point, point)?;
+        let filter = filter();
+        match self.nearest(point, &filter) {
+            Ok((_, projected)) => {
+                let projected = Vec3::from_array(projected);
+                Ok(((projected.y - point.y).abs() <= crate::AGENT_CLIMB).then_some(projected))
+            }
+            Err(error) if error.starts_with("no walkable polygon near ") => Ok(None),
+            Err(error) => Err(error),
+        }
+    }
+
+    /// Read and verify the hierarchy before the worker begins processing requests.
+    pub fn preload_hierarchy(&mut self) {
+        self.hierarchy =
+            Some(crate::hierarchy::PortalGraph::read_artifact(&self.dir).map(std::sync::Arc::new));
     }
 
     /// Native MovePositionToFirstCollision's Detour walkable-surface ray.
@@ -118,9 +158,20 @@ impl NavigationMap {
     }
 
     pub fn path(&mut self, start: Vec3, end: Vec3) -> Result<NavigationPath, String> {
-        let walking = self.walking_path(start, end);
-        let disconnected =
-            matches!(&walking, Err(error) if error == "unreachable target (incomplete corridor)");
+        self.path_with_plan(start, end, &mut NavigationPlan::default())
+    }
+
+    pub fn path_with_plan(
+        &mut self,
+        start: Vec3,
+        end: Vec3,
+        plan: &mut NavigationPlan,
+    ) -> Result<NavigationPath, String> {
+        let walking = self.walking_path_with_plan(start, end, plan);
+        let disconnected = matches!(&walking, Err(error) if error == "unreachable target (incomplete corridor)" || error == "unreachable target (hierarchy disconnected)");
+        if walking.is_err() {
+            *plan = NavigationPlan::default();
+        }
         if disconnected && self.has_collision_drop() {
             return self.path_via_collision_drop(start, end);
         }
@@ -128,7 +179,32 @@ impl NavigationMap {
     }
 
     fn walking_path(&mut self, start: Vec3, end: Vec3) -> Result<NavigationPath, String> {
-        let corridor = self.query_corridor(start, end)?;
+        self.walking_path_with_plan(start, end, &mut NavigationPlan::default())
+    }
+
+    fn walking_path_with_plan(
+        &mut self,
+        start: Vec3,
+        end: Vec3,
+        plan: &mut NavigationPlan,
+    ) -> Result<NavigationPath, String> {
+        let corridor = match self.query_corridor(start, end) {
+            Ok(corridor) if corridor.complete => {
+                *plan = NavigationPlan::default();
+                corridor
+            }
+            Ok(_) => return self.hierarchy_path(start, end, plan),
+            Err(error) if error == "unreachable target (partial corridor made no progress)" => {
+                return self.hierarchy_path(start, end, plan);
+            }
+            Err(error)
+                if error == "unreachable target (incomplete corridor)"
+                    && !self.all_tiles_loaded()? =>
+            {
+                return self.hierarchy_path(start, end, plan);
+            }
+            Err(error) => return Err(error),
+        };
         let points = self.pull_corners(&corridor.start, &corridor.end, &corridor.polygons)?;
         Ok(NavigationPath {
             points,
@@ -143,11 +219,7 @@ impl NavigationMap {
     }
 
     /// Escape candidates are walking-only; their callers do not own off-mesh motion.
-    pub(crate) fn complete_walk_path(
-        &mut self,
-        start: Vec3,
-        end: Vec3,
-    ) -> Result<Vec<Vec3>, String> {
+    pub fn complete_walk_path(&mut self, start: Vec3, end: Vec3) -> Result<Vec<Vec3>, String> {
         self.walking_path(start, end)?.into_complete()
     }
 
@@ -168,6 +240,17 @@ impl NavigationMap {
         let filter = filter();
         let (start_ref, start_pos) = self.nearest(start, &filter)?;
         let (end_ref, end_pos) = self.nearest(end, &filter)?;
+        self.query_references(start_ref, start_pos, end_ref, end_pos, &filter)
+    }
+
+    fn query_references(
+        &mut self,
+        start_ref: dtPolyRef,
+        start_pos: [f32; 3],
+        end_ref: dtPolyRef,
+        end_pos: [f32; 3],
+        filter: &dtQueryFilter,
+    ) -> Result<Corridor, String> {
         let mut corridor = [0; MAX_PATH];
         let mut count = 0;
         // SAFETY: all input/output arrays and refs belong to the loaded mesh.
@@ -177,7 +260,7 @@ impl NavigationMap {
                 end_ref,
                 start_pos.as_ptr(),
                 end_pos.as_ptr(),
-                &filter,
+                filter,
                 corridor.as_mut_ptr(),
                 &mut count,
                 MAX_PATH as i32,
@@ -208,7 +291,7 @@ impl NavigationMap {
             complete,
         };
         if complete {
-            self.optimize_visible_corridor(corridor, &filter)
+            self.optimize_visible_corridor(corridor, filter)
         } else {
             Ok(corridor)
         }
@@ -335,6 +418,32 @@ impl NavigationMap {
                 Ok(Vec3::from_array(surface))
             })
             .collect()
+    }
+
+    fn all_tiles_loaded(&self) -> Result<bool, String> {
+        for entry in std::fs::read_dir(&self.dir)
+            .map_err(|error| format!("{}: {error}", self.dir.display()))?
+        {
+            let path = entry.map_err(|error| error.to_string())?.path();
+            if path.extension().is_none_or(|extension| extension != "nav") {
+                continue;
+            }
+            let name = path
+                .file_stem()
+                .and_then(|name| name.to_str())
+                .ok_or("invalid navmesh filename")?;
+            let (row, col) = name
+                .split_once('_')
+                .ok_or("invalid navmesh tile filename")?;
+            let tile = (
+                row.parse::<u32>().map_err(|error| error.to_string())?,
+                col.parse::<u32>().map_err(|error| error.to_string())?,
+            );
+            if !self.loaded.contains(&tile) {
+                return Ok(false);
+            }
+        }
+        Ok(true)
     }
 
     fn load_around(&mut self, start: Vec3, end: Vec3) -> Result<(), String> {

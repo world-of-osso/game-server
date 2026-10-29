@@ -11,6 +11,7 @@ GROUND_LIST="$(mktemp)"
 trap 'rm -f "$GROUND_LIST"' EXIT
 
 python3 scripts/check_los_eyes.py --world-db data/world.db --table ../game-engine/data/los/eye_heights.tsv
+python3 scripts/check_navigation_graphs.py --world-db data/world.db --nav-root data/ground/navmesh
 
 echo "Building release (Debian bookworm, glibc 2.36: runs on sakuin's older glibc)..."
 # A host `cargo build` links against the deploying machine's glibc (Arch: 2.43),
@@ -18,12 +19,6 @@ echo "Building release (Debian bookworm, glibc 2.36: runs on sakuin's older glib
 python3 ../game-engine/scripts/desktop-server-build.py --root "$PWD" --release --build-host local
 
 ssh "$SERVER_HOST" "mkdir -p ${STATE_DIR}/bin ${STATE_DIR}/data/economy ${GROUND_DIR}"
-
-echo "Uploading binaries..."
-for bin in game-server game-server-admin; do
-	scp "target/release/${bin}" "${SERVER_HOST}:${STATE_DIR}/bin/${bin}.new"
-	ssh "$SERVER_HOST" "mv ${STATE_DIR}/bin/${bin}.new ${STATE_DIR}/bin/${bin}"
-done
 
 echo "Uploading data (world.db and economy config are read relative to ${STATE_DIR})..."
 scp data/world.db "${SERVER_HOST}:${STATE_DIR}/data/world.db"
@@ -64,6 +59,12 @@ echo "Uploading navigation (incremental nav-bake output)..."
 test -d data/ground/navmesh || { echo "No navigation bake: run nav-bake (docs/specs/navigation.md)" >&2; exit 1; }
 # Delete stale navigation artifacts only, never neighboring ground/LOS assets.
 rsync -a --delete --delete-excluded $map_filter --exclude='/*/' data/ground/navmesh/ "${SERVER_HOST}:${GROUND_DIR}/navmesh/"
+
+echo "Uploading binaries after navigation graphs..."
+for bin in game-server game-server-admin; do
+	scp "target/release/${bin}" "${SERVER_HOST}:${STATE_DIR}/bin/${bin}.new"
+	ssh "$SERVER_HOST" "mv ${STATE_DIR}/bin/${bin}.new ${STATE_DIR}/bin/${bin}"
+done
 
 ssh "$SERVER_HOST" "chown -R game-server:game-server ${STATE_DIR}"
 

@@ -7,8 +7,9 @@ use combat::auras::{
 use combat::class_progression::TraitLoadout;
 use combat::spell_cast::script_registry::SpellScriptHook;
 use combat::spell_info::{SpellInfo, SpellStore};
-use combat::stats::CharacterStats;
+use combat::stats::{CharacterStats, EquippedItemModifiers};
 use shared::components::{ActiveSpec, Health, PowerType};
+use shared::protocol::EquipmentSlot;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::SuccessfulCastRelationships(after_cast),
@@ -16,14 +17,19 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AfterAbsorbConsumed(reflection_from_absorb),
     SpellScriptHook::AvoidanceProcHitMask(grand_crusader_avoidance_mask),
     SpellScriptHook::ResolvedDamage(glory_from_shield),
+    SpellScriptHook::ResolvedDamage(grant_bulwark_of_righteous_fury),
     SpellScriptHook::OnCast(glory_on_cast),
     SpellScriptHook::EffectHandler(armament_energize_handler),
+    SpellScriptHook::EffectHandler(rite_of_sanctification_handler),
     SpellScriptHook::AuraEvent(divine_inspiration_event),
     SpellScriptHook::OwnsPolicyProc(|spell| spell == 432964),
     SpellScriptHook::AfterNativeCastUpdate(bind_blessed_hammer_fields),
     SpellScriptHook::EnemyContextHit(blessed_hammer_hit),
     SpellScriptHook::TargetDamageMultiplier(valor_shield_multiplier),
+    SpellScriptHook::TargetDamageMultiplier(ferren_marcus_multiplier),
+    SpellScriptHook::TargetDamageMultiplier(focused_enmity_multiplier),
     SpellScriptHook::AfterResolvedHits(consume_valor),
+    SpellScriptHook::AfterResolvedHits(consume_bulwark_of_righteous_fury),
     SpellScriptHook::AreaFilter(blaze_area_filter),
 ];
 
@@ -190,6 +196,37 @@ fn roll_divine_inspiration(world: &mut World, caster: Entity) {
         }));
 }
 
+fn rite_of_sanctification_handler(
+    spell: u32,
+    index: u8,
+) -> Option<combat::spell_cast::effects::EffectHandler> {
+    (spell == 433568 && index == 0).then_some(apply_rite_of_sanctification)
+}
+
+fn apply_rite_of_sanctification(
+    world: &mut World,
+    ctx: &combat::spell_cast::effects::EffectCtx<'_>,
+    effect: &combat::spell_info::SpellEffect,
+    _: Entity,
+) {
+    // SimC76f8118 sc_paladin.cpp:1999–2020; DB2 effect54 selects enchant7143.
+    let Some(mut items) = world.get_mut::<EquippedItemModifiers>(ctx.caster) else {
+        warn!("Rite of Sanctification requires equipped item modifiers");
+        return;
+    };
+    if items
+        .temporary_enchants
+        .iter()
+        .any(|(slot, _)| *slot == EquipmentSlot::MainHand)
+    {
+        warn!("Rite of Sanctification cannot replace a temporary weapon enchant");
+        return;
+    }
+    items
+        .temporary_enchants
+        .push((EquipmentSlot::MainHand, effect.misc_values[0] as u32));
+}
+
 fn armament_energize_handler(
     spell: u32,
     index: u8,
@@ -231,6 +268,36 @@ fn selected(world: &World, caster: Entity, talent: u32) -> bool {
                 .active_talent_spells()
                 .any(|entry| entry.spell_id == talent)
         })
+}
+
+fn focused_enmity_multiplier(world: &World, caster: Entity, _: Entity, spell: &SpellInfo) -> f32 {
+    if spell.id != 31935
+        || !selected(world, caster, 378845)
+        || combat::combat_refs::active_opponents(world, caster)
+            .take(2)
+            .count()
+            != 1
+    {
+        return 1.0;
+    }
+    // SimC76f8118 sc_paladin_protection.cpp: count encounter enemies, not chain hits.
+    1.0 + combat::spell_cast::scripts::script_effect_value(world, caster, 378845, 0) / 100.0
+}
+
+fn ferren_marcus_multiplier(
+    world: &World,
+    caster: Entity,
+    target: Entity,
+    spell: &SpellInfo,
+) -> f32 {
+    if spell.id != 31935
+        || spell.cast_primary_target != Some(target)
+        || !selected(world, caster, 378762)
+    {
+        return 1.0;
+    }
+    // SimC76f8118 sc_paladin_protection.cpp:273–280 applies the selected rank to the primary hit.
+    1.0 + combat::spell_cast::scripts::script_effect_value(world, caster, 378762, 0) / 100.0
 }
 
 fn valor_shield_multiplier(
@@ -310,6 +377,41 @@ fn roll_vanguard(world: &mut World, caster: Entity, spell: u32) {
                 source: AuraSource::Cast,
             },
         );
+    }
+}
+
+fn grant_bulwark_of_righteous_fury(
+    world: &mut World,
+    ctx: &combat::spell_cast::effects::EffectCtx<'_>,
+    _: Entity,
+    _: bool,
+    amount: f32,
+) {
+    if ctx.spell.id != 31935 || amount <= 0.0 || !selected(world, ctx.caster, 386653) {
+        return;
+    }
+    // SimC76f8118 sc_paladin_protection.cpp:228–229 grants a stack per Shield impact.
+    combat::auras::apply_aura(
+        world,
+        &AuraApplication {
+            caster: ctx.caster,
+            target: ctx.caster,
+            spell_id: 386652,
+            effect_mask: u32::MAX,
+            source: AuraSource::Cast,
+        },
+    );
+}
+
+fn consume_bulwark_of_righteous_fury(
+    world: &mut World,
+    ctx: &combat::spell_cast::effects::EffectCtx<'_>,
+) {
+    if ctx.spell.id == 53600 {
+        // SimC76f8118 sc_paladin.cpp:3927 consumes the modifier after Shield's damage.
+        combat::auras::remove_auras(world, ctx.caster, RemoveReason::Consumed, |aura| {
+            aura.spell_id == 386652 && aura.caster == ctx.caster
+        });
     }
 }
 
@@ -740,6 +842,19 @@ fn reset_avengers_shield(world: &mut World, caster: Entity) {
 }
 
 fn after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    // SimC76f8118 sc_paladin.hpp:1730–1735: Protection SotR grants selected Faith's Armor.
+    if spell.id == 53600 && selected(world, caster, 406101) {
+        combat::auras::apply_aura(
+            world,
+            &AuraApplication {
+                caster,
+                target: caster,
+                spell_id: 379017,
+                effect_mask: u32::MAX,
+                source: AuraSource::Cast,
+            },
+        );
+    }
     roll_vanguard(world, caster, spell.id);
     if spell.id == 204019
         && spell.cast_primary_target.is_some_and(|target| {

@@ -10,16 +10,21 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::LateAuraRegistra
 
 fn register(scripts: &mut AuraScripts) {
     for spell in [312916, 326801] {
-        scripts.0.entry(spell).or_default().check_proc = Some(below_health_without_cooldown);
+        scripts.0.entry(spell).or_default().check_proc = Some(health_without_cooldown);
     }
 }
 
-// SimC76f8118 spelltext_data.inc 13277/13911: below the native effect's
-// threshold and not while the triggered spell's cooldown aura is active.
-fn below_health_without_cooldown(world: &World, aura: &AuraInstance, event: &AuraEvent) -> bool {
+// SimC76f8118 sc_death_knight.cpp:12982–12987 checks Sanguination above
+// its native threshold; Emergency Failsafe retains its below-threshold rule.
+fn health_without_cooldown(world: &World, aura: &AuraInstance, event: &AuraEvent) -> bool {
     let Some(target) = event.target.filter(|target| *target == aura.caster) else {
         return false;
     };
+    // SimC76f8118 sc_death_knight.cpp:12982–12990: Sanguination is
+    // driven by damage taken, not its owner's self-targeted spell effects.
+    if aura.spell_id == 326801 && event.actor == target {
+        return false;
+    }
     let Some(health) = world.get::<Health>(target) else {
         return false;
     };
@@ -34,6 +39,11 @@ fn below_health_without_cooldown(world: &World, aura: &AuraInstance, event: &Aur
         326801 => 326809,
         _ => unreachable!(),
     };
-    health.current < health.max * threshold / 100.0
-        && !combat::auras::has_aura(world, target, cooldown)
+    let threshold = health.max * threshold / 100.0;
+    let eligible = match aura.spell_id {
+        312916 => health.current < threshold,
+        326801 => health.current > threshold,
+        _ => unreachable!(),
+    };
+    eligible && !combat::auras::has_aura(world, target, cooldown)
 }

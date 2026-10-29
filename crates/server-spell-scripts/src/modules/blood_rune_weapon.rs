@@ -205,6 +205,8 @@ fn sync_rune_weapon_buff(world: &mut World) {
                 .map(|end| (entity, summon.owner, end, registered.is_none()))
         })
         .collect();
+    // SimC76f8118 sc_death_knight.cpp:4353–4361: both buffs inherit the
+    // resolved summon lifetime, without applying its duration modifier again.
     for (weapon, owner, end, is_new) in weapons {
         if is_new {
             world.entity_mut(weapon).insert(RegisteredRuneWeapon);
@@ -219,7 +221,7 @@ fn sync_rune_weapon_buff(world: &mut World) {
                     Some(owner),
                     1,
                     TriggeredSpellOverrides {
-                        duration_ms: Some(((end - now) * 1000.0).round() as i32),
+                        fixed_aura_duration_ms: Some(((end - now) * 1000.0).round() as u32),
                         ..Default::default()
                     },
                 );
@@ -242,7 +244,7 @@ fn sync_rune_weapon_buff(world: &mut World) {
                 Some(owner),
                 1,
                 TriggeredSpellOverrides {
-                    duration_ms: Some(((end - now) * 1000.0).round() as i32),
+                    fixed_aura_duration_ms: Some(((end - now) * 1000.0).round() as u32),
                     ..Default::default()
                 },
             );

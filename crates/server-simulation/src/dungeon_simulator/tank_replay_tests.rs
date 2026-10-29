@@ -74,9 +74,18 @@ fn simc_dummy_strike_triggers_taken_melee_ability_proc() {
         run.app.world_mut(),
         target,
         RemoveReason::Cancelled,
-        |aura| matches!(aura.spell_id, 77535 | 207203 | 326809),
+        |aura| matches!(aura.spell_id, 77535 | 207203 | 326808 | 326809),
     );
     let max = run.app.world().get::<Health>(target).unwrap().max;
+    crate::spell_cast::creature_cast(run.app.world_mut(), target, 433895, Some(source), false)
+        .unwrap();
+    for _ in 0..4 {
+        run.app.update();
+    }
+    assert!(
+        !crate::auras::has_aura(run.app.world(), target, 326808),
+        "self-targeted Vampiric Strike effects must not trigger Sanguination"
+    );
     run.app
         .world_mut()
         .get_mut::<Health>(target)
@@ -86,14 +95,32 @@ fn simc_dummy_strike_triggers_taken_melee_ability_proc() {
         run.app.world_mut(),
         source,
         target,
-        max * 0.05,
+        max * 0.01,
+        false,
+        false,
+    );
+    run.app.update();
+    assert!(
+        !crate::auras::has_aura(run.app.world(), target, 326808),
+        "SimC Sanguination does not proc below its threshold"
+    );
+    run.app
+        .world_mut()
+        .get_mut::<Health>(target)
+        .unwrap()
+        .current = max * 0.80;
+    crate::spell_cast::effects::replay_simc_dummy_strike(
+        run.app.world_mut(),
+        source,
+        target,
+        max * 0.01,
         false,
         false,
     );
     run.app.update();
     assert!(
         crate::auras::has_aura(run.app.world(), target, 326808),
-        "landed melee ability must proc Rune of Sanguination"
+        "landed melee ability above the threshold must proc Rune of Sanguination"
     );
 }
 
@@ -1657,6 +1684,58 @@ fn dungeon_season_armor_tuning_changes_incoming_swing_damage() {
 }
 
 #[test]
+#[ignore = "uses native dungeon-season tuning and a real blocked hit"]
+fn tank_report_block_reduction_matches_dungeon_combat() {
+    use shared::components::{Health, UnitLevel};
+    let mut h = crate::spell_cast::test_harness::harness(Vec::new(), &[], 12).unwrap();
+    let data = crate::test_data::world_data();
+    h.app.insert_resource(data.armor_constants.clone());
+    h.app.world_mut().entity_mut(h.caster).insert((
+        UnitLevel(90),
+        Health {
+            current: 100_000.0,
+            max: 100_000.0,
+        },
+    ));
+    h.app.world_mut().entity_mut(h.npc).insert((
+        UnitLevel(92),
+        data.expected_stats.armor_tuning(3025, 120).unwrap(),
+    ));
+    let mut stats = h
+        .app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(h.caster)
+        .unwrap();
+    stats.armor = 0.0;
+    stats.defense.shield_block = 3185.0;
+    drop(stats);
+    let reported = super::tank_replay::sampled_blocked_pct(h.app.world(), h.npc, h.caster).unwrap();
+    let hit = super::healer_intake::Hit {
+        tick: 1,
+        source_guid: 0,
+        pack: 0,
+        target_slot: 0,
+        school: 1,
+        raw: 10_000.0,
+        level_scaling_factor: 1.0,
+        kind: super::healer_intake::HitKind::Melee {
+            hand: 0,
+            outcome: "Block".into(),
+            level_difference: -2,
+            critical_multiplier: 1.0,
+            weapon_speed: 2.0,
+        },
+    };
+    crate::combat::replay_healer_hit(h.app.world_mut(), h.npc, h.caster, &hit).unwrap();
+    let actual = 100.0 * (h.health(h.caster) - 90_000.0) / 10_000.0;
+    assert!((reported - 41.2777).abs() < 0.01, "reported={reported}");
+    assert!(
+        (reported - actual).abs() < 0.02,
+        "reported={reported} actual={actual}"
+    );
+}
+
+#[test]
 #[ignore = "uses native recipient armor and absorb data"]
 fn simc_dummy_bleed_uses_native_absorbs_but_not_armor() {
     let mut h = crate::spell_cast::test_harness::harness(Vec::new(), &[17], 5).unwrap();
@@ -2161,6 +2240,656 @@ fn devotion_aura_reduces_incoming_bleed() {
     assert!(
         before > 0.0 && after < before * 0.98,
         "Devotion Aura did not reduce bleed: {before} -> {after}"
+    );
+}
+
+#[test]
+#[ignore = "uses the selected Protection set and real Consecration field"]
+fn protection_two_piece_illuminates_enemies_in_consecration() {
+    use shared::components::Position;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::dps_parity::prepare_registered_player(66, 1).unwrap();
+    super::dps_parity::engage(&mut run);
+    let actor = run.actor;
+    let target = run.targets[0];
+    assert!(crate::auras::has_aura(run.app.world(), actor, 1296658));
+    let chance = |world: &bevy::prelude::World| {
+        let spell = world
+            .resource::<crate::spell_info::SpellStore>()
+            .get(275779)
+            .unwrap();
+        crate::spell_cast::effects::crit_chance(world, actor, target, spell)
+    };
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        target,
+        crate::auras::RemoveReason::Expired,
+        |aura| aura.spell_id == 204242 && aura.caster == actor,
+    );
+    let before = chance(run.app.world());
+    let consecration = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(26573)
+        .unwrap()
+        .clone();
+    crate::spell_cast::scripts::spawn_consecration(run.app.world_mut(), actor, &consecration);
+    for _ in 0..30 {
+        run.app.update();
+    }
+    assert!(crate::auras::has_aura(run.app.world(), target, 204242));
+    let illuminated = chance(run.app.world());
+    assert!(
+        (illuminated - before - 5.0).abs() < 0.01,
+        "before={before} illuminated={illuminated}"
+    );
+    run.app.world_mut().get_mut::<Position>(target).unwrap().x += 100.0;
+    run.app.update();
+    assert!(!crate::auras::has_aura(run.app.world(), target, 204242));
+    assert!((chance(run.app.world()) - before).abs() < 0.01);
+}
+
+#[test]
+#[ignore = "uses selected MID2 Focused Enmity and real Avenger's Shield impacts"]
+fn focused_enmity_counts_engaged_enemies_not_chain_targets() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::components::Position;
+    use shared::protocol::CombatLogKind;
+
+    fn shield(second_engaged: bool) -> f64 {
+        let _seed = crate::random::seed_scope(70448);
+        let mut run = super::dps_parity::prepare_registered_player(66, 2).unwrap();
+        super::dps_parity::engage(&mut run);
+        let actor = run.actor;
+        let primary = run.targets[0];
+        let secondary = run.targets[1];
+        run.app
+            .world_mut()
+            .get_mut::<Position>(secondary)
+            .unwrap()
+            .x += 100.0;
+        if !second_engaged {
+            crate::combat::combat_stop(run.app.world_mut(), secondary);
+        }
+        let start = run.app.world().resource::<ObservedCombatEvents>().0.len();
+        let _hit_seed = crate::random::seed_scope(454545);
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 31935, Some(primary), false)
+            .unwrap();
+        for _ in 0..40 {
+            run.app.update();
+        }
+        let events = &run.app.world().resource::<ObservedCombatEvents>().0[start..];
+        let hit = events
+            .iter()
+            .find(|event| {
+                event.source == Some(actor.to_bits())
+                    && event.target == Some(primary.to_bits())
+                    && event.spell_id == Some(31935)
+                    && event.kind == CombatLogKind::Damage
+            })
+            .expect("Shield must hit primary");
+        f64::from(hit.amount) / if hit.crit { 2.0 } else { 1.0 }
+    }
+    let single = shield(false);
+    let multiple = shield(true);
+    assert!(
+        (1.99..2.01).contains(&(single / multiple)),
+        "single={single} multiple={multiple}"
+    );
+}
+
+#[test]
+#[ignore = "uses selected MID2 Ferren Marcus and real Avenger's Shield chain"]
+fn ferren_marcus_empowers_only_primary_shield_target() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::protocol::CombatLogKind;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::dps_parity::prepare_registered_player(66, 2).unwrap();
+    super::dps_parity::engage(&mut run);
+    let actor = run.actor;
+    let primary = run.targets[0];
+    let secondary = run.targets[1];
+    let rank = crate::spell_cast::scripts::script_effect_value(run.app.world(), actor, 378762, 0);
+    assert!((rank - 20.0).abs() < 0.01, "selected Fervor rank: {rank}");
+    let start = run.app.world().resource::<ObservedCombatEvents>().0.len();
+    let _hit_seed = crate::random::seed_scope(454545);
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 31935, Some(primary), false)
+        .unwrap();
+    for _ in 0..40 {
+        run.app.update();
+    }
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0[start..];
+    let damage = |target| {
+        let hit = events
+            .iter()
+            .find(|event| {
+                event.source == Some(actor.to_bits())
+                    && event.target == Some(target)
+                    && event.spell_id == Some(31935)
+                    && event.kind == CombatLogKind::Damage
+            })
+            .expect("Shield must hit both chain targets");
+        f64::from(hit.amount) / if hit.crit { 2.0 } else { 1.0 }
+    };
+    let first = damage(primary.to_bits());
+    let second = damage(secondary.to_bits());
+    // Native per-target damage variance is independently rolled for each impact.
+    assert!(
+        (1.12..1.28).contains(&(first / second)),
+        "primary={first} secondary={second}"
+    );
+}
+
+#[test]
+#[ignore = "uses selected MID2 Greater Judgment and real Protection spell impacts"]
+fn protection_judgment_empowers_and_is_consumed_by_shield() {
+    use crate::spell_cast::powers::PowerPools;
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::components::PowerType;
+    use shared::protocol::CombatLogKind;
+    fn shield(with_mark: bool) -> i32 {
+        let _seed = crate::random::seed_scope(70448);
+        let mut run = super::dps_parity::prepare_registered_player(66, 1).unwrap();
+        super::dps_parity::engage(&mut run);
+        let actor = run.actor;
+        let target = run.targets[0];
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 275779, Some(target), false)
+            .unwrap();
+        for _ in 0..40 {
+            run.app.update();
+        }
+        let aura = run
+            .app
+            .world()
+            .get::<crate::auras::ActiveAuras>(target)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 197277 && aura.caster == actor)
+            .expect("Judgment must mark its target");
+        assert!(
+            aura.effects
+                .iter()
+                .any(|effect| effect.index == 0 && (effect.amount - 50.0).abs() < 0.01)
+        );
+        let before_stacks = aura.stacks;
+        if !with_mark {
+            crate::auras::remove_auras(
+                run.app.world_mut(),
+                target,
+                crate::auras::RemoveReason::Consumed,
+                |aura| aura.spell_id == 197277 && aura.caster == actor,
+            );
+        }
+        run.app
+            .world_mut()
+            .get_mut::<PowerPools>(actor)
+            .unwrap()
+            .get_mut(PowerType::HolyPower)
+            .unwrap()
+            .current = 3.0;
+        let start = run.app.world().resource::<ObservedCombatEvents>().0.len();
+        let _hit_seed = crate::random::seed_scope(454545);
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 53600, Some(target), false)
+            .unwrap();
+        for _ in 0..4 {
+            run.app.update();
+        }
+        if with_mark {
+            let after = run
+                .app
+                .world()
+                .get::<crate::auras::ActiveAuras>(target)
+                .unwrap()
+                .iter()
+                .find(|aura| aura.spell_id == 197277 && aura.caster == actor)
+                .map_or(0, |aura| aura.stacks);
+            assert_eq!(
+                after + 1,
+                before_stacks,
+                "Shield must consume one Judgment use"
+            );
+        }
+        run.app.world().resource::<ObservedCombatEvents>().0[start..]
+            .iter()
+            .find(|event| {
+                event.source == Some(actor.to_bits())
+                    && event.target == Some(target.to_bits())
+                    && event.spell_id == Some(53600)
+                    && event.kind == CombatLogKind::Damage
+            })
+            .expect("Shield must damage its target")
+            .amount
+    }
+    let without = shield(false);
+    let with = shield(true);
+    assert!(
+        without > 0 && (with as f64 / without as f64 - 1.5).abs() < 0.01,
+        "Judgment must increase Shield damage by 50%: {without} -> {with}"
+    );
+}
+
+#[test]
+#[ignore = "uses selected MID2 Bulwark and real Shield casts"]
+fn avengers_shield_grants_bulwark_for_the_next_shield() {
+    use crate::spell_cast::powers::PowerPools;
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::components::PowerType;
+    use shared::protocol::CombatLogKind;
+    fn shield(with_bulwark: bool) -> i32 {
+        let _seed = crate::random::seed_scope(70448);
+        let mut run = super::dps_parity::prepare_registered_player(66, 1).unwrap();
+        super::dps_parity::engage(&mut run);
+        let actor = run.actor;
+        let target = run.targets[0];
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 31935, Some(target), false)
+            .unwrap();
+        for _ in 0..40 {
+            run.app.update();
+        }
+        let aura = run
+            .app
+            .world()
+            .get::<crate::auras::ActiveAuras>(actor)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 386652)
+            .expect("Avenger's Shield must grant Bulwark");
+        assert_eq!(aura.stacks, 1);
+        if !with_bulwark {
+            crate::auras::remove_auras(
+                run.app.world_mut(),
+                actor,
+                crate::auras::RemoveReason::Consumed,
+                |aura| aura.spell_id == 386652,
+            );
+        }
+        run.app
+            .world_mut()
+            .get_mut::<PowerPools>(actor)
+            .unwrap()
+            .get_mut(PowerType::HolyPower)
+            .unwrap()
+            .current = 3.0;
+        let start = run.app.world().resource::<ObservedCombatEvents>().0.len();
+        let _hit_seed = crate::random::seed_scope(454545);
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 53600, Some(target), false)
+            .unwrap();
+        for _ in 0..4 {
+            run.app.update();
+        }
+        assert!(
+            !crate::auras::has_aura(run.app.world(), actor, 386652),
+            "Shield must consume Bulwark"
+        );
+        run.app.world().resource::<ObservedCombatEvents>().0[start..]
+            .iter()
+            .find(|event| {
+                event.source == Some(actor.to_bits())
+                    && event.target == Some(target.to_bits())
+                    && event.spell_id == Some(53600)
+                    && event.kind == CombatLogKind::Damage
+            })
+            .expect("Shield must damage its target")
+            .amount
+    }
+    let without = shield(false);
+    let with = shield(true);
+    assert!(
+        without > 0 && (with as f64 / without as f64 - 1.1).abs() < 0.01,
+        "one Bulwark stack must add 10% Shield damage: {without} -> {with}"
+    );
+}
+
+#[test]
+#[ignore = "uses selected MID2 Instrument and real Shield of the Righteous damage"]
+fn instrument_scales_shield_damage_from_pre_spend_holy_power() {
+    use crate::spell_cast::powers::PowerPools;
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::components::PowerType;
+    use shared::protocol::CombatLogKind;
+    fn shield(power: f32) -> i32 {
+        let _seed = crate::random::seed_scope(70448);
+        let mut run = super::dps_parity::prepare_registered_player(66, 1).unwrap();
+        super::dps_parity::engage(&mut run);
+        let actor = run.actor;
+        let target = run.targets[0];
+        run.app
+            .world_mut()
+            .get_mut::<PowerPools>(actor)
+            .unwrap()
+            .get_mut(PowerType::HolyPower)
+            .unwrap()
+            .current = power;
+        let start = run.app.world().resource::<ObservedCombatEvents>().0.len();
+        let _hit_seed = crate::random::seed_scope(454545);
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 53600, Some(target), false)
+            .unwrap();
+        for _ in 0..4 {
+            run.app.update();
+        }
+        run.app.world().resource::<ObservedCombatEvents>().0[start..]
+            .iter()
+            .find(|event| {
+                event.source == Some(actor.to_bits())
+                    && event.target == Some(target.to_bits())
+                    && event.spell_id == Some(53600)
+                    && event.kind == CombatLogKind::Damage
+            })
+            .expect("Shield must damage its target")
+            .amount
+    }
+    let three = shield(3.0);
+    let five = shield(5.0);
+    assert!(
+        three > 0 && (five as f64 / three as f64 - 2.0).abs() < 0.01,
+        "two extra Holy Power must double Shield damage: {three} -> {five}"
+    );
+}
+
+#[test]
+#[ignore = "uses selected MID2 Protection and native Shield of the Righteous"]
+fn protection_shield_uses_modified_armor_effect() {
+    use crate::spell_cast::powers::PowerPools;
+    use shared::components::PowerType;
+    let mut run = super::dps_parity::prepare_registered_player(66, 1).unwrap();
+    super::dps_parity::engage(&mut run);
+    let actor = run.actor;
+    let target = run.targets[0];
+    run.app
+        .world_mut()
+        .get_mut::<PowerPools>(actor)
+        .unwrap()
+        .get_mut(PowerType::HolyPower)
+        .unwrap()
+        .current = 5.0;
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 53600, Some(target), false)
+        .unwrap();
+    for _ in 0..4 {
+        run.app.update();
+    }
+    let aura = run
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(actor)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 132403)
+        .expect("Shield must grant armor");
+    let amount = aura
+        .effects
+        .iter()
+        .find(|effect| effect.index == 1)
+        .unwrap()
+        .amount;
+    assert!(
+        (amount - 192.0).abs() < 0.01,
+        "Protection-modified Shield armor: {amount}"
+    );
+    let with = *run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(actor)
+        .unwrap();
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        actor,
+        crate::auras::RemoveReason::Consumed,
+        |aura| aura.spell_id == 132403,
+    );
+    for _ in 0..4 {
+        run.app.update();
+    }
+    let without = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(actor)
+        .unwrap();
+    assert!(
+        with.armor - without.armor > with.primary.strength * 1.9,
+        "Shield must add its modified Strength-based armor: {} -> {}",
+        without.armor,
+        with.armor
+    );
+}
+
+#[test]
+#[ignore = "uses selected MID2 Protection and real incoming magic damage"]
+fn protection_shield_reduces_real_magic_damage() {
+    use super::healer_intake::{Hit, HitKind};
+    use crate::spell_cast::powers::PowerPools;
+    use shared::components::{Health, PowerType};
+    let mut run = super::dps_parity::prepare_registered_player(66, 1).unwrap();
+    super::dps_parity::engage(&mut run);
+    let actor = run.actor;
+    let source = run.targets[0];
+    run.app
+        .world_mut()
+        .get_mut::<PowerPools>(actor)
+        .unwrap()
+        .get_mut(PowerType::HolyPower)
+        .unwrap()
+        .current = 5.0;
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 53600, Some(source), false)
+        .unwrap();
+    for _ in 0..4 {
+        run.app.update();
+    }
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        actor,
+        crate::auras::RemoveReason::Consumed,
+        |aura| [432607, 1239002, 204301].contains(&aura.spell_id),
+    );
+    let hit = Hit {
+        tick: 0,
+        source_guid: 0,
+        pack: 0,
+        target_slot: 0,
+        school: 4,
+        raw: 10000.0,
+        level_scaling_factor: 1.0,
+        kind: HitKind::Spell {
+            spell_id: 133,
+            depth: 0,
+            bonus_source_guid: None,
+            effect_index: None,
+            periodic: false,
+            crit: false,
+            resolved_source: true,
+            blocked: false,
+        },
+    };
+    let damage = |run: &mut super::dps_parity::Run| {
+        let max = run.app.world().get::<Health>(actor).unwrap().max;
+        run.app
+            .world_mut()
+            .get_mut::<Health>(actor)
+            .unwrap()
+            .current = max;
+        crate::spell_cast::effects::replay_healer_hit(run.app.world_mut(), source, actor, &hit)
+            .unwrap();
+        max - run.app.world().get::<Health>(actor).unwrap().current
+    };
+    let with = damage(&mut run);
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        actor,
+        crate::auras::RemoveReason::Consumed,
+        |aura| aura.spell_id == 132403,
+    );
+    for _ in 0..4 {
+        run.app.update();
+    }
+    let without = damage(&mut run);
+    assert!(
+        without > 0.0 && (with / without - 0.88).abs() < 0.005,
+        "magic: {with}/{without}"
+    );
+}
+
+#[test]
+#[ignore = "uses selected MID2 Protection and native Rite of Sanctification"]
+fn protection_rite_grants_native_strength_and_armor() {
+    let mut run = super::dps_parity::prepare_registered_player(66, 1).unwrap();
+    super::dps_parity::engage(&mut run);
+    let actor = run.actor;
+    let items = run
+        .app
+        .world()
+        .get::<crate::stats::EquippedItemModifiers>(actor)
+        .unwrap();
+    assert!(
+        items
+            .temporary_enchants
+            .contains(&(shared::protocol::EquipmentSlot::MainHand, 7143))
+    );
+    let aura = run
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(actor)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 433550)
+        .expect("Rite must grant its enchant aura");
+    assert!(
+        aura.effects
+            .iter()
+            .any(|effect| effect.index == 0 && (effect.amount - 2.0).abs() < 0.01)
+    );
+    assert!(
+        aura.effects
+            .iter()
+            .any(|effect| effect.index == 1 && (effect.amount - 5.0).abs() < 0.01)
+    );
+    let with = *run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(actor)
+        .unwrap();
+    run.app
+        .world_mut()
+        .get_mut::<crate::stats::EquippedItemModifiers>(actor)
+        .unwrap()
+        .temporary_enchants
+        .retain(|(_, enchant)| *enchant != 7143);
+    for _ in 0..4 {
+        run.app.update();
+    }
+    assert!(!crate::auras::has_aura(run.app.world(), actor, 433550));
+    let without = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(actor)
+        .unwrap();
+    assert!(
+        with.primary.strength > without.primary.strength,
+        "Rite must increase strength"
+    );
+    assert!(with.armor > without.armor, "Rite must increase armor");
+}
+
+#[test]
+#[ignore = "uses selected MID2 Protection and native Faith's Armor"]
+fn protection_shield_grants_faiths_armor_with_native_modifier() {
+    use crate::spell_cast::powers::PowerPools;
+    use shared::components::PowerType;
+    let mut run = super::dps_parity::prepare_registered_player(66, 1).unwrap();
+    super::dps_parity::engage(&mut run);
+    let actor = run.actor;
+    let target = run.targets[0];
+    run.app
+        .world_mut()
+        .get_mut::<PowerPools>(actor)
+        .unwrap()
+        .get_mut(PowerType::HolyPower)
+        .unwrap()
+        .current = 5.0;
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 53600, Some(target), false)
+        .unwrap();
+    for _ in 0..4 {
+        run.app.update();
+    }
+    let aura = run
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(actor)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 379017)
+        .expect("Shield must grant Faith's Armor");
+    let effect = aura
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap();
+    assert!(
+        (effect.amount - 5.0).abs() < 0.01,
+        "Protection modifies the native 20% to 5%: {}",
+        effect.amount
+    );
+    let with = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(actor)
+        .unwrap()
+        .armor;
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        actor,
+        crate::auras::RemoveReason::Consumed,
+        |aura| aura.spell_id == 379017,
+    );
+    for _ in 0..4 {
+        run.app.update();
+    }
+    let without = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(actor)
+        .unwrap()
+        .armor;
+    assert!(
+        with > without,
+        "Faith's Armor must increase live armor: {without} -> {with}"
+    );
+}
+
+#[test]
+#[ignore = "uses real tank-dummy bleed and Protection player"]
+fn tank_dummy_bleed_ignores_target_armor() {
+    use shared::components::Health;
+    let mut run = super::dps_parity::prepare_registered_player(66, 1).unwrap();
+    super::dps_parity::engage(&mut run);
+    let actor = run.actor;
+    let source = run.targets[0];
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        actor,
+        crate::auras::RemoveReason::Consumed,
+        |aura| aura.spell_id == 432607,
+    );
+    let mut damage = Vec::new();
+    for armor in [0.0, 100_000.0] {
+        run.app
+            .world_mut()
+            .get_mut::<crate::stats::CharacterStats>(actor)
+            .unwrap()
+            .armor = armor;
+        let mut health = run.app.world_mut().get_mut::<Health>(actor).unwrap();
+        health.current = health.max;
+        let before = health.current;
+        crate::spell_cast::effects::replay_simc_dummy_bleed(
+            run.app.world_mut(),
+            source,
+            actor,
+            10_000.0,
+        );
+        damage.push(before - run.app.world().get::<Health>(actor).unwrap().current);
+    }
+    assert!(
+        damage[0] > 0.0 && (damage[0] - damage[1]).abs() < 1.0,
+        "zero/high armor bleed damage: {damage:?}"
     );
 }
 

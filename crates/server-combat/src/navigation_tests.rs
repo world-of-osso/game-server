@@ -182,6 +182,18 @@ fn navigation_neltharus_entrance_walks_to_all_four_bosses() {
 }
 
 #[test]
+#[ignore = "requires canonical2519 assets and FOLLOWER_NAV_CANONICAL"]
+fn navigation_gorek_walks_to_magmatusk_and_sargha() {
+    let gorek = Vec3::new(-257.87, 123.38, 489.73);
+    for target in [
+        Vec3::new(-211.1, 99.34897, 932.7),
+        Vec3::new(-380.025, 63.997375, 772.8375),
+    ] {
+        assert_canonical_route_arrives(2519, gorek, target);
+    }
+}
+
+#[test]
 #[ignore = "requires canonical2520 assets and FOLLOWER_NAV_CANONICAL"]
 fn navigation_brackenhide_partial_corridors_walk_and_repath_three_bosses() {
     // Exact authored XY/source-floor Z from brackenhide-packet-2/receipt.json.

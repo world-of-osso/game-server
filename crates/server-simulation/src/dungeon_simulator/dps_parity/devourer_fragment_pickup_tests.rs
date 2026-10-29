@@ -133,14 +133,18 @@ fn soul_splitter_rolls_once_for_each_three_fragment_batch() {
     let actor = run.actor;
     assert!(crate::auras::has_aura(run.app.world(), actor, 1266330));
     for _ in 0..500 {
-        soul_fragments::spawn_many(run.app.world_mut(), actor, FragmentKind::Lesser, 3, false).unwrap();
+        soul_fragments::spawn_many(run.app.world_mut(), actor, FragmentKind::Lesser, 3, false)
+            .unwrap();
         for _ in 0..12 {
             run.app.update();
         }
     }
     let generated = soul_fragments::observation_counts(run.app.world(), actor).0;
     let extra = generated - 1500;
-    assert!((8..=35).contains(&extra), "expected one 4% Soul Splitter roll per batch, got {extra} extra fragments");
+    assert!(
+        (8..=35).contains(&extra),
+        "expected one 4% Soul Splitter roll per batch, got {extra} extra fragments"
+    );
 }
 
 #[test]

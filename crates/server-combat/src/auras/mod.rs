@@ -731,6 +731,9 @@ fn is_harmful(
 }
 
 fn duration_ms(world: &World, application: &AuraApplication, spell: &SpellInfo) -> u32 {
+    if let Some(duration) = spell.cast_fixed_aura_duration_ms {
+        return duration;
+    }
     if is_passive(spell) {
         return 0;
     }
@@ -929,6 +932,19 @@ fn build_effect(
     // do not snapshot its label modifiers into Essence's haste and apply them twice.
     let amount = if spell.id == 433925 && effect.index == 0 {
         effect.base_points
+    } else if spell.id == 132403
+        && effect.index == 1
+        && world
+            .get::<shared::components::ActiveSpec>(caster)
+            .is_some_and(|spec| spec.0 == 66)
+    {
+        // SimC76f8118 sc_paladin.cpp:4649–4659 uses the modified first effect for armor.
+        let source = spell
+            .effects
+            .iter()
+            .find(|source| source.index == 0)
+            .expect("Shield of the Righteous armor source effect");
+        crate::spell_cast::effects::modded_base_points(world, caster, spell, source)
     } else if let Some(amount) = scripts::absorb_amount(world, caster, spell, effect) {
         amount
     } else if handlers::scales_with_power(effect.aura) {

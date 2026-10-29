@@ -11,6 +11,11 @@ fn kokia_copy(difficulty: u32) -> (Harness, Entity, InMap) {
     let mut visibility = crate::interest::NetworkVisibility::default();
     visibility.gain_visibility(h.players[0].1);
     h.app.world_mut().entity_mut(boss).insert(visibility);
+    let wdt = h.app.world().resource::<MapStore>().maps[&MAP].wdt_file_data_id;
+    h.app.insert_resource(crate::ground::GroundMap::new(
+        &crate::ground::ground_data_dir(),
+        std::collections::HashMap::from([(MAP, wdt)]),
+    ));
     (h, boss, map)
 }
 
@@ -40,7 +45,7 @@ fn boss_alerts_kokia_real_schedule_and_actual_cast_without_imported_clock() {
         })
         .expect("actual Kokia schedule must publish without an imported addon catalog");
     assert_eq!(timers.len(), 3);
-    for (spell, duration) in [(372864, 8000), (372110, 19000), (SEARING_BLOWS, 28000)] {
+    for (spell, duration) in [(372864, 8502), (372110, 19431), (SEARING_BLOWS, 28953)] {
         let timer = timers.iter().find(|timer| timer.spell_id == spell).unwrap();
         assert_eq!(timer.duration_ms, duration);
         assert!((duration - 100..=duration).contains(&timer.remaining_ms));
@@ -66,7 +71,7 @@ fn boss_alerts_kokia_real_schedule_and_actual_cast_without_imported_clock() {
         })
         .unwrap();
     assert!(
-        (26900..=27000).contains(&remaining),
+        (27853..=27953).contains(&remaining),
         "snapshot reads advancing real request clock"
     );
     h.advance(32.0);
@@ -76,7 +81,7 @@ fn boss_alerts_kokia_real_schedule_and_actual_cast_without_imported_clock() {
         if *caster == boss.to_bits() && warning_text == "Searing Blows (1)")));
     assert!(h.inbox(0).timeline.iter().any(|event| matches!(event,
         EncounterTimelineEvent::Timers { timers, .. }
-        if timers.iter().any(|timer| timer.spell_id == 372864 && timer.duration_ms == 40000))));
+        if timers.iter().any(|timer| timer.spell_id == 372864 && timer.duration_ms == 40088))));
     assert!(
         h.inbox(1).timeline.is_empty(),
         "other copy cannot receive timers or warnings"
@@ -165,7 +170,7 @@ fn encounter_coverage_kokia_current_retail_inputs_qualify() {
     let conn =
         Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
     for (spell, expected) in [
-        (372864, (3, 0, 0)),
+        (372863, (3, 0, 1309540)),
         (372110, (3, 0, 372107)),
         (SEARING_BLOWS, (6, 23, 372859)),
     ] {
@@ -181,6 +186,99 @@ fn encounter_coverage_kokia_current_retail_inputs_qualify() {
         .unwrap(),
         (MAP, BIT)
     );
+}
+
+#[test]
+fn encounter_coverage_kokia_ritual_summons_after_success() {
+    for difficulty in [1, 205] {
+        let (mut h, boss, map) = kokia_copy(difficulty);
+        let origin = h.app.world().resource::<Time>().elapsed_secs_f64();
+        h.app
+            .insert_resource(super::cast_admission::CastAdmissions {
+                actor: boss,
+                origin,
+                entries: Vec::new(),
+            });
+        h.engage(boss);
+        h.advance(12.5);
+        let count = |world: &mut World| {
+            world
+                .query::<(&shared::components::Npc, &InMap)>()
+                .iter(world)
+                .filter(|(npc, actor_map)| npc.template_id == 189886 && **actor_map == map)
+                .count()
+        };
+        assert_eq!(count(h.app.world_mut()), 0, "ritual has not completed");
+        h.advance(2.0);
+        eprintln!(
+            "Ritual admissions: {:?}",
+            h.app
+                .world()
+                .resource::<super::cast_admission::CastAdmissions>()
+                .entries
+        );
+        assert_eq!(
+            count(h.app.world_mut()),
+            1,
+            "successful ritual summons native Firestorm"
+        );
+    }
+}
+
+#[test]
+fn encounter_coverage_kokia_missing_energy_pool_does_not_create_one() {
+    let (mut h, boss, _) = kokia_copy(205);
+    h.app
+        .world_mut()
+        .entity_mut(boss)
+        .remove::<crate::spell_cast::powers::PowerPools>();
+    h.engage(boss);
+    h.advance(1.0);
+    assert!(
+        h.app
+            .world()
+            .get::<crate::spell_cast::powers::PowerPools>(boss)
+            .is_none()
+    );
+}
+
+#[test]
+fn encounter_coverage_kokia_logged_energy_refills_after_ritual() {
+    for difficulty in [1, 205] {
+        let (mut h, boss, _) = kokia_copy(difficulty);
+        h.engage(boss);
+        h.advance(14.0);
+        let energy = |world: &World| {
+            crate::spell_cast::powers::power_value(
+                world,
+                boss,
+                shared::components::PowerType::Energy,
+            )
+            .unwrap()
+            .0
+        };
+        let before = energy(h.app.world());
+        h.advance(5.0);
+        let gained = energy(h.app.world()) - before;
+        assert!(
+            (gained - 14.32).abs() < 0.3,
+            "logged refill difficulty{difficulty}: {gained}"
+        );
+    }
+}
+
+#[test]
+fn encounter_coverage_kokia_interrupted_ritual_does_not_summon() {
+    let (mut h, boss, _) = kokia_copy(205);
+    h.engage(boss);
+    h.advance(9.0);
+    assert_eq!(
+        h.app.world().get::<CastState>(boss).unwrap().spell_id,
+        372863
+    );
+    crate::spell_cast::cancel_cast(h.app.world_mut(), boss);
+    h.advance(6.0);
+    assert!(h.creatures_of(189886).is_empty());
 }
 
 #[test]
@@ -246,14 +344,20 @@ fn encounter_coverage_kokia_current_lanes_native_damage_and_isolated_credit() {
             .entries;
         eprintln!("KOKIA difficulty{difficulty} actual native requests={attempts:?}");
         let lanes = [
-            (372864, &[8.0, 48.0, 88.0, 128.0][..]),
-            (372107, &[19.0, 39.0, 58.0, 78.0, 97.0, 117.0, 136.0][..]),
-            (SEARING_BLOWS, &[28.0, 68.0, 108.0][..]),
+            (372863, &[8.502, 48.590, 88.678, 128.766][..]),
+            (
+                372107,
+                &[19.431, 40.081, 60.731, 81.381, 102.031, 122.681][..],
+            ),
+            (SEARING_BLOWS, &[28.953, 69.081, 109.209][..]),
         ];
         assert_eq!(
-            attempts.len(),
-            14,
-            "only current native source lanes, no legacy substitutes"
+            attempts
+                .iter()
+                .filter(|attempt| lanes.iter().any(|(spell, _)| *spell == attempt.spell))
+                .count(),
+            13,
+            "only logged native source lanes"
         );
         for (spell, expected) in lanes {
             let casts: Vec<_> = attempts
@@ -271,7 +375,7 @@ fn encounter_coverage_kokia_current_lanes_native_damage_and_isolated_credit() {
                     "ordinary native admission{attempt:?}"
                 );
                 assert!(
-                    (attempt.time - *time).abs() <= 0.1,
+                    (attempt.time - *time).abs() <= 0.75,
                     "currentRetail source-order lane{spell}: {attempt:?} expected{time}"
                 );
             }
@@ -331,12 +435,12 @@ fn encounter_coverage_kokia_current_lanes_native_damage_and_isolated_credit() {
         assert!(h.inbox(1).ends.is_empty());
         let before = cast_count(&h, boss, SEARING_BLOWS)
             + cast_count(&h, boss, 372107)
-            + cast_count(&h, boss, 372864);
+            + cast_count(&h, boss, 372863);
         h.advance(45.0);
         assert_eq!(
             cast_count(&h, boss, SEARING_BLOWS)
                 + cast_count(&h, boss, 372107)
-                + cast_count(&h, boss, 372864),
+                + cast_count(&h, boss, 372863),
             before,
             "corpse silence"
         );

@@ -1,4 +1,4 @@
-//! Bloody Reflection damages the attacker while Blood Shield survives a direct hit.
+//! Bloody Reflection damages the attacker while Blood Shield survives a direct event.
 use bevy::prelude::*;
 use shared::protocol::{CombatLogEvent, CombatLogKind, MissKind};
 
@@ -11,14 +11,14 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::HealthChangeObse
 struct ReflectionCooldown(f64);
 
 // SimC76f8118 sc_death_knight.cpp15540/16675–16682: surviving Blood Shield
-// and a 500ms internal cooldown. Spelltext1279633 requires direct damage.
+// and a 500ms internal cooldown; direct parries can also trigger the reflection.
 fn reflect(world: &mut World, event: &CombatLogEvent) {
-    if !matches!(
+    let direct_parry = event.kind == CombatLogKind::Miss(MissKind::Parry);
+    let direct_hit = matches!(
         event.kind,
         CombatLogKind::Damage | CombatLogKind::Miss(MissKind::Absorb)
-    ) || event.periodic
-        || event.amount + event.absorbed <= 0
-    {
+    ) && event.amount + event.absorbed > 0;
+    if event.periodic || !(direct_parry || direct_hit) {
         return;
     }
     let (Some(attacker), Some(target)) = (

@@ -8,7 +8,10 @@ use crate::auras::{
 };
 
 pub(super) fn is_creature_script(name: &str) -> bool {
-    matches!(name, super::melidrussa::SCRIPT | super::kokia::SCRIPT)
+    matches!(
+        name,
+        super::melidrussa::SCRIPT | super::kokia::SCRIPT | super::ruby_final::SCRIPT
+    )
 }
 
 pub(super) fn creature_ai(world: &World, actor: Entity) -> Option<Box<dyn super::CreatureAi>> {
@@ -23,6 +26,10 @@ pub(super) fn creature_ai(world: &World, actor: Entity) -> Option<Box<dyn super:
     match world.get::<super::CreatureScriptName>(actor)?.0.as_str() {
         super::melidrussa::SCRIPT => Some(super::melidrussa::creature_ai(boss)),
         super::kokia::SCRIPT => Some(super::kokia::creature_ai(boss)),
+        super::ruby_final::SCRIPT => Some(super::ruby_final::creature_ai(
+            boss,
+            world.get::<shared::components::Npc>(actor)?.template_id,
+        )),
         _ => None,
     }
 }

@@ -6,6 +6,7 @@ never code. Only successful encounter windows and listed boss casts are used.
 Positions are first observed in-combat samples, not spawn coordinates or floors.
 """
 import argparse
+import bisect
 import collections
 import csv
 import datetime
@@ -47,7 +48,7 @@ def extract(paths):
                     row = next(csv.reader([raw]))
                     event = row[0]
                     if event == 'ENCOUNTER_START' and row[1] in ('2606', '2623'):
-                        active = {'encounter': int(row[1]), 'start': time, 'casts': collections.defaultdict(list), 'positions': {}}
+                        active = {'encounter': int(row[1]), 'start': time, 'casts': collections.defaultdict(list), 'positions': {}, 'health_50': {}, 'stage_event': None, 'energy': [], 'energizes': [], 'self_auras': set()}
                         continue
                     if event == 'ENCOUNTER_END' and active and int(row[1]) == active['encounter']:
                         if row[5] == '1':
@@ -61,20 +62,57 @@ def extract(paths):
                         key = (active['encounter'], source, int(row[9]), event)
                         if key in CASTS:
                             active['casts'][key].append((time - active['start']).total_seconds())
+                    if active['encounter'] == 2606:
+                        elapsed = (time - active['start']).total_seconds()
+                        if entry(row[5]) == 189232 and event in ('SPELL_ENERGIZE', 'SPELL_PERIODIC_ENERGIZE'):
+                            active['energizes'].append([elapsed, int(row[9])])
+                        if entry(row[1]) == entry(row[5]) == 189232 and event.startswith('SPELL_AURA_'):
+                            active['self_auras'].add((event, row[9]))
+                        for index in (9, 12):
+                            if len(row) > index + 17 and entry(row[index]) == 189232 and row[index + 10] == '3' and row[index + 11].isdigit():
+                                active['energy'].append((elapsed, int(row[index + 11])))
                     if active['encounter'] == 2623:
+                        elapsed = (time - active['start']).total_seconds()
+                        if event == 'SPELL_AURA_APPLIED' and row[9] == '181089' and entry(row[5]) == 190485:
+                            active['stage_event'] = elapsed
                         for index in (9, 12):
                             if len(row) <= index + 17:
                                 continue
                             actor = entry(row[index])
-                            if actor not in (190484, 190485) or actor in active['positions']:
+                            if actor not in (190484, 190485):
                                 continue
                             if not row[index + 2].isdigit() or not row[index + 3].isdigit():
                                 continue
-                            coords = [float(value) for value in row[index + 14:index + 18]]
-                            active['positions'][actor] = coords
+                            health, maximum = int(row[index + 2]), int(row[index + 3])
+                            if maximum and health * 2 <= maximum:
+                                active['health_50'].setdefault(actor, elapsed)
+                            if actor not in active['positions']:
+                                x, y, map_id, orientation = row[index + 14:index + 18]
+                                active['positions'][actor] = {
+                                    'x': float(x), 'y': float(y),
+                                    'logged_map_id': int(map_id), 'orientation': float(orientation),
+                                }
                 except (ValueError, IndexError, csv.Error):
                     continue
-    result = {'kills': collections.Counter(str(kill['encounter']) for kill in kills), 'timers': {}, 'positions': {}}
+    result = {'kills': collections.Counter(str(kill['encounter']) for kill in kills), 'timers': {}, 'positions': {}, 'stage_events': [], 'kokia_energy': []}
+    for kill in kills:
+        if kill['encounter'] != 2606:
+            continue
+        samples = kill['energy']
+        times = [sample[0] for sample in samples]
+        rates = []
+        for time, energy in samples:
+            if not 5 <= energy <= 65:
+                continue
+            index = bisect.bisect_left(times, time + 8)
+            if index < len(samples):
+                end, value = samples[index]
+                if end - time <= 8.5 and energy < value < 95:
+                    rates.append((value - energy) / (end - time))
+        result['kokia_energy'].append({'sample_count': len(samples), 'rate_8s': summarize(rates), 'energizes': kill['energizes'], 'self_auras': sorted(kill['self_auras'])})
+    for kill in kills:
+        if kill['encounter'] == 2623:
+            result['stage_events'].append({'first_observed_health_50': kill['health_50'], 'aura_181089': kill['stage_event']})
     for key in sorted(CASTS):
         sequences = [kill['casts'][key] for kill in kills if key in kill['casts']]
         first = [sequence[0] for sequence in sequences]

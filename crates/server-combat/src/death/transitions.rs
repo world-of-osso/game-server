@@ -101,6 +101,7 @@ pub(crate) fn process_player_death_transitions(
             });
         }
         params.commands.queue(move |world: &mut World| {
+            super::instrument_of_retribution::on_player_death(world, player_entity);
             crate::damage_meter::record_player_death_transition(world, player_entity);
             crate::mythic_plus::record_death(world, player_entity);
             crate::achievement::record_player_death(world, player_entity);

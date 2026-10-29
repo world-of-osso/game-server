@@ -21,8 +21,8 @@ Retail's LOS errors ("can see it, not in line of sight") are the bugs to avoid.
   access. Measure memory per loaded tile and time per ray.
 
 ## M2 ground companion
-- `los-bake` also writes `los/<map>/m2/<row>_<col>.los` from dedicated M2 bounding collision arrays, including placed active WMO doodad sets. `--m2-only` rebakes just this companion, without altering visible LOS geometry or navigation.
-- GroundMap and native client movement use the same companion with shared walkable-normal, step-up and height-search rules. Floor faces are admitted by authored collision normals rotated into world space (upward within the shared slope limit), without LOS thickness or material exclusions; they are not substituted for the visible LOS bake.
+- `los-bake` writes `los/<map>/m2/<row>_<col>.los` for walkable M2 faces and `los/<map>/m2-solid/<row>_<col>.los` for upward-facing M2 faces steeper than the walkable limit, from dedicated collision arrays including active WMO doodad sets. `--m2-only` rebakes both companions without altering visible LOS geometry or navigation.
+- GroundMap and native client movement use both companions. Walkable faces use authored collision normals rotated into world space; the union with upward-facing steep faces supplies solid support within the shared step-up and height-search interval. Missing solid companions for an existing walkable tile fail explicitly. Neither companion substitutes visible LOS geometry.
 - Legacy global-WMO WDTs resolve MODF name indices through the authored MWMO path and local community listfile; FileDataID-flagged MODF entries retain direct identity. No asset rewriting or network lookup.
 - A non-global WDT without MAID is terrain-less only when its complete MAIN has no active tiles; active or malformed MAIN remains an explicit gap.
 - Ground support contract: [M2 floor collision](../../../game-engine/docs/specs/m2-floor-collision.md).

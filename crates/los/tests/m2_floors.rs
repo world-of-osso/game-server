@@ -155,11 +155,30 @@ fn m2_floor_authored_downward_normal_is_not_a_floor() {
     }
     bytes[344..348].copy_from_slice(&(-1f32).to_le_bytes());
     bytes[356..360].copy_from_slice(&1f32.to_le_bytes());
-    std::fs::write(path, bytes).unwrap();
+    std::fs::write(&path, &bytes).unwrap();
     assert_eq!(
         global_floor(dir.path(), Vec3::new(1200.0, 110.0, -1300.0)),
         None
     );
     let roof = global_floor(dir.path(), Vec3::new(1200.0, 118.0, -1300.0)).unwrap();
     assert!((roof - 118.0).abs() < 0.001, "{roof}");
+    let solid_hit = || {
+        let mut baker = Baker::for_m2_solids(dir.path());
+        let global = baker.collect_global(999).unwrap().unwrap();
+        let start = Vec3::new(1200.0, 111.0, -1300.0);
+        let end = Vec3::new(1200.0, 109.0, -1300.0);
+        global.into_iter().find_map(|(tile, geometry)| {
+            let (vertices, indices) = los::bake::index_triangles(&geometry.triangles);
+            LosTile::build(tile.0, tile.1, vertices, indices).first_hit(start, end)
+        })
+    };
+    assert_eq!(solid_hit(), None, "downward normal must not support feet");
+    bytes[336..340].copy_from_slice(&0.8f32.to_le_bytes());
+    bytes[344..348].copy_from_slice(&0.6f32.to_le_bytes());
+    std::fs::write(&path, &bytes).unwrap();
+    assert_eq!(
+        global_floor(dir.path(), Vec3::new(1200.0, 110.0, -1300.0)),
+        None
+    );
+    assert!(solid_hit().is_some_and(|fraction| (fraction - 0.5).abs() < 0.001));
 }
