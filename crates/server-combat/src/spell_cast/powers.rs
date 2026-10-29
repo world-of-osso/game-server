@@ -655,6 +655,7 @@ type RegenQuery<'w, 's> = Query<
         Option<&'static PetFocusRegen>,
         Option<&'static crate::hunter_pet::HunterPet>,
         Option<&'static super::guardian::GuardianActor>,
+        Option<&'static mut super::ObservedResourcePayments>,
     ),
     Without<GridDormant>,
 >;
@@ -673,7 +674,7 @@ fn read_owner_focus_rates(
     units
         .iter()
         .filter_map(
-            |(unit, pools, _, auras, combat, mods, stats, death, npc, flags, _, _, guardian)| {
+            |(unit, pools, _, auras, combat, mods, stats, death, npc, flags, _, _, guardian, _)| {
                 let pool = pools.get(PowerType::Focus)?;
                 let stats = stats?;
                 if !read_creature_power_regeneration(npc, flags, data, guardian)
@@ -737,6 +738,7 @@ pub(crate) fn regenerate_powers(
         pet_focus,
         pet,
         guardian,
+        mut observed,
     ) in &mut units
     {
         // TC Player::GetPowerRegen: aura94 selects combat rates, not combat state.
@@ -850,6 +852,9 @@ pub(crate) fn regenerate_powers(
             mana_rate = rate;
             let old = mana.current;
             mana.current = (mana.current + mana_rate * dt).clamp(0.0, mana.max);
+            if let Some(observed) = observed.as_deref_mut() {
+                observed.1 += f64::from(mana.current - old);
+            }
             crate::auras::power_amount_trigger::queue_regenerated(
                 &mut commands,
                 unit,

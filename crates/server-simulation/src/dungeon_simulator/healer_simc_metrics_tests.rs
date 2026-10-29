@@ -51,6 +51,46 @@ fn healer_report_records_real_mana_payment_by_spell() {
 
 #[test]
 #[ignore = "requires native spell data"]
+fn healer_report_records_passive_mana_regeneration() {
+    let mut h = crate::spell_cast::test_harness::harness_with(Vec::new(), &[], 5, true).unwrap();
+    h.app
+        .init_resource::<crate::spell_cast::test_harness::ObservedCombatEvents>();
+    let caster = h.caster;
+    h.app
+        .world_mut()
+        .entity_mut(caster)
+        .insert(crate::spell_cast::ObservedResourcePayments::default());
+    crate::spell_cast::powers::change_power(
+        h.app.world_mut(),
+        caster,
+        shared::components::PowerType::Mana,
+        -500.0,
+    );
+    let before = crate::spell_cast::powers::power_value(
+        h.app.world(),
+        caster,
+        shared::components::PowerType::Mana,
+    )
+    .unwrap()
+    .0;
+    let recorder = Recorder::start(h.app.world(), caster, caster, vec![caster]);
+    h.advance(40);
+    let after = crate::spell_cast::powers::power_value(
+        h.app.world(),
+        caster,
+        shared::components::PowerType::Mana,
+    )
+    .unwrap()
+    .0;
+    let recorded = recorder.report(h.app.world(), 2)["passive_mana_regenerated"]
+        .as_f64()
+        .unwrap();
+    assert!(after > before);
+    assert!((recorded - f64::from(after - before)).abs() < 0.001);
+}
+
+#[test]
+#[ignore = "requires native spell data"]
 fn healer_report_records_effective_resource_energize() {
     let mut h = crate::spell_cast::test_harness::harness(Vec::new(), &[47755], 5).unwrap();
     h.app
