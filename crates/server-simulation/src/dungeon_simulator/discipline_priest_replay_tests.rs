@@ -143,7 +143,10 @@ fn discipline_pain_observes_power_of_dark_side_procs() {
         })
         .count();
     assert!(ticks > 0, "real Pain ticks required");
-    println!("POWER_OF_DARK_SIDE pain_ticks={ticks} procs={procs}");
+    assert!(
+        procs > 0,
+        "selected Power of the Dark Side must proc from real Pain ticks"
+    );
 }
 
 #[test]
