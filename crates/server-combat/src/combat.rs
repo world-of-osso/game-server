@@ -150,6 +150,22 @@ impl AutoAttack {
     }
 }
 
+/// Reschedule the active main-hand swing using its current form and haste.
+pub(crate) fn reset_player_main_hand_swing(world: &mut World, unit: Entity) {
+    let Some(stats) = world.get::<CharacterStats>(unit) else {
+        return;
+    };
+    let base = crate::auras::shapeshift::attack_timing(world, unit)
+        .map_or(stats.main_hand.speed, |form| form.seconds);
+    let slow = world.get::<AuraStatMods>(unit).map_or(1.0, |mods| {
+        mods.attack_cast_time_mult * mods.attack_time_mult * mods.melee_ranged_attack_time_mult
+    });
+    let interval = melee::attack_timer_duration(melee::swing_time(base, stats.haste_pct) * slow);
+    if let Some(mut attack) = world.get_mut::<AutoAttack>(unit) {
+        attack.timer = interval;
+    }
+}
+
 /// Marks a dead NPC awaiting respawn.
 #[derive(Component, Debug)]
 pub struct DeathState {
