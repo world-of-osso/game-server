@@ -105,6 +105,80 @@ fn discipline_soulcoiler_real_item_channels_five_fractional_barriers() {
     );
 }
 #[test]
+#[ignore = "requires the selected real Discipline profile and canonical world database"]
+fn discipline_shield_policy_prefers_atoned_ally_and_uses_void_proc() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::protocol::CombatLogKind;
+    for darkness in [false, true] {
+        let mut run = super::super::dps_parity::prepare_registered_player(66, 1).unwrap();
+        let tank = run.actor;
+        let healer =
+            super::super::dps_parity::spawn_second_reference_player(&mut run, 256).unwrap();
+        let party = crate::followers::simulator::spawn_party_for_reference_healer(
+            run.app.world_mut(),
+            tank,
+            healer,
+        )
+        .unwrap();
+        let mut members = party.members.clone();
+        members.push(tank);
+        let ally = *members
+            .iter()
+            .find(|&&member| member != healer && member != tank)
+            .unwrap();
+        run.app
+            .world_mut()
+            .entity_mut(tank)
+            .insert(crate::networking::CombatTarget(None));
+        crate::auras::apply_aura(
+            run.app.world_mut(),
+            &crate::auras::AuraApplication {
+                caster: healer,
+                target: ally,
+                spell_id: 17,
+                effect_mask: u32::MAX,
+                source: crate::auras::AuraSource::Cast,
+            },
+        );
+        assert!(crate::auras::has_aura(run.app.world(), ally, 194384));
+        if darkness {
+            crate::auras::apply_aura(
+                run.app.world_mut(),
+                &crate::auras::AuraApplication {
+                    caster: healer,
+                    target: healer,
+                    spell_id: 1253591,
+                    effect_mask: u32::MAX,
+                    source: crate::auras::AuraSource::Cast,
+                },
+            );
+        }
+        let mut policy = super::prepare(&mut run, healer).unwrap();
+        let cursor = run.app.world().resource::<ObservedCombatEvents>().0.len();
+        policy.drive(run.app.world_mut(), healer, &members).unwrap();
+        run.app.update();
+        let events = &run.app.world().resource::<ObservedCombatEvents>().0[cursor..];
+        let expected = if darkness { 1253593 } else { 17 };
+        assert!(
+            events
+                .iter()
+                .any(|event| event.kind == CombatLogKind::CastSuccess
+                    && event.source == Some(healer.to_bits())
+                    && event.spell_id == Some(expected)),
+            "expected shield {expected} with darkness={darkness}: {events:?}"
+        );
+        assert!(
+            events.iter().any(|event| matches!(
+                event.kind,
+                CombatLogKind::AuraApplied | CombatLogKind::AuraRefreshed
+            ) && event.target == Some(ally.to_bits())
+                && event.spell_id == Some(expected)),
+            "shield must prefer the already Atoned ally: {events:?}"
+        );
+    }
+}
+
+#[test]
 #[ignore = "requires MID2 profiles, canonical world database and SimC trace"]
 fn discipline_priest_heals_simc_dummy_party() {
     let trace = std::env::var("HEALER_TANK_SIMC_TRACE").expect("HEALER_TANK_SIMC_TRACE required");
