@@ -3,6 +3,94 @@ use shared::components::Health;
 use shared::protocol::CombatLogKind;
 
 #[test]
+#[ignore = "checks Consume Flame against the native Dream Breath and Verdant Embrace"]
+fn preservation_consume_flame_consumes_dream_breath_on_verdant_embrace() {
+    let spells = [444088, 355941, 360995, 361195, 445495];
+    let mut h = crate::spell_cast::test_harness::harness(Vec::new(), &spells, 13).unwrap();
+    h.app
+        .init_resource::<crate::spell_cast::test_harness::ObservedCombatEvents>();
+    *h.app.world_mut().get_mut::<Health>(h.caster).unwrap() = Health {
+        current: 1.0,
+        max: 100_000.0,
+    };
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: h.caster,
+            target: h.caster,
+            spell_id: 444088,
+            effect_mask: u32::MAX,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    // The rank-1 empower release sets the child's duration to eight 2-second ticks.
+    let mut dream = h
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(355941)
+        .unwrap()
+        .clone();
+    let duration = dream.misc.as_mut().unwrap().duration.as_mut().unwrap();
+    duration.duration_ms = 16_000;
+    duration.max_duration_ms = 16_000;
+    crate::spell_cast::execute_cast(h.app.world_mut(), h.caster, &dream, Some(h.caster)).unwrap();
+    h.advance(1);
+    let expiry = |h: &crate::spell_cast::test_harness::Harness, phase: &str| {
+        h.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(h.caster)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 355941 && aura.caster == h.caster)
+            .unwrap_or_else(|| panic!("Dream Breath aura absent {phase}"))
+            .expires_at
+            .unwrap()
+    };
+    let dump = |h: &crate::spell_cast::test_harness::Harness, phase: &str| {
+        let now = crate::auras::aura_now(h.app.world());
+        let auras = h
+            .app
+            .world()
+            .get::<crate::auras::ActiveAuras>(h.caster)
+            .unwrap();
+        let rows: Vec<_> = auras
+            .iter()
+            .map(|aura| {
+                (
+                    aura.spell_id,
+                    aura.caster,
+                    aura.expires_at.map(|at| ((at - now) * 1000.0).round()),
+                )
+            })
+            .collect();
+        println!("{phase} target auras: {rows:?}");
+    };
+    dump(&h, "before Verdant Embrace");
+    let before = expiry(&h, "before Verdant Embrace");
+    crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 360995, Some(h.caster), 1);
+    dump(&h, "after Verdant Embrace");
+    let after = expiry(&h, "after Verdant Embrace");
+    assert!((before - after - 4.0).abs() < 0.001);
+    h.advance(1);
+    let events = &h
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    let heal = events
+        .iter()
+        .find(|event| {
+            event.kind == CombatLogKind::Heal
+                && event.spell_id == Some(445495)
+                && event.target == Some(h.caster.to_bits())
+        })
+        .expect("Verdant Embrace must detonate the consumed Dream Breath");
+    // 70448: 4s / 2s × 0.5352 × 100 SP × 290%.
+    assert!((309..=311).contains(&heal.amount), "{heal:?}");
+}
+
+#[test]
 #[ignore = "checks Preservation Dream Breath's native healing coefficients"]
 fn preservation_dream_breath_child_matches_native_coefficients() {
     // 70448 SpellEffect 889437/1037451: HoT 0.5352, direct 0.9216.

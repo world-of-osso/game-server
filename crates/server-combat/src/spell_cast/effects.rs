@@ -2617,6 +2617,20 @@ fn apply_heal_with_raw(
     }
 }
 
+/// Resolve a script-calculated heal through normal crit and healing multipliers.
+pub fn apply_calculated_heal(world: &mut World, ctx: &EffectCtx, target: Entity, amount: f32) {
+    let (critical_amount, crit) = with_crit(world, ctx.caster, target, ctx.spell, amount);
+    apply_heal_with_raw(
+        world,
+        ctx,
+        target,
+        critical_amount,
+        crit,
+        false,
+        Some(amount),
+    );
+}
+
 /// A named transfer already computed from effective healing; no second spell-power,
 /// healing multiplier or crit roll on the copied amount.
 pub fn apply_fixed_heal(world: &mut World, ctx: &EffectCtx, target: Entity, amount: f32) {
@@ -2677,6 +2691,7 @@ fn apply_resolved_heal(
             .iter()
             .any(|effect| effect.effect == EFFECT_HEAL_PCT);
     crate::auras::lifebind::record_heal(world, ctx, target, amount);
+    crate::auras::consume_flame::consume_dream_breath(world, ctx, target);
     super::script_registry::heal_received(
         world,
         target,
