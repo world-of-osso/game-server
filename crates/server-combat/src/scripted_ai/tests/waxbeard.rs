@@ -19,6 +19,7 @@ fn actors(h: &mut Harness, map: InMap, entry: u32) -> Vec<Entity> {
 
 const WAXBEARD_GATE: u32 = 420154;
 const CATACOMBS_GATE: u32 = 430177;
+const BLAZIKON_DOOR: u32 = 430175;
 
 /// Replicated collision of the copy's one `entry` door.
 fn door_blocks(h: &mut Harness, map: InMap, entry: u32) -> bool {
@@ -122,6 +123,30 @@ fn waxbeard_gate_opens_when_the_encounter_is_done() {
         door_blocks(&mut h, map, CATACOMBS_GATE),
         "the Candle King's gate stays closed"
     );
+}
+
+#[test]
+fn blazikon_door_opens_when_its_encounter_is_done() {
+    let (mut h, _, map) =
+        encounter_fixture(RIDER, MAP, BIT, 205, None, EncounterState::NotStarted, true);
+    h.advance(0.1);
+    assert!(
+        door_blocks(&mut h, map, BLAZIKON_DOOR),
+        "closed before Blazikon"
+    );
+    let world = h.app.world_mut();
+    let blazikon = instance_script::boss_id_for_encounter(world, map, 2826).unwrap();
+    assert!(instance_script::set_boss_state(
+        world,
+        map,
+        blazikon,
+        EncounterState::Done
+    ));
+    assert!(
+        !door_blocks(&mut h, map, BLAZIKON_DOOR),
+        "open after 2826 DONE"
+    );
+    assert!(door_blocks(&mut h, map, CATACOMBS_GATE));
 }
 
 #[test]
