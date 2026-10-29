@@ -801,6 +801,41 @@ mod tests {
 
     #[test]
     #[ignore = "requires canonical world database and MID2 Blood inputs"]
+    fn equipped_prismatic_iris_proc_deals_real_periodic_damage() {
+        use shared::protocol::CombatLogKind;
+        let _seed = crate::random::seed_scope(70448);
+        let mut run = super::super::prepare_registered_player(250, 1).unwrap();
+        let actor = run.actor;
+        let target = run.targets[0];
+        super::super::engage(&mut run);
+        assert!(crate::auras::has_aura(run.app.world(), actor, 1251906));
+        assert!(crate::auras::has_aura(run.app.world(), actor, 1252383));
+        for _ in 0..2000 {
+            super::super::drive_literal_tick(&mut run).unwrap();
+            run.app.update();
+            if run
+                .app
+                .world()
+                .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+                .0
+                .iter()
+                .any(|event| {
+                    event.source == Some(actor.to_bits())
+                        && event.target == Some(target.to_bits())
+                        && event.spell_id == Some(1252389)
+                        && event.kind == CombatLogKind::Damage
+                        && event.periodic
+                        && event.amount > 0
+                })
+            {
+                return;
+            }
+        }
+        panic!("equipped Iris must proc and deal periodic damage");
+    }
+
+    #[test]
+    #[ignore = "requires canonical world database and MID2 Blood inputs"]
     fn blood_rune_weapon_heart_strike_uses_owners_ground_cleave() {
         use shared::components::{Npc, UnitSummonedBy};
         use shared::protocol::CombatLogKind;

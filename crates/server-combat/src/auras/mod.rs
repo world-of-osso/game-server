@@ -77,7 +77,7 @@ pub use ret_sentence::track_cast as track_ret_sentence_cast;
 mod gebbos_bag;
 pub mod harmony;
 mod janthrazet;
-mod midnight_stat_procs;
+pub(crate) mod midnight_stat_procs;
 pub(crate) mod reward_mods;
 pub mod rogue;
 #[cfg(test)]
