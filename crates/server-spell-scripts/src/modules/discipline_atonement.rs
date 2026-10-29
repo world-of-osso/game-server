@@ -30,8 +30,8 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
 #[derive(Component, Default)]
 struct PenanceBolts(u32);
 
-fn start_penance(world: &mut World, caster: Entity, spell: &SpellInfo, _depth: u8) {
-    if spell.id != 47540 || !is_discipline(world, caster) {
+fn start_penance(world: &mut World, caster: Entity, spell: u32, _depth: u8) {
+    if spell != 47540 || !is_discipline(world, caster) {
         return;
     }
     // SimC76f8118 sc_priest_discipline.cpp:579-582 resets Holy Ray at channel start.
