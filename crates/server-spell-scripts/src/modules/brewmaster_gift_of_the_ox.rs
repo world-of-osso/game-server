@@ -36,26 +36,44 @@ fn blackout_kick_only(_: &World, aura: &AuraInstance, event: &AuraEvent) -> bool
 }
 
 fn spawn_orb(world: &mut World, actor: Entity, _: &AuraInstance, _: Option<Entity>) {
-    let duration = world.resource::<SpellStore>().get(ORB)
+    let duration = world
+        .resource::<SpellStore>()
+        .get(ORB)
         .and_then(|spell| spell.misc.as_ref())
         .and_then(|misc| misc.duration)
-        .expect("Gift of the Ox native duration").duration_ms;
+        .expect("Gift of the Ox native duration")
+        .duration_ms;
     let expires = spell_cast::now(world) + f64::from(duration) / 1000.0;
-    let overflow = world.get::<Orbs>(actor).is_some_and(|orbs| orbs.0.len() >= 5);
+    let overflow = world
+        .get::<Orbs>(actor)
+        .is_some_and(|orbs| orbs.0.len() >= 5);
     if overflow {
         world.get_mut::<Orbs>(actor).unwrap().0.pop_front();
         spell_cast::cast_triggered(world, actor, TRIGGER, Some(actor), 1);
     }
-    world.entity_mut(actor).entry::<Orbs>().or_default().get_mut().0.push_back(expires);
+    world
+        .entity_mut(actor)
+        .entry::<Orbs>()
+        .or_default()
+        .get_mut()
+        .0
+        .push_back(expires);
 }
 
 fn expire_orbs(world: &mut World) {
     let now = spell_cast::now(world);
-    let actors: Vec<_> = world.query::<(Entity, &Orbs)>().iter(world)
+    let actors: Vec<_> = world
+        .query::<(Entity, &Orbs)>()
+        .iter(world)
         .filter(|(_, orbs)| orbs.0.front().is_some_and(|expires| *expires <= now))
-        .map(|(actor, _)| actor).collect();
+        .map(|(actor, _)| actor)
+        .collect();
     for actor in actors {
-        while world.get::<Orbs>(actor).and_then(|orbs| orbs.0.front()).is_some_and(|expires| *expires <= now) {
+        while world
+            .get::<Orbs>(actor)
+            .and_then(|orbs| orbs.0.front())
+            .is_some_and(|expires| *expires <= now)
+        {
             world.get_mut::<Orbs>(actor).unwrap().0.pop_front();
             spell_cast::cast_triggered(world, actor, EXPIRE, Some(actor), 1);
         }
@@ -67,9 +85,16 @@ fn consume_orbs(world: &mut World, actor: Entity) -> f32 {
     let mut effective = 0.0;
     for _ in 0..count {
         world.get_mut::<Orbs>(actor).unwrap().0.pop_front();
-        let before = world.get::<Health>(actor).expect("orb owner health").current;
+        let before = world
+            .get::<Health>(actor)
+            .expect("orb owner health")
+            .current;
         spell_cast::cast_triggered(world, actor, TRIGGER, Some(actor), 1);
-        effective += world.get::<Health>(actor).expect("orb owner health").current - before;
+        effective += world
+            .get::<Health>(actor)
+            .expect("orb owner health")
+            .current
+            - before;
     }
     effective
 }
