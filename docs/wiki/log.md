@@ -1,3 +1,4 @@
+- 2026-10-28: Added the [offline floor resolver](systems/ground-assets.md#offline-floor-resolver); train qualification pending.
 - 2026-10-28: Recorded [both-skin Stockade diagnostic walks](investigations/follower-data.md#stockade-both-skin-physical-walks--2026-10-28), encounter completion and the sequential auto-attack fix.
 - 2026-10-26: Added [summon missile retirement](systems/spell-casting.md#summon-missile-retirement--2026-10-26); natural-expiry and cross-spec qualification pending.
 - 2026-10-26: Recorded [guardian periodic haste](systems/spell-casting.md#guardian-periodic-haste--2026-10-26) native RED and source-qualified actual-owner lookup.

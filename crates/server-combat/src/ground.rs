@@ -63,6 +63,163 @@ pub enum GroundProbe {
     Supported(f32),
 }
 
+#[derive(Clone, Debug, serde::Serialize)]
+pub struct Floor {
+    pub z: f32,
+    pub source: &'static str,
+}
+
+#[derive(Clone, Debug)]
+pub struct MissingGeometry(pub String);
+
+/// Strict offline geometry reader: missing input never becomes an empty floor set.
+pub struct FloorGeometry {
+    ground: GroundMap,
+    strict_tiles: HashMap<(u32, u32, u32), Result<Vec<WmoCollision>, String>>,
+}
+
+impl FloorGeometry {
+    pub fn new(data_dir: &Path, wdts: HashMap<u32, u32>) -> Self {
+        Self {
+            ground: GroundMap::new(data_dir, wdts),
+            strict_tiles: HashMap::new(),
+        }
+    }
+
+    pub fn candidate_floors(
+        &mut self,
+        map_id: u32,
+        x: f32,
+        y: f32,
+    ) -> Result<Vec<Floor>, MissingGeometry> {
+        self.read_candidate_floors(map_id, x, y)
+            .map_err(MissingGeometry)
+    }
+
+    fn read_candidate_floors(&mut self, map_id: u32, x: f32, y: f32) -> Result<Vec<Floor>, String> {
+        let (bx, _, bz) = crate::terrain_height::wow_to_bevy(x, y, 0.0);
+        if !self.ground.maps.contains_key(&map_id) {
+            let wdt = self
+                .ground
+                .wdts
+                .get(&map_id)
+                .ok_or_else(|| format!("map {map_id}: no WDT"))?;
+            let map = MapGround::open(&self.ground.data_dir, *wdt)?;
+            self.ground.maps.insert(map_id, Some(map));
+        }
+        let map = self
+            .ground
+            .maps
+            .get_mut(&map_id)
+            .and_then(Option::as_mut)
+            .ok_or("missing map geometry")?;
+        let mut floors = Vec::new();
+        if let Some(wmo) = &map.global_wmo {
+            append_wmo_floors(&mut floors, std::slice::from_ref(wmo), bx, bz);
+        } else {
+            let tile_id = bevy_to_tile(bx, bz);
+            let tile = map
+                .tile(tile_id)
+                .ok_or_else(|| format!("map {map_id}: missing terrain tile {tile_id:?}"))?;
+            if let Some(z) = tile.terrain.height_at_bevy(bx, bz) {
+                floors.push(Floor {
+                    z,
+                    source: "terrain",
+                });
+            }
+            let nearby = nearby_source_tiles(map, tile_id);
+            for coordinates in nearby {
+                let key = (map_id, coordinates.0, coordinates.1);
+                if !self.strict_tiles.contains_key(&key) {
+                    let result = load_strict_tile_wmos(map, coordinates);
+                    self.strict_tiles.insert(key, result);
+                }
+                let wmos = self.strict_tiles[&key].as_ref().map_err(Clone::clone)?;
+                append_wmo_floors(&mut floors, wmos, bx, bz);
+            }
+        }
+        let m2_dir = self.ground.data_dir.join(format!("los/{map_id}/m2"));
+        let tile_id = bevy_to_tile(bx, bz);
+        validate_m2_tiles(map, &m2_dir, tile_id)?;
+        let m2 = self
+            .ground
+            .m2_floors
+            .entry(map_id)
+            .or_insert_with(|| los::LosMap::new(&m2_dir));
+        floors.extend(
+            m2.floor_heights(bx, bz)?
+                .into_iter()
+                .map(|z| Floor { z, source: "m2" }),
+        );
+        Ok(floors)
+    }
+}
+
+fn append_wmo_floors(floors: &mut Vec<Floor>, wmos: &[WmoCollision], x: f32, z: f32) {
+    let mut heights = Vec::new();
+    for wmo in wmos {
+        wmo.floor_heights(x, z, 100_000.0, -100_000.0, &mut heights);
+    }
+    floors.extend(heights.into_iter().map(|z| Floor { z, source: "wmo" }));
+}
+
+fn validate_m2_tiles(map: &MapGround, dir: &Path, (row, col): (u32, u32)) -> Result<(), String> {
+    for r in row.saturating_sub(1)..=(row + 1).min(63) {
+        for c in col.saturating_sub(1)..=(col + 1).min(63) {
+            let required = map.source.as_ref().map_or((r, c) == (row, col), |source| {
+                source.tiles[c as usize * MAP_TILES + r as usize].root != 0
+            });
+            let path = dir.join(format!("{r}_{c}.los"));
+            if required && !path.is_file() {
+                return Err(format!("missing M2 tile {}", path.display()));
+            }
+        }
+    }
+    Ok(())
+}
+
+fn nearby_source_tiles(map: &MapGround, (row, col): (u32, u32)) -> Vec<(u32, u32)> {
+    let source = map.source.as_ref().expect("terrain map has a tile source");
+    let mut tiles = Vec::new();
+    for r in row.saturating_sub(1)..=(row + 1).min(63) {
+        for c in col.saturating_sub(1)..=(col + 1).min(63) {
+            if source.tiles[c as usize * MAP_TILES + r as usize].obj0 != 0 {
+                tiles.push((r, c));
+            }
+        }
+    }
+    tiles
+}
+
+fn load_strict_tile_wmos(
+    map: &mut MapGround,
+    (row, col): (u32, u32),
+) -> Result<Vec<WmoCollision>, String> {
+    let source = map.source.as_ref().ok_or("missing tile source")?;
+    let files = source.tiles[col as usize * MAP_TILES + row as usize];
+    let data_dir = source.data_dir.clone();
+    let data = read_client_file(&data_dir, "terrain", files.obj0, "adt")?;
+    let Some(modf) = find_chunk(&data, b"MODF")? else {
+        return Ok(Vec::new());
+    };
+    if modf.len() % MODF_ENTRY_SIZE != 0 {
+        return Err("truncated MODF".into());
+    }
+    modf.chunks_exact(MODF_ENTRY_SIZE)
+        .map(|entry| {
+            let placement = parse_modf_entry(entry)?;
+            if !map.wmo_models.contains_key(&placement.fdid) {
+                map.wmo_models
+                    .insert(placement.fdid, load_wmo_groups(&data_dir, placement.fdid)?);
+            }
+            Ok(WmoCollision::new(
+                placement.world_from_local(),
+                map.wmo_models[&placement.fdid].clone(),
+            ))
+        })
+        .collect()
+}
+
 struct TileGround {
     terrain: TerrainHeightMap,
     /// Area/liquid/flight-bound queries need terrain, not WMO collision.
