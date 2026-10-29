@@ -88,6 +88,8 @@ pub(super) fn benediction_from_mending(
     _target: Entity,
     _raw: f32,
     _effective: f32,
+    _critical: bool,
+    _periodic: bool,
 ) {
     if ctx.spell.id == 33_110
         && has_aura(world, ctx.caster, BENEDICTION_TALENT)
@@ -166,6 +168,8 @@ pub(super) fn piety(
     _target: Entity,
     raw: f32,
     effective: f32,
+    _critical: bool,
+    _periodic: bool,
 ) {
     use combat::spell_cast::{
         effects,

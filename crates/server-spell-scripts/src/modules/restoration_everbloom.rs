@@ -14,7 +14,15 @@ const HEAL: u32 = 1_244_341;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::ResolvedHeal(everbloom)];
 
-fn everbloom(world: &mut World, ctx: &EffectCtx<'_>, target: Entity, raw: f32, _effective: f32) {
+fn everbloom(
+    world: &mut World,
+    ctx: &EffectCtx<'_>,
+    target: Entity,
+    raw: f32,
+    _effective: f32,
+    _critical: bool,
+    _periodic: bool,
+) {
     if ctx.spell.id != BLOOM || raw <= 0.0 || !combat::auras::has_aura(world, ctx.caster, TALENT) {
         return;
     }
