@@ -273,7 +273,10 @@ fn selected(world: &World, caster: Entity, talent: u32) -> bool {
 fn focused_enmity_multiplier(world: &World, caster: Entity, _: Entity, spell: &SpellInfo) -> f32 {
     if spell.id != 31935
         || !selected(world, caster, 378845)
-        || combat::combat_refs::active_opponents(world, caster).take(2).count() != 1
+        || combat::combat_refs::active_opponents(world, caster)
+            .take(2)
+            .count()
+            != 1
     {
         return 1.0;
     }
