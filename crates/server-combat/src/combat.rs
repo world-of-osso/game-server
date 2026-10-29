@@ -3369,6 +3369,7 @@ pub(crate) fn respawn_system(
             Has<crate::spawn_pools::PooledSpawn>,
             Option<&crate::vignettes::CreatureVignette>,
             Option<(&crate::spawn_groups::GroupedSpawn, &crate::maps::InMap)>,
+            Option<(&shared::components::Npc, &crate::maps::InMap)>,
         ),
         (
             Without<crate::zones::TempSummon>,
@@ -3376,6 +3377,7 @@ pub(crate) fn respawn_system(
         ),
     >,
     inactive_groups: Option<Res<crate::spawn_groups::InactiveGroupedSpawns>>,
+    instances: Option<Res<crate::scripted_ai::instance_script::InstanceScripts>>,
     mut commands: Commands,
     dirty_queue: Option<Res<InterestDirtyQueue>>,
     mut senders: Query<&mut MessageSender<CombatEvent>>,
@@ -3385,7 +3387,7 @@ pub(crate) fn respawn_system(
     let elapsed = time.elapsed_secs_f64();
     let mut events = Vec::new();
 
-    for (entity, mut death, mut health, spawn, mut pos, waypoint, pooled, vignette, grouped) in
+    for (entity, mut death, mut health, spawn, mut pos, waypoint, pooled, vignette, grouped, npc) in
         &mut query
     {
         death.respawn_timer -= dt;
@@ -3400,6 +3402,14 @@ pub(crate) fn respawn_system(
         {
             // An inactive spawn group's member does not respawn
             // (`Map::SetSpawnGroupInactive`).
+            commands.entity(entity).despawn();
+            continue;
+        }
+        if let Some((npc, &map)) = npc
+            && instances
+                .as_ref()
+                .is_some_and(|scripts| scripts.is_done_boss(map, npc.template_id))
+        {
             commands.entity(entity).despawn();
             continue;
         }
