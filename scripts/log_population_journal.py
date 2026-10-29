@@ -18,11 +18,19 @@ def journal_actors(directory):
     encounters_path = directory / 'JournalEncounter.csv'
     actors_path = directory / 'JournalEncounterCreature.csv'
     with encounters_path.open(encoding='utf-8', newline='') as source:
-        for line, row in enumerate(csv.DictReader(source), 2):
+        reader = csv.DictReader(source)
+        previous_line = 1
+        for row in reader:
+            line = previous_line + 1
+            previous_line = reader.line_num
             encounters[row['ID']] = (int(row['DungeonEncounterID']), line)
     actors = defaultdict(list)
     with actors_path.open(encoding='utf-8', newline='') as source:
-        for line, row in enumerate(csv.DictReader(source), 2):
+        reader = csv.DictReader(source)
+        previous_line = 1
+        for row in reader:
+            line = previous_line + 1
+            previous_line = reader.line_num
             if row['JournalEncounterID'] not in encounters:
                 continue
             encounter_id, encounter_line = encounters[row['JournalEncounterID']]
