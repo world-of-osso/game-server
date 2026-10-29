@@ -1011,6 +1011,35 @@ mod tests {
 
     #[test]
     #[ignore = "requires canonical world database and MID2 Blood inputs"]
+    fn blood_dance_weapon_buffs_follow_real_summon_lifetimes() {
+        let mut run = super::super::prepare_registered_player(250, 1).unwrap();
+        let actor = run.actor;
+        super::super::engage(&mut run);
+        let summon = |run: &mut super::super::Run| {
+            assert!(crate::spell_cast::try_cast_triggered(run.app.world_mut(), actor, 1264353, Some(actor), 1));
+            for _ in 0..4 { run.app.update(); }
+            let world = run.app.world_mut();
+            world.query::<&crate::spell_cast::summon::SummonedCreature>().iter(world)
+                .filter(|summon| summon.owner == actor && summon.spell_id == 1264353)
+                .filter_map(|summon| summon.expires_at).max_by(f64::total_cmp).unwrap()
+        };
+        let first_end = summon(&mut run);
+        let first_buff_end = run.app.world().get::<crate::auras::ActiveAuras>(actor).unwrap().iter().find(|aura| aura.spell_id == 81256).unwrap().expires_at.unwrap();
+        assert!((first_buff_end - first_end).abs() < 0.06, "weapon {first_end}, parry buff {first_buff_end}");
+        for _ in 0..40 { run.app.update(); }
+        let second_end = summon(&mut run);
+        let stack_count = |run: &super::super::Run| run.app.world().get::<crate::auras::ActiveAuras>(actor).unwrap().iter().find(|aura| aura.spell_id == 1264407).map_or(0, |aura| aura.stacks);
+        assert_eq!(stack_count(&run), 2);
+        while crate::spell_cast::now(run.app.world()) < first_end + 0.15 { run.app.update(); }
+        assert_eq!(stack_count(&run), 1, "first weapon's Strength stack expires with it");
+        assert!(crate::auras::has_aura(run.app.world(), actor, 81256), "second weapon keeps parry buff");
+        while crate::spell_cast::now(run.app.world()) < second_end + 0.15 { run.app.update(); }
+        assert_eq!(stack_count(&run), 0, "last Strength stack expires with the last weapon");
+        assert!(!crate::auras::has_aura(run.app.world(), actor, 81256), "parry buff ends with the last weapon");
+    }
+
+    #[test]
+    #[ignore = "requires canonical world database and MID2 Blood inputs"]
     fn blood_rune_spend_can_summon_dance_weapon_and_enable_parry_buff() {
         let _seed = crate::random::seed_scope(70448);
         let mut run = super::super::prepare_registered_player(250, 1).unwrap();
