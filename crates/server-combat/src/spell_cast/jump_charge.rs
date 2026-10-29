@@ -26,7 +26,10 @@ pub(crate) struct JumpChargeParam {
 }
 
 #[derive(Clone, Default)]
-pub(crate) struct JumpChargeParams(pub(crate) HashMap<u32, JumpChargeParam>);
+pub(crate) struct JumpChargeParams(
+    pub(crate) HashMap<u32, JumpChargeParam>,
+    pub(crate) Vec<(f32, f32)>,
+);
 
 pub(crate) fn load_params(conn: &rusqlite::Connection) -> rusqlite::Result<JumpChargeParams> {
     let mut statement = conn.prepare(
@@ -49,7 +52,21 @@ pub(crate) fn load_params(conn: &rusqlite::Connection) -> rusqlite::Result<JumpC
             },
         ))
     })?;
-    Ok(JumpChargeParams(rows.collect::<rusqlite::Result<_>>()?))
+    let params: HashMap<_, _> = rows.collect::<rusqlite::Result<_>>()?;
+    let curve = if params
+        .values()
+        .any(|param| param.progress_curve == Some(1636))
+    {
+        let mut points = conn.prepare(
+            "SELECT Pos_0,Pos_1 FROM curve_point WHERE CurveID=1636 ORDER BY OrderIndex,ID",
+        )?;
+        points
+            .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?
+            .collect::<rusqlite::Result<Vec<_>>>()?
+    } else {
+        Vec::new()
+    };
+    Ok(JumpChargeParams(params, curve))
 }
 
 impl JumpChargeParam {
@@ -231,7 +248,49 @@ mod tests {
     }
 }
 
+fn jump_infernal_strike(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect) {
+    let Some(params) = world
+        .get_resource::<crate::world_data::WorldData>()
+        .map(|data| &data.jump_charge_params)
+    else {
+        error!("Infernal Strike requires jump-charge data");
+        return;
+    };
+    let Some(parameter) = params.0.get(&(effect.misc_values[0] as u32)) else {
+        error!("Infernal Strike requires its native jump parameters");
+        return;
+    };
+    if parameter.progress_curve != Some(1636)
+        || params.1.len() < 2
+        || params.1.windows(2).any(|points| points[0].0 >= points[1].0)
+    {
+        error!("Infernal Strike requires valid native curve 1636");
+        return;
+    }
+    let curve = params.1.clone();
+    let height = parameter.max_height.unwrap_or(0.5);
+    let Ok(destination) = jump_destination(ctx) else {
+        error!("Infernal Strike requires a finite destination");
+        return;
+    };
+    // SimC76f8118 sc_demon_hunter.cpp:4543-4578: leap travels one second and impacts on landing.
+    let options = JumpOptions {
+        speed: 1.0,
+        time_mode: true,
+        unlimited_speed: parameter.unlimited_speed,
+        min_height: height,
+        max_height: height,
+        no_facing_control: false,
+    };
+    move_jump_with_options(world, ctx.caster, EVENT_JUMP, destination, options);
+    crate::scripted_ai::jump_movement::configure_spell_jump(world, ctx.caster, curve, 189112);
+}
+
 pub(super) fn jump_to_destination(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect) {
+    if ctx.spell.id == 189110 {
+        jump_infernal_strike(world, ctx, effect);
+        return;
+    }
     match prepare_jump(world, ctx, effect) {
         Ok((destination, options)) => {
             move_jump_with_options(world, ctx.caster, EVENT_JUMP, destination, options);
