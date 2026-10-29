@@ -801,6 +801,72 @@ mod tests {
 
     #[test]
     #[ignore = "requires canonical world database and MID2 Blood inputs"]
+    fn blood_strikes_cleave_more_targets_in_death_and_decay() {
+        use shared::protocol::CombatLogKind;
+        for (spell, inside) in [
+            (206930, false),
+            (433895, false),
+            (206930, true),
+            (433895, true),
+        ] {
+            let mut run = super::super::prepare_registered_player(250, 3).unwrap();
+            let actor = run.actor;
+            let target = run.targets[0];
+            super::super::engage(&mut run);
+            if inside {
+                crate::spell_cast::creature_cast(
+                    run.app.world_mut(),
+                    actor,
+                    43265,
+                    Some(actor),
+                    false,
+                )
+                .unwrap();
+                for _ in 0..40 {
+                    run.app.update();
+                }
+                assert!(crate::auras::has_aura(run.app.world(), actor, 188290));
+            }
+            crate::spell_cast::creature_cast(
+                run.app.world_mut(),
+                actor,
+                spell,
+                Some(target),
+                false,
+            )
+            .unwrap();
+            for _ in 0..4 {
+                run.app.update();
+            }
+            let events = &run
+                .app
+                .world()
+                .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+                .0;
+            let targets: std::collections::BTreeSet<_> = events
+                .iter()
+                .filter(|event| {
+                    event.source == Some(actor.to_bits())
+                        && event.spell_id == Some(spell)
+                        && event.kind == CombatLogKind::Damage
+                        && event.amount > 0
+                })
+                .filter_map(|event| event.target)
+                .collect();
+            assert_eq!(
+                targets.len(),
+                if inside { 3 } else { 2 },
+                "spell {spell}, inside Death and Decay: {inside}"
+            );
+            assert!(
+                targets.contains(&target.to_bits()),
+                "primary target must be hit"
+            );
+        }
+    }
+
+    #[test]
+    #[ignore = "requires canonical world database and MID2 Blood inputs"]
     fn blood_infliction_scales_with_remaining_plague_duration() {
         use shared::protocol::CombatLogKind;
         fn sample(duration: u32) -> i32 {
