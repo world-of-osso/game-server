@@ -25,7 +25,7 @@ fn preservation_consume_flame_consumes_dream_breath_on_verdant_embrace() {
     );
     crate::spell_cast::creature_cast(h.app.world_mut(), h.caster, 355941, Some(h.caster), true)
         .unwrap();
-    h.advance(1);
+    h.advance(45);
     let expiry = |h: &crate::spell_cast::test_harness::Harness| {
         h.app
             .world()
@@ -33,7 +33,7 @@ fn preservation_consume_flame_consumes_dream_breath_on_verdant_embrace() {
             .unwrap()
             .iter()
             .find(|aura| aura.spell_id == 355941 && aura.caster == h.caster)
-            .unwrap()
+            .expect("Dream Breath aura must be active")
             .expires_at
             .unwrap()
     };
