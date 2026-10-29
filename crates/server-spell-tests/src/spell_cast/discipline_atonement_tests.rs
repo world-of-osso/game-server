@@ -26,6 +26,156 @@ fn discipline_flash_heal_applies_atonement_even_at_full_health() {
 }
 
 #[test]
+fn shadow_mend_override_heals_and_applies_atonement() {
+    let mut h = harness(
+        Vec::new(),
+        &[2061, 186263, 1252217, 194384, 81749, 94472],
+        5,
+    )
+    .unwrap();
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(ActiveSpec(256));
+    let ally = spawn_player(&mut h.app, 5, 1.0);
+    *h.app.world_mut().get_mut::<Health>(ally).unwrap() = Health {
+        current: 500.0,
+        max: 10_000.0,
+    };
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: h.caster,
+            target: h.caster,
+            spell_id: 1252217,
+            effect_mask: u32::MAX,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    h.cast_and_deliver(2061, Some(ally));
+    h.advance(80);
+    assert!(
+        h.inbox.failed.is_empty(),
+        "override cast failed: {:?}",
+        h.inbox.failed
+    );
+    assert!(
+        h.inbox
+            .log
+            .iter()
+            .any(|event| event.kind == CombatLogKind::Heal
+                && event.spell_id == Some(186263)
+                && event.target == Some(ally.to_bits())
+                && event.amount > 0),
+        "Flash Heal must resolve as Shadow Mend: {:?}",
+        h.inbox.log
+    );
+    assert!(
+        crate::auras::has_aura(h.app.world(), ally, 194384),
+        "Shadow Mend applies Atonement"
+    );
+}
+
+#[test]
+fn divine_aegis_accumulates_critical_flash_heals_and_absorbs_damage() {
+    let mut h = harness(
+        Vec::new(),
+        &[2061, 47515, 47753, 194384, 81749, 94472, 133],
+        5,
+    )
+    .unwrap();
+    h.app
+        .init_resource::<super::test_harness::ObservedCombatEvents>();
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(ActiveSpec(256));
+    h.app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(h.caster)
+        .unwrap()
+        .crit_pct = 100.0;
+    let ally = spawn_player(&mut h.app, 5, 1.0);
+    *h.app.world_mut().get_mut::<Health>(ally).unwrap() = Health {
+        current: 1_000.0,
+        max: 100_000.0,
+    };
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: h.caster,
+            target: h.caster,
+            spell_id: 47515,
+            effect_mask: u32::MAX,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    for _ in 0..2 {
+        h.cast_and_deliver(2061, Some(ally));
+        h.advance(80);
+    }
+    let heals: Vec<_> = h
+        .inbox
+        .log
+        .iter()
+        .filter(|event| {
+            event.kind == CombatLogKind::Heal
+                && event.spell_id == Some(2061)
+                && event.target == Some(ally.to_bits())
+        })
+        .collect();
+    assert_eq!(heals.len(), 2, "two real Flash Heals: {:?}", h.inbox.log);
+    assert!(heals.iter().all(|event| event.crit));
+    let expected = heals
+        .iter()
+        .map(|event| (event.amount - event.overflow).max(0) as f32 * 0.30)
+        .sum::<f32>()
+        .min(30_000.0);
+    assert!(expected > 0.0);
+    let fire = world_db().unwrap().spell_store().get(133).unwrap().clone();
+    super::effects::deal_damage(
+        h.app.world_mut(),
+        &super::effects::EffectCtx {
+            caster: h.npc,
+            spell: &fire,
+            depth: 0,
+            dest: None,
+            chain_multiplier: 1.0,
+        },
+        ally,
+        expected + 100.0,
+        false,
+        false,
+    );
+    h.advance(2);
+    let hit = h
+        .app
+        .world()
+        .resource::<super::test_harness::ObservedCombatEvents>()
+        .0
+        .iter()
+        .rev()
+        .find(|event| {
+            event.kind == CombatLogKind::Damage
+                && event.spell_id == Some(133)
+                && event.target == Some(ally.to_bits())
+        })
+        .unwrap_or_else(|| {
+            panic!(
+                "actual shield consumption: {:?}",
+                h.app
+                    .world()
+                    .resource::<super::test_harness::ObservedCombatEvents>()
+                    .0
+            )
+        });
+    assert!(
+        (hit.absorbed as f32 - expected).abs() <= 2.0,
+        "Aegis must accumulate 30% of effective critical heals: expected {expected}, got {hit:?}"
+    );
+}
+
+#[test]
 fn master_the_darkness_penance_draws_one_proc_per_four_casts() {
     let mut h = harness(
         Vec::new(),

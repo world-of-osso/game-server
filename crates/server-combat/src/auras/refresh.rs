@@ -62,7 +62,7 @@ pub(super) fn prepare_application(
         IGNORE_PAIN => accumulate_ignore_pain(world, target, new),
         HOLY_BULWARK_ABSORB => accumulate_holy_bulwark(world, target, new),
         77535 => accumulate_blood_shield(world, target, new),
-        372505 => accumulate_ursocs_fury(world, target, new),
+        372505 | 47753 => accumulate_capped_absorb(world, target, new),
         SHIELD_BLOCK => carry_duration(world, target, new, DurationCarry::Extend),
         SHIELD_OF_THE_RIGHTEOUS => {
             carry_duration(world, target, new, DurationCarry::CappedExtend(3));
@@ -445,11 +445,11 @@ fn accumulate_blood_shield(world: &World, target: Entity, new: &mut AuraInstance
     }
 }
 
-/// SimC76f8118 sc_druid.cpp5166–5173: cumulative Ursoc's Fury is capped at30% max health.
-fn accumulate_ursocs_fury(world: &World, target: Entity, new: &mut AuraInstance) {
+/// SimC76f8118 caps cumulative Ursoc's Fury and Divine Aegis at 30% target health.
+fn accumulate_capped_absorb(world: &World, target: Entity, new: &mut AuraInstance) {
     let max_health = world
         .get::<Health>(target)
-        .expect("living Ursoc's Fury target")
+        .expect("living capped-absorb target")
         .max;
     let previous = previous(world, target, new)
         .and_then(|old| {
