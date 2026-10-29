@@ -1,6 +1,28 @@
 use std::path::Path;
 
 #[test]
+#[ignore = "requires top-character profiles, native DB and SimC party pulse"]
+fn restoration_shaman_uses_surging_totem_throughout_party_pulse() {
+    let trace = std::env::var("HEALER_TANK_TIMELINE").unwrap();
+    let party = std::env::var("HEALER_TANK_PARTY_TRACE").unwrap();
+    let report = super::super::healer_replay::replay_simc_party(
+        264,
+        Path::new(&trace),
+        Path::new(&party),
+        300,
+        70448,
+    )
+    .unwrap();
+    let casts = &report["healer_casts"];
+    let count = casts["444995"].as_u64().unwrap_or(0) + casts["73920"].as_u64().unwrap_or(0);
+    assert!(
+        count >= 5,
+        "Rain/Totem is not used across the replay: {report}"
+    );
+    println!("SHAMAN_POLICY_REPORT={report}");
+}
+
+#[test]
 #[ignore = "requires native Restoration Shaman spell data"]
 fn earthliving_imbue_allows_riptide_to_apply_its_hot() {
     use crate::spell_cast::{
