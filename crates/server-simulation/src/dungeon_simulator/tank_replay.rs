@@ -363,7 +363,21 @@ pub(super) fn replay_simc_with_healing(
     seed: u64,
     external_healing: bool,
 ) -> Result<Value, String> {
+    replay_simc_with_pressure(spec_id, path, duration_seconds, seed, external_healing, 1.0)
+}
+
+pub(super) fn replay_simc_with_pressure(
+    spec_id: u32,
+    path: &std::path::Path,
+    duration_seconds: u32,
+    seed: u64,
+    external_healing: bool,
+    pressure_scale: f64,
+) -> Result<Value, String> {
     use crate::simc_tank_timeline;
+    if !pressure_scale.is_finite() || pressure_scale <= 0.0 {
+        return Err("SIMC_PRESSURE_SCALE_MUST_BE_POSITIVE_AND_FINITE".into());
+    }
     let canonical =
         std::path::Path::new("/home/osso/Projects/world-of-osso/game-server/data/world.db")
             .canonicalize()
@@ -383,7 +397,8 @@ pub(super) fn replay_simc_with_healing(
     if duration_seconds != 300 {
         return Err("NATIVE_LITERAL_ENCOUNTER_REQUIRES_300_SECONDS".into());
     }
-    let hits = simc_tank_timeline::read_trace(path, "Tank_Dummy_Dungeon")?;
+    let mut hits = simc_tank_timeline::read_trace(path, "Tank_Dummy_Dungeon")?;
+    scale_pressure(&mut hits, pressure_scale);
     let (bloodlust_ms, raid_buffs) = if external_healing {
         let (profile, _) = super::dps_parity::read_reference(spec_id)?;
         let name = profile
@@ -422,7 +437,7 @@ pub(super) fn replay_simc_with_healing(
             .insert(crate::simc_apl_native::FixtureBleeding);
     }
     let auras = super::dps_parity::tank_mitigation_auras(&run)?;
-    replay_registered_run_with_healing(
+    let mut report = replay_registered_run_with_healing(
         run,
         &hits,
         duration_seconds,
@@ -432,7 +447,15 @@ pub(super) fn replay_simc_with_healing(
         &raid_buffs,
         &dummy_debuffs,
         dummy_bleeding,
-    )
+    )?;
+    report["pressure_scale"] = json!(pressure_scale);
+    Ok(report)
+}
+
+pub(super) fn scale_pressure(hits: &mut [simc_tank_timeline::Hit], scale: f64) {
+    for hit in hits {
+        hit.amount *= scale;
+    }
 }
 
 pub(super) fn apply_simc_starting_holy_power(run: &mut super::dps_parity::Run) {
