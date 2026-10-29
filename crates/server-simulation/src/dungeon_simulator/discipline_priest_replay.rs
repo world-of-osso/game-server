@@ -22,6 +22,7 @@ const SPELLS: &[(&str, u32, bool)] = &[
     ("shield", 17, false),
     ("evangelism", 246287, true),
     ("penance", 47540, false),
+    ("flash_heal", 2061, false),
     ("shadow_word_death", 32379, false),
     ("mind_blast", 8092, false),
     ("smite", 585, false),
@@ -60,6 +61,10 @@ pub(super) fn prepare(
         ),
         ("default", "evangelism,if=party.injured>=3"),
         ("heal", "penance,if=target.health.pct<45"),
+        (
+            "heal",
+            "flash_heal,if=target.atonement_up=0&(mana.pct*7.5>=fight_remains|party.shield_discipline&mana.pct*18>=fight_remains|mana.pct>=90)",
+        ),
         ("damage", "penance"),
         ("damage", "mind_blast"),
         ("damage", "shadow_word_death,if=target.health.pct<=20"),
@@ -78,6 +83,7 @@ struct PartyFacts<'a> {
     shield: bool,
     atonement: bool,
     darkness: bool,
+    shield_discipline: bool,
 }
 impl Facts for PartyFacts<'_> {
     fn value(&self, name: &str) -> Result<f64, String> {
@@ -86,6 +92,7 @@ impl Facts for PartyFacts<'_> {
             "target.shield_up" => Ok(f64::from(self.shield)),
             "target.atonement_up" => Ok(f64::from(self.atonement)),
             "party.darkness_up" => Ok(f64::from(self.darkness)),
+            "party.shield_discipline" => Ok(f64::from(self.shield_discipline)),
             _ => self.native.value(name),
         }
     }
@@ -93,9 +100,11 @@ impl Facts for PartyFacts<'_> {
 impl ActionFacts for PartyFacts<'_> {
     fn value_for(&self, action: &Action, name: &str) -> Result<f64, String> {
         match name {
-            "party.injured" | "target.shield_up" | "target.atonement_up" | "party.darkness_up" => {
-                self.value(name)
-            }
+            "party.injured"
+            | "target.shield_up"
+            | "target.atonement_up"
+            | "party.darkness_up"
+            | "party.shield_discipline" => self.value(name),
             _ => self.native.value_for(action, name),
         }
     }
@@ -144,6 +153,7 @@ impl Discipline {
             shield: crate::auras::has_aura(world, target, 17),
             atonement,
             darkness: crate::auras::has_aura(world, healer, 1253591),
+            shield_discipline: crate::auras::has_aura(world, healer, 197045),
         };
         if let Some((action, execution)) =
             self.driver
@@ -201,7 +211,14 @@ impl Policy for Discipline {
         )? {
             return Ok(());
         }
-        if self.select(world, healer, lowest, injured, "heal", &["penance"])? {
+        if self.select(
+            world,
+            healer,
+            lowest,
+            injured,
+            "heal",
+            &["penance", "flash_heal"],
+        )? {
             return Ok(());
         }
         let enemy = world

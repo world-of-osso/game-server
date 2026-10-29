@@ -33,6 +33,14 @@ fn discipline_priest_heals_simc_dummy_party() {
     );
     assert!(
         casts
+            .get("186263")
+            .and_then(|value| value.as_u64())
+            .unwrap_or(0)
+            > 0,
+        "selected Shadow Mend must cast while applying Atonement: {report}"
+    );
+    assert!(
+        casts
             .get("32379")
             .and_then(|value| value.as_u64())
             .unwrap_or(0)
