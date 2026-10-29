@@ -112,15 +112,26 @@ def main():
     for name in ('census', 'clusters', 'requests', 'resolved', 'output', 'gaps'):
         parser.add_argument('--' + name, required=True, type=Path)
     parser.add_argument('--packs', type=Path)
+    parser.add_argument('--extra-requests', type=Path)
+    parser.add_argument('--extra-resolved', type=Path)
     parser.add_argument('--centroid-requests', type=Path)
     parser.add_argument('--centroid-resolved', type=Path)
     args = parser.parse_args()
     if bool(args.centroid_requests) != bool(args.centroid_resolved):
         parser.error('--centroid-requests and --centroid-resolved must be used together')
+    if bool(args.extra_requests) != bool(args.extra_resolved):
+        parser.error('--extra-requests and --extra-resolved must be used together')
     packs = load(args.packs)['packs'] if args.packs else ()
     centroid_requests = load(args.centroid_requests) if args.centroid_requests else ()
     centroid_resolved = load(args.centroid_resolved) if args.centroid_resolved else ()
-    records, gaps = prepare(load(args.census)['runs'], load(args.clusters), load(args.requests), load(args.resolved), packs, centroid_requests, centroid_resolved)
+    requests, resolved = load(args.requests), load(args.resolved)
+    if args.extra_requests:
+        extra_requests, extra_resolved = load(args.extra_requests), load(args.extra_resolved)
+        if len(extra_requests) != len(extra_resolved):
+            parser.error('extra floor response count does not match requests')
+        requests.extend(extra_requests)
+        resolved.extend(extra_resolved)
+    records, gaps = prepare(load(args.census)['runs'], load(args.clusters), requests, resolved, packs, centroid_requests, centroid_resolved)
     args.output.write_text(json.dumps(records, indent=2) + '\n')
     args.gaps.write_text(json.dumps(gaps, indent=2) + '\n')
 
