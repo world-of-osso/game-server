@@ -653,8 +653,6 @@ const EFFECT_PARRY: u32 = 22;
 pub(crate) const EFFECT_DUAL_WIELD: u32 = 40;
 const EFFECT_BLOCK: u32 = 23;
 /// `ActivePlayerData` base parry and block (StatSystem.cpp:497, 664).
-const BASE_PARRY_PCT: f32 = 5.0;
-const BASE_BLOCK_PCT: f32 = 5.0;
 /// SimC 76f8118 sc_extra_data.inc `_gt_avoid_per_str_agi_by_level` denominators.
 /// Values were measured in game; the source repeats level 90 above that level.
 const AVOIDANCE_STAT_DENOMINATOR: [f64; 90] = [
@@ -752,18 +750,6 @@ const AVOIDANCE_STAT_DENOMINATOR: [f64; 90] = [
 
 /// `ShieldBlock` per point of shield armor (Player.cpp:8144).
 const SHIELD_BLOCK_PER_ARMOR: f32 = 2.5;
-/// Diminishing-return `k`, dodge and parry caps by class 1-13 (StatSystem.cpp:596-697).
-const DIMINISHING_K: [f32; 13] = [
-    0.956, 0.956, 0.988, 0.988, 0.983, 0.956, 0.988, 0.983, 0.983, 0.983, 0.972, 0.983, 0.988,
-];
-const DODGE_CAP: [f32; 13] = [
-    65.63144, 65.63144, 145.560408, 145.560408, 150.37594, 65.63144, 145.560408, 150.37594,
-    150.37594, 145.560408, 116.890707, 145.560408, 145.560408,
-];
-const PARRY_CAP: [f32; 13] = [
-    65.63144, 65.63144, 145.560408, 145.560408, 0.0, 65.63144, 145.560408, 0.0, 0.0, 90.6425, 0.0,
-    65.63144, 0.0,
-];
 
 /// What a player's avoidance depends on besides its class, level and ratings.
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
@@ -789,75 +775,58 @@ pub struct DefenseInputs {
     pub diminishing_block_pct: f32,
 }
 
-/// TrinityCore master's player avoidance: `Player::UpdateDodgePercentage`,
-/// `UpdateParryPercentage` and `UpdateBlockPercentage` (StatSystem.cpp:490-507,
-/// 657-715). Agility classes use SimC's Agility conversion and dodge DR;
-/// Warrior, Paladin and Death Knight parry use its Strength conversion and DR.
-/// Block is 5% plus MOD_BLOCK_PERCENT plus its rating, for one that can block and holds a
-/// shield (StatSystem.cpp:496-501, Unit.cpp:2843-2846).
+/// SimC76f8118 player.cpp:1639-1690,5221-5298 and sc_extra_data.inc:1798-1820:
+/// class-dependent primary-stat conversion and avoidance diminishing returns.
 pub fn player_defense(
     class: u8,
     level: u8,
     ratings: &CombatRatings,
     inputs: DefenseInputs,
 ) -> PlayerDefense {
-    let (Some(level), Some(class_index)) = (level_index(level), usize::from(class).checked_sub(1))
-    else {
+    let Some(level) = level_index(level) else {
         return PlayerDefense::default();
     };
-    let (Some(&k), Some(&dodge_cap), Some(&parry_cap)) = (
-        DIMINISHING_K.get(class_index),
-        DODGE_CAP.get(class_index),
-        PARRY_CAP.get(class_index),
-    ) else {
+    if !(1..=13).contains(&class) {
         return PlayerDefense::default();
-    };
-    // CalculateDiminishingReturns (StatSystem.cpp:616-636): c·x / (x + c·k) + nondiminishing.
-    let diminished = |cap: f32, nondiminishing: f32, diminishing: f32| {
-        if diminishing + cap * k == 0.0 {
-            return nondiminishing;
-        }
-        cap * diminishing / (diminishing + cap * k) + nondiminishing
-    };
-    let parry = if inputs.can_parry && parry_cap > 0.0 && inputs.has_weapon {
-        if matches!(class, 1 | 2 | 6) {
-            // SimC player.cpp:1682 and 5282–5298: naked Strength is not diminished;
-            // bonus Strength and rating share DR (parry factor 1, stretch .01,
-            // horizontal shift 1/.94 for these three classes).
-            let coefficient = AVOIDANCE_STAT_DENOMINATOR[level.min(89)] as f32;
-            let bonus = ratings.parry / PARRY_RATING[level]
-                + (inputs.strength - inputs.base_strength) / coefficient;
-            3.0 + inputs.parry_pct
-                + inputs.base_strength / coefficient
-                + bonus / (bonus * 0.01 + 1.0 / 0.94)
+    }
+    let coefficient = AVOIDANCE_STAT_DENOMINATOR[level.min(89)] as f32;
+    let vertical = if class == 12 { 0.02 } else { 0.01 };
+    let horizontal = if class == 11 { 1.0 / 0.97 } else { 1.0 / 0.94 };
+    let diminished = |bonus: f32| bonus / (bonus * vertical + horizontal);
+    let parry = if inputs.can_parry && inputs.has_weapon && matches!(class, 1 | 2 | 4 | 6 | 10 | 12)
+    {
+        let strength_class = matches!(class, 1 | 2 | 6);
+        let base_strength = if strength_class {
+            inputs.base_strength / coefficient
         } else {
-            diminished(
-                parry_cap,
-                BASE_PARRY_PCT + inputs.parry_pct,
-                ratings.parry / PARRY_RATING[level],
-            )
-        }
+            0.0
+        };
+        let bonus_strength = if strength_class {
+            (inputs.strength - inputs.base_strength) / coefficient
+        } else {
+            0.0
+        };
+        3.0 + inputs.parry_pct
+            + base_strength
+            + diminished(ratings.parry / PARRY_RATING[level] + bonus_strength)
     } else {
         0.0
     };
-    let dodge = if matches!(class, 3 | 4 | 7 | 10 | 11 | 12) {
-        // SimC76f8118 player.cpp1639–1657,5251–5267: base Agility is
-        // undiminished; bonus Agility and dodge rating share class-specific DR.
-        let coefficient = AVOIDANCE_STAT_DENOMINATOR[level.min(89)] as f32;
-        let bonus = ratings.dodge / DODGE_RATING[level]
-            + (inputs.agility - inputs.base_agility) / coefficient;
-        let vertical = if class == 12 { 0.02 } else { 0.01 };
-        let horizontal = if class == 11 { 1.0 / 0.97 } else { 1.0 / 0.94 };
-        3.0 + inputs.dodge_pct
-            + inputs.base_agility / coefficient
-            + bonus / (bonus * vertical + horizontal)
+    let agility_class = matches!(class, 3 | 4 | 7 | 10 | 11 | 12);
+    let base_agility = if agility_class {
+        inputs.base_agility / coefficient
     } else {
-        diminished(
-            dodge_cap,
-            inputs.dodge_pct,
-            ratings.dodge / DODGE_RATING[level],
-        )
+        0.0
     };
+    let bonus_agility = if agility_class {
+        (inputs.agility - inputs.base_agility) / coefficient
+    } else {
+        0.0
+    };
+    let dodge = 3.0
+        + inputs.dodge_pct
+        + base_agility
+        + diminished(ratings.dodge / DODGE_RATING[level] + bonus_agility);
     let shield_armor = inputs.shield_armor.filter(|_| inputs.can_block);
     PlayerDefense {
         dodge,
@@ -878,7 +847,7 @@ pub fn player_defense(
                 };
                 3.0 + inputs.block_pct + diminished
             } else {
-                BASE_BLOCK_PCT + inputs.block_pct + ratings.block / BLOCK_RATING[level]
+                0.0
             }
         }),
         shield_block: inputs
