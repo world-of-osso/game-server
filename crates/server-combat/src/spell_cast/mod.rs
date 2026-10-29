@@ -824,6 +824,11 @@ impl SpellHistory {
         self.gcd_ready_at.values().any(|&deadline| deadline > now)
     }
 
+    #[cfg(any(test, feature = "test-support"))]
+    pub fn clear_fixture_precombat_gcd(&mut self) {
+        self.gcd_ready_at.clear();
+    }
+
     pub fn on_gcd(&self, spell: &SpellInfo, now: f64) -> bool {
         let category = gcd_category(spell);
         category != 0 && self.gcd_ready_at.get(&category).is_some_and(|&at| at > now)

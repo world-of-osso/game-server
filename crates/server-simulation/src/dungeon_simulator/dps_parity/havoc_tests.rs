@@ -3,6 +3,24 @@ use super::*;
 
 #[test]
 #[ignore = "requires DPS_PARITY_WORLD_DB and DPS_PARITY_OUTPUT with spec577 exact profile/traits"]
+fn havoc_precombat_immolation_starts_at_pull_before_felblade() {
+    use shared::protocol::CombatLogKind;
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_measurement(577, 1).expect("native Havoc fixture");
+    let events = &run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
+    assert!(events.iter().any(|event| event.spell_id == Some(258920) && event.kind == CombatLogKind::CastSuccess));
+    assert!(!events.iter().any(|event| event.spell_id == Some(258922) && event.kind == CombatLogKind::Damage), "precombat Immolation must not tick before pull");
+    engage(&mut run);
+    let started_at = run.app.world().resource::<Time>().elapsed();
+    install_fixture_lifetimes(&mut run, started_at);
+    drive_player(&mut run).expect("first literal combat decision");
+    let events = &run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
+    assert!(events.iter().any(|event| event.spell_id == Some(232893) && event.kind == CombatLogKind::CastSuccess), "Felblade must be available at pull");
+    assert!(!events.iter().any(|event| event.spell_id == Some(1297908) && event.kind == CombatLogKind::CastSuccess), "Font must wait for Initiative from an actual impact");
+}
+
+#[test]
+#[ignore = "requires DPS_PARITY_WORLD_DB and DPS_PARITY_OUTPUT with spec577 exact profile/traits"]
 fn havoc_native_metamorphosis_requires_ground_destination() {
     let mut run = prepare_literal(577, 1).expect("native Havoc profile");
     let actor = run.actor;
