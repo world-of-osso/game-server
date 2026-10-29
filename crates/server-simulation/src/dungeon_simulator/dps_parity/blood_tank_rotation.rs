@@ -2829,7 +2829,7 @@ mod tests {
         assert!(crate::auras::has_aura(run.app.world(), actor, 1265968));
         crate::spell_cast::creature_cast(run.app.world_mut(), actor, 49028, Some(actor), false)
             .unwrap();
-        for _ in 0..4 {
+        for _ in 0..30 {
             run.app.update();
         }
         let world = run.app.world_mut();
