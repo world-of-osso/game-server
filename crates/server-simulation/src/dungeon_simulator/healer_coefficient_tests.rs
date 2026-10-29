@@ -20,7 +20,11 @@ fn preservation_life_givers_flame_splits_fire_breath_damage() {
         .world_mut()
         .get_mut::<crate::stats::CharacterStats>(h.caster)
         .unwrap()
-        .crit_pct = 0.0;
+        .crit_pct = 100.0;
+    *h.app.world_mut().get_mut::<Health>(h.npc).unwrap() = Health {
+        current: 100_000.0,
+        max: 100_000.0,
+    };
     crate::auras::apply_aura(
         h.app.world_mut(),
         &crate::auras::AuraApplication {
@@ -31,22 +35,28 @@ fn preservation_life_givers_flame_splits_fire_breath_damage() {
             source: crate::auras::AuraSource::Cast,
         },
     );
-    crate::spell_cast::creature_cast(h.app.world_mut(), h.caster, 357209, Some(h.npc), true)
-        .unwrap();
+    for _ in 0..2 {
+        crate::spell_cast::creature_cast(h.app.world_mut(), h.caster, 357209, Some(h.npc), true)
+            .unwrap();
+    }
     h.advance(8);
     let events = &h
         .app
         .world()
         .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
         .0;
-    let damage: i32 = events
+    let damage: Vec<_> = events
         .iter()
         .filter(|event| {
             event.kind == CombatLogKind::Damage && event.spell_id == Some(357209) && !event.periodic
         })
-        .map(|event| event.amount)
-        .sum();
-    assert!(damage > 0, "Fire Breath must damage an enemy");
+        .collect();
+    assert_eq!(damage.len(), 2, "both Fire Breath hits must land");
+    assert!(
+        damage.iter().all(|event| event.crit),
+        "both hits must critically strike"
+    );
+    let noncritical_damage: f32 = damage.iter().map(|event| event.amount as f32 / 2.0).sum();
     for target in [h.caster, ally] {
         let heal = events
             .iter()
@@ -57,7 +67,7 @@ fn preservation_life_givers_flame_splits_fire_breath_damage() {
             })
             .expect("Life-Giver's Flame must heal each injured ally");
         assert!(
-            (heal.amount as f32 - damage as f32 * 0.8 / 2.0).abs() <= 2.0,
+            (heal.amount as f32 - noncritical_damage * 0.8 / 2.0).abs() <= 2.0,
             "{heal:?}"
         );
     }
@@ -66,7 +76,9 @@ fn preservation_life_givers_flame_splits_fire_breath_damage() {
 #[test]
 #[ignore = "checks Consume Flame against the native Dream Breath and Verdant Embrace"]
 fn preservation_consume_flame_consumes_dream_breath_on_verdant_embrace() {
-    let spells = [444088, 355941, 360995, 361195, 361361, 445495];
+    let spells = [
+        444088, 355941, 360995, 361195, 361361, 355913, 355916, 445495,
+    ];
     let mut h = crate::spell_cast::test_harness::harness(Vec::new(), &spells, 13).unwrap();
     h.app
         .init_resource::<crate::spell_cast::test_harness::ObservedCombatEvents>();
@@ -149,6 +161,28 @@ fn preservation_consume_flame_consumes_dream_breath_on_verdant_embrace() {
         .collect();
     assert_eq!(heals.len(), 2);
     assert!((154..=156).contains(&heals[1].amount), "{:?}", heals[1]);
+
+    let before = expiry(&h, "before Emerald Blossom");
+    crate::spell_cast::creature_cast(h.app.world_mut(), h.caster, 355913, Some(h.caster), true)
+        .unwrap();
+    h.advance(45);
+    let after = expiry(&h, "after Emerald Blossom");
+    assert!((before - after - 2.0).abs() < 0.001);
+    let events = &h
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    let heals: Vec<_> = events
+        .iter()
+        .filter(|event| {
+            event.kind == CombatLogKind::Heal
+                && event.spell_id == Some(445495)
+                && event.target == Some(h.caster.to_bits())
+        })
+        .collect();
+    assert_eq!(heals.len(), 3);
+    assert!((154..=156).contains(&heals[2].amount), "{:?}", heals[2]);
 }
 
 #[test]
