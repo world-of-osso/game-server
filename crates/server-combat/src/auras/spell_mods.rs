@@ -410,6 +410,20 @@ fn live_modifiers<'a>(
                 || !matches!(effect.index, 8 | 9)
                 || super::has_aura(world, caster, 275336)
         })
+        // SimC76f8118 sc_warrior.cpp7877–7879 selects one Slayer's
+        // Malice effect per specialization, despite overlapping native masks.
+        .filter(move |(aura, effect)| {
+            aura.spell_id != 444779
+                || !matches!(
+                    (
+                        world
+                            .get::<shared::components::ActiveSpec>(caster)
+                            .map(|s| s.0),
+                        effect.index
+                    ),
+                    (Some(71), 1) | (Some(72), 0)
+                )
+        })
         .filter(move |(aura, _)| !snapshots_periodic_modifier(aura, op))
         .filter(move |(aura, _)| {
             spell.cast_charge_mods.is_none()
