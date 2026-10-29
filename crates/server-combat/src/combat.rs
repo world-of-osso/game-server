@@ -2324,6 +2324,18 @@ fn resolve_swing(
             crate::test_support::healer_intake::record(world, source, target_entity, 1, raw, kind)
         });
     }
+    if !immune {
+        let source_damage =
+            melee::outcome_damage(swing.raw, kind, level_difference, 0.0).0 * critical_multiplier;
+        commands.queue(move |world: &mut World| {
+            crate::spell_cast::script_registry::incoming_damage_before_mitigation(
+                world,
+                target_entity,
+                None,
+                source_damage,
+            );
+        });
+    }
     let (deferred, consume_ox) = context
         .stagger
         .map_or((0.0, false), |stagger| stagger.deferred(outcome_damage, 1));
@@ -2990,6 +3002,16 @@ pub fn replay_healer_hit(
     } else {
         blocked
     };
+    if !immune {
+        let source_damage =
+            melee::outcome_damage(hit.raw, kind, level_difference, 0.0).0 * critical_multiplier;
+        crate::spell_cast::script_registry::incoming_damage_before_mitigation(
+            world,
+            victim,
+            None,
+            source_damage,
+        );
+    }
     let (deferred, consume_ox) = crate::auras::stagger::snapshot(world, victim)
         .map_or((0.0, false), |stagger| stagger.deferred(amount, 1));
     if deferred > 0.0 || consume_ox {

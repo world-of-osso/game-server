@@ -2201,6 +2201,12 @@ fn deal_source_damage_and_report(
     }
     let target_multiplier = damage_taken(world, ctx, target, &damage);
     let cast_multiplier = cast_damage_multiplier(ctx.spell);
+    super::script_registry::incoming_damage_before_mitigation(
+        world,
+        target,
+        Some(ctx.spell.id),
+        source_amount * cast_multiplier,
+    );
     let creature = if resolved_source || ignores_caster_damage_modifiers(ctx.spell) {
         1.0
     } else {

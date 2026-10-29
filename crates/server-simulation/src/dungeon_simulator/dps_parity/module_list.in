@@ -489,6 +489,7 @@ mod windwalker_player_tests;
 #[cfg(test)] mod brewmaster_quick_sip_tests;
 #[cfg(test)] mod brewmaster_barrel_proc_tests;
 #[cfg(test)] mod brewmaster_gift_of_the_ox_tests;
+#[cfg(test)] mod brewmaster_gift_damage_tests;
 #[cfg(test)] mod brewmaster_blackout_combo_tests;
 #[cfg(test)] mod brewmaster_purified_spirit_tests;
 #[cfg(test)] mod brewmaster_keg_reset_tests;
