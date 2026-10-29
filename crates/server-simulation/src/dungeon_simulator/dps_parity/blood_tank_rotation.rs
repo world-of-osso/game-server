@@ -707,18 +707,29 @@ mod tests {
             super::super::engage(&mut run);
             for attempt in 1..=30 {
                 crate::spell_cast::script_registry::after_payment(
-                    run.app.world_mut(), actor,
-                    &[(crate::spell_cast::CostPool::Power(shared::components::PowerType::Runes), runes)],
+                    run.app.world_mut(),
+                    actor,
+                    &[(
+                        crate::spell_cast::CostPool::Power(shared::components::PowerType::Runes),
+                        runes,
+                    )],
                 );
                 let world = run.app.world_mut();
-                if world.query::<&crate::spell_cast::summon::SummonedCreature>().iter(world)
-                    .any(|summon| summon.owner == actor && summon.spell_id == 1264353) {
+                if world
+                    .query::<&crate::spell_cast::summon::SummonedCreature>()
+                    .iter(world)
+                    .any(|summon| summon.owner == actor && summon.spell_id == 1264353)
+                {
                     return attempt;
                 }
             }
             panic!("no Dance weapon after 30 payments")
         }
-        assert_eq!(first_spawn(1.0), first_spawn(2.0), "each payment gets one proc roll regardless of rune count");
+        assert_eq!(
+            first_spawn(1.0),
+            first_spawn(2.0),
+            "each payment gets one proc roll regardless of rune count"
+        );
     }
 
     #[test]
@@ -894,9 +905,17 @@ mod tests {
             let actor = run.actor;
             let target = run.targets[0];
             super::super::engage(&mut run);
-            run.app.world_mut().entity_mut(actor).insert(crate::spell_cast::ObservedResourcePayments::default());
+            run.app
+                .world_mut()
+                .entity_mut(actor)
+                .insert(crate::spell_cast::ObservedResourcePayments::default());
             if !improved {
-                crate::auras::remove_auras(run.app.world_mut(), actor, crate::auras::RemoveReason::Cancelled, |aura| aura.spell_id == 374277 && aura.caster == actor);
+                crate::auras::remove_auras(
+                    run.app.world_mut(),
+                    actor,
+                    crate::auras::RemoveReason::Cancelled,
+                    |aura| aura.spell_id == 374277 && aura.caster == actor,
+                );
             }
             crate::auras::apply_aura(
                 run.app.world_mut(),
@@ -949,10 +968,23 @@ mod tests {
                         && event.kind == CombatLogKind::Damage
                 })
                 .expect("Sanguinary Burst damage");
-            let paid = run.app.world().get::<crate::spell_cast::ObservedResourcePayments>(actor).unwrap().0.iter()
-                .filter(|(id, pool, _)| *id == 49998 && *pool == crate::spell_cast::CostPool::Power(PowerType::RunicPower))
-                .map(|(_, _, amount)| *amount / 10.0).sum();
-            (event.amount as f32 / if event.crit { 2.0808 } else { 1.0 }, paid)
+            let paid = run
+                .app
+                .world()
+                .get::<crate::spell_cast::ObservedResourcePayments>(actor)
+                .unwrap()
+                .0
+                .iter()
+                .filter(|(id, pool, _)| {
+                    *id == 49998
+                        && *pool == crate::spell_cast::CostPool::Power(PowerType::RunicPower)
+                })
+                .map(|(_, _, amount)| *amount / 10.0)
+                .sum();
+            (
+                event.amount as f32 / if event.crit { 2.0808 } else { 1.0 },
+                paid,
+            )
         }
         let (baseline, _) = burst(None, true);
         let (generated, _) = burst(Some(433895), true);
@@ -964,7 +996,10 @@ mod tests {
         let (control, control_paid) = burst(Some(49998), false);
         assert!(paid > 0.0 && control_paid > paid);
         let expected = (1.0 + (paid + 5.0) * 0.02) / (1.0 + control_paid * 0.02);
-        assert!((spent / control - expected).abs() < 0.03, "spent={spent} control={control} paid={paid} control_paid={control_paid}");
+        assert!(
+            (spent / control - expected).abs() < 0.03,
+            "spent={spent} control={control} paid={paid} control_paid={control_paid}"
+        );
     }
 
     #[test]

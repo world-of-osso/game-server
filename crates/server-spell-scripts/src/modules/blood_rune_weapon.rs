@@ -88,7 +88,12 @@ fn grant_mist_power(
     spell_cast::cast_triggered(world, ctx.caster, 1263774, Some(ctx.caster), ctx.depth + 1);
 }
 
-fn track_mist_spending(world: &mut World, caster: Entity, spell: &SpellInfo, costs: &[(CostPool, f32)]) {
+fn track_mist_spending(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    costs: &[(CostPool, f32)],
+) {
     let mut spent: f32 = costs
         .iter()
         .filter_map(|(pool, amount)| {
@@ -98,8 +103,15 @@ fn track_mist_spending(world: &mut World, caster: Entity, spell: &SpellInfo, cos
         .sum();
     // SimC76f8118 sc_death_knight.cpp13183–13199 adds back Improved Death Strike's reduction.
     if spent > 0.0 && spell.id == 49998 && auras::has_aura(world, caster, 374277) {
-        let reduction = world.resource::<SpellStore>().get(374277).expect("Improved Death Strike")
-            .effects.iter().find(|effect| effect.index == 4).expect("Blood runic power reduction").base_points;
+        let reduction = world
+            .resource::<SpellStore>()
+            .get(374277)
+            .expect("Improved Death Strike")
+            .effects
+            .iter()
+            .find(|effect| effect.index == 4)
+            .expect("Blood runic power reduction")
+            .base_points;
         spent -= reduction / 10.0;
     }
     if let Some(mut state) = world.get_mut::<BloodMistState>(caster) {
