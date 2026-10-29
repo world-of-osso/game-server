@@ -753,15 +753,17 @@ def measure_spec(entry, measurement, executable, target, log, tree, previous=Non
         return measure_spec_locked(entry, measurement, executable, target, log, tree)
 
 
-def measurement_inputs(measurement):
-    """What a measurement depends on besides the tree: the spec, DB, actor, targets and the
-    profile/trait inputs in its output directory. Equal inputs on one tree give equal results."""
+def measurement_inputs(entry, measurement):
+    """What a measurement depends on besides the tree: the spec, DB, actor, targets, the entry's
+    environment (e.g. tank replay seeds) and the profile/trait inputs in its output directory.
+    Equal inputs on one tree give equal results."""
     output = Path(measurement["output"])
     spec = measurement["spec"]
     inputs = [(output / f"{spec}.{name}.json").read_bytes() if (output / f"{spec}.{name}.json").exists() else b""
               for name in ("profile", "selected-traits-active")]
     return (spec, str(Path(measurement["world_db"]).resolve()), measurement.get("actor", "follower"),
-            measurement["targets"], hashlib.sha256(b"\0".join(inputs)).hexdigest())
+            measurement["targets"], tuple(sorted(entry.get("env", {}).items())),
+            hashlib.sha256(b"\0".join(inputs)).hexdigest())
 
 
 def share_measurement(entry, measurement, first, first_entry):
@@ -960,7 +962,7 @@ def measure_then_write(entries, log):
         for index, measurement in enumerate(entry["measure"]):
             # The parity script writes a spec-level timing file as well as target reports.
             key = (str(Path(measurement["output"]).resolve()), measurement["spec"])
-            inputs = measurement_inputs(measurement)
+            inputs = measurement_inputs(entry, measurement)
             if inputs in shared:
                 first, first_entry = shared[inputs]
                 future = SHARERS.submit(share_measurement, entry, measurement, first, first_entry)
