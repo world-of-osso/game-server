@@ -231,7 +231,10 @@ fn guardian_heart_in_cat_executes_empowered_feral_frenzy() {
         "Cat Heart executes five Feral Frenzy hits"
     );
     assert!(impacts.iter().all(|event| event.amount > 0));
-    assert!(ticks > 0, "the empowered frenzy applies its native bleed");
+    assert_eq!(
+        ticks, 2,
+        "the empowered frenzy must produce one bleed stream"
+    );
     let combo = crate::spell_cast::powers::power_value(
         run.app.world(),
         actor,

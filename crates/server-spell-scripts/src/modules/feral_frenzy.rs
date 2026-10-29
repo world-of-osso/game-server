@@ -92,6 +92,8 @@ fn feral_tick(world: &mut World, unit: Entity, aura: &AuraInstance, effect_index
         1,
         spell_cast::TriggeredSpellOverrides {
             damage_multiplier,
+            // 274838 effect 3 is a targetless compute-points field, not another bleed.
+            effect_mask: Some(0b1011),
             ..Default::default()
         },
     );
