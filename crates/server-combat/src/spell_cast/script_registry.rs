@@ -246,6 +246,8 @@ pub type HealthChangeObservedHook = fn(&mut World, &shared::protocol::CombatLogE
 pub type AuraEventHook = fn(&mut World, &crate::auras::procs::AuraEvent);
 pub type RawHealHook = fn(&mut World, &EffectCtx<'_>, f32);
 pub type ExpelHarmHealHook = fn(&mut World, Entity) -> f32;
+pub type IncomingDamageBeforeMitigationHook = fn(&mut World, Entity, Option<u32>, f32);
+pub type HealReceivedHook = fn(&mut World, Entity, u32, f32, f32, bool);
 pub type SupportAuraRegistrationHook = fn(&mut crate::auras::scripts::AuraScripts);
 pub type NamedAuraFields = &'static [(u32, u8)];
 pub type SnapshotLaunchAurasHook = fn(&World, Entity, &mut SpellInfo);
@@ -416,6 +418,8 @@ pub enum SpellScriptHook {
     AuraEvent(AuraEventHook),
     RawHeal(RawHealHook),
     ExpelHarmHeal(ExpelHarmHealHook),
+    IncomingDamageBeforeMitigation(IncomingDamageBeforeMitigationHook),
+    HealReceived(HealReceivedHook),
     SupportAuraRegistration(SupportAuraRegistrationHook),
     NamedAuraFields(NamedAuraFields),
     SnapshotLaunchAuras(SnapshotLaunchAurasHook),
@@ -1915,6 +1919,41 @@ pub fn before_enemy_context_hit(world: &World, spell: u32) -> Option<BeforeEnemy
             SpellScriptHook::BeforeEnemyContextHit(lookup) => lookup(spell),
             _ => None,
         })
+}
+
+/// Report a resolved heal to recipient-owned effects, including overheal.
+pub fn heal_received(
+    world: &mut World,
+    target: Entity,
+    spell: u32,
+    raw: f32,
+    effective: f32,
+    percent_based: bool,
+) {
+    let registry = *world.resource::<SpellScriptRegistry>();
+    for hook in registry.hooks() {
+        if let SpellScriptHook::HealReceived(run) = hook {
+            run(world, target, spell, raw, effective, percent_based);
+        }
+    }
+}
+
+/// Report landed source damage before target mitigation and absorbs.
+pub fn incoming_damage_before_mitigation(
+    world: &mut World,
+    target: Entity,
+    spell: Option<u32>,
+    amount: f32,
+) {
+    if amount <= 0.0 {
+        return;
+    }
+    let registry = *world.resource::<SpellScriptRegistry>();
+    for hook in registry.hooks() {
+        if let SpellScriptHook::IncomingDamageBeforeMitigation(run) = hook {
+            run(world, target, spell, amount);
+        }
+    }
 }
 
 /// Consume earned healing before Expel Harm calculates its damage payload.

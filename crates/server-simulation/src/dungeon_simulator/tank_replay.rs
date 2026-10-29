@@ -607,15 +607,30 @@ fn replay_registered_run_with_healing(
             bloodlust_applied = true;
         }
         if external_healing && tick % 100 == 0 && tick < duration_seconds * 20 {
-            let mut health = run
-                .app
-                .world_mut()
-                .get_mut::<Health>(tank)
-                .ok_or("TANK_HEALTH_ABSENT")?;
-            if health.current > 0.0 {
-                let amount = 75_000.0_f32.min((health.max - health.current).max(0.0));
-                health.current += amount;
+            let effective = {
+                let mut health = run
+                    .app
+                    .world_mut()
+                    .get_mut::<Health>(tank)
+                    .ok_or("TANK_HEALTH_ABSENT")?;
+                if health.current > 0.0 {
+                    let amount = 75_000.0_f32.min((health.max - health.current).max(0.0));
+                    health.current += amount;
+                    Some(amount)
+                } else {
+                    None
+                }
+            };
+            if let Some(amount) = effective {
                 external_healing_effective += f64::from(amount);
+                crate::spell_cast::script_registry::heal_received(
+                    run.app.world_mut(),
+                    tank,
+                    0,
+                    75_000.0,
+                    amount,
+                    false,
+                );
             }
         }
         while let Some(hit) = hits

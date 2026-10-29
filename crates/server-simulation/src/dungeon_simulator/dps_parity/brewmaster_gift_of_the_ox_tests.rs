@@ -12,6 +12,19 @@ fn heals(run: &Run, spell: u32) -> usize {
         .count()
 }
 
+fn first_noncritical_amount(run: &Run, spell: u32) -> f32 {
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    let event = events
+        .iter()
+        .find(|event| event.spell_id == Some(spell) && event.kind == CombatLogKind::Heal)
+        .unwrap();
+    event.amount as f32 / if event.crit { 2.0 } else { 1.0 }
+}
+
 fn earn_orbs(run: &mut Run) {
     let actor = run.actor;
     let target = run.targets[0];
@@ -53,6 +66,10 @@ fn brewmaster_gift_orbs_expire_or_are_consumed_by_expel_harm() {
         "consumed orbs must not expire later"
     );
 
+    {
+        let mut health = run.app.world_mut().get_mut::<Health>(actor).unwrap();
+        health.current = health.max * 0.3;
+    }
     earn_orbs(&mut run);
     let before = heals(&run, 178173);
     for _ in 0..3500 {
@@ -61,5 +78,11 @@ fn brewmaster_gift_orbs_expire_or_are_consumed_by_expel_harm() {
     assert!(
         heals(&run, 178173) > before,
         "unconsumed orbs heal when they expire"
+    );
+    let consumed_heal = first_noncritical_amount(&run, 124507);
+    let expiry_heal = first_noncritical_amount(&run, 178173);
+    assert!(
+        consumed_heal > expiry_heal * 1.6,
+        "Strength of Spirit applies only to orbs consumed by Expel Harm: {consumed_heal} vs {expiry_heal}"
     );
 }

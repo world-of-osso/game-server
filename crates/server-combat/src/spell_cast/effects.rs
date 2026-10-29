@@ -2201,6 +2201,12 @@ fn deal_source_damage_and_report(
     }
     let target_multiplier = damage_taken(world, ctx, target, &damage);
     let cast_multiplier = cast_damage_multiplier(ctx.spell);
+    super::script_registry::incoming_damage_before_mitigation(
+        world,
+        target,
+        Some(ctx.spell.id),
+        source_amount * cast_multiplier,
+    );
     let creature = if resolved_source || ignores_caster_damage_modifiers(ctx.spell) {
         1.0
     } else {
@@ -2633,6 +2639,20 @@ fn apply_resolved_heal(
     event.crit = crit;
     event.periodic = periodic;
     log_event(world, event);
+    let percent_based = !periodic
+        && ctx
+            .spell
+            .effects
+            .iter()
+            .any(|effect| effect.effect == EFFECT_HEAL_PCT);
+    super::script_registry::heal_received(
+        world,
+        target,
+        ctx.spell.id,
+        amount,
+        effective,
+        percent_based,
+    );
     if !periodic {
         super::record_hit_heal(world, ctx.caster, ctx.spell.id, target, amount);
         super::scripts::heal_beacon(world, ctx, target, effective);
