@@ -427,7 +427,7 @@ mod tests {
         let mut run = prepare_reference(profile, &traits, 1, identity).unwrap();
         let actor = run.actor;
         let target = run.targets[0];
-        crate::spell_cast::powers::change_power(run.app.world_mut(), actor, PowerType::Fury, 100.0).unwrap();
+        crate::spell_cast::powers::change_power(run.app.world_mut(), actor, shared::components::PowerType::Fury, 100.0).unwrap();
         crate::spell_cast::cast_for_player_with_target(run.app.world_mut(), actor, 212084, Some(target)).unwrap();
         for _ in 0..60 {
             run.app.update();
