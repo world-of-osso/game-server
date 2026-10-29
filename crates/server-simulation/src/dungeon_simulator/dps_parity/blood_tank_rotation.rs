@@ -401,6 +401,25 @@ mod tests {
         for _ in 0..12 {
             run.app.update();
         }
+        let parry = server::test_support::healer_intake::Hit {
+            kind: server::test_support::healer_intake::HitKind::Melee {
+                hand: 0,
+                outcome: "Parry".into(),
+                level_difference: 0,
+                critical_multiplier: 1.0,
+                weapon_speed: 2.0,
+            },
+            ..hit
+        };
+        crate::combat::replay_healer_hit(run.app.world_mut(), attacker, actor, &parry).unwrap();
+        assert_eq!(
+            count(&run),
+            4,
+            "a parry with surviving Blood Shield reflects"
+        );
+        for _ in 0..12 {
+            run.app.update();
+        }
         crate::auras::remove_auras(
             run.app.world_mut(),
             actor,
@@ -408,7 +427,7 @@ mod tests {
             |aura| matches!(aura.spell_id, 77535 | 207203),
         );
         strike(&mut run);
-        assert_eq!(count(&run), 3, "no Blood Shield means no reflection");
+        assert_eq!(count(&run), 4, "no Blood Shield means no reflection");
     }
 
     #[test]
