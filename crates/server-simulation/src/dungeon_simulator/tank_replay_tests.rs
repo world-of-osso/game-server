@@ -2227,6 +2227,8 @@ fn ferren_marcus_empowers_only_primary_shield_target() {
     let actor = run.actor;
     let primary = run.targets[0];
     let secondary = run.targets[1];
+    let rank = crate::spell_cast::scripts::script_effect_value(run.app.world(), actor, 378762, 0);
+    assert!((rank - 20.0).abs() < 0.01, "selected Fervor rank: {rank}");
     let start = run.app.world().resource::<ObservedCombatEvents>().0.len();
     let _hit_seed = crate::random::seed_scope(454545);
     crate::spell_cast::creature_cast(run.app.world_mut(), actor, 31935, Some(primary), false)
@@ -2249,8 +2251,9 @@ fn ferren_marcus_empowers_only_primary_shield_target() {
     };
     let first = damage(primary.to_bits());
     let second = damage(secondary.to_bits());
+    // Native per-target damage variance is independently rolled for each impact.
     assert!(
-        (first / second - 1.2).abs() < 0.02,
+        (1.12..1.28).contains(&(first / second)),
         "primary={first} secondary={second}"
     );
 }
