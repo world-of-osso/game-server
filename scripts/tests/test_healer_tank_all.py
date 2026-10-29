@@ -42,6 +42,39 @@ print('HEALER_TANK_REPORT=' + json.dumps(report))
             self.assertEqual(json.loads((output / 'healer-105-unhealed.json').read_text())['metrics']['spell_healing']['123']['effective_hps'], 10)
             self.assertEqual(json.loads((output / 'tank-581-unhealed.json').read_text())['time_to_death'], 42)
 
+    def test_pressure_sweep_ranks_and_records_ten_seed_results(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            specs = ('66', '73', '104', '250', '268', '581')
+            for spec in specs:
+                (root / f'{spec}.simc-trace.log').write_text(spec)
+            executable = root / 'replay'
+            executable.write_text('''#!/usr/bin/env python3
+import json, os
+spec = os.environ['HEALER_TANK_SPEC']
+scale = float(os.environ['HEALER_TANK_PRESSURE_SCALE'])
+seed = int(os.environ['HEALER_TANK_SEED'])
+assert os.environ['HEALER_TANK_EXTERNAL_HEALING'] == '0'
+threshold = {'66': 1.0, '73': 1.2, '104': 1.4, '250': 1.6, '268': 1.8, '581': 2.0}[spec]
+survives = scale <= threshold and seed < 70453
+report = {'time_to_death': None if survives else 100.0, 'duration_seconds': 300.0 if survives else 100.0,
+          'damage_taken': 3000.0 if survives else 1000.0, 'self_heal_per_second': 3.0, 'pressure_scale': scale}
+print('HEALER_TANK_REPORT=' + json.dumps(report))
+''')
+            executable.chmod(0o755)
+            output = root / 'results'
+            result = subprocess.run(['python3', str(SCRIPT), '--pressure-sweep', '--trace-dir', str(root),
+                                     '--profile-dir', str(root), '--executable', str(executable),
+                                     '--output-dir', str(output), '--jobs', '4'], text=True, capture_output=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            summary = json.loads((output / 'summary.json').read_text())
+            self.assertEqual(len(summary['seeds']), 10)
+            self.assertEqual([row['spec'] for row in summary['results']], list(reversed(specs)))
+            self.assertEqual(summary['results'][0]['survival_scale'], 2.0)
+            self.assertEqual(summary['results'][0]['mean_time_to_death_125'], 100.0)
+            self.assertEqual(summary['results'][0]['net_damage_per_second'], 7.0)
+            self.assertIn('| 581 | 2.00 | 100.00 | 7.00 |', result.stdout)
+
     def test_multiseed_aggregates_real_cli_outputs_and_keeps_seed_details(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

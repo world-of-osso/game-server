@@ -29,6 +29,12 @@ Replay recorded incoming damage in the native server combat simulation to compar
 
 - [Guardian Druid (104)](healer-tank-replay/104.md)
 
+## Scaled tank pressure
+
+`--pressure-scale X` multiplies the raw amounts of all SimC tank-dummy swings, strikes and bleed ticks before native combat; timestamps, attack tables and other trace fields remain unchanged. The report records `pressure_scale`. The scale must be positive and finite.
+
+`--pressure-sweep` runs each tank without external healing across ten consecutive native seeds, starting at 70448 by default. It brackets and bisects pressure in 0.05 steps, assuming survival is monotonic, to find the highest tested scale with at least five survivors. It reports the mean survival time at 1.25 times that scale, treating survivors as 300 seconds, and mean net damage per second at the survival scale. Damage taken is already after absorbs, so net damage subtracts effective self-healing only. Per-seed reports and a summary are written to the output directory. This synthetic trace is not a general ranking of tank performance in encounters.
+
 ## SimC party-pressure trace
 
 The second canonical healer input is `game-engine/data/diagnostics/healer-tank-replay/66.simc-party-pulse-seed70448.debug.log`. It adds a 20,000 Shadow pulse every 12 seconds from 8 seconds through 296 seconds. This is a reproducible synthetic dungeon-pressure scenario, not a measured dungeon encounter. SimC `76f8118` generates the five recipient source rolls with the MID2 Protection profile and four named copies; the native replay maps them to its tank, healer and three DPS followers. The original tank-only trace still supplies the tank's melee and bleed rolls.

@@ -4,6 +4,7 @@ import argparse
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 import json
+import math
 import os
 from pathlib import Path
 import subprocess
@@ -21,20 +22,21 @@ HEALERS = ('65', '105', '256', '257', '264', '270', '1468')
 TANKS = ('66', '73', '104', '250', '268', '581')
 
 
-def run_replay(timeline, spec, source, duration, seed, profile_dir, executable, external_healing, mode='tank', party_trace=None):
+def run_replay(timeline, spec, source, duration, seed, profile_dir, executable, external_healing, mode='tank', party_trace=None, pressure_scale=1.0):
     environment = os.environ | {
         'HEALER_TANK_TIMELINE': str(timeline), 'HEALER_TANK_SPEC': str(spec),
         'HEALER_TANK_SOURCE': source, 'HEALER_TANK_MODE': mode, 'HEALER_TANK_DURATION': str(duration),
         'HEALER_TANK_SEED': str(seed), 'DPS_PARITY_WORLD_DB': str(WORLD_DB),
         'DPS_PARITY_OUTPUT': str(profile_dir), 'DPS_PARITY_ACTOR': 'player',
         'HEALER_TANK_EXTERNAL_HEALING': '1' if external_healing else '0',
+        'HEALER_TANK_PRESSURE_SCALE': str(pressure_scale),
     }
     if party_trace is not None and mode == 'healer':
         environment['HEALER_TANK_PARTY_TRACE'] = str(party_trace)
     if executable:
         command = [str(executable), DRIVER, '--exact', '--ignored', '--nocapture']
     else:
-        command = [str(AGENT_RUN), 'healer-tank-replay-cli', 'cargo', 'test', '--locked',
+        command = [str(AGENT_RUN), 'tank-pressure', 'cargo', 'test', '--locked',
                    '-p', 'server-simulation', '--lib', DRIVER, '--', '--exact', '--ignored', '--nocapture']
     result = subprocess.run(command, cwd=ROOT, env=environment, text=True, capture_output=True)
     if result.returncode:
@@ -113,7 +115,7 @@ def print_tank(report):
 
 
 def build_replay_executable():
-    command = [str(AGENT_RUN), 'healer-tank-replay-cli', 'cargo', 'test', '--locked',
+    command = [str(AGENT_RUN), 'tank-pressure', 'cargo', 'test', '--locked',
                '-p', 'server-simulation', '--lib', '--no-run', '--message-format=json']
     result = subprocess.run(command, cwd=ROOT, text=True, capture_output=True)
     if result.returncode:
@@ -214,11 +216,65 @@ def run_all(trace_dir, executable, output_dir, jobs, profile_dir=None, party_tra
     print(f'\nDetails: {output_dir}')
 
 
+def run_pressure_sweep(trace_dir, executable, output_dir, jobs, profiles, seeds):
+    output_dir.mkdir(parents=True, exist_ok=True)
+    results = []
+    with ThreadPoolExecutor(max_workers=jobs) as pool:
+        for spec in TANKS:
+            timeline = (trace_dir / f'{spec}.simc-trace.log').resolve(strict=True)
+            cache = {}
+
+            def measure(scale):
+                if scale not in cache:
+                    def replay(seed):
+                        report = run_replay(timeline, spec, 'simc', 300, seed, profiles, executable, False,
+                                            pressure_scale=scale)
+                        (output_dir / f'tank-{spec}-scale{scale:.4f}-seed{seed}.json').write_text(
+                            json.dumps(report, indent=2) + '\n')
+                        return report
+                    cache[scale] = list(pool.map(replay, seeds))
+                return cache[scale]
+
+            def survives(step):
+                return sum(r['time_to_death'] is None for r in measure(step / 20)) >= 5
+
+            low, high = 0, 20
+            while survives(high):
+                low, high = high, high * 2
+                if high > 20480:
+                    raise RuntimeError(f'{spec}: no failing pressure bound')
+            while high - low > 1:
+                middle = (low + high) // 2
+                if survives(middle):
+                    low = middle
+                else:
+                    high = middle
+            if low == 0:
+                raise RuntimeError(f'{spec}: no surviving scale at 0.05 resolution')
+            scale = low / 20
+            baseline = measure(scale)
+            stressed = measure(scale * 1.25)
+            net = sum(r['damage_taken'] / r['duration_seconds'] - r['self_heal_per_second']
+                      for r in baseline) / len(baseline)
+            death = sum(r['time_to_death'] if r['time_to_death'] is not None else 300.0
+                        for r in stressed) / len(stressed)
+            results.append({'spec': spec, 'survival_scale': scale, 'mean_time_to_death_125': death,
+                            'net_damage_per_second': net})
+    results.sort(key=lambda row: row['survival_scale'], reverse=True)
+    (output_dir / 'summary.json').write_text(json.dumps({'seeds': list(seeds), 'results': results}, indent=2) + '\n')
+    print('| Tank | Survival scale | Mean time at 1.25× (s) | Net damage/s at survival scale |')
+    print('|---|---:|---:|---:|')
+    for row in results:
+        print(f'| {row["spec"]} | {row["survival_scale"]:.2f} | {row["mean_time_to_death_125"]:.2f} | {row["net_damage_per_second"]:.2f} |')
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--timeline', type=Path, help='SimC debug trace or recorded intake JSON')
     parser.add_argument('--party-trace', type=Path, help='SimC raid-event party damage trace for healer replays')
     parser.add_argument('--all', action='store_true', help='run all healer and tank benchmarks')
+    parser.add_argument('--pressure-scale', type=float, default=1.0, help='multiply SimC tank incoming raw damage')
+    parser.add_argument('--pressure-sweep', action='store_true', help='rank all tanks over ten no-healer seeds')
     parser.add_argument('--trace-dir', type=Path, default=TRACE_DIR, help='directory of per-tank --all traces')
     parser.add_argument('--output-dir', type=Path, help='directory for --all detail JSON reports')
     parser.add_argument('--jobs', type=int, default=min(4, len(os.sched_getaffinity(0))), help='parallel --all replays')
@@ -232,6 +288,21 @@ def main():
     parser.add_argument('--profile-dir', type=Path, help='directory containing profile and trait inputs')
     parser.add_argument('--executable', type=Path, help='existing server-simulation test executable')
     args = parser.parse_args()
+    if not math.isfinite(args.pressure_scale) or args.pressure_scale <= 0:
+        parser.error('--pressure-scale must be positive and finite')
+    if args.pressure_sweep:
+        if (args.all or args.timeline or args.simc_tank_heal or args.pressure_scale != 1.0
+                or args.jobs <= 0 or args.seed < 0 or args.source != 'simc' or args.mode != 'tank'
+                or args.party_trace):
+            parser.error('--pressure-sweep requires SimC tank traces, no healer, a nonnegative seed, and positive jobs')
+        executable = args.executable.resolve(strict=True) if args.executable else build_replay_executable()
+        output = args.output_dir or TRACE_DIR / datetime.now().strftime('pressure-sweep-%Y-%m-%d-%H%M%S')
+        profiles = (args.profile_dir or ALL_PROFILES).resolve(strict=True)
+        run_pressure_sweep(args.trace_dir.resolve(strict=True), executable, output, args.jobs, profiles,
+                           tuple(range(args.seed, args.seed + 10)))
+        return 0
+    if args.pressure_scale != 1.0 and (args.all or args.mode != 'tank' or args.source != 'simc'):
+        parser.error('--pressure-scale requires a single SimC tank replay')
     if args.seeds <= 0 or args.seed < 0:
         parser.error('--seeds must be positive and --seed must be nonnegative')
     seeds = tuple(range(args.seed, args.seed + args.seeds))
@@ -268,7 +339,7 @@ def main():
     executable = args.executable.resolve(strict=True) if args.executable else None
     all_specs = ('66', '73', '104', '250', '268', '581') if args.source == 'simc' else ('65', '66')
     for spec in (all_specs if args.spec == 'all' else (args.spec,)):
-        reports = [run_replay(timeline, spec, args.source, args.duration, seed, profile_dir, executable, args.simc_tank_heal, args.mode, args.party_trace.resolve(strict=True) if args.party_trace else None) for seed in seeds]
+        reports = [run_replay(timeline, spec, args.source, args.duration, seed, profile_dir, executable, args.simc_tank_heal, args.mode, args.party_trace.resolve(strict=True) if args.party_trace else None, args.pressure_scale) for seed in seeds]
         report = reports[0]
         if len(seeds) > 1:
             print_tank_aggregate(reports, seeds)

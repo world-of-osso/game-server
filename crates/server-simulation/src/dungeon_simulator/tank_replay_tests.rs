@@ -1695,6 +1695,33 @@ fn unregistered_tank_driver_fails_instead_of_using_a_follower() {
 }
 
 #[test]
+#[ignore = "requires canonical MID2 profile inputs and a real SimC trace"]
+fn scaled_real_trace_doubles_raw_pressure_and_shortens_survival() {
+    let path = std::env::var("HEALER_TANK_SIMC_TRACE").expect("HEALER_TANK_SIMC_TRACE required");
+    let path = Path::new(&path);
+    let original = crate::simc_tank_timeline::read_trace(path, "Tank_Dummy_Dungeon").unwrap();
+    let mut scaled = crate::simc_tank_timeline::read_trace(path, "Tank_Dummy_Dungeon").unwrap();
+    super::tank_replay::scale_pressure(&mut scaled, 2.0);
+    for (before, after) in original.iter().zip(&scaled) {
+        assert_eq!(after.amount, before.amount * 2.0);
+        assert_eq!(after.time_ms, before.time_ms);
+        assert_eq!(after.kind, before.kind);
+        assert_eq!(after.melee_table, before.melee_table);
+    }
+    let normal =
+        super::tank_replay::replay_simc_with_pressure(66, path, 300, 70448, false, 1.0).unwrap();
+    let doubled =
+        super::tank_replay::replay_simc_with_pressure(66, path, 300, 70448, false, 2.0).unwrap();
+    let normal_time = normal["time_to_death"].as_f64().unwrap_or(300.0);
+    let doubled_time = doubled["time_to_death"].as_f64().unwrap();
+    assert!(
+        doubled_time < normal_time,
+        "normal {normal_time}, doubled {doubled_time}"
+    );
+    assert_eq!(doubled["pressure_scale"], 2.0);
+}
+
+#[test]
 #[ignore = "runs the MID2 Protection APL and SimC tank-dummy pressure"]
 fn protection_paladin_simc_apl_uses_shield_of_the_righteous() {
     let path = std::env::var("HEALER_TANK_SIMC_TRACE").expect("HEALER_TANK_SIMC_TRACE required");

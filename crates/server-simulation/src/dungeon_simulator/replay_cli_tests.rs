@@ -46,12 +46,17 @@ fn native_replay_cli_driver() {
                 .unwrap();
             let seed = std::env::var("HEALER_TANK_SEED").unwrap().parse().unwrap();
             let healing = std::env::var("HEALER_TANK_EXTERNAL_HEALING").unwrap_or_default() == "1";
-            super::tank_replay::replay_simc_with_healing(
+            let pressure_scale = std::env::var("HEALER_TANK_PRESSURE_SCALE")
+                .unwrap_or_else(|_| "1".into())
+                .parse()
+                .expect("numeric pressure scale");
+            super::tank_replay::replay_simc_with_pressure(
                 spec.parse().unwrap(),
                 Path::new(&path),
                 duration,
                 seed,
                 healing,
+                pressure_scale,
             )
         }
         ("recorded", "tank", "65" | "66") => {
