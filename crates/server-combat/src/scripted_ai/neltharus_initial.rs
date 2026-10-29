@@ -1,4 +1,4 @@
-//! LittleWigs2777a9d Chargath/Sargha initial phases; energy controllers unported.
+//! LittleWigs2777a9d Chargath/Sargha initial alert policy; energy controllers unported.
 use bevy::prelude::*;
 
 use super::boss_ai::{BossAi, BossScript, boss_update_ai};
@@ -15,14 +15,24 @@ struct InitialPhaseProfile {
 }
 
 const CHARGATH_INITIAL_PHASE: InitialPhaseProfile = InitialPhaseProfile {
-    first_casts: &[(373742, 5_000), (373733, 12_000), (373424, 24_200)],
+    first_casts: &[
+        (373742, 5_000),
+        (373733, 12_000),
+        (373424, 24_200),
+        (375056, 31_100),
+    ],
     repeated_spell: 373742,
     repeat_ms: 12_100,
     victim_spell: 373733,
 };
 
 const SARGHA_INITIAL_PHASE: InitialPhaseProfile = InitialPhaseProfile {
-    first_casts: &[(377204, 7_100), (377017, 14_200), (377473, 21_500)],
+    first_casts: &[
+        (377204, 7_100),
+        (377017, 14_200),
+        (377473, 21_500),
+        (376780, 37_700),
+    ],
     repeated_spell: 377204,
     repeat_ms: 21_900,
     victim_spell: 377017,
@@ -89,7 +99,7 @@ impl BossScript for InitialPhaseAi {
     }
 
     fn execute_event(&mut self, ctx: &mut Ctx, event: u32) {
-        let target = if event == self.profile.victim_spell {
+        let target = if event == self.profile.victim_spell || event == 375056 {
             ctx.victim()
         } else {
             None
