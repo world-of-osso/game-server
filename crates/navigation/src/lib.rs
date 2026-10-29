@@ -1,9 +1,10 @@
 //! Offline Recast navigation tiles and Detour queries, in Bevy world coordinates.
 #[cfg(feature = "bake")]
 pub mod bake;
+pub mod hierarchy;
 mod query;
 pub use query::read_walkable_polygons;
-pub use query::{CollisionDrop, NavigationMap, NavigationPath};
+pub use query::{CollisionDrop, NavigationMap, NavigationPath, NavigationPlan};
 pub mod worker;
 
 pub const TILE_SIZE: f32 = 1600.0 / 3.0;

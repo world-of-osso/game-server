@@ -14,7 +14,11 @@ fn request(entity: u64, id: u64, map_id: u32) -> Request {
 }
 
 fn drain(worker: &mut Worker) -> Vec<Response> {
-    let deadline = Instant::now() + Duration::from_secs(5);
+    drain_with_timeout(worker, Duration::from_secs(5))
+}
+
+fn drain_with_timeout(worker: &mut Worker, timeout: Duration) -> Vec<Response> {
+    let deadline = Instant::now() + timeout;
     let mut responses = Vec::new();
     while !worker.is_idle() {
         let batch = worker.poll();
@@ -32,6 +36,211 @@ fn drain(worker: &mut Worker) -> Vec<Response> {
         std::thread::yield_now();
     }
     responses
+}
+
+#[cfg(unix)]
+#[test]
+fn held_tile_on_one_map_does_not_block_another_map() {
+    use std::io::Write;
+    use std::sync::mpsc;
+    let temp = tempfile::tempdir().unwrap();
+    let map = temp.path().join("12");
+    std::fs::create_dir(&map).unwrap();
+    let tile = map.join("32_31.nav");
+    assert!(
+        std::process::Command::new("mkfifo")
+            .arg(&tile)
+            .status()
+            .unwrap()
+            .success()
+    );
+    let (opened_tx, opened_rx) = mpsc::channel();
+    let (release_tx, release_rx) = mpsc::channel();
+    let writer = std::thread::spawn(move || {
+        let mut pipe = std::fs::OpenOptions::new().write(true).open(tile).unwrap();
+        opened_tx.send(()).unwrap();
+        release_rx.recv().unwrap();
+        pipe.write_all(b"invalid tile").unwrap();
+    });
+    let mut worker = Worker::new(temp.path().to_owned());
+    worker.submit(request(1, 1, 12));
+    opened_rx.recv_timeout(Duration::from_secs(5)).unwrap();
+    worker.submit(request(2, 1, 99));
+    let deadline = Instant::now() + Duration::from_secs(5);
+    let response = loop {
+        if let Some(response) = worker
+            .poll()
+            .into_iter()
+            .find(|response| response.entity == 2)
+        {
+            break response;
+        }
+        assert!(
+            Instant::now() < deadline,
+            "unrelated map was blocked by tile read"
+        );
+        std::thread::yield_now();
+    };
+    assert!(matches!(response.result, Ok(None)));
+    worker.submit(request(3, 1, 12));
+    worker.submit(request(3, 2, 99));
+    let deadline = Instant::now() + Duration::from_secs(5);
+    loop {
+        if let Some(response) = worker
+            .poll()
+            .into_iter()
+            .find(|response| response.entity == 3)
+        {
+            assert_eq!(response.id, 2);
+            assert!(matches!(response.result, Ok(None)));
+            break;
+        }
+        assert!(
+            Instant::now() < deadline,
+            "moved entity remained blocked on its previous map"
+        );
+        std::thread::yield_now();
+    }
+    release_tx.send(()).unwrap();
+    let response = drain(&mut worker).pop().unwrap();
+    assert!(response.result.is_err());
+    writer.join().unwrap();
+}
+
+#[test]
+#[ignore = "requires FOLLOWER_NAV_CANONICAL canonical2519 assets"]
+fn worker_loads_graph_before_the_first_long_request() {
+    use std::os::unix::fs::symlink;
+    let source =
+        std::path::PathBuf::from(std::env::var_os("FOLLOWER_NAV_CANONICAL").unwrap()).join("2519");
+    let temp = tempfile::tempdir().unwrap();
+    let map = temp.path().join("2519");
+    std::fs::create_dir(&map).unwrap();
+    for entry in std::fs::read_dir(&source).unwrap() {
+        let path = entry.unwrap().path();
+        if path.extension().is_some_and(|ext| ext == "nav") {
+            symlink(&path, map.join(path.file_name().unwrap())).unwrap();
+        }
+    }
+    let graph = map.join("portal-graph.json");
+    std::fs::copy(source.join("portal-graph.json"), &graph).unwrap();
+    let mut worker = Worker::new(temp.path().to_owned());
+    std::fs::remove_file(graph).unwrap();
+    worker.submit(Request {
+        entity: 1,
+        id: 1,
+        map_id: 2519,
+        query: Query::Path {
+            from: Vec3::new(-257.87, 123.38, 489.73),
+            to: Vec3::new(-211.1, 99.34897, 932.7),
+        },
+    });
+    let response = drain_with_timeout(&mut worker, Duration::from_secs(60))
+        .pop()
+        .unwrap();
+    assert!(matches!(response.result, Ok(Some(Output::Path(_)))));
+}
+
+#[test]
+#[ignore = "requires FOLLOWER_NAV_CANONICAL canonical2519 assets"]
+fn worker_reports_missing_corrupt_and_mismatched_preloaded_graphs() {
+    use std::os::unix::fs::symlink;
+    let source =
+        std::path::PathBuf::from(std::env::var_os("FOLLOWER_NAV_CANONICAL").unwrap()).join("2519");
+    let temp = tempfile::tempdir().unwrap();
+    let map = temp.path().join("2519");
+    std::fs::create_dir(&map).unwrap();
+    for entry in std::fs::read_dir(&source).unwrap() {
+        let path = entry.unwrap().path();
+        if path.extension().is_some_and(|ext| ext == "nav") {
+            symlink(&path, map.join(path.file_name().unwrap())).unwrap();
+        }
+    }
+    let graph = map.join("portal-graph.json");
+    for case in ["missing", "corrupt", "mismatch"] {
+        if case == "corrupt" {
+            std::fs::write(&graph, b"bad graph").unwrap();
+        }
+        if case == "mismatch" {
+            std::fs::copy(source.join("portal-graph.json"), &graph).unwrap();
+            let extra_tile = map.join("0_0.nav");
+            assert!(!extra_tile.exists());
+            std::fs::write(extra_tile, b"changed").unwrap();
+        }
+        let mut worker = Worker::new(temp.path().to_owned());
+        worker.submit(Request {
+            entity: 1,
+            id: 1,
+            map_id: 2519,
+            query: Query::Path {
+                from: Vec3::new(-257.87, 123.38, 489.73),
+                to: Vec3::new(-211.1, 99.34897, 932.7),
+            },
+        });
+        let error = drain_with_timeout(&mut worker, Duration::from_secs(60))
+            .pop()
+            .unwrap()
+            .result
+            .unwrap_err();
+        assert!(
+            error.contains(if case == "mismatch" {
+                "digest mismatch"
+            } else {
+                "portal-graph.json"
+            }),
+            "{case}: {error}"
+        );
+    }
+}
+
+#[test]
+#[ignore = "requires FOLLOWER_NAV_CANONICAL canonical2516 assets"]
+fn worker_keeps_long_route_plans_separate_across_movers_and_cancel() {
+    let root = std::path::PathBuf::from(std::env::var_os("FOLLOWER_NAV_CANONICAL").unwrap());
+    let mut worker = Worker::new(root);
+    let start = Vec3::new(-559.8952, 340.06406, -1631.8356);
+    let end = Vec3::new(-1593.5763, 467.57016, -2037.4996);
+    let mut positions = [start, start];
+    let mut completed = [false, false];
+    let mut seen = [
+        std::collections::HashSet::new(),
+        std::collections::HashSet::new(),
+    ];
+    for step in 1..=100 {
+        for index in 0..2 {
+            if !completed[index] {
+                worker.submit(Request {
+                    entity: index as u64 + 1,
+                    id: step,
+                    map_id: 2516,
+                    query: Query::Path {
+                        from: positions[index],
+                        to: end,
+                    },
+                });
+            }
+        }
+        for response in drain_with_timeout(&mut worker, Duration::from_secs(60)) {
+            let index = response.entity as usize - 1;
+            let Some(Output::Path(path)) = response.result.unwrap() else {
+                panic!("expected path")
+            };
+            let endpoint = *path.points.last().expect("empty leg");
+            assert!(
+                seen[index].insert(endpoint.to_array().map(f32::to_bits)),
+                "mover repeated an endpoint"
+            );
+            positions[index] = endpoint;
+            completed[index] = path.complete;
+        }
+        if step == 1 {
+            worker.cancel(2);
+        }
+        if completed.iter().all(|value| *value) {
+            return;
+        }
+    }
+    panic!("movers did not finish their routes");
 }
 
 #[test]
