@@ -193,7 +193,7 @@ def cluster_population(runs, radius=10.0):
         run_id = (run['file'], run['start'])
         for guid, unit in sorted(run['creatures'].items()):
             pos = unit.get('first_position')
-            if pos is None:
+            if pos is None or unit['summoned']:
                 continue
             candidates = []
             key = (run['map'], unit['npc_id'], pos['ui_map_id'])

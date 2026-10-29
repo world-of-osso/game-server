@@ -44,6 +44,9 @@ class CensusTest(unittest.TestCase):
         self.assertEqual(clusters[0]['classification'], 'patrol_candidate')
         self.assertEqual(len(clusters[0]['unverified_candidate_path']), 2)
         self.assertEqual(clusters[0]['gap'], 'PARTIAL_PATROL_NAVMESH_AND_PHASE_UNVERIFIED')
+        summoned = run('b', [('b1', 7)])
+        summoned['creatures']['b1']['summoned'] = True
+        self.assertEqual(len(module.cluster_population([run('a', [('a1', 0)]), summoned])[0]['observations']), 1)
         ambiguous = module.cluster_population([run('a', [('a1', 0), ('a2', 1)]),
                                                run('b', [('b1', 0.5)])])
         self.assertEqual(len(ambiguous), 3)
