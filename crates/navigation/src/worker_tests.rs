@@ -82,6 +82,25 @@ fn held_tile_on_one_map_does_not_block_another_map() {
         std::thread::yield_now();
     };
     assert!(matches!(response.result, Ok(None)));
+    worker.submit(request(3, 1, 12));
+    worker.submit(request(3, 2, 99));
+    let deadline = Instant::now() + Duration::from_secs(5);
+    loop {
+        if let Some(response) = worker
+            .poll()
+            .into_iter()
+            .find(|response| response.entity == 3)
+        {
+            assert_eq!(response.id, 2);
+            assert!(matches!(response.result, Ok(None)));
+            break;
+        }
+        assert!(
+            Instant::now() < deadline,
+            "moved entity remained blocked on its previous map"
+        );
+        std::thread::yield_now();
+    }
     release_tx.send(()).unwrap();
     let response = drain(&mut worker).pop().unwrap();
     assert!(response.result.is_err());
