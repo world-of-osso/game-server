@@ -490,11 +490,46 @@ fn encounter_coverage_neltharus_initial_projected_finite_lanes_and_controller_ga
     }
 }
 
+#[derive(Resource)]
+struct ShieldRemovals {
+    original: Option<crate::auras::scripts::RemoveHook>,
+    reasons: Vec<crate::auras::RemoveReason>,
+}
+
+fn observe_shield_removal(
+    world: &mut World,
+    unit: Entity,
+    aura: &crate::auras::AuraInstance,
+    reason: crate::auras::RemoveReason,
+) {
+    let original = {
+        let mut observed = world.resource_mut::<ShieldRemovals>();
+        observed.reasons.push(reason);
+        observed.original
+    };
+    if let Some(original) = original {
+        original(world, unit, aura, reason);
+    }
+}
+
 #[test]
 #[ignore = "Sargha native shield expiry re-arms LittleWigs alerts"]
 fn encounter_coverage_sargha_native_shield_expiry_rearms_gold() {
     for difficulty in [1, 205] {
         let (mut h, boss, _) = projected_initial_boss(&INITIAL_PHASES[1], difficulty);
+        let hook = h
+            .app
+            .world_mut()
+            .resource_mut::<crate::auras::scripts::AuraScripts>()
+            .0
+            .get_mut(&376780)
+            .unwrap()
+            .on_remove
+            .replace(observe_shield_removal);
+        h.app.insert_resource(ShieldRemovals {
+            original: hook,
+            reasons: Vec::new(),
+        });
         h.engage(boss);
         h.advance(50.0);
         assert_eq!(completed_casts(&h, boss, 376780), 1);
@@ -524,7 +559,8 @@ fn encounter_coverage_sargha_native_shield_expiry_rearms_gold() {
             .collect::<Vec<_>>();
         assert!(
             !pending.is_empty(),
-            "expiry must rearm alerts; creature={:?}",
+            "expiry must rearm alerts; removals={:?}; creature={:?}",
+            h.app.world().resource::<ShieldRemovals>().reasons,
             h.app.world().get::<crate::creature_ai::CreatureState>(boss)
         );
         h.advance(8.4);
