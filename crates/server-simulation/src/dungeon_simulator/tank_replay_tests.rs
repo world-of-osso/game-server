@@ -2150,7 +2150,7 @@ fn devotion_aura_reduces_incoming_bleed() {
 
 #[test]
 #[ignore = "uses selected MID2 Protection and real Blessing of Dusk"]
-fn dusk_scales_real_bleed_damage_with_current_health() {
+fn dusk_reduces_real_bleed_damage_at_all_health_levels() {
     use shared::components::Health;
     let mut run = super::dps_parity::prepare_registered_player(66, 1).unwrap();
     super::dps_parity::engage(&mut run);
@@ -2180,7 +2180,7 @@ fn dusk_scales_real_bleed_damage_with_current_health() {
         crate::auras::RemoveReason::Consumed,
         |aura| aura.spell_id == 432607,
     );
-    for (health_pct, expected) in [(1.0, 1.0), (0.5, 0.9), (0.1, 0.82)] {
+    for (health_pct, expected) in [(1.0, 0.8), (0.5, 0.8), (0.1, 0.8)] {
         let max = run.app.world().get::<Health>(actor).unwrap().max;
         run.app
             .world_mut()
