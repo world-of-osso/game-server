@@ -26,6 +26,32 @@ fn clear_path(path: &[Vec3]) {
 }
 
 #[test]
+#[ignore = "requires explicit Ruby navmesh and a separate ground directory"]
+fn navigation_uses_explicit_nav_dir_for_real_ruby_route() {
+    let ground =
+        std::env::var_os("GAME_SERVER_GROUND_DIR").expect("test requires ground directory");
+    let navigation = std::env::var_os("GAME_SERVER_NAV_DIR").expect("test requires nav directory");
+    assert_ne!(
+        PathBuf::from(ground).join("navmesh"),
+        PathBuf::from(navigation)
+    );
+    let mut app = App::new();
+    app.add_plugins(MinimalPlugins)
+        .add_plugins(NavigationPlugin);
+    app.update();
+    let from = Vec3::new(1386.2, 131.0, 169.719);
+    let to = Vec3::new(1403.56, 128.0, 173.39);
+    let path = app
+        .world_mut()
+        .resource_mut::<Navigation>()
+        .query_path(2521, from, to)
+        .expect("Ruby navmesh query must succeed")
+        .expect("Ruby navmesh must exist");
+    assert!(path.first().unwrap().distance(from) < 1.0);
+    assert!(path.last().unwrap().distance(to) < 1.0);
+}
+
+#[test]
 #[ignore = "requires nav-bake map0 and real Stormwind assets"]
 fn navigation_stormwind_auction_house_uses_wmo_floor() {
     let mut map = navigation::NavigationMap::open(&ground_dir().join("navmesh/0")).unwrap();

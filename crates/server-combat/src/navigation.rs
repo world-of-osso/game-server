@@ -338,9 +338,11 @@ impl Plugin for NavigationPlugin {
 }
 
 fn open_navigation(mut commands: Commands) {
-    commands.insert_resource(Navigation::new(
-        &crate::ground::ground_data_dir().join("navmesh"),
-    ));
+    let directory = std::env::var_os("GAME_SERVER_NAV_DIR").map_or_else(
+        || crate::ground::ground_data_dir().join("navmesh"),
+        PathBuf::from,
+    );
+    commands.insert_resource(Navigation::new(&directory));
 }
 
 #[cfg(test)]
