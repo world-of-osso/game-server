@@ -58,7 +58,8 @@ def import_population(destination, records, radius=10.0):
         db.execute('''CREATE TABLE IF NOT EXISTS log_derived_population (
             guid INTEGER PRIMARY KEY, source_key TEXT NOT NULL UNIQUE, map INTEGER NOT NULL,
             npc_id INTEGER NOT NULL, z_method TEXT NOT NULL, observed_event TEXT NOT NULL,
-            observed_time TEXT NOT NULL, observed_level INTEGER, policy TEXT NOT NULL)''')
+            observed_time TEXT NOT NULL, observed_level INTEGER, policy TEXT NOT NULL,
+            observation_json TEXT NOT NULL)''')
         db.execute('CREATE TABLE IF NOT EXISTS log_derived_templates (entry INTEGER PRIMARY KEY, policy TEXT NOT NULL)')
         next_guid = db.execute('SELECT COALESCE(MAX(guid), 0) + 1 FROM content_creature').fetchone()[0]
         for record in records:
@@ -102,9 +103,10 @@ def import_population(destination, records, radius=10.0):
             db.execute('''INSERT INTO content_creature
                 (guid,id1,map,position_x,position_y,position_z,orientation,spawnDifficulties,Comment)
                 VALUES (?,?,?,?,?,?,?,?,?)''', (next_guid, npc_id, map_id, x, y, z, facing, '1', POLICY))
-            db.execute('INSERT INTO log_derived_population VALUES (?,?,?,?,?,?,?,?,?)',
+            db.execute('INSERT INTO log_derived_population VALUES (?,?,?,?,?,?,?,?,?,?)',
                        (next_guid, source_key, map_id, npc_id, record['z_method'], record['observation_event'],
-                        record['observation_time'], record.get('level'), POLICY))
+                        record['observation_time'], record.get('level'), POLICY,
+                        json.dumps(record, sort_keys=True, separators=(',', ':'))))
             result['imported'] += 1
             result['gaps'].append({'source_key': source_key, 'reason': 'PATROL_UNOBSERVED'})
             next_guid += 1
