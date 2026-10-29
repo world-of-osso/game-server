@@ -20,7 +20,11 @@ fn preservation_life_givers_flame_splits_fire_breath_damage() {
         .world_mut()
         .get_mut::<crate::stats::CharacterStats>(h.caster)
         .unwrap()
-        .crit_pct = 0.0;
+        .crit_pct = 100.0;
+    *h.app.world_mut().get_mut::<Health>(h.npc).unwrap() = Health {
+        current: 100_000.0,
+        max: 100_000.0,
+    };
     crate::auras::apply_aura(
         h.app.world_mut(),
         &crate::auras::AuraApplication {
@@ -31,22 +35,28 @@ fn preservation_life_givers_flame_splits_fire_breath_damage() {
             source: crate::auras::AuraSource::Cast,
         },
     );
-    crate::spell_cast::creature_cast(h.app.world_mut(), h.caster, 357209, Some(h.npc), true)
-        .unwrap();
+    for _ in 0..2 {
+        crate::spell_cast::creature_cast(h.app.world_mut(), h.caster, 357209, Some(h.npc), true)
+            .unwrap();
+    }
     h.advance(8);
     let events = &h
         .app
         .world()
         .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
         .0;
-    let damage: i32 = events
+    let damage: Vec<_> = events
         .iter()
         .filter(|event| {
             event.kind == CombatLogKind::Damage && event.spell_id == Some(357209) && !event.periodic
         })
-        .map(|event| event.amount)
-        .sum();
-    assert!(damage > 0, "Fire Breath must damage an enemy");
+        .collect();
+    assert_eq!(damage.len(), 2, "both Fire Breath hits must land");
+    assert!(
+        damage.iter().all(|event| event.crit),
+        "both hits must critically strike"
+    );
+    let noncritical_damage: f32 = damage.iter().map(|event| event.amount as f32 / 2.0).sum();
     for target in [h.caster, ally] {
         let heal = events
             .iter()
@@ -57,7 +67,7 @@ fn preservation_life_givers_flame_splits_fire_breath_damage() {
             })
             .expect("Life-Giver's Flame must heal each injured ally");
         assert!(
-            (heal.amount as f32 - damage as f32 * 0.8 / 2.0).abs() <= 2.0,
+            (heal.amount as f32 - noncritical_damage * 0.8 / 2.0).abs() <= 2.0,
             "{heal:?}"
         );
     }
