@@ -70,7 +70,7 @@ fn healer_benchmark_core_direct_heal_amounts_match_db2_tc_ledger() {
     // DB2 SpellEffect, DifficultyID0. TC a352b1fa Unit.cpp7345–7456:
     // unmodified heal = base + healing power × BonusCoefficient (+ AP term).
     // These rows all have base0/AP0; Variance0.05 means ±2.5%, not ±5%.
-    let cases: [(u32, u8, u32, f32, f32); 17] = [
+    let cases: [(u32, u8, u32, f32, f32); 18] = [
         (65, 2, 19750, 315.6, 0.05),
         (65, 2, 82326, 3250.0, 0.05),
         (65, 2, 25914, 1117.0, 0.05),
@@ -88,6 +88,8 @@ fn healer_benchmark_core_direct_heal_amounts_match_db2_tc_ledger() {
         (1468, 13, 361509, 780.0, 0.05),
         // 70448 SpellEffect 898900: Verdant Embrace healing child.
         (1468, 13, 361195, 1719.0, 0.0),
+        // 70448 SpellEffect 889395: Emerald Blossom healing child.
+        (1468, 13, 355916, 323.0, 0.05),
         (1468, 13, 364343, 240.0, 0.0),
     ];
     let mut mismatches = Vec::new();
