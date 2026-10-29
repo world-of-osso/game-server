@@ -23,7 +23,7 @@ use shared::components::Player;
 
 pub use difficulty::{DungeonDifficulty, ServerClock};
 pub use instances::{HOSTED_CONTINENTS, InstanceManager};
-pub(crate) use login::LoginMaps;
+pub(crate) use login::{LoginMaps, LoginPlace};
 pub(crate) use raid::RaidDifficulty;
 pub use store::MapStore;
 pub(crate) use transfer::{MapTransfer, TeleportOptions, teleport_to};

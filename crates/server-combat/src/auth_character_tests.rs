@@ -762,6 +762,124 @@ fn collect_enter_world_replies(
 }
 
 #[test]
+fn entering_world_prepares_unloaded_ground_without_blocking_updates() {
+    use bevy::time::TimeUpdateStrategy;
+    use std::time::Instant;
+
+    let db = test_db();
+    let account_id = 42;
+    let (character_id, _) =
+        persistence::create_character(&db.db, account_id, "Groundentry", 1, 1).unwrap();
+    let mut data = persistence::load_character(&db.db, character_id).unwrap();
+    (data.x, data.y, data.z) = (-8820.0, 660.0, 99.0);
+    persistence::save_character(&db.db, character_id, &data);
+    let data_dir = std::env::var_os("GAME_SERVER_GROUND_DIR")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|| {
+            std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../game-engine/data")
+        });
+    let mut ground =
+        crate::ground::GroundMap::new(&data_dir, std::collections::HashMap::from([(0, 775_971)]));
+    let gate = ground.gate_entry_preparation();
+
+    let mut app = App::new();
+    app.add_plugins(MinimalPlugins);
+    app.insert_resource(TimeUpdateStrategy::ManualDuration(Duration::from_millis(
+        50,
+    )));
+    app.add_plugins(bevy::state::app::StatesPlugin);
+    app.add_plugins(lightyear::prelude::server::ServerPlugins {
+        tick_duration: Duration::from_millis(50),
+    });
+    app.register_message::<SelectCharacter>();
+    app.register_message::<EnterWorldResponse>();
+    app.register_message::<LoadTerrain>();
+    app.insert_resource(db);
+    app.insert_resource(ground);
+    app.add_plugins(DeathPlugin);
+    app.insert_resource(crate::maps::MapStore::continents());
+    app.init_resource::<crate::maps::InstanceManager>();
+    app.init_resource::<EnterWorldReplies>();
+    app.add_systems(Update, process_select_character);
+    app.add_systems(Last, collect_enter_world_replies);
+    app.finish();
+    app.cleanup();
+    let connection = app
+        .world_mut()
+        .spawn((
+            RemoteId(PeerId::Local(account_id)),
+            Connected,
+            HostClient { buffer: Vec::new() },
+            Authenticated { account_id },
+            MessageSender::<SelectCharacter>::default(),
+            MessageReceiver::<SelectCharacter>::default(),
+            MessageSender::<EnterWorldResponse>::default(),
+            MessageReceiver::<EnterWorldResponse>::default(),
+            MessageSender::<LoadTerrain>::default(),
+            MessageReceiver::<LoadTerrain>::default(),
+        ))
+        .id();
+    app.world_mut()
+        .get_mut::<MessageSender<SelectCharacter>>(connection)
+        .unwrap()
+        .send::<AuthChannel>(SelectCharacter { character_id });
+    let deadline = Instant::now() + Duration::from_secs(10);
+    let release = loop {
+        assert!(
+            Instant::now() < deadline,
+            "ground preparation did not start"
+        );
+        app.update();
+        if let Ok(release) = gate.try_recv() {
+            break release;
+        }
+        std::thread::yield_now();
+    };
+    let (finished, wait) = std::sync::mpsc::channel();
+    let watchdog = std::thread::spawn(move || {
+        let explicit = wait.recv_timeout(Duration::from_secs(5)).is_ok();
+        release.send(()).unwrap();
+        explicit
+    });
+    for _ in 0..5 {
+        app.update();
+    }
+    assert!(
+        app.world()
+            .get::<crate::auth::InWorld>(connection)
+            .is_none()
+    );
+    assert!(app.world().resource::<EnterWorldReplies>().0.is_empty());
+    finished.send(()).unwrap();
+    assert!(
+        watchdog.join().unwrap(),
+        "server update blocked on ground preparation"
+    );
+    let player = crate::test_data::wait_for_selected_player(&mut app, connection);
+    app.world_mut()
+        .entity_mut(player)
+        .insert(shared::components::MovementControl::default());
+    use bevy::ecs::system::RunSystemOnce;
+    for _ in 0..40 {
+        app.world_mut()
+            .resource_mut::<Time>()
+            .advance_by(Duration::from_millis(50));
+        app.world_mut()
+            .run_system_once(crate::networking::apply_terrain_gravity)
+            .unwrap();
+    }
+    let height = app
+        .world()
+        .get::<shared::components::Position>(player)
+        .unwrap()
+        .y;
+    assert!(
+        (height - 98.06).abs() < 0.1,
+        "landed at {height} instead of the auction house floor"
+    );
+}
+
+#[test]
 fn selecting_character_with_invalid_race_class_is_rejected() {
     let db = test_db();
     let account_id = 8;
