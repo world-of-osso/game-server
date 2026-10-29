@@ -213,6 +213,8 @@ def cluster_population(runs, radius=10.0):
             if len(candidates) == 1 and claims[candidates[0]] == 1:
                 cluster = clusters[candidates[0]]
             else:
+                for index in candidates:
+                    clusters[index]['ambiguous_match'] = True
                 cluster = {'map': run['map'], 'npc_id': unit['npc_id'], 'ui_map_id': pos['ui_map_id'],
                            'ambiguous_match': bool(candidates), 'observations': [], '_runs': set()}
                 index_by_unit[(run['map'], unit['npc_id'], pos['ui_map_id'])].append(len(clusters))
@@ -243,6 +245,28 @@ def cluster_population(runs, radius=10.0):
             cluster['unverified_candidate_path'] = [{'x': point['x'], 'y': point['y']} for point in route]
             cluster['gap'] = 'PARTIAL_PATROL_NAVMESH_AND_PHASE_UNVERIFIED'
     return clusters
+
+
+def cluster_safe_samples(runs, samples):
+    units = {(run['file'], run['start'], guid): unit
+             for run in runs for guid, unit in run['creatures'].items()}
+    selected = {}
+    for line in samples:
+        sample = json.loads(line)
+        key = (sample['file'], sample['run_start'], sample['guid'])
+        if key not in units:
+            raise ValueError(f'sample has no census unit: {key}')
+        if key not in selected or sample['seconds_from_start'] < selected[key]['seconds_from_start']:
+            selected[key] = sample
+    safe_runs = []
+    for run in runs:
+        copy = {'file': run['file'], 'start': run['start'], 'map': run['map'], 'creatures': {}}
+        for guid, unit in run['creatures'].items():
+            key = (run['file'], run['start'], guid)
+            if key in selected:
+                copy['creatures'][guid] = {**unit, 'first_position': selected[key]}
+        safe_runs.append(copy)
+    return cluster_population(safe_runs)
 
 
 def summarize_population(runs, database=None):
@@ -361,6 +385,7 @@ def main():
     parser.add_argument("--floor-requests", type=Path)
     parser.add_argument("--precombat-samples", type=Path)
     parser.add_argument("--safe-samples", type=Path)
+    parser.add_argument("--safe-clusters", type=Path)
     parser.add_argument("--trash-data", type=Path)
     parser.add_argument("--world-db", type=Path)
     parser.add_argument("--encounter-summary", type=Path)
@@ -381,6 +406,13 @@ def main():
         args.safe_samples.parent.mkdir(parents=True, exist_ok=True)
         with args.precombat_samples.open(encoding='utf-8') as source, args.safe_samples.open('w', encoding='utf-8') as output:
             filter_safe_samples(runs, source, output)
+    if args.safe_clusters:
+        if not args.safe_samples:
+            parser.error('--safe-clusters requires --safe-samples')
+        args.safe_clusters.parent.mkdir(parents=True, exist_ok=True)
+        with args.safe_samples.open(encoding='utf-8') as source:
+            safe_clusters = cluster_safe_samples(runs, source)
+        args.safe_clusters.write_text(json.dumps(safe_clusters, indent=2) + '\n', encoding='utf-8')
     if args.trash_data:
         annotate_trash(runs, read_trash_timers(args.trash_data))
     if args.world_db:
