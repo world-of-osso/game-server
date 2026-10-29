@@ -256,6 +256,133 @@ fn atonement_transfers_critical_smite_before_absorb_but_not_fireball() {
 }
 
 #[test]
+#[ignore = "real class summons require the prepared native creature database"]
+fn discipline_fiend_spells_transfer_pet_damage_to_atonement() {
+    use super::summon::SummonedCreature;
+    use super::test_harness::{ObservedCombatEvents, prepare_class_world};
+    let prepared = prepare_class_world();
+    for spell in [1280172, 200174, 451235] {
+        let mut h = harness(Vec::new(), &[17, 194384, 81749, 94472, spell, 451435], 5).unwrap();
+        h.app.insert_resource(prepared.world_data());
+        if spell == 451235 {
+            assert!(
+                h.app
+                    .world()
+                    .resource::<server::world_data::WorldData>()
+                    .templates
+                    .contains_key(&224466),
+                "prepared Voidwraith template missing"
+            );
+        }
+        let conn = rusqlite::Connection::open_with_flags(
+            &world_db().unwrap().powers_db,
+            rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+        )
+        .unwrap();
+        h.app
+            .insert_resource(super::summon::load_summon_properties(&conn).unwrap());
+        h.app.init_resource::<ObservedCombatEvents>();
+        h.app.world_mut().entity_mut(h.caster).insert((
+            ActiveSpec(256),
+            server::networking::CombatTarget(Some(h.npc)),
+        ));
+        h.app
+            .world_mut()
+            .get_mut::<server::stats::CharacterStats>(h.caster)
+            .unwrap()
+            .spell_power = 1_000.0;
+        *h.app.world_mut().get_mut::<Health>(h.caster).unwrap() = Health {
+            current: 1_000.0,
+            max: 10_000.0,
+        };
+        *h.app.world_mut().get_mut::<Health>(h.npc).unwrap() = Health {
+            current: 100_000.0,
+            max: 100_000.0,
+        };
+        crate::auras::apply_aura(
+            h.app.world_mut(),
+            &crate::auras::AuraApplication {
+                caster: h.caster,
+                target: h.caster,
+                spell_id: 194384,
+                effect_mask: u32::MAX,
+                source: crate::auras::AuraSource::Cast,
+            },
+        );
+        if spell == 451235 {
+            let position = super::targets::position(h.app.world(), h.npc).unwrap();
+            let mut native = world_db()
+                .unwrap()
+                .spell_store()
+                .get(spell)
+                .unwrap()
+                .clone();
+            native.cast_destination = Some(position.to_array());
+            super::plan_triggered_spell(h.app.world_mut(), h.caster, &native, None, 1)
+                .unwrap_or_else(|failure| panic!("Voidwraith destination plan: {failure:?}"));
+            assert!(super::launch_triggered_spell(
+                h.app.world_mut(),
+                h.caster,
+                &native,
+                None,
+                1
+            ));
+        } else {
+            h.cast_and_deliver(spell, Some(h.npc));
+        }
+        h.advance(2);
+        assert!(
+            h.inbox.failed.is_empty(),
+            "summon {spell} cast failed: {:?}",
+            h.inbox.failed
+        );
+        let summons: Vec<_> = h
+            .app
+            .world_mut()
+            .query::<(Entity, &SummonedCreature)>()
+            .iter(h.app.world())
+            .map(|(entity, summon)| (entity, summon.owner, summon.spell_id))
+            .collect();
+        let actor = summons
+            .iter()
+            .find_map(|(entity, owner, id)| (*owner == h.caster && *id == spell).then_some(*entity))
+            .unwrap_or_else(|| panic!("summon {spell} not present immediately: {summons:?}"));
+        assert_eq!(
+            h.app
+                .world()
+                .get::<shared::components::UnitLevel>(actor)
+                .unwrap()
+                .0,
+            h.app
+                .world()
+                .get::<shared::components::Level>(h.caster)
+                .unwrap()
+                .0,
+            "summon {spell} must inherit its owner's level"
+        );
+        h.advance(60);
+        let events = &h.app.world().resource::<ObservedCombatEvents>().0;
+        assert!(
+            events
+                .iter()
+                .any(|event| event.kind == CombatLogKind::Damage
+                    && event.source == Some(actor.to_bits())
+                    && event.target == Some(h.npc.to_bits())
+                    && event.amount > 0),
+            "summon {spell} must actually damage its target: {events:?}"
+        );
+        assert!(
+            events.iter().any(|event| event.kind == CombatLogKind::Heal
+                && event.source == Some(h.caster.to_bits())
+                && event.target == Some(h.caster.to_bits())
+                && event.spell_id == Some(94472)
+                && event.amount > 0),
+            "summon {spell} must transfer Atonement: {events:?}"
+        );
+    }
+}
+
+#[test]
 fn atonement_applies_separate_injured_and_full_health_soft_caps() {
     let mut h = harness(Vec::new(), &[194384, 81749, 94472, 585], 5).unwrap();
     h.app

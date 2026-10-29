@@ -343,6 +343,17 @@ pub fn power_stats(world: &World, unit: Entity, healing: bool) -> (f32, f32) {
         return (power, power);
     }
     if let Some(summon) = world.get::<super::summon::SummonedCreature>(unit) {
+        // SimC76f8118 sc_priest_pets.cpp:404–409,466–471: Voidwraith inherits 50% owner SP.
+        if summon.spell_id == 451235
+            && world
+                .get::<shared::components::ActiveSpec>(summon.owner)
+                .is_some_and(|spec| spec.0 == 256)
+        {
+            let stats = world
+                .get::<CharacterStats>(summon.owner)
+                .expect("Voidwraith owner stats");
+            return (stats.spell_power * 0.5, stats.spell_power * 0.5);
+        }
         // TrinityCore Unit.cpp:7347–7350: totems use their owner's healing bonus.
         if healing && summon.properties.is_totem() {
             return power_stats(world, summon.owner, true);

@@ -426,9 +426,14 @@ fn spawn_owned_summons(
         } else {
             scatter_summon_destination(world, ctx.caster, dest, 0.0, GUARDIAN_SCATTER_RADIUS)
         };
-        let Some(template) =
-            read_summon_template(world, ctx.caster, entry, properties, destination)
-        else {
+        let Some(template) = read_summon_template(
+            world,
+            ctx.caster,
+            entry,
+            properties,
+            destination,
+            ctx.spell.id,
+        ) else {
             warn!(
                 "Spell {}: missing summon creature {entry} or source level inputs",
                 ctx.spell.id
@@ -784,8 +789,22 @@ fn read_summon_template(
     entry: u32,
     properties: SummonProperties,
     dest: super::targets::Dest,
+    spell_id: u32,
 ) -> Option<SummonTemplate> {
-    let selected = roll_summon_level(world, owner, entry, properties, dest)?;
+    // SimC76f8118 pet.cpp:69: Discipline fiends inherit their owner's level.
+    let discipline_fiend = matches!(spell_id, 1280172 | 200174 | 451235)
+        && world
+            .get::<shared::components::ActiveSpec>(owner)
+            .is_some_and(|spec| spec.0 == 256);
+    let selected = if discipline_fiend {
+        SelectedSummonLevel {
+            difficulty: crate::zones::map_difficulty_id(world, *world.get::<InMap>(owner)?),
+            level: read_summoner_level(world, owner)?,
+            scaling: None,
+        }
+    } else {
+        roll_summon_level(world, owner, entry, properties, dest)?
+    };
     let level = selected.level;
     let data = world.get_resource::<crate::world_data::WorldData>()?;
     let template = data.template_for(entry, selected.difficulty)?;

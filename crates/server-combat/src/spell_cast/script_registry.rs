@@ -170,6 +170,7 @@ pub type OwnsProcLookup = fn(u32) -> bool;
 pub type EffectiveResourceValueHook =
     fn(&World, Entity, &SpellInfo, shared::components::PowerType, f32) -> f32;
 pub type MeleeResidualHook = fn(&mut World, Entity, Entity, f32);
+pub type MeleeRawResolvedHook = fn(&mut World, Entity, Entity, f32, bool);
 pub type CastPredicate = fn(&World, Entity, &SpellInfo) -> bool;
 pub type ResolvedDamageHook = fn(&mut World, &EffectCtx<'_>, Entity, bool, f32);
 pub type RawResolvedDamageHook = fn(&mut World, &EffectCtx<'_>, Entity, bool, f32);
@@ -346,6 +347,7 @@ pub enum SpellScriptHook {
     ConsumeResourceValueSources(AfterCastHook),
     SpellResidual(SpellResidualHook),
     MeleeResidual(MeleeResidualHook),
+    MeleeRawResolved(MeleeRawResolvedHook),
     LateAuraRegistration(AuraRegistrationHook),
     SuccessfulCastRelationships(AfterCastHook),
     AfterAbsorbConsumed(fn(&mut World, Entity, Entity, Option<Entity>, u32, f32)),
@@ -1263,6 +1265,20 @@ pub fn ignores_armor(world: &World, spell: u32) -> bool {
             SpellScriptHook::ArmorIgnoredSpells(spells) => spells.contains(&spell),
             _ => false,
         })
+}
+
+pub fn melee_raw_resolved(
+    world: &mut World,
+    attacker: Entity,
+    target: Entity,
+    amount: f32,
+    crit: bool,
+) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::MeleeRawResolved(run) = hook {
+            run(world, attacker, target, amount, crit);
+        }
+    }
 }
 
 pub fn raw_resolved_damage(
