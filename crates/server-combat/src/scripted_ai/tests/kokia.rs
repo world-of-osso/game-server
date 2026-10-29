@@ -11,6 +11,11 @@ fn kokia_copy(difficulty: u32) -> (Harness, Entity, InMap) {
     let mut visibility = crate::interest::NetworkVisibility::default();
     visibility.gain_visibility(h.players[0].1);
     h.app.world_mut().entity_mut(boss).insert(visibility);
+    let wdt = h.app.world().resource::<MapStore>().maps[&MAP].wdt_file_data_id;
+    h.app.insert_resource(crate::ground::GroundMap::new(
+        &crate::ground::ground_data_dir(),
+        std::collections::HashMap::from([(MAP, wdt)]),
+    ));
     (h, boss, map)
 }
 
