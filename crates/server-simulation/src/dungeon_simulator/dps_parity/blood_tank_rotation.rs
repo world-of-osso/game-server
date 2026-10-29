@@ -804,7 +804,7 @@ mod tests {
     fn blood_sanguinary_burst_increases_with_real_runic_power_spending() {
         use shared::components::PowerType;
         use shared::protocol::CombatLogKind;
-        fn burst(spend: bool) -> i32 {
+        fn burst(spell: Option<u32>) -> f32 {
             let _seed = crate::random::seed_scope(70448);
             let mut run = super::super::prepare_registered_player(250, 1).unwrap();
             let actor = run.actor;
@@ -831,11 +831,11 @@ mod tests {
             for _ in 0..40 {
                 run.app.update();
             }
-            if spend {
+            if let Some(spell) = spell {
                 crate::spell_cast::creature_cast(
                     run.app.world_mut(),
                     actor,
-                    49998,
+                    spell,
                     Some(target),
                     false,
                 )
@@ -848,7 +848,8 @@ mod tests {
             for _ in 0..24 {
                 run.app.update();
             }
-            run.app
+            let event = run
+                .app
                 .world()
                 .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
                 .0
@@ -859,15 +860,17 @@ mod tests {
                         && event.spell_id == Some(1263786)
                         && event.kind == CombatLogKind::Damage
                 })
-                .expect("Sanguinary Burst damage")
-                .amount
+                .expect("Sanguinary Burst damage");
+            event.amount as f32 / if event.crit { 2.0808 } else { 1.0 }
         }
-        let baseline = burst(false);
-        let spent = burst(true);
+        let baseline = burst(None);
+        let generated = burst(Some(433895));
         assert!(
-            spent as f32 > baseline as f32 * 1.4,
-            "spent={spent} baseline={baseline}"
+            (generated / baseline - 1.0).abs() < 0.10,
+            "generated={generated} baseline={baseline}"
         );
+        let spent = burst(Some(49998));
+        assert!(spent > baseline * 1.4, "spent={spent} baseline={baseline}");
     }
 
     #[test]
