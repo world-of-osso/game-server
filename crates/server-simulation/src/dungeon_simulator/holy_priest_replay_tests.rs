@@ -1,6 +1,49 @@
 use std::path::Path;
 
 #[test]
+#[ignore = "requires native Holy Priest spell data"]
+fn prayer_of_mending_heals_its_target_only_with_prompt_prognosis() {
+    use crate::spell_cast::test_harness::{ObservedCombatEvents, harness, spawn_player};
+    use shared::components::Health;
+    use shared::protocol::CombatLogKind;
+
+    let mut h = harness(Vec::new(), &[33076, 41635, 1246799, 1246798], 10).unwrap();
+    h.app.init_resource::<ObservedCombatEvents>();
+    let ally = spawn_player(&mut h.app, 10, 3.0);
+    *h.app.world_mut().get_mut::<Health>(ally).unwrap() = Health {
+        current: 1.0,
+        max: 100_000.0,
+    };
+    crate::spell_cast::creature_cast(h.app.world_mut(), h.caster, 33076, Some(ally), true).unwrap();
+    h.advance(2);
+    assert!(
+        !h.app
+            .world()
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|event| event.spell_id == Some(1246798))
+    );
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: h.caster,
+            target: h.caster,
+            spell_id: 1246799,
+            effect_mask: u32::MAX,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    crate::spell_cast::creature_cast(h.app.world_mut(), h.caster, 33076, Some(ally), true).unwrap();
+    h.advance(2);
+    let events = &h.app.world().resource::<ObservedCombatEvents>().0;
+    assert!(events.iter().any(|event| event.kind == CombatLogKind::Heal
+        && event.spell_id == Some(1246798)
+        && event.target == Some(ally.to_bits())
+        && event.amount > 0));
+}
+
+#[test]
 #[ignore = "requires the canonical MID2 Holy Priest profile and world database"]
 fn holy_priest_spells_target_the_tank_and_pay_native_mana() {
     use crate::spell_cast::{
