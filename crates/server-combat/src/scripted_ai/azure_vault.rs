@@ -334,6 +334,20 @@ impl super::CreatureAi for Leymor {
         self.boss.just_died(ctx);
     }
 
+    fn just_summoned(&mut self, ctx: &mut super::Ctx, summon: Entity) {
+        self.boss.just_summoned(ctx, summon);
+    }
+
+    fn summoned_creature_despawn(&mut self, _ctx: &mut super::Ctx, summon: Entity) {
+        self.boss.summoned_creature_despawn(summon);
+    }
+
+    /// TC boss_leymor.cpp EnterEvadeMode: DespawnAll, _EnterEvadeMode, _DespawnAtEvade.
+    fn enter_evade_mode(&mut self, ctx: &mut super::Ctx) {
+        self.boss.summons.despawn_all(ctx.world);
+        super::boss_ai::despawn_at_evade(ctx, self.boss.boss_id);
+    }
+
     fn do_action(&mut self, _ctx: &mut super::Ctx, action: i32) {
         if action == ACTION_FINISH_LEYMOR_INTRO {
             self.tasks.schedule(EVENT_AWAKEN, 1_000);
@@ -499,6 +513,21 @@ impl super::CreatureAi for Telash {
 
     fn just_died(&mut self, ctx: &mut super::Ctx, _killer: Option<Entity>) {
         self.boss.just_died(ctx);
+    }
+
+    fn just_summoned(&mut self, ctx: &mut super::Ctx, summon: Entity) {
+        self.boss.just_summoned(ctx, summon);
+    }
+
+    fn summoned_creature_despawn(&mut self, _ctx: &mut super::Ctx, summon: Entity) {
+        self.boss.summoned_creature_despawn(summon);
+    }
+
+    /// TC boss_telash_greywing.cpp EnterEvadeMode: DespawnAll, _EnterEvadeMode,
+    /// _DespawnAtEvade; the respawned boss re-summons its Runes on appearing.
+    fn enter_evade_mode(&mut self, ctx: &mut super::Ctx) {
+        self.boss.summons.despawn_all(ctx.world);
+        super::boss_ai::despawn_at_evade(ctx, self.boss.boss_id);
     }
 
     fn update_ai(&mut self, ctx: &mut super::Ctx, diff_ms: u32) {

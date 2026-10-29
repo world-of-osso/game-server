@@ -11,6 +11,8 @@ mod azure_absolute_zero;
 mod azure_blade;
 #[path = "azure_combat.rs"]
 mod azure_combat;
+#[path = "azure_evade.rs"]
+mod azure_evade;
 #[path = "azure_explosive_brand.rs"]
 mod azure_explosive_brand;
 #[path = "azure_frost_bomb.rs"]
