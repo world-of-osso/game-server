@@ -16,6 +16,20 @@ use crate::persistence::ClientId;
 mod staging;
 pub(crate) use staging::stage_follower_party;
 
+#[derive(Resource, Default)]
+pub(crate) struct DisconnectedRuns(std::collections::HashMap<u64, DisconnectedRun>);
+
+struct DisconnectedRun {
+    run: FollowerRun,
+    lfg: crate::lfg::PlayerLfgState,
+}
+
+impl DisconnectedRuns {
+    pub(crate) fn copy(&self, character: u64) -> Option<InMap> {
+        self.0.get(&character)?.run.copy
+    }
+}
+
 #[derive(Component, Clone)]
 pub(crate) struct FollowerRun {
     dungeon: Dungeon,
@@ -148,6 +162,7 @@ fn begin_run(
 }
 
 pub(super) fn advance_runs(world: &mut World) {
+    world.init_resource::<DisconnectedRuns>();
     let runs: Vec<_> = world
         .query::<(Entity, &FollowerRun)>()
         .iter(world)
@@ -173,15 +188,38 @@ pub(super) fn advance_runs(world: &mut World) {
             }
         }
     }
+    let expired: Vec<_> = world
+        .resource::<DisconnectedRuns>()
+        .0
+        .iter()
+        .filter_map(|(&id, run)| {
+            let copy = run.run.copy?;
+            world
+                .resource::<crate::maps::InstanceManager>()
+                .copy_difficulty(copy)
+                .is_none()
+                .then_some(id)
+        })
+        .collect();
+    for id in expired {
+        world.resource_mut::<DisconnectedRuns>().0.remove(&id);
+        world.resource_mut::<GroupRegistry>().leave(id);
+    }
+    let suspended: std::collections::HashSet<_> = world
+        .resource::<DisconnectedRuns>()
+        .0
+        .values()
+        .flat_map(|run| run.run.members.iter().copied())
+        .collect();
     let orphans: Vec<_> = world
         .query::<(Entity, &Follower)>()
         .iter(world)
-        .filter(|(_, follower)| {
+        .filter(|(unit, follower)| {
             let retail_run = world.get::<FollowerRun>(follower.owner).is_some();
             let diagnostic_run = world
                 .get::<super::stockade_diagnostic::DiagnosticParty>(follower.owner)
                 .is_some();
-            !retail_run && !diagnostic_run
+            !retail_run && !diagnostic_run && !suspended.contains(unit)
         })
         .map(|(unit, _)| unit)
         .collect();
@@ -320,7 +358,22 @@ fn online_player(world: &World, entity: Entity, difficulty: u32) -> Result<Onlin
 
 pub(super) fn retire_owner(world: &mut World, player: Entity) {
     if let Some(run) = world.get::<FollowerRun>(player).cloned() {
-        end_run(world, player, &run);
+        if let Some(id) = world.get::<ClientId>(player).map(|id| id.0)
+            && run.copy.is_some()
+        {
+            let lfg = world
+                .get::<crate::lfg::PlayerLfgState>(player)
+                .cloned()
+                .expect("follower owner has LFG state");
+            world.init_resource::<DisconnectedRuns>();
+            world
+                .resource_mut::<DisconnectedRuns>()
+                .0
+                .insert(id, DisconnectedRun { run, lfg });
+            world.entity_mut(player).remove::<FollowerRun>();
+        } else {
+            end_run(world, player, &run);
+        }
     }
     if let Some(party) = world
         .get::<super::stockade_diagnostic::DiagnosticParty>(player)
@@ -331,6 +384,36 @@ pub(super) fn retire_owner(world: &mut World, player: Entity) {
             .entity_mut(player)
             .remove::<super::stockade_diagnostic::DiagnosticParty>();
     }
+}
+
+pub(crate) fn reconnect(world: &mut World, player: Entity, character: u64) {
+    let Some(DisconnectedRun { run, lfg }) = world
+        .get_resource_mut::<DisconnectedRuns>()
+        .and_then(|mut runs| runs.0.remove(&character))
+    else {
+        return;
+    };
+    if world.get::<InMap>(player).copied() != run.copy {
+        world.resource_mut::<GroupRegistry>().leave(character);
+        for member in run.members {
+            if world.get_entity(member).is_ok() {
+                crate::zones::unsummon(world, member);
+            }
+        }
+        return;
+    }
+    for &member in &run.members {
+        if let Some(mut follower) = world.get_mut::<Follower>(member) {
+            follower.owner = player;
+        }
+        if let Some(mut summon) = world.get_mut::<crate::zones::TempSummon>(member) {
+            summon.summoner = player;
+        }
+    }
+    world
+        .entity_mut(player)
+        .insert((DungeonDifficulty(FOLLOWER_DIFFICULTY), run, lfg));
+    send_update(world, player, None, None);
 }
 
 fn end_run(world: &mut World, player: Entity, run: &FollowerRun) {
@@ -576,19 +659,95 @@ mod copy_tests {
     }
 
     #[test]
-    fn retiring_owner_removes_followers_before_the_next_fixed_ai_tick() {
+    fn disconnect_and_login_restore_follower_copy_and_party() {
         let (mut app, owner, run) = fixture();
         app.add_plugins(crate::creature_aggro::CreatureAggroPlugin);
-        app.world_mut().entity_mut(owner).insert(run.clone());
-        crate::networking::queue_player_despawn(&mut app.world_mut().commands(), owner);
+        join_party(app.world_mut(), owner, &run, &run.members).unwrap();
+        let map = run.copy.unwrap();
+        let position = *app
+            .world()
+            .get::<shared::components::Position>(owner)
+            .unwrap();
+        let lfg = crate::lfg::PlayerLfgState {
+            selected_role: Some(GroupRole::Dps),
+            dungeon_ids: vec![run.dungeon.id],
+            ..Default::default()
+        };
+        app.world_mut()
+            .entity_mut(owner)
+            .insert((run.clone(), lfg.clone()));
+        crate::networking::install_disconnect_fixture(&mut app);
+        let connection = app
+            .world_mut()
+            .spawn((
+                lightyear::prelude::server::ClientOf,
+                RemoteId(PeerId::Local(1)),
+                Connected,
+                crate::networking::PlayerLink(owner),
+                crate::auth::InWorld { character_id: 30 },
+            ))
+            .id();
+        app.world_mut().entity_mut(connection).remove::<Connected>();
         app.world_mut().flush();
+        app.update();
+        assert!(app.world().get_entity(owner).is_err());
+        advance_runs(app.world_mut());
+        super::super::update_ai(app.world_mut());
         assert!(
             run.members
                 .iter()
-                .all(|&member| app.world().get_entity(member).is_err())
+                .all(|&member| app.world().get_entity(member).is_ok())
         );
-        assert!(app.world_mut().despawn(owner));
-        super::super::update_ai(app.world_mut());
+
+        let mut state = bevy::ecs::system::SystemState::<(Commands, crate::maps::LoginMaps)>::new(
+            app.world_mut(),
+        );
+        let (mut commands, mut maps) = state.get_mut(app.world_mut()).unwrap();
+        let place = maps
+            .resolve(
+                &mut commands,
+                30,
+                1,
+                Default::default(),
+                map.map_id,
+                position,
+            )
+            .unwrap();
+        state.apply(app.world_mut());
+        assert_eq!(place.map, map);
+        assert_eq!(place.position, position);
+        let reconnected = app
+            .world_mut()
+            .spawn((ClientId(30), place.map, position))
+            .id();
+        reconnect(app.world_mut(), reconnected, 30);
+        assert_eq!(
+            app.world().get::<DungeonDifficulty>(reconnected).unwrap().0,
+            205
+        );
+        assert_eq!(
+            app.world().get::<crate::lfg::PlayerLfgState>(reconnected),
+            Some(&lfg)
+        );
+        assert!(
+            app.world()
+                .resource::<GroupRegistry>()
+                .group_id_of(30)
+                .is_some()
+        );
+        assert!(run.members.iter().all(|&member| {
+            app.world()
+                .get::<Follower>(member)
+                .is_some_and(|f| f.owner == reconnected)
+                && app
+                    .world()
+                    .get::<crate::zones::TempSummon>(member)
+                    .is_some_and(|s| s.summoner == reconnected)
+        }));
+        assert_eq!(
+            app.world().get::<FollowerRun>(reconnected).unwrap().members,
+            run.members
+        );
     }
 
     #[test]

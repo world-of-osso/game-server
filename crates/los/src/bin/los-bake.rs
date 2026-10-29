@@ -66,6 +66,7 @@ fn run() -> Result<(), String> {
         Baker::new(&data, args.cutoff.unwrap_or(DEFAULT_THICKNESS_CUTOFF))
     };
     let mut floors = Baker::for_m2_floors(&data);
+    let mut solids = Baker::for_m2_solids(&data);
     let wdt = map_wdt(&world_db, map)?;
     let map_dir = out.join(map.to_string());
     let map_dir = if args.m2_only {
@@ -106,6 +107,15 @@ fn run() -> Result<(), String> {
         for problem in &floors.problems {
             writeln!(report, "M2 floor asset gap: {problem}").unwrap();
         }
+    }
+    let solid_dir = out.join(map.to_string()).join("m2-solid");
+    std::fs::create_dir_all(&solid_dir).map_err(|error| error.to_string())?;
+    bake_requested_tiles(&mut solids, wdt, &args, |tile, baked, _| {
+        std::fs::write(solid_dir.join(tile_file_name(tile)), baked.to_bytes())
+            .map_err(|error| error.to_string())
+    })?;
+    for problem in &solids.problems {
+        writeln!(report, "M2 solid asset gap: {problem}").unwrap();
     }
     report_dropped(&mut report, &baker);
     if !args.no_eyes && !args.m2_only {

@@ -86,14 +86,32 @@ fn simc_dummy_strike_triggers_taken_melee_ability_proc() {
         run.app.world_mut(),
         source,
         target,
-        max * 0.05,
+        max * 0.01,
+        false,
+        false,
+    );
+    run.app.update();
+    assert!(
+        !crate::auras::has_aura(run.app.world(), target, 326808),
+        "SimC Sanguination does not proc below its threshold"
+    );
+    run.app
+        .world_mut()
+        .get_mut::<Health>(target)
+        .unwrap()
+        .current = max * 0.80;
+    crate::spell_cast::effects::replay_simc_dummy_strike(
+        run.app.world_mut(),
+        source,
+        target,
+        max * 0.01,
         false,
         false,
     );
     run.app.update();
     assert!(
         crate::auras::has_aura(run.app.world(), target, 326808),
-        "landed melee ability must proc Rune of Sanguination"
+        "landed melee ability above the threshold must proc Rune of Sanguination"
     );
 }
 
@@ -1530,6 +1548,22 @@ fn simc_dummy_melee_uses_recipient_avoidance_and_strikes_can_block() {
 }
 
 #[test]
+#[ignore = "uses MID2 plate tank profiles and the native stat pipeline"]
+fn plate_tank_profiles_receive_simc_base_dodge() {
+    for spec in [66, 73] {
+        let run = super::dps_parity::prepare_registered_player(spec, 1).unwrap();
+        let dodge = run
+            .app
+            .world()
+            .get::<crate::stats::CharacterStats>(run.actor)
+            .unwrap()
+            .defense
+            .dodge;
+        assert!((dodge - 3.0).abs() < 0.01, "spec {spec} base dodge {dodge}");
+    }
+}
+
+#[test]
 #[ignore = "runs all six native MID2 tank dummy replays"]
 fn all_tanks_use_dungeon_season_combat_inputs() {
     let directory = Path::new(
@@ -2149,8 +2183,276 @@ fn devotion_aura_reduces_incoming_bleed() {
 }
 
 #[test]
+#[ignore = "uses selected MID2 Protection and native Shield of the Righteous"]
+fn protection_shield_uses_modified_armor_effect() {
+    use crate::spell_cast::powers::PowerPools;
+    use shared::components::PowerType;
+    let mut run = super::dps_parity::prepare_registered_player(66, 1).unwrap();
+    super::dps_parity::engage(&mut run);
+    let actor = run.actor;
+    let target = run.targets[0];
+    run.app
+        .world_mut()
+        .get_mut::<PowerPools>(actor)
+        .unwrap()
+        .get_mut(PowerType::HolyPower)
+        .unwrap()
+        .current = 5.0;
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 53600, Some(target), false)
+        .unwrap();
+    for _ in 0..4 {
+        run.app.update();
+    }
+    let aura = run
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(actor)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 132403)
+        .expect("Shield must grant armor");
+    let amount = aura
+        .effects
+        .iter()
+        .find(|effect| effect.index == 1)
+        .unwrap()
+        .amount;
+    assert!(
+        (amount - 192.0).abs() < 0.01,
+        "Protection-modified Shield armor: {amount}"
+    );
+    let with = *run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(actor)
+        .unwrap();
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        actor,
+        crate::auras::RemoveReason::Consumed,
+        |aura| aura.spell_id == 132403,
+    );
+    for _ in 0..4 {
+        run.app.update();
+    }
+    let without = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(actor)
+        .unwrap();
+    assert!(
+        with.armor - without.armor > with.primary.strength * 1.9,
+        "Shield must add its modified Strength-based armor: {} -> {}",
+        without.armor,
+        with.armor
+    );
+}
+
+#[test]
+#[ignore = "uses selected MID2 Protection and real incoming magic damage"]
+fn protection_shield_reduces_real_magic_damage() {
+    use super::healer_intake::{Hit, HitKind};
+    use crate::spell_cast::powers::PowerPools;
+    use shared::components::{Health, PowerType};
+    let mut run = super::dps_parity::prepare_registered_player(66, 1).unwrap();
+    super::dps_parity::engage(&mut run);
+    let actor = run.actor;
+    let source = run.targets[0];
+    run.app
+        .world_mut()
+        .get_mut::<PowerPools>(actor)
+        .unwrap()
+        .get_mut(PowerType::HolyPower)
+        .unwrap()
+        .current = 5.0;
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 53600, Some(source), false)
+        .unwrap();
+    for _ in 0..4 {
+        run.app.update();
+    }
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        actor,
+        crate::auras::RemoveReason::Consumed,
+        |aura| [432607, 1239002, 204301].contains(&aura.spell_id),
+    );
+    let hit = Hit {
+        tick: 0,
+        source_guid: 0,
+        pack: 0,
+        target_slot: 0,
+        school: 4,
+        raw: 10000.0,
+        level_scaling_factor: 1.0,
+        kind: HitKind::Spell {
+            spell_id: 133,
+            depth: 0,
+            bonus_source_guid: None,
+            effect_index: None,
+            periodic: false,
+            crit: false,
+            resolved_source: true,
+            blocked: false,
+        },
+    };
+    let damage = |run: &mut super::dps_parity::Run| {
+        let max = run.app.world().get::<Health>(actor).unwrap().max;
+        run.app
+            .world_mut()
+            .get_mut::<Health>(actor)
+            .unwrap()
+            .current = max;
+        crate::spell_cast::effects::replay_healer_hit(run.app.world_mut(), source, actor, &hit)
+            .unwrap();
+        max - run.app.world().get::<Health>(actor).unwrap().current
+    };
+    let with = damage(&mut run);
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        actor,
+        crate::auras::RemoveReason::Consumed,
+        |aura| aura.spell_id == 132403,
+    );
+    for _ in 0..4 {
+        run.app.update();
+    }
+    let without = damage(&mut run);
+    assert!(
+        without > 0.0 && (with / without - 0.88).abs() < 0.005,
+        "magic: {with}/{without}"
+    );
+}
+
+#[test]
+#[ignore = "uses selected MID2 Protection and native Rite of Sanctification"]
+fn protection_rite_grants_native_strength_and_armor() {
+    let mut run = super::dps_parity::prepare_registered_player(66, 1).unwrap();
+    super::dps_parity::engage(&mut run);
+    let actor = run.actor;
+    let items = run
+        .app
+        .world()
+        .get::<crate::stats::EquippedItemModifiers>(actor)
+        .unwrap();
+    assert!(
+        items
+            .temporary_enchants
+            .contains(&(shared::protocol::EquipmentSlot::MainHand, 7143))
+    );
+    let aura = run
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(actor)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 433550)
+        .expect("Rite must grant its enchant aura");
+    assert!(
+        aura.effects
+            .iter()
+            .any(|effect| effect.index == 0 && (effect.amount - 2.0).abs() < 0.01)
+    );
+    assert!(
+        aura.effects
+            .iter()
+            .any(|effect| effect.index == 1 && (effect.amount - 5.0).abs() < 0.01)
+    );
+    let with = *run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(actor)
+        .unwrap();
+    run.app
+        .world_mut()
+        .get_mut::<crate::stats::EquippedItemModifiers>(actor)
+        .unwrap()
+        .temporary_enchants
+        .retain(|(_, enchant)| *enchant != 7143);
+    for _ in 0..4 {
+        run.app.update();
+    }
+    assert!(!crate::auras::has_aura(run.app.world(), actor, 433550));
+    let without = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(actor)
+        .unwrap();
+    assert!(
+        with.primary.strength > without.primary.strength,
+        "Rite must increase strength"
+    );
+    assert!(with.armor > without.armor, "Rite must increase armor");
+}
+
+#[test]
+#[ignore = "uses selected MID2 Protection and native Faith's Armor"]
+fn protection_shield_grants_faiths_armor_with_native_modifier() {
+    use crate::spell_cast::powers::PowerPools;
+    use shared::components::PowerType;
+    let mut run = super::dps_parity::prepare_registered_player(66, 1).unwrap();
+    super::dps_parity::engage(&mut run);
+    let actor = run.actor;
+    let target = run.targets[0];
+    run.app
+        .world_mut()
+        .get_mut::<PowerPools>(actor)
+        .unwrap()
+        .get_mut(PowerType::HolyPower)
+        .unwrap()
+        .current = 5.0;
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 53600, Some(target), false)
+        .unwrap();
+    for _ in 0..4 {
+        run.app.update();
+    }
+    let aura = run
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(actor)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 379017)
+        .expect("Shield must grant Faith's Armor");
+    let effect = aura
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap();
+    assert!(
+        (effect.amount - 5.0).abs() < 0.01,
+        "Protection modifies the native 20% to 5%: {}",
+        effect.amount
+    );
+    let with = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(actor)
+        .unwrap()
+        .armor;
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        actor,
+        crate::auras::RemoveReason::Consumed,
+        |aura| aura.spell_id == 379017,
+    );
+    for _ in 0..4 {
+        run.app.update();
+    }
+    let without = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(actor)
+        .unwrap()
+        .armor;
+    assert!(
+        with > without,
+        "Faith's Armor must increase live armor: {without} -> {with}"
+    );
+}
+
+#[test]
 #[ignore = "uses selected MID2 Protection and real Blessing of Dusk"]
-fn dusk_scales_real_bleed_damage_with_current_health() {
+fn dusk_reduces_real_bleed_damage_at_all_health_levels() {
     use shared::components::Health;
     let mut run = super::dps_parity::prepare_registered_player(66, 1).unwrap();
     super::dps_parity::engage(&mut run);
@@ -2180,7 +2482,7 @@ fn dusk_scales_real_bleed_damage_with_current_health() {
         crate::auras::RemoveReason::Consumed,
         |aura| aura.spell_id == 432607,
     );
-    for (health_pct, expected) in [(1.0, 1.0), (0.5, 0.9), (0.1, 0.82)] {
+    for (health_pct, expected) in [(1.0, 0.8), (0.5, 0.8), (0.1, 0.8)] {
         let max = run.app.world().get::<Health>(actor).unwrap().max;
         run.app
             .world_mut()

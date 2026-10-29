@@ -143,12 +143,19 @@ pub(super) fn remove_other_forms(world: &mut World, unit: Entity, keep_instance:
 /// TC a352b1fa SpellAuraEffects.cpp1513–1516/1570–1617: native form2 boosts.
 const TREE_OF_LIFE_FORM: i32 = 2;
 const TREE_BOOSTS: &[u32] = &[5420, 81097];
+// SimC76f8118 sc_druid.cpp3035–3044,3079–3085,14320 applies both on Bear entry.
+const BEAR_BOOSTS: &[u32] = &[1178, 17057];
+
+fn form_boosts(form: Option<i32>) -> &'static [u32] {
+    match form {
+        Some(TREE_OF_LIFE_FORM) => TREE_BOOSTS,
+        Some(FORM_BEAR | FORM_DIRE_BEAR) => BEAR_BOOSTS,
+        _ => &[],
+    }
+}
 
 pub(super) fn apply_form_boosts(world: &mut World, unit: Entity, aura: &AuraInstance) {
-    if aura_form(aura) != Some(TREE_OF_LIFE_FORM) {
-        return;
-    }
-    for &spell in TREE_BOOSTS {
+    for &spell in form_boosts(aura_form(aura)) {
         if !crate::spell_cast::try_cast_triggered(world, unit, spell, Some(unit), 1) {
             warn!(?unit, spell, "Native Tree of Life form boost refused");
         }
@@ -156,11 +163,17 @@ pub(super) fn apply_form_boosts(world: &mut World, unit: Entity, aura: &AuraInst
 }
 
 pub(super) fn remove_form_boosts(world: &mut World, unit: Entity, aura: &AuraInstance) {
-    if aura_form(aura) != Some(TREE_OF_LIFE_FORM) {
-        return;
+    if matches!(aura_form(aura), Some(FORM_BEAR | FORM_DIRE_BEAR)) {
+        // SimC76f8118 sc_druid.cpp3052–3062 loses all Rage when Bear Form ends.
+        if let Some((rage, _)) =
+            crate::spell_cast::powers::power_value(world, unit, PowerType::Rage)
+        {
+            crate::spell_cast::powers::change_power(world, unit, PowerType::Rage, -rage);
+        }
     }
+    let boosts = form_boosts(aura_form(aura));
     super::remove_auras(world, unit, RemoveReason::Cancelled, |boost| {
-        boost.caster == unit && TREE_BOOSTS.contains(&boost.spell_id)
+        boost.caster == unit && boosts.contains(&boost.spell_id)
     });
 }
 

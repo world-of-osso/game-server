@@ -1238,6 +1238,7 @@ pub(super) fn cast_expel_harm_damage(
     if !matches!(ctx.spell.id, EXPEL_HARM | 451968) {
         return;
     }
+    let total = total + super::script_registry::expel_harm_heal(world, ctx.caster);
     let percent = script_effect_value(world, ctx.caster, ctx.spell.id, 1);
     super::cast_triggered_with_effect0_amount(
         world,

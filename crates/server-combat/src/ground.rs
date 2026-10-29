@@ -253,6 +253,8 @@ pub struct GroundMap {
     maps: HashMap<u32, Option<MapGround>>,
     /// Dedicated authored M2 hull bake, cached independently of ADT/WMO ground.
     m2_floors: HashMap<u32, los::LosMap>,
+    m2_solids: HashMap<u32, los::LosMap>,
+    m2_solid_checks: HashMap<u32, Result<(), String>>,
     live_hulls: crate::game_objects::collision::LiveHulls,
 }
 
@@ -274,6 +276,8 @@ impl GroundMap {
             wdts,
             maps: HashMap::new(),
             m2_floors: HashMap::new(),
+            m2_solids: HashMap::new(),
+            m2_solid_checks: HashMap::new(),
             live_hulls: HashMap::new(),
         }
     }
@@ -362,6 +366,15 @@ impl GroundMap {
         self.add_live_height(map, feet, base)
     }
 
+    pub(crate) fn player_solid_ground_in(
+        &mut self,
+        map: crate::maps::InMap,
+        feet: Vec3,
+    ) -> GroundProbe {
+        let base = self.sample_ground_at(map.map_id, feet, false, true);
+        self.add_live_height(map, feet, base)
+    }
+
     fn add_live_height(
         &self,
         map: crate::maps::InMap,
@@ -426,14 +439,20 @@ impl GroundMap {
     /// Ground under `feet` (Bevy space) on map `map_id`, loading the map and its tile on
     /// first use.
     pub fn ground_at(&mut self, map_id: u32, feet: Vec3) -> GroundProbe {
-        self.sample_ground_at(map_id, feet, true)
+        self.sample_ground_at(map_id, feet, true, false)
     }
 
     pub(crate) fn creature_ground_at(&mut self, map_id: u32, feet: Vec3) -> GroundProbe {
-        self.sample_ground_at(map_id, feet, false)
+        self.sample_ground_at(map_id, feet, false, false)
     }
 
-    fn sample_ground_at(&mut self, map_id: u32, feet: Vec3, walkable_only: bool) -> GroundProbe {
+    fn sample_ground_at(
+        &mut self,
+        map_id: u32,
+        feet: Vec3,
+        walkable_only: bool,
+        solid_m2: bool,
+    ) -> GroundProbe {
         if let Some(height) = self.flat_arena_height {
             return GroundProbe::Supported(height);
         }
@@ -445,11 +464,38 @@ impl GroundMap {
             Some(Some(map)) => map.ground_at(feet, walkable_only),
             _ => GroundProbe::Unloaded,
         };
-        let m2 = self
+        if solid_m2 {
+            let check = self.m2_solid_checks.entry(map_id).or_insert_with(|| {
+                let result = validate_m2_solid_files(&self.data_dir, map_id);
+                if let Err(error) = &result {
+                    error!("M2 solid collision on map {map_id}: {error}");
+                }
+                result
+            });
+            if check.is_err() {
+                return GroundProbe::Unloaded;
+            }
+        }
+        let walkable = self
             .m2_floors
             .entry(map_id)
-            .or_insert_with(|| los::LosMap::new(&self.data_dir.join(format!("los/{map_id}/m2"))));
-        match m2.floor_height(feet) {
+            .or_insert_with(|| los::LosMap::new(&self.data_dir.join(format!("los/{map_id}/m2"))))
+            .floor_height(feet);
+        let m2 = if solid_m2 {
+            let solid = self
+                .m2_solids
+                .entry(map_id)
+                .or_insert_with(|| {
+                    los::LosMap::new(&self.data_dir.join(format!("los/{map_id}/m2-solid")))
+                })
+                .solid_height(feet);
+            walkable.and_then(|floor| {
+                solid.map(|height| floor.into_iter().chain(height).max_by(f32::total_cmp))
+            })
+        } else {
+            walkable
+        };
+        match m2 {
             Ok(Some(height)) => match base {
                 GroundProbe::Supported(base_height) => {
                     GroundProbe::Supported(height.max(base_height))
@@ -677,6 +723,28 @@ impl MapGround {
         let groups = self.wmo_models[&placement.fdid].clone();
         Some(WmoCollision::new(placement.world_from_local(), groups))
     }
+}
+
+fn validate_m2_solid_files(data: &Path, map_id: u32) -> Result<(), String> {
+    let root = data.join(format!("los/{map_id}"));
+    let walkable = root.join("m2");
+    let entries = match std::fs::read_dir(&walkable) {
+        Ok(entries) => entries,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(()),
+        Err(error) => return Err(format!("{}: {error}", walkable.display())),
+    };
+    let solid = root.join("m2-solid");
+    for entry in entries {
+        let entry = entry.map_err(|error| format!("{}: {error}", walkable.display()))?;
+        let path = entry.path();
+        if path.extension().is_some_and(|extension| extension == "los") {
+            let companion = solid.join(entry.file_name());
+            if !companion.is_file() {
+                return Err(format!("missing {}", companion.display()));
+            }
+        }
+    }
+    Ok(())
 }
 
 fn probe_collision_height<'a>(

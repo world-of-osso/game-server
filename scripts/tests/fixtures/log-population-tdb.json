@@ -1,0 +1,236 @@
+{
+  "content_creature": {
+    "sql": "CREATE TABLE content_creature (\n  guid INTEGER NOT NULL,\n  id1 INTEGER NOT NULL DEFAULT 0,\n  id2 INTEGER NOT NULL DEFAULT 0,\n  id3 INTEGER NOT NULL DEFAULT 0,\n  map INTEGER NOT NULL DEFAULT 0,\n  zoneId INTEGER NOT NULL DEFAULT 0,\n  areaId INTEGER NOT NULL DEFAULT 0,\n  spawnMask INTEGER NOT NULL DEFAULT 1,\n  phaseMask INTEGER NOT NULL DEFAULT 1,\n  equipment_id INTEGER NOT NULL DEFAULT 0,\n  position_x REAL NOT NULL DEFAULT 0,\n  position_y REAL NOT NULL DEFAULT 0,\n  position_z REAL NOT NULL DEFAULT 0,\n  orientation REAL NOT NULL DEFAULT 0,\n  spawntimesecs INTEGER NOT NULL DEFAULT 120,\n  wander_distance REAL NOT NULL DEFAULT 0,\n  currentwaypoint INTEGER NOT NULL DEFAULT 0,\n  curhealth INTEGER NOT NULL DEFAULT 1,\n  curmana INTEGER NOT NULL DEFAULT 0,\n  MovementType INTEGER NOT NULL DEFAULT 0,\n  npcflag INTEGER NOT NULL DEFAULT 0,\n  unit_flags INTEGER NOT NULL DEFAULT 0,\n  dynamicflags INTEGER NOT NULL DEFAULT 0,\n  ScriptName TEXT DEFAULT '',\n  VerifiedBuild INTEGER DEFAULT NULL,\n  CreateObject INTEGER NOT NULL DEFAULT 0,\n  Comment TEXT DEFAULT NULL, modelid INTEGER NOT NULL DEFAULT 0, spawnDifficulties TEXT NOT NULL DEFAULT '0',\n  PRIMARY KEY (guid)\n)",
+    "rows": []
+  },
+  "tdb_creature": {
+    "sql": "CREATE TABLE tdb_creature (\n  guid INTEGER NOT NULL DEFAULT 0,\n  id INTEGER NOT NULL DEFAULT 0,\n  map INTEGER NOT NULL DEFAULT 0,\n  zoneId INTEGER NOT NULL DEFAULT 0,\n  areaId INTEGER NOT NULL DEFAULT 0,\n  spawnDifficulties TEXT NOT NULL DEFAULT '0',\n  phaseUseFlags INTEGER NOT NULL DEFAULT 0,\n  PhaseId INTEGER DEFAULT 0,\n  PhaseGroup INTEGER DEFAULT 0,\n  terrainSwapMap INTEGER NOT NULL DEFAULT -1,\n  modelid INTEGER NOT NULL DEFAULT 0,\n  equipment_id INTEGER NOT NULL DEFAULT 0,\n  position_x REAL NOT NULL DEFAULT 0,\n  position_y REAL NOT NULL DEFAULT 0,\n  position_z REAL NOT NULL DEFAULT 0,\n  orientation REAL NOT NULL DEFAULT 0,\n  spawntimesecs INTEGER NOT NULL DEFAULT 120,\n  wander_distance REAL NOT NULL DEFAULT 0,\n  currentwaypoint INTEGER NOT NULL DEFAULT 0,\n  curHealthPct INTEGER DEFAULT NULL,\n  MovementType INTEGER NOT NULL DEFAULT 0,\n  npcflag INTEGER DEFAULT NULL,\n  unit_flags INTEGER DEFAULT NULL,\n  unit_flags2 INTEGER DEFAULT NULL,\n  unit_flags3 INTEGER DEFAULT NULL,\n  ScriptName TEXT NOT NULL DEFAULT '',\n  StringId TEXT DEFAULT NULL,\n  VerifiedBuild INTEGER NOT NULL DEFAULT 0,\n  PRIMARY KEY (guid)\n)",
+    "rows": []
+  },
+  "content_creature_template": {
+    "sql": "CREATE TABLE content_creature_template (\n  entry INTEGER NOT NULL DEFAULT 0,\n  difficulty_entry_1 INTEGER NOT NULL DEFAULT 0,\n  difficulty_entry_2 INTEGER NOT NULL DEFAULT 0,\n  difficulty_entry_3 INTEGER NOT NULL DEFAULT 0,\n  KillCredit1 INTEGER NOT NULL DEFAULT 0,\n  KillCredit2 INTEGER NOT NULL DEFAULT 0,\n  name TEXT NOT NULL DEFAULT '0',\n  subname TEXT DEFAULT NULL,\n  IconName TEXT DEFAULT NULL,\n  gossip_menu_id INTEGER NOT NULL DEFAULT 0,\n  minlevel INTEGER NOT NULL DEFAULT 1,\n  maxlevel INTEGER NOT NULL DEFAULT 1,\n  exp INTEGER NOT NULL DEFAULT 0,\n  faction INTEGER NOT NULL DEFAULT 0,\n  npcflag INTEGER NOT NULL DEFAULT 0,\n  speed_walk REAL NOT NULL DEFAULT 1,\n  speed_run REAL NOT NULL DEFAULT 1.14286,\n  speed_swim REAL NOT NULL DEFAULT 1,\n  speed_flight REAL NOT NULL DEFAULT 1,\n  detection_range REAL NOT NULL DEFAULT 20,\n  scale REAL NOT NULL DEFAULT 1,\n  rank INTEGER NOT NULL DEFAULT 0,\n  dmgschool INTEGER NOT NULL DEFAULT 0,\n  DamageModifier REAL NOT NULL DEFAULT 1,\n  BaseAttackTime INTEGER NOT NULL DEFAULT 0,\n  RangeAttackTime INTEGER NOT NULL DEFAULT 0,\n  BaseVariance REAL NOT NULL DEFAULT 1,\n  RangeVariance REAL NOT NULL DEFAULT 1,\n  unit_class INTEGER NOT NULL DEFAULT 0,\n  unit_flags INTEGER NOT NULL DEFAULT 0,\n  unit_flags2 INTEGER NOT NULL DEFAULT 0,\n  dynamicflags INTEGER NOT NULL DEFAULT 0,\n  family INTEGER NOT NULL DEFAULT 0,\n  type INTEGER NOT NULL DEFAULT 0,\n  type_flags INTEGER NOT NULL DEFAULT 0,\n  lootid INTEGER NOT NULL DEFAULT 0,\n  pickpocketloot INTEGER NOT NULL DEFAULT 0,\n  skinloot INTEGER NOT NULL DEFAULT 0,\n  PetSpellDataId INTEGER NOT NULL DEFAULT 0,\n  VehicleId INTEGER NOT NULL DEFAULT 0,\n  mingold INTEGER NOT NULL DEFAULT 0,\n  maxgold INTEGER NOT NULL DEFAULT 0,\n  AIName TEXT NOT NULL DEFAULT '',\n  MovementType INTEGER NOT NULL DEFAULT 0,\n  HoverHeight REAL NOT NULL DEFAULT 1,\n  HealthModifier REAL NOT NULL DEFAULT 1,\n  ManaModifier REAL NOT NULL DEFAULT 1,\n  ArmorModifier REAL NOT NULL DEFAULT 1,\n  ExperienceModifier REAL NOT NULL DEFAULT 1,\n  RacialLeader INTEGER NOT NULL DEFAULT 0,\n  movementId INTEGER NOT NULL DEFAULT 0,\n  RegenHealth INTEGER NOT NULL DEFAULT 1,\n  mechanic_immune_mask INTEGER NOT NULL DEFAULT 0,\n  spell_school_immune_mask INTEGER NOT NULL DEFAULT 0,\n  flags_extra INTEGER NOT NULL DEFAULT 0,\n  ScriptName TEXT NOT NULL DEFAULT '',\n  VerifiedBuild INTEGER DEFAULT NULL, ContentTuningID INTEGER NOT NULL DEFAULT 0, HealthScalingExpansion INTEGER NOT NULL DEFAULT 0, LevelScalingDeltaMin INTEGER NOT NULL DEFAULT 0, LevelScalingDeltaMax INTEGER NOT NULL DEFAULT 0,\n  PRIMARY KEY (entry)\n)",
+    "rows": []
+  },
+  "tdb_creature_template": {
+    "sql": "CREATE TABLE tdb_creature_template (\n  entry INTEGER NOT NULL DEFAULT 0,\n  KillCredit1 INTEGER NOT NULL DEFAULT 0,\n  KillCredit2 INTEGER NOT NULL DEFAULT 0,\n  name TEXT,\n  femaleName TEXT,\n  subname TEXT,\n  TitleAlt TEXT,\n  IconName TEXT DEFAULT NULL,\n  RequiredExpansion INTEGER NOT NULL DEFAULT 0,\n  VignetteID INTEGER NOT NULL DEFAULT 0,\n  faction INTEGER NOT NULL DEFAULT 0,\n  npcflag INTEGER NOT NULL DEFAULT 0,\n  speed_walk REAL NOT NULL DEFAULT 1,\n  speed_run REAL NOT NULL DEFAULT 1.14286,\n  scale REAL NOT NULL DEFAULT 1,\n  Classification INTEGER NOT NULL DEFAULT 0,\n  dmgschool INTEGER NOT NULL DEFAULT 0,\n  BaseAttackTime INTEGER NOT NULL DEFAULT 0,\n  RangeAttackTime INTEGER NOT NULL DEFAULT 0,\n  BaseVariance REAL NOT NULL DEFAULT 1,\n  RangeVariance REAL NOT NULL DEFAULT 1,\n  unit_class INTEGER NOT NULL DEFAULT 0,\n  unit_flags INTEGER NOT NULL DEFAULT 0,\n  unit_flags2 INTEGER NOT NULL DEFAULT 0,\n  unit_flags3 INTEGER NOT NULL DEFAULT 0,\n  family INTEGER NOT NULL DEFAULT 0,\n  trainer_class INTEGER NOT NULL DEFAULT 0,\n  type INTEGER NOT NULL DEFAULT 0,\n  VehicleId INTEGER NOT NULL DEFAULT 0,\n  AIName TEXT NOT NULL DEFAULT '',\n  MovementType INTEGER NOT NULL DEFAULT 0,\n  ExperienceModifier REAL NOT NULL DEFAULT 1,\n  RacialLeader INTEGER NOT NULL DEFAULT 0,\n  movementId INTEGER NOT NULL DEFAULT 0,\n  WidgetSetID INTEGER NOT NULL DEFAULT 0,\n  WidgetSetUnitConditionID INTEGER NOT NULL DEFAULT 0,\n  RegenHealth INTEGER NOT NULL DEFAULT 1,\n  CreatureImmunitiesId INTEGER NOT NULL DEFAULT 0,\n  flags_extra INTEGER NOT NULL DEFAULT 0,\n  ScriptName TEXT NOT NULL DEFAULT '',\n  StringId TEXT DEFAULT NULL,\n  VerifiedBuild INTEGER NOT NULL DEFAULT 0,\n  PRIMARY KEY (entry)\n)",
+    "rows": [
+      [
+        189886,
+        0,
+        0,
+        "Blazebound Firestorm",
+        "",
+        null,
+        null,
+        null,
+        0,
+        0,
+        16,
+        0,
+        1.6,
+        2.14286,
+        1.0,
+        1,
+        0,
+        2000,
+        0,
+        1.0,
+        1.0,
+        2,
+        64,
+        1073743872,
+        524288,
+        0,
+        0,
+        4,
+        0,
+        "",
+        0,
+        1.0,
+        0,
+        144,
+        0,
+        0,
+        1,
+        0,
+        0,
+        "",
+        null,
+        69497
+      ]
+    ]
+  },
+  "tdb_creature_template_difficulty": {
+    "sql": "CREATE TABLE tdb_creature_template_difficulty (\n  Entry INTEGER NOT NULL,\n  DifficultyID INTEGER NOT NULL DEFAULT 0,\n  LevelScalingDeltaMin INTEGER NOT NULL DEFAULT 0,\n  LevelScalingDeltaMax INTEGER NOT NULL DEFAULT 0,\n  ContentTuningID INTEGER NOT NULL DEFAULT 0,\n  HealthScalingExpansion INTEGER NOT NULL DEFAULT 0,\n  HealthModifier REAL NOT NULL DEFAULT 1,\n  ManaModifier REAL NOT NULL DEFAULT 1,\n  ArmorModifier REAL NOT NULL DEFAULT 1,\n  DamageModifier REAL NOT NULL DEFAULT 1,\n  CreatureDifficultyID INTEGER NOT NULL DEFAULT 0,\n  TypeFlags INTEGER NOT NULL DEFAULT 0,\n  TypeFlags2 INTEGER NOT NULL DEFAULT 0,\n  TypeFlags3 INTEGER NOT NULL DEFAULT 0,\n  LootID INTEGER NOT NULL DEFAULT 0,\n  PickPocketLootID INTEGER NOT NULL DEFAULT 0,\n  SkinLootID INTEGER NOT NULL DEFAULT 0,\n  GoldMin INTEGER NOT NULL DEFAULT 0,\n  GoldMax INTEGER NOT NULL DEFAULT 0,\n  StaticFlags1 INTEGER NOT NULL DEFAULT 0,\n  StaticFlags2 INTEGER NOT NULL DEFAULT 0,\n  StaticFlags3 INTEGER NOT NULL DEFAULT 0,\n  StaticFlags4 INTEGER NOT NULL DEFAULT 0,\n  StaticFlags5 INTEGER NOT NULL DEFAULT 0,\n  StaticFlags6 INTEGER NOT NULL DEFAULT 0,\n  StaticFlags7 INTEGER NOT NULL DEFAULT 0,\n  StaticFlags8 INTEGER NOT NULL DEFAULT 0,\n  VerifiedBuild INTEGER NOT NULL DEFAULT 0,\n  PRIMARY KEY (Entry, DifficultyID)\n)",
+    "rows": [
+      [
+        189886,
+        0,
+        0,
+        0,
+        0,
+        0,
+        4.0,
+        1.0,
+        1.0,
+        1.0,
+        216572,
+        2097256,
+        2147483776,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        189886,
+        1,
+        1,
+        1,
+        2548,
+        9,
+        3.2,
+        1.0,
+        1.0,
+        1.0,
+        277090,
+        2097256,
+        128,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        47187
+      ],
+      [
+        189886,
+        2,
+        0,
+        0,
+        0,
+        9,
+        3.2,
+        1.0,
+        1.0,
+        1.0,
+        277091,
+        2097256,
+        128,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        189886,
+        23,
+        1,
+        1,
+        1279,
+        9,
+        3.2,
+        1.0,
+        1.0,
+        1.0,
+        216572,
+        2097256,
+        128,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        46658
+      ]
+    ]
+  },
+  "content_creature_template_difficulty": {
+    "sql": "CREATE TABLE content_creature_template_difficulty (entry INTEGER NOT NULL,\n        DifficultyID INTEGER NOT NULL, minlevel INTEGER NOT NULL, maxlevel INTEGER NOT NULL, exp INTEGER NOT NULL,\n        ContentTuningID INTEGER NOT NULL, HealthScalingExpansion INTEGER NOT NULL, LevelScalingDeltaMin INTEGER NOT NULL,\n        LevelScalingDeltaMax INTEGER NOT NULL, HealthModifier REAL NOT NULL, ManaModifier REAL NOT NULL,\n        ArmorModifier REAL NOT NULL, DamageModifier REAL NOT NULL, lootid INTEGER NOT NULL DEFAULT 0,\n        mingold INTEGER NOT NULL DEFAULT 0, maxgold INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (entry, DifficultyID))",
+    "rows": []
+  },
+  "content_tuning_level": {
+    "sql": "CREATE TABLE content_tuning_level (ID INTEGER PRIMARY KEY, minlevel INTEGER, maxlevel INTEGER,\n        MinLevelWithDelta INTEGER, ScalingFactionGroup INTEGER)",
+    "rows": [
+      [
+        1279,
+        1,
+        90,
+        1,
+        0
+      ],
+      [
+        2548,
+        10,
+        70,
+        10,
+        0
+      ]
+    ]
+  },
+  "tdb_creature_template_model": {
+    "sql": "CREATE TABLE tdb_creature_template_model (\n  CreatureID INTEGER NOT NULL,\n  Idx INTEGER NOT NULL DEFAULT 0,\n  CreatureDisplayID INTEGER NOT NULL,\n  DisplayScale REAL NOT NULL DEFAULT 1,\n  Probability REAL NOT NULL DEFAULT 0,\n  VerifiedBuild INTEGER NOT NULL DEFAULT 0,\n  PRIMARY KEY (CreatureID, Idx)\n)",
+    "rows": [
+      [
+        189886,
+        0,
+        102505,
+        2.0,
+        1.0,
+        69497
+      ]
+    ]
+  },
+  "content_creature_template_model": {
+    "sql": "CREATE TABLE content_creature_template_model (\n  CreatureID INTEGER NOT NULL,\n  Idx INTEGER NOT NULL DEFAULT 0,\n  CreatureDisplayID INTEGER NOT NULL,\n  DisplayScale REAL NOT NULL DEFAULT 1,\n  Probability REAL NOT NULL DEFAULT 0,\n  VerifiedBuild INTEGER DEFAULT NULL,\n  PRIMARY KEY (CreatureID, Idx)\n)",
+    "rows": []
+  },
+  "tdb_creature_template_addon": {
+    "sql": "CREATE TABLE tdb_creature_template_addon (\n  entry INTEGER NOT NULL DEFAULT 0,\n  PathId INTEGER NOT NULL DEFAULT 0,\n  mount INTEGER NOT NULL DEFAULT 0,\n  MountCreatureID INTEGER NOT NULL DEFAULT 0,\n  StandState INTEGER NOT NULL DEFAULT 0,\n  AnimTier INTEGER NOT NULL DEFAULT 0,\n  VisFlags INTEGER NOT NULL DEFAULT 0,\n  SheathState INTEGER NOT NULL DEFAULT 1,\n  PvPFlags INTEGER NOT NULL DEFAULT 0,\n  emote INTEGER NOT NULL DEFAULT 0,\n  aiAnimKit INTEGER NOT NULL DEFAULT 0,\n  movementAnimKit INTEGER NOT NULL DEFAULT 0,\n  meleeAnimKit INTEGER NOT NULL DEFAULT 0,\n  visibilityDistanceType INTEGER NOT NULL DEFAULT 0,\n  auras TEXT,\n  PRIMARY KEY (entry)\n)",
+    "rows": []
+  },
+  "content_creature_template_addon": {
+    "sql": "CREATE TABLE content_creature_template_addon (\n  entry INTEGER NOT NULL DEFAULT 0,\n  path_id INTEGER NOT NULL DEFAULT 0,\n  mount INTEGER NOT NULL DEFAULT 0,\n  bytes1 INTEGER NOT NULL DEFAULT 0,\n  bytes2 INTEGER NOT NULL DEFAULT 0,\n  emote INTEGER NOT NULL DEFAULT 0,\n  visibilityDistanceType INTEGER NOT NULL DEFAULT 0,\n  auras TEXT,\n  PRIMARY KEY (entry)\n)",
+    "rows": []
+  }
+}

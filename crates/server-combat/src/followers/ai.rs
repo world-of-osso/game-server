@@ -20,6 +20,7 @@ pub(super) fn update(world: &mut World) {
     let followers: Vec<_> = world
         .query::<(Entity, &Follower)>()
         .iter(world)
+        .filter(|(_, follower)| world.get_entity(follower.owner).is_ok())
         .map(|(entity, follower)| (entity, follower.clone()))
         .collect();
     for (unit, follower) in &followers {

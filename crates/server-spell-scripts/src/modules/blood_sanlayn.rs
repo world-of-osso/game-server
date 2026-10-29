@@ -16,6 +16,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AfterForegroundSpecial(grant_gift),
     SpellScriptHook::AfterForegroundSpecial(vampiric_proc),
     SpellScriptHook::EffectHandler(vampiric_heal_handler),
+    SpellScriptHook::LeechHealOverride(blood_plague_leech),
     SpellScriptHook::EffectEnabled(blood_vampiric_damage_effect),
     SpellScriptHook::AfterPolicyDirectDamage(infliction_of_sorrow),
     SpellScriptHook::TargetFilter(limit_vampiric_targets),
@@ -281,6 +282,26 @@ fn limit_vampiric_targets(
     targets.truncate(base + bonus);
 }
 
+// SimC76f8118 sc_death_knight.cpp:6992–7037,7864–7872: Blood Plague
+// heals actual tick damage through a direct, independently critical heal.
+fn blood_plague_leech(world: &World, ctx: &EffectCtx<'_>, damage: f32) -> Option<f32> {
+    if ctx.spell.id != 55078
+        || !world
+            .get::<ActiveSpec>(ctx.caster)
+            .is_some_and(|spec| spec.0 == 250)
+    {
+        return None;
+    }
+    let multiplier = auras::spell_mods::modify(
+        world,
+        ctx.caster,
+        ctx.spell,
+        auras::SpellModOp::Amplitude,
+        1.0,
+    );
+    Some(damage * multiplier)
+}
+
 fn vampiric_heal_handler(spell: u32, index: u8) -> Option<EffectHandler> {
     (spell == 434422 && index == 0).then_some(vampiric_heal)
 }
@@ -392,6 +413,11 @@ fn vampiric_proc(world: &mut World, caster: Entity, spell: &SpellInfo) {
             .base_points
     };
     let mut chance = effect(433901, 0);
+    // SimC76f8118 sc_death_knight.cpp:13842–13843: Blood-soaked Ground
+    // adds the selected talent's second effect to the proc chance.
+    if auras::has_aura(world, caster, 434034) {
+        chance += effect(434033, 1);
+    }
     if world
         .get::<KnownSpells>(caster)
         .is_some_and(|known| known.contains(434263))

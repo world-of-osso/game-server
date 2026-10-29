@@ -2982,6 +2982,7 @@ fn execute_cast_with_primary(
     // TC Spell.cpp3843–3869: OnCast precedes TakePower and SendSpellGo.
     scripts::before_ret_damage_cast(world, caster, spell, 0);
     scripts::on_cast(world, caster, spell.id, 0);
+    druid_transform::reset_swing_for_spell(world, caster, spell);
     take_cast_resources(world, caster, spell, &costs);
     start_cooldowns(world, caster, spell);
     scripts::ordinary_combo_cast(world, caster, spell);
@@ -4032,6 +4033,8 @@ pub struct TriggeredSpellOverrides {
     pub original_caster: Option<Entity>,
     /// Authored background-action lifetime, e.g. native Whirling Blade's amount.
     pub duration_ms: Option<i32>,
+    /// Exact duration of the triggered aura after spell modifiers.
+    pub fixed_aura_duration_ms: Option<u32>,
 }
 
 pub fn cast_triggered_with_overrides(
@@ -4046,6 +4049,7 @@ pub fn cast_triggered_with_overrides(
         return false;
     };
     spell.cast_aura_stacks = values.aura_stacks;
+    spell.cast_fixed_aura_duration_ms = values.fixed_aura_duration_ms;
     spell.cast_damage_multiplier = values.damage_multiplier;
     spell.cast_original_caster = values.original_caster;
     spell.cast_item_level = values.item_level;
@@ -4203,7 +4207,7 @@ pub fn launch_triggered_spell(
 }
 
 /// Effect64 clears IGNORE_POWER_COST/IGNORE_REAGENT_COST from FULL_MASK.
-pub(super) fn cast_costed_trigger_with_context(
+pub fn cast_costed_trigger_with_context(
     world: &mut World,
     caster: Entity,
     spell_id: u32,

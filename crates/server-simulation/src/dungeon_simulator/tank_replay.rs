@@ -552,6 +552,20 @@ fn replay_registered_run_with_healing(
         .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
         .0
         .len();
+    let mut precombat_casts = BTreeMap::<u32, usize>::new();
+    for event in &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0[..event_cursor]
+    {
+        if event.source == Some(tank.to_bits())
+            && event.kind == CombatLogKind::CastSuccess
+            && let Some(spell) = event.spell_id
+        {
+            *precombat_casts.entry(spell).or_default() += 1;
+        }
+    }
     let (mut raw, mut taken, mut self_healing, mut active_seconds, mut spike) =
         (0.0, 0.0, 0.0, 0.0, 0.0_f64);
     let mut self_periodic_taken = 0.0;
@@ -571,7 +585,6 @@ fn replay_registered_run_with_healing(
     let mut defense_samples = 0_u64;
     let mut dusk_samples = 0_u64;
     let mut dusk_reduction_sum = 0.0_f64;
-    let mut dusk_constant_counterfactual_reduction = 0.0_f64;
     let mut block_sources = BTreeMap::<u32, f64>::new();
     let mut aura_seconds = BTreeMap::<u32, f64>::new();
     let mut debuff_seconds: BTreeMap<u32, f64> =
@@ -594,15 +607,30 @@ fn replay_registered_run_with_healing(
             bloodlust_applied = true;
         }
         if external_healing && tick % 100 == 0 && tick < duration_seconds * 20 {
-            let mut health = run
-                .app
-                .world_mut()
-                .get_mut::<Health>(tank)
-                .ok_or("TANK_HEALTH_ABSENT")?;
-            if health.current > 0.0 {
-                let amount = 75_000.0_f32.min((health.max - health.current).max(0.0));
-                health.current += amount;
+            let effective = {
+                let mut health = run
+                    .app
+                    .world_mut()
+                    .get_mut::<Health>(tank)
+                    .ok_or("TANK_HEALTH_ABSENT")?;
+                if health.current > 0.0 {
+                    let amount = 75_000.0_f32.min((health.max - health.current).max(0.0));
+                    health.current += amount;
+                    Some(amount)
+                } else {
+                    None
+                }
+            };
+            if let Some(amount) = effective {
                 external_healing_effective += f64::from(amount);
+                crate::spell_cast::script_registry::heal_received(
+                    run.app.world_mut(),
+                    tank,
+                    0,
+                    75_000.0,
+                    amount,
+                    false,
+                );
             }
         }
         while let Some(hit) = hits
@@ -622,15 +650,12 @@ fn replay_registered_run_with_healing(
                 return Err("SIMC_DUMMY_AMOUNT_OUT_OF_RANGE".into());
             }
             let world = run.app.world();
-            let health = world.get::<Health>(tank).ok_or("TANK_HEALTH_ABSENT")?;
             let maximum_dusk = world
                 .get::<crate::auras::ActiveAuras>(tank)
                 .and_then(|auras| auras.iter().find(|aura| aura.spell_id == 1241945))
                 .and_then(|aura| aura.effects.iter().find(|effect| effect.index == 0))
                 .map_or(0.0, |effect| f64::from(effect.amount) / 100.0);
-            let dusk_reduction =
-                maximum_dusk * f64::from((1.0 - health.current / health.max).clamp(0.0, 1.0));
-            dusk_reduction_sum += dusk_reduction;
+            dusk_reduction_sum += maximum_dusk;
             dusk_samples += 1;
             let scale = crate::level_scaling::damage_to_hp_scale(run.app.world(), source, tank);
             let before_events = run
@@ -795,8 +820,6 @@ fn replay_registered_run_with_healing(
                 Kind::Bleed => "bleed",
             };
             let pre_absorb = damage + after_absorbed - before_absorbed;
-            dusk_constant_counterfactual_reduction +=
-                pre_absorb * (maximum_dusk - dusk_reduction) / (1.0 - dusk_reduction);
             *incoming_before_absorbs.entry(kind).or_default() += pre_absorb;
             if let Some(key) = outcome_key {
                 *incoming_by_outcome.entry(key).or_default() += pre_absorb;
@@ -1016,7 +1039,6 @@ fn replay_registered_run_with_healing(
         "raw_damage":raw,"damage_taken":taken,"damage_taken_by_kind":damage_taken_by_kind,"incoming_before_absorbs":incoming_before_absorbs,"incoming_outcomes":outcomes,"incoming_by_outcome":incoming_by_outcome,
         "defense_mean":defense_mean,
         "dusk_mean_reduction": (dusk_samples > 0).then(|| dusk_reduction_sum / dusk_samples as f64),
-        "dusk_constant_counterfactual_pre_absorb": dusk_constant_counterfactual_reduction,
         "block_sources_mean":block_sources.iter().map(|(spell, amount)| (spell, amount / defense_samples.max(1) as f64)).collect::<BTreeMap<_,_>>(),
         "self_periodic_damage_taken":self_periodic_taken,
         "mitigation_pct":(raw>0.0).then(||100.0*(raw-taken)/raw),
@@ -1034,7 +1056,15 @@ fn replay_registered_run_with_healing(
         )
         .ok_or("SIMC_DUMMY_ARMOR_CONSTANT_ABSENT")?;
     report["tank_dummy_scenario"] = json!({"difficulty":TANK_DUNGEON_DIFFICULTY,"content_tuning":TANK_DUNGEON_TUNING,"season":TANK_DUNGEON_SEASON,"attacker_level":attacker.level_against(&defender),"armor_constant":armor_constant});
+    report["precombat_casts"] = json!(precombat_casts);
     report["outgoing_damage_by_spell"] = json!(outgoing_damage_by_spell);
     report["resource_spent_by_spell"] = json!(resource_spent_by_spell);
+    report["melee_rage"] = json!(
+        capture
+            .melee_rage
+            .iter()
+            .filter_map(|(&(unit, source), &amount)| (unit == tank).then_some((source, amount)))
+            .collect::<BTreeMap<_, _>>()
+    );
     Ok(report)
 }

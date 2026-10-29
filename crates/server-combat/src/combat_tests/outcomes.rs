@@ -85,6 +85,39 @@ fn a_players_crit_is_sent_as_a_critical_hit() {
     assert!(events.contains(&CombatEventType::CriticalHit));
 }
 
+#[test]
+fn dual_wield_player_misses_level_92_creature_at_simc_rate() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut app = setup_replication_app();
+    let victim = spawn_target(&mut app, pos(1.0, 0.0, 0.0), 1.0e9);
+    app.world_mut().entity_mut(victim).insert((
+        UnitLevel(92),
+        Npc {
+            template_id: 1,
+            name: "Dungeon dummy".into(),
+        },
+    ));
+    let attacker = spawn_attacker(&mut app, pos(0.0, 0.0, 0.0), victim);
+    app.world_mut().entity_mut(attacker).insert((
+        UnitLevel(90),
+        CharacterStats {
+            main_hand: BLADE,
+            off_hand: Some(BLADE),
+            ..default()
+        },
+    ));
+    let events = swing_events(&mut app, attacker, 10_000);
+    let misses = events
+        .iter()
+        .filter(|event| **event == CombatEventType::Miss)
+        .count();
+    assert!(
+        (1_650..=1_850).contains(&misses),
+        "{misses} misses in {} swings",
+        events.len()
+    );
+}
+
 /// A creature swinging at a player rolls the player's avoidance
 /// (Unit::RollMeleeOutcomeAgainst for every unit): against a 100% block chance each
 /// swing not missed is a `Block`, and against 100% parry a `Parry`.
