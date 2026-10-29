@@ -128,12 +128,26 @@ fn druid_foreground_spell_resets_swing_but_mangle_and_form_do_not() {
             run.app.update();
         }
         run.app
+            .insert_resource(super::super::healer_intake::Capture {
+                members: vec![actor],
+                ..Default::default()
+            });
+        run.app
             .world_mut()
             .entity_mut(actor)
             .insert(crate::combat::AutoAttack::new(target));
         for _ in 0..21 {
             run.app.update();
         }
+        let captured = run
+            .app
+            .world()
+            .resource::<super::super::healer_intake::Capture>()
+            .melee_rage
+            .get(&(actor, "swing"))
+            .copied()
+            .unwrap_or_default();
+        assert!(captured > 0.0, "the real swing must report its earned Rage");
         crate::spell_cast::creature_cast(
             run.app.world_mut(),
             actor,
