@@ -729,6 +729,9 @@ fn is_harmful(
 }
 
 fn duration_ms(world: &World, application: &AuraApplication, spell: &SpellInfo) -> u32 {
+    if let Some(duration) = spell.cast_fixed_aura_duration_ms {
+        return duration;
+    }
     if is_passive(spell) {
         return 0;
     }

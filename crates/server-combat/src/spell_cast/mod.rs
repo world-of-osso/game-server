@@ -4032,6 +4032,8 @@ pub struct TriggeredSpellOverrides {
     pub original_caster: Option<Entity>,
     /// Authored background-action lifetime, e.g. native Whirling Blade's amount.
     pub duration_ms: Option<i32>,
+    /// Exact duration of the triggered aura after spell modifiers.
+    pub fixed_aura_duration_ms: Option<u32>,
 }
 
 pub fn cast_triggered_with_overrides(
@@ -4046,6 +4048,7 @@ pub fn cast_triggered_with_overrides(
         return false;
     };
     spell.cast_aura_stacks = values.aura_stacks;
+    spell.cast_fixed_aura_duration_ms = values.fixed_aura_duration_ms;
     spell.cast_damage_multiplier = values.damage_multiplier;
     spell.cast_original_caster = values.original_caster;
     spell.cast_item_level = values.item_level;
