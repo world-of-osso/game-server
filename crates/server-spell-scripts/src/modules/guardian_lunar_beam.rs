@@ -7,8 +7,26 @@ use combat::spell_cast::{
 };
 use combat::spell_info::SpellInfo;
 
-pub(super) const HOOKS: &[SpellScriptHook] =
-    &[SpellScriptHook::AfterForegroundSpecial(schedule_heals)];
+pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::AfterForegroundSpecial(schedule_heals),
+    SpellScriptHook::TargetFilter(limit_pulse_targets),
+];
+
+// SimC76f8118 sc_druid.cpp5381–5385: pulse cap is Lunar Beam effect 3.
+fn limit_pulse_targets(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    effect: u8,
+    _: Option<Entity>,
+    targets: &mut Vec<Entity>,
+) {
+    if spell.id == 414613 && effect == 0 {
+        let limit =
+            spell_cast::scripts::script_effect_value(world, caster, 204066, 2).max(0.0) as usize;
+        targets.truncate(limit);
+    }
+}
 
 fn schedule_heals(world: &mut World, caster: Entity, spell: &SpellInfo) {
     if spell.id != 204066 {
