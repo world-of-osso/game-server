@@ -157,11 +157,7 @@ impl NavigationMap {
     }
 
     /// Escape candidates are walking-only; their callers do not own off-mesh motion.
-    pub(crate) fn complete_walk_path(
-        &mut self,
-        start: Vec3,
-        end: Vec3,
-    ) -> Result<Vec<Vec3>, String> {
+    pub fn complete_walk_path(&mut self, start: Vec3, end: Vec3) -> Result<Vec<Vec3>, String> {
         self.walking_path(start, end)?.into_complete()
     }
 

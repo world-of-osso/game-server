@@ -161,7 +161,7 @@ impl FloorResolver {
             let nav = self.maps.get_mut(&request.map).unwrap();
             for (index, candidate) in candidates.iter().enumerate() {
                 let end = point(request.x, request.y, candidate.z);
-                match nav.complete_path(start, end) {
+                match nav.complete_walk_path(start, end) {
                     Ok(path) => {
                         let length: f32 = path
                             .windows(2)
@@ -256,7 +256,7 @@ impl FloorResolver {
                 }
                 let max_distance =
                     (start - point(request.x, request.y, anchor.z)).length() * 3.0 + 15.0;
-                match nav.complete_path(start, end) {
+                match nav.complete_walk_path(start, end) {
                     Ok(path)
                         if path
                             .windows(2)
