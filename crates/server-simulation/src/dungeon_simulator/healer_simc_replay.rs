@@ -28,6 +28,17 @@ const POLICIES: &[Registration] = &[
     (1468, super::preservation_evoker_replay::prepare),
 ];
 
+/// The replay's follower companions, equipped by `equip_companions`.
+pub(crate) fn spawn_reference_party(
+    world: &mut World,
+    tank: Entity,
+    healer: Entity,
+) -> Result<crate::followers::simulator::Party, String> {
+    let party = crate::followers::simulator::spawn_party_for_reference_healer(world, tank, healer)?;
+    super::dps_parity::equip_companions(world, &party.members)?;
+    Ok(party)
+}
+
 pub(super) fn replay_simc(
     spec: u32,
     trace: &Path,
@@ -97,11 +108,7 @@ fn replay_with_party_registry(
     let mut run = super::dps_parity::prepare_registered_player(66, 1)?;
     let healer = super::dps_parity::spawn_second_reference_player(&mut run, spec)?;
     let tank = run.actor;
-    let party = crate::followers::simulator::spawn_party_for_reference_healer(
-        run.app.world_mut(),
-        tank,
-        healer,
-    )?;
+    let party = spawn_reference_party(run.app.world_mut(), tank, healer)?;
     let members: Vec<_> = party.members.iter().copied().chain([tank]).collect();
     let party_slots = [
         tank,

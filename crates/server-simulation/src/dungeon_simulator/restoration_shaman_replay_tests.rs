@@ -56,7 +56,7 @@ fn restoration_shaman_healing_stream_summon_applies_native_pulse() {
     let mut run = super::super::dps_parity::prepare_registered_player(66, 1).unwrap();
     let healer = super::super::dps_parity::spawn_second_reference_player(&mut run, 264).unwrap();
     let tank = run.actor;
-    let party = crate::followers::simulator::spawn_party_for_reference_healer(
+    let party = crate::dungeon_simulator::healer_simc_replay::spawn_reference_party(
         run.app.world_mut(),
         tank,
         healer,

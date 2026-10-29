@@ -473,6 +473,28 @@ pub(super) fn equip(world: &mut World, unit: Entity, profile: &Profile) -> Resul
     Ok(())
 }
 
+/// Replay companions wear their spec's profile gear when this replay's evidence
+/// directory defines one; otherwise they use their follower dungeon tier.
+pub(crate) fn equip_companions(world: &mut World, members: &[Entity]) -> Result<(), String> {
+    let directory = directory()?;
+    for &unit in members {
+        let Some(follower) = world
+            .get::<crate::followers::Follower>(unit)
+            .map(|follower| follower.profile.clone())
+        else {
+            continue;
+        };
+        let path = directory.join(format!("{}.profile.json", follower.spec_id));
+        if path.exists() {
+            let profile: Profile = read_json(&path)?;
+            equip(world, unit, &profile)?;
+        } else {
+            crate::followers::gear::equip(world, unit, &follower)?;
+        }
+    }
+    Ok(())
+}
+
 pub(super) fn install_traits(
     world: &mut World,
     unit: Entity,

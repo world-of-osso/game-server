@@ -270,7 +270,7 @@ fn spawn_profiled_party(
         crate::maps::DungeonDifficulty(difficulty_id),
     )?;
     world.entity_mut(owner).insert(LeaderProfile(leader));
-    let members = spawning::spawn_members(world, owner, &profiles[..4])?;
+    let members = spawning::spawn_equipped_members(world, owner, &profiles[..4])?;
     party::join_members(world, owner, shared::group::GroupRole::Dps, &members)?;
     world
         .entity_mut(owner)

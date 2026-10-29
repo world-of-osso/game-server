@@ -49,12 +49,57 @@ fn reference_healer_remains_alive_during_single_faction_setup() {
 
 #[test]
 #[ignore = "requires canonical world database and healer-tank profiles"]
+fn reference_replay_follower_companions_wear_replay_profile_gear() {
+    let mut run = crate::dungeon_simulator::dps_parity::prepare_registered_player(66, 1).unwrap();
+    let tank = run.actor;
+    let healer =
+        crate::dungeon_simulator::dps_parity::spawn_second_reference_player(&mut run, 65).unwrap();
+    let party = super::spawn_reference_party(run.app.world_mut(), tank, healer).unwrap();
+    let directory = std::path::PathBuf::from(std::env::var_os("DPS_PARITY_OUTPUT").unwrap());
+    let world = run.app.world();
+    let companions: Vec<_> = party
+        .members
+        .iter()
+        .filter_map(|&unit| {
+            world
+                .get::<crate::followers::Follower>(unit)
+                .map(|follower| (unit, follower.profile.spec_id))
+        })
+        .collect();
+    assert_eq!(companions.len(), 3, "three follower companions");
+    for (unit, spec) in companions {
+        let path = directory.join(format!("{spec}.profile.json"));
+        let profile: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
+        let expected: Vec<u32> = profile["equipment"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|item| item["item_id"].as_u64().unwrap() as u32)
+            .collect();
+        let equipped: Vec<u32> = world
+            .get::<crate::stats::EquippedItems>(unit)
+            .expect("replay companion equipment")
+            .items
+            .iter()
+            .map(|(_, _, item)| *item)
+            .collect();
+        assert!(!expected.is_empty());
+        assert_eq!(
+            equipped, expected,
+            "spec{spec} wears its replay profile gear"
+        );
+    }
+}
+
+#[test]
+#[ignore = "requires canonical world database and healer-tank profiles"]
 fn beacon_transfers_healing_between_player_and_follower_party_members() {
     let mut run = crate::dungeon_simulator::dps_parity::prepare_registered_player(66, 1).unwrap();
     let tank = run.actor;
     let healer =
         crate::dungeon_simulator::dps_parity::spawn_second_reference_player(&mut run, 65).unwrap();
-    let party = crate::followers::simulator::spawn_party_for_reference_healer(
+    let party = crate::dungeon_simulator::healer_simc_replay::spawn_reference_party(
         run.app.world_mut(),
         tank,
         healer,
@@ -89,7 +134,7 @@ fn preservation_lifebind_aggregates_raw_healing_on_native_party() {
     let healer =
         crate::dungeon_simulator::dps_parity::spawn_second_reference_player(&mut run, 1468)
             .unwrap();
-    crate::followers::simulator::spawn_party_for_reference_healer(
+    crate::dungeon_simulator::healer_simc_replay::spawn_reference_party(
         run.app.world_mut(),
         tank,
         healer,
@@ -209,7 +254,7 @@ fn preservation_lifebind_transfers_periodic_overhealing() {
     let healer =
         crate::dungeon_simulator::dps_parity::spawn_second_reference_player(&mut run, 1468)
             .unwrap();
-    crate::followers::simulator::spawn_party_for_reference_healer(
+    crate::dungeon_simulator::healer_simc_replay::spawn_reference_party(
         run.app.world_mut(),
         tank,
         healer,
