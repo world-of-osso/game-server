@@ -25,12 +25,26 @@ fn owns_proc(spell: u32) -> bool {
     spell == TALENT
 }
 
-fn on_damage(world: &mut World, caster: Entity, target: Entity, spell: Option<u32>, amount: f32, periodic: bool) {
-    if periodic || spell.is_none() || amount <= 0.0
-        || !world.get::<ActiveSpec>(caster).is_some_and(|spec| spec.0 == 268)
+fn on_damage(
+    world: &mut World,
+    caster: Entity,
+    target: Entity,
+    spell: Option<u32>,
+    amount: f32,
+    periodic: bool,
+) {
+    if periodic
+        || spell.is_none()
+        || amount <= 0.0
+        || !world
+            .get::<ActiveSpec>(caster)
+            .is_some_and(|spec| spec.0 == 268)
         || !world.get::<TraitLoadout>(caster).is_some_and(|traits| {
-            traits.active_talent_spells().any(|talent| talent.spell_id == TALENT)
-        }) {
+            traits
+                .active_talent_spells()
+                .any(|talent| talent.spell_id == TALENT)
+        })
+    {
         return;
     }
     let now = combat::spell_cast::now(world);
@@ -40,9 +54,16 @@ fn on_damage(world: &mut World, caster: Entity, target: Entity, spell: Option<u3
     if world.get::<WalkProgress>(caster).unwrap().ready_at > now {
         return;
     }
-    let cooldown = f64::from(world.resource::<SpellStore>().get(TALENT)
-        .expect("native Walk with the Ox talent").aura_options.as_ref()
-        .expect("native Walk with the Ox proc options").proc_category_recovery_ms) / 1000.0;
+    let cooldown = f64::from(
+        world
+            .resource::<SpellStore>()
+            .get(TALENT)
+            .expect("native Walk with the Ox talent")
+            .aura_options
+            .as_ref()
+            .expect("native Walk with the Ox proc options")
+            .proc_category_recovery_ms,
+    ) / 1000.0;
     let coefficient = 0.0075 * f64::from(script_effect_value(world, caster, TALENT, 0));
     let mut progress = world.get_mut::<WalkProgress>(caster).unwrap();
     progress.ready_at = now + cooldown;

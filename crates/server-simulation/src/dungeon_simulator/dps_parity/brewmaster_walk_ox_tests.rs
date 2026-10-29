@@ -15,14 +15,22 @@ fn strikes_trigger_walk_with_the_ox() {
             let mut health = run.app.world_mut().get_mut::<Health>(target).unwrap();
             health.current = health.max;
         }
-        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 100780, Some(target), false).unwrap();
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 100780, Some(target), false)
+            .unwrap();
         for _ in 0..150 {
             run.app.update();
         }
     }
-    let events = &run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
-    assert!(events.iter().any(|event| event.spell_id == Some(1242373)
-        && event.kind == CombatLogKind::Damage
-        && event.target == Some(target.to_bits()) && event.amount > 0),
-        "eligible strikes must trigger the native Stomp");
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    assert!(
+        events.iter().any(|event| event.spell_id == Some(1242373)
+            && event.kind == CombatLogKind::Damage
+            && event.target == Some(target.to_bits())
+            && event.amount > 0),
+        "eligible strikes must trigger the native Stomp"
+    );
 }
