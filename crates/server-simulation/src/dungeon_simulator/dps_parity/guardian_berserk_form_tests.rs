@@ -4,6 +4,74 @@ use crate::auras::ActiveAuras;
 
 #[test]
 #[ignore = "requires Guardian profile and native world data"]
+fn guardian_star_cascade_uses_native_effectiveness() {
+    use shared::protocol::CombatLogKind;
+    let mut run = prepare_registered_player(104, 1).unwrap();
+    let actor = run.actor;
+    let target = run.targets[0];
+    engage(&mut run);
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 5487, Some(actor), false).unwrap();
+    for _ in 0..40 {
+        run.app.update();
+    }
+    let instance = run
+        .app
+        .world()
+        .get::<ActiveAuras>(actor)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 1271206 && aura.caster == actor)
+        .unwrap()
+        .instance_id;
+    assert!(crate::auras::set_effect_amount(
+        run.app.world_mut(),
+        actor,
+        instance,
+        1,
+        100.0
+    ));
+    run.app
+        .world_mut()
+        .resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .clear();
+    crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 197626, Some(target), 1);
+    for _ in 0..20 {
+        run.app.update();
+    }
+    let damage = |run: &Run| -> Vec<f32> {
+        run.app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .filter(|event| {
+                event.source == Some(actor.to_bits())
+                    && event.target == Some(target.to_bits())
+                    && event.spell_id == Some(197626)
+                    && event.kind == CombatLogKind::Damage
+            })
+            .map(|event| event.amount as f32 / if event.crit { 2.0 } else { 1.0 })
+            .collect()
+    };
+    let control = damage(&run);
+    assert_eq!(control.len(), 1);
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 77758, Some(target), false)
+        .unwrap();
+    for _ in 0..20 {
+        run.app.update();
+    }
+    let both = damage(&run);
+    assert_eq!(both.len(), 2, "guaranteed Cascade casts one native child");
+    let ratio = both[1] / control[0];
+    assert!(
+        (1.1..1.3).contains(&ratio),
+        "Cascade effectiveness {ratio}, expected 1.2"
+    );
+}
+
+#[test]
+#[ignore = "requires Guardian profile and native world data"]
 fn guardian_star_cascade_comes_from_foreground_landed_thrash() {
     use shared::protocol::CombatLogKind;
     let _seed = crate::random::seed_scope(70448);
