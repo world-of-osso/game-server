@@ -107,6 +107,7 @@ register_modules! {
     blood_rune_weapon: (2505, "modules/blood_rune_weapon.rs"),
     blood_reflection: (2507, "modules/blood_reflection.rs"),
     bloodied_blade: (2508, "modules/bloodied_blade.rs"),
+    blood_ossuary: (2509, "modules/blood_ossuary.rs"),
     cast_grants: (120, "modules/cast_grants.rs"),
     cast_relationships: (370, "modules/cast_relationships.rs"),
     cast_resets: (90, "modules/cast_resets.rs"),

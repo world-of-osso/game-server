@@ -1057,6 +1057,115 @@ mod tests {
 
     #[test]
     #[ignore = "requires canonical world database and MID2 Blood inputs"]
+    fn blood_ossuary_tracks_bone_shield_and_death_strike_cost() {
+        use server::test_support::healer_intake::{Hit, HitKind};
+        use shared::components::PowerType;
+        fn scenario(
+            stacks: usize,
+            lose_stack: bool,
+            selected: bool,
+            improved: bool,
+        ) -> (bool, f32) {
+            let mut run = super::super::prepare_registered_player(250, 1).unwrap();
+            let actor = run.actor;
+            let target = run.targets[0];
+            super::super::engage(&mut run);
+            if !selected {
+                let known = run
+                    .app
+                    .world()
+                    .get::<crate::class_progression::KnownSpells>(actor)
+                    .unwrap()
+                    .iter()
+                    .filter(|&id| id != 219786)
+                    .collect();
+                run.app
+                    .world_mut()
+                    .entity_mut(actor)
+                    .insert(crate::class_progression::KnownSpells::fixture(known));
+            }
+            crate::auras::remove_auras(
+                run.app.world_mut(),
+                actor,
+                crate::auras::RemoveReason::Cancelled,
+                |aura| {
+                    matches!(aura.spell_id, 195181 | 219788)
+                        || (!improved && aura.spell_id == 374277)
+                },
+            );
+            for _ in 0..stacks {
+                crate::auras::apply_aura(
+                    run.app.world_mut(),
+                    &crate::auras::AuraApplication {
+                        caster: actor,
+                        target: actor,
+                        spell_id: 195181,
+                        effect_mask: u32::MAX,
+                        source: crate::auras::AuraSource::Cast,
+                    },
+                );
+            }
+            if lose_stack {
+                let hit = Hit {
+                    tick: 0,
+                    source_guid: 0,
+                    pack: 0,
+                    target_slot: 0,
+                    school: 1,
+                    raw: 1000.0,
+                    level_scaling_factor: 1.0,
+                    kind: HitKind::Melee {
+                        hand: 0,
+                        outcome: "Hit".into(),
+                        level_difference: 0,
+                        critical_multiplier: 1.0,
+                        weapon_speed: 2.0,
+                    },
+                };
+                crate::combat::replay_healer_hit(run.app.world_mut(), target, actor, &hit).unwrap();
+                run.app.update();
+            }
+            let active = crate::auras::has_aura(run.app.world(), actor, 219788);
+            crate::spell_cast::powers::change_power(
+                run.app.world_mut(),
+                actor,
+                PowerType::RunicPower,
+                1000.0,
+            );
+            let before = crate::spell_cast::powers::power_value(
+                run.app.world(),
+                actor,
+                PowerType::RunicPower,
+            )
+            .unwrap()
+            .0;
+            crate::spell_cast::creature_cast(
+                run.app.world_mut(),
+                actor,
+                49998,
+                Some(target),
+                false,
+            )
+            .unwrap();
+            let after = crate::spell_cast::powers::power_value(
+                run.app.world(),
+                actor,
+                PowerType::RunicPower,
+            )
+            .unwrap()
+            .0;
+            (active, before - after)
+        }
+        assert_eq!(scenario(4, false, true, true), (false, 400.0));
+        assert_eq!(scenario(5, false, true, true), (true, 350.0));
+        assert_eq!(scenario(5, true, true, true), (false, 400.0));
+        assert_eq!(scenario(5, false, false, true), (false, 400.0));
+        assert_eq!(scenario(5, false, true, false), (true, 400.0));
+        assert_eq!(scenario(4, false, true, false), (false, 450.0));
+    }
+
+    #[test]
+    #[ignore = "requires canonical world database and MID2 Blood inputs"]
     fn blood_rune_spenders_earn_rune_mastery_strength() {
         use shared::components::PowerType;
         let _seed = crate::random::seed_scope(70448);
