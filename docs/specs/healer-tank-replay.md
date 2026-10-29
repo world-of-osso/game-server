@@ -77,18 +77,18 @@ Ten seeds give a survivor-count standard deviation of about 1.6 near 50%, so tie
 
 ## Ten-seed healed replay versus corrected SimC
 
-Measured on master `93a42f1f4a`: each tank's SimC trace, external dummy healing, native seeds 70448–70457. SimC is the mean of `collected_data.dtps` over ten measured iterations, after absorbs and including self-Stagger. `timeline_dmg_taken` sums run about 9% higher (consistent with 11 iterations divided by 10); do not use them. The corrected references remove SimC double applications and the Demon Spikes armor omission recorded in `healer-tank-replay/73.md`, `268.md` and `581.md`. Reports and `SUMMARY.md` are in `game-engine/data/diagnostics/healer-tank-replay/all-10seeds-93a42f1f4a/`.
+Measured on master `93a42f1f4a`: each tank's SimC trace, external dummy healing, native seeds 70448–70457. SimC is the mean of `collected_data.dtps` over ten measured iterations, after absorbs and including self-Stagger. `timeline_dmg_taken` sums run about 9% higher (consistent with 11 iterations divided by 10); do not use them. The corrected references remove SimC double applications and the Demon Spikes armor omission recorded in `healer-tank-replay/73.md`, `268.md` and `581.md`, and SimC's extra 100% Ursoc's Fury shield recorded in `104.md`. Reports and `SUMMARY.md` are in `game-engine/data/diagnostics/healer-tank-replay/all-10seeds-93a42f1f4a/`.
 
 | Tank | Native taken | SimC | Δ | Healed / unhealed deaths |
 |---|---:|---:|---:|---:|
-| 66 | 3,798,647 | 3,341,843 (canonical) | +13.7% | 0 / 4 |
+| 66 | 3,798,647 | 3,249,867 (solo, `fake_solidarity=0`) | +16.9% | 0 / 4 |
 | 73 | 3,010,673 | 2,951,770 (corrected) | +2.0% | 0 / 0 |
-| 104 | 2,132,723 | 0 (Ursoc's Fury shield bug) | n/a | 0 / 0 |
+| 104 | 2,132,723 | 1,901,807 (corrected: Ursoc's Fury percentage) | +12.1% | 0 / 0 |
 | 250 | 101,591 | 88,144 (canonical) | +15.3% | 0 / 0 |
 | 268 | 3,465,194 | 3,471,015 (corrected) | −0.2% | 0 / 0 |
 | 581 | 5,922,231 | 5,812,546 (corrected) | +1.9% | 0 / 0 |
 
-Blood absorbs about 8.69M of 8.79M pre-absorb intake, so its 13k difference is 0.03% of raw intake and within its 54k–154k seed range; a percentage gate is not meaningful there. Protection Paladin's pre-absorb intake matches the earlier run, but Holy Bulwark-led absorbs fell from 3.13M to 2.85M; that residual is not yet attributed.
+Blood absorbs about 8.69M of 8.79M pre-absorb intake, so its 13k difference is 0.03% of raw intake and within its 54k–154k seed range; a percentage gate is not meaningful there. The Protection Paladin native replay has no Solidarity, so its reference is the solo SimC run; the default reference adds fictional allied effects. Its absorb drop from 3.13M to 2.85M between runs is random Bulwark-application variation, and the remaining gap was missing Lightsmith armament rules; see [Protection Paladin](healer-tank-replay/66.md#mitigation-decomposition-and-lightsmith-fix-2026-10-29). The Guardian reference corrects SimC's Ursoc's Fury shield size; see [Guardian](healer-tank-replay/104.md#ursocs-fury-counterfactual-reference).
 
 ## SimC party-pressure trace
 
