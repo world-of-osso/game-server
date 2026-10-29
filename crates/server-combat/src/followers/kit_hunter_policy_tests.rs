@@ -80,6 +80,39 @@ pub(super) fn prepare_native_duck(
     (h, caster, pet)
 }
 
+#[test]
+fn hunter_follower_revives_its_dead_native_pet() {
+    let (mut h, caster, pet) = prepare_native_duck(70);
+    let max_health = h.app.world().get::<Health>(pet).unwrap().max;
+    let attacker = h.npc;
+    crate::combat::deal_direct_damage(h.app.world_mut(), attacker, pet, max_health + 1.0);
+    assert_eq!(h.app.world().get::<Health>(pet).unwrap().current, 0.0);
+    for _ in 0..200 {
+        super::update_ai(h.app.world_mut());
+        h.advance(1);
+        if h.app.world().get::<Health>(pet).unwrap().current > 0.0 {
+            break;
+        }
+    }
+    assert!(
+        h.inbox
+            .go
+            .iter()
+            .any(|event| event.caster == caster.to_bits() && event.spell_id == 982),
+        "ordinary Revive Pet cast completed"
+    );
+    assert_eq!(
+        h.app.world().get::<Health>(pet).unwrap().current,
+        max_health
+    );
+    assert!(
+        h.app
+            .world()
+            .get::<crate::combat::DeathState>(pet)
+            .is_none()
+    );
+}
+
 fn check_native_duck(level: u8) {
     prepare_native_duck(level);
 }

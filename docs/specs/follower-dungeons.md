@@ -182,6 +182,8 @@ Consuming Stomp374720 effect0 periodic-trigger aura kills its selected target on
 
 A destination-requiring spell cast at a supplied unit must initialize its absent destination from that unit, not the caster. An explicitly supplied destination retains priority; a cast without any unit uses the caster. Ground-target selectors still project onto native map geometry and fail if it is unavailable; no geometry/tolerance bypass.
 
+A Hunter follower with a dead current pet must request native Revive Pet982 and let its ordinary cast and resurrect effect restore that pet; an existing dead summon must not suppress preparation. The same native class check accepts an NPC follower's authenticated Hunter class.
+
 Azure book traversal must move all living same-copy owned pets, including Hunter Animal Companion, and discard their simulator travel; the primary stable pet is not the entire owned set. This does not establish a full follower clear.
 
 Copy-only `scripts/azure_encounter_bindings.py` validates TC primary identities, native encounter bits and 70448 Journal identities before preparing all four Azure encounter-credit rows; it requires the local boss scripts already bound. It must not write canonical world.db. This data preparation does not establish follower completion.

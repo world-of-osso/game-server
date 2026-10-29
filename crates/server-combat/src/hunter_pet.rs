@@ -631,7 +631,7 @@ fn first_dead_active_slot(world: &World, owner: Entity) -> Option<u8> {
 /// TC Spell.cpp RESURRECT_PET checks: reject a living summon, otherwise require
 /// a dead current pet or the first dead active record (not a stable-storage pet).
 fn check_revive_pet(world: &World, owner: Entity) -> Result<(), CastFailure> {
-    if world.get::<Player>(owner).map(|player| player.class) != Some(CLASS_HUNTER) {
+    if owner_class(world, owner) != Some(CLASS_HUNTER) {
         return Err(CastFailure::InvalidTarget);
     }
     if let Some(pet) = summoned_pet(world, owner) {

@@ -179,7 +179,14 @@ fn report_pet_preparation_failure(
 }
 
 pub(super) fn prepare_pet(world: &mut World, unit: Entity, follower: &Follower) -> bool {
-    if crate::hunter_pet::summoned_pet(world, unit).is_some() {
+    if let Some(pet) = crate::hunter_pet::summoned_pet(world, unit) {
+        if follower.profile.spec_id == 253 && !crate::spell_cast::targets::is_alive(world, pet) {
+            if let Err(failure) = crate::spell_cast::creature_cast(world, unit, 982, None, false) {
+                report_pet_preparation_failure(world, unit, format_args!("spell982: {failure:?}"));
+                return false;
+            }
+            return true;
+        }
         return false;
     }
     let spell = match follower.profile.spec_id {
