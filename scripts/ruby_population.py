@@ -29,6 +29,13 @@ def import_population(db, kyrakka_z, erkhart_z):
     if db.execute('SELECT 1 FROM content_creature WHERE id1=190484 AND map=2521').fetchone():
         raise ValueError('Kyrakka already has a placement')
     import_templates(db)
+    partner = db.execute('SELECT faction,unit_flags FROM content_creature_template WHERE entry=190485').fetchone()
+    kyrakka = db.execute('SELECT faction,unit_flags FROM content_creature_template WHERE entry=190484').fetchone()
+    if partner != (16, 64) or kyrakka not in ((0, 0), partner):
+        raise ValueError('Kyrakka or Erkhart faction/flags differ from the approved policy')
+    # LOG_OBSERVED_HOSTILE_ENCOUNTER_ACTOR: all four logs show hostile190484
+    # taking player damage; faction and flags come from her encounter partner.
+    db.execute('UPDATE content_creature_template SET faction=?,unit_flags=? WHERE entry=190484', partner)
     db.execute('UPDATE content_creature SET position_x=?,position_y=?,position_z=?,Comment=? WHERE guid=63521000',
                (*ERKHART_XY, erkhart_z, POLICY + f'; replaced xyz={placeholder[3:6]}; ' + placeholder[2]))
     db.execute('INSERT INTO content_creature(guid,id1,map,position_x,position_y,position_z,spawnDifficulties,Comment) VALUES(?,?,?,?,?,?,?,?)',
