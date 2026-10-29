@@ -1078,6 +1078,7 @@ fn compute_native_instance_stats(
         &template.scaling,
         &properties.bonus_list,
         &native.bonuses,
+        level,
     )
     .unwrap_or_else(|error| panic!("resolve equipped item bonuses: {error}"));
     let mut stats = server::item_instance::item_instance_stats(
