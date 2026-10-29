@@ -1,3 +1,7 @@
+#[path = "floor-resolver/anchors.rs"]
+mod anchors;
+
+use anchors::AnchorIndex;
 use rusqlite::{Connection, OpenFlags};
 use server_combat::floor_resolver::{FloorResolver, Request, Resolution};
 use std::{collections::HashMap, env, error::Error, fs::File, path::Path};
@@ -15,10 +19,11 @@ fn main() -> Result<(), Box<dyn Error>> {
         .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?
         .collect::<Result<_, _>>()?;
     let requests: Vec<Request> = serde_json::from_reader(File::open(&args[1])?)?;
+    let anchor_index = AnchorIndex::read(&db, &requests)?;
     let mut resolver = FloorResolver::new(Path::new(&args[3]), Path::new(&args[4]), wdts);
     let mut output: Vec<_> = requests
         .iter()
-        .map(|request| resolver.resolve(request))
+        .map(|request| resolver.resolve_with_hints(request, &[], &anchor_index.near(request)))
         .collect();
     loop {
         let known: HashMap<_, _> = requests
@@ -60,13 +65,13 @@ fn main() -> Result<(), Box<dyn Error>> {
                             hint.x.to_bits(),
                             hint.y.to_bits(),
                         ))
-                        .map(|&z| (hint.x, hint.y, z))
+                        .map(|&z| (hint.x, hint.y, z, hint.guid.clone()))
                 })
                 .collect();
             if anchors.is_empty() {
                 continue;
             }
-            let next = resolver.resolve_with_known_hints(request, &anchors);
+            let next = resolver.resolve_with_hints(request, &anchors, &anchor_index.near(request));
             if matches!(next, Resolution::Resolved { .. }) {
                 *result = next;
                 changed = true;

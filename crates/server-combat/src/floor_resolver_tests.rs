@@ -52,20 +52,68 @@ fn floor_resolver_neltharus_real_data() {
         ui_map_id: Some(1),
         neighbor_hints: Vec::new(),
     };
-    println!("Neltharus {:?}", resolver.resolve(&request));
+    let Resolution::Gap {
+        gap: Gap::NamedGap { candidates },
+    } = resolver.resolve(&request)
+    else {
+        panic!("stacked floors must remain ambiguous without hints");
+    };
+    assert!(candidates.iter().any(|floor| (floor.z - 0.0).abs() < 1.0));
+    assert!(candidates.iter().any(|floor| (floor.z - 133.6).abs() < 1.0));
+    for expected in [0.0, 133.6] {
+        let result = resolver.resolve_with_hints(
+            &request,
+            &[(-250.0, -550.0, expected, "unit".to_owned())],
+            &[],
+        );
+        assert!(
+            matches!(result, Resolution::Resolved { z, method: "neighbor_path", .. } if (z - expected).abs() < 1.0),
+            "{result:?}"
+        );
+    }
     let ruby_wdt: u32 = db
         .query_row("SELECT WdtFileDataID FROM map WHERE ID=2521", [], |row| {
             row.get(0)
         })
         .unwrap();
     let mut ruby = FloorResolver::new(geometry, nav, HashMap::from([(2521, ruby_wdt)]));
-    for (x, y) in [(1786.9, 27.945), (1785.13, 20.495), (1798.47, 36.11)] {
-        let request = Request {
-            map: 2521,
-            x,
-            y,
-            ..request.clone()
-        };
-        println!("Ruby {x} {y}: {:?}", ruby.resolve(&request));
-    }
+    let request = Request {
+        map: 2521,
+        x: 1786.9,
+        y: 27.945,
+        ..request
+    };
+    let anchors = [
+        AuthoredAnchor {
+            row: AnchorRow {
+                table: "tdb_creature",
+                guid: 9001671,
+            },
+            x: 1778.87,
+            y: 25.1024,
+            z: 312.687,
+        },
+        AuthoredAnchor {
+            row: AnchorRow {
+                table: "tdb_creature",
+                guid: 9001749,
+            },
+            x: 1781.53,
+            y: 18.532,
+            z: 313.228,
+        },
+    ];
+    let result = ruby.resolve_with_hints(&request, &[], &anchors);
+    assert!(
+        matches!(result, Resolution::Resolved { z, method: "authored_neighbor_anchor", .. } if (312.0..314.0).contains(&z)),
+        "{result:?}"
+    );
+    let mut conflicting = anchors.to_vec();
+    conflicting[1].z = 128.0;
+    assert!(matches!(
+        ruby.resolve_with_hints(&request, &[], &conflicting),
+        Resolution::Gap {
+            gap: Gap::NamedGap { .. }
+        }
+    ));
 }

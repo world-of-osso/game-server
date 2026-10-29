@@ -34,11 +34,34 @@ pub struct Request {
     pub neighbor_hints: Vec<Hint>,
 }
 
+#[derive(Clone, Debug, Serialize)]
+pub struct AnchorRow {
+    pub table: &'static str,
+    pub guid: i64,
+}
+
+#[derive(Clone, Debug)]
+pub struct AuthoredAnchor {
+    pub row: AnchorRow,
+    pub x: f32,
+    pub y: f32,
+    pub z: f32,
+}
+
 #[derive(Debug, Serialize)]
 #[serde(untagged)]
 pub enum Resolution {
-    Resolved { z: f32, method: &'static str },
-    Gap { gap: Gap },
+    Resolved {
+        z: f32,
+        method: &'static str,
+        #[serde(skip_serializing_if = "Vec::is_empty")]
+        anchor_rows: Vec<AnchorRow>,
+        #[serde(skip_serializing_if = "Vec::is_empty")]
+        hint_ids: Vec<String>,
+    },
+    Gap {
+        gap: Gap,
+    },
 }
 
 #[derive(Debug, Serialize)]
@@ -92,13 +115,14 @@ impl FloorResolver {
     }
 
     pub fn resolve(&mut self, request: &Request) -> Resolution {
-        self.resolve_with_known_hints(request, &[])
+        self.resolve_with_hints(request, &[], &[])
     }
 
-    pub fn resolve_with_known_hints(
+    pub fn resolve_with_hints(
         &mut self,
         request: &Request,
-        known_hints: &[(f32, f32, f32)],
+        known_hints: &[(f32, f32, f32, String)],
+        authored: &[AuthoredAnchor],
     ) -> Resolution {
         let candidates = match self.candidates(request.map, request.x, request.y) {
             Ok(candidates) => candidates,
@@ -112,18 +136,26 @@ impl FloorResolver {
             return Resolution::Resolved {
                 z: candidates[0].z,
                 method: "single_candidate",
+                anchor_rows: Vec::new(),
+                hint_ids: Vec::new(),
             };
+        }
+        if !authored.is_empty() {
+            return self.resolve_authored(request, candidates, authored);
         }
         let mut matching = vec![false; candidates.len()];
         let mut anchors = known_hints.to_vec();
         for hint in &request.neighbor_hints {
             if let Ok(hint_floors) = self.candidates(request.map, hint.x, hint.y) {
                 if hint_floors.len() == 1 {
-                    anchors.push((hint.x, hint.y, hint_floors[0].z));
+                    anchors.push((hint.x, hint.y, hint_floors[0].z, hint.guid.clone()));
                 }
             }
         }
-        for (x, y, z) in anchors {
+        let mut matching_hints: Vec<Vec<String>> = vec![Vec::new(); candidates.len()];
+        let mean_hint_z =
+            anchors.iter().map(|anchor| anchor.2).sum::<f32>() / anchors.len().max(1) as f32;
+        for (x, y, z, hint_id) in anchors {
             let start = point(x, y, z);
             let max_distance = (start - point(request.x, request.y, z)).length() * 3.0 + 15.0;
             let nav = self.maps.get_mut(&request.map).unwrap();
@@ -137,6 +169,9 @@ impl FloorResolver {
                             .sum();
                         if length <= max_distance {
                             matching[index] = true;
+                            if !hint_id.is_empty() {
+                                matching_hints[index].push(hint_id.clone());
+                            }
                         }
                     }
                     Err(error) if error.starts_with("unreachable target") => {}
@@ -153,10 +188,109 @@ impl FloorResolver {
             .enumerate()
             .filter(|(_, matched)| **matched)
             .collect();
-        if selected.len() == 1 {
+        if let (Some(first), Some(last)) = (selected.first(), selected.last()) {
+            if candidates[last.0].z - candidates[first.0].z <= navigation::AGENT_CLIMB {
+                let index = selected
+                    .iter()
+                    .map(|entry| entry.0)
+                    .min_by(|a, b| {
+                        (candidates[*a].z - mean_hint_z)
+                            .abs()
+                            .total_cmp(&(candidates[*b].z - mean_hint_z).abs())
+                    })
+                    .unwrap();
+                return Resolution::Resolved {
+                    z: candidates[index].z,
+                    method: "neighbor_path",
+                    anchor_rows: Vec::new(),
+                    hint_ids: matching_hints[index].clone(),
+                };
+            }
+        }
+        Resolution::Gap {
+            gap: Gap::NamedGap { candidates },
+        }
+    }
+
+    fn resolve_authored(
+        &mut self,
+        request: &Request,
+        candidates: Vec<Floor>,
+        anchors: &[AuthoredAnchor],
+    ) -> Resolution {
+        let min = anchors
+            .iter()
+            .map(|anchor| anchor.z)
+            .fold(f32::INFINITY, f32::min);
+        let max = anchors
+            .iter()
+            .map(|anchor| anchor.z)
+            .fold(f32::NEG_INFINITY, f32::max);
+        if max - min > navigation::AGENT_CLIMB {
+            return Resolution::Gap {
+                gap: Gap::NamedGap { candidates },
+            };
+        }
+        let mean = anchors.iter().map(|anchor| anchor.z).sum::<f32>() / anchors.len() as f32;
+        let nav = self.maps.get_mut(&request.map).unwrap();
+        let mut matches = Vec::new();
+        for candidate in &candidates {
+            if (candidate.z - mean).abs() > navigation::AGENT_CLIMB {
+                continue;
+            }
+            let end = point(request.x, request.y, candidate.z);
+            let mut connected = true;
+            for anchor in anchors {
+                let start = point(anchor.x, anchor.y, anchor.z);
+                match nav.floor_polygon(start) {
+                    Ok(Some(_)) => {}
+                    Ok(None) => {
+                        connected = false;
+                        break;
+                    }
+                    Err(error) => {
+                        return Resolution::Gap {
+                            gap: Gap::MissingGeometry { error },
+                        };
+                    }
+                }
+                let max_distance =
+                    (start - point(request.x, request.y, anchor.z)).length() * 3.0 + 15.0;
+                match nav.complete_path(start, end) {
+                    Ok(path)
+                        if path
+                            .windows(2)
+                            .map(|pair| pair[0].distance(pair[1]))
+                            .sum::<f32>()
+                            <= max_distance => {}
+                    Ok(_) => {
+                        connected = false;
+                        break;
+                    }
+                    Err(error) if error.starts_with("unreachable target") => {
+                        connected = false;
+                        break;
+                    }
+                    Err(error) => {
+                        return Resolution::Gap {
+                            gap: Gap::MissingGeometry { error },
+                        };
+                    }
+                }
+            }
+            if connected {
+                matches.push(candidate);
+            }
+        }
+        if let Some(candidate) = matches
+            .into_iter()
+            .min_by(|a, b| (a.z - mean).abs().total_cmp(&(b.z - mean).abs()))
+        {
             return Resolution::Resolved {
-                z: candidates[selected[0].0].z,
-                method: "neighbor_path",
+                z: candidate.z,
+                method: "authored_neighbor_anchor",
+                anchor_rows: anchors.iter().map(|anchor| anchor.row.clone()).collect(),
+                hint_ids: Vec::new(),
             };
         }
         Resolution::Gap {
