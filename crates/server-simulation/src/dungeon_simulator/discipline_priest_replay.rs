@@ -5,7 +5,9 @@ use super::dps_parity::literal_rotation::{
     execution::{NativeAction, Prepared},
 };
 use super::healer_simc_replay::Policy;
-use crate::simc_apl_native::{Bindings, Encounter, FightStyle, NativeFacts};
+use crate::simc_apl_native::{
+    Bindings, DotRefresh, DotRefreshPolicy, Encounter, FightStyle, NativeFacts, native_dot_spell,
+};
 use bevy::prelude::{Entity, World};
 use server::simc_apl::{Action, ActionFacts, Facts, Program};
 use shared::components::{ActiveSpec, Health, PowerType};
@@ -42,6 +44,14 @@ pub(super) fn prepare(
         actions: SPELLS.iter().map(|(n, id, _)| ((*n).into(), *id)).collect(),
         resources: [("mana".into(), PowerType::Mana)].into(),
         buffs: [("shadow_word_pain".into(), 589)].into(),
+        dot_refresh: [(
+            "shadow_word_pain".into(),
+            DotRefresh {
+                resolve: native_dot_spell,
+                policy: DotRefreshPolicy::Pandemic,
+            },
+        )]
+        .into(),
         global_cooldown_spell: 17,
         ..Default::default()
     };
