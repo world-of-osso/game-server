@@ -28,7 +28,7 @@ Read-only canonical database and log census, 2026-10-28. Counts are raw GUID obs
 | The Blinding Vale | 2859 | 8 | 3,499 | 73 | 0 | 216 |
 | Voidscar Arena | 2923 | 8 | 4,980 | 70 | 0 | 198 |
 
-The current extraction has 266 encounter pulls, including 253 successful pulls. A copy-only run inserted 1,214 source-tagged rows; read-only comparison found no pre-existing TDB or content creature rows missing, and SQLite `quick_check` passed. The sole multi-run pre-engagement movement candidate is Ghostly Brute135231 on map1762; all nine floor results are ambiguous, so no navmesh path was qualified or imported. The coverage snapshot is not a claim that a dungeon is complete.
+The current extraction has 266 encounter pulls, including 253 successful pulls. A superseded copy-only run inserted 1,214 source-tagged rows; read-only comparison found no pre-existing TDB or content creature rows missing and SQLite `quick_check` passed, but a later review found three near-authored duplicates. The importer now excludes these; a fresh-copy rerun is pending. The sole multi-run pre-engagement movement candidate is Ghostly Brute135231 on map1762; all nine floor results are ambiguous, so no navmesh path was qualified or imported. The coverage snapshot is not a claim that a dungeon is complete.
 
 ## Sources
 
