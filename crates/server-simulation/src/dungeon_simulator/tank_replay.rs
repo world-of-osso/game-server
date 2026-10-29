@@ -60,6 +60,20 @@ pub(super) fn bulwark_observations(world: &World, tank: Entity) -> (usize, usize
     (starts, refreshes, procs)
 }
 
+pub(super) fn resource_ledger_entry(
+    event: &shared::protocol::CombatLogEvent,
+    tank: Entity,
+    time: f64,
+) -> Option<Value> {
+    if event.target != Some(tank.to_bits()) || event.kind != CombatLogKind::Energize {
+        return None;
+    }
+    let spell = event.spell_id?;
+    Some(
+        json!({"time_seconds":time,"spell_id":spell,"gained":event.amount-event.overflow,"wasted":event.overflow}),
+    )
+}
+
 fn self_periodic_damage(event: &shared::protocol::CombatLogEvent, tank: Entity) -> bool {
     event.kind == CombatLogKind::Damage && event.periodic && event.source == Some(tank.to_bits())
 }
@@ -620,6 +634,8 @@ fn replay_registered_run_with_healing(
     let mut periodic_ticks_by_spell = BTreeMap::<u32, usize>::new();
     let mut outgoing_damage_by_spell = BTreeMap::<u32, i64>::new();
     let mut energize_by_spell = BTreeMap::<u32, (i64, i64)>::new();
+    let mut energize_timeline = Vec::new();
+    let mut cast_timeline = Vec::new();
     let mut damage_taken_by_kind = BTreeMap::<&str, f64>::new();
     let mut outcomes = BTreeMap::<String, usize>::new();
     let mut incoming_before_absorbs = BTreeMap::<&str, f64>::new();
@@ -915,6 +931,7 @@ fn replay_registered_run_with_healing(
                 && let Some(spell_id) = event.spell_id
             {
                 *casts.entry(spell_id).or_default() += 1;
+                cast_timeline.push(json!({"time_seconds":elapsed,"spell_id":spell_id}));
             }
             if event.target == Some(source.to_bits())
                 && event.kind == CombatLogKind::Damage
@@ -946,6 +963,9 @@ fn replay_registered_run_with_healing(
                 let totals = energize_by_spell.entry(spell_id).or_default();
                 totals.0 += i64::from(event.amount);
                 totals.1 += i64::from(event.amount - event.overflow);
+                energize_timeline.push(
+                    resource_ledger_entry(event, tank, elapsed).expect("target energize has spell"),
+                );
             }
             if event.target != Some(tank.to_bits()) {
                 continue;
@@ -1099,6 +1119,8 @@ fn replay_registered_run_with_healing(
     report["holy_bulwark_applications"] =
         json!({"starts": bulwark_starts, "refreshes": bulwark_refreshes});
     report["divine_inspiration_procs"] = json!(divine_inspiration_procs);
+    report["energize_timeline"] = json!(energize_timeline);
+    report["cast_timeline"] = json!(cast_timeline);
     report["precombat_casts"] = json!(precombat_casts);
     report["outgoing_damage_by_spell"] = json!(outgoing_damage_by_spell);
     report["resource_spent_by_spell"] = json!(resource_spent_by_spell);

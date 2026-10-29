@@ -844,6 +844,38 @@ fn divine_guidance_stacks_on_spenders_and_is_consumed_by_consecration() {
 }
 
 #[test]
+#[ignore = "uses real Protection Judgment Holy Power overflow"]
+fn replay_resource_ledger_records_judgment_overflow() {
+    use crate::spell_cast::powers::PowerPools;
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::components::PowerType;
+    use shared::protocol::CombatLogKind;
+    let mut run = super::dps_parity::prepare_registered_player(66, 1).unwrap();
+    let actor = run.actor;
+    let target = run.targets[0];
+    run.app
+        .world_mut()
+        .get_mut::<PowerPools>(actor)
+        .unwrap()
+        .get_mut(PowerType::HolyPower)
+        .unwrap()
+        .current = 5.0;
+    let start = run.app.world().resource::<ObservedCombatEvents>().0.len();
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 275779, Some(target), false)
+        .unwrap();
+    let event = run.app.world().resource::<ObservedCombatEvents>().0[start..]
+        .iter()
+        .find(|event| event.spell_id == Some(220637) && event.kind == CombatLogKind::Energize)
+        .expect("Judgment grants Holy Power");
+    assert_eq!(
+        super::tank_replay::resource_ledger_entry(event, actor, 3.25),
+        Some(serde_json::json!({
+            "time_seconds":3.25,"spell_id":220637,"gained":0,"wasted":1
+        }))
+    );
+}
+
+#[test]
 #[ignore = "uses the MID2 Protection precombat plan and raid buffs"]
 fn tank_raid_buffs_apply_before_precombat_bulwark_snapshot() {
     let _seed = crate::random::seed_scope(70448);
