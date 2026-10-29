@@ -124,14 +124,30 @@ pub(super) fn void_shield_plan(
     )
     .expect("Void Shield catalog area selectors");
     units.retain(|&unit| unit != primary);
-    units.sort_by_key(|&unit| {
-        world.get::<ActiveAuras>(unit).is_some_and(|auras| {
-            auras
-                .iter()
-                .any(|aura| aura.spell_id == ATONEMENT && aura.caster == caster)
-        })
-    });
     let count = script_effect_value(world, caster, VOID_SHIELD, 1) as usize;
+    if units.len() + 1 > count {
+        use rand::seq::SliceRandom;
+        // SimC76f8118 sc_priest.cpp:2110-2165: unmarked allies precede marked allies;
+        // shuffle excess candidates within each group, but never the primary.
+        units.sort_by_key(|&unit| {
+            world.get::<ActiveAuras>(unit).is_some_and(|auras| {
+                auras
+                    .iter()
+                    .any(|aura| aura.spell_id == ATONEMENT && aura.caster == caster)
+            })
+        });
+        let marked = units.partition_point(|&unit| {
+            !world.get::<ActiveAuras>(unit).is_some_and(|auras| {
+                auras
+                    .iter()
+                    .any(|aura| aura.spell_id == ATONEMENT && aura.caster == caster)
+            })
+        });
+        if marked + 1 > count {
+            units[..marked].shuffle(&mut rand::thread_rng());
+        }
+        units[marked..].shuffle(&mut rand::thread_rng());
+    }
     units.truncate(count.saturating_sub(1));
     units.insert(0, primary);
     vec![PlannedEffect {
