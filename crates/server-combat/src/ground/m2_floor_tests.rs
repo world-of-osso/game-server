@@ -121,6 +121,29 @@ fn neltharus_follower_keeps_upper_floor_at_recorded_drop() {
 }
 
 #[test]
+#[ignore = "requires canonical Neltharus ground assets"]
+fn neltharus_stationary_follower_keeps_floor_at_sargha_seam() {
+    let mut ground = GroundMap::new(&data_dir(), HashMap::from([(2519, 4289128)]));
+    let map = crate::maps::InMap::continent(2519);
+    let from = shared::components::Position {
+        x: -89.583984,
+        y: 72.513824,
+        z: 828.08673,
+    };
+    let to = shared::components::Position {
+        x: from.x,
+        y: 72.46268,
+        z: from.z,
+    };
+    let height =
+        crate::creature_ai::follower_footprint_ground(Some(&mut ground), Some(&map), from, to);
+    assert!(
+        (height - from.y).abs() < 0.01,
+        "stationary follower fell to {height}"
+    );
+}
+
+#[test]
 fn follower_footprint_does_not_bridge_a_wide_drop() {
     let mut ground = GroundMap::flat_arena(94.0);
     let map = crate::maps::InMap::continent(2519);
