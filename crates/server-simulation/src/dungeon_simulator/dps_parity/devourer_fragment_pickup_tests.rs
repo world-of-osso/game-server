@@ -124,6 +124,26 @@ fn soul_sigils_grants_one_fragment_per_sigil_with_enemy_hits() {
 }
 
 #[test]
+#[ignore = "requires native spec581 player profile and DB"]
+fn soul_splitter_rolls_once_for_each_three_fragment_batch() {
+    let _seed = crate::random::seed_scope(70_448);
+    let (profile, traits) = read_reference(581).unwrap();
+    let identity = inputs::read_actor(&profile).unwrap();
+    let mut run = prepare_reference(profile, &traits, 1, identity).unwrap();
+    let actor = run.actor;
+    assert!(crate::auras::has_aura(run.app.world(), actor, 1266330));
+    for _ in 0..500 {
+        soul_fragments::spawn_many(run.app.world_mut(), actor, FragmentKind::Lesser, 3, false).unwrap();
+        for _ in 0..12 {
+            run.app.update();
+        }
+    }
+    let generated = soul_fragments::observation_counts(run.app.world(), actor).0;
+    let extra = generated - 1500;
+    assert!((8..=35).contains(&extra), "expected one 4% Soul Splitter roll per batch, got {extra} extra fragments");
+}
+
+#[test]
 #[ignore = "requires native spec1480 player profile and DB"]
 fn devourer_fragment_pickup_is_available_during_real_consume_cast() {
     let _seed = crate::random::seed_scope(70_448);
