@@ -614,8 +614,14 @@ mod tests {
                 shared::components::PowerType::Rage,
                 1000.0,
             );
-            crate::spell_cast::creature_cast(run.app.world_mut(), actor, 192081, Some(actor), false)
-                .unwrap();
+            crate::spell_cast::creature_cast(
+                run.app.world_mut(),
+                actor,
+                192081,
+                Some(actor),
+                false,
+            )
+            .unwrap();
             run.app.update();
             armor_by_stacks.push(armor(&run));
             for _ in 0..59 {
@@ -627,13 +633,20 @@ mod tests {
             run.app.update();
         }
         // 9.5 s: only the first cast has expired; a shared refresh would keep all three.
-        assert_eq!(ironfur(&run), 2, "casts at 3 s and 6 s are still live at 9.5 s");
+        assert_eq!(
+            ironfur(&run),
+            2,
+            "casts at 3 s and 6 s are still live at 9.5 s"
+        );
         for _ in 0..60 {
             run.app.update();
         }
         // 12.5 s: the cast at 3 s has expired too.
         assert_eq!(ironfur(&run), 1);
-        assert!((armor(&run) - armor_by_stacks[0]).abs() < 1.0, "one stack's armor remains");
+        assert!(
+            (armor(&run) - armor_by_stacks[0]).abs() < 1.0,
+            "one stack's armor remains"
+        );
     }
 
     #[test]
@@ -682,8 +695,14 @@ mod tests {
             for _ in 0..40 {
                 run.app.update();
             }
-            crate::spell_cast::creature_cast(run.app.world_mut(), actor, spell, Some(target), false)
-                .unwrap();
+            crate::spell_cast::creature_cast(
+                run.app.world_mut(),
+                actor,
+                spell,
+                Some(target),
+                false,
+            )
+            .unwrap();
         }
         for _ in 0..10 {
             run.app.update();

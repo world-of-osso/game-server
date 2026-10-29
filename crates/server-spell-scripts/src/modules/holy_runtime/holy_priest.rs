@@ -188,15 +188,25 @@ pub(super) fn piety(
     }
 }
 
-fn distribute_piety(world: &mut World, caster: Entity, aura: &combat::auras::AuraInstance, index: u8) {
-    use combat::spell_cast::{effects, targets::{self, Relation}};
+fn distribute_piety(
+    world: &mut World,
+    caster: Entity,
+    aura: &combat::auras::AuraInstance,
+    index: u8,
+) {
+    use combat::spell_cast::{
+        effects,
+        targets::{self, Relation},
+    };
     use shared::components::Health;
     const TALENT: u32 = 1_246_802;
     const HEAL: u32 = 443_126;
     if index != 1 || aura.caster != caster {
         return;
     }
-    let amount = world.get_mut::<PietyPool>(caster).map_or(0.0, |mut pool| std::mem::take(&mut pool.0));
+    let amount = world
+        .get_mut::<PietyPool>(caster)
+        .map_or(0.0, |mut pool| std::mem::take(&mut pool.0));
     if amount <= 0.0 {
         return;
     }
@@ -251,7 +261,12 @@ const SMITE: u32 = 585;
 const MIRACLE_WORKER: u32 = 235587;
 const HOLY_WORDS: &[u32] = &[2050, 34861, 88625];
 
-fn clear_piety(world: &mut World, unit: Entity, _: &combat::auras::AuraInstance, _: combat::auras::RemoveReason) {
+fn clear_piety(
+    world: &mut World,
+    unit: Entity,
+    _: &combat::auras::AuraInstance,
+    _: combat::auras::RemoveReason,
+) {
     world.entity_mut(unit).remove::<PietyPool>();
 }
 
