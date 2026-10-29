@@ -4291,7 +4291,7 @@ fn take_cast_resources(
     }
     spend_costs(world, caster, costs);
     if let Some(mut observed) = world.get_mut::<ObservedResourcePayments>(caster) {
-        observed.0.extend(
+        observed.payments.extend(
             costs
                 .iter()
                 .filter(|(_, amount)| *amount > 0.0)

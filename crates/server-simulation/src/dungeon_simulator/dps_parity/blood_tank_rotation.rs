@@ -1763,7 +1763,7 @@ mod tests {
                 .world()
                 .get::<crate::spell_cast::ObservedResourcePayments>(actor)
                 .unwrap()
-                .0
+                .payments
                 .iter()
                 .filter(|(id, pool, _)| {
                     *id == 49998

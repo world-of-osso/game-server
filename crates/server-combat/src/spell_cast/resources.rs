@@ -14,7 +14,10 @@ const FEROCIOUS_BITE: u32 = 22568;
 
 /// Optional, per-caster record of paid costs and actual passive mana regeneration.
 #[derive(Component, Default)]
-pub struct ObservedResourcePayments(pub Vec<(u32, CostPool, f32)>, pub f64);
+pub struct ObservedResourcePayments {
+    pub payments: Vec<(u32, CostPool, f32)>,
+    pub mana_regenerated: f64,
+}
 
 /// CalcPowerCost's optional branch: signed, power/family-masked caster total.
 pub(super) fn additional_optional_cost(

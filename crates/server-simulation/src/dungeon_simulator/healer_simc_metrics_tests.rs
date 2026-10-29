@@ -43,7 +43,7 @@ fn healer_report_records_real_mana_payment_by_spell() {
             .world()
             .get::<crate::spell_cast::ObservedResourcePayments>(h.caster)
             .unwrap()
-            .0,
+            .payments,
         h.inbox.go,
         h.app.world().get::<crate::stats::CharacterStats>(h.caster)
     );
