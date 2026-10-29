@@ -2,8 +2,9 @@
 use super::combat;
 use bevy::prelude::*;
 use combat::auras::{
-    ActiveAuras,
+    ActiveAuras, AuraInstance,
     procs::{self, AuraEvent, PROC_HIT_DODGE, PROC_HIT_PARRY},
+    scripts::AuraScripts,
 };
 use combat::spell_cast::{self, script_registry::SpellScriptHook};
 
@@ -11,11 +12,22 @@ const TRIGGER: u32 = 5301;
 const BUFF: u32 = 5302;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
-    SpellScriptHook::OwnsPolicyProc(|spell| matches!(spell, TRIGGER | 392792)),
+    SpellScriptHook::OwnsPolicyProc(|spell| spell == TRIGGER),
+    SpellScriptHook::LateAuraRegistration(register_frothing),
     SpellScriptHook::AfterSpellPayment(refund_frothing_berserker),
     SpellScriptHook::AfterWhiteImpact(on_white_impact),
     SpellScriptHook::AuraEvent(on_incoming_event),
 ];
+
+fn register_frothing(scripts: &mut AuraScripts) {
+    scripts.0.entry(392792).or_default().check_proc = Some(frothing_generic_proc);
+}
+
+fn frothing_generic_proc(world: &World, aura: &AuraInstance, _: &AuraEvent) -> bool {
+    world
+        .get::<shared::components::ActiveSpec>(aura.caster)
+        .is_none_or(|spec| spec.0 != 73)
+}
 
 fn refund_frothing_berserker(
     world: &mut World,
