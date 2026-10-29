@@ -308,6 +308,7 @@ register_modules! {
     midnight_item_damage: (1000, "modules/midnight_item_damage.rs"),
     midnight_stat_items: (1000, "modules/midnight_stat_items.rs"),
     midnight_stormbound: (1000, "modules/midnight_stormbound.rs"),
+    soulcoiler_ritual: (1000, "modules/soulcoiler_ritual.rs"),
     midnight_tendril: (1000, "modules/midnight_tendril.rs"),
     mistweaver_ancient_teachings: (2700, "modules/mistweaver_ancient_teachings.rs"),
     mistweaver_mana_tea: (2700, "modules/mistweaver_mana_tea.rs"),
