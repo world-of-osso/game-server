@@ -1673,6 +1673,20 @@ mod tests {
                 "Blood Beast damage {spell:?}"
             );
         }
+        let swings = events
+            .iter()
+            .filter(|event| {
+                event.source == Some(beast.to_bits())
+                    && event.target == Some(target.to_bits())
+                    && event.spell_id.is_none()
+                    && event.kind == CombatLogKind::Damage
+                    && event.amount > 0
+            })
+            .count();
+        assert!(
+            swings >= 8,
+            "Blood Beast should keep swinging for its ten-second lifetime, got {swings}"
+        );
         assert!(
             events
                 .iter()
