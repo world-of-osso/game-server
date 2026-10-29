@@ -15,7 +15,7 @@ def timestamp_value(value):
         tzinfo=timezone(sign * timedelta(hours=int(offset))))
 
 
-def prepare(runs, clusters, requests, resolved):
+def prepare(runs, clusters, requests, resolved, packs=()):
     if len(requests) != len(resolved):
         raise ValueError('floor response count does not match frozen requests')
     floor = {}
@@ -32,6 +32,11 @@ def prepare(runs, clusters, requests, resolved):
                 outside.add((run['map'], unit['npc_id']))
         for encounter in run['encounters']:
             bosses.update((run['map'], npc) for npc in encounter.get('known_boss_npc_ids', []))
+    pack_by_unit = {}
+    for pack in packs:
+        for member in pack['members']:
+            key = (pack['file'], pack['run_start'], member['guid'])
+            pack_by_unit[key] = pack['npc_ids']
     records = []
     gaps = defaultdict(Counter)
     for cluster in clusters:
@@ -65,6 +70,9 @@ def prepare(runs, clusters, requests, resolved):
             'x': observation['x'], 'y': observation['y'], 'z': result['z'],
             'facing': observation['facing'], 'level': observation['level'], 'z_method': result['method'],
             'observation_event': observation['event'], 'observation_time': observation['time'],
+            'source_file': observation['file'], 'source_run_start': observation['run_start'],
+            'source_guid': observation['guid'],
+            'pack_npc_ids': pack_by_unit.get((observation['file'], observation['run_start'], observation['guid'])),
             'population_kind': 'likely_spawn', 'summoned': False, 'identity_ambiguous': False})
     return records, {str(map_id): dict(counts) for map_id, counts in sorted(gaps.items())}
 
@@ -78,8 +86,10 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ('census', 'clusters', 'requests', 'resolved', 'output', 'gaps'):
         parser.add_argument('--' + name, required=True, type=Path)
+    parser.add_argument('--packs', type=Path)
     args = parser.parse_args()
-    records, gaps = prepare(load(args.census)['runs'], load(args.clusters), load(args.requests), load(args.resolved))
+    packs = load(args.packs)['packs'] if args.packs else ()
+    records, gaps = prepare(load(args.census)['runs'], load(args.clusters), load(args.requests), load(args.resolved), packs)
     args.output.write_text(json.dumps(records, indent=2) + '\n')
     args.gaps.write_text(json.dumps(gaps, indent=2) + '\n')
 

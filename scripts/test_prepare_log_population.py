@@ -19,8 +19,11 @@ class PrepareTest(unittest.TestCase):
                    'observations': [observation]}
         request = {'file': 'a', 'run_start': 'start', 'guid': guid, 'map': 2521,
                    'x': 10, 'y': 20, 'ui_map_id': 2095}
-        records, gaps = module.prepare([run], [cluster], [request], [{'z': 30, 'method': 'single_candidate'}])
+        packs = [{'file': 'a', 'run_start': 'start', 'npc_ids': [123, 456], 'members': [{'guid': guid}]}]
+        records, gaps = module.prepare([run], [cluster], [request], [{'z': 30, 'method': 'single_candidate'}], packs)
         self.assertEqual((records[0]['x'], records[0]['z'], records[0]['z_method']), (10, 30, 'single_candidate'))
+        self.assertEqual(records[0]['pack_npc_ids'], [123, 456])
+        self.assertEqual(records[0]['source_guid'], guid)
         self.assertEqual(records[0]['observation_event'], 'SPELL_DAMAGE')
         self.assertEqual(gaps, {})
         records, gaps = module.prepare([run], [cluster], [request], [{'gap': {'kind': 'named_gap', 'candidates': []}}])
