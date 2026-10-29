@@ -169,6 +169,9 @@ pub struct SpellInfo {
     /// Completed native empower stage passed into release spell/effect snapshots.
     #[serde(skip)]
     pub cast_empower_level: Option<u8>,
+    /// TC SpellValue custom base points for effect 0, after native base scaling.
+    #[serde(skip)]
+    pub cast_effect0_amount: Option<f32>,
     /// Scripted effectiveness on this cast's damage only, retained through flight.
     #[serde(skip)]
     pub cast_damage_multiplier: Option<f32>,

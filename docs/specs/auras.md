@@ -2,6 +2,10 @@
 
 Server-side aura runtime in `crates/server/src/auras/`: aura instances on active units, periodic effects, procs, spell and stat modifiers, removal and `UnitAuras` replication. See [auras](../wiki/systems/auras.md).
 
+## Triggered custom base points
+
+A triggered cast's explicit effect-0 amount replaces the already-scaled native base value. It must not be scaled again as creature spell damage. Preserve the override through missile and aura execution; ordinary casts retain their native scaling. TC a352b1fa `Spell.cpp:442,8731–8734`.
+
 ## Unit form display power
 
 Form display-power reconciliation applies to every native Unit, not only Player entities. Native NPC Cat Form selects its existing Energy pool so the real Ferocious Bite22568 power-burn effect can consume it. Player Cat behavior remains unchanged; NPC caster forms such as Moonkin retain their native Mana display. Form/aura/native-class precedence is preserved. Reconciliation must not add Player identity, fabricate pools, reseed resources or change separately justified player-client synchronization.

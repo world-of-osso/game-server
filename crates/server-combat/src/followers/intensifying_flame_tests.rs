@@ -17,6 +17,13 @@ const FIRE_BLAST: u32 = 108853;
 
 fn prepare_ignites(target_count: usize) -> (Harness, Entity, Vec<Entity>) {
     let (mut h, caster) = prepare_follower(209059, 63, 70);
+    let source = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    h.app
+        .insert_resource(crate::world_data::load_creature_spell_stats(&source));
     assert!(
         h.app
             .world()
@@ -70,6 +77,7 @@ fn assert_native_tick_produces_intensifying_flame(target_count: usize) {
         .find(|effect| effect.index == 1)
         .unwrap()
         .amount;
+    assert_eq!(percent, 30.0, "native Intensifying Flame percentage");
     let expected: Vec<_> = targets
         .iter()
         .map(|&target| {

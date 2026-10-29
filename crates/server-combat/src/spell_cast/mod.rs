@@ -4080,6 +4080,7 @@ pub fn cast_triggered_with_overrides(
             return false;
         };
         effect.base_points = amount;
+        spell.cast_effect0_amount = Some(amount);
     }
     // The existing missile snapshot clones the whole per-cast SpellInfo.
     launch_triggered_spell(world, caster, &spell, explicit, depth)
