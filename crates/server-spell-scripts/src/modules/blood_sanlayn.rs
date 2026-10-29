@@ -18,6 +18,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::EffectHandler(vampiric_heal_handler),
     SpellScriptHook::EffectEnabled(blood_vampiric_damage_effect),
     SpellScriptHook::AfterPolicyDirectDamage(infliction_of_sorrow),
+    SpellScriptHook::TargetFilter(limit_vampiric_targets),
 ];
 
 // SimC76f8118 sc_death_knight.cpp11325–11329: Blood's Vampiric Strike
@@ -119,6 +120,51 @@ fn infliction_of_sorrow(world: &mut World, ctx: &EffectCtx<'_>, target: Entity, 
             remaining * percent,
         );
     }
+}
+
+// SimC76f8118 sc_death_knight.cpp11234–11253: Blood Vampiric Strike
+// shares Heart Strike's target cap and Death and Decay bonus.
+fn limit_vampiric_targets(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    effect: u8,
+    primary: Option<Entity>,
+    targets: &mut Vec<Entity>,
+) {
+    if spell.id != 433895
+        || effect != 4
+        || !world
+            .get::<ActiveSpec>(caster)
+            .is_some_and(|spec| spec.0 == 250)
+    {
+        return;
+    }
+    let store = world.resource::<SpellStore>();
+    let heart = store.get(206930).expect("Blood Heart Strike");
+    let base = heart
+        .effects
+        .iter()
+        .find(|effect| effect.index == 1)
+        .expect("Heart Strike damage")
+        .chain_targets
+        .max(0) as usize;
+    let bonus = world
+        .get::<auras::ActiveAuras>(caster)
+        .and_then(|auras| {
+            auras
+                .iter()
+                .find(|aura| aura.spell_id == 188290 && aura.caster == caster)
+                .and_then(|aura| aura.effects.iter().find(|effect| effect.index == 2))
+                .map(|effect| effect.amount.max(0.0) as usize)
+        })
+        .unwrap_or(0);
+    if let Some(primary) = primary
+        && let Some(index) = targets.iter().position(|target| *target == primary)
+    {
+        targets.swap(0, index);
+    }
+    targets.truncate(base + bonus);
 }
 
 fn vampiric_heal_handler(spell: u32, index: u8) -> Option<EffectHandler> {
