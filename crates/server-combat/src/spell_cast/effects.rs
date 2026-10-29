@@ -2614,6 +2614,11 @@ pub fn apply_fixed_heal(world: &mut World, ctx: &EffectCtx, target: Entity, amou
     apply_resolved_heal(world, ctx, target, amount.max(0.0).round(), false, false);
 }
 
+/// Echo's pool already includes the originating heal's modifiers and critical result.
+pub fn apply_fixed_periodic_heal(world: &mut World, ctx: &EffectCtx, target: Entity, amount: f32) {
+    apply_resolved_heal(world, ctx, target, amount.max(0.0).round(), false, true);
+}
+
 fn apply_resolved_heal(
     world: &mut World,
     ctx: &EffectCtx,

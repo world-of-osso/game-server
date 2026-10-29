@@ -446,7 +446,11 @@ fn run_tick(world: &mut World, unit: Entity, spell: &SpellInfo, tick: &Tick) {
         ),
         PERIODIC_HEAL => {
             let amount = periodic_heal_amount(world, unit, spell, tick);
-            effects::apply_heal(world, &ctx, unit, amount, false, true);
+            if spell.id == super::echo_of_light::ECHO_HEAL {
+                effects::apply_fixed_periodic_heal(world, &ctx, unit, amount);
+            } else {
+                effects::apply_heal(world, &ctx, unit, amount, false, true);
+            }
         }
         OBS_MOD_HEALTH => effects::apply_heal(
             world,
