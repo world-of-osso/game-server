@@ -2195,7 +2195,8 @@ fn havoc_burning_blades_banks_crit_in_the_native_source_fraction() {
         advance(&mut run, 160);
         let ticks = damage(&run, Some(453177));
         assert_eq!(
-            ticks.len(), 3,
+            ticks.len(),
+            3,
             "native six-second residual must pay three ticks: {ticks:?}"
         );
         (hit, ticks.iter().map(|tick| i64::from(tick.amount)).sum())
