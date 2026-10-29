@@ -1995,8 +1995,8 @@ fn havoc_essence_break_native_hit_marks_enemy_and_strikes_proc_once_per_icd() {
 
 #[test]
 #[ignore = "requires prepared native spec577 player profile"]
-fn havoc_eternal_hunt_scales_only_last_dance_strikes() {
-    fn strikes(parent: u32, enabled: bool) -> [u64; 4] {
+fn havoc_eternal_hunt_damage_is_not_double_applied() {
+    fn strikes(parent: u32, enabled: bool, remove_aura: bool) -> [u64; 4] {
         let _seed = crate::random::seed_scope(70_448);
         let mut run = prepare_literal(577, 3).unwrap();
         preparation::finish_pending_setup(&mut run).unwrap();
@@ -2020,6 +2020,14 @@ fn havoc_eternal_hunt_scales_only_last_dance_strikes() {
                 .entity_mut(actor)
                 .insert(crate::class_progression::KnownSpells::fixture(spells));
         }
+        if remove_aura {
+            crate::auras::remove_auras(
+                run.app.world_mut(),
+                actor,
+                crate::auras::RemoveReason::Cancelled,
+                |aura| aura.spell_id == 1270901 && aura.caster == actor,
+            );
+        }
         run.app
             .world_mut()
             .get_mut::<crate::stats::CharacterStats>(actor)
@@ -2042,23 +2050,22 @@ fn havoc_eternal_hunt_scales_only_last_dance_strikes() {
         })
     }
     for parent in [188499, 210152] {
-        let baseline = strikes(parent, false);
-        let selected = strikes(parent, true);
+        let baseline = strikes(parent, false, false);
+        let selected = strikes(parent, true, false);
+        let unbuffed = strikes(parent, false, true);
         assert!(
             baseline.iter().all(|amount| *amount > 0),
             "real primary and secondary strikes must land: {baseline:?}"
         );
-        for index in [0, 2] {
+        for index in 0..4 {
             assert_eq!(
                 selected[index], baseline[index],
-                "earlier strike {parent}/{index}: baseline={baseline:?}, selected={selected:?}"
+                "selected talent must not add a second factor to strike {parent}/{index}"
             );
-        }
-        for index in [1, 3] {
-            let ratio = selected[index] as f64 / baseline[index] as f64;
+            let ratio = selected[index] as f64 / unbuffed[index] as f64;
             assert!(
                 (ratio - 1.2).abs() < 0.001,
-                "final strike {parent}/{index}: baseline={baseline:?}, selected={selected:?}"
+                "native Eternal Hunt modifier must still apply once: {parent}/{index} {selected:?} {unbuffed:?}"
             );
         }
     }
