@@ -27,6 +27,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::EnemyContextHit(blessed_hammer_hit),
     SpellScriptHook::TargetDamageMultiplier(valor_shield_multiplier),
     SpellScriptHook::TargetDamageMultiplier(ferren_marcus_multiplier),
+    SpellScriptHook::TargetDamageMultiplier(focused_enmity_multiplier),
     SpellScriptHook::AfterResolvedHits(consume_valor),
     SpellScriptHook::AfterResolvedHits(consume_bulwark_of_righteous_fury),
     SpellScriptHook::AreaFilter(blaze_area_filter),
@@ -267,6 +268,17 @@ fn selected(world: &World, caster: Entity, talent: u32) -> bool {
                 .active_talent_spells()
                 .any(|entry| entry.spell_id == talent)
         })
+}
+
+fn focused_enmity_multiplier(world: &World, caster: Entity, _: Entity, spell: &SpellInfo) -> f32 {
+    if spell.id != 31935
+        || !selected(world, caster, 378845)
+        || combat::combat_refs::active_opponents(world, caster).take(2).count() != 1
+    {
+        return 1.0;
+    }
+    // SimC76f8118 sc_paladin_protection.cpp: count encounter enemies, not chain hits.
+    1.0 + combat::spell_cast::scripts::script_effect_value(world, caster, 378845, 0) / 100.0
 }
 
 fn ferren_marcus_multiplier(
