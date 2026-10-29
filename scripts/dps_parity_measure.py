@@ -101,7 +101,9 @@ def main():
     for count in counts:
         log = (args.output / f"{args.spec}.native.{count}.log").read_text()
         # --nocapture interleaves the test's stderr summary with libtest's status line.
-        lines = [line[line.index("NATIVE_DPS"):] for line in log.splitlines() if "NATIVE_DPS" in line]
+        markers = ("NATIVE_DPS", "NATIVE_HEALER_REPLAY")
+        lines = [line[line.index(marker):] for line in log.splitlines()
+                 for marker in markers if marker in line]
         print(*lines or [f"spec{args.spec} targets{count}: FAILED, see {args.output}/{args.spec}.native.{count}.log"])
     print(json.dumps(timing, indent=2))
     return 1 if any(result["exit_code"] for result in results.values()) else 0
