@@ -2029,6 +2029,7 @@ enum StartCheck {
     IgnoreCastInProgress,
     IgnoreRange,
     ChannelDecision,
+    CooldownQueue { after_channel: bool },
     TankHealCapability,
     HealerDecision,
 }
@@ -2085,6 +2086,30 @@ pub fn read_native_cast_after_channel(
         Some(target),
         StartCheck::ChannelDecision,
     )
+}
+
+/// Read native eligibility for a foreground action whose cooldown is within SimC's queue window.
+/// The returned delay does not modify the native cooldown or cast the spell.
+pub fn read_native_cast_for_cooldown_queue(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    target: Entity,
+    after_channel: bool,
+) -> Result<f64, CastFailure> {
+    let delay = cooldown_query::cooldown_value(world, caster, spell, "remains")
+        .expect("native cooldown remains is supported");
+    if delay <= 0.0 || delay > 0.250 {
+        return Err(CastFailure::OnCooldown);
+    }
+    validate_start_with_policy(
+        world,
+        caster,
+        spell,
+        Some(target),
+        StartCheck::CooldownQueue { after_channel },
+    )?;
+    Ok(delay)
 }
 
 /// Read ordinary native admission using only the chosen pool's maximum in the
@@ -2231,7 +2256,12 @@ fn validate_start_with_policy(
         && !allows_cast_while_casting(world, caster, spell);
     if matches!(
         check,
-        StartCheck::Native | StartCheck::ResourceMax(_) | StartCheck::IgnoreRange
+        StartCheck::Native
+            | StartCheck::ResourceMax(_)
+            | StartCheck::IgnoreRange
+            | StartCheck::CooldownQueue {
+                after_channel: false
+            }
     ) && casting_blocks_start
     {
         return Err(CastFailure::InProgress);
@@ -2326,6 +2356,9 @@ fn validate_history(
     if spell.cast_ignore_cooldowns || scripts::relationship_ignores_cooldown(world, caster, spell) {
         return Ok(());
     }
+    if matches!(check, StartCheck::CooldownQueue { .. }) {
+        return Ok(());
+    }
     if history.on_cooldown(spell, now) {
         return Err(CastFailure::OnCooldown);
     }
@@ -2358,7 +2391,11 @@ fn permits_transient_gcd(
 ) -> bool {
     if matches!(
         check,
-        StartCheck::HealerDecision | StartCheck::ChannelDecision
+        StartCheck::HealerDecision
+            | StartCheck::ChannelDecision
+            | StartCheck::CooldownQueue {
+                after_channel: true
+            }
     ) {
         return true;
     }

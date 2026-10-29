@@ -10,6 +10,7 @@ use std::collections::{BTreeMap, BTreeSet};
 pub(crate) enum Execution {
     Snapshot,
     Wait(f64),
+    Queue(Box<Execution>, f64),
     CancelCast,
     PickupFragment(server::soul_fragments::PickupPlan),
     AutoAttack(Entity),
@@ -43,9 +44,11 @@ type ReadyActions = BTreeMap<ActionKey, Execution>;
 struct NativeReadiness {
     ready: bool,
     limited: Option<PowerType>,
+    queue_delay: Option<f64>,
 }
 
 pub(crate) struct Prepared {
+    now: f64,
     ready: ReadyActions,
     limits: BTreeMap<ActionKey, PowerType>,
     pickups: BTreeMap<
@@ -137,6 +140,7 @@ impl Prepared {
             .is_some_and(|history| history.has_active_gcd(crate::spell_cast::history_now(world)));
         let targets = native_targets(world, actor, targets);
         let mut prepared = Self {
+            now: crate::spell_cast::history_now(world),
             moving,
             cast_active: cast_active && !after_channel,
             pickup_cast_usable,
@@ -215,6 +219,10 @@ impl Prepared {
     /// Suppress every target context for a fixture-specific action policy.
     pub fn suppress_action(&mut self, name: &str) {
         self.ready.retain(|(action, _), _| action != name);
+    }
+
+    pub fn now(&self) -> f64 {
+        self.now
     }
 
     pub fn setup_pending(&self) -> bool {
@@ -331,7 +339,10 @@ impl Prepared {
         let Some(key) = action_key(action, equipment)? else {
             return Ok(None);
         };
-        Ok(self.ready.get(&key).cloned())
+        let execution = self.ready.get(&key).cloned();
+        let off_gcd = read_boolean_option(action, "use_off_gcd")?.unwrap_or(false)
+            || intrinsic_off_gcd(self.spec_id, &action.name);
+        Ok(execution.filter(|execution| !off_gcd || !matches!(execution, Execution::Queue(_, _))))
     }
 }
 
@@ -588,6 +599,7 @@ fn filter_primary_range(
     NativeReadiness {
         ready: false,
         limited: None,
+        queue_delay: None,
     }
 }
 
@@ -662,6 +674,10 @@ fn record_probe(
     execution: Execution,
 ) {
     if state.ready {
+        let execution = match state.queue_delay {
+            Some(delay) => Execution::Queue(Box::new(execution), delay),
+            None => execution,
+        };
         prepared.ready.insert(key.clone(), execution.clone());
         if default {
             prepared.ready.insert((key.0.clone(), None), execution);
@@ -872,11 +888,25 @@ fn native_readiness(
         Ok(_) => Ok(NativeReadiness {
             ready: true,
             limited: None,
+            queue_delay: None,
         }),
+        Err(crate::spell_cast::CastFailure::OnCooldown | crate::spell_cast::CastFailure::NoCharges) => {
+            match crate::spell_cast::read_native_cast_for_cooldown_queue(
+                world, actor, &spell, target, after_channel,
+            ) {
+                Ok(delay) => Ok(NativeReadiness {
+                    ready: true,
+                    limited: None,
+                    queue_delay: Some(delay),
+                }),
+                Err(reason) => refused_admission(id, reason),
+            }
+        }
         Err(crate::spell_cast::CastFailure::NotEnoughPower(_)) if after_channel => {
             Ok(NativeReadiness {
                 ready: false,
                 limited: None,
+                queue_delay: None,
             })
         }
         Err(crate::spell_cast::CastFailure::NotEnoughPower(power)) => {
@@ -886,6 +916,7 @@ fn native_readiness(
                 Ok(_) => Ok(NativeReadiness {
                     ready: false,
                     limited: Some(power),
+                    queue_delay: None,
                 }),
                 Err(reason) => refused_admission(id, reason),
             }
@@ -927,6 +958,7 @@ fn refused_admission(
         _ => Ok(NativeReadiness {
             ready: false,
             limited: None,
+            queue_delay: None,
         }),
     }
 }
@@ -975,7 +1007,7 @@ pub(crate) fn execute_row(
 
 pub(crate) fn execute(world: &mut World, actor: Entity, action: Execution) -> Result<(), String> {
     match action {
-        Execution::Snapshot | Execution::Wait(_) => {
+        Execution::Snapshot | Execution::Wait(_) | Execution::Queue(_, _) => {
             Err("snapshot and wait execution belong to the literal driver".into())
         }
         Execution::PickupFragment(plan) => server::soul_fragments::begin_pickup(world, actor, plan),

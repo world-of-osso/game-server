@@ -66,6 +66,7 @@ pub(crate) struct Driver {
     selected_precombat: bool,
     precombat_harmful_executed: bool,
     wait_until: Option<f64>,
+    queued: Option<(Action, Execution, f64)>,
     pub snapshot: Option<Value>,
     cancellation: Option<(Action, Expression, u32)>,
     pending_fragment_row: Option<usize>,
@@ -86,6 +87,7 @@ impl Driver {
             selected_precombat: false,
             precombat_harmful_executed: false,
             wait_until: None,
+            queued: None,
             snapshot: None,
             cancellation: None,
             pending_fragment_row: None,
@@ -127,6 +129,22 @@ impl Driver {
         prepared: &Prepared,
         equipment: &Equipment,
     ) -> Result<Option<(Action, Execution)>, String> {
+        if let Some((action, execution, deadline)) = self.queued.take() {
+            if prepared.now() < deadline {
+                self.queued = Some((action, execution, deadline));
+                return Ok(None);
+            }
+            if prepared.permits_row(&action)? && facts.target_ready(&action)? {
+                match prepared.execution_in(&action, equipment, &self.program)? {
+                    Some(Execution::Queue(_, delay)) => {
+                        self.queued = Some((action, execution, prepared.now() + delay));
+                    }
+                    Some(_) => return Ok(Some((action, execution))),
+                    None => {}
+                }
+            }
+            return Ok(None);
+        }
         if self.waiting(facts)? {
             return Ok(None);
         }
@@ -192,6 +210,10 @@ impl Driver {
         action: Action,
         execution: Execution,
     ) -> Result<(), String> {
+        if let Execution::Queue(execution, delay) = execution {
+            self.queued = Some((action, *execution, crate::spell_cast::history_now(world) + delay));
+            return Ok(());
+        }
         let ends_precombat = self.selected_precombat && harmful_execution(world, &execution)?;
         // SimC76f8118 player.cpp6150–6182 executes one harmful precombat
         // action but continues scanning and executes later non-harmful rows.
@@ -228,6 +250,7 @@ impl Driver {
         match execution {
             Execution::Snapshot => self.snapshot = Some(super::report::stats(world, actor)),
             Execution::Wait(deadline) => self.wait_until = Some(deadline),
+            Execution::Queue(_, _) => unreachable!("queued actions return before execution"),
             execution => execution::execute_row(world, actor, &action, execution)?,
         }
         if fragment_row.is_some() {
@@ -307,6 +330,7 @@ fn harmful_execution(world: &World, execution: &Execution) -> Result<bool, Strin
         }
         Execution::Snapshot
         | Execution::Wait(_)
+        | Execution::Queue(_, _)
         | Execution::CancelCast
         | Execution::PickupFragment(_)
         | Execution::Retarget(_) => return Ok(false),
