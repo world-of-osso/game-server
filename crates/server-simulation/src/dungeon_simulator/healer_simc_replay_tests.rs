@@ -115,6 +115,18 @@ fn preservation_lifebind_aggregates_raw_healing_on_native_party() {
     for _ in 0..2 {
         crate::spell_cast::cast_triggered(run.app.world_mut(), healer, 361509, Some(tank), 1);
     }
+    for _ in 0..3 {
+        run.app.update();
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0[start..];
+    assert!(!events.iter().any(|event| event.spell_id == Some(373268)));
+    for _ in 0..2 {
+        run.app.update();
+    }
     let events = &run
         .app
         .world()
@@ -136,15 +148,6 @@ fn preservation_lifebind_aggregates_raw_healing_on_native_party() {
         })
         .sum();
     assert!(raw > 0);
-    assert!(!events.iter().any(|event| event.spell_id == Some(373268)));
-    for _ in 0..5 {
-        run.app.update();
-    }
-    let events = &run
-        .app
-        .world()
-        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
-        .0[start..];
     let transfers: Vec<_> = events
         .iter()
         .filter(|event| {
