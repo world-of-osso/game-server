@@ -291,6 +291,11 @@ pub(crate) fn spawn_map_game_objects(
         spawn_game_object(commands, spawn, map);
         count += 1;
     }
+    if map.instance_id != 0 {
+        commands.queue(move |world: &mut World| {
+            crate::scripted_ai::door_data::update_doors(world, map)
+        });
+    }
     count
 }
 

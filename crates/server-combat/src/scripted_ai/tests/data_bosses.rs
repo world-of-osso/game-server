@@ -250,12 +250,6 @@ pub(crate) fn prepare_encounter_database(
         run_preparation_script("ruby_population.py", &["--db".as_ref(), path.as_os_str()]);
         return (directory, path);
     }
-    if encounter == "waxbeard" {
-        let db: [&std::ffi::OsStr; 2] = ["--db".as_ref(), path.as_os_str()];
-        run_preparation_script("import-vehicle-accessories.py", &db);
-        run_preparation_script("waxbeard_rider.py", &db);
-        return (directory, path);
-    }
     if ["gargolmar", "omor"].contains(&encounter) {
         let dump = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("../../data/reference/tdb1210/TDB_full_world_1210.26091_2026_09_09.sql");

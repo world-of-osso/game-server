@@ -30,6 +30,7 @@ pub(crate) mod caster_chase;
 pub mod creature_text;
 mod dailcry;
 pub(crate) mod darkness;
+pub(crate) mod door_data;
 mod doragosa;
 mod emberon;
 pub mod event_map;

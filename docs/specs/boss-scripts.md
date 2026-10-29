@@ -18,6 +18,12 @@
 - `VEHICLE_DEATH_CREDITS_BOUND_ACCESSORY` (ours): the vehicle's death completes the encounter a seated accessory is bound to (2829 bit3) and unsummons every accessory. TC exits a non-minion rider alive; retail ENCOUNTER_END follows the mount's death and the rider takes no damage (WCL WBYDm1N6JTZzCFnd).
 - `WAXBEARD_SEAT1_212279_TEMPLATE_ABSENT`: accessory 212279 (seat1) has no content template, so it is not summoned.
 
+## Darkflame Cleft doors
+
+- TC a352b1fa `LoadDoorData`/`UpdateDoorState` (`OpenWhenDone`): a listed door is READY (closed, collision on) until its encounter is DONE, then ACTIVE. Applied at copy fill (saved DONE included) and on every boss state change.
+- GO_CATACOMBS_GATE 430177 follows The Candle King (2787), per TC `instance_darkflame_cleft.cpp` doorData.
+- `WAXBEARD_GATE_UNLOCK_LOG_CORRELATED`: 11DU_CATACOMBS_GATE01 420154 (TDB state 1, no TC door data) follows Ol' Waxbeard (2829). WCL WBYDm1N6JTZzCFnd fight 3 has no player position past WoW y=-11.4 before the kill and pull 5 at y=-123 beyond the gate. The exact retail trigger is unsourced.
+
 ## TWW The Darkness logged actor and 55% end
 
 - TC a352b1fa has no The Darkness script and names 210797. WCL WBYDm1N6JTZzCFnd fight3 (pull16) shows actor 208747 fighting and 210797 with zero events; ENCOUNTER_END kill=true arrives at 54.87% health (3548121701/6466574065) with no death, matching LittleWigs 55%. Encounter 2788 (bit1) binds 208747.
