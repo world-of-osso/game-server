@@ -10,6 +10,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import retail_content
+from log_population_census import minimum_assignment
 
 POLICY = 'LOG_DERIVED_POPULATION'
 
@@ -74,10 +75,56 @@ def load_existing_positions(db, map_id, npc_id):
     return [position for position, count in sorted(counts.items()) for _ in range(count)]
 
 
+def eligible_position(record):
+    ambiguous = record.get('identity_ambiguous')
+    spread = record.get('candidate_spread_yards')
+    centroid_ok = (ambiguous is True and record.get('position_method') == 'candidate_centroid'
+                   and isinstance(spread, (int, float)) and not isinstance(spread, bool)
+                   and math.isfinite(spread) and 0 <= spread <= 5)
+    if record.get('population_kind') != 'likely_spawn' or record.get('summoned') is not False:
+        return None, 'SUMMON_OR_UNCLASSIFIED'
+    if not (ambiguous is False or centroid_ok):
+        return None, 'AMBIGUOUS_SPAWN_IDENTITY'
+    values = [record.get(key) for key in ('x', 'y', 'z', 'facing')]
+    if any(not isinstance(value, (int, float)) or isinstance(value, bool) or not math.isfinite(value) for value in values):
+        return None, 'POSITION_OR_FACING_UNAVAILABLE'
+    return values, None
+
+
+def match_existing(db, records, radius):
+    groups = defaultdict(list)
+    keys = set()
+    for record in records:
+        source_key = record['source_key']
+        if source_key in keys:
+            raise ValueError(f'duplicate source key {source_key}')
+        keys.add(source_key)
+        position, _ = eligible_position(record)
+        if position is not None:
+            groups[(int(record['map']), int(record['npc_id']))].append((source_key, position))
+    matched = set()
+    for (map_id, npc_id), entries in groups.items():
+        positions = load_existing_positions(db, map_id, npc_id)
+        if not positions:
+            continue
+        # A dummy costs more than every possible sum of real distances, so match
+        # count takes precedence over total distance.
+        penalty = (radius + 1) * (len(entries) + 1)
+        costs = []
+        for _, values in entries:
+            distances = [math.dist(values[:3], position) for position in positions]
+            costs.append([distance if distance <= radius else math.inf for distance in distances]
+                         + [penalty] * len(entries))
+        assignment, _ = minimum_assignment(costs)
+        for (source_key, _), column in zip(entries, assignment):
+            if column < len(positions):
+                matched.add(source_key)
+    return matched
+
+
 def import_population(destination, records, radius=10.0):
     destination = validate_copy(destination)
     report = defaultdict(lambda: {'imported': 0, 'already_present': 0, 'gaps': [], 'templates_from_tdb': set(), 'templates_absent': set()})
-    existing_positions = {}
     with sqlite3.connect(destination) as db:
         db.execute('BEGIN IMMEDIATE')
         db.execute('''CREATE TABLE IF NOT EXISTS log_derived_population (
@@ -90,6 +137,7 @@ def import_population(destination, records, radius=10.0):
             entry INTEGER NOT NULL, table_name TEXT NOT NULL, row_key TEXT NOT NULL, policy TEXT NOT NULL,
             PRIMARY KEY (table_name,row_key))''')
         next_guid = db.execute('SELECT COALESCE(MAX(guid), 0) + 1 FROM content_creature').fetchone()[0]
+        matched = match_existing(db, records, radius)
         for record in records:
             map_id, npc_id = int(record['map']), int(record['npc_id'])
             result = report[map_id]
@@ -100,30 +148,14 @@ def import_population(destination, records, radius=10.0):
             if existing:
                 result['already_present'] += 1
                 continue
-            ambiguous = record.get('identity_ambiguous')
-            centroid_ok = (ambiguous is True and record.get('position_method') == 'candidate_centroid'
-                           and isinstance(record.get('candidate_spread_yards'), (int, float))
-                           and math.isfinite(record['candidate_spread_yards'])
-                           and 0 <= record['candidate_spread_yards'] <= 5)
-            if record.get('population_kind') != 'likely_spawn' or record.get('summoned') is not False or not (ambiguous is False or centroid_ok):
-                result['gaps'].append({'source_key': source_key, 'reason': 'SUMMON_OR_AMBIGUOUS_IDENTITY'})
-                continue
-            values = [record.get(key) for key in ('x', 'y', 'z', 'facing')]
-            if any(not isinstance(value, (int, float)) or isinstance(value, bool) or not math.isfinite(value) for value in values):
-                result['gaps'].append({'source_key': source_key, 'reason': 'POSITION_OR_FACING_UNAVAILABLE'})
+            values, reason = eligible_position(record)
+            if values is None:
+                result['gaps'].append({'source_key': source_key, 'reason': reason})
                 continue
             x, y, z, facing = values
-            key = (map_id, npc_id)
-            if key not in existing_positions:
-                existing_positions[key] = load_existing_positions(db, map_id, npc_id)
-            candidates = [(sum((a-b)**2 for a, b in zip(position, (x, y, z))), index)
-                          for index, position in enumerate(existing_positions[key])]
-            if candidates:
-                distance, index = min(candidates)
-                if distance <= radius ** 2:
-                    existing_positions[key].pop(index)
-                    result['already_present'] += 1
-                    continue
+            if source_key in matched:
+                result['already_present'] += 1
+                continue
             if not db.execute('SELECT 1 FROM content_creature_template WHERE entry=?', (npc_id,)).fetchone():
                 gap = prepare_tdb_template(db, npc_id)
                 if gap:
