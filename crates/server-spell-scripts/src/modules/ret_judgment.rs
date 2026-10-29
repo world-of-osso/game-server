@@ -40,9 +40,13 @@ fn after_hit(world: &mut World, ctx: &EffectCtx, target: Entity, _: bool) {
     let ret = matches!(ctx.spell.id, 20271 | 406957 | 24275 | 1279408)
         && selected(world, ctx.caster, GREATER_JUDGMENT);
     let protection = matches!(ctx.spell.id, 275779 | 1241413)
-        && world.get::<ActiveSpec>(ctx.caster).is_some_and(|spec| spec.0 == 66)
+        && world
+            .get::<ActiveSpec>(ctx.caster)
+            .is_some_and(|spec| spec.0 == 66)
         && world.get::<TraitLoadout>(ctx.caster).is_some_and(|traits| {
-            traits.active_talent_spells().any(|spell| spell.spell_id == GREATER_JUDGMENT)
+            traits
+                .active_talent_spells()
+                .any(|spell| spell.spell_id == GREATER_JUDGMENT)
         });
     // SimC76f8118 sc_paladin.cpp:1436–1441 shares Judgment's producer across specs.
     if (ret || protection)

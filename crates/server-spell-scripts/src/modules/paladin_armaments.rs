@@ -359,13 +359,16 @@ fn grant_bulwark_of_righteous_fury(
         return;
     }
     // SimC76f8118 sc_paladin_protection.cpp:228–229 grants a stack per Shield impact.
-    combat::auras::apply_aura(world, &AuraApplication {
-        caster: ctx.caster,
-        target: ctx.caster,
-        spell_id: 386652,
-        effect_mask: u32::MAX,
-        source: AuraSource::Cast,
-    });
+    combat::auras::apply_aura(
+        world,
+        &AuraApplication {
+            caster: ctx.caster,
+            target: ctx.caster,
+            spell_id: 386652,
+            effect_mask: u32::MAX,
+            source: AuraSource::Cast,
+        },
+    );
 }
 
 fn consume_bulwark_of_righteous_fury(
