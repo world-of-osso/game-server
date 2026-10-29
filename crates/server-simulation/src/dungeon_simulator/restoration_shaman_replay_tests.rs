@@ -16,7 +16,7 @@ fn restoration_shaman_uses_surging_totem_throughout_party_pulse() {
     let casts = &report["healer_casts"];
     let count = casts["444995"].as_u64().unwrap_or(0);
     assert!(
-        count >= 8,
+        count >= 10,
         "Surging Totem is not used across the replay: {report}"
     );
     assert_eq!(

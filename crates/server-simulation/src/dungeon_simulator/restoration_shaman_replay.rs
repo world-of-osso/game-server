@@ -76,7 +76,10 @@ pub(super) fn prepare(
         ("default", "riptide"),
         ("default", "healing_surge,if=target.health.pct<45"),
         ("default", "unleash_life,if=target.health.pct<90"),
-        ("default", "chain_heal,if=party.chain_heal_worthwhile"),
+        (
+            "default",
+            "chain_heal,if=party.chain_heal_worthwhile&mana.pct>35",
+        ),
         ("default", "healing_wave,if=target.healing_wave_useful"),
         ("damage", "flame_shock"),
         ("damage", "lava_burst"),
