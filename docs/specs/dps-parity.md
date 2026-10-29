@@ -467,7 +467,7 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 - Demon Hunter soul fragments retain their type, position, activation and expiry. The literal `pick_up_fragment` action selects a live fragment by its source mode and type, rechecks its condition at arrival, then consumes it through the spec's native payload. Demonic Appetite rolls native206478 on real Havoc Chaos Strike/Annihilation execution (SimC76f8118 sc_demon_hunter.cpp1656–1908,5069–5325,7579–7608).
 
-- A landed Havoc Hunt impact applies native370969's periodic payload to enemies within its native hostile range, with the primary included in the native370967 effect0 target cap. In pinned bugs mode its periodic damage receives selected Demon Hide428241's native effect0 multiplier a second time (SimC76f8118 sc_demon_hunter.cpp5488–5495,5505–5511,8486–8501).
+- A landed Havoc Hunt impact applies native370969's periodic payload to enemies within its native hostile range, with the primary included in the native370967 effect0 target cap (SimC76f8118 sc_demon_hunter.cpp5488–5495,5505–5511). SimC's bugs-mode Soulscar double-applies Demon Hide (sc_demon_hunter.cpp8486–8501); do not copy that double application or apply it to Hunt.
 
 - Selected Volatile Instinct1272453 triggers native Demonsurge on every hard Metamorphosis and on Demonic only when it enters, rather than extends, Metamorphosis. Hard Meta uses native1238696's delay; Demonic uses native453323's delay (SimC76f8118 sc_demon_hunter.cpp5008–5012,9160–9166,12646–12660).
 
@@ -504,6 +504,7 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 - [ ] `SIMC_HAVOC_DEMONIC_TRANSFORMATION`: native Eye Beam198013/Abyssal Gaze452497 with selected213410/spec577 enters native162264 before channel execution, using the live native talent effect0 duration plus the actual hasted channel duration (pinned sc_demon_hunter.cpp4051–4057). If the actor already owns live Meta, extend it without resetting effects or tick phase. No resource grant or damage adjustment; unrelated spells do not trigger the relationship.
 
 - [x] Spec577 player measurements interpret the pinned76f8118 Havoc action lists through the shared literal driver, including source-order precombat, native selected hero tree, and native equipment facts. No replacement priority or resource grants. The final precombat Immolation Aura starts at pull without advancing its first tick or delaying the first combat action for its GCD (`player.cpp6153–6189`).
+- Selected Havoc Monster Rising and Enduring Torment apply their native non-Meta stat buffs before combat; entering Metamorphosis removes them immediately, and leaving it restores them immediately (`sc_demon_hunter.cpp9204–9215,9233–9238,12136–12143`).
 - [ ] Per-action Demonsurge availability reads the native producer's per-ability uses. Meta arms all source-defined abilities, Demonic re-arms Annihilation/Death Sweep, and each cast consumes only its own use. Native453323/1238696 supply explosion delays and452416 supplies damage/geometry; Meta expiry clears uses and native intensity/stack buffs (pinned sc_demon_hunter.cpp4976–4982,9153–9172,9265–9277,12645–12671). Missing soul-fragment pickups and inventory potions remain named gaps.
 
 ### Ret Dawnlight policies

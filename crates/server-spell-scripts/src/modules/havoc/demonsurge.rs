@@ -13,6 +13,7 @@ const INTENSITY: u32 = 452489;
 const VOLATILE_INSTINCT: u32 = 1272453;
 const STACKS: u32 = 452416;
 const ABILITIES: &[u32] = &[201427, 210152, 258920, 452497, 452490];
+const NON_META_BUFFS: &[(u32, u32)] = &[(452414, 452550), (452410, 453314)];
 
 // SimC76f8118 sc_demon_hunter.cpp5608–5634: Focused Hatred uses
 // native effect0 minus effect1 per additional resolved enemy, through five.
@@ -150,7 +151,36 @@ pub(super) fn trigger_meta_entry(world: &mut World, caster: Entity, trigger: u32
 }
 
 pub(crate) fn register_havoc(scripts: &mut AuraScripts) {
-    scripts.0.entry(META).or_default().on_remove = Some(expire_meta);
+    let meta = scripts.0.entry(META).or_default();
+    meta.on_apply = Some(enter_meta);
+    meta.on_remove = Some(expire_meta);
+}
+
+// SimC76f8118 sc_demon_hunter.cpp9204–9215,9233–9238,12136–12143:
+// selected non-Meta stat buffs exist at pull and change on Meta transitions.
+pub(super) fn initialize_non_meta_buff(world: &mut World, unit: Entity, aura: &AuraInstance) {
+    if aura.caster != unit || auras::has_aura(world, unit, META) {
+        return;
+    }
+    if let Some(&(_, buff)) = NON_META_BUFFS
+        .iter()
+        .find(|&&(talent, _)| aura.spell_id == talent)
+        && super::has_talent(world, unit, aura.spell_id)
+        && !combat::spell_cast::try_cast_triggered(world, unit, buff, Some(unit), 1)
+    {
+        error!(?unit, buff, "Native non-Meta stat buff refused");
+    }
+}
+
+fn enter_meta(world: &mut World, unit: Entity, aura: &AuraInstance) {
+    if aura.caster == unit && super::is_havoc(world, unit) {
+        auras::remove_auras(world, unit, RemoveReason::Consumed, |active| {
+            active.caster == unit
+                && NON_META_BUFFS
+                    .iter()
+                    .any(|&(_, buff)| active.spell_id == buff)
+        });
+    }
 }
 
 fn expire_meta(world: &mut World, unit: Entity, aura: &AuraInstance, reason: RemoveReason) {
@@ -163,4 +193,11 @@ fn expire_meta(world: &mut World, unit: Entity, aura: &AuraInstance, reason: Rem
     auras::remove_auras(world, unit, reason, |active| {
         active.caster == unit && matches!(active.spell_id, INTENSITY | STACKS)
     });
+    for &(talent, buff) in NON_META_BUFFS {
+        if super::has_talent(world, unit, talent)
+            && !combat::spell_cast::try_cast_triggered(world, unit, buff, Some(unit), 1)
+        {
+            error!(?unit, buff, "Native non-Meta stat buff refused");
+        }
+    }
 }
