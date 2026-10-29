@@ -432,6 +432,69 @@ mod tests {
 
     #[test]
     #[ignore = "requires canonical world database and MID2 Blood inputs"]
+    fn blood_inevitable_scales_plague_with_target_missing_health() {
+        use shared::components::Health;
+        use shared::protocol::CombatLogKind;
+        fn tick(health_fraction: f32, talent: bool) -> i32 {
+            let _seed = crate::random::seed_scope(70448);
+            let mut run = super::super::prepare_registered_player(250, 1).unwrap();
+            let actor = run.actor;
+            let target = run.targets[0];
+            assert!(crate::auras::has_aura(run.app.world(), actor, 1280658));
+            if !talent {
+                crate::auras::remove_auras(
+                    run.app.world_mut(),
+                    actor,
+                    crate::auras::RemoveReason::Cancelled,
+                    |aura| aura.spell_id == 1280658,
+                );
+            }
+            let mut health = run.app.world_mut().get_mut::<Health>(target).unwrap();
+            health.current = health.max * health_fraction;
+            crate::auras::apply_aura(
+                run.app.world_mut(),
+                &crate::auras::AuraApplication {
+                    caster: actor,
+                    target,
+                    spell_id: 55078,
+                    effect_mask: 1,
+                    source: crate::auras::AuraSource::Cast,
+                },
+            );
+            for _ in 0..100 {
+                run.app.update();
+                let events = &run
+                    .app
+                    .world()
+                    .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+                    .0;
+                if let Some(event) = events.iter().find(|event| {
+                    event.spell_id == Some(55078)
+                        && event.kind == CombatLogKind::Damage
+                        && event.periodic
+                }) {
+                    return event.amount;
+                }
+            }
+            panic!("Blood Plague did not tick");
+        }
+        let full = tick(1.0, true) as f32;
+        let half = tick(0.55, true) as f32;
+        let capped = tick(0.10, true) as f32;
+        let unselected = tick(0.10, false) as f32;
+        assert!((half / full - 1.15).abs() < 0.01, "full={full} half={half}");
+        assert!(
+            (capped / full - 1.30).abs() < 0.01,
+            "full={full} capped={capped}"
+        );
+        assert!(
+            (unselected / full - 1.0).abs() < 0.01,
+            "full={full} without talent={unselected}"
+        );
+    }
+
+    #[test]
+    #[ignore = "requires canonical world database and MID2 Blood inputs"]
     fn blood_plague_direct_heal_uses_tick_damage_and_independent_crit() {
         use shared::components::Health;
         use shared::protocol::CombatLogKind;
@@ -1772,12 +1835,18 @@ mod tests {
     #[ignore = "requires canonical world database and MID2 Blood inputs"]
     fn blood_infliction_scales_with_remaining_plague_duration() {
         use shared::protocol::CombatLogKind;
-        fn sample(duration: u32, blood_modifier: bool) -> i32 {
+        fn sample(duration: u32, blood_modifier: bool, health_fraction: f32) -> i32 {
             let _seed = crate::random::seed_scope(70448);
             let mut run = super::super::prepare_registered_player(250, 1).unwrap();
             let actor = run.actor;
             let target = run.targets[0];
             super::super::engage(&mut run);
+            let mut health = run
+                .app
+                .world_mut()
+                .get_mut::<shared::components::Health>(target)
+                .unwrap();
+            health.current = health.max * health_fraction;
             assert!(crate::auras::has_aura(run.app.world(), actor, 137008));
             if !blood_modifier {
                 crate::auras::remove_auras(
@@ -1839,16 +1908,21 @@ mod tests {
                 .expect("Infliction damage")
                 .amount
         }
-        let short = sample(6000, true);
-        let long = sample(12000, true);
+        let short = sample(6000, true, 1.0);
+        let long = sample(12000, true, 1.0);
         assert!(
             long > short * 3 / 2 && long < short * 3,
             "remaining disease: {short} vs {long}"
         );
-        let unmodified = sample(12000, false);
+        let unmodified = sample(12000, false, 1.0);
         assert!(
             (long as f32 / unmodified as f32 - 2.0).abs() < 0.02,
             "Blood passive must add its native 10 percentage points: {long} vs {unmodified}"
+        );
+        let low_health = sample(12000, true, 0.10);
+        assert!(
+            (low_health as f32 / long as f32 - 1.30).abs() < 0.02,
+            "Inevitable must scale Infliction's remaining disease: {long} vs {low_health}"
         );
     }
 
