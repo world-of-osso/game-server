@@ -3,7 +3,7 @@ use super::combat;
 use bevy::prelude::*;
 use combat::auras::{self, ActiveAuras, AuraApplication, AuraInstance, AuraSource};
 use combat::spell_cast::{
-    effects::{EffectCtx, apply_fixed_heal},
+    effects::{EffectCtx, apply_critical_transfer_heal},
     script_registry::SpellScriptHook,
 };
 use combat::spell_info::SpellStore;
@@ -13,7 +13,7 @@ use shared::protocol::{CombatLogEvent, CombatLogKind};
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AfterAuraApplication(apply_mark),
     SpellScriptHook::HealthChangeObserved(mark_flash_heal),
-    SpellScriptHook::HealthChangeObserved(transfer_damage),
+    SpellScriptHook::RawResolvedDamage(transfer_damage),
     SpellScriptHook::ConsumedEffectValues(&[(81749, 0)]),
 ];
 
@@ -66,17 +66,14 @@ fn is_discipline(world: &World, caster: Entity) -> bool {
         .is_some_and(|spec| spec.0 == 256)
 }
 
-fn transfer_damage(world: &mut World, event: &CombatLogEvent) {
-    if event.kind != CombatLogKind::Damage || event.amount <= 0 {
-        return;
-    }
-    let (Some(caster), Some(target)) = (
-        event.source.and_then(Entity::try_from_bits),
-        event.target.and_then(Entity::try_from_bits),
-    ) else {
-        return;
-    };
-    if caster == target || !is_discipline(world, caster) {
+fn transfer_damage(world: &mut World, damage: &EffectCtx<'_>, target: Entity, crit: bool, raw: f32) {
+    // SimC 76f8118 priest_spell_t sets triggers_atonement on these damage actions.
+    const TRIGGERS: &[u32] = &[
+        585, 589, 8092, 32379, 47666, 373130, 390832, 120696, 390964, 132157,
+        450215, 447448, 448405, 1280134, 1253828, 421543,
+    ];
+    let caster = damage.caster;
+    if caster == target || !is_discipline(world, caster) || !TRIGGERS.contains(&damage.spell.id) {
         return;
     }
     let now = combat::spell_cast::now(world);
@@ -115,6 +112,6 @@ fn transfer_damage(world: &mut World, event: &CombatLogEvent) {
         chain_multiplier: 1.0,
     };
     for ally in recipients {
-        apply_fixed_heal(world, &ctx, ally, event.amount as f32 * fraction);
+        apply_critical_transfer_heal(world, &ctx, ally, raw * fraction, crit);
     }
 }

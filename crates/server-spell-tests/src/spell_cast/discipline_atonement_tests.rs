@@ -26,6 +26,85 @@ fn discipline_flash_heal_applies_atonement_even_at_full_health() {
 }
 
 #[test]
+fn atonement_transfers_critical_smite_before_absorb_but_not_fireball() {
+    let mut h = harness(Vec::new(), &[17, 194384, 81749, 94472, 585, 133], 5).unwrap();
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(ActiveSpec(256));
+    h.app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(h.caster)
+        .unwrap()
+        .crit_pct = 100.0;
+    let ally = spawn_player(&mut h.app, 5, 1.0);
+    {
+        let mut health = h.app.world_mut().get_mut::<Health>(ally).unwrap();
+        health.max = 10_000.0;
+        health.current = 5_000.0;
+    }
+    {
+        let mut health = h.app.world_mut().get_mut::<Health>(h.npc).unwrap();
+        health.max = 100_000.0;
+        health.current = 100_000.0;
+    }
+    h.cast_and_deliver(17, Some(ally));
+    h.advance(35);
+    super::cast_triggered_with_effect0_amount(h.app.world_mut(), h.npc, 17, Some(h.npc), 1, 10.0);
+    h.advance(2);
+    h.inbox.log.clear();
+    h.cast_and_deliver(585, Some(h.npc));
+    h.advance(60);
+    let smite = h
+        .inbox
+        .log
+        .iter()
+        .find(|e| e.kind == CombatLogKind::Damage && e.spell_id == Some(585))
+        .expect("real Smite damage");
+    let transfer = h
+        .inbox
+        .log
+        .iter()
+        .find(|e| {
+            e.kind == CombatLogKind::Heal
+                && e.spell_id == Some(94472)
+                && e.target == Some(ally.to_bits())
+        })
+        .expect("Atonement transfer");
+    assert!(
+        smite.crit && transfer.crit,
+        "critical outcome must be carried: {smite:?} {transfer:?}"
+    );
+    assert!(
+        smite.absorbed > 0 && smite.amount > 0,
+        "fixture requires partial absorb: {smite:?}"
+    );
+    let expected = ((smite.amount + smite.absorbed) as f32 * 0.46).round() as i32;
+    assert!(
+        (transfer.amount - expected).abs() <= 1,
+        "transfer uses pre-absorb damage: {smite:?} {transfer:?}"
+    );
+    h.advance(35);
+    h.inbox.log.clear();
+    h.cast_and_deliver(133, Some(h.npc));
+    h.advance(80);
+    assert!(
+        h.inbox
+            .log
+            .iter()
+            .any(|e| e.kind == CombatLogKind::Damage && e.spell_id == Some(133)),
+        "real Fireball damage required"
+    );
+    assert!(
+        !h.inbox
+            .log
+            .iter()
+            .any(|e| e.kind == CombatLogKind::Heal && e.spell_id == Some(94472)),
+        "Fireball is not a SimC Atonement trigger"
+    );
+}
+
+#[test]
 fn shield_absorbs_hit_and_smite_heals_its_atoned_ally() {
     let mut h = harness(Vec::new(), &[17, 139, 194384, 81749, 94472, 585, 133], 5).unwrap();
     h.app

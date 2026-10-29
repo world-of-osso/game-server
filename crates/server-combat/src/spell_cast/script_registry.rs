@@ -172,6 +172,7 @@ pub type EffectiveResourceValueHook =
 pub type MeleeResidualHook = fn(&mut World, Entity, Entity, f32);
 pub type CastPredicate = fn(&World, Entity, &SpellInfo) -> bool;
 pub type ResolvedDamageHook = fn(&mut World, &EffectCtx<'_>, Entity, bool, f32);
+pub type RawResolvedDamageHook = fn(&mut World, &EffectCtx<'_>, Entity, bool, f32);
 pub type LandedDamageHook = fn(&mut World, Entity, Entity, Option<u32>, f32, bool);
 pub type AbilityUseLookup = fn(&World, Entity, u32) -> bool;
 pub type ChannelPeriodicLookup = fn(u32, u8) -> Option<ContextHitHook>;
@@ -357,6 +358,7 @@ pub enum SpellScriptHook {
     PersistentCastMultiplier(&'static [u32]),
     ArmorIgnoredSpells(&'static [u32]),
     ResolvedDamage(ResolvedDamageHook),
+    RawResolvedDamage(RawResolvedDamageHook),
     AfterDirectDamageBeforeItems(PeriodicDamageFinishedHook),
     LandedDamagePolicy(LandedDamageHook),
     AbilityUseAvailable(AbilityUseLookup),
@@ -1260,6 +1262,20 @@ pub fn ignores_armor(world: &World, spell: u32) -> bool {
             SpellScriptHook::ArmorIgnoredSpells(spells) => spells.contains(&spell),
             _ => false,
         })
+}
+
+pub fn raw_resolved_damage(
+    world: &mut World,
+    ctx: &EffectCtx<'_>,
+    target: Entity,
+    critical: bool,
+    amount: f32,
+) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::RawResolvedDamage(run) = hook {
+            run(world, ctx, target, critical, amount);
+        }
+    }
 }
 
 pub fn resolved_damage(
