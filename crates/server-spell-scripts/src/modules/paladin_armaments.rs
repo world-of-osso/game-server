@@ -946,7 +946,7 @@ fn summon_forge(world: &mut World, caster: Entity, spell: u32) {
             Some(aura) => combat::auras::apply_aura_with_spell(world, &application, &aura),
             None => combat::auras::apply_aura(world, &application),
         }
-    }
+    }    super::paladin_masterwork::grant_masterwork_weapon(world, caster);
 }
 
 /// SimC76f8118 sc_paladin.cpp1286–1289, 2951–2954: during the buff, Word of Glory
