@@ -1030,9 +1030,10 @@ pub fn attributes(spell: &SpellInfo, index: usize) -> u32 {
 
 /// TC a352b1fa Spell.cpp530–531 sets IGNORE_CAST_IN_PROGRESS from Attr4.
 /// This does not waive costs, GCD, cooldowns or other native cast checks.
-pub(crate) fn allows_cast_while_casting(spell: &SpellInfo) -> bool {
+pub(crate) fn allows_cast_while_casting(world: &World, caster: Entity, spell: &SpellInfo) -> bool {
     const ALLOW_CAST_WHILE_CASTING: u32 = 0x0000_0080;
     attributes(spell, 4) & ALLOW_CAST_WHILE_CASTING != 0
+        || script_registry::allows_cast_during_channel(world, caster, spell)
 }
 
 pub(crate) fn is_channeled(spell: &SpellInfo) -> bool {
@@ -1901,7 +1902,7 @@ struct QueuedSpellCast {
 }
 
 fn cast_queue_delay(world: &World, caster: Entity, spell: &SpellInfo) -> f64 {
-    let cast_remaining = if allows_cast_while_casting(spell) {
+    let cast_remaining = if allows_cast_while_casting(world, caster, spell) {
         0.0
     } else {
         world.get::<CastState>(caster).map_or(0.0, |cast| {
@@ -1922,7 +1923,8 @@ fn start_queued_casts(world: &mut World) {
     let ready: Vec<_> = pending
         .iter(world)
         .filter(|(caster, queued)| {
-            (world.get::<CastState>(*caster).is_none() || allows_cast_while_casting(&queued.spell))
+            (world.get::<CastState>(*caster).is_none()
+                || allows_cast_while_casting(world, *caster, &queued.spell))
                 && cast_queue_delay(world, *caster, &queued.spell) == 0.0
         })
         .map(|(caster, _)| caster)
@@ -2220,8 +2222,8 @@ fn validate_start_with_policy(
     mobile_banking::check_cast(world, caster, spell.id)?;
     crate::game_objects::cooking_focus::check_cast(world, caster, spell.id)?;
     teleport::check_destination(world, caster, spell)?;
-    let casting_blocks_start =
-        world.get::<CastState>(caster).is_some() && !allows_cast_while_casting(spell);
+    let casting_blocks_start = world.get::<CastState>(caster).is_some()
+        && !allows_cast_while_casting(world, caster, spell);
     if matches!(
         check,
         StartCheck::Native | StartCheck::ResourceMax(_) | StartCheck::IgnoreRange

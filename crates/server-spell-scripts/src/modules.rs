@@ -100,6 +100,7 @@ register_modules! {
     brewmaster_shuffle: (1000, "modules/brewmaster_shuffle.rs"),
     brewmaster_special_delivery: (1000, "modules/brewmaster_special_delivery.rs"),
     brewmaster_walk_ox: (1000, "modules/brewmaster_walk_ox.rs"),
+    monk_cast_during: (1000, "modules/monk_cast_during.rs"),
     monk_harmony: (1000, "modules/monk_harmony.rs"),
     blood_death_strike: (2500, "modules/blood_death_strike.rs"),
     blood_ground: (2501, "modules/blood_ground.rs"),

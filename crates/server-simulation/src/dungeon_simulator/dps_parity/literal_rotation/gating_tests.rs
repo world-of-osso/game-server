@@ -111,6 +111,69 @@ fn literal_native_gating_moving_zero_rejects_native_moving_input() {
     );
 }
 
+#[test]
+#[ignore = "uses the real Brewmaster channel and Purifying Brew"]
+fn monk_purifying_brew_is_selectable_during_spinning_crane_kick() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::super::prepare_registered_player(268, 1).unwrap();
+    let actor = run.actor;
+    let target = run.targets[0];
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 322729, Some(target), false)
+        .unwrap();
+    let channel = run
+        .app
+        .world()
+        .get::<shared::casting::CastState>(actor)
+        .unwrap()
+        .clone();
+    assert_eq!(channel.spell_id, 322729);
+    assert_eq!(channel.cast_type, shared::casting::CastType::Channel);
+    let equipment = Equipment::load(
+        run.app.world(),
+        actor,
+        &mut crate::simc_apl_native::Bindings::default(),
+    )
+    .unwrap();
+    let prepared = Prepared::read(
+        run.app.world_mut(),
+        actor,
+        &run.targets,
+        &equipment,
+        [
+            NativeAction {
+                name: "purifying_brew",
+                spell: 119582,
+                talent: None,
+                self_target: true,
+            },
+            NativeAction {
+                name: "black_ox_brew",
+                spell: 115399,
+                talent: None,
+                self_target: true,
+            },
+        ],
+        false,
+    )
+    .unwrap();
+    assert!(
+        select("black_ox_brew", &prepared, &equipment).is_none(),
+        "unlisted Black Ox Brew has no SimC cast-during permission"
+    );
+    let (action, execution) = select("purifying_brew", &prepared, &equipment)
+        .expect("Purifying Brew must be admitted during the channel and GCD");
+    Driver::new(Program::parse(&[("default", "purifying_brew")]).unwrap())
+        .execute(run.app.world_mut(), actor, action, execution)
+        .unwrap();
+    let after = run
+        .app
+        .world()
+        .get::<shared::casting::CastState>(actor)
+        .expect("channel remains active");
+    assert_eq!(after.spell_id, channel.spell_id);
+    assert_eq!(after.cast_type, channel.cast_type);
+}
+
 fn start_native_gcd(run: &mut Run) {
     execution::execute(
         run.app.world_mut(),

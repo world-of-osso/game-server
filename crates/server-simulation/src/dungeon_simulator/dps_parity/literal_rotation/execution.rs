@@ -59,6 +59,7 @@ pub(crate) struct Prepared {
     moving: bool,
     cast_active: bool,
     pickup_cast_usable: bool,
+    channel_cast_actions: BTreeSet<String>,
     gcd_active: bool,
     spec_id: u32,
     after_channel: bool,
@@ -139,6 +140,7 @@ impl Prepared {
             moving,
             cast_active: cast_active && !after_channel,
             pickup_cast_usable,
+            channel_cast_actions: BTreeSet::new(),
             gcd_active: gcd_active && !after_channel,
             spec_id: world.get::<shared::components::ActiveSpec>(actor).map_or(0, |spec| spec.0),
             after_channel,
@@ -231,7 +233,9 @@ impl Prepared {
         if self.cast_active && pickup && !self.pickup_cast_usable {
             return Ok(false);
         }
-        if self.cast_active && !while_casting && !(pickup && self.pickup_cast_usable) {
+        if self.cast_active && !while_casting && !(pickup && self.pickup_cast_usable)
+            && !self.channel_cast_actions.contains(&action.name)
+        {
             return Ok(false);
         }
         let off_gcd = read_boolean_option(action, "use_off_gcd")?.unwrap_or(false)
@@ -708,6 +712,9 @@ fn read_spell(
         .resource::<crate::spell_info::SpellStore>()
         .get(id)
         .expect("resolved native action remains in its catalog");
+    if crate::spell_cast::script_registry::allows_cast_during_channel(world, actor, resolved) {
+        prepared.channel_cast_actions.insert(name.into());
+    }
     let self_target = self_target || crate::spell_cast::targets::targets_caster_only(resolved);
     // SimC76f8118 sc_hunter.cpp7269–7274: start once; native repeats
     // own later shots. This applies to any native autorepeat, not a spell-ID branch.
