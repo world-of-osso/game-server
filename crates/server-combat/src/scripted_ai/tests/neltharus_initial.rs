@@ -499,7 +499,35 @@ fn encounter_coverage_sargha_native_shield_expiry_rearms_gold() {
         h.advance(50.0);
         assert_eq!(completed_casts(&h, boss, 376780), 1);
         assert_eq!(completed_casts(&h, boss, 377017), 1);
-        h.advance(45.0);
+        assert!(
+            h.app
+                .world()
+                .resource::<crate::auras::scripts::AuraScripts>()
+                .0
+                .get(&376780)
+                .is_some_and(|script| script.on_remove.is_some()),
+            "shield hook registered"
+        );
+        h.advance(36.6);
+        let state = h
+            .app
+            .world()
+            .get::<crate::scripted_ai::CreatureAiState>(boss)
+            .unwrap();
+        let pending = state
+            .ai
+            .as_ref()
+            .unwrap()
+            .encounter_schedule()
+            .unwrap()
+            .pending_events()
+            .collect::<Vec<_>>();
+        assert!(
+            !pending.is_empty(),
+            "expiry must rearm alerts; creature={:?}",
+            h.app.world().get::<crate::creature_ai::CreatureState>(boss)
+        );
+        h.advance(8.4);
         assert!(
             completed_casts(&h, boss, 377017) >= 2,
             "expired shield re-arms native Gold projected{difficulty}; auras={:?} health={:?} casts={:?}",
