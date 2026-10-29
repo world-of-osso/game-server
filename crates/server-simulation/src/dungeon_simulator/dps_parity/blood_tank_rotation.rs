@@ -2978,6 +2978,69 @@ mod tests {
 
     #[test]
     #[ignore = "requires canonical world database and MID2 Blood inputs"]
+    fn boiling_point_increases_foreground_blood_boil_damage() {
+        use shared::protocol::CombatLogKind;
+        fn damage(empowered: bool) -> i32 {
+            let mut run = super::super::prepare_registered_player(250, 1).unwrap();
+            let actor = run.actor;
+            let target = run.targets[0];
+            super::super::engage(&mut run);
+            run.app
+                .world_mut()
+                .get_mut::<crate::stats::CharacterStats>(actor)
+                .unwrap()
+                .crit_pct = 0.0;
+            for (unit, spell) in [(target, 55078), (actor, 1265968)] {
+                if spell == 1265968 && !empowered {
+                    continue;
+                }
+                crate::auras::apply_aura(
+                    run.app.world_mut(),
+                    &crate::auras::AuraApplication {
+                        caster: actor,
+                        target: unit,
+                        spell_id: spell,
+                        effect_mask: u32::MAX,
+                        source: crate::auras::AuraSource::Cast,
+                    },
+                );
+            }
+            let before = run
+                .app
+                .world()
+                .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+                .0
+                .len();
+            let _seed = crate::random::seed_scope(70448);
+            crate::spell_cast::creature_cast(run.app.world_mut(), actor, 50842, None, false)
+                .unwrap();
+            for _ in 0..4 {
+                run.app.update();
+            }
+            run.app
+                .world()
+                .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+                .0[before..]
+                .iter()
+                .find(|event| {
+                    event.source == Some(actor.to_bits())
+                        && event.target == Some(target.to_bits())
+                        && event.spell_id == Some(50842)
+                        && event.kind == CombatLogKind::Damage
+                })
+                .unwrap()
+                .amount
+        }
+        let normal = damage(false);
+        let empowered = damage(true);
+        assert!(
+            (empowered as f32 / normal as f32 - 1.5).abs() < 0.02,
+            "Boiling Point must multiply Blood Boil: {normal} -> {empowered}"
+        );
+    }
+
+    #[test]
+    #[ignore = "requires canonical world database and MID2 Blood inputs"]
     fn rune_weapon_plague_ticks_after_dismissal_without_mirroring_new_casts() {
         use shared::components::{Npc, UnitSummonedBy};
         use shared::protocol::CombatLogKind;
