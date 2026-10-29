@@ -2993,7 +2993,7 @@ mod tests {
         let weapon = run
             .app
             .world_mut()
-            .query::<(Entity, &Npc, &UnitSummonedBy)>()
+            .query::<(bevy::prelude::Entity, &Npc, &UnitSummonedBy)>()
             .iter(run.app.world())
             .find(|(_, npc, owner)| npc.template_id == 27893 && owner.0 == actor.to_bits())
             .unwrap()
