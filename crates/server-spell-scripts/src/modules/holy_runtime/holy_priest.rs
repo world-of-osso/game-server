@@ -10,11 +10,20 @@ use combat::spell_info::{SpellInfo, SpellStore};
 
 const ULTIMATE_SERENITY: u32 = 1_246_517;
 const SERENITY_SPLASH: u32 = 1_250_581;
+const BENEDICTION_TALENT: u32 = 1_262_755;
+const BENEDICTION_SERENITY: u32 = 1_262_760;
+const BENEDICTION_BUFF: u32 = 1_262_766;
+const BENEDICTION_HEAL: u32 = 1_262_763;
+const COSMIC_RIPPLE: u32 = 243_241;
 
 pub(super) fn serenity_hit(
     spell: u32,
 ) -> Option<combat::spell_cast::script_registry::ContextHitHook> {
-    (spell == 2050).then_some(cast_serenity_splash)
+    match spell {
+        2050 => Some(cast_serenity_splash),
+        BENEDICTION_HEAL => Some(cast_benediction_ripple),
+        _ => None,
+    }
 }
 
 fn cast_serenity_splash(
@@ -22,6 +31,18 @@ fn cast_serenity_splash(
     ctx: &combat::spell_cast::effects::EffectCtx,
     target: Entity,
 ) {
+    if has_aura(world, ctx.caster, BENEDICTION_SERENITY)
+        && rand::random::<f32>() * 100.0
+            < super::script_effect_value(world, ctx.caster, BENEDICTION_SERENITY, 1)
+    {
+        combat::spell_cast::cast_triggered(
+            world,
+            ctx.caster,
+            BENEDICTION_BUFF,
+            Some(ctx.caster),
+            ctx.depth + 1,
+        );
+    }
     if has_aura(world, ctx.caster, ULTIMATE_SERENITY) {
         combat::spell_cast::cast_triggered(
             world,
@@ -31,6 +52,87 @@ fn cast_serenity_splash(
             ctx.depth + 1,
         );
     }
+}
+
+fn cast_benediction_ripple(
+    world: &mut World,
+    ctx: &combat::spell_cast::effects::EffectCtx,
+    _target: Entity,
+) {
+    combat::spell_cast::cast_triggered(
+        world,
+        ctx.caster,
+        COSMIC_RIPPLE,
+        Some(ctx.caster),
+        ctx.depth + 1,
+    );
+}
+
+pub(super) fn spend_benediction(world: &mut World, priest: Entity) {
+    let instance = world
+        .get::<ActiveAuras>(priest)
+        .and_then(|auras| {
+            auras
+                .iter()
+                .find(|aura| aura.spell_id == BENEDICTION_BUFF && aura.caster == priest)
+        })
+        .map(|aura| aura.instance_id);
+    if let Some(instance) = instance {
+        combat::auras::spend_stack(world, priest, instance);
+    }
+}
+
+pub(super) fn benediction_from_mending(
+    world: &mut World,
+    ctx: &combat::spell_cast::effects::EffectCtx,
+    _target: Entity,
+    _raw: f32,
+    _effective: f32,
+) {
+    if ctx.spell.id == 33_110
+        && has_aura(world, ctx.caster, BENEDICTION_TALENT)
+        && combat::auras::procs::try_native_policy_proc(world, ctx.caster, BENEDICTION_TALENT)
+    {
+        combat::spell_cast::cast_triggered(
+            world,
+            ctx.caster,
+            BENEDICTION_BUFF,
+            Some(ctx.caster),
+            ctx.depth + 1,
+        );
+    }
+}
+
+pub(super) fn hymn_tick(
+    spell: u32,
+    index: u8,
+) -> Option<combat::spell_cast::script_registry::ContextHitHook> {
+    ((spell, index) == (64_843, 0)).then_some(cast_hymn_tick)
+}
+
+fn cast_hymn_tick(world: &mut World, ctx: &combat::spell_cast::effects::EffectCtx, target: Entity) {
+    combat::spell_cast::cast_triggered(world, ctx.caster, 64_844, Some(target), ctx.depth + 1);
+    if !has_aura(world, ctx.caster, BENEDICTION_SERENITY) {
+        return;
+    }
+    let scale = super::script_effect_value(world, ctx.caster, BENEDICTION_SERENITY, 0) / 100.0;
+    let Some(mut spell) =
+        combat::spell_cast::load_triggered_spell(world, COSMIC_RIPPLE, ctx.depth + 1)
+    else {
+        return;
+    };
+    for effect in &mut spell.effects {
+        effect.base_points *= scale;
+        effect.bonus_coefficient *= scale;
+        effect.bonus_coefficient_from_ap *= scale;
+    }
+    combat::spell_cast::launch_triggered_spell(
+        world,
+        ctx.caster,
+        &spell,
+        Some(ctx.caster),
+        ctx.depth + 1,
+    );
 }
 
 pub(super) fn serenity_area_filter(spell: u32, index: u8) -> Option<super::AreaTargetFilter> {
@@ -56,6 +158,68 @@ fn select_serenity_allies(
         (a.current / a.max).total_cmp(&(b.current / b.max))
     });
     units.truncate(spell.effects[1].base_points.max(0.0) as usize);
+}
+
+pub(super) fn piety(
+    world: &mut World,
+    ctx: &combat::spell_cast::effects::EffectCtx,
+    _target: Entity,
+    raw: f32,
+    effective: f32,
+) {
+    use combat::spell_cast::{
+        effects,
+        targets::{self, Relation},
+    };
+    use shared::components::Health;
+    const TALENT: u32 = 1_246_802;
+    const HEAL: u32 = 443_126;
+    if ctx.spell.id == HEAL || raw <= effective || !has_aura(world, ctx.caster, TALENT) {
+        return;
+    }
+    let spell = world
+        .resource::<SpellStore>()
+        .get(HEAL)
+        .expect("Piety heal missing")
+        .clone();
+    let Some(center) = targets::position(world, ctx.caster) else {
+        return;
+    };
+    let mut allies = targets::area_units(
+        world,
+        ctx.caster,
+        center,
+        targets::radius(&spell.effects[0], 1),
+        Relation::Ally,
+        0,
+    );
+    allies.retain(|unit| {
+        world
+            .get::<Health>(*unit)
+            .is_some_and(|h| h.current > 0.0 && h.current < h.max)
+    });
+    allies.sort_by(|a, b| {
+        let a = world.get::<Health>(*a).unwrap();
+        let b = world.get::<Health>(*b).unwrap();
+        (a.current / a.max).total_cmp(&(b.current / b.max))
+    });
+    let count = super::script_effect_value(world, ctx.caster, TALENT, 1).max(0.0) as usize;
+    allies.truncate(count);
+    if allies.is_empty() {
+        return;
+    }
+    let percent = super::script_effect_value(world, ctx.caster, TALENT, 0) / 100.0;
+    let amount = (raw - effective) * percent / allies.len() as f32;
+    let heal = effects::EffectCtx {
+        caster: ctx.caster,
+        spell: &spell,
+        depth: ctx.depth + 1,
+        dest: None,
+        chain_multiplier: 1.0,
+    };
+    for ally in allies {
+        effects::apply_fixed_heal(world, &heal, ally, amount);
+    }
 }
 
 pub(crate) const APOTHEOSIS: u32 = 200183;

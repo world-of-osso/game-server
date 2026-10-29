@@ -2701,6 +2701,7 @@ fn apply_resolved_heal(
     event.crit = crit;
     event.periodic = periodic;
     log_event(world, event);
+    super::script_registry::resolved_heal(world, ctx, target, amount, effective);
     let percent_based = !periodic
         && ctx
             .spell
