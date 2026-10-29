@@ -120,6 +120,7 @@ Retail's LOS errors ("can see it, not in line of sight") are the bugs to avoid.
   [navigation's bake tool](../wiki/systems/navigation.md) also writes Stockade (map34) LOS tiles
   from that collector for the existing LOS-query acceptance oracle. Ship this supplement with
   the existing eye tables; it is not a second extractor.
+- The standard eye-only workflow runs `scripts/bake_los_eyes.py --world-db data/world.db --engine ../game-engine --baker <los-bake-binary> --out <output-dir>`: it extracts missing model dependencies from local CASC, bakes the full current database, and verifies hosted spawned displays. `deploy.sh` verifies all ten stand states before any build or upload and fails when coverage is incomplete. The output must be promoted to the shared LOS directory before deployment.
 - Run: `cargo run --release -p los --features bake --bin los-bake -- --data ../game-engine/data
   --world-db data/world.db --out ../game-engine/data/los --map 0 --all` (per map; `--no-eyes`
   skips the eye table). Map 0 is 1176 tiles, 6.3 GB, under 10 minutes (debug, opt-level 2). `deploy.sh` ships the
