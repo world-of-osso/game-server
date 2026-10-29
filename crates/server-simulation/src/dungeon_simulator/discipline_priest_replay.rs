@@ -57,7 +57,7 @@ pub(super) fn prepare(
         ("default", "void_shield,if=party.darkness_up"),
         (
             "default",
-            "shield,if=target.atonement_up=0&target.shield_up=0",
+            "shield,if=party.active_atonements<=5&target.atonement_up=0&target.shield_up=0",
         ),
         ("default", "evangelism,if=party.injured>=3"),
         ("heal", "penance,if=target.health.pct<45"),
@@ -94,6 +94,7 @@ fn atonement_remaining(world: &World, healer: Entity, target: Entity) -> f64 {
 struct PartyFacts<'a> {
     native: NativeFacts<'a>,
     injured: usize,
+    active_atonements: usize,
     shield: bool,
     atonement: bool,
     atonement_remains: f64,
@@ -104,6 +105,7 @@ impl Facts for PartyFacts<'_> {
     fn value(&self, name: &str) -> Result<f64, String> {
         match name {
             "party.injured" => Ok(self.injured as f64),
+            "party.active_atonements" => Ok(self.active_atonements as f64),
             "target.shield_up" => Ok(f64::from(self.shield)),
             "target.atonement_up" => Ok(f64::from(self.atonement)),
             "target.atonement_remains" => Ok(self.atonement_remains),
@@ -117,6 +119,7 @@ impl ActionFacts for PartyFacts<'_> {
     fn value_for(&self, action: &Action, name: &str) -> Result<f64, String> {
         match name {
             "party.injured"
+            | "party.active_atonements"
             | "target.shield_up"
             | "target.atonement_up"
             | "target.atonement_remains"
@@ -142,6 +145,7 @@ impl Discipline {
         healer: Entity,
         target: Entity,
         injured: usize,
+        active_atonements: usize,
         list: &str,
         names: &[&str],
     ) -> Result<bool, String> {
@@ -162,6 +166,7 @@ impl Discipline {
             native: NativeFacts::new(world, healer, &self.bindings, self.encounter, 1)
                 .with_targets(Some(target), &targets),
             injured,
+            active_atonements,
             shield: crate::auras::has_aura(world, target, 17),
             atonement,
             atonement_remains,
@@ -207,11 +212,16 @@ impl Policy for Discipline {
             tank
         };
         let injured = living.iter().filter(|(_, ratio)| *ratio < 0.85).count();
+        let active_atonements = living
+            .iter()
+            .filter(|(unit, _)| atonement_remaining(world, healer, *unit) > 0.0)
+            .count();
         if self.select(
             world,
             healer,
             target,
             injured,
+            active_atonements,
             "default",
             &[
                 "pain_suppression",
@@ -224,12 +234,19 @@ impl Policy for Discipline {
         )? {
             return Ok(());
         }
-        if self.select(world, healer, lowest, injured, "heal", &["penance"])? {
+        if self.select(
+            world,
+            healer,
+            lowest,
+            injured,
+            active_atonements,
+            "heal",
+            &["penance"],
+        )? {
             return Ok(());
         }
         let flash_target = living
             .iter()
-            .filter(|(_, ratio)| *ratio < 1.0)
             .min_by(|(left, _), (right, _)| {
                 let score = |unit| {
                     atonement_remaining(world, healer, unit)
@@ -239,7 +256,15 @@ impl Policy for Discipline {
             })
             .map(|(unit, _)| *unit);
         if let Some(target) = flash_target
-            && self.select(world, healer, target, injured, "heal", &["flash_heal"])?
+            && self.select(
+                world,
+                healer,
+                target,
+                injured,
+                active_atonements,
+                "heal",
+                &["flash_heal"],
+            )?
         {
             return Ok(());
         }
@@ -255,6 +280,7 @@ impl Policy for Discipline {
                 healer,
                 enemy,
                 injured,
+                active_atonements,
                 "damage",
                 &["penance", "mind_blast", "shadow_word_death", "smite"],
             )?;
