@@ -107,6 +107,10 @@ fn replay_with_party_registry(
     let _rng = crate::random::seed_scope(seed);
     let mut run = super::dps_parity::prepare_registered_player(66, 1)?;
     let healer = super::dps_parity::spawn_second_reference_player(&mut run, spec)?;
+    run.app
+        .world_mut()
+        .entity_mut(healer)
+        .insert(crate::spell_cast::ObservedResourcePayments::default());
     let tank = run.actor;
     let party = spawn_reference_party(run.app.world_mut(), tank, healer)?;
     let members: Vec<_> = party.members.iter().copied().chain([tank]).collect();

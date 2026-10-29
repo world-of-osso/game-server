@@ -5,6 +5,31 @@ use shared::components::Health;
 
 #[test]
 #[ignore = "requires native spell data"]
+fn healer_report_records_real_mana_payment_by_spell() {
+    let mut h = crate::spell_cast::test_harness::harness(Vec::new(), &[2061], 5).unwrap();
+    h.app
+        .init_resource::<crate::spell_cast::test_harness::ObservedCombatEvents>();
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(crate::spell_cast::ObservedResourcePayments::default());
+    let recorder = Recorder::start(h.app.world(), h.caster, h.caster, vec![h.caster]);
+    h.cast_and_deliver(2061, Some(h.caster));
+    h.advance(80);
+    assert!(
+        h.inbox.failed.is_empty(),
+        "real Flash Heal must succeed: {:?}",
+        h.inbox.failed
+    );
+    let report = recorder.report(h.app.world(), 5);
+    assert!(
+        report["mana_spent_by_spell"]["2061"].as_f64().unwrap() > 0.0,
+        "actual Flash Heal payment must be reported: {report}"
+    );
+}
+
+#[test]
+#[ignore = "requires native spell data"]
 fn healer_report_counts_only_consumed_owned_shields() {
     let mut h = crate::spell_cast::test_harness::harness(Vec::new(), &[133, 17], 5).unwrap();
     h.app
