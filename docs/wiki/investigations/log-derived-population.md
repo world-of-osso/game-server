@@ -16,7 +16,7 @@ Cross-run matching is provisional. Within a connected 10-yard area of the same N
 
 ## Coverage snapshot
 
-Read-only canonical database and log census, 2026-10-28. Counts are raw GUID observations and NPC IDs, not deduplicated spawns; they include summons and unclassified actors. TDB and content counts include all stored difficulties, not only Normal. Spawn, import and already-present counts await floor resolution and copy import.
+Read-only canonical database and log census, 2026-10-28. Counts are raw GUID observations and NPC IDs, not deduplicated spawns; they include summons and unclassified actors. TDB and content counts include all stored difficulties, not only Normal. The [copy-only import results and named gaps](../../specs/follower-dungeons.md#copy-only-coverage-2026-10-28) are recorded separately.
 
 | Dungeon | Map | Runs | GUID observations | NPC IDs | TDB rows | Content rows |
 |---|---:|---:|---:|---:|---:|---:|
@@ -28,7 +28,7 @@ Read-only canonical database and log census, 2026-10-28. Counts are raw GUID obs
 | The Blinding Vale | 2859 | 8 | 3,499 | 73 | 0 | 216 |
 | Voidscar Arena | 2923 | 8 | 4,980 | 70 | 0 | 198 |
 
-The current extraction has 266 encounter pulls, including 253 successful pulls. The initial pack analysis has no qualified patrol paths; provisional candidates are not imported as paths. The coverage snapshot is not a claim that a dungeon is complete.
+The current extraction has 266 encounter pulls, including 253 successful pulls. A copy-only run inserted 1,214 source-tagged rows; read-only comparison found no pre-existing TDB or content creature rows missing, and SQLite `quick_check` passed. The sole multi-run pre-engagement movement candidate is Ghostly Brute135231 on map1762; all nine floor results are ambiguous, so no navmesh path was qualified or imported. The coverage snapshot is not a claim that a dungeon is complete.
 
 ## Sources
 
