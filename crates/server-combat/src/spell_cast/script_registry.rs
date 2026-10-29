@@ -44,6 +44,7 @@
 //! - `AvoidanceProcHitMask`: sourced avoidance outcomes for a scripted proc.
 //! - `GuaranteesCrit`, `IgnoresCooldown`, `SnapshotsModifier`, `ArmorIgnoredSpells`:
 //!   pure native-readiness, launch snapshot and damage classification predicates.
+//! - `AllowCastDuringChannel`: source-qualified native cast admission during an active channel.
 //! - `PersistentCastMultiplier`: spell IDs whose existing cast factor is stored as periodic metadata.
 //! - `ResolvedDamage`: after actual direct/periodic damage, before Explosive tick callbacks.
 //! - `AfterDirectDamageBeforeItems`: after Ret direct damage, before item scripts.
@@ -350,6 +351,7 @@ pub enum SpellScriptHook {
     AvoidanceProcHitMask(fn(u32) -> Option<u32>),
     GuaranteesCrit(CastPredicate),
     IgnoresCooldown(CastPredicate),
+    AllowCastDuringChannel(CastPredicate),
     SnapshotsModifier(OwnsProcLookup),
     /// These spells retain their existing cast damage factor as stored periodic metadata.
     PersistentCastMultiplier(&'static [u32]),
@@ -1206,6 +1208,16 @@ pub fn guarantees_crit(world: &World, caster: Entity, spell: &SpellInfo) -> bool
         .any(|hook| match hook {
             SpellScriptHook::GuaranteesCrit(test) => test(world, caster, spell),
             _ => false,
+        })
+}
+
+pub fn allows_cast_during_channel(world: &World, caster: Entity, spell: &SpellInfo) -> bool {
+    world
+        .get_resource::<SpellScriptRegistry>()
+        .is_some_and(|registry| {
+            registry.hooks().any(|hook| {
+        matches!(hook, SpellScriptHook::AllowCastDuringChannel(test) if test(world, caster, spell))
+    })
         })
 }
 

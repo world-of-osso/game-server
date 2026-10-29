@@ -724,7 +724,7 @@ fn attempt_cast(
     let allows_parallel_cast = world
         .resource::<crate::spell_info::SpellStore>()
         .get(entry.spell_id)
-        .is_some_and(crate::spell_cast::allows_cast_while_casting);
+        .is_some_and(|spell| crate::spell_cast::allows_cast_while_casting(world, unit, spell));
     let may_start_while_casting = urgent || allows_parallel_cast;
     if world.get::<CastState>(unit).is_some() && !may_start_while_casting {
         return false;
