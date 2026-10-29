@@ -10,7 +10,7 @@ server = { path = "../server", features = ["test-support"] }
 bevy = { version = "0.19", default-features = false, features = ["bevy_log", "bevy_state"] }
 # Actual native combat broadcasts and requests; retain canonical protocol identities.
 lightyear = { version = "0.28", features = ["server", "netcode", "replication", "udp"] }
-shared = { git = "https://github.com/world-of-osso/shared-protocol.git", rev = "186134ff880f1a6a7b754e4ce43456d775a44caf" }
+shared = { git = "https://github.com/world-of-osso/shared-protocol.git", rev = "470a7e8b7aed67d808defc473c6e46475dafc53f" }
 # Read-only installed attack-time rows used by native cadence cases.
 rusqlite = { version = "0.35", features = ["bundled"] }
 # Preserve the existing cadence fixture's ordinary spawn RNG type.

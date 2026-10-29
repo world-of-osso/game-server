@@ -12,4 +12,4 @@ bevy = { version = "0.19", default-features = false, features = ["bevy_log", "be
 rusqlite = { version = "0.35", features = ["bundled"] }
 # Preserve canonical native messages and components in fixture observations.
 lightyear = { version = "0.28", features = ["server", "netcode", "replication", "udp"] }
-shared = { git = "https://github.com/world-of-osso/shared-protocol.git", rev = "186134ff880f1a6a7b754e4ce43456d775a44caf" }
+shared = { git = "https://github.com/world-of-osso/shared-protocol.git", rev = "470a7e8b7aed67d808defc473c6e46475dafc53f" }
