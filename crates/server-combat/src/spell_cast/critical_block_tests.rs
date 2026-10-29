@@ -1100,8 +1100,28 @@ fn class_completeness_native_evasion_does_not_dodge_ranged_aimed_shot() {
 
 #[test]
 fn class_completeness_native_evasion_removal_and_expiry_restore_weapon_hits() {
+    let _seed = crate::random::seed_scope(70448);
     for expires in [false, true] {
         let (mut h, defender) = evasion_duel(1);
+        let dodge_with_evasion = h
+            .app
+            .world()
+            .get::<CharacterStats>(defender)
+            .unwrap()
+            .defense
+            .dodge;
+        let evasion = h
+            .app
+            .world()
+            .get::<ActiveAuras>(defender)
+            .unwrap()
+            .modifier(crate::auras::handlers::MOD_DODGE_PERCENT);
+        assert_eq!(evasion, 200.0);
+        let baseline = dodge_with_evasion - evasion;
+        assert!(
+            (baseline - 5.057295).abs() < 0.0001,
+            "native Rogue baseline: {baseline}"
+        );
         if expires {
             h.advance(205); // Native5277 duration10000ms.
         } else {
@@ -1114,14 +1134,16 @@ fn class_completeness_native_evasion_removal_and_expiry_restore_weapon_hits() {
             h.advance(2);
         }
         assert!(!crate::auras::has_aura(h.app.world(), defender, 5277));
-        assert_eq!(
-            h.app
-                .world()
-                .get::<CharacterStats>(defender)
-                .unwrap()
-                .defense
-                .dodge,
-            0.0
+        let restored = h
+            .app
+            .world()
+            .get::<CharacterStats>(defender)
+            .unwrap()
+            .defense
+            .dodge;
+        assert!(
+            (restored - baseline).abs() < 0.0001,
+            "restored={restored}, baseline={baseline}"
         );
         let hits = cast_damage_spell(&mut h, defender, 1464, 3);
         assert_eq!(hits.len(), 1);
