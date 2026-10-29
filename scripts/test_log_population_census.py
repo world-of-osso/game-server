@@ -49,6 +49,12 @@ class CensusTest(unittest.TestCase):
         self.assertEqual(len(ambiguous), 3)
         self.assertTrue(ambiguous[2]['ambiguous_match'])
         self.assertEqual(ambiguous[2]['classification'], 'insufficient_or_ambiguous')
+        runs = [run('a', [('a1', 0)]), run('b', [('b1', 7)])]
+        samples = [dict(runs[i]['creatures'][guid]['first_position'], file=runs[i]['file'],
+                        run_start='start', guid=guid, seconds_from_start=2)
+                   for i, guid in enumerate(('a1', 'b1'))]
+        safe_clusters = module.cluster_safe_samples(runs, io.StringIO('\n'.join(map(json.dumps, samples))))
+        self.assertEqual(safe_clusters[0]['classification'], 'patrol_candidate')
 
     def test_encounter_casts_and_known_boss_identity(self):
         with tempfile.TemporaryDirectory() as directory:
