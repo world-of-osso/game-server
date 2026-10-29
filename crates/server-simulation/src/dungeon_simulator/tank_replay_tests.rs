@@ -1567,6 +1567,57 @@ fn higher_level_attacker_reduces_player_avoidance() {
 }
 
 #[test]
+#[ignore = "uses native ExpectedStat and real incoming damage"]
+fn dungeon_season_armor_tuning_changes_incoming_swing_damage() {
+    use shared::components::{Health, UnitLevel};
+    let mut h = crate::spell_cast::test_harness::harness(Vec::new(), &[], 12).unwrap();
+    let data = crate::test_data::world_data();
+    h.app.insert_resource(data.armor_constants.clone());
+    h.app.world_mut().entity_mut(h.caster).insert((
+        UnitLevel(90),
+        Health {
+            current: 10000.0,
+            max: 10000.0,
+        },
+    ));
+    h.app.world_mut().entity_mut(h.npc).insert(UnitLevel(92));
+    h.app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(h.caster)
+        .unwrap()
+        .armor = 3430.0;
+    let hit = super::healer_intake::Hit {
+        tick: 1,
+        source_guid: 0,
+        pack: 0,
+        target_slot: 0,
+        school: 1,
+        raw: 1000.0,
+        level_scaling_factor: 1.0,
+        kind: super::healer_intake::HitKind::Melee {
+            hand: 0,
+            outcome: "Hit".into(),
+            level_difference: -2,
+            critical_multiplier: 1.0,
+            weapon_speed: 2.0,
+        },
+    };
+    crate::combat::replay_healer_hit(h.app.world_mut(), h.npc, h.caster, &hit).unwrap();
+    let ordinary = 10000.0 - h.health(h.caster);
+    h.app
+        .world_mut()
+        .get_mut::<Health>(h.caster)
+        .unwrap()
+        .current = 10000.0;
+    let tuning = data.expected_stats.armor_tuning(3025, 120).unwrap();
+    h.app.world_mut().entity_mut(h.npc).insert(tuning);
+    crate::combat::replay_healer_hit(h.app.world_mut(), h.npc, h.caster, &hit).unwrap();
+    let dungeon = 10000.0 - h.health(h.caster);
+    assert_eq!(ordinary, 500.0);
+    assert_eq!(dungeon, 569.0);
+}
+
+#[test]
 #[ignore = "uses native recipient armor and absorb data"]
 fn simc_dummy_bleed_uses_native_absorbs_but_not_armor() {
     let mut h = crate::spell_cast::test_harness::harness(Vec::new(), &[17], 5).unwrap();
