@@ -23,7 +23,9 @@ fn preservation_consume_flame_consumes_dream_breath_on_verdant_embrace() {
             source: crate::auras::AuraSource::Cast,
         },
     );
-    crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 355941, Some(h.caster), 1);
+    crate::spell_cast::creature_cast(h.app.world_mut(), h.caster, 355941, Some(h.caster), true)
+        .unwrap();
+    h.advance(1);
     let expiry = |h: &crate::spell_cast::test_harness::Harness| {
         h.app
             .world()
