@@ -20,6 +20,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::ResolvedHeal(divine_aegis),
     SpellScriptHook::RawResolvedDamage(transfer_damage),
     SpellScriptHook::DamageAmount(penance_bolt_damage),
+    SpellScriptHook::HealingMultiplier(penance_healing_multiplier),
     SpellScriptHook::EffectHit(shadowfiend_death_hit),
     SpellScriptHook::MeleeRawResolved(transfer_pet_melee),
     SpellScriptHook::MeleeResidual(fiend_mana_on_landed_melee),
@@ -28,16 +29,32 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::ConsumedEffectValues(&[(81749, 0)]),
 ];
 
-#[derive(Component, Default)]
-struct PenanceBolts(u32);
+#[derive(Component)]
+struct PenanceBolts {
+    completed: u32,
+    dark_side_multiplier: f32,
+}
 
 fn start_penance(world: &mut World, caster: Entity, spell: u32, _depth: u8) {
     if spell != 47540 || !is_discipline(world, caster) {
         return;
     }
     // SimC76f8118 sc_priest_discipline.cpp:579-582 resets Holy Ray at channel start.
-    auras::remove_auras(world, caster, auras::RemoveReason::Consumed, |aura| aura.spell_id == 1235193 && aura.caster == caster);
-    world.entity_mut(caster).insert(PenanceBolts::default());
+    auras::remove_auras(world, caster, auras::RemoveReason::Consumed, |aura| {
+        aura.spell_id == 1235193 && aura.caster == caster
+    });
+    let dark_side_multiplier = if auras::has_aura(world, caster, 198069) {
+        1.0 + combat::spell_cast::scripts::script_effect_value(world, caster, 198069, 0) / 100.0
+    } else {
+        1.0
+    };
+    auras::remove_auras(world, caster, auras::RemoveReason::Consumed, |aura| {
+        aura.spell_id == 198069 && aura.caster == caster
+    });
+    world.entity_mut(caster).insert(PenanceBolts {
+        completed: 0,
+        dark_side_multiplier,
+    });
 }
 
 fn register_shield_discipline(scripts: &mut auras::scripts::AuraScripts) {
@@ -46,16 +63,30 @@ fn register_shield_discipline(scripts: &mut auras::scripts::AuraScripts) {
     }
 }
 
-fn shield_discipline(world: &mut World, _target: Entity, aura: &AuraInstance, _reason: auras::RemoveReason) {
+fn shield_discipline(
+    world: &mut World,
+    _target: Entity,
+    aura: &AuraInstance,
+    _reason: auras::RemoveReason,
+) {
     let caster = aura.caster;
     // SimC76f8118 sc_priest.cpp:50-61,114-125: only an early shield expiration returns mana.
     if !auras::has_aura(world, caster, 197045)
-        || !aura.expires_at.is_some_and(|expiry| expiry > combat::spell_cast::now(world))
+        || !aura
+            .expires_at
+            .is_some_and(|expiry| expiry > combat::spell_cast::now(world))
     {
         return;
     }
     let percent = combat::spell_cast::scripts::script_effect_value(world, caster, 47755, 0) / 100.0;
-    combat::spell_cast::cast_triggered_with_effect0_amount(world, caster, 47755, Some(caster), 1, percent);
+    combat::spell_cast::cast_triggered_with_effect0_amount(
+        world,
+        caster,
+        47755,
+        Some(caster),
+        1,
+        percent,
+    );
 }
 
 #[derive(Component)]
@@ -352,44 +383,98 @@ fn transfer_damage(
     }
 }
 
-fn penance_bolt_damage(spell: u32) -> Option<combat::spell_cast::script_registry::DamageAmountHook> {
-    (spell == 47666).then_some(apply_prompt_prognosis)
+fn penance_bolt_damage(
+    spell: u32,
+) -> Option<combat::spell_cast::script_registry::DamageAmountHook> {
+    (spell == 47666).then_some(apply_penance_bolt_modifiers)
 }
 
-fn apply_prompt_prognosis(world: &World, caster: Entity, _target: Entity, amount: f32) -> f32 {
-    if !is_discipline(world, caster)
-        || !world.get::<PenanceBolts>(caster).is_some_and(|bolts| bolts.0 == 2)
-        || !world.get::<combat::class_progression::KnownSpells>(caster).is_some_and(|known| known.contains(1246799))
-    {
+fn apply_penance_bolt_modifiers(
+    world: &World,
+    caster: Entity,
+    _target: Entity,
+    amount: f32,
+) -> f32 {
+    let Some(bolts) = world.get::<PenanceBolts>(caster) else {
         return amount;
+    };
+    let prompt = bolts.completed == 2
+        && world
+            .get::<combat::class_progression::KnownSpells>(caster)
+            .is_some_and(|known| known.contains(1246799));
+    // SimC76f8118 sc_priest_discipline.cpp:445-448,490-494 snapshots Dark Side and boosts tick 2.
+    let bonus = if prompt {
+        combat::spell_cast::scripts::script_effect_value(world, caster, 1246799, 0)
+    } else {
+        0.0
+    };
+    amount * bolts.dark_side_multiplier * (1.0 + bonus / 100.0)
+}
+
+fn penance_healing_multiplier(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    _periodic: bool,
+) -> f32 {
+    if spell.id != 47750 {
+        return 1.0;
     }
-    // SimC76f8118 sc_priest_discipline.cpp:490-494 applies Prompt Prognosis at current_tick 2.
-    let bonus = combat::spell_cast::scripts::script_effect_value(world, caster, 1246799, 0);
-    amount * (1.0 + bonus / 100.0)
+    world
+        .get::<PenanceBolts>(caster)
+        .map_or(1.0, |bolts| bolts.dark_side_multiplier)
 }
 
 fn select_twinsight_recipient(world: &mut World, caster: Entity) -> Option<Entity> {
     let map = *world.get::<combat::maps::InMap>(caster)?;
-    let candidates: Vec<_> = world.query::<(Entity, &Health, &combat::maps::InMap, Option<&Player>, Option<&combat::followers::Follower>)>()
+    let candidates: Vec<_> = world
+        .query::<(
+            Entity,
+            &Health,
+            &combat::maps::InMap,
+            Option<&Player>,
+            Option<&combat::followers::Follower>,
+        )>()
         .iter(world)
-        .filter(|(_, health, unit_map, player, follower)| health.current > 0.0 && **unit_map == map && (player.is_some() || follower.is_some()))
+        .filter(|(_, health, unit_map, player, follower)| {
+            health.current > 0.0 && **unit_map == map && (player.is_some() || follower.is_some())
+        })
         .map(|(unit, _, _, _, _)| unit)
-        .filter(|&unit| combat::spell_cast::targets::relation_matches(world, caster, unit, combat::spell_cast::targets::Relation::Ally))
+        .filter(|&unit| {
+            combat::spell_cast::targets::relation_matches(
+                world,
+                caster,
+                unit,
+                combat::spell_cast::targets::Relation::Ally,
+            )
+        })
         .collect();
-    if candidates.is_empty() { return None; }
+    if candidates.is_empty() {
+        return None;
+    }
     Some(candidates[(combat::random::random::<f32>() * candidates.len() as f32) as usize])
 }
 
 fn finish_penance_bolt(world: &mut World, caster: Entity) {
-    let Some(mut bolts) = world.get_mut::<PenanceBolts>(caster) else { return; };
-    bolts.0 += 1;
-    let bolt = bolts.0;
-    let selected = |world: &World, talent| world.get::<combat::class_progression::KnownSpells>(caster).is_some_and(|known| known.contains(talent));
+    let Some(mut bolts) = world.get_mut::<PenanceBolts>(caster) else {
+        return;
+    };
+    bolts.completed += 1;
+    let bolt = bolts.completed;
+    let selected = |world: &World, talent| {
+        world
+            .get::<combat::class_progression::KnownSpells>(caster)
+            .is_some_and(|known| known.contains(talent))
+    };
     let twinsight = bolt <= 4 && selected(world, 440742);
     let mut stacks = 1;
     if twinsight && let Some(target) = select_twinsight_recipient(world, caster) {
         // SimC76f8118 sc_priest_discipline.cpp:463-484 schedules one healing and one damage bolt.
-        let mut spell = world.resource::<SpellStore>().get(47750).expect("Twinsight Penance heal must exist").clone();
+        let mut spell = world
+            .resource::<SpellStore>()
+            .get(47750)
+            .expect("Twinsight Penance heal must exist")
+            .clone();
         for effect in &mut spell.effects {
             if effect.implicit_targets[0] == 77 {
                 effect.implicit_targets[0] = 21;
@@ -402,7 +487,16 @@ fn finish_penance_bolt(world: &mut World, caster: Entity) {
     if selected(world, 372969) {
         // SimC76f8118 sc_priest_discipline.cpp:304-310,350-358: each bolt advances Holy Ray.
         for _ in 0..stacks {
-            auras::apply_aura(world, &AuraApplication { caster, target: caster, spell_id: 1235193, effect_mask: u32::MAX, source: AuraSource::Cast });
+            auras::apply_aura(
+                world,
+                &AuraApplication {
+                    caster,
+                    target: caster,
+                    spell_id: 1235193,
+                    effect_mask: u32::MAX,
+                    source: AuraSource::Cast,
+                },
+            );
         }
     }
 }
@@ -495,8 +589,16 @@ fn fiend_mana_on_landed_melee(world: &mut World, source: Entity, _target: Entity
         123040 | 200174 if known.contains(123040) || known.contains(200174) => (123051, 100.0),
         _ => return,
     };
-    let percent = combat::spell_cast::scripts::script_effect_value(world, owner, spell, 0) / divisor;
-    combat::spell_cast::cast_triggered_with_effect0_amount(world, source, spell, Some(owner), 1, percent);
+    let percent =
+        combat::spell_cast::scripts::script_effect_value(world, owner, spell, 0) / divisor;
+    combat::spell_cast::cast_triggered_with_effect0_amount(
+        world,
+        source,
+        spell,
+        Some(owner),
+        1,
+        percent,
+    );
 }
 
 fn transfer_pet_melee(world: &mut World, source: Entity, target: Entity, raw: f32, crit: bool) {

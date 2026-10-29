@@ -5,6 +5,58 @@ use shared::components::{ActiveSpec, Health};
 use shared::protocol::CombatLogKind;
 
 #[test]
+fn discipline_dark_side_is_consumed_and_snapshotted_for_all_penance_bolts() {
+    let mut damage_sets = Vec::new();
+    for empowered in [false, true] {
+        let _seed = crate::random::seed_scope(70448);
+        let mut h = harness(Vec::new(), &[47540, 47758, 47757, 47666, 47750, 198069], 5).unwrap();
+        h.app
+            .init_resource::<super::test_harness::ObservedCombatEvents>();
+        let caster = h.caster;
+        h.app.world_mut().entity_mut(caster).insert(ActiveSpec(256));
+        h.app
+            .world_mut()
+            .get_mut::<server::stats::CharacterStats>(caster)
+            .unwrap()
+            .crit_pct = 0.0;
+        if empowered {
+            crate::auras::apply_aura(
+                h.app.world_mut(),
+                &crate::auras::AuraApplication {
+                    caster,
+                    target: caster,
+                    spell_id: 198069,
+                    effect_mask: u32::MAX,
+                    source: crate::auras::AuraSource::Cast,
+                },
+            );
+        }
+        h.cast_and_deliver(47540, Some(h.npc));
+        h.advance(70);
+        assert!(!crate::auras::has_aura(h.app.world(), caster, 198069));
+        let events = &h
+            .app
+            .world()
+            .resource::<super::test_harness::ObservedCombatEvents>()
+            .0;
+        let damage: Vec<_> = events
+            .iter()
+            .filter(|event| event.kind == CombatLogKind::Damage && event.spell_id == Some(47666))
+            .map(|event| event.amount)
+            .collect();
+        assert_eq!(damage.len(), 3);
+        damage_sets.push(damage);
+    }
+    for (base, empowered) in damage_sets[0].iter().zip(&damage_sets[1]) {
+        let ratio = *empowered as f32 / *base as f32;
+        assert!(
+            (1.2..1.4).contains(&ratio),
+            "Dark Side must persist through each real bolt: {damage_sets:?}"
+        );
+    }
+}
+
+#[test]
 fn discipline_prompt_prognosis_amplifies_only_the_third_penance_bolt() {
     let mut h = harness(Vec::new(), &[47540, 47758, 47757, 47666, 47750, 1246799], 5).unwrap();
     h.app
