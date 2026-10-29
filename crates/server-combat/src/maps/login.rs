@@ -66,15 +66,17 @@ impl LoginMaps<'_> {
             return self.place(copy, position);
         }
         self.restore_housing_admission(map_id, character_id)?;
+        let checkpoint = self.instances.normal_login_checkpoint(character_id, map_id);
         let entrant: InstanceEntrant = super::transfer::entrant_for(
             self.groups.as_deref(),
             character_id,
-            difficulty_id,
+            checkpoint.map_or(difficulty_id, |(_, difficulty)| difficulty),
             raid_difficulty,
         );
         let place = match self.enter(map_id, entrant) {
             Some(resolved) => {
-                let position = match (resolved.created, self.is_dungeon(map_id)) {
+                let restored = checkpoint.is_some_and(|(map, _)| map == resolved.map);
+                let position = match (resolved.created && !restored, self.is_dungeon(map_id)) {
                     (true, true) => self
                         .store
                         .entrance_location(map_id)
