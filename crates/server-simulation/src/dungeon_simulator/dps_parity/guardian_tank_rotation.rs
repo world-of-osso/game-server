@@ -580,6 +580,61 @@ mod tests {
 
     #[test]
     #[ignore = "requires Guardian MID2 profile and native world data"]
+    fn guardian_ironfur_stacks_expire_on_their_own_lifetimes() {
+        let mut run = super::super::prepare_registered_player(104, 1).unwrap();
+        let actor = run.actor;
+        super::super::engage(&mut run);
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 5487, Some(actor), false)
+            .unwrap();
+        let ironfur = |run: &super::super::Run| {
+            run.app
+                .world()
+                .get::<crate::auras::ActiveAuras>(actor)
+                .unwrap()
+                .iter()
+                .find(|aura| aura.spell_id == 192081 && aura.caster == actor)
+                .map_or(0, |aura| aura.stacks)
+        };
+        let armor = |run: &super::super::Run| {
+            run.app
+                .world()
+                .get::<crate::stats::CharacterStats>(actor)
+                .unwrap()
+                .armor
+        };
+        // Three real casts 3 s apart; 0.05 s per update.
+        let mut armor_by_stacks = Vec::new();
+        for _ in 0..3 {
+            crate::spell_cast::powers::change_power(
+                run.app.world_mut(),
+                actor,
+                shared::components::PowerType::Rage,
+                1000.0,
+            );
+            crate::spell_cast::creature_cast(run.app.world_mut(), actor, 192081, Some(actor), false)
+                .unwrap();
+            run.app.update();
+            armor_by_stacks.push(armor(&run));
+            for _ in 0..59 {
+                run.app.update();
+            }
+        }
+        // Each stack lives 9 s (SimC trace: gain 6.044, decrement 15.044).
+        for _ in 0..10 {
+            run.app.update();
+        }
+        // 9.5 s: only the first cast has expired; a shared refresh would keep all three.
+        assert_eq!(ironfur(&run), 2, "casts at 3 s and 6 s are still live at 9.5 s");
+        for _ in 0..60 {
+            run.app.update();
+        }
+        // 12.5 s: the cast at 3 s has expired too.
+        assert_eq!(ironfur(&run), 1);
+        assert!((armor(&run) - armor_by_stacks[0]).abs() < 1.0, "one stack's armor remains");
+    }
+
+    #[test]
+    #[ignore = "requires Guardian MID2 profile and native world data"]
     fn guardian_thrash_and_moonfire_reduce_dummy_bleed_on_the_druid() {
         use crate::spell_cast::test_harness::ObservedCombatEvents;
         use shared::protocol::CombatLogKind;
