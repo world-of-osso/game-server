@@ -1060,7 +1060,12 @@ mod tests {
     fn blood_ossuary_tracks_bone_shield_and_death_strike_cost() {
         use server::test_support::healer_intake::{Hit, HitKind};
         use shared::components::PowerType;
-        fn scenario(stacks: usize, lose_stack: bool, selected: bool) -> (bool, f32) {
+        fn scenario(
+            stacks: usize,
+            lose_stack: bool,
+            selected: bool,
+            improved: bool,
+        ) -> (bool, f32) {
             let mut run = super::super::prepare_registered_player(250, 1).unwrap();
             let actor = run.actor;
             let target = run.targets[0];
@@ -1083,7 +1088,10 @@ mod tests {
                 run.app.world_mut(),
                 actor,
                 crate::auras::RemoveReason::Cancelled,
-                |aura| matches!(aura.spell_id, 195181 | 219788),
+                |aura| {
+                    matches!(aura.spell_id, 195181 | 219788)
+                        || (!improved && aura.spell_id == 374277)
+                },
             );
             for _ in 0..stacks {
                 crate::auras::apply_aura(
@@ -1148,10 +1156,12 @@ mod tests {
             .0;
             (active, before - after)
         }
-        assert_eq!(scenario(4, false, true), (false, 400.0));
-        assert_eq!(scenario(5, false, true), (true, 350.0));
-        assert_eq!(scenario(5, true, true), (false, 400.0));
-        assert_eq!(scenario(5, false, false), (false, 400.0));
+        assert_eq!(scenario(4, false, true, true), (false, 400.0));
+        assert_eq!(scenario(5, false, true, true), (true, 350.0));
+        assert_eq!(scenario(5, true, true, true), (false, 400.0));
+        assert_eq!(scenario(5, false, false, true), (false, 400.0));
+        assert_eq!(scenario(5, false, true, false), (true, 400.0));
+        assert_eq!(scenario(4, false, true, false), (false, 450.0));
     }
 
     #[test]

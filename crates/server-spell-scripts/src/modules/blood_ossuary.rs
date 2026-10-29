@@ -99,5 +99,14 @@ fn death_strike_cost(
             .expect("Improved Death Strike cost")
             .base_points
     };
-    amount + effect(4) - effect(2)
+    let adjustment = effect(4) - effect(2);
+    let order = spell
+        .power_costs
+        .iter()
+        .find(|cost| cost.power_type == 6)
+        .expect("Death Strike runic power cost")
+        .order_index;
+    let op = auras::SpellModOp::power_cost(order).expect("Death Strike cost modifier");
+    let modified = |base| auras::spell_mods::modify(world, caster, spell, op, base);
+    amount + modified(adjustment) - modified(0.0)
 }
