@@ -244,10 +244,9 @@ fn encounter_coverage_lost_dwarves_all_actor_current_lanes_and_native_completion
 }
 
 #[test]
-fn encounter_coverage_lost_dwarves_threshold_stops_casts_without_faction_or_flags() {
+fn encounter_coverage_lost_dwarves_threshold_stops_casts_and_becomes_friendly() {
     let (mut h, boss, map) = dwarf_copy(DWARVES[0], 205);
     let flags = *h.app.world().get::<UnitFlags>(boss).unwrap();
-    let faction = *h.app.world().get::<UnitFactionTemplate>(boss).unwrap();
     h.engage(boss);
     h.hit_pct(boss, 89.0);
     h.advance(12.0);
@@ -263,14 +262,20 @@ fn encounter_coverage_lost_dwarves_threshold_stops_casts_without_faction_or_flag
     assert_eq!(*h.app.world().get::<UnitFlags>(boss).unwrap(), flags);
     assert_eq!(
         *h.app.world().get::<UnitFactionTemplate>(boss).unwrap(),
-        faction
+        UnitFactionTemplate(35)
     );
+    assert!(!crate::spell_cast::targets::relation_matches(
+        h.app.world(),
+        h.player(),
+        boss,
+        crate::spell_cast::targets::Relation::Enemy,
+    ));
     let before = h.inbox(0).spell_gos.len();
     h.advance(60.0);
     assert_eq!(
         h.inbox(0).spell_gos.len(),
         before,
-        "surrendered actor remains silent despite hostile source faction"
+        "surrendered actor remains silent after becoming friendly"
     );
     assert!(
         h.app
@@ -288,11 +293,51 @@ fn encounter_coverage_lost_dwarves_threshold_stops_casts_without_faction_or_flag
 }
 
 #[test]
+fn encounter_coverage_lost_dwarves_surrender_stops_garrick_and_player_attacks() {
+    let (mut h, boss, _) = dwarf_copy(DWARVES[0], 205);
+    let owner = h.player();
+    let garrick = crate::followers::native_fixture::spawn(h.app.world_mut(), owner, 209057)
+        .expect("authored Garrick follower");
+    h.app.add_systems(FixedUpdate, crate::followers::update_ai);
+    h.engage(boss);
+    crate::combat::start_attack_now(
+        h.app.world_mut(),
+        garrick,
+        crate::combat::AutoAttack::new(boss),
+    );
+    h.hit_pct(boss, 200.0);
+    h.advance(0.1);
+    assert!(!crate::spell_cast::targets::relation_matches(
+        h.app.world(),
+        owner,
+        boss,
+        crate::spell_cast::targets::Relation::Enemy,
+    ));
+    assert!(!crate::spell_cast::targets::relation_matches(
+        h.app.world(),
+        garrick,
+        boss,
+        crate::spell_cast::targets::Relation::Enemy,
+    ));
+    let log_start = h.inbox(0).log.len();
+    h.advance(6.0);
+    assert!(
+        h.inbox(0).log[log_start..].iter().all(|event| {
+            event.source != Some(garrick.to_bits())
+                || event.target != Some(boss.to_bits())
+                || event.kind != CombatLogKind::Damage
+        }),
+        "Garrick must not resume damaging the friendly dwarf"
+    );
+}
+
+#[test]
 fn encounter_coverage_lost_dwarves_evade_restores_partial_surrender_progress() {
     let (mut h, baelog, map) = dwarf_copy(DWARVES[0], 205);
     let conn =
         Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
     let (eric, _) = spawn_authored_actor(&mut h.app, &conn, DWARVES[1], map, 205);
+    let original_faction = *h.app.world().get::<UnitFactionTemplate>(baelog).unwrap();
     h.engage(baelog);
     h.hit_pct(baelog, 200.0);
     h.advance(0.1);
@@ -306,6 +351,11 @@ fn encounter_coverage_lost_dwarves_evade_restores_partial_surrender_progress() {
     h.engage(eric);
     crate::creature_aggro::enter_evade_mode(h.app.world_mut(), eric);
     h.advance(14.0);
+    assert_eq!(
+        *h.app.world().get::<UnitFactionTemplate>(baelog).unwrap(),
+        original_faction,
+        "a wipe restores the sourced hostile faction"
+    );
     assert!(
         cast_count(&h, baelog, 369563) > 0,
         "native home/health recovery and reset restore unsurrendered combat clocks"
