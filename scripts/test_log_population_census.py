@@ -153,6 +153,21 @@ class CensusTest(unittest.TestCase):
             'map': 2521, 'x': 10.0, 'y': 20.0, 'ui_map_id': 2095,
             'neighbor_hints': [neighbor]}])
 
+    def test_zone_observations_stay_separate_from_challenge_runs(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'combat.txt'
+            path.write_text(
+                '1  ZONE_CHANGE,2521,"Ruby Life Pools",23\n'
+                '2  SPELL_DAMAGE,Player-1,"Player",0x511,0,Creature-0-1-2521-42-123-ABCD,"Before",0xa48,0,1,"Hit",1\n'
+                '3  CHALLENGE_MODE_START,"Ruby Life Pools",2521,399,15,[]\n'
+                '4  SPELL_DAMAGE,Player-1,"Player",0x511,0,Creature-0-1-2521-42-456-DCBA,"Key",0xa48,0,1,"Hit",1\n'
+                '5  CHALLENGE_MODE_END,"Ruby Life Pools",2521\n')
+            zones = census([path], {2521}, zones_only=True)
+            keys = census([path], {2521})
+        self.assertEqual(zones[0]['session_kind'], 'zone')
+        self.assertEqual([unit['npc_id'] for unit in zones[0]['creatures'].values()], [123])
+        self.assertEqual([unit['npc_id'] for unit in keys[0]['creatures'].values()], [456])
+
     def test_runs_creatures_and_summon_destinations(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / 'combat.txt'
