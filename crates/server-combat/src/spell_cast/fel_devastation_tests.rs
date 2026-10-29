@@ -103,6 +103,54 @@ fn trigger_damage(h: &mut Harness) {
 }
 
 #[test]
+fn haste_173_adds_fel_devastation_ticks_without_shortening_channel() {
+    let mut h = fixture(true);
+    h.set_power(PowerType::Fury, 50.0);
+    h.app
+        .world_mut()
+        .get_mut::<CharacterStats>(h.caster)
+        .unwrap()
+        .haste_pct = 43.965;
+    let target = h.npc;
+    move_unit(&mut h, target, 3.0, 0.0);
+    let start = start_channel(&mut h);
+    let duration = h
+        .app
+        .world()
+        .get::<shared::casting::CastState>(h.caster)
+        .unwrap()
+        .duration;
+    assert_eq!(duration, 2.0);
+    finish_channel(&mut h);
+    assert_native_heals(&h, start, 15);
+    let damage = h.inbox.log[start..]
+        .iter()
+        .filter(|event| event.spell_id == Some(DAMAGE) && event.kind == CombatLogKind::Damage)
+        .count();
+    assert_eq!(damage, 15);
+}
+
+#[test]
+fn haste_273_shortens_arcane_missiles_channel() {
+    let mut h = harness(Vec::new(), &[5143, 7268], 8).unwrap();
+    h.advance(3);
+    h.app
+        .world_mut()
+        .get_mut::<CharacterStats>(h.caster)
+        .unwrap()
+        .haste_pct = 100.0;
+    h.cast_and_deliver(5143, Some(h.npc));
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    let duration = h
+        .app
+        .world()
+        .get::<shared::casting::CastState>(h.caster)
+        .unwrap()
+        .duration;
+    assert_eq!(duration, 1.25);
+}
+
+#[test]
 fn vengeance_fel_existing_geometry_native_cone_75deg_13yd_is_uncapped_with_native_exclusions() {
     let mut h = fixture(true);
     let front = h.npc;

@@ -286,6 +286,8 @@ pub struct AuraEffectState {
     next_tick_index: u64,
     /// Periodic ticks paid by this application, independent of its phase origin.
     periodic_ticks: u64,
+    /// A fixed-duration hasted channel emits its final triggered tick at expiry.
+    fixed_channel_final_trigger: bool,
     /// Native extra initial period is tick_zero, not a scheduled SimC dot tick.
     initial_period_pending: bool,
     /// SCHOOL_ABSORB points left (whole aura, not per stack).
@@ -994,6 +996,10 @@ fn build_effect(
         periodic_started_at: now,
         next_tick_index: if extra_initial_period { 0 } else { 1 },
         periodic_ticks: 0,
+        fixed_channel_final_trigger: crate::spell_cast::is_channeled(spell)
+            && effect.aura == handlers::PERIODIC_TRIGGER_SPELL
+            && attributes(spell, 5) & 0x2000 != 0
+            && attributes(spell, 8) & 0x2_0000 == 0,
         initial_period_pending: extra_initial_period,
         absorb_remaining: amount.max(0.0),
     }
