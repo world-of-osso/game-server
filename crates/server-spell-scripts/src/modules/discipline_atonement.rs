@@ -33,28 +33,44 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
 ];
 
 fn is_priest_spell(spell: &SpellInfo) -> bool {
-    spell.class_options.as_ref().is_some_and(|options| options.spell_class_set == 6)
+    spell
+        .class_options
+        .as_ref()
+        .is_some_and(|options| options.spell_class_set == 6)
 }
 
-fn trigger_twist_of_fate(world: &mut World, ctx: &EffectCtx<'_>, target: Entity, before: f32, _healing: bool) {
+fn trigger_twist_of_fate(
+    world: &mut World,
+    ctx: &EffectCtx<'_>,
+    target: Entity,
+    before: f32,
+    _healing: bool,
+) {
     let caster = ctx.caster;
     if !is_priest_spell(ctx.spell)
-        || !world.get::<combat::class_progression::KnownSpells>(caster).is_some_and(|known| known.contains(390972))
+        || !world
+            .get::<combat::class_progression::KnownSpells>(caster)
+            .is_some_and(|known| known.contains(390972))
     {
         return;
     }
-    let Some(health) = world.get::<Health>(target) else { return };
+    let Some(health) = world.get::<Health>(target) else {
+        return;
+    };
     let threshold = combat::spell_cast::scripts::script_effect_value(world, caster, 390972, 2);
     if before * 100.0 >= health.max * threshold {
         return;
     }
-    auras::apply_aura(world, &AuraApplication {
-        caster,
-        target: caster,
-        spell_id: 390978,
-        effect_mask: u32::MAX,
-        source: AuraSource::Cast,
-    });
+    auras::apply_aura(
+        world,
+        &AuraApplication {
+            caster,
+            target: caster,
+            spell_id: 390978,
+            effect_mask: u32::MAX,
+            source: AuraSource::Cast,
+        },
+    );
 }
 
 fn twist_multiplier(world: &World, caster: Entity, spell: &SpellInfo) -> f32 {
@@ -69,7 +85,12 @@ fn twist_damage_multiplier(world: &mut World, ctx: &EffectCtx<'_>, _target: Enti
     twist_multiplier(world, ctx.caster, ctx.spell)
 }
 
-fn twist_healing_multiplier(world: &World, caster: Entity, spell: &SpellInfo, _periodic: bool) -> f32 {
+fn twist_healing_multiplier(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    _periodic: bool,
+) -> f32 {
     twist_multiplier(world, caster, spell)
 }
 
