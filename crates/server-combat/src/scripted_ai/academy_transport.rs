@@ -119,6 +119,7 @@ pub(super) fn finish_entrance_pad(
                 && Some(control.epoch) == epoch
             {
                 control.controlled = false;
+                control.epoch = control.epoch.wrapping_add(1);
             }
             crate::spell_cast::mark_dirty(world, entity);
         });
