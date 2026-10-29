@@ -1,4 +1,4 @@
-//! Unholy rune spenders can earn native Rune Mastery Strength.
+//! Blood and Unholy rune spenders can earn native Rune Mastery Strength.
 use super::combat;
 use bevy::prelude::*;
 use combat::spell_cast::{self, script_registry::SpellScriptHook};
@@ -11,7 +11,7 @@ fn on_cast(world: &mut World, caster: Entity, spell: &SpellInfo, depth: u8) {
     if depth != 0
         || world
             .get::<ActiveSpec>(caster)
-            .is_none_or(|spec| spec.0 != 252)
+            .is_none_or(|spec| !matches!(spec.0, 250 | 252))
         || !combat::auras::has_aura(world, caster, 374574)
     {
         return;
