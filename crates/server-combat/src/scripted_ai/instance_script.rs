@@ -242,6 +242,20 @@ pub(super) fn bound_boss(world: &World, creature: Entity) -> Option<super::boss_
 #[derive(Resource, Debug, Default)]
 pub struct InstanceScripts(pub HashMap<InMap, InstanceScript>);
 
+impl InstanceScripts {
+    pub(crate) fn is_done_boss(&self, map: InMap, entry: u32) -> bool {
+        self.0.get(&map).is_some_and(|script| {
+            script.boss_creatures.iter().any(|&(creature, boss_id)| {
+                creature == entry
+                    && script
+                        .bosses
+                        .get(boss_id as usize)
+                        .is_some_and(|boss| boss.state == EncounterState::Done)
+            })
+        })
+    }
+}
+
 /// The copy's instance script, created from `instance_template.script` when missing.
 pub(super) fn instance_script(world: &mut World, map: InMap) -> Option<&mut InstanceScript> {
     if !world

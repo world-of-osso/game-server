@@ -890,6 +890,9 @@ fn measure(spec_id: u32, count: usize) -> Result<Value, String> {
 fn measure_seed(spec_id: u32, count: usize, seed: u64) -> Result<Value, String> {
     let _seed_scope = crate::random::seed_scope(seed);
     let mut run = prepare_measurement(spec_id, count)?;
+    if run.spec_driver.is_none() {
+        return Err(format!("NATIVE_LITERAL_DRIVER_UNAVAILABLE:{spec_id}"));
+    }
     let before = report::stats(run.app.world(), run.actor);
     let targets = target_snapshot(&run);
     engage(&mut run);
@@ -936,6 +939,13 @@ fn beast_mastery_literal_fixture_casts_reference_actions() {
             "literal Auto Shot/Barbed Shot must execute: {spell}; {combat}"
         );
     }
+}
+
+#[test]
+#[ignore = "requires native Demonology profile and player actor"]
+fn dps_measurement_rejects_demonology_player_without_literal_driver() {
+    let error = measure_seed(266, 1, 70448).unwrap_err();
+    assert_eq!(error, "NATIVE_LITERAL_DRIVER_UNAVAILABLE:266");
 }
 
 #[test]
@@ -1022,6 +1032,32 @@ fn dps_parity_native_bis_dummy_records_300s() {
         .parse()
         .expect("numeric target count");
     assert!(matches!(count, 1 | 3));
+    if count == 1
+        && matches!(spec, 270 | 1468)
+        && std::env::var_os("HEALER_IMPACT_REPLAY").is_some()
+    {
+        let directory = std::path::Path::new(
+            "/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/healer-tank-replay",
+        );
+        let report = super::healer_replay::replay_simc_party(
+            spec,
+            &directory.join("66.simc-trace.log"),
+            &directory.join("66.simc-party-pulse-seed70448.debug.log"),
+            300,
+            70448,
+        )
+        .expect("native healer impact replay");
+        let file = inputs::directory()
+            .unwrap()
+            .join(format!("{spec}.native.{count}.json"));
+        std::fs::write(
+            file,
+            serde_json::to_vec_pretty(&json!({"spec_id":spec,"healer_replay":report})).unwrap(),
+        )
+        .unwrap();
+        eprintln!("NATIVE_HEALER_REPLAY spec{spec} seed70448: complete");
+        return;
+    }
     let result = measure(spec, count);
     let mut output = match &result {
         Ok(report) => report.clone(),

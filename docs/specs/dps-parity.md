@@ -4,6 +4,7 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 ## What it must do
 
+- Parity measurements fail if the selected actor cannot run the spec's registered literal rotation; an assisted player or unrelated follower kit is not a valid substitute.
 - Player weapon auto-attack damage applies the attack-power multiplier to the weapon roll as well as the attack-power contribution (SimC76f8118 `action.cpp:1429–1439`).
 - Equipped Call the Swarm1310082 delivers Acidbrood1310088 through native missile1310083, and equipped Void Eruption1310208 delivers1310209. Payload damage uses the originating item's native driver effect1 budget and native role multiplier, not the zero-valued damage-leaf points. Preserve native proc eligibility/RPPM/ICD, travel, crit and full unsplit AoE.
 - The pinned `bugs=true` Void Eruption behavior does not apply its inactive Venomcursed15% bonus. Casting-item context must survive native aura proc children and their missile/trigger descendants; class procs without an item retain their existing context.
@@ -65,7 +66,8 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 ### Shared channel timing
 
-- Quantize native channel tick intervals to the nearest millisecond. A hasted channel's duration is that rounded interval times its original native modified tick count, not an independently truncated hasted duration (`action.cpp4297–4314/4397–4421`).
+- Quantize native channel tick intervals to the nearest millisecond. Attribute 273 hastes channel duration; when periodic haste also applies, rebuild the duration from that rounded interval and the original native modified tick count. Attribute 173 alone hastes ticks without shortening duration, including the final triggered tick at expiry (`action.cpp:670–674,4297–4314,4390–4432`).
+- Native DB2 difficulty-0 channels affected by the 173/273 distinction (including NPC and utility spells): 173 without 273: `698, 45789, 54518, 54900, 61994, 66097, 115294, 165721, 175498, 175516, 196997, 197432, 205065, 211474, 212084, 212947, 223922, 261631, 261789, 262607, 262616, 262878, 263165, 272131, 288267, 296823, 315419, 342601, 392451, 410172, 417537, 427688, 432569, 438973, 452486, 463840, 468942, 468979, 470973, 1216571, 1250936, 1252860, 1264367, 1284063, 1287761, 1293918`; 273 without 173: `92380, 141612, 149891, 151566, 163414, 164588, 185152, 203313, 203375, 209315, 209874, 234501, 359073, 367226, 382411, 382731, 385804, 387839, 396286, 408092, 417132, 436358`.
 - Cast-time spell modifiers must not alter a channel's duration. Channel span and period retain the pre-execution charged-modifier snapshot when the admitted use is consumed, including later tick interval recalculation; legitimate Duration/Period modifiers remain active in that snapshot. Live uncharged Period modifiers and non-channel periodic behavior remain unchanged. Instant non-channel casts retain cast-time modifier behavior.
 - The actor's channel cadence and its periodic aura use the same native effect cadence. Declared damage/healing periods own this cadence ahead of faster auxiliary control pulses; channels without declared health emissions retain their native utility/script period. Constant haste must not create an extra expiry damage event or full proc callbacks from rounding residue. Preserve tick-zero behavior and genuine fractional native tick counts.
 - Preserve non-channel periodic quantization, channel modifier/haste snapshots, and un-hasted channel lifetimes, including four-second Convoke. For hasted non-channel periodic effects, use current caster haste when scheduling the interval after each paid tick; do not retime the already-pending tick (SimC76f8118 `action.cpp:2038–2041,2792–2809`). Do not add spell-ID branches or replace native coefficients/periods/durations.
@@ -608,6 +610,8 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 - With selected Fatality383703, actual Execute damage260798 resolves native383706 against the caster-owned383704 marks. Damage scales with the actual mark stacks, cannot crit, and consumes those marks on its impact without consuming another caster's marks (`sc_warrior.cpp4251–4252,4404–4423`).
 
 - With selected Tactical Edge1261051, each completed Colossus Smash167105 grants Sudden Death52437 uses from the native talent's effect1. AoE recipients do not multiply the grant; natural Sudden Death RPPM remains independent (`sc_warrior.cpp3758–3759`).
+
+- Slayer's Malice444779 applies its first native effect for Arms and its second for Fury, not both overlapping damage modifiers (`sc_warrior.cpp7877–7879`).
 
 - Selected Mortal Wounds1261062 applies native Deep Wounds262115 only after an actual Mortal Strike12294 or Slam-family critical impact (Slam1464 and inherited Heroic Strike1269383), including background Unhinged/Fervor attacks. Normal hits cannot grant it. Shared1261060 remains the separate Execute producer and Fury's native relationship is unchanged (`sc_warrior.cpp3153–3154,3518–3519,3551–3562,4248–4249`).
 

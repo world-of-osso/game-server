@@ -182,6 +182,8 @@ pub type AfterPolicyDirectDamageHook = fn(&mut World, &EffectCtx<'_>, Entity, bo
 pub type AfterPolicyPeriodicDamageHook = fn(&mut World, &EffectCtx<'_>, Entity, bool);
 pub type TargetContextDamageMultiplierHook = fn(&World, &EffectCtx<'_>, Entity, bool) -> f32;
 pub type AfterNativeOnCastHook = fn(&mut World, Entity, u32, u8);
+pub type AfterComboGainHook = fn(&mut World, &EffectCtx<'_>, Entity, f32);
+pub type AfterComboOverflowHook = fn(&mut World, Entity, f32);
 pub type AfterModifierConsumptionHook = fn(&mut World, Entity, &SpellInfo);
 pub type AfterForegroundSpenderHook = fn(&mut World, Entity, &SpellInfo, Option<Entity>);
 pub type AfterSpenderProcHook = fn(&mut World, Entity, &SpellInfo, Option<Entity>);
@@ -366,6 +368,8 @@ pub enum SpellScriptHook {
     AfterPolicyPeriodicDamage(AfterPolicyPeriodicDamageHook),
     TargetContextDamageMultiplier(TargetContextDamageMultiplierHook),
     AfterNativeOnCast(AfterNativeOnCastHook),
+    AfterComboGain(AfterComboGainHook),
+    AfterComboOverflow(AfterComboOverflowHook),
     AfterModifierConsumption(AfterModifierConsumptionHook),
     AfterForegroundSpender(AfterForegroundSpenderHook),
     AfterSpenderProc(AfterSpenderProcHook),
@@ -1401,6 +1405,34 @@ pub fn target_context_damage_multiplier(
             _ => None,
         })
         .product()
+}
+
+pub fn after_combo_overflow(world: &mut World, target: Entity, overflow: f32) {
+    let hooks: Vec<_> = world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .filter_map(|hook| match hook {
+            SpellScriptHook::AfterComboOverflow(run) => Some(run),
+            _ => None,
+        })
+        .collect();
+    for run in hooks {
+        run(world, target, overflow);
+    }
+}
+
+pub fn after_combo_gain(world: &mut World, ctx: &EffectCtx<'_>, target: Entity, gained: f32) {
+    let hooks: Vec<_> = world
+        .resource::<SpellScriptRegistry>()
+        .hooks()
+        .filter_map(|hook| match hook {
+            SpellScriptHook::AfterComboGain(run) => Some(run),
+            _ => None,
+        })
+        .collect();
+    for run in hooks {
+        run(world, ctx, target, gained);
+    }
 }
 
 pub fn after_native_on_cast(world: &mut World, caster: Entity, spell: u32, depth: u8) {

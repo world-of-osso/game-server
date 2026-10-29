@@ -1,5 +1,5 @@
 //! Native70448 Fel Devastation selectors and scheduled healing.
-//! FEL_DEVASTATION_UPFRONT_HEAL_SOURCE_CONFLICT remains deferred, not certified absent.
+//! The rank-two cast heal is separate from the scheduled channel heals.
 use super::test_harness::*;
 use crate::auras;
 use crate::class_progression::ActiveSpec;
@@ -100,6 +100,80 @@ fn trigger_damage(h: &mut Harness) {
     // Same existing aura23 dispatch boundary: explicit aura unit is self.
     super::cast_triggered(h.app.world_mut(), caster, DAMAGE, Some(caster), 1);
     h.advance(3);
+}
+
+#[test]
+fn rank_two_fel_devastation_heals_once_on_accepted_cast() {
+    for rank in [false, true] {
+        let mut h = fixture(rank);
+        h.set_power(PowerType::Fury, 50.0);
+        h.cast_and_deliver(ROOT, None);
+        assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+        let heals = events(&h, HEAL, CombatLogKind::Heal);
+        assert_eq!(heals.len(), usize::from(rank));
+        if rank {
+            assert_eq!(heals[0].target, Some(h.caster.to_bits()));
+            assert!(heals[0].amount > 0);
+        }
+    }
+}
+
+#[test]
+fn haste_173_adds_fel_devastation_ticks_without_shortening_channel() {
+    let mut h = fixture(true);
+    h.set_power(PowerType::Fury, 50.0);
+    h.app
+        .world_mut()
+        .get_mut::<CharacterStats>(h.caster)
+        .unwrap()
+        .haste_pct = 43.965;
+    let target = h.npc;
+    move_unit(&mut h, target, 3.0, 0.0);
+    let start = start_channel(&mut h);
+    let duration = h
+        .app
+        .world()
+        .get::<shared::casting::CastState>(h.caster)
+        .unwrap()
+        .duration;
+    assert_eq!(duration, 2.0);
+    finish_channel(&mut h);
+    assert_native_heals(&h, start, 15);
+    let damage = h.inbox.log[start..]
+        .iter()
+        .filter(|event| event.spell_id == Some(DAMAGE) && event.kind == CombatLogKind::Damage)
+        .count();
+    assert_eq!(damage, 15);
+}
+
+#[test]
+fn haste_273_shortens_arcane_missiles_channel() {
+    let mut h = harness(Vec::new(), &[5143, 7268, 263725], 8).unwrap();
+    h.advance(3);
+    auras::apply_aura(
+        h.app.world_mut(),
+        &auras::AuraApplication {
+            caster: h.caster,
+            target: h.caster,
+            spell_id: 263725,
+            effect_mask: u32::MAX,
+            source: auras::AuraSource::Cast,
+        },
+    );
+    h.app
+        .world_mut()
+        .get_mut::<CharacterStats>(h.caster)
+        .unwrap()
+        .haste_pct = 100.0;
+    h.cast_and_deliver(5143, Some(h.npc));
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    let duration = h
+        .app
+        .world()
+        .get::<shared::casting::CastState>(h.caster)
+        .unwrap()
+        .duration;
+    assert_eq!(duration, 1.252);
 }
 
 #[test]
@@ -251,8 +325,7 @@ fn start_channel(h: &mut Harness) -> usize {
         ROOT
     );
     assert_eq!(h.power(PowerType::Fury), 0.0, "native50-Fury payment");
-    // Start the observation after application. Any separately implemented
-    // up-front heal is outside these tests, never certified absent.
+    // The cast heal precedes this observation of scheduled channel heals.
     h.inbox.log.len()
 }
 

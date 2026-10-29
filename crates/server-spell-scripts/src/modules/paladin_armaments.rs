@@ -169,7 +169,12 @@ fn roll_divine_inspiration(world: &mut World, caster: Entity) {
     }
     #[cfg(any(test, feature = "test-support"))]
     {
-        world.entity_mut(caster).entry::<combat::test_support::DivineInspirationProcs>().or_default().get_mut().0 += 1;
+        world
+            .entity_mut(caster)
+            .entry::<combat::test_support::DivineInspirationProcs>()
+            .or_default()
+            .get_mut()
+            .0 += 1;
     }
     let next = world
         .get::<NextInspirationArmament>(caster)

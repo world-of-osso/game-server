@@ -211,6 +211,80 @@ fn feral_prev_gcd_tracks_successful_foreground_gcd_casts_only() {
 }
 
 #[test]
+#[ignore = "requires spec103 profile and native world data"]
+fn berserk_stores_overflow_until_real_finisher() {
+    use shared::components::PowerType;
+    let mut run = prepare_literal(103, 1).unwrap();
+    let actor = run.actor;
+    let target = run.targets[0];
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 768, Some(actor), false).unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 106951, Some(actor), 1);
+    crate::spell_cast::powers::change_power(
+        run.app.world_mut(),
+        actor,
+        PowerType::ComboPoints,
+        8.0,
+    );
+    let aura = run
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(actor)
+        .unwrap()
+        .iter()
+        .find(|a| a.spell_id == 405189)
+        .expect("overflow stored");
+    assert_eq!(aura.stacks, 3);
+    crate::spell_cast::powers::change_power(run.app.world_mut(), actor, PowerType::Energy, 140.0);
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 22568, Some(target), false)
+        .unwrap();
+    assert!(!crate::auras::has_aura(run.app.world(), actor, 405189));
+    assert_eq!(
+        crate::spell_cast::powers::power_value(run.app.world(), actor, PowerType::ComboPoints)
+            .unwrap()
+            .0,
+        3.0
+    );
+}
+
+#[test]
+#[ignore = "requires spec103 profile and native world data"]
+fn panthers_guile_fills_combo_points_after_real_shred() {
+    use shared::components::PowerType;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(103, 1).unwrap();
+    let actor = run.actor;
+    let target = run.targets[0];
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 768, Some(actor), false).unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    assert!(crate::auras::has_aura(run.app.world(), actor, 1280316));
+    let mut filled = 0;
+    for _ in 0..40 {
+        crate::spell_cast::powers::change_power(
+            run.app.world_mut(),
+            actor,
+            PowerType::ComboPoints,
+            -5.0,
+        );
+        crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 5221, Some(target), 1);
+        let combo =
+            crate::spell_cast::powers::power_value(run.app.world(), actor, PowerType::ComboPoints)
+                .unwrap()
+                .0;
+        if combo == 5.0 {
+            filled += 1;
+        }
+        for _ in 0..4 {
+            run.app.update();
+        }
+    }
+    assert!(
+        filled > 0,
+        "selected Panther's Guile must fill combo points on Shred"
+    );
+}
+
+#[test]
 #[ignore = "requires DPS_PARITY_WORLD_DB and DPS_PARITY_OUTPUT with spec103 exact profile/traits"]
 fn feral_frenzy_rolls_five_hits_into_one_bleed() {
     use shared::protocol::CombatLogKind;

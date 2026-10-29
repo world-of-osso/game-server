@@ -22,6 +22,8 @@ mod aoe_avoidance_tests;
 pub mod area_aura;
 pub mod area_trigger;
 #[cfg(test)]
+mod area_units_tests;
+#[cfg(test)]
 mod attack_power_tests;
 pub mod aura_spell_restrictions;
 pub(crate) mod auto_repeat;
@@ -344,6 +346,7 @@ pub struct SpellCastPlugin;
 
 impl Plugin for SpellCastPlugin {
     fn build(&self, app: &mut App) {
+        crate::maps::units::install(app);
         app.init_resource::<script_registry::SpellScriptRegistry>();
         #[cfg(any(test, feature = "test-support"))]
         app.insert_resource(toy_requirements::fixture());
@@ -1213,7 +1216,9 @@ pub(crate) fn haste_channel_duration_ms(
     spell: &SpellInfo,
     duration: u32,
 ) -> u32 {
-    if !is_channeled(spell) || attributes(spell, 5) & 0x2000 == 0 {
+    // SimC76f8118 action.cpp670–674 distinguishes periodic haste (173)
+    // from duration haste (273); only the latter shortens a channel.
+    if !is_channeled(spell) || attributes(spell, 8) & 0x2_0000 == 0 {
         return duration;
     }
     let haste = spell_haste_multiplier(world, caster);
@@ -1224,6 +1229,9 @@ pub(crate) fn haste_channel_duration_ms(
     // tick count, rebuilding duration from the same rounded hasted aura period.
     // Independent duration/period truncation creates false expiry partial ticks.
     let duration = duration as f32 * slow;
+    if attributes(spell, 5) & 0x2000 == 0 {
+        return (duration / haste.max(0.01)).max(0.0).round() as u32;
+    }
     match crate::auras::channel_tick_timing_ms(world, caster, spell) {
         Some((original_period, hasted_period)) => {
             scripts::missiles_channel_duration(spell.id, duration, original_period, hasted_period)

@@ -109,9 +109,21 @@ fn encounter_coverage_silverlaine_normal_progress_reopens_and_filters_only_its_p
     );
     let bosses = h.creatures_of(SILVERLAINE);
     assert_eq!(bosses.len(), 1, "one authored Silverlaine spawn");
+    h.app.world_mut().entity_mut(bosses[0]).insert((
+        crate::combat::RespawnDelay(0.2),
+        crate::combat::CorpseDelay(0.05),
+    ));
     h.engage(bosses[0]);
     h.hit_pct(bosses[0], 200.0);
-    h.advance(0.1);
+    h.advance(1.0);
+    assert_eq!(
+        instance_script::get_boss_state(h.app.world_mut(), map, SILVERLAINE_BIT),
+        Some(EncounterState::Done)
+    );
+    assert!(
+        h.creatures_of(SILVERLAINE).is_empty(),
+        "a completed boss must not respawn in its live copy"
+    );
     let directory = tempfile::tempdir().unwrap();
     let file = directory.path().join("shadowfang.redb");
     {
