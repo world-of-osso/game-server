@@ -175,6 +175,7 @@ pub(crate) fn spawn_connection(
                 pair::<InteractionOpened>(),
                 pair::<InteractionClosed>(),
                 pair::<InteractionFailed>(),
+                pair::<GuildBankMove>(),
             ),
             (
                 pair::<BankContents>(),
@@ -197,7 +198,6 @@ pub(crate) fn spawn_connection(
                 pair::<GuildBankFailed>(),
                 pair::<GuildBankDeposit>(),
                 pair::<GuildBankWithdraw>(),
-                pair::<GuildBankMove>(),
                 pair::<GuildBankMoneyTransfer>(),
                 pair::<GuildBankBuyTab>(),
                 pair::<GuildBankSetTabInfo>(),
