@@ -12,6 +12,8 @@ use combat::spell_info::SpellInfo;
 
 const EMPTY_BARREL: u32 = 1265307;
 const EMPTY_BARREL_DAMAGE: u32 = 1265133;
+const REFRESHING_DRINK: u32 = 1265140;
+const REFRESHING_DRINK_HEAL: u32 = 1265145;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::EarlyAuraRegistration(register),
@@ -24,6 +26,21 @@ fn register(scripts: &mut AuraScripts) {
         .entry(1265129)
         .or_insert(AuraScript::default())
         .check_proc = Some(is_brew_cast);
+    let drink = scripts.0.entry(REFRESHING_DRINK).or_default();
+    drink.check_proc = Some(is_incoming_damage);
+    drink.on_proc = Some(drink_on_damage);
+}
+
+fn is_incoming_damage(_: &World, aura: &AuraInstance, event: &AuraEvent) -> bool {
+    event.target == Some(aura.caster)
+}
+
+fn drink_on_damage(world: &mut World, caster: Entity, _: &AuraInstance, _: Option<Entity>) {
+    // SimC76f8118 sc_monk.cpp6944–6953 spends the buff on the next incoming hit.
+    auras::remove_auras(world, caster, RemoveReason::Consumed, |aura| {
+        aura.spell_id == REFRESHING_DRINK && aura.caster == caster
+    });
+    spell_cast::cast_triggered(world, caster, REFRESHING_DRINK_HEAL, Some(caster), 1);
 }
 
 // SimC76f8118 sc_monk.cpp6911–6919: the unmasked native proc only accepts registered Brews.
@@ -53,16 +70,18 @@ fn grant_empty_barrel(world: &mut World, caster: Entity, _: &SpellInfo) {
     }) {
         return;
     }
-    auras::apply_aura(
-        world,
-        &AuraApplication {
-            caster,
-            target: caster,
-            spell_id: EMPTY_BARREL,
-            effect_mask: u32::MAX,
-            source: AuraSource::Cast,
-        },
-    );
+    for spell_id in [EMPTY_BARREL, REFRESHING_DRINK] {
+        auras::apply_aura(
+            world,
+            &AuraApplication {
+                caster,
+                target: caster,
+                spell_id,
+                effect_mask: u32::MAX,
+                source: AuraSource::Cast,
+            },
+        );
+    }
 }
 
 fn consume_empty_barrel(world: &mut World, caster: Entity, spell: &SpellInfo) {
