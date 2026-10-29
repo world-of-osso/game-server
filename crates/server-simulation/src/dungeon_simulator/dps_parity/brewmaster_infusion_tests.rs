@@ -26,13 +26,13 @@ fn infusion_absorbs_only_its_fraction_of_each_hit() {
     );
     assert!(capacity > 6000.0);
     let (remaining, absorbed) =
-        crate::auras::absorb_damage(run.app.world_mut(), actor, 1, 10_000.0);
+        crate::auras::absorb_damage(run.app.world_mut(), actor, None, 1, 10_000.0);
     assert!(
         (remaining - 7000.0).abs() < 1.0 && (absorbed - 3000.0).abs() < 1.0,
         "30% of incoming damage must be absorbed, got {absorbed} absorbed and {remaining} through"
     );
     let (remaining, absorbed) =
-        crate::auras::absorb_damage(run.app.world_mut(), actor, 4, 10_000.0);
+        crate::auras::absorb_damage(run.app.world_mut(), actor, None, 4, 10_000.0);
     assert!(
         (remaining - 7000.0).abs() < 1.0 && (absorbed - 3000.0).abs() < 1.0,
         "the remaining shield must absorb 30% of a second school"

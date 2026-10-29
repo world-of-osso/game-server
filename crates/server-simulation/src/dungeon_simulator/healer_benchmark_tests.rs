@@ -98,7 +98,8 @@ fn small_fight() -> serde_json::Value {
             source: crate::auras::AuraSource::Cast,
         },
     );
-    let (remaining, consumed) = crate::auras::absorb_damage(app.world_mut(), party.tank, 4, 200.0);
+    let (remaining, consumed) =
+        crate::auras::absorb_damage(app.world_mut(), party.tank, None, 4, 200.0);
     assert_eq!((remaining, consumed), (0.0, 200.0));
     recorder.observe_frame(app.world());
     recorder.report(app.world())["dungeon_healing"].clone()

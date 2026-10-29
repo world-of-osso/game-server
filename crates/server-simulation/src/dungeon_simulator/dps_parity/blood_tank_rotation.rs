@@ -755,7 +755,7 @@ mod tests {
             crate::auras::has_aura(run.app.world(), actor, 207203),
             "a real white hit must create Frost Shield"
         );
-        let (_, absorbed) = crate::auras::absorb_damage(run.app.world_mut(), actor, 1, 1_000_000.0);
+        let (_, absorbed) = crate::auras::absorb_damage(run.app.world_mut(), actor, None, 1, 1_000_000.0);
         assert!(
             absorbed > 0.0,
             "incoming physical damage must consume the shield"
@@ -3151,7 +3151,7 @@ mod tests {
             crate::auras::has_aura(run.app.world(), actor, 77535),
             "Blood mastery must create a shield"
         );
-        let (_, absorbed) = crate::auras::absorb_damage(run.app.world_mut(), actor, 1, max);
+        let (_, absorbed) = crate::auras::absorb_damage(run.app.world_mut(), actor, None, 1, max);
         assert!(
             absorbed > 0.0 && absorbed <= max * 0.5,
             "actual physical damage must consume capped Blood Shield: {absorbed}"
@@ -3178,7 +3178,7 @@ mod tests {
             1,
             max,
         );
-        let (_, selected) = crate::auras::absorb_damage(run.app.world_mut(), actor, 1, max);
+        let (_, selected) = crate::auras::absorb_damage(run.app.world_mut(), actor, None, 1, max);
         assert!(
             (selected - max * 0.65).abs() < 2.0,
             "selected Bloody Reflection raises the actual cap: {selected}/{max}"
@@ -3197,7 +3197,7 @@ mod tests {
             1,
             max,
         );
-        let (_, unselected) = crate::auras::absorb_damage(run.app.world_mut(), actor, 1, max);
+        let (_, unselected) = crate::auras::absorb_damage(run.app.world_mut(), actor, None, 1, max);
         assert!(
             (unselected - max * 0.50).abs() < 2.0,
             "without Bloody Reflection the native cap is 50%: {unselected}/{max}"
