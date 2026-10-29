@@ -279,6 +279,7 @@ pub const MASTERY: u32 = 318;
 pub const MOD_NO_ACTIONS: u32 = 321;
 pub const ANIM_REPLACEMENT_SET: u32 = 312;
 pub const OVERRIDE_ACTIONBAR_SPELLS: u32 = 332;
+pub const OVERRIDE_ACTIONBAR_SPELLS_TRIGGERED: u32 = 333;
 pub const MOD_MELEE_RANGED_HASTE_2: u32 = 342;
 /// TC a352b1fa Unit.cpp2387: signed autoattack-only critical chance.
 pub const MOD_AUTOATTACK_CRIT_CHANCE: u32 = 334;
