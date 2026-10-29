@@ -740,6 +740,29 @@ mod tests {
 
     #[test]
     #[ignore = "requires canonical world database and MID2 Blood inputs"]
+    fn blood_free_heart_strikes_can_summon_dance_weapon() {
+        let _seed = crate::random::seed_scope(70448);
+        let mut run = super::super::prepare_registered_player(250, 1).unwrap();
+        let actor = run.actor;
+        let target = run.targets[0];
+        super::super::engage(&mut run);
+        crate::spell_cast::powers::change_power(run.app.world_mut(), actor, shared::components::PowerType::Runes, -6.0);
+        for _ in 0..30 {
+            crate::auras::apply_aura(run.app.world_mut(), &crate::auras::AuraApplication {
+                caster: actor, target: actor, spell_id: 1264568, effect_mask: u32::MAX, source: crate::auras::AuraSource::Cast,
+            });
+            crate::spell_cast::creature_cast(run.app.world_mut(), actor, 206930, Some(target), false).unwrap();
+            let world = run.app.world_mut();
+            if world.query::<&crate::spell_cast::summon::SummonedCreature>().iter(world)
+                .any(|summon| summon.owner == actor && summon.spell_id == 1264353) { return; }
+            for _ in 0..30 { run.app.update(); }
+            crate::spell_cast::powers::change_power(run.app.world_mut(), actor, shared::components::PowerType::Runes, -6.0);
+        }
+        panic!("free Heart Strikes must be able to summon a Dance weapon");
+    }
+
+    #[test]
+    #[ignore = "requires canonical world database and MID2 Blood inputs"]
     fn blood_rune_spend_can_summon_dance_weapon_and_enable_parry_buff() {
         let _seed = crate::random::seed_scope(70448);
         let mut run = super::super::prepare_registered_player(250, 1).unwrap();
