@@ -3,6 +3,73 @@ use shared::components::Health;
 use shared::protocol::CombatLogKind;
 
 #[test]
+#[ignore = "checks native Emerald Blossom and Fluttering Seedlings"]
+fn preservation_blossom_generates_seedlings_for_unfilled_slots() {
+    let spells = [359793, 355913, 355916, 361361];
+    let mut h = crate::spell_cast::test_harness::harness(Vec::new(), &spells, 13).unwrap();
+    h.app
+        .init_resource::<crate::spell_cast::test_harness::ObservedCombatEvents>();
+    let allies: Vec<_> = [2.0, 3.0, 4.0]
+        .into_iter()
+        .map(|x| crate::spell_cast::test_harness::spawn_player(&mut h.app, 13, x))
+        .collect();
+    for unit in [h.caster, allies[0], allies[1], allies[2]] {
+        *h.app.world_mut().get_mut::<Health>(unit).unwrap() = Health {
+            current: 100_000.0,
+            max: 100_000.0,
+        };
+    }
+    h.app
+        .world_mut()
+        .get_mut::<Health>(allies[0])
+        .unwrap()
+        .current = 1.0;
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: h.caster,
+            target: h.caster,
+            spell_id: 359793,
+            effect_mask: u32::MAX,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    crate::spell_cast::creature_cast(h.app.world_mut(), h.caster, 355913, Some(allies[0]), true)
+        .unwrap();
+    h.advance(45);
+    let events = &h
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    let count = events
+        .iter()
+        .filter(|event| event.kind == CombatLogKind::Heal && event.spell_id == Some(361361))
+        .count();
+    assert_eq!(count, 3, "one base seedling and two unfilled Blossom slots");
+    let start = events.len();
+    for unit in [h.caster, allies[0], allies[1]] {
+        h.app.world_mut().get_mut::<Health>(unit).unwrap().current = 1.0;
+    }
+    crate::spell_cast::creature_cast(h.app.world_mut(), h.caster, 355913, Some(allies[0]), true)
+        .unwrap();
+    h.advance(45);
+    let events = &h
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0[start..];
+    let count = events
+        .iter()
+        .filter(|event| event.kind == CombatLogKind::Heal && event.spell_id == Some(361361))
+        .count();
+    assert_eq!(
+        count, 1,
+        "three Blossom recipients leave only the base seedling"
+    );
+}
+
+#[test]
 #[ignore = "checks Life-Giver's Flame against native Fire Breath damage"]
 fn preservation_life_givers_flame_splits_fire_breath_damage() {
     let spells = [371426, 371441, 357209];

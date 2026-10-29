@@ -702,10 +702,51 @@ fn cast_ground_pulse(world: &mut World, entity: Entity, pulses: &GroundPulses) {
     }
     // Named damage/heal effect only; Earthquake reads E1 chance in its OnHit script.
     spell_cast::hit::remove_defended_targets(world, pulses.caster, &child, &mut plan);
+    if pulses.root == EMERALD_BLOSSOM {
+        cast_fluttering_seedlings(world, pulses, center, plan[0].units.len());
+    }
     spell_cast::missiles::launch(world, pulses.caster, &child, plan, pulses.depth);
 }
 
-/// TC a352b1fa spell_shaman.cpp1015-1027: roll native E1, then find the original
+fn cast_fluttering_seedlings(
+    world: &mut World,
+    pulses: &GroundPulses,
+    center: Vec3,
+    healed: usize,
+) {
+    const TALENT: u32 = 359793;
+    const HEAL: u32 = 361361;
+    if !crate::auras::has_aura(world, pulses.caster, TALENT) {
+        return;
+    }
+    // 70448 talent description: base seedlings plus one per unfilled Blossom slot, capped by s3.
+    let value = |index| script_effect_value(world, pulses.caster, TALENT, index).max(0.0) as usize;
+    let count = value(0) + pulses.cap.saturating_sub(healed).min(value(2));
+    let radius = script_effect_value(world, pulses.caster, TALENT, 1);
+    let mut allies = targets::area_units(
+        world,
+        pulses.caster,
+        center,
+        radius,
+        targets::Relation::Ally,
+        0,
+    );
+    allies.retain(|&unit| {
+        world
+            .get::<Health>(unit)
+            .is_some_and(|health| health.current > 0.0 && health.max > 0.0)
+    });
+    allies.sort_by(|&a, &b| {
+        let a = world.get::<Health>(a).unwrap();
+        let b = world.get::<Health>(b).unwrap();
+        (a.current / a.max).total_cmp(&(b.current / b.max))
+    });
+    for ally in allies.into_iter().take(count) {
+        spell_cast::cast_triggered(world, pulses.caster, HEAL, Some(ally), pulses.depth + 1);
+    }
+}
+
+/// TC a352b1fa spell_shaman.cpp1015–1027: roll native E1, then find the original
 /// field among this caster's Earthquakes; stun a target only once per field.
 pub(in crate::spell_cast) fn cast_earthquake_knockdown(
     world: &mut World,
