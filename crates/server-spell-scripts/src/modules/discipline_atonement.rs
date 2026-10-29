@@ -35,7 +35,9 @@ fn start_penance(world: &mut World, caster: Entity, spell: u32, _depth: u8) {
         return;
     }
     // SimC76f8118 sc_priest_discipline.cpp:579-582 resets Holy Ray at channel start.
-    auras::remove_auras(world, caster, auras::RemoveReason::Consumed, |aura| aura.spell_id == 1235193 && aura.caster == caster);
+    auras::remove_auras(world, caster, auras::RemoveReason::Consumed, |aura| {
+        aura.spell_id == 1235193 && aura.caster == caster
+    });
     world.entity_mut(caster).insert(PenanceBolts::default());
 }
 
@@ -367,26 +369,54 @@ fn transfer_damage(
 
 fn select_twinsight_recipient(world: &mut World, caster: Entity) -> Option<Entity> {
     let map = *world.get::<combat::maps::InMap>(caster)?;
-    let candidates: Vec<_> = world.query::<(Entity, &Health, &combat::maps::InMap, Option<&Player>, Option<&combat::followers::Follower>)>()
+    let candidates: Vec<_> = world
+        .query::<(
+            Entity,
+            &Health,
+            &combat::maps::InMap,
+            Option<&Player>,
+            Option<&combat::followers::Follower>,
+        )>()
         .iter(world)
-        .filter(|(_, health, unit_map, player, follower)| health.current > 0.0 && **unit_map == map && (player.is_some() || follower.is_some()))
+        .filter(|(_, health, unit_map, player, follower)| {
+            health.current > 0.0 && **unit_map == map && (player.is_some() || follower.is_some())
+        })
         .map(|(unit, _, _, _, _)| unit)
-        .filter(|&unit| combat::spell_cast::targets::relation_matches(world, caster, unit, combat::spell_cast::targets::Relation::Ally))
+        .filter(|&unit| {
+            combat::spell_cast::targets::relation_matches(
+                world,
+                caster,
+                unit,
+                combat::spell_cast::targets::Relation::Ally,
+            )
+        })
         .collect();
-    if candidates.is_empty() { return None; }
+    if candidates.is_empty() {
+        return None;
+    }
     Some(candidates[(combat::random::random::<f32>() * candidates.len() as f32) as usize])
 }
 
 fn finish_penance_bolt(world: &mut World, caster: Entity) {
-    let Some(mut bolts) = world.get_mut::<PenanceBolts>(caster) else { return; };
+    let Some(mut bolts) = world.get_mut::<PenanceBolts>(caster) else {
+        return;
+    };
     bolts.0 += 1;
     let bolt = bolts.0;
-    let selected = |world: &World, talent| world.get::<combat::class_progression::KnownSpells>(caster).is_some_and(|known| known.contains(talent));
+    let selected = |world: &World, talent| {
+        world
+            .get::<combat::class_progression::KnownSpells>(caster)
+            .is_some_and(|known| known.contains(talent))
+    };
     let twinsight = bolt <= 4 && selected(world, 440742);
     let mut stacks = 1;
     if twinsight && let Some(target) = select_twinsight_recipient(world, caster) {
         // SimC76f8118 sc_priest_discipline.cpp:463-484 schedules one healing and one damage bolt.
-        let mut spell = world.resource::<SpellStore>().get(47750).expect("Twinsight Penance heal must exist").clone();
+        let mut spell = world
+            .resource::<SpellStore>()
+            .get(47750)
+            .expect("Twinsight Penance heal must exist")
+            .clone();
         for effect in &mut spell.effects {
             if effect.implicit_targets[0] == 77 {
                 effect.implicit_targets[0] = 21;
@@ -399,7 +429,16 @@ fn finish_penance_bolt(world: &mut World, caster: Entity) {
     if selected(world, 372969) {
         // SimC76f8118 sc_priest_discipline.cpp:304-310,350-358: each bolt advances Holy Ray.
         for _ in 0..stacks {
-            auras::apply_aura(world, &AuraApplication { caster, target: caster, spell_id: 1235193, effect_mask: u32::MAX, source: AuraSource::Cast });
+            auras::apply_aura(
+                world,
+                &AuraApplication {
+                    caster,
+                    target: caster,
+                    spell_id: 1235193,
+                    effect_mask: u32::MAX,
+                    source: AuraSource::Cast,
+                },
+            );
         }
     }
 }
