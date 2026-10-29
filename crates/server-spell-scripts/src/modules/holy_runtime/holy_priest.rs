@@ -162,6 +162,9 @@ fn select_serenity_allies(
     units.truncate(spell.effects[1].base_points.max(0.0) as usize);
 }
 
+#[derive(Component, Default)]
+struct PietyPool(f32);
+
 pub(super) fn piety(
     world: &mut World,
     ctx: &combat::spell_cast::effects::EffectCtx,
@@ -171,14 +174,30 @@ pub(super) fn piety(
     _critical: bool,
     _periodic: bool,
 ) {
-    use combat::spell_cast::{
-        effects,
-        targets::{self, Relation},
-    };
-    use shared::components::Health;
     const TALENT: u32 = 1_246_802;
     const HEAL: u32 = 443_126;
     if ctx.spell.id == HEAL || raw <= effective || !has_aura(world, ctx.caster, TALENT) {
+        return;
+    }
+    let percent = super::script_effect_value(world, ctx.caster, TALENT, 0) / 100.0;
+    let amount = (raw - effective) * percent;
+    if let Some(mut pool) = world.get_mut::<PietyPool>(ctx.caster) {
+        pool.0 += amount;
+    } else {
+        world.entity_mut(ctx.caster).insert(PietyPool(amount));
+    }
+}
+
+fn distribute_piety(world: &mut World, caster: Entity, aura: &combat::auras::AuraInstance, index: u8) {
+    use combat::spell_cast::{effects, targets::{self, Relation}};
+    use shared::components::Health;
+    const TALENT: u32 = 1_246_802;
+    const HEAL: u32 = 443_126;
+    if index != 1 || aura.caster != caster {
+        return;
+    }
+    let amount = world.get_mut::<PietyPool>(caster).map_or(0.0, |mut pool| std::mem::take(&mut pool.0));
+    if amount <= 0.0 {
         return;
     }
     let spell = world
@@ -186,12 +205,12 @@ pub(super) fn piety(
         .get(HEAL)
         .expect("Piety heal missing")
         .clone();
-    let Some(center) = targets::position(world, ctx.caster) else {
+    let Some(center) = targets::position(world, caster) else {
         return;
     };
     let mut allies = targets::area_units(
         world,
-        ctx.caster,
+        caster,
         center,
         targets::radius(&spell.effects[0], 1),
         Relation::Ally,
@@ -207,17 +226,16 @@ pub(super) fn piety(
         let b = world.get::<Health>(*b).unwrap();
         (a.current / a.max).total_cmp(&(b.current / b.max))
     });
-    let count = super::script_effect_value(world, ctx.caster, TALENT, 1).max(0.0) as usize;
+    let count = super::script_effect_value(world, caster, TALENT, 1).max(0.0) as usize;
     allies.truncate(count);
     if allies.is_empty() {
         return;
     }
-    let percent = super::script_effect_value(world, ctx.caster, TALENT, 0) / 100.0;
-    let amount = (raw - effective) * percent / allies.len() as f32;
+    let amount = amount / allies.len() as f32;
     let heal = effects::EffectCtx {
-        caster: ctx.caster,
+        caster,
         spell: &spell,
-        depth: ctx.depth + 1,
+        depth: 1,
         dest: None,
         chain_multiplier: 1.0,
     };
@@ -233,7 +251,14 @@ const SMITE: u32 = 585;
 const MIRACLE_WORKER: u32 = 235587;
 const HOLY_WORDS: &[u32] = &[2050, 34861, 88625];
 
+fn clear_piety(world: &mut World, unit: Entity, _: &combat::auras::AuraInstance, _: combat::auras::RemoveReason) {
+    world.entity_mut(unit).remove::<PietyPool>();
+}
+
 pub(crate) fn register(scripts: &mut AuraScripts) {
+    let piety = scripts.0.entry(1_246_802).or_default();
+    piety.on_periodic = Some(distribute_piety);
+    piety.on_remove = Some(clear_piety);
     scripts.0.insert(
         SURGE_TALENT,
         AuraScript {
