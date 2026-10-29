@@ -16,9 +16,11 @@ const NATIVE_FLAMESTRIKE: u32 = 1254851;
 const IGNITION: u32 = 1254756;
 
 pub(super) fn check_damage(_world: &World, _aura: &AuraInstance, event: &AuraEvent) -> bool {
-    // TC IsTriggeredByAura excludes the producer's own child. This scripted
-    // child is not in EffectTriggerSpell, so retain that relationship here.
-    event.damage > 0.0 && event.target.is_some() && event.spell_id != Some(IGNITE)
+    // SimC76f8118 sc_mage.cpp2502: Intensifying Flame is a plain spell_t,
+    // not a mage spell that contributes to Ignite.
+    event.damage > 0.0
+        && event.target.is_some()
+        && !matches!(event.spell_id, Some(IGNITE | INTENSIFYING_FLAME_DAMAGE))
 }
 
 /// SimC76f8118 sc_mage.cpp2216–2279/4586–4590: Fire Blast spreads
