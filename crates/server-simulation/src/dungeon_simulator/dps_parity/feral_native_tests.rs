@@ -212,6 +212,26 @@ fn feral_prev_gcd_tracks_successful_foreground_gcd_casts_only() {
 
 #[test]
 #[ignore = "requires spec103 profile and native world data"]
+fn berserk_stores_overflow_until_real_finisher() {
+    use shared::components::PowerType;
+    let mut run = prepare_literal(103, 1).unwrap();
+    let actor = run.actor;
+    let target = run.targets[0];
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 768, Some(actor), false).unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 106951, Some(actor), 1);
+    crate::spell_cast::powers::change_power(run.app.world_mut(), actor, PowerType::ComboPoints, 8.0);
+    let aura = run.app.world().get::<crate::auras::ActiveAuras>(actor).unwrap().iter().find(|a| a.spell_id == 405189).expect("overflow stored");
+    assert_eq!(aura.stacks, 3);
+    crate::spell_cast::powers::change_power(run.app.world_mut(), actor, PowerType::Energy, 140.0);
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 22568, Some(target), false).unwrap();
+    for _ in 0..40 { run.app.update(); }
+    assert!(!crate::auras::has_aura(run.app.world(), actor, 405189));
+    assert_eq!(crate::spell_cast::powers::power_value(run.app.world(), actor, PowerType::ComboPoints).unwrap().0, 3.0);
+}
+
+#[test]
+#[ignore = "requires spec103 profile and native world data"]
 fn panthers_guile_fills_combo_points_after_real_shred() {
     use shared::components::PowerType;
     let _seed = crate::random::seed_scope(70448);

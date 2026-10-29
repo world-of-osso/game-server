@@ -48,11 +48,12 @@ fn on_combo_gain(world: &mut World, ctx: &EffectCtx<'_>, target: Entity, gained:
     }
     let (current, max) =
         powers::power_value(world, ctx.caster, PowerType::ComboPoints).expect("Feral combo points");
-    if current >= max {
+    let fill = max - current + super::feral_overflow::capacity(world, ctx.caster);
+    if fill <= 0.0 {
         return;
     }
     world
         .entity_mut(ctx.caster)
         .insert(PanthersGuileReady(now + cooldown));
-    powers::change_power(world, ctx.caster, PowerType::ComboPoints, max - current);
+    powers::change_power(world, ctx.caster, PowerType::ComboPoints, fill);
 }

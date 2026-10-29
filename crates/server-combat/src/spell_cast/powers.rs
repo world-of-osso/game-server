@@ -374,6 +374,9 @@ fn change_power_with_source(
     observe_power_change(world, entity, power, gained);
     if power == PowerType::ComboPoints && delta > 0.0 {
         record_combo_gain(world, entity, delta, gained, source);
+        if delta > gained {
+            super::script_registry::after_combo_overflow(world, entity, delta - gained);
+        }
     }
     Some(gained)
 }
