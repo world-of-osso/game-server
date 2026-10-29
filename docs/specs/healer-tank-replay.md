@@ -75,6 +75,21 @@ Ranking: the highest scale before the first scale with fewer than five survivors
 
 Ten seeds give a survivor-count standard deviation of about 1.6 near 50%, so tied tanks are not separated. Warrior holds 10/10 to 3.50 and then drops sharply; Vengeance starts losing seeds at 2.75 but lasts longer at 4.50 and above. At 1.0×, net damage per second (damage taken after absorbs minus effective self-healing) is 4,094 for Paladin and between −260 and 35 for the other five. Effective healing cannot exceed missing health, so a tank that stays at full health shows zero net damage; this metric does not rank surviving tanks.
 
+## Ten-seed healed replay versus corrected SimC
+
+Measured on master `93a42f1f4a`: each tank's SimC trace, external dummy healing, native seeds 70448–70457. SimC is the mean of `collected_data.dtps` over ten measured iterations, after absorbs and including self-Stagger. `timeline_dmg_taken` sums run about 9% higher (consistent with 11 iterations divided by 10); do not use them. The corrected references remove SimC double applications and the Demon Spikes armor omission recorded in `healer-tank-replay/73.md`, `268.md` and `581.md`. Reports and `SUMMARY.md` are in `game-engine/data/diagnostics/healer-tank-replay/all-10seeds-93a42f1f4a/`.
+
+| Tank | Native taken | SimC | Δ | Healed / unhealed deaths |
+|---|---:|---:|---:|---:|
+| 66 | 3,798,647 | 3,341,843 (canonical) | +13.7% | 0 / 4 |
+| 73 | 3,010,673 | 2,951,770 (corrected) | +2.0% | 0 / 0 |
+| 104 | 2,132,723 | 0 (Ursoc's Fury shield bug) | n/a | 0 / 0 |
+| 250 | 101,591 | 88,144 (canonical) | +15.3% | 0 / 0 |
+| 268 | 3,465,194 | 3,471,015 (corrected) | −0.2% | 0 / 0 |
+| 581 | 5,922,231 | 5,812,546 (corrected) | +1.9% | 0 / 0 |
+
+Blood absorbs about 8.69M of 8.79M pre-absorb intake, so its 13k difference is 0.03% of raw intake and within its 54k–154k seed range; a percentage gate is not meaningful there. Protection Paladin's pre-absorb intake matches the earlier run, but Holy Bulwark-led absorbs fell from 3.13M to 2.85M; that residual is not yet attributed.
+
 ## SimC party-pressure trace
 
 The second canonical healer input is `game-engine/data/diagnostics/healer-tank-replay/66.simc-party-pulse-seed70448.debug.log`. It adds a 20,000 Shadow pulse every 12 seconds from 8 seconds through 296 seconds. This is a reproducible synthetic dungeon-pressure scenario, not a measured dungeon encounter. SimC `76f8118` generates the five recipient source rolls with the MID2 Protection profile and four named copies; the native replay maps them to its tank, healer and three DPS followers. The original tank-only trace still supplies the tank's melee and bleed rolls.
