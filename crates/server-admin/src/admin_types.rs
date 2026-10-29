@@ -165,6 +165,12 @@ pub enum AdminRequest {
         faction_id: u32,
         value: i32,
     },
+    /// Live proofs only: one controlled `item_id` loot slot on the nearest corpse the
+    /// character tapped.
+    StageCorpseLoot {
+        character_name: String,
+        item_id: u32,
+    },
     SetAppearance {
         character_name: String,
         appearance: CharacterAppearance,
@@ -437,6 +443,11 @@ pub enum AdminResponse {
         character_name: String,
         faction_id: u32,
         value: i32,
+    },
+    CorpseLootStaged {
+        character_name: String,
+        item_id: u32,
+        corpse: u64,
     },
     AppearanceSet {
         character_name: String,

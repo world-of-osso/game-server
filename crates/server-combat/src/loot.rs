@@ -90,6 +90,67 @@ impl LootKind {
 #[derive(Component)]
 pub(crate) struct PendingGroupLoot;
 
+/// Admin `stage-corpse-loot`, for live proofs only: one controlled `item_id` slot for
+/// `name` on the nearest corpse it tapped within loot reach, and the corpse lootable for
+/// it. Taking the slot goes through the real `LootSlotRequest` path. Returns the corpse.
+pub(crate) fn stage_corpse_loot(
+    world: &mut World,
+    name: &str,
+    item_id: u32,
+) -> Result<u64, String> {
+    let db = world.resource::<GameDatabase>().db.clone();
+    let character = persistence::find_character_id_by_name(&db, name)
+        .ok_or_else(|| format!("character '{name}' not found"))?;
+    let (connection, player) = world
+        .query::<(Entity, &InWorld, &PlayerLink)>()
+        .iter(world)
+        .find(|(_, in_world, _)| in_world.character_id == character)
+        .map(|(connection, _, link)| (connection, link.0))
+        .ok_or_else(|| format!("{name} is not in the world"))?;
+    let origin = *world
+        .get::<Position>(player)
+        .ok_or_else(|| format!("{name} has no position"))?;
+    let corpse = world
+        .query_filtered::<(Entity, &Position, &CreatureTap), With<Corpse>>()
+        .iter(world)
+        .filter(|(_, _, tap)| tap.tappers.contains(&character))
+        .map(|(corpse, position, _)| (corpse, distance(&origin, position)))
+        .filter(|(_, yards)| *yards <= INTERACTION_DISTANCE)
+        .min_by(|a, b| a.1.total_cmp(&b.1))
+        .map(|(corpse, _)| corpse)
+        .ok_or_else(|| format!("no corpse {name} tapped within loot reach"))?;
+    let goods = world
+        .resource::<VendorCatalog>()
+        .goods
+        .get(&item_id)
+        .cloned()
+        .ok_or_else(|| format!("item {item_id} not found"))?;
+    let content = Some(LootContent::Item {
+        item_id,
+        name: goods.name,
+        quality: goods.quality,
+        count: 1,
+    });
+    match world.get_mut::<CorpseLoot>(corpse) {
+        Some(mut loot) => loot.looters.entry(character).or_default().push(content),
+        None => {
+            world.entity_mut(corpse).insert((
+                CorpseLoot {
+                    looters: HashMap::from([(character, vec![content])]),
+                },
+                LootKind::CORPSE,
+            ));
+        }
+    }
+    if let Some(mut sender) = world.get_mut::<MessageSender<CorpseLootable>>(connection) {
+        sender.send::<LootChannel>(CorpseLootable {
+            corpse: corpse.to_bits(),
+            lootable: true,
+        });
+    }
+    Ok(corpse.to_bits())
+}
+
 pub(crate) fn open_item_loot(
     world: &mut World,
     player: Entity,
