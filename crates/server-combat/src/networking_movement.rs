@@ -425,11 +425,30 @@ fn prevent_steep_ascent(ground: &mut GroundMap, map: InMap, current: Vec3, next:
     }
     let rise = solid - current.y;
     let distance = (next - current).with_y(0.0).length();
-    if rise > 0.0 && rise.atan2(distance) > shared::movement::MAX_SLOPE_ANGLE {
+    if rise > 0.0
+        && rise.atan2(distance) > shared::movement::MAX_SLOPE_ANGLE
+        && !has_step_landing(ground, map, current, next)
+    {
         current
     } else {
         next
     }
+}
+
+fn has_step_landing(ground: &mut GroundMap, map: InMap, current: Vec3, next: Vec3) -> bool {
+    let direction = (next - current).with_y(0.0).normalize_or_zero();
+    let probe = current + direction * (2.0 * shared::los::body::BODY_RADIUS);
+    let GroundProbe::Supported(landing) = ground.ground_in(map, probe) else {
+        return false;
+    };
+    if landing <= current.y
+        || !matches!(ground.player_solid_ground_in(map, probe), GroundProbe::Supported(solid) if solid <= landing)
+    {
+        return false;
+    }
+    let raised = current.with_y(landing);
+    let destination = probe.with_y(landing);
+    ground.clamp_live_movement(map, raised, destination) == destination
 }
 
 /// The highest height on land: without a jump the ground or where the player already is
@@ -667,7 +686,7 @@ mod steep_floor_tests {
 
     #[test]
     #[ignore = "requires Neltharus ground assets in GAME_SERVER_GROUND_DIR"]
-    fn neltharus_authority_supports_steep_face_and_blocks_uphill() {
+    fn neltharus_authority_supports_steep_face_and_crosses_lip() {
         let data = PathBuf::from(std::env::var_os("GAME_SERVER_GROUND_DIR").unwrap());
         let mut ground = GroundMap::new(&data, HashMap::from([(2519, 4289128)]));
         let map = InMap::continent(2519);
@@ -684,8 +703,20 @@ mod steep_floor_tests {
             "authoritative solid floor {height}"
         );
         let uphill = feet + Vec3::new(-0.1, 0.0, 0.0);
-        assert_eq!(prevent_steep_ascent(&mut ground, map, feet, uphill), feet);
+        assert_eq!(prevent_steep_ascent(&mut ground, map, feet, uphill), uphill);
         let across = feet + Vec3::new(-0.05, 0.0, -0.087);
         assert_eq!(prevent_steep_ascent(&mut ground, map, feet, across), across);
+    }
+
+    #[test]
+    #[ignore = "requires Neltharus ground assets in GAME_SERVER_GROUND_DIR"]
+    fn neltharus_authority_admits_recorded_gorek_return_step() {
+        let data = PathBuf::from(std::env::var_os("GAME_SERVER_GROUND_DIR").unwrap());
+        let mut ground = GroundMap::new(&data, HashMap::from([(2519, 4289128)]));
+        let map = InMap::continent(2519);
+        let feet = Vec3::new(-248.251, 123.114, 468.9084);
+        let waypoint = Vec3::new(-247.91733, 124.4, 468.22916);
+        let next = feet + (waypoint - feet).with_y(0.0).normalize() * (7.0 / 60.0);
+        assert_eq!(prevent_steep_ascent(&mut ground, map, feet, next), next);
     }
 }
