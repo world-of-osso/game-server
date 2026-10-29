@@ -2856,6 +2856,44 @@ fn protection_shield_grants_faiths_armor_with_native_modifier() {
 }
 
 #[test]
+#[ignore = "uses real tank-dummy bleed and Protection player"]
+fn tank_dummy_bleed_ignores_target_armor() {
+    use shared::components::Health;
+    let mut run = super::dps_parity::prepare_registered_player(66, 1).unwrap();
+    super::dps_parity::engage(&mut run);
+    let actor = run.actor;
+    let source = run.targets[0];
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        actor,
+        crate::auras::RemoveReason::Consumed,
+        |aura| aura.spell_id == 432607,
+    );
+    let mut damage = Vec::new();
+    for armor in [0.0, 100_000.0] {
+        run.app
+            .world_mut()
+            .get_mut::<crate::stats::CharacterStats>(actor)
+            .unwrap()
+            .armor = armor;
+        let mut health = run.app.world_mut().get_mut::<Health>(actor).unwrap();
+        health.current = health.max;
+        let before = health.current;
+        crate::spell_cast::effects::replay_simc_dummy_bleed(
+            run.app.world_mut(),
+            source,
+            actor,
+            10_000.0,
+        );
+        damage.push(before - run.app.world().get::<Health>(actor).unwrap().current);
+    }
+    assert!(
+        damage[0] > 0.0 && (damage[0] - damage[1]).abs() < 1.0,
+        "zero/high armor bleed damage: {damage:?}"
+    );
+}
+
+#[test]
 #[ignore = "uses selected MID2 Protection and real Blessing of Dusk"]
 fn dusk_reduces_real_bleed_damage_at_all_health_levels() {
     use shared::components::Health;

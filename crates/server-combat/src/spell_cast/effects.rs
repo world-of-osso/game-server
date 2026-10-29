@@ -2045,7 +2045,7 @@ pub fn replay_simc_dummy_bleed(world: &mut World, source: Entity, target: Entity
         crit: false,
         periodic: true,
         resolved_source: true,
-        effect: None,
+        effect: Some(&spell.effects[0]),
         bonus_caster: source,
     };
     deal_source_damage_and_report(world, &ctx, target, damage, Some((amount, false)));
