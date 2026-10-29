@@ -446,11 +446,14 @@ mod tests {
                 source: crate::auras::AuraSource::Cast,
             },
         );
+        // Out-of-combat decay drains each 3-rage tick within 2.4 s; check the peak.
+        let mut peak = before;
         for _ in 0..120 {
             run.app.update();
+            peak = peak.max(rage(&run));
         }
         assert!(
-            rage(&run) > before,
+            peak > before,
             "an owned Thrash bleed must earn periodic rage"
         );
     }
@@ -575,6 +578,140 @@ mod tests {
         assert!(
             (shield - damage * multiplier).abs() <= 2.0,
             "damage={damage} shield={shield} multiplier={multiplier}"
+        );
+    }
+
+    #[test]
+    #[ignore = "requires Guardian MID2 profile and native world data"]
+    fn guardian_ironfur_stacks_expire_on_their_own_lifetimes() {
+        let mut run = super::super::prepare_registered_player(104, 1).unwrap();
+        let actor = run.actor;
+        super::super::engage(&mut run);
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 5487, Some(actor), false)
+            .unwrap();
+        let ironfur = |run: &super::super::Run| {
+            run.app
+                .world()
+                .get::<crate::auras::ActiveAuras>(actor)
+                .unwrap()
+                .iter()
+                .find(|aura| aura.spell_id == 192081 && aura.caster == actor)
+                .map_or(0, |aura| aura.stacks)
+        };
+        let armor = |run: &super::super::Run| {
+            run.app
+                .world()
+                .get::<crate::stats::CharacterStats>(actor)
+                .unwrap()
+                .armor
+        };
+        // Three real casts 3 s apart; 0.05 s per update.
+        let mut armor_by_stacks = Vec::new();
+        for _ in 0..3 {
+            crate::spell_cast::powers::change_power(
+                run.app.world_mut(),
+                actor,
+                shared::components::PowerType::Rage,
+                1000.0,
+            );
+            crate::spell_cast::creature_cast(run.app.world_mut(), actor, 192081, Some(actor), false)
+                .unwrap();
+            run.app.update();
+            armor_by_stacks.push(armor(&run));
+            for _ in 0..59 {
+                run.app.update();
+            }
+        }
+        // Each stack lives 9 s (SimC trace: gain 6.044, decrement 15.044).
+        for _ in 0..10 {
+            run.app.update();
+        }
+        // 9.5 s: only the first cast has expired; a shared refresh would keep all three.
+        assert_eq!(ironfur(&run), 2, "casts at 3 s and 6 s are still live at 9.5 s");
+        for _ in 0..60 {
+            run.app.update();
+        }
+        // 12.5 s: the cast at 3 s has expired too.
+        assert_eq!(ironfur(&run), 1);
+        assert!((armor(&run) - armor_by_stacks[0]).abs() < 1.0, "one stack's armor remains");
+    }
+
+    #[test]
+    #[ignore = "requires Guardian MID2 profile and native world data"]
+    fn guardian_thrash_and_moonfire_reduce_dummy_bleed_on_the_druid() {
+        use crate::spell_cast::test_harness::ObservedCombatEvents;
+        use shared::protocol::CombatLogKind;
+        let mut run = super::super::prepare_registered_player(104, 1).unwrap();
+        let actor = run.actor;
+        let target = run.targets[0];
+        super::super::engage(&mut run);
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 5487, Some(actor), false)
+            .unwrap();
+        for _ in 0..40 {
+            run.app.update();
+        }
+        // One 25,000 dummy bleed tick, measured with no shield to absorb it.
+        let bleed = |run: &mut super::super::Run| {
+            crate::auras::remove_auras(
+                run.app.world_mut(),
+                actor,
+                crate::auras::RemoveReason::Cancelled,
+                |aura| matches!(aura.spell_id, 372505 | 385787),
+            );
+            crate::spell_cast::effects::replay_simc_dummy_bleed(
+                run.app.world_mut(),
+                target,
+                actor,
+                25_000.0,
+            );
+            run.app
+                .world()
+                .resource::<ObservedCombatEvents>()
+                .0
+                .iter()
+                .rev()
+                .find(|event| {
+                    event.source == Some(target.to_bits())
+                        && event.target == Some(actor.to_bits())
+                        && event.kind == CombatLogKind::Damage
+                })
+                .expect("dummy bleed tick")
+                .amount as f32
+        };
+        for spell in [77758, 8921] {
+            for _ in 0..40 {
+                run.app.update();
+            }
+            crate::spell_cast::creature_cast(run.app.world_mut(), actor, spell, Some(target), false)
+                .unwrap();
+        }
+        for _ in 0..10 {
+            run.app.update();
+        }
+        let stacks = run
+            .app
+            .world()
+            .get::<crate::auras::ActiveAuras>(target)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 192090 && aura.caster == actor)
+            .expect("Bear Thrash bleed")
+            .stacks;
+        let debuffed = bleed(&mut run);
+        crate::auras::remove_auras(
+            run.app.world_mut(),
+            target,
+            crate::auras::RemoveReason::Cancelled,
+            |aura| aura.caster == actor && matches!(aura.spell_id, 192090 | 164812),
+        );
+        let plain = bleed(&mut run);
+        // SimC76f8118 104 trace: Rend and Tear Thrash -3% per stack, rank-two
+        // Scintillating Moonlight Moonfire -12% on damage the target deals to the Druid.
+        let expected = (1.0 - 0.03 * f32::from(stacks)) * 0.88;
+        assert!(
+            (debuffed / plain - expected).abs() < 0.002,
+            "stacks={stacks} plain={plain} debuffed={debuffed} ratio={}",
+            debuffed / plain
         );
     }
 

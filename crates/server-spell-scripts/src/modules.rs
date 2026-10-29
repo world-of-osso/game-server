@@ -254,6 +254,7 @@ register_modules! {
     giantkiller: (170, "modules/giantkiller.rs"),
     enhancement_tempest_aoe: (2633, "modules/enhancement_tempest_aoe.rs"),
     guardian_impacts: (1000, "modules/guardian_impacts.rs"),
+    guardian_ironfur: (9801, "modules/guardian_ironfur.rs"),
     guardian_ursocs_fury: (1040, "modules/guardian_ursocs_fury.rs"),
     guardian_vicious_brambles: (1052, "modules/guardian_vicious_brambles.rs"),
     guardian_star_cascade: (1053, "modules/guardian_star_cascade.rs"),
