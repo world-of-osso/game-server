@@ -2404,6 +2404,7 @@ fn deal_source_damage_and_report(
     #[cfg(any(test, feature = "test-support"))]
     factor_capture::finish(world, ctx, target, captured_hit, &event);
     log_event(world, event);
+    super::script_registry::spell_health_impact(world, ctx, target, before, false);
     if amount > 0.0 {
         super::script_registry::raw_resolved_damage(world, ctx, target, crit, unrounded);
     }
@@ -2697,6 +2698,7 @@ fn apply_resolved_heal(
     if health.current <= 0.0 {
         return;
     }
+    let before = health.current;
     let effective = amount.min(health.max - health.current).max(0.0);
     health.current += effective;
     crate::achievement::record_healing(world, ctx.caster, target, amount, effective);
@@ -2714,6 +2716,9 @@ fn apply_resolved_heal(
     event.crit = crit;
     event.periodic = periodic;
     log_event(world, event);
+    if amount > 0.0 {
+        super::script_registry::spell_health_impact(world, ctx, target, before, true);
+    }
     super::script_registry::resolved_heal(world, ctx, target, amount, effective, crit, periodic);
     let percent_based = !periodic
         && ctx
