@@ -45,6 +45,29 @@ fn holy_avenging_wrath_enables_and_removes_hammer_override() {
 }
 
 #[test]
+#[ignore = "replays party pressure with the MID2 Holy Paladin"]
+fn holy_paladin_keeps_one_beacon_during_party_pressure() {
+    let trace = std::env::var("HEALER_TANK_SIMC_TRACE").expect("HEALER_TANK_SIMC_TRACE required");
+    let party = std::env::var("HEALER_TANK_PARTY_TRACE").expect("HEALER_TANK_PARTY_TRACE required");
+    let report = super::super::healer_replay::replay_simc_party(
+        65,
+        Path::new(&trace),
+        Path::new(&party),
+        300,
+        70448,
+    )
+    .unwrap();
+    assert_eq!(report["healer_casts"]["53563"], 1, "{report}");
+    assert!(
+        report["metrics"]["spell_healing"]["53652"]["raw"]
+            .as_u64()
+            .unwrap_or(0)
+            > 0,
+        "{report}"
+    );
+}
+
+#[test]
 #[ignore = "replays the approved MID2 Holy Paladin against the SimC dummy trace"]
 fn holy_paladin_heals_the_simc_dummy_party() {
     let trace = std::env::var("HEALER_TANK_SIMC_TRACE").expect("HEALER_TANK_SIMC_TRACE required");
