@@ -54,7 +54,7 @@ def extract(paths):
                             kills.append(active)
                         active = None
                         continue
-                    if active is None or len(row) < 12:
+                    if active is None or len(row) < 11:
                         continue
                     source = entry(row[1])
                     if row[9].isdigit():
