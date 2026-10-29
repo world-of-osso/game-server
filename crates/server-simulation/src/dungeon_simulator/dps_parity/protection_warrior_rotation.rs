@@ -317,14 +317,24 @@ mod tests {
     fn protection_tank_enters_combat_with_native_charge() {
         let trace = std::env::var("HEALER_TANK_SIMC_TRACE").expect("SimC trace required");
         let report = super::super::super::tank_replay::replay_simc_with_healing(
-            73, std::path::Path::new(&trace), 300, 70448, true,
+            73,
+            std::path::Path::new(&trace),
+            300,
+            70448,
+            true,
         )
         .expect("Protection Warrior replay");
         let casts = report["cast_timeline"].as_array().unwrap();
         assert!(casts.iter().any(|cast| cast["spell_id"] == 100
             && cast["time_seconds"].as_f64().unwrap() < 1.0), "opening Charge: {casts:?}");
-        assert!(report["energize_by_spell"]["100"]["effective"].as_i64().unwrap_or(0) >= 200,
-            "opening Charge must grant native Rage: {}", report["energize_by_spell"]);
+        assert!(
+            report["energize_by_spell"]["100"]["effective"]
+                .as_i64()
+                .unwrap_or(0)
+                >= 200,
+            "opening Charge must grant native Rage: {}",
+            report["energize_by_spell"]
+        );
     }
     #[test]
     #[ignore = "requires canonical world database and SimC tank trace"]

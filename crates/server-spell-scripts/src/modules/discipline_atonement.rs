@@ -48,39 +48,85 @@ fn after_darkness_action(world: &mut World, caster: Entity, spell: &SpellInfo) {
     };
     if proc {
         // SimC76f8118 sc_priest_discipline.cpp:588-594,793-796; sc_priest.cpp:216-218.
-        auras::apply_aura(world, &AuraApplication {
-            caster, target: caster, spell_id: 1253591, effect_mask: u32::MAX, source: AuraSource::Cast,
-        });
+        auras::apply_aura(
+            world,
+            &AuraApplication {
+                caster,
+                target: caster,
+                spell_id: 1253591,
+                effect_mask: u32::MAX,
+                source: AuraSource::Cast,
+            },
+        );
     }
 }
 
 fn draw_darkness_card(world: &mut World, caster: Entity) -> bool {
-    if world.get::<DarknessDeck>(caster).is_none_or(|deck| deck.cards == 0) {
-        world.entity_mut(caster).insert(DarknessDeck { cards: 4, success: true });
+    if world
+        .get::<DarknessDeck>(caster)
+        .is_none_or(|deck| deck.cards == 0)
+    {
+        world.entity_mut(caster).insert(DarknessDeck {
+            cards: 4,
+            success: true,
+        });
     }
     let mut deck = world.get_mut::<DarknessDeck>(caster).unwrap();
     let drawn = deck.success && combat::random::random::<f32>() < 1.0 / f32::from(deck.cards);
     deck.cards -= 1;
-    if drawn { deck.success = false; }
+    if drawn {
+        deck.success = false;
+    }
     drawn
 }
 
-fn discharge_void_shield(world: &mut World, caster: Entity, _victim: Entity, attacker: Option<Entity>, spell: u32, amount: f32) {
+fn discharge_void_shield(
+    world: &mut World,
+    caster: Entity,
+    _victim: Entity,
+    attacker: Option<Entity>,
+    spell: u32,
+    amount: f32,
+) {
     if spell != 1253593 || amount <= 0.0 || !auras::has_aura(world, caster, 1253827) {
         return;
     }
     let is_enemy = |world: &World, target| {
         combat::spell_cast::targets::is_alive(world, target)
-            && combat::spell_cast::targets::relation_matches(world, caster, target, combat::spell_cast::targets::Relation::Enemy)
+            && combat::spell_cast::targets::relation_matches(
+                world,
+                caster,
+                target,
+                combat::spell_cast::targets::Relation::Enemy,
+            )
     };
-    let target = attacker.filter(|&target| is_enemy(world, target)).or_else(|| {
-        let enemies: Vec<_> = world.query::<Entity>().iter(world).filter(|&target| is_enemy(world, target)).collect();
-        if enemies.is_empty() { None } else { Some(enemies[(combat::random::random::<f32>() * enemies.len() as f32) as usize]) }
-    });
-    let Some(target) = target else { return; };
+    let target = attacker
+        .filter(|&target| is_enemy(world, target))
+        .or_else(|| {
+            let enemies: Vec<_> = world
+                .query::<Entity>()
+                .iter(world)
+                .filter(|&target| is_enemy(world, target))
+                .collect();
+            if enemies.is_empty() {
+                None
+            } else {
+                Some(enemies[(combat::random::random::<f32>() * enemies.len() as f32) as usize])
+            }
+        });
+    let Some(target) = target else {
+        return;
+    };
     let percent = combat::spell_cast::scripts::script_effect_value(world, caster, 1253827, 0);
     // SimC76f8118 sc_priest.cpp:84-105: each actual absorbed contribution discharges.
-    combat::spell_cast::cast_triggered_with_effect0_amount(world, caster, 1253828, Some(target), 1, amount * percent / 100.0);
+    combat::spell_cast::cast_triggered_with_effect0_amount(
+        world,
+        caster,
+        1253828,
+        Some(target),
+        1,
+        amount * percent / 100.0,
+    );
 }
 
 fn apply_mark(world: &mut World, target: Entity, aura: &AuraInstance) {

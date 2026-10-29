@@ -755,7 +755,8 @@ mod tests {
             crate::auras::has_aura(run.app.world(), actor, 207203),
             "a real white hit must create Frost Shield"
         );
-        let (_, absorbed) = crate::auras::absorb_damage(run.app.world_mut(), actor, None, 1, 1_000_000.0);
+        let (_, absorbed) =
+            crate::auras::absorb_damage(run.app.world_mut(), actor, None, 1, 1_000_000.0);
         assert!(
             absorbed > 0.0,
             "incoming physical damage must consume the shield"
