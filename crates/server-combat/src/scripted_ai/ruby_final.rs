@@ -54,6 +54,9 @@ impl CreatureAi for RubyFinal {
         self.phase_pending = false;
         self.stage_remaining_ms = None;
         self.landed = false;
+        ctx.world
+            .entity_mut(ctx.me)
+            .remove::<super::smart_ai::CombatMovementDisabled>();
         if let Some(map) = ctx.map() {
             super::instance_script::set_data(ctx.world, map, DEATH_DATA, 0);
         }
@@ -97,6 +100,11 @@ impl CreatureAi for RubyFinal {
     fn update_ai(&mut self, ctx: &mut Ctx, diff_ms: u32) {
         if self.entry == KYRAKKA && !self.phase_pending && ctx.is_engaged() && either_at_half(ctx) {
             self.phase_pending = true;
+            // Keep ordinary combat chase from displacing her after arrival and
+            // before the stage event; point movement itself remains active.
+            ctx.world
+                .entity_mut(ctx.me)
+                .insert(super::smart_ai::CombatMovementDisabled);
             ctx.move_point(ctx.me, LANDING_POINT, LANDING);
             self.stage_remaining_ms = Some(STAGE_DELAY_MS);
         }
@@ -129,6 +137,9 @@ impl RubyFinal {
         }
         self.boss.events.cancel(FLAMESPIT_ONE);
         self.boss.events.schedule(FLAMESPIT_TWO, 14_560);
+        ctx.world
+            .entity_mut(ctx.me)
+            .remove::<super::smart_ai::CombatMovementDisabled>();
     }
 }
 

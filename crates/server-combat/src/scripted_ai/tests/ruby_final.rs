@@ -137,7 +137,13 @@ fn ruby_final_logged_clocks_and_stage_anchor() {
         assert!(
             (movement.target.x - 1798.47).abs() < 0.01 && (movement.target.z + 36.11).abs() < 0.01
         );
-        h.advance(37.5);
+        h.advance(22.0);
+        let landed = *h.app.world().get::<Position>(kyrakka).unwrap();
+        assert!(
+            (landed.x - 1798.47).abs() < 0.1 && (landed.z + 36.11).abs() < 0.1,
+            "Kyrakka must wait at the landing point: {landed:?}"
+        );
+        h.advance(15.5);
         let attempts = &h
             .app
             .world()
