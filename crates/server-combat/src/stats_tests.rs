@@ -410,11 +410,9 @@ fn tertiary_ratings_follow_curve_21025() {
     );
 }
 
-/// A level 10 Warrior with zero Strength, a weapon, a shield, Parry and Block
-/// parries 3%, blocks 3% and dodges nothing without rating;
-/// 10% of dodge rating diminishes to 65.63144 × 10 / (10 + 65.63144 × 0.956) = 9.022%.
+/// A level 10 Warrior starts at 3% dodge, parry and block; rating follows SimC DR.
 #[test]
-fn player_avoidance_follows_trinitycore_master() {
+fn player_avoidance_follows_simc() {
     let inputs = DefenseInputs {
         can_parry: true,
         can_block: true,
@@ -433,7 +431,7 @@ fn player_avoidance_follows_trinitycore_master() {
     assert_eq!(
         none,
         PlayerDefense {
-            dodge: 0.0,
+            dodge: 3.0,
             parry: 3.0,
             block: 3.0,
             shield_block: 250.0,
@@ -449,7 +447,7 @@ fn player_avoidance_follows_trinitycore_master() {
         },
         inputs,
     );
-    assert!((rated.dodge - 9.0223).abs() < 1e-3, "{}", rated.dodge);
+    assert!((rated.dodge - 11.5923).abs() < 1e-3, "{}", rated.dodge);
     // No Parry spell, no weapon or no parry cap (Mage) parries nothing; no Block spell
     // or no shield blocks nothing.
     let unarmed = DefenseInputs {
@@ -472,6 +470,47 @@ fn player_avoidance_follows_trinitycore_master() {
         player_defense(WARRIOR, 10, &CombatRatings::default(), no_block).block,
         0.0
     );
+}
+
+#[test]
+fn all_classes_use_simc_base_and_rating_avoidance() {
+    let inputs = DefenseInputs {
+        can_parry: true,
+        has_weapon: true,
+        can_block: true,
+        shield_armor: Some(100.0),
+        ..Default::default()
+    };
+    let ratings = CombatRatings {
+        parry: 726.0,
+        dodge: 520.0,
+        ..Default::default()
+    };
+    for class in 1..=13 {
+        let defense = player_defense(class, 90, &ratings, inputs);
+        let vertical = if class == 12 { 0.02 } else { 0.01 };
+        let horizontal = if class == 11 { 1.0 / 0.97 } else { 1.0 / 0.94 };
+        let dodge_bonus = 520.0 / crate::character_stats_data::DODGE_RATING[89];
+        let dodge = 3.0 + dodge_bonus / (dodge_bonus * vertical + horizontal);
+        assert!(
+            (defense.dodge - dodge).abs() < 0.001,
+            "class {class}: {defense:?}"
+        );
+        let parry_bonus = 726.0 / crate::character_stats_data::PARRY_RATING[89];
+        let parry = if matches!(class, 1 | 2 | 4 | 6 | 10 | 12) {
+            3.0 + parry_bonus / (parry_bonus * vertical + horizontal)
+        } else {
+            0.0
+        };
+        assert!(
+            (defense.parry - parry).abs() < 0.001,
+            "class {class}: {defense:?}"
+        );
+        assert_eq!(
+            defense.block,
+            if matches!(class, 1 | 2) { 3.0 } else { 0.0 }
+        );
+    }
 }
 
 #[test]
