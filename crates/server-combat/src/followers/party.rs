@@ -28,6 +28,13 @@ impl DisconnectedRuns {
     pub(crate) fn copy(&self, character: u64) -> Option<InMap> {
         self.0.get(&character)?.run.copy
     }
+
+    pub(crate) fn member_difficulty(&self, member: Entity) -> Option<u32> {
+        self.0
+            .values()
+            .any(|run| run.run.members.contains(&member))
+            .then_some(FOLLOWER_DIFFICULTY)
+    }
 }
 
 #[derive(Component, Clone)]
@@ -661,7 +668,10 @@ mod copy_tests {
     #[test]
     fn disconnect_and_login_restore_follower_copy_and_party() {
         let (mut app, owner, run) = fixture();
-        app.add_plugins(crate::creature_aggro::CreatureAggroPlugin);
+        app.add_plugins((
+            crate::creature_aggro::CreatureAggroPlugin,
+            crate::group::GroupPlugin,
+        ));
         join_party(app.world_mut(), owner, &run, &run.members).unwrap();
         let map = run.copy.unwrap();
         let position = *app
@@ -693,6 +703,12 @@ mod copy_tests {
         assert!(app.world().get_entity(owner).is_err());
         advance_runs(app.world_mut());
         super::super::update_ai(app.world_mut());
+        assert!(
+            app.world()
+                .resource::<GroupRegistry>()
+                .group_id_of(30)
+                .is_some()
+        );
         assert!(
             run.members
                 .iter()

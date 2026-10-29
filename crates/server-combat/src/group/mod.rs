@@ -107,6 +107,7 @@ fn process_group_commands(
         &shared::components::ModelDisplay,
     )>,
     mut registry: ResMut<GroupRegistry>,
+    suspended: Option<Res<crate::followers::DisconnectedRuns>>,
     time: Res<Time>,
     mut difficulty_changes: ResMut<crate::maps::difficulty::DifficultyChanges>,
     mut raid_changes: ResMut<crate::maps::raid::RaidChanges>,
@@ -116,8 +117,10 @@ fn process_group_commands(
         followers
             .iter()
             .filter_map(|(entity, follower, level, display)| {
-                let (_, _, _, _, difficulty, _, _) = players.get(follower.owner).ok()?;
-                let difficulty = difficulty?.0;
+                let difficulty = match players.get(follower.owner) {
+                    Ok((_, _, _, _, Some(difficulty), _, _)) => difficulty.0,
+                    _ => suspended.as_ref()?.member_difficulty(entity)?,
+                };
                 Some((
                     crate::followers::Follower::member_id(entity),
                     follower.online(entity, level.0, difficulty, display.display_id),
