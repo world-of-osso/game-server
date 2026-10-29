@@ -101,6 +101,36 @@ fn mistweaver_ancient_teachings_splits_damage_and_preserves_critical_result() {
 }
 
 #[test]
+#[ignore = "requires top-character profiles, native DB and SimC party pulse"]
+fn mistweaver_prioritizes_rising_sun_kick_and_accumulates_mana_tea() {
+    let trace = std::env::var("HEALER_TANK_TIMELINE").unwrap();
+    let party = std::env::var("HEALER_TANK_PARTY_TRACE").unwrap();
+    let report = super::super::healer_replay::replay_simc_party(
+        270,
+        Path::new(&trace),
+        Path::new(&party),
+        300,
+        70448,
+    )
+    .unwrap();
+    let casts = &report["healer_casts"];
+    let count = |id| casts[id].as_u64().unwrap_or(0);
+    assert!(
+        count("107428") > 8,
+        "Rising Sun Kick must not be starved: {report}"
+    );
+    assert!(
+        count("399491") < 100,
+        "Sheilun's Gift must not be cast as single-target filler: {report}"
+    );
+    assert!(
+        count("115294") < 30,
+        "Mana Tea must accumulate stacks: {report}"
+    );
+    println!("MISTWEAVER_POLICY_REPORT={report}");
+}
+
+#[test]
 #[ignore = "requires native top-character profiles and world database"]
 fn mistweaver_uses_spinning_crane_kick_only_against_a_pack() {
     use crate::spell_cast::test_harness::ObservedCombatEvents;
