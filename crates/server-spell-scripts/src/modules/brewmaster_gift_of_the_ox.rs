@@ -18,11 +18,14 @@ const BLACKOUT_KICK: u32 = 205523;
 #[derive(Component, Default)]
 struct Orbs(VecDeque<f64>);
 
+#[derive(Component)]
+struct ConsumingOrbs;
+
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::EarlyAuraRegistration(register),
     SpellScriptHook::AfterCastUpdate(expire_orbs),
-    SpellScriptHook::CombatStatusChanged(combat_changed),
     SpellScriptHook::ExpelHarmHeal(consume_orbs),
+    SpellScriptHook::NamedHealingMultiplier(orb_healing_multiplier),
 ];
 
 fn register(scripts: &mut AuraScripts) {
@@ -65,17 +68,34 @@ fn expire_orbs(world: &mut World) {
 fn consume_orbs(world: &mut World, actor: Entity) -> f32 {
     let count = world.get::<Orbs>(actor).map_or(0, |orbs| orbs.0.len());
     let mut effective = 0.0;
+    world.entity_mut(actor).insert(ConsumingOrbs);
     for _ in 0..count {
         world.get_mut::<Orbs>(actor).unwrap().0.pop_front();
         let before = world.get::<Health>(actor).expect("orb owner health").current;
         spell_cast::cast_triggered(world, actor, TRIGGER, Some(actor), 1);
         effective += world.get::<Health>(actor).expect("orb owner health").current - before;
     }
+    world.entity_mut(actor).remove::<ConsumingOrbs>();
     effective
 }
 
-fn combat_changed(world: &mut World, actor: Entity, active: bool) {
-    if !active {
-        world.entity_mut(actor).remove::<Orbs>();
+fn orb_healing_multiplier(
+    world: &World,
+    caster: Entity,
+    spell: &combat::spell_info::SpellInfo,
+) -> f32 {
+    if spell.id != TRIGGER || world.get::<ConsumingOrbs>(caster).is_none() {
+        return 1.0;
     }
+    let selected = world
+        .get::<combat::class_progression::TraitLoadout>(caster)
+        .is_some_and(|traits| traits.active_talent_spells().any(|talent| talent.spell_id == 387276));
+    if !selected {
+        return 1.0;
+    }
+    let health = world.get::<Health>(caster).expect("orb owner health");
+    let missing = 1.0 - (health.current / health.max).max(0.0);
+    let percent = combat::spell_cast::scripts::script_effect_value(world, caster, 387276, 0) / 100.0;
+    // sc_monk.cpp4336–4346 applies Strength of Spirit only during Expel Harm.
+    2.0 + missing * percent
 }
