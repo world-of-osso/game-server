@@ -2153,6 +2153,21 @@ fn simc_dummy_debuffs_modify_real_damage_by_school() {
 }
 
 #[test]
+#[ignore = "requires Protection Paladin inputs and a SimC tank-dummy trace"]
+fn replay_reports_sacred_weapon_strikes() {
+    let path = std::env::var("HEALER_TANK_SIMC_TRACE").expect("HEALER_TANK_SIMC_TRACE required");
+    let report = super::tank_replay::replay_simc(66, Path::new(&path), 300, 70448).unwrap();
+    let hits = report["outgoing_damage_hits_by_spell"]["432616"]
+        .as_u64()
+        .unwrap();
+    let damage = report["outgoing_damage_by_spell"]["432616"]
+        .as_i64()
+        .unwrap();
+    assert!(hits > 0, "Sacred Weapon must land at least one strike");
+    assert!(damage > 0, "Sacred Weapon strikes must deal damage");
+}
+
+#[test]
 #[ignore = "requires canonical MID2 profile inputs and a SimC tank-dummy trace"]
 fn unregistered_tank_driver_fails_instead_of_using_a_follower() {
     let path = std::env::var("HEALER_TANK_SIMC_TRACE").expect("HEALER_TANK_SIMC_TRACE required");

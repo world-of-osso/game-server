@@ -1106,7 +1106,7 @@ fn insert_summon_privacy(entity: &mut EntityWorldMut<'_>, owner: Option<PrivateS
     }
 }
 
-/// A retired summon retains source state while its in-flight spells or Grasp ticks remain.
+/// A retired summon retains source state while its in-flight spells or periodic effects remain.
 #[derive(Component)]
 pub(crate) struct RetiringSummon {
     pub health: f32,
@@ -1166,7 +1166,7 @@ fn finish_retiring_summons(world: &mut World, now: f64) {
         let pending = world
             .get_resource::<super::missiles::PendingSpellHits>()
             .is_some_and(|hits| hits.has_caster(entity))
-            || has_lingering_grasp(world, entity);
+            || has_lingering_periodic(world, entity);
         if !pending || now >= deadline {
             if pending {
                 warn!(?entity, "Retired summon exceeded effect drain timeout");
@@ -1214,7 +1214,7 @@ pub fn despawn_summon(world: &mut World, entity: Entity) {
     let pending = world
         .get_resource::<super::missiles::PendingSpellHits>()
         .is_some_and(|hits| hits.has_caster(entity))
-        || has_lingering_grasp(world, entity);
+        || has_lingering_periodic(world, entity);
     if pending {
         retire_until_effects_finish(world, entity);
     } else {
@@ -1222,22 +1222,23 @@ pub fn despawn_summon(world: &mut World, entity: Entity) {
     }
 }
 
-fn has_lingering_grasp(world: &mut World, caster: Entity) -> bool {
-    if !world
-        .get::<SummonedCreature>(caster)
-        .is_some_and(|summon| matches!(summon.spell_id, 317776 | 1242294))
-    {
+fn has_lingering_periodic(world: &mut World, caster: Entity) -> bool {
+    let Some(summon) = world.get::<SummonedCreature>(caster) else {
         return false;
-    }
-    // SimC76f8118 sc_death_knight.cpp4545–4574: a consumed Magus's
-    // existing Withering Grasp continues after the pet is dismissed.
+    };
+    let spell = match summon.spell_id {
+        317776 | 1242294 => 1297091,
+        49028 | 1237128 | 1264353 => 55078,
+        _ => return false,
+    };
+    // SimC76f8118 retains Magus Grasp and Rune Weapon Blood Plague after demise.
     world
         .query::<&crate::auras::ActiveAuras>()
         .iter(world)
         .any(|auras| {
             auras
                 .iter()
-                .any(|aura| aura.caster == caster && aura.spell_id == 1297091)
+                .any(|aura| aura.caster == caster && aura.spell_id == spell)
         })
 }
 

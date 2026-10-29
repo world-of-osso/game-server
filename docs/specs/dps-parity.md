@@ -6,7 +6,7 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 - Tank DPS comparisons with `DPS_PARITY_TANK_TRACE_DIR` replay the matching `<spec>.<targets>.<seed>.simc.log` through the existing tank replay. The recorded dummy level, armor coefficient, incoming attacks, pauses and external heals apply to the selected 1T or 3T fixture. Count damage to all fixture targets and preserve native incoming-hit resource and mitigation behavior.
 - Blood Boiling Point's delayed Blood Boil echo is mirrored by each active Dancing Rune Weapon, as is the foreground Blood Boil (SimC `sc_death_knight.cpp:9051–9079`). Blood Vampiric Strike earns Heartbreaker's runic power for each enemy hit, like Heart Strike (`sc_death_knight.cpp:11282–11289,11322–11325`).
-- Blood Beast inherits its owner's level for native combat and summon stats (SimC `pet.cpp:69`).
+- Blood Beast inherits its owner's level for native combat and summon stats (SimC `pet.cpp:69`). Rune Weapon Blood Plague continues through its remaining duration after the weapon is dismissed; a dismissed weapon cannot mirror further attacks. Blood's disease ticks can apply the selected Brittle debuff (`sc_death_knight.cpp:7809–7821`).
 - Guardian Twin Moonfire copies foreground and Galactic Guardian Moonfire to one other enemy. Prefer an undotted enemy; foreground casts prefer the shortest remaining Moonfire (SimC `sc_druid.cpp:7897–7944,14025–14072`).
 
 - Foreground literal actions within SimC's default 250 ms cooldown tolerance may be selected and queued. Execute the selected action only after its native cooldown or charge is ready; do not cast a lower-priority action in the meantime. Recheck native admission at execution. Native off-GCD and item-use actions do not use this queue.
