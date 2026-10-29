@@ -1635,6 +1635,12 @@ mod tests {
             let owner = run.actor;
             let target = run.targets[0];
             super::super::engage(&mut run);
+            for &target in &run.targets {
+                run.app
+                    .world_mut()
+                    .entity_mut(target)
+                    .insert(shared::components::UnitLevel(93));
+            }
             crate::spell_cast::creature_cast(run.app.world_mut(), owner, 49028, Some(owner), false)
                 .unwrap();
             for _ in 0..4 {
@@ -1649,6 +1655,10 @@ mod tests {
                 })
                 .expect("real owned Blood Beast")
                 .0;
+            assert_eq!(
+                world.get::<shared::components::UnitLevel>(beast).unwrap().0,
+                90
+            );
             let owner_stats = world.get::<crate::stats::CharacterStats>(owner).unwrap();
             let owner_ap = owner_stats.total_attack_power(
                 crate::stats::WeaponAttackType::MainHand,
