@@ -801,6 +801,139 @@ mod tests {
 
     #[test]
     #[ignore = "requires canonical world database and MID2 Blood inputs"]
+    fn blood_sanguinary_burst_increases_with_real_runic_power_spending() {
+        use shared::components::PowerType;
+        use shared::protocol::CombatLogKind;
+        fn burst(spend: bool) -> i32 {
+            let _seed = crate::random::seed_scope(70448);
+            let mut run = super::super::prepare_registered_player(250, 1).unwrap();
+            let actor = run.actor;
+            let target = run.targets[0];
+            super::super::engage(&mut run);
+            crate::auras::apply_aura(
+                run.app.world_mut(),
+                &crate::auras::AuraApplication {
+                    caster: actor,
+                    target: actor,
+                    spell_id: 77535,
+                    effect_mask: u32::MAX,
+                    source: crate::auras::AuraSource::Cast,
+                },
+            );
+            crate::spell_cast::powers::change_power(
+                run.app.world_mut(),
+                actor,
+                PowerType::RunicPower,
+                1000.0,
+            );
+            crate::spell_cast::creature_cast(run.app.world_mut(), actor, 49028, Some(actor), false)
+                .unwrap();
+            for _ in 0..40 {
+                run.app.update();
+            }
+            if spend {
+                crate::spell_cast::creature_cast(
+                    run.app.world_mut(),
+                    actor,
+                    49998,
+                    Some(target),
+                    false,
+                )
+                .unwrap();
+            }
+            for _ in 0..116 {
+                run.app.update();
+            }
+            let _burst_seed = crate::random::seed_scope(500);
+            for _ in 0..24 {
+                run.app.update();
+            }
+            run.app
+                .world()
+                .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+                .0
+                .iter()
+                .find(|event| {
+                    event.source == Some(actor.to_bits())
+                        && event.target == Some(target.to_bits())
+                        && event.spell_id == Some(1263786)
+                        && event.kind == CombatLogKind::Damage
+                })
+                .expect("Sanguinary Burst damage")
+                .amount
+        }
+        let baseline = burst(false);
+        let spent = burst(true);
+        assert!(
+            spent as f32 > baseline as f32 * 1.4,
+            "spent={spent} baseline={baseline}"
+        );
+    }
+
+    #[test]
+    #[ignore = "requires canonical world database and MID2 Blood inputs"]
+    fn blood_mist_damages_generates_power_and_expires_into_burst() {
+        use shared::components::PowerType;
+        use shared::protocol::CombatLogKind;
+        let mut run = super::super::prepare_registered_player(250, 1).unwrap();
+        let actor = run.actor;
+        let target = run.targets[0];
+        super::super::engage(&mut run);
+        crate::spell_cast::powers::change_power(
+            run.app.world_mut(),
+            actor,
+            PowerType::RunicPower,
+            -1000.0,
+        );
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 49028, Some(actor), false)
+            .unwrap();
+        assert!(crate::auras::has_aura(run.app.world(), actor, 1263729));
+        for _ in 0..40 {
+            run.app.update();
+        }
+        let events = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0;
+        assert!(
+            events
+                .iter()
+                .any(|event| event.source == Some(actor.to_bits())
+                    && event.target == Some(target.to_bits())
+                    && event.spell_id == Some(1263752)
+                    && event.kind == CombatLogKind::Damage
+                    && event.amount > 0),
+            "Blood Mist deals periodic area damage"
+        );
+        let power =
+            crate::spell_cast::powers::power_value(run.app.world(), actor, PowerType::RunicPower)
+                .unwrap()
+                .0;
+        assert!(power > 0.0, "Blood Mist generates Runic Power");
+        for _ in 0..140 {
+            run.app.update();
+        }
+        assert!(!crate::auras::has_aura(run.app.world(), actor, 1263729));
+        let events = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0;
+        assert!(
+            events
+                .iter()
+                .any(|event| event.source == Some(actor.to_bits())
+                    && event.target == Some(target.to_bits())
+                    && event.spell_id == Some(1263786)
+                    && event.kind == CombatLogKind::Damage
+                    && event.amount > 0),
+            "Blood Mist expiry fires Sanguinary Burst"
+        );
+    }
+
+    #[test]
+    #[ignore = "requires canonical world database and MID2 Blood inputs"]
     fn equipped_prismatic_iris_proc_deals_real_periodic_damage() {
         use shared::protocol::CombatLogKind;
         let _seed = crate::random::seed_scope(70448);
