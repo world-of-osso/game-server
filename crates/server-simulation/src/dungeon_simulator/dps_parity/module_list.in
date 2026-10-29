@@ -502,6 +502,7 @@ mod windwalker_player_tests;
 #[cfg(test)] mod brewmaster_dragonfire_tests;
 #[cfg(test)] mod brewmaster_walk_ox_tests;
 #[cfg(test)] mod brewmaster_niuzao_tests;
+#[cfg(test)] mod brewmaster_recharge_tests;
 #[cfg(test)] mod brewmaster_blackout_combo_tests;
 #[cfg(test)] mod brewmaster_purified_spirit_tests;
 #[cfg(test)] mod brewmaster_keg_reset_tests;
