@@ -1740,13 +1740,21 @@ pub fn area_units(
     relation: Relation,
     max_targets: u32,
 ) -> Vec<Entity> {
-    let caster_map = world.get::<crate::maps::InMap>(caster).copied();
-    let mut query = world.query::<(Entity, &Position, &Health, &crate::maps::InMap)>();
-    let mut found: Vec<(f32, Entity)> = query
-        .iter(world)
-        .filter(|(_, _, health, map)| health.current > 0.0 && Some(**map) == caster_map)
-        .map(|(entity, pos, _, _)| (Vec3::new(pos.x, pos.y, pos.z).distance(center), entity))
-        .filter(|&(distance, _)| distance <= radius)
+    let Some(caster_map) = world.get::<crate::maps::InMap>(caster).copied() else {
+        return Vec::new();
+    };
+    let units = world.resource::<crate::maps::units::MapUnits>();
+    let mut found: Vec<(f32, Entity)> = units
+        .in_map(caster_map)
+        .filter_map(|entity| {
+            let health = world.get::<Health>(entity)?;
+            let pos = world.get::<Position>(entity)?;
+            if health.current.partial_cmp(&0.0) != Some(std::cmp::Ordering::Greater) {
+                return None;
+            }
+            let distance = Vec3::new(pos.x, pos.y, pos.z).distance(center);
+            (distance <= radius).then_some((distance, entity))
+        })
         .collect();
     found.retain(|&(_, entity)| relation_matches(world, caster, entity, relation));
     found.sort_by(|a, b| a.0.total_cmp(&b.0));
