@@ -17,6 +17,7 @@ pub(super) struct Recorder {
     mana_min: Option<f32>,
     event_cursor: usize,
     spells: BTreeMap<u32, (u64, u64)>,
+    energizes: BTreeMap<u32, (u64, u64)>,
     initial_absorbs: BTreeMap<u32, f64>,
     party_damage: BTreeMap<u64, u64>,
     party_healing: BTreeMap<u64, (u64, u64)>,
@@ -43,6 +44,7 @@ impl Recorder {
                 .0
                 .len(),
             spells: BTreeMap::new(),
+            energizes: BTreeMap::new(),
             initial_absorbs: healer_absorbs(world, healer),
             party_damage: BTreeMap::new(),
             party_healing: BTreeMap::new(),
@@ -131,6 +133,16 @@ impl Recorder {
             if !target.is_some_and(|unit| self.members.contains(&unit)) {
                 continue;
             }
+            if event.kind == CombatLogKind::Energize && target == Some(self.healer) {
+                let raw = event.amount.max(0) as u64;
+                let effective = raw - (event.overflow.max(0) as u64).min(raw);
+                let entry = self
+                    .energizes
+                    .entry(event.spell_id.unwrap_or(0))
+                    .or_default();
+                entry.0 += raw;
+                entry.1 += effective;
+            }
             if event.kind == CombatLogKind::Death {
                 self.first_death_seconds.get_or_insert(seconds);
             } else if event.kind == CombatLogKind::Damage {
@@ -201,7 +213,12 @@ impl Recorder {
                 }
             }
         }
-        json!({"mana_spent_by_spell":mana_spent,"fiend_rolls":fiend_rolls,"fiend_summons":fiend_summons,"fiend_pre_mitigation_damage":fiend.0,"fiend_atonement_raw":fiend.1,"fiend_atonement_effective":fiend.2,
+        let energizes: BTreeMap<_, _> = self
+            .energizes
+            .iter()
+            .map(|(&spell, &(raw, effective))| (spell, json!({"raw":raw,"effective":effective})))
+            .collect();
+        json!({"mana_spent_by_spell":mana_spent,"resource_energizes_by_spell":energizes,"fiend_rolls":fiend_rolls,"fiend_summons":fiend_summons,"fiend_pre_mitigation_damage":fiend.0,"fiend_atonement_raw":fiend.1,"fiend_atonement_effective":fiend.2,
             "raw_hps":raw as f64 / duration,"effective_hps":effective as f64 / duration,
             "consumed_absorbs_by_spell":absorbs,
             "overheal_pct":(raw > 0).then(|| 100.0 * (raw - effective) as f64 / raw as f64),
