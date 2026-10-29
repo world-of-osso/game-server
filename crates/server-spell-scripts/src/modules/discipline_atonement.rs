@@ -182,7 +182,36 @@ struct DarknessDeck {
 }
 
 fn master_the_darkness_action(spell: u32) -> Option<combat::spell_cast::scripts::AfterCastHook> {
-    matches!(spell, 47540 | 8092 | 1253593).then_some(after_darkness_action)
+    match spell {
+        472433 => Some(after_evangelism),
+        47540 | 8092 | 1253593 => Some(after_darkness_action),
+        _ => None,
+    }
+}
+
+fn after_evangelism(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    if !is_discipline(world, caster) {
+        return;
+    }
+    let Some(target) = spell.cast_primary_target else {
+        return;
+    };
+    let effectiveness =
+        combat::spell_cast::scripts::script_effect_value(world, caster, 472433, 1) / 100.0;
+    let mut radiance = world
+        .resource::<SpellStore>()
+        .get(194509)
+        .expect("Evangelism requires Radiance")
+        .clone();
+    for effect in &mut radiance.effects {
+        if effect.effect == 10 {
+            effect.base_points *= effectiveness;
+            effect.bonus_coefficient *= effectiveness;
+            effect.bonus_coefficient_from_ap *= effectiveness;
+        }
+    }
+    // SimC76f8118 sc_priest_discipline.cpp:164-194: Evangelism triggers scaled Radiance.
+    combat::spell_cast::launch_triggered_spell(world, caster, &radiance, Some(target), 1);
 }
 
 fn after_darkness_action(world: &mut World, caster: Entity, spell: &SpellInfo) {

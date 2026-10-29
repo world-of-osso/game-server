@@ -5,6 +5,62 @@ use shared::components::{ActiveSpec, Health};
 use shared::protocol::CombatLogKind;
 
 #[test]
+fn discipline_evangelism_cast_triggers_scaled_radiance_and_marks_allies() {
+    let mut primary_heals = Vec::new();
+    for root in [194509, 472433] {
+        let _seed = crate::random::seed_scope(70448);
+        let mut h = harness(Vec::new(), &[194509, 472433, 194384, 81749], 5).unwrap();
+        h.app
+            .init_resource::<super::test_harness::ObservedCombatEvents>();
+        let caster = h.caster;
+        h.app.world_mut().entity_mut(caster).insert(ActiveSpec(256));
+        h.app
+            .world_mut()
+            .get_mut::<server::stats::CharacterStats>(caster)
+            .unwrap()
+            .crit_pct = 0.0;
+        let primary = spawn_player(&mut h.app, 5, 2.0);
+        *h.app.world_mut().get_mut::<Health>(primary).unwrap() = Health {
+            current: 100.0,
+            max: 10_000.0,
+        };
+        let ally = spawn_player(&mut h.app, 5, 3.0);
+        *h.app.world_mut().get_mut::<Health>(ally).unwrap() = Health {
+            current: 100.0,
+            max: 10_000.0,
+        };
+        h.cast_and_deliver(root, Some(primary));
+        h.advance(80);
+        assert!(
+            h.inbox.failed.is_empty(),
+            "real cast failed: {:?}",
+            h.inbox.failed
+        );
+        let events = &h
+            .app
+            .world()
+            .resource::<super::test_harness::ObservedCombatEvents>()
+            .0;
+        let heal = events
+            .iter()
+            .find(|event| {
+                event.kind == CombatLogKind::Heal
+                    && event.spell_id == Some(194509)
+                    && event.target == Some(primary.to_bits())
+            })
+            .expect("primary receives real Radiance heal");
+        assert!(crate::auras::has_aura(h.app.world(), primary, 194384));
+        assert!(crate::auras::has_aura(h.app.world(), ally, 194384));
+        primary_heals.push(heal.amount);
+    }
+    let ratio = primary_heals[1] as f32 / primary_heals[0] as f32;
+    assert!(
+        (1.3..1.7).contains(&ratio),
+        "Evangelism Radiance uses native 150%: {primary_heals:?}"
+    );
+}
+
+#[test]
 fn discipline_dark_side_is_consumed_and_snapshotted_for_all_penance_bolts() {
     let mut damage_sets = Vec::new();
     for empowered in [false, true] {
