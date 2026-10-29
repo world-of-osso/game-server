@@ -81,6 +81,86 @@ fn beacon_transfers_healing_between_player_and_follower_party_members() {
     }
 }
 
+#[test]
+#[ignore = "requires canonical world database and Preservation reference profile"]
+fn preservation_lifebind_aggregates_raw_healing_on_native_party() {
+    let mut run = crate::dungeon_simulator::dps_parity::prepare_registered_player(66, 1).unwrap();
+    let tank = run.actor;
+    let healer =
+        crate::dungeon_simulator::dps_parity::spawn_second_reference_player(&mut run, 1468)
+            .unwrap();
+    crate::followers::simulator::spawn_party_for_reference_healer(
+        run.app.world_mut(),
+        tank,
+        healer,
+    )
+    .unwrap();
+    crate::spell_cast::cast_triggered(run.app.world_mut(), healer, 360995, Some(tank), 1);
+    assert!(crate::auras::has_aura(run.app.world(), healer, 373267));
+    assert!(crate::auras::has_aura(run.app.world(), tank, 373267));
+    for unit in [tank, healer] {
+        let mut health = run.app.world_mut().get_mut::<Health>(unit).unwrap();
+        health.current = if unit == tank {
+            health.max
+        } else {
+            health.max * 0.25
+        };
+    }
+    let start = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .len();
+    for _ in 0..2 {
+        crate::spell_cast::cast_triggered(run.app.world_mut(), healer, 361509, Some(tank), 1);
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0[start..];
+    let raw: i32 = events
+        .iter()
+        .filter(|event| {
+            event.spell_id == Some(361509)
+                && event.kind == shared::protocol::CombatLogKind::Heal
+                && event.target == Some(tank.to_bits())
+        })
+        .map(|event| {
+            assert_eq!(
+                event.amount, event.overflow,
+                "source heal must be entirely overheal"
+            );
+            event.amount
+        })
+        .sum();
+    assert!(raw > 0);
+    assert!(!events.iter().any(|event| event.spell_id == Some(373268)));
+    for _ in 0..5 {
+        run.app.update();
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0[start..];
+    let transfers: Vec<_> = events
+        .iter()
+        .filter(|event| {
+            event.spell_id == Some(373268)
+                && event.kind == shared::protocol::CombatLogKind::Heal
+                && event.target == Some(healer.to_bits())
+        })
+        .collect();
+    assert_eq!(
+        transfers.len(),
+        1,
+        "two heals must aggregate into one 200 ms transfer"
+    );
+    assert!((transfers[0].amount as f32 - raw as f32 * 0.6).abs() <= 2.0);
+}
+
 struct FixturePolicy {
     driver: Driver,
     bindings: Bindings,

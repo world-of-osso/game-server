@@ -2651,6 +2651,7 @@ fn apply_resolved_heal(
             .effects
             .iter()
             .any(|effect| effect.effect == EFFECT_HEAL_PCT);
+    crate::auras::lifebind::record_heal(world, ctx, target, amount);
     super::script_registry::heal_received(
         world,
         target,

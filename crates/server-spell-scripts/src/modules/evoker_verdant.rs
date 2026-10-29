@@ -11,4 +11,5 @@ fn effect_hit(spell: u32, index: u8) -> Option<HitHook> {
 
 fn heal(world: &mut World, caster: Entity, target: Entity, depth: u8) {
     combat::spell_cast::cast_triggered(world, caster, 361195, Some(target), depth + 1);
+    combat::auras::lifebind::apply_bond(world, caster, target);
 }
