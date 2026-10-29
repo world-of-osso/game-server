@@ -403,6 +403,13 @@ fn live_modifiers<'a>(
                     .get::<shared::components::ActiveSpec>(caster)
                     .is_some_and(|spec| spec.0 == 269))
         })
+        // SimC76f8118 sc_warrior.cpp1056,1163–1166: Avatar's Thunder
+        // Clap damage and cooldown effects require selected Storm Surge.
+        .filter(move |(aura, effect)| {
+            aura.spell_id != 107574
+                || !matches!(effect.index, 8 | 9)
+                || super::has_aura(world, caster, 275336)
+        })
         .filter(move |(aura, _)| !snapshots_periodic_modifier(aura, op))
         .filter(move |(aura, _)| {
             spell.cast_charge_mods.is_none()

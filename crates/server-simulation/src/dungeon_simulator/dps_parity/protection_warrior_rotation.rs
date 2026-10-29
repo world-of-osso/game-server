@@ -550,6 +550,78 @@ mod tests {
     }
 
     #[test]
+    fn storm_surge_alone_grants_avatar_thunder_clap_cooldown_reduction() {
+        use crate::spell_cast::test_harness::harness_with_native_enemy_dodge_reduction;
+        let mut cooldowns = Vec::new();
+        let mut damage = Vec::new();
+        for selected in [false, true] {
+            let mut h =
+                harness_with_native_enemy_dodge_reduction(Vec::new(), &[107574, 275336, 6343], 1)
+                    .unwrap();
+            h.advance(3);
+            if !selected {
+                crate::auras::remove_auras(
+                    h.app.world_mut(),
+                    h.caster,
+                    crate::auras::RemoveReason::Consumed,
+                    |aura| aura.spell_id == 275336,
+                );
+            }
+            crate::auras::apply_aura(
+                h.app.world_mut(),
+                &crate::auras::AuraApplication {
+                    caster: h.caster,
+                    target: h.caster,
+                    spell_id: 107574,
+                    effect_mask: u32::MAX,
+                    source: crate::auras::AuraSource::Cast,
+                },
+            );
+            h.app
+                .world_mut()
+                .get_mut::<crate::stats::CharacterStats>(h.caster)
+                .unwrap()
+                .crit_pct = 0.0;
+            h.cast_and_deliver(6343, Some(h.npc));
+            assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+            let hit = h
+                .inbox
+                .log
+                .iter()
+                .find(|event| {
+                    event.spell_id == Some(6343)
+                        && event.kind == shared::protocol::CombatLogKind::Damage
+                })
+                .expect("Thunder Clap hit");
+            assert!(!hit.crit);
+            damage.push(hit.amount);
+            let world = h.app.world();
+            let spell = world
+                .resource::<server::spell_info::SpellStore>()
+                .get(6343)
+                .unwrap();
+            cooldowns.push(
+                world
+                    .get::<crate::spell_cast::SpellHistory>(h.caster)
+                    .unwrap()
+                    .remaining_cooldown_ms(spell, crate::spell_cast::history_now(world)),
+            );
+        }
+        assert!(
+            (damage[1] as f32 / damage[0] as f32 - 1.5).abs() < 0.16,
+            "Storm Surge increases actual Thunder Clap damage: {damage:?}"
+        );
+        assert!(
+            cooldowns[0] > 5500,
+            "Avatar without Storm Surge must retain full cooldown: {cooldowns:?}"
+        );
+        assert!(
+            cooldowns[1] > 2500 && cooldowns[1] < 3500,
+            "selected Storm Surge halves cooldown: {cooldowns:?}"
+        );
+    }
+
+    #[test]
     #[ignore = "requires canonical MID2 Protection profile"]
     fn thunderlord_reduces_demoralizing_shout_per_hit_with_cap() {
         use super::super::literal_rotation::execution::{Execution, execute};
