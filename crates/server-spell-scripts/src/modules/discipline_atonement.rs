@@ -372,7 +372,13 @@ fn finish_penance_bolt(world: &mut World, caster: Entity) {
     let mut stacks = 1;
     if twinsight && let Some(target) = select_twinsight_recipient(world, caster) {
         // SimC76f8118 sc_priest_discipline.cpp:463-484 schedules one healing and one damage bolt.
-        if combat::spell_cast::try_cast_triggered(world, caster, 47750, Some(target), 1) {
+        let mut spell = world.resource::<SpellStore>().get(47750).expect("Twinsight Penance heal must exist").clone();
+        for effect in &mut spell.effects {
+            if effect.implicit_targets[0] == 77 {
+                effect.implicit_targets[0] = 21;
+            }
+        }
+        if combat::spell_cast::launch_triggered_spell(world, caster, &spell, Some(target), 1) {
             stacks += 1;
         }
     }
