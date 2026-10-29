@@ -503,6 +503,14 @@ fn run_trigger_tick(world: &mut World, unit: Entity, spell: &SpellInfo, tick: &T
             TICK_TRIGGER_DEPTH,
         );
     }
+    if spell.id == super::fel_devastation::FEL_DEVASTATION && tick.effect_index == 0 {
+        super::fel_devastation::generate_meteoric_rise_fragment(
+            world,
+            unit,
+            tick.instance_id,
+            tick.ordinal,
+        );
+    }
 }
 
 /// WILD_GROWTH_FALLOFF_SIMC_SHAPE_ON_NATIVE_COEFFICIENT policy.

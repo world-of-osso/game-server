@@ -419,6 +419,24 @@ mod tests {
     }
     #[test]
     #[ignore = "requires native Vengeance profile"]
+    fn meteoric_rise_generates_fragments_during_fel_devastation() {
+        use super::super::*;
+        let _seed = crate::random::seed_scope(70_448);
+        let (profile, traits) = read_reference(581).unwrap();
+        let identity = inputs::read_actor(&profile).unwrap();
+        let mut run = prepare_reference(profile, &traits, 1, identity).unwrap();
+        let actor = run.actor;
+        let target = run.targets[0];
+        crate::spell_cast::powers::change_power(run.app.world_mut(), actor, PowerType::Fury, 100.0).unwrap();
+        crate::spell_cast::cast_for_player_with_target(run.app.world_mut(), actor, 212084, Some(target)).unwrap();
+        for _ in 0..60 {
+            run.app.update();
+        }
+        assert_eq!(server::soul_fragments::observation_counts(run.app.world(), actor).0, 3);
+    }
+
+    #[test]
+    #[ignore = "requires native Vengeance profile"]
     fn fiery_brand_impact_applies_target_and_caster_auras() {
         use super::super::*;
         let _seed = crate::random::seed_scope(70_448);
