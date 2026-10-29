@@ -23,6 +23,8 @@ def coverage(populations, clusters, safe_clusters, preparation_gaps, imports):
     for population in populations:
         map_id = population['map']
         outcome = imports.get(str(map_id), {})
+        import_gaps = Counter(gap['reason'] for gap in outcome.get('gaps', []))
+        projected, absent = outcome.get('templates_from_tdb'), outcome.get('templates_absent')
         report.append({'map': map_id, 'runs': population['runs'],
             'observed_npc_ids': len(population['npcs']),
             'tdb_rows': population['authored']['tdb_creature']['count'],
@@ -30,10 +32,10 @@ def coverage(populations, clusters, safe_clusters, preparation_gaps, imports):
             **counts[map_id], 'unique_spawns_proven': None,
             'unique_spawn_gap': 'CROSS_RUN_IDENTITY_UNPROVEN',
             'imported': outcome.get('imported'), 'already_present_nearby': outcome.get('already_present'),
-            'template_ids_projected': outcome.get('templates_from_tdb'),
-            'template_ids_absent': outcome.get('templates_absent'),
+            'template_ids_projected': projected, 'template_ids_projected_count': len(projected) if projected is not None else None,
+            'template_ids_absent': absent, 'template_ids_absent_count': len(absent) if absent is not None else None,
             'preparation_gaps': preparation_gaps.get(str(map_id), {}),
-            'import_gaps': outcome.get('gaps', []),
+            'import_gaps_by_reason': dict(import_gaps),
             'patrol_candidates': patrols[map_id], 'fitted_paths': 0})
     return report
 

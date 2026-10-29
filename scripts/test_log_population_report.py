@@ -19,6 +19,7 @@ class ReportTest(unittest.TestCase):
                                            'templates_from_tdb': [123], 'templates_absent': []}})[0]
         self.assertIsNone(report['unique_spawns_proven'])
         self.assertEqual((report['imported'], report['already_present_nearby']), (1, 2))
+        self.assertEqual((report['template_ids_projected_count'], report['template_ids_absent_count']), (1, 0))
         self.assertEqual(report['patrol_candidates'][0]['sample_count'], 3)
         self.assertEqual(report['patrol_candidates'][0]['gap'], 'unverified')
         self.assertEqual(report['fitted_paths'], 0)
