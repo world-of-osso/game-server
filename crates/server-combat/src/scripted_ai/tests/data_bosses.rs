@@ -43,6 +43,8 @@ mod azure_sprouts;
 mod azure_telash;
 #[path = "azure_telash_return.rs"]
 mod azure_telash_return;
+#[path = "azure_tender.rs"]
+mod azure_tender;
 #[path = "broggok.rs"]
 mod broggok;
 #[path = "bromach.rs"]

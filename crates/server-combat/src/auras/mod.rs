@@ -94,6 +94,7 @@ pub mod stagger;
 pub mod stat_mods;
 pub(crate) mod stealth;
 pub mod summon_damage;
+mod trigger_on_expire;
 mod unit_state;
 mod venomcursed;
 mod warrior_stats;
@@ -2019,6 +2020,7 @@ fn announce_removed(world: &mut World, unit: Entity, aura: &AuraInstance, reason
     crate::simc_apl_native::reaction::removed(world, unit, aura.instance_id);
     world_state::on_removed(world, unit, aura);
     scripts::run_remove(world, unit, aura, reason);
+    trigger_on_expire::on_removed(world, unit, aura, reason);
     linked::on_removed(world, unit, aura);
     linked_summon::on_removed(world, unit, aura);
     crate::spell_cast::area_trigger::on_aura_removed(world, unit, aura);

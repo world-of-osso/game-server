@@ -172,6 +172,8 @@ pub const MOUNTED: u32 = 78;
 /// Caster-owned vehicle boarding aura; runtime support is vehicle-context-specific.
 pub const CONTROL_VEHICLE: u32 = 236;
 pub const TRANSFORM: u32 = 56;
+/// TC a352b1fa SpellAuraDefines.h: SPELL_AURA_TRIGGER_SPELL_ON_EXPIRE.
+pub const TRIGGER_SPELL_ON_EXPIRE: u32 = 495;
 pub const SCHOOL_IMMUNITY: u32 = 39;
 pub const PROC_TRIGGER_SPELL: u32 = 42;
 pub const MOD_PACIFY_SILENCE: u32 = 60;
