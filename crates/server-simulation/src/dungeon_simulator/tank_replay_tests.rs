@@ -1047,6 +1047,42 @@ fn replay_resource_ledger_records_judgment_overflow() {
 }
 
 #[test]
+#[ignore = "uses the selected MID2 Protection player"]
+fn protection_replay_starts_with_blessed_hammer_holy_power() {
+    use crate::spell_cast::powers::PowerPools;
+    use shared::components::PowerType;
+    let mut run = super::dps_parity::prepare_registered_player(66, 1).unwrap();
+    let actor = run.actor;
+    super::tank_replay::apply_simc_starting_holy_power(&mut run);
+    let power = run
+        .app
+        .world()
+        .get::<PowerPools>(actor)
+        .unwrap()
+        .get(PowerType::HolyPower)
+        .unwrap()
+        .current;
+    assert_eq!(power, 1.0);
+    run.app
+        .world_mut()
+        .get_mut::<PowerPools>(actor)
+        .unwrap()
+        .get_mut(PowerType::HolyPower)
+        .unwrap()
+        .current = 3.0;
+    super::tank_replay::apply_simc_starting_holy_power(&mut run);
+    let power = run
+        .app
+        .world()
+        .get::<PowerPools>(actor)
+        .unwrap()
+        .get(PowerType::HolyPower)
+        .unwrap()
+        .current;
+    assert_eq!(power, 1.0, "SimC caps combat-start Holy Power at one");
+}
+
+#[test]
 #[ignore = "uses the MID2 Protection precombat plan and raid buffs"]
 fn tank_raid_buffs_apply_before_precombat_bulwark_snapshot() {
     let _seed = crate::random::seed_scope(70448);
