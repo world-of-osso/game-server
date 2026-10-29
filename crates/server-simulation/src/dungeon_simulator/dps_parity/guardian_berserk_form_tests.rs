@@ -4,6 +4,62 @@ use crate::auras::ActiveAuras;
 
 #[test]
 #[ignore = "requires Guardian profile and native world data"]
+fn guardian_heart_in_cat_executes_empowered_feral_frenzy() {
+    use shared::protocol::CombatLogKind;
+    let mut run = prepare_registered_player(104, 1).unwrap();
+    let actor = run.actor;
+    let target = run.targets[0];
+    engage(&mut run);
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 768, Some(actor), false).unwrap();
+    for _ in 0..40 {
+        run.app.update();
+    }
+    run.app
+        .world_mut()
+        .resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .clear();
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 1261868, Some(target), false)
+        .unwrap();
+    for _ in 0..100 {
+        run.app.update();
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    let impacts: Vec<_> = events
+        .iter()
+        .filter(|event| {
+            event.source == Some(actor.to_bits())
+                && event.target == Some(target.to_bits())
+                && event.spell_id == Some(274838)
+                && event.kind == CombatLogKind::Damage
+                && !event.periodic
+        })
+        .collect();
+    let ticks = events
+        .iter()
+        .filter(|event| {
+            event.source == Some(actor.to_bits())
+                && event.target == Some(target.to_bits())
+                && event.spell_id == Some(274838)
+                && event.kind == CombatLogKind::Damage
+                && event.periodic
+        })
+        .count();
+    assert_eq!(
+        impacts.len(),
+        5,
+        "Cat Heart executes five Feral Frenzy hits"
+    );
+    assert!(impacts.iter().all(|event| event.amount > 0));
+    assert!(ticks > 0, "the empowered frenzy applies its native bleed");
+}
+
+#[test]
+#[ignore = "requires Guardian profile and native world data"]
 fn guardian_mangle_earns_rank_scaled_vicious_brambles() {
     use shared::protocol::CombatLogKind;
     let mut run = prepare_registered_player(104, 1).unwrap();
