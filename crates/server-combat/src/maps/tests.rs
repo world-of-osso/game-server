@@ -3294,7 +3294,7 @@ fn releasing_in_the_stockade_resurrects_the_player_at_the_stockade_graveyard() {
 }
 
 #[test]
-fn ruby_dungeon_release_revives_at_the_real_exterior_entrance_portal() {
+fn ruby_dungeon_release_revives_at_the_linked_exterior_safe_location() {
     let mut h = harness().expect("world database");
     let copy = InMap {
         map_id: 2521,
@@ -3321,11 +3321,11 @@ fn ruby_dungeon_release_revives_at_the_real_exterior_entrance_portal() {
         },
     ));
     let store = map_store().unwrap().clone();
-    let portal = store
-        .entrance_portal(2521)
-        .expect("sourced Ruby entrance trigger");
-    assert_eq!(portal.map_id, 2444);
-    assert!(close(portal.position, Vec3::new(1351.28, -146.733, 140.89)));
+    let exit = store
+        .entrance_exit_location(2521)
+        .expect("sourced Ruby exit safe location");
+    assert_eq!(exit.map_id, 2444);
+    assert!(close(exit.position, Vec3::new(1341.3, -132.202, 137.45)));
     let entity = player.player;
     h.app
         .world_mut()
@@ -3348,7 +3348,7 @@ fn ruby_dungeon_release_revives_at_the_real_exterior_entrance_portal() {
     assert_eq!(h.new_worlds(&player).pop().unwrap().map_id, 2444);
     h.ack(&player);
     assert_eq!(h.map_of(&player), Some(InMap::continent(2444)));
-    assert!(close(h.position(&player), portal.position));
+    assert!(close(h.position(&player), exit.position));
     let world = h.app.world();
     assert_eq!(
         world.get::<PlayerDeathState>(entity).unwrap().state,

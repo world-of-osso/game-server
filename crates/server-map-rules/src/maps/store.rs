@@ -326,6 +326,8 @@ pub struct MapStore {
     pub area_triggers: HashMap<u32, Vec<AreaTriggerTeleport>>,
     /// Destination map → source position of its first world-static teleport trigger.
     entrance_portals: HashMap<u32, WorldLocation>,
+    /// Source map → world-static teleport destinations, in spawn order.
+    exit_destinations: HashMap<u32, Vec<WorldLocation>>,
     pub world_area_triggers: crate::world_area_triggers::Catalog,
     pub safe_locs: HashMap<u32, WorldLocation>,
     /// Nonzero WorldSafeLocs.TransportSpawnId: location coordinates are ship-relative.
@@ -470,6 +472,23 @@ impl MapStore {
             .or_else(|| self.entrance_portals.get(&map_id).copied())
     }
 
+    /// The exit destination on the same outside map as the instance entrance.
+    pub fn entrance_exit_location(&self, map_id: u32) -> Option<WorldLocation> {
+        let outside = self.entrance_portal(map_id)?.map_id;
+        self.area_triggers_on(map_id)
+            .iter()
+            .filter(|trigger| trigger.target.map_id == outside)
+            .min_by_key(|trigger| trigger.id)
+            .map(|trigger| trigger.target)
+            .or_else(|| {
+                self.exit_destinations
+                    .get(&map_id)?
+                    .iter()
+                    .find(|target| target.map_id == outside)
+                    .copied()
+            })
+    }
+
     /// `ObjectMgr::GetMapEntranceTrigger` (ObjectMgr.cpp:7295-7306): the target of the
     /// first trigger leading into `map_id` (lowest trigger id).
     pub fn entrance_location(&self, map_id: u32) -> Option<WorldLocation> {
@@ -511,6 +530,7 @@ impl MapStore {
 
 pub fn load_map_store(conn: &Connection) -> rusqlite::Result<MapStore> {
     let safe_locs = load_safe_locs(conn)?;
+    let (entrance_portals, exit_destinations) = load_static_portals(conn, &safe_locs)?;
     Ok(MapStore {
         maps: load_maps(conn)?,
         world_area_triggers: crate::world_area_triggers::load_catalog(conn)?,
@@ -520,7 +540,8 @@ pub fn load_map_store(conn: &Connection) -> rusqlite::Result<MapStore> {
         dungeon_encounters: load_dungeon_encounters(conn)?,
         raid_creature_encounters: load_raid_creature_encounters(conn)?,
         area_triggers: load_area_triggers(conn, &safe_locs)?,
-        entrance_portals: load_entrance_portals(conn)?,
+        entrance_portals,
+        exit_destinations,
         graveyard_zones: load_graveyard_zones(conn)?,
         instance_parents: load_instance_parents(conn)?,
         instance_scripts: load_instance_scripts(conn)?,
@@ -529,24 +550,50 @@ pub fn load_map_store(conn: &Connection) -> rusqlite::Result<MapStore> {
     })
 }
 
-fn load_entrance_portals(conn: &Connection) -> rusqlite::Result<HashMap<u32, WorldLocation>> {
-    let mut statement = conn.prepare("SELECT dest.MapID,s.MapId,s.PosX,s.PosY,s.PosZ,s.Orientation FROM tdb_areatrigger s JOIN tdb_areatrigger_create_properties p ON p.Id=s.AreaTriggerCreatePropertiesId AND p.IsCustom=s.IsCustom JOIN tdb_areatrigger_template_actions a ON a.AreaTriggerId=p.AreaTriggerId AND a.IsCustom=p.IsAreatriggerCustom JOIN tdb_world_safe_locs dest ON dest.ID=a.ActionParam WHERE a.ActionType=2 AND a.TargetType=5 AND s.MapId<>dest.MapID ORDER BY s.SpawnId")?;
+type StaticPortals = (
+    HashMap<u32, WorldLocation>,
+    HashMap<u32, Vec<WorldLocation>>,
+);
+
+fn load_static_portals(
+    conn: &Connection,
+    safe_locs: &HashMap<u32, WorldLocation>,
+) -> rusqlite::Result<StaticPortals> {
+    let mut statement = conn.prepare(
+        "SELECT s.MapId,s.PosX,s.PosY,s.PosZ,s.Orientation,a.ActionParam \
+         FROM tdb_areatrigger s \
+         JOIN tdb_areatrigger_create_properties p ON p.Id=s.AreaTriggerCreatePropertiesId AND p.IsCustom=s.IsCustom \
+         JOIN tdb_areatrigger_template_actions a ON a.AreaTriggerId=p.AreaTriggerId AND a.IsCustom=p.IsAreatriggerCustom \
+         WHERE a.ActionType=2 AND a.TargetType=5 ORDER BY s.SpawnId",
+    )?;
     let rows = statement.query_map([], |row| {
         Ok((
-            row.get::<_, u32>(0)?,
             WorldLocation {
-                map_id: row.get(1)?,
-                position: Vec3::new(row.get(2)?, row.get(3)?, row.get(4)?),
-                orientation: row.get(5)?,
+                map_id: row.get(0)?,
+                position: Vec3::new(row.get(1)?, row.get(2)?, row.get(3)?),
+                orientation: row.get(4)?,
             },
+            row.get::<_, u32>(5)?,
         ))
     })?;
-    let mut portals = HashMap::new();
+    let mut entrances = HashMap::new();
+    let mut exits: HashMap<u32, Vec<WorldLocation>> = HashMap::new();
     for row in rows {
-        let (target, location) = row?;
-        portals.entry(target).or_insert(location);
+        let (source, target_id) = row?;
+        let Some(&target) = safe_locs.get(&target_id) else {
+            warn!(
+                target_id,
+                "World-static teleport names a missing safe location"
+            );
+            continue;
+        };
+        if source.map_id == target.map_id {
+            continue;
+        }
+        entrances.entry(target.map_id).or_insert(source);
+        exits.entry(source.map_id).or_default().push(target);
     }
-    Ok(portals)
+    Ok((entrances, exits))
 }
 
 fn load_raid_creature_encounters(conn: &Connection) -> rusqlite::Result<HashMap<(u32, u32), u32>> {
