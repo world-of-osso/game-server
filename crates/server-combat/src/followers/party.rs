@@ -115,6 +115,9 @@ fn begin_run(
         .ok_or("player has no dungeon difficulty")?
         .0;
     world
+        .resource_mut::<crate::maps::InstanceManager>()
+        .forget_recent_instance(id, dungeon.entrance.map_id);
+    world
         .entity_mut(player)
         .insert(DungeonDifficulty(FOLLOWER_DIFFICULTY));
     if !teleport_to(world, player, dungeon.entrance, TeleportOptions::default()) {
@@ -894,5 +897,97 @@ mod copy_tests {
                 .iter()
                 .all(|&unit| app.world().get_entity(unit).is_err())
         );
+    }
+
+    /// Live Ruby rerun: Rubynew killed Melidrussa, released outside, requeued, and was
+    /// admitted to its loaded orphaned copy without Melidrussa. TC forms a new LFG group
+    /// before the teleport, so the requeue must resolve a fresh copy.
+    #[test]
+    fn follower_requeue_after_a_progressed_copy_admits_a_fresh_copy() {
+        let db = rusqlite::Connection::open_with_flags(
+            crate::test_data::world_db_path(),
+            rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+        )
+        .unwrap();
+        let store = crate::maps::store::load_map_store(&db).unwrap();
+        let catalog = super::super::catalog::load_catalog(&db).unwrap();
+        let now = crate::maps::instances::Now {
+            elapsed: 0.0,
+            unix: 1_790_510_400,
+        };
+        let solo = crate::maps::instances::InstanceEntrant {
+            character_id: 30,
+            group: None,
+            leader: 30,
+            difficulty_id: 205,
+            raid_difficulty: Default::default(),
+            raid_group: false,
+        };
+        let mut instances = crate::maps::InstanceManager::default();
+        let old = instances.create_map(&store, 2521, solo, now).unwrap().map;
+        let melidrussa = (0..32)
+            .find(|&id| {
+                crate::scripted_ai::instance_script::done_boss_entries(&store, 2521, 1 << id)
+                    == [188252]
+            })
+            .expect("Ruby script binds Melidrussa 188252");
+        instances.update_instance_lock(old, &[], 1 << melidrussa, None, now.unix);
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(store)
+            .insert_resource(instances)
+            .insert_resource(catalog)
+            .init_resource::<GroupRegistry>();
+        // Ruby's reciprocal exit safe-loc 100031, where the release revived Rubynew.
+        let outside = WorldLocation {
+            map_id: 2444,
+            position: Vec3::new(1341.3, -132.202, 137.45),
+            orientation: 0.0,
+        };
+        let player = app
+            .world_mut()
+            .spawn((
+                Player {
+                    name: "Rubynew".into(),
+                    race: 1,
+                    class: 8,
+                    appearance: Default::default(),
+                },
+                ClientId(30),
+                shared::components::Level(70),
+                UnitLevel(70),
+                outside.bevy_position(),
+                shared::components::Rotation {
+                    x: 0.0,
+                    y: 0.0,
+                    z: 0.0,
+                },
+                InMap {
+                    map_id: 2444,
+                    instance_id: 0,
+                },
+                DungeonDifficulty(1),
+            ))
+            .id();
+        queue_player(app.world_mut(), player, GroupRole::Dps, 2436);
+        assert!(app.world().get::<MapTransfer>(player).is_some());
+        let entrant = crate::maps::transfer::entrant_of(app.world(), player);
+        let arrival = app.world_mut().resource_scope(
+            |world, mut instances: Mut<crate::maps::InstanceManager>| {
+                instances
+                    .create_map(
+                        world.resource::<crate::maps::MapStore>(),
+                        2521,
+                        entrant,
+                        now,
+                    )
+                    .unwrap()
+            },
+        );
+        let instances = app.world().resource::<crate::maps::InstanceManager>();
+        assert_ne!(arrival.map, old, "requeue must not reuse the orphaned copy");
+        assert!(arrival.created);
+        assert_eq!(instances.initial_done_bosses(arrival.map), 0);
+        assert_eq!(instances.initial_done_bosses(old), 1 << melidrussa);
     }
 }
