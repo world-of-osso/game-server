@@ -158,8 +158,29 @@ fn mistweaver_uses_spinning_crane_kick_only_against_a_pack() {
     let positions = [healer, enemy, add]
         .map(|unit| crate::spell_cast::targets::position(run.app.world(), unit));
     let healths = [enemy, add].map(|unit| run.app.world().get::<Health>(unit).copied());
+    let pulse = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(107270)
+        .unwrap();
+    let radius = crate::spell_cast::targets::radius(&pulse.effects[0], 1);
+    let center = positions[0].unwrap();
+    let units = crate::spell_cast::targets::area_units(
+        run.app.world_mut(),
+        healer,
+        center,
+        radius,
+        crate::spell_cast::targets::Relation::Enemy,
+        0,
+    );
+    let resolved = super::super::dps_parity::literal_rotation::execution::resolve_action(
+        run.app.world(),
+        healer,
+        101546,
+    );
     println!(
-        "PACK_DIAGNOSTIC known={known} positions={positions:?} healths={healths:?} casts={casts:?}"
+        "PACK_DIAGNOSTIC known={known} radius={radius} units={units:?} resolved={resolved:?} positions={positions:?} healths={healths:?} casts={casts:?}"
     );
     assert!(
         casts.contains(&Some(101546)),
