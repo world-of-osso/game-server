@@ -48,6 +48,7 @@ mod ignite;
 mod incoming_spell_masks;
 pub mod invisibility;
 mod item_requirements;
+pub mod lifebind;
 mod light_of_titans;
 mod linked;
 mod linked_owners;
