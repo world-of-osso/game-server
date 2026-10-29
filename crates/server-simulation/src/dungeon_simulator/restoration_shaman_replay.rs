@@ -14,6 +14,7 @@ use server::simc_apl::{Action, ActionFacts, Facts, Program};
 use shared::components::{Health, PowerType};
 
 const SPELLS: &[(&str, u32, bool)] = &[
+    ("earthliving_weapon", 382021, true),
     ("mana_tide_totem", 16191, true),
     ("spirit_link_totem", 98008, true),
     ("healing_stream_totem", 5394, true),
@@ -63,6 +64,7 @@ pub(super) fn prepare(
     };
     literal_rotation::capture_fixture(run.app.world_mut(), healer, encounter)?;
     let program = Program::parse(&[
+        ("default", "earthliving_weapon,if=player.earthliving_up=0"),
         ("default", "mana_tide_totem,if=mana.pct<75"),
         ("default", "spirit_link_totem,if=target.health.pct<35"),
         ("default", "healing_tide_totem,if=party.injured>=3"),
@@ -91,6 +93,7 @@ struct PartyFacts<'a> {
     native: NativeFacts<'a>,
     injured: usize,
     earth_shield_up: bool,
+    earthliving_up: bool,
     healing_wave_useful: bool,
 }
 
@@ -99,6 +102,7 @@ impl Facts for PartyFacts<'_> {
         match name {
             "party.injured" => Ok(self.injured as f64),
             "target.earth_shield_up" => Ok(f64::from(self.earth_shield_up)),
+            "player.earthliving_up" => Ok(f64::from(self.earthliving_up)),
             "target.healing_wave_useful" => Ok(f64::from(self.healing_wave_useful)),
             _ => self.native.value(name),
         }
@@ -108,9 +112,10 @@ impl Facts for PartyFacts<'_> {
 impl ActionFacts for PartyFacts<'_> {
     fn value_for(&self, action: &Action, name: &str) -> Result<f64, String> {
         match name {
-            "party.injured" | "target.earth_shield_up" | "target.healing_wave_useful" => {
-                self.value(name)
-            }
+            "party.injured"
+            | "target.earth_shield_up"
+            | "target.healing_wave_useful"
+            | "player.earthliving_up" => self.value(name),
             _ => self.native.value_for(action, name),
         }
     }
@@ -140,6 +145,7 @@ impl Policy for Restoration {
             return Ok(());
         };
         let injured = living.iter().filter(|(_, ratio)| *ratio < 0.90).count();
+        let earthliving_up = crate::auras::has_aura(world, healer, 382022);
         let earth_shield_up = world
             .get::<crate::auras::ActiveAuras>(target)
             .is_some_and(|auras| {
@@ -177,6 +183,7 @@ impl Policy for Restoration {
                 .with_targets(Some(target), &targets),
             injured,
             earth_shield_up,
+            earthliving_up,
             healing_wave_useful,
         };
         if let Some((action, execution)) =
