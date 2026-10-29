@@ -192,11 +192,12 @@ fn remove_beam(
         }
     }
     super::havoc_eternal::remove_beam(world, caster, aura, reason);
+    super::havoc::beam::clear_channel(world, caster, aura.spell_id);
 }
 
 fn finish_beam(world: &mut World, caster: Entity, aura: &AuraInstance) {
     if aura.caster == caster {
-        super::havoc::beam::finish_final_breath(world, caster);
+        super::havoc::beam::finish_final_breath(world, caster, aura.spell_id);
         super::havoc_eternal::finish_beam(world, caster);
     }
     if aura.caster == caster && has_talent(world, caster, GAZE_TALENT) {
