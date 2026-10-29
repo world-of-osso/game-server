@@ -19,6 +19,116 @@ use crate::npc_interaction::{NpcInteractionPlugin, load_gossip_catalog};
 use crate::persistence::ClientId;
 use crate::terrain_height::wow_to_bevy;
 
+#[test]
+fn ruby_ferry_click_flies_owner_and_follower_on_real_path() {
+    let mut h = harness().expect("real world database");
+    let map = crate::maps::InMap {
+        map_id: 2521,
+        instance_id: 77,
+    };
+    let (x, y, z, faction, flag): (f32, f32, f32, u32, u32) = h.conn.query_row(
+        "SELECT c.position_x,c.position_y,c.position_z,t.faction,t.npcflag FROM content_creature c JOIN content_creature_template t ON t.entry=c.id1 WHERE c.guid=3276417217 AND c.id1=194667", [],
+        |row| Ok((row.get(0)?,row.get(1)?,row.get(2)?,row.get(3)?,row.get(4)?)),
+    ).unwrap();
+    let start = bevy((x, y, z));
+    h.app
+        .world_mut()
+        .entity_mut(h.player)
+        .insert((map, start, MovementControl::default()));
+    let npc = h
+        .app
+        .world_mut()
+        .spawn((
+            Npc {
+                template_id: 194667,
+                name: "Radiant Drake".into(),
+            },
+            NpcFlags::from_azerothcore(flag),
+            map,
+            start,
+            Health {
+                current: 100.0,
+                max: 100.0,
+            },
+            UnitFactionTemplate(faction),
+        ))
+        .id();
+    let follower = h
+        .app
+        .world_mut()
+        .spawn((
+            crate::followers::Follower {
+                owner: h.player,
+                profile: crate::followers::Profile {
+                    entry: 198595,
+                    name: "Captain Garrick".into(),
+                    class_id: 1,
+                    spec_id: 73,
+                    role: shared::group::GroupRole::Tank,
+                    attack_spell: 0,
+                    cooldown_spell: 0,
+                    heal_spell: 0,
+                    taunt_spell: 0,
+                    form_spell: 0,
+                    melee: true,
+                },
+            },
+            map,
+            start,
+            Rotation {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+        ))
+        .id();
+    let instance = crate::scripted_ai::instance_script::InstanceScript {
+        name: "ruby",
+        bosses: vec![crate::scripted_ai::instance_script::BossInfo {
+            state: crate::scripted_ai::instance_script::EncounterState::Done,
+            encounter_id: 2609,
+        }],
+        boss_creatures: vec![],
+        handled_area_triggers: Default::default(),
+        data: Default::default(),
+        ramparts_sentry_deaths: 0,
+        ramparts_reset_delays: vec![],
+    };
+    h.app
+        .init_resource::<crate::scripted_ai::instance_script::InstanceScripts>();
+    h.app
+        .world_mut()
+        .resource_mut::<crate::scripted_ai::instance_script::InstanceScripts>()
+        .0
+        .insert(map, instance);
+    h.send::<_, InteractionChannel>(InteractNpc { npc: npc.to_bits() });
+    for entity in [h.player, follower] {
+        assert_eq!(
+            h.app
+                .world()
+                .get::<Mounted>(entity)
+                .unwrap()
+                .mount_display_id,
+            107204
+        );
+        assert!(h.app.world().get::<TaxiFlight>(entity).is_some());
+    }
+    for _ in 0..2000 {
+        if h.app.world().get::<TaxiFlight>(h.player).is_none()
+            && h.app.world().get::<TaxiFlight>(follower).is_none()
+        {
+            break;
+        }
+        h.app.update();
+    }
+    let endpoint = bevy((1572.375, -221.335068, 320.0));
+    for entity in [h.player, follower] {
+        assert!(h.app.world().get::<TaxiFlight>(entity).is_none());
+        assert!(h.app.world().get::<Mounted>(entity).is_none());
+        assert_eq!(*h.app.world().get::<Position>(entity).unwrap(), endpoint);
+    }
+}
+
 const HUMAN_TEMPLATE: u32 = 1;
 const DUNGAR_LONGDRINK: u32 = 352;
 /// Dungar's spawn (guid 79658).

@@ -62,6 +62,7 @@ pub(crate) struct TaxiNetwork {
     paths: HashMap<u32, Vec<TaxiPath>>,
     /// Creature template display of each mount creature.
     mount_displays: HashMap<u32, u32>,
+    scripted_paths: HashMap<u32, Vec<Vec3>>,
 }
 
 /// A flight: `nodes` from the start to the destination, `cost` in copper.
@@ -72,6 +73,18 @@ pub(crate) struct TaxiRoute {
 }
 
 impl TaxiNetwork {
+    pub(crate) fn scripted_path(&self, id: u32) -> Option<Vec<Vec3>> {
+        self.scripted_paths.get(&id).map(|points| {
+            points
+                .iter()
+                .map(|point| {
+                    let (x, y, z) = wow_to_bevy(point.x, point.y, point.z);
+                    Vec3::new(x, y, z)
+                })
+                .collect()
+        })
+    }
+
     pub fn visible(&self, node: u32, team: Team) -> bool {
         let bit = match team {
             Team::Alliance => SHOW_ON_ALLIANCE_MAP,
@@ -251,10 +264,19 @@ pub(crate) fn load_taxi_network(conn: &Connection) -> rusqlite::Result<TaxiNetwo
         });
     }
     let mount_displays = load_mount_displays(conn, &nodes)?;
+    let scripted_paths = points
+        .into_iter()
+        .filter_map(|(id, points)| {
+            (id == 11715)
+                .then_some(points.map(|points| (id, points)))
+                .flatten()
+        })
+        .collect();
     Ok(TaxiNetwork {
         nodes,
         paths,
         mount_displays,
+        scripted_paths,
     })
 }
 
