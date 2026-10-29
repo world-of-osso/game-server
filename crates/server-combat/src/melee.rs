@@ -183,6 +183,16 @@ impl PlayerDefense {
     }
 }
 
+/// SimC76f8118 sc_warrior.cpp:9517–9522 caps a warrior critical block
+/// at the same 85% resistance cap as armor.
+pub(crate) fn critical_block_cap(auras: Option<&crate::auras::ActiveAuras>) -> f32 {
+    if auras.is_some_and(|auras| auras.iter().any(|aura| aura.spell_id == 76857)) {
+        MAX_ARMOR_MITIGATION
+    } else {
+        1.0
+    }
+}
+
 /// Hit-table chances in percent, in roll order.
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub struct MeleeChances {

@@ -198,6 +198,25 @@ fn brace_for_impact_stacks_increase_actual_block_and_removal_restores_it() {
 }
 
 #[test]
+fn brace_for_impact_critical_block_caps_at_eighty_five_percent() {
+    let (mut h, defender) = shield_duel(100.0);
+    apply_mastery(&mut h, defender);
+    for _ in 0..3 {
+        crate::auras::apply_aura(
+            h.app.world_mut(),
+            &AuraApplication {
+                caster: defender,
+                target: defender,
+                spell_id: 386029,
+                effect_mask: u32::MAX,
+                source: AuraSource::Cast,
+            },
+        );
+    }
+    assert_eq!(blocked_swing(&mut h, defender), (50, 283, false));
+}
+
+#[test]
 fn census_tail_638_native_attacker_martial_expert_scales_critical_auto_block_then_removes() {
     let (mut h, defender) = martial_block_duel(true);
     let caster = h.caster;
@@ -279,8 +298,8 @@ fn class_completeness_native_critical_block_doubles_already_truncated_autoattack
             .modifier(253),
         150.0
     );
-    // 333 ×50%=166.5 truncates to166 BEFORE doubling, TC Unit.cpp1469–1473.
-    assert_eq!(blocked_swing(&mut h, defender), (1, 332, false));
+    // 333 × 85% truncates to 283: the warrior cap applies after doubling.
+    assert_eq!(blocked_swing(&mut h, defender), (50, 283, false));
 }
 
 #[test]
@@ -307,7 +326,7 @@ fn class_completeness_native_attacker_critical_block_aura_does_not_protect_defen
 fn class_completeness_native_critical_block_removal_restores_ordinary_block() {
     let (mut h, defender) = shield_duel(100.0);
     apply_mastery(&mut h, defender);
-    assert_eq!(blocked_swing(&mut h, defender), (1, 332, false));
+    assert_eq!(blocked_swing(&mut h, defender), (50, 283, false));
     crate::auras::remove_auras(
         h.app.world_mut(),
         defender,
@@ -386,13 +405,9 @@ fn class_completeness_native_slam_rolls_block_and_critical_block_before_absorbs(
         assert!(varied(303.0).contains(&(total as f32)), "{hit:?}");
         assert!(!hit.crit, "critical block is not a critical strike");
         if critical {
-            // Spell blocks double50% BEFORE truncation: full block, unlike autoswings.
-            assert_eq!(hit.amount, 0, "{hit:?}");
-            assert_eq!(
-                hit.absorbed, 0,
-                "full block precedes and preserves the shield"
-            );
-            assert_eq!(h.health(defender), health);
+            assert_eq!(hit.blocked, (total as f32 * 0.85).trunc() as i32, "{hit:?}");
+            assert!(hit.absorbed > 0, "the remaining 15% reaches the shield");
+            assert_eq!(health - h.health(defender), hit.amount as f32);
         } else {
             assert_eq!(hit.blocked, (total as f32 * 0.5).trunc() as i32, "{hit:?}");
             assert!(

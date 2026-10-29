@@ -2000,9 +2000,11 @@ fn roll_critical_block_damage(
     attacker_mods: Option<&AuraStatMods>,
 ) -> (f32, f32) {
     if roll_critical_block(auras) {
-        // TC doubles the truncated block, then applies the attacker's638 multiplier.
+        // Double the truncated block, then apply the attacker's638 multiplier.
+        // SimC76f8118 sc_warrior.cpp:9517–9522 caps warrior critical block at 85%.
         let multiplier = attacker_mods.map_or(1.0, |mods| mods.critical_block_amount_mult);
-        let critical_blocked = (blocked * 2.0 * multiplier).trunc();
+        let cap = ((damage + blocked) * melee::critical_block_cap(auras)).trunc();
+        let critical_blocked = (blocked * 2.0 * multiplier).trunc().min(cap);
         (damage - (critical_blocked - blocked), critical_blocked)
     } else {
         (damage, blocked)
