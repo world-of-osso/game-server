@@ -32,48 +32,50 @@ Replay recorded incoming damage in the native server combat simulation to compar
 
 ## Scaled tank pressure
 
-`--pressure-scale X` multiplies the raw amounts of all SimC tank-dummy swings, strikes and bleed ticks before native combat; timestamps, attack tables and other trace fields remain unchanged. The report records `pressure_scale`. The scale must be positive and finite. Native avoidance and block rolls are not held fixed: they share the seeded native random stream with the tank's own procs and decisions, so once a scale changes one tank action, the same seed rolls different outcomes for later attacks.
+`--pressure-scale X` multiplies the raw amounts of all SimC tank-dummy swings, strikes and bleed ticks before native combat; timestamps, attack tables and other trace fields remain unchanged. The report records `pressure_scale` and `incoming_outcome_sequence` (outcome, parry, dodge and block chance per attack). The scale must be positive and finite.
 
-`--pressure-sweep` runs each tank without external healing across ten consecutive native seeds, starting at 70448 by default. It brackets and bisects pressure in 0.05 steps, assuming survival is monotonic, to find the highest tested scale with at least five survivors. It reports the mean survival time at 1.25 times that scale, treating survivors as 300 seconds, and mean net damage per second at 1.0×. Damage taken is already after absorbs, so net damage subtracts effective self-healing only. Because survival is not monotonic in scale for every seed (see below), the bisected scale for Blood and Brewmaster depends on which scales the bisection probes; use the grid results for ranking. Per-seed reports and a summary are written to the output directory. This synthetic trace is not a general ranking of tank performance in encounters.
+Recipient rolls (avoidance, block, critical block) for each replayed attack draw from their own stream, seeded from the run seed and the attack's trace index. The tank's procs and decisions use the separate actor stream, so a scale change cannot reshuffle later attack outcomes. For the same seed, equal avoidance and block chances roll equal outcomes at every scale. Blood and Brewmaster still change outcomes across scales, because their own procs change the chances themselves: Dancing Rune Weapon raises Blood parry from about 34% to 65%, and Elusive Brawler raises Brewmaster dodge.
+
+`--pressure-sweep` runs each tank without external healing at every scale from 1.0 to 5.0 in 0.25 steps (17 scales) and ten consecutive native seeds, starting at 70448 by default. The survival scale is the last grid scale before the first scale with fewer than five survivors; a later recovery does not count. The sweep also reports mean net damage per second at 1.0×. Damage taken is already after absorbs, so net damage subtracts effective self-healing only. Per-seed reports and `summary.json` are written to the output directory. This synthetic trace is not a general ranking of tank performance in encounters.
 
 ### Pressure grid results
 
-Measured on game-server master `897f408cc7df1913e2968fde103ef619c3ca4871`: each tank's 300-second SimC trace, no healer, native seeds 70448–70457, every scale from 1.0 to 5.0 in 0.25 steps (1,020 replays, no bisection). Cells are survivors/10 and mean time, counting survivors as 300 s. Per-seed reports are in `game-engine/data/diagnostics/healer-tank-replay/pressure-sweep-897f408cc7/grid/`. Repeating a tank, scale and seed reproduces the same report.
+Measured on game-server master `fc2dbbabb625af18e587a10ae861569e64b79c7a`, with separate recipient rolls, Paladin Valiance and Paladin Afterimage. Each tank uses its 300-second SimC trace, no healer, native seeds 70448–70457 (1,020 replays). Cells are survivors/10 and mean time, counting survivors as 300 s. Per-seed reports and `summary.json` are in `game-engine/data/diagnostics/healer-tank-replay/pressure-sweep-fc2dbbabb6/`. Later master commits 353d2b797c (Lightsmith armament rules for Protection) and 4fe801a1a4 (Master Shapeshifter Ironfur gate) change Paladin and Guardian; these results do not include them.
 
 | Scale | 66 | 73 | 104 | 250 | 268 | 581 |
 |---:|---:|---:|---:|---:|---:|---:|
-| 1.00 | 6/10, 283 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s |
-| 1.25 | 0/10, 157 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s |
-| 1.50 | 0/10, 111 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s |
-| 1.75 | 0/10, 93 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s |
-| 2.00 | 0/10, 82 s | 10/10, 300 s | 9/10, 294 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s |
-| 2.25 | 0/10, 61 s | 10/10, 300 s | 0/10, 217 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s |
-| 2.50 | 0/10, 50 s | 10/10, 300 s | 0/10, 137 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s |
-| 2.75 | 0/10, 41 s | 10/10, 300 s | 0/10, 107 s | 10/10, 300 s | 10/10, 300 s | 9/10, 294 s |
-| 3.00 | 0/10, 40 s | 10/10, 300 s | 0/10, 98 s | 10/10, 300 s | 8/10, 266 s | 9/10, 294 s |
-| 3.25 | 0/10, 39 s | 10/10, 300 s | 0/10, 91 s | 8/10, 273 s | 7/10, 261 s | 9/10, 293 s |
-| 3.50 | 0/10, 36 s | 10/10, 300 s | 0/10, 78 s | 4/10, 219 s | 3/10, 228 s | 7/10, 270 s |
-| 3.75 | 0/10, 34 s | 8/10, 275 s | 0/10, 68 s | 5/10, 207 s | 3/10, 182 s | 6/10, 226 s |
-| 4.00 | 0/10, 32 s | 3/10, 229 s | 0/10, 67 s | 1/10, 146 s | 1/10, 167 s | 4/10, 200 s |
-| 4.25 | 0/10, 31 s | 2/10, 189 s | 0/10, 64 s | 0/10, 66 s | 0/10, 104 s | 3/10, 173 s |
-| 4.50 | 0/10, 30 s | 0/10, 141 s | 0/10, 61 s | 0/10, 83 s | 1/10, 132 s | 3/10, 165 s |
-| 4.75 | 0/10, 28 s | 0/10, 91 s | 0/10, 58 s | 0/10, 63 s | 0/10, 67 s | 1/10, 147 s |
-| 5.00 | 0/10, 27 s | 0/10, 75 s | 0/10, 54 s | 0/10, 66 s | 0/10, 87 s | 0/10, 109 s |
+| 1.00 | 9/10, 294 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s |
+| 1.25 | 1/10, 245 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s |
+| 1.50 | 0/10, 145 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s |
+| 1.75 | 0/10, 108 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s |
+| 2.00 | 0/10, 81 s | 10/10, 300 s | 9/10, 290 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s |
+| 2.25 | 0/10, 68 s | 10/10, 300 s | 0/10, 203 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s |
+| 2.50 | 0/10, 58 s | 10/10, 300 s | 0/10, 144 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s |
+| 2.75 | 0/10, 56 s | 10/10, 300 s | 0/10, 119 s | 10/10, 300 s | 9/10, 281 s | 10/10, 300 s |
+| 3.00 | 0/10, 44 s | 10/10, 300 s | 0/10, 100 s | 10/10, 300 s | 8/10, 272 s | 10/10, 300 s |
+| 3.25 | 0/10, 42 s | 10/10, 300 s | 0/10, 92 s | 9/10, 296 s | 5/10, 246 s | 10/10, 300 s |
+| 3.50 | 0/10, 39 s | 10/10, 300 s | 0/10, 79 s | 8/10, 283 s | 2/10, 221 s | 10/10, 300 s |
+| 3.75 | 0/10, 37 s | 10/10, 300 s | 0/10, 72 s | 2/10, 218 s | 5/10, 246 s | 9/10, 296 s |
+| 4.00 | 0/10, 35 s | 10/10, 300 s | 0/10, 68 s | 0/10, 167 s | 1/10, 171 s | 8/10, 287 s |
+| 4.25 | 0/10, 33 s | 10/10, 300 s | 0/10, 64 s | 3/10, 164 s | 0/10, 130 s | 7/10, 280 s |
+| 4.50 | 0/10, 32 s | 9/10, 297 s | 0/10, 61 s | 0/10, 134 s | 0/10, 137 s | 6/10, 266 s |
+| 4.75 | 0/10, 30 s | 6/10, 261 s | 0/10, 59 s | 0/10, 90 s | 0/10, 120 s | 4/10, 225 s |
+| 5.00 | 0/10, 29 s | 2/10, 218 s | 0/10, 57 s | 0/10, 56 s | 0/10, 87 s | 3/10, 214 s |
 
-Paladin, Warrior, Guardian and Vengeance never gain survivors as scale rises. Blood (4/10 at 3.50, 5/10 at 3.75; mean time 66 s at 4.25, 83 s at 4.50) and Brewmaster (0/10 at 4.25, 1/10 at 4.50; 67 s at 4.75, 87 s at 5.00) do not. Their per-seed outcome counts differ between scales, as described above. The trace has a strike of about 500k raw every 32 s from 4 s. 35 of Blood's 62 deaths come within 1 s after a strike: the strike kills when earlier unparried swings or Death Strike timing leave health and Blood Shield low. Brewmaster dodges about 42% of attacks and Stagger spreads damage, so only 20 of its 67 deaths follow a strike and its death times scatter. Warrior's Shield Block casts (28) and Ignore Pain casts (66–69) do not grow with damage taken.
+Paladin, Warrior, Guardian and Vengeance survivor counts now fall monotonically with scale. Blood (0/10 at 4.00, 3/10 at 4.25) and Brewmaster (2/10 at 3.50, 5/10 at 3.75) still recover. Their own procs change their avoidance chances, so their per-seed outcomes differ across scales, as described above. The previous grid on `897f408cc7` shared one stream between recipient rolls and tank decisions. Since then, Warrior rose from 3.75 to 4.75, Vengeance from 3.75 to 4.50, Blood from 3.25 to 3.50 and Paladin from 6/10 to 9/10 survivors at 1.0×. The new outcome sequence and other master changes between the two commits both contribute; this grid does not separate them.
 
 Ranking: the highest scale before the first scale with fewer than five survivors (0.25 resolution).
 
-| Rank | Tank | Survival scale |
-|---:|---|---:|
-| 1= | Protection Warrior (73) | 3.75 |
-| 1= | Vengeance Demon Hunter (581) | 3.75 |
-| 3= | Blood Death Knight (250) | 3.25 |
-| 3= | Brewmaster Monk (268) | 3.25 |
-| 5 | Guardian Druid (104) | 2.00 |
-| 6 | Protection Paladin (66) | 1.00 |
+| Rank | Tank | Survival scale | Net damage/s at 1.0× |
+|---:|---|---:|---:|
+| 1 | Protection Warrior (73) | 4.75 | 5 |
+| 2 | Vengeance Demon Hunter (581) | 4.50 | −58 |
+| 3 | Blood Death Knight (250) | 3.50 | 0 |
+| 4 | Brewmaster Monk (268) | 3.25 | 72 |
+| 5 | Guardian Druid (104) | 2.00 | −153 |
+| 6 | Protection Paladin (66) | 1.00 | 1,829 |
 
-Ten seeds give a survivor-count standard deviation of about 1.6 near 50%, so tied tanks are not separated. Warrior holds 10/10 to 3.50 and then drops sharply; Vengeance starts losing seeds at 2.75 but lasts longer at 4.50 and above. At 1.0×, net damage per second (damage taken after absorbs minus effective self-healing) is 4,094 for Paladin and between −260 and 35 for the other five. Effective healing cannot exceed missing health, so a tank that stays at full health shows zero net damage; this metric does not rank surviving tanks.
+Ten seeds give a survivor-count standard deviation of about 1.6 near 50%, so adjacent ranks one grid step apart (Warrior and Vengeance; Blood and Brewmaster) are not reliably separated. Brewmaster's 3.25 depends on 5/10 at that scale exactly. Effective healing cannot exceed missing health, so a tank that stays at full health shows zero net damage; that column does not rank surviving tanks.
 
 ## Ten-seed healed replay versus corrected SimC
 
