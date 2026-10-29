@@ -412,6 +412,7 @@ pub(super) fn replay_simc_with_healing(
     let mut run = super::dps_parity::prepare_registered_player_with(spec_id, 1, |run| {
         apply_simc_raid_buffs(run, &raid_buffs)
     })?;
+    apply_simc_starting_holy_power(&mut run);
     apply_simc_dummy_debuffs(&mut run, &dummy_debuffs)?;
     if dummy_bleeding {
         let target = run.targets[0];
@@ -432,6 +433,30 @@ pub(super) fn replay_simc_with_healing(
         &dummy_debuffs,
         dummy_bleeding,
     )
+}
+
+pub(super) fn apply_simc_starting_holy_power(run: &mut super::dps_parity::Run) {
+    let actor = run.actor;
+    let selected = run
+        .app
+        .world()
+        .get::<crate::class_progression::TraitLoadout>(actor)
+        .is_some_and(|traits| {
+            traits
+                .active_talent_spells()
+                .any(|spell| spell.spell_id == 204019)
+        });
+    if selected {
+        let mut pools = run
+            .app
+            .world_mut()
+            .get_mut::<crate::spell_cast::powers::PowerPools>(actor)
+            .expect("paladin has power pools");
+        let holy_power = pools
+            .get_mut(shared::components::PowerType::HolyPower)
+            .expect("paladin has holy power");
+        holy_power.current = (holy_power.current + 1.0).min(1.0);
+    }
 }
 
 pub(super) fn replay_registered_run(
