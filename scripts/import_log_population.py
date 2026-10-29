@@ -139,7 +139,7 @@ def import_population(destination, records, radius=10.0):
             entry INTEGER NOT NULL, table_name TEXT NOT NULL, row_key TEXT NOT NULL, policy TEXT NOT NULL,
             PRIMARY KEY (table_name,row_key))''')
         next_guid = db.execute('SELECT COALESCE(MAX(guid), 0) + 1 FROM content_creature').fetchone()[0]
-        matched, existing = match_existing(db, records, radius)
+        matched, existing_positions = match_existing(db, records, radius)
         for record in records:
             map_id, npc_id = int(record['map']), int(record['npc_id'])
             result = report[map_id]
@@ -158,7 +158,7 @@ def import_population(destination, records, radius=10.0):
             if source_key in matched:
                 result['already_present'] += 1
                 continue
-            if any(math.dist((x, y, z), position) <= 3.0 for position in existing.get((map_id, npc_id), ())):
+            if any(math.dist((x, y, z), position) <= 3.0 for position in existing_positions.get((map_id, npc_id), ())):
                 result['gaps'].append({'source_key': source_key, 'reason': 'AUTHORED_SPAWN_NEARBY_AMBIGUOUS'})
                 continue
             if not db.execute('SELECT 1 FROM content_creature_template WHERE entry=?', (npc_id,)).fetchone():
