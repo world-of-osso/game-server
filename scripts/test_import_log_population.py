@@ -37,7 +37,7 @@ class ImportTest(unittest.TestCase):
                 for guid, map_id, entry in [(3276416036,1762,229227), (3276416302,2813,229227),
                                              (3276416485,2825,229227), (3276416397,2813,234359)]:
                     db.execute('INSERT INTO content_creature(guid,id1,map,Comment) VALUES (?,?,?,?)',
-                               (guid,map_id,entry,module.POLICY))
+                               (guid,entry,map_id,module.POLICY))
                     db.execute('INSERT INTO log_derived_population VALUES (?,?,?,?,?,?,?,?,?,?)',
                                (guid,str(guid),map_id,entry,'floor','SPELL_CAST_SUCCESS','time',90,module.POLICY,'{}'))
             records = [dict(record('observed-' + str(map_id), 100, npc=229227), map=map_id)
