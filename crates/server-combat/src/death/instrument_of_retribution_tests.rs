@@ -30,6 +30,13 @@ fn instrument_player_death_group_range_and_refresh() {
     assert_eq!(aura.duration_ms, 9000);
 
     let previous_expiry = aura.expires_at;
+    let mut groups = h
+        .app
+        .world_mut()
+        .resource_mut::<crate::group::GroupRegistry>();
+    groups.convert_to_raid(1);
+    assert!(groups.is_in_raid(1));
+    drop(groups);
     let outsider = spawn_player(&mut h.app, 1, 1.0);
     h.app
         .world_mut()
