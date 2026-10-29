@@ -97,6 +97,7 @@ mod pull_sources_tests;
 #[cfg(test)]
 mod pull_stat_provenance_tests;
 mod resto_policy;
+pub mod retreat;
 #[cfg(test)]
 mod rotation_dummy_tests;
 #[cfg(any(test, feature = "test-support"))]

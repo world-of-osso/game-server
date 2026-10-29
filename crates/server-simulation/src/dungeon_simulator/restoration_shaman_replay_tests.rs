@@ -2,6 +2,174 @@ use std::path::Path;
 
 #[test]
 #[ignore = "requires native Restoration Shaman spell data"]
+fn water_shield_restores_mana_from_incoming_melee() {
+    use crate::spell_cast::test_harness::{ObservedCombatEvents, collect_swings, harness};
+    use shared::components::{Health, Mana};
+    use shared::protocol::CombatLogKind;
+    let mut h = harness(Vec::new(), &[52127, 52128], 7).unwrap();
+    h.app.init_resource::<ObservedCombatEvents>();
+    *h.app.world_mut().get_mut::<Health>(h.caster).unwrap() = Health {
+        current: 100_000.0,
+        max: 100_000.0,
+    };
+    *h.app.world_mut().get_mut::<Mana>(h.caster).unwrap() = Mana {
+        current: 50_000.0,
+        max: 100_000.0,
+    };
+    h.cast_and_deliver(52127, Some(h.caster));
+    assert!(crate::auras::has_aura(h.app.world(), h.caster, 52127));
+    let attacker = h.npc;
+    let target = h.caster;
+    collect_swings(&mut h, attacker, target, 5);
+    let events = &h.app.world().resource::<ObservedCombatEvents>().0;
+    assert!(
+        events.iter().any(|e| e.kind == CombatLogKind::Energize
+            && e.spell_id == Some(52128)
+            && e.target == Some(target.to_bits())
+            && e.amount == 2000),
+        "Water Shield must refund 2% max mana on a melee hit: {events:?}"
+    );
+}
+
+#[test]
+#[ignore = "requires native Restoration Shaman spell data"]
+fn resurgence_restores_mana_for_critical_direct_heals() {
+    use crate::spell_cast::test_harness::{ObservedCombatEvents, harness, spawn_player};
+    use shared::components::{Health, Mana};
+    use shared::protocol::CombatLogKind;
+    let mut h = harness(Vec::new(), &[61295, 77472, 1064, 16196, 101033], 7).unwrap();
+    h.app.init_resource::<ObservedCombatEvents>();
+    let ally = spawn_player(&mut h.app, 7, 3.0);
+    *h.app.world_mut().get_mut::<Health>(ally).unwrap() = Health {
+        current: 1.0,
+        max: 100_000.0,
+    };
+    *h.app.world_mut().get_mut::<Mana>(h.caster).unwrap() = Mana {
+        current: 0.0,
+        max: 100_000.0,
+    };
+    h.app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(h.caster)
+        .unwrap()
+        .crit_pct = 100.0;
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: h.caster,
+            target: h.caster,
+            spell_id: 16196,
+            effect_mask: u32::MAX,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    for (source, expected) in [(61295, 480), (77472, 800), (1064, 200)] {
+        h.app
+            .world_mut()
+            .resource_mut::<ObservedCombatEvents>()
+            .0
+            .clear();
+        crate::spell_cast::creature_cast(h.app.world_mut(), h.caster, source, Some(ally), true)
+            .unwrap();
+        h.advance(2);
+        let events = &h.app.world().resource::<ObservedCombatEvents>().0;
+        assert!(
+            events.iter().any(|e| e.spell_id == Some(source)
+                && e.kind == CombatLogKind::Heal
+                && e.crit
+                && !e.periodic),
+            "source must critically heal: {events:?}"
+        );
+        assert!(
+            events.iter().any(|e| e.spell_id == Some(101033)
+                && e.kind == CombatLogKind::Energize
+                && e.target == Some(h.caster.to_bits())
+                && e.amount == expected),
+            "Resurgence source {source} must refund {expected}: {events:?}"
+        );
+    }
+}
+
+#[test]
+#[ignore = "requires native top-character profiles and world database"]
+fn restoration_shaman_uses_chain_lightning_only_against_a_pack() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::components::Health;
+    use shared::protocol::CombatLogKind;
+    let mut run = super::super::dps_parity::prepare_registered_player(66, 2).unwrap();
+    let tank = run.actor;
+    let healer = super::super::dps_parity::spawn_second_reference_player(&mut run, 264).unwrap();
+    let add = run.targets[1];
+    run.app.world_mut().get_mut::<Health>(add).unwrap().current = 0.0;
+    let mut policy = super::prepare(&mut run, healer).unwrap();
+    for _ in 0..200 {
+        policy
+            .drive(run.app.world_mut(), healer, &[tank, healer])
+            .unwrap();
+        run.app.update();
+    }
+    assert!(
+        !run.app
+            .world()
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|e| e.source == Some(healer.to_bits())
+                && e.spell_id == Some(188443)
+                && e.kind == CombatLogKind::CastSuccess)
+    );
+    {
+        let mut hp = run.app.world_mut().get_mut::<Health>(add).unwrap();
+        hp.current = hp.max;
+    }
+    for _ in 0..300 {
+        policy
+            .drive(run.app.world_mut(), healer, &[tank, healer])
+            .unwrap();
+        run.app.update();
+    }
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0;
+    assert!(
+        events.iter().any(|e| e.source == Some(healer.to_bits())
+            && e.spell_id == Some(188443)
+            && e.kind == CombatLogKind::CastSuccess),
+        "Chain Lightning must cast against a pack: {events:?}"
+    );
+}
+
+#[test]
+#[ignore = "requires top-character profiles, native DB and SimC party pulse"]
+fn restoration_shaman_uses_surging_totem_throughout_party_pulse() {
+    let trace = std::env::var("HEALER_TANK_TIMELINE").unwrap();
+    let party = std::env::var("HEALER_TANK_PARTY_TRACE").unwrap();
+    let report = super::super::healer_replay::replay_simc_party(
+        264,
+        Path::new(&trace),
+        Path::new(&party),
+        300,
+        70448,
+    )
+    .unwrap();
+    let casts = &report["healer_casts"];
+    let count = casts["444995"].as_u64().unwrap_or(0);
+    assert!(
+        count >= 10,
+        "Surging Totem is not used across the replay: {report}"
+    );
+    assert_eq!(
+        casts["73920"].as_u64().unwrap_or(0),
+        0,
+        "selected Surging Totem replaces Healing Rain"
+    );
+    assert!(
+        casts["1064"].as_u64().unwrap_or(0) > 0,
+        "policy must use Chain Heal for group injury: {report}"
+    );
+    println!("SHAMAN_POLICY_REPORT={report}");
+}
+
+#[test]
+#[ignore = "requires native Restoration Shaman spell data"]
 fn earthliving_imbue_allows_riptide_to_apply_its_hot() {
     use crate::spell_cast::{
         CastTargets, cast_for_player_with_targets,

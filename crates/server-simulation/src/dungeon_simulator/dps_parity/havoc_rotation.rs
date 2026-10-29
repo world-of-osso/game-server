@@ -2,19 +2,22 @@
 mod bindings;
 mod facts;
 use super::literal_rotation::{
-    self, Driver, PrecombatPoll, equipment::Equipment, execution::Prepared,
+    self, Driver, PrecombatPoll,
+    equipment::Equipment,
+    execution::{Execution, Prepared},
 };
 use crate::simc_apl_native::{Bindings, Encounter, NativeFacts};
 use bevy::prelude::*;
 use facts::HavocFacts;
 use serde_json::{Value, json};
-use server::simc_apl::Program;
+use server::simc_apl::{Action, Program};
 
 pub(super) struct Rotation {
     driver: Driver,
     bindings: Bindings,
     equipment: Equipment,
     encounter: Encounter,
+    pending_retreat: Option<(Action, Execution, Entity)>,
 }
 
 fn load_program() -> Result<Program, String> {
@@ -56,6 +59,7 @@ impl Rotation {
             bindings,
             equipment,
             encounter,
+            pending_retreat: None,
         })
     }
 
@@ -124,6 +128,14 @@ impl Rotation {
         actor: Entity,
         targets: &[Entity],
     ) -> Result<(), String> {
+        if let Some((action, execution, target)) = self.pending_retreat.take() {
+            if crate::followers::retreat::prepare_havoc_retreat(world, actor, target)? {
+                self.driver.execute(world, actor, action, execution)?;
+            } else {
+                self.pending_retreat = Some((action, execution, target));
+            }
+            return Ok(());
+        }
         let pickup = {
             let facts = HavocFacts {
                 native: NativeFacts::new(
@@ -156,6 +168,13 @@ impl Rotation {
             self.driver
                 .select("default", &facts, &prepared, &self.equipment)?
         {
+            if matches!(execution, Execution::Spell(198793, _, _)) {
+                let target = *targets.first().ok_or("Retreat requires an enemy target")?;
+                if !crate::followers::retreat::prepare_havoc_retreat(world, actor, target)? {
+                    self.pending_retreat = Some((action, execution, target));
+                    return Ok(());
+                }
+            }
             self.driver.execute(world, actor, action, execution)?;
         }
         Ok(())

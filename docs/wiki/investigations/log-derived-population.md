@@ -48,3 +48,7 @@ The current extraction has 266 encounter pulls, including 253 successful pulls. 
 - `scripts/log_population_census.py`, `scripts/log_population_packs.py`, `scripts/prepare_log_population.py`, `scripts/import_log_population.py` — extraction, candidates, geometry join and copy-only import.
 - User's Retail log directories and local `EXBossData` addon — private data and addon observations, not tracked in this repository.
 - Canonical `data/world.db` — read-only TDB and content comparison.
+
+## Encounter actors duplicated by later placements — 2026-10-29
+
+The live Ruby run had two Erkhart Stormvein 190485 spawns. The importer added the logged Erkhart while the journal placeholder 63521000 was 12 yards away, outside its 10-yard match radius; `ruby_population.py` later moved the placeholder 1.8 yards from that row. `retire_encounter_duplicates` deletes a log-derived row of a `raid_encounter_creature` entry that lies within 10 yards of another spawn of the same entry on the same map. On the canonical database it retired Ruby 3276416184 (applied first) and map 2813 234649 row 3276416398 (7.5 yards). Five other encounter observations remain because they are 15–37 yards from their placements: map 1762 135322, 2923 239008 and three 2993 259445 rows.

@@ -148,6 +148,30 @@ def retire_affix_spawns(db, summons, maps, report):
         report[map_id]['gaps'].append({'source_key': source_key, 'reason': 'AFFIX_SUMMON_RETIRED'})
 
 
+def retire_encounter_duplicates(db, radius=10.0):
+    """Delete log-derived rows within `radius` of another spawn of the same encounter creature.
+
+    A later placement can move an encounter actor next to the observation the importer
+    already added for it; that observation then duplicates the actor.
+    """
+    rows = db.execute('''SELECT p.guid,p.map,p.npc_id,c.position_x,c.position_y,c.position_z
+        FROM log_derived_population AS p JOIN content_creature AS c ON c.guid=p.guid
+        WHERE EXISTS (SELECT 1 FROM raid_encounter_creature AS r
+                      WHERE r.map_id=p.map AND r.creature_entry=p.npc_id)
+        ORDER BY p.guid''').fetchall()
+    retired = []
+    for guid, map_id, npc_id, *position in rows:
+        spawns = db.execute('''SELECT position_x,position_y,position_z FROM content_creature
+            WHERE map=? AND id1=? AND guid NOT IN (SELECT guid FROM log_derived_population)
+            UNION ALL SELECT position_x,position_y,position_z FROM tdb_creature WHERE map=? AND id=?''',
+                            (map_id, npc_id, map_id, npc_id)).fetchall()
+        if any(math.dist(position, spawn) <= radius for spawn in spawns):
+            db.execute('DELETE FROM content_creature WHERE guid=?', (guid,))
+            db.execute('DELETE FROM log_derived_population WHERE guid=?', (guid,))
+            retired.append((map_id, npc_id, guid))
+    return retired
+
+
 def import_population(destination, records, radius=10.0):
     destination = validate_copy(destination)
     report = defaultdict(lambda: {'imported': 0, 'already_present': 0, 'gaps': [], 'templates_from_tdb': set(), 'templates_absent': set()})

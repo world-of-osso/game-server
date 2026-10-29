@@ -59,16 +59,27 @@ struct PickerEntry {
     picker: u32,
     #[serde(rename = "ItemCreationContext")]
     context: u32,
+    #[serde(rename = "OrderIndex")]
+    order: u32,
     #[serde(rename = "PVal")]
     probability: i32,
+    #[serde(rename = "LabelID")]
+    label: u32,
+    #[serde(rename = "Flags")]
+    flags: u32,
+    #[serde(rename = "PlayerConditionID")]
+    condition: u32,
 }
+
+/// `ItemContextPickerEntry` flag 0x1: the entry applies when its PlayerCondition fails.
+const PICKER_NEGATE_CONDITION: u32 = 0x1;
 
 /// The native tree and context-picker inputs. No per-difficulty ilvl table is stored.
 pub struct DungeonItemLevels {
     item_trees: HashMap<u32, Vec<u32>>,
     trees: HashMap<u32, Tree>,
     nodes: HashMap<u32, Vec<Node>>,
-    pickers: HashMap<u32, Vec<u32>>,
+    pickers: HashMap<u32, Vec<PickerEntry>>,
 }
 
 impl DungeonItemLevels {
@@ -85,10 +96,10 @@ impl DungeonItemLevels {
         for row in super::read_rows::<Node>(db2, "ItemBonusTreeNode.csv")? {
             nodes.entry(row.parent).or_default().push(row);
         }
-        let mut pickers: HashMap<u32, Vec<u32>> = HashMap::new();
+        let mut pickers: HashMap<u32, Vec<PickerEntry>> = HashMap::new();
         for row in super::read_rows::<PickerEntry>(db2, "ItemContextPickerEntry.csv")? {
             if row.probability > 0 {
-                pickers.entry(row.picker).or_default().push(row.context);
+                pickers.entry(row.picker).or_default().push(row);
             }
         }
         Ok(Self {
@@ -99,7 +110,48 @@ impl DungeonItemLevels {
         })
     }
 
-    /// Refuse an unresolved picker rather than inventing player or world-state conditions.
+    /// `ItemBonusMgr::GetContextForPlayer`: the picker entry with the highest OrderIndex
+    /// (first in store order on ties) whose PlayerCondition, negated by flag 0x1, holds
+    /// for `level`. Entries are tried highest order first, so lower-order conditions the
+    /// bounded PlayerCondition evaluator cannot answer are never needed once one passes.
+    fn pick_context(
+        &self,
+        db: &Connection,
+        picker: u32,
+        context: u32,
+        level: u8,
+    ) -> Result<u32, String> {
+        let mut entries: Vec<_> = self
+            .pickers
+            .get(&picker)
+            .ok_or_else(|| format!("item context picker{picker} unavailable"))?
+            .iter()
+            .collect();
+        entries.sort_by_key(|entry| std::cmp::Reverse(entry.order));
+        for entry in entries {
+            let met = match entry.condition {
+                0 => true,
+                id => {
+                    crate::adventure_guide::conditions::load_conditions(db, BTreeSet::from([id]))?
+                        [&id]
+                        .evaluate(level, None)
+                        .map_err(|reason| format!("item context picker{picker}: {reason}"))?
+                }
+            };
+            if met == (entry.flags & PICKER_NEGATE_CONDITION != 0) {
+                continue;
+            }
+            if entry.label != 0 {
+                return Err(format!(
+                    "FOLLOWER_ITEM_CONTEXT_PICKER_LABEL_UNSUPPORTED picker{picker} label{}",
+                    entry.label
+                ));
+            }
+            return Ok(entry.context);
+        }
+        Ok(context)
+    }
+
     pub fn resolve(
         &self,
         db: &Connection,
@@ -119,32 +171,19 @@ impl DungeonItemLevels {
             (map, difficulty), |row| Ok((row.get(0)?, row.get(1)?)))
             .optional().map_err(|error| format!("read map difficulty: {error}"))?
             .ok_or_else(|| format!("map{map} difficulty{difficulty} item context unavailable"))?;
-        let contexts = if picker == 0 {
-            vec![context]
-        } else {
-            self.pickers
-                .get(&picker)
-                .cloned()
-                .ok_or_else(|| format!("item context picker{picker} unavailable"))?
+        let context = match picker {
+            0 => context,
+            picker => self.pick_context(db, picker, context, level)?,
         };
-        let mut results = BTreeSet::new();
-        for context in contexts {
-            let lists = self.level_lists(item_id, item, context, bonuses)?;
-            let resolved = apply_item_bonuses(&item.scaling, &lists, bonuses, level)?;
-            let item_stats = item_instance_stats(
-                &resolved.scaling,
-                item.inventory_type,
-                &ItemInstanceModifiers::default(),
-                stats,
-            )?;
-            results.insert(item_stats.item_level);
-        }
-        match results.iter().copied().collect::<Vec<_>>().as_slice() {
-            [value] => Ok(*value),
-            _ => Err(format!(
-                "FOLLOWER_ITEM_CONTEXT_PICKER_UNRESOLVED map{map} difficulty{difficulty}: {results:?}"
-            )),
-        }
+        let lists = self.level_lists(item_id, item, context, bonuses)?;
+        let resolved = apply_item_bonuses(&item.scaling, &lists, bonuses, level)?;
+        let item_stats = item_instance_stats(
+            &resolved.scaling,
+            item.inventory_type,
+            &ItemInstanceModifiers::default(),
+            stats,
+        )?;
+        Ok(item_stats.item_level)
     }
 
     fn level_lists(
@@ -261,5 +300,26 @@ mod tests {
                 .unwrap_err()
                 .contains("FOLLOWER_MYTHIC_PLUS_SEASON_ITEM_LEVEL_UNSOURCED")
         );
+    }
+
+    #[test]
+    fn follower_gear_context_picker_follows_the_player_condition_for_darkflame() {
+        let path = crate::test_data::world_db_path();
+        let db = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+        let db2 = path.parent().unwrap().join("db2/active");
+        let source = DungeonItemLevels::read(&db2).unwrap();
+        let items = crate::item_templates::load_item_templates(&path).unwrap();
+        // Ol' Waxbeard Journal loot; map2651/205 uses picker277 (entries 994/995 on
+        // PlayerCondition120217, ContentTuning2462 level 80 or above).
+        let item = items.get(ItemDefinitionSource::Retail, 221097).unwrap();
+        let bonuses = crate::item_instance::load::load_bonus_tables(&db).unwrap();
+        let stats = crate::item_stats::load_item_scaling_tables(&path).unwrap();
+        let level = |player_level| {
+            source
+                .resolve(&db, 2651, 205, player_level, 221097, item, &bonuses, &stats)
+                .unwrap()
+        };
+        // Level 80 meets 120217: entry995 (context1). Level 79 fails it: negated entry994 (context17).
+        assert_eq!((level(80), level(79)), (79, 74));
     }
 }

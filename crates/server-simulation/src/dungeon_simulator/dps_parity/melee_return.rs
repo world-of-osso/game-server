@@ -37,6 +37,12 @@ pub(super) fn advance(world: &mut World) {
 }
 
 fn advance_actor(world: &mut World, actor: Entity, delta: f32) {
+    if world
+        .get::<crate::followers::retreat::RetreatSetup>(actor)
+        .is_some()
+    {
+        return;
+    }
     // A charge can finish inside melee reach facing along its short travel,
     // away from the opponent. The fixture still owns the actor's melee intent.
     // Do not override active forced movement or turn an active channel.

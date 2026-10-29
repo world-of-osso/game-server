@@ -2,7 +2,7 @@
 #[path = "adventure_guide_catalog.rs"]
 mod catalog;
 #[path = "adventure_guide_conditions.rs"]
-mod conditions;
+pub(crate) mod conditions;
 #[path = "adventure_guide_month.rs"]
 mod month;
 #[path = "adventure_guide_publication.rs"]

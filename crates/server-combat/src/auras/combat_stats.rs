@@ -87,32 +87,6 @@ pub(crate) fn armor_after_bypass(auras: Option<&ActiveAuras>, attacker: Entity, 
     armor * (100.0 - bypass.min(100.0)) / 100.0
 }
 
-/// Unit.cpp1712-1716: physical269 filters the spell, then floors armor per effect.
-pub(crate) fn armor_after_ignore(
-    world: &World,
-    caster: Entity,
-    spell: &SpellInfo,
-    armor: f32,
-) -> f32 {
-    let Some(auras) = world.get::<ActiveAuras>(caster) else {
-        return armor;
-    };
-    auras.iter().fold(armor, |armor, aura| {
-        aura.effects
-            .iter()
-            .filter(|effect| {
-                effect.aura_type == handlers::MOD_IGNORE_TARGET_RESIST
-                    && !(aura.spell_id == 275335 && effect.index == 0)
-                    && effect.misc_values[0] & 1 != 0
-                    && affects_spell(aura, effect, spell)
-            })
-            .fold(armor, |armor, effect| {
-                let remaining = 1.0 - effect.amount * aura.stack_multiplier() / 100.0;
-                (armor * remaining).floor()
-            })
-    })
-}
-
 /// TC a352b1fa Unit.cpp7340: caster-owned50, with no MiscValue school mask.
 pub fn critical_healing_multiplier(world: &World, caster: Entity) -> f32 {
     world.get::<ActiveAuras>(caster).map_or(1.0, |auras| {

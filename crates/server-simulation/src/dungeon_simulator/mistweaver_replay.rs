@@ -29,6 +29,7 @@ const SPELLS: &[(&str, u32, bool)] = &[
     ("sheiluns_gift", 205406, false),
     ("vivify", 116670, false),
     ("rising_sun_kick", 107428, false),
+    ("spinning_crane_kick", 101546, true),
     ("blackout_kick", 100784, false),
     ("tiger_palm", 100780, false),
 ];
@@ -67,7 +68,10 @@ pub(super) fn prepare(
     let program = Program::parse(&[
         ("default", "life_cocoon,if=target.health.pct<35"),
         ("default", "revival,if=party.injured>=3"),
-        ("default", "mana_tea,if=mana.pct<65"),
+        (
+            "default",
+            "mana_tea,if=mana.pct<65&player.mana_tea_stacks>=4",
+        ),
         ("default", "thunder_focus_tea,if=target.health.pct<75"),
         (
             "default",
@@ -80,7 +84,9 @@ pub(super) fn prepare(
         ("default", "sheiluns_gift,if=party.heal_worthwhile"),
         ("default", "vivify,if=party.heal_worthwhile"),
         ("default", "soothing_mist,if=target.health.pct<90"),
+        ("priority_damage", "rising_sun_kick"),
         ("damage", "rising_sun_kick"),
+        ("damage", "spinning_crane_kick,if=active_enemies>=2"),
         ("damage", "blackout_kick"),
         ("damage", "tiger_palm"),
     ])?;
@@ -106,6 +112,7 @@ struct PartyFacts<'a> {
     renewing_up: bool,
     enveloping_up: bool,
     worthwhile: bool,
+    mana_tea_stacks: u8,
 }
 
 impl Facts for PartyFacts<'_> {
@@ -115,6 +122,7 @@ impl Facts for PartyFacts<'_> {
             "target.renewing_mist_up" => Ok(f64::from(self.renewing_up)),
             "target.enveloping_mist_up" => Ok(f64::from(self.enveloping_up)),
             "party.heal_worthwhile" => Ok(f64::from(self.worthwhile)),
+            "player.mana_tea_stacks" => Ok(f64::from(self.mana_tea_stacks)),
             _ => self.native.value(name),
         }
     }
@@ -126,7 +134,8 @@ impl ActionFacts for PartyFacts<'_> {
             "party.injured"
             | "target.renewing_mist_up"
             | "target.enveloping_mist_up"
-            | "party.heal_worthwhile" => self.value(name),
+            | "party.heal_worthwhile"
+            | "player.mana_tea_stacks" => self.value(name),
             _ => self.native.value_for(action, name),
         }
     }
@@ -203,17 +212,30 @@ impl Mistweaver {
         let health = world
             .get::<Health>(target)
             .ok_or("Mistweaver target health absent")?;
-        let missing = if spell_id == 399491 {
-            party
+        let expected = per_target.max(last_tank_heal);
+        if spell_id == 399491 {
+            let count = crate::spell_cast::scripts::script_effect_value(world, healer, spell_id, 1)
+                .max(1.0) as usize;
+            let mut missing: Vec<_> = party
                 .iter()
                 .filter_map(|&unit| world.get::<Health>(unit))
                 .filter(|health| health.current > 0.0)
                 .map(|health| (health.max - health.current).max(0.0))
-                .sum()
-        } else {
-            (health.max - health.current).max(0.0)
-        };
-        let expected = per_target.max(last_tank_heal);
+                .collect();
+            missing.sort_by(|a, b| b.total_cmp(a));
+            let group_missing: f32 = missing
+                .into_iter()
+                .take(count)
+                .map(|amount| amount.min(expected))
+                .sum();
+            let emergency = health.current / health.max < 0.65
+                && health.max - health.current >= expected * 0.75;
+            return Ok(expected > 0.0
+                && (emergency
+                    || (group_missing >= expected * count as f32 * 0.75
+                        && group_missing + incoming_dps >= expected)));
+        }
+        let missing = (health.max - health.current).max(0.0);
         Ok(expected > 0.0 && missing >= expected * 0.75 && missing + incoming_dps >= expected)
     }
 }
@@ -266,11 +288,46 @@ impl Policy for Mistweaver {
         let renewing_up = crate::auras::has_aura(world, target, 119611)
             || crate::auras::has_aura(world, target, 115151);
         let enveloping_up = crate::auras::has_aura(world, target, 124682);
+        let mana_tea_stacks = world
+            .get::<crate::auras::ActiveAuras>(healer)
+            .and_then(|auras| {
+                auras
+                    .iter()
+                    .find(|aura| aura.spell_id == 115867 && aura.caster == healer)
+            })
+            .map_or(0, |aura| aura.stacks);
+        if lowest_ratio >= 0.65
+            && let Some(enemy) = world
+                .get::<crate::networking::CombatTarget>(tank)
+                .and_then(|target| target.0)
+        {
+            let enemies = [enemy];
+            let action = NativeAction {
+                name: "rising_sun_kick",
+                spell: 107428,
+                self_target: false,
+                talent: None,
+            };
+            let prepared =
+                Prepared::read(world, healer, &enemies, &self.equipment, [action], false)?;
+            let facts = NativeFacts::new(world, healer, &self.bindings, self.encounter, 1)
+                .with_targets(Some(enemy), &enemies);
+            if let Some((action, execution)) =
+                self.driver
+                    .select("priority_damage", &facts, &prepared, &self.equipment)?
+            {
+                self.driver.execute(world, healer, action, execution)?;
+                return Ok(());
+            }
+        }
         let targets = [target];
         let actions = SPELLS
             .iter()
             .filter(|(name, _, _)| {
-                !matches!(*name, "rising_sun_kick" | "blackout_kick" | "tiger_palm")
+                !matches!(
+                    *name,
+                    "rising_sun_kick" | "spinning_crane_kick" | "blackout_kick" | "tiger_palm"
+                )
             })
             .map(|&(name, spell, self_target)| NativeAction {
                 name,
@@ -286,6 +343,7 @@ impl Policy for Mistweaver {
             renewing_up,
             enveloping_up,
             worthwhile,
+            mana_tea_stacks,
         };
         if let Some((action, execution)) =
             self.driver
@@ -303,11 +361,31 @@ impl Policy for Mistweaver {
         let Some(enemy) = enemy else {
             return Ok(());
         };
-        let enemies = [enemy];
+        let pulse = world
+            .resource::<crate::spell_info::SpellStore>()
+            .get(107270)
+            .ok_or("Spinning Crane Kick pulse missing")?;
+        let radius = crate::spell_cast::targets::radius(&pulse.effects[0], 1);
+        let center = crate::spell_cast::targets::position(world, healer)
+            .ok_or("Mistweaver position missing")?;
+        let mut enemies = crate::spell_cast::targets::area_units(
+            world,
+            healer,
+            center,
+            radius,
+            crate::spell_cast::targets::Relation::Enemy,
+            0,
+        );
+        if !enemies.contains(&enemy) {
+            enemies = vec![enemy];
+        }
         let damage = SPELLS
             .iter()
             .filter(|(name, _, _)| {
-                matches!(*name, "rising_sun_kick" | "blackout_kick" | "tiger_palm")
+                matches!(
+                    *name,
+                    "rising_sun_kick" | "spinning_crane_kick" | "blackout_kick" | "tiger_palm"
+                )
             })
             .map(|&(name, spell, self_target)| NativeAction {
                 name,
@@ -316,7 +394,7 @@ impl Policy for Mistweaver {
                 talent: None,
             });
         let prepared = Prepared::read(world, healer, &enemies, &self.equipment, damage, false)?;
-        let facts = NativeFacts::new(world, healer, &self.bindings, self.encounter, 1)
+        let facts = NativeFacts::new(world, healer, &self.bindings, self.encounter, enemies.len())
             .with_targets(Some(enemy), &enemies);
         if let Some((action, execution)) =
             self.driver

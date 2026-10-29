@@ -1,6 +1,387 @@
 use std::path::Path;
 
 #[test]
+#[ignore = "requires native top-character profiles and world database"]
+fn restoration_druid_uses_innervate_at_low_mana() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::components::Mana;
+    use shared::protocol::CombatLogKind;
+    let mut run = super::super::dps_parity::prepare_registered_player(66, 1).unwrap();
+    let tank = run.actor;
+    let healer = super::super::dps_parity::spawn_second_reference_player(&mut run, 105).unwrap();
+    let mut policy = super::prepare(&mut run, healer).unwrap();
+    {
+        let mut mana = run.app.world_mut().get_mut::<Mana>(healer).unwrap();
+        mana.current = mana.max * 0.5;
+    }
+    for _ in 0..120 {
+        policy
+            .drive(run.app.world_mut(), healer, &[tank, healer])
+            .unwrap();
+        run.app.update();
+    }
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0;
+    assert!(
+        events.iter().any(|e| e.source == Some(healer.to_bits())
+            && e.target == Some(healer.to_bits())
+            && e.spell_id == Some(29166)
+            && e.kind == CombatLogKind::Energize
+            && e.amount > 0),
+        "Innervate must restore mana: {events:?}"
+    );
+}
+
+#[test]
+#[ignore = "requires native Restoration Druid spell data"]
+fn master_shapeshifter_refunds_only_five_point_cat_finishers() {
+    use crate::spell_cast::test_harness::{
+        ObservedCombatEvents, harness_with_native_enemy_dodge_reduction,
+    };
+    use shared::components::PowerType;
+    use shared::protocol::CombatLogKind;
+    for points in [4.0, 5.0] {
+        let mut h = harness_with_native_enemy_dodge_reduction(
+            Vec::new(),
+            &[768, 22568, 289237, 411143],
+            11,
+        )
+        .unwrap();
+        h.app.init_resource::<ObservedCombatEvents>();
+        h.cast_and_deliver(768, Some(h.caster));
+        h.advance(40);
+        h.set_power(PowerType::Energy, 100.0);
+        h.set_power(PowerType::ComboPoints, points);
+        h.app
+            .world_mut()
+            .get_mut::<shared::components::Mana>(h.caster)
+            .unwrap()
+            .current = 1000.0;
+        h.cast_and_deliver(22568, Some(h.npc));
+        h.advance(5);
+        let events = &h.app.world().resource::<ObservedCombatEvents>().0;
+        assert!(
+            events
+                .iter()
+                .any(|e| e.spell_id == Some(22568) && e.kind == CombatLogKind::Damage),
+            "Bite must land: {events:?}"
+        );
+        let refunded = events.iter().any(|e| {
+            e.spell_id == Some(411143) && e.kind == CombatLogKind::Energize && e.amount > 0
+        });
+        assert_eq!(refunded, points == 5.0, "combo points {points}: {events:?}");
+    }
+}
+
+#[test]
+#[ignore = "requires native Restoration Druid spell data"]
+fn master_shapeshifter_restores_mana_from_actual_wrath() {
+    use crate::spell_cast::test_harness::{ObservedCombatEvents, harness};
+    use shared::components::Mana;
+    use shared::protocol::CombatLogKind;
+    let mut h = harness(Vec::new(), &[5176, 289237, 411144, 411146], 11).unwrap();
+    h.app.init_resource::<ObservedCombatEvents>();
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(crate::class_progression::KnownSpells::fixture(vec![
+            5176, 411146,
+        ]));
+    h.advance(3);
+    *h.app.world_mut().get_mut::<Mana>(h.caster).unwrap() = Mana {
+        current: 5000.0,
+        max: 10_000.0,
+    };
+    h.cast(5176, Some(h.npc));
+    h.advance(100);
+    assert!(
+        !h.app
+            .world()
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|e| e.spell_id == Some(411146) && e.kind == CombatLogKind::Energize)
+    );
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: h.caster,
+            target: h.caster,
+            spell_id: 289237,
+            effect_mask: u32::MAX,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    h.app
+        .world_mut()
+        .resource_mut::<ObservedCombatEvents>()
+        .0
+        .clear();
+    h.cast(5176, Some(h.npc));
+    h.advance(100);
+    let events = &h.app.world().resource::<ObservedCombatEvents>().0;
+    assert!(
+        events.iter().any(|e| e.spell_id == Some(411146)
+            && e.kind == CombatLogKind::Energize
+            && e.target == Some(h.caster.to_bits())
+            && e.amount > 0),
+        "actual Wrath must restore native scaled mana: {events:?}"
+    );
+    assert!(
+        !events.iter().any(|e| e.spell_id == Some(411144)),
+        "Wrath must not trigger the Ironfur mana child: {events:?}"
+    );
+}
+
+#[test]
+#[ignore = "requires native Restoration Druid spell data"]
+fn master_shapeshifter_restores_mana_from_bear_form_ironfur() {
+    use crate::spell_cast::test_harness::{ObservedCombatEvents, harness};
+    use shared::components::{Mana, PowerType};
+    use shared::protocol::CombatLogKind;
+    let mut h = harness(Vec::new(), &[5487, 192081, 289237, 411144], 11).unwrap();
+    h.app.init_resource::<ObservedCombatEvents>();
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: h.caster,
+            target: h.caster,
+            spell_id: 289237,
+            effect_mask: u32::MAX,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    h.cast_and_deliver(5487, Some(h.caster));
+    h.advance(40);
+    *h.app.world_mut().get_mut::<Mana>(h.caster).unwrap() = Mana {
+        current: 5000.0,
+        max: 10_000.0,
+    };
+    let events = &h.app.world().resource::<ObservedCombatEvents>().0;
+    assert!(
+        !events.iter().any(|e| e.spell_id == Some(411144)),
+        "Bear Form itself must not trigger Ironfur mana: {events:?}"
+    );
+    h.set_power(PowerType::Rage, 1000.0);
+    h.cast_and_deliver(192081, Some(h.caster));
+    h.advance(5);
+    let events = &h.app.world().resource::<ObservedCombatEvents>().0;
+    assert!(
+        events.iter().any(|e| e.spell_id == Some(411144)
+            && e.kind == CombatLogKind::Energize
+            && e.target == Some(h.caster.to_bits())
+            && e.amount > 0),
+        "Bear Form Ironfur must restore native scaled mana: {events:?}"
+    );
+    let grants = events
+        .iter()
+        .filter(|e| e.spell_id == Some(411144) && e.kind == CombatLogKind::Energize)
+        .count();
+    assert_eq!(grants, 1, "one Ironfur grants once: {events:?}");
+}
+
+#[test]
+#[ignore = "requires top-character profiles, native DB and SimC party pulse"]
+fn restoration_druid_uses_selected_germination_in_party_pulse() {
+    let trace = std::env::var("HEALER_TANK_TIMELINE").unwrap();
+    let party = std::env::var("HEALER_TANK_PARTY_TRACE").unwrap();
+    let report = super::super::healer_replay::replay_simc_party(
+        105,
+        Path::new(&trace),
+        Path::new(&party),
+        300,
+        70448,
+    )
+    .unwrap();
+    assert!(
+        report["metrics"]["spell_healing"]["155777"]["raw"]
+            .as_u64()
+            .unwrap_or(0)
+            > 0,
+        "selected Germination must heal: {report}"
+    );
+    println!("DRUID_POLICY_REPORT={report}");
+}
+
+#[test]
+#[ignore = "requires native Restoration Druid spell data"]
+fn swiftmend_triggers_three_blooms_on_owned_lifebloom() {
+    use crate::spell_cast::test_harness::{ObservedCombatEvents, harness, spawn_player};
+    use shared::protocol::CombatLogKind;
+    let mut h = harness(Vec::new(), &[774, 18562, 33763, 33778, 1244470], 11).unwrap();
+    h.app.init_resource::<ObservedCombatEvents>();
+    let lifebloom_target = spawn_player(&mut h.app, 11, 3.0);
+    let swiftmend_target = spawn_player(&mut h.app, 11, 5.0);
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: h.caster,
+            target: h.caster,
+            spell_id: 1244470,
+            effect_mask: u32::MAX,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    crate::spell_cast::creature_cast(
+        h.app.world_mut(),
+        h.caster,
+        33763,
+        Some(lifebloom_target),
+        true,
+    )
+    .unwrap();
+    crate::spell_cast::creature_cast(
+        h.app.world_mut(),
+        h.caster,
+        774,
+        Some(swiftmend_target),
+        true,
+    )
+    .unwrap();
+    h.advance(2);
+    crate::spell_cast::creature_cast(
+        h.app.world_mut(),
+        h.caster,
+        18562,
+        Some(swiftmend_target),
+        true,
+    )
+    .unwrap();
+    h.advance(30);
+    let events = &h.app.world().resource::<ObservedCombatEvents>().0;
+    let blooms: Vec<_> = events
+        .iter()
+        .filter(|e| {
+            e.kind == CombatLogKind::Heal
+                && e.spell_id == Some(33778)
+                && e.target == Some(lifebloom_target.to_bits())
+        })
+        .collect();
+    assert_eq!(
+        blooms.len(),
+        3,
+        "Swiftmend must trigger three Lifebloom blooms: {events:?}"
+    );
+    assert!(
+        crate::auras::has_aura(h.app.world(), lifebloom_target, 33763),
+        "frenzy must not consume Lifebloom"
+    );
+}
+
+#[test]
+#[ignore = "requires native Restoration Druid spell data"]
+fn wild_growth_grows_one_selected_talent_bloom() {
+    use crate::spell_cast::test_harness::{harness, spawn_player};
+    use shared::components::Health;
+    let mut h = harness(Vec::new(), &[48438, 440118, 439530], 11).unwrap();
+    let first = spawn_player(&mut h.app, 11, 3.0);
+    let second = spawn_player(&mut h.app, 11, 5.0);
+    for unit in [first, second] {
+        *h.app.world_mut().get_mut::<Health>(unit).unwrap() = Health {
+            current: 1.0,
+            max: 100_000.0,
+        };
+    }
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: h.caster,
+            target: h.caster,
+            spell_id: 440118,
+            effect_mask: u32::MAX,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    crate::spell_cast::creature_cast(h.app.world_mut(), h.caster, 48438, Some(first), true)
+        .unwrap();
+    h.advance(2);
+    let count = [h.caster, first, second]
+        .into_iter()
+        .filter(|unit| crate::auras::has_aura(h.app.world(), *unit, 439530))
+        .count();
+    assert_eq!(
+        count, 1,
+        "Wild Growth must grow exactly one selected-talent bloom"
+    );
+}
+
+#[test]
+#[ignore = "requires native Restoration Druid spell data"]
+fn swiftmend_grows_the_selected_talent_bloom() {
+    use crate::spell_cast::test_harness::{harness, spawn_player};
+    let mut h = harness(Vec::new(), &[774, 18562, 440118, 439530], 11).unwrap();
+    let ally = spawn_player(&mut h.app, 11, 3.0);
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: h.caster,
+            target: h.caster,
+            spell_id: 440118,
+            effect_mask: u32::MAX,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    crate::spell_cast::creature_cast(h.app.world_mut(), h.caster, 774, Some(ally), true).unwrap();
+    h.advance(2);
+    crate::spell_cast::creature_cast(h.app.world_mut(), h.caster, 18562, Some(ally), true).unwrap();
+    h.advance(2);
+    let aura = h
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(ally)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 439530 && aura.caster == h.caster)
+        .expect("Swiftmend must grow Symbiotic Blooms");
+    assert_eq!(aura.duration_ms, 6000);
+}
+
+#[test]
+#[ignore = "requires native Restoration Druid spell data"]
+fn regrowth_can_grow_symbiotic_blooms_and_heal() {
+    use crate::spell_cast::test_harness::{ObservedCombatEvents, harness, spawn_player};
+    use shared::components::Health;
+    use shared::protocol::CombatLogKind;
+    let mut h = harness(Vec::new(), &[8936, 439528, 439530], 11).unwrap();
+    h.app.init_resource::<ObservedCombatEvents>();
+    let ally = spawn_player(&mut h.app, 11, 3.0);
+    *h.app.world_mut().get_mut::<Health>(ally).unwrap() = Health {
+        current: 1.0,
+        max: 1_000_000.0,
+    };
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: h.caster,
+            target: h.caster,
+            spell_id: 439528,
+            effect_mask: u32::MAX,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    for _ in 0..500 {
+        crate::spell_cast::creature_cast(h.app.world_mut(), h.caster, 8936, Some(ally), true)
+            .unwrap();
+        h.advance(2);
+        if crate::auras::has_aura(h.app.world(), ally, 439530) {
+            h.advance(100);
+            assert!(
+                h.app
+                    .world()
+                    .resource::<ObservedCombatEvents>()
+                    .0
+                    .iter()
+                    .any(|e| e.kind == CombatLogKind::Heal
+                        && e.spell_id == Some(439530)
+                        && e.target == Some(ally.to_bits())
+                        && e.amount > 0)
+            );
+            return;
+        }
+    }
+    panic!("Symbiotic Blooms did not proc in 500 Regrowth casts");
+}
+
+#[test]
 #[ignore = "requires native Restoration Druid spell data"]
 fn everbloom_copies_an_expiring_lifebloom_to_nearby_allies() {
     use crate::spell_cast::test_harness::{ObservedCombatEvents, harness, spawn_player};

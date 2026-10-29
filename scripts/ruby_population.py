@@ -9,6 +9,7 @@ from contextlib import closing
 from pathlib import Path
 import sqlite3
 
+from import_log_population import retire_encounter_duplicates
 from ruby_native_templates import import_templates
 
 KYRAKKA_XY = (1786.9, 27.945)
@@ -51,6 +52,8 @@ def import_population(db):
     if existing is not None and existing != binding:
         raise ValueError('Kyrakka encounter binding conflicts')
     db.execute('INSERT OR IGNORE INTO raid_encounter_creature VALUES(?,?,?,?,?,?,?)', binding)
+    # The log importer added the observed Erkhart while the placeholder was 12 yards away.
+    retire_encounter_duplicates(db)
 
 
 def main():

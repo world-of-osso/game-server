@@ -172,6 +172,10 @@ fn try_emergency_heal(
         .any(|entry| try_entry(world, unit, follower, party, enemy, enemies, entry))
 }
 
+#[cfg(test)]
+#[path = "kit_retreat_tests.rs"]
+mod retreat_tests;
+
 fn is_generic_utility(slot: Slot) -> bool {
     matches!(slot, Slot::Defensive | Slot::Dispel | Slot::Control)
 }
@@ -212,8 +216,36 @@ fn try_entry(
     let Some(target) = select_target(world, unit, party, enemy, &entry) else {
         return false;
     };
-    conditions_met(world, unit, target, party, enemies, &entry)
-        && attempt_cast(world, unit, target, follower, &entry, enemies.len())
+    if !conditions_met(world, unit, target, party, enemies, &entry) {
+        return false;
+    }
+    if follower.profile.spec_id == 577 && entry.spell_id == 198793 {
+        let Some(enemy) = enemy else { return false };
+        let Some(spell) = world
+            .resource::<crate::spell_info::SpellStore>()
+            .get(entry.spell_id)
+            .cloned()
+        else {
+            return false;
+        };
+        if crate::spell_cast::read_native_cast_start(world, unit, &spell, target).is_ok() {
+            match super::retreat::prepare_havoc_retreat(world, unit, enemy) {
+                Ok(true) => {}
+                Ok(false) => {
+                    world
+                        .entity_mut(unit)
+                        .remove::<crate::creature_ai::FollowOwner>()
+                        .insert(crate::creature_ai::CreatureState::Idle);
+                    return true;
+                }
+                Err(error) => {
+                    error!(?unit, ?enemy, "Follower Retreat setup: {error}");
+                    return false;
+                }
+            }
+        }
+    }
+    attempt_cast(world, unit, target, follower, &entry, enemies.len())
 }
 
 fn select_min_own_aura_enemy(

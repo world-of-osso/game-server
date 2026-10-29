@@ -1619,7 +1619,6 @@ fn apply_swing_multipliers(
     let done = attacker_mods.map_or(1.0, |mods| {
         mods.damage_done(PHYSICAL) * mods.autoattack_damage_mult
     });
-    let taken = attacker_mods.map_or(taken, |mods| mods.bypass_damage_reduction(PHYSICAL, taken));
     (base * done * additional_mult * taken).max(0.0).round()
 }
 
@@ -2025,7 +2024,8 @@ pub(crate) fn roll_critical_block(auras: Option<&crate::auras::ActiveAuras>) -> 
             })
             .sum::<f32>()
     });
-    chance >= 100.0 || chance > 0.0 && rand::random::<f32>() * 100.0 < chance
+    let roll_succeeds = || rand::Rng::r#gen::<f32>(&mut rand::recipient_rng()) * 100.0 < chance;
+    chance >= 100.0 || chance > 0.0 && roll_succeeds()
 }
 
 fn roll_critical_block_damage(
@@ -2281,9 +2281,9 @@ fn resolve_swing(
             .white_swing_multiplier(attacker.entity)
         * inherited_versatility
         * versus
-        * attacker
-            .mods
-            .map_or(1.0, |mods| mods.punish_damage_multiplier(target_entity));
+        * attacker.mods.map_or(1.0, |mods| {
+            mods.damage_to_caster_multiplier(target_entity, 1)
+        });
     let swing = swing_damage(
         attacker,
         &weapon,
@@ -2970,8 +2970,8 @@ pub fn roll_simc_dummy_outcome(
     Ok((
         melee::roll_player_melee_outcome(
             &chances,
-            rand::Rng::gen_range(&mut rand::thread_rng(), 0..10_000),
-            rand::Rng::gen_range(&mut rand::thread_rng(), 0..10_000),
+            rand::Rng::gen_range(&mut rand::recipient_rng(), 0..10_000),
+            rand::Rng::gen_range(&mut rand::recipient_rng(), 0..10_000),
         ),
         difference,
     ))
@@ -3027,9 +3027,7 @@ pub fn replay_healer_hit(
         * crate::auras::dusk_damage_multiplier(auras)
         * crate::auras::melee_damage_from_caster(auras, attacker)
         * stats.map_or(1.0, CharacterStats::versatility_damage_taken_multiplier);
-    let taken = mods.map_or(taken, |mods| {
-        mods.bypass_damage_reduction(1, taken) * mods.punish_damage_multiplier(victim)
-    });
+    let taken = taken * mods.map_or(1.0, |mods| mods.damage_to_caster_multiplier(victim, 1));
     let summon_taken = crate::auras::summon_damage::taken_multiplier(world, attacker, auras);
     let raw_armor = target_armor(
         (

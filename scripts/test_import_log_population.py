@@ -50,6 +50,34 @@ class ImportTest(unittest.TestCase):
                                  [('ordinary',), ('other-map',)])
             self.assertEqual(module.import_population(copy, records)['2521']['imported'], 0)
 
+    def test_encounter_observation_beside_another_spawn_of_its_entry_is_retired(self):
+        with closing(sqlite3.connect(':memory:')) as db, db:
+            db.executescript('''
+                CREATE TABLE content_creature(guid INTEGER PRIMARY KEY,id1 INTEGER,map INTEGER,
+                    position_x REAL,position_y REAL,position_z REAL);
+                CREATE TABLE tdb_creature(id INTEGER,map INTEGER,position_x REAL,position_y REAL,position_z REAL);
+                CREATE TABLE log_derived_population(guid INTEGER PRIMARY KEY,map INTEGER,npc_id INTEGER);
+                CREATE TABLE raid_encounter_creature(map_id INTEGER,creature_entry INTEGER);
+                INSERT INTO raid_encounter_creature VALUES(2521,190485),(2993,259445);
+                -- Ruby Erkhart: journal placement and the log row 1.8 yards from it.
+                INSERT INTO content_creature VALUES(63521000,190485,2521,1785.13,20.495,312.59048);
+                INSERT INTO content_creature VALUES(3276416184,190485,2521,1785.52,22.24,312.59048);
+                -- Map 2993 259445: the log row is 26.3 yards from its placement.
+                INSERT INTO content_creature VALUES(63993000,259445,2993,0,0,0);
+                INSERT INTO content_creature VALUES(3276417175,259445,2993,26.3,0,0);
+                -- Not an encounter creature: pack members stay beside each other.
+                INSERT INTO content_creature VALUES(29001628,187969,2521,1621.44,-143.41,126.719);
+                INSERT INTO content_creature VALUES(3276416144,187969,2521,1619.87,-136.2,126.1765);
+                INSERT INTO log_derived_population VALUES(3276416184,2521,190485),(3276417175,2993,259445),
+                    (3276416144,2521,187969);
+            ''')
+            self.assertEqual(module.retire_encounter_duplicates(db), [(2521, 190485, 3276416184)])
+            self.assertEqual(db.execute('SELECT guid FROM content_creature ORDER BY guid').fetchall(),
+                             [(29001628,), (63521000,), (63993000,), (3276416144,), (3276417175,)])
+            self.assertEqual(db.execute('SELECT guid FROM log_derived_population ORDER BY guid').fetchall(),
+                             [(3276416144,), (3276417175,)])
+            self.assertEqual(module.retire_encounter_duplicates(db), [])
+
     def test_projects_tdb_template_and_models_on_copy(self):
         fixture = json.loads((Path(__file__).parent / 'tests/fixtures/log-population-tdb.json').read_text())
         with tempfile.TemporaryDirectory() as directory:

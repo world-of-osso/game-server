@@ -31,4 +31,6 @@
     441416,
     // SimC76f8118 sc_druid.cpp11262–11265: Clearcasting stacks are independent uses.
     135700,
+    // SimC76f8118 sc_paladin.hpp1644–1648: Word of Glory spends one Shining Light stack.
+    327510,
 ]

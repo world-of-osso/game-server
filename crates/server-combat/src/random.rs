@@ -10,23 +10,88 @@ pub(crate) use ::rand::{SeedableRng, distributions, rngs};
 
 #[cfg(any(test, feature = "test-support"))]
 thread_local! {
-    static SEEDED: std::cell::RefCell<Option<rngs::StdRng>> = const { std::cell::RefCell::new(None) };
+    static SEEDED: std::cell::RefCell<Option<(u64, rngs::StdRng)>> = const { std::cell::RefCell::new(None) };
+    static ATTACK: std::cell::RefCell<Option<rngs::StdRng>> = const { std::cell::RefCell::new(None) };
 }
 
 /// Restores the caller's RNG mode when this explicit simulation scope ends.
 #[cfg(any(test, feature = "test-support"))]
-pub struct SeedScope(Option<rngs::StdRng>);
+pub struct SeedScope(Option<(u64, rngs::StdRng)>);
 
 #[cfg(any(test, feature = "test-support"))]
 pub fn seed_scope(seed: u64) -> SeedScope {
     let rng = rngs::StdRng::seed_from_u64(seed);
-    SeedScope(SEEDED.with(|state| state.replace(Some(rng))))
+    SeedScope(SEEDED.with(|state| state.replace(Some((seed, rng)))))
 }
 
 #[cfg(any(test, feature = "test-support"))]
 impl Drop for SeedScope {
     fn drop(&mut self) {
         SEEDED.with(|state| state.replace(self.0.take()));
+    }
+}
+
+/// Restores the recipient-roll stream when one replayed incoming attack ends.
+#[cfg(any(test, feature = "test-support"))]
+pub struct AttackScope(Option<rngs::StdRng>);
+
+/// Seed recipient outcome rolls (avoidance, block, critical block) for one replayed
+/// incoming attack from the run seed and the attack's trace index. The actor stream
+/// is untouched, so the tank's own procs and decisions cannot shift later outcomes.
+/// Without a seed scope, recipient rolls keep using the caller's stream.
+#[cfg(any(test, feature = "test-support"))]
+pub fn attack_scope(attack_index: u64) -> AttackScope {
+    const ATTACK_STREAM: u64 = 0x9e37_79b9_7f4a_7c15;
+    let run_seed = SEEDED.with(|state| state.borrow().as_ref().map(|(seed, _)| *seed));
+    let rng = run_seed.map(|seed| {
+        let attack_seed = seed ^ ATTACK_STREAM.wrapping_mul(attack_index.wrapping_add(1));
+        rngs::StdRng::seed_from_u64(attack_seed)
+    });
+    AttackScope(ATTACK.with(|state| state.replace(rng)))
+}
+
+#[cfg(any(test, feature = "test-support"))]
+impl Drop for AttackScope {
+    fn drop(&mut self) {
+        ATTACK.with(|state| state.replace(self.0.take()));
+    }
+}
+
+/// Recipient outcome rolls: the active attack stream, else the caller's stream.
+#[cfg(any(test, feature = "test-support"))]
+pub struct RecipientRng;
+
+#[cfg(any(test, feature = "test-support"))]
+pub fn recipient_rng() -> RecipientRng {
+    RecipientRng
+}
+
+#[cfg(not(any(test, feature = "test-support")))]
+pub fn recipient_rng() -> rngs::ThreadRng {
+    thread_rng()
+}
+
+#[cfg(any(test, feature = "test-support"))]
+fn with_recipient_rng<T>(draw: impl FnOnce(&mut dyn ::rand::RngCore) -> T) -> T {
+    ATTACK.with(|state| match state.borrow_mut().as_mut() {
+        Some(rng) => draw(rng),
+        None => with_rng(draw),
+    })
+}
+
+#[cfg(any(test, feature = "test-support"))]
+impl ::rand::RngCore for RecipientRng {
+    fn next_u32(&mut self) -> u32 {
+        with_recipient_rng(|rng| rng.next_u32())
+    }
+    fn next_u64(&mut self) -> u64 {
+        with_recipient_rng(|rng| rng.next_u64())
+    }
+    fn fill_bytes(&mut self, destination: &mut [u8]) {
+        with_recipient_rng(|rng| rng.fill_bytes(destination));
+    }
+    fn try_fill_bytes(&mut self, destination: &mut [u8]) -> Result<(), ::rand::Error> {
+        with_recipient_rng(|rng| rng.try_fill_bytes(destination))
     }
 }
 
@@ -41,7 +106,7 @@ pub fn thread_rng() -> ThreadRng {
 #[cfg(any(test, feature = "test-support"))]
 fn with_rng<T>(draw: impl FnOnce(&mut dyn ::rand::RngCore) -> T) -> T {
     SEEDED.with(|state| match state.borrow_mut().as_mut() {
-        Some(rng) => draw(rng),
+        Some((_, rng)) => draw(rng),
         None => draw(&mut ::rand::thread_rng()),
     })
 }

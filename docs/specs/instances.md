@@ -53,6 +53,7 @@ Dungeons phases 1 and 4: several maps in one world, far teleports between them, 
 
 ### Dungeon deaths (`Player::RepopAtGraveyard`, Player.cpp:4720-4764)
 - [x] Releasing in a dungeon turns the corpse to bones and teleports the player, revived at half health (`TELE_REVIVE_AT_TELEPORT`), to the graveyard `ObjectMgr::GetClosestGraveyardInZone` (ObjectMgr.cpp:6868-6970) picks for the dungeon's zone: same or parent map by 3D distance, else on `CorpseMapID` closest to `Corpse`, else any. A WMO-only dungeon's zone is its `Map.db2` AreaTableID (`TerrainInfo::GetAreaId`). Stockade (zone 717) → graveyard 1854 (-8786.88, 829.08, 97.65) in Stormwind.
+- [x] If a dungeon zone has no imported graveyard, the approved rule revives the player at the exterior safe location reached by its linked exit portal, on the same outside map as its entrance. Prefer `AreaTrigger.db2`/`areatrigger_teleport` links; world-static teleport actions also supply links. For map 2521, entrance spawn 19 on map 2444 targets safe-loc 100030 inside; exit spawn 20 targets safe-loc 100031 on map 2444 at (1341.3, -132.202, 137.45). This is an approved Retail-oriented rule, not TC's default-faction-graveyard behavior. If the reciprocal links are absent, release fails explicitly.
 - [x] Continent deaths keep the spirit-healer graveyards on the player's own map (Kalimdor deaths release to Kalimdor healers).
 
 ### Login (`Player::LoadFromDB`, Player.cpp:18480-18545)

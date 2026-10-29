@@ -119,6 +119,80 @@ fn havoc_undying_embers_retriggers_expired_immolation() {
 
 #[test]
 #[ignore = "requires prepared native spec577 player profile"]
+fn havoc_beam_keeps_tick_action_chosen_at_channel_start() {
+    for initially_empowered in [true, false] {
+        let _seed = crate::random::seed_scope(70_448);
+        let mut run = prepare_literal(577, 1).unwrap();
+        let actor = run.actor;
+        let target = run.targets[0];
+        assert!(
+            run.app
+                .world()
+                .get::<crate::class_progression::KnownSpells>(actor)
+                .unwrap()
+                .contains(1270898)
+        );
+        super::face_actor_toward_primary(run.app.world_mut(), actor, target);
+        havoc_tests::earn_havoc_fury(&mut run, 30.0);
+        crate::auras::remove_auras(
+            run.app.world_mut(),
+            actor,
+            crate::auras::RemoveReason::Cancelled,
+            |aura| aura.spell_id == 1271144 && aura.caster == actor,
+        );
+        if initially_empowered {
+            crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 1271144, Some(actor), 1);
+            assert!(crate::auras::set_owned_duration(
+                run.app.world_mut(),
+                actor,
+                actor,
+                1271144,
+                300
+            ));
+        }
+        cast(&mut run, 198013, false);
+        advance(&mut run, 4);
+        if initially_empowered {
+            advance(&mut run, 5);
+            assert!(
+                !crate::auras::has_aura(run.app.world(), actor, 1271144),
+                "the buff must expire during the real channel"
+            );
+        } else {
+            assert!(
+                !damage(&run, Some(198030)).is_empty(),
+                "normal channel must tick before the buff is gained"
+            );
+            crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 1271144, Some(actor), 1);
+        }
+        assert!(
+            run.app
+                .world()
+                .get::<shared::casting::CastState>(actor)
+                .is_some(),
+            "the buff changes while the channel remains active"
+        );
+        advance(&mut run, 100);
+        let normal = damage(&run, Some(198030)).len();
+        let empowered = damage(&run, Some(1287949)).len();
+        let (chosen, other) = if initially_empowered {
+            (empowered, normal)
+        } else {
+            (normal, empowered)
+        };
+        assert_eq!(
+            chosen, 13,
+            "all channel ticks and Final Breath use the starting action"
+        );
+        assert_eq!(
+            other, 0,
+            "buff expiry or gain cannot change an active channel"
+        );
+    }
+}
+
+#[test]
+#[ignore = "requires prepared native spec577 player profile"]
 fn havoc_late_channel_interrupt_earns_final_breath_and_gaze() {
     for remaining in [3, 2] {
         let _seed = crate::random::seed_scope(70_448);

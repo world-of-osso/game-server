@@ -34,6 +34,19 @@ mod caster_ability_crit_tests;
 #[cfg(any(test, feature = "test-support"))]
 #[path = "factor_capture.rs"]
 pub mod factor_capture;
+/// Production builds keep the armor capture call site; it records nothing.
+#[cfg(not(any(test, feature = "test-support")))]
+mod factor_capture {
+    pub(crate) fn record_armor(
+        _: &super::World,
+        _: super::Entity,
+        _: super::Entity,
+        _: &super::SpellInfo,
+        _: f32,
+        _: &crate::combat::ArmorMitigation,
+    ) {
+    }
+}
 #[cfg(test)]
 #[path = "windwalker_mastery_tests.rs"]
 mod windwalker_mastery_tests;
@@ -1004,7 +1017,6 @@ fn armor_reduced(
         caster,
         armor,
     );
-    let armor = crate::auras::combat_stats::armor_after_ignore(world, caster, spell, armor);
     let mitigation = crate::combat::armor_mitigated(
         amount,
         armor,
@@ -1013,7 +1025,6 @@ fn armor_reduced(
         world.get_resource::<ArmorConstants>(),
         world.get::<crate::auras::AuraStatMods>(caster),
     );
-    #[cfg(any(test, feature = "test-support"))]
     factor_capture::record_armor(world, caster, target, spell, amount, &mitigation);
     mitigation.damage
 }
@@ -2525,10 +2536,12 @@ fn kill(world: &mut World, killer: Entity, target: Entity, can_proc: bool) {
 }
 
 fn heal(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target: Entity) {
+    let effectiveness = ctx.spell.cast_healing_multiplier.unwrap_or(1.0);
     let amount = with_variance(
         scaled_amount(world, ctx.caster, ctx.spell, effect),
         effect.variance,
-    ) * ctx.chain_multiplier;
+    ) * ctx.chain_multiplier
+        * effectiveness;
     let raw = amount;
     let (amount, crit) = with_crit(world, ctx.caster, target, ctx.spell, amount);
     apply_heal_with_raw(world, ctx, target, amount, crit, false, Some(raw));

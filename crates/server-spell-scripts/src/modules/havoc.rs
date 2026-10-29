@@ -124,6 +124,7 @@ const DEMONIC: TransformPolicy = TransformPolicy {
 };
 
 pub(super) fn before_cast(world: &mut World, caster: Entity, spell: u32, depth: u8) {
+    beam::snapshot_channel(world, caster, spell);
     before_runtime_cast(world, caster, spell, depth);
     if !DEMONIC.parents.contains(&spell) || !selected(world, caster) {
         return;
