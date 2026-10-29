@@ -8,6 +8,7 @@ fn training_of_niuzao_tracks_live_stagger_levels() {
     use crate::stats::CharacterStats;
     use shared::components::Health;
 
+    let _seed = crate::random::seed_scope(70448);
     let mut run = super::dps_parity::prepare_registered_player(268, 1).unwrap();
     let tank = run.actor;
     let source = run.targets[0];
@@ -44,6 +45,31 @@ fn training_of_niuzao_tracks_live_stagger_levels() {
         (world.get::<CharacterStats>(tank).unwrap().mastery_points - baseline - per_level).abs()
             < 0.01
     );
+    let light = *world.get::<CharacterStats>(tank).unwrap();
+    let stacks = world
+        .get::<ActiveAuras>(tank)
+        .unwrap()
+        .iter()
+        .find(|a| a.spell_id == 195630)
+        .expect("the real incoming hit grants Elusive Brawler")
+        .stacks;
+    let light_dodges = (0..4000)
+        .filter(|_| {
+            matches!(
+                crate::combat::roll_simc_dummy_outcome(
+                    run.app.world(),
+                    source,
+                    tank,
+                    false,
+                    0.0,
+                    0.0
+                )
+                .unwrap()
+                .0,
+                crate::melee::MeleeOutcome::Dodge
+            )
+        })
+        .count();
     for (fraction, level) in [(0.4_f32, 2.0_f32), (0.8, 3.0)] {
         let world = run.app.world_mut();
         let pool = auras::stagger::pool_size(world, tank);
@@ -76,6 +102,34 @@ fn training_of_niuzao_tracks_live_stagger_levels() {
             "fraction {fraction}, mastery {mastery}, baseline {baseline}"
         );
     }
+    let heavy = *run.app.world().get::<CharacterStats>(tank).unwrap();
+    let gained_dodge = heavy.defense.dodge - light.defense.dodge;
+    let expected_dodge = (heavy.mastery_pct - light.mastery_pct) * f32::from(stacks);
+    assert!(
+        (gained_dodge - expected_dodge).abs() < 0.01,
+        "held Elusive stacks must use live mastery: gained {gained_dodge}, expected {expected_dodge}"
+    );
+    let heavy_dodges = (0..4000)
+        .filter(|_| {
+            matches!(
+                crate::combat::roll_simc_dummy_outcome(
+                    run.app.world(),
+                    source,
+                    tank,
+                    false,
+                    0.0,
+                    0.0
+                )
+                .unwrap()
+                .0,
+                crate::melee::MeleeOutcome::Dodge
+            )
+        })
+        .count();
+    assert!(
+        heavy_dodges > light_dodges + 150,
+        "actual swing rolls must reflect increased mastery: light={light_dodges}, heavy={heavy_dodges}"
+    );
     auras::remove_auras(run.app.world_mut(), tank, RemoveReason::Cancelled, |a| {
         a.spell_id == 124255
     });
