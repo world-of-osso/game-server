@@ -405,7 +405,7 @@ fn land_height(
     next: Vec3,
     envelope: LandEnvelope,
 ) -> f32 {
-    let floor = match ground.creature_ground_in(map_id, next.with_y(current.y)) {
+    let floor = match ground.player_solid_ground_in(map_id, next.with_y(current.y)) {
         GroundProbe::Supported(height) => height,
         GroundProbe::Unsupported => f32::NEG_INFINITY,
         GroundProbe::Unloaded => return current.y,
@@ -417,7 +417,7 @@ fn land_height(
 /// Keep solid steep faces under the player, but reject a too-steep uphill direction.
 fn prevent_steep_ascent(ground: &mut GroundMap, map: InMap, current: Vec3, next: Vec3) -> Vec3 {
     let probe = next.with_y(current.y);
-    let GroundProbe::Supported(solid) = ground.creature_ground_in(map, probe) else {
+    let GroundProbe::Supported(solid) = ground.player_solid_ground_in(map, probe) else {
         return next;
     };
     if matches!(ground.ground_in(map, probe), GroundProbe::Supported(height) if height >= solid) {

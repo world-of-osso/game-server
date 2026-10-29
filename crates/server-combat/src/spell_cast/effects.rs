@@ -1646,7 +1646,8 @@ pub fn deal_damage_shield(
 }
 
 /// Leech copies effective damage, after mitigation/absorption and excluding overkill.
-/// Its DB2 amplitude is a multiplier, not a second spell-power or crit roll.
+/// Native leech uses DB2 amplitude without a second spell-power or crit roll;
+/// a registered spell policy can instead supply a direct critical heal.
 pub(crate) fn deal_leech(
     world: &mut World,
     ctx: &EffectCtx,
@@ -1666,6 +1667,11 @@ pub(crate) fn deal_leech(
     };
     let dealt = deal_damage_and_report(world, ctx, target, damage);
     if dealt > 0.0 {
+        if let Some(healing) = super::script_registry::leech_heal_override(world, ctx, dealt) {
+            let (healing, crit) = with_crit(world, ctx.caster, ctx.caster, ctx.spell, healing);
+            apply_resolved_heal(world, ctx, ctx.caster, healing, crit, false);
+            return;
+        }
         let amplitude = spell_mods::modify(
             world,
             ctx.caster,
@@ -2201,6 +2207,12 @@ fn deal_source_damage_and_report(
     }
     let target_multiplier = damage_taken(world, ctx, target, &damage);
     let cast_multiplier = cast_damage_multiplier(ctx.spell);
+    super::script_registry::incoming_damage_before_mitigation(
+        world,
+        target,
+        Some(ctx.spell.id),
+        source_amount * cast_multiplier,
+    );
     let creature = if resolved_source || ignores_caster_damage_modifiers(ctx.spell) {
         1.0
     } else {
@@ -2251,6 +2263,16 @@ fn deal_source_damage_and_report(
     } else {
         amount
     };
+    if amount > 0.0
+        && !periodic
+        && ctx
+            .spell
+            .categories
+            .as_ref()
+            .is_some_and(|category| category.defense_type == 2)
+    {
+        crate::combat::reward_bear_melee_hit_rage(world, target);
+    }
     #[cfg(any(test, feature = "test-support"))]
     factor_capture::record_mitigated(world, ctx, target, amount);
     #[cfg(any(test, feature = "test-support"))]
@@ -2623,6 +2645,20 @@ fn apply_resolved_heal(
     event.crit = crit;
     event.periodic = periodic;
     log_event(world, event);
+    let percent_based = !periodic
+        && ctx
+            .spell
+            .effects
+            .iter()
+            .any(|effect| effect.effect == EFFECT_HEAL_PCT);
+    super::script_registry::heal_received(
+        world,
+        target,
+        ctx.spell.id,
+        amount,
+        effective,
+        percent_based,
+    );
     if !periodic {
         super::record_hit_heal(world, ctx.caster, ctx.spell.id, target, amount);
         super::scripts::heal_beacon(world, ctx, target, effective);

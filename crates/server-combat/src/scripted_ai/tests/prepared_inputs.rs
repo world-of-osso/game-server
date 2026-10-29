@@ -94,6 +94,7 @@ pub(super) fn encounter_inputs(entry: u32, map_id: u32, populate: bool) -> Arc<P
         186120 => Some("treemouth"),
         188252 => Some("melidrussa"),
         189232 => Some("kokia"),
+        190484 | 190485 => Some("ruby-final"),
         184580 | 184581 | 184582 => Some("lost-dwarves"),
         184018 => Some("bromach"),
         184124 => Some("talondras"),
@@ -142,7 +143,7 @@ fn decode_encounter_inputs(
     if [
         208745, 20923, 196482, 190609, 194181, 188252, 189232, 184580, 184581, 184582, 184018,
         184124, 184422, 215405, 215407, 207946, 216619, 186616, 186120, 210156, 189722, 189727,
-        189478, 186116,
+        189478, 186116, 190484, 190485,
     ]
     .contains(&entry)
     {
@@ -195,6 +196,8 @@ fn decode_encounter_inputs(
             || (entry == 186737 && *id == 197204)
             || (entry == 186739 && *id == 190187)
             || (entry == 184018 && *id == 186696)
+            || (entry == 189232 && *id == 189886)
+            || ([190484, 190485].contains(&entry) && [190484, 190485].contains(id))
             || ([184580, 184581, 184582].contains(&entry) && [184580, 184581, 184582].contains(id))
             || (map_id == 43 && [3636, 3654, 3678, 3679, 5048, 5762, 5763].contains(id))
             || spawns.iter().any(|spawn| spawn.template_entry == *id)

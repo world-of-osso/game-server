@@ -132,7 +132,8 @@ fn spend(world: &mut World, caster: Entity, spell: &SpellInfo) {
         error!(?caster, "Voidfall spender has no target");
         return;
     };
-    let meteor_fall = selected(world, caster, METEORIC_FALL) && stacks == maximum;
+    let has_meteoric_fall = selected(world, caster, METEORIC_FALL);
+    let meteor_fall = has_meteoric_fall && stacks == maximum;
     if spell.id == 247455 && !meteor_fall {
         return;
     }
@@ -146,7 +147,12 @@ fn spend(world: &mut World, caster: Entity, spell: &SpellInfo) {
         .speed as f64;
     let now = spell_cast::now(world);
     for i in 0..count {
-        let id = if world_killer && i == count - 1 && (meteor_fall || stacks == 1) {
+        // SimC76f8118 sc_demon_hunter.cpp:3028-3040,3066-3083: partial
+        // Meteoric Fall stacks do not replace a meteor with World Killer.
+        let id = if world_killer
+            && i == count - 1
+            && (meteor_fall || (!has_meteoric_fall && stacks == 1))
+        {
             WORLD_KILLER_MISSILE
         } else {
             METEOR
@@ -235,7 +241,8 @@ fn launch_meteor(world: &mut World, caster: Entity, meteor: PendingMeteor) {
             stacks - 1
         ));
     }
-    if selected(world, caster, 1253805) {
+    if stacks > 0 && selected(world, caster, 1253805) {
+        // Final Hour retains bonuses for consumed stacks, not already-exhausted scheduled meteors.
         apply(world, caster, FINAL_HOUR);
     }
 }

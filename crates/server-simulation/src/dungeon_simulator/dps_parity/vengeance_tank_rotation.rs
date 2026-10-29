@@ -356,6 +356,8 @@ mod tests {
         .unwrap();
         assert_eq!(report["spec"], 581);
         assert_eq!(report["level"], 90);
+        assert_eq!(report["precombat_casts"]["204596"], 1, "{report}");
+        assert_eq!(report["precombat_casts"]["258920"], 1, "{report}");
         assert!(report["incoming_events"].as_u64().unwrap() > 0, "{report}");
         assert!(report["raw_damage"].as_f64().unwrap() > 0.0, "{report}");
         assert!(
@@ -415,6 +417,78 @@ mod tests {
         );
         println!("VENGEANCE_TANK_REPORT={report}");
     }
+    #[test]
+    #[ignore = "requires native Vengeance profile"]
+    fn meteoric_rise_generates_fragments_during_fel_devastation() {
+        use super::super::*;
+        let _seed = crate::random::seed_scope(70_448);
+        let (profile, traits) = read_reference(581).unwrap();
+        let identity = inputs::read_actor(&profile).unwrap();
+        let mut run = prepare_reference(profile, &traits, 1, identity).unwrap();
+        let actor = run.actor;
+        let target = run.targets[0];
+        crate::spell_cast::powers::change_power(
+            run.app.world_mut(),
+            actor,
+            shared::components::PowerType::Fury,
+            100.0,
+        )
+        .unwrap();
+        crate::spell_cast::cast_for_player_with_target(
+            run.app.world_mut(),
+            actor,
+            212084,
+            Some(target),
+        )
+        .unwrap();
+        for _ in 0..60 {
+            run.app.update();
+        }
+        assert_eq!(
+            server::soul_fragments::observation_counts(run.app.world(), actor).0,
+            3
+        );
+
+        let (profile, traits) = read_reference(581).unwrap();
+        let identity = inputs::read_actor(&profile).unwrap();
+        let mut run = prepare_reference(profile, &traits, 1, identity).unwrap();
+        let actor = run.actor;
+        let target = run.targets[0];
+        crate::spell_cast::powers::change_power(
+            run.app.world_mut(),
+            actor,
+            shared::components::PowerType::Fury,
+            100.0,
+        )
+        .unwrap();
+        crate::spell_cast::cast_for_player_with_target(
+            run.app.world_mut(),
+            actor,
+            212084,
+            Some(target),
+        )
+        .unwrap();
+        for _ in 0..60 {
+            run.app.update();
+            if server::soul_fragments::observation_counts(run.app.world(), actor).0 == 1 {
+                break;
+            }
+        }
+        assert_eq!(
+            server::soul_fragments::observation_counts(run.app.world(), actor).0,
+            1
+        );
+        crate::spell_cast::cancel_cast(run.app.world_mut(), actor);
+        for _ in 0..60 {
+            run.app.update();
+        }
+        assert_eq!(
+            server::soul_fragments::observation_counts(run.app.world(), actor).0,
+            1,
+            "interruption must cancel later fragments"
+        );
+    }
+
     #[test]
     #[ignore = "requires native Vengeance profile"]
     fn fiery_brand_impact_applies_target_and_caster_auras() {
@@ -1457,6 +1531,76 @@ mod tests {
 
     #[test]
     #[ignore = "requires native Vengeance profile"]
+    fn partial_meteoric_fall_spends_one_stack_as_normal_meteor() {
+        use super::super::*;
+        use crate::auras::{AuraApplication, AuraSource};
+        let _seed = crate::random::seed_scope(70_448);
+        let (profile, traits) = read_reference(581).unwrap();
+        let identity = inputs::read_actor(&profile).unwrap();
+        let mut run = prepare_reference(profile, &traits, 1, identity).unwrap();
+        let actor = run.actor;
+        let target = run.targets[0];
+        let selected = run
+            .app
+            .world()
+            .get::<crate::class_progression::TraitLoadout>(actor)
+            .unwrap();
+        for id in [1253391, 1256353] {
+            assert!(
+                selected
+                    .active_talent_spells()
+                    .any(|talent| talent.spell_id == id),
+                "missing talent {id}"
+            );
+        }
+        engage(&mut run);
+        crate::auras::apply_aura(
+            run.app.world_mut(),
+            &AuraApplication {
+                caster: actor,
+                target: actor,
+                spell_id: 1256302,
+                effect_mask: u32::MAX,
+                source: AuraSource::Cast,
+            },
+        );
+        assert!(crate::auras::set_self_cast_stacks(
+            run.app.world_mut(),
+            actor,
+            1256302,
+            1
+        ));
+        assert!(crate::spell_cast::try_cast_triggered(
+            run.app.world_mut(),
+            actor,
+            228478,
+            Some(target),
+            1
+        ));
+        for _ in 0..30 {
+            run.app.update();
+        }
+        let events = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0;
+        assert!(
+            events
+                .iter()
+                .any(|event| event.spell_id == Some(1256306) && event.amount > 0),
+            "normal meteor must land"
+        );
+        assert!(
+            !events
+                .iter()
+                .any(|event| event.spell_id == Some(1256617) && event.amount > 0),
+            "partial spending must not launch World Killer"
+        );
+    }
+
+    #[test]
+    #[ignore = "requires native Vengeance profile"]
     fn overlapping_spenders_do_not_cancel_scheduled_world_killer() {
         use super::super::*;
         let _seed = crate::random::seed_scope(70_448);
@@ -1501,6 +1645,18 @@ mod tests {
             !crate::auras::has_aura(run.app.world(), actor, 1256302),
             "other spenders must exhaust the stacks before the scheduled World Killer"
         );
+        let final_hour_stacks = |run: &Run| {
+            run.app
+                .world()
+                .get::<crate::auras::ActiveAuras>(actor)
+                .and_then(|auras| {
+                    auras
+                        .iter()
+                        .find(|aura| aura.spell_id == 1256322 && aura.caster == actor)
+                })
+                .map_or(0, |aura| aura.stacks)
+        };
+        assert_eq!(final_hour_stacks(&run), 3, "three consumed stacks persist");
         assert!(
             !run.app
                 .world()
@@ -1526,8 +1682,13 @@ mod tests {
                     && event.kind == shared::protocol::CombatLogKind::Damage
                     && event.amount > 0)
                 .count()
-                >= 2,
-            "scheduled World Killers must land even when other spenders consumed their stacks"
+                == 1,
+            "the scheduled World Killer must land without a duplicate from partial spending"
+        );
+        assert_eq!(
+            final_hour_stacks(&run),
+            3,
+            "zero-stack scheduled meteors must not grant Final Hour"
         );
     }
 

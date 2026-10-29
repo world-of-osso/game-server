@@ -63,6 +63,163 @@ pub enum GroundProbe {
     Supported(f32),
 }
 
+#[derive(Clone, Debug, serde::Serialize)]
+pub struct Floor {
+    pub z: f32,
+    pub source: &'static str,
+}
+
+#[derive(Clone, Debug)]
+pub struct MissingGeometry(pub String);
+
+/// Strict offline geometry reader: missing input never becomes an empty floor set.
+pub struct FloorGeometry {
+    ground: GroundMap,
+    strict_tiles: HashMap<(u32, u32, u32), Result<Vec<WmoCollision>, String>>,
+}
+
+impl FloorGeometry {
+    pub fn new(data_dir: &Path, wdts: HashMap<u32, u32>) -> Self {
+        Self {
+            ground: GroundMap::new(data_dir, wdts),
+            strict_tiles: HashMap::new(),
+        }
+    }
+
+    pub fn candidate_floors(
+        &mut self,
+        map_id: u32,
+        x: f32,
+        y: f32,
+    ) -> Result<Vec<Floor>, MissingGeometry> {
+        self.read_candidate_floors(map_id, x, y)
+            .map_err(MissingGeometry)
+    }
+
+    fn read_candidate_floors(&mut self, map_id: u32, x: f32, y: f32) -> Result<Vec<Floor>, String> {
+        let (bx, _, bz) = crate::terrain_height::wow_to_bevy(x, y, 0.0);
+        if !self.ground.maps.contains_key(&map_id) {
+            let wdt = self
+                .ground
+                .wdts
+                .get(&map_id)
+                .ok_or_else(|| format!("map {map_id}: no WDT"))?;
+            let map = MapGround::open(&self.ground.data_dir, *wdt)?;
+            self.ground.maps.insert(map_id, Some(map));
+        }
+        let map = self
+            .ground
+            .maps
+            .get_mut(&map_id)
+            .and_then(Option::as_mut)
+            .ok_or("missing map geometry")?;
+        let mut floors = Vec::new();
+        if let Some(wmo) = &map.global_wmo {
+            append_wmo_floors(&mut floors, std::slice::from_ref(wmo), bx, bz);
+        } else {
+            let tile_id = bevy_to_tile(bx, bz);
+            let tile = map
+                .tile(tile_id)
+                .ok_or_else(|| format!("map {map_id}: missing terrain tile {tile_id:?}"))?;
+            if let Some(z) = tile.terrain.height_at_bevy(bx, bz) {
+                floors.push(Floor {
+                    z,
+                    source: "terrain",
+                });
+            }
+            let nearby = nearby_source_tiles(map, tile_id);
+            for coordinates in nearby {
+                let key = (map_id, coordinates.0, coordinates.1);
+                if !self.strict_tiles.contains_key(&key) {
+                    let result = load_strict_tile_wmos(map, coordinates);
+                    self.strict_tiles.insert(key, result);
+                }
+                let wmos = self.strict_tiles[&key].as_ref().map_err(Clone::clone)?;
+                append_wmo_floors(&mut floors, wmos, bx, bz);
+            }
+        }
+        let m2_dir = self.ground.data_dir.join(format!("los/{map_id}/m2"));
+        let tile_id = bevy_to_tile(bx, bz);
+        validate_m2_tiles(map, &m2_dir, tile_id)?;
+        let m2 = self
+            .ground
+            .m2_floors
+            .entry(map_id)
+            .or_insert_with(|| los::LosMap::new(&m2_dir));
+        floors.extend(
+            m2.floor_heights(bx, bz)?
+                .into_iter()
+                .map(|z| Floor { z, source: "m2" }),
+        );
+        Ok(floors)
+    }
+}
+
+fn append_wmo_floors(floors: &mut Vec<Floor>, wmos: &[WmoCollision], x: f32, z: f32) {
+    let mut heights = Vec::new();
+    for wmo in wmos {
+        wmo.floor_heights(x, z, 100_000.0, -100_000.0, &mut heights);
+    }
+    floors.extend(heights.into_iter().map(|z| Floor { z, source: "wmo" }));
+}
+
+fn validate_m2_tiles(map: &MapGround, dir: &Path, (row, col): (u32, u32)) -> Result<(), String> {
+    for r in row.saturating_sub(1)..=(row + 1).min(63) {
+        for c in col.saturating_sub(1)..=(col + 1).min(63) {
+            let required = map.source.as_ref().map_or((r, c) == (row, col), |source| {
+                source.tiles[c as usize * MAP_TILES + r as usize].root != 0
+            });
+            let path = dir.join(format!("{r}_{c}.los"));
+            if required && !path.is_file() {
+                return Err(format!("missing M2 tile {}", path.display()));
+            }
+        }
+    }
+    Ok(())
+}
+
+fn nearby_source_tiles(map: &MapGround, (row, col): (u32, u32)) -> Vec<(u32, u32)> {
+    let source = map.source.as_ref().expect("terrain map has a tile source");
+    let mut tiles = Vec::new();
+    for r in row.saturating_sub(1)..=(row + 1).min(63) {
+        for c in col.saturating_sub(1)..=(col + 1).min(63) {
+            if source.tiles[c as usize * MAP_TILES + r as usize].obj0 != 0 {
+                tiles.push((r, c));
+            }
+        }
+    }
+    tiles
+}
+
+fn load_strict_tile_wmos(
+    map: &mut MapGround,
+    (row, col): (u32, u32),
+) -> Result<Vec<WmoCollision>, String> {
+    let source = map.source.as_ref().ok_or("missing tile source")?;
+    let files = source.tiles[col as usize * MAP_TILES + row as usize];
+    let data_dir = source.data_dir.clone();
+    let data = read_client_file(&data_dir, "terrain", files.obj0, "adt")?;
+    let Some(modf) = find_chunk(&data, b"MODF")? else {
+        return Ok(Vec::new());
+    };
+    if modf.len() % MODF_ENTRY_SIZE != 0 {
+        return Err("truncated MODF".into());
+    }
+    modf.chunks_exact(MODF_ENTRY_SIZE)
+        .map(|entry| {
+            let placement = parse_modf_entry(entry)?;
+            if !map.wmo_models.contains_key(&placement.fdid) {
+                map.wmo_models
+                    .insert(placement.fdid, load_wmo_groups(&data_dir, placement.fdid)?);
+            }
+            Ok(WmoCollision::new(
+                placement.world_from_local(),
+                map.wmo_models[&placement.fdid].clone(),
+            ))
+        })
+        .collect()
+}
+
 struct TileGround {
     terrain: TerrainHeightMap,
     /// Area/liquid/flight-bound queries need terrain, not WMO collision.
@@ -96,6 +253,8 @@ pub struct GroundMap {
     maps: HashMap<u32, Option<MapGround>>,
     /// Dedicated authored M2 hull bake, cached independently of ADT/WMO ground.
     m2_floors: HashMap<u32, los::LosMap>,
+    m2_solids: HashMap<u32, los::LosMap>,
+    m2_solid_checks: HashMap<u32, Result<(), String>>,
     live_hulls: crate::game_objects::collision::LiveHulls,
 }
 
@@ -117,6 +276,8 @@ impl GroundMap {
             wdts,
             maps: HashMap::new(),
             m2_floors: HashMap::new(),
+            m2_solids: HashMap::new(),
+            m2_solid_checks: HashMap::new(),
             live_hulls: HashMap::new(),
         }
     }
@@ -205,6 +366,15 @@ impl GroundMap {
         self.add_live_height(map, feet, base)
     }
 
+    pub(crate) fn player_solid_ground_in(
+        &mut self,
+        map: crate::maps::InMap,
+        feet: Vec3,
+    ) -> GroundProbe {
+        let base = self.sample_ground_at(map.map_id, feet, false, true);
+        self.add_live_height(map, feet, base)
+    }
+
     fn add_live_height(
         &self,
         map: crate::maps::InMap,
@@ -269,14 +439,20 @@ impl GroundMap {
     /// Ground under `feet` (Bevy space) on map `map_id`, loading the map and its tile on
     /// first use.
     pub fn ground_at(&mut self, map_id: u32, feet: Vec3) -> GroundProbe {
-        self.sample_ground_at(map_id, feet, true)
+        self.sample_ground_at(map_id, feet, true, false)
     }
 
     pub(crate) fn creature_ground_at(&mut self, map_id: u32, feet: Vec3) -> GroundProbe {
-        self.sample_ground_at(map_id, feet, false)
+        self.sample_ground_at(map_id, feet, false, false)
     }
 
-    fn sample_ground_at(&mut self, map_id: u32, feet: Vec3, walkable_only: bool) -> GroundProbe {
+    fn sample_ground_at(
+        &mut self,
+        map_id: u32,
+        feet: Vec3,
+        walkable_only: bool,
+        solid_m2: bool,
+    ) -> GroundProbe {
         if let Some(height) = self.flat_arena_height {
             return GroundProbe::Supported(height);
         }
@@ -288,11 +464,38 @@ impl GroundMap {
             Some(Some(map)) => map.ground_at(feet, walkable_only),
             _ => GroundProbe::Unloaded,
         };
-        let m2 = self
+        if solid_m2 {
+            let check = self.m2_solid_checks.entry(map_id).or_insert_with(|| {
+                let result = validate_m2_solid_files(&self.data_dir, map_id);
+                if let Err(error) = &result {
+                    error!("M2 solid collision on map {map_id}: {error}");
+                }
+                result
+            });
+            if check.is_err() {
+                return GroundProbe::Unloaded;
+            }
+        }
+        let walkable = self
             .m2_floors
             .entry(map_id)
-            .or_insert_with(|| los::LosMap::new(&self.data_dir.join(format!("los/{map_id}/m2"))));
-        match m2.floor_height(feet) {
+            .or_insert_with(|| los::LosMap::new(&self.data_dir.join(format!("los/{map_id}/m2"))))
+            .floor_height(feet);
+        let m2 = if solid_m2 {
+            let solid = self
+                .m2_solids
+                .entry(map_id)
+                .or_insert_with(|| {
+                    los::LosMap::new(&self.data_dir.join(format!("los/{map_id}/m2-solid")))
+                })
+                .solid_height(feet);
+            walkable.and_then(|floor| {
+                solid.map(|height| floor.into_iter().chain(height).max_by(f32::total_cmp))
+            })
+        } else {
+            walkable
+        };
+        match m2 {
             Ok(Some(height)) => match base {
                 GroundProbe::Supported(base_height) => {
                     GroundProbe::Supported(height.max(base_height))
@@ -520,6 +723,28 @@ impl MapGround {
         let groups = self.wmo_models[&placement.fdid].clone();
         Some(WmoCollision::new(placement.world_from_local(), groups))
     }
+}
+
+fn validate_m2_solid_files(data: &Path, map_id: u32) -> Result<(), String> {
+    let root = data.join(format!("los/{map_id}"));
+    let walkable = root.join("m2");
+    let entries = match std::fs::read_dir(&walkable) {
+        Ok(entries) => entries,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(()),
+        Err(error) => return Err(format!("{}: {error}", walkable.display())),
+    };
+    let solid = root.join("m2-solid");
+    for entry in entries {
+        let entry = entry.map_err(|error| format!("{}: {error}", walkable.display()))?;
+        let path = entry.path();
+        if path.extension().is_some_and(|extension| extension == "los") {
+            let companion = solid.join(entry.file_name());
+            if !companion.is_file() {
+                return Err(format!("missing {}", companion.display()));
+            }
+        }
+    }
+    Ok(())
 }
 
 fn probe_collision_height<'a>(

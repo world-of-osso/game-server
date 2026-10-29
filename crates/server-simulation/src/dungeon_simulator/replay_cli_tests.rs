@@ -68,6 +68,31 @@ fn native_replay_cli_driver() {
     println!("HEALER_TANK_REPORT={report}");
 }
 
+/// Train-executed batches use the same replay entry point as single-seed runs.
+#[test]
+#[ignore = "native tank replay batch entry point"]
+fn native_tank_replay_batch() {
+    let path = std::env::var("HEALER_TANK_TIMELINE").expect("HEALER_TANK_TIMELINE is required");
+    let spec = std::env::var("HEALER_TANK_SPEC").unwrap().parse().unwrap();
+    let duration = std::env::var("HEALER_TANK_DURATION")
+        .unwrap()
+        .parse()
+        .unwrap();
+    let healing = std::env::var("HEALER_TANK_EXTERNAL_HEALING").unwrap_or_default() == "1";
+    for seed in std::env::var("HEALER_TANK_SEEDS").unwrap().split(',') {
+        let seed: u64 = seed.parse().expect("numeric replay seed");
+        let report = super::tank_replay::replay_simc_with_healing(
+            spec,
+            Path::new(&path),
+            duration,
+            seed,
+            healing,
+        )
+        .expect("native replay failed");
+        println!("HEALER_TANK_BATCH_SEED={seed} REPORT={report}");
+    }
+}
+
 #[test]
 fn all_replay_cli_summarizes_parallel_results() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");

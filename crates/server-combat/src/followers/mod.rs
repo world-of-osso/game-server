@@ -122,7 +122,7 @@ mod group_buff_tests;
 
 pub use ai::FollowerReach;
 pub use catalog::FollowerCatalog;
-pub(crate) use party::{queue_player, stage_follower_party};
+pub(crate) use party::{DisconnectedRuns, queue_player, reconnect, stage_follower_party};
 
 #[derive(Clone, Debug)]
 pub struct Profile {
@@ -219,7 +219,8 @@ pub struct FollowerPlugin;
 impl Plugin for FollowerPlugin {
     fn build(&self, app: &mut App) {
         crate::maps::units::install(app);
-        app.init_resource::<FollowerCatalog>()
+        app.init_resource::<party::DisconnectedRuns>()
+            .init_resource::<FollowerCatalog>()
             .add_systems(
                 Startup,
                 (catalog::load_startup, stockade_diagnostic::load_request),

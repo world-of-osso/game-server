@@ -23,8 +23,10 @@ const MORSEL: u32 = 1305374;
 const DEVOURED: u32 = 1305376;
 const FIRE: u32 = 1279599;
 const FIRE_DAMAGE: u32 = 1286970;
+const FIRE_HEAL: u32 = 1263002;
 const LINGERING: u32 = 1287555;
 const LINGERING_DAMAGE: u32 = 1287663;
+const LINGERING_HEAL: u32 = 1287665;
 const IRIS_DRIVER: u32 = 1251906;
 const IRIS_DAMAGE: u32 = 1252389;
 const BANDOLIER: u32 = 1251905;
@@ -120,7 +122,17 @@ fn role(world: &World, caster: Entity, driver: u32) -> f32 {
 
 fn check_proc(world: &World, aura: &AuraInstance, event: &AuraEvent) -> bool {
     // dbc_proc_callback.cpp186–190: exclude callback's own action, not every item proc.
-    if event.actor != aura.caster || event.damage <= 0.0 {
+    if event.actor != aura.caster {
+        return false;
+    }
+    if aura.spell_id == FIRE
+        && (event.heal.is_some_and(|amount| amount > 0.0)
+            || (event.target == Some(aura.caster) && event.damage > 0.0))
+    {
+        return event.target.is_some()
+            && !matches!(event.spell_id, Some(FIRE_HEAL | LINGERING_HEAL));
+    }
+    if event.damage <= 0.0 {
         return false;
     }
     let own = match aura.spell_id {
@@ -182,7 +194,12 @@ fn proc_item(world: &mut World, caster: Entity, aura: &AuraInstance, event: &Aur
             let stack = native_amount(world, caster, HEART_VALUES, 2, aura.cast_item_level);
             apply_primary_aura(world, caster, DEVOURED, stack, aura.cast_item_level, true);
         }
-        FIRE => proc_fire(world, caster, target),
+        FIRE => proc_fire(
+            world,
+            caster,
+            target,
+            event.heal.is_some() || target == caster,
+        ),
         _ => unreachable!(),
     }
 }
@@ -293,7 +310,7 @@ fn apply_primary_aura(
     );
 }
 
-fn proc_fire(world: &mut World, caster: Entity, target: Entity) {
+fn proc_fire(world: &mut World, caster: Entity, target: Entity, healing: bool) {
     // unique_gear_midnight.cpp6063–6123: Omnium scales its native coefficient at fixed ilvl289.
     let store = world.resource::<crate::spell_info::SpellStore>();
     let coefficient_id = store
@@ -319,26 +336,29 @@ fn proc_fire(world: &mut World, caster: Entity, target: Entity) {
         * coefficient.coefficient)
         .floor()
         / 100.0;
-    let amount = native_amount(world, caster, FIRE_DAMAGE, 1, None) * scale;
+    let direct = if healing { FIRE_HEAL } else { FIRE_DAMAGE };
+    let lingering = if healing {
+        LINGERING_HEAL
+    } else {
+        LINGERING_DAMAGE
+    };
+    let amount = native_amount(world, caster, direct, 1, None) * scale;
     let overload = if crate::auras::has_aura(world, caster, 1279614) {
         1.0 + native_amount(world, caster, 1279614, 0, None) / 100.0
     } else {
         1.0
     };
-    cast_amount(
-        world,
-        caster,
-        target,
-        FIRE_DAMAGE,
-        amount * overload,
-        None,
-        None,
-    );
+    // SimC76f8118 unique_gear_midnight.cpp6183–6198 executes on the triggering recipient.
+    if healing {
+        cast_omnium_heal(world, caster, target, direct, amount * overload);
+    } else {
+        cast_amount(world, caster, target, direct, amount * overload, None, None);
+    }
     proc_omnium_stat(world, caster, coefficient_id);
     if crate::auras::has_aura(world, caster, LINGERING) {
         let duration = world
             .resource::<crate::spell_info::SpellStore>()
-            .get(LINGERING_DAMAGE)
+            .get(lingering)
             .unwrap()
             .misc
             .as_ref()
@@ -351,11 +371,29 @@ fn proc_fire(world: &mut World, caster: Entity, target: Entity) {
         } else {
             1.0
         };
-        let tick = native_amount(world, caster, LINGERING_DAMAGE, 1, None) * scale
+        let tick = native_amount(world, caster, lingering, 1, None) * scale
             / (duration as f32 / 1000.0)
             * residual;
-        cast_amount(world, caster, target, LINGERING_DAMAGE, tick, None, None);
+        if healing {
+            cast_omnium_heal(world, caster, target, lingering, tick);
+        } else {
+            cast_amount(world, caster, target, lingering, tick, None, None);
+        }
     }
+}
+
+fn cast_omnium_heal(world: &mut World, caster: Entity, target: Entity, id: u32, amount: f32) {
+    let Some(mut spell) = spell_cast::load_triggered_spell(world, id, 1) else {
+        return;
+    };
+    let effect = spell
+        .effects
+        .iter_mut()
+        .find(|effect| effect.index == 0)
+        .expect("native Omnium healing effect");
+    effect.base_points = amount;
+    effect.implicit_targets = [21, 0];
+    spell_cast::launch_triggered_spell(world, caster, &spell, Some(target), 1);
 }
 
 // unique_gear_midnight.cpp6148–6170: select the first actual secondary rune.

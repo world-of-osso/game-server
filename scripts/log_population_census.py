@@ -3,6 +3,7 @@
 import argparse
 import csv
 import json
+import math
 import re
 import sqlite3
 from collections import defaultdict
@@ -56,13 +57,14 @@ def engagement_guids(fields):
     return tuple(guid for guid in (fields[1], fields[5]) if guid.startswith('Creature-'))
 
 
-def census(paths, maps, samples=None):
+def census(paths, maps, samples=None, zones_only=False):
     runs = []
     for path in sorted(paths):
         current = None
         encounter = None
         engaged = set()
         activity = {}
+        in_key = False
         with path.open(encoding="utf-8", errors="replace") as source:
             for line in source:
                 timestamp, sep, payload = line.partition("  ")
@@ -72,6 +74,9 @@ def census(paths, maps, samples=None):
                 if event == "CHALLENGE_MODE_START":
                     fields = next(csv.reader([payload]))
                     current = None
+                    in_key = True
+                    if zones_only:
+                        continue
                     encounter = None
                     engaged = set()
                     activity = {}
@@ -84,6 +89,19 @@ def census(paths, maps, samples=None):
                 if event == "CHALLENGE_MODE_END":
                     current = None
                     encounter = None
+                    in_key = False
+                    continue
+                if zones_only and event == 'ZONE_CHANGE' and not in_key:
+                    fields = next(csv.reader([payload]))
+                    current = None
+                    encounter = None
+                    engaged = set()
+                    activity = {}
+                    if len(fields) > 2 and fields[1].isdigit() and int(fields[1]) in maps:
+                        current = {'file': path.name, 'map': int(fields[1]), 'start': timestamp,
+                                   'name': fields[2], 'challenge_id': None, 'session_kind': 'zone',
+                                   'creatures': {}, 'encounters': []}
+                        runs.append(current)
                     continue
                 if current is None:
                     continue
@@ -124,7 +142,12 @@ def census(paths, maps, samples=None):
                                                        "instance": parts[4], "name": fields[index + 1],
                                                        "first_seen": timestamp, "first_event": event,
                                                        "first_encounter_id": encounter['id'] if encounter else None,
-                                                       "seen_outside_encounter": False, "summoned": False})
+                                                       "seen_outside_encounter": False, "summoned": False,
+                                                       "player_controlled": False, "control_flags_invalid": False})
+                    try:
+                        item['player_controlled'] |= bool(int(fields[index + 2], 0) & 0x100)
+                    except ValueError:
+                        item['control_flags_invalid'] = True
                     item.update(activity.get(guid, {}))
                     if encounter is None:
                         item['seen_outside_encounter'] = True
@@ -184,49 +207,145 @@ def filter_safe_samples(runs, source, output, margin_seconds=3.0):
         output.write(json.dumps(sample, separators=(',', ':')) + '\n')
 
 
-def cluster_population(runs, radius=10.0):
-    """Propose 2-D matches; ambiguous matches are kept separate, not resolved."""
-    clusters = []
-    index_by_unit = defaultdict(list)
+def minimum_assignment(costs):
+    """Minimum-cost rectangular assignment, with one column per observation slot."""
+    rows, columns = len(costs), len(costs[0])
+    if rows > columns:
+        raise ValueError('more observations than slots')
+    u, v, matching, previous = [0.0] * (rows + 1), [0.0] * (columns + 1), [0] * (columns + 1), [0] * (columns + 1)
+    for row in range(1, rows + 1):
+        matching[0] = row
+        column = 0
+        best = [math.inf] * (columns + 1)
+        used = [False] * (columns + 1)
+        while True:
+            used[column] = True
+            current = matching[column]
+            delta, next_column = math.inf, 0
+            for candidate in range(1, columns + 1):
+                if not used[candidate]:
+                    value = costs[current - 1][candidate - 1] - u[current] - v[candidate]
+                    if value < best[candidate]:
+                        best[candidate], previous[candidate] = value, column
+                    if best[candidate] < delta:
+                        delta, next_column = best[candidate], candidate
+            if not math.isfinite(delta):
+                return None, math.inf
+            for candidate in range(columns + 1):
+                if used[candidate]:
+                    u[matching[candidate]] += delta
+                    v[candidate] -= delta
+                else:
+                    best[candidate] -= delta
+            column = next_column
+            if matching[column] == 0:
+                break
+        while column:
+            prior = previous[column]
+            matching[column] = matching[prior]
+            column = prior
+    assignment = [None] * rows
+    for column in range(1, columns + 1):
+        if matching[column]:
+            assignment[matching[column] - 1] = column - 1
+    return assignment, sum(costs[i][slot] for i, slot in enumerate(assignment))
+
+
+def connected_observations(observations, radius):
+    parents = list(range(len(observations)))
+    cells = defaultdict(list)
+    def root(index):
+        while parents[index] != index:
+            parents[index] = parents[parents[index]]
+            index = parents[index]
+        return index
+    for index, point in enumerate(observations):
+        cell = (math.floor(point['x'] / radius), math.floor(point['y'] / radius))
+        for x in range(cell[0] - 1, cell[0] + 2):
+            for y in range(cell[1] - 1, cell[1] + 2):
+                for other in cells[(x, y)]:
+                    if math.hypot(point['x'] - observations[other]['x'], point['y'] - observations[other]['y']) <= radius:
+                        parents[root(index)] = root(other)
+        cells[cell].append(index)
+    groups = defaultdict(list)
+    for index, point in enumerate(observations):
+        groups[root(index)].append(point)
+    return list(groups.values())
+
+
+def assign_component(key, observations, margin_threshold):
+    by_run = defaultdict(list)
+    for point in observations:
+        by_run[(point['file'], point.get('episode_start', point['run_start']))].append(point)
+    anchor_run = max(sorted(by_run), key=lambda run: len(by_run[run]))
+    anchors = sorted(by_run[anchor_run], key=lambda point: point['guid'])
+    slots = [{'map': key[0], 'npc_id': key[1], 'ui_map_id': key[2], 'ambiguous_match': False,
+              'assignment_margin_yards': None, 'observations': [point],
+              'candidate_observations': [point]} for point in anchors]
+    for run in sorted(by_run):
+        if run == anchor_run:
+            continue
+        points = sorted(by_run[run], key=lambda point: point['guid'])
+        costs = [[math.hypot(point['x'] - anchor['x'], point['y'] - anchor['y']) for anchor in anchors] for point in points]
+        assignment, best = minimum_assignment(costs)
+        for row, slot in enumerate(assignment):
+            slots[slot]['observations'].append(points[row])
+            if points[row] not in slots[slot]['candidate_observations']:
+                slots[slot]['candidate_observations'].append(points[row])
+            if len(anchors) > 1:
+                alternative = [list(values) for values in costs]
+                alternative[row][slot] = math.inf
+                alternative_assignment, next_best = minimum_assignment(alternative)
+                margin = next_best - best
+                if math.isfinite(margin):
+                    affected = {assigned for i, assigned in enumerate(assignment)
+                                if assignment[i] != alternative_assignment[i]}
+                    affected.update(assigned for i, assigned in enumerate(alternative_assignment)
+                                    if assignment[i] != alternative_assignment[i])
+                    for affected_slot in affected:
+                        candidate = slots[affected_slot]
+                        prior = candidate['assignment_margin_yards']
+                        candidate['assignment_margin_yards'] = margin if prior is None else min(prior, margin)
+                        if margin < margin_threshold:
+                            candidate['ambiguous_match'] = True
+                    if margin < margin_threshold:
+                        for i, alternate_slot in enumerate(alternative_assignment):
+                            if assignment[i] != alternate_slot:
+                                candidate = slots[alternate_slot]['candidate_observations']
+                                if points[i] not in candidate:
+                                    candidate.append(points[i])
+    return slots
+
+
+def cluster_population(runs, radius=10.0, margin_threshold=1.0):
+    """Assign observations to maximum-per-run slots within connected 2-D areas."""
+    groups = defaultdict(list)
     for run in runs:
-        incoming = []
-        run_id = (run['file'], run['start'])
         for guid, unit in sorted(run['creatures'].items()):
             pos = unit.get('first_position')
-            if pos is None:
+            if pos is None or unit['summoned'] or unit.get('player_controlled', False) or unit.get('control_flags_invalid', False):
                 continue
-            candidates = []
             key = (run['map'], unit['npc_id'], pos['ui_map_id'])
-            for index in index_by_unit[key]:
-                cluster = clusters[index]
-                if run_id in cluster['_runs']:
-                    continue
-                anchor = cluster['observations'][0]
-                if (anchor['x'] - pos['x']) ** 2 + (anchor['y'] - pos['y']) ** 2 <= radius ** 2:
-                    candidates.append(index)
-            incoming.append((guid, unit, pos, candidates))
-        claims = defaultdict(int)
-        for _, _, _, candidates in incoming:
-            if len(candidates) == 1:
-                claims[candidates[0]] += 1
-        for guid, unit, pos, candidates in incoming:
-            if len(candidates) == 1 and claims[candidates[0]] == 1:
-                cluster = clusters[candidates[0]]
-            else:
-                cluster = {'map': run['map'], 'npc_id': unit['npc_id'], 'ui_map_id': pos['ui_map_id'],
-                           'ambiguous_match': bool(candidates), 'observations': [], '_runs': set()}
-                index_by_unit[(run['map'], unit['npc_id'], pos['ui_map_id'])].append(len(clusters))
-                clusters.append(cluster)
-            cluster['_runs'].add(run_id)
-            cluster['observations'].append({'file': run['file'], 'run_start': run['start'], 'guid': guid,
-                'spawn_uid': unit['spawn_uid'], 'x': pos['x'], 'y': pos['y'], 'time': pos['time'], 'event': pos['event'],
+            groups[key].append({'file': run['file'], 'run_start': unit.get('position_source_run_start', run['start']),
+                'episode_start': run['start'], 'guid': guid, 'spawn_uid': unit['spawn_uid'], 'x': pos['x'], 'y': pos['y'], 'time': pos['time'], 'event': pos['event'],
                 'facing': pos['facing'], 'level': pos['level'], 'summoned': unit['summoned']})
+    clusters = []
+    for key, observations in sorted(groups.items()):
+        for component in connected_observations(observations, radius):
+            clusters.extend(assign_component(key, component, margin_threshold))
     for cluster in clusters:
-        del cluster['_runs']
         observations = cluster['observations']
-        spread = max((((a['x'] - b['x']) ** 2 + (a['y'] - b['y']) ** 2) ** 0.5
+        spread = max((math.hypot(a['x'] - b['x'], a['y'] - b['y'])
                       for a in observations for b in observations), default=0.0)
         cluster['spread_xy'] = spread
+        if cluster['ambiguous_match']:
+            candidates = cluster['candidate_observations']
+            candidate_spread = max((math.hypot(a['x'] - b['x'], a['y'] - b['y'])
+                                    for a in candidates for b in candidates), default=0.0)
+            cluster['candidate_spread_yards'] = candidate_spread
+            if candidate_spread <= 5.0:
+                cluster['candidate_centroid'] = {'x': sum(p['x'] for p in candidates) / len(candidates),
+                                                  'y': sum(p['y'] for p in candidates) / len(candidates)}
         if len(observations) < 2 or cluster['ambiguous_match']:
             cluster['classification'] = 'insufficient_or_ambiguous'
         elif spread > 5:
@@ -245,11 +364,50 @@ def cluster_population(runs, radius=10.0):
     return clusters
 
 
+def centroid_requests(clusters):
+    requests = []
+    for index, cluster in enumerate(clusters):
+        centroid = cluster.get('candidate_centroid')
+        if centroid is None:
+            continue
+        first = cluster['observations'][0]
+        requests.append({'cluster_index': index, 'file': first['file'], 'run_start': first['run_start'],
+                         'guid': first['guid'], 'map': cluster['map'], 'x': centroid['x'], 'y': centroid['y'],
+                         'ui_map_id': cluster['ui_map_id'], 'neighbor_hints': cluster['candidate_observations']})
+    return requests
+
+
+def cluster_safe_samples(runs, samples):
+    units = {(run['file'], run['start'], guid): unit
+             for run in runs for guid, unit in run['creatures'].items()}
+    selected = {}
+    for line in samples:
+        sample = json.loads(line)
+        key = (sample['file'], sample['run_start'], sample['guid'])
+        if key not in units:
+            raise ValueError(f'sample has no census unit: {key}')
+        if key not in selected or sample['seconds_from_start'] < selected[key]['seconds_from_start']:
+            selected[key] = sample
+    safe_runs = []
+    for run in runs:
+        copy = {'file': run['file'], 'start': run['start'], 'map': run['map'], 'creatures': {}}
+        for guid, unit in run['creatures'].items():
+            key = (run['file'], run['start'], guid)
+            if key in selected:
+                copy['creatures'][guid] = {**unit, 'first_position': selected[key],
+                                           'position_source_run_start': selected[key]['run_start']}
+        safe_runs.append(copy)
+    return cluster_population(safe_runs)
+
+
 def summarize_population(runs, database=None):
     maps = {}
     for run in runs:
-        group = maps.setdefault(run['map'], {'map': run['map'], 'runs': 0, 'npcs': {}})
-        group['runs'] += 1
+        group = maps.setdefault(run['map'], {'map': run['map'], 'runs': 0, 'zone_segments_retained': 0, 'npcs': {}})
+        if run.get('session_kind') == 'zone':
+            group['zone_segments_retained'] += 1
+        else:
+            group['runs'] += 1
         counts = defaultdict(int)
         for unit in run['creatures'].values():
             entry = group['npcs'].setdefault(unit['npc_id'], {'npc_id': unit['npc_id'],
@@ -288,9 +446,10 @@ def summarize_encounters(runs):
         for kill in kills:
             by_actor = defaultdict(list)
             for cast in kill['casts']:
-                if cast.get('known_boss'):
+                if cast.get('known_boss') or cast.get('journal_actor'):
                     unit = kill['units'][cast['guid']]
-                    key = (unit['npc_id'], cast['spell_id'], cast['event'])
+                    role = 'known_boss' if cast.get('known_boss') else 'journal_actor_candidate'
+                    key = (unit['npc_id'], cast['spell_id'], cast['event'], role)
                     by_actor[(key, cast['guid'])].append(cast['seconds_from_pull'])
             for (key, _), times in by_actor.items():
                 times.sort()
@@ -298,7 +457,7 @@ def summarize_encounters(runs):
                 spells[key]['interval_seconds'].extend(b - a for a, b in zip(times, times[1:]))
         result.append({'map': map_id, 'encounter_id': encounter_id, 'name': name,
                        'successful_pulls': len(kills),
-                       'spells': [{'npc_id': key[0], 'spell_id': key[1], 'event': key[2], **values,
+                       'spells': [{'npc_id': key[0], 'spell_id': key[1], 'event': key[2], 'actor_identification': key[3], **values,
                                    'interval_range_seconds': [min(values['interval_seconds']), max(values['interval_seconds'])]
                                    if values['interval_seconds'] else None}
                                   for key, values in sorted(spells.items())]})
@@ -357,30 +516,40 @@ def floor_requests(runs):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--map", type=int, action="append", required=True)
+    parser.add_argument("--zone-only", action='store_true', help='extract zone-entry intervals outside challenge keys')
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--floor-requests", type=Path)
     parser.add_argument("--precombat-samples", type=Path)
     parser.add_argument("--safe-samples", type=Path)
+    parser.add_argument("--safe-clusters", type=Path)
     parser.add_argument("--trash-data", type=Path)
     parser.add_argument("--world-db", type=Path)
     parser.add_argument("--encounter-summary", type=Path)
     parser.add_argument("--population-summary", type=Path)
     parser.add_argument("--clusters", type=Path)
+    parser.add_argument("--centroid-requests", type=Path)
     parser.add_argument("logs", type=Path, nargs="+")
     args = parser.parse_args()
     paths = [f for p in args.logs for f in (sorted(p.glob("*.txt")) if p.is_dir() else [p])]
     if args.precombat_samples:
         args.precombat_samples.parent.mkdir(parents=True, exist_ok=True)
         with args.precombat_samples.open('w', encoding='utf-8') as samples:
-            runs = census(paths, set(args.map), samples)
+            runs = census(paths, set(args.map), samples, args.zone_only)
     else:
-        runs = census(paths, set(args.map))
+        runs = census(paths, set(args.map), zones_only=args.zone_only)
     if args.safe_samples:
         if not args.precombat_samples:
             parser.error('--safe-samples requires --precombat-samples')
         args.safe_samples.parent.mkdir(parents=True, exist_ok=True)
         with args.precombat_samples.open(encoding='utf-8') as source, args.safe_samples.open('w', encoding='utf-8') as output:
             filter_safe_samples(runs, source, output)
+    if args.safe_clusters:
+        if not args.safe_samples:
+            parser.error('--safe-clusters requires --safe-samples')
+        args.safe_clusters.parent.mkdir(parents=True, exist_ok=True)
+        with args.safe_samples.open(encoding='utf-8') as source:
+            safe_clusters = cluster_safe_samples(runs, source)
+        args.safe_clusters.write_text(json.dumps(safe_clusters, indent=2) + '\n', encoding='utf-8')
     if args.trash_data:
         annotate_trash(runs, read_trash_timers(args.trash_data))
     if args.world_db:
@@ -396,9 +565,14 @@ def main():
     if args.population_summary:
         args.population_summary.parent.mkdir(parents=True, exist_ok=True)
         args.population_summary.write_text(json.dumps(summarize_population(runs, args.world_db), indent=2) + "\n", encoding="utf-8")
-    if args.clusters:
-        args.clusters.parent.mkdir(parents=True, exist_ok=True)
-        args.clusters.write_text(json.dumps(cluster_population(runs), indent=2) + "\n", encoding="utf-8")
+    if args.clusters or args.centroid_requests:
+        clusters = cluster_population(runs)
+        if args.clusters:
+            args.clusters.parent.mkdir(parents=True, exist_ok=True)
+            args.clusters.write_text(json.dumps(clusters, indent=2) + "\n", encoding="utf-8")
+        if args.centroid_requests:
+            args.centroid_requests.parent.mkdir(parents=True, exist_ok=True)
+            args.centroid_requests.write_text(json.dumps(centroid_requests(clusters), indent=2) + "\n", encoding="utf-8")
 
 
 if __name__ == "__main__":

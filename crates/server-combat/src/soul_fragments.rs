@@ -177,8 +177,22 @@ pub fn spawn(
     kind: FragmentKind,
     consume_on_activation: bool,
 ) -> Result<(), String> {
-    spawn_one(world, owner, kind, consume_on_activation)?;
-    if roll_splitter(world, owner) {
+    spawn_many(world, owner, kind, 1, consume_on_activation)
+}
+
+/// Generate one producer's fragments and roll Soul Splitter once for that producer.
+pub fn spawn_many(
+    world: &mut World,
+    owner: Entity,
+    kind: FragmentKind,
+    count: u32,
+    consume_on_activation: bool,
+) -> Result<(), String> {
+    for _ in 0..count {
+        spawn_one(world, owner, kind, consume_on_activation)?;
+    }
+    // SimC76f8118 sc_demon_hunter.cpp12608–12630 rolls once after the whole batch.
+    if count > 0 && roll_splitter(world, owner) {
         spawn_one(world, owner, FragmentKind::Lesser, consume_on_activation)?;
     }
     Ok(())

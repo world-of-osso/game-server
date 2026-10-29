@@ -92,6 +92,8 @@ Spell458324 is not assigned by the follower templates' TDB/runtime addon data. D
 - Public authored MythicDungeonTools coordinates are allowed under `FOLLOWER_PLACEMENT_MDT_COORDS`, with immutable git commit and per-placement file/line citations. Source precedence is native TDB, then MDT pack data, then Wowhead observations. Custom MDT canvas coordinates must not be treated as UiMap percentages without a sourced, calibrated transform; source identity, floor bounds and baked heights remain required.
 
 ### Gameplay (acceptance remains open until behavioral/live proof)
+
+- If the owner reconnects while the follower copy remains loaded, restore the owner to that copy with the same follower party and dungeon-finder state. The copy follows its ordinary empty-instance unload policy.
 - Combat coverage includes each party member's actual living, same-copy summoned hunter/warlock pet. An enemy attacking or holding active combat/threat with only that pet is admitted for the existing follower tank pickup/taunt policy. Foreign pets and merely nearby unengaged packs are excluded. This does not add pets to healer patient/party membership or change pet stats/native autocast policy.
 - Selecting a hostile is not engagement. Assist requires an actual owner attack victim, that enemy's active (not target-side suppressed) combat reference to a party member, or its threat reference to the owner/party; keep defending enemies attacking party members. Suppressed missile-launch references alone do not start follower rotations; retain those references and pre-impact clearance holds until native impact. Owner selection only prioritizes already engaged enemies. Kits, stats, crowd-control protection and navigation remain unchanged.
 - Diagnostic `npc-info` retains its live identity/health row and appends `combat` JSON with current derived spell/healing/attack power, strength/intellect, crit/haste/versatility, native creature armor, combat target and per-unit threat. The `victim` field is the literal `CombatTarget`: an attack victim for a hostile NPC, but possibly a healer's patient. Absent components are null, never invented player stats or zero threat. Inspection must not mutate combat state. These native inputs support follower output/threat comparisons without changing kits or budgets; a snapshot is not sustained-output proof.
@@ -292,7 +294,7 @@ Sourced passive and explicit utility spells remain inventoried with `passive`/`u
 `scripts/follower_spec_kits.py` validates the active CSV build against world spell/trait rows, reads world.db read-only, makes a new database copy and adds only the kit table. It refuses overlapping/existing outputs; receipt and `sqldiff` accompany the copy. Rebuilding after publication replaces only the derived kit table in the new copy, never its input; an unchanged projection has an empty sqldiff and reports no changed tables. The lead alone publishes canonical world.db. Source exporter: `FOLLOWER_KIT_SOURCE_OUTPUT=<new.json> agent-run follower-kits cargo test --locked -p server follower_kit_export_native_source -- --ignored`. Producer: `python3 scripts/follower_spec_kits.py --world-db data/world.db --db2-root ../game-engine/data/db2/active --source-json <new.json> --output-db <new-world.db> --receipt <receipt.json> --sqldiff <delta.sql>`.
 
 ## Known gaps (current cycle)
-- [ ] Ruby Life Pools final encounter is a source gap: combat Kyrakka190484 and Erkhart Stormvein190485 have no authored map2521 spawn rows in the local source audit; no final SmartAI, summon-group or summon-spell source supplies them. Do not invent their spawns, coordinates, scripts or kill credits. The sourced immune vehicle199790/Kyrakka (VehicleId8026) is not a combat-boss substitute. Navigation/admission/trash or first-boss proof cannot certify Ruby completion. Continue full-completion work on another imported follower dungeon only after its authored entrance, complete encounter population and required encounter behavior are sourced.
+- [ ] Ruby final uses the user-approved log-derived population, timers and explicit joint-death policy described in [boss scripts](boss-scripts.md#ruby-final-logged-policy). The source does not contain authored spawn coordinates; the copy importer records post-pull median XY, interim geometry Z and the replaced journal placeholder. Full follower dungeon completion, native spell children and live navigation remain unproved. The immune vehicle199790 is not a combat-boss substitute.
 - [ ] Authored NPC combat kits are absent. The approved player-spec bridge does not establish full player rotation, pet, interrupt, defensive or ground-avoidance parity.
 - [ ] Full-instance completion and full eleven-spec combat coverage remain unproved. Current both-skin live slice covers a Damage-role Mage, Garrick/Crenna/Shuja/Meredy, trash and the first Ruby boss; no wider certification.
 - [x] User approved same-map Normal population/entrance reuse; no synthetic coordinates or mutation of authored spawn tags.
@@ -324,4 +326,28 @@ Lingering damage after an enemy's native Death (for example Hogger86604) remains
 ## Native-sight-safe non-tank positioning
 
 Idle follow and combat/heal approach choices for non-tank followers must not cross an unpulled aggressive hostile's native sight circle. Use actual same-copy live hostile positions and native per-recipient attack distance, including both model reaches and level scaling; no pack-specific offsets or fixed fake radii. Hold an unsafe approach while continuing native casts that are valid from the safe current position. The tank retains its pull planner. Actual accidental combat still takes precedence and already-dead packs are skipped in the authored route.
+
+## Log-derived population policy
+
+The user approved their Retail combat logs as evidence for follower-catalog populations and encounter timers where authored data is absent. `LOG_DERIVED_POPULATION` rows are additions, not replacements for TrinityCore or existing content. The importer operates only on a database copy, records per-row observation and floor-resolution provenance, and tags added spawns and projected TDB templates for retirement. Missing raw and runtime templates remain named gaps. A log position is an event observation, not an authored idle spawn; the log has no Z, and floor resolution must use sourced collision geometry. For ambiguous cross-run assignments, the user approved a centroid only when all candidate observations lie within five yards; resolve the centroid's own floor and retain the assignment margin and source observations. Where the floor is ambiguous or missing, do not import the placement. Observed level remains provenance; do not mutate shared template levels to fit one observation. A missing facing is a gap because the template has no facing field.
+
+Patrol evidence requires at least three distinct runs and a navmesh-validated route. Otherwise keep an imported spawn stationary and report `PATROL_UNOBSERVED`; unseen creatures, patrol routes, formation offsets and boss phases are not implied by logs. Combat movement, summon identities and ambiguous cross-run matches remain explicit limitations. [Extraction and coverage](../wiki/investigations/log-derived-population.md).
+
+### Applied log population coverage
+
+The lead applied the fresh-copy result to canonical `world.db`: 1,211 creatures, 47 templates, one template addon, 13 difficulty rows and 70 model rows. The initial 1,214-creature diagnostic is superseded. The lead's pre-apply comparison found inserts only, no same-NPC rows within three yards, no null Z values and a successful SQLite `quick_check`. The pre-apply backup is `data/world.db.pre-logpop-20261029`.
+
+These are position-assignment slots, not proven authored spawn counts. Existing rows are one-to-one matches within ten yards in 3-D, not identity proof. `P` is `POSITION_Z_UNRESOLVED`, `A` is `AMBIGUOUS_SPAWN_IDENTITY`, `C` is `CENTROID_Z_UNRESOLVED`, `E` is `MID_ENCOUNTER_ONLY_ID`, and `D` is `AUTHORED_SPAWN_NEARBY_AMBIGUOUS`. `PATROL_UNOBSERVED` applies to every imported slot.
+
+| Dungeon (map) | Slots | Imported | Nearby existing | Gaps | TDB template IDs projected | IDs absent in both sources |
+|---|---:|---:|---:|---|---:|---:|
+| Kings' Rest (1762) | 495 | 129 | 21 | P120, A202, C10, E13 | 15 | 0 |
+| Ruby Life Pools (2521) | 514 | 167 | 28 | P109, A205, C5 | 4 | 0 |
+| Altar of Fangs (2993) | 351 | 69 | 13 | P137, A129, C1, D2 | 6 | 0 |
+| Murder Row (2813) | 609 | 183 | 18 | P104, A288, C14, E1, D1 | 17 | 0 |
+| Den of Nalorakk (2825) | 601 | 362 | 35 | P103, A94, C7 | 12 | 0 |
+| The Blinding Vale (2859) | 481 | 83 | 22 | P232, A139, C5 | 4 | 0 |
+| Voidscar Arena (2923) | 431 | 218 | 17 | P106, A87, C3 | 3 | 0 |
+
+Template counts apply only to resolved slots considered by the importer. Kings' Rest Ghostly Brute135231 is a nine-run movement candidate, not a fitted path: its observed points have four unresolved candidate floors. No patrol path was qualified or imported.
 

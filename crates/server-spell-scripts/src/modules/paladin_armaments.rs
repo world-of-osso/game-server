@@ -214,11 +214,17 @@ fn apply_rite_of_sanctification(
         warn!("Rite of Sanctification requires equipped item modifiers");
         return;
     };
-    if items.temporary_enchants.iter().any(|(slot, _)| *slot == EquipmentSlot::MainHand) {
+    if items
+        .temporary_enchants
+        .iter()
+        .any(|(slot, _)| *slot == EquipmentSlot::MainHand)
+    {
         warn!("Rite of Sanctification cannot replace a temporary weapon enchant");
         return;
     }
-    items.temporary_enchants.push((EquipmentSlot::MainHand, effect.misc_values[0] as u32));
+    items
+        .temporary_enchants
+        .push((EquipmentSlot::MainHand, effect.misc_values[0] as u32));
 }
 
 fn armament_energize_handler(
@@ -265,7 +271,8 @@ fn selected(world: &World, caster: Entity, talent: u32) -> bool {
 }
 
 fn focused_enmity_multiplier(world: &World, caster: Entity, _: Entity, spell: &SpellInfo) -> f32 {
-    if spell.id != 31935 || !selected(world, caster, 378845)
+    if spell.id != 31935
+        || !selected(world, caster, 378845)
         || combat::combat_refs::active_opponents(world, caster).take(2).count() != 1
     {
         return 1.0;
@@ -274,8 +281,16 @@ fn focused_enmity_multiplier(world: &World, caster: Entity, _: Entity, spell: &S
     1.0 + combat::spell_cast::scripts::script_effect_value(world, caster, 378845, 0) / 100.0
 }
 
-fn ferren_marcus_multiplier(world: &World, caster: Entity, target: Entity, spell: &SpellInfo) -> f32 {
-    if spell.id != 31935 || spell.cast_primary_target != Some(target) || !selected(world, caster, 378762) {
+fn ferren_marcus_multiplier(
+    world: &World,
+    caster: Entity,
+    target: Entity,
+    spell: &SpellInfo,
+) -> f32 {
+    if spell.id != 31935
+        || spell.cast_primary_target != Some(target)
+        || !selected(world, caster, 378762)
+    {
         return 1.0;
     }
     // SimC76f8118 sc_paladin_protection.cpp:273–280 applies the selected rank to the primary hit.
@@ -373,13 +388,16 @@ fn grant_bulwark_of_righteous_fury(
         return;
     }
     // SimC76f8118 sc_paladin_protection.cpp:228–229 grants a stack per Shield impact.
-    combat::auras::apply_aura(world, &AuraApplication {
-        caster: ctx.caster,
-        target: ctx.caster,
-        spell_id: 386652,
-        effect_mask: u32::MAX,
-        source: AuraSource::Cast,
-    });
+    combat::auras::apply_aura(
+        world,
+        &AuraApplication {
+            caster: ctx.caster,
+            target: ctx.caster,
+            spell_id: 386652,
+            effect_mask: u32::MAX,
+            source: AuraSource::Cast,
+        },
+    );
 }
 
 fn consume_bulwark_of_righteous_fury(

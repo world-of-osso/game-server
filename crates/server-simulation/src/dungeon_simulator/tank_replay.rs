@@ -571,6 +571,20 @@ fn replay_registered_run_with_healing(
         .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
         .0
         .len();
+    let mut precombat_casts = BTreeMap::<u32, usize>::new();
+    for event in &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0[..event_cursor]
+    {
+        if event.source == Some(tank.to_bits())
+            && event.kind == CombatLogKind::CastSuccess
+            && let Some(spell) = event.spell_id
+        {
+            *precombat_casts.entry(spell).or_default() += 1;
+        }
+    }
     let (mut raw, mut taken, mut self_healing, mut active_seconds, mut spike) =
         (0.0, 0.0, 0.0, 0.0, 0.0_f64);
     let mut self_periodic_taken = 0.0;
@@ -612,15 +626,30 @@ fn replay_registered_run_with_healing(
             bloodlust_applied = true;
         }
         if external_healing && tick % 100 == 0 && tick < duration_seconds * 20 {
-            let mut health = run
-                .app
-                .world_mut()
-                .get_mut::<Health>(tank)
-                .ok_or("TANK_HEALTH_ABSENT")?;
-            if health.current > 0.0 {
-                let amount = 75_000.0_f32.min((health.max - health.current).max(0.0));
-                health.current += amount;
+            let effective = {
+                let mut health = run
+                    .app
+                    .world_mut()
+                    .get_mut::<Health>(tank)
+                    .ok_or("TANK_HEALTH_ABSENT")?;
+                if health.current > 0.0 {
+                    let amount = 75_000.0_f32.min((health.max - health.current).max(0.0));
+                    health.current += amount;
+                    Some(amount)
+                } else {
+                    None
+                }
+            };
+            if let Some(amount) = effective {
                 external_healing_effective += f64::from(amount);
+                crate::spell_cast::script_registry::heal_received(
+                    run.app.world_mut(),
+                    tank,
+                    0,
+                    75_000.0,
+                    amount,
+                    false,
+                );
             }
         }
         while let Some(hit) = hits
@@ -1041,7 +1070,15 @@ fn replay_registered_run_with_healing(
         )
         .ok_or("SIMC_DUMMY_ARMOR_CONSTANT_ABSENT")?;
     report["tank_dummy_scenario"] = json!({"difficulty":TANK_DUNGEON_DIFFICULTY,"content_tuning":TANK_DUNGEON_TUNING,"season":TANK_DUNGEON_SEASON,"attacker_level":attacker.level_against(&defender),"armor_constant":armor_constant});
+    report["precombat_casts"] = json!(precombat_casts);
     report["outgoing_damage_by_spell"] = json!(outgoing_damage_by_spell);
     report["resource_spent_by_spell"] = json!(resource_spent_by_spell);
+    report["melee_rage"] = json!(
+        capture
+            .melee_rage
+            .iter()
+            .filter_map(|(&(unit, source), &amount)| (unit == tank).then_some((source, amount)))
+            .collect::<BTreeMap<_, _>>()
+    );
     Ok(report)
 }

@@ -16,13 +16,13 @@ def import_templates(conn):
             raise ValueError(f'missing native template {entry}')
         if not conn.execute('SELECT 1 FROM tdb_creature_template_model WHERE CreatureID=?', (entry,)).fetchone():
             raise ValueError(f'missing native model {entry}')
-    retail_content.create_retail_map_table(conn)
-    retail_content.create_difficulty_table(conn)
-    conn.create_function('health_expansion', 1, retail_content.health_expansion, deterministic=True)
     missing = [entry for entry in ENTRIES if not conn.execute(
         'SELECT 1 FROM content_creature_template WHERE entry=?', (entry,)
     ).fetchone()]
     if missing:
+        retail_content.create_retail_map_table(conn)
+        retail_content.create_difficulty_table(conn)
+        conn.create_function('health_expansion', 1, retail_content.health_expansion, deterministic=True)
         retail_content.insert_tdb_templates(conn, ','.join(map(str, missing)))
     for entry in ENTRIES:
         conn.execute('INSERT OR IGNORE INTO content_creature_template_model SELECT * FROM tdb_creature_template_model WHERE CreatureID=?', (entry,))
@@ -34,8 +34,11 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--db', required=True, type=Path)
     args = parser.parse_args()
-    if args.db.name == 'world.db' or not args.db.is_file():
+    canonical = Path(__file__).resolve().parents[1] / 'data/world.db'
+    if not args.db.is_file() or args.db.name == 'world.db' or args.db.samefile(canonical):
         parser.error('provide an existing prepared copy, not world.db')
+    if args.db.is_symlink() or args.db.stat().st_nlink != 1:
+        parser.error('copy must be an independent regular file')
     with closing(sqlite3.connect(args.db)) as conn, conn:
         import_templates(conn)
     print('imported native Ruby templates and models; no spawn changes')
