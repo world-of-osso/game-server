@@ -96,14 +96,19 @@ struct TidalInsightReversing;
 
 fn proc_seastone(world: &mut World, unit: Entity, driver: &AuraInstance, _: Option<Entity>) {
     let current = world.get::<ActiveAuras>(unit).and_then(|auras| {
-        auras.iter().find(|aura| aura.spell_id == TIDAL_INSIGHT && aura.caster == unit).cloned()
+        auras
+            .iter()
+            .find(|aura| aura.spell_id == TIDAL_INSIGHT && aura.caster == unit)
+            .cloned()
     });
     if let Some(buff) = current {
         if world.get::<TidalInsightReversing>(unit).is_some() {
             if buff.stacks > 1 {
                 auras::set_self_cast_stacks(world, unit, TIDAL_INSIGHT, buff.stacks - 1);
             } else {
-                auras::remove_auras(world, unit, auras::RemoveReason::Consumed, |aura| aura.spell_id == TIDAL_INSIGHT && aura.caster == unit);
+                auras::remove_auras(world, unit, auras::RemoveReason::Consumed, |aura| {
+                    aura.spell_id == TIDAL_INSIGHT && aura.caster == unit
+                });
                 world.entity_mut(unit).remove::<TidalInsightReversing>();
             }
             return;
@@ -112,9 +117,17 @@ fn proc_seastone(world: &mut World, unit: Entity, driver: &AuraInstance, _: Opti
         world.entity_mut(unit).remove::<TidalInsightReversing>();
     }
     // SimC76f8118 unique_gear_midnight.cpp:3530–3560: driver supplies item-scaled intellect.
-    apply_stat_buff(world, unit, driver, TIDAL_INSIGHT, Some(read_amount(driver, 0)));
+    apply_stat_buff(
+        world,
+        unit,
+        driver,
+        TIDAL_INSIGHT,
+        Some(read_amount(driver, 0)),
+    );
     let reached_cap = world.get::<ActiveAuras>(unit).is_some_and(|auras| {
-        auras.iter().any(|aura| aura.spell_id == TIDAL_INSIGHT && aura.caster == unit && aura.stacks == 6)
+        auras
+            .iter()
+            .any(|aura| aura.spell_id == TIDAL_INSIGHT && aura.caster == unit && aura.stacks == 6)
     });
     if reached_cap {
         world.entity_mut(unit).insert(TidalInsightReversing);
