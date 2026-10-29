@@ -100,8 +100,8 @@ fn discipline_soulcoiler_real_item_channels_five_fractional_barriers() {
         })
         .expect("actual incoming hit");
     assert!(
-        (hit.absorbed as f32 - 500.0).abs() <= 1.0,
-        "Soulcoil absorbs 50% of the hit: {hit:?}"
+        (hit.absorbed - hit.amount).abs() <= 1 && hit.absorbed > 0,
+        "Soulcoil absorbs half the post-modifier hit: {hit:?}"
     );
 }
 #[test]
