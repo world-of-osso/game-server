@@ -91,6 +91,7 @@ register_modules! {
     brewmaster_gift_of_the_ox: (1000, "modules/brewmaster_gift_of_the_ox.rs"),
     brewmaster_elusive_brawler: (1000, "modules/brewmaster_elusive_brawler.rs"),
     brewmaster_keg_reset: (1000, "modules/brewmaster_keg_reset.rs"),
+    brewmaster_overwhelming_force: (1000, "modules/brewmaster_overwhelming_force.rs"),
     brewmaster_shuffle: (1000, "modules/brewmaster_shuffle.rs"),
     monk_harmony: (1000, "modules/monk_harmony.rs"),
     blood_death_strike: (2500, "modules/blood_death_strike.rs"),
