@@ -22,6 +22,7 @@ const SPELLS: &[(&str, u32, bool)] = &[
     ("unleash_life", 73685, false),
     ("healing_tide_totem", 108280, true),
     ("healing_rain", 73920, false),
+    ("surging_totem", 444995, false),
     ("riptide", 61295, false),
     ("healing_surge", 8004, false),
     ("chain_heal", 1064, false),
@@ -69,7 +70,8 @@ pub(super) fn prepare(
         ("default", "spirit_link_totem,if=target.health.pct<35"),
         ("default", "healing_tide_totem,if=party.injured>=3"),
         ("default", "earth_shield,if=target.earth_shield_up=0"),
-        ("default", "healing_rain"),
+        ("default", "surging_totem"),
+        ("default", "healing_rain,if=player.surging_totem=0"),
         ("default", "healing_stream_totem,if=target.health.pct<90"),
         ("default", "riptide"),
         ("default", "healing_surge,if=target.health.pct<45"),
@@ -94,6 +96,7 @@ struct PartyFacts<'a> {
     injured: usize,
     earth_shield_up: bool,
     earthliving_up: bool,
+    surging_totem: bool,
     healing_wave_useful: bool,
 }
 
@@ -103,6 +106,7 @@ impl Facts for PartyFacts<'_> {
             "party.injured" => Ok(self.injured as f64),
             "target.earth_shield_up" => Ok(f64::from(self.earth_shield_up)),
             "player.earthliving_up" => Ok(f64::from(self.earthliving_up)),
+            "player.surging_totem" => Ok(f64::from(self.surging_totem)),
             "target.healing_wave_useful" => Ok(f64::from(self.healing_wave_useful)),
             _ => self.native.value(name),
         }
@@ -115,7 +119,8 @@ impl ActionFacts for PartyFacts<'_> {
             "party.injured"
             | "target.earth_shield_up"
             | "target.healing_wave_useful"
-            | "player.earthliving_up" => self.value(name),
+            | "player.earthliving_up"
+            | "player.surging_totem" => self.value(name),
             _ => self.native.value_for(action, name),
         }
     }
@@ -146,6 +151,7 @@ impl Policy for Restoration {
         };
         let injured = living.iter().filter(|(_, ratio)| *ratio < 0.90).count();
         let earthliving_up = crate::auras::has_aura(world, healer, 382022);
+        let surging_totem = crate::auras::has_aura(world, healer, 455630);
         let earth_shield_up = world
             .get::<crate::auras::ActiveAuras>(target)
             .is_some_and(|auras| {
@@ -184,6 +190,7 @@ impl Policy for Restoration {
             injured,
             earth_shield_up,
             earthliving_up,
+            surging_totem,
             healing_wave_useful,
         };
         if let Some((action, execution)) =

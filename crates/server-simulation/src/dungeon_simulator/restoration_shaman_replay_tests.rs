@@ -14,10 +14,15 @@ fn restoration_shaman_uses_surging_totem_throughout_party_pulse() {
     )
     .unwrap();
     let casts = &report["healer_casts"];
-    let count = casts["444995"].as_u64().unwrap_or(0) + casts["73920"].as_u64().unwrap_or(0);
+    let count = casts["444995"].as_u64().unwrap_or(0);
     assert!(
-        count >= 5,
-        "Rain/Totem is not used across the replay: {report}"
+        count >= 8,
+        "Surging Totem is not used across the replay: {report}"
+    );
+    assert_eq!(
+        casts["73920"].as_u64().unwrap_or(0),
+        0,
+        "selected Surging Totem replaces Healing Rain"
     );
     println!("SHAMAN_POLICY_REPORT={report}");
 }
