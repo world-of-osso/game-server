@@ -66,7 +66,9 @@ fn preservation_life_givers_flame_splits_fire_breath_damage() {
 #[test]
 #[ignore = "checks Consume Flame against the native Dream Breath and Verdant Embrace"]
 fn preservation_consume_flame_consumes_dream_breath_on_verdant_embrace() {
-    let spells = [444088, 355941, 360995, 361195, 361361, 445495];
+    let spells = [
+        444088, 355941, 360995, 361195, 361361, 355913, 355916, 445495,
+    ];
     let mut h = crate::spell_cast::test_harness::harness(Vec::new(), &spells, 13).unwrap();
     h.app
         .init_resource::<crate::spell_cast::test_harness::ObservedCombatEvents>();
@@ -149,6 +151,28 @@ fn preservation_consume_flame_consumes_dream_breath_on_verdant_embrace() {
         .collect();
     assert_eq!(heals.len(), 2);
     assert!((154..=156).contains(&heals[1].amount), "{:?}", heals[1]);
+
+    let before = expiry(&h, "before Emerald Blossom");
+    crate::spell_cast::creature_cast(h.app.world_mut(), h.caster, 355913, Some(h.caster), true)
+        .unwrap();
+    h.advance(45);
+    let after = expiry(&h, "after Emerald Blossom");
+    assert!((before - after - 2.0).abs() < 0.001);
+    let events = &h
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    let heals: Vec<_> = events
+        .iter()
+        .filter(|event| {
+            event.kind == CombatLogKind::Heal
+                && event.spell_id == Some(445495)
+                && event.target == Some(h.caster.to_bits())
+        })
+        .collect();
+    assert_eq!(heals.len(), 3);
+    assert!((154..=156).contains(&heals[2].amount), "{:?}", heals[2]);
 }
 
 #[test]
