@@ -149,7 +149,10 @@ fn spend(world: &mut World, caster: Entity, spell: &SpellInfo) {
     for i in 0..count {
         // SimC76f8118 sc_demon_hunter.cpp:3028-3040,3066-3083: partial
         // Meteoric Fall stacks do not replace a meteor with World Killer.
-        let id = if world_killer && i == count - 1 && (meteor_fall || (!has_meteoric_fall && stacks == 1)) {
+        let id = if world_killer
+            && i == count - 1
+            && (meteor_fall || (!has_meteoric_fall && stacks == 1))
+        {
             WORLD_KILLER_MISSILE
         } else {
             METEOR

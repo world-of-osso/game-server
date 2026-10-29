@@ -1468,19 +1468,63 @@ mod tests {
         let mut run = prepare_reference(profile, &traits, 1, identity).unwrap();
         let actor = run.actor;
         let target = run.targets[0];
-        let selected = run.app.world().get::<crate::class_progression::TraitLoadout>(actor).unwrap();
+        let selected = run
+            .app
+            .world()
+            .get::<crate::class_progression::TraitLoadout>(actor)
+            .unwrap();
         for id in [1253391, 1256353] {
-            assert!(selected.active_talent_spells().any(|talent| talent.spell_id == id), "missing talent {id}");
+            assert!(
+                selected
+                    .active_talent_spells()
+                    .any(|talent| talent.spell_id == id),
+                "missing talent {id}"
+            );
         }
         engage(&mut run);
-        crate::auras::apply_aura(run.app.world_mut(), &AuraApplication { caster: actor, target: actor,
-            spell_id: 1256302, effect_mask: u32::MAX, source: AuraSource::Cast });
-        assert!(crate::auras::set_self_cast_stacks(run.app.world_mut(), actor, 1256302, 1));
-        assert!(crate::spell_cast::try_cast_triggered(run.app.world_mut(), actor, 228478, Some(target), 1));
-        for _ in 0..30 { run.app.update(); }
-        let events = &run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
-        assert!(events.iter().any(|event| event.spell_id == Some(1256306) && event.amount > 0), "normal meteor must land");
-        assert!(!events.iter().any(|event| event.spell_id == Some(1256617) && event.amount > 0), "partial spending must not launch World Killer");
+        crate::auras::apply_aura(
+            run.app.world_mut(),
+            &AuraApplication {
+                caster: actor,
+                target: actor,
+                spell_id: 1256302,
+                effect_mask: u32::MAX,
+                source: AuraSource::Cast,
+            },
+        );
+        assert!(crate::auras::set_self_cast_stacks(
+            run.app.world_mut(),
+            actor,
+            1256302,
+            1
+        ));
+        assert!(crate::spell_cast::try_cast_triggered(
+            run.app.world_mut(),
+            actor,
+            228478,
+            Some(target),
+            1
+        ));
+        for _ in 0..30 {
+            run.app.update();
+        }
+        let events = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0;
+        assert!(
+            events
+                .iter()
+                .any(|event| event.spell_id == Some(1256306) && event.amount > 0),
+            "normal meteor must land"
+        );
+        assert!(
+            !events
+                .iter()
+                .any(|event| event.spell_id == Some(1256617) && event.amount > 0),
+            "partial spending must not launch World Killer"
+        );
     }
 
     #[test]
