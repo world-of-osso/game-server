@@ -980,6 +980,86 @@ mod tests {
 
     #[test]
     #[ignore = "requires canonical world database and MID2 Blood inputs"]
+    fn blood_rune_mastery_rolls_on_free_and_costed_triggered_strikes() {
+        use shared::components::PowerType;
+        for triggered in [false, true] {
+            let _seed = crate::random::seed_scope(70448);
+            let mut run = super::super::prepare_registered_player(250, 1).unwrap();
+            let actor = run.actor;
+            let target = run.targets[0];
+            super::super::engage(&mut run);
+            let mut earned = false;
+            for _ in 0..30 {
+                crate::spell_cast::powers::change_power(
+                    run.app.world_mut(),
+                    actor,
+                    PowerType::Runes,
+                    6.0,
+                );
+                if triggered {
+                    assert!(crate::spell_cast::cast_costed_trigger_with_context(
+                        run.app.world_mut(),
+                        actor,
+                        433895,
+                        Some(target),
+                        1,
+                        None,
+                        None
+                    ));
+                } else {
+                    crate::auras::apply_aura(
+                        run.app.world_mut(),
+                        &crate::auras::AuraApplication {
+                            caster: actor,
+                            target: actor,
+                            spell_id: 1264568,
+                            effect_mask: u32::MAX,
+                            source: crate::auras::AuraSource::Cast,
+                        },
+                    );
+                    let before = crate::spell_cast::powers::power_value(
+                        run.app.world(),
+                        actor,
+                        PowerType::Runes,
+                    )
+                    .unwrap()
+                    .0;
+                    crate::spell_cast::creature_cast(
+                        run.app.world_mut(),
+                        actor,
+                        433895,
+                        Some(target),
+                        false,
+                    )
+                    .unwrap();
+                    assert_eq!(
+                        crate::spell_cast::powers::power_value(
+                            run.app.world(),
+                            actor,
+                            PowerType::Runes
+                        )
+                        .unwrap()
+                        .0,
+                        before
+                    );
+                }
+                for _ in 0..4 {
+                    run.app.update();
+                }
+                if crate::auras::has_aura(run.app.world(), actor, 374585) {
+                    earned = true;
+                    break;
+                }
+                for _ in 0..40 {
+                    run.app.update();
+                }
+            }
+            assert!(earned, "Rune Mastery must proc for triggered={triggered}");
+        }
+    }
+
+    #[test]
+    #[ignore = "requires canonical world database and MID2 Blood inputs"]
     fn bloodied_blade_parries_grant_strength_then_strike() {
         use server::test_support::healer_intake::{Hit, HitKind};
         let mut run = super::super::prepare_registered_player(250, 1).unwrap();
