@@ -2167,8 +2167,8 @@ fn devotion_aura_reduces_incoming_bleed() {
 #[test]
 #[ignore = "uses selected MID2 Protection and real incoming magic damage"]
 fn protection_shield_reduces_real_magic_damage() {
+    use super::healer_intake::{Hit, HitKind};
     use crate::spell_cast::powers::PowerPools;
-    use crate::test_support::healer_intake::{Hit, HitKind};
     use shared::components::{Health, PowerType};
     let mut run = super::dps_parity::prepare_registered_player(66, 1).unwrap();
     super::dps_parity::engage(&mut run);
