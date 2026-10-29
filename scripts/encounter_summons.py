@@ -531,6 +531,24 @@ def import_khajin(connection):
     return [189727]
 
 
+def import_magmatusk(connection):
+    """Bind the LittleWigs Magmatusk actor without changing native data."""
+    import encounter_cpp_bindings
+    primary = dict(map_id=2519, entry=181861, encounter_id=2610, bit=0,
+                   script='', ai='', journal_id=2494, actor_id=5369, display_id=102604)
+    rows = encounter_cpp_bindings.prepare_bindings(connection, [primary])
+    runtime = connection.execute('SELECT name,AIName,ScriptName,unit_flags FROM content_creature_template WHERE entry=181861').fetchone()
+    if runtime not in [('Magmatusk','','',0), ('Magmatusk','','boss_magmatusk',0)]:
+        raise ValueError('Magmatusk runtime binding or source flags changed')
+    connection.executemany('''INSERT INTO raid_encounter_creature
+        (map_id,creature_entry,encounter_id,bit,journal_encounter_id,journal_creature_id,display_id)
+        VALUES(?,?,?,?,?,?,?) ON CONFLICT(map_id,creature_entry) DO UPDATE SET
+        encounter_id=excluded.encounter_id,bit=excluded.bit,journal_encounter_id=excluded.journal_encounter_id,
+        journal_creature_id=excluded.journal_creature_id,display_id=excluded.display_id''', rows)
+    connection.execute("UPDATE content_creature_template SET ScriptName='boss_magmatusk' WHERE entry=181861")
+    return [181861]
+
+
 def import_chargath(connection):
     """Bind source initial phase without energy, placement or native spell changes."""
     import encounter_cpp_bindings
@@ -1012,7 +1030,7 @@ def import_candle_king(connection):
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--encounter',choices=['kystia','golden-serpent','adarogg','wailing-ritual','noxxion','celebras','theradras','omor','leymor','telash','herald','herald-nazan','nethekurse','kargath','porung','azureblade','umbrelskul','ancient','doragosa','khajin','gorek','gutshot','wratheye','irideus','chargath','sargha','vexamus','granyth','treemouth','gulping-goliath','melidrussa','kokia','kyrioss','lost-dwarves','bromach','talondras','emberon','anubzekt','kikatal','dailcry','orator','skarmorak','candle-king'],default='kystia')
+    parser.add_argument('--encounter',choices=['kystia','golden-serpent','adarogg','wailing-ritual','noxxion','celebras','theradras','omor','leymor','telash','herald','herald-nazan','nethekurse','kargath','porung','azureblade','umbrelskul','ancient','doragosa','khajin','gorek','gutshot','wratheye','irideus','magmatusk','chargath','sargha','vexamus','granyth','treemouth','gulping-goliath','melidrussa','kokia','kyrioss','lost-dwarves','bromach','talondras','emberon','anubzekt','kikatal','dailcry','orator','skarmorak','candle-king'],default='kystia')
     parser.add_argument('--db',type=Path,required=True)
     args=parser.parse_args()
     canonical=Path('/home/osso/Projects/world-of-osso/game-engine/data/server-world/world.db')
@@ -1072,6 +1090,8 @@ def main():
                 entries = import_wratheye(conn)
             elif args.encounter == 'irideus':
                 entries = import_irideus(conn)
+            elif args.encounter == 'magmatusk':
+                entries = import_magmatusk(conn)
             elif args.encounter == 'chargath':
                 entries = import_chargath(conn)
             elif args.encounter == 'sargha':
