@@ -18,9 +18,7 @@ fn detonate(world: &mut World, caster: Entity, spell: u32, position: Vec3) {
         return;
     }
     spell_cast::cast_triggered_at_destination(world, caster, 389860, position, 1);
-    for _ in 0..count as u32 {
-        if let Err(reason) = soul_fragments::spawn(world, caster, FragmentKind::Lesser, false) {
-            error!(spell, %reason, "Sigil of Spite fragment spawn failed");
-        }
+    if let Err(reason) = soul_fragments::spawn_many(world, caster, FragmentKind::Lesser, count as u32, false) {
+        error!(spell, %reason, "Sigil of Spite fragment spawn failed");
     }
 }
