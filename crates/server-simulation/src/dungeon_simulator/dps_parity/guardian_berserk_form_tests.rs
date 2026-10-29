@@ -27,7 +27,7 @@ fn guardian_mangle_earns_rank_scaled_vicious_brambles() {
         .find(|effect| effect.index == 1)
         .unwrap()
         .amount;
-    assert!(percent > 0.0);
+    assert_eq!(percent, 40.0, "the selected rank supplies 40% residual");
     run.app
         .world_mut()
         .resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>()
@@ -35,7 +35,7 @@ fn guardian_mangle_earns_rank_scaled_vicious_brambles() {
         .clear();
     crate::spell_cast::creature_cast(run.app.world_mut(), actor, 33917, Some(target), false)
         .unwrap();
-    for _ in 0..200 {
+    for _ in 0..260 {
         run.app.update();
     }
     let events = &run
@@ -70,7 +70,7 @@ fn guardian_mangle_earns_rank_scaled_vicious_brambles() {
     );
     let expected = mangle as f32 * percent / 100.0;
     assert!(
-        ticks as f32 >= expected * 0.5 && ticks as f32 <= expected * 2.0,
+        (ticks as f32 - expected).abs() <= 8.0,
         "Mangle {mangle}, talent {percent}%, residual {ticks}"
     );
 }
