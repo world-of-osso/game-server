@@ -63,6 +63,7 @@ struct InterestDirtyEntities {
     /// marks one relocation for both visibility and AI (`Map::CreatureRelocation` →
     /// `AddToNotify(NOTIFY_VISIBILITY_CHANGED)`).
     relocated: EntityHashSet,
+    area_relocated: EntityHashSet,
 }
 
 #[derive(Resource, Default)]
@@ -74,6 +75,16 @@ impl InterestDirtyQueue {
         dirty.interest.insert(entity);
         dirty.replication.insert(entity);
         dirty.relocated.insert(entity);
+        dirty.area_relocated.insert(entity);
+    }
+
+    pub(crate) fn drain_area_relocated(&self) -> Vec<Entity> {
+        self.0
+            .lock()
+            .expect("interest dirty queue poisoned")
+            .area_relocated
+            .drain()
+            .collect()
     }
 
     /// Units that moved since the last call (AI relocation notifies).

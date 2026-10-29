@@ -4,6 +4,57 @@ use shared::components::{Health, Position};
 use std::time::Instant;
 
 #[test]
+fn area_units_follows_relocations_across_cell_boundaries() {
+    let mut app = App::new();
+    crate::maps::units::install(&mut app);
+    let map = crate::maps::InMap {
+        map_id: 2521,
+        instance_id: 1,
+    };
+    let spawn = |app: &mut App, x, z| {
+        app.world_mut()
+            .spawn((
+                map,
+                Position { x, y: 0.0, z },
+                Health {
+                    current: 100.0,
+                    max: 100.0,
+                },
+            ))
+            .id()
+    };
+    let caster = spawn(&mut app, 63.0, -1.0);
+    let near = spawn(&mut app, 65.0, 1.0);
+    let far = spawn(&mut app, 200.0, 0.0);
+    let center = Vec3::new(63.0, 0.0, -1.0);
+    assert_eq!(
+        area_units(app.world_mut(), caster, center, 5.0, Relation::Any, 0),
+        vec![caster, near]
+    );
+    app.world_mut().get_mut::<Position>(far).unwrap().x = 64.0;
+    app.world()
+        .resource::<crate::interest::InterestDirtyQueue>()
+        .mark(far);
+    assert_eq!(
+        area_units(app.world_mut(), caster, center, 5.0, Relation::Any, 0),
+        vec![caster, far, near]
+    );
+    app.world_mut().entity_mut(near).insert(crate::maps::InMap {
+        map_id: 2521,
+        instance_id: 2,
+    });
+    assert_eq!(
+        area_units(app.world_mut(), caster, center, 5.0, Relation::Any, 0),
+        vec![caster, far]
+    );
+    app.world_mut().despawn(far);
+    assert_eq!(
+        area_units(app.world_mut(), caster, center, 5.0, Relation::Any, 0),
+        vec![caster]
+    );
+}
+
+#[test]
 fn area_units_selects_only_living_nearby_units_in_the_same_copy() {
     let mut app = App::new();
     crate::maps::units::install(&mut app);

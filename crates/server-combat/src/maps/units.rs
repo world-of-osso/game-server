@@ -1,7 +1,8 @@
 //! Entities by map copy, so per-copy scans do not walk every loaded map.
-use bevy::ecs::entity::EntityHashSet;
+use bevy::ecs::entity::{EntityHashMap, EntityHashSet};
 use bevy::platform::collections::HashMap;
 use bevy::prelude::*;
+use shared::components::Position;
 
 use super::InMap;
 
@@ -23,18 +24,36 @@ pub(crate) fn install(app: &mut App) {
         return;
     }
     app.init_resource::<MapUnits>()
+        .init_resource::<AreaGrid>()
+        .init_resource::<crate::interest::InterestDirtyQueue>()
         .add_observer(index_unit)
-        .add_observer(unindex_unit);
+        .add_observer(unindex_unit)
+        .add_observer(index_position)
+        .add_observer(unindex_position);
 }
 
-fn index_unit(trigger: On<Insert, InMap>, maps: Query<&InMap>, mut units: ResMut<MapUnits>) {
-    if let Ok(map) = maps.get(trigger.entity) {
+fn index_unit(
+    trigger: On<Insert, InMap>,
+    maps: Query<(&InMap, Option<&Position>)>,
+    mut units: ResMut<MapUnits>,
+    mut grid: ResMut<AreaGrid>,
+) {
+    if let Ok((map, position)) = maps.get(trigger.entity) {
         units.0.entry(*map).or_default().insert(trigger.entity);
+        if let Some(position) = position {
+            grid.place(trigger.entity, *map, position);
+        }
     }
 }
 
 /// Fires with the old value still present: on replacement, removal and despawn.
-fn unindex_unit(trigger: On<Discard, InMap>, maps: Query<&InMap>, mut units: ResMut<MapUnits>) {
+fn unindex_unit(
+    trigger: On<Discard, InMap>,
+    maps: Query<&InMap>,
+    mut units: ResMut<MapUnits>,
+    mut grid: ResMut<AreaGrid>,
+) {
+    grid.remove(trigger.entity);
     let Ok(map) = maps.get(trigger.entity) else {
         return;
     };
@@ -44,6 +63,89 @@ fn unindex_unit(trigger: On<Discard, InMap>, maps: Query<&InMap>, mut units: Res
             units.0.remove(map);
         }
     }
+}
+
+const AREA_CELL_SIZE: f32 = 64.0;
+type AreaCell = (InMap, i32, i32);
+
+#[derive(Resource, Default)]
+struct AreaGrid {
+    cells: HashMap<AreaCell, EntityHashSet>,
+    membership: EntityHashMap<AreaCell>,
+}
+
+impl AreaGrid {
+    fn remove(&mut self, entity: Entity) {
+        if let Some(cell) = self.membership.remove(&entity)
+            && let Some(members) = self.cells.get_mut(&cell)
+        {
+            members.remove(&entity);
+            if members.is_empty() {
+                self.cells.remove(&cell);
+            }
+        }
+    }
+
+    fn place(&mut self, entity: Entity, map: InMap, position: &Position) {
+        let cell = (
+            map,
+            (position.x / AREA_CELL_SIZE).floor() as i32,
+            (position.z / AREA_CELL_SIZE).floor() as i32,
+        );
+        if self.membership.get(&entity) == Some(&cell) {
+            return;
+        }
+        self.remove(entity);
+        self.membership.insert(entity, cell);
+        self.cells.entry(cell).or_default().insert(entity);
+    }
+}
+
+fn index_position(
+    trigger: On<Insert, Position>,
+    units: Query<(&InMap, &Position)>,
+    mut grid: ResMut<AreaGrid>,
+) {
+    if let Ok((map, position)) = units.get(trigger.entity) {
+        grid.place(trigger.entity, *map, position);
+    }
+}
+
+fn unindex_position(trigger: On<Discard, Position>, mut grid: ResMut<AreaGrid>) {
+    grid.remove(trigger.entity);
+}
+
+/// Synchronize notified relocations, then return candidates from intersecting cells.
+pub(crate) fn nearby(world: &mut World, map: InMap, center: Vec3, radius: f32) -> Vec<Entity> {
+    let relocated = world
+        .resource::<crate::interest::InterestDirtyQueue>()
+        .drain_area_relocated();
+    for entity in relocated {
+        let current = world
+            .get::<InMap>(entity)
+            .copied()
+            .zip(world.get::<Position>(entity).copied());
+        let mut grid = world.resource_mut::<AreaGrid>();
+        if let Some((map, position)) = current {
+            grid.place(entity, map, &position);
+        } else {
+            grid.remove(entity);
+        }
+    }
+    if radius < 0.0 || !radius.is_finite() || !center.is_finite() {
+        return Vec::new();
+    }
+    let min_x = ((center.x - radius) / AREA_CELL_SIZE).floor() as i32;
+    let max_x = ((center.x + radius) / AREA_CELL_SIZE).floor() as i32;
+    let min_z = ((center.z - radius) / AREA_CELL_SIZE).floor() as i32;
+    let max_z = ((center.z + radius) / AREA_CELL_SIZE).floor() as i32;
+    let grid = world.resource::<AreaGrid>();
+    let cells = &grid.cells;
+    (min_x..=max_x)
+        .flat_map(|x| (min_z..=max_z).filter_map(move |z| cells.get(&(map, x, z))))
+        .flatten()
+        .copied()
+        .collect()
 }
 
 #[cfg(test)]

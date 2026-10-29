@@ -1743,9 +1743,9 @@ pub fn area_units(
     let Some(caster_map) = world.get::<crate::maps::InMap>(caster).copied() else {
         return Vec::new();
     };
-    let units = world.resource::<crate::maps::units::MapUnits>();
-    let mut found: Vec<(f32, Entity)> = units
-        .in_map(caster_map)
+    let candidates = crate::maps::units::nearby(world, caster_map, center, radius);
+    let mut found: Vec<(f32, Entity)> = candidates
+        .into_iter()
         .filter_map(|entity| {
             let health = world.get::<Health>(entity)?;
             let pos = world.get::<Position>(entity)?;
