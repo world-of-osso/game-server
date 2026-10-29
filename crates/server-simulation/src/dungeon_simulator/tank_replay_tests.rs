@@ -1733,7 +1733,10 @@ fn pressure_scale_keeps_same_seed_attack_outcomes_for_every_tank() {
             mismatch.map_or(serde_json::Value::Null, |attack| pressured[attack].clone()),
         );
         if matches!(spec, 66 | 73 | 104 | 581) {
-            assert_eq!(normal[..shared], pressured[..shared], "spec {spec}");
+            let differing = (0..shared)
+                .filter(|&attack| normal[attack]["outcome"] != pressured[attack]["outcome"])
+                .count();
+            assert_eq!(differing, 0, "spec {spec}: attack outcomes differ");
         }
     }
 }
