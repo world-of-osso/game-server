@@ -53,7 +53,7 @@ def import_population(db):
         raise ValueError('Kyrakka encounter binding conflicts')
     db.execute('INSERT OR IGNORE INTO raid_encounter_creature VALUES(?,?,?,?,?,?,?)', binding)
     # The log importer added the observed Erkhart while the placeholder was 12 yards away.
-    retire_encounter_duplicates(db)
+    retire_encounter_duplicates(db, maps={2521})
 
 
 def main():

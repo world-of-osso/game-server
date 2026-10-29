@@ -1,4 +1,8 @@
 {
+  "raid_encounter_creature": {
+    "sql": "CREATE TABLE raid_encounter_creature(map_id INTEGER, creature_entry INTEGER, encounter_id INTEGER)",
+    "rows": []
+  },
   "keystone_affix": {
     "sql": "CREATE TABLE keystone_affix(ID INTEGER, Name_lang TEXT)",
     "rows": []

@@ -50,33 +50,71 @@ class ImportTest(unittest.TestCase):
                                  [('ordinary',), ('other-map',)])
             self.assertEqual(module.import_population(copy, records)['2521']['imported'], 0)
 
-    def test_encounter_observation_beside_another_spawn_of_its_entry_is_retired(self):
-        with closing(sqlite3.connect(':memory:')) as db, db:
+    def test_boss_deduplication_uses_authored_then_start_observation_then_placeholder(self):
+        # Real October 2026 positions, GUIDs, and source timings from the four follower maps.
+        with tempfile.TemporaryDirectory() as directory, closing(sqlite3.connect(':memory:')) as db, db:
             db.executescript('''
-                CREATE TABLE content_creature(guid INTEGER PRIMARY KEY,id1 INTEGER,map INTEGER,
-                    position_x REAL,position_y REAL,position_z REAL);
-                CREATE TABLE tdb_creature(id INTEGER,map INTEGER,position_x REAL,position_y REAL,position_z REAL);
-                CREATE TABLE log_derived_population(guid INTEGER PRIMARY KEY,map INTEGER,npc_id INTEGER);
-                CREATE TABLE raid_encounter_creature(map_id INTEGER,creature_entry INTEGER);
-                INSERT INTO raid_encounter_creature VALUES(2521,190485),(2993,259445);
-                -- Ruby Erkhart: journal placement and the log row 1.8 yards from it.
-                INSERT INTO content_creature VALUES(63521000,190485,2521,1785.13,20.495,312.59048);
-                INSERT INTO content_creature VALUES(3276416184,190485,2521,1785.52,22.24,312.59048);
-                -- Map 2993 259445: the log row is 26.3 yards from its placement.
-                INSERT INTO content_creature VALUES(63993000,259445,2993,0,0,0);
-                INSERT INTO content_creature VALUES(3276417175,259445,2993,26.3,0,0);
-                -- Not an encounter creature: pack members stay beside each other.
-                INSERT INTO content_creature VALUES(29001628,187969,2521,1621.44,-143.41,126.719);
-                INSERT INTO content_creature VALUES(3276416144,187969,2521,1619.87,-136.2,126.1765);
-                INSERT INTO log_derived_population VALUES(3276416184,2521,190485),(3276417175,2993,259445),
-                    (3276416144,2521,187969);
+                CREATE TABLE content_creature(guid INTEGER PRIMARY KEY,id1 INTEGER,map INTEGER,Comment TEXT);
+                CREATE TABLE tdb_creature(id INTEGER,map INTEGER);
+                CREATE TABLE log_derived_population(guid INTEGER PRIMARY KEY,observation_json TEXT);
+                CREATE TABLE raid_encounter_creature(map_id INTEGER,creature_entry INTEGER,encounter_id INTEGER);
+                INSERT INTO raid_encounter_creature VALUES(2813,234649,3102),(2825,241812,3207),
+                    (2923,239008,3286),(2993,259445,3456);
+                INSERT INTO tdb_creature VALUES(241812,2825);
+                INSERT INTO content_creature VALUES(31000640,241812,2825,NULL);
+                INSERT INTO content_creature VALUES(3276416712,241812,2825,'LOG_DERIVED_POPULATION');
+                INSERT INTO content_creature VALUES(63813001,234649,2813,'FOLLOWER_PLACEMENT_XY_FROM_JOURNAL_ENCOUNTER_UIMAP');
+                INSERT INTO content_creature VALUES(3276416398,234649,2813,'LOG_DERIVED_POPULATION');
+                INSERT INTO content_creature VALUES(63923000,239008,2923,'FOLLOWER_PLACEMENT_XY_FROM_JOURNAL_ENCOUNTER_UIMAP');
+                INSERT INTO content_creature VALUES(3276417028,239008,2923,'LOG_DERIVED_POPULATION');
+                INSERT INTO content_creature VALUES(63993000,259445,2993,'FOLLOWER_PLACEMENT_XY_FROM_JOURNAL_ENCOUNTER_UIMAP');
+                INSERT INTO content_creature VALUES(3276417173,259445,2993,'LOG_DERIVED_POPULATION');
+                INSERT INTO content_creature VALUES(3276417174,259445,2993,'LOG_DERIVED_POPULATION');
+                INSERT INTO content_creature VALUES(3276417175,259445,2993,'LOG_DERIVED_POPULATION');
+                INSERT INTO content_creature VALUES(1,187969,2521,NULL),(2,187969,2521,'LOG_DERIVED_POPULATION');
             ''')
-            self.assertEqual(module.retire_encounter_duplicates(db), [(2521, 190485, 3276416184)])
+            samples = [
+                (3276416398, '10/1/2026 22:32:55.772-5', '10/1/2026 22:41:55.410-5', '10/1/2026 22:41:55.778-5', 3102),
+                (3276417028, '10/1/2026 21:14:10.071-5', '10/1/2026 21:28:36.765-5', '10/1/2026 21:28:37.162-5', 3286),
+                (3276417173, '10/3/2026 03:13:00.925-5', '10/3/2026 03:18:43.191-5', '10/3/2026 03:18:43.199-5', 3456),
+                (3276417174, '10/5/2026 22:03:43.503-5', '10/5/2026 22:10:10.980-5', '10/5/2026 22:10:10.995-5', 3456),
+                (3276417175, '10/15/2026 20:27:06.584-5', '10/15/2026 20:34:56.914-5', '10/15/2026 20:34:56.918-5', 3456),
+            ]
+            for guid, run, start, observed, encounter in samples:
+                name = f'{guid}.txt'
+                (Path(directory) / name).write_text(f'{run}  CHALLENGE_MODE_START\n{start}  ENCOUNTER_START,{encounter},"boss"\n')
+                db.execute('INSERT INTO log_derived_population VALUES (?,?)', (guid, json.dumps(
+                    {'source_file': name, 'source_run_start': run, 'observation_time': observed})))
+            db.execute('INSERT INTO log_derived_population VALUES (3276416712,?)', ('{}',))
+            retired = module.retire_encounter_duplicates(db, Path(directory))
+            self.assertEqual(retired, [(2813, 234649, 63813001), (2825, 241812, 3276416712),
+                                       (2923, 239008, 63923000), (2993, 259445, 63993000),
+                                       (2993, 259445, 3276417173), (2993, 259445, 3276417174)])
             self.assertEqual(db.execute('SELECT guid FROM content_creature ORDER BY guid').fetchall(),
-                             [(29001628,), (63521000,), (63993000,), (3276416144,), (3276417175,)])
-            self.assertEqual(db.execute('SELECT guid FROM log_derived_population ORDER BY guid').fetchall(),
-                             [(3276416144,), (3276417175,)])
-            self.assertEqual(module.retire_encounter_duplicates(db), [])
+                             [(1,), (2,), (31000640,), (3276416398,), (3276417028,), (3276417175,)])
+            self.assertEqual(module.retire_encounter_duplicates(db, Path(directory)), [])
+
+    def test_late_boss_observation_loses_to_placeholder_and_missing_log_fails(self):
+        with tempfile.TemporaryDirectory() as directory, closing(sqlite3.connect(':memory:')) as db, db:
+            db.executescript('''
+                CREATE TABLE content_creature(guid INTEGER PRIMARY KEY,id1 INTEGER,map INTEGER,Comment TEXT);
+                CREATE TABLE tdb_creature(id INTEGER,map INTEGER);
+                CREATE TABLE log_derived_population(guid INTEGER PRIMARY KEY,observation_json TEXT);
+                CREATE TABLE raid_encounter_creature(map_id INTEGER,creature_entry INTEGER,encounter_id INTEGER);
+                INSERT INTO raid_encounter_creature VALUES(2825,241812,3207);
+                INSERT INTO content_creature VALUES(100,241812,2825,'FOLLOWER_PLACEMENT_XY_FROM_JOURNAL_ENCOUNTER_UIMAP');
+                INSERT INTO content_creature VALUES(200,241812,2825,'LOG_DERIVED_POPULATION');
+            ''')
+            record = {'source_file': 'pull.txt', 'source_run_start': '10/12/2026 23:31:28.760-5',
+                      'observation_time': '10/12/2026 23:38:22.053-5'}
+            db.execute('INSERT INTO log_derived_population VALUES (?,?)', (200, json.dumps(record)))
+            with self.assertRaises(FileNotFoundError):
+                module.retire_encounter_duplicates(db, Path(directory))
+            (Path(directory) / 'pull.txt').write_text(
+                '10/12/2026 23:31:28.760-5  CHALLENGE_MODE_START\n'
+                '10/12/2026 23:38:20.189-5  ENCOUNTER_START,3207,"The Hoardmonger"\n')
+            self.assertEqual(module.retire_encounter_duplicates(db, Path(directory)), [(2825, 241812, 200)])
+            self.assertEqual(db.execute('SELECT guid FROM content_creature').fetchall(), [(100,)])
 
     def test_projects_tdb_template_and_models_on_copy(self):
         fixture = json.loads((Path(__file__).parent / 'tests/fixtures/log-population-tdb.json').read_text())
