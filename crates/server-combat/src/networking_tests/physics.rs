@@ -1093,3 +1093,65 @@ fn aura_world_safe_fall_1860_reduces_landing_height_seventeen_yards() {
     let expected = 100.0 * (1.0 - shared::movement::fall_damage_percent(13.0));
     assert!((app.world().get::<Health>(player).unwrap().current - expected).abs() < 0.001);
 }
+
+/// Live Ruby run: Rubynew stepped from the ferry landing onto a floor seam that the
+/// centre sample misses and fell to the lower floor on the server while the client stood.
+#[test]
+fn gravity_keeps_the_player_on_a_floor_seam_that_movement_admits() {
+    use bevy::ecs::system::RunSystemOnce;
+    let map = InMap {
+        map_id: 2521,
+        instance_id: 1,
+    };
+    let feet = Vec3::new(1577.3, 311.8, 226.3);
+    let mut ground = crate::test_data::ground_map();
+    assert_eq!(
+        ground.ground_in(map, feet),
+        crate::ground::GroundProbe::Unsupported
+    );
+    let crate::ground::GroundProbe::Supported(floor) = ground.player_solid_ground_in(map, feet)
+    else {
+        panic!("Ruby upper floor footprint support absent");
+    };
+    assert!((floor - 311.6884).abs() < 0.01, "floor {floor}");
+    let mut app = App::new();
+    app.add_plugins(bevy::MinimalPlugins)
+        .add_message::<crate::death::PlayerDeathTransition>()
+        .insert_resource(ground);
+    app.update();
+    let player = app
+        .world_mut()
+        .spawn((
+            Position {
+                x: feet.x,
+                y: feet.y,
+                z: feet.z,
+            },
+            Health {
+                current: 100.0,
+                max: 100.0,
+            },
+            Player {
+                name: "Seamproof".into(),
+                race: 1,
+                class: 8,
+                appearance: Default::default(),
+            },
+            shared::components::MovementControl::default(),
+            VerticalVelocity(0.0),
+            FallTracker::grounded(feet.y),
+            map,
+        ))
+        .id();
+    for _ in 0..100 {
+        app.world_mut()
+            .resource_mut::<Time>()
+            .advance_by(std::time::Duration::from_millis(50));
+        app.world_mut()
+            .run_system_once(crate::networking::apply_terrain_gravity)
+            .unwrap();
+    }
+    let landed = app.world().get::<Position>(player).unwrap().y;
+    assert!((landed - floor).abs() < 0.01, "player fell to {landed}");
+    assert_eq!(app.world().get::<Health>(player).unwrap().current, 100.0);
+}
