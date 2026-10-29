@@ -4585,6 +4585,21 @@ fn send_spell_failure(
 
 /// Remove an active cast without reporting it: a channel ran out or handed over.
 pub(crate) fn end_cast(world: &mut World, caster: Entity) -> Option<CastState> {
+    let cast = take_cast_state(world, caster)?;
+    end_channel_effects(world, caster, &cast);
+    Some(cast)
+}
+
+/// The channel's auras and ritual end with it.
+fn end_channel_effects(world: &mut World, caster: Entity, cast: &CastState) {
+    if cast.cast_type == CastType::Channel {
+        crate::auras::channel_ended(world, caster, cast.spell_id);
+        crate::meeting_stone::ritual::channel_ended(world, caster, cast.spell_id);
+    }
+}
+
+/// Clear the cast bar and its pending state, leaving channel effects in place.
+fn take_cast_state(world: &mut World, caster: Entity) -> Option<CastState> {
     empower::cancel(world, caster);
     crate::crafting_orders::interrupt(world, caster);
     world
@@ -4596,10 +4611,6 @@ pub(crate) fn end_cast(world: &mut World, caster: Entity) -> Option<CastState> {
     let cast = world.entity_mut(caster).take::<CastState>()?;
     debug!(caster = ?caster, state = ?cast, "Cast state ended");
     mark_dirty(world, caster);
-    if cast.cast_type == CastType::Channel {
-        crate::auras::channel_ended(world, caster, cast.spell_id);
-        crate::meeting_stone::ritual::channel_ended(world, caster, cast.spell_id);
-    }
     Some(cast)
 }
 
@@ -4704,14 +4715,20 @@ fn tick_and_resolve_cast(world: &mut World, caster: Entity, dt: f32) {
     }
 }
 
+/// TC Spell::update: `finish()` then `OnChannelFinished`, while the channel's
+/// target auras still stand (Leymor's Stomp damage reads its Sprout stacks before
+/// their Stomp auras end and kill them).
 fn finish_channel(world: &mut World, caster: Entity, spell_id: u32) {
     crate::auras::channel_completed(world, caster, spell_id);
-    end_cast(world, caster);
+    let cast = take_cast_state(world, caster);
     crate::scripted_ai::dispatch(
         world,
         caster,
         crate::scripted_ai::Hook::ChannelFinished { spell_id },
     );
+    if let Some(cast) = cast {
+        end_channel_effects(world, caster, &cast);
+    }
 }
 
 /// The spell snapshot belonging to a cast bar, including casting-item scaling.
