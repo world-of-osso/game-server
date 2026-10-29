@@ -15,7 +15,7 @@ fn neltharus_boss_models_bake_and_load_all_eye_poses() {
     let output = PathBuf::from(std::env::var("NELTHARUS_EYE_OUTPUT").unwrap());
     let connection =
         Connection::open_with_flags(&database, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
-    let mut query = connection.prepare("SELECT DISTINCT CreatureDisplayID FROM content_creature_template_model WHERE CreatureID IN (SELECT id1 FROM content_creature WHERE map=2519) ORDER BY 1").unwrap();
+    let mut query = connection.prepare("SELECT DISTINCT m.CreatureDisplayID FROM content_creature_template_model m JOIN content_creature c ON c.id1=m.CreatureID WHERE c.map=2519 AND c.id1 IN (181861,189340,189478,189901) ORDER BY 1").unwrap();
     let displays: Vec<u32> = query
         .query_map([], |row| row.get(0))
         .unwrap()
