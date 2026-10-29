@@ -12,6 +12,8 @@ The floor resolver supplies WoW-coordinate heights for log positions without ass
 - [ ] Treat `ui_map_id` only as metadata; do not filter candidates by UI-map Z bounds.
 - [ ] Read a JSON request array and write one result per input row in the same order.
 
+Usage: `floor-resolver INPUT.json OUTPUT.json GEOMETRY_DIR NAVMESH_DIR WORLD_DB`. The world database is read-only; `GEOMETRY_DIR` contains `terrain/`, `models/`, and `los/`, and `NAVMESH_DIR` contains map directories.
+
 ## How it works
 
 See [ground assets](../wiki/systems/ground-assets.md).
