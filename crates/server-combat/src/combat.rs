@@ -1643,7 +1643,7 @@ pub fn armor_mitigated(
 ) -> ArmorMitigation {
     let penetration = attacker_mods.map_or(0.0, |mods| mods.armor_penetration_pct);
     let armor = armor_after_penetration(armor, target.level_against(attacker), penetration);
-    let constant = constants.and_then(|constants| constants.at(attacker.level_against(target)));
+    let constant = constants.and_then(|constants| attacker.armor_constant(target, constants));
     let reduction = constant.map(|constant| melee::armor_reduced_damage(damage, armor, constant));
     ArmorMitigation {
         damage: reduction
@@ -1914,10 +1914,14 @@ fn swing_victim(
     if is_npc {
         Victim::Creature { level_difference }
     } else {
-        Victim::Player(PlayerDefense {
-            sitting,
-            ..player.map_or_else(Default::default, |stats| stats.defense)
-        })
+        let mut defense = player.map_or_else(Default::default, |stats| stats.defense);
+        if player.is_some() {
+            // SimC76f8118 attack.cpp:106-123,400-424: both chances use defender minus attacker level.
+            let adjustment = level_difference as f32 * 1.5;
+            defense.dodge = (defense.dodge + adjustment).max(0.0);
+            defense.parry = (defense.parry + adjustment).max(0.0);
+        }
+        Victim::Player(PlayerDefense { sitting, ..defense })
     }
 }
 
@@ -1932,7 +1936,7 @@ fn blocked_pct(
     match victim {
         Victim::Creature { .. } => melee::CREATURE_BLOCKED_PCT,
         Victim::Player(defense) => constants
-            .and_then(|constants| constants.at(attacker.level_against(target)))
+            .and_then(|constants| attacker.armor_constant(target, constants))
             .map_or(0.0, |constant| defense.blocked_pct(constant)),
     }
 }
@@ -2046,7 +2050,7 @@ fn melee_damage_splits(
         let scaling = |entity| {
             context.scaling.get(entity).map_or(
                 UnitScaling::from_item((None, None, None)),
-                UnitScaling::from_item,
+                UnitScaling::from_query,
             )
         };
         let multiplier = scaling(split.recipient).health_multiplier(&scaling(attacker));
@@ -2163,7 +2167,7 @@ fn resolve_swing(
     let unit = |entity| {
         context.scaling.get(entity).map_or(
             UnitScaling::from_item((None, None, None)),
-            UnitScaling::from_item,
+            UnitScaling::from_query,
         )
     };
     let (attacker_scaling, target) = (unit(attacker.entity), unit(target_entity));
@@ -2356,7 +2360,7 @@ fn resolve_swing(
     for split in splits {
         let recipient_scaling = context.scaling.get(split.recipient).map_or(
             UnitScaling::from_item((None, None, None)),
-            UnitScaling::from_item,
+            UnitScaling::from_query,
         );
         let health_left = redirect_health
             .entry(split.recipient)

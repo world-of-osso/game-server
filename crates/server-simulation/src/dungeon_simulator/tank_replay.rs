@@ -13,6 +13,10 @@ use std::collections::{BTreeMap, BTreeSet, VecDeque};
 const TICK_SECONDS: f64 = 0.05;
 const SPIKE_WINDOW_SECONDS: f64 = 5.0;
 const SHIELD_OF_THE_RIGHTEOUS: u32 = 132403;
+// SimC Tank_Dummy_Dungeon: native dungeon difficulty 23, MID2 season 120.
+const TANK_DUNGEON_DIFFICULTY: u32 = 23;
+const TANK_DUNGEON_TUNING: u32 = 3025;
+const TANK_DUNGEON_SEASON: u32 = 120;
 
 fn self_periodic_damage(event: &shared::protocol::CombatLogEvent, tank: Entity) -> bool {
     event.kind == CombatLogKind::Damage && event.periodic && event.source == Some(tank.to_bits())
@@ -509,6 +513,25 @@ fn replay_registered_run_with_healing(
     if level != 90 {
         return Err(format!("MID2_PLAYER_LEVEL_MISMATCH:{level}"));
     }
+    // SimC76f8118 sc_enemy.cpp:1214-1220: the tank dungeon dummy is two levels above the player.
+    let tuning = run
+        .app
+        .world()
+        .resource::<crate::world_data::WorldData>()
+        .expected_stats
+        .armor_tuning(TANK_DUNGEON_TUNING, TANK_DUNGEON_SEASON)?;
+    run.app
+        .world_mut()
+        .entity_mut(source)
+        .insert((shared::components::UnitLevel(level + 2), tuning));
+    run.app
+        .world_mut()
+        .entity_mut(source)
+        .remove::<shared::level_scaling::LevelScaling>();
+    run.app
+        .world_mut()
+        .entity_mut(source)
+        .remove::<crate::level_scaling::ScaledStats>();
     let started_at = run.app.world().resource::<Time>().elapsed();
     super::dps_parity::install_fixture_lifetimes(&mut run, started_at);
     super::dps_parity::engage(&mut run);
@@ -1001,6 +1024,16 @@ fn replay_registered_run_with_healing(
         "absorb_per_second":(elapsed>0.0).then(||absorbed/elapsed),"time_to_death":death,
         "active_mitigation_auras":mitigation_auras,"active_mitigation_uptime":(elapsed>0.0).then(||active_seconds/elapsed),
         "spike_window_seconds":SPIKE_WINDOW_SECONDS,"largest_spike":spike});
+    let world = run.app.world();
+    let attacker = crate::level_scaling::UnitScaling::of(world, source);
+    let defender = crate::level_scaling::UnitScaling::of(world, tank);
+    let armor_constant = attacker
+        .armor_constant(
+            &defender,
+            world.resource::<crate::level_scaling::ArmorConstants>(),
+        )
+        .ok_or("SIMC_DUMMY_ARMOR_CONSTANT_ABSENT")?;
+    report["tank_dummy_scenario"] = json!({"difficulty":TANK_DUNGEON_DIFFICULTY,"content_tuning":TANK_DUNGEON_TUNING,"season":TANK_DUNGEON_SEASON,"attacker_level":attacker.level_against(&defender),"armor_constant":armor_constant});
     report["outgoing_damage_by_spell"] = json!(outgoing_damage_by_spell);
     report["resource_spent_by_spell"] = json!(resource_spent_by_spell);
     Ok(report)

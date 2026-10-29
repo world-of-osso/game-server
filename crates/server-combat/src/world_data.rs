@@ -475,6 +475,35 @@ pub(crate) fn load_expected_stats(conn: &Connection) -> ExpectedStats {
             .or_default()
             .push(mod_id);
     }
+    let mut seasonal = conn.prepare("SELECT ContentTuningID, ExpectedStatModID, MinMythicPlusSeasonID, MaxMythicPlusSeasonID FROM content_tuning_x_expected ORDER BY ID")
+        .expect("Failed to prepare seasonal content tuning query");
+    let rows = seasonal
+        .query_map([], |row| {
+            Ok((
+                row.get::<_, u32>(0)?,
+                row.get::<_, u32>(1)?,
+                row.get::<_, u32>(2)?,
+                row.get::<_, u32>(3)?,
+            ))
+        })
+        .expect("Failed to query seasonal content tuning");
+    for row in rows {
+        let (tuning, modifier, minimum, maximum) =
+            row.expect("Failed to read seasonal content tuning");
+        stats
+            .armor_tuning_mods
+            .entry(tuning)
+            .or_default()
+            .push((modifier, minimum, maximum));
+    }
+    let mut seasons = conn
+        .prepare("SELECT ID, MilestoneSeason FROM mythic_plus_season")
+        .expect("Failed to prepare MythicPlusSeason query");
+    stats.season_milestones = seasons
+        .query_map([], |row| Ok((row.get::<_, u32>(0)?, row.get::<_, u32>(1)?)))
+        .expect("Failed to query MythicPlusSeason")
+        .collect::<rusqlite::Result<_>>()
+        .expect("Failed to read MythicPlusSeason");
     stats
 }
 
