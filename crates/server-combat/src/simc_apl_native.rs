@@ -1219,6 +1219,8 @@ fn fixture_add_value(
     let never = i64::MAX as f64 / 1000.0;
     Ok(match property {
         "exists" => bool_value(adds.is_some()),
+        // SimC76f8118 raid_event.cpp3193–3200: ordinary adds never contain a boss.
+        "has_boss" => 0.0,
         // raid_event.cpp3097–3108: configured events are up only during an active wave.
         "up" => bool_value(
             adds.and_then(|adds| adds.expires_at)

@@ -1177,6 +1177,29 @@ fn dps_parity_native_bis_dummy_records_300s() {
 }
 
 #[test]
+#[ignore = "uses the real Vengeance three-target fixture and literal APL"]
+fn vengeance_three_target_add_event_has_no_boss() {
+    use crate::simc_apl_native::{Bindings, Encounter, FightStyle, NativeFacts};
+    use server::simc_apl::Facts;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_registered_player(581, 3).unwrap();
+    engage(&mut run);
+    let start = run.app.world().resource::<Time>().elapsed();
+    install_fixture_lifetimes(&mut run, start);
+    let bindings = Bindings::default();
+    let encounter = Encounter::Fixture {
+        started_at: start.as_secs_f64(),
+        duration: 300.0,
+        style: FightStyle::Patchwerk,
+    };
+    let facts = NativeFacts::new(run.app.world(), run.actor, &bindings, encounter, 3);
+    assert_eq!(facts.value("raid_event.adds.exists").unwrap(), 1.0);
+    assert_eq!(facts.value("raid_event.adds.count").unwrap(), 2.0);
+    assert_eq!(facts.value("raid_event.adds.has_boss").unwrap(), 0.0);
+    drive_literal_tick(&mut run).expect("Vengeance APL must accept configured ordinary adds");
+}
+
+#[test]
 #[ignore = "opt-in actual300s per-wave health/TTD; requires private parity inputs"]
 fn dps_parity_fixture_add_health_and_ttd_follow_each_summon_lifetime() {
     use crate::simc_apl_native::{Bindings, Encounter, FightStyle, NativeFacts};
