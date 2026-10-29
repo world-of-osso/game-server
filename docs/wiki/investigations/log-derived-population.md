@@ -14,6 +14,12 @@ Cross-run matching is provisional. Within a connected 10-yard area of the same N
 
 `scripts/import_log_population.py` requires a database copy and resolved, explicitly classified observations. It checks both `tdb_creature` and `content_creature` before adding rows. It projects missing runtime templates and their available raw TDB difficulty, model and addon data through the existing Retail template projection. It records template and spawn provenance separately. No shared template level is changed to match a log observation.
 
+## Ruby Life Pools Global Affix Stalker — 2026-10-29
+
+In the private follower walk, Global Affix Stalker 171322 acquired threat and attacked while the player could not select it. The private copy's TDB spawn 9001503 is on map 2521 at `(1393.61, -177.391, 129.034)`, lists difficulties `1,2,8,23`, and has no `tdb_spawn_group` row. The follower Normal-population bridge therefore admits the Normal spawn; the name alone does not establish a Mythic-only condition.
+
+The TDB and content templates agree: faction 14, `unit_flags=0x02000000`, `unit_flags2=0x800`, `flags_extra=0`, and no AI or script name. In pinned TrinityCore a352b1fa, `Creature::CanStartAttack` checks the prospective victim and does not reject the attacker's uninteractible flag. This explains why the imported flags do not themselves prevent the stalker's outgoing attack; it does not prove that Retail intends this spawn to attack in follower difficulty. No data or flag change is justified by the available evidence. Determine the authored phase, aura, or script before changing or hiding the creature.
+
 ## Coverage snapshot
 
 Read-only canonical database and log census, 2026-10-28. Counts are raw GUID observations and NPC IDs, not deduplicated spawns; they include summons and unclassified actors. TDB and content counts include all stored difficulties, not only Normal. The [applied import results and named gaps](../../specs/follower-dungeons.md#applied-log-population-coverage) are recorded separately.
