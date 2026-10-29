@@ -23,6 +23,102 @@ pub(crate) struct Hit {
     pub(crate) melee_table: Option<MeleeTable>,
 }
 
+#[derive(Debug, PartialEq)]
+pub(crate) struct Scenario {
+    pub(crate) dummy: String,
+    pub(crate) player: String,
+    pub(crate) target_level: Option<u8>,
+    pub(crate) armor_constant: f32,
+    pub(crate) heals: Vec<(u64, f32)>,
+}
+
+pub(crate) fn read_scenario(path: &Path) -> Result<Scenario, String> {
+    let trace = std::fs::read_to_string(path)
+        .map_err(|error| format!("read {}: {error}", path.display()))?;
+    parse_scenario(&trace)
+}
+
+fn parse_scenario(trace: &str) -> Result<Scenario, String> {
+    let dummy = trace
+        .lines()
+        .find_map(|line| {
+            let (_, rest) = line.split_once(" Enemy '")?;
+            let (name, rest) = rest.split_once("' actions.default=")?;
+            rest.starts_with("/auto_attack").then_some(name.to_owned())
+        })
+        .ok_or("SimC tank dummy actions absent")?;
+    let target_level = trace
+        .lines()
+        .find_map(|line| line.strip_prefix("target_level="))
+        .ok_or("SimC target level absent")?
+        .parse::<i16>()
+        .map_err(|error| format!("invalid SimC target level: {error}"))?;
+    let target_level = if target_level == -1 {
+        None
+    } else {
+        Some(
+            u8::try_from(target_level)
+                .map_err(|error| format!("invalid SimC target level: {error}"))?,
+        )
+    };
+    let armor_marker = format!("'{dummy}' base armor coefficient set to ");
+    let armor_constant = trace
+        .lines()
+        .filter_map(|line| line.split_once(&armor_marker).map(|(_, value)| value))
+        .last()
+        .ok_or("SimC dummy armor constant absent")?
+        .trim_end_matches('.')
+        .parse::<f32>()
+        .map_err(|error| format!("invalid SimC armor constant: {error}"))?;
+    if !armor_constant.is_finite() || armor_constant <= 0.0 {
+        return Err("invalid SimC dummy armor constant".into());
+    }
+    let heal_marker = format!("Enemy '{dummy}' Action 'tank_heal' (0) heals Player '");
+    let mut heals = Vec::new();
+    let mut player = None;
+    for line in trace.lines() {
+        let Some((time, event)) = line.split_once(' ') else {
+            continue;
+        };
+        let Some(rest) = event.strip_prefix(&heal_marker) else {
+            continue;
+        };
+        let (name, amount) = rest
+            .split_once(" for ")
+            .ok_or("SimC tank heal amount absent")?;
+        let name = name
+            .strip_suffix('\'')
+            .ok_or("SimC tank heal target absent")?;
+        if player.as_deref().is_some_and(|previous| previous != name) {
+            return Err("SimC tank heals have multiple targets".into());
+        }
+        player = Some(name.to_owned());
+        let seconds = time
+            .parse::<f64>()
+            .map_err(|error| format!("invalid SimC heal time: {error}"))?;
+        let amount = amount
+            .split_whitespace()
+            .next()
+            .ok_or("SimC tank heal amount absent")?
+            .parse::<f32>()
+            .map_err(|error| format!("invalid SimC tank heal: {error}"))?;
+        if !seconds.is_finite() || seconds < 0.0 || !amount.is_finite() || amount <= 0.0 {
+            return Err("invalid SimC tank heal".into());
+        }
+        heals.push(((seconds * 1000.0).round() as u64, amount));
+    }
+    if heals.is_empty() || heals.windows(2).any(|pair| pair[0].0 > pair[1].0) {
+        return Err("SimC tank healing events absent or unordered".into());
+    }
+    Ok(Scenario {
+        dummy,
+        player: player.ok_or("SimC tank heal target absent")?,
+        target_level,
+        armor_constant,
+        heals,
+    })
+}
+
 pub(crate) fn read_trace(path: &Path, dummy: &str) -> Result<Vec<Hit>, String> {
     let trace = std::fs::read_to_string(path)
         .map_err(|error| format!("read {}: {error}", path.display()))?;
@@ -223,10 +319,11 @@ fn parse_trace(trace: &str, dummy: &str) -> Result<Vec<Hit>, String> {
                 let value: f32 = raw
                     .parse()
                     .map_err(|error| format!("invalid {name}: {error}"))?;
-                if !value.is_finite() || !(0.0..=1.0).contains(&value) {
+                if !value.is_finite() || value > 1.0 || (name != "miss" && value < 0.0) {
                     return Err(format!("invalid {name} in SimC attack table: {line}"));
                 }
-                Ok(value)
+                // SimC attack.cpp197–211 omits nonpositive miss entries.
+                Ok(value.max(0.0))
             };
             melee_table = Some(MeleeTable {
                 miss: value("miss")?,
@@ -297,6 +394,21 @@ fn parse_trace(trace: &str, dummy: &str) -> Result<Vec<Hit>, String> {
         return Err("SimC tank dummy trace has no ordered damage events".into());
     }
     Ok(hits)
+}
+
+#[test]
+fn reads_actual_dummy_level_armor_and_healing() {
+    let trace = "target_level=93\n0.000 Enemy 'Fluffy_Pillow' base armor coefficient set to 3430.\n0.000 Enemy 'Fluffy_Pillow' actions.default=/auto_attack,damage=1000000\n0.000 Enemy 'Fluffy_Pillow' Action 'tank_heal' (0) heals Player 'Tank'layn' for 300000 (0) (hit)\n5.000 Enemy 'Fluffy_Pillow' Action 'tank_heal' (0) heals Player 'Tank'layn' for 300000 (1) (hit)";
+    assert_eq!(
+        parse_scenario(trace).unwrap(),
+        Scenario {
+            dummy: "Fluffy_Pillow".into(),
+            player: "Tank'layn".into(),
+            target_level: Some(93),
+            armor_constant: 3430.0,
+            heals: vec![(0, 300000.0), (5000, 300000.0)],
+        }
+    );
 }
 
 #[test]

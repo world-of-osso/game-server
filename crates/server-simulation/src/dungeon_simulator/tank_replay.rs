@@ -376,7 +376,30 @@ pub(super) fn replay_simc_with_pressure(
     external_healing: bool,
     pressure_scale: f64,
 ) -> Result<Value, String> {
+    replay_simc_with_targets(
+        spec_id,
+        path,
+        1,
+        duration_seconds,
+        seed,
+        external_healing,
+        pressure_scale,
+    )
+}
+
+pub(super) fn replay_simc_with_targets(
+    spec_id: u32,
+    path: &std::path::Path,
+    target_count: usize,
+    duration_seconds: u32,
+    seed: u64,
+    external_healing: bool,
+    pressure_scale: f64,
+) -> Result<Value, String> {
     use crate::simc_tank_timeline;
+    if !matches!(target_count, 1 | 3) {
+        return Err(format!("SIMC_TANK_TARGET_COUNT_UNSUPPORTED:{target_count}"));
+    }
     if !pressure_scale.is_finite() || pressure_scale <= 0.0 {
         return Err("SIMC_PRESSURE_SCALE_MUST_BE_POSITIVE_AND_FINITE".into());
     }
@@ -399,37 +422,33 @@ pub(super) fn replay_simc_with_pressure(
     if duration_seconds != 300 {
         return Err("NATIVE_LITERAL_ENCOUNTER_REQUIRES_300_SECONDS".into());
     }
-    let mut hits = simc_tank_timeline::read_trace(path, "Tank_Dummy_Dungeon")?;
+    let scenario = simc_tank_timeline::read_scenario(path)?;
+    let mut hits = simc_tank_timeline::read_trace(path, &scenario.dummy)?;
     scale_pressure(&mut hits, pressure_scale);
     let (bloodlust_ms, raid_buffs) = if external_healing {
-        let (profile, _) = super::dps_parity::read_reference(spec_id)?;
-        let name = profile
-            .options
-            .get("name")
-            .and_then(|value| value.as_str())
-            .ok_or("SIMC_PROFILE_NAME_ABSENT")?;
         (
-            simc_tank_timeline::read_bloodlust_time(path, name)?,
-            simc_tank_timeline::read_raid_buffs(path, name)?,
+            simc_tank_timeline::read_bloodlust_time(path, &scenario.player)?,
+            simc_tank_timeline::read_raid_buffs(path, &scenario.player)?,
         )
     } else {
         (None, Vec::new())
     };
     let dummy_debuffs = if external_healing {
-        simc_tank_timeline::read_dummy_debuffs(path, "Tank_Dummy_Dungeon")?
+        simc_tank_timeline::read_dummy_debuffs(path, &scenario.dummy)?
     } else {
         Vec::new()
     };
     let dummy_bleeding = if external_healing {
-        simc_tank_timeline::read_dummy_bleeding(path, "Tank_Dummy_Dungeon")?
+        simc_tank_timeline::read_dummy_bleeding(path, &scenario.dummy)?
     } else {
         false
     };
     let _rng = crate::random::seed_scope(seed);
-    let mut run = super::dps_parity::prepare_registered_player_with(spec_id, 1, |run| {
-        apply_simc_raid_buffs(run, &raid_buffs)?;
-        apply_simc_dummy_debuffs(run, &dummy_debuffs)
-    })?;
+    let mut run =
+        super::dps_parity::prepare_registered_player_with(spec_id, target_count, |run| {
+            apply_simc_raid_buffs(run, &raid_buffs)?;
+            apply_simc_dummy_debuffs(run, &dummy_debuffs)
+        })?;
     apply_simc_starting_holy_power(&mut run);
     if dummy_bleeding {
         let target = run.targets[0];
@@ -449,6 +468,7 @@ pub(super) fn replay_simc_with_pressure(
         &raid_buffs,
         &dummy_debuffs,
         dummy_bleeding,
+        &scenario,
     )?;
     report["pressure_scale"] = json!(pressure_scale);
     Ok(report)
@@ -500,6 +520,13 @@ pub(super) fn replay_registered_run(
         &[],
         &[],
         false,
+        &crate::simc_tank_timeline::Scenario {
+            dummy: "Tank_Dummy_Dungeon".into(),
+            player: String::new(),
+            target_level: None,
+            armor_constant: 4531.03,
+            heals: Vec::new(),
+        },
     )
 }
 
@@ -611,6 +638,48 @@ pub(super) fn apply_simc_dummy_debuffs(
     Ok(())
 }
 
+fn configure_trace_attacker(
+    world: &mut World,
+    source: Entity,
+    player_level: u8,
+    scenario: &simc_tank_timeline::Scenario,
+) -> Result<(), String> {
+    // SimC76f8118 sc_enemy.cpp1214–1220 sets the dungeon dummy two levels above its tank.
+    let attacker_level = scenario.target_level.unwrap_or(player_level + 2);
+    let base = world
+        .resource::<crate::level_scaling::ArmorConstants>()
+        .at(attacker_level)
+        .ok_or("SIMC_DUMMY_ARMOR_CONSTANT_ABSENT")?;
+    world
+        .entity_mut(source)
+        .insert(shared::components::UnitLevel(attacker_level))
+        .remove::<crate::level_scaling::ArmorTuning>()
+        .remove::<shared::level_scaling::LevelScaling>()
+        .remove::<crate::level_scaling::ScaledStats>();
+    if (base - scenario.armor_constant).abs() > 0.01 {
+        let tuning = world
+            .resource::<crate::world_data::WorldData>()
+            .expected_stats
+            .armor_tuning(TANK_DUNGEON_TUNING, TANK_DUNGEON_SEASON)?;
+        world.entity_mut(source).insert(tuning);
+        let attacker = crate::level_scaling::UnitScaling::of(world, source);
+        let target = crate::level_scaling::UnitScaling::of(world, source);
+        let actual = attacker
+            .armor_constant(
+                &target,
+                world.resource::<crate::level_scaling::ArmorConstants>(),
+            )
+            .ok_or("SIMC_DUMMY_ARMOR_CONSTANT_ABSENT")?;
+        if (actual - scenario.armor_constant).abs() > 0.01 {
+            return Err(format!(
+                "SIMC_DUMMY_ARMOR_CONSTANT_MISMATCH: trace={}, native={actual}",
+                scenario.armor_constant
+            ));
+        }
+    }
+    Ok(())
+}
+
 fn replay_registered_run_with_healing(
     mut run: super::dps_parity::Run,
     hits: &[crate::simc_tank_timeline::Hit],
@@ -621,6 +690,7 @@ fn replay_registered_run_with_healing(
     raid_buffs: &[simc_tank_timeline::RaidBuff],
     dummy_debuffs: &[simc_tank_timeline::RaidBuff],
     dummy_bleeding: bool,
+    scenario: &simc_tank_timeline::Scenario,
 ) -> Result<Value, String> {
     use crate::simc_tank_timeline::Kind;
     let tank = run.actor;
@@ -642,25 +712,7 @@ fn replay_registered_run_with_healing(
     if level != 90 {
         return Err(format!("MID2_PLAYER_LEVEL_MISMATCH:{level}"));
     }
-    // SimC76f8118 sc_enemy.cpp:1214-1220: the tank dungeon dummy is two levels above the player.
-    let tuning = run
-        .app
-        .world()
-        .resource::<crate::world_data::WorldData>()
-        .expected_stats
-        .armor_tuning(TANK_DUNGEON_TUNING, TANK_DUNGEON_SEASON)?;
-    run.app
-        .world_mut()
-        .entity_mut(source)
-        .insert((shared::components::UnitLevel(level + 2), tuning));
-    run.app
-        .world_mut()
-        .entity_mut(source)
-        .remove::<shared::level_scaling::LevelScaling>();
-    run.app
-        .world_mut()
-        .entity_mut(source)
-        .remove::<crate::level_scaling::ScaledStats>();
+    configure_trace_attacker(run.app.world_mut(), source, level, scenario)?;
     if spec == 73 {
         // SimC76f8118 sc_warrior.cpp:3432 assumes the first Charge enters combat.
         // Start outside native Charge's minimum range and let native movement close it.
@@ -714,6 +766,7 @@ fn replay_registered_run_with_healing(
     let mut self_periodic_taken = 0.0;
     let (mut recent, mut recent_sum) = (VecDeque::<(f64, f64)>::new(), 0.0);
     let (mut next, mut elapsed, mut death) = (0, 0.0, None);
+    let mut next_heal = 0;
     let mut casts = BTreeMap::<u32, usize>::new();
     let mut healing_by_spell = BTreeMap::<u32, f64>::new();
     let mut raw_healing_by_spell = BTreeMap::<u32, f64>::new();
@@ -736,6 +789,8 @@ fn replay_registered_run_with_healing(
     let mut debuff_seconds: BTreeMap<u32, f64> =
         target_debuffs.iter().map(|&id| (id, 0.0)).collect();
     let mut external_healing_effective = 0.0;
+    let mut engagement_samples = vec![super::dps_parity::capture_engagement(&run)];
+    let mut retired = Vec::new();
     let mut bloodlust_applied = false;
     for tick in 1..=duration_seconds * 20 {
         elapsed = f64::from(tick) * TICK_SECONDS;
@@ -743,7 +798,17 @@ fn replay_registered_run_with_healing(
             apply_replay_bloodlust(run.app.world_mut(), tank)?;
             bloodlust_applied = true;
         }
-        if external_healing && tick % 100 == 0 && tick < duration_seconds * 20 {
+        while external_healing
+            && scenario
+                .heals
+                .get(next_heal)
+                .is_some_and(|(time, _)| *time <= u64::from(tick) * 50)
+        {
+            let (time, raw_heal) = scenario.heals[next_heal];
+            next_heal += 1;
+            if time == 0 {
+                continue;
+            }
             let effective = {
                 let mut health = run
                     .app
@@ -751,7 +816,7 @@ fn replay_registered_run_with_healing(
                     .get_mut::<Health>(tank)
                     .ok_or("TANK_HEALTH_ABSENT")?;
                 if health.current > 0.0 {
-                    let amount = 75_000.0_f32.min((health.max - health.current).max(0.0));
+                    let amount = raw_heal.min((health.max - health.current).max(0.0));
                     health.current += amount;
                     Some(amount)
                 } else {
@@ -764,7 +829,7 @@ fn replay_registered_run_with_healing(
                     run.app.world_mut(),
                     tank,
                     0,
-                    75_000.0,
+                    raw_heal,
                     amount,
                     false,
                 );
@@ -973,13 +1038,25 @@ fn replay_registered_run_with_healing(
             .app
             .world()
             .get::<Health>(tank)
-            .is_some_and(|health| health.current > 0.0)
+            .is_none_or(|health| health.current <= 0.0)
         {
-            super::dps_parity::drive_literal_tick(&mut run)
-                .map_err(|error| format!("native APL tick {tick}: {error}"))?;
+            death = Some(elapsed);
+            break;
         }
+        super::dps_parity::drive_literal_tick(&mut run)
+            .map_err(|error| format!("native APL tick {tick}: {error}"))?;
         let boundary = started_at + std::time::Duration::from_millis(u64::from(tick) * 50);
-        super::dps_parity::advance_fixture_step(&mut run, boundary)?;
+        while run.app.world().resource::<Time>().elapsed() < boundary {
+            let next = super::dps_parity::next_fixture_boundary(&run, boundary);
+            super::dps_parity::advance_fixture_step(&mut run, next)?;
+            super::dps_parity::apply_fixture_add_events(&mut run, &mut retired, started_at)?;
+            if next < boundary {
+                super::dps_parity::drive_literal_tick(&mut run)?;
+            }
+        }
+        if matches!(tick, 1 | 20 | 5400 | 6000) {
+            engagement_samples.push(super::dps_parity::capture_engagement(&run));
+        }
         let world = run.app.world();
         if mitigation_auras
             .iter()
@@ -1198,7 +1275,16 @@ fn replay_registered_run_with_healing(
             world.resource::<crate::level_scaling::ArmorConstants>(),
         )
         .ok_or("SIMC_DUMMY_ARMOR_CONSTANT_ABSENT")?;
-    report["tank_dummy_scenario"] = json!({"difficulty":TANK_DUNGEON_DIFFICULTY,"content_tuning":TANK_DUNGEON_TUNING,"season":TANK_DUNGEON_SEASON,"attacker_level":attacker.level_against(&defender),"armor_constant":armor_constant});
+    let dungeon = scenario.target_level.is_none();
+    report["tank_dummy_scenario"] = json!({"dummy":scenario.dummy,
+        "difficulty":dungeon.then_some(TANK_DUNGEON_DIFFICULTY),
+        "content_tuning":dungeon.then_some(TANK_DUNGEON_TUNING),
+        "season":dungeon.then_some(TANK_DUNGEON_SEASON),
+        "attacker_level":attacker.level_against(&defender),"armor_constant":armor_constant});
+    report["combat"] = super::dps_parity::combat_report(&run, elapsed);
+    report["actor_kind"] = json!("player");
+    report["target_waves"] = json!(run.target_waves);
+    report["engagement_samples"] = json!(engagement_samples);
     let (bulwark_starts, bulwark_refreshes, divine_inspiration_procs) =
         bulwark_observations(world, tank);
     report["holy_bulwark_applications"] =

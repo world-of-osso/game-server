@@ -4,6 +4,8 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 ## What it must do
 
+- Tank DPS comparisons with `DPS_PARITY_TANK_TRACE_DIR` replay the matching `<spec>.<targets>.<seed>.simc.log` through the existing tank replay. The recorded dummy level, armor coefficient, incoming attacks, pauses and external heals apply to the selected 1T or 3T fixture. Count damage to all fixture targets and preserve native incoming-hit resource and mitigation behavior.
+
 - Foreground literal actions within SimC's default 250 ms cooldown tolerance may be selected and queued. Execute the selected action only after its native cooldown or charge is ready; do not cast a lower-priority action in the meantime. Recheck native admission at execution. Native off-GCD and item-use actions do not use this queue.
 - [ ] SimC also queues some `use_while_casting` off-GCD actions; native does not. In the Fire seed-70448 1T trace, SimC queues Combustion twice and cancels both when Fireball finishes, so neither executes. The DPS effect of other cases is not established.
 
