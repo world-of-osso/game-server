@@ -1518,13 +1518,31 @@ mod tests {
         let target = run.targets[0];
         let control = run.targets[1];
         {
-            let mut health = run.app.world_mut().get_mut::<shared::components::Health>(target).unwrap();
+            let mut health = run
+                .app
+                .world_mut()
+                .get_mut::<shared::components::Health>(target)
+                .unwrap();
             health.current = health.max * 0.1;
         }
-        run.app.world_mut().get_mut::<crate::spell_cast::powers::PowerPools>(actor).unwrap()
-            .get_mut(shared::components::PowerType::Rage).unwrap().current = 1000.0;
-        run.app.world_mut().get_mut::<crate::stats::CharacterStats>(actor).unwrap().crit_pct = 0.0;
-        execute(run.app.world_mut(), actor, Execution::Spell(163201, target, Some(target))).unwrap();
+        run.app
+            .world_mut()
+            .get_mut::<crate::spell_cast::powers::PowerPools>(actor)
+            .unwrap()
+            .get_mut(shared::components::PowerType::Rage)
+            .unwrap()
+            .current = 1000.0;
+        run.app
+            .world_mut()
+            .get_mut::<crate::stats::CharacterStats>(actor)
+            .unwrap()
+            .crit_pct = 0.0;
+        execute(
+            run.app.world_mut(),
+            actor,
+            Execution::Spell(163201, target, Some(target)),
+        )
+        .unwrap();
         for _ in 0..20 {
             run.app.update();
             if crate::auras::has_aura(run.app.world(), target, 262115) {
@@ -1533,19 +1551,40 @@ mod tests {
         }
         assert!(crate::auras::has_aura(run.app.world(), target, 262115));
         crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 262115, Some(control), 1);
-        for _ in 0..25 { run.app.update(); }
-        let events = &run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
-        let first_tick = |unit: bevy::prelude::Entity| events.iter().find(|event| {
-            event.source == Some(actor.to_bits()) && event.target == Some(unit.to_bits())
-                && event.spell_id == Some(262115) && event.periodic && event.kind == CombatLogKind::Damage
-        }).expect("Deep Wounds tick");
+        for _ in 0..25 {
+            run.app.update();
+        }
+        let events = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0;
+        let first_tick = |unit: bevy::prelude::Entity| {
+            events
+                .iter()
+                .find(|event| {
+                    event.source == Some(actor.to_bits())
+                        && event.target == Some(unit.to_bits())
+                        && event.spell_id == Some(262115)
+                        && event.periodic
+                        && event.kind == CombatLogKind::Damage
+                })
+                .expect("Deep Wounds tick")
+        };
         let actual = first_tick(target);
         let expected = first_tick(control);
-        assert_eq!(actual.crit, expected.crit, "compare equal critical outcomes");
+        assert_eq!(
+            actual.crit, expected.crit,
+            "compare equal critical outcomes"
+        );
         // Execute's target can acquire its own debuffs; a duplicate deposit adds
         // at least six ticks to the fresh budget, far more than this 10% bound.
-        assert!((actual.amount - expected.amount).abs() as f32 <= expected.amount as f32 * 0.10,
-            "Execute must deposit one fresh bleed: actual={} control={}", actual.amount, expected.amount);
+        assert!(
+            (actual.amount - expected.amount).abs() as f32 <= expected.amount as f32 * 0.10,
+            "Execute must deposit one fresh bleed: actual={} control={}",
+            actual.amount,
+            expected.amount
+        );
     }
     #[test]
     #[ignore = "requires canonical MID2 Protection profile"]
