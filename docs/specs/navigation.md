@@ -4,6 +4,8 @@ Phase-1 baked obstacle-aware creature movement in `crates/navigation` and server
 
 ## What it must do
 
+- [x] `GAME_SERVER_NAV_DIR`, when set, selects the baked navigation directory independently of `GAME_SERVER_GROUND_DIR`. An unset setting uses `<ground dir>/navmesh`; an invalid selected directory is not replaced by another source.
+
 - [x] Produce reproducible per-tile navigation beside `<ground dir>/los`, covering existing LOS maps/tiles starting with map 0; include Stockade global-WMO geometry for acceptance.
 - [x] Voxelize deterministically and classify source triangles above the shared 50° slope limit as nonwalkable. Recast can merge a steep triangle and adjacent walkable geometry into one walkable voxel; navigation cells do not certify that every underlying triangle is walkable. Player movement must retain solid steep-face support and enforce the directional slope limit.
 - [x] Include collision-bearing WMO floors, walls and open doorways, terrain holes and M2 doodad collision hulls, with agent clearance/radius/climb; mark authored terrain water as a distinct area. M2 hull faces use their transformed authored collision normals: upward support faces within the shared slope limit remain walkable; underside/steep faces remain obstacles. Never classify an entire support model as a nonwalkable obstruction.
