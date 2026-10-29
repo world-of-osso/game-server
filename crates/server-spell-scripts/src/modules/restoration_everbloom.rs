@@ -12,7 +12,42 @@ const TALENT: u32 = 1_244_331;
 const BLOOM: u32 = 33_778;
 const HEAL: u32 = 1_244_341;
 
-pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::ResolvedHeal(everbloom)];
+pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::ResolvedHeal(everbloom),
+    SpellScriptHook::AfterResolvedHits(blooming_frenzy),
+];
+
+fn blooming_frenzy(world: &mut World, ctx: &EffectCtx<'_>) {
+    use combat::auras::ActiveAuras;
+    const FRENZY: u32 = 1_244_470;
+    if ctx.spell.id != 18_562 || !combat::auras::has_aura(world, ctx.caster, FRENZY) {
+        return;
+    }
+    let count = combat::spell_cast::scripts::script_effect_value(world, ctx.caster, FRENZY, 0)
+        .max(0.0) as u32;
+    let targets: Vec<_> = world
+        .query::<(Entity, &ActiveAuras)>()
+        .iter(world)
+        .filter_map(|(unit, auras)| {
+            auras
+                .iter()
+                .any(|aura| aura.spell_id == 33_763 && aura.caster == ctx.caster)
+                .then_some(unit)
+        })
+        .collect();
+    for target in targets {
+        // WCL mR86tKbdCqF1A2NY fight4 actor4: the three blooms land at 0, ~250 and ~500ms.
+        for tick in 0..count {
+            combat::spell_cast::queued_triggers::schedule_full_trigger(
+                world,
+                ctx,
+                target,
+                BLOOM,
+                tick * 250,
+            );
+        }
+    }
+}
 
 fn everbloom(
     world: &mut World,
