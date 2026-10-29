@@ -10,14 +10,16 @@ impl NavigationMap {
         end: Vec3,
         plan: &mut NavigationPlan,
     ) -> Result<NavigationPath, String> {
-        let graph = match &self.hierarchy {
-            Some(graph) => Arc::clone(graph),
-            None => {
-                let graph = Arc::new(PortalGraph::read_artifact(&self.dir)?);
-                self.hierarchy = Some(Arc::clone(&graph));
-                graph
-            }
-        };
+        if self.hierarchy.is_none() {
+            self.preload_hierarchy();
+        }
+        let graph = Arc::clone(
+            self.hierarchy
+                .as_ref()
+                .expect("hierarchy was loaded")
+                .as_ref()
+                .map_err(Clone::clone)?,
+        );
         let filter = filter();
         let (start_ref, start_pos) = self.nearest(start, &filter)?;
         let (end_ref, end_pos) = self.nearest(end, &filter)?;

@@ -72,7 +72,7 @@ pub struct NavigationMap {
     subtile_width: Option<f32>,
     mesh: *mut dtNavMesh,
     query: *mut dtNavMeshQuery,
-    hierarchy: Option<std::sync::Arc<crate::hierarchy::PortalGraph>>,
+    hierarchy: Option<Result<std::sync::Arc<crate::hierarchy::PortalGraph>, String>>,
 }
 
 // SAFETY: pointers are exclusively owned, no thread-affine state; use requires &mut.
@@ -110,6 +110,12 @@ impl NavigationMap {
             Err(error) if error.starts_with("no walkable polygon near ") => Ok(None),
             Err(error) => Err(error),
         }
+    }
+
+    /// Read and verify the hierarchy before the worker begins processing requests.
+    pub fn preload_hierarchy(&mut self) {
+        self.hierarchy =
+            Some(crate::hierarchy::PortalGraph::read_artifact(&self.dir).map(std::sync::Arc::new));
     }
 
     /// Native MovePositionToFirstCollision's Detour walkable-surface ray.

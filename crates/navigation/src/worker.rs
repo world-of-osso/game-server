@@ -123,7 +123,10 @@ impl Worker {
         let mailbox = Arc::new(Mutex::new(Mailbox::default()));
         let (wake, receiver) = mpsc::sync_channel(1);
         let stop = Arc::new(AtomicBool::new(false));
-        let spawned = spawn_worker(root, mailbox.clone(), receiver, stop.clone());
+        let spawned = preload_maps(&root).and_then(|maps| {
+            spawn_worker(maps, mailbox.clone(), receiver, stop.clone())
+                .map_err(|error| error.to_string())
+        });
         let (thread, failure) = match spawned {
             Ok(thread) => (Some(thread), None),
             Err(error) => {
@@ -286,8 +289,37 @@ impl Drop for Worker {
     }
 }
 
+type MapCache = BTreeMap<u32, Result<Option<NavigationMap>, String>>;
+
+fn preload_maps(root: &Path) -> Result<MapCache, String> {
+    let entries = match std::fs::read_dir(root) {
+        Ok(entries) => entries,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(BTreeMap::new()),
+        Err(error) => return Err(format!("{}: {error}", root.display())),
+    };
+    let mut maps = BTreeMap::new();
+    for entry in entries {
+        let entry = entry.map_err(|error| format!("{}: {error}", root.display()))?;
+        let Some(id) = entry
+            .file_name()
+            .to_str()
+            .and_then(|name| name.parse::<u32>().ok())
+        else {
+            continue;
+        };
+        let result = open_baked_map(&entry.path()).map(|map| {
+            map.map(|mut map| {
+                map.preload_hierarchy();
+                map
+            })
+        });
+        maps.insert(id, result);
+    }
+    Ok(maps)
+}
+
 fn spawn_worker(
-    root: PathBuf,
+    maps: MapCache,
     mailbox: Arc<Mutex<Mailbox>>,
     receiver: Receiver<()>,
     stop: Arc<AtomicBool>,
@@ -295,12 +327,12 @@ fn spawn_worker(
     std::thread::Builder::new()
         .name("navigation".into())
         .spawn(move || {
-            supervise_worker(root, mailbox, receiver, stop);
+            supervise_worker(maps, mailbox, receiver, stop);
         })
 }
 
 fn supervise_worker(
-    root: PathBuf,
+    maps: MapCache,
     mailbox: Arc<Mutex<Mailbox>>,
     receiver: Receiver<()>,
     stop: Arc<AtomicBool>,
@@ -308,7 +340,7 @@ fn supervise_worker(
     let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
         // Publish the panic reason before dropping the receiver; disconnection
         // must not race ahead of the explicit worker failure.
-        run_worker(&root, &mailbox, &receiver, &stop);
+        run_worker(maps, &mailbox, &receiver, &stop);
     }));
     if let Err(panic) = result {
         let detail = panic
@@ -325,8 +357,12 @@ fn supervise_worker(
     }
 }
 
-fn run_worker(root: &Path, mailbox: &Mutex<Mailbox>, receiver: &Receiver<()>, stop: &AtomicBool) {
-    let mut maps = BTreeMap::new();
+fn run_worker(
+    mut maps: MapCache,
+    mailbox: &Mutex<Mailbox>,
+    receiver: &Receiver<()>,
+    stop: &AtomicBool,
+) {
     let mut plans: BTreeMap<u64, (u32, NavigationPlan)> = BTreeMap::new();
     while receiver.recv().is_ok() {
         loop {
@@ -347,8 +383,7 @@ fn run_worker(root: &Path, mailbox: &Mutex<Mailbox>, receiver: &Receiver<()>, st
             if entry.0 != request.map_id {
                 *entry = (request.map_id, NavigationPlan::default());
             }
-            let result =
-                query_owned_map(root, &mut maps, request.map_id, request.query, &mut entry.1);
+            let result = query_owned_map(&mut maps, request.map_id, request.query, &mut entry.1);
             if result.is_err() || entry.1.is_empty() {
                 plans.remove(&request.entity);
             }
@@ -366,8 +401,7 @@ fn run_worker(root: &Path, mailbox: &Mutex<Mailbox>, receiver: &Receiver<()>, st
 }
 
 fn query_owned_map(
-    root: &Path,
-    maps: &mut BTreeMap<u32, Option<NavigationMap>>,
+    maps: &mut MapCache,
     map_id: u32,
     query: Query,
     plan: &mut NavigationPlan,
@@ -376,10 +410,10 @@ fn query_owned_map(
     if matches!(query, Query::Panic) {
         panic!("controlled navigation worker death")
     }
-    if !maps.contains_key(&map_id) {
-        maps.insert(map_id, open_baked_map(&root.join(map_id.to_string()))?);
-    }
-    let Some(map) = maps.get_mut(&map_id).expect("owned map inserted") else {
+    let Some(map) = maps.get_mut(&map_id) else {
+        return Ok(None);
+    };
+    let Some(map) = map.as_mut().map_err(|error| error.clone())? else {
         return Ok(None);
     };
     run_query(map, query, plan).map(Some)
