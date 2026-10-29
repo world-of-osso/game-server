@@ -2170,6 +2170,15 @@ fn protection_rite_grants_native_strength_and_armor() {
     let mut run = super::dps_parity::prepare_registered_player(66, 1).unwrap();
     super::dps_parity::engage(&mut run);
     let actor = run.actor;
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        actor,
+        crate::auras::RemoveReason::Consumed,
+        |aura| aura.spell_id == 433550,
+    );
+    for _ in 0..4 {
+        run.app.update();
+    }
     let before = *run
         .app
         .world()
