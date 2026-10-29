@@ -1644,6 +1644,9 @@ fn masterwork_hammers_forge_lesser_weapon_strikes_on_the_dummy() {
         before + 3,
         "Sacred Weapon hardcast adds three"
     );
+    for _ in 0..40 {
+        run.app.update();
+    }
     crate::spell_cast::creature_cast(run.app.world_mut(), actor, 204019, Some(target), false)
         .unwrap();
     run.app.update();
