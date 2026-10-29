@@ -268,6 +268,29 @@ fn a_soldier_and_a_hostile_orc_in_range_fight_until_one_dies_and_the_other_goes_
 }
 
 #[test]
+fn large_creature_in_a_distant_cell_is_seen_by_a_small_hostile() {
+    let mut app = sight_app();
+    let soldier = spawn(&mut app, &SOLDIER, at(0.0));
+    let orc = spawn(&mut app, &CIVILIAN_ORC, at(70.0));
+    let display = app
+        .world()
+        .get::<shared::components::ModelDisplay>(orc)
+        .unwrap()
+        .display_id;
+    let base_reach = crate::scripted_ai::model_reach::creature_combat_reach(
+        app.world()
+            .resource::<crate::scripted_ai::model_reach::ModelReaches>(),
+        display,
+        1.0,
+    );
+    app.world_mut()
+        .entity_mut(orc)
+        .insert(shared::components::UnitScale(100.0 / base_reach));
+    run(&mut app, NOTIFY_TICKS + 1);
+    assert_eq!(state(&app, soldier), pursuing(orc));
+}
+
+#[test]
 fn a_soldier_and_a_worg_are_neutral_and_never_fight() {
     let mut app = sight_app();
     let soldier = spawn(&mut app, &SOLDIER, at(0.0));
@@ -438,7 +461,7 @@ fn waking_resized_npc_updates_spatial_search_after_dormant_changes_settle() {
     assert!(
         !app.world()
             .resource::<NpcGrid>()
-            .near(map, &at(0.0))
+            .near(map, &at(0.0), 1.5)
             .any(|unit| unit == npc)
     );
     app.world_mut()
@@ -449,7 +472,7 @@ fn waking_resized_npc_updates_spatial_search_after_dormant_changes_settle() {
     assert!(
         app.world()
             .resource::<NpcGrid>()
-            .near(map, &at(0.0))
+            .near(map, &at(0.0), 1.5)
             .any(|unit| unit == npc),
         "waking a resized creature immediately expands neighbour search to its authored scaled reach"
     );
