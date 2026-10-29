@@ -118,7 +118,17 @@ fn ruby_final_logged_clocks_and_stage_anchor() {
         h.engage(erkhart);
         h.engage(kyrakka);
         h.advance(1.0);
-        h.hit_pct(erkhart, 55.0);
+        for _ in 0..20 {
+            if h.health(erkhart).current <= h.health(erkhart).max * 0.5 {
+                break;
+            }
+            h.hit_pct(erkhart, 5.0);
+        }
+        let health = h.health(erkhart);
+        assert!(
+            health.current > 0.0 && health.current <= health.max * 0.5,
+            "real damage must cross phase threshold: {health:?}"
+        );
         h.advance(38.5);
         let attempts = &h
             .app
