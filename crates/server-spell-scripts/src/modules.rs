@@ -83,6 +83,7 @@ register_modules! {
     aura_rolls: (110, "modules/aura_rolls.rs"),
     beast_mastery: (20, "modules/beast_mastery.rs"),
     brewmaster_cooldowns: (1000, "modules/brewmaster_cooldowns.rs"),
+    brewmaster_chi_burst: (1000, "modules/brewmaster_chi_burst.rs"),
     brewmaster_celestial_fortune: (1000, "modules/brewmaster_celestial_fortune.rs"),
     brewmaster_purify: (1000, "modules/brewmaster_purify.rs"),
     brewmaster_black_ox: (1000, "modules/brewmaster_black_ox.rs"),

@@ -497,6 +497,7 @@ mod windwalker_player_tests;
 #[cfg(test)] mod brewmaster_omnium_stagger_tests;
 #[cfg(test)] mod brewmaster_overwhelming_force_tests;
 #[cfg(test)] mod brewmaster_harmonic_surge_tests;
+#[cfg(test)] mod brewmaster_chi_burst_tests;
 #[cfg(test)] mod brewmaster_blackout_combo_tests;
 #[cfg(test)] mod brewmaster_purified_spirit_tests;
 #[cfg(test)] mod brewmaster_keg_reset_tests;
