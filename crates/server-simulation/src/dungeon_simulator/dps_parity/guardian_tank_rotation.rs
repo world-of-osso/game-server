@@ -446,11 +446,14 @@ mod tests {
                 source: crate::auras::AuraSource::Cast,
             },
         );
+        // Out-of-combat decay drains each 3-rage tick within 2.4 s; check the peak.
+        let mut peak = before;
         for _ in 0..120 {
             run.app.update();
+            peak = peak.max(rage(&run));
         }
         assert!(
-            rage(&run) > before,
+            peak > before,
             "an owned Thrash bleed must earn periodic rage"
         );
     }
