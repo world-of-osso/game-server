@@ -72,6 +72,14 @@ fn consume_scourge(world: &mut World, caster: Entity, spell: &combat::spell_info
             .is_some_and(|spec| spec.0 == 250)
     {
         trigger_relish(world, caster);
+        // SimC76f8118 sc_death_knight.cpp:9717–9723: a free DnD grants Visceral Strength.
+        if auras::has_aura(world, caster, SCOURGE_BUFF)
+            && world
+                .get::<combat::class_progression::KnownSpells>(caster)
+                .is_some_and(|known| known.contains(434157))
+        {
+            spell_cast::cast_triggered(world, caster, 461130, Some(caster), 1);
+        }
         auras::remove_auras(world, caster, RemoveReason::Consumed, |aura| {
             aura.spell_id == SCOURGE_BUFF && aura.caster == caster
         });
