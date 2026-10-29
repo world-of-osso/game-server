@@ -82,7 +82,8 @@ fn resolve_slot_spells(
     level: u8,
     temporary: &[u32],
 ) -> Vec<(EquipmentSlot, SpellInfo)> {
-    let (item_level, bonus_effects) = resolve_item_level_and_effects(world, item_id, properties);
+    let (item_level, bonus_effects) =
+        resolve_item_level_and_effects(world, item_id, properties, level);
     let mut ids = equipped_spell_ids(world, item_id, &bonus_effects, properties, level);
     for &id in temporary {
         let contribution = server::item_instance::enchants::enchantment_stats(
@@ -120,15 +121,20 @@ fn resolve_item_level_and_effects(
     world: &World,
     item_id: u32,
     properties: &ItemInstanceModifiers,
+    level: u8,
 ) -> (u16, Vec<u32>) {
     let native = world.resource::<NativeItemInstances>();
     let templates = world.resource::<crate::item_templates::ItemTemplates>();
     let template = templates
         .get(ItemDefinitionSource::Retail, item_id)
         .unwrap_or_else(|| panic!("native equipped item {item_id} absent"));
-    let modified =
-        bonuses::apply_item_bonuses(&template.scaling, &properties.bonus_list, &native.bonuses)
-            .unwrap_or_else(|error| panic!("equipped item {item_id} bonuses: {error}"));
+    let modified = bonuses::apply_item_bonuses(
+        &template.scaling,
+        &properties.bonus_list,
+        &native.bonuses,
+        level,
+    )
+    .unwrap_or_else(|error| panic!("equipped item {item_id} bonuses: {error}"));
     let item_level = server::item_instance::item_instance_stats(
         &modified.scaling,
         template.inventory_type,

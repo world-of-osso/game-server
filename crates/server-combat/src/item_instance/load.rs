@@ -9,7 +9,7 @@ pub fn load_bonus_tables(conn: &Connection) -> rusqlite::Result<ItemBonusTables>
         entries: load_bonus_entries(conn)?,
         scaling_configs: load_map(
             conn,
-            "SELECT ID,ItemOffsetCurveID,ItemLevel,ItemSquishEraID FROM item_scaling_config",
+            "SELECT ID,ItemOffsetCurveID,ItemLevel,ItemSquishEraID,Flags FROM item_scaling_config",
             |row| {
                 Ok((
                     row.get(0)?,
@@ -17,6 +17,7 @@ pub fn load_bonus_tables(conn: &Connection) -> rusqlite::Result<ItemBonusTables>
                         offset_curve: row.get(1)?,
                         item_level: row.get(2)?,
                         squish_era: row.get(3)?,
+                        flags: row.get(4)?,
                     },
                 ))
             },
@@ -214,6 +215,35 @@ mod tests {
     }
 
     #[test]
+    fn item_instance_native_azure_and_rookery_journal_loot_levels() {
+        let path = crate::test_data::world_db_path();
+        let conn =
+            Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+        let bonuses = load_bonus_tables(&conn).unwrap();
+        let items = crate::item_templates::load_item_templates(&path).unwrap();
+        let scaling = crate::item_stats::load_item_scaling_tables(&path).unwrap();
+        for (item_id, list, expected) in
+            [(193633, 6710, 73), (193633, 13487, 76), (219294, 11338, 79)]
+        {
+            let template = items
+                .get(shared::item_data::ItemDefinitionSource::Retail, item_id)
+                .unwrap();
+            let resolved = apply_item_bonuses(&template.scaling, &[list], &bonuses, 70).unwrap();
+            let stats = super::super::item_instance_stats(
+                &resolved.scaling,
+                template.inventory_type,
+                &Default::default(),
+                &scaling,
+            )
+            .unwrap();
+            assert_eq!(
+                stats.item_level, expected,
+                "native journal item{item_id} bonus{list}"
+            );
+        }
+    }
+
+    #[test]
     fn item_instance_sqlite_native_config_and_rank_rows_resolve_mid1_bracers_level() {
         let conn = Connection::open_in_memory().unwrap();
         conn.execute_batch("CREATE TABLE item_bonus (ID INTEGER PRIMARY KEY,Value_0 INTEGER,Value_1 INTEGER,Value_2 INTEGER,Value_3 INTEGER,ParentItemBonusListID INTEGER,Type INTEGER,OrderIndex INTEGER);
@@ -229,7 +259,7 @@ mod tests {
             item_level: 197,
             ..Default::default()
         };
-        let result = apply_item_bonuses(&item, &[12066, 12214, 13622, 9627], &tables);
+        let result = apply_item_bonuses(&item, &[12066, 12214, 13622, 9627], &tables, 90);
         assert!(
             result.is_ok(),
             "native rows must load through SQLite, not become base items"

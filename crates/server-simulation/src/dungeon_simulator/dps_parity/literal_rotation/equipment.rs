@@ -397,6 +397,7 @@ fn read_slot_item(
         &template.scaling,
         &properties.bonus_list,
         &native.bonuses,
+        world.get::<shared::components::Level>(actor).ok_or("equipped actor level missing")?.0,
     )?;
     let metadata = read_slot_metadata(world, item_id, &modified.effect_ids)?;
     let item_level = server::item_instance::item_instance_stats(

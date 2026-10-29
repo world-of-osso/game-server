@@ -13,6 +13,7 @@ pub struct ScalingConfig {
     pub offset_curve: u32,
     pub item_level: u16,
     pub squish_era: u8,
+    pub flags: u32,
 }
 
 #[derive(Clone, Copy)]
@@ -39,6 +40,7 @@ pub fn apply_item_bonuses(
     item: &ItemScaling,
     bonus_list: &[u32],
     tables: &ItemBonusTables,
+    player_level: u8,
 ) -> Result<BonusResult, String> {
     let mut result = BonusResult {
         scaling: *item,
@@ -46,9 +48,16 @@ pub fn apply_item_bonuses(
         effect_ids: Vec::new(),
     };
     let mut midnight_scaling = false;
+    let mut item_level_bonus = 0_i32;
+    let mut scaling_priority = i32::MAX;
+    let mut item_level_priority = i32::MAX;
     for bonus in ordered_entries(bonus_list, tables)? {
         match bonus.kind {
-            1 if !midnight_scaling => adjust_level(&mut result.scaling, bonus.values[0])?,
+            1 => {
+                item_level_bonus = item_level_bonus
+                    .checked_add(bonus.values[0])
+                    .ok_or("item level bonus overflow")?
+            }
             2 => add_allocation(&mut result.scaling, bonus.values)?,
             3 => {
                 result.scaling.quality = u8::try_from(bonus.values[0]).map_err(|e| e.to_string())?
@@ -59,13 +68,27 @@ pub fn apply_item_bonuses(
                     .map_err(|error| format!("ItemEffect ID: {error}"))?,
             ),
             25 => replace_crafted_stat(&mut result.scaling, bonus.values[0])?,
-            49 => {
-                apply_scaling_config(&mut result.scaling, bonus.values[0], tables)?;
+            42 if bonus.values[1] < item_level_priority => {
+                result.scaling.item_level = u16::try_from(bonus.values[0])
+                    .map_err(|error| format!("base item level: {error}"))?;
+                item_level_priority = bonus.values[1];
+            }
+            49 | 51 if bonus.values[1] < scaling_priority => {
+                apply_scaling_config(
+                    &mut result.scaling,
+                    bonus.values[0],
+                    tables,
+                    (bonus.kind == 51).then_some(player_level),
+                )?;
+                scaling_priority = bonus.values[1];
                 midnight_scaling = true;
             }
             52 => adjust_level(&mut result.scaling, bonus.values[0])?,
             _ => {}
         }
+    }
+    if !midnight_scaling && item_level_bonus != 0 {
+        adjust_level(&mut result.scaling, item_level_bonus)?;
     }
     Ok(result)
 }
@@ -150,6 +173,7 @@ fn apply_scaling_config(
     item: &mut ItemScaling,
     id: i32,
     tables: &ItemBonusTables,
+    player_level: Option<u8>,
 ) -> Result<(), String> {
     let config = tables
         .scaling_configs
@@ -159,20 +183,19 @@ fn apply_scaling_config(
         .offset_curves
         .get(&config.offset_curve)
         .ok_or_else(|| format!("ItemOffsetCurve {} absent", config.offset_curve))?;
-    let curve_id = if config.squish_era < 2 {
-        92181
-    } else {
-        offset.curve
-    };
     let curve = tables
         .curves
-        .get(&curve_id)
-        .ok_or_else(|| format!("item curve {curve_id} absent"))?;
-    let level =
-        interpolate_curve(curve, f64::from(config.item_level))?.round() as i32 + offset.offset;
+        .get(&offset.curve)
+        .ok_or_else(|| format!("item curve {} absent", offset.curve))?;
+    let input = player_level.map_or(config.item_level, u16::from);
+    let level = interpolate_curve(curve, f64::from(input))?.round() as i32 + offset.offset;
     item.item_level =
         u16::try_from(level).map_err(|e| format!("scaled item level {level}: {e}"))?;
-    item.squish_era = 2;
+    item.squish_era = if config.flags & 1 != 0 {
+        2
+    } else {
+        config.squish_era
+    };
     Ok(())
 }
 
@@ -212,7 +235,7 @@ mod tests {
             item_level: 285,
             ..Default::default()
         };
-        let resolved = apply_item_bonuses(&item, &[13771], &tables).unwrap();
+        let resolved = apply_item_bonuses(&item, &[13771], &tables, 90).unwrap();
         assert_eq!(resolved.effect_ids, vec![234561]);
         assert_eq!(resolved.scaling.item_level, 285);
         assert!(
@@ -254,7 +277,7 @@ mod tests {
             squish_era: 2,
             ..Default::default()
         };
-        let modified = apply_item_bonuses(&item, &[15, 17], &native).unwrap();
+        let modified = apply_item_bonuses(&item, &[15, 17], &native, 90).unwrap();
         let mut tables = ItemScalingTables::default();
         tables.rand_prop_points.insert(104, [[100.0; 5]; 3]);
         let stats = shared::item_scaling::item_stats(&modified.scaling, 1, &tables);
@@ -291,7 +314,7 @@ mod tests {
             allocation: 3500,
             socket_multiplier: 0.0,
         };
-        let modified = apply_item_bonuses(&item, &[6647, 13750], &native).unwrap();
+        let modified = apply_item_bonuses(&item, &[6647, 13750], &native, 90).unwrap();
         assert_eq!(modified.scaling.stats[0].stat, 32);
         assert_eq!(modified.scaling.stats[0].allocation, 3500);
         assert_eq!(modified.sockets, vec![7]);
@@ -340,6 +363,7 @@ mod tests {
                         offset_curve: 47,
                         item_level: 246,
                         squish_era: 2,
+                        flags: 0,
                     },
                 ),
                 (
@@ -348,6 +372,7 @@ mod tests {
                         offset_curve: 47,
                         item_level: 246,
                         squish_era: 2,
+                        flags: 0,
                     },
                 ),
                 (
@@ -356,6 +381,7 @@ mod tests {
                         offset_curve: 47,
                         item_level: 272,
                         squish_era: 2,
+                        flags: 0,
                     },
                 ),
             ]),
@@ -376,7 +402,7 @@ mod tests {
             vec![9627, 13622, 12214, 12066, 12214],
             vec![12066, 12214, 12214, 13622, 9627],
         ] {
-            let result = apply_item_bonuses(&item, &bonuses, &native).unwrap();
+            let result = apply_item_bonuses(&item, &bonuses, &native, 90).unwrap();
             assert_eq!(result.scaling.item_level, 285);
             assert_eq!(result.scaling.squish_era, 2, "no second legacy squish");
         }
@@ -388,6 +414,7 @@ mod tests {
             &ItemScaling::default(),
             &[987654321],
             &ItemBonusTables::default(),
+            90,
         );
         assert!(result.is_err());
     }
