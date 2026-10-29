@@ -5,6 +5,26 @@ use shared::{components::PowerType, protocol::CombatLogKind};
 
 #[test]
 #[ignore = "requires Guardian Galactic Guardian profile and native world data"]
+fn guardian_galactic_mangle_does_not_proc_from_its_self_effect() {
+    let mut run = prepare_registered_player(104, 1).unwrap();
+    let actor = run.actor;
+    let target = run.targets[0];
+    engage(&mut run);
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 5487, Some(actor), false).unwrap();
+    for _ in 0..40 { run.app.update(); }
+    let passive = run.app.world().get::<ActiveAuras>(actor).unwrap().iter()
+        .find(|a| a.spell_id == 203964 && a.caster == actor).unwrap().instance_id;
+    assert!(auras::set_effect_amount(run.app.world_mut(), actor, passive, 0, 100.0));
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 33917, Some(target), false).unwrap();
+    for _ in 0..10 { run.app.update(); }
+    let events = &run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
+    let direct: Vec<_> = events.iter().filter(|e| e.spell_id == Some(164812) && e.kind == CombatLogKind::Damage && !e.periodic).collect();
+    assert_eq!(direct.len(), 1, "one damaging Mangle must earn exactly one Moonfire: {direct:?}");
+    assert_eq!(direct[0].target, Some(target.to_bits()));
+}
+
+#[test]
+#[ignore = "requires Guardian Galactic Guardian profile and native world data"]
 fn guardian_galactic_proc_casts_and_empowers_moonfire() {
     let mut run = prepare_registered_player(104, 1).unwrap();
     let actor = run.actor;
