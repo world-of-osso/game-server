@@ -78,7 +78,7 @@ fn master_shapeshifter_restores_mana_from_actual_wrath() {
     use crate::spell_cast::test_harness::{ObservedCombatEvents, harness};
     use shared::components::Mana;
     use shared::protocol::CombatLogKind;
-    let mut h = harness(Vec::new(), &[5176, 289237, 411146], 11).unwrap();
+    let mut h = harness(Vec::new(), &[5176, 289237, 411144, 411146], 11).unwrap();
     h.app.init_resource::<ObservedCombatEvents>();
     h.app
         .world_mut()
@@ -126,6 +126,57 @@ fn master_shapeshifter_restores_mana_from_actual_wrath() {
             && e.amount > 0),
         "actual Wrath must restore native scaled mana: {events:?}"
     );
+    assert!(
+        !events.iter().any(|e| e.spell_id == Some(411144)),
+        "Wrath must not trigger the Ironfur mana child: {events:?}"
+    );
+}
+
+#[test]
+#[ignore = "requires native Restoration Druid spell data"]
+fn master_shapeshifter_restores_mana_from_bear_form_ironfur() {
+    use crate::spell_cast::test_harness::{ObservedCombatEvents, harness};
+    use shared::components::{Mana, PowerType};
+    use shared::protocol::CombatLogKind;
+    let mut h = harness(Vec::new(), &[5487, 192081, 289237, 411144], 11).unwrap();
+    h.app.init_resource::<ObservedCombatEvents>();
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: h.caster,
+            target: h.caster,
+            spell_id: 289237,
+            effect_mask: u32::MAX,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    h.cast_and_deliver(5487, Some(h.caster));
+    h.advance(40);
+    *h.app.world_mut().get_mut::<Mana>(h.caster).unwrap() = Mana {
+        current: 5000.0,
+        max: 10_000.0,
+    };
+    let events = &h.app.world().resource::<ObservedCombatEvents>().0;
+    assert!(
+        !events.iter().any(|e| e.spell_id == Some(411144)),
+        "Bear Form itself must not trigger Ironfur mana: {events:?}"
+    );
+    h.set_power(PowerType::Rage, 1000.0);
+    h.cast_and_deliver(192081, Some(h.caster));
+    h.advance(5);
+    let events = &h.app.world().resource::<ObservedCombatEvents>().0;
+    assert!(
+        events.iter().any(|e| e.spell_id == Some(411144)
+            && e.kind == CombatLogKind::Energize
+            && e.target == Some(h.caster.to_bits())
+            && e.amount > 0),
+        "Bear Form Ironfur must restore native scaled mana: {events:?}"
+    );
+    let grants = events
+        .iter()
+        .filter(|e| e.spell_id == Some(411144) && e.kind == CombatLogKind::Energize)
+        .count();
+    assert_eq!(grants, 1, "one Ironfur grants once: {events:?}");
 }
 
 #[test]
