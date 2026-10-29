@@ -300,7 +300,26 @@ fn discipline_fiend_spells_transfer_pet_damage_to_atonement() {
         } else {
             h.cast_and_deliver(spell, Some(h.npc));
         }
-        h.advance(150);
+        h.advance(2);
+        assert!(
+            h.inbox.failed.is_empty(),
+            "summon {spell} cast failed: {:?}",
+            h.inbox.failed
+        );
+        let summons: Vec<_> = h
+            .app
+            .world_mut()
+            .query::<(Entity, &SummonedCreature)>()
+            .iter(h.app.world())
+            .map(|(entity, summon)| (entity, summon.owner, summon.spell_id))
+            .collect();
+        assert!(
+            summons
+                .iter()
+                .any(|(_, owner, id)| *owner == h.caster && *id == spell),
+            "summon {spell} not present immediately: {summons:?}"
+        );
+        h.advance(148);
         let actor = h
             .app
             .world_mut()
