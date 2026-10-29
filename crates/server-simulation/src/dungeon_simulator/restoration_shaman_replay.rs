@@ -15,6 +15,7 @@ use shared::components::{Health, PowerType};
 
 const SPELLS: &[(&str, u32, bool)] = &[
     ("earthliving_weapon", 382021, true),
+    ("water_shield", 52127, true),
     ("mana_tide_totem", 16191, true),
     ("spirit_link_totem", 98008, true),
     ("healing_stream_totem", 5394, true),
@@ -67,6 +68,7 @@ pub(super) fn prepare(
     literal_rotation::capture_fixture(run.app.world_mut(), healer, encounter)?;
     let program = Program::parse(&[
         ("default", "earthliving_weapon,if=player.earthliving_up=0"),
+        ("default", "water_shield,if=player.water_shield_up=0"),
         ("default", "mana_tide_totem,if=mana.pct<75"),
         ("default", "spirit_link_totem,if=target.health.pct<35"),
         ("default", "healing_tide_totem,if=party.injured>=3"),
@@ -101,6 +103,7 @@ struct PartyFacts<'a> {
     injured: usize,
     earth_shield_up: bool,
     earthliving_up: bool,
+    water_shield_up: bool,
     surging_totem: bool,
     healing_wave_useful: bool,
     chain_heal_worthwhile: bool,
@@ -112,6 +115,7 @@ impl Facts for PartyFacts<'_> {
             "party.injured" => Ok(self.injured as f64),
             "target.earth_shield_up" => Ok(f64::from(self.earth_shield_up)),
             "player.earthliving_up" => Ok(f64::from(self.earthliving_up)),
+            "player.water_shield_up" => Ok(f64::from(self.water_shield_up)),
             "player.surging_totem" => Ok(f64::from(self.surging_totem)),
             "target.healing_wave_useful" => Ok(f64::from(self.healing_wave_useful)),
             "party.chain_heal_worthwhile" => Ok(f64::from(self.chain_heal_worthwhile)),
@@ -127,6 +131,7 @@ impl ActionFacts for PartyFacts<'_> {
             | "target.earth_shield_up"
             | "target.healing_wave_useful"
             | "player.earthliving_up"
+            | "player.water_shield_up"
             | "player.surging_totem"
             | "party.chain_heal_worthwhile" => self.value(name),
             _ => self.native.value_for(action, name),
@@ -178,6 +183,7 @@ impl Policy for Restoration {
         let chain_heal_worthwhile =
             missing.len() >= 2 && missing.iter().sum::<f32>() >= chain_expected * 0.8;
         let earthliving_up = crate::auras::has_aura(world, healer, 382022);
+        let water_shield_up = crate::auras::has_aura(world, healer, 52127);
         let surging_totem = crate::auras::has_aura(world, healer, 455630);
         let earth_shield_up = world
             .get::<crate::auras::ActiveAuras>(target)
@@ -217,6 +223,7 @@ impl Policy for Restoration {
             injured,
             earth_shield_up,
             earthliving_up,
+            water_shield_up,
             surging_totem,
             healing_wave_useful,
             chain_heal_worthwhile,

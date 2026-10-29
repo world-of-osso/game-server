@@ -2,6 +2,37 @@ use std::path::Path;
 
 #[test]
 #[ignore = "requires native Restoration Shaman spell data"]
+fn water_shield_restores_mana_from_incoming_melee() {
+    use crate::spell_cast::test_harness::{ObservedCombatEvents, collect_swings, harness};
+    use shared::components::{Health, Mana};
+    use shared::protocol::CombatLogKind;
+    let mut h = harness(Vec::new(), &[52127, 52128], 7).unwrap();
+    h.app.init_resource::<ObservedCombatEvents>();
+    *h.app.world_mut().get_mut::<Health>(h.caster).unwrap() = Health {
+        current: 100_000.0,
+        max: 100_000.0,
+    };
+    *h.app.world_mut().get_mut::<Mana>(h.caster).unwrap() = Mana {
+        current: 50_000.0,
+        max: 100_000.0,
+    };
+    h.cast_and_deliver(52127, Some(h.caster));
+    assert!(crate::auras::has_aura(h.app.world(), h.caster, 52127));
+    let attacker = h.npc;
+    let target = h.caster;
+    collect_swings(&mut h, attacker, target, 5);
+    let events = &h.app.world().resource::<ObservedCombatEvents>().0;
+    assert!(
+        events.iter().any(|e| e.kind == CombatLogKind::Energize
+            && e.spell_id == Some(52128)
+            && e.target == Some(target.to_bits())
+            && e.amount == 2000),
+        "Water Shield must refund 2% max mana on a melee hit: {events:?}"
+    );
+}
+
+#[test]
+#[ignore = "requires native Restoration Shaman spell data"]
 fn resurgence_restores_mana_for_critical_direct_heals() {
     use crate::spell_cast::test_harness::{ObservedCombatEvents, harness, spawn_player};
     use shared::components::{Health, Mana};
