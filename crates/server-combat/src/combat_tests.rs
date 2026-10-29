@@ -588,6 +588,60 @@ fn zero_health_without_damage_transition_is_not_discovered_by_death_poll() {
 }
 
 #[test]
+fn lethal_swing_stops_later_attack_in_same_tick() {
+    let mut app = setup_replication_app();
+    let first = app
+        .world_mut()
+        .spawn((
+            pos(0.0, 0.0, 0.0),
+            Health {
+                current: 100.0,
+                max: 100.0,
+            },
+            Player {
+                name: "First".into(),
+                race: 1,
+                class: 1,
+                appearance: Default::default(),
+            },
+            crate::maps::InMap::continent(0),
+            crate::auras::AuraStatMods {
+                melee_hit_chance_pct: 100.0,
+                ..Default::default()
+            },
+        ))
+        .id();
+    let second = app
+        .world_mut()
+        .spawn((
+            pos(1.0, 0.0, 0.0),
+            Health {
+                current: 1.0,
+                max: 100.0,
+            },
+            Npc {
+                template_id: 1,
+                name: "Second".into(),
+            },
+            shared::components::ModelDisplay { display_id: 1 },
+        ))
+        .id();
+    app.world_mut()
+        .entity_mut(first)
+        .insert(AutoAttack::new(second));
+    app.world_mut()
+        .entity_mut(second)
+        .insert(AutoAttack::new(first));
+
+    app.world_mut().run_system_once(auto_attack_system).unwrap();
+
+    assert_eq!(app.world().get::<Health>(second).unwrap().current, 0.0);
+    assert!(app.world().get::<DeathState>(second).is_some());
+    assert!(app.world().get::<AutoAttack>(second).is_none());
+    assert_eq!(app.world().get::<Health>(first).unwrap().current, 100.0);
+}
+
+#[test]
 fn nonlethal_auto_attack_keeps_npc_alive_and_replicated() {
     let mut app = setup_replication_app();
     let target = app

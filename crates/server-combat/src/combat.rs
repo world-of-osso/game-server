@@ -807,10 +807,12 @@ pub(crate) fn auto_attack_system(world: &mut World) {
         }
         // Apply this attacker's commands before the next attacker reads mitigation.
         // In particular, consuming Ardent also removes its30% damage reduction now.
-        let target = world
+        let Some(target) = world
             .get::<AutoAttack>(attacker)
-            .expect("active attack")
-            .victim;
+            .map(|attack| attack.victim)
+        else {
+            continue;
+        };
         let Some(melee_range) =
             crate::scripted_ai::model_reach::melee_range(world, attacker, target)
         else {
