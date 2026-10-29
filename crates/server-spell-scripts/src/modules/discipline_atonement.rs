@@ -66,8 +66,14 @@ fn draw_darkness_card(world: &mut World, caster: Entity) -> bool {
         .get::<DarknessDeck>(caster)
         .is_none_or(|deck| deck.cards == 0)
     {
+        let chance = combat::spell_cast::scripts::script_effect_value(world, caster, 1253590, 0);
+        assert!(
+            chance > 0.0 && chance <= 100.0,
+            "Master the Darkness requires a native proc chance"
+        );
+        let cards = (100.0 / chance).round() as u8;
         world.entity_mut(caster).insert(DarknessDeck {
-            cards: 4,
+            cards,
             success: true,
         });
     }
