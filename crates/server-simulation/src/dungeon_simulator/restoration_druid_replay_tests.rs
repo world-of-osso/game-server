@@ -2,6 +2,43 @@ use std::path::Path;
 
 #[test]
 #[ignore = "requires native Restoration Druid spell data"]
+fn master_shapeshifter_refunds_only_five_point_cat_finishers() {
+    use crate::spell_cast::test_harness::{
+        ObservedCombatEvents, harness_with_native_enemy_dodge_reduction,
+    };
+    use shared::components::PowerType;
+    use shared::protocol::CombatLogKind;
+    for points in [4.0, 5.0] {
+        let mut h = harness_with_native_enemy_dodge_reduction(
+            Vec::new(),
+            &[768, 22568, 289237, 411143],
+            11,
+        )
+        .unwrap();
+        h.app.init_resource::<ObservedCombatEvents>();
+        h.cast_and_deliver(768, Some(h.caster));
+        h.advance(40);
+        h.set_power(PowerType::Energy, 100.0);
+        h.set_power(PowerType::ComboPoints, points);
+        h.set_power(PowerType::Mana, 1000.0);
+        h.cast_and_deliver(22568, Some(h.npc));
+        h.advance(5);
+        let events = &h.app.world().resource::<ObservedCombatEvents>().0;
+        assert!(
+            events
+                .iter()
+                .any(|e| e.spell_id == Some(22568) && e.kind == CombatLogKind::Damage),
+            "Bite must land: {events:?}"
+        );
+        let refunded = events.iter().any(|e| {
+            e.spell_id == Some(411143) && e.kind == CombatLogKind::Energize && e.amount > 0
+        });
+        assert_eq!(refunded, points == 5.0, "combo points {points}: {events:?}");
+    }
+}
+
+#[test]
+#[ignore = "requires native Restoration Druid spell data"]
 fn master_shapeshifter_restores_mana_from_actual_wrath() {
     use crate::spell_cast::test_harness::{ObservedCombatEvents, harness};
     use shared::components::Mana;
