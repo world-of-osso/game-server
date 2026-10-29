@@ -1,3 +1,4 @@
+- 2026-10-29: Recorded [Ruby affix summons imported as spawns](investigations/log-derived-population.md#ruby-affix-summons-imported-as-spawns--2026-10-29) and private-copy retirement.
 - 2026-10-29: Recorded the [Ruby Global Affix Stalker source and live behavior](investigations/log-derived-population.md#ruby-life-pools-global-affix-stalker--2026-10-29); Retail intent remains unresolved.
 - 2026-10-28: Added the [offline floor resolver](systems/ground-assets.md#offline-floor-resolver); train qualification pending.
 - 2026-10-28: Recorded [Ruby final log-derived policy](systems/boss-scripts.md#ruby-final-log-derived-policy--2026-10-28) and revised Kokia evidence; train integration pending.
