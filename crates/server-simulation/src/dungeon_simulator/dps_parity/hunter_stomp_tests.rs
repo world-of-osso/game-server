@@ -2,6 +2,35 @@ use super::*;
 
 #[test]
 #[ignore = "requires private spec253 reference inputs and native world DB"]
+fn native_bm_wrath_triggers_thundering_hooves_from_permanent_pets() {
+    use shared::protocol::CombatLogKind;
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_measurement(253, 3).expect("native literal BM fixture");
+    engage(&mut run);
+    let pets: Vec<_> = crate::hunter_pet::active_owned_pets(run.app.world_mut(), run.actor)
+        .into_iter()
+        .filter(|pet| !crate::hunter_pet::is_stabled_guardian(run.app.world(), *pet))
+        .collect();
+    assert_eq!(pets.len(), 2);
+    let before = run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0.len();
+    crate::spell_cast::creature_cast(run.app.world_mut(), run.actor, 19574, Some(run.targets[0]), false)
+        .expect("ordinary Bestial Wrath");
+    let events = &run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0[before..];
+    for pet in pets {
+        for target in &run.targets {
+            let hits: Vec<_> = events.iter().filter(|event| event.source == Some(pet.to_bits())
+                && event.target == Some(target.to_bits()) && event.spell_id == Some(201754)
+                && matches!(event.kind, CombatLogKind::Damage | CombatLogKind::Miss(_))).collect();
+            assert_eq!(hits.len(), 1, "each permanent pet must Stomp each target once");
+        }
+    }
+    assert_eq!(events.iter().filter(|event| event.spell_id == Some(201754)
+        && matches!(event.kind, CombatLogKind::Damage | CombatLogKind::Miss(_))).count(), 6,
+        "Nature's Ally and the two-piece echo must not add Hooves impacts");
+}
+
+#[test]
+#[ignore = "requires private spec253 reference inputs and native world DB"]
 fn native_bm_barbed_stomps_the_pack_and_earns_mid2_cobra_fang() {
     use shared::protocol::CombatLogKind;
     let _seed = crate::random::seed_scope(70_448);

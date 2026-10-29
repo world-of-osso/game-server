@@ -116,12 +116,37 @@ pub(crate) fn finish_cobra(world: &mut World, caster: Entity, spell: &SpellInfo)
 }
 
 pub(super) fn has_cast(parent: u32) -> bool {
-    CASTS.iter().any(|rule| rule.parent == parent)
+    parent == 19574 || CASTS.iter().any(|rule| rule.parent == parent)
 }
 
 pub(super) fn after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    if spell.id == 19574 {
+        cast_thundering_hooves(world, caster, spell);
+    }
     for rule in CASTS.iter().filter(|rule| rule.parent == spell.id) {
         cast_stomps(world, caster, spell, rule);
+    }
+}
+
+// SimC76f8118 sc_hunter.cpp3335–3336,6753–6761: Bestial Wrath
+// triggers a scaled Stomp from the permanent pets, excluding Nature's Ally.
+fn cast_thundering_hooves(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    const TALENT: u32 = 459693;
+    if !world.get::<KnownSpells>(caster).is_some_and(|spells| spells.contains(TALENT)) {
+        return;
+    }
+    let Some(target) = spell.cast_primary_target else {
+        warn!(?caster, "Bestial Wrath lacks a target for Thundering Hooves");
+        return;
+    };
+    let percent = spell_cast::scripts::script_effect_value(world, caster, TALENT, 0);
+    let mut stomp = world.resource::<SpellStore>().get(201754).expect("native Stomp payload").clone();
+    stomp.cast_damage_multiplier = Some(percent / 100.0);
+    let depth = spell_cast::next_trigger_depth(world);
+    for pet in combat::hunter_pet::active_owned_pets(world, caster) {
+        if !combat::hunter_pet::is_stabled_guardian(world, pet) {
+            spell_cast::launch_triggered_spell(world, pet, &stomp, Some(target), depth);
+        }
     }
 }
 

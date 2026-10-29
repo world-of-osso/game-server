@@ -15,9 +15,8 @@ mod companions;
 pub(crate) mod death_knight;
 pub(crate) use companions::{EFFECT_SUMMON_STABLED_PET, effect_summon_companion};
 mod guardians;
-pub(crate) use guardians::{
-    EFFECT_SUMMON_STABLED_PET_AS_GUARDIAN, effect_summon_stabled_pet, is_stabled_guardian,
-};
+pub use guardians::is_stabled_guardian;
+pub(crate) use guardians::{EFFECT_SUMMON_STABLED_PET_AS_GUARDIAN, effect_summon_stabled_pet};
 
 use crate::random as rand;
 use std::collections::HashMap;
