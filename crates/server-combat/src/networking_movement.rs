@@ -194,8 +194,11 @@ pub(super) fn apply_movement_input(
         clocks.grant(player_entity, secs)
     });
     let unclamped = next;
-    if let Some((ground, map)) = terrain.as_ref() {
+    if let Some((ground, map)) = terrain.as_mut() {
         next = ground.clamp_live_movement(*map, current, next);
+        if !flown && !swimming && !input.jumping && !fall_tracker.airborne {
+            next = prevent_steep_ascent(ground, *map, current, next);
+        }
     }
     let behind = behind || leg.cut || next != unclamped;
     // Short of a landing report the player still flies.
@@ -402,13 +405,31 @@ fn land_height(
     next: Vec3,
     envelope: LandEnvelope,
 ) -> f32 {
-    let floor = match ground.ground_in(map_id, next.with_y(current.y)) {
+    let floor = match ground.creature_ground_in(map_id, next.with_y(current.y)) {
         GroundProbe::Supported(height) => height,
         GroundProbe::Unsupported => f32::NEG_INFINITY,
         GroundProbe::Unloaded => return current.y,
     };
     let ceiling = land_ceiling(current.y, floor, envelope);
     next.y.min(ceiling).max(floor)
+}
+
+/// Keep solid steep faces under the player, but reject a too-steep uphill direction.
+fn prevent_steep_ascent(ground: &mut GroundMap, map: InMap, current: Vec3, next: Vec3) -> Vec3 {
+    let probe = next.with_y(current.y);
+    let GroundProbe::Supported(solid) = ground.creature_ground_in(map, probe) else {
+        return next;
+    };
+    if matches!(ground.ground_in(map, probe), GroundProbe::Supported(height) if height >= solid) {
+        return next;
+    }
+    let rise = solid - current.y;
+    let distance = (next - current).with_y(0.0).length();
+    if rise > 0.0 && rise.atan2(distance) > shared::movement::MAX_SLOPE_ANGLE {
+        current
+    } else {
+        next
+    }
 }
 
 /// The highest height on land: without a jump the ground or where the player already is
@@ -637,4 +658,34 @@ fn right_alignment(facing_yaw: f32, direction: &[f32; 3], direction_length: f32)
 
 pub(super) fn direction_length(direction: &[f32; 3]) -> f32 {
     (direction[0].powi(2) + direction[1].powi(2) + direction[2].powi(2)).sqrt()
+}
+
+#[cfg(test)]
+mod steep_floor_tests {
+    use super::*;
+    use std::{collections::HashMap, path::PathBuf};
+
+    #[test]
+    #[ignore = "requires Neltharus ground assets in GAME_SERVER_GROUND_DIR"]
+    fn neltharus_authority_supports_steep_face_and_blocks_uphill() {
+        let data = PathBuf::from(std::env::var_os("GAME_SERVER_GROUND_DIR").unwrap());
+        let mut ground = GroundMap::new(&data, HashMap::from([(2519, 4289128)]));
+        let map = InMap::continent(2519);
+        let feet = Vec3::new(-233.50781, 133.42572, 532.7626);
+        let envelope = LandEnvelope {
+            airborne: None,
+            jumping: false,
+            feather_fall: false,
+        };
+        let reported = feet.with_y(123.0);
+        let height = land_height(&mut ground, map, feet, reported, envelope);
+        assert!(
+            (height - 133.42572).abs() < 0.02,
+            "authoritative solid floor {height}"
+        );
+        let uphill = feet + Vec3::new(-0.1, 0.0, 0.0);
+        assert_eq!(prevent_steep_ascent(&mut ground, map, feet, uphill), feet);
+        let across = feet + Vec3::new(-0.05, 0.0, -0.087);
+        assert_eq!(prevent_steep_ascent(&mut ground, map, feet, across), across);
+    }
 }
