@@ -57,6 +57,7 @@ fn healer_report_records_actual_damage_to_enemy() {
     h.app
         .init_resource::<crate::spell_cast::test_harness::ObservedCombatEvents>();
     let mut recorder = Recorder::start(h.app.world(), h.caster, h.caster, vec![h.caster]);
+    recorder.capture_damage_samples = true;
     h.cast_and_deliver(585, Some(h.npc));
     h.advance(80);
     recorder.observe_frame(h.app.world(), 80);
@@ -77,6 +78,9 @@ fn healer_report_records_actual_damage_to_enemy() {
     let report = recorder.report(h.app.world(), 4);
     assert_eq!(report["damage_by_spell"]["585"]["hits"], 1);
     assert_eq!(report["damage_by_spell"]["585"]["amount"], hit.amount);
+    assert_eq!(report["damage_samples"][0]["spell"], 585);
+    assert_eq!(report["damage_samples"][0]["amount"], hit.amount);
+    assert_eq!(report["damage_samples"][0]["crit"], hit.crit);
 }
 
 #[test]
