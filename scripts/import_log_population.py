@@ -97,6 +97,8 @@ def import_population(destination, records, radius=10.0):
                     result['gaps'].append({'source_key': source_key, 'reason': gap})
                     continue
                 result['templates_from_tdb'].add(npc_id)
+            elif db.execute('SELECT 1 FROM log_derived_templates WHERE entry=?', (npc_id,)).fetchone():
+                result['templates_from_tdb'].add(npc_id)
             db.execute('''INSERT INTO content_creature
                 (guid,id1,map,position_x,position_y,position_z,orientation,spawnDifficulties,Comment)
                 VALUES (?,?,?,?,?,?,?,?,?)''', (next_guid, npc_id, map_id, x, y, z, facing, '1', POLICY))
