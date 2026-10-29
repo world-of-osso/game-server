@@ -318,6 +318,21 @@ fn online_player(world: &World, entity: Entity, difficulty: u32) -> Result<Onlin
     })
 }
 
+pub(super) fn retire_owner(world: &mut World, player: Entity) {
+    if let Some(run) = world.get::<FollowerRun>(player).cloned() {
+        end_run(world, player, &run);
+    }
+    if let Some(party) = world
+        .get::<super::stockade_diagnostic::DiagnosticParty>(player)
+        .cloned()
+    {
+        leave_members(world, player, &party.members);
+        world
+            .entity_mut(player)
+            .remove::<super::stockade_diagnostic::DiagnosticParty>();
+    }
+}
+
 fn end_run(world: &mut World, player: Entity, run: &FollowerRun) {
     leave_members(world, player, &run.members);
     world.entity_mut(player).remove::<FollowerRun>().insert((
@@ -558,6 +573,22 @@ mod copy_tests {
             "a known admitted member is missing, not healthy"
         );
         // This contract concerns health coverage; ordinary assist target enumeration is unchanged.
+    }
+
+    #[test]
+    fn retiring_owner_removes_followers_before_the_next_fixed_ai_tick() {
+        let (mut app, owner, run) = fixture();
+        app.add_plugins(crate::creature_aggro::CreatureAggroPlugin);
+        app.world_mut().entity_mut(owner).insert(run.clone());
+        crate::networking::queue_player_despawn(&mut app.world_mut().commands(), owner);
+        app.world_mut().flush();
+        assert!(
+            run.members
+                .iter()
+                .all(|&member| app.world().get_entity(member).is_err())
+        );
+        assert!(app.world_mut().despawn(owner));
+        super::super::update_ai(app.world_mut());
     }
 
     #[test]
