@@ -269,8 +269,16 @@ fn selected(world: &World, caster: Entity, talent: u32) -> bool {
         })
 }
 
-fn ferren_marcus_multiplier(world: &World, caster: Entity, target: Entity, spell: &SpellInfo) -> f32 {
-    if spell.id != 31935 || spell.cast_primary_target != Some(target) || !selected(world, caster, 378762) {
+fn ferren_marcus_multiplier(
+    world: &World,
+    caster: Entity,
+    target: Entity,
+    spell: &SpellInfo,
+) -> f32 {
+    if spell.id != 31935
+        || spell.cast_primary_target != Some(target)
+        || !selected(world, caster, 378762)
+    {
         return 1.0;
     }
     // SimC76f8118 sc_paladin_protection.cpp:273–280 applies the selected rank to the primary hit.
