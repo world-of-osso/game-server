@@ -244,9 +244,7 @@ fn open_db(world_db: &Path) -> Result<rusqlite::Connection> {
 fn required_display_ids(data: &Path, world_db: &Path) -> Result<Vec<u32>> {
     let mut ids = query_ids(
         world_db,
-        "SELECT m.CreatureDisplayID FROM content_creature c
-           JOIN content_creature_template_model m ON m.CreatureID = c.id1
-         UNION SELECT CAST(modelid AS INTEGER) FROM content_creature WHERE modelid != 0",
+        include_str!("../../../../scripts/los-runtime-displays.sql"),
     )?;
     ids.extend(chr_model_displays(data)?.into_values());
     ids.sort_unstable();

@@ -30,14 +30,14 @@ def model_fdids(world_db, data):
     db.execute("CREATE TEMP TABLE chr_displays (id INTEGER)")
     with (data / "ChrModel.csv").open() as chr_models:
         db.executemany("INSERT INTO chr_displays VALUES (?)", [(row["DisplayID"],) for row in csv.DictReader(chr_models)])
+    runtime_displays = Path(__file__).with_name("los-runtime-displays.sql").read_text().strip()
     return sorted(
         fdid
         for (fdid,) in db.execute(
-            """SELECT DISTINCT m.FileDataID FROM creature_display_info d
+            f"""SELECT DISTINCT m.FileDataID FROM creature_display_info d
                  JOIN creature_model_data m ON m.ID = d.ModelID
                 WHERE m.FileDataID != 0 AND d.ID IN (
-                      SELECT CreatureDisplayID FROM content_creature_template_model
-                      UNION SELECT CAST(modelid AS INTEGER) FROM content_creature WHERE modelid != 0
+                      {runtime_displays}
                       UNION SELECT id FROM chr_displays)"""
         )
     )
