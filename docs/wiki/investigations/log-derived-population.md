@@ -20,6 +20,12 @@ In the private follower walk, Global Affix Stalker 171322 acquired threat and at
 
 The TDB and content templates agree: faction 14, `unit_flags=0x02000000`, `unit_flags2=0x800`, `flags_extra=0`, and no AI or script name. In pinned TrinityCore a352b1fa, `Creature::CanStartAttack` checks the prospective victim and does not reject the attacker's uninteractible flag. This explains why the imported flags do not themselves prevent the stalker's outgoing attack; it does not prove that Retail intends this spawn to attack in follower difficulty. No data or flag change is justified by the available evidence. Determine the authored phase, aura, or script before changing or hiding the creature.
 
+## Ruby affix summons imported as spawns — 2026-10-29
+
+The live follower walk repeatedly fought Orb of Ascendance 229296 and Xal'atath 236933. The private copy had 71 and 21 respectively as `LOG_DERIVED_POPULATION` Normal spawns on map 2521. Native `keystone_affix` names match summon spells 461936 and 1217019, whose effect 28 creates those entries. A combat log lacking a visible summon event was not enough to classify them as stationary dungeon inhabitants.
+
+The importer now resolves native affix summons through the affix, spell-name and spell-effect tables. Re-import excludes them and retires only previously tagged rows in requested maps, preserving authored spawns. The private Ruby re-import retired exactly 92 rows, retained authored Stalker 171322 and left other map row counts unchanged; SQLite integrity check passed. The canonical database was not changed. This classification does not determine whether 171322 itself should attack.
+
 ## Coverage snapshot
 
 Read-only canonical database and log census, 2026-10-28. Counts are raw GUID observations and NPC IDs, not deduplicated spawns; they include summons and unclassified actors. TDB and content counts include all stored difficulties, not only Normal. The [applied import results and named gaps](../../specs/follower-dungeons.md#applied-log-population-coverage) are recorded separately.
