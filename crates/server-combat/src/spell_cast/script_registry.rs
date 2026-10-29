@@ -348,7 +348,7 @@ pub enum SpellScriptHook {
     MeleeResidual(MeleeResidualHook),
     LateAuraRegistration(AuraRegistrationHook),
     SuccessfulCastRelationships(AfterCastHook),
-    AfterAbsorbConsumed(fn(&mut World, Entity, Entity, u32, f32)),
+    AfterAbsorbConsumed(fn(&mut World, Entity, Entity, Option<Entity>, u32, f32)),
     AvoidanceProcHitMask(fn(u32) -> Option<u32>),
     GuaranteesCrit(CastPredicate),
     IgnoresCooldown(CastPredicate),
@@ -1182,6 +1182,7 @@ pub fn after_absorb_consumed(
     world: &mut World,
     caster: Entity,
     victim: Entity,
+    attacker: Option<Entity>,
     spell: u32,
     amount: f32,
 ) {
@@ -1190,7 +1191,7 @@ pub fn after_absorb_consumed(
     };
     for hook in registry.hooks() {
         if let SpellScriptHook::AfterAbsorbConsumed(run) = hook {
-            run(world, caster, victim, spell, amount);
+            run(world, caster, victim, attacker, spell, amount);
         }
     }
 }

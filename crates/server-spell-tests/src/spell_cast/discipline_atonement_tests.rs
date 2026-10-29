@@ -26,6 +26,124 @@ fn discipline_flash_heal_applies_atonement_even_at_full_health() {
 }
 
 #[test]
+fn master_the_darkness_penance_draws_one_proc_per_four_casts() {
+    let mut h = harness(
+        Vec::new(),
+        &[47540, 47758, 47666, 1253590, 1253591, 1253593],
+        5,
+    )
+    .unwrap();
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(ActiveSpec(256));
+    *h.app.world_mut().get_mut::<Health>(h.npc).unwrap() = Health {
+        current: 100_000.0,
+        max: 100_000.0,
+    };
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: h.caster,
+            target: h.caster,
+            spell_id: 1253590,
+            effect_mask: u32::MAX,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    let mut procs = 0;
+    for _ in 0..4 {
+        h.cast_and_deliver(47540, Some(h.npc));
+        h.advance(250);
+        if crate::auras::has_aura(h.app.world(), h.caster, 1253591) {
+            procs += 1;
+            crate::auras::remove_auras(
+                h.app.world_mut(),
+                h.caster,
+                crate::auras::RemoveReason::Consumed,
+                |aura| aura.spell_id == 1253591,
+            );
+        }
+    }
+    assert!(
+        h.inbox.failed.is_empty(),
+        "all four real Penance casts must succeed: {:?}",
+        h.inbox.failed
+    );
+    assert_eq!(procs, 1, "one success is drawn from each four-card deck");
+}
+
+#[test]
+fn master_the_darkness_mind_blast_earns_void_shield_and_absorb_discharges() {
+    let mut h = harness(
+        Vec::new(),
+        &[
+            17, 8092, 133, 194384, 81749, 94472, 1253591, 1253593, 1253827, 1253828,
+        ],
+        5,
+    )
+    .unwrap();
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(ActiveSpec(256));
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: h.caster,
+            target: h.caster,
+            spell_id: 1253827,
+            effect_mask: u32::MAX,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    h.cast_and_deliver(8092, Some(h.npc));
+    h.advance(80);
+    assert!(
+        crate::auras::has_aura(h.app.world(), h.caster, 1253591),
+        "Mind Blast must earn the native override"
+    );
+    h.cast_and_deliver(17, Some(h.caster));
+    h.advance(5);
+    assert!(
+        crate::auras::has_aura(h.app.world(), h.caster, 1253593),
+        "Shield must resolve to Void Shield"
+    );
+    assert!(
+        !crate::auras::has_aura(h.app.world(), h.caster, 1253591),
+        "Void Shield consumes its override"
+    );
+    let fire = world_db().unwrap().spell_store().get(133).unwrap().clone();
+    h.inbox.log.clear();
+    super::effects::deal_damage(
+        h.app.world_mut(),
+        &super::effects::EffectCtx {
+            caster: h.npc,
+            spell: &fire,
+            depth: 0,
+            dest: None,
+            chain_multiplier: 1.0,
+        },
+        h.caster,
+        200.0,
+        false,
+        false,
+    );
+    h.advance(5);
+    assert!(
+        h.inbox
+            .log
+            .iter()
+            .any(|event| event.kind == CombatLogKind::Damage
+                && event.spell_id == Some(1253828)
+                && event.target == Some(h.npc.to_bits())
+                && event.amount > 0),
+        "actual absorbed damage must discharge at its attacker: {:?}",
+        h.inbox.log
+    );
+}
+
+#[test]
 fn atonement_transfers_critical_smite_before_absorb_but_not_fireball() {
     let mut h = harness(Vec::new(), &[17, 194384, 81749, 94472, 585, 133], 5).unwrap();
     h.app

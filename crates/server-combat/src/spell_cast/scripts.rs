@@ -958,6 +958,7 @@ pub(super) fn target_plan(world: &World, spell_id: u32) -> Option<(Relation, Tar
         batch6::KEG_SMASH => Some((Relation::Enemy, batch6::keg_smash_plan)),
         batch6::WILD_GROWTH => Some((Relation::Ally, batch6::wild_growth_plan)),
         batch7::RADIANCE => Some((Relation::Ally, batch7::radiance_plan)),
+        batch7::VOID_SHIELD => Some((Relation::Ally, batch7::void_shield_plan)),
         _ => None,
     }
 }

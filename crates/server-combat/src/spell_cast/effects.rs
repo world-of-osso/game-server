@@ -2288,7 +2288,8 @@ fn deal_source_damage_and_report(
     }
     let (amount, source_absorbed) =
         crate::auras::source_absorb::absorb(world, target, ctx.caster, amount - deferred);
-    let (amount, absorbed) = crate::auras::absorb_damage(world, target, school, amount);
+    let (amount, absorbed) =
+        crate::auras::absorb_damage(world, target, Some(ctx.caster), school, amount);
     let absorbed = absorbed + source_absorbed;
     let amount = crate::auras::damage_transfer::route(world, ctx.caster, target, school, amount);
     let (caster_scaling, target_scaling) = (

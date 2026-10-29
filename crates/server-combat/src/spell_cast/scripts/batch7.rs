@@ -12,6 +12,7 @@ use crate::spell_info::{SpellInfo, SpellStore};
 pub(super) const COLOSSUS_SMASH: u32 = 167105;
 pub(super) const HEART_STRIKE: u32 = 206930;
 pub(super) const RADIANCE: u32 = 194509;
+pub(super) const VOID_SHIELD: u32 = 1253593;
 pub(super) const RAGING_BLOW: u32 = 85288;
 pub(super) const CRUSHING_BLOW: u32 = 335097;
 pub(super) const WHIRLWIND: u32 = 190411;
@@ -82,6 +83,56 @@ pub(super) fn radiance_plan(
         .expect("Radiance heal effect");
     let mut units = select_radiance_allies(world, caster, spell, primary, index);
     units.truncate(script_effect_value(world, caster, RADIANCE, 2) as usize);
+    units.insert(0, primary);
+    vec![PlannedEffect {
+        index,
+        units,
+        dest: targets::effect_dest(
+            world,
+            caster,
+            explicit,
+            &spell.effects[index],
+            spell.cast_destination,
+        ),
+        chain_multipliers: Vec::new(),
+        selected_units: Vec::new(),
+        blocked_units: Vec::new(),
+        prevent_hit_script: false,
+    }]
+}
+
+pub(super) fn void_shield_plan(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    explicit: Option<Entity>,
+) -> TargetPlan {
+    let primary = explicit.expect("Void Shield requires a validated ally");
+    let index = spell
+        .effects
+        .iter()
+        .position(|effect| effect.index == 0)
+        .expect("Void Shield absorb effect");
+    let mut units = targets::select_targets(
+        world,
+        caster,
+        Some(primary),
+        spell,
+        &spell.effects[index],
+        0,
+        false,
+    )
+    .expect("Void Shield catalog area selectors");
+    units.retain(|&unit| unit != primary);
+    units.sort_by_key(|&unit| {
+        world.get::<ActiveAuras>(unit).is_some_and(|auras| {
+            auras
+                .iter()
+                .any(|aura| aura.spell_id == ATONEMENT && aura.caster == caster)
+        })
+    });
+    let count = script_effect_value(world, caster, VOID_SHIELD, 1) as usize;
+    units.truncate(count.saturating_sub(1));
     units.insert(0, primary);
     vec![PlannedEffect {
         index,

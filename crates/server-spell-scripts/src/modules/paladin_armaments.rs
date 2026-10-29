@@ -801,6 +801,7 @@ fn reflection_from_absorb(
     world: &mut World,
     caster: Entity,
     victim: Entity,
+    _attacker: Option<Entity>,
     spell: u32,
     amount: f32,
 ) {

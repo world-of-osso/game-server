@@ -788,7 +788,7 @@ fn groupmeter_real_shield_consumption_credits_the_caster_group() {
     h.cast_and_deliver(SHIELD, Some(h.caster));
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
     assert_eq!(
-        crate::auras::absorb_damage(h.app.world_mut(), h.caster, 1, 75.0),
+        crate::auras::absorb_damage(h.app.world_mut(), h.caster, None, 1, 75.0),
         (0.0, 75.0)
     );
     // The damage line's mitigation is recap detail, never another caster credit.

@@ -18,6 +18,7 @@ const SPELLS: &[(&str, u32, bool)] = &[
     ("pain_suppression", 33206, false),
     ("barrier", 62618, true),
     ("radiance", 194509, false),
+    ("void_shield", 17, false),
     ("shield", 17, false),
     ("evangelism", 246287, true),
     ("penance", 47540, false),
@@ -52,6 +53,7 @@ pub(super) fn prepare(
         ("default", "pain_suppression,if=target.health.pct<35"),
         ("default", "barrier,if=party.injured>=3"),
         ("default", "radiance,if=party.injured>=3"),
+        ("default", "void_shield,if=party.darkness_up"),
         (
             "default",
             "shield,if=target.atonement_up=0&target.shield_up=0",
@@ -75,6 +77,7 @@ struct PartyFacts<'a> {
     injured: usize,
     shield: bool,
     atonement: bool,
+    darkness: bool,
 }
 impl Facts for PartyFacts<'_> {
     fn value(&self, name: &str) -> Result<f64, String> {
@@ -82,6 +85,7 @@ impl Facts for PartyFacts<'_> {
             "party.injured" => Ok(self.injured as f64),
             "target.shield_up" => Ok(f64::from(self.shield)),
             "target.atonement_up" => Ok(f64::from(self.atonement)),
+            "party.darkness_up" => Ok(f64::from(self.darkness)),
             _ => self.native.value(name),
         }
     }
@@ -89,7 +93,9 @@ impl Facts for PartyFacts<'_> {
 impl ActionFacts for PartyFacts<'_> {
     fn value_for(&self, action: &Action, name: &str) -> Result<f64, String> {
         match name {
-            "party.injured" | "target.shield_up" | "target.atonement_up" => self.value(name),
+            "party.injured" | "target.shield_up" | "target.atonement_up" | "party.darkness_up" => {
+                self.value(name)
+            }
             _ => self.native.value_for(action, name),
         }
     }
@@ -137,6 +143,7 @@ impl Discipline {
             injured,
             shield: crate::auras::has_aura(world, target, 17),
             atonement,
+            darkness: crate::auras::has_aura(world, healer, 1253591),
         };
         if let Some((action, execution)) =
             self.driver
@@ -187,6 +194,7 @@ impl Policy for Discipline {
                 "pain_suppression",
                 "barrier",
                 "radiance",
+                "void_shield",
                 "shield",
                 "evangelism",
             ],
