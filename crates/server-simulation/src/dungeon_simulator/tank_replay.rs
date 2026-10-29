@@ -508,6 +508,14 @@ pub(super) fn apply_simc_raid_buffs(
     buffs: &[simc_tank_timeline::RaidBuff],
 ) -> Result<(), String> {
     let tank = run.actor;
+    apply_simc_raid_buffs_to(run, tank, buffs)
+}
+
+pub(super) fn apply_simc_raid_buffs_to(
+    run: &mut super::dps_parity::Run,
+    tank: Entity,
+    buffs: &[simc_tank_timeline::RaidBuff],
+) -> Result<(), String> {
     for buff in buffs {
         let world = run.app.world_mut();
         if world

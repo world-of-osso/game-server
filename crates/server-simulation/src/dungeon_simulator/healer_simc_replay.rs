@@ -39,6 +39,32 @@ pub(crate) fn spawn_reference_party(
     Ok(party)
 }
 
+fn apply_optimal_raid_environment(
+    run: &mut super::dps_parity::Run,
+    members: &[Entity],
+) -> Result<(), String> {
+    use crate::simc_tank_timeline::RaidBuff;
+
+    let buffs =
+        [("arcane_intellect", 1459), ("mark_of_the_wild", 1126)].map(|(name, spell_id)| RaidBuff {
+            name: name.into(),
+            spell_id,
+        });
+    let debuffs =
+        [("chaos_brand", 1490), ("mystic_touch", 113746)].map(|(name, spell_id)| RaidBuff {
+            name: name.into(),
+            spell_id,
+        });
+    for &member in members {
+        super::tank_replay::apply_simc_raid_buffs_to(run, member, &buffs)?;
+    }
+    super::tank_replay::apply_simc_dummy_debuffs(run, &debuffs)?;
+    for &member in members {
+        super::tank_replay::apply_replay_bloodlust(run.app.world_mut(), member)?;
+    }
+    Ok(())
+}
+
 pub(super) fn replay_simc(
     spec: u32,
     trace: &Path,
@@ -122,6 +148,7 @@ fn replay_with_party_registry(
         party.members[2],
     ];
     let source = run.targets[0];
+    apply_optimal_raid_environment(&mut run, &party_slots)?;
     let started_at = run.app.world().resource::<bevy::prelude::Time>().elapsed();
     super::dps_parity::install_fixture_lifetimes(&mut run, started_at);
     let lifetime = std::time::Duration::from_secs(u64::from(duration));

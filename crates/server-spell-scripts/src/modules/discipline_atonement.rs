@@ -408,8 +408,22 @@ fn transfer_damage(
         false,
     );
     if damage.spell.id == 47666 && is_discipline(world, caster) {
+        extend_pain_from_penance(world, caster, target);
         finish_penance_bolt(world, caster);
     }
+}
+
+fn extend_pain_from_penance(world: &mut World, caster: Entity, target: Entity) {
+    if !world
+        .get::<combat::class_progression::KnownSpells>(caster)
+        .is_some_and(|known| known.contains(390686))
+    {
+        return;
+    }
+    // SimC76f8118 sc_priest_discipline.cpp:291-295 extends only the caster's Pain on impact.
+    let milliseconds =
+        combat::spell_cast::scripts::script_effect_value(world, caster, 390686, 0).max(0.0) as u32;
+    auras::extend_owned_duration(world, caster, target, &[589], milliseconds);
 }
 
 fn penance_bolt_damage(

@@ -5,6 +5,87 @@ use shared::components::{ActiveSpec, Health};
 use shared::protocol::CombatLogKind;
 
 #[test]
+fn discipline_penance_extends_only_its_casters_real_pain() {
+    for selected in [false, true] {
+        let mut h = harness(
+            Vec::new(),
+            &[589, 47540, 47758, 47757, 47666, 47750, 390686],
+            5,
+        )
+        .unwrap();
+        let caster = h.caster;
+        let enemy = h.npc;
+        h.app.world_mut().entity_mut(caster).insert((
+            ActiveSpec(256),
+            crate::class_progression::KnownSpells::fixture(if selected {
+                vec![589, 47540, 390686]
+            } else {
+                vec![589, 47540]
+            }),
+        ));
+        *h.app.world_mut().get_mut::<Health>(enemy).unwrap() = Health {
+            current: 100_000.0,
+            max: 100_000.0,
+        };
+        h.cast_and_deliver(589, Some(enemy));
+        h.advance(50);
+        let other = spawn_player(&mut h.app, 5, 1.0);
+        crate::auras::apply_aura(
+            h.app.world_mut(),
+            &crate::auras::AuraApplication {
+                caster: other,
+                target: enemy,
+                spell_id: 589,
+                effect_mask: u32::MAX,
+                source: crate::auras::AuraSource::Cast,
+            },
+        );
+        let other_before = h
+            .app
+            .world()
+            .get::<ActiveAuras>(enemy)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 589 && aura.caster == other)
+            .unwrap()
+            .expires_at;
+        let expiry = |h: &Harness| {
+            h.app
+                .world()
+                .get::<ActiveAuras>(enemy)
+                .unwrap()
+                .iter()
+                .find(|aura| aura.spell_id == 589 && aura.caster == caster)
+                .unwrap()
+                .expires_at
+                .unwrap()
+        };
+        let before = expiry(&h);
+        h.cast_and_deliver(47540, Some(enemy));
+        h.advance(70);
+        let extension = expiry(&h) - before;
+        let expected = if selected { 4.5 } else { 0.0 };
+        assert!(
+            (extension - expected).abs() < 0.001,
+            "three actual bolts must extend owned Pain by {expected}s, got {extension}"
+        );
+        let other_after = h
+            .app
+            .world()
+            .get::<ActiveAuras>(enemy)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 589 && aura.caster == other)
+            .unwrap()
+            .expires_at;
+        assert_eq!(
+            other_after, other_before,
+            "another Priest's Pain must not be extended"
+        );
+    }
+}
+
+#[test]
 fn discipline_evangelism_cast_triggers_scaled_radiance_and_marks_allies() {
     let mut primary_heals = Vec::new();
     for root in [194509, 472433] {
