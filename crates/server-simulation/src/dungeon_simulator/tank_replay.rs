@@ -1059,5 +1059,12 @@ fn replay_registered_run_with_healing(
     report["precombat_casts"] = json!(precombat_casts);
     report["outgoing_damage_by_spell"] = json!(outgoing_damage_by_spell);
     report["resource_spent_by_spell"] = json!(resource_spent_by_spell);
+    report["melee_rage"] = json!(
+        capture
+            .melee_rage
+            .iter()
+            .filter_map(|(&(unit, source), &amount)| (unit == tank).then_some((source, amount)))
+            .collect::<BTreeMap<_, _>>()
+    );
     Ok(report)
 }

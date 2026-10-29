@@ -4,6 +4,32 @@ use crate::auras::ActiveAuras;
 
 #[test]
 #[ignore = "requires Guardian profile and native world data"]
+fn guardian_bear_entry_grants_rage_and_leaving_discards_it() {
+    use crate::spell_cast::powers::power_value;
+    use shared::components::PowerType;
+    let mut run = prepare_registered_player(104, 1).unwrap();
+    let actor = run.actor;
+    let rage = |run: &Run| {
+        power_value(run.app.world(), actor, PowerType::Rage)
+            .unwrap()
+            .0
+    };
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 5487, Some(actor), false).unwrap();
+    assert_eq!(rage(&run), 250.0, "Bear entry earns native 25 Rage");
+    for _ in 0..40 {
+        run.app.update();
+    }
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 768, Some(actor), false).unwrap();
+    assert_eq!(rage(&run), 0.0, "leaving Bear consumes the stored Rage");
+    for _ in 0..40 {
+        run.app.update();
+    }
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 5487, Some(actor), false).unwrap();
+    assert_eq!(rage(&run), 250.0, "re-entering Bear earns 25 Rage again");
+}
+
+#[test]
+#[ignore = "requires Guardian profile and native world data"]
 fn guardian_absorbed_melee_special_earns_bear_rage_with_native_cooldown() {
     use crate::spell_cast::powers::{change_power, power_value};
     use shared::components::{Health, PowerType};
@@ -18,6 +44,11 @@ fn guardian_absorbed_melee_special_earns_bear_rage_with_native_cooldown() {
     crate::spell_cast::creature_cast(run.app.world_mut(), actor, 22812, Some(actor), false)
         .unwrap();
     change_power(run.app.world_mut(), actor, PowerType::Rage, -1000.0);
+    run.app
+        .insert_resource(super::super::healer_intake::Capture {
+            members: vec![actor],
+            ..Default::default()
+        });
     let health = run.app.world().get::<Health>(actor).unwrap().current;
     let strike = |run: &mut Run| {
         crate::spell_cast::effects::replay_simc_dummy_strike(
@@ -75,6 +106,26 @@ fn guardian_absorbed_melee_special_earns_bear_rage_with_native_cooldown() {
         60.0,
         "a later absorbed swing grants Rage exactly once"
     );
+    let capture = run
+        .app
+        .world()
+        .resource::<super::super::healer_intake::Capture>();
+    assert_eq!(capture.melee_rage.get(&(actor, "taken")), Some(&6.0));
+    change_power(run.app.world_mut(), actor, PowerType::Rage, 930.0);
+    for _ in 0..16 {
+        run.app.update();
+    }
+    strike(&mut run);
+    assert_eq!(rage(&run), 1000.0);
+    let capture = run
+        .app
+        .world()
+        .resource::<super::super::healer_intake::Capture>();
+    assert_eq!(
+        capture.melee_rage.get(&(actor, "taken")),
+        Some(&7.0),
+        "capture records the capped gain, not the attempted gain"
+    );
 }
 
 #[test]
@@ -92,12 +143,26 @@ fn druid_foreground_spell_resets_swing_but_mangle_and_form_do_not() {
             run.app.update();
         }
         run.app
+            .insert_resource(super::super::healer_intake::Capture {
+                members: vec![actor],
+                ..Default::default()
+            });
+        run.app
             .world_mut()
             .entity_mut(actor)
             .insert(crate::combat::AutoAttack::new(target));
         for _ in 0..21 {
             run.app.update();
         }
+        let captured = run
+            .app
+            .world()
+            .resource::<super::super::healer_intake::Capture>()
+            .melee_rage
+            .get(&(actor, "swing"))
+            .copied()
+            .unwrap_or_default();
+        assert!(captured > 0.0, "the real swing must report its earned Rage");
         crate::spell_cast::creature_cast(
             run.app.world_mut(),
             actor,
