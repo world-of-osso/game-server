@@ -13,6 +13,17 @@ def sample(file, guid, x, time):
 
 
 class PackTest(unittest.TestCase):
+    def test_pack_is_excluded_when_any_member_acts_near_sample(self):
+        a = sample('a', 'Creature-0-1-2521-1-100-1', 0, 10)
+        b = sample('a', 'Creature-0-1-2521-1-101-2', 2, 11)
+        a['time'] = '10/3/2026 20:23:32.000-5'
+        b['time'] = '10/3/2026 20:23:33.000-5'
+        packs = module.build_packs([a, b])
+        runs = [{'file': 'a', 'start': 'start', 'creatures': {
+            a['guid']: {'first_hostile_time': '10/3/2026 20:23:35.000-5'}, b['guid']: {}}}]
+        self.assertEqual(module.filter_pack_activity(packs, runs), [])
+        self.assertEqual(len(module.filter_pack_activity(packs, runs, 1)), 1)
+
     def test_cross_run_unique_packs_and_no_same_run_ambiguity(self):
         a = sample('a', 'Creature-0-1-2521-1-100-1', 0, 10)
         b = sample('a', 'Creature-0-1-2521-1-101-2', 2, 11)

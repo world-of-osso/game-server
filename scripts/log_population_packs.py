@@ -2,6 +2,7 @@
 """Build provisional cross-run pack matches from pre-engagement position samples."""
 import argparse
 import json
+from datetime import datetime, timedelta, timezone
 from collections import Counter, defaultdict
 from pathlib import Path
 
@@ -37,6 +38,29 @@ def build_packs(samples, radius=5.0, seconds=3.0):
     return packs
 
 
+def timestamp_value(value):
+    stamp, offset = value.rsplit('-', 1) if '-' in value else value.rsplit('+', 1)
+    sign = -1 if '-' in value else 1
+    return datetime.strptime(stamp, '%m/%d/%Y %H:%M:%S.%f').replace(
+        tzinfo=timezone(sign * timedelta(hours=int(offset))))
+
+
+def filter_pack_activity(packs, runs, margin_seconds=3.0):
+    units = {(run['file'], run['start'], guid): unit
+             for run in runs for guid, unit in run['creatures'].items()}
+    eligible = []
+    for pack in packs:
+        boundaries = []
+        for member in pack['members']:
+            unit = units[(pack['file'], pack['run_start'], member['guid'])]
+            boundaries.extend(timestamp_value(unit[key]) for key in ('first_hostile_time', 'first_cast_time') if key in unit)
+        if boundaries and any((min(boundaries) - timestamp_value(member['time'])).total_seconds() < margin_seconds
+                              for member in pack['members']):
+            continue
+        eligible.append(pack)
+    return eligible
+
+
 def match_packs(packs, radius=60.0):
     groups = defaultdict(list)
     for pack in packs:
@@ -68,10 +92,13 @@ def match_packs(packs, radius=60.0):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--samples', required=True, type=Path)
+    parser.add_argument('--census', required=True, type=Path)
     parser.add_argument('--output', required=True, type=Path)
     args = parser.parse_args()
     with args.samples.open(encoding='utf-8') as source:
         packs = build_packs(json.loads(line) for line in source)
+    with args.census.open(encoding='utf-8') as source:
+        packs = filter_pack_activity(packs, json.load(source)['runs'])
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps({'packs': packs, 'cross_run_candidates': match_packs(packs)}, indent=2) + '\n')
 
