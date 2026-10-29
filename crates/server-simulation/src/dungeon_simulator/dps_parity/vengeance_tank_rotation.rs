@@ -1554,8 +1554,8 @@ mod tests {
                     && event.kind == shared::protocol::CombatLogKind::Damage
                     && event.amount > 0)
                 .count()
-                >= 2,
-            "scheduled World Killers must land even when other spenders consumed their stacks"
+                == 1,
+            "the scheduled World Killer must land without a duplicate from partial spending"
         );
     }
 
