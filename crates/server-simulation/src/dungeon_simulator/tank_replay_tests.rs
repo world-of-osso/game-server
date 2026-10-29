@@ -1625,6 +1625,73 @@ fn blessing_of_the_forge_wings_summon_weapon_and_echo_spenders() {
 }
 
 #[test]
+#[ignore = "uses the selected MID2 Protection player and native Masterwork"]
+fn masterwork_hammers_forge_lesser_weapon_strikes_on_the_dummy() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::protocol::CombatLogKind;
+
+    let mut run = engaged_protection_paladin();
+    let actor = run.actor;
+    let target = run.targets[0];
+    let stacks =
+        |run: &super::dps_parity::Run, spell| owned_aura(run, spell).map_or(0, |aura| aura.stacks);
+    let before = stacks(&run, 1271436);
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 432472, Some(actor), false)
+        .unwrap();
+    run.app.update();
+    assert_eq!(
+        stacks(&run, 1271436),
+        before + 3,
+        "Sacred Weapon hardcast adds three"
+    );
+    for _ in 0..40 {
+        run.app.update();
+    }
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 204019, Some(target), false)
+        .unwrap();
+    run.app.update();
+    assert_eq!(
+        stacks(&run, 1271436),
+        before + 2,
+        "Blessed Hammer spends one"
+    );
+    assert_eq!(
+        stacks(&run, 1239091),
+        5,
+        "one forged Lesser Weapon holds five charges"
+    );
+    // Auto attacks over 6 s; Lesser Weapon's native ICD is 0.75 s.
+    for _ in 0..120 {
+        run.app.update();
+    }
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0;
+    let count = |spell: u32, kind: CombatLogKind| {
+        events
+            .iter()
+            .filter(|event| {
+                event.source == Some(actor.to_bits())
+                    && event.spell_id == Some(spell)
+                    && event.kind == kind
+            })
+            .count()
+    };
+    let strikes = count(1239282, CombatLogKind::Damage);
+    let heals = count(1239276, CombatLogKind::Heal);
+    assert!(strikes > 0, "Lesser Weapon strikes the dummy");
+    assert!(
+        events.iter().any(|event| event.spell_id == Some(1239282)
+            && event.target == Some(target.to_bits())
+            && event.amount > 0),
+        "strikes deal damage to the dummy"
+    );
+    assert_eq!(
+        usize::from(stacks(&run, 1239091)) + strikes + heals,
+        5,
+        "each proc spends one charge"
+    );
+}
+
+#[test]
 #[ignore = "uses the selected MID2 Protection player and precombat APL"]
 fn protection_default_precombat_casts_holy_bulwark() {
     let run = super::dps_parity::prepare_registered_player(66, 1).unwrap();

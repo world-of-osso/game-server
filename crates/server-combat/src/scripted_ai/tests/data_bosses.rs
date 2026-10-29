@@ -11,6 +11,8 @@ mod azure_absolute_zero;
 mod azure_blade;
 #[path = "azure_combat.rs"]
 mod azure_combat;
+#[path = "azure_evade.rs"]
+mod azure_evade;
 #[path = "azure_explosive_brand.rs"]
 mod azure_explosive_brand;
 #[path = "azure_frost_bomb.rs"]
@@ -43,6 +45,8 @@ mod azure_sprouts;
 mod azure_telash;
 #[path = "azure_telash_return.rs"]
 mod azure_telash_return;
+#[path = "azure_tender.rs"]
+mod azure_tender;
 #[path = "broggok.rs"]
 mod broggok;
 #[path = "bromach.rs"]
@@ -163,6 +167,8 @@ mod vazruden_slay;
 mod vexamus;
 #[path = "vyletongue.rs"]
 mod vyletongue;
+#[path = "waxbeard.rs"]
+mod waxbeard;
 #[path = "wratheye.rs"]
 mod wratheye;
 
@@ -246,6 +252,12 @@ pub(crate) fn prepare_encounter_database(
         .expect("snapshot canonical encounter data without writing source");
     if encounter == "ruby-final" {
         run_preparation_script("ruby_population.py", &["--db".as_ref(), path.as_os_str()]);
+        return (directory, path);
+    }
+    if encounter == "waxbeard" {
+        let db: [&std::ffi::OsStr; 2] = ["--db".as_ref(), path.as_os_str()];
+        run_preparation_script("import-vehicle-accessories.py", &db);
+        run_preparation_script("waxbeard_rider.py", &db);
         return (directory, path);
     }
     if ["gargolmar", "omor"].contains(&encounter) {

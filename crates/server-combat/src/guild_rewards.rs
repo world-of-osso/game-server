@@ -158,6 +158,17 @@ impl GuildRewardCatalog {
         }
     }
 
+    /// The vendor price of a guild reward: `guild_rewards.Cost`, the Cataclysm ItemSparse
+    /// price modern ItemSparse zeroes for the old guild heirlooms (equal wherever both are set).
+    pub(crate) fn price(&self, item_id: u32) -> Option<u32> {
+        self.rewards
+            .iter()
+            .find(|reward| reward.item_id == item_id)
+            .map(|reward| {
+                u32::try_from(reward.cost).expect("guild reward cost fits a vendor price")
+            })
+    }
+
     /// Whether a vendor may sell `item_id` to this buyer. Guild achievements are not
     /// earned by any guild yet, so a reward requiring one is always refused.
     pub(crate) fn check_purchase(
@@ -171,7 +182,7 @@ impl GuildRewardCatalog {
         };
         let standing = reputation.map_or(Standing::Neutral, |rep| rep.get_standing(GUILD_FACTION));
         if standing < reward.min_standing {
-            return Err(MerchantError::ReputationRequired);
+            return Err(MerchantError::GuildReputationTooLow);
         }
         if reward.achievements_for(race).next().is_some() {
             return Err(MerchantError::MissingTurnins);
@@ -270,10 +281,9 @@ pub(crate) fn award_quest_reputation(
     let snapshot =
         crate::reputation::read_reputation_snapshot(&db, character, &reputation, &registry);
     world.entity_mut(player).insert(reputation);
-    if change.actual_change() == 0 {
+    let Some(message) = crate::reputation::format_change_message(&[change], &registry) else {
         return;
-    }
-    let message = crate::reputation::format_change_message(&[change], &registry);
+    };
     if let Some(mut sender) = world.get_mut::<MessageSender<ReputationStateUpdate>>(connection) {
         sender.send::<ReputationChannel>(ReputationStateUpdate {
             snapshot: Some(snapshot),

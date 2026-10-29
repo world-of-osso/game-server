@@ -7,6 +7,9 @@ const SHAY_PRESSLER: u32 = 46602;
 const GARGOYLE_CAPE: u32 = 62038;
 /// Shroud of Cooperation: Honored and the guild achievement A Class Act.
 const SHROUD_OF_COOPERATION: u32 = 63352;
+const GOLD: u64 = 50_000_000;
+/// TDB1210 `guild_rewards.Cost` of the cape; modern ItemSparse.BuyPrice is 0.
+const CAPE_COST: u32 = 12_000_000;
 
 fn guild_shopper() -> Harness {
     let mut h = harness().expect("authentic guild vendor data");
@@ -16,7 +19,7 @@ fn guild_shopper() -> Harness {
         .world_mut()
         .entity_mut(h.player)
         .insert(CharacterReputation::default());
-    h.set_gold(10_000_000);
+    h.set_gold(GOLD);
     h
 }
 
@@ -55,15 +58,20 @@ fn guild_vendor_sells_a_reward_only_at_its_guild_standing() {
     );
     let before = h.inventory();
     h.buy(npc, cape.slot, cape.item_id, 1);
-    assert_eq!(h.failures(), vec![MerchantError::ReputationRequired]);
+    assert_eq!(h.failures(), vec![MerchantError::GuildReputationTooLow]);
     assert_eq!(h.inventory(), before);
 
     set_guild_standing(&mut h, Standing::Friendly);
     let (npc, cape) = offer(&mut h, GARGOYLE_CAPE);
     assert!(cape.usable);
+    assert_eq!(
+        cape.price, CAPE_COST,
+        "the vendor lists the guild reward cost"
+    );
     h.buy(npc, cape.slot, cape.item_id, 1);
     assert!(h.failures().is_empty());
     assert_eq!(h.count_of(GARGOYLE_CAPE), vec![1]);
+    assert_eq!(h.inventory().gold, GOLD - u64::from(CAPE_COST));
 }
 
 #[test]

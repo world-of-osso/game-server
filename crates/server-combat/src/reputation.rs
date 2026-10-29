@@ -148,54 +148,27 @@ fn apply_npc_kill_reputation(
     }
     let changes =
         reputation.gain_rep_with_spillover(faction_id, amount, RepGainSource::MobKill, registry);
-    if changes.is_empty() {
-        return None;
-    }
-    Some(format_change_message(&changes, registry))
+    format_change_message(&changes, registry)
 }
 
+/// `CHAT_MSG_COMBAT_FACTION_CHANGE` lines, one per changed faction (FACTION_STANDING_INCREASED
+/// / FACTION_STANDING_DECREASED); `None` when no value moved.
 pub(crate) fn format_change_message(
     changes: &[RepChangeResult],
     registry: &FactionRegistry,
-) -> String {
-    let mut message = primary_change_message(changes[0], registry);
-    append_spillover_message(&mut message, spillover_changes(changes, registry));
-    message
-}
-
-fn primary_change_message(change: RepChangeResult, registry: &FactionRegistry) -> String {
-    let direction = rep_direction(change.actual_change());
-    let faction_name = faction_name(registry, change.faction_id);
-    format!(
-        "{} {} reputation with {}",
-        direction,
-        change.actual_change().abs(),
-        faction_name
-    )
-}
-
-fn append_spillover_message(message: &mut String, spillovers: Vec<String>) {
-    if spillovers.is_empty() {
-        return;
-    }
-    message.push_str(" (spillover ");
-    message.push_str(&spillovers.join(", "));
-    message.push(')');
-}
-
-fn spillover_changes(changes: &[RepChangeResult], registry: &FactionRegistry) -> Vec<String> {
-    changes
+) -> Option<String> {
+    let lines: Vec<String> = changes
         .iter()
-        .skip(1)
         .filter(|change| change.actual_change() != 0)
         .map(|change| {
-            format!(
-                "{:+} {}",
-                change.actual_change(),
-                faction_name(registry, change.faction_id)
-            )
+            let name = faction_name(registry, change.faction_id);
+            match change.actual_change() {
+                amount if amount > 0 => format!("Reputation with {name} increased by {amount}."),
+                amount => format!("Reputation with {name} decreased by {}.", -amount),
+            }
         })
-        .collect()
+        .collect();
+    (!lines.is_empty()).then(|| lines.join("\n"))
 }
 
 fn faction_name(registry: &FactionRegistry, faction_id: u32) -> &str {
@@ -203,10 +176,6 @@ fn faction_name(registry: &FactionRegistry, faction_id: u32) -> &str {
         .get(faction_id)
         .map(|faction| faction.name.as_str())
         .unwrap_or("Unknown")
-}
-
-fn rep_direction(change: i32) -> &'static str {
-    if change >= 0 { "gained" } else { "lost" }
 }
 
 fn send_reputation_update(

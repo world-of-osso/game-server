@@ -22,6 +22,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::HealingMultiplier(twist_healing_multiplier),
     SpellScriptHook::ResolvedHeal(divine_aegis),
     SpellScriptHook::RawResolvedDamage(transfer_damage),
+    SpellScriptHook::RawResolvedDamage(trigger_dark_indulgence),
     SpellScriptHook::DamageAmount(penance_bolt_damage),
     SpellScriptHook::HealingMultiplier(penance_healing_multiplier),
     SpellScriptHook::EffectHit(shadowfiend_death_hit),
@@ -31,6 +32,33 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AfterNativeCastUpdate(update_voidwraith),
     SpellScriptHook::ConsumedEffectValues(&[(81749, 0)]),
 ];
+
+fn trigger_dark_indulgence(
+    world: &mut World,
+    ctx: &EffectCtx<'_>,
+    _target: Entity,
+    _crit: bool,
+    _amount: f32,
+) {
+    if ctx.spell.id != 8092
+        || !world
+            .get::<combat::class_progression::KnownSpells>(ctx.caster)
+            .is_some_and(|known| known.contains(372972))
+    {
+        return;
+    }
+    // SimC76f8118 sc_priest.cpp:273–277 grants Power of the Dark Side on Mind Blast impact.
+    auras::apply_aura(
+        world,
+        &AuraApplication {
+            caster: ctx.caster,
+            target: ctx.caster,
+            spell_id: 198069,
+            effect_mask: u32::MAX,
+            source: AuraSource::Cast,
+        },
+    );
+}
 
 fn is_priest_spell(spell: &SpellInfo) -> bool {
     spell

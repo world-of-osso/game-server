@@ -2712,6 +2712,7 @@ fn insert_npc_death(mut entity: EntityWorldMut) {
         crate::maps::raid::record_creature_death(world, npc);
         crate::scripted_ai::hellfire_ramparts::on_unit_death(world, npc);
         crate::scripted_ai::algethar_academy::on_unit_death(world, npc);
+        crate::vehicle::accessory::on_vehicle_death(world, npc);
         crate::zones::notify_group_depletion(world, npc);
     });
 }

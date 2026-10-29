@@ -14,6 +14,9 @@ pub(super) const THUNDER_CLAP: u32 = 6343;
 pub(super) const MOONFIRE: u32 = 8921;
 pub(super) const DEVASTATE: u32 = 20243;
 const MOONFIRE_DAMAGE: u32 = 164812;
+const SCINTILLATING_MOONLIGHT: u32 = 238049;
+/// 164812 effect5: aura269, damage the debuffed unit deals to the Druid.
+const MOONFIRE_DAMAGE_TO_CASTER: u8 = 5;
 const THUNDER_CLAP_SLOW: u32 = 435203;
 const THUNDER_CLAP_REND: u32 = 388539;
 const SHRED_RANK: u32 = 231063;
@@ -29,23 +32,48 @@ const GARROTE_RANK: u32 = 196861;
 const GARROTE_SILENCE: u32 = 1330;
 const GARROTE_DAMAGE_REDUCTION: u32 = 256148;
 
+/// Learned Scintillating Moonlight rank value (native trait points: 12 at rank 2).
+fn scintillating_moonlight(world: &World, caster: Entity) -> Option<f32> {
+    world
+        .get::<crate::auras::ActiveAuras>(caster)?
+        .iter()
+        .find(|aura| aura.spell_id == SCINTILLATING_MOONLIGHT && aura.caster == caster)?
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .map(|effect| effect.amount)
+}
+
 /// 8921 explicitly names 164812s1/o2/d. Resolve the two base effects, not
 /// unauthored optional debuffs (notably the child's effect7 snare).
+/// SimC76f8118 sc_druid.cpp14384–14388: selected Scintillating Moonlight
+/// gives effect5 its negated rank value, reducing damage the target deals to the Druid.
 pub(super) fn moonfire(world: &mut World, caster: Entity, target: Entity, depth: u8) {
     if depth >= spell_cast::effects::MAX_TRIGGER_DEPTH {
         warn!("Moonfire trigger depth exhausted");
         return;
     }
-    let child = world
+    let mut child = world
         .resource::<SpellStore>()
         .get(MOONFIRE_DAMAGE)
         .expect("Moonfire requires catalog 164812")
         .clone();
+    let moonlight = scintillating_moonlight(world, caster);
+    if let Some(value) = moonlight {
+        child
+            .effects
+            .iter_mut()
+            .find(|effect| effect.index == MOONFIRE_DAMAGE_TO_CASTER)
+            .expect("Moonfire damage-to-caster effect")
+            .base_points = -value;
+    }
     let mut plan: TargetPlan = child
         .effects
         .iter()
         .enumerate()
-        .filter(|(_, effect)| effect.index <= 1)
+        .filter(|(_, effect)| {
+            effect.index <= 1 || (effect.index == MOONFIRE_DAMAGE_TO_CASTER && moonlight.is_some())
+        })
         .map(|(index, _)| PlannedEffect {
             index,
             units: vec![target],

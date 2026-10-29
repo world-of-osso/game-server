@@ -244,14 +244,18 @@ fn encounter_coverage_umbrelskul_native_lua_rotation_and_isolated_credit() {
             .filter(|(spell, _)| *spell == DRAGON_STRIKE)
             .map(|(_, time)| *time)
             .collect();
+        // BossAI waits for any admitted boss cast still in progress.
+        let cast_end_after = |due: f32, spell: u32| {
+            attempts
+                .iter()
+                .filter(|other| other.spell != spell)
+                .map(|other| (other.time, other.time + native_cast_secs(&h, other.spell)))
+                .find(|&(start, end)| start <= due && end > due)
+                .map_or(due, |(_, end)| end)
+        };
         for (index, attempt) in strikes.iter().enumerate().skip(1) {
             let due = strike_finishes[index - 1] + strike_repeat;
-            let blocking = roars.iter().find(|roar| {
-                roar.time <= due && roar.time + native_cast_secs(&h, CRYSTALLINE_ROAR) > due
-            });
-            let expected = blocking.map_or(due, |roar| {
-                roar.time + native_cast_secs(&h, CRYSTALLINE_ROAR)
-            });
+            let expected = cast_end_after(due, DRAGON_STRIKE);
             assert!(
                 (attempt.time - expected).abs() <= 0.1,
                 "Strike after actual success+Lua delay/native cast wait: {attempt:?} expected{expected}"
@@ -259,12 +263,7 @@ fn encounter_coverage_umbrelskul_native_lua_rotation_and_isolated_credit() {
         }
         for pair in roars.windows(2) {
             let due = pair[0].time + roar_repeat;
-            let blocking = strikes.iter().find(|strike| {
-                strike.time <= due && strike.time + native_cast_secs(&h, DRAGON_STRIKE) > due
-            });
-            let expected = blocking.map_or(due, |strike| {
-                strike.time + native_cast_secs(&h, DRAGON_STRIKE)
-            });
+            let expected = cast_end_after(due, CRYSTALLINE_ROAR);
             assert!(
                 (pair[1].time - expected).abs() <= 0.1,
                 "Roar Lua countdown/native cast wait: {pair:?} expected{expected}"
@@ -284,13 +283,18 @@ fn encounter_coverage_umbrelskul_native_lua_rotation_and_isolated_credit() {
         }
         let destruction = if difficulty == 23 { 388804 } else { 385399 };
         assert_eq!(cast_count(&h, boss, destruction), 1, "first sourced alert");
-        for spell in [385075, 386746] {
-            assert_eq!(
-                cast_count(&h, boss, spell),
-                0,
-                "named energy/crystal gap, never invented"
-            );
-        }
+        let eruption = attempts
+            .iter()
+            .find(|attempt| attempt.spell == ARCANE_ERUPTION);
+        assert!(
+            eruption.is_some_and(|attempt| attempt.time >= 28.2 - 0.1),
+            "Lua 28.2s Arcane Eruption request"
+        );
+        assert_eq!(
+            cast_count(&h, boss, BRITTLE),
+            0,
+            "no Brittle without a health threshold"
+        );
         assert!(
             h.inbox(0)
                 .starts
@@ -412,5 +416,125 @@ fn encounter_coverage_umbrelskul_evade_rearms_without_credit() {
         cast_count(&h, boss, DRAGON_STRIKE),
         2,
         "repull re-arms native first request"
+    );
+}
+
+const ARCANE_ERUPTION: u32 = 385075;
+const UNLEASHED_DESTRUCTION: u32 = 385399;
+const BRITTLE: u32 = 386746;
+const DETONATING_CRYSTAL: u32 = 195138;
+
+/// Untargeted NPC casts reach no player's combat log; read server-observed events.
+fn cast_starts(h: &Harness, boss: Entity, spell: u32) -> usize {
+    h.app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .iter()
+        .filter(|event| {
+            event.kind == CombatLogKind::CastStart
+                && event.source == Some(boss.to_bits())
+                && event.spell_id == Some(spell)
+        })
+        .count()
+}
+
+#[test]
+fn umbrelskul_arcane_eruption_follows_lua_energy_clock_and_native_cast() {
+    let (mut h, boss, _) = umbrelskul_copy(205);
+    h.app
+        .init_resource::<crate::spell_cast::test_harness::ObservedCombatEvents>();
+    h.engage(boss);
+    h.advance(28.1);
+    assert_eq!(cast_starts(&h, boss, ARCANE_ERUPTION), 0);
+    // The request waits for any cast in progress (BossAI casting gate).
+    h.advance(3.0);
+    assert_eq!(
+        cast_starts(&h, boss, ARCANE_ERUPTION),
+        1,
+        "Lua 28.2s first Arcane Eruption"
+    );
+}
+
+#[test]
+fn umbrelskul_unleashed_destruction_repeats_on_lua_normal_clock() {
+    let (mut h, boss, _) = umbrelskul_copy(205);
+    h.app
+        .init_resource::<crate::spell_cast::test_harness::ObservedCombatEvents>();
+    h.engage(boss);
+    h.advance(105.0);
+    assert_eq!(cast_starts(&h, boss, UNLEASHED_DESTRUCTION), 1);
+    h.advance(15.0);
+    assert_eq!(
+        cast_starts(&h, boss, UNLEASHED_DESTRUCTION),
+        2,
+        "Lua 54.7s repeat from the first cast start"
+    );
+}
+
+#[test]
+fn umbrelskul_brittle_interrupts_cast_once_per_lua_threshold_without_crystals() {
+    let (mut h, boss, map) = umbrelskul_copy(205);
+    h.app
+        .init_resource::<crate::spell_cast::test_harness::ObservedCombatEvents>();
+    let brittles = |h: &Harness| {
+        h.app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .filter(|event| {
+                event.kind == CombatLogKind::CastSuccess
+                    && event.source == Some(boss.to_bits())
+                    && event.spell_id == Some(BRITTLE)
+            })
+            .count()
+    };
+    h.engage(boss);
+    h.advance(0.05);
+    crate::spell_cast::creature_cast(h.app.world_mut(), boss, UNLEASHED_DESTRUCTION, None, false)
+        .expect("native385399 admission");
+    h.advance(0.1);
+    assert!(
+        h.app
+            .world()
+            .get::<shared::casting::CastState>(boss)
+            .is_some()
+    );
+    h.hit_pct(boss, 30.0);
+    h.advance(0.1);
+    assert!(
+        h.app
+            .world()
+            .get::<shared::casting::CastState>(boss)
+            .is_none_or(|cast| cast.spell_id != UNLEASHED_DESTRUCTION),
+        "Brittle interrupts Unleashed Destruction"
+    );
+    assert_eq!(brittles(&h), 1, "100% to 70% crosses 75%");
+    h.advance(4.0);
+    assert_eq!(
+        cast_count(&h, boss, UNLEASHED_DESTRUCTION),
+        0,
+        "Lua: the interrupted Destruction is not recast"
+    );
+    h.hit_pct(boss, 5.0);
+    h.advance(0.1);
+    assert_eq!(brittles(&h), 1, "70% to 65% crosses no threshold");
+    h.hit_pct(boss, 45.0);
+    h.advance(0.1);
+    assert_eq!(
+        brittles(&h),
+        3,
+        "one hit from 65% to 20% casts Brittle for 50% and 25%"
+    );
+    h.advance(3.0);
+    let crystals = h
+        .creatures_of(DETONATING_CRYSTAL)
+        .into_iter()
+        .filter(|&crystal| h.app.world().get::<InMap>(crystal) == Some(&map))
+        .count();
+    assert_eq!(
+        crystals, 0,
+        "UMBRELSKUL_BRITTLE_DUMMY_CHILD_UNSOURCED: no crystal from dummy base points"
     );
 }
