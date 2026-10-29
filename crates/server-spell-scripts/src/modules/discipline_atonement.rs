@@ -202,16 +202,17 @@ fn transfer_damage(
     }
     let now = combat::spell_cast::now(world);
     let recipients: Vec<_> = world
-        .query::<(Entity, &ActiveAuras)>()
+        .query::<(Entity, &ActiveAuras, &shared::components::Health)>()
         .iter(world)
-        .filter(|(_, auras)| {
-            auras.iter().any(|aura| {
-                aura.spell_id == 194384
-                    && aura.caster == caster
-                    && aura.expires_at.is_none_or(|expiry| expiry > now)
-            })
+        .filter(|(_, auras, health)| {
+            health.current > 0.0
+                && auras.iter().any(|aura| {
+                    aura.spell_id == 194384
+                        && aura.caster == caster
+                        && aura.expires_at.is_none_or(|expiry| expiry > now)
+                })
         })
-        .map(|(entity, _)| entity)
+        .map(|(entity, _, health)| (entity, health.current >= health.max))
         .collect();
     if recipients.is_empty() {
         return;
@@ -227,6 +228,14 @@ fn transfer_damage(
         .expect("Atonement share")
         .base_points
         / 100.0;
+    let cap = store
+        .get(81749)
+        .expect("Atonement passive")
+        .effects
+        .iter()
+        .find(|effect| effect.index == 1)
+        .expect("Atonement target cap")
+        .base_points;
     let spell = store.get(94472).expect("Atonement heal").clone();
     let mastery = world
         .get::<ActiveAuras>(caster)
@@ -259,7 +268,21 @@ fn transfer_damage(
         dest: None,
         chain_multiplier: 1.0,
     };
-    for ally in recipients {
-        apply_critical_transfer_heal(world, &ctx, ally, transfer, crit);
+    let targets = recipients.len() as f32;
+    let injured = recipients.iter().filter(|(_, full)| !full).count() as f32;
+    for (ally, full) in recipients {
+        // SimC76f8118 sc_priest.cpp:2250-2259: full-health and injured targets
+        // use separate reduced-AoE populations.
+        let population = if full && targets >= cap {
+            targets
+        } else {
+            injured
+        };
+        let factor = if population > cap {
+            (cap / population).powf(0.75)
+        } else {
+            1.0
+        };
+        apply_critical_transfer_heal(world, &ctx, ally, transfer * factor, crit);
     }
 }
