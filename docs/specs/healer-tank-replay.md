@@ -92,6 +92,35 @@ Measured on master `93a42f1f4a`: each tank's SimC trace, external dummy healing,
 
 Blood absorbs about 8.69M of 8.79M pre-absorb intake, so its 13k difference is 0.03% of raw intake and within its 54k–154k seed range; a percentage gate is not meaningful there. The Protection Paladin native replay has no Solidarity, so its reference is the solo SimC run; the default reference adds fictional allied effects. Its absorb drop from 3.13M to 2.85M between runs is random Bulwark-application variation, and the remaining gap was missing Lightsmith armament rules; see [Protection Paladin](healer-tank-replay/66.md#mitigation-decomposition-and-lightsmith-fix-2026-10-29). The Guardian reference corrects SimC's Ursoc's Fury shield size; see [Guardian](healer-tank-replay/104.md#ursocs-fury-counterfactual-reference).
 
+### Midnight Season 2 boss-pressure calibration (2026-10-29; provisional)
+
+Warcraft Logs extracts are in `game-engine/data/diagnostics/mplus-calibration-2026-10-29/`. They include report metadata and affixes, boss-pull lists, resource-bearing damage events, and selected Guardian buff streams. The current-season Altar of Fangs sample has one run each at +2, +4, +6, +8, +10, +12, +15, +22, +23 and +24; three bosses provide health observations in each run. Den of Nalorakk and Ruby Life Pools each have +22 and +24 runs. These are convenience samples, not population-weighted estimates.
+
+For Rav'i, observed maximum HP at +2/+4/+6/+8/+10/+12/+15/+22/+23/+24 was 21,793,375 / 25,052,199 / 28,514,697 / 40,989,878 / 46,845,573 / 56,520,201 / 75,360,268 / 146,901,603 / 161,668,150 / 177,707,656. The +8 sample has Tyrannical; +10 and higher have both Fortified and Tyrannical. After dividing Tyrannical boss HP by 1.25, all three Altar bosses match the rounded factors 1.07, 1.23, 1.40, 1.61, 1.84, 2.22 and 2.96 through +15. These observations support the rounded factors and a 25% Tyrannical boss-health increase, not a direct measurement of Mythic 0. Affix IDs 9 and 10 appear together in every sampled +10 and higher run; there is no Fortified-only week at those levels.
+
+The following uses normal auto-attacks against Guardian tanks on +2, with no Tyrannical affix. The median logged `unmitigatedAmount` is divided by 1.07 and by the SimC dungeon dummy's 250,000 melee. The ranges are individual logged hits, not confidence intervals. Buff streams are saved alongside the extracts; the sample includes defensive auras and does not isolate cooldown-free hits.
+
+| Boss | Report / fight / pull | Hits | Logged hit range | Median | M0-normalized median / dummy |
+|---|---|---:|---:|---:|---:|
+| Writhing Coil | `zyRhmrY2NxnGgTPZ` / 1 / 8 | 9 | 260,419–280,615 | 274,277 | 1.025 |
+| Zul'jan | `zyRhmrY2NxnGgTPZ` / 1 / 14 | 22 | 131,593–294,574 | 200,384.5 | 0.749 |
+| Hoardmonger | `YcgyAmbfv1JLhq39` / 1 / 4 | 16 | 140,022–327,637 | 161,350.5 | 0.603 |
+| Sentinel of Winter | `YcgyAmbfv1JLhq39` / 1 / 10 | 16 | 277,030–326,297 | 282,633.5 | 1.057 |
+| Nalorakk | `YcgyAmbfv1JLhq39` / 1 / 14 | 8 | 316,949–365,884 | 326,249 | 1.220 |
+
+The resulting 0.603–1.220 band is a spread of five boss medians, not an uncertainty interval for a universal boss. WCL's field may still include persistent tank reductions; if it does, the raw damage before those reductions is higher. The extracts do not establish which reductions WCL has already reversed, so do not divide the field by Thick Hide or versatility without additional proof. Tyrannical's damage factor is assumed to be 1.15, not independently isolated by this sample.
+
+Applying each end of this proxy band to the survival scales gives the following **illustrative** highest keys: low boss pressure gives the upper end; high boss pressure gives the lower end. Fortified and Tyrannical differ only at +7–+9; at +10 and above both apply. A dash means the modeled +2 exceeds the survival scale, not that Mythic 0 is proven survivable.
+
+| Rank | Tank | Fortified | Tyrannical |
+|---:|---|---:|---:|
+| 1= | Protection Warrior, Vengeance Demon Hunter | +13–+21 | +13–+21 |
+| 3= | Blood Death Knight, Brewmaster Monk | +12–+19 | +12–+19 |
+| 5 | Guardian Druid | +8–+14 | +6–+14 |
+| 6 | Protection Paladin | below +2–+8 | below +2–+6 |
+
+These are not validated real-key ceilings: the field is not proven attacker-side raw, the sample includes cooldowns and other modifiers, and the pressure grid scales dummy strikes and bleed ticks as well as melee. The 1.15 damage assumption and survival grid also carry their own uncertainty.
+
 ## SimC party-pressure trace
 
 The second canonical healer input is `game-engine/data/diagnostics/healer-tank-replay/66.simc-party-pulse-seed70448.debug.log`. It adds a 20,000 Shadow pulse every 12 seconds from 8 seconds through 296 seconds. This is a reproducible synthetic dungeon-pressure scenario, not a measured dungeon encounter. SimC `76f8118` generates the five recipient source rolls with the MID2 Protection profile and four named copies; the native replay maps them to its tank, healer and three DPS followers. The original tank-only trace still supplies the tank's melee and bleed rolls.
