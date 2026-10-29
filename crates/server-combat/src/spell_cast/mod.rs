@@ -4207,7 +4207,7 @@ pub fn launch_triggered_spell(
 }
 
 /// Effect64 clears IGNORE_POWER_COST/IGNORE_REAGENT_COST from FULL_MASK.
-pub(super) fn cast_costed_trigger_with_context(
+pub fn cast_costed_trigger_with_context(
     world: &mut World,
     caster: Entity,
     spell_id: u32,

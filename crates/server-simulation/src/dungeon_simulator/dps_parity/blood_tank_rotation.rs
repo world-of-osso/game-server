@@ -908,6 +908,236 @@ mod tests {
 
     #[test]
     #[ignore = "requires canonical world database and MID2 Blood inputs"]
+    fn blood_rune_spenders_earn_rune_mastery_strength() {
+        use shared::components::PowerType;
+        let _seed = crate::random::seed_scope(70448);
+        let mut run = super::super::prepare_registered_player(250, 1).unwrap();
+        let actor = run.actor;
+        let target = run.targets[0];
+        super::super::engage(&mut run);
+        assert!(crate::auras::has_aura(run.app.world(), actor, 374574));
+        for _ in 0..30 {
+            crate::spell_cast::powers::change_power(
+                run.app.world_mut(),
+                actor,
+                PowerType::Runes,
+                6.0,
+            );
+            crate::spell_cast::creature_cast(
+                run.app.world_mut(),
+                actor,
+                206930,
+                Some(target),
+                false,
+            )
+            .unwrap();
+            for _ in 0..4 {
+                run.app.update();
+            }
+            if crate::auras::has_aura(run.app.world(), actor, 374585) {
+                let buffed = run
+                    .app
+                    .world()
+                    .get::<crate::stats::CharacterStats>(actor)
+                    .unwrap()
+                    .primary
+                    .strength;
+                crate::auras::remove_auras(
+                    run.app.world_mut(),
+                    actor,
+                    crate::auras::RemoveReason::Cancelled,
+                    |aura| aura.spell_id == 374585,
+                );
+                run.app.update();
+                let unbuffed = run
+                    .app
+                    .world()
+                    .get::<crate::stats::CharacterStats>(actor)
+                    .unwrap()
+                    .primary
+                    .strength;
+                assert!(buffed > unbuffed, "{unbuffed} -> {buffed}");
+                return;
+            }
+            for _ in 0..40 {
+                run.app.update();
+            }
+        }
+        panic!("Blood rune spenders must earn Rune Mastery");
+    }
+
+    #[test]
+    #[ignore = "requires canonical world database and MID2 Blood inputs"]
+    fn bloodied_blade_parries_grant_strength_then_strike() {
+        use server::test_support::healer_intake::{Hit, HitKind};
+        let mut run = super::super::prepare_registered_player(250, 1).unwrap();
+        let actor = run.actor;
+        let source = run.targets[0];
+        super::super::engage(&mut run);
+        crate::auras::remove_auras(
+            run.app.world_mut(),
+            actor,
+            crate::auras::RemoveReason::Cancelled,
+            |aura| matches!(aura.spell_id, 460499 | 460500 | 433899),
+        );
+        let hit = Hit {
+            tick: 0,
+            source_guid: 0,
+            pack: 0,
+            target_slot: 0,
+            school: 1,
+            raw: 100.0,
+            level_scaling_factor: 1.0,
+            kind: HitKind::Melee {
+                hand: 0,
+                outcome: "Parry".into(),
+                level_difference: 0,
+                critical_multiplier: 1.0,
+                weapon_speed: 2.0,
+            },
+        };
+        let before = run
+            .app
+            .world()
+            .get::<crate::stats::CharacterStats>(actor)
+            .unwrap()
+            .primary
+            .strength;
+        for _ in 0..8 {
+            crate::combat::replay_healer_hit(run.app.world_mut(), source, actor, &hit).unwrap();
+            for _ in 0..12 {
+                run.app.update();
+            }
+        }
+        let aura = run
+            .app
+            .world()
+            .get::<crate::auras::ActiveAuras>(actor)
+            .unwrap()
+            .iter()
+            .find(|a| a.spell_id == 460499)
+            .expect("eight parries grant stacks");
+        assert_eq!(aura.stacks, 8);
+        assert_eq!(aura.effects[0].amount, 0.5);
+        let stacked = run
+            .app
+            .world()
+            .get::<crate::stats::CharacterStats>(actor)
+            .unwrap()
+            .primary
+            .strength;
+        assert!(stacked > before * 1.03, "{before} -> {stacked}");
+        crate::combat::replay_healer_hit(run.app.world_mut(), source, actor, &hit).unwrap();
+        for _ in 0..4 {
+            run.app.update();
+        }
+        assert!(!crate::auras::has_aura(run.app.world(), actor, 460499));
+        assert!(crate::auras::has_aura(run.app.world(), actor, 460500));
+        let events = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0;
+        assert!(
+            events
+                .iter()
+                .any(|event| event.spell_id == Some(460501) && event.amount > 0),
+            "final parry causes Heart Strike damage"
+        );
+    }
+
+    #[test]
+    #[ignore = "requires canonical world database and MID2 Blood inputs"]
+    fn bloodied_blade_vampiric_strike_requires_and_spends_a_rune() {
+        use server::test_support::healer_intake::{Hit, HitKind};
+        use shared::components::PowerType;
+        for funded in [false, true] {
+            let mut run = super::super::prepare_registered_player(250, 1).unwrap();
+            let actor = run.actor;
+            let source = run.targets[0];
+            super::super::engage(&mut run);
+            crate::auras::remove_auras(
+                run.app.world_mut(),
+                actor,
+                crate::auras::RemoveReason::Cancelled,
+                |aura| matches!(aura.spell_id, 460499 | 460500 | 433899 | 434153),
+            );
+            for id in [
+                460499, 460499, 460499, 460499, 460499, 460499, 460499, 460499, 433899,
+            ] {
+                crate::auras::apply_aura(
+                    run.app.world_mut(),
+                    &crate::auras::AuraApplication {
+                        caster: actor,
+                        target: actor,
+                        spell_id: id,
+                        effect_mask: u32::MAX,
+                        source: crate::auras::AuraSource::Cast,
+                    },
+                );
+            }
+            if !funded {
+                crate::spell_cast::powers::change_power(
+                    run.app.world_mut(),
+                    actor,
+                    PowerType::Runes,
+                    -6.0,
+                );
+            }
+            let before =
+                crate::spell_cast::powers::power_value(run.app.world(), actor, PowerType::Runes)
+                    .unwrap()
+                    .0;
+            let hit = Hit {
+                tick: 0,
+                source_guid: 0,
+                pack: 0,
+                target_slot: 0,
+                school: 1,
+                raw: 100.0,
+                level_scaling_factor: 1.0,
+                kind: HitKind::Melee {
+                    hand: 0,
+                    outcome: "Parry".into(),
+                    level_difference: 0,
+                    critical_multiplier: 1.0,
+                    weapon_speed: 2.0,
+                },
+            };
+            crate::combat::replay_healer_hit(run.app.world_mut(), source, actor, &hit).unwrap();
+            for _ in 0..4 {
+                run.app.update();
+            }
+            assert!(crate::auras::has_aura(run.app.world(), actor, 460500));
+            assert_eq!(
+                crate::auras::has_aura(run.app.world(), actor, 433899),
+                !funded
+            );
+            let after =
+                crate::spell_cast::powers::power_value(run.app.world(), actor, PowerType::Runes)
+                    .unwrap()
+                    .0;
+            if funded {
+                assert_eq!(after, before - 1.0);
+            } else {
+                assert_eq!(after, before);
+            }
+            let events = &run
+                .app
+                .world()
+                .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+                .0;
+            assert_eq!(
+                events
+                    .iter()
+                    .any(|event| event.spell_id == Some(433895) && event.amount > 0),
+                funded
+            );
+        }
+    }
+
+    #[test]
+    #[ignore = "requires canonical world database and MID2 Blood inputs"]
     fn blood_parry_during_rune_weapon_grants_free_vampiric_strike() {
         use server::test_support::healer_intake::{Hit, HitKind};
         let mut run = super::super::prepare_registered_player(250, 1).unwrap();
