@@ -446,9 +446,10 @@ def summarize_encounters(runs):
         for kill in kills:
             by_actor = defaultdict(list)
             for cast in kill['casts']:
-                if cast.get('known_boss'):
+                if cast.get('known_boss') or cast.get('journal_actor'):
                     unit = kill['units'][cast['guid']]
-                    key = (unit['npc_id'], cast['spell_id'], cast['event'])
+                    role = 'known_boss' if cast.get('known_boss') else 'journal_actor_candidate'
+                    key = (unit['npc_id'], cast['spell_id'], cast['event'], role)
                     by_actor[(key, cast['guid'])].append(cast['seconds_from_pull'])
             for (key, _), times in by_actor.items():
                 times.sort()
@@ -456,7 +457,7 @@ def summarize_encounters(runs):
                 spells[key]['interval_seconds'].extend(b - a for a, b in zip(times, times[1:]))
         result.append({'map': map_id, 'encounter_id': encounter_id, 'name': name,
                        'successful_pulls': len(kills),
-                       'spells': [{'npc_id': key[0], 'spell_id': key[1], 'event': key[2], **values,
+                       'spells': [{'npc_id': key[0], 'spell_id': key[1], 'event': key[2], 'actor_identification': key[3], **values,
                                    'interval_range_seconds': [min(values['interval_seconds']), max(values['interval_seconds'])]
                                    if values['interval_seconds'] else None}
                                   for key, values in sorted(spells.items())]})
