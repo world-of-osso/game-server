@@ -17,12 +17,12 @@ fn stacks(world: &bevy::prelude::World, unit: bevy::prelude::Entity) -> u8 {
 #[ignore = "requires the native MID2 Mistweaver profile and canonical DB"]
 fn mana_tea_spending_earns_stacks_and_channel_consumes_them() {
     let (profile, traits) = super::super::dps_parity::read_reference(270).unwrap();
-    assert_eq!(profile.race, "troll");
+    let race = super::super::dps_parity::inputs::read_reference_race(&profile.race).unwrap();
     let mut run = super::super::dps_parity::spawn_reference(
         profile,
         &traits,
         1,
-        crate::followers::simulator::ParityActor::Player { race: 8 },
+        crate::followers::simulator::ParityActor::Player { race },
     )
     .unwrap();
     for _ in 0..5 {
