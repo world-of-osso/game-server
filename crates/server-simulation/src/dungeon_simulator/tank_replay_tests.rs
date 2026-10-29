@@ -2217,6 +2217,45 @@ fn devotion_aura_reduces_incoming_bleed() {
 }
 
 #[test]
+#[ignore = "uses selected MID2 Ferren Marcus and real Avenger's Shield chain"]
+fn ferren_marcus_empowers_only_primary_shield_target() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::protocol::CombatLogKind;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::dps_parity::prepare_registered_player(66, 2).unwrap();
+    super::dps_parity::engage(&mut run);
+    let actor = run.actor;
+    let primary = run.targets[0];
+    let secondary = run.targets[1];
+    let start = run.app.world().resource::<ObservedCombatEvents>().0.len();
+    let _hit_seed = crate::random::seed_scope(454545);
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 31935, Some(primary), false)
+        .unwrap();
+    for _ in 0..40 {
+        run.app.update();
+    }
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0[start..];
+    let damage = |target| {
+        let hit = events
+            .iter()
+            .find(|event| {
+                event.source == Some(actor.to_bits())
+                    && event.target == Some(target)
+                    && event.spell_id == Some(31935)
+                    && event.kind == CombatLogKind::Damage
+            })
+            .expect("Shield must hit both chain targets");
+        f64::from(hit.amount) / if hit.crit { 2.0 } else { 1.0 }
+    };
+    let first = damage(primary.to_bits());
+    let second = damage(secondary.to_bits());
+    assert!(
+        (first / second - 1.2).abs() < 0.02,
+        "primary={first} secondary={second}"
+    );
+}
+
+#[test]
 #[ignore = "uses selected MID2 Greater Judgment and real Protection spell impacts"]
 fn protection_judgment_empowers_and_is_consumed_by_shield() {
     use crate::spell_cast::powers::PowerPools;

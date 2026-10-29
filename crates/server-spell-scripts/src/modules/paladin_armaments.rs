@@ -26,6 +26,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AfterNativeCastUpdate(bind_blessed_hammer_fields),
     SpellScriptHook::EnemyContextHit(blessed_hammer_hit),
     SpellScriptHook::TargetDamageMultiplier(valor_shield_multiplier),
+    SpellScriptHook::TargetDamageMultiplier(ferren_marcus_multiplier),
     SpellScriptHook::AfterResolvedHits(consume_valor),
     SpellScriptHook::AfterResolvedHits(consume_bulwark_of_righteous_fury),
     SpellScriptHook::AreaFilter(blaze_area_filter),
@@ -260,6 +261,14 @@ fn selected(world: &World, caster: Entity, talent: u32) -> bool {
                 .active_talent_spells()
                 .any(|entry| entry.spell_id == talent)
         })
+}
+
+fn ferren_marcus_multiplier(world: &World, caster: Entity, target: Entity, spell: &SpellInfo) -> f32 {
+    if spell.id != 31935 || spell.cast_primary_target != Some(target) || !selected(world, caster, 378762) {
+        return 1.0;
+    }
+    // SimC76f8118 sc_paladin_protection.cpp:273–280 applies the selected rank to the primary hit.
+    1.0 + combat::spell_cast::scripts::script_effect_value(world, caster, 378762, 0) / 100.0
 }
 
 fn valor_shield_multiplier(
