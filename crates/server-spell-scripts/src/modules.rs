@@ -354,6 +354,7 @@ register_modules! {
     restoration_resurgence: (2640, "modules/restoration_resurgence.rs"),
     restoration_symbiotic_blooms: (1050, "modules/restoration_symbiotic_blooms.rs"),
     restoration_tidewaters: (2640, "modules/restoration_tidewaters.rs"),
+    restoration_water_shield: (2640, "modules/restoration_water_shield.rs"),
     ret_aurora: (1000, "modules/ret_aurora.rs"),
     ret_damage: (1000, "modules/ret_damage.rs"),
     ret_empyrean: (1000, "modules/ret_empyrean.rs"),
