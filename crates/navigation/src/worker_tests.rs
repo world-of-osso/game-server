@@ -38,6 +38,56 @@ fn drain_with_timeout(worker: &mut Worker, timeout: Duration) -> Vec<Response> {
     responses
 }
 
+#[cfg(unix)]
+#[test]
+fn held_tile_on_one_map_does_not_block_another_map() {
+    use std::io::Write;
+    use std::sync::mpsc;
+    let temp = tempfile::tempdir().unwrap();
+    let map = temp.path().join("12");
+    std::fs::create_dir(&map).unwrap();
+    let tile = map.join("32_31.nav");
+    assert!(
+        std::process::Command::new("mkfifo")
+            .arg(&tile)
+            .status()
+            .unwrap()
+            .success()
+    );
+    let (opened_tx, opened_rx) = mpsc::channel();
+    let (release_tx, release_rx) = mpsc::channel();
+    let writer = std::thread::spawn(move || {
+        let mut pipe = std::fs::OpenOptions::new().write(true).open(tile).unwrap();
+        opened_tx.send(()).unwrap();
+        release_rx.recv().unwrap();
+        pipe.write_all(b"invalid tile").unwrap();
+    });
+    let mut worker = Worker::new(temp.path().to_owned());
+    worker.submit(request(1, 1, 12));
+    opened_rx.recv_timeout(Duration::from_secs(5)).unwrap();
+    worker.submit(request(2, 1, 99));
+    let deadline = Instant::now() + Duration::from_secs(5);
+    let response = loop {
+        if let Some(response) = worker
+            .poll()
+            .into_iter()
+            .find(|response| response.entity == 2)
+        {
+            break response;
+        }
+        assert!(
+            Instant::now() < deadline,
+            "unrelated map was blocked by tile read"
+        );
+        std::thread::yield_now();
+    };
+    assert!(matches!(response.result, Ok(None)));
+    release_tx.send(()).unwrap();
+    let response = drain(&mut worker).pop().unwrap();
+    assert!(response.result.is_err());
+    writer.join().unwrap();
+}
+
 #[test]
 #[ignore = "requires FOLLOWER_NAV_CANONICAL canonical2519 assets"]
 fn worker_loads_graph_before_the_first_long_request() {

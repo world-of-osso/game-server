@@ -105,9 +105,110 @@ impl Mailbox {
     }
 }
 
-/// Main-thread handle. Outgoing updates and retained completions coalesce by entity.
-/// The wake channel contains at most one notification, never a queue of jobs.
+/// Main-thread handle. Each map has a worker so a cold tile read cannot block another map.
 pub struct Worker {
+    lanes: BTreeMap<u32, WorkerLane>,
+    unbaked: WorkerLane,
+    owners: BTreeMap<u64, u32>,
+    current: BTreeMap<u64, u64>,
+    pending: BTreeMap<u64, u64>,
+    failure: Option<String>,
+}
+
+impl Worker {
+    pub fn new(root: PathBuf) -> Self {
+        let (lanes, failure) = match preload_maps(&root) {
+            Ok(maps) => (
+                maps.into_iter()
+                    .map(|(id, map)| (id, WorkerLane::new(BTreeMap::from([(id, map)]))))
+                    .collect(),
+                None,
+            ),
+            Err(error) => (
+                BTreeMap::new(),
+                Some(format!("navigation worker could not start: {error}")),
+            ),
+        };
+        Self {
+            lanes,
+            unbaked: WorkerLane::new(BTreeMap::new()),
+            owners: BTreeMap::new(),
+            current: BTreeMap::new(),
+            pending: BTreeMap::new(),
+            failure,
+        }
+    }
+
+    fn lane(&mut self, map_id: u32) -> &mut WorkerLane {
+        self.lanes.get_mut(&map_id).unwrap_or(&mut self.unbaked)
+    }
+
+    pub fn submit(&mut self, request: Request) {
+        if self
+            .current
+            .get(&request.entity)
+            .is_some_and(|id| *id >= request.id)
+        {
+            return;
+        }
+        if let Some(old_map) = self.owners.get(&request.entity).copied() {
+            if old_map != request.map_id {
+                self.lane(old_map).cancel(request.entity);
+            }
+        }
+        self.owners.insert(request.entity, request.map_id);
+        self.current.insert(request.entity, request.id);
+        self.pending.insert(request.entity, request.id);
+        self.lane(request.map_id).submit(request);
+    }
+
+    pub fn cancel(&mut self, entity: u64) {
+        if let Some(map_id) = self.owners.remove(&entity) {
+            self.lane(map_id).cancel(entity);
+        }
+        self.current.remove(&entity);
+        self.pending.remove(&entity);
+    }
+
+    pub fn is_idle(&self) -> bool {
+        self.pending.is_empty()
+    }
+
+    pub fn poll(&mut self) -> Vec<Response> {
+        if let Some(error) = &self.failure {
+            return std::mem::take(&mut self.pending)
+                .into_iter()
+                .map(|(entity, id)| Response {
+                    entity,
+                    id,
+                    result: Err(error.clone()),
+                })
+                .collect();
+        }
+        let mut responses = Vec::new();
+        for lane in self
+            .lanes
+            .values_mut()
+            .chain(std::iter::once(&mut self.unbaked))
+        {
+            if !lane.is_idle() || !lane.outgoing.is_empty() {
+                responses.extend(lane.poll());
+            }
+        }
+        responses.retain(|response| {
+            self.current.get(&response.entity) == Some(&response.id)
+                && self.pending.get(&response.entity) == Some(&response.id)
+        });
+        for response in &responses {
+            self.pending.remove(&response.entity);
+        }
+        responses.sort_by_key(|response| (response.entity, response.id));
+        responses
+    }
+}
+
+/// One map's bounded queue and exclusively owned navigation state.
+struct WorkerLane {
     mailbox: Arc<Mutex<Mailbox>>,
     wake: SyncSender<()>,
     thread: Option<JoinHandle<()>>,
@@ -118,15 +219,12 @@ pub struct Worker {
     stop: Arc<AtomicBool>,
 }
 
-impl Worker {
-    pub fn new(root: PathBuf) -> Self {
+impl WorkerLane {
+    fn new(maps: MapCache) -> Self {
         let mailbox = Arc::new(Mutex::new(Mailbox::default()));
         let (wake, receiver) = mpsc::sync_channel(1);
         let stop = Arc::new(AtomicBool::new(false));
-        let spawned = preload_maps(&root).and_then(|maps| {
-            spawn_worker(maps, mailbox.clone(), receiver, stop.clone())
-                .map_err(|error| error.to_string())
-        });
+        let spawned = spawn_worker(maps, mailbox.clone(), receiver, stop.clone());
         let (thread, failure) = match spawned {
             Ok(thread) => (Some(thread), None),
             Err(error) => {
@@ -282,7 +380,7 @@ impl Worker {
     }
 }
 
-impl Drop for Worker {
+impl Drop for WorkerLane {
     fn drop(&mut self) {
         self.stop.store(true, Ordering::Release);
         // Dropping the sole wake sender wakes an idle receiver; never join on a tick.
