@@ -69,6 +69,7 @@ pub use elemental_ancestors::{owner as ancestor_owner, summon as summon_ancestor
 mod policies;
 pub(super) use policies::check_cast as check_policy_cast;
 pub(crate) use policies::register_channel_policies;
+pub use policies::soft_cap_multiplier;
 pub(super) use policies::{
     after_impacts as after_impact_policies, after_triggered_cast as apply_triggered_cast_policies,
     before_impact as before_impact_policies, has_impact_policy, on_hit as apply_hit_policies,

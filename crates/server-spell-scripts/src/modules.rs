@@ -333,6 +333,7 @@ register_modules! {
     paladin_armaments: (1000, "modules/paladin_armaments.rs"),
     paladin_edict: (1001, "modules/paladin_edict.rs"),
     paladin_masterwork: (9802, "modules/paladin_masterwork.rs"),
+    paladin_sacred_weapon: (9803, "modules/paladin_sacred_weapon.rs"),
     paladin_strength_adversity: (1003, "modules/paladin_strength_adversity.rs"),
     protection_demolish: (734, "modules/protection_demolish.rs"),
     protection_devastator: (730, "modules/protection_devastator.rs"),
