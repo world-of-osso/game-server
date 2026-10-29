@@ -8,17 +8,49 @@ const EYE_BEAM: u32 = 198013;
 const GAZE: u32 = 452497;
 const EYE_BEAM_DAMAGE: u32 = 198030;
 const EYE_BEAM_RANK: u32 = 320415;
+const EMPOWERED_BEAM: u32 = 1271144;
+const EMPOWERED_DAMAGE: u32 = 1287949;
+
+#[derive(Component)]
+struct ChannelTick {
+    parent: u32,
+    child: u32,
+}
+
+// SimC76f8118 sc_demon_hunter.cpp4020–4028 chooses one tick action at channel start.
+pub(super) fn snapshot_channel(world: &mut World, caster: Entity, spell: u32) {
+    if !super::is_havoc(world, caster) || !matches!(spell, EYE_BEAM | GAZE) {
+        return;
+    }
+    let child = if super::has_talent(world, caster, 1270898)
+        && combat::auras::has_aura(world, caster, EMPOWERED_BEAM)
+    {
+        EMPOWERED_DAMAGE
+    } else {
+        EYE_BEAM_DAMAGE
+    };
+    world.entity_mut(caster).insert(ChannelTick { parent: spell, child });
+}
+
+fn channel_child(world: &World, caster: Entity, parent: u32) -> Option<u32> {
+    world.get::<ChannelTick>(caster).filter(|snapshot| snapshot.parent == parent).map(|snapshot| snapshot.child)
+}
+
+pub(crate) fn clear_channel(world: &mut World, caster: Entity, parent: u32) {
+    if channel_child(world, caster, parent).is_some() {
+        world.entity_mut(caster).remove::<ChannelTick>();
+    }
+}
 
 // SimC76f8118 sc_demon_hunter.cpp3285–3327: a completed channel
 // snapshots one more actual tick, scaled by the selected native talent.
-pub(crate) fn finish_final_breath(world: &mut World, caster: Entity) {
+pub(crate) fn finish_final_breath(world: &mut World, caster: Entity, parent: u32) {
     if !super::has_talent(world, caster, 1266500) {
         return;
     }
-    let child = if combat::auras::has_aura(world, caster, 1271144) {
-        1287949
-    } else {
-        EYE_BEAM_DAMAGE
+    let Some(child) = channel_child(world, caster, parent) else {
+        error!(?caster, parent, "Final Breath has no channel tick snapshot");
+        return;
     };
     let multiplier = spell_cast::scripts::script_effect_value(world, caster, 1266500, 0) / 100.0;
     if !spell_cast::cast_triggered_with_overrides(
@@ -53,10 +85,9 @@ fn cast_tick(world: &mut World, ctx: &EffectCtx<'_>, _unit: Entity) {
     }
     // SimC76f8118 sc_demon_hunter.cpp3925–4050: both channels use native
     // cone children, not a hand-built single-target plan or the self cast unit.
-    let child = if combat::auras::has_aura(world, caster, 1271144) {
-        1287949
-    } else {
-        EYE_BEAM_DAMAGE
+    let Some(child) = channel_child(world, caster, parent) else {
+        error!(?caster, parent, "Eye Beam has no channel tick snapshot");
+        return;
     };
     spell_cast::cast_triggered(world, caster, child, None, 1);
 }
