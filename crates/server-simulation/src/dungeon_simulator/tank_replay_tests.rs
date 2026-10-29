@@ -844,6 +844,52 @@ fn divine_guidance_stacks_on_spenders_and_is_consumed_by_consecration() {
 }
 
 #[test]
+#[ignore = "uses selected MID2 Protection and the literal action list"]
+fn protection_sotr_casts_during_an_active_global_cooldown() {
+    use crate::spell_cast::powers::PowerPools;
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::components::PowerType;
+    use shared::protocol::CombatLogKind;
+    let mut run = super::dps_parity::prepare_registered_player(66, 1).unwrap();
+    super::dps_parity::engage(&mut run);
+    let actor = run.actor;
+    let target = run.targets[0];
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 204019, Some(target), false)
+        .unwrap();
+    assert!(
+        run.app
+            .world()
+            .get::<crate::spell_cast::SpellHistory>(actor)
+            .unwrap()
+            .has_active_gcd(crate::spell_cast::history_now(run.app.world()))
+    );
+    run.app
+        .world_mut()
+        .get_mut::<PowerPools>(actor)
+        .unwrap()
+        .get_mut(PowerType::HolyPower)
+        .unwrap()
+        .current = 5.0;
+    let start = run.app.world().resource::<ObservedCombatEvents>().0.len();
+    super::dps_parity::drive_literal_tick(&mut run).unwrap();
+    assert!(
+        run.app.world().resource::<ObservedCombatEvents>().0[start..]
+            .iter()
+            .any(|event| event.source == Some(actor.to_bits())
+                && event.spell_id == Some(53600)
+                && event.kind == CombatLogKind::CastSuccess),
+        "SotR must cast while the unrelated GCD is active"
+    );
+    assert!(
+        run.app
+            .world()
+            .get::<crate::spell_cast::SpellHistory>(actor)
+            .unwrap()
+            .has_active_gcd(crate::spell_cast::history_now(run.app.world()))
+    );
+}
+
+#[test]
 #[ignore = "uses real Protection Judgment Holy Power overflow"]
 fn replay_resource_ledger_records_judgment_overflow() {
     use crate::spell_cast::powers::PowerPools;

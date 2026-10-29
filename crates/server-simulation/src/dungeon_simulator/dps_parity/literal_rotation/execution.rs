@@ -60,7 +60,26 @@ pub(crate) struct Prepared {
     cast_active: bool,
     pickup_cast_usable: bool,
     gcd_active: bool,
+    spec_id: u32,
     after_channel: bool,
+}
+
+// SimC76f8118 class constructors set use_off_gcd independently of APL options.
+// Native readiness still requires the spell's actual GCD, costs and cooldowns.
+fn intrinsic_off_gcd(spec: u32, name: &str) -> bool {
+    match spec {
+        71..=73 => matches!(name, "ignore_pain" | "berserker_rage" | "battle_stance" | "berserker_stance" | "defensive_stance" | "spell_reflection" | "taunt"),
+        1467 | 1468 | 1473 => name == "quell",
+        577 | 581 | 1480 => matches!(name, "demon_spikes" | "fiery_brand"),
+        250..=252 => name == "dark_command",
+        102..=105 => matches!(name, "skull_bash" | "solar_beam" | "cancel_form" | "growl" | "ironfur" | "barkskin" | "prowl" | "survival_instincts" | "auto_attack"),
+        258 => name == "void_torrent",
+        268..=270 => matches!(name, "black_ox_brew" | "purifying_brew"),
+        65 => matches!(name, "divine_protection" | "lay_on_hands" | "hand_of_reckoning" | "shield_of_the_righteous"),
+        66 => matches!(name, "ardent_defender" | "guardian_of_ancient_kings" | "lay_on_hands" | "hand_of_reckoning" | "shield_of_the_righteous"),
+        70 => matches!(name, "lay_on_hands" | "hand_of_reckoning" | "shield_of_the_righteous"),
+        _ => false,
+    }
 }
 
 impl Prepared {
@@ -121,6 +140,7 @@ impl Prepared {
             cast_active: cast_active && !after_channel,
             pickup_cast_usable,
             gcd_active: gcd_active && !after_channel,
+            spec_id: world.get::<shared::components::ActiveSpec>(actor).map_or(0, |spec| spec.0),
             after_channel,
             ready: BTreeMap::new(),
             limits: BTreeMap::new(),
@@ -214,7 +234,8 @@ impl Prepared {
         if self.cast_active && !while_casting && !(pickup && self.pickup_cast_usable) {
             return Ok(false);
         }
-        let off_gcd = read_boolean_option(action, "use_off_gcd")?.unwrap_or(false);
+        let off_gcd = read_boolean_option(action, "use_off_gcd")?.unwrap_or(false)
+            || intrinsic_off_gcd(self.spec_id, &action.name);
         Ok(!self.gcd_active || off_gcd)
     }
 
