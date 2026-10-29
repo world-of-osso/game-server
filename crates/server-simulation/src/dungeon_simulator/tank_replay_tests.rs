@@ -2165,6 +2165,72 @@ fn devotion_aura_reduces_incoming_bleed() {
 }
 
 #[test]
+#[ignore = "uses selected MID2 Protection and native Faith's Armor"]
+fn protection_shield_grants_faiths_armor_with_native_modifier() {
+    use crate::spell_cast::powers::PowerPools;
+    use shared::components::PowerType;
+    let mut run = super::dps_parity::prepare_registered_player(66, 1).unwrap();
+    super::dps_parity::engage(&mut run);
+    let actor = run.actor;
+    let target = run.targets[0];
+    run.app
+        .world_mut()
+        .get_mut::<PowerPools>(actor)
+        .unwrap()
+        .get_mut(PowerType::HolyPower)
+        .unwrap()
+        .current = 5.0;
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 53600, Some(target), false)
+        .unwrap();
+    for _ in 0..4 {
+        run.app.update();
+    }
+    let aura = run
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(actor)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 379017)
+        .expect("Shield must grant Faith's Armor");
+    let effect = aura
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap();
+    assert!(
+        (effect.amount - 5.0).abs() < 0.01,
+        "Protection modifies the native 20% to 5%: {}",
+        effect.amount
+    );
+    let with = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(actor)
+        .unwrap()
+        .armor;
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        actor,
+        crate::auras::RemoveReason::Consumed,
+        |aura| aura.spell_id == 379017,
+    );
+    for _ in 0..4 {
+        run.app.update();
+    }
+    let without = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(actor)
+        .unwrap()
+        .armor;
+    assert!(
+        with > without,
+        "Faith's Armor must increase live armor: {without} -> {with}"
+    );
+}
+
+#[test]
 #[ignore = "uses selected MID2 Protection and real Blessing of Dusk"]
 fn dusk_reduces_real_bleed_damage_at_all_health_levels() {
     use shared::components::Health;

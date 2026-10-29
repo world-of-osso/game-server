@@ -740,6 +740,19 @@ fn reset_avengers_shield(world: &mut World, caster: Entity) {
 }
 
 fn after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    // SimC76f8118 sc_paladin.hpp:1730–1735: Protection SotR grants selected Faith's Armor.
+    if spell.id == 53600 && selected(world, caster, 406101) {
+        combat::auras::apply_aura(
+            world,
+            &AuraApplication {
+                caster,
+                target: caster,
+                spell_id: 379017,
+                effect_mask: u32::MAX,
+                source: AuraSource::Cast,
+            },
+        );
+    }
     roll_vanguard(world, caster, spell.id);
     if spell.id == 204019
         && spell.cast_primary_target.is_some_and(|target| {
