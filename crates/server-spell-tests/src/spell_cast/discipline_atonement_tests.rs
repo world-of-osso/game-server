@@ -607,6 +607,59 @@ fn discipline_death_summons_shadowfiend_only_in_execute_range() {
 
 #[test]
 #[ignore = "real class summons require the prepared native creature database"]
+fn discipline_fiend_landed_swings_restore_owner_mana() {
+    use super::test_harness::{ObservedCombatEvents, prepare_class_world};
+    use shared::components::PowerType;
+    let prepared = prepare_class_world();
+    for (summon, talent, mana_spell, percentage) in [
+        (1280172, 34433, 343727, 0.005),
+        (200174, 200174, 123051, 0.002),
+    ] {
+        let mut h = harness(Vec::new(), &[summon, talent, mana_spell], 5).unwrap();
+        h.app.insert_resource(prepared.world_data());
+        let conn = rusqlite::Connection::open_with_flags(
+            &world_db().unwrap().powers_db,
+            rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+        )
+        .unwrap();
+        h.app
+            .insert_resource(super::summon::load_summon_properties(&conn).unwrap());
+        h.app.init_resource::<ObservedCombatEvents>();
+        h.app.world_mut().entity_mut(h.caster).insert((
+            ActiveSpec(256),
+            crate::class_progression::KnownSpells::fixture(vec![talent]),
+            server::networking::CombatTarget(Some(h.npc)),
+        ));
+        super::powers::change_power(h.app.world_mut(), h.caster, PowerType::Mana, -500.0);
+        let maximum = super::powers::power_value(h.app.world(), h.caster, PowerType::Mana)
+            .unwrap()
+            .1;
+        h.cast_and_deliver(summon, Some(h.npc));
+        h.advance(60);
+        let events = &h.app.world().resource::<ObservedCombatEvents>().0;
+        let gains: Vec<_> = events
+            .iter()
+            .filter(|event| {
+                event.kind == CombatLogKind::Energize
+                    && event.spell_id == Some(mana_spell)
+                    && event.target == Some(h.caster.to_bits())
+            })
+            .collect();
+        assert!(
+            !gains.is_empty(),
+            "summon {summon} must energize its owner: {events:?}"
+        );
+        assert!(
+            gains
+                .iter()
+                .all(|event| event.amount == (maximum * percentage) as i32),
+            "unexpected fiend mana amounts: {gains:?}"
+        );
+    }
+}
+
+#[test]
+#[ignore = "real class summons require the prepared native creature database"]
 fn discipline_fiend_spells_transfer_pet_damage_to_atonement() {
     use super::summon::SummonedCreature;
     use super::test_harness::{ObservedCombatEvents, prepare_class_world};

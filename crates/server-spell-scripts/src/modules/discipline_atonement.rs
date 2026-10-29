@@ -20,6 +20,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::RawResolvedDamage(transfer_damage),
     SpellScriptHook::EffectHit(shadowfiend_death_hit),
     SpellScriptHook::MeleeRawResolved(transfer_pet_melee),
+    SpellScriptHook::MeleeResidual(fiend_mana_on_landed_melee),
     SpellScriptHook::SummonInitialized(initialize_fiend),
     SpellScriptHook::AfterNativeCastUpdate(update_voidwraith),
     SpellScriptHook::ConsumedEffectValues(&[(81749, 0)]),
@@ -403,6 +404,27 @@ fn divine_aegis(
         ctx.depth + 1,
         effective * percent / 100.0,
     );
+}
+
+fn fiend_mana_on_landed_melee(world: &mut World, source: Entity, _target: Entity, _raw: f32) {
+    let Some(summon) = world.get::<combat::spell_cast::summon::SummonedCreature>(source) else {
+        return;
+    };
+    let (owner, summon_spell) = (summon.owner, summon.spell_id);
+    if !is_discipline(world, owner) {
+        return;
+    }
+    let Some(known) = world.get::<combat::class_progression::KnownSpells>(owner) else {
+        return;
+    };
+    // SimC76f8118 sc_priest_pets.cpp:587-588,627-628,745-762: landed fiend swings return mana.
+    let (spell, divisor) = match summon_spell {
+        1280172 if known.contains(34433) => (343727, 10.0),
+        123040 | 200174 if known.contains(123040) || known.contains(200174) => (123051, 100.0),
+        _ => return,
+    };
+    let percent = combat::spell_cast::scripts::script_effect_value(world, owner, spell, 0) / divisor;
+    combat::spell_cast::cast_triggered_with_effect0_amount(world, source, spell, Some(owner), 1, percent);
 }
 
 fn transfer_pet_melee(world: &mut World, source: Entity, target: Entity, raw: f32, crit: bool) {
