@@ -52,13 +52,14 @@ fn step_probe(
 
 fn run_probe(root: PathBuf, probe: TickProbe) {
     let mut app = App::new();
-    app.add_plugins((MinimalPlugins, NavigationPlugin));
+    app.add_plugins(MinimalPlugins);
+    install_publication(&mut app);
     app.insert_resource(Time::<Fixed>::from_duration(Duration::from_millis(50)));
     app.insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
         Duration::from_millis(50),
     ));
-    app.update();
     app.insert_resource(Navigation::new(&root));
+    app.update();
     app.insert_resource(probe.clone());
     app.world_mut().spawn((
         ProbeActor,
