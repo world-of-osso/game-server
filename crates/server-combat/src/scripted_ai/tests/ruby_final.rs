@@ -140,6 +140,17 @@ fn ruby_final_logged_clocks_and_stage_anchor() {
             "stage2 must wait for its anchor delay"
         );
         h.advance(2.0);
+        eprintln!(
+            "stage: position={:?} movement={:?} erkhart_health={:?} kyrakka_state={:?}",
+            h.app.world().get::<Position>(kyrakka),
+            h.app
+                .world()
+                .get::<crate::scripted_ai::movement::PointMovement>(kyrakka),
+            h.app.world().get::<Health>(erkhart),
+            h.app
+                .world()
+                .get::<crate::creature_ai::CreatureState>(kyrakka)
+        );
         let attempts = &h
             .app
             .world()

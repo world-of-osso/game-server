@@ -120,6 +120,8 @@ enum Selector {
     AreaAroundDest(Relation),
     ///38 UNIT_NEARBY_ENTRY: nearest qualifying unit in the spell's range.
     NearbyEntry,
+    ///46: destination at the nearest object matching entry conditions.
+    NearbyEntryDestination,
     ///64/65: explicit target position offset by the native radius and direction.
     DestTargetOffset(f32),
     /// The live channel's destination, else its target's current position.
@@ -199,6 +201,7 @@ fn selector(id: u32) -> Option<Selector> {
         16 => Selector::AreaAroundDest(Enemy),
         31 => Selector::AreaAroundDest(Ally),
         38 => Selector::NearbyEntry,
+        46 => Selector::NearbyEntryDestination,
         28 => Selector::DynObj(Enemy),
         29 => Selector::DynObj(Ally),
         64 => Selector::DestTargetOffset(0.0),
@@ -529,7 +532,7 @@ pub(super) fn select_targets_and_destination(
     let ordered = effect
         .implicit_targets
         .iter()
-        .any(|&id| matches!(id, 41 | 43 | 48 | 73 | 74 | 148));
+        .any(|&id| matches!(id, 41 | 43 | 46 | 48 | 73 | 74 | 148));
     let mut destination = spell.cast_destination.map(|point| Dest {
         position: Vec3::from_array(point),
         orientation: orientation(world, caster),
@@ -555,6 +558,7 @@ pub(super) fn select_targets_and_destination(
         }
         match selector {
             Selector::None
+            | Selector::NearbyEntryDestination
             | Selector::ForwardLeap
             | Selector::DestTowardsCaster
             | Selector::CasterRadius
@@ -833,6 +837,38 @@ fn area_game_objects(world: &mut World, caster: Entity, center: Vec3, radius: f3
         })
         .map(|(entity, _, _, _)| entity)
         .collect()
+}
+
+/// TC Spell.cpp:1089–1214: target46 selects the nearest object matching
+/// this effect's entry conditions, then uses that object's destination.
+fn nearby_entry_destination(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    effect: &SpellEffect,
+) -> Option<Dest> {
+    let negative = crate::spell_info::positivity::negative_effects(
+        world.resource::<crate::spell_info::SpellStore>(),
+        spell,
+    );
+    let range = spell_range(spell, negative != 0).1;
+    let origin = position(world, caster)?;
+    let mut candidates = area_units(world, caster, origin, range, Relation::Any, 0);
+    candidates.extend(area_game_objects(world, caster, origin, range));
+    let candidates = filter_entry_targets(world, caster, candidates, spell.id, effect.index);
+    let target = candidates
+        .into_iter()
+        .filter(|&target| !excludes_caster(spell) || target != caster)
+        .filter(|&target| implicit_target_allowed(world, caster, spell, target))
+        .filter_map(|target| position(world, target).map(|at| (target, at)))
+        .min_by(|(_, a), (_, b)| {
+            a.distance_squared(origin)
+                .total_cmp(&b.distance_squared(origin))
+        })?;
+    Some(Dest {
+        position: target.1,
+        orientation: orientation(world, target.0),
+    })
 }
 
 fn nearby_entry_unit(

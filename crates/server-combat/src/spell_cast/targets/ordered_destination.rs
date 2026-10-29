@@ -31,6 +31,7 @@ pub(super) fn sets_destination(selector: Selector) -> bool {
     matches!(
         selector,
         Selector::CenterCaster
+            | Selector::NearbyEntryDestination
             | Selector::ExistingDest
             | Selector::DestTowardsCaster
             | Selector::CasterRandom
@@ -75,6 +76,11 @@ pub(super) fn select_slot(
 ) -> Result<Option<Dest>, super::super::CastFailure> {
     check_destination_support(spell)?;
     let id = effect.implicit_targets[slot];
+    if id == 46 {
+        return nearby_entry_destination(world, caster, spell, effect)
+            .map(Some)
+            .ok_or(super::super::CastFailure::InvalidTarget);
+    }
     if id == 73 {
         return sample_caster_radius_destination(world, caster, spell, effect, slot).map(Some);
     }
