@@ -315,6 +315,7 @@ register_modules! {
     protection_fray: (1004, "modules/protection_fray.rs"),
     protection_outburst: (733, "modules/protection_outburst.rs"),
     protection_revenge: (1003, "modules/protection_revenge.rs"),
+    protection_thunderlord: (1005, "modules/protection_thunderlord.rs"),
     protection_shield_block: (731, "modules/protection_shield_block.rs"),
     periodic_counters: (270, "modules/periodic_counters.rs"),
     pet_sets: (1000, "modules/pet_sets.rs"),
