@@ -390,7 +390,7 @@ impl GroundMap {
                 },
             )
             .max_by(f32::total_cmp)
-            .map_or(center, GroundProbe::Supported)
+            .map_or(center, |height| GroundProbe::Supported(height.min(feet.y)))
     }
 
     fn player_solid_point(&mut self, map: crate::maps::InMap, feet: Vec3) -> GroundProbe {

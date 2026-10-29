@@ -729,6 +729,25 @@ mod steep_floor_tests {
 
     #[test]
     #[ignore = "requires Neltharus ground assets in GAME_SERVER_GROUND_DIR"]
+    fn neltharus_authority_footprint_does_not_invent_ascent() {
+        let data = PathBuf::from(std::env::var_os("GAME_SERVER_GROUND_DIR").unwrap());
+        let mut ground = GroundMap::new(&data, HashMap::from([(2519, 4289128)]));
+        let map = InMap::continent(2519);
+        let feet = Vec3::new(-78.82245, 123.9822, 618.2463);
+        let target = Vec3::new(-78.2758, 122.8, 618.70844);
+        let next = feet + (target - feet).with_y(0.0).normalize() * 0.12;
+        let GroundProbe::Supported(height) = ground.player_solid_ground_in(map, next) else {
+            panic!("missing footprint support");
+        };
+        assert!(
+            height <= feet.y,
+            "footprint fabricated an ascent to {height}"
+        );
+        assert_eq!(prevent_steep_ascent(&mut ground, map, feet, next), next);
+    }
+
+    #[test]
+    #[ignore = "requires Neltharus ground assets in GAME_SERVER_GROUND_DIR"]
     fn neltharus_authority_admits_recorded_gorek_return_step() {
         let data = PathBuf::from(std::env::var_os("GAME_SERVER_GROUND_DIR").unwrap());
         let mut ground = GroundMap::new(&data, HashMap::from([(2519, 4289128)]));
