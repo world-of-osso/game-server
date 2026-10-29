@@ -248,7 +248,7 @@ fn dummy9_fracture_requires_both_meta_and_rank_for_fifteen_additional_fury() {
 #[test]
 fn sigil_of_flame_grants_fury_only_to_vengeance() {
     for (spec, expected) in [(581, 25.0), (577, 0.0)] {
-        let mut h = harness(Vec::new(), &[204596, 389787], 12).unwrap();
+        let mut h = harness(Vec::new(), &[204596, 204598, 389787], 12).unwrap();
         h.app
             .world_mut()
             .entity_mut(h.caster)
