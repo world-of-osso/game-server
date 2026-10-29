@@ -1,6 +1,29 @@
 use std::path::Path;
 
 #[test]
+#[ignore = "requires top-character profiles, native DB and SimC party pulse"]
+fn restoration_druid_uses_selected_germination_in_party_pulse() {
+    let trace = std::env::var("HEALER_TANK_TIMELINE").unwrap();
+    let party = std::env::var("HEALER_TANK_PARTY_TRACE").unwrap();
+    let report = super::super::healer_replay::replay_simc_party(
+        105,
+        Path::new(&trace),
+        Path::new(&party),
+        300,
+        70448,
+    )
+    .unwrap();
+    assert!(
+        report["metrics"]["spell_healing"]["155777"]["raw"]
+            .as_u64()
+            .unwrap_or(0)
+            > 0,
+        "selected Germination must heal: {report}"
+    );
+    println!("DRUID_POLICY_REPORT={report}");
+}
+
+#[test]
 #[ignore = "requires native Restoration Druid spell data"]
 fn swiftmend_triggers_three_blooms_on_owned_lifebloom() {
     use crate::spell_cast::test_harness::{ObservedCombatEvents, harness, spawn_player};
