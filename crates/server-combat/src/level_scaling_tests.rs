@@ -64,6 +64,8 @@ fn expected_stats() -> ExpectedStats {
             ),
         ]),
         content_tuning_mods: HashMap::from([(999, vec![50])]),
+        armor_tuning_mods: HashMap::new(),
+        season_milestones: HashMap::new(),
     }
 }
 

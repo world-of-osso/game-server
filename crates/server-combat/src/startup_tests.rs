@@ -47,9 +47,10 @@ fn create_world_schema(conn: &rusqlite::Connection) {
             ID INTEGER PRIMARY KEY, CreatureHealthMod REAL, CreatureAutoAttackDPSMod REAL,
             CreatureArmorMod REAL, ArmorConstantMod REAL
         );
+        CREATE TABLE mythic_plus_season (ID INTEGER PRIMARY KEY, MilestoneSeason INTEGER);
         CREATE TABLE content_tuning_x_expected (
             ID INTEGER PRIMARY KEY, ExpectedStatModID INTEGER, MinMythicPlusSeasonID INTEGER,
-            ContentTuningID INTEGER
+            ContentTuningID INTEGER, MaxMythicPlusSeasonID INTEGER
         );
         CREATE TABLE content_creature_template_difficulty (entry INTEGER NOT NULL,
             DifficultyID INTEGER NOT NULL, minlevel INTEGER NOT NULL, maxlevel INTEGER NOT NULL, exp INTEGER NOT NULL,
