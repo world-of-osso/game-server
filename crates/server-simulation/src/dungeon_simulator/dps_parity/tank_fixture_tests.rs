@@ -40,7 +40,7 @@ impl SpecDriver for TargetFactsProbe {
 #[ignore = "requires the matching MID2 Guardian profile and SimC DPS trace"]
 fn tank_dps_replay_uses_reference_incoming_and_all_targets() {
     let directory = std::env::var("DPS_PARITY_TANK_TRACE_DIR").unwrap();
-    let trace = std::path::Path::new(&directory).join("104.3.simc.log");
+    let trace = std::path::Path::new(&directory).join("104.3.70448.simc.log");
     let report =
         super::super::tank_replay::replay_simc_with_targets(104, &trace, 3, 300, 70448, true, 1.0)
             .unwrap();

@@ -894,7 +894,8 @@ pub(crate) fn combat_report(run: &Run, seconds: f64) -> Value {
 
 fn measure_seed(spec_id: u32, count: usize, seed: u64) -> Result<Value, String> {
     if let Some(directory) = std::env::var_os("DPS_PARITY_TANK_TRACE_DIR") {
-        let path = std::path::Path::new(&directory).join(format!("{spec_id}.{count}.simc.log"));
+        let path =
+            std::path::Path::new(&directory).join(format!("{spec_id}.{count}.{seed}.simc.log"));
         let started = Instant::now();
         let mut replay = super::tank_replay::replay_simc_with_targets(
             spec_id, &path, count, 300, seed, true, 1.0,
