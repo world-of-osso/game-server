@@ -1,8 +1,12 @@
+import importlib.util
 import tempfile
 import unittest
 from pathlib import Path
 
-from log_population_census import census
+spec = importlib.util.spec_from_file_location('log_population_census', Path(__file__).with_name('log_population_census.py'))
+module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+census = module.census
 
 
 class CensusTest(unittest.TestCase):
