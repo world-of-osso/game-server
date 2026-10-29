@@ -125,7 +125,10 @@ fn check_proc(world: &World, aura: &AuraInstance, event: &AuraEvent) -> bool {
     if event.actor != aura.caster {
         return false;
     }
-    if aura.spell_id == FIRE && event.heal.is_some_and(|amount| amount > 0.0) {
+    if aura.spell_id == FIRE
+        && (event.heal.is_some_and(|amount| amount > 0.0)
+            || (event.target == Some(aura.caster) && event.damage > 0.0))
+    {
         return event.target.is_some()
             && !matches!(event.spell_id, Some(FIRE_HEAL | LINGERING_HEAL));
     }
@@ -191,7 +194,12 @@ fn proc_item(world: &mut World, caster: Entity, aura: &AuraInstance, event: &Aur
             let stack = native_amount(world, caster, HEART_VALUES, 2, aura.cast_item_level);
             apply_primary_aura(world, caster, DEVOURED, stack, aura.cast_item_level, true);
         }
-        FIRE => proc_fire(world, caster, target, event.heal.is_some()),
+        FIRE => proc_fire(
+            world,
+            caster,
+            target,
+            event.heal.is_some() || target == caster,
+        ),
         _ => unreachable!(),
     }
 }

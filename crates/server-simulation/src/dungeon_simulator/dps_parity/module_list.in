@@ -494,6 +494,7 @@ mod windwalker_player_tests;
 #[cfg(test)] mod brewmaster_celestial_fortune_tests;
 #[cfg(test)] mod brewmaster_refreshing_drink_tests;
 #[cfg(test)] mod brewmaster_omnium_heal_tests;
+#[cfg(test)] mod brewmaster_omnium_stagger_tests;
 #[cfg(test)] mod brewmaster_blackout_combo_tests;
 #[cfg(test)] mod brewmaster_purified_spirit_tests;
 #[cfg(test)] mod brewmaster_keg_reset_tests;
