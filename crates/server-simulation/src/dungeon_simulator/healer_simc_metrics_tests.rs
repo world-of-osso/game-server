@@ -61,7 +61,7 @@ fn healer_report_records_effective_resource_energize() {
         h.app.world_mut(),
         caster,
         shared::components::PowerType::Mana,
-        -100.0,
+        -48.0,
     );
     crate::spell_cast::cast_triggered_with_effect0_amount(
         h.app.world_mut(),
@@ -75,9 +75,9 @@ fn healer_report_records_effective_resource_energize() {
     let report = recorder.report(h.app.world(), 1);
     assert_eq!(
         report["resource_energizes_by_spell"]["47755"]["effective"],
-        5
+        48
     );
-    assert_eq!(report["resource_energizes_by_spell"]["47755"]["raw"], 5);
+    assert_eq!(report["resource_energizes_by_spell"]["47755"]["raw"], 50);
 }
 
 #[test]
