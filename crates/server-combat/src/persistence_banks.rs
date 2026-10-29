@@ -119,6 +119,8 @@ pub enum GuildBankLogKindData {
     BuyTab,
     /// TrinityCore `GUILD_BANK_LOG_REPAIR_MONEY`.
     RepairMoney,
+    /// Bank-to-bank movement; `copper` stores the destination tab index.
+    MoveItem,
 }
 
 #[derive(bitcode::Encode, bitcode::Decode, Debug, Clone, PartialEq)]
@@ -265,6 +267,21 @@ pub fn save_bank_move(
     inventory: Option<&InventoryRecord>,
 ) {
     save_bank_moves(db, character_id, [owner], inventory);
+}
+
+/// Persist a guild-bank rearrangement and split-item metadata atomically.
+pub(crate) fn save_guild_bank_rearrangement(
+    db: &Database,
+    character_id: u64,
+    owner: BankOwner<'_>,
+    clones: &[(u64, u64)],
+) {
+    let txn = db.begin_write().expect("begin guild bank rearrangement");
+    write_bank_owner(&txn, character_id, owner);
+    for &(source, destination) in clones {
+        super::inventory_store::copy_item_metadata_in(&txn, source, destination);
+    }
+    txn.commit().expect("commit guild bank rearrangement");
 }
 
 /// `save_bank_move` for several banks in one transaction.

@@ -313,6 +313,141 @@ fn guild_tab_info_accepts_retail_sixteen_character_name_and_rejects_longer() {
 }
 
 #[test]
+fn guild_bank_moves_split_merge_swap_and_preserve_item_metadata() {
+    let Some(mut h) = harness() else {
+        panic!("world fixture must load")
+    };
+    let vault = leader_with_tab(&mut h);
+    deposit_linen(&mut h, vault);
+    let source = contents(&mut h).tabs[0].slots[0]
+        .as_ref()
+        .unwrap()
+        .item_guid;
+    let modifiers = server::item_instance::ItemInstanceModifiers {
+        bonus_list: vec![12066],
+        ..Default::default()
+    };
+    let txn = h.db().begin_write().unwrap();
+    server::item_instance::store::write_modifiers(&txn, source, &modifiers).unwrap();
+    txn.commit().unwrap();
+    let send = |h: &mut Harness, from, to, count| {
+        h.send::<_, GuildBankChannel>(GuildBankMove {
+            object: vault.to_bits(),
+            from_tab: 0,
+            from_slot: from,
+            to_tab: 0,
+            to_slot: to,
+            count,
+        })
+    };
+    send(&mut h, 0, 3, 0);
+    assert_eq!(slot_items(&contents(&mut h).tabs[0]), vec![(3, LINEN, 20)]);
+    send(&mut h, 3, 4, 7);
+    let view = contents(&mut h);
+    assert_eq!(
+        slot_items(&view.tabs[0]),
+        vec![(3, LINEN, 13), (4, LINEN, 7)]
+    );
+    let split = view.tabs[0].slots[4].as_ref().unwrap().item_guid;
+    assert_ne!(split, source);
+    assert_eq!(
+        server::item_instance::store::load_modifiers(h.db(), split).unwrap(),
+        modifiers
+    );
+    send(&mut h, 4, 3, 0);
+    assert_eq!(slot_items(&contents(&mut h).tabs[0]), vec![(3, LINEN, 20)]);
+    let mut guild = load_guild(h.db(), GUILD);
+    let mut other = guild.tabs[0].slots[3].clone().unwrap();
+    other.item_guid = 99001;
+    other.item_id = PEACEBLOOM;
+    other.name = "Peacebloom".into();
+    other.stack_count = 3;
+    guild.tabs[0].slots[4] = Some(other);
+    save_guild(h.db(), GUILD, &guild);
+    send(&mut h, 3, 4, 0);
+    assert_eq!(
+        slot_items(&contents(&mut h).tabs[0]),
+        vec![(3, PEACEBLOOM, 3), (4, LINEN, 20)]
+    );
+    h.send::<_, GuildBankChannel>(GuildBankQueryLog {
+        object: vault.to_bits(),
+        tab: Some(0),
+    });
+    let log = h.take::<GuildBankLog>().pop().unwrap();
+    assert_eq!(
+        log.entries.len(),
+        1,
+        "same-tab moves do not create log entries"
+    );
+}
+
+#[test]
+fn guild_bank_cross_tab_swap_checks_both_rights_and_consumes_both_allowances() {
+    let Some(mut h) = harness() else {
+        panic!("world fixture must load")
+    };
+    let vault = leader_with_tab(&mut h);
+    h.set_gold(5_000_000);
+    h.send::<_, GuildBankChannel>(GuildBankBuyTab {
+        object: vault.to_bits(),
+    });
+    deposit_linen(&mut h, vault);
+    let mut guild = load_guild(h.db(), GUILD);
+    let mut other = guild.tabs[0].slots[0].clone().unwrap();
+    other.item_guid = 99002;
+    other.item_id = PEACEBLOOM;
+    other.name = "Peacebloom".into();
+    other.stack_count = 3;
+    guild.tabs[1].slots[0] = Some(other);
+    for tab in 0..2 {
+        guild.ranks[usize::from(MEMBER_RANK)].tabs[tab] = GuildTabRights {
+            view: true,
+            deposit: true,
+            withdrawals_per_day: 1,
+        };
+    }
+    guild.ranks[usize::from(MEMBER_RANK)].tabs[0].deposit = false;
+    save_guild(h.db(), GUILD, &guild);
+    save_guild_member_rank(h.db(), h.character_id, MEMBER_RANK);
+    let request = GuildBankMove {
+        object: vault.to_bits(),
+        from_tab: 0,
+        from_slot: 0,
+        to_tab: 1,
+        to_slot: 0,
+        count: 0,
+    };
+    h.send::<_, GuildBankChannel>(request.clone());
+    assert_eq!(failures(&mut h), vec![GuildBankError::Permissions]);
+    assert_eq!(
+        load_guild(h.db(), GUILD).tabs[0].slots[0]
+            .as_ref()
+            .unwrap()
+            .item_id,
+        LINEN
+    );
+    let mut guild = load_guild(h.db(), GUILD);
+    guild.ranks[usize::from(MEMBER_RANK)].tabs[0].deposit = true;
+    save_guild(h.db(), GUILD, &guild);
+    h.send::<_, GuildBankChannel>(request.clone());
+    let updated = contents(&mut h);
+    assert_eq!(slot_items(&updated.tabs[0]), vec![(0, PEACEBLOOM, 3)]);
+    assert_eq!(slot_items(&updated.tabs[1]), vec![(0, LINEN, 20)]);
+    assert_eq!(updated.tabs[0].remaining_withdrawals, Some(0));
+    assert_eq!(updated.tabs[1].remaining_withdrawals, Some(0));
+    h.send::<_, GuildBankChannel>(request);
+    assert_eq!(failures(&mut h), vec![GuildBankError::WithdrawLimit]);
+    h.send::<_, GuildBankChannel>(GuildBankQueryLog {
+        object: vault.to_bits(),
+        tab: Some(1),
+    });
+    let log = h.take::<GuildBankLog>().pop().unwrap();
+    assert!(log.entries.iter().any(|entry| entry.kind
+        == (GuildBankLogKind::MoveItem { to_tab: 0 })
+        && entry.item_id == PEACEBLOOM));
+}
+
+#[test]
 fn daily_reset_starts_the_day_at_the_reset_hour() {
     let reset = DailyReset { hour_utc: 15 };
     // 2026-09-24 14:59:59 UTC and 15:00:00 UTC.

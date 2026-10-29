@@ -25,8 +25,8 @@ use shared::components::GuildMembership;
 use shared::protocol::{
     GUILD_BANK_MAX_TABS, GuildBankBuyTab, GuildBankChannel, GuildBankContents, GuildBankDeposit,
     GuildBankError, GuildBankFailed, GuildBankLog, GuildBankLogEntry, GuildBankLogKind,
-    GuildBankMoneyTransfer, GuildBankQueryLog, GuildBankSetTabInfo, GuildBankSetTabText,
-    GuildBankTabView, GuildBankWithdraw, NpcRole,
+    GuildBankMoneyTransfer, GuildBankMove, GuildBankQueryLog, GuildBankSetTabInfo,
+    GuildBankSetTabText, GuildBankTabView, GuildBankWithdraw, NpcRole,
 };
 
 use crate::auth::InWorld;
@@ -100,6 +100,7 @@ impl Plugin for GuildBankPlugin {
                     send_opened_guild_banks,
                     process_deposits,
                     process_withdrawals,
+                    guild_bank_move::process_moves,
                     process_money_transfers,
                     process_tab_purchases,
                     process_tab_info,
@@ -111,6 +112,9 @@ impl Plugin for GuildBankPlugin {
             );
     }
 }
+
+#[path = "guild_bank_move.rs"]
+mod guild_bank_move;
 
 type GuildBankResult = Result<(), GuildBankError>;
 
@@ -800,7 +804,7 @@ fn set_tab_text(
     Ok(())
 }
 
-fn log_kind(kind: GuildBankLogKindData) -> GuildBankLogKind {
+fn log_kind(kind: GuildBankLogKindData, destination: u64) -> GuildBankLogKind {
     match kind {
         GuildBankLogKindData::DepositItem => GuildBankLogKind::DepositItem,
         GuildBankLogKindData::WithdrawItem => GuildBankLogKind::WithdrawItem,
@@ -808,6 +812,9 @@ fn log_kind(kind: GuildBankLogKindData) -> GuildBankLogKind {
         GuildBankLogKindData::WithdrawMoney => GuildBankLogKind::WithdrawMoney,
         GuildBankLogKindData::BuyTab => GuildBankLogKind::BuyTab,
         GuildBankLogKindData::RepairMoney => GuildBankLogKind::RepairMoney,
+        GuildBankLogKindData::MoveItem => GuildBankLogKind::MoveItem {
+            to_tab: destination as u8,
+        },
     }
 }
 
@@ -829,7 +836,7 @@ fn send_log(vault: &mut GuildVault, member: &Member, req: GuildBankQueryLog) -> 
         .log(req.tab)
         .iter()
         .map(|entry| GuildBankLogEntry {
-            kind: log_kind(entry.kind),
+            kind: log_kind(entry.kind, entry.copper),
             actor: entry.actor.clone(),
             item_id: entry.item_id,
             item_name: entry.item_name.clone(),

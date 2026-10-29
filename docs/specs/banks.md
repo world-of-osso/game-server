@@ -44,6 +44,7 @@ The client frames are specified in game-engine `docs/specs/bank-frame.md` and `d
 - [x] Players without a guild get `NotInGuild`.
 - [x] Deposit needs view and deposit rights, and refuses soulbound (`BoundItem`) and quest items.
 - [x] Withdraw needs view rights and a remaining daily stack (`WithdrawLimit`).
+- [ ] Internal bank moves: `GuildBankMove` addresses exact source and destination slots, with zero count for the whole stack. TrinityCore `Guild.cpp:833–870,945–1029,3120–3127,3151–3245` defines same-tab rights exemption, cross-tab deposit/withdraw checks in both swap directions, daily usage, merging before swap, split and source-tab move logs. The server change is in progress; full client and live proof are pending.
 - [x] Money deposit and withdraw follow the allowance and guild balance (`NotEnoughGuildMoney`). Daily counts reset at `GAME_SERVER_DAILY_RESET_HOUR_UTC` (default 15).
 - [x] Only the Guild Master buys tabs (Retail `BankTab` guild prices: 100g–5000g, 6 tabs) and sets tab name, icon and text. Guild tab names accept up to 16 Unicode characters, matching Mainline `SharedUIPanelTemplates.xml:1764`'s icon-selector edit box; `guild_tab_info_accepts_retail_sixteen_character_name_and_rejects_longer` exercises the authority boundary.
 - [x] Item moves are logged per tab and money moves (deposits, withdrawals, tab purchases, guild repairs) in the money log. Each log keeps its last 25 entries (`GUILD_BANKLOG_MAX_RECORDS`). `GuildBankQueryLog` sends them, with the item name and age.

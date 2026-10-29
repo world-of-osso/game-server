@@ -317,6 +317,42 @@ pub(crate) fn read_row<T: bitcode::DecodeOwned + Default>(
         .unwrap_or_default()
 }
 
+/// Copy a split stack's GUID-keyed attributes in the same transaction as its move.
+pub(crate) fn copy_item_metadata_in(txn: &WriteTransaction, source: u64, destination: u64) {
+    for definition in [
+        ITEM_INSTANCES,
+        ITEM_CRAFTING_ORIGINS,
+        ITEM_DURABILITIES,
+        server::item_instance::store::ITEM_MODIFIERS,
+        crate::transmog_store::ITEM_TRANSMOGS,
+    ] {
+        let mut table = txn
+            .open_table(definition)
+            .expect("open split item metadata");
+        let value = table
+            .get(source)
+            .expect("read split item metadata")
+            .map(|value| value.value().to_vec());
+        if let Some(value) = value {
+            table
+                .insert(destination, value.as_slice())
+                .expect("copy split item metadata");
+        }
+    }
+    for definition in [ITEM_DEFINITION_SOURCES, ITEM_UNLOCKED] {
+        let mut table = txn.open_table(definition).expect("open split item flag");
+        let value = table
+            .get(source)
+            .expect("read split item flag")
+            .map(|value| value.value());
+        if let Some(value) = value {
+            table
+                .insert(destination, value)
+                .expect("copy split item flag");
+        }
+    }
+}
+
 /// Persist all parts of the record in one transaction.
 pub fn save_inventory_record(db: &Database, character_id: u64, record: &InventoryRecord) {
     let txn = db.begin_write().expect("Failed to begin inventory write");
