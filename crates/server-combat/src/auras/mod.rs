@@ -1024,13 +1024,13 @@ fn build_instance(
     let max_stacks = fresh_max_stacks(world, caster, spell);
     let charges = options.map_or(0.0, |options| options.proc_charges.max(0) as f32);
     let charges = spell_mods::modify(world, caster, spell, SpellModOp::ProcCharges, charges);
+    // SimC76f8118 sc_demon_hunter.cpp:8069-8078 uses Metamorphosis effect 4 without a rank gate.
     let mut effects: Vec<AuraEffectState> = spell
         .effects
         .iter()
         .filter(|effect| {
             is_aura_effect(effect)
                 && application.effect_mask & (1 << effect.index) != 0
-                && scripts::effect_enabled(world, caster, spell.id, effect.index)
                 && crate::spell_cast::script_registry::effect_enabled(
                     world,
                     caster,

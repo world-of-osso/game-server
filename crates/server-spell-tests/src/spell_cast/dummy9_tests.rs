@@ -215,10 +215,11 @@ fn dummy9_scourge_strike_applies_base_virulent_plague_without_refreshing_existin
     assert!(logged(&h, 191587, h.npc, CombatLogKind::Damage) > 0);
 }
 #[test]
-fn dummy9_fracture_requires_both_meta_and_rank_for_fifteen_additional_fury() {
+fn fracture_metamorphosis_grants_additional_fury_without_rank() {
     for (meta, rank, expected) in [
         (false, false, 25.0),
-        (true, false, 25.0),
+        // SimC 76f8118 sc_demon_hunter.cpp:8069-8078 requires Metamorphosis, not rank 321068.
+        (true, false, 40.0),
         (false, true, 25.0),
         (true, true, 40.0),
     ] {
