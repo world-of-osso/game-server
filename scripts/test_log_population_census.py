@@ -22,8 +22,10 @@ class CensusTest(unittest.TestCase):
                          (1433.58, -155.52, 2095, 90))
         fields[12] = 'Creature-0-1-2521-42-789-AAAA'
         self.assertIsNone(module.advanced_position(fields))
+        fields[12] = 'Creature-0-1-2521-42-456-DCBA'
         fields[0] = 'SPELL_AURA_APPLIED'
-        self.assertIsNone(module.advanced_position(fields))
+        fields.insert(12, 'DEBUFF')
+        self.assertEqual(module.advanced_position(fields)['guid'], fields[5])
 
     def test_floor_requests_keep_run_identity_and_neighbor_hints(self):
         position = {'x': 10.0, 'y': 20.0, 'ui_map_id': 2095}

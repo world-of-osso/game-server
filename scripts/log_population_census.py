@@ -8,27 +8,25 @@ from pathlib import Path
 
 def advanced_position(fields):
     """Return only a block that identifies its own source or destination unit."""
-    event = fields[0]
-    if event in {"SWING_DAMAGE", "SWING_DAMAGE_LANDED"}:
-        start = 9
-    elif event in {"SPELL_DAMAGE", "SPELL_PERIODIC_DAMAGE", "RANGE_DAMAGE",
-                   "SPELL_HEAL", "SPELL_PERIODIC_HEAL"}:
-        start = 12
-    else:
+    if len(fields) < 28:
         return None
-    if len(fields) <= start + 18 or fields[start] not in (fields[1], fields[5]):
-        return None
-    try:
-        return {
-            "guid": fields[start],
-            "x": float(fields[start + 14]),
-            "y": float(fields[start + 15]),
-            "ui_map_id": int(fields[start + 16]),
-            "facing": float(fields[start + 17]),
-            "level": int(fields[start + 18]),
-        }
-    except ValueError:
-        return None
+    for start in range(9, len(fields) - 18):
+        if fields[start] not in (fields[1], fields[5]):
+            continue
+        try:
+            int(fields[start + 2])  # current health begins the advanced block
+            int(fields[start + 3])
+            return {
+                "guid": fields[start],
+                "x": float(fields[start + 14]),
+                "y": float(fields[start + 15]),
+                "ui_map_id": int(fields[start + 16]),
+                "facing": float(fields[start + 17]),
+                "level": int(fields[start + 18]),
+            }
+        except ValueError:
+            continue
+    return None
 
 
 def census(paths, maps):
