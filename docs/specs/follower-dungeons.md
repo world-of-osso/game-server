@@ -333,3 +333,19 @@ The user approved their Retail combat logs as evidence for follower-catalog popu
 
 Patrol evidence requires at least three distinct runs and a navmesh-validated route. Otherwise keep an imported spawn stationary and report `PATROL_UNOBSERVED`; unseen creatures, patrol routes, formation offsets and boss phases are not implied by logs. Combat movement, summon identities and ambiguous cross-run matches remain explicit limitations. [Extraction and coverage](../wiki/investigations/log-derived-population.md).
 
+### Copy-only coverage, 2026-10-28
+
+These are position-assignment slots, not proven authored spawn counts. Existing rows are one-to-one matches within ten yards in 3-D, not identity proof. The importer was run on a database copy only. `P` is `POSITION_Z_UNRESOLVED`, `A` is `AMBIGUOUS_SPAWN_IDENTITY`, `C` is `CENTROID_Z_UNRESOLVED`, and `E` is `MID_ENCOUNTER_ONLY_ID`. `PATROL_UNOBSERVED` applies to every imported slot.
+
+| Dungeon (map) | Slots | Imported | Nearby existing | Preparation gaps | TDB template IDs projected | IDs absent in both sources |
+|---|---:|---:|---:|---|---:|---:|
+| Kings' Rest (1762) | 495 | 129 | 21 | P120, A202, C10, E13 | 15 | 0 |
+| Ruby Life Pools (2521) | 514 | 167 | 28 | P109, A205, C5 | 4 | 0 |
+| Altar of Fangs (2993) | 351 | 71 | 13 | P137, A129, C1 | 6 | 0 |
+| Murder Row (2813) | 609 | 184 | 18 | P104, A288, C14, E1 | 17 | 0 |
+| Den of Nalorakk (2825) | 601 | 362 | 35 | P103, A94, C7 | 12 | 0 |
+| The Blinding Vale (2859) | 481 | 83 | 22 | P232, A139, C5 | 4 | 0 |
+| Voidscar Arena (2923) | 431 | 218 | 17 | P106, A87, C3 | 3 | 0 |
+
+Template counts apply only to resolved slots considered by the importer. Kings' Rest Ghostly Brute135231 is a nine-run movement candidate, not a fitted path: its observed points have four unresolved candidate floors. No patrol path was qualified or imported.
+
