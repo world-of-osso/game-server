@@ -55,6 +55,9 @@ fn cast_initial_ward(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, t
         jumps.saturating_add(1)
     };
     cast_ward(world, ctx.caster, target, stacks, ctx.depth + 1);
+    if combat::auras::has_aura(world, ctx.caster, 1_246_799) {
+        cast_triggered(world, ctx.caster, 1_246_798, Some(target), ctx.depth + 1);
+    }
 }
 
 fn cast_ward(world: &mut World, priest: Entity, target: Entity, stacks: u8, depth: u8) {
