@@ -4,6 +4,81 @@ use crate::auras::ActiveAuras;
 
 #[test]
 #[ignore = "requires Guardian profile and native world data"]
+fn guardian_absorbed_melee_special_earns_bear_rage_with_native_cooldown() {
+    use crate::spell_cast::powers::{change_power, power_value};
+    use shared::components::{Health, PowerType};
+    let mut run = prepare_registered_player(104, 1).unwrap();
+    let actor = run.actor;
+    let enemy = run.targets[0];
+    engage(&mut run);
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 5487, Some(actor), false).unwrap();
+    for _ in 0..40 {
+        run.app.update();
+    }
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 22812, Some(actor), false)
+        .unwrap();
+    change_power(run.app.world_mut(), actor, PowerType::Rage, -1000.0);
+    let health = run.app.world().get::<Health>(actor).unwrap().current;
+    let strike = |run: &mut Run| {
+        crate::spell_cast::effects::replay_simc_dummy_strike(
+            run.app.world_mut(),
+            enemy,
+            actor,
+            100.0,
+            false,
+            false,
+        );
+        run.app.update();
+    };
+    let rage = |run: &Run| {
+        power_value(run.app.world(), actor, PowerType::Rage)
+            .unwrap()
+            .0
+    };
+    strike(&mut run);
+    assert_eq!(
+        run.app.world().get::<Health>(actor).unwrap().current,
+        health,
+        "the hit must be absorbed"
+    );
+    assert_eq!(rage(&run), 30.0);
+    let hit = super::super::healer_intake::Hit {
+        tick: 1,
+        source_guid: 0,
+        pack: 0,
+        target_slot: 0,
+        school: 1,
+        raw: 100.0,
+        level_scaling_factor: 1.0,
+        kind: super::super::healer_intake::HitKind::Melee {
+            hand: 0,
+            outcome: "Hit".into(),
+            level_difference: 0,
+            critical_multiplier: 1.0,
+            weapon_speed: 2.0,
+        },
+    };
+    crate::combat::replay_healer_hit(run.app.world_mut(), enemy, actor, &hit).unwrap();
+    run.app.update();
+    assert_eq!(
+        rage(&run),
+        30.0,
+        "swing and special share the 750ms recovery"
+    );
+    for _ in 0..16 {
+        run.app.update();
+    }
+    crate::combat::replay_healer_hit(run.app.world_mut(), enemy, actor, &hit).unwrap();
+    run.app.update();
+    assert_eq!(
+        rage(&run),
+        60.0,
+        "a later absorbed swing grants Rage exactly once"
+    );
+}
+
+#[test]
+#[ignore = "requires Guardian profile and native world data"]
 fn druid_foreground_spell_resets_swing_but_mangle_and_form_do_not() {
     use shared::protocol::CombatLogKind;
     for (spell, should_reset) in [(8921, true), (33917, false), (768, false)] {

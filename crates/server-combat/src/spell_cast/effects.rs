@@ -2251,6 +2251,16 @@ fn deal_source_damage_and_report(
     } else {
         amount
     };
+    if amount > 0.0
+        && !periodic
+        && ctx
+            .spell
+            .categories
+            .as_ref()
+            .is_some_and(|category| category.defense_type == 2)
+    {
+        crate::combat::reward_bear_melee_hit_rage(world, target);
+    }
     #[cfg(any(test, feature = "test-support"))]
     factor_capture::record_mitigated(world, ctx, target, amount);
     #[cfg(any(test, feature = "test-support"))]
