@@ -252,7 +252,7 @@ def run_pressure_sweep(trace_dir, executable, output_dir, jobs, profiles, seeds)
             if low == 0:
                 raise RuntimeError(f'{spec}: no surviving scale at 0.05 resolution')
             scale = low / 20
-            baseline = measure(scale)
+            baseline = measure(1.0)
             stressed = measure(scale * 1.25)
             net = sum(r['damage_taken'] / r['duration_seconds'] - r['self_heal_per_second']
                       for r in baseline) / len(baseline)
@@ -262,7 +262,7 @@ def run_pressure_sweep(trace_dir, executable, output_dir, jobs, profiles, seeds)
                             'net_damage_per_second': net})
     results.sort(key=lambda row: row['survival_scale'], reverse=True)
     (output_dir / 'summary.json').write_text(json.dumps({'seeds': list(seeds), 'results': results}, indent=2) + '\n')
-    print('| Tank | Survival scale | Mean time at 1.25× (s) | Net damage/s at survival scale |')
+    print('| Tank | Survival scale | Mean time at 1.25× survival scale (s) | Net damage/s at 1.0× |')
     print('|---|---:|---:|---:|')
     for row in results:
         print(f'| {row["spec"]} | {row["survival_scale"]:.2f} | {row["mean_time_to_death_125"]:.2f} | {row["net_damage_per_second"]:.2f} |')

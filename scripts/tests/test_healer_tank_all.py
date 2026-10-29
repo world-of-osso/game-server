@@ -58,7 +58,7 @@ assert os.environ['HEALER_TANK_EXTERNAL_HEALING'] == '0'
 threshold = {'66': 1.0, '73': 1.2, '104': 1.4, '250': 1.6, '268': 1.8, '581': 2.0}[spec]
 survives = scale <= threshold and seed < 70453
 report = {'time_to_death': None if survives else 100.0, 'duration_seconds': 300.0 if survives else 100.0,
-          'damage_taken': 3000.0 if survives else 1000.0, 'self_heal_per_second': 3.0, 'pressure_scale': scale}
+          'damage_taken': (3000.0 if survives else 1000.0) * scale, 'self_heal_per_second': 3.0, 'pressure_scale': scale}
 print('HEALER_TANK_REPORT=' + json.dumps(report))
 ''')
             executable.chmod(0o755)
