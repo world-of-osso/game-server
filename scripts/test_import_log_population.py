@@ -48,6 +48,21 @@ class ImportTest(unittest.TestCase):
             with sqlite3.connect(source) as db:
                 self.assertEqual(db.execute('SELECT COUNT(*) FROM content_creature_template').fetchone()[0], 0)
 
+    def test_authored_matching_maximizes_matches_before_distance(self):
+        fixture = json.loads((Path(__file__).parent / 'tests/fixtures/log-population-tdb.json').read_text())
+        with tempfile.TemporaryDirectory() as directory:
+            copy = Path(directory) / 'world-copy.db'
+            with sqlite3.connect(copy) as db:
+                for table, data in fixture.items():
+                    db.execute(data['sql'])
+                    for row in data['rows']:
+                        db.execute(f"INSERT INTO {table} VALUES ({','.join('?' for _ in row)})", row)
+                db.executemany('INSERT INTO tdb_creature(guid,id,map,position_x,position_y,position_z) VALUES(?,189886,2521,?,20,30)', [(1, 0), (2, 18)])
+            report = module.import_population(copy, [record('flexible', 9, npc=189886), record('constrained', 0, npc=189886)])
+            self.assertEqual((report['2521']['already_present'], report['2521']['imported']), (2, 0))
+            with sqlite3.connect(copy) as db:
+                self.assertEqual(db.execute('SELECT COUNT(*) FROM content_creature').fetchone()[0], 0)
+
     def test_nearby_slots_are_not_collapsed_or_matched_twice(self):
         fixture = json.loads((Path(__file__).parent / 'tests/fixtures/log-population-tdb.json').read_text())
         with tempfile.TemporaryDirectory() as directory:
