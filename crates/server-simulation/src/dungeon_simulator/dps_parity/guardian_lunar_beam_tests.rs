@@ -4,6 +4,91 @@ use shared::{components::Health, protocol::CombatLogKind};
 
 #[test]
 #[ignore = "requires Guardian MID2 profile and native world data"]
+fn guardian_lunar_beam_earns_caster_owned_atmospheric_exposure() {
+    use crate::auras::ActiveAuras;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_registered_player(104, 1).unwrap();
+    let actor = run.actor;
+    let target = run.targets[0];
+    engage(&mut run);
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 5487, Some(actor), false).unwrap();
+    for _ in 0..40 {
+        run.app.update();
+    }
+    assert!(
+        run.app
+            .world()
+            .get::<ActiveAuras>(actor)
+            .unwrap()
+            .iter()
+            .any(|aura| aura.spell_id == 429532 && aura.caster == actor)
+    );
+    let damage = |run: &Run| -> f32 {
+        let event = run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .rev()
+            .find(|event| {
+                event.source == Some(actor.to_bits())
+                    && event.target == Some(target.to_bits())
+                    && event.spell_id == Some(197626)
+                    && event.kind == CombatLogKind::Damage
+            })
+            .expect("real Starsurge impact");
+        event.amount as f32 / if event.crit { 2.0 } else { 1.0 }
+    };
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 204066, Some(target), false)
+        .unwrap();
+    for _ in 0..25 {
+        run.app.update();
+    }
+    let debuff = run
+        .app
+        .world()
+        .get::<ActiveAuras>(target)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 430589 && aura.caster == actor)
+        .expect("Lunar Beam damage must apply its own exposure");
+    let amount = debuff
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap()
+        .amount;
+    assert_eq!(amount, 6.0);
+    crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 197626, Some(target), 1);
+    for _ in 0..5 {
+        run.app.update();
+    }
+    let exposed = damage(&run);
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        target,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 430589 && aura.caster == actor,
+    );
+    run.app
+        .world_mut()
+        .resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .clear();
+    crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 197626, Some(target), 1);
+    for _ in 0..5 {
+        run.app.update();
+    }
+    let ratio = exposed / damage(&run);
+    assert!(
+        (1.02..1.10).contains(&ratio),
+        "exposure changes caster damage by {ratio}, expected 1.06"
+    );
+}
+
+#[test]
+#[ignore = "requires Guardian MID2 profile and native world data"]
 fn guardian_lunar_beam_pulse_respects_native_five_target_cap() {
     use shared::components::Position;
     let mut run = prepare_registered_player(104, 7).unwrap();

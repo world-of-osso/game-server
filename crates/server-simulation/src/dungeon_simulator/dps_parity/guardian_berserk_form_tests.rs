@@ -139,6 +139,7 @@ fn guardian_star_cascade_comes_from_foreground_landed_thrash() {
 #[ignore = "requires Guardian profile and native world data"]
 fn guardian_heart_in_cat_executes_empowered_feral_frenzy() {
     use shared::protocol::CombatLogKind;
+    let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_registered_player(104, 1).unwrap();
     let actor = run.actor;
     let target = run.targets[0];
