@@ -22,6 +22,8 @@ mod aoe_avoidance_tests;
 pub mod area_aura;
 pub mod area_trigger;
 #[cfg(test)]
+mod area_units_tests;
+#[cfg(test)]
 mod attack_power_tests;
 pub mod aura_spell_restrictions;
 pub(crate) mod auto_repeat;
