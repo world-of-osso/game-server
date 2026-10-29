@@ -21,6 +21,9 @@ class RubyNativeTemplatesTests(unittest.TestCase):
                     self.assertEqual(db.execute('SELECT name FROM content_creature_template WHERE entry=?', (entry,)).fetchone(), (name,))
                     self.assertEqual(db.execute('SELECT CreatureDisplayID FROM content_creature_template_model WHERE CreatureID=?', (entry,)).fetchall(), [(display,)])
                 self.assertEqual(db.execute('SELECT count(*) FROM content_creature').fetchone()[0], before)
+            with sqlite3.connect(Path(directory) / 'copy.sqlite') as db, db:
+                import_templates(db)
+                self.assertEqual(db.execute('SELECT count(*) FROM content_creature_template_model WHERE CreatureID=190484').fetchone()[0], 1)
 
 
 if __name__ == '__main__':
