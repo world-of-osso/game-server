@@ -29,6 +29,8 @@ pub struct AuraStatMods {
     pub critical_block_amount_mult: f32,
     ///168: (creature-type mask, percent multiplier), independent of school.
     pub damage_done_versus_mods: Vec<(u32, f32)>,
+    /// Punish damage multipliers keyed by the debuff's casting warrior.
+    pub punish_damage_to_caster: Vec<(Entity, f32)>,
     /// MOD_DAMAGE_PERCENT_TAKEN 87 per school bit.
     pub damage_taken_mult: [f32; SCHOOL_COUNT],
     ///163: each (school mask, multiplier) applies once when any school intersects.
@@ -131,6 +133,7 @@ impl Default for AuraStatMods {
             armor_penetration_pct: 0.0,
             critical_block_amount_mult: 1.0,
             damage_done_versus_mods: Vec::new(),
+            punish_damage_to_caster: Vec::new(),
             damage_taken_mult: [1.0; SCHOOL_COUNT],
             critical_damage_mods: Vec::new(),
             healing_done_mult: 1.0,
@@ -200,6 +203,15 @@ impl AuraStatMods {
             .iter()
             .filter(|(mask, _)| mask & creature_mask != 0)
             .map(|(_, mult)| mult)
+            .product()
+    }
+
+    /// SimC76f8118 sc_warrior.cpp:9638: Punish reduces damage to its caster.
+    pub fn punish_damage_multiplier(&self, target: Entity) -> f32 {
+        self.punish_damage_to_caster
+            .iter()
+            .filter(|(caster, _)| *caster == target)
+            .map(|(_, multiplier)| multiplier)
             .product()
     }
 
@@ -638,6 +650,13 @@ fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance, sanlayn: bool) {
             MOD_ABSORB_TAKEN_PCT => combat.absorb_taken_mult *= pct(amount),
             MOD_TOTAL_THREAT => combat.temporary_threat += amount,
             MOD_SPELL_CRIT_CHANCE => combat.spell_crit_pct += amount,
+            // SimC76f8118 sc_warrior.cpp:9638: native Punish's named
+            // field reduces this target's damage to its casting warrior.
+            MOD_IGNORE_TARGET_RESIST if aura.spell_id == 275335 && effect.index == 0 => {
+                combat
+                    .punish_damage_to_caster
+                    .push((aura.caster, pct(amount)));
+            }
             MOD_IGNORE_TARGET_RESIST => combat
                 .target_reduction_mult
                 .push((misc as u32, 1.0 - amount / 100.0)),

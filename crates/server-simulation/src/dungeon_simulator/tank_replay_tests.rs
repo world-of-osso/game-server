@@ -2093,6 +2093,94 @@ fn dungeon_season_armor_tuning_changes_incoming_swing_damage() {
 }
 
 #[test]
+#[ignore = "uses native Punish aura and real incoming damage"]
+fn punish_reduces_only_its_casters_incoming_swing_strike_and_bleed() {
+    use shared::components::Health;
+    let mut h = crate::spell_cast::test_harness::harness(Vec::new(), &[275335], 1).unwrap();
+    h.app
+        .insert_resource(crate::test_data::world_data().armor_constants.clone());
+    let owner = h.caster;
+    let source = h.npc;
+    let other = crate::spell_cast::test_harness::spawn_player(&mut h.app, 1, 4.0);
+    for target in [owner, other] {
+        h.app.world_mut().entity_mut(target).insert(Health {
+            current: 10_000.0,
+            max: 10_000.0,
+        });
+        h.app
+            .world_mut()
+            .get_mut::<crate::stats::CharacterStats>(target)
+            .unwrap()
+            .versatility_pct = 20.0;
+    }
+    let hit = super::healer_intake::Hit {
+        tick: 1,
+        source_guid: 0,
+        pack: 0,
+        target_slot: 0,
+        school: 1,
+        raw: 1000.0,
+        level_scaling_factor: 1.0,
+        kind: super::healer_intake::HitKind::Melee {
+            hand: 0,
+            outcome: "Hit".into(),
+            level_difference: 0,
+            critical_multiplier: 1.0,
+            weapon_speed: 2.0,
+        },
+    };
+    for _ in 0..5 {
+        crate::auras::apply_aura(
+            h.app.world_mut(),
+            &crate::auras::AuraApplication {
+                caster: owner,
+                target: source,
+                spell_id: 275335,
+                effect_mask: 1,
+                source: crate::auras::AuraSource::Cast,
+            },
+        );
+    }
+    h.advance(2);
+    for target in [owner, other] {
+        let expected = if target == owner { 765.0 } else { 900.0 };
+        for kind in 0..3 {
+            h.app.world_mut().get_mut::<Health>(target).unwrap().current = 10_000.0;
+            match kind {
+                0 => crate::combat::replay_healer_hit(h.app.world_mut(), source, target, &hit)
+                    .unwrap(),
+                1 => crate::spell_cast::effects::replay_simc_dummy_strike(
+                    h.app.world_mut(),
+                    source,
+                    target,
+                    1000.0,
+                    false,
+                    false,
+                ),
+                _ => crate::spell_cast::effects::replay_simc_dummy_bleed(
+                    h.app.world_mut(),
+                    source,
+                    target,
+                    1000.0,
+                ),
+            }
+            let damage = 10_000.0 - h.health(target);
+            assert_eq!(damage, expected, "kind={kind} target={target:?}");
+        }
+    }
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        source,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 275335,
+    );
+    h.advance(2);
+    h.app.world_mut().get_mut::<Health>(owner).unwrap().current = 10_000.0;
+    crate::combat::replay_healer_hit(h.app.world_mut(), source, owner, &hit).unwrap();
+    assert_eq!(10_000.0 - h.health(owner), 900.0, "removal restores damage");
+}
+
+#[test]
 #[ignore = "uses native dungeon-season tuning and a real blocked hit"]
 fn tank_report_block_reduction_matches_dungeon_combat() {
     use shared::components::{Health, UnitLevel};
