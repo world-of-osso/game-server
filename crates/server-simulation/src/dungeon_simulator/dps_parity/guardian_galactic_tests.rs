@@ -60,20 +60,62 @@ fn twin_moonfire_copies_foreground_and_galactic_casts_to_other_enemies() {
     let primary = run.targets[0];
     engage(&mut run);
     crate::spell_cast::creature_cast(run.app.world_mut(), actor, 5487, Some(actor), false).unwrap();
-    for _ in 0..40 { run.app.update(); }
-    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 8921, Some(primary), false).unwrap();
-    for _ in 0..3 { run.app.update(); }
-    let dotted = |run: &Run| run.targets.iter().copied().filter(|target| {
-        run.app.world().get::<ActiveAuras>(*target).is_some_and(|auras| {
-            auras.iter().any(|aura| aura.spell_id == 164812 && aura.caster == actor)
-        })
-    }).collect::<Vec<_>>();
+    for _ in 0..40 {
+        run.app.update();
+    }
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 8921, Some(primary), false)
+        .unwrap();
+    for _ in 0..3 {
+        run.app.update();
+    }
+    let dotted = |run: &Run| {
+        run.targets
+            .iter()
+            .copied()
+            .filter(|target| {
+                run.app
+                    .world()
+                    .get::<ActiveAuras>(*target)
+                    .is_some_and(|auras| {
+                        auras
+                            .iter()
+                            .any(|aura| aura.spell_id == 164812 && aura.caster == actor)
+                    })
+            })
+            .collect::<Vec<_>>()
+    };
     let first = dotted(&run);
     assert_eq!(first.len(), 2, "foreground Moonfire must hit two targets");
     assert!(first.contains(&primary));
-    crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 8921, Some(primary), 1);
-    for _ in 0..3 { run.app.update(); }
-    assert_eq!(dotted(&run).len(), 3, "background Moonfire must prefer the undotted enemy");
+    let passive = run
+        .app
+        .world()
+        .get::<ActiveAuras>(actor)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 203964 && aura.caster == actor)
+        .unwrap()
+        .instance_id;
+    assert!(auras::set_effect_amount(
+        run.app.world_mut(),
+        actor,
+        passive,
+        0,
+        100.0
+    ));
+    for _ in 0..30 {
+        run.app.update();
+    }
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 33917, Some(primary), false)
+        .unwrap();
+    for _ in 0..3 {
+        run.app.update();
+    }
+    assert_eq!(
+        dotted(&run).len(),
+        3,
+        "Galactic Guardian must copy Moonfire to the undotted enemy"
+    );
 }
 
 #[test]
