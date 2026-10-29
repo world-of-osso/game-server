@@ -35,6 +35,19 @@ Replay recorded incoming damage in the native server combat simulation to compar
 
 `--pressure-sweep` runs each tank without external healing across ten consecutive native seeds, starting at 70448 by default. It brackets and bisects pressure in 0.05 steps, assuming survival is monotonic, to find the highest tested scale with at least five survivors. It reports the mean survival time at 1.25 times that scale, treating survivors as 300 seconds, and mean net damage per second at the survival scale. Damage taken is already after absorbs, so net damage subtracts effective self-healing only. Per-seed reports and a summary are written to the output directory. This synthetic trace is not a general ranking of tank performance in encounters.
 
+### Pressure sweep results
+
+Measured on game-server master `897f408cc7df1913e2968fde103ef619c3ca4871`, using each tank's 300-second SimC trace and native seeds 70448–70457 without a healer. Per-seed reports and `summary.json` are in `game-engine/data/diagnostics/healer-tank-replay/pressure-sweep-897f408cc7/`. Net damage is averaged over all ten runs at each tank's survival scale; deaths shorten the individual measurement interval.
+
+| Tank | Survival scale | Mean time at 1.25× (s) | Net damage/s at survival scale |
+|---|---:|---:|---:|
+| Protection Warrior (73) | 3.95 | 78.52 | 4305.96 |
+| Vengeance Demon Hunter (581) | 3.85 | 145.82 | 5191.42 |
+| Blood Death Knight (250) | 3.45 | 86.23 | 4104.03 |
+| Brewmaster Monk (268) | 3.30 | 158.71 | 3021.90 |
+| Guardian Druid (104) | 2.10 | 126.03 | 3537.96 |
+| Protection Paladin (66) | 1.00 | 157.31 | 4094.03 |
+
 ## SimC party-pressure trace
 
 The second canonical healer input is `game-engine/data/diagnostics/healer-tank-replay/66.simc-party-pulse-seed70448.debug.log`. It adds a 20,000 Shadow pulse every 12 seconds from 8 seconds through 296 seconds. This is a reproducible synthetic dungeon-pressure scenario, not a measured dungeon encounter. SimC `76f8118` generates the five recipient source rolls with the MID2 Protection profile and four named copies; the native replay maps them to its tank, healer and three DPS followers. The original tank-only trace still supplies the tank's melee and bleed rolls.
