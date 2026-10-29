@@ -267,6 +267,7 @@ Frost player reaction clocks are configured before food setup advances native fr
 - Literal precombat provisions the existing native default-duck stable policy and executes ordinary Call Pet. The pet attacks the current encounter primary through native pet control, without restoring follower rotation decisions.
 
 - Spec253 keeps the requested native actor identity and disables follower-kit decisions before setup. Its pinned76f8118 `hunter_beast_mastery.simc` rows run through the shared `Program`/`Driver`/`Prepared`/`Equipment` path, including native pet summon, snapshot, Auto Shot and target-scored Barbed Shot. Native70448 supplies spell values, readiness, resources and damage; the adapter does not substitute reference damage.
+- Selected Thundering Hooves makes each permanent pet execute its own Stomp on Bestial Wrath using the talent's native effectiveness; Nature's Ally does not execute it. Its actual impacts can earn Cobra Fang, but do not trigger the Barbed Shot set echo (SimC76f8118 `sc_hunter.cpp3110–3125,3335–3339,6753–6761`).
 
 ### Outlaw literal fixture
 

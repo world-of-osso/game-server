@@ -8,7 +8,7 @@ pub(super) struct StabledPetGuardian {
     expires_at: Option<f64>,
 }
 
-pub(crate) fn is_stabled_guardian(world: &World, pet: Entity) -> bool {
+pub fn is_stabled_guardian(world: &World, pet: Entity) -> bool {
     world.get::<StabledPetGuardian>(pet).is_some()
 }
 
