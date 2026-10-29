@@ -699,6 +699,31 @@ mod tests {
 
     #[test]
     #[ignore = "requires canonical world database and MID2 Blood inputs"]
+    fn blood_profile_potion_uses_native_item_and_strength_buff() {
+        use super::super::literal_rotation::{equipment::Equipment, execution::{self, NativeAction, Prepared}};
+        let mut run = super::super::prepare_registered_player(250, 1).unwrap();
+        let actor = run.actor;
+        let world = run.app.world();
+        let before = world.get::<crate::stats::CharacterStats>(actor).unwrap().primary.strength;
+        let potion = world.get::<super::super::profile_effects::Potion>(actor).expect("configured potion");
+        assert_eq!((potion.0.item_id, potion.0.item_level), (241292, 295));
+        let mut bindings = crate::simc_apl_native::Bindings::default();
+        let equipment = Equipment::load(world, actor, &mut bindings).unwrap();
+        let row = server::simc_apl::Action { source_row: None, name: "potion".into(), target: None, options: Default::default() };
+        let prepared = Prepared::read(run.app.world_mut(), actor, &run.targets, &equipment, std::iter::empty::<NativeAction>(), false).unwrap();
+        let item = prepared.execution(&row, &equipment).unwrap().expect("potion is ready");
+        execution::execute(run.app.world_mut(), actor, item).unwrap();
+        super::super::preparation::finish_pending_setup(&mut run).unwrap();
+        let world = run.app.world();
+        assert!(crate::auras::has_aura(world, actor, 1236998));
+        let after = world.get::<crate::stats::CharacterStats>(actor).unwrap().primary.strength;
+        assert!(after > before, "native potion increases Strength: {before} -> {after}");
+        let prepared = Prepared::read(run.app.world_mut(), actor, &run.targets, &equipment, std::iter::empty::<NativeAction>(), false).unwrap();
+        assert!(prepared.execution(&row, &equipment).unwrap().is_none(), "potion cannot be reused");
+    }
+
+    #[test]
+    #[ignore = "requires canonical world database and MID2 Blood inputs"]
     fn blood_dance_rolls_once_per_rune_payment() {
         fn first_spawn(runes: f32) -> u32 {
             let _seed = crate::random::seed_scope(70448);
