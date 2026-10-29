@@ -888,7 +888,30 @@ fn measure(spec_id: u32, count: usize) -> Result<Value, String> {
     Ok(multi_seed::summarize(reports))
 }
 
+pub(crate) fn combat_report(run: &Run, seconds: f64) -> Value {
+    report::combat(run.app.world(), &run.damage_targets, seconds)
+}
+
 fn measure_seed(spec_id: u32, count: usize, seed: u64) -> Result<Value, String> {
+    if let Some(directory) = std::env::var_os("DPS_PARITY_TANK_TRACE_DIR") {
+        let path = std::path::Path::new(&directory).join(format!("{spec_id}.{count}.simc.log"));
+        let started = Instant::now();
+        let mut replay = super::tank_replay::replay_simc_with_targets(
+            spec_id, &path, count, 300, seed, true, 1.0,
+        )?;
+        if !replay["time_to_death"].is_null() {
+            return Err(format!(
+                "tank died during DPS measurement: {}",
+                replay["time_to_death"]
+            ));
+        }
+        replay["spec_id"] = json!(spec_id);
+        replay["target_count"] = json!(count);
+        replay["simulated_seconds"] = json!(replay["duration_seconds"]);
+        replay["seed"] = json!(seed);
+        replay["wall_seconds"] = json!(started.elapsed().as_secs_f64());
+        return Ok(replay);
+    }
     let _seed_scope = crate::random::seed_scope(seed);
     let mut run = prepare_measurement(spec_id, count)?;
     if run.spec_driver.is_none() {
