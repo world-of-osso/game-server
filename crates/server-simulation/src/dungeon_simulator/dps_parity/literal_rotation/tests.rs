@@ -144,23 +144,24 @@ fn literal_queues_nearly_ready_cooldown_before_lower_priority_cast() {
         run.app.world_mut(), actor, shared::components::PowerType::Chi, 10.0,
     ).unwrap();
     execution::execute(
-        run.app.world_mut(), actor, Execution::Spell(107428, target, Some(target)),
+        run.app.world_mut(), actor, Execution::Spell(113656, target, Some(target)),
     ).unwrap();
-    for _ in 0..40 {
+    for _ in 0..100 {
         run.app.update();
     }
+    crate::spell_cast::powers::change_power(run.app.world_mut(), actor, shared::components::PowerType::Chi, 10.0).unwrap();
     let world = run.app.world();
-    let spell = world.resource::<crate::spell_info::SpellStore>().get(107428).unwrap();
+    let spell = world.resource::<crate::spell_info::SpellStore>().get(113656).unwrap();
     let remaining = world.get::<crate::spell_cast::SpellHistory>(actor).unwrap()
         .remaining_cooldown_ms(spell, crate::spell_cast::history_now(world));
     assert!(remaining > 250);
-    crate::spell_cast::scripts::reduce_cooldown(run.app.world_mut(), actor, 107428, (remaining as f64 - 200.0) / 1000.0);
+    crate::spell_cast::scripts::reduce_cooldown(run.app.world_mut(), actor, 113656, (remaining as f64 - 200.0) / 1000.0);
     let actions = [
-        NativeAction { name: "rising_sun_kick", spell: 107428, talent: None, self_target: false },
+        NativeAction { name: "fists_of_fury", spell: 113656, talent: None, self_target: false },
         NativeAction { name: "tiger_palm", spell: 100780, talent: None, self_target: false },
     ];
     let mut driver = Driver::new(Program::parse(&[
-        ("default", "rising_sun_kick,if=target.health.pct>50"),
+        ("default", "fists_of_fury,if=target.health.pct>50"),
         ("default", "tiger_palm"),
     ]).unwrap());
     let initial = run.app.world().resource::<ObservedCombatEvents>().0.len();
@@ -181,7 +182,7 @@ fn literal_queues_nearly_ready_cooldown_before_lower_priority_cast() {
     let events = &run.app.world().resource::<ObservedCombatEvents>().0[initial..];
     let spells: Vec<_> = events.iter().filter(|event| event.source == Some(actor.to_bits())
         && event.kind == CombatLogKind::CastSuccess).filter_map(|event| event.spell_id).collect();
-    assert_eq!(spells, vec![107428], "the queued kick must execute after its cooldown without casting the lower-priority Tiger Palm");
+    assert_eq!(spells, vec![113656], "the queued Fists of Fury must execute after its cooldown without casting the lower-priority Tiger Palm");
 }
 
 fn make_secondary_low(run: &mut Run) -> Entity {
