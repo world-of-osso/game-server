@@ -96,6 +96,45 @@ fn azure_translocation_book_gossip_moves_to_four_authored_receiving_books() {
 }
 
 #[test]
+fn azure_translocation_moves_all_living_owned_pets_in_the_same_copy() {
+    let mut h = fixture();
+    let copy = *h.app.world().get::<InMap>(h.player).unwrap();
+    let book = h.spawn_real_npc(194602, 1.0);
+    let first = h.spawn_real_npc(187159, 1.0);
+    let second = h.spawn_real_npc(187159, 1.0);
+    let remote = h.spawn_real_npc(187159, 1.0);
+    h.app.world_mut().entity_mut(book).insert(copy);
+    for pet in [first, second, remote] {
+        h.app
+            .world_mut()
+            .entity_mut(pet)
+            .insert(crate::hunter_pet::HunterPet {
+                owner: h.player,
+                slot: 1,
+            });
+    }
+    for pet in [first, second] {
+        h.app.world_mut().entity_mut(pet).insert(copy);
+    }
+    h.app.world_mut().entity_mut(remote).insert(InMap {
+        instance_id: copy.instance_id + 1,
+        ..copy
+    });
+    let remote_before = *h.app.world().get::<Position>(remote).unwrap();
+    h.place_player(book, 1.0);
+    h.interact(book);
+    let events = h.take::<InteractionOpened>();
+    let InteractionKind::Gossip(menu) = &events.last().unwrap().kind else {
+        panic!("book gossip")
+    };
+    h.select(book, menu.options[0].option_id);
+    let endpoint = *h.app.world().get::<Position>(h.player).unwrap();
+    assert_eq!(h.app.world().get::<Position>(first), Some(&endpoint));
+    assert_eq!(h.app.world().get::<Position>(second), Some(&endpoint));
+    assert_eq!(h.app.world().get::<Position>(remote), Some(&remote_before));
+}
+
+#[test]
 fn azure_translocation_final_book_uses_qualified_authored_poi_inside_umbrelskul_component() {
     let mut h = fixture();
     let copy = *h.app.world().get::<InMap>(h.player).unwrap();

@@ -6,7 +6,7 @@ Azure Vault books expose their authored gossip and move the reader's same-copy p
 
 - [x] Preserve source menu IDs, destination body text and the `Proceed onward.` choice for entries194602/194712/194713/194714/194715.
 - [x] Revalidate ordinary interaction range and map identity before applying the option.
-- [ ] Move the reader and living same-copy party members, followers and companion pets to the qualified receiver-book spawn, without changing resources or admitting a different copy.
+- [ ] Move the reader and living same-copy party members, followers and all their living controlled pets, including both Hunter Animal Companion pets, to the qualified receiver-book spawn, without changing resources or admitting a different copy. Clear each moved pet's simulator travel so stale pre-book routes cannot cross disconnected components.
 - [x] For194715, use authenticated AreaPOI7116 inside Umbrelskul's nav component, as explicitly approved when no receiving book exists.
 - [ ] Freeze the same directed teleport links in the simulator graph; actors cannot walk a teleport as an ordinary path or traverse it backwards.
 

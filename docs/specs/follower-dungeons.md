@@ -182,6 +182,8 @@ Consuming Stomp374720 effect0 periodic-trigger aura kills its selected target on
 
 A destination-requiring spell cast at a supplied unit must initialize its absent destination from that unit, not the caster. An explicitly supplied destination retains priority; a cast without any unit uses the caster. Ground-target selectors still project onto native map geometry and fail if it is unavailable; no geometry/tolerance bypass.
 
+Azure book traversal must move all living same-copy owned pets, including Hunter Animal Companion, and discard their simulator travel; the primary stable pet is not the entire owned set. This does not establish a full follower clear.
+
 Copy-only `scripts/azure_encounter_bindings.py` validates TC primary identities, native encounter bits and 70448 Journal identities before preparing all four Azure encounter-credit rows; it requires the local boss scripts already bound. It must not write canonical world.db. This data preparation does not establish follower completion.
 
 The copy-only encounter summon producer must project Vault Rune197204 from its actual base0 template and models plus authored Normal1/Mythic23 difficulty rows. Preserve source model probabilities/scales and existing group0 placements; do not invent205 rows or change unrelated content. Repeating preparation is idempotent; source AI identity drift must fail atomically. This preparation does not publish canonical data or establish native rune/phase behavior.
