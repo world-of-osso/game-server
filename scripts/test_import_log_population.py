@@ -99,6 +99,31 @@ class ImportTest(unittest.TestCase):
                              [(1,), (2,), (31000640,), (3276416398,), (3276417028,), (3276417029,), (3276417175,)])
             self.assertEqual(module.retire_encounter_duplicates(db, Path(directory)), [])
 
+    def test_import_keeps_near_start_boss_observation_over_nearby_placeholder(self):
+        fixture = json.loads((Path(__file__).parent / 'tests/fixtures/log-population-tdb.json').read_text())
+        with tempfile.TemporaryDirectory() as directory:
+            copy = Path(directory) / 'world-copy.sqlite'
+            with sqlite3.connect(copy) as db:
+                for data in fixture.values():
+                    db.execute(data['sql'])
+                    for row in data['rows']:
+                        db.execute(f"INSERT INTO {data['sql'].split()[2]} VALUES ({','.join('?' for _ in row)})", row)
+                db.execute('INSERT INTO content_creature_template(entry) VALUES (234649)')
+                db.execute('INSERT INTO raid_encounter_creature VALUES (2813,234649,3102)')
+                db.execute('''INSERT INTO content_creature(guid,id1,map,position_x,position_y,position_z,Comment)
+                    VALUES (63813001,234649,2813,8924.3223,-4738.4488,30.3815,?)''', (module.JOURNAL_PLACEHOLDER,))
+            run = '10/1/2026 22:32:55.772-5'
+            (Path(directory) / 'source.txt').write_text(
+                f'{run}  CHALLENGE_MODE_START\n10/1/2026 22:41:55.410-5  ENCOUNTER_START,3102,"Zaen Bladesorrow"\n')
+            observation = dict(record('zaen', 8916.85, npc=234649), map=2813, y=-4738.5, z=29.995829,
+                               source_file='source.txt', source_run_start=run,
+                               observation_time='10/1/2026 22:41:55.778-5')
+            module.import_population(copy, [observation], logs=Path(directory))
+            with sqlite3.connect(copy) as db:
+                self.assertEqual(db.execute('SELECT position_x,position_y FROM content_creature WHERE id1=234649').fetchall(),
+                                 [(8916.85, -4738.5)])
+            self.assertEqual(module.import_population(copy, [observation], logs=Path(directory))['2813']['already_present'], 1)
+
     def test_late_boss_observation_loses_to_placeholder_and_missing_log_fails(self):
         with tempfile.TemporaryDirectory() as directory, closing(sqlite3.connect(':memory:')) as db, db:
             db.executescript('''

@@ -210,7 +210,7 @@ def retire_encounter_duplicates(db, logs=LOG_ARCHIVE, maps=None):
                 else:
                     delta = observation_start_delta(json.loads(observation), encounter_id, logs)
                     ranked.append((1 if delta <= BOSS_START_OBSERVATION_WINDOW_SECONDS else 3,
-                                   abs(delta), guid))
+                                   delta, guid))
             winner = min(ranked)[2]
         for guid, _, _ in rows:
             if guid == winner:
@@ -221,7 +221,7 @@ def retire_encounter_duplicates(db, logs=LOG_ARCHIVE, maps=None):
     return retired
 
 
-def import_population(destination, records, radius=10.0):
+def import_population(destination, records, radius=10.0, logs=LOG_ARCHIVE):
     destination = validate_copy(destination)
     report = defaultdict(lambda: {'imported': 0, 'already_present': 0, 'gaps': [], 'templates_from_tdb': set(), 'templates_absent': set()})
     with closing(sqlite3.connect(destination)) as db, db:
@@ -236,6 +236,7 @@ def import_population(destination, records, radius=10.0):
             entry INTEGER NOT NULL, table_name TEXT NOT NULL, row_key TEXT NOT NULL, policy TEXT NOT NULL,
             PRIMARY KEY (table_name,row_key))''')
         summons = affix_summons(db)
+        bosses = set(db.execute('SELECT map_id,creature_entry FROM raid_encounter_creature'))
         retire_affix_spawns(db, summons, {int(record['map']) for record in records}, report)
         next_guid = db.execute('SELECT COALESCE(MAX(guid), 0) + 1 FROM content_creature').fetchone()[0]
         matched, existing_positions = match_existing(db, records, radius)
@@ -257,10 +258,11 @@ def import_population(destination, records, radius=10.0):
                 result['gaps'].append({'source_key': source_key, 'reason': reason})
                 continue
             x, y, z, facing = values
-            if source_key in matched:
+            boss = (map_id, npc_id) in bosses
+            if not boss and source_key in matched:
                 result['already_present'] += 1
                 continue
-            if any(math.dist((x, y, z), position) <= 3.0 for position in existing_positions.get((map_id, npc_id), ())):
+            if not boss and any(math.dist((x, y, z), position) <= 3.0 for position in existing_positions.get((map_id, npc_id), ())):
                 result['gaps'].append({'source_key': source_key, 'reason': 'AUTHORED_SPAWN_NEARBY_AMBIGUOUS'})
                 continue
             if not db.execute('SELECT 1 FROM content_creature_template WHERE entry=?', (npc_id,)).fetchone():
@@ -283,7 +285,7 @@ def import_population(destination, records, radius=10.0):
             result['imported'] += 1
             result['gaps'].append({'source_key': source_key, 'reason': 'PATROL_UNOBSERVED'})
             next_guid += 1
-        retire_encounter_duplicates(db, maps={int(record['map']) for record in records})
+        retire_encounter_duplicates(db, logs, maps={int(record['map']) for record in records})
     for value in report.values():
         value['templates_from_tdb'] = sorted(value['templates_from_tdb'])
         value['templates_absent'] = sorted(value['templates_absent'])
