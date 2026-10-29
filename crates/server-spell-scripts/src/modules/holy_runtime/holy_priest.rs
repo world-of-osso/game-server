@@ -11,13 +11,25 @@ use combat::spell_info::{SpellInfo, SpellStore};
 const ULTIMATE_SERENITY: u32 = 1_246_517;
 const SERENITY_SPLASH: u32 = 1_250_581;
 
-pub(super) fn serenity_hit(spell: u32) -> Option<combat::spell_cast::script_registry::ContextHitHook> {
+pub(super) fn serenity_hit(
+    spell: u32,
+) -> Option<combat::spell_cast::script_registry::ContextHitHook> {
     (spell == 2050).then_some(cast_serenity_splash)
 }
 
-fn cast_serenity_splash(world: &mut World, ctx: &combat::spell_cast::effects::EffectCtx, target: Entity) {
+fn cast_serenity_splash(
+    world: &mut World,
+    ctx: &combat::spell_cast::effects::EffectCtx,
+    target: Entity,
+) {
     if has_aura(world, ctx.caster, ULTIMATE_SERENITY) {
-        combat::spell_cast::cast_triggered(world, ctx.caster, SERENITY_SPLASH, Some(target), ctx.depth + 1);
+        combat::spell_cast::cast_triggered(
+            world,
+            ctx.caster,
+            SERENITY_SPLASH,
+            Some(target),
+            ctx.depth + 1,
+        );
     }
 }
 
@@ -25,9 +37,19 @@ pub(super) fn serenity_area_filter(spell: u32, index: u8) -> Option<super::AreaT
     ((spell, index) == (SERENITY_SPLASH, 0)).then_some(select_serenity_allies)
 }
 
-fn select_serenity_allies(world: &World, spell: &SpellInfo, primary: Option<Entity>, units: &mut Vec<Entity>) {
+fn select_serenity_allies(
+    world: &World,
+    spell: &SpellInfo,
+    primary: Option<Entity>,
+    units: &mut Vec<Entity>,
+) {
     use shared::components::Health;
-    units.retain(|unit| Some(*unit) != primary && world.get::<Health>(*unit).is_some_and(|h| h.current > 0.0 && h.current < h.max));
+    units.retain(|unit| {
+        Some(*unit) != primary
+            && world
+                .get::<Health>(*unit)
+                .is_some_and(|h| h.current > 0.0 && h.current < h.max)
+    });
     units.sort_by(|a, b| {
         let a = world.get::<Health>(*a).unwrap();
         let b = world.get::<Health>(*b).unwrap();
