@@ -968,7 +968,7 @@ fn ally_or_raid_targets(
     filter_area_sight(world, caster, spell, effect, center, candidates)
 }
 
-fn raid_member_id(world: &World, unit: Entity) -> Option<u64> {
+pub(super) fn raid_member_id(world: &World, unit: Entity) -> Option<u64> {
     if world.get::<crate::followers::Follower>(unit).is_some() {
         return Some(crate::followers::Follower::member_id(unit));
     }

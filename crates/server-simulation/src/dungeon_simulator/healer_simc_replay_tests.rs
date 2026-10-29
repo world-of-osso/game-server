@@ -47,6 +47,40 @@ fn reference_healer_remains_alive_during_single_faction_setup() {
     );
 }
 
+#[test]
+#[ignore = "requires canonical world database and healer-tank profiles"]
+fn beacon_transfers_healing_between_player_and_follower_party_members() {
+    let mut run = crate::dungeon_simulator::dps_parity::prepare_registered_player(66, 1).unwrap();
+    let tank = run.actor;
+    let healer =
+        crate::dungeon_simulator::dps_parity::spawn_second_reference_player(&mut run, 65).unwrap();
+    let party = crate::followers::simulator::spawn_party_for_reference_healer(
+        run.app.world_mut(),
+        tank,
+        healer,
+    )
+    .unwrap();
+    let follower = party.members[0];
+    for (beacon, healed) in [(tank, follower), (follower, tank)] {
+        for target in [beacon, healed] {
+            let mut health = run.app.world_mut().get_mut::<Health>(target).unwrap();
+            health.current = health.max * 0.25;
+        }
+        crate::spell_cast::cast_triggered(run.app.world_mut(), healer, 53563, Some(beacon), 1);
+        let before = run.app.world().get::<Health>(beacon).unwrap().current;
+        let healed_before = run.app.world().get::<Health>(healed).unwrap().current;
+        crate::spell_cast::cast_triggered(run.app.world_mut(), healer, 19750, Some(healed), 1);
+        let after = run.app.world().get::<Health>(beacon).unwrap().current;
+        let effective = run.app.world().get::<Health>(healed).unwrap().current - healed_before;
+        let transferred = after - before;
+        assert!(effective > 0.0);
+        assert!(
+            (transferred - effective * 0.1).abs() <= 2.0,
+            "Beacon {beacon:?} received {transferred} from {effective} healing on {healed:?}"
+        );
+    }
+}
+
 struct FixturePolicy {
     driver: Driver,
     bindings: Bindings,
