@@ -585,7 +585,10 @@ fn update_owner(world: &mut World, owner: Entity, now: f64) -> Result<(), String
                     .expect("active overflow fragment");
                 consume(&mut state, oldest, now, speed, owner_position);
                 state.pickup = None;
-                if oldest <= index {
+                if oldest == index {
+                    continue;
+                }
+                if oldest < index {
                     index -= 1;
                 }
             }
