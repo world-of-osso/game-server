@@ -34,6 +34,8 @@ pub const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::NativeAfterCast(after_cast),
     SpellScriptHook::EffectHandler(prayer_of_mending::effect_handler),
     SpellScriptHook::AreaFilter(prayer_of_mending::area_filter),
+    SpellScriptHook::AreaFilter(holy_priest::serenity_area_filter),
+    SpellScriptHook::ContextHit(holy_priest::serenity_hit),
     SpellScriptHook::TargetPlan(target_plan),
 ];
 
