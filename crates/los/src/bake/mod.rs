@@ -113,6 +113,7 @@ pub struct Baker {
     pub cutoff: f32,
     collision: bool,
     m2_only: bool,
+    m2_solids: bool,
     m2s: HashMap<u32, Option<Rc<ModelGeometry>>>,
     wmos: HashMap<u32, Option<Rc<WmoModel>>>,
     /// Dropped thin doodads by model, counted once per (placement unique id, model): the
@@ -137,6 +138,7 @@ impl Baker {
             cutoff,
             collision: false,
             m2_only: false,
+            m2_solids: false,
             m2s: HashMap::new(),
             wmos: HashMap::new(),
             dropped: HashMap::new(),
@@ -160,6 +162,14 @@ impl Baker {
             collision: true,
             m2_only: true,
             ..Self::new(data, 0.0)
+        }
+    }
+
+    /// All authored M2 collision faces, including faces too steep to walk on.
+    pub fn for_m2_solids(data: &Path) -> Self {
+        Self {
+            m2_solids: true,
+            ..Self::for_m2_floors(data)
         }
     }
 
@@ -507,7 +517,7 @@ impl Baker {
         let thickness = model.thickness(doodad.scale);
         if thickness >= self.cutoff {
             build.stats.alpha_or_blended_triangles += model.dropped_triangles;
-            let added = if self.m2_only {
+            let added = if self.m2_only && !self.m2_solids {
                 build.add(&model.select_m2_faces(doodad.world, true), doodad.world)
             } else {
                 build.add(&model.triangles, doodad.world)

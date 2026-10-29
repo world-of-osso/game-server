@@ -162,4 +162,13 @@ fn m2_floor_authored_downward_normal_is_not_a_floor() {
     );
     let roof = global_floor(dir.path(), Vec3::new(1200.0, 118.0, -1300.0)).unwrap();
     assert!((roof - 118.0).abs() < 0.001, "{roof}");
+    let mut baker = Baker::for_m2_solids(dir.path());
+    let global = baker.collect_global(999).unwrap().unwrap();
+    let start = Vec3::new(1200.0, 111.0, -1300.0);
+    let end = Vec3::new(1200.0, 109.0, -1300.0);
+    let hit = global.into_iter().find_map(|(tile, geometry)| {
+        let (vertices, indices) = los::bake::index_triangles(&geometry.triangles);
+        LosTile::build(tile.0, tile.1, vertices, indices).first_hit(start, end)
+    });
+    assert!(hit.is_some_and(|fraction| (fraction - 0.5).abs() < 0.001));
 }
