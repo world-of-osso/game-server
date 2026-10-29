@@ -22,7 +22,7 @@ const SPELLS: &[(&str, u32, bool)] = &[
     ("radiance", 194509, false),
     ("void_shield", 17, false),
     ("shield", 17, false),
-    ("evangelism", 246287, true),
+    ("evangelism", 472433, false),
     ("penance", 47540, false),
     ("flash_heal", 2061, false),
     ("shadow_word_pain", 589, false),
@@ -70,7 +70,9 @@ pub(super) fn prepare(
         ("dot", "shadow_word_pain,if=refreshable"),
         ("default", "pain_suppression,if=target.health.pct<35"),
         ("default", "barrier,if=party.injured>=3"),
-        ("default", "radiance,if=party.injured>=3"),
+        ("ramp", "evangelism"),
+        ("ramp", "radiance,if=cooldown.mind_blast.remains<=gcd.max*2"),
+        ("radiance_fallback", "radiance"),
         (
             "shield",
             "void_shield,if=party.darkness_up&(party.darkness_up|cooldown.penance.remains<=gcd.max|party.active_atonements<=5)",
@@ -79,7 +81,6 @@ pub(super) fn prepare(
             "shield",
             "shield,if=party.darkness_up=0&party.borrowed_time&(party.darkness_up|cooldown.penance.remains<=gcd.max|party.active_atonements<=5)&(mana.pct*2.5>=fight_remains|party.shield_discipline&mana.pct*6>=fight_remains)",
         ),
-        ("default", "evangelism,if=party.injured>=3"),
         ("heal", "penance,if=target.health.pct<45"),
         (
             "heal",
@@ -268,7 +269,7 @@ impl Policy for Discipline {
             injured,
             active_atonements,
             "default",
-            &["pain_suppression", "barrier", "radiance", "evangelism"],
+            &["pain_suppression", "barrier"],
         )? {
             return Ok(());
         }
@@ -294,10 +295,48 @@ impl Policy for Discipline {
                 injured,
                 active_atonements,
                 "damage",
-                &["penance", "mind_blast"],
+                &["mind_blast"],
             )? {
                 return Ok(());
             }
+        }
+        // SimC76f8118 apl_priest.cpp:244-248: target the shortest mark,
+        // penalize self, and cast Radiance near Mind Blast's next cooldown.
+        let ramp_target = living
+            .iter()
+            .min_by(|(left, _), (right, _)| {
+                let score = |unit| {
+                    atonement_remaining(world, healer, unit)
+                        + if unit == healer { 10.0 } else { 0.0 }
+                };
+                score(*left).total_cmp(&score(*right))
+            })
+            .map(|(unit, _)| *unit);
+        if let Some(target) = ramp_target
+            && self.select(
+                world,
+                healer,
+                target,
+                injured,
+                active_atonements,
+                "ramp",
+                &["evangelism", "radiance"],
+            )?
+        {
+            return Ok(());
+        }
+        if let Some(enemy) = enemy
+            && self.select(
+                world,
+                healer,
+                enemy,
+                injured,
+                active_atonements,
+                "damage",
+                &["penance"],
+            )?
+        {
+            return Ok(());
         }
         // SimC76f8118 apl_priest.cpp:231-232,249: prefer an Atoned target,
         // then the shortest remaining mark, with a ten-second self penalty.
@@ -358,6 +397,19 @@ impl Policy for Discipline {
                 active_atonements,
                 "heal",
                 &["flash_heal"],
+            )?
+        {
+            return Ok(());
+        }
+        if let Some(target) = ramp_target
+            && self.select(
+                world,
+                healer,
+                target,
+                injured,
+                active_atonements,
+                "radiance_fallback",
+                &["radiance"],
             )?
         {
             return Ok(());

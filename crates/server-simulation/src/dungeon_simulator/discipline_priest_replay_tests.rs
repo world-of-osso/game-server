@@ -250,6 +250,61 @@ fn discipline_policy_applies_pain_and_does_not_refresh_early() {
 
 #[test]
 #[ignore = "requires the selected real Discipline profile and canonical world database"]
+fn discipline_policy_uses_evangelism_without_injury_gate() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::protocol::CombatLogKind;
+    let mut run = super::super::dps_parity::prepare_registered_player(66, 1).unwrap();
+    let tank = run.actor;
+    let healer = super::super::dps_parity::spawn_second_reference_player(&mut run, 256).unwrap();
+    let party = crate::followers::simulator::spawn_party_for_reference_healer(
+        run.app.world_mut(),
+        tank,
+        healer,
+    )
+    .unwrap();
+    let mut members = party.members.clone();
+    members.push(tank);
+    run.app
+        .world_mut()
+        .entity_mut(tank)
+        .insert(crate::networking::CombatTarget(None));
+    let mut policy = super::prepare(&mut run, healer).unwrap();
+    let cursor = run.app.world().resource::<ObservedCombatEvents>().0.len();
+    policy.drive(run.app.world_mut(), healer, &members).unwrap();
+    for _ in 0..30 {
+        run.app.update();
+    }
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0[cursor..];
+    assert!(
+        events
+            .iter()
+            .any(|event| event.kind == CombatLogKind::CastSuccess
+                && event.source == Some(healer.to_bits())
+                && event.spell_id == Some(472433)),
+        "Evangelism must not require injured allies: {events:?}"
+    );
+    assert!(
+        members
+            .iter()
+            .any(|&member| crate::auras::has_aura(run.app.world(), member, 194384)),
+        "Evangelism's Radiance must apply Atonement"
+    );
+    policy.drive(run.app.world_mut(), healer, &members).unwrap();
+    for _ in 0..50 {
+        run.app.update();
+    }
+    assert!(
+        run.app.world().resource::<ObservedCombatEvents>().0[cursor..]
+            .iter()
+            .any(|event| event.kind == CombatLogKind::CastSuccess
+                && event.source == Some(healer.to_bits())
+                && event.spell_id == Some(194509)),
+        "Radiance must follow under the Mind Blast cooldown condition"
+    );
+}
+
+#[test]
+#[ignore = "requires the selected real Discipline profile and canonical world database"]
 fn discipline_shield_policy_prefers_atoned_ally_and_uses_void_proc() {
     use crate::spell_cast::test_harness::ObservedCombatEvents;
     use shared::protocol::CombatLogKind;
@@ -297,6 +352,9 @@ fn discipline_shield_policy_prefers_atoned_ally_and_uses_void_proc() {
                 },
             );
         }
+        run.app.world_mut().entity_mut(healer).insert(
+            crate::class_progression::KnownSpells::fixture(vec![17, 1253593, 390691]),
+        );
         let mut policy = super::prepare(&mut run, healer).unwrap();
         let cursor = run.app.world().resource::<ObservedCombatEvents>().0.len();
         policy.drive(run.app.world_mut(), healer, &members).unwrap();
