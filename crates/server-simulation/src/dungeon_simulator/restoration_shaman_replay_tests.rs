@@ -24,6 +24,10 @@ fn restoration_shaman_uses_surging_totem_throughout_party_pulse() {
         0,
         "selected Surging Totem replaces Healing Rain"
     );
+    assert!(
+        casts["1064"].as_u64().unwrap_or(0) > 0,
+        "policy must use Chain Heal for group injury: {report}"
+    );
     println!("SHAMAN_POLICY_REPORT={report}");
 }
 
