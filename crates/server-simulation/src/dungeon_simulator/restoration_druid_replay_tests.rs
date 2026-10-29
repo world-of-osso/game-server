@@ -2,6 +2,52 @@ use std::path::Path;
 
 #[test]
 #[ignore = "requires native Restoration Druid spell data"]
+fn regrowth_can_grow_symbiotic_blooms_and_heal() {
+    use crate::spell_cast::test_harness::{ObservedCombatEvents, harness, spawn_player};
+    use shared::components::Health;
+    use shared::protocol::CombatLogKind;
+    let mut h = harness(Vec::new(), &[8936, 439528, 439530], 11).unwrap();
+    h.app.init_resource::<ObservedCombatEvents>();
+    let ally = spawn_player(&mut h.app, 11, 3.0);
+    *h.app.world_mut().get_mut::<Health>(ally).unwrap() = Health {
+        current: 1.0,
+        max: 1_000_000.0,
+    };
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: h.caster,
+            target: h.caster,
+            spell_id: 439528,
+            effect_mask: u32::MAX,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    for _ in 0..500 {
+        crate::spell_cast::creature_cast(h.app.world_mut(), h.caster, 8936, Some(ally), true)
+            .unwrap();
+        h.advance(2);
+        if crate::auras::has_aura(h.app.world(), ally, 439530) {
+            h.advance(100);
+            assert!(
+                h.app
+                    .world()
+                    .resource::<ObservedCombatEvents>()
+                    .0
+                    .iter()
+                    .any(|e| e.kind == CombatLogKind::Heal
+                        && e.spell_id == Some(439530)
+                        && e.target == Some(ally.to_bits())
+                        && e.amount > 0)
+            );
+            return;
+        }
+    }
+    panic!("Symbiotic Blooms did not proc in 500 Regrowth casts");
+}
+
+#[test]
+#[ignore = "requires native Restoration Druid spell data"]
 fn everbloom_copies_an_expiring_lifebloom_to_nearby_allies() {
     use crate::spell_cast::test_harness::{ObservedCombatEvents, harness, spawn_player};
     use shared::components::Health;
