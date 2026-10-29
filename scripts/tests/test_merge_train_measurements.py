@@ -214,7 +214,8 @@ class MeasurementTests(unittest.TestCase):
             stack.enter_context(patch.object(train, "parity_executable", return_value=str(executable)))
             stack.enter_context(patch.object(train, "tree_id", return_value="tree-abc"))
             outputs = {}
-            for name, profile in (("first", "same"), ("second", "same"), ("other", "different")):
+            for name, profile in (("first", "same"), ("second", "same"), ("other", "different"),
+                                  ("replay", "same")):
                 outputs[name] = root / name
                 outputs[name].mkdir()
                 (outputs[name] / "252.profile.json").write_text(profile)
@@ -234,6 +235,10 @@ class MeasurementTests(unittest.TestCase):
             entries = [{"id": name, "measure": [{"spec": "252", "targets": "1", "world_db": "db",
                                                   "output": str(outputs[name])}]}
                        for name in ("first", "second", "other")]
+            # Same profile and tree, but its environment changes what the measurement runs.
+            entries.append({"id": "replay", "env": {"HEALER_TANK_SEEDS": "70448,1"},
+                            "measure": [{"spec": "252", "targets": "1", "world_db": "db",
+                                         "output": str(outputs["replay"])}]})
             train.measure_then_write(entries, root / "cycle.log")
             deadline = time.monotonic() + 5
             while time.monotonic() < deadline and not all(
@@ -242,7 +247,8 @@ class MeasurementTests(unittest.TestCase):
 
             def result(name):
                 return json.loads((root / f"results/{name}.json").read_text())["measurements"]
-            self.assertEqual(sorted(runs), ["first", "other"])
+            self.assertEqual(sorted(runs), ["first", "other", "replay"])
+            self.assertEqual(result("replay"), ["NATIVE_DPS spec252 targets1: replay"])
             self.assertEqual(result("second"), result("first"))
             self.assertEqual(result("other"), ["NATIVE_DPS spec252 targets1: other"])
             self.assertEqual((root / "logs/second.reports/252.native.1.json").read_text(), "first")
