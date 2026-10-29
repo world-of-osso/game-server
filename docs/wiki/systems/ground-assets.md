@@ -56,6 +56,10 @@ Evidence: canonical `game-engine/data/diagnostics/server-test-perf-2026-10-22/wh
 
 The [ground-files qualification ledger](../../handoffs/wow-formats-ground-files-qualification.md) records actual ordered walks plus normal/missing CLI outputs and failures on frozen real/synthetic inputs. It makes no decoder replacement or deploy/extraction claim. Existing permissive chunk/record/group handling is script policy, not permission to substitute stricter runtime projections. A raw-field reuse boundary and any cross-language entry point require separate approval.
 
+## Offline floor resolver
+
+The [floor resolver contract](../../specs/floor-resolver.md) enumerates terrain, neighboring WMO placements and baked M2 floors, then admits candidates near a baked navigation polygon. Missing required geometry is an error. Ambiguous columns remain gaps unless walking paths connect them to resolved hints or agreeing nearby authored creature/game-object rows. The batch output records the supporting row or hint IDs; UI-map IDs do not filter heights.
+
 ## Sources
 
 - [ground_files.py](../../../scripts/ground_files.py), [extract_ground.py](../../../scripts/extract_ground.py), [selection/extraction fixtures](../../../scripts/tests/test_ground_selection.py)
