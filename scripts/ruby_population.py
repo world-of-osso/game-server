@@ -6,6 +6,7 @@ sourced geometry estimates from authored neighbor anchors, not logged altitude.
 """
 import argparse
 from contextlib import closing
+import math
 from pathlib import Path
 import sqlite3
 
@@ -19,6 +20,25 @@ ERKHART_Z = 312.59048
 KYRAKKA_ANCHORS = 'tdb_creature:9001671,9001749;content_creature:29001671,29001749'
 ERKHART_ANCHORS = 'tdb_creature:9001758,9001671,9001749,9001785;content_creature:29001758,29001671,29001749,29001785'
 PLACEHOLDER = 'FOLLOWER_PLACEMENT_XY_FROM_JOURNAL_ENCOUNTER_UIMAP'
+# import_log_population.py's default radius for matching an observation to a spawn.
+LOG_MATCH_RADIUS = 10.0
+
+
+def retire_superseded_erkhart(db):
+    """Delete log-derived Erkhart rows the placed Erkhart now matches.
+
+    The log importer ran while the placeholder sat 12 yards from the observed
+    Erkhart, so it added that same encounter actor as a second spawn.
+    """
+    rows = db.execute('''SELECT p.guid,c.position_x,c.position_y,c.position_z
+        FROM log_derived_population AS p JOIN content_creature AS c ON c.guid=p.guid
+        WHERE p.map=2521 AND p.npc_id=190485''').fetchall()
+    erkhart = (*ERKHART_XY, ERKHART_Z)
+    retired = [guid for guid, *position in rows if math.dist(position, erkhart) <= LOG_MATCH_RADIUS]
+    for guid in retired:
+        db.execute('DELETE FROM content_creature WHERE guid=?', (guid,))
+        db.execute('DELETE FROM log_derived_population WHERE guid=?', (guid,))
+    return retired
 
 
 def import_population(db):
@@ -51,6 +71,7 @@ def import_population(db):
     if existing is not None and existing != binding:
         raise ValueError('Kyrakka encounter binding conflicts')
     db.execute('INSERT OR IGNORE INTO raid_encounter_creature VALUES(?,?,?,?,?,?,?)', binding)
+    retire_superseded_erkhart(db)
 
 
 def main():

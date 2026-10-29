@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from ruby_population import ERKHART_XY, ERKHART_Z, KYRAKKA_XY, KYRAKKA_Z, import_population
+from ruby_population import ERKHART_XY, ERKHART_Z, KYRAKKA_XY, KYRAKKA_Z, import_population, retire_superseded_erkhart
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -45,6 +45,20 @@ class RubyPopulationTests(unittest.TestCase):
                 self.assertEqual(db.execute('SELECT encounter_id,bit FROM raid_encounter_creature WHERE map_id=2521 AND creature_entry=190484').fetchone(), (2623, 2))
                 with self.assertRaisesRegex(ValueError, 'GUID already occupied'):
                     import_population(db)
+
+    def test_placed_erkhart_retires_its_log_derived_duplicate(self):
+        with tempfile.TemporaryDirectory() as directory:
+            with sqlite3.connect((ROOT / 'data/world.db').resolve().as_uri() + '?mode=ro', uri=True) as source, sqlite3.connect(Path(directory) / 'copy.sqlite') as db:
+                source.backup(db)
+                creatures = db.execute('SELECT count(*) FROM content_creature').fetchone()[0]
+                observations = db.execute('SELECT count(*) FROM log_derived_population').fetchone()[0]
+                with db:
+                    self.assertEqual(retire_superseded_erkhart(db), [3276416184])
+                self.assertEqual(db.execute('SELECT guid FROM content_creature WHERE map=2521 AND id1=190485').fetchall(), [(63521000,)])
+                self.assertEqual(db.execute('SELECT count(*) FROM content_creature').fetchone()[0], creatures - 1)
+                self.assertEqual(db.execute('SELECT count(*) FROM log_derived_population').fetchone()[0], observations - 1)
+                self.assertEqual(db.execute('SELECT count(*) FROM content_creature WHERE map=2521 AND id1=190484').fetchone()[0], 1)
+                self.assertEqual(retire_superseded_erkhart(db), [])
 
 
 if __name__ == '__main__':
