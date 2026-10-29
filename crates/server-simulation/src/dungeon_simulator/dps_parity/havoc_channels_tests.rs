@@ -2165,6 +2165,101 @@ fn havoc_burning_blades_real_weapon_damage_produces_native_periodic_damage() {
 
 #[test]
 #[ignore = "requires prepared native spec577 player profile"]
+fn havoc_burning_blades_banks_crit_in_the_native_source_fraction() {
+    fn paid_damage(crit_pct: f32) -> (CombatLogEvent, i64) {
+        let _seed = crate::random::seed_scope(70_448);
+        let mut run = prepare_literal(577, 1).unwrap();
+        let actor = run.actor;
+        let target = run.targets[0];
+        crate::auras::remove_auras(
+            run.app.world_mut(),
+            actor,
+            crate::auras::RemoveReason::Cancelled,
+            |_| true,
+        );
+        run.app
+            .world_mut()
+            .get_mut::<crate::stats::CharacterStats>(actor)
+            .unwrap()
+            .crit_pct = crit_pct;
+        crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 227518, Some(target), 1);
+        let hit = damage(&run, Some(227518))
+            .into_iter()
+            .next()
+            .expect("real Annihilation hit");
+        run.app.world_mut().flush();
+        run.app
+            .world_mut()
+            .entity_mut(actor)
+            .remove::<crate::combat::AutoAttack>();
+        advance(&mut run, 160);
+        let ticks = damage(&run, Some(453177));
+        assert_eq!(
+            ticks.len(), 3,
+            "native six-second residual must pay three ticks: {ticks:?}"
+        );
+        (hit, ticks.iter().map(|tick| i64::from(tick.amount)).sum())
+    }
+    let (normal, normal_total) = paid_damage(-100.0);
+    let (critical, critical_total) = paid_damage(100.0);
+    assert!(
+        !normal.crit && critical.crit,
+        "real source hits must exercise both outcomes"
+    );
+    for (hit, total) in [(&normal, normal_total), (&critical, critical_total)] {
+        let expected = f64::from(hit.amount) * 0.35;
+        assert!(
+            (total as f64 - expected).abs() < 4.0,
+            "native35% residual must bank post-crit source damage: hit={} ticks={total} expected={expected}",
+            hit.amount
+        );
+    }
+}
+
+#[test]
+#[ignore = "requires prepared native spec577 player profile"]
+fn havoc_burning_blades_applies_exergy_once_to_real_weapon_damage() {
+    fn hit_and_tick(exergy: bool) -> (CombatLogEvent, CombatLogEvent) {
+        let _seed = crate::random::seed_scope(70_448);
+        let mut run = prepare_literal(577, 1).unwrap();
+        let actor = run.actor;
+        let target = run.targets[0];
+        if exergy {
+            crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 208628, Some(actor), 1);
+        }
+        crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 227518, Some(target), 1);
+        let hit = damage(&run, Some(227518))
+            .into_iter()
+            .next()
+            .expect("real Annihilation hit");
+        for _ in 0..80 {
+            run.app.update();
+            if let Some(tick) = damage(&run, Some(453177)).into_iter().next() {
+                return (hit, tick);
+            }
+        }
+        panic!("Burning Blades must pay its actual periodic tick");
+    }
+    let (plain_hit, plain_tick) = hit_and_tick(false);
+    let (buffed_hit, buffed_tick) = hit_and_tick(true);
+    assert_eq!(
+        plain_hit.crit, buffed_hit.crit,
+        "compare the same hit outcome"
+    );
+    let hit_ratio = buffed_hit.amount as f32 / plain_hit.amount as f32;
+    let tick_ratio = buffed_tick.amount as f32 / plain_tick.amount as f32;
+    assert!(
+        (hit_ratio - 1.05).abs() < 0.002,
+        "Exergy must affect its actual source hit: {hit_ratio}"
+    );
+    assert!(
+        (tick_ratio - hit_ratio).abs() < 0.002,
+        "residual must not apply Exergy a second time: source={hit_ratio}, tick={tick_ratio}"
+    );
+}
+
+#[test]
+#[ignore = "requires prepared native spec577 player profile"]
 fn havoc_demonsurge_native_meta_arms_one_explosion_per_ability() {
     let _seed = crate::random::seed_scope(70_448);
     let mut run = prepare_literal(577, 3).unwrap();
