@@ -4002,8 +4002,18 @@ fn grand_crusader_advances_shared_judgment_charge() {
             .unwrap();
         crate::spell_cast::test_harness::charge_recovery(history, 1663).1
     };
-    let before = recharge(&run).expect("Judgment must start recharging");
     for _ in 0..100 {
+        if recharge(&run).is_none() {
+            crate::spell_cast::creature_cast(
+                run.app.world_mut(),
+                actor,
+                275779,
+                Some(target),
+                false,
+            )
+            .unwrap();
+        }
+        let before = recharge(&run).expect("Judgment must be recharging");
         crate::combat::replay_healer_hit(run.app.world_mut(), target, actor, &avoided_hit("Parry"))
             .unwrap();
         run.app.update();
@@ -4012,6 +4022,10 @@ fn grand_crusader_advances_shared_judgment_charge() {
             || (after.is_none() && before - crate::spell_cast::now(run.app.world()) > 0.1)
         {
             return;
+        }
+        // Native 85043 has a one-second proc cooldown; space the replayed swings.
+        for _ in 0..21 {
+            run.app.update();
         }
     }
     panic!("Grand Crusader did not advance the shared charge by 3 seconds");
