@@ -141,8 +141,7 @@ fn read_party(world: &mut World, player: Entity, copy: InMap) -> Vec<Entity> {
     owners.extend(followers);
     let pets: Vec<_> = owners
         .iter()
-        .filter_map(|unit| crate::hunter_pet::summoned_pet(world, *unit))
-        .filter(|pet| world.get::<InMap>(*pet) == Some(&copy))
+        .flat_map(|unit| crate::hunter_pet::active_owned_pets(world, *unit))
         .collect();
     owners.extend(pets);
     owners.retain(|unit| crate::spell_cast::targets::is_alive(world, *unit));

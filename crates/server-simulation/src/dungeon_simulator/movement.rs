@@ -24,7 +24,7 @@ pub(super) fn forget_party_travel(world: &mut World, owner: Entity) {
     units.push(owner);
     let pets: Vec<_> = units
         .iter()
-        .filter_map(|unit| crate::hunter_pet::summoned_pet(world, *unit))
+        .flat_map(|unit| crate::hunter_pet::active_owned_pets(world, *unit))
         .collect();
     units.extend(pets);
     for unit in units {
