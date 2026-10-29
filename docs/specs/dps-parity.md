@@ -457,7 +457,7 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 - Selected Chaotic Disposition428492 rolls its native number of independent chances on each affected Demon Hunter chromatic-school direct or periodic damage action; each success adds its native damage percentage. The Hunt and its DoT are excluded, and Felblade damage is included (SimC76f8118 `sc_demon_hunter.cpp`2105–2108,2317–2346,2370–2396,5493–5497,7854–7858).
 
-- Selected Eternal Hunt1270901 applies its native effect0 percentage a second time to the final Blade Dance and Death Sweep primary and secondary strikes, not to earlier strikes (SimC76f8118 `sc_demon_hunter.cpp`7055–7065,7113–7121).
+- Eternal Hunt1270901 applies its native effect0 modifier once to affected Blade Dance and Death Sweep strikes. Do not copy SimC's extra final-strike application; see [577](577.md#simc-double-applications).
 
 - A melee fixture returns to its selected target at native run speed after self-displacement, including instant teleports. Continue polling its APL: skip actions outside their native target range so eligible lower-priority self-casts, off-GCD and in-range actions can execute (SimC76f8118 action.cpp2418–2430). Arcane Torrent202719 is a non-harmful self-cast for APL readiness even though native data has an area dispel (player.cpp9045–9057). A hostile channel waits for active displacement to end so its target-range check uses the settled position. Demon Hunter channels also remain unavailable while returning outside melee range (SimC76f8118 sc_demon_hunter.cpp2477–2486). Targets stay fixed and actual casts retain native range, movement control and channel self-slow. Real Retreat followed by Eye Beam must land all twelve native ticks and the selected Final Breath child.
 

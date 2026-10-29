@@ -60,31 +60,9 @@ pub(super) fn filter_targets(
 
 pub(super) fn damage_amount(spell: u32) -> Option<DamageAmountHook> {
     match spell {
-        391374 | 393055 => Some(first_blood_damage),
-        391378 | 393054 => Some(final_first_blood_damage),
-        200685 | 210155 => Some(final_dance_damage),
+        391374 | 393055 | 391378 | 393054 => Some(first_blood_damage),
         _ => None,
     }
-}
-
-// SimC76f8118 sc_demon_hunter.cpp7055–7065,7113–7121: Eternal Hunt's
-// selected talent adds its native effect1 factor again to the final dance hit.
-fn final_dance_damage(world: &World, caster: Entity, _target: Entity, amount: f32) -> f32 {
-    const ETERNAL_HUNT: u32 = 1270901;
-    if !has_talent(world, caster, ETERNAL_HUNT) {
-        return amount;
-    }
-    let percent = combat::spell_cast::scripts::script_effect_value(world, caster, ETERNAL_HUNT, 0);
-    amount * (1.0 + percent / 100.0)
-}
-
-fn final_first_blood_damage(world: &World, caster: Entity, target: Entity, amount: f32) -> f32 {
-    final_dance_damage(
-        world,
-        caster,
-        target,
-        first_blood_damage(world, caster, target, amount),
-    )
 }
 
 fn first_blood_damage(world: &World, caster: Entity, _target: Entity, amount: f32) -> f32 {
