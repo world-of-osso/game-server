@@ -1530,6 +1530,22 @@ fn simc_dummy_melee_uses_recipient_avoidance_and_strikes_can_block() {
 }
 
 #[test]
+#[ignore = "uses MID2 plate tank profiles and the native stat pipeline"]
+fn plate_tank_profiles_receive_simc_base_dodge() {
+    for spec in [66, 73] {
+        let run = super::dps_parity::prepare_registered_player(spec, 1).unwrap();
+        let dodge = run
+            .app
+            .world()
+            .get::<crate::stats::CharacterStats>(run.actor)
+            .unwrap()
+            .defense
+            .dodge;
+        assert!((dodge - 3.0).abs() < 0.01, "spec {spec} base dodge {dodge}");
+    }
+}
+
+#[test]
 #[ignore = "runs all six native MID2 tank dummy replays"]
 fn all_tanks_use_dungeon_season_combat_inputs() {
     let directory = Path::new(
@@ -2150,7 +2166,7 @@ fn devotion_aura_reduces_incoming_bleed() {
 
 #[test]
 #[ignore = "uses selected MID2 Protection and real Blessing of Dusk"]
-fn dusk_scales_real_bleed_damage_with_current_health() {
+fn dusk_reduces_real_bleed_damage_at_all_health_levels() {
     use shared::components::Health;
     let mut run = super::dps_parity::prepare_registered_player(66, 1).unwrap();
     super::dps_parity::engage(&mut run);
@@ -2180,7 +2196,7 @@ fn dusk_scales_real_bleed_damage_with_current_health() {
         crate::auras::RemoveReason::Consumed,
         |aura| aura.spell_id == 432607,
     );
-    for (health_pct, expected) in [(1.0, 1.0), (0.5, 0.9), (0.1, 0.82)] {
+    for (health_pct, expected) in [(1.0, 0.8), (0.5, 0.8), (0.1, 0.8)] {
         let max = run.app.world().get::<Health>(actor).unwrap().max;
         run.app
             .world_mut()

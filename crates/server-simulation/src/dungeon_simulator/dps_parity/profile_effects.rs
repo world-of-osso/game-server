@@ -131,6 +131,8 @@ fn potion_item(token: &str) -> Option<u32> {
     // SimC76f8118 item_data.inc175810/175828: identities only; native catalogs
     // supply each potion's spell, item level, coefficient and cooldown.
     match token {
+        // SimC76f8118 item_data.inc175824: quality2; native item 241292 supplies its use spell.
+        "draught_of_rampant_abandon_2" => Some(241292),
         "potion_of_recklessness_2" => Some(241288),
         "lights_potential_2" => Some(241308),
         // SimC76f8118 item_data.inc182728: Liquid Luster quality2, native ilvl295.

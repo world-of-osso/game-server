@@ -699,6 +699,74 @@ mod tests {
 
     #[test]
     #[ignore = "requires canonical world database and MID2 Blood inputs"]
+    fn blood_profile_potion_uses_native_item_and_strength_buff() {
+        use super::super::literal_rotation::{
+            equipment::Equipment,
+            execution::{self, NativeAction, Prepared},
+        };
+        let mut run = super::super::prepare_registered_player(250, 1).unwrap();
+        let actor = run.actor;
+        let world = run.app.world();
+        let before = world
+            .get::<crate::stats::CharacterStats>(actor)
+            .unwrap()
+            .primary
+            .strength;
+        let potion = world
+            .get::<super::super::profile_effects::Potion>(actor)
+            .expect("configured potion");
+        assert_eq!((potion.0.item_id, potion.0.item_level), (241292, 295));
+        let mut bindings = crate::simc_apl_native::Bindings::default();
+        let equipment = Equipment::load(world, actor, &mut bindings).unwrap();
+        let row = server::simc_apl::Action {
+            source_row: None,
+            name: "potion".into(),
+            target: None,
+            options: Default::default(),
+        };
+        let prepared = Prepared::read(
+            run.app.world_mut(),
+            actor,
+            &run.targets,
+            &equipment,
+            std::iter::empty::<NativeAction>(),
+            false,
+        )
+        .unwrap();
+        let item = prepared
+            .execution(&row, &equipment)
+            .unwrap()
+            .expect("potion is ready");
+        execution::execute(run.app.world_mut(), actor, item).unwrap();
+        super::super::preparation::finish_pending_setup(&mut run).unwrap();
+        let world = run.app.world();
+        assert!(crate::auras::has_aura(world, actor, 1236998));
+        let after = world
+            .get::<crate::stats::CharacterStats>(actor)
+            .unwrap()
+            .primary
+            .strength;
+        assert!(
+            after > before,
+            "native potion increases Strength: {before} -> {after}"
+        );
+        let prepared = Prepared::read(
+            run.app.world_mut(),
+            actor,
+            &run.targets,
+            &equipment,
+            std::iter::empty::<NativeAction>(),
+            false,
+        )
+        .unwrap();
+        assert!(
+            prepared.execution(&row, &equipment).unwrap().is_none(),
+            "potion cannot be reused"
+        );
+    }
+
+    #[test]
+    #[ignore = "requires canonical world database and MID2 Blood inputs"]
     fn blood_dance_rolls_once_per_rune_payment() {
         fn first_spawn(runes: f32) -> u32 {
             let _seed = crate::random::seed_scope(70448);
@@ -2577,6 +2645,68 @@ mod tests {
             "Relish in Blood grants native ten Runic Power"
         );
         assert!(!crate::auras::has_aura(run.app.world(), actor, 81141));
+    }
+
+    #[test]
+    #[ignore = "requires canonical world database and MID2 Blood inputs"]
+    fn blood_visceral_strength_requires_free_decay() {
+        for free in [false, true] {
+            let mut run = super::super::prepare_registered_player(250, 1).unwrap();
+            let actor = run.actor;
+            super::super::engage(&mut run);
+            assert!(
+                run.app
+                    .world()
+                    .get::<crate::class_progression::KnownSpells>(actor)
+                    .unwrap()
+                    .contains(434157)
+            );
+            crate::auras::remove_auras(
+                run.app.world_mut(),
+                actor,
+                crate::auras::RemoveReason::Cancelled,
+                |aura| matches!(aura.spell_id, 81141 | 461130),
+            );
+            if free {
+                crate::auras::apply_aura(
+                    run.app.world_mut(),
+                    &crate::auras::AuraApplication {
+                        caster: actor,
+                        target: actor,
+                        spell_id: 81141,
+                        effect_mask: u32::MAX,
+                        source: crate::auras::AuraSource::Cast,
+                    },
+                );
+            }
+            let before = run
+                .app
+                .world()
+                .get::<crate::stats::CharacterStats>(actor)
+                .unwrap()
+                .primary
+                .strength;
+            crate::spell_cast::creature_cast(run.app.world_mut(), actor, 43265, Some(actor), false)
+                .unwrap();
+            for _ in 0..4 {
+                run.app.update();
+            }
+            let world = run.app.world();
+            assert_eq!(crate::auras::has_aura(world, actor, 461130), free);
+            let after = world
+                .get::<crate::stats::CharacterStats>(actor)
+                .unwrap()
+                .primary
+                .strength;
+            if free {
+                assert!(after > before * 1.05, "strength {before} -> {after}");
+            } else {
+                assert!(
+                    (after - before).abs() < 0.01,
+                    "strength {before} -> {after}"
+                );
+            }
+        }
     }
 
     #[test]

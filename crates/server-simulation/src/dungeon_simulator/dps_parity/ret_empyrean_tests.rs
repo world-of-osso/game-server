@@ -392,3 +392,47 @@ fn dps_parity_ret_empyrean_unselected_owner_cannot_receive_the_policy_grant() {
     assert_eq!(applications(&run, LEGACY_BUFF), 0);
     assert_eq!(damage(&run, DIVINE_STORM), 0);
 }
+
+#[test]
+#[ignore = "uses the native selected Ret profile and fixed-duration triggered Wrath"]
+fn dps_parity_ret_instrument_wrath_triggers_selected_riders() {
+    let _seed = crate::random::seed_scope(70448);
+    let (profile, traits) = read_reference(70).unwrap();
+    let race = inputs::read_reference_race(&profile.race).unwrap();
+    let mut run = prepare_reference(
+        profile,
+        &traits,
+        1,
+        crate::followers::simulator::ParityActor::Player { race },
+    )
+    .unwrap();
+    engage(&mut run);
+    let actor = run.actor;
+    assert!(has(&run, 1263782));
+    assert!(crate::spell_cast::cast_triggered_with_overrides(
+        run.app.world_mut(),
+        actor,
+        AVENGING_WRATH,
+        Some(actor),
+        1,
+        crate::spell_cast::TriggeredSpellOverrides {
+            fixed_aura_duration_ms: Some(9000),
+            ..Default::default()
+        },
+    ));
+    for _ in 0..4 {
+        run.app.update();
+    }
+    let auras = run
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(actor)
+        .unwrap();
+    let wrath = auras
+        .iter()
+        .find(|aura| aura.spell_id == AVENGING_WRATH)
+        .unwrap();
+    assert_eq!(wrath.duration_ms, 9000);
+    assert!(has(&run, LEGACY_BUFF));
+    assert!(has(&run, 445206));
+}

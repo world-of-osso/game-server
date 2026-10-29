@@ -150,6 +150,22 @@ impl AutoAttack {
     }
 }
 
+/// Reschedule the active main-hand swing using its current form and haste.
+pub(crate) fn reset_player_main_hand_swing(world: &mut World, unit: Entity) {
+    let Some(stats) = world.get::<CharacterStats>(unit) else {
+        return;
+    };
+    let base = crate::auras::shapeshift::attack_timing(world, unit)
+        .map_or(stats.main_hand.speed, |form| form.seconds);
+    let slow = world.get::<AuraStatMods>(unit).map_or(1.0, |mods| {
+        mods.attack_cast_time_mult * mods.attack_time_mult * mods.melee_ranged_attack_time_mult
+    });
+    let interval = melee::attack_timer_duration(melee::swing_time(base, stats.haste_pct) * slow);
+    if let Some(mut attack) = world.get_mut::<AutoAttack>(unit) {
+        attack.timer = interval;
+    }
+}
+
 /// Marks a dead NPC awaiting respawn.
 #[derive(Component, Debug)]
 pub struct DeathState {
@@ -2180,7 +2196,7 @@ fn resolve_swing(
         context,
     );
     let taken = target_mods.map_or(1.0, |mods| mods.damage_taken(1))
-        * crate::auras::dusk_damage_multiplier(avoidance.1.as_deref(), &health)
+        * crate::auras::dusk_damage_multiplier(avoidance.1.as_deref())
         * crate::auras::melee_damage_from_caster(avoidance.1.as_deref(), attacker.entity)
         * armor
             .1
@@ -2940,9 +2956,7 @@ pub fn replay_healer_hit(
     let auras = world.get::<crate::auras::ActiveAuras>(victim);
     let stats = world.get::<CharacterStats>(victim);
     let taken = target_mods.map_or(1.0, |mods| mods.damage_taken(1))
-        * world.get::<Health>(victim).map_or(1.0, |health| {
-            crate::auras::dusk_damage_multiplier(auras, health)
-        })
+        * crate::auras::dusk_damage_multiplier(auras)
         * crate::auras::melee_damage_from_caster(auras, attacker)
         * stats.map_or(1.0, CharacterStats::versatility_damage_taken_multiplier);
     let taken = mods.map_or(taken, |mods| mods.bypass_damage_reduction(1, taken));
