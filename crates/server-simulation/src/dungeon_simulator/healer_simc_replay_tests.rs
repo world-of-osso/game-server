@@ -162,6 +162,43 @@ fn preservation_lifebind_aggregates_raw_healing_on_native_party() {
         "two heals must aggregate into one 200 ms transfer"
     );
     assert!((transfers[0].amount as f32 - raw as f32 * 0.6).abs() <= 2.0);
+
+    let start = events.len() + start;
+    for unit in [tank, healer] {
+        let mut health = run.app.world_mut().get_mut::<Health>(unit).unwrap();
+        health.current = if unit == healer {
+            health.max
+        } else {
+            health.max * 0.25
+        };
+    }
+    crate::spell_cast::cast_triggered(run.app.world_mut(), healer, 361509, Some(healer), 1);
+    for _ in 0..5 {
+        run.app.update();
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0[start..];
+    let heal = events
+        .iter()
+        .find(|event| {
+            event.kind == shared::protocol::CombatLogKind::Heal
+                && event.spell_id == Some(361509)
+                && event.target == Some(healer.to_bits())
+        })
+        .expect("self-heal must land");
+    assert_eq!(heal.amount, heal.overflow);
+    let transfer = events
+        .iter()
+        .find(|event| {
+            event.kind == shared::protocol::CombatLogKind::Heal
+                && event.spell_id == Some(373268)
+                && event.target == Some(tank.to_bits())
+        })
+        .expect("Lifebind must heal the bonded ally");
+    assert!((transfer.amount as f32 - heal.amount as f32 * 0.6).abs() <= 2.0);
 }
 
 #[test]
