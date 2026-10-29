@@ -46,18 +46,17 @@ pub(crate) fn caster_ability_critical_chance(
     spell: &SpellInfo,
 ) -> f32 {
     const SPELL_DAMAGE_CLASS_MAGIC: u32 = 1;
-    if spell
+    let magic = spell
         .categories
         .as_ref()
         .map(|category| category.defense_type)
-        != Some(SPELL_DAMAGE_CLASS_MAGIC)
-    {
-        return 0.0;
-    }
+        == Some(SPELL_DAMAGE_CLASS_MAGIC);
     world.get::<ActiveAuras>(target).map_or(0.0, |auras| {
         auras
             .iter()
-            .filter(|aura| aura.caster == caster)
+            // Native 1296658 specifies abilities, and SimC76f8118 applies its
+            // Consecration debuff to matching melee as well as magic actions.
+            .filter(|aura| aura.caster == caster && (magic || aura.spell_id == 204242))
             .flat_map(|aura| {
                 aura.effects
                     .iter()

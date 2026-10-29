@@ -212,6 +212,9 @@ pub fn spawn_delayed_ground_pulses(
 #[derive(Component, Default)]
 struct EarthquakeStunnedTargets(HashSet<Entity>);
 
+#[derive(Component, Default)]
+struct ConsecrationTargets(HashSet<Entity>);
+
 fn spawn_ground_pulses(
     world: &mut World,
     ctx: &EffectCtx,
@@ -236,6 +239,9 @@ fn spawn_ground_pulses(
     ));
     if matches!(ctx.spell.id, EARTHQUAKE | EARTHQUAKE_TARGET) {
         field.insert(EarthquakeStunnedTargets::default());
+    }
+    if ctx.spell.id == CONSECRATION {
+        field.insert(ConsecrationTargets::default());
     }
 }
 
@@ -510,8 +516,53 @@ fn replace_owned_field(world: &mut World, caster: Entity, root: u32) {
         .map(|(e, _)| e)
         .collect();
     for entity in previous {
+        clear_consecration_targets(world, entity, caster);
         world.entity_mut(entity).despawn();
     }
+}
+
+fn clear_consecration_targets(world: &mut World, entity: Entity, caster: Entity) {
+    let Some(targets) = world.get::<ConsecrationTargets>(entity) else {
+        return;
+    };
+    let targets: Vec<_> = targets.0.iter().copied().collect();
+    for target in targets {
+        remove_consecration_debuff(world, caster, target);
+    }
+}
+
+fn remove_consecration_debuff(world: &mut World, caster: Entity, target: Entity) {
+    if world.get_entity(target).is_ok() {
+        crate::auras::remove_auras(world, target, crate::auras::RemoveReason::Expired, |aura| {
+            aura.spell_id == 204242 && aura.caster == caster
+        });
+    }
+}
+
+fn update_consecration_targets(world: &mut World, entity: Entity, pulses: &GroundPulses) {
+    let Some(previous) = world.get::<ConsecrationTargets>(entity) else {
+        return;
+    };
+    let previous = previous.0.clone();
+    let center = targets::position(world, entity).expect("ground pulse anchor");
+    let inside: HashSet<_> = targets::area_units(
+        world,
+        pulses.caster,
+        center,
+        pulses.radius,
+        pulses.relation,
+        0,
+    )
+    .into_iter()
+    .collect();
+    for target in previous.difference(&inside) {
+        remove_consecration_debuff(world, pulses.caster, *target);
+    }
+    world
+        .get_mut::<ConsecrationTargets>(entity)
+        .unwrap()
+        .0
+        .retain(|target| inside.contains(target));
 }
 
 pub(in crate::spell_cast) fn update_ground_pulses(world: &mut World) {
@@ -533,9 +584,11 @@ fn update_ground_pulse(world: &mut World, entity: Entity) {
     let same_map =
         world.get::<crate::maps::InMap>(pulses.caster) == world.get::<crate::maps::InMap>(entity);
     if !targets::is_alive(world, pulses.caster) || !same_map {
+        clear_consecration_targets(world, entity, pulses.caster);
         world.entity_mut(entity).despawn();
         return;
     }
+    update_consecration_targets(world, entity, &pulses);
     // Include the final authored tick at expiry; never emit catch-up ticks after it.
     if now >= pulses.next_tick && pulses.next_tick <= pulses.expires_at {
         cast_ground_pulse(world, entity, &pulses);
@@ -547,6 +600,7 @@ fn update_ground_pulse(world: &mut World, entity: Entity) {
         }
     }
     if now >= pulses.expires_at {
+        clear_consecration_targets(world, entity, pulses.caster);
         world.entity_mut(entity).despawn();
     }
 }
@@ -626,6 +680,25 @@ fn cast_ground_pulse(world: &mut World, entity: Entity, pulses: &GroundPulses) {
             blocked_units: Vec::new(),
             prevent_hit_script: false,
         });
+    }
+    if pulses.root == CONSECRATION {
+        for &target in &plan[0].units {
+            crate::auras::apply_aura(
+                world,
+                &crate::auras::AuraApplication {
+                    caster: pulses.caster,
+                    target,
+                    spell_id: 204242,
+                    effect_mask: u32::MAX,
+                    source: crate::auras::AuraSource::Cast,
+                },
+            );
+            world
+                .get_mut::<ConsecrationTargets>(entity)
+                .unwrap()
+                .0
+                .insert(target);
+        }
     }
     // Named damage/heal effect only; Earthquake reads E1 chance in its OnHit script.
     spell_cast::hit::remove_defended_targets(world, pulses.caster, &child, &mut plan);

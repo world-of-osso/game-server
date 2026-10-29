@@ -2217,6 +2217,53 @@ fn devotion_aura_reduces_incoming_bleed() {
 }
 
 #[test]
+#[ignore = "uses the selected Protection set and real Consecration field"]
+fn protection_two_piece_illuminates_enemies_in_consecration() {
+    use shared::components::Position;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::dps_parity::prepare_registered_player(66, 1).unwrap();
+    super::dps_parity::engage(&mut run);
+    let actor = run.actor;
+    let target = run.targets[0];
+    assert!(crate::auras::has_aura(run.app.world(), actor, 1296658));
+    let chance = |world: &bevy::prelude::World| {
+        let spell = world
+            .resource::<crate::spell_info::SpellStore>()
+            .get(275779)
+            .unwrap();
+        crate::spell_cast::effects::crit_chance(world, actor, target, spell)
+    };
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        target,
+        crate::auras::RemoveReason::Expired,
+        |aura| aura.spell_id == 204242 && aura.caster == actor,
+    );
+    let before = chance(run.app.world());
+    let consecration = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(26573)
+        .unwrap()
+        .clone();
+    crate::spell_cast::scripts::spawn_consecration(run.app.world_mut(), actor, &consecration);
+    for _ in 0..30 {
+        run.app.update();
+    }
+    assert!(crate::auras::has_aura(run.app.world(), target, 204242));
+    let illuminated = chance(run.app.world());
+    assert!(
+        (illuminated - before - 5.0).abs() < 0.01,
+        "before={before} illuminated={illuminated}"
+    );
+    run.app.world_mut().get_mut::<Position>(target).unwrap().x += 100.0;
+    run.app.update();
+    assert!(!crate::auras::has_aura(run.app.world(), target, 204242));
+    assert!((chance(run.app.world()) - before).abs() < 0.01);
+}
+
+#[test]
 #[ignore = "uses selected MID2 Focused Enmity and real Avenger's Shield impacts"]
 fn focused_enmity_counts_engaged_enemies_not_chain_targets() {
     use crate::spell_cast::test_harness::ObservedCombatEvents;
