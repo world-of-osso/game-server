@@ -53,6 +53,8 @@ class CensusTest(unittest.TestCase):
         self.assertTrue(all(cluster['ambiguous_match'] for cluster in ambiguous))
         self.assertEqual(ambiguous[0]['assignment_margin_yards'], 0.0)
         self.assertEqual(ambiguous[0]['classification'], 'insufficient_or_ambiguous')
+        self.assertEqual(len(module.centroid_requests(ambiguous)), 2)
+        self.assertLessEqual(ambiguous[0]['candidate_spread_yards'], 5.0)
         distinct = module.cluster_population([run('a', [('a1', 0), ('a2', 8)]),
                                               run('b', [('b1', 0.1), ('b2', 8.1)])])
         self.assertEqual(len(distinct), 2)
