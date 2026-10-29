@@ -354,7 +354,7 @@ Seismic's source `TRIGGERED_IGNORE_SPELL_AND_CATEGORY_CD`0x2 becomes `SpellInfo:
 
 [Contract](../../specs/boss-scripts.md#ruby-final-logged-policy). Four successful logs establish both actors, cast medians, 181089→381605 delay and joint death; LittleWigs confirms the stage2 boundary but not the 181089 producer. The named median-delay approximation waits for Kyrakka's observed landing XY; its interim Z and the two post-pull placement Z values use sourced neighbor geometry. The copy importer retains the replaced journal placement in its provenance. Native health and damage remain untouched.
 
-Local targeted3/3 tests pass on Normal and projected205 for one-actor pull/peer engagement, native cast lanes, movement/phase and first-death versus joint credit. Target46 nearest same-copy test passes; conditioned gameobject/focus cases remain unqualified. Train integration and whole-dungeon completion are pending.
+Local targeted3/3 tests pass on Normal and projected205 for one-actor pull/peer engagement, native cast lanes, movement/phase and first-death versus joint credit. Target46 local2/2 tests cover nearest same-copy selection, native unit-entry conditions and no-match failure; conditioned gameobject/focus cases remain unqualified. Train integration and whole-dungeon completion are pending.
 
 ## Ruby Life Pools spell hooks
 
