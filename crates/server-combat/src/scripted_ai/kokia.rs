@@ -24,12 +24,14 @@ pub(super) fn creature_ai(boss: BossAi) -> Box<dyn CreatureAi> {
     Box::new(Kokia {
         boss,
         ritual_target: None,
+        missing_energy_reported: false,
     })
 }
 
 struct Kokia {
     boss: BossAi,
     ritual_target: Option<Entity>,
+    missing_energy_reported: bool,
 }
 
 impl CreatureAi for Kokia {
@@ -44,6 +46,7 @@ impl CreatureAi for Kokia {
     fn just_engaged_with(&mut self, ctx: &mut Ctx, _who: Entity) {
         self.boss.just_engaged_with(ctx);
         self.ritual_target = None;
+        self.missing_energy_reported = false;
         self.boss.events.schedule(RITUAL, 8_502);
         self.boss.events.schedule(MOLTEN_BOULDER, 19_431);
         self.boss.events.schedule(SEARING_BLOWS, 28_953);
@@ -64,13 +67,16 @@ impl CreatureAi for Kokia {
     fn update_ai(&mut self, ctx: &mut Ctx, diff_ms: u32) {
         if ctx.is_engaged() {
             let amount = OBSERVED_ENERGY_PER_SECOND * diff_ms as f32 / 1_000.0;
-            crate::spell_cast::powers::change_power(
+            let changed = crate::spell_cast::powers::change_power(
                 ctx.world,
                 ctx.me,
                 shared::components::PowerType::Energy,
                 amount,
-            )
-            .expect("Kokia's native Energy pool is required");
+            );
+            if changed.is_none() && !self.missing_energy_reported {
+                warn!("Kokia's observed Energy policy requires her native Energy pool");
+                self.missing_energy_reported = true;
+            }
         }
         boss_update_ai(self, ctx, diff_ms);
     }

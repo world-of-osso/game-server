@@ -226,6 +226,23 @@ fn encounter_coverage_kokia_ritual_summons_after_success() {
 }
 
 #[test]
+fn encounter_coverage_kokia_missing_energy_pool_does_not_create_one() {
+    let (mut h, boss, _) = kokia_copy(205);
+    h.app
+        .world_mut()
+        .entity_mut(boss)
+        .remove::<crate::spell_cast::powers::PowerPools>();
+    h.engage(boss);
+    h.advance(1.0);
+    assert!(
+        h.app
+            .world()
+            .get::<crate::spell_cast::powers::PowerPools>(boss)
+            .is_none()
+    );
+}
+
+#[test]
 fn encounter_coverage_kokia_logged_energy_refills_after_ritual() {
     for difficulty in [1, 205] {
         let (mut h, boss, _) = kokia_copy(difficulty);
