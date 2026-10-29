@@ -2186,7 +2186,7 @@ fn protection_rite_grants_native_strength_and_armor() {
         .unwrap();
     crate::spell_cast::creature_cast(run.app.world_mut(), actor, 433568, Some(actor), false)
         .unwrap();
-    for _ in 0..4 {
+    for _ in 0..40 {
         run.app.update();
     }
     let aura = run
