@@ -238,7 +238,8 @@ fn launch_meteor(world: &mut World, caster: Entity, meteor: PendingMeteor) {
             stacks - 1
         ));
     }
-    if selected(world, caster, 1253805) {
+    if stacks > 0 && selected(world, caster, 1253805) {
+        // Final Hour retains bonuses for consumed stacks, not already-exhausted scheduled meteors.
         apply(world, caster, FINAL_HOUR);
     }
 }

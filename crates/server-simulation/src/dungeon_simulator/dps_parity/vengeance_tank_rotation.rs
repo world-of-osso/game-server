@@ -1529,6 +1529,10 @@ mod tests {
             !crate::auras::has_aura(run.app.world(), actor, 1256302),
             "other spenders must exhaust the stacks before the scheduled World Killer"
         );
+        let final_hour_stacks = |run: &Run| run.app.world().get::<crate::auras::ActiveAuras>(actor)
+            .and_then(|auras| auras.iter().find(|aura| aura.spell_id == 1256322 && aura.caster == actor))
+            .map_or(0, |aura| aura.stacks);
+        assert_eq!(final_hour_stacks(&run), 3, "three consumed stacks persist");
         assert!(
             !run.app
                 .world()
@@ -1557,6 +1561,7 @@ mod tests {
                 == 1,
             "the scheduled World Killer must land without a duplicate from partial spending"
         );
+        assert_eq!(final_hour_stacks(&run), 3, "zero-stack scheduled meteors must not grant Final Hour");
     }
 
     #[test]
