@@ -16,6 +16,7 @@ class RubyLogExtractTests(unittest.TestCase):
             '1/1/2026 00:00:02.000-5  SPELL_CAST_START,Vehicle-0-0-0-0-190484-a,x,0,0,0,0,0,0,381525,x',
             '1/1/2026 00:00:03.000-5  SPELL_CAST_START,Creature-0-0-0-0-999999-a,x,0,0,0,0,0,0,381525,x',
             '1/1/2026 00:00:05.000-5  SPELL_CAST_START,Vehicle-0-0-0-0-190484-a,x,0,0,0,0,0,0,381525,x',
+            '1/1/2026 00:00:05.500-5  SPELL_AURA_APPLIED,Creature-0-0-0-0-190485-a,x,0,0,Creature-0-0-0-0-190485-a,x,0,0,181089,x',
             '1/1/2026 00:00:06.000-5  ENCOUNTER_END,2623,x,8,5,1',
             '1/1/2026 00:01:00.000-5  ENCOUNTER_START,2623,x,8,5,2521',
             '1/1/2026 00:01:01.000-5  SPELL_CAST_START,Vehicle-0-0-0-0-190484-a,x,0,0,0,0,0,0,381525,x',
@@ -26,6 +27,7 @@ class RubyLogExtractTests(unittest.TestCase):
             path.write_text('\n'.join(lines))
             result = ruby.extract([path])
         self.assertEqual(result['kills']['2623'], 1)
+        self.assertEqual(result['stage_events'][0]['aura_181089'], 5.5)
         timer = result['timers']['190484:381525:SPELL_CAST_START']
         self.assertEqual(timer['first']['median'], 2)
         self.assertEqual(timer['repeat']['median'], 3)

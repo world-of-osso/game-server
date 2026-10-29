@@ -47,7 +47,7 @@ def extract(paths):
                     row = next(csv.reader([raw]))
                     event = row[0]
                     if event == 'ENCOUNTER_START' and row[1] in ('2606', '2623'):
-                        active = {'encounter': int(row[1]), 'start': time, 'casts': collections.defaultdict(list), 'positions': {}}
+                        active = {'encounter': int(row[1]), 'start': time, 'casts': collections.defaultdict(list), 'positions': {}, 'health_50': {}, 'stage_event': None}
                         continue
                     if event == 'ENCOUNTER_END' and active and int(row[1]) == active['encounter']:
                         if row[5] == '1':
@@ -62,19 +62,29 @@ def extract(paths):
                         if key in CASTS:
                             active['casts'][key].append((time - active['start']).total_seconds())
                     if active['encounter'] == 2623:
+                        elapsed = (time - active['start']).total_seconds()
+                        if event == 'SPELL_AURA_APPLIED' and row[9] == '181089' and entry(row[5]) == 190485:
+                            active['stage_event'] = elapsed
                         for index in (9, 12):
                             if len(row) <= index + 17:
                                 continue
                             actor = entry(row[index])
-                            if actor not in (190484, 190485) or actor in active['positions']:
+                            if actor not in (190484, 190485):
                                 continue
                             if not row[index + 2].isdigit() or not row[index + 3].isdigit():
                                 continue
-                            coords = [float(value) for value in row[index + 14:index + 18]]
-                            active['positions'][actor] = coords
+                            health, maximum = int(row[index + 2]), int(row[index + 3])
+                            if maximum and health * 2 <= maximum:
+                                active['health_50'].setdefault(actor, elapsed)
+                            if actor not in active['positions']:
+                                coords = [float(value) for value in row[index + 14:index + 18]]
+                                active['positions'][actor] = coords
                 except (ValueError, IndexError, csv.Error):
                     continue
-    result = {'kills': collections.Counter(str(kill['encounter']) for kill in kills), 'timers': {}, 'positions': {}}
+    result = {'kills': collections.Counter(str(kill['encounter']) for kill in kills), 'timers': {}, 'positions': {}, 'stage_events': []}
+    for kill in kills:
+        if kill['encounter'] == 2623:
+            result['stage_events'].append({'first_observed_health_50': kill['health_50'], 'aura_181089': kill['stage_event']})
     for key in sorted(CASTS):
         sequences = [kill['casts'][key] for kill in kills if key in kill['casts']]
         first = [sequence[0] for sequence in sequences]
