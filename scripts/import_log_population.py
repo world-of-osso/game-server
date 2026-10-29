@@ -124,6 +124,29 @@ def match_existing(db, records, radius):
     return matched, existing
 
 
+def affix_summons(db):
+    return {row[0] for row in db.execute('''
+        SELECT DISTINCT effect.EffectMiscValue_0
+        FROM keystone_affix AS affix
+        JOIN spell_name AS spell ON spell.Name_lang = affix.Name_lang
+        JOIN spell_effect AS effect ON effect.SpellID = spell.ID
+        WHERE effect.Effect = 28 AND effect.EffectMiscValue_0 > 0
+    ''')}
+
+
+def retire_affix_spawns(db, summons, report):
+    rows = db.execute('''SELECT p.guid,p.map,p.npc_id,p.source_key
+        FROM log_derived_population AS p
+        JOIN content_creature AS c ON c.guid=p.guid
+        WHERE p.policy=? AND c.Comment=?''', (POLICY, POLICY)).fetchall()
+    for guid, map_id, npc_id, source_key in rows:
+        if npc_id not in summons:
+            continue
+        db.execute('DELETE FROM content_creature WHERE guid=?', (guid,))
+        db.execute('DELETE FROM log_derived_population WHERE guid=?', (guid,))
+        report[map_id]['gaps'].append({'source_key': source_key, 'reason': 'AFFIX_SUMMON_RETIRED'})
+
+
 def import_population(destination, records, radius=10.0):
     destination = validate_copy(destination)
     report = defaultdict(lambda: {'imported': 0, 'already_present': 0, 'gaps': [], 'templates_from_tdb': set(), 'templates_absent': set()})
@@ -138,6 +161,8 @@ def import_population(destination, records, radius=10.0):
         db.execute('''CREATE TABLE IF NOT EXISTS log_derived_template_rows (
             entry INTEGER NOT NULL, table_name TEXT NOT NULL, row_key TEXT NOT NULL, policy TEXT NOT NULL,
             PRIMARY KEY (table_name,row_key))''')
+        summons = affix_summons(db)
+        retire_affix_spawns(db, summons, report)
         next_guid = db.execute('SELECT COALESCE(MAX(guid), 0) + 1 FROM content_creature').fetchone()[0]
         matched, existing_positions = match_existing(db, records, radius)
         for record in records:
@@ -146,6 +171,9 @@ def import_population(destination, records, radius=10.0):
             source_key = record['source_key']
             if not source_key or not record.get('z_method') or not record.get('observation_event') or not record.get('observation_time'):
                 raise ValueError(f'incomplete provenance for {source_key!r}')
+            if npc_id in summons:
+                result['gaps'].append({'source_key': source_key, 'reason': 'AFFIX_SUMMON'})
+                continue
             existing = db.execute('SELECT guid FROM log_derived_population WHERE source_key=?', (source_key,)).fetchone()
             if existing:
                 result['already_present'] += 1

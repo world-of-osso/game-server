@@ -19,6 +19,33 @@ def record(key, x, npc=123):
 
 
 class ImportTest(unittest.TestCase):
+    def test_affix_summons_are_not_static_spawns_and_prior_imports_are_retired(self):
+        fixture = json.loads((Path(__file__).parent / 'tests/fixtures/log-population-tdb.json').read_text())
+        with tempfile.TemporaryDirectory() as directory:
+            copy = Path(directory) / 'world-copy.db'
+            with sqlite3.connect(copy) as db:
+                for table, data in fixture.items():
+                    db.execute(data['sql'])
+                    for row in data['rows']:
+                        db.execute(f"INSERT INTO {table} VALUES ({','.join('?' for _ in row)})", row)
+                db.execute('INSERT INTO content_creature_template(entry) VALUES(229296)')
+                db.execute('INSERT INTO content_creature_template(entry) VALUES(123)')
+                db.execute("INSERT INTO content_creature(guid,id1,map,position_x,position_y,position_z,Comment) VALUES(1,229296,2521,10,20,30,'authored')")
+            records = [record('affix', 100, npc=229296), record('ordinary', 200)]
+            module.import_population(copy, records)
+            with sqlite3.connect(copy) as db:
+                db.execute("INSERT INTO keystone_affix VALUES(148,?)", ("Xal'atath's Bargain: Ascendant",))
+                db.execute("INSERT INTO spell_name VALUES(461936,?)", ("Xal'atath's Bargain: Ascendant",))
+                db.execute('INSERT INTO spell_effect VALUES(461936,28,229296)')
+            report = module.import_population(copy, records)
+            self.assertIn('AFFIX_SUMMON_RETIRED', [gap['reason'] for gap in report['2521']['gaps']])
+            self.assertIn('AFFIX_SUMMON', [gap['reason'] for gap in report['2521']['gaps']])
+            with sqlite3.connect(copy) as db:
+                self.assertEqual(db.execute('SELECT id1,Comment FROM content_creature ORDER BY guid').fetchall(),
+                                 [(229296, 'authored'), (123, module.POLICY)])
+                self.assertEqual(db.execute('SELECT source_key FROM log_derived_population').fetchall(), [('ordinary',)])
+            self.assertEqual(module.import_population(copy, records)['2521']['imported'], 0)
+
     def test_projects_tdb_template_and_models_on_copy(self):
         fixture = json.loads((Path(__file__).parent / 'tests/fixtures/log-population-tdb.json').read_text())
         with tempfile.TemporaryDirectory() as directory:
@@ -113,6 +140,9 @@ class ImportTest(unittest.TestCase):
             copy = Path(directory) / 'world-copy.db'
             with sqlite3.connect(source) as db:
                 db.executescript('''
+                    CREATE TABLE keystone_affix(ID INTEGER, Name_lang TEXT);
+                    CREATE TABLE spell_name(ID INTEGER, Name_lang TEXT);
+                    CREATE TABLE spell_effect(SpellID INTEGER, Effect INTEGER, EffectMiscValue_0 INTEGER);
                     CREATE TABLE content_creature_template(entry INTEGER PRIMARY KEY);
                     INSERT INTO content_creature_template VALUES(123);
                     CREATE TABLE tdb_creature(id INTEGER,map INTEGER,position_x REAL,position_y REAL,position_z REAL);
