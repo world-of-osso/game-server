@@ -9,7 +9,7 @@ rust-version.workspace = true
 bevy = { version = "0.19", default-features = false, features = ["bevy_log"] }
 bitcode = "0.6"
 # Canonical transfer errors and map-admission wire records.
-shared = { git = "https://github.com/world-of-osso/shared-protocol.git", rev = "7773df472ceaf0595ea4ba5962fa7d2363b55e45" }
+shared = { git = "https://github.com/world-of-osso/shared-protocol.git", rev = "1660f5bf4a8a18b8a4d6d0c8cc0962fc62ba0024" }
 # Unchanged world.db map/static-area catalog reader.
 rusqlite = { version = "0.35", features = ["bundled"] }
 

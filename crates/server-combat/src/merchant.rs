@@ -258,7 +258,10 @@ impl Shop<'_, '_> {
                 if !buyer.offered(&template) {
                     return None;
                 }
-                let goods = self.catalog.goods.get(&slot.item_id)?.clone();
+                let mut goods = self.catalog.goods.get(&slot.item_id)?.clone();
+                if let Some(price) = self.guild_rewards.price(slot.item_id) {
+                    goods.buy_price = price;
+                }
                 let available =
                     self.stock
                         .available(vendor, index as u32, slot, goods.buy_count, now);
@@ -539,6 +542,9 @@ fn buy(shop: &mut Shop, customer: &mut Customer, req: BuyItem) -> MerchantResult
         return Err(MerchantError::ReputationRequired);
     }
     shop.guild_reward_allowed(buyer, slot.item_id)?;
+    if let Some(price) = shop.guild_rewards.price(slot.item_id) {
+        goods.buy_price = price;
+    }
     let mount_cost = shop.catalog.mount_costs.get(&(entry, req.slot)).cloned();
     if let Some(cost) = &mount_cost {
         goods.buy_price = cost.money;
