@@ -956,19 +956,37 @@ fn measure_tank_replays(spec: u32, seeds: &str) -> Vec<serde_json::Value> {
             let replay =
                 super::tank_replay::replay_simc_with_healing(spec, &trace, 300, seed, true)
                     .expect("tank replay measurement");
-            assert_eq!(replay["tank_dummy_scenario"]["attacker_level"], 92);
-            assert!(
-                (replay["tank_dummy_scenario"]["armor_constant"]
-                    .as_f64()
-                    .unwrap()
-                    - 4531.03)
-                    .abs()
-                    < 0.01
-            );
-            assert!(replay["damage_taken"].as_f64().unwrap() > 0.0);
+            validate_tank_replay(&replay);
             json!({"seed":seed,"report":replay})
         })
         .collect()
+}
+
+fn validate_tank_replay(replay: &Value) {
+    assert_eq!(replay["tank_dummy_scenario"]["attacker_level"], 92);
+    assert!(
+        (replay["tank_dummy_scenario"]["armor_constant"]
+            .as_f64()
+            .unwrap()
+            - 4531.03)
+            .abs()
+            < 0.01
+    );
+    assert!(
+        replay["incoming_before_absorbs"]
+            .as_object()
+            .unwrap()
+            .values()
+            .map(|amount| amount.as_f64().unwrap())
+            .sum::<f64>()
+            > 0.0
+    );
+}
+
+#[test]
+fn tank_measurement_accepts_fully_absorbed_incoming_damage() {
+    let replay = json!({"tank_dummy_scenario": {"attacker_level": 92, "armor_constant": 4531.03}, "incoming_before_absorbs": {"melee": 1200}, "damage_taken": 0});
+    validate_tank_replay(&replay);
 }
 
 #[test]
