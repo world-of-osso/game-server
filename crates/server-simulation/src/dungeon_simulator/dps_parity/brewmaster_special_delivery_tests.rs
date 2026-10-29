@@ -27,7 +27,8 @@ fn defensive_brew_launches_special_delivery_after_missile_delay() {
     let target = run.targets[0];
     crate::spell_cast::creature_cast(run.app.world_mut(), actor, 115203, Some(actor), false)
         .unwrap();
-    for _ in 0..100 {
+    let launched_at = crate::spell_cast::now(run.app.world());
+    while crate::spell_cast::now(run.app.world()) < launched_at + 2.5 {
         run.app.update();
     }
     assert_eq!(
@@ -35,7 +36,7 @@ fn defensive_brew_launches_special_delivery_after_missile_delay() {
         0,
         "the projectile cannot land early"
     );
-    for _ in 0..300 {
+    while crate::spell_cast::now(run.app.world()) < launched_at + 3.5 {
         run.app.update();
     }
     assert_eq!(
