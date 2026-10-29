@@ -68,8 +68,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         if (!connectivity
             && (f[7] == "complete"
                 || f[7] == "partial"
-                || (std::env::var_os("HIERARCHY_ORACLE_PAIRS").is_some() && f[7] == "connected")
-                || std::env::var_os("HIERARCHY_TRACE_PAIR").is_some()))
+                || (std::env::var_os("HIERARCHY_ORACLE_PAIRS").is_some() && f[7] == "connected")))
             || (connectivity
                 && (f[7] == "unreachable target (hierarchy disconnected)"
                     || f[7] == "unreachable target (incomplete corridor)"))
@@ -137,14 +136,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 return Err("connectivity probe requires --features bake".into());
             }
             for (_, _, a, b) in pairs {
-                if let Ok(selected) = std::env::var("HIERARCHY_TRACE_PAIR") {
-                    if !selected
-                        .split(',')
-                        .any(|pair| pair == format!("{id}:{kind}:{a}:{b}"))
-                    {
-                        continue;
-                    }
-                }
                 let (Some(&start), Some(&end)) = (points.get(a), points.get(b)) else {
                     return Err(format!("sample missing {id} {kind} {a} {b}").into());
                 };
@@ -157,13 +148,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let result = loop {
                     let leg_start = Instant::now();
                     let path = nav.path_with_plan(current, end, &mut plan);
-                    if std::env::var_os("HIERARCHY_TRACE_PAIR").is_some() {
-                        eprintln!(
-                            "leg {legs} from {current:?} to {end:?}: {:?}",
-                            path.as_ref()
-                                .map(|route| (route.points.last(), route.complete))
-                        );
-                    }
                     max_leg = max_leg.max(leg_start.elapsed().as_micros());
                     legs += 1;
                     match path {
