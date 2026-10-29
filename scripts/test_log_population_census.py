@@ -13,6 +13,14 @@ census = module.census
 
 
 class CensusTest(unittest.TestCase):
+    def test_minimum_cost_matching_is_not_greedy(self):
+        assignment, cost = module.minimum_assignment([[1.0, 2.0], [1.1, 20.0]])
+        self.assertEqual(assignment, [1, 0])
+        self.assertAlmostEqual(cost, 3.1)
+        assignment, cost = module.minimum_assignment([[float('inf'), 2.0], [1.1, 20.0]])
+        self.assertEqual(assignment, [1, 0])
+        self.assertAlmostEqual(cost, 3.1)
+
     def test_advanced_position_belongs_to_described_unit(self):
         fields = ['SPELL_DAMAGE', 'Creature-0-1-2521-42-123-ABCD', 'Boss', '0', '0',
                   'Creature-0-1-2521-42-456-DCBA', 'Add', '0', '0', '1', 'Hit', '1',
@@ -55,6 +63,8 @@ class CensusTest(unittest.TestCase):
         self.assertEqual(ambiguous[0]['classification'], 'insufficient_or_ambiguous')
         self.assertEqual(len(module.centroid_requests(ambiguous)), 2)
         self.assertLessEqual(ambiguous[0]['candidate_spread_yards'], 5.0)
+        self.assertEqual(len({x['guid'] for x in ambiguous[0]['candidate_observations']}),
+                         len(ambiguous[0]['candidate_observations']))
         distinct = module.cluster_population([run('a', [('a1', 0), ('a2', 8)]),
                                               run('b', [('b1', 0.1), ('b2', 8.1)])])
         self.assertEqual(len(distinct), 2)
