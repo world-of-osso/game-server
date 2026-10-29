@@ -256,6 +256,8 @@ pub struct GroundMap {
     m2_solids: HashMap<u32, los::LosMap>,
     m2_solid_checks: HashMap<u32, Result<(), String>>,
     live_hulls: crate::game_objects::collision::LiveHulls,
+    #[cfg(test)]
+    entry_gate: Option<std::sync::mpsc::Sender<std::sync::mpsc::Sender<()>>>,
 }
 
 impl GroundMap {
@@ -279,6 +281,8 @@ impl GroundMap {
             m2_solids: HashMap::new(),
             m2_solid_checks: HashMap::new(),
             live_hulls: HashMap::new(),
+            #[cfg(test)]
+            entry_gate: None,
         }
     }
 
@@ -339,6 +343,76 @@ impl GroundMap {
 
     pub(crate) fn data_dir(&self) -> &Path {
         &self.data_dir
+    }
+
+    /// Prepare the entry position's terrain and collision caches without borrowing the live world.
+    pub(crate) fn prepare_entry(
+        &self,
+        map_id: u32,
+        feet: Vec3,
+    ) -> std::sync::mpsc::Receiver<GroundMap> {
+        let mut prepared = Self::new(&self.data_dir, self.wdts.clone());
+        prepared.flat_arena_height = self.flat_arena_height;
+        #[cfg(test)]
+        let gate = self.entry_gate.clone();
+        let (sender, receiver) = std::sync::mpsc::channel();
+        std::thread::Builder::new()
+            .name("entry-ground".into())
+            .spawn(move || {
+                #[cfg(test)]
+                if let Some(gate) = gate {
+                    let (release, blocked) = std::sync::mpsc::channel();
+                    if gate.send(release).is_ok() {
+                        blocked
+                            .recv_timeout(std::time::Duration::from_secs(30))
+                            .expect("release entry ground worker");
+                    }
+                }
+                prepared.liquid_at(map_id, feet);
+                prepared.ground_at(map_id, feet);
+                prepared.min_height(map_id, feet);
+                // A disconnected client no longer needs its prepared ground.
+                let _ = sender.send(prepared);
+            })
+            .expect("start entry ground worker");
+        receiver
+    }
+
+    #[cfg(test)]
+    pub(crate) fn gate_entry_preparation(
+        &mut self,
+    ) -> std::sync::mpsc::Receiver<std::sync::mpsc::Sender<()>> {
+        let (sender, receiver) = std::sync::mpsc::channel();
+        self.entry_gate = Some(sender);
+        receiver
+    }
+
+    /// Merge worker-loaded tiles without discarding ground already used by other players.
+    pub(crate) fn merge_entry_ground(&mut self, prepared: GroundMap) {
+        for (map_id, incoming) in prepared.maps {
+            match (self.maps.entry(map_id).or_insert(None), incoming) {
+                (slot @ None, incoming) => *slot = incoming,
+                (Some(current), Some(incoming)) => {
+                    for (tile, loaded) in incoming.tiles {
+                        let existing = current.tiles.entry(tile).or_insert(None);
+                        if loaded.is_some()
+                            && existing.as_ref().is_none_or(|tile| tile.wmos.is_none())
+                        {
+                            *existing = loaded;
+                        }
+                    }
+                    current.wmo_models.extend(incoming.wmo_models);
+                }
+                (Some(_), None) => {}
+            }
+        }
+        for (map_id, incoming) in prepared.m2_floors {
+            if let Some(current) = self.m2_floors.get_mut(&map_id) {
+                current.merge_preloaded(incoming);
+            } else {
+                self.m2_floors.insert(map_id, incoming);
+            }
+        }
     }
 
     #[cfg(test)]
