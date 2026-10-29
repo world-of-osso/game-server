@@ -716,6 +716,7 @@ fn replay_registered_run_with_healing(
     let mut cast_timeline = Vec::new();
     let mut damage_taken_by_kind = BTreeMap::<&str, f64>::new();
     let mut outcomes = BTreeMap::<String, usize>::new();
+    let mut outcome_sequence = Vec::<Value>::new();
     let mut incoming_before_absorbs = BTreeMap::<&str, f64>::new();
     let mut incoming_by_outcome = BTreeMap::<String, f64>::new();
     let mut defense_totals = [0.0_f64; 6];
@@ -773,6 +774,7 @@ fn replay_registered_run_with_healing(
             {
                 break;
             }
+            let _attack = crate::random::attack_scope(next as u64);
             let amount = hit.amount as f32;
             if !amount.is_finite() {
                 return Err("SIMC_DUMMY_AMOUNT_OUT_OF_RANGE".into());
@@ -864,6 +866,12 @@ fn replay_registered_run_with_healing(
                         *total += f64::from(value);
                     }
                     defense_samples += 1;
+                    outcome_sequence.push(json!({
+                        "outcome": format!("{outcome:?}"),
+                        "parry_pct": stats.defense.parry,
+                        "dodge_pct": stats.defense.dodge,
+                        "block_pct": stats.defense.block,
+                    }));
                     if let Some(auras) = world.get::<crate::auras::ActiveAuras>(tank) {
                         for aura in auras.iter() {
                             for effect in
@@ -1163,7 +1171,7 @@ fn replay_registered_run_with_healing(
         "absorbs_by_spell":absorbs_by_spell,"aura_uptime":aura_uptime,
         "resource_counters":counters,"target_debuff_uptime":target_debuff_uptime,
         "rotation_status":"registered_literal_simc","duration_seconds":elapsed,"incoming_events":next,"tank_casts":casts,
-        "raw_damage":raw,"damage_taken":taken,"damage_taken_by_kind":damage_taken_by_kind,"incoming_before_absorbs":incoming_before_absorbs,"incoming_outcomes":outcomes,"incoming_by_outcome":incoming_by_outcome,
+        "raw_damage":raw,"damage_taken":taken,"damage_taken_by_kind":damage_taken_by_kind,"incoming_before_absorbs":incoming_before_absorbs,"incoming_outcomes":outcomes,"incoming_outcome_sequence":outcome_sequence,"incoming_by_outcome":incoming_by_outcome,
         "defense_mean":defense_mean,
         "dusk_mean_reduction": (dusk_samples > 0).then(|| dusk_reduction_sum / dusk_samples as f64),
         "block_sources_mean":block_sources.iter().map(|(spell, amount)| (spell, amount / defense_samples.max(1) as f64)).collect::<BTreeMap<_,_>>(),

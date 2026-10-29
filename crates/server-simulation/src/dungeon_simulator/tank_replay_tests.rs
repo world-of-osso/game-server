@@ -1697,6 +1697,51 @@ fn unregistered_tank_driver_fails_instead_of_using_a_follower() {
 }
 
 #[test]
+#[ignore = "requires canonical MID2 profile inputs and the six SimC tank traces"]
+fn pressure_scale_keeps_same_seed_attack_outcomes_for_every_tank() {
+    let traces = std::env::var("HEALER_TANK_TRACE_DIR").expect("HEALER_TANK_TRACE_DIR required");
+    let chances = |attack: &serde_json::Value| {
+        ["parry_pct", "dodge_pct", "block_pct"].map(|chance| attack[chance].as_f64().unwrap())
+    };
+    // Blood's Dance of Midnight and Brewmaster's Elusive Brawler change avoidance
+    // through the tank's own procs and decisions; equal chances must roll equally.
+    for spec in [66, 73, 104, 250, 268, 581] {
+        let path = Path::new(&traces).join(format!("{spec}.simc-trace.log"));
+        let outcomes = |scale| {
+            let report = super::tank_replay::replay_simc_with_pressure(
+                spec, &path, 300, 70448, false, scale,
+            )
+            .unwrap();
+            report["incoming_outcome_sequence"]
+                .as_array()
+                .unwrap()
+                .clone()
+        };
+        let normal = outcomes(1.0);
+        let pressured = outcomes(2.0);
+        let shared = normal.len().min(pressured.len());
+        assert!(shared >= 40, "spec {spec}: only {shared} shared attacks");
+        let mismatch = (0..shared).find(|&attack| {
+            let same_chances = chances(&normal[attack]) == chances(&pressured[attack]);
+            same_chances && normal[attack]["outcome"] != pressured[attack]["outcome"]
+        });
+        assert_eq!(
+            mismatch,
+            None,
+            "spec {spec}: equal chances rolled differently ({} at 1.0x, {} at 2.0x)",
+            mismatch.map_or(serde_json::Value::Null, |attack| normal[attack].clone()),
+            mismatch.map_or(serde_json::Value::Null, |attack| pressured[attack].clone()),
+        );
+        if matches!(spec, 66 | 73 | 104 | 581) {
+            let differing = (0..shared)
+                .filter(|&attack| normal[attack]["outcome"] != pressured[attack]["outcome"])
+                .count();
+            assert_eq!(differing, 0, "spec {spec}: attack outcomes differ");
+        }
+    }
+}
+
+#[test]
 #[ignore = "requires canonical MID2 profile inputs and a real SimC trace"]
 fn scaled_real_trace_doubles_raw_pressure_and_shortens_survival() {
     let path = std::env::var("HEALER_TANK_SIMC_TRACE").expect("HEALER_TANK_SIMC_TRACE required");
