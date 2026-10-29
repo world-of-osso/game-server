@@ -1,6 +1,55 @@
 use std::path::Path;
 
 #[test]
+#[ignore = "requires native Restoration Druid spell data"]
+fn master_shapeshifter_restores_mana_from_actual_wrath() {
+    use crate::spell_cast::test_harness::{ObservedCombatEvents, harness};
+    use shared::components::Mana;
+    use shared::protocol::CombatLogKind;
+    let mut h = harness(Vec::new(), &[5176, 289237, 411146], 11).unwrap();
+    h.app.init_resource::<ObservedCombatEvents>();
+    *h.app.world_mut().get_mut::<Mana>(h.caster).unwrap() = Mana {
+        current: 5000.0,
+        max: 10_000.0,
+    };
+    h.cast(5176, Some(h.npc));
+    h.advance(100);
+    assert!(
+        !h.app
+            .world()
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|e| e.spell_id == Some(411146) && e.kind == CombatLogKind::Energize)
+    );
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: h.caster,
+            target: h.caster,
+            spell_id: 289237,
+            effect_mask: u32::MAX,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    h.app
+        .world_mut()
+        .resource_mut::<ObservedCombatEvents>()
+        .0
+        .clear();
+    h.cast(5176, Some(h.npc));
+    h.advance(100);
+    let events = &h.app.world().resource::<ObservedCombatEvents>().0;
+    assert!(
+        events.iter().any(|e| e.spell_id == Some(411146)
+            && e.kind == CombatLogKind::Energize
+            && e.target == Some(h.caster.to_bits())
+            && e.amount > 0),
+        "actual Wrath must restore native scaled mana: {events:?}"
+    );
+}
+
+#[test]
 #[ignore = "requires top-character profiles, native DB and SimC party pulse"]
 fn restoration_druid_uses_selected_germination_in_party_pulse() {
     let trace = std::env::var("HEALER_TANK_TIMELINE").unwrap();
