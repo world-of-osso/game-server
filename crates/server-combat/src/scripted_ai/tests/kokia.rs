@@ -192,6 +192,13 @@ fn encounter_coverage_kokia_current_retail_inputs_qualify() {
 fn encounter_coverage_kokia_ritual_summons_after_success() {
     for difficulty in [1, 205] {
         let (mut h, boss, map) = kokia_copy(difficulty);
+        let origin = h.app.world().resource::<Time>().elapsed_secs_f64();
+        h.app
+            .insert_resource(super::cast_admission::CastAdmissions {
+                actor: boss,
+                origin,
+                entries: Vec::new(),
+            });
         h.engage(boss);
         h.advance(12.5);
         let count = |world: &mut World| {
@@ -203,6 +210,13 @@ fn encounter_coverage_kokia_ritual_summons_after_success() {
         };
         assert_eq!(count(h.app.world_mut()), 0, "ritual has not completed");
         h.advance(2.0);
+        eprintln!(
+            "Ritual admissions: {:?}",
+            h.app
+                .world()
+                .resource::<super::cast_admission::CastAdmissions>()
+                .entries
+        );
         assert_eq!(
             count(h.app.world_mut()),
             1,
