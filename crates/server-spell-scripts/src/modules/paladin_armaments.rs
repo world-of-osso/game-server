@@ -596,21 +596,21 @@ fn apply_bulwark_absorb(
     );
 }
 
-fn advance_shining_light(world: &mut World, caster: Entity, spell: u32) {
+fn advance_shining_light(world: &mut World, caster: Entity, cast: &SpellInfo) {
     if !world
         .get::<ActiveSpec>(caster)
         .is_some_and(|spec| spec.0 == 66)
     {
         return;
     }
+    let spell = cast.id;
     if spell == 85673 {
-        let free = world
-            .get::<combat::auras::ActiveAuras>(caster)
-            .is_some_and(|auras| {
-                auras
-                    .iter()
-                    .any(|aura| aura.spell_id == 327510 && aura.caster == caster)
-            });
+        // The cast's charge modifiers record the Shining Light aura that paid for it.
+        let free = cast
+            .cast_charge_mods
+            .iter()
+            .flatten()
+            .any(|modifier| modifier.aura_spell_id == 327510);
         combat::auras::remove_auras(world, caster, RemoveReason::Consumed, |aura| {
             aura.spell_id == 327510 && aura.caster == caster
         });
@@ -902,7 +902,7 @@ fn after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
     }
     trigger_grand_crusader(world, caster, spell.id);
     extend_zealots_paragon(world, caster, spell.id);
-    advance_shining_light(world, caster, spell.id);
+    advance_shining_light(world, caster, spell);
     advance_divine_guidance(world, caster, spell.id);
     // Native70448 spell432478 effect0 is aura332: misc432459 -> amount432472.
     // SimC76f8118 sc_paladin.cpp2748–2752 alternates only on actual hardcasts.
