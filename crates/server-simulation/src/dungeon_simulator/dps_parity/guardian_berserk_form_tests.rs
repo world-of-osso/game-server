@@ -4,6 +4,32 @@ use crate::auras::ActiveAuras;
 
 #[test]
 #[ignore = "requires Guardian profile and native world data"]
+fn guardian_bear_entry_grants_rage_and_leaving_discards_it() {
+    use crate::spell_cast::powers::power_value;
+    use shared::components::PowerType;
+    let mut run = prepare_registered_player(104, 1).unwrap();
+    let actor = run.actor;
+    let rage = |run: &Run| {
+        power_value(run.app.world(), actor, PowerType::Rage)
+            .unwrap()
+            .0
+    };
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 5487, Some(actor), false).unwrap();
+    assert_eq!(rage(&run), 250.0, "Bear entry earns native 25 Rage");
+    for _ in 0..40 {
+        run.app.update();
+    }
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 768, Some(actor), false).unwrap();
+    assert_eq!(rage(&run), 0.0, "leaving Bear consumes the stored Rage");
+    for _ in 0..40 {
+        run.app.update();
+    }
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 5487, Some(actor), false).unwrap();
+    assert_eq!(rage(&run), 250.0, "re-entering Bear earns 25 Rage again");
+}
+
+#[test]
+#[ignore = "requires Guardian profile and native world data"]
 fn guardian_absorbed_melee_special_earns_bear_rage_with_native_cooldown() {
     use crate::spell_cast::powers::{change_power, power_value};
     use shared::components::{Health, PowerType};
