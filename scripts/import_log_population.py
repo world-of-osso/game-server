@@ -182,10 +182,10 @@ def observation_start_delta(record, encounter_id, logs):
 
 def retire_encounter_duplicates(db, logs=LOG_ARCHIVE, maps=None):
     """Keep one sourced boss spawn per encounter entry and map."""
-    groups = db.execute('''SELECT DISTINCT c.map,c.id1,r.encounter_id
+    groups = db.execute('''SELECT c.map,c.id1,r.encounter_id
         FROM content_creature c JOIN raid_encounter_creature r
         ON r.map_id=c.map AND r.creature_entry=c.id1
-        WHERE (SELECT COUNT(*) FROM content_creature x WHERE x.map=c.map AND x.id1=c.id1)>1
+        GROUP BY c.map,c.id1,r.encounter_id HAVING COUNT(*)>1
         ORDER BY c.map,c.id1''').fetchall()
     retired = []
     for map_id, entry, encounter_id in groups:

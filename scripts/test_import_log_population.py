@@ -59,7 +59,7 @@ class ImportTest(unittest.TestCase):
                 CREATE TABLE log_derived_population(guid INTEGER PRIMARY KEY,observation_json TEXT);
                 CREATE TABLE raid_encounter_creature(map_id INTEGER,creature_entry INTEGER,encounter_id INTEGER);
                 INSERT INTO raid_encounter_creature VALUES(2813,234649,3102),(2825,241812,3207),
-                    (2923,239008,3286),(2993,259445,3456);
+                    (2923,239008,3286),(2923,239167,3287),(2993,259445,3456);
                 INSERT INTO tdb_creature VALUES(241812,2825);
                 INSERT INTO content_creature VALUES(31000640,241812,2825,NULL);
                 INSERT INTO content_creature VALUES(3276416712,241812,2825,'LOG_DERIVED_POPULATION');
@@ -67,6 +67,8 @@ class ImportTest(unittest.TestCase):
                 INSERT INTO content_creature VALUES(3276416398,234649,2813,'LOG_DERIVED_POPULATION');
                 INSERT INTO content_creature VALUES(63923000,239008,2923,'FOLLOWER_PLACEMENT_XY_FROM_JOURNAL_ENCOUNTER_UIMAP');
                 INSERT INTO content_creature VALUES(3276417028,239008,2923,'LOG_DERIVED_POPULATION');
+                INSERT INTO content_creature VALUES(3276417029,239167,2923,'LOG_DERIVED_POPULATION');
+                INSERT INTO content_creature VALUES(3276417030,239167,2923,'LOG_DERIVED_POPULATION');
                 INSERT INTO content_creature VALUES(63993000,259445,2993,'FOLLOWER_PLACEMENT_XY_FROM_JOURNAL_ENCOUNTER_UIMAP');
                 INSERT INTO content_creature VALUES(3276417173,259445,2993,'LOG_DERIVED_POPULATION');
                 INSERT INTO content_creature VALUES(3276417174,259445,2993,'LOG_DERIVED_POPULATION');
@@ -76,6 +78,8 @@ class ImportTest(unittest.TestCase):
             samples = [
                 (3276416398, '10/1/2026 22:32:55.772-5', '10/1/2026 22:41:55.410-5', '10/1/2026 22:41:55.778-5', 3102),
                 (3276417028, '10/1/2026 21:14:10.071-5', '10/1/2026 21:28:36.765-5', '10/1/2026 21:28:37.162-5', 3286),
+                (3276417029, '10/1/2026 21:14:10.071-5', '10/1/2026 21:37:55.099-5', '10/1/2026 21:37:55.103-5', 3287),
+                (3276417030, '10/8/2026 03:05:41.731-5', '10/8/2026 03:27:49.903-5', '10/8/2026 03:27:50.659-5', 3287),
                 (3276417173, '10/3/2026 03:13:00.925-5', '10/3/2026 03:18:43.191-5', '10/3/2026 03:18:43.199-5', 3456),
                 (3276417174, '10/5/2026 22:03:43.503-5', '10/5/2026 22:10:10.980-5', '10/5/2026 22:10:10.995-5', 3456),
                 (3276417175, '10/15/2026 20:27:06.584-5', '10/15/2026 20:34:56.914-5', '10/15/2026 20:34:56.918-5', 3456),
@@ -88,10 +92,11 @@ class ImportTest(unittest.TestCase):
             db.execute('INSERT INTO log_derived_population VALUES (3276416712,?)', ('{}',))
             retired = module.retire_encounter_duplicates(db, Path(directory))
             self.assertEqual(retired, [(2813, 234649, 63813001), (2825, 241812, 3276416712),
-                                       (2923, 239008, 63923000), (2993, 259445, 63993000),
+                                       (2923, 239008, 63923000), (2923, 239167, 3276417030),
+                                       (2993, 259445, 63993000),
                                        (2993, 259445, 3276417173), (2993, 259445, 3276417174)])
             self.assertEqual(db.execute('SELECT guid FROM content_creature ORDER BY guid').fetchall(),
-                             [(1,), (2,), (31000640,), (3276416398,), (3276417028,), (3276417175,)])
+                             [(1,), (2,), (31000640,), (3276416398,), (3276417028,), (3276417029,), (3276417175,)])
             self.assertEqual(module.retire_encounter_duplicates(db, Path(directory)), [])
 
     def test_late_boss_observation_loses_to_placeholder_and_missing_log_fails(self):
