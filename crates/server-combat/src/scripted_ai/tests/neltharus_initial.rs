@@ -508,6 +508,24 @@ fn encounter_coverage_sargha_native_shield_expiry_rearms_gold() {
 }
 
 #[test]
+#[ignore = "Sargha interrupted shield must not count as natural completion"]
+fn encounter_coverage_sargha_interrupted_shield_does_not_rearm() {
+    for difficulty in [1, 205] {
+        let (mut h, boss, _) = projected_initial_boss(&INITIAL_PHASES[1], difficulty);
+        h.engage(boss);
+        h.advance(45.0);
+        assert_eq!(completed_casts(&h, boss, 376780), 1);
+        crate::spell_cast::cancel_cast(h.app.world_mut(), boss);
+        h.advance(50.0);
+        assert_eq!(
+            completed_casts(&h, boss, 377017),
+            1,
+            "interrupted shield does not re-arm Gold projected{difficulty}"
+        );
+    }
+}
+
+#[test]
 #[ignore = "Neltharus LittleWigs first phase alert requests"]
 fn encounter_coverage_neltharus_first_focus_and_shield_alerts() {
     for (profile, spell) in [(&INITIAL_PHASES[0], 375056), (&INITIAL_PHASES[1], 376780)] {
