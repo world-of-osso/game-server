@@ -1167,12 +1167,20 @@ mod tests {
     #[ignore = "requires canonical world database and MID2 Blood inputs"]
     fn blood_infliction_scales_with_remaining_plague_duration() {
         use shared::protocol::CombatLogKind;
-        fn sample(duration: u32) -> i32 {
+        fn sample(duration: u32, blood_modifier: bool) -> i32 {
             let _seed = crate::random::seed_scope(70448);
             let mut run = super::super::prepare_registered_player(250, 1).unwrap();
             let actor = run.actor;
             let target = run.targets[0];
             super::super::engage(&mut run);
+            assert!(crate::auras::has_aura(run.app.world(), actor, 137008));
+            if !blood_modifier {
+                crate::auras::remove_auras(run.app.world_mut(), actor, crate::auras::RemoveReason::Cancelled, |aura| aura.spell_id == 137008 && aura.caster == actor);
+                crate::auras::apply_aura(run.app.world_mut(), &crate::auras::AuraApplication {
+                    caster: actor, target: actor, spell_id: 137008,
+                    effect_mask: u32::MAX & !(1 << 13), source: crate::auras::AuraSource::Cast,
+                });
+            }
             crate::auras::apply_aura(
                 run.app.world_mut(),
                 &crate::auras::AuraApplication {
@@ -1215,11 +1223,16 @@ mod tests {
                 .expect("Infliction damage")
                 .amount
         }
-        let short = sample(6000);
-        let long = sample(12000);
+        let short = sample(6000, true);
+        let long = sample(12000, true);
         assert!(
             long > short * 3 / 2 && long < short * 3,
             "remaining disease: {short} vs {long}"
+        );
+        let unmodified = sample(12000, false);
+        assert!(
+            (long as f32 / unmodified as f32 - 2.0).abs() < 0.02,
+            "Blood passive must add its native 10 percentage points: {long} vs {unmodified}"
         );
     }
 

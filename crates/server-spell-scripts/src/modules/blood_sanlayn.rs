@@ -185,13 +185,21 @@ fn infliction_of_sorrow(world: &mut World, ctx: &EffectCtx<'_>, target: Entity, 
         .find(|effect| effect.index == 0)
         .expect("Blood Plague damage effect");
     let talent = store.get(434143).expect("Infliction of Sorrow talent");
-    let percent = talent
+    let base_percent = talent
         .effects
         .iter()
         .find(|effect| effect.index == 1)
         .expect("Infliction damage percent")
-        .base_points
-        / 100.0;
+        .base_points;
+    // SimC76f8118 sc_death_knight.cpp13821 reads the modified talent effect;
+    // Blood's 137008 effect 14 adds its native points through label 4138.
+    let percent = auras::spell_mods::modify(
+        world,
+        ctx.caster,
+        talent,
+        auras::spell_mods::SpellModOp::PointsIndex1,
+        base_percent,
+    ) / 100.0;
     let extension = talent
         .effects
         .iter()
