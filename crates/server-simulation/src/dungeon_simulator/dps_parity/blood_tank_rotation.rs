@@ -751,8 +751,16 @@ mod tests {
             panic!("no Dance weapon after 30 payments")
         }
         let paid = first_spawn(1.0);
-        assert_eq!(paid, first_spawn(2.0), "each payment gets one roll regardless of rune count");
-        assert_eq!(paid, first_spawn(0.0), "a fully discounted rune cost still gets a roll");
+        assert_eq!(
+            paid,
+            first_spawn(2.0),
+            "each payment gets one roll regardless of rune count"
+        );
+        assert_eq!(
+            paid,
+            first_spawn(0.0),
+            "a fully discounted rune cost still gets a roll"
+        );
     }
 
     #[test]
@@ -763,17 +771,48 @@ mod tests {
         let actor = run.actor;
         let target = run.targets[0];
         super::super::engage(&mut run);
-        crate::spell_cast::powers::change_power(run.app.world_mut(), actor, shared::components::PowerType::Runes, -6.0);
+        crate::spell_cast::powers::change_power(
+            run.app.world_mut(),
+            actor,
+            shared::components::PowerType::Runes,
+            -6.0,
+        );
         for _ in 0..30 {
-            crate::auras::apply_aura(run.app.world_mut(), &crate::auras::AuraApplication {
-                caster: actor, target: actor, spell_id: 1264568, effect_mask: u32::MAX, source: crate::auras::AuraSource::Cast,
-            });
-            crate::spell_cast::creature_cast(run.app.world_mut(), actor, 206930, Some(target), false).unwrap();
+            crate::auras::apply_aura(
+                run.app.world_mut(),
+                &crate::auras::AuraApplication {
+                    caster: actor,
+                    target: actor,
+                    spell_id: 1264568,
+                    effect_mask: u32::MAX,
+                    source: crate::auras::AuraSource::Cast,
+                },
+            );
+            crate::spell_cast::creature_cast(
+                run.app.world_mut(),
+                actor,
+                206930,
+                Some(target),
+                false,
+            )
+            .unwrap();
             let world = run.app.world_mut();
-            if world.query::<&crate::spell_cast::summon::SummonedCreature>().iter(world)
-                .any(|summon| summon.owner == actor && summon.spell_id == 1264353) { return; }
-            for _ in 0..30 { run.app.update(); }
-            crate::spell_cast::powers::change_power(run.app.world_mut(), actor, shared::components::PowerType::Runes, -6.0);
+            if world
+                .query::<&crate::spell_cast::summon::SummonedCreature>()
+                .iter(world)
+                .any(|summon| summon.owner == actor && summon.spell_id == 1264353)
+            {
+                return;
+            }
+            for _ in 0..30 {
+                run.app.update();
+            }
+            crate::spell_cast::powers::change_power(
+                run.app.world_mut(),
+                actor,
+                shared::components::PowerType::Runes,
+                -6.0,
+            );
         }
         panic!("free Heart Strikes must be able to summon a Dance weapon");
     }

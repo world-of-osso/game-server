@@ -68,6 +68,10 @@ pub struct ExpectedStats {
     pub mods: HashMap<u32, CreatureStats>,
     /// ContentTuningID -> ExpectedStatMod IDs (DB2Stores.cpp:1293-1295).
     pub content_tuning_mods: HashMap<u32, Vec<u32>>,
+    /// ContentTuningXExpected modifiers and their season ID bounds.
+    pub armor_tuning_mods: HashMap<u32, Vec<(u32, u32, u32)>>,
+    /// MythicPlusSeason ID to milestone season, used by the native reducer.
+    pub season_milestones: HashMap<u32, u32>,
 }
 
 impl ExpectedStats {
@@ -135,6 +139,42 @@ impl ExpectedStats {
     ) -> f32 {
         let expansion = resolve_health_expansion(health_scaling_expansion);
         self.evaluate(Stat::Armor, level, expansion, 0, unit_class) * armor_modifier
+    }
+
+    /// Resolve a creature's armor-constant multiplier from its content tuning and season.
+    pub fn armor_tuning(&self, content_tuning_id: u32, season: u32) -> Result<ArmorTuning, String> {
+        let milestone = self
+            .season_milestones
+            .get(&season)
+            .copied()
+            .ok_or_else(|| format!("missing MythicPlusSeason {season}"))?;
+        let mut multiplier = 1.0;
+        let rows = self
+            .armor_tuning_mods
+            .get(&content_tuning_id)
+            .ok_or_else(|| format!("missing ContentTuningXExpected {content_tuning_id}"))?;
+        for &(id, min, max) in rows {
+            let bound = |id| {
+                self.season_milestones
+                    .get(&id)
+                    .copied()
+                    .ok_or_else(|| format!("missing MythicPlusSeason {id}"))
+            };
+            // TrinityCore a352b1fa DB2Stores.cpp:2338-2347 uses milestone bounds; the maximum is exclusive.
+            if (min != 0 && milestone < bound(min)?) || (max != 0 && milestone >= bound(max)?) {
+                continue;
+            }
+            multiplier *= self
+                .mods
+                .get(&id)
+                .ok_or_else(|| format!("missing ExpectedStatMod {id}"))?
+                .armor_constant;
+        }
+        Ok(ArmorTuning {
+            content_tuning_id,
+            season,
+            multiplier,
+        })
     }
 
     /// The ArmorConstant a player attacker of every level 0..=MAX_LEVEL + 3
@@ -207,6 +247,14 @@ impl ArmorConstants {
     pub fn at(&self, level: u8) -> Option<f32> {
         self.0.get(usize::from(level.min(TOP_LEVEL))).copied()
     }
+}
+
+/// Sourced content-tuning context for an attacker's armor coefficient.
+#[derive(Component, Debug, Clone, Copy, PartialEq)]
+pub struct ArmorTuning {
+    pub content_tuning_id: u32,
+    pub season: u32,
+    multiplier: f32,
 }
 
 /// A creature's armor at its own level (UNIT_MOD_ARMOR BASE_VALUE,
@@ -315,6 +363,7 @@ pub(crate) type ScalingItem<'a> = (
     Option<&'a UnitLevel>,
     Option<&'a LevelScaling>,
     Option<&'a ScaledStats>,
+    Option<&'a ArmorTuning>,
 );
 
 /// A unit's level and, when it is a tuned creature, its scaling.
@@ -323,18 +372,41 @@ pub struct UnitScaling<'a> {
     /// `UnitLevel` (GetEffectiveLevel); a tuned creature's native level.
     level: u8,
     tuned: Option<(&'a LevelScaling, &'a LevelStats)>,
+    armor_tuning: Option<&'a ArmorTuning>,
 }
 
 impl<'a> UnitScaling<'a> {
-    pub fn from_item((level, scaling, stats): ScalingItem<'a>) -> Self {
+    pub fn from_item(
+        (level, scaling, stats): (
+            Option<&'a UnitLevel>,
+            Option<&'a LevelScaling>,
+            Option<&'a ScaledStats>,
+        ),
+    ) -> Self {
+        Self::from_query((level, scaling, stats, None))
+    }
+
+    pub(crate) fn from_query((level, scaling, stats, armor_tuning): ScalingItem<'a>) -> Self {
         Self {
             level: level.map_or(1, |level| level.0),
             tuned: scaling.zip(stats.map(|stats| &*stats.0)),
+            armor_tuning,
         }
     }
 
     pub fn of(world: &'a World, unit: Entity) -> Self {
-        Self::from_item((world.get(unit), world.get(unit), world.get(unit)))
+        Self::from_query((
+            world.get(unit),
+            world.get(unit),
+            world.get(unit),
+            world.get(unit),
+        ))
+    }
+
+    pub fn armor_constant(&self, target: &UnitScaling, constants: &ArmorConstants) -> Option<f32> {
+        constants
+            .at(self.level_against(target))
+            .map(|base| base * self.armor_tuning.map_or(1.0, |tuning| tuning.multiplier))
     }
 
     /// Unit::GetLevelForTarget / Creature::GetLevelForTarget.

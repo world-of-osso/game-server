@@ -1210,8 +1210,9 @@ mod tests {
                 ArmorConstant REAL);
              CREATE TABLE expected_stat_mod (ID INTEGER, CreatureHealthMod REAL,
                 CreatureAutoAttackDPSMod REAL, CreatureArmorMod REAL, ArmorConstantMod REAL);
+             CREATE TABLE mythic_plus_season (ID INTEGER, MilestoneSeason INTEGER);
              CREATE TABLE content_tuning_x_expected (ID INTEGER, ContentTuningID INTEGER,
-                ExpectedStatModID INTEGER, MinMythicPlusSeasonID INTEGER);
+                ExpectedStatModID INTEGER, MinMythicPlusSeasonID INTEGER, MaxMythicPlusSeasonID INTEGER);
              CREATE TABLE creature_classlevelstats (level INTEGER, class INTEGER,
                 basehp0 INTEGER, basehp1 INTEGER, basehp2 INTEGER, basemana INTEGER);
              INSERT INTO creature_classlevelstats VALUES (1,1,42,42,42,0);

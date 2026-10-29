@@ -1530,6 +1530,117 @@ fn simc_dummy_melee_uses_recipient_avoidance_and_strikes_can_block() {
 }
 
 #[test]
+#[ignore = "runs all six native MID2 tank dummy replays"]
+fn all_tanks_use_dungeon_season_combat_inputs() {
+    let directory = Path::new(
+        "/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/healer-tank-replay",
+    );
+    for spec in [66, 73, 104, 250, 268, 581] {
+        let trace = directory.join(format!("{spec}.simc-trace.log"));
+        let report =
+            super::tank_replay::replay_simc_with_healing(spec, &trace, 300, 70448, true).unwrap();
+        assert_eq!(report["spec"], spec, "{report}");
+        assert_eq!(
+            report["tank_dummy_scenario"]["attacker_level"], 92,
+            "{report}"
+        );
+        let k = report["tank_dummy_scenario"]["armor_constant"]
+            .as_f64()
+            .unwrap();
+        assert!((k - 4531.03).abs() < 0.01, "spec {spec} K={k}");
+        assert!(report["raw_damage"].as_f64().unwrap() > 0.0, "{report}");
+    }
+}
+
+#[test]
+#[ignore = "uses native player defense and actual melee outcome rolls"]
+fn higher_level_attacker_reduces_player_avoidance() {
+    use crate::melee::MeleeOutcome;
+    use shared::components::UnitLevel;
+    let _rng = crate::random::seed_scope(70448);
+    let mut h = crate::spell_cast::test_harness::harness(Vec::new(), &[], 12).unwrap();
+    h.app.world_mut().entity_mut(h.caster).insert(UnitLevel(90));
+    h.app.world_mut().entity_mut(h.npc).insert(UnitLevel(92));
+    let mut stats = h
+        .app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(h.caster)
+        .unwrap();
+    stats.defense.dodge = 3.0;
+    stats.defense.parry = 3.0;
+    stats.defense.block = 0.0;
+    drop(stats);
+    for _ in 0..1000 {
+        let (outcome, difference) =
+            crate::combat::roll_simc_dummy_outcome(h.app.world(), h.npc, h.caster, false, 0.0, 0.0)
+                .unwrap();
+        assert_eq!(difference, -2);
+        assert_eq!(outcome, MeleeOutcome::Hit);
+    }
+    h.app.world_mut().entity_mut(h.npc).insert(UnitLevel(90));
+    let avoided = (0..1000)
+        .filter(|_| {
+            crate::combat::roll_simc_dummy_outcome(h.app.world(), h.npc, h.caster, false, 0.0, 0.0)
+                .unwrap()
+                .0
+                .avoided()
+        })
+        .count();
+    assert!(avoided > 0, "equal-level attacks retain defense");
+}
+
+#[test]
+#[ignore = "uses native ExpectedStat and real incoming damage"]
+fn dungeon_season_armor_tuning_changes_incoming_swing_damage() {
+    use shared::components::{Health, UnitLevel};
+    let mut h = crate::spell_cast::test_harness::harness(Vec::new(), &[], 12).unwrap();
+    let data = crate::test_data::world_data();
+    h.app.insert_resource(data.armor_constants.clone());
+    h.app.world_mut().entity_mut(h.caster).insert((
+        UnitLevel(90),
+        Health {
+            current: 10000.0,
+            max: 10000.0,
+        },
+    ));
+    h.app.world_mut().entity_mut(h.npc).insert(UnitLevel(92));
+    h.app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(h.caster)
+        .unwrap()
+        .armor = 3430.0;
+    let hit = super::healer_intake::Hit {
+        tick: 1,
+        source_guid: 0,
+        pack: 0,
+        target_slot: 0,
+        school: 1,
+        raw: 1000.0,
+        level_scaling_factor: 1.0,
+        kind: super::healer_intake::HitKind::Melee {
+            hand: 0,
+            outcome: "Hit".into(),
+            level_difference: -2,
+            critical_multiplier: 1.0,
+            weapon_speed: 2.0,
+        },
+    };
+    crate::combat::replay_healer_hit(h.app.world_mut(), h.npc, h.caster, &hit).unwrap();
+    let ordinary = 10000.0 - h.health(h.caster);
+    h.app
+        .world_mut()
+        .get_mut::<Health>(h.caster)
+        .unwrap()
+        .current = 10000.0;
+    let tuning = data.expected_stats.armor_tuning(3025, 120).unwrap();
+    h.app.world_mut().entity_mut(h.npc).insert(tuning);
+    crate::combat::replay_healer_hit(h.app.world_mut(), h.npc, h.caster, &hit).unwrap();
+    let dungeon = 10000.0 - h.health(h.caster);
+    assert_eq!(ordinary, 500.0);
+    assert_eq!(dungeon, 569.0);
+}
+
+#[test]
 #[ignore = "uses native recipient armor and absorb data"]
 fn simc_dummy_bleed_uses_native_absorbs_but_not_armor() {
     let mut h = crate::spell_cast::test_harness::harness(Vec::new(), &[17], 5).unwrap();

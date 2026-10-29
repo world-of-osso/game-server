@@ -166,7 +166,10 @@ fn spawn_dance_weapon(world: &mut World, caster: Entity, costs: &[(CostPool, f32
     {
         return;
     }
-    if !costs.iter().any(|(pool, _)| *pool == CostPool::Power(PowerType::Runes)) {
+    if !costs
+        .iter()
+        .any(|(pool, _)| *pool == CostPool::Power(PowerType::Runes))
+    {
         return;
     }
     // SimC76f8118 sc_death_knight.cpp13072–13075 rolls once per rune resource
