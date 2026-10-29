@@ -1,7 +1,7 @@
 //! Real Barkskin uses the selected Matted Fur rank and one recipient multiplier.
 use super::*;
 use crate::auras::{ActiveAuras, AuraStatMods};
-use crate::stats::CharacterStats;
+use crate::stats::{CharacterStats, StatModifiers, WeaponAttackType};
 
 #[test]
 #[ignore = "requires Guardian rank-two Matted Fur profile and native world data"]
@@ -18,7 +18,12 @@ fn guardian_matted_fur_uses_selected_rank_and_single_absorb_multiplier() {
     assert_eq!(coefficient, 3750.0);
     let stats = world.get::<CharacterStats>(actor).unwrap();
     let recipient = world.get::<AuraStatMods>(actor).unwrap().absorb_taken_mult;
-    let expected = (stats.attack_power * coefficient / 100.0
+    let attack_power = stats.total_attack_power(
+        WeaponAttackType::MainHand,
+        world.get::<StatModifiers>(actor),
+    );
+    assert!(attack_power > stats.attack_power, "the equipped weapon contributes attack power");
+    let expected = (attack_power * coefficient / 100.0
         * (1.0 + stats.versatility_pct / 100.0)
         * recipient)
         .round();
