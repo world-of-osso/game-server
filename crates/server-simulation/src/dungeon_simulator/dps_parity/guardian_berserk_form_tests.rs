@@ -45,7 +45,7 @@ fn guardian_absorbed_melee_special_earns_bear_rage_with_native_cooldown() {
         .unwrap();
     change_power(run.app.world_mut(), actor, PowerType::Rage, -1000.0);
     run.app
-        .insert_resource(crate::test_support::healer_intake::Capture {
+        .insert_resource(super::super::healer_intake::Capture {
             members: vec![actor],
             ..Default::default()
         });
@@ -109,7 +109,7 @@ fn guardian_absorbed_melee_special_earns_bear_rage_with_native_cooldown() {
     let capture = run
         .app
         .world()
-        .resource::<crate::test_support::healer_intake::Capture>();
+        .resource::<super::super::healer_intake::Capture>();
     assert_eq!(capture.melee_rage.get(&(actor, "taken")), Some(&6.0));
 }
 
