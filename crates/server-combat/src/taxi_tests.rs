@@ -113,13 +113,36 @@ fn ruby_ferry_click_flies_owner_and_follower_on_real_path() {
         );
         assert!(h.app.world().get::<TaxiFlight>(entity).is_some());
     }
+    let path: Vec<Vec3> = h
+        .conn
+        .prepare(
+            "SELECT Loc_0,Loc_1,Loc_2 FROM taxi_path_node WHERE PathID=11715 ORDER BY NodeIndex",
+        )
+        .unwrap()
+        .query_map([], |row| Ok(bevy((row.get(0)?, row.get(1)?, row.get(2)?))))
+        .unwrap()
+        .map(|row| {
+            let point = row.unwrap();
+            Vec3::new(point.x, point.y, point.z)
+        })
+        .collect();
+    let mut observed = Vec::new();
     for _ in 0..2000 {
+        let position = h.app.world().get::<Position>(h.player).unwrap();
+        observed.push(Vec3::new(position.x, position.y, position.z));
         if h.app.world().get::<TaxiFlight>(h.player).is_none()
             && h.app.world().get::<TaxiFlight>(follower).is_none()
         {
             break;
         }
         h.app.update();
+    }
+    assert_eq!(path.len(), 10);
+    for point in path {
+        assert!(
+            observed.iter().any(|sample| sample.distance(point) < 2.0),
+            "flight missed source path node {point:?}"
+        );
     }
     let endpoint = bevy((1572.375, -221.335068, 320.0));
     for entity in [h.player, follower] {
