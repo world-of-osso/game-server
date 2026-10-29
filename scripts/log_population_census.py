@@ -57,13 +57,14 @@ def engagement_guids(fields):
     return tuple(guid for guid in (fields[1], fields[5]) if guid.startswith('Creature-'))
 
 
-def census(paths, maps, samples=None):
+def census(paths, maps, samples=None, zones_only=False):
     runs = []
     for path in sorted(paths):
         current = None
         encounter = None
         engaged = set()
         activity = {}
+        in_key = False
         with path.open(encoding="utf-8", errors="replace") as source:
             for line in source:
                 timestamp, sep, payload = line.partition("  ")
@@ -73,6 +74,9 @@ def census(paths, maps, samples=None):
                 if event == "CHALLENGE_MODE_START":
                     fields = next(csv.reader([payload]))
                     current = None
+                    in_key = True
+                    if zones_only:
+                        continue
                     encounter = None
                     engaged = set()
                     activity = {}
@@ -85,6 +89,19 @@ def census(paths, maps, samples=None):
                 if event == "CHALLENGE_MODE_END":
                     current = None
                     encounter = None
+                    in_key = False
+                    continue
+                if zones_only and event == 'ZONE_CHANGE' and not in_key:
+                    fields = next(csv.reader([payload]))
+                    current = None
+                    encounter = None
+                    engaged = set()
+                    activity = {}
+                    if len(fields) > 2 and fields[1].isdigit() and int(fields[1]) in maps:
+                        current = {'file': path.name, 'map': int(fields[1]), 'start': timestamp,
+                                   'name': fields[2], 'challenge_id': None, 'session_kind': 'zone',
+                                   'creatures': {}, 'encounters': []}
+                        runs.append(current)
                     continue
                 if current is None:
                     continue
@@ -494,6 +511,7 @@ def floor_requests(runs):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--map", type=int, action="append", required=True)
+    parser.add_argument("--zone-only", action='store_true', help='extract zone-entry intervals outside challenge keys')
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--floor-requests", type=Path)
     parser.add_argument("--precombat-samples", type=Path)
@@ -511,9 +529,9 @@ def main():
     if args.precombat_samples:
         args.precombat_samples.parent.mkdir(parents=True, exist_ok=True)
         with args.precombat_samples.open('w', encoding='utf-8') as samples:
-            runs = census(paths, set(args.map), samples)
+            runs = census(paths, set(args.map), samples, args.zone_only)
     else:
-        runs = census(paths, set(args.map))
+        runs = census(paths, set(args.map), zones_only=args.zone_only)
     if args.safe_samples:
         if not args.precombat_samples:
             parser.error('--safe-samples requires --precombat-samples')
