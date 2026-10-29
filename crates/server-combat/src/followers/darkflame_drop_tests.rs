@@ -342,3 +342,65 @@ fn darkflame_drop_idle_follower_descends_when_owner_is_directly_below() {
         "idle follower must not treat a reachable owner30yd below as already in range: {feet:?}"
     );
 }
+
+/// Live Follow failure 2026-10-29 in the Sprawling Trackyard: the slot point lies on a
+/// walkable strip that the follower's polygon does not connect to.
+const TRACKYARD_FROM: Vec3 = Vec3::new(297.12, 86.53, -38.58);
+const TRACKYARD_TO: Vec3 = Vec3::new(331.23, 86.91, -36.79);
+
+#[test]
+#[ignore = "requires actual2651 navigation assets"]
+fn darkflame_trackyard_follow_walks_the_incomplete_corridor_chase_stays_blocked() {
+    let mut map =
+        ::navigation::NavigationMap::open(&navigation_root().join(MAP.to_string())).unwrap();
+    let mut plan = ::navigation::NavigationPlan::default();
+    assert!(
+        map.path_with_plan(TRACKYARD_FROM, TRACKYARD_TO, &mut plan)
+            .is_err(),
+        "non-Follow movers keep the disconnect as no path"
+    );
+    let path = map
+        .follow_path(TRACKYARD_FROM, TRACKYARD_TO, &mut plan)
+        .expect("Follow walks PATHFIND_INCOMPLETE");
+    assert!(!path.complete);
+    let end = *path.points.last().unwrap();
+    let gap = |p: Vec3| (p.x - TRACKYARD_TO.x).hypot(p.z - TRACKYARD_TO.z);
+    assert!(
+        gap(end) < gap(TRACKYARD_FROM) - 10.0,
+        "closest reachable polygon is toward the target: {end:?}"
+    );
+}
+
+#[test]
+#[ignore = "requires actual2651 navigation/ground and imported follower profile"]
+fn darkflame_trackyard_follower_advances_toward_unreachable_slot_point() {
+    let slot = crate::creature_ai::PartyFollowSlot::new(2, 4);
+    // Facing PI - slot puts the slot point 4yd south of the owner: the live target.
+    let owner = Vec3::new(TRACKYARD_TO.x, TRACKYARD_TO.y, TRACKYARD_TO.z + 4.0);
+    let (mut h, follower) = create_native_follower_fixture();
+    h.app.world_mut().entity_mut(follower).insert(slot);
+    *h.app.world_mut().get_mut::<Position>(follower).unwrap() = position(TRACKYARD_FROM);
+    h.app.world_mut().entity_mut(h.caster).insert((
+        position(owner),
+        shared::components::Rotation {
+            x: 0.0,
+            y: std::f32::consts::PI - slot.angle(),
+            z: 0.0,
+        },
+    ));
+    let gap = |p: Vec3| (p.x - TRACKYARD_TO.x).hypot(p.z - TRACKYARD_TO.z);
+    let mut before = TRACKYARD_FROM;
+    for _ in 0..80 {
+        h.advance(1);
+        let after = point(*h.app.world().get::<Position>(follower).unwrap());
+        assert!(
+            after.distance(before) < 4.0,
+            "teleported: {before:?}->{after:?}"
+        );
+        before = after;
+    }
+    assert!(
+        gap(before) < gap(TRACKYARD_FROM) - 10.0,
+        "follower walks toward the slot point: {before:?}"
+    );
+}
