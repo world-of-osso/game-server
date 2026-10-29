@@ -2,7 +2,9 @@
 mod bindings;
 mod facts;
 use super::literal_rotation::{
-    self, Driver, PrecombatPoll, equipment::Equipment, execution::{Execution, Prepared},
+    self, Driver, PrecombatPoll,
+    equipment::Equipment,
+    execution::{Execution, Prepared},
 };
 use crate::simc_apl_native::{Bindings, Encounter, NativeFacts};
 use bevy::prelude::*;

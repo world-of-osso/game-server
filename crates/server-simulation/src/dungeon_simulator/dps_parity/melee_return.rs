@@ -37,7 +37,10 @@ pub(super) fn advance(world: &mut World) {
 }
 
 fn advance_actor(world: &mut World, actor: Entity, delta: f32) {
-    if world.get::<crate::followers::retreat::RetreatSetup>(actor).is_some() {
+    if world
+        .get::<crate::followers::retreat::RetreatSetup>(actor)
+        .is_some()
+    {
         return;
     }
     // A charge can finish inside melee reach facing along its short travel,

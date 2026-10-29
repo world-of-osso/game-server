@@ -11,7 +11,11 @@ fn havoc_real_retreat_uses_max_melee_setup_over_300_seconds() {
     engage(&mut run);
     let actor = run.actor;
     let target = run.targets[0];
-    let mut previous_time = run.app.world().resource::<Time<Virtual>>().elapsed_secs_f64();
+    let mut previous_time = run
+        .app
+        .world()
+        .resource::<Time<Virtual>>()
+        .elapsed_secs_f64();
     let mut previous_out = false;
     let mut outside = 0.0;
     let mut seen_events = 0;
@@ -19,31 +23,49 @@ fn havoc_real_retreat_uses_max_melee_setup_over_300_seconds() {
     advance_combat_observed(&mut run, |run| {
         let world = run.app.world();
         let now = world.resource::<Time<Virtual>>().elapsed_secs_f64();
-        if previous_out { outside += now - previous_time; }
+        if previous_out {
+            outside += now - previous_time;
+        }
         previous_time = now;
         let from = world.get::<Position>(actor).unwrap();
         let to = world.get::<Position>(target).unwrap();
         let distance = (from.x - to.x).hypot(from.z - to.z);
         let range = crate::scripted_ai::model_reach::melee_range(world, actor, target).unwrap();
         previous_out = distance > range;
-        let events = &world.resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
+        let events = &world
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0;
         for event in &events[seen_events..] {
-            if event.source == Some(actor.to_bits()) && event.spell_id == Some(198793)
+            if event.source == Some(actor.to_bits())
+                && event.spell_id == Some(198793)
                 && event.kind == CombatLogKind::CastSuccess
             {
                 casts += 1;
-                assert!((distance - range).abs() < 0.05, "Retreat must launch at melee reach: {distance} vs {range}");
+                assert!(
+                    (distance - range).abs() < 0.05,
+                    "Retreat must launch at melee reach: {distance} vs {range}"
+                );
                 let rotation = world.get::<shared::components::Rotation>(actor).unwrap();
                 let facing = Vec2::new(rotation.y.sin(), rotation.y.cos());
                 let away = Vec2::new(from.x - to.x, from.z - to.z).normalize();
-                assert!(facing.dot(away) > 0.99, "Retreat must face away from the target");
+                assert!(
+                    facing.dot(away) > 0.99,
+                    "Retreat must face away from the target"
+                );
             }
         }
         seen_events = events.len();
-    }).unwrap();
+    })
+    .unwrap();
     eprintln!("RETREAT_300S casts={casts} outside_melee={outside:.3}s simc=7.275s");
-    assert!(casts >= 8, "real rotation must exercise repeated Retreat: {casts}");
-    assert!(outside < 20.0, "max-reach setup must improve on the prior 29.0s: {outside}");
+    assert!(
+        casts >= 8,
+        "real rotation must exercise repeated Retreat: {casts}"
+    );
+    assert!(
+        outside < 20.0,
+        "max-reach setup must improve on the prior 29.0s: {outside}"
+    );
 }
 
 #[derive(Resource, Default)]

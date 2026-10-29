@@ -2000,7 +2000,11 @@ mod tests {
         fn bleed_taken(void_reaver: bool) -> (f32, f32) {
             let _seed = crate::random::seed_scope(70_448);
             let (profile, mut traits) = read_reference(581).unwrap();
-            assert!(traits.iter().any(|entry| entry.entry_id == VOID_REAVER_ENTRY));
+            assert!(
+                traits
+                    .iter()
+                    .any(|entry| entry.entry_id == VOID_REAVER_ENTRY)
+            );
             if !void_reaver {
                 traits.retain(|entry| entry.entry_id != VOID_REAVER_ENTRY);
             }
@@ -2023,7 +2027,11 @@ mod tests {
                 health.current = health.max;
                 let before = health.current;
                 crate::spell_cast::effects::replay_simc_dummy_bleed(world, target, actor, 10_000.0);
-                before - world.get::<shared::components::Health>(actor).unwrap().current
+                before
+                    - world
+                        .get::<shared::components::Health>(actor)
+                        .unwrap()
+                        .current
             };
             let branded = bleed(&mut run);
             crate::auras::remove_auras(
@@ -2039,7 +2047,10 @@ mod tests {
         }
         // Native 247456 effect 2 is -6% damage to the aura caster; Soulcrush doubles it.
         let (frail, plain) = bleed_taken(true);
-        assert!((frail - plain * 0.88).abs() <= 1.0, "frail={frail} plain={plain}");
+        assert!(
+            (frail - plain * 0.88).abs() <= 1.0,
+            "frail={frail} plain={plain}"
+        );
         let (frail, plain) = bleed_taken(false);
         assert_eq!(frail, plain, "Frailty needs Void Reaver to reduce damage");
     }
