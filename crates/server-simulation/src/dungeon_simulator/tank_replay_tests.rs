@@ -74,9 +74,18 @@ fn simc_dummy_strike_triggers_taken_melee_ability_proc() {
         run.app.world_mut(),
         target,
         RemoveReason::Cancelled,
-        |aura| matches!(aura.spell_id, 77535 | 207203 | 326809),
+        |aura| matches!(aura.spell_id, 77535 | 207203 | 326808 | 326809),
     );
     let max = run.app.world().get::<Health>(target).unwrap().max;
+    crate::spell_cast::creature_cast(run.app.world_mut(), target, 433895, Some(source), false)
+        .unwrap();
+    for _ in 0..4 {
+        run.app.update();
+    }
+    assert!(
+        !crate::auras::has_aura(run.app.world(), target, 326808),
+        "self-targeted Vampiric Strike effects must not trigger Sanguination"
+    );
     run.app
         .world_mut()
         .get_mut::<Health>(target)
