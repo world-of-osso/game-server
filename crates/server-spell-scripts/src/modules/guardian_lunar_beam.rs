@@ -3,7 +3,7 @@ use bevy::prelude::*;
 
 use super::combat;
 use combat::spell_cast::{
-    self, effects::EffectCtx, queued_triggers, script_registry::SpellScriptHook,
+    self, effects::EffectCtx, queued_triggers, script_registry::SpellScriptHook, targets,
 };
 use combat::spell_info::SpellInfo;
 
@@ -15,6 +15,9 @@ fn schedule_heals(world: &mut World, caster: Entity, spell: &SpellInfo) {
         return;
     }
     let duration = spell_cast::duration_ms(world, caster, spell).max(0) as u32;
+    let Some(origin) = targets::position(world, caster) else {
+        return;
+    };
     let ctx = EffectCtx {
         caster,
         spell,
@@ -24,5 +27,15 @@ fn schedule_heals(world: &mut World, caster: Entity, spell: &SpellInfo) {
     };
     for delay in (1000..=duration).step_by(1000) {
         queued_triggers::schedule_full_trigger(world, &ctx, caster, 204069, delay);
+        queued_triggers::schedule_destination_trigger(
+            world,
+            &ctx,
+            queued_triggers::DestinationTrigger {
+                target: caster,
+                spell_id: 414613,
+                delay_ms: delay,
+                destination: origin.to_array(),
+            },
+        );
     }
 }
