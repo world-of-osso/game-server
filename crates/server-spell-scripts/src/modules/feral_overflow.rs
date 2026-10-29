@@ -29,18 +29,22 @@ fn active(world: &World, unit: Entity) -> bool {
         && (auras::has_aura(world, unit, BERSERK) || auras::has_aura(world, unit, INCARNATION))
 }
 
-pub(super) fn capacity(world: &World, unit: Entity) -> f32 {
+pub(super) fn extra_max(world: &World, unit: Entity) -> f32 {
     if !active(world, unit) {
         return 0.0;
     }
-    let max = world
+    world
         .resource::<SpellStore>()
         .get(OVERFLOW)
         .expect("Overflowing Power spell")
         .aura_options
         .as_ref()
         .expect("Overflowing Power stacks")
-        .cumulative_aura;
+        .cumulative_aura as f32
+}
+
+fn capacity(world: &World, unit: Entity) -> f32 {
+    let max = extra_max(world, unit) as u32;
     let stacks = world
         .get::<ActiveAuras>(unit)
         .and_then(|auras| {

@@ -48,7 +48,7 @@ fn on_combo_gain(world: &mut World, ctx: &EffectCtx<'_>, target: Entity, gained:
     }
     let (current, max) =
         powers::power_value(world, ctx.caster, PowerType::ComboPoints).expect("Feral combo points");
-    let fill = max - current + super::feral_overflow::capacity(world, ctx.caster);
+    let fill = max - current + super::feral_overflow::extra_max(world, ctx.caster);
     if fill <= 0.0 {
         return;
     }
