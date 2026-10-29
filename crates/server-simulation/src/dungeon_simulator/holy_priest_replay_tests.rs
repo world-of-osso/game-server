@@ -2,6 +2,78 @@ use std::path::Path;
 
 #[test]
 #[ignore = "requires native Holy Priest spell data"]
+fn divine_hymn_pulses_emit_scaled_cosmic_ripple() {
+    use crate::spell_cast::test_harness::{ObservedCombatEvents, harness, spawn_player};
+    use shared::components::Health;
+    use shared::protocol::CombatLogKind;
+    let mut h = harness(Vec::new(), &[64843, 64844, 1262760, 243241], 5).unwrap();
+    h.app.init_resource::<ObservedCombatEvents>();
+    let ally = spawn_player(&mut h.app, 5, 3.0);
+    *h.app.world_mut().get_mut::<Health>(ally).unwrap() = Health {
+        current: 1.0,
+        max: 1_000_000.0,
+    };
+    h.app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(h.caster)
+        .unwrap()
+        .crit_pct = 0.0;
+    crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 243241, Some(h.caster), 1);
+    h.advance(2);
+    let baseline = h
+        .app
+        .world()
+        .resource::<ObservedCombatEvents>()
+        .0
+        .iter()
+        .find(|e| {
+            e.kind == CombatLogKind::Heal
+                && e.spell_id == Some(243241)
+                && e.target == Some(ally.to_bits())
+        })
+        .unwrap()
+        .amount;
+    h.app
+        .world_mut()
+        .resource_mut::<ObservedCombatEvents>()
+        .0
+        .clear();
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: h.caster,
+            target: h.caster,
+            spell_id: 1262760,
+            effect_mask: u32::MAX,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    crate::spell_cast::creature_cast(h.app.world_mut(), h.caster, 64843, Some(h.caster), true)
+        .unwrap();
+    h.advance(100);
+    let events = &h.app.world().resource::<ObservedCombatEvents>().0;
+    assert!(
+        events.iter().any(|e| e.kind == CombatLogKind::Heal
+            && e.spell_id == Some(64844)
+            && e.target == Some(ally.to_bits())),
+        "native hymn pulse must remain: {events:?}"
+    );
+    let ripple = events
+        .iter()
+        .find(|e| {
+            e.kind == CombatLogKind::Heal
+                && e.spell_id == Some(243241)
+                && e.target == Some(ally.to_bits())
+        })
+        .expect("hymn must emit ripple");
+    assert!(
+        (ripple.amount as f32 - baseline as f32 * 0.75).abs() <= 2.0,
+        "baseline={baseline}, ripple={ripple:?}"
+    );
+}
+
+#[test]
+#[ignore = "requires native Holy Priest spell data"]
 fn serenity_upgrades_the_next_real_flash_heal_to_benediction() {
     use crate::spell_cast::{
         CastTargets, cast_for_player_with_targets,

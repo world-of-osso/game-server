@@ -103,6 +103,38 @@ pub(super) fn benediction_from_mending(
     }
 }
 
+pub(super) fn hymn_tick(
+    spell: u32,
+    index: u8,
+) -> Option<combat::spell_cast::script_registry::ContextHitHook> {
+    ((spell, index) == (64_843, 0)).then_some(cast_hymn_tick)
+}
+
+fn cast_hymn_tick(world: &mut World, ctx: &combat::spell_cast::effects::EffectCtx, target: Entity) {
+    combat::spell_cast::cast_triggered(world, ctx.caster, 64_844, Some(target), ctx.depth + 1);
+    if !has_aura(world, ctx.caster, BENEDICTION_SERENITY) {
+        return;
+    }
+    let scale = super::script_effect_value(world, ctx.caster, BENEDICTION_SERENITY, 0) / 100.0;
+    let Some(mut spell) =
+        combat::spell_cast::load_triggered_spell(world, COSMIC_RIPPLE, ctx.depth + 1)
+    else {
+        return;
+    };
+    for effect in &mut spell.effects {
+        effect.base_points *= scale;
+        effect.bonus_coefficient *= scale;
+        effect.bonus_coefficient_from_ap *= scale;
+    }
+    combat::spell_cast::launch_triggered_spell(
+        world,
+        ctx.caster,
+        &spell,
+        Some(ctx.caster),
+        ctx.depth + 1,
+    );
+}
+
 pub(super) fn serenity_area_filter(spell: u32, index: u8) -> Option<super::AreaTargetFilter> {
     ((spell, index) == (SERENITY_SPLASH, 0)).then_some(select_serenity_allies)
 }
