@@ -214,6 +214,12 @@ enum AdminRequest {
         character_name: String,
         percent: u32,
     },
+    /// The signed reputation `value` with `faction_id`.
+    SetReputation {
+        character_name: String,
+        faction_id: u32,
+        value: i32,
+    },
     SetAppearance {
         character_name: String,
         appearance: CharacterAppearance,
@@ -449,6 +455,11 @@ enum AdminResponse {
         character_name: String,
         percent: u32,
     },
+    ReputationSet {
+        character_name: String,
+        faction_id: u32,
+        value: i32,
+    },
     AppearanceSet {
         character_name: String,
         appearance: CharacterAppearance,
@@ -595,6 +606,7 @@ fn print_usage() {
     eprintln!("  game-server-admin mail-deliver-now <character_name>");
     eprintln!("  game-server-admin quest-complete <character_name> <quest_id>");
     eprintln!("  game-server-admin set-durability <character_name> <percent>");
+    eprintln!("  game-server-admin set-reputation <character_name> <faction_id> <value>");
     eprintln!(
         "  game-server-admin set-appearance <character_name> <sex> <skin_color> <face> <eye_color> <hair_style> <hair_color> <facial_style>"
     );
@@ -770,6 +782,21 @@ fn parse_request(args: &[String]) -> AdminRequest {
             }
         }
         "set-durability" => parse_set_durability(args),
+        "set-reputation" => {
+            require_args(
+                args,
+                5,
+                "set-reputation <character_name> <faction_id> <value>",
+            );
+            AdminRequest::SetReputation {
+                character_name: args[2].clone(),
+                faction_id: parse_number(&args[3], "faction_id"),
+                value: args[4].parse().unwrap_or_else(|_| {
+                    eprintln!("Invalid value: {}", args[4]);
+                    std::process::exit(1);
+                }),
+            }
+        }
         "set-appearance" => parse_set_appearance(args),
         "set-equipment-appearance" => parse_set_equipment_appearance(args),
         "clear-equipment-appearance" => parse_clear_equipment_appearance(args),

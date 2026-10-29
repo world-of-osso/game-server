@@ -159,6 +159,12 @@ pub enum AdminRequest {
         character_name: String,
         percent: u32,
     },
+    /// The signed reputation `value` with `faction_id`.
+    SetReputation {
+        character_name: String,
+        faction_id: u32,
+        value: i32,
+    },
     SetAppearance {
         character_name: String,
         appearance: CharacterAppearance,
@@ -426,6 +432,11 @@ pub enum AdminResponse {
     DurabilitySet {
         character_name: String,
         percent: u32,
+    },
+    ReputationSet {
+        character_name: String,
+        faction_id: u32,
+        value: i32,
     },
     AppearanceSet {
         character_name: String,

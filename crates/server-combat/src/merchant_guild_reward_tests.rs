@@ -77,3 +77,51 @@ fn guild_vendor_refuses_a_reward_whose_guild_achievement_is_unearned() {
     assert_eq!(h.failures(), vec![MerchantError::MissingTurnins]);
     assert_eq!(h.inventory(), before);
 }
+
+#[test]
+fn admin_set_reputation_opens_the_friendly_reward_to_the_live_player() {
+    use bevy::ecs::system::RunSystemOnce;
+
+    use crate::admin_handlers::handle_set_reputation;
+    use crate::admin_types::AdminResponse;
+
+    let mut h = guild_shopper();
+    let friendly = threshold_for_standing(Standing::Friendly);
+    let set = move |faction_id| {
+        move |db: Res<GameDatabase>, mut commands: Commands| {
+            handle_set_reputation(&db, &mut commands, "Shopper", faction_id, friendly)
+        }
+    };
+    let rejected = h.app.world_mut().run_system_once(set(999_999)).unwrap();
+    assert!(
+        matches!(rejected, AdminResponse::Error(message) if message == "faction 999999 not found")
+    );
+
+    let response = h
+        .app
+        .world_mut()
+        .run_system_once(set(crate::guild_rewards::GUILD_FACTION))
+        .unwrap();
+    assert!(matches!(
+        response,
+        AdminResponse::ReputationSet {
+            faction_id: 1168,
+            value: 3000,
+            ..
+        }
+    ));
+    let (npc, cape) = offer(&mut h, GARGOYLE_CAPE);
+    assert!(
+        cape.usable,
+        "Friendly guild standing lists the cape as usable"
+    );
+    h.buy(npc, cape.slot, cape.item_id, 1);
+    assert!(h.failures().is_empty());
+    assert_eq!(h.count_of(GARGOYLE_CAPE), vec![1]);
+    let db = &h.app.world().resource::<GameDatabase>().db;
+    let saved = persistence::load_reputation(db, h.character_id, || unreachable!());
+    assert_eq!(
+        saved.get_value(crate::guild_rewards::GUILD_FACTION),
+        friendly
+    );
+}

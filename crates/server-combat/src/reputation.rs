@@ -241,6 +241,50 @@ fn send_reputation_error(
     });
 }
 
+/// Admin `set-reputation`: `faction_id` at `value`, saved, and sent to the live player.
+pub(crate) fn set_reputation(world: &mut World, character: u64, faction_id: u32, value: i32) {
+    let db = world.resource::<GameDatabase>().db.clone();
+    let registry = default_faction_registry();
+    let live = world
+        .query::<(Entity, &ClientId, &CharacterReputation)>()
+        .iter(world)
+        .find(|(_, id, _)| id.0 == character)
+        .map(|(player, _, reputation)| (player, reputation.clone()));
+    let mut reputation = match &live {
+        Some((_, reputation)) => reputation.clone(),
+        None => {
+            let Some(data) = persistence::load_character(&db, character) else {
+                warn!("set-reputation: character {character} has no saved data");
+                return;
+            };
+            persistence::load_reputation(&db, character, || {
+                CharacterReputation::new_for_player(&registry, data.race, data.class)
+            })
+        }
+    };
+    reputation.set_rep(faction_id, value);
+    persistence::save_reputation(&db, character, &reputation);
+    let Some((player, _)) = live else {
+        return;
+    };
+    let snapshot = read_reputation_snapshot(&db, character, &reputation, &registry);
+    world.entity_mut(player).insert(reputation);
+    let connection = world
+        .query::<(Entity, &PlayerLink)>()
+        .iter(world)
+        .find(|(_, link)| link.0 == player)
+        .map(|(connection, _)| connection);
+    if let Some(mut sender) =
+        connection.and_then(|entity| world.get_mut::<MessageSender<ReputationStateUpdate>>(entity))
+    {
+        sender.send::<ReputationChannel>(ReputationStateUpdate {
+            snapshot: Some(snapshot),
+            message: None,
+            error: None,
+        });
+    }
+}
+
 pub(crate) fn read_reputation_snapshot(
     db: &redb::Database,
     character: u64,
