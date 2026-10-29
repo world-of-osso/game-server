@@ -15,7 +15,7 @@ fn area_units_follows_relocations_across_cell_boundaries() {
         app.world_mut()
             .spawn((
                 map,
-                Position { x, y: 0.0, z },
+                Position { x, y: 232.711, z },
                 Health {
                     current: 100.0,
                     max: 100.0,
@@ -23,20 +23,21 @@ fn area_units_follows_relocations_across_cell_boundaries() {
             ))
             .id()
     };
-    let caster = spawn(&mut app, 63.0, -1.0);
-    let near = spawn(&mut app, 65.0, 1.0);
-    let far = spawn(&mut app, 200.0, 0.0);
-    let center = Vec3::new(63.0, 0.0, -1.0);
+    // Map 2521 Radiant Drake spawns 9001664 and 9001669 straddle x=1536.
+    let caster = spawn(&mut app, 1533.38, 234.109);
+    let near = spawn(&mut app, 1537.06, 261.51);
+    let far = spawn(&mut app, 1700.0, 240.0);
+    let center = Vec3::new(1533.38, 232.711, 234.109);
     assert_eq!(
-        area_units(app.world_mut(), caster, center, 5.0, Relation::Any, 0),
+        area_units(app.world_mut(), caster, center, 30.0, Relation::Any, 0),
         vec![caster, near]
     );
-    app.world_mut().get_mut::<Position>(far).unwrap().x = 64.0;
+    app.world_mut().get_mut::<Position>(far).unwrap().x = 1536.0;
     app.world()
         .resource::<crate::interest::InterestDirtyQueue>()
         .mark(far);
     assert_eq!(
-        area_units(app.world_mut(), caster, center, 5.0, Relation::Any, 0),
+        area_units(app.world_mut(), caster, center, 30.0, Relation::Any, 0),
         vec![caster, far, near]
     );
     app.world_mut().entity_mut(near).insert(crate::maps::InMap {
@@ -44,12 +45,12 @@ fn area_units_follows_relocations_across_cell_boundaries() {
         instance_id: 2,
     });
     assert_eq!(
-        area_units(app.world_mut(), caster, center, 5.0, Relation::Any, 0),
+        area_units(app.world_mut(), caster, center, 30.0, Relation::Any, 0),
         vec![caster, far]
     );
     app.world_mut().despawn(far);
     assert_eq!(
-        area_units(app.world_mut(), caster, center, 5.0, Relation::Any, 0),
+        area_units(app.world_mut(), caster, center, 30.0, Relation::Any, 0),
         vec![caster]
     );
 }
