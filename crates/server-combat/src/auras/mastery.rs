@@ -76,9 +76,19 @@ fn collect_updates(world: &World, unit: Entity, now: f64) -> Vec<AmountUpdate> {
             let spell = store
                 .get(aura.spell_id)
                 .filter(|spell| affects_points(spell));
-            aura.effects
-                .iter()
-                .filter_map(move |state| compute_update(world, unit, aura, state, spell?, now))
+            aura.effects.iter().filter_map(move |state| {
+                // SimC76f8118 sc_monk.cpp7031–7036: each Elusive stack uses
+                // current mastery, not the value when the stack was applied.
+                if aura.spell_id == 195630 && state.index == 0 {
+                    let amount = world.get::<CharacterStats>(unit)?.mastery_pct;
+                    return (amount != state.amount).then_some(AmountUpdate {
+                        instance: aura.instance_id,
+                        index: state.index,
+                        amount,
+                    });
+                }
+                compute_update(world, unit, aura, state, spell?, now)
+            })
         })
         .collect()
 }
