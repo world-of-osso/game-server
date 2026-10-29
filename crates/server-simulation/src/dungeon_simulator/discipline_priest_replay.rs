@@ -68,7 +68,7 @@ pub(super) fn prepare(
         ("damage", "penance"),
         ("damage", "mind_blast"),
         ("damage", "shadow_word_death,if=target.health.pct<=20"),
-        ("damage", "smite"),
+        ("filler", "smite"),
     ])?;
     Ok(Box::new(Discipline {
         driver: Driver::new(program),
@@ -245,6 +245,25 @@ impl Policy for Discipline {
         )? {
             return Ok(());
         }
+        let enemy = world
+            .get::<crate::networking::CombatTarget>(tank)
+            .and_then(|target| target.0);
+        if let Some(enemy) = enemy {
+            world
+                .entity_mut(healer)
+                .insert(crate::networking::CombatTarget(Some(enemy)));
+            if self.select(
+                world,
+                healer,
+                enemy,
+                injured,
+                active_atonements,
+                "damage",
+                &["penance", "mind_blast", "shadow_word_death"],
+            )? {
+                return Ok(());
+            }
+        }
         let flash_target = living
             .iter()
             .min_by(|(left, _), (right, _)| {
@@ -268,21 +287,15 @@ impl Policy for Discipline {
         {
             return Ok(());
         }
-        let enemy = world
-            .get::<crate::networking::CombatTarget>(tank)
-            .and_then(|t| t.0);
         if let Some(enemy) = enemy {
-            world
-                .entity_mut(healer)
-                .insert(crate::networking::CombatTarget(Some(enemy)));
             let _ = self.select(
                 world,
                 healer,
                 enemy,
                 injured,
                 active_atonements,
-                "damage",
-                &["penance", "mind_blast", "shadow_word_death", "smite"],
+                "filler",
+                &["smite"],
             )?;
         }
         Ok(())
