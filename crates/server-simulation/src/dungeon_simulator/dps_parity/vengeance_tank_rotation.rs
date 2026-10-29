@@ -377,7 +377,13 @@ mod tests {
                 > 0,
             "{report}"
         );
-        assert!(report["outgoing_damage_by_spell"]["189112"].as_i64().unwrap() > 0, "{report}");
+        assert!(
+            report["outgoing_damage_by_spell"]["189112"]
+                .as_i64()
+                .unwrap()
+                > 0,
+            "{report}"
+        );
         assert!(
             report["resource_spent_by_spell"]["228477"]["fury"]
                 .as_f64()
