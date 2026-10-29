@@ -66,7 +66,7 @@ fn preservation_life_givers_flame_splits_fire_breath_damage() {
 #[test]
 #[ignore = "checks Consume Flame against the native Dream Breath and Verdant Embrace"]
 fn preservation_consume_flame_consumes_dream_breath_on_verdant_embrace() {
-    let spells = [444088, 355941, 360995, 361195, 445495];
+    let spells = [444088, 355941, 360995, 361195, 361361, 445495];
     let mut h = crate::spell_cast::test_harness::harness(Vec::new(), &spells, 13).unwrap();
     h.app
         .init_resource::<crate::spell_cast::test_harness::ObservedCombatEvents>();
@@ -108,29 +108,8 @@ fn preservation_consume_flame_consumes_dream_breath_on_verdant_embrace() {
             .expires_at
             .unwrap()
     };
-    let dump = |h: &crate::spell_cast::test_harness::Harness, phase: &str| {
-        let now = crate::auras::aura_now(h.app.world());
-        let auras = h
-            .app
-            .world()
-            .get::<crate::auras::ActiveAuras>(h.caster)
-            .unwrap();
-        let rows: Vec<_> = auras
-            .iter()
-            .map(|aura| {
-                (
-                    aura.spell_id,
-                    aura.caster,
-                    aura.expires_at.map(|at| ((at - now) * 1000.0).round()),
-                )
-            })
-            .collect();
-        println!("{phase} target auras: {rows:?}");
-    };
-    dump(&h, "before Verdant Embrace");
     let before = expiry(&h, "before Verdant Embrace");
     crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 360995, Some(h.caster), 1);
-    dump(&h, "after Verdant Embrace");
     let after = expiry(&h, "after Verdant Embrace");
     assert!((before - after - 4.0).abs() < 0.001);
     h.advance(1);
@@ -149,6 +128,27 @@ fn preservation_consume_flame_consumes_dream_breath_on_verdant_embrace() {
         .expect("Verdant Embrace must detonate the consumed Dream Breath");
     // 70448: 4s / 2s × 0.5352 × 100 SP × 290%.
     assert!((309..=311).contains(&heal.amount), "{heal:?}");
+
+    let before = expiry(&h, "before Fluttering Seedlings");
+    crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 361361, Some(h.caster), 1);
+    let after = expiry(&h, "after Fluttering Seedlings");
+    assert!((before - after - 2.0).abs() < 0.001);
+    h.advance(1);
+    let events = &h
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    let heals: Vec<_> = events
+        .iter()
+        .filter(|event| {
+            event.kind == CombatLogKind::Heal
+                && event.spell_id == Some(445495)
+                && event.target == Some(h.caster.to_bits())
+        })
+        .collect();
+    assert_eq!(heals.len(), 2);
+    assert!((154..=156).contains(&heals[1].amount), "{:?}", heals[1]);
 }
 
 #[test]
