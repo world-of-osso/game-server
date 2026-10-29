@@ -17,7 +17,8 @@ struct Energy {
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::AfterCastUpdate(update)];
 
-#[cfg(feature = "test-support")]
+// server-combat compiles this file in its own tests (cfg(test)), where no test uses it.
+#[cfg(all(feature = "test-support", not(test)))]
 pub fn set_ghoul_energy(world: &mut World, pet: Entity, value: f64) {
     let now = combat::auras::aura_now(world);
     let mut energy = world.get_mut::<Energy>(pet).expect("actual ghoul Energy");
@@ -25,7 +26,7 @@ pub fn set_ghoul_energy(world: &mut World, pet: Entity, value: f64) {
     energy.updated = now;
 }
 
-#[cfg(feature = "test-support")]
+#[cfg(all(feature = "test-support", not(test)))]
 pub fn ghoul_energy(world: &World, pet: Entity) -> f64 {
     world.get::<Energy>(pet).expect("actual ghoul Energy").value
 }
