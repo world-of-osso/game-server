@@ -2,6 +2,7 @@
 """Prepare Murder Row's source-backed encounter rows on an independent DB copy."""
 import argparse
 import json
+import math
 import sqlite3
 from pathlib import Path
 
@@ -21,10 +22,21 @@ XATHUUX = dict(source_key='murder-row-xathuux-100526-205117', map=2813,
     population_kind='likely_spawn', summoned=False, identity_ambiguous=False)
 
 
+# First positioned player event after zone entry, 100126_203256 line 737884.
+# 9.167 seconds elapsed after entry: this is an observation, not an exact landing.
+ENTRANCE = (81002813, 2813, 8687.87, -4927.05, 19.061333,
+            math.degrees(1.4573), None,
+            'FOLLOWER_ENTRANCE_LOG_CORRELATED; 100126_203256 22:31:19.537; Entrance')
+
+
 def prepare(path):
     path = validate_copy(path)
     report = import_population(path, [XATHUUX])
     with sqlite3.connect(path) as db:
+        existing = db.execute('SELECT * FROM tdb_world_safe_locs WHERE ID=?', (ENTRANCE[0],)).fetchone()
+        if existing is not None and existing != ENTRANCE:
+            raise ValueError(f'conflicting entrance: {existing}')
+        db.execute('INSERT OR IGNORE INTO tdb_world_safe_locs VALUES (?,?,?,?,?,?,?,?)', ENTRANCE)
         for row in BINDINGS:
             existing = db.execute('SELECT * FROM raid_encounter_creature WHERE map_id=? AND creature_entry=?', row[:2]).fetchone()
             if existing is not None and existing != row:

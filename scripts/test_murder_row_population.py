@@ -4,7 +4,7 @@ import sqlite3
 import tempfile
 import unittest
 
-from murder_row_population import BINDINGS, prepare
+from murder_row_population import BINDINGS, ENTRANCE, prepare
 
 
 class MurderRowPopulationTest(unittest.TestCase):
@@ -18,6 +18,7 @@ class MurderRowPopulationTest(unittest.TestCase):
             prepare(target)
             prepare(target)
             with sqlite3.connect(target) as db:
+                self.assertEqual(db.execute('SELECT * FROM tdb_world_safe_locs WHERE ID=81002813').fetchone(), ENTRANCE)
                 bindings = db.execute('SELECT * FROM raid_encounter_creature WHERE map_id=2813 AND creature_entry IN (234647,237415) ORDER BY creature_entry').fetchall()
                 self.assertEqual(bindings, BINDINGS)
                 spawn = db.execute('SELECT position_x,position_y,position_z,orientation,spawnDifficulties FROM content_creature WHERE map=2813 AND id1=234647').fetchall()
