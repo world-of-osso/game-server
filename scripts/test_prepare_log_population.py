@@ -26,6 +26,15 @@ class PrepareTest(unittest.TestCase):
         self.assertEqual(records[0]['source_guid'], guid)
         self.assertEqual(records[0]['observation_event'], 'SPELL_DAMAGE')
         self.assertEqual(gaps, {})
+        cluster.update(ambiguous_match=True, candidate_centroid={'x': 10.5, 'y': 20},
+                       candidate_spread_yards=1, assignment_margin_yards=0.0)
+        centroid_request = dict(request, cluster_index=0, x=10.5)
+        anchor = [{'table': 'tdb_creature', 'guid': 123}]
+        records, gaps = module.prepare([run], [cluster], [request], [{'gap': {'kind': 'named_gap'}}], packs,
+                                       [centroid_request], [{'z': 31, 'method': 'authored_neighbor_anchor', 'anchor_rows': anchor}])
+        self.assertEqual((records[0]['x'], records[0]['z'], records[0]['identity_ambiguous']), (10.5, 31, True))
+        self.assertEqual(records[0]['floor_anchor_rows'], anchor)
+        cluster['ambiguous_match'] = False
         records, gaps = module.prepare([run], [cluster], [request], [{'gap': {'kind': 'named_gap', 'candidates': []}}])
         self.assertEqual(records, [])
         self.assertEqual(gaps['2521']['POSITION_Z_UNRESOLVED'], 1)
