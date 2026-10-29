@@ -198,6 +198,10 @@
 - `encounter_summons.py --encounter melidrussa` authenticates native wrapper→child metadata, blank TDB source identity, source spawn9001489/difficulties and TC/DB2 primary; prepare2609/map2521bit1 binding and explicitly local `boss_melidrussa_chillworn` on independent copies. Preserve stats/difficulties/models/addons/population and unrelated credit. Never grant Infused Whelp primary credit or create205 stats.
 - Named gaps: `MELIDRUSSA_CHILLSTORM_SELECTOR_UNSCRIPTED` (1311543→372851 selector/aura chain), `MELIDRUSSA_HAILBOMBS_SELECTOR_UNSCRIPTED` (396042 dummy→missile placement), `MELIDRUSSA_WHELP_PHASE_UNSOURCED` (Whelps/Bulwark/Frost Overload transitions). Native implicit targets are defaults; no guessed single-target/aura/summon forwarding. Whole encounter/follower clear/native visuals/loot/persistence remain unproved.
 
+## Leymor Consuming Stomp
+
+- TC `boss_leymor.cpp` removes native374720 effect0 periodic-trigger aura by killing its target, on any removal reason. TDB condition restricts this effect to190509 Ley-Line Sprouts. Their ordinary death callback owns Arcane Power stack removal; Leymor uses encounter2582/bit0 ordinary death credit. This does not certify the full follower clear.
+
 ## Umbrelskul Lua-clock partial boundary
 
 - Explicit lead-approved partial Lua-clock/native70448 port: Umbrelskul186738/map2515, saved ordinal3/encounter2584/native completionbit2. LittleWigs2777a9d `Dragonflight/TheAzureVault/Umbrelskul.lua` supplies ability countdowns, not a complete executable TC script.
@@ -209,6 +213,7 @@
 ## Azureblade Lua-clock partial boundary
 
 - Lead explicitly approves a partial Lua-clock combat port for Azureblade186739/map2515, prioritizing follower205. LittleWigs2777a9d51418934b5fdd5b92d937b1af6070bcad `Dragonflight/TheAzureVault/Azureblade.lua` supplies schedules/counts; this is not TC combat or full Retail-phase parity.
+- `AZUREBLADE_LITTLEWIGS_ALERT_POLICY` requests native Overwhelming Energy384132 at the initial32.9s LittleWigs alert; ordinary admission and native effects remain authoritative. `AZUREBLADE_ENERGY_PHASE_UNSOURCED` retains missing center movement, illusion spawns and phase completion; the alert does not source those actions.
 - Literal initial request clocks: Summon Draconic Image384223 at3.3s, Arcane Cleave372222 at5.2s, Ancient Orb385578 at10.6s. Lua first-phase counters bound each to two requests, repeats14.6/13.4/15.8s respectively. Native casts/cooldowns remain ordinary; due events wait while casting. Requests rejected by native admission get no invented retry policy.
 - Native70448 supplies target104 destination-facing cone/radius/damage for372222, self140→373658 missile32→373582 summon28/190187/property64 for384223, explicit enemy6 + destination87/caster-front47/AT for385578. Explicit hostile requests select the current victim; native selectors retain area/child destinations. No hard-coded radius, damage, summon location or alternate spell.
 - `encounter_summons.py --encounter azureblade` prepares only independent copies: authenticate blank TDB186739 source binding, install explicitly local Lua-backed `boss_azureblade`, import actual190187 base/models + authored Normal1/Mythic23 rows. Do not manufacture205 stats or assert TDB supplied this script name. Preserve installed Azure saved ordinal1/encounter2585 despite DB2 bit3.

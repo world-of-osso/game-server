@@ -210,6 +210,50 @@ fn prepare_running_stomp() -> (Harness, Entity) {
 }
 
 #[test]
+fn azure_leymor_stomp_consumes_selected_sprouts_and_boss_death_grants_credit() {
+    let (mut h, leymor) = prepare_running_stomp();
+    let map = *h.app.world().get::<InMap>(leymor).unwrap();
+    let affected: Vec<_> = h
+        .creatures_of(SPROUT)
+        .into_iter()
+        .filter(|&sprout| h.has_aura(sprout, STOMP))
+        .collect();
+    assert!(
+        !affected.is_empty(),
+        "ordinary channel selected native Sprouts"
+    );
+    assert!(
+        affected
+            .iter()
+            .all(|&sprout| crate::spell_cast::targets::is_alive(h.app.world(), sprout))
+    );
+    let remaining = {
+        let cast = h.app.world().get::<CastState>(leymor).unwrap();
+        cast.duration - cast.elapsed
+    };
+    h.advance(remaining + 0.2);
+    assert!(
+        affected
+            .iter()
+            .all(|&sprout| !crate::spell_cast::targets::is_alive(h.app.world(), sprout))
+    );
+    h.hit_pct(leymor, 200.0);
+    h.advance(0.1);
+    assert_eq!(
+        instance_script::get_boss_state(h.app.world_mut(), map, 0),
+        Some(EncounterState::Done)
+    );
+    assert_ne!(
+        h.app
+            .world()
+            .resource::<crate::maps::InstanceManager>()
+            .completed_encounters(map)
+            & 1,
+        0
+    );
+}
+
+#[test]
 fn azure_leymor_child_stomp_natural_channel_finish_deals_native_damage_once() {
     let (mut h, leymor) = prepare_running_stomp();
     assert!(
