@@ -54,7 +54,8 @@ fn assert_profile_intellect(spec: u32, expected: f32) {
     // SimC buffed_stats samples at combat start: pre-pull buffs included, but no
     // transient item proc (e.g. Insight1229746) earned by real pre-pull casts.
     let run = prepare_measurement_with(spec, 1, |run| {
-        super::channel_timing_tests::remove_equipped_proc_drivers(run)
+        super::channel_timing_tests::remove_equipped_proc_drivers(run);
+        Ok(())
     })
     .unwrap();
     let world = run.app.world();

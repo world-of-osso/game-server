@@ -346,11 +346,19 @@ fn literal_follower_only_specs_explicitly_preserve_their_actor_restriction() {
 }
 
 fn prepare_measurement(spec_id: u32, count: usize) -> Result<Run, String> {
-    prepare_measurement_with(spec_id, count, |_| {})
+    prepare_measurement_with(spec_id, count, |_| Ok(()))
 }
 
 /// Prepare only a registered literal player driver; never substitute a follower policy.
 pub(crate) fn prepare_registered_player(spec_id: u32, count: usize) -> Result<Run, String> {
+    prepare_registered_player_with(spec_id, count, |_| Ok(()))
+}
+
+pub(crate) fn prepare_registered_player_with(
+    spec_id: u32,
+    count: usize,
+    before_prepare: impl FnOnce(&mut Run) -> Result<(), String>,
+) -> Result<Run, String> {
     if !DRIVERS.iter().any(|driver| driver.spec_id == spec_id) {
         return Err(format!("NATIVE_LITERAL_DRIVER_UNAVAILABLE:{spec_id}"));
     }
@@ -366,7 +374,7 @@ pub(crate) fn prepare_registered_player(spec_id: u32, count: usize) -> Result<Ru
     if measurement_driver(spec_id, &identity).is_none() {
         return Err(format!("NATIVE_LITERAL_DRIVER_UNAVAILABLE:{spec_id}"));
     }
-    prepare_measurement(spec_id, count)
+    prepare_measurement_with(spec_id, count, before_prepare)
 }
 
 pub(crate) fn require_mid2_profile(profile: &inputs::Profile) -> Result<(), String> {
@@ -418,7 +426,7 @@ pub(crate) fn tank_target_debuff_auras(run: &Run) -> Result<&'static [u32], Stri
 fn prepare_measurement_with(
     spec_id: u32,
     count: usize,
-    before_prepare: impl FnOnce(&mut Run),
+    before_prepare: impl FnOnce(&mut Run) -> Result<(), String>,
 ) -> Result<Run, String> {
     let (profile, traits) = read_reference(spec_id)?;
     let identity = inputs::read_actor(&profile)?;
@@ -430,7 +438,7 @@ fn prepare_measurement_with(
             devourer_rotation::configure_actor_reactions(run.app.world_mut(), run.actor)?;
         }
         preparation::consume_profile_food(&mut run)?;
-        before_prepare(&mut run);
+        before_prepare(&mut run)?;
         run.spec_driver = Some((driver.prepare)(&mut run)?);
         Ok(run)
     } else {

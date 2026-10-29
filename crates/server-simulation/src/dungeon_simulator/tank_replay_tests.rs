@@ -844,6 +844,46 @@ fn divine_guidance_stacks_on_spenders_and_is_consumed_by_consecration() {
 }
 
 #[test]
+#[ignore = "uses the MID2 Protection precombat plan and raid buffs"]
+fn tank_raid_buffs_apply_before_precombat_bulwark_snapshot() {
+    let _seed = crate::random::seed_scope(70448);
+    let buffs = [
+        crate::simc_tank_timeline::RaidBuff {
+            name: "mark_of_the_wild".into(),
+            spell_id: 1126,
+        },
+        crate::simc_tank_timeline::RaidBuff {
+            name: "power_word_fortitude".into(),
+            spell_id: 21562,
+        },
+    ];
+    let mut run = super::dps_parity::prepare_registered_player_with(66, 1, |run| {
+        super::tank_replay::apply_simc_raid_buffs(run, &buffs)
+    })
+    .unwrap();
+    let actor = run.actor;
+    let max = run
+        .app
+        .world()
+        .get::<shared::components::Health>(actor)
+        .unwrap()
+        .max;
+    let vers = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(actor)
+        .unwrap()
+        .versatility_pct;
+    let (_, shield) = crate::auras::absorb_damage(run.app.world_mut(), actor, 1, max);
+    assert!((max - 1_492_640.0).abs() < 10.0, "max health {max}");
+    assert!((vers - 23.8889).abs() < 0.01, "versatility {vers}");
+    assert!(
+        (shield - 277_382.3).abs() < 10.0,
+        "precombat shield {shield}"
+    );
+}
+
+#[test]
 #[ignore = "uses selected MID2 Holy Bulwark parent refresh"]
 fn holy_bulwark_refresh_regrants_initial_absorb() {
     let mut run = super::dps_parity::prepare_registered_player(66, 1).unwrap();
@@ -862,7 +902,11 @@ fn holy_bulwark_refresh_regrants_initial_absorb() {
         .unwrap()
         .versatility_pct;
     let (_, consumed) = crate::auras::absorb_damage(run.app.world_mut(), actor, 1, max);
-    assert!(consumed > 0.0);
+    let expected = max * 0.15 * (1.0 + vers / 100.0);
+    assert!(
+        (consumed - expected).abs() < 2.0,
+        "initial={consumed} expected={expected}"
+    );
     assert!(!crate::auras::has_aura(run.app.world(), actor, 432607));
     let before_counts = super::tank_replay::bulwark_observations(run.app.world(), actor);
     crate::auras::apply_aura(
@@ -879,7 +923,6 @@ fn holy_bulwark_refresh_regrants_initial_absorb() {
     assert_eq!(after_counts.0, before_counts.0);
     assert_eq!(after_counts.1, before_counts.1 + 1);
     let (_, refreshed) = crate::auras::absorb_damage(run.app.world_mut(), actor, 1, max);
-    let expected = max * 0.15 * (1.0 + vers / 100.0);
     assert!(
         (refreshed - expected).abs() < 2.0,
         "refresh={refreshed} expected={expected}"

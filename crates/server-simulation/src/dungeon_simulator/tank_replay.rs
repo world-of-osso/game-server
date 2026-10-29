@@ -381,8 +381,9 @@ pub(super) fn replay_simc_with_healing(
         false
     };
     let _rng = crate::random::seed_scope(seed);
-    let mut run = super::dps_parity::prepare_registered_player(spec_id, 1)?;
-    apply_simc_raid_buffs(&mut run, &raid_buffs)?;
+    let mut run = super::dps_parity::prepare_registered_player_with(spec_id, 1, |run| {
+        apply_simc_raid_buffs(run, &raid_buffs)
+    })?;
     apply_simc_dummy_debuffs(&mut run, &dummy_debuffs)?;
     if dummy_bleeding {
         let target = run.targets[0];
