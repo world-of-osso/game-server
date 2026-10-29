@@ -224,7 +224,9 @@ fn non_weapon_hit_masks(spell: &SpellInfo, harmful: bool) -> (u32, u32) {
     const TREAT_AS_PERIODIC: u32 = 0x0200_0000;
     const IS_ABILITY: u32 = 0x10;
     let attributes = spell.misc.as_ref().map_or([0; 17], |misc| misc.attributes);
-    if attributes[3] & TREAT_AS_PERIODIC != 0 {
+    // SimC76f8118 sc_demon_hunter.cpp4758–4761 treats Immolation's
+    // triggered tick as damage over time for proc eligibility.
+    if attributes[3] & TREAT_AS_PERIODIC != 0 || spell.id == 258922 {
         return if harmful {
             (PROC_DEAL_HARMFUL_PERIODIC, PROC_TAKE_HARMFUL_PERIODIC)
         } else {
