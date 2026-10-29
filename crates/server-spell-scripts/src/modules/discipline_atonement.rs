@@ -15,6 +15,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::NativeAfterCast(master_the_darkness_action),
     SpellScriptHook::AfterAbsorbConsumed(discharge_void_shield),
     SpellScriptHook::HealthChangeObserved(mark_flash_heal),
+    SpellScriptHook::ResolvedHeal(divine_aegis),
     SpellScriptHook::RawResolvedDamage(transfer_damage),
     SpellScriptHook::EffectHit(shadowfiend_death_hit),
     SpellScriptHook::MeleeRawResolved(transfer_pet_melee),
@@ -350,6 +351,38 @@ fn proc_shadowfiend(world: &mut World, caster: Entity, target: Entity, depth: u8
     if roll < chance {
         combat::spell_cast::cast_triggered(world, caster, 1280172, Some(target), depth + 1);
     }
+}
+
+fn divine_aegis(
+    world: &mut World,
+    ctx: &EffectCtx<'_>,
+    target: Entity,
+    _raw: f32,
+    effective: f32,
+    crit: bool,
+    _periodic: bool,
+) {
+    // SimC76f8118 priest_heal_t triggers on critical direct priest heals, except Atonement.
+    if !is_discipline(world, ctx.caster)
+        || !crit
+        || effective <= 0.0
+        || !auras::has_aura(world, ctx.caster, 47515)
+        || !matches!(
+            ctx.spell.id,
+            2061 | 186263 | 47750 | 1232567 | 281469 | 270501 | 194509 | 421544
+        )
+    {
+        return;
+    }
+    let percent = combat::spell_cast::scripts::script_effect_value(world, ctx.caster, 47515, 0);
+    combat::spell_cast::cast_triggered_with_effect0_amount(
+        world,
+        ctx.caster,
+        47753,
+        Some(target),
+        ctx.depth + 1,
+        effective * percent / 100.0,
+    );
 }
 
 fn transfer_pet_melee(world: &mut World, source: Entity, target: Entity, raw: f32, crit: bool) {
