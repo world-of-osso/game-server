@@ -6,14 +6,24 @@ use shared::components::Health;
 #[test]
 #[ignore = "requires native spell data"]
 fn healer_report_records_real_mana_payment_by_spell() {
-    let mut h =
-        crate::spell_cast::test_harness::harness_with(Vec::new(), &[2061], 5, true).unwrap();
+    let mut h = crate::spell_cast::test_harness::harness_with(Vec::new(), &[2061, 137032], 5, true)
+        .unwrap();
     h.app
         .init_resource::<crate::spell_cast::test_harness::ObservedCombatEvents>();
     h.app
         .world_mut()
         .entity_mut(h.caster)
         .insert(crate::spell_cast::ObservedResourcePayments::default());
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: h.caster,
+            target: h.caster,
+            spell_id: 137032,
+            effect_mask: u32::MAX,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
     let recorder = Recorder::start(h.app.world(), h.caster, h.caster, vec![h.caster]);
     h.cast_and_deliver(2061, Some(h.caster));
     h.advance(80);
@@ -24,8 +34,18 @@ fn healer_report_records_real_mana_payment_by_spell() {
     );
     let report = recorder.report(h.app.world(), 5);
     assert!(
-        report["mana_spent_by_spell"]["2061"].as_f64().unwrap() > 0.0,
-        "actual Flash Heal payment must be reported: {report}"
+        report["mana_spent_by_spell"]["2061"]
+            .as_f64()
+            .unwrap_or_default()
+            > 0.0,
+        "actual Flash Heal payment must be reported: {report}; payments={:?}; cast={:?}; stats={:?}",
+        h.app
+            .world()
+            .get::<crate::spell_cast::ObservedResourcePayments>(h.caster)
+            .unwrap()
+            .0,
+        h.inbox.go,
+        h.app.world().get::<crate::stats::CharacterStats>(h.caster)
     );
 }
 
