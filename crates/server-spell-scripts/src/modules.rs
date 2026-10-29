@@ -85,6 +85,7 @@ register_modules! {
     brewmaster_cooldowns: (1000, "modules/brewmaster_cooldowns.rs"),
     brewmaster_chi_burst: (1000, "modules/brewmaster_chi_burst.rs"),
     brewmaster_celestial_fortune: (1000, "modules/brewmaster_celestial_fortune.rs"),
+    brewmaster_cellar: (1000, "modules/brewmaster_cellar.rs"),
     brewmaster_dragonfire: (1000, "modules/brewmaster_dragonfire.rs"),
     brewmaster_purify: (1000, "modules/brewmaster_purify.rs"),
     brewmaster_black_ox: (1000, "modules/brewmaster_black_ox.rs"),

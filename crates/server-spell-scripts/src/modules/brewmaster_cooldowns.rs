@@ -45,7 +45,7 @@ fn effect(world: &World, spell: u32, index: u8) -> f64 {
     )
 }
 
-fn brew_reduction(world: &mut World, caster: Entity, seconds: f64) {
+pub(super) fn brew_reduction(world: &mut World, caster: Entity, seconds: f64) {
     let celestial = if selected(world, caster, INFUSION) {
         INFUSION
     } else {
