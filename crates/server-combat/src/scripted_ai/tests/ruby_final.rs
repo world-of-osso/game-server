@@ -129,7 +129,16 @@ fn ruby_final_logged_clocks_and_stage_anchor() {
             health.current > 0.0 && health.current <= health.max * 0.5,
             "real damage must cross phase threshold: {health:?}"
         );
-        h.advance(38.5);
+        h.advance(1.0);
+        let movement = h
+            .app
+            .world()
+            .get::<crate::scripted_ai::movement::PointMovement>(kyrakka)
+            .expect("stage uses ordinary point movement");
+        assert!(
+            (movement.target.x - 1798.47).abs() < 0.01 && (movement.target.z + 36.11).abs() < 0.01
+        );
+        h.advance(37.5);
         let attempts = &h
             .app
             .world()
@@ -144,6 +153,15 @@ fn ruby_final_logged_clocks_and_stage_anchor() {
             attempts
                 .iter()
                 .any(|a| a.spell == 381602 && (a.time - 15.608).abs() < 0.2)
+        );
+        assert!(
+            h.inbox(0)
+                .log
+                .iter()
+                .any(|event| event.kind == CombatLogKind::CastSuccess
+                    && event.spell_id == Some(181089)
+                    && event.source == Some(erkhart.to_bits())),
+            "actual Erkhart stage event"
         );
         assert!(
             !attempts.iter().any(|a| a.spell == 381605),

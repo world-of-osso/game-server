@@ -18,12 +18,11 @@ const STORMSLAM: u32 = 381512;
 const WINDS: u32 = 381517;
 const CLOUDBURST: u32 = 381516;
 const ENCOUNTER_EVENT: u32 = 181089;
-const STAGE_EVENT: u32 = 1;
 const LANDING_POINT: u32 = 1;
 const DEATH_DATA: u32 = 0x524c_5001;
 // ERKHART_181089_MEDIAN_DELAY: <=50% to181089 median24.308s,
 // observed range17.220–29.734s. This is an approximation, not a sourced trigger.
-const STAGE_DELAY_MS: u64 = 24_308;
+const STAGE_DELAY_MS: u32 = 24_308;
 // LOG_OBSERVED_KYRAKKA_LANDING: all four kills observed this XY before181089;
 // interim Z312.8835 is the supplied neighbor_path geometry estimate.
 const LANDING: Position = Position {
@@ -37,6 +36,7 @@ pub(super) fn creature_ai(boss: BossAi, entry: u32) -> Box<dyn CreatureAi> {
         boss,
         entry,
         phase_pending: false,
+        stage_remaining_ms: None,
         landed: false,
     })
 }
@@ -45,12 +45,14 @@ struct RubyFinal {
     boss: BossAi,
     entry: u32,
     phase_pending: bool,
+    stage_remaining_ms: Option<u32>,
     landed: bool,
 }
 
 impl CreatureAi for RubyFinal {
     fn reset(&mut self, ctx: &mut Ctx) {
         self.phase_pending = false;
+        self.stage_remaining_ms = None;
         self.landed = false;
         if let Some(map) = ctx.map() {
             super::instance_script::set_data(ctx.world, map, DEATH_DATA, 0);
@@ -96,9 +98,37 @@ impl CreatureAi for RubyFinal {
         if self.entry == KYRAKKA && !self.phase_pending && ctx.is_engaged() && either_at_half(ctx) {
             self.phase_pending = true;
             ctx.move_point(ctx.me, LANDING_POINT, LANDING);
-            self.boss.events.schedule(STAGE_EVENT, STAGE_DELAY_MS);
+            self.stage_remaining_ms = Some(STAGE_DELAY_MS);
+        }
+        if ctx.is_engaged() {
+            self.advance_stage(ctx, diff_ms);
         }
         boss_update_ai(self, ctx, diff_ms);
+    }
+}
+
+impl RubyFinal {
+    fn advance_stage(&mut self, ctx: &mut Ctx, diff_ms: u32) {
+        let Some(remaining) = self.stage_remaining_ms.as_mut() else {
+            return;
+        };
+        *remaining = remaining.saturating_sub(diff_ms);
+        if *remaining != 0 || !self.landed {
+            return;
+        }
+        self.stage_remaining_ms = None;
+        let Some(peer) = find_peer(ctx, KYRAKKA) else {
+            warn!("Ruby stage event cannot find Erkhart");
+            return;
+        };
+        if let Err(error) =
+            crate::spell_cast::creature_cast(ctx.world, peer, ENCOUNTER_EVENT, Some(peer), true)
+        {
+            warn!("Ruby stage event failed: {error:?}");
+            return;
+        }
+        self.boss.events.cancel(FLAMESPIT_ONE);
+        self.boss.events.schedule(FLAMESPIT_TWO, 14_560);
     }
 }
 
@@ -115,27 +145,6 @@ impl BossScript for RubyFinal {
             STORMSLAM => 26_096,
             WINDS => 23_112,
             CLOUDBURST => 25_501,
-            STAGE_EVENT => {
-                if !self.landed {
-                    self.boss.events.repeat(100);
-                    return;
-                }
-                if let Some(peer) = find_peer(ctx, KYRAKKA) {
-                    if let Err(error) = crate::spell_cast::creature_cast(
-                        ctx.world,
-                        peer,
-                        ENCOUNTER_EVENT,
-                        Some(peer),
-                        true,
-                    ) {
-                        warn!("Ruby stage event failed: {error:?}");
-                        return;
-                    }
-                    self.boss.events.cancel(FLAMESPIT_ONE);
-                    self.boss.events.schedule(FLAMESPIT_TWO, 14_560);
-                }
-                return;
-            }
             _ => return,
         };
         if event == STORMSLAM {
