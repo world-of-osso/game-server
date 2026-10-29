@@ -95,7 +95,7 @@ fn floor_resolver_neltharus_real_data() {
         ..request.clone()
     };
     assert!(
-        matches!(resolver.resolve(&later_request), Resolution::Resolved { z, method: "neighbor_path", hint_ids, .. } if z.abs() < 1.0 && hint_ids == ["later"])
+        matches!(resolver.resolve(&later_request), Resolution::Resolved { z, method: "neighbor_path", hint_ids, .. } if z.abs() < 1.0 && hint_ids == vec!["later".to_owned()])
     );
     let ruby_wdt: u32 = db
         .query_row("SELECT WdtFileDataID FROM map WHERE ID=2521", [], |row| {
