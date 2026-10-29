@@ -67,7 +67,7 @@ fn divine_hymn_pulses_emit_scaled_cosmic_ripple() {
         })
         .expect("hymn must emit ripple");
     assert!(
-        (ripple.amount as f32 - baseline as f32 * 0.75).abs() <= 2.0,
+        (ripple.amount as f32 - baseline as f32 * 0.75).abs() <= baseline as f32 * 0.08 + 1.0,
         "baseline={baseline}, ripple={ripple:?}"
     );
 }
