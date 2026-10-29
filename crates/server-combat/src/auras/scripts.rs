@@ -362,16 +362,6 @@ pub(super) fn absorb_ends_aura(spell_id: u32) -> bool {
     spell_id != 740
 }
 
-///321068 explicitly gates187827s4's extra Shear/Fracture Fury modifier.
-pub(super) fn effect_enabled(
-    world: &World,
-    caster: Entity,
-    spell_id: u32,
-    effect_index: u8,
-) -> bool {
-    spell_id != 187827 || effect_index != 3 || super::has_aura(world, caster, 321068)
-}
-
 /// Native383391 names only Fire Blast; SimC76f8118 sc_mage.cpp4583.
 fn check_feel_the_burn_proc(
     _world: &World,
