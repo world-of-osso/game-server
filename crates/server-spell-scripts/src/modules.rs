@@ -129,6 +129,7 @@ register_modules! {
     demon_hunter_sigil_spite: (5810, "modules/demon_hunter_sigil_spite.rs"),
     vengeance_consume_soul: (5817, "modules/vengeance_consume_soul.rs"),
     vengeance_fallout: (5818, "modules/vengeance_fallout.rs"),
+    vengeance_fel_devastation: (5823, "modules/vengeance_fel_devastation.rs"),
     vengeance_fiery_brand: (5814, "modules/vengeance_fiery_brand.rs"),
     vengeance_fracture: (5811, "modules/vengeance_fracture.rs"),
     vengeance_frailty: (5815, "modules/vengeance_frailty.rs"),

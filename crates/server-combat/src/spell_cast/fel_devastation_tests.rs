@@ -1,5 +1,5 @@
 //! Native70448 Fel Devastation selectors and scheduled healing.
-//! FEL_DEVASTATION_UPFRONT_HEAL_SOURCE_CONFLICT remains deferred, not certified absent.
+//! The rank-two cast heal is separate from the scheduled channel heals.
 use super::test_harness::*;
 use crate::auras;
 use crate::class_progression::ActiveSpec;
@@ -100,6 +100,22 @@ fn trigger_damage(h: &mut Harness) {
     // Same existing aura23 dispatch boundary: explicit aura unit is self.
     super::cast_triggered(h.app.world_mut(), caster, DAMAGE, Some(caster), 1);
     h.advance(3);
+}
+
+#[test]
+fn rank_two_fel_devastation_heals_once_on_accepted_cast() {
+    for rank in [false, true] {
+        let mut h = fixture(rank);
+        h.set_power(PowerType::Fury, 50.0);
+        h.cast_and_deliver(ROOT, None);
+        assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+        let heals = events(&h, HEAL, CombatLogKind::Heal);
+        assert_eq!(heals.len(), usize::from(rank));
+        if rank {
+            assert_eq!(heals[0].target, Some(h.caster.to_bits()));
+            assert!(heals[0].amount > 0);
+        }
+    }
 }
 
 #[test]
@@ -309,8 +325,7 @@ fn start_channel(h: &mut Harness) -> usize {
         ROOT
     );
     assert_eq!(h.power(PowerType::Fury), 0.0, "native50-Fury payment");
-    // Start the observation after application. Any separately implemented
-    // up-front heal is outside these tests, never certified absent.
+    // The cast heal precedes this observation of scheduled channel heals.
     h.inbox.log.len()
 }
 
