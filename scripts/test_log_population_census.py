@@ -119,6 +119,11 @@ class CensusTest(unittest.TestCase):
         self.assertEqual(creatures['Creature-0-1-2521-42-123-ABCD']['first_seen'], '2')
         self.assertTrue(creatures['Creature-0-1-2521-42-456-DCBA']['summoned'])
         self.assertFalse(creatures['Creature-0-1-2521-42-123-ABCD']['summoned'])
+        summary = module.summarize_population(runs)[0]
+        self.assertEqual(summary['runs'], 1)
+        self.assertEqual(summary['npcs'][0]['observed_per_run'][0]['count'], 1)
+        self.assertEqual(summary['npcs'][1]['summon_destination_count'], 1)
+        self.assertEqual(summary['npcs'][1]['observed_outside_encounter_count'], 1)
 
 
 if __name__ == '__main__':

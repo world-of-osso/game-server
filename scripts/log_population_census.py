@@ -116,7 +116,10 @@ def census(paths, maps, samples=None):
                     item = creatures.setdefault(guid, {"npc_id": int(parts[5]), "spawn_uid": parts[6],
                                                        "instance": parts[4], "name": fields[index + 1],
                                                        "first_seen": timestamp, "first_event": event,
-                                                       "summoned": False})
+                                                       "first_encounter_id": encounter['id'] if encounter else None,
+                                                       "seen_outside_encounter": False, "summoned": False})
+                    if encounter is None:
+                        item['seen_outside_encounter'] = True
                     if encounter is not None:
                         encounter['units'][guid] = {'npc_id': int(parts[5]), 'name': fields[index + 1]}
                     if event == "SPELL_SUMMON" and index == 5:
@@ -159,6 +162,37 @@ def annotate_bosses(runs, database):
             encounter['unclassified_npc_ids'] = sorted({u['npc_id'] for u in encounter['units'].values()} - known)
             for cast in encounter['casts']:
                 cast['known_boss'] = encounter['units'][cast['guid']]['npc_id'] in known
+
+
+def summarize_population(runs, database=None):
+    maps = {}
+    for run in runs:
+        group = maps.setdefault(run['map'], {'map': run['map'], 'runs': 0, 'npcs': {}})
+        group['runs'] += 1
+        counts = defaultdict(int)
+        for unit in run['creatures'].values():
+            entry = group['npcs'].setdefault(unit['npc_id'], {'npc_id': unit['npc_id'],
+                'names': [], 'observed_per_run': [], 'summon_destination_count': 0,
+                'first_seen_in_encounter_count': 0, 'observed_outside_encounter_count': 0})
+            if unit['name'] not in entry['names']:
+                entry['names'].append(unit['name'])
+            counts[unit['npc_id']] += 1
+            entry['summon_destination_count'] += int(unit['summoned'])
+            entry['first_seen_in_encounter_count'] += int(unit['first_encounter_id'] is not None)
+            entry['observed_outside_encounter_count'] += int(unit['seen_outside_encounter'])
+        for npc_id, count in counts.items():
+            group['npcs'][npc_id]['observed_per_run'].append({'file': run['file'], 'start': run['start'], 'count': count})
+    if database:
+        with sqlite3.connect(database.resolve().as_uri() + '?mode=ro', uri=True) as conn:
+            for map_id, group in maps.items():
+                group['authored'] = {}
+                for table, column in (('tdb_creature', 'id'), ('content_creature', 'id1')):
+                    rows = conn.execute(f'SELECT {column}, count(*) FROM {table} WHERE map=? GROUP BY {column}', (map_id,)).fetchall()
+                    group['authored'][table] = {'count': sum(count for _, count in rows),
+                                                'npc_counts': dict(rows)}
+    for group in maps.values():
+        group['npcs'] = sorted(group['npcs'].values(), key=lambda item: item['npc_id'])
+    return [maps[key] for key in sorted(maps)]
 
 
 def summarize_encounters(runs):
@@ -248,6 +282,7 @@ def main():
     parser.add_argument("--trash-data", type=Path)
     parser.add_argument("--world-db", type=Path)
     parser.add_argument("--encounter-summary", type=Path)
+    parser.add_argument("--population-summary", type=Path)
     parser.add_argument("logs", type=Path, nargs="+")
     args = parser.parse_args()
     paths = [f for p in args.logs for f in (sorted(p.glob("*.txt")) if p.is_dir() else [p])]
@@ -269,6 +304,9 @@ def main():
     if args.encounter_summary:
         args.encounter_summary.parent.mkdir(parents=True, exist_ok=True)
         args.encounter_summary.write_text(json.dumps(summarize_encounters(runs), indent=2) + "\n", encoding="utf-8")
+    if args.population_summary:
+        args.population_summary.parent.mkdir(parents=True, exist_ok=True)
+        args.population_summary.write_text(json.dumps(summarize_population(runs, args.world_db), indent=2) + "\n", encoding="utf-8")
 
 
 if __name__ == "__main__":
