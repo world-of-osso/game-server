@@ -520,6 +520,11 @@ fn scales_with_spell_damage(effect: &SpellEffect) -> bool {
 /// the target's level of `SPELL_ATTR8_USE_TARGETS_LEVEL_FOR_SPELL_SCALING` and the casting item's
 /// level multiplier of class -6.
 fn calc_base_value(world: &World, caster: Entity, spell: &SpellInfo, effect: &SpellEffect) -> f32 {
+    if effect.index == 0
+        && let Some(amount) = spell.cast_effect0_amount
+    {
+        return amount;
+    }
     let attribute = |index: usize| spell.misc.as_ref().map_or(0, |misc| misc.attributes[index]);
     let level = world
         .get::<shared::components::UnitLevel>(caster)
