@@ -2987,10 +2987,9 @@ pub fn energize_unit(
 ) {
     let amount = amount.max(0.0);
     if power == PowerType::ComboPoints && amount > 0.0 {
-        if super::powers::change_power_from_effect(world, target, power, amount, ctx, periodic)
-            .is_none()
-        {
-            debug!("Spell {}: target has no {power:?} pool", ctx.spell.id);
+        match super::powers::change_power_from_effect(world, target, power, amount, ctx, periodic) {
+            Some(gained) => super::script_registry::after_combo_gain(world, ctx, target, gained),
+            None => debug!("Spell {}: target has no {power:?} pool", ctx.spell.id),
         }
         return;
     }
