@@ -2,7 +2,6 @@
 """Prepare Murder Row's source-backed encounter rows on an independent DB copy."""
 import argparse
 import json
-import math
 import sqlite3
 from pathlib import Path
 
@@ -25,7 +24,7 @@ XATHUUX = dict(source_key='murder-row-xathuux-100526-205117', map=2813,
 # First positioned player event after zone entry, 100126_203256 line 737884.
 # 9.167 seconds elapsed after entry: this is an observation, not an exact landing.
 ENTRANCE = (81002813, 2813, 8687.87, -4927.05, 19.061333,
-            math.degrees(1.4573), None,
+            83.4971394844149, None,
             'FOLLOWER_ENTRANCE_LOG_CORRELATED; 100126_203256 22:31:19.537; Entrance')
 
 
