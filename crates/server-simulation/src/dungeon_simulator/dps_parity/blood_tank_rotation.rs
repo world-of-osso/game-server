@@ -801,6 +801,83 @@ mod tests {
 
     #[test]
     #[ignore = "requires canonical world database and MID2 Blood inputs"]
+    fn blood_infliction_requires_owned_plague_and_extends_its_deadline() {
+        use shared::protocol::CombatLogKind;
+        for with_plague in [false, true] {
+            let mut run = super::super::prepare_registered_player(250, 1).unwrap();
+            let actor = run.actor;
+            let target = run.targets[0];
+            super::super::engage(&mut run);
+            assert!(
+                run.app
+                    .world()
+                    .get::<crate::class_progression::KnownSpells>(actor)
+                    .unwrap()
+                    .contains(434143)
+            );
+            crate::auras::remove_auras(
+                run.app.world_mut(),
+                target,
+                crate::auras::RemoveReason::Cancelled,
+                |aura| aura.spell_id == 55078 && aura.caster == actor,
+            );
+            if with_plague {
+                crate::auras::apply_aura(
+                    run.app.world_mut(),
+                    &crate::auras::AuraApplication {
+                        caster: actor,
+                        target,
+                        spell_id: 55078,
+                        effect_mask: u32::MAX,
+                        source: crate::auras::AuraSource::Cast,
+                    },
+                );
+            }
+            let expiry = |run: &super::super::Run| {
+                run.app
+                    .world()
+                    .get::<crate::auras::ActiveAuras>(target)
+                    .and_then(|auras| {
+                        auras
+                            .iter()
+                            .find(|aura| aura.spell_id == 55078 && aura.caster == actor)
+                    })
+                    .and_then(|aura| aura.expires_at)
+            };
+            let before = expiry(&run);
+            crate::spell_cast::creature_cast(
+                run.app.world_mut(),
+                actor,
+                433895,
+                Some(target),
+                false,
+            )
+            .unwrap();
+            for _ in 0..4 {
+                run.app.update();
+            }
+            let hit = run
+                .app
+                .world()
+                .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+                .0
+                .iter()
+                .any(|event| {
+                    event.source == Some(actor.to_bits())
+                        && event.target == Some(target.to_bits())
+                        && event.spell_id == Some(434144)
+                        && event.kind == CombatLogKind::Damage
+                        && event.amount > 0
+                });
+            assert_eq!(hit, with_plague, "Infliction requires owned Blood Plague");
+            if let Some(before) = before {
+                assert!((expiry(&run).unwrap() - before - 3.0).abs() < 0.001);
+            }
+        }
+    }
+
+    #[test]
+    #[ignore = "requires canonical world database and MID2 Blood inputs"]
     fn blood_vampiric_strike_hits_primary_target_once_and_heals() {
         use shared::protocol::CombatLogKind;
         let mut run = super::super::prepare_registered_player(250, 1).unwrap();

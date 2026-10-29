@@ -17,6 +17,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AfterForegroundSpecial(vampiric_proc),
     SpellScriptHook::EffectHandler(vampiric_heal_handler),
     SpellScriptHook::EffectEnabled(blood_vampiric_damage_effect),
+    SpellScriptHook::AfterPolicyDirectDamage(infliction_of_sorrow),
 ];
 
 // SimC76f8118 sc_death_knight.cpp11325–11329: Blood's Vampiric Strike
@@ -27,6 +28,97 @@ fn blood_vampiric_damage_effect(world: &World, caster: Entity, spell: u32, index
         && world
             .get::<ActiveSpec>(caster)
             .is_some_and(|spec| spec.0 == 250))
+}
+
+// SimC76f8118 sc_death_knight.cpp13778–13830: only an actual owned
+// Blood Plague supplies remaining damage; extend it without restarting ticks.
+fn infliction_of_sorrow(world: &mut World, ctx: &EffectCtx<'_>, target: Entity, _: bool) {
+    if ctx.spell.id != 433895
+        || !world
+            .get::<ActiveSpec>(ctx.caster)
+            .is_some_and(|spec| spec.0 == 250)
+        || !world
+            .get::<KnownSpells>(ctx.caster)
+            .is_some_and(|known| known.contains(434143))
+    {
+        return;
+    }
+    let Some(plague) = world
+        .get::<auras::ActiveAuras>(target)
+        .and_then(|auras| {
+            auras
+                .iter()
+                .find(|aura| aura.spell_id == 55078 && aura.caster == ctx.caster)
+        })
+        .cloned()
+    else {
+        return;
+    };
+    let Some(expiry) = plague.expires_at else {
+        return;
+    };
+    let Some(state) = plague
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0 && effect.period_ms > 0)
+    else {
+        return;
+    };
+    let now = auras::aura_now(world);
+    if expiry <= now {
+        return;
+    }
+    let period = f64::from(state.period_ms) / 1000.0;
+    let ticks = (1.0 + (expiry - state.next_tick_at()) / period).max(0.0) as f32;
+    let store = world.resource::<SpellStore>();
+    let disease = store.get(55078).expect("active Blood Plague spell");
+    let effect = disease
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .expect("Blood Plague damage effect");
+    let talent = store.get(434143).expect("Infliction of Sorrow talent");
+    let percent = talent
+        .effects
+        .iter()
+        .find(|effect| effect.index == 1)
+        .expect("Infliction damage percent")
+        .base_points
+        / 100.0;
+    let extension = talent
+        .effects
+        .iter()
+        .find(|effect| effect.index == 2)
+        .expect("Infliction extension")
+        .base_points as u32;
+    let disease_ctx = EffectCtx {
+        caster: ctx.caster,
+        spell: disease,
+        depth: ctx.depth,
+        dest: None,
+        chain_multiplier: 1.0,
+    };
+    let damage = effects::DamageInput {
+        amount: auras::periodic_live_amount(world, ctx.caster, disease, state)
+            * plague.stack_multiplier(),
+        crit: false,
+        periodic: true,
+        resolved_source: false,
+        effect: Some(effect),
+        bonus_caster: ctx.caster,
+    };
+    let remaining = effects::damage_before_mitigation(world, &disease_ctx, target, &damage) * ticks;
+    auras::extend_owned_duration(world, ctx.caster, target, &[55078], extension);
+    if remaining > 0.0 {
+        spell_cast::cast_triggered_with_effect0_amount(
+            world,
+            ctx.caster,
+            434144,
+            Some(target),
+            ctx.depth + 1,
+            remaining * percent,
+        );
+    }
 }
 
 fn vampiric_heal_handler(spell: u32, index: u8) -> Option<EffectHandler> {
