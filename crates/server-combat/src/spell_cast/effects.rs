@@ -940,15 +940,14 @@ const MECHANIC_BLEED: u32 = 15;
 
 /// SimC76f8118 action.cpp1686–1690: armor applies only to pure Physical
 /// damage, not hybrid schools. Native bleed and explicit bypass rules remain.
-fn reduced_by_armor(world: &World, spell: &SpellInfo) -> bool {
+fn reduced_by_armor(world: &World, spell: &SpellInfo, effect: Option<&SpellEffect>) -> bool {
+    // SimC76f8118 sc_druid.cpp2481–2506 checks the damaging effect, not an
+    // unrelated bleed effect on the same spell.
     let bleed = spell
         .categories
         .as_ref()
         .is_some_and(|categories| categories.mechanic == MECHANIC_BLEED)
-        || spell
-            .effects
-            .iter()
-            .any(|effect| effect.mechanic == MECHANIC_BLEED);
+        || effect.is_some_and(|effect| effect.mechanic == MECHANIC_BLEED);
     spell.school_mask() == 1 && !bleed && !super::script_registry::ignores_armor(world, spell.id)
 }
 
@@ -1451,7 +1450,7 @@ fn expected_damage_after_mitigation(
     );
     let ignores_mitigation =
         super::attributes(ctx.spell, 4) & ATTR4_IGNORE_DAMAGE_TAKEN_MODIFIERS != 0;
-    if !ignores_mitigation && reduced_by_armor(world, ctx.spell) {
+    if !ignores_mitigation && reduced_by_armor(world, ctx.spell, Some(effect)) {
         armor_reduced(world, ctx.caster, target, amount, ctx.spell)
     } else {
         amount
@@ -2232,7 +2231,7 @@ fn deal_source_damage_and_report(
         crate::auras::area_avoidance::reduce_damage(world, target, ctx.spell, effect, false, amount)
     };
     let amount = if super::attributes(ctx.spell, 4) & ATTR4_IGNORE_DAMAGE_TAKEN_MODIFIERS == 0
-        && reduced_by_armor(world, ctx.spell)
+        && reduced_by_armor(world, ctx.spell, effect)
     {
         armor_reduced(world, ctx.caster, target, amount, ctx.spell)
     } else {
