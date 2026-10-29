@@ -287,7 +287,7 @@ fn census_tail_638_native_attacker_martial_expert_scales_slam_block() {
 }
 
 #[test]
-fn class_completeness_native_critical_block_doubles_already_truncated_autoattack_block() {
+fn warrior_critical_autoattack_block_caps_at_eighty_five_percent() {
     let (mut h, defender) = shield_duel(100.0);
     apply_mastery(&mut h, defender);
     assert_eq!(
