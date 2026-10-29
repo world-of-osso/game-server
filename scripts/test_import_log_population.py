@@ -38,13 +38,16 @@ class ImportTest(unittest.TestCase):
                 db.execute("INSERT INTO keystone_affix VALUES(148,?)", ("Xal'atath's Bargain: Ascendant",))
                 db.execute("INSERT INTO spell_name VALUES(461936,?)", ("Xal'atath's Bargain: Ascendant",))
                 db.execute('INSERT INTO spell_effect VALUES(461936,28,229296)')
+                db.execute("INSERT INTO content_creature(guid,id1,map,Comment) VALUES(99,229296,1762,?)", (module.POLICY,))
+                db.execute("INSERT INTO log_derived_population VALUES(99,'other-map',1762,229296,'floor','SPELL_DAMAGE','time',90,?,'{}')", (module.POLICY,))
             report = module.import_population(copy, records)
             self.assertIn('AFFIX_SUMMON_RETIRED', [gap['reason'] for gap in report['2521']['gaps']])
             self.assertIn('AFFIX_SUMMON', [gap['reason'] for gap in report['2521']['gaps']])
             with closing(sqlite3.connect(copy)) as db, db:
                 self.assertEqual(db.execute('SELECT id1,Comment FROM content_creature ORDER BY guid').fetchall(),
-                                 [(229296, 'authored'), (123, module.POLICY)])
-                self.assertEqual(db.execute('SELECT source_key FROM log_derived_population').fetchall(), [('ordinary',)])
+                                 [(229296, 'authored'), (123, module.POLICY), (229296, module.POLICY)])
+                self.assertEqual(db.execute('SELECT source_key FROM log_derived_population ORDER BY guid').fetchall(),
+                                 [('ordinary',), ('other-map',)])
             self.assertEqual(module.import_population(copy, records)['2521']['imported'], 0)
 
     def test_projects_tdb_template_and_models_on_copy(self):

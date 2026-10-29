@@ -135,13 +135,13 @@ def affix_summons(db):
     ''')}
 
 
-def retire_affix_spawns(db, summons, report):
+def retire_affix_spawns(db, summons, maps, report):
     rows = db.execute('''SELECT p.guid,p.map,p.npc_id,p.source_key
         FROM log_derived_population AS p
         JOIN content_creature AS c ON c.guid=p.guid
         WHERE p.policy=? AND c.Comment=?''', (POLICY, POLICY)).fetchall()
     for guid, map_id, npc_id, source_key in rows:
-        if npc_id not in summons:
+        if map_id not in maps or npc_id not in summons:
             continue
         db.execute('DELETE FROM content_creature WHERE guid=?', (guid,))
         db.execute('DELETE FROM log_derived_population WHERE guid=?', (guid,))
@@ -163,7 +163,7 @@ def import_population(destination, records, radius=10.0):
             entry INTEGER NOT NULL, table_name TEXT NOT NULL, row_key TEXT NOT NULL, policy TEXT NOT NULL,
             PRIMARY KEY (table_name,row_key))''')
         summons = affix_summons(db)
-        retire_affix_spawns(db, summons, report)
+        retire_affix_spawns(db, summons, {int(record['map']) for record in records}, report)
         next_guid = db.execute('SELECT COALESCE(MAX(guid), 0) + 1 FROM content_creature').fetchone()[0]
         matched, existing_positions = match_existing(db, records, radius)
         for record in records:
