@@ -1,5 +1,6 @@
 //! Source dungeon gear candidates directly from the active Journal and LFG data.
 pub mod levels;
+pub mod select;
 use std::collections::{BTreeSet, HashMap};
 use std::path::Path;
 
