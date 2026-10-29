@@ -37,13 +37,17 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--world-db", type=Path, required=True)
     parser.add_argument("--table", type=Path, required=True)
+    parser.add_argument("--gaps", type=Path, default=Path(__file__).with_name("los-eye-gaps.tsv"))
     args = parser.parse_args()
-    missing = missing_eyes(args.world_db, args.table)
+    with args.gaps.open(newline="") as stream:
+        allowed = {int(row["display_id"]) for row in csv.DictReader(stream, delimiter="\t") if row["cause"]}
+    missing = [(map_id, display, states) for map_id, display, states in missing_eyes(args.world_db, args.table)
+               if display not in allowed]
     if missing:
         for map_id, display, states in missing:
             print(f"map {map_id}: display {display} missing eye states {states}")
         raise SystemExit(f"LOS eye table incomplete: {len(missing)} map/display pairs")
-    print("LOS eye table covers hosted spawned displays")
+    print("LOS eye table covers hosted spawned displays except listed gaps")
 
 
 if __name__ == "__main__":

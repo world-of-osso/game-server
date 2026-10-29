@@ -4,7 +4,7 @@
 
 use std::path::PathBuf;
 
-use los::bake::eye::{EyeStats, eye_rows_of};
+use los::bake::eye::{EyeStats, eye_rows_of, eye_rows_with_gaps};
 use los::eye::{EyeRow, EyeSource};
 
 /// `ChrModel` displays of human male and female, gnome male, tauren male.
@@ -109,6 +109,18 @@ fn unspawned_displays_without_eyes_are_skipped_and_spawned_ones_must_bake() {
         "{:?}",
         stats.skipped
     );
+    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let (rows, stats) = eye_rows_with_gaps(
+        &root.join("../../../game-engine/data"),
+        &root.join("../../data/world.db"),
+        &[KOBOLD, 31004],
+        &[],
+    )
+    .unwrap();
+    assert!(rows.iter().all(|row| row.display == KOBOLD));
+    assert_eq!(stats.gaps.len(), 1);
+    assert_eq!(stats.gaps[0].0, 31004);
+    assert!(stats.gaps[0].1.contains("bounding box"));
     let err = bake(&[KOBOLD, 31004], &[]).unwrap_err();
     assert!(err.contains("31004"), "{err}");
 }
