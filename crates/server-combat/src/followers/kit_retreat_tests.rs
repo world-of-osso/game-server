@@ -7,6 +7,18 @@ use shared::components::{ActiveSpec, Position, Rotation};
 fn havoc_follower_walks_to_melee_edge_before_retreat() {
     let (mut h, unit) = crate::followers::kit_tests::at_level_unengaged(209053, 90, |_| {});
     let enemy = h.npc;
+    h.app
+        .insert_resource(crate::terrain_height::test_helpers::flat_ground(
+            33.0, 33.0, 0.0,
+        ));
+    let los = crate::ground::ground_data_dir().join("los");
+    h.app
+        .insert_resource(crate::line_of_sight::LineOfSight::load(&los).unwrap());
+    h.app.world_mut().entity_mut(enemy).insert(Position {
+        x: 8.0,
+        y: 0.0,
+        z: -5.0,
+    });
     let mut follower = h.app.world().get::<Follower>(unit).unwrap().clone();
     follower.profile.class_id = 12;
     follower.profile.spec_id = 577;
@@ -15,9 +27,9 @@ fn havoc_follower_walks_to_melee_edge_before_retreat() {
         ActiveSpec(577),
         crate::class_progression::KnownSpells::fixture(vec![198793]),
         Position {
-            x: -1.0,
+            x: 5.0,
             y: 0.0,
-            z: 0.0,
+            z: -5.0,
         },
         Rotation {
             x: 0.0,
