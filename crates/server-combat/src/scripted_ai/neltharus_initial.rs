@@ -1,8 +1,8 @@
 //! LittleWigs2777a9d Chargath/Sargha initial alert policy; energy controllers unported.
 use bevy::prelude::*;
 
+use crate::auras::AuraInstance;
 use crate::auras::scripts::{AuraScript, AuraScripts};
-use crate::auras::{AuraInstance, RemoveReason};
 
 use super::boss_ai::{BossAi, BossScript, boss_update_ai};
 use super::{CreatureAi, Ctx};
@@ -122,16 +122,14 @@ pub(super) fn register_aura_scripts(mut scripts: ResMut<AuraScripts>) {
     scripts.0.insert(
         376780,
         AuraScript {
-            on_remove: Some(shield_removed),
+            on_natural_end: Some(shield_expired),
             ..Default::default()
         },
     );
 }
 
-fn shield_removed(world: &mut World, unit: Entity, _aura: &AuraInstance, reason: RemoveReason) {
-    if reason == RemoveReason::Expired {
-        super::dispatch(world, unit, super::Hook::DoAction(SHIELD_EXPIRED));
-    }
+fn shield_expired(world: &mut World, unit: Entity, _aura: &AuraInstance) {
+    super::dispatch(world, unit, super::Hook::DoAction(SHIELD_EXPIRED));
 }
 
 impl BossScript for InitialPhaseAi {
