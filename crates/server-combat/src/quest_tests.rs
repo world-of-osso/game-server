@@ -1784,7 +1784,7 @@ fn guild_member_turning_in_join_the_battle_earns_guild_reputation() {
         .expect("guild reputation update");
     assert_eq!(
         update.message.as_deref(),
-        Some("gained 166 reputation with Guild")
+        Some("Reputation with Guild increased by 166.")
     );
     let guild = update
         .snapshot
