@@ -62,6 +62,17 @@ impl ModelGeometry {
         }
     }
 
+    fn select_m2_steep_support_faces(&self, world: Affine3A) -> Vec<[Vec3; 3]> {
+        self.triangles
+            .iter()
+            .zip(&self.floor_normals)
+            .filter_map(|(&triangle, &normal)| {
+                let up = world.matrix3.mul_vec3(normal.into()).normalize_or_zero().y;
+                (up > 0.0 && up < shared::ground::min_walkable_normal_y()).then_some(triangle)
+            })
+            .collect()
+    }
+
     fn select_m2_faces(&self, world: Affine3A, walkable: bool) -> Vec<[Vec3; 3]> {
         self.triangles
             .iter()
@@ -165,7 +176,7 @@ impl Baker {
         }
     }
 
-    /// Authored M2 faces excluded from the walkable companion.
+    /// Upward-facing authored M2 faces steeper than the walkable companion.
     pub fn for_m2_solids(data: &Path) -> Self {
         Self {
             m2_solids: true,
@@ -517,11 +528,13 @@ impl Baker {
         let thickness = model.thickness(doodad.scale);
         if thickness >= self.cutoff {
             build.stats.alpha_or_blended_triangles += model.dropped_triangles;
-            let added = if self.m2_only {
+            let added = if self.m2_only && self.m2_solids {
                 build.add(
-                    &model.select_m2_faces(doodad.world, !self.m2_solids),
+                    &model.select_m2_steep_support_faces(doodad.world),
                     doodad.world,
                 )
+            } else if self.m2_only {
+                build.add(&model.select_m2_faces(doodad.world, true), doodad.world)
             } else {
                 build.add(&model.triangles, doodad.world)
             };
