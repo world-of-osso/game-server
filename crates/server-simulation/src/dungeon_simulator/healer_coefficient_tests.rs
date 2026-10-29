@@ -26,20 +26,41 @@ fn preservation_consume_flame_consumes_dream_breath_on_verdant_embrace() {
     crate::spell_cast::creature_cast(h.app.world_mut(), h.caster, 355941, Some(h.caster), true)
         .unwrap();
     h.advance(45);
-    let expiry = |h: &crate::spell_cast::test_harness::Harness| {
+    let expiry = |h: &crate::spell_cast::test_harness::Harness, phase: &str| {
         h.app
             .world()
             .get::<crate::auras::ActiveAuras>(h.caster)
             .unwrap()
             .iter()
             .find(|aura| aura.spell_id == 355941 && aura.caster == h.caster)
-            .expect("Dream Breath aura must be active")
+            .unwrap_or_else(|| panic!("Dream Breath aura absent {phase}"))
             .expires_at
             .unwrap()
     };
-    let before = expiry(&h);
+    let dump = |h: &crate::spell_cast::test_harness::Harness, phase: &str| {
+        let now = crate::auras::aura_now(h.app.world());
+        let auras = h
+            .app
+            .world()
+            .get::<crate::auras::ActiveAuras>(h.caster)
+            .unwrap();
+        let rows: Vec<_> = auras
+            .iter()
+            .map(|aura| {
+                (
+                    aura.spell_id,
+                    aura.caster,
+                    aura.expires_at.map(|at| ((at - now) * 1000.0).round()),
+                )
+            })
+            .collect();
+        println!("{phase} target auras: {rows:?}");
+    };
+    dump(&h, "before Verdant Embrace");
+    let before = expiry(&h, "before Verdant Embrace");
     crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 360995, Some(h.caster), 1);
-    let after = expiry(&h);
+    dump(&h, "after Verdant Embrace");
+    let after = expiry(&h, "after Verdant Embrace");
     assert!((before - after - 4.0).abs() < 0.001);
     h.advance(1);
     let events = &h
