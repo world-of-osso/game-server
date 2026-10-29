@@ -75,7 +75,7 @@ pub(super) fn small_intake() -> Intake {
     let graph = super::graph::read_graph().unwrap();
     let mut app = super::runtime::build_app();
     let copy = super::runtime::create_copy(&mut app);
-    let party = crate::followers::simulator::spawn_party_with_healer(
+    let party = super::healer_replay::spawn_intake_party(
         app.world_mut(),
         copy,
         shared::components::Position {
@@ -170,7 +170,7 @@ fn healer_benchmark_restores_recorded_source_scaling_before_native_damage() {
     let mut app = super::runtime::build_app();
     let graph = app.world().resource::<super::Space>().0.clone();
     let copy = super::runtime::create_copy(&mut app);
-    let party = crate::followers::simulator::spawn_party_with_healer(
+    let party = super::healer_replay::spawn_intake_party(
         app.world_mut(),
         copy,
         shared::components::Position {
@@ -404,4 +404,57 @@ fn healer_benchmark_raw_melee_replay_applies_native_armor_and_shield() {
         shielded,
         "same raw200 must reach native shield after armor"
     );
+}
+
+#[test]
+#[ignore = "requires canonical world database and healer-tank profiles"]
+fn recorded_intake_replay_companions_wear_replay_profile_gear() {
+    let _rng = crate::random::seed_scope(1);
+    let mut app = super::runtime::build_app();
+    let graph = app.world().resource::<super::Space>().0.clone();
+    let copy = super::runtime::create_copy(&mut app);
+    let party = super::healer_replay::spawn_intake_party(
+        app.world_mut(),
+        copy,
+        shared::components::Position {
+            x: graph.entrance[0],
+            y: graph.entrance_height,
+            z: graph.entrance[1],
+        },
+        32,
+        105,
+    )
+    .unwrap();
+    let directory = std::path::PathBuf::from(std::env::var_os("DPS_PARITY_OUTPUT").unwrap());
+    let world = app.world();
+    let geared = crate::followers::simulator::geared_profiles(world, &party);
+    assert_eq!(
+        geared.len(),
+        5,
+        "four follower companions and the synthetic leader"
+    );
+    for (unit, profile) in geared {
+        let spec = profile.spec_id;
+        let path = directory.join(format!("{spec}.profile.json"));
+        let profile: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
+        let expected: Vec<u32> = profile["equipment"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|item| item["item_id"].as_u64().unwrap() as u32)
+            .collect();
+        let equipped: Vec<u32> = world
+            .get::<crate::stats::EquippedItems>(unit)
+            .expect("intake companion equipment")
+            .items
+            .iter()
+            .map(|(_, _, item)| *item)
+            .collect();
+        assert!(!expected.is_empty());
+        assert_eq!(
+            equipped, expected,
+            "spec{spec} wears its replay profile gear"
+        );
+    }
 }

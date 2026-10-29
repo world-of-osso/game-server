@@ -245,7 +245,25 @@ fn spawn_configured_party(
     configuration: PartyConfiguration,
 ) -> Result<Party, String> {
     let profiles = read_party_profiles(world, configuration.entries)?;
-    spawn_profiled_party(world, copy, at, configuration.level, profiles)
+    let party = spawn_profiled_party(world, copy, at, configuration.level, profiles)?;
+    for (unit, profile) in geared_profiles(world, &party) {
+        super::gear::equip(world, unit, &profile)?;
+    }
+    Ok(party)
+}
+
+/// Party units that wear gear with the profile that selects it: follower
+/// members plus a synthetic leader. Player owners keep their own equipment.
+pub fn geared_profiles(world: &World, party: &Party) -> Vec<(Entity, Profile)> {
+    let members = party.members.iter().filter_map(|&unit| {
+        world
+            .get::<Follower>(unit)
+            .map(|follower| (unit, follower.profile.clone()))
+    });
+    let leader = world
+        .get::<LeaderProfile>(party.owner)
+        .map(|leader| (party.owner, leader.0.clone()));
+    members.chain(leader).collect()
 }
 
 fn spawn_profiled_party(
@@ -451,7 +469,6 @@ fn initialize_player_owner(
             format!("initialize simulator leader through native player powers: {error}")
         })?;
     spawning::initialize(world, owner, owner, profile.clone())?;
-    super::gear::equip(world, owner, profile)?;
     // Preserve the native runtime-only stable before removing NPC ownership.
     // This headless player has no transport InWorld/character identity.
     crate::hunter_pet::init_pet_stable(world, owner)

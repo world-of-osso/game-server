@@ -305,7 +305,7 @@ fn holy_priest_spells_target_the_tank_and_pay_native_mana() {
         .get::<shared::components::UnitFactionTemplate>(tank)
         .unwrap();
     run.app.world_mut().entity_mut(healer).insert(faction);
-    crate::followers::simulator::spawn_party_for_reference_healer(
+    crate::dungeon_simulator::healer_simc_replay::spawn_reference_party(
         run.app.world_mut(),
         tank,
         healer,
