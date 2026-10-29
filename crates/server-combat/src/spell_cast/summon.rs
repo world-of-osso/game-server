@@ -791,12 +791,14 @@ fn read_summon_template(
     dest: super::targets::Dest,
     spell_id: u32,
 ) -> Option<SummonTemplate> {
-    // SimC76f8118 pet.cpp:69: Discipline fiends inherit their owner's level.
-    let discipline_fiend = matches!(spell_id, 1280172 | 200174 | 451235)
-        && world
-            .get::<shared::components::ActiveSpec>(owner)
-            .is_some_and(|spec| spec.0 == 256);
-    let selected = if discipline_fiend {
+    // SimC76f8118 pet.cpp:69: these combat pets inherit their owner's level.
+    let owner_level_pet = world
+        .get::<shared::components::ActiveSpec>(owner)
+        .is_some_and(|spec| {
+            (spec.0 == 256 && matches!(spell_id, 1280172 | 200174 | 451235))
+                || (spec.0 == 250 && spell_id == 434237)
+        });
+    let selected = if owner_level_pet {
         SelectedSummonLevel {
             difficulty: crate::zones::map_difficulty_id(world, *world.get::<InMap>(owner)?),
             level: read_summoner_level(world, owner)?,
