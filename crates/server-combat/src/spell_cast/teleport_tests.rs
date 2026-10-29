@@ -294,6 +294,11 @@ fn infernal_strike_follows_native_progress_curve_and_damages_on_arrival() {
         .send::<shared::protocol::CombatChannel>(request);
     h.advance(4);
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    let early = *h.app.world().get::<Position>(h.caster).unwrap();
+    assert!(
+        early.x >= 10.0 && early.x < 12.5,
+        "curve 1636 starts slowly: {early:?}"
+    );
     h.advance(6);
     let midway = *h.app.world().get::<Position>(h.caster).unwrap();
     assert!(

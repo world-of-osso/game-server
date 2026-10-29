@@ -1,7 +1,7 @@
 //! TC a352b1fa MotionMaster::MoveJump / MoveSpline's two-point parabolic spline.
 //! Gordoth retains its explicit-speed subset; effect254 also supplies source time,
-//! speed-cap and height options. Facing target/transport/curves are not implemented.
-//! Native jumping animation is unproved.
+//! speed-cap and height options. Infernal Strike uses its progress curve and
+//! arrival action. Facing target and transport remain unsupported.
 use bevy::prelude::*;
 use shared::components::{Position, Rotation};
 
