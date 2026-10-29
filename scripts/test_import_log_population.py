@@ -211,6 +211,7 @@ class ImportTest(unittest.TestCase):
             with sqlite3.connect(source) as db:
                 db.executescript('''
                     CREATE TABLE keystone_affix(ID INTEGER, Name_lang TEXT);
+                    CREATE TABLE raid_encounter_creature(map_id INTEGER, creature_entry INTEGER, encounter_id INTEGER);
                     CREATE TABLE spell_name(ID INTEGER, Name_lang TEXT);
                     CREATE TABLE spell_effect(SpellID INTEGER, Effect INTEGER, EffectMiscValue_0 INTEGER);
                     CREATE TABLE content_creature_template(entry INTEGER PRIMARY KEY);
