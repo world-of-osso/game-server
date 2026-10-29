@@ -3,6 +3,61 @@ use shared::components::Health;
 use shared::protocol::CombatLogKind;
 
 #[test]
+#[ignore = "checks Consume Flame against the native Dream Breath and Verdant Embrace"]
+fn preservation_consume_flame_consumes_dream_breath_on_verdant_embrace() {
+    let spells = [444088, 355941, 360995, 361195, 445495];
+    let mut h = crate::spell_cast::test_harness::harness(Vec::new(), &spells, 13).unwrap();
+    h.app
+        .init_resource::<crate::spell_cast::test_harness::ObservedCombatEvents>();
+    *h.app.world_mut().get_mut::<Health>(h.caster).unwrap() = Health {
+        current: 1.0,
+        max: 100_000.0,
+    };
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: h.caster,
+            target: h.caster,
+            spell_id: 444088,
+            effect_mask: u32::MAX,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 355941, Some(h.caster), 1);
+    let expiry = |h: &crate::spell_cast::test_harness::Harness| {
+        h.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(h.caster)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 355941 && aura.caster == h.caster)
+            .unwrap()
+            .expires_at
+            .unwrap()
+    };
+    let before = expiry(&h);
+    crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 360995, Some(h.caster), 1);
+    let after = expiry(&h);
+    assert!((before - after - 4.0).abs() < 0.001);
+    h.advance(1);
+    let events = &h
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    let heal = events
+        .iter()
+        .find(|event| {
+            event.kind == CombatLogKind::Heal
+                && event.spell_id == Some(445495)
+                && event.target == Some(h.caster.to_bits())
+        })
+        .expect("Verdant Embrace must detonate the consumed Dream Breath");
+    // 70448: 4s / 2s × 0.5352 × 100 SP × 290%.
+    assert!((309..=311).contains(&heal.amount), "{heal:?}");
+}
+
+#[test]
 #[ignore = "checks Preservation Dream Breath's native healing coefficients"]
 fn preservation_dream_breath_child_matches_native_coefficients() {
     // 70448 SpellEffect 889437/1037451: HoT 0.5352, direct 0.9216.
