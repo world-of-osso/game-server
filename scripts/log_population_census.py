@@ -6,6 +6,31 @@ import json
 from pathlib import Path
 
 
+def advanced_position(fields):
+    """Return only a block that identifies its own source or destination unit."""
+    event = fields[0]
+    if event in {"SWING_DAMAGE", "SWING_DAMAGE_LANDED"}:
+        start = 9
+    elif event in {"SPELL_DAMAGE", "SPELL_PERIODIC_DAMAGE", "RANGE_DAMAGE",
+                   "SPELL_HEAL", "SPELL_PERIODIC_HEAL"}:
+        start = 12
+    else:
+        return None
+    if len(fields) <= start + 18 or fields[start] not in (fields[1], fields[5]):
+        return None
+    try:
+        return {
+            "guid": fields[start],
+            "x": float(fields[start + 14]),
+            "y": float(fields[start + 15]),
+            "ui_map_id": int(fields[start + 16]),
+            "facing": float(fields[start + 17]),
+            "level": int(fields[start + 18]),
+        }
+    except ValueError:
+        return None
+
+
 def census(paths, maps):
     runs = []
     for path in sorted(paths):
@@ -45,6 +70,11 @@ def census(paths, maps):
                                                        "summoned": False})
                     if event == "SPELL_SUMMON" and index == 5:
                         item["summoned"] = True
+                position = advanced_position(fields)
+                if position and position['guid'] in current['creatures']:
+                    item = current['creatures'][position['guid']]
+                    if 'first_position' not in item:
+                        item['first_position'] = {**position, 'time': timestamp, 'event': event}
     return runs
 
 
