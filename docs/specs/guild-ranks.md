@@ -57,6 +57,7 @@ Wire contract: shared-protocol `docs/guild-ranks.md`.
 - [x] Updated rights are effective for an already-open vault, and open vault views refresh after edits.
 
 - [x] Hiding a tab preserves its configured deposit flag and daily stack limit; the action/view gate still refuses access.
+- Live proof (2026-10-29, both skins, two private clients): the Guild Master edits only the Member rank through Guild Control. The online Member's own snapshot then grants and later removes tab view/deposit/one stack a day, Withdraw Gold at 1g a day, and officer chat (delivered, then `/o` refused). Evidence: game-engine `godot/tests/guild_control_live.gd`, `docs/specs/guild-ranks.md`.
 
 ### Authority and durability
 - [x] Rank list and affected member positions commit together and survive database reopen.
@@ -91,7 +92,6 @@ Wire contract: shared-protocol `docs/guild-ranks.md`.
 
 ## Known gaps (current cycle)
 
-- [ ] Client native settings UI and transport hookup are tracked in game-engine `docs/specs/guild-ranks.md`.
 - [ ] Unchecked contract bullets have code but lack specific passing behavioral proof.
 
 ## Out of scope
