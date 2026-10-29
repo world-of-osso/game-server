@@ -319,20 +319,24 @@ impl GroundMap {
                 return GroundProbe::Unloaded;
             }
         }
-        let m2 = if !solid_m2 {
-            self.m2_floors
-                .entry(map_id)
-                .or_insert_with(|| {
-                    los::LosMap::new(&self.data_dir.join(format!("los/{map_id}/m2")))
-                })
-                .floor_height(feet)
-        } else {
-            self.m2_solids
+        let walkable = self
+            .m2_floors
+            .entry(map_id)
+            .or_insert_with(|| los::LosMap::new(&self.data_dir.join(format!("los/{map_id}/m2"))))
+            .floor_height(feet);
+        let m2 = if solid_m2 {
+            let solid = self
+                .m2_solids
                 .entry(map_id)
                 .or_insert_with(|| {
                     los::LosMap::new(&self.data_dir.join(format!("los/{map_id}/m2-solid")))
                 })
-                .solid_height(feet)
+                .solid_height(feet);
+            walkable.and_then(|floor| {
+                solid.map(|height| floor.into_iter().chain(height).max_by(f32::total_cmp))
+            })
+        } else {
+            walkable
         };
         match m2 {
             Ok(Some(height)) => match base {

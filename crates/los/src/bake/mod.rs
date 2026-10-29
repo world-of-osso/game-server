@@ -165,7 +165,7 @@ impl Baker {
         }
     }
 
-    /// All authored M2 collision faces, including faces too steep to walk on.
+    /// Authored M2 faces excluded from the walkable companion.
     pub fn for_m2_solids(data: &Path) -> Self {
         Self {
             m2_solids: true,
@@ -517,8 +517,11 @@ impl Baker {
         let thickness = model.thickness(doodad.scale);
         if thickness >= self.cutoff {
             build.stats.alpha_or_blended_triangles += model.dropped_triangles;
-            let added = if self.m2_only && !self.m2_solids {
-                build.add(&model.select_m2_faces(doodad.world, true), doodad.world)
+            let added = if self.m2_only {
+                build.add(
+                    &model.select_m2_faces(doodad.world, !self.m2_solids),
+                    doodad.world,
+                )
             } else {
                 build.add(&model.triangles, doodad.world)
             };

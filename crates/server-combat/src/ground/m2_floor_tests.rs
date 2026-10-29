@@ -21,14 +21,11 @@ fn m2_solid_companion_supports_steep_face_above_walkable_floor() {
         tile.0,
         tile.1,
         vec![
-            Vec3::new(-4.0, 12.0, -4.0),
-            Vec3::new(4.0, 12.0, -4.0),
-            Vec3::new(0.0, 12.0, 4.0),
             Vec3::new(-4.0, 8.88, -4.0),
             Vec3::new(4.0, 19.12, -4.0),
             Vec3::new(0.0, 14.0, 4.0),
         ],
-        vec![[0, 1, 2], [3, 4, 5]],
+        vec![[0, 1, 2]],
     );
     for (directory, baked) in [("m2", floor), ("m2-solid", solid)] {
         let output = dir.path().join("los/2519").join(directory);
@@ -43,6 +40,10 @@ fn m2_solid_companion_supports_steep_face_above_walkable_floor() {
     assert_eq!(
         ground.player_solid_ground_in(crate::maps::InMap::continent(2519), position),
         GroundProbe::Supported(14.0)
+    );
+    assert_eq!(
+        ground.player_solid_ground_in(crate::maps::InMap::continent(2519), position.with_y(12.0)),
+        GroundProbe::Supported(12.0)
     );
 }
 
