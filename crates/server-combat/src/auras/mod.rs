@@ -319,7 +319,8 @@ impl AuraEffectState {
             scheduled_at - paid_offset as f64 * f64::from(period_ms) / 1000.0;
     }
 
-    fn next_tick_at(&self) -> f64 {
+    /// The next scheduled periodic tick, in the aura clock's seconds.
+    pub fn next_tick_at(&self) -> f64 {
         // Form the ordinal offset in native milliseconds before converting to
         // seconds: neither repeated addition nor fractional-period products drift.
         let offset_ms = self.next_tick_index as f64 * f64::from(self.period_ms);
