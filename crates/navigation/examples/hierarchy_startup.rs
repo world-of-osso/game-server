@@ -1,6 +1,6 @@
 //! Measure worker startup and two requests after all installed graphs are loaded.
 use glam::Vec3;
-use navigation::worker::{Query, Request, Worker};
+use navigation::worker::{Output, Query, Request, Worker};
 use std::path::PathBuf;
 use std::time::Instant;
 
@@ -62,13 +62,16 @@ fn main() -> Result<(), String> {
     }
     while !worker.is_idle() {
         for result in worker.poll() {
+            let Some(Output::Path(path)) = result.result? else {
+                return Err(format!("entity {} did not return a path", result.entity));
+            };
             println!(
-                "entity={} response_seconds={:.3} result={}",
+                "entity={} response_seconds={:.3} points={} complete={}",
                 result.entity,
                 started.elapsed().as_secs_f64(),
-                if result.result.is_ok() { "ok" } else { "error" }
+                path.points.len(),
+                path.complete
             );
-            result.result?;
         }
         std::thread::yield_now();
     }
