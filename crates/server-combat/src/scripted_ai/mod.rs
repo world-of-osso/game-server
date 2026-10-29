@@ -137,6 +137,7 @@ impl Plugin for ScriptedAiPlugin {
             .add_systems(Startup, shattered_halls::register_aura_scripts)
             .add_systems(Startup, orator::register_aura_scripts)
             .add_systems(Startup, skarmorak::register_aura_scripts)
+            .add_systems(Startup, neltharus_initial::register_aura_scripts)
             .add_systems(FixedPreUpdate, trigger_just_appeared)
             .add_systems(FixedPostUpdate, hellfire_ramparts::update_instance_resets)
             .add_systems(FixedPostUpdate, hellfire_ramparts::liquid_fire::update)

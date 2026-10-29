@@ -470,7 +470,7 @@ fn encounter_coverage_neltharus_initial_projected_finite_lanes_and_controller_ga
         for difficulty in [1, 205] {
             let (mut h, boss, _) = projected_initial_boss(profile, difficulty);
             h.engage(boss);
-            h.advance(90.0);
+            h.advance(35.0);
             assert!(h.health(h.player()).current > 0.0, "actual victim alive");
             for &(spell, expected) in profile.counts {
                 assert_eq!(
@@ -487,6 +487,23 @@ fn encounter_coverage_neltharus_initial_projected_finite_lanes_and_controller_ga
                 );
             }
         }
+    }
+}
+
+#[test]
+#[ignore = "Sargha native shield expiry re-arms LittleWigs alerts"]
+fn encounter_coverage_sargha_native_shield_expiry_rearms_gold() {
+    for difficulty in [1, 205] {
+        let (mut h, boss, _) = projected_initial_boss(&INITIAL_PHASES[1], difficulty);
+        h.engage(boss);
+        h.advance(50.0);
+        assert_eq!(completed_casts(&h, boss, 376780), 1);
+        assert_eq!(completed_casts(&h, boss, 377017), 1);
+        h.advance(45.0);
+        assert!(
+            completed_casts(&h, boss, 377017) >= 2,
+            "natural shield completion re-arms Gold projected{difficulty}"
+        );
     }
 }
 

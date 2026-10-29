@@ -1,11 +1,15 @@
 //! LittleWigs2777a9d Chargath/Sargha initial alert policy; energy controllers unported.
 use bevy::prelude::*;
 
+use crate::auras::AuraInstance;
+use crate::auras::scripts::{AuraScript, AuraScripts};
+
 use super::boss_ai::{BossAi, BossScript, boss_update_ai};
 use super::{CreatureAi, Ctx};
 
 pub(super) const CHARGATH_SCRIPT: &str = "boss_chargath";
 pub(super) const SARGHA_SCRIPT: &str = "boss_sargha";
+const SHIELD_EXPIRED: i32 = 1;
 
 struct InitialPhaseProfile {
     first_casts: &'static [(u32, u64)],
@@ -57,6 +61,8 @@ pub(super) fn creature_ai(
         boss,
         profile,
         repeat_scheduled: false,
+        expired_shield_phase: false,
+        gold_repeated: false,
     }))
 }
 
@@ -64,6 +70,8 @@ struct InitialPhaseAi {
     boss: BossAi,
     profile: &'static InitialPhaseProfile,
     repeat_scheduled: bool,
+    expired_shield_phase: bool,
+    gold_repeated: bool,
 }
 
 impl CreatureAi for InitialPhaseAi {
@@ -74,14 +82,31 @@ impl CreatureAi for InitialPhaseAi {
     fn reset(&mut self, ctx: &mut Ctx) {
         self.boss.reset(ctx);
         self.repeat_scheduled = false;
+        self.expired_shield_phase = false;
+        self.gold_repeated = false;
     }
 
     fn just_engaged_with(&mut self, ctx: &mut Ctx, _who: Entity) {
         self.boss.just_engaged_with(ctx);
         self.repeat_scheduled = false;
+        self.expired_shield_phase = false;
+        self.gold_repeated = false;
         for &(spell, delay) in self.profile.first_casts {
             self.boss.events.schedule(spell, delay);
         }
+    }
+
+    fn do_action(&mut self, ctx: &mut Ctx, action: i32) {
+        if action != SHIELD_EXPIRED || self.profile.victim_spell != 377017 || !ctx.is_engaged() {
+            return;
+        }
+        self.expired_shield_phase = true;
+        self.repeat_scheduled = false;
+        self.gold_repeated = false;
+        for spell in [377017, 377473, 377204] {
+            self.boss.events.reschedule(spell, 2_400);
+        }
+        self.boss.events.reschedule(376780, 32_600);
     }
 
     fn just_died(&mut self, ctx: &mut Ctx, _killer: Option<Entity>) {
@@ -91,6 +116,20 @@ impl CreatureAi for InitialPhaseAi {
     fn update_ai(&mut self, ctx: &mut Ctx, diff_ms: u32) {
         boss_update_ai(self, ctx, diff_ms);
     }
+}
+
+pub(super) fn register_aura_scripts(mut scripts: ResMut<AuraScripts>) {
+    scripts.0.insert(
+        376780,
+        AuraScript {
+            on_natural_end: Some(shield_expired),
+            ..Default::default()
+        },
+    );
+}
+
+fn shield_expired(world: &mut World, unit: Entity, _aura: &AuraInstance) {
+    super::dispatch(world, unit, super::Hook::DoAction(SHIELD_EXPIRED));
 }
 
 impl BossScript for InitialPhaseAi {
@@ -107,10 +146,12 @@ impl BossScript for InitialPhaseAi {
         let accepted = ctx.do_cast_at(target, event, false);
         let should_repeat = event == self.profile.repeated_spell && !self.repeat_scheduled;
         if accepted && should_repeat {
-            // Both sources expose two casts of this lane before the missing
-            // energy phase. No invented repeat after its second accepted start.
             self.boss.events.schedule(event, self.profile.repeat_ms);
             self.repeat_scheduled = true;
+        }
+        if accepted && event == 377017 && self.expired_shield_phase && !self.gold_repeated {
+            self.boss.events.schedule(event, 26_700);
+            self.gold_repeated = true;
         }
     }
 }
