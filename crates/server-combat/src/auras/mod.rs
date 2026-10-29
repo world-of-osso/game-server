@@ -2425,23 +2425,16 @@ pub(crate) fn critical_bonus_from_caster(
     })
 }
 
-/// User-decided 2026-10-28 approximation: Blessing of Dusk scales its
-/// runtime-modified maximum linearly with missing health on each incoming hit.
-pub(crate) fn dusk_damage_multiplier(
-    auras: Option<&ActiveAuras>,
-    health: &shared::components::Health,
-) -> f32 {
-    if health.max <= 0.0 {
-        return 1.0;
-    }
-    let missing = (1.0 - health.current / health.max).clamp(0.0, 1.0);
+/// SimC 76f8118 sc_paladin.cpp:4729-4732 applies effect 1's maximum at all health levels.
+/// DB2 1241945 effect 0 supplies the base magnitude; native spell modifiers apply to it.
+pub(crate) fn dusk_damage_multiplier(auras: Option<&ActiveAuras>) -> f32 {
     auras
         .into_iter()
         .flat_map(|auras| auras.iter())
         .filter(|aura| aura.spell_id == 1241945)
         .flat_map(|aura| aura.effects.iter())
         .filter(|effect| effect.index == 0)
-        .map(|effect| 1.0 - effect.amount * missing / 100.0)
+        .map(|effect| 1.0 - effect.amount / 100.0)
         .product()
 }
 
@@ -2495,11 +2488,7 @@ pub fn damage_taken_multiplier(
             })
             .product()
     });
-    let dusk = world
-        .get::<shared::components::Health>(target)
-        .map_or(1.0, |health| {
-            dusk_damage_multiplier(world.get::<ActiveAuras>(target), health)
-        });
+    let dusk = dusk_damage_multiplier(world.get::<ActiveAuras>(target));
     let taken = taken
         * dusk
         * versatility

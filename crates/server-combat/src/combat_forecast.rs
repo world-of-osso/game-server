@@ -283,14 +283,9 @@ fn armored_damage(world: &World, projection: &SwingProjection, base: f32) -> f32
     let taken = projection
         .target_mods
         .map_or(1.0, |mods| mods.damage_taken(1))
-        * world
-            .get::<Health>(projection.target)
-            .map_or(1.0, |health| {
-                crate::auras::dusk_damage_multiplier(
-                    world.get::<crate::auras::ActiveAuras>(projection.target),
-                    health,
-                )
-            })
+        * crate::auras::dusk_damage_multiplier(
+            world.get::<crate::auras::ActiveAuras>(projection.target),
+        )
         * world
             .get::<CharacterStats>(projection.target)
             .map_or(1.0, CharacterStats::versatility_damage_taken_multiplier)

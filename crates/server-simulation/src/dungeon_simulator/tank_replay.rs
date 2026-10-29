@@ -622,15 +622,12 @@ fn replay_registered_run_with_healing(
                 return Err("SIMC_DUMMY_AMOUNT_OUT_OF_RANGE".into());
             }
             let world = run.app.world();
-            let health = world.get::<Health>(tank).ok_or("TANK_HEALTH_ABSENT")?;
             let maximum_dusk = world
                 .get::<crate::auras::ActiveAuras>(tank)
                 .and_then(|auras| auras.iter().find(|aura| aura.spell_id == 1241945))
                 .and_then(|aura| aura.effects.iter().find(|effect| effect.index == 0))
                 .map_or(0.0, |effect| f64::from(effect.amount) / 100.0);
-            let dusk_reduction =
-                maximum_dusk * f64::from((1.0 - health.current / health.max).clamp(0.0, 1.0));
-            dusk_reduction_sum += dusk_reduction;
+            dusk_reduction_sum += maximum_dusk;
             dusk_samples += 1;
             let scale = crate::level_scaling::damage_to_hp_scale(run.app.world(), source, tank);
             let before_events = run
