@@ -1692,6 +1692,66 @@ fn masterwork_hammers_forge_lesser_weapon_strikes_on_the_dummy() {
 }
 
 #[test]
+#[ignore = "uses the selected MID2 Protection player and native Sacred Weapon"]
+fn sacred_weapon_procs_strike_the_dummy_with_the_lone_target_bonus() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::protocol::CombatLogKind;
+
+    let strikes = |run: &super::dps_parity::Run, unit: bevy::prelude::Entity| {
+        run.app
+            .world()
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .filter(|event| {
+                event.source == Some(run.actor.to_bits())
+                    && event.target == Some(unit.to_bits())
+                    && event.spell_id == Some(432616)
+                    && event.kind == CombatLogKind::Damage
+            })
+            .map(|event| event.amount)
+            .collect::<Vec<_>>()
+    };
+    // The worn weapon procs from auto attacks over 15 s of its 20 s lifetime.
+    let mut run = engaged_protection_paladin();
+    apply_self_aura(&mut run, 432502);
+    for _ in 0..300 {
+        run.app.update();
+    }
+    assert!(
+        !strikes(&run, run.targets[0]).is_empty(),
+        "Sacred Weapon strikes the dummy"
+    );
+    // Lowest strike per dummy; crits only raise amounts and Holy damage ignores armor.
+    let lowest = |dummies: usize| {
+        let mut run = super::dps_parity::prepare_registered_player(66, dummies).unwrap();
+        super::dps_parity::engage(&mut run);
+        let (actor, primary) = (run.actor, run.targets[0]);
+        for _ in 0..12 {
+            crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 432616, Some(primary), 1);
+            run.app.update();
+        }
+        run.targets
+            .iter()
+            .map(|&unit| {
+                strikes(&run, unit)
+                    .into_iter()
+                    .min()
+                    .expect("every dummy is struck")
+            })
+            .collect::<Vec<_>>()
+    };
+    let lone = lowest(1);
+    let pair = lowest(2);
+    assert_eq!(pair.len(), 2);
+    let ratio = lone[0] as f32 / pair[0] as f32;
+    assert!(
+        (ratio - 1.5).abs() < 0.02,
+        "lone-target strike ratio {ratio}"
+    );
+}
+
+#[test]
 #[ignore = "uses the selected MID2 Protection player and precombat APL"]
 fn protection_default_precombat_casts_holy_bulwark() {
     let run = super::dps_parity::prepare_registered_player(66, 1).unwrap();
