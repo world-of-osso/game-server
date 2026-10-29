@@ -74,6 +74,20 @@ pub(super) fn resource_ledger_entry(
     )
 }
 
+pub(super) fn apply_replay_bloodlust(world: &mut World, tank: Entity) -> Result<(), String> {
+    crate::auras::apply_aura(
+        world,
+        &crate::auras::AuraApplication {
+            caster: tank,
+            target: tank,
+            spell_id: 2825,
+            effect_mask: u32::MAX,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    server::test_support::recompute_fixture_stats(world)
+}
+
 fn self_periodic_damage(event: &shared::protocol::CombatLogEvent, tank: Entity) -> bool {
     event.kind == CombatLogKind::Damage && event.periodic && event.source == Some(tank.to_bits())
 }
@@ -653,16 +667,7 @@ fn replay_registered_run_with_healing(
     for tick in 1..=duration_seconds * 20 {
         elapsed = f64::from(tick) * TICK_SECONDS;
         if !bloodlust_applied && bloodlust_ms.is_some_and(|time| time <= u64::from(tick - 1) * 50) {
-            crate::auras::apply_aura(
-                run.app.world_mut(),
-                &crate::auras::AuraApplication {
-                    caster: tank,
-                    target: tank,
-                    spell_id: 2825,
-                    effect_mask: u32::MAX,
-                    source: crate::auras::AuraSource::Cast,
-                },
-            );
+            apply_replay_bloodlust(run.app.world_mut(), tank)?;
             bloodlust_applied = true;
         }
         if external_healing && tick % 100 == 0 && tick < duration_seconds * 20 {

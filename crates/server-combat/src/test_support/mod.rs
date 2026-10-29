@@ -25,3 +25,10 @@ pub struct ReferenceRace(pub u8);
 /// Successful Divine Inspiration procs on a fixture actor.
 #[derive(bevy::prelude::Component, Default)]
 pub struct DivineInspirationProcs(pub u32);
+
+/// Make newly applied aura stats visible before a fixture's next decision.
+pub fn recompute_fixture_stats(world: &mut bevy::prelude::World) -> Result<(), String> {
+    world
+        .run_system_cached(crate::stats::update_character_stats)
+        .map_err(|error| error.to_string())
+}
