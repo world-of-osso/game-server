@@ -356,6 +356,8 @@ mod tests {
         .unwrap();
         assert_eq!(report["spec"], 581);
         assert_eq!(report["level"], 90);
+        assert_eq!(report["precombat_casts"]["204596"], 1, "{report}");
+        assert_eq!(report["precombat_casts"]["258920"], 1, "{report}");
         assert!(report["incoming_events"].as_u64().unwrap() > 0, "{report}");
         assert!(report["raw_damage"].as_f64().unwrap() > 0.0, "{report}");
         assert!(
