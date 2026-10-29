@@ -2,6 +2,7 @@
 //! The player is refilled between steps: this proves ability timing and native
 //! effects, not party survivability.
 use super::*;
+use crate::spell_cast::test_harness::ObservedCombatEvents;
 
 const LEYMOR: u32 = 186644;
 const TENDER: u32 = 191164;
@@ -14,6 +15,7 @@ const ERRATIC_GROWTH_TRANSFORM: u32 = 375602;
 fn azure_tenders() -> (Harness, Entity, Vec<Entity>) {
     let (mut h, _, map) =
         encounter_fixture(LEYMOR, 2515, 0, 205, None, EncounterState::NotStarted, true);
+    h.app.init_resource::<ObservedCombatEvents>();
     h.advance(0.1);
     let in_copy = |h: &mut Harness, entry| -> Vec<Entity> {
         h.creatures_of(entry)
@@ -36,6 +38,22 @@ fn stasis_casters(h: &Harness, leymor: Entity) -> Vec<Entity> {
         .filter(|aura| aura.spell_id == STASIS_RITUAL)
         .map(|aura| aura.caster)
         .collect()
+}
+
+/// Untargeted NPC casts reach no player's combat log (source/target owners
+/// only), so count them from the server-observed events.
+fn observed_casts(h: &Harness, caster: Entity, spell: u32) -> usize {
+    h.app
+        .world()
+        .resource::<ObservedCombatEvents>()
+        .0
+        .iter()
+        .filter(|event| {
+            event.kind == CombatLogKind::CastSuccess
+                && event.source == Some(caster.to_bits())
+                && event.spell_id == Some(spell)
+        })
+        .count()
 }
 
 fn advance_refilled(h: &mut Harness, seconds: f32) {
@@ -71,19 +89,32 @@ fn azure_tender_channels_native_stasis_ritual_on_leymor_until_engaged() {
 fn azure_tender_wild_eruption_and_erratic_growth_follow_source_clocks() {
     let (mut h, _, tenders) = azure_tenders();
     let tender = tenders[0];
+    // 375647 targets DEST_DEST_GROUND (138): explicit planar ground under the
+    // Tender, whose position is 375652's DEST_CASTER hit destination.
+    let at = h.wow_position(tender);
+    let chunk = crate::terrain_height::CHUNK_SIZE;
+    let corner = [
+        (at.x / chunk).ceil() * chunk + chunk,
+        (at.y / chunk).ceil() * chunk + chunk,
+    ];
+    h.app
+        .insert_resource(crate::terrain_height::test_helpers::flat_arena_ground(
+            2515, corner, at.z,
+        ));
     let position = *h.app.world().get::<Position>(tender).unwrap();
     let player = h.player();
     h.app.world_mut().entity_mut(player).insert(position);
     h.engage(tender);
     advance_refilled(&mut h, 11.8);
-    assert_eq!(h.casts(0, tender, WILD_ERUPTION), 0);
+    assert_eq!(observed_casts(&h, tender, WILD_ERUPTION), 0);
     advance_refilled(&mut h, 2.0);
     assert_eq!(
-        h.casts(0, tender, WILD_ERUPTION),
+        observed_casts(&h, tender, WILD_ERUPTION),
         1,
         "source12s Wild Eruption completes its native1.5s cast"
     );
-    advance_refilled(&mut h, 1.0);
+    // 375650 MinDuration 1.5s: the missile lands 1.5s after the ~13.4s cast.
+    advance_refilled(&mut h, 1.5);
     let fields = h
         .app
         .world_mut()
@@ -96,7 +127,7 @@ fn azure_tender_wild_eruption_and_erratic_growth_follow_source_clocks() {
         "one player target sends one375650 missile whose375647 creates the field"
     );
     assert!(!h.has_aura(player, ERRATIC_GROWTH));
-    advance_refilled(&mut h, 7.5);
+    advance_refilled(&mut h, 7.0);
     assert!(
         h.has_aura(player, ERRATIC_GROWTH),
         "source22s Erratic Growth places its aura on one enemy"
