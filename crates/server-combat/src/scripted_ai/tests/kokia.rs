@@ -226,6 +226,31 @@ fn encounter_coverage_kokia_ritual_summons_after_success() {
 }
 
 #[test]
+fn encounter_coverage_kokia_logged_energy_refills_after_ritual() {
+    for difficulty in [1, 205] {
+        let (mut h, boss, _) = kokia_copy(difficulty);
+        h.engage(boss);
+        h.advance(14.0);
+        let energy = |world: &World| {
+            crate::spell_cast::powers::power_value(
+                world,
+                boss,
+                shared::components::PowerType::Energy,
+            )
+            .unwrap()
+            .0
+        };
+        let before = energy(h.app.world());
+        h.advance(5.0);
+        let gained = energy(h.app.world()) - before;
+        assert!(
+            (gained - 14.32).abs() < 0.3,
+            "logged refill difficulty{difficulty}: {gained}"
+        );
+    }
+}
+
+#[test]
 fn encounter_coverage_kokia_interrupted_ritual_does_not_summon() {
     let (mut h, boss, _) = kokia_copy(205);
     h.engage(boss);

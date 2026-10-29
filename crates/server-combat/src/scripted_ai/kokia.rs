@@ -15,6 +15,10 @@ const SEARING_BLOWS: u32 = 372858;
 const RITUAL_REPEAT_MS: u64 = 40_088;
 const BOULDER_REPEAT_MS: u64 = 20_650;
 const SEARING_REPEAT_MS: u64 = 40_128;
+// LOG_OBSERVED_BOSS_ENERGY_RATE: four Mythic+ kills, 8s uncapped
+// windows have medians 2.8625–2.8653 Energy/s. The native spawn's
+// periodic-dummy383804 has no identified Energy driver; this is not TC regen.
+const OBSERVED_ENERGY_PER_SECOND: f32 = 2.864;
 
 pub(super) fn creature_ai(boss: BossAi) -> Box<dyn CreatureAi> {
     Box::new(Kokia {
@@ -58,6 +62,16 @@ impl CreatureAi for Kokia {
     }
 
     fn update_ai(&mut self, ctx: &mut Ctx, diff_ms: u32) {
+        if ctx.is_engaged() {
+            let amount = OBSERVED_ENERGY_PER_SECOND * diff_ms as f32 / 1_000.0;
+            crate::spell_cast::powers::change_power(
+                ctx.world,
+                ctx.me,
+                shared::components::PowerType::Energy,
+                amount,
+            )
+            .expect("Kokia's native Energy pool is required");
+        }
         boss_update_ai(self, ctx, diff_ms);
     }
 }
