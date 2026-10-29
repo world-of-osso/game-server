@@ -289,6 +289,19 @@ fn discipline_policy_uses_evangelism_without_injury_gate() {
             .any(|&member| crate::auras::has_aura(run.app.world(), member, 194384)),
         "Evangelism's Radiance must apply Atonement"
     );
+    // The selected profile does not learn Radiance; add it to exercise this APL branch.
+    let mut spells: Vec<_> = run
+        .app
+        .world()
+        .get::<crate::class_progression::KnownSpells>(healer)
+        .unwrap()
+        .iter()
+        .collect();
+    spells.push(194509);
+    run.app
+        .world_mut()
+        .entity_mut(healer)
+        .insert(crate::class_progression::KnownSpells::fixture(spells));
     policy.drive(run.app.world_mut(), healer, &members).unwrap();
     for _ in 0..50 {
         run.app.update();
@@ -299,7 +312,8 @@ fn discipline_policy_uses_evangelism_without_injury_gate() {
             .any(|event| event.kind == CombatLogKind::CastSuccess
                 && event.source == Some(healer.to_bits())
                 && event.spell_id == Some(194509)),
-        "Radiance must follow under the Mind Blast cooldown condition"
+        "Radiance must follow under the Mind Blast cooldown condition: {:?}",
+        &run.app.world().resource::<ObservedCombatEvents>().0[cursor..]
     );
 }
 
