@@ -14,6 +14,11 @@ pub enum Query {
         from: Vec3,
         to: Vec3,
     },
+    /// `Path` that walks PATHFIND_INCOMPLETE corridors (FollowMovementGenerator).
+    FollowPath {
+        from: Vec3,
+        to: Vec3,
+    },
     SmoothPath {
         from: Vec3,
         to: Vec3,
@@ -524,6 +529,7 @@ fn run_query(
 ) -> Result<Output, String> {
     let output = match query {
         Query::Path { from, to } => Output::Path(map.path_with_plan(from, to, plan)?),
+        Query::FollowPath { from, to } => Output::Path(map.follow_path(from, to, plan)?),
         Query::SmoothPath { from, to } => Output::Path(NavigationPath {
             points: map.smooth_waypoint_path(from, to)?,
             complete: true,

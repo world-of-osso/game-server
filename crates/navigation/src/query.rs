@@ -73,6 +73,9 @@ pub struct NavigationMap {
     mesh: *mut dtNavMesh,
     query: *mut dtNavMeshQuery,
     hierarchy: Option<Result<std::sync::Arc<crate::hierarchy::PortalGraph>, String>>,
+    /// Endpoint polygon pairs the portal hierarchy proved disconnected. Tiles never
+    /// unload, so refs and the baked connectivity stay valid for this map's lifetime.
+    disconnected: HashSet<(dtPolyRef, dtPolyRef)>,
 }
 
 // SAFETY: pointers are exclusively owned, no thread-affine state; use requires &mut.
@@ -90,6 +93,7 @@ impl NavigationMap {
                 mesh: dtAllocNavMesh(),
                 query: dtAllocNavMeshQuery(),
                 hierarchy: None,
+                disconnected: HashSet::new(),
             }
         };
         if map.mesh.is_null() || map.query.is_null() {
@@ -178,6 +182,41 @@ impl NavigationMap {
         walking
     }
 
+    /// TC a352b1fa FollowMovementGenerator: a PATHFIND_INCOMPLETE path is still walked;
+    /// only PATHFIND_NOPATH stops. A proven disconnect yields the corridor to the
+    /// polygon Detour found closest to the target (PathGenerator::BuildPolyPath).
+    pub fn follow_path(
+        &mut self,
+        start: Vec3,
+        end: Vec3,
+        plan: &mut NavigationPlan,
+    ) -> Result<NavigationPath, String> {
+        match self.path_with_plan(start, end, plan) {
+            Err(error)
+                if error == "unreachable target (incomplete corridor)"
+                    || error == "unreachable target (hierarchy disconnected)" =>
+            {
+                self.closest_reachable_path(start, end)
+            }
+            path => path,
+        }
+    }
+
+    fn closest_reachable_path(&mut self, start: Vec3, end: Vec3) -> Result<NavigationPath, String> {
+        self.load_around(start, end)?;
+        let filter = filter();
+        let (start_ref, start_pos) = self.nearest(start, &filter)?;
+        let (end_ref, end_pos) = self.nearest(end, &filter)?;
+        let corridor =
+            self.query_references(start_ref, start_pos, end_ref, end_pos, &filter, true)?;
+        let points = self.pull_corners(&corridor.start, &corridor.end, &corridor.polygons)?;
+        Ok(NavigationPath {
+            points,
+            complete: corridor.complete,
+            collision_drop: None,
+        })
+    }
+
     fn walking_path(&mut self, start: Vec3, end: Vec3) -> Result<NavigationPath, String> {
         self.walking_path_with_plan(start, end, &mut NavigationPlan::default())
     }
@@ -240,7 +279,7 @@ impl NavigationMap {
         let filter = filter();
         let (start_ref, start_pos) = self.nearest(start, &filter)?;
         let (end_ref, end_pos) = self.nearest(end, &filter)?;
-        self.query_references(start_ref, start_pos, end_ref, end_pos, &filter)
+        self.query_references(start_ref, start_pos, end_ref, end_pos, &filter, false)
     }
 
     fn query_references(
@@ -250,6 +289,7 @@ impl NavigationMap {
         end_ref: dtPolyRef,
         end_pos: [f32; 3],
         filter: &dtQueryFilter,
+        accept_incomplete: bool,
     ) -> Result<Corridor, String> {
         let mut corridor = [0; MAX_PATH];
         let mut count = 0;
@@ -275,8 +315,9 @@ impl NavigationMap {
         let exhaustion_flags = DT_PARTIAL_RESULT | DT_OUT_OF_NODES;
         let exhausted = result & exhaustion_flags == exhaustion_flags;
         // A completed search proves a disconnect. Only resource-limited searches
-        // may expose a walkable prefix; preserve stationary CannotReachTarget policy.
-        if !complete && !exhausted {
+        // may expose a walkable prefix; preserve stationary CannotReachTarget policy
+        // unless the caller walks PATHFIND_INCOMPLETE paths.
+        if !complete && !exhausted && !accept_incomplete {
             return Err("unreachable target (incomplete corridor)".into());
         }
         let reachable_end = if complete {

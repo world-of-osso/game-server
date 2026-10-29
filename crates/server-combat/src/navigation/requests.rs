@@ -41,9 +41,16 @@ impl Navigation {
             entity: entity.to_bits(),
             id,
             map_id: request.map_id,
-            query: WorkerQuery::Path {
-                from: point(request.from),
-                to: point(request.to),
+            query: if matches!(request.goal, Goal::Follow(_)) {
+                WorkerQuery::FollowPath {
+                    from: point(request.from),
+                    to: point(request.to),
+                }
+            } else {
+                WorkerQuery::Path {
+                    from: point(request.from),
+                    to: point(request.to),
+                }
             },
         });
     }
@@ -117,8 +124,11 @@ impl Navigation {
         };
         if let Err(error) = &points {
             error!(
-                "Creature {entity} navigation {:?} on map {} failed: {error}; no direct movement",
-                request.goal, request.map_id
+                "Creature {entity} navigation {:?} on map {} from {} to {} failed: {error}; no direct movement",
+                request.goal,
+                request.map_id,
+                point(request.from),
+                point(request.to)
             );
         }
         self.routes.insert(

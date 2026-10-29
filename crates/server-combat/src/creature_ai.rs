@@ -243,6 +243,11 @@ impl FollowOwner {
 pub(crate) struct PartyFollowSlot(f32);
 
 impl PartyFollowSlot {
+    #[cfg(test)]
+    pub(crate) fn angle(&self) -> f32 {
+        self.0
+    }
+
     pub(crate) fn new(slot: usize, member_count: usize) -> Self {
         let fraction = if member_count > 1 {
             slot as f32 / (member_count - 1) as f32

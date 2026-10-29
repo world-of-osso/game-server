@@ -126,6 +126,7 @@ impl Navigation {
 pub(super) fn query_from(query: &PendingQuery) -> Vec3 {
     match &query.query {
         WorkerQuery::Path { from, .. }
+        | WorkerQuery::FollowPath { from, .. }
         | WorkerQuery::SmoothPath { from, .. }
         | WorkerQuery::Collision { from, .. }
         | WorkerQuery::Candidates { from, .. } => *from,
