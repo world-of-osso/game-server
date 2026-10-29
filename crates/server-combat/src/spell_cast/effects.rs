@@ -2371,6 +2371,9 @@ fn deal_source_damage_and_report(
     #[cfg(any(test, feature = "test-support"))]
     factor_capture::finish(world, ctx, target, captured_hit, &event);
     log_event(world, event);
+    if amount > 0.0 {
+        super::script_registry::raw_resolved_damage(world, ctx, target, crit, unrounded);
+    }
     super::script_registry::landed_damage_policies(
         world,
         ctx.caster,
@@ -2617,6 +2620,17 @@ pub fn apply_fixed_heal(world: &mut World, ctx: &EffectCtx, target: Entity, amou
 /// Echo's pool already includes the originating heal's modifiers and critical result.
 pub fn apply_fixed_periodic_heal(world: &mut World, ctx: &EffectCtx, target: Entity, amount: f32) {
     apply_resolved_heal(world, ctx, target, amount.max(0.0).round(), false, true);
+}
+
+/// A transfer carries the already-applied critical result without rolling again.
+pub fn apply_critical_transfer_heal(
+    world: &mut World,
+    ctx: &EffectCtx,
+    target: Entity,
+    amount: f32,
+    crit: bool,
+) {
+    apply_resolved_heal(world, ctx, target, amount.max(0.0).round(), crit, false);
 }
 
 fn apply_resolved_heal(
