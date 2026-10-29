@@ -1,7 +1,6 @@
 //! Native70448 scheduled Fel Devastation healing; TC a352b1fa spell_dh1291–1310.
 //! SimC76f8118 DH4204–4212 agrees on heal-before-damage periodic order.
-//! FEL_DEVASTATION_UPFRONT_HEAL_SOURCE_CONFLICT: SimC also heals on execute;
-//! that difference and full aura-origin/proc/trigger-flag parity remain deferred.
+//! The separate cast heal is registered in vengeance_fel_devastation.
 use bevy::prelude::*;
 
 use super::AuraInstance;

@@ -1014,6 +1014,32 @@ fn dps_parity_native_bis_dummy_records_300s() {
         .parse()
         .expect("numeric target count");
     assert!(matches!(count, 1 | 3));
+    if count == 1
+        && matches!(spec, 270 | 1468)
+        && std::env::var_os("HEALER_IMPACT_REPLAY").is_some()
+    {
+        let directory = std::path::Path::new(
+            "/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/healer-tank-replay",
+        );
+        let report = super::healer_replay::replay_simc_party(
+            spec,
+            &directory.join("66.simc-trace.log"),
+            &directory.join("66.simc-party-pulse-seed70448.debug.log"),
+            300,
+            70448,
+        )
+        .expect("native healer impact replay");
+        let file = inputs::directory()
+            .unwrap()
+            .join(format!("{spec}.native.{count}.json"));
+        std::fs::write(
+            file,
+            serde_json::to_vec_pretty(&json!({"spec_id":spec,"healer_replay":report})).unwrap(),
+        )
+        .unwrap();
+        eprintln!("NATIVE_HEALER_REPLAY spec{spec} seed70448: complete");
+        return;
+    }
     let result = measure(spec, count);
     let mut output = match &result {
         Ok(report) => report.clone(),

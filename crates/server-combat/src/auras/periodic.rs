@@ -70,19 +70,24 @@ struct Tick {
 
 /// SimC76f8118 dot.cpp1154–1170/action.cpp5223: final damage/healing is fractional.
 /// TC a352b1fa SharedDefines.h defines no final-partial selector attribute.
-/// Trigger, dummy and resource periods remain discrete.
-fn supports_partial_tick(aura_type: u32) -> bool {
-    matches!(
-        aura_type,
-        PERIODIC_DAMAGE | PERIODIC_DAMAGE_PERCENT | PERIODIC_LEECH | PERIODIC_HEAL | OBS_MOD_HEALTH
-    )
+/// Fixed-duration hasted trigger channels also emit their final child at expiry.
+fn supports_partial_tick(effect: &super::AuraEffectState) -> bool {
+    effect.fixed_channel_final_trigger
+        || matches!(
+            effect.aura_type,
+            PERIODIC_DAMAGE
+                | PERIODIC_DAMAGE_PERCENT
+                | PERIODIC_LEECH
+                | PERIODIC_HEAL
+                | OBS_MOD_HEALTH
+        )
 }
 
 fn next_due_tick(effect: &super::AuraEffectState, expiry: f64, now: f64) -> Option<(f64, f32)> {
     const TIME_EPSILON: f64 = 1e-6;
     let full_tick_at = effect.next_tick_at();
     let final_partial = full_tick_at > expiry + TIME_EPSILON;
-    if final_partial && !supports_partial_tick(effect.aura_type) {
+    if final_partial && !supports_partial_tick(effect) {
         return None;
     }
     let scheduled_at = full_tick_at.min(expiry);
@@ -187,7 +192,7 @@ pub fn count_remaining_ticks(aura: &super::AuraInstance) -> Result<u32, String> 
 
 /// SimC76f8118 dot.hpp88 rounds remaining fractional ticks upward.
 fn remaining_effect_ticks(effect: &super::AuraEffectState, expiry: f64) -> u32 {
-    if !supports_partial_tick(effect.aura_type) {
+    if !supports_partial_tick(effect) {
         return super::refresh::remaining_ticks(effect.next_tick_at(), expiry, effect.period_ms);
     }
     let period = f64::from(effect.period_ms) / 1000.0;
