@@ -1697,6 +1697,30 @@ fn unregistered_tank_driver_fails_instead_of_using_a_follower() {
 }
 
 #[test]
+#[ignore = "requires canonical MID2 profile inputs and the six SimC tank traces"]
+fn pressure_scale_keeps_same_seed_attack_outcomes_for_every_tank() {
+    let traces = std::env::var("HEALER_TANK_TRACE_DIR").expect("HEALER_TANK_TRACE_DIR required");
+    for spec in [66, 73, 104, 250, 268, 581] {
+        let path = Path::new(&traces).join(format!("{spec}.simc-trace.log"));
+        let outcomes = |scale| {
+            let report = super::tank_replay::replay_simc_with_pressure(
+                spec, &path, 300, 70448, false, scale,
+            )
+            .unwrap();
+            report["incoming_outcome_sequence"]
+                .as_array()
+                .unwrap()
+                .clone()
+        };
+        let normal = outcomes(1.0);
+        let pressured = outcomes(2.0);
+        let shared = normal.len().min(pressured.len());
+        assert!(shared >= 60, "spec {spec}: only {shared} shared attacks");
+        assert_eq!(normal[..shared], pressured[..shared], "spec {spec}");
+    }
+}
+
+#[test]
 #[ignore = "requires canonical MID2 profile inputs and a real SimC trace"]
 fn scaled_real_trace_doubles_raw_pressure_and_shortens_survival() {
     let path = std::env::var("HEALER_TANK_SIMC_TRACE").expect("HEALER_TANK_SIMC_TRACE required");

@@ -2025,7 +2025,8 @@ pub(crate) fn roll_critical_block(auras: Option<&crate::auras::ActiveAuras>) -> 
             })
             .sum::<f32>()
     });
-    chance >= 100.0 || chance > 0.0 && rand::random::<f32>() * 100.0 < chance
+    let roll_succeeds = || rand::Rng::r#gen::<f32>(&mut rand::recipient_rng()) * 100.0 < chance;
+    chance >= 100.0 || chance > 0.0 && roll_succeeds()
 }
 
 fn roll_critical_block_damage(
@@ -2970,8 +2971,8 @@ pub fn roll_simc_dummy_outcome(
     Ok((
         melee::roll_player_melee_outcome(
             &chances,
-            rand::Rng::gen_range(&mut rand::thread_rng(), 0..10_000),
-            rand::Rng::gen_range(&mut rand::thread_rng(), 0..10_000),
+            rand::Rng::gen_range(&mut rand::recipient_rng(), 0..10_000),
+            rand::Rng::gen_range(&mut rand::recipient_rng(), 0..10_000),
         ),
         difference,
     ))
