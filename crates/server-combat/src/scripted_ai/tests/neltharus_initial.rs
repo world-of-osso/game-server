@@ -451,13 +451,30 @@ fn encounter_coverage_neltharus_initial_projected_finite_lanes_and_controller_ga
                     "source finite lane {spell} projected{difficulty}"
                 );
             }
-            for spell in [375056, 376780, 377014] {
+            for spell in [377014] {
                 assert_eq!(
                     completed_casts(&h, boss, spell),
                     0,
-                    "no fabricated energy, shield or Backdraft controller"
+                    "no fabricated Backdraft controller"
                 );
             }
+        }
+    }
+}
+
+#[test]
+#[ignore = "Neltharus LittleWigs first phase alert requests"]
+fn encounter_coverage_neltharus_first_focus_and_shield_alerts() {
+    for (profile, spell) in [(&INITIAL_PHASES[0], 375056), (&INITIAL_PHASES[1], 376780)] {
+        for difficulty in [1, 205] {
+            let (mut h, boss, _) = projected_initial_boss(profile, difficulty);
+            h.engage(boss);
+            h.advance(45.0);
+            assert_eq!(
+                completed_casts(&h, boss, spell),
+                1,
+                "first phase alert spell {spell} projected{difficulty}"
+            );
         }
     }
 }
