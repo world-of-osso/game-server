@@ -82,6 +82,10 @@
 - `ANUBZEKT_IMPALE_DUMMY_CHILD_UNSOURCED`, `ANUBZEKT_BURROW_SELECTOR_MOVEMENT_CHILD_UNSOURCED`, `ANUBZEKT_EYE_CENTER_AREA_PHASE_EXIT_UNSOURCED` and `ANUBZEKT_WEBMAGE_CONTROLLER_UNSOURCED` retain missing dummy forwarding, charge destinations, center movement, Eye area/aura434408 ingress/exit and add controller. Never manufacture those actions or infer25s phase exit from the warning duration. Lua outgoing countdown updates are a declared partial, not certification of the absent controller or whole fight.
 - Ignored native RED must be pushed/executed before combat implementation. Require native Normal/Follower ongoing request/effect/reset/rearm/copy-credit/corpse proof and producer preservation/idempotence/conflict tests before gate packet. Final integration/publication remains lead-owned.
 
+## Uldaman Prehistoria door
+
+`ULDAMAN_PREHISTORIA_DOOR_LITTLEWIGS_TIMER`: when Bromach2556 completes with Lost Dwarves2555 already Done, open source Vault Door376557 in that copy after18.3s. LittleWigs `UldamanLegacyOfTyr/Trash.lua:176–185` ties the timer to Bromach's win and the completed Dwarves criterion; the dwarves' RP movement is not modelled. Do not infer a gossip or spellclick trigger.
+
 ## Deios source ingress boundary
 
 - Current LittleWigs2777a9d `ChronoLordDeios.lua` authenticates184125/2559/map2451bit4, first Wing3760496.3s/Sand37572712.1s/Rewind37620839.1s. Normal1/Follower205 must not invent non-Normal Time Sink debuffs. Lua warmup16.9s and defeated-health>1 check do not establish an immunity-removal action or surrender/credit controller.

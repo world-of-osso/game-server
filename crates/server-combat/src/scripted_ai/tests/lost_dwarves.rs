@@ -108,6 +108,103 @@ fn encounter_coverage_lost_dwarves_overkill_surrenders_alive_and_all_three_grant
 }
 
 #[test]
+fn encounter_coverage_uldaman_prehistoria_door_opens_after_bromach() {
+    let (mut h, baelog, map) = dwarf_copy(DWARVES[0], 205);
+    let conn =
+        Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    let spawns = crate::game_objects::load_game_object_spawns(&conn).unwrap();
+    let source = spawns
+        .0
+        .iter()
+        .find(|spawn| spawn.info.entry == 376557)
+        .unwrap();
+    assert_eq!(source.map_id, MAP);
+    let door = h
+        .app
+        .world_mut()
+        .spawn((crate::game_objects::game_object_bundle(source), map))
+        .id();
+    let other_map = InMap {
+        instance_id: map.instance_id + 1,
+        ..map
+    };
+    let other_door = h
+        .app
+        .world_mut()
+        .spawn((crate::game_objects::game_object_bundle(source), other_map))
+        .id();
+    let (eric, _) = spawn_authored_actor(&mut h.app, &conn, DWARVES[1], map, 205);
+    let (olaf, _) = spawn_authored_actor(&mut h.app, &conn, DWARVES[2], map, 205);
+    let (bromach, _) = spawn_authored_actor(&mut h.app, &conn, 184018, map, 205);
+    for actor in [baelog, eric, olaf] {
+        h.engage(actor);
+        h.hit_pct(actor, 200.0);
+        h.advance(0.1);
+    }
+    h.engage(bromach);
+    h.hit_pct(bromach, 200.0);
+    h.advance(0.1);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::protocol::GameObjectCollision>(door),
+        Some(&shared::protocol::GameObjectCollision(true))
+    );
+    h.advance(18.0);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::protocol::GameObjectCollision>(door),
+        Some(&shared::protocol::GameObjectCollision(true)),
+        "door remains closed before 18.3s"
+    );
+    h.advance(0.3);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::protocol::GameObjectCollision>(door),
+        Some(&shared::protocol::GameObjectCollision(false)),
+        "Bromach after dwarves opens the sourced door"
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::protocol::GameObjectCollision>(other_door),
+        Some(&shared::protocol::GameObjectCollision(true)),
+        "another copy stays closed"
+    );
+}
+
+#[test]
+fn encounter_coverage_uldaman_prehistoria_door_requires_lost_dwarves() {
+    let (mut h, _, map) = dwarf_copy(DWARVES[0], 205);
+    let conn =
+        Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    let spawns = crate::game_objects::load_game_object_spawns(&conn).unwrap();
+    let source = spawns
+        .0
+        .iter()
+        .find(|spawn| spawn.info.entry == 376557)
+        .unwrap();
+    let door = h
+        .app
+        .world_mut()
+        .spawn((crate::game_objects::game_object_bundle(source), map))
+        .id();
+    let (bromach, _) = spawn_authored_actor(&mut h.app, &conn, 184018, map, 205);
+    h.engage(bromach);
+    h.hit_pct(bromach, 200.0);
+    h.advance(19.0);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::protocol::GameObjectCollision>(door),
+        Some(&shared::protocol::GameObjectCollision(true)),
+        "Bromach alone must not open the door"
+    );
+}
+
+#[test]
 fn encounter_coverage_lost_dwarves_sustained_damage_surrenders_all_three() {
     let (mut h, baelog, map) = dwarf_copy(DWARVES[0], 205);
     let conn =

@@ -71,6 +71,7 @@ mod talondras;
 pub mod the_stockade;
 mod treemouth;
 pub(crate) mod tww_rookery;
+mod uldaman;
 mod umbrelskul;
 mod vexamus;
 pub(crate) mod wailing_caverns;
@@ -146,6 +147,7 @@ impl Plugin for ScriptedAiPlugin {
             .add_systems(FixedPreUpdate, trigger_just_appeared)
             .add_systems(FixedPostUpdate, hellfire_ramparts::update_instance_resets)
             .add_systems(FixedPostUpdate, hellfire_ramparts::liquid_fire::update)
+            .add_systems(FixedPostUpdate, uldaman::update_door)
             .add_systems(
                 FixedPreUpdate,
                 (
