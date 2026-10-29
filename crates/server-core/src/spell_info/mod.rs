@@ -110,6 +110,9 @@ pub struct SpellInfo {
     /// Source SPELLVALUE_AURA_STACK on this cast, retained through missile snapshots.
     #[serde(skip)]
     pub cast_aura_stacks: Option<u8>,
+    /// A triggering effect's exact aura duration, independent of duration modifiers.
+    #[serde(skip)]
+    pub cast_fixed_aura_duration_ms: Option<u32>,
     /// Source CastSpellExtraArgs::OriginalCaster, not the actual casting unit.
     #[serde(skip)]
     pub cast_original_caster: Option<Entity>,
