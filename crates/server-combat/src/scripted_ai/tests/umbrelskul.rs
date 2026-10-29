@@ -90,6 +90,45 @@ fn encounter_coverage_umbrelskul_ordinary_strike_damage_and_periodic_qualify() {
 }
 
 #[test]
+fn encounter_coverage_umbrelskul_unleashed_destruction_and_credit() {
+    let (mut h, boss, map) = umbrelskul_copy(205);
+    h.engage(boss);
+    h.advance(54.7);
+    assert_eq!(cast_count(&h, boss, 385399), 0);
+    h.advance(8.0);
+    assert_eq!(
+        cast_count(&h, boss, 385399),
+        1,
+        "native first Unleashed Destruction"
+    );
+    assert!(
+        h.inbox(0)
+            .log
+            .iter()
+            .any(|event| event.kind == CombatLogKind::Damage
+                && event.amount > 0
+                && event.spell_id == Some(385399)
+                && event.source == Some(boss.to_bits())
+                && event.target == Some(h.player().to_bits())),
+        "native area damage"
+    );
+    h.hit_pct(boss, 200.0);
+    h.advance(0.1);
+    assert_eq!(
+        instance_script::get_boss_state(h.app.world_mut(), map, ORDINAL),
+        Some(EncounterState::Done)
+    );
+    assert_ne!(
+        h.app
+            .world()
+            .resource::<crate::maps::InstanceManager>()
+            .completed_encounters(map)
+            & (1 << 2),
+        0
+    );
+}
+
+#[test]
 fn encounter_coverage_umbrelskul_first_strike_uses_lua_clock() {
     let (mut h, boss, _) = umbrelskul_copy(205);
     h.engage(boss);
@@ -243,7 +282,9 @@ fn encounter_coverage_umbrelskul_native_lua_rotation_and_isolated_credit() {
                 "native scheduled damage{spell}"
             );
         }
-        for spell in [385075, 385399, 388804, 386746] {
+        let destruction = if difficulty == 23 { 388804 } else { 385399 };
+        assert_eq!(cast_count(&h, boss, destruction), 1, "first sourced alert");
+        for spell in [385075, 386746] {
             assert_eq!(
                 cast_count(&h, boss, spell),
                 0,

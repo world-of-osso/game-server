@@ -8,6 +8,8 @@ use super::{CreatureAi, Ctx};
 pub(super) const SCRIPT: &str = "boss_umbrelskul";
 const DRAGON_STRIKE: u32 = 384978;
 const CRYSTALLINE_ROAR: u32 = 384699;
+const UNLEASHED_DESTRUCTION: u32 = 385399;
+const MYTHIC_UNLEASHED_DESTRUCTION: u32 = 388804;
 const MYTHIC_KEYSTONE: u32 = 8;
 const MYTHIC_DUNGEON: u32 = 23;
 
@@ -43,6 +45,14 @@ impl CreatureAi for Umbrelskul {
         self.roar_repeat_ms = if mythic { 105_600 } else { 23_100 };
         self.boss.events.schedule(DRAGON_STRIKE, 7_400);
         self.boss.events.schedule(CRYSTALLINE_ROAR, 12_200);
+        self.boss.events.schedule(
+            if mythic {
+                MYTHIC_UNLEASHED_DESTRUCTION
+            } else {
+                UNLEASHED_DESTRUCTION
+            },
+            54_800,
+        );
     }
 
     fn on_spell_cast(&mut self, _ctx: &mut Ctx, spell_id: u32) {
@@ -72,6 +82,7 @@ impl BossScript for Umbrelskul {
     fn execute_event(&mut self, ctx: &mut Ctx, event: u32) {
         match event {
             DRAGON_STRIKE => ctx.do_cast_victim(DRAGON_STRIKE),
+            UNLEASHED_DESTRUCTION | MYTHIC_UNLEASHED_DESTRUCTION => ctx.do_cast_self(event),
             CRYSTALLINE_ROAR => {
                 // Partial direct384699 request from Lua's ability countdown;
                 // upstream384696 dummy-selector scripting remains unsourced.
