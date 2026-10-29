@@ -4,6 +4,7 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 ## What it must do
 
+- Player weapon auto-attack damage applies the attack-power multiplier to the weapon roll as well as the attack-power contribution (SimC76f8118 `action.cpp:1429–1439`).
 - Equipped Call the Swarm1310082 delivers Acidbrood1310088 through native missile1310083, and equipped Void Eruption1310208 delivers1310209. Payload damage uses the originating item's native driver effect1 budget and native role multiplier, not the zero-valued damage-leaf points. Preserve native proc eligibility/RPPM/ICD, travel, crit and full unsplit AoE.
 - The pinned `bugs=true` Void Eruption behavior does not apply its inactive Venomcursed15% bonus. Casting-item context must survive native aura proc children and their missile/trigger descendants; class procs without an item retain their existing context.
 - An Antoran Tyrant uses the scheduled Burning Cleave action as its only swing; native1251000 must not also emit a separate white-swing replacement (`sc_warlock_pets.cpp1510–1573`).
