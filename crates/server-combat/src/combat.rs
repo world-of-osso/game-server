@@ -1504,9 +1504,7 @@ fn roll_swing_base(
         Some(stats) => {
             // SimC76f8118 action.cpp1429–1439: AP multipliers scale the weapon
             // roll too; CharacterStats already includes them in attack_power.
-            let multiplier = attacker
-                .mods
-                .map_or(1.0, |mods| 1.0 + mods.attack_power_pct / 100.0);
+            let multiplier = 1.0 + stats.attack_power_pct / 100.0;
             let mut scaled_weapon = weapon.clone();
             scaled_weapon.min *= multiplier;
             scaled_weapon.max *= multiplier;

@@ -75,21 +75,16 @@ fn attack_power_multiplier_also_scales_the_weapon_roll() {
     let _seed = crate::random::seed_scope(70_448);
     let mut app = setup_app();
     let target = spawn_target(&mut app, pos(1.0, 0.0, 0.0), 10_000.0);
-    let attacker = level_10_player(
+    level_10_player(
         &mut app,
         target,
         CharacterStats {
             attack_power: 60.0,
+            attack_power_pct: 30.0,
             main_hand: HEAVY_BLADE,
             ..default()
         },
     );
-    app.world_mut()
-        .entity_mut(attacker)
-        .insert(crate::auras::AuraStatMods {
-            attack_power_pct: 30.0,
-            ..default()
-        });
     run_attack_tick(&mut app);
     // AP is already scaled in CharacterStats: 100 * 1.3 + 60 / 6 * 2.6 = 156.
     assert_eq!(app.world().get::<Health>(target).unwrap().current, 9_844.0);
