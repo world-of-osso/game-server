@@ -47,3 +47,4 @@ Only105 Crenna209072 and257 Henry215011 have authored healer follower profiles i
 ## See also
 
 - [Dungeon simulator](dungeon-simulator.md)
+- [Healer and tank replay](healer-tank-replay.md) — SimC dummy and party-pulse inputs.
