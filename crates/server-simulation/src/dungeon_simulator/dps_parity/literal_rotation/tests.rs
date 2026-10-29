@@ -152,7 +152,7 @@ fn literal_queues_nearly_ready_cooldown_before_lower_priority_cast() {
     let world = run.app.world();
     let spell = world.resource::<crate::spell_info::SpellStore>().get(107428).unwrap();
     let remaining = world.get::<crate::spell_cast::SpellHistory>(actor).unwrap()
-        .remaining_cooldown_ms(spell, crate::spell_cast::now(world));
+        .remaining_cooldown_ms(spell, crate::spell_cast::history_now(world));
     assert!(remaining > 250);
     crate::spell_cast::scripts::reduce_cooldown(run.app.world_mut(), actor, 107428, (remaining as f64 - 200.0) / 1000.0);
     let actions = [
