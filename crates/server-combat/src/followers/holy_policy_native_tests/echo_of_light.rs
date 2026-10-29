@@ -212,6 +212,51 @@ fn holy_echo_of_light_native90_direct_overheal_produces_two_native_ticks_and_exp
 }
 
 #[test]
+fn holy_echo_does_not_reapply_crit_or_versatility_to_the_direct_heal() {
+    let mut group = native_group();
+    let percent = expected_echo_percent(&group);
+    {
+        let mut stats = group
+            .h
+            .app
+            .world_mut()
+            .get_mut::<crate::stats::CharacterStats>(group.priest)
+            .unwrap();
+        stats.crit_pct = 100.0;
+        stats.versatility_pct = 50.0;
+    }
+    apply_pressure(&mut group, 1);
+    let patient = group.h.caster;
+    let start = group
+        .h
+        .app
+        .world()
+        .resource::<ObservedCombatEvents>()
+        .0
+        .len();
+    let direct = complete_flash_hit(&mut group, patient);
+    assert!(
+        direct.crit,
+        "fixture must produce a critical direct heal: {direct:?}"
+    );
+    let echo = owned_echo(&group, patient).expect("critical Flash Heal must produce Echo");
+    finish_echo(&mut group, &echo);
+    let ticks = echo_ticks(&group, patient, start);
+    assert_eq!(ticks.len(), 2);
+    let expected = (direct.amount as f32 * percent / 100.0 / 2.0).round() as i32;
+    for tick in ticks {
+        assert!(
+            tick.periodic && !tick.crit,
+            "Echo must not roll a second critical: {tick:?}"
+        );
+        assert!(
+            (tick.amount - expected).abs() <= 1,
+            "Echo reapplied a modifier: expected {expected}, {tick:?}"
+        );
+    }
+}
+
+#[test]
 fn holy_echo_of_light_native90_self_flash_is_eligible_unlike_binding_heals() {
     let mut group = native_group();
     native_mastery_percent(&group);
