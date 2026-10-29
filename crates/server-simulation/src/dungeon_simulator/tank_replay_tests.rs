@@ -844,6 +844,38 @@ fn divine_guidance_stacks_on_spenders_and_is_consumed_by_consecration() {
 }
 
 #[test]
+#[ignore = "uses real Protection casts and the replay Bloodlust path"]
+fn tank_replay_bloodlust_hastes_the_first_global_cooldown() {
+    fn active_after_900ms(bloodlust: bool) -> bool {
+        let mut run = super::dps_parity::prepare_registered_player(66, 1).unwrap();
+        let actor = run.actor;
+        let target = run.targets[0];
+        if bloodlust {
+            super::tank_replay::apply_replay_bloodlust(run.app.world_mut(), actor).unwrap();
+        }
+        let spell = run
+            .app
+            .world()
+            .resource::<crate::spell_info::SpellStore>()
+            .get(204019)
+            .unwrap()
+            .clone();
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 204019, Some(target), false)
+            .unwrap();
+        let world = run.app.world();
+        world
+            .get::<crate::spell_cast::SpellHistory>(actor)
+            .unwrap()
+            .on_gcd(&spell, crate::spell_cast::history_now(world) + 0.9)
+    }
+    assert!(active_after_900ms(false), "ordinary GCD remains active");
+    assert!(
+        !active_after_900ms(true),
+        "Bloodlust must haste the first GCD before the next app update"
+    );
+}
+
+#[test]
 #[ignore = "uses selected MID2 Protection and the literal action list"]
 fn protection_sotr_casts_during_an_active_global_cooldown() {
     use crate::spell_cast::powers::PowerPools;
