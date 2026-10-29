@@ -4,6 +4,48 @@ use shared::{components::Health, protocol::CombatLogKind};
 
 #[test]
 #[ignore = "requires Guardian MID2 profile and native world data"]
+fn guardian_lunar_beam_earns_caster_owned_atmospheric_exposure() {
+    use crate::auras::ActiveAuras;
+    let mut run = prepare_registered_player(104, 1).unwrap();
+    let actor = run.actor;
+    let target = run.targets[0];
+    engage(&mut run);
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 5487, Some(actor), false).unwrap();
+    for _ in 0..40 {
+        run.app.update();
+    }
+    assert!(
+        run.app
+            .world()
+            .get::<ActiveAuras>(actor)
+            .unwrap()
+            .iter()
+            .any(|aura| aura.spell_id == 429532 && aura.caster == actor)
+    );
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 204066, Some(target), false)
+        .unwrap();
+    for _ in 0..25 {
+        run.app.update();
+    }
+    let debuff = run
+        .app
+        .world()
+        .get::<ActiveAuras>(target)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 430589 && aura.caster == actor)
+        .expect("Lunar Beam damage must apply its own exposure");
+    let amount = debuff
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap()
+        .amount;
+    assert_eq!(amount, 6.0);
+}
+
+#[test]
+#[ignore = "requires Guardian MID2 profile and native world data"]
 fn guardian_lunar_beam_pulse_respects_native_five_target_cap() {
     use shared::components::Position;
     let mut run = prepare_registered_player(104, 7).unwrap();
