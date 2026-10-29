@@ -350,6 +350,7 @@ register_modules! {
     restoration_earthliving: (2640, "modules/restoration_earthliving.rs"),
     restoration_everbloom: (1050, "modules/restoration_everbloom.rs"),
     restoration_healing_stream: (2640, "modules/restoration_healing_stream.rs"),
+    restoration_symbiotic_blooms: (1050, "modules/restoration_symbiotic_blooms.rs"),
     restoration_tidewaters: (2640, "modules/restoration_tidewaters.rs"),
     ret_aurora: (1000, "modules/ret_aurora.rs"),
     ret_damage: (1000, "modules/ret_damage.rs"),
