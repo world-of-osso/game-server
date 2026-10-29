@@ -1962,12 +1962,15 @@ fn blocked_pct(
     attacker: &UnitScaling,
     target: &UnitScaling,
     constants: Option<&ArmorConstants>,
+    auras: Option<&crate::auras::ActiveAuras>,
 ) -> f32 {
     match victim {
         Victim::Creature { .. } => melee::CREATURE_BLOCKED_PCT,
         Victim::Player(defense) => constants
             .and_then(|constants| attacker.armor_constant(target, constants))
-            .map_or(0.0, |constant| defense.blocked_pct(constant)),
+            .map_or(0.0, |constant| {
+                defense.blocked_pct_with_auras(constant, auras)
+            }),
     }
 }
 
@@ -2308,7 +2311,13 @@ fn resolve_swing(
         armored,
         kind,
         level_difference,
-        blocked_pct(victim, &attacker_scaling, &target, context.armor_constants),
+        blocked_pct(
+            victim,
+            &attacker_scaling,
+            &target,
+            context.armor_constants,
+            avoidance.1.as_deref(),
+        ),
     );
     let (outcome_damage, blocked) =
         if matches!(kind, MeleeOutcome::Block | MeleeOutcome::CritBlock) && !immune {
@@ -3011,6 +3020,7 @@ pub fn replay_healer_hit(
             &attacker_scaling,
             &target,
             world.get_resource::<ArmorConstants>(),
+            auras,
         ),
     );
     let immune = crate::auras::immune_to_school(auras, 1);

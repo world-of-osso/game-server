@@ -29,7 +29,9 @@ pub(super) fn sampled_blocked_pct(
     let stats = world
         .get::<crate::stats::CharacterStats>(tank)
         .ok_or("TANK_STATS_ABSENT")?;
-    Ok(stats.defense.blocked_pct(constant))
+    Ok(stats
+        .defense
+        .blocked_pct_with_auras(constant, world.get::<crate::auras::ActiveAuras>(tank)))
 }
 const SHIELD_OF_THE_RIGHTEOUS: u32 = 132403;
 // SimC Tank_Dummy_Dungeon: native dungeon difficulty 23, MID2 season 120.

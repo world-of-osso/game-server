@@ -232,6 +232,7 @@ fn read_swing_projection(
         &source_scaling,
         &target_scaling,
         world.get_resource::<ArmorConstants>(),
+        target_auras,
     );
     let versus = read_damage_versus(world, attacker.mods, tank)?;
     Ok(SwingProjection {

@@ -1794,7 +1794,9 @@ fn spell_block_percent(world: &World, caster: Entity, target: Entity) -> f32 {
         .resource::<ArmorConstants>()
         .at(caster.level_against(&victim))
         .expect("native armor constant for blocked spell caster level");
-    stats.defense.blocked_pct(constant)
+    stats
+        .defense
+        .blocked_pct_with_auras(constant, world.get::<crate::auras::ActiveAuras>(target))
 }
 
 /// TC Unit.cpp6922–6929: these attributes exclude percent-done modifiers.
