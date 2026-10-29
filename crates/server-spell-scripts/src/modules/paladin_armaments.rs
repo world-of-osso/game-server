@@ -723,7 +723,8 @@ fn advance_afterimage(world: &mut World, caster: Entity, spell: &SpellInfo) {
     if spent > 0 {
         set_afterimage_stacks(world, caster, before.saturating_add(spent));
     }
-    let threshold = combat::spell_cast::scripts::script_effect_value(world, caster, 385414, 2) as u8;
+    let threshold =
+        combat::spell_cast::scripts::script_effect_value(world, caster, 385414, 2) as u8;
     if spell.id != 85673 || before < threshold {
         return;
     }
