@@ -20,6 +20,11 @@ fn health_without_cooldown(world: &World, aura: &AuraInstance, event: &AuraEvent
     let Some(target) = event.target.filter(|target| *target == aura.caster) else {
         return false;
     };
+    // SimC76f8118 sc_death_knight.cpp:12982–12990: Sanguination is
+    // driven by damage taken, not its owner's self-targeted spell effects.
+    if aura.spell_id == 326801 && event.actor == target {
+        return false;
+    }
     let Some(health) = world.get::<Health>(target) else {
         return false;
     };
