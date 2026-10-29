@@ -70,6 +70,7 @@ class ImportTest(unittest.TestCase):
                                  ('LOG_DERIVED_POPULATION', 30, 1.5))
                 self.assertEqual(db.execute('SELECT source_key,z_method,observed_level FROM log_derived_population').fetchone(),
                                  ('new', 'single_walkable_floor', 90))
+                self.assertEqual(json.loads(db.execute('SELECT observation_json FROM log_derived_population').fetchone()[0])['observation_event'], 'SPELL_DAMAGE')
             self.assertEqual(module.import_population(copy, [record('new', 100)])['2521']['already_present'], 1)
             with sqlite3.connect(source) as db:
                 self.assertEqual(db.execute('SELECT COUNT(*) FROM content_creature').fetchone()[0], 1)
