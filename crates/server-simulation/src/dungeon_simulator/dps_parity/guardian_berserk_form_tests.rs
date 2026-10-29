@@ -155,7 +155,7 @@ fn frenzy_direct_hit_is_armored_but_its_bleed_is_not() {
     run.app
         .world_mut()
         .entity_mut(armored)
-        .insert(crate::level_scaling::CreatureArmor(10000.0));
+        .insert(crate::level_scaling::CreatureArmor(1_000_000.0));
     run.app
         .world_mut()
         .resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>()
