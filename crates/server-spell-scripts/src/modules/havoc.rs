@@ -13,6 +13,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::EarlyAuraRegistration(demonsurge::register_havoc),
     SpellScriptHook::LateAuraRegistration(immolation::register),
     SpellScriptHook::AfterAuraApplication(immolation::initial_damage),
+    SpellScriptHook::AfterAuraApplication(demonsurge::initialize_non_meta_buff),
     SpellScriptHook::LandedDamagePolicy(damage::apply_havoc_damage_policies),
     SpellScriptHook::ActualDamageMultiplier(damage::chaotic_disposition_damage),
     SpellScriptHook::ExpectedDamageMultiplier(damage::expected_chaotic_disposition_damage),

@@ -39,6 +39,54 @@ fn havoc_precombat_immolation_starts_at_pull_before_felblade() {
 
 #[test]
 #[ignore = "requires DPS_PARITY_WORLD_DB and DPS_PARITY_OUTPUT with spec577 exact profile/traits"]
+fn havoc_non_meta_stat_buffs_follow_actual_metamorphosis() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_measurement(577, 1).expect("native Havoc profile");
+    let actor = run.actor;
+    for buff in [452550, 453314] {
+        assert!(
+            crate::auras::has_aura(run.app.world(), actor, buff),
+            "selected buff {buff} must be active at pull"
+        );
+    }
+    let stats = report::stats(run.app.world(), actor);
+    let agility = stats["attribute"]["agility"].as_f64().unwrap();
+    let swing_speed = stats["native"]["auto_attack_speed"].as_f64().unwrap();
+    assert!((agility - 2904.0).abs() < 1.0, "pull agility: {agility}");
+    assert!(
+        (swing_speed - 0.850168).abs() < 0.001,
+        "pull swing speed: {swing_speed}"
+    );
+    earn_eye_beam_fury(&mut run);
+    crate::spell_cast::cast_for_player_with_target(
+        run.app.world_mut(),
+        actor,
+        198013,
+        Some(run.targets[0]),
+    )
+    .expect("ordinary native Eye Beam enters Meta");
+    for buff in [452550, 453314] {
+        assert!(
+            !crate::auras::has_aura(run.app.world(), actor, buff),
+            "Meta must immediately remove {buff}"
+        );
+    }
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        actor,
+        crate::auras::RemoveReason::Expired,
+        |aura| aura.spell_id == 162264 && aura.caster == actor,
+    );
+    for buff in [452550, 453314] {
+        assert!(
+            crate::auras::has_aura(run.app.world(), actor, buff),
+            "Meta expiry must immediately restore {buff}"
+        );
+    }
+}
+
+#[test]
+#[ignore = "requires DPS_PARITY_WORLD_DB and DPS_PARITY_OUTPUT with spec577 exact profile/traits"]
 fn havoc_native_metamorphosis_requires_ground_destination() {
     let mut run = prepare_literal(577, 1).expect("native Havoc profile");
     let actor = run.actor;
