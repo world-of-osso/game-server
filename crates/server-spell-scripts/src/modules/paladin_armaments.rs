@@ -7,8 +7,9 @@ use combat::auras::{
 use combat::class_progression::TraitLoadout;
 use combat::spell_cast::script_registry::SpellScriptHook;
 use combat::spell_info::{SpellInfo, SpellStore};
-use combat::stats::CharacterStats;
+use combat::stats::{CharacterStats, EquippedItemModifiers};
 use shared::components::{ActiveSpec, Health, PowerType};
+use shared::protocol::EquipmentSlot;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::SuccessfulCastRelationships(after_cast),
@@ -201,20 +202,19 @@ fn rite_of_sanctification_handler(
 fn apply_rite_of_sanctification(
     world: &mut World,
     ctx: &combat::spell_cast::effects::EffectCtx<'_>,
-    _: &combat::spell_info::SpellEffect,
-    target: Entity,
+    effect: &combat::spell_info::SpellEffect,
+    _: Entity,
 ) {
-    // SimC76f8118 sc_paladin.cpp:2010–2020; DB2 enchant 7143 grants 433550.
-    combat::auras::apply_aura(
-        world,
-        &AuraApplication {
-            caster: ctx.caster,
-            target,
-            spell_id: 433550,
-            effect_mask: u32::MAX,
-            source: AuraSource::Cast,
-        },
-    );
+    // SimC76f8118 sc_paladin.cpp:1999–2020; DB2 effect54 selects enchant7143.
+    let Some(mut items) = world.get_mut::<EquippedItemModifiers>(ctx.caster) else {
+        warn!("Rite of Sanctification requires equipped item modifiers");
+        return;
+    };
+    if items.temporary_enchants.iter().any(|(slot, _)| *slot == EquipmentSlot::MainHand) {
+        warn!("Rite of Sanctification cannot replace a temporary weapon enchant");
+        return;
+    }
+    items.temporary_enchants.push((EquipmentSlot::MainHand, effect.misc_values[0] as u32));
 }
 
 fn armament_energize_handler(

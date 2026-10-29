@@ -2170,25 +2170,16 @@ fn protection_rite_grants_native_strength_and_armor() {
     let mut run = super::dps_parity::prepare_registered_player(66, 1).unwrap();
     super::dps_parity::engage(&mut run);
     let actor = run.actor;
-    crate::auras::remove_auras(
-        run.app.world_mut(),
-        actor,
-        crate::auras::RemoveReason::Consumed,
-        |aura| aura.spell_id == 433550,
-    );
-    for _ in 0..4 {
-        run.app.update();
-    }
-    let before = *run
+    let items = run
         .app
         .world()
-        .get::<crate::stats::CharacterStats>(actor)
+        .get::<crate::stats::EquippedItemModifiers>(actor)
         .unwrap();
-    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 433568, Some(actor), false)
-        .unwrap();
-    for _ in 0..40 {
-        run.app.update();
-    }
+    assert!(
+        items
+            .temporary_enchants
+            .contains(&(shared::protocol::EquipmentSlot::MainHand, 7143))
+    );
     let aura = run
         .app
         .world()
@@ -2207,16 +2198,31 @@ fn protection_rite_grants_native_strength_and_armor() {
             .iter()
             .any(|effect| effect.index == 1 && (effect.amount - 5.0).abs() < 0.01)
     );
-    let after = run
+    let with = *run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(actor)
+        .unwrap();
+    run.app
+        .world_mut()
+        .get_mut::<crate::stats::EquippedItemModifiers>(actor)
+        .unwrap()
+        .temporary_enchants
+        .retain(|(_, enchant)| *enchant != 7143);
+    for _ in 0..4 {
+        run.app.update();
+    }
+    assert!(!crate::auras::has_aura(run.app.world(), actor, 433550));
+    let without = run
         .app
         .world()
         .get::<crate::stats::CharacterStats>(actor)
         .unwrap();
     assert!(
-        after.primary.strength > before.primary.strength,
+        with.primary.strength > without.primary.strength,
         "Rite must increase strength"
     );
-    assert!(after.armor > before.armor, "Rite must increase armor");
+    assert!(with.armor > without.armor, "Rite must increase armor");
 }
 
 #[test]
