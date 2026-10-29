@@ -45,6 +45,7 @@ mod creature_tooltip;
 mod currency;
 mod damage_meter;
 mod death;
+pub mod download_grant;
 mod duel;
 mod durability;
 mod economy;

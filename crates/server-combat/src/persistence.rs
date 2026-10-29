@@ -317,7 +317,10 @@ fn open_database(mut commands: Commands) {
     }
     commands.insert_resource(motd);
     info!("Database opened at {}", path.display());
-    commands.insert_resource(GameDatabase::new(db));
+    let db = GameDatabase::new(db);
+    crate::download_grant::start_from_env(std::sync::Arc::clone(&db.db))
+        .expect("Failed to start download grant issuer");
+    commands.insert_resource(db);
 }
 
 fn game_database_path() -> PathBuf {
