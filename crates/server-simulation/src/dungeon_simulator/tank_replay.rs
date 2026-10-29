@@ -410,10 +410,10 @@ pub(super) fn replay_simc_with_healing(
     };
     let _rng = crate::random::seed_scope(seed);
     let mut run = super::dps_parity::prepare_registered_player_with(spec_id, 1, |run| {
-        apply_simc_raid_buffs(run, &raid_buffs)
+        apply_simc_raid_buffs(run, &raid_buffs)?;
+        apply_simc_dummy_debuffs(run, &dummy_debuffs)
     })?;
     apply_simc_starting_holy_power(&mut run);
-    apply_simc_dummy_debuffs(&mut run, &dummy_debuffs)?;
     if dummy_bleeding {
         let target = run.targets[0];
         run.app
@@ -628,6 +628,20 @@ fn replay_registered_run_with_healing(
         .world_mut()
         .entity_mut(source)
         .remove::<crate::level_scaling::ScaledStats>();
+    if spec == 73 {
+        // SimC76f8118 sc_warrior.cpp:3432 assumes the first Charge enters combat.
+        // Start outside native Charge's minimum range and let native movement close it.
+        let target = *run
+            .app
+            .world()
+            .get::<Position>(source)
+            .ok_or("DUMMY_POSITION_ABSENT")?;
+        run.app.world_mut().entity_mut(tank).insert(Position {
+            x: target.x - 9.0,
+            y: target.y,
+            z: target.z,
+        });
+    }
     let started_at = run.app.world().resource::<Time>().elapsed();
     super::dps_parity::install_fixture_lifetimes(&mut run, started_at);
     super::dps_parity::engage(&mut run);
