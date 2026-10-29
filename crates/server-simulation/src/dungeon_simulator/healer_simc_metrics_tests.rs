@@ -6,7 +6,8 @@ use shared::components::Health;
 #[test]
 #[ignore = "requires native spell data"]
 fn healer_report_records_real_mana_payment_by_spell() {
-    let mut h = crate::spell_cast::test_harness::harness(Vec::new(), &[2061], 5).unwrap();
+    let mut h =
+        crate::spell_cast::test_harness::harness_with(Vec::new(), &[2061], 5, true).unwrap();
     h.app
         .init_resource::<crate::spell_cast::test_harness::ObservedCombatEvents>();
     h.app
