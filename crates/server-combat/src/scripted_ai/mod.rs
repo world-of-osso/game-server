@@ -16,6 +16,7 @@
 //! See `docs/specs/boss-scripts.md`.
 
 use crate::random as rand;
+mod academy_transport;
 pub(crate) mod algethar_academy;
 mod anubzekt;
 pub(crate) mod azure_vault;
@@ -148,6 +149,7 @@ impl Plugin for ScriptedAiPlugin {
                 (
                     jump_movement::release_finished_jumps,
                     algethar_academy::finish_crawth_descent,
+                    academy_transport::finish_entrance_pad,
                 )
                     .chain(),
             )
@@ -156,6 +158,7 @@ impl Plugin for ScriptedAiPlugin {
                 FixedUpdate,
                 (
                     bossmod::advance_schedules,
+                    academy_transport::launch_entrance_pad,
                     init_creature_ai,
                     ragefire_chasm::intro_triggers::detect_entries,
                     nethekurse_intro::detect_entries,
