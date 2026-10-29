@@ -114,14 +114,16 @@ fn discipline_pain_observes_power_of_dark_side_procs() {
     let mut run = super::super::dps_parity::prepare_registered_player(66, 1).unwrap();
     let healer = super::super::dps_parity::spawn_second_reference_player(&mut run, 256).unwrap();
     let target = run.targets[0];
-    execute(
-        run.app.world_mut(),
-        healer,
-        Execution::Spell(589, target, Some(target)),
-    )
-    .unwrap();
-    for _ in 0..400 {
-        run.app.update();
+    for _ in 0..10 {
+        execute(
+            run.app.world_mut(),
+            healer,
+            Execution::Spell(589, target, Some(target)),
+        )
+        .unwrap();
+        for _ in 0..400 {
+            run.app.update();
+        }
     }
     let events = &run.app.world().resource::<ObservedCombatEvents>().0;
     let ticks = events
