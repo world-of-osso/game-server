@@ -51,6 +51,10 @@ pub(super) fn prepare(
     };
     literal_rotation::capture_fixture(run.app.world_mut(), healer, encounter)?;
     let program = Program::parse(&[
+        (
+            "item",
+            "use_item,name=soulcoiler_ritual_vessel,use_off_gcd=1,if=gcd.remains>=0.75*gcd.max",
+        ),
         ("default", "pain_suppression,if=target.health.pct<35"),
         ("default", "barrier,if=party.injured>=3"),
         ("default", "radiance,if=party.injured>=3"),
@@ -216,6 +220,17 @@ impl Policy for Discipline {
             .iter()
             .filter(|(unit, _)| atonement_remaining(world, healer, *unit) > 0.0)
             .count();
+        if self.select(
+            world,
+            healer,
+            healer,
+            injured,
+            active_atonements,
+            "item",
+            &[],
+        )? {
+            return Ok(());
+        }
         if self.select(
             world,
             healer,

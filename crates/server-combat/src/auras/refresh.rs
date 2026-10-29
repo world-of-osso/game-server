@@ -464,9 +464,9 @@ fn accumulate_capped_absorb(world: &World, target: Entity, new: &mut AuraInstanc
     }
 }
 
-/// Ignore Pain and Celestial Infusion spend their authored fraction of each hit.
+/// Fractional shields spend their authored fraction of each hit.
 pub(super) fn absorb_fraction(aura: &AuraInstance) -> f32 {
-    if !matches!(aura.spell_id, IGNORE_PAIN | 1241059) {
+    if !matches!(aura.spell_id, IGNORE_PAIN | 1241059 | 1307578) {
         return 1.0;
     }
     let percent = aura
