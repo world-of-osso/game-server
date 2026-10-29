@@ -137,6 +137,84 @@ fn guardian_star_cascade_comes_from_foreground_landed_thrash() {
 
 #[test]
 #[ignore = "requires Guardian profile and native world data"]
+fn frenzy_direct_hit_is_armored_but_its_bleed_is_not() {
+    use shared::protocol::CombatLogKind;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_registered_player(104, 2).unwrap();
+    let actor = run.actor;
+    let [unarmored, armored] = [run.targets[0], run.targets[1]];
+    engage(&mut run);
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 768, Some(actor), false).unwrap();
+    for _ in 0..40 {
+        run.app.update();
+    }
+    for target in [unarmored, armored] {
+        run.app
+            .world_mut()
+            .entity_mut(target)
+            .remove::<crate::level_scaling::ScaledStats>();
+    }
+    run.app
+        .world_mut()
+        .entity_mut(unarmored)
+        .insert(crate::level_scaling::CreatureArmor(0.0));
+    run.app
+        .world_mut()
+        .entity_mut(armored)
+        .insert(crate::level_scaling::CreatureArmor(1_000_000.0));
+    run.app
+        .world_mut()
+        .resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .clear();
+    for target in [unarmored, armored] {
+        crate::spell_cast::cast_triggered_with_overrides(
+            run.app.world_mut(),
+            actor,
+            274838,
+            Some(target),
+            1,
+            crate::spell_cast::TriggeredSpellOverrides {
+                effect_mask: Some(0b1011),
+                ..Default::default()
+            },
+        );
+    }
+    for _ in 0..160 {
+        run.app.update();
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    let total = |target: bevy::prelude::Entity, periodic: bool| -> f32 {
+        events
+            .iter()
+            .filter(|event| {
+                event.source == Some(actor.to_bits())
+                    && event.target == Some(target.to_bits())
+                    && event.spell_id == Some(274838)
+                    && event.kind == CombatLogKind::Damage
+                    && event.periodic == periodic
+            })
+            .map(|event| event.amount as f32 / if event.crit { 2.0 } else { 1.0 })
+            .sum()
+    };
+    let direct_ratio = total(armored, false) / total(unarmored, false);
+    let bleed_ratio = total(armored, true) / total(unarmored, true);
+    assert!(
+        direct_ratio < 0.8,
+        "the direct hit must lose damage to armor: {direct_ratio}"
+    );
+    assert!(
+        (0.85..1.15).contains(&bleed_ratio),
+        "the bleed must bypass armor: {bleed_ratio}"
+    );
+}
+
+#[test]
+#[ignore = "requires Guardian profile and native world data"]
 fn guardian_heart_in_cat_executes_empowered_feral_frenzy() {
     use shared::protocol::CombatLogKind;
     let _seed = crate::random::seed_scope(70448);
