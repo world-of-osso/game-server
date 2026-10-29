@@ -34,6 +34,7 @@ pub(crate) mod darkness;
 pub(crate) mod door_data;
 mod doragosa;
 mod emberon;
+pub(crate) mod encounter_doors;
 pub mod event_map;
 mod gorek;
 mod granyth;
