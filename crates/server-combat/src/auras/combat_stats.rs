@@ -102,6 +102,7 @@ pub(crate) fn armor_after_ignore(
             .iter()
             .filter(|effect| {
                 effect.aura_type == handlers::MOD_IGNORE_TARGET_RESIST
+                    && !(aura.spell_id == 275335 && effect.index == 0)
                     && effect.misc_values[0] & 1 != 0
                     && affects_spell(aura, effect, spell)
             })

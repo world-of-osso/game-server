@@ -246,6 +246,19 @@ pub(super) fn replay_simc(
     super::healer_simc_replay::replay_simc(spec, trace, duration, seed)
 }
 
+/// The recorded-intake party, its companions equipped by `equip_companions`.
+pub(super) fn spawn_intake_party(
+    world: &mut World,
+    copy: crate::maps::InMap,
+    at: Position,
+    level: u8,
+    spec: u32,
+) -> Result<crate::followers::simulator::Party, String> {
+    let party = crate::followers::simulator::spawn_party_with_healer(world, copy, at, level, spec)?;
+    super::dps_parity::equip_companions(world, &party)?;
+    Ok(party)
+}
+
 pub(super) fn replay(intake: &Intake, spec: u32) -> Result<Value, String> {
     if intake.schema != 1 || intake.map_id != 34 || intake.difficulty_id != 1 {
         return Err("INTAKE_SCHEMA_OR_STOCKADE_NORMAL_COPY_MISMATCH".into());
@@ -276,7 +289,7 @@ pub(super) fn replay(intake: &Intake, spec: u32) -> Result<Value, String> {
         return Err("NATIVE_COPY_DIFFERS_FROM_RECORDED_INTAKE".into());
     }
     let copy = super::runtime::create_copy(&mut app);
-    let party = crate::followers::simulator::spawn_party_with_healer(
+    let party = spawn_intake_party(
         app.world_mut(),
         copy,
         Position {

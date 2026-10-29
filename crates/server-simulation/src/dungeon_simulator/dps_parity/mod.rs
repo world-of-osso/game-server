@@ -2,6 +2,7 @@
 include!("module_list.in");
 use crate::simc_apl_native::{FixtureAdds, FixtureTarget};
 use bevy::prelude::*;
+pub(crate) use inputs::equip_companions;
 use serde_json::{Value, json};
 use std::collections::BTreeMap;
 use std::time::{Duration, Instant};
@@ -655,7 +656,7 @@ fn target_snapshot(run: &Run) -> Vec<Value> {
 
 /// Main uses the global fight deadline; sc_enemy.cpp1053–1101 timed adds
 /// project their own expiration. Native training-dummy hit handling stays inert.
-fn apply_fixed_time_target_health(run: &mut Run, at: Duration) -> Result<(), String> {
+pub(super) fn apply_fixed_time_target_health(run: &mut Run, at: Duration) -> Result<(), String> {
     for &target in &run.targets {
         let metadata = *run
             .app

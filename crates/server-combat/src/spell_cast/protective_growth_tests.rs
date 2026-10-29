@@ -148,6 +148,39 @@ fn swing_loss(h: &mut Harness) -> f32 {
 }
 
 #[test]
+fn punish_reduces_a_real_melee_swing_against_its_caster() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut h = harness(Vec::new(), &[275335], 1).unwrap();
+    let owner = h.caster;
+    let attacker = h.npc;
+    h.app.world_mut().entity_mut(owner).insert(Health {
+        current: 10_000.0,
+        max: 10_000.0,
+    });
+    h.advance(3);
+    let baseline = swing_loss(&mut h);
+    assert!(baseline > 0.0);
+    h.app
+        .world_mut()
+        .entity_mut(attacker)
+        .remove::<crate::combat::AutoAttack>();
+    for _ in 0..5 {
+        crate::auras::apply_aura(
+            h.app.world_mut(),
+            &crate::auras::AuraApplication {
+                caster: owner,
+                target: attacker,
+                spell_id: 275335,
+                effect_mask: 1,
+                source: crate::auras::AuraSource::Cast,
+            },
+        );
+    }
+    h.advance(2);
+    assert_eq!(swing_loss(&mut h), (baseline * 0.85).round());
+}
+
+#[test]
 fn class_completeness_native_protective_growth_reduces_real_melee_swings() {
     let mut baseline = growth_harness(true);
     let base_loss = swing_loss(&mut baseline);

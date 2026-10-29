@@ -4,6 +4,7 @@ use shared::protocol::{
     AuthChannel, ForcedDisconnect, LoginRequest, LoginResponse, RegisterRequest, RegisterResponse,
 };
 use std::collections::{HashMap, HashSet};
+use std::sync::{Arc, mpsc};
 
 pub use crate::auth_character::*;
 use crate::persistence::{self, CharacterData, GameDatabase};
@@ -105,7 +106,8 @@ pub(crate) fn process_login_requests(
     mut connected: ResMut<ConnectedAccounts>,
     mut senders: Query<&mut MessageSender<LoginResponse>>,
     mut commands: Commands,
-    mut pending: Local<HashMap<Entity, PendingLoginToken>>,
+    mut pending: Local<HashMap<Entity, PendingLogin>>,
+    verifier: Local<LoginVerifier>,
     active: Query<(), (With<Connected>, Without<PendingForcedDisconnect>)>,
 ) {
     let Some(db) = db.as_ref() else { return };
@@ -113,20 +115,65 @@ pub(crate) fn process_login_requests(
         if active.get(entity).is_err() || receivers.get(entity).is_err() {
             return false;
         }
-        let Some(result) = login.receipt.result() else {
-            return true;
-        };
-        match result {
-            Ok(token) => publish_authenticated_login(
-                entity,
-                login.account_id,
-                &token,
-                db,
-                &mut connected,
-                &mut senders,
-                &mut commands,
-            ),
-            Err(error) => send_login_error(entity, &mut senders, &error),
+        match login {
+            PendingLogin::Credentials(receipt) => {
+                let result = match receipt.try_recv() {
+                    Ok(result) => result,
+                    Err(mpsc::TryRecvError::Empty) => return true,
+                    Err(mpsc::TryRecvError::Disconnected) => {
+                        Err("Login verification worker stopped".to_string())
+                    }
+                };
+                match result {
+                    Ok((account_id, Some(token))) => publish_authenticated_login(
+                        entity,
+                        account_id,
+                        &token,
+                        db,
+                        &mut connected,
+                        &mut senders,
+                        &mut commands,
+                    ),
+                    Ok((account_id, None)) => {
+                        let receipt =
+                            db.writer
+                                .enqueue_result("password login token", move |raw| {
+                                    persistence_accounts::ensure_account_not_banned(
+                                        raw, account_id,
+                                    )?;
+                                    Ok(persistence_accounts::generate_token_for_account(
+                                        raw, account_id,
+                                    ))
+                                });
+                        *login = PendingLogin::Token {
+                            account_id,
+                            receipt,
+                        };
+                        return true;
+                    }
+                    Err(error) => send_login_error(entity, &mut senders, &error),
+                }
+            }
+            PendingLogin::Token {
+                account_id,
+                receipt,
+            } => {
+                let Some(result) = receipt.result() else {
+                    return true;
+                };
+                match result {
+                    Ok(token) => publish_authenticated_login(
+                        entity,
+                        *account_id,
+                        &token,
+                        db,
+                        &mut connected,
+                        &mut senders,
+                        &mut commands,
+                    ),
+                    Err(error) => send_login_error(entity, &mut senders, &error),
+                }
+            }
         }
         false
     });
@@ -135,46 +182,61 @@ pub(crate) fn process_login_requests(
         if pending.contains_key(&entity) || active.get(entity).is_err() {
             continue;
         }
-        match persistence_accounts::validate_login_credentials(
-            &db.db,
-            req.token.as_deref(),
-            &req.username,
-            &req.password,
-        ) {
-            Ok((account_id, Some(token))) => publish_authenticated_login(
-                entity,
-                account_id,
-                &token,
-                db,
-                &mut connected,
-                &mut senders,
-                &mut commands,
-            ),
-            Ok((account_id, None)) => {
-                let receipt = db
-                    .writer
-                    .enqueue_result("password login token", move |raw| {
-                        persistence_accounts::ensure_account_not_banned(raw, account_id)?;
-                        Ok(persistence_accounts::generate_token_for_account(
-                            raw, account_id,
-                        ))
-                    });
-                pending.insert(
-                    entity,
-                    PendingLoginToken {
-                        account_id,
-                        receipt,
-                    },
-                );
-            }
-            Err(error) => send_login_error(entity, &mut senders, &error),
+        let (reply, receipt) = mpsc::channel();
+        let job = LoginVerification {
+            db: db.db.clone(),
+            request: req,
+            reply,
+        };
+        if verifier.sender.send(job).is_err() {
+            send_login_error(entity, &mut senders, "Login verification worker stopped");
+            continue;
         }
+        pending.insert(entity, PendingLogin::Credentials(receipt));
     }
 }
 
-pub(crate) struct PendingLoginToken {
-    account_id: u64,
-    receipt: crate::persistence_writer::CommitReceipt<String>,
+type LoginResult = Result<(u64, Option<String>), String>;
+
+struct LoginVerification {
+    db: Arc<redb::Database>,
+    request: LoginRequest,
+    reply: mpsc::Sender<LoginResult>,
+}
+
+pub(crate) struct LoginVerifier {
+    sender: mpsc::Sender<LoginVerification>,
+}
+
+impl Default for LoginVerifier {
+    fn default() -> Self {
+        let (sender, receiver) = mpsc::channel::<LoginVerification>();
+        std::thread::Builder::new()
+            .name("login-verifier".into())
+            .spawn(move || {
+                while let Ok(job) = receiver.recv() {
+                    let request = job.request;
+                    let result = persistence_accounts::validate_login_credentials(
+                        &job.db,
+                        request.token.as_deref(),
+                        &request.username,
+                        &request.password,
+                    );
+                    // A disconnected client no longer needs the result.
+                    let _ = job.reply.send(result);
+                }
+            })
+            .expect("start login verification worker");
+        Self { sender }
+    }
+}
+
+pub(crate) enum PendingLogin {
+    Credentials(mpsc::Receiver<LoginResult>),
+    Token {
+        account_id: u64,
+        receipt: crate::persistence_writer::CommitReceipt<String>,
+    },
 }
 
 fn collect_pending_auth_requests<M: lightyear::prelude::Message>(

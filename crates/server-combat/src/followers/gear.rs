@@ -157,11 +157,7 @@ pub(super) fn load_startup(mut commands: Commands) {
 }
 
 /// Equip source items at the current dungeon loot level through normal item instances.
-pub(super) fn equip(
-    world: &mut World,
-    actor: Entity,
-    profile: &super::Profile,
-) -> Result<(), String> {
+pub fn equip(world: &mut World, actor: Entity, profile: &super::Profile) -> Result<(), String> {
     let source = world
         .get_resource::<FollowerGearSource>()
         .ok_or("FOLLOWER_GEAR_SOURCE_UNAVAILABLE")?;

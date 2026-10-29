@@ -281,3 +281,114 @@ fn guild_ranks_layout_one_preserves_bank_allowances_on_upgrade() {
     create_tables(&db);
     assert_eq!(load_guild(&db, 7), guild);
 }
+
+/// `GuildBankLogKindData` as the server wrote it before `MoveItem`.
+#[derive(bitcode::Encode)]
+enum GuildBankLogKindBeforeMove {
+    DepositItem,
+    WithdrawItem,
+    DepositMoney,
+    WithdrawMoney,
+    BuyTab,
+    RepairMoney,
+}
+
+#[derive(bitcode::Encode)]
+struct GuildBankLogDataBeforeMove {
+    kind: GuildBankLogKindBeforeMove,
+    actor: String,
+    item_id: u32,
+    item_name: String,
+    count: u32,
+    copper: u64,
+    time: u64,
+}
+
+#[derive(bitcode::Encode)]
+struct GuildBankLogsBeforeMove {
+    tabs: Vec<Vec<GuildBankLogDataBeforeMove>>,
+    money: Vec<GuildBankLogDataBeforeMove>,
+}
+
+#[test]
+fn guild_bank_logs_from_before_move_kind_migrate_once_and_keep_move_entries() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("game.redb");
+    {
+        let db = Database::create(&path).unwrap();
+        let entry = |kind, item_id, count, copper| GuildBankLogDataBeforeMove {
+            kind,
+            actor: "Bankone".into(),
+            item_id,
+            item_name: if item_id == 0 {
+                String::new()
+            } else {
+                "Linen Cloth".into()
+            },
+            count,
+            copper,
+            time: 1_790_000_000,
+        };
+        let logs = GuildBankLogsBeforeMove {
+            tabs: vec![vec![
+                entry(GuildBankLogKindBeforeMove::DepositItem, 2589, 10, 0),
+                entry(GuildBankLogKindBeforeMove::WithdrawItem, 2589, 4, 0),
+            ]],
+            money: vec![
+                entry(GuildBankLogKindBeforeMove::DepositMoney, 0, 0, 20_000),
+                entry(GuildBankLogKindBeforeMove::WithdrawMoney, 0, 0, 5_000),
+                entry(GuildBankLogKindBeforeMove::BuyTab, 0, 0, 1_000_000),
+                entry(GuildBankLogKindBeforeMove::RepairMoney, 0, 0, 4_321),
+            ],
+        };
+        let txn = db.begin_write().unwrap();
+        write(&txn, GUILD_BANK_LOGS, 7, &logs);
+        txn.commit().unwrap();
+    }
+    let db = Database::create(&path).unwrap();
+    create_tables(&db);
+    let mut logs = load_guild_bank_logs(&db, 7);
+    let summary = |logs: &GuildBankLogs| {
+        logs.tabs
+            .iter()
+            .flatten()
+            .chain(&logs.money)
+            .map(|entry| (entry.kind, entry.item_id, entry.count, entry.copper))
+            .collect::<Vec<_>>()
+    };
+    assert_eq!(
+        summary(&logs),
+        vec![
+            (GuildBankLogKindData::DepositItem, 2589, 10, 0),
+            (GuildBankLogKindData::WithdrawItem, 2589, 4, 0),
+            (GuildBankLogKindData::DepositMoney, 0, 0, 20_000),
+            (GuildBankLogKindData::WithdrawMoney, 0, 0, 5_000),
+            (GuildBankLogKindData::BuyTab, 0, 0, 1_000_000),
+            (GuildBankLogKindData::RepairMoney, 0, 0, 4_321),
+        ]
+    );
+    let mut moved = logs.tabs[0][0].clone();
+    moved.kind = GuildBankLogKindData::MoveItem;
+    moved.count = 3;
+    moved.copper = 1;
+    logs.push(Some(0), moved);
+    let txn = db.begin_write().unwrap();
+    write(&txn, GUILD_BANK_LOGS, 7, &logs);
+    txn.commit().unwrap();
+    drop(db);
+
+    let db = Database::create(&path).unwrap();
+    create_tables(&db);
+    assert_eq!(
+        summary(&load_guild_bank_logs(&db, 7)),
+        vec![
+            (GuildBankLogKindData::DepositItem, 2589, 10, 0),
+            (GuildBankLogKindData::WithdrawItem, 2589, 4, 0),
+            (GuildBankLogKindData::MoveItem, 2589, 3, 1),
+            (GuildBankLogKindData::DepositMoney, 0, 0, 20_000),
+            (GuildBankLogKindData::WithdrawMoney, 0, 0, 5_000),
+            (GuildBankLogKindData::BuyTab, 0, 0, 1_000_000),
+            (GuildBankLogKindData::RepairMoney, 0, 0, 4_321),
+        ]
+    );
+}

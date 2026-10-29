@@ -236,7 +236,7 @@ pub(super) fn advance_runs(world: &mut World) {
 }
 
 fn spawn_party(world: &mut World, owner: Entity, run: &FollowerRun) -> Result<(), String> {
-    let members = super::spawning::spawn_members(world, owner, &run.profiles)?;
+    let members = super::spawning::spawn_equipped_members(world, owner, &run.profiles)?;
     if let Err(error) = join_party(world, owner, run, &members) {
         super::spawning::unsummon_members(world, &members);
         return Err(error);

@@ -10,6 +10,7 @@ Provision local client-cache geometry for registered server maps, including maps
 - [x] Discovery registers and opens root ADTs, WMO groups and vehicle M2s without reading unused payload bytes. Preserve ordered present/missing paths, map selections, duplicate handling and open failures; parse WDT/obj0/WMO-root contents as before.
 - [x] Accept real Forever MVER-18 terrain and sample WMO primary groups; return finite supported terrain centers, minimum bounds and the authored liquid surface; preserve terrain holes.
 - [x] Export all 72 Zephras center records with explicit nulls for unavailable/unsupported terrain; do not invent a starting position.
+- [x] Prepare the resolved world-entry position's ground off the server update thread before activating the player. Preserve ground cached for other players.
 
 ## How it works
 

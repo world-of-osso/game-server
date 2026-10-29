@@ -31,6 +31,14 @@ fn discipline_priest_heals_simc_dummy_party() {
             > 0.0,
         "{report}"
     );
+    assert!(
+        casts
+            .get("32379")
+            .and_then(|value| value.as_u64())
+            .unwrap_or(0)
+            > 0,
+        "fixed-time execute must enable Shadow Word: Death: {report}"
+    );
     assert_eq!(metrics["mana_curve"].as_array().unwrap().len(), 301);
     println!("NATIVE_DISCIPLINE_PRIEST={report}");
 }

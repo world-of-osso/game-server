@@ -1,6 +1,184 @@
 use std::path::Path;
 
 #[test]
+#[ignore = "requires native Restoration Druid spell data"]
+fn wild_growth_grows_one_selected_talent_bloom() {
+    use crate::spell_cast::test_harness::{harness, spawn_player};
+    use shared::components::Health;
+    let mut h = harness(Vec::new(), &[48438, 440118, 439530], 11).unwrap();
+    let first = spawn_player(&mut h.app, 11, 3.0);
+    let second = spawn_player(&mut h.app, 11, 5.0);
+    for unit in [first, second] {
+        *h.app.world_mut().get_mut::<Health>(unit).unwrap() = Health {
+            current: 1.0,
+            max: 100_000.0,
+        };
+    }
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: h.caster,
+            target: h.caster,
+            spell_id: 440118,
+            effect_mask: u32::MAX,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    crate::spell_cast::creature_cast(h.app.world_mut(), h.caster, 48438, Some(first), true)
+        .unwrap();
+    h.advance(2);
+    let count = [h.caster, first, second]
+        .into_iter()
+        .filter(|unit| crate::auras::has_aura(h.app.world(), *unit, 439530))
+        .count();
+    assert_eq!(
+        count, 1,
+        "Wild Growth must grow exactly one selected-talent bloom"
+    );
+}
+
+#[test]
+#[ignore = "requires native Restoration Druid spell data"]
+fn swiftmend_grows_the_selected_talent_bloom() {
+    use crate::spell_cast::test_harness::{harness, spawn_player};
+    let mut h = harness(Vec::new(), &[774, 18562, 440118, 439530], 11).unwrap();
+    let ally = spawn_player(&mut h.app, 11, 3.0);
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: h.caster,
+            target: h.caster,
+            spell_id: 440118,
+            effect_mask: u32::MAX,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    crate::spell_cast::creature_cast(h.app.world_mut(), h.caster, 774, Some(ally), true).unwrap();
+    h.advance(2);
+    crate::spell_cast::creature_cast(h.app.world_mut(), h.caster, 18562, Some(ally), true).unwrap();
+    h.advance(2);
+    let aura = h
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(ally)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 439530 && aura.caster == h.caster)
+        .expect("Swiftmend must grow Symbiotic Blooms");
+    assert_eq!(aura.duration_ms, 6000);
+}
+
+#[test]
+#[ignore = "requires native Restoration Druid spell data"]
+fn regrowth_can_grow_symbiotic_blooms_and_heal() {
+    use crate::spell_cast::test_harness::{ObservedCombatEvents, harness, spawn_player};
+    use shared::components::Health;
+    use shared::protocol::CombatLogKind;
+    let mut h = harness(Vec::new(), &[8936, 439528, 439530], 11).unwrap();
+    h.app.init_resource::<ObservedCombatEvents>();
+    let ally = spawn_player(&mut h.app, 11, 3.0);
+    *h.app.world_mut().get_mut::<Health>(ally).unwrap() = Health {
+        current: 1.0,
+        max: 1_000_000.0,
+    };
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: h.caster,
+            target: h.caster,
+            spell_id: 439528,
+            effect_mask: u32::MAX,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    for _ in 0..500 {
+        crate::spell_cast::creature_cast(h.app.world_mut(), h.caster, 8936, Some(ally), true)
+            .unwrap();
+        h.advance(2);
+        if crate::auras::has_aura(h.app.world(), ally, 439530) {
+            h.advance(100);
+            assert!(
+                h.app
+                    .world()
+                    .resource::<ObservedCombatEvents>()
+                    .0
+                    .iter()
+                    .any(|e| e.kind == CombatLogKind::Heal
+                        && e.spell_id == Some(439530)
+                        && e.target == Some(ally.to_bits())
+                        && e.amount > 0)
+            );
+            return;
+        }
+    }
+    panic!("Symbiotic Blooms did not proc in 500 Regrowth casts");
+}
+
+#[test]
+#[ignore = "requires native Restoration Druid spell data"]
+fn everbloom_copies_an_expiring_lifebloom_to_nearby_allies() {
+    use crate::spell_cast::test_harness::{ObservedCombatEvents, harness, spawn_player};
+    use shared::components::Health;
+    use shared::protocol::CombatLogKind;
+    let mut h = harness(Vec::new(), &[33763, 33778, 1244331, 1244341], 11).unwrap();
+    h.app.init_resource::<ObservedCombatEvents>();
+    let primary = spawn_player(&mut h.app, 11, 3.0);
+    let ally = spawn_player(&mut h.app, 11, 5.0);
+    let far = spawn_player(&mut h.app, 11, 100.0);
+    for unit in [primary, ally, far] {
+        *h.app.world_mut().get_mut::<Health>(unit).unwrap() = Health {
+            current: 1.0,
+            max: 100_000.0,
+        };
+    }
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: h.caster,
+            target: h.caster,
+            spell_id: 1244331,
+            effect_mask: u32::MAX,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    crate::spell_cast::creature_cast(h.app.world_mut(), h.caster, 33763, Some(primary), true)
+        .unwrap();
+    h.advance(2);
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        primary,
+        crate::auras::RemoveReason::Expired,
+        |a| a.spell_id == 33763,
+    );
+    h.advance(2);
+    let events = &h.app.world().resource::<ObservedCombatEvents>().0;
+    let bloom = events
+        .iter()
+        .find(|e| {
+            e.kind == CombatLogKind::Heal
+                && e.spell_id == Some(33778)
+                && e.target == Some(primary.to_bits())
+        })
+        .expect("Lifebloom must bloom on expiry");
+    for unit in [primary, ally] {
+        let copy = events
+            .iter()
+            .find(|e| {
+                e.kind == CombatLogKind::Heal
+                    && e.spell_id == Some(1244341)
+                    && e.target == Some(unit.to_bits())
+            })
+            .expect("Everbloom must heal nearby ally");
+        assert!((copy.amount as f32 - bloom.amount as f32 * 0.24).abs() <= 1.0);
+    }
+    assert!(
+        !events
+            .iter()
+            .any(|e| e.spell_id == Some(1244341) && e.target == Some(far.to_bits()))
+    );
+}
+
+#[test]
 #[ignore = "replays the MID2 Restoration Druid against the SimC dummy trace"]
 fn restoration_druid_heals_the_simc_dummy_party() {
     let trace = std::env::var("HEALER_TANK_SIMC_TRACE").expect("HEALER_TANK_SIMC_TRACE required");

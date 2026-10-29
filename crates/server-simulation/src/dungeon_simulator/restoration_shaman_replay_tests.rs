@@ -1,6 +1,204 @@
 use std::path::Path;
 
 #[test]
+#[ignore = "requires native Restoration Shaman spell data"]
+fn earthliving_imbue_allows_riptide_to_apply_its_hot() {
+    use crate::spell_cast::{
+        CastTargets, cast_for_player_with_targets,
+        test_harness::{ObservedCombatEvents, harness, spawn_player},
+    };
+    let mut h = harness(Vec::new(), &[382021, 382022, 382024, 61295], 7).unwrap();
+    h.app.init_resource::<ObservedCombatEvents>();
+    let ally = spawn_player(&mut h.app, 7, 3.0);
+    cast_for_player_with_targets(
+        h.app.world_mut(),
+        h.caster,
+        382021,
+        CastTargets {
+            unit: h.caster,
+            primary: Some(h.caster),
+            destination: None,
+        },
+    )
+    .unwrap();
+    h.advance(50);
+    assert!(
+        crate::auras::has_aura(h.app.world(), h.caster, 382022),
+        "imbue must apply its native buff"
+    );
+    for _ in 0..100 {
+        crate::spell_cast::creature_cast(h.app.world_mut(), h.caster, 61295, Some(ally), true)
+            .unwrap();
+        h.advance(2);
+        if crate::auras::has_aura(h.app.world(), ally, 382024) {
+            return;
+        }
+    }
+    panic!("Earthliving did not proc in 100 Riptides");
+}
+
+#[test]
+#[ignore = "requires native Restoration Shaman spell data"]
+fn critical_riptide_can_trigger_ancestral_awakening() {
+    use crate::spell_cast::test_harness::{ObservedCombatEvents, harness, spawn_player};
+    use shared::components::Health;
+    use shared::protocol::CombatLogKind;
+    let mut h = harness(Vec::new(), &[61295, 382309, 382311], 7).unwrap();
+    h.app.init_resource::<ObservedCombatEvents>();
+    let target = spawn_player(&mut h.app, 7, 3.0);
+    let lowest = spawn_player(&mut h.app, 7, 5.0);
+    *h.app.world_mut().get_mut::<Health>(target).unwrap() = Health {
+        current: 500_000.0,
+        max: 1_000_000.0,
+    };
+    *h.app.world_mut().get_mut::<Health>(lowest).unwrap() = Health {
+        current: 1.0,
+        max: 1_000_000.0,
+    };
+    h.app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(h.caster)
+        .unwrap()
+        .crit_pct = 100.0;
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: h.caster,
+            target: h.caster,
+            spell_id: 382309,
+            effect_mask: u32::MAX,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    for _ in 0..80 {
+        h.app
+            .world_mut()
+            .resource_mut::<ObservedCombatEvents>()
+            .0
+            .clear();
+        crate::spell_cast::creature_cast(h.app.world_mut(), h.caster, 61295, Some(target), true)
+            .unwrap();
+        h.advance(2);
+        let events = &h.app.world().resource::<ObservedCombatEvents>().0;
+        if let Some(heal) = events
+            .iter()
+            .find(|e| e.kind == CombatLogKind::Heal && e.spell_id == Some(382311))
+        {
+            let source = events
+                .iter()
+                .find(|e| e.kind == CombatLogKind::Heal && e.spell_id == Some(61295) && !e.periodic)
+                .unwrap();
+            assert!(source.crit);
+            assert_eq!(heal.target, Some(lowest.to_bits()));
+            assert!(!heal.crit);
+            assert!((heal.amount as f32 - source.amount as f32 * 0.15).abs() <= 1.0);
+            return;
+        }
+    }
+    panic!("Ancestral Awakening did not proc in 80 critical Riptides");
+}
+
+#[test]
+#[ignore = "requires native Restoration Shaman spell data"]
+fn healing_rain_triggers_tidewaters_on_owned_riptides() {
+    use crate::spell_cast::{
+        CastTargets, cast_for_player_with_targets,
+        test_harness::{ObservedCombatEvents, harness, spawn_player},
+    };
+    use shared::components::{Health, Mana};
+    use shared::protocol::CombatLogKind;
+    let mut h = harness(
+        Vec::new(),
+        &[73920, 73921, 444995, 61295, 462424, 462425],
+        7,
+    )
+    .unwrap();
+    h.app.init_resource::<ObservedCombatEvents>();
+    let first = spawn_player(&mut h.app, 7, 3.0);
+    let second = spawn_player(&mut h.app, 7, 5.0);
+    let other = spawn_player(&mut h.app, 7, 6.0);
+    for unit in [first, second, other] {
+        *h.app.world_mut().get_mut::<Health>(unit).unwrap() = Health {
+            current: 1.0,
+            max: 100_000.0,
+        };
+    }
+    *h.app.world_mut().get_mut::<Mana>(h.caster).unwrap() = Mana {
+        current: 250_000.0,
+        max: 250_000.0,
+    };
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: h.caster,
+            target: h.caster,
+            spell_id: 462424,
+            effect_mask: u32::MAX,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    for unit in [first, second] {
+        crate::spell_cast::creature_cast(h.app.world_mut(), h.caster, 61295, Some(unit), true)
+            .unwrap();
+    }
+    h.advance(2);
+    cast_for_player_with_targets(
+        h.app.world_mut(),
+        h.caster,
+        73920,
+        CastTargets {
+            unit: h.caster,
+            primary: Some(h.caster),
+            destination: Some([3.0, 0.0, 0.0]),
+        },
+    )
+    .unwrap();
+    h.advance(100);
+    let events = &h.app.world().resource::<ObservedCombatEvents>().0;
+    for unit in [first, second] {
+        assert!(
+            events.iter().any(|e| e.kind == CombatLogKind::Heal
+                && e.spell_id == Some(462425)
+                && e.target == Some(unit.to_bits())
+                && e.amount > 0),
+            "{events:?}"
+        );
+    }
+    assert!(
+        !events
+            .iter()
+            .any(|e| e.spell_id == Some(462425) && e.target == Some(other.to_bits()))
+    );
+    h.app
+        .world_mut()
+        .resource_mut::<ObservedCombatEvents>()
+        .0
+        .clear();
+    cast_for_player_with_targets(
+        h.app.world_mut(),
+        h.caster,
+        444995,
+        CastTargets {
+            unit: h.caster,
+            primary: Some(h.caster),
+            destination: Some([3.0, 0.0, 0.0]),
+        },
+    )
+    .unwrap();
+    h.advance(100);
+    let events = &h.app.world().resource::<ObservedCombatEvents>().0;
+    for unit in [first, second] {
+        assert!(
+            events.iter().any(|e| e.kind == CombatLogKind::Heal
+                && e.spell_id == Some(462425)
+                && e.target == Some(unit.to_bits())
+                && e.amount > 0),
+            "Surging Totem must trigger Tidewaters: {events:?}"
+        );
+    }
+}
+
+#[test]
 fn zero_capacity_charge_category_keeps_native_spell_cooldown() {
     use crate::spell_cast::test_harness::{Inbox, harness};
     // Native Dark Soul: Instability has category1447 with zero base charges
@@ -56,7 +254,7 @@ fn restoration_shaman_healing_stream_summon_applies_native_pulse() {
     let mut run = super::super::dps_parity::prepare_registered_player(66, 1).unwrap();
     let healer = super::super::dps_parity::spawn_second_reference_player(&mut run, 264).unwrap();
     let tank = run.actor;
-    let party = crate::followers::simulator::spawn_party_for_reference_healer(
+    let party = crate::dungeon_simulator::healer_simc_replay::spawn_reference_party(
         run.app.world_mut(),
         tank,
         healer,

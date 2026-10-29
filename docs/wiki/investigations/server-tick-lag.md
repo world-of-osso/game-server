@@ -4,6 +4,23 @@ The :5000 dev server ran its 20 Hz simulation at 55–70% of real time while pla
 
 ## Content
 
+### World entry, creature sight and host paging (2026-10-29)
+
+A private debug server and client reproduced a 21,472 ms maximum outer frame after character 30 entered Stormwind; the client disconnected. During the frame interval, major faults rose by roughly 16,000 and the server had about 1.9–2.1 GiB in swap. The reported frame is an outer update, not necessarily one fixed step. The original guild-server observations were 10,434 and 11,143 ms.
+
+| Measurement | Before | After |
+|---|---:|---:|
+| Release entry sight pass, 1,566 active movers | 433,919 candidates; 1,586 ms wall; 52 CPU ticks | 47,240 candidates; 106 ms wall; 10 CPU ticks |
+| Release entry-window maximum outer frame | 1,606 ms | 365 ms |
+| Password verification | Synchronous on the update thread | Dedicated worker; four auth tests pass |
+| Entry ground collision tile | 125 ms synchronous in `apply_terrain_gravity` | 225 ms on worker before activation in a separate run |
+
+CPU ticks are 10 ms on this host. Candidate counts decreased 89%; wall times are not a controlled comparison because paging and competing load differed. A later full-fix run had a 4,932 ms maximum frame. Its repeated instrumented run had a 4,261 ms frame before the sight pass; that pass took 1,306 ms wall and 92 combined CPU ticks for 47,239 candidates. Process samples bracketing the pass gained 40 user ticks total, so at least 52 of the pass's 92 ticks were system time; 1,565 major faults occurred in the bracket. The earlier entry interval gained about 18,000 major faults with roughly 2 GiB swapped. A warm re-entry took 26.7 ms and 2 CPU ticks for 47,034 candidates. These observations support host paging as a major factor; they do not identify the exact cause of the earlier 4,932 ms frame.
+
+The sight broadphase uses each cell's maximum reach and the mover's reach to prune impossible cells without excluding large creatures. The auth verifier runs on a dedicated thread because this Bevy build's async task pool executes on the main thread. Entry ground preparation runs before the player is published and merges the result into the live cache. Later movement and teleport cache misses are outside this change. Broadphase, auth and entry-ground preparation landed in `030ad748886d`, `9ad7425fe4d1` and `7caa306da4cf`; the ground entry regression passed locally and in the train. No deployment was performed.
+
+Evidence: private logs `/home/osso/.worktrees/logs/login-stall-{baseline,profile,profile-after-2,final-server,full-profile}.log` and `login-stall-monitor-{1570819,full}.log`; implementation in `crates/server-combat/src/{creature_sight,auth,auth_character,ground}.rs`.
+
 ### SIGHT_FACTION_MAIN_THREAD_CPU
 
 Named next candidate after the [navigation worker](../design/navigation-worker.md), not part of its implementation. Joint capture2026-10-18 confirms a separate main-thread CPU contributor; no claim it alone causes historical ten-second gaps.

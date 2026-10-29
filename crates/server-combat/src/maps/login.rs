@@ -42,6 +42,10 @@ pub(crate) struct LoginPlace {
 }
 
 impl LoginMaps<'_> {
+    pub(crate) fn ground_mut(&mut self) -> Option<&mut crate::ground::GroundMap> {
+        self.ground.as_deref_mut()
+    }
+
     /// The copy and position for `character_id` at dungeon difficulty `difficulty_id`,
     /// saved on `map_id` at `position`; `None` when neither the saved map nor its
     /// go-back location can take the player.

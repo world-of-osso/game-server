@@ -190,6 +190,7 @@ pub(crate) fn process_select_character(
     mut player_deaths: MessageWriter<crate::death::PlayerDeathTransition>,
     mut maps: crate::maps::LoginMaps,
     mut pending: Local<std::collections::HashMap<Entity, PendingCharacterHydration>>,
+    mut pending_ground: Local<std::collections::HashMap<Entity, PendingGroundSelection>>,
     active: Query<
         &Authenticated,
         (
@@ -200,6 +201,41 @@ pub(crate) fn process_select_character(
     >,
 ) {
     let Some(db) = db.as_ref() else { return };
+    pending_ground.retain(|&entity, pending| {
+        let Ok(auth) = active.get(entity) else {
+            return false;
+        };
+        if auth.account_id != pending.selection.selection.account_id {
+            return false;
+        }
+        match pending.receipt.try_recv() {
+            Ok(prepared) => {
+                let Some(ground) = maps.ground_mut() else {
+                    send_enter_error(entity, &mut enter_senders, "Ground cache unavailable");
+                    return false;
+                };
+                ground.merge_entry_ground(prepared);
+                handle_select(
+                    pending.selection.clone(),
+                    db,
+                    &mut enter_senders,
+                    &mut terrain_senders,
+                    &mut commands,
+                    &mut player_deaths,
+                );
+                false
+            }
+            Err(std::sync::mpsc::TryRecvError::Empty) => true,
+            Err(std::sync::mpsc::TryRecvError::Disconnected) => {
+                send_enter_error(
+                    entity,
+                    &mut enter_senders,
+                    "Ground preparation worker stopped",
+                );
+                false
+            }
+        }
+    });
     pending.retain(|&entity, hydration| {
         let Ok(auth) = active.get(entity) else {
             return false;
@@ -211,26 +247,44 @@ pub(crate) fn process_select_character(
             return true;
         };
         match result {
-            Ok(hydrated) => handle_select(
-                CharacterSelection {
+            Ok(hydrated) => {
+                let selection = CharacterSelection {
                     connection: entity,
                     account_id: hydration.account_id,
                     character_id: hydration.character_id,
                     hydrated,
-                },
-                db,
-                &mut enter_senders,
-                &mut terrain_senders,
-                &mut commands,
-                &mut player_deaths,
-                &mut maps,
-            ),
+                };
+                match resolve_character_selection(selection, db, &mut commands, &mut maps) {
+                    Ok(selection) => {
+                        if let Some(ground) = maps.ground_mut() {
+                            let position = &selection.place.position;
+                            let feet = Vec3::new(position.x, position.y, position.z);
+                            let receipt = ground.prepare_entry(selection.place.map.map_id, feet);
+                            pending_ground
+                                .insert(entity, PendingGroundSelection { selection, receipt });
+                        } else {
+                            handle_select(
+                                selection,
+                                db,
+                                &mut enter_senders,
+                                &mut terrain_senders,
+                                &mut commands,
+                                &mut player_deaths,
+                            );
+                        }
+                    }
+                    Err(error) => send_enter_error(entity, &mut enter_senders, &error),
+                }
+            }
             Err(error) => send_enter_error(entity, &mut enter_senders, &error),
         }
         false
     });
     for (entity, account_id, req) in collect_select_requests(&mut receivers) {
-        if pending.contains_key(&entity) || active.get(entity).is_err() {
+        if pending.contains_key(&entity)
+            || pending_ground.contains_key(&entity)
+            || active.get(entity).is_err()
+        {
             continue;
         }
         save_and_despawn_stale_player(&db.db, &existing_players, req.character_id, &mut commands);
@@ -356,6 +410,7 @@ fn hydrate_character(
     Ok(HydratedCharacter { data, state })
 }
 
+#[derive(Clone)]
 struct CharacterSelection {
     connection: Entity,
     account_id: u64,
@@ -363,15 +418,61 @@ struct CharacterSelection {
     hydrated: HydratedCharacter,
 }
 
-fn handle_select(
+pub(crate) struct PendingGroundSelection {
+    selection: ResolvedCharacterSelection,
+    receipt: std::sync::mpsc::Receiver<crate::ground::GroundMap>,
+}
+
+#[derive(Clone)]
+struct ResolvedCharacterSelection {
     selection: CharacterSelection,
+    place: crate::maps::LoginPlace,
+    dungeon_difficulty: crate::maps::DungeonDifficulty,
+    raid_difficulty: crate::maps::RaidDifficulty,
+}
+
+fn resolve_character_selection(
+    selection: CharacterSelection,
+    db: &GameDatabase,
+    commands: &mut Commands,
+    maps: &mut crate::maps::LoginMaps,
+) -> Result<ResolvedCharacterSelection, String> {
+    let character_id = selection.character_id;
+    let saved_map = crate::maps::persistence::load_character_map(&db.db, character_id);
+    let dungeon_difficulty = crate::maps::difficulty::load_dungeon_difficulty(&db.db, character_id);
+    let raid_difficulty = crate::maps::raid::load(&db.db, character_id);
+    let place = maps
+        .resolve(
+            commands,
+            character_id,
+            dungeon_difficulty.0,
+            raid_difficulty,
+            saved_map,
+            persisted_player_position(&selection.hydrated.data),
+        )
+        .ok_or_else(|| "Character map unavailable".to_string())?;
+    Ok(ResolvedCharacterSelection {
+        selection,
+        place,
+        dungeon_difficulty,
+        raid_difficulty,
+    })
+}
+
+fn handle_select(
+    resolved: ResolvedCharacterSelection,
     db: &GameDatabase,
     enter_senders: &mut Query<&mut MessageSender<EnterWorldResponse>>,
     terrain_senders: &mut Query<&mut MessageSender<LoadTerrain>>,
     commands: &mut Commands,
     player_deaths: &mut MessageWriter<crate::death::PlayerDeathTransition>,
-    maps: &mut crate::maps::LoginMaps,
 ) {
+    let ResolvedCharacterSelection {
+        selection,
+        place,
+        dungeon_difficulty,
+        raid_difficulty,
+    } = resolved;
     let character_id = selection.character_id;
     let HydratedCharacter {
         mut data,
@@ -381,24 +482,6 @@ fn handle_select(
     // was queued after hydration completed but before this receipt was consumed.
     state.achievements =
         crate::achievement::load_character_progress(db, selection.account_id, character_id);
-    let saved_map = crate::maps::persistence::load_character_map(&db.db, character_id);
-    let dungeon_difficulty = crate::maps::difficulty::load_dungeon_difficulty(&db.db, character_id);
-    let raid_difficulty = crate::maps::raid::load(&db.db, character_id);
-    let Some(place) = maps.resolve(
-        commands,
-        character_id,
-        dungeon_difficulty.0,
-        raid_difficulty,
-        saved_map,
-        persisted_player_position(&data),
-    ) else {
-        send_enter_error(
-            selection.connection,
-            enter_senders,
-            "Character map unavailable",
-        );
-        return;
-    };
     (data.x, data.y, data.z) =
         crate::terrain_height::bevy_to_wow(place.position.x, place.position.y, place.position.z);
     let saved_death = persistence::load_player_death_state(&db.db, character_id);

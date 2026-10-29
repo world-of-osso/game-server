@@ -169,6 +169,7 @@ fn read_attacker(world: &World, enemy: Entity) -> Result<Attacker<'_>, String> {
             .map(|summon| summon.summoner),
         spirit_wolf: None,
         hunter_owner_ap: None,
+        priest_fiend_owner_damage: None,
         hunter_owner_crit_pct: None,
         pet_owner_hit_expertise: None,
     })
@@ -234,7 +235,10 @@ fn read_swing_projection(
         world.get_resource::<ArmorConstants>(),
         target_auras,
     );
-    let versus = read_damage_versus(world, attacker.mods, tank)?;
+    let versus = read_damage_versus(world, attacker.mods, tank)?
+        * attacker
+            .mods
+            .map_or(1.0, |mods| mods.punish_damage_multiplier(tank));
     Ok(SwingProjection {
         attacker,
         source_scaling,

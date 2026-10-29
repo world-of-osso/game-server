@@ -10,6 +10,7 @@ use std::collections::BTreeMap;
 
 pub(super) struct Recorder {
     healer: Entity,
+    started_at: f64,
     tank: Entity,
     members: Vec<Entity>,
     tank_health_min: Option<f32>,
@@ -32,6 +33,7 @@ impl Recorder {
     pub(super) fn start(world: &World, healer: Entity, tank: Entity, members: Vec<Entity>) -> Self {
         let mut recorder = Self {
             healer,
+            started_at: crate::spell_cast::now(world),
             tank,
             members,
             tank_health_min: None,
@@ -182,7 +184,15 @@ impl Recorder {
                 (consumed > 0.0).then_some((spell, consumed))
             })
             .collect();
-        json!({"raw_hps":raw as f64 / duration,"effective_hps":effective as f64 / duration,
+        let fiend = world
+            .get_resource::<server_spell_scripts::test_support::FiendAtonementReceipts>()
+            .and_then(|receipts| receipts.0.get(&self.healer))
+            .copied()
+            .unwrap_or_default();
+        let fiend_summons: Vec<_> = world.get_resource::<server_spell_scripts::test_support::FiendAtonementReceipts>().into_iter().flat_map(|receipts| &receipts.1).filter(|receipt| receipt.owner == self.healer).map(|receipt| json!({"spell": receipt.spell, "spawn_seconds": receipt.started - self.started_at, "scheduled_lifetime_seconds": receipt.expires.map(|expires| expires - receipt.started), "owner_spell_power": receipt.owner_spell_power, "landed_pre_mitigation_hits": receipt.landed_raw})).collect();
+        let fiend_rolls: Vec<_> = world.get_resource::<server_spell_scripts::test_support::FiendAtonementReceipts>().into_iter().flat_map(|receipts| &receipts.2).filter(|(owner, _, _, _)| *owner == self.healer).map(|(_, time, roll, chance)| json!({"time_seconds":time - self.started_at,"roll_pct":roll,"chance_pct":chance})).collect();
+        json!({"fiend_rolls":fiend_rolls,"fiend_summons":fiend_summons,"fiend_pre_mitigation_damage":fiend.0,"fiend_atonement_raw":fiend.1,"fiend_atonement_effective":fiend.2,
+            "raw_hps":raw as f64 / duration,"effective_hps":effective as f64 / duration,
             "consumed_absorbs_by_spell":absorbs,
             "overheal_pct":(raw > 0).then(|| 100.0 * (raw - effective) as f64 / raw as f64),
             "idle_gcd_pct":100.0 * f64::from(self.idle_gcd_ticks) / (duration * 20.0),

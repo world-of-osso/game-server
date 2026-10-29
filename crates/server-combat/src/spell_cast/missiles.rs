@@ -543,7 +543,11 @@ fn hit_delays(
             Some(delay),
         );
     }
-    let bouncy = attributes(spell, 4) & SPELL_ATTR4_BOUNCY_CHAIN_MISSILES != 0;
+    // SimC76f8118 unique_gear_midnight.cpp6331–6372 and action.cpp1860–1895,
+    // 4463–4475 schedule each Guillotine target with the same travel delay,
+    // despite the native bouncy attribute.
+    let bouncy =
+        attributes(spell, 4) & SPELL_ATTR4_BOUNCY_CHAIN_MISSILES != 0 && spell.id != 1306624;
     let effect_mask = |unit: Entity| -> u64 {
         plan.iter()
             .filter(|planned| {

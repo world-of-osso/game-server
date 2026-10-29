@@ -306,6 +306,90 @@ fn devastate(h: &mut Harness) {
 }
 
 #[test]
+fn perfected_guillotine_impacts_both_targets_after_one_second() {
+    let mut h = item_fixture(true);
+    let first = h.npc;
+    let second = crate::spell_cast::test_harness::spawn_npc(&mut h.app, 4.0);
+    h.app
+        .world_mut()
+        .entity_mut(second)
+        .insert(shared::components::Health {
+            current: 1_000_000_000.0,
+            max: 1_000_000_000.0,
+        });
+    h.advance(2);
+    let caster = h.caster;
+    crate::spell_cast::cast_triggered_with_overrides(
+        h.app.world_mut(),
+        caster,
+        PERFECTED_GUILLOTINE,
+        Some(first),
+        1,
+        crate::spell_cast::TriggeredSpellOverrides {
+            effect0_amount: Some(1_000.0),
+            ..Default::default()
+        },
+    );
+    h.advance(18);
+    assert!(
+        !h.inbox.log.iter().any(|event| {
+            event.spell_id == Some(PERFECTED_GUILLOTINE) && event.kind == CombatLogKind::Damage
+        }),
+        "no target is hit before one second"
+    );
+    h.advance(5);
+    let targets: Vec<_> = h
+        .inbox
+        .log
+        .iter()
+        .filter(|event| {
+            event.spell_id == Some(PERFECTED_GUILLOTINE) && event.kind == CombatLogKind::Damage
+        })
+        .filter_map(|event| event.target)
+        .collect();
+    assert_eq!(
+        targets.len(),
+        2,
+        "both targets must be hit at one second: {targets:?}"
+    );
+    assert!(targets.contains(&first.to_bits()) && targets.contains(&second.to_bits()));
+}
+
+#[test]
+fn guillotine_ignores_immolation_ticks_but_procs_from_direct_attacks() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut h = item_fixture(true);
+    for _ in 0..80 {
+        let caster = h.caster;
+        crate::spell_cast::cast_triggered(h.app.world_mut(), caster, 258922, Some(caster), 1);
+        h.advance(20);
+    }
+    assert!(
+        h.inbox.log.iter().any(|event| {
+            event.spell_id == Some(258922)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0
+        }),
+        "real Immolation ticks must hit the enemy"
+    );
+    assert!(
+        !h.inbox.log.iter().any(|event| {
+            event.spell_id == Some(GUILLOTINE_DAMAGE) && event.kind == CombatLogKind::Damage
+        }),
+        "periodic Immolation ticks must not trigger Guillotine"
+    );
+    for _ in 0..60 {
+        devastate(&mut h);
+        if h.inbox.log.iter().any(|event| {
+            event.spell_id == Some(GUILLOTINE_DAMAGE) && event.kind == CombatLogKind::Damage
+        }) {
+            return;
+        }
+    }
+    panic!("direct attacks must still trigger the equipped Guillotine");
+}
+
+#[test]
 fn protection_producers_item_guillotine_starts_without_preloaded_rppm() {
     let _seed = crate::random::seed_scope(70448);
     let mut h = item_fixture(true);

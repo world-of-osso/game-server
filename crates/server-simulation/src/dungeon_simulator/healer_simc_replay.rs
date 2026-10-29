@@ -28,6 +28,17 @@ const POLICIES: &[Registration] = &[
     (1468, super::preservation_evoker_replay::prepare),
 ];
 
+/// The replay's follower companions, equipped by `equip_companions`.
+pub(crate) fn spawn_reference_party(
+    world: &mut World,
+    tank: Entity,
+    healer: Entity,
+) -> Result<crate::followers::simulator::Party, String> {
+    let party = crate::followers::simulator::spawn_party_for_reference_healer(world, tank, healer)?;
+    super::dps_parity::equip_companions(world, &party)?;
+    Ok(party)
+}
+
 pub(super) fn replay_simc(
     spec: u32,
     trace: &Path,
@@ -97,11 +108,7 @@ fn replay_with_party_registry(
     let mut run = super::dps_parity::prepare_registered_player(66, 1)?;
     let healer = super::dps_parity::spawn_second_reference_player(&mut run, spec)?;
     let tank = run.actor;
-    let party = crate::followers::simulator::spawn_party_for_reference_healer(
-        run.app.world_mut(),
-        tank,
-        healer,
-    )?;
+    let party = spawn_reference_party(run.app.world_mut(), tank, healer)?;
     let members: Vec<_> = party.members.iter().copied().chain([tank]).collect();
     let party_slots = [
         tank,
@@ -113,8 +120,18 @@ fn replay_with_party_registry(
     let source = run.targets[0];
     let started_at = run.app.world().resource::<bevy::prelude::Time>().elapsed();
     super::dps_parity::install_fixture_lifetimes(&mut run, started_at);
+    let lifetime = std::time::Duration::from_secs(u64::from(duration));
+    let mut target_lifetime = run
+        .app
+        .world_mut()
+        .get_mut::<crate::simc_apl_native::FixtureTarget>(source)
+        .ok_or("SIMC_REPLAY_TARGET_LIFETIME_MISSING")?;
+    target_lifetime.lifetime = lifetime;
+    target_lifetime.expires_at = started_at + lifetime;
     super::dps_parity::engage(&mut run);
     super::healer_replay::freeze_sources(run.app.world_mut(), &[(0, source)].into());
+    run.app
+        .init_resource::<server_spell_scripts::test_support::FiendAtonementReceipts>();
     run.app.insert_resource(Capture {
         members: members.clone(),
         sources: [(source, (0, 0))].into(),
@@ -139,6 +156,8 @@ fn replay_with_party_registry(
         .checked_mul(20)
         .ok_or("SIMC_REPLAY_DURATION_OUT_OF_RANGE")?
     {
+        let now = run.app.world().resource::<bevy::prelude::Time>().elapsed();
+        super::dps_parity::apply_fixed_time_target_health(&mut run, now)?;
         while let Some(hit) = hits
             .get(next)
             .filter(|hit| hit.time_ms <= u64::from(tick) * 50)

@@ -47,6 +47,7 @@
 //! - `AllowCastDuringChannel`: source-qualified native cast admission during an active channel.
 //! - `PersistentCastMultiplier`: spell IDs whose existing cast factor is stored as periodic metadata.
 //! - `ResolvedDamage`: after actual direct/periodic damage, before Explosive tick callbacks.
+//! - `ResolvedHeal`: after health and combat log updates, with raw and effective healing.
 //! - `AfterDirectDamageBeforeItems`: after Ret direct damage, before item scripts.
 //! - `LandedDamagePolicy`: actual white/spell damage at the original Havoc policy boundary.
 //! - `AbilityUseAvailable`: earned per-ability use state, not ordinary cast admission.
@@ -174,6 +175,7 @@ pub type MeleeRawResolvedHook = fn(&mut World, Entity, Entity, f32, bool);
 pub type CastPredicate = fn(&World, Entity, &SpellInfo) -> bool;
 pub type ResolvedDamageHook = fn(&mut World, &EffectCtx<'_>, Entity, bool, f32);
 pub type RawResolvedDamageHook = fn(&mut World, &EffectCtx<'_>, Entity, bool, f32);
+pub type ResolvedHealHook = fn(&mut World, &EffectCtx<'_>, Entity, f32, f32, bool, bool);
 pub type LandedDamageHook = fn(&mut World, Entity, Entity, Option<u32>, f32, bool);
 pub type AbilityUseLookup = fn(&World, Entity, u32) -> bool;
 pub type ChannelPeriodicLookup = fn(u32, u8) -> Option<ContextHitHook>;
@@ -361,6 +363,7 @@ pub enum SpellScriptHook {
     ArmorIgnoredSpells(&'static [u32]),
     ResolvedDamage(ResolvedDamageHook),
     RawResolvedDamage(RawResolvedDamageHook),
+    ResolvedHeal(ResolvedHealHook),
     AfterDirectDamageBeforeItems(PeriodicDamageFinishedHook),
     LandedDamagePolicy(LandedDamageHook),
     AbilityUseAvailable(AbilityUseLookup),
@@ -1291,6 +1294,22 @@ pub fn raw_resolved_damage(
     for hook in world.resource::<SpellScriptRegistry>().hooks() {
         if let SpellScriptHook::RawResolvedDamage(run) = hook {
             run(world, ctx, target, critical, amount);
+        }
+    }
+}
+
+pub fn resolved_heal(
+    world: &mut World,
+    ctx: &EffectCtx<'_>,
+    target: Entity,
+    raw: f32,
+    effective: f32,
+    critical: bool,
+    periodic: bool,
+) {
+    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+        if let SpellScriptHook::ResolvedHeal(run) = hook {
+            run(world, ctx, target, raw, effective, critical, periodic);
         }
     }
 }
