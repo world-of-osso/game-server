@@ -3,14 +3,18 @@ use super::*;
 #[test]
 fn floor_resolver_missing_geometry_is_not_a_single_floor() {
     let dir = tempfile::tempdir().unwrap();
-    let mut resolver = FloorResolver::new(dir.path(), dir.path(), HashMap::new());
+    let source =
+        Path::new("/home/osso/Projects/world-of-osso/game-engine/data/terrain/4289128.wdt");
+    std::fs::create_dir(dir.path().join("terrain")).unwrap();
+    std::fs::copy(source, dir.path().join("terrain/4289128.wdt")).unwrap();
+    let mut resolver = FloorResolver::new(dir.path(), dir.path(), HashMap::from([(2519, 4289128)]));
     let request = Request {
         file: String::new(),
         run_start: String::new(),
         guid: String::new(),
         map: 2519,
         x: -250.0,
-        y: 550.0,
+        y: -550.0,
         ui_map_id: None,
         neighbor_hints: Vec::new(),
     };
@@ -44,9 +48,24 @@ fn floor_resolver_neltharus_real_data() {
         guid: String::new(),
         map: 2519,
         x: -250.0,
-        y: 550.0,
+        y: -550.0,
         ui_map_id: Some(1),
         neighbor_hints: Vec::new(),
     };
-    println!("{:?}", resolver.resolve(&request));
+    println!("Neltharus {:?}", resolver.resolve(&request));
+    let ruby_wdt: u32 = db
+        .query_row("SELECT WdtFileDataID FROM map WHERE ID=2521", [], |row| {
+            row.get(0)
+        })
+        .unwrap();
+    let mut ruby = FloorResolver::new(geometry, nav, HashMap::from([(2521, ruby_wdt)]));
+    for (x, y) in [(1786.9, 27.945), (1785.13, 20.495), (1798.47, 36.11)] {
+        let request = Request {
+            map: 2521,
+            x,
+            y,
+            ..request.clone()
+        };
+        println!("Ruby {x} {y}: {:?}", ruby.resolve(&request));
+    }
 }
