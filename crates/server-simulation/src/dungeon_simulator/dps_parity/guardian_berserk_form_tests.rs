@@ -19,6 +19,33 @@ fn guardian_heart_in_cat_executes_empowered_feral_frenzy() {
         .resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>()
         .0
         .clear();
+    crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 274838, Some(target), 1);
+    let control = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .iter()
+        .find(|event| {
+            event.source == Some(actor.to_bits())
+                && event.target == Some(target.to_bits())
+                && event.spell_id == Some(274838)
+                && event.kind == CombatLogKind::Damage
+                && !event.periodic
+        })
+        .expect("unempowered Frenzy hit");
+    let control_damage = control.amount as f32 / if control.crit { 2.0 } else { 1.0 };
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        target,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 274838 && aura.caster == actor,
+    );
+    run.app
+        .world_mut()
+        .resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .clear();
     crate::spell_cast::creature_cast(run.app.world_mut(), actor, 1261868, Some(target), false)
         .unwrap();
     for _ in 0..100 {
@@ -49,6 +76,15 @@ fn guardian_heart_in_cat_executes_empowered_feral_frenzy() {
                 && event.periodic
         })
         .count();
+    let normalized = impacts
+        .iter()
+        .map(|event| event.amount as f32 / if event.crit { 2.0 } else { 1.0 })
+        .sum::<f32>()
+        / impacts.len() as f32;
+    assert!(
+        normalized > control_damage * 8.0 && normalized < control_damage * 12.0,
+        "Heart damage {normalized} vs unempowered {control_damage}"
+    );
     assert_eq!(
         impacts.len(),
         5,
