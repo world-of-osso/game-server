@@ -45,6 +45,19 @@ const POLICIES: &[Policy] = &[
             primary_only: false,
         },
     },
+    // SimC76f8118 sc_warrior.cpp4243–4249: Protection Execute's damage
+    // impact applies one native Deep Wounds, not its zero-damage parent.
+    Policy {
+        name: "SIMC_PROTECTION_EXECUTE_DEEP_WOUNDS",
+        spec: 73,
+        talent: 1261060,
+        relationship: Relationship::HitPayload {
+            parent: 260798,
+            payload: 262115,
+            self_target: false,
+            primary_only: false,
+        },
+    },
     // SimC76f8118 sc_warrior.cpp4452–4456: only Fury Execute main-hand
     // applies Deep Wounds. Native262115 retains its coefficient and rolling pool.
     Policy {

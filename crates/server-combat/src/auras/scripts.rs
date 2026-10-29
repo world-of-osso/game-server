@@ -110,12 +110,12 @@ pub(super) fn check_proc(
     aura: &AuraInstance,
     event: &super::procs::AuraEvent,
 ) -> bool {
-    // SimC76f8118 sc_warrior.cpp4452–4456: Fury's Execute-MH hit policy
-    // owns Deep Wounds; the native broad melee mask would roll every impact.
+    // SimC76f8118 sc_warrior.cpp4243–4249/4452–4456: the Execute
+    // damage impact owns Deep Wounds for Protection and Fury.
     if aura.spell_id == 1261060
         && world
             .get::<shared::components::ActiveSpec>(aura.caster)
-            .is_some_and(|spec| spec.0 == 72)
+            .is_some_and(|spec| matches!(spec.0, 72 | 73))
     {
         return false;
     }
