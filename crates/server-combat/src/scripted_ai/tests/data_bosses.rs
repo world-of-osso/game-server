@@ -163,6 +163,8 @@ mod vazruden_slay;
 mod vexamus;
 #[path = "vyletongue.rs"]
 mod vyletongue;
+#[path = "waxbeard.rs"]
+mod waxbeard;
 #[path = "wratheye.rs"]
 mod wratheye;
 
@@ -246,6 +248,12 @@ pub(crate) fn prepare_encounter_database(
         .expect("snapshot canonical encounter data without writing source");
     if encounter == "ruby-final" {
         run_preparation_script("ruby_population.py", &["--db".as_ref(), path.as_os_str()]);
+        return (directory, path);
+    }
+    if encounter == "waxbeard" {
+        let db: [&std::ffi::OsStr; 2] = ["--db".as_ref(), path.as_os_str()];
+        run_preparation_script("import-vehicle-accessories.py", &db);
+        run_preparation_script("waxbeard_rider.py", &db);
         return (directory, path);
     }
     if ["gargolmar", "omor"].contains(&encounter) {
