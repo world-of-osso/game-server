@@ -85,21 +85,32 @@ fn cell_of(map: InMap, position: &Position) -> Cell {
 /// Every creature in the world by cell.
 #[derive(Resource, Default)]
 pub(crate) struct NpcGrid {
-    cells: HashMap<Cell, Vec<Entity>>,
+    cells: HashMap<Cell, NpcCell>,
     cell_of: EntityHashMap<Cell>,
     max_reach: HashMap<InMap, f32>,
+}
+
+#[derive(Default)]
+struct NpcCell {
+    npcs: Vec<Entity>,
+    max_reach: f32,
 }
 
 impl NpcGrid {
     fn place(&mut self, npc: Entity, cell: Cell, reach: f32) {
         let maximum = self.max_reach.entry(cell.0).or_default();
         *maximum = maximum.max(reach);
-        match self.cell_of.insert(npc, cell) {
-            Some(previous) if previous == cell => return,
-            Some(previous) => self.remove_from_cell(npc, previous),
-            None => {}
+        let previous = self.cell_of.insert(npc, cell);
+        if let Some(previous) = previous
+            && previous != cell
+        {
+            self.remove_from_cell(npc, previous);
         }
-        self.cells.entry(cell).or_default().push(npc);
+        let entry = self.cells.entry(cell).or_default();
+        entry.max_reach = entry.max_reach.max(reach);
+        if previous != Some(cell) {
+            entry.npcs.push(npc);
+        }
     }
 
     fn remove(&mut self, npc: Entity) {
@@ -109,9 +120,9 @@ impl NpcGrid {
     }
 
     fn remove_from_cell(&mut self, npc: Entity, cell: Cell) {
-        if let Some(npcs) = self.cells.get_mut(&cell) {
-            npcs.retain(|&other| other != npc);
-            if npcs.is_empty() {
+        if let Some(cell_data) = self.cells.get_mut(&cell) {
+            cell_data.npcs.retain(|&other| other != npc);
+            if cell_data.npcs.is_empty() {
                 self.cells.remove(&cell);
             }
         }
@@ -119,16 +130,33 @@ impl NpcGrid {
 
     /// GetAttackDistance clamps before IsWithinDist adds both model reaches.
     /// A conservative per-copy maximum keeps large/scaled bodies in the search.
-    fn near(&self, map: InMap, position: &Position) -> impl Iterator<Item = Entity> + '_ {
-        let radius = MAX_AGGRO_RADIUS + 2.0 * self.max_reach.get(&map).copied().unwrap_or(0.0);
+    fn near<'a>(
+        &'a self,
+        map: InMap,
+        position: &'a Position,
+        reach: f32,
+    ) -> impl Iterator<Item = Entity> + 'a {
+        let radius = MAX_AGGRO_RADIUS + reach + self.max_reach.get(&map).copied().unwrap_or(0.0);
         let min_x = ((position.x - radius) / MAX_AGGRO_RADIUS).floor() as i32;
         let max_x = ((position.x + radius) / MAX_AGGRO_RADIUS).floor() as i32;
         let min_z = ((position.z - radius) / MAX_AGGRO_RADIUS).floor() as i32;
         let max_z = ((position.z + radius) / MAX_AGGRO_RADIUS).floor() as i32;
         (min_x..=max_x)
             .flat_map(move |x| (min_z..=max_z).map(move |z| (map, x, z)))
-            .filter_map(|cell| self.cells.get(&cell))
-            .flatten()
+            .filter_map(move |cell| {
+                let data = self.cells.get(&cell)?;
+                let min_x = cell.1 as f32 * MAX_AGGRO_RADIUS;
+                let min_z = cell.2 as f32 * MAX_AGGRO_RADIUS;
+                let dx = (min_x - position.x)
+                    .max(0.0)
+                    .max(position.x - min_x - MAX_AGGRO_RADIUS);
+                let dz = (min_z - position.z)
+                    .max(0.0)
+                    .max(position.z - min_z - MAX_AGGRO_RADIUS);
+                let radius = MAX_AGGRO_RADIUS + reach + data.max_reach;
+                (dx * dx + dz * dz <= radius * radius).then_some(data)
+            })
+            .flat_map(|data| data.npcs.iter())
             .copied()
     }
 }
@@ -459,8 +487,11 @@ fn creature_sight_system(
         let Some(mover) = params.view(moved) else {
             continue;
         };
+        let Some(reach) = params.attack_distance.combat_reach(moved) else {
+            continue;
+        };
         for other in grid
-            .near(mover.map, mover.position)
+            .near(mover.map, mover.position, reach)
             .filter(|&other| other != moved)
         {
             let Some(seen) = params.view(other) else {
