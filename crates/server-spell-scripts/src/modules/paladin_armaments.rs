@@ -573,7 +573,12 @@ fn lay_down_arms(world: &mut World, unit: Entity, aura: &AuraInstance) {
         },
     );
     let milliseconds = combat::spell_cast::scripts::script_effect_value(world, unit, 432866, 0);
-    combat::spell_cast::scripts::reduce_cooldown(world, unit, 633, f64::from(milliseconds) / 1000.0);
+    combat::spell_cast::scripts::reduce_cooldown(
+        world,
+        unit,
+        633,
+        f64::from(milliseconds) / 1000.0,
+    );
 }
 
 fn periodic_bulwark(world: &mut World, target: Entity, aura: &AuraInstance, index: u8) {
@@ -920,8 +925,15 @@ fn summon_forge(world: &mut World, caster: Entity, spell: u32) {
         .and_then(|forge| forge.misc.as_ref()?.duration)
         .expect("Blessing of the Forge duration");
     // Native434132 effect1 triggers dummy aura434255, whose own duration is infinite.
-    let mut marker = store.get(434255).expect("Blessing of the Forge aura").clone();
-    marker.misc.as_mut().expect("Blessing of the Forge misc").duration = Some(duration);
+    let mut marker = store
+        .get(434255)
+        .expect("Blessing of the Forge aura")
+        .clone();
+    marker
+        .misc
+        .as_mut()
+        .expect("Blessing of the Forge misc")
+        .duration = Some(duration);
     for (spell_id, aura) in [(434255, Some(marker)), (432502, None)] {
         let application = AuraApplication {
             caster,
