@@ -346,6 +346,7 @@ register_modules! {
     resource_bridges: (1000, "modules/resource_bridges.rs"),
     resource_values: (350, "modules/resource_values.rs"),
     unholy_infected_claws: (2532, "modules/unholy_infected_claws.rs"),
+    restoration_everbloom: (1050, "modules/restoration_everbloom.rs"),
     restoration_healing_stream: (2640, "modules/restoration_healing_stream.rs"),
     ret_aurora: (1000, "modules/ret_aurora.rs"),
     ret_damage: (1000, "modules/ret_damage.rs"),
