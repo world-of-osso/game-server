@@ -274,7 +274,7 @@ fn discipline_fiend_spells_transfer_pet_damage_to_atonement() {
         h.app.init_resource::<ObservedCombatEvents>();
         h.app.world_mut().entity_mut(h.caster).insert((
             ActiveSpec(256),
-            crate::networking::CombatTarget(Some(h.npc)),
+            server::networking::CombatTarget(Some(h.npc)),
         ));
         *h.app.world_mut().get_mut::<Health>(h.caster).unwrap() = Health {
             current: 1_000.0,
