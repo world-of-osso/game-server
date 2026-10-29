@@ -627,7 +627,7 @@ fn discipline_fiend_landed_swings_restore_owner_mana() {
         h.app.init_resource::<ObservedCombatEvents>();
         h.app.world_mut().entity_mut(h.caster).insert((
             ActiveSpec(256),
-            crate::class_progression::KnownSpells::fixture(vec![talent]),
+            crate::class_progression::KnownSpells::fixture(vec![talent, summon]),
             server::networking::CombatTarget(Some(h.npc)),
         ));
         super::powers::change_power(h.app.world_mut(), h.caster, PowerType::Mana, -500.0);
@@ -647,7 +647,9 @@ fn discipline_fiend_landed_swings_restore_owner_mana() {
             .collect();
         assert!(
             !gains.is_empty(),
-            "summon {summon} must energize its owner: {events:?}"
+            "summon {summon} must energize its owner: {events:?}; failed={:?}, go={:?}",
+            h.inbox.failed,
+            h.inbox.go
         );
         assert!(
             gains
