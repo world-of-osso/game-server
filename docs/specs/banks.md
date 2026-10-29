@@ -44,13 +44,14 @@ The client frames are specified in game-engine `docs/specs/bank-frame.md` and `d
 - [x] Players without a guild get `NotInGuild`.
 - [x] Deposit needs view and deposit rights, and refuses soulbound (`BoundItem`) and quest items.
 - [x] Withdraw needs view rights and a remaining daily stack (`WithdrawLimit`).
-- [x] Internal bank moves: `GuildBankMove` addresses exact source and destination slots, with zero count for the whole stack. TrinityCore `Guild.cpp:833–870,945–1029,3120–3127,3151–3245` defines same-tab rights exemption, cross-tab deposit/withdraw checks in both swap directions, daily usage, merging before swap, split and source-tab move logs. A split copies the source GUID's item metadata in the rearrangement's transaction. Live two-client proof of same-tab move, split and merge passed in both skins; cross-tab, swap and rights live proof is pending (game-engine `docs/specs/guild-bank-frame.md`).
+- [x] Internal bank moves: `GuildBankMove` addresses exact source and destination slots, with zero count for the whole stack. TrinityCore `Guild.cpp:833–870,945–1029,3120–3127,3151–3245` defines same-tab rights exemption, cross-tab deposit/withdraw checks in both swap directions, daily usage, merging before swap, split and source-tab move logs. A split copies the source GUID's item metadata in the rearrangement's transaction. Live two-client proof in both skins covers same-tab move, split and merge, cross-tab move and swap, and Member deposit-right refusal, allowance use and daily-limit refusal (game-engine `docs/specs/guild-bank-frame.md`).
 - [x] Adding the `MoveItem` log kind changes bitcode's packing of `GuildBankLogKindData` (six and seven variants pack differently), so rows written before it cannot decode. `migrate_guild_bank_logs` rewrites every `guild_bank_logs` row once at startup (`server_settings` `guild_bank_log_layout_version` 1), keeping each entry.
   - Proven by `guild_bank_logs_from_before_move_kind_migrate_once_and_keep_move_entries`.
 - [x] Money deposit and withdraw follow the allowance and guild balance (`NotEnoughGuildMoney`). Daily counts reset at `GAME_SERVER_DAILY_RESET_HOUR_UTC` (default 15).
 - [x] Only the Guild Master buys tabs (Retail `BankTab` guild prices: 100g–5000g, 6 tabs) and sets tab name, icon and text. Guild tab names accept up to 16 Unicode characters, matching Mainline `SharedUIPanelTemplates.xml:1764`'s icon-selector edit box; `guild_tab_info_accepts_retail_sixteen_character_name_and_rejects_longer` exercises the authority boundary.
 - [x] Item moves are logged per tab and money moves (deposits, withdrawals, tab purchases, guild repairs) in the money log. Each log keeps its last 25 entries (`GUILD_BANKLOG_MAX_RECORDS`). `GuildBankQueryLog` sends them, with the item name and age.
 - [x] Admin commands `set-guild-rank <character> <rank>` and `set-guild-bank-rights <guild> <rank> tab|gold|repair ...` edit ranks and rights. The Guild Master rank itself can't be edited.
+- [x] The Guild Master also edits rank bank rights in game through Guild Control (`GuildRankRequest::SetTab`, `SetPermissions`; [guild ranks](guild-ranks.md)). Every guild member online receives a fresh snapshot of its own rights. Two-client proof in both skins: a Member granted tab view, deposit and one stack a day withdraws, hits the limit and is refused a deposit once deposit is removed; granted Withdraw Gold at 1g a day, it withdraws 1g and the allowance is then used up (game-engine `godot/tests/guild_control_live.gd`).
 
 ## How it works
 - [banks](../wiki/systems/banks.md)
@@ -87,5 +88,5 @@ The client frames are specified in game-engine `docs/specs/bank-frame.md` and `d
 
 ## Out of scope
 - Sorting, search, the expansion filter and the tab icon picker (deferred by decision).
-- Exact-slot swaps/splits in Warband and guild banks; the Guild Control UI (ranks are set by admin).
+- Exact-slot swaps/splits in the Warband bank.
 - Game objects other than type 34; maps other than 0.
