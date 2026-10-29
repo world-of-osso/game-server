@@ -92,7 +92,8 @@ fn track_mist_spending(world: &mut World, caster: Entity, costs: &[(CostPool, f3
     let spent: f32 = costs
         .iter()
         .filter_map(|(pool, amount)| {
-            (*pool == CostPool::Power(PowerType::RunicPower)).then_some(*amount / 10.0)
+            (*pool == CostPool::Power(PowerType::RunicPower) && *amount > 0.0)
+                .then_some(*amount / 10.0)
         })
         .sum();
     if let Some(mut state) = world.get_mut::<BloodMistState>(caster) {
