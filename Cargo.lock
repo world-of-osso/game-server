@@ -6773,6 +6773,7 @@ dependencies = [
  "bevy",
  "blake3",
  "game-engine-core 0.1.0 (git+ssh://git@github.com/world-of-osso/game-engine.git?rev=21a30a47493d3609d7ad7ce64ddb248294f1cab5)",
+ "navigation",
  "rusqlite",
  "serde",
  "serde_json",
