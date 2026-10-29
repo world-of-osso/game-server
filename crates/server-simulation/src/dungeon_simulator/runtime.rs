@@ -198,9 +198,14 @@ fn load_gameplay_data(app: &mut App) {
     let (spells, classes) = crate::spell_info::load_spell_data(&db).unwrap();
     app.insert_resource(spells);
     app.insert_resource(classes);
-    app.insert_resource(
-        crate::item_stats::load_item_scaling_tables(&crate::test_data::world_db_path()).unwrap(),
-    );
+    let path = crate::test_data::world_db_path();
+    app.insert_resource(crate::item_stats::load_item_scaling_tables(&path).unwrap());
+    app.insert_resource(crate::item_templates::load_item_templates(&path).unwrap());
+    app.insert_resource(crate::stats::NativeItemInstances {
+        bonuses: server::item_instance::load::load_bonus_tables(&db).unwrap(),
+        enchants: server::item_instance::load::load_enchantment_tables(&db).unwrap(),
+        effects: server::item_instance::load::load_item_effect_tables(&db).unwrap(),
+    });
     app.insert_resource(crate::faction::load_faction_templates(&db).unwrap());
     app.insert_resource(crate::maps::store::load_map_store(&db).unwrap());
     app.insert_resource(crate::scripted_ai::model_reach::load_model_reaches(&db).unwrap());

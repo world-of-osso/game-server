@@ -3,6 +3,146 @@ use super::super::catalogs::Catalogs;
 use super::spawn_run;
 use shared::protocol::CombatLogKind;
 
+fn native_tender_damage_rate(equipped: bool) -> f64 {
+    let _rng_scope = crate::random::seed_scope(1);
+    let mut run = spawn_run(1, &mut None).unwrap();
+    assert_eq!(run.graph.map_id, 2515);
+    if equipped {
+        for member in run.members() {
+            let name = run
+                .app
+                .world()
+                .get::<crate::followers::Follower>(member)
+                .map(|follower| follower.profile.name.as_str())
+                .unwrap_or("synthetic leader");
+            let items = run
+                .app
+                .world()
+                .get::<crate::stats::EquippedItemModifiers>(member)
+                .expect("every party member has source equipment");
+            let levels: Vec<_> = items
+                .items
+                .iter()
+                .map(|(_, modifiers)| modifiers.item_level_override)
+                .collect();
+            eprintln!("AZURE_EQUIPMENT {name} levels={levels:?}");
+        }
+    }
+    if !equipped {
+        let members: Vec<_> = run.members().collect();
+        for member in members {
+            run.app.world_mut().entity_mut(member).insert((
+                crate::stats::EquippedItems::default(),
+                crate::stats::EquippedItemModifiers::default(),
+            ));
+        }
+    }
+    let target = run.actors[&29001796];
+    let max_health = run
+        .app
+        .world()
+        .get::<shared::components::Health>(target)
+        .unwrap()
+        .max;
+    let mut started = None;
+    let mut cursor = 0;
+    let mut damage = std::collections::BTreeMap::<u64, i64>::new();
+    for _ in 0..18_000 {
+        run.control().unwrap();
+        run.app.update();
+        let events = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0;
+        for event in &events[cursor..] {
+            if event.kind == CombatLogKind::Damage && event.target == Some(target.to_bits()) {
+                if let Some(source) = event.source {
+                    *damage.entry(source).or_default() += i64::from(event.amount);
+                }
+            }
+        }
+        cursor = events.len();
+        let hp = run
+            .app
+            .world()
+            .get::<shared::components::Health>(target)
+            .unwrap()
+            .current;
+        if hp < max_health && started.is_none() {
+            started = Some((run.now(), hp));
+        }
+        if hp <= 0.0 {
+            let (at, first_health) = started.expect("real native tender damage");
+            let duration = run.now() - at;
+            if equipped {
+                for member in run.members() {
+                    let name = run
+                        .app
+                        .world()
+                        .get::<crate::followers::Follower>(member)
+                        .map(|follower| follower.profile.name.as_str())
+                        .unwrap_or("Austin Huxworth");
+                    let pet_damage = crate::hunter_pet::summoned_pet(run.app.world(), member)
+                        .and_then(|pet| damage.get(&pet.to_bits()))
+                        .copied()
+                        .unwrap_or_default();
+                    let amount =
+                        damage.get(&member.to_bits()).copied().unwrap_or_default() + pet_damage;
+                    eprintln!(
+                        "AZURE_TENDER_MEMBER {name} damage={amount} duration={duration} dps={}",
+                        amount as f64 / duration
+                    );
+                }
+            }
+            return f64::from(first_health) / duration;
+        }
+    }
+    panic!("native Azure Arcane Tender was not killed");
+}
+
+#[test]
+#[ignore = "explicit Azure native equipment in fresh and cached campaigns"]
+fn native_azure_equipment_survives_cached_campaigns() {
+    let mut catalogs = None;
+    for _ in 0..2 {
+        let mut run = spawn_run(1, &mut catalogs).unwrap();
+        for member in run.members() {
+            let name = run
+                .app
+                .world()
+                .get::<crate::followers::Follower>(member)
+                .map(|follower| follower.profile.name.as_str())
+                .unwrap_or("Austin Huxworth");
+            let items = run
+                .app
+                .world()
+                .get::<crate::stats::EquippedItems>(member)
+                .unwrap();
+            let levels = run
+                .app
+                .world()
+                .get::<crate::stats::EquippedItemModifiers>(member)
+                .unwrap();
+            eprintln!("AZURE_ITEMS {name}: {:?}; {:?}", items.items, levels.items);
+            assert!(items.items.len() >= 15);
+        }
+        catalogs = Some(Catalogs::take(run.app.world_mut()));
+    }
+}
+
+#[test]
+#[ignore = "explicit Azure native level70 source gear versus unequipped pack"]
+fn follower_gear_increases_actual_azure_pack_damage() {
+    let baseline = native_tender_damage_rate(false);
+    let equipped = native_tender_damage_rate(true);
+    eprintln!("AZURE_TENDER_DPS baseline={baseline} equipped={equipped}");
+    assert!(
+        equipped > baseline,
+        "source gear must improve real party damage"
+    );
+}
+
 #[test]
 #[ignore = "explicit native Azure70 BM leader Call Pet and damage across cached worlds"]
 fn native_bm_leader_summons_and_uses_its_pet_without_transport_identity() {
