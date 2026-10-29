@@ -150,6 +150,61 @@ fn discipline_smite_and_penance_capture_matched_stat_factors() {
 
 #[test]
 #[ignore = "requires the selected real Discipline profile and canonical world database"]
+fn discipline_policy_applies_pain_and_does_not_refresh_early() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::protocol::CombatLogKind;
+    let mut run = super::super::dps_parity::prepare_registered_player(66, 1).unwrap();
+    let tank = run.actor;
+    let healer = super::super::dps_parity::spawn_second_reference_player(&mut run, 256).unwrap();
+    let party = crate::followers::simulator::spawn_party_for_reference_healer(
+        run.app.world_mut(),
+        tank,
+        healer,
+    )
+    .unwrap();
+    let mut members = party.members.clone();
+    members.push(tank);
+    let enemy = run.targets[0];
+    run.app
+        .world_mut()
+        .entity_mut(tank)
+        .insert(crate::networking::CombatTarget(Some(enemy)));
+    let mut policy = super::prepare(&mut run, healer).unwrap();
+    policy.drive(run.app.world_mut(), healer, &members).unwrap();
+    for _ in 0..40 {
+        run.app.update();
+    }
+    assert!(
+        crate::auras::has_aura(run.app.world(), enemy, 589),
+        "Pain must apply to the enemy"
+    );
+    let casts = |run: &super::super::dps_parity::Run| {
+        run.app
+            .world()
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .filter(|event| {
+                event.kind == CombatLogKind::CastSuccess
+                    && event.source == Some(healer.to_bits())
+                    && event.spell_id == Some(589)
+            })
+            .count()
+    };
+    assert_eq!(casts(&run), 1);
+    policy.drive(run.app.world_mut(), healer, &members).unwrap();
+    for _ in 0..40 {
+        run.app.update();
+    }
+    assert_eq!(
+        casts(&run),
+        1,
+        "fresh Pain must not be recast before its pandemic window"
+    );
+}
+
+#[test]
+#[ignore = "requires the selected real Discipline profile and canonical world database"]
 fn discipline_shield_policy_prefers_atoned_ally_and_uses_void_proc() {
     use crate::spell_cast::test_harness::ObservedCombatEvents;
     use shared::protocol::CombatLogKind;
