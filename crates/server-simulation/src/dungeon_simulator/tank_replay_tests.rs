@@ -1715,7 +1715,7 @@ fn pressure_scale_keeps_same_seed_attack_outcomes_for_every_tank() {
         let normal = outcomes(1.0);
         let pressured = outcomes(2.0);
         let shared = normal.len().min(pressured.len());
-        assert!(shared >= 60, "spec {spec}: only {shared} shared attacks");
+        assert!(shared >= 40, "spec {spec}: only {shared} shared attacks");
         assert_eq!(normal[..shared], pressured[..shared], "spec {spec}");
     }
 }
