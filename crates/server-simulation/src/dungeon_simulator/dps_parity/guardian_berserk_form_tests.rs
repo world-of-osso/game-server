@@ -111,6 +111,21 @@ fn guardian_absorbed_melee_special_earns_bear_rage_with_native_cooldown() {
         .world()
         .resource::<super::super::healer_intake::Capture>();
     assert_eq!(capture.melee_rage.get(&(actor, "taken")), Some(&6.0));
+    change_power(run.app.world_mut(), actor, PowerType::Rage, 930.0);
+    for _ in 0..16 {
+        run.app.update();
+    }
+    strike(&mut run);
+    assert_eq!(rage(&run), 1000.0);
+    let capture = run
+        .app
+        .world()
+        .resource::<super::super::healer_intake::Capture>();
+    assert_eq!(
+        capture.melee_rage.get(&(actor, "taken")),
+        Some(&7.0),
+        "capture records the capped gain, not the attempted gain"
+    );
 }
 
 #[test]
