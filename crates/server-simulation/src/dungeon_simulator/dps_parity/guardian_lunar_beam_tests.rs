@@ -22,6 +22,28 @@ fn guardian_lunar_beam_earns_caster_owned_atmospheric_exposure() {
             .iter()
             .any(|aura| aura.spell_id == 429532 && aura.caster == actor)
     );
+    let damage = |run: &Run| -> f32 {
+        let event = run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .rev()
+            .find(|event| {
+                event.source == Some(actor.to_bits())
+                    && event.target == Some(target.to_bits())
+                    && event.spell_id == Some(197626)
+                    && event.kind == CombatLogKind::Damage
+            })
+            .expect("real Starsurge impact");
+        event.amount as f32 / if event.crit { 2.0 } else { 1.0 }
+    };
+    crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 197626, Some(target), 1);
+    for _ in 0..20 {
+        run.app.update();
+    }
+    let control = damage(&run);
     crate::spell_cast::creature_cast(run.app.world_mut(), actor, 204066, Some(target), false)
         .unwrap();
     for _ in 0..25 {
@@ -42,6 +64,15 @@ fn guardian_lunar_beam_earns_caster_owned_atmospheric_exposure() {
         .unwrap()
         .amount;
     assert_eq!(amount, 6.0);
+    crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 197626, Some(target), 1);
+    for _ in 0..20 {
+        run.app.update();
+    }
+    let ratio = damage(&run) / control;
+    assert!(
+        (1.02..1.10).contains(&ratio),
+        "exposure changes caster damage by {ratio}, expected 1.06"
+    );
 }
 
 #[test]
