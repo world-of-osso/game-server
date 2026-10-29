@@ -148,6 +148,12 @@ fn frenzy_direct_hit_is_armored_but_its_bleed_is_not() {
     for _ in 0..40 {
         run.app.update();
     }
+    for target in [unarmored, armored] {
+        run.app
+            .world_mut()
+            .entity_mut(target)
+            .remove::<crate::level_scaling::ScaledStats>();
+    }
     run.app
         .world_mut()
         .entity_mut(unarmored)
