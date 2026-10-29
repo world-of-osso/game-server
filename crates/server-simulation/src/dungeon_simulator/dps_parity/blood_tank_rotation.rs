@@ -725,11 +725,9 @@ mod tests {
             }
             panic!("no Dance weapon after 30 payments")
         }
-        assert_eq!(
-            first_spawn(1.0),
-            first_spawn(2.0),
-            "each payment gets one proc roll regardless of rune count"
-        );
+        let paid = first_spawn(1.0);
+        assert_eq!(paid, first_spawn(2.0), "each payment gets one roll regardless of rune count");
+        assert_eq!(paid, first_spawn(0.0), "a fully discounted rune cost still gets a roll");
     }
 
     #[test]

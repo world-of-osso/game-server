@@ -166,16 +166,11 @@ fn spawn_dance_weapon(world: &mut World, caster: Entity, costs: &[(CostPool, f32
     {
         return;
     }
-    let runes = costs
-        .iter()
-        .filter_map(|(pool, amount)| {
-            (*pool == CostPool::Power(PowerType::Runes)).then_some(*amount)
-        })
-        .sum::<f32>();
-    if runes <= 0.0 {
+    if !costs.iter().any(|(pool, _)| *pool == CostPool::Power(PowerType::Runes)) {
         return;
     }
-    // SimC76f8118 sc_death_knight.cpp13072–13075 rolls once per rune resource loss.
+    // SimC76f8118 sc_death_knight.cpp13072–13075 rolls once per rune resource
+    // loss, including a rune cost reduced to zero.
     let mut entity = world.entity_mut(caster);
     let mut state = entity.entry::<DanceAttempts>().or_default();
     let mut state = state.get_mut();
