@@ -213,6 +213,44 @@ fn fire_intensifying_flame_native70_final_tick_script_isolation_credits_natural_
 
 #[test]
 #[ignore = "native Intensifying Flame source gate"]
+fn fire_intensifying_flame_native70_ignite_deposit_is_not_creature_scaled_twice() {
+    let _seed = crate::random::seed_scope(1);
+    let (h, caster, targets) = prepare_ignites(1);
+    let target = targets[0];
+    let fireball = h
+        .inbox
+        .log
+        .iter()
+        .find(|event| {
+            event.source == Some(caster.to_bits())
+                && event.target == Some(target.to_bits())
+                && event.spell_id == Some(FIREBALL)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0
+        })
+        .expect("native Fireball must deal damage");
+    let ignite_tick = h
+        .app
+        .world()
+        .get::<ActiveAuras>(target)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == IGNITE && aura.caster == caster)
+        .unwrap()
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap()
+        .amount;
+    assert!(
+        ignite_tick < fireball.amount as f32,
+        "one Ignite tick cannot exceed the Fireball that produced its bank: tick={ignite_tick} hit={}",
+        fireball.amount
+    );
+}
+
+#[test]
+#[ignore = "native Intensifying Flame source gate"]
 fn fire_intensifying_flame_native70_child_does_not_refresh_ignite() {
     let _seed = crate::random::seed_scope(1);
     let (mut h, caster, targets) = prepare_ignites(1);
