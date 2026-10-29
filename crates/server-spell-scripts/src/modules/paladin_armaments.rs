@@ -17,6 +17,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AfterAbsorbConsumed(reflection_from_absorb),
     SpellScriptHook::AvoidanceProcHitMask(grand_crusader_avoidance_mask),
     SpellScriptHook::ResolvedDamage(glory_from_shield),
+    SpellScriptHook::ResolvedDamage(grant_bulwark_of_righteous_fury),
     SpellScriptHook::OnCast(glory_on_cast),
     SpellScriptHook::EffectHandler(armament_energize_handler),
     SpellScriptHook::EffectHandler(rite_of_sanctification_handler),
@@ -26,6 +27,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::EnemyContextHit(blessed_hammer_hit),
     SpellScriptHook::TargetDamageMultiplier(valor_shield_multiplier),
     SpellScriptHook::AfterResolvedHits(consume_valor),
+    SpellScriptHook::AfterResolvedHits(consume_bulwark_of_righteous_fury),
     SpellScriptHook::AreaFilter(blaze_area_filter),
 ];
 
@@ -343,6 +345,38 @@ fn roll_vanguard(world: &mut World, caster: Entity, spell: u32) {
                 source: AuraSource::Cast,
             },
         );
+    }
+}
+
+fn grant_bulwark_of_righteous_fury(
+    world: &mut World,
+    ctx: &combat::spell_cast::effects::EffectCtx<'_>,
+    _: Entity,
+    _: bool,
+    amount: f32,
+) {
+    if ctx.spell.id != 31935 || amount <= 0.0 || !selected(world, ctx.caster, 386653) {
+        return;
+    }
+    // SimC76f8118 sc_paladin_protection.cpp:228–229 grants a stack per Shield impact.
+    combat::auras::apply_aura(world, &AuraApplication {
+        caster: ctx.caster,
+        target: ctx.caster,
+        spell_id: 386652,
+        effect_mask: u32::MAX,
+        source: AuraSource::Cast,
+    });
+}
+
+fn consume_bulwark_of_righteous_fury(
+    world: &mut World,
+    ctx: &combat::spell_cast::effects::EffectCtx<'_>,
+) {
+    if ctx.spell.id == 53600 {
+        // SimC76f8118 sc_paladin.cpp:3927 consumes the modifier after Shield's damage.
+        combat::auras::remove_auras(world, ctx.caster, RemoveReason::Consumed, |aura| {
+            aura.spell_id == 386652 && aura.caster == ctx.caster
+        });
     }
 }
 
