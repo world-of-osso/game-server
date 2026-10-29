@@ -87,6 +87,8 @@ fn master_the_darkness_mind_blast_earns_void_shield_and_absorb_discharges() {
         .world_mut()
         .entity_mut(h.caster)
         .insert(ActiveSpec(256));
+    let ally_one = spawn_player(&mut h.app, 5, 1.0);
+    let ally_two = spawn_player(&mut h.app, 5, 2.0);
     crate::auras::apply_aura(
         h.app.world_mut(),
         &crate::auras::AuraApplication {
@@ -109,6 +111,16 @@ fn master_the_darkness_mind_blast_earns_void_shield_and_absorb_discharges() {
         crate::auras::has_aura(h.app.world(), h.caster, 1253593),
         "Shield must resolve to Void Shield"
     );
+    for ally in [ally_one, ally_two] {
+        assert!(
+            crate::auras::has_aura(h.app.world(), ally, 1253593),
+            "Void Shield must protect three allies"
+        );
+        assert!(
+            crate::auras::has_aura(h.app.world(), ally, 194384),
+            "Void Shield must apply Atonement"
+        );
+    }
     assert!(
         !crate::auras::has_aura(h.app.world(), h.caster, 1253591),
         "Void Shield consumes its override"
