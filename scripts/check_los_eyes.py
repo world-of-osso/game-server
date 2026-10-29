@@ -15,6 +15,8 @@ STAND_STATES = set(range(10))
 def missing_eyes(world_db, table):
     maps = {row[0] for row in selected_map_sources(world_db)}
     with sqlite3.connect(f"file:{world_db}?mode=ro", uri=True) as db:
+        runtime_sql = Path(__file__).with_name("los-runtime-displays.sql").read_text()
+        runtime_displays = {row[0] for row in db.execute(runtime_sql)}
         displays = {
             (map_id, display)
             for map_id, display in db.execute(
@@ -29,8 +31,11 @@ def missing_eyes(world_db, table):
     with table.open(newline="") as stream:
         for row in csv.DictReader(stream, delimiter="\t"):
             states.setdefault(int(row["display_id"]), set()).add(int(row["stand_state"]))
-    return sorted((map_id, display, sorted(STAND_STATES - states.get(display, set())))
-                  for map_id, display in displays if STAND_STATES - states.get(display, set()))
+    missing = [(str(map_id), display, sorted(STAND_STATES - states.get(display, set())))
+               for map_id, display in displays if STAND_STATES - states.get(display, set())]
+    missing.extend(("runtime", display, sorted(STAND_STATES - states.get(display, set())))
+                   for display in runtime_displays if STAND_STATES - states.get(display, set()))
+    return sorted(missing)
 
 
 def main():
@@ -45,7 +50,7 @@ def main():
                if display not in allowed]
     if missing:
         for map_id, display, states in missing:
-            print(f"map {map_id}: display {display} missing eye states {states}")
+            print(f"{map_id}: display {display} missing eye states {states}")
         raise SystemExit(f"LOS eye table incomplete: {len(missing)} map/display pairs")
     print("LOS eye table covers hosted spawned displays except listed gaps")
 

@@ -21,6 +21,11 @@ class EyeCoverageTest(unittest.TestCase):
                     CREATE TABLE content_creature (id1 INTEGER, map INTEGER, modelid INTEGER);
                     CREATE TABLE content_gameobject (map INTEGER);
                     CREATE TABLE content_creature_template_model (CreatureID INTEGER, CreatureDisplayID INTEGER);
+                    CREATE TABLE creature_template_model (CreatureDisplayID INTEGER);
+                    CREATE TABLE battle_pet_species (display_id INTEGER);
+                    CREATE TABLE battle_pet_display_override (CreatureDisplayInfoID INTEGER);
+                    CREATE TABLE spell_shapeshift_form (CreatureDisplayID INTEGER);
+                    INSERT INTO creature_template_model VALUES (33);
                     INSERT INTO map VALUES (2519, 1, 1);
                     INSERT INTO content_creature VALUES (1, 2519, 22);
                     INSERT INTO content_creature_template_model VALUES (1, 11);
@@ -39,12 +44,13 @@ class EyeCoverageTest(unittest.TestCase):
             write_rows((11, state) for state in range(9))
             result = check()
             self.assertNotEqual(result.returncode, 0)
-            self.assertIn("map 2519: display 11 missing eye states [9]", result.stdout)
-            self.assertIn("map 2519: display 22 missing eye states", result.stdout)
-            gaps.write_text("display_id\tcause\n11\tmissing animation\n22\tno model mapping\n")
+            self.assertIn("2519: display 11 missing eye states [9]", result.stdout)
+            self.assertIn("2519: display 22 missing eye states", result.stdout)
+            self.assertIn("runtime: display 33 missing eye states", result.stdout)
+            gaps.write_text("display_id\tcause\n11\tmissing animation\n22\tno model mapping\n33\tno model mapping\n")
             self.assertEqual(check().returncode, 0)
             gaps.write_text("display_id\tcause\n")
-            write_rows((display, state) for display in (11, 22) for state in range(10))
+            write_rows((display, state) for display in (11, 22, 33) for state in range(10))
             self.assertEqual(check().returncode, 0)
 
 
