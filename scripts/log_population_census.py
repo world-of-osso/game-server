@@ -73,21 +73,50 @@ def census(paths, maps):
                 position = advanced_position(fields)
                 if position and position['guid'] in current['creatures']:
                     item = current['creatures'][position['guid']]
+                    observation = {**position, 'time': timestamp, 'event': event}
                     if 'first_position' not in item:
-                        item['first_position'] = {**position, 'time': timestamp, 'event': event}
+                        item['first_position'] = observation
+                        item['position_neighbors'] = []
+                    elif len(item['position_neighbors']) < 2 and (
+                        observation['x'], observation['y'], observation['ui_map_id']
+                    ) != (
+                        item['first_position']['x'], item['first_position']['y'],
+                        item['first_position']['ui_map_id']
+                    ):
+                        item['position_neighbors'].append(observation)
     return runs
+
+
+def floor_requests(runs):
+    requests = []
+    for run in runs:
+        for guid, creature in run['creatures'].items():
+            position = creature.get('first_position')
+            if position is None:
+                continue
+            requests.append({
+                'file': run['file'], 'run_start': run['start'], 'guid': guid,
+                'map': run['map'], 'x': position['x'], 'y': position['y'],
+                'ui_map_id': position['ui_map_id'],
+                'neighbor_hints': creature['position_neighbors'],
+            })
+    return requests
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--map", type=int, action="append", required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--floor-requests", type=Path)
     parser.add_argument("logs", type=Path, nargs="+")
     args = parser.parse_args()
     paths = [f for p in args.logs for f in (sorted(p.glob("*.txt")) if p.is_dir() else [p])]
     runs = census(paths, set(args.map))
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps({"runs": runs}, indent=2) + "\n", encoding="utf-8")
+    if args.floor_requests:
+        args.floor_requests.parent.mkdir(parents=True, exist_ok=True)
+        args.floor_requests.write_text(json.dumps(floor_requests(runs), indent=2) + "\n", encoding="utf-8")
 
 
 if __name__ == "__main__":

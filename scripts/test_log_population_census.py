@@ -25,6 +25,18 @@ class CensusTest(unittest.TestCase):
         fields[0] = 'SPELL_AURA_APPLIED'
         self.assertIsNone(module.advanced_position(fields))
 
+    def test_floor_requests_keep_run_identity_and_neighbor_hints(self):
+        position = {'x': 10.0, 'y': 20.0, 'ui_map_id': 2095}
+        neighbor = {'x': 11.0, 'y': 20.0, 'ui_map_id': 2095, 'time': '3', 'event': 'SPELL_DAMAGE'}
+        runs = [{'file': 'a.txt', 'start': '1', 'map': 2521,
+                 'creatures': {'Creature-0-1-2521-42-123-ABCD': {
+                     'first_position': position, 'position_neighbors': [neighbor]},
+                     'Creature-0-1-2521-42-456-DCBA': {}}}]
+        self.assertEqual(module.floor_requests(runs), [{
+            'file': 'a.txt', 'run_start': '1', 'guid': 'Creature-0-1-2521-42-123-ABCD',
+            'map': 2521, 'x': 10.0, 'y': 20.0, 'ui_map_id': 2095,
+            'neighbor_hints': [neighbor]}])
+
     def test_runs_creatures_and_summon_destinations(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / 'combat.txt'
