@@ -3,6 +3,36 @@ use shared::components::Health;
 use shared::protocol::CombatLogKind;
 
 #[test]
+#[ignore = "checks Preservation Reversion's native periodic healing coefficient"]
+fn preservation_reversion_tick_matches_native_coefficient() {
+    // 70448 SpellEffect 907578: coefficient 0.4275, period 2000 ms, variance 0.
+    let mut h = crate::spell_cast::test_harness::harness(Vec::new(), &[366155], 13).unwrap();
+    h.app
+        .init_resource::<crate::spell_cast::test_harness::ObservedCombatEvents>();
+    *h.app.world_mut().get_mut::<Health>(h.caster).unwrap() = Health {
+        current: 1.0,
+        max: 100_000.0,
+    };
+    crate::spell_cast::creature_cast(h.app.world_mut(), h.caster, 366155, Some(h.caster), true)
+        .unwrap();
+    h.advance(45);
+    let events = &h
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    let tick = events.iter().find(|event| {
+        event.kind == CombatLogKind::Heal
+            && event.periodic
+            && event.spell_id == Some(366155)
+            && event.target == Some(h.caster.to_bits())
+    });
+    let tick = tick.expect("Reversion must heal at its first native periodic tick");
+    assert!((42..=43).contains(&tick.amount), "{tick:?}");
+    assert_eq!(tick.overflow, 0);
+}
+
+#[test]
 #[ignore = "explicit seven-spec core-heal coefficient ledger qualification"]
 fn healer_benchmark_core_direct_heal_amounts_match_db2_tc_ledger() {
     // DB2 SpellEffect, DifficultyID0. TC a352b1fa Unit.cpp7345–7456:
