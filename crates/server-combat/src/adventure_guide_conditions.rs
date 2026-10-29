@@ -8,14 +8,14 @@ const WITHIN_OR_ABOVE: u32 = 0x20;
 const DISABLED: u32 = 0x100;
 
 #[derive(Clone, Debug)]
-pub(super) enum ConditionRule {
+pub(crate) enum ConditionRule {
     Always,
     Level { min: u8, max: u8 },
     Achievement { id: u32 },
     Unsupported(String),
 }
 impl ConditionRule {
-    pub(super) fn evaluate(&self, level: u8, earned: Option<&BTreeSet<u32>>) -> Result<bool, &str> {
+    pub(crate) fn evaluate(&self, level: u8, earned: Option<&BTreeSet<u32>>) -> Result<bool, &str> {
         match self {
             Self::Always => Ok(true),
             Self::Level { min, max } => Ok(level >= *min && (*max == 0 || level <= *max)),
@@ -27,7 +27,7 @@ impl ConditionRule {
     }
 }
 
-pub(super) fn load_conditions(
+pub(crate) fn load_conditions(
     conn: &Connection,
     ids: BTreeSet<u32>,
 ) -> Result<BTreeMap<u32, ConditionRule>, String> {
