@@ -41,15 +41,29 @@ fn havoc_follower_walks_to_melee_edge_before_retreat() {
     let mut steps = 0;
     for _ in 0..40 {
         let before = *h.app.world().get::<Position>(unit).unwrap();
-        assert!(try_entry(
+        let admitted = try_entry(
             h.app.world_mut(),
             unit,
             &follower,
             &[unit],
             Some(enemy),
             &[(enemy, None)],
-            &entry
-        ));
+            &entry,
+        );
+        if !admitted {
+            let world = h.app.world_mut();
+            let known = crate::spell_cast::knowledge::resolve_actor_action(world, unit, 198793);
+            let spell = world
+                .resource::<crate::spell_info::SpellStore>()
+                .get(198793)
+                .unwrap()
+                .clone();
+            let readiness = crate::spell_cast::read_native_cast_start(world, unit, &spell, unit);
+            let conditions = conditions_met(world, unit, unit, &[unit], &[(enemy, None)], &entry);
+            panic!(
+                "Retreat unavailable: known={known:?}, readiness={readiness:?}, conditions={conditions}"
+            );
+        }
         if h.app
             .world()
             .get::<crate::knockback::KnockbackFlight>(unit)
