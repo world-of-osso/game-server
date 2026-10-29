@@ -77,8 +77,11 @@ def extract(paths):
                             if maximum and health * 2 <= maximum:
                                 active['health_50'].setdefault(actor, elapsed)
                             if actor not in active['positions']:
-                                coords = [float(value) for value in row[index + 14:index + 18]]
-                                active['positions'][actor] = coords
+                                x, y, map_id, orientation = row[index + 14:index + 18]
+                                active['positions'][actor] = {
+                                    'x': float(x), 'y': float(y),
+                                    'logged_map_id': int(map_id), 'orientation': float(orientation),
+                                }
                 except (ValueError, IndexError, csv.Error):
                     continue
     result = {'kills': collections.Counter(str(kill['encounter']) for kill in kills), 'timers': {}, 'positions': {}, 'stage_events': []}
