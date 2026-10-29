@@ -801,6 +801,66 @@ mod tests {
 
     #[test]
     #[ignore = "requires canonical world database and MID2 Blood inputs"]
+    fn blood_infliction_scales_with_remaining_plague_duration() {
+        use shared::protocol::CombatLogKind;
+        fn sample(duration: u32) -> i32 {
+            let _seed = crate::random::seed_scope(70448);
+            let mut run = super::super::prepare_registered_player(250, 1).unwrap();
+            let actor = run.actor;
+            let target = run.targets[0];
+            super::super::engage(&mut run);
+            crate::auras::apply_aura(
+                run.app.world_mut(),
+                &crate::auras::AuraApplication {
+                    caster: actor,
+                    target,
+                    spell_id: 55078,
+                    effect_mask: u32::MAX,
+                    source: crate::auras::AuraSource::Cast,
+                },
+            );
+            assert!(crate::auras::set_owned_duration(
+                run.app.world_mut(),
+                actor,
+                target,
+                55078,
+                duration
+            ));
+            crate::spell_cast::creature_cast(
+                run.app.world_mut(),
+                actor,
+                433895,
+                Some(target),
+                false,
+            )
+            .unwrap();
+            for _ in 0..4 {
+                run.app.update();
+            }
+            run.app
+                .world()
+                .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+                .0
+                .iter()
+                .find(|event| {
+                    event.source == Some(actor.to_bits())
+                        && event.target == Some(target.to_bits())
+                        && event.spell_id == Some(434144)
+                        && event.kind == CombatLogKind::Damage
+                })
+                .expect("Infliction damage")
+                .amount
+        }
+        let short = sample(6000);
+        let long = sample(12000);
+        assert!(
+            long > short * 3 / 2 && long < short * 3,
+            "remaining disease: {short} vs {long}"
+        );
+    }
+
+    #[test]
+    #[ignore = "requires canonical world database and MID2 Blood inputs"]
     fn blood_infliction_requires_owned_plague_and_extends_its_deadline() {
         use shared::protocol::CombatLogKind;
         for with_plague in [false, true] {
