@@ -65,8 +65,11 @@ fn queue_echo(world: &mut World, unit: Entity, aura: &AuraInstance, reason: Remo
 fn echo(world: &mut World, unit: Entity, aura: &AuraInstance, reason: RemoveReason) {
     if unit == aura.caster && matches!(reason, RemoveReason::Expired | RemoveReason::Consumed) {
         if spell_cast::try_cast_triggered(world, unit, 50842, None, 1) {
-            let spell = world.resource::<combat::spell_info::SpellStore>()
-                .get(50842).expect("native Blood Boil").clone();
+            let spell = world
+                .resource::<combat::spell_info::SpellStore>()
+                .get(50842)
+                .expect("native Blood Boil")
+                .clone();
             super::blood_rune_weapon::copy_weapon_actions(world, unit, &spell);
         }
     }
