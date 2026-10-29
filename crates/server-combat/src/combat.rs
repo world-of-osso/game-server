@@ -692,6 +692,7 @@ pub(crate) struct AutoAttackParams<'w, 's> {
     units: ParamSet<'w, 's, (AutoAttackers<'w, 's>, AutoAttackTargets<'w, 's>)>,
     traits: Query<'w, 's, &'static crate::class_progression::TraitLoadout>,
     known_spells: Query<'w, 's, &'static crate::class_progression::KnownSpells>,
+    active_specs: Query<'w, 's, &'static shared::components::ActiveSpec>,
     impact_gates: Query<'w, 's, &'static WhiteImpactGate>,
     scaling: Query<'w, 's, ScalingItem<'static>>,
     spirit_wolves: Query<'w, 's, &'static crate::spell_cast::guardian::SpiritWolf>,
@@ -1049,6 +1050,28 @@ fn auto_attack_unit(
             .or(demon_owner_ap)
             .or(guardian_owner_ap),
         // SimC76f8118 pet.cpp217–220: read live owner crit, not template base5%.
+        priest_fiend_owner_damage: params.guardians.get(attacker_entity).ok().and_then(
+            |(summon, _, _)| {
+                if !params
+                    .active_specs
+                    .get(summon.owner)
+                    .is_ok_and(|spec| spec.0 == 256)
+                {
+                    return None;
+                }
+                let share = match summon.spell_id {
+                    1280172 => 0.408,
+                    123040 | 200174 => 0.6,
+                    _ => return None,
+                };
+                let (owner, _) = params
+                    .owner_stats
+                    .get(summon.owner)
+                    .expect("Discipline fiend owner stats");
+                // SimC weapon AP contribution: inherited SP * 1.5s / 6.
+                Some(owner.spell_power.max(0.0) * share * 1.5 / 6.0)
+            },
+        ),
         hunter_owner_crit_pct: owner_crit,
         spirit_wolf: params.spirit_wolves.get(attacker_entity).ok().map(|wolf| {
             let (owner, _) = params
@@ -1443,6 +1466,7 @@ pub(crate) struct Attacker<'a> {
     pub temp_summoner: Option<Entity>,
     pub spirit_wolf: Option<(&'a crate::spell_cast::guardian::SpiritWolf, f32)>,
     pub hunter_owner_ap: Option<f32>,
+    pub priest_fiend_owner_damage: Option<f32>,
     pub hunter_owner_crit_pct: Option<f32>,
     pub pet_owner_hit_expertise: Option<f32>,
 }
@@ -1569,8 +1593,10 @@ fn swing_damage(
     // TC Guardian::UpdateDamagePhysical1423: owner-derived AP is additive
     // before the same damage/armor/outcome path. Intrinsic pet AP and weapon
     // damage remain unqualified; do not import TC's fake primary-stat values.
-    let owner_bonus = attacker.hunter_owner_ap.map_or(0.0, |power| {
-        power / if felguard { 6.0 } else { 3.5 } * AUTO_ATTACK_INTERVAL
+    let owner_bonus = attacker.priest_fiend_owner_damage.unwrap_or_else(|| {
+        attacker.hunter_owner_ap.map_or(0.0, |power| {
+            power / if felguard { 6.0 } else { 3.5 } * AUTO_ATTACK_INTERVAL
+        })
     });
     let base = base + owner_bonus;
     SwingDamage {
@@ -2911,6 +2937,7 @@ pub fn roll_simc_dummy_outcome(
         temp_summoner: None,
         spirit_wolf: None,
         hunter_owner_ap: None,
+        priest_fiend_owner_damage: None,
         hunter_owner_crit_pct: None,
         pet_owner_hit_expertise: None,
     };

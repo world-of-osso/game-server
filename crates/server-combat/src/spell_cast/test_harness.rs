@@ -27,6 +27,24 @@ use crate::networking::{Moving, PlayerLink};
 use crate::spell_info::{ClassInfo, ClassSpells, SpellInfo, SpellStore, load_spell_data};
 use crate::stats::CharacterStats;
 
+/// Optional replay receipts: pre-mitigation fiend damage and raw/effective transfers by owner.
+#[derive(Resource, Default)]
+pub struct FiendAtonementReceipts(
+    pub std::collections::HashMap<Entity, (f64, f64, f64)>,
+    pub Vec<FiendSummonReceipt>,
+    pub Vec<(Entity, f64, f32, f32)>,
+);
+
+pub struct FiendSummonReceipt {
+    pub actor: Entity,
+    pub owner: Entity,
+    pub spell: u32,
+    pub started: f64,
+    pub expires: Option<f64>,
+    pub owner_spell_power: f32,
+    pub landed_raw: Vec<f32>,
+}
+
 mod assisted_parity;
 pub use assisted_parity::{
     read_facts as read_assisted_parity_facts,
