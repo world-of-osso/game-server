@@ -256,6 +256,62 @@ fn atonement_transfers_critical_smite_before_absorb_but_not_fireball() {
 }
 
 #[test]
+fn atonement_shadow_word_pain_uses_native_abyssal_reverie() {
+    let mut h = harness(Vec::new(), &[17, 194384, 81749, 94472, 589, 373054], 5).unwrap();
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(ActiveSpec(256));
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: h.caster,
+            target: h.caster,
+            spell_id: 373054,
+            effect_mask: u32::MAX,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    let ally = spawn_player(&mut h.app, 5, 1.0);
+    *h.app.world_mut().get_mut::<Health>(ally).unwrap() = Health {
+        current: 1_000.0,
+        max: 10_000.0,
+    };
+    *h.app.world_mut().get_mut::<Health>(h.npc).unwrap() = Health {
+        current: 100_000.0,
+        max: 100_000.0,
+    };
+    h.cast_and_deliver(17, Some(ally));
+    h.advance(35);
+    h.inbox.log.clear();
+    h.cast_and_deliver(589, Some(h.npc));
+    h.advance(120);
+    let index = h
+        .inbox
+        .log
+        .iter()
+        .position(|event| {
+            event.kind == CombatLogKind::Damage && event.spell_id == Some(589) && event.periodic
+        })
+        .expect("real Pain tick");
+    let damage = &h.inbox.log[index];
+    let transfer = h.inbox.log[index + 1..]
+        .iter()
+        .find(|event| {
+            event.kind == CombatLogKind::Heal
+                && event.spell_id == Some(94472)
+                && event.target == Some(ally.to_bits())
+        })
+        .expect("Atonement transfer");
+    // 70448 Abyssal Reverie effect 0 adds 10% to Shadow transfers.
+    let expected = (damage.amount as f32 * 0.46 * 1.10).round() as i32;
+    assert!(
+        (transfer.amount - expected).abs() <= 1,
+        "native Shadow transfer bonus: {damage:?} {transfer:?}"
+    );
+}
+
+#[test]
 fn atonement_smite_uses_native_grace_mastery() {
     let mut h = harness(Vec::new(), &[17, 194384, 81749, 94472, 585, 271534], 5).unwrap();
     h.app

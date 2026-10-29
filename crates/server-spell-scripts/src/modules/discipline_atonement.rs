@@ -238,7 +238,20 @@ fn transfer_damage(
         .and_then(|aura| aura.effects.iter().find(|effect| effect.index == 0))
         .map_or(0.0, |effect| effect.amount);
     // SimC76f8118 sc_priest.hpp:1418-1425: Grace increases healing on Atoned allies.
-    let transfer = raw * fraction * (1.0 + mastery / 100.0);
+    let school = damage.spell.school_mask();
+    let mut transfer = raw * fraction * (1.0 + mastery / 100.0);
+    // SimC76f8118 sc_priest.hpp:1547-1565 applies these source-school bonuses.
+    for (aura, effect, applies) in [
+        (373054, 0, school & 32 != 0),
+        (1272359, 3, school & 2 != 0),
+        (449887, 1, true),
+    ] {
+        if applies && auras::has_aura(world, caster, aura) {
+            let percent =
+                combat::spell_cast::scripts::script_effect_value(world, caster, aura, effect);
+            transfer *= 1.0 + percent / 100.0;
+        }
+    }
     let ctx = EffectCtx {
         caster,
         spell: &spell,
