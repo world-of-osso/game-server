@@ -3211,14 +3211,19 @@ fn reward_swing_rage(
             * RAGE_PER_SWING_SECOND
             * (1.0 + (bonus_pct - war_machine_sum) / 100.0)
             * war_machine_multiplier;
-        change_rage(world, attacker, (rage * RAGE_RAW_PER_RAGE).round());
+        change_rage(world, attacker, (rage * RAGE_RAW_PER_RAGE).round(), "swing");
     }
     if damage > 0.0 {
         if !reward_bear_melee_hit_rage(world, target)
             && has_rage_primary_power(world, target)
             && take_hit_rage_cooldown(world, target, RAGE_FROM_HITS_TAKEN_COOLDOWN_SECS)
         {
-            change_rage(world, target, RAGE_PER_HIT_TAKEN * RAGE_RAW_PER_RAGE);
+            change_rage(
+                world,
+                target,
+                RAGE_PER_HIT_TAKEN * RAGE_RAW_PER_RAGE,
+                "taken",
+            );
         }
     }
 }
@@ -3278,7 +3283,7 @@ pub(crate) fn reward_bear_melee_hit_rage(world: &mut World, unit: Entity) -> boo
         .proc_category_recovery_ms as f64
         / 1000.0;
     if has_rage_primary_power(world, unit) && take_hit_rage_cooldown(world, unit, recovery) {
-        change_rage(world, unit, amount * RAGE_RAW_PER_RAGE);
+        change_rage(world, unit, amount * RAGE_RAW_PER_RAGE, "taken");
     }
     true
 }
@@ -3304,8 +3309,12 @@ fn take_hit_rage_cooldown(world: &mut World, unit: Entity, cooldown: f64) -> boo
     true
 }
 
-fn change_rage(world: &mut World, unit: Entity, raw: f32) {
-    crate::spell_cast::powers::change_power(world, unit, PowerType::Rage, raw);
+fn change_rage(world: &mut World, unit: Entity, raw: f32, _source: &'static str) {
+    let _gained = crate::spell_cast::powers::change_power(world, unit, PowerType::Rage, raw);
+    #[cfg(any(test, feature = "test-support"))]
+    if let Some(amount) = _gained {
+        crate::test_support::healer_intake::record_melee_rage(world, unit, _source, amount);
+    }
 }
 
 /// Tick respawn timers and restore dead NPCs when ready; a pooled creature's pool

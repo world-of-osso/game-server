@@ -44,6 +44,11 @@ fn guardian_absorbed_melee_special_earns_bear_rage_with_native_cooldown() {
     crate::spell_cast::creature_cast(run.app.world_mut(), actor, 22812, Some(actor), false)
         .unwrap();
     change_power(run.app.world_mut(), actor, PowerType::Rage, -1000.0);
+    run.app
+        .insert_resource(crate::test_support::healer_intake::Capture {
+            members: vec![actor],
+            ..Default::default()
+        });
     let health = run.app.world().get::<Health>(actor).unwrap().current;
     let strike = |run: &mut Run| {
         crate::spell_cast::effects::replay_simc_dummy_strike(
@@ -101,6 +106,11 @@ fn guardian_absorbed_melee_special_earns_bear_rage_with_native_cooldown() {
         60.0,
         "a later absorbed swing grants Rage exactly once"
     );
+    let capture = run
+        .app
+        .world()
+        .resource::<crate::test_support::healer_intake::Capture>();
+    assert_eq!(capture.melee_rage.get(&(actor, "taken")), Some(&6.0));
 }
 
 #[test]

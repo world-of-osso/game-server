@@ -1036,5 +1036,12 @@ fn replay_registered_run_with_healing(
     report["tank_dummy_scenario"] = json!({"difficulty":TANK_DUNGEON_DIFFICULTY,"content_tuning":TANK_DUNGEON_TUNING,"season":TANK_DUNGEON_SEASON,"attacker_level":attacker.level_against(&defender),"armor_constant":armor_constant});
     report["outgoing_damage_by_spell"] = json!(outgoing_damage_by_spell);
     report["resource_spent_by_spell"] = json!(resource_spent_by_spell);
+    report["melee_rage"] = json!(
+        capture
+            .melee_rage
+            .iter()
+            .filter_map(|(&(unit, source), &amount)| (unit == tank).then_some((source, amount)))
+            .collect::<BTreeMap<_, _>>()
+    );
     Ok(report)
 }
