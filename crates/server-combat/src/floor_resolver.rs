@@ -175,7 +175,7 @@ impl FloorResolver {
                             .sum();
                         if length <= max_distance {
                             matching[index] = true;
-                            if !hint_id.is_empty() {
+                            if !hint_id.is_empty() && !matching_hints[index].contains(&hint_id) {
                                 matching_hints[index].push(hint_id.clone());
                             }
                         }
