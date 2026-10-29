@@ -76,7 +76,10 @@ pub(super) fn prepare(
         ("default", "riptide"),
         ("default", "healing_surge,if=target.health.pct<45"),
         ("default", "unleash_life,if=target.health.pct<90"),
-        ("default", "chain_heal,if=party.injured>=2"),
+        (
+            "default",
+            "chain_heal,if=party.chain_heal_worthwhile&mana.pct>35",
+        ),
         ("default", "healing_wave,if=target.healing_wave_useful"),
         ("damage", "flame_shock"),
         ("damage", "lava_burst"),
@@ -98,6 +101,7 @@ struct PartyFacts<'a> {
     earthliving_up: bool,
     surging_totem: bool,
     healing_wave_useful: bool,
+    chain_heal_worthwhile: bool,
 }
 
 impl Facts for PartyFacts<'_> {
@@ -108,6 +112,7 @@ impl Facts for PartyFacts<'_> {
             "player.earthliving_up" => Ok(f64::from(self.earthliving_up)),
             "player.surging_totem" => Ok(f64::from(self.surging_totem)),
             "target.healing_wave_useful" => Ok(f64::from(self.healing_wave_useful)),
+            "party.chain_heal_worthwhile" => Ok(f64::from(self.chain_heal_worthwhile)),
             _ => self.native.value(name),
         }
     }
@@ -120,7 +125,8 @@ impl ActionFacts for PartyFacts<'_> {
             | "target.earth_shield_up"
             | "target.healing_wave_useful"
             | "player.earthliving_up"
-            | "player.surging_totem" => self.value(name),
+            | "player.surging_totem"
+            | "party.chain_heal_worthwhile" => self.value(name),
             _ => self.native.value_for(action, name),
         }
     }
@@ -150,6 +156,25 @@ impl Policy for Restoration {
             return Ok(());
         };
         let injured = living.iter().filter(|(_, ratio)| *ratio < 0.90).count();
+        let chain_spell = world
+            .resource::<crate::spell_info::SpellStore>()
+            .get(1064)
+            .ok_or("Chain Heal native spell data missing")?;
+        let chain_effect = chain_spell
+            .effects
+            .iter()
+            .find(|effect| effect.effect == 10)
+            .ok_or("Chain Heal native heal effect missing")?;
+        let chain_expected =
+            crate::spell_cast::effects::scaled_amount(world, healer, chain_spell, chain_effect);
+        let missing: Vec<_> = party
+            .iter()
+            .filter_map(|unit| world.get::<Health>(*unit))
+            .filter(|health| health.current > 0.0 && health.current < health.max)
+            .map(|health| health.max - health.current)
+            .collect();
+        let chain_heal_worthwhile =
+            missing.len() >= 2 && missing.iter().sum::<f32>() >= chain_expected * 0.8;
         let earthliving_up = crate::auras::has_aura(world, healer, 382022);
         let surging_totem = crate::auras::has_aura(world, healer, 455630);
         let earth_shield_up = world
@@ -192,6 +217,7 @@ impl Policy for Restoration {
             earthliving_up,
             surging_totem,
             healing_wave_useful,
+            chain_heal_worthwhile,
         };
         if let Some((action, execution)) =
             self.driver
