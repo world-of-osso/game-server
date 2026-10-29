@@ -238,7 +238,7 @@ fn read_swing_projection(
     let versus = read_damage_versus(world, attacker.mods, tank)?
         * attacker
             .mods
-            .map_or(1.0, |mods| mods.punish_damage_multiplier(tank));
+            .map_or(1.0, |mods| mods.damage_to_caster_multiplier(tank, 1));
     Ok(SwingProjection {
         attacker,
         source_scaling,

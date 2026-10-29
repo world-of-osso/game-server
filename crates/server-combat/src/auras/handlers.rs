@@ -145,7 +145,8 @@ pub const SCHOOL_ABSORB_OVERKILL: u32 = 316;
 pub const MOD_HEALING_DONE_PCT_VERSUS_TARGET_HEALTH: u32 = 354;
 pub const MOD_SPELL_CRIT_CHANCE: u32 = 57;
 pub const MOD_EXPERTISE: u32 = 240;
-pub const MOD_IGNORE_TARGET_RESIST: u32 = 269;
+/// SimC76f8118 A_MOD_DAMAGE_TO_CASTER; TC a352b1fa names it MOD_IGNORE_TARGET_RESIST.
+pub const MOD_DAMAGE_TO_CASTER: u32 = 269;
 /// TC a352b1fa Unit.cpp1697–1703: signed sum on the target, matching aura caster.
 pub const BYPASS_ARMOR_FOR_CASTER: u32 = 345;
 /// The three versatility ratings share one value in our CombatRatings component.
@@ -465,7 +466,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | MOD_TOTAL_THREAT
         | MOD_SPELL_CRIT_CHANCE
         | MOD_EXPERTISE
-        | MOD_IGNORE_TARGET_RESIST
+        | MOD_DAMAGE_TO_CASTER
         | BYPASS_ARMOR_FOR_CASTER
         | MASTERY
         | MOD_STAT_BONUS_PCT

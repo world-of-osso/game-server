@@ -145,7 +145,6 @@ const DRAIN_SOUL: u32 = 198_590;
 const DRAIN_SOUL_ENERGIZE: u32 = 205_292;
 const SURVIVAL_INSTINCTS: u32 = 61336;
 const SURVIVAL_INSTINCTS_BUFF: u32 = 50322;
-const BREATH_OF_FIRE_BURN: u32 = 123725;
 const RAKE_BLEED: u32 = 155722;
 const UNSTABLE_AFFLICTION: u32 = 30108;
 const UNSTABLE_AFFLICTION_BLEED: u32 = 233490;
@@ -236,22 +235,6 @@ pub(super) fn protective_growth_multiplier(unit: Entity, auras: &super::ActiveAu
 
 pub(super) use super::incoming_spell_masks::affects_incoming_spell;
 
-///115181 names123725s2 as reduced damage dealt to the casting Monk.
-///Consume that named field for this spell only; do not redefine generic269.
-pub(super) fn outgoing_to_owner_multiplier(world: &World, attacker: Entity, victim: Entity) -> f32 {
-    world
-        .get::<super::ActiveAuras>(attacker)
-        .map_or(1.0, |auras| {
-            auras
-                .iter()
-                .filter(|aura| aura.spell_id == BREATH_OF_FIRE_BURN && aura.caster == victim)
-                .flat_map(|aura| &aura.effects)
-                .filter(|effect| effect.index == 1)
-                .map(|effect| 1.0 + effect.amount / 100.0)
-                .product()
-        })
-}
-
 pub(super) fn consumes_named_field(spell_id: u32, effect_index: u8) -> bool {
     super::augmentation::consumes_field(spell_id, effect_index)
         || super::ebon_might::consumes_field(spell_id, effect_index)
@@ -262,7 +245,6 @@ pub(super) fn consumes_named_field(spell_id: u32, effect_index: u8) -> bool {
         || (spell_id == PROTECTIVE_GROWTH && effect_index == 0)
         || (spell_id == LINGERING_HEALING && effect_index == 1)
         || (spell_id == FOUNT_OF_STRENGTH && effect_index == 2)
-        || (spell_id == BREATH_OF_FIRE_BURN && effect_index == 1)
         || (spell_id == 740 && effect_index == 5)
         || (spell_id == 190456 && matches!(effect_index, 1 | 3))
         || (spell_id == 31850 && effect_index == 1)
