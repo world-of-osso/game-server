@@ -105,12 +105,6 @@ impl FloorGeometry {
             append_wmo_floors(&mut floors, std::slice::from_ref(wmo), bx, bz);
         } else {
             let tile_id = bevy_to_tile(bx, bz);
-            let key = (map_id, tile_id.0, tile_id.1);
-            if !self.strict_tiles.contains_key(&key) {
-                let result = load_strict_tile_wmos(map, tile_id);
-                self.strict_tiles.insert(key, result);
-            }
-            let wmos = self.strict_tiles[&key].as_ref().map_err(Clone::clone)?;
             let tile = map
                 .tile(tile_id)
                 .ok_or_else(|| format!("map {map_id}: missing terrain tile {tile_id:?}"))?;
@@ -120,14 +114,20 @@ impl FloorGeometry {
                     source: "terrain",
                 });
             }
-            append_wmo_floors(&mut floors, wmos, bx, bz);
+            let nearby = nearby_source_tiles(map, tile_id);
+            for coordinates in nearby {
+                let key = (map_id, coordinates.0, coordinates.1);
+                if !self.strict_tiles.contains_key(&key) {
+                    let result = load_strict_tile_wmos(map, coordinates);
+                    self.strict_tiles.insert(key, result);
+                }
+                let wmos = self.strict_tiles[&key].as_ref().map_err(Clone::clone)?;
+                append_wmo_floors(&mut floors, wmos, bx, bz);
+            }
         }
         let m2_dir = self.ground.data_dir.join(format!("los/{map_id}/m2"));
         let tile_id = bevy_to_tile(bx, bz);
-        let m2_tile = m2_dir.join(format!("{}_{}.los", tile_id.0, tile_id.1));
-        if !m2_tile.is_file() {
-            return Err(format!("missing M2 tile {}", m2_tile.display()));
-        }
+        validate_m2_tiles(map, &m2_dir, tile_id)?;
         let m2 = self
             .ground
             .m2_floors
@@ -148,6 +148,34 @@ fn append_wmo_floors(floors: &mut Vec<Floor>, wmos: &[WmoCollision], x: f32, z: 
         wmo.floor_heights(x, z, 100_000.0, -100_000.0, &mut heights);
     }
     floors.extend(heights.into_iter().map(|z| Floor { z, source: "wmo" }));
+}
+
+fn validate_m2_tiles(map: &MapGround, dir: &Path, (row, col): (u32, u32)) -> Result<(), String> {
+    for r in row.saturating_sub(1)..=(row + 1).min(63) {
+        for c in col.saturating_sub(1)..=(col + 1).min(63) {
+            let required = map.source.as_ref().map_or((r, c) == (row, col), |source| {
+                source.tiles[c as usize * MAP_TILES + r as usize].root != 0
+            });
+            let path = dir.join(format!("{r}_{c}.los"));
+            if required && !path.is_file() {
+                return Err(format!("missing M2 tile {}", path.display()));
+            }
+        }
+    }
+    Ok(())
+}
+
+fn nearby_source_tiles(map: &MapGround, (row, col): (u32, u32)) -> Vec<(u32, u32)> {
+    let source = map.source.as_ref().expect("terrain map has a tile source");
+    let mut tiles = Vec::new();
+    for r in row.saturating_sub(1)..=(row + 1).min(63) {
+        for c in col.saturating_sub(1)..=(col + 1).min(63) {
+            if source.tiles[c as usize * MAP_TILES + r as usize].obj0 != 0 {
+                tiles.push((r, c));
+            }
+        }
+    }
+    tiles
 }
 
 fn load_strict_tile_wmos(
