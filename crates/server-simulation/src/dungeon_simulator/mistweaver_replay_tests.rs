@@ -137,63 +137,18 @@ fn mistweaver_uses_spinning_crane_kick_only_against_a_pack() {
         let mut hp = run.app.world_mut().get_mut::<Health>(add).unwrap();
         hp.current = hp.max;
     }
-    let spell = run
-        .app
-        .world()
-        .resource::<crate::spell_info::SpellStore>()
-        .get(101546)
-        .unwrap()
-        .clone();
-    let mut checks = std::collections::BTreeMap::new();
     for _ in 0..250 {
-        let admission =
-            crate::spell_cast::read_native_cast_start(run.app.world_mut(), healer, &spell, healer);
-        *checks.entry(format!("{admission:?}")).or_insert(0) += 1;
         policy
             .drive(run.app.world_mut(), healer, &[tank, healer])
             .unwrap();
         run.app.update();
     }
-    println!("PACK_ADMISSION {checks:?}");
     let events = &run.app.world().resource::<ObservedCombatEvents>().0;
     let casts: Vec<_> = events
         .iter()
         .filter(|e| e.source == Some(healer.to_bits()) && e.kind == CombatLogKind::CastSuccess)
         .map(|e| e.spell_id)
         .collect();
-    let known = run
-        .app
-        .world()
-        .get::<crate::class_progression::KnownSpells>(healer)
-        .unwrap()
-        .contains(101546);
-    let positions = [healer, enemy, add]
-        .map(|unit| crate::spell_cast::targets::position(run.app.world(), unit));
-    let healths = [enemy, add].map(|unit| run.app.world().get::<Health>(unit).copied());
-    let pulse = run
-        .app
-        .world()
-        .resource::<crate::spell_info::SpellStore>()
-        .get(107270)
-        .unwrap();
-    let radius = crate::spell_cast::targets::radius(&pulse.effects[0], 1);
-    let center = positions[0].unwrap();
-    let units = crate::spell_cast::targets::area_units(
-        run.app.world_mut(),
-        healer,
-        center,
-        radius,
-        crate::spell_cast::targets::Relation::Enemy,
-        0,
-    );
-    let resolved = super::super::dps_parity::literal_rotation::execution::resolve_action(
-        run.app.world(),
-        healer,
-        101546,
-    );
-    println!(
-        "PACK_DIAGNOSTIC known={known} radius={radius} units={units:?} resolved={resolved:?} positions={positions:?} healths={healths:?} casts={casts:?}"
-    );
     assert!(
         casts.contains(&Some(101546)),
         "Mistweaver must use Spinning Crane Kick against a pack"

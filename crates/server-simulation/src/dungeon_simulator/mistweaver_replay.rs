@@ -308,7 +308,24 @@ impl Policy for Mistweaver {
         let Some(enemy) = enemy else {
             return Ok(());
         };
-        let enemies = [enemy];
+        let pulse = world
+            .resource::<crate::spell_info::SpellStore>()
+            .get(107270)
+            .ok_or("Spinning Crane Kick pulse missing")?;
+        let radius = crate::spell_cast::targets::radius(&pulse.effects[0], 1);
+        let center = crate::spell_cast::targets::position(world, healer)
+            .ok_or("Mistweaver position missing")?;
+        let mut enemies = crate::spell_cast::targets::area_units(
+            world,
+            healer,
+            center,
+            radius,
+            crate::spell_cast::targets::Relation::Enemy,
+            0,
+        );
+        if !enemies.contains(&enemy) {
+            enemies = vec![enemy];
+        }
         let damage = SPELLS
             .iter()
             .filter(|(name, _, _)| {
@@ -324,23 +341,7 @@ impl Policy for Mistweaver {
                 talent: None,
             });
         let prepared = Prepared::read(world, healer, &enemies, &self.equipment, damage, false)?;
-        let pulse = world
-            .resource::<crate::spell_info::SpellStore>()
-            .get(107270)
-            .ok_or("Spinning Crane Kick pulse missing")?;
-        let radius = crate::spell_cast::targets::radius(&pulse.effects[0], 1);
-        let center = crate::spell_cast::targets::position(world, healer)
-            .ok_or("Mistweaver position missing")?;
-        let enemy_count = crate::spell_cast::targets::area_units(
-            world,
-            healer,
-            center,
-            radius,
-            crate::spell_cast::targets::Relation::Enemy,
-            0,
-        )
-        .len();
-        let facts = NativeFacts::new(world, healer, &self.bindings, self.encounter, enemy_count)
+        let facts = NativeFacts::new(world, healer, &self.bindings, self.encounter, enemies.len())
             .with_targets(Some(enemy), &enemies);
         if let Some((action, execution)) =
             self.driver
