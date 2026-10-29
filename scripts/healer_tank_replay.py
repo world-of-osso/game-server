@@ -36,7 +36,7 @@ def run_replay(timeline, spec, source, duration, seed, profile_dir, executable, 
     if executable:
         command = [str(executable), DRIVER, '--exact', '--ignored', '--nocapture']
     else:
-        command = [str(AGENT_RUN), 'healer-tank-replay-cli', 'cargo', 'test', '--locked',
+        command = [str(AGENT_RUN), 'tank-pressure', 'cargo', 'test', '--locked',
                    '-p', 'server-simulation', '--lib', DRIVER, '--', '--exact', '--ignored', '--nocapture']
     result = subprocess.run(command, cwd=ROOT, env=environment, text=True, capture_output=True)
     if result.returncode:
@@ -115,7 +115,7 @@ def print_tank(report):
 
 
 def build_replay_executable():
-    command = [str(AGENT_RUN), 'healer-tank-replay-cli', 'cargo', 'test', '--locked',
+    command = [str(AGENT_RUN), 'tank-pressure', 'cargo', 'test', '--locked',
                '-p', 'server-simulation', '--lib', '--no-run', '--message-format=json']
     result = subprocess.run(command, cwd=ROOT, text=True, capture_output=True)
     if result.returncode:
@@ -291,8 +291,10 @@ def main():
     if not math.isfinite(args.pressure_scale) or args.pressure_scale <= 0:
         parser.error('--pressure-scale must be positive and finite')
     if args.pressure_sweep:
-        if args.all or args.timeline or args.simc_tank_heal or args.pressure_scale != 1.0 or args.jobs <= 0:
-            parser.error('--pressure-sweep requires per-tank traces, no healer, and positive jobs')
+        if (args.all or args.timeline or args.simc_tank_heal or args.pressure_scale != 1.0
+                or args.jobs <= 0 or args.seed < 0 or args.source != 'simc' or args.mode != 'tank'
+                or args.party_trace):
+            parser.error('--pressure-sweep requires SimC tank traces, no healer, a nonnegative seed, and positive jobs')
         executable = args.executable.resolve(strict=True) if args.executable else build_replay_executable()
         output = args.output_dir or TRACE_DIR / datetime.now().strftime('pressure-sweep-%Y-%m-%d-%H%M%S')
         profiles = (args.profile_dir or ALL_PROFILES).resolve(strict=True)
