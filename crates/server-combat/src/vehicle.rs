@@ -8,6 +8,7 @@ use shared::components::{Health, Mounted, MovementControl, Position, Rotation, V
 use shared::protocol::{BoardVehicle, ExitVehicle};
 use std::collections::HashMap;
 
+pub(crate) mod accessory;
 pub(crate) mod isle;
 
 const CAN_ENTER_OR_EXIT: u32 = 0x02000000;
@@ -19,7 +20,7 @@ pub(crate) struct Seat {
     pub flags: u32,
     pub offset: Vec3,
 }
-#[derive(Resource, Default)]
+#[derive(Resource, Default, Clone)]
 pub(crate) struct VehicleStore {
     pub vehicles: HashMap<u32, [u32; 8]>,
     pub seats: HashMap<u32, Seat>,
@@ -42,8 +43,11 @@ impl Plugin for VehiclePlugin {
             PostStartup,
             load_vehicle_store.after(crate::ground::open_ground_map),
         );
-        app.add_systems(Update, receive_requests);
-        app.add_systems(FixedPostUpdate, reconcile_passengers);
+        app.add_systems(Update, (receive_requests, accessory::install_accessories));
+        app.add_systems(
+            FixedPostUpdate,
+            (reconcile_passengers, accessory::seat_accessories),
+        );
     }
 }
 
@@ -307,9 +311,21 @@ fn load_vehicle_store(mut commands: Commands) {
         rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
     )
     .expect("Open world.db for mount vehicles");
-    let store = load_store(&root, &conn)
-        .expect("Load mount vehicles from world.db; run scripts/import-vehicles.py first");
+    let (store, accessories) = load_runtime(&root, &conn).expect(
+        "Load vehicles from world.db; run scripts/import-vehicles.py and import-vehicle-accessories.py first",
+    );
     commands.insert_resource(store);
+    commands.insert_resource(accessories);
+}
+
+/// The vehicle catalog with mount poses, plus TDB accessories and their seat poses.
+pub(crate) fn load_runtime(
+    root: &std::path::Path,
+    conn: &rusqlite::Connection,
+) -> Result<(VehicleStore, accessory::VehicleAccessories), String> {
+    let store = load_store(root, conn)?;
+    let accessories = accessory::load(root, conn, &store)?;
+    Ok((store, accessories))
 }
 
 fn load_vehicle_catalog(conn: &rusqlite::Connection) -> Result<VehicleStore, String> {

@@ -75,6 +75,7 @@ pub(super) fn encounter_inputs(entry: u32, map_id: u32, populate: bool) -> Arc<P
         20923 => Some("porung"),
         209230 => Some("kyrioss"),
         208745 => Some("candle-king"),
+        210149 => Some("waxbeard"),
         186737 => Some("telash"),
         186739 => Some("azureblade"),
         186738 => Some("umbrelskul"),
@@ -301,6 +302,12 @@ fn decode_encounter_inputs(
     }
     inputs.push(store);
     inputs.push(scripts);
+    if entry == 210149 {
+        let (vehicles, accessories) =
+            crate::vehicle::load_runtime(&crate::ground::ground_data_dir(), &conn).unwrap();
+        inputs.push(vehicles);
+        inputs.push(accessories);
+    }
     if !populate {
         inputs.spawn = Some(load_authored_spawn(&conn, entry, map_id, 0));
     }
