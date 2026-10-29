@@ -96,6 +96,10 @@ fn twin_moonfire_copies_foreground_and_galactic_casts_to_other_enemies() {
         .find(|aura| aura.spell_id == 203964 && aura.caster == actor)
         .unwrap()
         .instance_id;
+    for _ in 0..30 {
+        run.app.update();
+    }
+    assert_eq!(dotted(&run).len(), 2);
     assert!(auras::set_effect_amount(
         run.app.world_mut(),
         actor,
@@ -103,9 +107,6 @@ fn twin_moonfire_copies_foreground_and_galactic_casts_to_other_enemies() {
         0,
         100.0
     ));
-    for _ in 0..30 {
-        run.app.update();
-    }
     crate::spell_cast::creature_cast(run.app.world_mut(), actor, 33917, Some(primary), false)
         .unwrap();
     for _ in 0..3 {
