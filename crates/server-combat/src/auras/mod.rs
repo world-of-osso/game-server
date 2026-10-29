@@ -2519,11 +2519,11 @@ pub fn damage_taken_multiplier(
         * versatility
         * from_caster
         * summon_damage::taken_multiplier(world, attacker, world.get::<ActiveAuras>(target))
-        * scripts::unstable_affliction_multiplier(world, attacker, target)
-        * scripts::outgoing_to_owner_multiplier(world, attacker, target);
-    world.get::<AuraStatMods>(attacker).map_or(taken, |mods| {
-        mods.bypass_damage_reduction(school_mask, taken) * mods.punish_damage_multiplier(target)
-    })
+        * scripts::unstable_affliction_multiplier(world, attacker, target);
+    taken
+        * world.get::<AuraStatMods>(attacker).map_or(1.0, |mods| {
+            mods.damage_to_caster_multiplier(target, school_mask)
+        })
 }
 
 /// White-swing damage taken from `attacker`: every MOD_MELEE_DAMAGE_FROM_CASTER

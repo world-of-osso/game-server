@@ -1994,6 +1994,58 @@ mod tests {
 
     #[test]
     #[ignore = "requires native Vengeance profile and canonical DB"]
+    fn void_reaver_frailty_reduces_damage_from_its_target_by_doubled_six_percent() {
+        use super::super::*;
+        const VOID_REAVER_ENTRY: u32 = 112890;
+        fn bleed_taken(void_reaver: bool) -> (f32, f32) {
+            let _seed = crate::random::seed_scope(70_448);
+            let (profile, mut traits) = read_reference(581).unwrap();
+            assert!(traits.iter().any(|entry| entry.entry_id == VOID_REAVER_ENTRY));
+            if !void_reaver {
+                traits.retain(|entry| entry.entry_id != VOID_REAVER_ENTRY);
+            }
+            let identity = inputs::read_actor(&profile).unwrap();
+            let mut run = prepare_reference(profile, &traits, 1, identity).unwrap();
+            let (actor, target) = (run.actor, run.targets[0]);
+            engage(&mut run);
+            for _ in 0..5 {
+                run.app.update();
+            }
+            // Soul Cleave's real damage event applies Frailty through its script.
+            crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 228478, Some(target), 1);
+            for _ in 0..2 {
+                run.app.update();
+            }
+            assert!(crate::auras::has_aura(run.app.world(), target, 247456));
+            let bleed = |run: &mut Run| {
+                let world = run.app.world_mut();
+                let mut health = world.get_mut::<shared::components::Health>(actor).unwrap();
+                health.current = health.max;
+                let before = health.current;
+                crate::spell_cast::effects::replay_simc_dummy_bleed(world, target, actor, 10_000.0);
+                before - world.get::<shared::components::Health>(actor).unwrap().current
+            };
+            let branded = bleed(&mut run);
+            crate::auras::remove_auras(
+                run.app.world_mut(),
+                target,
+                crate::auras::RemoveReason::Cancelled,
+                |aura| aura.spell_id == 247456,
+            );
+            for _ in 0..2 {
+                run.app.update();
+            }
+            (branded, bleed(&mut run))
+        }
+        // Native 247456 effect 2 is -6% damage to the aura caster; Soulcrush doubles it.
+        let (frail, plain) = bleed_taken(true);
+        assert!((frail - plain * 0.88).abs() <= 1.0, "frail={frail} plain={plain}");
+        let (frail, plain) = bleed_taken(false);
+        assert_eq!(frail, plain, "Frailty needs Void Reaver to reduce damage");
+    }
+
+    #[test]
+    #[ignore = "requires native Vengeance profile and canonical DB"]
     fn vengeance_leech_observes_damage_channels_and_gear_rating() {
         use super::super::*;
         let _seed = crate::random::seed_scope(70_448);

@@ -1619,7 +1619,6 @@ fn apply_swing_multipliers(
     let done = attacker_mods.map_or(1.0, |mods| {
         mods.damage_done(PHYSICAL) * mods.autoattack_damage_mult
     });
-    let taken = attacker_mods.map_or(taken, |mods| mods.bypass_damage_reduction(PHYSICAL, taken));
     (base * done * additional_mult * taken).max(0.0).round()
 }
 
@@ -2281,9 +2280,9 @@ fn resolve_swing(
             .white_swing_multiplier(attacker.entity)
         * inherited_versatility
         * versus
-        * attacker
-            .mods
-            .map_or(1.0, |mods| mods.punish_damage_multiplier(target_entity));
+        * attacker.mods.map_or(1.0, |mods| {
+            mods.damage_to_caster_multiplier(target_entity, 1)
+        });
     let swing = swing_damage(
         attacker,
         &weapon,
@@ -3027,9 +3026,7 @@ pub fn replay_healer_hit(
         * crate::auras::dusk_damage_multiplier(auras)
         * crate::auras::melee_damage_from_caster(auras, attacker)
         * stats.map_or(1.0, CharacterStats::versatility_damage_taken_multiplier);
-    let taken = mods.map_or(taken, |mods| {
-        mods.bypass_damage_reduction(1, taken) * mods.punish_damage_multiplier(victim)
-    });
+    let taken = taken * mods.map_or(1.0, |mods| mods.damage_to_caster_multiplier(victim, 1));
     let summon_taken = crate::auras::summon_damage::taken_multiplier(world, attacker, auras);
     let raw_armor = target_armor(
         (

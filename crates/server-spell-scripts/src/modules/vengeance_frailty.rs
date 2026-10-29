@@ -69,20 +69,25 @@ fn observe(world: &mut World, event: &CombatLogEvent) {
     }
 }
 
-fn apply_frailty(world: &mut World, caster: Entity, target: Entity) {
-    let vulnerability = world
+fn has_talent(world: &World, caster: Entity, spell_id: u32) -> bool {
+    world
         .get::<combat::class_progression::TraitLoadout>(caster)
         .is_some_and(|traits| {
             traits
                 .active_talent_spells()
-                .any(|talent| talent.spell_id == 389976)
-        });
+                .any(|talent| talent.spell_id == spell_id)
+        })
+}
+
+fn apply_frailty(world: &mut World, caster: Entity, target: Entity) {
+    let vulnerability = has_talent(world, caster, 389976);
     let mut spell = world
         .resource::<combat::spell_info::SpellStore>()
         .get(247456)
         .expect("native Frailty")
         .clone();
-    let effect_mask = if vulnerability {
+    let mut effect_mask = u32::MAX;
+    if vulnerability {
         // SimC76f8118 sc_demon_hunter.cpp2275–2285: target damage requires
         // Vulnerability; Soulcrush's native point modifiers remain applicable.
         let amount = spell_cast::scripts::script_effect_value(world, caster, 389976, 0);
@@ -93,10 +98,14 @@ fn apply_frailty(world: &mut World, caster: Entity, target: Entity) {
         {
             effect.base_points = amount;
         }
-        u32::MAX
     } else {
-        u32::MAX & !(1 << 3 | 1 << 4)
-    };
+        effect_mask &= !(1 << 3 | 1 << 4);
+    }
+    // SimC76f8118 sc_demon_hunter.cpp12743–12746 / 268175 tooltip: the
+    // damage-to-caster effect 2 requires Void Reaver.
+    if !has_talent(world, caster, 268175) {
+        effect_mask &= !(1 << 2);
+    }
     combat::auras::apply_aura_with_spell(
         world,
         &combat::auras::AuraApplication {

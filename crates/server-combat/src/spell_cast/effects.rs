@@ -1004,7 +1004,6 @@ fn armor_reduced(
         caster,
         armor,
     );
-    let armor = crate::auras::combat_stats::armor_after_ignore(world, caster, spell, armor);
     let mitigation = crate::combat::armor_mitigated(
         amount,
         armor,
