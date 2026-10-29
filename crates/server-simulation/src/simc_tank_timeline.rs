@@ -35,18 +35,20 @@ pub(crate) struct RaidBuff {
     pub spell_id: u32,
 }
 
-pub(crate) fn read_raid_buffs(path: &Path) -> Result<Vec<RaidBuff>, String> {
+pub(crate) fn read_raid_buffs(path: &Path, player: &str) -> Result<Vec<RaidBuff>, String> {
     let trace = std::fs::read_to_string(path)
         .map_err(|error| format!("read {}: {error}", path.display()))?;
-    parse_raid_buffs(&trace)
+    parse_raid_buffs(&trace, player)
 }
 
-fn parse_raid_buffs(trace: &str) -> Result<Vec<RaidBuff>, String> {
+fn parse_raid_buffs(trace: &str, player: &str) -> Result<Vec<RaidBuff>, String> {
     const NAMES: &[&str] = &[
         "mark_of_the_wild",
+        "arcane_intellect",
         "power_word_fortitude",
         "battle_shout",
         "skyfury",
+        "blessing_of_the_bronze",
     ];
     let mut buffs = Vec::new();
     for &name in NAMES {
@@ -56,7 +58,11 @@ fn parse_raid_buffs(trace: &str) -> Result<Vec<RaidBuff>, String> {
         if !enabled {
             continue;
         }
-        let prefix = format!("Raid gains Buff '{name}' (");
+        let prefix = if name == "blessing_of_the_bronze" {
+            format!("Player '{player}' gains Buff '{name}' (")
+        } else {
+            format!("Raid gains Buff '{name}' (")
+        };
         let ids: Vec<&str> = trace
             .lines()
             .filter_map(|line| line.split_once(' '))
@@ -96,6 +102,7 @@ fn parse_dummy_debuffs(trace: &str, dummy: &str) -> Result<Vec<RaidBuff>, String
         ("chaos_brand", 1490),
         ("mystic_touch", 113746),
         ("hunters_mark", 259556),
+        ("mortal_wounds", 115804),
     ] {
         if !trace
             .lines()
@@ -119,6 +126,32 @@ fn parse_dummy_debuffs(trace: &str, dummy: &str) -> Result<Vec<RaidBuff>, String
         });
     }
     Ok(debuffs)
+}
+
+pub(crate) fn read_dummy_bleeding(path: &Path, dummy: &str) -> Result<bool, String> {
+    let trace = std::fs::read_to_string(path)
+        .map_err(|error| format!("read {}: {error}", path.display()))?;
+    parse_dummy_bleeding(&trace, dummy)
+}
+
+fn parse_dummy_bleeding(trace: &str, dummy: &str) -> Result<bool, String> {
+    if !trace
+        .lines()
+        .any(|line| line.trim() == "override.bleeding=1")
+    {
+        return Ok(false);
+    }
+    let event = format!("0.000 Enemy '{dummy}' gains Buff 'bleeding' (0)");
+    let count = trace
+        .lines()
+        .filter(|line| line.starts_with(&event))
+        .count();
+    if count != 1 {
+        return Err(format!(
+            "expected one initial SimC dummy bleeding event, found {count}"
+        ));
+    }
+    Ok(true)
 }
 
 pub(crate) fn read_bloodlust_time(path: &Path, player: &str) -> Result<Option<u64>, String> {
@@ -270,7 +303,7 @@ fn parse_trace(trace: &str, dummy: &str) -> Result<Vec<Hit>, String> {
 fn reads_enabled_raid_buffs_and_their_trace_spell_ids() {
     let trace = "override.skyfury=1\noverride.mark_of_the_wild=1\noverride.battle_shout=0\n0.000 Raid gains Buff 'skyfury' (462854) (stacks=1)\n0.000 Raid gains Buff 'mark_of_the_wild' (1126) (stacks=1)\n0.000 Raid gains Buff 'battle_shout' (6673) (stacks=1)";
     assert_eq!(
-        parse_raid_buffs(trace).unwrap(),
+        parse_raid_buffs(trace, "tank").unwrap(),
         vec![
             RaidBuff {
                 name: "mark_of_the_wild".into(),
@@ -282,7 +315,25 @@ fn reads_enabled_raid_buffs_and_their_trace_spell_ids() {
             },
         ]
     );
-    assert!(parse_raid_buffs("override.skyfury=1").is_err());
+    assert!(parse_raid_buffs("override.skyfury=1", "tank").is_err());
+}
+
+#[test]
+fn reads_the_named_players_class_specific_bronze_buff() {
+    let trace = "override.blessing_of_the_bronze=1\n0.000 Player 'other' gains Buff 'blessing_of_the_bronze' (381752)\n0.000 Player 'tank' gains Buff 'blessing_of_the_bronze' (381741)";
+    assert_eq!(
+        parse_raid_buffs(trace, "tank").unwrap(),
+        vec![RaidBuff {
+            name: "blessing_of_the_bronze".into(),
+            spell_id: 381741
+        }]
+    );
+    assert!(parse_raid_buffs(trace, "missing").is_err());
+    assert!(
+        parse_raid_buffs("override.blessing_of_the_bronze=0", "tank")
+            .unwrap()
+            .is_empty()
+    );
 }
 
 #[test]
@@ -303,6 +354,28 @@ fn reads_only_enabled_dummy_debuffs() {
     );
     assert!(parse_dummy_debuffs("override.chaos_brand=1", "dummy").is_err());
     assert!(parse_dummy_debuffs(trace, "other").is_err());
+}
+
+#[test]
+fn reads_trace_declared_intellect_mortal_wounds_and_bleeding() {
+    let trace = "override.arcane_intellect=1\noverride.mortal_wounds=1\noverride.bleeding=1\n0.000 Raid gains Buff 'arcane_intellect' (1459)\n0.000 Enemy 'dummy' gains Buff 'mortal_wounds' (115804)\n0.000 Enemy 'dummy' gains Buff 'bleeding' (0)";
+    assert_eq!(
+        parse_raid_buffs(trace, "tank").unwrap(),
+        vec![RaidBuff {
+            name: "arcane_intellect".into(),
+            spell_id: 1459
+        }]
+    );
+    assert_eq!(
+        parse_dummy_debuffs(trace, "dummy").unwrap(),
+        vec![RaidBuff {
+            name: "mortal_wounds".into(),
+            spell_id: 115804
+        }]
+    );
+    assert!(parse_dummy_bleeding(trace, "dummy").unwrap());
+    assert!(!parse_dummy_bleeding("override.bleeding=0", "dummy").unwrap());
+    assert!(parse_dummy_bleeding(trace, "other").is_err());
 }
 
 #[test]

@@ -696,6 +696,9 @@ fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance, sanlayn: bool) {
                 combat.dire_frenzy_damage_mult *= pct(amount);
             }
             // Unit::GetTotalAuraModifier(SPELL_AURA_MOD_BLOCK_PERCENT) (StatSystem.cpp:499).
+            MOD_BLOCK_PERCENT if matches!(aura.spell_id, 76671 | 76857) => {
+                stats.diminishing_block_pct += amount;
+            }
             MOD_BLOCK_PERCENT => stats.block_pct += amount,
             // Player::UpdateDodgePercentage adds aura 49 outside rating DR.
             MOD_DODGE_PERCENT => stats.dodge_pct += amount,

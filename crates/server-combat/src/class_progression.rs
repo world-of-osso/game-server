@@ -331,8 +331,17 @@ fn compute_known_spells(
         spells.chain(masteries)
     });
     let overridden = |spell_id| traits.overrides.iter().any(|&(base, _)| base == spell_id);
+    // User decision 2026-10-28: all paladins learn Devotion Aura. The DB2
+    // SkillLineAbility row is NeverLearned and SpellLevel is zero; grant at
+    // level one rather than claiming a sourced retail learn level.
+    let devotion = (class.class_id == 2 && level >= 1).then_some(KnownSpell {
+        spell_id: 465,
+        passive: false,
+    });
     let mut known: Vec<KnownSpell> = Vec::new();
-    for spell in learnable
+    for spell in devotion
+        .into_iter()
+        .chain(learnable)
         .chain(spec_spells)
         .chain(traits.active_talent_spells())
     {

@@ -550,6 +550,324 @@ mod tests {
     }
 
     #[test]
+    fn storm_surge_alone_grants_avatar_thunder_clap_cooldown_reduction() {
+        use crate::spell_cast::test_harness::harness_with_native_enemy_dodge_reduction;
+        let mut cooldowns = Vec::new();
+        let mut damage = Vec::new();
+        for selected in [false, true] {
+            let mut h =
+                harness_with_native_enemy_dodge_reduction(Vec::new(), &[107574, 275336, 6343], 1)
+                    .unwrap();
+            h.advance(3);
+            if !selected {
+                crate::auras::remove_auras(
+                    h.app.world_mut(),
+                    h.caster,
+                    crate::auras::RemoveReason::Consumed,
+                    |aura| aura.spell_id == 275336,
+                );
+            }
+            crate::auras::apply_aura(
+                h.app.world_mut(),
+                &crate::auras::AuraApplication {
+                    caster: h.caster,
+                    target: h.caster,
+                    spell_id: 107574,
+                    effect_mask: u32::MAX,
+                    source: crate::auras::AuraSource::Cast,
+                },
+            );
+            h.app
+                .world_mut()
+                .get_mut::<crate::stats::CharacterStats>(h.caster)
+                .unwrap()
+                .crit_pct = 0.0;
+            h.cast_and_deliver(6343, Some(h.npc));
+            assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+            let hit = h
+                .inbox
+                .log
+                .iter()
+                .find(|event| {
+                    event.spell_id == Some(6343)
+                        && event.kind == shared::protocol::CombatLogKind::Damage
+                })
+                .expect("Thunder Clap hit");
+            assert!(!hit.crit);
+            damage.push(hit.amount);
+            let world = h.app.world();
+            let spell = world
+                .resource::<server::spell_info::SpellStore>()
+                .get(6343)
+                .unwrap();
+            cooldowns.push(
+                world
+                    .get::<crate::spell_cast::SpellHistory>(h.caster)
+                    .unwrap()
+                    .remaining_cooldown_ms(spell, crate::spell_cast::history_now(world)),
+            );
+        }
+        assert!(
+            (damage[1] as f32 / damage[0] as f32 - 1.5).abs() < 0.16,
+            "Storm Surge increases actual Thunder Clap damage: {damage:?}"
+        );
+        assert!(
+            cooldowns[0] > 5500,
+            "Avatar without Storm Surge must retain full cooldown: {cooldowns:?}"
+        );
+        assert!(
+            cooldowns[1] > 2500 && cooldowns[1] < 3500,
+            "selected Storm Surge halves cooldown: {cooldowns:?}"
+        );
+    }
+
+    #[test]
+    #[ignore = "requires canonical MID2 Protection profile"]
+    fn thunderlord_reduces_demoralizing_shout_per_hit_with_cap() {
+        use super::super::literal_rotation::execution::{Execution, execute};
+        for (targets, selected, expected_ms) in [(1, true, 1500), (4, true, 4500), (1, false, 0)] {
+            let mut run = super::super::prepare_measurement(73, targets).unwrap();
+            super::super::engage(&mut run);
+            let actor = run.actor;
+            let target = run.targets[0];
+            if !selected {
+                crate::auras::remove_auras(
+                    run.app.world_mut(),
+                    actor,
+                    crate::auras::RemoveReason::Consumed,
+                    |aura| aura.spell_id == 385840,
+                );
+            }
+            execute(
+                run.app.world_mut(),
+                actor,
+                Execution::Spell(1160, actor, Some(actor)),
+            )
+            .unwrap();
+            for _ in 0..30 {
+                run.app.update();
+            }
+            let shout = run
+                .app
+                .world()
+                .resource::<server::spell_info::SpellStore>()
+                .get(1160)
+                .unwrap()
+                .clone();
+            let now = crate::spell_cast::history_now(run.app.world());
+            let before = run
+                .app
+                .world()
+                .get::<crate::spell_cast::SpellHistory>(actor)
+                .unwrap()
+                .remaining_cooldown_ms(&shout, now);
+            execute(
+                run.app.world_mut(),
+                actor,
+                Execution::Spell(6343, target, Some(target)),
+            )
+            .unwrap();
+            let after = run
+                .app
+                .world()
+                .get::<crate::spell_cast::SpellHistory>(actor)
+                .unwrap()
+                .remaining_cooldown_ms(&shout, now);
+            assert_eq!(
+                before - after,
+                expected_ms,
+                "targets={targets} selected={selected}"
+            );
+        }
+    }
+
+    #[test]
+    #[ignore = "requires canonical MID2 Protection profile"]
+    fn thunderlord_counts_fully_absorbed_thunder_blast_targets() {
+        use super::super::literal_rotation::execution::{Execution, execute};
+        use shared::protocol::CombatLogKind;
+        let mut run = super::super::prepare_measurement(73, 1).unwrap();
+        super::super::engage(&mut run);
+        let actor = run.actor;
+        let target = run.targets[0];
+        execute(
+            run.app.world_mut(),
+            actor,
+            Execution::Spell(1160, actor, Some(actor)),
+        )
+        .unwrap();
+        for _ in 0..30 {
+            run.app.update();
+        }
+        crate::spell_cast::cast_triggered_with_effect0_amount(
+            run.app.world_mut(),
+            target,
+            17,
+            Some(target),
+            1,
+            1_000_000_000.0,
+        );
+        let shout = run
+            .app
+            .world()
+            .resource::<server::spell_info::SpellStore>()
+            .get(1160)
+            .unwrap()
+            .clone();
+        let now = crate::spell_cast::history_now(run.app.world());
+        let before = run
+            .app
+            .world()
+            .get::<crate::spell_cast::SpellHistory>(actor)
+            .unwrap()
+            .remaining_cooldown_ms(&shout, now);
+        assert!(crate::spell_cast::try_cast_triggered(
+            run.app.world_mut(),
+            actor,
+            435222,
+            Some(target),
+            1
+        ));
+        let events = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0;
+        assert!(
+            events.iter().any(|event| event.spell_id == Some(435222)
+                && event.kind == CombatLogKind::Damage
+                && event.amount == 0
+                && event.absorbed > 0),
+            "Thunder Blast must be fully absorbed"
+        );
+        let after = run
+            .app
+            .world()
+            .get::<crate::spell_cast::SpellHistory>(actor)
+            .unwrap()
+            .remaining_cooldown_ms(&shout, now);
+        assert_eq!(before - after, 1500);
+    }
+
+    #[test]
+    fn frothing_berserker_refunds_only_paid_revenge() {
+        use crate::spell_cast::test_harness::harness_with_native_enemy_dodge_reduction;
+        use shared::components::{ActiveSpec, PowerType};
+        use shared::protocol::CombatLogKind;
+        let seed =
+            harness_with_native_enemy_dodge_reduction(Vec::new(), &[392792, 392793, 6572, 5302], 1)
+                .unwrap();
+        let mut talent = seed
+            .app
+            .world()
+            .resource::<server::spell_info::SpellStore>()
+            .get(392792)
+            .unwrap()
+            .clone();
+        assert_eq!(talent.aura_options.as_ref().unwrap().proc_chance, 20);
+        talent.aura_options.as_mut().unwrap().proc_chance = 100;
+        for (selected, free, expected) in [
+            (true, false, true),
+            (true, true, false),
+            (false, false, false),
+        ] {
+            let known = if selected {
+                vec![392792, 392793, 6572, 5302]
+            } else {
+                vec![392793, 6572, 5302]
+            };
+            let mut h =
+                harness_with_native_enemy_dodge_reduction(vec![talent.clone()], &known, 1).unwrap();
+            h.app
+                .world_mut()
+                .entity_mut(h.caster)
+                .insert(ActiveSpec(73));
+            h.advance(3);
+            if !selected {
+                crate::auras::remove_auras(
+                    h.app.world_mut(),
+                    h.caster,
+                    crate::auras::RemoveReason::Consumed,
+                    |aura| aura.spell_id == 392792,
+                );
+            }
+            assert_eq!(
+                crate::auras::has_aura(h.app.world(), h.caster, 392792),
+                selected,
+                "talent aura setup"
+            );
+            if free {
+                crate::auras::apply_aura(
+                    h.app.world_mut(),
+                    &crate::auras::AuraApplication {
+                        caster: h.caster,
+                        target: h.caster,
+                        spell_id: 5302,
+                        effect_mask: u32::MAX,
+                        source: crate::auras::AuraSource::Cast,
+                    },
+                );
+            }
+            h.set_power(PowerType::Rage, 500.0);
+            h.cast_and_deliver(6572, Some(h.npc));
+            assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+            let refund = h.inbox.log.iter().find(|event| {
+                event.kind == CombatLogKind::Energize && event.spell_id == Some(392793)
+            });
+            assert_eq!(
+                refund.is_some(),
+                expected,
+                "selected={selected} free={free}"
+            );
+            if let Some(refund) = refund {
+                assert_eq!(refund.amount, 100);
+            }
+        }
+    }
+
+    #[test]
+    fn frothing_protection_refund_does_not_fire_for_arms_mortal_strike() {
+        use crate::spell_cast::test_harness::harness_with_native_enemy_dodge_reduction;
+        use shared::components::{ActiveSpec, PowerType};
+        use shared::protocol::CombatLogKind;
+        let ids = [392792, 392793, 12294];
+        let seed = harness_with_native_enemy_dodge_reduction(Vec::new(), &ids, 1).unwrap();
+        let mut talent = seed
+            .app
+            .world()
+            .resource::<server::spell_info::SpellStore>()
+            .get(392792)
+            .unwrap()
+            .clone();
+        talent.aura_options.as_mut().unwrap().proc_chance = 100;
+        let mut h = harness_with_native_enemy_dodge_reduction(vec![talent], &ids, 1).unwrap();
+        h.app
+            .world_mut()
+            .entity_mut(h.caster)
+            .insert(ActiveSpec(71));
+        h.advance(3);
+        assert!(crate::auras::has_aura(h.app.world(), h.caster, 392792));
+        h.set_power(PowerType::Rage, 1000.0);
+        h.cast_and_deliver(12294, Some(h.npc));
+        assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+        assert!(
+            h.inbox
+                .log
+                .iter()
+                .any(|event| event.spell_id == Some(12294) && event.kind == CombatLogKind::Damage)
+        );
+        assert!(
+            !h.inbox
+                .log
+                .iter()
+                .any(|event| event.spell_id == Some(392793)
+                    && event.kind == CombatLogKind::Energize
+                    && event.amount == 150),
+            "Arms must not receive the Protection 50% refund of 300 raw Rage"
+        );
+    }
+
+    #[test]
     fn free_revenge_is_consumed_by_revenge() {
         let mut h = crate::spell_cast::test_harness::harness_with_native_enemy_dodge_reduction(
             Vec::new(),
@@ -581,6 +899,63 @@ mod tests {
         assert!(
             !crate::auras::has_aura(h.app.world(), actor, 5302),
             "one free Revenge consumes its proc"
+        );
+    }
+
+    #[test]
+    fn sudden_death_background_hit_does_not_consume_foreground_proc_window() {
+        use crate::spell_cast::test_harness::harness_with_native_enemy_dodge_reduction;
+        let ids = [29725, 52437, 236282, 6343, 163201, 280735];
+        let seed = harness_with_native_enemy_dodge_reduction(Vec::new(), &ids, 1).unwrap();
+        let mut passive = seed
+            .app
+            .world()
+            .resource::<server::spell_info::SpellStore>()
+            .get(29725)
+            .unwrap()
+            .clone();
+        passive
+            .aura_options
+            .as_mut()
+            .unwrap()
+            .procs_per_minute
+            .as_mut()
+            .unwrap()
+            .base_proc_rate = 600.0;
+        let mut h = harness_with_native_enemy_dodge_reduction(vec![passive], &ids, 1).unwrap();
+        h.app
+            .world_mut()
+            .entity_mut(h.caster)
+            .insert(shared::components::ActiveSpec(73));
+        h.advance(100);
+        let caster = h.caster;
+        let npc = h.npc;
+        assert!(crate::spell_cast::try_cast_triggered(
+            h.app.world_mut(),
+            caster,
+            236282,
+            Some(npc),
+            1
+        ));
+        h.advance(1);
+        assert!(
+            h.inbox
+                .log
+                .iter()
+                .any(|event| event.spell_id == Some(236282)
+                    && event.kind == shared::protocol::CombatLogKind::Damage
+                    && event.amount > 0),
+            "the background impact must land"
+        );
+        assert!(
+            !crate::auras::has_aura(h.app.world(), caster, 52437),
+            "background hit must not grant Sudden Death"
+        );
+        h.cast_and_deliver(6343, Some(npc));
+        assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+        assert!(
+            crate::auras::has_aura(h.app.world(), caster, 52437),
+            "foreground attack earns Sudden Death"
         );
     }
 
@@ -1320,6 +1695,59 @@ mod tests {
             "Shield Slam consumes outburst"
         );
     }
+    #[test]
+    #[ignore = "requires canonical MID2 Protection profile"]
+    fn celeritous_conclusion_follows_demolish_and_is_consumed_by_shield_slam() {
+        use super::super::literal_rotation::execution::{Execution, execute};
+        let mut run = super::super::prepare_measurement(73, 1).unwrap();
+        super::super::engage(&mut run);
+        let actor = run.actor;
+        let target = run.targets[0];
+        execute(
+            run.app.world_mut(),
+            actor,
+            Execution::Spell(436358, target, Some(target)),
+        )
+        .unwrap();
+        for _ in 0..60 {
+            run.app.update();
+        }
+        assert!(
+            crate::auras::has_aura(run.app.world(), actor, 1270843),
+            "Demolish grants haste"
+        );
+        assert!(
+            crate::auras::has_aura(run.app.world(), actor, 1270846),
+            "Demolish grants Shield Slam crit"
+        );
+        execute(
+            run.app.world_mut(),
+            actor,
+            Execution::Spell(23922, target, Some(target)),
+        )
+        .unwrap();
+        let hit = run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .find(|event| {
+                event.spell_id == Some(23922)
+                    && event.kind == shared::protocol::CombatLogKind::Damage
+            })
+            .expect("Shield Slam deals damage");
+        assert!(hit.crit, "the earned buff makes Shield Slam critical");
+        assert!(
+            !crate::auras::has_aura(run.app.world(), actor, 1270846),
+            "Shield Slam consumes its crit buff"
+        );
+        assert!(
+            crate::auras::has_aura(run.app.world(), actor, 1270843),
+            "Shield Slam keeps the haste buff"
+        );
+    }
+
     #[test]
     #[ignore = "requires canonical MID2 Protection profile"]
     fn protection_demolish_channel_delivers_three_hits_and_selected_decimator() {

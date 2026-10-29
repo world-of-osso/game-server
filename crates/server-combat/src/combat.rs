@@ -807,10 +807,12 @@ pub(crate) fn auto_attack_system(world: &mut World) {
         }
         // Apply this attacker's commands before the next attacker reads mitigation.
         // In particular, consuming Ardent also removes its30% damage reduction now.
-        let target = world
+        let Some(target) = world
             .get::<AutoAttack>(attacker)
-            .expect("active attack")
-            .victim;
+            .map(|attack| attack.victim)
+        else {
+            continue;
+        };
         let Some(melee_range) =
             crate::scripted_ai::model_reach::melee_range(world, attacker, target)
         else {
@@ -1326,7 +1328,7 @@ fn record_swing(
             world,
             attacker_entity,
             outcome.hand,
-            outcome.kind == MeleeOutcome::Crit,
+            matches!(outcome.kind, MeleeOutcome::Crit | MeleeOutcome::CritBlock),
         );
     }
     // SimC76f8118 hunter2974–3010 runs stable-pet impact producers on
@@ -1695,10 +1697,13 @@ fn roll_outcome(
     if cannot_miss {
         chances.miss = 0.0;
     }
-    melee::roll_melee_outcome(
-        &chances,
-        rand::Rng::gen_range(&mut rand::thread_rng(), 0..10_000),
-    )
+    let hit_roll = rand::Rng::gen_range(&mut rand::thread_rng(), 0..10_000);
+    if matches!(victim, Victim::Player(_)) {
+        let block_roll = rand::Rng::gen_range(&mut rand::thread_rng(), 0..10_000);
+        melee::roll_player_melee_outcome(&chances, hit_roll, block_roll)
+    } else {
+        melee::roll_melee_outcome(&chances, hit_roll)
+    }
 }
 
 fn read_outcome_chances(
@@ -2171,6 +2176,7 @@ fn resolve_swing(
         context,
     );
     let taken = target_mods.map_or(1.0, |mods| mods.damage_taken(1))
+        * crate::auras::dusk_damage_multiplier(avoidance.1.as_deref(), &health)
         * crate::auras::melee_damage_from_caster(avoidance.1.as_deref(), attacker.entity)
         * armor
             .1
@@ -2270,17 +2276,18 @@ fn resolve_swing(
         level_difference,
         blocked_pct(victim, &attacker_scaling, &target, context.armor_constants),
     );
-    let (outcome_damage, blocked) = if kind == MeleeOutcome::Block && !immune {
-        roll_critical_block_damage(
-            avoidance.1.as_deref(),
-            outcome_damage,
-            blocked,
-            attacker.mods,
-        )
-    } else {
-        (outcome_damage, blocked)
-    };
-    let critical_multiplier = if kind == MeleeOutcome::Crit {
+    let (outcome_damage, blocked) =
+        if matches!(kind, MeleeOutcome::Block | MeleeOutcome::CritBlock) && !immune {
+            roll_critical_block_damage(
+                avoidance.1.as_deref(),
+                outcome_damage,
+                blocked,
+                attacker.mods,
+            )
+        } else {
+            (outcome_damage, blocked)
+        };
+    let critical_multiplier = if matches!(kind, MeleeOutcome::Crit | MeleeOutcome::CritBlock) {
         attacker.mods.map_or(1.0, |mods| mods.critical_damage(1))
             * context
                 .summon_modifiers
@@ -2292,6 +2299,11 @@ fn resolve_swing(
         0.0
     } else {
         outcome_damage * critical_multiplier
+    };
+    let blocked = if kind == MeleeOutcome::CritBlock {
+        blocked * critical_multiplier
+    } else {
+        blocked
     };
     #[cfg(any(test, feature = "test-support"))]
     {
@@ -2456,7 +2468,7 @@ fn build_swing_event(attacker: Entity, target: Entity, outcome: &SwingOutcome) -
             MeleeOutcome::Miss => CombatEventType::Miss,
             MeleeOutcome::Dodge => CombatEventType::Dodge,
             MeleeOutcome::Parry => CombatEventType::Parry,
-            MeleeOutcome::Crit => CombatEventType::CriticalHit,
+            MeleeOutcome::Crit | MeleeOutcome::CritBlock => CombatEventType::CriticalHit,
             MeleeOutcome::Block => CombatEventType::Block,
             MeleeOutcome::Glancing | MeleeOutcome::Hit => CombatEventType::MeleeDamage,
         },
@@ -2509,7 +2521,8 @@ fn swing_log_event(attacker: Entity, target: Entity, outcome: &SwingOutcome) -> 
         } else {
             outcome.blocked as i32
         },
-        crit: !outcome.immune && outcome.kind == MeleeOutcome::Crit,
+        crit: !outcome.immune
+            && matches!(outcome.kind, MeleeOutcome::Crit | MeleeOutcome::CritBlock),
         glancing: !outcome.immune && outcome.kind == MeleeOutcome::Glancing,
         periodic: false,
         extra_spell_id: None,
@@ -2855,8 +2868,9 @@ pub fn roll_simc_dummy_outcome(
         chances.parry = 0.0;
     }
     Ok((
-        melee::roll_melee_outcome(
+        melee::roll_player_melee_outcome(
             &chances,
+            rand::Rng::gen_range(&mut rand::thread_rng(), 0..10_000),
             rand::Rng::gen_range(&mut rand::thread_rng(), 0..10_000),
         ),
         difference,
@@ -2893,6 +2907,7 @@ pub fn replay_healer_hit(
     let kind = match outcome.as_str() {
         "Hit" => MeleeOutcome::Hit,
         "Crit" => MeleeOutcome::Crit,
+        "CritBlock" => MeleeOutcome::CritBlock,
         "Glancing" => MeleeOutcome::Glancing,
         "Block" => MeleeOutcome::Block,
         "Miss" => MeleeOutcome::Miss,
@@ -2909,6 +2924,9 @@ pub fn replay_healer_hit(
     let auras = world.get::<crate::auras::ActiveAuras>(victim);
     let stats = world.get::<CharacterStats>(victim);
     let taken = target_mods.map_or(1.0, |mods| mods.damage_taken(1))
+        * world.get::<Health>(victim).map_or(1.0, |health| {
+            crate::auras::dusk_damage_multiplier(auras, health)
+        })
         * crate::auras::melee_damage_from_caster(auras, attacker)
         * stats.map_or(1.0, CharacterStats::versatility_damage_taken_multiplier);
     let taken = mods.map_or(taken, |mods| mods.bypass_damage_reduction(1, taken));
@@ -2952,15 +2970,21 @@ pub fn replay_healer_hit(
         ),
     );
     let immune = crate::auras::immune_to_school(auras, 1);
-    let (amount, blocked) = if kind == MeleeOutcome::Block && !immune {
-        roll_critical_block_damage(auras, amount, blocked, mods)
-    } else {
-        (amount, blocked)
-    };
+    let (amount, blocked) =
+        if matches!(kind, MeleeOutcome::Block | MeleeOutcome::CritBlock) && !immune {
+            roll_critical_block_damage(auras, amount, blocked, mods)
+        } else {
+            (amount, blocked)
+        };
     let amount = if immune {
         0.0
     } else {
         amount * critical_multiplier
+    };
+    let blocked = if kind == MeleeOutcome::CritBlock {
+        blocked * critical_multiplier
+    } else {
+        blocked
     };
     let (deferred, consume_ox) = crate::auras::stagger::snapshot(world, victim)
         .map_or((0.0, false), |stagger| stagger.deferred(amount, 1));
@@ -3162,7 +3186,11 @@ fn reward_swing_rage(
         let bonus_pct = world
             .get::<AuraStatMods>(attacker)
             .map_or(0.0, |mods| mods.rage_from_damage_dealt_pct);
-        let rage = swing_secs * RAGE_PER_SWING_SECOND * (1.0 + bonus_pct / 100.0);
+        let (war_machine_sum, war_machine_multiplier) = war_machine_rage_modifier(world, attacker);
+        let rage = swing_secs
+            * RAGE_PER_SWING_SECOND
+            * (1.0 + (bonus_pct - war_machine_sum) / 100.0)
+            * war_machine_multiplier;
         change_rage(world, attacker, (rage * RAGE_RAW_PER_RAGE).round());
     }
     if damage > 0.0
@@ -3171,6 +3199,40 @@ fn reward_swing_rage(
     {
         change_rage(world, target, RAGE_PER_HIT_TAKEN * RAGE_RAW_PER_RAGE);
     }
+}
+
+/// SimC76f8118 sc_warrior.cpp2008–2019, 2134–2160: War Machine's
+/// three native effects are specialization alternatives, multiplied separately.
+fn war_machine_rage_modifier(world: &World, unit: Entity) -> (f32, f32) {
+    let index = match world
+        .get::<shared::components::ActiveSpec>(unit)
+        .map(|spec| spec.0)
+    {
+        Some(71) => 1,
+        Some(72) => 2,
+        Some(73) => 3,
+        _ => return (0.0, 1.0),
+    };
+    let Some(aura) = world
+        .get::<crate::auras::ActiveAuras>(unit)
+        .and_then(|auras| {
+            auras
+                .iter()
+                .find(|aura| aura.spell_id == 262231 && aura.caster == unit)
+        })
+    else {
+        return (0.0, 1.0);
+    };
+    let effects = aura
+        .effects
+        .iter()
+        .filter(|effect| effect.aura_type == crate::auras::handlers::MOD_RAGE_FROM_DAMAGE_DEALT);
+    let total = effects.clone().map(|effect| effect.amount).sum();
+    let selected = effects
+        .filter(|effect| effect.index == index)
+        .map(|effect| effect.amount)
+        .sum::<f32>();
+    (total, 1.0 + selected / 100.0)
 }
 
 fn has_rage_primary_power(world: &World, unit: Entity) -> bool {

@@ -1024,13 +1024,13 @@ fn build_instance(
     let max_stacks = fresh_max_stacks(world, caster, spell);
     let charges = options.map_or(0.0, |options| options.proc_charges.max(0) as f32);
     let charges = spell_mods::modify(world, caster, spell, SpellModOp::ProcCharges, charges);
+    // SimC76f8118 sc_demon_hunter.cpp:8069-8078 uses Metamorphosis effect 4 without a rank gate.
     let mut effects: Vec<AuraEffectState> = spell
         .effects
         .iter()
         .filter(|effect| {
             is_aura_effect(effect)
                 && application.effect_mask & (1 << effect.index) != 0
-                && scripts::effect_enabled(world, caster, spell.id, effect.index)
                 && crate::spell_cast::script_registry::effect_enabled(
                     world,
                     caster,
@@ -2425,6 +2425,26 @@ pub(crate) fn critical_bonus_from_caster(
     })
 }
 
+/// User-decided 2026-10-28 approximation: Blessing of Dusk scales its
+/// runtime-modified maximum linearly with missing health on each incoming hit.
+pub(crate) fn dusk_damage_multiplier(
+    auras: Option<&ActiveAuras>,
+    health: &shared::components::Health,
+) -> f32 {
+    if health.max <= 0.0 {
+        return 1.0;
+    }
+    let missing = (1.0 - health.current / health.max).clamp(0.0, 1.0);
+    auras
+        .into_iter()
+        .flat_map(|auras| auras.iter())
+        .filter(|aura| aura.spell_id == 1241945)
+        .flat_map(|aura| aura.effects.iter())
+        .filter(|effect| effect.index == 0)
+        .map(|effect| 1.0 - effect.amount * missing / 100.0)
+        .product()
+}
+
 /// Damage taken multiplier of `target`: MOD_DAMAGE_PERCENT_TAKEN (through
 /// `AuraStatMods`) × matching school/family/label auras cast by `attacker`.
 pub fn damage_taken_multiplier(
@@ -2475,7 +2495,13 @@ pub fn damage_taken_multiplier(
             })
             .product()
     });
+    let dusk = world
+        .get::<shared::components::Health>(target)
+        .map_or(1.0, |health| {
+            dusk_damage_multiplier(world.get::<ActiveAuras>(target), health)
+        });
     let taken = taken
+        * dusk
         * versatility
         * from_caster
         * summon_damage::taken_multiplier(world, attacker, world.get::<ActiveAuras>(target))

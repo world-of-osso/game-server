@@ -60,6 +60,24 @@ fn rage_from_damage_dealt_auras_scale_swing_rage() {
 }
 
 #[test]
+fn war_machine_uses_the_selected_warrior_spec_rage_effect() {
+    for (spec, passive, expected) in [(71, 137049, 135.0), (72, 137050, 42.0), (73, 1258163, 23.0)]
+    {
+        let mut h = warrior(&[262231, passive]).expect("canonical world.db required");
+        h.app
+            .world_mut()
+            .entity_mut(h.caster)
+            .insert(shared::components::ActiveSpec(spec));
+        assert!(crate::auras::has_aura(h.app.world(), h.caster, 262231));
+        assert!(crate::auras::has_aura(h.app.world(), h.caster, passive));
+        let (caster, npc) = (h.caster, h.npc);
+        attack(&mut h, caster, npc);
+        h.advance(3);
+        assert_eq!(h.power(PowerType::Rage), expected, "spec {spec}");
+    }
+}
+
+#[test]
 fn each_auto_attack_taken_gives_3_rage() {
     let Some(mut h) = warrior(&[]) else {
         return;

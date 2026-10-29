@@ -352,6 +352,48 @@ fn protection_producers_ravager_native_periodic_damage_waits_for_tick_and_stops_
     );
 }
 
+#[test]
+fn protection_ravager_grants_rage_once_per_pulse_with_targets() {
+    use shared::components::{ActiveSpec, PowerType};
+    for (spec, extra_target, expected) in [
+        (73, false, 100.0),
+        (73, true, 100.0),
+        (71, false, 0.0),
+        (72, false, 0.0),
+    ] {
+        let mut h = fixture(false);
+        h.app.world_mut().entity_mut(h.caster).insert((
+            ActiveSpec(spec),
+            crate::class_progression::KnownSpells::fixture(vec![RAVAGER]),
+        ));
+        h.set_power(PowerType::Rage, 0.0);
+        if extra_target {
+            spawn_npc(&mut h.app, 1.0);
+        }
+        h.cast_and_deliver(RAVAGER, Some(h.npc));
+        h.advance(45);
+        assert_eq!(
+            h.power(PowerType::Rage),
+            expected,
+            "spec {spec}, extra target {extra_target}"
+        );
+    }
+    let mut h = fixture(false);
+    h.app.world_mut().entity_mut(h.caster).insert((
+        ActiveSpec(73),
+        crate::class_progression::KnownSpells::fixture(vec![RAVAGER]),
+    ));
+    h.set_power(PowerType::Rage, 0.0);
+    h.cast_and_deliver(RAVAGER, Some(h.npc));
+    h.app.world_mut().get_mut::<Position>(h.npc).unwrap().x = 100.0;
+    h.advance(45);
+    assert_eq!(
+        h.power(PowerType::Rage),
+        0.0,
+        "an empty field grants no Rage"
+    );
+}
+
 /// SimC76f8118 sc_warrior.cpp4173–4174/6300–6303. Native1269311
 /// supplies proc eligibility and1278009, but no native edge supplies1270116.
 #[test]

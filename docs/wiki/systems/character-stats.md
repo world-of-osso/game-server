@@ -273,7 +273,7 @@ SimC marks these class blocks TODO for the listed levels:
 - `max_health_pct`, `max_health_flat`
 - `dodge_pct`, `block_pct`
 
-MOD_INCREASE_HEALTH 34 changes current/max health by the same flat delta on aura change, rather than rescaling current health. Aura 49 adds nondiminishing player dodge points. [Defensives audit](../../defensives-audit.md) records catalog amounts, lifecycle tests and remaining gaps.
+MOD_INCREASE_HEALTH 34 changes current/max health by the same flat delta on aura change, rather than rescaling current health. Aura 49 adds nondiminishing player dodge points. Hunter, Rogue, Shaman, Monk, Druid and Demon Hunter also gain dodge from Agility: base Agility is undiminished, while bonus Agility and dodge rating share the class-specific SimC avoidance curve. [Defensives audit](../../defensives-audit.md) records catalog amounts, lifecycle tests and remaining gaps.
 
 The aura runtime ([[auras]]) inserts or updates it, and `Changed<StatModifiers>` triggers a recompute. The pure entry point is `compute_character_stats(&StatInputs, Option<&StatModifiers>)`.
 

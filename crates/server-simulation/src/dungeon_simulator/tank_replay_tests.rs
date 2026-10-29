@@ -309,6 +309,133 @@ fn simc_dummy_bleed_application_is_a_zero_damage_physical_hit() {
     );
 }
 
+#[test]
+#[ignore = "requires canonical Brewmaster profile and world database"]
+fn critical_blackout_kick_grants_elusive_footwork_stack() {
+    use crate::auras::{self, ActiveAuras, RemoveReason};
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::dps_parity::prepare_registered_player(268, 1).unwrap();
+    super::dps_parity::engage(&mut run);
+    let tank = run.actor;
+    let target = run.targets[0];
+    assert!(
+        run.app
+            .world()
+            .get::<crate::class_progression::TraitLoadout>(tank)
+            .unwrap()
+            .active_talent_spells()
+            .any(|talent| talent.spell_id == 387046)
+    );
+    auras::remove_auras(run.app.world_mut(), tank, RemoveReason::Cancelled, |aura| {
+        aura.spell_id == 195630
+    });
+    run.app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(tank)
+        .unwrap()
+        .crit_pct = 100.0;
+    crate::spell_cast::creature_cast(run.app.world_mut(), tank, 205523, Some(target), false)
+        .unwrap();
+    for _ in 0..40 {
+        run.app.update();
+    }
+    assert!(
+        run.app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|event| event.spell_id == Some(205523)
+                && event.crit
+                && event.target == Some(target.to_bits()))
+    );
+    let stacks = run
+        .app
+        .world()
+        .get::<ActiveAuras>(tank)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 195630)
+        .map_or(0, |aura| aura.stacks);
+    assert_eq!(
+        stacks, 2,
+        "one base mastery stack and one selected Elusive Footwork stack"
+    );
+}
+
+#[test]
+#[ignore = "requires canonical Brewmaster profile and world database"]
+fn elusive_brawler_only_procs_from_blackout_and_incoming_physical_hits() {
+    use crate::auras::{self, RemoveReason};
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::dps_parity::prepare_registered_player(268, 1).unwrap();
+    super::dps_parity::engage(&mut run);
+    let tank = run.actor;
+    let source = run.targets[0];
+    auras::remove_auras(run.app.world_mut(), tank, RemoveReason::Cancelled, |aura| {
+        aura.spell_id == 195630
+    });
+    for spell in [100780, 121253] {
+        crate::spell_cast::creature_cast(run.app.world_mut(), tank, spell, Some(source), false)
+            .unwrap();
+        for _ in 0..40 {
+            run.app.update();
+        }
+        assert!(
+            !auras::has_aura(run.app.world(), tank, 195630),
+            "spell {spell} must not grant mastery"
+        );
+    }
+    crate::spell_cast::creature_cast(run.app.world_mut(), tank, 205523, Some(source), false)
+        .unwrap();
+    for _ in 0..40 {
+        run.app.update();
+    }
+    assert!(
+        auras::has_aura(run.app.world(), tank, 195630),
+        "Blackout Kick grants mastery"
+    );
+    auras::remove_auras(run.app.world_mut(), tank, RemoveReason::Cancelled, |aura| {
+        aura.spell_id == 195630
+    });
+    crate::combat::replay_healer_hit(run.app.world_mut(), source, tank, &avoided_hit("Hit"))
+        .unwrap();
+    run.app.update();
+    assert!(
+        auras::has_aura(run.app.world(), tank, 195630),
+        "incoming physical melee hit grants mastery"
+    );
+}
+
+#[test]
+#[ignore = "requires canonical Brewmaster profile and world database"]
+fn simc_dummy_bleed_tick_grants_elusive_brawler_but_self_damage_does_not() {
+    use crate::auras::{self, RemoveReason};
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::dps_parity::prepare_registered_player(268, 1).unwrap();
+    let tank = run.actor;
+    let source = run.targets[0];
+    assert!(auras::has_aura(run.app.world(), tank, 117906));
+    auras::remove_auras(run.app.world_mut(), tank, RemoveReason::Cancelled, |aura| {
+        aura.spell_id == 195630
+    });
+    crate::spell_cast::effects::replay_simc_dummy_bleed(run.app.world_mut(), tank, tank, 1_000.0);
+    assert!(
+        !auras::has_aura(run.app.world(), tank, 195630),
+        "self damage does not grant mastery"
+    );
+    crate::spell_cast::effects::replay_simc_dummy_bleed(
+        run.app.world_mut(),
+        source,
+        tank,
+        25_000.0,
+    );
+    assert!(
+        auras::has_aura(run.app.world(), tank, 195630),
+        "incoming physical bleed tick grants mastery"
+    );
+}
+
 fn avoided_hit(outcome: &str) -> super::healer_intake::Hit {
     super::healer_intake::Hit {
         tick: 1,
@@ -974,6 +1101,129 @@ fn protection_apl_selects_shield_using_the_real_profile_conditions() {
     };
     assert_eq!(select(true).unwrap().name, "shield_of_the_righteous");
     assert!(select(false).is_none());
+}
+
+#[test]
+#[ignore = "requires canonical MID2 Vengeance profile"]
+fn traced_mortal_wounds_reduce_dummy_healing_for_the_encounter() {
+    use crate::simc_tank_timeline::RaidBuff;
+    fn heal(wounded: bool) -> f32 {
+        let _seed = crate::random::seed_scope(70_448);
+        let mut run = super::dps_parity::prepare_registered_player(581, 1).unwrap();
+        let debuffs = if wounded {
+            vec![RaidBuff {
+                name: "mortal_wounds".into(),
+                spell_id: 115804,
+            }]
+        } else {
+            Vec::new()
+        };
+        super::tank_replay::apply_simc_dummy_debuffs(&mut run, &debuffs).unwrap();
+        for _ in 0..220 {
+            run.app.update();
+        }
+        let actor = run.actor;
+        let target = run.targets[0];
+        let mut health = run
+            .app
+            .world_mut()
+            .get_mut::<shared::components::Health>(target)
+            .unwrap();
+        health.current = health.max / 2.0;
+        let before = health.current;
+        let spell = run
+            .app
+            .world()
+            .resource::<crate::spell_info::SpellStore>()
+            .get(213011)
+            .unwrap()
+            .clone();
+        let ctx = crate::spell_cast::effects::EffectCtx {
+            caster: actor,
+            spell: &spell,
+            depth: 1,
+            dest: None,
+            chain_multiplier: 1.0,
+        };
+        crate::spell_cast::effects::apply_heal(
+            run.app.world_mut(),
+            &ctx,
+            target,
+            1000.0,
+            false,
+            false,
+        );
+        run.app
+            .world()
+            .get::<shared::components::Health>(target)
+            .unwrap()
+            .current
+            - before
+    }
+    let base = heal(false);
+    let reduced = heal(true);
+    assert!(
+        base > 0.0 && (reduced / base - 0.5).abs() < 0.01,
+        "dummy heal {base}/{reduced}"
+    );
+}
+
+#[test]
+#[ignore = "requires canonical MID2 Vengeance profile"]
+fn simc_bronze_buff_shortens_real_infernal_strike_recovery() {
+    use crate::simc_tank_timeline::RaidBuff;
+    fn recovery(bronze: bool) -> f64 {
+        let _seed = crate::random::seed_scope(70_448);
+        let mut run = super::dps_parity::prepare_registered_player(581, 1).unwrap();
+        let buffs = if bronze {
+            vec![RaidBuff {
+                name: "blessing_of_the_bronze".into(),
+                spell_id: 381741,
+            }]
+        } else {
+            Vec::new()
+        };
+        super::tank_replay::apply_simc_raid_buffs(&mut run, &buffs).unwrap();
+        if !bronze {
+            run.app.update();
+            run.app.update();
+        }
+        super::dps_parity::engage(&mut run);
+        let actor = run.actor;
+        let target = run.targets[0];
+        let destination = crate::spell_cast::targets::position(run.app.world(), target).unwrap();
+        crate::spell_cast::cast_for_player_with_targets(
+            run.app.world_mut(),
+            actor,
+            189110,
+            crate::spell_cast::CastTargets {
+                unit: target,
+                primary: Some(target),
+                destination: Some(destination.to_array()),
+            },
+        )
+        .unwrap();
+        let world = run.app.world();
+        let spell = world
+            .resource::<crate::spell_info::SpellStore>()
+            .get(189110)
+            .unwrap();
+        let bindings = crate::simc_apl_native::Bindings::default();
+        let encounter = crate::simc_apl_native::Encounter::Fixture {
+            started_at: 0.0,
+            duration: 300.0,
+            style: crate::simc_apl_native::FightStyle::Patchwerk,
+        };
+        crate::simc_apl_native::NativeFacts::new(world, actor, &bindings, encounter, 1)
+            .cooldown_for_spell(spell, "full_recharge_time")
+            .unwrap()
+    }
+    let baseline = recovery(false);
+    let reduced = recovery(true);
+    assert!(
+        baseline > 0.0 && (reduced / baseline - 0.85).abs() < 0.01,
+        "base={baseline} bronze={reduced}"
+    );
 }
 
 #[test]
@@ -1735,6 +1985,138 @@ fn strength_in_adversity_scales_with_actual_shield_targets() {
         "each actual Shield hit grants a stack"
     );
     assert_eq!(hits, 3, "the fixture must exercise three Shield targets");
+}
+
+#[test]
+#[ignore = "uses selected MID2 Protection and the real Devotion Aura"]
+fn devotion_aura_reduces_incoming_bleed() {
+    use shared::components::Health;
+    let mut run = super::dps_parity::prepare_registered_player(66, 1).unwrap();
+    super::dps_parity::engage(&mut run);
+    for _ in 0..40 {
+        run.app.update();
+    }
+    let actor = run.actor;
+    let source = run.targets[0];
+    assert!(
+        run.app
+            .world()
+            .get::<crate::class_progression::KnownSpells>(actor)
+            .unwrap()
+            .contains(465)
+    );
+    assert!(
+        crate::auras::has_aura(run.app.world(), actor, 465),
+        "precombat must cast Devotion Aura"
+    );
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        actor,
+        crate::auras::RemoveReason::Consumed,
+        |aura| aura.spell_id == 432607 || aura.spell_id == 465 || aura.spell_id == 344218,
+    );
+    let hit = |run: &mut super::dps_parity::Run| {
+        let before = run.app.world().get::<Health>(actor).unwrap().current;
+        crate::spell_cast::effects::replay_simc_dummy_bleed(
+            run.app.world_mut(),
+            source,
+            actor,
+            25000.0,
+        );
+        before - run.app.world().get::<Health>(actor).unwrap().current
+    };
+    let before = hit(&mut run);
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 465, Some(actor), false).unwrap();
+    for _ in 0..4 {
+        run.app.update();
+    }
+    let after = hit(&mut run);
+    assert!(
+        before > 0.0 && after < before * 0.98,
+        "Devotion Aura did not reduce bleed: {before} -> {after}"
+    );
+}
+
+#[test]
+#[ignore = "uses selected MID2 Protection and real Blessing of Dusk"]
+fn dusk_scales_real_bleed_damage_with_current_health() {
+    use shared::components::Health;
+    let mut run = super::dps_parity::prepare_registered_player(66, 1).unwrap();
+    super::dps_parity::engage(&mut run);
+    let actor = run.actor;
+    let source = run.targets[0];
+    let aura = run
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(actor)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 1241945)
+        .expect("selected Dusk aura");
+    let maximum = aura
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap()
+        .amount;
+    assert!(
+        (maximum - 20.0).abs() < 0.01,
+        "Protection-modified Dusk maximum: {maximum}"
+    );
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        actor,
+        crate::auras::RemoveReason::Consumed,
+        |aura| aura.spell_id == 432607,
+    );
+    for (health_pct, expected) in [(1.0, 1.0), (0.5, 0.9), (0.1, 0.82)] {
+        let max = run.app.world().get::<Health>(actor).unwrap().max;
+        run.app
+            .world_mut()
+            .get_mut::<Health>(actor)
+            .unwrap()
+            .current = max * health_pct;
+        let before = run.app.world().get::<Health>(actor).unwrap().current;
+        crate::spell_cast::effects::replay_simc_dummy_bleed(
+            run.app.world_mut(),
+            source,
+            actor,
+            10_000.0,
+        );
+        let actual = before - run.app.world().get::<Health>(actor).unwrap().current;
+        crate::auras::remove_auras(
+            run.app.world_mut(),
+            actor,
+            crate::auras::RemoveReason::Consumed,
+            |aura| aura.spell_id == 1241945,
+        );
+        run.app
+            .world_mut()
+            .get_mut::<Health>(actor)
+            .unwrap()
+            .current = before;
+        crate::spell_cast::effects::replay_simc_dummy_bleed(
+            run.app.world_mut(),
+            source,
+            actor,
+            10_000.0,
+        );
+        let baseline = before - run.app.world().get::<Health>(actor).unwrap().current;
+        assert!(
+            (actual / baseline - expected).abs() < 0.002,
+            "health {health_pct}: {actual}/{baseline} expected {expected}"
+        );
+        crate::auras::apply_aura(
+            run.app.world_mut(),
+            &crate::auras::AuraApplication {
+                caster: actor,
+                target: actor,
+                spell_id: 1241945,
+                effect_mask: u32::MAX,
+                source: crate::auras::AuraSource::KnownSpell,
+            },
+        );
+    }
 }
 
 #[test]

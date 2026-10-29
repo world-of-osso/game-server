@@ -410,8 +410,8 @@ fn tertiary_ratings_follow_curve_21025() {
     );
 }
 
-/// TC master avoidance (StatSystem.cpp:490-715): a level 10 Warrior with a weapon, a
-/// shield, Parry and Block parries 5%, blocks 5% and dodges nothing without rating;
+/// A level 10 Warrior with zero Strength, a weapon, a shield, Parry and Block
+/// parries 3%, blocks 3% and dodges nothing without rating;
 /// 10% of dodge rating diminishes to 65.63144 × 10 / (10 + 65.63144 × 0.956) = 9.022%.
 #[test]
 fn player_avoidance_follows_trinitycore_master() {
@@ -422,15 +422,20 @@ fn player_avoidance_follows_trinitycore_master() {
         shield_armor: Some(100.0),
         dodge_pct: 0.0,
         parry_pct: 0.0,
+        strength: 0.0,
+        base_strength: 0.0,
+        agility: 0.0,
+        base_agility: 0.0,
         block_pct: 0.0,
+        diminishing_block_pct: 0.0,
     };
     let none = player_defense(WARRIOR, 10, &CombatRatings::default(), inputs);
     assert_eq!(
         none,
         PlayerDefense {
             dodge: 0.0,
-            parry: 5.0,
-            block: 5.0,
+            parry: 3.0,
+            block: 3.0,
             shield_block: 250.0,
             sitting: false,
         }
@@ -467,6 +472,135 @@ fn player_avoidance_follows_trinitycore_master() {
         player_defense(WARRIOR, 10, &CombatRatings::default(), no_block).block,
         0.0
     );
+}
+
+#[test]
+fn agility_classes_gain_diminished_dodge_from_agility() {
+    let inputs = DefenseInputs {
+        agility: 2620.0,
+        base_agility: 618.0,
+        dodge_pct: 5.0,
+        ..Default::default()
+    };
+    let ratings = CombatRatings::default();
+    let base = player_defense(10, 90, &ratings, inputs).dodge;
+    assert!((base - 20.18695).abs() < 0.001, "Monk dodge {base}");
+    let higher = player_defense(
+        10,
+        90,
+        &ratings,
+        DefenseInputs {
+            agility: 4620.0,
+            ..inputs
+        },
+    )
+    .dodge;
+    assert!(
+        higher > base && higher < base + 10.0,
+        "diminished agility dodge {base} -> {higher}"
+    );
+    let rated = player_defense(
+        10,
+        90,
+        &CombatRatings {
+            dodge: 5.0 * crate::character_stats_data::DODGE_RATING[89],
+            ..default()
+        },
+        inputs,
+    )
+    .dodge;
+    assert!(
+        (rated - 23.92289).abs() < 0.001,
+        "Agility and dodge rating share DR: {rated}"
+    );
+    assert!((player_defense(11, 90, &ratings, inputs).dodge - 20.44645).abs() < 0.001);
+    assert!((player_defense(12, 90, &ratings, inputs).dodge - 19.45072).abs() < 0.001);
+    for class in [3, 4, 7, 10, 11, 12] {
+        let low = player_defense(class, 90, &ratings, inputs).dodge;
+        let high = player_defense(
+            class,
+            90,
+            &ratings,
+            DefenseInputs {
+                agility: 4620.0,
+                ..inputs
+            },
+        )
+        .dodge;
+        assert!(high > low, "class {class}: {low} -> {high}");
+    }
+    assert_eq!(
+        player_defense(1, 90, &ratings, inputs).dodge,
+        player_defense(
+            1,
+            90,
+            &ratings,
+            DefenseInputs {
+                agility: 4620.0,
+                ..inputs
+            }
+        )
+        .dodge
+    );
+}
+
+#[test]
+fn plate_mastery_block_diminishes_before_flat_shield_block() {
+    let base = DefenseInputs {
+        can_block: true,
+        shield_armor: Some(100.0),
+        block_pct: 7.0,
+        diminishing_block_pct: 25.78125,
+        ..Default::default()
+    };
+    let expected = 10.0 + 25.78125 / (25.78125 * 0.0067 + 1.0 / 0.94);
+    for class in [1, 2] {
+        let normal = player_defense(class, 90, &CombatRatings::default(), base).block;
+        let shield = player_defense(
+            class,
+            90,
+            &CombatRatings::default(),
+            DefenseInputs {
+                block_pct: 107.0,
+                ..base
+            },
+        )
+        .block;
+        assert!((normal - expected).abs() < 0.001, "class {class}: {normal}");
+        assert!(
+            (shield - normal - 100.0).abs() < 0.001,
+            "class {class}: {shield}"
+        );
+    }
+}
+
+#[test]
+fn plate_strength_grants_diminished_parry() {
+    let inputs = DefenseInputs {
+        can_parry: true,
+        has_weapon: true,
+        strength: 1912.9742,
+        base_strength: 191.29742,
+        ..Default::default()
+    };
+    for class in [1, 2, 6] {
+        let initial = player_defense(class, 90, &CombatRatings::default(), inputs).parry;
+        let stronger = player_defense(
+            class,
+            90,
+            &CombatRatings::default(),
+            DefenseInputs {
+                strength: 3825.9485,
+                ..inputs
+            },
+        )
+        .parry;
+        assert!((initial - 11.8).abs() < 0.001, "class {class}: {initial}");
+        assert!(
+            (stronger - (4.0 + 19.0 / (0.19 + 1.0 / 0.94))).abs() < 0.001,
+            "class {class}: {stronger}"
+        );
+    }
 }
 
 const SPEC_ARCANE: u32 = 62;

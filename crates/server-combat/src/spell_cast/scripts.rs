@@ -46,6 +46,7 @@ pub(super) use script_registry::{
     triggered_child_damage_multiplier as frost_flurry_damage_multiplier,
 };
 mod periodic_attacks;
+pub(crate) use midnight_items::iris_dot_amount;
 pub(crate) use periodic_attacks::{after_periodic_trigger, rolls_reapplication};
 pub(super) use script_registry::after_cast_update as update_unleashed;
 pub(super) use script_registry::after_foreground_special;
@@ -55,7 +56,6 @@ pub(super) use script_registry::check_native_spell as check_enhancement_cast;
 pub(crate) use script_registry::consume_cast_modifiers as consume_maelstrom_weapon;
 pub(crate) use script_registry::melee_residual as after_melee_residual;
 pub(crate) use script_registry::snapshot_native_aura_amount as snapshot_rod_amount;
-pub(crate) use midnight_items::iris_dot_amount;
 pub(super) use script_registry::spell_residual as after_spell_residual;
 pub(super) use script_registry::{
     after_chain_resolved as after_enhancement_chain,

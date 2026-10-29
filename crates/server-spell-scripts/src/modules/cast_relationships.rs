@@ -54,6 +54,17 @@ const PRECISE_CONSUMER: Operation = Operation::Consume {
 };
 
 const RULES: &[CastRule] = &[
+    // SimC76f8118 sc_warrior.cpp6298: Shield Slam consumes the earned crit modifier.
+    CastRule {
+        name: "CELERITOUS_CONCLUSION_SHIELD_SLAM",
+        spec: Some(73),
+        talent: 0,
+        cast: 23922,
+        operation: Operation::Consume {
+            aura: 1270846,
+            conditional_grant: None,
+        },
+    },
     // SimC76f8118 sc_mage.cpp4760–4761: selected Sunfury + Pyroclasm
     // executes one native buff application, without the HS-spend chance roll.
     CastRule {

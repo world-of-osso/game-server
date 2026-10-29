@@ -182,6 +182,13 @@ pub(super) fn shred_damage(world: &World, caster: Entity, target: Entity, amount
 }
 
 pub(super) fn is_bleeding(world: &World, target: Entity) -> bool {
+    #[cfg(any(test, feature = "test-support"))]
+    if world
+        .get::<crate::simc_apl_native::FixtureBleeding>(target)
+        .is_some()
+    {
+        return true;
+    }
     const BLEED_MECHANIC: u32 = 15;
     let Some(auras) = world.get::<crate::auras::ActiveAuras>(target) else {
         return false;

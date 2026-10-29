@@ -371,6 +371,20 @@ mod tests {
             "{report}"
         );
         assert!(
+            report["outgoing_damage_by_spell"]["225919"]
+                .as_i64()
+                .unwrap()
+                > 0,
+            "{report}"
+        );
+        assert!(
+            report["resource_spent_by_spell"]["228477"]["fury"]
+                .as_f64()
+                .unwrap()
+                >= 30.0,
+            "{report}"
+        );
+        assert!(
             report["resource_counters"]["soul_fragments_generated"]
                 .as_u64()
                 .unwrap()
@@ -1066,6 +1080,106 @@ mod tests {
                 "spell {spell} without Sigil: {without_sigil}/{tier_without_sigil}"
             );
         }
+    }
+
+    #[test]
+    #[ignore = "requires native Vengeance profile"]
+    fn infernal_armor_and_retaliation_require_real_eligible_hits() {
+        use super::super::super::healer_intake::{Hit, HitKind};
+        use super::super::*;
+        let _seed = crate::random::seed_scope(70_448);
+        let (profile, traits) = read_reference(581).unwrap();
+        let identity = inputs::read_actor(&profile).unwrap();
+        let mut run = prepare_reference(profile, &traits, 1, identity).unwrap();
+        let actor = run.actor;
+        let attacker = run.targets[0];
+        engage(&mut run);
+        let count = |run: &Run, spell| {
+            run.app
+                .world()
+                .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+                .0
+                .iter()
+                .filter(|event| {
+                    event.spell_id == Some(spell)
+                        && event.source == Some(actor.to_bits())
+                        && event.target == Some(attacker.to_bits())
+                        && event.kind == shared::protocol::CombatLogKind::Damage
+                })
+                .count()
+        };
+        crate::spell_cast::effects::replay_simc_dummy_strike(
+            run.app.world_mut(),
+            attacker,
+            actor,
+            1000.0,
+            false,
+            false,
+        );
+        assert_eq!((count(&run, 320334), count(&run, 391159)), (0, 0));
+        crate::spell_cast::cast_for_player_with_target(
+            run.app.world_mut(),
+            actor,
+            258920,
+            Some(actor),
+        )
+        .unwrap();
+        for _ in 0..30 {
+            run.app.update();
+        }
+        crate::spell_cast::cast_for_player_with_target(
+            run.app.world_mut(),
+            actor,
+            203720,
+            Some(actor),
+        )
+        .unwrap();
+        for _ in 0..3 {
+            run.app.update();
+        }
+        assert!(crate::auras::has_aura(run.app.world(), actor, 258920));
+        assert!(crate::auras::has_aura(run.app.world(), actor, 203819));
+        let before = (count(&run, 320334), count(&run, 391159));
+        crate::spell_cast::effects::replay_simc_dummy_bleed(
+            run.app.world_mut(),
+            attacker,
+            actor,
+            1000.0,
+        );
+        assert_eq!((count(&run, 320334), count(&run, 391159)), before);
+        crate::spell_cast::effects::replay_simc_dummy_strike(
+            run.app.world_mut(),
+            attacker,
+            actor,
+            1000.0,
+            false,
+            false,
+        );
+        assert_eq!(
+            (count(&run, 320334), count(&run, 391159)),
+            (before.0 + 1, before.1)
+        );
+        let hit = Hit {
+            tick: 1,
+            source_guid: 0,
+            pack: 0,
+            target_slot: 0,
+            school: 1,
+            raw: 1000.0,
+            level_scaling_factor: 1.0,
+            kind: HitKind::Melee {
+                hand: 0,
+                outcome: "Hit".into(),
+                level_difference: 0,
+                critical_multiplier: 1.0,
+                weapon_speed: 2.0,
+            },
+        };
+        crate::combat::replay_healer_hit(run.app.world_mut(), attacker, actor, &hit).unwrap();
+        assert_eq!(
+            (count(&run, 320334), count(&run, 391159)),
+            (before.0 + 2, before.1 + 1)
+        );
     }
 
     #[test]
