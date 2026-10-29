@@ -331,18 +331,18 @@ The user approved their Retail combat logs as evidence for follower-catalog popu
 
 Patrol evidence requires at least three distinct runs and a navmesh-validated route. Otherwise keep an imported spawn stationary and report `PATROL_UNOBSERVED`; unseen creatures, patrol routes, formation offsets and boss phases are not implied by logs. Combat movement, summon identities and ambiguous cross-run matches remain explicit limitations. [Extraction and coverage](../wiki/investigations/log-derived-population.md).
 
-### Copy-only coverage, 2026-10-28
+### Applied log population coverage
 
-**Superseded diagnostic:** A later copy review found three near-authored duplicates. The importer now rejects unmatched slots within three yards of an existing same-NPC row; a fresh-copy rerun is pending. Do not use the counts below as final import coverage.
+The lead applied the fresh-copy result to canonical `world.db`: 1,211 creatures, 47 templates, one template addon, 13 difficulty rows and 70 model rows. The initial 1,214-creature diagnostic is superseded. The lead's pre-apply comparison found inserts only, no same-NPC rows within three yards, no null Z values and a successful SQLite `quick_check`. The pre-apply backup is `data/world.db.pre-logpop-20261029`.
 
-These are position-assignment slots, not proven authored spawn counts. Existing rows are one-to-one matches within ten yards in 3-D, not identity proof. The importer was run on a database copy only. `P` is `POSITION_Z_UNRESOLVED`, `A` is `AMBIGUOUS_SPAWN_IDENTITY`, `C` is `CENTROID_Z_UNRESOLVED`, and `E` is `MID_ENCOUNTER_ONLY_ID`. `PATROL_UNOBSERVED` applies to every imported slot.
+These are position-assignment slots, not proven authored spawn counts. Existing rows are one-to-one matches within ten yards in 3-D, not identity proof. `P` is `POSITION_Z_UNRESOLVED`, `A` is `AMBIGUOUS_SPAWN_IDENTITY`, `C` is `CENTROID_Z_UNRESOLVED`, `E` is `MID_ENCOUNTER_ONLY_ID`, and `D` is `AUTHORED_SPAWN_NEARBY_AMBIGUOUS`. `PATROL_UNOBSERVED` applies to every imported slot.
 
-| Dungeon (map) | Slots | Imported | Nearby existing | Preparation gaps | TDB template IDs projected | IDs absent in both sources |
+| Dungeon (map) | Slots | Imported | Nearby existing | Gaps | TDB template IDs projected | IDs absent in both sources |
 |---|---:|---:|---:|---|---:|---:|
 | Kings' Rest (1762) | 495 | 129 | 21 | P120, A202, C10, E13 | 15 | 0 |
 | Ruby Life Pools (2521) | 514 | 167 | 28 | P109, A205, C5 | 4 | 0 |
-| Altar of Fangs (2993) | 351 | 71 | 13 | P137, A129, C1 | 6 | 0 |
-| Murder Row (2813) | 609 | 184 | 18 | P104, A288, C14, E1 | 17 | 0 |
+| Altar of Fangs (2993) | 351 | 69 | 13 | P137, A129, C1, D2 | 6 | 0 |
+| Murder Row (2813) | 609 | 183 | 18 | P104, A288, C14, E1, D1 | 17 | 0 |
 | Den of Nalorakk (2825) | 601 | 362 | 35 | P103, A94, C7 | 12 | 0 |
 | The Blinding Vale (2859) | 481 | 83 | 22 | P232, A139, C5 | 4 | 0 |
 | Voidscar Arena (2923) | 431 | 218 | 17 | P106, A87, C3 | 3 | 0 |
