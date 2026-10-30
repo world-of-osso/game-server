@@ -7,6 +7,8 @@ mod academy_barrier;
 mod ancient;
 #[path = "anubzekt.rs"]
 mod anubzekt;
+#[path = "avanoxx_intro.rs"]
+mod avanoxx_intro;
 #[path = "azure_absolute_zero.rs"]
 mod azure_absolute_zero;
 #[path = "azure_blade.rs"]
