@@ -71,4 +71,54 @@ fn guardian_after_the_wildfire_heals_on_300_rage_and_retains_overflow() {
         2,
         "the retained 20 Rage triggers again at 600 total"
     );
+
+    let faction = *run
+        .app
+        .world()
+        .get::<shared::components::UnitFactionTemplate>(actor)
+        .unwrap();
+    let map = *run.app.world().get::<crate::maps::InMap>(actor).unwrap();
+    let position = *run
+        .app
+        .world()
+        .get::<shared::components::Position>(actor)
+        .unwrap();
+    for offset in 1..=6 {
+        let ally = crate::spell_cast::test_harness::spawn_player(
+            &mut run.app,
+            13,
+            position.x + offset as f32,
+        );
+        run.app.world_mut().entity_mut(ally).insert((
+            faction,
+            map,
+            Health {
+                current: 100_000.0,
+                max: 1_000_000.0,
+            },
+        ));
+    }
+    run.app.update();
+    run.app
+        .world_mut()
+        .resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .clear();
+    for _ in 0..8 {
+        spend(&mut run);
+    }
+    let recipients: std::collections::HashSet<_> = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .iter()
+        .filter(|event| event.spell_id == Some(371982) && event.kind == CombatLogKind::Heal)
+        .filter_map(|event| event.target)
+        .collect();
+    assert_eq!(
+        recipients.len(),
+        5,
+        "the native talent limits the area heal to five allies"
+    );
 }
