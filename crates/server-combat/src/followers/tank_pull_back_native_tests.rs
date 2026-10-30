@@ -218,6 +218,8 @@ fn run_native_pull_back(production: bool, full_party: bool) {
     let mut waited = false;
     let mut acquired = false;
     let mut healed_while_waiting = false;
+    let mut followed = vec![false; companions.len()];
+    let mut moved = vec![false; companions.len()];
     for _ in 0..1200 {
         if production {
             super::update_ai(h.app.world_mut());
@@ -237,6 +239,15 @@ fn run_native_pull_back(production: bool, full_party: bool) {
         h.advance(1);
         if full_party && waiting_now {
             healed_while_waiting |= h.health(owner) > initial_health;
+            for (index, &unit) in companions.iter().enumerate() {
+                followed[index] |= h
+                    .app
+                    .world()
+                    .get::<crate::creature_ai::FollowOwner>(unit)
+                    .is_some_and(|follow| follow.owner == tank);
+                moved[index] |= crate::spell_cast::targets::position(h.app.world(), unit)
+                    .is_some_and(|position| position.distance(start) > 1.0);
+            }
             assert!(
                 h.inbox.log[before_events..].iter().all(|event| {
                     !matches!(event.kind, shared::protocol::CombatLogKind::Damage)
@@ -285,6 +296,14 @@ fn run_native_pull_back(production: bool, full_party: bool) {
     assert!(waited, "party must wait for the pull-back");
     if full_party {
         assert!(healed_while_waiting, "healer must heal while waiting");
+        assert!(
+            followed.iter().all(|seen| *seen),
+            "both companions must follow the tank: {followed:?}"
+        );
+        assert!(
+            moved.iter().all(|seen| *seen),
+            "both companions must move during pull-back: {moved:?}"
+        );
     }
     assert!(acquired, "tank must acquire the intended Groundskeeper");
     if production {
