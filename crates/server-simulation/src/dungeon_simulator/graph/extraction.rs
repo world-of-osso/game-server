@@ -385,8 +385,9 @@ fn extract_follower_topology() {
         .expect("follower topology inputs");
     let graph_path = super::graph_path();
     std::fs::write(&graph_path, serde_json::to_vec_pretty(&graph).unwrap()).unwrap();
+    let gates = server::test_support::objectives::boss_gate_entries(map);
     let requirements =
-        serde_json::json!({(map.to_string()): {"boss_order": bosses, "gate_entries": {}}});
+        serde_json::json!({(map.to_string()): {"boss_order": bosses, "gate_entries": gates}});
     let path = graph_path.with_file_name(format!(
         "{}-requirements.json",
         graph_path.file_stem().unwrap().to_string_lossy()

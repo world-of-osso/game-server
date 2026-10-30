@@ -114,3 +114,14 @@ fn academy_intro_unlocks_only_after_local_pack_dies_and_crawth_lands() {
     assert_eq!(world.get::<UnitFlags>(crawth).unwrap().0 & 0x300, 0);
     assert!(world.get::<ThreatTable>(crawth).is_some());
 }
+
+#[test]
+fn route_driver_gates_match_the_production_intro_unlocks() {
+    // The unlock behavior itself is proven above; the route driver must plan those same deaths.
+    let gates = crate::test_support::objectives::boss_gate_entries(2526);
+    assert_eq!(
+        gates.into_iter().collect::<Vec<_>>(),
+        vec![(191736, vec![192333]), (196482, vec![197219])]
+    );
+    assert!(crate::test_support::objectives::boss_gate_entries(2527).is_empty());
+}

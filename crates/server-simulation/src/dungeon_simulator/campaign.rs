@@ -273,6 +273,66 @@ fn unattackable_objective_is_approached_using_its_live_position() {
 }
 
 #[test]
+fn off_graph_source_is_approached_at_its_anchor_when_translocations_exist() {
+    let mut run = spawn_run(1, &mut None).unwrap();
+    let source = 20375720;
+    let neighbour = run
+        .graph
+        .edges
+        .iter()
+        .find_map(|edge| (edge.from == source).then_some(edge.to))
+        .unwrap();
+    let anchor = run
+        .graph
+        .packs
+        .iter()
+        .find(|pack| pack.id == neighbour)
+        .unwrap()
+        .point();
+    run.graph
+        .edges
+        .retain(|edge| edge.from != source && edge.to != source);
+    let ledge = {
+        let pack = run
+            .graph
+            .packs
+            .iter_mut()
+            .find(|pack| pack.id == source)
+            .unwrap();
+        pack.position[0] += 500.0;
+        pack.point()
+    };
+    // A self-loop enables translocation planning without lying on any shortest path.
+    run.graph.teleports = vec![server::test_support::graph::Edge {
+        from: neighbour,
+        to: neighbour,
+        yards: 0.0,
+    }];
+    run.app
+        .world_mut()
+        .insert_resource(super::Space(run.graph.clone()));
+    run.graph.route = vec![server::test_support::graph::RouteStep {
+        pack: source,
+        anchor: anchor.to_array(),
+    }];
+    let boss = run.actors[&source];
+    run.app.world_mut().entity_mut(boss).insert(Position {
+        x: ledge.x,
+        y: ledge.y,
+        z: ledge.z,
+    });
+    run.control().unwrap();
+    assert_eq!(
+        run.app
+            .world()
+            .get::<MoveIntent>(run.party.owner)
+            .unwrap()
+            .0,
+        anchor
+    );
+}
+
+#[test]
 fn relocated_attackable_objective_without_aggro_uses_live_position() {
     let mut run = spawn_run(1, &mut None).unwrap();
     let boss = run.actors[&20375720];
@@ -2323,7 +2383,9 @@ impl Run {
         };
         self.current_pack = Some(pack_id);
         let target_position = *self.app.world().get::<Position>(target).unwrap();
-        if self.approach_translocation(target_position)? {
+        let to = Vec3::new(target_position.x, target_position.y, target_position.z);
+        let approach = self.approach_point(pack_id, target, to);
+        if self.approach_translocation(approach)? {
             return Ok(());
         }
         let tank_position = *self.app.world().get::<Position>(self.party.tank).ok_or(
@@ -2331,14 +2393,7 @@ impl Run {
         )?;
         let (_, range) =
             crate::followers::simulator::opening_spell(self.app.world(), self.party.tank);
-        let step = self
-            .graph
-            .route
-            .iter()
-            .find(|step| step.pack == pack_id)
-            .unwrap();
         let from = Vec3::new(tank_position.x, tank_position.y, tank_position.z);
-        let to = Vec3::new(target_position.x, target_position.y, target_position.z);
         let attackable = crate::spell_cast::targets::relation_matches(
             self.app.world(),
             self.party.owner,
@@ -2414,18 +2469,6 @@ impl Run {
         }
         self.waiting_objective = None;
         if from.distance(to) > range {
-            let pack = self
-                .graph
-                .packs
-                .iter()
-                .find(|pack| pack.id == pack_id)
-                .unwrap();
-            let approach =
-                if self.actors.get(&pack_id) == Some(&target) && pack.point().distance(to) <= 1.0 {
-                    Vec3::from_array(step.anchor)
-                } else {
-                    to
-                };
             self.app
                 .world_mut()
                 .entity_mut(self.party.owner)
@@ -2488,7 +2531,24 @@ impl Run {
         }
     }
 
-    fn approach_translocation(&mut self, target: Position) -> Result<bool, String> {
+    /// An unmoved source is approached at its frozen route anchor, which lies on the walk graph
+    /// even when the source itself stands off-mesh; a moved source is approached where it is.
+    fn approach_point(&self, pack_id: u32, target: Entity, live: Vec3) -> Vec3 {
+        let unmoved = self.actors.get(&pack_id) == Some(&target)
+            && self
+                .graph
+                .packs
+                .iter()
+                .find(|pack| pack.id == pack_id)
+                .is_some_and(|pack| pack.point().distance(live) <= 1.0);
+        let anchor = self.graph.route.iter().find(|step| step.pack == pack_id);
+        match anchor {
+            Some(step) if unmoved => Vec3::from_array(step.anchor),
+            _ => live,
+        }
+    }
+
+    fn approach_translocation(&mut self, target: Vec3) -> Result<bool, String> {
         if self.graph.teleports.is_empty() {
             return Ok(false);
         }
@@ -2501,10 +2561,7 @@ impl Run {
             .app
             .world()
             .resource::<super::Space>()
-            .next_translocation(
-                Vec3::new(from.x, from.y, from.z),
-                Vec3::new(target.x, target.y, target.z),
-            )?;
+            .next_translocation(Vec3::new(from.x, from.y, from.z), target)?;
         let Some((source, destination)) = edge else {
             return Ok(false);
         };

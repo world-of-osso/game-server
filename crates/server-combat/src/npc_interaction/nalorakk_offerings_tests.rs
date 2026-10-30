@@ -174,7 +174,10 @@ fn unlock_hoardmonger_through_objective(source: u32, name: &str, pickup: u32) {
             UnitFlags(immunity),
         ))
         .id();
-    for _ in 0..1500 {
+    // Fishing is SPELL_ATTR0_NOT_IN_COMBAT_ONLY_PEACEFUL; the route driver offers it out of combat.
+    crate::combat::combat_stop(h.app.world_mut(), owner);
+    // Teleported approaches never interrupt the 22s fishing channel, so each offering can wait it out.
+    for _ in 0..3000 {
         match objectives::next(h.app.world_mut(), owner, boss)
             .unwrap()
             .unwrap()

@@ -161,13 +161,24 @@ def plan_route(graph, profile, requirements):
     adjacency = build_adjacency(graph)
     bosses = boss_packs(packs, requirements)
     origin = [graph["entrance"][0], graph["entrance_height"], graph["entrance"][1]]
-    visited, route, boss_path = set(), [], []
+    visited, route, boss_path, deferred = set(), [], [], []
     for entry, boss in zip(requirements["boss_order"], bosses):
-        for goal in gate_packs(packs, requirements, entry) + [boss]:
+        gates = gate_packs(packs, requirements, entry)
+        for goal in gates + [boss]:
             if goal in visited:
                 continue
             nearest = min(packs, key=lambda key: (squared_distance(point(packs[key]), origin), key))
-            nodes = shortest_path(adjacency, nearest, goal)
+            try:
+                nodes = shortest_path(adjacency, nearest, goal)
+            except ValueError:
+                # Production relocates and unlocks a gated boss after its gates die;
+                # the runtime approaches its live position, so its spawn needs no frozen path.
+                if goal != boss or not gates:
+                    raise
+                route.append({"pack": goal, "anchor": point(packs[goal])})
+                visited.add(goal)
+                deferred.append(goal)
+                continue
             segments = walk_segments(graph, packs, adjacency, nodes, origin)
             pulls = corridor_pulls(packs, sources, segments, visited | set(bosses) | {goal})
             for pull in pulls:
@@ -177,7 +188,8 @@ def plan_route(graph, profile, requirements):
             visited.add(goal)
             boss_path.extend(nodes[1:] if boss_path and boss_path[-1] == nodes[0] else nodes)
             origin = point(packs[goal])
-    return {"route": route, "boss_path": boss_path, "route_policy": POLICY}
+    return {"route": route, "boss_path": boss_path, "route_policy": POLICY,
+            "deferred_bosses": deferred}
 
 
 def main():
@@ -193,7 +205,7 @@ def main():
     graph.update(result)
     args.graph.write_text(json.dumps(graph, indent=2) + "\n")
     print(f"{POLICY} map={graph['map_id']} pulls={len(result['route'])} "
-          f"path_nodes={len(result['boss_path'])}")
+          f"path_nodes={len(result['boss_path'])} deferred_bosses={result['deferred_bosses']}")
 
 
 if __name__ == "__main__":
