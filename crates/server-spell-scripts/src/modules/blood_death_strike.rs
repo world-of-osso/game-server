@@ -133,9 +133,24 @@ fn schedule_death_strike_heal(world: &mut World, ctx: &EffectCtx<'_>, target: En
     }
 }
 
-pub(super) fn finish_death_strike_heal(world: &mut World, caster: Entity, spell: &combat::spell_info::SpellInfo) {
-    if spell.id == DEATH_STRIKE && world.entity_mut(caster).take::<PendingDeathStrikeHeal>().is_some() {
-        let ctx = EffectCtx { caster, spell, depth: 0, dest: None, chain_multiplier: 1.0 };
+pub(super) fn finish_death_strike_heal(
+    world: &mut World,
+    caster: Entity,
+    spell: &combat::spell_info::SpellInfo,
+) {
+    if spell.id == DEATH_STRIKE
+        && world
+            .entity_mut(caster)
+            .take::<PendingDeathStrikeHeal>()
+            .is_some()
+    {
+        let ctx = EffectCtx {
+            caster,
+            spell,
+            depth: 0,
+            dest: None,
+            chain_multiplier: 1.0,
+        };
         heal_death_strike(world, &ctx);
     }
 }
