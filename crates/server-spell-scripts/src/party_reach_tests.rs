@@ -5,6 +5,9 @@ use shared::components::Level;
 
 fn follower(entry: u32, class: u8) -> (crate::test_support::Harness, Entity) {
     let mut harness = crate::test_support::harness(Vec::new(), &[], class).unwrap();
+    harness
+        .app
+        .insert_resource(combat::test_data::world_data().clone());
     let full_store = crate::test_support::world_db()
         .unwrap()
         .spell_store()
