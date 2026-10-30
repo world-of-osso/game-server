@@ -16,6 +16,7 @@ const ECHOING_FURY: u32 = 1265855;
 const EXTERMINATE: u32 = 441416;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::DeclaredReach(declared_reach),
     SpellScriptHook::OwnsPolicyProc(|spell| spell == EXTERMINATE),
     SpellScriptHook::AfterElementalLaunch(after_launch),
     SpellScriptHook::AfterResolvedHits(after_hits),
@@ -24,6 +25,50 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::ResolvedDamage(stack_mark),
     SpellScriptHook::CriticalChance(wave_crit_chance),
 ];
+
+fn declared_reach(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+) -> combat::spell_cast::script_registry::ScriptReach {
+    use combat::spell_cast::script_registry::{DeclaredReach, ScriptReach, reach_source_selected};
+    let store = world.resource::<combat::spell_info::SpellStore>();
+    let wave =
+        matches!(spell.id, REAPERS_MARK | 435802) && reach_source_selected(world, caster, 439851);
+    let rupture =
+        matches!(spell.id, REAPERS_MARK | 436304) && reach_source_selected(world, caster, 437161);
+    if !wave && !rupture {
+        return ScriptReach::None;
+    }
+    let caster_radius = if wave {
+        store
+            .get(435802)
+            .and_then(|spell| spell.misc.as_ref())
+            .and_then(|misc| misc.range)
+            .expect("native Wave of Souls range")
+            .max_hostile
+    } else {
+        0.0
+    };
+    let target_radius = if rupture {
+        store
+            .get(439594)
+            .expect("native Soul Rupture")
+            .effects
+            .iter()
+            .find(|effect| effect.index == 0)
+            .expect("native Soul Rupture effect")
+            .radius[1]
+            .expect("native Soul Rupture radius")
+            .radius
+    } else {
+        0.0
+    };
+    ScriptReach::Area(DeclaredReach {
+        caster_radius,
+        target_radius,
+    })
+}
 
 fn register_mark(scripts: &mut auras::scripts::AuraScripts) {
     scripts.0.entry(434765).or_default().on_remove = Some(explode_mark);

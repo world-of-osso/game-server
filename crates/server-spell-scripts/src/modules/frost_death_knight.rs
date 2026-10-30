@@ -12,6 +12,7 @@ use combat::{
 use combat::spell_cast::script_registry::SpellScriptHook;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::DeclaredReach(declared_reach),
     SpellScriptHook::OwnsPolicyProc(owns_proc),
     SpellScriptHook::SnapshotsModifier(snapshots_modifier),
     SpellScriptHook::BeforeDamageSnapshot(convert_km_weapon_school),
@@ -42,6 +43,23 @@ const PILLAR: u32 = 51271;
 const RIME_BUFF: u32 = 59052;
 const FROSTBOUND_WILL: u32 = 1238680;
 const EMPOWER_RUNE_WEAPON: u32 = 47568;
+
+fn declared_reach(
+    _world: &World,
+    _caster: Entity,
+    spell: &SpellInfo,
+) -> combat::spell_cast::script_registry::ScriptReach {
+    if !matches!(spell.id, 279302 | 1265384) {
+        return Default::default();
+    }
+    let radius = spell
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .expect("native Fury radius")
+        .base_points;
+    combat::spell_cast::script_registry::ScriptReach::caster(radius)
+}
 
 #[derive(Component, Default)]
 struct KillingMachineAttempts(u32);
