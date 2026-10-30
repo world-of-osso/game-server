@@ -55,6 +55,66 @@ pub(super) fn source_packs(
         .collect()
 }
 
+pub(super) fn append_entrance_route(
+    packs: &mut Vec<Pack>,
+    edges: &mut Vec<Edge>,
+    entrance: Vec3,
+    opening: u32,
+    corners: Vec<Vec3>,
+) -> Result<u32, String> {
+    let destination = packs
+        .iter()
+        .find(|pack| pack.id == opening)
+        .ok_or("entrance destination missing from population")?
+        .point();
+    let mut next = packs
+        .iter()
+        .flat_map(|pack| std::iter::once(pack.id).chain(pack.spawns.iter().map(|spawn| spawn.guid)))
+        .max()
+        .unwrap_or(0);
+    next = next
+        .checked_add(1)
+        .ok_or("navigation waypoint identifiers exhausted")?;
+    let entrance_id = next;
+    packs.push(Pack {
+        id: entrance_id,
+        position: [entrance.x, entrance.z],
+        height: entrance.y,
+        spawns: Vec::new(),
+    });
+    let mut last = entrance_id;
+    let mut previous = entrance;
+    for point in corners.into_iter().chain([destination]) {
+        if point.distance_squared(previous) < 0.000001 && point != destination {
+            continue;
+        }
+        let node = if point == destination {
+            opening
+        } else {
+            next = next
+                .checked_add(1)
+                .ok_or("navigation waypoint identifiers exhausted")?;
+            packs.push(Pack {
+                id: next,
+                position: [point.x, point.z],
+                height: point.y,
+                spawns: Vec::new(),
+            });
+            next
+        };
+        if last != node {
+            edges.push(Edge {
+                from: last,
+                to: node,
+                yards: previous.distance(point),
+            });
+        }
+        previous = point;
+        last = node;
+    }
+    Ok(entrance_id)
+}
+
 fn root(roots: &BTreeMap<u32, u32>, mut id: u32) -> u32 {
     while roots[&id] != id {
         id = roots[&id];
@@ -178,6 +238,56 @@ pub(super) fn unreachable(
         .filter(|pack| !reached.contains(&pack.id))
         .map(|pack| pack.id)
         .collect()
+}
+
+#[test]
+fn entrance_route_preserves_native_corners_past_disconnected_nearest_pack() {
+    use super::super::Space;
+    use super::Graph;
+    let pack = |id, x, z| Pack {
+        id,
+        position: [x, z],
+        height: 0.0,
+        spawns: Vec::new(),
+    };
+    let entrance = Vec3::ZERO;
+    let destination = Vec3::new(10.0, 0.0, 0.0);
+    let corner = Vec3::new(5.0, 0.0, 5.0);
+    let mut packs = vec![pack(1, 10.0, 0.0), pack(2, 1.0, 0.0)];
+    let mut edges = Vec::new();
+    let entrance_pack = append_entrance_route(
+        &mut packs,
+        &mut edges,
+        entrance,
+        1,
+        vec![entrance, corner, destination],
+    )
+    .unwrap();
+    let unreachable = unreachable(&packs, &edges, &[], entrance_pack);
+    assert_eq!(unreachable, vec![2]);
+    let graph = Graph {
+        map_id: 2527,
+        entrance: [0.0, 0.0],
+        entrance_height: 0.0,
+        entrance_pack,
+        packs,
+        edges,
+        teleports: vec![],
+        transports: vec![],
+        unreachable,
+        route: vec![],
+        follower_difficulty: 0,
+        follower_boss_entries: vec![],
+        follower_boss_sources: BTreeMap::new(),
+        follower_boss_bits: BTreeMap::new(),
+        follower_encounter_actor_bits: BTreeMap::new(),
+    };
+    let route = Space(graph).route(entrance, destination).unwrap();
+    assert!(
+        route.contains(&corner),
+        "route must walk the queried corner: {route:?}"
+    );
+    assert_eq!(route.last(), Some(&destination));
 }
 
 #[test]

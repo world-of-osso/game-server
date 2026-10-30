@@ -191,9 +191,13 @@ fn extract(
         })
         .collect();
     nearest.sort_by(|a, b| a.0.total_cmp(&b.0).then(a.1.cmp(&b.1)));
-    let opening = nearest
+    let (opening, entrance_route) = nearest
         .into_iter()
-        .find_map(|(_, id, point)| complete_route(&mut nav, entrance, point).ok().map(|_| id))
+        .find_map(|(_, id, point)| {
+            complete_route(&mut nav, entrance, point)
+                .ok()
+                .map(|route| (id, route))
+        })
         .ok_or_else(|| format!("map{map} entrance cannot reach the population on navmesh"))?;
     let bosses: Vec<_> = source.bosses.iter().map(|(_, entry)| *entry).collect();
     let accessories = server::test_support::read_vehicle_accessories(&asset_root(), db)
@@ -219,13 +223,16 @@ fn extract(
         });
     }
     let (teleports, transports) = append_registered_transports(map, &mut packs, &registrations)?;
-    let edges = topology::connect_packs(&mut packs, |from, to| complete_route(&mut nav, from, to))?;
-    let unreachable = topology::unreachable(&packs, &edges, &teleports, opening);
+    let mut edges =
+        topology::connect_packs(&mut packs, |from, to| complete_route(&mut nav, from, to))?;
+    let entrance_pack =
+        topology::append_entrance_route(&mut packs, &mut edges, entrance, opening, entrance_route)?;
+    let unreachable = topology::unreachable(&packs, &edges, &teleports, entrance_pack);
     let graph = Graph {
         map_id: map,
         entrance: [entrance.x, entrance.z],
         entrance_height: entrance.y,
-        entrance_pack: opening,
+        entrance_pack,
         packs,
         edges,
         teleports,
