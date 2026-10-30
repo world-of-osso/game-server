@@ -1675,10 +1675,11 @@ fn windrunner_native_social_assistance_replays_groundskeeper_pull() {
         .within_cells(map, &caller_position, 10.0);
     for &helper in &helpers {
         println!(
-            "ASSIST_INPUT helper={} indexed={} los={} state={:?} flags={:?} faction={:?} display={:?}",
+            "ASSIST_INPUT helper={} indexed={} los={} eligible={} state={:?} flags={:?} faction={:?} display={:?}",
             helper.to_bits(),
             grid.contains(&helper),
             crate::line_of_sight::sees_in_world(app.world(), caller, helper),
+            crate::creature_assistance::can_assist(app.world(), helper, caller, target, true),
             app.world().get::<CreatureState>(helper),
             app.world().get::<UnitFlags>(helper).map(|f| f.0),
             app.world().get::<UnitFactionTemplate>(helper).map(|f| f.0),
@@ -1689,6 +1690,18 @@ fn windrunner_native_social_assistance_replays_groundskeeper_pull() {
     }
     let start = app.world().resource::<Time>().elapsed_secs_f64();
     attack_start(app.world_mut(), caller, target);
+    println!(
+        "ASSIST_CALL caller_state={:?} has_threat={} called={} caller_reference={} target_alive={}",
+        app.world().get::<CreatureState>(caller),
+        app.world().get::<ThreatTable>(caller).is_some(),
+        app.world()
+            .get::<crate::creature_assistance::AssistanceCalled>(caller)
+            .is_some(),
+        crate::combat_refs::has_active_reference_to(app.world(), caller, target),
+        app.world()
+            .get::<Health>(target)
+            .is_some_and(|health| health.current > 0.0)
+    );
     for &helper in &helpers {
         assert!(!crate::combat_refs::has_active_reference_to(
             app.world(),

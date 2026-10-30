@@ -91,7 +91,7 @@ fn valid_target(world: &World, assistant: Entity, target: Entity) -> bool {
         && templates.can_attack(actor, enemy)
 }
 
-fn can_assist(
+pub(crate) fn can_assist(
     world: &World,
     assistant: Entity,
     caller: Entity,
