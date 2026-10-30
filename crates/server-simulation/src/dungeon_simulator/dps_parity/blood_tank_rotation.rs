@@ -3382,6 +3382,7 @@ mod tests {
     fn boiling_point_increases_foreground_blood_boil_damage() {
         use shared::protocol::CombatLogKind;
         fn damage(empowered: bool) -> i32 {
+            let _seed = crate::random::seed_scope(70448);
             let mut run = super::super::prepare_registered_player(250, 1).unwrap();
             let actor = run.actor;
             let target = run.targets[0];
