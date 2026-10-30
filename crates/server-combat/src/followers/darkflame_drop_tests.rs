@@ -642,6 +642,15 @@ fn followers_retrace_owner_curve_around_unpulled_watcher() {
         Vec3::new(5331.647, 101.156, 3213.7322),
     ];
     let watcher_at = Vec3::new(5345.0, 101.115, 3180.0);
+    let watcher_floor = h
+        .app
+        .world_mut()
+        .resource_mut::<GroundMap>()
+        .ground_at(map_id, watcher_at);
+    assert!(
+        matches!(watcher_floor, GroundProbe::Supported(y) if (y - watcher_at.y).abs() < 1.0),
+        "watcher must stand on native ground: {watcher_floor:?}"
+    );
     h.app.world_mut().entity_mut(owner).insert((
         position(start),
         InMap::continent(map_id),
@@ -713,6 +722,7 @@ fn followers_retrace_owner_curve_around_unpulled_watcher() {
         owner_route.extend(points);
     }
     let mut owner_steps = 0;
+    let mut observed_unsafe_corridor = false;
     for leg in owner_route.windows(2) {
         let length = leg[0].distance(leg[1]);
         let steps = (length / 0.35).ceil() as usize;
@@ -736,7 +746,7 @@ fn followers_retrace_owner_curve_around_unpulled_watcher() {
             );
             h.app.world_mut().entity_mut(owner).insert(position(point));
             owner_steps += 1;
-            if owner_steps == 60 {
+            if owner_steps == 80 {
                 for &unit in &followers {
                     h.app
                         .world_mut()
@@ -748,6 +758,20 @@ fn followers_retrace_owner_curve_around_unpulled_watcher() {
             super::update_ai(h.app.world_mut());
             crate::navigation::drain_fixture(&mut h.app);
             h.advance(1);
+            if !observed_unsafe_corridor && owner_steps % 10 == 0 {
+                for (&unit, &radius) in followers.iter().zip(&radii) {
+                    let feet = h.app.world().get::<Position>(unit).unwrap();
+                    let from = Vec3::new(feet.x, feet.y, feet.z);
+                    if let Ok(path) = nav.complete_walk_path(from, point) {
+                        let mut route = vec![from];
+                        route.extend(path);
+                        observed_unsafe_corridor |= route.windows(2).any(|leg| {
+                            super::pull_route::segment_distance_squared(watcher_at, leg[0], leg[1])
+                                < radius * radius
+                        });
+                    }
+                }
+            }
             assert!(
                 !crate::creature_aggro::read_player_proximity_acquisition(
                     h.app.world_mut(),
@@ -770,6 +794,10 @@ fn followers_retrace_owner_curve_around_unpulled_watcher() {
             }
         }
     }
+    assert!(
+        observed_unsafe_corridor,
+        "a follower must encounter the unsafe direct corridor while the owner walks"
+    );
     for _ in 0..800 {
         super::update_ai(h.app.world_mut());
         crate::navigation::drain_fixture(&mut h.app);
@@ -795,7 +823,7 @@ fn followers_retrace_owner_curve_around_unpulled_watcher() {
     for unit in followers {
         let feet = point(*h.app.world().get::<Position>(unit).unwrap());
         assert!(
-            feet.distance(corners[2]) < 12.0,
+            feet.distance(corners[2]) < 8.0,
             "follower did not arrive: {feet:?}"
         );
     }
