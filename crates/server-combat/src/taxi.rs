@@ -337,6 +337,9 @@ fn process_activate_taxi(
                 }
             });
             let points = takeoff.network.flight_points(&route.nodes);
+            let rider = link.0;
+            commands
+                .queue(move |world: &mut World| crate::hunter_pet::unsummon_for_taxi(world, rider));
             commands.entity(link.0).insert((
                 TaxiFlight { points, next: 0 },
                 Mounted {
@@ -406,6 +409,7 @@ pub(crate) fn start_ruby_ferry(world: &mut World, player: Entity, npc: Entity) {
         return;
     }
     for rider in riders {
+        crate::hunter_pet::unsummon_for_taxi(world, rider);
         world.entity_mut(rider).insert((
             TaxiFlight {
                 points: points.clone(),
@@ -479,6 +483,9 @@ pub(crate) fn fly_taxis(
             }
             commands.entity(entity).queue(finish_flight);
             commands.queue(move |world: &mut World| fall_after_flight(world, entity));
+            commands.queue(move |world: &mut World| {
+                crate::hunter_pet::resummon_after_taxi(world, entity)
+            });
         }
     }
 }

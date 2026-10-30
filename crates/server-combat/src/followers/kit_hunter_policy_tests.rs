@@ -81,6 +81,132 @@ pub(super) fn prepare_native_duck(
 }
 
 #[test]
+fn ruby_taxi_temporarily_unsummons_and_restores_follower_pet() {
+    use shared::components::{MovementControl, Position, Rotation};
+    let (mut h, follower, old_pet) = prepare_native_duck(70);
+    let owner = h.caster;
+    let map = crate::maps::InMap {
+        map_id: 2521,
+        instance_id: 77,
+    };
+    let start = Position {
+        x: 1540.7935,
+        y: 131.9674,
+        z: 246.033,
+    };
+    for unit in [owner, follower, old_pet] {
+        h.app.world_mut().entity_mut(unit).insert((
+            map,
+            start,
+            Rotation {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+        ));
+    }
+    h.app
+        .world_mut()
+        .entity_mut(owner)
+        .insert(MovementControl::default());
+    let health = h.app.world().get::<Health>(old_pet).unwrap().max * 0.75;
+    h.app
+        .world_mut()
+        .get_mut::<Health>(old_pet)
+        .unwrap()
+        .current = health;
+    let db = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    h.app
+        .insert_resource(crate::taxi::load_taxi_network(&db).unwrap());
+    h.app
+        .add_systems(bevy::prelude::FixedUpdate, crate::taxi::fly_taxis);
+    h.app
+        .init_resource::<crate::scripted_ai::instance_script::InstanceScripts>();
+    h.app
+        .world_mut()
+        .resource_mut::<crate::scripted_ai::instance_script::InstanceScripts>()
+        .0
+        .insert(
+            map,
+            crate::scripted_ai::instance_script::InstanceScript {
+                name: "ruby",
+                bosses: vec![crate::scripted_ai::instance_script::BossInfo {
+                    state: crate::scripted_ai::instance_script::EncounterState::Done,
+                    encounter_id: 2609,
+                }],
+                boss_creatures: vec![],
+                handled_area_triggers: Default::default(),
+                data: Default::default(),
+                ramparts_sentry_deaths: 0,
+                ramparts_reset_delays: vec![],
+            },
+        );
+    let drake = h
+        .app
+        .world_mut()
+        .spawn((
+            Npc {
+                template_id: 194667,
+                name: "Radiant Drake".into(),
+            },
+            map,
+            start,
+        ))
+        .id();
+    crate::taxi::start_ruby_ferry(h.app.world_mut(), owner, drake);
+    assert!(
+        h.app
+            .world()
+            .get::<crate::taxi::TaxiFlight>(follower)
+            .is_some()
+    );
+    assert!(summoned_pet(h.app.world(), follower).is_none());
+    assert!(h.app.world().get_entity(old_pet).is_err());
+    assert_eq!(
+        h.app
+            .world()
+            .get::<PetStable>(follower)
+            .unwrap()
+            .stored
+            .current,
+        Some(0)
+    );
+    for _ in 0..1000 {
+        if h.app
+            .world()
+            .get::<crate::taxi::TaxiFlight>(follower)
+            .is_none()
+        {
+            break;
+        }
+        super::update_ai(h.app.world_mut());
+        h.advance(1);
+        if h.app
+            .world()
+            .get::<crate::taxi::TaxiFlight>(follower)
+            .is_some()
+        {
+            assert!(
+                summoned_pet(h.app.world(), follower).is_none(),
+                "no pet during flight"
+            );
+        }
+    }
+    let pet = summoned_pet(h.app.world(), follower).expect("pet restored after landing");
+    assert_ne!(pet, old_pet);
+    assert_eq!(
+        h.app.world().get::<Npc>(pet).unwrap().template_id,
+        NATIVE_DUCK
+    );
+    assert_eq!(h.app.world().get::<Health>(pet).unwrap().current, health);
+    assert_eq!(*h.app.world().get::<crate::maps::InMap>(pet).unwrap(), map);
+}
+
+#[test]
 fn hunter_follower_revives_its_dead_native_pet() {
     let (mut h, caster, pet) = prepare_native_duck(70);
     let max_health = h.app.world().get::<Health>(pet).unwrap().max;
