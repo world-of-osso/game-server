@@ -407,6 +407,34 @@ pub fn spawn_consecration(world: &mut World, caster: Entity, spell: &crate::spel
     spawn_ground_pulses(world, &ctx, &spell.effects[0]);
 }
 
+/// Apply SimC's precombat Consecration clock to the real spawned field.
+#[cfg(any(test, feature = "test-support"))]
+pub fn prepare_simc_precombat_consecration(
+    world: &mut World,
+    caster: Entity,
+    precombat_seconds: f64,
+) -> Result<(), String> {
+    // SimC76f8118 sc_paladin.cpp:492–512,579–591: delay the field by 1s,
+    // reduce its duration by precombat+1s and its cooldown by precombat.
+    let now = crate::auras::aura_now(world);
+    let entity = world
+        .query::<(Entity, &GroundPulses)>()
+        .iter(world)
+        .find(|(_, field)| field.caster == caster && field.root == CONSECRATION)
+        .map(|(entity, _)| entity)
+        .ok_or("SIMC_PRECOMBAT_CONSECRATION_FIELD_ABSENT")?;
+    let mut field = world.get_mut::<GroundPulses>(entity).unwrap();
+    field.expires_at -= precombat_seconds;
+    field.next_tick = now + 1.0;
+    let radius = field.radius;
+    let relation = field.relation;
+    let center = targets::position(world, entity).expect("ground pulse anchor");
+    let units = targets::area_units(world, caster, center, radius, relation, 0);
+    apply_consecration_targets(world, entity, caster, &units);
+    super::reduce_cooldown(world, caster, CONSECRATION, precombat_seconds);
+    Ok(())
+}
+
 /// SimC76f8118 sc_paladin.cpp5058–5060: the APL checks the owned active field, not position.
 #[cfg(any(test, feature = "test-support"))]
 pub fn has_active_consecration(world: &mut World, caster: Entity) -> bool {
@@ -695,23 +723,7 @@ fn cast_ground_pulse(world: &mut World, entity: Entity, pulses: &GroundPulses) {
         });
     }
     if pulses.root == CONSECRATION {
-        for &target in &plan[0].units {
-            crate::auras::apply_aura(
-                world,
-                &crate::auras::AuraApplication {
-                    caster: pulses.caster,
-                    target,
-                    spell_id: 204242,
-                    effect_mask: u32::MAX,
-                    source: crate::auras::AuraSource::Cast,
-                },
-            );
-            world
-                .get_mut::<ConsecrationTargets>(entity)
-                .unwrap()
-                .0
-                .insert(target);
-        }
+        apply_consecration_targets(world, entity, pulses.caster, &plan[0].units);
     }
     // Named damage/heal effect only; Earthquake reads E1 chance in its OnHit script.
     spell_cast::hit::remove_defended_targets(world, pulses.caster, &child, &mut plan);
@@ -719,6 +731,26 @@ fn cast_ground_pulse(world: &mut World, entity: Entity, pulses: &GroundPulses) {
         cast_fluttering_seedlings(world, pulses, center, plan[0].units.len());
     }
     spell_cast::missiles::launch(world, pulses.caster, &child, plan, pulses.depth);
+}
+
+fn apply_consecration_targets(world: &mut World, entity: Entity, caster: Entity, units: &[Entity]) {
+    for &target in units {
+        crate::auras::apply_aura(
+            world,
+            &crate::auras::AuraApplication {
+                caster,
+                target,
+                spell_id: 204242,
+                effect_mask: u32::MAX,
+                source: crate::auras::AuraSource::Cast,
+            },
+        );
+        world
+            .get_mut::<ConsecrationTargets>(entity)
+            .unwrap()
+            .0
+            .insert(target);
+    }
 }
 
 fn cast_fluttering_seedlings(

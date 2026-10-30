@@ -138,6 +138,75 @@ fn prepare_follower(
 
 #[test]
 #[ignore = "requires FOLLOWER_DPS_WORLD_DB and FOLLOWER_DPS_TANK_TRACE"]
+fn follower_tank_precombat_starts_consecration_on_simc_clock() {
+    let (mut app, actor, target, _) = prepare_follower(209057, 90, 2813);
+    app.world_mut()
+        .entity_mut(actor)
+        .insert(server::test_support::LiteralParityFixture);
+    for _ in 0..5 {
+        app.update();
+    }
+    let trace = std::env::var_os("FOLLOWER_DPS_TANK_TRACE").expect("tank trace");
+    super::follower_tank_precombat::execute(&mut app, actor, target, std::path::Path::new(&trace))
+        .unwrap();
+    assert!(crate::spell_cast::scripts::has_active_consecration(
+        app.world_mut(),
+        actor
+    ));
+    assert!(
+        crate::auras::has_aura(app.world(), target, 204242),
+        "precombat cast applies its target debuff"
+    );
+    let spell = app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(26573)
+        .unwrap();
+    let history = app
+        .world()
+        .get::<crate::spell_cast::SpellHistory>(actor)
+        .unwrap();
+    let now = crate::spell_cast::now(app.world());
+    assert!(!history.has_active_gcd(now));
+    let remaining = history.remaining_cooldown_ms(spell, now);
+    assert!(
+        (1500..=2200).contains(&remaining),
+        "precombat cooldown {remaining}ms"
+    );
+    crate::combat_refs::set_in_combat_with(app.world_mut(), actor, target);
+    let pulses = |app: &App| {
+        app.world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .filter(|event| {
+                event.source == Some(actor.to_bits())
+                    && event.target == Some(target.to_bits())
+                    && event.spell_id == Some(81297)
+                    && event.kind == CombatLogKind::Damage
+            })
+            .count()
+    };
+    for _ in 0..19 {
+        app.update();
+    }
+    assert_eq!(
+        pulses(&app),
+        0,
+        "precombat field cannot pulse before one second"
+    );
+    for _ in 0..4 {
+        app.update();
+    }
+    assert_eq!(
+        pulses(&app),
+        1,
+        "precombat field starts with one immediate pulse"
+    );
+}
+
+#[test]
+#[ignore = "requires FOLLOWER_DPS_WORLD_DB and FOLLOWER_DPS_TANK_TRACE"]
 fn follower_tank_replay_survives_lethal_hit_and_keeps_avoidance_procs() {
     use server::test_support::healer_intake::{Hit, HitKind};
     use shared::components::Health;
@@ -251,6 +320,13 @@ fn follower_dps_production_dummy() {
     let mut tank_scenario = if profile.role == shared::group::GroupRole::Tank {
         let trace = std::env::var_os("FOLLOWER_DPS_TANK_TRACE")
             .expect("tank measurements require a SimC tank dummy trace");
+        super::follower_tank_precombat::execute(
+            &mut app,
+            actor,
+            target,
+            std::path::Path::new(&trace),
+        )
+        .expect("execute SimC tank precombat");
         Some(
             super::follower_tank_scenario::TankScenario::read(
                 std::path::Path::new(&trace),
