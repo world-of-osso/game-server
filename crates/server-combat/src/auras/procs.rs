@@ -519,17 +519,7 @@ fn matches_hit_mask(world: &World, aura: &AuraInstance, mask: [u32; 2], event: &
         } else {
             0
         };
-    let reflect = aura
-        .effects
-        .iter()
-        .any(|effect| handlers::reflects(effect.aura_type));
-    let required = if native != 0 {
-        native
-    } else if reflect {
-        PROC_HIT_REFLECT
-    } else {
-        default
-    };
+    let required = if native != 0 { native } else { default };
     let additional =
         crate::spell_cast::script_registry::avoidance_proc_hit_mask(world, aura.spell_id)
             .unwrap_or(0);

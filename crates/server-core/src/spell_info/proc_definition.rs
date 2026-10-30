@@ -51,6 +51,7 @@ pub(super) fn load(conn: &Connection, spells: &mut [SpellInfo]) -> rusqlite::Res
         .collect::<rusqlite::Result<HashMap<u32, (u32, [u32; 4], u32)>>>()?;
     for spell in spells {
         let source = definition_source(spell, &explicit);
+        let generated_hit_mask = generated_hit_mask(spell);
         if source.is_some() {
             let options = spell.aura_options.get_or_insert_default();
             options.proc_definition_source = source;
@@ -59,7 +60,7 @@ pub(super) fn load(conn: &Connection, spells: &mut [SpellInfo]) -> rusqlite::Res
                 .map(|&(family, mask, _)| (family, mask));
             options.proc_hit_mask = explicit
                 .get(&spell.id)
-                .map_or(0, |&(_, _, hit_mask)| hit_mask);
+                .map_or(generated_hit_mask, |&(_, _, hit_mask)| hit_mask);
         } else if let Some(options) = spell.aura_options.as_mut() {
             // Stacks, charges and raw DB2 fields remain available to non-proc consumers.
             options.proc_definition_source = None;
@@ -67,6 +68,25 @@ pub(super) fn load(conn: &Connection, spells: &mut [SpellInfo]) -> rusqlite::Res
         }
     }
     Ok(())
+}
+
+/// TC SpellMgr.cpp1847–1868 assigns these generated proc masks before matching.
+fn generated_hit_mask(spell: &SpellInfo) -> u32 {
+    for effect in spell
+        .effects
+        .iter()
+        .filter(|effect| super::is_aura_effect(effect))
+    {
+        match effect.aura {
+            28 | 74 => return 0x800,                                         // reflect
+            52 => return 0x2,                                                // critical
+            51 => return 0x40,                                               // block
+            54 => return if effect.base_points <= -100.0 { 0x4 } else { 0 }, // miss
+            42 | 231 => break, // trigger-spell effect ends TC's scan
+            _ => {}
+        }
+    }
+    0
 }
 
 fn definition_source(
