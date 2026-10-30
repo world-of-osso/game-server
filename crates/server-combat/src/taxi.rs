@@ -402,7 +402,7 @@ pub(crate) fn start_ruby_ferry(world: &mut World, player: Entity, npc: Entity) {
         player,
         map,
         RUBY_FERRY_PATH,
-        RADIANT_DRAKE_DISPLAY,
+        Some(RADIANT_DRAKE_DISPLAY),
         false,
     );
 }
@@ -441,7 +441,7 @@ pub(crate) fn start_darkflame_cart(world: &mut World, player: Entity, npc: Entit
     {
         return;
     }
-    start_scripted_party_flight(world, player, map, DARKFLAME_CART_PATH, CART_DISPLAY, false);
+    start_scripted_party_flight(world, player, map, DARKFLAME_CART_PATH, Some(CART_DISPLAY), false);
 }
 
 pub(crate) fn start_windrunner_flight(
@@ -450,7 +450,7 @@ pub(crate) fn start_windrunner_flight(
     map: crate::maps::InMap,
     path: u32,
 ) {
-    start_scripted_party_flight(world, player, map, path, 0, true);
+    start_scripted_party_flight(world, player, map, path, None, true);
 }
 
 fn start_scripted_party_flight(
@@ -458,7 +458,7 @@ fn start_scripted_party_flight(
     player: Entity,
     map: crate::maps::InMap,
     path: u32,
-    display: u32,
+    display: Option<u32>,
     carry_pets: bool,
 ) {
     let Some(mut points) = world.resource::<TaxiNetwork>().scripted_path(path) else {
@@ -498,16 +498,16 @@ fn start_scripted_party_flight(
         if !carry_pets {
             crate::hunter_pet::unsummon_for_taxi(world, rider);
         }
-        world.entity_mut(rider).insert((
-            TaxiFlight {
-                points: points.clone(),
-                next: 0,
-            },
-            Mounted {
+        world.entity_mut(rider).insert(TaxiFlight {
+            points: points.clone(),
+            next: 0,
+        });
+        if let Some(display) = display {
+            world.entity_mut(rider).insert(Mounted {
                 mount_display_id: display,
                 ..Default::default()
-            },
-        ));
+            });
+        }
         if path == DARKFLAME_CART_PATH {
             world
                 .entity_mut(rider)

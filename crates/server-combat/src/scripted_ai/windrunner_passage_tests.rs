@@ -170,6 +170,12 @@ fn check_passage(passage: &Passage) {
             .get::<crate::taxi::TaxiFlight>(unit)
             .expect("party member boards");
         assert_eq!(flight.points, expected);
+        assert!(
+            h.app
+                .world()
+                .get::<shared::components::Mounted>(unit)
+                .is_none()
+        );
         assert_eq!(*h.app.world().get::<InMap>(unit).unwrap(), copy);
     }
     assert!(
