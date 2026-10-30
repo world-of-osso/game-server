@@ -1337,12 +1337,16 @@ fn record_swing(
     };
     mark_replication_changed(world.get_resource::<ReplicationDirtyQueue>(), target_entity);
     let landed = !outcome.immune && !outcome.kind.avoided();
-    if !outcome.immune {
-        let hit_mask = match outcome.kind {
-            MeleeOutcome::Miss => procs::PROC_HIT_MISS,
-            MeleeOutcome::Dodge => procs::PROC_HIT_DODGE,
-            MeleeOutcome::Parry => procs::PROC_HIT_PARRY,
-            _ => 0,
+    {
+        let hit_mask = if outcome.immune {
+            procs::PROC_HIT_IMMUNE
+        } else {
+            match outcome.kind {
+                MeleeOutcome::Miss => procs::PROC_HIT_MISS,
+                MeleeOutcome::Dodge => procs::PROC_HIT_DODGE,
+                MeleeOutcome::Parry => procs::PROC_HIT_PARRY,
+                _ => 0,
+            }
         };
         if hit_mask != 0 {
             procs::push_event(
