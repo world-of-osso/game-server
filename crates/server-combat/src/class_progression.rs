@@ -166,7 +166,6 @@ impl TraitLoadout {
         crate::trait_config::selected_sub_tree(&class.traits, &self.entries)
     }
 
-    #[cfg(any(test, feature = "test-support"))]
     pub fn source_config(&self) -> (&[ConfigEntry], &[(u32, i32)]) {
         (&self.entries, &self.unspent)
     }

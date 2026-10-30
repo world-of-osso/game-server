@@ -900,7 +900,6 @@ fn modified_regen_rates(
     }
 }
 
-#[cfg(any(test, feature = "test-support"))]
 fn unit_power_regen_enabled(world: &World, unit: Entity) -> bool {
     read_creature_power_regeneration(
         world.get::<Npc>(unit),
@@ -912,7 +911,6 @@ fn unit_power_regen_enabled(world: &World, unit: Entity) -> bool {
         .is_some_and(|death| death.state != shared::death::DeathState::Alive)
 }
 
-#[cfg(any(test, feature = "test-support"))]
 fn read_regen_phase(world: &World, unit: Entity, pools: &PowerPools) -> (bool, u32) {
     let in_combat = world
         .get::<CombatStatus>(unit)
