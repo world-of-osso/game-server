@@ -1,0 +1,26 @@
+[
+  {
+    "map_id": 2662,
+    "creature_entry": 213937,
+    "encounter_id": 2839,
+    "bit": 2,
+    "journal_encounter_id": 2593,
+    "journal_creature_id": 5658,
+    "display_id": 118404,
+    "complete_at_health_pct": 59.5,
+    "policy": "ENCOUNTER_END_AT_HEALTH_THRESHOLD_LOG_CORRELATED",
+    "evidence": "LittleWigs 2777a9d WarWithin/TheDawnbreaker/Rashanan.lua VerifyEnable; WCL x3HzDRn6yVjqCbt8 fight7 pull12 and NW7zAgkTDbyqKZBf fight1 pull13"
+  },
+  {
+    "map_id": 2993,
+    "creature_entry": 259447,
+    "encounter_id": 3458,
+    "bit": 2,
+    "journal_encounter_id": 2880,
+    "journal_creature_id": 6218,
+    "display_id": 145435,
+    "complete_at_health_pct": 0.0,
+    "policy": "ENCOUNTER_END_ON_LETHAL_DAMAGE_LOG_CORRELATED",
+    "evidence": "WCL JpHdnbhYD8ZFWvma fight1 pull10, z1C2HFkf6VpGqWZD fight1 pull9, MzD8pFb9YaW6fA1K fight15 pull9; lethal trigger inferred"
+  }
+]

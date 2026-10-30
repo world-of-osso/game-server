@@ -5,6 +5,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 from contextlib import closing
 from pathlib import Path
 
@@ -38,6 +39,29 @@ def blood_furnace_world():
 
 
 class DeriveBindingsTest(unittest.TestCase):
+    def test_rebuild_preserves_curated_living_completion_rows(self):
+        encounters = [journal_row(555, 1922), journal_row(2593, 2839), journal_row(2880, 3458)]
+        actors = [actor_row(1132, 555, 18369), actor_row(5658, 2593, 118404),
+                  actor_row(6218, 2880, 145435)]
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            database = root / 'world.sqlite'
+            with closing(blood_furnace_world()) as source, closing(sqlite3.connect(database)) as target:
+                source.backup(target)
+                target.executescript('''INSERT INTO map VALUES(2662,1),(2993,1);
+                    INSERT INTO dungeon_encounter VALUES(2839,2662,2,"Rashanan"),(3458,2993,2,"Zuljan");
+                    INSERT INTO tdb_creature_template_model VALUES(213937,118404),(259447,145435);''')
+            output, report = root / 'bindings.sql', root / 'report.json'
+            for _ in range(2):
+                with patch('raid_encounters.read_journal', side_effect=[encounters, actors]):
+                    prepare(database, root / 'journal.db2', root / 'actors.db2', output, report, 'test')
+                with closing(sqlite3.connect(':memory:')) as rebuilt:
+                    rebuilt.executescript(output.read_text())
+                    self.assertEqual(
+                        rebuilt.execute('SELECT map_id,creature_entry,complete_at_health_pct FROM raid_encounter_creature WHERE complete_at_health_pct IS NOT NULL ORDER BY map_id').fetchall(),
+                        [(2662, 213937, 59.5), (2993, 259447, 0.0)],
+                    )
+
     def test_unjoinable_journal_encounter_is_a_named_gap(self):
         with closing(blood_furnace_world()) as conn:
             bindings, gaps = derive_bindings(
