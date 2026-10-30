@@ -378,8 +378,54 @@ pub(crate) fn start_ruby_ferry(world: &mut World, player: Entity, npc: Entity) {
     {
         return;
     }
-    let Some(points) = world.resource::<TaxiNetwork>().scripted_path(RUBY_PATH) else {
-        error!("Ruby ferry TaxiPath {RUBY_PATH} is unavailable");
+    start_scripted_party_flight(world, player, map, RUBY_PATH, RADIANT_DRAKE_DISPLAY);
+}
+
+/// DARKFLAME_CART_BOARDING_LOG_CORRELATED: the point is TaxiPath9458's first
+/// node; WCL WBYDm1N6JTZzCFnd fight3 pull14 shows the party on the same path
+/// using Throw Dynamite423374. The exact boarding trigger is unsourced.
+pub(crate) fn start_darkflame_cart(world: &mut World, player: Entity, npc: Entity) {
+    const MAP: u32 = 2651;
+    const PATH: u32 = 9458;
+    const CART_DISPLAY: u32 = 118139;
+    let Some(map) = world.get::<crate::maps::InMap>(player).copied() else {
+        return;
+    };
+    if map.map_id != MAP || world.get::<crate::maps::InMap>(npc) != Some(&map) {
+        return;
+    }
+    let encounter = crate::scripted_ai::instance_script::boss_id_for_encounter(world, map, 2787);
+    if encounter.and_then(|id| crate::scripted_ai::instance_script::get_boss_state(world, map, id))
+        != Some(crate::scripted_ai::instance_script::EncounterState::Done)
+    {
+        return;
+    }
+    let Some(points) = world.resource::<TaxiNetwork>().scripted_path(PATH) else {
+        error!("Darkflame cart TaxiPath {PATH} is unavailable");
+        return;
+    };
+    let Some(position) = world.get::<Position>(npc) else {
+        return;
+    };
+    let npc_position = Vec3::new(position.x, position.y, position.z);
+    if points
+        .first()
+        .is_none_or(|first| first.distance(npc_position) > 1.0)
+    {
+        return;
+    }
+    start_scripted_party_flight(world, player, map, PATH, CART_DISPLAY);
+}
+
+fn start_scripted_party_flight(
+    world: &mut World,
+    player: Entity,
+    map: crate::maps::InMap,
+    path: u32,
+    display: u32,
+) {
+    let Some(points) = world.resource::<TaxiNetwork>().scripted_path(path) else {
+        error!("Scripted party TaxiPath {path} is unavailable");
         return;
     };
     let mut riders = vec![player];
@@ -397,7 +443,7 @@ pub(crate) fn start_ruby_ferry(world: &mut World, player: Entity, npc: Entity) {
             || world.get::<Position>(rider).is_none()
             || world.get::<Rotation>(rider).is_none()
     }) {
-        error!("Ruby ferry party contains a rider who cannot start flight");
+        error!("Scripted TaxiPath {path} party contains a rider who cannot start flight");
         return;
     }
     for rider in riders {
@@ -407,7 +453,7 @@ pub(crate) fn start_ruby_ferry(world: &mut World, player: Entity, npc: Entity) {
                 next: 0,
             },
             Mounted {
-                mount_display_id: RADIANT_DRAKE_DISPLAY,
+                mount_display_id: display,
                 ..Default::default()
             },
         ));

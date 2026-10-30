@@ -152,6 +152,153 @@ fn ruby_ferry_click_flies_owner_and_follower_on_real_path() {
     }
 }
 
+#[test]
+fn darkflame_cart_click_carries_owner_and_follower_on_native_path() {
+    let mut h = harness().expect("real world database");
+    let map = crate::maps::InMap {
+        map_id: 2651,
+        instance_id: 77,
+    };
+    let (x, y, z, faction, flags): (f32, f32, f32, u32, u32) = h.conn.query_row(
+        "SELECT c.position_x,c.position_y,c.position_z,t.faction,t.npcflag FROM content_creature c JOIN content_creature_template t ON t.entry=c.id1 WHERE c.guid=63651999 AND c.id1=209439", [],
+        |row| Ok((row.get(0)?,row.get(1)?,row.get(2)?,row.get(3)?,row.get(4)?)),
+    ).unwrap();
+    let start = bevy((x, y, z));
+    h.app
+        .world_mut()
+        .entity_mut(h.player)
+        .insert((map, start, MovementControl::default()));
+    let npc = h
+        .app
+        .world_mut()
+        .spawn((
+            Npc {
+                template_id: 209439,
+                name: "Creaky Mine Cart".into(),
+            },
+            NpcFlags::from_azerothcore(flags),
+            map,
+            start,
+            Health {
+                current: 100.0,
+                max: 100.0,
+            },
+            UnitFactionTemplate(faction),
+        ))
+        .id();
+    let follower = h
+        .app
+        .world_mut()
+        .spawn((
+            crate::followers::Follower {
+                owner: h.player,
+                profile: crate::followers::Profile {
+                    entry: 209057,
+                    name: "Captain Garrick".into(),
+                    class_id: 2,
+                    spec_id: 66,
+                    role: shared::group::GroupRole::Tank,
+                    attack_spell: 0,
+                    cooldown_spell: 0,
+                    heal_spell: 0,
+                    taunt_spell: 0,
+                    form_spell: 0,
+                    melee: true,
+                },
+            },
+            map,
+            start,
+            Rotation {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+        ))
+        .id();
+    let instance = crate::scripted_ai::instance_script::InstanceScript {
+        name: "darkflame",
+        bosses: vec![crate::scripted_ai::instance_script::BossInfo {
+            state: crate::scripted_ai::instance_script::EncounterState::NotStarted,
+            encounter_id: 2787,
+        }],
+        boss_creatures: vec![],
+        handled_area_triggers: Default::default(),
+        data: Default::default(),
+        ramparts_sentry_deaths: 0,
+        ramparts_reset_delays: vec![],
+    };
+    h.app
+        .init_resource::<crate::scripted_ai::instance_script::InstanceScripts>();
+    h.app
+        .world_mut()
+        .resource_mut::<crate::scripted_ai::instance_script::InstanceScripts>()
+        .0
+        .insert(map, instance);
+    h.send::<_, InteractionChannel>(InteractNpc { npc: npc.to_bits() });
+    assert!(
+        h.app.world().get::<TaxiFlight>(h.player).is_none(),
+        "Candle King must be done"
+    );
+    h.app
+        .world_mut()
+        .resource_mut::<crate::scripted_ai::instance_script::InstanceScripts>()
+        .0
+        .get_mut(&map)
+        .unwrap()
+        .bosses[0]
+        .state = crate::scripted_ai::instance_script::EncounterState::Done;
+    h.send::<_, InteractionChannel>(InteractNpc { npc: npc.to_bits() });
+    for entity in [h.player, follower] {
+        assert_eq!(
+            h.app
+                .world()
+                .get::<Mounted>(entity)
+                .unwrap()
+                .mount_display_id,
+            118139
+        );
+        assert!(h.app.world().get::<TaxiFlight>(entity).is_some());
+    }
+    let path: Vec<Vec3> = h
+        .conn
+        .prepare(
+            "SELECT Loc_0,Loc_1,Loc_2 FROM taxi_path_node WHERE PathID=9458 ORDER BY NodeIndex",
+        )
+        .unwrap()
+        .query_map([], |row| Ok(bevy((row.get(0)?, row.get(1)?, row.get(2)?))))
+        .unwrap()
+        .map(|row| {
+            let p = row.unwrap();
+            Vec3::new(p.x, p.y, p.z)
+        })
+        .collect();
+    assert_eq!(path.len(), 32);
+    let mut observed = Vec::new();
+    for _ in 0..2000 {
+        let position = h.app.world().get::<Position>(h.player).unwrap();
+        observed.push(Vec3::new(position.x, position.y, position.z));
+        if h.app.world().get::<TaxiFlight>(h.player).is_none()
+            && h.app.world().get::<TaxiFlight>(follower).is_none()
+        {
+            break;
+        }
+        h.app.update();
+    }
+    for point in &path {
+        assert!(
+            observed.iter().any(|sample| sample.distance(*point) < 2.0),
+            "flight missed source path node {point:?}"
+        );
+    }
+    let endpoint = path.last().unwrap();
+    for entity in [h.player, follower] {
+        assert!(h.app.world().get::<TaxiFlight>(entity).is_none());
+        assert!(h.app.world().get::<Mounted>(entity).is_none());
+        let p = h.app.world().get::<Position>(entity).unwrap();
+        assert!(Vec3::new(p.x, p.y, p.z).distance(*endpoint) < 0.001);
+    }
+}
+
 const HUMAN_TEMPLATE: u32 = 1;
 const DUNGAR_LONGDRINK: u32 = 352;
 /// Dungar's spawn (guid 79658).

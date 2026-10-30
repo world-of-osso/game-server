@@ -34,9 +34,16 @@ pub(crate) fn load_spellclick_catalog(conn: &Connection) -> rusqlite::Result<Spe
 }
 
 pub(super) fn cast_spellclick(world: &mut World, player: Entity, npc: Entity, entry: u32) {
-    if entry == 194667 {
-        crate::taxi::start_ruby_ferry(world, player, npc);
-        return;
+    match entry {
+        194667 => {
+            crate::taxi::start_ruby_ferry(world, player, npc);
+            return;
+        }
+        209439 => {
+            crate::taxi::start_darkflame_cart(world, player, npc);
+            return;
+        }
+        _ => {}
     }
     let spells = world
         .resource::<SpellClickCatalog>()
