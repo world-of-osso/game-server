@@ -581,7 +581,11 @@ fn trigger_burnout(world: &mut World, caster: Entity) {
         .clone();
     // sc_mage.cpp2523–2537: the bank is already resolved; Burnout's
     // fixed background hit excludes source and target multipliers.
-    spell.misc.as_mut().expect("Burnout spell attributes").attributes[4] |= 0x100;
+    spell
+        .misc
+        .as_mut()
+        .expect("Burnout spell attributes")
+        .attributes[4] |= 0x100;
     let ctx = EffectCtx {
         caster,
         spell: &spell,

@@ -1130,10 +1130,18 @@ fn fire_burnout_discharges_only_owned_ignite_when_combustion_ends() {
             .unwrap()
             .crit_pct = 0.0;
         crate::spell_cast::cast_triggered_with_effect0_amount(
-            run.app.world_mut(), actor, 12654, Some(target), 1, 1000.0,
+            run.app.world_mut(),
+            actor,
+            12654,
+            Some(target),
+            1,
+            1000.0,
         );
         let bank = crate::auras::owned_ignite_bank(run.app.world(), actor, target);
-        assert!(bank > 0.0, "the owned Ignite bank must exist before Combustion ends");
+        assert!(
+            bank > 0.0,
+            "the owned Ignite bank must exist before Combustion ends"
+        );
         crate::auras::set_owned_duration(run.app.world_mut(), actor, actor, 190319, 100);
         for _ in 0..10 {
             run.app.update();
@@ -1156,7 +1164,8 @@ fn fire_burnout_discharges_only_owned_ignite_when_combustion_ends() {
             let expected = bank * 0.75;
             assert!(
                 (f64::from(hits[0].amount) - expected).abs() < expected * 0.08,
-                "Burnout must deal 75% of the Ignite bank: bank {bank}, damage {}", hits[0].amount
+                "Burnout must deal 75% of the Ignite bank: bank {bank}, damage {}",
+                hits[0].amount
             );
         }
     }
