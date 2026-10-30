@@ -85,6 +85,8 @@ All six tanks were rerun on one integrated tree, with 300-second traces, no exte
 
 The current sample reverses Vengeance and Warrior; the 0.25-step separation is not reliable with ten seeds. Blood's 3.75 result is exactly 5/10. All tanks survived 10/10 at 1×. Effective self-healing is limited by missing health, so net damage is not a ranking of surviving tanks.
 
+Against finite-health, no-healer, no-raid-buff SimC single-fight runs using the same scales and seeds, the survival scales are 66 **1.25×**, 73 **3.00×**, 104 **1.00×**, 250 **3.50×**, 268 **3.50×**, and 581 **3.75×**. This uses dungeon armor coefficient 4,531.03 and level 92, disables Paladin fake Solidarity, selects night racial for 104 and 581, and corrects SimC's extra Guardian absorb multipliers. Guardian SimC still sends Lunar Beam healing to the dummy rather than self. At the first failing step, 66 has 1/10 survivors at 1.50×; 73 has 3/10 at 3.25×. Individual runs are in `game-engine/data/diagnostics/healer-tank-replay/simc-solo-unbuffed-finite-dungeon-single-grid/`. These independently sampled results are not general class rankings.
+
 The trees differ in multiple ways. Vengeance includes trace-selected Touch of Elune and shared replay scheduling changes; Blood includes Rune Weapon/Hemostasis, Boiling Point and Icy Talons changes; Guardian includes Galactic Guardian, Keeper haste, Touch of Elune and Thrash modifiers; Paladin includes Sacred Weapon target and callback changes. Warrior and Brewmaster include shared scheduling and other integrated changes. These changes are potential contributors, not established causes of a particular grid shift: no isolated counterfactual was run for this ranking.
 
 ### Earlier pressure grid results
