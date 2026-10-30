@@ -57,7 +57,7 @@ const DARKFLAME_CART_SPEED: f32 = 36.7;
 const DARKFLAME_CART_LANDING: Vec3 = Vec3::new(543.72, 87.4, 69.77);
 
 #[derive(Component)]
-struct ScriptedTaxiSpeed(f32);
+pub(crate) struct ScriptedTaxiSpeed(f32);
 
 /// A flight in progress: Bevy-space points still to fly through.
 #[derive(Component, Debug, Clone, PartialEq)]
