@@ -77,7 +77,7 @@ incremental = true
 shared = { path = "../shared-protocol" }
 
 [patch.crates-io]
-# Modern clang/CMake compatibility; algorithms remain pinned to 1.0.3 source.
+# Clang/CMake compatibility and Recast adjacency index fix; see vendor/recastnavigation-sys/UPSTREAM.md.
 recastnavigation-sys = { path = "vendor/recastnavigation-sys" }
 bevy_replicon = { path = "vendor/bevy_replicon" }
 # Per-client server disconnect; see ../shared-protocol/vendor/lightyear_netcode/UPSTREAM.md.

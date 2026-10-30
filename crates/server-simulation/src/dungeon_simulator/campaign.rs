@@ -274,6 +274,59 @@ fn unattackable_objective_is_approached_using_its_live_position() {
 }
 
 #[test]
+fn relocated_attackable_objective_uses_live_position() {
+    let mut run = spawn_run(1, &mut None).unwrap();
+    let boss = run.actors[&20375720];
+    let step = run
+        .graph
+        .route
+        .iter()
+        .find(|step| step.pack == 20375720)
+        .unwrap()
+        .clone();
+    run.graph.route = vec![step];
+    let at = *run.app.world().get::<Position>(boss).unwrap();
+    let moved = Position {
+        x: at.x + 2.0,
+        ..at
+    };
+    run.app.world_mut().entity_mut(boss).insert(moved);
+    run.control().unwrap();
+    assert_eq!(
+        run.app
+            .world()
+            .get::<MoveIntent>(run.party.owner)
+            .unwrap()
+            .0,
+        Vec3::new(moved.x, moved.y, moved.z)
+    );
+}
+
+#[test]
+#[ignore = "requires extracted Darkflame follower graph"]
+fn darkflame_withheld_darkness_does_not_abort_initialization() {
+    let mut run = spawn_run(1, &mut None).unwrap();
+    assert_eq!(run.graph.map_id, 2651);
+    assert!(!run.actors.contains_key(&63651001));
+    let map = *run
+        .app
+        .world()
+        .get::<crate::maps::InMap>(run.party.owner)
+        .unwrap();
+    assert!(crate::scripted_ai::instance_script::set_boss_state(
+        run.app.world_mut(),
+        map,
+        0,
+        crate::scripted_ai::instance_script::EncounterState::Done,
+    ));
+    run.refresh_population();
+    let darkness = run.actors[&63651001];
+    let capture = run.app.world().resource::<super::healer_intake::Capture>();
+    assert_eq!(capture.sources[&darkness].0, 63651001);
+    assert!(capture.source_snapshots.contains_key(&63651001));
+}
+
+#[test]
 #[ignore = "requires extracted Uldaman follower graph"]
 fn completed_dwarf_encounter_is_skipped_even_if_olaf_is_alive() {
     let mut run = spawn_run(1, &mut None).unwrap();
@@ -1713,6 +1766,14 @@ fn spawn_run(seed: u64, catalogs: &mut Option<super::catalogs::Catalogs>) -> Res
         .iter()
         .flat_map(|pack| &pack.spawns)
         .filter(|spawn| !actors.contains_key(&spawn.guid))
+        .filter(|spawn| {
+            !super::graph::corridor_inputs::source_is_withheld(
+                app.world().resource::<crate::world_data::WorldData>(),
+                copy,
+                graph.difficulty_id(),
+                spawn.guid,
+            )
+        })
         .map(|spawn| spawn.guid)
         .collect();
     if !missing.is_empty() {
@@ -1967,16 +2028,30 @@ impl Run {
         false
     }
 
-    fn control(&mut self) -> Result<(), String> {
+    fn refresh_population(&mut self) {
         if let Some(copy) = self
             .app
             .world()
             .get::<crate::maps::InMap>(self.party.owner)
             .copied()
         {
-            self.actors
-                .extend(runtime::live_population(self.app.world_mut(), copy));
+            let live = runtime::live_population(self.app.world_mut(), copy);
+            let changed = live
+                .iter()
+                .any(|(guid, actor)| self.actors.get(guid) != Some(actor));
+            self.actors.extend(live);
+            if changed {
+                self.healer_metrics.register_sources(
+                    self.app.world_mut(),
+                    &self.graph,
+                    &self.actors,
+                );
+            }
         }
+    }
+
+    fn control(&mut self) -> Result<(), String> {
+        self.refresh_population();
         if server::test_support::transport::in_progress(self.app.world(), self.party.owner) {
             return Ok(());
         }
@@ -2067,11 +2142,18 @@ impl Run {
         }
         self.waiting_objective = None;
         if from.distance(to) > range {
-            let approach = if self.actors.get(&pack_id) == Some(&target) {
-                Vec3::from_array(step.anchor)
-            } else {
-                to
-            };
+            let pack = self
+                .graph
+                .packs
+                .iter()
+                .find(|pack| pack.id == pack_id)
+                .unwrap();
+            let approach =
+                if self.actors.get(&pack_id) == Some(&target) && pack.point().distance(to) <= 1.0 {
+                    Vec3::from_array(step.anchor)
+                } else {
+                    to
+                };
             self.app
                 .world_mut()
                 .entity_mut(self.party.owner)

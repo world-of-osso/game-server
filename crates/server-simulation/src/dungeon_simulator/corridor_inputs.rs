@@ -2,6 +2,29 @@
 use super::super::{diagnostics, runtime};
 use super::*;
 
+pub(crate) fn source_is_withheld(
+    data: &crate::world_data::WorldData,
+    copy: crate::maps::InMap,
+    difficulty_id: u32,
+    guid: u32,
+) -> bool {
+    let Some(source) = data.spawns.iter().find(|spawn| spawn.guid == guid) else {
+        return false;
+    };
+    let withheld = data
+        .script_spawn_groups
+        .values()
+        .flatten()
+        .copied()
+        .collect();
+    let content = crate::zones::MapContent {
+        map: copy,
+        difficulty_id,
+        dead_bosses: Vec::new(),
+    };
+    crate::zones::script_withholds_spawn(&withheld, &content, source)
+}
+
 #[test]
 #[ignore = "explicit native corridor-input capture; select map/level in environment"]
 fn freeze_native_corridor_inputs() {
@@ -67,17 +90,6 @@ fn freeze_native_corridor_inputs() {
         .filter_map(|source| source["guid"].as_u64().map(|guid| guid as u32))
         .collect();
     let data = app.world().resource::<crate::world_data::WorldData>();
-    let withheld = data
-        .script_spawn_groups
-        .values()
-        .flatten()
-        .copied()
-        .collect();
-    let content = crate::zones::MapContent {
-        map: copy,
-        difficulty_id: graph.difficulty_id(),
-        dead_bosses: Vec::new(),
-    };
     let mut deferred = Vec::new();
     for spawn in graph
         .packs
@@ -85,13 +97,8 @@ fn freeze_native_corridor_inputs() {
         .flat_map(|pack| &pack.spawns)
         .filter(|spawn| !present.contains(&spawn.guid))
     {
-        let actual = data
-            .spawns
-            .iter()
-            .find(|row| row.guid == spawn.guid)
-            .expect("graph source missing from native catalog");
         assert!(
-            crate::zones::script_withholds_spawn(&withheld, &content, actual),
+            source_is_withheld(data, copy, graph.difficulty_id(), spawn.guid),
             "missing source{} is not script-withheld",
             spawn.guid
         );

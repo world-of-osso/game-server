@@ -81,9 +81,11 @@ pub(super) fn start(
         .packs
         .iter()
         .flat_map(|pack| {
-            pack.spawns
-                .iter()
-                .map(|spawn| (actors[&spawn.guid], (spawn.guid, pack.id)))
+            pack.spawns.iter().filter_map(|spawn| {
+                actors
+                    .get(&spawn.guid)
+                    .map(|actor| (*actor, (spawn.guid, pack.id)))
+            })
         })
         .collect();
     let start_tick = super::healer_intake::tick(world);
@@ -105,7 +107,7 @@ pub(super) fn start(
         .flat_map(|pack| {
             pack.spawns
                 .iter()
-                .map(|spawn| (actors[&spawn.guid], pack.id))
+                .filter_map(|spawn| actors.get(&spawn.guid).map(|actor| (*actor, pack.id)))
         })
         .collect();
     let packs = graph
@@ -115,7 +117,7 @@ pub(super) fn start(
             let living = pack
                 .spawns
                 .iter()
-                .map(|spawn| actors[&spawn.guid])
+                .filter_map(|spawn| actors.get(&spawn.guid).copied())
                 .collect();
             (
                 pack.id,
@@ -203,6 +205,48 @@ fn available_periodic_heals(world: &World, healer: Entity) -> BTreeMap<u32, f64>
 }
 
 impl Recorder {
+    pub fn register_sources(
+        &mut self,
+        world: &mut World,
+        graph: &Graph,
+        actors: &BTreeMap<u32, Entity>,
+    ) {
+        let mut added = BTreeMap::new();
+        for pack in &graph.packs {
+            for spawn in &pack.spawns {
+                let Some(&actor) = actors.get(&spawn.guid) else {
+                    continue;
+                };
+                if self.actor_packs.contains_key(&actor) {
+                    continue;
+                }
+                self.actor_packs.insert(actor, pack.id);
+                self.packs
+                    .get_mut(&pack.id)
+                    .expect("source pack")
+                    .living
+                    .insert(actor);
+                added.insert(spawn.guid, (actor, pack.id));
+            }
+        }
+        if added.is_empty() {
+            return;
+        }
+        let snapshot_actors = added
+            .iter()
+            .map(|(&guid, &(actor, _))| (guid, actor))
+            .collect();
+        let snapshots = super::healer_intake::snapshot_sources(world, &snapshot_actors);
+        let mut capture = world.resource_mut::<super::healer_intake::Capture>();
+        for (guid, (actor, pack)) in added {
+            capture.sources.insert(actor, (guid, pack));
+        }
+        match snapshots {
+            Ok(sources) => capture.source_snapshots.extend(sources),
+            Err(gap) => capture.gaps.push(gap),
+        }
+    }
+
     /// Called once after each actual app update, never by the route controller's decisions.
     pub fn observe_frame(&mut self, world: &World) {
         let now = world.resource::<Time<Virtual>>().elapsed_secs_f64();
