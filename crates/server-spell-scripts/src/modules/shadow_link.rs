@@ -11,6 +11,7 @@ use combat::spell_cast::{
 use combat::spell_info::SpellStore;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::DeclaredReach(declared_reach),
     SpellScriptHook::ResolvedDamage(copy_link),
     SpellScriptHook::ConsumedEffectValues(&[(TALENT, 0)]),
 ];
@@ -21,6 +22,26 @@ const VAMPIRIC_TOUCH: u32 = 34914;
 const SOURCES: &[u32] = &[
     8092, 15407, 32379, 263165, 323673, 335467, 391403, 450983, 1243105, 1243106,
 ];
+
+fn declared_reach(
+    world: &World,
+    caster: Entity,
+    spell: &combat::spell_info::SpellInfo,
+) -> combat::spell_cast::script_registry::DeclaredReach {
+    let selected = world
+        .get::<combat::class_progression::KnownSpells>(caster)
+        .is_some_and(|known| known.contains(TALENT));
+    let target_radius = if selected && SOURCES.contains(&spell.id) {
+        // The recipient query has no distance bound; it visits all owned live VT.
+        f32::INFINITY
+    } else {
+        0.0
+    };
+    combat::spell_cast::script_registry::DeclaredReach {
+        caster_radius: 0.0,
+        target_radius,
+    }
+}
 
 fn native_fraction(world: &World, caster: Entity) -> Option<f32> {
     let aura = world

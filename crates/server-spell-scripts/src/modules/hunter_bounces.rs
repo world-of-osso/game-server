@@ -10,7 +10,10 @@ use combat::spell_cast::{
     targets,
 };
 
-pub const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::EffectHandler(hook)];
+pub const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::EffectHandler(hook),
+    SpellScriptHook::DeclaredReach(declared_reach),
+];
 
 struct BouncePolicy {
     parent: u32,
@@ -43,6 +46,35 @@ const POLICIES: &[BouncePolicy] = &[BouncePolicy {
     finisher_talent: 1264904,
     finisher: 1266096,
 }];
+
+fn declared_reach(
+    world: &World,
+    caster: Entity,
+    spell: &combat::spell_info::SpellInfo,
+) -> combat::spell_cast::script_registry::DeclaredReach {
+    let Some(policy) = POLICIES.iter().find(|policy| policy.parent == spell.id) else {
+        return Default::default();
+    };
+    let effect = spell
+        .effects
+        .iter()
+        .find(|effect| effect.index == policy.dispatch_effect)
+        .expect("native bounce dispatch effect");
+    let (jumps, jump_radius) = targets::chain_jump_parameters(world, caster, spell, effect);
+    let finisher = world
+        .resource::<combat::spell_info::SpellStore>()
+        .get(policy.finisher)
+        .expect("native bounce finisher");
+    let payload_radius = finisher
+        .effects
+        .iter()
+        .map(targets::effect_radius)
+        .fold(0.0, f32::max);
+    combat::spell_cast::script_registry::DeclaredReach {
+        caster_radius: 0.0,
+        target_radius: jumps as f32 * jump_radius + payload_radius,
+    }
+}
 
 fn selected(world: &World, caster: Entity, policy: &BouncePolicy) -> bool {
     // SimC76f8118 sc_hunter.cpp7864–7877: the active Sentinel hero
