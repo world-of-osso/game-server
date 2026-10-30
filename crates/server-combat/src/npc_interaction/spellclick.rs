@@ -38,6 +38,10 @@ pub(crate) fn cast_spellclick(world: &mut World, player: Entity, npc: Entity, en
         crate::taxi::start_ruby_ferry(world, player, npc);
         return;
     }
+    if entry == 209439 {
+        crate::taxi::start_darkflame_cart(world, player, npc);
+        return;
+    }
     let spells = world
         .resource::<SpellClickCatalog>()
         .0
