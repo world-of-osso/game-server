@@ -731,7 +731,7 @@ pub(super) fn apply_simc_touch_of_elune(
     run: &mut super::dps_parity::Run,
     racial: Option<u32>,
 ) -> Result<(), String> {
-    let is_night_elf = run.profile.race.eq_ignore_ascii_case("Night Elf");
+    let is_night_elf = crate::auras::has_aura(run.app.world(), run.actor, 154748);
     if is_night_elf != racial.is_some() {
         return Err("SIMC_TOUCH_OF_ELUNE_RACE_OR_STATE_MISMATCH".into());
     }
