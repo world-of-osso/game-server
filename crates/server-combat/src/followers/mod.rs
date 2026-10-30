@@ -115,6 +115,8 @@ mod tank_planner;
 mod tank_planner_tests;
 mod trail_follow;
 mod unintended_reach;
+#[cfg(test)]
+mod unintended_reach_tests;
 mod utility;
 #[cfg(test)]
 mod utility_buff_tests;

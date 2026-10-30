@@ -49,7 +49,7 @@ fn party_and_pets(world: &mut World, party: &[Entity]) -> Vec<Entity> {
     units
 }
 
-fn unit_reach(world: &World, unit: Entity) -> DeclaredReach {
+fn unit_reach(world: &mut World, unit: Entity) -> DeclaredReach {
     let store = world.resource::<SpellStore>();
     let registry = *world.resource::<SpellScriptRegistry>();
     let mut reach = DeclaredReach::default();
@@ -64,7 +64,48 @@ fn unit_reach(world: &World, unit: Entity) -> DeclaredReach {
         reach.caster_radius = reach.caster_radius.max(current.caster_radius);
         reach.target_radius = reach.target_radius.max(current.target_radius);
     }
+    reach.caster_radius = reach.caster_radius.max(active_field_extent(world, unit));
     reach
+}
+
+fn active_field_extent(world: &mut World, unit: Entity) -> f32 {
+    let Some(origin) = targets::position(world, unit) else {
+        return 0.0;
+    };
+    let mut fields = crate::spell_cast::scripts::owned_hostile_ground_fields(world, unit);
+    let map = world.get::<crate::maps::InMap>(unit).copied();
+    let now = crate::auras::aura_now(world);
+    let triggers: Vec<_> = world
+        .query::<(
+            Entity,
+            &crate::spell_cast::area_trigger::SpellAreaTrigger,
+            &shared::components::Position,
+            &crate::maps::InMap,
+        )>()
+        .iter(world)
+        .filter(|(_, field, _, field_map)| {
+            field.caster == unit
+                && field.relation == targets::Relation::Enemy
+                && field.expires_at.is_none_or(|expiry| expiry > now)
+                && Some(**field_map) == map
+        })
+        .map(|(entity, field, center, _)| {
+            (
+                entity,
+                Vec3::new(center.x, center.y, center.z),
+                field.radius,
+            )
+        })
+        .collect();
+    for (entity, center, _) in triggers {
+        let radius = crate::spell_cast::area_trigger::avoidance_radius_at(world, entity, unit, now)
+            .unwrap_or(f32::INFINITY);
+        fields.push((center, radius));
+    }
+    fields
+        .into_iter()
+        .map(|(center, radius)| origin.distance(center) + radius)
+        .fold(0.0, f32::max)
 }
 
 fn unit_spells(world: &World, unit: Entity) -> Vec<u32> {
@@ -114,6 +155,13 @@ fn spell_reach(
     depth: u8,
 ) -> DeclaredReach {
     let mut result = registry.declared_reach(world, caster, spell);
+    if let Some(radius) =
+        crate::spell_cast::scripts::hostile_ground_pulse_radius(world, caster, spell.id)
+    {
+        // Named ground casts may use either caster or target as their destination.
+        result.caster_radius = result.caster_radius.max(radius);
+        result.target_radius = result.target_radius.max(radius);
+    }
     for effect in &spell.effects {
         let (caster_radius, target_radius) =
             targets::unintended_effect_reach(world, caster, spell, effect);
