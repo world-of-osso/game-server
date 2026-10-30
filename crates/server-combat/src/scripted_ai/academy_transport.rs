@@ -87,6 +87,11 @@ pub(super) fn launch_entrance_pad(world: &mut World) {
             .collect();
         let mut riders = vec![owner];
         riders.extend(followers);
+        let companions: Vec<_> = riders
+            .iter()
+            .flat_map(|&rider| crate::maps::transfer::owned_companions(world, rider))
+            .collect();
+        riders.extend(companions);
         if riders.iter().any(|&rider| {
             world.get::<Position>(rider).is_none()
                 || world.get::<JumpMovement>(rider).is_some()
