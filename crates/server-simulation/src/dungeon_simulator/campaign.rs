@@ -2317,13 +2317,14 @@ impl Run {
     }
 
     fn stalled(&mut self) -> bool {
-        if let Some((pack, since)) = self.waiting_objective
-            && self.now() - since >= STALL_SECONDS
-        {
-            self.report.status = "stalled".into();
-            self.report.detail =
-                format!("OBJECTIVE_NOT_ATTACKABLE: pack{pack} remained gated for 60s");
-            return true;
+        if let Some((pack, since)) = self.waiting_objective {
+            if self.now() - since >= STALL_SECONDS {
+                self.report.status = "stalled".into();
+                self.report.detail =
+                    format!("OBJECTIVE_NOT_ATTACKABLE: pack{pack} remained gated for 60s");
+                return true;
+            }
+            return false;
         }
         let resource_gain = self.observe_resource_gain();
         let world = self.app.world();
