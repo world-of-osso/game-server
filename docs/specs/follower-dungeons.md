@@ -24,7 +24,7 @@ Evidence under `/home/osso/.worktrees/murderrow-walk-run/`: `server16.log` conta
 
 ## Living encounter completion
 
-`raid_encounter_creature.complete_at_health_pct` is an optional sourced completion boundary. Damage crossing that percentage leaves the bound creature alive, completes the active encounter and applies the existing living-surrender combat exit. A zero threshold intercepts lethal damage at one health. An unset threshold preserves ordinary death completion. The completion is not a creature death or a new loot-corpse policy.
+`raid_encounter_creature.complete_at_health_pct` is an optional sourced completion boundary. Damage crossing that percentage leaves the bound creature alive, completes the active encounter and applies the existing living-surrender combat exit. A zero threshold intercepts lethal damage at one health. An unset threshold preserves ordinary death completion. The completion is not a creature death or a new loot-corpse policy. `content/encounter-thresholds.json` is the source for these values and identities; `scripts/raid_encounters.py` validates the journal and TDB model and preserves them when it rebuilds the binding table.
 
 `ENCOUNTER_END_AT_HEALTH_THRESHOLD_LOG_CORRELATED`: Rasha'nan 213937 / encounter 2839 completes at 59.5%, as LittleWigs `WarWithin/TheDawnbreaker/Rashanan.lua` records. WCL x3HzDRn6yVjqCbt8/7 and NW7zAgkTDbyqKZBf/1 show the living actor near 60% immediately before successful encounter end; they do not independently establish 59.5% exactly.
 
