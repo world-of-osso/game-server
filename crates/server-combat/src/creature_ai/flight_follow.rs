@@ -6,9 +6,18 @@ use crate::followers::Follower;
 use crate::maps::InMap;
 use crate::navigation::{Goal, Navigation};
 
+const DRUID_FLIGHT_FORM: u32 = 33943;
+// FOLLOWER_FLYING_MOUNT_PROFILE_GAP: profiles have no flying-mount field yet.
+// Golden Gryphon Mount 129, MountXDisplay 200 (display 17697), is the shared default.
+const DEFAULT_MOUNT: u32 = 129;
+const DEFAULT_DISPLAY: u32 = 17697;
+
 /// Marker used by public creature movement system filters.
 #[derive(Component)]
-pub struct FlightFollow;
+pub struct FlightFollow {
+    previous_form: Option<u32>,
+    druid: bool,
+}
 
 pub(super) fn update(world: &mut World) {
     let followers: Vec<_> = world
@@ -18,10 +27,11 @@ pub(super) fn update(world: &mut World) {
         >()
         .iter(world)
         .filter(|(_, _, _, _, health)| health.current > 0.0)
-        .map(|(unit, follower, position, map, _)| (unit, follower.owner, *position, *map))
+        .map(|(unit, follower, position, map, _)| (unit, follower.clone(), *position, *map))
         .collect();
     let dt = world.resource::<Time>().delta_secs();
-    for (unit, owner, position, map) in followers {
+    for (unit, follower, position, map) in followers {
+        let owner = follower.owner;
         let Some((leader, leader_map)) = world
             .get::<Position>(owner)
             .copied()
@@ -35,7 +45,6 @@ pub(super) fn update(world: &mut World) {
         let flying = world
             .get::<PlayerMotion>(owner)
             .is_some_and(|motion| motion.contains(PlayerMotion::FLYING));
-        let mounted = world.get::<Mounted>(owner).cloned();
         let active = world.get::<FlightFollow>(unit).is_some();
         if flying && !active {
             let feet = Vec3::new(leader.x, leader.y, leader.z);
@@ -47,15 +56,9 @@ pub(super) fn update(world: &mut World) {
                     .get_resource::<crate::area_table::AreaTable>()
                     .is_some_and(|table| table.permits_flying(area, map.map_id))
             });
-            let Some(mut mount) = mounted.filter(|_| allowed) else {
+            if !allowed || !start_flight(world, unit, &follower) {
                 continue;
-            };
-            mount.vehicle_id = 0;
-            mount.seats = [None; 8];
-            if let Some(mut nav) = world.get_resource_mut::<Navigation>() {
-                nav.cancel_route(unit);
             }
-            world.entity_mut(unit).insert((FlightFollow, mount));
         } else if !active {
             continue;
         }
@@ -72,6 +75,37 @@ pub(super) fn update(world: &mut World) {
             land_on_leader_floor(world, unit, map, here, target, speed, dt);
         }
     }
+}
+
+fn start_flight(world: &mut World, unit: Entity, follower: &Follower) -> bool {
+    let druid = follower.profile.class_id == 11;
+    let previous_form = world
+        .get::<crate::auras::ActiveAuras>(unit)
+        .and_then(crate::auras::shapeshift::current_form)
+        .map(|(aura, _)| aura.spell_id);
+    if druid {
+        if let Err(error) =
+            crate::spell_cast::creature_cast(world, unit, DRUID_FLIGHT_FORM, Some(unit), true)
+        {
+            error!(?unit, ?error, "follower Flight Form could not start");
+            return false;
+        }
+    } else {
+        world.entity_mut(unit).insert(Mounted {
+            mount_id: DEFAULT_MOUNT,
+            mount_display_id: DEFAULT_DISPLAY,
+            vehicle_id: 0,
+            seats: [None; 8],
+        });
+    }
+    if let Some(mut nav) = world.get_resource_mut::<Navigation>() {
+        nav.cancel_route(unit);
+    }
+    world.entity_mut(unit).insert(FlightFollow {
+        previous_form,
+        druid,
+    });
+    true
 }
 
 fn move_toward(world: &mut World, unit: Entity, here: Vec3, target: Vec3, speed: f32, dt: f32) {
@@ -140,5 +174,25 @@ fn land_on_leader_floor(
     if let Some(mut nav) = world.get_resource_mut::<Navigation>() {
         nav.cancel_query(unit, Goal::FollowerFlightLanding);
     }
-    world.entity_mut(unit).remove::<(FlightFollow, Mounted)>();
+    let state = world.get::<FlightFollow>(unit).expect("active flight");
+    let (druid, previous_form) = (state.druid, state.previous_form);
+    if druid {
+        crate::auras::remove_auras(world, unit, crate::auras::RemoveReason::Cancelled, |aura| {
+            aura.spell_id == DRUID_FLIGHT_FORM
+        });
+        if let Some(spell) = previous_form
+            && let Err(error) =
+                crate::spell_cast::creature_cast(world, unit, spell, Some(unit), true)
+        {
+            error!(
+                ?unit,
+                ?spell,
+                ?error,
+                "follower could not restore its previous form"
+            );
+        }
+    } else {
+        world.entity_mut(unit).remove::<Mounted>();
+    }
+    world.entity_mut(unit).remove::<FlightFollow>();
 }

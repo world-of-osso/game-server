@@ -2,7 +2,7 @@
 use super::navigation_tests::stockade_fixture;
 use crate::ground::GroundMap;
 use bevy::prelude::*;
-use shared::components::{Mounted, PlayerMotion, Position};
+use shared::components::{Mounted, Npc, PlayerMotion, Position, UnitPowers};
 
 fn areas(flags: u32) -> crate::area_table::AreaTable {
     let db = rusqlite::Connection::open_in_memory().unwrap();
@@ -15,6 +15,38 @@ fn areas(flags: u32) -> crate::area_table::AreaTable {
     crate::area_table::load_area_table(&db).unwrap()
 }
 
+fn spawn_druid(h: &mut crate::spell_cast::test_harness::Harness, position: Position) -> Entity {
+    let db = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let profile = super::catalog::load_catalog(&db)
+        .unwrap()
+        .profiles
+        .into_iter()
+        .find(|profile| profile.entry == 209072)
+        .unwrap();
+    let native = crate::spell_cast::test_harness::load_native_creature_world(&[209072]);
+    h.app
+        .world_mut()
+        .resource_mut::<crate::world_data::WorldData>()
+        .templates
+        .extend(native.templates);
+    let unit = crate::spell_cast::test_harness::spawn_npc(&mut h.app, 0.0);
+    h.app.world_mut().entity_mut(unit).insert((
+        Npc {
+            template_id: profile.entry,
+            name: profile.name.clone(),
+        },
+        UnitPowers::default(),
+        position,
+        crate::maps::InMap::continent(34),
+    ));
+    super::spawning::initialize(h.app.world_mut(), h.caster, unit, profile).unwrap();
+    unit
+}
+
 #[test]
 fn flying_follower_requires_area_permission_and_lands_on_leaders_navmesh() {
     let from = Position {
@@ -24,6 +56,7 @@ fn flying_follower_requires_area_permission_and_lands_on_leaders_navmesh() {
     };
     let (mut h, follower, _) = stockade_fixture(from);
     let owner = h.caster;
+    let druid = spawn_druid(&mut h, from);
     let landing = Position {
         x: 103.0,
         y: -34.85623,
@@ -39,16 +72,17 @@ fn flying_follower_requires_area_permission_and_lands_on_leaders_navmesh() {
         9001,
     )]));
     h.app.insert_resource(areas(0));
-    h.app.world_mut().entity_mut(owner).insert((
-        in_air,
-        PlayerMotion(PlayerMotion::FLYING),
-        Mounted {
-            mount_display_id: 42,
-            ..default()
-        },
-    ));
+    h.app
+        .world_mut()
+        .entity_mut(owner)
+        .insert((in_air, PlayerMotion(PlayerMotion::FLYING)));
+    assert!(
+        h.app.world().get::<Mounted>(owner).is_none(),
+        "leader is in an unmounted flight form"
+    );
     h.advance(5);
     assert!(h.app.world().get::<Mounted>(follower).is_none());
+    assert!(!crate::auras::has_aura(h.app.world(), druid, 33943));
     h.app.insert_resource(areas(2));
     for _ in 0..500 {
         h.advance(1);
@@ -64,15 +98,24 @@ fn flying_follower_requires_area_permission_and_lands_on_leaders_navmesh() {
             .get::<Mounted>(follower)
             .unwrap()
             .mount_display_id,
-        42
+        17697
     );
+    assert!(h.app.world().get::<Mounted>(druid).is_none());
+    assert!(
+        crate::auras::has_aura(h.app.world(), druid, 33943),
+        "druid uses its own Flight Form"
+    );
+    let druid_air = *h.app.world().get::<Position>(druid).unwrap();
+    assert!((druid_air.y - in_air.y).abs() < 1.0);
     h.app
         .world_mut()
         .entity_mut(owner)
         .insert((landing, PlayerMotion::default()));
     for _ in 0..500 {
         h.advance(1);
-        if h.app.world().get::<Mounted>(follower).is_none() {
+        if h.app.world().get::<Mounted>(follower).is_none()
+            && !crate::auras::has_aura(h.app.world(), druid, 33943)
+        {
             break;
         }
         h.app
@@ -84,6 +127,10 @@ fn flying_follower_requires_area_permission_and_lands_on_leaders_navmesh() {
     assert!(
         h.app.world().get::<Mounted>(follower).is_none(),
         "follower did not complete navmesh landing: {landed:?}"
+    );
+    assert!(
+        !crate::auras::has_aura(h.app.world(), druid, 33943),
+        "druid leaves Flight Form after landing"
     );
     assert!((landed.y - landing.y).abs() < navigation::AGENT_CLIMB);
     assert!((landed.x - landing.x).hypot(landed.z - landing.z) < 1.0);

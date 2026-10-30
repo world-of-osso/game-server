@@ -45,7 +45,7 @@ For an in-memory follower run, disconnect and logout retain the same instance an
 
 ## Flying follow
 
-`DAWNBREAKER_FLIGHT_TRAVERSAL`: In an area whose AreaTable MountFlags contains 0x2, living followers mount and follow their flying leader in three dimensions without a navigation route. When the leader lands, followers land on the navmesh surface connected to the leader's landing point before resuming ground follow. This is the project follower policy. The simulator leader must use the same flight rule; its implementation is pending.
+`DAWNBREAKER_FLIGHT_TRAVERSAL`: In an area whose AreaTable MountFlags contains 0x2, living followers follow their flying leader in three dimensions without a navigation route, whether the leader is mounted or in flight form. Druid followers use their own Flight Form; other followers use their own profile's flying mount. `FOLLOWER_FLYING_MOUNT_PROFILE_GAP`: profiles do not yet contain a flying mount, so non-druids use the shared default Golden Gryphon (Mount 129, display 17697) until sourced profile mounts are available. When the leader lands, followers land on the navmesh surface connected to the leader's landing point before resuming ground follow. This is the project follower policy. The simulator leader must use the same flight rule; its implementation is pending.
 
 ## Nexus-Point Xenas passage
 
