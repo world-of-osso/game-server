@@ -1,5 +1,5 @@
 //! Real Windrunner ground, source placements and native tank/creature movement.
-use super::{Follower, ai, owner_trail, pull_history, tank_pull_back};
+use super::{Follower, owner_trail, pull_history, tank_pull_back};
 use crate::maps::InMap;
 use bevy::prelude::*;
 use shared::components::{Health, Level, Position, UnitLevel};
