@@ -103,6 +103,57 @@ fn nalorakk_pyre_gossip_moves_owner_and_owned_follower_in_both_directions() {
             },
         ))
         .id();
+    let mut companions = Vec::new();
+    for owner in [h.player, follower] {
+        let pet = h
+            .app
+            .world_mut()
+            .spawn((
+                copy,
+                Position {
+                    x: 4480.69,
+                    y: 13.435155,
+                    z: 4912.04,
+                },
+                shared::components::Health {
+                    current: 100.0,
+                    max: 100.0,
+                },
+                crate::hunter_pet::HunterPet { owner, slot: 0 },
+            ))
+            .id();
+        let guardian = h
+            .app
+            .world_mut()
+            .spawn((
+                copy,
+                Position {
+                    x: 4480.69,
+                    y: 13.435155,
+                    z: 4912.04,
+                },
+                shared::components::Health {
+                    current: 100.0,
+                    max: 100.0,
+                },
+                crate::spell_cast::summon::SummonedCreature {
+                    owner,
+                    spell_id: 104316,
+                    properties_id: 61,
+                    properties: crate::spell_cast::summon::SummonProperties {
+                        control: 0,
+                        faction: 0,
+                        title: 2,
+                        slot: 0,
+                        flags: 0,
+                    },
+                    display_scale: 1.0,
+                    expires_at: None,
+                },
+            ))
+            .id();
+        companions.extend([pet, guardian]);
+    }
     for (entry, menu, target) in [
         (616377, 40087, (4339.33, 104.31152, 4947.34)),
         (613266, 40088, (4480.69, 13.435155, 4912.04)),
@@ -164,7 +215,10 @@ fn nalorakk_pyre_gossip_moves_owner_and_owned_follower_in_both_directions() {
             .unwrap()
             .epoch;
         h.select(pyre, gossip.options[0].option_id);
-        for unit in [h.player, follower] {
+        for unit in [h.player, follower]
+            .into_iter()
+            .chain(companions.iter().copied())
+        {
             let pos = h.app.world().get::<Position>(unit).unwrap();
             assert_eq!((pos.x, pos.y, pos.z), target);
             assert_eq!(h.app.world().get::<InMap>(unit), Some(&copy));
