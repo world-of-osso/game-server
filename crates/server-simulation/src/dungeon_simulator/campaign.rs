@@ -1341,6 +1341,45 @@ fn follower_making_native_route_progress_prevents_a_false_stall() {
 }
 
 #[test]
+fn follower_changing_goals_without_route_progress_still_stalls() {
+    let mut run = spawn_run(1, &mut None).unwrap();
+    for _ in 0..400 {
+        run.app.update();
+    }
+    let tank = run.party.tank;
+    let start = *run.app.world().get::<Position>(tank).unwrap();
+    let points: Vec<_> = [20375706, 20375674]
+        .into_iter()
+        .map(|id| {
+            run.graph
+                .packs
+                .iter()
+                .find(|pack| pack.id == id)
+                .unwrap()
+                .point()
+        })
+        .collect();
+    run.last_progress = run.now();
+    let mut moved = false;
+    for tick in 0..1300 {
+        run.app
+            .world_mut()
+            .entity_mut(tank)
+            .insert(MoveIntent(points[tick % 2]));
+        run.app.update();
+        moved |= *run.app.world().get::<Position>(tank).unwrap() != start;
+        if run.stalled() {
+            assert!(
+                moved,
+                "the follower must actually move while changing goals"
+            );
+            return;
+        }
+    }
+    panic!("goal changes without decreasing a stable route must still stall");
+}
+
+#[test]
 fn stationary_full_party_still_stalls_without_any_progress() {
     let _rng_scope = crate::random::seed_scope(1);
     let mut run = spawn_run(1, &mut None).unwrap();
