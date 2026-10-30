@@ -45,6 +45,16 @@ pub(super) fn update(world: &mut World) {
         {
             let party = party_units(world, follower.owner);
             super::tank_frontal::record_observed_frontal(world, *unit, follower, &party);
+            let enemies = engaged_enemies(world, follower, *unit, &party);
+            if !enemies.is_empty() {
+                let reach = super::party_unintended_reach(world, &party)
+                    .into_iter()
+                    .flat_map(|(_, caster, target)| [caster, target])
+                    .fold(0.0_f32, f32::max);
+                super::tank_pull_back::update(world, *unit, follower, &party, reach);
+            } else if super::tank_pull_back::active(world, *unit) {
+                super::tank_pull_back::update(world, *unit, follower, &party, 0.0);
+            }
         }
     }
     for (unit, follower) in followers {
