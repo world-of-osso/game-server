@@ -681,10 +681,12 @@ pub(super) fn scale_pressure(hits: &mut [simc_tank_timeline::Hit], scale: f64) {
 }
 
 pub(super) fn apply_simc_starting_holy_power(run: &mut super::dps_parity::Run) {
-    let actor = run.actor;
-    let selected = run
-        .app
-        .world()
+    apply_simc_starting_holy_power_to(run.app.world_mut(), run.actor);
+}
+
+pub(super) fn apply_simc_starting_holy_power_to(world: &mut World, actor: Entity) {
+    // SimC76f8118 sc_paladin.cpp:4969–4977: Blessed Hammer supplies one at pull.
+    let selected = world
         .get::<crate::class_progression::TraitLoadout>(actor)
         .is_some_and(|traits| {
             traits
@@ -692,9 +694,7 @@ pub(super) fn apply_simc_starting_holy_power(run: &mut super::dps_parity::Run) {
                 .any(|spell| spell.spell_id == 204019)
         });
     if selected {
-        let mut pools = run
-            .app
-            .world_mut()
+        let mut pools = world
             .get_mut::<crate::spell_cast::powers::PowerPools>(actor)
             .expect("paladin has power pools");
         let holy_power = pools
