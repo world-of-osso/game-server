@@ -192,6 +192,59 @@ fn damage_follower_casts_real_fireball_and_stops_after_enemy_death() {
 }
 
 #[test]
+fn class_follower_apl_marker_keeps_pursuit_without_kit_casts() {
+    let mut h = crate::spell_cast::test_harness::harness(vec![], &[133], 8).unwrap();
+    let follower = spawn_follower(&mut h, profile(209059, GroupRole::Dps, 133, 0));
+    h.app.world_mut().entity_mut(follower).insert(AplControlled);
+    let enemy = h.npc;
+    h.app
+        .world_mut()
+        .get_mut::<crate::networking::CombatTarget>(h.caster)
+        .unwrap()
+        .0 = Some(enemy);
+    h.attack(enemy);
+    h.advance(3);
+    let mut cast_seen = false;
+    for _ in 0..90 {
+        update_ai(h.app.world_mut());
+        h.advance(1);
+        cast_seen |= h
+            .app
+            .world()
+            .get::<shared::casting::CastState>(follower)
+            .is_some();
+    }
+    let world = h.app.world();
+    assert_eq!(
+        world
+            .get::<crate::networking::CombatTarget>(follower)
+            .unwrap()
+            .0,
+        Some(enemy),
+        "the brain still selects and pursues the engaged enemy"
+    );
+    assert!(
+        world
+            .get::<crate::creature_ai::FollowOwner>(follower)
+            .is_none()
+    );
+    assert!(!cast_seen, "kit Fireball must not be cast");
+    assert_eq!(engaged_targets(h.app.world_mut(), follower), vec![enemy]);
+    h.app.world_mut().get_mut::<Health>(enemy).unwrap().current = 0.0;
+    for _ in 0..10 {
+        update_ai(h.app.world_mut());
+        h.advance(1);
+    }
+    assert!(
+        h.app
+            .world()
+            .get::<crate::creature_ai::FollowOwner>(follower)
+            .is_some(),
+        "the brain regroups after the pull"
+    );
+}
+
+#[test]
 fn healer_prioritizes_the_lowest_health_party_member_over_damage() {
     let mut h = crate::spell_cast::test_harness::harness(vec![], &[585, 2061, 137031], 5).unwrap();
     let db = rusqlite::Connection::open_with_flags(
