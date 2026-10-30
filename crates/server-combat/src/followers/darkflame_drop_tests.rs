@@ -677,6 +677,10 @@ fn followers_retrace_owner_curve_around_unpulled_watcher() {
                 .unwrap()
         })
         .collect();
+    eprintln!(
+        "CURVE_TEST radii={radii:?} start={start:?} end={:?}",
+        corners[3]
+    );
     for leg in corners.windows(2) {
         let length = leg[0].distance(leg[1]);
         let steps = (length / 0.35).ceil() as usize;
@@ -709,6 +713,8 @@ fn followers_retrace_owner_curve_around_unpulled_watcher() {
         crate::navigation::drain_fixture(&mut h.app);
         h.advance(1);
         for (&unit, &radius) in followers.iter().zip(&radii) {
+            let feet = point(*h.app.world().get::<Position>(unit).unwrap());
+            let time = h.app.world().resource::<Time>().elapsed_secs_f64();
             assert!(
                 !crate::creature_sight::read_npc_proximity_acquisition(
                     h.app.world_mut(),
@@ -716,9 +722,8 @@ fn followers_retrace_owner_curve_around_unpulled_watcher() {
                     unit
                 )
                 .unwrap(),
-                "watcher must not acquire a follower"
+                "watcher acquired follower {unit:?} at {feet:?}, radius={radius}, time={time}"
             );
-            let feet = point(*h.app.world().get::<Position>(unit).unwrap());
             assert!(
                 feet.distance(Vec3::new(393.4, 87.07, -31.0)) >= radius,
                 "follower entered watcher radius at {feet:?}, radius {radius}"
