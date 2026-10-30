@@ -103,6 +103,24 @@ fn azure_translocation_moves_all_living_owned_pets_in_the_same_copy() {
     let first = h.spawn_real_npc(187159, 1.0);
     let second = h.spawn_real_npc(187159, 1.0);
     let remote = h.spawn_real_npc(187159, 1.0);
+    let guardian = h.spawn_real_npc(187159, 1.0);
+    h.app.world_mut().entity_mut(guardian).insert((
+        copy,
+        crate::spell_cast::summon::SummonedCreature {
+            owner: h.player,
+            spell_id: 104316,
+            properties_id: 61,
+            properties: crate::spell_cast::summon::SummonProperties {
+                control: 0,
+                faction: 0,
+                title: 2,
+                slot: 0,
+                flags: 0,
+            },
+            display_scale: 1.0,
+            expires_at: None,
+        },
+    ));
     h.app.world_mut().entity_mut(book).insert(copy);
     for pet in [first, second, remote] {
         h.app
@@ -131,6 +149,7 @@ fn azure_translocation_moves_all_living_owned_pets_in_the_same_copy() {
     let endpoint = *h.app.world().get::<Position>(h.player).unwrap();
     assert_eq!(h.app.world().get::<Position>(first), Some(&endpoint));
     assert_eq!(h.app.world().get::<Position>(second), Some(&endpoint));
+    assert_eq!(h.app.world().get::<Position>(guardian), Some(&endpoint));
     assert_eq!(h.app.world().get::<Position>(remote), Some(&remote_before));
 }
 

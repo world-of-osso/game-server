@@ -119,6 +119,58 @@ fn near_teleport(
     }
     crate::transport::clear_passenger(world, player);
     place_player(world, player, destination);
+    for companion in owned_companions(world, player) {
+        place_companion(world, companion, destination);
+    }
+}
+
+/// TC 15e0ed76 Player.cpp:1274-1278 and MovementHandler.cpp:464-465
+/// temporarily unsummon distant pets and restore them after near teleport.
+pub(crate) fn owned_companions(world: &mut World, owner: Entity) -> Vec<Entity> {
+    let Some(map) = world.get::<InMap>(owner).copied() else {
+        return Vec::new();
+    };
+    let mut companions: std::collections::HashSet<_> =
+        crate::hunter_pet::active_owned_pets(world, owner)
+            .into_iter()
+            .collect();
+    companions.extend(
+        world
+            .query::<(Entity, &crate::spell_cast::summon::SummonedCreature, &InMap)>()
+            .iter(world)
+            .filter_map(|(unit, summon, current)| {
+                (summon.owner == owner
+                    && *current == map
+                    && summon.properties.is_guardian()
+                    && crate::spell_cast::targets::is_alive(world, unit))
+                .then_some(unit)
+            }),
+    );
+    companions.into_iter().collect()
+}
+
+pub(crate) fn teleport_creature_with_companions(
+    world: &mut World,
+    unit: Entity,
+    destination: &WorldLocation,
+) {
+    let companions = owned_companions(world, unit);
+    place_companion(world, unit, destination);
+    for companion in companions {
+        place_companion(world, companion, destination);
+    }
+}
+
+fn place_companion(world: &mut World, unit: Entity, destination: &WorldLocation) {
+    if let Some(mut navigation) = world.get_resource_mut::<crate::navigation::Navigation>() {
+        navigation.cancel_route(unit);
+    }
+    world.entity_mut(unit).insert(destination.bevy_position());
+    crate::interest::mark_interest_position_changed(
+        world.get_resource::<InterestDirtyQueue>(),
+        unit,
+    );
+    crate::spell_cast::mark_dirty(world, unit);
 }
 
 /// Move `player` to `destination` on its map: the client adopts the new position on the
