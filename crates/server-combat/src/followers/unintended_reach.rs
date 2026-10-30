@@ -180,5 +180,29 @@ fn spell_reach(
                 .max(target_radius + child.target_radius);
         }
     }
+    if depth < crate::spell_cast::effects::MAX_TRIGGER_DEPTH {
+        let parent = result;
+        for (child_id, caster_range, splash_radius) in
+            crate::spell_cast::scripts::reach_children(world, caster, spell)
+        {
+            let Some(child) = world.resource::<SpellStore>().get(child_id) else {
+                continue;
+            };
+            let child = spell_reach(world, caster, child, registry, depth + 1);
+            result.caster_radius = result.caster_radius.max(child.caster_radius);
+            if caster_range > 0.0 {
+                result.caster_radius = result
+                    .caster_radius
+                    .max(caster_range + child.target_radius.max(splash_radius));
+            } else {
+                let extension = child.target_radius.max(splash_radius);
+                if parent.caster_radius > 0.0 {
+                    result.caster_radius =
+                        result.caster_radius.max(parent.caster_radius + extension);
+                }
+                result.target_radius = result.target_radius.max(parent.target_radius + extension);
+            }
+        }
+    }
     result
 }

@@ -143,6 +143,21 @@ fn wildfire_declaration_matches_its_target_centered_explosion() {
 }
 
 #[test]
+fn hammer_of_the_righteous_declares_its_native_target_centered_wave() {
+    let store = crate::test_support::world_db()
+        .unwrap()
+        .spell_store()
+        .clone();
+    let hammer = store.get(53595).unwrap().clone();
+    let mut world = World::new();
+    world.insert_resource(store);
+    let caster = world.spawn_empty().id();
+    let reach = crate::registry().declared_reach(&world, caster, &hammer);
+    assert_eq!(reach.target_radius, 8.0);
+    assert_eq!(reach.caster_radius, 0.0);
+}
+
+#[test]
 fn registry_keeps_first_match_and_additive_module_order() {
     let mut world = World::new();
     world.insert_resource(SpellScriptRegistry::new(&[FIRST, &[], SECOND]));

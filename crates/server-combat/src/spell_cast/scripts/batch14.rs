@@ -24,7 +24,7 @@ const LANDING_HIT: u32 = 200166;
 const LANDING_DAZE: u32 = 247121;
 //191427's description explicitly says enemies within8yd; native Dummy radius
 //is5yd and200166 has no radius, so neither supplies the landing geometry.
-const LANDING_RADIUS: f32 = 8.0;
+pub(super) const LANDING_RADIUS: f32 = 8.0;
 pub(super) const CONSUME: u32 = 473662;
 const CONSUME_FURY: u32 = 1261710;
 
