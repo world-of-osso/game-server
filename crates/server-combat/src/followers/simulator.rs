@@ -499,6 +499,11 @@ fn spawn_player_identity(
             shared::components::UnitLevel(level),
             UnitFactionTemplate(1),
             at,
+            shared::components::Rotation {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
             copy,
             crate::persistence::ClientId(1),
             difficulty,
