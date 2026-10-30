@@ -48,6 +48,26 @@ fn halls_wmo_swimming_follower_uses_navigation_height() {
         (height - vertical.y).abs() < 0.01,
         "vertical swim stopped at {height}"
     );
+    let bank = Position {
+        x: -70.5,
+        y: -38.79386,
+        z: 145.0,
+    };
+    let entering = Position {
+        x: -70.4,
+        y: -39.1,
+        z: 145.0,
+    };
+    let height = crate::creature_ai::follower_footprint_ground(
+        Some(&mut ground),
+        Some(&map),
+        bank,
+        entering,
+    );
+    assert!(
+        (height - entering.y).abs() < 0.01,
+        "water entry snapped to {height}"
+    );
 }
 
 fn wow(x: f32, y: f32, z: f32) -> Position {
