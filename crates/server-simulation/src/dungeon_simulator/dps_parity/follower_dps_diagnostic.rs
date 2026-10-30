@@ -17,6 +17,13 @@ fn follower_dps_production_dummy() {
     let map: u32 = std::env::var("FOLLOWER_DPS_MAP").unwrap().parse().unwrap();
     let _seed = crate::random::seed_scope(1);
     let mut app = super::super::runtime::build_app();
+    let db = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    app.insert_resource(crate::item_proc_data::load(&db).unwrap());
+    crate::spell_cast::area_trigger::install_native_catalog(app.world_mut(), &db).unwrap();
     let copy = app
         .world_mut()
         .resource_scope(|world, maps: Mut<crate::maps::MapStore>| {
@@ -78,6 +85,9 @@ fn follower_dps_production_dummy() {
         .get::<crate::followers::Follower>(actor)
         .unwrap()
         .owner;
+    for _ in 0..5 {
+        app.update();
+    }
     app.world_mut()
         .entity_mut(owner)
         .insert(crate::networking::CombatTarget(Some(target)));
@@ -85,9 +95,6 @@ fn follower_dps_production_dummy() {
         .entity_mut(owner)
         .insert(crate::combat::AutoAttack::new(target));
     crate::combat_refs::set_in_combat_with(app.world_mut(), owner, target);
-    for _ in 0..5 {
-        app.update();
-    }
     let stats = app
         .world()
         .get::<crate::stats::CharacterStats>(actor)
@@ -115,6 +122,7 @@ fn follower_dps_production_dummy() {
         .clear();
     let mut casting = 0u32;
     let mut gcd_only = 0u32;
+    let mut gcd_total = 0u32;
     let mut ready = 0u32;
     let mut sources = std::collections::BTreeSet::from([actor.to_bits()]);
     for _ in 0..2400 {
@@ -128,6 +136,9 @@ fn follower_dps_production_dummy() {
         let gcd = world
             .get::<crate::spell_cast::SpellHistory>(actor)
             .is_some_and(|history| history.on_gcd(spell, now));
+        if gcd {
+            gcd_total += 1;
+        }
         if world.get::<shared::casting::CastState>(actor).is_some() {
             casting += 1;
         } else if gcd {
@@ -164,6 +175,6 @@ fn follower_dps_production_dummy() {
         "FOLLOWER_DPS {}",
         json!({"entry":entry,"level":level,"map":map,"difficulty":205,"seconds":120,"sheet":sheet,
         "items":items,"modifiers":modifiers,"damage":damage,"casts":casts,"casting_s":casting as f64 / 20.0,
-        "gcd_only_s":gcd_only as f64 / 20.0,"ready_s":ready as f64 / 20.0})
+        "gcd_s":gcd_total as f64 / 20.0,"gcd_only_s":gcd_only as f64 / 20.0,"ready_s":ready as f64 / 20.0})
     );
 }
