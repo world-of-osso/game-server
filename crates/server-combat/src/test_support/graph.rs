@@ -49,6 +49,14 @@ pub struct TransportEdge {
     pub action: super::transport::Action,
 }
 
+/// A directed, LOS-checked 3D flight path between frozen graph anchors.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct FlightEdge {
+    pub from: u32,
+    pub to: u32,
+    pub points: Vec<[f32; 3]>,
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Graph {
     pub map_id: u32,
@@ -60,6 +68,8 @@ pub struct Graph {
     pub teleports: Vec<Edge>,
     #[serde(default)]
     pub transports: Vec<TransportEdge>,
+    #[serde(default)]
+    pub flights: Vec<FlightEdge>,
     pub unreachable: Vec<u32>,
     pub route: Vec<RouteStep>,
     #[serde(default)]
@@ -413,6 +423,7 @@ fn stacked_fixture() -> Space {
             to: 3,
             yards: 10.0,
         }],
+        flights: Vec::new(),
         follower_difficulty: 0,
         follower_boss_entries: Vec::new(),
         follower_boss_sources: BTreeMap::new(),
@@ -578,6 +589,7 @@ fn extract_stockade_graph() {
         entrance_height: entrance.y,
         entrance_pack: nearest,
         unreachable: unreachable(&packs, &edges, nearest),
+        flights: Vec::new(),
         follower_difficulty: 0,
         follower_boss_entries: Vec::new(),
         follower_boss_sources: BTreeMap::new(),

@@ -50,6 +50,7 @@ fn small_fight() -> serde_json::Value {
         follower_boss_bits: Default::default(),
         follower_encounter_actor_bits: Default::default(),
         transports: Vec::new(),
+        flights: Vec::new(),
         entrance: [0.0; 2],
         entrance_height: 0.0,
         entrance_pack: 0,

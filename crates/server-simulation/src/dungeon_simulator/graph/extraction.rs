@@ -237,6 +237,7 @@ fn extract(
         edges,
         teleports,
         transports,
+        flights: Vec::new(),
         unreachable,
         route: Vec::new(),
         follower_difficulty: source.difficulty,

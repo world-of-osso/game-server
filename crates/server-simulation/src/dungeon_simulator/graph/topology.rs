@@ -274,6 +274,7 @@ fn entrance_route_preserves_native_corners_past_disconnected_nearest_pack() {
         edges,
         teleports: vec![],
         transports: vec![],
+        flights: vec![],
         unreachable,
         route: vec![],
         follower_difficulty: 0,
