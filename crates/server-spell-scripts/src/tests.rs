@@ -187,6 +187,26 @@ fn native_area_reach_includes_destination_offsets() {
 }
 
 #[test]
+fn ordered_native_area_reach_includes_running_offset() {
+    let harness = crate::test_support::harness(Vec::new(), &[], 1).unwrap();
+    let world = harness.app.world();
+    let spell = crate::test_support::world_db()
+        .unwrap()
+        .spell_store()
+        .get(97545)
+        .unwrap();
+    let effect = spell
+        .effects
+        .iter()
+        .find(|effect| effect.index == 1)
+        .unwrap();
+    let (caster_radius, target_radius) =
+        combat::spell_cast::targets::unintended_effect_reach(world, harness.caster, spell, effect);
+    assert_eq!(caster_radius, 10.0);
+    assert_eq!(target_radius, 0.0);
+}
+
+#[test]
 fn registry_keeps_first_match_and_additive_module_order() {
     let mut world = World::new();
     world.insert_resource(SpellScriptRegistry::new(&[FIRST, &[], SECOND]));

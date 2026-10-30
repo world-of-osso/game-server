@@ -175,6 +175,33 @@ fn move_caster_destination(
     move_destination(world, caster, start, destination, selector)
 }
 
+/// Upper bound for the same ordered caster-offset selection, including running.
+pub(super) fn maximum_caster_offset(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    effect: &SpellEffect,
+    slot: usize,
+) -> Option<f32> {
+    let id = effect.implicit_targets[slot];
+    let missing_corner_radius = matches!(id, 41 | 43) && effect.radius[slot].is_none();
+    let distance = if missing_corner_radius {
+        DEFAULT_TOTEM_DISTANCE
+    } else {
+        let source_slot = radius_slot(effect, slot);
+        let extent = effect.radius[source_slot]
+            .map_or(0.0, |entry| read_caster_radius_cap(world, caster, entry));
+        let bonus = if super::super::attributes(spell, 9) & NO_MOVEMENT_RADIUS_BONUS == 0 {
+            RUNNING_RANGE_BONUS
+        } else {
+            0.0
+        };
+        extent + bonus
+    };
+    let reach = crate::scripted_ai::model_reach::combat_reach(world, caster)?;
+    Some(distance.max(reach))
+}
+
 /// CalcRadius(m_caster): absent B radius inherits A's entry; a missing entry is0.
 fn sample_caster_radius_extent(
     world: &World,

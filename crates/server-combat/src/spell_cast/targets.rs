@@ -1256,6 +1256,10 @@ pub fn unintended_effect_reach(
     let mut offset = 0.0;
     let mut caster_radius: f32 = 0.0;
     let mut target_radius: f32 = 0.0;
+    let ordered = effect
+        .implicit_targets
+        .iter()
+        .any(|&id| matches!(id, 41 | 43 | 46 | 48 | 73 | 74 | 148));
     for (slot, &id) in effect.implicit_targets.iter().enumerate() {
         let selector = selector(id);
         match selector {
@@ -1273,14 +1277,32 @@ pub fn unintended_effect_reach(
             }
             Some(Selector::CasterOffset(_)) => {
                 center = Some(Center::Caster);
-                let distance = radius(effect, slot);
-                offset = if distance > 0.0 {
-                    distance
+                if ordered && matches!(id, 41 | 43 | 48) {
+                    let Some(distance) = ordered_destination::maximum_caster_offset(
+                        world, caster, spell, effect, slot,
+                    ) else {
+                        continue;
+                    };
+                    offset = distance;
                 } else {
-                    DEFAULT_TOTEM_DISTANCE
-                };
+                    let distance = radius(effect, slot);
+                    offset = if distance > 0.0 {
+                        distance
+                    } else {
+                        DEFAULT_TOTEM_DISTANCE
+                    };
+                }
             }
-            Some(Selector::CasterRandom | Selector::CasterRadius | Selector::ForwardLeap) => {
+            Some(Selector::CasterRadius) => {
+                center = Some(Center::Caster);
+                let Some(distance) =
+                    ordered_destination::maximum_caster_offset(world, caster, spell, effect, slot)
+                else {
+                    continue;
+                };
+                offset = distance;
+            }
+            Some(Selector::CasterRandom | Selector::ForwardLeap) => {
                 center = Some(Center::Caster);
                 offset = radius(effect, slot);
             }
