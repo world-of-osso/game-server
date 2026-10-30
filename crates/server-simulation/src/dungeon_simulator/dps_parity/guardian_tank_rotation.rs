@@ -302,6 +302,11 @@ mod tests {
         for _ in 0..40 {
             run.app.update();
         }
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 102558, Some(actor), false)
+            .unwrap();
+        for _ in 0..40 {
+            run.app.update();
+        }
         run.app
             .insert_resource(FactorCapture::new(actor, target, 77758, "thrash", 1));
         crate::spell_cast::creature_cast(run.app.world_mut(), actor, 77758, Some(target), false)
@@ -321,7 +326,7 @@ mod tests {
         let actual = result["factors"]["raw_amount"].as_f64().unwrap();
         // Guardian 8% and 125%, Killer Instinct 6%, Grievous Wounds 10%,
         // Lunar Calling 12%, Circle 5%, Fury of Nature rank two 30%.
-        let expected = base * vers * 1.08 * 2.25 * 1.06 * 1.10 * 1.12 * 1.05 * 1.30;
+        let expected = base * vers * 1.08 * 2.25 * 1.06 * 1.10 * 1.12 * 1.05 * 1.30 * 1.10;
         assert!(
             (actual / expected - 1.0).abs() < 0.026,
             "actual={actual} expected={expected} trace={capture}"
