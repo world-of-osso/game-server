@@ -69,7 +69,7 @@ fn flight_path(
     ground_start: Vec3,
     ground_end: Vec3,
     samples: &[LoggedPoint],
-    mut surfaces: impl FnMut(Vec2) -> Result<Vec<f32>, String>,
+    mut surfaces: impl FnMut(Vec2, f32) -> Result<Vec<f32>, String>,
     mut clear: impl FnMut(Vec3, Vec3) -> Result<bool, String>,
 ) -> Result<Vec<Vec3>, String> {
     let Some(first) = samples.first() else {
@@ -96,7 +96,7 @@ fn flight_path(
                 .horizontal
                 .lerp(pair[1].horizontal, i as f32 / count as f32);
             let max_change = VERTICAL_BOUND * seconds / count as f32;
-            let height = surfaces(point)?
+            let height = surfaces(point, previous_height)?
                 .into_iter()
                 .filter(|height| {
                     height.is_finite() && (height - previous_height).abs() <= max_change
@@ -130,6 +130,11 @@ fn project_endpoint(
     reference: f32,
 ) -> Result<Vec3, String> {
     let mut floors = Vec::new();
+    if let Some(floor) = nav.floor_polygon(Vec3::new(point.x, reference, point.y))?
+        && (floor.x - point.x).hypot(floor.z - point.y) < 0.001
+    {
+        floors.push(Vec3::new(point.x, floor.y, point.y));
+    }
     for height in los.floor_heights(point.x, point.y)? {
         if let Some(floor) = nav.floor_polygon(Vec3::new(point.x, height, point.y))?
             && (floor.x - point.x).hypot(floor.z - point.y) < 0.001
@@ -187,6 +192,7 @@ pub(super) fn build_paths(
     }
     let root = super::graph::extraction::asset_root();
     let los = std::cell::RefCell::new(los::LosMap::new(&root.join("los/2662")));
+    let nav = std::cell::RefCell::new(nav);
     let mut paths = Vec::new();
     let mut previous_boss_height = graph.entrance_height;
     for (leg, &boss_height) in trace.legs.iter().zip(&boss_heights) {
@@ -206,16 +212,31 @@ pub(super) fn build_paths(
         };
         let start = project_endpoint(
             &mut los.borrow_mut(),
-            nav,
+            &mut nav.borrow_mut(),
             first.horizontal,
             previous_boss_height,
         )?;
-        let end = project_endpoint(&mut los.borrow_mut(), nav, last.horizontal, boss_height)?;
+        let end = project_endpoint(
+            &mut los.borrow_mut(),
+            &mut nav.borrow_mut(),
+            last.horizontal,
+            boss_height,
+        )?;
         let path = flight_path(
             start,
             end,
             &points,
-            |point| native_surfaces(&mut los.borrow_mut(), point),
+            |point, previous_height| {
+                let mut candidates = native_surfaces(&mut los.borrow_mut(), point)?;
+                if let Some(floor) =
+                    nav.borrow_mut()
+                        .floor_polygon(Vec3::new(point.x, previous_height, point.y))?
+                    && (floor.x - point.x).hypot(floor.z - point.y) < 0.001
+                {
+                    candidates.push(floor.y);
+                }
+                Ok(candidates)
+            },
             |from, to| los.borrow_mut().clear(from, to),
         )
         .map_err(|error| format!("encounter {} flight: {error}", leg.encounter))?;
@@ -232,23 +253,24 @@ fn dawnbreaker_logged_endpoint_surfaces_are_reported() {
     let mut los = los::LosMap::new(&root.join("los/2662"));
     let mut nav = navigation::NavigationMap::open(&root.join("navmesh/2662")).unwrap();
     let points = [
-        (1373.77, 178.47),
-        (2352.87, -687.51),
-        (1877.25, -970.72),
-        (2300.01, -636.16),
+        (1373.77, 178.47, 3.23963),
+        (2352.87, -687.51, 1104.8579),
+        (1877.25, -970.72, 124.9919),
+        (2300.01, -636.16, 1104.7925),
     ];
     let mut missing = Vec::new();
-    for (x, z) in points {
+    for (x, z, reference) in points {
         let heights = los.floor_heights(x, z).unwrap();
         let solids = native_surfaces(&mut los, Vec2::new(x, z)).unwrap();
         let floors: Vec<_> = heights
             .iter()
             .filter_map(|&y| nav.floor_polygon(Vec3::new(x, y, z)).unwrap())
             .collect();
+        let projected = project_endpoint(&mut los, &mut nav, Vec2::new(x, z), reference);
         println!(
-            "DAWNBREAKER_SURFACES x={x} z={z} solids={solids:?} walkable={heights:?} nav={floors:?}"
+            "DAWNBREAKER_SURFACES x={x} z={z} solids={solids:?} walkable={heights:?} nav={floors:?} projected={projected:?}"
         );
-        if floors.is_empty() {
+        if projected.is_err() {
             missing.push((x, z));
         }
     }
@@ -277,7 +299,7 @@ fn inferred_flight_selects_continuous_layer_and_checks_every_segment() {
         start,
         end,
         &samples,
-        |point| Ok(vec![5000.0, if point.x == 5.0 { 3.0 } else { 4.0 }]),
+        |point, _| Ok(vec![5000.0, if point.x == 5.0 { 3.0 } else { 4.0 }]),
         |a, b| {
             checked.push((a, b));
             Ok(true)
@@ -314,16 +336,23 @@ fn inferred_flight_rejects_missing_layers_impossible_changes_and_blocked_segment
             seconds: 1.0,
         },
     ];
-    let missing = flight_path(start, end, &samples, |_| Ok(vec![]), |_, _| Ok(true)).unwrap_err();
+    let missing =
+        flight_path(start, end, &samples, |_, _| Ok(vec![]), |_, _| Ok(true)).unwrap_err();
     assert!(missing.contains("continuity bound"));
-    let impossible =
-        flight_path(start, end, &samples, |_| Ok(vec![1000.0]), |_, _| Ok(true)).unwrap_err();
+    let impossible = flight_path(
+        start,
+        end,
+        &samples,
+        |_, _| Ok(vec![1000.0]),
+        |_, _| Ok(true),
+    )
+    .unwrap_err();
     assert!(impossible.contains("continuity bound"));
     let blocked = flight_path(
         start,
         end,
         &samples,
-        |_| Ok(vec![0.0]),
+        |_, _| Ok(vec![0.0]),
         |a, b| Ok(a.x == b.x),
     )
     .unwrap_err();
