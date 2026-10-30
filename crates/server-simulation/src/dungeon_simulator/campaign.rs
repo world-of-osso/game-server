@@ -274,6 +274,14 @@ fn unattackable_objective_is_approached_using_its_live_position() {
 }
 
 #[test]
+#[ignore = "requires extracted Darkflame follower graph"]
+fn darkflame_withheld_darkness_does_not_abort_initialization() {
+    let run = spawn_run(1, &mut None).unwrap();
+    assert_eq!(run.graph.map_id, 2651);
+    assert!(!run.actors.contains_key(&63651001));
+}
+
+#[test]
 #[ignore = "requires extracted Uldaman follower graph"]
 fn completed_dwarf_encounter_is_skipped_even_if_olaf_is_alive() {
     let mut run = spawn_run(1, &mut None).unwrap();
@@ -1713,6 +1721,14 @@ fn spawn_run(seed: u64, catalogs: &mut Option<super::catalogs::Catalogs>) -> Res
         .iter()
         .flat_map(|pack| &pack.spawns)
         .filter(|spawn| !actors.contains_key(&spawn.guid))
+        .filter(|spawn| {
+            !super::graph::corridor_inputs::source_is_withheld(
+                app.world().resource::<crate::world_data::WorldData>(),
+                copy,
+                graph.difficulty_id(),
+                spawn.guid,
+            )
+        })
         .map(|spawn| spawn.guid)
         .collect();
     if !missing.is_empty() {
