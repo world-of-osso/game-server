@@ -366,8 +366,7 @@ pub(crate) fn dungeon_release_location(
     map: &crate::maps::store::MapEntry,
     maps: &MapStore,
 ) -> Option<crate::maps::WorldLocation> {
-    crate::maps::graveyard::closest_graveyard_in_zone(maps, location, map.area_table_id)
-        .filter(|grave| grave.map_id == map.id)
+    crate::maps::graveyard::closest_graveyard_on_map(maps, location, map.area_table_id)
         .or_else(|| maps.dungeon_entrance_location(map.id))
         .or_else(|| maps.entrance_exit_location(map.id))
 }
