@@ -180,6 +180,11 @@ fn interaction_objective_unlocks_hoardmonger_through_six_native_deliveries() {
         }
         h.advance(1);
         if h.app.world().get::<UnitFlags>(boss).unwrap().0 & immunity == 0 {
+            assert!(
+                objectives::next(h.app.world_mut(), owner, boss)
+                    .unwrap()
+                    .is_none()
+            );
             return;
         }
     }
