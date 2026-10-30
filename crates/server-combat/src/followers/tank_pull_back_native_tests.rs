@@ -113,6 +113,10 @@ fn windrunner_tank_pulls_back_and_waits_without_pulling_hatchling() {
     h.app.world_mut().entity_mut(tank).insert(at(start));
     // The source spawn is about 21 yards away: an attack request alone cannot
     // land a melee swing. Start combat with the mage's native ranged spell.
+    h.app
+        .world_mut()
+        .entity_mut(owner)
+        .insert(crate::class_progression::KnownSpells::fixture(vec![30451]));
     h.cast(30451, Some(target));
     for _ in 0..180 {
         h.advance(1);
