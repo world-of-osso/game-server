@@ -18,6 +18,7 @@ fn at(point: Vec3) -> Position {
 fn windrunner_tank_pulls_back_and_waits_without_pulling_hatchling() {
     use super::profile_behavior_tests::spawn_profile_fixture_with_plugins;
     let (mut h, tank, profile) = spawn_profile_fixture_with_plugins(209057, |app| {
+        app.insert_resource(crate::test_data::world_data().clone());
         app.add_plugins((
             crate::creature_ai::CreatureAiPlugin,
             crate::creature_aggro::CreatureAggroPlugin,
