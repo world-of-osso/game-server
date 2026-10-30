@@ -52,4 +52,10 @@ fn avanoxx_requires_three_distinct_attendant_deaths_then_waits_in_its_copy() {
         h.app.world().get::<UnitFlags>(other_boss).unwrap().0 & blocked,
         blocked
     );
+    let (respawned, _) = spawn_authored_actor(&mut h.app, &conn, 213179, map, 205);
+    h.advance(0.1);
+    assert_eq!(
+        h.app.world().get::<UnitFlags>(respawned).unwrap().0 & blocked,
+        0
+    );
 }
