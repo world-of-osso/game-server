@@ -216,5 +216,14 @@ fn choose_route(
 }
 
 pub(super) fn clear(world: &mut World, unit: Entity) {
-    world.entity_mut(unit).remove::<TrailFollow>();
+    let Some(state) = world.entity_mut(unit).take::<TrailFollow>() else {
+        return;
+    };
+    let goal = Goal::OwnerTrail(state.owner.to_bits());
+    if let Some(mut nav) = world.get_resource_mut::<Navigation>() {
+        nav.cancel_query(unit, goal);
+        if nav.route_destination(unit, goal).is_some() {
+            nav.cancel_route(unit);
+        }
+    }
 }

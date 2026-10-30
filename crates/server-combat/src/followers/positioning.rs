@@ -46,6 +46,9 @@ pub(super) fn hold_unsafe_approach(world: &mut World, unit: Entity, target: Enti
     let is_owner = world
         .get::<super::Follower>(unit)
         .is_some_and(|follower| follower.owner == target);
+    if !is_owner {
+        super::trail_follow::clear(world, unit);
+    }
     if kit_ai::is_tank(world, unit) && !is_owner {
         return false;
     }
