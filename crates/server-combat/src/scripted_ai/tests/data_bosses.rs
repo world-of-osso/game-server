@@ -127,6 +127,8 @@ mod lost_dwarves;
 mod maraudon;
 #[path = "melidrussa.rs"]
 mod melidrussa;
+#[path = "multi_boss_credit.rs"]
+mod multi_boss_credit;
 #[path = "native_target148.rs"]
 mod native_target148;
 #[path = "neltharus_initial.rs"]
