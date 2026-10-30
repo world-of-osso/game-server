@@ -25,6 +25,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::ResourceContext(&[2120, 1254851]),
     SpellScriptHook::TargetDamageMultiplier(fuel_damage_multiplier),
     SpellScriptHook::TargetDamageMultiplier(scald_damage_multiplier),
+    SpellScriptHook::CriticalChance(scald_crit_chance),
     SpellScriptHook::TargetDamageMultiplier(molten_fury_damage_multiplier),
 ];
 
@@ -383,6 +384,17 @@ fn molten_fury_damage_multiplier(
         return 1.0;
     }
     1.0 + script_effect_value(world, caster, MOLTEN_FURY, 1) / 100.0
+}
+
+fn scald_crit_chance(world: &World, caster: Entity, target: Entity, spell: u32) -> Option<f32> {
+    if !matches!(spell, 133 | 431044) || !selected(world, caster, SCALD) {
+        return None;
+    }
+    // SimC76f8118 sc_mage.cpp2299–2305/3850–3857/5769–5772: Fireball
+    // and Fire Frostfire Bolt are guaranteed critical at Scald's health gate.
+    let threshold = script_effect_value(world, caster, SCALD, 2);
+    let health = world.get::<shared::components::Health>(target)?;
+    (health.current <= health.max * (threshold / 100.0)).then_some(100.0)
 }
 
 fn scald_damage_multiplier(
