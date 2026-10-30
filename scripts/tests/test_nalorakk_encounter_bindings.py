@@ -15,9 +15,9 @@ class NalorakkBindingsTest(unittest.TestCase):
         self.addCleanup(self.tmp.cleanup)
         self.db2 = Path(self.tmp.name)
         for name, fields, rows in (
-            ('JournalEncounter.csv', ('ID', 'DungeonEncounterID'), [(2776, 3207), (2777, 3208)]),
+            ('JournalEncounter.csv', ('ID', 'DungeonEncounterID'), [(2776, 3207), (2777, 3208), (2778, 3209)]),
             ('JournalEncounterCreature.csv', ('ID', 'JournalEncounterID', 'CreatureDisplayInfoID'),
-             [(5941, 2776, 129344), (5948, 2777, 129418)]),
+             [(5941, 2776, 129344), (5948, 2777, 129418), (5978, 2778, 129989)]),
         ):
             with (self.db2 / name).open('w', newline='') as output:
                 writer = csv.writer(output)
@@ -27,9 +27,9 @@ class NalorakkBindingsTest(unittest.TestCase):
         self.addCleanup(self.db.close)
         self.db.executescript('''
             CREATE TABLE dungeon_encounter (ID INTEGER, MapID INTEGER, Bit INTEGER);
-            INSERT INTO dungeon_encounter VALUES (3207,2825,0),(3208,2825,1);
+            INSERT INTO dungeon_encounter VALUES (3207,2825,0),(3208,2825,1),(3209,2825,2);
             CREATE TABLE content_creature (map INTEGER, id1 INTEGER);
-            INSERT INTO content_creature VALUES (2825,241812),(2825,244100);
+            INSERT INTO content_creature VALUES (2825,241812),(2825,244100),(2825,246404);
             CREATE TABLE raid_encounter_creature (
                 map_id INTEGER, creature_entry INTEGER, encounter_id INTEGER, bit INTEGER,
                 journal_encounter_id INTEGER, journal_creature_id INTEGER, display_id INTEGER,
@@ -42,6 +42,7 @@ class NalorakkBindingsTest(unittest.TestCase):
         self.assertEqual(self.db.execute('SELECT * FROM raid_encounter_creature ORDER BY bit').fetchall(), [
             (2825, 241812, 3207, 0, 2776, 5941, 129344),
             (2825, 244100, 3208, 1, 2777, 5948, 129418),
+            (2825, 246404, 3209, 2, 2778, 5978, 129989),
         ])
 
     def test_conflicting_binding_fails_without_partial_import(self):
