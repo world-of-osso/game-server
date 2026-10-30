@@ -29,6 +29,11 @@ fn register(scripts: &mut AuraScripts) {
     script.before_remove_reactions = Some(save_weapon_clock);
     script.check_proc = Some(accept_weapon_event);
     script.on_damage_proc = Some(wield_sacred_weapon);
+    // SimC76f8118 sc_paladin.cpp2403–2408,2444–2449,2462–2467,2490–2496:
+    // Sacred and Lesser Weapon child actions disable proc callbacks.
+    for spell in [432616, 441590, 1239282, 1239276] {
+        scripts.0.entry(spell).or_default().suppress_outgoing_procs = true;
+    }
 }
 
 // SimC76f8118 sc_paladin.cpp2813–2822,3313–3314 keeps one callback

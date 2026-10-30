@@ -21,6 +21,8 @@ pub type DamageProcHook = fn(&mut World, Entity, &AuraInstance, &super::procs::A
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct AuraScript {
+    /// This spell's outgoing events do not trigger proc callbacks.
+    pub suppress_outgoing_procs: bool,
     pub on_apply: Option<AuraHook>,
     /// Same-caster reapplication while the aura is still live.
     pub on_refresh: Option<AuraHook>,
