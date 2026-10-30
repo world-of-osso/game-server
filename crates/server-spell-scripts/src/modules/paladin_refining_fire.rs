@@ -1,6 +1,6 @@
 //! Avenger's Shield deposits its resolved damage into Refining Fire.
-use bevy::prelude::*;
 use super::{combat, marksmanship};
+use bevy::prelude::*;
 use combat::auras::ActiveAuras;
 use combat::spell_cast::{effects::EffectCtx, script_registry::SpellScriptHook};
 
@@ -9,8 +9,13 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::ResolvedDamage(a
 fn after_shield(world: &mut World, ctx: &EffectCtx<'_>, target: Entity, _: bool, damage: f32) {
     const TALENT: u32 = 469883;
     const DOT: u32 = 469882;
-    if ctx.spell.id != 31935 || damage <= 0.0 || !world.get::<ActiveAuras>(ctx.caster)
-        .is_some_and(|auras| auras.iter().any(|aura| aura.spell_id == TALENT && aura.caster == ctx.caster))
+    if ctx.spell.id != 31935
+        || damage <= 0.0
+        || !world.get::<ActiveAuras>(ctx.caster).is_some_and(|auras| {
+            auras
+                .iter()
+                .any(|aura| aura.spell_id == TALENT && aura.caster == ctx.caster)
+        })
     {
         return;
     }
