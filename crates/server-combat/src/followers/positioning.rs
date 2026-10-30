@@ -1,4 +1,4 @@
-//! Project positioning policy: non-tanks do not approach through idle native sight circles.
+//! Follower approaches avoid idle hostile formations other than the target's own.
 use bevy::ecs::system::SystemState;
 use bevy::prelude::*;
 use shared::components::{Health, UnitFactionTemplate};
