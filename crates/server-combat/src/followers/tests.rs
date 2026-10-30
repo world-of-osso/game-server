@@ -101,6 +101,11 @@ fn wrong_floor_hostile_is_dropped_instead_of_pursued() {
         .entity_mut(follower)
         .insert(crate::networking::CombatTarget(Some(enemy)));
     crate::combat_refs::set_in_combat_with(h.app.world_mut(), h.caster, enemy);
+    assert!(crate::combat_refs::has_active_reference_to(
+        h.app.world(),
+        h.caster,
+        enemy
+    ));
     for _ in 0..3 {
         update_ai(h.app.world_mut());
         h.app
@@ -114,6 +119,28 @@ fn wrong_floor_hostile_is_dropped_instead_of_pursued() {
             .get::<crate::networking::CombatTarget>(follower)
             .and_then(|target| target.0),
         Some(enemy)
+    );
+    h.app
+        .world_mut()
+        .entity_mut(enemy)
+        .insert(shared::components::Position {
+            x: upper.x + 1.0,
+            ..upper
+        });
+    for _ in 0..3 {
+        update_ai(h.app.world_mut());
+        h.app
+            .world_mut()
+            .resource_mut::<crate::navigation::Navigation>()
+            .drain_until_idle();
+    }
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::networking::CombatTarget>(follower)
+            .and_then(|target| target.0),
+        Some(enemy),
+        "a visible hostile in melee range remains selectable"
     );
 }
 
