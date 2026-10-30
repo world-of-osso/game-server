@@ -517,7 +517,7 @@ pub fn spawn_creature(
         && template.static_flags[0] & crate::creature_static::IGNORE_COMBAT == 0
     {
         let unblocked = crate::creature_aggro::AggroMode::for_template(
-            template.creature_type,
+            u32::from(template.creature_type),
             template.flags_extra,
             template.unit_flags
                 & !(shared::components::UnitFlags::IMMUNE_TO_PC
