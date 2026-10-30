@@ -70,6 +70,7 @@ pub(super) fn hammer_wave(world: &mut World, caster: Entity, target: Entity, dep
         chain_multipliers: Vec::new(),
         selected_units: Vec::new(),
         blocked_units: Vec::new(),
+        missed_units: Vec::new(),
         prevent_hit_script: false,
     }];
     spell_cast::hit::remove_defended_targets(world, caster, &wave, &mut plan);

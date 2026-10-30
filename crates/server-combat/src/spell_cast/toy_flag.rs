@@ -84,6 +84,7 @@ fn planned_effect(index: usize, units: Vec<Entity>, dest: Option<targets::Dest>)
         chain_multipliers: Vec::new(),
         selected_units: Vec::new(),
         blocked_units: Vec::new(),
+        missed_units: Vec::new(),
         prevent_hit_script: false,
     }
 }

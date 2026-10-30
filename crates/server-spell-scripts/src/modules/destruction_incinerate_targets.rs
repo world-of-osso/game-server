@@ -64,6 +64,7 @@ fn plan_incinerate(
                 dest: targets::effect_dest(world, caster, explicit, effect, spell.cast_destination),
                 chain_multipliers,
                 blocked_units: Vec::new(),
+missed_units: Vec::new(),
                 prevent_hit_script: false,
             }
         })

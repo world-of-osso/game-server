@@ -55,6 +55,12 @@ pub(super) fn remove_defended_targets(
         if kind == MissKind::Block && attributes(spell, 3) & ATTR3_COMPLETELY_BLOCKED == 0 {
             continue;
         }
+        if let Some(effect) = plan
+            .iter_mut()
+            .find(|effect| effect.selected_units.contains(&unit))
+        {
+            effect.missed_units.push((unit, kind));
+        }
         log_event(
             world,
             cast_event(caster, Some(unit), spell, CombatLogKind::Miss(kind)),

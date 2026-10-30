@@ -303,6 +303,9 @@ fn land_now(
                         .selected_units
                         .retain(|unit| reachable.contains(unit));
                     planned
+                        .missed_units
+                        .retain(|(unit, _)| reachable.contains(unit));
+                    planned
                 })
                 .collect();
             hit(world, caster, spell, &plan, depth);
@@ -369,6 +372,7 @@ fn split_reflected(
                     chain_multipliers: vec![(caster, planned.chain_multiplier(reflector))],
                     selected_units: Vec::new(),
                     blocked_units: Vec::new(),
+                    missed_units: Vec::new(),
                     prevent_hit_script: planned.prevent_hit_script,
                 })
                 .collect();
@@ -456,6 +460,12 @@ fn landings(
                         .copied()
                         .filter(|&unit| delay_of(unit) == moment)
                         .collect();
+                    let missed_units = planned
+                        .missed_units
+                        .iter()
+                        .copied()
+                        .filter(|(unit, _)| delay_of(*unit) == moment)
+                        .collect();
                     let unitless = planned.units.is_empty()
                         && planned.selected_units.is_empty()
                         && moment == unitless_moment;
@@ -463,6 +473,7 @@ fn landings(
                     (has_units || unitless).then(|| PlannedEffect {
                         units,
                         selected_units,
+                        missed_units,
                         ..planned.clone()
                     })
                 })

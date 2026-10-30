@@ -2046,7 +2046,7 @@ pub fn replay_simc_dummy_bleed_application(world: &mut World, source: Entity, ta
             periodic: false,
             damage: 0.0,
             heal: None,
-            hit_mask: 0,
+            hit_mask: procs::PROC_HIT_NORMAL,
             reflected: false,
         },
     );
@@ -2448,10 +2448,18 @@ fn deal_source_damage_and_report(
     // breakable crowd control compares with the target's max health.
     // A fully absorbed damage effect still landed. Preserve that target in
     // the hit ledger for per-hit scripts, without inventing damage procs.
-    let recorded_hit =
-        !periodic && super::record_hit_damage(world, ctx.caster, ctx.spell.id, target, scaled_loss);
-    if amount > 0.0 && !recorded_hit {
-        push_damage_event(world, ctx, target, periodic, scaled_loss);
+    let hit_mask = procs::landed_hit_mask(crit, blocked, absorbed, amount);
+    let recorded_hit = !periodic
+        && super::record_hit_damage(
+            world,
+            ctx.caster,
+            ctx.spell.id,
+            target,
+            scaled_loss,
+            hit_mask,
+        );
+    if (amount > 0.0 || absorbed > 0.0 || blocked > 0.0) && !recorded_hit {
+        push_damage_event(world, ctx, target, periodic, scaled_loss, hit_mask);
     }
     if commit.lethal {
         kill(world, ctx.caster, target, ctx.depth == 0);
@@ -2471,6 +2479,7 @@ fn push_damage_event(
     target: Entity,
     periodic: bool,
     damage: f32,
+    hit_mask: u32,
 ) {
     let (actor, taken) = if periodic {
         (
@@ -2496,14 +2505,22 @@ fn push_damage_event(
             target: Some(target),
             action_target: ctx.spell.cast_primary_target,
             actor_mask: [actor, 0],
-            target_mask: [taken | procs::PROC_TAKE_ANY_DAMAGE, 0],
+            target_mask: [
+                taken
+                    | if damage > 0.0 {
+                        procs::PROC_TAKE_ANY_DAMAGE
+                    } else {
+                        0
+                    },
+                0,
+            ],
             spell_id: Some(ctx.spell.id),
             can_proc: ctx.depth == 0,
             cast_used_proc_modifier: !ctx.spell.cast_proc_mods.is_empty(),
             periodic,
             damage,
             heal: None,
-            hit_mask: 0,
+            hit_mask,
             reflected: false,
         },
     );
@@ -2752,7 +2769,14 @@ fn apply_resolved_heal(
         percent_based,
     );
     if !periodic {
-        super::record_hit_heal(world, ctx.caster, ctx.spell.id, target, amount);
+        super::record_hit_heal(
+            world,
+            ctx.caster,
+            ctx.spell.id,
+            target,
+            amount,
+            procs::landed_hit_mask(crit, 0.0, 0.0, amount),
+        );
         super::scripts::heal_beacon(world, ctx, target, effective);
         super::scripts::cast_expel_harm_damage(world, ctx, amount);
     }
@@ -2771,7 +2795,7 @@ fn apply_resolved_heal(
                 periodic: true,
                 damage: 0.0,
                 heal: Some(amount),
-                hit_mask: 0,
+                hit_mask: procs::landed_hit_mask(crit, 0.0, 0.0, amount),
                 reflected: false,
             },
         );
