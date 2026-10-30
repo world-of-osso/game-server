@@ -66,6 +66,13 @@ pub(super) fn update_follower(world: &mut World, unit: Entity, follower: &Follow
     }
     stop_attacking_cc(world, unit);
     let party = party_units(world, follower.owner);
+    if follower.profile.role != GroupRole::Tank
+        && super::tank_pull_back::party_should_wait(world, follower.owner)
+    {
+        wait_for_tank_pull_back(world, unit, follower, &party);
+        return;
+    }
+    super::tank_pull_back_party::restore_pets(world, unit);
     let mut enemies = engaged_enemies(world, follower, unit, &party);
     let pending = super::target_reach::retain_reachable(world, unit, follower, &mut enemies);
     let lost_target = world
@@ -137,6 +144,22 @@ pub(super) fn update_follower(world: &mut World, unit: Entity, follower: &Follow
         return;
     };
     attack_enemy(world, unit, follower, enemy);
+}
+
+fn wait_for_tank_pull_back(world: &mut World, unit: Entity, follower: &Follower, party: &[Entity]) {
+    super::tank_pull_back_party::stop_damage(world, unit);
+    if let Some(tank) = super::tank_pull_back_party::find_tank(world, party) {
+        super::tank_pull_back_party::follow_tank(world, unit, tank);
+    } else {
+        hold_combat(world, unit);
+    }
+    if !super::kit_ai::update(world, unit, follower, party, None, &[])
+        && follower.profile.heal_spell != 0
+        && let Some(patient) = lowest_health(world, party, unit)
+        && pursue(world, unit, patient, follower.profile.heal_spell, false)
+    {
+        cast(world, unit, patient, follower.profile.heal_spell);
+    }
 }
 
 fn trace_target_selection(

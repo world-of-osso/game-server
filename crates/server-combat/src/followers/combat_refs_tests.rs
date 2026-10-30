@@ -9,7 +9,7 @@ const TRAINING_DUMMY: u32 = 31_146;
 const MEREDY: u32 = 209_059;
 const METEOR: u32 = 153_561;
 
-fn native_dummies() -> (Harness, Entity, [Entity; 3]) {
+pub(super) fn native_dummies() -> (Harness, Entity, [Entity; 3]) {
     let (mut h, unit, _) = spawn_profile_fixture_with_plugins(MEREDY, |_| {});
     let db = rusqlite::Connection::open_with_flags(
         crate::test_data::world_db_path(),

@@ -36,12 +36,15 @@ pub(super) fn update(
     {
         return true;
     }
+    let waiting_for_pull = follower.profile.role != shared::group::GroupRole::Tank
+        && super::tank_pull_back::party_should_wait(world, follower.owner);
     let level = world.get::<Level>(unit).map_or(0, |level| level.0);
     let mut entries: Vec<_> = world
         .get_resource::<FollowerCatalog>()
         .into_iter()
         .flat_map(|catalog| &catalog.kits)
         .filter(|entry| entry.available(follower.profile.spec_id, level))
+        .filter(|entry| !waiting_for_pull || !matches!(entry.slot, Slot::Attack | Slot::Aoe))
         .cloned()
         .map(super::utility::normalize_entry)
         .collect();
@@ -67,7 +70,11 @@ pub(super) fn update(
     if world.get::<CastState>(unit).is_none() && ai::prepare_pet(world, unit, follower) {
         return true;
     }
-    let candidates = super::utility_interrupt::ordered_casts(world, enemies);
+    let candidates = if waiting_for_pull {
+        Vec::new()
+    } else {
+        super::utility_interrupt::ordered_casts(world, enemies)
+    };
     for &candidate in &candidates {
         if super::utility_interrupt::try_party(
             world,
@@ -139,6 +146,9 @@ pub(super) fn update(
         }
     }
     if world.get::<CastState>(unit).is_some() {
+        return true;
+    }
+    if waiting_for_pull {
         return true;
     }
     if let Some(enemy) = enemy {

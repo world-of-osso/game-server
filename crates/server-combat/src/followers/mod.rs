@@ -117,6 +117,7 @@ mod tank_defense;
 mod tank_frontal;
 mod tank_planner;
 mod tank_pull_back;
+mod tank_pull_back_party;
 #[cfg(test)]
 mod tank_planner_tests;
 mod trail_follow;
