@@ -3,7 +3,7 @@ use super::*;
 
 #[test]
 fn fangs_warmup_requires_orator_and_nearby_player_then_unlocks_both() {
-    let (mut h, nx, map) = bound_boss_at_difficulty(216648, 2669, 1, 205, None);
+    let (mut h, nx, map) = bound_boss_at_difficulty(216648, 2669, 2, 205, None);
     let native = crate::spell_cast::test_harness::load_native_creature_world(&[216649]);
     {
         let mut data = h.app.world_mut().resource_mut::<WorldData>();
