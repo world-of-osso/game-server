@@ -1343,6 +1343,7 @@ fn record_swing(
                 AuraEvent {
                     actor: attacker_entity,
                     target: Some(target_entity),
+                    action_target: None,
                     actor_mask: [0; 2],
                     target_mask: [procs::PROC_TAKE_MELEE_SWING, 0],
                     spell_id: None,
@@ -1408,6 +1409,7 @@ fn swing_aura_events(attacker: Entity, target: Entity, outcome: &SwingOutcome) -
     let mut events = vec![AuraEvent {
         actor: attacker,
         target: Some(target),
+        action_target: None,
         actor_mask: [procs::PROC_DEAL_MELEE_SWING | hand_swing, 0],
         target_mask: [
             procs::PROC_TAKE_MELEE_SWING | procs::PROC_TAKE_ANY_DAMAGE,
@@ -1426,6 +1428,7 @@ fn swing_aura_events(attacker: Entity, target: Entity, outcome: &SwingOutcome) -
         events.push(AuraEvent {
             actor: attacker,
             target: Some(target),
+            action_target: None,
             actor_mask: [procs::PROC_KILL, 0],
             target_mask: [procs::PROC_DEATH, 0],
             spell_id: None,
@@ -2680,7 +2683,27 @@ pub(crate) fn mark_npc_dead_world(world: &mut World, entity: Entity) {
 /// Dying stops combat (`setDeathState` → `CombatStop`), so its killers do not
 /// swing at it again when it respawns.
 fn insert_npc_death(mut entity: EntityWorldMut) {
-    let respawn_timer = entity.get::<RespawnDelay>().map_or(0.0, |delay| delay.0);
+    let map = entity.get::<crate::maps::InMap>().copied();
+    let summon = entity.contains::<crate::zones::TempSummon>();
+    let instance_lifetime = entity.world_scope(|world| {
+        let Some(map) = map else { return false };
+        !summon
+            && world
+                .get_resource::<crate::maps::MapStore>()
+                .and_then(|store| store.map(map.map_id))
+                .is_some_and(|entry| entry.instance_type == crate::maps::store::InstanceType::Party)
+            && world
+                .get_resource::<crate::maps::InstanceManager>()
+                .and_then(|instances| instances.copy_difficulty(map))
+                .is_some_and(|difficulty| matches!(difficulty.difficulty_id, 1 | 2 | 8 | 23 | 205))
+    });
+    // TC 15e0ed76 Creature.cpp:1148 uses a non-respawning delay for dungeon bosses.
+    // Retail instance trash also stays dead; scripted despawns replace this timer.
+    let respawn_timer = if instance_lifetime {
+        f32::INFINITY
+    } else {
+        entity.get::<RespawnDelay>().map_or(0.0, |delay| delay.0)
+    };
     let remaining = entity.get::<CorpseDelay>().map_or(0.0, |delay| delay.0);
     let killer = entity.get::<LastDamager>().map(|damager| damager.0);
     let killing_blow = entity.take::<KillingBlow>().and_then(|cause| cause.0);
@@ -2711,6 +2734,7 @@ fn insert_npc_death(mut entity: EntityWorldMut) {
         crate::mythic_plus::record_kill(world, npc);
         crate::maps::raid::record_creature_death(world, npc);
         crate::scripted_ai::hellfire_ramparts::on_unit_death(world, npc);
+        crate::scripted_ai::algethar_academy::on_unit_death(world, npc);
         crate::vehicle::accessory::on_vehicle_death(world, npc);
         crate::zones::notify_group_depletion(world, npc);
     });

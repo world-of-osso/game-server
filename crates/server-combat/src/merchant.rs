@@ -66,6 +66,7 @@ pub struct MerchantPlugin;
 impl Plugin for MerchantPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<VendorCatalog>()
+            .init_resource::<crate::guild_rewards::GuildRewardCatalog>()
             .init_resource::<VendorStock>()
             .init_resource::<DailyReset>()
             .init_resource::<ChangedGuilds>()
@@ -125,6 +126,7 @@ struct Shop<'w, 's> {
     db: Option<Res<'w, GameDatabase>>,
     templates: Option<Res<'w, ItemTemplates>>,
     catalog: Res<'w, VendorCatalog>,
+    guild_rewards: Res<'w, crate::guild_rewards::GuildRewardCatalog>,
     quests: Option<Res<'w, crate::quest_data::QuestDb>>,
     economy_config: Option<Res<'w, crate::economy::Config>>,
     economy: Option<ResMut<'w, crate::economy::Economy>>,
@@ -184,6 +186,14 @@ impl Shop<'_, '_> {
             .mount_reputation
             .get(&item_id)
             .is_none_or(|requirement| requirement.met(self.reputations.get(buyer.player).ok()))
+    }
+
+    fn guild_reward_allowed(&self, buyer: Buyer, item_id: u32) -> MerchantResult {
+        self.guild_rewards.check_purchase(
+            item_id,
+            buyer.race,
+            self.reputations.get(buyer.player).ok(),
+        )
     }
 
     fn vendor_entry(&self, vendor: Entity) -> Result<u32, MerchantError> {
@@ -248,7 +258,10 @@ impl Shop<'_, '_> {
                 if !buyer.offered(&template) {
                     return None;
                 }
-                let goods = self.catalog.goods.get(&slot.item_id)?.clone();
+                let mut goods = self.catalog.goods.get(&slot.item_id)?.clone();
+                if let Some(price) = self.guild_rewards.price(slot.item_id) {
+                    goods.buy_price = price;
+                }
                 let available =
                     self.stock
                         .available(vendor, index as u32, slot, goods.buy_count, now);
@@ -267,7 +280,8 @@ impl Shop<'_, '_> {
                     max_stack: template.max_stack.max(1),
                     num_available: available,
                     usable: buyer.can_use(&template)
-                        && self.mount_reputation_met(buyer, slot.item_id),
+                        && self.mount_reputation_met(buyer, slot.item_id)
+                        && self.guild_reward_allowed(buyer, slot.item_id).is_ok(),
                     max_durability: self.durability_rules.max_durability(slot.item_id),
                 })
             })
@@ -526,6 +540,10 @@ fn buy(shop: &mut Shop, customer: &mut Customer, req: BuyItem) -> MerchantResult
     }
     if !shop.mount_reputation_met(buyer, slot.item_id) {
         return Err(MerchantError::ReputationRequired);
+    }
+    shop.guild_reward_allowed(buyer, slot.item_id)?;
+    if let Some(price) = shop.guild_rewards.price(slot.item_id) {
+        goods.buy_price = price;
     }
     let mount_cost = shop.catalog.mount_costs.get(&(entry, req.slot)).cloned();
     if let Some(cost) = &mount_cost {

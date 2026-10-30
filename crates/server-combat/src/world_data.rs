@@ -693,9 +693,29 @@ pub(crate) fn load_templates(
         .query_map(params![], |row| template_from_row(row, expected))
         .expect("Failed to query content_creature_template");
 
+    let factions: HashSet<u32> = conn
+        .prepare("SELECT ID FROM faction_template")
+        .expect("Failed to prepare faction template validation")
+        .query_map([], |row| row.get(0))
+        .expect("Failed to query faction template validation")
+        .collect::<rusqlite::Result<_>>()
+        .expect("Failed to read faction template validation");
+    const FRIENDLY_FACTION: u32 = 35;
+    assert!(
+        factions.contains(&FRIENDLY_FACTION),
+        "faction template 35 is required"
+    );
     let mut map = HashMap::new();
     for row in rows {
-        let t = row.expect("Failed to read content_creature_template row");
+        let mut t = row.expect("Failed to read content_creature_template row");
+        // TC 15e0ed76 ObjectMgr.cpp:1022-1026 validates every CreatureTemplate faction.
+        if !factions.contains(&u32::from(t.faction)) {
+            error!(
+                "Creature entry {} has non-existing faction template {}; set to 35",
+                t.entry, t.faction
+            );
+            t.faction = FRIENDLY_FACTION as u16;
+        }
         map.insert(t.entry, t);
     }
     map
@@ -733,10 +753,10 @@ pub(crate) fn load_difficulty_templates(
     for row in rows {
         let (difficulty_id, mut template) =
             row.expect("Failed to read content_creature_template_difficulty row");
-        template.models = templates
-            .get(&template.entry)
-            .map(|base| base.models.clone())
-            .unwrap_or_default();
+        if let Some(base) = templates.get(&template.entry) {
+            template.models = base.models.clone();
+            template.faction = base.faction;
+        }
         map.insert((template.entry, difficulty_id), template);
     }
     map
@@ -1105,6 +1125,9 @@ fn startup_load_world_data(mut commands: Commands) {
         crate::merchant::load_vendor_catalog(&conn).expect("Failed to load content_npc_vendor");
     info!("Loaded {} vendor lists", vendors.vendors.len());
     commands.insert_resource(vendors);
+    commands.insert_resource(crate::guild_rewards::load_guild_reward_catalog(&conn).expect(
+        "Failed to load tdb_guild_rewards; run scripts/import_guild_rewards.py on a world.db copy",
+    ));
     let professions = crate::profession::load_profession_data(&conn)
         .expect("Failed to load profession data; run scripts/import-azerothcore.sh");
     commands.insert_resource(professions);

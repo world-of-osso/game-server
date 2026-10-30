@@ -16,8 +16,8 @@ class DarknessPlacement(unittest.TestCase):
             path = Path(directory) / 'copy.sqlite'
             with closing(sqlite3.connect(path)) as db, db:
                 db.execute('CREATE TABLE content_creature(guid INTEGER PRIMARY KEY, id1 INTEGER, map INTEGER,'
-                           'position_x REAL, position_y REAL, position_z REAL, orientation REAL, Comment TEXT)')
-                db.executemany('INSERT INTO content_creature VALUES(?,?,?,?,?,?,?,?)', [
+                           'position_x REAL, position_y REAL, position_z REAL, orientation REAL, Comment TEXT, spawntimesecs INTEGER DEFAULT 120)')
+                db.executemany('INSERT INTO content_creature(guid,id1,map,position_x,position_y,position_z,orientation,Comment) VALUES(?,?,?,?,?,?,?,?)', [
                     (63651001, 208747, 2651, 188.47888114999995, -547.817170475, 59.8, 0.0,
                      'FOLLOWER_PLACEMENT_XY_FROM_JOURNAL_ENCOUNTER_UIMAP; db2:12.1.5.70448/JournalEncounter#2561'),
                     (63651000, 208743, 2651, 406.77750715, -155.2714289, 56.68354978731017, 0.0,
@@ -26,6 +26,7 @@ class DarknessPlacement(unittest.TestCase):
             subprocess.run([sys.executable, '-I', str(SCRIPT), '--db', str(path)], check=True,
                            capture_output=True)
             with closing(sqlite3.connect(path)) as db:
+                self.assertEqual(db.execute('SELECT spawntimesecs FROM content_creature WHERE guid=63651001').fetchone(), (7200,))
                 rows = db.execute('SELECT guid,position_x,position_y,position_z,orientation,Comment '
                                   'FROM content_creature ORDER BY guid').fetchall()
         self.assertEqual(rows[0], (63651000, 406.77750715, -155.2714289, 56.68354978731017, 0.0,

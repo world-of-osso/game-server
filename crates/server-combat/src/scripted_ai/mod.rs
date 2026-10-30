@@ -16,7 +16,8 @@
 //! See `docs/specs/boss-scripts.md`.
 
 use crate::random as rand;
-mod algethar_academy;
+pub(crate) mod academy_transport;
+pub(crate) mod algethar_academy;
 mod anubzekt;
 pub(crate) mod azure_vault;
 mod azureblade;
@@ -33,6 +34,7 @@ pub(crate) mod darkness;
 pub(crate) mod door_data;
 mod doragosa;
 mod emberon;
+pub(crate) mod encounter_doors;
 pub mod event_map;
 mod gorek;
 mod granyth;
@@ -69,8 +71,10 @@ mod talondras;
 pub mod the_stockade;
 mod treemouth;
 pub(crate) mod tww_rookery;
+mod uldaman;
 mod umbrelskul;
 mod vexamus;
+pub(crate) mod voidscar_portal;
 pub(crate) mod wailing_caverns;
 pub mod waypoint_path;
 mod wratheye;
@@ -104,7 +108,9 @@ pub(crate) const SCRIPT_SPAWN_GROUPS: &[u32] = &[
 pub(crate) fn is_game_object_script(script_name: &str) -> bool {
     matches!(
         script_name,
-        kings_rest::SERPENTINE_SEAL_SCRIPT | nethekurse_intro::DOOR_SCRIPT
+        kings_rest::SERPENTINE_SEAL_SCRIPT
+            | nethekurse_intro::DOOR_SCRIPT
+            | voidscar_portal::SCRIPT
     )
 }
 
@@ -117,6 +123,8 @@ pub(crate) fn game_object_gossip_hello(world: &mut World, player: Entity, object
         kings_rest::serpentine_seal_gossip_hello(world, player, object);
     } else if script.0 == nethekurse_intro::DOOR_SCRIPT {
         nethekurse_intro::door_gossip_hello(world, object);
+    } else if script.0 == voidscar_portal::SCRIPT {
+        voidscar_portal::use_portal(world, player, object);
     }
 }
 
@@ -144,12 +152,23 @@ impl Plugin for ScriptedAiPlugin {
             .add_systems(FixedPreUpdate, trigger_just_appeared)
             .add_systems(FixedPostUpdate, hellfire_ramparts::update_instance_resets)
             .add_systems(FixedPostUpdate, hellfire_ramparts::liquid_fire::update)
-            .add_systems(FixedPreUpdate, jump_movement::release_finished_jumps)
+            .add_systems(FixedPostUpdate, uldaman::update_door)
+            .add_systems(
+                FixedPreUpdate,
+                (
+                    jump_movement::release_finished_jumps,
+                    algethar_academy::finish_crawth_descent,
+                    academy_transport::finish_entrance_pad,
+                    voidscar_portal::finish_portal_flight,
+                )
+                    .chain(),
+            )
             .add_systems(FixedPreUpdate, fall_movement::release_finished_falls)
             .add_systems(
                 FixedUpdate,
                 (
                     bossmod::advance_schedules,
+                    academy_transport::launch_entrance_pad,
                     init_creature_ai,
                     ragefire_chasm::intro_triggers::detect_entries,
                     nethekurse_intro::detect_entries,

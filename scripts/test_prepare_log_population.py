@@ -12,6 +12,18 @@ spec.loader.exec_module(module)
 
 
 class PrepareTest(unittest.TestCase):
+    def test_missing_and_ambiguous_boss_positions_remain_named_gaps(self):
+        run = {'file': 'a', 'start': 'start', 'map': 2813,
+               'creatures': {'g': {'npc_id': 237415, 'seen_outside_encounter': True,
+                                   'position_gap': 'BOSS_PRE_PULL_POSITION_UNOBSERVED'}},
+               'encounters': [{'known_boss_npc_ids': [237415]}]}
+        cluster = {'map': 2813, 'npc_id': 237415, 'ambiguous_match': True,
+                   'candidate_centroid': {'x': 9151.12, 'y': -4944.43}, 'observations': []}
+        records, gaps = module.prepare([run], [cluster], [], [])
+        self.assertEqual(records, [])
+        self.assertEqual(gaps['2813']['BOSS_PRE_PULL_POSITION_UNOBSERVED'], 1)
+        self.assertEqual(gaps['2813']['BOSS_PRE_PULL_IDENTITY_AMBIGUOUS'], 1)
+
     def test_cli_combines_key_and_zone_floor_batches(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

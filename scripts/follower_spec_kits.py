@@ -183,6 +183,10 @@ def combat_policy(spec, name, spell, dispel_effects, control_effects):
         return policy('buff', 75, 'self', missing_aura=spell)
     if spec == 103 and name in {'Berserk', 'Incarnation: Avatar of Ashamane'}:
         return policy('buff', 80, 'self', combat=True, missing_aura=spell, required_aura=5217)
+    # SimC76f8118 apl_paladin.cpp101 and sc_paladin.cpp5319: Protection's
+    # Sentinel replaces Avenging Wrath in the same cooldown action.
+    if spec == 66 and name == 'Sentinel':
+        return policy('buff', 80, 'self', combat=True, missing_aura=spell)
     if name in {'Avenging Wrath', 'Combustion', 'Dragonrage', 'Zenith', 'Bestial Wrath', "Tiger's Fury", 'Stormkeeper', 'Summon Demonic Tyrant', 'Divine Toll', 'Mirror Image'}:
         return policy('buff', 80, 'self', combat=True, missing_aura=spell)
     if name in GROUND_AOE_MIN_ENEMIES:

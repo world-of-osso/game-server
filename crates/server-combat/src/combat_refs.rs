@@ -192,6 +192,11 @@ pub fn end_all_combat(world: &mut World, unit: Entity) {
         .map(|mut refs| refs.0.drain().map(|(other, _)| other).collect())
         .unwrap_or_default();
     for other in others {
+        for (endpoint, opponent) in [(unit, other), (other, unit)] {
+            if let Some(mut threat) = world.get_mut::<ThreatTable>(endpoint) {
+                threat.remove(opponent.to_bits());
+            }
+        }
         if let Some(mut refs) = world.get_mut::<CombatRefs>(other) {
             refs.0.remove(&unit);
             update_combat_status(world, other);

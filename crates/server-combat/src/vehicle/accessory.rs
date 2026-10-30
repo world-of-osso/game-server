@@ -23,6 +23,32 @@ pub(crate) struct VehicleAccessories {
     seat_offsets: HashMap<(u32, usize), Vec3>,
 }
 
+impl VehicleAccessories {
+    #[cfg(any(test, feature = "test-support"))]
+    pub(crate) fn entry_pairs(&self) -> Vec<(u32, u32)> {
+        let mut pairs: Vec<_> = self
+            .by_vehicle
+            .iter()
+            .flat_map(|(&vehicle, rows)| rows.iter().map(move |row| (vehicle, row.entry)))
+            .collect();
+        pairs.sort_unstable();
+        pairs
+    }
+}
+
+#[test]
+fn accessory_pairs_include_each_vehicle_rider() {
+    let mut catalog = VehicleAccessories::default();
+    catalog.by_vehicle.insert(
+        210153,
+        vec![AccessoryRow {
+            entry: 210149,
+            seat_index: Some(0),
+        }],
+    );
+    assert_eq!(catalog.entry_pairs(), [(210153, 210149)]);
+}
+
 /// A summoned rider held at its vehicle's seat.
 #[derive(Component, Clone, Copy)]
 pub(crate) struct Accessory {

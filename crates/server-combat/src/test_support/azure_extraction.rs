@@ -55,6 +55,11 @@ fn extract_azure_graph() {
     combined.extend(teleports.clone());
     let graph = Graph {
         map_id: 2515,
+        follower_difficulty: 0,
+        follower_boss_entries: Vec::new(),
+        follower_boss_sources: BTreeMap::new(),
+        follower_boss_bits: BTreeMap::new(),
+        transports: Vec::new(),
         entrance: [-5050.48, -1024.56],
         entrance_height: 594.216,
         entrance_pack: opening,

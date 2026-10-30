@@ -1092,6 +1092,17 @@ impl<'a> QuestSession<'a, '_, '_> {
             let character_id = self.character();
             self.io.effects.xp.0.push(XpAward::quest(character_id, xp));
         }
+        let quest_level = crate::quest_rules::quest_level(quest, self.requester.player);
+        let connection = self.requester.connection;
+        self.io.commands.queue(move |world: &mut World| {
+            crate::guild_rewards::award_quest_reputation(
+                world,
+                connection,
+                character,
+                level,
+                quest_level,
+            );
+        });
         let complete = QuestGiverQuestComplete {
             quest_id,
             money: money.max(0) as u32,

@@ -66,22 +66,21 @@ fn read_catalog(db: &Connection) -> rusqlite::Result<FollowerCatalog> {
             })
         })?
         .collect::<rusqlite::Result<Vec<_>>>()?;
-    let mut query = db.prepare("SELECT d.id,d.name,d.map_id,l.LocX,l.LocY,l.LocZ,l.Facing FROM follower_lfg_dungeons d JOIN tdb_world_safe_locs l ON l.MapID=d.map_id WHERE d.difficulty_id=205 AND d.tanks=1 AND d.healers=1 AND d.damage=3 AND l.Comment LIKE '%Entrance%' AND EXISTS(SELECT 1 FROM content_creature c WHERE c.map=d.map_id AND (','||c.spawnDifficulties||',') LIKE '%,1,%') ORDER BY d.id,l.ID")?;
+    let entrances = crate::maps::store::load_entrance_store(db)?;
+    let mut query = db.prepare("SELECT d.id,d.name,d.map_id FROM follower_lfg_dungeons d WHERE d.difficulty_id=205 AND d.tanks=1 AND d.healers=1 AND d.damage=3 AND EXISTS(SELECT 1 FROM content_creature c WHERE c.map=d.map_id AND (','||c.spawnDifficulties||',') LIKE '%,1,%') ORDER BY d.id")?;
     let rows = query.query_map([], |row| {
-        Ok(Dungeon {
-            id: row.get(0)?,
-            name: row.get(1)?,
-            entrance: WorldLocation {
-                map_id: row.get(2)?,
-                position: Vec3::new(row.get(3)?, row.get(4)?, row.get(5)?),
-                orientation: row.get::<_, f32>(6)?.to_radians(),
-            },
-        })
+        Ok((
+            row.get::<_, u32>(0)?,
+            row.get::<_, String>(1)?,
+            row.get::<_, u32>(2)?,
+        ))
     })?;
     let mut dungeons = HashMap::new();
-    for dungeon in rows {
-        let dungeon = dungeon?;
-        dungeons.entry(dungeon.id).or_insert(dungeon);
+    for row in rows {
+        let (id, name, map_id) = row?;
+        if let Some(entrance) = entrances.dungeon_entrance_location(map_id) {
+            dungeons.insert(id, Dungeon { id, name, entrance });
+        }
     }
     Ok(FollowerCatalog {
         profiles: profiles.into(),

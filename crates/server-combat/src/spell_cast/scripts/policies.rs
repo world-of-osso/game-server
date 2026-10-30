@@ -223,7 +223,7 @@ fn read_splash_geometry(world: &World, caster: Entity, spell: &SpellInfo) -> (f3
     (radius, cap)
 }
 
-fn soft_cap_multiplier(count: usize, cap: f32) -> f32 {
+pub fn soft_cap_multiplier(count: usize, cap: f32) -> f32 {
     // SimC76f8118 action.cpp1562–1579; max_aoe_enemies defaults to20.
     const MAX_AOE_ENEMIES: usize = 20;
     let reduced = if cap > 0.0 && count as f32 > cap {

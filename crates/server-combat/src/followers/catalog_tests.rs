@@ -75,6 +75,22 @@ fn follower_population_catalog_lists_every_map_with_authentic_sources() {
 }
 
 #[test]
+fn murder_row_catalog_uses_the_login_and_release_entrance() {
+    let db = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let catalog = load_catalog(&db).unwrap();
+    let entrance = catalog.dungeons.get(&3089).unwrap().entrance;
+    assert_eq!(entrance.map_id, 2813);
+    assert!(
+        (entrance.position - bevy::prelude::Vec3::new(8687.87, -4927.05, 19.061333)).length()
+            < 0.01
+    );
+}
+
+#[test]
 fn follower_normal_population_requires_exact_normal_spawns_and_an_authored_entrance() {
     let db = rusqlite::Connection::open_in_memory().unwrap();
     db.execute_batch("CREATE TABLE follower_profiles(entry INTEGER,name TEXT,class_id INTEGER,spec_id INTEGER,role INTEGER,attack_spell INTEGER,cooldown_spell INTEGER,heal_spell INTEGER,taunt_spell INTEGER,form_spell INTEGER,melee INTEGER);
@@ -84,7 +100,10 @@ fn follower_normal_population_requires_exact_normal_spawns_and_an_authored_entra
         CREATE TABLE tdb_world_safe_locs(ID INTEGER,MapID INTEGER,LocX REAL,LocY REAL,LocZ REAL,Facing REAL,Comment TEXT);
         INSERT INTO tdb_world_safe_locs VALUES(100030,2521,1386.2,-169.719,131.0,342.674,'10.x Dungeon - Ruby Life Pools - Entrance'),(100031,2520,0,0,0,0,'Entrance');
         CREATE TABLE content_creature(map INTEGER,spawnDifficulties TEXT);
-        INSERT INTO content_creature VALUES(2521,'1,2,23'),(2520,'11,205');").unwrap();
+        INSERT INTO content_creature VALUES(2521,'1,2,23'),(2520,'11,205');
+        CREATE TABLE tdb_areatrigger_teleport(ID INTEGER,PortLocID INTEGER);
+        CREATE TABLE area_trigger(ID INTEGER,ContinentID INTEGER,Pos_0 REAL,Pos_1 REAL,Pos_2 REAL,ShapeType INTEGER,Radius REAL,Box_length REAL,Box_width REAL,Box_height REAL,Box_yaw REAL,AreaTriggerActionSetID INTEGER);
+        CREATE TABLE area_trigger_action_set(ID INTEGER,Flags INTEGER);").unwrap();
     let catalog = load_catalog(&db).unwrap();
     assert_eq!(catalog.profiles[0].entry, 209057);
     assert_eq!(catalog.profiles[0].spec_id, 66);
@@ -95,6 +114,19 @@ fn follower_normal_population_requires_exact_normal_spawns_and_an_authored_entra
     assert!((ruby.entrance.position.x - 1386.2).abs() < 0.001);
     assert!((ruby.entrance.position.z - 131.0).abs() < 0.001);
     assert!((ruby.entrance.orientation - 342.674_f32.to_radians()).abs() < 0.0001);
+    db.execute_batch(
+        "INSERT INTO tdb_world_safe_locs VALUES(200000,2521,10,20,30,90,'Portal target');
+        INSERT INTO tdb_areatrigger_teleport VALUES(77,200000);
+        INSERT INTO area_trigger VALUES(77,0,1,2,3,0,5,0,0,0,0,0);",
+    )
+    .unwrap();
+    let catalog = load_catalog(&db).unwrap();
+    let ruby = catalog.dungeons.get(&2436).unwrap();
+    assert_eq!(
+        ruby.entrance.position,
+        bevy::prelude::Vec3::new(10.0, 20.0, 30.0)
+    );
+    assert!((ruby.entrance.orientation - 90.0_f32.to_radians()).abs() < 0.0001);
     db.execute("DELETE FROM content_creature WHERE map=2521", [])
         .unwrap();
     assert!(load_catalog(&db).unwrap().dungeons.is_empty());

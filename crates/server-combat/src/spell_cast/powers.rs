@@ -853,7 +853,7 @@ pub(crate) fn regenerate_powers(
             let old = mana.current;
             mana.current = (mana.current + mana_rate * dt).clamp(0.0, mana.max);
             if let Some(observed) = observed.as_deref_mut() {
-                observed.1 += f64::from(mana.current - old);
+                observed.mana_regenerated += f64::from(mana.current - old);
             }
             crate::auras::power_amount_trigger::queue_regenerated(
                 &mut commands,

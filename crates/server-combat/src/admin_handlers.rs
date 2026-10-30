@@ -327,6 +327,33 @@ pub(crate) fn handle_set_gold(
     }
 }
 
+/// Sets the signed reputation `value` with `faction_id`, saved and sent to the live player.
+pub(crate) fn handle_set_reputation(
+    db: &persistence::GameDatabase,
+    commands: &mut Commands,
+    name: &str,
+    faction_id: u32,
+    value: i32,
+) -> AdminResponse {
+    let Some(char_id) = persistence::find_character_id_by_name(&db.db, name) else {
+        return AdminResponse::Error(format!("character '{name}' not found"));
+    };
+    if shared::reputation::default_faction_registry()
+        .get(faction_id)
+        .is_none()
+    {
+        return AdminResponse::Error(format!("faction {faction_id} not found"));
+    }
+    commands.queue(move |world: &mut World| {
+        crate::reputation::set_reputation(world, char_id, faction_id, value);
+    });
+    AdminResponse::ReputationSet {
+        character_name: name.to_owned(),
+        faction_id,
+        value,
+    }
+}
+
 /// Sets every equipped item with durability to `percent` of its max, saved and
 /// on the live player.
 pub(crate) fn handle_set_durability(

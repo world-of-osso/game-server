@@ -1,7 +1,9 @@
 //! Frozen native-height topology. Only explicit extraction tests open navigation data.
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
+#[cfg(test)]
+use std::collections::BTreeSet;
 use std::path::PathBuf;
 
 #[cfg(test)]
@@ -37,6 +39,17 @@ pub struct RouteStep {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct TransportEdge {
+    pub from: u32,
+    pub to: u32,
+    pub source_guid: u32,
+    pub radius: f32,
+    pub departure: Option<[f32; 3]>,
+    pub landing: [f32; 3],
+    pub action: super::transport::Action,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Graph {
     pub map_id: u32,
     pub entrance: [f32; 2],
@@ -45,8 +58,18 @@ pub struct Graph {
     pub packs: Vec<Pack>,
     pub edges: Vec<Edge>,
     pub teleports: Vec<Edge>,
+    #[serde(default)]
+    pub transports: Vec<TransportEdge>,
     pub unreachable: Vec<u32>,
     pub route: Vec<RouteStep>,
+    #[serde(default)]
+    pub follower_difficulty: u32,
+    #[serde(default)]
+    pub follower_boss_entries: Vec<u32>,
+    #[serde(default)]
+    pub follower_boss_sources: BTreeMap<u32, u32>,
+    #[serde(default)]
+    pub follower_boss_bits: BTreeMap<u32, u32>,
 }
 
 #[path = "walk_route.rs"]
@@ -54,6 +77,30 @@ mod walk_route;
 
 #[derive(Resource)]
 pub struct Space(pub Graph);
+
+struct PendingNode {
+    id: u32,
+    distance: f32,
+}
+impl PartialEq for PendingNode {
+    fn eq(&self, other: &Self) -> bool {
+        self.cmp(other).is_eq()
+    }
+}
+impl Eq for PendingNode {}
+impl Ord for PendingNode {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        other
+            .distance
+            .total_cmp(&self.distance)
+            .then(other.id.cmp(&self.id))
+    }
+}
+impl PartialOrd for PendingNode {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
 
 impl Space {
     pub fn route(&self, from: Vec3, to: Vec3) -> Result<Vec<Vec3>, String> {
@@ -103,35 +150,43 @@ impl Space {
         let goal = nearest(to)?;
         let mut distances = BTreeMap::from([(start, 0.0_f32)]);
         let mut previous = BTreeMap::new();
-        let mut visited = BTreeSet::new();
-        while let Some((&node, &distance)) = distances
-            .iter()
-            .filter(|(node, _)| !visited.contains(*node))
-            .min_by(|a, b| a.1.total_cmp(b.1).then(a.0.cmp(b.0)))
-        {
+        let mut adjacency = BTreeMap::<u32, Vec<(u32, f32)>>::new();
+        for edge in &self.0.edges {
+            adjacency
+                .entry(edge.from)
+                .or_default()
+                .push((edge.to, edge.yards));
+            adjacency
+                .entry(edge.to)
+                .or_default()
+                .push((edge.from, edge.yards));
+        }
+        for edge in &self.0.teleports {
+            adjacency
+                .entry(edge.from)
+                .or_default()
+                .push((edge.to, edge.yards));
+        }
+        let mut pending = std::collections::BinaryHeap::from([PendingNode {
+            id: start,
+            distance: 0.0,
+        }]);
+        while let Some(PendingNode { id: node, distance }) = pending.pop() {
+            if distance != distances[&node] {
+                continue;
+            }
             if node == goal {
                 break;
             }
-            visited.insert(node);
-            for edge in self
-                .0
-                .edges
-                .iter()
-                .map(|edge| (edge, false))
-                .chain(self.0.teleports.iter().map(|edge| (edge, true)))
-            {
-                let (edge, directed) = edge;
-                let next = if edge.from == node {
-                    edge.to
-                } else if !directed && edge.to == node {
-                    edge.from
-                } else {
-                    continue;
-                };
-                let total = distance + edge.yards;
+            for &(next, yards) in adjacency.get(&node).into_iter().flatten() {
+                let total = distance + yards;
                 if distances.get(&next).is_none_or(|known| total < *known) {
                     distances.insert(next, total);
                     previous.insert(next, node);
+                    pending.push(PendingNode {
+                        id: next,
+                        distance: total,
+                    });
                 }
             }
         }
@@ -160,20 +215,23 @@ impl Graph {
         match self.map_id {
             34 => 1,
             2515 => 205,
-            other => panic!("unsupported simulator map{other}"),
+            _ => self.follower_difficulty,
         }
     }
 
-    pub fn boss_entries(&self) -> &'static [u32] {
+    pub fn boss_entries(&self) -> &[u32] {
         match self.map_id {
             34 => &[46383, 46264, 46254],
             2515 => &[186644, 186739, 186737, 186738],
-            other => panic!("unsupported simulator map{other}"),
+            _ => &self.follower_boss_entries,
         }
     }
 }
 
 pub fn graph_path() -> PathBuf {
+    if let Some(path) = std::env::var_os("DUNGEON_SIMULATOR_GRAPH") {
+        return PathBuf::from(path);
+    }
     let map = std::env::var_os("DUNGEON_SIMULATOR_MAP")
         .map(|value| {
             value
@@ -182,9 +240,9 @@ pub fn graph_path() -> PathBuf {
         })
         .unwrap_or_else(|| "34".into());
     let file = match map.as_str() {
-        "34" => "stockade-34.json",
-        "2515" => "azure-vault-2515.json",
-        _ => panic!("unsupported DUNGEON_SIMULATOR_MAP={map}"),
+        "34" => "stockade-34.json".to_owned(),
+        "2515" => "azure-vault-2515.json".to_owned(),
+        _ => format!("map-{map}.json"),
     };
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("../../content/dungeons")
@@ -353,6 +411,11 @@ fn stacked_fixture() -> Space {
             to: 3,
             yards: 10.0,
         }],
+        follower_difficulty: 0,
+        follower_boss_entries: Vec::new(),
+        follower_boss_sources: BTreeMap::new(),
+        follower_boss_bits: BTreeMap::new(),
+        transports: Vec::new(),
         teleports: vec![Edge {
             from: 1,
             to: 2,
@@ -361,6 +424,21 @@ fn stacked_fixture() -> Space {
         unreachable: Vec::new(),
         route: Vec::new(),
     })
+}
+
+#[test]
+fn generated_graph_uses_sourced_follower_difficulty_and_bosses() {
+    let mut graph = stacked_fixture().0;
+    graph.map_id = 2451;
+    graph.follower_difficulty = 205;
+    graph.follower_boss_entries = vec![184580, 184581, 184582, 184018];
+    let bytes = serde_json::to_vec(&graph).unwrap();
+    let loaded: Graph = serde_json::from_slice(&bytes).unwrap();
+    assert_eq!(loaded.difficulty_id(), 205);
+    assert_eq!(loaded.boss_entries(), &[184580, 184581, 184582, 184018]);
+    let legacy = stacked_fixture().0;
+    assert_eq!(legacy.difficulty_id(), 1);
+    assert_eq!(legacy.boss_entries(), &[46383, 46264, 46254]);
 }
 
 #[test]
@@ -497,6 +575,11 @@ fn extract_stockade_graph() {
         entrance_height: entrance.y,
         entrance_pack: nearest,
         unreachable: unreachable(&packs, &edges, nearest),
+        follower_difficulty: 0,
+        follower_boss_entries: Vec::new(),
+        follower_boss_sources: BTreeMap::new(),
+        follower_boss_bits: BTreeMap::new(),
+        transports: Vec::new(),
         // Topology extraction is followed by native radius capture and the generic route author.
         route: Vec::new(),
         teleports: Vec::new(),

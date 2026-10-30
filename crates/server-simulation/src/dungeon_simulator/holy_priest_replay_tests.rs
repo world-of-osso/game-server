@@ -198,16 +198,28 @@ fn piety_redistributes_flash_heal_overhealing() {
     );
     crate::spell_cast::creature_cast(h.app.world_mut(), h.caster, 2061, Some(full), true).unwrap();
     h.advance(2);
+    assert!(
+        !h.app
+            .world()
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|e| e.spell_id == Some(443126)),
+        "Piety waits for its native 500 ms tick"
+    );
+    crate::spell_cast::creature_cast(h.app.world_mut(), h.caster, 2061, Some(full), true).unwrap();
+    h.advance(10);
     let events = &h.app.world().resource::<ObservedCombatEvents>().0;
-    let source = events
+    let overheal: i32 = events
         .iter()
-        .find(|e| {
+        .filter(|e| {
             e.kind == CombatLogKind::Heal
                 && e.spell_id == Some(2061)
                 && e.target == Some(full.to_bits())
         })
-        .expect("Flash Heal must land");
-    assert!(source.overflow > 0);
+        .map(|e| e.overflow)
+        .sum();
+    assert!(overheal > 0);
     for ally in [first, second] {
         let heal = events
             .iter()
@@ -217,7 +229,7 @@ fn piety_redistributes_flash_heal_overhealing() {
                     && e.target == Some(ally.to_bits())
             })
             .expect("Piety must heal injured ally");
-        assert!((heal.amount as f32 - source.overflow as f32 * 0.1).abs() <= 1.0);
+        assert!((heal.amount as f32 - overheal as f32 * 0.1).abs() <= 1.0);
     }
 }
 

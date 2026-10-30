@@ -1,0 +1,145 @@
+use super::nalorakk_offerings::update_offerings;
+use super::spellclick::{cast_spellclick, load_spellclick_catalog};
+use crate::maps::InMap;
+use crate::spell_cast::test_harness::harness;
+use shared::components::{Health, Npc, Position, UnitFlags};
+
+#[test]
+fn nalorakk_six_avatar_deliveries_unlock_only_their_instance() {
+    let mut h = harness(Vec::new(), &[1239001, 1239428, 1249737], 2).unwrap();
+    h.app
+        .add_systems(bevy::prelude::FixedUpdate, update_offerings);
+    let conn = rusqlite::Connection::open(crate::test_data::world_db_path()).unwrap();
+    h.app
+        .insert_resource(load_spellclick_catalog(&conn).unwrap());
+    let player = h.caster;
+    let bush = h.npc;
+    let map = InMap {
+        map_id: 2825,
+        instance_id: 47,
+    };
+    let other_map = InMap {
+        map_id: 2825,
+        instance_id: 48,
+    };
+    h.app.world_mut().entity_mut(player).insert(map);
+    h.app.world_mut().entity_mut(bush).insert((
+        map,
+        Npc {
+            template_id: 244941,
+            name: "Berry Bush".into(),
+        },
+    ));
+    let immunity = UnitFlags::IMMUNE_TO_PC | UnitFlags::IMMUNE_TO_NPC;
+    let mut avatars = Vec::new();
+    for index in 0..6 {
+        let avatar = h
+            .app
+            .world_mut()
+            .spawn((
+                Npc {
+                    template_id: 241805,
+                    name: "Avatar of Starvation".into(),
+                },
+                Position {
+                    x: 20.0 + index as f32 * 10.0,
+                    y: 0.0,
+                    z: 0.0,
+                },
+                map,
+                Health {
+                    current: 100.0,
+                    max: 100.0,
+                },
+            ))
+            .id();
+        avatars.push(avatar);
+    }
+    let boss = h
+        .app
+        .world_mut()
+        .spawn((
+            Npc {
+                template_id: 241812,
+                name: "Hoardmonger".into(),
+            },
+            map,
+            UnitFlags(immunity),
+        ))
+        .id();
+    let other = h
+        .app
+        .world_mut()
+        .spawn((
+            Npc {
+                template_id: 241812,
+                name: "Hoardmonger".into(),
+            },
+            other_map,
+            UnitFlags(immunity),
+        ))
+        .id();
+    update_offerings(h.app.world_mut());
+    for avatar in &avatars {
+        assert!(crate::auras::has_aura(h.app.world(), *avatar, 1249737));
+    }
+    for (index, avatar) in avatars.iter().enumerate() {
+        let x = 20.0 + index as f32 * 10.0;
+        h.app.world_mut().entity_mut(player).insert(Position {
+            x: x - 8.0,
+            y: 0.0,
+            z: 0.0,
+        });
+        h.app.world_mut().entity_mut(bush).insert(Position {
+            x: x - 6.0,
+            y: 0.0,
+            z: 0.0,
+        });
+        cast_spellclick(h.app.world_mut(), player, bush, 244941);
+        h.advance(80);
+        assert!(crate::auras::has_aura(h.app.world(), player, 1239428));
+        h.app
+            .world_mut()
+            .entity_mut(player)
+            .insert(Position { x, y: 0.0, z: 0.0 });
+        h.advance(3);
+        assert!(!crate::auras::has_aura(h.app.world(), player, 1239428));
+        assert!(!crate::auras::has_aura(h.app.world(), *avatar, 1249737));
+        let flags = h.app.world().get::<UnitFlags>(boss).unwrap().0;
+        assert_eq!(flags & immunity, if index == 5 { 0 } else { immunity });
+        assert_eq!(
+            h.app.world().get::<UnitFlags>(other).unwrap().0 & immunity,
+            immunity
+        );
+    }
+}
+
+#[test]
+fn nalorakk_pickup_requires_a_completed_cast() {
+    let mut h = harness(Vec::new(), &[1239001, 1239428], 2).unwrap();
+    let conn = rusqlite::Connection::open(crate::test_data::world_db_path()).unwrap();
+    h.app
+        .insert_resource(load_spellclick_catalog(&conn).unwrap());
+    let player = h.caster;
+    let bush = h.npc;
+    let map = InMap {
+        map_id: 2825,
+        instance_id: 47,
+    };
+    h.app.world_mut().entity_mut(player).insert(map);
+    h.app.world_mut().entity_mut(bush).insert((
+        map,
+        Npc {
+            template_id: 244941,
+            name: "Berry Bush".into(),
+        },
+    ));
+    cast_spellclick(h.app.world_mut(), player, bush, 244941);
+    crate::spell_cast::cancel_cast(h.app.world_mut(), player);
+    update_offerings(h.app.world_mut());
+    assert!(!crate::auras::has_aura(h.app.world(), player, 1239428));
+    cast_spellclick(h.app.world_mut(), player, bush, 244941);
+    cast_spellclick(h.app.world_mut(), player, bush, 244941);
+    h.advance(80);
+    assert!(crate::auras::has_aura(h.app.world(), player, 1239428));
+}

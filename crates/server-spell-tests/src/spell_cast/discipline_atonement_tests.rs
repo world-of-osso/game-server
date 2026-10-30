@@ -5,6 +5,414 @@ use shared::components::{ActiveSpec, Health};
 use shared::protocol::CombatLogKind;
 
 #[test]
+fn dark_indulgence_grants_dark_side_from_real_mind_blast() {
+    for selected in [false, true] {
+        let mut h = harness(Vec::new(), &[8092, 372972, 198069], 5).unwrap();
+        let caster = h.caster;
+        let target = h.npc;
+        h.app.world_mut().entity_mut(caster).insert((
+            ActiveSpec(256),
+            crate::class_progression::KnownSpells::fixture(if selected {
+                vec![8092, 372972]
+            } else {
+                vec![8092]
+            }),
+        ));
+        *h.app.world_mut().get_mut::<Health>(target).unwrap() = Health {
+            current: 100_000.0,
+            max: 100_000.0,
+        };
+        h.cast_and_deliver(8092, Some(target));
+        h.advance(50);
+        assert_eq!(
+            crate::auras::has_aura(h.app.world(), caster, 198069),
+            selected
+        );
+    }
+}
+
+#[test]
+fn twist_of_fate_triggers_from_preimpact_health_for_real_spells() {
+    for (spell, healing) in [(585, false), (2061, true)] {
+        for (selected, health_pct, expected) in [
+            (true, 34.0, true),
+            (true, 35.0, false),
+            (false, 34.0, false),
+        ] {
+            let mut h = harness(Vec::new(), &[585, 2061, 390972, 390978], 5).unwrap();
+            let caster = h.caster;
+            let target = if healing {
+                spawn_player(&mut h.app, 5, 2.0)
+            } else {
+                h.npc
+            };
+            h.app.world_mut().entity_mut(caster).insert((
+                ActiveSpec(256),
+                crate::class_progression::KnownSpells::fixture(if selected {
+                    vec![585, 2061, 390972]
+                } else {
+                    vec![585, 2061]
+                }),
+            ));
+            *h.app.world_mut().get_mut::<Health>(target).unwrap() = Health {
+                current: health_pct * 1000.0,
+                max: 100_000.0,
+            };
+            h.cast_and_deliver(spell, Some(target));
+            h.advance(50);
+            assert_eq!(
+                crate::auras::has_aura(h.app.world(), caster, 390978),
+                expected,
+                "spell {spell}, selected {selected}, health {health_pct}%"
+            );
+        }
+    }
+}
+
+#[test]
+fn twist_of_fate_increases_real_priest_damage_and_healing() {
+    for (spell, kind) in [(585, CombatLogKind::Damage), (2061, CombatLogKind::Heal)] {
+        let mut amounts = Vec::new();
+        for active in [false, true] {
+            let _seed = crate::random::seed_scope(70448);
+            let mut h = harness(Vec::new(), &[585, 2061, 390972, 390978], 5).unwrap();
+            h.app
+                .init_resource::<super::test_harness::ObservedCombatEvents>();
+            let caster = h.caster;
+            let target = if spell == 2061 {
+                spawn_player(&mut h.app, 5, 2.0)
+            } else {
+                h.npc
+            };
+            *h.app.world_mut().get_mut::<Health>(target).unwrap() = Health {
+                current: 80_000.0,
+                max: 100_000.0,
+            };
+            if active {
+                crate::auras::apply_aura(
+                    h.app.world_mut(),
+                    &crate::auras::AuraApplication {
+                        caster,
+                        target: caster,
+                        spell_id: 390978,
+                        effect_mask: u32::MAX,
+                        source: crate::auras::AuraSource::Cast,
+                    },
+                );
+            }
+            h.cast_and_deliver(spell, Some(target));
+            h.advance(50);
+            let event = h
+                .app
+                .world()
+                .resource::<super::test_harness::ObservedCombatEvents>()
+                .0
+                .iter()
+                .find(|event| {
+                    event.kind == kind
+                        && event.spell_id == Some(spell)
+                        && event.target == Some(target.to_bits())
+                })
+                .unwrap();
+            amounts.push(event.amount);
+        }
+        assert!(
+            (amounts[1] as f32 - amounts[0] as f32 * 1.05).abs() <= 2.0,
+            "spell {spell}: {amounts:?}"
+        );
+    }
+}
+
+#[test]
+fn discipline_penance_extends_only_its_casters_real_pain() {
+    for selected in [false, true] {
+        let mut h = harness(
+            Vec::new(),
+            &[589, 47540, 47758, 47757, 47666, 47750, 390686],
+            5,
+        )
+        .unwrap();
+        let caster = h.caster;
+        let enemy = h.npc;
+        h.app.world_mut().entity_mut(caster).insert((
+            ActiveSpec(256),
+            crate::class_progression::KnownSpells::fixture(if selected {
+                vec![589, 47540, 390686]
+            } else {
+                vec![589, 47540]
+            }),
+        ));
+        *h.app.world_mut().get_mut::<Health>(enemy).unwrap() = Health {
+            current: 100_000.0,
+            max: 100_000.0,
+        };
+        h.cast_and_deliver(589, Some(enemy));
+        h.advance(50);
+        let other = spawn_player(&mut h.app, 5, 1.0);
+        crate::auras::apply_aura(
+            h.app.world_mut(),
+            &crate::auras::AuraApplication {
+                caster: other,
+                target: enemy,
+                spell_id: 589,
+                effect_mask: u32::MAX,
+                source: crate::auras::AuraSource::Cast,
+            },
+        );
+        let other_before = h
+            .app
+            .world()
+            .get::<ActiveAuras>(enemy)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 589 && aura.caster == other)
+            .unwrap()
+            .expires_at;
+        let expiry = |h: &Harness| {
+            h.app
+                .world()
+                .get::<ActiveAuras>(enemy)
+                .unwrap()
+                .iter()
+                .find(|aura| aura.spell_id == 589 && aura.caster == caster)
+                .unwrap()
+                .expires_at
+                .unwrap()
+        };
+        let before = expiry(&h);
+        h.cast_and_deliver(47540, Some(enemy));
+        h.advance(70);
+        let extension = expiry(&h) - before;
+        let expected = if selected { 4.5 } else { 0.0 };
+        assert!(
+            (extension - expected).abs() < 0.001,
+            "three actual bolts must extend owned Pain by {expected}s, got {extension}"
+        );
+        let other_after = h
+            .app
+            .world()
+            .get::<ActiveAuras>(enemy)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 589 && aura.caster == other)
+            .unwrap()
+            .expires_at;
+        assert_eq!(
+            other_after, other_before,
+            "another Priest's Pain must not be extended"
+        );
+    }
+}
+
+#[test]
+fn discipline_evangelism_cast_triggers_scaled_radiance_and_marks_allies() {
+    let mut primary_heals = Vec::new();
+    for root in [194509, 472433] {
+        let _seed = crate::random::seed_scope(70448);
+        let mut h = harness(Vec::new(), &[194509, 472433, 194384, 81749], 5).unwrap();
+        h.app
+            .init_resource::<super::test_harness::ObservedCombatEvents>();
+        let caster = h.caster;
+        h.app.world_mut().entity_mut(caster).insert(ActiveSpec(256));
+        h.app
+            .world_mut()
+            .get_mut::<server::stats::CharacterStats>(caster)
+            .unwrap()
+            .crit_pct = 0.0;
+        let primary = spawn_player(&mut h.app, 5, 2.0);
+        *h.app.world_mut().get_mut::<Health>(primary).unwrap() = Health {
+            current: 100.0,
+            max: 10_000.0,
+        };
+        let ally = spawn_player(&mut h.app, 5, 3.0);
+        *h.app.world_mut().get_mut::<Health>(ally).unwrap() = Health {
+            current: 100.0,
+            max: 10_000.0,
+        };
+        h.cast_and_deliver(root, Some(primary));
+        h.advance(80);
+        assert!(
+            h.inbox.failed.is_empty(),
+            "real cast failed: {:?}",
+            h.inbox.failed
+        );
+        let events = &h
+            .app
+            .world()
+            .resource::<super::test_harness::ObservedCombatEvents>()
+            .0;
+        let heal = events
+            .iter()
+            .find(|event| {
+                event.kind == CombatLogKind::Heal
+                    && event.spell_id == Some(194509)
+                    && event.target == Some(primary.to_bits())
+            })
+            .expect("primary receives real Radiance heal");
+        assert!(crate::auras::has_aura(h.app.world(), primary, 194384));
+        assert!(crate::auras::has_aura(h.app.world(), ally, 194384));
+        primary_heals.push(heal.amount);
+    }
+    let ratio = primary_heals[1] as f32 / primary_heals[0] as f32;
+    assert!(
+        (1.3..1.7).contains(&ratio),
+        "Evangelism Radiance uses native 150%: {primary_heals:?}"
+    );
+}
+
+#[test]
+fn discipline_dark_side_is_consumed_and_snapshotted_for_all_penance_bolts() {
+    let mut damage_sets = Vec::new();
+    for empowered in [false, true] {
+        let _seed = crate::random::seed_scope(70448);
+        let mut h = harness(Vec::new(), &[47540, 47758, 47757, 47666, 47750, 198069], 5).unwrap();
+        h.app
+            .init_resource::<super::test_harness::ObservedCombatEvents>();
+        let caster = h.caster;
+        h.app.world_mut().entity_mut(caster).insert(ActiveSpec(256));
+        h.app
+            .world_mut()
+            .get_mut::<server::stats::CharacterStats>(caster)
+            .unwrap()
+            .crit_pct = 0.0;
+        if empowered {
+            crate::auras::apply_aura(
+                h.app.world_mut(),
+                &crate::auras::AuraApplication {
+                    caster,
+                    target: caster,
+                    spell_id: 198069,
+                    effect_mask: u32::MAX,
+                    source: crate::auras::AuraSource::Cast,
+                },
+            );
+        }
+        h.cast_and_deliver(47540, Some(h.npc));
+        h.advance(70);
+        assert!(!crate::auras::has_aura(h.app.world(), caster, 198069));
+        let events = &h
+            .app
+            .world()
+            .resource::<super::test_harness::ObservedCombatEvents>()
+            .0;
+        let damage: Vec<_> = events
+            .iter()
+            .filter(|event| event.kind == CombatLogKind::Damage && event.spell_id == Some(47666))
+            .map(|event| event.amount)
+            .collect();
+        assert_eq!(damage.len(), 3);
+        damage_sets.push(damage);
+    }
+    for (base, empowered) in damage_sets[0].iter().zip(&damage_sets[1]) {
+        let ratio = *empowered as f32 / *base as f32;
+        assert!(
+            (1.2..1.4).contains(&ratio),
+            "Dark Side must persist through each real bolt: {damage_sets:?}"
+        );
+    }
+}
+
+#[test]
+fn discipline_prompt_prognosis_amplifies_only_the_third_penance_bolt() {
+    let mut h = harness(Vec::new(), &[47540, 47758, 47757, 47666, 47750, 1246799], 5).unwrap();
+    h.app
+        .init_resource::<super::test_harness::ObservedCombatEvents>();
+    let caster = h.caster;
+    h.app.world_mut().entity_mut(caster).insert((
+        ActiveSpec(256),
+        crate::class_progression::KnownSpells::fixture(vec![47540, 1246799]),
+    ));
+    h.app
+        .world_mut()
+        .get_mut::<server::stats::CharacterStats>(caster)
+        .unwrap()
+        .crit_pct = 0.0;
+    h.cast_and_deliver(47540, Some(h.npc));
+    h.advance(70);
+    let events = &h
+        .app
+        .world()
+        .resource::<super::test_harness::ObservedCombatEvents>()
+        .0;
+    let damage: Vec<_> = events
+        .iter()
+        .filter(|event| event.kind == CombatLogKind::Damage && event.spell_id == Some(47666))
+        .collect();
+    assert_eq!(damage.len(), 3);
+    assert!(
+        damage[1].amount < damage[0].amount * 2,
+        "the second bolt is unmodified: {damage:?}"
+    );
+    assert!(
+        damage[2].amount > damage[0].amount * 2,
+        "the third bolt gets the native 125% bonus: {damage:?}"
+    );
+}
+
+#[test]
+fn discipline_penance_twinsight_heals_and_holy_ray_increases_later_bolts() {
+    let mut h = harness(
+        Vec::new(),
+        &[47540, 47758, 47757, 47666, 47750, 372969, 1235193, 440742],
+        5,
+    )
+    .unwrap();
+    h.app
+        .init_resource::<super::test_harness::ObservedCombatEvents>();
+    let caster = h.caster;
+    h.app.world_mut().entity_mut(caster).insert((
+        ActiveSpec(256),
+        crate::class_progression::KnownSpells::fixture(vec![47540, 372969, 440742]),
+    ));
+    h.app
+        .world_mut()
+        .get_mut::<server::stats::CharacterStats>(caster)
+        .unwrap()
+        .crit_pct = 0.0;
+    *h.app.world_mut().get_mut::<Health>(caster).unwrap() = Health {
+        current: 500.0,
+        max: 10_000.0,
+    };
+    let ally = spawn_player(&mut h.app, 5, 1.0);
+    *h.app.world_mut().get_mut::<Health>(ally).unwrap() = Health {
+        current: 500.0,
+        max: 10_000.0,
+    };
+    h.cast_and_deliver(47540, Some(h.npc));
+    h.advance(70);
+    let events = &h
+        .app
+        .world()
+        .resource::<super::test_harness::ObservedCombatEvents>()
+        .0;
+    let damage: Vec<_> = events
+        .iter()
+        .filter(|event| {
+            event.kind == CombatLogKind::Damage
+                && event.source == Some(caster.to_bits())
+                && event.spell_id == Some(47666)
+        })
+        .collect();
+    let heals: Vec<_> = events
+        .iter()
+        .filter(|event| {
+            event.kind == CombatLogKind::Heal
+                && event.source == Some(caster.to_bits())
+                && event.spell_id == Some(47750)
+        })
+        .collect();
+    assert_eq!(damage.len(), 3, "real channel damage: {events:?}");
+    assert_eq!(heals.len(), 3, "Twinsight heals once per bolt: {events:?}");
+    assert!(heals.iter().all(
+        |event| event.target == Some(caster.to_bits()) || event.target == Some(ally.to_bits())
+    ));
+    assert!(
+        damage[2].amount > damage[0].amount,
+        "Holy Ray increases subsequent real bolts: {damage:?}"
+    );
+}
+
+#[test]
 fn shield_discipline_returns_mana_when_real_shields_are_depleted() {
     use shared::components::PowerType;
     for (spell, talent) in [(17, true), (1253593, true), (17, false)] {

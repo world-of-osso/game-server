@@ -2037,6 +2037,7 @@ pub fn replay_simc_dummy_bleed_application(world: &mut World, source: Entity, ta
         AuraEvent {
             actor: source,
             target: Some(target),
+            action_target: None,
             actor_mask: [actor, 0],
             target_mask: [taken, 0],
             spell_id: Some(spell.id),
@@ -2404,6 +2405,7 @@ fn deal_source_damage_and_report(
     #[cfg(any(test, feature = "test-support"))]
     factor_capture::finish(world, ctx, target, captured_hit, &event);
     log_event(world, event);
+    super::script_registry::spell_health_impact(world, ctx, target, before, false);
     if amount > 0.0 {
         super::script_registry::raw_resolved_damage(world, ctx, target, crit, unrounded);
     }
@@ -2492,6 +2494,7 @@ fn push_damage_event(
         AuraEvent {
             actor: ctx.caster,
             target: Some(target),
+            action_target: ctx.spell.cast_primary_target,
             actor_mask: [actor, 0],
             target_mask: [taken | procs::PROC_TAKE_ANY_DAMAGE, 0],
             spell_id: Some(ctx.spell.id),
@@ -2521,6 +2524,7 @@ fn kill(world: &mut World, killer: Entity, target: Entity, can_proc: bool) {
         AuraEvent {
             actor: killer,
             target: Some(target),
+            action_target: None,
             actor_mask: [procs::PROC_KILL, 0],
             target_mask: [procs::PROC_DEATH, 0],
             spell_id: None,
@@ -2536,10 +2540,12 @@ fn kill(world: &mut World, killer: Entity, target: Entity, can_proc: bool) {
 }
 
 fn heal(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target: Entity) {
+    let effectiveness = ctx.spell.cast_healing_multiplier.unwrap_or(1.0);
     let amount = with_variance(
         scaled_amount(world, ctx.caster, ctx.spell, effect),
         effect.variance,
-    ) * ctx.chain_multiplier;
+    ) * ctx.chain_multiplier
+        * effectiveness;
     let raw = amount;
     let (amount, crit) = with_crit(world, ctx.caster, target, ctx.spell, amount);
     apply_heal_with_raw(world, ctx, target, amount, crit, false, Some(raw));
@@ -2695,6 +2701,7 @@ fn apply_resolved_heal(
     if health.current <= 0.0 {
         return;
     }
+    let before = health.current;
     let effective = amount.min(health.max - health.current).max(0.0);
     health.current += effective;
     crate::achievement::record_healing(world, ctx.caster, target, amount, effective);
@@ -2712,6 +2719,9 @@ fn apply_resolved_heal(
     event.crit = crit;
     event.periodic = periodic;
     log_event(world, event);
+    if amount > 0.0 {
+        super::script_registry::spell_health_impact(world, ctx, target, before, true);
+    }
     super::script_registry::resolved_heal(world, ctx, target, amount, effective, crit, periodic);
     let percent_based = !periodic
         && ctx
@@ -2740,6 +2750,7 @@ fn apply_resolved_heal(
             AuraEvent {
                 actor: ctx.caster,
                 target: Some(target),
+                action_target: ctx.spell.cast_primary_target,
                 actor_mask: [procs::PROC_DEAL_HELPFUL_PERIODIC, 0],
                 target_mask: [procs::PROC_TAKE_HELPFUL_PERIODIC, 0],
                 spell_id: Some(ctx.spell.id),

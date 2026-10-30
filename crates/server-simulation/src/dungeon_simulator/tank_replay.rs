@@ -13,6 +13,201 @@ use std::collections::{BTreeMap, BTreeSet, VecDeque};
 const TICK_SECONDS: f64 = 0.05;
 const SPIKE_WINDOW_SECONDS: f64 = 5.0;
 
+#[derive(Clone, Copy)]
+enum DecisionKind {
+    Foreground,
+    OffGcd,
+}
+
+struct DecisionSchedule {
+    at: std::time::Duration,
+    kind: DecisionKind,
+    gaussian_pair: Option<f64>,
+}
+
+impl DecisionSchedule {
+    fn new(at: std::time::Duration) -> Self {
+        Self {
+            at,
+            kind: DecisionKind::Foreground,
+            gaussian_pair: None,
+        }
+    }
+
+    fn poll_delay(&mut self) -> std::time::Duration {
+        use crate::random::Rng;
+        // SimC76f8118 rng.hpp:295–326 uses the polar Box–Muller pair.
+        let normal = if let Some(value) = self.gaussian_pair.take() {
+            value
+        } else {
+            let mut rng = crate::random::thread_rng();
+            loop {
+                let x = 2.0 * rng.r#gen::<f64>() - 1.0;
+                let y = 2.0 * rng.r#gen::<f64>() - 1.0;
+                let w = x * x + y * y;
+                if w > 0.0 && w < 1.0 {
+                    let factor = (-2.0 * w.ln() / w).sqrt();
+                    self.gaussian_pair = Some(y * factor);
+                    break x * factor;
+                }
+            }
+        };
+        std::time::Duration::from_secs_f64((0.1 + 0.01 * normal).max(0.000_000_001))
+    }
+
+    fn decide(&mut self, run: &mut super::dps_parity::Run) -> Result<(), String> {
+        let off_gcd_acted = match self.kind {
+            DecisionKind::Foreground => {
+                super::dps_parity::drive_literal_tick(run)?;
+                false
+            }
+            DecisionKind::OffGcd => super::dps_parity::drive_literal_off_gcd(run)?,
+        };
+        let world = run.app.world();
+        let now = world.resource::<Time>().elapsed();
+        let clock = crate::spell_cast::history_now(world);
+        let gcd = world
+            .get::<crate::spell_cast::SpellHistory>(run.actor)
+            .and_then(|history| history.active_gcd_ready_at(clock));
+        let cast = world
+            .get::<shared::casting::CastState>(run.actor)
+            .map(|cast| (cast.duration - cast.elapsed).max(0.0));
+        if gcd.is_some()
+            && cast.is_none()
+            && (matches!(self.kind, DecisionKind::Foreground) || off_gcd_acted)
+        {
+            // SimC76f8118 action.cpp303–306 schedules the first off-GCD check immediately.
+            self.at = now;
+            self.kind = DecisionKind::OffGcd;
+            return Ok(());
+        }
+        let poll = now + self.poll_delay();
+        if gcd.is_some() || cast.is_some() {
+            let gcd_at = next_gcd_decision_boundary(run, std::time::Duration::MAX);
+            let cast_at = cast.map_or(now, |remaining| {
+                now + std::time::Duration::from_secs_f32(remaining)
+                    + std::time::Duration::from_micros(1)
+            });
+            let ready = if gcd.is_some() {
+                gcd_at.max(cast_at)
+            } else {
+                cast_at
+            };
+            if ready <= poll {
+                self.at = ready;
+                self.kind = DecisionKind::Foreground;
+            } else {
+                self.at = poll;
+                self.kind = DecisionKind::OffGcd;
+            }
+        } else {
+            // SimC76f8118 player.cpp343–351,7130–7133: no ready action retries at 100±10 ms.
+            self.at = poll;
+            self.kind = DecisionKind::Foreground;
+        }
+        Ok(())
+    }
+
+    fn run_due(&mut self, run: &mut super::dps_parity::Run) -> Result<(), String> {
+        for _ in 0..128 {
+            if self.at > run.app.world().resource::<Time>().elapsed() {
+                return Ok(());
+            }
+            self.decide(run)?;
+        }
+        Err("tank replay exceeded 128 simultaneous decision events".into())
+    }
+}
+
+pub(super) fn next_gcd_decision_boundary(
+    run: &super::dps_parity::Run,
+    boundary: std::time::Duration,
+) -> std::time::Duration {
+    let world = run.app.world();
+    let now = crate::spell_cast::history_now(world);
+    let Some(ready) = world
+        .get::<crate::spell_cast::SpellHistory>(run.actor)
+        .and_then(|history| history.active_gcd_ready_at(now))
+    else {
+        return boundary;
+    };
+    let delay =
+        std::time::Duration::from_secs_f64(ready - now) + std::time::Duration::from_nanos(1);
+    boundary.min(world.resource::<Time>().elapsed() + delay)
+}
+
+#[cfg(test)]
+mod decision_schedule_tests {
+    use super::*;
+
+    #[test]
+    #[ignore = "uses the selected MID2 Protection profile"]
+    fn scheduled_decision_waits_before_casting() {
+        use crate::spell_cast::test_harness::ObservedCombatEvents;
+        use shared::protocol::CombatLogKind;
+        let _seed = crate::random::seed_scope(70448);
+        let mut run = super::super::dps_parity::prepare_registered_player(66, 1).unwrap();
+        super::super::dps_parity::engage(&mut run);
+        for _ in 0..40 {
+            run.app.update();
+        }
+        let actor = run.actor;
+        let now = run.app.world().resource::<Time>().elapsed();
+        let mut schedule = DecisionSchedule::new(now + std::time::Duration::from_millis(100));
+        let count = |run: &super::super::dps_parity::Run| {
+            run.app
+                .world()
+                .resource::<ObservedCombatEvents>()
+                .0
+                .iter()
+                .filter(|event| {
+                    event.source == Some(actor.to_bits())
+                        && event.kind == CombatLogKind::CastSuccess
+                })
+                .count()
+        };
+        let before = count(&run);
+        schedule.run_due(&mut run).unwrap();
+        assert_eq!(
+            count(&run),
+            before,
+            "no foreground cast before its decision event"
+        );
+        run.app
+            .insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+                std::time::Duration::from_millis(100),
+            ));
+        run.app.update();
+        let before_due = count(&run);
+        schedule.run_due(&mut run).unwrap();
+        assert!(
+            count(&run) > before_due,
+            "the due foreground decision casts an ability"
+        );
+    }
+
+    #[test]
+    fn poll_intervals_follow_seeded_gaussian() {
+        let sample = || {
+            let _seed = crate::random::seed_scope(70448);
+            let mut schedule = DecisionSchedule::new(std::time::Duration::ZERO);
+            (0..10_000)
+                .map(|_| schedule.poll_delay().as_secs_f64() * 1000.0)
+                .collect::<Vec<_>>()
+        };
+        let values = sample();
+        assert_eq!(values, sample());
+        let mean = values.iter().sum::<f64>() / values.len() as f64;
+        let deviation =
+            (values.iter().map(|x| (x - mean).powi(2)).sum::<f64>() / values.len() as f64).sqrt();
+        assert!((99.5..100.5).contains(&mean), "mean poll interval {mean}");
+        assert!(
+            (9.5..10.5).contains(&deviation),
+            "poll interval deviation {deviation}"
+        );
+    }
+}
+
 pub(super) fn sampled_blocked_pct(
     world: &World,
     source: Entity,
@@ -376,7 +571,30 @@ pub(super) fn replay_simc_with_pressure(
     external_healing: bool,
     pressure_scale: f64,
 ) -> Result<Value, String> {
+    replay_simc_with_targets(
+        spec_id,
+        path,
+        1,
+        duration_seconds,
+        seed,
+        external_healing,
+        pressure_scale,
+    )
+}
+
+pub(super) fn replay_simc_with_targets(
+    spec_id: u32,
+    path: &std::path::Path,
+    target_count: usize,
+    duration_seconds: u32,
+    seed: u64,
+    external_healing: bool,
+    pressure_scale: f64,
+) -> Result<Value, String> {
     use crate::simc_tank_timeline;
+    if !matches!(target_count, 1 | 3) {
+        return Err(format!("SIMC_TANK_TARGET_COUNT_UNSUPPORTED:{target_count}"));
+    }
     if !pressure_scale.is_finite() || pressure_scale <= 0.0 {
         return Err("SIMC_PRESSURE_SCALE_MUST_BE_POSITIVE_AND_FINITE".into());
     }
@@ -399,37 +617,38 @@ pub(super) fn replay_simc_with_pressure(
     if duration_seconds != 300 {
         return Err("NATIVE_LITERAL_ENCOUNTER_REQUIRES_300_SECONDS".into());
     }
-    let mut hits = simc_tank_timeline::read_trace(path, "Tank_Dummy_Dungeon")?;
+    let scenario = simc_tank_timeline::read_scenario(path)?;
+    let racial = simc_tank_timeline::read_touch_of_elune(path, &scenario.player)?;
+    let mut hits = simc_tank_timeline::read_trace(path, &scenario.dummy)?;
     scale_pressure(&mut hits, pressure_scale);
     let (bloodlust_ms, raid_buffs) = if external_healing {
-        let (profile, _) = super::dps_parity::read_reference(spec_id)?;
-        let name = profile
-            .options
-            .get("name")
-            .and_then(|value| value.as_str())
-            .ok_or("SIMC_PROFILE_NAME_ABSENT")?;
         (
-            simc_tank_timeline::read_bloodlust_time(path, name)?,
-            simc_tank_timeline::read_raid_buffs(path, name)?,
+            simc_tank_timeline::read_bloodlust_time(path, &scenario.player)?,
+            simc_tank_timeline::read_raid_buffs(path, &scenario.player)?,
         )
     } else {
         (None, Vec::new())
     };
     let dummy_debuffs = if external_healing {
-        simc_tank_timeline::read_dummy_debuffs(path, "Tank_Dummy_Dungeon")?
+        simc_tank_timeline::read_dummy_debuffs(path, &scenario.dummy)?
     } else {
         Vec::new()
     };
     let dummy_bleeding = if external_healing {
-        simc_tank_timeline::read_dummy_bleeding(path, "Tank_Dummy_Dungeon")?
+        simc_tank_timeline::read_dummy_bleeding(path, &scenario.dummy)?
     } else {
         false
     };
     let _rng = crate::random::seed_scope(seed);
-    let mut run = super::dps_parity::prepare_registered_player_with(spec_id, 1, |run| {
-        apply_simc_raid_buffs(run, &raid_buffs)?;
-        apply_simc_dummy_debuffs(run, &dummy_debuffs)
-    })?;
+    let mut run =
+        super::dps_parity::prepare_registered_player_with(spec_id, target_count, |run| {
+            apply_simc_touch_of_elune(run, racial)?;
+            apply_simc_raid_buffs(run, &raid_buffs)?;
+            if racial.is_some() && raid_buffs.is_empty() {
+                run.app.update();
+            }
+            apply_simc_dummy_debuffs(run, &dummy_debuffs)
+        })?;
     apply_simc_starting_holy_power(&mut run);
     if dummy_bleeding {
         let target = run.targets[0];
@@ -449,6 +668,7 @@ pub(super) fn replay_simc_with_pressure(
         &raid_buffs,
         &dummy_debuffs,
         dummy_bleeding,
+        &scenario,
     )?;
     report["pressure_scale"] = json!(pressure_scale);
     Ok(report)
@@ -500,7 +720,42 @@ pub(super) fn replay_registered_run(
         &[],
         &[],
         false,
+        &crate::simc_tank_timeline::Scenario {
+            dummy: "Tank_Dummy_Dungeon".into(),
+            player: String::new(),
+            target_level: None,
+            armor_constant: 4531.03,
+            heals: Vec::new(),
+        },
     )
+}
+
+pub(super) fn apply_simc_touch_of_elune(
+    run: &mut super::dps_parity::Run,
+    racial: Option<u32>,
+) -> Result<(), String> {
+    let is_night_elf = crate::auras::has_aura(run.app.world(), run.actor, 154748);
+    if is_night_elf != racial.is_some() {
+        return Err("SIMC_TOUCH_OF_ELUNE_RACE_OR_STATE_MISMATCH".into());
+    }
+    if let Some(spell_id) = racial {
+        let actor = run.actor;
+        let world = run.app.world_mut();
+        crate::auras::apply_aura(
+            world,
+            &crate::auras::AuraApplication {
+                caster: actor,
+                target: actor,
+                spell_id,
+                effect_mask: u32::MAX,
+                source: crate::auras::AuraSource::Cast,
+            },
+        );
+        if !crate::auras::has_aura(world, actor, spell_id) {
+            return Err(format!("SIMC_TOUCH_OF_ELUNE_NOT_APPLIED:{spell_id}"));
+        }
+    }
+    Ok(())
 }
 
 pub(super) fn apply_simc_raid_buffs(
@@ -508,6 +763,14 @@ pub(super) fn apply_simc_raid_buffs(
     buffs: &[simc_tank_timeline::RaidBuff],
 ) -> Result<(), String> {
     let tank = run.actor;
+    apply_simc_raid_buffs_to(run, tank, buffs)
+}
+
+pub(super) fn apply_simc_raid_buffs_to(
+    run: &mut super::dps_parity::Run,
+    tank: Entity,
+    buffs: &[simc_tank_timeline::RaidBuff],
+) -> Result<(), String> {
     for buff in buffs {
         let world = run.app.world_mut();
         if world
@@ -603,6 +866,48 @@ pub(super) fn apply_simc_dummy_debuffs(
     Ok(())
 }
 
+fn configure_trace_attacker(
+    world: &mut World,
+    source: Entity,
+    player_level: u8,
+    scenario: &simc_tank_timeline::Scenario,
+) -> Result<(), String> {
+    // SimC76f8118 sc_enemy.cpp1214–1220 sets the dungeon dummy two levels above its tank.
+    let attacker_level = scenario.target_level.unwrap_or(player_level + 2);
+    let base = world
+        .resource::<crate::level_scaling::ArmorConstants>()
+        .at(attacker_level)
+        .ok_or("SIMC_DUMMY_ARMOR_CONSTANT_ABSENT")?;
+    world
+        .entity_mut(source)
+        .insert(shared::components::UnitLevel(attacker_level))
+        .remove::<crate::level_scaling::ArmorTuning>()
+        .remove::<shared::level_scaling::LevelScaling>()
+        .remove::<crate::level_scaling::ScaledStats>();
+    if (base - scenario.armor_constant).abs() > 0.01 {
+        let tuning = world
+            .resource::<crate::world_data::WorldData>()
+            .expected_stats
+            .armor_tuning(TANK_DUNGEON_TUNING, TANK_DUNGEON_SEASON)?;
+        world.entity_mut(source).insert(tuning);
+        let attacker = crate::level_scaling::UnitScaling::of(world, source);
+        let target = crate::level_scaling::UnitScaling::of(world, source);
+        let actual = attacker
+            .armor_constant(
+                &target,
+                world.resource::<crate::level_scaling::ArmorConstants>(),
+            )
+            .ok_or("SIMC_DUMMY_ARMOR_CONSTANT_ABSENT")?;
+        if (actual - scenario.armor_constant).abs() > 0.01 {
+            return Err(format!(
+                "SIMC_DUMMY_ARMOR_CONSTANT_MISMATCH: trace={}, native={actual}",
+                scenario.armor_constant
+            ));
+        }
+    }
+    Ok(())
+}
+
 fn replay_registered_run_with_healing(
     mut run: super::dps_parity::Run,
     hits: &[crate::simc_tank_timeline::Hit],
@@ -613,6 +918,7 @@ fn replay_registered_run_with_healing(
     raid_buffs: &[simc_tank_timeline::RaidBuff],
     dummy_debuffs: &[simc_tank_timeline::RaidBuff],
     dummy_bleeding: bool,
+    scenario: &simc_tank_timeline::Scenario,
 ) -> Result<Value, String> {
     use crate::simc_tank_timeline::Kind;
     let tank = run.actor;
@@ -634,25 +940,7 @@ fn replay_registered_run_with_healing(
     if level != 90 {
         return Err(format!("MID2_PLAYER_LEVEL_MISMATCH:{level}"));
     }
-    // SimC76f8118 sc_enemy.cpp:1214-1220: the tank dungeon dummy is two levels above the player.
-    let tuning = run
-        .app
-        .world()
-        .resource::<crate::world_data::WorldData>()
-        .expected_stats
-        .armor_tuning(TANK_DUNGEON_TUNING, TANK_DUNGEON_SEASON)?;
-    run.app
-        .world_mut()
-        .entity_mut(source)
-        .insert((shared::components::UnitLevel(level + 2), tuning));
-    run.app
-        .world_mut()
-        .entity_mut(source)
-        .remove::<shared::level_scaling::LevelScaling>();
-    run.app
-        .world_mut()
-        .entity_mut(source)
-        .remove::<crate::level_scaling::ScaledStats>();
+    configure_trace_attacker(run.app.world_mut(), source, level, scenario)?;
     if spec == 73 {
         // SimC76f8118 sc_warrior.cpp:3432 assumes the first Charge enters combat.
         // Start outside native Charge's minimum range and let native movement close it.
@@ -706,11 +994,13 @@ fn replay_registered_run_with_healing(
     let mut self_periodic_taken = 0.0;
     let (mut recent, mut recent_sum) = (VecDeque::<(f64, f64)>::new(), 0.0);
     let (mut next, mut elapsed, mut death) = (0, 0.0, None);
+    let mut next_heal = 0;
     let mut casts = BTreeMap::<u32, usize>::new();
     let mut healing_by_spell = BTreeMap::<u32, f64>::new();
     let mut raw_healing_by_spell = BTreeMap::<u32, f64>::new();
     let mut periodic_ticks_by_spell = BTreeMap::<u32, usize>::new();
     let mut outgoing_damage_by_spell = BTreeMap::<u32, i64>::new();
+    let mut outgoing_damage_hits_by_spell = BTreeMap::<u32, u64>::new();
     let mut energize_by_spell = BTreeMap::<u32, (i64, i64)>::new();
     let mut energize_timeline = Vec::new();
     let mut cast_timeline = Vec::new();
@@ -728,14 +1018,27 @@ fn replay_registered_run_with_healing(
     let mut debuff_seconds: BTreeMap<u32, f64> =
         target_debuffs.iter().map(|&id| (id, 0.0)).collect();
     let mut external_healing_effective = 0.0;
+    let mut engagement_samples = vec![super::dps_parity::capture_engagement(&run)];
+    let mut retired = Vec::new();
     let mut bloodlust_applied = false;
+    let mut decisions = DecisionSchedule::new(started_at);
     for tick in 1..=duration_seconds * 20 {
         elapsed = f64::from(tick) * TICK_SECONDS;
         if !bloodlust_applied && bloodlust_ms.is_some_and(|time| time <= u64::from(tick - 1) * 50) {
             apply_replay_bloodlust(run.app.world_mut(), tank)?;
             bloodlust_applied = true;
         }
-        if external_healing && tick % 100 == 0 && tick < duration_seconds * 20 {
+        while external_healing
+            && scenario
+                .heals
+                .get(next_heal)
+                .is_some_and(|(time, _)| *time <= u64::from(tick) * 50)
+        {
+            let (time, raw_heal) = scenario.heals[next_heal];
+            next_heal += 1;
+            if time == 0 {
+                continue;
+            }
             let effective = {
                 let mut health = run
                     .app
@@ -743,7 +1046,7 @@ fn replay_registered_run_with_healing(
                     .get_mut::<Health>(tank)
                     .ok_or("TANK_HEALTH_ABSENT")?;
                 if health.current > 0.0 {
-                    let amount = 75_000.0_f32.min((health.max - health.current).max(0.0));
+                    let amount = raw_heal.min((health.max - health.current).max(0.0));
                     health.current += amount;
                     Some(amount)
                 } else {
@@ -756,7 +1059,7 @@ fn replay_registered_run_with_healing(
                     run.app.world_mut(),
                     tank,
                     0,
-                    75_000.0,
+                    raw_heal,
                     amount,
                     false,
                 );
@@ -965,13 +1268,24 @@ fn replay_registered_run_with_healing(
             .app
             .world()
             .get::<Health>(tank)
-            .is_some_and(|health| health.current > 0.0)
+            .is_none_or(|health| health.current <= 0.0)
         {
-            super::dps_parity::drive_literal_tick(&mut run)
-                .map_err(|error| format!("native APL tick {tick}: {error}"))?;
+            death = Some(elapsed);
+            break;
         }
+        decisions
+            .run_due(&mut run)
+            .map_err(|error| format!("native APL tick {tick}: {error}"))?;
         let boundary = started_at + std::time::Duration::from_millis(u64::from(tick) * 50);
-        super::dps_parity::advance_fixture_step(&mut run, boundary)?;
+        while run.app.world().resource::<Time>().elapsed() < boundary {
+            let next = super::dps_parity::next_fixture_boundary(&run, boundary.min(decisions.at));
+            super::dps_parity::advance_fixture_step(&mut run, next)?;
+            super::dps_parity::apply_fixture_add_events(&mut run, &mut retired, started_at)?;
+            decisions.run_due(&mut run)?;
+        }
+        if matches!(tick, 1 | 20 | 5400 | 6000) {
+            engagement_samples.push(super::dps_parity::capture_engagement(&run));
+        }
         let world = run.app.world();
         if mitigation_auras
             .iter()
@@ -1022,9 +1336,10 @@ fn replay_registered_run_with_healing(
                                 .is_some_and(|summon| summon.owner == tank)
                     })
             {
-                *outgoing_damage_by_spell
-                    .entry(event.spell_id.unwrap_or(0))
-                    .or_default() += i64::from((event.amount - event.overflow.max(0)).max(0));
+                let spell_id = event.spell_id.unwrap_or(0);
+                *outgoing_damage_by_spell.entry(spell_id).or_default() +=
+                    i64::from((event.amount - event.overflow.max(0)).max(0));
+                *outgoing_damage_hits_by_spell.entry(spell_id).or_default() += 1;
             }
             if event.source == Some(tank.to_bits())
                 && event.kind == CombatLogKind::Damage
@@ -1147,7 +1462,7 @@ fn replay_registered_run_with_healing(
         .world()
         .get::<crate::spell_cast::ObservedResourcePayments>(tank)
         .unwrap()
-        .0
+        .payments
     {
         let resource = match pool {
             crate::spell_cast::CostPool::Power(power) => format!("{power:?}").to_lowercase(),
@@ -1190,7 +1505,16 @@ fn replay_registered_run_with_healing(
             world.resource::<crate::level_scaling::ArmorConstants>(),
         )
         .ok_or("SIMC_DUMMY_ARMOR_CONSTANT_ABSENT")?;
-    report["tank_dummy_scenario"] = json!({"difficulty":TANK_DUNGEON_DIFFICULTY,"content_tuning":TANK_DUNGEON_TUNING,"season":TANK_DUNGEON_SEASON,"attacker_level":attacker.level_against(&defender),"armor_constant":armor_constant});
+    let dungeon = scenario.target_level.is_none();
+    report["tank_dummy_scenario"] = json!({"dummy":scenario.dummy,
+        "difficulty":dungeon.then_some(TANK_DUNGEON_DIFFICULTY),
+        "content_tuning":dungeon.then_some(TANK_DUNGEON_TUNING),
+        "season":dungeon.then_some(TANK_DUNGEON_SEASON),
+        "attacker_level":attacker.level_against(&defender),"armor_constant":armor_constant});
+    report["combat"] = super::dps_parity::combat_report(&run, elapsed);
+    report["actor_kind"] = json!("player");
+    report["target_waves"] = json!(run.target_waves);
+    report["engagement_samples"] = json!(engagement_samples);
     let (bulwark_starts, bulwark_refreshes, divine_inspiration_procs) =
         bulwark_observations(world, tank);
     report["holy_bulwark_applications"] =
@@ -1200,6 +1524,7 @@ fn replay_registered_run_with_healing(
     report["cast_timeline"] = json!(cast_timeline);
     report["precombat_casts"] = json!(precombat_casts);
     report["outgoing_damage_by_spell"] = json!(outgoing_damage_by_spell);
+    report["outgoing_damage_hits_by_spell"] = json!(outgoing_damage_hits_by_spell);
     report["resource_spent_by_spell"] = json!(resource_spent_by_spell);
     report["melee_rage"] = json!(
         capture

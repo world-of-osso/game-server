@@ -21,7 +21,11 @@ pub type DamageProcHook = fn(&mut World, Entity, &AuraInstance, &super::procs::A
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct AuraScript {
+    /// This spell's outgoing events do not trigger proc callbacks.
+    pub suppress_outgoing_procs: bool,
     pub on_apply: Option<AuraHook>,
+    /// Same-caster reapplication while the aura is still live.
+    pub on_refresh: Option<AuraHook>,
     pub on_remove: Option<RemoveHook>,
     /// After detachment, before generic reactions to the removed aura.
     pub before_remove_reactions: Option<RemoveHook>,
@@ -46,6 +50,12 @@ fn script(world: &World, spell_id: u32) -> Option<AuraScript> {
 
 pub(super) fn run_apply(world: &mut World, unit: Entity, aura: &AuraInstance) {
     if let Some(run) = script(world, aura.spell_id).and_then(|script| script.on_apply) {
+        run(world, unit, aura);
+    }
+}
+
+pub(super) fn run_refresh(world: &mut World, unit: Entity, aura: &AuraInstance) {
+    if let Some(run) = script(world, aura.spell_id).and_then(|script| script.on_refresh) {
         run(world, unit, aura);
     }
 }

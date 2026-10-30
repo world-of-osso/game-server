@@ -15,6 +15,9 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AfterForegroundSpecial(grant_bones),
     SpellScriptHook::AfterForegroundSpecial(start_mist),
     SpellScriptHook::AfterForegroundSpecial(copy_weapon_actions),
+    // SimC76f8118 sc_death_knight.cpp10121–10130: copies precede healing and consumption.
+    SpellScriptHook::AfterForegroundSpecial(super::blood_death_strike::finish_death_strike_heal),
+    SpellScriptHook::AfterForegroundSpecial(super::blood_death_strike::consume_hemostasis),
     SpellScriptHook::EarlyAuraRegistration(register_dance),
     SpellScriptHook::AvoidanceProcHitMask(dance_avoidance_mask),
     SpellScriptHook::AfterForegroundSpecial(consume_dance),
@@ -284,7 +287,7 @@ fn consume_dance(world: &mut World, caster: Entity, spell: &SpellInfo) {
 
 // SimC76f8118 sc_death_knight.cpp9523–9527/13955–13965 summons the
 // selected second weapon and mirrors the owner's Bone Shield generators.
-fn copy_weapon_actions(world: &mut World, caster: Entity, spell: &SpellInfo) {
+pub(super) fn copy_weapon_actions(world: &mut World, caster: Entity, spell: &SpellInfo) {
     if !world
         .get::<ActiveSpec>(caster)
         .is_some_and(|spec| spec.0 == 250)
@@ -314,6 +317,9 @@ fn copy_weapon_actions(world: &mut World, caster: Entity, spell: &SpellInfo) {
         .map(|(entity, _, _)| entity)
         .collect();
     for weapon in weapons {
+        if !spell_cast::targets::is_alive(world, weapon) {
+            continue;
+        }
         // SimC76f8118 sc_death_knight.cpp13856–13883: each owner
         // Vampiric Strike grants an independent Transfusion stack to each weapon.
         if spell.id == 433895
@@ -334,23 +340,27 @@ fn copy_weapon_actions(world: &mut World, caster: Entity, spell: &SpellInfo) {
             );
         }
         match spell.id {
-            49998 | 50842 => {
-                let (copy, mask) = match spell.id {
-                    49998 => (49998, 1),
-                    50842 => (50842, 1),
-                    _ => unreachable!(),
-                };
+            49998 => {
                 spell_cast::cast_triggered_with_overrides(
                     world,
                     weapon,
-                    copy,
+                    49998,
                     target,
                     1,
                     TriggeredSpellOverrides {
-                        effect_mask: Some(mask),
+                        effect_mask: Some(1),
                         ..Default::default()
                     },
                 );
+            }
+            50842 => {
+                let Some(mut copy) = spell_cast::load_triggered_spell(world, 50842, 1) else {
+                    continue;
+                };
+                copy.effects.retain(|effect| effect.index == 0);
+                copy.cast_charge_mods = spell.cast_charge_mods.clone();
+                copy.cast_damage_multiplier = spell.cast_damage_multiplier;
+                spell_cast::launch_triggered_spell(world, weapon, &copy, target, 1);
             }
             206930 => {
                 let Some(mut copy) = spell_cast::load_triggered_spell(world, 228645, 1) else {

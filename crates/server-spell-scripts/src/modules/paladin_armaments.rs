@@ -32,11 +32,17 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AfterResolvedHits(consume_valor),
     SpellScriptHook::AfterResolvedHits(consume_bulwark_of_righteous_fury),
     SpellScriptHook::AreaFilter(blaze_area_filter),
+    SpellScriptHook::AfterSpenderStacks(advance_afterimage),
 ];
 
 fn register_bulwark(scripts: &mut AuraScripts) {
     let script = scripts.0.entry(432496).or_default();
     script.on_periodic = Some(periodic_bulwark);
+    for armament in [432496, 432502] {
+        let script = scripts.0.entry(armament).or_default();
+        script.on_refresh = Some(lay_down_refreshed_armament);
+        script.on_remove = Some(lay_down_removed_armament);
+    }
     let grand = scripts.0.entry(85043).or_default();
     grand.check_proc = Some(grand_crusader_is_avoidance);
     grand.on_damage_proc = Some(grand_crusader_from_avoidance);
@@ -537,6 +543,44 @@ fn initial_bulwark(world: &mut World, target: Entity, aura: &AuraInstance) {
     }
 }
 
+fn lay_down_refreshed_armament(world: &mut World, unit: Entity, aura: &AuraInstance) {
+    lay_down_arms(world, unit, aura);
+}
+
+fn lay_down_removed_armament(
+    world: &mut World,
+    unit: Entity,
+    aura: &AuraInstance,
+    _: RemoveReason,
+) {
+    lay_down_arms(world, unit, aura);
+}
+
+/// SimC76f8118 sc_paladin.cpp2838–2852, 3693–3710: a self armament that
+/// expires, or is refreshed while live, grants Shining Light and shortens Lay on Hands.
+fn lay_down_arms(world: &mut World, unit: Entity, aura: &AuraInstance) {
+    if aura.caster != unit || !selected(world, unit, 432866) {
+        return;
+    }
+    combat::auras::apply_aura(
+        world,
+        &AuraApplication {
+            caster: unit,
+            target: unit,
+            spell_id: 327510,
+            effect_mask: 1,
+            source: AuraSource::Cast,
+        },
+    );
+    let milliseconds = combat::spell_cast::scripts::script_effect_value(world, unit, 432866, 0);
+    combat::spell_cast::scripts::reduce_cooldown(
+        world,
+        unit,
+        633,
+        f64::from(milliseconds) / 1000.0,
+    );
+}
+
 fn periodic_bulwark(world: &mut World, target: Entity, aura: &AuraInstance, index: u8) {
     if index == 1 {
         apply_bulwark_absorb(world, target, aura.caster, 3, false);
@@ -596,17 +640,19 @@ fn apply_bulwark_absorb(
     );
 }
 
-fn advance_shining_light(world: &mut World, caster: Entity, spell: u32) {
+fn advance_shining_light(world: &mut World, caster: Entity, cast: &SpellInfo) {
     if !world
         .get::<ActiveSpec>(caster)
         .is_some_and(|spec| spec.0 == 66)
     {
         return;
     }
+    let spell = cast.id;
     if spell == 85673 {
-        combat::auras::remove_auras(world, caster, RemoveReason::Consumed, |aura| {
-            aura.spell_id == 327510 && aura.caster == caster
-        });
+        // Its charge modifier already spent one of the two Shining Light stacks.
+        if consumed_shining_light(cast) {
+            apply_valiance(world, caster);
+        }
         return;
     }
     if spell != 53600 {
@@ -640,6 +686,121 @@ fn advance_shining_light(world: &mut World, caster: Entity, spell: u32) {
             source: AuraSource::Cast,
         },
     );
+}
+
+/// The cast's charge modifiers record the Shining Light aura that paid for it.
+fn consumed_shining_light(cast: &SpellInfo) -> bool {
+    cast.cast_charge_mods
+        .iter()
+        .flatten()
+        .any(|modifier| modifier.aura_spell_id == 327510)
+}
+
+/// SimC76f8118 sc_paladin.cpp1263–1268: selected Valiance shortens Holy Armaments
+/// whenever a Word of Glory executes with free Shining Light.
+fn apply_valiance(world: &mut World, caster: Entity) {
+    if !selected(world, caster, 432919) {
+        return;
+    }
+    let milliseconds = combat::spell_cast::scripts::script_effect_value(world, caster, 432919, 0);
+    combat::spell_cast::scripts::reduce_cooldown(
+        world,
+        caster,
+        432459,
+        f64::from(milliseconds) / 1000.0,
+    );
+}
+
+fn owned_stacks(world: &World, caster: Entity, spell: u32) -> u8 {
+    world
+        .get::<combat::auras::ActiveAuras>(caster)
+        .and_then(|auras| {
+            auras
+                .iter()
+                .find(|aura| aura.spell_id == spell && aura.caster == caster)
+        })
+        .map_or(0, |aura| aura.stacks)
+}
+
+fn set_afterimage_stacks(world: &mut World, caster: Entity, stacks: u8) {
+    if stacks == 0 {
+        combat::auras::remove_auras(world, caster, RemoveReason::Consumed, |aura| {
+            aura.spell_id == 400745 && aura.caster == caster
+        });
+        return;
+    }
+    if owned_stacks(world, caster, 400745) == 0 {
+        combat::auras::apply_aura(
+            world,
+            &AuraApplication {
+                caster,
+                target: caster,
+                spell_id: 400745,
+                effect_mask: u32::MAX,
+                source: AuraSource::Cast,
+            },
+        );
+    }
+    combat::auras::set_self_cast_stacks(world, caster, 400745, stacks);
+}
+
+/// SimC76f8118 sc_paladin.hpp1545–1568,1747–1757: each foreground spender adds its
+/// Holy Power cost to Afterimage (free spenders count their base cost). A Word of
+/// Glory that starts at the threshold spends it and echoes onto the caster at the
+/// talent's effectiveness; the echo is a Word of Glory and also triggers Valiance.
+fn advance_afterimage(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    if !selected(world, caster, 385414) {
+        return;
+    }
+    let Some(spent) = spell
+        .power_costs
+        .iter()
+        .find(|cost| cost.power_type == PowerType::HolyPower as i32)
+        .map(|cost| cost.mana_cost.clamp(0, i32::from(u8::MAX)) as u8)
+    else {
+        return;
+    };
+    let before = owned_stacks(world, caster, 400745);
+    if spent > 0 {
+        set_afterimage_stacks(world, caster, before.saturating_add(spent));
+    }
+    let threshold =
+        combat::spell_cast::scripts::script_effect_value(world, caster, 385414, 2) as u8;
+    if spell.id != 85673 || before < threshold {
+        return;
+    }
+    let remaining = owned_stacks(world, caster, 400745).saturating_sub(threshold);
+    set_afterimage_stacks(world, caster, remaining);
+    let effectiveness =
+        combat::spell_cast::scripts::script_effect_value(world, caster, 385414, 0) / 100.0;
+    combat::spell_cast::cast_triggered_with_overrides(
+        world,
+        caster,
+        85673,
+        Some(caster),
+        1,
+        combat::spell_cast::TriggeredSpellOverrides {
+            healing_multiplier: Some(effectiveness),
+            ..Default::default()
+        },
+    );
+    echo_forge(world, caster, 447246, caster);
+    // SimC76f8118 sc_paladin.cpp1261–1268, sc_paladin.hpp1644–1648: the echo
+    // executes as a Word of Glory after its parent spent a stack, so only a
+    // remaining Shining Light shortens Holy Armaments and is spent.
+    let Some(shining_light) = world
+        .get::<combat::auras::ActiveAuras>(caster)
+        .and_then(|auras| {
+            auras
+                .iter()
+                .find(|aura| aura.spell_id == 327510 && aura.caster == caster)
+        })
+        .map(|aura| aura.instance_id)
+    else {
+        return;
+    };
+    apply_valiance(world, caster);
+    combat::auras::spend_stack(world, caster, shining_light);
 }
 
 fn advance_divine_guidance(world: &mut World, caster: Entity, spell: u32) {
@@ -752,6 +913,62 @@ fn cast_guidance_effect(
     }
 }
 
+/// SimC76f8118 sc_paladin.cpp305–309, 3724–3728: selected Blessing of the Forge
+/// starts its 434132-duration buff with Avenging Wrath and summons a Sacred Weapon.
+fn summon_forge(world: &mut World, caster: Entity, spell: u32) {
+    if spell != 31884 || !selected(world, caster, 433011) {
+        return;
+    }
+    let store = world.resource::<SpellStore>();
+    let duration = store
+        .get(434132)
+        .and_then(|forge| forge.misc.as_ref()?.duration)
+        .expect("Blessing of the Forge duration");
+    // Native434132 effect1 triggers dummy aura434255, whose own duration is infinite.
+    let mut marker = store
+        .get(434255)
+        .expect("Blessing of the Forge aura")
+        .clone();
+    marker
+        .misc
+        .as_mut()
+        .expect("Blessing of the Forge misc")
+        .duration = Some(duration);
+    for (spell_id, aura) in [(434255, Some(marker)), (432502, None)] {
+        let application = AuraApplication {
+            caster,
+            target: caster,
+            spell_id,
+            effect_mask: u32::MAX,
+            source: AuraSource::Cast,
+        };
+        match aura {
+            Some(aura) => combat::auras::apply_aura_with_spell(world, &application, &aura),
+            None => combat::auras::apply_aura(world, &application),
+        }
+    }
+    super::paladin_masterwork::grant_masterwork_weapon(world, caster);
+}
+
+/// SimC76f8118 sc_paladin.cpp1286–1289, 2951–2954: during the buff, Word of Glory
+/// echoes Sacred Word on its target and Shield of the Righteous echoes Forge's Reckoning.
+fn echo_forge(world: &mut World, caster: Entity, echo: u32, target: Entity) {
+    if combat::auras::has_aura(world, caster, 434255) {
+        combat::spell_cast::cast_triggered(world, caster, echo, Some(target), 1);
+    }
+}
+
+fn echo_forge_spender(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    let echo = match spell.id {
+        85673 => 447246,
+        53600 => 447258,
+        _ => return,
+    };
+    if let Some(target) = spell.cast_primary_target {
+        echo_forge(world, caster, echo, target);
+    }
+}
+
 fn extend_zealots_paragon(world: &mut World, caster: Entity, spell: u32) {
     if !matches!(spell, 275779 | 1241413)
         || !world
@@ -805,12 +1022,18 @@ fn reflection_from_absorb(
     spell: u32,
     amount: f32,
 ) {
-    if caster != victim
-        || spell != 432607
-        || amount <= 0.0
-        || !world
-            .get::<ActiveSpec>(caster)
-            .is_some_and(|spec| spec.0 == 66)
+    // SimC76f8118 sc_paladin.hpp777–780,1002–1012: a self Bulwark absorb
+    // rolls the 20% solo chance; fake allied Solidarity stacks are not present.
+    if caster == victim && spell == 432607 && amount > 0.0 {
+        roll_reflection_of_radiance(world, caster, 0.2);
+    }
+}
+
+/// Selected Reflection of Radiance resets Avenger's Shield through Grand Crusader.
+pub(super) fn roll_reflection_of_radiance(world: &mut World, caster: Entity, chance: f32) {
+    if !world
+        .get::<ActiveSpec>(caster)
+        .is_some_and(|spec| spec.0 == 66)
         || !world.get::<TraitLoadout>(caster).is_some_and(|traits| {
             let mut talents = traits.active_talent_spells();
             talents.any(|talent| talent.spell_id == 1271466)
@@ -821,9 +1044,7 @@ fn reflection_from_absorb(
     {
         return;
     }
-    // SimC76f8118 sc_paladin.hpp777–780,1002–1012: a self Bulwark absorb
-    // rolls the 20% solo chance; fake allied Solidarity stacks are not present.
-    if combat::random::random::<f32>() < 0.2 {
+    if combat::random::random::<f32>() < chance {
         reset_avengers_shield(world, caster);
     }
 }
@@ -883,7 +1104,9 @@ fn after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
     }
     trigger_grand_crusader(world, caster, spell.id);
     extend_zealots_paragon(world, caster, spell.id);
-    advance_shining_light(world, caster, spell.id);
+    summon_forge(world, caster, spell.id);
+    echo_forge_spender(world, caster, spell);
+    advance_shining_light(world, caster, spell);
     advance_divine_guidance(world, caster, spell.id);
     // Native70448 spell432478 effect0 is aura332: misc432459 -> amount432472.
     // SimC76f8118 sc_paladin.cpp2748–2752 alternates only on actual hardcasts.

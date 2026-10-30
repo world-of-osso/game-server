@@ -31,6 +31,7 @@ fn ruby_ferry_click_flies_owner_and_follower_on_real_path() {
         |row| Ok((row.get(0)?,row.get(1)?,row.get(2)?,row.get(3)?,row.get(4)?)),
     ).unwrap();
     let start = bevy((x, y, z));
+    h.app.insert_resource(crate::test_data::ground_map());
     h.app
         .world_mut()
         .entity_mut(h.player)
@@ -148,8 +149,33 @@ fn ruby_ferry_click_flies_owner_and_follower_on_real_path() {
     for entity in [h.player, follower] {
         assert!(h.app.world().get::<TaxiFlight>(entity).is_none());
         assert!(h.app.world().get::<Mounted>(entity).is_none());
-        assert_eq!(*h.app.world().get::<Position>(entity).unwrap(), endpoint);
     }
+    assert_eq!(*h.app.world().get::<Position>(h.player).unwrap(), endpoint);
+    // The path ends above the upper floor: the follower falls onto it like the client player.
+    let floor = match h
+        .app
+        .world_mut()
+        .resource_mut::<crate::ground::GroundMap>()
+        .creature_ground_in(map, Vec3::new(endpoint.x, endpoint.y, endpoint.z))
+    {
+        crate::ground::GroundProbe::Supported(floor) => floor,
+        _ => panic!("no upper floor below the ferry endpoint"),
+    };
+    // The live client stands on the upper landing floor, 8.8 yards below the endpoint.
+    assert!(
+        (floor - 311.2).abs() < 1.0,
+        "endpoint {endpoint:?} floor {floor}"
+    );
+    for _ in 0..100 {
+        h.app.update();
+        crate::scripted_ai::fall_movement::advance_falls(h.app.world_mut());
+    }
+    let landed = *h.app.world().get::<Position>(follower).unwrap();
+    assert!((landed.x, landed.z) == (endpoint.x, endpoint.z));
+    assert!(
+        (landed.y - floor).abs() < 0.01,
+        "follower stayed at {landed:?}"
+    );
 }
 
 #[test]

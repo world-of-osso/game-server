@@ -148,51 +148,27 @@ fn apply_npc_kill_reputation(
     }
     let changes =
         reputation.gain_rep_with_spillover(faction_id, amount, RepGainSource::MobKill, registry);
-    if changes.is_empty() {
-        return None;
-    }
-    Some(format_change_message(&changes, registry))
+    format_change_message(&changes, registry)
 }
 
-fn format_change_message(changes: &[RepChangeResult], registry: &FactionRegistry) -> String {
-    let mut message = primary_change_message(changes[0], registry);
-    append_spillover_message(&mut message, spillover_changes(changes, registry));
-    message
-}
-
-fn primary_change_message(change: RepChangeResult, registry: &FactionRegistry) -> String {
-    let direction = rep_direction(change.actual_change());
-    let faction_name = faction_name(registry, change.faction_id);
-    format!(
-        "{} {} reputation with {}",
-        direction,
-        change.actual_change().abs(),
-        faction_name
-    )
-}
-
-fn append_spillover_message(message: &mut String, spillovers: Vec<String>) {
-    if spillovers.is_empty() {
-        return;
-    }
-    message.push_str(" (spillover ");
-    message.push_str(&spillovers.join(", "));
-    message.push(')');
-}
-
-fn spillover_changes(changes: &[RepChangeResult], registry: &FactionRegistry) -> Vec<String> {
-    changes
+/// `CHAT_MSG_COMBAT_FACTION_CHANGE` lines, one per changed faction (FACTION_STANDING_INCREASED
+/// / FACTION_STANDING_DECREASED); `None` when no value moved.
+pub(crate) fn format_change_message(
+    changes: &[RepChangeResult],
+    registry: &FactionRegistry,
+) -> Option<String> {
+    let lines: Vec<String> = changes
         .iter()
-        .skip(1)
         .filter(|change| change.actual_change() != 0)
         .map(|change| {
-            format!(
-                "{:+} {}",
-                change.actual_change(),
-                faction_name(registry, change.faction_id)
-            )
+            let name = faction_name(registry, change.faction_id);
+            match change.actual_change() {
+                amount if amount > 0 => format!("Reputation with {name} increased by {amount}."),
+                amount => format!("Reputation with {name} decreased by {}.", -amount),
+            }
         })
-        .collect()
+        .collect();
+    (!lines.is_empty()).then(|| lines.join("\n"))
 }
 
 fn faction_name(registry: &FactionRegistry, faction_id: u32) -> &str {
@@ -200,10 +176,6 @@ fn faction_name(registry: &FactionRegistry, faction_id: u32) -> &str {
         .get(faction_id)
         .map(|faction| faction.name.as_str())
         .unwrap_or("Unknown")
-}
-
-fn rep_direction(change: i32) -> &'static str {
-    if change >= 0 { "gained" } else { "lost" }
 }
 
 fn send_reputation_update(
@@ -236,6 +208,50 @@ fn send_reputation_error(
         message: None,
         error: Some(error.into()),
     });
+}
+
+/// Admin `set-reputation`: `faction_id` at `value`, saved, and sent to the live player.
+pub(crate) fn set_reputation(world: &mut World, character: u64, faction_id: u32, value: i32) {
+    let db = world.resource::<GameDatabase>().db.clone();
+    let registry = default_faction_registry();
+    let live = world
+        .query::<(Entity, &ClientId, &CharacterReputation)>()
+        .iter(world)
+        .find(|(_, id, _)| id.0 == character)
+        .map(|(player, _, reputation)| (player, reputation.clone()));
+    let mut reputation = match &live {
+        Some((_, reputation)) => reputation.clone(),
+        None => {
+            let Some(data) = persistence::load_character(&db, character) else {
+                warn!("set-reputation: character {character} has no saved data");
+                return;
+            };
+            persistence::load_reputation(&db, character, || {
+                CharacterReputation::new_for_player(&registry, data.race, data.class)
+            })
+        }
+    };
+    reputation.set_rep(faction_id, value);
+    persistence::save_reputation(&db, character, &reputation);
+    let Some((player, _)) = live else {
+        return;
+    };
+    let snapshot = read_reputation_snapshot(&db, character, &reputation, &registry);
+    world.entity_mut(player).insert(reputation);
+    let connection = world
+        .query::<(Entity, &PlayerLink)>()
+        .iter(world)
+        .find(|(_, link)| link.0 == player)
+        .map(|(connection, _)| connection);
+    if let Some(mut sender) =
+        connection.and_then(|entity| world.get_mut::<MessageSender<ReputationStateUpdate>>(entity))
+    {
+        sender.send::<ReputationChannel>(ReputationStateUpdate {
+            snapshot: Some(snapshot),
+            message: None,
+            error: None,
+        });
+    }
 }
 
 pub(crate) fn read_reputation_snapshot(

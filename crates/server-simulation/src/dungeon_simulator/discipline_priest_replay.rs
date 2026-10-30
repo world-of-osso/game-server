@@ -5,7 +5,9 @@ use super::dps_parity::literal_rotation::{
     execution::{NativeAction, Prepared},
 };
 use super::healer_simc_replay::Policy;
-use crate::simc_apl_native::{Bindings, Encounter, FightStyle, NativeFacts};
+use crate::simc_apl_native::{
+    Bindings, DotRefresh, DotRefreshPolicy, Encounter, FightStyle, NativeFacts, native_dot_spell,
+};
 use bevy::prelude::{Entity, World};
 use server::simc_apl::{Action, ActionFacts, Facts, Program};
 use shared::components::{ActiveSpec, Health, PowerType};
@@ -20,9 +22,10 @@ const SPELLS: &[(&str, u32, bool)] = &[
     ("radiance", 194509, false),
     ("void_shield", 17, false),
     ("shield", 17, false),
-    ("evangelism", 246287, true),
+    ("evangelism", 472433, false),
     ("penance", 47540, false),
     ("flash_heal", 2061, false),
+    ("shadow_word_pain", 589, false),
     ("shadow_word_death", 32379, false),
     ("mind_blast", 8092, false),
     ("smite", 585, false),
@@ -40,6 +43,15 @@ pub(super) fn prepare(
     let mut bindings = Bindings {
         actions: SPELLS.iter().map(|(n, id, _)| ((*n).into(), *id)).collect(),
         resources: [("mana".into(), PowerType::Mana)].into(),
+        buffs: [("shadow_word_pain".into(), 589)].into(),
+        dot_refresh: [(
+            "shadow_word_pain".into(),
+            DotRefresh {
+                resolve: native_dot_spell,
+                policy: DotRefreshPolicy::Pandemic,
+            },
+        )]
+        .into(),
         global_cooldown_spell: 17,
         ..Default::default()
     };
@@ -55,22 +67,27 @@ pub(super) fn prepare(
             "item",
             "use_item,name=soulcoiler_ritual_vessel,use_off_gcd=1,if=gcd.remains>=0.75*gcd.max",
         ),
+        ("dot", "shadow_word_pain,if=refreshable"),
         ("default", "pain_suppression,if=target.health.pct<35"),
         ("default", "barrier,if=party.injured>=3"),
-        ("default", "radiance,if=party.injured>=3"),
-        ("default", "void_shield,if=party.darkness_up"),
+        ("ramp", "evangelism"),
+        ("ramp", "radiance,if=cooldown.mind_blast.remains<=gcd.max*2"),
+        ("radiance_fallback", "radiance"),
         (
-            "default",
-            "shield,if=party.active_atonements<=5&target.atonement_up=0&target.shield_up=0",
+            "shield",
+            "void_shield,if=party.darkness_up&(party.darkness_up|cooldown.penance.remains<=gcd.max|party.active_atonements<=5)",
         ),
-        ("default", "evangelism,if=party.injured>=3"),
+        (
+            "shield",
+            "shield,if=party.darkness_up=0&party.borrowed_time&(party.darkness_up|cooldown.penance.remains<=gcd.max|party.active_atonements<=5)&(mana.pct*2.5>=fight_remains|party.shield_discipline&mana.pct*6>=fight_remains)",
+        ),
         ("heal", "penance,if=target.health.pct<45"),
         (
             "heal",
             "flash_heal,if=target.atonement_remains<=gcd.max&(mana.pct*7.5>=fight_remains|party.shield_discipline&mana.pct*18>=fight_remains|mana.pct>=90)",
         ),
-        ("damage", "penance"),
         ("damage", "mind_blast"),
+        ("damage", "penance"),
         ("damage", "shadow_word_death,if=target.health.pct<=20"),
         ("filler", "smite"),
     ])?;
@@ -99,9 +116,8 @@ struct PartyFacts<'a> {
     native: NativeFacts<'a>,
     injured: usize,
     active_atonements: usize,
-    shield: bool,
-    atonement: bool,
     atonement_remains: f64,
+    borrowed_time: bool,
     darkness: bool,
     shield_discipline: bool,
 }
@@ -110,8 +126,7 @@ impl Facts for PartyFacts<'_> {
         match name {
             "party.injured" => Ok(self.injured as f64),
             "party.active_atonements" => Ok(self.active_atonements as f64),
-            "target.shield_up" => Ok(f64::from(self.shield)),
-            "target.atonement_up" => Ok(f64::from(self.atonement)),
+            "party.borrowed_time" => Ok(f64::from(self.borrowed_time)),
             "target.atonement_remains" => Ok(self.atonement_remains),
             "party.darkness_up" => Ok(f64::from(self.darkness)),
             "party.shield_discipline" => Ok(f64::from(self.shield_discipline)),
@@ -124,8 +139,7 @@ impl ActionFacts for PartyFacts<'_> {
         match name {
             "party.injured"
             | "party.active_atonements"
-            | "target.shield_up"
-            | "target.atonement_up"
+            | "party.borrowed_time"
             | "target.atonement_remains"
             | "party.darkness_up"
             | "party.shield_discipline" => self.value(name),
@@ -165,15 +179,15 @@ impl Discipline {
             });
         let prepared = Prepared::read(world, healer, &targets, &self.equipment, actions, false)?;
         let atonement_remains = atonement_remaining(world, healer, target);
-        let atonement = atonement_remains > 0.0;
         let facts = PartyFacts {
             native: NativeFacts::new(world, healer, &self.bindings, self.encounter, 1)
                 .with_targets(Some(target), &targets),
             injured,
             active_atonements,
-            shield: crate::auras::has_aura(world, target, 17),
-            atonement,
             atonement_remains,
+            borrowed_time: world
+                .get::<crate::class_progression::KnownSpells>(healer)
+                .is_some_and(|known| known.contains(390691)),
             darkness: crate::auras::has_aura(world, healer, 1253591),
             shield_discipline: crate::auras::has_aura(world, healer, 197045),
         };
@@ -220,6 +234,23 @@ impl Policy for Discipline {
             .iter()
             .filter(|(unit, _)| atonement_remaining(world, healer, *unit) > 0.0)
             .count();
+        let enemy = world
+            .get::<crate::networking::CombatTarget>(tank)
+            .and_then(|target| target.0);
+        // SimC76f8118 apl_priest.cpp:234: refresh Pain before other actions.
+        if let Some(enemy) = enemy
+            && self.select(
+                world,
+                healer,
+                enemy,
+                injured,
+                active_atonements,
+                "dot",
+                &["shadow_word_pain"],
+            )?
+        {
+            return Ok(());
+        }
         if self.select(
             world,
             healer,
@@ -238,14 +269,7 @@ impl Policy for Discipline {
             injured,
             active_atonements,
             "default",
-            &[
-                "pain_suppression",
-                "barrier",
-                "radiance",
-                "void_shield",
-                "shield",
-                "evangelism",
-            ],
+            &["pain_suppression", "barrier"],
         )? {
             return Ok(());
         }
@@ -260,9 +284,6 @@ impl Policy for Discipline {
         )? {
             return Ok(());
         }
-        let enemy = world
-            .get::<crate::networking::CombatTarget>(tank)
-            .and_then(|target| target.0);
         if let Some(enemy) = enemy {
             world
                 .entity_mut(healer)
@@ -274,10 +295,88 @@ impl Policy for Discipline {
                 injured,
                 active_atonements,
                 "damage",
-                &["penance", "mind_blast", "shadow_word_death"],
+                &["mind_blast"],
             )? {
                 return Ok(());
             }
+        }
+        // SimC76f8118 apl_priest.cpp:244-248: target the shortest mark,
+        // penalize self, and cast Radiance near Mind Blast's next cooldown.
+        let ramp_target = living
+            .iter()
+            .min_by(|(left, _), (right, _)| {
+                let score = |unit| {
+                    atonement_remaining(world, healer, unit)
+                        + if unit == healer { 10.0 } else { 0.0 }
+                };
+                score(*left).total_cmp(&score(*right))
+            })
+            .map(|(unit, _)| *unit);
+        if let Some(target) = ramp_target
+            && self.select(
+                world,
+                healer,
+                target,
+                injured,
+                active_atonements,
+                "ramp",
+                &["evangelism", "radiance"],
+            )?
+        {
+            return Ok(());
+        }
+        if let Some(enemy) = enemy
+            && self.select(
+                world,
+                healer,
+                enemy,
+                injured,
+                active_atonements,
+                "damage",
+                &["penance"],
+            )?
+        {
+            return Ok(());
+        }
+        // SimC76f8118 apl_priest.cpp:231-232,249: prefer an Atoned target,
+        // then the shortest remaining mark, with a ten-second self penalty.
+        let shield_target = living
+            .iter()
+            .min_by(|(left, _), (right, _)| {
+                let score = |unit| {
+                    let remains = atonement_remaining(world, healer, unit);
+                    remains
+                        + if unit == healer { 10.0 } else { 0.0 }
+                        + if remains <= 0.0 { 100.0 } else { 0.0 }
+                };
+                score(*left).total_cmp(&score(*right))
+            })
+            .map(|(unit, _)| *unit);
+        if let Some(target) = shield_target
+            && self.select(
+                world,
+                healer,
+                target,
+                injured,
+                active_atonements,
+                "shield",
+                &["void_shield", "shield"],
+            )?
+        {
+            return Ok(());
+        }
+        if let Some(enemy) = enemy
+            && self.select(
+                world,
+                healer,
+                enemy,
+                injured,
+                active_atonements,
+                "damage",
+                &["shadow_word_death"],
+            )?
+        {
+            return Ok(());
         }
         let flash_target = living
             .iter()
@@ -298,6 +397,19 @@ impl Policy for Discipline {
                 active_atonements,
                 "heal",
                 &["flash_heal"],
+            )?
+        {
+            return Ok(());
+        }
+        if let Some(target) = ramp_target
+            && self.select(
+                world,
+                healer,
+                target,
+                injured,
+                active_atonements,
+                "radiance_fallback",
+                &["radiance"],
             )?
         {
             return Ok(());

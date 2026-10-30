@@ -18,6 +18,9 @@ pub(super) struct Recorder {
     event_cursor: usize,
     spells: BTreeMap<u32, (u64, u64)>,
     energizes: BTreeMap<u32, (u64, u64)>,
+    damage: BTreeMap<u32, (u64, u64)>,
+    damage_samples: Vec<Value>,
+    capture_damage_samples: bool,
     initial_absorbs: BTreeMap<u32, f64>,
     party_damage: BTreeMap<u64, u64>,
     party_healing: BTreeMap<u64, (u64, u64)>,
@@ -45,6 +48,9 @@ impl Recorder {
                 .len(),
             spells: BTreeMap::new(),
             energizes: BTreeMap::new(),
+            damage: BTreeMap::new(),
+            damage_samples: Vec::new(),
+            capture_damage_samples: std::env::var_os("HEALER_TANK_FACTOR_SAMPLES").is_some(),
             initial_absorbs: healer_absorbs(world, healer),
             party_damage: BTreeMap::new(),
             party_healing: BTreeMap::new(),
@@ -130,6 +136,16 @@ impl Recorder {
             .0;
         for event in &events[self.event_cursor..] {
             let target = event.target.and_then(Entity::try_from_bits);
+            if event.kind == CombatLogKind::Damage && event.source == Some(self.healer.to_bits()) {
+                let entry = self.damage.entry(event.spell_id.unwrap_or(0)).or_default();
+                entry.0 += 1;
+                entry.1 += event.amount.max(0) as u64;
+                if self.capture_damage_samples && matches!(event.spell_id, Some(585 | 47666 | 8092))
+                {
+                    self.damage_samples
+                        .push(damage_sample(world, self.healer, target, event));
+                }
+            }
             if !target.is_some_and(|unit| self.members.contains(&unit)) {
                 continue;
             }
@@ -207,7 +223,7 @@ impl Recorder {
         if let Some(payments) =
             world.get::<crate::spell_cast::ObservedResourcePayments>(self.healer)
         {
-            for &(spell, pool, amount) in &payments.0 {
+            for &(spell, pool, amount) in &payments.payments {
                 if pool == crate::spell_cast::CostPool::Power(shared::components::PowerType::Mana) {
                     *mana_spent.entry(spell).or_default() += f64::from(amount);
                 }
@@ -218,10 +234,15 @@ impl Recorder {
             .iter()
             .map(|(&spell, &(raw, effective))| (spell, json!({"raw":raw,"effective":effective})))
             .collect();
+        let damage: BTreeMap<_, _> = self
+            .damage
+            .iter()
+            .map(|(&spell, &(hits, amount))| (spell, json!({"hits":hits,"amount":amount})))
+            .collect();
         let mana_regenerated = world
             .get::<crate::spell_cast::ObservedResourcePayments>(self.healer)
-            .map_or(0.0, |observed| observed.1);
-        json!({"mana_spent_by_spell":mana_spent,"passive_mana_regenerated":mana_regenerated,"resource_energizes_by_spell":energizes,"fiend_rolls":fiend_rolls,"fiend_summons":fiend_summons,"fiend_pre_mitigation_damage":fiend.0,"fiend_atonement_raw":fiend.1,"fiend_atonement_effective":fiend.2,
+            .map_or(0.0, |observed| observed.mana_regenerated);
+        json!({"damage_by_spell":damage,"damage_samples":self.damage_samples,"mana_spent_by_spell":mana_spent,"passive_mana_regenerated":mana_regenerated,"resource_energizes_by_spell":energizes,"fiend_rolls":fiend_rolls,"fiend_summons":fiend_summons,"fiend_pre_mitigation_damage":fiend.0,"fiend_atonement_raw":fiend.1,"fiend_atonement_effective":fiend.2,
             "raw_hps":raw as f64 / duration,"effective_hps":effective as f64 / duration,
             "consumed_absorbs_by_spell":absorbs,
             "overheal_pct":(raw > 0).then(|| 100.0 * (raw - effective) as f64 / raw as f64),
@@ -232,6 +253,19 @@ impl Recorder {
             "mana_min":self.mana_min,"tank_health_min":self.tank_health_min,
             "party_damage":self.party_damage,"party_healing":self.party_healing})
     }
+}
+
+fn damage_sample(
+    world: &World,
+    healer: Entity,
+    target: Option<Entity>,
+    event: &shared::protocol::CombatLogEvent,
+) -> Value {
+    let auras = |unit: Entity| -> Vec<_> {
+        world.get::<crate::auras::ActiveAuras>(unit).into_iter().flat_map(|auras| auras.iter()).map(|aura| json!({"spell":aura.spell_id,"stacks":aura.stacks,"amounts":aura.effects.iter().map(|effect| effect.amount).collect::<Vec<_>>()})).collect()
+    };
+    let stats = world.get::<crate::stats::CharacterStats>(healer);
+    json!({"spell":event.spell_id,"amount":event.amount,"crit":event.crit,"time":crate::spell_cast::now(world),"spell_power":stats.map(|s| s.spell_power),"haste_pct":stats.map(|s| s.haste_pct),"crit_pct":stats.map(|s| s.crit_pct),"versatility_pct":stats.map(|s| s.versatility_pct),"caster_auras":auras(healer),"target_auras":target.map(auras)})
 }
 
 fn healer_absorbs(world: &World, healer: Entity) -> BTreeMap<u32, f64> {

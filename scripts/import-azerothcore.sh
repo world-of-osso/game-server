@@ -7,6 +7,7 @@
 # Retail profession trainers + skill tier caps, Retail creature models and the Retail
 # creature spawns of maps 0/1, areatrigger teleports and graveyards: TrinityCore TDB1210 excerpts
 # (data/reference/tdb1210/<table>.sql) → mysql_dump.py --prefix tdb_ → tdb_* tables
+# Guild rewards: TDB1210 guild_rewards* excerpts → tdb_guild_rewards* (guild_rewards_schema.sql)
 # Server-read content_* tables: content_policy.py (Retail-first ID mapping)
 #
 # Usage: FOREVER_DB2_SOURCE=/path/to/forever-db2 ./scripts/import-azerothcore.sh [path/to/azerothcore/data/sql/base/db_world]
@@ -24,6 +25,7 @@ DB2_CSV_ROOT="${DB2_CSV_ROOT:-$PROJECT_DIR/../game-engine/data/db2}"
 # playercreateinfo_action/_item for the new-character kit.
 # pool_template/pool_members/game_event_pool: PoolMgr spawn pools of the Retail spawns (content_pool_*).
 TDB_DIR="${TDB_DIR:-$PROJECT_DIR/data/reference/tdb1210}"
+TDB_FULL_DUMP="${TDB_FULL_DUMP:-$TDB_DIR/TDB_full_world_1210.26091_2026_09_09.sql}"
 # Seven hash/layout/count-pinned Midnight crafting reference files.
 CRAFTING_SOURCE_DIR="${CRAFTING_SOURCE_DIR:-$PROJECT_DIR/data/reference/crafting/12.1.0.69933}"
 
@@ -75,8 +77,16 @@ for table in "${TDB_TABLES[@]}"; do
     TDB_ARGS+=("$table=$f")
 done
 
-if [[ ! -f "$TDB_DIR/spell_area.sql" ]]; then
-    echo "ERROR: Missing TDB excerpt: $TDB_DIR/spell_area.sql" >&2
+# Guild reward excerpts: scripts/import_guild_rewards.py --dump <full TDB world dump> writes them.
+for table in spell_area guild_rewards guild_rewards_req_achievements; do
+    if [[ ! -f "$TDB_DIR/$table.sql" ]]; then
+        echo "ERROR: Missing TDB excerpt: $TDB_DIR/$table.sql" >&2
+        exit 1
+    fi
+done
+
+if [[ ! -f "$TDB_FULL_DUMP" ]]; then
+    echo "ERROR: Missing pinned TDB full dump: $TDB_FULL_DUMP" >&2
     exit 1
 fi
 
@@ -100,6 +110,9 @@ python3 "$SCRIPT_DIR/mysql_dump.py" --db "$DB_PATH" --schema "$SCHEMA_SQL" "${DU
 echo "  Importing TDB tables ..."
 python3 "$SCRIPT_DIR/mysql_dump.py" --db "$DB_PATH" --schema "$SCRIPT_DIR/tdb_schema.sql" --prefix tdb_ "${TDB_ARGS[@]}"
 python3 "$SCRIPT_DIR/mysql_dump.py" --db "$DB_PATH" --schema "$SCRIPT_DIR/spell_area_schema.sql" --prefix tdb_ "spell_area=$TDB_DIR/spell_area.sql"
+python3 "$SCRIPT_DIR/mysql_dump.py" --db "$DB_PATH" --schema "$SCRIPT_DIR/guild_rewards_schema.sql" --prefix tdb_ \
+    "guild_rewards=$TDB_DIR/guild_rewards.sql" "guild_rewards_req_achievements=$TDB_DIR/guild_rewards_req_achievements.sql"
+python3 "$SCRIPT_DIR/import-battlegrounds.py" --dump "$TDB_FULL_DUMP" --db "$DB_PATH" --table npc_spellclick_spells
 python3 "$SCRIPT_DIR/retail_action_bars.py" --db "$DB_PATH"
 
 # --- Retail DB2 CSV import (build-pinned, see db2.py) ---

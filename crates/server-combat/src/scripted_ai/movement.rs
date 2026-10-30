@@ -82,7 +82,9 @@ pub(crate) fn point_movement_system(world: &mut World) {
         Entity,
         &mut Position,
         &PointMovement,
-        &SpawnPoint,
+        Option<&SpawnPoint>,
+        Has<shared::components::Player>,
+        Has<crate::hunter_pet::HunterPet>,
         Option<&crate::creature_ai::CreatureState>,
         Option<&mut ScriptedPath>,
         Has<Walking>,
@@ -100,6 +102,8 @@ pub(crate) fn point_movement_system(world: &mut World) {
         mut position,
         movement,
         spawn,
+        player,
+        pet,
         state,
         escort,
         walking,
@@ -118,10 +122,15 @@ pub(crate) fn point_movement_system(world: &mut World) {
             );
             continue;
         }
+        let (walk_multiplier, run_multiplier) = match spawn {
+            Some(spawn) => (spawn.speed_walk, spawn.speed_run),
+            None if player || pet => (1.0, 1.0),
+            None => continue,
+        };
         let (speed, gait) = if walking {
-            (spawn.speed_walk * BASE_WALK_SPEED, CreatureMotion::Walk)
+            (walk_multiplier * BASE_WALK_SPEED, CreatureMotion::Walk)
         } else {
-            (spawn.speed_run * BASE_RUN_SPEED, CreatureMotion::Run)
+            (run_multiplier * BASE_RUN_SPEED, CreatureMotion::Run)
         };
         let (next, reached) = step_toward(*position, movement.target, speed * dt);
         bevy::log::debug!(?entity, from = ?*position, to = ?next, ?movement, ?state, reached, driver = "point", "scripted movement");

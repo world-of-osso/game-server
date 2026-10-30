@@ -11,6 +11,8 @@ const TICKS: u32 = 6_000;
 const ADD_WAVE_TICKS: u32 = 600;
 const LAST_30S_START: u32 = TICKS - ADD_WAVE_TICKS;
 #[cfg(test)]
+mod follower_dps_diagnostic;
+#[cfg(test)]
 mod tank_fixture_tests;
 #[cfg(test)]
 mod vengeance_consume_soul_tests;
@@ -117,7 +119,7 @@ pub(crate) struct Run {
     pub(crate) actor: Entity,
     pub(crate) targets: Vec<Entity>,
     damage_targets: Vec<Entity>,
-    target_waves: Vec<Value>,
+    pub(crate) target_waves: Vec<Value>,
     profile: inputs::Profile,
     gaps: Vec<String>,
     player_rotation: Option<player_rotation::PlayerRotation>,
@@ -679,7 +681,7 @@ pub(super) fn apply_fixed_time_target_health(run: &mut Run, at: Duration) -> Res
     Ok(())
 }
 
-fn next_fixture_boundary(run: &Run, frame_end: Duration) -> Duration {
+pub(crate) fn next_fixture_boundary(run: &Run, frame_end: Duration) -> Duration {
     let Some(adds) = run.app.world().get::<FixtureAdds>(run.actor) else {
         return frame_end;
     };
@@ -705,7 +707,7 @@ pub(super) fn advance_fixture_step(run: &mut Run, boundary: Duration) -> Result<
     Ok(())
 }
 
-fn apply_fixture_add_events(
+pub(crate) fn apply_fixture_add_events(
     run: &mut Run,
     retired: &mut Vec<Entity>,
     started_at: Duration,
@@ -742,7 +744,7 @@ fn advance_fixture_frame(
     Ok(())
 }
 
-fn capture_engagement(run: &Run) -> Value {
+pub(crate) fn capture_engagement(run: &Run) -> Value {
     let mut sample = report::engagement(run.app.world(), run.actor, &run.targets);
     // The last add retirement is270.09s, inside the final30s qualification window.
     // Keep live target inspection, but never subtract a retired wave's earned damage.
@@ -841,6 +843,17 @@ pub(crate) fn drive_literal_tick(run: &mut Run) -> Result<(), String> {
     Err("literal rotation exceeded 128 same-tick actions".into())
 }
 
+pub(crate) fn drive_literal_off_gcd(run: &mut Run) -> Result<bool, String> {
+    let world = run.app.world_mut();
+    world.init_resource::<LiteralTickProgress>();
+    world.resource_mut::<LiteralTickProgress>().0 = false;
+    run.spec_driver
+        .as_mut()
+        .expect("literal driver is present")
+        .drive(world, run.actor, &run.targets)?;
+    Ok(world.resource::<LiteralTickProgress>().0)
+}
+
 fn drive_player(run: &mut Run) -> Result<(), String> {
     if run.spec_driver.is_some() {
         drive_literal_tick(run)?;
@@ -888,7 +901,31 @@ fn measure(spec_id: u32, count: usize) -> Result<Value, String> {
     Ok(multi_seed::summarize(reports))
 }
 
+pub(crate) fn combat_report(run: &Run, seconds: f64) -> Value {
+    report::combat(run.app.world(), &run.damage_targets, seconds)
+}
+
 fn measure_seed(spec_id: u32, count: usize, seed: u64) -> Result<Value, String> {
+    if let Some(directory) = std::env::var_os("DPS_PARITY_TANK_TRACE_DIR") {
+        let path =
+            std::path::Path::new(&directory).join(format!("{spec_id}.{count}.{seed}.simc.log"));
+        let started = Instant::now();
+        let mut replay = super::tank_replay::replay_simc_with_targets(
+            spec_id, &path, count, 300, seed, true, 1.0,
+        )?;
+        if !replay["time_to_death"].is_null() {
+            return Err(format!(
+                "tank died during DPS measurement: {}",
+                replay["time_to_death"]
+            ));
+        }
+        replay["spec_id"] = json!(spec_id);
+        replay["target_count"] = json!(count);
+        replay["simulated_seconds"] = json!(replay["duration_seconds"]);
+        replay["seed"] = json!(seed);
+        replay["wall_seconds"] = json!(started.elapsed().as_secs_f64());
+        return Ok(replay);
+    }
     let _seed_scope = crate::random::seed_scope(seed);
     let mut run = prepare_measurement(spec_id, count)?;
     if run.spec_driver.is_none() {

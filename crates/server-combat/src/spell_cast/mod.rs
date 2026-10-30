@@ -825,6 +825,15 @@ impl SpellHistory {
     }
 
     #[cfg(any(test, feature = "test-support"))]
+    pub fn active_gcd_ready_at(&self, now: f64) -> Option<f64> {
+        self.gcd_ready_at
+            .values()
+            .copied()
+            .filter(|&deadline| deadline > now)
+            .max_by(f64::total_cmp)
+    }
+
+    #[cfg(any(test, feature = "test-support"))]
     pub fn clear_fixture_precombat_gcd(&mut self) {
         self.gcd_ready_at.clear();
     }
@@ -2029,6 +2038,7 @@ enum StartCheck {
     IgnoreCastInProgress,
     IgnoreRange,
     ChannelDecision,
+    CooldownQueue { after_channel: bool },
     TankHealCapability,
     HealerDecision,
 }
@@ -2085,6 +2095,30 @@ pub fn read_native_cast_after_channel(
         Some(target),
         StartCheck::ChannelDecision,
     )
+}
+
+/// Read native eligibility for a foreground action whose cooldown is within SimC's queue window.
+/// The returned delay does not modify the native cooldown or cast the spell.
+pub fn read_native_cast_for_cooldown_queue(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    target: Entity,
+    after_channel: bool,
+) -> Result<f64, CastFailure> {
+    let delay = cooldown_query::cooldown_value(world, caster, spell, "remains")
+        .expect("native cooldown remains is supported");
+    if delay <= 0.0 || delay > 0.250 {
+        return Err(CastFailure::OnCooldown);
+    }
+    validate_start_with_policy(
+        world,
+        caster,
+        spell,
+        Some(target),
+        StartCheck::CooldownQueue { after_channel },
+    )?;
+    Ok(delay)
 }
 
 /// Read ordinary native admission using only the chosen pool's maximum in the
@@ -2231,7 +2265,12 @@ fn validate_start_with_policy(
         && !allows_cast_while_casting(world, caster, spell);
     if matches!(
         check,
-        StartCheck::Native | StartCheck::ResourceMax(_) | StartCheck::IgnoreRange
+        StartCheck::Native
+            | StartCheck::ResourceMax(_)
+            | StartCheck::IgnoreRange
+            | StartCheck::CooldownQueue {
+                after_channel: false
+            }
     ) && casting_blocks_start
     {
         return Err(CastFailure::InProgress);
@@ -2326,6 +2365,9 @@ fn validate_history(
     if spell.cast_ignore_cooldowns || scripts::relationship_ignores_cooldown(world, caster, spell) {
         return Ok(());
     }
+    if matches!(check, StartCheck::CooldownQueue { .. }) {
+        return Ok(());
+    }
     if history.on_cooldown(spell, now) {
         return Err(CastFailure::OnCooldown);
     }
@@ -2358,7 +2400,11 @@ fn permits_transient_gcd(
 ) -> bool {
     if matches!(
         check,
-        StartCheck::HealerDecision | StartCheck::ChannelDecision
+        StartCheck::HealerDecision
+            | StartCheck::ChannelDecision
+            | StartCheck::CooldownQueue {
+                after_channel: true
+            }
     ) {
         return true;
     }
@@ -2679,6 +2725,21 @@ fn preserve_cost_sign(initial: f32, modified: f32) -> f32 {
     } else {
         0.0
     }
+}
+
+/// TDB non-vehicle spellclicks use an ordinary cast, not a triggered cast.
+pub(crate) fn start_spellclick_cast(
+    world: &mut World,
+    caster: Entity,
+    spell_id: u32,
+    target: Entity,
+) -> Result<(), CastFailure> {
+    let spell = world
+        .resource::<SpellStore>()
+        .get(spell_id)
+        .cloned()
+        .ok_or(CastFailure::UnknownSpell)?;
+    start_cast(world, caster, &spell, Some(target))
 }
 
 fn start_cast(
@@ -3025,6 +3086,7 @@ fn execute_cast_with_primary(
         AuraEvent {
             actor: caster,
             target: None,
+            action_target: explicit,
             actor_mask: [0, procs::PROC2_CAST_SUCCESSFUL],
             target_mask: [0; 2],
             spell_id: Some(spell.id),
@@ -3077,6 +3139,7 @@ fn execute_cast_with_primary(
         crate::combat::attack_stop(world, caster);
     }
     auto_repeat::on_cast(world, caster, spell, explicit);
+    crate::npc_interaction::nalorakk_offerings::finish_pickup(world, caster, spell.id, explicit);
     Ok(())
 }
 
@@ -3909,6 +3972,7 @@ fn push_hit_events(
             AuraEvent {
                 actor: caster,
                 target: Some(target),
+                action_target: spell.cast_primary_target,
                 actor_mask: [0; 2],
                 target_mask: [procs::PROC_TAKE_ANY_DAMAGE, 0],
                 spell_id: Some(spell.id),
@@ -3955,6 +4019,7 @@ fn push_hit_events(
             AuraEvent {
                 actor: caster,
                 target: Some(target),
+                action_target: spell.cast_primary_target,
                 actor_mask: [actor_mask, 0],
                 target_mask: [target_mask, 0],
                 spell_id: Some(spell.id),
@@ -4046,6 +4111,7 @@ pub(super) fn cast_triggered_with_item_level(
 pub struct TriggeredSpellOverrides {
     pub effect0_amount: Option<f32>,
     pub damage_multiplier: Option<f32>,
+    pub healing_multiplier: Option<f32>,
     pub item_level: Option<u16>,
     pub item_inventory_type: Option<u8>,
     pub effect_mask: Option<u32>,
@@ -4071,6 +4137,7 @@ pub fn cast_triggered_with_overrides(
     spell.cast_aura_stacks = values.aura_stacks;
     spell.cast_fixed_aura_duration_ms = values.fixed_aura_duration_ms;
     spell.cast_damage_multiplier = values.damage_multiplier;
+    spell.cast_healing_multiplier = values.healing_multiplier;
     spell.cast_original_caster = values.original_caster;
     spell.cast_item_level = values.item_level;
     spell.cast_item_inventory_type = values.item_inventory_type;
@@ -4296,7 +4363,7 @@ fn take_cast_resources(
     }
     spend_costs(world, caster, costs);
     if let Some(mut observed) = world.get_mut::<ObservedResourcePayments>(caster) {
-        observed.0.extend(
+        observed.payments.extend(
             costs
                 .iter()
                 .filter(|(_, amount)| *amount > 0.0)
@@ -4551,6 +4618,21 @@ fn send_spell_failure(
 
 /// Remove an active cast without reporting it: a channel ran out or handed over.
 pub(crate) fn end_cast(world: &mut World, caster: Entity) -> Option<CastState> {
+    let cast = take_cast_state(world, caster)?;
+    end_channel_effects(world, caster, &cast);
+    Some(cast)
+}
+
+/// The channel's auras and ritual end with it.
+fn end_channel_effects(world: &mut World, caster: Entity, cast: &CastState) {
+    if cast.cast_type == CastType::Channel {
+        crate::auras::channel_ended(world, caster, cast.spell_id);
+        crate::meeting_stone::ritual::channel_ended(world, caster, cast.spell_id);
+    }
+}
+
+/// Clear the cast bar and its pending state, leaving channel effects in place.
+fn take_cast_state(world: &mut World, caster: Entity) -> Option<CastState> {
     empower::cancel(world, caster);
     crate::crafting_orders::interrupt(world, caster);
     world
@@ -4562,10 +4644,6 @@ pub(crate) fn end_cast(world: &mut World, caster: Entity) -> Option<CastState> {
     let cast = world.entity_mut(caster).take::<CastState>()?;
     debug!(caster = ?caster, state = ?cast, "Cast state ended");
     mark_dirty(world, caster);
-    if cast.cast_type == CastType::Channel {
-        crate::auras::channel_ended(world, caster, cast.spell_id);
-        crate::meeting_stone::ritual::channel_ended(world, caster, cast.spell_id);
-    }
     Some(cast)
 }
 
@@ -4670,14 +4748,20 @@ fn tick_and_resolve_cast(world: &mut World, caster: Entity, dt: f32) {
     }
 }
 
+/// TC Spell::update: `finish()` then `OnChannelFinished`, while the channel's
+/// target auras still stand (Leymor's Stomp damage reads its Sprout stacks before
+/// their Stomp auras end and kill them).
 fn finish_channel(world: &mut World, caster: Entity, spell_id: u32) {
     crate::auras::channel_completed(world, caster, spell_id);
-    end_cast(world, caster);
+    let cast = take_cast_state(world, caster);
     crate::scripted_ai::dispatch(
         world,
         caster,
         crate::scripted_ai::Hook::ChannelFinished { spell_id },
     );
+    if let Some(cast) = cast {
+        end_channel_effects(world, caster, &cast);
+    }
 }
 
 /// The spell snapshot belonging to a cast bar, including casting-item scaling.

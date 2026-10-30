@@ -101,6 +101,7 @@ pub(super) fn can_move(world: &World, unit: Entity) -> bool {
     world
         .get::<Health>(unit)
         .is_some_and(|health| health.current > 0.0)
+        && !server::test_support::transport::in_progress(world, unit)
         && world
             .get::<shared::casting::CastState>(unit)
             .is_none_or(|cast| cast.cast_while_moving)
@@ -160,6 +161,14 @@ fn handle_unreachable_movement(
         world.get::<crate::creature_ai::CreatureState>(unit)
     {
         crate::creature_ai::mark_chase_blocked(world, unit, *target);
+        let position = *world.get::<Position>(unit).unwrap();
+        crate::creature_ai::move_follower(world, unit, position, 0.0);
+        return Ok(());
+    }
+    if matches!(
+        world.get::<crate::creature_ai::PetMotion>(unit),
+        Some(crate::creature_ai::PetMotion::Chase(_))
+    ) {
         let position = *world.get::<Position>(unit).unwrap();
         crate::creature_ai::move_follower(world, unit, position, 0.0);
         return Ok(());

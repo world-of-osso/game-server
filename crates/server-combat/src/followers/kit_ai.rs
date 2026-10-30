@@ -245,7 +245,7 @@ fn try_entry(
             }
         }
     }
-    attempt_cast(world, unit, target, follower, &entry, enemies.len())
+    attempt_cast(world, unit, target, enemy, follower, &entry, enemies.len())
 }
 
 fn select_min_own_aura_enemy(
@@ -424,6 +424,9 @@ pub(super) fn conditions_met(
             || (condition.health_below.is_none()
                 && !super::utility::projected_death(world, target)))
     {
+        return false;
+    }
+    if entry.spell_id == 118 && !polymorph_target_allowed(world, target, party) {
         return false;
     }
     if !action_history_allows(world, unit, entry)
@@ -660,6 +663,44 @@ fn maintenance_aura_present(
         }))
 }
 
+fn polymorph_target_allowed(world: &World, target: Entity, party: &[Entity]) -> bool {
+    let boss = world
+        .get::<InMap>(target)
+        .zip(world.get::<shared::components::Npc>(target))
+        .zip(world.get_resource::<crate::maps::MapStore>())
+        .is_some_and(|((map, npc), store)| {
+            store
+                .raid_creature_encounters
+                .contains_key(&(map.map_id, npc.template_id))
+        });
+    if boss {
+        return false;
+    }
+    let attacking = party.iter().any(|member| {
+        world
+            .get::<crate::combat::AutoAttack>(*member)
+            .is_some_and(|attack| attack.victim == target)
+            || world
+                .get::<crate::spell_cast::auto_repeat::AutoRepeat>(*member)
+                .is_some_and(|repeat| repeat.targets(target))
+            || world
+                .get::<CastState>(*member)
+                .is_some_and(|cast| cast.target == target.to_bits())
+    });
+    let periodic_damage = world
+        .get::<crate::auras::ActiveAuras>(target)
+        .is_some_and(|auras| {
+            auras.iter().any(|aura| {
+                party.contains(&aura.caster)
+                    && aura
+                        .effects
+                        .iter()
+                        .any(|effect| effect.aura_type == crate::auras::PERIODIC_DAMAGE_AURA)
+            })
+        });
+    !attacking && !periodic_damage
+}
+
 pub(super) fn combat_allows(
     world: &World,
     unit: Entity,
@@ -731,6 +772,7 @@ fn attempt_cast(
     world: &mut World,
     unit: Entity,
     target: Entity,
+    enemy: Option<Entity>,
     follower: &Follower,
     entry: &Entry,
     enemies: usize,
@@ -785,6 +827,19 @@ fn attempt_cast(
             unit,
             entry.spell_id,
             Some(target),
+        )
+    } else if entry.spell_id == 19574 {
+        // SimC76f8118 sc_hunter.cpp6746–6750: self-cast Bestial Wrath
+        // sends its pets' Bloodshed to the selected enemy, not the caster.
+        crate::spell_cast::creature_cast_with_targets(
+            world,
+            unit,
+            entry.spell_id,
+            crate::spell_cast::CastTargets {
+                unit: target,
+                primary: enemy,
+                destination: None,
+            },
         )
     } else if let Some(stage) =
         super::empower_policy::selected_stage(world, unit, entry.spell_id, enemies)

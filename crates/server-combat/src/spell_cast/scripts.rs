@@ -69,6 +69,7 @@ pub use elemental_ancestors::{owner as ancestor_owner, summon as summon_ancestor
 mod policies;
 pub(super) use policies::check_cast as check_policy_cast;
 pub(crate) use policies::register_channel_policies;
+pub use policies::soft_cap_multiplier;
 pub(super) use policies::{
     after_impacts as after_impact_policies, after_triggered_cast as apply_triggered_cast_policies,
     before_impact as before_impact_policies, has_impact_policy, on_hit as apply_hit_policies,
@@ -330,6 +331,9 @@ pub(super) fn effect_handler(
     if (spell, index) == (321507, 0) {
         return Some(arcane_touch::apply);
     }
+    if (spell, index) == (crate::scripted_ai::azure_vault::WILD_ERUPTION, 0) {
+        return Some(crate::scripted_ai::azure_vault::cast_wild_eruption_missile);
+    }
     batch13::effect_handler(spell, index)
 }
 
@@ -580,7 +584,7 @@ pub fn on_effect_hit(
         (batch8::INCINERATE, 1) => Some(batch8::incinerate),
         (batch8::UNSTABLE_AFFLICTION, 0) => Some(batch8::unstable_affliction),
         (batch7::COLOSSUS_SMASH, 0) => Some(batch7::apply_colossus_wound),
-        (batch7::HEART_STRIKE, 0) => Some(batch7::energize_heartbreaker),
+        (batch7::HEART_STRIKE, 0) | (433895, 4) => Some(batch7::energize_heartbreaker),
         (batch7::RAGING_BLOW | batch7::CRUSHING_BLOW, 0) => Some(batch7::roll_raging_blow_reset),
         (batch7::WHIRLWIND, 1) => Some(batch7::energize_whirlwind),
         (batch7::RAKE, 0) => Some(batch7::stun_rake),

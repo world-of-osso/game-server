@@ -337,6 +337,9 @@ fn process_activate_taxi(
                 }
             });
             let points = takeoff.network.flight_points(&route.nodes);
+            let rider = link.0;
+            commands
+                .queue(move |world: &mut World| crate::hunter_pet::unsummon_for_taxi(world, rider));
             commands.entity(link.0).insert((
                 TaxiFlight { points, next: 0 },
                 Mounted {
@@ -353,23 +356,25 @@ fn process_activate_taxi(
     }
 }
 
+pub(crate) const RUBY_FERRY_MAP: u32 = 2521;
+pub(crate) const RUBY_FERRY_ENTRY: u32 = 194667;
+pub(crate) const RUBY_FERRY_PATH: u32 = 11715;
+pub(crate) const RUBY_FERRY_SOURCE: Vec3 = Vec3::new(1540.7935, 131.9674, 246.033);
+
 /// Start the lead-approved Ruby ferry approximation. The source action set and
 /// vehicle seat are unavailable; see the follower-dungeon spec for the inference.
 pub(crate) fn start_ruby_ferry(world: &mut World, player: Entity, npc: Entity) {
-    const RUBY_MAP: u32 = 2521;
-    const RUBY_PATH: u32 = 11715;
     const RADIANT_DRAKE_DISPLAY: u32 = 107204;
     let Some(map) = world.get::<crate::maps::InMap>(player).copied() else {
         return;
     };
-    if map.map_id != RUBY_MAP || world.get::<crate::maps::InMap>(npc) != Some(&map) {
+    if map.map_id != RUBY_FERRY_MAP || world.get::<crate::maps::InMap>(npc) != Some(&map) {
         return;
     }
     let Some(npc_position) = world.get::<Position>(npc) else {
         return;
     };
-    let lower_spawn = Vec3::new(1540.7935, 131.9674, 246.033);
-    if Vec3::new(npc_position.x, npc_position.y, npc_position.z).distance(lower_spawn) > 1.0 {
+    if Vec3::new(npc_position.x, npc_position.y, npc_position.z).distance(RUBY_FERRY_SOURCE) > 1.0 {
         return;
     }
     let encounter = crate::scripted_ai::instance_script::boss_id_for_encounter(world, map, 2609);
@@ -378,7 +383,7 @@ pub(crate) fn start_ruby_ferry(world: &mut World, player: Entity, npc: Entity) {
     {
         return;
     }
-    start_scripted_party_flight(world, player, map, RUBY_PATH, RADIANT_DRAKE_DISPLAY);
+    start_scripted_party_flight(world, player, map, RUBY_FERRY_PATH, RADIANT_DRAKE_DISPLAY);
 }
 
 /// DARKFLAME_CART_BOARDING_LOG_CORRELATED: the point is TaxiPath9458's first
@@ -447,6 +452,7 @@ fn start_scripted_party_flight(
         return;
     }
     for rider in riders {
+        crate::hunter_pet::unsummon_for_taxi(world, rider);
         world.entity_mut(rider).insert((
             TaxiFlight {
                 points: points.clone(),
@@ -493,7 +499,7 @@ type Flyers<'w, 's> = Query<
     ),
 >;
 
-fn fly_taxis(
+pub(crate) fn fly_taxis(
     time: Res<Time>,
     mut flyers: Flyers,
     dirty_queue: Option<Res<InterestDirtyQueue>>,
@@ -519,7 +525,19 @@ fn fly_taxis(
                 teleported(dirty_queue.as_deref(), entity, &mut control);
             }
             commands.entity(entity).queue(finish_flight);
+            commands.queue(move |world: &mut World| fall_after_flight(world, entity));
+            commands.queue(move |world: &mut World| {
+                crate::hunter_pet::resummon_after_taxi(world, entity)
+            });
         }
+    }
+}
+
+/// A creature that loses flight above the floor falls (`SetCanFly(false)` →
+/// `MotionMaster::MoveFall`, `AuraEffect::HandleAuraAllowFlight`); a player's client drops it.
+fn fall_after_flight(world: &mut World, rider: Entity) {
+    if world.get_entity(rider).is_ok() && world.get::<Player>(rider).is_none() {
+        crate::scripted_ai::fall_movement::move_fall(world, rider, 0);
     }
 }
 

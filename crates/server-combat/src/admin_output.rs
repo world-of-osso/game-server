@@ -17,6 +17,10 @@ pub(super) fn print_response(response: &AdminResponse) {
 
 fn print_listing_response(response: &AdminResponse) -> bool {
     match response {
+        AdminResponse::AchievementsListed { .. } => println!(
+            "{}",
+            serde_json::to_string_pretty(response).expect("serialize achievement readback")
+        ),
         AdminResponse::Pong => println!("pong"),
         AdminResponse::AccountsListed { accounts } => print_accounts(accounts),
         AdminResponse::CharactersListed { characters } => print_characters(characters),
@@ -267,6 +271,20 @@ fn print_character_response(response: &AdminResponse) -> bool {
             percent,
         } => {
             println!("Durability set: {character_name} -> {percent}%");
+        }
+        AdminResponse::ReputationSet {
+            character_name,
+            faction_id,
+            value,
+        } => {
+            println!("Reputation set: {character_name} faction {faction_id} -> {value}");
+        }
+        AdminResponse::CorpseLootStaged {
+            character_name,
+            item_id,
+            corpse,
+        } => {
+            println!("Corpse loot staged: {character_name} item {item_id} on corpse {corpse}");
         }
         AdminResponse::AppearanceSet {
             character_name,

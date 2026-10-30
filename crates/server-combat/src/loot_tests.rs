@@ -1089,3 +1089,48 @@ fn aura_world_loot_city_of_gold_not_quest_enlisted_money() {
         assert_eq!(h.inventory().gold - before, expected, "no replay");
     }
 }
+
+#[test]
+fn admin_staged_corpse_slot_is_looted_through_the_real_request_and_makes_guild_news() {
+    let mut h = harness(false).unwrap();
+    let db = &h.app.world().resource::<GameDatabase>().db;
+    crate::persistence_character::set_character_guild_by_id(
+        db,
+        h.looter.character_id,
+        7,
+        "Looters",
+    )
+    .unwrap();
+    assert_eq!(
+        crate::loot::stage_corpse_loot(h.app.world_mut(), "Looter", 19019),
+        Err("no corpse Looter tapped within loot reach".into())
+    );
+    let kobold = h.kill_kobold();
+    h.take::<CorpseLootable>();
+    let staged = crate::loot::stage_corpse_loot(h.app.world_mut(), "Looter", 19019);
+    assert_eq!(staged, Ok(kobold.to_bits()));
+    h.settle();
+    assert_eq!(h.take::<CorpseLootable>(), vec![lootable(kobold, true)]);
+    h.open(kobold, false);
+    h.settle();
+    let window = h.take::<LootResponse>().pop().expect("loot window");
+    assert_eq!(
+        window.slots,
+        vec![LootSlot {
+            slot: 0,
+            content: LootContent::Item {
+                item_id: 19019,
+                name: "Thunderfury, Blessed Blade of the Windseeker".into(),
+                quality: 5,
+                count: 1,
+            },
+        }]
+    );
+    h.take_slot(kobold, 0);
+    h.settle();
+    assert_eq!(h.count_of(19019), 1);
+    let db = &h.app.world().resource::<GameDatabase>().db;
+    let entries = crate::guild_news::query(db, h.looter.character_id).entries;
+    assert!(matches!(&entries[..], [entry] if matches!(&entry.kind,
+        shared::protocol::GuildNewsKind::ItemLooted { member, item_id: 19019 } if member == "Looter")));
+}

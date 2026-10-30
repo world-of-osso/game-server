@@ -33,17 +33,14 @@ pub(crate) fn load_spellclick_catalog(conn: &Connection) -> rusqlite::Result<Spe
     Ok(catalog)
 }
 
-pub(super) fn cast_spellclick(world: &mut World, player: Entity, npc: Entity, entry: u32) {
-    match entry {
-        194667 => {
-            crate::taxi::start_ruby_ferry(world, player, npc);
-            return;
-        }
-        209439 => {
-            crate::taxi::start_darkflame_cart(world, player, npc);
-            return;
-        }
-        _ => {}
+pub(crate) fn cast_spellclick(world: &mut World, player: Entity, npc: Entity, entry: u32) {
+    if entry == crate::taxi::RUBY_FERRY_ENTRY {
+        crate::taxi::start_ruby_ferry(world, player, npc);
+        return;
+    }
+    if entry == 209439 {
+        crate::taxi::start_darkflame_cart(world, player, npc);
+        return;
     }
     let spells = world
         .resource::<SpellClickCatalog>()
@@ -64,6 +61,18 @@ pub(super) fn cast_spellclick(world: &mut World, player: Entity, npc: Entity, en
             );
             continue;
         }
-        crate::spell_cast::cast_triggered(world, player, spell.spell_id, Some(npc), 0);
+        let pending =
+            super::nalorakk_offerings::begin_pickup(world, player, npc, entry, spell.spell_id);
+        if let Err(failure) =
+            crate::spell_cast::start_spellclick_cast(world, player, spell.spell_id, npc)
+        {
+            if pending {
+                super::nalorakk_offerings::cancel_pickup(world, player);
+            }
+            warn!(
+                "Spellclick NPC {entry} spell {} failed: {failure:?}",
+                spell.spell_id
+            );
+        }
     }
 }

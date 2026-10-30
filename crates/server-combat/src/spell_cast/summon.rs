@@ -791,12 +791,14 @@ fn read_summon_template(
     dest: super::targets::Dest,
     spell_id: u32,
 ) -> Option<SummonTemplate> {
-    // SimC76f8118 pet.cpp:69: Discipline fiends inherit their owner's level.
-    let discipline_fiend = matches!(spell_id, 1280172 | 200174 | 451235)
-        && world
-            .get::<shared::components::ActiveSpec>(owner)
-            .is_some_and(|spec| spec.0 == 256);
-    let selected = if discipline_fiend {
+    // SimC76f8118 pet.cpp:69: these combat pets inherit their owner's level.
+    let owner_level_pet = world
+        .get::<shared::components::ActiveSpec>(owner)
+        .is_some_and(|spec| {
+            (spec.0 == 256 && matches!(spell_id, 1280172 | 200174 | 451235))
+                || (spec.0 == 250 && spell_id == 434237)
+        });
+    let selected = if owner_level_pet {
         SelectedSummonLevel {
             difficulty: crate::zones::map_difficulty_id(world, *world.get::<InMap>(owner)?),
             level: read_summoner_level(world, owner)?,
@@ -1104,7 +1106,7 @@ fn insert_summon_privacy(entity: &mut EntityWorldMut<'_>, owner: Option<PrivateS
     }
 }
 
-/// A retired summon retains source state while its in-flight spells or Grasp ticks remain.
+/// A retired summon retains source state while its in-flight spells or periodic effects remain.
 #[derive(Component)]
 pub(crate) struct RetiringSummon {
     pub health: f32,
@@ -1164,7 +1166,7 @@ fn finish_retiring_summons(world: &mut World, now: f64) {
         let pending = world
             .get_resource::<super::missiles::PendingSpellHits>()
             .is_some_and(|hits| hits.has_caster(entity))
-            || has_lingering_grasp(world, entity);
+            || has_lingering_periodic(world, entity);
         if !pending || now >= deadline {
             if pending {
                 warn!(?entity, "Retired summon exceeded effect drain timeout");
@@ -1212,7 +1214,7 @@ pub fn despawn_summon(world: &mut World, entity: Entity) {
     let pending = world
         .get_resource::<super::missiles::PendingSpellHits>()
         .is_some_and(|hits| hits.has_caster(entity))
-        || has_lingering_grasp(world, entity);
+        || has_lingering_periodic(world, entity);
     if pending {
         retire_until_effects_finish(world, entity);
     } else {
@@ -1220,22 +1222,23 @@ pub fn despawn_summon(world: &mut World, entity: Entity) {
     }
 }
 
-fn has_lingering_grasp(world: &mut World, caster: Entity) -> bool {
-    if !world
-        .get::<SummonedCreature>(caster)
-        .is_some_and(|summon| matches!(summon.spell_id, 317776 | 1242294))
-    {
+fn has_lingering_periodic(world: &mut World, caster: Entity) -> bool {
+    let Some(summon) = world.get::<SummonedCreature>(caster) else {
         return false;
-    }
-    // SimC76f8118 sc_death_knight.cpp4545–4574: a consumed Magus's
-    // existing Withering Grasp continues after the pet is dismissed.
+    };
+    let spell = match summon.spell_id {
+        317776 | 1242294 => 1297091,
+        49028 | 1237128 | 1264353 => 55078,
+        _ => return false,
+    };
+    // SimC76f8118 retains Magus Grasp and Rune Weapon Blood Plague after demise.
     world
         .query::<&crate::auras::ActiveAuras>()
         .iter(world)
         .any(|auras| {
             auras
                 .iter()
-                .any(|aura| aura.caster == caster && aura.spell_id == 1297091)
+                .any(|aura| aura.caster == caster && aura.spell_id == spell)
         })
 }
 

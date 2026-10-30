@@ -12,6 +12,33 @@ use std::path::Path;
 
 #[test]
 #[ignore = "requires canonical world database and healer-tank profiles"]
+fn optimal_raid_environment_reaches_all_replay_actors() {
+    let mut run = crate::dungeon_simulator::dps_parity::prepare_registered_player(66, 1).unwrap();
+    let tank = run.actor;
+    let healer =
+        crate::dungeon_simulator::dps_parity::spawn_second_reference_player(&mut run, 256).unwrap();
+    let party = super::spawn_reference_party(run.app.world_mut(), tank, healer).unwrap();
+    let members: Vec<_> = party.members.iter().copied().chain([tank]).collect();
+    super::apply_optimal_raid_environment(&mut run, &members).unwrap();
+    let world = run.app.world();
+    for member in members {
+        for spell in [1459, 1126, 2825] {
+            assert!(
+                crate::auras::has_aura(world, member, spell),
+                "member {member:?} lacks {spell}"
+            );
+        }
+    }
+    for spell in [1490, 113746] {
+        assert!(
+            crate::auras::has_aura(world, run.targets[0], spell),
+            "enemy lacks {spell}"
+        );
+    }
+}
+
+#[test]
+#[ignore = "requires canonical world database and healer-tank profiles"]
 fn reference_healer_remains_alive_during_single_faction_setup() {
     let mut run = crate::dungeon_simulator::dps_parity::prepare_registered_player(66, 1).unwrap();
     let tank = run.actor;
