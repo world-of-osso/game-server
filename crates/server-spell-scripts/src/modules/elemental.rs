@@ -276,7 +276,9 @@ pub(super) fn grant_blast_buff(
     // Fusion and Ancestors can execute Blast without the separately selected
     // Elemental Blast talent; SimC grants the buff from the actual execution.
     if !BUFF_RULES.contains(&(spell, before))
-        || !world.get::<ActiveSpec>(caster).is_some_and(|spec| spec.0 == 262)
+        || !world
+            .get::<ActiveSpec>(caster)
+            .is_some_and(|spec| spec.0 == 262)
     {
         return;
     }
