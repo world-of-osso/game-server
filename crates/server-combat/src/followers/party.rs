@@ -831,6 +831,23 @@ mod copy_tests {
                 .owner,
             owner
         );
+        app.insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+            std::time::Duration::from_millis(100),
+        ));
+        crate::creature_ai::install_follow_fixture(&mut app);
+        for _ in 0..80 {
+            app.update();
+            app.world_mut()
+                .resource_mut::<crate::navigation::Navigation>()
+                .drain_until_idle();
+        }
+        let moved = *app.world().get::<Position>(member).unwrap();
+        let target = *app.world().get::<Position>(owner).unwrap();
+        let distance = |p: Position| (p.x - target.x).hypot(p.z - target.z);
+        assert!(
+            distance(moved) < distance(entrance) - 5.0,
+            "normal Follow must walk toward the owner"
+        );
     }
 
     #[test]
