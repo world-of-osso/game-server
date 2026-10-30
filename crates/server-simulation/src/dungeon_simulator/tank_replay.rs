@@ -141,6 +141,52 @@ mod decision_schedule_tests {
     use super::*;
 
     #[test]
+    #[ignore = "uses the selected MID2 Protection profile"]
+    fn scheduled_decision_waits_before_casting() {
+        use crate::spell_cast::test_harness::ObservedCombatEvents;
+        use shared::protocol::CombatLogKind;
+        let _seed = crate::random::seed_scope(70448);
+        let mut run = super::super::dps_parity::prepare_registered_player(66, 1).unwrap();
+        super::super::dps_parity::engage(&mut run);
+        for _ in 0..40 {
+            run.app.update();
+        }
+        let actor = run.actor;
+        let now = run.app.world().resource::<Time>().elapsed();
+        let mut schedule = DecisionSchedule::new(now + std::time::Duration::from_millis(100));
+        let count = |run: &super::super::dps_parity::Run| {
+            run.app
+                .world()
+                .resource::<ObservedCombatEvents>()
+                .0
+                .iter()
+                .filter(|event| {
+                    event.source == Some(actor.to_bits())
+                        && event.kind == CombatLogKind::CastSuccess
+                })
+                .count()
+        };
+        let before = count(&run);
+        schedule.run_due(&mut run).unwrap();
+        assert_eq!(
+            count(&run),
+            before,
+            "no foreground cast before its decision event"
+        );
+        run.app
+            .insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+                std::time::Duration::from_millis(100),
+            ));
+        run.app.update();
+        let before_due = count(&run);
+        schedule.run_due(&mut run).unwrap();
+        assert!(
+            count(&run) > before_due,
+            "the due foreground decision casts an ability"
+        );
+    }
+
+    #[test]
     fn poll_intervals_follow_seeded_gaussian() {
         let sample = || {
             let _seed = crate::random::seed_scope(70448);
