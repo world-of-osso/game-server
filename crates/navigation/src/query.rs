@@ -564,7 +564,7 @@ impl NavigationMap {
             orig: [-32.0 * TILE_SIZE, 0.0, -32.0 * TILE_SIZE],
             tileWidth: width,
             tileHeight: width,
-            maxTiles: 65536,
+            maxTiles: map_tile_capacity(&self.dir)?,
             maxPolys: 65536,
         };
         // SAFETY: uniquely owned non-null pointers; init copies these parameters.
@@ -631,6 +631,46 @@ fn status(value: dtStatus, operation: &str) -> Result<(), String> {
     } else {
         Ok(())
     }
+}
+
+fn map_tile_capacity(dir: &std::path::Path) -> Result<i32, String> {
+    use std::io::Read;
+    let mut count = 0u32;
+    for entry in std::fs::read_dir(dir).map_err(|error| format!("{}: {error}", dir.display()))? {
+        let path = entry.map_err(|error| error.to_string())?.path();
+        if path.extension().is_none_or(|extension| extension != "nav") {
+            continue;
+        }
+        let mut file =
+            std::fs::File::open(&path).map_err(|error| format!("{}: {error}", path.display()))?;
+        if file.metadata().map_err(|error| error.to_string())?.len() == 0 {
+            continue;
+        }
+        let mut header = [0u8; 12];
+        file.read_exact(&mut header)
+            .map_err(|error| format!("{}: {error}", path.display()))?;
+        if &header[..8] != MAGIC {
+            return Err(format!(
+                "{}: invalid navigation artifact header",
+                path.display()
+            ));
+        }
+        let packets = u32::from_le_bytes(header[8..12].try_into().unwrap());
+        count = count
+            .checked_add(packets)
+            .ok_or("navigation tile count overflow")?;
+    }
+    let capacity = count
+        .checked_add(1)
+        .and_then(u32::checked_next_power_of_two)
+        .ok_or("navigation tile capacity overflow")?
+        .max(65536);
+    if capacity > 1 << 28 {
+        return Err(format!(
+            "navigation tile capacity {capacity} exceeds Detour's 28-bit limit"
+        ));
+    }
+    Ok(capacity as i32)
 }
 
 fn packet_subtile_width(bytes: &[u8]) -> Result<f32, String> {

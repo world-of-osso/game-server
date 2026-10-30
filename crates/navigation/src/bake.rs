@@ -577,6 +577,35 @@ mod tests {
     }
 
     #[test]
+    fn loader_accepts_more_than_65536_detour_tiles() {
+        let fixture = bake_tile(&floor(10.0, 30.0, 0.0), (32, 31)).unwrap();
+        let length = u32::from_le_bytes(fixture[12..16].try_into().unwrap()) as usize;
+        let packet = &fixture[16..16 + length];
+        let count = 65_537u32;
+        let mut bytes = Vec::with_capacity(12 + count as usize * (4 + length));
+        bytes.extend_from_slice(MAGIC);
+        bytes.extend_from_slice(&count.to_le_bytes());
+        for i in 0..count {
+            bytes.extend_from_slice(&(length as u32).to_le_bytes());
+            let start = bytes.len();
+            bytes.extend_from_slice(packet);
+            if i + 1 != count {
+                bytes[start + 8..start + 12].copy_from_slice(&(10_000 + i as i32).to_le_bytes());
+                bytes[start + 12..start + 16].copy_from_slice(&10_000i32.to_le_bytes());
+            }
+        }
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join("32_31.nav"), bytes).unwrap();
+        let mut map = crate::NavigationMap::open(dir.path()).unwrap();
+        let point = Vec3::new(20.0, 0.0, 20.0);
+        let floor = map
+            .floor_polygon(point)
+            .unwrap()
+            .expect("last tile must load");
+        assert!((floor.y - point.y).abs() < 0.5, "{floor:?}");
+    }
+
+    #[test]
     fn vertical_bands_preserve_floors_and_connect_across_layer_indices() {
         let triangles: Vec<_> = floor(10.0, 120.0, -3000.0)
             .into_iter()
