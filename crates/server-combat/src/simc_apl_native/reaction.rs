@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use std::collections::{BTreeMap, BTreeSet};
 
 /// Seconds from the pinned reference player's reaction fields; no implicit defaults.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq)]
 pub struct ReactionSettings {
     pub mean: f64,
     pub stddev: f64,
@@ -56,6 +56,8 @@ struct BuffReactions {
 }
 
 /// Configure before tracked buffs exist: a late query cannot reconstruct acquisition.
+/// Repeating the same policy keeps the observed state, as a follower's APL is
+/// reloaded every pull.
 pub fn configure(
     world: &mut World,
     actor: Entity,
@@ -64,8 +66,11 @@ pub fn configure(
 ) -> Result<(), String> {
     let settings = settings.validate()?;
     let spells: BTreeSet<_> = spells.iter().copied().collect();
-    if world.get::<BuffReactions>(actor).is_some() {
-        return Err("native APL buff reaction policy already configured".into());
+    if let Some(existing) = world.get::<BuffReactions>(actor) {
+        if existing.settings == settings && existing.spells == spells {
+            return Ok(());
+        }
+        return Err("native APL buff reaction policy already configured differently".into());
     }
     let active = world
         .get::<crate::auras::ActiveAuras>(actor)

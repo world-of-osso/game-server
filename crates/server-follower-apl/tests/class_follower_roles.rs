@@ -7,6 +7,7 @@ use server_combat::maps::instances::{InstanceEntrant, Now};
 use server_combat::spell_cast::test_harness::{
     Harness, ObservedCombatEvents, harness_with_plugins, load_native_creature_world, world_db,
 };
+use server_follower_apl::{FollowerApl, FollowerAplFailed};
 use shared::components::{Health, Level};
 use shared::protocol::{CombatLogEvent, CombatLogKind};
 
@@ -84,11 +85,7 @@ fn dungeon_owner(h: &mut Harness) {
 /// Spawn `spec` through `spawn_class` and run the follower brain and its APL for `FRAMES`.
 fn pull(spec: u32) -> Pull {
     let mut pull = spawn(spec);
-    for _ in 0..FRAMES {
-        server_combat::followers::update_ai(pull.harness.app.world_mut());
-        server_follower_apl::drive_followers(pull.harness.app.world_mut());
-        pull.harness.app.update();
-    }
+    pull.fight();
     pull
 }
 
@@ -129,6 +126,23 @@ fn spawn(spec: u32) -> Pull {
 }
 
 impl Pull {
+    /// Run the follower brain and its APL for `FRAMES`.
+    fn fight(&mut self) {
+        for _ in 0..FRAMES {
+            server_combat::followers::update_ai(self.harness.app.world_mut());
+            server_follower_apl::drive_followers(self.harness.app.world_mut());
+            self.harness.app.update();
+        }
+    }
+
+    fn apl_failed(&self) -> bool {
+        self.harness
+            .app
+            .world()
+            .get::<FollowerAplFailed>(self.follower)
+            .is_some()
+    }
+
     fn events(&self) -> &[CombatLogEvent] {
         &self
             .harness
@@ -211,5 +225,49 @@ fn class_follower_dps_casts_arcane_apl_spells_on_dummy_pull() {
     assert!(
         pull.landed(CombatLogKind::Damage, pull.harness.npc, &apl),
         "Arcane follower casts {casts:?}; no APL damage {apl:?} on the dummy"
+    );
+}
+
+/// BM's APL reads `buff.natures_ally.react`; its reaction policy must survive
+/// the APL reload a new pull performs, or every later pull stops casting.
+#[test]
+fn class_follower_beast_mastery_apl_keeps_casting_on_the_next_pull() {
+    let mut pull = pull(253);
+    assert!(!pull.apl_failed(), "first BM pull casts {:?}", pull.casts());
+    // A pull's end drops its APL; the next pull loads a fresh one.
+    let follower = pull.follower;
+    pull.harness
+        .app
+        .world_mut()
+        .entity_mut(follower)
+        .remove::<FollowerApl>();
+    let first = pull.casts().len();
+    pull.fight();
+    assert!(!pull.apl_failed(), "second BM pull stopped its APL");
+    assert!(
+        pull.casts().len() > first,
+        "second BM pull casts nothing new: {:?}",
+        pull.casts()
+    );
+}
+
+/// Frost Mage's APL reads `.react` on its tracked buffs (Icicles, Fingers of
+/// Frost, Brain Freeze); production configures their acquisition before they exist.
+#[test]
+fn class_follower_frost_mage_apl_reacts_to_its_procs() {
+    let pull = pull(64);
+    let tracked: Vec<_> = server_follower_apl::frost_mage_rotation::bindings::BUFFS
+        .iter()
+        .map(|&(_, spell)| spell)
+        .collect();
+    assert!(
+        pull.landed(CombatLogKind::AuraApplied, pull.follower, &tracked),
+        "Frost Mage gained no tracked buff; casts {:?}",
+        pull.casts()
+    );
+    assert!(
+        !pull.apl_failed(),
+        "Frost Mage APL stopped; casts {:?}",
+        pull.casts()
     );
 }

@@ -57,6 +57,7 @@ impl Rotation {
         {
             return Err("literal Devourer requires native spec1480".into());
         }
+        configure_actor_reactions(world, actor)?;
         let mut bindings = bindings::build();
         let equipment = Equipment::load(world, actor, &mut bindings)?;
         let driver = Driver::new(load_program()?);

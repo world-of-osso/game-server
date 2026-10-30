@@ -67,6 +67,7 @@ impl Rotation {
         if profile.spec_id != 64 {
             return Err("literal Frost Mage requires spec64".into());
         }
+        configure_actor_reactions(world, actor)?;
         let mut bindings = bindings::build();
         let equipment = Equipment::load(world, actor, &mut bindings)?;
         Ok(Self {
