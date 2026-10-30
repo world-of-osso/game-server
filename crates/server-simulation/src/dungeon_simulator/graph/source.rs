@@ -110,7 +110,7 @@ fn source_requires_real_entrance_population_and_bindings() {
     assert!(
         read_source(&db, 2451)
             .unwrap_err()
-            .contains("missing encounter bindings")
+            .contains("missing encounter binding for Earlier")
     );
     db.execute_batch(
         "INSERT INTO raid_encounter_creature VALUES(2451,0,184580,10), (2451,1,184018,11);",
