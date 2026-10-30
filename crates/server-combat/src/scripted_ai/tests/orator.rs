@@ -11,7 +11,7 @@ const SUBJUGATE: u32 = 434722;
 
 fn orator_copy(difficulty: u32) -> (Harness, Entity, InMap) {
     let (mut h, boss, map) = bound_boss_at_difficulty(ORATOR, MAP, BIT, difficulty, None);
-    assert_eq!(h.app.world().get::<UnitFlags>(boss).unwrap().0, 64);
+    assert_eq!(h.app.world().get::<UnitFlags>(boss).unwrap().0, 64 | 0x8000);
     assert!(
         h.app.world().get::<Mana>(boss).is_none(),
         "actual sourceclass4 is Energy"
