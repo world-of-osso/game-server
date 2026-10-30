@@ -11,6 +11,8 @@ const TICKS: u32 = 6_000;
 const ADD_WAVE_TICKS: u32 = 600;
 const LAST_30S_START: u32 = TICKS - ADD_WAVE_TICKS;
 #[cfg(test)]
+mod consecration_vision_tests;
+#[cfg(test)]
 mod follower_dps_diagnostic;
 #[cfg(test)]
 mod tank_fixture_tests;
