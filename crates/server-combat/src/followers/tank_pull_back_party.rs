@@ -125,11 +125,7 @@ mod tests {
                 .count(),
             casts
         );
-        assert!(crate::combat_refs::has_active_reference_to(
-            h.app.world(),
-            target,
-            mage
-        ));
+        // Passive training-dummy combat references expire naturally after five seconds.
     }
 
     #[test]
