@@ -244,6 +244,13 @@ pub(crate) fn call_assistance(world: &mut World, caller: Entity, target: Entity)
     if assistants.is_empty() {
         return;
     }
+    for &assistant in &assistants {
+        let distance = world
+            .get::<Position>(caller)
+            .zip(world.get::<Position>(assistant))
+            .map(|(a, b)| Vec3::new(a.x, a.y, a.z).distance(Vec3::new(b.x, b.y, b.z)));
+        info!(target: "game_server::creature_assistance", caller = caller.to_bits(), helper = assistant.to_bits(), victim = target.to_bits(), ?distance, delay_secs = delay, "assistance scheduled");
+    }
     let due = world.resource::<Time>().elapsed_secs_f64() + delay;
     world
         .resource_mut::<PendingAssistance>()
@@ -299,6 +306,7 @@ pub(crate) fn dispatch_assistance(world: &mut World) {
     for event in due {
         for assistant in event.assistants {
             if can_assist(world, assistant, event.caller, event.target, true) {
+                info!(target: "game_server::creature_assistance", caller = event.caller.to_bits(), helper = assistant.to_bits(), victim = event.target.to_bits(), due = event.due, now, "assistance dispatched");
                 world.entity_mut(assistant).insert(AssistanceCalled);
                 attack_start(world, assistant, event.target);
             }

@@ -1598,3 +1598,111 @@ fn pack_assistance_call_for_help_is_immediate_and_requires_friendly_faction() {
     );
     assert_eq!(state(&app, neutral), Some(CreatureState::Idle));
 }
+
+#[test]
+#[ignore = "requires native Windrunner world and LOS data"]
+fn windrunner_native_social_assistance_replays_groundskeeper_pull() {
+    let mut app = aggro_app();
+    let source = crate::test_data::world_data();
+    let mut data = source.clone();
+    let spawns: Vec<_> = source
+        .spawns
+        .iter()
+        .filter(|spawn| matches!(spawn.guid, 63805115 | 63805164 | 63805165))
+        .cloned()
+        .collect();
+    assert_eq!(spawns.len(), 3);
+    data.spawns = spawns.into();
+    data.spawns_by_map = crate::world_data::build_spawns_by_map(&data.spawns);
+    app.insert_resource(data.clone());
+    app.insert_resource(crate::faction::world_db_faction_templates().unwrap());
+    let root = std::path::PathBuf::from(
+        std::env::var_os("GAME_SERVER_GROUND_DIR").expect("native ground directory"),
+    );
+    app.insert_resource(
+        crate::line_of_sight::LineOfSight::load(&root.join("los")).expect("native LOS"),
+    );
+    let map = crate::maps::InMap {
+        map_id: 2805,
+        instance_id: 71,
+    };
+    let mut queue = bevy::ecs::world::CommandQueue::default();
+    let mut commands = Commands::new(&mut queue, app.world());
+    let count = crate::zones::spawn_map_creatures(
+        &mut commands,
+        &data,
+        crate::zones::MapContent {
+            map,
+            difficulty_id: 1,
+            dead_bosses: vec![],
+        },
+        false,
+        None,
+    );
+    assert_eq!(count, 3);
+    queue.apply(app.world_mut());
+    app.update();
+    let units: HashMap<_, _> = app
+        .world_mut()
+        .query::<(Entity, &crate::zones::CreatureOrigin)>()
+        .iter(app.world())
+        .map(|(unit, origin)| (origin.guid, unit))
+        .collect();
+    let caller = units[&63805115];
+    let helpers = [units[&63805164], units[&63805165]];
+    let target = spawn_player(
+        &mut app,
+        Position {
+            x: 5312.1387,
+            y: 126.344864,
+            z: 3142.1423,
+        },
+        90,
+    );
+    app.world_mut().entity_mut(target).insert(map);
+    let caller_position = *app.world().get::<Position>(caller).unwrap();
+    let distances: Vec<_> = helpers
+        .iter()
+        .map(|&helper| {
+            let point = app.world().get::<Position>(helper).unwrap();
+            Vec3::new(caller_position.x, caller_position.y, caller_position.z)
+                .distance(Vec3::new(point.x, point.y, point.z))
+        })
+        .collect();
+    let start = app.world().resource::<Time>().elapsed_secs_f64();
+    attack_start(app.world_mut(), caller, target);
+    for &helper in &helpers {
+        assert!(!crate::combat_refs::has_active_reference_to(
+            app.world(),
+            helper,
+            target
+        ));
+    }
+    let mut times = HashMap::new();
+    for _ in 0..60 {
+        app.update();
+        let now = app.world().resource::<Time>().elapsed_secs_f64();
+        for &helper in &helpers {
+            if crate::combat_refs::has_active_reference_to(app.world(), helper, target) {
+                times.entry(helper).or_insert(now - start);
+            }
+        }
+        if times.len() == helpers.len() {
+            break;
+        }
+    }
+    for (&helper, distance) in helpers.iter().zip(distances) {
+        println!(
+            "NATIVE_ASSIST caller={} helper={} distance={distance:.3} delay={:?}",
+            caller.to_bits(),
+            helper.to_bits(),
+            times.get(&helper)
+        );
+        assert!(
+            times
+                .get(&helper)
+                .is_some_and(|delay| (1.5..=1.65).contains(delay)),
+            "native helper must join after assistance delay"
+        );
+    }
+}
