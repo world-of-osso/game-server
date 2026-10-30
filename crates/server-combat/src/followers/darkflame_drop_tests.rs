@@ -707,44 +707,66 @@ fn followers_retrace_owner_curve_around_unpulled_watcher() {
             ),
         "direct follower corridor must cross the watcher radius: {direct:?}"
     );
-    let mut owner_route = None;
-    'search: for radius in [20.0_f32, 25.0, 30.0, 35.0] {
-        for index in 0..16 {
-            let angle = index as f32 * std::f32::consts::TAU / 16.0;
+    // A single waypoint can still force a path through the circle. Try two
+    // grounded waypoints on its perimeter so the route can go around both sides.
+    let mut waypoints = Vec::new();
+    for radius in [18.0_f32, 24.0, 30.0] {
+        for index in 0..12 {
+            let angle = index as f32 * std::f32::consts::TAU / 12.0;
             let mut waypoint =
                 watcher_at + Vec3::new(angle.cos() * radius, 0.0, angle.sin() * radius);
-            let GroundProbe::Supported(height) = h
+            if let GroundProbe::Supported(height) = h
                 .app
                 .world_mut()
                 .resource_mut::<GroundMap>()
                 .ground_at(map_id, waypoint)
-            else {
-                continue;
-            };
-            if (height - watcher_at.y).abs() >= 1.0 {
-                continue;
+            {
+                if (height - watcher_at.y).abs() < 1.0 {
+                    waypoint.y = height;
+                    waypoints.push(waypoint);
+                }
             }
-            waypoint.y = height;
-            let Ok(first) = nav.complete_walk_path(start, waypoint) else {
+        }
+    }
+    let safe_leg = |route: &[Vec3], collision: &mut los::LosMap| {
+        route.windows(2).all(|leg| {
+            super::pull_route::segment_distance_squared(watcher_at, leg[0], leg[1])
+                >= (radii[0] + 3.0).powi(2)
+                && collision.clear(leg[0] + Vec3::Y, leg[1] + Vec3::Y).unwrap()
+        })
+    };
+    let mut owner_route = None;
+    'search: for &first_waypoint in &waypoints {
+        let Ok(first) = nav.complete_walk_path(start, first_waypoint) else {
+            continue;
+        };
+        let mut first_leg = vec![start];
+        first_leg.extend(first);
+        if first_leg
+            .last()
+            .is_none_or(|p| p.distance(first_waypoint) >= 1.0)
+            || !safe_leg(&first_leg, &mut collision)
+        {
+            continue;
+        }
+        for &second_waypoint in &waypoints {
+            let Ok(middle) = nav.complete_walk_path(first_waypoint, second_waypoint) else {
                 continue;
             };
-            let Ok(second) = nav.complete_walk_path(waypoint, end) else {
+            let Ok(last) = nav.complete_walk_path(second_waypoint, end) else {
                 continue;
             };
-            if first.last().is_none_or(|p| p.distance(waypoint) >= 1.0)
-                || second.last().is_none_or(|p| p.distance(end) >= 1.0)
+            if middle
+                .last()
+                .is_none_or(|p| p.distance(second_waypoint) >= 1.0)
+                || last.last().is_none_or(|p| p.distance(end) >= 1.0)
             {
                 continue;
             }
-            let mut route = vec![start];
-            route.extend(first);
-            route.extend(second);
-            let safe = route.windows(2).all(|leg| {
-                super::pull_route::segment_distance_squared(watcher_at, leg[0], leg[1])
-                    >= (radii[0] + 1.0).powi(2)
-                    && collision.clear(leg[0] + Vec3::Y, leg[1] + Vec3::Y).unwrap()
-            });
-            if safe {
+            let mut route = first_leg.clone();
+            route.extend(middle);
+            route.extend(last);
+            if safe_leg(&route, &mut collision) {
                 owner_route = Some(route);
                 break 'search;
             }
