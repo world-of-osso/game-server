@@ -10,6 +10,7 @@ use combat::spell_info::SpellInfo;
 use std::collections::HashMap;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::DeclaredReach(declared_reach),
     SpellScriptHook::LateAuraRegistration(register),
     SpellScriptHook::TargetPlan(plan_hook),
 ];
@@ -19,6 +20,23 @@ const STRIKE: u32 = 432616;
 const HEAL: u32 = 441590;
 // sc_paladin.hpp779: default solo Reflection of Radiance chance per strike.
 const REFLECTION_CHANCE: f32 = 0.1;
+
+fn declared_reach(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+) -> combat::spell_cast::script_registry::ScriptReach {
+    if spell.id != STRIKE
+        && !combat::spell_cast::script_registry::reach_source_selected(world, caster, SACRED_WEAPON)
+    {
+        return Default::default();
+    }
+    let strike = world
+        .resource::<combat::spell_info::SpellStore>()
+        .get(STRIKE)
+        .expect("native Sacred Weapon strike");
+    combat::spell_cast::script_registry::ScriptReach::target(targets::radius(&strike.effects[0], 1))
+}
 
 #[derive(Component, Default)]
 struct SacredWeaponClocks(HashMap<Entity, combat::auras::ProcTimers>);

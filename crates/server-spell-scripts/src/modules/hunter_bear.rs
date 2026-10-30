@@ -16,10 +16,12 @@ const REND_FLESH: u32 = 471999;
 
 fn declared_reach(
     world: &World,
-    _caster: Entity,
+    caster: Entity,
     spell: &SpellInfo,
 ) -> combat::spell_cast::script_registry::ScriptReach {
-    if !matches!(spell.id, BEAR_SUMMON | REND_FLESH) {
+    let command_can_summon = matches!(spell.id, 34026 | 259489)
+        && combat::spell_cast::script_registry::reach_source_selected(world, caster, 471876);
+    if !matches!(spell.id, BEAR_SUMMON | REND_FLESH) && !command_can_summon {
         return Default::default();
     }
     let rend = world

@@ -317,6 +317,13 @@ pub fn reach_source_selected(world: &World, caster: Entity, spell: u32) -> bool 
     world
         .get::<crate::class_progression::KnownSpells>(caster)
         .is_some_and(|known| known.contains(spell))
+        || world
+            .get::<crate::class_progression::TraitLoadout>(caster)
+            .is_some_and(|traits| {
+                traits
+                    .active_talent_spells()
+                    .any(|talent| talent.spell_id == spell)
+            })
         || crate::auras::has_aura(world, caster, spell)
 }
 

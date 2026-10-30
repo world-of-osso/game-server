@@ -13,6 +13,7 @@ use combat::spell_cast::{self, PlannedEffect, TargetPlan, effects::EffectCtx, ta
 use combat::spell_info::{CastDamageRole, SpellInfo, SpellStore};
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::DeclaredReach(declared_reach),
     SpellScriptHook::BeforeNativeOnCast(before_cast),
     SpellScriptHook::SnapshotsModifier(blade_buff_modifier),
     SpellScriptHook::BeforeDamageSnapshot(snapshot_triggered_blade),
@@ -26,6 +27,29 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::TargetPlan(target_plan),
     SpellScriptHook::AreaFilter(area_filter),
 ];
+
+fn declared_reach(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+) -> combat::spell_cast::script_registry::ScriptReach {
+    let child = match spell.id {
+        LIGHT_WITHIN | TEMPEST | 431911 => Some(spell.id),
+        BLADE if selected(world, caster, LIGHT_WITHIN_TALENT) => Some(LIGHT_WITHIN),
+        STORM if selected(world, caster, TEMPEST_TALENT) => Some(TEMPEST),
+        431380 if selected(world, caster, AVATAR_TALENT) => Some(431911),
+        _ => None,
+    };
+    let Some(child) = child else {
+        return Default::default();
+    };
+    let radius_spell = if child == TEMPEST { STORM } else { child };
+    let damage = world
+        .resource::<SpellStore>()
+        .get(radius_spell)
+        .expect("native Ret area child");
+    combat::spell_cast::script_registry::ScriptReach::target(damage_area_radius(damage))
+}
 
 fn context_hit(spell: u32) -> Option<ContextHitHook> {
     (spell == SENTENCE).then_some(sentence_init)
