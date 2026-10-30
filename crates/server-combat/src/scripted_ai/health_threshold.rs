@@ -36,7 +36,7 @@ pub(crate) fn limit_loss(world: &World, unit: Entity, health: &Health, loss: f32
     loss.min(safe_limit)
 }
 
-/// Complete only on an actual crossing while the bound encounter is in progress.
+/// Complete a reached boundary or intercepted lethal hit in the active encounter.
 pub(crate) fn complete_crossing(world: &mut World, unit: Entity, before: f32, incoming: f32) {
     let Some(health) = world.get::<Health>(unit) else {
         return;
@@ -44,15 +44,12 @@ pub(crate) fn complete_crossing(world: &mut World, unit: Entity, before: f32, in
     let Some((floor, lethal_only)) = threshold(world, unit, health) else {
         return;
     };
-    if lethal_only && incoming < before {
+    if incoming <= 0.0 || (lethal_only && incoming < before) {
         return;
     }
     let rounded_lethal_floor =
         lethal_only && before - floor == before && health.current <= before - before.next_down();
-    if (!lethal_only && before <= floor)
-        || health.current <= 0.0
-        || (health.current > floor && !rounded_lethal_floor)
-    {
+    if health.current <= 0.0 || (health.current > floor && !rounded_lethal_floor) {
         return;
     }
     let Some(map) = world.get::<InMap>(unit).copied() else {

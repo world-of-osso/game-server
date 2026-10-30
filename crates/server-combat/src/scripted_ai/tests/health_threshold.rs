@@ -2,7 +2,8 @@ use super::*;
 
 #[test]
 fn bound_health_threshold_completes_alive_on_spell_and_lethal_direct_damage() {
-    for (threshold, large_health) in [(59.5_f32, false), (0.0, false), (0.0, true)] {
+    for (threshold, large_health) in [(59.5_f32, false), (0.0, false), (0.0, true), (100.0, false)]
+    {
         let (mut h, boss, map) = bound_boss_at_difficulty(213216, 2652, 3, 205, None);
         h.app
             .world_mut()
@@ -15,16 +16,18 @@ fn bound_health_threshold_completes_alive_on_spell_and_lethal_direct_damage() {
             health.current = health.max;
         }
         h.engage(boss);
-        h.hit_pct(boss, 20.0);
-        assert_eq!(
-            h.app
-                .world()
-                .resource::<crate::maps::InstanceManager>()
-                .completed_encounters(map)
-                & (1 << 3),
-            0,
-            "damage above the boundary does not complete the encounter"
-        );
+        if threshold < 100.0 {
+            h.hit_pct(boss, 20.0);
+            assert_eq!(
+                h.app
+                    .world()
+                    .resource::<crate::maps::InstanceManager>()
+                    .completed_encounters(map)
+                    & (1 << 3),
+                0,
+                "damage above the boundary does not complete the encounter"
+            );
+        }
         let max = h.health(boss).max;
         if threshold == 0.0 {
             let player = h.player();
