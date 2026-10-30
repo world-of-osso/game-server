@@ -687,6 +687,15 @@ mod copy_tests {
         ));
         join_party(app.world_mut(), owner, &run, &run.members).unwrap();
         let map = run.copy.unwrap();
+        let dead = run.members[0];
+        app.world_mut().entity_mut(dead).insert((
+            shared::components::Health {
+                current: 0.0,
+                max: 1000.0,
+            },
+            crate::combat::Corpse { remaining: 0.0 },
+            crate::combat::DeathState { respawn_timer: 0.0 },
+        ));
         let position = *app
             .world()
             .get::<shared::components::Position>(owner)
@@ -776,6 +785,14 @@ mod copy_tests {
         assert_eq!(
             app.world().get::<FollowerRun>(reconnected).unwrap().members,
             run.members
+        );
+        assert!(app.world().get::<crate::combat::Corpse>(dead).is_some());
+        assert_eq!(
+            app.world()
+                .get::<shared::components::Health>(dead)
+                .unwrap()
+                .current,
+            0.0
         );
     }
 
