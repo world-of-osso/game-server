@@ -61,6 +61,36 @@ fn flight_path(
 }
 
 #[test]
+#[ignore = "requires baked Dawnbreaker LOS and navmesh"]
+fn dawnbreaker_logged_endpoint_surfaces_are_reported() {
+    let root = std::path::Path::new("/home/osso/Projects/world-of-osso/game-engine/data");
+    let mut los = los::LosMap::new(&root.join("los/2662"));
+    let mut nav = navigation::NavigationMap::open(&root.join("navmesh/2662")).unwrap();
+    let points = [
+        (1373.77, 178.47),
+        (2352.87, -687.51),
+        (1877.25, -970.72),
+        (2300.01, -636.16),
+    ];
+    let mut missing = Vec::new();
+    for (x, z) in points {
+        let heights = los.floor_heights(x, z).unwrap();
+        let floors: Vec<_> = heights
+            .iter()
+            .filter_map(|&y| nav.floor_polygon(Vec3::new(x, y, z)).unwrap())
+            .collect();
+        println!("DAWNBREAKER_SURFACES x={x} z={z} los={heights:?} nav={floors:?}");
+        if floors.is_empty() {
+            missing.push((x, z));
+        }
+    }
+    assert!(
+        missing.is_empty(),
+        "no projected floor at logged samples: {missing:?}"
+    );
+}
+
+#[test]
 fn inferred_flight_uses_sampled_corridor_heights_and_checks_every_segment() {
     let start = Vec3::new(0.0, 2.0, 0.0);
     let end = Vec3::new(20.0, 3.0, 0.0);
