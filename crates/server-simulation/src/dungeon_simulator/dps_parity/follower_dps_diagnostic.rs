@@ -150,6 +150,14 @@ fn follower_dps_production_dummy() {
         .resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>()
         .0
         .clear();
+    if let Ok(spell) = std::env::var("FOLLOWER_FACTOR_SPELL") {
+        let spell = spell.parse().expect("numeric FOLLOWER_FACTOR_SPELL");
+        app.insert_resource(
+            crate::spell_cast::effects::factor_capture::FactorCapture::new(
+                actor, target, spell, "follower", 128,
+            ),
+        );
+    }
     let mut casting = 0u32;
     let mut gcd_only = 0u32;
     let mut gcd_total = 0u32;
@@ -382,6 +390,12 @@ fn follower_dps_production_dummy() {
             damage.get(&321538).is_some_and(|amount| *amount > 0),
             "owned pets must damage the selected enemy with Bloodshed"
         );
+    }
+    if let Some(capture) = app
+        .world()
+        .get_resource::<crate::spell_cast::effects::factor_capture::FactorCapture>()
+    {
+        println!("FOLLOWER_FACTORS {}", capture.export());
     }
     println!(
         "FOLLOWER_DPS {}",
