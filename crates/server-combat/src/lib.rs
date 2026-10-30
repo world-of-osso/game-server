@@ -38,6 +38,7 @@ pub mod consumables;
 mod crafting_orders;
 pub mod creature_aggro;
 pub mod creature_ai;
+pub mod creature_assistance;
 pub mod creature_scripts;
 mod creature_sight;
 pub mod creature_static;

@@ -1361,3 +1361,121 @@ fn threat_membership_wakes_with_current_entries_and_tracks_active_edits() {
         vec![victim.to_bits()]
     );
 }
+
+#[test]
+fn pack_assistance_formation_member_engages_its_group() {
+    let mut app = aggro_app();
+    app.world_mut()
+        .resource_mut::<crate::creature_assistance::AssistanceConfig>()
+        .radius = 0.0;
+    let leader = spawn_creature(&mut app, &FOREST_SPIDER, at(0.0, 0.0));
+    let pulled = spawn_creature(&mut app, &FOREST_SPIDER, at(3.0, 0.0));
+    let other = spawn_creature(&mut app, &FOREST_SPIDER, at(6.0, 0.0));
+    for member in [leader, pulled, other] {
+        app.world_mut()
+            .entity_mut(member)
+            .insert(crate::zones::CreatureGroupMember {
+                leader,
+                leader_ids: Default::default(),
+                group_ai: 3,
+            });
+    }
+    let player = spawn_player(&mut app, at(90.0, 0.0), 5);
+    attack_start(app.world_mut(), pulled, player);
+    for member in [leader, pulled, other] {
+        assert_eq!(
+            app.world().get::<CombatTarget>(member).unwrap().0,
+            Some(player)
+        );
+    }
+}
+
+#[test]
+fn pack_assistance_formation_respects_initiator_flags() {
+    for (flags, pull_leader, expected) in [
+        (1, true, [true, true, true]),
+        (1, false, [false, true, false]),
+        (2, false, [true, true, false]),
+        (2, true, [true, false, false]),
+    ] {
+        let mut app = aggro_app();
+        app.world_mut()
+            .resource_mut::<crate::creature_assistance::AssistanceConfig>()
+            .radius = 0.0;
+        let leader = spawn_creature(&mut app, &FOREST_SPIDER, at(0.0, 0.0));
+        let member = spawn_creature(&mut app, &FOREST_SPIDER, at(3.0, 0.0));
+        let other = spawn_creature(&mut app, &FOREST_SPIDER, at(6.0, 0.0));
+        for actor in [leader, member, other] {
+            app.world_mut()
+                .entity_mut(actor)
+                .insert(crate::zones::CreatureGroupMember {
+                    leader,
+                    leader_ids: Default::default(),
+                    group_ai: flags,
+                });
+        }
+        let player = spawn_player(&mut app, at(90.0, 0.0), 5);
+        attack_start(
+            app.world_mut(),
+            if pull_leader { leader } else { member },
+            player,
+        );
+        for (actor, should_engage) in [leader, member, other].into_iter().zip(expected) {
+            assert_eq!(
+                app.world()
+                    .get::<CombatTarget>(actor)
+                    .and_then(|target| target.0)
+                    == Some(player),
+                should_engage,
+                "flags={flags}, leader={pull_leader}"
+            );
+        }
+    }
+}
+
+#[test]
+fn pack_assistance_delayed_radius_and_tc_exclusions() {
+    let mut app = aggro_app();
+    app.insert_resource(crate::line_of_sight::LineOfSight::open_arena());
+    let caller = spawn_creature(&mut app, &FOREST_SPIDER, at(0.0, 0.0));
+    let nearby = spawn_creature(&mut app, &FOREST_SPIDER, at(5.0, 0.0));
+    let outside = spawn_creature(&mut app, &FOREST_SPIDER, at(11.0, 0.0));
+    let neutral = spawn_creature(&mut app, &STONETUSK_BOAR, at(6.0, 0.0));
+    let immune = spawn_creature(&mut app, &FOREST_SPIDER, at(7.0, 0.0));
+    app.world_mut()
+        .entity_mut(immune)
+        .insert(UnitFlags(UnitFlags::IMMUNE_TO_NPC));
+    let player = spawn_player(&mut app, at(90.0, 0.0), 5);
+    attack_start(app.world_mut(), caller, player);
+    assert_eq!(state(&app, nearby), Some(CreatureState::Idle));
+    run(&mut app, 20);
+    assert_eq!(state(&app, nearby), Some(CreatureState::Idle));
+    run(&mut app, 12);
+    assert_eq!(
+        app.world().get::<CombatTarget>(nearby).unwrap().0,
+        Some(player)
+    );
+    for excluded in [outside, neutral, immune] {
+        assert_eq!(state(&app, excluded), Some(CreatureState::Idle));
+    }
+}
+
+#[test]
+fn pack_assistance_call_for_help_is_immediate_and_requires_friendly_faction() {
+    let mut app = aggro_app();
+    app.insert_resource(crate::line_of_sight::LineOfSight::open_arena());
+    app.world_mut()
+        .resource_mut::<crate::creature_assistance::AssistanceConfig>()
+        .radius = 0.0;
+    let caller = spawn_creature(&mut app, &FOREST_SPIDER, at(0.0, 0.0));
+    let helper = spawn_creature(&mut app, &FOREST_SPIDER, at(5.0, 0.0));
+    let neutral = spawn_creature(&mut app, &STONETUSK_BOAR, at(6.0, 0.0));
+    let player = spawn_player(&mut app, at(90.0, 0.0), 5);
+    attack_start(app.world_mut(), caller, player);
+    crate::creature_assistance::call_for_help(app.world_mut(), caller, 10.0);
+    assert_eq!(
+        app.world().get::<CombatTarget>(helper).unwrap().0,
+        Some(player)
+    );
+    assert_eq!(state(&app, neutral), Some(CreatureState::Idle));
+}

@@ -45,7 +45,7 @@ const MAX_AGGRO_RESET_SECS: f64 = 10.0;
 
 const CREATURE_TYPE_CRITTER: u32 = 8;
 const CREATURE_TYPE_NON_COMBAT_PET: u32 = 12;
-const CREATURE_FLAG_EXTRA_CIVILIAN: u32 = 0x2;
+pub(crate) const CREATURE_FLAG_EXTRA_CIVILIAN: u32 = 0x2;
 const CREATURE_FLAG_EXTRA_TRIGGER: u32 = 0x80;
 const UNIT_FLAG_IMMUNE_TO_PC: u32 = 0x100;
 
@@ -54,13 +54,16 @@ pub struct CreatureAggroPlugin;
 impl Plugin for CreatureAggroPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(crate::creature_sight::CreatureSightPlugin);
-        app.init_resource::<PendingThreatWakes>()
+        app.init_resource::<crate::creature_assistance::AssistanceConfig>()
+            .init_resource::<crate::creature_assistance::PendingAssistance>()
+            .init_resource::<PendingThreatWakes>()
             .add_observer(replicate_woken_threat_list);
         app.add_systems(
             FixedUpdate,
             (
                 activate_unblocked_creatures,
                 aggro_on_sight_system,
+                crate::creature_assistance::dispatch_assistance,
                 update_victim_system,
                 publish_woken_threat_lists,
                 replicate_threat_list_system,
@@ -704,6 +707,8 @@ fn engage_after_threat(world: &mut World, creature: Entity, attacker: Entity) {
     }
     crate::combat_refs::set_in_combat_with(world, creature, attacker);
     if engages {
+        crate::creature_assistance::engage_formation(world, creature, attacker);
+        crate::creature_assistance::call_assistance(world, creature, attacker);
         // Creature::AtEngage → CreatureAI::JustEngagedWith.
         crate::scripted_ai::dispatch(
             world,
@@ -779,6 +784,9 @@ pub fn enter_evade_mode(world: &mut World, creature: Entity) {
     world.entity_mut(creature).remove::<LastDamagedTime>();
     world
         .entity_mut(creature)
+        .remove::<crate::creature_assistance::AssistanceCalled>();
+    world
+        .entity_mut(creature)
         .remove::<crate::spell_cast::SpellHistory>();
     let mut entity = world.entity_mut(creature);
     entity.insert(CreatureState::Returning);
@@ -834,6 +842,7 @@ fn remove_auras_on_evade(world: &mut World, creature: Entity) {
 /// `ClearAllThreat`, `CombatStop`), so it respawns idle.
 pub(crate) fn forget_combat(entity: &mut EntityWorldMut) {
     entity.remove::<CurrentVictim>();
+    entity.remove::<crate::creature_assistance::AssistanceCalled>();
     if let Some(mut threat) = entity.get_mut::<ThreatTable>() {
         threat.reset();
     }
