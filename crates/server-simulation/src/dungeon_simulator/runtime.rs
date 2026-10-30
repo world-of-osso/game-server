@@ -123,10 +123,18 @@ pub(super) fn build_app() -> App {
 }
 
 pub(super) fn build_cached_app(catalogs: &mut Option<super::catalogs::Catalogs>) -> App {
-    build_runtime_app(catalogs)
+    build_runtime_app(catalogs, &crate::test_data::world_db_path())
 }
 
-fn build_runtime_app(catalogs: &mut Option<super::catalogs::Catalogs>) -> App {
+#[cfg(test)]
+pub(super) fn build_app_with_world_db(path: &std::path::Path) -> App {
+    build_runtime_app(&mut None, path)
+}
+
+fn build_runtime_app(
+    catalogs: &mut Option<super::catalogs::Catalogs>,
+    path: &std::path::Path,
+) -> App {
     let mut app = App::new();
     app.add_plugins(server_spell_scripts::SpellScriptsPlugin);
     app.insert_resource(super::Space(super::graph::read_graph().unwrap()));
@@ -147,11 +155,9 @@ fn build_runtime_app(catalogs: &mut Option<super::catalogs::Catalogs>) -> App {
     ));
     server::test_support::install_player_death(&mut app);
     if app.world().resource::<super::Space>().0.map_id == 2825 {
-        let db = rusqlite::Connection::open_with_flags(
-            crate::test_data::world_db_path(),
-            rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
-        )
-        .expect("open interaction objective catalog");
+        let db =
+            rusqlite::Connection::open_with_flags(path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+                .expect("open interaction objective catalog");
         server::test_support::objectives::install(&mut app, &db)
             .expect("install interaction objectives");
     }
@@ -191,7 +197,7 @@ fn build_runtime_app(catalogs: &mut Option<super::catalogs::Catalogs>) -> App {
     app.cleanup();
     app.update();
     if !reused {
-        load_gameplay_data(&mut app);
+        load_gameplay_data(&mut app, path);
     }
     let has_accessory_boss = app
         .world()
@@ -221,11 +227,9 @@ fn build_runtime_app(catalogs: &mut Option<super::catalogs::Catalogs>) -> App {
         .iter()
         .any(|edge| edge.action == server::test_support::transport::Action::CollisionDrop);
     if has_drop {
-        let db = rusqlite::Connection::open_with_flags(
-            crate::test_data::world_db_path(),
-            rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
-        )
-        .expect("open collision drop catalog");
+        let db =
+            rusqlite::Connection::open_with_flags(path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+                .expect("open collision drop catalog");
         let nav = std::env::var_os("DUNGEON_SIMULATOR_NAVMESH")
             .map(std::path::PathBuf::from)
             .unwrap_or_else(|| super::graph::extraction::asset_root().join("navmesh"));
@@ -233,20 +237,16 @@ fn build_runtime_app(catalogs: &mut Option<super::catalogs::Catalogs>) -> App {
             .expect("install native collision drop system");
     }
     if has_taxi {
-        let db = rusqlite::Connection::open_with_flags(
-            crate::test_data::world_db_path(),
-            rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
-        )
-        .expect("open taxi transport catalog");
+        let db =
+            rusqlite::Connection::open_with_flags(path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+                .expect("open taxi transport catalog");
         server::test_support::transport::install_taxi_system(&mut app, &db)
             .expect("install native simulator taxi transport");
     }
     if has_accessory_boss {
-        let db = rusqlite::Connection::open_with_flags(
-            crate::test_data::world_db_path(),
-            rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
-        )
-        .expect("open vehicle accessory catalog");
+        let db =
+            rusqlite::Connection::open_with_flags(path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+                .expect("open vehicle accessory catalog");
         server::test_support::install_vehicle_accessories(
             &mut app,
             &super::graph::extraction::asset_root(),
@@ -257,24 +257,21 @@ fn build_runtime_app(catalogs: &mut Option<super::catalogs::Catalogs>) -> App {
     app
 }
 
-fn load_gameplay_data(app: &mut App) {
-    let db = rusqlite::Connection::open_with_flags(
-        crate::test_data::world_db_path(),
-        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
-    )
-    .unwrap();
+fn load_gameplay_data(app: &mut App, path: &std::path::Path) {
+    let db =
+        rusqlite::Connection::open_with_flags(path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+            .unwrap();
     app.insert_resource(
         crate::item_proc_data::load(&db).expect("load native equipped-producer catalogs"),
     );
-    let data = crate::world_data::load_world_data(&crate::test_data::world_db_path());
+    let data = crate::world_data::load_world_data(path);
     app.insert_resource(data.armor_constants.clone());
     app.insert_resource(data);
     let (spells, classes) = crate::spell_info::load_spell_data(&db).unwrap();
     app.insert_resource(spells);
     app.insert_resource(classes);
-    let path = crate::test_data::world_db_path();
-    app.insert_resource(crate::item_stats::load_item_scaling_tables(&path).unwrap());
-    app.insert_resource(crate::item_templates::load_item_templates(&path).unwrap());
+    app.insert_resource(crate::item_stats::load_item_scaling_tables(path).unwrap());
+    app.insert_resource(crate::item_templates::load_item_templates(path).unwrap());
     app.insert_resource(crate::stats::NativeItemInstances {
         bonuses: server::item_instance::load::load_bonus_tables(&db).unwrap(),
         enchants: server::item_instance::load::load_enchantment_tables(&db).unwrap(),
@@ -284,10 +281,7 @@ fn load_gameplay_data(app: &mut App) {
     app.insert_resource(crate::maps::store::load_map_store(&db).unwrap());
     app.insert_resource(crate::scripted_ai::model_reach::load_model_reaches(&db).unwrap());
     app.insert_resource(crate::unit_creature_type::load_race_types(&db).unwrap());
-    app.insert_resource(
-        crate::conditions::load_spell_target_conditions(&crate::test_data::world_db_path())
-            .unwrap(),
-    );
+    app.insert_resource(crate::conditions::load_spell_target_conditions(path).unwrap());
 }
 
 pub(super) fn create_copy(app: &mut App) -> crate::maps::InMap {
