@@ -172,6 +172,9 @@ fn follower_dps_production_dummy() {
     let mut stable_storm_frames = 0u32;
     let mut lava_during_stable_storm = 0u32;
     let mut seen_events = 0usize;
+    let mut cast_trace = Vec::new();
+    let trace_actions = std::env::var_os("FOLLOWER_TRACE_ACTIONS").is_some()
+        || std::env::var_os("FOLLOWER_VERIFY_WINGS_ORDER").is_some();
     let mut stat_sums = [0.0f64; 6];
     for frame in 0..2400 {
         // SimC fixed-time Patchwerk uses a 100% to 0% target-health timeline.
@@ -180,6 +183,11 @@ fn follower_dps_production_dummy() {
             .get_mut::<shared::components::Health>(target)
             .unwrap();
         health.current = health.max * (2400 - frame) as f32 / 2400.0;
+        let before_power = crate::spell_cast::powers::power_value(
+            app.world(),
+            actor,
+            shared::components::PowerType::HolyPower,
+        );
         app.update();
         let world = app.world();
         let now = crate::spell_cast::history_now(world);
@@ -242,6 +250,24 @@ fn follower_dps_production_dummy() {
             .world()
             .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
             .0;
+        if trace_actions {
+            let after_power = crate::spell_cast::powers::power_value(
+                app.world(),
+                actor,
+                shared::components::PowerType::HolyPower,
+            );
+            for event in &events[seen_events..] {
+                if event.source == Some(actor.to_bits()) && event.kind == CombatLogKind::CastSuccess
+                {
+                    cast_trace.push(
+                        json!({"at_s": (frame + 1) as f64 / 20.0, "spell": event.spell_id,
+                        "power_before": before_power, "power_after": after_power,
+                        "valor": crate::auras::has_aura(app.world(), actor, 1269179),
+                        "divine_purpose": crate::auras::has_aura(app.world(), actor, 223819)}),
+                    );
+                }
+            }
+        }
         if storm {
             lava_during_storm += events[seen_events..]
                 .iter()
@@ -288,6 +314,7 @@ fn follower_dps_production_dummy() {
     let mut damage_sources = BTreeMap::<String, usize>::new();
     let mut casts = BTreeMap::<u32, usize>::new();
     let mut aura_applications = BTreeMap::<u32, usize>::new();
+    let mut energize = BTreeMap::<u32, i64>::new();
     let incoming: Vec<_> = events
         .iter()
         .filter(|event| {
@@ -312,6 +339,9 @@ fn follower_dps_production_dummy() {
         }
         if event.kind == CombatLogKind::CastSuccess && event.source == Some(actor.to_bits()) {
             *casts.entry(id).or_default() += 1;
+        }
+        if event.kind == CombatLogKind::Energize && event.target == Some(actor.to_bits()) {
+            *energize.entry(id).or_default() += i64::from(event.amount);
         }
         if matches!(
             event.kind,
@@ -365,6 +395,29 @@ fn follower_dps_production_dummy() {
             "Lava Burst resumes outside Storm Elemental"
         );
     }
+    if entry == 209057 && std::env::var_os("FOLLOWER_VERIFY_WINGS_ORDER").is_some() {
+        let wings: Vec<f64> = cast_trace
+            .iter()
+            .filter(|action| action["spell"] == 389539)
+            .map(|action| action["at_s"].as_f64().unwrap())
+            .collect();
+        let tolls: Vec<f64> = cast_trace
+            .iter()
+            .filter(|action| action["spell"] == 375576)
+            .map(|action| action["at_s"].as_f64().unwrap())
+            .collect();
+        assert_eq!(
+            (wings.len(), tolls.len()),
+            (2, 2),
+            "both cooldown windows must occur"
+        );
+        for (&wing, &toll) in wings.iter().zip(&tolls) {
+            assert!(
+                wing < toll && toll - wing < 2.0,
+                "Sentinel {wing}s must precede Toll {toll}s"
+            );
+        }
+    }
     if entry == 209057 && std::env::var_os("FOLLOWER_DPS_WORLD_DB").is_some() {
         assert!(
             !hits.contains_key(&1269224),
@@ -415,7 +468,7 @@ fn follower_dps_production_dummy() {
         "FOLLOWER_DPS {}",
         json!({"entry":entry,"level":level,"map":map,"difficulty":205,"seed":seed,"seconds":120,"sheet":sheet,
         "items":items,"modifiers":modifiers,"talents":talents,"known_spells":known_spells,"target_armor":armor,"checkpoints":checkpoints,"incoming":incoming,"actor_id":actor.to_bits(),"target_id":target.to_bits(),"damage":damage,"hits":hits,"hit_breakdown":hit_breakdown,
-        "mean_stats":stat_sums.map(|sum| sum / 2400.0),"sources":damage_sources,"casts":casts,"aura_applications":aura_applications,
+        "mean_stats":stat_sums.map(|sum| sum / 2400.0),"sources":damage_sources,"casts":casts,"cast_trace":cast_trace,"aura_applications":aura_applications,"energize":energize,
         "flame_shock_s":flame_shock_frames as f64 / 20.0,"lava_surge_s":lava_surge_frames as f64 / 20.0,
         "storm_elemental_s":storm_frames as f64 / 20.0,"lava_casts_started_during_storm":lava_during_storm,
         "bolt_casts_started_during_storm":bolt_during_storm,"lava_successes_during_stable_storm":lava_during_stable_storm,"casting_s":casting as f64 / 20.0,
