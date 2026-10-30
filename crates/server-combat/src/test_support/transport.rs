@@ -6,11 +6,14 @@ use serde::{Deserialize, Serialize};
 pub enum Action {
     SpellClick,
     Proximity,
+    ObjectGossip,
+    ObjectScript,
 }
 
 #[derive(Clone, Debug)]
 pub struct Registration {
     pub entry: u32,
+    pub source_guid: Option<u32>,
     pub source: Vec3,
     pub destination: Vec3,
     pub distance: f32,
@@ -43,6 +46,7 @@ pub fn read_registrations(
             .sum();
         registrations.push(Registration {
             entry: crate::taxi::RUBY_FERRY_ENTRY,
+            source_guid: None,
             source: crate::taxi::RUBY_FERRY_SOURCE,
             destination,
             distance,
@@ -54,6 +58,7 @@ pub fn read_registrations(
         registrations.extend(crate::scripted_ai::academy_transport::PADS.iter().map(
             |(entry, source, destination, radius)| Registration {
                 entry: *entry,
+                source_guid: None,
                 source: *source,
                 destination: *destination,
                 distance: source.distance(*destination),
@@ -62,7 +67,85 @@ pub fn read_registrations(
             },
         ));
     }
+    registrations.extend(read_object_registrations(map, db)?);
     Ok(registrations)
+}
+
+fn read_object_registrations(
+    map: u32,
+    db: &rusqlite::Connection,
+) -> Result<Vec<Registration>, String> {
+    if map != crate::npc_interaction::nalorakk_pyre::MAP
+        && map != crate::scripted_ai::voidscar_portal::MAP
+    {
+        return Ok(Vec::new());
+    }
+    let objects = crate::game_objects::load_game_object_spawns(db)
+        .map_err(|error| format!("map{map} transport objects: {error}"))?;
+    let mut registrations = Vec::new();
+    for object in objects.0.iter().filter(|object| object.map_id == map) {
+        let destination = if map == crate::npc_interaction::nalorakk_pyre::MAP {
+            crate::npc_interaction::nalorakk_pyre::destination(object.info.entry).map(|location| {
+                let point = location.bevy_position();
+                (Vec3::new(point.x, point.y, point.z), Action::ObjectGossip)
+            })
+        } else if object.script_name == crate::scripted_ai::voidscar_portal::SCRIPT {
+            Some((
+                crate::scripted_ai::voidscar_portal::LANDING,
+                Action::ObjectScript,
+            ))
+        } else {
+            None
+        };
+        if let Some((destination, action)) = destination {
+            let position = crate::game_objects::bevy_position(object.position);
+            let source = Vec3::new(position.x, position.y, position.z);
+            registrations.push(Registration {
+                entry: object.info.entry,
+                source_guid: Some(object.guid),
+                source,
+                destination,
+                distance: source.distance(destination),
+                radius: crate::game_objects::GAME_OBJECT_INTERACT_DISTANCE,
+                action,
+            });
+        }
+    }
+    Ok(registrations)
+}
+
+pub fn spawn_objects(
+    world: &mut World,
+    db: &rusqlite::Connection,
+    map: crate::maps::InMap,
+    guids: &[u32],
+) -> Result<std::collections::BTreeMap<u32, Entity>, String> {
+    let objects = crate::game_objects::load_game_object_spawns(db)
+        .map_err(|error| format!("load transport objects: {error}"))?;
+    let mut queue = bevy::ecs::world::CommandQueue::default();
+    let mut commands = Commands::new(&mut queue, world);
+    let actors: std::collections::BTreeMap<_, _> = objects
+        .0
+        .iter()
+        .filter(|object| object.map_id == map.map_id && guids.contains(&object.guid))
+        .map(|object| {
+            (
+                object.guid,
+                crate::game_objects::spawn_game_object(&mut commands, object, map),
+            )
+        })
+        .collect();
+    drop(commands);
+    queue.apply(world);
+    for guid in guids {
+        if !actors.contains_key(guid) {
+            return Err(format!(
+                "map{} transport game object{guid} missing",
+                map.map_id
+            ));
+        }
+    }
+    Ok(actors)
 }
 
 fn open_ground(db: &rusqlite::Connection) -> Result<crate::ground::GroundMap, String> {
@@ -126,6 +209,9 @@ pub fn in_progress(world: &World, unit: Entity) -> bool {
         || world
             .get::<crate::scripted_ai::academy_transport::AcademyPadFlight>(unit)
             .is_some()
+        || world
+            .get::<crate::scripted_ai::voidscar_portal::PortalFlight>(unit)
+            .is_some()
 }
 
 pub fn activate(
@@ -149,6 +235,13 @@ pub fn activate(
             world.entity_mut(owner).insert(TaxiLandingPending);
         }
         Action::Proximity => {}
+        Action::ObjectGossip => crate::npc_interaction::nalorakk_pyre::traverse(world, owner, npc)?,
+        Action::ObjectScript => {
+            crate::scripted_ai::game_object_gossip_hello(world, owner, npc);
+            if !in_progress(world, owner) {
+                return Err("registered game object script did not start transport".into());
+            }
+        }
     }
     Ok(())
 }
@@ -214,4 +307,15 @@ fn ruby_registration_uses_native_taxi_points_and_academy_uses_pad_registry() {
     let academy = read_registrations(2526, &db).unwrap();
     assert_eq!(academy.len(), 5);
     assert!(academy.iter().all(|row| row.action == Action::Proximity));
+    let pyres = read_registrations(2825, &db).unwrap();
+    assert_eq!(pyres.len(), 2);
+    assert!(
+        pyres
+            .iter()
+            .all(|row| row.source_guid.is_some() && row.action == Action::ObjectGossip)
+    );
+    let portals = read_registrations(2923, &db).unwrap();
+    assert_eq!(portals.len(), 1);
+    assert_eq!(portals[0].source_guid, Some(81002923));
+    assert_eq!(portals[0].action, Action::ObjectScript);
 }

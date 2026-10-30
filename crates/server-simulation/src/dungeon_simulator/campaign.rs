@@ -1422,6 +1422,7 @@ struct Run {
     graph: Graph,
     party: crate::followers::simulator::Party,
     actors: BTreeMap<u32, Entity>,
+    objects: BTreeMap<u32, Entity>,
     report: Report,
     current_pack: Option<u32>,
     last_progress: f64,
@@ -1579,6 +1580,28 @@ fn spawn_run(seed: u64, catalogs: &mut Option<super::catalogs::Catalogs>) -> Res
         },
     )?;
     let actors = runtime::spawn_population(&mut app, copy);
+    let object_guids: Vec<_> = graph
+        .transports
+        .iter()
+        .filter(|transport| {
+            matches!(
+                transport.action,
+                server::test_support::transport::Action::ObjectGossip
+                    | server::test_support::transport::Action::ObjectScript
+            )
+        })
+        .map(|transport| transport.source_guid)
+        .collect();
+    let objects = if object_guids.is_empty() {
+        BTreeMap::new()
+    } else {
+        let db = rusqlite::Connection::open_with_flags(
+            crate::test_data::world_db_path(),
+            rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+        )
+        .map_err(|error| format!("open transport objects: {error}"))?;
+        server::test_support::transport::spawn_objects(app.world_mut(), &db, copy, &object_guids)?
+    };
     let missing: Vec<_> = graph
         .packs
         .iter()
@@ -1599,6 +1622,7 @@ fn spawn_run(seed: u64, catalogs: &mut Option<super::catalogs::Catalogs>) -> Res
         graph,
         party,
         actors,
+        objects,
         current_pack: None,
         last_progress: 0.0,
         event_cursor: 0,
@@ -1970,8 +1994,17 @@ impl Run {
             .find(|edge| edge.from == source && edge.to == destination)
             .cloned()
         {
-            let npc = *self
-                .actors
+            let source_objects = matches!(
+                transport.action,
+                server::test_support::transport::Action::ObjectGossip
+                    | server::test_support::transport::Action::ObjectScript
+            );
+            let actors = if source_objects {
+                &self.objects
+            } else {
+                &self.actors
+            };
+            let npc = *actors
                 .get(&transport.source_guid)
                 .ok_or("registered transport source actor absent")?;
             let at = *self
