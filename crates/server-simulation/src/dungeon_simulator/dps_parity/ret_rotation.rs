@@ -90,28 +90,7 @@ fn execution_actions()
 }
 
 fn read_program() -> Result<server::simc_apl::Program, String> {
-    let rows = include_str!("ret_rotation/76f8118.simc")
-        .lines()
-        .filter(|line| !line.is_empty() && !line.starts_with('#'))
-        .map(parse_row)
-        .collect::<Result<Vec<_>, _>>()?;
-    server::simc_apl::Program::parse(&rows)
-}
-
-fn parse_row(line: &str) -> Result<(&str, &str), String> {
-    let (head, literal) = line
-        .split_once("+=")
-        .ok_or("Ret source lacks += assignment")?;
-    let list = if head == "actions" {
-        "default"
-    } else {
-        head.strip_prefix("actions.")
-            .ok_or("Ret source is not an action list")?
-    };
-    let literal = literal
-        .strip_prefix('/')
-        .ok_or("Ret source action lacks slash")?;
-    Ok((list, literal))
+    server::simc_apl::ret_program::load()
 }
 
 struct RetFacts<'a> {

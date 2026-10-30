@@ -2,6 +2,7 @@
 mod expression;
 pub mod gcd_history;
 mod program;
+pub mod ret_program;
 pub use program::Program;
 use std::collections::{BTreeMap, BTreeSet};
 
