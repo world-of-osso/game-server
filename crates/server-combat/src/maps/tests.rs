@@ -515,6 +515,122 @@ fn bevy(wow: Vec3) -> Position {
     Position { x, y, z }
 }
 
+#[test]
+fn uldaman_login_after_restart_uses_authored_entrance() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("player.redb");
+    let db = redb::Database::create(&path).unwrap();
+    crate::persistence::create_tables(&db);
+    let (character, _) = crate::persistence::create_character(&db, 21, "Doorwalker", 1, 1).unwrap();
+    let mut data = crate::persistence::load_character(&db, character).unwrap();
+    (data.x, data.y, data.z) = (91.1, -828.42, 229.35);
+    crate::persistence::save_character(&db, character, &data);
+    crate::maps::persistence::save_character_map(&db, character, 2451);
+    let saved = bevy(Vec3::new(data.x, data.y, data.z));
+    let mut first = harness().expect("world.db map data");
+    let original = first
+        .app
+        .world_mut()
+        .run_system_once(move |mut commands: Commands, mut maps: LoginMaps| {
+            maps.resolve(
+                &mut commands,
+                character,
+                1,
+                RaidDifficulty::default(),
+                2451,
+                saved,
+            )
+        })
+        .unwrap()
+        .expect("first copy");
+    assert_ne!(original.map.instance_id, 0);
+    drop(first);
+    drop(db);
+
+    let db = redb::Database::open(&path).unwrap();
+    let data = crate::persistence::load_character(&db, character).unwrap();
+    let saved = bevy(Vec3::new(data.x, data.y, data.z));
+    let map = crate::maps::persistence::load_character_map(&db, character);
+    let mut restarted = harness().expect("world.db map data after restart");
+    restarted
+        .app
+        .insert_resource(InstanceManager::with_locks_and_normal(
+            locks::InstanceLocks::default(),
+            vec![locks::NormalInstanceLock {
+                map_id: 2451,
+                difficulty_id: 205,
+                instance_id: original.map.instance_id,
+                owner: character,
+                data: locks::LockData::default(),
+            }],
+        ));
+    let place = restarted
+        .app
+        .world_mut()
+        .run_system_once(move |mut commands: Commands, mut maps: LoginMaps| {
+            maps.resolve(
+                &mut commands,
+                character,
+                1,
+                RaidDifficulty::default(),
+                map,
+                saved,
+            )
+        })
+        .unwrap()
+        .expect("new copy after restart");
+    assert_ne!(place.map.instance_id, 0);
+    assert_eq!(place.map.map_id, 2451);
+    assert!(wow(&place.position).distance(Vec3::new(204.89, -1017.31, 219.656)) < 0.01);
+    assert_ne!(place.position, saved);
+}
+
+#[test]
+fn dungeon_login_without_authored_entrance_is_refused() {
+    let mut h = harness().expect("world.db map data");
+    h.app
+        .world_mut()
+        .resource_mut::<MapStore>()
+        .area_triggers
+        .clear();
+    let place = h
+        .app
+        .world_mut()
+        .run_system_once(|mut commands: Commands, mut maps: LoginMaps| {
+            maps.resolve(
+                &mut commands,
+                30,
+                1,
+                RaidDifficulty::default(),
+                34,
+                bevy(Vec3::new(42.0, 1.0, 1.0)),
+            )
+        })
+        .unwrap();
+    assert!(
+        place.is_none(),
+        "a reset copy must not reuse the saved position without an entrance"
+    );
+    let retry = h
+        .app
+        .world_mut()
+        .run_system_once(|mut commands: Commands, mut maps: LoginMaps| {
+            maps.resolve(
+                &mut commands,
+                30,
+                1,
+                RaidDifficulty::default(),
+                34,
+                bevy(Vec3::new(42.0, 1.0, 1.0)),
+            )
+        })
+        .unwrap();
+    assert!(
+        retry.is_none(),
+        "a refused login must not create a reusable empty copy"
+    );
+}
+
 // --- App-level transfers ---
 
 struct Harness {
