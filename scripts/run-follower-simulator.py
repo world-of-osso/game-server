@@ -9,6 +9,7 @@ import subprocess
 import sys
 
 from freeze_follower_route import plan_route
+from follower_encounter_actors import encounter_actor_bits
 
 ROOT = Path(__file__).resolve().parent.parent
 NAVMESH = Path('/home/osso/Projects/world-of-osso/game-engine/data/navmesh')
@@ -80,6 +81,9 @@ def main():
             inputs = json.loads((output / f'map-{args.map}-corridor-inputs.json').read_text())
             requirements = json.loads((output / f'map-{args.map}-requirements.json').read_text())[str(args.map)]
             graph.update(plan_route(graph, inputs, requirements))
+            with sqlite3.connect(f'file:{ROOT / "data/world.db"}?mode=ro', uri=True) as db:
+                graph['follower_encounter_actor_bits'] = encounter_actor_bits(
+                    graph, db, ROOT / 'data/db2/active/JournalEncounterCreature.csv')
             graph_path.write_text(json.dumps(graph, indent=2) + '\n')
         run_test(executable, 'dungeon_simulator::batch::run_stockade_batch', env, output / 'run.log')
     except (RuntimeError, OSError, ValueError, KeyError, sqlite3.Error) as error:

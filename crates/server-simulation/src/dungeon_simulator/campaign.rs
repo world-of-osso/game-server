@@ -327,6 +327,33 @@ fn darkflame_withheld_darkness_does_not_abort_initialization() {
 }
 
 #[test]
+#[ignore = "requires extracted Murder Row follower graph with journal actors"]
+fn completed_kystia_encounter_skips_living_nibbles() {
+    let mut run = spawn_run(1, &mut None).unwrap();
+    assert_eq!(run.graph.map_id, 2813);
+    let map = *run
+        .app
+        .world()
+        .get::<crate::maps::InMap>(run.party.owner)
+        .unwrap();
+    let nibbles = run.actors[&31000648];
+    assert!(crate::spell_cast::targets::is_alive(
+        run.app.world(),
+        nibbles
+    ));
+    run.graph.route.retain(|step| step.pack == 31000648);
+    assert_eq!(run.next_pack().unwrap().1, nibbles);
+    run.app
+        .world_mut()
+        .resource_mut::<crate::maps::InstanceManager>()
+        .update_instance_lock(map, &[], 1, Some(0), 0);
+    assert!(
+        run.next_pack().is_none(),
+        "Nibbles belongs to completed encounter 3101"
+    );
+}
+
+#[test]
 #[ignore = "requires extracted Uldaman follower graph"]
 fn completed_dwarf_encounter_is_skipped_even_if_olaf_is_alive() {
     let mut run = spawn_run(1, &mut None).unwrap();
@@ -2371,8 +2398,13 @@ impl Run {
                                 .flatten()
                         })
                         .collect();
-                    let pending =
-                        bits.is_empty() || bits.iter().any(|bit| completed & (1 << **bit) == 0);
+                    let pending = (bits.is_empty()
+                        || bits.iter().any(|bit| completed & (1 << **bit) == 0))
+                        && self
+                            .graph
+                            .follower_encounter_actor_bits
+                            .get(&spawn.entry)
+                            .is_none_or(|bit| completed & (1 << *bit) == 0);
                     pending
                         && crate::spell_cast::targets::is_alive(world, *actor)
                         && (self.graph.boss_entries().contains(&spawn.entry)
