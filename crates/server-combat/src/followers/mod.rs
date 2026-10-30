@@ -108,8 +108,8 @@ pub mod retreat;
 mod rotation_dummy_tests;
 #[cfg(any(test, feature = "test-support"))]
 pub mod simulator;
-pub mod spec_selection;
 mod spawning;
+pub mod spec_selection;
 mod stockade_diagnostic;
 mod tank_defense;
 mod tank_frontal;
@@ -123,6 +123,7 @@ mod utility_buff_tests;
 mod utility_interrupt;
 #[cfg(test)]
 mod utility_policy_tests;
+pub mod visual;
 
 use bevy::prelude::*;
 use shared::group::GroupRole;
