@@ -77,17 +77,59 @@ fn purifying_brew_clarity_funds_purified_spirit() {
     let actor = run.actor;
     let target = run.targets[0];
     let world = run.app.world();
-    assert!(world.get::<TraitLoadout>(actor).unwrap().active_talent_spells().any(|talent| talent.spell_id == 451017));
+    assert!(
+        world
+            .get::<TraitLoadout>(actor)
+            .unwrap()
+            .active_talent_spells()
+            .any(|talent| talent.spell_id == 451017)
+    );
     let stats = world.get::<CharacterStats>(actor).unwrap();
-    let expected = 3.0 * stats.total_attack_power(WeaponAttackType::MainHand, world.get::<StatModifiers>(actor)) * (1.0 + stats.versatility_pct / 100.0);
-    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 119582, Some(actor), false).unwrap();
-    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 1241059, Some(actor), false).unwrap();
-    run.app.world_mut().entity_mut(actor).remove::<crate::combat::AutoAttack>();
+    let expected =
+        3.0 * stats.total_attack_power(
+            WeaponAttackType::MainHand,
+            world.get::<StatModifiers>(actor),
+        ) * (1.0 + stats.versatility_pct / 100.0);
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 119582, Some(actor), false)
+        .unwrap();
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 1241059, Some(actor), false)
+        .unwrap();
+    run.app
+        .world_mut()
+        .entity_mut(actor)
+        .remove::<crate::combat::AutoAttack>();
     for _ in 0..400 {
         run.app.update();
     }
-    let damage: i32 = run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0.iter().filter(|event| event.kind == CombatLogKind::Damage && event.spell_id == Some(450820) && event.target == Some(target.to_bits())).map(|event| event.amount).sum();
-    assert!((damage as f32 - expected).abs() < 5.0, "Purified Spirit {damage}, expected {expected}");
+    let damage: i32 = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .iter()
+        .filter(|event| {
+            event.kind == CombatLogKind::Damage
+                && event.spell_id == Some(450820)
+                && event.target == Some(target.to_bits())
+        })
+        .map(|event| event.amount)
+        .sum();
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    eprintln!(
+        "Clarity events: {:?}",
+        events
+            .iter()
+            .filter(|event| event.kind == CombatLogKind::Damage)
+            .collect::<Vec<_>>()
+    );
+    assert!(
+        (damage as f32 - expected).abs() < 5.0,
+        "Purified Spirit {damage}, expected {expected}"
+    );
 }
 
 #[test]
