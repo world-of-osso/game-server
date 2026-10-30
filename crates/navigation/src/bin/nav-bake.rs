@@ -1,6 +1,6 @@
 //! Reproducible local-CASC bake; selection comes from the existing LOS tile directory.
 use los::bake::{Baker, DEFAULT_THICKNESS_CUTOFF, index_triangles};
-use navigation::bake::{VERTEX_CAPACITY_ERROR, bake_collected_on_grid};
+use navigation::bake::{POLYGON_CAPACITY_ERROR, VERTEX_CAPACITY_ERROR, bake_collected_on_grid};
 use navigation::{SUBDIVISIONS, TILE_CELLS};
 use std::path::{Path, PathBuf};
 use std::time::Instant;
@@ -25,7 +25,11 @@ fn run() -> Result<(), String> {
     let mut subdivisions = SUBDIVISIONS;
     loop {
         match run_on_grid(&args, subdivisions) {
-            Err(error) if error.contains(VERTEX_CAPACITY_ERROR) && subdivisions < TILE_CELLS => {
+            Err(error)
+                if (error.contains(VERTEX_CAPACITY_ERROR)
+                    || error.contains(POLYGON_CAPACITY_ERROR))
+                    && subdivisions < TILE_CELLS =>
+            {
                 subdivisions *= 2;
                 eprintln!("{error}; refining whole map to {subdivisions}x{subdivisions}");
             }

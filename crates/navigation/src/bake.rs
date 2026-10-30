@@ -4,6 +4,7 @@ use glam::{Vec3, Vec3Swizzles};
 use recastnavigation_sys::*;
 
 pub const VERTEX_CAPACITY_ERROR: &str = "RECAST_VERTEX_CAPACITY_EXCEEDED";
+pub const POLYGON_CAPACITY_ERROR: &str = "RECAST_POLYGON_NEIGHBOUR_CAPACITY_EXCEEDED";
 const BORDER_CELLS: i32 = RADIUS_CELLS + 3;
 const HEIGHT_CELLS: i32 = ceil_cells(AGENT_HEIGHT, CELL_HEIGHT);
 const CLIMB_CELLS: i32 = (AGENT_CLIMB / CELL_HEIGHT) as i32;
@@ -263,6 +264,13 @@ impl RecastBuild {
             )?;
             if !rcBuildPolyMesh(self.context, self.contours, 6, self.mesh) {
                 return Err(self.polygon_mesh_failure());
+            }
+            // Recast reserves the high bit of polygon neighbours for border markers.
+            if (*self.mesh).npolys > 0x8000 {
+                return Err(format!(
+                    "{POLYGON_CAPACITY_ERROR}: {} polygons",
+                    (*self.mesh).npolys
+                ));
             }
             if (*self.mesh).npolys > 0 {
                 require(
