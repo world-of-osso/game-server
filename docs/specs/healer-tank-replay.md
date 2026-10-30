@@ -46,6 +46,21 @@ Healed native replays of each tank's 300-second dummy trace used seeds 70448–7
 
 The paired change in damage has standard error 217,665 / 38,987 / 86,436 / 14,251 / 56,211 / 55,522 respectively. Native reports: `game-engine/data/diagnostics/healer-tank-replay/all-tankgaps2-ready-baseline-ten-seeds/` and `all-tankgaps2-gcd-events-ten-seeds/`. These samples do not establish full parity.
 
+## Gaussian decision-poll comparison (2026-10-29)
+
+The replay now schedules foreground readiness and Gaussian 100±10 ms off-GCD and idle polls instead of polling every 50 ms. It still does not reproduce SimC's optimization that suppresses off-GCD checks when no off-GCD action can become ready before the foreground event; extra checks can consume RNG draws. Healed replays use the same traces and ten native seeds as above. SimC has ten independent measured iterations; 104 uses the corrected single-application reference.
+
+| Spec | 50 ms baseline | Gaussian polls | SimC |
+|---:|---:|---:|---:|
+| 66 | 3,304,981 | 2,852,249 | 3,341,843 |
+| 73 | 2,893,245 | 2,900,928 | 2,783,862 |
+| 104 | 1,766,524 | 1,855,710 | 1,850,456 |
+| 250 | 47,621 | 49,054 | 88,144 |
+| 268 | 3,429,579 | 3,376,957 | 3,318,109 |
+| 581 | 5,837,808 | 5,759,202 | 5,949,784 |
+
+All native runs survived. The paired mean damage changes have standard errors 247,554 / 42,753 / 83,599 / 18,516 / 87,889 / 71,242 respectively. The Paladin shift of −452,732 is about 1.8 paired standard errors and remains unresolved at this sample size. Both native samples averaged 92.8 Shield of the Righteous, zero Guardian of Ancient Kings and 5 Ardent Defender casts; SimC averaged 91.6, no Guardian entry and 5.0 respectively. Mean Holy Bulwark consumption rose from 3,156,938 to 3,617,946, accounting for most of the damage difference, but its cause and persistence are unproven. Reports: `game-engine/data/diagnostics/healer-tank-replay/all-tankgaps2-ready-baseline-ten-seeds/` and `all-tankgaps2-simc-polls-ten-seeds/`.
+
 ## Scaled tank pressure
 
 `--pressure-scale X` multiplies the raw amounts of all SimC tank-dummy swings, strikes and bleed ticks before native combat; timestamps, attack tables and other trace fields remain unchanged. The report records `pressure_scale` and `incoming_outcome_sequence` (outcome, parry, dodge and block chance per attack). The scale must be positive and finite.
