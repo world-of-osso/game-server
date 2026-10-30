@@ -450,7 +450,7 @@ On 2026-10-29, an ordinary LFG run of map 2923 at difficulty 205 reached Done fo
 
 `VOIDSCAR_ATROXUS_PORTAL_POSITION_LOG_CORRELATED` uses TDB portal template 630573 (display 99878), whose spell 1248113 is named for Voidscar Arena's Pit of Spite. The template has no authored spawn in TDB. The user identified a portal before Atroxus and approved placement at the last upstream player sample (4615.12,-430.05) in `WoWCombatLog-102126_222250.txt` at 22:41:28.581. Navmesh height -103.6306 connects to the previous sample at (4614.76,-403.0), which has one supporting surface at -109.9542. The first downstream sample is (4761.38,-451.23) at 22:41:38.823; its navmesh height -62.1763 connects to Atroxus. Using the portal moves the owner and owned followers along a project-authored arc. The samples do not establish the authored portal position, exact landing, flight path, or unlock condition. Replace this approximation when authored data are available.
 
-Dungeon release uses a linked graveyard or reciprocal exit when available. If neither is available, it revives at the imported map entrance safe location; missing all three remains an explicit error.
+Dungeon release prefers a linked graveyard on the instance map, then the imported map entrance, then the reciprocal exit; missing all three remains an explicit error.
 
 ### Nalorakk completion credit
 

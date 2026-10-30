@@ -161,6 +161,17 @@ fn unload_expired_instances(world: &mut World) {
     }
 }
 
+#[cfg(test)]
+pub(crate) fn install_occupancy_fixture(app: &mut App) {
+    app.add_observer(track_player_added_to_map)
+        .add_observer(track_player_removed_from_map);
+}
+
+#[cfg(test)]
+pub(crate) fn expire_instances_fixture(world: &mut World) {
+    unload_expired_instances(world);
+}
+
 /// Both timed dungeon unload and explicit match close remove the same map-owned data.
 pub(crate) fn unload_map_content(world: &mut World, maps: &[InMap]) {
     let mut query = world.query::<(Entity, &InMap)>();

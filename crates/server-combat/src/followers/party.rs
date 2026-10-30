@@ -682,7 +682,7 @@ mod copy_tests {
     }
 
     #[test]
-    fn disconnect_and_login_restore_follower_copy_and_party() {
+    fn follower_disconnect_and_login_restore_follower_copy_and_party() {
         let (mut app, owner, run) = fixture();
         app.add_plugins((
             crate::creature_aggro::CreatureAggroPlugin,
@@ -690,6 +690,30 @@ mod copy_tests {
         ));
         join_party(app.world_mut(), owner, &run, &run.members).unwrap();
         let map = run.copy.unwrap();
+        crate::maps::install_occupancy_fixture(&mut app);
+        app.world_mut()
+            .entity_mut(owner)
+            .remove::<InMap>()
+            .insert(map);
+        app.world_mut().flush();
+        let database_file = tempfile::NamedTempFile::new().unwrap();
+        let db = redb::Database::create(database_file.path()).unwrap();
+        crate::persistence::create_tables(&db);
+        app.insert_resource(crate::persistence::GameDatabase::new(db));
+        app.world_mut().entity_mut(owner).insert((
+            shared::components::Health {
+                current: 600.0,
+                max: 1000.0,
+            },
+            shared::components::Position {
+                x: 1403.56,
+                y: 128.0,
+                z: 173.39,
+            },
+        ));
+        app.world_mut()
+            .resource_mut::<crate::maps::InstanceManager>()
+            .update_instance_lock(map, &[(owner, 30)], 1, Some(2), 1_790_510_400);
         let dead = run.members[0];
         let living = run.members[1];
         app.world_mut()
@@ -744,6 +768,22 @@ mod copy_tests {
                 .all(|&member| app.world().get_entity(member).is_ok())
         );
 
+        let db = &app
+            .world()
+            .resource::<crate::persistence::GameDatabase>()
+            .db;
+        let saved = crate::persistence::load_character(db, 30).unwrap();
+        let saved_map = crate::maps::persistence::load_character_map(db, 30);
+        let (x, y, z) = crate::terrain_height::wow_to_bevy(saved.x, saved.y, saved.z);
+        let saved_position = shared::components::Position { x, y, z };
+        assert_eq!(saved_map, map.map_id);
+        assert_eq!(saved_position, position);
+        assert_eq!(
+            app.world()
+                .resource::<crate::maps::InstanceManager>()
+                .completed_encounters(map),
+            1 << 2
+        );
         let mut state = bevy::ecs::system::SystemState::<(Commands, crate::maps::LoginMaps)>::new(
             app.world_mut(),
         );
@@ -754,8 +794,8 @@ mod copy_tests {
                 30,
                 1,
                 Default::default(),
-                map.map_id,
-                position,
+                saved_map,
+                saved_position,
             )
             .unwrap();
         state.apply(app.world_mut());
@@ -763,9 +803,34 @@ mod copy_tests {
         assert_eq!(place.position, position);
         let reconnected = app
             .world_mut()
-            .spawn((ClientId(30), place.map, position))
+            .spawn((
+                Player {
+                    name: "Followproof".into(),
+                    race: 1,
+                    class: 8,
+                    appearance: Default::default(),
+                },
+                ClientId(30),
+                place.map,
+                position,
+            ))
             .id();
         reconnect(app.world_mut(), reconnected, 30);
+        app.world_mut().flush();
+        let elapsed = app.world().resource::<Time>().elapsed_secs_f64();
+        assert!(
+            app.world_mut()
+                .resource_mut::<crate::maps::InstanceManager>()
+                .take_expired(elapsed + 1800.0)
+                .is_empty(),
+            "reconnected player keeps the copy loaded"
+        );
+        assert_eq!(
+            app.world()
+                .resource::<crate::maps::InstanceManager>()
+                .completed_encounters(map),
+            1 << 2
+        );
         assert_eq!(
             app.world().get::<DungeonDifficulty>(reconnected).unwrap().0,
             205
@@ -807,6 +872,112 @@ mod copy_tests {
                 .unwrap()
                 .owner,
             reconnected
+        );
+    }
+
+    #[test]
+    fn follower_disconnect_expires_copy_after_last_player_unload_delay() {
+        let (mut app, owner, run) = fixture();
+        let map = run.copy.unwrap();
+        app.world_mut()
+            .resource_mut::<crate::maps::InstanceManager>()
+            .update_instance_lock(map, &[(owner, 30)], 1, Some(2), 1_790_510_400);
+        join_party(app.world_mut(), owner, &run, &run.members).unwrap();
+        crate::maps::install_occupancy_fixture(&mut app);
+        app.world_mut()
+            .entity_mut(owner)
+            .remove::<InMap>()
+            .insert(map);
+        app.world_mut()
+            .entity_mut(owner)
+            .insert((run.clone(), crate::lfg::PlayerLfgState::default()));
+        crate::networking::install_disconnect_fixture(&mut app);
+        let connection = app
+            .world_mut()
+            .spawn((
+                lightyear::prelude::server::ClientOf,
+                RemoteId(PeerId::Local(1)),
+                Connected,
+                crate::networking::PlayerLink(owner),
+                crate::auth::InWorld { character_id: 30 },
+            ))
+            .id();
+        app.world_mut().entity_mut(connection).remove::<Connected>();
+        app.world_mut().flush();
+        app.update();
+        assert!(app.world().get_entity(owner).is_err());
+        app.world_mut()
+            .resource_mut::<Time>()
+            .advance_by(std::time::Duration::from_secs(1799));
+        crate::maps::expire_instances_fixture(app.world_mut());
+        advance_runs(app.world_mut());
+        assert!(
+            app.world()
+                .resource::<crate::maps::InstanceManager>()
+                .copy_difficulty(map)
+                .is_some()
+        );
+        assert!(
+            run.members
+                .iter()
+                .all(|member| app.world().get_entity(*member).is_ok())
+        );
+        assert_eq!(
+            app.world()
+                .resource::<crate::maps::InstanceManager>()
+                .completed_encounters(map),
+            1 << 2
+        );
+        app.world_mut()
+            .resource_mut::<Time>()
+            .advance_by(std::time::Duration::from_secs(1));
+        crate::maps::expire_instances_fixture(app.world_mut());
+        advance_runs(app.world_mut());
+        assert!(
+            app.world()
+                .resource::<crate::maps::InstanceManager>()
+                .copy_difficulty(map)
+                .is_none()
+        );
+        assert!(
+            run.members
+                .iter()
+                .all(|member| app.world().get_entity(*member).is_err())
+        );
+        assert!(
+            app.world()
+                .resource::<GroupRegistry>()
+                .group_id_of(30)
+                .is_none()
+        );
+        assert!(
+            app.world()
+                .resource::<DisconnectedRuns>()
+                .copy(30)
+                .is_none()
+        );
+        let old_position = run.dungeon.entrance.bevy_position();
+        let mut state = bevy::ecs::system::SystemState::<(Commands, crate::maps::LoginMaps)>::new(
+            app.world_mut(),
+        );
+        let (mut commands, mut maps) = state.get_mut(app.world_mut()).unwrap();
+        let place = maps
+            .resolve(
+                &mut commands,
+                30,
+                1,
+                Default::default(),
+                map.map_id,
+                old_position,
+            )
+            .unwrap();
+        state.apply(app.world_mut());
+        assert_eq!(place.position, old_position);
+        assert_eq!(
+            app.world()
+                .resource::<crate::maps::InstanceManager>()
+                .completed_encounters(place.map),
+            0
         );
     }
 
