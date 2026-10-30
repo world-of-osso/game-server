@@ -11,7 +11,7 @@ import tempfile
 import unittest
 from types import SimpleNamespace
 
-from scripts.follower_spec_kits import prepare, read_periodic_description_child
+from scripts.follower_spec_kits import kit_rows, prepare, read_periodic_description_child
 
 ROOT = Path(__file__).resolve().parents[1]
 DB2 = Path('/home/osso/Projects/world-of-osso/game-engine/data/db2/active')
@@ -50,6 +50,25 @@ class DescriptionReferenceTests(unittest.TestCase):
 
 
 class FollowerKitProducerTests(unittest.TestCase):
+    def test_native_passive_talents_project_their_castable_actions(self):
+        source = json.loads(SOURCE.read_text())
+        with closing(sqlite3.connect((ROOT / 'data/world.db').resolve().as_uri() + '?mode=ro', uri=True)) as db:
+            rows, _, _ = kit_rows(db, source)
+        def active(spec, spell, level):
+            return [row for row in rows if row[0] == spec and row[1] == spell and row[2] <= level <= row[3]]
+        for spec, parent, action, level, slot in [
+            (66, 1241288, 1241413, 90, 'attack'),
+            (262, 392915, 5394, 90, 'utility'),
+            (266, 1265799, 1271748, 90, 'utility'),
+            (269, 388917, 115203, 90, 'defensive'),
+            (266, 1250273, 105174, 90, 'attack'),
+            (103, 343223, 106951, 32, 'buff'),
+        ]:
+            self.assertEqual(active(spec, parent, level)[0][4], 'passive')
+            self.assertEqual(active(spec, action, level)[0][4], slot)
+        self.assertEqual(active(103, 106951, 90), [], 'Incarnation replaces Berserk')
+        self.assertEqual(active(103, 102543, 90)[0][4], 'buff')
+
     def command(self, output, receipt, diff, world_db=None, source=None):
         return [sys.executable, str(ROOT / 'scripts/follower_spec_kits.py'),
                 '--world-db', str(world_db or ROOT / 'data/world.db'), '--db2-root', str(DB2),

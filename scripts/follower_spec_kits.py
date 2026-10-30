@@ -136,7 +136,7 @@ def combat_policy(spec, name, spell, dispel_effects, control_effects):
                       resources=[dict(power='SoulShards', below=4)])
 
     # SimC76f8118 apl_paladin.cpp106/110: Hammer replaces Judgment while wings are active.
-    if spec == 66 and spell == 1241288:
+    if spec == 66 and spell == 1241413:
         return policy('attack', 110, required_self_aura=1241410)
 
     # SimC apl_shaman79/103: after native Shock actions84, before spenders85.
@@ -317,18 +317,39 @@ def read_description_reference_sources(db2, references):
 # Elemental114050's native description names1219480; SimCsc_shaman11419
 # selects that actual self action, not the legacy enemy-targeted DUMMY parent.
 SIMC_TALENT_CAST_ACTIONS = {
+    # Native1241288 describes Judgment's Hammer but has no VisibleSpellID.
+    66: ((1241288, 1241413, ()),),
     262: ((114050, 1219480, ()),),
     266: ((1250273, 105174, ()), (426115, 264178, ())),
     103: ((343223, 106951, (102543,)),),
 }
 
 
-def project_loadout_actions(loadout):
+def read_visible_talent_actions(db, source):
+    """Map selected native talent entries to their visible, castable actions."""
+    castable = {row[0] for row in db.execute(
+        'SELECT SpellID FROM spell_misc WHERE (Attributes_0 & 64)=0')}
+    definitions = {row[0]: (row[1], row[2] if row[2] in castable else 0, row[3])
+                   for row in db.execute('SELECT ID,SpellID,VisibleSpellID,OverridesSpellID FROM trait_definition')}
+    result = {}
+    for tree in source['trees']:
+        for node in tree['tree']['nodes']:
+            for entry in node['entries']:
+                definition = definitions.get(entry['definition_id'])
+                if definition:
+                    result[(tree['class_id'], entry['id'])] = definition
+    return result
+
+
+def project_loadout_actions(loadout, visible_actions):
     known = dict(loadout['known'])
-    # Native passive1241288 projects to the castable Protection action1241413.
-    # Keep the learned passive; this flag classifies only its controller row.
-    if loadout['spec_id'] == 66 and '1241288' in known:
-        known['1241288'] = False
+    selected = [visible_actions[(loadout['class_id'], entry['entry_id'])]
+                for entry in loadout['config']
+                if (loadout['class_id'], entry['entry_id']) in visible_actions]
+    overridden = {base for parent, _, base in selected if base and str(parent) in known}
+    for parent, action, _ in selected:
+        if action and known.get(str(parent)) is True and action != parent and action not in overridden:
+            known.setdefault(str(action), False)
     for parent, action, replacements in SIMC_TALENT_CAST_ACTIONS.get(loadout['spec_id'], ()):
         if str(parent) in known and not any(str(spell) in known for spell in replacements):
             known.setdefault(str(action), False)
@@ -455,6 +476,7 @@ def kit_rows(db, source):
     slots = {}
     inventory = []
     active_minima, _ = read_active_enemy_sources(row['spec_id'] for row in source['loadouts'])
+    visible_actions = read_visible_talent_actions(db, source)
     dispels = defaultdict(list)
     for spell, dispel_type, target in db.execute('SELECT SpellID,EffectMiscValue_0,ImplicitTarget_0 FROM spell_effect WHERE DifficultyID=0 AND Effect=38'):
         dispels[spell].append((dispel_type, target))
@@ -463,7 +485,7 @@ def kit_rows(db, source):
         controls[spell].append((target_a, target_b))
     for loadout in source['loadouts']:
         spec, level = loadout['spec_id'], loadout['level']
-        for spell_text, passive in project_loadout_actions(loadout).items():
+        for spell_text, passive in project_loadout_actions(loadout, visible_actions).items():
             spell = int(spell_text)
             native = db.execute('SELECT n.Name_lang,COALESCE(l.SpellLevel,0) FROM spell_name n LEFT JOIN spell_levels l ON l.SpellID=n.ID AND l.DifficultyID=0 WHERE n.ID=?', (spell,)).fetchone()
             if not native:
