@@ -72,16 +72,49 @@ pub(crate) struct Prepared {
 // Native readiness still requires the spell's actual GCD, costs and cooldowns.
 fn intrinsic_off_gcd(spec: u32, name: &str) -> bool {
     match spec {
-        71..=73 => matches!(name, "ignore_pain" | "berserker_rage" | "battle_stance" | "berserker_stance" | "defensive_stance" | "spell_reflection" | "taunt"),
+        71..=73 => matches!(
+            name,
+            "ignore_pain"
+                | "berserker_rage"
+                | "battle_stance"
+                | "berserker_stance"
+                | "defensive_stance"
+                | "spell_reflection"
+                | "taunt"
+        ),
         1467 | 1468 | 1473 => name == "quell",
         577 | 581 | 1480 => matches!(name, "demon_spikes" | "fiery_brand"),
         250..=252 => name == "dark_command",
-        102..=105 => matches!(name, "skull_bash" | "solar_beam" | "cancel_form" | "growl" | "ironfur" | "barkskin" | "prowl" | "survival_instincts" | "auto_attack"),
+        102..=105 => matches!(
+            name,
+            "skull_bash"
+                | "solar_beam"
+                | "cancel_form"
+                | "growl"
+                | "ironfur"
+                | "barkskin"
+                | "prowl"
+                | "survival_instincts"
+                | "auto_attack"
+        ),
         258 => name == "void_torrent",
         268..=270 => matches!(name, "black_ox_brew" | "purifying_brew"),
-        65 => matches!(name, "divine_protection" | "lay_on_hands" | "hand_of_reckoning" | "shield_of_the_righteous"),
-        66 => matches!(name, "ardent_defender" | "guardian_of_ancient_kings" | "lay_on_hands" | "hand_of_reckoning" | "shield_of_the_righteous"),
-        70 => matches!(name, "lay_on_hands" | "hand_of_reckoning" | "shield_of_the_righteous"),
+        65 => matches!(
+            name,
+            "divine_protection" | "lay_on_hands" | "hand_of_reckoning" | "shield_of_the_righteous"
+        ),
+        66 => matches!(
+            name,
+            "ardent_defender"
+                | "guardian_of_ancient_kings"
+                | "lay_on_hands"
+                | "hand_of_reckoning"
+                | "shield_of_the_righteous"
+        ),
+        70 => matches!(
+            name,
+            "lay_on_hands" | "hand_of_reckoning" | "shield_of_the_righteous"
+        ),
         _ => false,
     }
 }
@@ -146,7 +179,9 @@ impl Prepared {
             pickup_cast_usable,
             channel_cast_actions: BTreeSet::new(),
             gcd_active: gcd_active && !after_channel,
-            spec_id: world.get::<shared::components::ActiveSpec>(actor).map_or(0, |spec| spec.0),
+            spec_id: world
+                .get::<shared::components::ActiveSpec>(actor)
+                .map_or(0, |spec| spec.0),
             after_channel,
             ready: BTreeMap::new(),
             limits: BTreeMap::new(),
@@ -241,7 +276,9 @@ impl Prepared {
         if self.cast_active && pickup && !self.pickup_cast_usable {
             return Ok(false);
         }
-        if self.cast_active && !while_casting && !(pickup && self.pickup_cast_usable)
+        if self.cast_active
+            && !while_casting
+            && !(pickup && self.pickup_cast_usable)
             && !self.channel_cast_actions.contains(&action.name)
         {
             return Ok(false);
@@ -586,7 +623,9 @@ fn filter_primary_range(
         .is_some_and(|spec| matches!(spec.0, 577 | 581 | 1480));
     let outside_melee = crate::spell_cast::targets::position(world, actor)
         .zip(crate::spell_cast::targets::position(world, primary))
-        .zip(crate::scripted_ai::model_reach::melee_range(world, actor, primary))
+        .zip(crate::scripted_ai::model_reach::melee_range(
+            world, actor, primary,
+        ))
         .is_some_and(|((from, to), range)| from.distance(to) > range);
     // SimC76f8118 sc_demon_hunter.cpp2477–2486: a DH channel is unavailable
     // while the actor is out of melee, even if its own spell range is longer.
@@ -620,8 +659,13 @@ fn primary_in_native_range(
     // Reuse native range and live Range modifiers; do not move either unit.
     let (min, mut max) = crate::spell_cast::targets::spell_range(spell, true);
     if crate::spell_cast::targets::uses_melee_range(spell, true) {
-        let Some(range) = crate::scripted_ai::model_reach::melee_range(world, actor, primary) else {
-            error!(?actor, ?primary, "Literal melee range requires sourced combat reaches");
+        let Some(range) = crate::scripted_ai::model_reach::melee_range(world, actor, primary)
+        else {
+            error!(
+                ?actor,
+                ?primary,
+                "Literal melee range requires sourced combat reaches"
+            );
             return false;
         };
         max = range;
@@ -734,7 +778,7 @@ fn read_spell(
     let self_target = self_target || crate::spell_cast::targets::targets_caster_only(resolved);
     // SimC76f8118 sc_hunter.cpp7269–7274: start once; native repeats
     // own later shots. This applies to any native autorepeat, not a spell-ID branch.
-    if crate::spell_cast::test_harness::read_native_auto_repeat(world, actor, id) {
+    if crate::spell_cast::native_apl::auto_repeat_active(world, actor, id) {
         return Ok(());
     }
     let targets = if self_target {
@@ -890,11 +934,15 @@ fn native_readiness(
             limited: None,
             queue_delay: None,
         }),
-        Err(crate::spell_cast::CastFailure::OnCooldown | crate::spell_cast::CastFailure::NoCharges)
-            if item.is_none() =>
-        {
+        Err(
+            crate::spell_cast::CastFailure::OnCooldown | crate::spell_cast::CastFailure::NoCharges,
+        ) if item.is_none() => {
             match crate::spell_cast::read_native_cast_for_cooldown_queue(
-                world, actor, &spell, target, after_channel,
+                world,
+                actor,
+                &spell,
+                target,
+                after_channel,
             ) {
                 Ok(delay) => Ok(NativeReadiness {
                     ready: true,
