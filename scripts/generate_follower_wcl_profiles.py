@@ -31,6 +31,9 @@ SEASON_TIME_EVENT = 1552
 # Ruby Life Pools, the ranked encounter 112521.
 RUBY_LIFE_POOLS_MAP = 2521
 TALENTS_SOURCE = "TALENTS_FROM_WCL"
+# The Blizzard profile race WCL caches in Character.gameData, used only when the
+# class follower roster has no SimC or parity race for the spec.
+WCL_RACE_SOURCE = "RACE_FROM_WCL_CHARACTER"
 GEAR_SOURCE = "GEAR_ITEMS_FROM_WCL_ILVL_FROM_BAND_TRACK"
 
 
@@ -64,6 +67,14 @@ def read_races(class_profiles):
         profile["spec_id"]: {"id": profile["race"], "source": profile["race_source"]}
         for profile in class_profiles
     }
+
+
+def race_for(races, spec_id, character):
+    if spec_id in races:
+        return races[spec_id]
+    if character.get("race"):
+        return {"id": character["race"]["id"], "source": WCL_RACE_SOURCE}
+    return None
 
 
 def collect_candidates(selected, catalog):
@@ -108,12 +119,12 @@ def judge(candidates, races, decode, validate):
         for (key, _, _, class_id, spec_id, character), result in zip(candidates, decoded)
     ])
     judged = []
-    for (_, _, _, _, spec_id, _), result, verdict in zip(candidates, decoded, verdicts):
+    for (_, _, _, _, spec_id, character), result, verdict in zip(candidates, decoded, verdicts):
         reasons = list(verdict["rejections"])
         if result["error"]:
             reasons.append(f"talents: engine decode: {result['error']}")
-        if spec_id not in races:
-            reasons.append("race: unavailable in SimC and parity profiles")
+        if race_for(races, spec_id, character) is None:
+            reasons.append("race: unavailable in SimC, parity profiles and WCL character data")
         judged.append((reasons, result["purchases"], verdict["items"]))
     return judged
 
@@ -168,7 +179,7 @@ def generate(source_bytes, catalog, races, decode, validate):
             "spec_id": spec_id,
             "key_band": band,
             **describe(character),
-            "race": races[spec_id],
+            "race": race_for(races, spec_id, character),
             "gear": band_gear(character["gear"], band_items),
             "gear_source": GEAR_SOURCE,
             "median_item_level": statistics.median(item["item_level"] for item in band_items),

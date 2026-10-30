@@ -140,8 +140,26 @@ class GenerateFollowerProfilesTest(unittest.TestCase):
         reasons = output["rejected"]["paladin-retribution/10-14"][1]["reasons"]
         self.assertEqual(reasons, [
             "talents: engine decode: loadout decode: InvalidNodes",
-            "race: unavailable in SimC and parity profiles",
+            "race: unavailable in SimC, parity profiles and WCL character data",
         ])
+
+    def test_wcl_character_race_fills_specs_without_a_roster_race(self):
+        self.races = {}
+        overgeared = self.selected["paladin-retribution/10-14"]["characters"][1]
+        overgeared["race"] = {"id": 70, "name": "Dracthyr"}
+        output = self.generate()
+        profile = output["profiles"]["paladin-retribution/10-14"]
+        self.assertEqual(profile["race"], {"id": 70, "source": "RACE_FROM_WCL_CHARACTER"})
+        self.assertNotIn("paladin-retribution/6-9", output["profiles"])
+        self.assertEqual(
+            output["rejected"]["paladin-retribution/6-9"][0]["reasons"],
+            ["race: unavailable in SimC, parity profiles and WCL character data"],
+        )
+
+    def test_roster_race_wins_over_wcl_character_race(self):
+        self.selected["paladin-retribution/10-14"]["characters"][1]["race"] = {"id": 70}
+        profile = self.generate()["profiles"]["paladin-retribution/10-14"]
+        self.assertEqual(profile["race"], {"id": 3, "source": "RACE_FROM_SIMC_PROFILE"})
 
     def test_race_comes_from_class_follower_roster(self):
         roster = [{"spec_id": 1473, "race": 52, "race_source": "RACE_FROM_PARITY_PROFILE"}]
