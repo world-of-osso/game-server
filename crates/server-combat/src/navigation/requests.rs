@@ -41,16 +41,20 @@ impl Navigation {
             entity: entity.to_bits(),
             id,
             map_id: request.map_id,
-            query: if matches!(request.goal, Goal::Follow(_)) {
-                WorkerQuery::FollowPath {
+            query: match request.goal {
+                Goal::FollowFormation(_, owner) => WorkerQuery::FollowFormation {
                     from: point(request.from),
                     to: point(request.to),
-                }
-            } else {
-                WorkerQuery::Path {
+                    owner,
+                },
+                Goal::Follow(_) => WorkerQuery::FollowPath {
                     from: point(request.from),
                     to: point(request.to),
-                }
+                },
+                _ => WorkerQuery::Path {
+                    from: point(request.from),
+                    to: point(request.to),
+                },
             },
         });
     }
@@ -296,7 +300,7 @@ fn remember_partial_endpoint(
 }
 
 fn same_route_request(previous: &MoveRequest, next: &MoveRequest) -> bool {
-    let same_target = if matches!(next.goal, Goal::Follow(_)) {
+    let same_target = if matches!(next.goal, Goal::Follow(_) | Goal::FollowFormation(..)) {
         point(previous.to) == point(next.to)
     } else {
         point(previous.to).distance(point(next.to)) <= REPATH_DISTANCE
