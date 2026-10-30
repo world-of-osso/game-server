@@ -164,6 +164,7 @@ fn academy_pad_follower_regroups_after_crawth_flight() {
     let root = PathBuf::from(std::env::var_os("GAME_SERVER_GROUND_DIR").unwrap());
     let (mut h, follower, _) = spawn_profile_fixture_with_plugins(209057, |app| {
         install_native_follow_movement(app);
+        app.add_plugins(crate::grid_activity::GridActivityPlugin);
         app.add_systems(
             Update,
             (
@@ -193,9 +194,9 @@ fn academy_pad_follower_regroups_after_crawth_flight() {
         InMap::continent(2526),
         crate::creature_ai::PartyFollowSlot::new(0, 4),
         crate::creature_ai::SpawnPoint {
-            x: departure.x,
-            y: departure.y,
-            z: departure.z,
+            x: 1410.22,
+            y: 955.637,
+            z: 2771.71,
             wander_distance: 0.0,
             speed_walk,
             speed_run,
@@ -210,6 +211,8 @@ fn academy_pad_follower_regroups_after_crawth_flight() {
         .get_mut::<crate::networking::CombatTarget>(h.caster)
         .unwrap()
         .0 = None;
+    // Register the entrance spawn grid while the owner is still in its neighborhood.
+    h.advance(2);
     jump_movement::move_jump(h.app.world_mut(), follower, 0, position(landing), 50.0, 0.0);
     *h.app.world_mut().get_mut::<Position>(h.caster).unwrap() = position(landing);
     h.advance(120);
