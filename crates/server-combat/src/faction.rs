@@ -79,6 +79,46 @@ pub(crate) fn player_affected(is_player: bool, flags: Option<&UnitFlags>) -> boo
     is_player || flags.is_some_and(|flags| flags.0 & UNIT_FLAG_PLAYER_CONTROLLED != 0)
 }
 
+/// TC Object.cpp `IsValidAttackTarget`: immunity applies in both directions.
+pub(crate) fn immunity_blocks_attack(
+    attacker_flags: Option<&UnitFlags>,
+    attacker_player_controlled: bool,
+    target_flags: Option<&UnitFlags>,
+    target_player_controlled: bool,
+) -> bool {
+    let immunity = |flags: Option<&UnitFlags>, other_is_player: bool| {
+        let mask = if other_is_player {
+            UnitFlags::IMMUNE_TO_PC
+        } else {
+            UnitFlags::IMMUNE_TO_NPC
+        };
+        flags.is_some_and(|flags| flags.0 & mask != 0)
+    };
+    immunity(target_flags, attacker_player_controlled)
+        || immunity(attacker_flags, target_player_controlled)
+}
+
+pub(crate) fn world_immunity_blocks_attack(
+    world: &World,
+    attacker: Entity,
+    target: Entity,
+) -> bool {
+    let attacker_flags = world.get::<UnitFlags>(attacker);
+    let target_flags = world.get::<UnitFlags>(target);
+    let player_controlled = |unit, flags| {
+        player_affected(
+            world.get::<shared::components::Player>(unit).is_some(),
+            flags,
+        )
+    };
+    immunity_blocks_attack(
+        attacker_flags,
+        player_controlled(attacker, attacker_flags),
+        target_flags,
+        player_controlled(target, target_flags),
+    )
+}
+
 /// Faction identity of one unit for attack/assist checks.
 #[derive(Debug, Clone, Copy)]
 pub struct UnitFaction {

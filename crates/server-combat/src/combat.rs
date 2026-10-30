@@ -327,6 +327,13 @@ impl AttackRules<'_, '_> {
             .unit_flags
             .get(victim)
             .is_ok_and(|flags| !flags.can_be_attacked_by(player_controlled));
+        let target_controlled = self.unit_faction(victim).is_some_and(|unit| unit.is_player);
+        let immune = crate::faction::immunity_blocks_attack(
+            self.unit_flags.get(attacker).ok(),
+            player_controlled,
+            self.unit_flags.get(victim).ok(),
+            target_controlled,
+        );
         let dueling = self
             .factions
             .get(attacker)
@@ -357,6 +364,7 @@ impl AttackRules<'_, '_> {
             && !evading
             && !self.dead(victim)
             && !blocked_by_flags
+            && !immune
             && permitted
             && detected
     }
@@ -858,6 +866,9 @@ pub(crate) fn auto_attack_system(world: &mut World) {
         else {
             continue;
         };
+        if crate::faction::world_immunity_blocks_attack(world, attacker, target) {
+            continue;
+        }
         let Some(melee_range) =
             crate::scripted_ai::model_reach::melee_range(world, attacker, target)
         else {
@@ -889,6 +900,9 @@ pub(crate) fn auto_attack_system(world: &mut World) {
 
 /// Repeat a landed white swing without advancing or resetting its normal timer.
 pub fn repeat_melee_swing(world: &mut World, attacker: Entity, target: Entity, hand: Hand) {
+    if crate::faction::world_immunity_blocks_attack(world, attacker, target) {
+        return;
+    }
     let Some(melee_range) = crate::scripted_ai::model_reach::melee_range(world, attacker, target)
     else {
         return;

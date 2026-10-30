@@ -199,6 +199,7 @@ fn valid_victim(
     templates: &FactionTemplates,
     creature_faction: u32,
     creature_map: &InMap,
+    creature: Entity,
     victim: Entity,
 ) -> bool {
     let Ok((_, health, faction, _, death, is_player, flying, npc_dead, map, flags)) =
@@ -206,20 +207,31 @@ fn valid_victim(
     else {
         return false;
     };
+    let creature_info = victims.get(creature).ok();
+    let creature_flags = creature_info.and_then(|row| row.9);
+    let creature_controlled =
+        creature_info.is_some_and(|row| crate::faction::player_affected(row.5, row.9));
+    let victim_controlled = crate::faction::player_affected(is_player, flags);
     let alive = health.current > 0.0
         && !npc_dead
         && death.is_none_or(|death| death.state == shared::death::DeathState::Alive);
     map == Some(creature_map)
         && alive
         && !flying
+        && !crate::faction::immunity_blocks_attack(
+            creature_flags,
+            creature_controlled,
+            flags,
+            victim_controlled,
+        )
         && templates.can_attack(
             UnitFaction {
                 template: creature_faction,
-                is_player: false,
+                is_player: creature_controlled,
             },
             UnitFaction {
                 template: faction.map_or(0, |faction| faction.0),
-                is_player: crate::faction::player_affected(is_player, flags),
+                is_player: victim_controlled,
             },
         )
 }
@@ -283,7 +295,14 @@ impl PlayerSight<'_, '_> {
             == Reaction::Hostile;
         (distance < radius
             && hostile
-            && valid_victim(&self.victims, &self.templates, faction.0, map, player))
+            && valid_victim(
+                &self.victims,
+                &self.templates,
+                faction.0,
+                map,
+                creature,
+                player,
+            ))
         .then_some(distance)
     }
 
@@ -692,7 +711,10 @@ pub(crate) fn add_unmodified_threat(
     attacker: Entity,
     amount: f32,
 ) {
-    if creature == attacker || !can_engage(world, creature) {
+    if creature == attacker
+        || !can_engage(world, creature)
+        || crate::faction::world_immunity_blocks_attack(world, creature, attacker)
+    {
         return;
     }
     if let Some(mut threat) = world.get_mut::<ThreatTable>(creature) {
@@ -735,7 +757,9 @@ fn engage_after_threat(world: &mut World, creature: Entity, attacker: Entity) {
 ///then attack the caster. Aura11 holds selection independently until removal.
 ///Units without a creature threat list (including players) cannot be forced.
 pub(crate) fn taunt(world: &mut World, creature: Entity, caster: Entity) {
-    if !can_engage(world, creature) {
+    if !can_engage(world, creature)
+        || crate::faction::world_immunity_blocks_attack(world, creature, caster)
+    {
         return;
     }
     let table = world

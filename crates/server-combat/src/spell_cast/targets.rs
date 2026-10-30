@@ -389,12 +389,20 @@ pub fn relation_matches(world: &World, caster: Entity, target: Entity, relation:
     if let Some(arena) = arena {
         return match relation {
             Relation::Enemy => {
+                let attacker = unit_faction(world, caster);
+                let defender = unit_faction(world, target);
+                let attacker_flags = world.get::<shared::components::UnitFlags>(caster);
+                let target_flags = world.get::<shared::components::UnitFlags>(target);
                 matches!(
                     arena,
                     crate::pvp::arena_combat::ArenaRelation::Enemy { can_attack: true }
-                ) && world
-                    .get::<shared::components::UnitFlags>(target)
-                    .is_none_or(|flags| flags.is_attackable())
+                ) && target_flags.is_none_or(|flags| flags.is_attackable())
+                    && !crate::faction::immunity_blocks_attack(
+                        attacker_flags,
+                        attacker.is_player,
+                        target_flags,
+                        defender.is_player,
+                    )
             }
             _ => arena == crate::pvp::arena_combat::ArenaRelation::Teammate,
         };
@@ -402,11 +410,18 @@ pub fn relation_matches(world: &World, caster: Entity, target: Entity, relation:
     // The duel opponent is hostile: attackable, never assisted.
     let dueling = dueling(world, caster, target);
     let templates = world.resource::<FactionTemplates>();
+    let caster_entity = caster;
     let target_entity = target;
     let (caster, target) = (unit_faction(world, caster), unit_faction(world, target));
-    let attackable = world
-        .get::<shared::components::UnitFlags>(target_entity)
-        .is_none_or(|flags| flags.can_be_attacked_by(caster.is_player));
+    let attacker_flags = world.get::<shared::components::UnitFlags>(caster_entity);
+    let target_flags = world.get::<shared::components::UnitFlags>(target_entity);
+    let attackable = target_flags.is_none_or(|flags| flags.can_be_attacked_by(caster.is_player))
+        && !crate::faction::immunity_blocks_attack(
+            attacker_flags,
+            caster.is_player,
+            target_flags,
+            target.is_player,
+        );
     match relation {
         Relation::Enemy => attackable && (dueling || templates.can_attack(caster, target)),
         _ => !dueling && templates.can_assist(caster, target),
