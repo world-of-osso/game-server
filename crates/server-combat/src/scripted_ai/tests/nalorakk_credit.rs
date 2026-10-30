@@ -29,7 +29,18 @@ fn hoardmonger_unblocked_attack_enters_combat_without_regeneration() {
         .get::<ThreatTable>(boss)
         .unwrap()
         .threat_for(player.to_bits());
-    assert!(threat > 0.0, "melee must produce threat: {threat}");
+    assert!(
+        threat > 0.0,
+        "melee must produce threat: {threat}; boss health {:?} flags {:?} position {:?} state {:?}; player position {:?} attack {:?}; reach {:?}; events {:?}",
+        h.health(boss),
+        h.app.world().get::<UnitFlags>(boss),
+        h.app.world().get::<Position>(boss),
+        h.app.world().get::<crate::creature_ai::CreatureState>(boss),
+        h.app.world().get::<Position>(player),
+        h.app.world().get::<crate::combat::AutoAttack>(player),
+        crate::scripted_ai::model_reach::melee_range(h.app.world(), player, boss),
+        h.inbox(0).log
+    );
     assert_eq!(
         h.app.world().get::<CombatStatus>(boss),
         Some(&CombatStatus(true))
