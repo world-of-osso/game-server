@@ -107,5 +107,6 @@ pub fn fire_breath_rank_one(
     _spell: u32,
 ) -> Result<crate::spell_info::SpellInfo, String> {
     // Generic refreshability creates fresh zero-empower state in dot.cpp458–477.
-    Ok(server::test_support::fire_breath_release(world, caster, 1))
+    crate::spell_cast::script_registry::empower_release_preview(world, caster, 357208, 1)
+        .ok_or_else(|| "native Fire Breath release script is not registered".into())
 }

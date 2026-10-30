@@ -155,9 +155,10 @@ pub(super) use script_registry::{
 };
 mod midnight_items;
 mod protection_items;
+pub use batch9::has_active_consecration;
 pub use batch9::spawn_consecration;
 #[cfg(any(test, feature = "test-support"))]
-pub use batch9::{has_active_consecration, prepare_simc_precombat_consecration};
+pub use batch9::prepare_simc_precombat_consecration;
 pub use batch10::launch_guldan_meteor;
 pub(crate) use midnight_items::register as register_midnight_items;
 pub(super) use script_registry::healing_multiplier as soul_of_the_forest_direct_multiplier;
