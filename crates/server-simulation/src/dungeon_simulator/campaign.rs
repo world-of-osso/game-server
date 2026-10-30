@@ -248,11 +248,10 @@ fn unattackable_objective_is_approached_using_its_live_position() {
         x: at.x + 2.0,
         ..at
     };
-    run.app
-        .world_mut()
-        .entity_mut(boss)
-        .insert(moved)
-        .remove::<crate::creature_aggro::AggroRange>();
+    run.app.world_mut().entity_mut(boss).insert((
+        moved,
+        shared::components::UnitFlags(shared::components::UnitFlags::IMMUNE_TO_PC),
+    ));
     run.control().unwrap();
     let target = run
         .app
@@ -274,7 +273,7 @@ fn unattackable_objective_is_approached_using_its_live_position() {
 }
 
 #[test]
-fn relocated_attackable_objective_uses_live_position() {
+fn relocated_attackable_objective_without_aggro_uses_live_position() {
     let mut run = spawn_run(1, &mut None).unwrap();
     let boss = run.actors[&20375720];
     let step = run
@@ -290,7 +289,11 @@ fn relocated_attackable_objective_uses_live_position() {
         x: at.x + 2.0,
         ..at
     };
-    run.app.world_mut().entity_mut(boss).insert(moved);
+    run.app
+        .world_mut()
+        .entity_mut(boss)
+        .insert(moved)
+        .remove::<crate::creature_aggro::AggroRange>();
     run.control().unwrap();
     assert_eq!(
         run.app
@@ -300,6 +303,15 @@ fn relocated_attackable_objective_uses_live_position() {
             .0,
         Vec3::new(moved.x, moved.y, moved.z)
     );
+    for unit in [run.party.owner, run.party.tank] {
+        run.app.world_mut().entity_mut(unit).insert(moved);
+    }
+    run.control().unwrap();
+    assert!(
+        !run.report.pulls.is_empty(),
+        "attackable objective must attempt native admission without AggroRange"
+    );
+    assert!(run.waiting_objective.is_none());
 }
 
 #[test]
@@ -2129,17 +2141,12 @@ impl Run {
             .unwrap();
         let from = Vec3::new(tank_position.x, tank_position.y, tank_position.z);
         let to = Vec3::new(target_position.x, target_position.y, target_position.z);
-        let attackable = self
-            .app
-            .world()
-            .get::<crate::creature_aggro::AggroRange>(target)
-            .is_some()
-            && crate::spell_cast::targets::relation_matches(
-                self.app.world(),
-                self.party.owner,
-                target,
-                crate::spell_cast::targets::Relation::Enemy,
-            );
+        let attackable = crate::spell_cast::targets::relation_matches(
+            self.app.world(),
+            self.party.owner,
+            target,
+            crate::spell_cast::targets::Relation::Enemy,
+        );
         if !attackable {
             if let Some(step) = server::test_support::objectives::next(
                 self.app.world_mut(),
