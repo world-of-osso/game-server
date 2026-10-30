@@ -23,7 +23,7 @@ pub struct CollisionDropMovement {
     phase: Phase,
 }
 
-pub(super) fn advance_collision_drops(world: &mut World) {
+pub(crate) fn advance_collision_drops(world: &mut World) {
     let requests = std::mem::take(&mut world.resource_mut::<Navigation>().drop_requests);
     for (unit, (map_id, drop)) in requests {
         start_departure(world, unit, map_id, drop);
@@ -37,7 +37,7 @@ pub(super) fn advance_collision_drops(world: &mut World) {
     }
 }
 
-fn start_departure(
+pub(crate) fn start_departure(
     world: &mut World,
     unit: Entity,
     map_id: u32,

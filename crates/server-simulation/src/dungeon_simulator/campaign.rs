@@ -1999,20 +1999,36 @@ impl Run {
                 server::test_support::transport::Action::ObjectGossip
                     | server::test_support::transport::Action::ObjectScript
             );
+            let drop = transport.action == server::test_support::transport::Action::CollisionDrop;
             let actors = if source_objects {
                 &self.objects
             } else {
                 &self.actors
             };
-            let npc = *actors
-                .get(&transport.source_guid)
-                .ok_or("registered transport source actor absent")?;
-            let at = *self
-                .app
-                .world()
-                .get::<Position>(npc)
-                .ok_or("registered transport source lacks position")?;
-            let position = Vec3::new(at.x, at.y, at.z);
+            let npc = if drop {
+                None
+            } else {
+                Some(
+                    *actors
+                        .get(&transport.source_guid)
+                        .ok_or("registered transport source actor absent")?,
+                )
+            };
+            let position = if let Some(npc) = npc {
+                let at = self
+                    .app
+                    .world()
+                    .get::<Position>(npc)
+                    .ok_or("registered transport source lacks position")?;
+                Vec3::new(at.x, at.y, at.z)
+            } else {
+                self.graph
+                    .packs
+                    .iter()
+                    .find(|pack| pack.id == source)
+                    .ok_or("registered transport source waypoint absent")?
+                    .point()
+            };
             if Vec3::new(from.x, from.y, from.z).distance(position) > transport.radius {
                 self.app
                     .world_mut()
@@ -2028,7 +2044,7 @@ impl Run {
                 self.app.world_mut(),
                 self.party.owner,
                 npc,
-                transport.action,
+                &transport,
             )?;
             super::movement::forget_party_travel(self.app.world_mut(), self.party.owner);
             self.record_pull(

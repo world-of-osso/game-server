@@ -295,6 +295,64 @@ fn place_follower_on_upper(h: &mut Harness, follower: Entity, entry: u32) {
 
 #[test]
 #[ignore = "requires actual2651 navigation/ground and imported follower profile"]
+fn registered_drop_moves_player_follower_and_pet_to_the_native_landing() {
+    use bevy::ecs::system::RunSystemOnce;
+    let (mut h, follower) = create_native_follower_fixture();
+    let owner = h.caster;
+    let pet = h
+        .app
+        .world_mut()
+        .spawn((
+            crate::hunter_pet::HunterPet {
+                owner: follower,
+                slot: 0,
+            },
+            InMap::continent(MAP),
+            position(UPPER),
+            Health {
+                current: 100.0,
+                max: 100.0,
+            },
+        ))
+        .id();
+    let edge = crate::test_support::graph::TransportEdge {
+        from: 1,
+        to: 2,
+        source_guid: 0,
+        radius: 1.0,
+        departure: Some(DEPARTURE.to_array()),
+        landing: LANDING.to_array(),
+        action: crate::test_support::transport::Action::CollisionDrop,
+    };
+    crate::test_support::transport::activate(h.app.world_mut(), owner, None, &edge).unwrap();
+    for _ in 0..150 {
+        h.app
+            .world_mut()
+            .resource_mut::<Time>()
+            .advance_by(std::time::Duration::from_millis(50));
+        crate::scripted_ai::movement::point_movement_system(h.app.world_mut());
+        crate::scripted_ai::fall_movement::advance_falls(h.app.world_mut());
+        h.app
+            .world_mut()
+            .run_system_once(crate::scripted_ai::fall_movement::release_finished_falls)
+            .unwrap();
+        crate::navigation::collision_drop::advance_collision_drops(h.app.world_mut());
+    }
+    for unit in [owner, follower, pet] {
+        let feet = point(*h.app.world().get::<Position>(unit).unwrap());
+        assert!(
+            feet.distance(LANDING) <= ::navigation::CELL_HEIGHT,
+            "unit {unit:?} landed at {feet:?}"
+        );
+        assert!(!crate::test_support::transport::in_progress(
+            h.app.world(),
+            unit
+        ));
+    }
+}
+
+#[test]
+#[ignore = "requires actual2651 navigation/ground and imported follower profile"]
 fn darkflame_drop_follower_sim_traverses_only_after_upper_route_stage() {
     let (mut h, follower) = create_native_follower_fixture();
     h.advance(8);

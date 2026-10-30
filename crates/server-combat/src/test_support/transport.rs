@@ -8,6 +8,7 @@ pub enum Action {
     Proximity,
     ObjectGossip,
     ObjectScript,
+    CollisionDrop,
 }
 
 #[derive(Clone, Debug)]
@@ -18,6 +19,7 @@ pub struct Registration {
     pub destination: Vec3,
     pub distance: f32,
     pub radius: f32,
+    pub departure: Option<Vec3>,
     pub action: Action,
 }
 
@@ -51,6 +53,7 @@ pub fn read_registrations(
             destination,
             distance,
             radius: crate::npc_interaction::INTERACTION_DISTANCE,
+            departure: None,
             action: Action::SpellClick,
         });
     }
@@ -63,6 +66,7 @@ pub fn read_registrations(
                 destination: *destination,
                 distance: source.distance(*destination),
                 radius: *radius,
+                departure: None,
                 action: Action::Proximity,
             },
         ));
@@ -107,6 +111,7 @@ fn read_object_registrations(
                 destination,
                 distance: source.distance(destination),
                 radius: crate::game_objects::GAME_OBJECT_INTERACT_DISTANCE,
+                departure: None,
                 action,
             });
         }
@@ -200,8 +205,61 @@ pub fn install_taxi_system(app: &mut App, db: &rusqlite::Connection) -> Result<(
     Ok(())
 }
 
+pub fn install_drop_system(
+    app: &mut App,
+    db: &rusqlite::Connection,
+    nav_root: &std::path::Path,
+) -> Result<(), String> {
+    app.insert_resource(crate::navigation::Navigation::new(nav_root));
+    if !app.world().contains_resource::<crate::ground::GroundMap>() {
+        app.insert_resource(open_ground(db)?);
+    }
+    app.add_systems(
+        FixedUpdate,
+        crate::navigation::collision_drop::advance_collision_drops,
+    );
+    Ok(())
+}
+
+fn start_collision_drop(
+    world: &mut World,
+    owner: Entity,
+    edge: &super::graph::TransportEdge,
+) -> Result<(), String> {
+    let copy = *world
+        .get::<crate::maps::InMap>(owner)
+        .ok_or("drop owner lacks map")?;
+    let departure = edge.departure.ok_or("registered drop lacks departure")?;
+    let drop = ::navigation::CollisionDrop {
+        after_corner: 0,
+        departure: Vec3::from_array(departure),
+        landing: Vec3::from_array(edge.landing),
+    };
+    let mut riders = vec![owner];
+    riders.extend(
+        world
+            .query::<(Entity, &crate::followers::Follower, &crate::maps::InMap)>()
+            .iter(world)
+            .filter_map(|(unit, follower, map)| {
+                (follower.owner == owner && *map == copy).then_some(unit)
+            }),
+    );
+    let pets: Vec<_> = riders
+        .iter()
+        .flat_map(|unit| crate::hunter_pet::active_owned_pets(world, *unit))
+        .collect();
+    riders.extend(pets);
+    for rider in riders {
+        crate::navigation::collision_drop::start_departure(world, rider, copy.map_id, drop.clone());
+    }
+    Ok(())
+}
+
 pub fn in_progress(world: &World, unit: Entity) -> bool {
-    world.get::<crate::taxi::TaxiFlight>(unit).is_some()
+    world
+        .get::<crate::navigation::collision_drop::CollisionDropMovement>(unit)
+        .is_some()
+        || world.get::<crate::taxi::TaxiFlight>(unit).is_some()
         || world.get::<TaxiLandingPending>(unit).is_some()
         || world
             .get::<crate::scripted_ai::fall_movement::FallMovement>(unit)
@@ -217,10 +275,14 @@ pub fn in_progress(world: &World, unit: Entity) -> bool {
 pub fn activate(
     world: &mut World,
     owner: Entity,
-    npc: Entity,
-    action: Action,
+    npc: Option<Entity>,
+    edge: &super::graph::TransportEdge,
 ) -> Result<(), String> {
-    match action {
+    if edge.action == Action::CollisionDrop {
+        return start_collision_drop(world, owner, edge);
+    }
+    let npc = npc.ok_or("registered transport source actor absent")?;
+    match edge.action {
         Action::SpellClick => {
             let entry = world
                 .get::<shared::components::Npc>(npc)
@@ -242,6 +304,7 @@ pub fn activate(
                 return Err("registered game object script did not start transport".into());
             }
         }
+        Action::CollisionDrop => unreachable!(),
     }
     Ok(())
 }
