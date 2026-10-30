@@ -4,6 +4,40 @@ use crate::auras::{self, ActiveAuras};
 use shared::{components::PowerType, protocol::CombatLogKind};
 
 #[test]
+#[ignore = "requires Guardian mastery and native world data"]
+fn guardian_mastery_follows_non_percent_heals() {
+    use crate::spell_cast::effects::{self, EffectCtx};
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::components::Health;
+
+    let mut run = prepare_registered_player(104, 1).unwrap();
+    engage(&mut run);
+    let actor = run.actor;
+    assert!(auras::has_aura(run.app.world(), actor, 155783));
+    run.app.world_mut().get_mut::<crate::stats::CharacterStats>(actor).unwrap().crit_pct = 0.0;
+    let health = run.app.world_mut().get_mut::<Health>(actor).unwrap();
+    health.into_inner().current = 1.0;
+    run.app.world_mut().resource_mut::<ObservedCombatEvents>().0.clear();
+    let heal = |run: &mut Run, spell_id, amount| {
+        let spell = crate::spell_cast::load_triggered_spell(run.app.world(), spell_id, 1).unwrap();
+        let ctx = EffectCtx { caster: actor, spell: &spell, depth: 1, dest: None, chain_multiplier: 1.0 };
+        effects::apply_fixed_heal(run.app.world_mut(), &ctx, actor, amount);
+    };
+    heal(&mut run, 204069, 10_000.0);
+    heal(&mut run, 204069, 20_000.0);
+    heal(&mut run, 474683, 10_000.0);
+    heal(&mut run, 143924, 10_000.0);
+    auras::remove_auras(run.app.world_mut(), actor, auras::RemoveReason::Expired, |a| a.spell_id == 155783);
+    heal(&mut run, 204069, 10_000.0);
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0;
+    let mastery: Vec<_> = events.iter().filter(|event| event.spell_id == Some(227034) && event.kind == CombatLogKind::Heal).collect();
+    assert_eq!(mastery.len(), 2, "only eligible heals with mastery trigger once");
+    assert!(mastery.iter().all(|event| event.source == Some(actor.to_bits()) && event.target == Some(actor.to_bits())));
+    assert!(mastery[0].amount > 0);
+    assert!((mastery[1].amount - 2 * mastery[0].amount).abs() <= 1);
+}
+
+#[test]
 #[ignore = "requires Guardian Galactic Guardian profile and native world data"]
 fn guardian_galactic_mangle_does_not_proc_from_its_self_effect() {
     let mut run = prepare_registered_player(104, 1).unwrap();
