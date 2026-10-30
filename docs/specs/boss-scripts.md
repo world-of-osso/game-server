@@ -39,6 +39,7 @@
 - TC 15e0ed76 `instance_the_stonevault.cpp:54,100–121` and `boss_edna.cpp:94,165–192`: after five deaths tagged `edna_intro_trash` in the same copy, wait 3 seconds, remove aura 447230 and walk E.D.N.A. 210108 to WoW (1.94097, 0.512153, 361.66537). One second after arrival, remove only PC immunity. Restore the unlocked state when the boss reappears in that copy. TDB tags template 210109; the five Stonevault spawns already inherit the tag. Intro conversation 25768 and Anchor Here 45313 remain unported.
 
 - TC 15e0ed76 `instance_the_stonevault.cpp` doorData opens GO 440235 (Skarmorak route) and GO 440239 (Machinists route) when E.D.N.A. encounter 2854 is Done. Each copy retains its own state, including when doors reload.
+- `STONEVAULT_FINAL_DOOR_LOG_CORRELATED`: Open GO 440238 after both Master Machinists complete encounter 2888. WCL `8maLdvGchJ1MK97g` fight 1 records the encounter ending at 1,489,107 ms; actor 4 crosses the door plane between 1,541,613 and 1,543,860 ms. This is a log-correlated policy, not a verified Retail trigger.
 
 ## TWW Skarmorak source admission
 
