@@ -2,6 +2,10 @@
 
 **TRANSPORT_REGISTRY_DUPLICATED:** Simulator extraction repeats dispatch across production transport handlers. A new production edge requires an extraction registration and a test against its live handler until a shared registry replaces both. The follower-map inventory covers Azure books, Ruby ferry, Darkflame cart and collision drop, Academy pads, Murder Row gateway, Nalorakk pyres and Voidscar portal. The world database has no same-map `areatrigger_teleport` among the 27 follower maps; cross-map entries, player spells, dungeon entry/release, PvP, housing and admin staging are not in-dungeon route edges. Azure book actions and the final endpoint retain the source limitations documented in [Azure translocation](azure-translocation.md).
 
+## Party route progress —2026-10-30
+
+In the 2813 seed-1 stall, the leader repeatedly moved ahead during combat while the tank stayed near earlier pulls. Both use the same frozen walk graph. After the leader stopped, the tank followed a long valid loop: its remaining route fell from 724.8 to 296.3 yd over 50 simulated seconds, although direct distance initially increased. Leader-only movement detection falsely declared a stall. The driver waits when the tank's walk distance exceeds its opening range and measures decreasing remaining route distance for stable goals; arbitrary motion does not count.
+
 ## Hoardmonger interaction objective —2026-10-30
 
 The interaction driver uses the native spellclick and offering systems to pick up food and feed the six unfed avatars before waiting on Hoardmonger. The server's existing `HOARDMONGER_UNLOCK_LOG_CORRELATED` and inferred delivery-radius limitations remain; the driver does not clear immunity itself.
