@@ -75,16 +75,15 @@ impl Rotation {
     }
 
     pub fn start_combat_at(&mut self, started_at: f64) {
-        let Encounter::Fixture {
-            duration, style, ..
-        } = self.encounter
-        else {
-            unreachable!("literal Ret fixture validated at load");
-        };
-        self.encounter = Encounter::Fixture {
-            started_at,
-            duration,
-            style,
+        self.encounter = match self.encounter {
+            Encounter::Fixture {
+                duration, style, ..
+            } => Encounter::Fixture {
+                started_at,
+                duration,
+                style,
+            },
+            Encounter::Dungeon { .. } => Encounter::Dungeon { started_at },
         };
     }
 

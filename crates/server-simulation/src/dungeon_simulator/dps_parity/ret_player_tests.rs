@@ -16,6 +16,7 @@ fn class_follower_ret_dungeon_apl_casts_in_native_pull() {
     };
     let mut rotation =
         ret_rotation::Rotation::load(run.app.world_mut(), run.actor, encounter).unwrap();
+    rotation.start_combat_at(crate::spell_cast::now(run.app.world()));
     engage(&mut run);
     for _ in 0..100 {
         rotation
