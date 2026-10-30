@@ -50,7 +50,7 @@ fn has_conductive_energy(world: &World, caster: Entity) -> bool {
     enhancement && conductive
 }
 
-fn owns_rod(world: &World, target: Entity, caster: Entity) -> bool {
+pub(crate) fn owns_rod(world: &World, target: Entity, caster: Entity) -> bool {
     world.get::<ActiveAuras>(target).is_some_and(|auras| {
         auras
             .iter()
@@ -111,7 +111,7 @@ fn choose_application_target(
     Some(target)
 }
 
-fn mirror_existing_rods(world: &mut World, ctx: &EffectCtx, damage: f32) {
+pub(crate) fn mirror_existing_rods(world: &mut World, ctx: &EffectCtx, damage: f32) {
     if damage <= 0.0 {
         return;
     }

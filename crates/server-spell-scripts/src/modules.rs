@@ -185,6 +185,7 @@ register_modules! {
     elemental_offering: (2623, "modules/elemental_offering.rs"),
     elemental_overload_ascendance: (2627, "modules/elemental_overload_ascendance.rs"),
     elemental_primals: (2628, "modules/elemental_primals.rs"),
+    elemental_rod: (9805, "modules/elemental_rod.rs"),
     elemental_quake_overload: (2625, "modules/elemental_quake_overload.rs"),
     elemental_storm_overload: (2629, "modules/elemental_storm_overload.rs"),
     elemental_tier: (2622, "modules/elemental_tier.rs"),
