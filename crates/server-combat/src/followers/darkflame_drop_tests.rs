@@ -579,6 +579,147 @@ fn darkflame_non_tank_approach_holds_only_for_watchers_that_would_aggro() {
 }
 
 #[test]
+#[ignore = "requires Windrunner navigation/ground and imported follower profile"]
+fn followers_arrive_on_curved_windrunner_route() {
+    use shared::components::{Npc, UnitFactionTemplate, UnitLevel};
+    use shared::group::GroupRole;
+    let (mut h, first) = create_native_follower_fixture_for(209072);
+    let map_id = 2805;
+    h.app.insert_resource(GroundMap::new(
+        &assets(),
+        HashMap::from([(map_id, 6_099_383)]),
+    ));
+    let native = crate::spell_cast::test_harness::load_native_creature_world(&[6]);
+    h.app
+        .world_mut()
+        .resource_mut::<crate::world_data::WorldData>()
+        .templates
+        .extend(native.templates);
+    h.app
+        .insert_resource(crate::line_of_sight::LineOfSight::open_arena());
+    let owner = h.caster;
+    crate::combat::combat_stop(h.app.world_mut(), owner);
+    let profile = h
+        .app
+        .world()
+        .get::<super::Follower>(first)
+        .unwrap()
+        .profile
+        .clone();
+    let faction = *h.app.world().get::<UnitFactionTemplate>(first).unwrap();
+    let mut followers = vec![first];
+    for slot in 1..4 {
+        let actor = crate::spell_cast::test_harness::spawn_npc(&mut h.app, 0.0);
+        let mut profile = profile.clone();
+        if slot == 1 {
+            profile.role = GroupRole::Tank;
+        }
+        h.app.world_mut().entity_mut(actor).insert((
+            Npc {
+                template_id: profile.entry,
+                name: profile.name.clone(),
+            },
+            faction,
+            UnitLevel(10),
+            super::Follower { owner, profile },
+            crate::creature_ai::PartyFollowSlot::new(slot, 4),
+            crate::creature_ai::SpawnPoint {
+                x: 5358.188,
+                y: 101.434,
+                z: 3146.1702,
+                wander_distance: 0.0,
+                speed_walk: 1.0,
+                speed_run: 1.0,
+            },
+        ));
+        followers.push(actor);
+    }
+    // Positions from the physical instance10 route through the Windrunner courtyard.
+    let start = Vec3::new(5358.188, 101.434, 3146.1702);
+    let corners = [
+        start,
+        Vec3::new(5365.77, 101.272, 3187.69),
+        Vec3::new(5331.647, 101.156, 3213.7322),
+    ];
+    h.app.world_mut().entity_mut(owner).insert((
+        position(start),
+        InMap::continent(map_id),
+        UnitLevel(10),
+    ));
+    for &unit in &followers {
+        h.app.world_mut().entity_mut(unit).insert((
+            position(start),
+            InMap::continent(map_id),
+            crate::auras::AuraStatMods {
+                movement_speed: 0.0,
+                ..Default::default()
+            },
+        ));
+    }
+    let mut collision = los::LosMap::new(&assets().join(format!("los/{map_id}")));
+    let mut nav =
+        ::navigation::NavigationMap::open(&navigation_root().join(map_id.to_string())).unwrap();
+    let mut owner_route = vec![start];
+    for leg in corners.windows(2) {
+        let points = nav
+            .complete_walk_path(leg[0], leg[1])
+            .expect("owner's curved route must be walkable");
+        assert!(points.last().is_some_and(|end| end.distance(leg[1]) < 1.0));
+        owner_route.extend(points);
+    }
+    let mut owner_steps = 0;
+    for leg in owner_route.windows(2) {
+        let length = leg[0].distance(leg[1]);
+        let steps = (length / 0.35).ceil() as usize;
+        for step in 1..=steps {
+            let point = leg[0].lerp(leg[1], step as f32 / steps as f32);
+            let previous = leg[0].lerp(leg[1], (step - 1) as f32 / steps as f32);
+            let floor = h
+                .app
+                .world_mut()
+                .resource_mut::<GroundMap>()
+                .ground_at(map_id, point);
+            assert!(
+                matches!(floor, GroundProbe::Supported(y) if (y - point.y).abs() < 1.0),
+                "owner path lacks ground at {point:?}: {floor:?}"
+            );
+            assert!(
+                collision
+                    .clear(previous + Vec3::Y, point + Vec3::Y)
+                    .unwrap(),
+                "owner path crosses collision at {point:?}"
+            );
+            h.app.world_mut().entity_mut(owner).insert(position(point));
+            owner_steps += 1;
+            if owner_steps == 60 {
+                for &unit in &followers {
+                    h.app
+                        .world_mut()
+                        .get_mut::<crate::auras::AuraStatMods>(unit)
+                        .unwrap()
+                        .movement_speed = 1.0;
+                }
+            }
+            super::update_ai(h.app.world_mut());
+            crate::navigation::drain_fixture(&mut h.app);
+            h.advance(1);
+        }
+    }
+    for _ in 0..800 {
+        super::update_ai(h.app.world_mut());
+        crate::navigation::drain_fixture(&mut h.app);
+        h.advance(1);
+    }
+    for unit in followers {
+        let feet = point(*h.app.world().get::<Position>(unit).unwrap());
+        assert!(
+            feet.distance(corners[2]) < 12.0,
+            "follower did not arrive: {feet:?}"
+        );
+    }
+}
+
+#[test]
 #[ignore = "requires actual2651 navigation/ground and imported follower profile"]
 fn candlelight_follower_walks_into_authored_box_and_receives_light() {
     let (mut h, follower) = create_native_follower_fixture();

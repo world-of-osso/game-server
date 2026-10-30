@@ -62,6 +62,7 @@ mod kit_rotation_fidelity_tests;
 mod kit_rotation_tests;
 #[cfg(test)]
 mod meteor_tests;
+mod owner_trail;
 mod pack_identity;
 pub(crate) mod party;
 mod positioning;
@@ -112,6 +113,7 @@ mod tank_frontal;
 mod tank_planner;
 #[cfg(test)]
 mod tank_planner_tests;
+mod trail_follow;
 mod utility;
 #[cfg(test)]
 mod utility_buff_tests;
