@@ -35,9 +35,13 @@ fn party_and_pets(world: &mut World, party: &[Entity]) -> Vec<Entity> {
             Option<&SummonedCreature>,
         ), Or<(With<crate::hunter_pet::HunterPet>, With<SummonedCreature>)>>()
         .iter(world)
-        .filter(|(_, pet, summon)| {
-            pet.is_some_and(|pet| owners.contains(&pet.owner))
-                || summon.is_some_and(|summon| owners.contains(&summon.owner))
+        .filter(|(unit, pet, summon)| {
+            let owner = pet
+                .map(|pet| pet.owner)
+                .or_else(|| summon.map(|summon| summon.owner));
+            owner.is_some_and(|owner| {
+                owners.contains(&owner) && targets::same_map(world, owner, *unit)
+            })
         })
         .map(|(unit, _, _)| unit)
         .collect();

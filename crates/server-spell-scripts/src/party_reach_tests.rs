@@ -55,6 +55,20 @@ fn pet_reach_is_reported_at_the_pet_not_its_owner() {
         .spawn((
             combat::hunter_pet::HunterPet { owner, slot: 0 },
             combat::pet_control::PetCharm::new(bar, REACT_DEFENSIVE),
+            combat::maps::InMap::continent(0),
+            shared::components::Position {
+                x: 30.0,
+                y: 0.0,
+                z: 0.0,
+            },
+        ))
+        .id();
+    let off_map = harness
+        .app
+        .world_mut()
+        .spawn((
+            combat::hunter_pet::HunterPet { owner, slot: 1 },
+            combat::maps::InMap::continent(1),
             shared::components::Position {
                 x: 30.0,
                 y: 0.0,
@@ -63,6 +77,7 @@ fn pet_reach_is_reported_at_the_pet_not_its_owner() {
         ))
         .id();
     let reaches = party_unintended_reach(harness.app.world_mut(), &[owner]);
+    assert!(!reaches.iter().any(|(unit, _, _)| *unit == off_map));
     let pet_reach = reaches.iter().find(|(unit, _, _)| *unit == pet).unwrap();
     assert_eq!(pet_reach.1, 10.0);
     assert_eq!(pet_reach.2, 0.0);
@@ -80,6 +95,7 @@ fn demonology_felguard_autonomous_felstorm_contributes_pet_reach() {
                 template_id: 17252,
                 name: "Felguard".into(),
             },
+            combat::maps::InMap::continent(0),
             shared::components::Position {
                 x: 30.0,
                 y: 0.0,
@@ -115,6 +131,7 @@ fn transformed_unholy_ghoul_reports_its_autonomous_cleave() {
                 template_id: 26125,
                 name: "Ghoul".into(),
             },
+            combat::maps::InMap::continent(0),
             shared::components::Position {
                 x: 20.0,
                 y: 0.0,
@@ -144,6 +161,7 @@ fn lesser_ghoul_expiry_uses_the_pets_native_explosion_radius() {
         .app
         .world_mut()
         .spawn((
+            combat::maps::InMap::continent(0),
             combat::spell_cast::summon::SummonedCreature {
                 owner,
                 spell_id: 275430,
@@ -184,6 +202,7 @@ fn army_ghoul_reports_its_owner_commanded_epidemic_order() {
         .app
         .world_mut()
         .spawn((
+            combat::maps::InMap::continent(0),
             combat::spell_cast::summon::SummonedCreature {
                 owner,
                 spell_id: 1294026,
