@@ -33,6 +33,7 @@ def project_static_flags(conn):
         WHERE s.entry=c.entry AND s.difficulty=c.DifficultyID)""")
     conn.execute("""CREATE TEMP TABLE static_flag_base AS SELECT entry, source FROM temp.static_flag_sources s
         WHERE difficulty = (SELECT MIN(difficulty) FROM temp.static_flag_sources WHERE entry=s.entry)""")
+    conn.execute("CREATE UNIQUE INDEX temp.static_flag_base_entry ON static_flag_base(entry)")
     conn.execute(f"""UPDATE content_creature_template AS c SET ({columns}) = (
         SELECT {source_columns} FROM tdb_creature_template_difficulty d
         WHERE d.Entry=c.entry AND d.DifficultyID=COALESCE(
