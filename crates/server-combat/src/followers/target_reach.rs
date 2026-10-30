@@ -61,7 +61,12 @@ pub(super) fn retain_reachable(
         };
         let result = nav.query_deferred(unit, map.map_id, Goal::FollowerTargetSelection, query);
         let paths = match result {
-            None => return true,
+            None => {
+                enemies.retain(|(entity, _)| {
+                    !pending.iter().any(|(candidate, _)| candidate == entity)
+                });
+                return true;
+            }
             Some(Ok(Some(Output::Candidates(paths)))) => paths,
             Some(other) => {
                 error!(?unit, ?other, "Follower target navigation failed");

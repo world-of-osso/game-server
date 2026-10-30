@@ -52,9 +52,24 @@ pub(super) fn update_follower(world: &mut World, unit: Entity, follower: &Follow
     super::tank_frontal::update_goal(world, unit, follower, &party);
     let collection_target = super::tank_planner::update_caster_goal(world, unit, follower, &party);
     let mut enemies = engaged_enemies(world, follower, unit, &party);
-    if super::target_reach::retain_reachable(world, unit, follower, &mut enemies) {
+    let pending = super::target_reach::retain_reachable(world, unit, follower, &mut enemies);
+    let lost_target = world
+        .get::<CombatTarget>(unit)
+        .and_then(|target| target.0)
+        .is_some_and(|target| !enemies.iter().any(|(enemy, _)| *enemy == target));
+    if lost_target {
+        if world.get::<CastState>(unit).is_some_and(|cast| {
+            Entity::try_from_bits(cast.target).is_some_and(|target| {
+                crate::spell_cast::targets::is_hostile(world, unit, target)
+                    && !enemies.iter().any(|(enemy, _)| *enemy == target)
+            })
+        }) {
+            crate::spell_cast::cancel_cast(world, unit);
+        }
         crate::combat::attack_stop(world, unit);
         hold_combat(world, unit);
+    }
+    if pending {
         return;
     }
     let selection = collection_target
