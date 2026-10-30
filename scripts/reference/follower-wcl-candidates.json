@@ -1,8 +1,11 @@
 {
+  "native_spec_catalog": "chr_classes and chr_specialization",
+  "native_spec_catalog_sha256": "f73249a051fbd646edee991c027bd4274a75f3f8e0031314e3c9c298de03edb0",
   "profiles": {
     "death-knight-blood/10-14": {
       "actual_key": 11,
       "character": "\u6c88\u51ef\u4eba",
+      "class_id": 6,
       "gear": [
         {
           "bonusIDs": [
@@ -302,6 +305,7 @@
         "region": "CN"
       },
       "spec": "death-knight-blood",
+      "spec_id": 250,
       "talents": [
         {
           "points": 1,
@@ -616,6 +620,7 @@
     "death-knight-blood/15-19": {
       "actual_key": 16,
       "character": "\u770b\u6e5b\u84dd\u7684\u5929",
+      "class_id": 6,
       "gear": [
         {
           "bonusIDs": [
@@ -913,6 +918,7 @@
         "region": "CN"
       },
       "spec": "death-knight-blood",
+      "spec_id": 250,
       "talents": [
         {
           "points": 1,
@@ -1227,6 +1233,7 @@
     "death-knight-blood/2-5": {
       "actual_key": 3,
       "character": "Anarmy",
+      "class_id": 6,
       "gear": [
         {
           "bonusIDs": [
@@ -1525,6 +1532,7 @@
         "region": "EU"
       },
       "spec": "death-knight-blood",
+      "spec_id": 250,
       "talents": [
         {
           "points": 1,
@@ -1843,6 +1851,7 @@
     "death-knight-blood/20+": {
       "actual_key": 21,
       "character": "\u6230\u4e34\u4e36",
+      "class_id": 6,
       "gear": [
         {
           "bonusIDs": [
@@ -2147,6 +2156,7 @@
         "region": "CN"
       },
       "spec": "death-knight-blood",
+      "spec_id": 250,
       "talents": [
         {
           "points": 1,
@@ -2461,6 +2471,7 @@
     "death-knight-blood/6-9": {
       "actual_key": 7,
       "character": "Nepazwei",
+      "class_id": 6,
       "gear": [
         {
           "bonusIDs": [
@@ -2751,6 +2762,7 @@
         "region": "EU"
       },
       "spec": "death-knight-blood",
+      "spec_id": 250,
       "talents": [
         {
           "points": 1,
@@ -3065,6 +3077,7 @@
     "death-knight-frost/10-14": {
       "actual_key": 11,
       "character": "Jastle",
+      "class_id": 6,
       "gear": [
         {
           "bonusIDs": [
@@ -3362,6 +3375,7 @@
         "region": "US"
       },
       "spec": "death-knight-frost",
+      "spec_id": 251,
       "talents": [
         {
           "points": 2,
@@ -3676,6 +3690,7 @@
     "death-knight-frost/15-19": {
       "actual_key": 16,
       "character": "Emoray",
+      "class_id": 6,
       "gear": [
         {
           "bonusIDs": [
@@ -3974,6 +3989,7 @@
         "region": "EU"
       },
       "spec": "death-knight-frost",
+      "spec_id": 251,
       "talents": [
         {
           "points": 2,
@@ -4288,6 +4304,7 @@
     "death-knight-frost/2-5": {
       "actual_key": 3,
       "character": "Remmydk",
+      "class_id": 6,
       "gear": [
         {
           "bonusIDs": [
@@ -4566,6 +4583,7 @@
         "region": "EU"
       },
       "spec": "death-knight-frost",
+      "spec_id": 251,
       "talents": [
         {
           "points": 2,
@@ -4880,6 +4898,7 @@
     "death-knight-frost/20+": {
       "actual_key": 21,
       "character": "Cosmickaguya",
+      "class_id": 6,
       "gear": [
         {
           "bonusIDs": [
@@ -5195,6 +5214,7 @@
         "region": "US"
       },
       "spec": "death-knight-frost",
+      "spec_id": 251,
       "talents": [
         {
           "points": 2,
@@ -5509,6 +5529,7 @@
     "death-knight-frost/6-9": {
       "actual_key": 7,
       "character": "Akkad",
+      "class_id": 6,
       "gear": [
         {
           "bonusIDs": [
@@ -5807,6 +5828,7 @@
         "region": "US"
       },
       "spec": "death-knight-frost",
+      "spec_id": 251,
       "talents": [
         {
           "points": 2,
@@ -6121,6 +6143,7 @@
     "death-knight-unholy/10-14": {
       "actual_key": 11,
       "character": "Kayzk",
+      "class_id": 6,
       "gear": [
         {
           "bonusIDs": [
@@ -6410,6 +6433,7 @@
         "region": "EU"
       },
       "spec": "death-knight-unholy",
+      "spec_id": 252,
       "talents": [
         {
           "points": 1,
@@ -6724,6 +6748,7 @@
     "death-knight-unholy/15-19": {
       "actual_key": 16,
       "character": "Letr\u00f8t",
+      "class_id": 6,
       "gear": [
         {
           "bonusIDs": [
@@ -7016,6 +7041,7 @@
         "region": "EU"
       },
       "spec": "death-knight-unholy",
+      "spec_id": 252,
       "talents": [
         {
           "points": 1,
@@ -7330,6 +7356,7 @@
     "death-knight-unholy/2-5": {
       "actual_key": 3,
       "character": "Scarylarry",
+      "class_id": 6,
       "gear": [
         {
           "bonusIDs": [
@@ -7622,6 +7649,7 @@
         "region": "EU"
       },
       "spec": "death-knight-unholy",
+      "spec_id": 252,
       "talents": [
         {
           "points": 1,
@@ -7936,6 +7964,7 @@
     "death-knight-unholy/20+": {
       "actual_key": 21,
       "character": "Mograinez",
+      "class_id": 6,
       "gear": [
         {
           "bonusIDs": [
@@ -8238,6 +8267,7 @@
         "region": "US"
       },
       "spec": "death-knight-unholy",
+      "spec_id": 252,
       "talents": [
         {
           "points": 1,
@@ -8552,6 +8582,7 @@
     "death-knight-unholy/6-9": {
       "actual_key": 7,
       "character": "Seraf",
+      "class_id": 6,
       "gear": [
         {
           "bonusIDs": [
@@ -8831,6 +8862,7 @@
         "region": "US"
       },
       "spec": "death-knight-unholy",
+      "spec_id": 252,
       "talents": [
         {
           "points": 1,
@@ -9145,6 +9177,7 @@
     "demon-hunter-devourer/10-14": {
       "actual_key": 11,
       "character": "\u4f0a\u5229\u8fbe\u51d1\u732b",
+      "class_id": 12,
       "gear": [
         {
           "bonusIDs": [
@@ -9450,6 +9483,7 @@
         "region": "CN"
       },
       "spec": "demon-hunter-devourer",
+      "spec_id": 1480,
       "talents": [
         {
           "points": 1,
@@ -9760,6 +9794,7 @@
     "demon-hunter-devourer/15-19": {
       "actual_key": 16,
       "character": "Diceros",
+      "class_id": 12,
       "gear": [
         {
           "bonusIDs": [
@@ -10051,6 +10086,7 @@
         "region": "EU"
       },
       "spec": "demon-hunter-devourer",
+      "spec_id": 1480,
       "talents": [
         {
           "points": 1,
@@ -10357,6 +10393,7 @@
     "demon-hunter-devourer/2-5": {
       "actual_key": 3,
       "character": "Nyxvay",
+      "class_id": 12,
       "gear": [
         {
           "bonusIDs": [
@@ -10658,6 +10695,7 @@
         "region": "EU"
       },
       "spec": "demon-hunter-devourer",
+      "spec_id": 1480,
       "talents": [
         {
           "points": 1,
@@ -10964,6 +11002,7 @@
     "demon-hunter-devourer/20+": {
       "actual_key": 21,
       "character": "Waffl",
+      "class_id": 12,
       "gear": [
         {
           "bonusIDs": [
@@ -11266,6 +11305,7 @@
         "region": "US"
       },
       "spec": "demon-hunter-devourer",
+      "spec_id": 1480,
       "talents": [
         {
           "points": 1,
@@ -11572,6 +11612,7 @@
     "demon-hunter-devourer/6-9": {
       "actual_key": 7,
       "character": "Melder",
+      "class_id": 12,
       "gear": [
         {
           "bonusIDs": [
@@ -11872,6 +11913,7 @@
         "region": "EU"
       },
       "spec": "demon-hunter-devourer",
+      "spec_id": 1480,
       "talents": [
         {
           "points": 1,
@@ -12178,6 +12220,7 @@
     "demon-hunter-havoc/10-14": {
       "actual_key": 11,
       "character": "Hearis",
+      "class_id": 12,
       "gear": [
         {
           "bonusIDs": [
@@ -12479,6 +12522,7 @@
         "region": "EU"
       },
       "spec": "demon-hunter-havoc",
+      "spec_id": 577,
       "talents": [
         {
           "points": 1,
@@ -12789,6 +12833,7 @@
     "demon-hunter-havoc/15-19": {
       "actual_key": 16,
       "character": "Heracranosx",
+      "class_id": 12,
       "gear": [
         {
           "bonusIDs": [
@@ -13098,6 +13143,7 @@
         "region": "US"
       },
       "spec": "demon-hunter-havoc",
+      "spec_id": 577,
       "talents": [
         {
           "points": 1,
@@ -13408,6 +13454,7 @@
     "demon-hunter-havoc/2-5": {
       "actual_key": 3,
       "character": "Merk\u00fcles",
+      "class_id": 12,
       "gear": [
         {
           "bonusIDs": [
@@ -13711,6 +13758,7 @@
         "region": "US"
       },
       "spec": "demon-hunter-havoc",
+      "spec_id": 577,
       "talents": [
         {
           "points": 1,
@@ -14021,6 +14069,7 @@
     "demon-hunter-havoc/20+": {
       "actual_key": 21,
       "character": "Shadarek",
+      "class_id": 12,
       "gear": [
         {
           "bonusIDs": [
@@ -14334,6 +14383,7 @@
         "region": "US"
       },
       "spec": "demon-hunter-havoc",
+      "spec_id": 577,
       "talents": [
         {
           "points": 1,
@@ -14644,6 +14694,7 @@
     "demon-hunter-havoc/6-9": {
       "actual_key": 7,
       "character": "Kaleb",
+      "class_id": 12,
       "gear": [
         {
           "bonusIDs": [
@@ -14942,6 +14993,7 @@
         "region": "US"
       },
       "spec": "demon-hunter-havoc",
+      "spec_id": 577,
       "talents": [
         {
           "points": 1,
@@ -15252,6 +15304,7 @@
     "demon-hunter-vengeance/10-14": {
       "actual_key": 11,
       "character": "\u0422\u043e\u043c\u0430\u0441\u0434\u0445",
+      "class_id": 12,
       "gear": [
         {
           "bonusIDs": [
@@ -15562,6 +15615,7 @@
         "region": "EU"
       },
       "spec": "demon-hunter-vengeance",
+      "spec_id": 581,
       "talents": [
         {
           "points": 1,
@@ -15864,6 +15918,7 @@
     "demon-hunter-vengeance/15-19": {
       "actual_key": 16,
       "character": "Fuminno",
+      "class_id": 12,
       "gear": [
         {
           "bonusIDs": [
@@ -16171,6 +16226,7 @@
         "region": "US"
       },
       "spec": "demon-hunter-vengeance",
+      "spec_id": 581,
       "talents": [
         {
           "points": 1,
@@ -16477,6 +16533,7 @@
     "demon-hunter-vengeance/2-5": {
       "actual_key": 3,
       "character": "Bcfitness",
+      "class_id": 12,
       "gear": [
         {
           "bonusIDs": [
@@ -16765,6 +16822,7 @@
         "region": "US"
       },
       "spec": "demon-hunter-vengeance",
+      "spec_id": 581,
       "talents": [
         {
           "points": 1,
@@ -17071,6 +17129,7 @@
     "demon-hunter-vengeance/20+": {
       "actual_key": 21,
       "character": "Avade",
+      "class_id": 12,
       "gear": [
         {
           "bonusIDs": [
@@ -17381,6 +17440,7 @@
         "region": "US"
       },
       "spec": "demon-hunter-vengeance",
+      "spec_id": 581,
       "talents": [
         {
           "points": 1,
@@ -17687,6 +17747,7 @@
     "demon-hunter-vengeance/6-9": {
       "actual_key": 7,
       "character": "Patrikvaok",
+      "class_id": 12,
       "gear": [
         {
           "bonusIDs": [
@@ -17981,6 +18042,7 @@
         "region": "EU"
       },
       "spec": "demon-hunter-vengeance",
+      "spec_id": 581,
       "talents": [
         {
           "points": 1,
@@ -18283,6 +18345,7 @@
     "druid-balance/10-14": {
       "actual_key": 11,
       "character": "Mogybear",
+      "class_id": 11,
       "gear": [
         {
           "bonusIDs": [
@@ -18586,6 +18649,7 @@
         "region": "US"
       },
       "spec": "druid-balance",
+      "spec_id": 102,
       "talents": [
         {
           "points": 1,
@@ -18908,6 +18972,7 @@
     "druid-balance/15-19": {
       "actual_key": 16,
       "character": "Mcknaehrich",
+      "class_id": 11,
       "gear": [
         {
           "bonusIDs": [
@@ -19208,6 +19273,7 @@
         "region": "EU"
       },
       "spec": "druid-balance",
+      "spec_id": 102,
       "talents": [
         {
           "points": 1,
@@ -19530,6 +19596,7 @@
     "druid-balance/2-5": {
       "actual_key": 3,
       "character": "Thatgurl",
+      "class_id": 11,
       "gear": [
         {
           "bonusIDs": [
@@ -19814,6 +19881,7 @@
         "region": "US"
       },
       "spec": "druid-balance",
+      "spec_id": 102,
       "talents": [
         {
           "points": 1,
@@ -20132,6 +20200,7 @@
     "druid-balance/20+": {
       "actual_key": 21,
       "character": "\u71c3\u70e7\u7684\u5495\u5495",
+      "class_id": 11,
       "gear": [
         {
           "bonusIDs": [
@@ -20438,6 +20507,7 @@
         "region": "CN"
       },
       "spec": "druid-balance",
+      "spec_id": 102,
       "talents": [
         {
           "points": 1,
@@ -20760,6 +20830,7 @@
     "druid-balance/6-9": {
       "actual_key": 7,
       "character": "Sf\u00f5d",
+      "class_id": 11,
       "gear": [
         {
           "bonusIDs": [
@@ -21048,6 +21119,7 @@
         "region": "US"
       },
       "spec": "druid-balance",
+      "spec_id": 102,
       "talents": [
         {
           "points": 1,
@@ -21370,6 +21442,7 @@
     "druid-feral/10-14": {
       "actual_key": 11,
       "character": "\u5471\u5b9d",
+      "class_id": 11,
       "gear": [
         {
           "bonusIDs": [
@@ -21664,6 +21737,7 @@
         "region": "CN"
       },
       "spec": "druid-feral",
+      "spec_id": 103,
       "talents": [
         {
           "points": 1,
@@ -21994,6 +22068,7 @@
     "druid-feral/15-19": {
       "actual_key": 16,
       "character": "\u0413\u0440\u0438\u043d\u0434\u0438\u043b",
+      "class_id": 11,
       "gear": [
         {
           "bonusIDs": [
@@ -22284,6 +22359,7 @@
         "region": "EU"
       },
       "spec": "druid-feral",
+      "spec_id": 103,
       "talents": [
         {
           "points": 1,
@@ -22614,6 +22690,7 @@
     "druid-feral/2-5": {
       "actual_key": 3,
       "character": "\u518d\u521b\u65b0\u9ad8",
+      "class_id": 11,
       "gear": [
         {
           "bonusIDs": [
@@ -22893,6 +22970,7 @@
         "region": "CN"
       },
       "spec": "druid-feral",
+      "spec_id": 103,
       "talents": [
         {
           "points": 1,
@@ -23223,6 +23301,7 @@
     "druid-feral/20+": {
       "actual_key": 21,
       "character": "Enjoyphoenix",
+      "class_id": 11,
       "gear": [
         {
           "bonusIDs": [
@@ -23515,6 +23594,7 @@
         "region": "EU"
       },
       "spec": "druid-feral",
+      "spec_id": 103,
       "talents": [
         {
           "points": 1,
@@ -23845,6 +23925,7 @@
     "druid-feral/6-9": {
       "actual_key": 7,
       "character": "Dezulee",
+      "class_id": 11,
       "gear": [
         {
           "bonusIDs": [
@@ -24123,6 +24204,7 @@
         "region": "US"
       },
       "spec": "druid-feral",
+      "spec_id": 103,
       "talents": [
         {
           "points": 1,
@@ -24453,6 +24535,7 @@
     "druid-guardian/10-14": {
       "actual_key": 11,
       "character": "P\u00ea\u00earcin",
+      "class_id": 11,
       "gear": [
         {
           "bonusIDs": [
@@ -24746,6 +24829,7 @@
         "region": "EU"
       },
       "spec": "druid-guardian",
+      "spec_id": 104,
       "talents": [
         {
           "points": 1,
@@ -25060,6 +25144,7 @@
     "druid-guardian/15-19": {
       "actual_key": 16,
       "character": "Pumperdudu",
+      "class_id": 11,
       "gear": [
         {
           "bonusIDs": [
@@ -25353,6 +25438,7 @@
         "region": "EU"
       },
       "spec": "druid-guardian",
+      "spec_id": 104,
       "talents": [
         {
           "points": 1,
@@ -25667,6 +25753,7 @@
     "druid-guardian/2-5": {
       "actual_key": 3,
       "character": "Cassandraa",
+      "class_id": 11,
       "gear": [
         {
           "bonusIDs": [
@@ -25958,6 +26045,7 @@
         "region": "US"
       },
       "spec": "druid-guardian",
+      "spec_id": 104,
       "talents": [
         {
           "points": 1,
@@ -26272,6 +26360,7 @@
     "druid-guardian/20+": {
       "actual_key": 21,
       "character": "Thwash",
+      "class_id": 11,
       "gear": [
         {
           "bonusIDs": [
@@ -26564,6 +26653,7 @@
         "region": "US"
       },
       "spec": "druid-guardian",
+      "spec_id": 104,
       "talents": [
         {
           "points": 1,
@@ -26878,6 +26968,7 @@
     "druid-guardian/6-9": {
       "actual_key": 7,
       "character": "Gigachonk",
+      "class_id": 11,
       "gear": [
         {
           "bonusIDs": [
@@ -27175,6 +27266,7 @@
         "region": "EU"
       },
       "spec": "druid-guardian",
+      "spec_id": 104,
       "talents": [
         {
           "points": 1,
