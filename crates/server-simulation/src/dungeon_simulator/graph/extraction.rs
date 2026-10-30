@@ -305,6 +305,28 @@ fn boss_source_uses_the_spawned_vehicle_for_its_bound_accessory() {
 }
 
 #[test]
+#[ignore = "requires Azure native population and world database"]
+fn azure_generic_extraction_registers_each_native_book() {
+    let db = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let mut packs = topology::source_packs(crate::test_data::world_data(), 2515, 205).unwrap();
+    let registrations = server::test_support::transport::read_registrations(2515, &db).unwrap();
+    let (edges, transports) =
+        append_registered_transports(2515, &mut packs, &registrations).unwrap();
+    assert_eq!(edges.len(), 9);
+    assert_eq!(transports.len(), 9);
+    assert!(
+        transports
+            .iter()
+            .all(|edge| edge.action == server::test_support::transport::Action::AzureBook)
+    );
+    assert!(edges.iter().all(|edge| edge.yards == 0.0));
+}
+
+#[test]
 #[ignore = "explicit follower topology extraction from world.db and navmesh"]
 fn extract_follower_topology() {
     let map: u32 = std::env::var("DUNGEON_SIMULATOR_MAP")

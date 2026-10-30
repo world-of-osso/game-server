@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq)]
 pub enum Action {
     SpellClick,
+    AzureBook,
     Proximity,
     GatewayProximity,
     ObjectGossip,
@@ -83,6 +84,9 @@ pub fn read_registrations(
             action: Action::SpellClick,
         });
     }
+    if map == 2515 {
+        registrations.extend(read_azure_books(db)?);
+    }
     if map == crate::scripted_ai::academy_transport::MAP {
         registrations.extend(crate::scripted_ai::academy_transport::PADS.iter().map(
             |(entry, source, destination, radius)| Registration {
@@ -114,6 +118,43 @@ pub fn read_registrations(
     }
     registrations.extend(read_object_registrations(map, db)?);
     Ok(registrations)
+}
+
+fn read_azure_books(db: &rusqlite::Connection) -> Result<Vec<Registration>, String> {
+    let spawns = crate::world_data::load_spawns(db);
+    let mut result = Vec::new();
+    for spawn in spawns.iter().filter(|spawn| spawn.map == 2515) {
+        let Some(link) = crate::npc_interaction::azure_translocation::LINKS
+            .iter()
+            .find(|link| link.entry == spawn.template_entry)
+        else {
+            continue;
+        };
+        let position = |spawn: &crate::world_data::CreatureSpawn| {
+            Vec3::new(spawn.position_x, spawn.position_z, -spawn.position_y)
+        };
+        let destination = if link.destination == 7116 {
+            let point = crate::npc_interaction::azure_translocation::FINAL_POI_WOW;
+            Vec3::new(point.x, point.z, -point.y)
+        } else {
+            let target = spawns
+                .iter()
+                .find(|target| target.guid == link.destination && target.map == 2515)
+                .ok_or_else(|| format!("Azure receiving book source{} absent", link.destination))?;
+            position(target)
+        };
+        result.push(Registration {
+            entry: spawn.template_entry,
+            source_guid: None,
+            source: position(spawn),
+            destination,
+            distance: 0.0,
+            radius: 0.1,
+            departure: None,
+            action: Action::AzureBook,
+        });
+    }
+    Ok(result)
 }
 
 fn read_object_registrations(
@@ -344,6 +385,9 @@ pub fn activate(
                 ));
             }
             world.entity_mut(owner).insert(TaxiLandingPending);
+        }
+        Action::AzureBook => {
+            crate::npc_interaction::azure_translocation::traverse(world, owner, npc)?;
         }
         Action::Proximity => {}
         Action::ObjectGossip => crate::npc_interaction::nalorakk_pyre::traverse(world, owner, npc)?,

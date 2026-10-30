@@ -1,6 +1,7 @@
 //! Explicit fixture contracts shared by authoritative gameplay and external test consumers.
 pub mod graph;
 pub mod healer_intake;
+pub mod objectives;
 pub mod transport;
 pub use crate::navigation::within_reach;
 pub use graph::Space;

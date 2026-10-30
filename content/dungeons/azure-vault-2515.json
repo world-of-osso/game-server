@@ -6658,6 +6658,17 @@
       "yards": 50.42885
     }
   ],
+  "transports": [
+    {"from": 29001868, "to": 29001870, "source_guid": 29001868, "radius": 0.1, "departure": null, "landing": [-5322.26, 508.083, -1122.75], "action": "AzureBook"},
+    {"from": 29002007, "to": 29001886, "source_guid": 29002007, "radius": 0.1, "departure": null, "landing": [-5336.61, 426.341, -1113.19], "action": "AzureBook"},
+    {"from": 29002008, "to": 29001886, "source_guid": 29002008, "radius": 0.1, "departure": null, "landing": [-5336.61, 426.341, -1113.19], "action": "AzureBook"},
+    {"from": 29002009, "to": 29001886, "source_guid": 29002009, "radius": 0.1, "departure": null, "landing": [-5336.61, 426.341, -1113.19], "action": "AzureBook"},
+    {"from": 29001906, "to": 29001915, "source_guid": 29001906, "radius": 0.1, "departure": null, "landing": [-5336.72, 426.686, -952.384], "action": "AzureBook"},
+    {"from": 29001918, "to": 29002013, "source_guid": 29001918, "radius": 0.1, "departure": null, "landing": [-5373.31, 339.632, -1032.07], "action": "AzureBook"},
+    {"from": 29002014, "to": 7116, "source_guid": 29002014, "radius": 0.1, "departure": null, "landing": [-5364.33, 157.716995, -1035.76], "action": "AzureBook"},
+    {"from": 29002015, "to": 7116, "source_guid": 29002015, "radius": 0.1, "departure": null, "landing": [-5364.33, 157.716995, -1035.76], "action": "AzureBook"},
+    {"from": 29002016, "to": 7116, "source_guid": 29002016, "radius": 0.1, "departure": null, "landing": [-5364.33, 157.716995, -1035.76], "action": "AzureBook"}
+  ],
   "teleports": [
     {
       "from": 29001868,

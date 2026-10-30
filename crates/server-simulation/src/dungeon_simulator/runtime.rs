@@ -146,6 +146,15 @@ fn build_runtime_app(catalogs: &mut Option<super::catalogs::Catalogs>) -> App {
         crate::stats::StatsPlugin,
     ));
     server::test_support::install_player_death(&mut app);
+    if app.world().resource::<super::Space>().0.map_id == 2825 {
+        let db = rusqlite::Connection::open_with_flags(
+            crate::test_data::world_db_path(),
+            rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+        )
+        .expect("open interaction objective catalog");
+        server::test_support::objectives::install(&mut app, &db)
+            .expect("install interaction objectives");
+    }
     app.add_systems(FixedUpdate, crate::zones::apply_addon_auras);
     app.init_resource::<crate::maps::InstanceManager>();
     app.init_resource::<crate::spell_cast::test_harness::ObservedCombatEvents>();
