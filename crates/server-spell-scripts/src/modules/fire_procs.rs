@@ -29,6 +29,8 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
 ];
 
 const COMBUSTION: u32 = 190319;
+const BURNOUT_TALENT: u32 = 1271177;
+const BURNOUT_DAMAGE: u32 = 1271335;
 const FIRED_UP_TALENT: u32 = 1257343;
 const FIRED_UP: u32 = 1257350;
 const SPHERES_TALENT: u32 = 448601;
@@ -556,6 +558,40 @@ fn end_fiery_rush(
     auras::remove_auras(world, caster, reason, |aura| {
         aura.spell_id == 383637 && aura.caster == caster
     });
+    trigger_burnout(world, caster);
+}
+
+fn trigger_burnout(world: &mut World, caster: Entity) {
+    if !selected(world, caster, BURNOUT_TALENT) {
+        return;
+    }
+    // SimC76f8118 sc_mage.cpp1458–1465: Combustion's end deals the
+    // talent fraction of each target's unpaid owned Ignite bank.
+    let fraction = script_effect_value(world, caster, BURNOUT_TALENT, 0) / 100.0;
+    let targets: Vec<_> = world
+        .query_filtered::<Entity, With<auras::ActiveAuras>>()
+        .iter(world)
+        .map(|target| (target, auras::owned_ignite_bank(world, caster, target)))
+        .filter(|(_, bank)| *bank > 0.0)
+        .collect();
+    let mut spell = world
+        .resource::<SpellStore>()
+        .get(BURNOUT_DAMAGE)
+        .expect("native Burnout damage spell")
+        .clone();
+    // sc_mage.cpp2523–2537: the bank is already resolved; Burnout's
+    // fixed background hit excludes source and target multipliers.
+    spell.misc.as_mut().expect("Burnout spell attributes").attributes[4] |= 0x100;
+    let ctx = EffectCtx {
+        caster,
+        spell: &spell,
+        depth: 1,
+        dest: None,
+        chain_multiplier: 1.0,
+    };
+    for (target, bank) in targets {
+        spell_cast::effects::deal_copied_damage(world, &ctx, target, bank as f32 * fraction);
+    }
 }
 
 fn reset_combustion_procs(world: &mut World, caster: Entity, aura: &AuraInstance) {

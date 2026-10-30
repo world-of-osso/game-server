@@ -46,6 +46,7 @@ pub(crate) mod forecast;
 pub mod handlers;
 pub(crate) mod health_pct_trigger;
 mod ignite;
+pub use ignite::owned_ignite_bank;
 mod incoming_spell_masks;
 pub mod invisibility;
 mod item_requirements;

@@ -1100,6 +1100,68 @@ fn fire_feedback_fiery_rush_ends_with_combustion() {
     panic!("unextended native Combustion must expire within30s");
 }
 
+#[test]
+#[ignore = "requires exact Fire63 inputs and private70448 DB"]
+fn fire_burnout_discharges_only_owned_ignite_when_combustion_ends() {
+    for selected in [false, true] {
+        let mut run = prepare_literal(63, 2).unwrap();
+        let actor = run.actor;
+        let target = run.targets[0];
+        let mut known: Vec<_> = run
+            .app
+            .world()
+            .get::<crate::class_progression::KnownSpells>(actor)
+            .unwrap()
+            .iter()
+            .filter(|id| *id != 1271177)
+            .collect();
+        if selected {
+            known.push(1271177);
+        }
+        run.app
+            .world_mut()
+            .entity_mut(actor)
+            .insert(crate::class_progression::KnownSpells::fixture(known));
+        start_native(&mut run, 190319, actor);
+        run.app.update();
+        run.app
+            .world_mut()
+            .get_mut::<crate::stats::CharacterStats>(actor)
+            .unwrap()
+            .crit_pct = 0.0;
+        crate::spell_cast::cast_triggered_with_effect0_amount(
+            run.app.world_mut(), actor, 12654, Some(target), 1, 1000.0,
+        );
+        let bank = crate::auras::owned_ignite_bank(run.app.world(), actor, target);
+        assert!(bank > 0.0, "the owned Ignite bank must exist before Combustion ends");
+        crate::auras::set_owned_duration(run.app.world_mut(), actor, actor, 190319, 100);
+        for _ in 0..10 {
+            run.app.update();
+        }
+        let hits: Vec<_> = run
+            .app
+            .world()
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .filter(|event| {
+                event.source == Some(actor.to_bits())
+                    && event.spell_id == Some(1271335)
+                    && event.kind == CombatLogKind::Damage
+            })
+            .collect();
+        assert_eq!(hits.len(), usize::from(selected));
+        if selected {
+            assert_eq!(hits[0].target, Some(target.to_bits()));
+            let expected = bank * 0.75;
+            assert!(
+                (f64::from(hits[0].amount) - expected).abs() < expected * 0.08,
+                "Burnout must deal 75% of the Ignite bank: bank {bank}, damage {}", hits[0].amount
+            );
+        }
+    }
+}
+
 fn fire_phoenix_actor(run: &mut Run) -> Option<Entity> {
     run.app
         .world_mut()
