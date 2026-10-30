@@ -1720,6 +1720,24 @@ impl Run {
             .iter()
             .copied()
             .filter(|entry| {
+                if self
+                    .graph
+                    .follower_boss_sources
+                    .get(entry)
+                    .is_some_and(|source| source != entry)
+                {
+                    let Some(bit) = self.graph.follower_boss_bits.get(entry) else {
+                        return false;
+                    };
+                    let Some(copy) = world.get::<crate::maps::InMap>(self.party.owner) else {
+                        return false;
+                    };
+                    return world
+                        .resource::<crate::maps::InstanceManager>()
+                        .completed_encounters(*copy)
+                        & (1 << bit)
+                        != 0;
+                }
                 self.graph
                     .packs
                     .iter()

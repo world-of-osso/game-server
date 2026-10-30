@@ -4,6 +4,35 @@ pub mod healer_intake;
 pub use crate::navigation::within_reach;
 pub use graph::Space;
 
+/// Load the same vehicle accessory catalog used by the live server.
+pub fn read_vehicle_accessories(
+    root: &std::path::Path,
+    db: &rusqlite::Connection,
+) -> Result<Vec<(u32, u32)>, String> {
+    let (_, accessories) = crate::vehicle::load_runtime(root, db)?;
+    Ok(accessories.entry_pairs())
+}
+
+/// Install native vehicle accessory systems in a transport-free simulator.
+pub fn install_vehicle_accessories(
+    app: &mut bevy::prelude::App,
+    root: &std::path::Path,
+    db: &rusqlite::Connection,
+) -> Result<(), String> {
+    let (store, accessories) = crate::vehicle::load_runtime(root, db)?;
+    app.insert_resource(store);
+    app.insert_resource(accessories);
+    app.add_systems(
+        bevy::prelude::Update,
+        crate::vehicle::accessory::install_accessories,
+    );
+    app.add_systems(
+        bevy::prelude::FixedPostUpdate,
+        crate::vehicle::accessory::seat_accessories,
+    );
+    Ok(())
+}
+
 /// Fresh native Fire Breath release metadata for the proposed APL empower rank.
 pub fn fire_breath_release(
     world: &bevy::prelude::World,
