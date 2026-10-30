@@ -3,6 +3,7 @@
 extern crate self as server;
 
 pub mod character_data;
+mod character_visual;
 pub mod item_instance;
 pub mod mythic_plus_catalog;
 pub mod mythic_plus_history;

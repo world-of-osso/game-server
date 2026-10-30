@@ -199,6 +199,7 @@ impl Plugin for ServerNetworkPlugin {
         app.init_resource::<ChatHistoryBuffer>();
         app.add_systems(Startup, start_server);
         app.add_systems(PostUpdate, despawn_pending);
+        app.add_systems(Update, crate::character_visual::sync_player_visuals);
         app.add_systems(FixedUpdate, process_player_inputs);
         app.add_systems(
             FixedUpdate,
