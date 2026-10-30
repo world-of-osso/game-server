@@ -174,7 +174,7 @@ fn follower_tank_precombat_starts_consecration_on_simc_clock() {
             actor,
             shared::components::PowerType::HolyPower
         ),
-        Some(1.0)
+        Some((1.0, 5.0))
     );
     let remaining = history.remaining_cooldown_ms(spell, now);
     assert!(
