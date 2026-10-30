@@ -22,6 +22,15 @@ pub fn install(app: &mut App, db: &rusqlite::Connection) -> Result<(), String> {
     Ok(())
 }
 
+/// Production intro gates: boss entry -> entries whose deaths unlock it.
+pub fn boss_gate_entries(map: u32) -> std::collections::BTreeMap<u32, Vec<u32>> {
+    let mut gates = std::collections::BTreeMap::<u32, Vec<u32>>::new();
+    for (boss, gate) in crate::scripted_ai::algethar_academy::intro_gates(map) {
+        gates.entry(boss).or_default().push(gate);
+    }
+    gates
+}
+
 pub fn next(
     world: &mut World,
     owner: Entity,

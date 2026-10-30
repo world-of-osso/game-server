@@ -104,6 +104,18 @@ class CorridorPlanning(unittest.TestCase):
         reverse = plan_route(graph, profile, requirements)
         self.assertIn(5, [step["pack"] for step in reverse["route"]])
 
+    def test_gated_boss_off_the_frozen_graph_is_deferred_after_its_gate(self):
+        graph, profile, requirements = fixture()
+        graph["edges"] = [edge for edge in graph["edges"] if 3 not in (edge["from"], edge["to"])]
+        edges = json.dumps(graph["edges"])
+        requirements["gate_entries"] = {"900": [5]}
+        result = plan_route(graph, profile, requirements)
+        ids = [step["pack"] for step in result["route"]]
+        self.assertLess(ids.index(5), ids.index(3))
+        self.assertEqual(result["deferred_bosses"], [3])
+        self.assertNotIn(3, result["boss_path"])
+        self.assertEqual(json.dumps(graph["edges"]), edges)
+
     def test_disconnected_boss_and_unknown_gate_fail_instead_of_inventing_edges(self):
         graph, profile, requirements = fixture()
         graph["edges"] = []

@@ -18,24 +18,45 @@ const BURST_FORTH: u32 = 388923;
 #[derive(Component)]
 pub(super) struct CrawthDescent;
 
+const MAP: u32 = 2526;
+
+/// ANCIENT/CRAWTH_UNLOCK_LOG_CORRELATED: (gate entry, boss entry, intro centre, radius).
 /// WCL deaths correlate each intro with the last member of its local pack.
-/// Positions are Bevy coordinates; the Crawth landing is the first cited boss
-/// cast position, projected onto the native detail mesh, not a logged landing.
+/// Positions are Bevy coordinates.
+const INTRO_UNLOCKS: [(u32, u32, Vec2, f32); 2] = [
+    (197219, 196482, Vec2::new(1766.25, 3086.41), 80.0),
+    (192333, 191736, Vec2::new(2365.0, 3050.0), 40.0),
+];
+
+/// Gate entries whose intro deaths unlock each boss entry on `map`.
+pub(crate) fn intro_gates(map: u32) -> Vec<(u32, u32)> {
+    if map != MAP {
+        return Vec::new();
+    }
+    INTRO_UNLOCKS
+        .iter()
+        .map(|(gate, boss, _, _)| (*boss, *gate))
+        .collect()
+}
+
+/// The Crawth landing is the first cited boss cast position, projected onto
+/// the native detail mesh, not a logged landing.
 pub(crate) fn on_unit_death(world: &mut World, dead: Entity) {
     use shared::components::Npc;
     let Some(npc) = world.get::<Npc>(dead) else {
         return;
     };
-    let (boss_entry, center, radius) = match npc.template_id {
-        197219 => (196482, Vec2::new(1766.25, 3086.41), 80.0),
-        192333 => (191736, Vec2::new(2365.0, 3050.0), 40.0),
-        _ => return,
+    let Some(&(_, boss_entry, center, radius)) = INTRO_UNLOCKS
+        .iter()
+        .find(|(gate, ..)| *gate == npc.template_id)
+    else {
+        return;
     };
     let entry = npc.template_id;
     let Some(map) = world.get::<crate::maps::InMap>(dead).copied() else {
         return;
     };
-    if map.map_id != 2526 || !in_intro_area(world, dead, center, radius) {
+    if map.map_id != MAP || !in_intro_area(world, dead, center, radius) {
         return;
     }
     let living = world
