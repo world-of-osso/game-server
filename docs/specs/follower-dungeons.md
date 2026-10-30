@@ -16,6 +16,8 @@ Follower party roster portraits carry the spawned NPC's actual template-selected
 
 `CREATURE_DAMAGED_IDLE_REGENERATES`: In Murder Row instance4, the static entry255050 remained Idle with an empty threat table and regenerated near full health while followers damaged it. Evidence: `/home/osso/.worktrees/murderrow-walk-run/fight-image2.log`; cause and general scope are unverified.
 
+`MURDER_ROW_STAIRS_NAV_COLLISION_GAP`: Near Bevy (8872.657, 30.726, 4739.721), the first generated stair bend was blocked by live movement collision. An eastward player nudge followed by a fresh path reached (8878.12, 61.61, 4777.14); all four followers reached the upper point. The nav/collision discrepancy remains unexplained. Evidence: `/home/osso/.worktrees/murderrow-walk-run/gateway-walk.log` and `gateway-walk2.log`.
+
 `FOLLOWER_RUN_RESTART_PERSISTENCE_GAP`: A server restart does not restore the follower party or its active run. Murder Row's owner logged back into difficulty 205 without a group; releasing spirit then created a difficulty-1 copy. A resumed clear and its encounter credit are not established. Run live clears without restarting the server until run persistence is implemented.
 
 ## Admin harness party staging
