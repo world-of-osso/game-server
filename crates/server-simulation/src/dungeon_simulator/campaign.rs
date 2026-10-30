@@ -305,9 +305,25 @@ fn relocated_attackable_objective_uses_live_position() {
 #[test]
 #[ignore = "requires extracted Darkflame follower graph"]
 fn darkflame_withheld_darkness_does_not_abort_initialization() {
-    let run = spawn_run(1, &mut None).unwrap();
+    let mut run = spawn_run(1, &mut None).unwrap();
     assert_eq!(run.graph.map_id, 2651);
     assert!(!run.actors.contains_key(&63651001));
+    let map = *run
+        .app
+        .world()
+        .get::<crate::maps::InMap>(run.party.owner)
+        .unwrap();
+    assert!(crate::scripted_ai::instance_script::set_boss_state(
+        run.app.world_mut(),
+        map,
+        0,
+        crate::scripted_ai::instance_script::EncounterState::Done,
+    ));
+    run.control().unwrap();
+    let darkness = run.actors[&63651001];
+    let capture = run.app.world().resource::<super::healer_intake::Capture>();
+    assert_eq!(capture.sources[&darkness].0, 63651001);
+    assert!(capture.source_snapshots.contains_key(&63651001));
 }
 
 #[test]
@@ -2019,8 +2035,18 @@ impl Run {
             .get::<crate::maps::InMap>(self.party.owner)
             .copied()
         {
-            self.actors
-                .extend(runtime::live_population(self.app.world_mut(), copy));
+            let live = runtime::live_population(self.app.world_mut(), copy);
+            let changed = live
+                .iter()
+                .any(|(guid, actor)| self.actors.get(guid) != Some(actor));
+            self.actors.extend(live);
+            if changed {
+                self.healer_metrics.register_sources(
+                    self.app.world_mut(),
+                    &self.graph,
+                    &self.actors,
+                );
+            }
         }
         if server::test_support::transport::in_progress(self.app.world(), self.party.owner) {
             return Ok(());
