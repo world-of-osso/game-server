@@ -69,6 +69,8 @@ mod doragosa;
 mod edna_intro;
 #[path = "emberon.rs"]
 mod emberon;
+#[path = "fangs_warmup.rs"]
+mod fangs_warmup;
 #[path = "gargolmar.rs"]
 mod gargolmar;
 #[path = "gargolmar_speech.rs"]
