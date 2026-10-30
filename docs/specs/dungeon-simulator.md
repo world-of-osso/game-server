@@ -43,7 +43,7 @@ Extract each in-dungeon transport from its production registration and execute i
 
 ## Route progress
 
-A party member makes movement progress only when its remaining native route distance to the same goal decreases. Damage and HP/mana recovery also count as progress; movement that does not reduce the route does not.
+A party member makes movement progress only when its remaining native route distance to the same goal decreases. Damage and HP/mana recovery also count as progress; movement that does not reduce the route does not. The leader waits when the tank's native walking distance to the leader exceeds the tank's opening range, and resumes after the tank regroups.
 
 ## Interaction objectives
 

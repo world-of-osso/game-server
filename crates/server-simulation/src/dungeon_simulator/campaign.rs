@@ -7,6 +7,7 @@ use std::collections::BTreeMap;
 
 const MAX_TICKS: usize = 72_000;
 const STALL_SECONDS: f64 = 60.0;
+const COHESION_CHECK_SECONDS: f64 = 1.0;
 
 #[path = "azure_positioning_tests.rs"]
 mod azure_positioning_tests;
@@ -259,10 +260,9 @@ fn unattackable_objective_is_approached_using_its_live_position() {
         .get::<MoveIntent>(run.party.owner)
         .expect("walk toward gated objective");
     assert_eq!(target.0, Vec3::new(moved.x, moved.y, moved.z));
-    run.app
-        .world_mut()
-        .entity_mut(run.party.owner)
-        .insert(moved);
+    for unit in [run.party.owner, run.party.tank] {
+        run.app.world_mut().entity_mut(unit).insert(moved);
+    }
     run.control().unwrap();
     run.app
         .world_mut()
@@ -1265,6 +1265,44 @@ fn single_engaged_boss_never_enters_repeating_breakable_control_hold() {
 }
 
 #[test]
+fn leader_waits_on_native_walk_graph_until_tank_catches_up() {
+    let mut run = spawn_run(1, &mut None).unwrap();
+    let actors: Vec<_> = run.actors.values().copied().collect();
+    for actor in actors {
+        run.app.world_mut().despawn(actor);
+    }
+    let target = run
+        .graph
+        .packs
+        .iter()
+        .find(|pack| pack.id == 20375706)
+        .unwrap()
+        .point();
+    let owner = run.party.owner;
+    let tank = run.party.tank;
+    run.app.world_mut().entity_mut(owner).insert(Position {
+        x: target.x,
+        y: target.y,
+        z: target.z,
+    });
+    let initial_tank = *run.app.world().get::<Position>(tank).unwrap();
+    assert!(run.wait_for_tank().unwrap());
+    for _ in 0..3000 {
+        run.app.update();
+        let position = *run.app.world().get::<Position>(owner).unwrap();
+        assert_eq!(Vec3::new(position.x, position.y, position.z), target);
+        if !run.wait_for_tank().unwrap() {
+            assert_ne!(
+                *run.app.world().get::<Position>(tank).unwrap(),
+                initial_tank
+            );
+            return;
+        }
+    }
+    panic!("tank did not regroup along the native graph");
+}
+
+#[test]
 fn follower_making_native_route_progress_prevents_a_false_stall() {
     let mut run = spawn_run(1, &mut None).unwrap();
     for _ in 0..400 {
@@ -1664,6 +1702,8 @@ struct Run {
     last_progress: f64,
     event_cursor: usize,
     best_routes: BTreeMap<Entity, (Vec3, f32)>,
+    next_cohesion_check: f64,
+    waiting_for_tank: bool,
     last_resources: Vec<(Option<f32>, Option<f32>)>,
     healer_metrics: super::healer_metrics::Recorder,
     pet_recorder: super::diagnostics::PetRecorder,
@@ -1870,6 +1910,8 @@ fn spawn_run(seed: u64, catalogs: &mut Option<super::catalogs::Catalogs>) -> Res
         last_progress: 0.0,
         event_cursor: 0,
         best_routes: BTreeMap::new(),
+        next_cohesion_check: 0.0,
+        waiting_for_tank: false,
         last_resources: Vec::new(),
         healer_metrics,
         pet_recorder: Default::default(),
@@ -2125,16 +2167,50 @@ impl Run {
         }
     }
 
-    fn control(&mut self) -> Result<(), String> {
-        self.refresh_population();
-        if server::test_support::transport::in_progress(self.app.world(), self.party.owner) {
-            return Ok(());
+    fn wait_for_tank(&mut self) -> Result<bool, String> {
+        let world = self.app.world();
+        if !crate::spell_cast::targets::is_alive(world, self.party.tank)
+            || server::test_support::transport::in_progress(world, self.party.tank)
+        {
+            self.waiting_for_tank = false;
+            return Ok(false);
         }
-        if crate::followers::simulator::has_uncleared_fight(self.app.world(), self.party.owner) {
+        if self.now() >= self.next_cohesion_check {
+            let owner = *world
+                .get::<Position>(self.party.owner)
+                .ok_or("cohesion owner absent")?;
+            let tank = *world
+                .get::<Position>(self.party.tank)
+                .ok_or("cohesion tank absent")?;
+            let from = Vec3::new(tank.x, tank.y, tank.z);
+            let to = Vec3::new(owner.x, owner.y, owner.z);
+            let route = world
+                .resource::<super::Space>()
+                .walk_legs(from, to)
+                .map_err(|error| format!("tank cannot follow leader: {error}"))?;
+            let yards: f32 = route.iter().map(|(_, distance)| distance).sum();
+            let (_, opening_range) =
+                crate::followers::simulator::opening_spell(world, self.party.tank);
+            self.waiting_for_tank = yards > opening_range;
+            self.next_cohesion_check = self.now() + COHESION_CHECK_SECONDS;
+        }
+        if self.waiting_for_tank {
+            let owner = *self
+                .app
+                .world()
+                .get::<Position>(self.party.owner)
+                .ok_or("cohesion owner absent")?;
             self.app
                 .world_mut()
                 .entity_mut(self.party.owner)
-                .remove::<MoveIntent>();
+                .insert(MoveIntent(Vec3::new(owner.x, owner.y, owner.z)));
+        }
+        Ok(self.waiting_for_tank)
+    }
+
+    fn control(&mut self) -> Result<(), String> {
+        self.refresh_population();
+        if server::test_support::transport::in_progress(self.app.world(), self.party.owner) {
             return Ok(());
         }
         if !crate::spell_cast::targets::is_alive(self.app.world(), self.party.owner) {
@@ -2145,6 +2221,16 @@ impl Run {
                 )?;
                 super::movement::forget_party_travel(self.app.world_mut(), self.party.owner);
             }
+            return Ok(());
+        }
+        if self.wait_for_tank()? {
+            return Ok(());
+        }
+        if crate::followers::simulator::has_uncleared_fight(self.app.world(), self.party.owner) {
+            self.app
+                .world_mut()
+                .entity_mut(self.party.owner)
+                .remove::<MoveIntent>();
             return Ok(());
         }
         let Some((pack_id, target)) = self.next_pack() else {
