@@ -24,6 +24,13 @@ fn encounter_coverage_deios_rp_warmup_is_copy_local_and_opens_after_cast() {
     let (mut h, boss, map) = deios_copy(205);
     let conn =
         Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    let native = crate::spell_cast::test_harness::load_native_creature_world(&[191220]);
+    {
+        let mut data = h.app.world_mut().resource_mut::<WorldData>();
+        data.templates.extend(native.templates);
+        data.difficulty_templates
+            .extend(native.difficulty_templates);
+    }
     let (rp, _) = spawn_authored_actor(&mut h.app, &conn, 191220, map, 205);
     let mut visibility = crate::interest::NetworkVisibility::default();
     visibility.gain_visibility(h.players[0].1);
