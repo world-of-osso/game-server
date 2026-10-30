@@ -9,6 +9,20 @@ const SAMPLE_SPACING: f32 = 5.0;
 // continuity bound is inferred; dives may exceed the impulse speed.
 const VERTICAL_BOUND: f32 = shared::skyriding::SKYRIDING.add_impulse_max_speed;
 
+#[derive(serde::Deserialize)]
+struct Trace {
+    report: String,
+    fight: u32,
+    actor: u32,
+    legs: Vec<TraceLeg>,
+}
+
+#[derive(serde::Deserialize)]
+struct TraceLeg {
+    encounter: u32,
+    points: Vec<(f32, f32, f32)>,
+}
+
 #[derive(Clone, Copy)]
 struct LoggedPoint {
     horizontal: Vec2,
@@ -107,6 +121,108 @@ fn flight_path(
         }
     }
     Ok(path)
+}
+
+fn project_endpoint(
+    los: &mut los::LosMap,
+    nav: &mut navigation::NavigationMap,
+    point: Vec2,
+    reference: f32,
+) -> Result<Vec3, String> {
+    let mut floors = Vec::new();
+    for height in los.floor_heights(point.x, point.y)? {
+        if let Some(floor) = nav.floor_polygon(Vec3::new(point.x, height, point.y))?
+            && (floor.x - point.x).hypot(floor.z - point.y) < 0.001
+        {
+            floors.push(Vec3::new(point.x, floor.y, point.y));
+        }
+    }
+    floors
+        .into_iter()
+        .min_by(|a, b| (a.y - reference).abs().total_cmp(&(b.y - reference).abs()))
+        .ok_or_else(|| format!("no native projected floor at logged point {point:?}"))
+}
+
+/// Resolve the retained WCL trace against the map's real collision and navmesh.
+pub(super) fn build_paths(
+    graph: &super::graph::Graph,
+    nav: &mut navigation::NavigationMap,
+) -> Result<Vec<Vec<Vec3>>, String> {
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../content/dungeons/dawnbreaker-flight-wcl.json");
+    let trace: Trace = serde_json::from_slice(
+        &std::fs::read(&path)
+            .map_err(|error| format!("flight trace {}: {error}", path.display()))?,
+    )
+    .map_err(|error| format!("flight trace {}: {error}", path.display()))?;
+    if trace.report != "x3HzDRn6yVjqCbt8"
+        || trace.fight != 7
+        || trace.actor != 5
+        || trace
+            .legs
+            .iter()
+            .map(|leg| leg.encounter)
+            .collect::<Vec<_>>()
+            != [2837, 2838, 2839]
+        || graph.follower_boss_entries.len() != trace.legs.len()
+    {
+        return Err("Dawnbreaker flight trace does not match encounter order".into());
+    }
+    let mut boss_heights = Vec::new();
+    for entry in &graph.follower_boss_entries {
+        let source = graph
+            .follower_boss_sources
+            .get(entry)
+            .copied()
+            .unwrap_or(*entry);
+        let matches: Vec<_> = graph
+            .packs
+            .iter()
+            .filter(|pack| pack.spawns.iter().any(|spawn| spawn.entry == source))
+            .collect();
+        let [boss] = matches.as_slice() else {
+            return Err(format!("flight boss source {source} is not unique"));
+        };
+        boss_heights.push(boss.height);
+    }
+    let root = super::graph::extraction::asset_root();
+    let los = std::cell::RefCell::new(los::LosMap::new(&root.join("los/2662")));
+    let mut paths = Vec::new();
+    let mut previous_boss_height = graph.entrance_height;
+    for (leg, &boss_height) in trace.legs.iter().zip(&boss_heights) {
+        let points: Vec<_> = leg
+            .points
+            .iter()
+            .map(|&(ms, x, z)| LoggedPoint {
+                horizontal: Vec2::new(x, z),
+                seconds: ms / 1000.0,
+            })
+            .collect();
+        let (Some(first), Some(last)) = (points.first(), points.last()) else {
+            return Err(format!(
+                "encounter {} has no logged flight samples",
+                leg.encounter
+            ));
+        };
+        let start = project_endpoint(
+            &mut los.borrow_mut(),
+            nav,
+            first.horizontal,
+            previous_boss_height,
+        )?;
+        let end = project_endpoint(&mut los.borrow_mut(), nav, last.horizontal, boss_height)?;
+        let path = flight_path(
+            start,
+            end,
+            &points,
+            |point| native_surfaces(&mut los.borrow_mut(), point),
+            |from, to| los.borrow_mut().clear(from, to),
+        )
+        .map_err(|error| format!("encounter {} flight: {error}", leg.encounter))?;
+        paths.push(path);
+        previous_boss_height = boss_height;
+    }
+    Ok(paths)
 }
 
 #[test]
