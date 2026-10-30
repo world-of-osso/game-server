@@ -22,6 +22,16 @@ The party walked from the entrance through Kystia and Zaen, took the inferred ga
 
 Evidence under `/home/osso/.worktrees/murderrow-walk-run/`: `server16.log` contains the four encounter transitions; `instance7-achievements.json` contains the owner readback; `lithiel-resume.log` records the blocked approach and `lithiel-resume2.log` records the kill and final approach; `obstacle-exact.log` and `obstacle-engine-master-exact-trace.json` record the engine-master retest. `instance7-lithiel-forever.webp` and `instance7-lithiel-modern.webp` are post-kill captures, not kill-frame captures; the Modern image was taken after a client reconnect, with the same server still running.
 
+## Uldaman live clear
+
+On 2026-10-30, Uldawalk entered map 2451, difficulty 205, through ordinary LFG 2465 with Garrick, Crenna, Shuja and Meredy. Instance 13 completed Lost Dwarves 2555, Bromach 2556, Sentinel Talondras 2557, Emberon 2558 and Chrono-Lord Deios 2559 without a server restart. All five were alive after Deios. The client reconnected during host load; the same server and copy continued. `list-achievements` shows character achievement 16278, Uldaman: Legacy of Tyr, earned after the genuine Deios kill.
+
+The party followed complete nav paths from the entrance to the dwarves, Bromach, Talondras, Emberon and Deios. The player used short movement segments and stopped to check position. A detour at Bevy (91,229,825) passed the blocked direct route. At (60,218,680), an eastward detour avoided a WMO movement clamp. Crenna briefly lagged after later trash combat; the player walked back to regroup before continuing. After Talondras knockback, Crenna and Meredy landed and followed the player; this is live proof for the landing fix, not proof of the precise cause of the earlier stuck flights.
+
+Before Talondras, GO376554 and GO377366 were READY with server and client collision enabled. After Talondras, GO376554 was ACTIVE with server and replicated client collision disabled; GO376191 was also ACTIVE. The party passed the inferred Talondras and Emberon vault passages. GO377366 remains READY: `NAV_ROUTES_THROUGH_STATIC_CLOSED_DOOR_377366` is recorded in [boss scripts](boss-scripts.md). The 376554, 376191 and 376640 passage triggers and `DEIOS_WARMUP_PROXIMITY_INFERRED` remain inferred, not sourced Retail triggers. Deios became attackable after that warmup and entered combat through a player cast.
+
+Evidence under `/home/osso/.worktrees/uldaman-walk-run/`: `server19.log` records the five encounter transitions; `achievements-copy13.json` records credit; `scene-680-copy13.txt`, `scene-post-talondras-copy13.txt`, and `go-376554-copy13.txt` / `go-377366-copy13.txt` record door diagnostics. The run did not produce qualified both-skin kill-frame evidence.
+
 ## Known gaps
 
 `WOWHEAD_PLACEMENT_INCLUDES_SUMMONS`: The one-time Wowhead placement import can classify spell-summoned actors as independent static spawns. Murder Row GUID63813226 is entry255050, the native Effect28 summon of spell1264098, and must not be statically placed. Audit other follower-map placements against native summon effects before publication; a match alone does not prove that every static placement is invalid.
