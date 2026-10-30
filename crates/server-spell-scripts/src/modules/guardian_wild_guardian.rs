@@ -17,11 +17,35 @@ const SUMMON: u32 = 1308399;
 const ANSWERED_CALLING: u32 = 1308647;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::DeclaredReach(declared_reach),
     SpellScriptHook::AfterPayment(on_payment),
     SpellScriptHook::AfterResolvedHits(spirit_attack),
     SpellScriptHook::AfterForegroundSpecial(wild_guardian_action),
     SpellScriptHook::OwnsPolicyProc(|spell| spell == TALENT),
 ];
+
+fn declared_reach(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+) -> combat::spell_cast::script_registry::ScriptReach {
+    if !matches!(spell.id, 33917 | 77758)
+        || !combat::spell_cast::script_registry::reach_source_selected(world, caster, TALENT)
+    {
+        return Default::default();
+    }
+    let wrath = world
+        .resource::<SpellStore>()
+        .get(1308093)
+        .expect("native Spirit's Wrath");
+    let range = wrath
+        .misc
+        .as_ref()
+        .and_then(|misc| misc.range)
+        .expect("native Spirit's Wrath range")
+        .max_hostile;
+    combat::spell_cast::script_registry::ScriptReach::caster(range)
+}
 
 fn talent_amount(world: &World, caster: Entity, spell: u32, index: u8) -> Option<f32> {
     world

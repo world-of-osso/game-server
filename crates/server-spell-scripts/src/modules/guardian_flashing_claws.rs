@@ -6,7 +6,29 @@ use combat::spell_cast::{
     effects::EffectCtx, queued_triggers, script_registry::SpellScriptHook, targets,
 };
 
-pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::AfterResolvedHits(after_thrash)];
+pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::DeclaredReach(declared_reach),
+    SpellScriptHook::AfterResolvedHits(after_thrash),
+];
+
+fn declared_reach(
+    world: &World,
+    caster: Entity,
+    spell: &combat::spell_info::SpellInfo,
+) -> combat::spell_cast::script_registry::ScriptReach {
+    if spell.id != 77758
+        || !combat::spell_cast::script_registry::reach_source_selected(world, caster, 393427)
+    {
+        return Default::default();
+    }
+    let effect = spell
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .expect("native Thrash effect");
+    let radius = effect.radius[1].expect("native Thrash radius").radius;
+    combat::spell_cast::script_registry::ScriptReach::caster(radius)
+}
 
 fn after_thrash(world: &mut World, ctx: &EffectCtx<'_>) {
     if ctx.spell.id != 77758 {

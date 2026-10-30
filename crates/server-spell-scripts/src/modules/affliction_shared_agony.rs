@@ -24,7 +24,9 @@ fn declared_reach(
     caster: Entity,
     spell: &SpellInfo,
 ) -> combat::spell_cast::script_registry::ScriptReach {
-    if spell.id != AGONY {
+    if spell.id != AGONY
+        || !combat::spell_cast::script_registry::reach_source_selected(world, caster, SHARED_AGONY)
+    {
         return Default::default();
     }
     combat::spell_cast::script_registry::ScriptReach::target(

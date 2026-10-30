@@ -34,7 +34,9 @@ fn declared_reach(
     caster: Entity,
     spell: &combat::spell_info::SpellInfo,
 ) -> combat::spell_cast::script_registry::ScriptReach {
-    if spell.id != BITE {
+    if spell.id != BITE
+        || !combat::spell_cast::script_registry::reach_source_selected(world, caster, UNSEEN)
+    {
         return Default::default();
     }
     let range = spell_cast::scripts::script_effect_value(world, caster, UNSEEN, 1);

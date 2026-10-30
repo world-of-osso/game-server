@@ -312,6 +312,14 @@ impl ScriptReach {
     }
 }
 
+/// A selected passive may be represented by its spellbook entry or its active aura.
+pub fn reach_source_selected(world: &World, caster: Entity, spell: u32) -> bool {
+    world
+        .get::<crate::class_progression::KnownSpells>(caster)
+        .is_some_and(|known| known.contains(spell))
+        || crate::auras::has_aura(world, caster, spell)
+}
+
 pub type DeclaredReachHook = fn(&World, Entity, &SpellInfo) -> ScriptReach;
 
 #[derive(Clone, Copy)]

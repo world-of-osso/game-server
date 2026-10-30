@@ -37,10 +37,12 @@ const SOURCES: &[(u32, u8)] = &[(1079, 0), (155722, 1)];
 
 fn declared_reach(
     world: &World,
-    _caster: Entity,
+    caster: Entity,
     spell: &combat::spell_info::SpellInfo,
 ) -> combat::spell_cast::script_registry::ScriptReach {
-    if !SOURCES.iter().any(|(source, _)| *source == spell.id) {
+    if !SOURCES.iter().any(|(source, _)| *source == spell.id)
+        || !combat::spell_cast::script_registry::reach_source_selected(world, caster, TWIN_SPROUTS)
+    {
         return Default::default();
     }
     let vines = world

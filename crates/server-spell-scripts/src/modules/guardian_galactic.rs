@@ -15,9 +15,34 @@ const MOONFIRE: u32 = 8921;
 const MOONFIRE_DAMAGE: u32 = 164812;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::DeclaredReach(declared_reach),
     SpellScriptHook::EarlyAuraRegistration(register),
     SpellScriptHook::ContextHit(moonfire_hit),
 ];
+
+fn declared_reach(
+    world: &World,
+    caster: Entity,
+    spell: &combat::spell_info::SpellInfo,
+) -> combat::spell_cast::script_registry::ScriptReach {
+    let selected = world
+        .get::<combat::class_progression::TraitLoadout>(caster)
+        .is_some_and(|traits| {
+            traits
+                .active_talent_spells()
+                .any(|talent| talent.spell_id == 372567)
+        });
+    if spell.id != MOONFIRE || !selected {
+        return Default::default();
+    }
+    let range = spell
+        .misc
+        .as_ref()
+        .and_then(|misc| misc.range)
+        .expect("native Moonfire range")
+        .max_hostile;
+    combat::spell_cast::script_registry::ScriptReach::caster(range)
+}
 
 fn moonfire_hit(spell: u32) -> Option<fn(&mut World, &EffectCtx<'_>, Entity)> {
     (spell == MOONFIRE).then_some(copy_twin_moonfire)

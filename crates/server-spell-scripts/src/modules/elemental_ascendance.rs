@@ -10,7 +10,22 @@ use combat::spell_cast::scripts::script_effect_value;
 use combat::spell_cast::{self, Sight, targets};
 use combat::spell_info::SpellStore;
 
-pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::Hit(hit_hook)];
+pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::DeclaredReach(declared_reach),
+    SpellScriptHook::Hit(hit_hook),
+];
+
+fn declared_reach(
+    _world: &World,
+    _caster: Entity,
+    spell: &combat::spell_info::SpellInfo,
+) -> combat::spell_cast::script_registry::ScriptReach {
+    if spell.id == ASCENDANCE {
+        combat::spell_cast::script_registry::ScriptReach::EngagedOnly
+    } else {
+        Default::default()
+    }
+}
 
 fn hit_hook(spell: u32) -> Option<HitHook> {
     (spell == ASCENDANCE).then_some(cast_entry)
