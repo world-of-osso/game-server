@@ -64,6 +64,7 @@ mod kit_rotation_tests;
 mod meteor_tests;
 mod owner_trail;
 mod pack_identity;
+pub mod parity_profile;
 pub(crate) mod party;
 mod positioning;
 mod pull_admission;
