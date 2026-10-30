@@ -333,6 +333,68 @@ fn off_graph_source_is_approached_at_its_anchor_when_translocations_exist() {
 }
 
 #[test]
+fn reached_anchor_that_did_not_engage_gives_way_to_the_live_source() {
+    let mut run = spawn_run(1, &mut None).unwrap();
+    let source = 20375720;
+    let boss = run.actors[&source];
+    let at = *run.app.world().get::<Position>(boss).unwrap();
+    let live = Vec3::new(at.x, at.y, at.z);
+    let anchor = run
+        .graph
+        .packs
+        .iter()
+        .map(|pack| pack.point())
+        .find(|point| (40.0..200.0).contains(&point.distance(live)))
+        .unwrap();
+    run.graph.route = vec![server::test_support::graph::RouteStep {
+        pack: source,
+        anchor: anchor.to_array(),
+    }];
+    run.control().unwrap();
+    assert_eq!(
+        run.app
+            .world()
+            .get::<MoveIntent>(run.party.owner)
+            .unwrap()
+            .0,
+        anchor
+    );
+    let standing = Position {
+        x: anchor.x,
+        y: anchor.y,
+        z: anchor.z,
+    };
+    for unit in [run.party.owner, run.party.tank] {
+        run.app.world_mut().entity_mut(unit).insert(standing);
+    }
+    run.control().unwrap();
+    assert_eq!(
+        run.app
+            .world()
+            .get::<MoveIntent>(run.party.owner)
+            .unwrap()
+            .0,
+        live,
+        "an anchor that left the source idle must not hold the party there"
+    );
+    let step = Position {
+        x: anchor.x + 2.0,
+        ..standing
+    };
+    run.app.world_mut().entity_mut(run.party.owner).insert(step);
+    run.control().unwrap();
+    assert_eq!(
+        run.app
+            .world()
+            .get::<MoveIntent>(run.party.owner)
+            .unwrap()
+            .0,
+        live,
+        "leaving the reached anchor must not send the party back to it"
+    );
+}
+
+#[test]
 fn relocated_attackable_objective_without_aggro_uses_live_position() {
     let mut run = spawn_run(1, &mut None).unwrap();
     let boss = run.actors[&20375720];
@@ -1829,6 +1891,8 @@ struct Run {
     report: Report,
     current_pack: Option<u32>,
     waiting_objective: Option<(u32, f64)>,
+    /// Packs whose frozen route anchor the owner reached without engaging them.
+    anchors_reached: std::collections::BTreeSet<u32>,
     last_progress: f64,
     event_cursor: usize,
     best_routes: BTreeMap<Entity, (super::movement::RouteGoal, f32)>,
@@ -2037,6 +2101,7 @@ fn spawn_run(seed: u64, catalogs: &mut Option<super::catalogs::Catalogs>) -> Res
         objects,
         current_pack: None,
         waiting_objective: None,
+        anchors_reached: Default::default(),
         last_progress: 0.0,
         event_cursor: 0,
         best_routes: BTreeMap::new(),
@@ -2533,7 +2598,9 @@ impl Run {
 
     /// An unmoved source is approached at its frozen route anchor, which lies on the walk graph
     /// even when the source itself stands off-mesh; a moved source is approached where it is.
-    fn approach_point(&self, pack_id: u32, target: Entity, live: Vec3) -> Vec3 {
+    /// A reached anchor that did not engage the source (its contact member may be dead) gives
+    /// way to the live source.
+    fn approach_point(&mut self, pack_id: u32, target: Entity, live: Vec3) -> Vec3 {
         let unmoved = self.actors.get(&pack_id) == Some(&target)
             && self
                 .graph
@@ -2541,9 +2608,26 @@ impl Run {
                 .iter()
                 .find(|pack| pack.id == pack_id)
                 .is_some_and(|pack| pack.point().distance(live) <= 1.0);
-        let anchor = self.graph.route.iter().find(|step| step.pack == pack_id);
+        let owner = self
+            .app
+            .world()
+            .get::<Position>(self.party.owner)
+            .map(|at| Vec3::new(at.x, at.y, at.z));
+        let anchor = self
+            .graph
+            .route
+            .iter()
+            .find(|step| step.pack == pack_id)
+            .map(|step| Vec3::from_array(step.anchor));
+        if anchor
+            .zip(owner)
+            .is_some_and(|(anchor, owner)| owner.distance(anchor) <= 1.0)
+        {
+            self.anchors_reached.insert(pack_id);
+        }
+        let reached = self.anchors_reached.contains(&pack_id);
         match anchor {
-            Some(step) if unmoved => Vec3::from_array(step.anchor),
+            Some(anchor) if unmoved && !reached => anchor,
             _ => live,
         }
     }
