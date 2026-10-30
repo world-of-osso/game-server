@@ -86,6 +86,10 @@
 
 `ULDAMAN_PREHISTORIA_DOOR_LITTLEWIGS_TIMER`: when Bromach2556 completes with Lost Dwarves2555 already Done, open source Vault Door376557 in that copy after18.3s. LittleWigs `UldamanLegacyOfTyr/Trash.lua:176–185` ties the timer to Bromach's win and the completed Dwarves criterion; the dwarves' RP movement is not modelled. Do not infer a gossip or spellclick trigger.
 
+## Uldaman Talondras passage
+
+`ULDAMAN_TALONDRAS_DOOR_PASSAGE_INFERRED`: GO376554 opens when Sentinel Talondras2557 is Done in its copy, using passage-door state. Its TDB position lies on the nav route to Emberon, and DungeonEncounter orders Talondras before Emberon. [Warcraft Wiki Hall of the Keepers](https://warcraft.wiki.gg/wiki/Hall_of_the_Keepers) corroborates onward progression after Talondras. No log or script sources this door's exact trigger or a possible post-RP delay.
+
 ## Deios source ingress boundary
 
 - Current LittleWigs2777a9d `ChronoLordDeios.lua` authenticates184125/2559/map2451bit4, first Wing3760496.3s/Sand37572712.1s/Rewind37620839.1s. Normal1/Follower205 must not invent non-Normal Time Sink debuffs. Lua warmup16.9s and defeated-health>1 check do not establish an immunity-removal action or surrender/credit controller.
