@@ -41,6 +41,10 @@ A gameplay panic or initialization failure must return an explicit `aborted` res
 
 Extract each in-dungeon transport from its production registration and execute its production handler. Azure book routes must be available in generic extraction and in the frozen Azure graph; they must not use an implicit fallback dispatcher.
 
+## Route progress
+
+A party member makes movement progress only when its remaining native route distance to the same goal decreases. Damage and HP/mana recovery also count as progress; movement that does not reduce the route does not.
+
 ## Interaction objectives
 
 When a gated encounter requires an interaction, the route driver performs the native interaction before waiting for attackability. In map 2825 it picks up offerings through spellclick, carries each to an unfed avatar, and lets the production delivery handler unlock Hoardmonger. It does not change immunity or positions directly.

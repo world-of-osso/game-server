@@ -32,6 +32,14 @@ pub(super) fn forget_party_travel(world: &mut World, owner: Entity) {
     }
 }
 
+pub(super) fn remaining_route(world: &World, unit: Entity) -> Option<(Vec3, f32)> {
+    let travel = world.get::<Travel>(unit)?;
+    Some((
+        travel.destination,
+        travel.legs.iter().map(|(_, yards)| yards).sum(),
+    ))
+}
+
 pub(super) fn inspect_travel(world: &World, unit: Entity) -> serde_json::Value {
     let Some(travel) = world.get::<Travel>(unit) else {
         return serde_json::Value::Null;

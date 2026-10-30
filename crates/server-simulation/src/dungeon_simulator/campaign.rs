@@ -1265,6 +1265,44 @@ fn single_engaged_boss_never_enters_repeating_breakable_control_hold() {
 }
 
 #[test]
+fn follower_making_native_route_progress_prevents_a_false_stall() {
+    let mut run = spawn_run(1, &mut None).unwrap();
+    for _ in 0..400 {
+        run.app.update();
+    }
+    let tank = run.party.tank;
+    let start = *run.app.world().get::<Position>(tank).unwrap();
+    let target = run
+        .graph
+        .packs
+        .iter()
+        .find(|pack| pack.id == 20375720)
+        .unwrap()
+        .point();
+    run.app.world_mut().entity_mut(tank).insert((
+        MoveIntent(target),
+        crate::creature_ai::SpawnPoint {
+            x: start.x,
+            y: start.y,
+            z: start.z,
+            wander_distance: 0.0,
+            speed_walk: 1.0,
+            speed_run: 0.005,
+        },
+    ));
+    run.last_progress = run.now();
+    for _ in 0..1300 {
+        run.app.update();
+        assert!(
+            !run.stalled(),
+            "a follower advancing on its native route must not stall"
+        );
+    }
+    let end = *run.app.world().get::<Position>(tank).unwrap();
+    assert_ne!(start, end);
+}
+
+#[test]
 fn stationary_full_party_still_stalls_without_any_progress() {
     let _rng_scope = crate::random::seed_scope(1);
     let mut run = spawn_run(1, &mut None).unwrap();
@@ -1625,7 +1663,7 @@ struct Run {
     waiting_objective: Option<(u32, f64)>,
     last_progress: f64,
     event_cursor: usize,
-    last_owner_position: Vec3,
+    best_routes: BTreeMap<Entity, (Vec3, f32)>,
     last_resources: Vec<(Option<f32>, Option<f32>)>,
     healer_metrics: super::healer_metrics::Recorder,
     pet_recorder: super::diagnostics::PetRecorder,
@@ -1820,8 +1858,6 @@ fn spawn_run(seed: u64, catalogs: &mut Option<super::catalogs::Catalogs>) -> Res
             "frozen graph contains sources absent from production Normal population: {missing:?}"
         ));
     }
-    let last_owner_position =
-        Vec3::new(graph.entrance[0], graph.entrance_height, graph.entrance[1]);
     let healer_metrics = super::healer_metrics::start(app.world_mut(), &graph, &party, &actors);
     Ok(Run {
         app,
@@ -1833,7 +1869,7 @@ fn spawn_run(seed: u64, catalogs: &mut Option<super::catalogs::Catalogs>) -> Res
         waiting_objective: None,
         last_progress: 0.0,
         event_cursor: 0,
-        last_owner_position,
+        best_routes: BTreeMap::new(),
         last_resources: Vec::new(),
         healer_metrics,
         pet_recorder: Default::default(),
@@ -2492,6 +2528,31 @@ impl Run {
         gained
     }
 
+    fn observe_route_progress(&mut self) -> bool {
+        let routes: BTreeMap<_, _> = self
+            .members()
+            .filter_map(|unit| {
+                super::movement::remaining_route(self.app.world(), unit).map(|route| (unit, route))
+            })
+            .collect();
+        let mut progressed = false;
+        for (&unit, &(goal, remaining)) in &routes {
+            match self.best_routes.get_mut(&unit) {
+                Some((previous_goal, best)) if *previous_goal == goal => {
+                    if remaining < *best {
+                        *best = remaining;
+                        progressed = true;
+                    }
+                }
+                _ => {
+                    self.best_routes.insert(unit, (goal, remaining));
+                }
+            }
+        }
+        self.best_routes.retain(|unit, _| routes.contains_key(unit));
+        progressed
+    }
+
     fn stalled(&mut self) -> bool {
         if let Some((pack, since)) = self.waiting_objective {
             if self.now() - since >= STALL_SECONDS {
@@ -2503,6 +2564,7 @@ impl Run {
             return false;
         }
         let resource_gain = self.observe_resource_gain();
+        let route_progress = self.observe_route_progress();
         let world = self.app.world();
         let events = &world
             .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
@@ -2519,21 +2581,18 @@ impl Run {
                     })
         });
         self.event_cursor = events.len();
-        let position = world.get::<Position>(self.party.owner).unwrap();
-        let position = Vec3::new(position.x, position.y, position.z);
-        if damage || position != self.last_owner_position || resource_gain {
+        if damage || route_progress || resource_gain {
             self.last_progress = self.now();
         }
-        self.last_owner_position = position;
         if self.now() - self.last_progress < STALL_SECONDS {
             return false;
         }
         self.report.status = "stalled".into();
         self.report.detail = self.report.pulls.last().map_or_else(
-            || "no party damage, actual leader movement or HP/mana gain for 60s".into(),
+            || "no party damage, decreasing native route distance or HP/mana gain for 60s".into(),
             |pull| {
                 format!(
-                    "no party damage, actual leader movement or HP/mana gain for 60s; last pull: {}",
+                    "no party damage, decreasing native route distance or HP/mana gain for 60s; last pull: {}",
                     pull.decision
                 )
             },
