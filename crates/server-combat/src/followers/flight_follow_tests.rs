@@ -80,10 +80,10 @@ fn flying_follower_requires_area_permission_and_lands_on_leaders_navmesh() {
     crate::spell_cast::creature_cast(h.app.world_mut(), owner, 33943, Some(owner), true)
         .expect("leader enters native Flight Form");
     assert!(crate::auras::has_aura(h.app.world(), owner, 33943));
-    h.app
-        .world_mut()
-        .entity_mut(owner)
-        .insert((in_air, PlayerMotion(PlayerMotion::FLYING)));
+    h.app.world_mut().entity_mut(owner).insert((
+        in_air,
+        PlayerMotion(PlayerMotion::CAN_FLY | PlayerMotion::FLYING),
+    ));
     assert!(
         h.app.world().get::<Mounted>(owner).is_none(),
         "leader is in an unmounted flight form"
