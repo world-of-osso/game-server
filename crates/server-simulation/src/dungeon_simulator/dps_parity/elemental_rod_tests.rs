@@ -70,15 +70,16 @@ fn elemental_spenders_apply_rod_and_lightning_copies_resolved_damage() {
     trigger(&mut run, 188196, target);
     let world = run.app.world();
     let events = &world.resource::<ObservedCombatEvents>().0[before..];
-    let bolt = events
+    let bolt_index = events
         .iter()
-        .find(|e| {
+        .position(|e| {
             e.source == Some(run.actor.to_bits())
                 && e.spell_id == Some(188196)
                 && e.kind == CombatLogKind::Damage
         })
         .expect("real Lightning Bolt hit");
-    let copy = events
+    let bolt = &events[bolt_index];
+    let copy = events[bolt_index + 1..]
         .iter()
         .find(|e| {
             e.source == Some(run.actor.to_bits())
