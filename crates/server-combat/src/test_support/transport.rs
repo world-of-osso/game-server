@@ -8,6 +8,7 @@ pub enum Action {
     AzureBook,
     Proximity,
     GatewayProximity,
+    TaxiProximity,
     ObjectGossip,
     ObjectScript,
     CollisionDrop,
@@ -75,10 +76,7 @@ pub fn read_registrations(
             source_guid: None,
             source,
             destination,
-            distance: points
-                .windows(2)
-                .map(|pair| pair[0].distance(pair[1]))
-                .sum(),
+            distance: points.windows(2).map(|pair| pair[0].distance(pair[1])).sum(),
             radius: crate::npc_interaction::INTERACTION_DISTANCE,
             departure: None,
             action: Action::SpellClick,
@@ -86,6 +84,24 @@ pub fn read_registrations(
     }
     if map == 2515 {
         registrations.extend(read_azure_books(db)?);
+    }
+    if map == crate::scripted_ai::windrunner_passage::MAP {
+        let network =
+            crate::taxi::load_taxi_network(db).map_err(|error| format!("taxi network: {error}"))?;
+        let points = network
+            .scripted_path(crate::scripted_ai::windrunner_passage::PATH)
+            .ok_or("Windrunner TaxiPath 10308 unavailable")?;
+        let endpoint = *points.last().ok_or("Windrunner TaxiPath 10308 is empty")?;
+        registrations.push(Registration {
+            entry: crate::scripted_ai::windrunner_passage::PATH,
+            source_guid: None,
+            source: crate::scripted_ai::windrunner_passage::SOURCE,
+            destination: landing_floor(db, map, endpoint)?,
+            distance: points.windows(2).map(|pair| pair[0].distance(pair[1])).sum(),
+            radius: crate::scripted_ai::windrunner_passage::RADIUS,
+            departure: None,
+            action: Action::TaxiProximity,
+        });
     }
     if map == crate::scripted_ai::academy_transport::MAP {
         registrations.extend(crate::scripted_ai::academy_transport::PADS.iter().map(
@@ -371,6 +387,14 @@ pub fn activate(
         }
         return Ok(());
     }
+    if edge.action == Action::TaxiProximity {
+        crate::scripted_ai::windrunner_passage::update(world);
+        if world.get::<crate::taxi::TaxiFlight>(owner).is_none() {
+            return Err("Windrunner proximity did not start taxi flight".into());
+        }
+        world.entity_mut(owner).insert(TaxiLandingPending);
+        return Ok(());
+    }
     let npc = npc.ok_or("registered transport source actor absent")?;
     match edge.action {
         Action::SpellClick => {
@@ -397,7 +421,7 @@ pub fn activate(
                 return Err("registered game object script did not start transport".into());
             }
         }
-        Action::CollisionDrop | Action::GatewayProximity => unreachable!(),
+        Action::CollisionDrop | Action::GatewayProximity | Action::TaxiProximity => unreachable!(),
     }
     Ok(())
 }

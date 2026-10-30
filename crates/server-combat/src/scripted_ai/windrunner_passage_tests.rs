@@ -123,7 +123,18 @@ fn windrunner_passage_requires_kroluk_and_flies_owner_followers_and_pets() {
             },
         ))
         .id();
-    update(h.app.world_mut());
+    let edge = crate::test_support::graph::TransportEdge {
+        from: 1,
+        to: 2,
+        source_guid: 0,
+        radius: RADIUS,
+        departure: None,
+        landing: expected.last().unwrap().to_array(),
+        action: crate::test_support::transport::Action::TaxiProximity,
+    };
+    assert!(
+        crate::test_support::transport::activate(h.app.world_mut(), owner, None, &edge).is_err()
+    );
     assert_eq!(
         *h.app.world().get::<Position>(owner).unwrap(),
         Position {
@@ -139,7 +150,7 @@ fn windrunner_passage_requires_kroluk_and_flies_owner_followers_and_pets() {
         id,
         EncounterState::Done
     ));
-    update(h.app.world_mut());
+    crate::test_support::transport::activate(h.app.world_mut(), owner, None, &edge).unwrap();
     assert_eq!(
         *h.app.world().get::<Position>(distant).unwrap(),
         distant_position
