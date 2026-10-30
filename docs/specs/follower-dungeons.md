@@ -18,6 +18,8 @@ Follower party roster portraits carry the spawned NPC's actual template-selected
 
 `MURDER_ROW_STAIRS_NAV_COLLISION_GAP`: Near Bevy (8872.657, 30.726, 4739.721), the first generated stair bend was blocked by live movement collision. An eastward player nudge followed by a fresh path reached (8878.12, 61.61, 4777.14); all four followers reached the upper point. The nav/collision discrepancy remains unexplained. Evidence: `/home/osso/.worktrees/murderrow-walk-run/gateway-walk.log` and `gateway-walk2.log`.
 
+`MURDER_ROW_DEMONIC_GATEWAY_LOG_CORRELATED`: After Zaen3102 is Done, a player within the inferred20-yard radius of Bevy (8878.12, 61.60762, 4777.14) takes an automatic near teleport to (8872.60, 100.26132, 4857.73), with living owned followers and companions. Endpoint XY follows the Retail 1216138 landing and pre-landing observations; nav connectivity selects the landing Z. Launcher identity and flight duration are unsourced (≤3.70s from Thalecgos); TC no-ops without JumpChargeParams1272. The activation and radius are project-inferred, not an authored click or flight.
+
 `FOLLOWER_RUN_RESTART_PERSISTENCE_GAP`: A server restart does not restore the follower party or its active run. Murder Row's owner logged back into difficulty 205 without a group; releasing spirit then created a difficulty-1 copy. A resumed clear and its encounter credit are not established. Run live clears without restarting the server until run persistence is implemented.
 
 ## Admin harness party staging

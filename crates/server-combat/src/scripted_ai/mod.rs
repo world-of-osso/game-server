@@ -56,6 +56,7 @@ mod melidrussa;
 pub mod model_reach;
 pub mod movement;
 pub mod murder_row;
+mod murder_row_gateway;
 mod neltharus_initial;
 pub(crate) mod nethekurse;
 pub(crate) mod nethekurse_intro;
@@ -169,6 +170,7 @@ impl Plugin for ScriptedAiPlugin {
                 (
                     bossmod::advance_schedules,
                     academy_transport::launch_entrance_pad,
+                    murder_row_gateway::update,
                     init_creature_ai,
                     ragefire_chasm::intro_triggers::detect_entries,
                     nethekurse_intro::detect_entries,
