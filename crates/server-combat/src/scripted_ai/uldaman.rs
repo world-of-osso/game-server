@@ -118,7 +118,10 @@ fn update_deios_copy(world: &mut World, boss: Entity, map: InMap, position: Posi
             flags.0 &= !IMMUNE_TO_PC;
         }
         actor.entry::<ThreatTable>().or_default();
-        actor.insert(crate::creature_aggro::AggroRange);
+        actor.insert((
+            crate::creature_aggro::AggroRange,
+            crate::creature_ai::CreatureState::Idle,
+        ));
         instance_script::set_data(world, map, WARMUP_STATE, ACTIVATED);
     }
 }
