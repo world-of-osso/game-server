@@ -76,6 +76,14 @@ fn assert_talondras_passage(entry: u32) {
     assert_eq!(
         h.app
             .world()
+            .get::<crate::game_objects::GameObjectState>(door),
+        Some(&crate::game_objects::GameObjectState(
+            crate::game_objects::GO_STATE_READY
+        ))
+    );
+    assert_eq!(
+        h.app
+            .world()
             .get::<shared::protocol::GameObjectCollision>(door),
         Some(&shared::protocol::GameObjectCollision(true))
     );
@@ -84,6 +92,14 @@ fn assert_talondras_passage(entry: u32) {
     assert_eq!(
         instance_script::get_boss_state(h.app.world_mut(), map, BIT),
         Some(EncounterState::Done)
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::game_objects::GameObjectState>(door),
+        Some(&crate::game_objects::GameObjectState(
+            crate::game_objects::GO_STATE_ACTIVE
+        ))
     );
     assert_eq!(
         h.app
