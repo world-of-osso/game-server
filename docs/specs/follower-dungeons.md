@@ -10,6 +10,10 @@
 
 Follower party roster portraits carry the spawned NPC's actual template-selected `ModelDisplay.display_id`, independent of replication interest. They remain NPC heads; race0 combat-stat inputs must not become synthetic player portrait customization. Ordinary player roster portraits retain canonical customization and head equipment. [Engine portrait contract](../../../game-engine/docs/specs/group-frames.md).
 
+## Known restart gap
+
+`FOLLOWER_RUN_RESTART_PERSISTENCE_GAP`: A server restart does not restore the follower party or its active run. Murder Row's owner logged back into difficulty 205 without a group; releasing spirit then created a difficulty-1 copy. A resumed clear and its encounter credit are not established. Run live clears without restarting the server until run persistence is implemented.
+
 ## Admin harness party staging
 
 `stage-follower-party <owner> <map> <x> <y> <z>` is admin-socket-only setup, not gameplay
