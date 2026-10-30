@@ -457,6 +457,26 @@ mod admin_game_object_tests {
     }
 
     #[test]
+    fn game_object_info_reports_live_state_and_collision() {
+        let mut world = World::new();
+        let object = spawn_mailbox(&mut world, InMap::continent(0), 197134);
+        world.entity_mut(object).insert((
+            crate::game_objects::GameObjectState(0),
+            shared::protocol::GameObjectCollision(false),
+        ));
+        let response = serde_json::to_value(lookup(&mut world, 197134)).unwrap();
+        let line = response["GameObjectInfoList"]["lines"][0].as_str().unwrap();
+        assert!(line.ends_with(" state=0 collision=false"));
+        world.entity_mut(object).insert((
+            crate::game_objects::GameObjectState(1),
+            shared::protocol::GameObjectCollision(true),
+        ));
+        let response = serde_json::to_value(lookup(&mut world, 197134)).unwrap();
+        let line = response["GameObjectInfoList"]["lines"][0].as_str().unwrap();
+        assert!(line.ends_with(" state=1 collision=true"));
+    }
+
+    #[test]
     fn game_object_info_reports_missing_object_in_requested_map_copy() {
         let mut world = World::new();
         spawn_mailbox(&mut world, InMap::continent(1), 197134);
@@ -506,6 +526,8 @@ pub(crate) struct AdminInstances<'w, 's> {
             &'static shared::components::Position,
             &'static InMap,
             Option<&'static crate::interest::NetworkVisibility>,
+            Option<&'static crate::game_objects::GameObjectState>,
+            Option<&'static shared::protocol::GameObjectCollision>,
         ),
         Without<crate::persistence::ClientId>,
     >,
@@ -671,14 +693,20 @@ impl AdminInstances<'_, '_> {
                 let lines: Vec<_> = self
                     .game_objects
                     .iter()
-                    .filter(|(_, info, _, in_map, _)| **in_map == map && info.entry == *entry)
-                    .map(|(entity, info, position, _, visibility)| {
+                    .filter(|(_, info, _, in_map, ..)| **in_map == map && info.entry == *entry)
+                    .map(|(entity, info, position, _, visibility, state, collision)| {
                         let world = crate::game_objects::wow_position(position);
                         let mut line = format!(
                             "{} (entity {}) entry {} display {} map {} instance {} world ({}, {}, {})",
                             info.name, entity.to_bits(), info.entry, info.display_id,
                             map_id, instance_id, world.x, world.y, world.z
                         );
+                        if let Some(state) = state {
+                            line.push_str(&format!(" state={}", state.0));
+                        }
+                        if let Some(collision) = collision {
+                            line.push_str(&format!(" collision={}", collision.0));
+                        }
                         if let Some(visibility) = visibility {
                             let senders: Vec<_> = visibility.visible_senders().map(Entity::to_bits).collect();
                             line.push_str(&format!(" visible_senders={senders:?}"));
