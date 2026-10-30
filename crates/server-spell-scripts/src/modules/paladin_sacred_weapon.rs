@@ -91,7 +91,7 @@ fn wield_sacred_weapon(
     _aura: &AuraInstance,
     event: &combat::auras::procs::AuraEvent,
 ) {
-    // SimC76f8118 sc_paladin_protection.cpp636–658: Blessed Hammer's
+    // SimC76f8118 sc_paladin_protection.cpp448–469: Blessed Hammer's
     // foreground action targets the enemy even though it energizes its caster.
     let target = if event.spell_id == Some(204019) {
         event.action_target
