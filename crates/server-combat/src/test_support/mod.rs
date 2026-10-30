@@ -1,4 +1,5 @@
 //! Explicit fixture contracts shared by authoritative gameplay and external test consumers.
+pub mod flight;
 pub mod graph;
 pub mod healer_intake;
 pub mod objectives;

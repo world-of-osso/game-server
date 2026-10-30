@@ -19,7 +19,7 @@ pub struct FlightFollow {
     druid: bool,
 }
 
-pub(super) fn update(world: &mut World) {
+pub(crate) fn update(world: &mut World) {
     let followers: Vec<_> = world
         .query_filtered::<
             (Entity, &Follower, &Position, &InMap, &Health),

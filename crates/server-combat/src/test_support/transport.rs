@@ -273,7 +273,7 @@ pub fn spawn_objects(
     Ok(actors)
 }
 
-fn open_ground(db: &rusqlite::Connection) -> Result<crate::ground::GroundMap, String> {
+pub(super) fn open_ground(db: &rusqlite::Connection) -> Result<crate::ground::GroundMap, String> {
     let maps = crate::maps::store::load_map_store(db)
         .map_err(|error| format!("transport maps: {error}"))?;
     let wdts = maps
