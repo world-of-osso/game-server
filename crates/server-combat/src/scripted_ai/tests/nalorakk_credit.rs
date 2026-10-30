@@ -4,6 +4,10 @@ use super::*;
 fn hoardmonger_unblocked_attack_enters_combat_without_regeneration() {
     use shared::components::{CombatStatus, UnitFlags};
     let (mut h, boss, _) = bound_boss_at_difficulty(241812, 2825, 0, 205, None);
+    let conn =
+        Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    h.app
+        .insert_resource(crate::scripted_ai::model_reach::load_model_reaches(&conn).unwrap());
     let player = h.player();
     let pos = *h.app.world().get::<Position>(boss).unwrap();
     h.app.world_mut().entity_mut(player).insert(Position {
