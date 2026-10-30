@@ -33,6 +33,8 @@ pub(super) fn movement_app(ground: GroundMap, spawn: Position) -> (App, Entity, 
     });
     app.register_message::<PlayerInput>();
     app.add_message::<crate::death::PlayerDeathTransition>();
+    app.init_resource::<crate::spell_cast::script_registry::SpellScriptRegistry>();
+    app.init_resource::<crate::spell_cast::test_harness::ObservedCombatEvents>();
     app.init_resource::<crate::friends::AutoAfkScheduler>();
     app.insert_resource(ground);
     app.add_systems(
@@ -329,6 +331,11 @@ fn a_fall_the_client_reports_lands_with_fall_damage() {
             client.y
         );
     }
+    let events = &app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    assert_eq!(events.len(), 1, "landing must emit one combat event");
     let health = app.world().get::<Health>(player).unwrap().current;
     let expected = 100.0 * (1.0 - shared::movement::fall_damage_percent(10.0));
     assert!(
