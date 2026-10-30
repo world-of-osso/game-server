@@ -47,6 +47,18 @@ pub(crate) const FLIGHT_SPEED: f32 = 32.0;
 /// `networking_movement::DEFAULT_RUN_SPEED`, restored on landing.
 const RUN_SPEED: f32 = 7.0;
 
+// DARKFLAME_CART_CONTINUATION_LOG_CORRELATED: WCL WBYDm1N6JTZzCFnd fight3
+// actor2 at t=6741925 (542.82,-251.89) and t=6746889 (543.72,-69.77)
+// moved ~36.7 yd/s. The landing is that second XY projected to the native
+// navmesh (87.4). Heights between TaxiPath9458's endpoint and the landing are
+// unsourced; the taxi mover interpolates them linearly.
+const DARKFLAME_CART_PATH: u32 = 9458;
+const DARKFLAME_CART_SPEED: f32 = 36.7;
+const DARKFLAME_CART_LANDING: Vec3 = Vec3::new(543.72, 87.4, 69.77);
+
+#[derive(Component)]
+struct ScriptedTaxiSpeed(f32);
+
 /// A flight in progress: Bevy-space points still to fly through.
 #[derive(Component, Debug, Clone, PartialEq)]
 pub struct TaxiFlight {
@@ -391,7 +403,6 @@ pub(crate) fn start_ruby_ferry(world: &mut World, player: Entity, npc: Entity) {
 /// using Throw Dynamite423374. The exact boarding trigger is unsourced.
 pub(crate) fn start_darkflame_cart(world: &mut World, player: Entity, npc: Entity) {
     const MAP: u32 = 2651;
-    const PATH: u32 = 9458;
     const CART_DISPLAY: u32 = 118139;
     let Some(map) = world.get::<crate::maps::InMap>(player).copied() else {
         return;
@@ -405,8 +416,11 @@ pub(crate) fn start_darkflame_cart(world: &mut World, player: Entity, npc: Entit
     {
         return;
     }
-    let Some(points) = world.resource::<TaxiNetwork>().scripted_path(PATH) else {
-        error!("Darkflame cart TaxiPath {PATH} is unavailable");
+    let Some(points) = world
+        .resource::<TaxiNetwork>()
+        .scripted_path(DARKFLAME_CART_PATH)
+    else {
+        error!("Darkflame cart TaxiPath {DARKFLAME_CART_PATH} is unavailable");
         return;
     };
     let Some(position) = world.get::<Position>(npc) else {
@@ -419,7 +433,7 @@ pub(crate) fn start_darkflame_cart(world: &mut World, player: Entity, npc: Entit
     {
         return;
     }
-    start_scripted_party_flight(world, player, map, PATH, CART_DISPLAY);
+    start_scripted_party_flight(world, player, map, DARKFLAME_CART_PATH, CART_DISPLAY);
 }
 
 fn start_scripted_party_flight(
@@ -429,10 +443,13 @@ fn start_scripted_party_flight(
     path: u32,
     display: u32,
 ) {
-    let Some(points) = world.resource::<TaxiNetwork>().scripted_path(path) else {
+    let Some(mut points) = world.resource::<TaxiNetwork>().scripted_path(path) else {
         error!("Scripted party TaxiPath {path} is unavailable");
         return;
     };
+    if path == DARKFLAME_CART_PATH {
+        points.push(DARKFLAME_CART_LANDING);
+    }
     let mut riders = vec![player];
     let followers: Vec<Entity> = world
         .query::<(Entity, &crate::followers::Follower, &crate::maps::InMap)>()
@@ -463,6 +480,11 @@ fn start_scripted_party_flight(
                 ..Default::default()
             },
         ));
+        if path == DARKFLAME_CART_PATH {
+            world
+                .entity_mut(rider)
+                .insert(ScriptedTaxiSpeed(DARKFLAME_CART_SPEED));
+        }
         if let Some(mut control) = world.get_mut::<MovementControl>(rider) {
             control.controlled = true;
         }
@@ -496,6 +518,7 @@ type Flyers<'w, 's> = Query<
         &'static mut Position,
         &'static mut Rotation,
         Option<&'static mut MovementControl>,
+        Option<&'static ScriptedTaxiSpeed>,
     ),
 >;
 
@@ -505,8 +528,9 @@ pub(crate) fn fly_taxis(
     dirty_queue: Option<Res<InterestDirtyQueue>>,
     mut commands: Commands,
 ) {
-    let step = FLIGHT_SPEED * time.delta_secs();
-    for (entity, mut flight, mut position, mut rotation, control) in &mut flyers {
+    for (entity, mut flight, mut position, mut rotation, control, scripted_speed) in &mut flyers {
+        let speed = scripted_speed.map_or(FLIGHT_SPEED, |speed| speed.0);
+        let step = speed * time.delta_secs();
         let start = Vec3::new(position.x, position.y, position.z);
         let mut next = start;
         let landed = advance_flight(&mut flight, &mut next, step);
@@ -546,7 +570,7 @@ pub(crate) fn finish_flight(mut player: EntityWorldMut) {
     if !player.contains::<TaxiFlight>() {
         return;
     }
-    player.remove::<(TaxiFlight, Mounted)>();
+    player.remove::<(TaxiFlight, Mounted, ScriptedTaxiSpeed)>();
     if player.contains::<Player>() {
         player.insert(MovementSpeed(RUN_SPEED));
     }
