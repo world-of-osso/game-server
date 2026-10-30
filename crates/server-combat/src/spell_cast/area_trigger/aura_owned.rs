@@ -156,6 +156,17 @@ fn has_bound_effect(world: &World, binding: &AuraAreaTrigger) -> bool {
         })
 }
 
+pub(super) fn maximum_radius(world: &World, entity: Entity) -> Option<f32> {
+    let binding = world.get::<AuraAreaTrigger>(entity)?;
+    Some(
+        world
+            .resource::<AuraFieldCatalog>()
+            .definition(binding.properties)
+            .expect("created field has a supported source definition")
+            .maximum_radius(),
+    )
+}
+
 pub(super) fn radius_at(world: &World, entity: Entity, at: f64) -> Option<f32> {
     let binding = world.get::<AuraAreaTrigger>(entity)?;
     Some(

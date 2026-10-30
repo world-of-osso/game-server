@@ -46,6 +46,17 @@ impl AuraFieldCatalog {
 }
 
 impl FieldDefinition {
+    /// Linear interpolation cannot exceed the largest authored scale point.
+    pub(super) fn maximum_radius(&self) -> f32 {
+        let scale = self.scale_curve.as_ref().map_or(1.0, |points| {
+            points
+                .iter()
+                .map(|(_, scale)| *scale)
+                .fold(0.000001, f32::max)
+        });
+        self.radius * scale
+    }
+
     pub(super) fn radius_at(&self, elapsed_seconds: f64) -> f32 {
         let Some(points) = &self.scale_curve else {
             // Native ScaleCurveId0 means no scale multiplier.
@@ -292,6 +303,16 @@ mod tests {
         assert!((clamped_linear(&points, 0.02) - 1.0).abs() < 0.000001);
         assert!((clamped_linear(&points, 0.01) - 0.625).abs() < 0.000001);
         assert!((clamped_linear(&points, 2.0) - 0.962566733).abs() < 0.000001);
+        let field = FieldDefinition {
+            trigger_spell: 387150,
+            relation: crate::spell_cast::targets::Relation::Enemy,
+            script: None,
+            radius: 8.0,
+            time_to_scale_ms: 1000,
+            scale_curve: Some(points),
+        };
+        assert_eq!(field.maximum_radius(), 8.0);
+        assert!(field.maximum_radius() > field.radius_at(0.0));
         for missing in [121405, 121406] {
             assert!(
                 load_curve(&connection, missing).is_err(),

@@ -89,17 +89,11 @@ fn active_field_extent(world: &mut World, unit: Entity) -> f32 {
                 && field.expires_at.is_none_or(|expiry| expiry > now)
                 && Some(**field_map) == map
         })
-        .map(|(entity, field, center, _)| {
-            (
-                entity,
-                Vec3::new(center.x, center.y, center.z),
-                field.radius,
-            )
-        })
+        .map(|(entity, _, center, _)| (entity, Vec3::new(center.x, center.y, center.z)))
         .collect();
-    for (entity, center, _) in triggers {
-        let radius = crate::spell_cast::area_trigger::avoidance_radius_at(world, entity, unit, now)
-            .unwrap_or(f32::INFINITY);
+    for (entity, center) in triggers {
+        let radius = crate::spell_cast::area_trigger::maximum_field_radius(world, entity)
+            .expect("active hostile area requires its native maximum radius");
         fields.push((center, radius));
     }
     fields
