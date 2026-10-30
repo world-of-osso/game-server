@@ -3412,7 +3412,7 @@ fn spell_teleport_hearthstone_cross_map_uses_new_world_and_world_port_ack() {
 }
 
 #[test]
-fn releasing_in_the_stockade_resurrects_the_player_at_the_stockade_graveyard() {
+fn releasing_in_the_stockade_resurrects_the_player_at_the_instance_entrance() {
     let Some(mut h) = harness() else { return };
     let player = h.spawn(
         1,
@@ -3465,18 +3465,83 @@ fn releasing_in_the_stockade_resurrects_the_player_at_the_stockade_graveyard() {
         )
         .unwrap();
     h.advance(1);
-    let new_world = h.new_worlds(&player).pop().expect("NewWorld to map 0");
-    assert_eq!(new_world.map_id, 0);
-    h.ack(&player);
-
-    assert_eq!(h.map_of(&player), Some(STORMWIND));
-    assert!(close(h.position(&player), STOCKADE_GRAVEYARD));
+    assert!(h.new_worlds(&player).is_empty());
+    assert_eq!(h.map_of(&player), Some(map));
+    let entrance = map_store()
+        .unwrap()
+        .dungeon_entrance_location(STOCKADE)
+        .unwrap();
+    assert!(close(h.position(&player), entrance.position));
     let world = h.app.world();
     assert_eq!(
         world.get::<PlayerDeathState>(player.player).unwrap().state,
         DeathState::Alive
     );
     assert_eq!(world.get::<Health>(player.player).unwrap().current, 50.0);
+}
+
+#[test]
+fn neltharus_player_release_revives_inside_the_same_instance() {
+    let store = map_store().expect("world database").clone();
+    let entrance = store
+        .dungeon_entrance_location(2519)
+        .expect("Neltharus entrance");
+    let mut h = harness_with(|app| {
+        app.add_plugins(crate::death::DeathPlugin);
+    })
+    .unwrap();
+    let copy = h
+        .app
+        .world_mut()
+        .resource_mut::<InstanceManager>()
+        .create_map(&store, 2519, entrant_at(30, 205), at(0.0))
+        .unwrap()
+        .map;
+    let player = h.spawn_at_level(30, 90, copy, entrance.position + Vec3::new(10.0, 0.0, 0.0));
+    h.app
+        .world_mut()
+        .resource_mut::<InstanceManager>()
+        .add_player(copy, player.player);
+    h.app
+        .world_mut()
+        .entity_mut(player.connection)
+        .insert(pair::<ReleaseSpirit>());
+    h.app.world_mut().entity_mut(player.player).insert((
+        DungeonDifficulty(205),
+        Health {
+            current: 0.0,
+            max: 100.0,
+        },
+        PlayerDeathState {
+            state: DeathState::Dead,
+            corpse: None,
+            graveyard: None,
+        },
+    ));
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<ReleaseSpirit>>(player.connection)
+        .unwrap()
+        .send::<DeathChannel>(ReleaseSpirit);
+    h.advance(3);
+    assert_eq!(h.map_of(&player), Some(copy));
+    assert!(
+        h.new_worlds(&player).is_empty(),
+        "release must not start a far transfer"
+    );
+    assert!(close(h.position(&player), entrance.position));
+    assert_eq!(
+        h.app.world().get::<Health>(player.player).unwrap().current,
+        50.0
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .get::<PlayerDeathState>(player.player)
+            .unwrap()
+            .state,
+        DeathState::Alive
+    );
 }
 
 #[test]
@@ -3552,12 +3617,16 @@ fn voidscar_release_uses_imported_entrance_when_graveyard_and_exit_are_missing()
 }
 
 #[test]
-fn ruby_dungeon_release_revives_at_the_linked_exterior_safe_location() {
+fn ruby_dungeon_release_revives_at_the_instance_entrance() {
     let mut h = harness().expect("world database");
-    let copy = InMap {
-        map_id: 2521,
-        instance_id: 77,
-    };
+    let store = map_store().unwrap().clone();
+    let copy = h
+        .app
+        .world_mut()
+        .resource_mut::<InstanceManager>()
+        .create_map(&store, 2521, entrant_at(1, 1), at(0.0))
+        .unwrap()
+        .map;
     let player = h.spawn(1, copy, Vec3::new(1563.0, -241.0, 126.0147));
     let corpse = Corpse {
         player: 1,
@@ -3578,12 +3647,11 @@ fn ruby_dungeon_release_revives_at_the_linked_exterior_safe_location() {
             graveyard: None,
         },
     ));
-    let store = map_store().unwrap().clone();
-    let exit = store
-        .entrance_exit_location(2521)
-        .expect("sourced Ruby exit safe location");
-    assert_eq!(exit.map_id, 2444);
-    assert!(close(exit.position, Vec3::new(1341.3, -132.202, 137.45)));
+    h.app
+        .world_mut()
+        .resource_mut::<InstanceManager>()
+        .add_player(copy, player.player);
+    let entrance = store.dungeon_entrance_location(2521).unwrap();
     let entity = player.player;
     h.app
         .world_mut()
@@ -3603,10 +3671,9 @@ fn ruby_dungeon_release_revives_at_the_linked_exterior_safe_location() {
         )
         .unwrap();
     h.advance(1);
-    assert_eq!(h.new_worlds(&player).pop().unwrap().map_id, 2444);
-    h.ack(&player);
-    assert_eq!(h.map_of(&player), Some(InMap::continent(2444)));
-    assert!(close(h.position(&player), exit.position));
+    assert!(h.new_worlds(&player).is_empty());
+    assert_eq!(h.map_of(&player), Some(copy));
+    assert!(close(h.position(&player), entrance.position));
     let world = h.app.world();
     assert_eq!(
         world.get::<PlayerDeathState>(entity).unwrap().state,

@@ -44,6 +44,8 @@ fn follower_utility_policy_native_resurrection_effect_restores_a_dead_follower()
         .world_mut()
         .entity_mut(healer)
         .insert(crate::combat::CorpseDelay(60.0));
+    h.app.world_mut().get_mut::<Position>(healer).unwrap().x = 3.0;
+    let corpse_position = *h.app.world().get::<Position>(healer).unwrap();
     crate::combat::kill_unit(h.app.world_mut(), h.npc, healer);
     h.advance(2);
     assert!(
@@ -75,6 +77,10 @@ fn follower_utility_policy_native_resurrection_effect_restores_a_dead_follower()
             .is_none()
     );
     assert!(h.app.world().get::<crate::combat::Corpse>(healer).is_none());
+    assert_eq!(
+        *h.app.world().get::<Position>(healer).unwrap(),
+        corpse_position
+    );
 }
 
 #[test]
