@@ -172,6 +172,8 @@ mod waxbeard;
 #[path = "wratheye.rs"]
 mod wratheye;
 
+#[path = "nalorakk_credit.rs"]
+mod nalorakk_credit;
 #[path = "prepared_input_concurrency_tests.rs"]
 mod prepared_input_concurrency_tests;
 #[path = "prepared_input_tests.rs"]
@@ -250,6 +252,19 @@ pub(crate) fn prepare_encounter_database(
     source
         .execute("VACUUM INTO ?1", [path.to_str().unwrap()])
         .expect("snapshot canonical encounter data without writing source");
+    if encounter == "nalorakk" {
+        let db2 = world_db_path().parent().unwrap().join("db2/active");
+        run_preparation_script(
+            "nalorakk_encounter_bindings.py",
+            &[
+                "--db".as_ref(),
+                path.as_os_str(),
+                "--db2".as_ref(),
+                db2.as_os_str(),
+            ],
+        );
+        return (directory, path);
+    }
     if encounter == "ruby-final" {
         run_preparation_script("ruby_population.py", &["--db".as_ref(), path.as_os_str()]);
         return (directory, path);

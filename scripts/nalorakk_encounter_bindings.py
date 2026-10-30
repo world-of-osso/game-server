@@ -9,8 +9,13 @@ from pathlib import Path
 # WoWCombatLog-101926_223417.txt: PARTY_KILL immediately precedes successful
 # ENCOUNTER_END 3207 at 22:42:52.899 and 3208 at 22:50:48.146. Journal
 # actor/display identities and encounter bits are from the installed DB2 rows.
+# NALORAKK_CREDIT_LETHAL_DAMAGE_LOG_CORRELATED: the user approved death credit
+# after WoWCombatLog-101926_223417.txt:151075 (3307 HP, 7348 damage) and
+# WoWCombatLog-102326_212253.txt:534424 (9972 HP, 10105 damage), each immediately
+# followed by successful ENCOUNTER_END 3209. Neither log directly records death.
 BOSSES = ((241812, 3207, 0, 2776, 5941, 129344),
-          (244100, 3208, 1, 2777, 5948, 129418))
+          (244100, 3208, 1, 2777, 5948, 129418),
+          (246404, 3209, 2, 2778, 5978, 129989))
 
 
 def read_rows(path):
