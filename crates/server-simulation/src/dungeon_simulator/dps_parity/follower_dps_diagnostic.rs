@@ -150,6 +150,14 @@ fn follower_dps_production_dummy() {
         .resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>()
         .0
         .clear();
+    if let Ok(spell) = std::env::var("FOLLOWER_FACTOR_SPELL") {
+        let spell = spell.parse().expect("numeric FOLLOWER_FACTOR_SPELL");
+        app.insert_resource(
+            crate::spell_cast::effects::factor_capture::FactorCapture::new(
+                actor, target, spell, "follower", 128,
+            ),
+        );
+    }
     let mut casting = 0u32;
     let mut gcd_only = 0u32;
     let mut gcd_total = 0u32;
@@ -164,6 +172,7 @@ fn follower_dps_production_dummy() {
     let mut stable_storm_frames = 0u32;
     let mut lava_during_stable_storm = 0u32;
     let mut seen_events = 0usize;
+    let mut stat_sums = [0.0f64; 6];
     for frame in 0..2400 {
         // SimC fixed-time Patchwerk uses a 100% to 0% target-health timeline.
         let mut health = app
@@ -174,6 +183,17 @@ fn follower_dps_production_dummy() {
         app.update();
         let world = app.world();
         let now = crate::spell_cast::history_now(world);
+        let stats = world.get::<crate::stats::CharacterStats>(actor).unwrap();
+        for (sum, value) in stat_sums.iter_mut().zip([
+            stats.primary.intellect,
+            stats.spell_power,
+            stats.crit_pct,
+            stats.haste_pct,
+            stats.mastery_pct,
+            stats.versatility_pct,
+        ]) {
+            *sum += f64::from(value);
+        }
         let spell = world
             .resource::<crate::spell_info::SpellStore>()
             .get(profile.attack_spell)
@@ -264,6 +284,7 @@ fn follower_dps_production_dummy() {
         .0;
     let mut damage = BTreeMap::<u32, i64>::new();
     let mut hits = BTreeMap::<u32, usize>::new();
+    let mut hit_breakdown = BTreeMap::<u32, [i64; 4]>::new();
     let mut damage_sources = BTreeMap::<String, usize>::new();
     let mut casts = BTreeMap::<u32, usize>::new();
     let mut aura_applications = BTreeMap::<u32, usize>::new();
@@ -281,6 +302,10 @@ fn follower_dps_production_dummy() {
         if event.kind == CombatLogKind::Damage && event.target == Some(target.to_bits()) {
             *damage.entry(id).or_default() += i64::from(event.amount);
             *hits.entry(id).or_default() += 1;
+            let bucket = hit_breakdown.entry(id).or_default();
+            let index = if event.crit { 2 } else { 0 };
+            bucket[index] += 1;
+            bucket[index + 1] += i64::from(event.amount);
             *damage_sources
                 .entry(format!("{id}:{:?}", event.source))
                 .or_default() += 1;
@@ -366,10 +391,17 @@ fn follower_dps_production_dummy() {
             "owned pets must damage the selected enemy with Bloodshed"
         );
     }
+    if let Some(capture) = app
+        .world()
+        .get_resource::<crate::spell_cast::effects::factor_capture::FactorCapture>()
+    {
+        println!("FOLLOWER_FACTORS {}", capture.export());
+    }
     println!(
         "FOLLOWER_DPS {}",
         json!({"entry":entry,"level":level,"map":map,"difficulty":205,"seed":seed,"seconds":120,"sheet":sheet,
-        "items":items,"modifiers":modifiers,"talents":talents,"known_spells":known_spells,"target_armor":armor,"checkpoints":checkpoints,"incoming":incoming,"actor_id":actor.to_bits(),"target_id":target.to_bits(),"damage":damage,"hits":hits,"sources":damage_sources,"casts":casts,"aura_applications":aura_applications,
+        "items":items,"modifiers":modifiers,"talents":talents,"known_spells":known_spells,"target_armor":armor,"checkpoints":checkpoints,"incoming":incoming,"actor_id":actor.to_bits(),"target_id":target.to_bits(),"damage":damage,"hits":hits,"hit_breakdown":hit_breakdown,
+        "mean_stats":stat_sums.map(|sum| sum / 2400.0),"sources":damage_sources,"casts":casts,"aura_applications":aura_applications,
         "flame_shock_s":flame_shock_frames as f64 / 20.0,"lava_surge_s":lava_surge_frames as f64 / 20.0,
         "storm_elemental_s":storm_frames as f64 / 20.0,"lava_casts_started_during_storm":lava_during_storm,
         "bolt_casts_started_during_storm":bolt_during_storm,"lava_successes_during_stable_storm":lava_during_stable_storm,"casting_s":casting as f64 / 20.0,

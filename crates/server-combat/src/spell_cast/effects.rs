@@ -1065,6 +1065,23 @@ fn takes_melee_crit_modifier(spell: &SpellInfo) -> bool {
 /// SharedDefines.h:539, SPELL_ATTR2_CANT_CRIT.
 const SPELL_ATTR2_CANT_CRIT: u32 = 0x2000_0000;
 
+/// Caster action crit before target-specific guaranteed critical effects.
+pub fn caster_action_crit_chance(world: &World, caster: Entity, spell: &SpellInfo) -> f32 {
+    let base = world
+        .get::<CharacterStats>(caster)
+        .expect("class caster stats")
+        .crit_pct;
+    let spell_bonus = stat_mods(world, caster).map_or(0.0, |mods| mods.spell_crit_pct);
+    spell_mods::modify(
+        world,
+        caster,
+        spell,
+        SpellModOp::CritChance,
+        base + spell_bonus,
+    )
+    .max(0.0)
+}
+
 /// CritChance mods and script values precede the victim's melee crit modifier.
 pub fn crit_chance(world: &World, caster: Entity, target: Entity, spell: &SpellInfo) -> f32 {
     spell_crit_chance(world, caster, target, spell, false)
