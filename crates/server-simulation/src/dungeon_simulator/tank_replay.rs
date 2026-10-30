@@ -998,6 +998,8 @@ fn replay_registered_run_with_healing(
     let mut casts = BTreeMap::<u32, usize>::new();
     let mut healing_by_spell = BTreeMap::<u32, f64>::new();
     let mut raw_healing_by_spell = BTreeMap::<u32, f64>::new();
+    let mut healing_events_by_spell = BTreeMap::<u32, usize>::new();
+    let mut raw_heal_health_fraction_by_spell = BTreeMap::<u32, f64>::new();
     let mut periodic_ticks_by_spell = BTreeMap::<u32, usize>::new();
     let mut outgoing_damage_by_spell = BTreeMap::<u32, i64>::new();
     let mut outgoing_damage_hits_by_spell = BTreeMap::<u32, u64>::new();
@@ -1398,6 +1400,10 @@ fn replay_registered_run_with_healing(
                     *healing_by_spell.entry(spell).or_default() += effective;
                     *raw_healing_by_spell.entry(spell).or_default() +=
                         f64::from(event.amount.max(0));
+                    *healing_events_by_spell.entry(spell).or_default() += 1;
+                    let max_health = world.get::<Health>(tank).expect("tank health").max;
+                    *raw_heal_health_fraction_by_spell.entry(spell).or_default() +=
+                        f64::from(event.amount.max(0)) / f64::from(max_health);
                 }
             }
         }
@@ -1481,6 +1487,8 @@ fn replay_registered_run_with_healing(
         "dummy_debuffs":dummy_debuffs.iter().map(|buff| json!({"name":buff.name,"spell_id":buff.spell_id})).collect::<Vec<_>>(),
         "dummy_bleeding":dummy_bleeding,
         "self_healing_by_spell":healing_by_spell,"raw_self_healing_by_spell":raw_healing_by_spell,
+        "self_healing_events_by_spell":healing_events_by_spell,
+        "raw_heal_health_fraction_by_spell":raw_heal_health_fraction_by_spell,
         "periodic_damage_ticks_by_spell":periodic_ticks_by_spell,
         "energize_by_spell":energize_by_spell.iter().map(|(spell, (attempted, effective))| (spell, json!({"attempted": attempted, "effective": effective}))).collect::<BTreeMap<_, _>>(),
         "absorbs_by_spell":absorbs_by_spell,"aura_uptime":aura_uptime,
