@@ -180,6 +180,12 @@ fn follower_dps_production_dummy() {
         .0;
     let mut damage = BTreeMap::<u32, i64>::new();
     let mut casts = BTreeMap::<u32, usize>::new();
+    let incoming: Vec<_> = events
+        .iter()
+        .filter(|event| {
+            event.kind == CombatLogKind::Damage && event.target == Some(actor.to_bits())
+        })
+        .collect();
     for event in events {
         if !event.source.is_some_and(|id| sources.contains(&id)) {
             continue;
@@ -195,7 +201,7 @@ fn follower_dps_production_dummy() {
     println!(
         "FOLLOWER_DPS {}",
         json!({"entry":entry,"level":level,"map":map,"difficulty":205,"seconds":120,"sheet":sheet,
-        "items":items,"modifiers":modifiers,"talents":talents,"checkpoints":checkpoints,"damage":damage,"casts":casts,"casting_s":casting as f64 / 20.0,
+        "items":items,"modifiers":modifiers,"talents":talents,"checkpoints":checkpoints,"incoming":incoming,"actor_id":actor.to_bits(),"target_id":target.to_bits(),"damage":damage,"casts":casts,"casting_s":casting as f64 / 20.0,
         "gcd_s":gcd_total as f64 / 20.0,"gcd_only_s":gcd_only as f64 / 20.0,"ready_s":ready as f64 / 20.0})
     );
 }
