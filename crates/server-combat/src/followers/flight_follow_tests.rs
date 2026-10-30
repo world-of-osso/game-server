@@ -87,4 +87,18 @@ fn flying_follower_requires_area_permission_and_lands_on_leaders_navmesh() {
     );
     assert!((landed.y - landing.y).abs() < navigation::AGENT_CLIMB);
     assert!((landed.x - landing.x).hypot(landed.z - landing.z) < 1.0);
+    let nav_dir =
+        std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/ground/navmesh/34");
+    let mut nav = navigation::NavigationMap::open(&nav_dir).unwrap();
+    let at = Vec3::new(landed.x, landed.y, landed.z);
+    let leader = Vec3::new(landing.x, landing.y, landing.z);
+    let floor = nav
+        .floor_polygon(at)
+        .unwrap()
+        .expect("follower has a navmesh floor");
+    assert!((floor.y - at.y).abs() < 0.05);
+    assert!(
+        nav.path(leader, at).unwrap().complete,
+        "landing must connect to the leader"
+    );
 }
