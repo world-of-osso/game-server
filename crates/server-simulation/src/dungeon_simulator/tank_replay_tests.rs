@@ -1485,6 +1485,43 @@ fn engaged_protection_paladin() -> super::dps_parity::Run {
     run
 }
 
+#[test]
+#[ignore = "uses a real Protection Paladin cast and replay clock"]
+fn replay_decides_when_global_cooldown_expires() {
+    let mut run = engaged_protection_paladin();
+    let (actor, target) = (run.actor, run.targets[0]);
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 204019, Some(target), false)
+        .unwrap();
+    run.app.update();
+    let now = run.app.world().resource::<Time>().elapsed();
+    let next = super::tank_replay::next_gcd_decision_boundary(
+        &run,
+        now + std::time::Duration::from_secs(5),
+    );
+    assert!(next > now && next < now + std::time::Duration::from_secs(5));
+    let step = std::time::Duration::from_millis(50);
+    while run.app.world().resource::<Time>().elapsed() + step < next {
+        let boundary = run.app.world().resource::<Time>().elapsed() + step;
+        super::dps_parity::advance_fixture_step(&mut run, boundary).unwrap();
+    }
+    let now = run.app.world().resource::<Time>().elapsed();
+    let decision = super::tank_replay::next_gcd_decision_boundary(&run, now + step);
+    assert!(
+        decision < now + step,
+        "the GCD event must precede the next 50 ms boundary"
+    );
+    super::dps_parity::advance_fixture_step(&mut run, decision).unwrap();
+    assert!(
+        !run.app
+            .world()
+            .get::<crate::spell_cast::SpellHistory>(actor)
+            .unwrap()
+            .has_active_gcd(crate::spell_cast::history_now(run.app.world()))
+    );
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 20271, Some(target), false)
+        .expect("Judgment is ready at the replay decision event");
+}
+
 fn set_holy_power(run: &mut super::dps_parity::Run, amount: f32) {
     let actor = run.actor;
     run.app
