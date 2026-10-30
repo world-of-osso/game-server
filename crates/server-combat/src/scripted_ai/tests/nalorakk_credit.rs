@@ -1,6 +1,45 @@
 use super::*;
 
 #[test]
+fn hoardmonger_unblocked_attack_enters_combat_without_regeneration() {
+    use shared::components::{CombatStatus, UnitFlags};
+    let (mut h, boss, _) = bound_boss_at_difficulty(241812, 2825, 0, 205, None);
+    let player = h.player();
+    let pos = *h.app.world().get::<Position>(boss).unwrap();
+    h.app.world_mut().entity_mut(player).insert(Position {
+        x: pos.x + 3.0,
+        ..pos
+    });
+    assert!(h.app.world().get::<ThreatTable>(boss).is_none());
+    h.app.world_mut().get_mut::<UnitFlags>(boss).unwrap().0 &=
+        !(UnitFlags::IMMUNE_TO_PC | UnitFlags::IMMUNE_TO_NPC);
+    h.advance(0.2);
+    h.app
+        .world_mut()
+        .entity_mut(player)
+        .insert(crate::combat::AutoAttack::new(boss));
+    h.advance(3.0);
+    let threat = h
+        .app
+        .world()
+        .get::<ThreatTable>(boss)
+        .unwrap()
+        .threat_for(player.to_bits());
+    assert!(threat > 0.0, "melee must produce threat: {threat}");
+    assert_eq!(
+        h.app.world().get::<CombatStatus>(boss),
+        Some(&CombatStatus(true))
+    );
+    let damaged = h.app.world().get::<Health>(boss).unwrap().current;
+    assert!(damaged < h.app.world().get::<Health>(boss).unwrap().max);
+    h.advance(5.0);
+    assert!(
+        h.app.world().get::<Health>(boss).unwrap().current <= damaged,
+        "boss regenerated while in combat"
+    );
+}
+
+#[test]
 fn nalorakk_credit_lethal_damage_completes_encounter_3209() {
     let (_directory, path) = prepare_encounter_database("nalorakk");
     let source = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
