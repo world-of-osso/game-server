@@ -33,6 +33,7 @@ use shared::ground::{
 
 use crate::liquid::LiquidSample;
 use crate::terrain_height::{TerrainHeightMap, parse_adt_heights};
+use los::wmo_liquid::LiquidTriangle;
 
 /// Overrides the client asset cache the ground loads from.
 const GROUND_DIR_ENV: &str = "GAME_SERVER_GROUND_DIR";
@@ -224,8 +225,8 @@ fn load_strict_tile_wmos(
 
 struct TileGround {
     terrain: TerrainHeightMap,
-    /// Area/liquid/flight-bound queries need terrain, not WMO collision.
     wmos: Option<Vec<WmoCollision>>,
+    liquids: Option<Vec<LiquidTriangle>>,
     /// Root ADT MFBO minimum corner heights (flight bounds), in file order.
     flight_min: Option<[i16; 9]>,
 }
@@ -306,6 +307,7 @@ impl GroundMap {
             Some(TileGround {
                 terrain,
                 wmos: Some(Vec::new()),
+                liquids: Some(Vec::new()),
                 flight_min: None,
             }),
         );
@@ -336,6 +338,7 @@ impl GroundMap {
                 Some(TileGround {
                     terrain,
                     wmos: Some(Vec::new()),
+                    liquids: Some(Vec::new()),
                     flight_min: None,
                 }),
             );
@@ -704,6 +707,8 @@ impl GroundMap {
 struct MapGround {
     source: Option<TileSource>,
     global_wmo: Option<WmoCollision>,
+    global_liquids: Vec<LiquidTriangle>,
+    liquid_models: HashMap<u32, Vec<LiquidTriangle>>,
     /// `None`: the tile's terrain is not available.
     tiles: HashMap<(u32, u32), Option<TileGround>>,
     /// WMO group collision by root FileDataID, shared by the tiles a WMO spans.
@@ -740,8 +745,13 @@ impl MapGround {
             placement_rotation(placement.rotation),
             global_wmo_placement_position(placement.position),
         );
+        let global_liquids = load_wmo_liquids(data_dir, placement.fdid)?
+            .iter()
+            .map(|triangle| triangle.transformed(world_from_local))
+            .collect();
         Ok(Self {
             global_wmo: Some(WmoCollision::new(world_from_local, groups)),
+            global_liquids,
             ..default()
         })
     }
@@ -759,11 +769,75 @@ impl MapGround {
 
     fn liquid_at(&mut self, feet: Vec3) -> Option<LiquidSample> {
         if self.global_wmo.is_some() {
-            return None;
+            let sample = sample_wmo_liquid(&self.global_liquids, feet)?;
+            let wmo = self.global_wmo.as_ref().expect("global WMO is loaded");
+            return Some(with_liquid_floor(
+                sample,
+                feet,
+                None,
+                std::slice::from_ref(wmo),
+            ));
         }
-        let tile = self.tile(bevy_to_tile(feet.x, feet.z))?;
+        let coordinates = bevy_to_tile(feet.x, feet.z);
+        if self.tile(coordinates)?.liquids.is_none() {
+            let liquids = self.load_tile_liquids(coordinates);
+            self.tiles.get_mut(&coordinates)?.as_mut()?.liquids = Some(liquids);
+        }
+        let tile = self.load_collision_tile(coordinates)?;
         let (wow_x, wow_y, _) = crate::terrain_height::bevy_to_wow(feet.x, feet.y, feet.z);
-        tile.terrain.liquid_at(wow_x, wow_y)
+        let terrain = tile.terrain.liquid_at(wow_x, wow_y);
+        let wmo =
+            sample_wmo_liquid(tile.liquids.as_deref().unwrap_or_default(), feet).map(|sample| {
+                with_liquid_floor(
+                    sample,
+                    feet,
+                    tile.terrain.height_at_bevy(feet.x, feet.z),
+                    tile.wmos.as_deref().unwrap_or_default(),
+                )
+            });
+        [terrain, wmo].into_iter().flatten().min_by(|a, b| {
+            (a.level - feet.y)
+                .abs()
+                .total_cmp(&(b.level - feet.y).abs())
+        })
+    }
+
+    fn load_tile_liquids(&mut self, coordinates: (u32, u32)) -> Vec<LiquidTriangle> {
+        let source = self.source.as_ref().expect("terrain map has a tile source");
+        let data_dir = source.data_dir.clone();
+        let files: Vec<u32> = nearby_source_tiles(self, coordinates)
+            .into_iter()
+            .map(|(row, col)| source.tiles[col as usize * MAP_TILES + row as usize].obj0)
+            .collect();
+        let mut surfaces = Vec::new();
+        for fdid in files {
+            let placements = match load_wmo_placements(&data_dir, fdid) {
+                Ok(placements) => placements,
+                Err(error) => {
+                    warn!("WMO liquid placements {fdid}: {error}");
+                    continue;
+                }
+            };
+            for placement in placements {
+                if !self.liquid_models.contains_key(&placement.fdid) {
+                    match load_wmo_liquids(&data_dir, placement.fdid) {
+                        Ok(liquids) => {
+                            self.liquid_models.insert(placement.fdid, liquids);
+                        }
+                        Err(error) => {
+                            warn!("WMO {} liquid: {error}", placement.fdid);
+                            continue;
+                        }
+                    }
+                }
+                surfaces.extend(
+                    self.liquid_models[&placement.fdid]
+                        .iter()
+                        .map(|triangle| triangle.transformed(placement.world_from_local())),
+                );
+            }
+        }
+        surfaces
     }
 
     fn tile(&mut self, tile: (u32, u32)) -> Option<&TileGround> {
@@ -829,6 +903,7 @@ impl MapGround {
         Some(TileGround {
             terrain,
             wmos: None,
+            liquids: None,
             flight_min,
         })
     }
@@ -1185,6 +1260,55 @@ fn parse_modf_entry(entry: &[u8]) -> Result<WmoPlacement, String> {
         rotation: transform.rotation,
         scale: transform.scale,
     })
+}
+
+fn load_wmo_liquids(data_dir: &Path, root_fdid: u32) -> Result<Vec<LiquidTriangle>, String> {
+    let root = read_client_file(data_dir, "models", root_fdid, "wmo")?;
+    let parsed = wow_wmo::parser::load_wmo_root(&root)?;
+    let mut triangles = Vec::new();
+    for fdid in parsed
+        .group_file_data_ids
+        .into_iter()
+        .take(parsed.n_groups as usize)
+    {
+        let group = read_client_file(data_dir, "models", fdid, "wmo")?;
+        triangles.extend(
+            los::wmo_liquid::group_triangles(parsed.flags, &group)
+                .map_err(|error| format!("group {fdid}: {error}"))?,
+        );
+    }
+    Ok(triangles)
+}
+
+fn sample_wmo_liquid(triangles: &[LiquidTriangle], feet: Vec3) -> Option<LiquidSample> {
+    triangles
+        .iter()
+        .filter_map(|triangle| {
+            triangle.level_at(feet.x, feet.z).map(|level| LiquidSample {
+                level,
+                depth_level: f32::NEG_INFINITY,
+                liquid_type: triangle.liquid_type,
+                deep: false,
+            })
+        })
+        .min_by(|a, b| {
+            (a.level - feet.y)
+                .abs()
+                .total_cmp(&(b.level - feet.y).abs())
+        })
+}
+
+fn with_liquid_floor(
+    mut liquid: LiquidSample,
+    feet: Vec3,
+    terrain: Option<f32>,
+    wmos: &[WmoCollision],
+) -> LiquidSample {
+    let surface = Vec3::new(feet.x, liquid.level, feet.z);
+    if let GroundProbe::Supported(height) = probe_fall_height(surface, terrain, wmos) {
+        liquid.depth_level = height;
+    }
+    liquid
 }
 
 fn load_wmo_groups(data_dir: &Path, root_fdid: u32) -> Result<Vec<Arc<WmoGroupCollision>>, String> {

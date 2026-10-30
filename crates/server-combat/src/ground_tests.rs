@@ -21,6 +21,19 @@ fn client_data_dir() -> PathBuf {
         })
 }
 
+#[test]
+#[ignore = "requires Halls of Infusion extracted WMO assets"]
+fn halls_wmo_liquid_has_surface_and_collision_depth() {
+    let mut ground = GroundMap::new(&client_data_dir(), HashMap::from([(2527, 4290690)]));
+    let (x, y, z) = crate::terrain_height::wow_to_bevy(-70.5, -145.0, -44.0);
+    let liquid = ground
+        .liquid_at(2527, Vec3::new(x, y, z))
+        .expect("WMO water");
+    assert!((liquid.level - -38.516).abs() < 0.05, "{liquid:?}");
+    assert!((liquid.depth_level - -44.083).abs() < 0.1, "{liquid:?}");
+    assert!(liquid.level - liquid.depth_level > shared::movement::SWIM_DEPTH);
+}
+
 /// `world/maps/azeroth/azeroth.wdt`.
 const AZEROTH_WDT_FDID: u32 = 775_971;
 
