@@ -124,8 +124,12 @@ fn register_creatures(
     creatures: CreatureHomes,
     world_data: Option<Res<WorldData>>,
     escorts: Query<(), With<crate::scripted_ai::movement::ScriptedPath>>,
+    followers: Query<(), With<crate::followers::Follower>>,
 ) {
     for creature in std::mem::take(&mut index.pending) {
+        if followers.contains(creature) {
+            continue;
+        }
         let Ok(home) = creatures.get(creature) else {
             continue;
         };
